@@ -124,18 +124,18 @@ export interface RaceSelectDialogData {
       }
 
       &.selected.grade-g1 {
-        border-color: rgba(54, 132, 227, 0.4);
-        background: rgba(54, 132, 227, 0.08);
+        border-color: rgba(var(--grade-g1-base), 0.4);
+        background: rgba(var(--grade-g1-base), 0.08);
       }
 
       &.selected.grade-g2 {
-        border-color: rgba(244, 85, 129, 0.4);
-        background: rgba(244, 85, 129, 0.08);
+        border-color: rgba(var(--grade-g2-base), 0.4);
+        background: rgba(var(--grade-g2-base), 0.08);
       }
 
       &.selected.grade-g3 {
-        border-color: rgba(57, 187, 84, 0.4);
-        background: rgba(57, 187, 84, 0.08);
+        border-color: rgba(var(--grade-g3-base), 0.4);
+        background: rgba(var(--grade-g3-base), 0.08);
       }
     }
 
@@ -149,19 +149,19 @@ export interface RaceSelectDialogData {
       flex-shrink: 0;
 
       &.grade-g1 {
-        background: rgba(54, 132, 227, 0.15);
-        color: #7fb3ef;
-        border: 1px solid rgba(54, 132, 227, 0.3);
+        background: rgba(var(--grade-g1-base), 0.15);
+        color: var(--grade-g1);
+        border: 1px solid rgba(var(--grade-g1-base), 0.3);
       }
       &.grade-g2 {
-        background: rgba(244, 85, 129, 0.15);
-        color: #f48fab;
-        border: 1px solid rgba(244, 85, 129, 0.3);
+        background: rgba(var(--grade-g2-base), 0.15);
+        color: var(--grade-g2);
+        border: 1px solid rgba(var(--grade-g2-base), 0.3);
       }
       &.grade-g3 {
-        background: rgba(57, 187, 84, 0.15);
-        color: #6fcf85;
-        border: 1px solid rgba(57, 187, 84, 0.3);
+        background: rgba(var(--grade-g3-base), 0.15);
+        color: var(--grade-g3);
+        border: 1px solid rgba(var(--grade-g3-base), 0.3);
       }
     }
 

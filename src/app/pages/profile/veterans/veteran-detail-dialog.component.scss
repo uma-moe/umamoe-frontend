@@ -1,7 +1,7 @@
 @use '../../../../styles/mixins' as *;
 
 // ─── Veteran Detail Dialog ───────────────────────
-// ViewEncapsulation.None — all styles scoped under .veteran-detail-dialog
+// ViewEncapsulation.None - all styles scoped under .veteran-detail-dialog
 
 .veteran-detail-dialog {
   display: flex;
@@ -21,10 +21,11 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 14px 18px;
+    padding: 14px 44px 14px 18px;
     background: #1a1a1a;
     border-bottom: 1px solid var(--border-subtle);
     flex-shrink: 0;
+    position: relative;
   }
 
   .select-header-title {
@@ -35,6 +36,9 @@
   }
 
   .close-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
     width: 32px;
     height: 32px;
     padding: 0;
@@ -174,26 +178,9 @@
 
     .race-name { font-weight: 500; }
 
-    &.g1 {
-      background: rgba(255, 193, 7, 0.08);
-      border-color: rgba(255, 193, 7, 0.2);
-      .race-grade { color: #ffc107; }
-      .race-name { color: rgba(255, 215, 64, 0.85); }
-    }
-
-    &.g2 {
-      background: rgba(244, 143, 177, 0.06);
-      border-color: rgba(244, 143, 177, 0.15);
-      .race-grade { color: var(--color-pink); }
-      .race-name { color: rgba(244, 143, 177, 0.8); }
-    }
-
-    &.g3 {
-      background: rgba(129, 199, 132, 0.06);
-      border-color: rgba(129, 199, 132, 0.12);
-      .race-grade { color: var(--accent-secondary); }
-      .race-name { color: rgba(129, 199, 132, 0.75); }
-    }
+    &.grade-g1-chip { background: rgba(var(--grade-g1-base), 0.15); border-color: rgba(var(--grade-g1-base), 0.4); color: var(--grade-g1); }
+    &.grade-g2-chip { background: rgba(var(--grade-g2-base), 0.15); border-color: rgba(var(--grade-g2-base), 0.4); color: var(--grade-g2); }
+    &.grade-g3-chip { background: rgba(var(--grade-g3-base), 0.15); border-color: rgba(var(--grade-g3-base), 0.4); color: var(--grade-g3); }
   }
 
   // ─── Inheritance ───────────────────────────────

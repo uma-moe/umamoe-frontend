@@ -26,7 +26,7 @@
         </h4>
         <div class="m-collapse" [class.m-collapsed]="isSectionCollapsed('mLegacyTree')">
         <div class="legacy-tree-section">
-          <!-- Target Character —  single select in container -->
+          <!-- Target Character -  single select in container -->
           <div class="tree-group">
             <div class="tree-box target-box">
               <div class="tree-circle target-circle" [class.has-character]="treeData.characterId" (click)="selectNode(treeData)">
@@ -41,9 +41,9 @@
             <span class="tree-group-label target-color">Target</span>
           </div>
 
-          <span class="tree-connector">—</span>
+          <span class="tree-connector">-</span>
 
-          <!-- Main Parent — include/exclude in container -->
+          <!-- Main Parent - include/exclude in container -->
           <div class="tree-group">
             <div class="tree-box parent-box">
               <!-- Include section -->
@@ -78,9 +78,9 @@
             <span class="tree-group-label parent-color">Main Parent</span>
           </div>
 
-          <span class="tree-connector">—</span>
+          <span class="tree-connector">-</span>
 
-          <!-- Grand Parents — include/exclude in container -->
+          <!-- Grand Parents - include/exclude in container -->
           <div class="tree-group">
             <div class="tree-box grandparent-box">
               <!-- Include section -->
@@ -794,7 +794,7 @@
   </div>
 </div>
 
-<!-- Floating scroll-aware button — shows "Results" when in filter, "Back to Top" when past it -->
+<!-- Floating scroll-aware button - shows "Results" when in filter, "Back to Top" when past it -->
 <button class="floating-scroll-btn"
         *ngIf="showFloatingBtn"
         [class.results-mode]="floatingBtnMode === 'results'"

@@ -303,7 +303,7 @@
 }
 
 .details-card {
-  background: #1e1e1e;
+  background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   overflow: visible;

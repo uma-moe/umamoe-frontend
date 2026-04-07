@@ -518,7 +518,7 @@
                   <div class="factor-list">
                     <div class="factor-row-wrapper" *ngFor="let ff of parentFactorFilters; let i = index">
                       <div class="factor-row-item" [ngClass]="ff.factorId != null ? (ff.color + '-factor') : 'empty-row'">
-                        <!-- Populated row � single compact line -->
+                        <!-- Populated row - single compact line -->
                         <div class="factor-row-single" *ngIf="ff.factorId != null">
                           <span class="spark-dot" [ngClass]="ff.color + '-dot'"></span>
                           <span class="factor-name">{{ ff.name }}</span>
@@ -539,7 +539,7 @@
                             </div>
                           </div>
                         </div>
-                        <!-- Empty row � inline search -->
+                        <!-- Empty row - inline search -->
                         <div class="factor-row-search" *ngIf="ff.factorId == null">
                           <mat-form-field appearance="fill" class="custom-search-field inline-search" subscriptSizing="dynamic">
                             <input matInput placeholder="Search factors..."
@@ -632,47 +632,60 @@
             </div>
           </div>
 
-          <!-- Parent branches (vertical spine via CSS) -->
-          <div class="tree-branches" *ngIf="d.successionParents.length > 0">
-            <div class="tree-branch" *ngFor="let parent of d.successionParents">
-
-              <!-- Parent node -->
-              <div class="tree-node tree-node--parent">
-                <div class="tree-node-head">
-                  <img *ngIf="parent._image" [src]="parent._image" class="tree-node-av">
-                  <span class="tree-node-name">{{ parent._name }}</span>
+          <!-- Parent branches -->
+          <ng-container *ngIf="d.successionParents.length > 0">
+            <div class="tree-line"></div>
+            <div class="tree-branches">
+              <div class="tree-branch" *ngFor="let parent of d.successionParents; let first = first; let last = last">
+                <div class="tree-elbow" [class.first]="first" [class.last]="last">
+                  <div class="c-top"></div><div class="c-bot"></div>
                 </div>
-                <div class="tree-node-sparks tree-node-sparks--flat">
-                  <span class="spark-item spark-item--sm" [ngClass]="f.color + '-spark'"
-                    *ngFor="let f of parent._factors; trackBy: trackByFactor">
-                    <span class="spark-level">{{ f.level }}</span>
-                    <mat-icon class="spark-star">star</mat-icon>
-                    <span class="spark-name">{{ f.name }}</span>
-                  </span>
-                </div>
-              </div>
 
-              <!-- GP nodes (vertical spine via CSS) -->
-              <div class="tree-gps" *ngIf="parent._gps.length > 0">
-                <div class="tree-node tree-node--gp"
-                  *ngFor="let gp of parent._gps">
+                <!-- Parent node -->
+                <div class="tree-node tree-node--parent">
                   <div class="tree-node-head">
-                    <img *ngIf="gp._image" [src]="gp._image"
-                      class="tree-node-av tree-node-av--sm">
-                    <span class="tree-node-name tree-node-name--sm">{{ gp._name }}</span>
+                    <img *ngIf="parent._image" [src]="parent._image" class="tree-node-av">
+                    <span class="tree-node-name">{{ parent._name }}</span>
                   </div>
                   <div class="tree-node-sparks tree-node-sparks--flat">
-                    <span class="spark-item spark-item--xs" [ngClass]="f.color + '-spark'"
-                      *ngFor="let f of gp._factors; trackBy: trackByFactor">
+                    <span class="spark-item spark-item--sm" [ngClass]="f.color + '-spark'"
+                      *ngFor="let f of parent._factors; trackBy: trackByFactor">
                       <span class="spark-level">{{ f.level }}</span>
                       <mat-icon class="spark-star">star</mat-icon>
                       <span class="spark-name">{{ f.name }}</span>
                     </span>
                   </div>
                 </div>
+
+                <!-- GP nodes -->
+                <ng-container *ngIf="parent._gps.length > 0">
+                  <div class="tree-line"></div>
+                  <div class="tree-gps">
+                    <div class="tree-gp-row" *ngFor="let gp of parent._gps; let gFirst = first; let gLast = last">
+                      <div class="tree-elbow" [class.first]="gFirst" [class.last]="gLast">
+                        <div class="c-top"></div><div class="c-bot"></div>
+                      </div>
+                      <div class="tree-node tree-node--gp">
+                        <div class="tree-node-head">
+                          <img *ngIf="gp._image" [src]="gp._image"
+                            class="tree-node-av tree-node-av--sm">
+                          <span class="tree-node-name tree-node-name--sm">{{ gp._name }}</span>
+                        </div>
+                        <div class="tree-node-sparks tree-node-sparks--flat">
+                          <span class="spark-item spark-item--xs" [ngClass]="f.color + '-spark'"
+                            *ngFor="let f of gp._factors; trackBy: trackByFactor">
+                            <span class="spark-level">{{ f.level }}</span>
+                            <mat-icon class="spark-star">star</mat-icon>
+                            <span class="spark-name">{{ f.name }}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </ng-container>
               </div>
             </div>
-          </div>
+          </ng-container>
 
           <!-- No inheritance data -->
           <div class="inh-empty" *ngIf="d.successionParents.length === 0 && d.factors.length === 0">
@@ -865,7 +878,7 @@
                       <mat-icon>star</mat-icon>{{ d.whiteStarSum }}
                     </span>
                   </div>
-                  <span class="no-factors" *ngIf="d.factors.length === 0">�</span>
+                  <span class="no-factors" *ngIf="d.factors.length === 0">-</span>
                 </td>
               </tr>
             </ng-container>

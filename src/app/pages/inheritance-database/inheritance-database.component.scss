@@ -142,7 +142,16 @@
     p { color: var(--text-secondary); margin: 0.25rem 0 0 0; font-size: 0.875rem; }
   }
 
-  .header-spacer { flex: 1; }
+  .header-spacer { flex: 1; order: 0; }
+
+  .pagination-inline {
+    flex-basis: 100%;
+    display: flex;
+    justify-content: center;
+    order: 50;
+  }
+
+  .header-spacer-end { display: none; }
 
   .split-sparks-badge,
   .max-followers-badge {
@@ -158,9 +167,18 @@
     @include toggle-badge-state(#4caf50, 'excluded', 'included');
   }
 
+  .list-mode-badge {
+    @include toggle-badge;
+    margin-bottom: 1px;
+    @include toggle-badge-state(#2196f3, 'inactive', 'active');
+  }
+
   .sort-select {
     min-width: 180px;
     @include mat-form-dark-theme;
+  }
+
+  @media (max-width: 800px) {
   }
 }
 
@@ -196,6 +214,69 @@
 .loading-container { @include loading-container; }
 
 .results-grid { display: grid; gap: 1rem; }
+
+.pagination-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+
+  .page-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-primary);
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+
+    mat-icon { @include icon-size(18px); }
+
+    &:hover:not(:disabled) { background: var(--surface-3); color: var(--text-primary); border-color: rgba(100, 181, 246, 0.4); }
+    &:disabled { opacity: 0.3; cursor: default; }
+  }
+
+  .page-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-primary);
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0 0.2rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+
+    &:hover { background: var(--surface-3); color: var(--text-primary); border-color: rgba(100, 181, 246, 0.4); }
+    &.active { background: rgba(100, 181, 246, 0.15); border-color: rgba(100, 181, 246, 0.5); color: var(--accent-primary); }
+    &.page-hidden { visibility: hidden; }
+  }
+
+  .page-ellipsis {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    user-select: none;
+  }
+}
+
+.pagination-bottom {
+  @extend .pagination-inline;
+  justify-content: center;
+  padding: 1rem 0 0.5rem;
+}
 
 .record-card {
   background: var(--surface-2);

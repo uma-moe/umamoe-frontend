@@ -817,8 +817,8 @@ $spark-palette: (
 }
 
 // Section card with header
-@mixin section-card($bg: #1e1e1e) {
-  background: $bg;
+@mixin section-card() {
+  background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   overflow: hidden;

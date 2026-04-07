@@ -47,7 +47,7 @@ export class InheritanceEntryComponent {
     @Output() copyTrainerId = new EventEmitter<{ accountId: string; event: Event }>();
     @Output() reportUnavailable = new EventEmitter<{ accountId: string; event: Event }>();
 
-    /** Spark display mode — driven by parent (global toggle) */
+    /** Spark display mode - driven by parent (global toggle) */
     @Input() sparkViewMode: 'merged' | 'split' = 'merged';
     /** Currently focused parent in split view */
     selectedParent: 'main' | 'left' | 'right' | null = null;
@@ -168,7 +168,7 @@ export class InheritanceEntryComponent {
         this.dialog.open(RaceResultsDialogComponent, {
             data: { charId, charName, winSaddleIds: saddles, runRaceIds } as RaceResultsDialogData,
             panelClass: 'modern-dialog-panel',
-            width: '900px',
+            width: '1100px',
             maxWidth: '95vw',
             maxHeight: '90vh',
             autoFocus: false,

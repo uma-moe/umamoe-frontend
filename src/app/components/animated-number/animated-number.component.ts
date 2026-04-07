@@ -3,7 +3,7 @@ import {
   SimpleChanges, ElementRef, ChangeDetectionStrategy
 } from '@angular/core';
 import { AnimationSchedulerService } from './animation-scheduler.service';
-// Shared formatter — one instance for all components in the app.
+// Shared formatter - one instance for all components in the app.
 const sharedFmt = new Intl.NumberFormat(undefined);
 /**
  * Renders a number that smoothly counts from its previous value to the new one.
@@ -45,7 +45,7 @@ export class AnimatedNumberComponent implements OnInit, OnChanges, OnDestroy {
   private startTime: number | null = null;
   private animating = false;
   private initialized = false;
-  // Bound tick function — stable reference required for register/unregister.
+  // Bound tick function - stable reference required for register/unregister.
   private readonly tick = (ts: number): void => {
     if (this.startTime === null) this.startTime = ts;
     const t = Math.min((ts - this.startTime) / this.duration, 1);

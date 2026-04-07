@@ -1061,7 +1061,7 @@ export class TimelineService {
         bannerDuration: 14,
         tags: ['paid-banner'],
         relatedCharacters: [],
-        // No imagePath — will show placeholder icon
+        // No imagePath - will show placeholder icon
       };
       events.push(event);
     });

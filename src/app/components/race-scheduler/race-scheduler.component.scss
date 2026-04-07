@@ -124,19 +124,17 @@
   position: relative;
   box-sizing: border-box;
 
-  &.grade-g1 { background: rgba(54, 132, 227, 0.15); border: 1px solid rgba(54, 132, 227, 0.4); color: #7fb3ef; }
-
-  &.grade-g2 { background: rgba(244, 85, 129, 0.15); border: 1px solid rgba(244, 85, 129, 0.4); color: #f48fab; }
-
-  &.grade-g3 { background: rgba(57, 187, 84, 0.15); border: 1px solid rgba(57, 187, 84, 0.4); color: #6fcf85; }
+  &.grade-g1 { background: rgba(var(--grade-g1-base), 0.15); border: 1px solid rgba(var(--grade-g1-base), 0.4); color: var(--grade-g1); }
+  &.grade-g2 { background: rgba(var(--grade-g2-base), 0.15); border: 1px solid rgba(var(--grade-g2-base), 0.4); color: var(--grade-g2); }
+  &.grade-g3 { background: rgba(var(--grade-g3-base), 0.15); border: 1px solid rgba(var(--grade-g3-base), 0.4); color: var(--grade-g3); }
 
   &.won {
-    &.grade-g1 { background: rgba(54, 132, 227, 0.25); border-color: #3684e3; color: #90bef7; }
-    &.grade-g2 { background: rgba(244, 85, 129, 0.25); border-color: #f45581; color: #f48fab; }
-    &.grade-g3 { background: rgba(57, 187, 84, 0.25); border-color: #39bb54; color: #6fcf85; }
+    &.grade-g1 { background: rgba(var(--grade-g1-base), 0.25); border-color: rgba(var(--grade-g1-base), 0.6); color: var(--grade-g1); }
+    &.grade-g2 { background: rgba(var(--grade-g2-base), 0.25); border-color: rgba(var(--grade-g2-base), 0.6); color: var(--grade-g2); }
+    &.grade-g3 { background: rgba(var(--grade-g3-base), 0.25); border-color: rgba(var(--grade-g3-base), 0.6); color: var(--grade-g3); }
   }
 
-  // Ran — position-based styling
+  // Ran - position-based styling
   &.ran {
     &.pos-1st {
       background: rgba(255, 215, 0, 0.15);
@@ -247,11 +245,9 @@
   mat-icon { @include icon-size(12px); }
 }
 
-.grade-g1-legend { background: rgba(54, 132, 227, 0.15); border: 1px solid rgba(54, 132, 227, 0.4); color: #7fb3ef; }
-
-.grade-g2-legend { background: rgba(244, 85, 129, 0.15); border: 1px solid rgba(244, 85, 129, 0.4); color: #f48fab; }
-
-.grade-g3-legend { background: rgba(57, 187, 84, 0.15); border: 1px solid rgba(57, 187, 84, 0.4); color: #6fcf85; }
+.grade-g1-legend { background: rgba(var(--grade-g1-base), 0.15); border: 1px solid rgba(var(--grade-g1-base), 0.4); color: var(--grade-g1); }
+.grade-g2-legend { background: rgba(var(--grade-g2-base), 0.15); border: 1px solid rgba(var(--grade-g2-base), 0.4); color: var(--grade-g2); }
+.grade-g3-legend { background: rgba(var(--grade-g3-base), 0.15); border: 1px solid rgba(var(--grade-g3-base), 0.4); color: var(--grade-g3); }
 
 .won-legend {
   color: #f5c83a;

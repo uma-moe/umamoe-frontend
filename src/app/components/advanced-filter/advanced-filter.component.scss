@@ -134,10 +134,10 @@
     }
 }
 
-// Mobile chevron in section headers — hidden on desktop, shown on mobile
+// Mobile chevron in section headers - hidden on desktop, shown on mobile
 .mobile-chevron { display: none !important; }
 
-// Support-lb group header — hidden on desktop, replaces individual headers on mobile
+// Support-lb group header - hidden on desktop, replaces individual headers on mobile
 .support-lb-mobile-header {
     display: none !important;
     margin: 0;
@@ -234,7 +234,7 @@
     }
 }
 
-// Mobile collapse wrapper — transparent on desktop, grid collapse on mobile
+// Mobile collapse wrapper - transparent on desktop, grid collapse on mobile
 .m-collapse {
     display: contents;
 
@@ -364,7 +364,7 @@
     > .m-collapse > .legacy-tree-section,
     > .legacy-tree-section { align-items: stretch; }
 
-    // When legacy wraps to its own row — dividers only
+    // When legacy wraps to its own row - dividers only
     &.is-wrapped { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1.5px solid var(--border-primary); }
 
     @media (max-width: 600px) {
@@ -445,7 +445,7 @@
     > div:not(.m-collapse),
     > .m-collapse > div { justify-content: flex-start; }
 
-    // When search wraps to its own row — dividers only
+    // When search wraps to its own row - dividers only
     &.is-wrapped {
         border-left: none;
         border-top: 1.5px solid var(--border-primary);
@@ -904,7 +904,7 @@
     box-sizing: border-box;
 }
 
-// Race Schedule filter group — full width own row
+// Race Schedule filter group - full width own row
 .race-schedule-group { flex: 1 1 100% !important; min-width: 100% !important; }
 
 // Container for General Criteria + Total Star Count
@@ -1379,7 +1379,7 @@
   &.white { color: #bdbdbd; }
 }
 
-// Floating scroll-aware button — fixed at bottom-right
+// Floating scroll-aware button - fixed at bottom-right
 .floating-scroll-btn {
     position: fixed; bottom: 20px; right: 20px; z-index: 1000;
     display: flex; align-items: center; gap: 6px; padding: 10px 20px;

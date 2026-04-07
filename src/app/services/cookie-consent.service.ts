@@ -49,7 +49,7 @@ export class CookieConsentService {
     this.saveConsent({ ...consent, essential: true });
   }
 
-  /** Reset consent — re-shows the banner */
+  /** Reset consent - re-shows the banner */
   resetConsent(): void {
     localStorage.removeItem(CONSENT_KEY);
     this.consentSubject.next(null);

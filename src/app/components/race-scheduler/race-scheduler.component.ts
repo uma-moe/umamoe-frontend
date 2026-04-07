@@ -318,7 +318,7 @@ export class RaceSchedulerComponent implements OnInit, OnChanges {
 
     const key = this.cellKey(year, month, half);
     const currentId = this.cellSelection.get(key) ?? null;
-    const cellLabel = `${this.yearLabels[year]} — ${this.getCellLabel(month, half)}`;
+    const cellLabel = `${this.yearLabels[year]} - ${this.getCellLabel(month, half)}`;
 
     const ref = this.dialog.open(RaceSelectDialogComponent, {
       panelClass: 'modern-dialog-panel',

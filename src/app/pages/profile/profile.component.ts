@@ -113,7 +113,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
                 this.visibility = v;
             },
             error: () => {
-                // No settings yet — defaults are all visible
+                // No settings yet - defaults are all visible
                 this.visibility = { profile_hidden: false, hidden_sections: [] };
             }
         });
@@ -164,7 +164,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
                 this.loading = false;
                 const name = profile.trainer.name || this.accountId;
                 this.title.setTitle(`${name} | uma.moe`);
-                this.meta.updateTag({ property: 'og:title', content: `${name} — Trainer Profile | uma.moe` });
+                this.meta.updateTag({ property: 'og:title', content: `${name} - Trainer Profile | uma.moe` });
             },
             error: (err) => {
                 this.loading = false;
@@ -312,7 +312,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
 
     getTeamClassName(teamClass: number | null): string {
-        if (teamClass == null) return '—';
+        if (teamClass == null) return '-';
         const names: Record<number, string> = { 1: 'Class 1', 2: 'Class 2', 3: 'Class 3', 4: 'Class 4', 5: 'Class 5', 6: 'Class 6', 7: 'Open' };
         return names[teamClass] || `Class ${teamClass}`;
     }

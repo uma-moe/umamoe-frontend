@@ -61,7 +61,7 @@ $dark-theme: mat.define-dark-theme((color: (primary: $primary-palette,
   --bg-quaternary: #2a2a2a;
 
   // Glass / surface layers (used for cards, panels, overlays)
-  --surface-1: rgba(255, 255, 255, 0.03);
+  --surface-1: rgba(255, 255, 255, 0.02);
   --surface-2: rgba(255, 255, 255, 0.05);
   --surface-3: rgba(255, 255, 255, 0.08);
   --surface-4: rgba(255, 255, 255, 0.12);
@@ -96,6 +96,14 @@ $dark-theme: mat.define-dark-theme((color: (primary: $primary-palette,
   --color-purple: #9c27b0;
   --color-pink: #e91e63;
   --color-gold: #ffd700;
+
+  // ===== RACE GRADE COLORS =====
+  --grade-g1: #7fb3ef;
+  --grade-g1-base: 54, 132, 227;
+  --grade-g2: #f48fab;
+  --grade-g2-base: 244, 85, 129;
+  --grade-g3: #6fcf85;
+  --grade-g3-base: 57, 187, 84;
 
   // ===== BORDER TOKENS =====
   --border-subtle: rgba(255, 255, 255, 0.06);
@@ -427,7 +435,8 @@ body.christmas-theme {
 
 // Modern Dialog Panel (removes default styles for custom styling)
 .modern-dialog-panel,
-.trainer-submit-dialog-panel {
+.trainer-submit-dialog-panel,
+.milestone-dialog-panel {
   .mat-mdc-dialog-container {
     background: transparent !important;
     box-shadow: none !important;
@@ -1314,4 +1323,47 @@ body.christmas-theme {
       background-color: var(--text-disabled);
     }
   }
+}
+
+// ===== GLOBAL: RACE GRADE COLORS =====
+// Reusable grade classes for G1 (blue), G2 (pink), G3 (green).
+// Use as: .grade-g1, .grade-g2, .grade-g3
+
+// Text-only color (for labels, grade badges in lists)
+.grade-g1-text { color: var(--grade-g1); }
+.grade-g2-text { color: var(--grade-g2); }
+.grade-g3-text { color: var(--grade-g3); }
+
+// Chip style: background + border + text
+.grade-g1-chip {
+  background: rgba(var(--grade-g1-base), 0.15);
+  border: 1px solid rgba(var(--grade-g1-base), 0.4);
+  color: var(--grade-g1);
+}
+.grade-g2-chip {
+  background: rgba(var(--grade-g2-base), 0.15);
+  border: 1px solid rgba(var(--grade-g2-base), 0.4);
+  color: var(--grade-g2);
+}
+.grade-g3-chip {
+  background: rgba(var(--grade-g3-base), 0.15);
+  border: 1px solid rgba(var(--grade-g3-base), 0.4);
+  color: var(--grade-g3);
+}
+
+// Won (selected) variant: stronger background
+.grade-g1-chip-active {
+  background: rgba(var(--grade-g1-base), 0.25);
+  border-color: rgba(var(--grade-g1-base), 0.6);
+  color: var(--grade-g1);
+}
+.grade-g2-chip-active {
+  background: rgba(var(--grade-g2-base), 0.25);
+  border-color: rgba(var(--grade-g2-base), 0.6);
+  color: var(--grade-g2);
+}
+.grade-g3-chip-active {
+  background: rgba(var(--grade-g3-base), 0.25);
+  border-color: rgba(var(--grade-g3-base), 0.6);
+  color: var(--grade-g3);
 }

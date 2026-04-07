@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 //  RANK COLOR CONFIG
 //
 //  Standard ranks (G → SS+): single hex color for text & border.
-//  Ultra ranks   (UG → US):  two colors — 'u' for the "U", 'tier' for the rest.
+//  Ultra ranks   (UG → US):  two colors - 'u' for the "U", 'tier' for the rest.
 //
 //  Edit values below to change rank badge colors.
 // ══════════════════════════════════════════════════════════════════════════════
@@ -55,21 +55,28 @@ export interface RankInfo {
 const STANDARD_TIERS = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS'];
 const ULTRA_TIERS = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S'];
 
-// Score thresholds for ultra tiers (UG0 through US9).
-// Tier ranges: 4300, 4900, 5600, 6400, 7300, 8300, 9400, 10600
-// (range increases by +600, +700, +800, … i.e. +100 more each tier)
-// Sublevels are even 10ths within each tier.
-const ULTRA_SCORE_STARTS: number[] = (() => {
-    const starts = [19600];
-    let gap = 4300;
-    let gapInc = 600;
-    for (let i = 1; i <= ULTRA_TIERS.length; i++) {
-        starts.push(starts[i - 1] + gap);
-        gap += gapInc;
-        gapInc += 100;
-    }
-    return starts; // 9 entries: 8 tier starts + 1 end boundary
-})();
+// Precomputed lower-bound score for each ultra sublevel, sourced from rating-shared.js.
+// Index = tierIdx * 10 + subLevel  (0 = UG0, 79 = US9, 80 = sentinel)
+const ULTRA_THRESHOLDS: number[] = [
+    // UG0-9
+    19600, 20000, 20400, 20800, 21200, 21600, 22100, 22500, 23000, 23400,
+    // UF0-9
+    23900, 24300, 24800, 25300, 25800, 26300, 26800, 27300, 27800, 28300,
+    // UE0-9
+    28800, 29400, 29900, 30400, 31000, 31500, 32100, 32700, 33200, 33800,
+    // UD0-9
+    34400, 35000, 35600, 36200, 36800, 37500, 38100, 38700, 39400, 40000,
+    // UC0-9
+    40700, 41300, 42000, 42700, 43400, 44000, 44700, 45400, 46200, 46900,
+    // UB0-9
+    47600, 48300, 49000, 49800, 50500, 51300, 52000, 52800, 53600, 54400,
+    // UA0-9
+    55200, 55900, 56700, 57500, 58400, 59200, 60000, 60800, 61700, 62500,
+    // US0-9
+    63400, 64200, 65100, 66400, 67700, 69000, 70300, 71600, 72900, 74400,
+    // sentinel (LG start)
+    76000,
+];
 
 /**
  * Convert a 1-based rarity value (1-98) to rank info.
@@ -112,15 +119,14 @@ export function getRankInfo(rarity: number): RankInfo {
  */
 export function getRankInfoFromScore(score: number): RankInfo {
     // Ultra ranks
-    if (score >= ULTRA_SCORE_STARTS[0]) {
-        let tierIdx = ULTRA_TIERS.length - 1;
-        for (let i = ULTRA_TIERS.length - 1; i >= 0; i--) {
-            if (score >= ULTRA_SCORE_STARTS[i]) { tierIdx = i; break; }
+    if (score >= ULTRA_THRESHOLDS[0]) {
+        let idx = ULTRA_THRESHOLDS.length - 2; // cap at US9
+        for (let i = ULTRA_THRESHOLDS.length - 2; i >= 0; i--) {
+            if (score >= ULTRA_THRESHOLDS[i]) { idx = i; break; }
         }
+        const tierIdx = Math.floor(idx / 10);
+        const subLevel = idx % 10;
         const tier = ULTRA_TIERS[tierIdx];
-        const tierStart = ULTRA_SCORE_STARTS[tierIdx];
-        const tierEnd = ULTRA_SCORE_STARTS[tierIdx + 1];
-        const subLevel = Math.min(9, Math.floor((score - tierStart) / (tierEnd - tierStart) * 10));
         const key = `U${tier}`;
         const colors = ULTRA_RANK_COLORS[key] || { tier: '#9e9e9e', u: '#b0bec5' };
         return {
@@ -236,7 +242,7 @@ export class RankBadgeComponent implements OnChanges {
     /** 1-based rarity (1-98): G, G+, F, … SS+, UG0-UG9, … US0-US9 */
     @Input() rarity?: number;
 
-    /** URA evaluation score — used when rarity is not available (team stadium, veterans) */
+    /** URA evaluation score - used when rarity is not available (team stadium, veterans) */
     @Input() score?: number;
 
     /** Badge diameter preset */

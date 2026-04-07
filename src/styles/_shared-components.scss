@@ -4,8 +4,8 @@
 // ===== MONO FONT =====
 // Standard monospace font stack for number display
 .mono {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
-  font-variant-numeric: tabular-nums;
+  //font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  //font-variant-numeric: tabular-nums;
 }
 
 // ===== TAB BAR PATTERN =====
@@ -134,7 +134,6 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.5);
-  text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.75rem;
 }
@@ -455,7 +454,7 @@
 .ds-section-title { @include section-title; }
 
 // ===== STATE CLASSES =====
-// For loading, error, empty states—just apply the class to a container div.
+// For loading, error, empty states-just apply the class to a container div.
 .ds-state       { @include state-container; }
 .ds-loading     { @include loading-container; }
 .ds-no-results  { @include no-results; }

@@ -105,7 +105,7 @@ export class SettingsComponent implements OnInit {
       error: err => {
         console.error('Link account error:', err.status, err.error);
         this.linkError = err.error?.message || err.error?.error
-          || (err.status === 0 ? 'Network error — is the backend running?' : `Request failed (${err.status})`);
+          || (err.status === 0 ? 'Network error - is the backend running?' : `Request failed (${err.status})`);
         this.linking = false;
       }
     });

@@ -412,7 +412,7 @@
 }
 
 // =============================================
-// FILTER CONTENT � instant expand/collapse (no transition for performance)
+// FILTER CONTENT - instant expand/collapse (no transition for performance)
 // =============================================
 .filter-content {
   display: none;
@@ -492,7 +492,7 @@
 }
 
 // =============================================
-// MAIN LAYOUT � horizontal row for Quick Filters + Tree
+// MAIN LAYOUT - horizontal row for Quick Filters + Tree
 // =============================================
 .main-layout {
   display: flex;
@@ -1204,7 +1204,7 @@
   &:last-child { margin-bottom: 0; }
 }
 
-// Legacy tree section � horizontal layout matching advanced-filter
+// Legacy tree section - horizontal layout matching advanced-filter
 .legacy-tree-section {
   display: flex;
   align-items: stretch;
@@ -1352,7 +1352,7 @@ $space-x: 40px; // horizontal space between columns
 $space-y: 24px; // vertical gap between parent elements
 $space-y-gp: 16px; // vertical gap between gp elements
 
-// One row per veteran � horizontal LTR tree
+// One row per veteran - horizontal LTR tree
 .tree {
   display: flex;
   align-items: center;
@@ -1410,7 +1410,7 @@ $node-border: rgba(255, 255, 255, 0.08);
 
 .tree-node--parent { flex: 1; padding: 0.6rem; border-left: 3px solid rgba(100, 181, 246, 0.2); }
 
-.tree-node--gp { padding: 0.4rem 0.5rem; border-left: 3px solid rgba(186, 104, 200, 0.2); }
+.tree-node--gp { padding: 0.6rem; border-left: 3px solid rgba(186, 104, 200, 0.2); }
 
 .tree-node-head { display: flex; align-items: center; gap: 0.5rem; }
 
@@ -1486,74 +1486,54 @@ $node-border: rgba(255, 255, 255, 0.08);
   margin-top: 0.15rem;
 }
 
-// --- Tree connectors -----------------------------
-// Strategy: each container owns ONE continuous vertical spine (::before)
-// and ONE horizontal connector back to its parent column (::after).
-// Each child only draws a single horizontal tap (::before).
-// Each child draws its own vertical segment that reaches into the gap,
-// so segments from adjacent children overlap to form a continuous spine
-// from center-of-first to center-of-last � no overshooting.
+// --- Tree connectors (real elements) -------------
+// .tree-line  = horizontal connector between sections
+// .tree-elbow = per-row spine segment (two halves: .c-top / .c-bot)
+// Rows are FLUSH (no gap/padding) so elbows form a continuous spine.
+// Spacing comes from margin on the card nodes themselves.
+
+.tree-line {
+  width: $space-x;
+  flex-shrink: 0;
+  align-self: center;
+  border-top: $line-w solid $line-color;
+}
+
+.tree-elbow {
+  width: $space-x;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+
+  .c-top {
+    flex: 1;
+    border-left: $line-w solid $line-color;
+    border-bottom: $line-w solid $line-color;
+  }
+
+  .c-bot {
+    flex: 1;
+    border-left: $line-w solid $line-color;
+  }
+
+  &.first .c-top { border-left: none; }
+  &.last .c-bot  { border-left: none; }
+  &.first.last .c-bot { display: none; }
+}
 
 .tree-branches {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  position: relative;
-  gap: $space-y;
-  margin-left: $space-x;
-  padding-left: $space-x;
-
-  // Horizontal connector: main node ? spine
-  &::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: -$space-x;
-    width: $space-x;
-    height: $line-w;
-    background: $line-color;
-    transform: translateY(-50%);
-  }
 }
 
 .tree-branch {
   display: flex;
-  align-items: center;
-  position: relative;
+  align-items: stretch;
 
-  // Horizontal tap: spine ? parent node
-  &::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: -$space-x;
-    width: $space-x;
-    height: $line-w;
-    background: $line-color;
-    transform: translateY(-50%);
-  }
-
-  // Vertical spine segment (per-child, overlaps in the gap)
-  &::after {
-    content: '';
-    position: absolute;
-    left: -$space-x;
-    width: $line-w;
-    background: $line-color;
-  }
-
-  // First child: from center to bottom + half the gap
-  &:first-child:not(:last-child)::after { top: 50%; bottom: calc(#{$space-y} / -2); }
-
-  // Last child: from top - half the gap to center
-  &:last-child:not(:first-child)::after { top: calc(#{$space-y} / -2); bottom: 50%; }
-
-  // Middle children: full height + gap coverage
-  &:not(:first-child):not(:last-child)::after { top: calc(#{$space-y} / -2); bottom: calc(#{$space-y} / -2); }
-
-  // Only child: no vertical needed
-  &:only-child::after { display: none; }
+  > .tree-node--parent { align-self: center; margin: ($space-y / 2) 0; }
+  > .tree-line { align-self: center; }
 }
 
 .tree-gps {
@@ -1561,194 +1541,71 @@ $node-border: rgba(255, 255, 255, 0.08);
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  justify-content: center;
-  position: relative;
-  gap: $space-y-gp;
-  margin-left: $space-x;
-  padding-left: $space-x;
+}
 
-  // Horizontal connector: parent node ? GP spine
-  &::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: -$space-x;
-    width: $space-x;
-    height: $line-w;
-    background: $line-color;
-    transform: translateY(-50%);
-  }
+.tree-gp-row {
+  display: flex;
+  align-items: stretch;
 
-  >.tree-node--gp {
-    position: relative;
-
-    // Horizontal tap: spine ? GP node
-    &::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: -$space-x;
-      width: $space-x;
-      height: $line-w;
-      background: $line-color;
-      transform: translateY(-50%);
-    }
-
-    // Vertical spine segment (per-child, overlaps in the gap)
-    &::after {
-      content: '';
-      position: absolute;
-      left: -$space-x;
-      width: $line-w;
-      background: $line-color;
-    }
-
-    &:first-child:not(:last-child)::after { top: 50%; bottom: calc(#{$space-y-gp} / -2); }
-
-    &:last-child:not(:first-child)::after { top: calc(#{$space-y-gp} / -2); bottom: 50%; }
-
-    &:not(:first-child):not(:last-child)::after { top: calc(#{$space-y-gp} / -2); bottom: calc(#{$space-y-gp} / -2); }
-
-    &:only-child::after { display: none; }
-  }
+  > .tree-node--gp { align-self: center; margin: ($space-y-gp / 2) 0; }
 }
 
 // --- Vertical tree for narrow viewports ----------
-// Per-child vertical segments so the spine stops at the last node's tap.
 $v-gap: 12px;
 $v-indent: 20px;
-$v-tap-parent: 20px; // avatar-center offset for parent nodes
-$v-tap-gp: 16px; // avatar-center offset for GP nodes
 
 @media (max-width: 860px) {
   .tree { flex-direction: column; align-items: stretch; padding: 1rem; }
-
   .tree-node--main { width: 100% !important; }
 
-  // -- Parents column --
-  .tree-branches {
-    margin-left: 0;
-    padding-left: $v-indent;
-    margin-top: $v-gap;
-    gap: $v-gap;
-    border-left: none;
-    position: relative;
+  // Hide tree-lines on mobile
+  .tree-line { display: none; }
 
-    // Vertical line from main card down to the first parent's horizontal tap
-    &::before {
-      content: '';
-      position: absolute;
-      top: -$v-gap;
-      left: 0;
-      width: $line-w;
-      height: calc(#{$v-gap} + #{$v-tap-parent});
-      background: $line-color;
-      display: block;
-    }
+  // Elbows: narrower on mobile
+  .tree-elbow { width: $v-indent; }
 
-    &::after { display: none; }
-  }
+  // Branches container: indented so elbows line up under the tree-line
+  .tree-branches { margin-left: $v-indent; }
 
+  // Each branch is a 2-column grid.
+  // Elbow sits in row 1 only → horizontal tap aligns with card center.
+  // A ::before on non-last branches continues the spine through rows 2-3.
   .tree-branch {
-    flex-direction: column;
-    align-items: stretch;
-    position: relative;
+    display: grid;
+    grid-template-columns: $v-indent 1fr;
 
-    // Horizontal tap to parent node
-    &::before {
+    > .tree-elbow        { grid-column: 1; grid-row: 1; }
+    > .tree-node--parent { grid-column: 2; grid-row: 1; margin: ($v-gap / 2) 0; }
+    > .tree-line          { grid-column: 2; grid-row: 2; margin-left: $v-indent; }
+    > .tree-gps           { grid-column: 2; grid-row: 3; }
+
+    // Spine continuation between branches (column 1, below the card row)
+    &:not(:last-child)::before {
       content: '';
-      position: absolute;
-      top: $v-tap-parent;
-      left: -$v-indent;
-      width: $v-indent;
-      height: $line-w;
-      background: $line-color;
-      transform: none;
+      grid-column: 1;
+      grid-row: 2 / 4;
+      border-left: $line-w solid $line-color;
     }
-
-    // Vertical spine segment
-    &::after {
-      content: '';
-      position: absolute;
-      left: -$v-indent;
-      width: $line-w;
-      background: $line-color;
-    }
-
-    // First (not only): from tap DOWN past bottom into gap (continues to next)
-    &:first-child:not(:only-child)::after { top: $v-tap-parent; bottom: -$v-gap; }
-
-    // Last (not only): from above gap DOWN to tap (terminates)
-    &:last-child:not(:only-child)::after { top: -$v-gap; height: calc(#{$v-gap} + #{$v-tap-parent}); }
-
-    // Middle: full span through both gaps
-    &:not(:first-child):not(:last-child)::after { top: -$v-gap; bottom: -$v-gap; }
-
-    // Only child: just from gap to tap
-    &:only-child::after { top: -$v-gap; height: calc(#{$v-gap} + #{$v-tap-parent}); }
   }
 
-  .tree-node--parent { flex: none; width: 100%; }
+  .tree-node--parent { width: 100%; }
 
-  // -- Grandparents column --
-  .tree-gps {
-    margin-left: 0;
-    padding-left: $v-indent;
-    margin-top: $v-gap;
-    gap: $v-gap;
-    border-left: none;
-    position: relative;
+  // GP section indented under parent
+  .tree-gps { margin-left: $v-indent; }
 
-    // Vertical line from parent card down to the first GP's horizontal tap
-    &::before {
-      content: '';
-      position: absolute;
-      top: -$v-gap;
-      left: 0;
-      width: $line-w;
-      height: calc(#{$v-gap} + #{$v-tap-gp});
-      background: $line-color;
-      display: block;
-    }
+  // GP rows: simple 2-column grid
+  .tree-gp-row {
+    display: grid;
+    grid-template-columns: $v-indent 1fr;
 
-    &::after { display: none; }
+    > .tree-elbow    { grid-column: 1; grid-row: 1; }
+    > .tree-node--gp { grid-column: 2; grid-row: 1; margin: ($v-gap / 2) 0; }
+  }
 
-    >.tree-node--gp {
-      position: relative;
-      margin-left: 0;
-      padding-left: 0;
-      width: auto;
-      margin-top: 0;
-
-      // Horizontal tap to GP node
-      &::before {
-        content: '';
-        position: absolute;
-        top: $v-tap-gp;
-        left: -$v-indent;
-        width: $v-indent;
-        height: $line-w;
-        background: $line-color;
-        transform: none;
-      }
-
-      // Vertical spine segment
-      &::after {
-        content: '';
-        position: absolute;
-        left: -$v-indent;
-        width: $line-w;
-        background: $line-color;
-      }
-
-      &:first-child:not(:only-child)::after { top: $v-tap-gp; bottom: -$v-gap; }
-
-      &:last-child:not(:only-child)::after { top: -$v-gap; height: calc(#{$v-gap} + #{$v-tap-gp}); }
-
-      &:not(:first-child):not(:last-child)::after { top: -$v-gap; bottom: -$v-gap; }
-
-      &:only-child::after { top: -$v-gap; height: calc(#{$v-gap} + #{$v-tap-gp}); }
-    }
+  // First elbows: connect upward to the tree-line above
+  .tree-branch:first-child > .tree-elbow.first .c-top,
+  .tree-gp-row:first-child > .tree-elbow.first .c-top {
+    border-left: $line-w solid $line-color;
   }
 }
 
@@ -2235,7 +2092,7 @@ $v-tap-gp: 16px; // avatar-center offset for GP nodes
   mat-icon { @include icon-size(14px); }
 }
 
-// Aptitude badges (table view expanded) � colors come from shared _shared-components.scss
+// Aptitude badges (table view expanded) - colors come from shared _shared-components.scss
 .apt-item {
   display: inline-flex;
   align-items: center;

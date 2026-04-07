@@ -23,7 +23,7 @@
 // Only the active color is rankings-specific
 .tab-bar .tab-btn.active { background: rgba(255, 183, 77, 0.12); color: var(--accent-warning); border-color: rgba(255, 183, 77, 0.25); }
 
-// Filters — uses global .search-field, .compact-select, .clear-filters-btn, .filter-bar
+// Filters - uses global .search-field, .compact-select, .clear-filters-btn, .filter-bar
 .filters-container {
   display: flex;
   flex-direction: column;
@@ -39,7 +39,7 @@
   }
 }
 
-// Loading/empty — uses shared .loading-container, .no-results from _shared-components
+// Loading/empty - uses shared .loading-container, .no-results from _shared-components
 
 // ─── Leaderboard ─────────────────────────────
 .leaderboard { display: flex; flex-direction: column; gap: 6px; }
@@ -108,7 +108,8 @@
     transition: color 0.15s ease;
     @include text-ellipsis;
 
-    mat-icon { @include icon-size(12px); }
+    mat-icon { @include icon-size(12px); }
+
     &:hover { color: var(--accent-primary); text-decoration: underline; }
   }
 }

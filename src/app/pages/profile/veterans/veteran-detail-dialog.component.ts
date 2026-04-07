@@ -99,7 +99,7 @@ export class VeteranDetailDialogComponent {
     this.dialog.open(RaceResultsDialogComponent, {
       data: { charId: this.v.card_id, charName, winSaddleIds: winSaddles, runRaceIds: [] } as RaceResultsDialogData,
       panelClass: 'modern-dialog-panel',
-      width: '900px',
+      width: '1100px',
       maxWidth: '95vw',
       maxHeight: '90vh',
       autoFocus: false,

@@ -86,7 +86,7 @@ export const routes: Routes = [
       }
     ]
   },
-  // Example guarded route — add canActivate: [authGuard] to any route that needs authentication
+  // Example guarded route - add canActivate: [authGuard] to any route that needs authentication
   {
     path: 'settings',
     loadComponent: () => import('./pages/settings/settings.component').then(m => m.SettingsComponent),

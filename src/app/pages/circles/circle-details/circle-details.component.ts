@@ -325,7 +325,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   trackByViewerId(_: number, member: any): string {
     return member.trainer_id ?? String(_);
   }
-  // External tooltip handler — renders tooltip as a DOM element on document.body
+  // External tooltip handler - renders tooltip as a DOM element on document.body
   // so it is never clipped by overflow on parent containers
   externalTooltipHandler(context: any): void {
     const { chart, tooltip } = context;
@@ -803,13 +803,13 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       if (effectiveLatestValue > 0 && firstFanCount > 0) {
         monthlyGain = effectiveLatestValue - firstFanCount;
       }
-      // Calculate Daily Avg (Month) — denominator includes the extra day from next_month_start
+      // Calculate Daily Avg (Month) - denominator includes the extra day from next_month_start
       let dailyAvg = 0;
       if (monthlyGain > 0 && effectiveLatestIndex > firstIndex) {
         const daySpan = effectiveLatestIndex - firstIndex;
         dailyAvg = monthlyGain / daySpan;
       }
-      // Calculate 7 Day Avg — seed nonZeroValues with the synthetic next_month_start point
+      // Calculate 7 Day Avg - seed nonZeroValues with the synthetic next_month_start point
       let sevenDayAvg = 0;
       let weeklyGain = 0;
       let priorInWeekly = 0;
@@ -1170,7 +1170,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
             isCarriedForward.push(false);
             isPriorCircle.push(includePrior && shiftedRaw < 0);
           } else {
-            // Zero gap — check if there's future data
+            // Zero gap - check if there's future data
             let hasFutureData = false;
             for (let j = i + 1; j < member.daily_fans.length; j++) {
               const futureRaw = member.daily_fans[j];
@@ -1488,7 +1488,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     if (insertAt < result.length) {
       result[insertAt] = nextMonthStart;        // fill trailing-zero slot
     } else {
-      result.push(nextMonthStart);              // all slots filled — append one
+      result.push(nextMonthStart);              // all slots filled - append one
     }
     return result;
   }
@@ -1531,9 +1531,9 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       { label: 'Trainer ID',        get: m => m.trainer_id,                                   sum: false },
       ...(c.showRole             ? [{ label: 'Role',              get: (m: CircleMember) => m.role,                               sum: false }] : []),
       { label: 'Status',            get: m => m.isActive ? 'Active' : 'Inactive',             sum: false },
-      // Primary metric — always present (label automatically reflects selectedCalculation)
+      // Primary metric - always present (label automatically reflects selectedCalculation)
       primarySpec,
-      // Additional metrics — only added if they are not already the primary
+      // Additional metrics - only added if they are not already the primary
       ...(c.showMonthlyGain      && sel !== 'monthly_gain'      ? [{ label: 'Monthly Gain',      get: (m: CircleMember) => m.monthly_gain ?? 0,                  sum: true  }] : []),
       ...(c.showWeeklyGain       && sel !== 'weekly_gain'       ? [{ label: 'Weekly Gain',       get: (m: CircleMember) => m.weekly_gain ?? 0,                   sum: true  }] : []),
       ...(c.showDailyGain        && sel !== 'daily_gain'        ? [{ label: 'Daily Gain',        get: (m: CircleMember) => m.daily_gain ?? 0,                    sum: true  }] : []),
@@ -1642,13 +1642,13 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     const ExcelJS: typeof import('exceljs') = (ExcelJSModule as any).default ?? ExcelJSModule;
     const c = this.config;
     // Colour palette (dark-theme matching the app)
-    const H_BG        = 'FF1B3A6B';  // dark blue — header background
-    const H_FG        = 'FFFFFFFF';  // white     — header text
-    const TOTALS_BG   = 'FF0D47A1';  // deeper blue — totals row
+    const H_BG        = 'FF1B3A6B';  // dark blue - header background
+    const H_FG        = 'FFFFFFFF';  // white     - header text
+    const TOTALS_BG   = 'FF0D47A1';  // deeper blue - totals row
     const ROW_A       = 'FF16162A';  // base row
     const ROW_B       = 'FF1A1A32';  // alt row
-    const INACTIVE    = 'FF2A1F1F';  // muted red  — inactive member
-    const PRIOR_BG    = 'FF152215';  // dark green — prior-club day cell
+    const INACTIVE    = 'FF2A1F1F';  // muted red  - inactive member
+    const PRIOR_BG    = 'FF152215';  // dark green - prior-club day cell
     const PRIOR_FG    = 'FF81C784';  // light green text for prior-club cells
     const DAY_H_BG    = 'FF162244';  // day column header
     const DELTA_H_BG  = 'FF163044';  // delta column header

@@ -33,7 +33,7 @@
 }
 
 .settings-card {
-  @include section-card(var(--surface-1));
+  @include section-card();
 }
 
 .card-header {

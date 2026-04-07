@@ -485,7 +485,7 @@
 
 // --- Inheritance ---------------------------------
 .inheritance-card {
-  // Remove the inner record-card styling � we already have the outer details-card
+  // Remove the inner record-card styling - we already have the outer details-card
   ::ng-deep .record-card {
     background: none !important;
     border: none !important;
@@ -842,7 +842,7 @@
 
   .details-card .card-content { padding: 0 0.75rem 0.75rem; }
 
-  // Tables � hide rank column on very small screens
+  // Tables - hide rank column on very small screens
   .data-table {
     th, td { padding: 0.4rem 0.4rem; font-size: 0.7rem; }
 

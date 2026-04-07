@@ -15,7 +15,7 @@
   gap: 0.75rem;
 }
 
-// Filters — uses global .search-field, .compact-select, .filter-bar,
+// Filters - uses global .search-field, .compact-select, .filter-bar,
 // .clear-filters-btn, .sort-direction-btn from shared styles
 .filters-container {
   display: flex;
@@ -127,7 +127,7 @@
 
 .results-info { font-size: 0.8125rem; color: var(--text-muted); padding: 0 0.25rem; }
 
-// no-results — uses shared .no-results from _shared-components,
+// no-results - uses shared .no-results from _shared-components,
 // with extra clear-filters-btn styling specific to circles
 .no-results .clear-filters-btn {
   margin-top: 0.25rem;
@@ -144,7 +144,7 @@
   &:hover { background: rgba(100, 181, 246, 0.15); border-color: rgba(100, 181, 246, 0.3); color: #90caf9; }
 }
 
-// loading-container — uses shared .loading-container from _shared-components
+// loading-container - uses shared .loading-container from _shared-components
 
 .results-grid { display: flex; flex-direction: column; gap: 6px; }
 
