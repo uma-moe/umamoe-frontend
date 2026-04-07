@@ -26,15 +26,15 @@ export class PrivacyPolicyComponent {
   ) {
     this.title.setTitle('Privacy Policy | uma.moe');
     this.meta.addTags([
-      { name: 'description', content: 'Privacy policy for uma.moe — Umamusume resource hub. Learn how your data is handled and protected.' },
+      { name: 'description', content: 'Privacy policy for uma.moe - Umamusume resource hub. Learn how your data is handled and protected.' },
       { property: 'og:title', content: 'Privacy Policy | uma.moe' },
-      { property: 'og:description', content: 'Privacy policy for uma.moe — Umamusume resource hub. Learn how your data is handled and protected.' },
+      { property: 'og:description', content: 'Privacy policy for uma.moe - Umamusume resource hub. Learn how your data is handled and protected.' },
       { property: 'og:type', content: 'website' },
       { property: 'og:url', content: 'https://uma.moe/privacy-policy' },
       { property: 'og:image', content: 'https://uma.moe/assets/logo.png' },
       { name: 'twitter:card', content: 'summary' },
       { name: 'twitter:title', content: 'Privacy Policy | uma.moe' },
-      { name: 'twitter:description', content: 'Privacy policy for uma.moe — Umamusume resource hub.' },
+      { name: 'twitter:description', content: 'Privacy policy for uma.moe - Umamusume resource hub.' },
     ]);
   }
 

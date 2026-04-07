@@ -43,7 +43,7 @@
                 </div>
               </ng-container>
 
-              <!-- Race results in this cell (display mode) — position 1 = won, else ran -->
+              <!-- Race results in this cell (display mode) - position 1 = won, else ran -->
               <ng-container *ngIf="!selectable">
                 <ng-container *ngFor="let entry of getRanInCell(year, month, half)">
                   <div
@@ -51,7 +51,7 @@
                     [class.won]="entry.position === 1"
                     [class.ran]="entry.position !== 1"
                     [ngClass]="[getGradeClass(entry.race.grade), getPositionClass(entry.position)]"
-                    [matTooltip]="entry.race.name + (entry.position === 1 ? ' — Won' : ' — ' + entry.position + getOrdinalSuffix(entry.position) + ' place')">
+                    [matTooltip]="entry.race.name + (entry.position === 1 ? ' - Won' : ' - ' + entry.position + getOrdinalSuffix(entry.position) + ' place')">
                     <mat-icon *ngIf="entry.position === 1" class="won-icon">emoji_events</mat-icon>
                     <span *ngIf="entry.position !== 1" class="position-num">{{ entry.position }}</span>
                     <span class="badge-label">{{ entry.race.short_name }}</span>
@@ -63,7 +63,7 @@
                     <div
                       class="race-badge won"
                       [ngClass]="getGradeClass(race.grade)"
-                      [matTooltip]="race.name + ' — Won'">
+                      [matTooltip]="race.name + ' - Won'">
                       <mat-icon class="won-icon">emoji_events</mat-icon>
                       <span class="badge-label">{{ race.short_name }}</span>
                     </div>

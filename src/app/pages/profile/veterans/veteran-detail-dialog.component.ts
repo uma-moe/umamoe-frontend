@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RankBadgeComponent } from '../../../components/rank-badge/rank-badge.component';
 import { RaceResultsDialogComponent, RaceResultsDialogData } from '../../../components/race-results-dialog/race-results-dialog.component';
 import { FactorService } from '../../../services/factor.service';
+import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
 import { VeteranMember, SuccessionChara, FactorInfoEntry } from '../../../models/profile.model';
 import RACE_DATA from '../../../../data/race_to_saddle_mapping.json';
 
@@ -40,7 +41,7 @@ export interface VeteranDetailData {
 @Component({
   selector: 'app-veteran-detail-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule, MatTooltipModule, RankBadgeComponent],
+  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule, MatTooltipModule, RankBadgeComponent, LocaleNumberPipe],
   templateUrl: './veteran-detail-dialog.component.html',
   styleUrls: ['./veteran-detail-dialog.component.scss'],
   encapsulation: ViewEncapsulation.None,
@@ -98,7 +99,7 @@ export class VeteranDetailDialogComponent {
     this.dialog.open(RaceResultsDialogComponent, {
       data: { charId: this.v.card_id, charName, winSaddleIds: winSaddles, runRaceIds: [] } as RaceResultsDialogData,
       panelClass: 'modern-dialog-panel',
-      width: '900px',
+      width: '1100px',
       maxWidth: '95vw',
       maxHeight: '90vh',
       autoFocus: false,

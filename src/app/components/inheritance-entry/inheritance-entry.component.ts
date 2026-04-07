@@ -11,11 +11,12 @@ import { ResolveSparksPipe } from '../../pipes/resolve-sparks.pipe';
 import { TrainerIdFormatPipe } from '../../pipes/trainer-id-format.pipe';
 import { RaceResultsDialogComponent, RaceResultsDialogData } from '../race-results-dialog/race-results-dialog.component';
 import { RankBadgeComponent } from '../rank-badge/rank-badge.component';
+import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 
 @Component({
     selector: 'app-inheritance-entry',
     standalone: true,
-    imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule, MatDialogModule, ResolveSparksPipe, TrainerIdFormatPipe, DatePipe, RankBadgeComponent],
+    imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule, MatDialogModule, ResolveSparksPipe, TrainerIdFormatPipe, DatePipe, RankBadgeComponent, LocaleNumberPipe],
     templateUrl: './inheritance-entry.component.html',
     styleUrl: './inheritance-entry.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -46,7 +47,7 @@ export class InheritanceEntryComponent {
     @Output() copyTrainerId = new EventEmitter<{ accountId: string; event: Event }>();
     @Output() reportUnavailable = new EventEmitter<{ accountId: string; event: Event }>();
 
-    /** Spark display mode — driven by parent (global toggle) */
+    /** Spark display mode - driven by parent (global toggle) */
     @Input() sparkViewMode: 'merged' | 'split' = 'merged';
     /** Currently focused parent in split view */
     selectedParent: 'main' | 'left' | 'right' | null = null;
@@ -167,7 +168,7 @@ export class InheritanceEntryComponent {
         this.dialog.open(RaceResultsDialogComponent, {
             data: { charId, charName, winSaddleIds: saddles, runRaceIds } as RaceResultsDialogData,
             panelClass: 'modern-dialog-panel',
-            width: '900px',
+            width: '1100px',
             maxWidth: '95vw',
             maxHeight: '90vh',
             autoFocus: false,

@@ -24,7 +24,7 @@ export class AuthInterceptor implements HttpInterceptor {
 
     return next.handle(req).pipe(
       catchError((error: HttpErrorResponse) => {
-        // On 401, clear the token but don't force navigation —
+        // On 401, clear the token but don't force navigation -
         // let the calling code (fetchMe, components) handle UX.
         if (error.status === 401 && this.isApiRequest(req.url)) {
           localStorage.removeItem('auth_token');

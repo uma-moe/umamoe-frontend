@@ -31,6 +31,7 @@ import { environment } from '../../../environments/environment';
 import { AdvancedFilterComponent, UnifiedSearchParams } from '../../components/advanced-filter/advanced-filter.component';
 import { InheritanceEntryComponent } from '../../components/inheritance-entry/inheritance-entry.component';
 import { getCharacterById } from '../../data/character.data';
+import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 @Component({
   selector: 'app-inheritance-database',
   standalone: true,
@@ -50,7 +51,8 @@ import { getCharacterById } from '../../data/character.data';
     TrainerIdFormatPipe,
     ResolveSparksPipe,
     AdvancedFilterComponent,
-    InheritanceEntryComponent
+    InheritanceEntryComponent,
+    LocaleNumberPipe
   ],
   templateUrl: './inheritance-database.component.html',
   styleUrl: './inheritance-database.component.scss'
@@ -69,7 +71,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   currentFilters: InheritanceFilters | null = null;
   currentAdvancedFilters: UnifiedSearchParams | null = null;
   hasMoreRecords = true;
-  // Infinite scroll properties
+  // Scroll / pagination mode
+  listMode: 'infinite' | 'paginated' = 'infinite';
+  private readonly LIST_MODE_KEY = 'db-list-mode';
+  // Pagination properties
   pageSize = 12;
   currentPage = 0;
   totalRecords = 0; // Total records from the search result
@@ -108,6 +113,15 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     private title: Title,
     private ngZone: NgZone
   ) {
+    // Restore list mode preference
+    const saved = localStorage.getItem(this.LIST_MODE_KEY);
+    if (saved === 'paginated' || saved === 'infinite') this.listMode = saved;
+    // Restore page from URL - also force paginated mode
+    const urlPage = parseInt(this.route.snapshot.queryParams['page'], 10);
+    if (!isNaN(urlPage) && urlPage > 0) {
+      this.currentPage = urlPage - 1;
+      this.listMode = 'paginated';
+    }
     this.title.setTitle('Database | honse.moe');
     this.meta.addTags([
       { name: 'description', content: 'Browse and search the Umamusume database. Find optimal inheritance skills and support cards for your team.' },
@@ -172,7 +186,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         const threshold = 300;
         const position = window.pageYOffset + window.innerHeight;
         const height = document.documentElement.scrollHeight;
-        if (position > height - threshold && this.hasMoreRecords && !this.loading && !this.loadingMore) {
+        if (this.listMode === 'infinite' && position > height - threshold && this.hasMoreRecords && !this.loading && !this.loadingMore) {
           this.ngZone.run(() => this.loadMoreRecords());
         }
         this.scrollThrottled = false;
@@ -181,10 +195,16 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     window.addEventListener('scroll', this.scrollListener, { passive: true });
   }
 
+  private _pendingPage: number | null = null;
+
   ngAfterViewInit() {
     // Check for filters URL parameter
     const filters = this.route.snapshot.queryParams['filters'];
     if (filters) {
+      // Save the page from URL so it survives the debounced filter change
+      if (this.currentPage > 0) {
+        this._pendingPage = this.currentPage;
+      }
       // Load state
       // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError if the load triggers immediate changes
       setTimeout(() => {
@@ -205,8 +225,13 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       queryParamsHandling: 'merge',
       replaceUrl: true
     });
-    // Reset pagination and search
-    this.currentPage = 0;
+    // Reset pagination and search (but preserve page when restoring from URL)
+    if (this._pendingPage !== null) {
+      this.currentPage = this._pendingPage;
+      this._pendingPage = null;
+    } else {
+      this.currentPage = 0;
+    }
     this.allRecords = [];
     this.hasMoreRecords = true;
     this.searchRecords();
@@ -430,6 +455,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       .subscribe({
         next: (result) => {
           this.totalRecords = result.total || 0;
+          this._totalPages = result.totalPages || Math.max(1, Math.ceil(this.totalRecords / this.pageSize));
           if (this.currentPage === 0) {
             // First page or new search - replace all records
             this.allRecords = result.items || [];
@@ -482,6 +508,58 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     if (!this.currentFilters?.aptitudes) return undefined;
     const aptitude = this.currentFilters.aptitudes.find(a => a.type === aptitudeType);
     return aptitude?.level;
+  }
+  get totalPages(): number {
+    return this._totalPages;
+  }
+  _totalPages = 1;
+  toggleListMode() {
+    this.listMode = this.listMode === 'infinite' ? 'paginated' : 'infinite';
+    localStorage.setItem(this.LIST_MODE_KEY, this.listMode);
+    // Reset and re-search when switching modes
+    this.currentPage = 0;
+    this.allRecords = [];
+    this.hasMoreRecords = true;
+    // Clear page param from URL
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { page: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+    this.searchRecords();
+  }
+  goToPage(page: number) {
+    if (page < 0 || page >= this.totalPages || page === this.currentPage) return;
+    this.currentPage = page;
+    this.allRecords = [];
+    this.hasMoreRecords = true;
+    // Update URL with page param
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { page: page > 0 ? page + 1 : null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+    this.searchRecords();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  /** Returns page indices to display, using -1 for ellipsis. Always returns exactly 9 slots. */
+  getVisiblePages(): number[] {
+    const total = this.totalPages;
+    if (total <= 9) {
+      // Pad with -2 (hidden) to keep length 9
+      const pages = Array.from({ length: total }, (_, i) => i);
+      while (pages.length < 9) pages.push(-2);
+      return pages;
+    }
+    const cur = this.currentPage;
+    // Near start: [0 1 2 3 4 5 6 ... last]
+    if (cur <= 4) return [0, 1, 2, 3, 4, 5, 6, -1, total - 1];
+    // Near end: [first ... last-6 last-5 last-4 last-3 last-2 last-1 last]
+    if (cur >= total - 5) return [0, -1, total - 7, total - 6, total - 5, total - 4, total - 3, total - 2, total - 1];
+    // Middle: [first ... cur-2 cur-1 cur cur+1 cur+2 ... last]
+    return [0, -1, cur - 2, cur - 1, cur, cur + 1, cur + 2, -1, total - 1];
   }
   hasActiveFilters(): boolean {
     if (!this.currentFilters && !this.trainerIdFilter) return false;

@@ -16,6 +16,7 @@ import { Circle, CircleMember, CircleHistoryPoint, CircleMemberMonthlyData } fro
 import { DiscordLinkPipe } from '../../../pipes/discord-link.pipe';
 import { MemberDisplaySettingsDialogComponent } from './member-display-settings-dialog.component';
 import { AnimatedNumberComponent } from '../../../components/animated-number/animated-number.component';
+import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
 Chart.register(...registerables);
 export type CalculationType = 'monthly_gain' | 'weekly_gain' | 'daily_gain' | 'avg_daily_gain' | 'daily_avg' | 'projected_monthly' | 'total_fans';
 export interface ChartLegendItem {
@@ -64,7 +65,8 @@ export interface CalendarDay {
     MatDialogModule,
     MatTooltipModule,
     DiscordLinkPipe,
-    AnimatedNumberComponent
+    AnimatedNumberComponent,
+    LocaleNumberPipe
   ],
   templateUrl: './circle-details.component.html',
   styleUrl: './circle-details.component.scss'
@@ -323,7 +325,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   trackByViewerId(_: number, member: any): string {
     return member.trainer_id ?? String(_);
   }
-  // External tooltip handler — renders tooltip as a DOM element on document.body
+  // External tooltip handler - renders tooltip as a DOM element on document.body
   // so it is never clipped by overflow on parent containers
   externalTooltipHandler(context: any): void {
     const { chart, tooltip } = context;
@@ -417,13 +419,11 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     }
     this.initMemberChart();
   }
+  private static compactFmt = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
   formatCompact(value: number): string {
-    const abs = Math.abs(value);
-    const sign = value >= 0 ? '+' : '-';
-    if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
-    if (abs >= 10_000) return sign + Math.round(abs / 1000) + 'K';
-    if (abs >= 1_000) return sign + (abs / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-    return sign + abs;
+    const sign = value >= 0 ? '+' : '';
+    if (Math.abs(value) >= 100_000) return sign + CircleDetailsComponent.compactFmt.format(value);
+    return sign + value.toLocaleString();
   }
   toggleMemberViewMode(): void {
     this.memberViewMode = this.memberViewMode === 'chart' ? 'calendar' : 'chart';
@@ -803,13 +803,13 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       if (effectiveLatestValue > 0 && firstFanCount > 0) {
         monthlyGain = effectiveLatestValue - firstFanCount;
       }
-      // Calculate Daily Avg (Month) — denominator includes the extra day from next_month_start
+      // Calculate Daily Avg (Month) - denominator includes the extra day from next_month_start
       let dailyAvg = 0;
       if (monthlyGain > 0 && effectiveLatestIndex > firstIndex) {
         const daySpan = effectiveLatestIndex - firstIndex;
         dailyAvg = monthlyGain / daySpan;
       }
-      // Calculate 7 Day Avg — seed nonZeroValues with the synthetic next_month_start point
+      // Calculate 7 Day Avg - seed nonZeroValues with the synthetic next_month_start point
       let sevenDayAvg = 0;
       let weeklyGain = 0;
       let priorInWeekly = 0;
@@ -1043,7 +1043,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
               color: 'rgba(255, 255, 255, 0.7)',
               callback: (value) => {
                 if (typeof value === 'number') {
-                  return new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short" }).format(value);
+                  return new Intl.NumberFormat('en', { notation: "compact", compactDisplay: "short" }).format(value);
                 }
                 return value;
               }
@@ -1064,7 +1064,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
                   label += ': ';
                 }
                 if (context.parsed.y !== null) {
-                  label += new Intl.NumberFormat('en-US').format(context.parsed.y);
+                  label += new Intl.NumberFormat(undefined).format(context.parsed.y);
                 }
                 return label;
               }
@@ -1170,7 +1170,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
             isCarriedForward.push(false);
             isPriorCircle.push(includePrior && shiftedRaw < 0);
           } else {
-            // Zero gap — check if there's future data
+            // Zero gap - check if there's future data
             let hasFutureData = false;
             for (let j = i + 1; j < member.daily_fans.length; j++) {
               const futureRaw = member.daily_fans[j];
@@ -1327,7 +1327,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
               color: 'rgba(255, 255, 255, 0.7)',
               callback: (value) => {
                 if (typeof value === 'number') {
-                  return new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short" }).format(value);
+                  return new Intl.NumberFormat('en', { notation: "compact", compactDisplay: "short" }).format(value);
                 }
                 return value;
               }
@@ -1352,7 +1352,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
                 if (currentVal === null || currentVal === undefined) return label;
                 if (this.memberChartMode === 'delta') {
                   // Delta mode: value IS the daily delta
-                  label += (currentVal > 0 ? '+' : '') + new Intl.NumberFormat('en-US').format(currentVal);
+                  label += (currentVal > 0 ? '+' : '') + new Intl.NumberFormat(undefined).format(currentVal);
                 } else {
                   // Cumulative mode: show total + daily delta
                   let dailyGain = 0;
@@ -1365,9 +1365,9 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
                       }
                     }
                   }
-                  label += new Intl.NumberFormat('en-US').format(currentVal);
+                  label += new Intl.NumberFormat(undefined).format(currentVal);
                   if (dailyGain !== 0) {
-                    label += ` (${dailyGain > 0 ? '+' : ''}${new Intl.NumberFormat('en-US').format(dailyGain)})`;
+                    label += ` (${dailyGain > 0 ? '+' : ''}${new Intl.NumberFormat(undefined).format(dailyGain)})`;
                   }
                 }
                 return label;
@@ -1488,7 +1488,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     if (insertAt < result.length) {
       result[insertAt] = nextMonthStart;        // fill trailing-zero slot
     } else {
-      result.push(nextMonthStart);              // all slots filled — append one
+      result.push(nextMonthStart);              // all slots filled - append one
     }
     return result;
   }
@@ -1531,9 +1531,9 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       { label: 'Trainer ID',        get: m => m.trainer_id,                                   sum: false },
       ...(c.showRole             ? [{ label: 'Role',              get: (m: CircleMember) => m.role,                               sum: false }] : []),
       { label: 'Status',            get: m => m.isActive ? 'Active' : 'Inactive',             sum: false },
-      // Primary metric — always present (label automatically reflects selectedCalculation)
+      // Primary metric - always present (label automatically reflects selectedCalculation)
       primarySpec,
-      // Additional metrics — only added if they are not already the primary
+      // Additional metrics - only added if they are not already the primary
       ...(c.showMonthlyGain      && sel !== 'monthly_gain'      ? [{ label: 'Monthly Gain',      get: (m: CircleMember) => m.monthly_gain ?? 0,                  sum: true  }] : []),
       ...(c.showWeeklyGain       && sel !== 'weekly_gain'       ? [{ label: 'Weekly Gain',       get: (m: CircleMember) => m.weekly_gain ?? 0,                   sum: true  }] : []),
       ...(c.showDailyGain        && sel !== 'daily_gain'        ? [{ label: 'Daily Gain',        get: (m: CircleMember) => m.daily_gain ?? 0,                    sum: true  }] : []),
@@ -1642,13 +1642,13 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     const ExcelJS: typeof import('exceljs') = (ExcelJSModule as any).default ?? ExcelJSModule;
     const c = this.config;
     // Colour palette (dark-theme matching the app)
-    const H_BG        = 'FF1B3A6B';  // dark blue — header background
-    const H_FG        = 'FFFFFFFF';  // white     — header text
-    const TOTALS_BG   = 'FF0D47A1';  // deeper blue — totals row
+    const H_BG        = 'FF1B3A6B';  // dark blue - header background
+    const H_FG        = 'FFFFFFFF';  // white     - header text
+    const TOTALS_BG   = 'FF0D47A1';  // deeper blue - totals row
     const ROW_A       = 'FF16162A';  // base row
     const ROW_B       = 'FF1A1A32';  // alt row
-    const INACTIVE    = 'FF2A1F1F';  // muted red  — inactive member
-    const PRIOR_BG    = 'FF152215';  // dark green — prior-club day cell
+    const INACTIVE    = 'FF2A1F1F';  // muted red  - inactive member
+    const PRIOR_BG    = 'FF152215';  // dark green - prior-club day cell
     const PRIOR_FG    = 'FF81C784';  // light green text for prior-club cells
     const DAY_H_BG    = 'FF162244';  // day column header
     const DELTA_H_BG  = 'FF163044';  // delta column header

@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../services/auth.service';
 import { LinkedAccount, Identity, User, ApiKey } from '../../models/auth.model';
 import { getCharacterById } from '../../data/character.data';
+import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 
 @Component({
   selector: 'app-settings',
@@ -18,7 +19,7 @@ import { getCharacterById } from '../../data/character.data';
     FormsModule,
     MatIconModule,
     MatButtonModule,
-
+    LocaleNumberPipe,
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss'
@@ -104,7 +105,7 @@ export class SettingsComponent implements OnInit {
       error: err => {
         console.error('Link account error:', err.status, err.error);
         this.linkError = err.error?.message || err.error?.error
-          || (err.status === 0 ? 'Network error — is the backend running?' : `Request failed (${err.status})`);
+          || (err.status === 0 ? 'Network error - is the backend running?' : `Request failed (${err.status})`);
         this.linking = false;
       }
     });

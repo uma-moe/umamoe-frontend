@@ -33,7 +33,7 @@
         <div class="results-info">
           <h2>Results</h2>
           <p *ngIf="!loading">
-            {{ totalRecords || 0 }} records found
+            {{ (totalRecords || 0) | localeNumber }} records found
             <span *ngIf="trainerIdFilter" class="trainer-filter-indicator">
               for trainer {{ trainerIdFilter }}
             </span>
@@ -58,11 +58,40 @@
           [class.included]="includeMaxFollowers"
           [class.excluded]="!includeMaxFollowers"
           (click)="onHeaderMaxFollowersToggle(!includeMaxFollowers)"
-          matTooltip="Click to toggle — accounts with 1000 followers are often bots or inactive">
+          matTooltip="Click to toggle - accounts with 1000 followers are often bots or inactive">
           <mat-icon class="badge-icon">{{ includeMaxFollowers ? 'visibility' : 'visibility_off' }}</mat-icon>
           <span class="badge-label">Max Followers</span>
           <span class="badge-status">{{ includeMaxFollowers ? 'ON' : 'OFF' }}</span>
         </button>
+        <button
+          class="list-mode-badge"
+          [class.active]="listMode === 'paginated'"
+          [class.inactive]="listMode === 'infinite'"
+          (click)="toggleListMode()"
+          [matTooltip]="listMode === 'infinite' ? 'Switch to paginated view' : 'Switch to infinite scroll'">
+          <mat-icon class="badge-icon">{{ listMode === 'infinite' ? 'all_inclusive' : 'last_page' }}</mat-icon>
+          <span class="badge-label">{{ listMode === 'infinite' ? 'Infinite' : 'Pages' }}</span>
+        </button>
+        <div class="pagination-inline" *ngIf="listMode === 'paginated' && _totalPages > 1">
+          <button class="page-btn" [disabled]="currentPage === 0" (click)="goToPage(0)" matTooltip="First page">
+            <mat-icon>first_page</mat-icon>
+          </button>
+          <button class="page-btn" [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <ng-container *ngFor="let p of getVisiblePages()">
+            <span *ngIf="p === -1" class="page-ellipsis">&hellip;</span>
+            <button *ngIf="p >= 0" class="page-num" [class.active]="p === currentPage" (click)="goToPage(p)">{{ p + 1 }}</button>
+            <span *ngIf="p === -2" class="page-num page-hidden">&nbsp;</span>
+          </ng-container>
+          <button class="page-btn" [disabled]="currentPage >= totalPages - 1" (click)="goToPage(currentPage + 1)">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+          <button class="page-btn" [disabled]="currentPage >= totalPages - 1" (click)="goToPage(totalPages - 1)" matTooltip="Last page">
+            <mat-icon>last_page</mat-icon>
+          </button>
+        </div>
+        <div class="header-spacer-end"></div>
         <mat-form-field appearance="outline" class="sort-select">
             <mat-label>Sort by</mat-label>
             <mat-select
@@ -126,10 +155,31 @@
         </button>
       </div>
 
-      <!-- Loading more indicator -->
-      <div *ngIf="loadingMore" class="loading-container">
+      <!-- Loading more indicator (infinite scroll only) -->
+      <div *ngIf="loadingMore && listMode === 'infinite'" class="loading-container">
         <mat-spinner diameter="40"></mat-spinner>
         <p>Loading more records...</p>
+      </div>
+
+      <!-- Bottom pagination -->
+      <div class="pagination-bottom" *ngIf="listMode === 'paginated' && _totalPages > 1 && !loading && allRecords.length > 0">
+        <button class="page-btn" [disabled]="currentPage === 0" (click)="goToPage(0)" matTooltip="First page">
+          <mat-icon>first_page</mat-icon>
+        </button>
+        <button class="page-btn" [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <ng-container *ngFor="let p of getVisiblePages()">
+          <span *ngIf="p === -1" class="page-ellipsis">&hellip;</span>
+          <button *ngIf="p >= 0" class="page-num" [class.active]="p === currentPage" (click)="goToPage(p)">{{ p + 1 }}</button>
+          <span *ngIf="p === -2" class="page-num page-hidden">&nbsp;</span>
+        </ng-container>
+        <button class="page-btn" [disabled]="currentPage >= totalPages - 1" (click)="goToPage(currentPage + 1)">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+        <button class="page-btn" [disabled]="currentPage >= totalPages - 1" (click)="goToPage(totalPages - 1)" matTooltip="Last page">
+          <mat-icon>last_page</mat-icon>
+        </button>
       </div>
     </div>
   </div>

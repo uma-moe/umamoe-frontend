@@ -26,7 +26,7 @@
         </h4>
         <div class="m-collapse" [class.m-collapsed]="isSectionCollapsed('mLegacyTree')">
         <div class="legacy-tree-section">
-          <!-- Target Character —  single select in container -->
+          <!-- Target Character -  single select in container -->
           <div class="tree-group">
             <div class="tree-box target-box">
               <div class="tree-circle target-circle" [class.has-character]="treeData.characterId" (click)="selectNode(treeData)">
@@ -41,9 +41,9 @@
             <span class="tree-group-label target-color">Target</span>
           </div>
 
-          <span class="tree-connector">—</span>
+          <span class="tree-connector">-</span>
 
-          <!-- Main Parent — include/exclude in container -->
+          <!-- Main Parent - include/exclude in container -->
           <div class="tree-group">
             <div class="tree-box parent-box">
               <!-- Include section -->
@@ -78,9 +78,9 @@
             <span class="tree-group-label parent-color">Main Parent</span>
           </div>
 
-          <span class="tree-connector">—</span>
+          <span class="tree-connector">-</span>
 
-          <!-- Grand Parents — include/exclude in container -->
+          <!-- Grand Parents - include/exclude in container -->
           <div class="tree-group">
             <div class="tree-box grandparent-box">
               <!-- Include section -->
@@ -173,7 +173,7 @@
             min="0"
             max="4"
             step="1"
-            class="limit-break-slider-compact"
+            class="limit-break-slider-compact compact-slider-dark"
             [displayWith]="formatLabel">
             <input matSliderThumb [(ngModel)]="selectedLimitBreak" (valueChange)="onFilterChange()">
           </mat-slider>
@@ -201,7 +201,7 @@
             <!-- User ID Search -->
             <div class="input-wrapper">
               <span class="input-label">Trainer ID</span>
-              <mat-form-field appearance="fill" class="custom-search-field" subscriptSizing="dynamic">
+              <mat-form-field appearance="fill" class="custom-search-field compact-field-dark" subscriptSizing="dynamic">
                 <input 
                   matInput
                   [(ngModel)]="searchUserId"
@@ -221,7 +221,7 @@
             <!-- Username Search -->
             <div class="input-wrapper">
               <span class="input-label">Username</span>
-              <mat-form-field appearance="fill" class="custom-search-field" subscriptSizing="dynamic">
+              <mat-form-field appearance="fill" class="custom-search-field compact-field-dark" subscriptSizing="dynamic">
                 <input 
                   matInput
                   [(ngModel)]="searchUsername"
@@ -794,13 +794,13 @@
   </div>
 </div>
 
-<!-- Floating scroll-aware button — shows "Results" when in filter, "Back to Top" when past it -->
+<!-- Floating scroll-aware button - shows "Results" when in filter, "Back to Top" when past it -->
 <button class="floating-scroll-btn"
         *ngIf="showFloatingBtn"
         [class.results-mode]="floatingBtnMode === 'results'"
         [class.top-mode]="floatingBtnMode === 'top'"
         (click)="onFloatingBtnClick()">
   <mat-icon>{{ floatingBtnMode === 'results' ? 'arrow_downward' : 'arrow_upward' }}</mat-icon>
-  <span *ngIf="floatingBtnMode === 'results'">Results<ng-container *ngIf="resultCount !== null"> ({{ resultCount }})</ng-container></span>
+  <span *ngIf="floatingBtnMode === 'results'">Results<ng-container *ngIf="resultCount !== null"> ({{ resultCount | localeNumber }})</ng-container></span>
   <span *ngIf="floatingBtnMode === 'top'">Back to Top</span>
 </button>
