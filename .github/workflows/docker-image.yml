@@ -40,7 +40,7 @@ env:
   BETA_REMOTE_SHELL_DIR: /var/www/html/umamoe_beta
   BETA_REMOTE_ASSETS_DIR: /var/www/html/umamoe_beta/assets
   PROD_REMOTE_SHELL_DIR: /var/www/html/umamoe
-  PROD_REMOTE_ASSETS_DIR: /assets
+  PROD_REMOTE_ASSETS_DIR: /var/www/html/umamoe/assets
 
 concurrency:
   group: deploy-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target || 'beta' }}
@@ -95,6 +95,20 @@ jobs:
 
           echo "deploy_target=$deploy_target" >> "$GITHUB_OUTPUT"
           echo "build_script=$build_script" >> "$GITHUB_OUTPUT"
+
+      - name: Inject frontend config from secrets
+        shell: bash
+        env:
+          BETA_TURNSTILE_SITE_KEY: ${{ secrets.BETA_TURNSTILE_SITE_KEY }}
+          PROD_TURNSTILE_SITE_KEY: ${{ secrets.PROD_TURNSTILE_SITE_KEY }}
+        run: |
+          if [[ -n "$BETA_TURNSTILE_SITE_KEY" ]]; then
+            perl -0pi -e "s/siteKey: '',/siteKey: '\Q$ENV{BETA_TURNSTILE_SITE_KEY}\E',/" src/environments/environment.beta.ts
+          fi
+
+          if [[ -n "$PROD_TURNSTILE_SITE_KEY" ]]; then
+            perl -0pi -e "s/siteKey: '',/siteKey: '\Q$ENV{PROD_TURNSTILE_SITE_KEY}\E',/" src/environments/environment.prod.ts
+          fi
 
       - name: Decide whether assets should deploy
         id: assets_plan
