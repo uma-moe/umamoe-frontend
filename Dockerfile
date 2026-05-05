@@ -12,7 +12,7 @@ FROM deps AS build
 COPY angular.json ./
 COPY tsconfig*.json ./
 COPY src ./src
-COPY scripts ./scripts
+COPY scripts/precompute-tierlist.js scripts/tierlist-calculation-engine.js scripts/compress-images.js ./scripts/
 
 ARG BUILD_SCRIPT=build:prod
 RUN npm run ${BUILD_SCRIPT}
