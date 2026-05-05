@@ -70,7 +70,7 @@ export function getRunningStyleName(style: number | null): string {
 
 export function getScenarioName(id: number | null): string {
     if (id == null) return '-';
-    const names: Record<number, string> = { 1: 'URA', 2: 'Aoharu', 3: 'Grand Live', 4: 'Grand Masters', 5: 'LArc', 6: 'Grand Challenge', 7: 'U.A.F.' };
+    const names: Record<number, string> = { 1: 'URA', 2: 'Aoharu', 3: 'MANT', 4: 'MANT', 5: 'LArc', 6: 'Grand Challenge', 7: 'U.A.F.' };
     return names[id] || `Scenario ${id}`;
 }
 

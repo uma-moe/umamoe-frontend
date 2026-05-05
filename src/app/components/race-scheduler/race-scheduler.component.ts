@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -78,12 +79,13 @@ function getYearsForPermission(perm: number): ('junior' | 'classic' | 'senior')[
 @Component({
   selector: 'app-race-scheduler',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatTooltipModule, MatDialogModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule, MatDialogModule],
   templateUrl: './race-scheduler.component.html',
   styleUrl: './race-scheduler.component.scss'
 })
 export class RaceSchedulerComponent implements OnInit, OnChanges {
   @Input() selectable = true;
+  @Input() showSearch = false;
   @Input() winSaddleIds: number[] = [];
   @Input() runRaceIds: number[] = [];
   @Output() selectionChanged = new EventEmitter<number[]>();
@@ -107,6 +109,11 @@ export class RaceSchedulerComponent implements OnInit, OnChanges {
   wonRaceIds = new Set<number>();
   /** Map race_instance_id → RaceEntry for quick lookup */
   private raceMap = new Map<number, RaceEntry>();
+
+  // Search state
+  raceSearchQuery = '';
+  raceSearchResults: RaceEntry[] = [];
+
   /** Map program_id → race_instance_id (race_results use program_id * 100 + position) */
   private programIdToRaceInstanceId = new Map<number, number>();
   /** Map `${programId}_${year}` → finishing position.
@@ -131,6 +138,12 @@ export class RaceSchedulerComponent implements OnInit, OnChanges {
     this.buildGrid();
     this.updateWonRaces();
     this.updateRunRaces();
+    if (this.selectable) {
+      this.initSelectionFromWinSaddleIds();
+      if (this.cellSelection.size > 0) {
+        this.selectionChanged.emit([...this.selectedRaceIds]);
+      }
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -187,6 +200,37 @@ export class RaceSchedulerComponent implements OnInit, OnChanges {
     }
   }
 
+  /**
+   * Pre-populate cellSelection from winSaddleIds so that previously saved
+   * wins are shown as selected when reopening the picker dialog.
+   */
+  private initSelectionFromWinSaddleIds(): void {
+    if (!this.winSaddleIds?.length) return;
+    const winSet = new Set(this.winSaddleIds);
+    for (const race of this.allRaces) {
+      for (const ws of race.win_saddles) {
+        if (
+          winSet.has(ws.saddle_id) &&
+          ws.required_race_instance_ids.length === 1 &&
+          ws.required_race_instance_ids[0] === race.race_instance_id
+        ) {
+          // Place into the first available year cell for this race
+          for (const sched of race.schedule) {
+            const years = getYearsForPermission(sched.race_permission);
+            for (const year of years) {
+              const key = this.cellKey(year, sched.month, sched.half);
+              if (!this.cellSelection.has(key)) {
+                this.cellSelection.set(key, race.race_instance_id);
+                break;
+              }
+            }
+          }
+          break; // found this saddle, no need to check other win_saddles of same race
+        }
+      }
+    }
+  }
+
   private updateRunRaces(): void {
     this.ranLookup.clear();
     this.ranCount = 0;
@@ -228,18 +272,9 @@ export class RaceSchedulerComponent implements OnInit, OnChanges {
     return new Set(this.cellSelection.values());
   }
 
-  /** Get races available in a cell, excluding races already selected in OTHER cells (same race_instance_id) */
+  /** Get races available in a cell. */
   getCellRaces(year: string, month: number, half: number): RaceEntry[] {
-    const key = this.cellKey(year, month, half);
-    const thisSelected = this.cellSelection.get(key);
-    // Races selected in other cells should not appear as options here
-    const takenElsewhere = new Set<number>();
-    for (const [k, id] of this.cellSelection) {
-      if (k !== key) takenElsewhere.add(id);
-    }
-    return (this.grid[year]?.[month]?.[half] ?? []).filter(
-      r => r.race_instance_id === thisSelected || !takenElsewhere.has(r.race_instance_id)
-    );
+    return this.grid[year]?.[month]?.[half] ?? [];
   }
 
   /** Get selected race for a cell (if any) */
@@ -505,5 +540,90 @@ export class RaceSchedulerComponent implements OnInit, OnChanges {
       if (!yearKey) continue;
       this.cellSelection.set(this.cellKey(yearKey, month, half), raceId);
     }
+  }
+
+  /** Returns the total number of distinct year-slots this race can occupy across the schedule. */
+  getRaceMaxSlots(raceInstanceId: number): number {
+    const race = this.raceMap.get(raceInstanceId);
+    if (!race) return 1;
+    const slots = new Set<string>();
+    for (const sched of race.schedule) {
+      for (const year of getYearsForPermission(sched.race_permission)) {
+        slots.add(`${year}_${sched.month}_${sched.half}`);
+      }
+    }
+    return slots.size || 1;
+  }
+
+  /** Returns how many calendar cells currently have this race selected. */
+  getRaceSelectedCount(raceInstanceId: number): number {
+    let count = 0;
+    for (const id of this.cellSelection.values()) {
+      if (id === raceInstanceId) count++;
+    }
+    return count;
+  }
+
+  /** Search races by name (case-insensitive). Returns up to `limit` results. */
+  searchRaces(query: string, limit = 20): RaceEntry[] {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase();
+    return this.allRaces
+      .filter(r => r.name.toLowerCase().includes(q) || r.short_name.toLowerCase().includes(q))
+      .slice(0, limit);
+  }
+
+  /**
+   * Programmatically select a race by its race_instance_id.
+   * Places it in the first available calendar slot (earliest year → month → half).
+   * No-op if all valid slots are already filled.
+   * Emits selectionChanged after placing.
+   */
+  selectRaceById(raceInstanceId: number): void {
+    const race = this.raceMap.get(raceInstanceId);
+    if (!race) return;
+
+    // Try each schedule entry in year-order
+    const yearOrder = ['junior', 'classic', 'senior'];
+    for (const year of yearOrder) {
+      for (const sched of race.schedule) {
+        const years = getYearsForPermission(sched.race_permission);
+        if (!years.includes(year as any)) continue;
+        const key = this.cellKey(year, sched.month, sched.half);
+        // Skip if this cell already has a selection
+        if (this.cellSelection.has(key)) continue;
+        this.cellSelection.set(key, raceInstanceId);
+        this.selectionChanged.emit([...this.selectedRaceIds]);
+        return;
+      }
+    }
+  }
+
+  // ─── Search bar helpers (used when showSearch=true) ──────────────────────────
+
+  onSearchInput(query: string): void {
+    this.raceSearchResults = this.searchRaces(query);
+  }
+
+  addSearchResult(race: RaceEntry, event: MouseEvent): void {
+    event.preventDefault();
+    if (this.isFullySelected(race)) return;
+    this.selectRaceById(race.race_instance_id);
+    this.raceSearchQuery = '';
+    this.raceSearchResults = [];
+  }
+
+  isFullySelected(race: RaceEntry): boolean {
+    return this.getRaceSelectedCount(race.race_instance_id) >= this.getRaceMaxSlots(race.race_instance_id);
+  }
+
+  hideSearchResults(): void {
+    setTimeout(() => { this.raceSearchResults = []; }, 150);
+  }
+
+  clearSearchInput(event: MouseEvent): void {
+    event.preventDefault();
+    this.raceSearchQuery = '';
+    this.raceSearchResults = [];
   }
 }

@@ -1,0 +1,291 @@
+name: Build And Deploy SPA
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: where to deploy this build
+        required: false
+        default: beta
+        type: choice
+        options:
+          - beta
+          - production
+      build_script:
+        description: optional npm build script override
+        required: false
+        default: ''
+        type: string
+      deploy_assets:
+        description: force-deploy the assets bundle even if no asset inputs changed
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  PLATFORM: linux/amd64
+  CACHE_SCOPE: spa-artifacts
+  DEPLOY_USER: github
+  BETA_REMOTE_SHELL_DIR: /var/www/html/umamoe_beta
+  BETA_REMOTE_ASSETS_DIR: /var/www/html/umamoe_beta/assets
+  PROD_REMOTE_SHELL_DIR: /var/www/html/umamoe
+  PROD_REMOTE_ASSETS_DIR: /assets
+
+concurrency:
+  group: deploy-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target || 'beta' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      build_script: ${{ steps.plan.outputs.build_script }}
+      deploy_target: ${{ steps.plan.outputs.deploy_target }}
+      should_deploy_assets: ${{ steps.assets_plan.outputs.should_build }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect asset-affecting changes
+        id: asset_changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            assets:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'angular.json'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'scripts/**'
+              - 'src/assets/**'
+              - 'src/data/**'
+
+      - name: Choose deployment plan
+        id: plan
+        shell: bash
+        run: |
+          deploy_target=beta
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ github.event.inputs.deploy_target || '' }}" ]]; then
+            deploy_target="${{ github.event.inputs.deploy_target }}"
+          fi
+
+          build_script="${{ github.event.inputs.build_script || '' }}"
+          if [[ -z "$build_script" ]]; then
+            if [[ "$deploy_target" == "production" ]]; then
+              build_script=build:prod
+            else
+              build_script=build:beta
+            fi
+          fi
+
+          echo "deploy_target=$deploy_target" >> "$GITHUB_OUTPUT"
+          echo "build_script=$build_script" >> "$GITHUB_OUTPUT"
+
+      - name: Decide whether assets should deploy
+        id: assets_plan
+        shell: bash
+        run: |
+          should_build=false
+          if [[ "${{ steps.asset_changes.outputs.assets }}" == "true" ]]; then
+            should_build=true
+          fi
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.deploy_assets || 'false' }}" == "true" ]]; then
+            should_build=true
+          fi
+          echo "should_build=$should_build" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build shell artifact
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: shell
+          platforms: ${{ env.PLATFORM }}
+          pull: true
+          build-args: |
+            BUILD_SCRIPT=${{ steps.plan.outputs.build_script }}
+          outputs: type=local,dest=${{ runner.temp }}/shell-export
+          cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
+          cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
+
+      - name: Build assets artifact
+        if: steps.assets_plan.outputs.should_build == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: assets
+          platforms: ${{ env.PLATFORM }}
+          pull: true
+          build-args: |
+            BUILD_SCRIPT=${{ steps.plan.outputs.build_script }}
+          outputs: type=local,dest=${{ runner.temp }}/assets-export
+          cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
+          cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
+
+      - name: Upload shell artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: shell-site
+          path: ${{ runner.temp }}/shell-export/var/www/html/umamoe/
+          if-no-files-found: error
+
+      - name: Upload assets artifact
+        if: github.event_name != 'pull_request' && steps.assets_plan.outputs.should_build == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: asset-site
+          path: ${{ runner.temp }}/assets-export/assets/
+          if-no-files-found: error
+
+  deploy_beta:
+    if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: beta
+    steps:
+      - name: Download shell artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: shell-site
+          path: ${{ runner.temp }}/shell-site
+
+      - name: Download assets artifact
+        if: needs.build.outputs.should_deploy_assets == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: asset-site
+          path: ${{ runner.temp }}/asset-site
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Configure known hosts
+        shell: bash
+        env:
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Ensure remote directories exist
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        run: |
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "mkdir -p '${{ env.BETA_REMOTE_SHELL_DIR }}' '${{ env.BETA_REMOTE_ASSETS_DIR }}'"
+
+      - name: Deploy beta shell bundle
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        run: |
+          rsync -az --delete \
+            --exclude 'assets/' \
+            -e "ssh -p $DEPLOY_PORT" \
+            "${{ runner.temp }}/shell-site/" \
+            "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_SHELL_DIR }}/"
+
+      - name: Deploy beta assets bundle
+        if: needs.build.outputs.should_deploy_assets == 'true'
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        run: |
+          rsync -az --delete \
+            -e "ssh -p $DEPLOY_PORT" \
+            "${{ runner.temp }}/asset-site/" \
+            "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_ASSETS_DIR }}/"
+
+  deploy_production:
+    if: github.event_name == 'workflow_dispatch' && needs.build.outputs.deploy_target == 'production'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download shell artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: shell-site
+          path: ${{ runner.temp }}/shell-site
+
+      - name: Download assets artifact
+        if: needs.build.outputs.should_deploy_assets == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: asset-site
+          path: ${{ runner.temp }}/asset-site
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Configure known hosts
+        shell: bash
+        env:
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Ensure remote directories exist
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        run: |
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "mkdir -p '${{ env.PROD_REMOTE_SHELL_DIR }}' '${{ env.PROD_REMOTE_ASSETS_DIR }}'"
+
+      - name: Deploy production shell bundle
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        run: |
+          rsync -az --delete \
+            -e "ssh -p $DEPLOY_PORT" \
+            "${{ runner.temp }}/shell-site/" \
+            "$DEPLOY_USER@$DEPLOY_HOST:${{ env.PROD_REMOTE_SHELL_DIR }}/"
+
+      - name: Deploy production assets bundle
+        if: needs.build.outputs.should_deploy_assets == 'true'
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        run: |
+          rsync -az --delete \
+            -e "ssh -p $DEPLOY_PORT" \
+            "${{ runner.temp }}/asset-site/" \
+            "$DEPLOY_USER@$DEPLOY_HOST:${{ env.PROD_REMOTE_ASSETS_DIR }}/"

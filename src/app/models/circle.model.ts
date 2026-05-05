@@ -43,7 +43,7 @@ export interface CircleMemberMonthlyData {
   year: number;
   month: number;
   daily_fans: number[];
-  next_month_start?: number; // Fan count at month start (enables day 1 gain calculation)
+  next_month_start?: number; // Legacy month-end tally fallback when daily_fans lacks the tallying index
   last_updated: string;
 }
 export interface CircleDetailsResponse {

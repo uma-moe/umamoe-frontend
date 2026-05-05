@@ -10,11 +10,13 @@
     "build:prod": "npm run precompute && ng build --configuration production && npm run compress",
     "build:beta": "npm run precompute && ng build --configuration beta && npm run compress",
     "build:dev": "ng build",
+    "build:profile": "npm run precompute && ng build --configuration profile",
     "precompute": "node scripts/precompute-tierlist.js",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "serve:prod": "ng serve --configuration production"
+    "serve:prod": "ng serve --configuration production",
+    "serve:profile": "ng serve --configuration profile"
   },
   "keywords": [
     "uma-musume",

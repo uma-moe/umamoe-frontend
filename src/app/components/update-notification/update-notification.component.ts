@@ -4,7 +4,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 // Increment this number whenever you want to show the update notification again
-export const CURRENT_UPDATE_VERSION = 5;
+export const CURRENT_UPDATE_VERSION = 7;
 export interface ChangeItem {
     text: string;
     link?: string; // Internal route link
@@ -23,6 +23,140 @@ export interface UpdateEntry {
 }
 // Define your updates here - newest first
 export const UPDATE_LOG: UpdateEntry[] = [
+  {
+    title: '30.04 Update - Lineage Planner & More!',
+    date: '2026-04-30',
+    categories: [
+      {
+        category: 'major',
+        label: 'New Features',
+        icon: 'star',
+        color: '#ffc107',
+        items: [
+          {
+            text: 'Lineage Planner with full parent and grandparent planning',
+            link: '/tools/lineage-planner'
+          },
+          {
+            text: 'Veteran Picker! Supports veterans, Practice/Trainer ID lookups, bookmarks, and manual entry',
+            link: '/tools/lineage-planner'
+          },
+          {
+            text: 'Lineage Planner save/load/import/export support for sharing and backup',
+            link: '/tools/lineage-planner'
+          },
+          {
+            text: 'New Lineage White Factors filter for borrow optimization by depth-aware weighting',
+            link: '/database'
+          },
+        ]
+      },
+      {
+        category: 'improvement',
+        label: 'Improvements',
+        icon: 'upgrade',
+        color: '#ff9800',
+        items: [
+          { text: 'Inheritance database is more compact and easier to use on mobile' },
+          { text: 'Lineage Planner and Veteran Picker received mobile responsiveness' },
+          { text: 'Character picker now supports multiple sorting methods' },
+          { text: 'Added spark proc rate displays to the database' },
+          { text: 'Refreshed input styling across the site for consistent visuals' },
+          { text: 'Inheritance database now supports full affinity sorting for a full lineage' },
+          { text: 'Race filter now supports search-based adding' },
+          { text: 'Navbar now includes a live server status indicator' },
+        ]
+      },
+      {
+        category: 'minor',
+        label: 'Club Improvements',
+        icon: 'add_circle',
+        color: '#64b5f6',
+        items: [
+          {
+            text: 'Club members are now searchable by both name and ID',
+            link: '/circles'
+          },
+          {
+            text: 'Trainer ID is now visible for club members',
+            link: '/circles'
+          },
+          {
+            text: 'Direct profile opening added in clubs',
+            link: '/circles'
+          },
+          {
+            text: 'Direct ID copy added to the clubs menu',
+            link: '/circles'
+          },
+        ]
+      }
+    ]
+  },
+    {
+        title: 'Lineage Planner & Inheritance Update',
+        date: '2026-04-21',
+        categories: [
+            {
+                category: 'major',
+                label: 'New Features',
+                icon: 'star',
+                color: '#ffc107',
+                items: [
+                    {
+                        text: 'Legacy Builder - plan full inheritance trees with parents and grandparents',
+                        link: '/tools/lineage-planner'
+                    },
+                    {
+                        text: 'Veteran Picker - pick parents from veterans, ID lookups, bookmarks, or manual entry',
+                        link: '/tools/lineage-planner'
+                    },
+                    {
+                        text: 'Bookmarks - save entries from the Inheritance Database for quick reuse',
+                        link: '/database'
+                    },
+                ]
+            },
+            {
+                category: 'improvement',
+                label: 'Database & UI Improvements',
+                icon: 'upgrade',
+                color: '#ff9800',
+                items: [
+                    { text: 'Spark proc rates shown for each entry' },
+                    { text: 'Per-parent affinity values, not just the combined total' },
+                    { text: 'Sort by true affinity for your chosen legacy' },
+                    { text: 'Race filter now uses a search bar instead of dropdowns' },
+                    { text: 'Live server status indicator in the navbar' },
+                    { text: 'Cleaner, more mobile-friendly database layout' },
+                    { text: 'Mobile layout for the Legacy Tree view' },
+                    { text: 'Refreshed inputs across the site for visual consistency' },
+                ]
+            },
+            {
+                category: 'minor',
+                label: 'Minor Changes',
+                icon: 'add_circle',
+                color: '#64b5f6',
+                items: [
+                    {
+                        text: 'Search clubs by user ID or name',
+                        link: '/circles'
+                    },
+                    { text: 'User ID shown beneath club member names for easy copying' },
+                ]
+            },
+            {
+                category: 'bugfix',
+                label: 'Bug Fixes',
+                icon: 'bug_report',
+                color: '#4caf50',
+                items: [
+                    { text: 'Fixed login issues' },
+                ]
+            }
+        ]
+    },
     {
         title: '🐴 Easter Update 🐇 Part 1',
         date: '2026-04-01',
@@ -205,7 +339,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
     <div class="update-dialog-container">
       <div class="dialog-header">
         <mat-icon class="header-icon">auto_awesome</mat-icon>
-        <span class="header-title">{{ updates[0]?.title || fallbackTitle }}</span>
+        <span class="header-title">{{ updates[0].title || fallbackTitle }}</span>
         <span class="header-date" *ngIf="updates[0]?.date">{{ formatDate(updates[0].date!) }}</span>
         <button class="close-btn" (click)="dismiss()">
           <mat-icon>close</mat-icon>

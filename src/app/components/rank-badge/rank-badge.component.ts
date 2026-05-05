@@ -172,19 +172,36 @@ export function getRankInfoFromScore(score: number): RankInfo {
     imports: [CommonModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
-    <span class="rank-badge"
-          [class.ultra]="rank.isUltra"
-          [ngClass]="'size-' + size"
-          [style.--rank-color]="rank.color"
-          [style.--rank-u-color]="rank.uColor || rank.color">
-      <!-- Standard rank -->
-      <span class="rank-label" *ngIf="!rank.isUltra">{{ rank.label }}</span>
-      <!-- Ultra rank: tier + sublevel (e.g. G1, A+) with ultra border -->
-      <span class="rank-label" *ngIf="rank.isUltra">{{ rank.tierLetter }}{{ rank.subLevel }}</span>
-    </span>
+        <img *ngIf="useIconAssets"
+                 class="rank-icon"
+                 [ngClass]="'size-' + size"
+                 [src]="iconPath"
+                 [alt]="rank.label + ' rank'"
+                 [title]="rank.label + ' rank'" />
+
+        <span *ngIf="!useIconAssets"
+                    class="rank-badge"
+                    [class.ultra]="rank.isUltra"
+                    [ngClass]="'size-' + size"
+                    [style.--rank-color]="rank.color"
+                    [style.--rank-u-color]="rank.uColor || rank.color">
+            <!-- Standard rank -->
+            <span class="rank-label" *ngIf="!rank.isUltra">{{ rank.label }}</span>
+            <!-- Ultra rank: tier + sublevel (e.g. G1, A+) with ultra border -->
+            <span class="rank-label" *ngIf="rank.isUltra">{{ rank.tierLetter }}{{ rank.subLevel }}</span>
+        </span>
   `,
     styles: [`
     :host { display: inline-flex; }
+
+        .rank-icon {
+            display: block;
+            object-fit: contain;
+
+            &.size-sm  { width: 28px; height: 28px; }
+            &.size-md  { width: 38px; height: 38px; }
+            &.size-lg  { width: 46px; height: 46px; }
+        }
 
     .rank-badge {
       display: flex;
@@ -245,10 +262,17 @@ export class RankBadgeComponent implements OnChanges {
     /** URA evaluation score - used when rarity is not available (team stadium, veterans) */
     @Input() score?: number;
 
+        /**
+         * Default is true to use game-like rank icon sprites.
+         * Set false to compare with the custom rendered badge style.
+         */
+        @Input() useIconAssets = true;
+
     /** Badge diameter preset */
     @Input() size: 'sm' | 'md' | 'lg' = 'md';
 
     rank!: RankInfo;
+        iconPath = 'assets/images/icon/ranks/utx_txt_rank_00.png';
 
     ngOnChanges(): void {
         if (this.rarity != null && this.rarity > 0) {
@@ -258,5 +282,28 @@ export class RankBadgeComponent implements OnChanges {
         } else {
             this.rank = getRankInfo(1); // fallback: G
         }
+
+                this.iconPath = `assets/images/icon/ranks/utx_txt_rank_${this.getIconIndex().toString().padStart(2, '0')}.png`;
+        }
+
+        private getIconIndex(): number {
+            if (this.rarity != null && this.rarity > 0) {
+                return this.clampIconIndex(this.rarity - 1);
+            }
+
+            // Score path has no explicit rarity; derive icon index from resolved rank.
+            const standardTierIdx = STANDARD_TIERS.indexOf(this.rank.tierLetter);
+            if (!this.rank.isUltra) {
+                const base = Math.max(0, standardTierIdx) * 2;
+                return this.clampIconIndex(base + (this.rank.isPlus ? 1 : 0));
+            }
+
+            const ultraTierIdx = ULTRA_TIERS.indexOf(this.rank.tierLetter);
+            const sub = this.rank.subLevel ?? 0;
+            return this.clampIconIndex(18 + Math.max(0, ultraTierIdx) * 10 + sub);
+        }
+
+        private clampIconIndex(index: number): number {
+            return Math.max(0, Math.min(97, index));
     }
 }

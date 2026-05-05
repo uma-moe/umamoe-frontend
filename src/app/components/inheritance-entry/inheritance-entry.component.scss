@@ -7,9 +7,10 @@
   background: var(--surface-2);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: clamp(0.75rem, 1.5vw, 1.5rem);
   transition: background-color 0.2s ease, border-color 0.2s ease;
   contain: layout style;
+  container-type: inline-size;
 
   &:hover { background: var(--surface-3); border-color: rgba(100, 181, 246, 0.5); }
 }
@@ -17,193 +18,339 @@
 // ─── Record Header ───────────────────────────────
 .record-header {
   display: flex;
-  justify-content: end;
-  align-items: flex-start;
-  margin-bottom: 0.75rem;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
-.record-main-info {
+// ─── Identity row: trainer pill + actions ────────
+.header-identity-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
   flex-wrap: wrap;
+  gap: 0.5rem;
   width: 100%;
-  min-height: 40px;
 }
 
-// ─── Performance Stats ──────────────────────────
-.performance-section {
-  display: flex;
+.trainer-info {
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  flex: 1 1 auto;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.2rem 0.4rem 0.2rem 0.65rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
   min-width: 0;
-  // Show verification badge inline on desktop
-  .verification-badge {
-    display: flex;
-    margin-left: 0.5rem;
-    padding-left: 0.75rem;
-    border-left: 1px solid var(--border-secondary);
-  }}
+  max-width: 100%;
 
-.main-stats {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  justify-content: space-around;
-}
-
-.wins-stat,
-.white-stat,
-.affinity-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.stat-number { font-size: 1.5rem; font-weight: 700; line-height: 1; }
-
-.affinity-stat .stat-number { color: var(--color-pink); }
-.wins-stat .stat-number { color: var(--color-green); }
-.white-stat .stat-number { color: var(--color-orange); }
-
-.stat-label {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-// ─── Rank & Score Section ────────────────────────
-.rank-score-section {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-left: 0.5rem;
-  padding-left: 0.75rem;
-  border-left: 1px solid var(--border-secondary);
-}
-
-.rank-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-
-  .rarity-icon-inline {
-    height: 28px;
-    width: auto;
-    object-fit: contain;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  &:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(100, 181, 246, 0.35);
   }
 }
 
-.score-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-
-  .stat-number { color: var(--accent-primary); }
+.trainer-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: clamp(80px, 22cqw, 220px);
 }
 
-// ─── Database-specific header sections ──────────
-.verification-badge {
-  @include verification-badge(0.75rem, var(--radius-sm), 0.25rem 0.625rem);
+.user-id-copy-btn {
+  margin: 0;
+  padding: 0 0.45rem !important;
+  min-width: 0;
+  height: 24px;
+  line-height: 24px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
-  line-height: 1.2;
+
+  .mat-icon {
+    @include icon-scale(12px);
+    margin-right: 4px;
+    color: var(--text-muted);
+  }
+  .user-id {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+  }
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.45);
+    .mat-icon { color: var(--text-primary); }
+    .user-id { color: var(--text-primary); }
+  }
 }
 
 .max-followers-card-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
   background: rgba(255, 152, 0, 0.12);
   border: 1px solid rgba(255, 152, 0, 0.35);
   color: var(--accent-warning);
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   white-space: nowrap;
-  letter-spacing: 0.03em;
   flex-shrink: 0;
 
   mat-icon {
-    @include icon-size(16px);
+    @include icon-scale(13px);
     color: #ffa726;
   }
 }
 
-.trainer-section {
-  @include trainer-info(0.5rem);
-  display: flex;
+.stale-badge {
+  display: inline-flex;
   align-items: center;
-  flex: 1 1 auto;
-  justify-content: flex-end;
-  min-height: 32px;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  background: rgba(255, 167, 38, 0.12);
+  border: 1px solid rgba(255, 167, 38, 0.4);
+  color: #ffb74d;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex-shrink: 0;
 
-  .trainer-label { flex-shrink: 0; }
-  .trainer-name { white-space: nowrap; }
-  .user-id-copy-btn { margin-left: auto; }
+  mat-icon {
+    @include icon-scale(13px);
+    color: #ffa726;
+  }
 }
 
+// Action buttons cluster
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
+  gap: 0.3rem;
+  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.race-results-btn,
-.unavailable-btn {
-  display: flex;
+.action-btn {
+  display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: var(--radius-sm);
-  transition: all 0.2s ease;
-  min-height: auto;
-  font-size: 0.75rem;
-  line-height: 1.2;
-  flex-shrink: 0;
+  gap: 0.3rem;
+  min-width: 0 !important;
+  white-space: nowrap;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.15s ease;
+  box-shadow: none !important;
 
-  mat-icon { font-size: 16px; width: 16px; height: 16px; }
-  .btn-text { font-weight: 500; }
+  // Override MDC custom properties that control button sizing
+  --mdc-text-button-horizontal-padding: 8px;
+  --mdc-text-button-container-height: 28px;
+  --mat-text-button-horizontal-padding: 8px;
+
+  border-radius: var(--radius-sm) !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
+
+  mat-icon {
+    @include icon-scale(15px);
+  }
+
+  .btn-text { font-weight: 600; }
+
+  &:hover { transform: translateY(-1px); }
+}
+
+.planner-btn {
+  background: rgba(100, 181, 246, 0.1) !important;
+  border: 1px solid rgba(100, 181, 246, 0.3) !important;
+  color: #64b5f6 !important;
+
+  &:hover { background: rgba(100, 181, 246, 0.18) !important; border-color: rgba(100, 181, 246, 0.55) !important; }
 }
 
 .race-results-btn {
   background: rgba(245, 200, 58, 0.1) !important;
   border: 1px solid rgba(245, 200, 58, 0.3) !important;
   color: #f5c83a !important;
-  cursor: pointer;
-  box-shadow: none !important;
 
-  &:hover { background: rgba(245, 200, 58, 0.2) !important; border-color: rgba(245, 200, 58, 0.5) !important; }
+  &:hover { background: rgba(245, 200, 58, 0.18) !important; border-color: rgba(245, 200, 58, 0.55) !important; }
 }
 
 .unavailable-btn {
-  background: rgba(255, 152, 0, 0.1);
-  border: 1px solid rgba(255, 152, 0, 0.3);
-  color: var(--color-orange);
+  background: rgba(255, 152, 0, 0.08) !important;
+  border: 1px solid rgba(255, 152, 0, 0.28) !important;
+  color: var(--color-orange) !important;
 
-  &:hover { background: rgba(255, 152, 0, 0.2); border-color: rgba(255, 152, 0, 0.5); }
+  &:hover { background: rgba(255, 152, 0, 0.18) !important; border-color: rgba(255, 152, 0, 0.5) !important; }
 }
 
-// Desktop/Mobile visibility helpers
-.desktop-only { display: flex; }
-.mobile-only { display: none; }
+.bookmark-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-muted) !important;
 
-// Status row for mobile layout
-.status-row { align-items: center; gap: 0.75rem; }
+  mat-icon { transition: transform 0.2s ease; }
+
+  &:hover {
+    background: rgba(255, 193, 7, 0.08) !important;
+    border-color: rgba(255, 193, 7, 0.28) !important;
+    color: #ffc107 !important;
+    mat-icon { transform: scale(calc(var(--icon-scale, 1) * 1.15)); }
+  }
+
+  &.bookmarked {
+    background: rgba(255, 193, 7, 0.12) !important;
+    border-color: rgba(255, 193, 7, 0.4) !important;
+    color: #ffc107 !important;
+
+    mat-icon { filter: drop-shadow(0 0 4px rgba(255, 193, 7, 0.5)); }
+
+    &:hover {
+      background: rgba(239, 83, 80, 0.1) !important;
+      border-color: rgba(239, 83, 80, 0.35) !important;
+      color: #ef5350 !important;
+      mat-icon { filter: none; transform: scale(calc(var(--icon-scale, 1) * 1.1)); }
+    }
+  }
+}
+
+// ─── Stats Row (affinity / G1 / white / rank / score) ─
+.record-header-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.25rem;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-md);
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.main-stats {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.rank-score-section {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-left: auto;
+  padding-left: 1rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  flex-wrap: wrap;
+}
+
+.stat-pill {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0;
+  min-width: 0;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+.rank-stat {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.stat-number {
+  font-size: clamp(1.05rem, 2.4cqw, 1.4rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+}
+
+.stat-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-family: inherit;
+}
+
+.affinity-stat .stat-number { color: var(--color-pink); }
+.wins-stat .stat-number { color: var(--color-green); }
+.white-stat .stat-number { color: var(--color-orange); }
+.score-stat .stat-number { color: var(--accent-primary); }
+
+// (rank-stat align handled in main rule)
+
+// Profile-only race-results row
+.status-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.profile-actions { margin-top: 0.25rem; }
+
+// ─── Container-driven compaction ─────────────────
+// When the card itself is narrow (≈ ≤ 720px wide), drop button labels first.
+@container (max-width: 720px) {
+  .action-btn .btn-text { display: none !important; }
+  .action-btn {
+    --mdc-text-button-horizontal-padding: 6px !important;
+    --mat-text-button-horizontal-padding: 6px !important;
+    width: auto !important;
+    min-width: 28px !important;
+    
+    // Clear the right margin that mat-button automatically applies to mat-icon
+    mat-icon {
+        margin-right: -4px !important;
+        margin-left: 2px !important;
+        margin-top: 0.15rem;
+    }
+    
+    ::ng-deep .mdc-button__label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
+// At ultra-narrow widths, allow the actions to wrap below the trainer pill.
+@container (max-width: 480px) {
+  .header-identity-row { gap: 0.4rem; }
+  .header-actions { gap: 0.2rem; flex-wrap: nowrap; }
+  .action-btn {
+    --mdc-text-button-container-height: 26px !important;
+    --mdc-text-button-horizontal-padding: 5px !important;
+    --mat-text-button-horizontal-padding: 5px !important;
+    min-width: 26px !important;
+  }
+  .stat-pill { padding: 0.1rem 0.4rem; }
+}
 
 // ─── Inheritance Body ───────────────────────────
 .inheritance-body {
   display: flex;
   flex-direction: row;
   gap: 0.5rem;
+  align-items: stretch;
   border-top: 1px solid var(--border-primary);
   margin-top: 1rem;
   padding-top: 1rem;
@@ -217,7 +364,117 @@
   gap: 1rem;
 }
 
-.spark-arrays { margin-left: 1rem; }
+.spark-arrays { margin-left: 1rem; width: 100%; }
+
+.spark-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+// ─── Per-Run / Per-Inheritance Toggle ────────────
+.spark-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(100, 181, 246, 0.35);
+  background: rgba(100, 181, 246, 0.1);
+  color: #64b5f6;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  text-transform: uppercase;
+
+  .mode-icon {
+    @include icon-scale(14px);
+  }
+
+  .mode-label { line-height: 1; }
+
+  &:hover {
+    background: rgba(100, 181, 246, 0.18);
+    border-color: rgba(100, 181, 246, 0.55);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(100, 181, 246, 0.2);
+  }
+
+  // "Per Run" state — emphasized (it doubles values, so user should clearly see it)
+  &.per-run {
+    background: linear-gradient(135deg, rgba(100, 181, 246, 0.2), rgba(33, 150, 243, 0.18));
+    border-color: rgba(100, 181, 246, 0.7);
+    color: #90caf9;
+    box-shadow: 0 0 0 1px rgba(100, 181, 246, 0.15), 0 2px 8px rgba(33, 150, 243, 0.18);
+  }
+}
+
+// ─── P2 Sparks Toggle ───────────────────────────
+.spark-p2-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(206, 147, 216, 0.35);
+  background: rgba(206, 147, 216, 0.08);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  text-transform: uppercase;
+
+  .p2-icon {
+    @include icon-scale(14px);
+    opacity: 0.85;
+  }
+
+  .p2-label { line-height: 1; }
+
+  .p2-status {
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+    font-size: 9px;
+    font-weight: 800;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    letter-spacing: 0.06em;
+  }
+
+  &:hover {
+    color: #ce93d8;
+    background: rgba(206, 147, 216, 0.14);
+    border-color: rgba(206, 147, 216, 0.55);
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    background: linear-gradient(135deg, rgba(206, 147, 216, 0.22), rgba(186, 104, 200, 0.18));
+    border-color: rgba(206, 147, 216, 0.75);
+    color: #ce93d8;
+    box-shadow: 0 0 0 1px rgba(206, 147, 216, 0.15), 0 2px 8px rgba(186, 104, 200, 0.2);
+
+    .p2-icon { opacity: 1; }
+
+    .p2-status {
+      background: rgba(206, 147, 216, 0.25);
+      color: #f3e0f7;
+      border-color: rgba(206, 147, 216, 0.5);
+    }
+  }
+}
+
+
 
 .sub-parents { display: flex; flex-direction: row; gap: 0.5rem; }
 
@@ -236,7 +493,7 @@
   margin-left: 1rem;
   flex: 1 1 100%;
 
-  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+  mat-icon { @include icon-scale(16px); }
 }
 
 .blue-factors,
@@ -267,13 +524,110 @@
 .character-images {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.5rem;
+  align-items: stretch;
+  flex-shrink: 0;
+  align-self: stretch; // fill the full height of inheritance-body
+
+  > .support-card-section {
+    margin-top: auto; // pin support card to bottom
+  }
+}
+
+// Lineage frame — wraps main + bracket + grandparents into a vertical family tree
+.lineage-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  width: 100%;
+  isolation: isolate;
+}
+
+// CSS-driven family-tree bracket between main portrait and grandparents
+.lineage-bracket {
+  display: block;
+  width: clamp(90px, 100%, 160px);
+  height: 22px;
+  margin: 4px 0;
+  pointer-events: none;
+  overflow: visible;
+
+  path {
+    fill: none;
+    stroke: #5a6470;
+    stroke-width: 2;
+    stroke-linecap: square;
+  }
+
+  .lineage-node { display: none; }
+}
+
+.main-character,
+.parent-characters,
+.parent-with-badges {
+  position: relative;
+  z-index: 1;
+}
+
+.main-character { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+.parent-characters {
+  display: flex;
+  gap: clamp(1.5rem, 6cqw, 3rem);
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.parent-with-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.parent-affinity-badges {
+  display: flex;
+  gap: 4px;
   align-items: center;
 }
 
-.main-character { display: flex; justify-content: center; }
+.affinity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 
-.parent-characters { display: flex; gap: 1rem; justify-content: center; }
+  mat-icon {
+    @include icon-scale(12px);
+  }
+
+  &.base {
+    background: rgba(100, 181, 246, 0.12);
+    color: #64b5f6;
+    border: 1px solid rgba(100, 181, 246, 0.25);
+  }
+
+  &.base.gp {
+    background: rgba(206, 147, 216, 0.12);
+    color: #ce93d8;
+    border: 1px solid rgba(206, 147, 216, 0.25);
+  }
+
+  &.breeding {
+    background: rgba(255, 167, 38, 0.10);
+    color: #ffb74d;
+    border: 1px solid rgba(255, 167, 38, 0.25);
+  }
+}
 
 .character-image {
   border-radius: 50%;
@@ -286,27 +640,60 @@
 .main-character-img { width: 80px; height: 80px; }
 .parent-character-img { width: 60px; height: 60px; }
 
+// ─── Visual hierarchy: main parent vs grandparents ─────────
+// Main: stronger neutral border (NOT colored — colored = selected). Just visual weight.
+.portrait-main .character-image {
+  border-width: 3px;
+  border-color: var(--border-strong);
+}
+
+// Grandparents: subtle border
+.portrait-gp .character-image {
+  border-color: var(--border-secondary);
+}
+
+// Role labels — hidden on desktop, shown on mobile
+.node-role-label { display: none; }
+
+// Mobile-only inheritance arrow icon (hidden by default)
+.lineage-arrow-mobile {
+  display: none;
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+  color: rgba(100, 181, 246, 0.55);
+  flex-shrink: 0;
+}
+
 // ─── Support Card ───────────────────────────────
 .support-card-section {
-  @include flex-center;
-  gap: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border-primary);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
   width: 100%;
-  transition: all 0.2s ease;
+  margin-top: 0;
+  transition: background 0.2s ease, border-color 0.2s ease;
 
-  &:hover .support-card-image { transform: scale(1.05); }
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+    .support-card-image { transform: scale(1.04); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); }
+  }
 
   &.image-error {
     .support-card-image { display: none; }
-
     &::before {
       content: 'Support Card';
       @include flex-center;
-      width: 60px;
-      height: 60px;
+      width: 64px;
+      height: 64px;
       color: var(--text-disabled);
-      font-size: 0.6rem;
+      font-size: 0.55rem;
       text-align: center;
       background: var(--surface-3);
       border-radius: var(--radius-xs);
@@ -315,18 +702,21 @@
 }
 
 .support-card-image {
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
   border-radius: var(--radius-xs);
   object-fit: cover;
-  transition: transform 0.2s ease;
   flex-shrink: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
+// LB pips flow horizontally next to image
 .card-limit-break {
   display: flex;
   align-items: center;
-  gap: 0.125rem;
+  gap: 0.15rem;
+  flex-wrap: wrap;
 
   .limit-break-icon {
     display: inline-flex;
@@ -334,8 +724,6 @@
 
     svg {
       fill: var(--text-disabled);
-      stroke-width: 3;
-
       &[fill="#2196F3"] { fill: #2196F3; stroke: none; }
     }
   }
@@ -363,6 +751,13 @@
 .spark-item {
   @include spark-item;
   @include spark-item-inheritance;
+  line-height: 1;
+
+  .spark-level,
+  .spark-name,
+  .parent-contribution {
+    line-height: 1;
+  }
 }
 
 @include spark-colors;
@@ -458,69 +853,47 @@
   .spark-level { color: #ff9100 !important; font-weight: 700; text-shadow: 0 0 8px rgba(255, 145, 0, 0.3); }
 }
 
+.parent-icon.p2-icon { color: #ce93d8 !important; }
+.parent-contribution.p2-contribution { color: #ce93d8; }
+
 // ─── Responsive ─────────────────────────────────
-@media (max-width: 1300px) {
-  .record-card { padding: 1.25rem; }
-  .record-header { margin-bottom: 0.75rem; }
+// Header layout is now fluid via container queries above. The viewport
+// media queries below only adjust the inheritance body (portraits, sparks).
 
-  .record-main-info {
-    display: grid !important;
-    grid-template-columns: 1fr auto;
-    gap: 0.375rem 0.75rem;
-    align-items: center;
-  }
+// ─── Tablet / 1024px breakpoint ─────────────────
+@media (max-width: 1024px) {
+  .main-character-img { width: 70px; height: 70px; }
+  .parent-character-img { width: 54px; height: 54px; }
+  .support-card-image { width: 54px; height: 54px; }
 
-  // Stats span full width to avoid overlap with trainer
-  .performance-section { grid-column: 1 / -1; min-width: 0; }
-
-  .max-followers-card-badge { grid-column: 1 / -1; }
-
-  // Trainer left, action buttons right
-  .trainer-section { grid-column: 1; justify-content: flex-start; }
-
-  .header-actions { grid-column: 2; justify-self: end; }
-
-  .status-row.mobile-only { grid-column: 1 / -1; }
-
-  .inheritance-body { margin-top: 0.75rem; padding-top: 0.75rem; }
+  .spark-arrays { margin-left: 0.5rem; }
+  .spark-item { font-size: 0.78rem; padding: 0.18rem 0.4rem; }
+  .spark-item .spark-star { @include icon-scale(12px, true, 0.8571); }
 }
 
 @media (max-width: 768px) {
-  .record-card { padding: 1rem; }
+  .record-card { padding: 0.875rem; border-radius: var(--radius-md); }
 
-  // Swap desktop/mobile visibility
-  .desktop-only { display: none !important; }
-  .mobile-only { display: flex !important; }
-
-  // Hide badge from performance-section on mobile (shown in status-row instead)
-  .performance-section .verification-badge { display: none !important; }
-
-  // Single column - everything stacks
-  .record-main-info { grid-template-columns: 1fr !important; gap: 0.5rem !important; }
-
-  .trainer-section { grid-column: 1 !important; justify-content: flex-start; }
-
-  .main-stats { flex: 1; justify-content: space-evenly; }
-
-  .stat-number { font-size: 1.25rem; }
-  .stat-label { font-size: 0.65rem; }
+  .main-stats { gap: 0.9rem; }
+  .stat-number { font-size: 1.05rem; }
+  .stat-label { font-size: 0.58rem; }
 
   .rank-score-section {
-    gap: 0.5rem;
-    .rarity-icon-inline { height: 24px; }
-  }
-
-  // Status row: flex-wrap so items flow naturally
-  .status-row {
-    display: flex !important;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    align-items: center;
+    gap: 0.9rem;
+    padding-left: 0;
+    border-left: none;
   }
 
   .inheritance-body {
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.625rem;
+    margin-top: 0.625rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 0.625rem;
   }
 
   .parents {
@@ -532,199 +905,371 @@
     width: 100%;
   }
 
-  .sub-parents { display: flex; flex-direction: row; gap: 0.5rem; }
+  .sub-parents { display: flex; flex-direction: row; gap: 0.4rem; }
 
-  .main-parent { width: 60px; flex-shrink: 0; }
-  .secondary-parent { width: 45px; flex-shrink: 0; }
+  .main-parent { width: 56px; flex-shrink: 0; }
+  .secondary-parent { width: 42px; flex-shrink: 0; }
 
   .factors {
     margin-left: 0;
     margin-top: 0.5rem;
     width: 100%;
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
-  // Character images in a row on mobile
+  // ─── Mobile lineage: top-bracket horizontal tree ────────────
+  //
+  //   ┌────────┬────────┐
+  // [MAIN]   [GP1]   [GP2]
+  //
+  // Flex row with space-around → each of 3 items occupies 1/3 of width.
+  // Matches lineage-planner: var(--border-secondary) lines, clear size hierarchy.
+  //
+  $tree-line-color: #5a6470;
+
   .character-images {
     flex-direction: row !important;
-    gap: 0.75rem;
-    align-items: center;
+    gap: 0;
+    align-items: stretch;
     width: 100%;
+    padding: 0.5rem 0.6rem;
+    background: rgba(255, 255, 255, 0.018);
+    border: 1px solid rgba(255, 255, 255, 0.055);
+    border-radius: var(--radius-md);
+    align-self: auto !important;
+    > .support-card-section { margin-top: 0 !important; }
   }
 
-  // Support card right-aligned on mobile with left divider
-  .support-card-section {
-    flex-direction: row;
-    gap: 0.5rem;
-    padding-top: 0 !important;
-    padding: 0 !important;
-    padding-left: 0.75rem !important;
-    border-top: none !important;
-    border-left: 1px solid var(--border-secondary) !important;
-    margin: 0 !important;
-    margin-left: auto !important;
+  .lineage-frame {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr);
+    justify-items: center;
+    align-items: start;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-top: 14px;     // room for top bar + drop
+    position: relative;
     width: auto;
+
+    // Top horizontal bar: centers of col1 and col3 are at 1/6 and 5/6 of width
+    &::before {
+      content: '';
+      position: absolute;
+      top: 4px;
+      left: calc(100% / 6);
+      right: calc(100% / 6);
+      height: 2px;
+      background: $tree-line-color;
+    }
+  }
+
+  .lineage-bracket { display: none; }
+  .lineage-arrow-mobile { display: none !important; }
+
+  // Each portrait wrapper: vertical drop line from top bar.
+  // Grid placement: MAIN col 1, GP1 col 2, GP2 col 3.
+  .main-character,
+  .parent-with-badges {
+    position: relative;
+    grid-row: 1;
+    padding-left: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    &::after { display: none; }
+    &::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 10px;
+      background: $tree-line-color;
+    }
+  }
+  .main-character { grid-column: 1; }
+  .parent-with-badges:nth-of-type(1) { grid-column: 2; }
+  .parent-with-badges:nth-of-type(2) { grid-column: 3; }
+
+  // Dissolve parent-characters wrapper so GPs become grid items
+  .parent-characters {
+    display: contents;
+    &::before { display: none; }
+  }
+
+  // Affinity badge: tight under portrait, no overlap
+  .parent-affinity-badges {
+    margin-top: 0;
+    z-index: 1;
+    justify-content: center;
+  }
+  .affinity-badge {
+    padding: 1px 6px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    gap: 3px;
+    line-height: 1;
+    mat-icon { @include icon-scale(10px); }
+  }
+
+  // Size hierarchy: MAIN larger than GPs (matches planner n-target vs n-gp sizing)
+  .main-character-img { width: 68px; height: 68px; }
+  .parent-character-img { width: 50px; height: 50px; }
+
+  // Role labels — tight under affinity badge
+  .node-role-label {
+    display: block;
+    font-size: 0.55rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: center;
+    margin-top: 1px;
+    line-height: 1;
+  }
+  .node-role-main {
+    color: var(--accent-primary);
+    opacity: 0.9;
+  }
+  .node-role-gp {
+    color: var(--text-disabled);
+  }
+
+  // Support card: compact column, right-anchored with left divider
+  .support-card-section {
+    flex-direction: column !important;
+    gap: 0.35rem;
+    padding: 0 0.5rem 0 0.75rem !important;
+    margin: 0 0 0 0.5rem !important;
+    background: transparent !important;
+    border: none !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 0 !important;
+    width: auto;
+    align-self: stretch;
+    flex-shrink: 0;
+    justify-content: center;
+  }
+
+  .support-card-image {
+    flex: 0 0 auto;
+    width: auto !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    max-height: 64px;
     align-self: center;
   }
 
-  .main-character-img { width: 64px; height: 64px; }
-  .parent-character-img { width: 52px; height: 52px; }
-
-  .support-card-image { width: 56px; height: 56px; }
-
   .card-limit-break {
-    .limit-break-icon svg { height: 18px; width: 18px; }
+    flex-shrink: 0;
+    justify-content: center;
+    font-size: 18px; // diamonds scale via em
+    .limit-break-icon svg { height: 1em !important; width: 1em !important; }
   }
 
+  // ─── Mobile: compact spark toggles ──────────────
+  .spark-header-row {
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .spark-mode-toggle {
+    padding: 4px 8px;
+    font-size: 10px;
+    gap: 4px;
+    .mode-icon { @include icon-scale(12px, true); }
+  }
+
+  .spark-p2-toggle {
+    padding: 4px 6px 4px 8px;
+    font-size: 10px;
+    gap: 4px;
+    .p2-icon { @include icon-scale(12px, true); }
+    .p2-status { padding: 1px 5px; font-size: 8px; }
+  }
+
+  // ─── Mobile: dramatically smaller sparks ────────
   .spark-arrays {
     margin-left: 0 !important;
     width: 100%;
-    border-top: 1px solid var(--border-primary);
-    padding-top: 0.75rem;
-    margin-top: 0.25rem;
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
   }
 
-  .spark-row { flex-direction: row; align-items: stretch; gap: 0.5rem; }
-
+  .spark-container { gap: 0.4rem; }
+  .spark-row { flex-direction: row; align-items: stretch; gap: 0.4rem; }
   .spark-type-indicator { display: block; width: 3px; min-height: 100%; }
+  .spark-list { width: calc(100% - 18px); justify-content: flex-start; gap: 0.3rem; }
 
-  .spark-list { width: calc(100% - 20px); justify-content: flex-start; }
+  .spark-item {
+    font-size: 0.74rem;
+    padding: 0.2rem 0.45rem;
+    gap: 0.22rem;
+    border-radius: var(--radius-sm);
 
-  .spark-item { font-size: 0.8rem; padding: 0.2rem 0.4rem; }
+    .spark-level { font-size: 0.74rem; font-weight: 700; }
+    .spark-name { font-size: 0.74rem; }
+    .spark-star { @include icon-scale(11px, true, 0.7857); }
+    .parent-icon { @include icon-scale(12px, true, 0.75); }
+    .parent-contribution { font-size: 0.68rem; }
+    .spark-pct {
+      padding: 2px 5px;
+      font-size: 0.7rem;
+      line-height: 1;
+      font-weight: 800;
+    }
+  }
 }
 
 @media (max-width: 480px) {
-  .record-card { padding: 0.75rem; }
-  .record-header { margin-bottom: 0; }
+  .record-card { padding: 0.625rem; }
+  .record-header { margin-bottom: 0.4rem; }
 
-  // Stacked header layout
-  .record-header .record-main-info {
-    gap: 0.375rem;
-    flex-direction: column;
-    align-items: stretch;
-    display: flex !important;
-  }
+  .main-stats { gap: 0.7rem; }
+  .stat-number { font-size: 0.95rem; }
+  .stat-label { font-size: 0.52rem; }
 
-  // Row 1: Stats + rank
-  .performance-section {
-    flex-direction: row;
-    align-items: center;
-    width: 100%;
-    gap: 0;
-    justify-content: flex-start;
-  }
+  .rank-score-section { gap: 0.7rem; padding-left: 0; border-left: none; }
 
-  .main-stats {
-    width: 100%;
-    justify-content: space-evenly;
-    gap: 0.5rem;
-    flex: 1 1 auto;
-  }
-
-  .rank-score-section {
-    margin-left: auto;
-    padding-left: 0.5rem;
-    gap: 0.5rem;
-
-    .rarity-icon-inline { height: 22px; }
-  }
-
-  .stat-number { font-size: 1.15rem; }
-  .stat-label { font-size: 0.6rem; }
-
-  // Reorder: move status-row above trainer on small screens
-  .trainer-section { order: 2; }
-  .status-row { order: 1; }
-
-  // Status row: badge on own line, buttons grouped on next line
-  .status-row { flex-wrap: wrap; gap: 0.375rem; }
-
-  .status-row .verification-badge {
-    flex: 1 1 100%; // Force badge to its own line
-    padding: 0.2rem 0.5rem;
-    font-size: 0.7rem;
-
-    mat-icon { font-size: 14px; width: 14px; height: 14px; }
-    .badge-date { font-size: 0.65rem; }
-  }
-
-  .status-row .race-results-btn,
-  .status-row .unavailable-btn {
-    flex: 1 1 0;
-    justify-content: center;
-    padding: 0.3rem 0.5rem;
-    font-size: 0.7rem;
-  }
-
-  // Row 3: Trainer box
-  .trainer-section {
-    width: 100%;
-    margin-top: 0;
-    justify-content: flex-start;
-
-    .trainer-info {
-      justify-content: flex-start;
-      width: 100%;
-      background: var(--surface-1);
-      padding: 0.375rem 0.625rem;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border-subtle);
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    .trainer-label { font-size: 0.65rem; }
-    .trainer-name { font-size: 0.8rem; }
-  }
+  .trainer-name { font-size: 0.78rem; max-width: 60vw; }
 
   .user-id-copy-btn {
-    font-size: 0.75rem;
-    padding: 0 0.5rem !important;
-    min-height: 26px;
-    line-height: 26px;
+    font-size: 0.7rem;
+    padding: 0 0.4rem !important;
+    height: 22px;
+    line-height: 22px;
 
-    .user-id { font-size: 0.75rem; }
+    .user-id { font-size: 0.7rem; }
   }
 
   .max-followers-card-badge {
-    width: 100%;
-    justify-content: flex-start;
-    padding: 3px 8px;
-    font-size: 0.7rem;
+    padding: 2px 6px;
+    font-size: 0.6rem;
   }
 
   // Compact inheritance body
   .inheritance-body {
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
+    margin-top: 0.4rem;
+    padding: 0.4rem 0 0;
     gap: 0.5rem;
   }
 
-  .parents { gap: 0.375rem; }
-  .main-parent { width: 50px; }
-  .secondary-parent { width: 40px; }
-  .factors { gap: 0.5rem; }
+  .parents { gap: 0.3rem; }
+  .main-parent { width: 46px; }
+  .secondary-parent { width: 36px; }
+  .factors { gap: 0.4rem; }
 
-  .support-card-section { gap: 0.25rem; }
+  .lineage-frame {
+    padding-top: 12px;
+    &::before { top: 3px; }
+  }
+  .support-card-section { gap: 0.2rem; padding: 0 0 0 0.45rem !important; margin: 0 0 0 0.4rem !important; }
 
-  .main-character-img { width: 50px; height: 50px; }
-  .parent-character-img { width: 40px; height: 40px; }
-  .support-card-image { width: 40px; height: 40px; }
+  .main-character-img { width: 58px; height: 58px; }
+  .parent-character-img { width: 44px; height: 44px; }
 
-  .card-limit-break .limit-break-icon svg { height: 14px; width: 14px; }
+  .card-limit-break { font-size: 12px; }
 
   // Tighter spark arrays
-  .spark-arrays { padding-top: 0.5rem !important; margin-top: 0.125rem !important; }
+  .spark-arrays { padding-top: 0 !important; margin-top: 0 !important; }
 
-  .spark-container { gap: 0.375rem; }
+  .spark-container { gap: 0.3rem; }
   .spark-list { gap: 0.25rem; }
 
-  .spark-item {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.4rem;
-
-    .spark-level, .spark-name { font-size: 0.75rem; }
-    .spark-star { font-size: 12px !important; width: 12px !important; height: 12px !important; }
-    .parent-icon { font-size: 14px !important; width: 14px !important; height: 14px !important; }
+  // ─── Smallest mobile: ultra compact toggles ─────
+  .spark-mode-toggle {
+    padding: 3px 7px;
+    font-size: 9px;
+    gap: 3px;
+    .mode-icon { @include icon-scale(11px, true); }
   }
+
+  .spark-p2-toggle {
+    padding: 3px 5px 3px 7px;
+    font-size: 9px;
+    gap: 3px;
+    .p2-icon { @include icon-scale(11px, true); }
+    .p2-status { padding: 1px 4px; font-size: 7.5px; }
+  }
+
+  .spark-item {
+    font-size: 0.68rem;
+    padding: 0.16rem 0.36rem;
+    gap: 0.18rem;
+
+    .spark-level, .spark-name { font-size: 0.68rem; }
+  .spark-star { @include icon-scale(9px, true, 0.6429); }
+  .parent-icon { @include icon-scale(11px, true, 0.6875); }
+    .parent-contribution { font-size: 0.62rem; }
+    .spark-pct {
+      padding: 1px 4px;
+      font-size: 0.64rem;
+      line-height: 1;
+      font-weight: 800;
+    }
+  }
+}
+
+// ─── Record Footer ─────────────────────────────
+.record-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding-top: 0.4rem;
+  margin-bottom: -0.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  flex-wrap: wrap;
+}
+
+.footer-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  font-weight: 500;
+}
+
+.verified-meta {
+  .verified-icon {
+    font-size: 13px;
+    width: 13px;
+    height: 13px;
+    color: rgba(76, 175, 80, 0.8);
+  }
+
+  .verified-text {
+    color: rgba(76, 175, 80, 0.85);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.6rem;
+  }
+
+  .footer-dot {
+    color: var(--text-disabled);
+    margin: 0 0.1rem;
+  }
+
+  .footer-date {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+  }
+}
+
+@media (max-width: 480px) {
+  .record-footer {
+    margin-top: 0.5rem;
+    padding-top: 0.4rem;
+    justify-content: center;
+  }
+  .footer-meta { font-size: 0.6rem; }
+  .verified-meta .verified-text { font-size: 0.55rem; }
 }

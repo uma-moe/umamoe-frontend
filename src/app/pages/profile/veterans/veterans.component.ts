@@ -12,7 +12,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { VeteranDetailDialogComponent, VeteranDetailData } from './veteran-detail-dialog.component';
-import { CharacterSelectDialogComponent } from '../../inheritance-database/character-select-dialog.component';
+import { CharacterSelectDialogComponent } from '../../../components/character-select-dialog/character-select-dialog.component';
 import { RaceSchedulerComponent } from '../../../components/race-scheduler/race-scheduler.component';
 import { RankBadgeComponent } from '../../../components/rank-badge/rank-badge.component';
 import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';

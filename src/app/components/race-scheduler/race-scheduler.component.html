@@ -1,6 +1,35 @@
 <div class="race-scheduler">
-  <!-- Import/Export toolbar -->
+  <!-- Toolbar: search + import/export -->
   <div class="scheduler-toolbar" *ngIf="selectable">
+    <div class="toolbar-search" *ngIf="showSearch">
+      <div class="toolbar-search-box">
+        <mat-icon class="toolbar-search-icon">search</mat-icon>
+        <input
+          class="toolbar-search-input"
+          type="text"
+          placeholder="Search and add race..."
+          [(ngModel)]="raceSearchQuery"
+          (ngModelChange)="onSearchInput($event)"
+          (blur)="hideSearchResults()"
+          autocomplete="off"
+        />
+        <mat-icon class="toolbar-search-clear" *ngIf="raceSearchQuery" (mousedown)="clearSearchInput($event)">close</mat-icon>
+      </div>
+      <div class="toolbar-search-results" *ngIf="raceSearchResults.length > 0">
+        <div
+          class="toolbar-search-result"
+          *ngFor="let r of raceSearchResults"
+          (mousedown)="addSearchResult(r, $event)"
+          [class.already-selected]="isFullySelected(r)">
+          <span class="result-grade" [ngClass]="getGradeClass(r.grade)">{{ getGradeLabel(r.grade) }}</span>
+          <span class="result-name">{{ r.name }}</span>
+          <span class="result-slot-count" *ngIf="getRaceMaxSlots(r.race_instance_id) > 1">
+            {{ getRaceSelectedCount(r.race_instance_id) }}/{{ getRaceMaxSlots(r.race_instance_id) }}
+          </span>
+          <mat-icon class="result-check" *ngIf="isFullySelected(r)">check</mat-icon>
+        </div>
+      </div>
+    </div>
     <input #importInput type="file" accept=".json" class="import-file-input" (change)="importSchedule($event)">
     <button class="toolbar-btn import-btn" (click)="triggerImport()" matTooltip="Import schedule from JSON">
       <mat-icon>upload</mat-icon>

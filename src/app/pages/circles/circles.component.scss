@@ -15,7 +15,7 @@
   gap: 0.75rem;
 }
 
-// Filters - uses global .search-field, .compact-select, .filter-bar,
+// Filters - uses shared form field styling and .filter-bar,
 // .clear-filters-btn, .sort-direction-btn from shared styles
 .filters-container {
   display: flex;
@@ -23,7 +23,7 @@
   gap: 0.75rem;
 
   .search-row { width: 100%; }
-  .search-field { width: 100%; max-width: 100%; }
+  .circle-search-field { width: 100%; max-width: 100%; }
 
   .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 
@@ -43,9 +43,42 @@
     &.toggle-chip.active { background: rgba(100, 181, 246, 0.12); border-color: rgba(100, 181, 246, 0.35); color: var(--accent-primary); }
   }
 
-  .compact-select {
-    width: 140px;
-    &.policy-select { width: 280px; }
+  // Match the height + icon styling of .filter-chip toggles
+  // Needs ::ng-deep to pierce the Material internal classes and override
+  // the global factor-autocomplete-field rules from styles.scss.
+  ::ng-deep .policy-select {
+    width: 280px;
+
+    .mat-mdc-text-field-wrapper {
+      height: 34px !important;
+      padding: 0 10px !important;
+      border-radius: 6px !important;
+    }
+
+    .mat-mdc-form-field-infix {
+      height: 32px !important;
+      min-height: unset !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+    }
+
+    .mat-mdc-select-value-text,
+    .mat-mdc-select-placeholder {
+      font-size: 0.8125rem !important;
+      font-weight: 500;
+    }
+
+    .mat-mdc-form-field-icon-prefix {
+      padding: 0 2px 0 0 !important;
+
+      mat-icon {
+        font-size: 16px !important;
+        width: 16px !important;
+        height: 16px !important;
+        color: rgba(255, 255, 255, 0.55) !important;
+        margin-right: 0 !important;
+      }
+    }
   }
 
   .clear-filters-btn.inline {
@@ -235,24 +268,37 @@
 }
 
 .circle-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.75rem;
+  row-gap: 0.18rem;
   flex: 1;
   min-width: 200px;
 }
 
 .circle-name {
   display: block;
+  flex: 0 0 100%;
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--accent-primary);
   text-decoration: none;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.05rem;
 
   &:hover { text-decoration: underline; }
 }
 
-.circle-meta {
+.circle-tags {
   display: flex;
   flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0;
+}
+
+.circle-meta {
+  display: flex;
+  flex-wrap: nowrap;
   gap: 0.75rem;
   font-size: 0.8125rem;
   color: var(--text-secondary);
@@ -361,14 +407,20 @@
     align-items: center;
     background: rgba(88, 101, 242, 0.15); // Discord Blurple
     color: #5865F2;
-    padding: 2px 8px;
+    padding: 1px 6px;
     border-radius: var(--radius-xs);
     text-decoration: none;
     font-weight: 500;
     transition: all 0.2s ease;
     border: 1px solid rgba(88, 101, 242, 0.3);
     margin: 0 2px;
-    font-size: 0.8125rem;
+    font-size: inherit;
+    line-height: 1.15;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: text-bottom;
 
     &:hover { background: rgba(88, 101, 242, 0.25); color: var(--text-primary); border-color: rgba(88, 101, 242, 0.6); }
   }
@@ -397,7 +449,7 @@ mat-paginator {
         width: 100%;
         order: 0;
 
-        .compact-select { flex: 1; width: auto; }
+        .policy-select { flex: 1; width: 100%; }
       }
 
       .clear-filters-btn { order: 2; }
@@ -405,88 +457,212 @@ mat-paginator {
   }
 
   .circle-card {
-    padding: 0.75rem;
+    padding: 0.45rem 0.55rem;
+
+    // Override desktop rank-1/2/3 font-size boosts — keep color, normalize size
+    &.rank-1 .rank-section .rank-number,
+    &.rank-2 .rank-section .rank-number,
+    &.rank-3 .rank-section .rank-number { font-size: 0.9rem; }
 
     .card-header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem;
+      display: grid;
+      grid-template-columns: auto auto 1fr auto;
+      grid-template-rows: auto auto;
+      grid-template-areas:
+        "rank icon info  fans"
+        "rank icon meta  fans";
+      column-gap: 0.45rem;
+      row-gap: 0.12rem;
     }
 
     .rank-section {
-      flex-direction: row;
-      gap: 0.25rem;
-      min-width: auto;
-      width: auto;
-      border-bottom: none;
-      padding-bottom: 0;
-      margin-bottom: 0;
+      grid-area: rank;
+      flex-direction: column;
       align-items: center;
-      
-      .rank-number { font-size: 1.1rem; }
+      justify-content: center;
+      min-width: 24px;
+      width: 24px;
+      align-self: center;
 
+      .rank-number { font-size: 0.9rem; }
+      .rank-main { gap: 0.1rem; flex-direction: column; align-items: center; }
+      .rank-diff { font-size: 0.6rem; mat-icon { @include icon-size(11px); } }
       .yesterday-rank { display: none; }
     }
 
     .club-rank-icon {
-      img { width: 32px; height: 32px; }
+      grid-area: icon;
+      align-self: center;
+      img { width: 34px; height: 34px; }
     }
 
     .circle-info {
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-      
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 0.25rem 0.5rem;
-      
+      display: contents;
+
       .circle-name {
-        font-size: 1rem;
+        grid-area: info;
+        font-size: 0.82rem;
+        font-weight: 600;
         margin-bottom: 0;
-        @include text-ellipsis;
-        max-width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        align-self: end;
+      }
+
+      .circle-tags {
+        grid-area: meta;
+        margin-bottom: 0;
+        gap: 0.12rem 0.3rem;
+        align-self: start;
       }
 
       .circle-meta {
-        display: contents;
-        
-        .meta-item {
-          font-size: 0.75rem;
-          color: var(--text-secondary);
-          white-space: nowrap;
+        grid-area: info;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.12rem 0.25rem;
+        align-self: end;
+        margin-top: 1.05rem;
 
+        .meta-item {
+          font-size: 0.65rem;
+          white-space: nowrap;
+          &.join-style,
+          &.policy-badge { display: none; }
           .label { display: none; }
         }
+      }
+
+      .circle-tags .meta-item {
+        &.join-style,
+        &.policy-badge { padding: 0 4px; font-size: 0.6rem; line-height: 1.5; }
       }
     }
 
     .fans-section {
-      width: 100%;
-      flex-direction: row;
-      justify-content: space-between;
-      align-items: center;
-      .fans-count { font-size: 0.9rem; }
+      grid-area: fans;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: center;
+      align-self: center;
+      width: auto;
+      padding: 0;
+      border: none;
+      margin: 0;
+      gap: 2px;
 
-      .gains-row { font-size: 0.75rem; margin-top: 0; }
+      .fans-count { font-size: 0.75rem; line-height: 1.1; white-space: nowrap; }
+      .gains-row { font-size: 0.6rem; margin-top: 0; gap: 3px; white-space: nowrap; }
     }
 
     .actions { display: none; }
-    
+
     .card-body {
-      margin-top: 0.5rem;
-      padding-top: 0.5rem;
-      
+      margin-top: 0.3rem;
+      padding-top: 0.3rem;
+
       .comment {
-        font-size: 0.8rem;
+        font-size: 0.62rem;
+        line-height: 1.3;
         display: -webkit-box;
         -webkit-line-clamp: 1;
         line-clamp: 1;
         -webkit-box-orient: vertical;
         overflow: hidden;
+        color: var(--text-secondary);
+
+        ::ng-deep .discord-link {
+          max-width: 145px;
+          padding: 0 5px;
+          font-size: inherit;
+          border-radius: 4px;
+          margin: 0 1px;
+        }
       }
+    }
+  }
+}
+
+@media (max-width: 430px) {
+  .circle-card {
+    padding: 0.42rem 0.5rem;
+
+    .card-header {
+      grid-template-columns: auto auto minmax(0, 1fr) auto;
+      grid-template-rows: auto;
+      grid-template-areas: "rank icon info fans";
+      column-gap: 0.4rem;
+      row-gap: 0;
+    }
+
+    .rank-section {
+      min-width: 22px;
+      width: 22px;
+
+      .rank-number { font-size: 0.84rem; }
+      .rank-diff { font-size: 0.56rem; mat-icon { @include icon-size(10px); } }
+    }
+
+    .club-rank-icon img { width: 30px; height: 30px; }
+
+    .circle-info {
+      grid-area: info;
+      display: flex;
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.22rem;
+      min-width: 0;
+      overflow: hidden;
+
+      .circle-name {
+        font-size: 0.74rem;
+        min-width: 0;
+        width: 100%;
+      }
+
+      .circle-tags {
+        margin-bottom: 0;
+        width: 100%;
+
+        .meta-item {
+          &.join-style,
+          &.policy-badge {
+            font-size: 0.54rem;
+            padding: 0 3px;
+          }
+        }
+      }
+
+      .circle-meta {
+        gap: 0.12rem;
+        flex-wrap: nowrap;
+        align-items: center;
+        flex-shrink: 0;
+        margin-top: 0;
+
+        .meta-item {
+          font-size: 0.58rem;
+
+          &:not(.join-style):not(.policy-badge) { display: none; }
+        }
+      }
+    }
+
+    .fans-section {
+      align-items: flex-end;
+      justify-content: center;
+      margin-top: 0;
+      min-width: 76px;
+
+      .fans-count { font-size: 0.7rem; }
+      .gains-row { font-size: 0.58rem; }
+    }
+
+    .card-body .comment {
+      font-size: 0.58rem;
+
+      ::ng-deep .discord-link { max-width: 128px; }
     }
   }
 }

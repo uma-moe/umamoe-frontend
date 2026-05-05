@@ -27,7 +27,7 @@ import { debounceTime, distinctUntilChanged, startWith, map } from 'rxjs/operato
 import { CharacterService } from '../../services/character.service';
 import { FactorService, Factor } from '../../services/factor.service';
 import { Character } from '../../models/character.model';
-import { CharacterSelectDialogComponent } from './character-select-dialog.component';
+import { CharacterSelectDialogComponent } from '../../components/character-select-dialog/character-select-dialog.component';
 import { MatCard, MatCardModule } from '@angular/material/card';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatExpansionModule } from '@angular/material/expansion';

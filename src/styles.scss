@@ -75,15 +75,15 @@ $dark-theme: mat.define-dark-theme((color: (primary: $primary-palette,
   --text-disabled: rgba(255, 255, 255, 0.3);
 
   // ===== ACCENT / SEMANTIC COLORS =====
-  --accent-primary: #64b5f6;       // Blue
+  --accent-primary: #64b5f6; // Blue
   --accent-primary-rgb: 100, 181, 246;
-  --accent-secondary: #81c784;     // Green
+  --accent-secondary: #81c784; // Green
   --accent-secondary-rgb: 129, 199, 132;
-  --accent-warning: #ffb74d;       // Orange
+  --accent-warning: #ffb74d; // Orange
   --accent-warning-rgb: 255, 183, 77;
-  --accent-error: #e57373;         // Red
+  --accent-error: #e57373; // Red
   --accent-error-rgb: 229, 115, 115;
-  --accent-purple: #ce93d8;        // Purple
+  --accent-purple: #ce93d8; // Purple
   --accent-purple-rgb: 206, 147, 216;
 
   // Stronger / darker variants for buttons & fills
@@ -134,23 +134,23 @@ $dark-theme: mat.define-dark-theme((color: (primary: $primary-palette,
   // ===== SPACING / LAYOUT TOKENS =====
   --header-height: 60px;
   --navbar-height: 60px;
-  --page-padding: 2rem;
+  --page-padding: clamp(1rem, 3vw, 2.5rem);
   --page-padding-mobile: 1rem;
-  --page-max-width: 1400px;
+  --page-max-width: 1800px;
   --card-padding: 1.5rem;
   --card-padding-mobile: 1rem;
   --filter-card-width: 280px;
 
   // ===== TYPOGRAPHY =====
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-xs: 0.6875rem;   // 11px
-  --font-sm: 0.8125rem;   // 13px
-  --font-base: 0.875rem;  // 14px
-  --font-md: 1rem;        // 16px
-  --font-lg: 1.125rem;    // 18px
-  --font-xl: 1.5rem;      // 24px
-  --font-2xl: 2rem;       // 32px
-  --font-3xl: 2.5rem;     // 40px
+  --font-xs: 0.6875rem; // 11px
+  --font-sm: 0.8125rem; // 13px
+  --font-base: 0.875rem; // 14px
+  --font-md: 1rem; // 16px
+  --font-lg: 1.125rem; // 18px
+  --font-xl: 1.5rem; // 24px
+  --font-2xl: 2rem; // 32px
+  --font-3xl: 2.5rem; // 40px
 
   // ===== TRANSITIONS =====
   --transition: all 0.3s ease;
@@ -239,6 +239,51 @@ a {
 .mat-mdc-menu-panel {
   background: var(--bg-secondary) !important;
   border: 1px solid var(--border-primary) !important;
+}
+
+// ===== CHARACTER SELECT SORT MENU =====
+.char-select-sort-menu {
+  background: rgba(18, 18, 18, 0.97) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-primary) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  min-width: 160px !important;
+
+  .mat-mdc-menu-item {
+    color: var(--text-secondary) !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    font-size: 0.82rem !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+
+    &:last-child { border-bottom: none !important; }
+
+    .mat-icon {
+      color: var(--text-disabled) !important;
+      font-size: 16px !important;
+      width: 16px !important;
+      height: 16px !important;
+      margin-right: 8px !important;
+    }
+
+    &:hover:not([disabled]) {
+      background: var(--surface-3) !important;
+      color: var(--text-primary) !important;
+      .mat-icon { color: var(--accent-primary) !important; }
+    }
+
+    &.active {
+      color: var(--accent-primary) !important;
+      background: rgba(33, 150, 243, 0.08) !important;
+      .mat-icon { color: var(--accent-primary) !important; }
+    }
+
+    &[disabled] {
+      color: var(--text-disabled) !important;
+      opacity: 0.5 !important;
+    }
+  }
 }
 
 .mat-mdc-chip {
@@ -456,6 +501,7 @@ body.christmas-theme {
     width: calc(100vw - 16px) !important;
   }
 }
+
 .transparent-dialog-panel {
   .mat-mdc-dialog-container {
     --mdc-dialog-container-color: transparent;
@@ -567,6 +613,14 @@ body.christmas-theme {
 
   .mdc-line-ripple {
     display: none;
+  }
+
+  .mat-mdc-form-field-icon-suffix {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    padding: 0 4px 0 0;
+    overflow: unset !important;
   }
 }
 
@@ -880,7 +934,7 @@ body.christmas-theme {
     --mdc-checkbox-unselected-icon-color: var(--text-secondary);
   }
 
-  .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background {
+  .mdc-checkbox__native-control:enabled:checked~.mdc-checkbox__background {
     background-color: var(--accent-primary) !important;
     border-color: var(--accent-primary) !important;
   }
@@ -893,7 +947,7 @@ body.christmas-theme {
 // Support (green)
 .support-toggle,
 .compact-support-toggle {
-  .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background {
+  .mdc-checkbox__native-control:enabled:checked~.mdc-checkbox__background {
     background-color: var(--accent-secondary) !important;
     border-color: var(--accent-secondary) !important;
   }
@@ -906,7 +960,7 @@ body.christmas-theme {
 // Story Events (orange/warning)
 .story-events-toggle,
 .compact-story-events-toggle {
-  .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background {
+  .mdc-checkbox__native-control:enabled:checked~.mdc-checkbox__background {
     background-color: var(--accent-warning) !important;
     border-color: var(--accent-warning) !important;
   }
@@ -919,7 +973,7 @@ body.christmas-theme {
 // Champions Meeting (purple)
 .champions-toggle,
 .compact-champions-toggle {
-  .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background {
+  .mdc-checkbox__native-control:enabled:checked~.mdc-checkbox__background {
     background-color: var(--color-purple) !important;
     border-color: var(--color-purple) !important;
   }
@@ -933,7 +987,7 @@ body.christmas-theme {
 .legend-toggle,
 .legend-races-toggle,
 .compact-legend-races-toggle {
-  .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background {
+  .mdc-checkbox__native-control:enabled:checked~.mdc-checkbox__background {
     background-color: var(--color-pink) !important;
     border-color: var(--color-pink) !important;
   }
@@ -947,7 +1001,7 @@ body.christmas-theme {
 .paid-toggle,
 .paid-banners-toggle,
 .compact-paid-toggle {
-  .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background {
+  .mdc-checkbox__native-control:enabled:checked~.mdc-checkbox__background {
     background-color: var(--color-orange) !important;
     border-color: var(--color-orange) !important;
   }
@@ -961,7 +1015,7 @@ body.christmas-theme {
 .campaign-toggle,
 .campaigns-toggle,
 .compact-campaign-toggle {
-  .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background {
+  .mdc-checkbox__native-control:enabled:checked~.mdc-checkbox__background {
     background-color: #26a69a !important;
     border-color: #26a69a !important;
   }
@@ -1084,7 +1138,9 @@ body.christmas-theme {
 // Apply the class "search-field-dark" to any mat-form-field for dark search styling.
 .search-field-dark,
 .search-field {
-  .mat-mdc-form-field-subscript-wrapper { display: none; }
+  .mat-mdc-form-field-subscript-wrapper {
+    display: none;
+  }
 
   .mat-mdc-form-field-wrapper {
     background: rgba(255, 255, 255, 0.05) !important;
@@ -1239,7 +1295,7 @@ body.christmas-theme {
 }
 
 // ===== GLOBAL: CHECKBOX LABEL RESET =====
-.compact-filter-toggles mat-checkbox .mdc-form-field > label {
+.compact-filter-toggles mat-checkbox .mdc-form-field>label {
   margin: 0;
   padding: 0;
 }
@@ -1268,6 +1324,7 @@ body.christmas-theme {
   }
 
   .mdc-text-field--outlined {
+
     .mdc-notched-outline__leading,
     .mdc-notched-outline__notch,
     .mdc-notched-outline__trailing {
@@ -1330,9 +1387,17 @@ body.christmas-theme {
 // Use as: .grade-g1, .grade-g2, .grade-g3
 
 // Text-only color (for labels, grade badges in lists)
-.grade-g1-text { color: var(--grade-g1); }
-.grade-g2-text { color: var(--grade-g2); }
-.grade-g3-text { color: var(--grade-g3); }
+.grade-g1-text {
+  color: var(--grade-g1);
+}
+
+.grade-g2-text {
+  color: var(--grade-g2);
+}
+
+.grade-g3-text {
+  color: var(--grade-g3);
+}
 
 // Chip style: background + border + text
 .grade-g1-chip {
@@ -1340,11 +1405,13 @@ body.christmas-theme {
   border: 1px solid rgba(var(--grade-g1-base), 0.4);
   color: var(--grade-g1);
 }
+
 .grade-g2-chip {
   background: rgba(var(--grade-g2-base), 0.15);
   border: 1px solid rgba(var(--grade-g2-base), 0.4);
   color: var(--grade-g2);
 }
+
 .grade-g3-chip {
   background: rgba(var(--grade-g3-base), 0.15);
   border: 1px solid rgba(var(--grade-g3-base), 0.4);
@@ -1357,13 +1424,295 @@ body.christmas-theme {
   border-color: rgba(var(--grade-g1-base), 0.6);
   color: var(--grade-g1);
 }
+
 .grade-g2-chip-active {
   background: rgba(var(--grade-g2-base), 0.25);
   border-color: rgba(var(--grade-g2-base), 0.6);
   color: var(--grade-g2);
 }
+
 .grade-g3-chip-active {
   background: rgba(var(--grade-g3-base), 0.25);
   border-color: rgba(var(--grade-g3-base), 0.6);
   color: var(--grade-g3);
+}
+
+// ===== GLOBAL: SNACKBAR =====
+.mat-mdc-snack-bar-container {
+  --mdc-snackbar-container-color: var(--bg-tertiary);
+  --mdc-snackbar-supporting-text-color: var(--text-primary);
+  --mat-snack-bar-button-color: var(--accent-primary);
+
+  .mdc-snackbar__surface {
+    background: var(--bg-tertiary) !important;
+    border: 1px solid var(--border-primary) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  .mdc-snackbar__label {
+    color: var(--text-primary) !important;
+    font-family: var(--font-family) !important;
+    font-size: var(--font-sm);
+    font-weight: 500;
+  }
+
+  .mat-mdc-button.mat-mdc-snack-bar-action {
+    color: var(--accent-primary) !important;
+    font-family: var(--font-family) !important;
+    font-weight: 600;
+    font-size: var(--font-sm);
+
+    &:hover {
+      background: rgba(var(--accent-primary-rgb), 0.1);
+    }
+  }
+}
+
+// ===== GLOBAL: FACTOR AUTOCOMPLETE / SELECT PANEL =====
+
+// Field styles for the standard dark autocomplete/select inputs
+// (paired with `.factor-autocomplete-panel` for the dropdown)
+.factor-autocomplete-field,
+.factor-select-field {
+  // Kill the MDC outline entirely via CSS vars
+  --mdc-outlined-text-field-outline-color: transparent;
+  --mdc-outlined-text-field-hover-outline-color: transparent;
+  --mdc-outlined-text-field-focus-outline-color: transparent;
+  --mdc-outlined-text-field-outline-width: 0;
+  --mdc-outlined-text-field-focus-outline-width: 0;
+
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing {
+    border: none !important;
+    border-width: 0 !important;
+  }
+
+  .mat-mdc-text-field-wrapper {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    padding: 0 10px !important;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  &.mat-focused .mat-mdc-text-field-wrapper,
+  &.mat-mdc-form-field-focused .mat-mdc-text-field-wrapper {
+    border-color: rgba(100, 181, 246, 0.4) !important;
+    background: rgba(100, 181, 246, 0.04) !important;
+  }
+
+  .mat-mdc-form-field-infix {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    min-height: unset !important;
+    height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  input.mat-mdc-input-element {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-size: 14px !important;
+    font-family: inherit !important;
+    caret-color: rgba(100, 181, 246, 0.8);
+    margin-top: 0 !important;
+
+    &::placeholder { color: rgba(255, 255, 255, 0.3) !important; }
+  }
+
+  .mat-mdc-select {
+    display: flex !important;
+    align-items: center !important;
+    height: 100% !important;
+  }
+
+  .mat-mdc-select-value-text,
+  .mat-mdc-select-placeholder {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-size: 14px !important;
+    font-family: inherit !important;
+  }
+  .mat-mdc-select-placeholder { color: rgba(255, 255, 255, 0.3) !important; }
+
+  .mat-mdc-select-arrow svg { fill: rgba(255, 255, 255, 0.4) !important; }
+}
+
+// Slightly compact variant for user/name search inputs
+.search-user-field {
+  .mat-mdc-text-field-wrapper { height: 38px !important; }
+
+  .mat-mdc-form-field-infix { height: 36px !important; }
+
+  .mat-mdc-form-field-icon-suffix {
+    padding: 0 4px 0 0 !important;
+    display: flex;
+    align-items: center;
+
+    .input-icon { font-size: 16px; width: 16px; height: 16px; color: rgba(255, 255, 255, 0.3); }
+
+    button.mat-mdc-icon-button {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      --mdc-icon-button-state-layer-size: 28px;
+
+      mat-icon { font-size: 16px; width: 16px; height: 16px; color: rgba(255, 255, 255, 0.3); }
+      &:hover mat-icon { color: rgba(255, 255, 255, 0.7); }
+    }
+  }
+}
+
+// Autocomplete panels (mat-autocomplete)
+// Must use `div.mat-mdc-autocomplete-panel` to match Material's own specificity (type + class)
+div.mat-mdc-autocomplete-panel.factor-autocomplete-panel {
+  --mat-autocomplete-background-color: #1e1e1e;
+  --mdc-menu-container-color: #1e1e1e;
+  --mat-option-label-text-color: rgba(255, 255, 255, 0.85);
+  --mat-option-selected-state-label-text-color: rgba(100, 181, 246, 0.9);
+  --mat-option-hover-state-layer-color: rgba(255, 255, 255, 0.05);
+  --mat-option-focus-state-layer-color: rgba(255, 255, 255, 0.05);
+  --mat-option-selected-state-layer-color: rgba(100, 181, 246, 0.08);
+  background-color: #1e1e1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  max-height: 220px !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+}
+
+// Select panels (mat-select)
+.factor-autocomplete-panel.mat-mdc-select-panel {
+  --mat-select-panel-background-color: #1e1e1e;
+  --mat-option-label-text-color: rgba(255, 255, 255, 0.85);
+  --mat-option-selected-state-label-text-color: rgba(100, 181, 246, 0.9);
+  --mat-option-hover-state-layer-color: rgba(255, 255, 255, 0.05);
+  --mat-option-focus-state-layer-color: rgba(255, 255, 255, 0.05);
+  --mat-option-selected-state-layer-color: rgba(100, 181, 246, 0.08);
+  background-color: #1e1e1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  max-height: 220px !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+}
+
+// Shared option styles for both autocomplete and select panels
+div.mat-mdc-autocomplete-panel.factor-autocomplete-panel .mat-mdc-option,
+.factor-autocomplete-panel.mat-mdc-select-panel .mat-mdc-option {
+  font-size: 13px !important;
+  font-family: inherit !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  min-height: 36px !important;
+  padding: 0 12px !important;
+  background: transparent !important;
+
+  &:last-child {
+    border-bottom: none !important;
+  }
+
+  .mdc-list-item__primary-text {
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-size: 13px !important;
+  }
+
+  &:hover:not(.mdc-list-item--disabled),
+  &.mat-mdc-option-active {
+    background: rgba(255, 255, 255, 0.05) !important;
+  }
+
+  &.mdc-list-item--selected:not(.mat-mdc-option-multiple) {
+    background: rgba(100, 181, 246, 0.08) !important;
+
+    .mdc-list-item__primary-text {
+      color: rgba(100, 181, 246, 0.9) !important;
+    }
+
+    .mat-pseudo-checkbox {
+      display: none;
+    }
+  }
+}
+
+// ===== GLOBAL: SPARK EDITOR OVERLAY =====
+.se-overlay-panel {
+  .se-results {
+    width: 100%;
+    max-height: 180px;
+    overflow-y: auto;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .se-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 10px;
+    font-size: 0.65rem;
+    cursor: pointer;
+    transition: background 0.1s;
+    border-bottom: 1px solid var(--border-subtle);
+    font-family: var(--font-family);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: var(--surface-hover, rgba(255, 255, 255, 0.05));
+    }
+
+    &.blue-spark .se-rname {
+      color: var(--accent-primary);
+    }
+
+    &.pink-spark .se-rname {
+      color: var(--color-pink);
+    }
+
+    &.green-spark .se-rname {
+      color: var(--accent-secondary, #81c784);
+    }
+
+    &.white-spark .se-rname {
+      color: var(--text-muted);
+    }
+  }
+
+  .se-rname {
+    font-weight: 600;
+  }
+
+  .se-rtype {
+    font-size: 0.55rem;
+    color: var(--text-disabled);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+}
+
+// ===== GLOBAL: TOOLTIP =====
+.mat-mdc-tooltip {
+  --mdc-plain-tooltip-container-color: var(--bg-tertiary);
+  --mdc-plain-tooltip-supporting-text-color: var(--text-primary);
+
+  .mdc-tooltip__surface {
+    background: var(--bg-tertiary) !important;
+    border: 1px solid var(--border-primary) !important;
+    border-radius: var(--radius-sm) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+    color: var(--text-primary) !important;
+    font-family: var(--font-family) !important;
+    font-size: var(--font-xs);
+    font-weight: 500;
+    padding: 6px 12px !important;
+    max-width: 280px;
+  }
 }

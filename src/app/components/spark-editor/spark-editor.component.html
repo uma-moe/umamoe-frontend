@@ -1,0 +1,68 @@
+<!-- Existing spark chips (optional, hidden when parent renders its own display) -->
+<div class="se-chips" *ngIf="showChips && sparks.length > 0">
+  <div
+    class="spark-item se-chip"
+    *ngFor="let spark of sparks; let i = index"
+    [ngClass]="chipClass(spark)"
+  >
+    <span class="spark-level">{{ spark.level }}</span>
+    <mat-icon class="spark-star">star</mat-icon>
+    <span class="spark-name">{{ spark.name }}</span>
+    <button class="se-rm" (click)="removeSpark(i, $event)" type="button" title="Remove">×</button>
+  </div>
+</div>
+
+<!-- Add Spark trigger chip -->
+<button class="se-add-chip" *ngIf="!isOpen" (click)="toggleOpen($event)" type="button">
+  <mat-icon>add</mat-icon>
+  <span>Add Spark</span>
+</button>
+
+<!-- Anchor: always present as CDK overlay origin; editor shown inside when open -->
+<div class="se-anchor" cdkOverlayOrigin #overlayOrigin="cdkOverlayOrigin" #anchor>
+  <div class="se-editor" *ngIf="isOpen">
+    <div class="se-search-row">
+      <input
+        class="se-input"
+        type="text"
+        placeholder="Search sparks..."
+        [ngModel]="searchQuery"
+        (ngModelChange)="search($event)"
+        autocomplete="off"
+        #sparkInput
+      />
+      <div class="se-levels">
+        <button
+          *ngFor="let l of [1, 2, 3]"
+          type="button"
+          [class.active]="addLevel === l"
+          (click)="setLevel(l, $event)"
+        >{{ l }}★</button>
+      </div>
+      <button class="se-close" (click)="toggleOpen($event)" type="button" title="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Results rendered in CDK overlay (outside the panel DOM tree) -->
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="overlayOrigin"
+  [cdkConnectedOverlayOpen]="isOpen && searchResults.length > 0"
+  [cdkConnectedOverlayPositions]="overlayPositions"
+  [cdkConnectedOverlayWidth]="panelWidth"
+  cdkConnectedOverlayPanelClass="se-overlay-panel">
+  <div class="se-results">
+    <div
+      class="se-result"
+      *ngFor="let f of searchResults"
+      [ngClass]="colorClass(f.type)"
+      (click)="addSpark(f, $event)"
+    >
+      <span class="se-rname">{{ f.text }}</span>
+      <span class="se-rtype">{{ typeLabelByType(f.type) }}</span>
+    </div>
+  </div>
+</ng-template>

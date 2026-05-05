@@ -3,6 +3,7 @@
 
 # ===== COMPILED OUTPUT =====
 /dist
+/.tmp
 
 # ===== NODE.JS =====
 /node_modules
@@ -59,3 +60,4 @@ scripts/
 
 # WebP conversion cache
 .webp-cache/
+/docs
