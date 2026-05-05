@@ -238,15 +238,53 @@
         </button>
       </div>
     </div>
+    <div class="members-filter-row">
+      <mat-form-field appearance="outline" class="factor-autocomplete-field search-user-field members-filter-field" subscriptSizing="dynamic">
+        <input
+          matInput
+          [matAutocomplete]="memberAuto"
+          placeholder="Filter by name or ID"
+          [(ngModel)]="memberFilter"
+          (ngModelChange)="onMemberFilterChange()" />
+        <mat-icon matSuffix class="input-icon" *ngIf="!memberFilter">search</mat-icon>
+        <button *ngIf="memberFilter" matSuffix mat-icon-button (click)="memberFilter = ''; onMemberFilterChange()">
+          <mat-icon>close</mat-icon>
+        </button>
+        <mat-autocomplete #memberAuto="matAutocomplete" class="factor-autocomplete-panel"
+                          (optionSelected)="onMemberFilterChange()">
+          <mat-option *ngFor="let m of memberFilterSuggestions" [value]="m.name">
+            {{ m.name }} <span style="opacity: 0.5; font-size: 0.85em;">{{ m.trainer_id }}</span>
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+    </div>
     <div class="members-grid" *ngIf="membersListMode === 'grid'">
-      <div class="member-card" *ngFor="let member of members; let i = index; trackBy: trackByViewerId" 
+      <div class="member-card" *ngFor="let member of filteredMembers; let i = index; trackBy: trackByViewerId" 
            [class.inactive]="!member.isActive"
            [class.rank-1]="i === 0 && member.isActive"
            [class.rank-2]="i === 1 && member.isActive"
            [class.rank-3]="i === 2 && member.isActive">
         <div class="member-header">
           <div class="rank mono">#{{i + 1}}</div>
-          <div class="name">{{member.name}}</div>
+          <div class="name-block">
+            <a class="name member-name-link"
+               [href]="getMemberProfileUrl(member)"
+               target="_blank"
+               rel="noopener noreferrer"
+               [title]="'Open ' + member.name + ' profile in new tab'">
+              {{member.name}}
+              <mat-icon class="action-icon" aria-hidden="true">open_in_new</mat-icon>
+            </a>
+            <button type="button"
+                    class="member-id mono member-id-copy"
+                    (click)="copyTrainerId(member.trainer_id, $event)"
+                    [title]="'Copy trainer ID ' + member.trainer_id"
+                    [attr.aria-label]="'Copy trainer ID ' + member.trainer_id">
+              <span class="copy-prefix">ID</span>
+              {{member.trainer_id}}
+              <mat-icon class="copy-icon" aria-hidden="true">content_copy</mat-icon>
+            </button>
+          </div>
           <span class="role-badge" [ngClass]="member.role">{{member.role | titlecase}}</span>
           <span class="status-badge inactive" *ngIf="!member.isActive">Left</span>
         </div>
@@ -335,14 +373,32 @@
         <span class="col-avg" *ngIf="config.showSevenDayAvg && config.selectedCalculation !== 'avg_daily_gain'">7d Avg</span>
         <span class="col-date" *ngIf="config.showLastUpdated">Updated</span>
       </div>
-      <div class="member-row" *ngFor="let member of members; let i = index; trackBy: trackByViewerId"
+      <div class="member-row" *ngFor="let member of filteredMembers; let i = index; trackBy: trackByViewerId"
            [class.inactive]="!member.isActive"
            [class.rank-1]="i === 0 && member.isActive"
            [class.rank-2]="i === 1 && member.isActive"
            [class.rank-3]="i === 2 && member.isActive">
         <span class="col-rank mono">#{{i + 1}}</span>
         <span class="col-name">
-          {{member.name}}
+          <span class="name-block">
+            <a class="member-name-link"
+               [href]="getMemberProfileUrl(member)"
+               target="_blank"
+               rel="noopener noreferrer"
+               [title]="'Open ' + member.name + ' profile in new tab'">
+              {{member.name}}
+              <mat-icon class="action-icon" aria-hidden="true">open_in_new</mat-icon>
+            </a>
+            <button type="button"
+                    class="member-id mono member-id-copy"
+                    (click)="copyTrainerId(member.trainer_id, $event)"
+                    [title]="'Copy trainer ID ' + member.trainer_id"
+                    [attr.aria-label]="'Copy trainer ID ' + member.trainer_id">
+              <span class="copy-prefix">ID</span>
+              {{member.trainer_id}}
+              <mat-icon class="copy-icon" aria-hidden="true">content_copy</mat-icon>
+            </button>
+          </span>
           <span class="status-badge-inline inactive" *ngIf="!member.isActive">Left</span>
         </span>
         <span class="col-role" *ngIf="config.showRole">

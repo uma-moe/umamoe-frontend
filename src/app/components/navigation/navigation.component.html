@@ -20,10 +20,10 @@
     </div>
 
     <div class="nav-links">
-      <a routerLink="/database" routerLinkActive="active" class="nav-link">
+      <a routerLink="/database" routerLinkActive="active" class="nav-link updated-feature">
         <mat-icon>dataset</mat-icon>
         <span
-          >Database
+          >Database<span class="updated-badge">Updated</span>
          </span
         >
       </a>
@@ -46,9 +46,9 @@
         <span>Tierlist</span>
       </a>
 
-      <a routerLink="/tools" routerLinkActive="active" class="nav-link">
+      <a routerLink="/tools" routerLinkActive="active" class="nav-link new-feature">
         <mat-icon>build</mat-icon>
-        <span>Tools</span>
+        <span>Tools<span class="new-badge">New</span></span>
       </a>
 
       <a routerLink="/timeline" routerLinkActive="active" class="nav-link">
@@ -59,6 +59,42 @@
       <!-- <button mat-icon-button (click)="toggleTheme()" class="theme-toggle" [matTooltip]="(isChristmas$ | async) ? 'Disable Christmas Theme' : 'Enable Christmas Theme'">
         <mat-icon [class.active-snowflake]="isChristmas$ | async">ac_unit</mat-icon>
       </button> -->
+    </div>
+
+    <div class="nav-status" *ngIf="(status$ | async) as status">
+      <ng-container *ngIf="status !== 'loading'">
+        <button
+          class="nav-status-btn"
+          [class.open]="statusTooltipOpen"
+          (click)="toggleStatusTooltip($event)"
+          [attr.aria-label]="getStatusLabel(status) + ' - Click for details'">
+          <div class="status-dot-wrap" [ngClass]="'status--' + status">
+            <span class="status-dot-inner"></span>
+            <span class="status-dot-ping"></span>
+          </div>
+          <span class="status-label">Status</span>
+          <mat-icon class="dropdown-chevron">expand_more</mat-icon>
+        </button>
+        <div class="status-dropdown" *ngIf="statusTooltipOpen" (click)="$event.stopPropagation()">
+        <div class="status-header" [ngClass]="'status--' + status">
+          <span class="status-dot"></span>
+          <span>{{ getStatusLabel(status) }}</span>
+        </div>
+        <div class="status-endpoints">
+          <ng-container *ngFor="let ep of endpoints$ | async">
+            <div class="status-ep">
+              <span class="status-ep-dot" [class.healthy]="ep.healthy" [class.unhealthy]="!ep.healthy"></span>
+              <span class="status-ep-name">{{ ep.name }}</span>
+              <span class="status-ep-group">{{ ep.group }}</span>
+            </div>
+          </ng-container>
+        </div>
+        <a class="status-link" href="https://status.uma.moe/" target="_blank" rel="noopener noreferrer">
+          <span>View Status Page</span>
+          <mat-icon>open_in_new</mat-icon>
+        </a>
+      </div>
+      </ng-container>
     </div>
 
     <div class="nav-auth">

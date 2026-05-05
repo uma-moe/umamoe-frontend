@@ -483,7 +483,16 @@
     align-items: flex-start;
     gap: 0.5rem;
 
-    .value { color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem; }
+    .value {
+      color: var(--text-secondary);
+      line-height: 1.6;
+      font-size: 0.95rem;
+      display: block;
+      width: 100%;
+      overflow: visible;
+      text-overflow: initial;
+      word-break: break-word;
+    }
   }
 
   .label { color: var(--text-muted); font-size: 0.9rem; flex-shrink: 0; }
@@ -511,10 +520,17 @@
 
     .discord-link {
       color: #7289da;
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.35rem;
       text-decoration: none;
+      border-radius: 4px;
+      padding: 1px 6px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.2;
       
       &:hover { text-decoration: underline; }
     }
@@ -590,6 +606,14 @@
   }
 }
 
+.members-filter-row {
+  margin-top: -1rem;
+
+  .members-filter-field {
+    width: 100%;
+  }
+}
+
 .members-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -620,7 +644,7 @@
     &.rank-#{$rank} {
       border-color: rgba($color, 0.5);
       background: linear-gradient(145deg, rgba($color, 0.05), #1e1e1e);
-      .member-header .rank, .member-header .name { color: $color; }
+      .member-header .rank, .member-header .name, .member-header .name-block .name { color: $color; }
     }
   }
 }
@@ -645,6 +669,139 @@
     color: var(--text-primary);
     @include text-ellipsis;
     margin-right: auto;
+  }
+
+  .name-block {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-right: auto;
+    min-width: 0;
+
+    .name,
+    .member-name-link {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: inherit;
+      @include text-ellipsis;
+      margin-right: 0;
+      text-decoration: none;
+      cursor: pointer;
+      max-width: 100%;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      width: fit-content;
+      line-height: 1.15;
+      transition: color 0.15s, text-shadow 0.15s;
+
+      .action-icon {
+        font-size: 13px;
+        width: 13px;
+        height: 13px;
+        opacity: 0;
+        transform: translateX(-4px);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        margin-left: -2px;
+
+        @media (hover: none) {
+          opacity: 0.5;
+          transform: translateX(0);
+        }
+      }
+
+      &:hover {
+        color: var(--accent-primary) !important;
+        text-shadow: 0 0 8px rgba(100, 181, 246, 0.4);
+
+        .action-icon {
+          opacity: 0.85;
+          transform: translateX(0);
+        }
+      }
+
+      &:focus-visible {
+        outline: 1px solid rgba(100, 181, 246, 0.5);
+        outline-offset: 2px;
+        border-radius: 2px;
+      }
+    }
+
+    .member-id {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    .member-id-copy {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      padding: 0 5px;
+      margin: 0 0 0 -5px;
+      font: inherit;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      align-self: flex-start;
+      transition: all 0.15s ease;
+
+      @media (hover: none) {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.08);
+      }
+
+      .copy-prefix {
+        font-size: 0.55rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        opacity: 0.5;
+        padding-right: 1px;
+      }
+
+      .copy-icon {
+        font-size: 11px;
+        width: 11px;
+        height: 11px;
+        opacity: 0;
+        transform: scale(0.8);
+        transition: all 0.15s ease;
+
+        @media (hover: none) {
+          opacity: 0.5;
+          transform: scale(1);
+        }
+      }
+
+      &:hover {
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.05);
+
+        .copy-prefix {
+          opacity: 0.8;
+          color: var(--accent-primary);
+        }
+
+        .copy-icon {
+          opacity: 1;
+          transform: scale(1);
+          color: var(--accent-primary);
+        }
+      }
+
+      &:active {
+        color: #90caf9;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      &:focus-visible {
+        outline: 1px solid rgba(100, 181, 246, 0.6);
+        outline-offset: 1px;
+      }
+    }
   }
 
   .role-badge, .status-badge {
@@ -1072,13 +1229,144 @@
   .col-name {
     flex: 1.5;
     min-width: 0;
-    @include text-ellipsis;
     font-weight: 500;
     color: var(--text-primary);
     font-size: 0.9rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+
+    .name-block {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+      overflow: hidden;
+
+      > :first-child {
+        @include text-ellipsis;
+      }
+
+      .member-name-link {
+        color: inherit;
+        text-decoration: none;
+        cursor: pointer;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        width: fit-content;
+        line-height: 1.15;
+        transition: color 0.15s, text-shadow 0.15s;
+
+        .action-icon {
+          font-size: 13px;
+          width: 13px;
+          height: 13px;
+          opacity: 0;
+          transform: translateX(-4px);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          margin-left: -2px;
+
+          @media (hover: none) {
+            opacity: 0.5;
+            transform: translateX(0);
+          }
+        }
+
+        &:hover {
+          color: var(--accent-primary) !important;
+          text-shadow: 0 0 8px rgba(100, 181, 246, 0.4);
+
+          .action-icon {
+            opacity: 0.85;
+            transform: translateX(0);
+          }
+        }
+
+        &:focus-visible {
+          outline: 1px solid rgba(100, 181, 246, 0.5);
+          outline-offset: 2px;
+          border-radius: 2px;
+        }
+      }
+
+      .member-id {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+      }
+
+      .member-id-copy {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        padding: 0 5px;
+        margin: 0 0 0 -5px;
+        font: inherit;
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+        align-self: flex-start;
+        transition: all 0.15s ease;
+
+        @media (hover: none) {
+          background: rgba(255, 255, 255, 0.03);
+          border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .copy-prefix {
+          font-size: 0.6rem;
+          font-weight: 600;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          opacity: 0.5;
+          padding-right: 1px;
+        }
+
+        .copy-icon {
+          font-size: 11px;
+          width: 11px;
+          height: 11px;
+          opacity: 0;
+          transform: scale(0.8);
+          transition: all 0.15s ease;
+
+          @media (hover: none) {
+            opacity: 0.5;
+            transform: scale(1);
+          }
+        }
+
+        &:hover {
+          color: var(--text-primary);
+          background: rgba(255, 255, 255, 0.05);
+
+          .copy-prefix {
+            opacity: 0.8;
+            color: var(--accent-primary);
+          }
+
+          .copy-icon {
+            opacity: 1;
+            transform: scale(1);
+            color: var(--accent-primary);
+          }
+        }
+
+        &:active {
+          color: #90caf9;
+          background: rgba(255, 255, 255, 0.08);
+        }
+
+        &:focus-visible {
+          outline: 1px solid rgba(100, 181, 246, 0.6);
+          outline-offset: 1px;
+        }
+      }
+    }
 
     .status-badge-inline {
       font-size: 0.6rem;
@@ -1172,27 +1460,53 @@
 
   .header-content {
     padding: 0 1rem;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    flex-direction: column;
+    align-items: stretch;
 
+    // Row 1: back + icon + name + badges (single row)
     .header-top {
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      width: 100%;
+      gap: 0.5rem;
+      align-items: center;
+      min-width: 0;
 
-      h1 { font-size: 1.25rem; }
+      h1 {
+        font-size: 1.25rem;
+        flex: 0 1 auto;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
 
-      .header-rank-icon { width: 44px; height: 44px; margin: -10px 0; }
+      .back-btn { flex-shrink: 0; }
+
+      .header-rank-icon { width: 44px; height: 44px; margin: -10px 0; flex-shrink: 0; }
 
       .badges {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        flex-shrink: 0;
+        margin-left: auto;
 
         .badge { padding: 2px 8px; height: 24px; font-size: 0.7rem; }
       }
     }
 
+    // Row 2: month nav + export + live bar all inline
     .header-actions {
       width: 100%;
-      justify-content: space-between;
+      flex-wrap: nowrap;
+      justify-content: flex-start;
       height: auto;
       gap: 0.5rem;
+
+      .live-refresh-bar {
+        order: 3;
+        flex: 0 0 auto;
+        margin-left: auto;
+      }
 
       .month-nav {
         height: 36px;
@@ -1272,6 +1586,16 @@
       .label { font-size: 0.8rem; }
 
       .value { font-size: 0.85rem; }
+    }
+
+    .info-row.description .value {
+      line-height: 1.45;
+
+      .discord-link {
+        font-size: 0.75rem;
+        max-width: 180px;
+        padding: 1px 5px;
+      }
     }
   }
 
@@ -1380,6 +1704,82 @@
 
         .tier-arrow { display: none; }
       }
+    }
+
+    .info-row {
+      .label { font-size: 0.74rem; }
+      .value { font-size: 0.8rem; }
+    }
+  }
+}
+
+@media (max-width: 390px) {
+  .header-content {
+    .header-top {
+      gap: 0.4rem;
+
+      h1 {
+        font-size: 1rem;
+        line-height: 1.2;
+      }
+    }
+
+    .header-actions {
+      flex-wrap: nowrap;
+
+      .live-refresh-bar {
+        order: 3;
+        width: auto;
+        flex: 0 0 auto;
+        margin-left: auto;
+        justify-content: center;
+      }
+
+      .month-nav {
+        flex: 1 1 auto;
+        min-width: 0;
+
+        .current-month {
+          min-width: 0;
+          padding: 0 0.35rem;
+          font-size: 0.8rem;
+        }
+      }
+    }
+  }
+
+  .info-card .card-content {
+    .club-rank-row {
+      padding: 0.35rem 0.2rem;
+
+      .tier-side .tier-info {
+        .tier-gap-label { display: none; }
+        .tier-gap-value { font-size: 0.64rem; }
+        .tier-delta { font-size: 0.52rem; }
+      }
+
+      .rank-center {
+        padding: 0 0.2rem;
+
+        .club-rank-icon { width: 26px; height: 26px; }
+      }
+    }
+
+    .info-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.2rem;
+
+      .value {
+        width: 100%;
+        justify-content: flex-start;
+      }
+    }
+
+    .info-row.description .value .discord-link {
+      max-width: 160px;
+      font-size: 0.7rem;
+      padding: 0 5px;
     }
   }
 }

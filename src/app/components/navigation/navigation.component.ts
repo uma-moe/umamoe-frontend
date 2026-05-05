@@ -8,6 +8,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ThemeService } from '../../services/theme.service';
 import { AuthService } from '../../services/auth.service';
+import { StatusService, OverallStatus, EndpointStatus } from '../../services/status.service';
 import { LinkedAccount } from '../../models/auth.model';
 import { getCharacterById } from '../../data/character.data';
 @Component({
@@ -29,14 +30,18 @@ export class NavigationComponent {
   isChristmas$ = this.themeService.isChristmas$;
   user$ = this.authService.user$;
   isLoggedIn$ = this.authService.isLoggedIn$;
+  status$ = this.statusService.status$;
+  endpoints$ = this.statusService.endpoints$;
   userMenuOpen = false;
+  statusTooltipOpen = false;
   linkedAccounts: LinkedAccount[] = [];
   accountsLoaded = false;
 
   constructor(
     private router: Router,
     private themeService: ThemeService,
-    public authService: AuthService
+    public authService: AuthService,
+    private statusService: StatusService
   ) {}
 
   toggleUserMenu(event: Event) {
@@ -62,6 +67,22 @@ export class NavigationComponent {
   @HostListener('document:click')
   closeUserMenu() {
     this.userMenuOpen = false;
+    this.statusTooltipOpen = false;
+  }
+
+  toggleStatusTooltip(event: Event) {
+    event.stopPropagation();
+    this.statusTooltipOpen = !this.statusTooltipOpen;
+    this.userMenuOpen = false;
+  }
+
+  getStatusLabel(status: OverallStatus): string {
+    switch (status) {
+      case 'operational': return 'All Systems Operational';
+      case 'degraded': return 'Partial Outage';
+      case 'down': return 'Major Outage';
+      default: return 'Checking...';
+    }
   }
   toggleTheme() {
     this.themeService.toggleChristmasTheme();

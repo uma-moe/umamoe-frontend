@@ -1,3 +1,5 @@
+@use 'sass:math';
+
 // SCSS Mixins Library
 // Reusable patterns to reduce duplication across components
 
@@ -182,9 +184,9 @@
   padding: 2rem 0;
 
   .header-content {
-    max-width: var(--page-max-width, 1400px);
+    max-width: var(--page-max-width, 1800px);
     margin: 0 auto;
-    padding: 0 2rem;
+    padding: 0 clamp(1rem, 3vw, 2.5rem);
 
     h1 {
       font-size: 2.5rem;
@@ -208,9 +210,9 @@
 }
 
 @mixin content-area {
-  max-width: var(--page-max-width, 1400px);
+  max-width: var(--page-max-width, 1800px);
   margin: 0 auto;
-  padding: 2rem;
+  padding: clamp(1rem, 2vw, 2rem);
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -640,6 +642,23 @@
   }
 }
 
+@mixin icon-scale($size, $important: false, $scale: null) {
+  // Deprecated transform scale approach. We now map this directly natively via font/layout size
+  // to avoid layout cropping issues when adjusting heights.
+  @include icon-size($size, $important);
+  
+  // Keep the variables in case some external styling was relying on them
+  $resolved-scale: if($scale == null, math.div($size, 24px), $scale);
+  @if $important {
+    --icon-scale: #{$resolved-scale} !important;
+  } @else {
+    --icon-scale: #{$resolved-scale};
+  }
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 // ===== COLOR VARIANT GENERATOR =====
 // For event-type borders, chip colors, spark variants, rank badges
 @mixin color-variant($color, $bg-alpha: 0.12, $border-alpha: 0.3) {
@@ -681,7 +700,7 @@ $spark-palette: (
 }
 
 // Spark item base pill
-@mixin spark-item($gap: 0.25rem, $padding: 0.25rem 0.5rem, $radius: var(--radius-lg), $font-size: 0.875rem, $level-weight: 600, $star-size: 14px) {
+@mixin spark-item($gap: 0.25rem, $padding: 0.25rem 0.5rem, $radius: var(--radius-md), $font-size: 0.875rem, $level-weight: 600, $star-size: 14px) {
   display: inline-flex;
   align-items: center;
   gap: $gap;
@@ -696,13 +715,30 @@ $spark-palette: (
   &:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); }
 
   .spark-level { font-weight: $level-weight; font-size: $font-size; }
-  .spark-star { @include icon-size($star-size, true); }
+  .spark-star { @include icon-scale($star-size, true, 1); }
   .spark-name { font-size: $font-size; }
+
+  .spark-pct {
+    margin-left: auto;
+    font-size: 0.85em;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 2px 5px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+  }
 }
 
 // Parent indicators + matched-filter highlight (inheritance pages)
 @mixin spark-item-inheritance {
-  .parent-icon { @include icon-size(16px, true); opacity: 0.9; }
+  .parent-icon { @include icon-scale(16px, true, 1); opacity: 0.9; }
 
   .parent-contribution {
     display: inline-flex;
@@ -745,7 +781,7 @@ $spark-palette: (
     font-size: 0.72rem;
     border-radius: var(--radius-sm);
     .spark-level { font-size: 0.72rem; }
-    .spark-star { @include icon-size(11px); }
+    .spark-star { @include icon-scale(11px, false, 0.7857); }
     .spark-name { font-size: 0.72rem; }
   }
 
@@ -754,7 +790,7 @@ $spark-palette: (
     font-size: 0.58rem;
     border-radius: var(--radius-xs);
     .spark-level { font-size: 0.58rem; }
-    .spark-star { @include icon-size(9px); }
+    .spark-star { @include icon-scale(9px, false, 0.6429); }
     .spark-name { font-size: 0.58rem; }
   }
 }

@@ -116,6 +116,12 @@ export interface InheritanceRecord {
   // UI helper fields
   character_name?: string;
   character_image_url?: string;
+
+  /**
+   * Bookmark-only flag. True when the underlying record on the source account
+   * has changed (or no longer matches) since the user originally bookmarked it.
+   */
+  is_stale?: boolean;
 }
 export interface SkillFactor {
   skill: Skill;
@@ -180,6 +186,11 @@ export interface InheritanceSearchFilters {
   // Optional White Factors (for scoring/sorting, no level required)
   optionalWhiteSparks?: number[];
   optionalMainWhiteSparks?: number[];
+  // Lineage White Factors
+  lineageWhite?: number[];
+  mainLegacyWhite?: number[];
+  leftLegacyWhite?: number[];
+  rightLegacyWhite?: number[];
   
   minMainBlueFactors?: number;
   minMainPinkFactors?: number;
@@ -198,6 +209,10 @@ export interface InheritanceSearchFilters {
   minGreenStarsSum?: number;
   minWhiteStarsSum?: number;
   mainWinSaddle?: number[];
+  // P2 legacy affinity
+  p2MainCharaId?: number;
+  p2WinSaddle?: number[];
+  affinityP2?: number;
   // Pagination
   page?: number;
   pageSize?: number;

@@ -13,16 +13,25 @@ import { MatChipsModule } from '@angular/material/chips';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { Subject } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
-import { CharacterSelectDialogComponent } from '../../pages/inheritance-database/character-select-dialog.component';
+import { debounceTime, takeUntil, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
+import { CharacterSelectDialogComponent } from '../character-select-dialog/character-select-dialog.component';
 import { SupportCardSelectDialogComponent } from '../../pages/support-cards-database/support-card-select-dialog.component';
+import { VeteranPickerDialogComponent, VeteranPickerDialogData } from '../veteran-picker-dialog/veteran-picker-dialog.component';
 import { SupportCardService } from '../../services/support-card.service';
+import { AuthService } from '../../services/auth.service';
+import { ProfileService } from '../../services/profile.service';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { SupportCard, SupportCardShort, SupportCardType, Rarity } from '../../models/support-card.model';
+import { VeteranMember } from '../../models/profile.model';
+import { LinkedAccount } from '../../models/auth.model';
+import { CHARACTERS } from '../../data/character.data';
+import { getCharacterName } from '../../pages/profile/profile-helpers';
 import factorsData from '../../../data/factors.json';
 import characterData from '../../../data/character.json';
 import characterNamesData from '../../../data/character_names.json';
 import { RaceSchedulerComponent } from '../race-scheduler/race-scheduler.component';
+import { VeteranDisplayComponent } from '../veteran-display/veteran-display.component';
 export interface ActiveFilterChip {
   id: string;
   label: string;
@@ -43,6 +52,7 @@ interface CompressedState {
   
   ow?: number[]; // optional white factors [id]
   omw?: number[]; // optional main white factors [id]
+  lw?: number[]; // lineage white factors [id]
   mb?: (number|null)[][]; // main blue
   mp?: (number|null)[][]; // main pink
   mg?: (number|null)[][]; // main green
@@ -77,6 +87,7 @@ interface CompressedState {
   emp?: number[]; // exclude main parent IDs
   // Race schedule: [yearIdx, month, half, raceInstanceId][]
   rs?: [number, number, number, number][];
+  vet?: [string, number];
 }
 export interface TreeNode {
   id: string;
@@ -125,6 +136,11 @@ export interface UnifiedSearchParams {
   // Optional white sparks (no level requirement, used for sorting by match score)
   optional_white_sparks?: number[];
   optional_main_white_sparks?: number[];
+  // Lineage white sparks (filter by white sparks in the lineage parents)
+  lineage_white?: number[];
+  main_legacy_white?: number[];
+  left_legacy_white?: number[];
+  right_legacy_white?: number[];
   // Support card filtering
   support_card_id?: number;
   min_limit_break?: number;
@@ -142,6 +158,9 @@ export interface UnifiedSearchParams {
   parent_id?: number[];           // Matches against both left and right parent positions
   exclude_parent_id?: number[];   // Excludes from both left and right parent positions
   exclude_main_parent_id?: number[]; // Excludes main parent IDs
+  p2_main_chara_id?: number;
+  p2_win_saddle?: number[];
+  affinity_p2?: number;
 }
 export interface FactorFilter {
   uuid: string;
@@ -166,6 +185,7 @@ export interface FactorFilter {
     MatChipsModule,
     FormsModule,
     RaceSchedulerComponent,
+    VeteranDisplayComponent,
     LocaleNumberPipe
   ],
   templateUrl: './advanced-filter.component.html',
@@ -175,7 +195,9 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
   @Input() resultCount: number | null = null;
   @Output() filterChange = new EventEmitter<UnifiedSearchParams>();
   @Output() maxFollowersToggled = new EventEmitter<boolean>();
+  @Output() veteranSelected = new EventEmitter<VeteranMember | null>();
   private filterChangeSubject = new Subject<UnifiedSearchParams>();
+  private destroy$ = new Subject<void>();
   @ViewChild(RaceSchedulerComponent) raceScheduler!: RaceSchedulerComponent;
   // Wrapping detection
   @ViewChild('mainLayout', { static: false }) mainLayoutRef!: ElementRef<HTMLElement>;
@@ -183,12 +205,22 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
   searchWrapped = false;
   private resizeObserver?: ResizeObserver;
   private hostResizeObserver?: ResizeObserver;
+  private wrappingDetectFrame: number | null = null;
+  private floatingBtnFrame: number | null = null;
   isExpanded = false;
   selectedLimitBreak = 0; // Default to LB0+
   includeMaxFollowers = false; // false = exclude max follower accounts (999), true = include (1000)
   searchUserId = ''; // Search for user ID
   searchUsername = ''; // Search for username
   selectedSupportCard: SupportCardShort | null = null;
+  selectedVeteran: VeteranMember | null = null;
+  selectedVeteranName = '';
+  selectedVeteranImage = '';
+  linkedAccounts: LinkedAccount[] = [];
+  selectedAccountId: string | null = null;
+  veterans: { [accountId: string]: VeteranMember[] } = {};
+  loadingVeterans: { [accountId: string]: boolean } = {};
+  private pendingVeteranRestore: { accountId: string; memberId: number } | null = null;
   activeFilterChips: ActiveFilterChip[] = [];
   // Collapsible section state
   collapsedSections = new Set<string>();
@@ -213,6 +245,8 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
   // Optional white factors (no level, just ID - for scoring/sorting)
   optionalWhiteFactorFilters: FactorFilter[] = [];
   optionalMainWhiteFactorFilters: FactorFilter[] = [];
+  // Lineage white factors (filter by which white sparks exist in lineage parents)
+  lineageWhiteFactorFilters: FactorFilter[] = [];
   // Parent include/exclude character selections (multi-select)
   includeMainParentCharacters: { id: number; name: string; image?: string }[] = [];
   includeParentCharacters: { id: number; name: string; image?: string }[] = [];
@@ -278,10 +312,13 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
   filteredMainGreenFactorOptions: any[][] = [];
   filteredOptionalWhiteFactorOptions: any[][] = [];
   filteredOptionalMainWhiteFactorOptions: any[][] = [];
+  filteredLineageWhiteFactorOptions: any[][] = [];
   private uuidCounter = 0;
   constructor(
     private dialog: MatDialog,
     private supportCardService: SupportCardService,
+    private authService: AuthService,
+    private profileService: ProfileService,
     private elementRef: ElementRef,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef
@@ -294,12 +331,14 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
   ngOnDestroy() {
     this.resizeObserver?.disconnect();
     this.hostResizeObserver?.disconnect();
+    if (this.wrappingDetectFrame !== null) cancelAnimationFrame(this.wrappingDetectFrame);
+    if (this.floatingBtnFrame !== null) cancelAnimationFrame(this.floatingBtnFrame);
     this.teardownScrollListener();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
   private setupScrollListener() {
-    this.scrollListener = () => {
-      requestAnimationFrame(() => this.updateFloatingBtnState());
-    };
+    this.scrollListener = () => this.scheduleFloatingBtnUpdate();
     this.ngZone.runOutsideAngular(() => {
       window.addEventListener('scroll', this.scrollListener!, { passive: true });
     });
@@ -312,10 +351,19 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
   private setupHostResizeObserver() {
     const hostEl = this.elementRef.nativeElement as HTMLElement;
-    this.hostResizeObserver = new ResizeObserver(() => {
+    this.ngZone.runOutsideAngular(() => {
+      this.hostResizeObserver = new ResizeObserver(() => {
+        this.scheduleFloatingBtnUpdate();
+      });
+      this.hostResizeObserver.observe(hostEl);
+    });
+  }
+  private scheduleFloatingBtnUpdate() {
+    if (this.floatingBtnFrame !== null) return;
+    this.floatingBtnFrame = requestAnimationFrame(() => {
+      this.floatingBtnFrame = null;
       this.updateFloatingBtnState();
     });
-    this.hostResizeObserver.observe(hostEl);
   }
   private updateFloatingBtnState() {
     let newShow: boolean;
@@ -375,12 +423,19 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
         if (this.searchWrapped) search.classList.add('is-wrapped');
       }
     };
+    const scheduleDetect = () => {
+      if (this.wrappingDetectFrame !== null) return;
+      this.wrappingDetectFrame = requestAnimationFrame(() => {
+        this.wrappingDetectFrame = null;
+        detect();
+      });
+    };
     this.ngZone.runOutsideAngular(() => {
-      this.resizeObserver = new ResizeObserver(() => detect());
+      this.resizeObserver = new ResizeObserver(() => scheduleDetect());
       this.resizeObserver.observe(el);
     });
     // Initial check
-    setTimeout(() => detect(), 0);
+    setTimeout(() => scheduleDetect(), 0);
   }
   scrollToResults() {
     // Scroll past the filter to the results section
@@ -417,6 +472,10 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.optionalMainWhiteFactorFilters.length) {
       const ids = this.optionalMainWhiteFactorFilters.filter(f => f.factorId && f.factorId > 0).map(f => f.factorId!);
       if (ids.length) state.omw = ids;
+    }
+    if (this.lineageWhiteFactorFilters.length) {
+      const ids = this.lineageWhiteFactorFilters.filter(f => f.factorId && f.factorId > 0).map(f => f.factorId!);
+      if (ids.length) state.lw = ids;
     }
     if (this.mainBlueFactorFilters.length) state.mb = this.mainBlueFactorFilters.map(f => [f.factorId, f.min, f.max]);
     if (this.mainPinkFactorFilters.length) state.mp = this.mainPinkFactorFilters.map(f => [f.factorId, f.min, f.max]);
@@ -463,6 +522,9 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
       const encoded = this.raceScheduler.getEncodedSelection();
       if (encoded.length) state.rs = encoded;
     }
+    if (this.selectedVeteran && this.selectedAccountId && this.selectedVeteran.member_id != null) {
+      state.vet = [this.selectedAccountId, this.selectedVeteran.member_id];
+    }
     return btoa(JSON.stringify(state));
   }
   loadSerializedState(stateStr: string) {
@@ -499,11 +561,13 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.mainWhiteFactorFilters = [];
       this.optionalWhiteFactorFilters = [];
       this.optionalMainWhiteFactorFilters = [];
+      this.lineageWhiteFactorFilters = [];
       this.filteredGreenFactorOptions = [];
       this.filteredWhiteFactorOptions = [];
       this.filteredMainWhiteFactorOptions = [];
       this.filteredOptionalWhiteFactorOptions = [];
       this.filteredOptionalMainWhiteFactorOptions = [];
+      this.filteredLineageWhiteFactorOptions = [];
       restoreFactors(state.b, this.blueFactorFilters);
       restoreFactors(state.p, this.pinkFactorFilters);
       restoreFactors(state.g, this.greenFactorFilters, 'green');
@@ -518,7 +582,7 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
       
       restoreFactors(state.mw, this.mainWhiteFactorFilters, 'mainWhite');
       // Restore Optional Factors
-      const restoreOptionalFactors = (source: number[] | undefined, target: FactorFilter[], type: 'optionalWhite' | 'optionalMainWhite') => {
+      const restoreOptionalFactors = (source: number[] | undefined, target: FactorFilter[], type: 'optionalWhite' | 'optionalMainWhite' | 'lineageWhite') => {
         if (!source) return;
         source.forEach(id => {
           const filter: FactorFilter = {
@@ -531,10 +595,12 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
           
           if (type === 'optionalWhite') this.filteredOptionalWhiteFactorOptions.push([...this.whiteFactors]);
           if (type === 'optionalMainWhite') this.filteredOptionalMainWhiteFactorOptions.push([...this.whiteFactors]);
+          if (type === 'lineageWhite') this.filteredLineageWhiteFactorOptions.push([...this.whiteFactors]);
         });
       };
       restoreOptionalFactors(state.ow, this.optionalWhiteFactorFilters, 'optionalWhite');
       restoreOptionalFactors(state.omw, this.optionalMainWhiteFactorFilters, 'optionalMainWhite');
+      restoreOptionalFactors(state.lw, this.lineageWhiteFactorFilters, 'lineageWhite');
       // Restore Tree
       if (state.t) {
         const [target, p1, p1g1, p1g2, p2, p2g1, p2g2] = state.t;
@@ -648,6 +714,19 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
           ? this.raceScheduler.getSelectedSaddleIds()
           : undefined;
       }
+      // Restore veteran
+      if (state.vet) {
+        const [accountId, memberId] = state.vet;
+        this.pendingVeteranRestore = { accountId, memberId };
+        this.selectedAccountId = accountId;
+        this.loadLinkedAccounts(() => {
+          if (this.veterans[accountId]?.length) {
+            this.tryRestoreVeteran();
+          } else {
+            this.loadVeteransForAccount(accountId);
+          }
+        });
+      }
       this.onFilterChange();
     } catch (e) {
       console.error('Failed to load filter state', e);
@@ -658,7 +737,7 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return `filter_${this.uuidCounter++}`;
   }
   // --- Factor Filter Management ---
-  addFactorFilter(list: FactorFilter[], defaultFactorId: number | null, type?: 'green' | 'white' | 'mainWhite' | 'mainGreen' | 'optionalWhite' | 'optionalMainWhite') {
+  addFactorFilter(list: FactorFilter[], defaultFactorId: number | null, type?: 'green' | 'white' | 'mainWhite' | 'mainGreen' | 'optionalWhite' | 'optionalMainWhite' | 'lineageWhite') {
     list.push({
       uuid: this.getUuid(),
       factorId: defaultFactorId,
@@ -671,6 +750,7 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (type === 'mainGreen') this.filteredMainGreenFactorOptions.push([...this.greenFactors]);
     if (type === 'optionalWhite') this.filteredOptionalWhiteFactorOptions.push([...this.whiteFactors]);
     if (type === 'optionalMainWhite') this.filteredOptionalMainWhiteFactorOptions.push([...this.whiteFactors]);
+    if (type === 'lineageWhite') this.filteredLineageWhiteFactorOptions.push([...this.whiteFactors]);
     // Enforce single green factor for main parent
     if (type === 'mainGreen' && this.mainGreenFactorFilters.length > 1) {
       // Remove the previous one, keep the new one
@@ -682,7 +762,7 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.onFilterChange();
     }
   }
-  removeFactorFilter(list: FactorFilter[], index: number, type?: 'green' | 'white' | 'mainWhite' | 'mainGreen' | 'optionalWhite' | 'optionalMainWhite') {
+  removeFactorFilter(list: FactorFilter[], index: number, type?: 'green' | 'white' | 'mainWhite' | 'mainGreen' | 'optionalWhite' | 'optionalMainWhite' | 'lineageWhite') {
     // Check if the filter being removed had a valid selection
     const removedFilter = list[index];
     const hadValidSelection = removedFilter && removedFilter.factorId !== null && removedFilter.factorId !== 0;
@@ -695,11 +775,12 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (type === 'mainGreen') this.filteredMainGreenFactorOptions.splice(index, 1);
     if (type === 'optionalWhite') this.filteredOptionalWhiteFactorOptions.splice(index, 1);
     if (type === 'optionalMainWhite') this.filteredOptionalMainWhiteFactorOptions.splice(index, 1);
+    if (type === 'lineageWhite') this.filteredLineageWhiteFactorOptions.splice(index, 1);
     // Always trigger filter change to update chips and URL
     this.onFilterChange();
   }
   // --- Autocomplete Logic ---
-  filterFactors(value: string | number, type: 'green' | 'white' | 'mainWhite' | 'mainGreen' | 'optionalWhite' | 'optionalMainWhite', index: number) {
+  filterFactors(value: string | number, type: 'green' | 'white' | 'mainWhite' | 'mainGreen' | 'optionalWhite' | 'optionalMainWhite' | 'lineageWhite', index: number) {
     // If value is a number (factor ID selected), don't filter - just return
     if (typeof value === 'number') return;
     
@@ -715,9 +796,11 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (type === 'mainGreen') this.filteredMainGreenFactorOptions[index] = filtered;
     if (type === 'optionalWhite') this.filteredOptionalWhiteFactorOptions[index] = filtered;
     if (type === 'optionalMainWhite') this.filteredOptionalMainWhiteFactorOptions[index] = filtered;
+    if (type === 'lineageWhite') this.filteredLineageWhiteFactorOptions[index] = filtered;
   }
   getFactorText(id: number | null | undefined, type: 'green' | 'white'): string {
-    if (!id || id === 0) return '';
+    if (id === null || id === undefined) return '';
+    if (id === 0) return 'Any';
     const list = type === 'green' ? this.greenFactors : this.whiteFactors;
     const found = list.find(f => f.id === id);
     return found ? found.text : '';
@@ -777,7 +860,8 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
       width: '90%',
       maxWidth: '600px',
       height: '80vh',
-      panelClass: 'modern-dialog-panel'
+      panelClass: 'modern-dialog-panel',
+      data: { affinityTargetIds: this.getAffinityTargetsForTreeNode(node) }
     });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
@@ -804,6 +888,37 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
       }
     });
   }
+  /** Build affinity target list for picking a slot in the breeding tree. */
+  private getAffinityTargetsForTreeNode(node: TreeNode): number[] {
+    const baseOf = (id?: number) => (id ? Math.floor(id / 100) : null);
+    const ids: number[] = [];
+    const push = (id?: number) => { const b = baseOf(id); if (b) ids.push(b); };
+    const target = this.treeData;
+    const p1 = this.treeData.children?.[0];
+    const p2 = this.treeData.children?.[1];
+    if (node === target) {
+      push(p1?.characterId);
+      push(p2?.characterId);
+    } else if (node === p1) {
+      push(target.characterId);
+      push(p1?.children?.[0]?.characterId);
+      push(p1?.children?.[1]?.characterId);
+    } else if (node === p2) {
+      push(target.characterId);
+      push(p2?.children?.[0]?.characterId);
+      push(p2?.children?.[1]?.characterId);
+    } else if (p1?.children?.includes(node)) {
+      push(target.characterId);
+      push(p1?.characterId);
+    } else if (p2?.children?.includes(node)) {
+      push(target.characterId);
+      push(p2?.characterId);
+    } else {
+      push(target.characterId);
+    }
+    return ids;
+  }
+
   /** Clear character from Target tree node */
   private clearFromTarget(baseId: number) {
     if (this.treeData.characterId && Math.floor(this.treeData.characterId / 100) === baseId) {
@@ -1135,6 +1250,37 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.filterState.optional_main_white_sparks = this.optionalMainWhiteFactorFilters
       .filter(f => f.factorId && f.factorId > 0)
       .map(f => f.factorId!);
+    // Lineage White Sparks (user-specified white factor IDs to match against lineage parents)
+    const lineageWhiteIds = this.lineageWhiteFactorFilters
+      .filter(f => f.factorId && f.factorId > 0)
+      .map(f => f.factorId!);
+    this.filterState.lineage_white = lineageWhiteIds.length ? lineageWhiteIds : undefined;
+    // Extract white sparks from the selected veteran's parents and merge with lineage_white
+    if (this.selectedVeteran?.succession_chara_array?.length) {
+      const whiteFactorIdSet = new Set(this.whiteFactors.map(f => f.id));
+      const getWhiteIds = (positionId: number): number[] => {
+        const sc = this.selectedVeteran!.succession_chara_array!.find(s => s.position_id === positionId);
+        if (!sc) return [];
+        const ids = sc.factor_info_array?.length
+          ? sc.factor_info_array.map(e => e.factor_id)
+          : sc.factor_id_array || [];
+        return ids.filter(id => whiteFactorIdSet.has(id));
+      };
+      const mainWhites = [...new Set([...getWhiteIds(10), ...lineageWhiteIds])];
+      const leftWhites = [...new Set([...getWhiteIds(20), ...lineageWhiteIds])];
+      this.filterState.main_legacy_white = mainWhites.length ? mainWhites : undefined;
+      this.filterState.left_legacy_white = leftWhites.length ? leftWhites : undefined;
+      this.filterState.right_legacy_white = undefined;
+    } else if (lineageWhiteIds.length) {
+      // No veteran selected: use lineage_white IDs for all legacy positions
+      this.filterState.main_legacy_white = lineageWhiteIds;
+      this.filterState.left_legacy_white = lineageWhiteIds;
+      this.filterState.right_legacy_white = undefined;
+    } else {
+      this.filterState.main_legacy_white = undefined;
+      this.filterState.left_legacy_white = undefined;
+      this.filterState.right_legacy_white = undefined;
+    }
     // Race schedule saddle IDs
     if (!this.filterState.main_win_saddle?.length) {
       this.filterState.main_win_saddle = undefined;
@@ -1146,6 +1292,18 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.filterState.parent_id = includeParentIds.length > 0 ? includeParentIds : this.filterState.parent_id;
     this.filterState.exclude_parent_id = this.excludeParentCharacters.map(c => c.id);
     this.filterState.exclude_main_parent_id = this.excludeMainParentCharacters.map(c => c.id);
+    // P2 legacy params from selected veteran
+    if (this.selectedVeteran) {
+      const vet = this.selectedVeteran;
+      this.filterState.p2_main_chara_id = vet.card_id
+        ? Math.floor(vet.card_id / 100)
+        : (vet.trained_chara_id ?? undefined);
+      this.filterState.p2_win_saddle = vet.win_saddle_id_array ?? undefined;
+    } else {
+      this.filterState.p2_main_chara_id = undefined;
+      this.filterState.p2_win_saddle = undefined;
+      this.filterState.affinity_p2 = undefined;
+    }
     // Sync include main parent characters into main_parent_id (merge with tree selection)
     if (this.includeMainParentCharacters.length > 0) {
       const existingMainIds = this.filterState.main_parent_id || [];
@@ -1361,6 +1519,16 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
         type: 'supportCard'
       });
     }
+    // Veteran
+    if (this.selectedVeteran) {
+      this.activeFilterChips.push({
+        id: 'veteran',
+        label: `Veteran: ${this.selectedVeteranName}`,
+        name: 'Veteran',
+        value: this.selectedVeteranName,
+        type: 'character'
+      });
+    }
     // Limit Break
     if (this.selectedLimitBreak > 0) {
       const lbLabel = this.selectedLimitBreak === 4 ? 'MLB' : `LB${this.selectedLimitBreak}+`;
@@ -1543,8 +1711,9 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
         }
         break;
       case 'character':
-        // Clear the appropriate tree node
-        if (chip.id === 'tree-target') {
+        if (chip.id === 'veteran') {
+          this.removeVeteran();
+        } else if (chip.id === 'tree-target') {
           this.clearNodeRecursive(this.treeData);
         } else if (chip.id === 'tree-parent1' && this.treeData.children?.[0]) {
           this.clearNodeRecursive(this.treeData.children[0]);
@@ -1705,6 +1874,117 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
   removeSupportCard() {
     this.selectedSupportCard = null;
     this.onFilterChange();
+  }
+  selectVeteran() {
+    if (this.linkedAccounts.length === 0) {
+      this.loadLinkedAccounts(() => this.openVeteranDialog());
+    } else {
+      this.openVeteranDialog();
+    }
+  }
+  private openVeteranDialog() {
+    const targetCharaId = this.treeData.characterId
+      ? Math.floor(this.treeData.characterId / 100)
+      : null;
+    const dialogRef = this.dialog.open(VeteranPickerDialogComponent, {
+      width: '92vw',
+      maxWidth: '1100px',
+      panelClass: 'modern-dialog-panel',
+      autoFocus: false,
+      data: {
+        linkedAccounts: this.linkedAccounts,
+        selectedAccountId: this.selectedAccountId,
+        characters: CHARACTERS,
+        veterans: this.veterans,
+        loadingVeterans: {},
+        targetCharaId,
+      } as VeteranPickerDialogData,
+    });
+    dialogRef.afterClosed().subscribe((vet: VeteranMember | undefined) => {
+      if (vet) {
+        this.selectedVeteran = vet;
+        this.selectedVeteranName = this.getVeteranName(vet);
+        this.selectedVeteranImage = this.getVeteranImage(vet);
+        this.veteranSelected.emit(vet);
+        this.onFilterChange();
+      }
+    });
+  }
+  private loadLinkedAccounts(callback?: () => void) {
+    this.authService.getLinkedAccounts()
+      .pipe(takeUntil(this.destroy$), catchError(() => of([])))
+      .subscribe(accounts => {
+        this.linkedAccounts = accounts;
+        if (accounts.length > 0 && !this.selectedAccountId) {
+          this.selectedAccountId = accounts[0].account_id;
+          this.loadVeteransForAccount(accounts[0].account_id);
+        }
+        this.cdr.markForCheck();
+        callback?.();
+      });
+  }
+  private loadVeteransForAccount(accountId: string) {
+    if (this.loadingVeterans[accountId]) return;
+    this.loadingVeterans[accountId] = true;
+    this.profileService.getProfile(accountId)
+      .pipe(takeUntil(this.destroy$), catchError(() => of(null)))
+      .subscribe(profile => {
+        this.loadingVeterans[accountId] = false;
+        this.veterans[accountId] = profile?.veterans ?? [];
+        this.tryRestoreVeteran();
+        this.cdr.markForCheck();
+      });
+  }
+  removeVeteran() {
+    this.selectedVeteran = null;
+    this.selectedVeteranName = '';
+    this.selectedVeteranImage = '';
+    this.pendingVeteranRestore = null;
+    this.filterState.affinity_p2 = undefined;
+    this.veteranSelected.emit(null);
+    this.onFilterChange();
+  }
+
+  onVeteranAffinityChanged(affinity: number) {
+    this.filterState.affinity_p2 = affinity > 0 ? affinity : undefined;
+    this.onFilterChange();
+  }
+
+  private tryRestoreVeteran() {
+    if (!this.pendingVeteranRestore) return;
+    const { accountId, memberId } = this.pendingVeteranRestore;
+    const vets = this.veterans[accountId];
+    if (!vets) return;
+    const vet = vets.find(v => v.member_id === memberId);
+    if (vet) {
+      this.pendingVeteranRestore = null;
+      this.selectedVeteran = vet;
+      this.selectedVeteranName = this.getVeteranName(vet);
+      this.selectedVeteranImage = this.getVeteranImage(vet);
+      this.veteranSelected.emit(vet);
+      this.onFilterChange();
+    }
+  }
+  getAffinityTargetCharaId(): number | null {
+    return this.treeData.characterId
+      ? Math.floor(this.treeData.characterId / 100)
+      : null;
+  }
+  private getVeteranName(vet: VeteranMember): string {
+    if (vet.card_id) return getCharacterName(vet.card_id);
+    if (vet.trained_chara_id) {
+      const c = CHARACTERS.find(ch => Math.floor(ch.id / 100) === vet.trained_chara_id);
+      return c ? getCharacterName(c.id) : `Uma #${vet.trained_chara_id}`;
+    }
+    return 'Unknown';
+  }
+  private getVeteranImage(vet: VeteranMember): string {
+    if (vet.card_id) return `assets/images/character_stand/chara_stand_${vet.card_id}.png`;
+    if (vet.trained_chara_id) {
+      const c = CHARACTERS.find(ch => Math.floor(ch.id / 100) === vet.trained_chara_id);
+      return c ? `assets/images/character_stand/chara_stand_${c.id}.png` : '';
+    }
+    return '';
   }
   getSupportCardTypeDisplay(type: SupportCardType): string {
     const typeMap: Record<number, string> = {

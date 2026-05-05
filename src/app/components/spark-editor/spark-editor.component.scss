@@ -1,0 +1,161 @@
+@use '../../../styles/mixins' as *;
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+// ── Chip list ─────────────────────────────────────────────────────────────
+
+.se-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.spark-item {
+  @include spark-item(0.15rem, 0.15rem 0.4rem, var(--radius-sm), 0.65rem, 700, 10px);
+
+  .spark-name {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &.blue-spark  { background: rgba(#2196f3, 0.1); border-color: rgba(#2196f3, 0.35); color: var(--accent-primary); .spark-star { color: var(--color-blue); } }
+  &.pink-spark  { background: rgba(#e91e63, 0.1); border-color: rgba(#e91e63, 0.35); color: var(--color-pink);     .spark-star { color: var(--color-pink); } }
+  &.green-spark { background: rgba(#4caf50, 0.1); border-color: rgba(#4caf50, 0.35); color: var(--accent-secondary); .spark-star { color: var(--color-green); } }
+  &.white-spark { background: rgba(#9e9e9e, 0.1); border-color: rgba(#9e9e9e, 0.35); color: #bdbdbd;              .spark-star { color: var(--text-muted); } }
+}
+
+// ── Add Spark trigger chip ────────────────────────────────────────────────
+
+.se-add-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 4px;
+  border-radius: var(--radius-pill);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: var(--text-disabled);
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+
+  &:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    background: rgba(100, 181, 246, 0.06);
+  }
+}
+
+.se-rm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin-left: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  opacity: 0.4;
+  color: inherit;
+  transition: opacity 0.12s;
+
+  &:hover { opacity: 1; }
+}
+
+// ── Editor ────────────────────────────────────────────────────────────────
+
+.se-anchor {
+  width: 100%;
+  display: block;
+}
+
+.se-editor {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 4px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+.se-search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.se-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-disabled);
+  transition: color 0.12s;
+
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+  &:hover { color: var(--text-primary); }
+}
+
+.se-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 0.7rem;
+  min-width: 0;
+
+  &::placeholder { color: var(--text-disabled); }
+}
+
+.se-levels {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+
+  button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    color: var(--text-disabled);
+    font-size: 0.55rem;
+    font-weight: 600;
+    padding: 1px 5px;
+    cursor: pointer;
+    transition: all 0.12s;
+
+    &.active {
+      background: rgba(100, 181, 246, 0.15);
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+
+    &:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+    }
+  }
+}
+
+// ── Results are rendered in a CDK overlay – see styles.scss .se-overlay-panel ──

@@ -21,14 +21,30 @@
   <div class="content-container">
     <!-- Filters -->
   <app-advanced-filter 
-    [resultCount]="totalRecords"
+    [resultCount]="activeTab === 'database' ? totalRecords : filteredBookmarks.length"
     (filterChange)="onAdvancedFilterChange($event)"
     (maxFollowersToggled)="onMaxFollowersToggled($event)">
 
   </app-advanced-filter>
 
-    <!-- Results Section -->
-    <div class="results-section">
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn" [class.active]="activeTab === 'database'" (click)="switchTab('database')">
+        <mat-icon>storage</mat-icon>
+        Database
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'bookmarks'" (click)="switchTab('bookmarks')">
+        <mat-icon>bookmarks</mat-icon>
+        Bookmarks
+        <span *ngIf="bookmarkService.count > 0" class="bookmark-count">{{ bookmarkService.count }}</span>
+      </button>
+      <span *ngIf="activeTab === 'bookmarks'" class="bookmark-limit">
+        {{ bookmarkService.count }} / {{ maxBookmarks }}
+      </span>
+    </div>
+
+    <!-- Results Section (Database tab) -->
+    <div class="results-section" [hidden]="activeTab !== 'database'">
       <div class="results-header">
         <div class="results-info">
           <h2>Results</h2>
@@ -92,11 +108,13 @@
           </button>
         </div>
         <div class="header-spacer-end"></div>
-        <mat-form-field appearance="outline" class="sort-select">
-            <mat-label>Sort by</mat-label>
+        <div class="sort-select-wrapper">
+            <div class="input-label">Sort by</div>
+            <mat-form-field appearance="outline" class="sort-select factor-select-field">
             <mat-select
               [(value)]="currentSortBy"
               (selectionChange)="onSortChanged($event)"
+              panelClass="factor-autocomplete-panel"
             >
               <mat-option value="affinity_score">Affinity</mat-option>
               <mat-option value="win_count">G1 Wins</mat-option>
@@ -105,6 +123,7 @@
               <mat-option value="submitted_at">Newest First</mat-option>
             </mat-select>
           </mat-form-field>
+          </div>
       </div>
 
       <!-- Optional Whites Sorting Notice -->
@@ -119,12 +138,21 @@
         <p>Searching inheritance records...</p>
       </div>
 
+      <!-- Pending Search State (on bookmarks tab, filters changed) -->
+      <div *ngIf="!loading && pendingSearch" class="loading-container">
+        <mat-spinner></mat-spinner>
+        <p>Results will update when you return to this tab...</p>
+      </div>
+
       <!-- Results Grid -->
       <div
         *ngIf="!loading && allRecords && allRecords.length"
         class="results-grid"
       >
-        <div *ngFor="let record of allRecords; trackBy: trackByRecordId">
+        <div
+          *ngFor="let record of renderedRecords; trackBy: trackByRecordId"
+          class="result-card-shell"
+        >
           <app-inheritance-entry
             [record]="record"
             [showDatabaseHeader]="true"
@@ -132,10 +160,39 @@
             [sparkMatchFn]="boundIsSparkMatched"
             [mainParentLevelFn]="boundGetLevelFromMainParent"
             [sparkViewMode]="splitSparksMode ? 'split' : 'merged'"
+            [targetCharaId]="currentTargetCharaId"
+            [p2CharaId]="currentP2CharaId"
+            [gp2LeftCharaId]="currentGp2LeftCharaId"
+            [gp2RightCharaId]="currentGp2RightCharaId"
+            [p2WinSaddleIds]="currentP2WinSaddleIds"
+            [gp2LeftWinSaddleIds]="currentGp2LeftWinSaddleIds"
+            [gp2RightWinSaddleIds]="currentGp2RightWinSaddleIds"
+            [sparkShowPerRun]="sparkShowPerRun"
+            (sparkShowPerRunChange)="sparkShowPerRun = $event"
+            [showP2Sparks]="showP2Sparks"
+            (showP2SparksChange)="showP2Sparks = $event"
+            [p2BlueSparks]="currentP2BlueSparks"
+            [p2PinkSparks]="currentP2PinkSparks"
+            [p2GreenSparks]="currentP2GreenSparks"
+            [p2WhiteSparks]="currentP2WhiteSparks"
+            [p2BlueSparkSources]="currentP2BlueSparkSources"
+            [p2PinkSparkSources]="currentP2PinkSparkSources"
+            [p2GreenSparkSources]="currentP2GreenSparkSources"
+            [p2WhiteSparkSources]="currentP2WhiteSparkSources"
+            [showBookmarkButton]="true"
+            [isLoggedIn]="authService.isLoggedIn()"
+            [isBookmarked]="bookmarkService.isBookmarked(record.account_id ?? '')"
+            (bookmarkToggle)="onBookmarkToggle($event)"
             (copyInfo)="onEntryCopyInfo($event)"
             (copyTrainerId)="copyUserId($event.accountId, $event.event)"
-            (reportUnavailable)="reportUnavailable($event.accountId, $event.event)">
+            (reportUnavailable)="reportUnavailable($event.accountId, $event.event)"
+            (openInPlanner)="openInPlanner($event)">
           </app-inheritance-entry>
+        </div>
+
+        <div *ngIf="isRenderingRecords" class="render-progress" aria-live="polite">
+          <mat-spinner diameter="20"></mat-spinner>
+          <span>Rendering results {{ renderedRecords.length }} / {{ allRecords.length }}</span>
         </div>
       </div>
 
@@ -178,6 +235,177 @@
           <mat-icon>chevron_right</mat-icon>
         </button>
         <button class="page-btn" [disabled]="currentPage >= totalPages - 1" (click)="goToPage(totalPages - 1)" matTooltip="Last page">
+          <mat-icon>last_page</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bookmarks Section -->
+    <div class="results-section" [hidden]="activeTab !== 'bookmarks'">
+      <div class="results-header">
+        <div class="results-info">
+          <h2>Bookmarks</h2>
+          <p *ngIf="!bookmarksLoading">
+            {{ filteredBookmarks.length | localeNumber }} bookmarked records
+            <span *ngIf="filteredBookmarks.length !== bookmarkRecords.length" class="filter-indicator">(filtered from {{ bookmarkRecords.length }})</span>
+          </p>
+        </div>
+        <div class="header-spacer"></div>
+        <button
+          class="split-sparks-badge"
+          [class.active]="splitSparksMode"
+          [class.inactive]="!splitSparksMode"
+          (click)="splitSparksMode = !splitSparksMode"
+          matTooltip="Show sparks split per parent instead of merged">
+          <mat-icon class="badge-icon">account_tree</mat-icon>
+          <span class="badge-label">Split Sparks</span>
+          <span class="badge-status">{{ splitSparksMode ? 'ON' : 'OFF' }}</span>
+        </button>
+        <div class="header-spacer-end"></div>
+        <div class="sort-select-wrapper">
+          <div class="input-label">Sort by</div>
+          <mat-form-field appearance="outline" class="sort-select factor-select-field">
+          <mat-select
+            [(value)]="currentSortBy"
+            (selectionChange)="onSortChanged($event)"
+            panelClass="factor-autocomplete-panel"
+          >
+            <mat-option value="affinity_score">Affinity</mat-option>
+            <mat-option value="win_count">G1 Wins</mat-option>
+            <mat-option value="white_count">White Count</mat-option>
+            <mat-option value="score">Score</mat-option>
+            <mat-option value="submitted_at">Newest First</mat-option>
+          </mat-select>
+        </mat-form-field>
+        </div>
+      </div>
+
+      <div *ngIf="!authService.isLoggedIn()" class="no-results login-prompt">
+        <mat-icon style="font-size: 64px; width: 64px; height: 64px; line-height: 64px; color: rgba(255, 255, 255, 0.2);">bookmark_border</mat-icon>
+        <h3 style="margin: 0.5rem 0;">Sign in to use bookmarks</h3>
+        <div style="display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; color: rgba(255,255,255,0.7);">
+          <span>Please</span>
+          <button mat-raised-button color="primary" routerLink="/login">Sign in</button>
+          <span>to bookmark and save records.</span>
+        </div>
+      </div>
+
+      <div *ngIf="authService.isLoggedIn() && bookmarksLoading" class="loading-container">
+        <mat-spinner></mat-spinner>
+        <p>Loading bookmarks...</p>
+      </div>
+
+      <!-- Filter chips + bulk actions for the bookmarks tab -->
+      <div *ngIf="authService.isLoggedIn() && !bookmarksLoading && bookmarkRecords.length > 0" class="bookmark-toolbar">
+        <div class="bookmark-chip-group" role="tablist" aria-label="Bookmark status filter">
+          <button class="bm-chip" role="tab"
+            [class.active]="bookmarkStaleFilter === 'all'"
+            [attr.aria-selected]="bookmarkStaleFilter === 'all'"
+            (click)="setBookmarkStaleFilter('all')">
+            <span class="bm-chip-label">All</span>
+            <span class="bm-chip-count">{{ bookmarkRecords.length }}</span>
+          </button>
+          <button class="bm-chip" role="tab"
+            [class.active]="bookmarkStaleFilter === 'unchanged'"
+            [attr.aria-selected]="bookmarkStaleFilter === 'unchanged'"
+            (click)="setBookmarkStaleFilter('unchanged')">
+            <mat-icon class="bm-chip-icon">check_circle</mat-icon>
+            <span class="bm-chip-label">Unchanged</span>
+            <span class="bm-chip-count">{{ bookmarkRecords.length - modifiedBookmarkCount }}</span>
+          </button>
+          <button class="bm-chip bm-chip--modified" role="tab"
+            [class.active]="bookmarkStaleFilter === 'modified'"
+            [attr.aria-selected]="bookmarkStaleFilter === 'modified'"
+            (click)="setBookmarkStaleFilter('modified')"
+            matTooltip="Bookmarks where the source record changed since you saved it">
+            <mat-icon class="bm-chip-icon">change_history</mat-icon>
+            <span class="bm-chip-label">Modified</span>
+            <span class="bm-chip-count">{{ modifiedBookmarkCount }}</span>
+          </button>
+        </div>
+
+        <div class="bookmark-bulk-actions">
+          <button class="bm-action"
+            *ngIf="modifiedBookmarkCount > 0"
+            [disabled]="bookmarkBulkBusy"
+            (click)="removeAllModifiedBookmarks()"
+            matTooltip="Remove every bookmark whose source record has changed">
+            <mat-icon>auto_delete</mat-icon>
+            <span>Remove modified ({{ modifiedBookmarkCount }})</span>
+          </button>
+
+          <!-- Two-step destructive button: first click arms, second commits within 4s. -->
+          <button class="bm-action bm-action--danger"
+            [class.armed]="clearAllArmed"
+            [disabled]="bookmarkBulkBusy"
+            (click)="clearAllBookmarks()"
+            (blur)="cancelClearAll()"
+            [matTooltip]="clearAllArmed ? 'Click again to confirm' : 'Remove every bookmark'">
+            <mat-icon>{{ clearAllArmed ? 'warning' : 'delete_sweep' }}</mat-icon>
+            <span *ngIf="!clearAllArmed">Clear all…</span>
+            <span *ngIf="clearAllArmed">Confirm · remove {{ bookmarkRecords.length }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="authService.isLoggedIn() && !bookmarksLoading && pagedBookmarks.length" class="results-grid">
+        <div *ngFor="let record of pagedBookmarks; trackBy: trackByRecordId">
+          <app-inheritance-entry
+            [record]="record"
+            [showDatabaseHeader]="true"
+            [isMaxFollowers]="isMaxFollowers(record)"
+            [sparkMatchFn]="boundIsSparkMatched"
+            [mainParentLevelFn]="boundGetLevelFromMainParent"
+            [sparkViewMode]="splitSparksMode ? 'split' : 'merged'"
+            [targetCharaId]="currentTargetCharaId"
+            [p2CharaId]="currentP2CharaId"
+            [gp2LeftCharaId]="currentGp2LeftCharaId"
+            [gp2RightCharaId]="currentGp2RightCharaId"
+            [p2WinSaddleIds]="currentP2WinSaddleIds"
+            [gp2LeftWinSaddleIds]="currentGp2LeftWinSaddleIds"
+            [gp2RightWinSaddleIds]="currentGp2RightWinSaddleIds"
+            [sparkShowPerRun]="sparkShowPerRun"
+            (sparkShowPerRunChange)="sparkShowPerRun = $event"
+            [showP2Sparks]="showP2Sparks"
+            (showP2SparksChange)="showP2Sparks = $event"
+            [p2BlueSparks]="currentP2BlueSparks"
+            [p2PinkSparks]="currentP2PinkSparks"
+            [p2GreenSparks]="currentP2GreenSparks"
+            [p2WhiteSparks]="currentP2WhiteSparks"
+            [p2BlueSparkSources]="currentP2BlueSparkSources"
+            [p2PinkSparkSources]="currentP2PinkSparkSources"
+            [p2GreenSparkSources]="currentP2GreenSparkSources"
+            [p2WhiteSparkSources]="currentP2WhiteSparkSources"
+            [showBookmarkButton]="true"
+            [isBookmarked]="true"
+            (bookmarkToggle)="onBookmarkToggle($event)"
+            (copyInfo)="onEntryCopyInfo($event)"
+            (copyTrainerId)="copyUserId($event.accountId, $event.event)"
+            (reportUnavailable)="reportUnavailable($event.accountId, $event.event)"
+            (openInPlanner)="openInPlanner($event)">
+          </app-inheritance-entry>
+        </div>
+      </div>
+
+      <div *ngIf="authService.isLoggedIn() && !bookmarksLoading && filteredBookmarks.length === 0" class="no-results">
+        <mat-icon>bookmarks</mat-icon>
+        <h3>No bookmarks{{ bookmarkRecords.length > 0 ? ' match your filters' : '' }}</h3>
+        <p *ngIf="bookmarkRecords.length === 0">Bookmark records from the database to save them here.</p>
+        <p *ngIf="bookmarkRecords.length > 0">Try adjusting your filters to see your bookmarks.</p>
+      </div>
+
+      <div class="pagination-bottom" *ngIf="authService.isLoggedIn() && bookmarkTotalPages > 1 && !bookmarksLoading && pagedBookmarks.length > 0">
+        <button class="page-btn" [disabled]="bookmarkPage === 0" (click)="goToBookmarkPage(0)" matTooltip="First page">
+          <mat-icon>first_page</mat-icon>
+        </button>
+        <button class="page-btn" [disabled]="bookmarkPage === 0" (click)="goToBookmarkPage(bookmarkPage - 1)">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <span class="page-num active">{{ bookmarkPage + 1 }} / {{ bookmarkTotalPages }}</span>
+        <button class="page-btn" [disabled]="bookmarkPage >= bookmarkTotalPages - 1" (click)="goToBookmarkPage(bookmarkPage + 1)">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+        <button class="page-btn" [disabled]="bookmarkPage >= bookmarkTotalPages - 1" (click)="goToBookmarkPage(bookmarkTotalPages - 1)" matTooltip="Last page">
           <mat-icon>last_page</mat-icon>
         </button>
       </div>

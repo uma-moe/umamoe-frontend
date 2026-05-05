@@ -25,8 +25,9 @@ export class AuthService {
 
   /** Redirect the user to the OAuth provider login page */
   login(provider: string): void {
+    const origin = encodeURIComponent(window.location.origin);
     this.http
-      .get<AuthLoginResponse>(`${environment.apiUrl}/api/auth/login/${encodeURIComponent(provider)}`)
+      .get<AuthLoginResponse>(`${environment.apiUrl}/api/auth/login/${encodeURIComponent(provider)}?origin=${origin}`)
       .subscribe(res => {
         window.location.href = res.url;
       });
@@ -51,7 +52,7 @@ export class AuthService {
   }
 
   isLoggedIn(): boolean {
-    return !!this.getToken();
+    return !!this.getToken() && !!this.userSubject.value;
   }
 
   /** Fetch the current user from the API and update the subject */
@@ -64,7 +65,7 @@ export class AuthService {
       catchError((err: HttpErrorResponse) => {
         // Only clear the token on 401/403 (actually invalid/expired)
         // Keep it for transient errors (network down, 500, etc.)
-        if (err.status === 401 || err.status === 403) {
+        if (err.status === 401 || err.status === 403 || err.status === 404) {
           localStorage.removeItem(TOKEN_KEY);
           this.userSubject.next(null);
         }

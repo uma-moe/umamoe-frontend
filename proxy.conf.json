@@ -8,5 +8,11 @@
     "target": "http://127.0.0.1:3003",
     "secure": false,
     "changeOrigin": true
+  },
+  "/status-api": {
+    "target": "https://status.uma.moe",
+    "secure": true,
+    "changeOrigin": true,
+    "pathRewrite": { "^/status-api": "" }
   }
 }

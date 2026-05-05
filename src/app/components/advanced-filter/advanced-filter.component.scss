@@ -489,6 +489,30 @@
     @media (max-width: 900px) { flex-wrap: wrap; gap: 8px; }
 }
 
+.legacy-tree-section--wide {
+    gap: 10px;
+
+    .tree-connector {
+        margin: 0;
+    }
+
+    @media (max-width: 600px) {
+        flex-direction: column;
+
+        .tree-connector { display: none; }
+    }
+}
+
+.tree-vdivider {
+    width: 1px;
+    align-self: stretch;
+    background: rgba(255, 255, 255, 0.12);
+    flex-shrink: 0;
+    margin: 0 14px;
+
+    @media (max-width: 900px) { display: none; }
+}
+
 .tree-connector {
     color: var(--text-disabled);
     font-size: 20px;
@@ -511,16 +535,27 @@
     flex: 1 1 0;
     min-width: 120px;
 
-    &:first-child {
-        flex: 0 0 auto;
+    &.tree-group--main-parent { flex: 1.05 1 0; }
+
+    &.tree-group--grandparent { flex: 1.35 1 0; }
+
+    &.tree-group--affinity-target,
+    &.tree-group--affinity-veteran {
+        flex: 0 0 140px;
+        width: 140px;
+    }
+
+    &.tree-group--affinity-detail {
+        flex: 1 1 0;
         min-width: 0;
-        // Keep stretch alignment so target box matches height of siblings
     }
 
     @media (max-width: 900px) {
         flex: 1 1 100%;
 
-        &:first-child { flex: 1 1 100%; }
+        &.tree-group--affinity-target,
+        &.tree-group--affinity-veteran { min-width: 0; }
+        &.tree-group--affinity-detail { flex: 1 1 100%; }
     }
 }
 
@@ -537,6 +572,8 @@
     &.target-color { color: rgba(255, 193, 7, 0.55); }
     &.parent-color { color: rgba(100, 181, 246, 0.55); }
     &.grandparent-color { color: rgba(186, 104, 200, 0.55); }
+    &.veteran-color { color: rgba(171, 71, 188, 0.7); }
+    &.legacy-detail-label { color: rgba(100, 181, 246, 0.55); }
 }
 
 // Container box around circle(s)
@@ -552,6 +589,7 @@
     min-width: 160px;
     justify-content: center;
     flex: 1;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 
     @media (max-width: 600px) { min-width: 0; min-height: 80px; }
 
@@ -561,21 +599,45 @@
         align-items: center;
         justify-content: center;
         padding: 12px 16px;
+        min-width: 120px;
 
-        .target-character-name {
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-align: center;
-            max-width: 100%;
-            @include text-ellipsis;
-            margin-top: 2px;
-        }
+        &:hover { border-color: rgba(255, 193, 7, 0.4); background: rgba(255, 193, 7, 0.04); }
     }
 
-    &.parent-box { border-color: rgba(100, 181, 246, 0.2); background: rgba(100, 181, 246, 0.02); }
+    &.parent-box {
+        border-color: rgba(100, 181, 246, 0.2);
+        background: rgba(100, 181, 246, 0.02);
+        transition: border-color 0.2s ease, background 0.2s ease;
+        &:hover { border-color: rgba(100, 181, 246, 0.35); background: rgba(100, 181, 246, 0.04); }
+    }
 
-    &.grandparent-box { border-color: rgba(186, 104, 200, 0.2); background: rgba(186, 104, 200, 0.02); }
+    &.grandparent-box {
+        border-color: rgba(186, 104, 200, 0.2);
+        background: rgba(186, 104, 200, 0.02);
+        transition: border-color 0.2s ease, background 0.2s ease;
+        &:hover { border-color: rgba(186, 104, 200, 0.35); background: rgba(186, 104, 200, 0.04); }
+    }
+
+    &.veteran-box {
+        border-color: rgba(171, 71, 188, 0.25);
+        background: rgba(171, 71, 188, 0.03);
+        align-items: center;
+        justify-content: center;
+        padding: 12px 16px;
+        min-width: 120px;
+
+        &:hover { border-color: rgba(171, 71, 188, 0.5); background: rgba(171, 71, 188, 0.06); }
+    }
+
+    &.legacy-detail-box {
+        border-color: rgba(100, 181, 246, 0.2);
+        background: rgba(100, 181, 246, 0.02);
+        padding: 8px 12px;
+        min-height: auto;
+        min-width: 0;
+        position: relative;
+        overflow: visible;
+    }
 }
 
 // Filter row: add button + chips
@@ -647,8 +709,8 @@
 
 // Target circle (single select)
 .tree-circle {
-    width: 62px;
-    height: 62px;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
     border: 2px dashed;
     @include flex-center;
@@ -657,18 +719,55 @@
     transition: all 0.2s ease;
     background: transparent;
     flex-shrink: 0;
+    overflow: visible;
 
     &.target-circle {
-        border-color: rgba(255, 193, 7, 0.3);
-        color: rgba(255, 193, 7, 0.4);
-        &:hover { border-color: rgba(255, 193, 7, 0.6); background: rgba(255, 193, 7, 0.05); color: rgba(255, 193, 7, 0.7); }
-        &.has-character { border-style: solid; border-color: rgba(255, 193, 7, 0.5); }
+        border-color: rgba(255, 193, 7, 0.35);
+        color: rgba(255, 193, 7, 0.45);
+        &:hover { border-color: rgba(255, 193, 7, 0.65); background: rgba(255, 193, 7, 0.06); color: rgba(255, 193, 7, 0.75); }
+        &.has-character {
+            border-style: solid;
+            border-color: rgba(255, 193, 7, 0.55);
+            box-shadow: 0 0 14px rgba(255, 193, 7, 0.18), inset 0 0 8px rgba(255, 193, 7, 0.06);
+        }
+    }
+
+    &.veteran-circle {
+        border-color: rgba(171, 71, 188, 0.35);
+        color: rgba(171, 71, 188, 0.5);
+        &:hover { border-color: rgba(171, 71, 188, 0.65); background: rgba(171, 71, 188, 0.06); color: rgba(171, 71, 188, 0.8); }
+        &.has-character {
+            border-style: solid;
+            border-color: rgba(171, 71, 188, 0.6);
+            box-shadow: 0 0 14px rgba(171, 71, 188, 0.2), inset 0 0 8px rgba(171, 71, 188, 0.06);
+        }
+        &.disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
     }
 }
 
-.circle-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.target-character-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: 100%;
+    @include text-ellipsis;
+    margin-top: 4px;
+    line-height: 1.3;
+}
 
-.circle-add-icon { @include icon-size(26px); transition: all 0.2s ease; }
+.target-character-name--placeholder {
+    color: var(--text-disabled) !important;
+    font-weight: 500 !important;
+}
+
+.circle-img { width: 100%; height: 100%; object-fit: cover; object-position: top center; border-radius: 50%; overflow: hidden; }
+
+.circle-add-icon { @include icon-size(28px); transition: all 0.2s ease; }
 
 .circle-remove-btn {
     position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; line-height: 24px;
@@ -783,6 +882,127 @@
     &:hover { background: rgba(244, 67, 54, 0.8); color: white; }
 }
 
+.selected-veteran {
+    @include flex-col-center;
+    gap: 8px;
+    padding: 8px;
+    border: 2px solid #ab47bc;
+    border-radius: var(--radius-lg);
+    background: rgba(171, 71, 188, 0.04);
+    min-width: 120px;
+    height: 130px;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.selected-veteran .veteran-thumb { height: 64px; width: auto; border-radius: var(--radius-xs); object-fit: contain; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); }
+
+.selected-veteran .veteran-info { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+
+.selected-veteran .veteran-name { font-weight: 600; font-size: 11px; color: white; text-align: center; @include text-ellipsis; max-width: 100%; }
+
+.selected-veteran .remove-card-btn {
+    position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; line-height: 24px;
+    background: rgba(0, 0, 0, 0.6); color: white; border-radius: 50%; padding: 0; z-index: 10;
+    mat-icon { @include icon-size(16px); }
+    &:hover { background: rgba(244, 67, 54, 0.8); color: white; }
+}
+
+// Affinity collapsible stays visible on mobile (unlike Quick Filters which hides its header)
+.affinity-collapsible {
+    @media (max-width: 600px) {
+        background: var(--surface-1) !important;
+        border: 1px solid var(--border-subtle) !important;
+        border-radius: var(--radius-md) !important;
+
+        .collapsible-header {
+            display: flex !important;
+        }
+
+        > .collapsible-body.collapsed {
+            grid-template-rows: 0fr !important;
+            opacity: 0;
+        }
+    }
+}
+
+// Affinity Section
+.affinity-tree-section {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    padding: 10px 14px;
+
+    > .tree-group {
+        display: flex;
+        flex-direction: column;
+
+        .tree-box { flex: 1; }
+    }
+
+    .tree-connector {
+        padding-bottom: 18px;
+    }
+
+    @media (max-width: 900px) {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px 8px;
+
+        .tree-connector--detail { display: none; }
+    }
+
+    @media (max-width: 600px) {
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 8px;
+        gap: 8px;
+
+        .tree-connector { display: none; }
+
+        .tree-group--affinity-target,
+        .tree-group--affinity-veteran {
+            flex: 1 1 0 !important;
+            width: auto !important;
+            flex-direction: column !important;
+            align-items: center;
+            gap: 6px;
+
+            .tree-box {
+                flex-direction: row;
+                min-height: auto;
+                min-width: auto;
+                padding: 10px 14px;
+                gap: 10px;
+                width: 100%;
+            }
+
+            .tree-group-label {
+                display: block;
+            }
+
+            .tree-circle {
+                width: 52px;
+                height: 52px;
+            }
+
+            .target-character-name {
+                font-size: 12px;
+                margin-top: 0;
+            }
+        }
+
+        .tree-group--affinity-detail {
+            flex: 1 1 100%;
+            width: 100%;
+
+            .legacy-detail-box {
+                min-width: 0;
+            }
+        }
+    }
+}
+
 .lb-filter-item {
     display: flex;
     flex-direction: column;
@@ -864,6 +1084,33 @@
     margin: 0;
 
     &.trainer-id-field input.mat-mdc-input-element { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace; letter-spacing: 1px; font-weight: 600; }
+}
+
+// Search Users fields — slightly smaller height than factor fields
+::ng-deep .search-user-field {
+    .mat-mdc-text-field-wrapper { height: 38px !important; }
+
+    .mat-mdc-form-field-infix {
+        height: 36px !important;
+    }
+
+    .mat-mdc-form-field-icon-suffix {
+        padding: 0 4px 0 0 !important;
+        display: flex;
+        align-items: center;
+
+        .input-icon { font-size: 16px; width: 16px; height: 16px; color: rgba(255, 255, 255, 0.3); }
+
+        button.mat-mdc-icon-button {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            --mdc-icon-button-state-layer-size: 28px;
+
+            mat-icon { font-size: 16px; width: 16px; height: 16px; color: rgba(255, 255, 255, 0.3); }
+            &:hover mat-icon { color: rgba(255, 255, 255, 0.7); }
+        }
+    }
 }
 
 // Property filters (compact single row when possible)
@@ -1150,19 +1397,25 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    height: 100%;
+    align-items: center;
+    align-self: stretch;
     margin-right: -4px;
+    padding: 0 4px;
+    overflow: unset !important;
 
     mat-icon {
-        font-size: 18px;
         width: 18px;
-        height: 14px;
-        line-height: 14px;
+        height: 14px; // Explicit smaller box for fitting 2 icons into the 38px wrapper
+        font-size: 18px; // Actual visual icon size size
+        line-height: 18px; // Matching line height for baseline centering
+        display: flex;
+        justify-content: center;
+        align-items: center;
         cursor: pointer;
         color: var(--text-muted);
         transition: all 0.2s;
-        @include flex-center;
         user-select: none;
+        overflow: unset !important; // Key fix: unset any default overflow boundaries
 
         &:hover { color: var(--color-blue); background: rgba(33, 150, 243, 0.1); border-radius: 2px; }
 
@@ -1181,6 +1434,81 @@
 @media (max-width: 768px) {
     .filters-panel { min-width: 100%; }
 }
+
+// =============================================
+// FACTOR FIELD STYLING (select + autocomplete)
+// =============================================
+// Matches the race-scheduler toolbar search box aesthetic
+
+::ng-deep .factor-autocomplete-field,
+::ng-deep .factor-select-field {
+    // Kill the MDC outline entirely via CSS vars
+    --mdc-outlined-text-field-outline-color: transparent;
+    --mdc-outlined-text-field-hover-outline-color: transparent;
+    --mdc-outlined-text-field-focus-outline-color: transparent;
+    --mdc-outlined-text-field-outline-width: 0;
+    --mdc-outlined-text-field-focus-outline-width: 0;
+
+    .mdc-notched-outline__leading,
+    .mdc-notched-outline__notch,
+    .mdc-notched-outline__trailing {
+        border: none !important;
+        border-width: 0 !important;
+    }
+
+    .mat-mdc-text-field-wrapper {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 8px !important;
+        padding: 0 10px !important;
+        transition: border-color 0.15s, background 0.15s;
+    }
+
+    &.mat-focused .mat-mdc-text-field-wrapper,
+    &.mat-mdc-form-field-focused .mat-mdc-text-field-wrapper {
+        border-color: rgba(100, 181, 246, 0.4) !important;
+        background: rgba(100, 181, 246, 0.04) !important;
+    }
+
+    .mat-mdc-form-field-infix {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        min-height: unset !important;
+        height: 38px !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    // Autocomplete input text
+    input.mat-mdc-input-element {
+        color: rgba(255, 255, 255, 0.9) !important;
+        font-size: 14px !important;
+        font-family: inherit !important;
+        caret-color: rgba(100, 181, 246, 0.8);
+        margin-top: 0 !important;
+
+        &::placeholder { color: rgba(255, 255, 255, 0.3) !important; }
+    }
+
+    // Select trigger — center vertically
+    .mat-mdc-select {
+        display: flex !important;
+        align-items: center !important;
+        height: 100% !important;
+    }
+
+    .mat-mdc-select-value-text,
+    .mat-mdc-select-placeholder {
+        color: rgba(255, 255, 255, 0.9) !important;
+        font-size: 14px !important;
+        font-family: inherit !important;
+    }
+    .mat-mdc-select-placeholder { color: rgba(255, 255, 255, 0.3) !important; }
+
+    // Select arrow
+    .mat-mdc-select-arrow svg { fill: rgba(255, 255, 255, 0.4) !important; }
+}
+
 
 // Rank Select Styles
 .rank-icon { height: 24px; width: auto; vertical-align: middle; }
@@ -1405,4 +1733,6 @@
     from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+
 

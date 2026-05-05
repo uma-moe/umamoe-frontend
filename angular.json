@@ -69,6 +69,19 @@
               "extractLicenses": false,
               "sourceMap": true
             },
+            "profile": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
+              "optimization": true,
+              "sourceMap": true,
+              "extractLicenses": false,
+              "namedChunks": true,
+              "outputHashing": "none"
+            },
             "beta": {
               "fileReplacements": [
                 {
@@ -90,6 +103,7 @@
             "host": "127.0.0.1",
             "proxyConfig": "proxy.conf.json",
             "port": 4200,
+            "open": false,
             "disableHostCheck": true,
             "allowedHosts": [
               "honse.moe",
@@ -100,6 +114,9 @@
           "configurations": {
             "production": {
               "buildTarget": "umamoe-frontend:build:production"
+            },
+            "profile": {
+              "buildTarget": "umamoe-frontend:build:profile"
             },
             "development": {
               "buildTarget": "umamoe-frontend:build:development"

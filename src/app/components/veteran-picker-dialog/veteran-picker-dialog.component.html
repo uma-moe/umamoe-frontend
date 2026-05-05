@@ -1,0 +1,595 @@
+<div class="vpd">
+
+  <!-- ===== TOP BAR ===== -->
+  <div class="vpd-topbar">
+    <div class="vpd-title">
+      <mat-icon>how_to_reg</mat-icon>
+      <span>Select Parent</span>
+    </div>
+    <button class="vpd-close-btn" mat-icon-button [mat-dialog-close]="null" matTooltip="Close">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- ===== SIGN-IN NOTICE ===== -->
+  <div class="vpd-signin-notice" *ngIf="!isLoggedIn()">
+    <mat-icon>info</mat-icon>
+    <span>Sign in to use your uploaded veterans here. After signing in, link your UMA profile in Settings and upload your veteran export from your profile page. Partner and manual entries still work without an account.</span>
+  </div>
+
+    <!-- ===== TAB BAR ===== -->
+    <nav class="vpd-tabbar" role="tablist" aria-label="Veteran picker sections">
+     <button type="button" class="vpd-tab-btn"
+       [class.active]="tab === 'veterans'"
+       (click)="setTab('veterans')">
+      <mat-icon>people</mat-icon>
+      <span class="vpd-tab-label">Veterans</span>
+      <span class="vpd-tab-count">{{ currentVeterans.length }}</span>
+     </button>
+     <button type="button" class="vpd-tab-btn"
+       [class.active]="tab === 'bookmarks'"
+       (click)="setTab('bookmarks')">
+      <mat-icon>bookmark</mat-icon>
+      <span class="vpd-tab-label">Bookmarks</span>
+      <span class="vpd-tab-count">{{ bookmarks.length }}</span>
+     </button>
+     <button type="button" class="vpd-tab-btn"
+       [class.active]="tab === 'saved'"
+       (click)="setTab('saved')">
+      <mat-icon>manage_accounts</mat-icon>
+      <span class="vpd-tab-label">Partner</span>
+      <span class="vpd-tab-count">{{ savedHistory.length }}</span>
+     </button>
+     <button type="button" class="vpd-tab-btn"
+       [class.active]="tab === 'manual'"
+       (click)="setTab('manual')">
+      <mat-icon>edit_note</mat-icon>
+      <span class="vpd-tab-label">Manual</span>
+      <span class="vpd-tab-count">{{ manualEntries.length }}</span>
+     </button>
+  </nav>
+
+  <!-- ===== FILTER BAR ===== -->
+  <div class="vpd-filterbar">
+    <!-- Account switcher (multi-account, veterans only) -->
+    <div class="vpd-accounts" *ngIf="tab === 'veterans' && accounts.length > 1">
+      <button
+        *ngFor="let acct of accounts"
+        class="vpd-acct-btn"
+        [class.active]="selectedId === acct.account_id"
+        (click)="switchAccount(acct.account_id)"
+      >
+        <mat-icon>person</mat-icon>{{ acct.trainer_name || acct.account_id }}
+      </button>
+    </div>
+    <div class="vpd-filter-divider" *ngIf="tab === 'veterans' && accounts.length > 1"></div>
+
+    <!-- Search -->
+    <div class="vpd-search">
+      <mat-icon>search</mat-icon>
+      <input class="vpd-search-input" [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()" placeholder="Search name..." />
+      <mat-icon class="vpd-search-clear" *ngIf="searchQuery" (click)="searchQuery = ''; onSearchChange()">close</mat-icon>
+    </div>
+
+    <!-- Sort -->
+    <div class="vpd-sort">
+      <mat-form-field appearance="outline" class="vpd-sort-field" subscriptSizing="dynamic">
+        <mat-select [(ngModel)]="sortKey" panelClass="factor-autocomplete-panel" (selectionChange)="onSortChange()">
+          <mat-option value="total">Total</mat-option>
+          <mat-option value="affinity" *ngIf="targetCharaId">Affinity</mat-option>
+          <mat-option value="blue">Blue ★</mat-option>
+          <mat-option value="pink">Pink ★</mat-option>
+          <mat-option value="green">Green ★</mat-option>
+          <mat-option value="name">Name</mat-option>
+        </mat-select>
+      </mat-form-field>
+      
+      <!-- Add Button (Manual Tab Only) -->
+      <button class="vpd-add-btn" (click)="showManualForm()" *ngIf="tab === 'manual' && !manualFormVisible">
+        <mat-icon>add</mat-icon>
+        <span>Add</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== FACTOR FILTERS ===== -->
+  <div class="vpd-factor-section">
+    <div class="vpd-factor-list" *ngIf="factorFilters.length > 0">
+      <div class="vpd-frow" *ngFor="let ff of factorFilters; let i = index">
+        <!-- Filled: factor selected -->
+        <div class="vpd-frow-item" [ngClass]="ff.color + '-factor'" *ngIf="ff.factorId">
+          <div class="vpd-frow-filled">
+            <span class="vpd-fdot" [ngClass]="ff.color + '-dot'"></span>
+            <span class="vpd-fname">{{ ff.name }}</span>
+            <div class="vpd-frow-right">
+              <div class="vpd-scope-toggle">
+                <button *ngFor="let s of sparkScopes"
+                  class="vpd-scope-btn"
+                  [class.active]="ff.scope === s.value"
+                  [matTooltip]="s.label"
+                  (click)="ff.scope = s.value; onFactorRowChanged()">
+                  {{ s.short }}
+                </button>
+              </div>
+              <div class="vpd-scope-toggle vpd-level-toggle">
+                <button class="vpd-scope-btn" [class.active]="ff.minLevel === 1" (click)="ff.minLevel = 1; onFactorRowChanged()">★</button>
+                <button class="vpd-scope-btn" [class.active]="ff.minLevel === 2" (click)="ff.minLevel = 2; onFactorRowChanged()">★★</button>
+                <button class="vpd-scope-btn" [class.active]="ff.minLevel === 3" (click)="ff.minLevel = 3; onFactorRowChanged()">★★★</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Search state: bare search bar, no outer panel -->
+        <div class="vpd-search vpd-factor-search" *ngIf="!ff.factorId">
+          <mat-icon>search</mat-icon>
+          <input class="vpd-search-input" placeholder="Search factors..."
+            [(ngModel)]="ff.searchQuery" (ngModelChange)="searchFactorsForRow(ff)"
+            [matAutocomplete]="factorAutoRow" />
+        </div>
+        <mat-autocomplete #factorAutoRow="matAutocomplete" panelClass="factor-autocomplete-panel" (optionSelected)="selectFactorForRow(ff, $event.option.value)">
+          <mat-option *ngFor="let f of ff.searchResults" [value]="f">
+            <span class="vpd-foption" [ngClass]="f.color + '-dot'">{{ f.name }}</span>
+          </mat-option>
+        </mat-autocomplete>
+        <button class="vpd-frow-rm" (click)="removeFactorFilter(i)">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+    <button class="vpd-add-factor" (click)="addEmptyFactorFilter()">
+      <mat-icon>add</mat-icon><span>Add Spark Filter</span>
+    </button>
+  </div>
+
+  <!-- ===== BODY ===== -->
+  <div class="vpd-body">
+
+    <!-- VETERANS TAB -->
+    <ng-container *ngIf="tab === 'veterans'">
+      <div class="vpd-state" *ngIf="loading">
+        <mat-icon class="spin">sync</mat-icon><span>Loading veterans...</span>
+      </div>
+      <div class="vpd-state" *ngIf="!loading && filteredVeterans.length === 0">
+        <ng-container *ngIf="hasActiveVeteranFilters; else veteranEmptyBaseState">
+          <mat-icon>people_outline</mat-icon>
+          <span>No veterans match your filters</span>
+          <button class="vpd-reset-btn" (click)="searchQuery=''; sparkFilters=[]; factorFilters=[]; onFactorRowChanged()">Clear filters</button>
+        </ng-container>
+        <ng-template #veteranEmptyBaseState>
+          <ng-container *ngIf="!isLoggedIn(); else veteranLoggedInEmptyState">
+            <mat-icon>login</mat-icon>
+            <span>Sign in to access your veterans</span>
+            <p>Your veterans only appear here after you sign in, link your UMA profile, and upload your veteran export.</p>
+            <div class="vpd-state-actions">
+              <a class="vpd-state-link primary" routerLink="/login" (click)="dialogRef.close()">
+                <mat-icon>login</mat-icon>
+                <span>Sign in</span>
+              </a>
+            </div>
+          </ng-container>
+          <ng-template #veteranLoggedInEmptyState>
+            <ng-container *ngIf="!hasLinkedVeteranAccount; else veteranUploadState">
+              <mat-icon>manage_accounts</mat-icon>
+              <span>Link your profile to use veterans</span>
+              <p>Add your UMA account in Settings first. After it is linked, open the profile and upload your veteran export.</p>
+              <div class="vpd-state-actions">
+                <a class="vpd-state-link primary" routerLink="/settings" (click)="dialogRef.close()">
+                  <mat-icon>settings</mat-icon>
+                  <span>Open Settings</span>
+                </a>
+              </div>
+            </ng-container>
+            <ng-template #veteranUploadState>
+              <mat-icon>upload_file</mat-icon>
+              <span>Upload your veterans</span>
+              <p>Your profile is linked, but there are no uploaded veterans for this account yet. Open your veterans page and upload your exported JSON.</p>
+              <div class="vpd-state-actions" *ngIf="veteransUploadRoute as uploadRoute">
+                <a class="vpd-state-link primary" [routerLink]="uploadRoute" (click)="dialogRef.close()">
+                  <mat-icon>open_in_new</mat-icon>
+                  <span>Open Veterans Page</span>
+                </a>
+                <a class="vpd-state-link secondary" href="https://github.com/xancia/UmaExtractor/releases" target="_blank" rel="noopener noreferrer" (click)="dialogRef.close()">
+                  <mat-icon>download</mat-icon>
+                  <span>Get Extractor</span>
+                </a>
+              </div>
+            </ng-template>
+          </ng-template>
+        </ng-template>
+      </div>
+      <div class="vpd-list" *ngIf="!loading && filteredVeterans.length > 0">
+        <app-vpd-row
+          *ngFor="let vet of visibleVeterans; trackBy: trackByVet"
+          [data]="vetToRowData(vet)"
+          (rowClick)="select(vet)">
+        </app-vpd-row>
+      </div>
+    </ng-container>
+
+    <!-- BOOKMARKS TAB -->
+    <ng-container *ngIf="tab === 'bookmarks'">
+      <ng-container *ngIf="!isLoggedIn()">
+        <div class="vpd-state">
+          <mat-icon>bookmark_border</mat-icon>
+          <span>Sign in to use bookmarks</span>
+          <p>Bookmark veterans from the Inheritance Database to find them here quickly. Sign in using the button in the top navigation bar.</p>
+        </div>
+      </ng-container>
+      <ng-container *ngIf="isLoggedIn()">
+        <div class="vpd-state" *ngIf="bookmarksLoading">
+          <mat-icon class="spin">sync</mat-icon><span>Loading bookmarks...</span>
+        </div>
+        <ng-container *ngIf="!bookmarksLoading">
+          <div class="vpd-state" *ngIf="bookmarks.length === 0">
+            <mat-icon>bookmark_border</mat-icon>
+            <span>No bookmarks yet</span>
+            <p>Bookmark characters from the Inheritance Database and they will appear here for quick access.</p>
+          </div>
+          <div class="vpd-state" *ngIf="bookmarks.length > 0 && filteredBookmarks.length === 0">
+            <mat-icon>search_off</mat-icon>
+            <span>No results</span>
+            <button class="vpd-reset-btn" (click)="searchQuery = ''">Clear search</button>
+          </div>
+          <div class="vpd-list" *ngIf="filteredBookmarks.length > 0">
+            <app-vpd-row
+              *ngFor="let bm of visibleBookmarks; trackBy: trackByBookmark"
+              [data]="bookmarkToRowData(bm)"
+              (rowClick)="selectBookmark(bm)">
+            </app-vpd-row>
+          </div>
+        </ng-container>
+      </ng-container>
+    </ng-container>
+
+    <!-- PARTNER TAB -->
+    <ng-container *ngIf="tab === 'saved'">
+
+      <!-- Lookup card -->
+      <div class="vpd-partner-lookup">
+        <div class="vpd-partner-lookup-label">
+          <mat-icon>travel_explore</mat-icon>
+          <span>Look up practice partner</span>
+        </div>
+        <div class="vpd-partner-lookup-form">
+          <div class="vpd-partner-lookup-input" [class.valid]="savedIdValid">
+            <mat-icon class="vpd-partner-lookup-icon">tag</mat-icon>
+            <input
+              class="vpd-search-input"
+              [(ngModel)]="savedTrainerId"
+              placeholder="Practice ID (9 digits) or Trainer ID (12 digits)"
+              inputmode="numeric"
+              maxlength="12"
+              (input)="onPartnerIdInput($event)"
+              (keydown.enter)="loadSaved()"
+            />
+            <mat-icon class="vpd-search-clear" *ngIf="savedTrainerId" (click)="savedTrainerId = ''; savedPhase = 'idle'; savedError = null">close</mat-icon>
+          </div>
+          <button class="vpd-fetch-btn" (click)="loadSaved()" [disabled]="!savedIdValid || savedLoading">
+            <mat-icon *ngIf="!savedLoading">travel_explore</mat-icon>
+            <mat-icon *ngIf="savedLoading" class="spin">sync</mat-icon>
+            <span>Fetch</span>
+          </button>
+        </div>
+        <div class="vpd-partner-lookup-meta">
+          <span class="vpd-id-hint"><strong>Practice ID:</strong> 9-digit code from the in-game share button · expires after 24h</span>
+          <span class="vpd-id-hint"><strong>Trainer ID:</strong> permanent 12-digit account ID · can be anyone's</span>
+        </div>
+        <!-- Login encouragement for anonymous users -->
+        <div class="vpd-login-banner vpd-login-banner--inline" *ngIf="!isLoggedIn()">
+          <mat-icon>info</mat-icon>
+          <span>Sign in to keep fetched partners saved to your account across devices.</span>
+        </div>
+      </div>
+
+      <!-- Phase: queued/waiting/processing -->
+      <div class="vpd-state" *ngIf="savedLoading && (savedPhase === 'queued' || savedPhase === 'waiting' || savedPhase === 'processing')">
+        <mat-icon class="spin">sync</mat-icon>
+        <span *ngIf="savedPhase === 'queued'">Request queued…</span>
+        <span *ngIf="savedPhase === 'waiting'">Waiting for a worker to pick up the task…</span>
+        <span *ngIf="savedPhase === 'processing'">Worker is retrieving inheritance data…</span>
+        <p>This usually takes a few seconds.</p>
+      </div>
+
+      <!-- Phase: error / timeout -->
+      <div class="vpd-state vpd-state--error" *ngIf="savedPhase === 'error' || savedPhase === 'timeout'">
+        <mat-icon>error_outline</mat-icon>
+        <span *ngIf="savedPhase === 'error'">Fetch failed</span>
+        <span *ngIf="savedPhase === 'timeout'">No response — timed out</span>
+        <p *ngIf="savedError">{{ savedError }}</p>
+      </div>
+
+      <!-- Idle / no history -->
+      <div class="vpd-state" *ngIf="savedPhase === 'idle' && savedHistory.length === 0">
+        <mat-icon>group_search</mat-icon>
+        <span>No saved partners yet</span>
+        <p>Enter a Trainer ID above to fetch someone's inheritance data.</p>
+      </div>
+
+      <!-- Saved partners list -->
+      <ng-container *ngIf="savedPhase === 'idle' && savedHistory.length > 0">
+        <div class="vpd-saved-history-header">
+          <mat-icon>save</mat-icon>
+          <span>Saved partners</span>
+        </div>
+        <div class="vpd-list">
+          <app-vpd-row
+            *ngFor="let p of filteredSavedHistory"
+            [data]="partnerToRowData(p)"
+            (rowClick)="selectSavedPartner(p)"
+            (deleteClick)="deleteSavedPartner(p, $event)">
+          </app-vpd-row>
+        </div>
+      </ng-container>
+    </ng-container>
+
+    <!-- MANUAL TAB -->
+    <ng-container *ngIf="tab === 'manual'">
+
+      <!-- Inline entry form (appears between header and list) -->
+      <div class="vpd-manual-form" *ngIf="manualFormVisible">
+        <div class="vpd-form-card">
+
+          <!-- Label input -->
+          <div class="vpd-form-label-row">
+            <div class="vpd-search vpd-form-label-search">
+              <mat-icon>label</mat-icon>
+              <input class="vpd-search-input" [(ngModel)]="manualLabel" placeholder="Label (optional)" />
+              <mat-icon class="vpd-search-clear" *ngIf="manualLabel" (click)="manualLabel = ''">close</mat-icon>
+            </div>
+          </div>
+
+          <!-- Tree -->
+          <div class="vpd-form-card-body">
+          <div class="vpd-manual-tree">
+
+          <!-- Main parent node -->
+          <div class="vpd-tree-node vpd-tree-node--parent"
+            [class.vpd-tree-node--filled]="manualNodes[0].cardId">
+
+            <!-- Filled state -->
+            <ng-container *ngIf="manualNodes[0].cardId">
+              <div class="vpd-tree-node-inner">
+                <div class="vpd-tree-node-head">
+                  <img class="vpd-tree-avatar vpd-tree-avatar--parent" [src]="getManualNodeImage(manualNodes[0])" (error)="onImgError($event)" />
+                  <div class="vpd-tree-meta">
+                    <span class="vpd-tree-name">{{ getManualNodeCharName(manualNodes[0]) }}</span>
+                    <div class="vpd-tree-tagline-row">
+                      <span class="vpd-tree-tagline">Parent</span>
+                      <span class="vpd-tree-aff-chip" *ngIf="affinityService.isReady && getManualNodeAffinity(0) as aff">
+                        <mat-icon>favorite</mat-icon>{{ aff }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="vpd-tree-action-bar">
+                    <button class="vpd-nb vpd-nb--race" (click)="openManualRaceWins(0, $event)" matTooltip="Race Wins">
+                      <mat-icon>emoji_events</mat-icon>
+                    </button>
+                    <button class="vpd-nb vpd-nb--swap" (click)="openManualCharacterPicker(0)" matTooltip="Change">
+                      <mat-icon>swap_horiz</mat-icon>
+                    </button>
+                    <button class="vpd-nb vpd-nb--clear" (click)="clearManualNodeChar(manualNodes[0])" matTooltip="Remove">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                </div>
+                <!-- Sparks section -->
+                <div class="vpd-tree-sparks">
+                  <app-spark-editor
+                    [sparks]="manualNodes[0].sparks"
+                    (sparksChange)="setNodeSparks(0, $event)">
+                  </app-spark-editor>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- Empty state -->
+            <ng-container *ngIf="!manualNodes[0].cardId">
+              <div class="vpd-tree-empty" (click)="openManualCharacterPicker(0)">
+                <div class="vpd-tree-empty-icon">
+                  <mat-icon>person_add</mat-icon>
+                </div>
+                <span class="vpd-tree-empty-label">Parent 1</span>
+                <button class="vpd-tool-btn" *ngIf="affinityService.isReady && targetCharaId"
+                  (click)="openManualBestFit(0, $event)" matTooltip="Best affinity fit">
+                  <mat-icon>auto_fix_high</mat-icon>
+                </button>
+              </div>
+              <div class="vpd-slot-fitter" *ngIf="manualSlotFitterTarget === 0" (click)="$event.stopPropagation()">
+                <div class="vpd-sf-header">
+                  <span>Best Fits</span>
+                  <mat-icon class="vpd-sf-close" (click)="closeManualSlotFitter()">close</mat-icon>
+                </div>
+                <div class="vpd-sf-list">
+                  <div class="vpd-sf-item" *ngFor="let c of manualSlotFitterCandidates; let i = index" (click)="selectManualSlotFitterCandidate(c)">
+                    <span class="vpd-sf-rank">{{ i + 1 }}</span>
+                    <img class="vpd-sf-avatar" [src]="'assets/images/character_stand/' + c.character?.image" (error)="onImgError($event)" />
+                    <span class="vpd-sf-name">{{ c.character?.name }}</span>
+                    <span class="vpd-sf-score">{{ c.totalAffinity }}</span>
+                    <span class="vpd-sf-delta">+{{ c.individualAffinity }}</span>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+
+          <!-- Tree branches -->
+          <div class="vpd-tree-trunk">
+
+            <!-- Branch to GP 1 -->
+            <div class="vpd-tree-branch">
+              <div class="vpd-tree-branch-line vpd-tree-branch-line--mid"></div>
+              <div class="vpd-tree-node vpd-tree-node--gp"
+                [class.vpd-tree-node--filled]="manualNodes[1].cardId">
+
+                <ng-container *ngIf="manualNodes[1].cardId">
+                  <div class="vpd-tree-node-inner">
+                    <div class="vpd-tree-node-head">
+                      <img class="vpd-tree-avatar vpd-tree-avatar--gp" [src]="getManualNodeImage(manualNodes[1])" (error)="onImgError($event)" />
+                      <div class="vpd-tree-meta">
+                        <span class="vpd-tree-name">{{ getManualNodeCharName(manualNodes[1]) }}</span>
+                        <div class="vpd-tree-tagline-row">
+                          <span class="vpd-tree-tagline">Grandparent 1</span>
+                          <span class="vpd-tree-aff-chip" *ngIf="affinityService.isReady && manualNodes[0].cardId && getManualNodeAffinity(1) as aff">
+                            <mat-icon>favorite</mat-icon>{{ aff }}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="vpd-tree-action-bar">
+                        <button class="vpd-nb vpd-nb--race" (click)="openManualRaceWins(1, $event)" matTooltip="Race Wins">
+                          <mat-icon>emoji_events</mat-icon>
+                        </button>
+                        <button class="vpd-nb vpd-nb--swap" (click)="openManualCharacterPicker(1)" matTooltip="Change">
+                          <mat-icon>swap_horiz</mat-icon>
+                        </button>
+                        <button class="vpd-nb vpd-nb--clear" (click)="clearManualNodeChar(manualNodes[1])" matTooltip="Remove">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="vpd-tree-sparks">
+                      <app-spark-editor
+                        [sparks]="manualNodes[1].sparks"
+                        (sparksChange)="setNodeSparks(1, $event)">
+                      </app-spark-editor>
+                    </div>
+                  </div>
+                </ng-container>
+
+                <ng-container *ngIf="!manualNodes[1].cardId">
+                  <div class="vpd-tree-empty" (click)="openManualCharacterPicker(1)">
+                    <div class="vpd-tree-empty-icon">
+                      <mat-icon>person_add</mat-icon>
+                    </div>
+                    <span class="vpd-tree-empty-label">Grandparent 1</span>
+                    <button class="vpd-tool-btn" *ngIf="affinityService.isReady && targetCharaId && manualNodes[0].cardId"
+                      (click)="openManualBestFit(1, $event)" matTooltip="Best affinity fit">
+                      <mat-icon>auto_fix_high</mat-icon>
+                    </button>
+                  </div>
+                  <div class="vpd-slot-fitter" *ngIf="manualSlotFitterTarget === 1" (click)="$event.stopPropagation()">
+                    <div class="vpd-sf-header">
+                      <span>Best Fits</span>
+                      <mat-icon class="vpd-sf-close" (click)="closeManualSlotFitter()">close</mat-icon>
+                    </div>
+                    <div class="vpd-sf-list">
+                      <div class="vpd-sf-item" *ngFor="let c of manualSlotFitterCandidates; let i = index" (click)="selectManualSlotFitterCandidate(c)">
+                        <span class="vpd-sf-rank">{{ i + 1 }}</span>
+                        <img class="vpd-sf-avatar" [src]="'assets/images/character_stand/' + c.character?.image" (error)="onImgError($event)" />
+                        <span class="vpd-sf-name">{{ c.character?.name }}</span>
+                        <span class="vpd-sf-score">{{ c.totalAffinity }}</span>
+                        <span class="vpd-sf-delta">+{{ c.individualAffinity }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </ng-container>
+              </div>
+            </div>
+
+            <!-- Branch to GP 2 -->
+            <div class="vpd-tree-branch vpd-tree-branch--last">
+              <div class="vpd-tree-branch-line vpd-tree-branch-line--last"></div>
+              <div class="vpd-tree-node vpd-tree-node--gp"
+                [class.vpd-tree-node--filled]="manualNodes[2].cardId">
+
+                <ng-container *ngIf="manualNodes[2].cardId">
+                  <div class="vpd-tree-node-inner">
+                    <div class="vpd-tree-node-head">
+                      <img class="vpd-tree-avatar vpd-tree-avatar--gp" [src]="getManualNodeImage(manualNodes[2])" (error)="onImgError($event)" />
+                      <div class="vpd-tree-meta">
+                        <span class="vpd-tree-name">{{ getManualNodeCharName(manualNodes[2]) }}</span>
+                        <div class="vpd-tree-tagline-row">
+                          <span class="vpd-tree-tagline">Grandparent 2</span>
+                          <span class="vpd-tree-aff-chip" *ngIf="affinityService.isReady && manualNodes[0].cardId && getManualNodeAffinity(2) as aff">
+                            <mat-icon>favorite</mat-icon>{{ aff }}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="vpd-tree-action-bar">
+                        <button class="vpd-nb vpd-nb--race" (click)="openManualRaceWins(2, $event)" matTooltip="Race Wins">
+                          <mat-icon>emoji_events</mat-icon>
+                        </button>
+                        <button class="vpd-nb vpd-nb--swap" (click)="openManualCharacterPicker(2)" matTooltip="Change">
+                          <mat-icon>swap_horiz</mat-icon>
+                        </button>
+                        <button class="vpd-nb vpd-nb--clear" (click)="clearManualNodeChar(manualNodes[2])" matTooltip="Remove">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="vpd-tree-sparks">
+                      <app-spark-editor
+                        [sparks]="manualNodes[2].sparks"
+                        (sparksChange)="setNodeSparks(2, $event)">
+                      </app-spark-editor>
+                    </div>
+                  </div>
+                </ng-container>
+
+                <ng-container *ngIf="!manualNodes[2].cardId">
+                  <div class="vpd-tree-empty" (click)="openManualCharacterPicker(2)">
+                    <div class="vpd-tree-empty-icon">
+                      <mat-icon>person_add</mat-icon>
+                    </div>
+                    <span class="vpd-tree-empty-label">Grandparent 2</span>
+                    <button class="vpd-tool-btn" *ngIf="affinityService.isReady && targetCharaId && manualNodes[0].cardId"
+                      (click)="openManualBestFit(2, $event)" matTooltip="Best affinity fit">
+                      <mat-icon>auto_fix_high</mat-icon>
+                    </button>
+                  </div>
+                  <div class="vpd-slot-fitter" *ngIf="manualSlotFitterTarget === 2" (click)="$event.stopPropagation()">
+                    <div class="vpd-sf-header">
+                      <span>Best Fits</span>
+                      <mat-icon class="vpd-sf-close" (click)="closeManualSlotFitter()">close</mat-icon>
+                    </div>
+                    <div class="vpd-sf-list">
+                      <div class="vpd-sf-item" *ngFor="let c of manualSlotFitterCandidates; let i = index" (click)="selectManualSlotFitterCandidate(c)">
+                        <span class="vpd-sf-rank">{{ i + 1 }}</span>
+                        <img class="vpd-sf-avatar" [src]="'assets/images/character_stand/' + c.character?.image" (error)="onImgError($event)" />
+                        <span class="vpd-sf-name">{{ c.character?.name }}</span>
+                        <span class="vpd-sf-score">{{ c.totalAffinity }}</span>
+                        <span class="vpd-sf-delta">+{{ c.individualAffinity }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </ng-container>
+              </div>
+            </div>
+          </div>
+          </div>
+          </div><!-- /vpd-form-card-body -->
+
+          <!-- Actions footer -->
+          <div class="vpd-form-card-foot">
+            <button class="vpd-manual-cancel" (click)="cancelManualForm()">Cancel</button>
+            <button class="vpd-confirm-manual" (click)="saveManualEntry()" [disabled]="!manualNodes[0].cardId">
+              <mat-icon>save</mat-icon>{{ editingManualId ? 'Save Changes' : 'Save Entry' }}
+            </button>
+          </div>
+
+        </div><!-- /vpd-form-card -->
+      </div>
+
+      <!-- List (always below form) -->
+      <div class="vpd-state" *ngIf="manualEntries.length === 0 && !manualFormVisible">
+        <mat-icon>edit_note</mat-icon>
+        <span>No saved entries</span>
+        <p>Create manual entries to use characters without a linked game account.</p>
+      </div>
+      <div class="vpd-list" *ngIf="filteredManualEntries.length > 0">
+        <app-vpd-row
+          *ngFor="let entry of visibleManualEntries; trackBy: trackByManual"
+          [data]="manualToRowData(entry)"
+          (rowClick)="selectManualEntry(entry)"
+          (editClick)="editManualEntry(entry)"
+          (deleteClick)="deleteManualEntry(entry, $event)">
+        </app-vpd-row>
+      </div>
+      <div class="vpd-state" *ngIf="manualEntries.length > 0 && filteredManualEntries.length === 0 && !manualFormVisible">
+        <mat-icon>search_off</mat-icon>
+        <span>No entries match your filters</span>
+      </div>
+
+    </ng-container>
+
+  </div>
+</div>

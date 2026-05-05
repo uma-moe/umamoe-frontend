@@ -25,6 +25,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/circles/circles.component').then(m => m.CirclesComponent)
   },
   {
+    path: 'circles/:id/:exportFormat',
+    loadComponent: () => import('./pages/circles/circle-details/circle-details.component').then(m => m.CircleDetailsComponent)
+  },
+  {
     path: 'circles/:id',
     loadComponent: () => import('./pages/circles/circle-details/circle-details.component').then(m => m.CircleDetailsComponent)
   },
@@ -47,6 +51,10 @@ export const routes: Routes = [
   {
     path: 'tools/statistics',
     loadComponent: () => import('./pages/statistics/statistics.component').then(m => m.StatisticsComponent)
+  },
+  {
+    path: 'tools/lineage-planner',
+    loadComponent: () => import('./pages/lineage-planner/lineage-planner.component').then(m => m.LineagePlannerComponent)
   },
   {
     path: 'wip',
