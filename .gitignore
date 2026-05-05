@@ -54,6 +54,11 @@ statistics/
 assets/
 src/assets/
 scripts/
+!scripts/
+scripts/*
+!scripts/precompute-tierlist.js
+!scripts/tierlist-calculation-engine.js
+!scripts/compress-images.js
 
 .github/copilot-instructions.md
 /src/assets/*
