@@ -1,100 +1,90 @@
 <div class="record-card">
   <!-- Record Header -->
-  <div class="record-header">
-    <div class="record-main-info">
-      <!-- Performance metrics -->
-      <div class="performance-section">
-        <div class="main-stats">
-          <span *ngIf="record.affinity_score !== undefined" class="affinity-stat">
-            <span class="stat-number">{{ record.affinity_score }}</span>
-            <span class="stat-label">Affinity</span>
-          </span>
-          <span *ngIf="record.win_count !== undefined" class="wins-stat">
-            <span class="stat-number">{{ record.win_count }}</span>
-            <span class="stat-label">G1 Wins</span>
-          </span>
-          <span *ngIf="record.white_count !== undefined" class="white-stat">
-            <span class="stat-number">{{ record.white_count }}</span>
-            <span class="stat-label">White Skills</span>
-          </span>
-        </div>
-        <div *ngIf="isV2Record() && (record.parent_rank || record.parent_rarity)" class="rank-score-section">
-          <span *ngIf="record.parent_rarity" class="rank-stat">
-            <app-rank-badge [rarity]="record.parent_rarity" size="md"></app-rank-badge>
-            <span class="stat-label">Rank</span>
-          </span>
-          <span *ngIf="record.parent_rank" class="score-stat">
-            <span class="stat-number">{{ record.parent_rank }}</span>
-            <span class="stat-label">Score</span>
-          </span>
-        </div>
-        <div *ngIf="showDatabaseHeader && isV2Record()" class="verification-badge verified" matTooltip="Verified record">
-          <mat-icon>verified</mat-icon>
-          <span class="badge-date">{{ record.last_updated || record.submitted_at | date: "MMM d, y 'at' h:mm a" }}</span>
-        </div>
+  <div class="record-header" [class.has-database-header]="showDatabaseHeader">
+
+    <!-- Identity Row: trainer ID + actions (database only). Wraps fluidly. -->
+    <div class="header-identity-row" *ngIf="showDatabaseHeader">
+      <div class="trainer-info" matTooltip="Click to copy trainer ID" (click)="onCopyTrainerId($event)">
+        <span class="trainer-name">{{ record.trainer_name || 'Unknown Trainer' }}</span>
+        <button mat-button class="user-id-copy-btn"
+                (click)="onCopyTrainerId($event)"
+                [matTooltip]="'Click to copy: ' + (record.account_id || record.trainer_id)">
+          <mat-icon>content_copy</mat-icon>
+          <span class="user-id">{{ (record.account_id! | trainerIdFormat) || 'N/A' }}</span>
+        </button>
       </div>
 
-      <!-- Database-specific: trainer, actions -->
-      <ng-container *ngIf="showDatabaseHeader">
-        <div *ngIf="isMaxFollowers" class="max-followers-card-badge" matTooltip="This account has 1000 followers (max cap). May be difficult to add as a friend.">
-          <mat-icon>warning</mat-icon>
-          <span>Max Followers</span>
-        </div>
+      <div *ngIf="isMaxFollowers" class="max-followers-card-badge" matTooltip="This account has 1000 followers (max cap). May be difficult to add as a friend.">
+        <mat-icon>warning</mat-icon>
+        <span>Max</span>
+      </div>
 
-        <div class="trainer-section">
-          <div class="trainer-info">
-            <span class="trainer-label">Trainer:</span>
-            <span *ngIf="record.trainer_name" class="trainer-name">{{ record.trainer_name }}</span>
-            <button mat-button class="user-id-copy-btn"
-                    (click)="onCopyTrainerId($event)"
-                    [matTooltip]="'Click to copy: ' + (record.account_id || record.trainer_id)">
-              <mat-icon>content_copy</mat-icon>
-              <span class="user-id">{{ (record.account_id! | trainerIdFormat) || 'N/A' }}</span>
-            </button>
-          </div>
-        </div>
+      <div *ngIf="record.is_stale" class="stale-badge" matTooltip="This bookmark no longer matches the record you originally saved — the source has changed.">
+        <mat-icon>change_history</mat-icon>
+        <span>Modified</span>
+      </div>
 
-        <!-- Desktop: standalone Outdated button (badge is in performance-section) -->
-        <div class="header-actions desktop-only">
-          <button *ngIf="record.race_results?.length" mat-raised-button class="race-results-btn"
-                  (click)="openRaceResults('main', $event)"
-                  matTooltip="View race results for main parent">
-            <mat-icon>emoji_events</mat-icon>
-            <span class="btn-text">Race Results</span>
-          </button>
-          <button *ngIf="isV2Record()" mat-raised-button class="unavailable-btn"
-                  (click)="onReportUnavailable($event)"
-                  [disabled]="!record.account_id && !record.trainer_id"
-                  matTooltip="Report this user as unavailable or friend list full">
-            <mat-icon>person_off</mat-icon>
-            <span class="btn-text">Outdated</span>
-          </button>
-        </div>
+      <div class="header-actions">
+        <button mat-button class="action-btn planner-btn"
+                (click)="openInPlanner.emit(record); $event.stopPropagation()"
+                matTooltip="Open in Lineage Planner">
+          <mat-icon>account_tree</mat-icon>
+          <span class="btn-text">Plan</span>
+        </button>
+        <button *ngIf="record.race_results?.length" mat-button class="action-btn race-results-btn"
+                (click)="openRaceResults('main', $event)"
+                matTooltip="View race results for main parent">
+          <mat-icon>emoji_events</mat-icon>
+          <span class="btn-text">Races</span>
+        </button>
+        <button *ngIf="isV2Record()" mat-button class="action-btn unavailable-btn"
+                (click)="onReportUnavailable($event)"
+                [disabled]="!record.account_id && !record.trainer_id"
+                matTooltip="Report this user as unavailable or friend list full">
+          <mat-icon>person_off</mat-icon>
+          <span class="btn-text">Outdated</span>
+        </button>
+        <button *ngIf="showBookmarkButton" mat-button
+                class="action-btn bookmark-btn" [class.bookmarked]="isBookmarked"
+                (click)="onBookmarkToggle($event)"
+                [matTooltip]="isBookmarked ? 'Remove bookmark' : 'Bookmark this record'">
+          <mat-icon>{{ isBookmarked ? 'bookmark' : 'bookmark_border' }}</mat-icon>
+          <span class="btn-text">{{ isBookmarked ? 'Saved' : 'Save' }}</span>
+        </button>
+      </div>
+    </div>
 
-        <!-- Mobile: badge + Outdated button together in status row -->
-        <div class="status-row mobile-only">
-          <div *ngIf="isV2Record()" class="verification-badge verified" matTooltip="Verified record">
-            <mat-icon>verified</mat-icon>
-            <span class="badge-date">{{ record.last_updated || record.submitted_at | date: "MMM d, y 'at' h:mm a" }}</span>
-          </div>
-          <button *ngIf="record.race_results?.length" mat-raised-button class="race-results-btn"
-                  (click)="openRaceResults('main', $event)"
-                  matTooltip="View race results for main parent">
-            <mat-icon>emoji_events</mat-icon>
-            <span class="btn-text">Race Results</span>
-          </button>
-          <button *ngIf="isV2Record()" mat-raised-button class="unavailable-btn"
-                  (click)="onReportUnavailable($event)"
-                  [disabled]="!record.account_id && !record.trainer_id"
-                  matTooltip="Report this user as unavailable or friend list full">
-            <mat-icon>person_off</mat-icon>
-            <span class="btn-text">Outdated</span>
-          </button>
-        </div>
-      </ng-container>
+    <!-- Stats Row: affinity / G1 / white / rank / score -->
+    <div class="record-header-stats">
+      <div class="main-stats">
+        <span *ngIf="getRecordTotalAffinity() !== null" class="stat-pill affinity-stat">
+          <span class="stat-number mono">{{ getRecordTotalAffinity() | localeNumber }}</span>
+          <span class="stat-label">Affinity</span>
+        </span>
+        <span *ngIf="record.win_count !== undefined" class="stat-pill wins-stat">
+          <span class="stat-number mono">{{ record.win_count | localeNumber }}</span>
+          <span class="stat-label">G1 Wins</span>
+        </span>
+        <span *ngIf="record.white_count !== undefined" class="stat-pill white-stat">
+          <span class="stat-number mono">{{ record.white_count | localeNumber }}</span>
+          <span class="stat-label">White Skills</span>
+        </span>
+      </div>
 
-      <!-- Profile-only: Race Results button when not in database mode -->
-      <button *ngIf="!showDatabaseHeader && record.race_results?.length" mat-raised-button class="race-results-btn"
+      <div *ngIf="isV2Record() && (record.parent_rank || record.parent_rarity)" class="rank-score-section">
+        <span *ngIf="record.parent_rarity" class="stat-pill rank-stat">
+          <app-rank-badge [rarity]="record.parent_rarity" size="md"></app-rank-badge>
+        </span>
+        <span *ngIf="record.parent_rank" class="stat-pill score-stat">
+          <span class="stat-number mono">{{ formatScore(record.parent_rank) }}</span>
+          <span class="stat-label">Score</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Profile-only: Race Results button when not in database mode -->
+    <div class="status-row profile-actions" *ngIf="!showDatabaseHeader && record.race_results?.length">
+      <button mat-button class="action-btn race-results-btn"
               (click)="openRaceResults('main', $event)"
               matTooltip="View race results for main parent">
         <mat-icon>emoji_events</mat-icon>
@@ -122,31 +112,88 @@
 
     <!-- V2 API: Character images + Support Card -->
     <div *ngIf="record.main_parent_id && record.parent_left_id && record.parent_right_id" class="character-images">
-      <div class="main-character">
-        <div class="portrait-wrapper"
-             [class.portrait-selected-main]="selectedParent === 'main'"
-             (click)="selectParent('main', $event)">
-          <img [src]="'/assets/images/character_stand/chara_stand_' + record.main_parent_id + '.png'"
-               [alt]="'Main Character ' + record.main_parent_id"
-               class="character-image main-character-img" loading="lazy">
+      <div class="lineage-frame">
+        <div class="main-character">
+          <div class="portrait-wrapper portrait-main"
+               [class.portrait-selected-main]="selectedParent === 'main'"
+               (click)="selectParent('main', $event)">
+            <img [src]="'/assets/images/character_stand/chara_stand_' + record.main_parent_id + '.png'"
+                 [alt]="'Main Character ' + record.main_parent_id"
+                 class="character-image main-character-img" loading="lazy">
+          </div>
+          <div class="parent-affinity-badges" *ngIf="getMainTotalAffinity() as total">
+            <span class="affinity-badge base" #mainTip="matTooltip" [matTooltip]="getMainAffinityTooltip()" (click)="mainTip.toggle(); $event.stopPropagation()">
+              <mat-icon>favorite</mat-icon>{{ total }}
+            </span>
+          </div>
+          <div class="parent-affinity-badges"
+               *ngIf="getMainTotalAffinity() == null && getMainBreedingBaseAffinity() as breedingTotal">
+            <span class="affinity-badge base" #breedTip="matTooltip"
+                  [matTooltip]="getMainBreedingTooltip()" (click)="breedTip.toggle(); $event.stopPropagation()">
+              <mat-icon>favorite</mat-icon>{{ breedingTotal }}
+            </span>
+          </div>
+          <span class="node-role-label node-role-main">MAIN</span>
         </div>
-      </div>
-      <div class="parent-characters">
-        <div class="portrait-wrapper"
-             [class.portrait-selected-left]="selectedParent === 'left'"
-             (click)="selectParent('left', $event)">
-          <img [src]="'/assets/images/character_stand/chara_stand_' + record.parent_left_id + '.png'"
-               [alt]="'Parent Left ' + record.parent_left_id"
-               class="character-image parent-character-img" loading="lazy">
+        <!-- Lineage connector — clean family-tree bracket (desktop) -->
+        <svg class="lineage-bracket" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M50 0 L50 9" vector-effect="non-scaling-stroke" />
+          <path d="M15 9 L85 9" vector-effect="non-scaling-stroke" />
+          <path d="M15 9 L15 24" vector-effect="non-scaling-stroke" />
+          <path d="M85 9 L85 24" vector-effect="non-scaling-stroke" />
+          <circle cx="50" cy="9" r="1.6" class="lineage-node" />
+          <circle cx="15" cy="9" r="1.4" class="lineage-node" />
+          <circle cx="85" cy="9" r="1.4" class="lineage-node" />
+        </svg>
+        <!-- Mobile-only inheritance arrow between main and grandparents -->
+        <mat-icon class="lineage-arrow-mobile" aria-hidden="true">chevron_right</mat-icon>
+        <div class="parent-characters">
+          <div class="parent-with-badges">
+            <div class="portrait-wrapper portrait-gp"
+                 [class.portrait-selected-left]="selectedParent === 'left'"
+                 (click)="selectParent('left', $event)">
+              <img [src]="'/assets/images/character_stand/chara_stand_' + record.parent_left_id + '.png'"
+                   [alt]="'Grandparent Left ' + record.parent_left_id"
+                   class="character-image parent-character-img" loading="lazy">
+            </div>
+            <div class="parent-affinity-badges" *ngIf="getGrandparentTotalAffinity('left') as total">
+              <span class="affinity-badge base gp" #gpLeftTip="matTooltip" [matTooltip]="getGrandparentAffinityTooltip('left')" (click)="gpLeftTip.toggle(); $event.stopPropagation()">
+                <mat-icon>favorite</mat-icon>{{ total }}
+              </span>
+            </div>
+            <div class="parent-affinity-badges"
+                 *ngIf="getGrandparentTotalAffinity('left') == null && getMainBreedingPair('left') as breed">
+              <span class="affinity-badge base gp" #gpLeftBreedTip="matTooltip"
+                    [matTooltip]="getMainBreedingPairTooltip('left')" (click)="gpLeftBreedTip.toggle(); $event.stopPropagation()">
+                <mat-icon>favorite</mat-icon>{{ breed }}
+              </span>
+            </div>
+            <span class="node-role-label node-role-gp">GP</span>
+          </div>
+          <div class="parent-with-badges">
+            <div class="portrait-wrapper portrait-gp"
+                 [class.portrait-selected-right]="selectedParent === 'right'"
+                 (click)="selectParent('right', $event)">
+              <img [src]="'/assets/images/character_stand/chara_stand_' + record.parent_right_id + '.png'"
+                   [alt]="'Grandparent Right ' + record.parent_right_id"
+                   class="character-image parent-character-img" loading="lazy">
+            </div>
+            <div class="parent-affinity-badges" *ngIf="getGrandparentTotalAffinity('right') as total">
+              <span class="affinity-badge base gp" #gpRightTip="matTooltip" [matTooltip]="getGrandparentAffinityTooltip('right')" (click)="gpRightTip.toggle(); $event.stopPropagation()">
+                <mat-icon>favorite</mat-icon>{{ total }}
+              </span>
+            </div>
+            <div class="parent-affinity-badges"
+                 *ngIf="getGrandparentTotalAffinity('right') == null && getMainBreedingPair('right') as breed">
+              <span class="affinity-badge base gp" #gpRightBreedTip="matTooltip"
+                    [matTooltip]="getMainBreedingPairTooltip('right')" (click)="gpRightBreedTip.toggle(); $event.stopPropagation()">
+                <mat-icon>favorite</mat-icon>{{ breed }}
+              </span>
+            </div>
+            <span class="node-role-label node-role-gp">GP</span>
+          </div>
         </div>
-        <div class="portrait-wrapper"
-             [class.portrait-selected-right]="selectedParent === 'right'"
-             (click)="selectParent('right', $event)">
-          <img [src]="'/assets/images/character_stand/chara_stand_' + record.parent_right_id + '.png'"
-               [alt]="'Parent Right ' + record.parent_right_id"
-               class="character-image parent-character-img" loading="lazy">
-        </div>
-      </div>
+      </div><!-- /.lineage-frame -->
 
       <!-- Support Card (from record) -->
       <div *ngIf="record.support_card_id" class="support-card-section">
@@ -217,76 +264,109 @@
 
     <!-- V2 API: Spark arrays -->
     <div *ngIf="record.blue_sparks || record.pink_sparks || record.green_sparks || record.white_sparks" class="spark-arrays">
+      <div class="spark-header-row" *ngIf="record.affinity_score !== undefined || canComputeAffinity()">
+        <button class="spark-mode-toggle" [class.per-run]="sparkShowPerRun" (click)="toggleSparkMode($event)"
+          [matTooltip]="sparkShowPerRun ? 'Showing per-run chance (2 inheritance rolls)' : 'Showing per-inheritance chance (1 roll)'">
+          <mat-icon class="mode-icon">{{ sparkShowPerRun ? 'loop' : 'casino' }}</mat-icon>
+          <span class="mode-label">{{ sparkShowPerRun ? 'Per Run' : 'Per Inh.' }}</span>
+        </button>
+        <button *ngIf="hasP2Sparks" class="spark-p2-toggle" [class.active]="showP2Sparks" (click)="toggleShowP2Sparks($event)"
+          [matTooltip]="showP2Sparks ? 'Hide P2 legacy sparks' : 'Combine P2 legacy sparks with P1'">
+          <mat-icon class="p2-icon">{{ showP2Sparks ? 'group' : 'group_off' }}</mat-icon>
+          <span class="p2-label">P2 Sparks</span>
+          <span class="p2-status">{{ showP2Sparks ? 'ON' : 'OFF' }}</span>
+        </button>
+      </div>
 
       <!-- ── Merged view ── -->
       <div *ngIf="sparkViewMode === 'merged' && !selectedParent" class="spark-container">
-        <div class="spark-row" *ngIf="record.blue_sparks && record.blue_sparks.length > 0">
+        <div class="spark-row" *ngIf="(record.blue_sparks && record.blue_sparks.length > 0) || (showP2Sparks && getP2BlueSparks().length)">
           <div class="spark-type-indicator blue"></div>
           <div class="spark-list">
-            <span *ngFor="let sparkInfo of record.blue_sparks | resolveSparks"
+            <span *ngFor="let sparkInfo of combineSparks([record.main_blue_factors, record.left_blue_factors, record.right_blue_factors], showP2Sparks ? getP2BlueSparks() : [], showP2Sparks ? p2BlueSparkSources : null)"
                   class="spark-item blue-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
                   [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
+              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
               <mat-icon *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-icon">person</mat-icon>
               <span *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-contribution">
                 {{ getLevelFromMainParent(sparkInfo) }}<mat-icon class="spark-star">star</mat-icon>
+              </span>
+              <mat-icon *ngIf="sparkInfo.p2Level" class="parent-icon p2-icon">person</mat-icon>
+              <span *ngIf="sparkInfo.p2Level" class="parent-contribution p2-contribution">
+                {{ sparkInfo.p2Level }}<mat-icon class="spark-star">star</mat-icon>
               </span>
             </span>
           </div>
         </div>
 
-        <div class="spark-row" *ngIf="record.pink_sparks && record.pink_sparks.length > 0">
+        <div class="spark-row" *ngIf="(record.pink_sparks && record.pink_sparks.length > 0) || (showP2Sparks && getP2PinkSparks().length)">
           <div class="spark-type-indicator pink"></div>
           <div class="spark-list">
-            <span *ngFor="let sparkInfo of record.pink_sparks | resolveSparks"
+            <span *ngFor="let sparkInfo of combineSparks([record.main_pink_factors, record.left_pink_factors, record.right_pink_factors], showP2Sparks ? getP2PinkSparks() : [], showP2Sparks ? p2PinkSparkSources : null)"
                   class="spark-item pink-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
                   [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
+              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
               <mat-icon *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-icon">person</mat-icon>
               <span *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-contribution">
                 {{ getLevelFromMainParent(sparkInfo) }}<mat-icon class="spark-star">star</mat-icon>
+              </span>
+              <mat-icon *ngIf="sparkInfo.p2Level" class="parent-icon p2-icon">person</mat-icon>
+              <span *ngIf="sparkInfo.p2Level" class="parent-contribution p2-contribution">
+                {{ sparkInfo.p2Level }}<mat-icon class="spark-star">star</mat-icon>
               </span>
             </span>
           </div>
         </div>
 
-        <div class="spark-row" *ngIf="record.green_sparks && record.green_sparks.length > 0">
+        <div class="spark-row" *ngIf="(record.green_sparks && record.green_sparks.length > 0) || (showP2Sparks && getP2GreenSparks().length)">
           <div class="spark-type-indicator green"></div>
           <div class="spark-list">
-            <span *ngFor="let sparkInfo of record.green_sparks | resolveSparks"
+            <span *ngFor="let sparkInfo of combineSparks([record.main_green_factors, record.left_green_factors, record.right_green_factors], showP2Sparks ? getP2GreenSparks() : [], showP2Sparks ? p2GreenSparkSources : null)"
                   class="spark-item green-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
                   [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
+              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
               <mat-icon *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-icon">person</mat-icon>
               <span *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-contribution">
                 {{ getLevelFromMainParent(sparkInfo) }}<mat-icon class="spark-star">star</mat-icon>
+              </span>
+              <mat-icon *ngIf="sparkInfo.p2Level" class="parent-icon p2-icon">person</mat-icon>
+              <span *ngIf="sparkInfo.p2Level" class="parent-contribution p2-contribution">
+                {{ sparkInfo.p2Level }}<mat-icon class="spark-star">star</mat-icon>
               </span>
             </span>
           </div>
         </div>
 
-        <div class="spark-row" *ngIf="record.white_sparks && record.white_sparks.length > 0">
+        <div class="spark-row" *ngIf="(record.white_sparks && record.white_sparks.length > 0) || (showP2Sparks && getP2WhiteSparks().length)">
           <div class="spark-type-indicator white"></div>
           <div class="spark-list">
-            <span *ngFor="let sparkInfo of record.white_sparks | resolveSparks"
+            <span *ngFor="let sparkInfo of combineWhiteSparks(showP2Sparks ? getP2WhiteSparks() : [], showP2Sparks ? p2WhiteSparkSources : null)"
                   class="spark-item white-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
                   [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
+              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
               <mat-icon *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-icon">person</mat-icon>
               <span *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-contribution">
                 {{ getLevelFromMainParent(sparkInfo) }}<mat-icon class="spark-star">star</mat-icon>
+              </span>
+              <mat-icon *ngIf="sparkInfo.p2Level" class="parent-icon p2-icon">person</mat-icon>
+              <span *ngIf="sparkInfo.p2Level" class="parent-contribution p2-contribution">
+                {{ sparkInfo.p2Level }}<mat-icon class="spark-star">star</mat-icon>
               </span>
             </span>
           </div>
@@ -296,7 +376,7 @@
       <!-- ── Split view: all parents inline per row ── -->
       <div *ngIf="sparkViewMode === 'split' && !selectedParent" class="spark-container">
         <!-- Blue: main + left + right inline -->
-        <div class="spark-row" *ngIf="record.main_blue_factors || record.left_blue_factors || record.right_blue_factors">
+        <div class="spark-row" *ngIf="record.main_blue_factors || record.left_blue_factors || record.right_blue_factors || (showP2Sparks && getP2BlueSparks().length)">
           <div class="spark-type-indicator blue"></div>
           <div class="spark-list">
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_blue_factors) | resolveSparks">
@@ -304,6 +384,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_blue_factors) | resolveSparks">
@@ -311,6 +392,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_blue_factors) | resolveSparks">
@@ -318,12 +400,22 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+              </span>
+            </ng-container>
+            <ng-container *ngIf="showP2Sparks">
+              <span *ngFor="let entry of resolveP2SparksWithAffinity(p2BlueSparkSources)" class="spark-item blue-spark from-p2-legacy">
+                <span class="spark-level">{{ entry.spark.level }}</span>
+                <mat-icon class="spark-star">star</mat-icon>
+                <span class="spark-name">{{ entry.spark.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
+                <mat-icon class="parent-icon p2-icon">person</mat-icon>
               </span>
             </ng-container>
           </div>
         </div>
         <!-- Pink: main + left + right inline -->
-        <div class="spark-row" *ngIf="record.main_pink_factors || record.left_pink_factors || record.right_pink_factors">
+        <div class="spark-row" *ngIf="record.main_pink_factors || record.left_pink_factors || record.right_pink_factors || (showP2Sparks && getP2PinkSparks().length)">
           <div class="spark-type-indicator pink"></div>
           <div class="spark-list">
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_pink_factors) | resolveSparks">
@@ -331,6 +423,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_pink_factors) | resolveSparks">
@@ -338,6 +431,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_pink_factors) | resolveSparks">
@@ -345,12 +439,22 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+              </span>
+            </ng-container>
+            <ng-container *ngIf="showP2Sparks">
+              <span *ngFor="let entry of resolveP2SparksWithAffinity(p2PinkSparkSources)" class="spark-item pink-spark from-p2-legacy">
+                <span class="spark-level">{{ entry.spark.level }}</span>
+                <mat-icon class="spark-star">star</mat-icon>
+                <span class="spark-name">{{ entry.spark.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
+                <mat-icon class="parent-icon p2-icon">person</mat-icon>
               </span>
             </ng-container>
           </div>
         </div>
         <!-- Green: main + left + right inline -->
-        <div class="spark-row" *ngIf="record.main_green_factors || record.left_green_factors || record.right_green_factors">
+        <div class="spark-row" *ngIf="record.main_green_factors || record.left_green_factors || record.right_green_factors || (showP2Sparks && getP2GreenSparks().length)">
           <div class="spark-type-indicator green"></div>
           <div class="spark-list">
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_green_factors) | resolveSparks">
@@ -358,6 +462,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_green_factors) | resolveSparks">
@@ -365,6 +470,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_green_factors) | resolveSparks">
@@ -372,33 +478,59 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+              </span>
+            </ng-container>
+            <ng-container *ngIf="showP2Sparks">
+              <span *ngFor="let entry of resolveP2SparksWithAffinity(p2GreenSparkSources)" class="spark-item green-spark from-p2-legacy">
+                <span class="spark-level">{{ entry.spark.level }}</span>
+                <mat-icon class="spark-star">star</mat-icon>
+                <span class="spark-name">{{ entry.spark.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
+                <mat-icon class="parent-icon p2-icon">person</mat-icon>
               </span>
             </ng-container>
           </div>
         </div>
         <!-- White: main + left + right inline -->
-        <div class="spark-row" *ngIf="record.main_white_factors?.length || record.left_white_factors?.length || record.right_white_factors?.length">
+        <div class="spark-row" *ngIf="record.main_white_factors?.length || record.left_white_factors?.length || record.right_white_factors?.length || (showP2Sparks && getP2WhiteSparks().length)">
           <div class="spark-type-indicator white"></div>
           <div class="spark-list">
             <ng-container *ngFor="let sparkInfo of record.main_white_factors | resolveSparks">
-              <span class="spark-item white-spark from-parent-main">
+              <span class="spark-item white-spark from-parent-main"
+                    [class.matched-filter]="isSparkMatched(sparkInfo)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of record.left_white_factors | resolveSparks">
-              <span class="spark-item white-spark from-parent-left">
+              <span class="spark-item white-spark from-parent-left"
+                    [class.matched-filter]="isSparkMatched(sparkInfo)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of record.right_white_factors | resolveSparks">
-              <span class="spark-item white-spark from-parent-right">
+              <span class="spark-item white-spark from-parent-right"
+                    [class.matched-filter]="isSparkMatched(sparkInfo)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+              </span>
+            </ng-container>
+            <ng-container *ngIf="showP2Sparks">
+              <span *ngFor="let entry of resolveP2SparksWithAffinity(p2WhiteSparkSources)" class="spark-item white-spark from-p2-legacy"
+                    [class.matched-filter]="isSparkMatched(entry.spark)">
+                <span class="spark-level">{{ entry.spark.level }}</span>
+                <mat-icon class="spark-star">star</mat-icon>
+                <span class="spark-name">{{ entry.spark.name }}</span>
+                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
+                <mat-icon class="parent-icon p2-icon">person</mat-icon>
               </span>
             </ng-container>
           </div>
@@ -415,6 +547,7 @@
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
+              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
             </span>
           </div>
         </div>
@@ -426,6 +559,7 @@
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
+              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
             </span>
           </div>
         </div>
@@ -437,6 +571,7 @@
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
+              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
             </span>
           </div>
         </div>
@@ -444,14 +579,27 @@
           <div class="spark-type-indicator white"></div>
           <div class="spark-list">
             <span *ngFor="let sparkInfo of getSelectedWhiteFactors() | resolveSparks"
-                  class="spark-item white-spark parent-own-spark">
+                  class="spark-item white-spark parent-own-spark"
+                  [class.matched-filter]="isSparkMatched(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
+              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
             </span>
           </div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Record Footer -->
+  <div class="record-footer" *ngIf="showDatabaseHeader && isV2Record()">
+    <span class="footer-meta verified-meta" matTooltip="Verified record">
+      <mat-icon class="verified-icon">verified</mat-icon>
+      <span class="verified-text">Verified</span>
+      <span class="footer-dot">·</span>
+      <span class="footer-date">{{ record.last_updated || record.submitted_at | date: "MMM d, y 'at' h:mm a" }}</span>
+    </span>
+  </div>
 </div>
+

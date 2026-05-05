@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, HostListener, ViewChild, AfterViewInit, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,8 +15,12 @@ import { Subject, Subscription, takeUntil } from 'rxjs';
 import { Meta, Title } from '@angular/platform-browser';
 import { InheritanceService } from '../../services/inheritance.service';
 import { VoteProtectionService, VoteState } from '../../services/vote-protection.service';
+import { PlannerTransferService } from '../../services/planner-transfer.service';
 import { FactorService, SparkInfo } from '../../services/factor.service';
 import { SupportCardService } from '../../services/support-card.service';
+import { AffinityService } from '../../services/affinity.service';
+import { AuthService } from '../../services/auth.service';
+import { BookmarkService } from '../../services/bookmark.service';
 import { InheritanceFilterComponent, InheritanceFilters } from './inheritance-filter.component';
 import { TrainerSubmitDialogComponent, TrainerSubmissionConfig } from '../../components/trainer-submit-dialog/trainer-submit-dialog.component';
 import { TrainerIdFormatPipe } from '../../pipes/trainer-id-format.pipe';
@@ -31,6 +35,15 @@ import { environment } from '../../../environments/environment';
 import { AdvancedFilterComponent, UnifiedSearchParams } from '../../components/advanced-filter/advanced-filter.component';
 import { InheritanceEntryComponent } from '../../components/inheritance-entry/inheritance-entry.component';
 import { getCharacterById } from '../../data/character.data';
+import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
+
+type P2SparkSource = 'main' | 'left' | 'right';
+
+interface P2SparkSourceEntry {
+  id: number;
+  source: P2SparkSource;
+}
+
 @Component({
   selector: 'app-inheritance-database',
   standalone: true,
@@ -50,7 +63,9 @@ import { getCharacterById } from '../../data/character.data';
     TrainerIdFormatPipe,
     ResolveSparksPipe,
     AdvancedFilterComponent,
-    InheritanceEntryComponent
+    InheritanceEntryComponent,
+    LocaleNumberPipe,
+    RouterModule
   ],
   templateUrl: './inheritance-database.component.html',
   styleUrl: './inheritance-database.component.scss'
@@ -66,10 +81,14 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   loading = false;
   loadingMore = false;
   allRecords: InheritanceRecord[] = [];
+  renderedRecords: InheritanceRecord[] = [];
   currentFilters: InheritanceFilters | null = null;
   currentAdvancedFilters: UnifiedSearchParams | null = null;
   hasMoreRecords = true;
-  // Infinite scroll properties
+  // Scroll / pagination mode
+  listMode: 'infinite' | 'paginated' = 'infinite';
+  private readonly LIST_MODE_KEY = 'db-list-mode';
+  // Pagination properties
   pageSize = 12;
   currentPage = 0;
   totalRecords = 0; // Total records from the search result
@@ -78,6 +97,149 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   currentSortOrder: 'asc' | 'desc' = 'desc';
   includeMaxFollowers = false;
   splitSparksMode = false;
+  sparkShowPerRun = false;
+  showP2Sparks = false;
+
+  // Bookmarks tab
+  activeTab: 'database' | 'bookmarks' = 'database';
+  pendingSearch = false;
+  bookmarksDirty = false;
+  bookmarkRecords: InheritanceRecord[] = [];
+  filteredBookmarks: InheritanceRecord[] = [];
+  bookmarksLoading = false;
+  bookmarkPage = 0;
+  bookmarkPageSize = 12;
+  /**
+   * Bookmark filter:
+   * - 'all'       — show every bookmark
+   * - 'unchanged' — record still matches what was originally saved
+   * - 'modified'  — source record changed since the user bookmarked it (is_stale)
+   */
+  bookmarkStaleFilter: 'all' | 'unchanged' | 'modified' = 'all';
+  bookmarkBulkBusy = false;
+  /**
+   * Two-step guard for the destructive "Clear all" action. First click arms it
+   * (button label flips to "Confirm clear all"); second click within 4s commits.
+   */
+  clearAllArmed = false;
+  private clearAllTimer: any = null;
+  readonly maxBookmarks = BookmarkService.MAX_BOOKMARKS;
+
+  private toCharaId(cardId: number | undefined): number | null {
+    if (!cardId) return null;
+    return cardId >= 10000 ? Math.floor(cardId / 100) : cardId;
+  }
+
+  private getSelectedVeteranSuccession(positionId: 10 | 20) {
+    return this.advancedFilter?.selectedVeteran?.succession_chara_array?.find(s => s.position_id === positionId) ?? null;
+  }
+
+  get currentTargetCharaId(): number | null {
+    return this.toCharaId(this.advancedFilter?.treeData?.characterId);
+  }
+
+  get currentP2CharaId(): number | null {
+    // Mirror AdvancedFilter's P2 normalization so the selected legacy is passed
+    // into AffinityService as a base chara id, not a raw card id.
+    const vet = this.advancedFilter?.selectedVeteran;
+    if (vet) {
+      return this.toCharaId(vet.card_id ?? vet.trained_chara_id ?? undefined);
+    }
+    return this.toCharaId(this.advancedFilter?.treeData?.children?.[1]?.characterId);
+  }
+
+  get currentGp2LeftCharaId(): number | null {
+    const sc = this.getSelectedVeteranSuccession(10);
+    if (sc) return this.toCharaId(sc.card_id);
+    return this.toCharaId(this.advancedFilter?.treeData?.children?.[1]?.children?.[0]?.characterId);
+  }
+
+  get currentGp2RightCharaId(): number | null {
+    const sc = this.getSelectedVeteranSuccession(20);
+    if (sc) return this.toCharaId(sc.card_id);
+    return this.toCharaId(this.advancedFilter?.treeData?.children?.[1]?.children?.[1]?.characterId);
+  }
+
+  get currentP2WinSaddleIds(): number[] | null {
+    return this.advancedFilter?.selectedVeteran?.win_saddle_id_array ?? null;
+  }
+
+  get currentGp2LeftWinSaddleIds(): number[] | null {
+    return this.getSelectedVeteranSuccession(10)?.win_saddle_id_array ?? null;
+  }
+
+  get currentGp2RightWinSaddleIds(): number[] | null {
+    return this.getSelectedVeteranSuccession(20)?.win_saddle_id_array ?? null;
+  }
+
+  // Cached P2 spark arrays - only recomputed in onAdvancedFilterChange, never on every CD cycle
+  private _p2BlueSparks: number[] | null = null;
+  private _p2PinkSparks: number[] | null = null;
+  private _p2GreenSparks: number[] | null = null;
+  private _p2WhiteSparks: number[] | null = null;
+  private _p2BlueSparkSources: P2SparkSourceEntry[] | null = null;
+  private _p2PinkSparkSources: P2SparkSourceEntry[] | null = null;
+  private _p2GreenSparkSources: P2SparkSourceEntry[] | null = null;
+  private _p2WhiteSparkSources: P2SparkSourceEntry[] | null = null;
+
+  get currentP2BlueSparks(): number[] | null { return this._p2BlueSparks; }
+  get currentP2PinkSparks(): number[] | null { return this._p2PinkSparks; }
+  get currentP2GreenSparks(): number[] | null { return this._p2GreenSparks; }
+  get currentP2WhiteSparks(): number[] | null { return this._p2WhiteSparks; }
+  get currentP2BlueSparkSources(): P2SparkSourceEntry[] | null { return this._p2BlueSparkSources; }
+  get currentP2PinkSparkSources(): P2SparkSourceEntry[] | null { return this._p2PinkSparkSources; }
+  get currentP2GreenSparkSources(): P2SparkSourceEntry[] | null { return this._p2GreenSparkSources; }
+  get currentP2WhiteSparkSources(): P2SparkSourceEntry[] | null { return this._p2WhiteSparkSources; }
+
+  private refreshP2SparkCache(): void {
+    this._p2BlueSparkSources = this.resolveP2SparkSourcesByColor(0);
+    this._p2PinkSparkSources = this.resolveP2SparkSourcesByColor(1);
+    this._p2GreenSparkSources = this.resolveP2SparkSourcesByColor(5);
+    this._p2WhiteSparkSources = this.resolveP2SparkSourcesByColor(2, 3, 4);
+
+    this._p2BlueSparks = this._p2BlueSparkSources?.map(s => s.id) ?? null;
+    this._p2PinkSparks = this._p2PinkSparkSources?.map(s => s.id) ?? null;
+    this._p2GreenSparks = this._p2GreenSparkSources?.map(s => s.id) ?? null;
+    this._p2WhiteSparks = this._p2WhiteSparkSources?.map(s => s.id) ?? null;
+  }
+
+  private resolveP2SparkSourcesByColor(...types: number[]): P2SparkSourceEntry[] | null {
+    const vet = this.advancedFilter?.selectedVeteran;
+    if (!vet) return null;
+    const typeSet = new Set(types);
+
+    const allEntries: P2SparkSourceEntry[] = [];
+
+    if (vet.inheritance) {
+      const inh = vet.inheritance;
+      allEntries.push(
+        ...(inh.blue_sparks || []).map(id => ({ id, source: 'main' as const })),
+        ...(inh.pink_sparks || []).map(id => ({ id, source: 'main' as const })),
+        ...(inh.green_sparks || []).map(id => ({ id, source: 'main' as const })),
+        ...(inh.white_sparks || []).map(id => ({ id, source: 'main' as const })),
+      );
+    } else {
+      const own = vet.factor_info_array?.length
+        ? vet.factor_info_array.map(e => e.factor_id)
+        : (vet.factors ?? []);
+      allEntries.push(...own.map(id => ({ id, source: 'main' as const })));
+    }
+
+    if (vet.succession_chara_array?.length) {
+      for (const sc of vet.succession_chara_array) {
+        if (sc.position_id !== 10 && sc.position_id !== 20) continue;
+        const source: P2SparkSource = sc.position_id === 10 ? 'left' : 'right';
+        const gpIds = sc.factor_info_array?.length
+          ? sc.factor_info_array.map(e => e.factor_id)
+          : (sc.factor_id_array || []);
+        allEntries.push(...gpIds.map(id => ({ id, source })));
+      }
+    }
+
+    const filtered = allEntries.filter(s => typeSet.has(this.factorService.resolveSpark(s.id).type));
+    return filtered.length ? filtered : null;
+  }
+
   sortOptions = [
     { value: 'affinity_score', label: 'Affinity' },
     { value: 'win_count', label: 'G1 Wins' },
@@ -94,6 +256,11 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   // Bound method references for child component inputs
   boundIsSparkMatched = this.isSparkMatched.bind(this);
   boundGetLevelFromMainParent = this.getLevelFromMainParent.bind(this);
+  private readonly mainParentLevelCache = new WeakMap<InheritanceRecord, Map<string, string>>();
+  private readonly initialRecordRenderBatchSize = 4;
+  private readonly recordRenderBatchSize = 3;
+  private recordRenderFrame: number | null = null;
+  private recordRenderGeneration = 0;
 
   constructor(
     private route: ActivatedRoute,
@@ -106,8 +273,21 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     private dialog: MatDialog,
     private meta: Meta,
     private title: Title,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private plannerTransfer: PlannerTransferService,
+    private affinityService: AffinityService,
+    public authService: AuthService,
+    public bookmarkService: BookmarkService,
   ) {
+    // Restore list mode preference
+    const saved = localStorage.getItem(this.LIST_MODE_KEY);
+    if (saved === 'paginated' || saved === 'infinite') this.listMode = saved;
+    // Restore page from URL - also force paginated mode
+    const urlPage = parseInt(this.route.snapshot.queryParams['page'], 10);
+    if (!isNaN(urlPage) && urlPage > 0) {
+      this.currentPage = urlPage - 1;
+      this.listMode = 'paginated';
+    }
     this.title.setTitle('Database | honse.moe');
     this.meta.addTags([
       { name: 'description', content: 'Browse and search the Umamusume database. Find optimal inheritance skills and support cards for your team.' },
@@ -123,6 +303,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     ]);
   }
   ngOnInit() {
+    this.affinityService.load();
+    if (this.authService.isLoggedIn()) {
+      this.bookmarkService.loadBookmarks().pipe(takeUntil(this.destroy$)).subscribe();
+    }
     // Check for trainer_id URL parameter
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
       const trainerId = params['trainer_id'];
@@ -130,7 +314,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         this.trainerIdFilter = trainerId;
         // Reset search when trainer_id parameter changes
         this.currentPage = 0;
-        this.allRecords = [];
+        this.clearRecords();
         this.hasMoreRecords = true;
         this.searchRecords();
         
@@ -144,7 +328,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         // Trainer ID parameter was removed, clear filter
         this.trainerIdFilter = null;
         this.currentPage = 0;
-        this.allRecords = [];
+        this.clearRecords();
         this.hasMoreRecords = true;
         this.searchRecords();
         
@@ -172,7 +356,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         const threshold = 300;
         const position = window.pageYOffset + window.innerHeight;
         const height = document.documentElement.scrollHeight;
-        if (position > height - threshold && this.hasMoreRecords && !this.loading && !this.loadingMore) {
+        if (this.listMode === 'infinite' && position > height - threshold && this.hasMoreRecords && !this.loading && !this.loadingMore) {
           this.ngZone.run(() => this.loadMoreRecords());
         }
         this.scrollThrottled = false;
@@ -181,10 +365,16 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     window.addEventListener('scroll', this.scrollListener, { passive: true });
   }
 
+  private _pendingPage: number | null = null;
+
   ngAfterViewInit() {
     // Check for filters URL parameter
     const filters = this.route.snapshot.queryParams['filters'];
     if (filters) {
+      // Save the page from URL so it survives the debounced filter change
+      if (this.currentPage > 0) {
+        this._pendingPage = this.currentPage;
+      }
       // Load state
       // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError if the load triggers immediate changes
       setTimeout(() => {
@@ -205,11 +395,20 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       queryParamsHandling: 'merge',
       replaceUrl: true
     });
-    // Reset pagination and search
-    this.currentPage = 0;
-    this.allRecords = [];
+    // Reset pagination and search (but preserve page when restoring from URL)
+    if (this._pendingPage !== null) {
+      this.currentPage = this._pendingPage;
+      this._pendingPage = null;
+    } else {
+      this.currentPage = 0;
+    }
+    this.clearRecords();
     this.hasMoreRecords = true;
     this.searchRecords();
+    this.boundIsSparkMatched = this.isSparkMatched.bind(this);
+    this.bookmarkPage = 0;
+    this.applyBookmarkFilters();
+    this.refreshP2SparkCache();
   }
   ngOnDestroy() {
     this.destroy$.next();
@@ -217,13 +416,14 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     if (this.scrollListener) {
       window.removeEventListener('scroll', this.scrollListener);
     }
+    this.cancelRecordRender();
   }
   onFiltersChanged(filters: InheritanceFilters) {
     if (!environment.production) {
     }
     this.currentFilters = filters;
     this.currentPage = 0; // Reset to first page
-    this.allRecords = []; // Clear existing records
+    this.clearRecords();
     this.hasMoreRecords = true;
     this.searchRecords();
   }
@@ -239,12 +439,19 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   }
   onSortChanged(event: any) {
     this.currentSortBy = event.value;
-    this.currentPage = 0; // Reset to first page when sorting changes
-    this.allRecords = []; // Clear existing records
+    this.currentPage = 0;
+    this.clearRecords();
     this.hasMoreRecords = true;
     this.searchRecords();
+    this.boundIsSparkMatched = this.isSparkMatched.bind(this);
+    this.bookmarkPage = 0;
+    this.applyBookmarkFilters();
   }
   searchRecords() {
+    if (this.activeTab === 'bookmarks') {
+      this.pendingSearch = true;
+      return;
+    }
     // If loading more (pagination), prevent duplicates
     if (this.currentPage > 0 && (this.loading || this.loadingMore)) {
       return;
@@ -284,6 +491,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         
         optionalWhiteSparks: af.optional_white_sparks,
         optionalMainWhiteSparks: af.optional_main_white_sparks,
+        lineageWhite: af.lineage_white,
+        mainLegacyWhite: af.main_legacy_white,
+        leftLegacyWhite: af.left_legacy_white,
+        rightLegacyWhite: af.right_legacy_white,
         
         minMainBlueFactors: af.min_main_blue_factors,
         minMainPinkFactors: af.min_main_pink_factors,
@@ -304,6 +515,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         minGreenStarsSum: af.min_green_stars_sum,
         minWhiteStarsSum: af.min_white_stars_sum,
         mainWinSaddle: af.main_win_saddle,
+        
+        p2MainCharaId: af.p2_main_chara_id,
+        p2WinSaddle: af.p2_win_saddle,
+        affinityP2: af.affinity_p2,
         
         page: this.currentPage,
         pageSize: this.pageSize,
@@ -430,12 +645,11 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       .subscribe({
         next: (result) => {
           this.totalRecords = result.total || 0;
+          this._totalPages = result.totalPages || Math.max(1, Math.ceil(this.totalRecords / this.pageSize));
           if (this.currentPage === 0) {
-            // First page or new search - replace all records
-            this.allRecords = result.items || [];
+            this.replaceRecords(result.items || []);
           } else {
-            // Subsequent pages - append to existing records
-            this.allRecords = [...this.allRecords, ...(result.items || [])];
+            this.appendRecords(result.items || []);
           }
           // Check if there are more records to load
           this.hasMoreRecords = (result.items?.length || 0) >= this.pageSize;
@@ -464,7 +678,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       });
   }
   loadMoreRecords() {
-    if (!this.hasMoreRecords || this.loading || this.loadingMore) {
+    if (!this.hasMoreRecords || this.loading || this.loadingMore || this.isRenderingRecords) {
       return;
     }
     this.currentPage++;
@@ -473,6 +687,80 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   trackByRecordId(index: number, record: InheritanceRecord): number | string {
     return record.id;
   }
+
+  get isRenderingRecords(): boolean {
+    return this.renderedRecords.length < this.allRecords.length;
+  }
+
+  private clearRecords(): void {
+    this.cancelRecordRender();
+    this.recordRenderGeneration++;
+    this.allRecords = [];
+    this.renderedRecords = [];
+  }
+
+  private replaceRecords(records: InheritanceRecord[]): void {
+    this.cancelRecordRender();
+    this.recordRenderGeneration++;
+    this.allRecords = records;
+    this.renderInitialRecordBatch();
+  }
+
+  private appendRecords(records: InheritanceRecord[]): void {
+    if (!records.length) return;
+    this.allRecords = [...this.allRecords, ...records];
+    if (!this.renderedRecords.length) {
+      this.recordRenderGeneration++;
+      this.renderInitialRecordBatch();
+      return;
+    }
+    this.scheduleRecordRenderExpansion(this.recordRenderGeneration);
+  }
+
+  private renderInitialRecordBatch(): void {
+    const initialCount = Math.min(this.initialRecordRenderBatchSize, this.allRecords.length);
+    this.renderedRecords = this.allRecords.slice(0, initialCount);
+    if (initialCount < this.allRecords.length) {
+      this.scheduleRecordRenderExpansion(this.recordRenderGeneration);
+    }
+  }
+
+  private scheduleRecordRenderExpansion(generation: number): void {
+    if (this.recordRenderFrame !== null) return;
+    this.recordRenderFrame = requestAnimationFrame(() => {
+      this.recordRenderFrame = null;
+      if (generation !== this.recordRenderGeneration) return;
+
+      const nextCount = Math.min(
+        this.allRecords.length,
+        this.renderedRecords.length + this.recordRenderBatchSize,
+      );
+      this.renderedRecords = this.allRecords.slice(0, nextCount);
+
+      if (nextCount < this.allRecords.length) {
+        this.scheduleRecordRenderExpansion(generation);
+      } else {
+        this.maybeLoadMoreRecordsForViewport();
+      }
+    });
+  }
+
+  private cancelRecordRender(): void {
+    if (this.recordRenderFrame === null) return;
+    cancelAnimationFrame(this.recordRenderFrame);
+    this.recordRenderFrame = null;
+  }
+
+  private maybeLoadMoreRecordsForViewport(): void {
+    if (this.listMode !== 'infinite' || !this.hasMoreRecords || this.loading || this.loadingMore) return;
+    const threshold = 300;
+    const position = window.pageYOffset + window.innerHeight;
+    const height = document.documentElement.scrollHeight;
+    if (position > height - threshold) {
+      this.loadMoreRecords();
+    }
+  }
+
   private getStatLevel(statType: string): number | undefined {
     if (!this.currentFilters?.mainStats) return undefined;
     const stat = this.currentFilters.mainStats.find(s => s.type === statType);
@@ -482,6 +770,67 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     if (!this.currentFilters?.aptitudes) return undefined;
     const aptitude = this.currentFilters.aptitudes.find(a => a.type === aptitudeType);
     return aptitude?.level;
+  }
+  get totalPages(): number {
+    return this._totalPages;
+  }
+  _totalPages = 1;
+  toggleListMode() {
+    this.listMode = this.listMode === 'infinite' ? 'paginated' : 'infinite';
+    localStorage.setItem(this.LIST_MODE_KEY, this.listMode);
+    // Reset and re-search when switching modes
+    this.currentPage = 0;
+    this.clearRecords();
+    this.hasMoreRecords = true;
+    // Clear page param from URL
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { page: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+    this.searchRecords();
+  }
+  goToPage(page: number) {
+    if (page < 0 || page >= this.totalPages || page === this.currentPage) return;
+    this.currentPage = page;
+    this.clearRecords();
+    this.hasMoreRecords = true;
+    // Update URL with page param
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { page: page > 0 ? page + 1 : null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+    this.searchRecords();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  private _visiblePagesCache: { page: number; total: number; result: number[] } | null = null;
+  /** Returns page indices to display, using -1 for ellipsis. Always returns exactly 9 slots. */
+  getVisiblePages(): number[] {
+    const total = this.totalPages;
+    const cur = this.currentPage;
+    if (this._visiblePagesCache && this._visiblePagesCache.page === cur && this._visiblePagesCache.total === total) {
+      return this._visiblePagesCache.result;
+    }
+    let result: number[];
+    if (total <= 9) {
+      // Pad with -2 (hidden) to keep length 9
+      result = Array.from({ length: total }, (_, i) => i);
+      while (result.length < 9) result.push(-2);
+    } else if (cur <= 4) {
+      // Near start: [0 1 2 3 4 5 6 ... last]
+      result = [0, 1, 2, 3, 4, 5, 6, -1, total - 1];
+    } else if (cur >= total - 5) {
+      // Near end: [first ... last-6 last-5 last-4 last-3 last-2 last-1 last]
+      result = [0, -1, total - 7, total - 6, total - 5, total - 4, total - 3, total - 2, total - 1];
+    } else {
+      // Middle: [first ... cur-2 cur-1 cur cur+1 cur+2 ... last]
+      result = [0, -1, cur - 2, cur - 1, cur, cur + 1, cur + 2, -1, total - 1];
+    }
+    this._visiblePagesCache = { page: cur, total, result };
+    return result;
   }
   hasActiveFilters(): boolean {
     if (!this.currentFilters && !this.trainerIdFilter) return false;
@@ -847,6 +1196,17 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   hasReportedTrainer(trainerId: string): boolean {
     return this.voteProtection.hasReported(trainerId);
   }
+
+  openInPlanner(record: InheritanceRecord): void {
+    const target = this.advancedFilter?.treeData?.characterId || null;
+    const vet = this.advancedFilter?.selectedVeteran || null;
+
+    this.plannerTransfer.set({ record, targetCharaId: target, veteran: vet });
+    const url = this.router.serializeUrl(
+      this.router.createUrlTree(['/tools/lineage-planner'], { queryParams: { from: 'db' } })
+    );
+    window.open(url, '_blank');
+  }
   // Check if reporting is in progress
   isReportingInProgress(trainerId: string): boolean {
     return this.voteProtection.isReportingInProgress(trainerId);
@@ -874,16 +1234,25 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     return sortMapping[sortBy] || 'win_count';
   }
   getLevelFromMainParent(currentspark: SparkInfo, record: InheritanceRecord): string | undefined {
-    let id = currentspark.factorId;
-    let main_factors = [record.main_blue_factors, record.main_pink_factors, record.main_green_factors].concat(record.main_white_factors || []);
-    // Strip the last digit from each spark value to get the factor ID
-    let factorIds = main_factors
-      .filter(spark => spark !== undefined && spark !== null)
-      .map(spark => spark!.toString().slice(0, -1));
-    const mainFactorId = factorIds.findIndex(factorId => factorId === id);
-    if (mainFactorId !== -1)
-      return main_factors[mainFactorId]?.toString().slice(-1);
-    return undefined;
+    return this.getMainParentLevelMap(record).get(String(currentspark.factorId));
+  }
+  private getMainParentLevelMap(record: InheritanceRecord): Map<string, string> {
+    const cached = this.mainParentLevelCache.get(record);
+    if (cached) return cached;
+
+    const levels = new Map<string, string>();
+    const addSpark = (spark: number | null | undefined) => {
+      if (spark === null || spark === undefined) return;
+      levels.set(String(Math.floor(spark / 10)), String(spark % 10));
+    };
+    addSpark(record.main_blue_factors);
+    addSpark(record.main_pink_factors);
+    addSpark(record.main_green_factors);
+    for (const spark of record.main_white_factors ?? []) {
+      addSpark(spark);
+    }
+    this.mainParentLevelCache.set(record, levels);
+    return levels;
   }
   isSparkMatched(spark: SparkInfo, record: InheritanceRecord): boolean {
     if (!this.currentAdvancedFilters) return false;
@@ -913,6 +1282,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
        
        // Check optional white sparks (match by factorId only)
        if (filters.optional_white_sparks && filters.optional_white_sparks.includes(parseInt(spark.factorId, 10))) {
+         return true;
+       }
+       // Check lineage white sparks (match by factorId only)
+       if (filters.lineage_white && filters.lineage_white.includes(parseInt(spark.factorId, 10))) {
          return true;
        }
     }
@@ -1072,5 +1445,306 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     }).catch(() => {
       this.fallbackCopyToClipboard(text);
     });
+  }
+
+  // --- Bookmarks Tab ---
+
+  switchTab(tab: 'database' | 'bookmarks'): void {
+    if (this.activeTab === tab) return;
+    this.activeTab = tab;
+    if (tab === 'bookmarks') {
+      if (this.bookmarksDirty) {
+        this.bookmarksDirty = false;
+        this.loadBookmarks();
+      } else if (this.bookmarkRecords.length === 0 && !this.bookmarksLoading) {
+        this.loadBookmarks();
+      }
+    } else {
+      if (this.pendingSearch) {
+        this.pendingSearch = false;
+        this.searchRecords();
+      }
+    }
+  }
+
+  loadBookmarks(): void {
+    this.bookmarksLoading = true;
+    this.bookmarkPage = 0;
+    this.bookmarkService.loadBookmarks()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (records) => {
+          this.bookmarkRecords = records;
+          this.applyBookmarkFilters();
+          this.bookmarksLoading = false;
+        },
+        error: () => {
+          this.bookmarksLoading = false;
+          this.snackBar.open('Failed to load bookmarks', 'Close', { duration: 3000 });
+        }
+      });
+  }
+
+  onBookmarkToggle(event: { id: string; bookmarked: boolean }): void {
+    if (!this.authService.isLoggedIn()) {
+      this.snackBar.open('Sign in to bookmark records', 'Close', { duration: 3000 });
+      return;
+    }
+    if (event.bookmarked) {
+      if (this.bookmarkService.count >= this.maxBookmarks) {
+        this.snackBar.open(`Bookmark limit reached (${this.maxBookmarks})`, 'Close', { duration: 3000 });
+        return;
+      }
+      this.bookmarkService.addBookmark(event.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.snackBar.open('Bookmarked', 'Close', { duration: 1500 });
+            this.bookmarksDirty = true;
+          },
+          error: () => this.snackBar.open('Failed to bookmark', 'Close', { duration: 3000 })
+        });
+    } else {
+      this.bookmarkService.removeBookmark(event.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.snackBar.open('Bookmark removed', 'Close', { duration: 1500 });
+            this.bookmarksDirty = true;
+            if (this.activeTab === 'bookmarks') {
+              this.bookmarkRecords = this.bookmarkRecords.filter(r => r.account_id !== event.id);
+              this.applyBookmarkFilters();
+            }
+          },
+          error: () => this.snackBar.open('Failed to remove bookmark', 'Close', { duration: 3000 })
+        });
+    }
+  }
+
+  applyBookmarkFilters(): void {
+    let records = [...this.bookmarkRecords];
+    if (this.bookmarkStaleFilter === 'modified') {
+      records = records.filter(r => !!r.is_stale);
+    } else if (this.bookmarkStaleFilter === 'unchanged') {
+      records = records.filter(r => !r.is_stale);
+    }
+    const af = this.currentAdvancedFilters;
+    if (af) {
+      records = records.filter(r => this.matchesFilters(r, af));
+    }
+    if (!this.includeMaxFollowers) {
+      records = records.filter(r => r.follower_num !== 1000);
+    }
+    this.computeBookmarkAffinity(records);
+    records = this.sortBookmarks(records);
+    this.filteredBookmarks = records;
+  }
+
+  /** Number of bookmarks the source has changed for since the user saved them. */
+  get modifiedBookmarkCount(): number {
+    return this.bookmarkRecords.reduce((n, r) => n + (r.is_stale ? 1 : 0), 0);
+  }
+
+  setBookmarkStaleFilter(filter: 'all' | 'unchanged' | 'modified'): void {
+    if (this.bookmarkStaleFilter === filter) return;
+    this.bookmarkStaleFilter = filter;
+    this.bookmarkPage = 0;
+    this.applyBookmarkFilters();
+  }
+
+  /** Bulk-remove every bookmark whose source record has changed. */
+  removeAllModifiedBookmarks(): void {
+    if (this.bookmarkBulkBusy) return;
+    const ids = this.bookmarkRecords
+      .filter(r => r.is_stale && r.account_id)
+      .map(r => r.account_id as string);
+    if (ids.length === 0) return;
+
+    this.bookmarkBulkBusy = true;
+    this.bookmarkService.bulkDeleteBookmarks({ accountIds: ids })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const removed = new Set(ids);
+          this.bookmarkRecords = this.bookmarkRecords.filter(
+            r => !r.account_id || !removed.has(r.account_id),
+          );
+          this.applyBookmarkFilters();
+          this.bookmarkBulkBusy = false;
+          this.snackBar.open(
+            `Removed ${res.removed_count} modified bookmark${res.removed_count === 1 ? '' : 's'}`,
+            'Close',
+            { duration: 2000 },
+          );
+        },
+        error: () => {
+          this.bookmarkBulkBusy = false;
+          this.snackBar.open('Failed to remove modified bookmarks', 'Close', { duration: 3000 });
+        },
+      });
+  }
+
+  /**
+   * Two-step "Clear all". First call arms the button for ~4 s; second call
+   * within that window commits the bulk delete.
+   */
+  clearAllBookmarks(): void {
+    if (this.bookmarkBulkBusy || this.bookmarkRecords.length === 0) return;
+
+    if (!this.clearAllArmed) {
+      this.clearAllArmed = true;
+      clearTimeout(this.clearAllTimer);
+      this.clearAllTimer = setTimeout(() => {
+        this.clearAllArmed = false;
+        this.clearAllTimer = null;
+      }, 4000);
+      return;
+    }
+
+    clearTimeout(this.clearAllTimer);
+    this.clearAllTimer = null;
+    this.clearAllArmed = false;
+    this.bookmarkBulkBusy = true;
+    this.bookmarkService.bulkDeleteBookmarks({ all: true })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.bookmarkRecords = [];
+          this.applyBookmarkFilters();
+          this.bookmarkBulkBusy = false;
+          this.snackBar.open(
+            `Removed ${res.removed_count} bookmark${res.removed_count === 1 ? '' : 's'}`,
+            'Close',
+            { duration: 2000 },
+          );
+        },
+        error: () => {
+          this.bookmarkBulkBusy = false;
+          this.snackBar.open('Failed to clear bookmarks', 'Close', { duration: 3000 });
+        },
+      });
+  }
+
+  /** Cancel an armed Clear-all (user moved away or pressed Escape). */
+  cancelClearAll(): void {
+    if (!this.clearAllArmed) return;
+    clearTimeout(this.clearAllTimer);
+    this.clearAllTimer = null;
+    this.clearAllArmed = false;
+  }
+
+  private computeBookmarkAffinity(records: InheritanceRecord[]): void {
+    const targetId = this.currentTargetCharaId;
+    if (!targetId || !this.affinityService.isReady) return;
+
+    for (const r of records) {
+      const mainId = r.main_parent_id ? (r.main_parent_id >= 10000 ? Math.floor(r.main_parent_id / 100) : r.main_parent_id) : null;
+      const leftId = r.parent_left_id ? (r.parent_left_id >= 10000 ? Math.floor(r.parent_left_id / 100) : r.parent_left_id) : null;
+      const rightId = r.parent_right_id ? (r.parent_right_id >= 10000 ? Math.floor(r.parent_right_id / 100) : r.parent_right_id) : null;
+
+      if (!mainId) continue;
+
+      const pair = this.affinityService.getAff2(targetId, mainId);
+      const tripleLeft = leftId ? this.affinityService.getAff3(targetId, mainId, leftId) : 0;
+      const tripleRight = rightId ? this.affinityService.getAff3(targetId, mainId, rightId) : 0;
+      let total = pair + tripleLeft + tripleRight;
+
+      const mainSaddles = r.main_win_saddles ?? [];
+      const leftSaddles = new Set(r.left_win_saddles ?? []);
+      const rightSaddles = new Set(r.right_win_saddles ?? []);
+      total += mainSaddles.filter(w => leftSaddles.has(w)).length;
+      total += mainSaddles.filter(w => rightSaddles.has(w)).length;
+
+      r.affinity_score = total;
+    }
+  }
+
+  private sortBookmarks(records: InheritanceRecord[]): InheritanceRecord[] {
+    const sortBy = this.currentSortBy;
+    return records.sort((a, b) => {
+      let va: number, vb: number;
+      switch (sortBy) {
+        case 'affinity_score': va = a.affinity_score ?? 0; vb = b.affinity_score ?? 0; break;
+        case 'win_count': va = a.win_count ?? 0; vb = b.win_count ?? 0; break;
+        case 'white_count': va = a.white_count ?? 0; vb = b.white_count ?? 0; break;
+        case 'score': va = a.parent_rank ?? 0; vb = b.parent_rank ?? 0; break;
+        default: return 0; // submitted_at - keep original order (newest first from API)
+      }
+      return vb - va;
+    });
+  }
+
+  private matchesFilters(r: InheritanceRecord, af: UnifiedSearchParams): boolean {
+    if (af.trainer_id && r.account_id !== af.trainer_id && r.trainer_id !== af.trainer_id) return false;
+    if (af.trainer_name && r.trainer_name && !r.trainer_name.toLowerCase().includes(af.trainer_name.toLowerCase())) return false;
+
+    if (af.main_parent_id?.length && !af.main_parent_id.includes(r.main_parent_id!)) return false;
+    if (af.parent_left_id && r.parent_left_id !== af.parent_left_id) return false;
+    if (af.parent_right_id && r.parent_right_id !== af.parent_right_id) return false;
+
+    if (af.parent_id?.length) {
+      const matched = af.parent_id.some(id => r.parent_left_id === id || r.parent_right_id === id);
+      if (!matched) return false;
+    }
+    if (af.exclude_parent_id?.length) {
+      if (af.exclude_parent_id.some(id => r.parent_left_id === id || r.parent_right_id === id)) return false;
+    }
+    if (af.exclude_main_parent_id?.length) {
+      if (af.exclude_main_parent_id.includes(r.main_parent_id!)) return false;
+    }
+
+    if (af.min_win_count && (r.win_count ?? 0) < af.min_win_count) return false;
+    if (af.min_white_count && (r.white_count ?? 0) < af.min_white_count) return false;
+    if (af.parent_rank && (r.parent_rank ?? 0) < af.parent_rank) return false;
+    if (af.parent_rarity && (r.parent_rarity ?? 0) < af.parent_rarity) return false;
+
+    if (af.support_card_id && r.support_card_id !== af.support_card_id) return false;
+    if (af.min_limit_break && (r.limit_break_count ?? 0) < af.min_limit_break) return false;
+
+    if (af.max_follower_num && r.follower_num !== null && r.follower_num !== undefined && r.follower_num > af.max_follower_num) return false;
+
+    const checkSparkGroups = (groups: number[][] | undefined, sparks: number[] | undefined): boolean => {
+      if (!groups?.length) return true;
+      if (!sparks?.length) return false;
+      const sparkSet = new Set(sparks);
+      return groups.every(group => group.some(id => sparkSet.has(id)));
+    };
+    if (!checkSparkGroups(af.blue_sparks, r.blue_sparks)) return false;
+    if (!checkSparkGroups(af.pink_sparks, r.pink_sparks)) return false;
+    if (!checkSparkGroups(af.green_sparks, r.green_sparks)) return false;
+    if (!checkSparkGroups(af.white_sparks, r.white_sparks)) return false;
+
+    const checkMainSparkArray = (required: number[] | undefined, mainFactor: number | undefined): boolean => {
+      if (!required?.length) return true;
+      if (mainFactor === undefined) return false;
+      const mainFactorId = Math.floor(mainFactor / 10);
+      return required.some(id => Math.floor(id / 10) === mainFactorId);
+    };
+    if (!checkMainSparkArray(af.main_parent_blue_sparks, r.main_blue_factors)) return false;
+    if (!checkMainSparkArray(af.main_parent_pink_sparks, r.main_pink_factors)) return false;
+    if (!checkMainSparkArray(af.main_parent_green_sparks, r.main_green_factors)) return false;
+
+    const sumSparks = (sparks: number[] | undefined) => (sparks ?? []).reduce((s, id) => s + (id % 10), 0);
+    if (af.min_blue_stars_sum && sumSparks(r.blue_sparks) < af.min_blue_stars_sum) return false;
+    if (af.min_pink_stars_sum && sumSparks(r.pink_sparks) < af.min_pink_stars_sum) return false;
+    if (af.min_green_stars_sum && sumSparks(r.green_sparks) < af.min_green_stars_sum) return false;
+    if (af.min_white_stars_sum && sumSparks(r.white_sparks) < af.min_white_stars_sum) return false;
+
+    return true;
+  }
+
+  get pagedBookmarks(): InheritanceRecord[] {
+    const start = this.bookmarkPage * this.bookmarkPageSize;
+    return this.filteredBookmarks.slice(start, start + this.bookmarkPageSize);
+  }
+
+  get bookmarkTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredBookmarks.length / this.bookmarkPageSize));
+  }
+
+  goToBookmarkPage(page: number): void {
+    if (page < 0 || page >= this.bookmarkTotalPages) return;
+    this.bookmarkPage = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

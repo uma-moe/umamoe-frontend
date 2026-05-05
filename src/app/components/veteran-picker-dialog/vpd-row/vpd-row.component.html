@@ -1,0 +1,53 @@
+<img class="vpd-avatar" [src]="data.imageUrl" (error)="onImgError($event)" loading="lazy" />
+
+<div class="vpd-content">
+  <div class="vpd-header">
+    <span class="vpd-name">{{ data.name }}</span>
+    <span class="sm-tag scenario" *ngIf="data.tag">{{ data.tag }}</span>
+    <span class="vpd-bm-trainer" *ngIf="data.subtitle">{{ data.subtitle }}</span>
+    <span class="vpd-stars" *ngIf="data.rarity">
+      <mat-icon *ngFor="let s of getStarDisplay(data.rarity)"
+        [class.star-filled]="s.filled"
+        [class.star-empty]="!s.filled">
+        {{ s.filled ? 'star' : 'star_border' }}
+      </mat-icon>
+    </span>
+    <span class="vpd-aff" *ngIf="data.affinity && data.affinity > 0">
+      <mat-icon>favorite</mat-icon>{{ data.affinity }}
+    </span>
+  </div>
+
+  <div class="vpd-sparks" *ngIf="data.sparks.length > 0">
+    <span class="spark-item" [ngClass]="spark.color + '-spark'"
+      *ngFor="let spark of data.sparks.slice(0, 16)"
+      [matTooltip]="spark.name + ' Lv.' + spark.level">
+      <span class="spark-level">{{ spark.level }}</span>
+      <mat-icon class="spark-star">star</mat-icon>
+      <span class="spark-name">{{ spark.name }}</span>
+    </span>
+    <span class="spark-more" *ngIf="data.sparks.length > 16">+{{ data.sparks.length - 16 }}</span>
+  </div>
+
+  <div class="vpd-parents" *ngIf="data.parents.length > 0">
+    <div class="vpd-parent-row" *ngFor="let parent of data.parents">
+      <span class="vpd-parent-label" [ngClass]="'pos-' + parent.position">{{ parent.position }}</span>
+      <span class="vpd-parent-name">{{ parent.name }}</span>
+      <span class="spark-item spark-item--xs" [ngClass]="s.color + '-spark'"
+        *ngFor="let s of parent.sparks.slice(0, 8)"
+        [matTooltip]="s.name + ' Lv.' + s.level">
+        <span class="spark-level">{{ s.level }}</span>
+        <mat-icon class="spark-star">star</mat-icon>
+        <span class="spark-name">{{ s.name }}</span>
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="vpd-row-actions" *ngIf="data.showActions || data.showEdit" (click)="stopProp($event)">
+  <button class="vpd-row-btn vpd-row-btn--edit" *ngIf="data.showEdit" (click)="editClick.emit()" matTooltip="Edit">
+    <mat-icon>edit</mat-icon>
+  </button>
+  <button class="vpd-row-btn vpd-row-btn--del" *ngIf="data.showActions" (click)="deleteClick.emit($event)" matTooltip="Delete">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>

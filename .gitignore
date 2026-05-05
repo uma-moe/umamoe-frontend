@@ -3,6 +3,7 @@
 
 # ===== COMPILED OUTPUT =====
 /dist
+/.tmp
 
 # ===== NODE.JS =====
 /node_modules
@@ -56,3 +57,7 @@ scripts/
 
 .github/copilot-instructions.md
 /src/assets/*
+
+# WebP conversion cache
+.webp-cache/
+/docs

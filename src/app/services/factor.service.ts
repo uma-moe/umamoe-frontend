@@ -121,4 +121,8 @@ export class FactorService {
   areFactorsLoaded(): boolean {
     return this.factorsMap.size > 0;
   }
+
+  getAllFactors(): Factor[] {
+    return this.factors$.getValue();
+  }
 }

@@ -18,11 +18,11 @@
       <p class="hero-subtitle">Umamusume resource hub for the global version</p>
 
       <div class="quick-links">
-        <a routerLink="/database" class="quick-link inheritance">
+        <a routerLink="/database" class="quick-link inheritance updated-feature">
           <mat-icon>dataset</mat-icon>
           <div class="link-content">
             <span class="link-title"
-              >Database
+              >Database<span class="updated-badge">Updated</span>
               </span
             >
             <span class="link-desc">Browse the Database</span>
@@ -63,10 +63,10 @@
           </div>
         </a>
 
-        <a routerLink="/tools" class="quick-link tools">
+        <a routerLink="/tools" class="quick-link tools new-feature">
           <mat-icon>build</mat-icon>
-          <div class="link-content ">
-            <span class="link-title">Tools & Analytics</span>
+          <div class="link-content">
+            <span class="link-title">Tools & Analytics<span class="new-badge">New</span></span>
             <span class="link-desc">Advanced tools and statistics</span>
           </div>
         </a>
@@ -79,22 +79,22 @@
     <div class="stats-grid">
       <div class="stat-card">
         <mat-icon>task_alt</mat-icon>
-        <div class="stat-value">{{ tasksToday | number }}</div>
+        <div class="stat-value">{{ tasksToday | localeNumber }}</div>
         <div class="stat-label">Tasks Today</div>
       </div>
       <div class="stat-card">
         <mat-icon>sync</mat-icon>
-        <div class="stat-value">{{ accountsUpdatedToday | number }}</div>
+        <div class="stat-value">{{ accountsUpdatedToday | localeNumber }}</div>
         <div class="stat-label">Updated Today</div>
       </div>
       <div class="stat-card">
         <mat-icon>group</mat-icon>
-        <div class="stat-value">{{ accounts7d | number }}</div>
+        <div class="stat-value">{{ accounts7d | localeNumber }}</div>
         <div class="stat-label">Active (7d)</div>
       </div>
       <div class="stat-card">
         <mat-icon>face</mat-icon>
-        <div class="stat-value">{{ umasTracked | number }}</div>
+        <div class="stat-value">{{ umasTracked | localeNumber }}</div>
         <div class="stat-label">Total Umas Tracked</div>
       </div>
     </div>

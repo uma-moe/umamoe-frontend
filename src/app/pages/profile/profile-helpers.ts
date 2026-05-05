@@ -57,20 +57,20 @@ export function getStarDisplay(rarity: number | null): { filled: boolean; talent
 }
 
 export function getDistanceName(type: number | null): string {
-    if (type == null) return '—';
+    if (type == null) return '-';
     const names: Record<number, string> = { 1: 'Sprint', 2: 'Mile', 3: 'Middle', 4: 'Long', 5: 'Dirt' };
     return names[type] || `Dist ${type}`;
 }
 
 export function getRunningStyleName(style: number | null): string {
-    if (style == null) return '—';
+    if (style == null) return '-';
     const names: Record<number, string> = { 1: 'Runner', 2: 'Leader', 3: 'Betweener', 4: 'Chaser' };
     return names[style] || `Style ${style}`;
 }
 
 export function getScenarioName(id: number | null): string {
-    if (id == null) return '—';
-    const names: Record<number, string> = { 1: 'URA', 2: 'Aoharu', 3: 'Grand Live', 4: 'Grand Masters', 5: 'LArc', 6: 'Grand Challenge', 7: 'U.A.F.' };
+    if (id == null) return '-';
+    const names: Record<number, string> = { 1: 'URA', 2: 'Aoharu', 3: 'MANT', 4: 'MANT', 5: 'LArc', 6: 'Grand Challenge', 7: 'U.A.F.' };
     return names[id] || `Scenario ${id}`;
 }
 

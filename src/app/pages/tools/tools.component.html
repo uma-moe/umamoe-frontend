@@ -35,14 +35,13 @@
           <div class="coming-soon-badge">COMING SOON</div>
         </div>
 
-        <div class="quick-link factor-calc disabled">
-          <mat-icon>family_restroom</mat-icon>
+        <a routerLink="/tools/lineage-planner" class="quick-link lineage-planner new-feature">
+          <mat-icon>account_tree</mat-icon>
           <div class="link-content">
-            <span class="link-title">Factor Calculator</span>
-            <span class="link-desc">Plan inheritance combinations</span>
+            <span class="link-title">Lineage Planner<span class="new-badge">NEW</span></span>
+            <span class="link-desc">Plan your full inheritance tree</span>
           </div>
-          <div class="coming-soon-badge">COMING SOON</div>
-        </div>
+        </a>
       </div>
     </div>
   </section>
@@ -52,22 +51,22 @@
     <div class="stats-grid">
       <div class="stat-card">
         <mat-icon>task_alt</mat-icon>
-        <div class="stat-value">{{ tasksToday | number }}</div>
+        <div class="stat-value">{{ tasksToday | localeNumber }}</div>
         <div class="stat-label">Tasks Today</div>
       </div>
       <div class="stat-card">
         <mat-icon>sync</mat-icon>
-        <div class="stat-value">{{ accountsUpdatedToday | number }}</div>
+        <div class="stat-value">{{ accountsUpdatedToday | localeNumber }}</div>
         <div class="stat-label">Updated Today</div>
       </div>
       <div class="stat-card">
         <mat-icon>group</mat-icon>
-        <div class="stat-value">{{ accounts7d | number }}</div>
+        <div class="stat-value">{{ accounts7d | localeNumber }}</div>
         <div class="stat-label">Active (7d)</div>
       </div>
       <div class="stat-card">
         <mat-icon>face</mat-icon>
-        <div class="stat-value">{{ umasTracked | number }}</div>
+        <div class="stat-value">{{ umasTracked | localeNumber }}</div>
         <div class="stat-label">Total Umas Tracked</div>
       </div>
     </div>

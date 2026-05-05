@@ -1,5 +1,6 @@
 import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, NgZone, OnDestroy, HostListener, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,6 +10,10 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import { CircleService } from '../../../services/circle.service';
@@ -16,8 +21,10 @@ import { Circle, CircleMember, CircleHistoryPoint, CircleMemberMonthlyData } fro
 import { DiscordLinkPipe } from '../../../pipes/discord-link.pipe';
 import { MemberDisplaySettingsDialogComponent } from './member-display-settings-dialog.component';
 import { AnimatedNumberComponent } from '../../../components/animated-number/animated-number.component';
+import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
 Chart.register(...registerables);
 export type CalculationType = 'monthly_gain' | 'weekly_gain' | 'daily_gain' | 'avg_daily_gain' | 'daily_avg' | 'projected_monthly' | 'total_fans';
+export type ExportFormat = 'csv' | 'json' | 'xlsx';
 export interface ChartLegendItem {
   name: string;
   color: string;
@@ -54,6 +61,7 @@ export interface CalendarDay {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     RouterModule,
     MatCardModule,
     MatButtonModule,
@@ -63,8 +71,13 @@ export interface CalendarDay {
     MatProgressSpinnerModule,
     MatDialogModule,
     MatTooltipModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatAutocompleteModule,
+    MatSnackBarModule,
     DiscordLinkPipe,
-    AnimatedNumberComponent
+    AnimatedNumberComponent,
+    LocaleNumberPipe
   ],
   templateUrl: './circle-details.component.html',
   styleUrl: './circle-details.component.scss'
@@ -175,6 +188,8 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     this.exportMenuOpen = false;
   }
   exportMenuOpen = false;
+  private directExportFormat: ExportFormat | null = null;
+  private directExportStarted = false;
   toggleExportMenu(event: MouseEvent): void {
     event.stopPropagation();
     this.exportMenuOpen = !this.exportMenuOpen;
@@ -182,6 +197,43 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   memberChartMode: MemberChartMode = 'cumulative';
   memberViewMode: MemberViewMode = 'chart';
   membersListMode: MembersListMode = 'grid';
+  memberFilter: string = '';
+
+  get filteredMembers(): CircleMember[] {
+    const q = this.memberFilter.trim().toLowerCase();
+    if (!q) return this.members;
+    return this.members.filter(m =>
+      m.name.toLowerCase().includes(q) ||
+      m.trainer_id.toLowerCase().includes(q)
+    );
+  }
+
+  get filteredRawMemberData(): CircleMemberMonthlyData[] {
+    const q = this.memberFilter.trim().toLowerCase();
+    if (!q) return this.rawMemberData;
+    return this.rawMemberData.filter(m =>
+      m.trainer_name.toLowerCase().includes(q) ||
+      m.viewer_id.toString().includes(q)
+    );
+  }
+
+  onMemberFilterChange(): void {
+    this.initMemberChart();
+    if (this.memberViewMode === 'calendar') {
+      this.buildCalendarData();
+    }
+  }
+
+  /** Autocomplete suggestions: top matches by name or trainer_id, capped for performance */
+  get memberFilterSuggestions(): CircleMember[] {
+    const q = this.memberFilter.trim().toLowerCase();
+    if (!q) return [];
+    const matches = this.members.filter(m =>
+      m.name.toLowerCase().includes(q) ||
+      m.trainer_id.toLowerCase().includes(q)
+    );
+    return matches.slice(0, 10);
+  }
   calendarWeeks: CalendarDay[][] = [];
   computedMonthlyPoint: number = 0;
   config: CircleDetailsConfig = {
@@ -212,7 +264,8 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     private circleService: CircleService,
     private ngZone: NgZone,
     private dialog: MatDialog,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private snackBar: MatSnackBar
   ) {
     // Initialize with JST date to handle month rollover correctly
     const now = new Date();
@@ -232,9 +285,48 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     document.addEventListener('touchstart', this._tooltipDismissHandler, { passive: true });
     document.addEventListener('click', this._tooltipDismissHandler);
     this.circleId = this.route.snapshot.paramMap.get('id');
+    this.applyInitialMonthQueryParams();
+    this.directExportFormat = this.normalizeExportFormat(this.route.snapshot.paramMap.get('exportFormat'));
     if (this.circleId) {
       this.loadData(this.circleId);
     }
+  }
+
+  private applyInitialMonthQueryParams(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const year = this.parseBoundedInteger(params.get('year'), 2000, 2100);
+    const month = this.parseBoundedInteger(params.get('month'), 1, 12);
+    if (year !== null) this.currentYear = year;
+    if (month !== null) this.currentMonth = month;
+  }
+
+  private parseBoundedInteger(value: string | null, min: number, max: number): number | null {
+    if (value == null || value.trim() === '') return null;
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < min || parsed > max) return null;
+    return parsed;
+  }
+
+  private normalizeExportFormat(format: string | null): ExportFormat | null {
+    switch ((format || '').toLowerCase()) {
+      case 'csv':
+        return 'csv';
+      case 'json':
+        return 'json';
+      case 'xlsx':
+      case 'xls':
+      case 'excel':
+      case 'exel':
+        return 'xlsx';
+      default:
+        return null;
+    }
+  }
+
+  private runDirectExportIfRequested(): void {
+    if (!this.directExportFormat || this.directExportStarted) return;
+    this.directExportStarted = true;
+    this.exportStats(this.directExportFormat);
   }
   loadConfig(): void {
     const saved = localStorage.getItem('circle_details_config');
@@ -323,7 +415,34 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   trackByViewerId(_: number, member: any): string {
     return member.trainer_id ?? String(_);
   }
-  // External tooltip handler — renders tooltip as a DOM element on document.body
+
+  /** Build the profile URL for a member's viewer/trainer id. */
+  getMemberProfileUrl(member: { viewer_id?: string | number; trainer_id?: string | number }): string {
+    const id = member?.viewer_id ?? member?.trainer_id ?? '';
+    return id ? `https://uma.moe/profile/${id}` : '';
+  }
+
+  /** Copy a trainer id to the clipboard and show a brief snackbar. */
+  copyTrainerId(trainerId: string | number | undefined, event: Event): void {
+    event.stopPropagation();
+    event.preventDefault();
+    const value = trainerId != null ? String(trainerId) : '';
+    if (!value) return;
+    const done = () => this.snackBar.open(`Copied ${value}`, 'OK', { duration: 1500 });
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(value).then(done).catch(() => done());
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = value;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } finally { document.body.removeChild(ta); }
+      done();
+    }
+  }
+  // External tooltip handler - renders tooltip as a DOM element on document.body
   // so it is never clipped by overflow on parent containers
   externalTooltipHandler(context: any): void {
     const { chart, tooltip } = context;
@@ -417,13 +536,11 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     }
     this.initMemberChart();
   }
+  private static compactFmt = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
   formatCompact(value: number): string {
-    const abs = Math.abs(value);
-    const sign = value >= 0 ? '+' : '-';
-    if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
-    if (abs >= 10_000) return sign + Math.round(abs / 1000) + 'K';
-    if (abs >= 1_000) return sign + (abs / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-    return sign + abs;
+    const sign = value >= 0 ? '+' : '';
+    if (Math.abs(value) >= 100_000) return sign + CircleDetailsComponent.compactFmt.format(value);
+    return sign + value.toLocaleString();
   }
   toggleMemberViewMode(): void {
     this.memberViewMode = this.memberViewMode === 'chart' ? 'calendar' : 'chart';
@@ -441,6 +558,14 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   buildCalendarData(): void {
     let data = this.allMemberData.filter(m => m.year == this.currentYear && m.month == this.currentMonth);
     if (data.length === 0) data = this.allMemberData;
+    // Apply member filter (by name or viewer_id)
+    const q = this.memberFilter.trim().toLowerCase();
+    if (q) {
+      data = data.filter(m =>
+        m.trainer_name.toLowerCase().includes(q) ||
+        m.viewer_id.toString().includes(q)
+      );
+    }
     const daysInMonth = new Date(this.currentYear, this.currentMonth, 0).getDate();
     const firstDayOfWeek = new Date(this.currentYear, this.currentMonth - 1, 1).getDay();
     const startOffset = (firstDayOfWeek + 6) % 7; // Adjust to Monday start
@@ -462,8 +587,8 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
           for (let n = day + 1; n < fans.length; n++) {
             if (fans[n] > 0) { nextValue = fans[n]; break; }
           }
-          // If no next day found, use next_month_start for last day's gain
-          if (nextValue === 0 && m.next_month_start && m.next_month_start > 0) {
+          // If no next day found, use next_month_start only for old data without an embedded tallying slot.
+          if (nextValue === 0 && this.canUseNextMonthStartFallback(fans, m.next_month_start)) {
             nextValue = m.next_month_start;
           }
           if (nextValue > 0) {
@@ -646,6 +771,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
         this.processMembersData(response.members);
         this.loading = false;
         this.setupLiveRefresh();
+        this.runDirectExportIfRequested();
         
         // Use setTimeout to ensure DOM is fully rendered
         this.ngZone.runOutsideAngular(() => {
@@ -731,8 +857,8 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
           break;
         }
       }
-      // Check if next_month_start is available (final value at end of month)
-      const hasNextMonthStart = m.next_month_start != null && m.next_month_start > 0;
+      // next_month_start is only a fallback for old data where the month-end tally is not in daily_fans.
+      const hasNextMonthStartFallback = this.canUseNextMonthStartFallback(fans, m.next_month_start);
       // Calculate prior circle gain
       // Prior circle days: consecutive negative values at the start
       // Find the last prior-circle day and the first current-circle day
@@ -754,10 +880,9 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
         priorCircleGain = firstCurrentValue - firstFanCount;
       }
       
-      // Whether next_month_start can serve as the "next day" value for this member's last snapshot.
-      // Requires the member to be active and their last data point to be at the very end of the
-      // daily_fans array, meaning next_month_start = value at the close of that final recorded day.
-      const canUseNextMonthStart = hasNextMonthStart;
+      // Whether next_month_start can serve as the legacy month-end tally for this member.
+      // Newer rows embed the tallying value in daily_fans at index daysInMonth, so those skip it.
+      const canUseNextMonthStart = hasNextMonthStartFallback;
       // Use the actual days in month (e.g. 28 for February) so short months aren't treated as 31-day months.
       const daysInMonth = new Date(this.currentYear, this.currentMonth, 0).getDate();
       // Effective latest index/value: one day beyond the last recorded snapshot when possible.
@@ -798,24 +923,24 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
         }
       }
       // Calculate Monthly Gain (total contribution including prior circle)
-      // Use next_month_start / effectiveLatestValue as the final value when available
+      // Use the embedded tallying value, or the legacy fallback, as the final value when available.
       let monthlyGain = 0;
       if (effectiveLatestValue > 0 && firstFanCount > 0) {
         monthlyGain = effectiveLatestValue - firstFanCount;
       }
-      // Calculate Daily Avg (Month) — denominator includes the extra day from next_month_start
+      // Calculate Daily Avg (Month) - denominator includes the month-end tallying point when available.
       let dailyAvg = 0;
       if (monthlyGain > 0 && effectiveLatestIndex > firstIndex) {
         const daySpan = effectiveLatestIndex - firstIndex;
         dailyAvg = monthlyGain / daySpan;
       }
-      // Calculate 7 Day Avg — seed nonZeroValues with the synthetic next_month_start point
+      // Calculate 7 Day Avg - seed nonZeroValues with the synthetic fallback point when needed.
       let sevenDayAvg = 0;
       let weeklyGain = 0;
       let priorInWeekly = 0;
       if (isActive && lastIndex >= 0) {
         const nonZeroValues: { index: number; value: number; isPrior: boolean }[] = [];
-        // Prepend the effective latest point (may be the synthetic next_month_start day)
+        // Prepend the effective latest point (may be the synthetic fallback day)
         if (canUseNextMonthStart) {
           nonZeroValues.push({ index: daysInMonth, value: m.next_month_start!, isPrior: false });
         }
@@ -1043,7 +1168,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
               color: 'rgba(255, 255, 255, 0.7)',
               callback: (value) => {
                 if (typeof value === 'number') {
-                  return new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short" }).format(value);
+                  return new Intl.NumberFormat('en', { notation: "compact", compactDisplay: "short" }).format(value);
                 }
                 return value;
               }
@@ -1064,7 +1189,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
                   label += ': ';
                 }
                 if (context.parsed.y !== null) {
-                  label += new Intl.NumberFormat('en-US').format(context.parsed.y);
+                  label += new Intl.NumberFormat(undefined).format(context.parsed.y);
                 }
                 return label;
               }
@@ -1095,11 +1220,12 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       console.error('Could not get member chart canvas context');
       return;
     }
+    const activeRawMemberData = this.filteredRawMemberData;
     // Determine how many days to show
     // We need to find the max index with data again, or store it.
     // Let's recalculate it quickly to be safe.
     let maxIndexWithData = 0;
-    this.rawMemberData.forEach(m => {
+    activeRawMemberData.forEach(m => {
         for (let i = m.daily_fans.length - 1; i >= 0; i--) {
             if (m.daily_fans[i] !== 0) {
                 if (i > maxIndexWithData) maxIndexWithData = i;
@@ -1110,12 +1236,12 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     
     // Gains are forward-shifted: gain on day d = fans[d] - fans[d-1]
     // fans[0] is the month-start baseline, so we can show maxIndexWithData days of gains
-    // With next_month_start we get one more (the last day's gain)
-    const anyHasNextMonthStart = this.rawMemberData.some(m => m.next_month_start != null && m.next_month_start > 0);
-    // When next_month_start is available the month is fully complete, so always
+    // With next_month_start fallback we get one more (the last day's gain)
+    const anyHasNextMonthStartFallback = activeRawMemberData.some(m => this.canUseNextMonthStartFallback(m.daily_fans, m.next_month_start));
+    // When next_month_start fallback is available the month is fully complete, so always
     // show every day of the month (not just up to the last recorded snapshot index).
     const daysInMonth = new Date(this.currentYear, this.currentMonth, 0).getDate();
-    const daysToShow = anyHasNextMonthStart ? daysInMonth : maxIndexWithData;
+    const daysToShow = anyHasNextMonthStartFallback ? daysInMonth : maxIndexWithData;
     // Generate labels (days 1 to N)
     const labels = Array.from({length: daysToShow}, (_, i) => {
       const day = (i + 1).toString().padStart(2, '0');
@@ -1124,7 +1250,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     });
     this.chartLegendItems = [];
     // Generate datasets
-    const datasets = this.rawMemberData.map((member, index) => {
+    const datasets = activeRawMemberData.map((member, index) => {
       // Simple color generation based on index
       const hue = (index * 137.508) % 360; // Golden angle approximation
       const color = `hsl(${hue}, 70%, 60%)`;
@@ -1140,7 +1266,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       const isPriorCircle: boolean[] = []; // Track prior circle data points
       if (this.memberChartMode === 'delta') {
         // Delta mode: show daily fan gain (forward delta: next - current)
-        // Gain on day i = fans[i+1] - fans[i], last day uses next_month_start
+        // Gain on day i = fans[i+1] - fans[i], with next_month_start only as a legacy fallback.
         const includePrior = this.config.includePriorClubData;
         for (let i = 0; i < daysToShow; i++) {
           const rawValue = member.daily_fans[i];
@@ -1158,8 +1284,8 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
                 break;
               }
             }
-            // If no next value, use next_month_start for last day
-            if (nextAbsValue === 0 && member.next_month_start && member.next_month_start > 0) {
+            // If no next value, use next_month_start only for old data without an embedded tallying slot.
+            if (nextAbsValue === 0 && this.canUseNextMonthStartFallback(member.daily_fans, member.next_month_start)) {
               nextAbsValue = member.next_month_start;
             }
             if (nextAbsValue > 0) {
@@ -1170,7 +1296,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
             isCarriedForward.push(false);
             isPriorCircle.push(includePrior && shiftedRaw < 0);
           } else {
-            // Zero gap — check if there's future data
+            // Zero gap - check if there's future data
             let hasFutureData = false;
             for (let j = i + 1; j < member.daily_fans.length; j++) {
               const futureRaw = member.daily_fans[j];
@@ -1179,7 +1305,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
                 break;
               }
             }
-            if (!hasFutureData && member.next_month_start && member.next_month_start > 0) {
+            if (!hasFutureData && this.canUseNextMonthStartFallback(member.daily_fans, member.next_month_start)) {
               hasFutureData = true;
             }
             if (hasFutureData && data.length > 0 && data[data.length - 1] !== null) {
@@ -1208,13 +1334,13 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
           let rawValue = 0;
           if (dataIdx < member.daily_fans.length) {
             rawValue = member.daily_fans[dataIdx];
-          } else if (member.next_month_start && member.next_month_start > 0) {
+          } else if (this.canUseNextMonthStartFallback(member.daily_fans, member.next_month_start)) {
             rawValue = member.next_month_start;
           }
           // Fallback: if rawValue is still 0 and there's no future non-zero data
-          // in the array, use next_month_start (mirrors calendar/delta behaviour
+          // in the array, use next_month_start fallback (mirrors calendar/delta behaviour
           // for the last day of a short month like February).
-          if (rawValue === 0 && member.next_month_start && member.next_month_start > 0) {
+          if (rawValue === 0 && this.canUseNextMonthStartFallback(member.daily_fans, member.next_month_start)) {
             let hasFutureFansData = false;
             for (let j = dataIdx + 1; j < member.daily_fans.length; j++) {
               const fr = member.daily_fans[j];
@@ -1242,7 +1368,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
                 break;
               }
             }
-            if (!hasFutureData && member.next_month_start && member.next_month_start > 0) {
+            if (!hasFutureData && this.canUseNextMonthStartFallback(member.daily_fans, member.next_month_start)) {
               hasFutureData = true;
             }
             if (hasFutureData) {
@@ -1327,7 +1453,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
               color: 'rgba(255, 255, 255, 0.7)',
               callback: (value) => {
                 if (typeof value === 'number') {
-                  return new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short" }).format(value);
+                  return new Intl.NumberFormat('en', { notation: "compact", compactDisplay: "short" }).format(value);
                 }
                 return value;
               }
@@ -1352,7 +1478,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
                 if (currentVal === null || currentVal === undefined) return label;
                 if (this.memberChartMode === 'delta') {
                   // Delta mode: value IS the daily delta
-                  label += (currentVal > 0 ? '+' : '') + new Intl.NumberFormat('en-US').format(currentVal);
+                  label += (currentVal > 0 ? '+' : '') + new Intl.NumberFormat(undefined).format(currentVal);
                 } else {
                   // Cumulative mode: show total + daily delta
                   let dailyGain = 0;
@@ -1365,9 +1491,9 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
                       }
                     }
                   }
-                  label += new Intl.NumberFormat('en-US').format(currentVal);
+                  label += new Intl.NumberFormat(undefined).format(currentVal);
                   if (dailyGain !== 0) {
-                    label += ` (${dailyGain > 0 ? '+' : ''}${new Intl.NumberFormat('en-US').format(dailyGain)})`;
+                    label += ` (${dailyGain > 0 ? '+' : ''}${new Intl.NumberFormat(undefined).format(dailyGain)})`;
                   }
                 }
                 return label;
@@ -1468,30 +1594,39 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     this.memberChart.update('none');
   }
   /**
-   * Shifted-delta: result[i] = fans[i+1] - fans[i] (skip-zero aware).
-   * result.length = fans.length - 1.
-   *
-   * Callers should pass buildEffectiveFans(...) so the next_month_start value
-   * occupies the first empty slot and the last delta covers it.
-   */
-  /**
    * Build the effective fans array used for Day columns and delta calculation.
-   * `next_month_start` is written into the slot immediately after the last
-   * non-zero entry (i.e. the first trailing-zero slot), so it never pads the
-   * array beyond the natural month length + 1.
+   * If daily_fans already contains the month-end tallying index, next_month_start
+   * is ignored. Otherwise it is written into the tallying slot for legacy rows.
    */
   private buildEffectiveFans(dailyFans: number[], nextMonthStart?: number): number[] {
-    if (!nextMonthStart || nextMonthStart <= 0) return dailyFans;
-    const lastNonZero = dailyFans.reduce((idx, v, i) => Math.abs(v) > 0 ? i : idx, -1);
-    const insertAt = lastNonZero + 1;          // first slot after last real data
-    const result = [...dailyFans];
-    if (insertAt < result.length) {
-      result[insertAt] = nextMonthStart;        // fill trailing-zero slot
-    } else {
-      result.push(nextMonthStart);              // all slots filled — append one
+    const tallyingIndex = this.getMonthEndTallyingIndex();
+    if (this.hasEmbeddedMonthEndTally(dailyFans)) {
+      return dailyFans.slice(0, tallyingIndex + 1);
     }
+    if (!this.canUseNextMonthStartFallback(dailyFans, nextMonthStart)) return dailyFans;
+    const result = [...dailyFans];
+    while (result.length <= tallyingIndex) result.push(0);
+    result[tallyingIndex] = nextMonthStart;
     return result;
   }
+
+  private getMonthEndTallyingIndex(): number {
+    return new Date(this.currentYear, this.currentMonth, 0).getDate();
+  }
+
+  private hasEmbeddedMonthEndTally(dailyFans: number[]): boolean {
+    const tallyingIndex = this.getMonthEndTallyingIndex();
+    return Math.abs(dailyFans[tallyingIndex] ?? 0) > 0;
+  }
+
+  private canUseNextMonthStartFallback(dailyFans: number[], nextMonthStart?: number): nextMonthStart is number {
+    return !!nextMonthStart && nextMonthStart > 0 && !this.hasEmbeddedMonthEndTally(dailyFans);
+  }
+
+  /**
+   * Shifted-delta: result[i] = fans[i+1] - fans[i] (skip-zero aware).
+   * Callers should pass buildEffectiveFans(...) so legacy fallback data is included.
+   */
   private computeDailyDelta(fans: number[]): (number | null)[] {
     const result: (number | null)[] = new Array(Math.max(0, fans.length - 1)).fill(null);
     for (let i = 0; i < fans.length - 1; i++) {
@@ -1531,9 +1666,9 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       { label: 'Trainer ID',        get: m => m.trainer_id,                                   sum: false },
       ...(c.showRole             ? [{ label: 'Role',              get: (m: CircleMember) => m.role,                               sum: false }] : []),
       { label: 'Status',            get: m => m.isActive ? 'Active' : 'Inactive',             sum: false },
-      // Primary metric — always present (label automatically reflects selectedCalculation)
+      // Primary metric - always present (label automatically reflects selectedCalculation)
       primarySpec,
-      // Additional metrics — only added if they are not already the primary
+      // Additional metrics - only added if they are not already the primary
       ...(c.showMonthlyGain      && sel !== 'monthly_gain'      ? [{ label: 'Monthly Gain',      get: (m: CircleMember) => m.monthly_gain ?? 0,                  sum: true  }] : []),
       ...(c.showWeeklyGain       && sel !== 'weekly_gain'       ? [{ label: 'Weekly Gain',       get: (m: CircleMember) => m.weekly_gain ?? 0,                   sum: true  }] : []),
       ...(c.showDailyGain        && sel !== 'daily_gain'        ? [{ label: 'Daily Gain',        get: (m: CircleMember) => m.daily_gain ?? 0,                    sum: true  }] : []),
@@ -1579,7 +1714,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
           d.year === this.currentYear && d.month === this.currentMonth
         ) ?? this.allMemberData.find(d => d.viewer_id.toString() === m.trainer_id)
       );
-      // effectiveFans: place next_month_start into the first empty slot after last data
+      // effectiveFans: use embedded tallying data, or place the legacy fallback in the tallying slot.
       const memberEffectiveFans = memberRawData.map(raw => {
         const fans = raw ? raw.daily_fans : ([] as number[]);
         return this.buildEffectiveFans(fans, raw?.next_month_start);
@@ -1642,27 +1777,27 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     const ExcelJS: typeof import('exceljs') = (ExcelJSModule as any).default ?? ExcelJSModule;
     const c = this.config;
     // Colour palette (dark-theme matching the app)
-    const H_BG        = 'FF1B3A6B';  // dark blue — header background
-    const H_FG        = 'FFFFFFFF';  // white     — header text
-    const TOTALS_BG   = 'FF0D47A1';  // deeper blue — totals row
+    const H_BG        = 'FF1B3A6B';  // dark blue - header background
+    const H_FG        = 'FFFFFFFF';  // white     - header text
+    const TOTALS_BG   = 'FF0D47A1';  // deeper blue - totals row
     const ROW_A       = 'FF16162A';  // base row
     const ROW_B       = 'FF1A1A32';  // alt row
-    const INACTIVE    = 'FF2A1F1F';  // muted red  — inactive member
-    const PRIOR_BG    = 'FF152215';  // dark green — prior-club day cell
+    const INACTIVE    = 'FF2A1F1F';  // muted red  - inactive member
+    const PRIOR_BG    = 'FF152215';  // dark green - prior-club day cell
     const PRIOR_FG    = 'FF81C784';  // light green text for prior-club cells
     const DAY_H_BG    = 'FF162244';  // day column header
     const DELTA_H_BG  = 'FF163044';  // delta column header
     const wb = new ExcelJS.Workbook();
     wb.creator = 'uma.moe';
     wb.created = new Date();
-    // Pre-compute daily fans + next_month_start per member once
+    // Pre-compute daily fans and any legacy month-end fallback per member once.
     const memberRawData = this.members.map(m =>
       this.allMemberData.find(d =>
         d.viewer_id.toString() === m.trainer_id &&
         d.year === this.currentYear && d.month === this.currentMonth
       ) ?? this.allMemberData.find(d => d.viewer_id.toString() === m.trainer_id)
     );
-    // effectiveFans: place next_month_start into the first empty slot after last data
+    // effectiveFans: use embedded tallying data, or place the legacy fallback in the tallying slot.
     const memberEffectiveFans = memberRawData.map(raw => {
       const fans = raw ? raw.daily_fans : ([] as number[]);
       return this.buildEffectiveFans(fans, raw?.next_month_start);

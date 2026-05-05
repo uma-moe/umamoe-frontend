@@ -12,6 +12,7 @@ import { ProfileHeaderComponent } from './profile-header/profile-header.componen
 import { ResolveSparksPipe } from '../../pipes/resolve-sparks.pipe';
 import { InheritanceEntryComponent } from '../../components/inheritance-entry/inheritance-entry.component';
 import { RankBadgeComponent } from '../../components/rank-badge/rank-badge.component';
+import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { InheritanceRecord } from '../../models/inheritance.model';
 import { Meta, Title } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
@@ -33,7 +34,7 @@ export interface CircleMembership {
 @Component({
     selector: 'app-profile',
     standalone: true,
-    imports: [CommonModule, RouterModule, RouterOutlet, MatIconModule, ResolveSparksPipe, ProfileHeaderComponent, InheritanceEntryComponent, RankBadgeComponent],
+    imports: [CommonModule, RouterModule, RouterOutlet, MatIconModule, ResolveSparksPipe, ProfileHeaderComponent, InheritanceEntryComponent, RankBadgeComponent, LocaleNumberPipe],
     templateUrl: './profile.component.html',
     styleUrl: './profile.component.scss'
 })
@@ -112,7 +113,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
                 this.visibility = v;
             },
             error: () => {
-                // No settings yet — defaults are all visible
+                // No settings yet - defaults are all visible
                 this.visibility = { profile_hidden: false, hidden_sections: [] };
             }
         });
@@ -163,7 +164,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
                 this.loading = false;
                 const name = profile.trainer.name || this.accountId;
                 this.title.setTitle(`${name} | uma.moe`);
-                this.meta.updateTag({ property: 'og:title', content: `${name} — Trainer Profile | uma.moe` });
+                this.meta.updateTag({ property: 'og:title', content: `${name} - Trainer Profile | uma.moe` });
             },
             error: (err) => {
                 this.loading = false;
@@ -245,16 +246,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
         return this.factorService.resolveSparks(sparkIds);
     }
 
+    private static compactFmt = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
+
     formatNumber(n: number): string {
-        if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2) + 'B';
-        if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
-        if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+        if (Math.abs(n) >= 100_000) return ProfileComponent.compactFmt.format(n);
         return n.toLocaleString();
     }
 
     formatRank(n: number): string {
-        if (n >= 1_000_000) return Math.round(n / 1_000_000) + 'M';
-        if (n >= 1_000) return Math.round(n / 1_000) + 'K';
+        if (Math.abs(n) >= 100_000) return ProfileComponent.compactFmt.format(n);
         return n.toLocaleString();
     }
 
@@ -312,7 +312,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
 
     getTeamClassName(teamClass: number | null): string {
-        if (teamClass == null) return '—';
+        if (teamClass == null) return '-';
         const names: Record<number, string> = { 1: 'Class 1', 2: 'Class 2', 3: 'Class 3', 4: 'Class 4', 5: 'Class 5', 6: 'Class 6', 7: 'Open' };
         return names[teamClass] || `Class ${teamClass}`;
     }

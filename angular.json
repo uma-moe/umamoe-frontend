@@ -20,13 +20,23 @@
             "outputPath": "dist",
             "index": "src/index.html",
             "browser": "src/main.ts",
-            "polyfills": ["zone.js"],
+            "polyfills": [
+              "zone.js"
+            ],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
-            "assets": ["src/favicon.ico", "src/assets", "src/_headers"],
-            "styles": ["src/styles.scss"],
+            "assets": [
+              "src/favicon.ico",
+              "src/assets",
+              "src/_headers"
+            ],
+            "styles": [
+              "src/styles.scss"
+            ],
             "scripts": [],
-            "allowedCommonJsDependencies": ["exceljs"]
+            "allowedCommonJsDependencies": [
+              "exceljs"
+            ]
           },
           "configurations": {
             "production": {
@@ -58,6 +68,31 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "profile": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
+              "optimization": true,
+              "sourceMap": true,
+              "extractLicenses": false,
+              "namedChunks": true,
+              "outputHashing": "none"
+            },
+            "beta": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.beta.ts"
+                }
+              ],
+              "optimization": true,
+              "outputHashing": "all",
+              "sourceMap": false,
+              "extractLicenses": true
             }
           },
           "defaultConfiguration": "production"
@@ -68,12 +103,20 @@
             "host": "127.0.0.1",
             "proxyConfig": "proxy.conf.json",
             "port": 4200,
+            "open": false,
             "disableHostCheck": true,
-            "allowedHosts": ["honse.moe", "localhost", "127.0.0.1"]
+            "allowedHosts": [
+              "honse.moe",
+              "localhost",
+              "127.0.0.1"
+            ]
           },
           "configurations": {
             "production": {
               "buildTarget": "umamoe-frontend:build:production"
+            },
+            "profile": {
+              "buildTarget": "umamoe-frontend:build:profile"
             },
             "development": {
               "buildTarget": "umamoe-frontend:build:development"
@@ -90,11 +133,19 @@
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
-            "polyfills": ["zone.js", "zone.js/testing"],
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
             "tsConfig": "tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
-            "assets": ["src/favicon.ico", "src/assets"],
-            "styles": ["src/styles.scss"],
+            "assets": [
+              "src/favicon.ico",
+              "src/assets"
+            ],
+            "styles": [
+              "src/styles.scss"
+            ],
             "scripts": []
           }
         }

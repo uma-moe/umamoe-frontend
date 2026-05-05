@@ -1,0 +1,50 @@
+<div class="vd" *ngIf="veteran">
+  <div class="vd-rows">
+    <div class="vd-top-row">
+      <div class="filter-row-chips no-left-margin" *ngIf="sparks.length > 0">
+        <span
+          class="vd-factor"
+          [ngClass]="spark.color + '-factor'"
+          *ngFor="let spark of sparks"
+          [matTooltip]="spark.name + ' Lv.' + spark.level">
+          <span class="factor-level">{{ spark.level }}</span>
+          <mat-icon class="factor-star">star</mat-icon>
+          <span class="factor-name">{{ spark.name }}</span>
+        </span>
+      </div>
+      <div class="vd-aff-badge" [class.has-affinity]="affinity > 0">
+        <mat-icon>{{ affinity > 0 ? 'favorite' : 'favorite_border' }}</mat-icon>
+        <span>{{ affinity }}</span>
+      </div>
+    </div>
+
+    <div class="vd-divider" *ngIf="sparks.length > 0 && parents.length > 0"></div>
+
+    <!-- Parent Rows -->
+    <div class="filter-row vd-parent-row" *ngFor="let parent of parents">
+      <div class="vd-parent-info">
+        <span class="vd-parent-label" [ngClass]="'pos-' + parent.position">{{ parent.position }}</span>
+        <img *ngIf="parent.image" class="vd-parent-img" [src]="parent.image" (error)="onImgError($event)" loading="lazy" />
+        <span class="vd-parent-name">{{ parent.name }}</span>
+        <span class="vd-aff-pill combined"
+              [class.has-affinity]="getParentTotalAffinity(parent) > 0"
+              #parentAffinityTip="matTooltip"
+              [matTooltip]="getParentAffinityTooltip(parent)"
+              (click)="parentAffinityTip.toggle(); $event.stopPropagation()">
+          <mat-icon>{{ getParentTotalAffinity(parent) > 0 ? 'favorite' : 'favorite_border' }}</mat-icon>{{ getParentTotalAffinity(parent) }}
+        </span>
+      </div>
+      <div class="filter-row-chips">
+        <span
+          class="vd-factor vd-factor--xs"
+          [ngClass]="s.color + '-factor'"
+          *ngFor="let s of parent.sparks"
+          [matTooltip]="s.name + ' Lv.' + s.level">
+          <span class="factor-level">{{ s.level }}</span>
+          <mat-icon class="factor-star">star</mat-icon>
+          <span class="factor-name">{{ s.name }}</span>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>

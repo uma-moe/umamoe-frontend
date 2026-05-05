@@ -239,6 +239,12 @@ export interface RaceResultsDialogData {
       min-width: 860px;
     }
 
+    @media (max-width: 768px) {
+      app-race-scheduler {
+        min-width: 0;
+      }
+    }
+
     // View toggle
     .view-toggle {
       display: inline-flex;
@@ -344,9 +350,9 @@ export interface RaceResultsDialogData {
       text-align: center;
       flex-shrink: 0;
 
-      &.lg-g1 { color: #7fb3ef; }
-      &.lg-g2 { color: #f48fab; }
-      &.lg-g3 { color: #6fcf85; }
+      &.lg-g1 { color: var(--grade-g1); }
+      &.lg-g2 { color: var(--grade-g2); }
+      &.lg-g3 { color: var(--grade-g3); }
     }
 
     .list-name {
@@ -423,7 +429,7 @@ export class RaceResultsDialogComponent implements AfterViewInit {
     }
   }
 
-  /** Build list data directly from the scheduler's computed cells — single source of truth */
+  /** Build list data directly from the scheduler's computed cells - single source of truth */
   private buildListFromScheduler(): void {
     const s = this.scheduler;
     if (!s) return;

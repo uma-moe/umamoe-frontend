@@ -87,7 +87,10 @@ const CONFIRMED_CHARACTER_BANNER_DATES = new Map<string, Date>([
   ['2022_30084.png', new Date(Date.UTC(2026, 3, 20, 22, 0, 0))], // April 24, 2026 22:00 UTC
   ['2022_30086.png', new Date(Date.UTC(2026, 3, 26, 22, 0, 0))], // May 6, 2026 22:00 UTC
   ['2022_30088.png', new Date(Date.UTC(2026, 3, 30, 22, 0, 0))], // May 14, 2026 22:00 UTC
-  // Add more confirmed character banner dates here as they're announced
+  ['2022_30090.png', new Date(Date.UTC(2026, 4, 10, 22, 0, 0))], // May 15, 2026 22:00 UTC
+  ['2022_30092.png', new Date(Date.UTC(2026, 4, 18, 22, 0, 0))], // May 21, 2026 22:00 UTC
+  ['2022_30094.png', new Date(Date.UTC(2026, 4, 28, 22, 0, 0))], // May 28, 2026 22:00 UTC
+    // Add more confirmed character banner dates here as they're announced
 ]);
 // Support Banner confirmed dates (banner image -> global release date)
 // All times are 22:00 UTC to display as midnight in GMT+2
@@ -135,6 +138,9 @@ const CONFIRMED_SUPPORT_BANNER_DATES = new Map<string, Date>([
   ['2022_30085.png', new Date(Date.UTC(2026, 3, 20, 22, 0, 0))], // April 24, 2026 22:00 UTC
   ['2022_30087.png', new Date(Date.UTC(2026, 3, 26, 22, 0, 0))], // May 6, 2026 22:00 UTC
   ['2022_30089.png', new Date(Date.UTC(2026, 3, 30, 22, 0, 0))], // May 14, 2026 22:00 UTC 
+  ['2022_30091.png', new Date(Date.UTC(2026, 4, 10, 22, 0, 0))], // May 15, 2026 22:00 UTC
+  ['2022_30093.png', new Date(Date.UTC(2026, 4, 18, 22, 0, 0))], // May 21, 2026 22:00 UTC
+  ['2022_30095.png', new Date(Date.UTC(2026, 4, 28, 22, 0, 0))], // May 28, 2026 22:00 UTC
   // Add more confirmed support banner dates here as they're announced
 ]);
 // Story Event confirmed dates (banner image -> global release date)
@@ -150,6 +156,7 @@ const CONFIRMED_STORY_EVENT_DATES = new Map<string, Date>([
   ['01_patisserie_grandeur_banner.png', new Date(Date.UTC(2026, 1, 18, 22, 0, 0))],
   ['02_flapping_run_up_banner.png', new Date(Date.UTC(2026, 2, 12, 22, 0, 0))],
   ['03_tonight_at_the_ligne_droite_banner.png', new Date(Date.UTC(2026, 3, 5, 22, 0, 0))],
+  ['05_silks_and_three_riddles_banner.png', new Date(Date.UTC(2026, 4, 18, 22, 0, 0))],
 ]);
 // Paid Banner confirmed dates (banner image -> global release date)
 const CONFIRMED_PAID_BANNER_DATES = new Map<string, Date>([
@@ -176,6 +183,8 @@ const CONFIRMED_CHAMPIONS_MEETING_DATES = new Map<string, Date>([
   ['champions_meeting_9', new Date(Date.UTC(2026, 2, 2, 22, 0, 0))], // Tenth Champions Meeting (February 25, 2026)
   ['champions_meeting_10', new Date(Date.UTC(2026, 2, 26, 22, 0, 0))], // Eleventh Champions Meeting (March 17, 2026)
   ['champions_meeting_11', new Date(Date.UTC(2026, 3, 20, 22, 0, 0))], // Twelfth Champions Meeting (April 14, 2026)
+  ['champions_meeting_12', new Date(Date.UTC(2026, 4, 10, 22, 0, 0))], // Thirteenth Champions Meeting (May 7, 2026)
+  ['champions_meeting_13', new Date(Date.UTC(2026, 4, 31, 22, 0, 0))], // Fourteenth Champions Meeting (May 28, 2026)
   // Add more confirmed champions meeting dates here as they're announced
 ]);
 // Legend Race confirmed dates (index -> global release date)
@@ -192,6 +201,7 @@ const CONFIRMED_LEGEND_RACE_DATES = new Map<string, Date>([
   ['legend_race_8', new Date(Date.UTC(2026, 0, 22, 22, 0, 0))], //
   ['legend_race_9', new Date(Date.UTC(2026, 1, 26, 22, 0, 0))], //
   ['legend_race_10', new Date(Date.UTC(2026, 2, 23, 22, 0, 0))], //
+  ['legend_race_11', new Date(Date.UTC(2026, 4, 7, 22, 0, 0))], //
   //['legend_race_11', new Date(Date.UTC(2026, 3, 20, 22, 0, 0))], //
   // Add more confirmed legend race dates here as they're announced
 ]);
@@ -1061,7 +1071,7 @@ export class TimelineService {
         bannerDuration: 14,
         tags: ['paid-banner'],
         relatedCharacters: [],
-        // No imagePath — will show placeholder icon
+        // No imagePath - will show placeholder icon
       };
       events.push(event);
     });

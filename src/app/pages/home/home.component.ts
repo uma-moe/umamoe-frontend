@@ -8,15 +8,19 @@ import { StatsService, StatsResponse } from '../../services/stats.service';
 import { DomainMigrationService } from '../../services/domain-migration.service';
 import { CookieConsentService } from '../../services/cookie-consent.service';
 import { DomainMigrationPopupComponent } from '../../components/domain-migration-popup/domain-migration-popup.component';
+import { MilestoneService } from '../../services/milestone.service';
+import { MilestonePopupComponent } from '../../components/milestone-popup/milestone-popup.component';
 import { Meta, Title } from '@angular/platform-browser';
 import { ThemeService } from '../../services/theme.service';
+import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 @Component({
   selector: 'app-home',
   standalone: true,
   imports: [
     CommonModule,
     RouterModule,
-    MatIconModule
+    MatIconModule,
+    LocaleNumberPipe
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
@@ -37,7 +41,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     private dialog: MatDialog,
     private domainMigrationService: DomainMigrationService,
     private themeService: ThemeService,
-    private cookieConsentService: CookieConsentService
+    private cookieConsentService: CookieConsentService,
+    private milestoneService: MilestoneService
   ) {
     this.title.setTitle('honse.moe Umamusume Database & Tools');
     this.meta.addTags([
@@ -57,6 +62,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.statsService.ensureDailyTracking();
     this.loadStats();
     this.checkForDomainMigrationPopup();
+    this.checkForMilestonePopup();
   }
   ngOnDestroy() {
     this.destroy$.next();
@@ -87,6 +93,23 @@ export class HomeComponent implements OnInit, OnDestroy {
   openCookieSettings(): void {
     this.cookieConsentService.reopenBanner();
   }
+  private checkForMilestonePopup() {
+    setTimeout(() => {
+      if (this.milestoneService.shouldShowPopup()) {
+        const dialogRef = this.dialog.open(MilestonePopupComponent, {
+          width: '90vw',
+          maxWidth: '520px',
+          disableClose: false,
+          autoFocus: false,
+          panelClass: 'milestone-dialog-panel'
+        });
+        dialogRef.afterClosed().subscribe(() => {
+          this.milestoneService.markPopupAsShown();
+        });
+      }
+    }, 800);
+  }
+
   private checkForDomainMigrationPopup() {
     // Small delay to ensure the component is fully rendered
     setTimeout(() => {

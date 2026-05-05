@@ -12,9 +12,10 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { VeteranDetailDialogComponent, VeteranDetailData } from './veteran-detail-dialog.component';
-import { CharacterSelectDialogComponent } from '../../inheritance-database/character-select-dialog.component';
+import { CharacterSelectDialogComponent } from '../../../components/character-select-dialog/character-select-dialog.component';
 import { RaceSchedulerComponent } from '../../../components/race-scheduler/race-scheduler.component';
 import { RankBadgeComponent } from '../../../components/rank-badge/rank-badge.component';
+import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
 import RACE_DATA from '../../../../data/race_to_saddle_mapping.json';
 import { ProfileService } from '../../../services/profile.service';
 import { FactorService, SparkInfo } from '../../../services/factor.service';
@@ -129,6 +130,7 @@ const APT_GRADES = ['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'];
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatAutocompleteModule, MatTooltipModule, MatDialogModule, MatSliderModule,
     MatButtonToggleModule, RaceSchedulerComponent, RankBadgeComponent,
+    LocaleNumberPipe,
   ],
   templateUrl: './veterans.component.html',
   styleUrls: ['./veterans.component.scss'],
@@ -314,7 +316,7 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
         this.profileService.ingestVeteranList(arr, this.accountId).subscribe({
           next: res => {
             this.uploading = false;
-            this.uploadFeedback = { type: 'success', message: `Done — ${res.inserted} added, ${res.updated} updated, ${res.total} total.` };
+            this.uploadFeedback = { type: 'success', message: `Done - ${res.inserted} added, ${res.updated} updated, ${res.total} total.` };
             this.cdr.markForCheck();
             // Reload profile to pick up new veterans
             this.profileService.getProfile(this.accountId).subscribe(p => {
@@ -490,7 +492,7 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
                 .reduce((sum, c) => sum + countFactorMatches(c), 0);
               return totalMatches >= ff.requiredCount;
             }
-            // 'any' — check vet itself + all succession
+            // 'any' - check vet itself + all succession
             totalMatches = countFactorMatches(v);
             if (v.succession_chara_array) {
               totalMatches += v.succession_chara_array.reduce((sum, c) => sum + countFactorMatches(c), 0);
@@ -501,7 +503,7 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     }
 
-    // Race schedule filter — match by race_instance_id via saddle mapping
+    // Race schedule filter - match by race_instance_id via saddle mapping
     if (this.filterSelectedRaceIds.length > 0) {
       list = list.filter(v => {
         if (!v.succession_chara_array) return false;
@@ -689,7 +691,7 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
     this.filterDistance = null;
     this.filterStyle = null;
     this.filterMinTotal = 0;
-    // Stat ranges — reset to full data bounds
+    // Stat ranges - reset to full data bounds
     this.resetStatRanges();
     this.filterAptTurf = null;
     this.filterAptDirt = null;
@@ -710,7 +712,7 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
     this.excludeGreatGrandParents = [];
     this.parentFactorFilters = [];
     this.filterSelectedRaceIds = [];
-    this.applyFilters(); // immediate — user clicked clear
+    this.applyFilters(); // immediate - user clicked clear
   }
 
   get activeFilterCount(): number {

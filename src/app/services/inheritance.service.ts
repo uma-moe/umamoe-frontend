@@ -256,6 +256,18 @@ export class InheritanceService {
     if (filters.optionalMainWhiteSparks && filters.optionalMainWhiteSparks.length > 0) {
       params = params.set('optional_main_white_sparks', filters.optionalMainWhiteSparks.join(','));
     }
+    if (filters.lineageWhite && filters.lineageWhite.length > 0) {
+      params = params.set('lineage_white', filters.lineageWhite.join(','));
+    }
+    if (filters.mainLegacyWhite && filters.mainLegacyWhite.length > 0) {
+      params = params.set('main_legacy_white', filters.mainLegacyWhite.join(','));
+    }
+    if (filters.leftLegacyWhite && filters.leftLegacyWhite.length > 0) {
+      params = params.set('left_legacy_white', filters.leftLegacyWhite.join(','));
+    }
+    if (filters.rightLegacyWhite && filters.rightLegacyWhite.length > 0) {
+      params = params.set('right_legacy_white', filters.rightLegacyWhite.join(','));
+    }
     if (filters.minMainBlueFactors !== undefined) {
       params = params.set('min_main_blue_factors', filters.minMainBlueFactors.toString());
     }
@@ -304,6 +316,15 @@ export class InheritanceService {
     }
     if (filters.mainWinSaddle && filters.mainWinSaddle.length > 0) {
       params = params.set('main_win_saddle', filters.mainWinSaddle.join(','));
+    }
+    if (filters.p2MainCharaId) {
+      params = params.set('p2_main_chara_id', filters.p2MainCharaId.toString());
+    }
+    if (filters.p2WinSaddle && filters.p2WinSaddle.length > 0) {
+      params = params.set('p2_win_saddle', filters.p2WinSaddle.join(','));
+    }
+    if (filters.affinityP2 != null) {
+      params = params.set('affinity_p2', filters.affinityP2.toString());
     }
     // Add sorting parameters
     if (filters.sortBy) {

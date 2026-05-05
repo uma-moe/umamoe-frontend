@@ -1,0 +1,626 @@
+<div class="lineage-planner">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-text">
+        <h1>Lineage Planner</h1>
+        <p>Optimize your inheritance tree and find the best parent pairings.</p>
+      </div>
+      <div class="header-actions">
+        <button mat-stroked-button class="saves-btn" (click)="openSavesDialog()"
+                matTooltip="Save, load, share or import a planner tree">
+          <mat-icon>bookmark</mat-icon>
+          Save / Load
+        </button>
+        <button mat-stroked-button class="clear-btn" (click)="clearAll()">
+          <mat-icon>delete_sweep</mat-icon>
+          Clear All
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCROLL -->
+  <div class="planner-scroll" #plannerScroll>
+    <div class="planner-content" #plannerContent>
+    <div class="tree-wrapper">
+
+      <!-- Recursive column tree -->
+      <div class="tree-col">
+
+        <!-- Target -->
+        <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer0[0] }"></ng-container>
+
+        <!-- Target -> Parents fork -->
+        <div class="tree-fork tree-fork--target">
+          <div class="fork-stem"></div>
+          <div class="fork-bar">
+            <div class="fork-line"></div>
+            <div class="fork-badge" *ngIf="affinityResult && sharedAffinity"
+              matTooltip="Shared: aff(P1,P2) {{ affinityResult.legacy }}">
+              <mat-icon>favorite</mat-icon>
+              <span class="cb-legacy">{{ sharedAffinity }}</span>
+            </div>
+            <div class="fork-line"></div>
+          </div>
+          <div class="fork-drops">
+            <div class="fork-drop">
+              <div class="drop-label" *ngIf="p1SideTotal"
+                [matTooltip]="'P1 total: aff(target,P1) + aff(P1,GP1) + aff(P1,GP2) + triples'">
+                {{ p1SideTotal }}
+              </div>
+            </div>
+            <div class="fork-drop">
+              <div class="drop-label" *ngIf="p2SideTotal"
+                [matTooltip]="'P2 total: aff(target,P2) + aff(P2,GP3) + aff(P2,GP4) + triples'">
+                {{ p2SideTotal }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Parents row -->
+        <div class="tree-row">
+
+          <!-- Parent 1 subtree -->
+          <div class="tree-col">
+            <div class="branch-chip branch-chip--p" *ngIf="p1SideTotal"
+              [matTooltip]="'P1 total: aff(target,P1) + aff(P1,GP1) + aff(P1,GP2) + triples'">
+              <mat-icon>favorite</mat-icon><span>{{ p1SideTotal }}</span>
+            </div>
+            <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer1[0] }"></ng-container>
+
+            <div class="tree-fork tree-fork--parent">
+              <div class="fork-stem"></div>
+              <div class="fork-bar">
+                <div class="fork-line"></div>
+                <div class="fork-badge" *ngIf="p1PlayerTriple"
+                  [matTooltip]="'Sub-legacy line total: ' + p1PlayerTriple">
+                  <mat-icon>favorite</mat-icon>
+                  <span class="cb-breed">{{ p1PlayerTriple }}</span>
+                </div>
+                <div class="fork-line"></div>
+              </div>
+              <div class="fork-drops">
+                <div class="fork-drop">
+                  <div class="drop-label" *ngIf="getNodeContribution(nodes.get('p1-1')!) as v">
+                    {{ v }}
+                  </div>
+                </div>
+                <div class="fork-drop">
+                  <div class="drop-label" *ngIf="getNodeContribution(nodes.get('p1-2')!) as v">
+                    {{ v }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="tree-row">
+              <!-- GP 1 subtree -->
+              <div class="tree-col">
+                <div class="branch-chip branch-chip--gp" *ngIf="getNodeContribution(nodes.get('p1-1')!) as v">
+                  <mat-icon>favorite</mat-icon><span>{{ v }}</span>
+                </div>
+                <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer2[0] }"></ng-container>
+                <button class="ggp-mobile-toggle" (click)="toggleMobileGGPs('p1-1', $event)" [class.expanded]="isMobileGGPExpanded('p1-1')">
+                  <mat-icon>expand_more</mat-icon>
+                  <span>Great-Grandparents</span>
+                </button>
+                <div class="tree-fork tree-fork--gp">
+                  <div class="fork-stem"></div>
+                  <div class="fork-bar"><div class="fork-line"></div><div class="fork-line"></div></div>
+                  <div class="fork-drops"><div class="fork-drop"></div><div class="fork-drop"></div></div>
+                </div>
+                <div class="tree-row ggp-row" [class.ggp-collapsed]="!isMobileGGPExpanded('p1-1')">
+                  <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer3[0] }"></ng-container>
+                  <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer3[1] }"></ng-container>
+                </div>
+              </div>
+              <!-- GP 2 subtree -->
+              <div class="tree-col">
+                <div class="branch-chip branch-chip--gp" *ngIf="getNodeContribution(nodes.get('p1-2')!) as v">
+                  <mat-icon>favorite</mat-icon><span>{{ v }}</span>
+                </div>
+                <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer2[1] }"></ng-container>
+                <button class="ggp-mobile-toggle" (click)="toggleMobileGGPs('p1-2', $event)" [class.expanded]="isMobileGGPExpanded('p1-2')">
+                  <mat-icon>expand_more</mat-icon>
+                  <span>Great-Grandparents</span>
+                </button>
+                <div class="tree-fork tree-fork--gp">
+                  <div class="fork-stem"></div>
+                  <div class="fork-bar"><div class="fork-line"></div><div class="fork-line"></div></div>
+                  <div class="fork-drops"><div class="fork-drop"></div><div class="fork-drop"></div></div>
+                </div>
+                <div class="tree-row ggp-row" [class.ggp-collapsed]="!isMobileGGPExpanded('p1-2')">
+                  <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer3[2] }"></ng-container>
+                  <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer3[3] }"></ng-container>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Parent 2 subtree -->
+          <div class="tree-col">
+            <div class="branch-chip branch-chip--p" *ngIf="p2SideTotal"
+              [matTooltip]="'P2 total: aff(target,P2) + aff(P2,GP3) + aff(P2,GP4) + triples'">
+              <mat-icon>favorite</mat-icon><span>{{ p2SideTotal }}</span>
+            </div>
+            <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer1[1] }"></ng-container>
+
+            <div class="tree-fork tree-fork--parent">
+              <div class="fork-stem"></div>
+              <div class="fork-bar">
+                <div class="fork-line"></div>
+                <div class="fork-badge" *ngIf="p2PlayerTriple"
+                  [matTooltip]="'Sub-legacy line total: ' + p2PlayerTriple">
+                  <mat-icon>favorite</mat-icon>
+                  <span class="cb-breed">{{ p2PlayerTriple }}</span>
+                </div>
+                <div class="fork-line"></div>
+              </div>
+              <div class="fork-drops">
+                <div class="fork-drop">
+                  <div class="drop-label" *ngIf="getNodeContribution(nodes.get('p2-1')!) as v">
+                    {{ v }}
+                  </div>
+                </div>
+                <div class="fork-drop">
+                  <div class="drop-label" *ngIf="getNodeContribution(nodes.get('p2-2')!) as v">
+                    {{ v }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="tree-row">
+              <!-- GP 3 subtree -->
+              <div class="tree-col">
+                <div class="branch-chip branch-chip--gp" *ngIf="getNodeContribution(nodes.get('p2-1')!) as v">
+                  <mat-icon>favorite</mat-icon><span>{{ v }}</span>
+                </div>
+                <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer2[2] }"></ng-container>
+                <button class="ggp-mobile-toggle" (click)="toggleMobileGGPs('p2-1', $event)" [class.expanded]="isMobileGGPExpanded('p2-1')">
+                  <mat-icon>expand_more</mat-icon>
+                  <span>Great-Grandparents</span>
+                </button>
+                <div class="tree-fork tree-fork--gp">
+                  <div class="fork-stem"></div>
+                  <div class="fork-bar"><div class="fork-line"></div><div class="fork-line"></div></div>
+                  <div class="fork-drops"><div class="fork-drop"></div><div class="fork-drop"></div></div>
+                </div>
+                <div class="tree-row ggp-row" [class.ggp-collapsed]="!isMobileGGPExpanded('p2-1')">
+                  <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer3[4] }"></ng-container>
+                  <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer3[5] }"></ng-container>
+                </div>
+              </div>
+              <!-- GP 4 subtree -->
+              <div class="tree-col">
+                <div class="branch-chip branch-chip--gp" *ngIf="getNodeContribution(nodes.get('p2-2')!) as v">
+                  <mat-icon>favorite</mat-icon><span>{{ v }}</span>
+                </div>
+                <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer2[3] }"></ng-container>
+                <button class="ggp-mobile-toggle" (click)="toggleMobileGGPs('p2-2', $event)" [class.expanded]="isMobileGGPExpanded('p2-2')">
+                  <mat-icon>expand_more</mat-icon>
+                  <span>Great-Grandparents</span>
+                </button>
+                <div class="tree-fork tree-fork--gp">
+                  <div class="fork-stem"></div>
+                  <div class="fork-bar"><div class="fork-line"></div><div class="fork-line"></div></div>
+                  <div class="fork-drops"><div class="fork-drop"></div><div class="fork-drop"></div></div>
+                </div>
+                <div class="tree-row ggp-row" [class.ggp-collapsed]="!isMobileGGPExpanded('p2-2')">
+                  <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer3[6] }"></ng-container>
+                  <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer3[7] }"></ng-container>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Spark Odds Panel -->
+    <div class="odds-panel">
+      <div class="odds-panel-header">
+        <mat-icon>auto_awesome</mat-icon>
+        <span>Spark Proc Odds</span>
+        <button class="spark-toggle odds-toggle" *ngIf="oddsParents.length > 0" (click)="sparkShowPerRun = !sparkShowPerRun"
+          [matTooltip]="sparkShowPerRun ? 'Showing per-run chance (2 rolls)' : 'Showing per-inheritance chance'">
+          {{ sparkShowPerRun ? 'Per Run' : 'Per Inh.' }}
+        </button>
+      </div>
+
+      <ng-container *ngIf="oddsParents.length > 0; else oddsPlaceholder">
+      <mat-tab-group [(selectedIndex)]="oddsTab" class="odds-tabs" animationDuration="150ms">
+        <mat-tab label="Base Odds">
+          <div class="odds-scroll odds-scroll-desktop">
+            <table class="odds-table-desktop">
+              <thead>
+                <tr>
+                  <th class="ot-label"></th>
+                  <ng-container *ngFor="let g of oddsColorGroups">
+                    <th [attr.colspan]="g.cols * 3" [class]="'ot-color ' + g.cssClass">{{ g.label }}</th>
+                  </ng-container>
+                </tr>
+                <tr>
+                  <th class="ot-label ot-star"></th>
+                  <ng-container *ngFor="let _ of baseChanceMatrix">
+                    <th class="ot-star">1?</th>
+                    <th class="ot-star">2?</th>
+                    <th class="ot-star">3?</th>
+                  </ng-container>
+                </tr>
+                <tr>
+                  <td class="ot-label"></td>
+                  <ng-container *ngFor="let m of baseChanceMatrix">
+                    <td class="ot-sublabel" colspan="3">{{ m.label }}</td>
+                  </ng-container>
+                </tr>
+                <tr class="odds-head-base">
+                  <td class="ot-label">Base</td>
+                  <ng-container *ngFor="let m of baseChanceMatrix">
+                    <td *ngFor="let c of m.chances" class="ot-base">{{ c }}%</td>
+                  </ng-container>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of oddsParents" [class.ot-row--p]="p.layer === 1" [class.ot-row--gp]="p.layer === 2">
+                  <td class="ot-label">
+                    <img class="ot-avatar" [src]="p.icon" (error)="handleImageError($event)" loading="lazy" />
+                    <div class="ot-label-text">
+                      <span class="ot-name">{{ p.charName }}</span>
+                      <span class="ot-aff"><mat-icon>favorite</mat-icon>{{ p.affinity }}</span>
+                    </div>
+                  </td>
+                  <ng-container *ngFor="let m of baseChanceMatrix; let ci = index">
+                    <td *ngFor="let c of m.chances" [class]="'ot-val ot-c' + ci">
+                      {{ formatSparkPct(clampedChance(c, p.affinity)) }}
+                    </td>
+                  </ng-container>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="odds-scroll odds-scroll-mobile">
+            <table class="odds-table-mobile">
+              <thead>
+                <tr>
+                  <th class="ot-label"></th>
+                  <ng-container *ngFor="let g of oddsColorGroups">
+                    <th [attr.colspan]="g.cols * 3" [class]="'ot-color ' + g.cssClass">{{ g.label }}</th>
+                  </ng-container>
+                </tr>
+                <tr>
+                  <th class="ot-label ot-star"></th>
+                  <ng-container *ngFor="let _ of baseChanceMatrix">
+                    <th class="ot-star">1?</th>
+                    <th class="ot-star">2?</th>
+                    <th class="ot-star">3?</th>
+                  </ng-container>
+                </tr>
+                <tr>
+                  <td class="ot-label"></td>
+                  <ng-container *ngFor="let m of baseChanceMatrix">
+                    <td class="ot-sublabel" colspan="3">{{ m.label }}</td>
+                  </ng-container>
+                </tr>
+                <tr class="odds-head-base">
+                  <td class="ot-label">Base</td>
+                  <ng-container *ngFor="let m of baseChanceMatrix">
+                    <td *ngFor="let c of m.chances" class="ot-base">{{ c }}%</td>
+                  </ng-container>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of oddsParents" [class.ot-row--p]="p.layer === 1" [class.ot-row--gp]="p.layer === 2">
+                  <td class="ot-label">
+                    <img class="ot-avatar" [src]="p.icon" (error)="handleImageError($event)" loading="lazy" />
+                    <div class="ot-label-text">
+                      <span class="ot-name">{{ p.charName }}</span>
+                      <span class="ot-aff"><mat-icon>favorite</mat-icon>{{ p.affinity }}</span>
+                    </div>
+                  </td>
+                  <ng-container *ngFor="let m of baseChanceMatrix; let ci = index">
+                    <td *ngFor="let c of m.chances" [class]="'ot-val ot-c' + ci">
+                      {{ formatSparkPct(clampedChance(c, p.affinity)) }}
+                    </td>
+                  </ng-container>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </mat-tab>
+
+        <mat-tab label="Per Source">
+          <div class="summary-list" *ngIf="sparkSummary.length; else noSparks">
+            <div class="summary-row summary-header">
+              <span class="sum-rank">#</span>
+              <span class="sum-spark">Spark</span>
+              <span class="sum-type">Type</span>
+              <span class="sum-base">Base</span>
+              <span class="sum-src">Source</span>
+              <span class="sum-chance-col">{{ sparkShowPerRun ? 'Per Run' : 'Per Inh.' }}</span>
+            </div>
+            <div class="summary-row" *ngFor="let e of sparkSummary; let i = index"
+              [class]="sparkTypeClass(e.spark)">
+              <span class="sum-rank">{{ i + 1 }}</span>
+              <span class="sum-spark">
+                <span class="sum-star">{{ e.spark.level }}</span>
+                <span class="sum-name">{{ e.spark.name }}</span>
+              </span>
+              <span class="sum-type">{{ sparkTypeLabel(e.spark) }}</span>
+              <span class="sum-base">{{ affinityService.sparkBaseChance(e.spark) }}%</span>
+              <span class="sum-src">
+                <img class="sum-avatar" [src]="e.icon" (error)="handleImageError($event)" loading="lazy" />
+                <span class="sum-src-name">{{ e.charName }}</span>
+                <span class="sum-src-chip">{{ e.node }}&nbsp;<mat-icon>favorite</mat-icon>{{ e.affinity }}</span>
+              </span>
+              <span class="sum-chance-col">
+                <span class="sum-bar-track">
+                  <span class="sum-bar-fill" [style.width.%]="sparkShowPerRun ? e.perRun : e.perInh"></span>
+                </span>
+                <span class="sum-pct">{{ (sparkShowPerRun ? e.perRun : e.perInh) | number:'1.2-2' }}%</span>
+              </span>
+            </div>
+          </div>
+          <ng-template #noSparks>
+            <div class="summary-empty">No sparks available. Add characters with factors to see spark summary.</div>
+          </ng-template>
+        </mat-tab>
+
+        <mat-tab label="Combined">
+          <div class="summary-list" *ngIf="sparkCombined.length; else noCombined">
+            <div class="summary-row summary-header combined-header">
+              <span class="sum-spark">Spark</span>
+              <span class="sum-type">Type</span>
+              <span class="sum-base">Base</span>
+              <span class="sum-sources-hdr">Sources</span>
+              <span class="sum-proc-col">Proc Chance</span>
+              <span class="sum-expected">Exp. Procs</span>
+            </div>
+            <div class="summary-row combined-row" *ngFor="let g of sparkCombined"
+              [class]="typeClass(g.type)">
+              <span class="sum-spark">
+                <span class="sum-name">{{ g.name }}</span>
+                <span class="sum-count">×{{ g.sources.length }}</span>
+              </span>
+              <span class="sum-type">{{ sparkTypeLabelByType(g.type) }}</span>
+              <span class="sum-base">{{ baseChanceForType(g.type, g.sources[0].star) }}%</span>
+              <span class="sum-sources">
+                <span class="comb-source" *ngFor="let s of g.sources"
+                  [matTooltip]="s.charName + ' (' + s.node + ') ' + s.star + '★  ' + (sparkShowPerRun ? s.perRun : s.perInh) + '%'">
+                  <img class="sum-avatar" [src]="s.icon" (error)="handleImageError($event)" loading="lazy" />
+                  <span class="comb-star">{{ s.star }}</span>
+                </span>
+              </span>
+              <span class="sum-proc-col">
+                <span class="sum-bar-track">
+                  <span class="sum-bar-fill" [style.width.%]="g.metrics.procChancePct"></span>
+                </span>
+                <span class="sum-pct">{{ g.metrics.procDisplay }}</span>
+              </span>
+              <span class="sum-expected">{{ g.metrics.expectedDisplay }}</span>
+            </div>
+          </div>
+          <ng-template #noCombined>
+            <div class="summary-empty">No sparks available.</div>
+          </ng-template>
+        </mat-tab>
+
+        <mat-tab label="Skill Sparks">
+          <div class="summary-list" *ngIf="targetInheritance.length; else noWhite">
+            <div class="inh-table-note">Chance of developing spark when skill is learned during training</div>
+            <div class="inh-table-head">
+              <span class="inh-t-name">Spark</span>
+              <span class="inh-t-count">#</span>
+              <span class="inh-t-tier inh-t-learned">If Learned</span>
+              <span class="inh-t-tier inh-t-upgraded">If Upgraded</span>
+              <span class="inh-t-tier inh-t-gold">If Gold</span>
+            </div>
+            <div class="inh-table-row" *ngFor="let inh of targetInheritance">
+              <span class="inh-t-name">
+                <img class="inh-t-icon" *ngIf="inh.icon" [src]="inh.icon" (error)="handleImageError($event)" loading="lazy" />
+                {{ inh.name }}
+              </span>
+              <span class="inh-t-count">{{ inh.count }}</span>
+              <span class="inh-t-tier inh-t-learned">{{ inh.learned }}%</span>
+              <span class="inh-t-tier inh-t-upgraded">{{ inh.upgraded }}%</span>
+              <span class="inh-t-tier inh-t-gold">{{ inh.gold }}%</span>
+            </div>
+          </div>
+          <ng-template #noWhite>
+            <div class="summary-empty">No white sparks in lineage.</div>
+          </ng-template>
+        </mat-tab>
+      </mat-tab-group>
+      </ng-container>
+
+      <ng-template #oddsPlaceholder>
+        <div class="odds-placeholder">
+          <mat-icon>info_outline</mat-icon>
+          <span>Add at least one parent to see spark inheritance odds</span>
+        </div>
+      </ng-template>
+    </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== NODE CARD TEMPLATE ===== -->
+<ng-template #nodeCard let-node>
+  <div
+    class="node"
+    [class.n-target]="node.layer === 0"
+    [class.n-parent]="node.layer === 1"
+    [class.n-gp]="node.layer === 2"
+    [class.n-ggp]="node.layer === 3"
+    [class.n-filled]="hasContent(node)"
+    [class.n-active]="activeNode === node.position"
+  >
+
+    <!-- FILLED STATE -->
+    <ng-container *ngIf="hasContent(node)">
+      <div class="n-inner">
+        <div class="n-head">
+          <img class="n-avatar" [src]="getCharacterIcon(node)" (error)="handleImageError($event)" loading="lazy" />
+          <div class="n-meta">
+            <div class="n-name-row">
+              <span class="n-name">{{ getCharacterName(node) }}</span>
+              <span class="n-aff-badge" *ngIf="node.layer === 0 && affinityTotal != null">
+                <span class="aff-symbol">{{ getAffinitySymbol(affinityTotal) }}</span>
+                <span class="aff-val">{{ affinityTotal }}</span>
+              </span>
+            </div>
+            <span class="n-tagline">
+              {{ node.layer === 0 ? 'Target' : node.layer === 1 ? 'Parent' : node.layer === 2 ? 'Grandparent' : 'Great-Grandparent' }}
+            </span>
+          </div>
+          <div class="n-actions">
+            <button class="n-btn n-btn--swap" (click)="openCharacterPicker(node.position, $event)" matTooltip="Change">
+              <mat-icon>swap_horiz</mat-icon>
+            </button>
+            <button class="n-btn n-btn--veteran"
+              *ngIf="node.layer < 3"
+              (click)="openVeteranDialog(node.position, $event)"
+              matTooltip="Pick from veterans">
+              <mat-icon>people</mat-icon>
+            </button>
+            <button class="n-btn n-btn--clear" (click)="clearNode(node.position); $event.stopPropagation()" matTooltip="Clear">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Mobile toolbar: affinity stats in one row -->
+        <div class="n-toolbar" *ngIf="node.layer > 0" (click)="$event.stopPropagation()">
+          <ng-container *ngIf="affinityResult">
+            <div class="n-stat n-stat--aff"
+              matTooltip="Base affinity">
+              <mat-icon>favorite</mat-icon>
+              <span class="n-stat-num">{{ getBaseContribution(node) ?? 0 }}</span>
+              <span class="n-stat-lbl">affinity</span>
+            </div>
+            <div class="n-stat n-stat--race-aff"
+              matTooltip="Race affinity from shared wins">
+              <mat-icon>emoji_events</mat-icon>
+              <span class="n-stat-num">{{ getNodeRaceAffinity(node) }}</span>
+              <span class="n-stat-lbl">Race Affinity</span>
+            </div>
+          </ng-container>
+          <button class="n-icon-btn n-toolbar-race" *ngIf="getWinCount(node) > 0 || node.layer <= 2"
+            (click)="openRaceResults(node.position, $event)" matTooltip="View / edit race wins">
+            <mat-icon>emoji_events</mat-icon>
+          </button>
+        </div>
+
+        <div class="n-stats" *ngIf="node.layer > 0">
+          <ng-container *ngIf="affinityResult">
+            <div class="n-stat n-stat--aff"
+              matTooltip="Base affinity">
+              <mat-icon>favorite</mat-icon>
+              <span class="n-stat-num">{{ getBaseContribution(node) ?? 0 }}</span>
+              <span class="n-stat-lbl">affinity</span>
+            </div>
+            <div class="n-stat n-stat--race-aff"
+              matTooltip="Race affinity from shared wins">
+              <mat-icon>emoji_events</mat-icon>
+              <span class="n-stat-num">{{ getNodeRaceAffinity(node) }}</span>
+              <span class="n-stat-lbl">Race Affinity</span>
+            </div>
+          </ng-container>
+          <button class="n-icon-btn" *ngIf="getWinCount(node) > 0 || node.layer <= 2"
+            (click)="openRaceResults(node.position, $event)" matTooltip="View / edit race wins">
+            <mat-icon>emoji_events</mat-icon>
+          </button>
+        </div>
+
+        <button class="n-inh-btn" *ngIf="node.layer === 0 && targetInheritance.length"
+          (click)="showInheritancePopup = !showInheritancePopup; $event.stopPropagation()"
+          matTooltip="View potential white spark inheritance">
+          <mat-icon>auto_awesome</mat-icon>
+          <span>Potential Inheritance ({{ targetInheritance.length }})</span>
+        </button>
+
+        <div class="inh-popup" *ngIf="node.layer === 0 && showInheritancePopup" (click)="$event.stopPropagation()">
+          <div class="inh-popup-header">
+            <mat-icon>auto_awesome</mat-icon>
+            <span>Potential Inheritance</span>
+            <span class="inh-popup-sub">When skill is learned during training</span>
+            <mat-icon class="inh-popup-close" (click)="showInheritancePopup = false">close</mat-icon>
+          </div>
+          <div class="inh-popup-table-head">
+            <span class="inh-col-name">Spark</span>
+            <span class="inh-col-count">#</span>
+              <span class="inh-col-tier inh-col-learned">If Learned</span>
+              <span class="inh-col-tier inh-col-upgraded">If Upgraded</span>
+              <span class="inh-col-tier inh-col-gold">If Gold</span>
+          </div>
+          <div class="inh-popup-scroll">
+            <div class="inh-popup-row" *ngFor="let inh of targetInheritance">
+              <span class="inh-col-name">
+                <img class="inh-col-icon" *ngIf="inh.icon" [src]="inh.icon" (error)="handleImageError($event)" loading="lazy" />
+                {{ inh.name }}
+              </span>
+              <span class="inh-col-count">{{ inh.count }}</span>
+              <span class="inh-col-tier inh-col-learned">{{ inh.learned }}%</span>
+              <span class="inh-col-tier inh-col-upgraded">{{ inh.upgraded }}%</span>
+              <span class="inh-col-tier inh-col-gold">{{ inh.gold }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="n-sparks" *ngIf="(node.resolvedSparks?.length || (!node.veteran && node.character)) && node.layer >= 1 && node.layer <= 2">
+          <div class="spark-header">
+            <span class="spark-title">Sparks</span>
+            <button class="spark-toggle" (click)="sparkShowPerRun = !sparkShowPerRun; $event.stopPropagation()"
+              [matTooltip]="sparkShowPerRun ? 'Showing per-run chance (2 rolls)' : 'Showing per-inheritance chance'">
+              {{ sparkShowPerRun ? 'Per Run' : 'Per Inh.' }}
+            </button>
+          </div>
+          <div class="spark-item spark-item--xs" *ngFor="let spark of sortedSparks(node); let si = index"
+            [class]="sparkTypeClass(spark)"
+            [matTooltip]="spark.name + ' - ' + sparkTypeLabel(spark) + ' ' + sparkStarLabel(spark) + (isWhiteSpark(spark) ? ' · activates when skill is learned during training' : ' · chance to activate during inheritance event')">
+            <span class="spark-level">{{ spark.level }}</span>
+            <mat-icon class="spark-star">star</mat-icon>
+            <span class="spark-name">{{ spark.name }}</span>
+            <span class="spark-pct">{{ sparkDisplayChance(spark, getNodeAffinity(node)) | number:'1.2-2' }}%</span>
+            <mat-icon class="spark-remove" *ngIf="!node.veteran"
+              (click)="removeSpark(node, node.resolvedSparks.indexOf(spark), $event)">close</mat-icon>
+          </div>
+          <div class="spark-empty" *ngIf="!sortedSparks(node).length">
+            No sparks on this character
+          </div>
+          <app-spark-editor
+            *ngIf="!node.veteran"
+            [sparks]="node.resolvedSparks"
+            [showChips]="false"
+            (sparksChange)="onNodeSparksChange(node, $event)"
+            (click)="$event.stopPropagation()">
+          </app-spark-editor>
+        </div>
+      </div>
+
+    </ng-container>
+
+    <!-- EMPTY STATE -->
+    <ng-container *ngIf="!hasContent(node)">
+      <div class="n-empty" (click)="openCharacterPicker(node.position, $event)">
+        <div class="n-empty-icon">
+          <mat-icon>person_add</mat-icon>
+        </div>
+        <span class="n-empty-label">{{ node.label }}</span>
+        <button class="n-tool-btn n-empty-vet-btn"
+          *ngIf="node.layer < 3"
+          (click)="openVeteranDialog(node.position, $event); $event.stopPropagation()"
+          matTooltip="Pick from veterans">
+          <mat-icon>people</mat-icon>
+        </button>
+      </div>
+    </ng-container>
+
+  </div>
+</ng-template>
