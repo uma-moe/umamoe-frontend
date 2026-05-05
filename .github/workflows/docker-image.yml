@@ -29,8 +29,14 @@ on:
         required: false
         default: false
         type: boolean
+        confirm_production:
+          description: type DEPLOY to confirm a production rollout
+          required: false
+          default: ''
+          type: string
 
 permissions:
+        actions: read
   contents: read
 
 env:
@@ -244,6 +250,59 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - name: Confirm production rollout
+        shell: bash
+        run: |
+          if [[ "${{ github.event.inputs.confirm_production || '' }}" != "DEPLOY" ]]; then
+            echo "Production rollout not confirmed. Re-run the workflow and set confirm_production to DEPLOY."
+            exit 1
+          fi
+
+      - name: Verify successful beta deploy for this commit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workflowId = 'docker-image.yml';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const currentRunId = context.runId;
+            const headSha = context.sha;
+
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              owner,
+              repo,
+              workflow_id: workflowId,
+              head_sha: headSha,
+              status: 'completed',
+              per_page: 100,
+            });
+
+            let betaApproved = false;
+
+            for (const run of runs) {
+              if (run.id === currentRunId || run.conclusion !== 'success') {
+                continue;
+              }
+
+              const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                owner,
+                repo,
+                run_id: run.id,
+                per_page: 100,
+              });
+
+              const betaJob = jobs.find((job) => job.name === 'deploy_beta' && job.conclusion === 'success');
+              if (betaJob) {
+                betaApproved = true;
+                core.info(`Found successful beta deploy in run ${run.id} for ${headSha}.`);
+                break;
+              }
+            }
+
+            if (!betaApproved) {
+              core.setFailed(`No successful beta deployment was found for commit ${headSha}. Deploy to beta first, then re-run this workflow for production.`);
+            }
+
       - name: Download shell artifact
         uses: actions/download-artifact@v4
         with:
