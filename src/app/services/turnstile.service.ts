@@ -50,6 +50,7 @@ export class TurnstileService {
   private tokenQueue: Promise<void> = Promise.resolve();
   private cachedToken: CachedTurnstileToken | null = null;
   private primedTokenTask: Promise<CachedTurnstileToken> | null = null;
+  private primeTimerId: number | null = null;
   private warnedMissingSiteKey = false;
 
   constructor(
@@ -121,6 +122,7 @@ export class TurnstileService {
     const cached = this.cachedToken;
     if (cached && cached.action === normalizedAction && cached.expiresAt > Date.now()) {
       this.cachedToken = null;
+      this.schedulePrime();
       return cached.token;
     }
 
@@ -135,13 +137,27 @@ export class TurnstileService {
         if (this.cachedToken?.token === primedToken.token) {
           this.cachedToken = null;
         }
+        this.schedulePrime();
         return primedToken.token;
       }
     }
 
     const tokenTask = this.tokenQueue.then(() => this.executeTokenRequest(normalizedAction));
     this.tokenQueue = tokenTask.then(() => undefined, () => undefined);
-    return tokenTask;
+    const token = await tokenTask;
+    this.schedulePrime();
+    return token;
+  }
+
+  private schedulePrime(): void {
+    if (this.primeTimerId !== null) {
+      return;
+    }
+
+    this.primeTimerId = window.setTimeout(() => {
+      this.primeTimerId = null;
+      this.prime();
+    }, 0);
   }
 
   private async executeTokenRequest(action: string): Promise<string> {
