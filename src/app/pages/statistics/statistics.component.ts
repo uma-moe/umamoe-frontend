@@ -92,6 +92,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   distanceStats: any = {};
   characterStats: any = {};
   rawData: any = null;
+  private supportCardInfoCache = new Map<string, ResolvedSupportCard>();
   // UI State
   isMobile = false;
   isSmallScreen = false;
@@ -262,16 +263,29 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     const rawId = data?.id
       ?? data?.support_card_id
       ?? (/^\d+$/.test(rawKey) ? rawKey : this.statisticsService.getSupportCardIdFromName(data?.name || rawKey));
+    const cacheKey = [
+      rawKey,
+      data?.id ?? '',
+      data?.support_card_id ?? '',
+      data?.name ?? '',
+      data?.type ?? ''
+    ].join('|');
+    const cached = this.supportCardInfoCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
     const id = rawId !== undefined && rawId !== null && String(rawId).trim() !== '' ? String(rawId) : null;
     const card = id ? getSupportCardById(id) : undefined;
     const name = data?.name || card?.name || (id ? `Unknown Support ${id}` : rawKey);
     const type = this.normalizeSupportCardType(data?.type ?? card?.type);
-    return {
+    const resolvedCard = {
       id,
       name,
       type,
       imageUrl: id ? this.getSupportCardImageUrl(id) : undefined
     };
+    this.supportCardInfoCache.set(cacheKey, resolvedCard);
+    return resolvedCard;
   }
   private normalizeSupportCardType(type: any): string | null {
     if (type === undefined || type === null || type === '') {
@@ -588,6 +602,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     }, {} as { [cardType: string]: number });
   }
   // Add computed properties for chart data
+  classStats$ = new BehaviorSubject<{ [key: string]: { count: number; percentage: number } }>({});
   teamClassChartData$ = new BehaviorSubject<ChartDataPoint[]>([]);
   totalTrainers$ = new BehaviorSubject<number>(0);
   supportCardCombinationsData$ = new BehaviorSubject<ChartDataPoint[]>([]);
@@ -627,6 +642,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   characterStatHistogramStamina$ = new BehaviorSubject<ChartDataPoint[]>([]);
   characterStatHistogramWiz$ = new BehaviorSubject<ChartDataPoint[]>([]);
   characterStatHistogramGuts$ = new BehaviorSubject<ChartDataPoint[]>([]);
+  characterStatComparisonData$ = new BehaviorSubject<ChartDataPoint[]>([]);
   characterSupportCardCombinationsData$ = new BehaviorSubject<ChartDataPoint[]>([]);
   characterOverallCardTypeDistribution$ = new BehaviorSubject<ChartDataPoint[]>([]);
   // Character distance-specific data observables
@@ -1495,9 +1511,37 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       .sort((a, b) => b.value - a.value);
     this.characterOverallCardTypeDistribution$.next(cardTypeData);
   }
+  private updateCharacterOverallChartData(): void {
+    if (!this.selectedCharacterDetail || !this.characterStats[this.selectedCharacterDetail]) {
+      this.characterClassData$.next([]);
+      this.characterStatHistogramSpeed$.next([]);
+      this.characterStatHistogramStamina$.next([]);
+      this.characterStatHistogramPower$.next([]);
+      this.characterStatHistogramGuts$.next([]);
+      this.characterStatHistogramWiz$.next([]);
+      this.characterStatComparisonData$.next([]);
+      this.characterSupportCardCombinationsData$.next([]);
+      return;
+    }
+
+    const characterId = this.selectedCharacterDetail;
+    this.characterClassData$.next(this.computeCharacterClassStackedData(characterId));
+    this.characterStatHistogramSpeed$.next(this.computeCharacterStatHistogramData(characterId, 'speed'));
+    this.characterStatHistogramStamina$.next(this.computeCharacterStatHistogramData(characterId, 'stamina'));
+    this.characterStatHistogramPower$.next(this.computeCharacterStatHistogramData(characterId, 'power'));
+    this.characterStatHistogramGuts$.next(this.computeCharacterStatHistogramData(characterId, 'guts'));
+    this.characterStatHistogramWiz$.next(this.computeCharacterStatHistogramData(characterId, 'wiz'));
+    this.characterStatComparisonData$.next(this.computeCharacterStatComparisonData(characterId));
+    this.characterSupportCardCombinationsData$.next(this.computeCharacterSupportCardCombinations(characterId));
+  }
   // Update all character charts when class filters change
   private updateAllCharacterCharts(): void {
-    if (!this.selectedCharacterDetail) return;
+    this.invalidateCache('selectedCharacter');
+    this.updateCharacterOverallChartData();
+    if (!this.selectedCharacterDetail) {
+      this.cdr.markForCheck();
+      return;
+    }
     // Update character overall data (distance preferences)
     this.updateCharacterOverallData();
     // Update character overall card type distribution
@@ -1506,8 +1550,6 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.selectedCharacterDistance) {
       this.updateCharacterDistanceData();
     }
-    // Invalidate character-specific cache to force recalculation
-    this.invalidateCache('selectedCharacter');
     // Trigger change detection to update template methods
     this.cdr.markForCheck();
   }
@@ -2110,7 +2152,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       const bottomSheetRef = this.bottomSheet.open(TeamClassBottomSheetComponent, {
         data: {
           selectedClasses: this.classFilters,
-          classStats: this.globalStats?.team_class_distribution || {},
+          classStats: this.classStats$.value,
           selectedDistance: currentDistance,
           selectedDistances: this.distanceFilters,
           distances: this.distances,
@@ -2211,15 +2253,13 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.globalStats?.team_class_distribution) {
       return [];
     }
-    // Use ALL active classes (merge all)
     const activeClasses = this.getActiveClassIds();
     const activeScenarios = this.getActiveScenarioIds();
-    const allScenarioCount = Object.keys(this.scenarioFilters).length;
-    const isAllScenariosActive = activeScenarios.length === allScenarioCount;
-    // If filtering by scenario, we need to aggregate data from active scenarios
-    if (!isAllScenariosActive && this.globalStats.team_class_distribution.by_scenario) {
+    // Always aggregate from by_scenario when it exists so the "all scenarios"
+    // state uses the same source as filtered scenario states.
+    if (this.globalStats.team_class_distribution.by_scenario) {
       const aggregatedData = new Map<string, number>();
-      
+
       activeScenarios.forEach(scenarioId => {
         const scenarioData = this.globalStats!.team_class_distribution.by_scenario[scenarioId];
         if (scenarioData) {
@@ -2240,6 +2280,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
         color: this.colorsService.getClassColor(classId)
       })).filter(item => item.value > 0);
     }
+
     const result = activeClasses
       .map((classId: string) => {
         const data = this.globalStats!.team_class_distribution[classId];
@@ -2743,9 +2784,10 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Calculate filtered total for percentage calculations
     const filteredTotal = this.calculateFilteredTotal();
+    const teamClass = this.computeTeamClassChartData();
     return {
-      teamClass: this.computeTeamClassChartData(),
-      totalTrainers: this.calculateTotalTrainers(),
+      teamClass,
+      totalTrainers: this.calculateTotalTrainers(teamClass),
       supportCardCombinations: this.computeSupportCardCombinationsData(),
       statAveragesByClass: this.computeStatAveragesByClassData(),
       supportCardUsage: this.computeSupportCardUsageData(),
@@ -2763,6 +2805,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   private applyChartData(data: any): void {
     // Update all observables at once
+    this.classStats$.next(this.buildClassStats(data.teamClass, data.totalTrainers));
     this.teamClassChartData$.next(data.teamClass);
     this.totalTrainers$.next(data.totalTrainers);
     this.supportCardCombinationsData$.next(data.supportCardCombinations);
@@ -2779,6 +2822,21 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     this.statDistributionData$.next(data.statDistribution);
     // Update the filtered total for charts
     this.filteredTotalCache = data.filteredTotal;
+  }
+  private buildClassStats(teamClassData: ChartDataPoint[], totalTrainers: number): { [key: string]: { count: number; percentage: number } } {
+    return teamClassData.reduce((stats, entry) => {
+      const match = entry.label?.match(/Class\s+(\d+)/i);
+      const classId = match?.[1];
+      if (!classId) {
+        return stats;
+      }
+
+      stats[classId] = {
+        count: entry.value || 0,
+        percentage: totalTrainers > 0 ? ((entry.value || 0) / totalTrainers) * 100 : 0
+      };
+      return stats;
+    }, {} as { [key: string]: { count: number; percentage: number } });
   }
   private calculateStatDistribution(): { [key: string]: any[] } {
     const statDistData: { [key: string]: any[] } = {};
@@ -3262,13 +3320,13 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
   // Character stat histogram methods
-  getCharacterStatHistogramData(stat: string): ChartDataPoint[] {
-    if (!this.selectedCharacterDetail || !this.characterStats[this.selectedCharacterDetail]) return [];
-    const character = this.characterStats[this.selectedCharacterDetail];
-    const histogramCombined = new Map<string, number>();
-    const activeClasses = this.getActiveClassIds();
-    // Aggregate histogram data across all distances for this character from ACTIVE classes only
-    if (character.by_distance) {
+  private computeCharacterStatHistogramData(characterId: string, stat: string): ChartDataPoint[] {
+    const cacheKey = this.generateCacheKey('characterStatHistogram', characterId, stat, this.classFilters, this.scenarioFilters, this.distanceFilters);
+    return this.getCachedData(cacheKey, () => {
+      const character = this.characterStats[characterId];
+      if (!character?.by_distance) return [];
+      const histogramCombined = new Map<string, number>();
+      const activeClasses = this.getActiveClassIds();
       this.getFilteredCharacterDistanceEntries(character).forEach(([, distanceData]: [string, any]) => {
         activeClasses.forEach(classId => {
           const dataList = this.getMetricData('', classId, distanceData);
@@ -3283,23 +3341,23 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
           });
         });
       });
-    }
-    return Array.from(histogramCombined.entries())
-      .map(([bucket, count]) => ({
-        label: bucket,
-        value: count,
-        color: this.getStatColor(stat)
-      }))
-      .sort((a, b) => parseInt(a.label) - parseInt(b.label));
+      return Array.from(histogramCombined.entries())
+        .map(([bucket, count]) => ({
+          label: bucket,
+          value: count,
+          color: this.getStatColor(stat)
+        }))
+        .sort((a, b) => parseInt(a.label) - parseInt(b.label));
+    });
   }
   // Character support card combinations
-  getCharacterSupportCardCombinations(): ChartDataPoint[] {
-    if (!this.selectedCharacterDetail || !this.characterStats[this.selectedCharacterDetail]) return [];
-    const character = this.characterStats[this.selectedCharacterDetail];
-    const combinations = new Map<string, { count: number; label: string; composition?: { [cardType: string]: number } }>();
-    const activeClasses = this.getActiveClassIds();
-    // Aggregate combinations across all distances for this character from ACTIVE classes only
-    if (character.by_distance) {
+  private computeCharacterSupportCardCombinations(characterId: string): ChartDataPoint[] {
+    const cacheKey = this.generateCacheKey('characterSupportCardCombinations', characterId, this.classFilters, this.scenarioFilters, this.distanceFilters);
+    return this.getCachedData(cacheKey, () => {
+      const character = this.characterStats[characterId];
+      if (!character?.by_distance) return [];
+      const combinations = new Map<string, { count: number; label: string; composition?: { [cardType: string]: number } }>();
+      const activeClasses = this.getActiveClassIds();
       this.getFilteredCharacterDistanceEntries(character).forEach(([, distanceData]: [string, any]) => {
         activeClasses.forEach(classId => {
           const dataList = this.getMetricData('', classId, distanceData);
@@ -3320,16 +3378,16 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
           });
         });
       });
-    }
-    return Array.from(combinations.entries())
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, 50)
-      .map(([combination, data], index) => ({
-        label: data.label || combination,
-        value: data.count,
-        color: this.getStableColor(combination, index),
-        composition: data.composition
-      }));
+      return Array.from(combinations.entries())
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 50)
+        .map(([combination, data], index) => ({
+          label: data.label || combination,
+          value: data.count,
+          color: this.getStableColor(combination, index),
+          composition: data.composition
+        }));
+    });
   }
   // Utility methods
   getActiveClassIds(): string[] {
@@ -3573,22 +3631,12 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     return statNames[statName.toLowerCase()] || statName;
   }
   // Calculate total trainers for donut chart center
-  private calculateTotalTrainers(): number {
+  private calculateTotalTrainers(teamClassData?: ChartDataPoint[]): number {
+    if (teamClassData) {
+      return teamClassData.reduce((total, entry) => total + (entry.value || 0), 0);
+    }
     if (!this.globalStats?.team_class_distribution) return 0;
-    // Always calculate from individual class entries for active classes only
-    const activeClasses = this.getActiveClassIds();
-    const total = activeClasses.reduce((total, classId) => {
-      const data = this.globalStats!.team_class_distribution[classId];
-      let value = 0;
-      if (typeof data === 'number') {
-        value = data;
-      } else if (data && typeof data === 'object') {
-        value = data.count || data.total || data.value || data.percentage || data.trainer_count || 0;
-      } else {
-      }
-      return total + value;
-    }, 0);
-    return total;
+    return this.computeTeamClassChartData().reduce((total, entry) => total + (entry.value || 0), 0);
   }
   // Format total trainers for display with dynamic abbreviations (always one decimal place)
   formatTotalTrainers(total: number | null): string {
@@ -3608,12 +3656,16 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   getTeamClassDoughnutConfig() {
     return {
       ...this.CHART_CONFIGS.DOUGHNUT_STANDARD,
+      animationDuration: 140,
+      animationEasing: 'easeOutCubic',
       centerText: this.formatTotalTrainers(this.totalTrainers$.value)
     };
   }
   getTeamClassDoughnutConfigWithTotal(total: number | null) {
     return {
       ...this.CHART_CONFIGS.DOUGHNUT_STANDARD,
+      animationDuration: 140,
+      animationEasing: 'easeOutCubic',
       centerText: this.formatTotalTrainers(total)
     };
   }
@@ -3813,53 +3865,69 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     const match = label.match(/(\d+)/);
     return match ? parseInt(match[1], 10) : 0;
   }
+  private computeCharacterClassStackedData(characterId: string): any[] {
+    const cacheKey = this.generateCacheKey('characterClassStacked', characterId, this.classFilters, this.scenarioFilters, this.distanceFilters);
+    return this.getCachedData(cacheKey, () => {
+      const character = this.characterStats[characterId];
+      if (!character?.by_distance) return [];
+      const activeClasses = this.getActiveClassIds();
+      const classData = new Map<string, number>();
+      this.getFilteredCharacterDistanceEntries(character).forEach(([, distanceData]: [string, any]) => {
+        if (distanceData.by_team_class) {
+          activeClasses.forEach(classId => {
+            const dataList = this.getMetricData('', classId, distanceData);
+            dataList.forEach(data => {
+              if (data) {
+                const current = classData.get(classId) || 0;
+                const count = data.total_entries || data.count || data.total || 0;
+                classData.set(classId, current + count);
+              }
+            });
+          });
+        }
+      });
+      if (classData.size === 0) return [];
+      return Array.from(classData.entries())
+        .map(([classId, count]) => ({
+          name: `Class ${classId}`,
+          data: [{
+            x: this.getSelectedCharacterName() || 'Character',
+            y: count
+          }],
+          backgroundColor: this.colorsService.getClassColor(classId) + 'CC',
+          borderColor: this.colorsService.getClassColor(classId),
+          borderWidth: 2,
+          borderRadius: 4,
+          borderSkipped: false
+        }))
+        .sort((a, b) => parseInt(a.name.split(' ')[1]) - parseInt(b.name.split(' ')[1]));
+    });
+  }
   // Template methods for character charts
   getCharacterClassStackedData(): any[] {
-    if (!this.selectedCharacterDetail || !this.characterStats[this.selectedCharacterDetail]) {
-      return [];
-    }
-    const character = this.characterStats[this.selectedCharacterDetail];
-    if (!character.by_distance) return [];
-    const activeClasses = this.getActiveClassIds();
-    // Aggregate class data across all distances for this character - ONLY for active classes
-    const classData = new Map<string, number>();
-    this.getFilteredCharacterDistanceEntries(character).forEach(([, distanceData]: [string, any]) => {
-      if (distanceData.by_team_class) {
-        activeClasses.forEach(classId => {
-          // Use getMetricData to handle scenario filtering and new data structure
-          const dataList = this.getMetricData('', classId, distanceData);
-          
-          dataList.forEach(data => {
-            if (data) {
-              const current = classData.get(classId) || 0;
-              const count = data.total_entries || data.count || data.total || 0;
-              classData.set(classId, current + count);
-            }
-          });
-        });
-      }
-    });
-    if (classData.size === 0) return [];
-    // Create separate series for each class with proper colors
-    return Array.from(classData.entries())
-      .map(([classId, count]) => ({
-        name: `Class ${classId}`,
-        data: [{
-          x: this.getSelectedCharacterName() || 'Character',
-          y: count
-        }],
-        backgroundColor: this.colorsService.getClassColor(classId) + 'CC',
-        borderColor: this.colorsService.getClassColor(classId),
-        borderWidth: 2,
-        borderRadius: 4,
-        borderSkipped: false
-      }))
-      .sort((a, b) => parseInt(a.name.split(' ')[1]) - parseInt(b.name.split(' ')[1]));
+    return this.characterClassData$.value;
   }
   getCharacterStatComparisonData(): any[] {
-    if (!this.selectedCharacterDetail) return [];
-    const ret = this.computeCharacterStatComparisonData(this.selectedCharacterDetail);
-    return ret;
+    return this.characterStatComparisonData$.value;
+  }
+  getCharacterStatHistogramData(stat: string): ChartDataPoint[] {
+    switch (stat) {
+      case 'speed':
+        return this.characterStatHistogramSpeed$.value;
+      case 'stamina':
+        return this.characterStatHistogramStamina$.value;
+      case 'power':
+        return this.characterStatHistogramPower$.value;
+      case 'guts':
+        return this.characterStatHistogramGuts$.value;
+      case 'wiz':
+        return this.characterStatHistogramWiz$.value;
+      default:
+        return [];
+    }
+  }
+  getCharacterSupportCardCombinations(): ChartDataPoint[] {
+    return this.characterSupportCardCombinationsData$.value;
   }
   // Character-specific methods for template
   getCharacterCardTypeDistribution(): ChartDataPoint[] {

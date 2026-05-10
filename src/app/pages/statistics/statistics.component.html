@@ -127,7 +127,7 @@
         <app-class-filter
           #classFilter
           [selectedClasses]="classFilters"
-          [classStats]="globalStats?.team_class_distribution || {}"
+          [classStats]="(classStats$ | async) || {}"
           [selectedDistance]="selectedDistance | async"
           [selectedDistances]="distanceFilters"
           [distances]="distances"
@@ -653,7 +653,7 @@
                 </p>
               </div>
               <app-statistics-chart
-                [multiSeries]="getCharacterClassStackedData()"
+                [multiSeries]="(characterClassData$ | async) || []"
                 [config]="getBarWithLegendConfig()"
               >
               </app-statistics-chart>
@@ -703,7 +703,7 @@
                 </p>
               </div>
               <app-statistics-chart
-                [data]="getCharacterStatHistogramData('speed')"
+                [data]="(characterStatHistogramSpeed$ | async) || []"
                 [config]="getStandardBarConfig()"
               >
               </app-statistics-chart>
@@ -728,7 +728,7 @@
                 </p>
               </div>
               <app-statistics-chart
-                [data]="getCharacterStatHistogramData('stamina')"
+                [data]="(characterStatHistogramStamina$ | async) || []"
                 [config]="getStandardBarConfig()"
               >
               </app-statistics-chart>
@@ -753,7 +753,7 @@
                 </p>
               </div>
               <app-statistics-chart
-                [data]="getCharacterStatHistogramData('power')"
+                [data]="(characterStatHistogramPower$ | async) || []"
                 [config]="getStandardBarConfig()"
               >
               </app-statistics-chart>
@@ -778,7 +778,7 @@
                 </p>
               </div>
               <app-statistics-chart
-                [data]="getCharacterStatHistogramData('guts')"
+                [data]="(characterStatHistogramGuts$ | async) || []"
                 [config]="getStandardBarConfig()"
               >
               </app-statistics-chart>
@@ -803,7 +803,7 @@
                 </p>
               </div>
               <app-statistics-chart
-                [data]="getCharacterStatHistogramData('wiz')"
+                [data]="(characterStatHistogramWiz$ | async) || []"
                 [config]="getStandardBarConfig()"
               >
               </app-statistics-chart>
@@ -820,7 +820,7 @@
                 </p>
               </div>
               <app-statistics-chart
-                [data]="getCharacterStatComparisonData()"
+                [data]="(characterStatComparisonData$ | async) || []"
                 [config]="getBarWithLegendConfig()"
               >
               </app-statistics-chart>
@@ -859,7 +859,7 @@
                 </p>
               </div>
               <app-statistics-chart
-                [data]="getCharacterSupportCardCombinations()"
+                [data]="(characterSupportCardCombinationsData$ | async) || []"
                 [config]="getStatSymbolBarConfig()"
               >
               </app-statistics-chart>

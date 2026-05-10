@@ -21,6 +21,8 @@ export interface ChartConfig {
   stacked?: boolean;
   height?: number;
   colors?: string[];
+  animationDuration?: number;
+  animationEasing?: string;
   centerText?: string | number; // For doughnut charts
   showImages?: boolean; // Whether to show images next to labels
   imageSize?: number; // Size of images in pixels
@@ -137,6 +139,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
   private imageCache = new Map<string, HTMLImageElement>();
   private resizeListener?: () => void;
   private lastDataHash: string = '';
+  private animateNextDataUpdate = false;
   private chartInitTimer: any = null;
   private chartUpdateTimer: any = null;
   private readonly chartUpdateDebounceMs = 100;
@@ -363,6 +366,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
       this._statTypesCache.clear();
     }
     if (!this.hasRenderableData) {
+      this.animateNextDataUpdate = false;
       if (this.chartInitTimer) {
         clearTimeout(this.chartInitTimer);
         this.chartInitTimer = null;
@@ -439,6 +443,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     if (!this.chart || recreate) {
+      this.animateNextDataUpdate = true;
       this.initializeChart();
       this.setupResizeListener();
     } else {
@@ -920,7 +925,8 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     this.lastDataHash = newDataHash;
     this.chart.data = config.data!;
     this.chart.options = config.options!;
-    this.chart.update('none');
+    this.chart.update(this.animateNextDataUpdate ? undefined : 'none');
+    this.animateNextDataUpdate = false;
     // If using images, trigger a redraw after a short delay to ensure images are loaded
     if (this.shouldUseChartWithImages && this.data && this.data.some(item => item.imageUrl)) {
       setTimeout(() => {
