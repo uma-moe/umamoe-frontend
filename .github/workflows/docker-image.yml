@@ -306,6 +306,7 @@ jobs:
         run: |
           rsync -az --delete \
             --exclude 'assets/' \
+            --exclude 'statistics/' \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
             "${{ runner.temp }}/shell-site/" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_SHELL_DIR }}/"
@@ -317,10 +318,10 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
         run: |
-          rsync -az --delete \
+          rsync -az \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
-            "${{ runner.temp }}/asset-site/" \
-            "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_ASSETS_DIR }}/"
+            "${{ runner.temp }}/asset-site/data/precomputed-tierlist.json" \
+            "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_ASSETS_DIR }}/data/"
 
   deploy_production:
     if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta'
@@ -489,6 +490,7 @@ jobs:
         run: |
           rsync -az --delete \
             --exclude 'assets/' \
+            --exclude 'statistics/' \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
             "${{ runner.temp }}/production-shell-export/var/www/html/umamoe/" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.PROD_REMOTE_SHELL_DIR }}/"
