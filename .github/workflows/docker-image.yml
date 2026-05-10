@@ -41,6 +41,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: beta
     outputs:
       build_script: ${{ steps.plan.outputs.build_script }}
       deploy_target: ${{ steps.plan.outputs.deploy_target }}
@@ -84,14 +85,31 @@ jobs:
         shell: bash
         env:
           BETA_TURNSTILE_SITE_KEY: ${{ secrets.BETA_TURNSTILE_SITE_KEY }}
-          PROD_TURNSTILE_SITE_KEY: ${{ secrets.PROD_TURNSTILE_SITE_KEY }}
         run: |
+          validate_turnstile_site_key() {
+            local env_name="$1"
+            local site_key="$2"
+
+            if [[ -z "$site_key" ]]; then
+              echo "::error title=Missing ${env_name} Turnstile site key::Set the ${env_name}_TURNSTILE_SITE_KEY secret to the actual Cloudflare site key value."
+              exit 1
+            fi
+
+            if [[ "$site_key" == *"{"* || "$site_key" == *"}"* ]]; then
+              echo "::error title=Invalid ${env_name} Turnstile site key::The configured value looks like a placeholder. Store the raw Cloudflare site key in the GitHub secret, not a template token."
+              exit 1
+            fi
+          }
+
+          validate_turnstile_site_key "BETA" "$BETA_TURNSTILE_SITE_KEY"
+
           if [[ -n "$BETA_TURNSTILE_SITE_KEY" ]]; then
             perl -0pi -e "s/siteKey: '',/siteKey: '\Q$ENV{BETA_TURNSTILE_SITE_KEY}\E',/" src/environments/environment.beta.ts
           fi
 
-          if [[ -n "$PROD_TURNSTILE_SITE_KEY" ]]; then
-            perl -0pi -e "s/siteKey: '',/siteKey: '\Q$ENV{PROD_TURNSTILE_SITE_KEY}\E',/" src/environments/environment.prod.ts
+          if grep -q "siteKey: ''" src/environments/environment.beta.ts; then
+            echo "::error title=Beta Turnstile site key injection failed::The workflow did not replace the beta siteKey placeholder."
+            exit 1
           fi
 
       - name: Decide whether assets should deploy
@@ -275,8 +293,23 @@ jobs:
         env:
           PROD_TURNSTILE_SITE_KEY: ${{ secrets.PROD_TURNSTILE_SITE_KEY }}
         run: |
+          if [[ -z "$PROD_TURNSTILE_SITE_KEY" ]]; then
+            echo "::error title=Missing PROD Turnstile site key::Set the PROD_TURNSTILE_SITE_KEY secret to the actual Cloudflare site key value."
+            exit 1
+          fi
+
+          if [[ "$PROD_TURNSTILE_SITE_KEY" == *"{"* || "$PROD_TURNSTILE_SITE_KEY" == *"}"* ]]; then
+            echo "::error title=Invalid PROD Turnstile site key::The configured value looks like a placeholder. Store the raw Cloudflare site key in the GitHub secret, not a template token."
+            exit 1
+          fi
+
           if [[ -n "$PROD_TURNSTILE_SITE_KEY" ]]; then
             perl -0pi -e "s/siteKey: '',/siteKey: '\Q$ENV{PROD_TURNSTILE_SITE_KEY}\E',/" src/environments/environment.prod.ts
+          fi
+
+          if grep -q "siteKey: ''" src/environments/environment.prod.ts; then
+            echo "::error title=Production Turnstile site key injection failed::The workflow did not replace the production siteKey placeholder."
+            exit 1
           fi
 
       - name: Set up Docker Buildx
