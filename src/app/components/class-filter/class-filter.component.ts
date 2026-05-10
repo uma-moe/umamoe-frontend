@@ -7,12 +7,14 @@ import { MatBottomSheetRef } from '@angular/material/bottom-sheet';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ColorsService } from '../../services/colors.service';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
-import { getStatisticsDistanceColor, getStatisticsDistanceIcon, getStatisticsDistanceLabel } from '../../data/statistics-lookup.data';
+import { getStatisticsDistanceColor, getStatisticsDistanceIcon, getStatisticsDistanceLabel, resolveStatisticsDistance } from '../../data/statistics-lookup.data';
 export interface ClassFilterState {
   [key: string]: boolean;
 }
 export interface DistanceChangeEvent {
   distance: string | null;
+  selected?: boolean;
+  allSelected?: boolean;
 }
 interface ClassOption {
   value: string;
@@ -62,16 +64,21 @@ interface ClassOption {
       *ngIf="distances.length > 0"
     >
       <div class="distance-header">
-        <mat-icon>track_changes</mat-icon>
-        <span>Distance</span>
+        <div class="distance-title">
+          <mat-icon>track_changes</mat-icon>
+          <span>Distance</span>
+        </div>
+        <button class="toggle-all-btn" (click)="toggleAllDistances()">
+          {{ areAllDistancesSelected ? 'None' : 'All' }}
+        </button>
       </div>
       
       <div class="distance-pills">
         <button
           *ngFor="let distance of distances"
           class="distance-pill"
-          [class.active]="selectedDistance === distance"
-          [attr.data-distance]="distance"
+          [class.active]="isDistanceSelected(distance)"
+          [attr.data-distance]="getDistanceCssKey(distance)"
           [title]="getDistanceLabel(distance)"
           (click)="onDistanceSelect(distance)"
         >
@@ -91,6 +98,7 @@ export class ClassFilterComponent implements OnInit, OnDestroy, OnChanges {
   @Output() filtersChanged = new EventEmitter<ClassFilterState>();
   // Distance selector inputs and outputs
   @Input() selectedDistance: string | null = null;
+  @Input() selectedDistances: { [key: string]: boolean } = {};
   @Input() distances: string[] = [];
   @Input() compactMode = false;
   @Input() showDistanceSelector = false;
@@ -114,7 +122,6 @@ export class ClassFilterComponent implements OnInit, OnDestroy, OnChanges {
   ngOnInit(): void {
     this.initializeControls();
     this.setupClassStats();
-    this.setupScrollListener();
   }
   ngOnDestroy(): void {
     if (this.scrollListener) {
@@ -279,7 +286,19 @@ export class ClassFilterComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
   onDistanceSelect(distance: string): void {
-    this.distanceChanged.emit({ distance });
+    this.distanceChanged.emit({ distance, selected: !this.isDistanceSelected(distance) });
+  }
+  toggleAllDistances(): void {
+    this.distanceChanged.emit({ distance: null, allSelected: !this.areAllDistancesSelected });
+  }
+  isDistanceSelected(distance: string): boolean {
+    if (Object.keys(this.selectedDistances || {}).length > 0) {
+      return this.selectedDistances[distance] !== false;
+    }
+    return this.selectedDistance === distance;
+  }
+  get areAllDistancesSelected(): boolean {
+    return this.distances.length > 0 && this.distances.every(distance => this.isDistanceSelected(distance));
   }
   getDistanceIcon(distance: string): string {
     return getStatisticsDistanceIcon(distance);
@@ -289,6 +308,9 @@ export class ClassFilterComponent implements OnInit, OnDestroy, OnChanges {
   }
   getDistanceColor(distance: string): string {
     return getStatisticsDistanceColor(distance);
+  }
+  getDistanceCssKey(distance: string): string {
+    return resolveStatisticsDistance(distance)?.slug || distance;
   }
   getBadgeColor(classValue: string): string {
     return this.colorsService.getClassColor(classValue);

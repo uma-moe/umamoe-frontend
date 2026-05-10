@@ -97,6 +97,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   isSmallScreen = false;
   isBottomSheetMode = window.innerWidth < 1200; // Initialize immediately
   selectedDistance = new BehaviorSubject<string | null>(null);
+  distanceFilters: { [key: string]: boolean } = {};
   selectedCharacterDetail: string | null = null;
   // Distance selector visibility is now determined by selectedCharacterDetail or selectedDistance
   // Search
@@ -132,6 +133,9 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   // Add debounce timer for character updates to prevent stuttering
   private characterUpdateTimer: any = null;
   private distanceUpdateTimer: any = null;
+  private chartDataUpdateTimer: any = null;
+  private readonly chartDataUpdateDebounceMs = 100;
+  private reactiveUpdatesInitialized = false;
   private pendingCharacterUpdates = {
     distance: null as string | null,
     characterId: null as string | null
@@ -196,16 +200,23 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     this.availableDistances = nextDistances.length
       ? nextDistances
       : STATISTICS_DISTANCES.map(distance => idsFormat ? distance.id : distance.slug);
-    const currentDistance = this.selectedDistance.value ?? 'sprint';
-    const currentInfo = resolveStatisticsDistance(currentDistance);
-    let nextSelectedDistance = currentInfo
-      ? (idsFormat ? currentInfo.id : currentInfo.slug)
-      : this.availableDistances[0];
-    if (!this.availableDistances.includes(nextSelectedDistance)) {
-      nextSelectedDistance = this.availableDistances[0];
-    }
-    if (nextSelectedDistance && this.selectedDistance.value !== nextSelectedDistance) {
-      this.selectedDistance.next(nextSelectedDistance);
+    const previousFilters = this.distanceFilters;
+    const hadPreviousFilters = Object.keys(previousFilters).length > 0;
+    this.distanceFilters = this.availableDistances.reduce((filters, distance) => {
+      const distanceInfo = resolveStatisticsDistance(distance);
+      const previousKeys = [distance, distanceInfo?.id, distanceInfo?.slug].filter(Boolean) as string[];
+      const previousValue = previousKeys
+        .map(key => previousFilters[key])
+        .find(value => value !== undefined);
+      filters[distance] = hadPreviousFilters ? previousValue !== false : true;
+      return filters;
+    }, {} as { [key: string]: boolean });
+    this.syncPrimarySelectedDistance();
+  }
+  private syncPrimarySelectedDistance(): void {
+    const nextDistance = this.getActiveDistanceIds()[0] ?? null;
+    if (this.selectedDistance.value !== nextDistance) {
+      this.selectedDistance.next(nextDistance);
     }
   }
   private getDistanceOptionForCurrentDataset(distance: string | number): string {
@@ -328,6 +339,13 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       && this.getEntryCount(data) > 0;
   }
   private getGlobalMetricMaps(metric: 'support_cards' | 'skills'): any[] {
+    const distanceMetricMaps = this.getLoadedActiveDistanceStats()
+      .flatMap(distanceData => this.getDistanceMetricMaps(distanceData, metric))
+      .filter(metricMap => this.hasNonEmptyMetricData(metricMap));
+    if (distanceMetricMaps.length > 0) {
+      return distanceMetricMaps;
+    }
+
     const metricData = this.globalStats?.[metric];
     if (!metricData) {
       return [];
@@ -381,6 +399,12 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   private getGlobalTotalUmasTrained(): number {
     if (!this.globalStats) {
       return 0;
+    }
+
+    const distanceTotal = this.getLoadedActiveDistanceStats()
+      .reduce((total, distanceData) => total + this.getDistanceTotalUmasTrained(distanceData), 0);
+    if (distanceTotal > 0) {
+      return distanceTotal;
     }
 
     const activeClasses = this.getActiveClassIds();
@@ -751,8 +775,6 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     // Initialize screen size detection
     this.checkScreenSize();
     this.setupMetaTags();
-    // Set default distance selection to "short"
-    this.selectedDistance.next('sprint');
     // Subscribe to available datasets
     this.statisticsService.getAvailableDatasets()
       .pipe(takeUntil(this.destroy$))
@@ -806,6 +828,10 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       clearTimeout(this.distanceUpdateTimer);
       this.distanceUpdateTimer = null;
     }
+    if (this.chartDataUpdateTimer) {
+      clearTimeout(this.chartDataUpdateTimer);
+      this.chartDataUpdateTimer = null;
+    }
     if (this.scrollThrottleTimer) {
       clearTimeout(this.scrollThrottleTimer);
       this.scrollThrottleTimer = null;
@@ -815,21 +841,19 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   private setupReactiveUpdates() {
     // Only set up reactive updates after global stats are loaded
-    if (!this.globalStats) {
+    if (!this.globalStats || this.reactiveUpdatesInitialized) {
       return;
     }
-    // Update distance-specific data when distance changes
+    this.reactiveUpdatesInitialized = true;
+    // Keep the legacy single-distance value in sync for character detail views.
     this.selectedDistance.pipe(
       takeUntil(this.destroy$),
       distinctUntilChanged(),
       filter(distance => distance !== null)
     ).subscribe(distance => {
-      if (this.distanceStats[distance!]) {
-        // Distance data already loaded, update charts immediately
-        this.updateDistanceChartData(distance!);
-      } else {
-        // Distance data not loaded yet, load it first
-        this.loadSingleDistanceStats(distance!);
+      if (this.selectedCharacterDetail) {
+        this.selectedCharacterDistance = distance;
+        this.updateCharacterDistanceData();
       }
     });
   }
@@ -884,8 +908,9 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
           this.updateAllChartData();
           // Set up reactive updates now that we have data
           this.setupReactiveUpdates();
-          // Load distance and character stats
-          // this.loadDistanceStats(); // Handled by setupReactiveUpdates
+          // Load selected distance files so the general charts can merge them in.
+          this.loadActiveDistanceStats();
+          // Load character stats
           this.loadCharacterStats();
           this.globalLoading = false;
         },
@@ -896,9 +921,39 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   private loadDistanceStats() {
     this.distanceLoading = true;
-    // Initially only load the default "sprint" distance for better performance
-    const currentDistance = this.selectedDistance.value || 'sprint';
-    this.loadSingleDistanceStats(currentDistance);
+    this.loadActiveDistanceStats();
+  }
+  private loadActiveDistanceStats(): void {
+    const activeDistances = this.getActiveDistanceIds();
+    const missingDistances = activeDistances.filter(distance => !this.distanceStats[distance]);
+
+    if (missingDistances.length === 0) {
+      this.distanceLoading = false;
+      this.filteredTotalCache = 0;
+      this.invalidateCache('selectedDistance');
+      this.updateAllChartData();
+      return;
+    }
+
+    this.distanceLoading = true;
+    forkJoin(missingDistances.map(distance =>
+      this.statisticsService.getDistanceStatistics(distance).pipe(
+        map(stats => ({ distance, stats })),
+        catchError(() => of({ distance, stats: null }))
+      )
+    ))
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(results => {
+        results.forEach(result => {
+          if (result.stats) {
+            this.distanceStats[result.distance] = result.stats;
+          }
+        });
+        this.distanceLoading = false;
+        this.filteredTotalCache = 0;
+        this.invalidateCache('selectedDistance');
+        this.updateAllChartData();
+      });
   }
   private loadSingleDistanceStats(distance: string) {
     if (this.distanceStats[distance]) {
@@ -1096,24 +1151,39 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   // Distance event handler from class-filter component
   onDistanceChanged(event: DistanceChangeEvent): void {
+    if (event.allSelected !== undefined) {
+      this.setAllDistanceFilters(event.allSelected);
+      return;
+    }
     if (event.distance) {
-      this.onDistanceSelect(event.distance);
+      this.onDistanceSelect(event.distance, event.selected);
     }
   }
   // Distance methods
-  onDistanceSelect(distance: string) {
-    this.selectedDistance.next(distance);
-    // If a character is currently selected, also update the character distance
+  onDistanceSelect(distance: string, selected?: boolean) {
+    this.distanceFilters = {
+      ...this.distanceFilters,
+      [distance]: selected ?? !this.distanceFilters[distance]
+    };
+    this.syncPrimarySelectedDistance();
+    this.filteredTotalCache = 0;
+    this.invalidateCache('selectedDistance');
+    this.loadActiveDistanceStats();
     if (this.selectedCharacterDetail) {
-      this.selectedCharacterDistance = distance;
-      this.updateCharacterDistanceData();
+      this.updateAllCharacterCharts();
     }
-    // Update distance-specific chart data if available, otherwise load first
-    if (this.distanceStats[distance]) {
-      this.updateDistanceChartData(distance);
-    } else {
-      // Load distance data on-demand for better performance
-      this.loadSingleDistanceStats(distance);
+  }
+  private setAllDistanceFilters(selected: boolean): void {
+    this.distanceFilters = this.availableDistances.reduce((filters, distance) => {
+      filters[distance] = selected;
+      return filters;
+    }, {} as { [key: string]: boolean });
+    this.syncPrimarySelectedDistance();
+    this.filteredTotalCache = 0;
+    this.invalidateCache('selectedDistance');
+    this.loadActiveDistanceStats();
+    if (this.selectedCharacterDetail) {
+      this.updateAllCharacterCharts();
     }
   }
   // Dataset selection method
@@ -1299,7 +1369,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     let mostPopularDistance = '';
     let maxCount = 0;
     // Calculate aggregated counts for each distance based on active class filters
-    Object.entries(characterData.by_distance).forEach(([distance, distanceInfo]: [string, any]) => {
+    this.getFilteredCharacterDistanceEntries(characterData).forEach(([distance, distanceInfo]: [string, any]) => {
       let totalCount = 0;
       if (distanceInfo.by_team_class) {
         // Sum counts from all active team classes for this distance
@@ -1328,6 +1398,8 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       // Use debounced distance update to prevent duplicate calls
       this.debouncedDistanceUpdate(distanceToSelect);
     } else {
+      this.selectedCharacterDistance = null;
+      this.updateCharacterDistanceData();
       // Update character overall distance preference data even if no popular distance found
       this.updateCharacterOverallData();
     }
@@ -1349,7 +1421,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     const activeClasses = this.getActiveClassIds();
     // Calculate distance preference data by merging active team classes
     const distanceData: ChartDataPoint[] = [];
-    Object.entries(characterData.by_distance).forEach(([distance, distanceInfo]: [string, any]) => {
+    this.getFilteredCharacterDistanceEntries(characterData).forEach(([distance, distanceInfo]: [string, any]) => {
       // Sum counts from all active team classes for this distance
       let totalCount = 0;
       if (distanceInfo.by_team_class) {
@@ -1396,7 +1468,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     const activeClasses = this.getActiveClassIds();
     const cardTypes = new Map<string, number>();
     // Aggregate card type data across all distances and active team classes
-    Object.values(characterData.by_distance).forEach((distanceData: any) => {
+    this.getFilteredCharacterDistanceEntries(characterData).forEach(([, distanceData]: [string, any]) => {
       if (distanceData.by_team_class) {
         activeClasses.forEach(classId => {
           const dataList = this.getMetricData('', classId, distanceData);
@@ -2040,6 +2112,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
           selectedClasses: this.classFilters,
           classStats: this.globalStats?.team_class_distribution || {},
           selectedDistance: currentDistance,
+          selectedDistances: this.distanceFilters,
           distances: this.distances,
           scenarioFilters: this.scenarioFilters,
           scenarioNames: this.scenarioNames,
@@ -2060,9 +2133,17 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
             this.invalidateCache('scenarioFilters');
             changed = true;
           }
+          if (result.distanceFilters) {
+            this.distanceFilters = { ...result.distanceFilters };
+            this.syncPrimarySelectedDistance();
+            this.invalidateCache('selectedDistance');
+            changed = true;
+          }
           
           if (changed) {
+            this.filteredTotalCache = 0;
             this.updateAllChartData();
+            this.loadActiveDistanceStats();
             
             // Also update distance-specific charts if a distance is selected
             const currentDistance = this.selectedDistance.value;
@@ -2075,7 +2156,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
               this.updateAllCharacterCharts();
             }
           }
-          if (result.distance) {
+          if (result.distance && !result.distanceFilters) {
             this.onDistanceSelect(result.distance);
           }
         }
@@ -2091,6 +2172,18 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       // For character stats or other sources
       classData = sourceData.by_team_class?.[classId];
     } else {
+      if (this.hasNoActiveDistanceFilters()) {
+        return [];
+      }
+
+      const distanceMetricData = this.getLoadedActiveDistanceStats()
+        .flatMap(distanceData => this.getMetricData('', classId, distanceData))
+        .map(distanceClassData => metric ? distanceClassData?.[metric] : distanceClassData)
+        .filter(data => this.hasNonEmptyMetricData(data));
+      if (distanceMetricData.length > 0) {
+        return distanceMetricData;
+      }
+
       // For global stats
       classData = this.globalStats?.[metric]?.by_team_class?.[classId];
     }
@@ -2167,7 +2260,6 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     return result;
   }
   private computeSupportCardCombinationsData(): ChartDataPoint[] {
-    if (!this.globalStats?.support_card_combinations?.by_team_class) return [];
     const activeClasses = this.getActiveClassIds();
     const allClassCount = Object.keys(this.classFilters).length;
     const isAllClassesActive = activeClasses.length === allClassCount;
@@ -2177,7 +2269,10 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     const isAllScenariosActive = activeScenarios.length === allScenarioCount;
     const combinations = new Map<string, { count: number; label: string; composition?: { [cardType: string]: number } }>();
     // Determine if we should use scenario data
-    const useScenarioData = isAllClassesActive && !isAllScenariosActive && this.globalStats?.support_card_combinations?.by_scenario;
+    const useScenarioData = !this.hasLoadedActiveDistanceStats()
+      && isAllClassesActive
+      && !isAllScenariosActive
+      && this.globalStats?.support_card_combinations?.by_scenario;
     if (useScenarioData) {
       activeScenarios.forEach(scenarioId => {
         const scenarioData = this.globalStats!.support_card_combinations.by_scenario[scenarioId];
@@ -2229,7 +2324,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     return result;
   }
   private computeStatAveragesByClassData(): any[] {
-    if (!this.globalStats?.stat_averages?.by_team_class) return [];
+    if (!this.globalStats?.stat_averages?.by_team_class && !this.hasLoadedActiveDistanceStats()) return [];
     // Use correct stat order: Speed, Stamina, Power, Guts, Wit
     const stats = [
       { key: 'speed', name: 'Speed' },
@@ -2274,7 +2369,6 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
   private computeSupportCardUsageData(): any[] {
-    if (!this.globalStats?.support_cards?.by_team_class) return [];
     const activeClasses = this.getActiveClassIds();
     // Get all support cards from ACTIVE classes only and find top cards - BY ID
     const allCards = new Map<string, { count: number, name: string, id?: string | number }>();
@@ -2376,7 +2470,6 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
   private computeSupportCardTypeDistribution(): ChartDataPoint[] {
-    if (!this.globalStats?.support_cards?.by_team_class) return [];
     const cardTypes = new Map<string, number>();
     
     const activeClasses = this.getActiveClassIds();
@@ -2387,7 +2480,10 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     const allScenarioCount = Object.keys(this.scenarioFilters).length;
     const isAllScenariosActive = activeScenarios.length === allScenarioCount;
     // Determine if we should use scenario data
-    const useScenarioData = isAllClassesActive && !isAllScenariosActive && this.globalStats?.support_card_type_distribution?.by_scenario;
+    const useScenarioData = !this.hasLoadedActiveDistanceStats()
+      && isAllClassesActive
+      && !isAllScenariosActive
+      && this.globalStats?.support_card_type_distribution?.by_scenario;
     if (useScenarioData) {
       activeScenarios.forEach(scenarioId => {
         const scenarioData = this.globalStats!.support_card_type_distribution.by_scenario[scenarioId];
@@ -2431,7 +2527,6 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       .sort((a, b) => b.value - a.value);
   }
   private computeSkillsUsageData(): any[] {
-    if (!this.globalStats?.skills?.by_team_class) return [];
     const activeClasses = this.getActiveClassIds();
     // Get top 15 skills from ACTIVE classes only
     const allSkills = new Map<string, number>();
@@ -2499,7 +2594,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
   private computeOverallStatComparison(): ChartDataPoint[] {
-    if (!this.globalStats?.stat_averages?.by_team_class) return [];
+    if (!this.globalStats?.stat_averages?.by_team_class && !this.hasLoadedActiveDistanceStats()) return [];
     const activeClasses = this.getActiveClassIds();
     // Use correct stat order: Speed, Stamina, Power, Guts, Wit
     const stats = [
@@ -2596,10 +2691,22 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     return series;
   }
   private updateAllChartData() {
+    if (this.chartDataUpdateTimer) {
+      clearTimeout(this.chartDataUpdateTimer);
+    }
+
+    this.chartDataUpdateTimer = setTimeout(() => {
+      this.chartDataUpdateTimer = null;
+      this.updateAllChartDataNow();
+    }, this.chartDataUpdateDebounceMs);
+  }
+  private updateAllChartDataNow() {
     if (!this.globalStats) return;
     const activeClasses = this.getActiveClassIds();
     const activeScenarios = this.getActiveScenarioIds();
-    const cacheKey = `global_${activeClasses.join('_')}_${activeScenarios.join('_')}`;
+    const activeDistances = this.getActiveDistanceIds();
+    const loadedDistances = activeDistances.filter(distance => this.distanceStats[distance]);
+    const cacheKey = `global_${activeClasses.join('_')}_${activeScenarios.join('_')}_${activeDistances.join('_')}_${loadedDistances.join('_')}`;
     // Check cache first
     if (this.chartDataCache.has(cacheKey)) {
       const cached = this.chartDataCache.get(cacheKey);
@@ -2614,6 +2721,26 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     this.applyChartData(chartData);
   }
   private calculateChartData(): any {
+    if (this.hasNoActiveDistanceFilters()) {
+      return {
+        teamClass: [],
+        totalTrainers: 0,
+        supportCardCombinations: [],
+        statAveragesByClass: [],
+        supportCardUsage: [],
+        supportCardTypes: [],
+        topSupportCards: [],
+        skillsUsage: [],
+        overallStatComparison: [],
+        umaDistributionStacked: [],
+        sampleSizeText: this.getSampleSizeText(),
+        topUmas: [],
+        topSkills: [],
+        statDistribution: { speed: [], stamina: [], power: [], guts: [], wiz: [] },
+        filteredTotal: 0
+      };
+    }
+
     // Calculate filtered total for percentage calculations
     const filteredTotal = this.calculateFilteredTotal();
     return {
@@ -2668,6 +2795,11 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     // For support cards, we need to count the total NUMBER OF TEAMS/ENTRIES
     // not the sum of all card usages
     // Each team has 6 support cards, so we need to get the total team count
+    const distanceTotal = this.hasLoadedActiveDistanceStats() ? this.getGlobalTotalUmasTrained() : 0;
+    if (distanceTotal > 0) {
+      this.filteredTotalCache = distanceTotal * 6;
+      return this.filteredTotalCache;
+    }
     let totalTeams = 0;
     activeClasses.forEach(classId => {
       const classDistribution = this.globalStats?.team_class_distribution?.[classId];
@@ -2689,10 +2821,12 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   // Multi-series stat distribution showing aggregated data from all selected classes
   getStatDistributionMultiSeries(statName: string): any[] {
-    const cacheKey = this.generateCacheKey('statDistribution', statName, this.classFilters, this.scenarioFilters);
+    const cacheKey = this.generateCacheKey('statDistribution', statName, this.classFilters, this.scenarioFilters, this.distanceFilters, this.getActiveDistanceIds().filter(distance => this.distanceStats[distance]));
     return this.getCachedData(cacheKey, () => {
       if (!this.globalStats?.stat_averages?.by_team_class) {
-        return [];
+        if (!this.hasLoadedActiveDistanceStats()) {
+          return [];
+        }
       }
       // Get ALL active classes (merge all)
       const activeClasses = this.getActiveClassIds();
@@ -3021,8 +3155,8 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   private computeCharacterStatComparisonData(characterId: string): ChartDataPoint[] {
     const character = this.characterStats[characterId];
     if (!character?.by_distance) return [];
-    const distances = Object.keys(character.by_distance);
-    if (distances.length === 0) return [];
+    const distanceEntries = this.getFilteredCharacterDistanceEntries(character);
+    if (distanceEntries.length === 0) return [];
     // Use correct stat order: Speed, Stamina, Power, Guts, Wit
     const stats = [
       { key: 'speed', name: 'Speed' },
@@ -3036,8 +3170,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       let totalStat = 0;
       let count = 0;
       const activeClasses = this.getActiveClassIds();
-      distances.forEach(distance => {
-        const distanceData = character.by_distance![distance];
+      distanceEntries.forEach(([, distanceData]) => {
         activeClasses.forEach(classId => {
           const dataList = this.getMetricData('', classId, distanceData);
           dataList.forEach(classData => {
@@ -3136,7 +3269,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     const activeClasses = this.getActiveClassIds();
     // Aggregate histogram data across all distances for this character from ACTIVE classes only
     if (character.by_distance) {
-      Object.values(character.by_distance).forEach((distanceData: any) => {
+      this.getFilteredCharacterDistanceEntries(character).forEach(([, distanceData]: [string, any]) => {
         activeClasses.forEach(classId => {
           const dataList = this.getMetricData('', classId, distanceData);
           dataList.forEach(classData => {
@@ -3167,7 +3300,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     const activeClasses = this.getActiveClassIds();
     // Aggregate combinations across all distances for this character from ACTIVE classes only
     if (character.by_distance) {
-      Object.values(character.by_distance).forEach((distanceData: any) => {
+      this.getFilteredCharacterDistanceEntries(character).forEach(([, distanceData]: [string, any]) => {
         activeClasses.forEach(classId => {
           const dataList = this.getMetricData('', classId, distanceData);
           dataList.forEach(classData => {
@@ -3204,6 +3337,59 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       (this.classFilters as any)[classId] !== false
     );
     return activeIds;
+  }
+
+  getActiveDistanceIds(): string[] {
+    return this.availableDistances.filter(distance => this.distanceFilters[distance] !== false);
+  }
+
+  private hasNoActiveDistanceFilters(): boolean {
+    return this.availableDistances.length > 0
+      && Object.keys(this.distanceFilters).length > 0
+      && this.getActiveDistanceIds().length === 0;
+  }
+
+  private getLoadedActiveDistanceStats(): any[] {
+    return this.getActiveDistanceIds()
+      .map(distance => this.distanceStats[distance])
+      .filter(Boolean);
+  }
+
+  private hasLoadedActiveDistanceStats(): boolean {
+    return this.getLoadedActiveDistanceStats().length > 0;
+  }
+
+  private hasNonEmptyMetricData(data: any): boolean {
+    if (!data) {
+      return false;
+    }
+    if (typeof data !== 'object') {
+      return true;
+    }
+    return Object.entries(data).some(([key, value]: [string, any]) => this.isMetricEntry(key, value));
+  }
+
+  private isSameStatisticsDistance(left: string | number, right: string | number): boolean {
+    const leftInfo = resolveStatisticsDistance(left);
+    const rightInfo = resolveStatisticsDistance(right);
+    if (leftInfo && rightInfo) {
+      return leftInfo.id === rightInfo.id;
+    }
+    return String(left).trim().toLowerCase() === String(right).trim().toLowerCase();
+  }
+
+  private getFilteredCharacterDistanceEntries(characterData: any): [string, any][] {
+    if (!characterData?.by_distance) {
+      return [];
+    }
+
+    const activeDistances = this.getActiveDistanceIds();
+    if (activeDistances.length === 0) {
+      return [];
+    }
+
+    return Object.entries(characterData.by_distance)
+      .filter(([distance]) => activeDistances.some(activeDistance => this.isSameStatisticsDistance(activeDistance, distance))) as [string, any][];
   }
   
   getActiveScenarioIds(): string[] {
@@ -3554,6 +3740,10 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       });
     }
     // Convert to ChartDataPoint with images and sort to get top 20
+    if (this.hasLoadedActiveDistanceStats() && allUmas.size > 0) {
+      totalUmasTrained = Array.from(allUmas.values())
+        .reduce((total, data: any) => total + (data.count || 0), 0);
+    }
     const result = Array.from(allUmas.entries())
       .map(([umaName, data]) => {
         const imageUrl = this.getCharacterImageUrl(data.character_id || umaName);
@@ -3633,7 +3823,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     const activeClasses = this.getActiveClassIds();
     // Aggregate class data across all distances for this character - ONLY for active classes
     const classData = new Map<string, number>();
-    Object.values(character.by_distance).forEach((distanceData: any) => {
+    this.getFilteredCharacterDistanceEntries(character).forEach(([, distanceData]: [string, any]) => {
       if (distanceData.by_team_class) {
         activeClasses.forEach(classId => {
           // Use getMetricData to handle scenario filtering and new data structure
@@ -3679,7 +3869,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     const activeClasses = this.getActiveClassIds();
     // Aggregate card type data across all distances for this character from ACTIVE classes only
     if (character.by_distance) {
-      Object.values(character.by_distance).forEach((distanceData: any) => {
+      this.getFilteredCharacterDistanceEntries(character).forEach(([, distanceData]: [string, any]) => {
         activeClasses.forEach(classId => {
           const dataList = this.getMetricData('', classId, distanceData);
           dataList.forEach(classData => {

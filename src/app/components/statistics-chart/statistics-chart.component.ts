@@ -27,6 +27,7 @@ export interface ChartConfig {
   verticalImages?: boolean; // Whether to show images vertically (at bottom of bars)
   totalEntries?: number; // Total entries for percentage calculation
   showStatSymbols?: boolean; // Whether to show stat symbols for compositions
+  emptyMessage?: string;
 }
 @Component({
   selector: 'app-statistics-chart',
@@ -35,47 +36,11 @@ export interface ChartConfig {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="chart-wrapper" [style.height.px]="config.height || 300">
-      <!-- Stat Symbol List View -->
-      <div *ngIf="showStatSymbolList; else imageListCheck" class="stat-symbol-list-view">
-        <div class="stat-symbol-item" 
-             *ngFor="let item of data; trackBy: trackByLabel; let i = index">
-          <!-- Full background container -->
-          <div class="bar-background"></div>
-          
-          <!-- Value bar that fills based on percentage -->
-          <div class="percentage-bar-fill"
-               [style.width.%]="getDisplayPercentage(item)"
-               [style.background-color]="getItemColor(item, i)">
-          </div>
-          
-          <!-- Content overlay -->
-          <div class="item-content">
-            <div class="stat-symbols-container">
-              <ng-container *ngFor="let statType of getStatTypes(item.composition); let statIndex = index">
-                <img *ngFor="let symbol of getStatSymbolsForType(item.composition!, statType); let symbolIndex = index"
-                     [src]="getStatIconUrl(statType)"
-                     [alt]="statType"
-                     class="stat-symbol"
-                     [style.width.px]="24"
-                     [style.height.px]="24">
-              </ng-container>
-            </div>
-            <div class="item-info">
-              <div class="item-value">
-                {{ formatDisplayValue(item.value) }}
-                <span class="item-percentage">({{ getActualPercentage(item).toFixed(1) }}%)</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Image List View with Horizontal Bar Background -->
-      <ng-template #imageListCheck>
-        <div *ngIf="showImageList; else chartView" class="image-list-view">
-          <div class="image-item" 
-               *ngFor="let item of data; trackBy: trackByLabel; let i = index"
-               class="horizontal-bar-item">
+      <ng-container *ngIf="hasRenderableData; else emptyChartState">
+        <!-- Stat Symbol List View -->
+        <div *ngIf="showStatSymbolList; else imageListCheck" class="stat-symbol-list-view">
+          <div class="stat-symbol-item" 
+               *ngFor="let item of data; trackBy: trackByLabel; let i = index">
             <!-- Full background container -->
             <div class="bar-background"></div>
             
@@ -87,17 +52,17 @@ export interface ChartConfig {
             
             <!-- Content overlay -->
             <div class="item-content">
-              <div class="image-container">
-                <img *ngIf="item.imageUrl"
-                     [src]="item.imageUrl" 
-                     [alt]="item.label"
-                     [style.width.px]="getResponsiveImageSize()"
-                     [style.height.px]="getResponsiveImageSize()"
-                     (error)="handleImageError($event)"
-                     class="item-image">
+              <div class="stat-symbols-container">
+                <ng-container *ngFor="let statType of getStatTypes(item.composition); let statIndex = index">
+                  <img *ngFor="let symbol of getStatSymbolsForType(item.composition!, statType); let symbolIndex = index"
+                       [src]="getStatIconUrl(statType)"
+                       [alt]="statType"
+                       class="stat-symbol"
+                       [style.width.px]="24"
+                       [style.height.px]="24">
+                </ng-container>
               </div>
               <div class="item-info">
-                <div class="item-label">{{ item.label }}</div>
                 <div class="item-value">
                   {{ formatDisplayValue(item.value) }}
                   <span class="item-percentage">({{ getActualPercentage(item).toFixed(1) }}%)</span>
@@ -106,11 +71,56 @@ export interface ChartConfig {
             </div>
           </div>
         </div>
-      </ng-template>
-      
-      <!-- Chart View (includes both regular charts and image-based charts) -->
-      <ng-template #chartView>
-        <canvas #chartCanvas></canvas>
+        
+        <!-- Image List View with Horizontal Bar Background -->
+        <ng-template #imageListCheck>
+          <div *ngIf="showImageList; else chartView" class="image-list-view">
+            <div class="image-item" 
+                 *ngFor="let item of data; trackBy: trackByLabel; let i = index"
+                 class="horizontal-bar-item">
+              <!-- Full background container -->
+              <div class="bar-background"></div>
+              
+              <!-- Value bar that fills based on percentage -->
+              <div class="percentage-bar-fill"
+                   [style.width.%]="getDisplayPercentage(item)"
+                   [style.background-color]="getItemColor(item, i)">
+              </div>
+              
+              <!-- Content overlay -->
+              <div class="item-content">
+                <div class="image-container">
+                  <img *ngIf="item.imageUrl"
+                       [src]="item.imageUrl" 
+                       [alt]="item.label"
+                       [style.width.px]="getResponsiveImageSize()"
+                       [style.height.px]="getResponsiveImageSize()"
+                       (error)="handleImageError($event)"
+                       class="item-image">
+                </div>
+                <div class="item-info">
+                  <div class="item-label">{{ item.label }}</div>
+                  <div class="item-value">
+                    {{ formatDisplayValue(item.value) }}
+                    <span class="item-percentage">({{ getActualPercentage(item).toFixed(1) }}%)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+        
+        <!-- Chart View (includes both regular charts and image-based charts) -->
+        <ng-template #chartView>
+          <canvas #chartCanvas></canvas>
+        </ng-template>
+      </ng-container>
+
+      <ng-template #emptyChartState>
+        <div class="chart-empty-state">
+          <div class="empty-title">No data available</div>
+          <div class="empty-detail">{{ config.emptyMessage || 'This dataset does not include data for this chart yet.' }}</div>
+        </div>
       </ng-template>
     </div>
   `,
@@ -127,6 +137,9 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
   private imageCache = new Map<string, HTMLImageElement>();
   private resizeListener?: () => void;
   private lastDataHash: string = '';
+  private chartInitTimer: any = null;
+  private chartUpdateTimer: any = null;
+  private readonly chartUpdateDebounceMs = 100;
   // Cached display state properties - computed only when inputs change
   private _showImageList: boolean = false;
   private _showStatSymbolList: boolean = false;
@@ -148,6 +161,15 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
   // Safe getter to determine if we should use Chart.js with images
   get shouldUseChartWithImages(): boolean {
     return this._shouldUseChartWithImages;
+  }
+  get hasRenderableData(): boolean {
+    if (this.data?.length > 0) {
+      return true;
+    }
+    if (Array.isArray(this.multiSeries)) {
+      return this.multiSeries.some((series: any) => Array.isArray(series?.data) && series.data.length > 0);
+    }
+    return Object.values(this.multiSeries || {}).some(seriesData => Array.isArray(seriesData) && seriesData.length > 0);
   }
   private get defaultColors(): string[] {
     return this.colorsService.getChartColors();
@@ -171,8 +193,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     this.addRoundRectPolyfill();
     // Compute initial display state
     this.computeDisplayState();
-    // Preload images first, then initialize chart to prevent loading delay
-    this.preloadImagesAndInitialize();
+    this.scheduleChartUpdate(false, true);
   }
   private computeDisplayState(): void {
     // Compute showImageList
@@ -224,6 +245,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
   }
   private setupResizeListener(): void {
     if (typeof window === 'undefined') return;
+    if (this.resizeListener) return;
     this.resizeListener = () => {
       // Debounce resize events
       clearTimeout((this as any).resizeTimeout);
@@ -306,7 +328,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
   ngAfterViewInit(): void {
     // Also try to initialize after view init
     if (!this.chart) {
-      setTimeout(() => this.initializeChart(), 50);
+      this.scheduleChartUpdate(false, true);
     }
   }
   ngOnDestroy(): void {
@@ -322,6 +344,14 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     if ((this as any).resizeTimeout) {
       clearTimeout((this as any).resizeTimeout);
     }
+    if (this.chartInitTimer) {
+      clearTimeout(this.chartInitTimer);
+      this.chartInitTimer = null;
+    }
+    if (this.chartUpdateTimer) {
+      clearTimeout(this.chartUpdateTimer);
+      this.chartUpdateTimer = null;
+    }
     // Clear image cache to prevent memory leaks
     this.imageCache.clear();
   }
@@ -332,8 +362,28 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
       // Clear caches when data changes
       this._statTypesCache.clear();
     }
+    if (!this.hasRenderableData) {
+      if (this.chartInitTimer) {
+        clearTimeout(this.chartInitTimer);
+        this.chartInitTimer = null;
+      }
+      if (this.chartUpdateTimer) {
+        clearTimeout(this.chartUpdateTimer);
+        this.chartUpdateTimer = null;
+      }
+      if (this.chart) {
+        this.chart.destroy();
+        this.chart = null;
+      }
+      return;
+    }
+    if (!this.chart) {
+      if (!this.showImageList && !this.showStatSymbolList) {
+        this.scheduleChartUpdate(false, true);
+      }
+      return;
+    }
     // Only update if we have a chart and there are meaningful changes
-    if (!this.chart) return;
     let shouldUpdate = false;
     let needsImagePreload = false;
     // Check for data changes
@@ -358,16 +408,54 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
       shouldUpdate = true;
     }
     if (shouldUpdate) {
-      if (needsImagePreload) {
-        this.preloadImages().then(() => {
-          this.updateChart();
-        }).catch(error => {
-          console.warn('Error preloading new images, updating chart anyway:', error);
-          this.updateChart();
-        });
-      } else {
-        this.updateChart();
+      this.scheduleChartUpdate(needsImagePreload);
+    }
+  }
+  private scheduleChartUpdate(needsImagePreload = false, recreate = false): void {
+    if (!this.chart || recreate) {
+      if (this.chartInitTimer) {
+        return;
       }
+
+      this.chartInitTimer = setTimeout(() => {
+        this.chartInitTimer = null;
+        this.runChartUpdate(needsImagePreload, recreate);
+      }, 0);
+      return;
+    }
+
+    if (this.chartUpdateTimer) {
+      clearTimeout(this.chartUpdateTimer);
+    }
+
+    this.chartUpdateTimer = setTimeout(() => {
+      this.chartUpdateTimer = null;
+      this.runChartUpdate(needsImagePreload, recreate);
+    }, this.chartUpdateDebounceMs);
+  }
+  private runChartUpdate(needsImagePreload = false, recreate = false): void {
+    if (!this.hasRenderableData || this.showImageList || this.showStatSymbolList) {
+      return;
+    }
+
+    if (!this.chart || recreate) {
+      this.initializeChart();
+      this.setupResizeListener();
+    } else {
+      this.updateChart();
+    }
+
+    const shouldPreloadImages = needsImagePreload || (this.shouldUseChartWithImages && this.data?.length > 0);
+    if (shouldPreloadImages) {
+      this.preloadImages()
+        .then(() => {
+          if (this.chart) {
+            this.chart.update('none');
+          }
+        })
+        .catch(error => {
+          console.warn('Error preloading chart images:', error);
+        });
     }
   }
   private hasDataChanged(previousData: any, currentData: any): boolean {
@@ -400,6 +488,9 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     return JSON.stringify(previousData) !== JSON.stringify(currentData);
   }
   private initializeChart(): void {
+    if (!this.hasRenderableData) {
+      return;
+    }
     if (this.showImageList || this.showStatSymbolList) {
       return;
     }
@@ -594,6 +685,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
         (chartConfig.plugins as any[]).push(imagePlugin);
       }
       this.chart = new Chart(ctx, chartConfig);
+      this.lastDataHash = JSON.stringify(chartConfig.data);
     } catch (error) {
       console.error('Error creating chart:', error);
       
@@ -605,6 +697,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
         // Retry chart creation once
         try {
           this.chart = new Chart(ctx, chartConfig);
+          this.lastDataHash = JSON.stringify(chartConfig.data);
         } catch (retryError) {
           console.error('Failed to create chart even after cleanup:', retryError);
         }

@@ -123,7 +123,15 @@
 .distance-selector-card.compact .pill-label.hidden { display: none; }
 
 // Distance Selector Styles (shared between old section and new card)
-.distance-header { @include distance-header(0.85rem, 1rem); text-transform: uppercase; letter-spacing: 0.5px; }
+.distance-header {
+  @include flex-between;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  .distance-title {
+    @include distance-header(0.85rem, 1rem);
+  }
+}
 
 .distance-pills {
   display: flex;

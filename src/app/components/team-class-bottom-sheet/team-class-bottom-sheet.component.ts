@@ -14,6 +14,7 @@ export interface BottomSheetData {
   selectedClasses: ClassFilterState;
   classStats: { [key: string]: { count: number; percentage: number } };
   selectedDistance: string | null;
+  selectedDistances?: { [key: string]: boolean };
   distances: string[];
   scenarioFilters: { [key: string]: boolean };
   scenarioNames: { [key: string]: string };
@@ -92,15 +93,18 @@ interface ScenarioOption {
       <div class="filter-section" *ngIf="data.distances.length > 0">
         <div class="section-header">
           <h3>Race Distance</h3>
+          <button mat-button (click)="toggleAllDistances()">
+            {{ allDistancesSelected ? 'None' : 'All' }}
+          </button>
         </div>
         
         <div class="distance-options">
           <button 
             *ngFor="let distance of data.distances"
             class="distance-option"
-            [class.selected]="localSelectedDistance === distance"
+            [class.selected]="localDistanceFilters[distance] !== false"
             [ngStyle]="getDistanceButtonStyle(distance)"
-            (click)="selectDistance(distance)">
+            (click)="toggleDistance(distance)">
             <mat-icon>{{ getDistanceIcon(distance) }}</mat-icon>
             <span>{{ getDistanceLabel(distance) }}</span>
           </button>
@@ -123,6 +127,7 @@ export class TeamClassBottomSheetComponent implements OnInit {
   localSelectedClasses: ClassFilterState = {};
   localScenarioFilters: { [key: string]: boolean } = {};
   localSelectedDistance: string | null = null;
+  localDistanceFilters: { [key: string]: boolean } = {};
   constructor(
     private bottomSheetRef: MatBottomSheetRef<TeamClassBottomSheetComponent>,
     @Inject(MAT_BOTTOM_SHEET_DATA) public data: BottomSheetData,
@@ -132,6 +137,12 @@ export class TeamClassBottomSheetComponent implements OnInit {
     this.localSelectedClasses = { ...data.selectedClasses };
     this.localScenarioFilters = { ...(data.scenarioFilters || {}) };
     this.localSelectedDistance = data.selectedDistance;
+    this.localDistanceFilters = data.selectedDistances
+      ? { ...data.selectedDistances }
+      : data.distances.reduce((filters, distance) => {
+          filters[distance] = data.selectedDistance ? data.selectedDistance === distance : true;
+          return filters;
+        }, {} as { [key: string]: boolean });
   }
   ngOnInit(): void {
     this.setupClassStats();
@@ -183,16 +194,26 @@ export class TeamClassBottomSheetComponent implements OnInit {
   toggleScenario(scenarioValue: string): void {
     this.localScenarioFilters[scenarioValue] = !this.localScenarioFilters[scenarioValue];
   }
-  selectDistance(distance: string): void {
-    this.localSelectedDistance = distance;
-    // For distance, it's a single selection, so maybe closing immediately is fine?
-    // But for consistency, let's keep it open.
+  toggleDistance(distance: string): void {
+    this.localDistanceFilters[distance] = this.localDistanceFilters[distance] === false;
+    this.localSelectedDistance = this.data.distances.find(entry => this.localDistanceFilters[entry] !== false) || null;
+  }
+  toggleAllDistances(): void {
+    const nextValue = !this.allDistancesSelected;
+    this.data.distances.forEach(distance => {
+      this.localDistanceFilters[distance] = nextValue;
+    });
+    this.localSelectedDistance = this.data.distances.find(entry => this.localDistanceFilters[entry] !== false) || null;
+  }
+  get allDistancesSelected(): boolean {
+    return this.data.distances.length > 0 && this.data.distances.every(distance => this.localDistanceFilters[distance] !== false);
   }
   close(): void {
     this.bottomSheetRef.dismiss({
       classFilters: this.localSelectedClasses,
       scenarioFilters: this.localScenarioFilters,
-      distance: this.localSelectedDistance
+      distance: this.localSelectedDistance,
+      distanceFilters: this.localDistanceFilters
     });
   }
   getBadgeColor(classValue: string): string {
@@ -213,7 +234,7 @@ export class TeamClassBottomSheetComponent implements OnInit {
     return getStatisticsDistanceColor(distance);
   }
   getDistanceButtonStyle(distance: string): any {
-    const isSelected = this.localSelectedDistance === distance;
+    const isSelected = this.localDistanceFilters[distance] !== false;
     const color = this.getDistanceColor(distance);
     
     if (isSelected) {
