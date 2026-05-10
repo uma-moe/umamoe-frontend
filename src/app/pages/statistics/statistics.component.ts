@@ -320,6 +320,220 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     return data?.total ?? data?.count ?? data?.usage_count ?? data?.total_usage ?? data?.total_count ?? 0;
   }
+  private isMetricEntry(key: string, data: any): boolean {
+    return key !== 'overall'
+      && key !== 'by_team_class'
+      && key !== 'by_scenario'
+      && !key.startsWith('total_')
+      && this.getEntryCount(data) > 0;
+  }
+  private getGlobalMetricMaps(metric: 'support_cards' | 'skills'): any[] {
+    const metricData = this.globalStats?.[metric];
+    if (!metricData) {
+      return [];
+    }
+
+    const activeClasses = this.getActiveClassIds();
+    const activeScenarios = this.getActiveScenarioIds();
+    const allClassCount = Object.keys(this.classFilters).length;
+    const allScenarioCount = Object.keys(this.scenarioFilters).length;
+    const isAllClassesActive = activeClasses.length === allClassCount;
+    const isAllScenariosActive = activeScenarios.length === allScenarioCount;
+
+    if (isAllClassesActive && !isAllScenariosActive && metricData.by_scenario) {
+      return activeScenarios
+        .map(scenarioId => metricData.by_scenario?.[scenarioId])
+        .filter(Boolean);
+    }
+
+    if (metricData.by_team_class) {
+      return activeClasses
+        .flatMap(classId => this.getMetricData(metric, classId))
+        .filter(Boolean);
+    }
+
+    if (!isAllScenariosActive && metricData.by_scenario) {
+      return activeScenarios
+        .map(scenarioId => metricData.by_scenario?.[scenarioId])
+        .filter(Boolean);
+    }
+
+    return metricData.overall ? [metricData.overall] : [];
+  }
+  private getDistanceMetricMaps(distanceData: any, metric: 'support_cards' | 'skills'): any[] {
+    if (!distanceData) {
+      return [];
+    }
+
+    if (distanceData.by_team_class) {
+      return this.getActiveClassIds()
+        .flatMap(classId => this.getMetricData('', classId, distanceData))
+        .map(classData => classData?.[metric])
+        .filter(Boolean);
+    }
+
+    if (distanceData.overall?.[metric]) {
+      return [distanceData.overall[metric]];
+    }
+
+    return distanceData[metric] ? [distanceData[metric]] : [];
+  }
+  private getGlobalTotalUmasTrained(): number {
+    if (!this.globalStats) {
+      return 0;
+    }
+
+    const activeClasses = this.getActiveClassIds();
+    const activeScenarios = this.getActiveScenarioIds();
+    const allClassCount = Object.keys(this.classFilters).length;
+    const allScenarioCount = Object.keys(this.scenarioFilters).length;
+    const isAllClassesActive = activeClasses.length === allClassCount;
+    const isAllScenariosActive = activeScenarios.length === allScenarioCount;
+
+    if (isAllClassesActive && !isAllScenariosActive && this.globalStats.scenario_distribution) {
+      const scenarioTotal = activeScenarios.reduce((total, scenarioId) => {
+        return total + this.getEntryCount(this.globalStats?.scenario_distribution?.[scenarioId]);
+      }, 0);
+      if (scenarioTotal > 0) {
+        return scenarioTotal;
+      }
+    }
+
+    const classTotal = activeClasses.reduce((total, classId) => {
+      const classData = this.globalStats?.team_class_distribution?.[classId];
+      if (typeof classData === 'number') {
+        return total + classData;
+      }
+      return total + (classData?.trained_umas ?? classData?.total_trained_umas ?? this.getEntryCount(classData));
+    }, 0);
+    if (classTotal > 0) {
+      return classTotal;
+    }
+
+    if (!this.globalStats.uma_distribution) {
+      return 0;
+    }
+
+    return Object.entries(this.globalStats.uma_distribution)
+      .filter(([key]) => key !== 'by_team_class')
+      .reduce((total, [, data]) => total + this.getEntryCount(data), 0);
+  }
+  private getDistanceTotalUmasTrained(distanceData: any): number {
+    if (!distanceData) {
+      return 0;
+    }
+
+    if (distanceData.by_team_class) {
+      const total = this.getActiveClassIds().reduce((sum, classId) => {
+        return sum + this.getMetricData('', classId, distanceData).reduce((classSum, classData) => {
+          return classSum + (classData?.total_trained_umas ?? classData?.total_entries ?? classData?.trainer_count ?? this.getEntryCount(classData));
+        }, 0);
+      }, 0);
+      if (total > 0) {
+        return total;
+      }
+    }
+
+    const overall = distanceData.overall ?? distanceData;
+    return overall?.total_trained_umas
+      ?? overall?.total_entries
+      ?? overall?.trainer_count
+      ?? distanceData.metadata?.total_trained_umas
+      ?? distanceData.metadata?.total_entries
+      ?? 0;
+  }
+  private buildSupportCardImageData(cardMaps: any[], totalUmasTrained: number): ChartDataPoint[] {
+    const aggregatedCards = new Map<string, { total: number; cardData: any; name: string; type: string | null }>();
+
+    cardMaps.forEach(cardMap => {
+      Object.entries(cardMap || {}).forEach(([cardId, cardData]: [string, any]) => {
+        if (!this.isMetricEntry(cardId, cardData)) {
+          return;
+        }
+
+        const resolvedCard = this.resolveSupportCardInfo(cardId, cardData);
+        const actualCardId = resolvedCard.id || cardId;
+        const sourceData = typeof cardData === 'object' && cardData !== null ? cardData : {};
+        const existing = aggregatedCards.get(actualCardId);
+        const count = this.getEntryCount(cardData);
+
+        if (existing) {
+          existing.total += count;
+          existing.cardData = { ...existing.cardData, ...sourceData, type: resolvedCard.type || existing.type };
+        } else {
+          aggregatedCards.set(actualCardId, {
+            total: count,
+            cardData: { ...sourceData, id: resolvedCard.id, type: resolvedCard.type },
+            name: resolvedCard.name,
+            type: resolvedCard.type
+          });
+        }
+      });
+    });
+
+    return Array.from(aggregatedCards.entries())
+      .sort((a, b) => b[1].total - a[1].total)
+      .slice(0, 50)
+      .map(([cardId, data]) => {
+        const resolvedCard = this.resolveSupportCardInfo(cardId, data.cardData);
+        const cardType = data.cardData?.type || data.type || resolvedCard.type;
+        return {
+          label: data.name || resolvedCard.name,
+          value: data.total,
+          percentage: totalUmasTrained > 0 ? (data.total / totalUmasTrained) * 100 : 0,
+          imageUrl: resolvedCard.imageUrl,
+          id: resolvedCard.id || cardId,
+          type: cardType,
+          color: cardType ? this.colorsService.getStatColor(cardType.toLowerCase()) : undefined
+        };
+      });
+  }
+  private buildSkillImageData(skillMaps: any[], totalUmasTrained: number): ChartDataPoint[] {
+    const aggregatedSkills = new Map<string, any>();
+
+    skillMaps.forEach(skillMap => {
+      Object.entries(skillMap || {}).forEach(([skillId, skillData]: [string, any]) => {
+        if (!this.isMetricEntry(skillId, skillData)) {
+          return;
+        }
+
+        const resolvedSkill = this.resolveSkillInfo(skillId, skillData);
+        const skillKey = String(resolvedSkill.id || skillId);
+        const count = this.getEntryCount(skillData);
+        const sourceData = typeof skillData === 'object' && skillData !== null ? skillData : {};
+        const existing = aggregatedSkills.get(skillKey);
+
+        if (existing) {
+          existing.total += count;
+          existing.count += count;
+        } else {
+          aggregatedSkills.set(skillKey, {
+            ...sourceData,
+            id: resolvedSkill.id,
+            name: resolvedSkill.name,
+            icon: resolvedSkill.icon,
+            total: count,
+            count
+          });
+        }
+      });
+    });
+
+    return Array.from(aggregatedSkills.entries())
+      .sort((a, b) => b[1].total - a[1].total)
+      .slice(0, 50)
+      .map(([skillKey, data]) => {
+        const resolvedSkill = this.resolveSkillInfo(skillKey, data);
+        return {
+          label: resolvedSkill.name,
+          value: data.total,
+          percentage: totalUmasTrained > 0 ? (data.total / totalUmasTrained) * 100 : 0,
+          imageUrl: resolvedSkill.imageUrl,
+          id: resolvedSkill.id || skillKey,
+          icon: resolvedSkill.icon
+        };
+      });
+  }
   private getSupportCardIdsFromCombination(data: any): string[] {
     const cardIds = data?.support_card_ids ?? data?.card_ids ?? data?.support_cards;
     return Array.isArray(cardIds) ? cardIds.map(cardId => String(cardId)) : [];
@@ -2797,75 +3011,10 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     const cacheKey = this.generateCacheKey('distanceSupportCardsWithImages', distance, this.classFilters, this.scenarioFilters);
     return this.getCachedData(cacheKey, () => {
       const distanceData = this.distanceStats[distance];
-      if (!distanceData?.by_team_class) return [];
-      // Get all support cards from active classes and aggregate by ID
-      const allCards = new Map<string, { total: number, cardData: any, name: string }>();
-      // Use the new total_trained_umas from distance data if available
-      let totalUmasTrained = 0;
-      this.getActiveClassIds().forEach(classId => {
-        const dataList = this.getMetricData('', classId, distanceData);
-        dataList.forEach(classData => {
-          if (classData?.total_trained_umas !== undefined) {
-            totalUmasTrained += classData.total_trained_umas;
-          } else if (classData?.total_entries !== undefined) {
-            totalUmasTrained += classData.total_entries;
-          } else if (classData?.trainer_count !== undefined) {
-            totalUmasTrained += classData.trainer_count;
-          }
-        });
-      });
-      this.getActiveClassIds().forEach(classId => {
-        const dataList = this.getMetricData('', classId, distanceData);
-        dataList.forEach(classData => {
-          if (classData?.support_cards) {
-            Object.entries(classData.support_cards).forEach(([cardId, data]: [string, any]) => {
-              const count = this.getEntryCount(data);
-              const resolvedCard = this.resolveSupportCardInfo(cardId, data);
-              const actualCardId = resolvedCard.id || cardId;
-              if (allCards.has(actualCardId)) {
-                const existing = allCards.get(actualCardId)!;
-                existing.total += count;
-                existing.cardData = { ...existing.cardData, ...(typeof data === 'object' ? data : {}), type: resolvedCard.type };
-                existing.cardData.by_level = existing.cardData.by_level || {};
-                if (data.by_level) {
-                  Object.entries(data.by_level).forEach(([level, levelCount]: [string, any]) => {
-                    existing.cardData.by_level[level] = (existing.cardData.by_level[level] || 0) + levelCount;
-                  });
-                }
-              } else {
-                allCards.set(actualCardId, {
-              total: count,
-              cardData: { ...(typeof data === 'object' ? data : {}), type: resolvedCard.type, by_level: { ...data.by_level } },
-              name: resolvedCard.name
-            });
-          }
-        });
-      }
-    });
-  });
-    // Sort and slice to get top 50
-    const sortedCards = Array.from(allCards.entries())
-      .sort((a, b) => b[1].total - a[1].total)
-      .slice(0, 50);
-    const result = sortedCards.map(([cardId, data]) => {
-      const resolvedCard = this.resolveSupportCardInfo(cardId, data.cardData);
-      const cardName = data.name || resolvedCard.name;
-      const imageUrl = resolvedCard.imageUrl;
-      const cardType = data.cardData?.type || resolvedCard.type;
-      const statColor = cardType ? this.colorsService.getStatColor(cardType.toLowerCase()) : undefined;
-      // Calculate percentage based on total number of Uma Musume trained
-      const percentage = totalUmasTrained > 0 ? (data.total / totalUmasTrained) * 100 : 0;
-      return {
-        label: cardName,
-        value: data.total,
-        percentage: percentage,
-        imageUrl: imageUrl,
-        id: cardId || undefined,
-        type: cardType,
-        color: statColor
-      };
-    });
-    return result;
+      return this.buildSupportCardImageData(
+        this.getDistanceMetricMaps(distanceData, 'support_cards'),
+        this.getDistanceTotalUmasTrained(distanceData)
+      );
     });
   }
   // Character-specific chart data methods
@@ -3330,137 +3479,10 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   // ...existing code...
   private computeTopSupportCardsWithImages(): ChartDataPoint[] {
-    if (!this.globalStats?.support_cards?.by_team_class) return [];
-    const activeClasses = this.getActiveClassIds();
-    const allClassCount = Object.keys(this.classFilters).length;
-    const isAllClassesActive = activeClasses.length === allClassCount;
-    
-    const activeScenarios = this.getActiveScenarioIds();
-    const allScenarioCount = Object.keys(this.scenarioFilters).length;
-    const isAllScenariosActive = activeScenarios.length === allScenarioCount;
-    
-    const aggregatedCards = new Map<string, any>();
-    // Calculate total Uma Musume trained
-    let totalUmasTrained = 0;
-    // Determine if we should use scenario data (when all classes are active and scenario filter is used)
-    const useScenarioData = isAllClassesActive && !isAllScenariosActive && this.globalStats?.support_cards?.by_scenario;
-    if (useScenarioData) {
-      // Use scenario distribution to get trained_umas from active scenarios
-      activeScenarios.forEach(scenarioId => {
-        const scenarioData = this.globalStats?.scenario_distribution?.[scenarioId];
-        if (scenarioData && scenarioData.count) {
-          totalUmasTrained += scenarioData.count;
-        }
-      });
-      
-      // Aggregate card data from active scenarios
-      activeScenarios.forEach(scenarioId => {
-        const scenarioData = this.globalStats!.support_cards.by_scenario[scenarioId];
-        if (scenarioData) {
-          Object.entries(scenarioData).forEach(([cardId, cardData]: [string, any]) => {
-            const resolvedCard = this.resolveSupportCardInfo(cardId, cardData);
-            const count = this.getEntryCount(cardData);
-            const actualCardId = resolvedCard.id || cardId;
-            if (aggregatedCards.has(actualCardId)) {
-              const existing = aggregatedCards.get(actualCardId);
-              existing.total += count;
-              existing.by_level = existing.by_level || {};
-              if (cardData.by_level) {
-                Object.entries(cardData.by_level).forEach(([level, levelCount]: [string, any]) => {
-                  existing.by_level[level] = (existing.by_level[level] || 0) + levelCount;
-                });
-              }
-            } else {
-              aggregatedCards.set(actualCardId, {
-                ...(typeof cardData === 'object' ? cardData : {}),
-                id: resolvedCard.id,
-                name: resolvedCard.name,
-                type: resolvedCard.type,
-                total: count,
-                by_level: { ...cardData.by_level }
-              });
-            }
-          });
-        }
-      });
-    } else {
-      // Use team_class_distribution to get trained_umas only from active classes
-      activeClasses.forEach(classId => {
-        const classData = this.globalStats?.team_class_distribution?.[classId];
-        if (classData && typeof classData === 'object' && classData.trained_umas) {
-          totalUmasTrained += classData.trained_umas;
-        }
-      });
-      // If no trained_umas data available, fallback to uma_distribution approach
-      if (totalUmasTrained === 0) {
-        if (this.globalStats?.uma_distribution) {
-          Object.values(this.globalStats.uma_distribution).forEach((data: any) => {
-            const count = data.count || data.total || 0;
-            totalUmasTrained += count;
-          });
-        }
-      }
-      
-      // Aggregate all card data by ID instead of name from active classes
-      activeClasses.forEach(classId => {
-        const dataList = this.getMetricData('support_cards', classId);
-        
-        dataList.forEach(classData => {
-          if (classData) {
-            Object.entries(classData).forEach(([cardId, cardData]: [string, any]) => {
-              const resolvedCard = this.resolveSupportCardInfo(cardId, cardData);
-              const count = this.getEntryCount(cardData);
-              const actualCardId = resolvedCard.id || cardId;
-              if (aggregatedCards.has(actualCardId)) {
-                const existing = aggregatedCards.get(actualCardId);
-                existing.total += count;
-                existing.by_level = existing.by_level || {};
-                if (cardData.by_level) {
-                  Object.entries(cardData.by_level).forEach(([level, levelCount]: [string, any]) => {
-                    existing.by_level[level] = (existing.by_level[level] || 0) + levelCount;
-                  });
-                }
-              } else {
-                aggregatedCards.set(actualCardId, {
-                  ...(typeof cardData === 'object' ? cardData : {}),
-                  id: resolvedCard.id,
-                  name: resolvedCard.name,
-                  type: resolvedCard.type,
-                  total: count,
-                  by_level: { ...cardData.by_level }
-                });
-              }
-            });
-          }
-        });
-      });
-    }
-    // Sort and slice to get top 50
-    const sortedCards = Array.from(aggregatedCards.entries())
-      .sort((a, b) => b[1].total - a[1].total)
-      .slice(0, 50);
-    const result = sortedCards.map(([cardId, data]) => {
-      const resolvedCard = this.resolveSupportCardInfo(cardId, data);
-      const name = data.name || resolvedCard.name;
-      const imageUrl = resolvedCard.imageUrl;
-      const cardType = data?.type || resolvedCard.type;
-      const statColor = cardType ? this.colorsService.getStatColor(cardType.toLowerCase()) : undefined;
-      // Calculate percentage: what percentage of trained Uma Musume used this card
-      // data.total = number of times this card was used
-      // totalUmasTrained = total number of Uma Musume trained
-      // percentage = (card usage / total trained) * 100
-      const percentage = totalUmasTrained > 0 ? (data.total / totalUmasTrained) * 100 : 0;
-      return {
-        label: name,
-        value: data.total,
-        percentage: percentage,
-        imageUrl: imageUrl,
-        id: cardId || undefined,
-        type: cardType,
-        color: statColor
-      };
-    });
-    return result;
+    return this.buildSupportCardImageData(
+      this.getGlobalMetricMaps('support_cards'),
+      this.getGlobalTotalUmasTrained()
+    );
   }
   // Generate single-series Uma Musume data with images (for image list display)
   private computeTopUmasWithImages(): ChartDataPoint[] {
@@ -3552,120 +3574,10 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   // Generate single-series Skills data with images (for image list display)
   private computeTopSkillsWithImages(): ChartDataPoint[] {
-    if (!this.globalStats?.skills?.by_team_class) return [];
-    const activeClasses = this.getActiveClassIds();
-    const allClassCount = Object.keys(this.classFilters).length;
-    const isAllClassesActive = activeClasses.length === allClassCount;
-    
-    const activeScenarios = this.getActiveScenarioIds();
-    const allScenarioCount = Object.keys(this.scenarioFilters).length;
-    const isAllScenariosActive = activeScenarios.length === allScenarioCount;
-    
-    const aggregatedSkills = new Map<string, any>();
-    // Calculate total Uma Musume trained
-    let totalUmasTrained = 0;
-    // Determine if we should use scenario data
-    const useScenarioData = isAllClassesActive && !isAllScenariosActive && this.globalStats?.skills?.by_scenario;
-    if (useScenarioData) {
-      // Use scenario distribution to get trained_umas from active scenarios
-      activeScenarios.forEach(scenarioId => {
-        const scenarioData = this.globalStats?.scenario_distribution?.[scenarioId];
-        if (scenarioData && scenarioData.count) {
-          totalUmasTrained += scenarioData.count;
-        }
-      });
-      
-      // Aggregate skill data from active scenarios
-      activeScenarios.forEach(scenarioId => {
-        const scenarioData = this.globalStats!.skills.by_scenario[scenarioId];
-        if (scenarioData) {
-          Object.entries(scenarioData).forEach(([skillId, skillData]: [string, any]) => {
-            const resolvedSkill = this.resolveSkillInfo(skillId, skillData);
-            const skillKey = String(resolvedSkill.id || skillId);
-            const count = this.getEntryCount(skillData);
-            if (aggregatedSkills.has(skillKey)) {
-              const existing = aggregatedSkills.get(skillKey);
-              existing.total += count;
-              existing.avg_level = ((existing.avg_level * existing.count + (skillData.avg_level || 0) * count) / (existing.count + count));
-              existing.count += count;
-            } else {
-              aggregatedSkills.set(skillKey, {
-                ...(typeof skillData === 'object' ? skillData : {}),
-                id: resolvedSkill.id,
-                name: resolvedSkill.name,
-                icon: resolvedSkill.icon,
-                total: count,
-                count: count
-              });
-            }
-          });
-        }
-      });
-    } else {
-      // Use team_class_distribution to get trained_umas only from active classes
-      activeClasses.forEach(classId => {
-        const classData = this.globalStats?.team_class_distribution?.[classId];
-        if (classData && typeof classData === 'object' && classData.trained_umas) {
-          totalUmasTrained += classData.trained_umas;
-        }
-      });
-      // If no trained_umas data available, fallback to uma_distribution approach
-      if (totalUmasTrained === 0) {
-        if (this.globalStats?.uma_distribution) {
-          Object.values(this.globalStats.uma_distribution).forEach((data: any) => {
-            const count = data.count || data.total || 0;
-            totalUmasTrained += count;
-          });
-        }
-      }
-      
-      // Aggregate skill data from active classes
-      activeClasses.forEach(classId => {
-        const dataList = this.getMetricData('skills', classId);
-        
-        dataList.forEach(classData => {
-          if (classData) {
-            Object.entries(classData).forEach(([skillId, skillData]: [string, any]) => {
-              const resolvedSkill = this.resolveSkillInfo(skillId, skillData);
-              const skillKey = String(resolvedSkill.id || skillId);
-              const count = this.getEntryCount(skillData);
-              if (aggregatedSkills.has(skillKey)) {
-                const existing = aggregatedSkills.get(skillKey);
-                existing.total += count;
-                existing.avg_level = ((existing.avg_level * existing.count + (skillData.avg_level || 0) * count) / (existing.count + count));
-                existing.count += count;
-              } else {
-                aggregatedSkills.set(skillKey, {
-                  ...(typeof skillData === 'object' ? skillData : {}),
-                  id: resolvedSkill.id,
-                  name: resolvedSkill.name,
-                  icon: resolvedSkill.icon,
-                  total: count,
-                  count: count
-                });
-              }
-            });
-          }
-        });
-      });
-    }
-    // Sort and slice to get top 50
-    const sortedSkills = Array.from(aggregatedSkills.entries())
-      .sort((a, b) => b[1].total - a[1].total)
-      .slice(0, 50);
-    return sortedSkills.map(([skillKey, data]) => {
-      const resolvedSkill = this.resolveSkillInfo(skillKey, data);
-      // Calculate percentage: what percentage of trained Uma Musume used this skill
-      const percentage = totalUmasTrained > 0 ? (data.total / totalUmasTrained) * 100 : 0;
-      return {
-        label: resolvedSkill.name,
-        value: data.total,
-        percentage: percentage,
-        imageUrl: resolvedSkill.imageUrl,
-        id: resolvedSkill.id || skillKey,
-        icon: resolvedSkill.icon
-      };
-    });
+    return this.buildSkillImageData(
+      this.getGlobalMetricMaps('skills'),
+      this.getGlobalTotalUmasTrained()
+    );
   }
   // Helper method to get skill icon URL
   private getSkillIconUrl(skillName: string): string {
@@ -3866,71 +3778,10 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     const cacheKey = this.generateCacheKey('distanceSkillsWithImages', distance, this.classFilters, this.scenarioFilters);
     return this.getCachedData(cacheKey, () => {
       const distanceData = this.distanceStats[distance];
-      if (!distanceData?.by_team_class) return [];
-      const activeClasses = this.getActiveClassIds();
-      const aggregatedSkills = new Map<string, any>();
-      // Calculate total Uma Musume trained only from selected/active classes for this distance
-      let totalUmasTrained = 0;
-      // Use the correct field names from distance data structure (same as support cards method)
-      activeClasses.forEach(classId => {
-        const dataList = this.getMetricData('', classId, distanceData);
-        
-        dataList.forEach(classData => {
-          if (classData?.total_trained_umas !== undefined) {
-            totalUmasTrained += classData.total_trained_umas;
-          } else if (classData?.total_entries !== undefined) {
-            totalUmasTrained += classData.total_entries;
-          } else if (classData?.trainer_count !== undefined) {
-            totalUmasTrained += classData.trainer_count;
-          }
-        });
-      });
-      // Aggregate skill data from active classes only
-      activeClasses.forEach(classId => {
-        const dataList = this.getMetricData('', classId, distanceData);
-        
-        dataList.forEach(classData => {
-          if (classData?.skills) {
-            Object.entries(classData.skills).forEach(([skillId, skillData]: [string, any]) => {
-            const resolvedSkill = this.resolveSkillInfo(skillId, skillData);
-            const skillKey = String(resolvedSkill.id || skillId);
-            const count = this.getEntryCount(skillData);
-            if (aggregatedSkills.has(skillKey)) {
-              const existing = aggregatedSkills.get(skillKey);
-              existing.total += count;
-              existing.avg_level = ((existing.avg_level * existing.count + (skillData.avg_level || 0) * count) / (existing.count + count));
-              existing.count += count;
-            } else {
-              aggregatedSkills.set(skillKey, {
-                ...(typeof skillData === 'object' ? skillData : {}),
-                id: resolvedSkill.id,
-                name: resolvedSkill.name,
-                icon: resolvedSkill.icon,
-                total: count,
-                count: count
-              });
-            }
-          });
-        }
-      });
-      });
-      // Sort and slice to get top 50
-      const sortedSkills = Array.from(aggregatedSkills.entries())
-        .sort((a, b) => b[1].total - a[1].total)
-        .slice(0, 50);
-      return sortedSkills.map(([skillKey, data]) => {
-        const resolvedSkill = this.resolveSkillInfo(skillKey, data);
-        // Calculate percentage: what percentage of trained Uma Musume used this skill
-        const percentage = totalUmasTrained > 0 ? (data.total / totalUmasTrained) * 100 : 0;
-        return {
-          label: resolvedSkill.name,
-          value: data.total,
-          percentage: percentage,
-          imageUrl: resolvedSkill.imageUrl,
-          id: resolvedSkill.id || skillKey,
-          icon: resolvedSkill.icon
-        };
-      });
+      return this.buildSkillImageData(
+        this.getDistanceMetricMaps(distanceData, 'skills'),
+        this.getDistanceTotalUmasTrained(distanceData)
+      );
     }); // Close the getCachedData callback
   }
   scrollToSection(sectionId: string) {

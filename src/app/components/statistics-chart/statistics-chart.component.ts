@@ -88,7 +88,8 @@ export interface ChartConfig {
             <!-- Content overlay -->
             <div class="item-content">
               <div class="image-container">
-                <img [src]="item.imageUrl" 
+                <img *ngIf="item.imageUrl"
+                     [src]="item.imageUrl" 
                      [alt]="item.label"
                      [style.width.px]="getResponsiveImageSize()"
                      [style.height.px]="getResponsiveImageSize()"
@@ -179,13 +180,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
       this.config?.showImages &&
       !this.config?.verticalImages && // Not vertical images
       !this.config?.showStatSymbols && // Not stat symbols
-      this.data?.length > 0 &&
-      this.data.every(item =>
-        item.imageUrl &&
-        item.imageUrl.trim() !== '' &&
-        item.imageUrl !== 'undefined' &&
-        item.imageUrl !== 'null'
-      )
+      this.data?.length > 0
     );
     // Compute showStatSymbolList
     this._showStatSymbolList = !!(
