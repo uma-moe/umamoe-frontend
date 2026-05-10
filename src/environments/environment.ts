@@ -6,12 +6,15 @@ export const environment = {
   turnstile: {
     enabled: false,
     siteKey: '',
-    headerName: 'X-Turnstile-Token',
+    challengeHeaderName: 'X-Turnstile-Token',
+    proofHeaderName: 'X-Browser-Proof',
+    proofTtlHeaderName: 'X-Browser-Proof-TTL',
+    exchangePath: '/api/auth/browser-proof',
     action: 'api_request',
     theme: 'auto' as const,
     appearance: 'interaction-only' as const,
     tokenTimeoutMs: 15000,
-    tokenMaxAgeMs: 240000,
+    proofRefreshSkewMs: 5000,
     failOpen: false,
   }
 };

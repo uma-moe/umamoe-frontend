@@ -20,31 +20,10 @@ export class TurnstileInterceptor implements HttpInterceptor {
       return next.handle(req);
     }
 
-    return from(this.turnstileService.getToken(environment.turnstile.action)).pipe(
-      catchError(error => {
-        if (environment.turnstile.failOpen) {
-          console.warn('Turnstile token request failed; sending request without proof because failOpen is enabled.', error);
-          return of('');
-        }
-
-        return throwError(() => new HttpErrorResponse({
-          error,
-          status: 0,
-          statusText: 'Turnstile verification failed',
-          url: req.url,
-        }));
-      }),
-      switchMap(token => {
-        if (!token) {
-          return next.handle(req);
-        }
-
-        return next.handle(req.clone({
-          setHeaders: {
-            [this.turnstileService.headerName]: token,
-          },
-        }));
-      }),
+    return from(this.prepareRequest(req, false, true)).pipe(
+      switchMap(preparedReq => next.handle(preparedReq).pipe(
+        catchError(error => this.retryWithFreshProof(error, req, preparedReq, next)),
+      )),
     );
   }
 
@@ -57,11 +36,92 @@ export class TurnstileInterceptor implements HttpInterceptor {
       return false;
     }
 
-    if (req.headers.has(environment.turnstile.headerName) || req.headers.has('X-API-Key')) {
+    if (
+      req.headers.has(this.turnstileService.proofHeaderName)
+      || req.headers.has(environment.turnstile.challengeHeaderName)
+      || req.headers.has('X-API-Key')
+      || this.isProofExchangeRequest(req.url)
+    ) {
       return false;
     }
 
     return this.isOwnApiRequest(req.url);
+  }
+
+  private async prepareRequest(
+    req: HttpRequest<unknown>,
+    forceRefresh: boolean,
+    allowFailOpen: boolean,
+  ): Promise<HttpRequest<unknown>> {
+    try {
+      const proofToken = await this.turnstileService.getProofToken(environment.turnstile.action, forceRefresh);
+      if (!proofToken) {
+        return req;
+      }
+
+      return req.clone({
+        setHeaders: {
+          [this.turnstileService.proofHeaderName]: proofToken,
+        },
+      });
+    } catch (error) {
+      if (allowFailOpen && environment.turnstile.failOpen) {
+        console.warn('Browser proof refresh failed; sending request without proof because failOpen is enabled.', error);
+        return req;
+      }
+
+      throw new HttpErrorResponse({
+        error,
+        status: 0,
+        statusText: 'Turnstile verification failed',
+        url: req.url,
+      });
+    }
+  }
+
+  private retryWithFreshProof(
+    error: unknown,
+    originalReq: HttpRequest<unknown>,
+    sentReq: HttpRequest<unknown>,
+    next: HttpHandler,
+  ): Observable<HttpEvent<unknown>> {
+    if (!(error instanceof HttpErrorResponse) || !this.shouldRetryWithFreshProof(error)) {
+      return throwError(() => error);
+    }
+
+    const failedProofToken = sentReq.headers.get(this.turnstileService.proofHeaderName) ?? undefined;
+    this.turnstileService.invalidateBrowserProof(failedProofToken);
+
+    return from(this.prepareRequest(originalReq, true, false)).pipe(
+      switchMap(retryReq => next.handle(retryReq)),
+    );
+  }
+
+  private shouldRetryWithFreshProof(error: HttpErrorResponse): boolean {
+    if (error.status !== 403) {
+      return false;
+    }
+
+    const errorCode = this.extractErrorCode(error.error);
+    return errorCode === 'browser_proof_required' || errorCode === 'turnstile_invalid';
+  }
+
+  private extractErrorCode(errorBody: unknown): string | null {
+    if (!errorBody || typeof errorBody !== 'object') {
+      return null;
+    }
+
+    const errorCode = (errorBody as { error?: unknown }).error;
+    return typeof errorCode === 'string' ? errorCode : null;
+  }
+
+  private isProofExchangeRequest(url: string): boolean {
+    const exchangePath = environment.turnstile.exchangePath;
+    if (url === exchangePath || url.endsWith(exchangePath)) {
+      return true;
+    }
+
+    return !!environment.apiUrl && url === `${environment.apiUrl}${exchangePath}`;
   }
 
   private isOwnApiRequest(url: string): boolean {

@@ -1,5 +1,7 @@
 import { DOCUMENT } from '@angular/common';
+import { HttpBackend, HttpClient } from '@angular/common/http';
 import { Inject, Injectable, NgZone } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 type TurnstileTheme = 'auto' | 'light' | 'dark';
@@ -30,7 +32,7 @@ interface TurnstileApi {
   remove(containerOrWidgetId: HTMLElement | string): void;
 }
 
-interface CachedTurnstileToken {
+interface CachedBrowserProofToken {
   token: string;
   action: string;
   expiresAt: number;
@@ -46,24 +48,27 @@ declare global {
 export class TurnstileService {
   private readonly scriptId = 'cf-turnstile-api';
   private readonly containerId = 'cf-turnstile-api-proof';
+  private readonly exchangeHttp: HttpClient;
   private scriptPromise: Promise<void> | null = null;
-  private tokenQueue: Promise<void> = Promise.resolve();
-  private cachedToken: CachedTurnstileToken | null = null;
-  private primedTokenTask: Promise<CachedTurnstileToken> | null = null;
-  private primeTimerId: number | null = null;
+  private proofQueue: Promise<void> = Promise.resolve();
+  private cachedBrowserProof: CachedBrowserProofToken | null = null;
+  private browserProofTask: Promise<CachedBrowserProofToken> | null = null;
   private warnedMissingSiteKey = false;
 
   constructor(
     @Inject(DOCUMENT) private document: Document,
     private zone: NgZone,
-  ) {}
+    httpBackend: HttpBackend,
+  ) {
+    this.exchangeHttp = new HttpClient(httpBackend);
+  }
 
   get enabled(): boolean {
     return !!environment.turnstile.enabled && !!environment.turnstile.siteKey;
   }
 
-  get headerName(): string {
-    return environment.turnstile.headerName;
+  get proofHeaderName(): string {
+    return environment.turnstile.proofHeaderName;
   }
 
   prime(): void {
@@ -76,39 +81,10 @@ export class TurnstileService {
       return;
     }
 
-    const action = this.normalizeAction(environment.turnstile.action);
-    const cached = this.cachedToken;
-    if (cached && cached.action === action && cached.expiresAt > Date.now()) {
-      return;
-    }
-
-    if (this.primedTokenTask) {
-      return;
-    }
-
-    const tokenTask = this.tokenQueue
-      .then(() => this.executeTokenRequest(action))
-      .then(token => {
-        const primedToken = {
-          token,
-          action,
-          expiresAt: Date.now() + environment.turnstile.tokenMaxAgeMs,
-        };
-        this.cachedToken = primedToken;
-        return primedToken;
-      });
-
-    this.primedTokenTask = tokenTask;
-    this.tokenQueue = tokenTask.then(() => undefined, () => undefined);
-
-    tokenTask
-      .then(
-        () => this.clearPrimedTask(tokenTask),
-        () => this.clearPrimedTask(tokenTask),
-      );
+    void this.loadScript().catch(() => undefined);
   }
 
-  async getToken(action = environment.turnstile.action): Promise<string> {
+  async getProofToken(action = environment.turnstile.action, forceRefresh = false): Promise<string> {
     if (!environment.turnstile.enabled) {
       return '';
     }
@@ -119,45 +95,93 @@ export class TurnstileService {
     }
 
     const normalizedAction = this.normalizeAction(action);
-    const cached = this.cachedToken;
-    if (cached && cached.action === normalizedAction && cached.expiresAt > Date.now()) {
-      this.cachedToken = null;
-      this.schedulePrime();
-      return cached.token;
-    }
 
-    if (cached) {
-      this.cachedToken = null;
-    }
+    if (!forceRefresh) {
+      const cached = this.cachedBrowserProof;
+      if (this.hasUsableBrowserProof(cached, normalizedAction)) {
+        return cached.token;
+      }
 
-    const primedTokenTask = this.primedTokenTask;
-    if (primedTokenTask) {
-      const primedToken = await primedTokenTask.catch(() => null);
-      if (primedToken && primedToken.action === normalizedAction && primedToken.expiresAt > Date.now()) {
-        if (this.cachedToken?.token === primedToken.token) {
-          this.cachedToken = null;
+      const existingTask = this.browserProofTask;
+      if (existingTask) {
+        const proof = await existingTask.catch(() => null);
+        if (proof && this.hasUsableBrowserProof(proof, normalizedAction)) {
+          return proof.token;
         }
-        this.schedulePrime();
-        return primedToken.token;
       }
     }
 
-    const tokenTask = this.tokenQueue.then(() => this.executeTokenRequest(normalizedAction));
-    this.tokenQueue = tokenTask.then(() => undefined, () => undefined);
-    const token = await tokenTask;
-    this.schedulePrime();
-    return token;
+    const proofTask = this.proofQueue.then(() => this.exchangeBrowserProof(normalizedAction));
+    this.browserProofTask = proofTask;
+    this.proofQueue = proofTask.then(() => undefined, () => undefined);
+
+    try {
+      const proof = await proofTask;
+      return proof.token;
+    } finally {
+      this.clearBrowserProofTask(proofTask);
+    }
   }
 
-  private schedulePrime(): void {
-    if (this.primeTimerId !== null) {
+  invalidateBrowserProof(token?: string): void {
+    if (!this.cachedBrowserProof) {
       return;
     }
 
-    this.primeTimerId = window.setTimeout(() => {
-      this.primeTimerId = null;
-      this.prime();
-    }, 0);
+    if (!token || this.cachedBrowserProof.token === token) {
+      this.cachedBrowserProof = null;
+    }
+  }
+
+  private hasUsableBrowserProof(
+    proof: CachedBrowserProofToken | null,
+    action: string,
+  ): proof is CachedBrowserProofToken {
+    return !!proof
+      && proof.action === action
+      && Date.now() < proof.expiresAt - environment.turnstile.proofRefreshSkewMs;
+  }
+
+  private async exchangeBrowserProof(action: string): Promise<CachedBrowserProofToken> {
+    const turnstileToken = await this.executeTokenRequest(action);
+    const response = await firstValueFrom(this.exchangeHttp.post(this.getExchangeUrl(), null, {
+      observe: 'response',
+      responseType: 'text',
+      withCredentials: true,
+      headers: {
+        [environment.turnstile.challengeHeaderName]: turnstileToken,
+      },
+    }));
+
+    const token = response.headers.get(environment.turnstile.proofHeaderName)?.trim() ?? '';
+    const ttlSeconds = Number(response.headers.get(environment.turnstile.proofTtlHeaderName) ?? '0');
+
+    if (!token || !Number.isFinite(ttlSeconds) || ttlSeconds <= 0) {
+      throw new Error(
+        'Browser proof exchange succeeded but proof headers were unavailable. Ensure CORS exposes X-Browser-Proof and X-Browser-Proof-TTL.',
+      );
+    }
+
+    const proof = {
+      token,
+      action,
+      expiresAt: Date.now() + ttlSeconds * 1000,
+    };
+    this.cachedBrowserProof = proof;
+    return proof;
+  }
+
+  private getExchangeUrl(): string {
+    const exchangePath = environment.turnstile.exchangePath;
+    if (/^https?:\/\//i.test(exchangePath)) {
+      return exchangePath;
+    }
+
+    if (environment.apiUrl && exchangePath.startsWith('/')) {
+      return `${environment.apiUrl}${exchangePath}`;
+    }
+
+    return exchangePath;
   }
 
   private async executeTokenRequest(action: string): Promise<string> {
@@ -279,9 +303,9 @@ export class TurnstileService {
     console.warn('Turnstile is enabled but no site key is configured. API proof headers will not be added.');
   }
 
-  private clearPrimedTask(tokenTask: Promise<CachedTurnstileToken>): void {
-    if (this.primedTokenTask === tokenTask) {
-      this.primedTokenTask = null;
+  private clearBrowserProofTask(tokenTask: Promise<CachedBrowserProofToken>): void {
+    if (this.browserProofTask === tokenTask) {
+      this.browserProofTask = null;
     }
   }
 }

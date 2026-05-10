@@ -264,6 +264,8 @@ export interface StatisticsIndex {
   character_ids: string[];
   version?: string;
   name?: string;
+  format?: string;
+  format_version?: number;
 }
 export interface StatisticsDataset {
   id: string;
@@ -271,4 +273,6 @@ export interface StatisticsDataset {
   date: string;
   basePath: string;
   index: StatisticsIndex;
+  format?: string;
+  format_version?: number;
 }

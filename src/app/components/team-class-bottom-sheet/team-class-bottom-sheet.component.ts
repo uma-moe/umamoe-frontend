@@ -6,6 +6,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatBottomSheetRef, MAT_BOTTOM_SHEET_DATA } from '@angular/material/bottom-sheet';
 import { MatListModule } from '@angular/material/list';
 import { ColorsService } from '../../services/colors.service';
+import { getStatisticsDistanceColor, getStatisticsDistanceIcon, getStatisticsDistanceLabel } from '../../data/statistics-lookup.data';
 export interface ClassFilterState {
   [key: string]: boolean;
 }
@@ -203,34 +204,13 @@ export class TeamClassBottomSheetComponent implements OnInit {
     return num.toLocaleString();
   }
   getDistanceIcon(distance: string): string {
-    const icons: { [key: string]: string } = {
-      'sprint': 'flash_on',
-      'mile': 'directions_run',
-      'medium': 'timeline',
-      'long': 'trending_up',
-      'dirt': 'landscape'
-    };
-    return icons[distance] || 'track_changes';
+    return getStatisticsDistanceIcon(distance);
   }
   getDistanceLabel(distance: string): string {
-    const labels: { [key: string]: string } = {
-      'sprint': 'Sprint',
-      'mile': 'Mile',
-      'medium': 'Medium',
-      'long': 'Long',
-      'dirt': 'Dirt'
-    };
-    return labels[distance] || distance;
+    return getStatisticsDistanceLabel(distance);
   }
   getDistanceColor(distance: string): string {
-    const colors: { [key: string]: string } = {
-      'sprint': '#e74c3c', // Red
-      'mile': '#f39c12', // Orange
-      'medium': '#2ecc71', // Green 
-      'long': '#3498db', // Blue
-      'dirt': '#9b59b6' // Purple
-    };
-    return colors[distance] || '#7f8c8d';
+    return getStatisticsDistanceColor(distance);
   }
   getDistanceButtonStyle(distance: string): any {
     const isSelected = this.localSelectedDistance === distance;

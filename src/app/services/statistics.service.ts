@@ -12,6 +12,7 @@ import {
 import * as characterData from '../../data/character.json';
 import characterNamesData from '../../data/character_names.json';
 import { getAllSupportCards } from '../data/support-cards.data';
+import { isIdsStatisticsFormat, toStatisticsDistanceFileName } from '../data/statistics-lookup.data';
 @Injectable({
   providedIn: 'root'
 })
@@ -83,8 +84,9 @@ export class StatisticsService {
     if (!datasetToUse) {
       throw new Error('No dataset selected');
     }
+    const distanceFileName = toStatisticsDistanceFileName(distance, isIdsStatisticsFormat(datasetToUse));
     return this.http.get<DistanceStatistics>(
-      `${datasetToUse.basePath}/distance/${distance.toLowerCase()}.json`
+      `${datasetToUse.basePath}/distance/${distanceFileName}.json`
     );
   }
   private loadCharacterNameMapping(): void {

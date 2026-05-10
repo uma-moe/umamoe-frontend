@@ -467,7 +467,7 @@
             <!-- Loading state for distance data -->
             <div *ngIf="distanceLoading" class="distance-loading">
               <mat-spinner diameter="40"></mat-spinner>
-              <span>Loading <b>{{ selectedDistance.value }}</b> statistics...</span>
+              <span>Loading <b>{{ getDistanceLabel(selectedDistance.value) }}</b> statistics...</span>
             </div>
 
             <!-- Distance charts when data is loaded -->
@@ -480,7 +480,7 @@
                 <div class="chart-description">
                   <h3>Top Uma Musume</h3>
                   <p>
-                    Most used Uma Musume in <b>{{ selectedDistance.value }}</b> races.
+                    Most used Uma Musume in <b>{{ getDistanceLabel(selectedDistance.value) }}</b> races.
                   </p>
                 </div>
                 <app-statistics-chart
@@ -496,7 +496,7 @@
                   <h3>Top Support Cards</h3>
                   <p>
                     Most used support cards in
-                    <b>{{ selectedDistance.value }}</b> races.
+                    <b>{{ getDistanceLabel(selectedDistance.value) }}</b> races.
                   </p>
                 </div>
                 <app-statistics-chart
@@ -510,7 +510,7 @@
               <div class="chart-card full-width" id="distance-skills">
                 <div class="chart-description">
                   <h3>Top Skills</h3>
-                  <p>Most used skills in <b>{{ selectedDistance.value }}</b> races.</p>
+                  <p>Most used skills in <b>{{ getDistanceLabel(selectedDistance.value) }}</b> races.</p>
                 </div>
                 <app-statistics-chart
                   [data]="(distanceSkillsWithImages$ | async) || []"
@@ -523,12 +523,12 @@
             <!-- Stat Distribution for Distance -->
             <div class="chart-description global-stats-description">
               <h3>
-                {{ selectedDistance.value | titlecase }} Distance Stat
+                {{ getDistanceLabel(selectedDistance.value) }} Distance Stat
                 Distributions
               </h3>
               <p>
                 Distribution of all stats across
-                <b>{{ selectedDistance.value }}</b> Stadium Teams. Shows the range,
+                <b>{{ getDistanceLabel(selectedDistance.value) }}</b> Stadium Teams. Shows the range,
                 frequency, and patterns of stat values achieved in Team Stadium.
                 Each chart displays the histogram of stat values, helping
                 identify optimal targets and common ranges.
@@ -550,7 +550,7 @@
                   </h3>
                   <p>
                     Distribution of speed stats for
-                    <b>{{ selectedDistance.value }}</b> races.
+                    <b>{{ getDistanceLabel(selectedDistance.value) }}</b> races.
                   </p>
                 </div>
                 <app-statistics-chart
@@ -574,7 +574,7 @@
                   </h3>
                   <p>
                     Distribution of stamina stats for
-                    <b>{{ selectedDistance.value }}</b> races.
+                    <b>{{ getDistanceLabel(selectedDistance.value) }}</b> races.
                   </p>
                 </div>
                 <app-statistics-chart
@@ -597,7 +597,7 @@
                   </h3>
                   <p>
                     Distribution of power stats for
-                    <b>{{ selectedDistance.value }}</b> races.
+                    <b>{{ getDistanceLabel(selectedDistance.value) }}</b> races.
                   </p>
                 </div>
                 <app-statistics-chart
@@ -621,7 +621,7 @@
                   </h3>
                   <p>
                     Distribution of guts stats for
-                    <b>{{ selectedDistance.value }}</b> races.
+                    <b>{{ getDistanceLabel(selectedDistance.value) }}</b> races.
                   </p>
                 </div>
                 <app-statistics-chart
@@ -644,7 +644,7 @@
                   </h3>
                   <p>
                     Distribution of wisdom stats for
-                    <b>{{ selectedDistance.value }}</b> races.
+                    <b>{{ getDistanceLabel(selectedDistance.value) }}</b> races.
                   </p>
                 </div>
                 <app-statistics-chart
@@ -659,7 +659,7 @@
                   <h3>Average Stats Comparison</h3>
                   <p>
                     Compare average values across all stat types for
-                    <b>{{ selectedDistance.value }}</b>.
+                    <b>{{ getDistanceLabel(selectedDistance.value) }}</b>.
                   </p>
                 </div>
                 <app-statistics-chart
@@ -677,7 +677,7 @@
                   <h3>Support Card Type Distribution</h3>
                   <p>
                     Distribution of support card types in Team Stadium decks for
-                    <b>{{ selectedDistance.value }}</b> races. Shows which card types
+                    <b>{{ getDistanceLabel(selectedDistance.value) }}</b> races. Shows which card types
                     are most commonly used.
                   </p>
                 </div>
@@ -697,7 +697,7 @@
                   <h3>Most Used Deck Compositions</h3>
                   <p>
                     Most frequent support card deck compositions for
-                    <b>{{ selectedDistance.value }}</b> races showing common card type
+                    <b>{{ getDistanceLabel(selectedDistance.value) }}</b> races showing common card type
                     combinations.
                   </p>
                 </div>
@@ -720,7 +720,7 @@
               <h4>No data available</h4>
               <p>
                 No statistics data found for
-                <b>{{ selectedDistance.value }}</b> distance.
+                <b>{{ getDistanceLabel(selectedDistance.value) }}</b> distance.
               </p>
             </div>
           </div>

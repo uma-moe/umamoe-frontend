@@ -7,6 +7,7 @@ import { MatBottomSheetRef } from '@angular/material/bottom-sheet';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ColorsService } from '../../services/colors.service';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
+import { getStatisticsDistanceColor, getStatisticsDistanceIcon, getStatisticsDistanceLabel } from '../../data/statistics-lookup.data';
 export interface ClassFilterState {
   [key: string]: boolean;
 }
@@ -281,34 +282,13 @@ export class ClassFilterComponent implements OnInit, OnDestroy, OnChanges {
     this.distanceChanged.emit({ distance });
   }
   getDistanceIcon(distance: string): string {
-    const icons: { [key: string]: string } = {
-      'sprint': 'flash_on',           // Lightning bolt for sprint
-      'mile': 'directions_run',       // Running person for mile
-      'medium': 'timeline',           // Timeline for medium distance
-      'long': 'trending_up',          // Trending up for long distance
-      'dirt': 'landscape'             // Landscape for dirt track
-    };
-    return icons[distance] || 'track_changes';
+    return getStatisticsDistanceIcon(distance);
   }
   getDistanceLabel(distance: string): string {
-    const labels: { [key: string]: string } = {
-      'sprint': 'Sprint',
-      'mile': 'Mile',
-      'medium': 'Medium',
-      'long': 'Long',
-      'dirt': 'Dirt'
-    };
-    return labels[distance] || distance;
+    return getStatisticsDistanceLabel(distance);
   }
   getDistanceColor(distance: string): string {
-    const colors: { [key: string]: string } = {
-      'sprint': '#e74c3c',    // Red for sprint
-      'mile': '#f39c12',      // Orange for mile
-      'medium': '#2ecc71',    // Green for medium
-      'long': '#3498db',      // Blue for long
-      'dirt': '#9b59b6'       // Purple for dirt
-    };
-    return colors[distance] || '#6c757d';
+    return getStatisticsDistanceColor(distance);
   }
   getBadgeColor(classValue: string): string {
     return this.colorsService.getClassColor(classValue);
