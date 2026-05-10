@@ -1,12 +1,12 @@
 # Cloudflare Pages headers file
 # https://developers.cloudflare.com/pages/configuration/headers/
 
-# Cache index.html for 12 hours
+# Revalidate the SPA shell so new hashed bundle references are picked up after deploys
 /
-  Cache-Control: public, max-age=43200
+  Cache-Control: no-cache, must-revalidate
 
 /index.html
-  Cache-Control: public, max-age=43200
+  Cache-Control: no-cache, must-revalidate
 
 # Cache hashed assets for 1 year (they have unique hashes)
 /*.js
