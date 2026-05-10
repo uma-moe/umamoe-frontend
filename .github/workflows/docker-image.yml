@@ -41,7 +41,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: beta
     outputs:
       build_script: ${{ steps.plan.outputs.build_script }}
       deploy_target: ${{ steps.plan.outputs.deploy_target }}
