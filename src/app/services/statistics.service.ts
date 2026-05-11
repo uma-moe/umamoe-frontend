@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, forkJoin, of } from 'rxjs';
+import { Observable, BehaviorSubject, forkJoin, of, from } from 'rxjs';
 import { map, catchError, tap, switchMap } from 'rxjs/operators';
 import { 
   StatisticsDataset, 
@@ -12,7 +12,7 @@ import {
 import * as characterData from '../../data/character.json';
 import characterNamesData from '../../data/character_names.json';
 import { getAllSupportCards } from '../data/support-cards.data';
-import { isIdsStatisticsFormat, toStatisticsDistanceFileName } from '../data/statistics-lookup.data';
+import { isIdsStatisticsFormat, isStatisticsV4Format, resolveStatisticsDistance, toStatisticsDistanceFileName } from '../data/statistics-lookup.data';
 @Injectable({
   providedIn: 'root'
 })
@@ -69,25 +69,89 @@ export class StatisticsService {
     if (!datasetToUse) {
       throw new Error('No dataset selected');
     }
-    const url = `${datasetToUse.basePath}/global/global.json`;
+    const useCompressedAsset = isStatisticsV4Format(datasetToUse);
+    const url = `${datasetToUse.basePath}/global/global.json${useCompressedAsset ? '.gz' : ''}`;
     
     
-    return this.http.get<GlobalStatistics>(url).pipe(
+    return this.getJsonAsset<GlobalStatistics>(url, useCompressedAsset).pipe(
       catchError(error => {
         console.error('❌ Failed to load global statistics:', error);
         throw error;
       })
     );
   }
+  private getJsonAsset<T>(url: string, compressed: boolean): Observable<T> {
+    if (!compressed) {
+      return this.http.get<T>(url);
+    }
+
+    return this.http.get(url, { responseType: 'arraybuffer' }).pipe(
+      switchMap(buffer => from(this.parseJsonBuffer<T>(buffer, url)))
+    );
+  }
+  private async parseJsonBuffer<T>(buffer: ArrayBuffer, url: string): Promise<T> {
+    const text = await this.decodeJsonBuffer(buffer, url);
+    return JSON.parse(text) as T;
+  }
+  private async decodeJsonBuffer(buffer: ArrayBuffer, url: string): Promise<string> {
+    const bytes = new Uint8Array(buffer);
+    const isGzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+
+    if (!isGzip) {
+      return new TextDecoder('utf-8').decode(buffer);
+    }
+
+    const DecompressionStreamConstructor = (globalThis as any).DecompressionStream;
+    if (!DecompressionStreamConstructor) {
+      throw new Error(`This browser cannot decode gzip statistics asset: ${url}`);
+    }
+
+    const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStreamConstructor('gzip'));
+    return new Response(stream).text();
+  }
   getDistanceStatistics(distance: string, dataset?: StatisticsDataset): Observable<DistanceStatistics> {
     const datasetToUse = dataset || this.selectedDataset$.value;
     if (!datasetToUse) {
       throw new Error('No dataset selected');
     }
+
+    if (isStatisticsV4Format(datasetToUse)) {
+      return this.getGlobalStatistics(datasetToUse).pipe(
+        map((globalStats: any) => {
+          const distanceStats = this.getEmbeddedDistanceStatistics(globalStats, distance);
+          if (!distanceStats) {
+            throw new Error(`Distance statistics not available for ${distance}`);
+          }
+          return distanceStats as DistanceStatistics;
+        })
+      );
+    }
+
     const distanceFileName = toStatisticsDistanceFileName(distance, isIdsStatisticsFormat(datasetToUse));
     return this.http.get<DistanceStatistics>(
       `${datasetToUse.basePath}/distance/${distanceFileName}.json`
     );
+  }
+  private getEmbeddedDistanceStatistics(globalStats: any, distance: string): DistanceStatistics | null {
+    const byDistance = globalStats?.by_distance;
+    if (!byDistance) {
+      return null;
+    }
+
+    const resolvedDistance = resolveStatisticsDistance(distance);
+    const candidateKeys = Array.from(new Set([
+      distance,
+      resolvedDistance?.id,
+      resolvedDistance?.slug
+    ].filter(Boolean) as string[]));
+
+    for (const key of candidateKeys) {
+      if (byDistance[key]) {
+        return byDistance[key] as DistanceStatistics;
+      }
+    }
+
+    return null;
   }
   private loadCharacterNameMapping(): void {
     // Use character_names.json as name source, character.json for 6-digit card IDs
@@ -165,8 +229,9 @@ export class StatisticsService {
       console.error(`❌ Character statistics not available for: ${characterNameOrId} (${characterId})`);
       throw new Error(`Character statistics not available for: ${characterNameOrId} (${characterId})`);
     }
-    const url = `${datasetToUse.basePath}/characters/${characterId}.json`;
-    return this.http.get<CharacterStatistics>(url).pipe(
+    const useCompressedAsset = isStatisticsV4Format(datasetToUse);
+    const url = `${datasetToUse.basePath}/characters/${characterId}.json${useCompressedAsset ? '.gz' : ''}`;
+    return this.getJsonAsset<CharacterStatistics>(url, useCompressedAsset).pipe(
       catchError(error => {
         console.error(`❌ Failed to load character statistics for ${characterNameOrId} (${characterId}):`, error);
         throw error;

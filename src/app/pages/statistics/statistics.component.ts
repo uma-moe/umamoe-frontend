@@ -35,6 +35,7 @@ import {
   getStatisticsDistanceLabel,
   getStatisticsScenarioName,
   isIdsStatisticsFormat,
+  isStatisticsV4Format,
   resolveStatisticsDistance,
   toStatisticsDistanceOption
 } from '../../data/statistics-lookup.data';
@@ -49,6 +50,13 @@ interface ResolvedSkill {
   name: string;
   icon: string | null;
   imageUrl: string;
+}
+interface SupportCardCombinationAggregate {
+  count: number;
+  label: string;
+  exactLabel: string;
+  composition?: { [cardType: string]: number };
+  exactKeys: Set<string>;
 }
 @Component({
   selector: 'app-statistics',
@@ -190,6 +198,9 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   private isIdsFormat(): boolean {
     return isIdsStatisticsFormat(this.selectedDataset$.value);
   }
+  private isV4Format(): boolean {
+    return isStatisticsV4Format(this.selectedDataset$.value);
+  }
   private configureDistancesForDataset(dataset: any): void {
     const idsFormat = isIdsStatisticsFormat(dataset);
     const rawDistances = dataset?.index?.distances?.length
@@ -309,7 +320,8 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       '2': 'Power',
       '3': 'Guts',
       '4': 'Intelligence',
-      '6': 'Friend',
+      '5': 'Friend',
+      '6': 'Group',
       speed: 'Speed',
       stamina: 'Stamina',
       power: 'Power',
@@ -411,6 +423,10 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     return distanceData[metric] ? [distanceData[metric]] : [];
   }
   private getSupportCardAnalysisMetricMaps(metric: 'support_cards' | 'support_card_combinations'): any[] {
+    if (this.hasNoActiveDistanceFilters()) {
+      return [];
+    }
+
     const distanceMetricMaps = this.getLoadedActiveDistanceStats()
       .flatMap(distanceData => this.getDistanceMetricMaps(distanceData, metric))
       .filter(metricMap => this.hasNonEmptyMetricData(metricMap));
@@ -490,6 +506,24 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       ?? distanceData.metadata?.total_trained_umas
       ?? distanceData.metadata?.total_entries
       ?? 0;
+  }
+  private getTeamClassEntryCount(classData: any): number {
+    if (typeof classData === 'number') {
+      return classData;
+    }
+
+    if (!classData || typeof classData !== 'object') {
+      return 0;
+    }
+
+    return classData.total_trained_umas
+      ?? classData.total_entries
+      ?? classData.trainer_count
+      ?? classData.trained_umas
+      ?? classData.count
+      ?? classData.total
+      ?? classData.value
+      ?? this.getEntryCount(classData);
   }
   private buildSupportCardImageData(cardMaps: any[], totalUmasTrained: number): ChartDataPoint[] {
     const aggregatedCards = new Map<string, { total: number; cardData: any; name: string; type: string | null }>();
@@ -663,7 +697,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     }, {} as { [cardType: string]: number });
   }
   private mergeSupportCardCombination(
-    combinations: Map<string, { count: number; label: string; exactLabel: string; composition?: { [cardType: string]: number }; exactKeys: Set<string> }>,
+    combinations: Map<string, SupportCardCombinationAggregate>,
     rawKey: string,
     data: any
   ): void {
@@ -681,7 +715,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     current.exactKeys.add(this.getSupportCardCombinationExactKey(rawKey, data));
     combinations.set(key, current);
   }
-  private getSupportCardCombinationDisplayLabel(data: { label: string; exactLabel: string; exactKeys: Set<string> }): string {
+  private getSupportCardCombinationDisplayLabel(data: SupportCardCombinationAggregate): string {
     if (data.exactKeys.size <= 1 && data.exactLabel) {
       return data.exactLabel;
     }
@@ -1031,6 +1065,15 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadActiveDistanceStats();
   }
   private loadActiveDistanceStats(): void {
+    if (this.isV4Format()) {
+      this.hydrateEmbeddedDistanceStats(this.getActiveDistanceIds());
+      this.distanceLoading = false;
+      this.filteredTotalCache = 0;
+      this.invalidateCache('selectedDistance');
+      this.updateAllChartData();
+      return;
+    }
+
     const activeDistances = this.getActiveDistanceIds();
     const missingDistances = activeDistances.filter(distance => !this.distanceStats[distance]);
 
@@ -1063,6 +1106,15 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       });
   }
   private loadSingleDistanceStats(distance: string) {
+    if (this.isV4Format()) {
+      this.hydrateEmbeddedDistanceStats([distance]);
+      if (this.distanceStats[distance]) {
+        this.updateDistanceChartData(distance);
+      }
+      this.distanceLoading = false;
+      return;
+    }
+
     if (this.distanceStats[distance]) {
       // Already loaded, no need to fetch again
       this.distanceLoading = false;
@@ -1082,6 +1134,36 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       }
       this.distanceLoading = false;
     });
+  }
+  private hydrateEmbeddedDistanceStats(distances: string[]): void {
+    distances.forEach(distance => {
+      const stats = this.getEmbeddedDistanceStatistics(distance);
+      if (stats) {
+        this.distanceStats[distance] = stats;
+      }
+    });
+  }
+  private getEmbeddedDistanceStatistics(distance: string): any | null {
+    const byDistance = this.globalStats?.by_distance;
+    if (!byDistance) {
+      return null;
+    }
+
+    const resolvedDistance = resolveStatisticsDistance(distance);
+    const candidateKeys = Array.from(new Set([
+      distance,
+      this.getDistanceOptionForCurrentDataset(distance),
+      resolvedDistance?.id,
+      resolvedDistance?.slug
+    ].filter(Boolean) as string[]));
+
+    for (const key of candidateKeys) {
+      if (byDistance[key]) {
+        return byDistance[key];
+      }
+    }
+
+    return null;
   }
   private loadCharacterStats() {
     this.characterLoading = true;
@@ -2223,7 +2305,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
         case 'scenarioFilters':
           return key.includes('scenario') || key.includes('stat') || key.includes('distribution');
         case 'selectedDistance':
-          return key.includes('distance');
+          return true;
         case 'selectedCharacter':
           return key.includes('character');
         default:
@@ -2341,10 +2423,33 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     return [classData];
   }
   private computeTeamClassChartData(): ChartDataPoint[] {
+    if (this.hasNoActiveDistanceFilters()) {
+      return [];
+    }
+
+    const activeClasses = this.getActiveClassIds();
+    const loadedDistanceStats = this.getLoadedActiveDistanceStats();
+    if (loadedDistanceStats.length > 0) {
+      return activeClasses
+        .map(classId => {
+          const value = loadedDistanceStats.reduce((distanceTotal, distanceData) => {
+            return distanceTotal + this.getMetricData('', classId, distanceData).reduce((classTotal, classData) => {
+              return classTotal + this.getTeamClassEntryCount(classData);
+            }, 0);
+          }, 0);
+
+          return {
+            label: `Class ${classId}`,
+            value,
+            color: this.colorsService.getClassColor(classId)
+          };
+        })
+        .filter(item => item.value > 0);
+    }
+
     if (!this.globalStats?.team_class_distribution) {
       return [];
     }
-    const activeClasses = this.getActiveClassIds();
     const activeScenarios = this.getActiveScenarioIds();
     // Always aggregate from by_scenario when it exists so the "all scenarios"
     // state uses the same source as filtered scenario states.
@@ -2358,7 +2463,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
             const classData = scenarioData[classId];
             if (classData) {
               // Sum counts (trainers)
-              const val = classData.count || 0;
+              const val = this.getTeamClassEntryCount(classData);
               aggregatedData.set(classId, (aggregatedData.get(classId) || 0) + val);
             }
           });
@@ -2380,7 +2485,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
         if (typeof data === 'number') {
           value = data;
         } else if (data && typeof data === 'object') {
-          value = data.count || data.total || data.value || data.percentage || data.trainer_count || 0;
+          value = this.getTeamClassEntryCount(data);
         }
         return {
           label: `Class ${classId}`,
@@ -2392,18 +2497,10 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     return result;
   }
   private computeSupportCardCombinationsData(): ChartDataPoint[] {
-    const combinations = new Map<string, { count: number; label: string; exactLabel: string; composition?: { [cardType: string]: number }; exactKeys: Set<string> }>();
-
-    this.getSupportCardAnalysisMetricMaps('support_card_combinations').forEach(combinationMap => {
-      Object.entries(combinationMap || {}).forEach(([combination, data]: [string, any]) => {
-        if (!this.isMetricEntry(combination, data)) {
-          return;
-        }
-
-        this.mergeSupportCardCombination(combinations, combination, data);
-      });
-    });
-
+    const combinations = this.buildSupportCardCombinationAggregates();
+    return this.getSupportCardCombinationChartData(combinations);
+  }
+  private getSupportCardCombinationChartData(combinations: Map<string, SupportCardCombinationAggregate>): ChartDataPoint[] {
     const result = Array.from(combinations.entries())
       .sort((a, b) => b[1].count - a[1].count)
       .slice(0, 50)
@@ -2415,7 +2512,26 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       }));
     return result;
   }
+  private buildSupportCardCombinationAggregates(): Map<string, SupportCardCombinationAggregate> {
+    const combinations = new Map<string, SupportCardCombinationAggregate>();
+
+    this.getSupportCardAnalysisMetricMaps('support_card_combinations').forEach(combinationMap => {
+      Object.entries(combinationMap || {}).forEach(([combination, data]: [string, any]) => {
+        if (!this.isMetricEntry(combination, data)) {
+          return;
+        }
+
+        this.mergeSupportCardCombination(combinations, combination, data);
+      });
+    });
+
+    return combinations;
+  }
   private computeStatAveragesByClassData(): any[] {
+    if (this.hasNoActiveDistanceFilters()) {
+      return [];
+    }
+
     if (!this.globalStats?.stat_averages?.by_team_class && !this.hasLoadedActiveDistanceStats()) return [];
     // Use correct stat order: Speed, Stamina, Power, Guts, Wit
     const stats = [
@@ -2458,7 +2574,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
         borderRadius: 4,
         borderSkipped: false
       };
-    });
+    }).filter(series => series.data.some((point: any) => point.y > 0));
   }
   private computeSupportCardUsageData(): any[] {
     const activeClasses = this.getActiveClassIds();
@@ -2561,21 +2677,44 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       };
     });
   }
-  private computeSupportCardTypeDistribution(): ChartDataPoint[] {
+  private computeSupportCardTypeDistribution(combinations?: Map<string, SupportCardCombinationAggregate>): ChartDataPoint[] {
     const cardTypes = new Map<string, number>();
 
-    this.getSupportCardAnalysisMetricMaps('support_cards').forEach(cardMap => {
-      Object.entries(cardMap || {}).forEach(([cardId, data]: [string, any]) => {
-        if (!this.isMetricEntry(cardId, data)) {
+    if (combinations && combinations.size > 0) {
+      combinations.forEach(combination => {
+        const count = Number(combination.count) || 0;
+        const composition = combination.composition;
+        if (count <= 0 || !composition) {
           return;
         }
 
-        const cardType = this.resolveSupportCardInfo(cardId, data).type || 'Other';
-        const count = this.getEntryCount(data);
-        const current = cardTypes.get(cardType) || 0;
-        cardTypes.set(cardType, current + count);
+        Object.entries(composition).forEach(([cardType, cardTypeCount]) => {
+          const normalizedType = this.normalizeSupportCardType(cardType) || cardType || 'Other';
+          const normalizedCount = Number(cardTypeCount) || 0;
+          if (normalizedCount <= 0) {
+            return;
+          }
+
+          const current = cardTypes.get(normalizedType) || 0;
+          cardTypes.set(normalizedType, current + (count * normalizedCount));
+        });
       });
-    });
+    }
+
+    if (cardTypes.size === 0) {
+      this.getSupportCardAnalysisMetricMaps('support_cards').forEach(cardMap => {
+        Object.entries(cardMap || {}).forEach(([cardId, data]: [string, any]) => {
+          if (!this.isMetricEntry(cardId, data)) {
+            return;
+          }
+
+          const cardType = this.resolveSupportCardInfo(cardId, data).type || 'Other';
+          const count = this.getEntryCount(data);
+          const current = cardTypes.get(cardType) || 0;
+          cardTypes.set(cardType, current + count);
+        });
+      });
+    }
 
     if (cardTypes.size === 0) {
       return [];
@@ -2807,13 +2946,15 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const filteredTotal = this.calculateFilteredTotal();
     const teamClass = this.computeTeamClassChartData();
+    const supportCardCombinationAggregates = this.buildSupportCardCombinationAggregates();
+    const supportCardCombinations = this.getSupportCardCombinationChartData(supportCardCombinationAggregates);
     return {
       teamClass,
       totalTrainers: this.calculateTotalTrainers(teamClass),
-      supportCardCombinations: this.computeSupportCardCombinationsData(),
+      supportCardCombinations,
       statAveragesByClass: this.computeStatAveragesByClassData(),
       supportCardUsage: this.computeSupportCardUsageData(),
-      supportCardTypes: this.computeSupportCardTypeDistribution(),
+      supportCardTypes: this.computeSupportCardTypeDistribution(supportCardCombinationAggregates),
       topSupportCards: this.computeTopSupportCardsWithImages(),
       skillsUsage: this.computeSkillsUsageData(),
       overallStatComparison: this.computeOverallStatComparison(),

@@ -92,6 +92,11 @@ export function isIdsStatisticsFormat(dataset?: StatisticsFormatLike | null): bo
   return format === 'ids-v1' || Number(version ?? 0) >= 2;
 }
 
+export function isStatisticsV4Format(dataset?: StatisticsFormatLike | null): boolean {
+  const version = dataset?.format_version ?? dataset?.index?.format_version;
+  return Number(version ?? 0) >= 4;
+}
+
 export function resolveStatisticsDistance(distance: string | number | null | undefined): StatisticsDistanceInfo | null {
   if (distance === null || distance === undefined) {
     return null;

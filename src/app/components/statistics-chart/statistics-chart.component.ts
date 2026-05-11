@@ -393,14 +393,13 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     // Check for data changes
     if (changes['data']) {
       const currentData = changes['data'].currentValue;
-      const previousData = changes['data'].previousValue;
-      
-      // Only update if data actually changed (not just new reference)
-      if (this.hasDataChanged(previousData, currentData)) {
+
+      if (!changes['data'].firstChange) {
         shouldUpdate = true;
-        if (this.shouldUseChartWithImages && currentData && currentData.length > 0) {
-          needsImagePreload = true;
-        }
+      }
+
+      if (this.shouldUseChartWithImages && currentData && currentData.length > 0) {
+        needsImagePreload = true;
       }
     }
     // Check for config or multiSeries changes
@@ -412,6 +411,15 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
       shouldUpdate = true;
     }
     if (shouldUpdate) {
+      if (this.config.type === 'doughnut' && this.chart && !needsImagePreload) {
+        if (this.chartUpdateTimer) {
+          clearTimeout(this.chartUpdateTimer);
+          this.chartUpdateTimer = null;
+        }
+        this.runChartUpdate(false);
+        return;
+      }
+
       this.scheduleChartUpdate(needsImagePreload);
     }
   }

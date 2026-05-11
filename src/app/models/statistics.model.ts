@@ -168,6 +168,9 @@ export interface GlobalStatistics {
     };
     [key: string]: any; // For dynamic team class totals
   };
+  by_distance?: {
+    [distance: string]: DistanceStatistics;
+  };
 }
 export interface DistanceStatistics {
   metadata: StatisticsMetadata;
@@ -215,9 +218,37 @@ export interface CharacterStatistics {
       total_entries?: number;
       [style: string]: CharacterDistribution | number | undefined;
     };
+    scenario_distribution?: {
+      total_entries?: number;
+      [scenario: string]: CharacterDistribution | number | undefined;
+    };
     team_class_distribution: { 
       total_trainers?: number;
       [teamClass: string]: TeamClassDistribution | number | undefined;
+    };
+  };
+  overall?: {
+    total_entries: number;
+    total_trained_umas: number;
+    stat_averages: { [stat: string]: StatDistribution | Partial<StatDistribution> };
+    support_cards?: { [cardName: string]: ItemWithLevels };
+    total_support_cards?: number;
+    support_card_combinations?: { [combination: string]: SupportCardCombination };
+    total_combinations?: number;
+    skills?: { [skillName: string]: ItemWithLevels };
+    total_skills?: number;
+  };
+  by_scenario?: {
+    [scenarioId: string]: {
+      total_entries: number;
+      total_trained_umas: number;
+      stat_averages: { [stat: string]: StatDistribution | Partial<StatDistribution> };
+      support_cards?: { [cardName: string]: ItemWithLevels };
+      total_support_cards?: number;
+      support_card_combinations?: { [combination: string]: SupportCardCombination };
+      total_combinations?: number;
+      skills?: { [skillName: string]: ItemWithLevels };
+      total_skills?: number;
     };
   };
   by_distance: {
