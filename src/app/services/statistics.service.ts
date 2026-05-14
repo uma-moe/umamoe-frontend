@@ -9,24 +9,28 @@ import {
   DistanceStatistics, 
   CharacterStatistics 
 } from '../models/statistics.model';
-import * as characterData from '../../data/character.json';
-import characterNamesData from '../../data/character_names.json';
+import { getAllCharacters } from '../data/character.data';
 import { getAllSupportCards } from '../data/support-cards.data';
 import { isIdsStatisticsFormat, isStatisticsV4Format, resolveStatisticsDistance, toStatisticsDistanceFileName } from '../data/statistics-lookup.data';
+import { MasterDataService } from './master-data.service';
 @Injectable({
   providedIn: 'root'
 })
 export class StatisticsService {
+  private static jsonParseWorkerUrl: string | null = null;
   private availableDatasets$ = new BehaviorSubject<StatisticsDataset[]>([]);
   private selectedDataset$ = new BehaviorSubject<StatisticsDataset | null>(null);
   private characterNameToIdMap: Map<string, string> = new Map();
   private supportCardNameToIdMap: Map<string, string> = new Map();
   private characterDataLoaded = false;
   private supportCardDataLoaded = false;
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private masterData: MasterDataService) {
     this.loadAvailableDatasets();
     this.loadCharacterNameMapping();
     this.loadSupportCardNameMapping();
+    this.masterData.init();
+    this.masterData.characters$.subscribe(() => this.loadCharacterNameMapping());
+    this.masterData.supportCards$.subscribe(() => this.loadSupportCardNameMapping());
   }
   getAvailableDatasets(): Observable<StatisticsDataset[]> {
     return this.availableDatasets$.asObservable();
@@ -90,8 +94,94 @@ export class StatisticsService {
     );
   }
   private async parseJsonBuffer<T>(buffer: ArrayBuffer, url: string): Promise<T> {
+    if (this.canUseJsonParseWorker()) {
+      try {
+        return await this.parseJsonBufferInWorker<T>(buffer, url);
+      } catch (error) {
+        console.warn(`Falling back to main-thread statistics parsing for ${url}:`, error);
+      }
+    }
+
     const text = await this.decodeJsonBuffer(buffer, url);
     return JSON.parse(text) as T;
+  }
+  private canUseJsonParseWorker(): boolean {
+    return typeof Worker !== 'undefined'
+      && typeof URL !== 'undefined'
+      && typeof URL.createObjectURL === 'function'
+      && typeof Blob !== 'undefined';
+  }
+  private parseJsonBufferInWorker<T>(buffer: ArrayBuffer, url: string): Promise<T> {
+    const worker = this.createJsonParseWorker();
+
+    return new Promise<T>((resolve, reject) => {
+      const cleanup = () => {
+        worker.removeEventListener('message', onMessage);
+        worker.removeEventListener('error', onError);
+        worker.terminate();
+      };
+
+      const onMessage = (event: MessageEvent<{ ok: boolean; json?: T; error?: string }>) => {
+        cleanup();
+        if (event.data?.ok) {
+          resolve(event.data.json as T);
+          return;
+        }
+
+        reject(new Error(event.data?.error || `Failed to parse statistics asset: ${url}`));
+      };
+
+      const onError = (event: ErrorEvent) => {
+        cleanup();
+        reject(new Error(event.message || `Failed to parse statistics asset: ${url}`));
+      };
+
+      worker.addEventListener('message', onMessage);
+      worker.addEventListener('error', onError);
+      worker.postMessage({ buffer, url });
+    });
+  }
+  private createJsonParseWorker(): Worker {
+    if (!StatisticsService.jsonParseWorkerUrl) {
+      const workerSource = `
+const decodeJsonBuffer = async (buffer, url) => {
+  const bytes = new Uint8Array(buffer);
+  const isGzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+
+  if (!isGzip) {
+    return new TextDecoder('utf-8').decode(buffer);
+  }
+
+  const DecompressionStreamConstructor = self.DecompressionStream;
+  if (!DecompressionStreamConstructor) {
+    throw new Error('This browser cannot decode gzip statistics asset: ' + url);
+  }
+
+  const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStreamConstructor('gzip'));
+  return new Response(stream).text();
+};
+
+self.onmessage = async (event) => {
+  const { buffer, url } = event.data;
+
+  try {
+    const text = await decodeJsonBuffer(buffer, url);
+    const json = JSON.parse(text);
+    self.postMessage({ ok: true, json });
+  } catch (error) {
+    self.postMessage({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+};`;
+
+      StatisticsService.jsonParseWorkerUrl = URL.createObjectURL(
+        new Blob([workerSource], { type: 'application/javascript' })
+      );
+    }
+
+    return new Worker(StatisticsService.jsonParseWorkerUrl);
   }
   private async decodeJsonBuffer(buffer: ArrayBuffer, url: string): Promise<string> {
     const bytes = new Uint8Array(buffer);
@@ -154,30 +244,14 @@ export class StatisticsService {
     return null;
   }
   private loadCharacterNameMapping(): void {
-    // Use character_names.json as name source, character.json for 6-digit card IDs
-    
     try {
-      const names = characterNamesData as Record<string, { name: string; skins: Record<string, string> }>;
-      
-      // Handle different ways TypeScript might import character.json
-      let characters: any[] = [];
-      if (Array.isArray(characterData)) {
-        characters = characterData as any[];
-      } else if ((characterData as any).default && Array.isArray((characterData as any).default)) {
-        characters = (characterData as any).default;
-      } else {
-        console.error('❌ Character data is not in expected format:', typeof characterData, Object.keys(characterData || {}));
-        this.characterDataLoaded = false;
-        return;
-      }
+      const characters = getAllCharacters();
       this.characterNameToIdMap.clear();
       characters.forEach((character) => {
         if (character.id) {
-          const charaId = Math.floor(parseInt(character.id, 10) / 100).toString();
-          const nameEntry = names[charaId];
-          const name = nameEntry?.name || character.name;
+          const name = character.name;
           if (name) {
-            this.characterNameToIdMap.set(name, character.id);
+            this.characterNameToIdMap.set(name, String(character.id));
           }
         }
       });

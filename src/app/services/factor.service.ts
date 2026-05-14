@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable, BehaviorSubject } from 'rxjs';
-import factorsData from '../../data/factors.json';
+import { MasterDataService } from './master-data.service';
 export interface Factor {
   id: string;
   text: string;
@@ -18,18 +18,11 @@ export interface SparkInfo {
 export class FactorService {
   private factors$ = new BehaviorSubject<Factor[]>([]);
   private factorsMap = new Map<string, Factor>();
-  constructor() {
-    this.loadFactors();
+  constructor(private masterData: MasterDataService) {
+    this.masterData.init();
+    this.masterData.factors$.subscribe(factors => this.setFactors(factors));
   }
-  private loadFactors(): void {
-    
-    let factors: Factor[];
-    if (Array.isArray(factorsData)) {
-      factors = factorsData as Factor[];
-    } else {
-      factors = (factorsData as any).default || [];
-    }
-    
+  private setFactors(factors: Factor[]): void {
     this.factors$.next(factors);
     // Create a map for quick lookups
     this.factorsMap.clear();

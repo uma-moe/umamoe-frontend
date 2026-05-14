@@ -74,6 +74,9 @@ export class NavigationComponent {
     event.stopPropagation();
     this.statusTooltipOpen = !this.statusTooltipOpen;
     this.userMenuOpen = false;
+    if (this.statusTooltipOpen) {
+      this.statusService.refreshIfStale(30_000);
+    }
   }
 
   getStatusLabel(status: OverallStatus): string {

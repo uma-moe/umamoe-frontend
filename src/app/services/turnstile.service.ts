@@ -71,6 +71,10 @@ export class TurnstileService {
     return environment.turnstile.proofHeaderName;
   }
 
+  get proofTtlHeaderName(): string {
+    return environment.turnstile.proofTtlHeaderName;
+  }
+
   prime(): void {
     if (!environment.turnstile.enabled) {
       return;
@@ -123,6 +127,25 @@ export class TurnstileService {
     }
   }
 
+  getCachedProofToken(action = environment.turnstile.action): string {
+    const normalizedAction = this.normalizeAction(action);
+    const cached = this.cachedBrowserProof;
+    return this.hasUsableBrowserProof(cached, normalizedAction) ? cached.token : '';
+  }
+
+  storeBrowserProof(token: string, ttlSeconds: number, action = environment.turnstile.action): void {
+    const normalizedToken = token.trim();
+    if (!normalizedToken || !Number.isFinite(ttlSeconds) || ttlSeconds <= 0) {
+      return;
+    }
+
+    this.cachedBrowserProof = {
+      token: normalizedToken,
+      action: this.normalizeAction(action),
+      expiresAt: Date.now() + ttlSeconds * 1000,
+    };
+  }
+
   invalidateBrowserProof(token?: string): void {
     if (!this.cachedBrowserProof) {
       return;
@@ -167,7 +190,7 @@ export class TurnstileService {
       action,
       expiresAt: Date.now() + ttlSeconds * 1000,
     };
-    this.cachedBrowserProof = proof;
+    this.storeBrowserProof(token, ttlSeconds, action);
     return proof;
   }
 

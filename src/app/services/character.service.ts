@@ -2,16 +2,19 @@ import { Injectable } from '@angular/core';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { map, filter, take } from 'rxjs/operators';
 import { Character } from '../models/character.model';
-import { getAllCharacters, getCharacterById } from '../data/character.data';
+import { getAllCharacters } from '../data/character.data';
+import { MasterDataService } from './master-data.service';
 @Injectable({
   providedIn: 'root'
 })
 export class CharacterService {
   private charactersSubject = new BehaviorSubject<Character[]>([]);
   public characters$ = this.charactersSubject.asObservable();
-  constructor() {
+  constructor(private masterData: MasterDataService) {
     // Load characters from bundled data immediately
     this.charactersSubject.next(getAllCharacters());
+    this.masterData.init();
+    this.masterData.characters$.subscribe(characters => this.charactersSubject.next(characters));
   }
   getCharacters(): Observable<Character[]> {
     return this.characters$;
@@ -51,20 +54,30 @@ export class CharacterService {
     return this.characters$.pipe(
       filter(characters => characters.length > 0),
       map(characters => {
+        const releaseDatesAreGlobal = this.hasGlobalReleaseDates(characters, globalReleaseDate);
         return characters.filter(character => {
-          // Parse the character's JP release date
-          const jpReleaseDate = new Date(character.release_date);
-          if (isNaN(jpReleaseDate.getTime())) return false;
-          
-          // Calculate estimated global release date using timeline logic
-          const estimatedGlobalDate = this.calculateGlobalReleaseDate(jpReleaseDate, globalReleaseDate);
-          
-          // Return true if the character should be released by the cutoff date (including grace period)
+          const releaseDate = new Date(character.release_date);
+          if (isNaN(releaseDate.getTime())) return false;
+
+          if (releaseDatesAreGlobal) {
+            return releaseDate <= effectiveCutoffDate;
+          }
+
+          const estimatedGlobalDate = this.calculateGlobalReleaseDate(releaseDate, globalReleaseDate);
           return estimatedGlobalDate <= effectiveCutoffDate;
         });
       })
     );
   }
+
+  private hasGlobalReleaseDates(characters: Character[], globalLaunchDate: Date): boolean {
+    const releaseDates = characters
+      .map(character => new Date(character.release_date))
+      .filter(releaseDate => !isNaN(releaseDate.getTime()));
+
+    return releaseDates.length > 0 && releaseDates.every(releaseDate => releaseDate >= globalLaunchDate);
+  }
+
   /**
    * Calculate estimated global release date based on timeline service logic
    * This mirrors the calculation used in timeline.service.ts

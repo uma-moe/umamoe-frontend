@@ -4,10 +4,11 @@ import {
   HttpEvent,
   HttpHandler,
   HttpInterceptor,
+  HttpResponse,
   HttpRequest,
 } from '@angular/common/http';
-import { Observable, from, of, throwError } from 'rxjs';
-import { catchError, switchMap } from 'rxjs/operators';
+import { Observable, from, throwError } from 'rxjs';
+import { catchError, switchMap, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { TurnstileService } from '../services/turnstile.service';
 
@@ -22,6 +23,7 @@ export class TurnstileInterceptor implements HttpInterceptor {
 
     return from(this.prepareRequest(req, false, true)).pipe(
       switchMap(preparedReq => next.handle(preparedReq).pipe(
+        tap(event => this.captureBrowserProof(event)),
         catchError(error => this.retryWithFreshProof(error, req, preparedReq, next)),
       )),
     );
@@ -53,6 +55,19 @@ export class TurnstileInterceptor implements HttpInterceptor {
     forceRefresh: boolean,
     allowFailOpen: boolean,
   ): Promise<HttpRequest<unknown>> {
+    const cachedProofToken = forceRefresh ? '' : this.turnstileService.getCachedProofToken(environment.turnstile.action);
+    if (cachedProofToken) {
+      return req.clone({
+        setHeaders: {
+          [this.turnstileService.proofHeaderName]: cachedProofToken,
+        },
+      });
+    }
+
+    if (!forceRefresh && this.canBootstrapWithoutProof(req)) {
+      return req;
+    }
+
     try {
       const proofToken = await this.turnstileService.getProofToken(environment.turnstile.action, forceRefresh);
       if (!proofToken) {
@@ -77,6 +92,16 @@ export class TurnstileInterceptor implements HttpInterceptor {
         url: req.url,
       });
     }
+  }
+
+  private captureBrowserProof(event: HttpEvent<unknown>): void {
+    if (!(event instanceof HttpResponse)) {
+      return;
+    }
+
+    const proofToken = event.headers.get(this.turnstileService.proofHeaderName)?.trim() ?? '';
+    const ttlSeconds = Number(event.headers.get(this.turnstileService.proofTtlHeaderName) ?? '0');
+    this.turnstileService.storeBrowserProof(proofToken, ttlSeconds, environment.turnstile.action);
   }
 
   private retryWithFreshProof(
@@ -115,6 +140,11 @@ export class TurnstileInterceptor implements HttpInterceptor {
     return typeof errorCode === 'string' ? errorCode : null;
   }
 
+  private canBootstrapWithoutProof(req: HttpRequest<unknown>): boolean {
+    const method = req.method.toUpperCase();
+    return method === 'GET' || method === 'HEAD';
+  }
+
   private isProofExchangeRequest(url: string): boolean {
     const exchangePath = environment.turnstile.exchangePath;
     if (url === exchangePath || url.endsWith(exchangePath)) {
@@ -125,15 +155,19 @@ export class TurnstileInterceptor implements HttpInterceptor {
   }
 
   private isOwnApiRequest(url: string): boolean {
-    if (!(url.includes('/api/') || url.includes('/ingest/'))) {
+    if (!(url.includes('/api/') || url.includes('/ingest/') || url.includes('/search/'))) {
       return false;
     }
 
-    if (url.startsWith('/api/') || url.startsWith('/ingest/')) {
+    if (url.startsWith('/api/') || url.startsWith('/ingest/') || url.startsWith('/search/')) {
       return true;
     }
 
     if (environment.apiUrl && url.startsWith(`${environment.apiUrl}/api/`)) {
+      return true;
+    }
+
+    if (environment.apiUrl && url.startsWith(`${environment.apiUrl}/search/`)) {
       return true;
     }
 

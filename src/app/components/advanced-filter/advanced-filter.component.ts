@@ -25,11 +25,9 @@ import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { SupportCard, SupportCardShort, SupportCardType, Rarity } from '../../models/support-card.model';
 import { VeteranMember } from '../../models/profile.model';
 import { LinkedAccount } from '../../models/auth.model';
-import { CHARACTERS } from '../../data/character.data';
+import { CHARACTERS, getCharacterById as getMasterCharacterById } from '../../data/character.data';
 import { getCharacterName } from '../../pages/profile/profile-helpers';
-import factorsData from '../../../data/factors.json';
-import characterData from '../../../data/character.json';
-import characterNamesData from '../../../data/character_names.json';
+import { FactorService } from '../../services/factor.service';
 import { RaceSchedulerComponent } from '../race-scheduler/race-scheduler.component';
 import { VeteranDisplayComponent } from '../veteran-display/veteran-display.component';
 export interface ActiveFilterChip {
@@ -229,10 +227,10 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
   floatingBtnMode: 'results' | 'top' = 'results';
   private scrollListener?: () => void;
   // Factor Data
-  blueFactors = factorsData.filter((f: any) => f.type === 0).map((f: any) => ({...f, id: parseInt(f.id, 10)}));
-  pinkFactors = factorsData.filter((f: any) => f.type === 1).map((f: any) => ({...f, id: parseInt(f.id, 10)}));
-  greenFactors = factorsData.filter((f: any) => f.type === 5).map((f: any) => ({...f, id: parseInt(f.id, 10)}));
-  whiteFactors = factorsData.filter((f: any) => f.type === 2 || f.type === 3 || f.type === 4).map((f: any) => ({...f, id: parseInt(f.id, 10)}));
+  blueFactors: any[] = [];
+  pinkFactors: any[] = [];
+  greenFactors: any[] = [];
+  whiteFactors: any[] = [];
   // Active Factor Filters
   blueFactorFilters: FactorFilter[] = [];
   pinkFactorFilters: FactorFilter[] = [];
@@ -273,6 +271,17 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
     ).subscribe(filters => {
       this.filterChange.emit(filters);
     });
+    this.factorService.getFactors()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(factors => this.setFactorOptions(factors));
+  }
+
+  private setFactorOptions(factors: any[]): void {
+    const normalize = (factor: any) => ({ ...factor, id: parseInt(factor.id, 10) });
+    this.blueFactors = factors.filter((f: any) => f.type === 0).map(normalize);
+    this.pinkFactors = factors.filter((f: any) => f.type === 1).map(normalize);
+    this.greenFactors = factors.filter((f: any) => f.type === 5).map(normalize);
+    this.whiteFactors = factors.filter((f: any) => f.type === 2 || f.type === 3 || f.type === 4).map(normalize);
   }
   // Filter State
   filterState: UnifiedSearchParams = {
@@ -317,6 +326,7 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
   constructor(
     private dialog: MatDialog,
     private supportCardService: SupportCardService,
+    private factorService: FactorService,
     private authService: AuthService,
     private profileService: ProfileService,
     private elementRef: ElementRef,
@@ -608,11 +618,9 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
         const setNode = (node: TreeNode, id: number | null) => {
           if (id) {
             node.characterId = id;
-            const charaId = Math.floor(id / 100).toString();
-            const nameEntry = (characterNamesData as any)[charaId];
-            const char = characterData.find((c: any) => parseInt(c.id, 10) === id);
-            if (nameEntry || char) {
-              node.name = nameEntry?.name || char?.name || `ID: ${id}`;
+            const char = getMasterCharacterById(id);
+            if (char) {
+              node.name = char.name || `ID: ${id}`;
               node.image = char?.image;
             } else {
               node.name = `ID: ${id}`; 
@@ -692,11 +700,9 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
       const restoreParentChars = (ids: number[] | undefined, target: { id: number; name: string; image?: string }[]) => {
         if (!ids) return;
         ids.forEach(id => {
-          const charaId = Math.floor(id / 100).toString();
-          const nameEntry = (characterNamesData as any)[charaId];
-          const char = characterData.find((c: any) => parseInt(c.id, 10) === id);
-          if (nameEntry || char) {
-            target.push({ id, name: nameEntry?.name || char?.name || `ID: ${id}`, image: char?.image });
+          const char = getMasterCharacterById(id);
+          if (char) {
+            target.push({ id, name: char.name || `ID: ${id}`, image: char.image });
           } else {
             target.push({ id, name: `ID: ${id}` });
           }

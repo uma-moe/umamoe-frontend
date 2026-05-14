@@ -23,6 +23,7 @@ import { LinkedAccount } from '../../models/auth.model';
 import { Character } from '../../models/character.model';
 import { InheritanceRecord } from '../../models/inheritance.model';
 import { ProfileService } from '../../services/profile.service';
+import { CharacterService } from '../../services/character.service';
 import { FactorService, Factor, SparkInfo } from '../../services/factor.service';
 import { AffinityService } from '../../services/affinity.service';
 import { BookmarkService } from '../../services/bookmark.service';
@@ -187,6 +188,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     public dialogRef: MatDialogRef<VeteranPickerDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: VeteranPickerDialogData,
     private profileService: ProfileService,
+    private characterService: CharacterService,
     private factorService: FactorService,
     public affinityService: AffinityService,
     private bookmarkService: BookmarkService,
@@ -207,6 +209,21 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     if (this.selectedId && this.veterans[this.selectedId] === undefined) {
       this.loadVeterans(this.selectedId);
     }
+    this.characterService.getReleasedCharacters()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(characters => {
+        this.characters = characters;
+        if (this.manualPickerSearch.trim()) {
+          this.searchManualPicker();
+        }
+        this.manualNodes.forEach(node => {
+          if (node.charSearch.trim()) {
+            this.searchManualNodeChar(node);
+          }
+        });
+        this._invalidateFiltered();
+        this.cdr.markForCheck();
+      });
     this.affinityService.load().pipe(takeUntil(this.destroy$)).subscribe(() => {
       if (this.targetCharaId && this.affinityService.isReady) {
         this.sortKey = 'affinity';

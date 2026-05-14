@@ -1,6 +1,8 @@
 export const environment = {
   production: false,
   apiUrl: 'https://beta.uma.moe',
+  resourceUrl: 'https://beta.uma.moe/resources',
+  statusApiUrl: '',
   enableSearchV3: true, // Enable V3 unified search API
   christmasTheme: false,
   turnstile: {

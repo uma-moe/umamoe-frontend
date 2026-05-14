@@ -398,8 +398,8 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
         shouldUpdate = true;
       }
 
-      if (this.shouldUseChartWithImages && currentData && currentData.length > 0) {
-        needsImagePreload = true;
+      if ((this.shouldUseChartWithImages || this.config.type === 'doughnut') && currentData && currentData.length > 0) {
+        needsImagePreload = this.hasPendingChartImages(currentData);
       }
     }
     // Check for config or multiSeries changes
@@ -411,12 +411,12 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
       shouldUpdate = true;
     }
     if (shouldUpdate) {
-      if (this.config.type === 'doughnut' && this.chart && !needsImagePreload) {
+      if ((this.config.type === 'doughnut' || this.shouldUseChartWithImages) && this.chart) {
         if (this.chartUpdateTimer) {
           clearTimeout(this.chartUpdateTimer);
           this.chartUpdateTimer = null;
         }
-        this.runChartUpdate(false);
+        this.runChartUpdate(needsImagePreload);
         return;
       }
 
@@ -458,11 +458,11 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
       this.updateChart();
     }
 
-    const shouldPreloadImages = needsImagePreload || (this.shouldUseChartWithImages && this.data?.length > 0);
-    if (shouldPreloadImages) {
-      this.preloadImages()
-        .then(() => {
-          if (this.chart) {
+    const pendingImageUrls = needsImagePreload ? this.getPendingImageUrls() : [];
+    if (pendingImageUrls.length > 0) {
+      this.preloadImages(pendingImageUrls)
+        .then(loadedImages => {
+          if (this.chart && loadedImages.length > 0) {
             this.chart.update('none');
           }
         })
@@ -935,14 +935,45 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     this.chart.options = config.options!;
     this.chart.update(this.animateNextDataUpdate ? undefined : 'none');
     this.animateNextDataUpdate = false;
-    // If using images, trigger a redraw after a short delay to ensure images are loaded
-    if (this.shouldUseChartWithImages && this.data && this.data.some(item => item.imageUrl)) {
-      setTimeout(() => {
-        if (this.chart) {
-          this.chart.update('none');
-        }
-      }, 100);
+  }
+  private hasPendingChartImages(data: ChartDataPoint[] = this.data): boolean {
+    return this.getPendingImageUrls(data).length > 0;
+  }
+  private isCachedImageReady(url: string): boolean {
+    const cachedImg = this.imageCache.get(url);
+    return !!cachedImg && cachedImg.complete && cachedImg.naturalHeight !== 0;
+  }
+  private getPendingImageUrls(data: ChartDataPoint[] = this.data): string[] {
+    if (!data || data.length === 0) {
+      return [];
     }
+
+    const pendingUrls = new Set<string>();
+
+    if (this.shouldUseChartWithImages) {
+      data
+        .map(item => item.imageUrl)
+        .filter((url): url is string => !!url && url.trim() !== '' && url !== 'undefined' && url !== 'null')
+        .forEach(url => {
+          if (!this.isCachedImageReady(url)) {
+            pendingUrls.add(url);
+          }
+        });
+    }
+
+    if (this.config.type === 'doughnut') {
+      data
+        .map(item => item.type)
+        .filter((type): type is string => !!type)
+        .forEach(type => {
+          const iconUrl = this.getTypeIconUrl(type);
+          if (!this.isCachedImageReady(iconUrl)) {
+            pendingUrls.add(iconUrl);
+          }
+        });
+    }
+
+    return Array.from(pendingUrls);
   }
   private getColor(index: number): string {
     const colors = this.config.colors || this.colorsService.getChartColors();
@@ -1168,33 +1199,18 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
   // Preload all images for the chart
-  private async preloadImages(): Promise<HTMLImageElement[]> {
-    if (!this.data || this.data.length === 0) return [];
+  private async preloadImages(urls: string[] = this.getPendingImageUrls()): Promise<HTMLImageElement[]> {
+    if (!urls.length) return [];
     const imagePromises: Promise<HTMLImageElement>[] = [];
-    
-    // Preload character images
-    this.data
-      .filter(item => item.imageUrl && item.imageUrl.trim() !== '' && item.imageUrl !== 'undefined' && item.imageUrl !== 'null')
-      .forEach(item => {
-        imagePromises.push(
-          this.loadImage(item.imageUrl!).catch(error => {
-            throw error;
-          })
-        );
-      });
-    // Preload type icons for doughnut charts
-    if (this.config.type === 'doughnut') {
-      const uniqueTypes = [...new Set(this.data.map(item => item.type).filter(type => type))];
-      
-      uniqueTypes.forEach(type => {
-        const iconUrl = this.getTypeIconUrl(type!);
-        imagePromises.push(
-          this.loadImage(iconUrl).catch(error => {
-            throw error;
-          })
-        );
-      });
-    }
+
+    urls.forEach(url => {
+      imagePromises.push(
+        this.loadImage(url).catch(error => {
+          throw error;
+        })
+      );
+    });
+
     try {
       const results = await Promise.allSettled(imagePromises);
       

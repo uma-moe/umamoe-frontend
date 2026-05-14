@@ -35,10 +35,11 @@ export class AuthInterceptor implements HttpInterceptor {
   }
 
   private isApiRequest(url: string): boolean {
-    return (url.includes('/api/') || url.includes('/ingest/')) && (
+    return (url.includes('/api/') || url.includes('/ingest/') || url.includes('/search/')) && (
       url.includes(environment.apiUrl) ||
       url.startsWith('/api/') ||
-      url.startsWith('/ingest/')
+      url.startsWith('/ingest/') ||
+      url.startsWith('/search/')
     );
   }
 }

@@ -10,6 +10,7 @@ import { ThemeService } from './services/theme.service';
 import { UpdateNotificationService } from './services/update-notification.service';
 import { RateLimitService } from './services/rate-limit.service';
 import { AuthService } from './services/auth.service';
+import { MasterDataService } from './services/master-data.service';
 import { environment } from '../environments/environment';
 import { filter, throttleTime } from 'rxjs';
 @Component({
@@ -30,6 +31,7 @@ export class AppComponent implements OnInit {
     private updateNotificationService: UpdateNotificationService,
     private rateLimitService: RateLimitService,
     private authService: AuthService,
+    private masterDataService: MasterDataService,
     private activatedRoute: ActivatedRoute,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
@@ -42,6 +44,8 @@ export class AppComponent implements OnInit {
     }
   }
   ngOnInit(): void {
+    this.masterDataService.init();
+
     // Handle OAuth token from any URL (backend redirects to /?token=...)
     if (isPlatformBrowser(this.platformId)) {
       const params = new URLSearchParams(window.location.search);

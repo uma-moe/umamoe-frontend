@@ -4,14 +4,36 @@
 import skillsData from '../../data/skills.json';
 import { Skill } from '../models/skill.model';
 // Export the skills data with proper typing
-export const SKILLS: Skill[] = skillsData as Skill[];
+function normalizeSkillsData(data: unknown): Skill[] {
+  if (Array.isArray(data)) {
+    return data as Skill[];
+  }
+
+  const defaultData = (data as any)?.default;
+  return Array.isArray(defaultData) ? defaultData as Skill[] : [];
+}
+
+export const SKILLS: Skill[] = normalizeSkillsData(skillsData);
 
 // Pre-built lookup maps for O(1) access
 const SKILL_BY_SKILL_ID = new Map<number, Skill>();
 const SKILL_BY_ID = new Map<string, Skill>();
-for (const skill of SKILLS) {
-  SKILL_BY_SKILL_ID.set(skill.skill_id, skill);
-  if (skill.id) SKILL_BY_ID.set(skill.id, skill);
+
+function rebuildSkillMaps(): void {
+  SKILL_BY_SKILL_ID.clear();
+  SKILL_BY_ID.clear();
+  for (const skill of SKILLS) {
+    SKILL_BY_SKILL_ID.set(skill.skill_id, skill);
+    if (skill.id) SKILL_BY_ID.set(skill.id, skill);
+  }
+}
+
+rebuildSkillMaps();
+
+export function replaceSkillsData(data: unknown): Skill[] {
+  SKILLS.splice(0, SKILLS.length, ...normalizeSkillsData(data));
+  rebuildSkillMaps();
+  return SKILLS;
 }
 
 // Export individual getters for convenience

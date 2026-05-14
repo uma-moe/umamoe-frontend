@@ -1,6 +1,8 @@
 export const environment = {
   production: false,
   apiUrl: '',  // relative paths - proxied by ng serve via proxy.conf.json
+  resourceUrl: '/resources',
+  statusApiUrl: '',
   enableSearchV3: true, // Enable V3 unified search API
   christmasTheme: false,
   turnstile: {

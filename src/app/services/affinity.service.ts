@@ -1,26 +1,12 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, ReplaySubject, of, firstValueFrom } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
-import { environment } from '../../environments/environment';
+import { Observable, ReplaySubject } from 'rxjs';
 import { SparkInfo } from './factor.service';
+import { ResourceDataService } from './resource-data.service';
 
 export interface AffinityData {
   chars: number[];
   aff2: number[];
   aff3: number[];
-}
-
-interface MasterVersion {
-  app_version: string;
-  resource_version: string;
-  updated_at: string;
-}
-
-interface AffinityCache {
-  appVersion: string;
-  resourceVersion: string;
-  data: AffinityData;
 }
 
 export interface TreeSlots {
@@ -94,10 +80,7 @@ export class AffinityService {
   private aff2: number[] = [];
   private aff3: number[] = [];
 
-  private static readonly CACHE_KEY = 'affinity_cache_v2';
-  private static readonly STALE_THRESHOLD_MS = 30 * 60 * 1000;
-
-  constructor(private http: HttpClient) {}
+  constructor(private resourceData: ResourceDataService) {}
 
   private initData(data: AffinityData): void {
     this.n = data.chars.length;
@@ -110,73 +93,33 @@ export class AffinityService {
     }
   }
 
-  private getCachedData(): AffinityCache | null {
-    try {
-      const raw = localStorage.getItem(AffinityService.CACHE_KEY);
-      if (!raw) return null;
-      const cache = JSON.parse(raw) as AffinityCache;
-      if (cache?.data?.chars?.length && cache?.data?.aff2?.length) return cache;
-    } catch {}
-    return null;
-  }
-
-  private saveCache(data: AffinityData, appVersion: string, resourceVersion: string): void {
-    try {
-      const cache: AffinityCache = { appVersion, resourceVersion, data };
-      localStorage.setItem(AffinityService.CACHE_KEY, JSON.stringify(cache));
-    } catch {}
+  private resetData(): void {
+    this.n = 0;
+    this.chars = [];
+    this.aff2 = [];
+    this.aff3 = [];
+    this.charIndex.clear();
   }
 
   load(): Observable<AffinityData | null> {
     if (this.loaded) {
       return this.data$.asObservable();
     }
+
     this.loaded = true;
 
-    const cache = this.getCachedData();
-    if (cache) {
-      this.initData(cache.data);
-      this.data$.next(cache.data);
-    }
+    this.resourceData.watchResource<AffinityData | null>('affinity', null)
+      .subscribe(data => {
+        if (data) {
+          this.initData(data);
+        } else {
+          this.resetData();
+        }
 
-    this.http.get<MasterVersion>(`${environment.apiUrl}/api/ver`).pipe(
-      catchError(() => of(null))
-    ).subscribe(async ver => {
-      if (!ver) {
-        if (!cache) this.fetchAndStore('', '');
-        return;
-      }
-
-      if (cache && cache.appVersion === ver.app_version && cache.resourceVersion === ver.resource_version) {
-        return;
-      }
-
-      const updatedAt = new Date(ver.updated_at).getTime();
-      const age = Date.now() - updatedAt;
-      if (age < AffinityService.STALE_THRESHOLD_MS) {
-        if (!cache) this.fetchAndStore(ver.app_version, ver.resource_version);
-        return;
-      }
-
-      this.fetchAndStore(ver.app_version, ver.resource_version);
-    });
+        this.data$.next(data);
+      });
 
     return this.data$.asObservable();
-  }
-
-  private fetchAndStore(appVersion: string, resourceVersion: string): void {
-    this.http.get<AffinityData>(`${environment.apiUrl}/api/v4/affinity/data`)
-      .pipe(
-        tap(data => {
-          this.initData(data);
-          this.saveCache(data, appVersion, resourceVersion);
-        }),
-        catchError(() => {
-          this.loaded = false;
-          return of(null);
-        })
-      )
-      .subscribe(data => this.data$.next(data));
   }
 
   get isReady(): boolean {

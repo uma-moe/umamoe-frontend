@@ -1,32 +1,45 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, combineLatest, of } from 'rxjs';
-import { map, filter, switchMap, take } from 'rxjs/operators';
+import { Observable, BehaviorSubject, combineLatest } from 'rxjs';
+import { map, filter, take } from 'rxjs/operators';
 import { Skill } from '../models/skill.model';
 import { CharacterService } from './character.service';
-import { SKILLS, getAllSkills, getUniqueSkills as getBundledUniqueSkills } from '../data/skills-data';
+import { getAllSkills } from '../data/skills-data';
 import { environment } from '../../environments/environment';
+import { MasterDataService } from './master-data.service';
 @Injectable({
     providedIn: 'root'
 })
 export class SkillService {
     private skillsSubject = new BehaviorSubject<Skill[]>([]);
     public skills$ = this.skillsSubject.asObservable();
-    constructor(private http: HttpClient, private characterService: CharacterService) {
+    constructor(private characterService: CharacterService, private masterData: MasterDataService) {
         // Load skills from bundled data immediately
         this.skillsSubject.next(getAllSkills());
+        this.masterData.init();
+        this.masterData.skills$.subscribe(skills => this.skillsSubject.next(skills));
     }
     getSkills(): Observable<Skill[]> {
         return this.skills$;
     }
     getUniqueSkills(): Observable<Skill[]> {
-        return of(getBundledUniqueSkills());
+        return this.skills$.pipe(
+            filter(skills => skills.length > 0),
+            map(skills => skills.filter(skill => skill.unique === 'true'))
+        );
     }
     getSkillById(id: number): Observable<Skill | undefined> {
-        return of(SKILLS.find(s => s.skill_id === id));
+        return this.skills$.pipe(
+            filter(skills => skills.length > 0),
+            map(skills => skills.find(s => s.skill_id === id)),
+            take(1)
+        );
     }
     getSkillViaId(id: string): Observable<Skill | undefined> {
-        return of(SKILLS.find(skill => skill.id === id));
+        return this.skills$.pipe(
+            filter(skills => skills.length > 0),
+            map(skills => skills.find(skill => skill.id === id)),
+            take(1)
+        );
     }
     // Get multiple skills by their IDs in a single operation
     getSkillsByIds(ids: string[]): Observable<Skill[]> {

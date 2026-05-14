@@ -27,14 +27,20 @@ export class CorsInterceptor implements HttpInterceptor {
   private isApiRequest(url: string): boolean {
     // Check if the request is to our API endpoints
     // Note: Apache redirects www.honse.moe -> honse.moe, but we handle both domains
-    return url.includes('/api/') && (
+    return (url.includes('/api/') || url.includes('/search/')) && (
       url.includes(environment.apiUrl) ||
       url.startsWith('/api/') ||
+      url.startsWith('/search/') ||
       url.startsWith('http://localhost:3001/api/') ||
       url.startsWith('http://127.0.0.1:3001/api/') ||
+      url.startsWith('http://localhost:3001/search/') ||
+      url.startsWith('http://127.0.0.1:3001/search/') ||
       url.startsWith('https://honse.moe/api/') ||
       url.startsWith('https://www.honse.moe/api/') ||
-      url.includes('honse.moe/api/')
+      url.startsWith('https://honse.moe/search/') ||
+      url.startsWith('https://www.honse.moe/search/') ||
+      url.includes('honse.moe/api/') ||
+      url.includes('honse.moe/search/')
     );
   }
 }

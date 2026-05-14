@@ -1,11 +1,12 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, OnDestroy, SimpleChanges, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { RaceSelectDialogComponent, RaceSelectDialogData } from './race-select-dialog.component';
-import RACE_DATA from '../../../data/race_to_saddle_mapping.json';
+import { MasterDataService } from '../../services/master-data.service';
+import { Subscription } from 'rxjs';
 
 export interface ScheduleEntry {
   raceName: string;
@@ -83,7 +84,7 @@ function getYearsForPermission(perm: number): ('junior' | 'classic' | 'senior')[
   templateUrl: './race-scheduler.component.html',
   styleUrl: './race-scheduler.component.scss'
 })
-export class RaceSchedulerComponent implements OnInit, OnChanges {
+export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
   @Input() selectable = true;
   @Input() showSearch = false;
   @Input() winSaddleIds: number[] = [];
@@ -121,11 +122,30 @@ export class RaceSchedulerComponent implements OnInit, OnChanges {
    *  Year is assigned in chronological order by consuming the earliest available slot. */
   private ranLookup = new Map<string, number>();
   private ranCount = 0;
+  private raceDataSub?: Subscription;
 
-  constructor(private dialog: MatDialog) {}
+  constructor(private dialog: MatDialog, private masterData: MasterDataService) {}
 
   ngOnInit(): void {
-    this.allRaces = (RACE_DATA as any).races as RaceEntry[];
+    this.masterData.init();
+    this.raceDataSub = this.masterData.raceSaddleData$.subscribe(data => this.initializeRaceData(data));
+  }
+
+  ngOnDestroy(): void {
+    this.raceDataSub?.unsubscribe();
+  }
+
+  private initializeRaceData(data: any): void {
+    this.allRaces = (data?.races || []) as RaceEntry[];
+    this.grid = {};
+    this.cellSelection.clear();
+    this.saddleToRaceMap.clear();
+    this.wonRaceIds.clear();
+    this.raceMap.clear();
+    this.programIdToRaceInstanceId.clear();
+    this.ranLookup.clear();
+    this.ranCount = 0;
+
     for (const r of this.allRaces) {
       this.raceMap.set(r.race_instance_id, r);
       for (const sched of r.schedule) {

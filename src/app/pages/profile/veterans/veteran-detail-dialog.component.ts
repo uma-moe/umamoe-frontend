@@ -9,7 +9,7 @@ import { RaceResultsDialogComponent, RaceResultsDialogData } from '../../../comp
 import { FactorService } from '../../../services/factor.service';
 import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
 import { VeteranMember, SuccessionChara, FactorInfoEntry } from '../../../models/profile.model';
-import RACE_DATA from '../../../../data/race_to_saddle_mapping.json';
+import { RACE_SADDLE_DATA } from '../../../data/race-saddle.data';
 
 interface WonRace {
   raceInstanceId: number;
@@ -73,7 +73,7 @@ export class VeteranDetailDialogComponent {
     const seen = new Set<number>();
     const races: WonRace[] = [];
 
-    for (const race of (RACE_DATA as any).races) {
+    for (const race of (RACE_SADDLE_DATA as any).races) {
       if (seen.has(race.race_instance_id)) continue;
       for (const ws of race.win_saddles ?? []) {
         if (ws.required_race_instance_ids?.length === 1 && saddleIds.has(ws.saddle_id)) {

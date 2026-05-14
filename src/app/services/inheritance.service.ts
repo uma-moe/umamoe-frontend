@@ -77,6 +77,7 @@ interface VoteResponse {
 })
 export class InheritanceService {
   private readonly apiUrl = '/api/v3'; // Updated to use v3 unified API
+  private readonly searchApiUrl = '/search';
   private searchResults$ = new BehaviorSubject<SearchResult<InheritanceRecord> | null>(null);
   private characters$ = new BehaviorSubject<UmaMusumeCharacter[]>([]);
   constructor(private http: HttpClient) {
@@ -92,7 +93,7 @@ export class InheritanceService {
         })
       );
   }
-  // Search inheritance records with V3 unified API
+  // Search inheritance records with the unified search API
   searchInheritance(filters: InheritanceSearchFilters = {}, page: number = 0, pageSize: number = 20): Observable<SearchResult<InheritanceRecord>> {
     let params = new HttpParams()
       .set('page', page.toString())
@@ -339,7 +340,7 @@ export class InheritanceService {
     } else {
       params = params.set('max_follower_num', '999');
     }
-    return this.http.get<V3SearchResult>(`${this.apiUrl}/search`, { params })
+    return this.http.get<V3SearchResult>(`${this.searchApiUrl}/query`, { params })
       .pipe(
         map(response => {
           
@@ -358,7 +359,7 @@ export class InheritanceService {
           return searchResult;
         }),
         catchError(error => {
-          console.error('Error searching inheritance with V3 API:', error);
+          console.error('Error searching inheritance:', error);
           const emptyResult: SearchResult<InheritanceRecord> = {
             items: [],
             totalPages: 0,

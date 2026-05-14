@@ -129,7 +129,7 @@ export class SupportCardSelectDialogComponent implements OnInit {
         this.supportCardService.getReleasedSupportCards().subscribe({
             next: (cards: SupportCardShort[]) => {
                 this.supportCards = cards;
-                this.filteredCardsSync = cards;
+              this.filterCards();
             },
             error: (error: any) => {
                 console.error('Error loading support cards:', error);

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { TimelineEvent, EventType, TimelineFilters, ReleaseCalculation, TimelineConfig, CharacterBanner, SupportBanner, PaidBanner, StoryEvent, ChampionsMeeting, LegendRace, Campaign } from '../models/timeline.model';
-import { HttpClient } from '@angular/common/http';
 import {
   getAllCharacterBanners,
   getAllSupportBanners,
@@ -11,29 +11,19 @@ import {
   getAllLegendRaces,
   getAllCampaigns
 } from '../data/timeline-data';
-import characterNamesData from '../../data/character_names.json';
-import supportCardsDbData from '../../data/support-cards-db.json';
+import { getCharacterNameEntry } from '../data/character.data';
+import { getSupportCardById } from '../data/support-cards.data';
+import { MasterDataService } from './master-data.service';
 // ============================================
 // CHARACTER & SUPPORT NAME LOOKUPS
 // ============================================
-interface CharacterNameEntry {
-  name: string;
-  skins: Record<string, string>;
-}
-const CHARACTER_NAMES: Record<string, CharacterNameEntry> = characterNamesData as any;
-const SUPPORT_CARDS_DB: { id: string; name: string; rarity: number; type: string }[] = supportCardsDbData as any;
-// Build lookup maps
-const SUPPORT_CARD_NAME_MAP = new Map<number, { name: string; rarity: number; type: string }>();
-SUPPORT_CARDS_DB.forEach(card => {
-  SUPPORT_CARD_NAME_MAP.set(parseInt(card.id, 10), { name: card.name, rarity: card.rarity, type: card.type });
-});
 function resolveCharacterName(cardId: number): string {
   const charaId = Math.floor(cardId / 100).toString();
-  const entry = CHARACTER_NAMES[charaId];
+  const entry = getCharacterNameEntry(charaId);
   return entry?.name || `Unknown_${cardId}`;
 }
 function resolveSupportName(cardId: number): string {
-  const info = SUPPORT_CARD_NAME_MAP.get(cardId);
+  const info = getSupportCardById(String(cardId));
   return info?.name || `Unknown_${cardId}`;
 }
 // ============================================
@@ -294,8 +284,13 @@ export class TimelineService {
   // Cached unified confirmed dates for consistent extrapolation across all event types
   private unifiedConfirmedDates: Array<{ jp: Date, global: Date }> | null = null;
   private unconfirmedBannerJpDates: Date[] | null = null;
-  constructor(private http: HttpClient) {
-    this.loadTimelineData();
+  constructor(private masterData: MasterDataService) {
+    this.masterData.init();
+    this.masterData.timelineRefresh$.pipe(debounceTime(0)).subscribe(() => {
+      this.unifiedConfirmedDates = null;
+      this.unconfirmedBannerJpDates = null;
+      this.loadTimelineData();
+    });
   }
   /**
    * Normalize a date to midnight UTC (00:00:00.000)

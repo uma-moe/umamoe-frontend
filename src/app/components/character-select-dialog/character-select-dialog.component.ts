@@ -631,6 +631,7 @@ export class CharacterSelectDialogComponent implements OnInit {
       .getReleasedCharacters()
       .subscribe((characters: Character[]) => {
         this.characters = characters;
+        this.sort$.next(this.sort);
         this.cdr.markForCheck();
       });
 

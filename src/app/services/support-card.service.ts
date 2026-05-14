@@ -15,7 +15,8 @@ import {
   SupportCardRecordV2Enriched
 } from '../models/support-card.model';
 import { PaginatedResponse, ApiResponse, SearchResult } from '../models/common.model';
-import { SUPPORT_CARDS, getAllSupportCards, getSupportCardById as getCardById, getSupportCardsByIds } from '../data/support-cards.data';
+import { getAllSupportCards, getSupportCardById as getCardById, getSupportCardsByIds } from '../data/support-cards.data';
+import { MasterDataService } from './master-data.service';
 // V3 API interfaces
 interface V3SearchResult {
   items: V3UnifiedAccountRecord[];
@@ -63,11 +64,14 @@ interface V3SupportCardRecord {
 })
 export class SupportCardService {
   private readonly apiUrl = '/api/v3'; // Updated to use v3 unified API
+  private readonly searchApiUrl = '/search';
   private searchResults$ = new BehaviorSubject<SearchResult<SupportCardRecord> | null>(null);
   private supportCards$ = new BehaviorSubject<SupportCardShort[]>([]);
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private masterData: MasterDataService) {
     // Load support cards from bundled data immediately
     this.supportCards$.next(getAllSupportCards());
+    this.masterData.init();
+    this.masterData.supportCards$.subscribe(cards => this.supportCards$.next(cards));
   }
   // Map V3 backend response to frontend format
   private mapV3BackendToFrontend(
@@ -217,7 +221,7 @@ export class SupportCardService {
     if (filters.sortOrder) {
       params = params.set('sort_order', filters.sortOrder);
     }
-    return this.http.get<V3SearchResult>(`${this.apiUrl}/search`, { headers, params })
+    return this.http.get<V3SearchResult>(`${this.searchApiUrl}/query`, { headers, params })
       .pipe(
         map(response => this.mapV3BackendToFrontend(response, filters, page, limit)),
         catchError(error => {
@@ -300,7 +304,10 @@ export class SupportCardService {
   }
   // Get support card by ID (master data)
   getSupportCardById(id: string): Observable<SupportCardShort | undefined> {
-    return of(getCardById(id));
+    return this.supportCards$.pipe(
+      filter(cards => cards.length > 0),
+      map(cards => cards.find(card => card.id === id) ?? getCardById(id))
+    );
   }
   // Get current search results
   getCurrentSearchResults(): Observable<SearchResult<SupportCardRecord> | null> {
@@ -312,7 +319,10 @@ export class SupportCardService {
   }
   // Get support cards by type
   getSupportCardsByType(type: number): Observable<SupportCardShort[]> {
-    return of(SUPPORT_CARDS.filter(card => card.type === type));
+    return this.supportCards$.pipe(
+      filter(cards => cards.length > 0),
+      map(cards => cards.filter(card => card.type === type))
+    );
   }
   // Get support cards by character
   // Legacy methods for backward compatibility with existing tierlist code
@@ -336,16 +346,33 @@ export class SupportCardService {
     // Add grace period to the cutoff date
     const effectiveCutoffDate = new Date(baseCutoffDate);
     effectiveCutoffDate.setDate(effectiveCutoffDate.getDate() + gracePeriodDays);
-    return of(SUPPORT_CARDS.filter(card => {
-      // Parse the card's JP release date
-      const jpReleaseDate = new Date(card.release_date);
-      if (isNaN(jpReleaseDate.getTime())) return false;
-      // Calculate estimated global release date using timeline logic
-      const estimatedGlobalDate = this.calculateGlobalReleaseDate(jpReleaseDate, globalReleaseDate);
-      // Return true if the card should be released by the cutoff date (including grace period)
-      return estimatedGlobalDate <= effectiveCutoffDate;
-    }));
+    return this.supportCards$.pipe(
+      filter(cards => cards.length > 0),
+      map(cards => {
+        const releaseDatesAreGlobal = this.hasGlobalReleaseDates(cards, globalReleaseDate);
+        return cards.filter(card => {
+          const releaseDate = new Date(card.release_date);
+          if (isNaN(releaseDate.getTime())) return false;
+
+          if (releaseDatesAreGlobal) {
+            return releaseDate <= effectiveCutoffDate;
+          }
+
+          const estimatedGlobalDate = this.calculateGlobalReleaseDate(releaseDate, globalReleaseDate);
+          return estimatedGlobalDate <= effectiveCutoffDate;
+        });
+      })
+    );
   }
+
+  private hasGlobalReleaseDates(cards: SupportCardShort[], globalLaunchDate: Date): boolean {
+    const releaseDates = cards
+      .map(card => new Date(card.release_date))
+      .filter(releaseDate => !isNaN(releaseDate.getTime()));
+
+    return releaseDates.length > 0 && releaseDates.every(releaseDate => releaseDate >= globalLaunchDate);
+  }
+
   /**
    * Calculate estimated global release date based on timeline service logic
    * This mirrors the calculation used in character.service.ts
