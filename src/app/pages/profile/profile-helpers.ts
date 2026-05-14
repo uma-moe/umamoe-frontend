@@ -3,7 +3,7 @@ import { getSkillBySkillId } from '../../data/skills.data';
 
 export function getAptIcon(val: number | null): string {
     const idx = val != null && val >= 1 ? (val * 2 - 1).toString().padStart(2, '0') : '01';
-    return `assets/images/icon/statusrank/utx_ico_statusrank_${idx}.png`;
+    return `assets/images/icon/statusrank/utx_ico_statusrank_${idx}.webp`;
 }
 
 export function getAptGrade(val: number | null): string {
@@ -24,7 +24,7 @@ export function getRankIcon(score: number | null): string | null {
         index = 24 + Math.floor((score - 22100) / 400);
     }
     if (index > 97) index = 97;
-    return `assets/images/icon/ranks/utx_txt_rank_${index.toString().padStart(2, '0')}.png`;
+    return `assets/images/icon/ranks/utx_txt_rank_${index.toString().padStart(2, '0')}.webp`;
 }
 
 export function getRankGrade(score: number | null): string {
@@ -80,7 +80,7 @@ export function getTotalStats(m: any): number {
 
 export function getCardImage(cardId: number | null): string | null {
     if (!cardId) return null;
-    return `assets/images/character_stand/chara_stand_${cardId}.png`;
+    return `assets/images/character_stand/chara_stand_${cardId}.webp`;
 }
 
 export function getCharacterName(cardId: number | null): string {

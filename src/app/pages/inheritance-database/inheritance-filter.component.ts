@@ -593,7 +593,7 @@ export class InheritanceFilterComponent implements OnInit, OnDestroy {
   getRankIconPath(rank: number): string {
     // Using rank icons with proper ID formatting (01, 02, etc.)
     const rankId = rank.toString().padStart(2, '0');
-    return `assets/images/icon/ranks/utx_txt_rank_${rankId}.png`;
+    return `assets/images/icon/ranks/utx_txt_rank_${rankId}.webp`;
   }
   onRankIconError(event: any, rank: number): void {
     // Fallback to hiding the image if rank icon is missing

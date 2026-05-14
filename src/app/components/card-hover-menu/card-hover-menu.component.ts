@@ -301,7 +301,7 @@ export class CardHoverMenuComponent implements OnChanges {
     return this.tierColors[tier] || '#999';
   }
   getCardImageUrl(card: PrecomputedCardData): string {
-    return `/assets/images/support_card/half/support_card_s_${card.id}.png`;
+    return `/assets/images/support_card/half/support_card_s_${card.id}.webp`;
   }
   getBestLB(): number {
     if (!this.card) return 0;

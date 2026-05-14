@@ -35,6 +35,7 @@ import { VeteranPickerDialogComponent, VeteranPickerDialogData } from '../../com
 import { RaceResultsDialogComponent, RaceResultsDialogData } from '../../components/race-results-dialog/race-results-dialog.component';
 import { RaceWinPickerDialogComponent, RaceWinPickerDialogData } from '../../components/race-results-dialog/race-win-picker-dialog.component';
 import { Meta, Title } from '@angular/platform-browser';
+import { preferRasterAsset } from '../../utils/raster-asset';
 
 @Component({
   selector: 'app-lineage-planner',
@@ -619,16 +620,16 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
 
   getCharacterImage(node: LineageNode): string {
     if (node.character) {
-      return `assets/images/characters/${node.character.image}`;
+      return preferRasterAsset(`assets/images/characters/${node.character.image}`);
     }
     if (node.succession?.card_id) {
-      return `assets/images/characters/chara_stand_${node.succession.card_id}.png`;
+      return `assets/images/characters/chara_stand_${node.succession.card_id}.webp`;
     }
     if (node.veteran?.card_id) {
-      return `assets/images/characters/chara_stand_${node.veteran.card_id}.png`;
+      return `assets/images/characters/chara_stand_${node.veteran.card_id}.webp`;
     }
     if (node.veteran?.trained_chara_id) {
-      return `assets/images/characters/chara_stand_${node.veteran.trained_chara_id}.png`;
+      return `assets/images/characters/chara_stand_${node.veteran.trained_chara_id}.webp`;
     }
     return '';
   }
@@ -678,11 +679,11 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
 
   getVeteranImage(veteran: VeteranMember): string {
     if (veteran.card_id) {
-      return `assets/images/character_stand/chara_stand_${veteran.card_id}.png`;
+      return `assets/images/character_stand/chara_stand_${veteran.card_id}.webp`;
     }
     if (veteran.trained_chara_id) {
       const c = this.characters.find(ch => Math.floor(ch.id / 100) === veteran.trained_chara_id);
-      return c ? `assets/images/character_stand/chara_stand_${c.id}.png` : '';
+      return c ? `assets/images/character_stand/chara_stand_${c.id}.webp` : '';
     }
     return '';
   }
@@ -1239,17 +1240,17 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
 
   getCharacterIcon(node: LineageNode): string {
     if (node.character?.image) {
-      return `assets/images/character_stand/${node.character.image}`;
+      return preferRasterAsset(`assets/images/character_stand/${node.character.image}`);
     }
     const cardId = this.getNodeCardId(node);
     if (!cardId) return '';
-    return `assets/images/character_stand/chara_stand_${cardId}.png`;
+    return `assets/images/character_stand/chara_stand_${cardId}.webp`;
   }
 
   getCharacterIconById(id: number): string {
     const ch = this.characters.find(c => c.id === id);
-    if (ch?.image) return `assets/images/character_stand/${ch.image}`;
-    return `assets/images/character_stand/chara_stand_${id}.png`;
+    if (ch?.image) return preferRasterAsset(`assets/images/character_stand/${ch.image}`);
+    return `assets/images/character_stand/chara_stand_${id}.webp`;
   }
 
   sparkShowPerRun = false;

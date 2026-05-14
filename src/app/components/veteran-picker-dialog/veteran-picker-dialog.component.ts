@@ -36,6 +36,7 @@ import {
 import { CharacterSelectDialogComponent } from '../character-select-dialog/character-select-dialog.component';
 import { RaceWinPickerDialogComponent, RaceWinPickerDialogData } from '../race-results-dialog/race-win-picker-dialog.component';
 import { TreeSlots, SlotName, CandidateScore } from '../../services/affinity.service';
+import { preferRasterAsset } from '../../utils/raster-asset';
 
 export interface VeteranPickerDialogData {
   linkedAccounts: LinkedAccount[];
@@ -726,7 +727,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
 
   partnerToRowData(p: PartnerInheritance): VpdRowData {
     return {
-      imageUrl: `assets/images/character_stand/chara_stand_${p.main_parent_id}.png`,
+      imageUrl: `assets/images/character_stand/chara_stand_${p.main_parent_id}.webp`,
       name: getCharacterName(p.main_parent_id),
       subtitle: p.trainer_name ?? undefined,
       rarity: p.parent_rarity,
@@ -985,8 +986,8 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   }
 
   getBookmarkImage(record: InheritanceRecord): string {
-    if (record.main_parent_id) return `assets/images/character_stand/chara_stand_${record.main_parent_id}.png`;
-    if (record.main?.image) return `assets/images/characters/${record.main.image}`;
+    if (record.main_parent_id) return `assets/images/character_stand/chara_stand_${record.main_parent_id}.webp`;
+    if (record.main?.image) return preferRasterAsset(`assets/images/characters/${record.main.image}`);
     return '';
   }
 
@@ -1530,7 +1531,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   }
 
   getManualEntryImage(entry: StoredManualEntry): string {
-    return entry.mainCardId ? `assets/images/character_stand/chara_stand_${entry.mainCardId}.png` : '';
+    return entry.mainCardId ? `assets/images/character_stand/chara_stand_${entry.mainCardId}.webp` : '';
   }
 
   getManualEntrySparks(entry: StoredManualEntry): ResolvedSpark[] {
@@ -1630,7 +1631,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   }
 
   getManualNodeImage(node: ManualFormNode): string {
-    return node.cardId ? `assets/images/character_stand/chara_stand_${node.cardId}.png` : '';
+    return node.cardId ? `assets/images/character_stand/chara_stand_${node.cardId}.webp` : '';
   }
 
   trackByIndex(i: number): number { return i; }
@@ -1645,10 +1646,10 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   }
 
   getImage(vet: VeteranMember): string {
-    if (vet.card_id) return `assets/images/character_stand/chara_stand_${vet.card_id}.png`;
+    if (vet.card_id) return `assets/images/character_stand/chara_stand_${vet.card_id}.webp`;
     if (vet.trained_chara_id) {
       const c = this.characters.find(ch => Math.floor(ch.id / 100) === vet.trained_chara_id);
-      return c ? `assets/images/character_stand/chara_stand_${c.id}.png` : '';
+      return c ? `assets/images/character_stand/chara_stand_${c.id}.webp` : '';
     }
     return '';
   }

@@ -209,7 +209,7 @@ export class TierlistComponent implements OnInit, OnDestroy {
   }
   getCardImageUrl(card: PrecomputedCardData): string {
     // You'll need to implement this based on your asset structure
-    return `/assets/images/support_card/half/support_card_s_${card.id}.png`;
+    return `/assets/images/support_card/half/support_card_s_${card.id}.webp`;
   }
   onCardClick(card: PrecomputedCardData): void {
     // Toggle power progression display

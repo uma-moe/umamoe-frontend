@@ -117,7 +117,7 @@
           <div class="portrait-wrapper portrait-main"
                [class.portrait-selected-main]="selectedParent === 'main'"
                (click)="selectParent('main', $event)">
-            <img [src]="'/assets/images/character_stand/chara_stand_' + record.main_parent_id + '.png'"
+              <img [src]="getCharacterImageUrl(record.main_parent_id)"
                  [alt]="'Main Character ' + record.main_parent_id"
                  class="character-image main-character-img" loading="lazy">
           </div>
@@ -152,7 +152,7 @@
             <div class="portrait-wrapper portrait-gp"
                  [class.portrait-selected-left]="selectedParent === 'left'"
                  (click)="selectParent('left', $event)">
-              <img [src]="'/assets/images/character_stand/chara_stand_' + record.parent_left_id + '.png'"
+                  <img [src]="getCharacterImageUrl(record.parent_left_id)"
                    [alt]="'Grandparent Left ' + record.parent_left_id"
                    class="character-image parent-character-img" loading="lazy">
             </div>
@@ -174,7 +174,7 @@
             <div class="portrait-wrapper portrait-gp"
                  [class.portrait-selected-right]="selectedParent === 'right'"
                  (click)="selectParent('right', $event)">
-              <img [src]="'/assets/images/character_stand/chara_stand_' + record.parent_right_id + '.png'"
+                  <img [src]="getCharacterImageUrl(record.parent_right_id)"
                    [alt]="'Grandparent Right ' + record.parent_right_id"
                    class="character-image parent-character-img" loading="lazy">
             </div>

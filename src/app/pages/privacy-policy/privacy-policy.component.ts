@@ -31,7 +31,7 @@ export class PrivacyPolicyComponent {
       { property: 'og:description', content: 'Privacy policy for uma.moe - Umamusume resource hub. Learn how your data is handled and protected.' },
       { property: 'og:type', content: 'website' },
       { property: 'og:url', content: 'https://uma.moe/privacy-policy' },
-      { property: 'og:image', content: 'https://uma.moe/assets/logo.png' },
+      { property: 'og:image', content: 'https://uma.moe/assets/logo.webp' },
       { name: 'twitter:card', content: 'summary' },
       { name: 'twitter:title', content: 'Privacy Policy | uma.moe' },
       { name: 'twitter:description', content: 'Privacy policy for uma.moe - Umamusume resource hub.' },

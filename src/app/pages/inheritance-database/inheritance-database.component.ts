@@ -295,11 +295,11 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       { property: 'og:description', content: 'Browse and search the Umamusume database. Find optimal inheritance skills and support cards for your team.' },
       { property: 'og:type', content: 'website' },
       { property: 'og:url', content: 'https://honsemoe.com/database' },
-      { property: 'og:image', content: 'https://honsemoe.com/assets/logo.png' },
+      { property: 'og:image', content: 'https://honsemoe.com/assets/logo.webp' },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: 'Database | honse.moe' },
       { name: 'twitter:description', content: 'Browse and search the Umamusume database. Find optimal inheritance skills and support cards for your team.' },
-      { name: 'twitter:image', content: 'https://honsemoe.com/assets/logo.png' }
+      { name: 'twitter:image', content: 'https://honsemoe.com/assets/logo.webp' }
     ]);
   }
   ngOnInit() {
@@ -1342,7 +1342,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     return this.supportCardService.getSupportCardById(supportCardId.toString()).pipe().toPromise();
   }
   getSupportCardImageUrl(supportCardId: number): string {
-    return `/assets/images/support_card/half/support_card_s_${supportCardId}.png`;
+    return `/assets/images/support_card/half/support_card_s_${supportCardId}.webp`;
   }
   getSupportCardName(supportCardId: number): string {
     // For now, return a fallback until we implement card lookup

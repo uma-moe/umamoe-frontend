@@ -35,7 +35,7 @@ export interface RaceResultsDialogData {
       <div class="dialog-header">
         <div class="header-left">
           <img *ngIf="data.charId"
-               [src]="'/assets/images/character_stand/chara_stand_' + data.charId + '.png'"
+            [src]="'/assets/images/character_stand/chara_stand_' + data.charId + '.webp'"
                class="char-portrait"
                [alt]="data.charName">
           <div class="header-text">

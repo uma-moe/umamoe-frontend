@@ -225,7 +225,7 @@ export class SupportCardFilterComponent implements OnInit {
     return rarityMap[rarity] || 'Unknown';
   }
   onImageError(event: any) {
-    event.target.src = 'assets/images/placeholder-card.png';
+    event.target.src = 'assets/images/placeholder-card.webp';
     this.isImageLoading = false;
   }
   

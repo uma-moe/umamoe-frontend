@@ -374,7 +374,7 @@ export class TierlistScatterChartComponent implements OnInit, OnDestroy, OnChang
     return 'D';
   }
   private getCardImageUrl(card: PrecomputedCardData): string {
-    return `/assets/images/support_card/half/support_card_s_${card.id}.png`;
+    return `/assets/images/support_card/half/support_card_s_${card.id}.webp`;
   }
   private updateChart(): void {
     if (!this.chart) return;

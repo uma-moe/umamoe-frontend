@@ -403,7 +403,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   getClubRankIcon(rank: number | undefined): string | null {
     if (!rank || rank < 1 || rank > 11) return null;
     const padded = rank.toString().padStart(2, '0');
-    return `assets/images/icon/circle_rank/utx_ico_circle_rank_${padded}.png`;
+    return `assets/images/icon/circle_rank/utx_ico_circle_rank_${padded}.webp`;
   }
   getMemberRole(m: CircleMemberMonthlyData): 'leader' | 'officer' | 'member' {
     if (m.membership === 3) return 'leader';

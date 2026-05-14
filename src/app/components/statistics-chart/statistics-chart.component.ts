@@ -1121,31 +1121,31 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
   }
   getStatIconUrl(statType: string): string {
     const typeMap: { [key: string]: string } = {
-      'speed': '/assets/images/icon/stats/speed.png',
-      'power': '/assets/images/icon/stats/power.png',
-      'stamina': '/assets/images/icon/stats/stamina.png',
-      'wiz': '/assets/images/icon/stats/wit.png',
-      'wisdom': '/assets/images/icon/stats/wit.png',
-      'intelligence': '/assets/images/icon/stats/wit.png',
-      'wit': '/assets/images/icon/stats/wit.png',
-      'guts': '/assets/images/icon/stats/guts.png',
-      'friend': '/assets/images/icon/stats/friend.png',
-      'group': '/assets/images/icon/stats/group.png'
+      'speed': '/assets/images/icon/stats/speed.webp',
+      'power': '/assets/images/icon/stats/power.webp',
+      'stamina': '/assets/images/icon/stats/stamina.webp',
+      'wiz': '/assets/images/icon/stats/wit.webp',
+      'wisdom': '/assets/images/icon/stats/wit.webp',
+      'intelligence': '/assets/images/icon/stats/wit.webp',
+      'wit': '/assets/images/icon/stats/wit.webp',
+      'guts': '/assets/images/icon/stats/guts.webp',
+      'friend': '/assets/images/icon/stats/friend.webp',
+      'group': '/assets/images/icon/stats/group.webp'
     };
     return typeMap[statType.toLowerCase()] || typeMap['speed'];
   }
   getTypeIconUrl(cardType: string): string {
     const typeMap: { [key: string]: string } = {
-      'speed': '/assets/images/icon/stats/speed.png',
-      'power': '/assets/images/icon/stats/power.png', 
-      'stamina': '/assets/images/icon/stats/stamina.png',
-      'wiz': '/assets/images/icon/stats/wit.png',
-      'wisdom': '/assets/images/icon/stats/wit.png',
-      'intelligence': '/assets/images/icon/stats/wit.png',
-      'wit': '/assets/images/icon/stats/wit.png',
-      'guts': '/assets/images/icon/stats/guts.png',
-      'friend': '/assets/images/icon/stats/friend.png',
-      'group': '/assets/images/icon/stats/group.png'
+      'speed': '/assets/images/icon/stats/speed.webp',
+      'power': '/assets/images/icon/stats/power.webp', 
+      'stamina': '/assets/images/icon/stats/stamina.webp',
+      'wiz': '/assets/images/icon/stats/wit.webp',
+      'wisdom': '/assets/images/icon/stats/wit.webp',
+      'intelligence': '/assets/images/icon/stats/wit.webp',
+      'wit': '/assets/images/icon/stats/wit.webp',
+      'guts': '/assets/images/icon/stats/guts.webp',
+      'friend': '/assets/images/icon/stats/friend.webp',
+      'group': '/assets/images/icon/stats/group.webp'
     };
     return typeMap[cardType.toLowerCase()] || typeMap['speed'];
   }

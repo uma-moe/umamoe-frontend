@@ -124,8 +124,12 @@ export class InheritanceEntryComponent {
         return char?.name || `Character ${charId}`;
     }
 
+    getCharacterImageUrl(charaId: number): string {
+        return `/assets/images/character_stand/chara_stand_${charaId}.webp`;
+    }
+
     getSupportCardImageUrl(supportCardId: number): string {
-        return `/assets/images/support_card/half/support_card_s_${supportCardId}.png`;
+        return `/assets/images/support_card/half/support_card_s_${supportCardId}.webp`;
     }
 
     handleSupportCardImageError(event: Event): void {
@@ -140,7 +144,7 @@ export class InheritanceEntryComponent {
 
     getRarityIcon(rarity: number): string {
         const idx = rarity < 11 ? '0' + (rarity - 1) : String(rarity - 1);
-        return `/assets/images/icon/ranks/utx_txt_rank_${idx}.png`;
+        return `/assets/images/icon/ranks/utx_txt_rank_${idx}.webp`;
     }
 
     resolveSparks(sparkIds: number[]): SparkInfo[] {

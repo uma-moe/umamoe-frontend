@@ -30,6 +30,7 @@ import { getCharacterName } from '../../pages/profile/profile-helpers';
 import { FactorService } from '../../services/factor.service';
 import { RaceSchedulerComponent } from '../race-scheduler/race-scheduler.component';
 import { VeteranDisplayComponent } from '../veteran-display/veteran-display.component';
+import { preferRasterAsset } from '../../utils/raster-asset';
 export interface ActiveFilterChip {
   id: string;
   label: string;
@@ -857,9 +858,9 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return this.collapsedSections.has(section);
   }
   getCharacterImagePath(imageName: string | undefined): string {
-    if (!imageName) return 'assets/images/placeholder-uma.png';
-    if (imageName.startsWith('assets/')) return imageName;
-    return `assets/images/character_stand/${imageName}`;
+    if (!imageName) return 'assets/images/placeholder-uma.webp';
+    if (imageName.startsWith('assets/')) return preferRasterAsset(imageName);
+    return preferRasterAsset(`assets/images/character_stand/${imageName}`);
   }
   selectNode(node: TreeNode) {
     const dialogRef = this.dialog.open(CharacterSelectDialogComponent, {
@@ -1985,10 +1986,10 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return 'Unknown';
   }
   private getVeteranImage(vet: VeteranMember): string {
-    if (vet.card_id) return `assets/images/character_stand/chara_stand_${vet.card_id}.png`;
+    if (vet.card_id) return `assets/images/character_stand/chara_stand_${vet.card_id}.webp`;
     if (vet.trained_chara_id) {
       const c = CHARACTERS.find(ch => Math.floor(ch.id / 100) === vet.trained_chara_id);
-      return c ? `assets/images/character_stand/chara_stand_${c.id}.png` : '';
+      return c ? `assets/images/character_stand/chara_stand_${c.id}.webp` : '';
     }
     return '';
   }
@@ -2061,7 +2062,7 @@ export class AdvancedFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
   getRankIconPath(rank: number): string {
     const rankId = rank.toString().padStart(2, '0');
-    return `assets/images/icon/ranks/utx_txt_rank_${rankId}.png`;
+    return `assets/images/icon/ranks/utx_txt_rank_${rankId}.webp`;
   }
   onRankIconError(event: any, rank: number): void {
     event.target.style.display = 'none';

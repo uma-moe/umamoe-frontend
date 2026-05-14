@@ -92,6 +92,6 @@ export class NavigationComponent {
   }
   onLogoError(event: Event) {
     const target = event.target as HTMLImageElement;
-    target.src = 'assets/logo.png';
+    target.src = 'assets/logo.webp';
   }
 }

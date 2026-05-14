@@ -135,11 +135,11 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             { property: 'og:description', content: 'Check the estimated release timeline for the global version. When does your favorite character release?' },
             { property: 'og:type', content: 'website' },
             { property: 'og:url', content: 'https://honse.moe/timeline' },
-            { property: 'og:image', content: 'https://honse.moe/assets/logo.png' },
+            { property: 'og:image', content: 'https://honse.moe/assets/logo.webp' },
             { name: 'twitter:card', content: 'summary_large_image' },
             { name: 'twitter:title', content: 'Timeline | honse.moe' },
             { name: 'twitter:description', content: 'Check the estimated release timeline for the global version. When does your favorite character release?' },
-            { name: 'twitter:image', content: 'https://honse.moe/assets/logo.png' }
+            { name: 'twitter:image', content: 'https://honse.moe/assets/logo.webp' }
         ]);
     }
     @HostListener('window:resize', ['$event'])

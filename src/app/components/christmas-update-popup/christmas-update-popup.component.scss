@@ -42,8 +42,8 @@
     width: 28px;
     height: 28px;
     background: linear-gradient(45deg, #ef5350, #66bb6a, #ffd700);
-    -webkit-mask-image: url('/assets/crimmas.png');
-    mask-image: url('/assets/crimmas.png');
+    -webkit-mask-image: url('/assets/crimmas.webp');
+    mask-image: url('/assets/crimmas.webp');
     -webkit-mask-size: contain;
     mask-size: contain;
     -webkit-mask-repeat: no-repeat;
@@ -72,7 +72,8 @@
   padding-right: 0.5rem; // Space for scrollbar
 
   // Custom scrollbar
-  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar { width: 6px; }
+
   &::-webkit-scrollbar-track { background: var(--surface-2); }
   
   &::-webkit-scrollbar-thumb {
@@ -287,11 +288,13 @@
       animation-duration: 2.2s;
     }
     
-    &:nth-child(odd) { animation-duration: 1.8s; }
+    &:nth-child(odd) { animation-duration: 1.8s; }
+
     &:nth-child(3n+1) { animation-duration: 1.4s; }
 
     // Add more randomness
-    &:nth-child(5n+3) { animation-duration: 2.3s; animation-delay: 0.5s; }
+    &:nth-child(5n+3) { animation-duration: 2.3s; animation-delay: 0.5s; }
+
     &:nth-child(7n) { animation-duration: 0.8s; animation-delay: 0.2s; }
     
     &:before {
@@ -316,7 +319,8 @@
       border-radius: 50%;
     }
     
-    &:last-child:after { content: none; }
+    &:last-child:after { content: none; }
+
     &:first-child { margin-left: -40px; }
   }
 }

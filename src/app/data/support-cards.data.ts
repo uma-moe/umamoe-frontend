@@ -42,7 +42,7 @@ function buildSupportCards(rawData: RawSupportCardData[]): SupportCardShort[] {
         rarity: card.rarity,
         release_date: card.release_date,
         limitBreak: 0, // Default limit break
-        imageUrl: `/assets/images/support_card/half/support_card_s_${card.id}.png`,
+        imageUrl: `/assets/images/support_card/half/support_card_s_${card.id}.webp`,
     }));
 }
 

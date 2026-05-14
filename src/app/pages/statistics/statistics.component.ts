@@ -39,6 +39,7 @@ import {
   resolveStatisticsDistance,
   toStatisticsDistanceOption
 } from '../../data/statistics-lookup.data';
+import { preferRasterAsset } from '../../utils/raster-asset';
 interface ResolvedSupportCard {
   id: string | null;
   name: string;
@@ -3651,7 +3652,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
   getCharacterImageUrl(characterNameOrId: string): string {
     // If it's already a numeric ID, use it directly
     if (/^\d+$/.test(characterNameOrId)) {
-      return `/assets/images/character_stand/chara_stand_${characterNameOrId}.png`;
+      return `/assets/images/character_stand/chara_stand_${characterNameOrId}.webp`;
     }
     // If it's a name, try to get the character ID from statistics data first
     if (this.globalStats?.uma_distribution) {
@@ -3660,12 +3661,12 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       );
       const characterId = (umaData as any)?.character_id || (umaData as any)?.id;
       if (characterId) {
-        return `/assets/images/character_stand/chara_stand_${characterId}.png`;
+        return `/assets/images/character_stand/chara_stand_${characterId}.webp`;
       }
     }
     // Otherwise, get character ID from the service mapping
     const characterId = this.statisticsService.getCharacterIdFromName(characterNameOrId) || characterNameOrId;
-    return `/assets/images/character_stand/chara_stand_${characterId}.png`;
+    return `/assets/images/character_stand/chara_stand_${characterId}.webp`;
   }
   // Helper method for template to check if character has image
   hasCharacterImage(characterNameOrId: string): boolean {
@@ -3702,7 +3703,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
   getSupportCardImageUrl(cardId: string | number): string {
-    return `/assets/images/support_card/half/support_card_s_${cardId}.png`;
+    return `/assets/images/support_card/half/support_card_s_${cardId}.webp`;
   }
   getStatIconUrl(statName: string): string {
     // Normalize stat name to match file names
@@ -3718,7 +3719,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       'rank_score': 'speed' // Use speed icon as fallback for rank score
     };
     const fileName = statMap[statName.toLowerCase()] || 'speed';
-    return `/assets/images/icon/stats/${fileName}.png`;
+    return `/assets/images/icon/stats/${fileName}.webp`;
   }
   handleImageError(event: any): void {
     event.target.style.display = 'none';
@@ -3989,7 +3990,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit, OnDestroy {
       .replace(/[^a-z0-9_]/g, '_')
       .replace(/_+/g, '_')
       .replace(/^_|_$/g, '');
-    return `/assets/images/skills/${normalizedName}.png`;
+    return `/assets/images/skills/${normalizedName}.webp`;
   }
   private getSkillIconFromName(skillName: string): string {
     return this.getSkillIconUrl(skillName);

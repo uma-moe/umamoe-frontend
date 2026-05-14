@@ -200,7 +200,7 @@ export class SupportCardSelectDialogComponent implements OnInit {
         return rarityMap[rarity] || 'Unknown';
     }
     onImageError(event: any) {
-        event.target.src = 'assets/images/placeholder-card.png';
+      event.target.src = 'assets/images/placeholder-card.webp';
     }
     confirm() {
         if (this.selectedCard) {

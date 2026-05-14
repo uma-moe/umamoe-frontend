@@ -373,7 +373,7 @@ export class CirclesComponent implements OnInit, OnDestroy {
   getClubRankIcon(rank: number | undefined): string | null {
     if (!rank || rank < 1 || rank > 11) return null;
     const padded = rank.toString().padStart(2, '0');
-    return `assets/images/icon/circle_rank/utx_ico_circle_rank_${padded}.png`;
+    return `assets/images/icon/circle_rank/utx_ico_circle_rank_${padded}.webp`;
   }
   onSearch(event: Event): void {
     const input = event.target as HTMLInputElement;

@@ -140,10 +140,10 @@ export class VeteranDisplayComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   private resolveImage(vet: VeteranMember): string {
-    if (vet.card_id) return `assets/images/character_stand/chara_stand_${vet.card_id}.png`;
+    if (vet.card_id) return `assets/images/character_stand/chara_stand_${vet.card_id}.webp`;
     if (vet.trained_chara_id) {
       const c = CHARACTERS.find(ch => Math.floor(ch.id / 100) === vet.trained_chara_id);
-      return c ? `assets/images/character_stand/chara_stand_${c.id}.png` : '';
+      return c ? `assets/images/character_stand/chara_stand_${c.id}.webp` : '';
     }
     return '';
   }
@@ -222,7 +222,7 @@ export class VeteranDisplayComponent implements OnChanges, OnInit, OnDestroy {
       parents.push({
         name: getCharacterName(sc.card_id),
         position: posLabels[sc.position_id] || `P${sc.position_id}`,
-        image: sc.card_id ? `assets/images/character_stand/chara_stand_${sc.card_id}.png` : '',
+        image: sc.card_id ? `assets/images/character_stand/chara_stand_${sc.card_id}.webp` : '',
         charaId: sc.card_id ? Math.floor(sc.card_id / 100) : null,
         sparks,
         affinity: 0,

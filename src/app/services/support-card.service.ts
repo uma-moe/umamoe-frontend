@@ -481,7 +481,7 @@ export class SupportCardService {
           cardName: 'Unknown Card',
           cardType: SupportCardType.SPEED, // Default type
           cardRarity: Rarity.R, // Default rarity
-          cardImageUrl: '/assets/images/support_card/half/support_card_s_unknown.png' // Placeholder image
+          cardImageUrl: '/assets/images/support_card/half/support_card_s_unknown.webp' // Placeholder image
         };
       }
       return {
@@ -489,7 +489,7 @@ export class SupportCardService {
         cardName: card.name,
         cardType: card.type,
         cardRarity: card.rarity,
-        cardImageUrl: `/assets/images/support_card/half/support_card_s_${card.id}.png` // Placeholder image
+        cardImageUrl: `/assets/images/support_card/half/support_card_s_${card.id}.webp` // Placeholder image
       };
     });
   }
@@ -507,7 +507,7 @@ export class SupportCardService {
           cardName: 'Unknown Card',
           cardType: SupportCardType.SPEED, // Default type
           cardRarity: Rarity.R, // Default rarity
-          cardImageUrl: '/assets/images/support_card/half/support_card_s_unknown.png' // Placeholder image
+          cardImageUrl: '/assets/images/support_card/half/support_card_s_unknown.webp' // Placeholder image
         };
       }
       return {
@@ -515,7 +515,7 @@ export class SupportCardService {
         cardName: card.name,
         cardType: card.type,
         cardRarity: card.rarity,
-        cardImageUrl: `/assets/images/support_card/half/support_card_s_${card.id}.png` // Placeholder image
+        cardImageUrl: `/assets/images/support_card/half/support_card_s_${card.id}.webp` // Placeholder image
       };
     });
   }
@@ -542,7 +542,7 @@ export class SupportCardService {
           cardName: 'Unknown Card',
           cardType: SupportCardType.SPEED, // Default type
           cardRarity: Rarity.R, // Default rarity
-          cardImageUrl: '/assets/images/support_card/half/support_card_s_unknown.png', // Placeholder image
+          cardImageUrl: '/assets/images/support_card/half/support_card_s_unknown.webp', // Placeholder image
           inheritance: record.v3Data.inheritance || undefined
         };
       }
@@ -551,7 +551,7 @@ export class SupportCardService {
         cardName: card.name,
         cardType: card.type,
         cardRarity: card.rarity,
-        cardImageUrl: `/assets/images/support_card/half/support_card_s_${card.id}.png`,
+        cardImageUrl: `/assets/images/support_card/half/support_card_s_${card.id}.webp`,
         inheritance: record.v3Data.inheritance || undefined
       };
     });

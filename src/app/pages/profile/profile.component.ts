@@ -274,7 +274,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     getRarityIcon(rarity: number): string {
         const idx = rarity < 11 ? '0' + (rarity - 1) : String(rarity - 1);
-        return `/assets/images/icon/ranks/utx_txt_rank_${idx}.png`;
+        return `/assets/images/icon/ranks/utx_txt_rank_${idx}.webp`;
     }
 
     private buildInheritanceRecord(profile: UserProfileResponse): InheritanceRecord | null {

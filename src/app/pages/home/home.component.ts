@@ -51,11 +51,11 @@ export class HomeComponent implements OnInit, OnDestroy {
       { property: 'og:description', content: 'Umamusume Database, Timeline, Tierlist, and tools for the global version.' },
       { property: 'og:type', content: 'website' },
       { property: 'og:url', content: 'https://honsemoe.com/' },
-      { property: 'og:image', content: 'https://honsemoe.com/assets/logo.png' },
+      { property: 'og:image', content: 'https://honsemoe.com/assets/logo.webp' },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: 'honse.moe Umamusume Database & Tools' },
       { name: 'twitter:description', content: 'Meta-based Umamusume Database, Timeline, Tierlist, and tools for the global version.' },
-      { name: 'twitter:image', content: 'https://honsemoe.com/assets/logo.png' }
+      { name: 'twitter:image', content: 'https://honsemoe.com/assets/logo.webp' }
     ]);
   }
   ngOnInit() {
@@ -88,7 +88,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
   onLogoError(event: Event) {
     const target = event.target as HTMLImageElement;
-    target.src = 'assets/logo.png';
+    target.src = 'assets/logo.webp';
   }
   openCookieSettings(): void {
     this.cookieConsentService.reopenBanner();

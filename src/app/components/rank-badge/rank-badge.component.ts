@@ -272,7 +272,7 @@ export class RankBadgeComponent implements OnChanges {
     @Input() size: 'sm' | 'md' | 'lg' = 'md';
 
     rank!: RankInfo;
-        iconPath = 'assets/images/icon/ranks/utx_txt_rank_00.png';
+        iconPath = 'assets/images/icon/ranks/utx_txt_rank_00.webp';
 
     ngOnChanges(): void {
         if (this.rarity != null && this.rarity > 0) {
@@ -283,7 +283,7 @@ export class RankBadgeComponent implements OnChanges {
             this.rank = getRankInfo(1); // fallback: G
         }
 
-                this.iconPath = `assets/images/icon/ranks/utx_txt_rank_${this.getIconIndex().toString().padStart(2, '0')}.png`;
+                this.iconPath = `assets/images/icon/ranks/utx_txt_rank_${this.getIconIndex().toString().padStart(2, '0')}.webp`;
         }
 
         private getIconIndex(): number {
