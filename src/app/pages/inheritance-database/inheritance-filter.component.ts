@@ -386,10 +386,6 @@ export interface InheritanceFilters {
     'class': 'inheritance-filter-page',
   },
   providers: [],
-  // Social meta tags for Discord/Twitter embeds
-  // These are set dynamically for SPA, but static tags help for SSR/prerender/SEO
-  // See also: support-cards-database.component.ts for pattern
-  // Add meta tags for this filter dialog
 })
 export class InheritanceFilterComponent implements OnInit, OnDestroy {
   @Output() filtersChanged = new EventEmitter<InheritanceFilters>();

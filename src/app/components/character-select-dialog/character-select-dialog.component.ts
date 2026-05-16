@@ -628,7 +628,7 @@ export class CharacterSelectDialogComponent implements OnInit {
 
   ngOnInit() {
     this.characterService
-      .getReleasedCharacters()
+      .getCharacters()
       .subscribe((characters: Character[]) => {
         this.characters = characters;
         this.sort$.next(this.sort);

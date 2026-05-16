@@ -1,6 +1,5 @@
 @use '../../../styles/mixins' as *;
 
-// Support Card Select Dialog - matches character selector style
 .select-dialog {
   display: flex;
   flex-direction: column;
@@ -148,7 +147,6 @@
 
     .mat-mdc-form-field-subscript-wrapper { display: none; }
 
-    // Hide the floating label when a value is selected to prevent overlap
     .mat-mdc-floating-label {
       font-size: 13px !important;
       color: var(--text-muted) !important;
@@ -156,7 +154,6 @@
       transform: translateY(-50%) !important;
     }
 
-    // When focused or has value, shrink label out of the way
     .mdc-floating-label--float-above { display: none !important; }
 
     .mat-mdc-select { width: 100%; }
