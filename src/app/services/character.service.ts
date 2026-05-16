@@ -1,21 +1,20 @@
 import { Injectable } from '@angular/core';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable } from 'rxjs';
 import { map, filter, take } from 'rxjs/operators';
 import { Character } from '../models/character.model';
-import { getAllCharacters } from '../data/character.data';
 import { MasterDataService } from './master-data.service';
 @Injectable({
   providedIn: 'root'
 })
 export class CharacterService {
-  private charactersSubject = new BehaviorSubject<Character[]>([]);
-  public characters$ = this.charactersSubject.asObservable();
   constructor(private masterData: MasterDataService) {
-    // Load characters from bundled data immediately
-    this.charactersSubject.next(getAllCharacters());
     this.masterData.init();
-    this.masterData.characters$.subscribe(characters => this.charactersSubject.next(characters));
   }
+
+  get characters$(): Observable<Character[]> {
+    return this.masterData.characters$;
+  }
+
   getCharacters(): Observable<Character[]> {
     return this.characters$;
   }

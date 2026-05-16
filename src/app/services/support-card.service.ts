@@ -15,7 +15,7 @@ import {
   SupportCardRecordV2Enriched
 } from '../models/support-card.model';
 import { PaginatedResponse, ApiResponse, SearchResult } from '../models/common.model';
-import { getAllSupportCards, getSupportCardById as getCardById, getSupportCardsByIds } from '../data/support-cards.data';
+import { getSupportCardById as getCardById, getSupportCardsByIds } from '../data/support-cards.data';
 import { MasterDataService } from './master-data.service';
 // V3 API interfaces
 interface V3SearchResult {
@@ -66,12 +66,13 @@ export class SupportCardService {
   private readonly apiUrl = '/api/v3'; // Updated to use v3 unified API
   private readonly searchApiUrl = '/search';
   private searchResults$ = new BehaviorSubject<SearchResult<SupportCardRecord> | null>(null);
-  private supportCards$ = new BehaviorSubject<SupportCardShort[]>([]);
+
   constructor(private http: HttpClient, private masterData: MasterDataService) {
-    // Load support cards from bundled data immediately
-    this.supportCards$.next(getAllSupportCards());
     this.masterData.init();
-    this.masterData.supportCards$.subscribe(cards => this.supportCards$.next(cards));
+  }
+
+  private get supportCards$(): Observable<SupportCardShort[]> {
+    return this.masterData.supportCards$;
   }
   // Map V3 backend response to frontend format
   private mapV3BackendToFrontend(
@@ -300,7 +301,7 @@ export class SupportCardService {
   }
   // Get all support cards (master data)
   getSupportCards(): Observable<SupportCardShort[]> {
-    return this.supportCards$.asObservable();
+    return this.supportCards$;
   }
   // Get support card by ID (master data)
   getSupportCardById(id: string): Observable<SupportCardShort | undefined> {

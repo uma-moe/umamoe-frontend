@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, ReplaySubject } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { TurnstileService } from './turnstile.service';
 
 type ManifestEntry = string | {
   name?: string;
@@ -58,7 +59,10 @@ export class ResourceDataService {
 
   private subjects = new Map<string, ReplaySubject<unknown>>();
   private loadStarted = new Set<string>();
+  private manifest: ResourceManifest | null = null;
   private manifestPromise: Promise<ResourceManifest | null> | null = null;
+
+  constructor(private turnstileService: TurnstileService) {}
 
   watchResource<T>(resourceName: string, fallback: T): Observable<T> {
     let subject = this.subjects.get(resourceName) as ReplaySubject<T> | undefined;
@@ -81,7 +85,9 @@ export class ResourceDataService {
       return;
     }
 
+    this.loadStarted.add(resourceName);
     const subject = new ReplaySubject<unknown>(1);
+    this.subjects.set(resourceName, subject);
     void this.loadResource(resourceName, subject);
   }
 
@@ -124,13 +130,24 @@ export class ResourceDataService {
   }
 
   private async fetchManifest(): Promise<ResourceManifest | null> {
-    if (!this.manifestPromise) {
-      this.manifestPromise = fetch(`${this.resourceBaseUrl}/manifest.json`, { cache: 'no-cache' })
-        .then(response => response.ok ? response.json() as Promise<ResourceManifest> : null)
-        .catch(() => null);
+    if (this.manifest) {
+      return this.manifest;
     }
 
-    return this.manifestPromise;
+    if (!this.manifestPromise) {
+      const manifestRequest = this.fetchJsonWithBrowserProof<ResourceManifest>(`${this.resourceBaseUrl}/manifest.json`)
+        .catch(() => null);
+
+      this.manifestPromise = manifestRequest;
+    }
+
+    const manifest = await this.manifestPromise;
+    if (manifest) {
+      this.manifest = manifest;
+    }
+
+    this.manifestPromise = null;
+    return manifest;
   }
 
   private get resourceBaseUrl(): string {
@@ -259,7 +276,7 @@ export class ResourceDataService {
   }
 
   private async fetchAndCacheResource<T>(resourceName: string, url: string, version: string): Promise<T> {
-    const response = await fetch(url, { cache: 'no-cache' });
+    const response = await this.fetchWithBrowserProof(url, { cache: 'no-cache' });
     if (!response.ok) {
       throw new Error(`${response.status} ${response.statusText}`);
     }
@@ -272,6 +289,76 @@ export class ResourceDataService {
     }
 
     return this.parseJsonResponse<T>(response, url);
+  }
+
+  private async fetchJsonWithBrowserProof<T>(url: string): Promise<T> {
+    const response = await this.fetchWithBrowserProof(url, { cache: 'no-cache' });
+    if (!response.ok) {
+      throw new Error(`${response.status} ${response.statusText}`);
+    }
+
+    return response.json() as Promise<T>;
+  }
+
+  private async fetchWithBrowserProof(url: string, init: RequestInit): Promise<Response> {
+    const response = await this.performFetchWithBrowserProof(url, init, false);
+    if (response.status === 403) {
+      const failedProofToken = this.getProofTokenFromHeaders(init.headers) ?? undefined;
+      this.turnstileService.invalidateBrowserProof(failedProofToken);
+
+      const retryResponse = await this.performFetchWithBrowserProof(url, init, true);
+      this.captureBrowserProof(retryResponse);
+      return retryResponse;
+    }
+
+    this.captureBrowserProof(response);
+    return response;
+  }
+
+  private async performFetchWithBrowserProof(
+    url: string,
+    init: RequestInit,
+    forceRefresh: boolean,
+  ): Promise<Response> {
+    const headers = new Headers(init.headers);
+    const proofToken = await this.getProofToken(forceRefresh);
+    if (proofToken) {
+      headers.set(this.turnstileService.proofHeaderName, proofToken);
+    }
+
+    return fetch(url, {
+      ...init,
+      headers,
+      credentials: init.credentials ?? 'include',
+    });
+  }
+
+  private async getProofToken(forceRefresh: boolean): Promise<string> {
+    if (!this.turnstileService.enabled) {
+      return '';
+    }
+
+    const action = environment.turnstile.action;
+    const cachedProofToken = forceRefresh ? '' : this.turnstileService.getCachedProofToken(action);
+    if (cachedProofToken) {
+      return cachedProofToken;
+    }
+
+    return this.turnstileService.getProofToken(action, forceRefresh);
+  }
+
+  private getProofTokenFromHeaders(headersInit?: HeadersInit): string | null {
+    if (!headersInit) {
+      return null;
+    }
+
+    return new Headers(headersInit).get(this.turnstileService.proofHeaderName)?.trim() ?? null;
+  }
+
+  private captureBrowserProof(response: Response): void {
+    const proofToken = response.headers.get(this.turnstileService.proofHeaderName)?.trim() ?? '';
+    const ttlSeconds = Number(response.headers.get(this.turnstileService.proofTtlHeaderName) ?? '0');
+    this.turnstileService.storeBrowserProof(proofToken, ttlSeconds, environment.turnstile.action);
   }
 
   private async parseJsonResponse<T>(response: Response, url: string): Promise<T> {
