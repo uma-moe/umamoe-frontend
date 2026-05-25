@@ -72,6 +72,7 @@ export class MobileTimelineComponent implements OnInit, OnDestroy {
     // Subscriptions
     private eventsSubscription?: Subscription;
     private todayUpdateInterval?: number;
+    private initialScrollDone = false;
     constructor(
         private timelineService: TimelineService,
         private cdr: ChangeDetectorRef
@@ -81,6 +82,10 @@ export class MobileTimelineComponent implements OnInit, OnDestroy {
             this.timelineEvents = events;
             this.generateTimelineItems();
             this.cdr.detectChanges();
+            if (!this.initialScrollDone && events.length > 0) {
+                this.initialScrollDone = true;
+                setTimeout(() => this.scrollToToday(), 100);
+            }
         });
         // Set up periodic updates for the today marker (every 5 minutes)
         this.setupTodayMarkerUpdate();
