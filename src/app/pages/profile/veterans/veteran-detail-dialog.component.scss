@@ -12,8 +12,8 @@
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
   color: #e0e0e0;
-  width: 600px;
-  max-width: 90vw;
+  width: 980px;
+  max-width: 95vw;
   max-height: 80vh;
 
   // ─── Header ──────────────────────────────────
@@ -160,6 +160,26 @@
     &:hover { background: rgba(255, 193, 7, 0.1); border-color: rgba(255, 193, 7, 0.3); color: #ffc107; }
   }
 
+  .open-planner-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border: 1px solid rgba(100, 181, 246, 0.28);
+    border-radius: var(--radius-xs);
+    background: rgba(100, 181, 246, 0.08);
+    color: var(--accent-primary);
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    mat-icon { @include icon-size(14px); }
+
+    &:hover { background: rgba(100, 181, 246, 0.14); border-color: rgba(100, 181, 246, 0.45); color: #bbdefb; }
+  }
+
   // ─── Race History ──────────────────────────────
   .race-list { display: flex; flex-wrap: wrap; gap: 4px; }
 
@@ -183,72 +203,18 @@
     &.grade-g3-chip { background: rgba(var(--grade-g3-base), 0.15); border-color: rgba(var(--grade-g3-base), 0.4); color: var(--grade-g3); }
   }
 
-  // ─── Inheritance ───────────────────────────────
-  .inh-list { display: flex; flex-direction: column; gap: 10px; }
-
-  .inh-node {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    padding: 0.6rem 0.75rem;
-    border-radius: var(--radius-md);
-    background: var(--surface-1);
-    border: 1px solid var(--border-subtle);
-
-    &--parent { padding: 0.5rem 0.65rem; }
-
-    &--gp { padding: 0.35rem 0.5rem; background: var(--surface-1); border-color: var(--border-subtle); }
+  // --- Lineage display ---------------------------
+  .detail-lineage-display {
+    display: block;
+    width: 100%;
   }
 
-  .inh-node-head { display: flex; align-items: center; gap: 0.5rem; }
-
-  .inh-node-av {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--border-secondary);
-    flex-shrink: 0;
-
-    &--sm { width: 22px; height: 22px; border-width: 1.5px; }
-  }
-
-  .inh-node-name {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    @include text-ellipsis;
-
-    &--sm { font-size: 0.68rem; font-weight: 500; color: var(--text-secondary); }
-  }
-
-  .inh-node-sum {
-    font-size: 0.6rem;
-    font-weight: 700;
-    color: var(--color-pink);
-    background: rgba(233, 30, 99, 0.12);
-    padding: 1px 5px;
-    border-radius: 3px;
-    flex-shrink: 0;
-    margin-left: auto;
-  }
-
+  // Own Factors uses the same spark grid (legacy class kept for compatibility)
   .inh-node-sparks {
     display: flex;
     flex-wrap: wrap;
     gap: 3px;
     margin-top: 2px;
-  }
-
-  .inh-branch { display: flex; flex-direction: column; gap: 6px; }
-
-  .inh-gp-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding-left: 12px;
-    border-left: 2px solid var(--border-primary);
-    margin-left: 8px;
   }
 
   // ─── Shared chips ──────────────────────────────
@@ -269,7 +235,13 @@
   @include spark-colors(0.1, 0.4);
 }
 
-// ─── Mobile ──────────────────────────────────────
+// --- Mobile ---------------------------------------
+@media (max-width: 760px) {
+  .veteran-detail-dialog {
+    .open-planner-btn span { display: none; }
+  }
+}
+
 @media (max-width: 600px) {
   .veteran-detail-dialog {
     width: calc(100vw - 8px) !important;

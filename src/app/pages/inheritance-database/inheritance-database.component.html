@@ -20,12 +20,12 @@
 
   <div class="content-container">
     <!-- Filters -->
-  <app-advanced-filter 
+  <app-database-filter 
     [resultCount]="activeTab === 'database' ? totalRecords : filteredBookmarks.length"
     (filterChange)="onAdvancedFilterChange($event)"
     (maxFollowersToggled)="onMaxFollowersToggled($event)">
 
-  </app-advanced-filter>
+  </app-database-filter>
 
     <!-- Tab bar -->
     <div class="tab-bar">

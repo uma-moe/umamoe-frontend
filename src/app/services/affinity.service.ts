@@ -210,7 +210,7 @@ export class AffinityService {
     const wins = this.buildPlannerTrialRaceWins(slotPosition, raceWinsByPosition);
     switch (slotPosition) {
       case 'target':
-        return result.total + this.getPlannerTotalRaceAffinity(wins);
+        return result.total + this.getPlannerTotalRaceAffinityFromWins(wins);
       case 'p1':
         return result.playerP1.total + this.getPlannerGPParentOverlap('p1', wins);
       case 'p2':
@@ -224,6 +224,29 @@ export class AffinityService {
       case 'p2-2':
         return result.playerP2.tripleRight + this.getPlannerGPRaceOverlap('p2-2', wins);
     }
+  }
+
+  getPlannerNodeRaceAffinity(
+    slotPosition: PlannerSlotPosition,
+    raceWinsByPosition: PlannerRaceWins = {},
+  ): number {
+    const wins = this.normalizePlannerRaceWins(raceWinsByPosition);
+    switch (slotPosition) {
+      case 'target':
+        return this.getPlannerTotalRaceAffinityFromWins(wins);
+      case 'p1':
+      case 'p2':
+        return this.getPlannerGPParentOverlap(slotPosition, wins);
+      case 'p1-1':
+      case 'p1-2':
+      case 'p2-1':
+      case 'p2-2':
+        return this.getPlannerGPRaceOverlap(slotPosition, wins);
+    }
+  }
+
+  getPlannerTotalRaceAffinity(raceWinsByPosition: PlannerRaceWins = {}): number {
+    return this.getPlannerTotalRaceAffinityFromWins(this.normalizePlannerRaceWins(raceWinsByPosition));
   }
 
   private calcBreeding(
@@ -252,14 +275,19 @@ export class AffinityService {
     slotPosition: PlannerSlotPosition,
     raceWinsByPosition: PlannerRaceWins,
   ): Record<PlannerSlotPosition, number[]> {
-    const trial = {} as Record<PlannerSlotPosition, number[]>;
-    for (const key of AffinityService.PLANNER_POSITIONS) {
-      trial[key] = [...(raceWinsByPosition[key] ?? [])];
-    }
+    const trial = this.normalizePlannerRaceWins(raceWinsByPosition);
     // Picking a character only changes the chara identity for that slot.
     // Existing veteran/succession race wins should not carry over.
     trial[slotPosition] = [];
     return trial;
+  }
+
+  private normalizePlannerRaceWins(raceWinsByPosition: PlannerRaceWins): Record<PlannerSlotPosition, number[]> {
+    const wins = {} as Record<PlannerSlotPosition, number[]>;
+    for (const key of AffinityService.PLANNER_POSITIONS) {
+      wins[key] = [...(raceWinsByPosition[key] ?? [])];
+    }
+    return wins;
   }
 
   private overlapCount(a: readonly number[], b: readonly number[]): number {
@@ -290,7 +318,7 @@ export class AffinityService {
     return this.overlapCount(wins[parentPos] ?? [], wins[gpPos] ?? []);
   }
 
-  private getPlannerTotalRaceAffinity(wins: Record<PlannerSlotPosition, number[]>): number {
+  private getPlannerTotalRaceAffinityFromWins(wins: Record<PlannerSlotPosition, number[]>): number {
     return this.getPlannerGPParentOverlap('p1', wins)
       + this.getPlannerGPParentOverlap('p2', wins);
   }

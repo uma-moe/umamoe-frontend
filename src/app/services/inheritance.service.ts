@@ -327,6 +327,9 @@ export class InheritanceService {
     if (filters.affinityP2 != null) {
       params = params.set('affinity_p2', filters.affinityP2.toString());
     }
+    if (filters.uql) {
+      params = params.set('uql', filters.uql);
+    }
     // Add sorting parameters
     if (filters.sortBy) {
       params = params.set('sort_by', this.mapSortByToBackend(filters.sortBy));

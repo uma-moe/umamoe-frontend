@@ -5,10 +5,11 @@ import {
   getSkillBySkillId,
   getSkillsByCharacter,
   getUniqueSkills,
+  hasUniqueFlag,
   replaceSkillsData
 } from './skills.data';
 
-export { SKILLS, getAllSkills, getSkillsByCharacter, getUniqueSkills, replaceSkillsData };
+export { SKILLS, getAllSkills, getSkillsByCharacter, getUniqueSkills, hasUniqueFlag, replaceSkillsData };
 
 export function getSkillById(skillId: number): Skill | undefined {
   return getSkillBySkillId(skillId);
@@ -30,7 +31,7 @@ export function searchSkills(query: string): Skill[] {
 export function searchUniqueSkills(query: string): Skill[] {
   const lowercaseQuery = query.toLowerCase();
   return SKILLS.filter(skill =>
-    skill.unique === 'true' &&
+    hasUniqueFlag(skill) &&
     (skill.name.toLowerCase().includes(lowercaseQuery) ||
      skill.description.toLowerCase().includes(lowercaseQuery) ||
      skill.effect.toLowerCase().includes(lowercaseQuery))

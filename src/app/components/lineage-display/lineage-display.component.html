@@ -1,0 +1,159 @@
+<div
+  class="lineage-planner lineage-planner--display"
+  [class.lineage-planner--compact]="mode === 'compact'"
+  [class.lineage-planner--full]="mode === 'full'"
+  [class.lineage-planner--clickable]="clickable"
+  [class.lineage-planner--unframed]="!framed"
+  (click)="onDisplayClick()"
+>
+  <ng-container *ngIf="parentView as parent">
+    <div class="planner-scroll">
+      <div class="planner-content">
+        <div class="tree-wrapper">
+          <div class="tree-col">
+            <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: parent }"></ng-container>
+
+            <ng-container *ngIf="hasAnyGrandparent; else noGrandparents">
+              <div class="tree-fork tree-fork--parent" aria-hidden="true">
+                <div class="fork-stem"></div>
+                <div class="fork-bar">
+                  <div class="fork-line"></div>
+                  <div class="fork-line"></div>
+                </div>
+                <div class="fork-drops">
+                  <div class="fork-drop"></div>
+                  <div class="fork-drop"></div>
+                </div>
+              </div>
+
+              <div class="tree-row tree-row--gps">
+                <div class="tree-col tree-col--gp" *ngFor="let group of grandparentGroups; trackBy: trackByGroup">
+                  <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: group.parent }"></ng-container>
+                  <ng-container *ngIf="mode === 'full' && hasAnyGreatGrandparent">
+                    <div class="tree-fork tree-fork--gp" aria-hidden="true">
+                      <div class="fork-stem"></div>
+                      <div class="fork-bar">
+                        <div class="fork-line"></div>
+                        <div class="fork-line"></div>
+                      </div>
+                      <div class="fork-drops">
+                        <div class="fork-drop"></div>
+                        <div class="fork-drop"></div>
+                      </div>
+                    </div>
+                    <div class="tree-row ggp-row">
+                      <ng-container *ngFor="let greatGrandparent of group.children; trackBy: trackByPosition">
+                        <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: greatGrandparent }"></ng-container>
+                      </ng-container>
+                    </div>
+                  </ng-container>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noGrandparents>
+      <div class="lineage-empty" *ngIf="mode === 'full'">
+        <mat-icon>account_tree</mat-icon>
+        <span>No parent lineage</span>
+      </div>
+    </ng-template>
+
+    <div class="lineage-open-hint" *ngIf="showOpenHint">
+      <mat-icon>open_in_new</mat-icon>
+      <span>View details</span>
+    </div>
+  </ng-container>
+</div>
+
+<ng-template #nodeCard let-view>
+  <div
+    class="node"
+    [class.n-parent]="view.position === 'p1'"
+    [class.n-gp]="view.layer === 2"
+    [class.n-ggp]="view.layer === 3"
+    [class.n-filled]="view.hasContent"
+  >
+    <ng-container *ngIf="view.hasContent; else emptyNode">
+      <div class="n-inner">
+        <div class="n-head">
+          <img *ngIf="view.image" class="n-avatar" [src]="view.image" [alt]="view.name" loading="lazy">
+          <div class="n-meta">
+            <div class="n-name-row">
+              <span class="n-name">{{ view.name }}</span>
+              <span class="n-position" [class.n-position--parent]="view.position === 'p1'" [class.n-position--gp]="view.layer === 2" [class.n-position--ggp]="view.layer === 3">
+                {{ view.label }}
+              </span>
+            </div>
+            <div class="n-sub-row">
+              <span class="n-tagline">{{ view.tagline }}</span>
+              <ng-container *ngIf="view.position === 'p1' && mode === 'full'">
+                <span class="n-meta-tag" *ngFor="let tag of parentTags" [ngClass]="tag.className">{{ tag.label }}</span>
+                <span class="n-stars" *ngIf="parentStars.length">
+                  <mat-icon *ngFor="let star of parentStars" [class.star-filled]="star.filled" [class.star-empty]="!star.filled">
+                    {{ star.filled ? 'star' : 'star_border' }}
+                  </mat-icon>
+                </span>
+              </ng-container>
+            </div>
+          </div>
+          <div class="n-top-actions" *ngIf="view.position === 'p1' && (showParentScore || showPlannerAction)" (click)="$event.stopPropagation()">
+            <span class="n-score-chip" *ngIf="showParentScore && veteran?.rank_score !== null && veteran?.rank_score !== undefined" matTooltip="Rank score">
+              <app-rank-badge [score]="veteran?.rank_score ?? undefined" size="sm"></app-rank-badge>
+              <strong class="mono">{{ veteran!.rank_score | localeNumber }}</strong>
+            </span>
+            <button type="button" class="n-planner-btn" *ngIf="showPlannerAction" (click)="openLineagePlanner($event)" matTooltip="Open this veteran as a parent in the Lineage Planner" aria-label="Go to Lineage Planner">
+              <mat-icon>account_tree</mat-icon>
+              <span>Planner</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="n-toolbar" *ngIf="view.layer !== 3 && (view.hasBaseAffinity || view.hasRaceAffinity || view.winCount > 0)" (click)="$event.stopPropagation()">
+          <span class="n-stat n-stat--aff" *ngIf="view.hasBaseAffinity" matTooltip="Base affinity">
+            <mat-icon>favorite</mat-icon>
+            <span class="n-stat-num">{{ view.baseAffinity }}</span>
+            <span class="n-stat-lbl">affinity</span>
+          </span>
+          <span class="n-stat n-stat--race-aff" *ngIf="view.hasRaceAffinity" matTooltip="Race affinity from shared wins">
+            <mat-icon>emoji_events</mat-icon>
+            <span class="n-stat-num">{{ view.raceAffinity }}</span>
+            <span class="n-stat-lbl">Race Affinity</span>
+          </span>
+          <button class="n-icon-btn n-toolbar-race" *ngIf="view.winCount > 0" (click)="openRaceResults(view, $event)" matTooltip="View race wins" aria-label="View race wins">
+            <mat-icon>emoji_events</mat-icon>
+          </button>
+        </div>
+
+        <div class="n-sparks" *ngIf="view.layer !== 3 && (showMainSparks || view.position !== 'p1') && view.visibleSparks.length > 0">
+          <span
+            class="spark-item"
+            [class.spark-item--xs]="mode === 'compact' || view.position !== 'p1'"
+            [ngClass]="sparkTypeClass(spark)"
+            *ngFor="let spark of view.visibleSparks; trackBy: trackBySpark"
+            [matTooltip]="sparkTooltip(spark, view)"
+          >
+            <span class="spark-level">{{ spark.level }}</span>
+            <mat-icon class="spark-star">star</mat-icon>
+            <span class="spark-name">{{ spark.name }}</span>
+            <span class="spark-pct">
+              {{ sparkDisplayChance(spark, view.totalAffinity) | number:'1.2-2' }}%
+            </span>
+          </span>
+          <span class="spark-more" *ngIf="view.moreSparkCount > 0">+{{ view.moreSparkCount }}</span>
+        </div>
+      </div>
+    </ng-container>
+
+    <ng-template #emptyNode>
+      <div class="n-empty">
+        <span class="n-position" [class.n-position--gp]="view.layer === 2" [class.n-position--ggp]="view.layer === 3">{{ view.label }}</span>
+        <div class="n-empty-icon"><mat-icon>person_outline</mat-icon></div>
+        <span class="n-empty-label">{{ view.tagline }}</span>
+      </div>
+    </ng-template>
+  </div>
+</ng-template>

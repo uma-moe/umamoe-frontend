@@ -1,14 +1,38 @@
-<div class="filter-header" (click)="toggleExpanded()">
+<div class="filter-header" [class.filter-header--expanded]="isExpanded" (click)="toggleExpanded()">
   <button mat-icon-button class="expand-button">
     <mat-icon class="expand-icon" [class.expanded]="isExpanded">
       expand_more
     </mat-icon>
   </button>
   <h2>Filters</h2>
+  <div class="filter-mode-toggle" (click)="$event.stopPropagation()" aria-label="Filter mode">
+    <button type="button" class="filter-mode-option" [class.active]="filterMode === 'basic'" (click)="setFilterMode('basic')">Basic</button>
+    <button type="button" class="filter-mode-option" [class.active]="filterMode === 'advanced'" (click)="setFilterMode('advanced')">Advanced</button>
+    <button type="button" class="filter-mode-option" [class.active]="filterMode === 'uql'" (click)="setFilterMode('uql')">UQL</button>
+  </div>
 </div>
 
 <div class="filter-content" [class.expanded]="isExpanded">
   <div class="filter-inner">
+    <app-uql-filter
+      *ngIf="filterMode === 'uql'; else formFilterMode"
+      [query]="uqlQuery"
+      [validationState]="uqlValidationState"
+      [validationMessage]="uqlValidationMessage"
+      [snippets]="uqlStarterSnippets"
+      [suggestions]="uqlSuggestions"
+      (queryChange)="uqlQuery = $event; onUqlChange()"
+      (clear)="clearUql()"
+      (insertSnippet)="insertUqlSnippet($event)">
+    </app-uql-filter>
+
+    <ng-template #formFilterMode>
+      <app-database-advanced-filter>
+        <ng-container *ngTemplateOutlet="formFilterContent"></ng-container>
+      </app-database-advanced-filter>
+    </ng-template>
+
+    <ng-template #formFilterContent>
     <!-- Affinity Section (first) -->
     <div class="collapsible-section affinity-collapsible">
       <div class="collapsible-header" (click)="toggleSection('affinitySection')">
@@ -45,9 +69,9 @@
                   </button>
                 </div>
                 <span *ngIf="selectedVeteran" class="target-character-name">{{ selectedVeteranName }}</span>
-                <span *ngIf="!selectedVeteran" class="target-character-name target-character-name--placeholder">{{ treeData.characterId ? 'Pick legacy' : 'Select target first' }}</span>
+                <span *ngIf="!selectedVeteran" class="target-character-name target-character-name--placeholder">{{ treeData.characterId ? 'Pick your legacy' : 'Select target first' }}</span>
               </div>
-              <span class="tree-group-label veteran-color">Legacy</span>
+              <span class="tree-group-label veteran-color">Your Legacy</span>
             </div>
 
             <span class="tree-vdivider" *ngIf="selectedVeteran"></span>
@@ -68,10 +92,10 @@
     </div>
 
     <!-- Single Row Layout: Everything Horizontal -->
-    <div class="collapsible-section">
+    <div class="collapsible-section" *ngIf="filterMode === 'advanced'">
       <div class="collapsible-header" (click)="toggleSection('quickFilters')">
         <mat-icon class="collapse-chevron" [class.collapsed]="isSectionCollapsed('quickFilters')">expand_more</mat-icon>
-        <h4>Parent Filters &mdash; Support Cards &mdash; Search</h4>
+        <h4>Friend Filters &mdash; Support Cards &mdash; Search</h4>
       </div>
       <div class="collapsible-body" [class.collapsed]="isSectionCollapsed('quickFilters')">
         <div class="collapsible-body-inner">
@@ -80,7 +104,7 @@
       <div class="filter-section-wrapper legacy-tree-wrapper" [class.is-wrapped]="legacyWrapped">
         <h4 class="section-header legacy-tree-header" (click)="toggleSection('mLegacyTree')">
           <mat-icon class="mobile-chevron" [class.collapsed]="isSectionCollapsed('mLegacyTree')">expand_more</mat-icon>
-          Parent Filters
+          Friend Parent Filters
         </h4>
         <div class="m-collapse" [class.m-collapsed]="isSectionCollapsed('mLegacyTree')">
         <div class="legacy-tree-section legacy-tree-section--wide">
@@ -89,10 +113,10 @@
             <div class="tree-box parent-box">
               <!-- Include section -->
               <div class="filter-row include-row" (click)="addIncludeMainParent()">
-                <button class="filter-row-add include-btn" matTooltip="Include main parent">
+                <button class="filter-row-add include-btn" matTooltip="Allow as friend's parent">
                   <mat-icon>add</mat-icon>
                 </button>
-                <span class="filter-row-label include-label" *ngIf="includeMainParentCharacters.length === 0">Include</span>
+                <span class="filter-row-label include-label" *ngIf="includeMainParentCharacters.length === 0">Allow</span>
                 <div class="filter-row-chips">
                   <div class="filter-chip include" *ngFor="let char of includeMainParentCharacters; let i = index">
                     <img *ngIf="char.image" [src]="getCharacterImagePath(char.image)" class="filter-chip-img" [alt]="char.name">
@@ -103,10 +127,10 @@
               </div>
               <!-- Exclude section -->
               <div class="filter-row exclude-row" (click)="addExcludeMainParent()">
-                <button class="filter-row-add exclude-btn" matTooltip="Exclude main parent">
+                <button class="filter-row-add exclude-btn" matTooltip="Hide friend's parent">
                   <mat-icon>remove</mat-icon>
                 </button>
-                <span class="filter-row-label exclude-label" *ngIf="excludeMainParentCharacters.length === 0">Exclude</span>
+                <span class="filter-row-label exclude-label" *ngIf="excludeMainParentCharacters.length === 0">Hide</span>
                 <div class="filter-row-chips">
                   <div class="filter-chip exclude" *ngFor="let char of excludeMainParentCharacters; let i = index">
                     <img *ngIf="char.image" [src]="getCharacterImagePath(char.image)" class="filter-chip-img" [alt]="char.name">
@@ -116,7 +140,7 @@
                 </div>
               </div>
             </div>
-            <span class="tree-group-label parent-color">Main Parent</span>
+            <span class="tree-group-label parent-color">Friend's Parent</span>
           </div>
 
           <span class="tree-connector">-</span>
@@ -126,10 +150,10 @@
             <div class="tree-box grandparent-box">
               <!-- Include section -->
               <div class="filter-row include-row" (click)="addIncludeParent()">
-                <button class="filter-row-add include-btn" matTooltip="Include parent">
+                <button class="filter-row-add include-btn" matTooltip="Allow as friend's grandparent">
                   <mat-icon>add</mat-icon>
                 </button>
-                <span class="filter-row-label include-label" *ngIf="includeParentCharacters.length === 0">Include</span>
+                <span class="filter-row-label include-label" *ngIf="includeParentCharacters.length === 0">Allow</span>
                 <div class="filter-row-chips">
                   <div class="filter-chip include" *ngFor="let char of includeParentCharacters; let i = index">
                     <img *ngIf="char.image" [src]="getCharacterImagePath(char.image)" class="filter-chip-img" [alt]="char.name">
@@ -140,10 +164,10 @@
               </div>
               <!-- Exclude section -->
               <div class="filter-row exclude-row" (click)="addExcludeParent()">
-                <button class="filter-row-add exclude-btn" matTooltip="Exclude parent">
+                <button class="filter-row-add exclude-btn" matTooltip="Hide friend's grandparent">
                   <mat-icon>remove</mat-icon>
                 </button>
-                <span class="filter-row-label exclude-label" *ngIf="excludeParentCharacters.length === 0">Exclude</span>
+                <span class="filter-row-label exclude-label" *ngIf="excludeParentCharacters.length === 0">Hide</span>
                 <div class="filter-row-chips">
                   <div class="filter-chip exclude" *ngFor="let char of excludeParentCharacters; let i = index">
                     <img *ngIf="char.image" [src]="getCharacterImagePath(char.image)" class="filter-chip-img" [alt]="char.name">
@@ -153,83 +177,13 @@
                 </div>
               </div>
             </div>
-            <span class="tree-group-label grandparent-color">Grand Parents</span>
+            <span class="tree-group-label grandparent-color">Friend's Grandparents</span>
           </div>
         </div>
         </div>
       </div>
 
-      <div class="support-lb-group" [class.is-wrapped]="legacyWrapped">
-      <h4 class="section-header support-lb-mobile-header" (click)="toggleSection('mSupportCard')">
-        <mat-icon class="mobile-chevron" [class.collapsed]="isSectionCollapsed('mSupportCard')">expand_more</mat-icon>
-        Support Card & LB
-      </h4>
-      <!-- Support Card Filter -->
-      <div class="m-collapse" [class.m-collapsed]="isSectionCollapsed('mSupportCard')">
-      <div class="filter-section-wrapper">
-        <h4 class="section-header">Support Card</h4>
-        <div class="filter-item">
-          <div class="selector-compact" *ngIf="!selectedSupportCard" (click)="selectSupportCard()">
-            <mat-icon>search</mat-icon>
-            <span>Select</span>
-          </div>
-          
-          <div class="selected-support-card" *ngIf="selectedSupportCard">
-            <img [src]="selectedSupportCard.imageUrl" class="card-thumb">
-            <div class="card-info">
-              <span class="card-name">{{selectedSupportCard.name}}</span>
-              <div class="card-badges">
-                <span class="badge type-badge">{{getSupportCardTypeDisplay(selectedSupportCard.type)}}</span>
-                <span class="badge rarity-badge">{{getSupportCardRarityDisplay(selectedSupportCard.rarity)}}</span>
-              </div>
-            </div>
-            <button mat-icon-button class="remove-card-btn" (click)="removeSupportCard()">
-              <mat-icon>close</mat-icon>
-            </button>
-          </div>
-        </div>
-      </div>
-      </div>
-
-      <!-- LB Selector -->
-      <div class="m-collapse" [class.m-collapsed]="isSectionCollapsed('mSupportCard')">
-      <div class="filter-section-wrapper">
-        <h4 class="section-header">Min LB</h4>
-        <div class="filter-item lb-filter-item">
-          <div class="lb-diamonds-compact">
-            <div class="diamond-icon pos-1" (click)="toggleLimitBreak(1)" [class.active]="1 <= selectedLimitBreak" [matTooltip]="'LB1+'">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-64 224-480l256-416 256 416L480-64Z" /></svg>
-            </div>
-            <div class="diamond-icon pos-2" (click)="toggleLimitBreak(2)" [class.active]="2 <= selectedLimitBreak" [matTooltip]="'LB2+'">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-64 224-480l256-416 256 416L480-64Z" /></svg>
-            </div>
-            <div class="diamond-icon pos-3" (click)="toggleLimitBreak(3)" [class.active]="3 <= selectedLimitBreak" [matTooltip]="'LB3+'">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-64 224-480l256-416 256 416L480-64Z" /></svg>
-            </div>
-            <div class="diamond-icon pos-4" (click)="toggleLimitBreak(4)" [class.active]="4 <= selectedLimitBreak" [matTooltip]="'MLB'">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-64 224-480l256-416 256 416L480-64Z" /></svg>
-            </div>
-          </div>
-          <mat-slider
-            min="0"
-            max="4"
-            step="1"
-            class="limit-break-slider-compact compact-slider-dark"
-            [displayWith]="formatLabel">
-            <input matSliderThumb [(ngModel)]="selectedLimitBreak" (valueChange)="onFilterChange()">
-          </mat-slider>
-          <div class="slider-labels-compact">
-            <span class="lbl-0" [class.active]="selectedLimitBreak === 0">LB0</span>
-            <span class="lbl-1" [class.active]="selectedLimitBreak === 1">LB1</span>
-            <span class="lbl-2" [class.active]="selectedLimitBreak === 2">LB2</span>
-            <span class="lbl-3" [class.active]="selectedLimitBreak === 3">LB3</span>
-            <span class="lbl-4" [class.active]="selectedLimitBreak === 4">MLB</span>
-          </div>
-        </div>
-      </div>
-      </div>
-
-      </div>
+      <ng-container *ngTemplateOutlet="supportCardLbSection; context: { wrapped: legacyWrapped, collapsed: isSectionCollapsed('mSupportCard'), showMobileHeader: true }"></ng-container>
 
       <!-- Search Users -->
       <div class="filter-section-wrapper search-wrapper" [class.is-wrapped]="searchWrapped">
@@ -291,7 +245,7 @@
     <!-- Property Filters Section (Full Width Below - Compact) -->
     <div class="property-filters-compact">
       <div class="filters-header-compact">
-        <h4>Property Filters</h4>
+        <h4>{{ filterMode === 'basic' ? 'Basic Criteria' : 'Property Filters' }}</h4>
       </div>
 
       <div class="filters-grid-content">
@@ -299,7 +253,7 @@
         <div class="filter-group">
           <h5 class="group-title collapsible-group-title" (click)="toggleSection('inheritanceFactors')">
             <mat-icon class="collapse-chevron" [class.collapsed]="isSectionCollapsed('inheritanceFactors')">expand_more</mat-icon>
-            Inheritance Factors
+            {{ filterMode === 'basic' ? 'Spark Filters' : 'Inheritance Factors' }}
           </h5>
           <div class="collapsible-body" [class.collapsed]="isSectionCollapsed('inheritanceFactors')">
           <div class="collapsible-body-inner">
@@ -475,7 +429,7 @@
           </div>
 
           <!-- Lineage White Factors -->
-          <div class="factor-section">
+          <div class="factor-section" *ngIf="filterMode === 'advanced'">
             <div class="section-label">Lineage White Factors (Sorts by Lineage depth factor 1.1^n)</div>
             <div class="factor-list">
               <div class="factor-row-item optional-factor" *ngFor="let filter of lineageWhiteFactorFilters; let i = index">
@@ -506,7 +460,7 @@
         </div>
 
         <!-- Group 2: Main Parent Specifics -->
-        <div class="filter-group">
+        <div class="filter-group" *ngIf="filterMode === 'advanced'">
           <h5 class="group-title collapsible-group-title" (click)="toggleSection('mainParentFactors')">
             <mat-icon class="collapse-chevron" [class.collapsed]="isSectionCollapsed('mainParentFactors')">expand_more</mat-icon>
             Main Parent Factors
@@ -701,10 +655,14 @@
         <div class="filter-group">
           <h5 class="group-title collapsible-group-title" (click)="toggleSection('generalCriteria')">
             <mat-icon class="collapse-chevron" [class.collapsed]="isSectionCollapsed('generalCriteria')">expand_more</mat-icon>
-            General Criteria
+            {{ filterMode === 'basic' ? 'Support Card & LB' : 'General Criteria' }}
           </h5>
           <div class="collapsible-body" [class.collapsed]="isSectionCollapsed('generalCriteria')">
           <div class="collapsible-body-inner">
+          <ng-container *ngIf="filterMode === 'basic'; else generalCriteriaFields">
+            <ng-container *ngTemplateOutlet="supportCardLbSection; context: { wrapped: true, collapsed: false, showMobileHeader: false }"></ng-container>
+          </ng-container>
+          <ng-template #generalCriteriaFields>
           <div class="input-grid">
             <div class="input-wrapper">
               <div class="input-label">Min Win Count</div>
@@ -755,6 +713,7 @@
               </button>
             </div>
           </div>
+          </ng-template>
 
           </div>
           </div>
@@ -817,7 +776,7 @@
         </div>
 
         <!-- Group 5: Race Schedule -->
-        <div class="filter-group race-schedule-group">
+        <div class="filter-group race-schedule-group" *ngIf="filterMode === 'advanced'">
           <h5 class="group-title collapsible-group-title" (click)="toggleSection('raceSchedule')">
             <mat-icon class="collapse-chevron" [class.collapsed]="isSectionCollapsed('raceSchedule')">expand_more</mat-icon>
             Race Schedule Filter
@@ -833,6 +792,80 @@
         </div>
       </div>
     </div>
+    </ng-template>
+
+    <ng-template #supportCardLbSection let-wrapped="wrapped" let-collapsed="collapsed" let-showMobileHeader="showMobileHeader">
+      <div class="support-lb-group" [class.is-wrapped]="wrapped">
+        <h4 class="section-header support-lb-mobile-header" *ngIf="showMobileHeader" (click)="toggleSection('mSupportCard')">
+          <mat-icon class="mobile-chevron" [class.collapsed]="collapsed">expand_more</mat-icon>
+          Support Card & LB
+        </h4>
+        <!-- Support Card Filter -->
+        <div class="m-collapse" [class.m-collapsed]="collapsed">
+          <div class="filter-section-wrapper">
+            <h4 class="section-header">Support Card</h4>
+            <div class="filter-item">
+              <div class="selector-compact" *ngIf="!selectedSupportCard" (click)="selectSupportCard()">
+                <mat-icon>search</mat-icon>
+                <span>Select</span>
+              </div>
+
+              <div class="selected-support-card" *ngIf="selectedSupportCard">
+                <img [src]="selectedSupportCard.imageUrl" class="card-thumb">
+                <div class="card-info">
+                  <span class="card-name">{{selectedSupportCard.name}}</span>
+                  <div class="card-badges">
+                    <span class="badge type-badge">{{getSupportCardTypeDisplay(selectedSupportCard.type)}}</span>
+                    <span class="badge rarity-badge">{{getSupportCardRarityDisplay(selectedSupportCard.rarity)}}</span>
+                  </div>
+                </div>
+                <button mat-icon-button class="remove-card-btn" (click)="removeSupportCard()">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LB Selector -->
+        <div class="m-collapse" [class.m-collapsed]="collapsed">
+          <div class="filter-section-wrapper">
+            <h4 class="section-header">Min LB</h4>
+            <div class="filter-item lb-filter-item">
+              <div class="lb-diamonds-compact">
+                <div class="diamond-icon pos-1" (click)="toggleLimitBreak(1)" [class.active]="1 <= selectedLimitBreak" [matTooltip]="'LB1+'">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-64 224-480l256-416 256 416L480-64Z" /></svg>
+                </div>
+                <div class="diamond-icon pos-2" (click)="toggleLimitBreak(2)" [class.active]="2 <= selectedLimitBreak" [matTooltip]="'LB2+'">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-64 224-480l256-416 256 416L480-64Z" /></svg>
+                </div>
+                <div class="diamond-icon pos-3" (click)="toggleLimitBreak(3)" [class.active]="3 <= selectedLimitBreak" [matTooltip]="'LB3+'">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-64 224-480l256-416 256 416L480-64Z" /></svg>
+                </div>
+                <div class="diamond-icon pos-4" (click)="toggleLimitBreak(4)" [class.active]="4 <= selectedLimitBreak" [matTooltip]="'MLB'">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-64 224-480l256-416 256 416L480-64Z" /></svg>
+                </div>
+              </div>
+              <mat-slider
+                min="0"
+                max="4"
+                step="1"
+                class="limit-break-slider-compact compact-slider-dark"
+                [displayWith]="formatLabel">
+                <input matSliderThumb [(ngModel)]="selectedLimitBreak" (valueChange)="onFilterChange()">
+              </mat-slider>
+              <div class="slider-labels-compact">
+                <span class="lbl-0" [class.active]="selectedLimitBreak === 0">LB0</span>
+                <span class="lbl-1" [class.active]="selectedLimitBreak === 1">LB1</span>
+                <span class="lbl-2" [class.active]="selectedLimitBreak === 2">LB2</span>
+                <span class="lbl-3" [class.active]="selectedLimitBreak === 3">LB3</span>
+                <span class="lbl-4" [class.active]="selectedLimitBreak === 4">MLB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-template>
   </div>
 </div>
 
@@ -862,6 +895,17 @@
         <mat-icon class="chip-remove">close</mat-icon>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="uql-preview-section" *ngIf="filterMode !== 'uql' && currentUqlPreview as uqlPreview">
+  <button type="button" class="uql-preview-header" (click)="toggleUqlPreview()">
+    <mat-icon class="collapse-chevron" [class.collapsed]="!uqlPreviewExpanded">expand_more</mat-icon>
+    <span>Current UQL</span>
+    <code>{{ uqlPreview }}</code>
+  </button>
+  <div class="uql-preview-body" [class.expanded]="uqlPreviewExpanded">
+    <pre>{{ uqlPreview }}</pre>
   </div>
 </div>
 

@@ -1,4 +1,5 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, OnInit, ChangeDetectorRef, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -44,7 +45,7 @@ interface CombinedSparkInfo extends SparkInfo {
     styleUrl: './inheritance-entry.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class InheritanceEntryComponent {
+export class InheritanceEntryComponent implements OnInit {
     /** The inheritance record to display */
     @Input({ required: true }) record!: InheritanceRecord;
 
@@ -59,6 +60,11 @@ export class InheritanceEntryComponent {
 
     /** Whether this record has max followers */
     @Input() isMaxFollowers = false;
+
+    /** Text/icon for the report action. Database uses this as an outdated marker; profile uses it as an update request. */
+    @Input() reportButtonText = 'Outdated';
+    @Input() reportButtonIcon = 'person_off';
+    @Input() reportButtonTooltip = 'Report this user as unavailable or friend list full';
 
     /** Function to check if a spark matches active filters (database only) */
     @Input() sparkMatchFn?: (spark: SparkInfo, record: InheritanceRecord) => boolean;
@@ -99,7 +105,23 @@ export class InheritanceEntryComponent {
     private readonly sharedWinsCache = new WeakMap<readonly number[], WeakMap<readonly number[], number>>();
     private readonly treeAffinityCache = new Map<string, TreeAffinityResult | null>();
 
-    constructor(private factorService: FactorService, private dialog: MatDialog, private affinityService: AffinityService, private snackBar: MatSnackBar) {}
+    constructor(
+        private factorService: FactorService,
+        private dialog: MatDialog,
+        private affinityService: AffinityService,
+        private snackBar: MatSnackBar,
+        private cdr: ChangeDetectorRef,
+        private destroyRef: DestroyRef,
+    ) {}
+
+    ngOnInit(): void {
+        this.affinityService.load()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => {
+                this.treeAffinityCache.clear();
+                this.cdr.markForCheck();
+            });
+    }
 
     onBookmarkToggle(event: Event): void {
         event.stopPropagation();
@@ -344,12 +366,12 @@ export class InheritanceEntryComponent {
 
     getRecordTotalAffinity(): number | null {
         if (!this.targetCharaId || !this.getMainCharaId()) {
-            return this.record.affinity_score ?? null;
+            return this.record.affinity_score ?? this.getMainBreedingBaseAffinity();
         }
 
         const result = this.getTreeAffinity(this.hasP2Context());
         if (!result) {
-            return this.record.affinity_score ?? null;
+            return this.record.affinity_score ?? this.getMainBreedingBaseAffinity();
         }
 
         // Shared tree affinity handles the base aff2/aff3 math. Race overlap is
@@ -597,13 +619,17 @@ export class InheritanceEntryComponent {
         return this.targetCharaId !== null && this.affinityService.isReady && this.getMainCharaId() !== null;
     }
 
+    hasDisplayAffinity(): boolean {
+        return this.getRecordTotalAffinity() !== null;
+    }
+
     private resolveDisplayAffinity(): number {
         if (this.canComputeAffinity()) {
             return (this.sparkViewMode === 'merged' && !this.selectedParent)
                 ? this.getMergedAffinity()
                 : this.getSplitAffinity();
         }
-        return this.record.affinity_score ?? 0;
+        return this.getRecordTotalAffinity() ?? 0;
     }
 
     sparkDisplayChance(spark: SparkInfo, affinityOverride?: number): number {

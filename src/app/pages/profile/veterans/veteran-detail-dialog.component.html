@@ -96,46 +96,16 @@
       </div>
     </div>
 
-    <!-- Inheritance -->
-    <div class="content-section" *ngIf="getSuccessionParents(v).length > 0">
+    <!-- Lineage -->
+    <div class="content-section lineage-section" *ngIf="hasLineageTree()">
       <div class="section-header">
-        <span class="section-title">Inheritance</span>
-        <span class="aff-chip" *ngIf="getAffinityScore(v) !== null">Aff: <strong class="mono">{{ getAffinityScore(v) }}</strong></span>
+        <span class="section-title">Lineage</span>
+        <button class="open-planner-btn" (click)="openLineagePlanner()" matTooltip="Open this veteran as a parent in the Lineage Planner">
+          <mat-icon>account_tree</mat-icon>
+          <span>Open Planner</span>
+        </button>
       </div>
-      <div class="inh-list">
-        <div class="inh-branch" *ngFor="let parent of getSuccessionParents(v)">
-          <!-- Parent node -->
-          <div class="inh-node inh-node--parent">
-            <div class="inh-node-head">
-              <img *ngIf="getCardImage(parent.card_id)" [src]="getCardImage(parent.card_id)" class="inh-node-av">
-              <span class="inh-node-name">{{ getCharacterName(parent.card_id) }}</span>
-            </div>
-            <div class="inh-node-sparks">
-              <span class="spark-item spark-item--xs" [ngClass]="f.color + '-spark'" *ngFor="let f of getFactors(parent)">
-                <span class="spark-level">{{ f.level }}</span>
-                <mat-icon class="spark-star">star</mat-icon>
-                <span class="spark-name">{{ f.name }}</span>
-              </span>
-            </div>
-          </div>
-          <!-- GP nodes -->
-          <div class="inh-gp-group" *ngIf="getSuccessionGrandparents(v, parent.position_id).length > 0">
-            <div class="inh-node inh-node--gp" *ngFor="let gp of getSuccessionGrandparents(v, parent.position_id)">
-              <div class="inh-node-head">
-                <img *ngIf="getCardImage(gp.card_id)" [src]="getCardImage(gp.card_id)" class="inh-node-av inh-node-av--sm">
-                <span class="inh-node-name inh-node-name--sm">{{ getCharacterName(gp.card_id) }}</span>
-              </div>
-              <div class="inh-node-sparks">
-                <span class="spark-item spark-item--xs" [ngClass]="f.color + '-spark'" *ngFor="let f of getFactors(gp)">
-                  <span class="spark-level">{{ f.level }}</span>
-                  <mat-icon class="spark-star">star</mat-icon>
-                  <span class="spark-name">{{ f.name }}</span>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <app-lineage-display class="detail-lineage-display" [veteran]="v" mode="full" [framed]="false"></app-lineage-display>
     </div>
   </div>
 </div>

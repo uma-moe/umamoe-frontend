@@ -373,7 +373,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       return;
     }
 
-    const { record, targetCharaId, veteran } = data;
+    const { record, targetCharaId, veteran, veteranPosition } = data;
 
     // Target
     if (targetCharaId) {
@@ -382,26 +382,27 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       if (targetChar && targetNode) targetNode.character = targetChar;
     }
 
-    const wrapFactor = (v: number | undefined | null): number[] | null => v != null ? [v] : null;
+    if (record) {
+      const wrapFactor = (v: number | undefined | null): number[] | null => v != null ? [v] : null;
 
-    this.populateFromRecord('p1', record.main_parent_id,
-      wrapFactor(record.main_blue_factors), wrapFactor(record.main_pink_factors),
-      wrapFactor(record.main_green_factors), record.main_white_factors ?? null,
-      record.main_win_saddles);
+      this.populateFromRecord('p1', record.main_parent_id,
+        wrapFactor(record.main_blue_factors), wrapFactor(record.main_pink_factors),
+        wrapFactor(record.main_green_factors), record.main_white_factors ?? null,
+        record.main_win_saddles);
 
-    this.populateFromRecord('p1-1', record.parent_left_id,
-      wrapFactor(record.left_blue_factors), wrapFactor(record.left_pink_factors),
-      wrapFactor(record.left_green_factors), record.left_white_factors ?? null,
-      record.left_win_saddles);
+      this.populateFromRecord('p1-1', record.parent_left_id,
+        wrapFactor(record.left_blue_factors), wrapFactor(record.left_pink_factors),
+        wrapFactor(record.left_green_factors), record.left_white_factors ?? null,
+        record.left_win_saddles);
 
-    this.populateFromRecord('p1-2', record.parent_right_id,
-      wrapFactor(record.right_blue_factors), wrapFactor(record.right_pink_factors),
-      wrapFactor(record.right_green_factors), record.right_white_factors ?? null,
-      record.right_win_saddles);
+      this.populateFromRecord('p1-2', record.parent_right_id,
+        wrapFactor(record.right_blue_factors), wrapFactor(record.right_pink_factors),
+        wrapFactor(record.right_green_factors), record.right_white_factors ?? null,
+        record.right_win_saddles);
+    }
 
-    // P2 (veteran)
     if (veteran) {
-      this.selectVeteran('p2', veteran);
+      this.selectVeteran(veteranPosition ?? 'p2', veteran);
     }
 
     this.affinityRecalc$.next();

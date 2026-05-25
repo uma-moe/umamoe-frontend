@@ -32,7 +32,7 @@ import {
 import { SearchResult } from '../../models/common.model';
 import { SupportCardShort } from '../../models/support-card.model';
 import { environment } from '../../../environments/environment';
-import { AdvancedFilterComponent, UnifiedSearchParams } from '../../components/advanced-filter/advanced-filter.component';
+import { DatabaseFilterComponent, UnifiedSearchParams } from '../../components/database-filter/database-filter.component';
 import { InheritanceEntryComponent } from '../../components/inheritance-entry/inheritance-entry.component';
 import { getCharacterById } from '../../data/character.data';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
@@ -62,7 +62,7 @@ interface P2SparkSourceEntry {
     InheritanceFilterComponent,
     TrainerIdFormatPipe,
     ResolveSparksPipe,
-    AdvancedFilterComponent,
+    DatabaseFilterComponent,
     InheritanceEntryComponent,
     LocaleNumberPipe,
     RouterModule
@@ -249,7 +249,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   ];
   // Vote state tracking
   voteStates = new Map<string, VoteState>();
-  @ViewChild(AdvancedFilterComponent) advancedFilter!: AdvancedFilterComponent;
+  @ViewChild(DatabaseFilterComponent) advancedFilter!: DatabaseFilterComponent;
   // Trainer ID filter from URL parameters
   trainerIdFilter: string | null = null;
 
@@ -519,6 +519,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         p2MainCharaId: af.p2_main_chara_id,
         p2WinSaddle: af.p2_win_saddle,
         affinityP2: af.affinity_p2,
+        uql: af.uql,
         
         page: this.currentPage,
         pageSize: this.pageSize,

@@ -305,7 +305,7 @@
       </section>
 
       <!-- Inheritance -->
-      <section class="details-card inheritance-card" *ngIf="inheritanceRecord && (isOwnProfile || isSectionVisible('inheritance'))">
+      <section class="inheritance-card" *ngIf="inheritanceRecord && (isOwnProfile || isSectionVisible('inheritance'))">
         <div class="card-header">
           <mat-icon>family_restroom</mat-icon>
           <h2>Inheritance</h2>
@@ -317,7 +317,14 @@
         <div class="card-content">
           <app-inheritance-entry
             [record]="inheritanceRecord"
-            [showDatabaseHeader]="false">
+            [showDatabaseHeader]="true"
+            [reportButtonText]="'Update inheritance'"
+            [reportButtonIcon]="'sync'"
+            [reportButtonTooltip]="'Report this inheritance as outdated and queue a database refresh'"
+            [mainParentLevelFn]="boundGetLevelFromMainParent"
+            (copyTrainerId)="copyTrainerId($event.accountId, $event.event)"
+            (reportUnavailable)="requestInheritanceUpdate($event.accountId, $event.event)"
+            (openInPlanner)="openInPlanner($event)">
           </app-inheritance-entry>
         </div>
       </section>

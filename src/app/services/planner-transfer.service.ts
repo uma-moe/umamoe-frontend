@@ -3,9 +3,10 @@ import { InheritanceRecord } from '../models/inheritance.model';
 import { VeteranMember } from '../models/profile.model';
 
 export interface PlannerTransferData {
-  record: InheritanceRecord;
+  record?: InheritanceRecord;
   targetCharaId?: number | null;
   veteran?: VeteranMember | null;
+  veteranPosition?: string;
 }
 
 @Injectable({ providedIn: 'root' })

@@ -3,7 +3,7 @@ import { Observable, BehaviorSubject, combineLatest } from 'rxjs';
 import { map, filter, take } from 'rxjs/operators';
 import { Skill } from '../models/skill.model';
 import { CharacterService } from './character.service';
-import { getAllSkills } from '../data/skills-data';
+import { getAllSkills, hasUniqueFlag } from '../data/skills-data';
 import { environment } from '../../environments/environment';
 import { MasterDataService } from './master-data.service';
 @Injectable({
@@ -24,7 +24,7 @@ export class SkillService {
     getUniqueSkills(): Observable<Skill[]> {
         return this.skills$.pipe(
             filter(skills => skills.length > 0),
-            map(skills => skills.filter(skill => skill.unique === 'true'))
+            map(skills => skills.filter(hasUniqueFlag))
         );
     }
     getSkillById(id: number): Observable<Skill | undefined> {
@@ -75,7 +75,7 @@ export class SkillService {
         return this.skills$.pipe(
             filter(skills => skills.length > 0),
             map(skills => skills.filter(skill =>
-                skill.unique === 'true' &&
+                hasUniqueFlag(skill) &&
                 (skill.name.toLowerCase().includes(query.toLowerCase()) ||
                     skill.skill_id.toString().includes(query))
             ))

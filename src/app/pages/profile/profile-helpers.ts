@@ -1,5 +1,5 @@
 import { getCharacterById } from '../../data/character.data';
-import { getSkillBySkillId } from '../../data/skills.data';
+import { getSkillBySkillId, hasInheritedFlag, hasUniqueFlag } from '../../data/skills.data';
 
 export function getAptIcon(val: number | null): string {
     const idx = val != null && val >= 1 ? (val * 2 - 1).toString().padStart(2, '0') : '01';
@@ -89,18 +89,14 @@ export function getCharacterName(cardId: number | null): string {
     return char?.name || `Character ${cardId}`;
 }
 
-const findSkillCache = new Map<number, { skill: ReturnType<typeof getSkillBySkillId>; inherited: boolean }>();
-
 function findSkill(skillId: number): { skill: ReturnType<typeof getSkillBySkillId>; inherited: boolean } {
-    const cached = findSkillCache.get(skillId);
-    if (cached) return cached;
     let result: { skill: ReturnType<typeof getSkillBySkillId>; inherited: boolean };
     let skill = getSkillBySkillId(skillId);
-    if (skill) { result = { skill, inherited: false }; }
+    if (skill) { result = { skill, inherited: hasInheritedFlag(skill) }; }
     else {
         const baseId = Math.floor(skillId / 10);
         skill = getSkillBySkillId(baseId);
-        if (skill) { result = { skill, inherited: false }; }
+        if (skill) { result = { skill, inherited: hasInheritedFlag(skill) }; }
         else {
             const baseIdStr = String(baseId);
             if (baseIdStr.startsWith('9')) {
@@ -116,14 +112,13 @@ function findSkill(skillId: number): { skill: ReturnType<typeof getSkillBySkillI
             }
         }
     }
-    findSkillCache.set(skillId, result!);
     return result!;
 }
 
 export function getSkillName(skillId: number): string {
-    const { skill, inherited } = findSkill(skillId);
+    const { skill } = findSkill(skillId);
     if (!skill) return `Skill ${skillId}`;
-    return inherited ? `${skill.name} (Inherited)` : skill.name;
+    return skill.name;
 }
 
 export function getSkillLevel(skillId: number): number {
@@ -137,10 +132,43 @@ export function getSkillIcon(skillId: number): string | null {
 }
 
 export function getSkillRarityClass(skillId: number): string {
-    const { skill } = findSkill(skillId);
+    const { skill, inherited } = findSkill(skillId);
     if (!skill) return '';
-    if (skill.rarity === 4) return 'rarity-unique';
+    if (hasUniqueFlag(skill) || skill.rarity === 4) return inherited ? 'rarity-unique-inherited' : 'rarity-gold rarity-unique-main';
     if (skill.rarity === 3) return 'rarity-special';
     if (skill.rarity === 2) return 'rarity-gold';
     return '';
+}
+
+function getSkillText(skill: NonNullable<ReturnType<typeof getSkillBySkillId>>): string {
+    return [skill.name, skill.effect, skill.description, skill.conditions, skill.icon].join(' ').toLowerCase();
+}
+
+function getSkillTypeRank(skill: NonNullable<ReturnType<typeof getSkillBySkillId>>): number {
+    const text = getSkillText(skill);
+    if (/speed down|decrease(?:s|d)? .*speed|lower(?:s|ed)? .*speed|slow(?:s|ed)?|hesitat|intimidat|disorient|drain|debuff|fatigue.*(?:opponent|enemy|rival)|(?:opponent|enemy|rival).*fatigue/.test(text)) return 2;
+    if (/stamina recovery|recover(?:s|ed)? stamina|recover endurance|restore(?:s|d)? stamina|regain|decrease fatigue|reduce fatigue|harder to tire/.test(text)) return 1;
+    if (/speed|velocity|target speed|current speed/.test(text)) return 0;
+    return 3;
+}
+
+function getSkillSortBucket(skillId: number): number {
+    const { skill, inherited } = findSkill(skillId);
+    if (!skill) return 99;
+
+    if (hasUniqueFlag(skill)) return inherited ? 1 : 0;
+
+    const typeRank = getSkillTypeRank(skill);
+    if (skill.rarity === 2 || skill.rarity === 4) return 2 + typeRank;
+    return 6 + typeRank;
+}
+
+export function sortEncodedSkills(skillIds: number[]): number[] {
+    return skillIds
+        .map((skillId, index) => ({ skillId, index }))
+        .sort((a, b) => {
+            const bucketDiff = getSkillSortBucket(a.skillId) - getSkillSortBucket(b.skillId);
+            return bucketDiff !== 0 ? bucketDiff : a.index - b.index;
+        })
+        .map(entry => entry.skillId);
 }

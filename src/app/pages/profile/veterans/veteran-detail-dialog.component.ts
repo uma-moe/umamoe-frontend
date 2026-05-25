@@ -4,11 +4,14 @@ import { MatDialogModule, MatDialogRef, MatDialog, MAT_DIALOG_DATA } from '@angu
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { Router } from '@angular/router';
 import { RankBadgeComponent } from '../../../components/rank-badge/rank-badge.component';
+import { LineageDisplayComponent } from '../../../components/lineage-display/lineage-display.component';
 import { RaceResultsDialogComponent, RaceResultsDialogData } from '../../../components/race-results-dialog/race-results-dialog.component';
 import { FactorService } from '../../../services/factor.service';
+import { PlannerTransferService } from '../../../services/planner-transfer.service';
 import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
-import { VeteranMember, SuccessionChara, FactorInfoEntry } from '../../../models/profile.model';
+import { VeteranMember, FactorInfoEntry } from '../../../models/profile.model';
 import { RACE_SADDLE_DATA } from '../../../data/race-saddle.data';
 
 interface WonRace {
@@ -21,7 +24,7 @@ import {
   getAptGrade, getRankGrade, getRankGradeColor, getStarDisplay,
   getDistanceName, getRunningStyleName, getScenarioName, getTotalStats,
   getCardImage, getSkillName, getSkillLevel, getSkillIcon, getSkillRarityClass,
-  getCharacterName,
+  getCharacterName, sortEncodedSkills,
 } from '../profile-helpers';
 
 type FactorColor = 'blue' | 'pink' | 'green' | 'white';
@@ -41,7 +44,7 @@ export interface VeteranDetailData {
 @Component({
   selector: 'app-veteran-detail-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule, MatTooltipModule, RankBadgeComponent, LocaleNumberPipe],
+  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule, MatTooltipModule, RankBadgeComponent, LineageDisplayComponent, LocaleNumberPipe],
   templateUrl: './veteran-detail-dialog.component.html',
   styleUrls: ['./veteran-detail-dialog.component.scss'],
   encapsulation: ViewEncapsulation.None,
@@ -55,6 +58,8 @@ export class VeteranDetailDialogComponent {
     @Inject(MAT_DIALOG_DATA) public data: VeteranDetailData,
     private factorService: FactorService,
     private dialog: MatDialog,
+    private plannerTransfer: PlannerTransferService,
+    private router: Router,
   ) {
     this.v = data.veteran;
     this.wonRaces = this.resolveWonRaces();
@@ -106,6 +111,14 @@ export class VeteranDetailDialogComponent {
     });
   }
 
+  openLineagePlanner(): void {
+    this.plannerTransfer.set({ veteran: this.v, veteranPosition: 'p1' });
+    const url = this.router.serializeUrl(
+      this.router.createUrlTree(['/tools/lineage-planner'], { queryParams: { from: 'db' } })
+    );
+    window.open(url, '_blank');
+  }
+
   // Re-export helpers
   getCharacterName = getCharacterName;
   getCardImage = getCardImage;
@@ -114,6 +127,8 @@ export class VeteranDetailDialogComponent {
   getRankGradeColor = getRankGradeColor;
   getStarDisplay = getStarDisplay;
   getScenarioName = getScenarioName;
+  getDistanceName = getDistanceName;
+  getRunningStyleName = getRunningStyleName;
   getTotalStats = getTotalStats;
   getSkillName = getSkillName;
   getSkillLevel = getSkillLevel;
@@ -121,10 +136,10 @@ export class VeteranDetailDialogComponent {
   getSkillRarityClass = getSkillRarityClass;
 
   getEncodedSkills(v: VeteranMember): number[] {
-    if (v.skill_array && v.skill_array.length > 0) {
-      return v.skill_array.map(s => s.skill_id * 10 + s.level);
-    }
-    return v.skills ?? [];
+    const skills = v.skill_array && v.skill_array.length > 0
+      ? v.skill_array.map(s => s.skill_id * 10 + s.level)
+      : v.skills ?? [];
+    return sortEncodedSkills(skills);
   }
 
   getFactors(node: { factor_info_array?: FactorInfoEntry[] | null; factor_id_array?: number[] | null; factors?: number[] | null }): ResolvedFactor[] {
@@ -158,22 +173,11 @@ export class VeteranDetailDialogComponent {
     return 'white';
   }
 
-  getParentFactorSum(chara: SuccessionChara): number {
-    return this.getFactors(chara).reduce((s, f) => s + (f.level || 0), 0);
-  }
-
   getAffinityScore(v: VeteranMember): number | null {
     return (v.inheritance as any)?.affinity_score ?? null;
   }
 
-  getSuccessionParents(v: VeteranMember): SuccessionChara[] {
-    if (!v.succession_chara_array) return [];
-    return v.succession_chara_array.filter(s => s.position_id === 10 || s.position_id === 20);
-  }
-
-  getSuccessionGrandparents(v: VeteranMember, parentPositionId: number): SuccessionChara[] {
-    if (!v.succession_chara_array) return [];
-    const base = parentPositionId === 10 ? 11 : 21;
-    return v.succession_chara_array.filter(s => s.position_id === base || s.position_id === base + 1);
+  hasLineageTree(): boolean {
+    return (this.v.succession_chara_array ?? []).some(succession => succession.position_id === 10 || succession.position_id === 20);
   }
 }

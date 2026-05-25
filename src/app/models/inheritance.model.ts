@@ -213,6 +213,7 @@ export interface InheritanceSearchFilters {
   p2MainCharaId?: number;
   p2WinSaddle?: number[];
   affinityP2?: number;
+  uql?: string;
   // Pagination
   page?: number;
   pageSize?: number;

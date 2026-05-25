@@ -6,6 +6,8 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { getStarDisplay } from '../../../pages/profile/profile-helpers';
+import { VeteranMember } from '../../../models/profile.model';
+import { LineageDisplayComponent } from '../../lineage-display/lineage-display.component';
 
 export interface VpdResolvedSpark {
   factorId: string;
@@ -38,12 +40,15 @@ export interface VpdRowData {
   showActions?: boolean;
   /** Show edit action button (manual entries only) */
   showEdit?: boolean;
+  /** Full veteran source used for compact planner-style lineage display. */
+  lineageVeteran?: VeteranMember;
+  lineageTargetCharaId?: number | null;
 }
 
 @Component({
   selector: 'app-vpd-row',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatTooltipModule],
+  imports: [CommonModule, MatIconModule, MatTooltipModule, LineageDisplayComponent],
   templateUrl: './vpd-row.component.html',
   styleUrls: ['./vpd-row.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

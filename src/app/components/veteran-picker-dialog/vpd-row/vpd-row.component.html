@@ -28,6 +28,16 @@
     <span class="spark-more" *ngIf="data.sparks.length > 16">+{{ data.sparks.length - 16 }}</span>
   </div>
 
+  <app-lineage-display
+    class="vpd-lineage-display"
+    *ngIf="data.lineageVeteran; else parentRows"
+    [veteran]="data.lineageVeteran"
+    [targetCharaId]="data.lineageTargetCharaId ?? null"
+    mode="compact"
+    [showMainSparks]="false">
+  </app-lineage-display>
+
+  <ng-template #parentRows>
   <div class="vpd-parents" *ngIf="data.parents.length > 0">
     <div class="vpd-parent-row" *ngFor="let parent of data.parents">
       <span class="vpd-parent-label" [ngClass]="'pos-' + parent.position">{{ parent.position }}</span>
@@ -41,6 +51,7 @@
       </span>
     </div>
   </div>
+  </ng-template>
 </div>
 
 <div class="vpd-row-actions" *ngIf="data.showActions || data.showEdit" (click)="stopProp($event)">

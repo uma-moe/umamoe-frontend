@@ -123,13 +123,29 @@
           </div>
 
           <!-- View toggle -->
-          <div class="view-toggle" *ngIf="displayTab === 'cards'">
-            <button [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">
-              <mat-icon>grid_view</mat-icon>
-            </button>
-            <button [class.active]="viewMode === 'table'" (click)="viewMode = 'table'">
-              <mat-icon>view_list</mat-icon>
-            </button>
+          <div class="toolbar-toggle-group" *ngIf="displayTab === 'cards'">
+            <span class="toggle-group-label">View</span>
+            <div class="view-toggle">
+              <button [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">
+                <mat-icon>grid_view</mat-icon>
+                <span>Grid</span>
+              </button>
+              <button [class.active]="viewMode === 'table'" (click)="viewMode = 'table'">
+                <mat-icon>view_list</mat-icon>
+                <span>Table</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="toolbar-toggle-group" *ngIf="displayTab === 'cards' && viewMode === 'grid'">
+            <span class="toggle-group-label">Per Row</span>
+            <div class="grid-columns-toggle">
+              <button *ngFor="let columns of gridColumnOptions"
+                      [class.active]="gridColumns === columns"
+                      (click)="gridColumns = columns">
+                {{ columns }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -590,107 +606,19 @@
 
       <!-- --- INHERITANCE VIEW --- -->
       <div class="inh-list" *ngIf="displayTab === 'inheritance' && filtered.length > 0">
-        <div class="tree" *ngFor="let d of displayed; trackBy: trackByDisplay">
-
-          <!-- Main character node -->
-          <div class="tree-node tree-node--main clickable" (click)="openDetail(d.veteran)">
-            <div class="tree-node-head">
-              <img *ngIf="d.cardImage" [src]="d.cardImage" class="tree-node-av">
-              <div class="tree-node-info">
-                <span class="tree-node-name">
-                  {{ d.characterName }}
-                  <span class="sm-stars" *ngIf="d.veteran.rarity">
-                    <ng-container *ngFor="let s of d.starDisplay">
-                      <mat-icon [class.star-filled]="s.filled" [class.star-empty]="!s.filled">{{ s.filled ? 'star' : 'star_border' }}</mat-icon>
-                    </ng-container>
-                  </span>
-                </span>
-                <span class="tree-node-meta">
-                  <span class="sm-tag scenario" *ngIf="d.veteran.scenario_id">{{ d.scenarioName }}</span>
-                  <span class="sm-tag distance" *ngIf="d.veteran.distance_type">{{ d.distanceName }}</span>
-                </span>
-              </div>
-              <div class="tree-node-score" *ngIf="d.veteran.rank_score">
-                <app-rank-badge [score]="d.veteran.rank_score" size="sm"></app-rank-badge>
-                <span class="sm-score-value mono">{{ d.veteran.rank_score | localeNumber }}</span>
-              </div>
-            </div>
-            <div class="tree-node-sparks tree-node-sparks--flat" *ngIf="d.factors.length > 0">
-              <span class="spark-item spark-item--sm" [ngClass]="f.color + '-spark'" *ngFor="let f of d.factors; trackBy: trackByFactor">
-                <span class="spark-level">{{ f.level }}</span>
-                <mat-icon class="spark-star">star</mat-icon>
-                <span class="spark-name">{{ f.name }}</span>
-              </span>
-            </div>
-            <div class="tree-node-stats" *ngIf="d.affinityScore !== null">
-              <span class="stat-chip stat-chip--aff">Affinity <strong class="mono">{{ d.affinityScore
-                  }}</strong></span>
-            </div>
-            <div class="tree-open-hint">
-              <mat-icon>open_in_new</mat-icon>
-              <span>View details</span>
-            </div>
-          </div>
-
-          <!-- Parent branches -->
-          <ng-container *ngIf="d.successionParents.length > 0">
-            <div class="tree-line"></div>
-            <div class="tree-branches">
-              <div class="tree-branch" *ngFor="let parent of d.successionParents; let first = first; let last = last">
-                <div class="tree-elbow" [class.first]="first" [class.last]="last">
-                  <div class="c-top"></div><div class="c-bot"></div>
-                </div>
-
-                <!-- Parent node -->
-                <div class="tree-node tree-node--parent">
-                  <div class="tree-node-head">
-                    <img *ngIf="parent._image" [src]="parent._image" class="tree-node-av">
-                    <span class="tree-node-name">{{ parent._name }}</span>
-                  </div>
-                  <div class="tree-node-sparks tree-node-sparks--flat">
-                    <span class="spark-item spark-item--sm" [ngClass]="f.color + '-spark'"
-                      *ngFor="let f of parent._factors; trackBy: trackByFactor">
-                      <span class="spark-level">{{ f.level }}</span>
-                      <mat-icon class="spark-star">star</mat-icon>
-                      <span class="spark-name">{{ f.name }}</span>
-                    </span>
-                  </div>
-                </div>
-
-                <!-- GP nodes -->
-                <ng-container *ngIf="parent._gps.length > 0">
-                  <div class="tree-line"></div>
-                  <div class="tree-gps">
-                    <div class="tree-gp-row" *ngFor="let gp of parent._gps; let gFirst = first; let gLast = last">
-                      <div class="tree-elbow" [class.first]="gFirst" [class.last]="gLast">
-                        <div class="c-top"></div><div class="c-bot"></div>
-                      </div>
-                      <div class="tree-node tree-node--gp">
-                        <div class="tree-node-head">
-                          <img *ngIf="gp._image" [src]="gp._image"
-                            class="tree-node-av tree-node-av--sm">
-                          <span class="tree-node-name tree-node-name--sm">{{ gp._name }}</span>
-                        </div>
-                        <div class="tree-node-sparks tree-node-sparks--flat">
-                          <span class="spark-item spark-item--xs" [ngClass]="f.color + '-spark'"
-                            *ngFor="let f of gp._factors; trackBy: trackByFactor">
-                            <span class="spark-level">{{ f.level }}</span>
-                            <mat-icon class="spark-star">star</mat-icon>
-                            <span class="spark-name">{{ f.name }}</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </ng-container>
-              </div>
-            </div>
-          </ng-container>
-
-          <!-- No inheritance data -->
-          <div class="inh-empty" *ngIf="d.successionParents.length === 0 && d.factors.length === 0">
-            <span>No inheritance data</span>
-          </div>
+        <div class="inh-card" *ngFor="let d of displayed; trackBy: trackByDisplay">
+          <app-lineage-display
+            class="inh-lineage-row"
+            [veteran]="d.veteran"
+            mode="full"
+            [clickable]="true"
+            [framed]="false"
+            [showPlannerAction]="true"
+            [showParentScore]="true"
+            [showOpenHint]="true"
+            (openVeteran)="openDetail($event)"
+            (openPlanner)="openLineagePlanner($event)">
+          </app-lineage-display>
         </div>
         <!-- Infinite scroll sentinel for inheritance -->
         <div class="scroll-sentinel" #scrollSentinel *ngIf="displayed.length < filtered.length">
@@ -699,7 +627,7 @@
       </div>
 
       <!-- --- GRID VIEW --- -->
-      <div class="vet-grid" *ngIf="displayTab === 'cards' && viewMode === 'grid' && filtered.length > 0">
+      <div class="vet-grid" [ngClass]="'grid-cols-' + gridColumns" *ngIf="displayTab === 'cards' && viewMode === 'grid' && filtered.length > 0">
         <div class="vet-card stadium-member clickable" *ngFor="let d of displayed; trackBy: trackByDisplay" (click)="openDetail(d.veteran)">
 
           <!-- Character Header -->
@@ -719,7 +647,18 @@
                 </span>
               </div>
               <div class="sm-tags">
-                <span class="sm-tag scenario" *ngIf="d.veteran.scenario_id">{{ d.scenarioName }}</span>
+                <span class="sm-tag distance" *ngIf="d.veteran.distance_type">
+                  <mat-icon>straighten</mat-icon>
+                  <span>{{ d.distanceName }}</span>
+                </span>
+                <span class="sm-tag style" *ngIf="d.veteran.running_style">
+                  <mat-icon>directions_run</mat-icon>
+                  <span>{{ d.runningStyleName }}</span>
+                </span>
+                <span class="sm-tag scenario" *ngIf="d.veteran.scenario_id">
+                  <mat-icon>auto_awesome</mat-icon>
+                  <span>{{ d.scenarioName }}</span>
+                </span>
               </div>
             </div>
             <div class="sm-rank-block" *ngIf="d.veteran.rank_score">

@@ -1,6 +1,11 @@
 @use '../../../styles/mixins' as *;
 
-.inheritance-database { min-height: calc(100vh - 60px); background: var(--bg-secondary); }
+.inheritance-database {
+  min-height: calc(100vh - 60px);
+  background: var(--bg-secondary);
+  overflow-x: hidden;
+  overflow-x: clip;
+}
 
 .page-header {
   background: linear-gradient(135deg, rgba(100, 181, 246, 0.1) 0%, rgba(129, 199, 132, 0.1) 100%);
@@ -78,7 +83,10 @@
 }
 
 .content-container {
-  max-width: 100vw;
+  box-sizing: border-box;
+  width: auto;
+  max-width: none;
+  min-width: 0;
   margin-left: 10%;
   margin-right: 10%;
   padding: 2rem;
@@ -89,6 +97,14 @@
 
   // Center the filter component
   app-inheritance-filter { display: flex; justify-content: center; flex: 1 1 32%; }
+
+  app-advanced-filter,
+  app-database-filter {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
 }
 
 .search-section {
@@ -120,6 +136,8 @@
   display: flex;
   flex-direction: column;
   flex: 1 1 100%;
+  min-width: 0;
+  max-width: 100%;
   gap: 0.75rem;
 
   &[hidden] {
@@ -132,6 +150,8 @@
   align-items: flex-end;
   gap: 12px;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 
   .results-info {
     margin-bottom: 18px;
@@ -275,11 +295,26 @@
 
 .loading-container { @include loading-container; }
 
-.results-grid { display: grid; gap: 1rem; }
+.results-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
 
 .result-card-shell {
   content-visibility: auto;
   contain-intrinsic-size: auto 640px;
+  min-width: 0;
+  max-width: 100%;
+
+  app-inheritance-entry {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+  }
 }
 
 .render-progress {
@@ -854,10 +889,11 @@ mat-icon { @include icon-size(16px); }
 
 @media (max-width: 1000px) {
   .content-container {
-    margin-left: 3rem;
-    margin-right: 3rem;
-    max-width: 100%;
-    padding: 2rem 0rem;
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    max-width: 100vw;
+    padding: 1rem;
     flex-direction: column;
     gap: 1.5rem;
   }
@@ -878,8 +914,8 @@ mat-icon { @include icon-size(16px); }
   }
 
   .content-container {
-    margin-left: 1rem;
-    margin-right: 1rem;
+    margin-left: 0;
+    margin-right: 0;
     flex-wrap: wrap;
     gap: 1rem;
   }
@@ -913,6 +949,7 @@ mat-icon { @include icon-size(16px); }
     .split-sparks-badge,
     .list-mode-badge {
       flex: 1 1 0;
+      min-width: 0;
       justify-content: center;
       padding: 6px 10px;
       font-size: 12px;
@@ -930,6 +967,7 @@ mat-icon { @include icon-size(16px); }
   }
 
   .content-container {
+    width: 100%;
     margin-left: 0;
     margin-right: 0;
     gap: 1rem;
@@ -1445,9 +1483,12 @@ mat-icon { @include icon-size(16px); }
 }
 
 @media (max-width: 430px) {
-  .inheritance-database { zoom: 0.85; }
-
-  .content-container { padding: 1rem 0.25rem; }
+  .content-container {
+    width: 117.6470588235%;
+    max-width: 117.6470588235vw;
+    padding: 1rem 0.25rem;
+    zoom: 0.85;
+  }
 
   .record-card { padding: 0.75rem; }
 
@@ -1479,6 +1520,7 @@ mat-icon { @include icon-size(16px); }
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
   width: fit-content;
+  max-width: 100%;
 
   @media (max-width: 768px) {
     width: 100%;
@@ -1490,6 +1532,7 @@ mat-icon { @include icon-size(16px); }
     align-items: center;
     gap: 6px;
     padding: 8px 16px;
+    min-width: 0;
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
     background: transparent;

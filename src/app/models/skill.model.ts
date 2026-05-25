@@ -14,5 +14,6 @@ export interface Skill {
   support_card_ids?: number[];
   character_id: number | undefined; // ID of the character this skill belongs to
   icon: string;
-  unique?: string; // "true" for unique skills
+  unique?: boolean;
+  inherited?: boolean;
 }

@@ -1,8 +1,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, RouterOutlet, ActivatedRoute } from '@angular/router';
+import { RouterModule, RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ProfileService } from '../../services/profile.service';
+import { InheritanceService } from '../../services/inheritance.service';
 import { UserProfileResponse, CircleHistoryEntry, ProfileVisibility } from '../../models/profile.model';
 import { AuthService } from '../../services/auth.service';
 import { getCharacterById } from '../../data/character.data';
@@ -14,6 +16,7 @@ import { InheritanceEntryComponent } from '../../components/inheritance-entry/in
 import { RankBadgeComponent } from '../../components/rank-badge/rank-badge.component';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { InheritanceRecord } from '../../models/inheritance.model';
+import { PlannerTransferService } from '../../services/planner-transfer.service';
 import { Meta, Title } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import {
@@ -34,7 +37,7 @@ export interface CircleMembership {
 @Component({
     selector: 'app-profile',
     standalone: true,
-    imports: [CommonModule, RouterModule, RouterOutlet, MatIconModule, ResolveSparksPipe, ProfileHeaderComponent, InheritanceEntryComponent, RankBadgeComponent, LocaleNumberPipe],
+    imports: [CommonModule, RouterModule, RouterOutlet, MatIconModule, MatSnackBarModule, ResolveSparksPipe, ProfileHeaderComponent, InheritanceEntryComponent, RankBadgeComponent, LocaleNumberPipe],
     templateUrl: './profile.component.html',
     styleUrl: './profile.component.scss'
 })
@@ -49,6 +52,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
     selectedStadiumTab = 0;
     hasActiveChild = false;
     inheritanceRecord: InheritanceRecord | null = null;
+    boundGetLevelFromMainParent = this.getLevelFromMainParent.bind(this);
+    private readonly mainParentLevelCache = new WeakMap<InheritanceRecord, Map<string, string>>();
 
     // Owner controls
     isOwnProfile = false;
@@ -58,9 +63,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     constructor(
         private route: ActivatedRoute,
+        private router: Router,
         private profileService: ProfileService,
+        private inheritanceService: InheritanceService,
         private authService: AuthService,
         private factorService: FactorService,
+        private snackBar: MatSnackBar,
+        private plannerTransfer: PlannerTransferService,
         private title: Title,
         private meta: Meta
     ) { }
@@ -283,6 +292,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         return {
             id: inh.inheritance_id,
             account_id: inh.account_id,
+            trainer_name: profile.trainer.name || undefined,
             main_parent_id: inh.main_parent_id,
             parent_left_id: inh.parent_left_id,
             parent_right_id: inh.parent_right_id,
@@ -300,8 +310,19 @@ export class ProfileComponent implements OnInit, OnDestroy {
             main_green_factors: inh.main_green_factors,
             main_white_factors: inh.main_white_factors,
             main_white_count: inh.main_white_count,
+            left_blue_factors: inh.left_blue_factors,
+            left_pink_factors: inh.left_pink_factors,
+            left_green_factors: inh.left_green_factors,
+            left_white_factors: inh.left_white_factors,
+            left_white_count: inh.left_white_count,
+            right_blue_factors: inh.right_blue_factors,
+            right_pink_factors: inh.right_pink_factors,
+            right_green_factors: inh.right_green_factors,
+            right_white_factors: inh.right_white_factors,
+            right_white_count: inh.right_white_count,
             support_card_id: profile.support_card?.support_card_id,
             limit_break_count: profile.support_card?.limit_break_count,
+            support_card_experience: profile.support_card?.experience,
             race_results: inh.race_results,
             main_win_saddles: inh.main_win_saddles,
             left_win_saddles: inh.left_win_saddles,
@@ -309,6 +330,64 @@ export class ProfileComponent implements OnInit, OnDestroy {
             upvotes: 0,
             downvotes: 0,
         };
+    }
+
+    getLevelFromMainParent(currentSpark: SparkInfo, record: InheritanceRecord): string | undefined {
+        return this.getMainParentLevelMap(record).get(String(currentSpark.factorId));
+    }
+
+    private getMainParentLevelMap(record: InheritanceRecord): Map<string, string> {
+        const cached = this.mainParentLevelCache.get(record);
+        if (cached) return cached;
+
+        const levels = new Map<string, string>();
+        const addSpark = (spark: number | null | undefined) => {
+            if (spark === null || spark === undefined) return;
+            levels.set(String(Math.floor(spark / 10)), String(spark % 10));
+        };
+        addSpark(record.main_blue_factors);
+        addSpark(record.main_pink_factors);
+        addSpark(record.main_green_factors);
+        for (const spark of record.main_white_factors ?? []) {
+            addSpark(spark);
+        }
+        this.mainParentLevelCache.set(record, levels);
+        return levels;
+    }
+
+    copyTrainerId(trainerId: string, event: Event): void {
+        event.stopPropagation();
+        if (!trainerId) return;
+        navigator.clipboard?.writeText(trainerId).then(() => {
+            this.snackBar.open('Trainer ID copied', 'Close', { duration: 2000 });
+        }).catch(() => {
+            this.snackBar.open('Could not copy trainer ID', 'Close', { duration: 2500 });
+        });
+    }
+
+    requestInheritanceUpdate(trainerId: string, event: Event): void {
+        event.stopPropagation();
+        if (!trainerId) return;
+        const confirmed = confirm(`Report trainer ${trainerId}'s inheritance as outdated and queue a refresh? It can take up to 5 minutes to update in the database.`);
+        if (!confirmed) return;
+
+        this.inheritanceService.reportUserUnavailable(trainerId).subscribe({
+            next: () => {
+                this.snackBar.open('Update requested. It can take up to 5 minutes to appear in the database.', 'Close', { duration: 5000 });
+            },
+            error: (error) => {
+                console.error('Failed to request inheritance update:', error);
+                this.snackBar.open('Update request submitted. It can take up to 5 minutes to appear in the database.', 'Close', { duration: 5000 });
+            }
+        });
+    }
+
+    openInPlanner(record: InheritanceRecord): void {
+        this.plannerTransfer.set({ record });
+        const url = this.router.serializeUrl(
+            this.router.createUrlTree(['/tools/lineage-planner'], { queryParams: { from: 'profile' } })
+        );
+        window.open(url, '_blank');
     }
 
     getTeamClassName(teamClass: number | null): string {

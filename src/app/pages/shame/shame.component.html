@@ -1,0 +1,699 @@
+<div class="shame-page">
+  <div class="page-header">
+    <div class="header-content">
+      <h1>Suspicious Activity</h1>
+      <p>This page ranks accounts by suspicious activity metrics from observed fan snapshots. It is not a ban list.</p>
+    </div>
+  </div>
+
+  <div class="content-container">
+    <ng-container *ngIf="selectedViewerId === null; else detailView">
+      <div class="filters-container">
+        <div class="search-row">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Search by Trainer Name or Viewer ID</mat-label>
+            <input matInput (input)="onSearch($event)" placeholder="Search by name or ID" [value]="searchTerm">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <div class="filter-bar">
+          <mat-form-field appearance="outline" class="compact-select sort-select">
+            <mat-icon matPrefix>sort</mat-icon>
+            <mat-select [(value)]="sortBy" (selectionChange)="onSortChange()">
+              <mat-option *ngFor="let option of sortOptions" [value]="option.value">{{ option.label }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="compact-select days-select">
+            <mat-icon matPrefix>calendar_today</mat-icon>
+            <mat-select [(value)]="minDays" (selectionChange)="onMinDaysChange()">
+              <mat-option *ngFor="let days of minDaysOptions" [value]="days">{{ days }}+ observed days</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="compact-select score-select">
+            <mat-icon matPrefix>speed</mat-icon>
+            <mat-select [(value)]="minScoreSelectValue" (selectionChange)="onMinScoreChange()">
+              <mat-option *ngFor="let option of scoreFilterOptions" [value]="option.value">{{ option.label }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <button class="clear-filters-btn" *ngIf="searchTerm || sortBy !== 'score' || minScore !== 0 || minDays !== 3" (click)="clearFilters()">
+            <mat-icon>clear</mat-icon>
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <div class="list-meta" *ngIf="!loading && !errorMessage">
+        <span>{{ totalEntries | localeNumber }} accounts</span>
+        <span *ngIf="lastRefreshedAt">Updated {{ lastRefreshedAt | date:'medium' }}</span>
+      </div>
+
+      <div class="loading-container" *ngIf="loading">
+        <mat-spinner></mat-spinner>
+        <p>Loading suspicious activity metrics...</p>
+      </div>
+
+      <div class="error-state" *ngIf="!loading && errorMessage">
+        <mat-icon>error_outline</mat-icon>
+        <p>{{ errorMessage }}</p>
+      </div>
+
+      <div class="leaderboard shame-list" *ngIf="!loading && !errorMessage && entries.length > 0">
+        <div class="shame-row"
+             *ngFor="let entry of entries; index as index; trackBy: trackByViewerId"
+             [ngClass]="getScoreTierClass(entry.suspicion_score)">
+          <div class="card-header">
+            <div class="rank-section">
+              <span class="rank-number mono">#{{ rowRank(index) }}</span>
+            </div>
+
+            <div class="entry-main">
+              <div class="entry-title-row">
+                <a class="entry-name" [routerLink]="['/shame', entry.viewer_id]" queryParamsHandling="preserve">
+                  {{ entry.trainer_name || 'Unknown Trainer' }}
+                </a>
+                <span class="viewer-id">ID {{ entry.viewer_id }}</span>
+              </div>
+
+              <div class="entry-facts">
+                <a class="circle-link" *ngIf="entry.circle_id" [routerLink]="['/circles', entry.circle_id]">
+                  <mat-icon>groups</mat-icon>
+                  <span>{{ entry.circle_name || 'Club' }}</span>
+                  <span *ngIf="entry.circle_monthly_rank">#{{ entry.circle_monthly_rank }}</span>
+                </a>
+                <span class="info-tag">{{ entry.days_observed }}d observed</span>
+                <span class="info-tag">{{ entry.total_careers | localeNumber }} careers</span>
+              </div>
+
+              <div class="entry-reasons">
+                <span class="info-tag">{{ getVerdictSignalLabel(entry.evidence.verdict) }}</span>
+                <span class="reason-chip"
+                      *ngFor="let reason of getTopReasons(entry); trackBy: trackByReasonKey"
+                      [ngClass]="[reason.severity, reason.confidence]">
+                  <span class="reason-label">{{ reason.label }}</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="metrics-section">
+              <div class="metric primary">
+                <span class="value">{{ entry.total_fan_gain | compactNumber }}</span>
+                <span class="label">Fan gain</span>
+              </div>
+              <div class="metric">
+                <span class="value">{{ formatDuration(entry.total_active_seconds) }}</span>
+                <span class="label">Active</span>
+              </div>
+              <div class="metric">
+                <span class="value">{{ entry.careers_per_active_hour | number:'1.1-1' }}</span>
+                <span class="label">Careers/hr</span>
+              </div>
+            </div>
+
+            <div class="score-section">
+              <span class="score-label">{{ getScoreBandLabel(entry.suspicion_score) }}</span>
+              <span class="score-line">
+                <span class="score-value mono">{{ entry.suspicion_score }}</span>
+                <span class="score-max">/100</span>
+              </span>
+            </div>
+
+            <div class="actions">
+              <a mat-icon-button [routerLink]="['/shame', entry.viewer_id]" queryParamsHandling="preserve" matTooltip="Open activity report" aria-label="Open activity report">
+                <mat-icon>chevron_right</mat-icon>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="no-results" *ngIf="!loading && !errorMessage && !hasResults">
+        <mat-icon>search_off</mat-icon>
+        <p>No matching suspicious activity metrics found.</p>
+        <button class="clear-filters-btn inline" *ngIf="searchTerm" (click)="clearSearch()">Clear search</button>
+      </div>
+
+      <mat-paginator [length]="totalEntries"
+                     [pageSize]="pageSize"
+                     [pageSizeOptions]="[25, 50, 100, 200]"
+                     [pageIndex]="page"
+                     (page)="onPageChange($event)"
+                     aria-label="Select page of suspicious activity metrics">
+      </mat-paginator>
+    </ng-container>
+
+    <ng-template #detailView>
+      <a class="back-link" routerLink="/shame" queryParamsHandling="preserve">
+        <mat-icon>arrow_back</mat-icon>
+        Back to suspicious activity
+      </a>
+
+      <div class="loading-container" *ngIf="detailLoading">
+        <mat-spinner></mat-spinner>
+        <p>Loading viewer report...</p>
+      </div>
+
+      <div class="error-state" *ngIf="!detailLoading && errorMessage">
+        <mat-icon>error_outline</mat-icon>
+        <p>{{ errorMessage }}</p>
+      </div>
+
+      <ng-container *ngIf="!detailLoading && !errorMessage && viewerReport as report">
+        <ng-container *ngIf="report.score as score; else missingScore">
+          <section class="intro-stack" [ngClass]="getScoreTierClass(score.suspicion_score)">
+            <section class="detail-lead" [ngClass]="[score.evidence.verdict, getScoreTierClass(score.suspicion_score)]">
+              <div class="lead-copy">
+                <div class="lead-kicker">
+                  <span class="verdict-badge" [ngClass]="score.evidence.verdict">
+                    <mat-icon>{{ getVerdictIcon(score.evidence.verdict) }}</mat-icon>
+                    {{ getVerdictLabel(score.evidence.verdict) }}
+                  </span>
+                  <span class="stable-id">Viewer ID {{ score.viewer_id }}</span>
+                </div>
+                <h2>{{ score.trainer_name || 'Unknown Trainer' }}</h2>
+                <p>{{ getEntrySummary(score) }}</p>
+                <div class="lead-meta">
+                  <span *ngIf="score.circle_name"><mat-icon>groups</mat-icon>{{ score.circle_name }}</span>
+                  <span><mat-icon>event</mat-icon>{{ score.days_observed }} observed days</span>
+                  <span><mat-icon>update</mat-icon>Last seen {{ score.last_seen | date:'mediumDate' }}</span>
+                </div>
+              </div>
+              <div class="score-ring">
+                <small>Score</small>
+                <span>{{ score.suspicion_score }}</span>
+                <em>/100</em>
+              </div>
+            </section>
+
+            <section class="caveat-callout" *ngIf="getDisplayCaveats(score).length > 0">
+              <mat-icon>info</mat-icon>
+              <div>
+                <p *ngFor="let caveat of getDisplayCaveats(score)">{{ caveat }}</p>
+              </div>
+            </section>
+
+            <section class="automation-panel" *ngIf="score.short_high_fan_careers > 0 || score.short_fan_gain_score > 0">
+              <div class="automation-copy">
+                <div class="signal-heading-row">
+                  <span class="eyebrow">Primary signal</span>
+                  <span class="signal-context">Training speed</span>
+                </div>
+                <h3>{{ score.short_high_fan_careers | localeNumber }} under-{{ shortCareerMaxMinutes }}m high-fan careers</h3>
+                <p>High-fan means at least {{ formatCompactNumber(highFanRateThreshold) }} fans per observed minute during an estimated career window. The short-fan score gets heavier when runs are both shorter and closer to a full high-value fan gain.</p>
+              </div>
+              <div class="automation-score">
+                <span>Weighted short-fan score</span>
+                <strong>{{ score.short_fan_gain_score | number:'1.1-1' }}</strong>
+                <div class="score-track" matTooltip="{{ shortFanScoreCap }}+ fills this component of the suspicion score">
+                  <span [style.width.%]="getShortFanScorePercent(score)"></span>
+                </div>
+                <small>{{ shortFanScoreCap }}+ is already saturated</small>
+              </div>
+              <div class="automation-metrics">
+                <div>
+                  <span>Short windows</span>
+                  <strong>{{ getShortCareerWindowCount(score) | localeNumber }}</strong>
+                  <small>under {{ shortCareerMaxMinutes }}m</small>
+                </div>
+                <div>
+                  <span>Average short gain</span>
+                  <strong>{{ formatCompactNumber(score.short_career_avg_fan_gain) }}</strong>
+                  <small>per short career</small>
+                </div>
+                <div>
+                  <span>P95 short gain</span>
+                  <strong>{{ formatCompactNumber(score.short_career_p95_fan_gain) }}</strong>
+                  <small>near full-run output</small>
+                </div>
+                <div>
+                  <span>Last 20 avg</span>
+                  <strong>{{ formatDuration(score.avg_career_length_last20_seconds) }}</strong>
+                  <small>career length</small>
+                </div>
+              </div>
+            </section>
+
+            <section class="metric-grid summary-metric-grid" [ngClass]="getScoreTierClass(score.suspicion_score)">
+              <div class="metric-tile metric-tile-feature metric-tile-accent">
+                <span class="label">Total fan gain</span>
+                <span class="value full">{{ score.total_fan_gain | localeNumber }}</span>
+                <span class="value compact">{{ score.total_fan_gain | compactNumber }}</span>
+              </div>
+              <div class="metric-tile metric-tile-feature">
+                <span class="label">Peak fans/min</span>
+                <span class="value full">{{ score.peak_fans_per_minute | localeNumber:'1.0-0' }}</span>
+                <span class="value compact">{{ score.peak_fans_per_minute | compactNumber }}</span>
+              </div>
+              <div class="metric-tile metric-tile-compact">
+                <span class="label">Careers/hour</span>
+                <span class="value">{{ score.careers_per_active_hour | number:'1.1-1' }}</span>
+              </div>
+              <div class="metric-tile metric-tile-compact">
+                <span class="label">{{ getPrimarySessionMetricLabel(score) }}</span>
+                <span class="value">{{ formatDuration(getPrimarySessionMetricDuration(score)) }}</span>
+              </div>
+              <div class="metric-tile metric-tile-compact">
+                <span class="label">Weekly buckets</span>
+                <span class="value">{{ score.distinct_weekly_hour_buckets }} / 168</span>
+              </div>
+              <div class="metric-tile metric-tile-compact">
+                <span class="label">Under-15m high-fan</span>
+                <span class="value">{{ score.short_high_fan_careers }}</span>
+              </div>
+              <div class="metric-tile metric-tile-feature">
+                <span class="label">Recent 3d gain</span>
+                <span class="value full">+{{ score.recent_fan_gain_3d | localeNumber }}</span>
+                <span class="value compact">+{{ score.recent_fan_gain_3d | compactNumber }}</span>
+              </div>
+              <div class="metric-tile metric-tile-feature">
+                <span class="label">Behavior / probe</span>
+                <span class="value">{{ score.behavior_change_score | number:'1.1-1' }} / {{ (score.probe_score ?? 0) | number:'1.1-1' }}</span>
+              </div>
+            </section>
+          </section>
+
+          <section class="detail-section insight-section" *ngIf="scoreInsightGroups.length > 0">
+            <div class="section-heading split-heading">
+              <div>
+                <h3>Score inputs</h3>
+                <p>Most of the raw score payload grouped into activity, trend, and reset context.</p>
+              </div>
+              <div class="flag-strip header-flags">
+                <span class="flag-chip" *ngFor="let flag of viewerFlagLabels">{{ flag }}</span>
+                <span class="flag-chip muted" *ngIf="viewerFlagLabels.length === 0">No hard activity flags were raised by the current score.</span>
+              </div>
+            </div>
+            <div class="insight-grid">
+              <article class="insight-card" *ngFor="let group of scoreInsightGroups; trackBy: trackByGroupTitle">
+                <div class="insight-card-head">
+                  <h4>{{ group.title }}</h4>
+                  <p>{{ group.description }}</p>
+                </div>
+                <div class="insight-metric-grid">
+                  <div class="insight-metric" *ngFor="let metric of group.metrics; trackBy: trackByMetricLabel">
+                    <span class="metric-label">{{ metric.label }}</span>
+                    <strong>{{ metric.value }}</strong>
+                    <small *ngIf="metric.hint">{{ metric.hint }}</small>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="detail-section evidence-section">
+            <div class="section-heading">
+              <h3>Why this account was flagged</h3>
+              <p>Signals are ordered from direct automation evidence to broader rate and schedule context.</p>
+            </div>
+            <div class="evidence-empty" *ngIf="!hasEvidenceReasons(score)">
+              <p>{{ score.evidence.summary }}</p>
+              <small *ngIf="score.evidence.strongest_signal">Strongest returned signal: {{ score.evidence.strongest_signal }}</small>
+              <small *ngIf="!score.evidence.strongest_signal">This payload did not include detailed evidence reasons, so the sections around it are showing the raw score inputs instead.</small>
+            </div>
+            <div class="evidence-groups" *ngIf="hasEvidenceReasons(score)">
+              <article class="evidence-group"
+                       *ngFor="let group of evidenceGroups; trackBy: trackByEvidenceGroupKey"
+                       [class.expanded]="isEvidenceGroupExpanded(group.key)">
+                <button type="button" class="evidence-group-toggle" (click)="toggleEvidenceGroup(group.key)">
+                  <div class="evidence-group-meta">
+                    <strong>{{ group.label }}</strong>
+                    <span>{{ group.description }}</span>
+                  </div>
+                  <div class="evidence-group-state">
+                    <small>{{ group.reasons.length }} signals</small>
+                    <mat-icon>{{ isEvidenceGroupExpanded(group.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </div>
+                </button>
+
+                <div class="evidence-list" *ngIf="isEvidenceGroupExpanded(group.key)">
+                  <article class="evidence-row"
+                           *ngFor="let reason of group.reasons; trackBy: trackByReasonKey"
+                           [ngClass]="[reason.severity, reason.confidence]">
+                    <div class="evidence-row-head">
+                      <div class="evidence-title">
+                        <div>
+                          <h4>{{ reason.label }}</h4>
+                          <span>{{ getConfidenceLabel(reason.confidence) }}</span>
+                        </div>
+                      </div>
+                      <strong>{{ reason.display_value }}</strong>
+                    </div>
+                    <p>{{ getEvidenceMessage(reason, score) }}</p>
+                    <small *ngIf="getEvidenceCaveat(reason) as caveat">{{ caveat }}</small>
+                  </article>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="detail-grid">
+            <div class="detail-section heatmap-section">
+              <div class="section-heading">
+                <h3>Weekly activity heatmap</h3>
+                <p>Each square is total observed active time for that weekday and hour across the {{ reportDays }} reported days, not one single day.</p>
+                <div class="heatmap-stats">
+                  <span>{{ score.distinct_weekly_hour_buckets }} / 168 slots touched</span>
+                  <span>{{ getHeatmapCoveragePercent(score) }}% weekly coverage</span>
+                  <span>darkest cell {{ formatDuration(heatmapMaxActiveSeconds) }}</span>
+                </div>
+              </div>
+              <div class="heatmap-wrap">
+                <div class="hourly-profile" *ngIf="hourlyActivityRows.length > 0">
+                  <span class="hourly-profile-label">24h</span>
+                  <span class="hourly-bar-slot"
+                        *ngFor="let row of hourlyActivityRows"
+                        [matTooltip]="getHourlyActivityTooltip(row)">
+                    <i class="hourly-bar"
+                       [ngClass]="'level-' + row.level"
+                       [style.height.%]="row.logPercent"></i>
+                  </span>
+                </div>
+                <div class="heatmap-hours">
+                  <span></span>
+                  <span *ngFor="let hour of heatmapHours" [class.major]="hour % 6 === 0">{{ hour % 6 === 0 ? hour : '' }}</span>
+                </div>
+                <div class="heatmap-row" *ngFor="let day of heatmapDays">
+                  <span class="day-label">{{ day.label }}</span>
+                  <ng-container *ngFor="let hour of heatmapHours">
+                    <span class="heat-cell"
+                          *ngIf="getHeatmapCell(day.value, hour) as cell; else emptyHeatCell"
+                          [ngClass]="'level-' + getHeatmapLevel(cell)"
+                          [matTooltip]="getHeatmapTooltip(day.label, hour, cell)"></span>
+                    <ng-template #emptyHeatCell>
+                      <span class="heat-cell level-0" [matTooltip]="getHeatmapTooltip(day.label, hour, null)"></span>
+                    </ng-template>
+                  </ng-container>
+                </div>
+              </div>
+              <div class="heatmap-legend">
+                <span class="scale-caption">Less</span>
+                <span class="heatmap-scale">
+                  <i class="heat-swatch"
+                     *ngFor="let level of heatmapLegendLevels"
+                     [ngClass]="'level-' + level"></i>
+                </span>
+                <span class="scale-caption">More</span>
+              </div>
+            </div>
+
+            <div class="detail-section career-section">
+              <div class="section-heading">
+                <h3>Career length buckets</h3>
+                <p>Grouped career windows. Count is how many estimated careers landed there; automation weight only rises when that short window also produced extreme fan gain.</p>
+              </div>
+              <div class="bucket-table" *ngIf="careerBucketRows.length > 0">
+                <div class="bucket-row bucket-head">
+                  <span>Window</span>
+                  <span>Careers</span>
+                  <span>Automation weight</span>
+                </div>
+                <div class="bucket-row" *ngFor="let bucket of careerBucketRows" [class.short-window]="bucket.isShortWindow">
+                  <div class="bucket-name">
+                    <span>{{ bucket.label }}</span>
+                    <small>{{ bucket.description }}</small>
+                  </div>
+                  <div class="bucket-meter count-meter">
+                    <span [style.width.%]="bucket.countPercent"></span>
+                    <strong>{{ bucket.count | localeNumber }}</strong>
+                  </div>
+                  <div class="bucket-meter signal-meter">
+                    <span [style.width.%]="bucket.signalPercent"></span>
+                    <strong>{{ bucket.signalScore | number:'1.1-1' }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="detail-section daily-section" *ngIf="dailyActivityRows.length > 0">
+            <div class="section-heading daily-heading">
+              <div>
+                <h3>Daily fan gain</h3>
+                <p>Chronological observed days. Fan gain sits above the center line, activity mirrors below it, and the white bias line shows which side dominates each day.</p>
+              </div>
+              <div class="daily-scale-summary">
+                <span>Peak +{{ formatCompactNumber(maxDailyFanGain) }}</span>
+                <span>{{ dailyActivityRows.length }} days shown</span>
+              </div>
+            </div>
+
+            <div class="daily-chart-shell">
+              <div class="daily-chart-canvas-wrap">
+                <canvas #dailyChartCanvas></canvas>
+              </div>
+            </div>
+
+            <div class="month-band" *ngIf="dailyMonthSegments.length > 0">
+              <span class="month-segment"
+                    *ngFor="let segment of dailyMonthSegments"
+                    [style.width.%]="segment.widthPercent"
+                    [ngClass]="segment.kind">
+                <strong>{{ segment.label }}</strong>
+                <small *ngIf="segment.kind === 'current'">this month</small>
+                <small *ngIf="segment.kind === 'previous'">last month</small>
+              </span>
+            </div>
+
+            <div class="chart-legend daily-legend">
+              <span class="legend-item primary"><i class="fan-key"></i><span>Fan gain</span><small>mirrored above center</small></span>
+              <span class="legend-item primary"><i class="bias-key"></i><span>Bias</span><small>white line shows fan-led vs activity-led days</small></span>
+              <span class="legend-item primary"><i class="active-key"></i><span>Active time</span><small>mirrored below center</small></span>
+            </div>
+
+            <div class="daily-highlight-grid" *ngIf="dailyHighlightMetrics.length > 0">
+              <div class="daily-highlight" *ngFor="let metric of dailyHighlightMetrics; trackBy: trackByMetricLabel">
+                <span class="metric-label">{{ metric.label }}</span>
+                <strong>{{ metric.value }}</strong>
+                <small *ngIf="metric.hint">{{ metric.hint }}</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="detail-section top-sessions-section" *ngIf="topSessionRows.length > 0">
+            <div class="section-heading">
+              <h3>Top sessions</h3>
+              <p>Longest observed windows from the payload. Observed time can include idle gaps between active bursts.</p>
+            </div>
+
+            <div class="snapshot-table-wrap">
+              <table class="snapshot-table session-table">
+                <thead>
+                  <tr>
+                    <th>Day</th>
+                    <th>Window</th>
+                    <th>Observed</th>
+                    <th>Active</th>
+                    <th>Idle</th>
+                    <th>Careers</th>
+                    <th>Fan gain</th>
+                    <th>Sessions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of topSessionRows; trackBy: trackBySessionKey">
+                    <td class="snapshot-time">{{ row.dayLabel }}</td>
+                    <td class="session-window">{{ row.windowLabel }}</td>
+                    <td>{{ formatDuration(row.observedSeconds) }}</td>
+                    <td>{{ formatDuration(row.activeSeconds) }}</td>
+                    <td>{{ formatDuration(row.idleSeconds) }}</td>
+                    <td>{{ row.careers | localeNumber }}</td>
+                    <td class="fan-gain">+{{ row.fanGain | localeNumber }}</td>
+                    <td>{{ row.sessionCount | localeNumber }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="detail-section short-snapshots-section" *ngIf="getShortCareerSnapshots(report).length > 0">
+            <div class="section-heading snapshot-heading">
+              <div>
+                <h3>Short careers</h3>
+                <p>Showing the latest {{ getShortCareerSnapshots(report).length | localeNumber }} of {{ getShortSnapshotTotalCount(report) | localeNumber }} short career records.</p>
+              </div>
+              <span>Latest {{ getShortCareerSnapshots(report).length | localeNumber }}</span>
+            </div>
+
+            <div class="snapshot-table-wrap">
+              <table class="snapshot-table">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Previous fans</th>
+                    <th>Current fans</th>
+                    <th>Gain</th>
+                    <th>Prev snapshot gap</th>
+                    <th>Prev career gap</th>
+                    <th>Length</th>
+                    <th>Fans/min</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <ng-container *ngFor="let snapshot of getShortCareerSnapshots(report); trackBy: trackBySnapshotId">
+                    <tr class="snapshot-row"
+                        [class.high-fan]="snapshot.is_high_fan_short"
+                        [class.expanded]="isShortCareerSnapshotExpanded(snapshot.snapshot_id)">
+                      <td class="snapshot-time-cell">
+                        <button type="button"
+                                class="snapshot-expand"
+                                [class.is-open]="isShortCareerSnapshotExpanded(snapshot.snapshot_id)"
+                                [attr.aria-expanded]="isShortCareerSnapshotExpanded(snapshot.snapshot_id)"
+                                (click)="toggleShortCareerSnapshot(snapshot.snapshot_id)">
+                          <mat-icon>{{ isShortCareerSnapshotExpanded(snapshot.snapshot_id) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                        </button>
+                        <div class="snapshot-time-stack">
+                          <span class="snapshot-time">{{ formatSnapshotTime(snapshot.snapshot_time) }}</span>
+                          <small>{{ hasShortCareerContext(snapshot) ? 'Show prior / next snapshots' : 'Career-end evidence summary' }}</small>
+                        </div>
+                      </td>
+                      <td class="previous-fans">{{ snapshot.previous_snapshot_fans | localeNumber }}</td>
+                      <td class="current-fans">{{ snapshot.current_fans | localeNumber }}</td>
+                      <td class="fan-gain">+{{ formatCompactNumber(snapshot.fan_gain) }}</td>
+                      <td class="snapshot-gap">{{ formatDuration(snapshot.snapshot_gap_seconds) }}</td>
+                      <td>{{ formatDuration(snapshot.previous_career_gap_seconds) }}</td>
+                      <td>{{ formatDuration(snapshot.career_length_seconds) }}</td>
+                      <td>{{ formatSnapshotRate(snapshot.fans_per_minute) }}</td>
+                      <td>{{ formatSnapshotScore(snapshot.short_training_score) }}</td>
+                      <td><span class="snapshot-status">{{ snapshot.is_high_fan_short ? 'High-fan' : 'Below rate' }}</span></td>
+                    </tr>
+                    <tr *ngIf="isShortCareerSnapshotExpanded(snapshot.snapshot_id)" class="snapshot-detail-row">
+                      <td colspan="10">
+                        <div class="snapshot-detail-shell">
+                          <div class="snapshot-detail-summary snapshot-meta-strip">
+                            <span class="snapshot-meta-item snapshot-meta-flag">Flagged short career</span>
+                            <span class="snapshot-meta-item">
+                              <small>Gain</small>
+                              <strong>+{{ formatWholeNumber(snapshot.fan_gain) }}</strong>
+                            </span>
+                            <span class="snapshot-meta-item">
+                              <small>Runtime</small>
+                              <strong>{{ formatDuration(snapshot.career_length_seconds) }}</strong>
+                            </span>
+                            <span class="snapshot-meta-item" *ngIf="snapshot.previous_career_gap_seconds !== null">
+                              <small>Prev end gap</small>
+                              <strong>{{ formatDuration(snapshot.previous_career_gap_seconds) }}</strong>
+                            </span>
+                            <span class="snapshot-meta-item" *ngIf="snapshot.is_high_fan_short">
+                              <small>Status</small>
+                              <strong>High-fan short</strong>
+                            </span>
+                          </div>
+                          <div class="snapshot-context-table-wrap snapshot-timeline-wrap">
+                              <table class="snapshot-context-table snapshot-timeline-table">
+                                <thead>
+                                  <tr>
+                                    <th>Kind</th>
+                                    <th>Time</th>
+                                    <th>Fans</th>
+                                    <th>Delta</th>
+                                    <th>Gap</th>
+                                    <th>Runtime</th>
+                                    <th>Career ends</th>
+                                    <th>Markers</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr *ngFor="let neighbor of snapshot.prior_snapshots; trackBy: trackByNeighborSnapshotId"
+                                      [class.has-career-end]="neighbor.career_count > 0">
+                                    <td class="timeline-kind">Lead-in <span class="timeline-kind-time">{{ formatSnapshotTime(neighbor.snapshot_time) }}</span></td>
+                                    <td class="snapshot-context-time">{{ formatSnapshotTime(neighbor.snapshot_time) }}</td>
+                                    <td>{{ neighbor.fans | localeNumber }}</td>
+                                    <td class="fan-gain">{{ neighbor.fan_delta >= 0 ? '+' : '' }}{{ formatWholeNumber(neighbor.fan_delta) }}</td>
+                                    <td>{{ formatDuration(neighbor.gap_seconds) }}</td>
+                                    <td>{{ formatDuration(neighbor.active_seconds) }}</td>
+                                    <td class="career-end-cell">{{ getCareerEndLabel(neighbor.career_count) }}</td>
+                                    <td>
+                                      <div class="snapshot-marker-list">
+                                        <span class="snapshot-marker career-end" *ngIf="neighbor.career_count > 0">{{ getCareerEndLabel(neighbor.career_count) }}</span>
+                                        <span class="snapshot-marker" *ngIf="neighbor.tight_gap">Tight gap</span>
+                                        <span class="snapshot-marker" *ngIf="neighbor.login_changed">Login changed</span>
+                                      </div>
+                                    </td>
+                                  </tr>
+
+                                  <tr class="timeline-focus-row" [class.high-fan]="snapshot.is_high_fan_short">
+                                    <td class="timeline-kind focus">Short career <span class="timeline-kind-time">{{ formatSnapshotTime(snapshot.snapshot_time) }}</span></td>
+                                    <td class="snapshot-context-time">{{ formatSnapshotTime(snapshot.snapshot_time) }}</td>
+                                    <td>{{ snapshot.current_fans | localeNumber }}</td>
+                                    <td class="fan-gain">+{{ formatWholeNumber(snapshot.fan_gain) }}</td>
+                                    <td>{{ formatDuration(snapshot.snapshot_gap_seconds) }}</td>
+                                    <td>{{ formatDuration(snapshot.career_length_seconds) }}</td>
+                                    <td class="career-end-cell">Career end</td>
+                                    <td>
+                                      <div class="snapshot-marker-list">
+                                        <span class="snapshot-marker career-end">Flagged short career</span>
+                                        <span class="snapshot-marker" *ngIf="snapshot.is_high_fan_short">High-fan short</span>
+                                      </div>
+                                    </td>
+                                  </tr>
+
+                                  <tr *ngFor="let neighbor of snapshot.next_snapshots; trackBy: trackByNeighborSnapshotId"
+                                      [class.has-career-end]="neighbor.career_count > 0">
+                                    <td class="timeline-kind">Follow-up <span class="timeline-kind-time">{{ formatSnapshotTime(neighbor.snapshot_time) }}</span></td>
+                                    <td class="snapshot-context-time">{{ formatSnapshotTime(neighbor.snapshot_time) }}</td>
+                                    <td>{{ neighbor.fans | localeNumber }}</td>
+                                    <td class="fan-gain">{{ neighbor.fan_delta >= 0 ? '+' : '' }}{{ formatWholeNumber(neighbor.fan_delta) }}</td>
+                                    <td>{{ formatDuration(neighbor.gap_seconds) }}</td>
+                                    <td>{{ formatDuration(neighbor.active_seconds) }}</td>
+                                    <td class="career-end-cell">{{ getCareerEndLabel(neighbor.career_count) }}</td>
+                                    <td>
+                                      <div class="snapshot-marker-list">
+                                        <span class="snapshot-marker career-end" *ngIf="neighbor.career_count > 0">{{ getCareerEndLabel(neighbor.career_count) }}</span>
+                                        <span class="snapshot-marker" *ngIf="neighbor.tight_gap">Tight gap</span>
+                                        <span class="snapshot-marker" *ngIf="neighbor.login_changed">Login changed</span>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </ng-container>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="detail-section probe-section" *ngIf="probeMetricGroups.length > 0">
+            <div class="section-heading split-heading">
+              <div>
+                <h3>Probe metrics</h3>
+                <p>Expanded cadence, schedule, burst, and account-context metrics returned by the API.</p>
+              </div>
+              <span class="section-kicker">cadence / schedule / context</span>
+            </div>
+            <div class="insight-grid probe-grid">
+              <article class="insight-card" *ngFor="let group of probeMetricGroups; trackBy: trackByGroupTitle">
+                <div class="insight-card-head">
+                  <h4>{{ group.title }}</h4>
+                  <p>{{ group.description }}</p>
+                </div>
+                <div class="insight-metric-grid">
+                  <div class="insight-metric" *ngFor="let metric of group.metrics; trackBy: trackByMetricLabel">
+                    <span class="metric-label">{{ metric.label }}</span>
+                    <strong>{{ metric.value }}</strong>
+                    <small *ngIf="metric.hint">{{ metric.hint }}</small>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+        </ng-container>
+
+        <ng-template #missingScore>
+          <div class="no-results detail-empty">
+            <mat-icon>person_off</mat-icon>
+            <p>No suspicious activity score exists for viewer ID {{ selectedViewerId }}.</p>
+          </div>
+        </ng-template>
+      </ng-container>
+    </ng-template>
+  </div>
+</div>

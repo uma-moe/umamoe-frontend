@@ -40,9 +40,9 @@
         <button *ngIf="isV2Record()" mat-button class="action-btn unavailable-btn"
                 (click)="onReportUnavailable($event)"
                 [disabled]="!record.account_id && !record.trainer_id"
-                matTooltip="Report this user as unavailable or friend list full">
-          <mat-icon>person_off</mat-icon>
-          <span class="btn-text">Outdated</span>
+                [matTooltip]="reportButtonTooltip">
+          <mat-icon>{{ reportButtonIcon }}</mat-icon>
+          <span class="btn-text">{{ reportButtonText }}</span>
         </button>
         <button *ngIf="showBookmarkButton" mat-button
                 class="action-btn bookmark-btn" [class.bookmarked]="isBookmarked"
@@ -264,7 +264,7 @@
 
     <!-- V2 API: Spark arrays -->
     <div *ngIf="record.blue_sparks || record.pink_sparks || record.green_sparks || record.white_sparks" class="spark-arrays">
-      <div class="spark-header-row" *ngIf="record.affinity_score !== undefined || canComputeAffinity()">
+      <div class="spark-header-row" *ngIf="hasDisplayAffinity()">
         <button class="spark-mode-toggle" [class.per-run]="sparkShowPerRun" (click)="toggleSparkMode($event)"
           [matTooltip]="sparkShowPerRun ? 'Showing per-run chance (2 inheritance rolls)' : 'Showing per-inheritance chance (1 roll)'">
           <mat-icon class="mode-icon">{{ sparkShowPerRun ? 'loop' : 'casino' }}</mat-icon>
@@ -286,11 +286,11 @@
             <span *ngFor="let sparkInfo of combineSparks([record.main_blue_factors, record.left_blue_factors, record.right_blue_factors], showP2Sparks ? getP2BlueSparks() : [], showP2Sparks ? p2BlueSparkSources : null)"
                   class="spark-item blue-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
-                  [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
+              [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
-              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
+              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
               <mat-icon *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-icon">person</mat-icon>
               <span *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-contribution">
                 {{ getLevelFromMainParent(sparkInfo) }}<mat-icon class="spark-star">star</mat-icon>
@@ -309,11 +309,11 @@
             <span *ngFor="let sparkInfo of combineSparks([record.main_pink_factors, record.left_pink_factors, record.right_pink_factors], showP2Sparks ? getP2PinkSparks() : [], showP2Sparks ? p2PinkSparkSources : null)"
                   class="spark-item pink-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
-                  [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
+              [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
-              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
+              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
               <mat-icon *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-icon">person</mat-icon>
               <span *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-contribution">
                 {{ getLevelFromMainParent(sparkInfo) }}<mat-icon class="spark-star">star</mat-icon>
@@ -332,11 +332,11 @@
             <span *ngFor="let sparkInfo of combineSparks([record.main_green_factors, record.left_green_factors, record.right_green_factors], showP2Sparks ? getP2GreenSparks() : [], showP2Sparks ? p2GreenSparkSources : null)"
                   class="spark-item green-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
-                  [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
+              [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
-              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
+              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
               <mat-icon *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-icon">person</mat-icon>
               <span *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-contribution">
                 {{ getLevelFromMainParent(sparkInfo) }}<mat-icon class="spark-star">star</mat-icon>
@@ -355,11 +355,11 @@
             <span *ngFor="let sparkInfo of combineWhiteSparks(showP2Sparks ? getP2WhiteSparks() : [], showP2Sparks ? p2WhiteSparkSources : null)"
                   class="spark-item white-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
-                  [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
+              [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
-              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
+              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
               <mat-icon *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-icon">person</mat-icon>
               <span *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-contribution">
                 {{ getLevelFromMainParent(sparkInfo) }}<mat-icon class="spark-star">star</mat-icon>
@@ -384,7 +384,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_blue_factors) | resolveSparks">
@@ -392,7 +392,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_blue_factors) | resolveSparks">
@@ -400,7 +400,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngIf="showP2Sparks">
@@ -408,7 +408,7 @@
                 <span class="spark-level">{{ entry.spark.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ entry.spark.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
                 <mat-icon class="parent-icon p2-icon">person</mat-icon>
               </span>
             </ng-container>
@@ -423,7 +423,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_pink_factors) | resolveSparks">
@@ -431,7 +431,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_pink_factors) | resolveSparks">
@@ -439,7 +439,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngIf="showP2Sparks">
@@ -447,7 +447,7 @@
                 <span class="spark-level">{{ entry.spark.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ entry.spark.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
                 <mat-icon class="parent-icon p2-icon">person</mat-icon>
               </span>
             </ng-container>
@@ -462,7 +462,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_green_factors) | resolveSparks">
@@ -470,7 +470,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_green_factors) | resolveSparks">
@@ -478,7 +478,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngIf="showP2Sparks">
@@ -486,7 +486,7 @@
                 <span class="spark-level">{{ entry.spark.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ entry.spark.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
                 <mat-icon class="parent-icon p2-icon">person</mat-icon>
               </span>
             </ng-container>
@@ -502,7 +502,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of record.left_white_factors | resolveSparks">
@@ -511,7 +511,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of record.right_white_factors | resolveSparks">
@@ -520,7 +520,7 @@
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
             <ng-container *ngIf="showP2Sparks">
@@ -529,7 +529,7 @@
                 <span class="spark-level">{{ entry.spark.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ entry.spark.name }}</span>
-                <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
                 <mat-icon class="parent-icon p2-icon">person</mat-icon>
               </span>
             </ng-container>
@@ -547,7 +547,7 @@
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
-              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
             </span>
           </div>
         </div>
@@ -559,7 +559,7 @@
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
-              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
             </span>
           </div>
         </div>
@@ -571,7 +571,7 @@
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
-              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
             </span>
           </div>
         </div>
@@ -584,7 +584,7 @@
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
-              <span *ngIf="record.affinity_score !== undefined || canComputeAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
             </span>
           </div>
         </div>

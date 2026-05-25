@@ -5,7 +5,7 @@
     "changeOrigin": true
   },
   "/search": {
-    "target": "http://127.0.0.1:3001",
+    "target": "http://127.0.0.1:3002",
     "secure": false,
     "changeOrigin": true
   },
@@ -15,7 +15,7 @@
     "changeOrigin": true
   },
   "/resources": {
-    "target": "http://127.0.0.1:3120",
+    "target": "http://127.0.0.1:3004",
     "secure": false,
     "changeOrigin": true
   }

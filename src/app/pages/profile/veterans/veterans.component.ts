@@ -11,14 +11,17 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { Router } from '@angular/router';
 import { VeteranDetailDialogComponent, VeteranDetailData } from './veteran-detail-dialog.component';
 import { CharacterSelectDialogComponent } from '../../../components/character-select-dialog/character-select-dialog.component';
 import { RaceSchedulerComponent } from '../../../components/race-scheduler/race-scheduler.component';
 import { RankBadgeComponent } from '../../../components/rank-badge/rank-badge.component';
+import { LineageDisplayComponent } from '../../../components/lineage-display/lineage-display.component';
 import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
 import { RACE_SADDLE_DATA } from '../../../data/race-saddle.data';
 import { ProfileService } from '../../../services/profile.service';
 import { FactorService, SparkInfo } from '../../../services/factor.service';
+import { PlannerTransferService } from '../../../services/planner-transfer.service';
 import { VeteranMember, SuccessionChara, FactorInfoEntry } from '../../../models/profile.model';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, takeUntil } from 'rxjs/operators';
@@ -27,12 +30,15 @@ import {
   getAptGrade, getRankGrade, getRankGradeColor, getStarDisplay,
   getDistanceName, getRunningStyleName, getScenarioName, getTotalStats,
   getCardImage, getSkillName, getSkillLevel, getSkillIcon, getSkillRarityClass,
-  getCharacterName, getAptIcon,
+  getCharacterName, getAptIcon, sortEncodedSkills,
 } from '../profile-helpers';
 
 type SortField = 'total' | 'speed' | 'stamina' | 'power' | 'guts' | 'wiz' | 'rank_score' | 'blue' | 'pink' | 'green' | 'name';
 type ViewMode = 'grid' | 'table';
+type GridColumns = 1 | 2 | 3 | 4;
 type FactorColor = 'blue' | 'pink' | 'green' | 'white';
+
+const GRID_COLUMN_OPTIONS: GridColumns[] = [4, 3, 2, 1];
 
 interface ResolvedFactor {
   id: number;
@@ -130,6 +136,7 @@ const APT_GRADES = ['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'];
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatAutocompleteModule, MatTooltipModule, MatDialogModule, MatSliderModule,
     MatButtonToggleModule, RaceSchedulerComponent, RankBadgeComponent,
+    LineageDisplayComponent,
     LocaleNumberPipe,
   ],
   templateUrl: './veterans.component.html',
@@ -149,6 +156,8 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // View & sort
   viewMode: ViewMode = 'grid';
+  gridColumns: GridColumns = 4;
+  readonly gridColumnOptions = GRID_COLUMN_OPTIONS;
   displayTab: 'cards' | 'inheritance' = 'cards';
   sortField: SortField = 'total';
   sortDir: 'asc' | 'desc' = 'desc';
@@ -234,7 +243,9 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     private profileService: ProfileService,
     private factorService: FactorService,
+    private plannerTransfer: PlannerTransferService,
     private dialog: MatDialog,
+    private router: Router,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
   ) { }
@@ -549,6 +560,7 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
     const encodedSkills = this.getEncodedSkills(v);
     const factors = this.getFactors(v);
     const parents = this.getSuccessionParents(v);
+    const sparkTotals = this.computeSparkTotals(v);
     return {
       veteran: v,
       characterName: getCharacterName(v.card_id),
@@ -581,7 +593,7 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
       factors,
       coloredFactors: factors.filter(f => f.color !== 'white'),
       whiteStarSum: factors.filter(f => f.color === 'white').reduce((s, f) => s + (f.level || 0), 0),
-      sparkTotals: this.computeSparkTotals(v),
+      sparkTotals,
       parentSparkTotals: this.computeSparkTotals(v, [10, 20]),
       gpSparkTotals: this.computeSparkTotals(v, [11, 12, 21, 22]),
       successionParents: parents.map(p => ({
@@ -961,10 +973,19 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
     this.dialog.open(VeteranDetailDialogComponent, {
       data: { veteran: v } as VeteranDetailData,
       panelClass: 'modern-dialog-panel',
-      width: '640px',
+      width: '980px',
       maxWidth: '95vw',
       maxHeight: '90vh',
     });
+  }
+
+  openLineagePlanner(v: VeteranMember, event?: Event): void {
+    event?.stopPropagation();
+    this.plannerTransfer.set({ veteran: v, veteranPosition: 'p1' });
+    const url = this.router.serializeUrl(
+      this.router.createUrlTree(['/tools/lineage-planner'], { queryParams: { from: 'profile' } })
+    );
+    window.open(url, '_blank');
   }
 
   // ── Helpers ───────────────────────────────────
@@ -987,10 +1008,10 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /** Convert skill_array [{skill_id,level}] or encoded skills[] to encoded IDs */
   getEncodedSkills(v: VeteranMember): number[] {
-    if (v.skill_array && v.skill_array.length > 0) {
-      return v.skill_array.map(s => s.skill_id * 10 + s.level);
-    }
-    return v.skills ?? [];
+    const skills = v.skill_array && v.skill_array.length > 0
+      ? v.skill_array.map(s => s.skill_id * 10 + s.level)
+      : v.skills ?? [];
+    return sortEncodedSkills(skills);
   }
 
   getStarSum(v: VeteranMember, color: FactorColor): number {

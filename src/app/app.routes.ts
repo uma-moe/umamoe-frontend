@@ -37,6 +37,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/rankings/rankings.component').then(m => m.RankingsComponent)
   },
   {
+    path: 'shame',
+    loadComponent: () => import('./pages/shame/shame.component').then(m => m.ShameComponent)
+  },
+  {
+    path: 'shame/:viewerId',
+    loadComponent: () => import('./pages/shame/shame.component').then(m => m.ShameComponent)
+  },
+  {
     path: 'timeline',
     loadComponent: () => import('./pages/timeline/timeline.component').then(m => m.TimelineComponent)
   },

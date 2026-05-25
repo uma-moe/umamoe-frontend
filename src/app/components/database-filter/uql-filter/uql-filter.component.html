@@ -1,0 +1,196 @@
+<section class="uql-mode-panel">
+  <div class="uql-editor-card">
+    <div class="uql-editor-header">
+      <div class="uql-title-group">
+        <h4>UQL</h4>
+        <span>SQL for your umas</span>
+      </div>
+      <div class="uql-status" [ngClass]="validationState">
+        <mat-icon>{{ statusIcon }}</mat-icon>
+        <span>{{ statusLabel }}</span>
+      </div>
+    </div>
+
+    <details class="uql-wiki-panel">
+      <summary>
+        <span class="uql-wiki-summary-main">
+          <mat-icon>menu_book</mat-icon>
+          <span>Wiki & examples</span>
+        </span>
+        <small>Open syntax help, slot names, and examples</small>
+        <mat-icon class="uql-wiki-chevron">expand_more</mat-icon>
+      </summary>
+      <article class="uql-doc-article">
+        <ng-template #uqlDocSnippetTemplate let-snippet let-hidden="hidden">
+          <pre class="uql-doc-snippet" [attr.aria-hidden]="hidden ? 'true' : null"><ng-container *ngFor="let segment of snippet.segments"><span
+            class="uql-token"
+            [ngClass]="'uql-token-' + segment.kind"
+            [class.uql-token-chip]="segment.imageUrl"
+            [class.uql-token-atomic]="segment.atomic"
+            [class.uql-paren-depth-0]="segment.kind === 'paren' && segment.depth === 0"
+            [class.uql-paren-depth-1]="segment.kind === 'paren' && segment.depth === 1"
+            [class.uql-paren-depth-2]="segment.kind === 'paren' && segment.depth === 2"
+            [class.uql-paren-depth-3]="segment.kind === 'paren' && segment.depth === 3"
+            [class.uql-paren-depth-4]="segment.kind === 'paren' && segment.depth === 4"
+            [class.uql-paren-depth-5]="segment.kind === 'paren' && segment.depth === 5"
+            [class.uql-context-blue]="segment.valueContext === 'blue-factor'"
+            [class.uql-context-pink]="segment.valueContext === 'pink-factor'"
+            [class.uql-context-green]="segment.valueContext === 'green-factor'"
+            [class.uql-context-white]="segment.valueContext === 'white-factor'"
+            [class.uql-context-character]="segment.valueContext === 'character'"
+            [class.uql-scope-main]="segment.scopeContext === 'main'"
+            [class.uql-scope-gp1]="segment.scopeContext === 'gp1'"
+            [class.uql-scope-gp2]="segment.scopeContext === 'gp2'"
+            [class.uql-scope-any-gp]="segment.scopeContext === 'any-gp'"
+            [attr.title]="segment.title || null"><img *ngIf="segment.imageUrl" class="uql-token-image" [src]="segment.imageUrl" alt=""><span>{{ segment.displayText || segment.text }}</span></span></ng-container></pre>
+        </ng-template>
+
+        <header class="uql-doc-hero">
+          <p class="uql-doc-kicker">Advanced Filter Docs</p>
+          <h5>Write compact filters with readable names.</h5>
+          <p>UQL is a predicate language for filtering inheritances. The editor already supplies the fixed <span class="uql-doc-inline-code">where</span> line, so you write only the condition that should be true for each result.</p>
+        </header>
+
+        <section class="uql-doc-section">
+          <h6>Start With A Simple Predicate</h6>
+          <p>A predicate is one complete condition. Numeric filters use comparison operators such as <span class="uql-doc-inline-code">&gt;=</span>, <span class="uql-doc-inline-code">=</span>, and <span class="uql-doc-inline-code">&lt;=</span>.</p>
+          <div class="uql-doc-example-row">
+            <button type="button" class="uql-doc-snippet-button" *ngFor="let snippet of simplePredicateDocSnippets" (click)="insertSnippet.emit(snippet.text)">
+              <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet, hidden: true }"></ng-container>
+            </button>
+          </div>
+        </section>
+
+        <section class="uql-doc-section">
+          <h6>Global Factors Versus Specific Slots</h6>
+          <p>Global factor names search across the whole visible lineage pool, so they can use totals like 6 or 9 stars. Slot filters look at one uma slot, so they use natural 1-3 star values.</p>
+          <div class="uql-doc-callout-grid">
+            <div>
+              <strong>Global factor total</strong>
+              <p>Use this when location does not matter.</p>
+              <ng-container *ngFor="let snippet of globalFactorDocSnippets">
+                <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet }"></ng-container>
+              </ng-container>
+            </div>
+            <div>
+              <strong>Specific slot factor</strong>
+              <p>Use this when the exact uma slot matters.</p>
+              <ng-container *ngFor="let snippet of specificSlotDocSnippets">
+                <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet }"></ng-container>
+              </ng-container>
+            </div>
+          </div>
+        </section>
+
+        <section class="uql-doc-section">
+          <h6>Slot Prefixes</h6>
+          <p>Put a slot prefix before a factor name to target one position in the inheritance tree.</p>
+          <dl class="uql-doc-table">
+            <div><dt>Main, Parent, Main parent</dt><dd>Main slot</dd></div>
+            <div><dt>GP1, Left, Grandparent 1</dt><dd>Left grandparent slot</dd></div>
+            <div><dt>GP2, Right, Grandparent 2</dt><dd>Right grandparent slot</dd></div>
+            <div><dt>GP, Any GP, Grandparent</dt><dd>Either GP1 or GP2 may match</dd></div>
+          </dl>
+          <div class="uql-doc-example-row">
+            <button type="button" class="uql-doc-snippet-button" *ngFor="let snippet of slotPrefixDocSnippets" (click)="insertSnippet.emit(snippet.text)">
+              <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet, hidden: true }"></ng-container>
+            </button>
+          </div>
+        </section>
+
+        <section class="uql-doc-section">
+          <h6>White Skills And Array Fields</h6>
+          <p>Skill lists use array operators. Use <span class="uql-doc-inline-code">has</span> for one required skill, <span class="uql-doc-inline-code">has any (...)</span> for at least one listed skill, and <span class="uql-doc-inline-code">has all (...)</span> when every listed skill must exist.</p>
+          <div class="uql-doc-code-block">
+            <div class="uql-doc-code-toolbar">
+              <span class="uql-doc-code-lang">uql</span>
+              <button
+                type="button"
+                class="uql-doc-copy-button"
+                [class.copied]="copiedDocBlock === 'white-skills'"
+                [attr.aria-label]="copiedDocBlock === 'white-skills' ? 'Copied white skill examples' : 'Copy white skill examples'"
+                (click)="copyDocSnippets(whiteSkillDocSnippets, 'white-skills')">
+                <mat-icon>{{ copiedDocBlock === 'white-skills' ? 'done' : 'content_copy' }}</mat-icon>
+                <span>{{ copiedDocBlock === 'white-skills' ? 'Copied' : 'Copy' }}</span>
+              </button>
+            </div>
+            <div class="uql-doc-code-lines">
+              <div class="uql-doc-code-line" *ngFor="let snippet of whiteSkillDocSnippets; let line = index">
+                <span class="uql-doc-code-line-number" aria-hidden="true">{{ line + 1 }}</span>
+                <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet }"></ng-container>
+              </div>
+            </div>
+          </div>
+          <p>Known skill names are treated as values, even when they contain words such as <span class="uql-doc-inline-code">and</span>, <span class="uql-doc-inline-code">or</span>, <span class="uql-doc-inline-code">in</span>, or <span class="uql-doc-inline-code">all</span>.</p>
+        </section>
+
+        <section class="uql-doc-section">
+          <h6>Optional And Lineage Sorting</h6>
+          <p>Use optional and lineage white filters when matching skills should influence result order. Add scoring settings as trailing comma attributes.</p>
+          <dl class="uql-doc-table">
+            <div><dt>optional_white(...)</dt><dd>Requires and scores global white skill matches.</dd></div>
+            <div><dt>optional_main_white(...)</dt><dd>Requires and scores main parent white skill matches.</dd></div>
+            <div><dt>optional_any_white(...)</dt><dd>Checks global and main parent white skill matches.</dd></div>
+            <div><dt>lineage_white(...)</dt><dd>Sorts by lineage-style white skill stacking.</dd></div>
+          </dl>
+          <dl class="uql-doc-table">
+            <div><dt>type_weight / distinct_weight</dt><dd>Score per distinct requested optional white skill.</dd></div>
+            <div><dt>level_weight</dt><dd>Score per matched spark level.</dd></div>
+            <div><dt>match_weight</dt><dd>Score per matched occurrence.</dd></div>
+            <div><dt>proc_weight</dt><dd>Adds proc-chance weighted scoring for matched skills.</dd></div>
+            <div><dt>proc_kind</dt><dd>Chance table: 3 skill, 2 race, 4 scenario.</dd></div>
+            <div><dt>affinity</dt><dd>Overrides row-derived affinity for proc scoring.</dd></div>
+            <div><dt>stack_weight</dt><dd>Base lineage stack score.</dd></div>
+            <div><dt>occurrence_weight</dt><dd>Lineage score per occurrence.</dd></div>
+            <div><dt>base / base_percent</dt><dd>Lineage stack base percent.</dd></div>
+            <div><dt>decay / decay_percent</dt><dd>Lineage decay percent between requested skills.</dd></div>
+            <div><dt>weight</dt><dd>Overall multiplier.</dd></div>
+          </dl>
+        </section>
+
+        <section class="uql-doc-section">
+          <h6>Characters, Trainers, And Logic</h6>
+          <p>Character names can be typed directly. Trainer text supports <span class="uql-doc-inline-code">ilike</span> with <span class="uql-doc-inline-code">%</span> wildcards. Use parentheses whenever <span class="uql-doc-inline-code">and</span> and <span class="uql-doc-inline-code">or</span> appear together.</p>
+          <div class="uql-doc-code-block">
+            <div class="uql-doc-code-toolbar">
+              <span class="uql-doc-code-lang">uql</span>
+              <button
+                type="button"
+                class="uql-doc-copy-button"
+                [class.copied]="copiedDocBlock === 'logic'"
+                [attr.aria-label]="copiedDocBlock === 'logic' ? 'Copied logic examples' : 'Copy logic examples'"
+                (click)="copyDocSnippets(logicDocSnippets, 'logic')">
+                <mat-icon>{{ copiedDocBlock === 'logic' ? 'done' : 'content_copy' }}</mat-icon>
+                <span>{{ copiedDocBlock === 'logic' ? 'Copied' : 'Copy' }}</span>
+              </button>
+            </div>
+            <div class="uql-doc-code-lines">
+              <div class="uql-doc-code-line" *ngFor="let snippet of logicDocSnippets; let line = index">
+                <span class="uql-doc-code-line-number" aria-hidden="true">{{ line + 1 }}</span>
+                <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet }"></ng-container>
+              </div>
+            </div>
+          </div>
+        </section>
+      </article>
+    </details>
+
+    <div class="uql-editor-shell">
+      <app-uql-code-editor
+        [value]="query"
+        [validationState]="validationState"
+        [placeholder]="animatedPlaceholder"
+        [tokenize]="tokenizeForEditor"
+        [complete]="completeForEditor"
+        (valueChange)="onEditorValueChange($event)"
+        (clear)="clear.emit()">
+      </app-uql-code-editor>
+    </div>
+
+    <div class="uql-message" [class.empty]="!validationMessage">
+      <span>{{ validationMessage || 'Type a field, pick an operator, then keep chaining with and/or.' }}</span>
+      <span class="uql-key-hint">Ctrl+Space suggestions</span>
+    </div>
+
+  </div>
+</section>

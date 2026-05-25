@@ -1471,6 +1471,8 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
       affinity: this.targetCharaId ? this.getAffinity(vet) : 0,
       sparks: this.getSparks(vet),
       parents: this.getParentSparks(vet),
+      lineageVeteran: vet.succession_chara_array?.some(succession => succession.position_id === 10 || succession.position_id === 20) ? vet : undefined,
+      lineageTargetCharaId: this.targetCharaId,
       sparkSums: {
         blue: this.getSparkSum(vet, 'blue'),
         pink: this.getSparkSum(vet, 'pink'),
