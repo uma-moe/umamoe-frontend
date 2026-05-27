@@ -41,6 +41,20 @@ export interface EvidenceSummary {
   caveats: string[];
 }
 
+export interface CareerRateWindow {
+  careers_per_hour: number;
+  sample_count: number;
+  sample_seconds: number;
+}
+
+export interface CareerRateBreakdown {
+  all?: CareerRateWindow;
+  last_30d?: CareerRateWindow;
+  last_7d?: CareerRateWindow;
+  last_3d?: CareerRateWindow;
+  last_20?: CareerRateWindow;
+}
+
 export interface HallEntry {
   viewer_id: number;
   trainer_name: string | null;
@@ -54,7 +68,11 @@ export interface HallEntry {
   total_active_seconds: number;
   total_fan_gain: number;
   total_careers: number;
+  avg_careers_per_day?: number;
   careers_per_active_hour: number;
+  career_rate_sample_count?: number;
+  career_rate_sample_seconds?: number;
+  career_rate_breakdown?: CareerRateBreakdown | null;
   avg_career_length_last20_seconds: number;
   career_length_buckets: number[];
   short_high_fan_careers: number;
@@ -73,6 +91,9 @@ export interface HallEntry {
   behavior_change_score: number;
   fans_per_active_minute: number;
   peak_fans_per_minute: number;
+  high_fan_rate_windows?: number;
+  high_fan_rate_total_fan_gain?: number;
+  high_fan_rate_total_seconds?: number;
   max_daily_active_seconds: number;
   max_daily_careers: number;
   max_session_seconds: number;

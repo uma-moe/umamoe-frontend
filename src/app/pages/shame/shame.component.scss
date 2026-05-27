@@ -34,6 +34,38 @@
   gap: 0.85rem;
 }
 
+.scope-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(100, 181, 246, 0.22);
+  border-radius: var(--radius-md);
+  background: rgba(100, 181, 246, 0.075);
+  color: var(--text-secondary);
+
+  mat-icon {
+    @include icon-size(20px);
+    margin-top: 1px;
+    color: rgba(144, 202, 249, 0.92);
+    flex-shrink: 0;
+  }
+
+  strong {
+    display: block;
+    margin-bottom: 0.18rem;
+    color: var(--text-primary);
+    font-size: 0.82rem;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+}
+
 .filters-container {
   display: flex;
   flex-direction: column;
@@ -1377,11 +1409,13 @@ mat-paginator {
 
   .label {
     margin-bottom: 0.18rem;
+    color: rgba(255, 204, 128, 0.78);
     font-size: 0.54rem;
     letter-spacing: 0.32px;
   }
 
   .value {
+    color: rgba(255, 238, 205, 0.98);
     font-size: 0.9rem;
   }
 }
@@ -1439,11 +1473,6 @@ mat-paginator {
 
 .summary-metric-grid .metric-tile:nth-child(-n + 4) {
   border-top: 0;
-}
-
-.summary-metric-grid .metric-tile-feature .label,
-.summary-metric-grid .metric-tile-accent .label {
-  color: rgba(255, 204, 128, 0.76);
 }
 
 .detail-section {

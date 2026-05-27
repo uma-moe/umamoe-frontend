@@ -18,6 +18,7 @@ import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import {
   DailyPoint,
   EvidenceReason,
+  CareerRateWindow,
   HallEntry,
   HeatmapCell,
   NeighborSnapshot,
@@ -144,7 +145,8 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
   sortBy: ShameSortBy = 'score';
   minScore: number | null = 0;
   minScoreSelectValue = '0';
-  minDays = 3;
+  readonly defaultMinDays = 1;
+  minDays = this.defaultMinDays;
   loading = false;
   detailLoading = false;
   errorMessage = '';
@@ -245,7 +247,7 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
       const parsedMinScore = this.parseOptionalNumber(params['minScore']);
       this.minScore = parsedMinScore === null ? 0 : parsedMinScore;
       this.minScoreSelectValue = String(this.minScore);
-      this.minDays = params['minDays'] ? +params['minDays'] : 3;
+      this.minDays = params['minDays'] ? +params['minDays'] : this.defaultMinDays;
 
       if (this.selectedViewerId !== null) {
         this.loadViewerReport(this.selectedViewerId);
@@ -284,7 +286,7 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
       limit: this.pageSize,
       sort_by: this.sortBy,
       min_score: this.minScore ?? undefined,
-      min_days: this.minDays !== 3 ? this.minDays : undefined,
+      min_days: this.minDays !== this.defaultMinDays ? this.minDays : undefined,
       query: this.searchTerm || undefined
     }).subscribe({
       next: response => {
@@ -302,7 +304,7 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
         this.entries = [];
         this.totalEntries = 0;
         this.loading = false;
-        this.errorMessage = 'Could not load suspicious activity metrics.';
+        this.errorMessage = 'Could not load suspicion scores.';
       }
     });
   }
@@ -368,7 +370,7 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
     this.sortBy = 'score';
     this.minScore = 0;
     this.minScoreSelectValue = '0';
-    this.minDays = 3;
+    this.minDays = this.defaultMinDays;
     this.updateQueryParams({ query: null, sortBy: null, minScore: null, minDays: null, page: 0 });
   }
 
@@ -402,12 +404,12 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
 
   getVerdictLabel(verdict: string | null | undefined): string {
     switch (verdict) {
-      case 'strong_automation_signal': return 'Strong automation signal';
+      case 'strong_automation_signal': return 'Automation-like pattern';
       case 'very_high_suspicion': return 'Very high suspicion';
-      case 'schedule_suspicion': return 'Schedule suspicion';
-      case 'suspicious': return 'Suspicious activity';
+      case 'schedule_suspicion': return 'Schedule pattern';
+      case 'suspicious': return 'Raised suspicion';
       case 'below_threshold': return 'Below threshold';
-      default: return 'Suspicious activity';
+      default: return 'Suspicion score';
     }
   }
 
@@ -459,7 +461,7 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
 
   getVerdictSignalLabel(verdict: string | null | undefined): string {
     switch (verdict) {
-      case 'strong_automation_signal': return 'Automation pattern';
+      case 'strong_automation_signal': return 'Automation-like pattern';
       case 'very_high_suspicion': return 'Rate anomaly';
       case 'schedule_suspicion': return 'Schedule pattern';
       case 'below_threshold': return 'Below threshold';
@@ -507,7 +509,19 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
     if (entry.short_high_fan_careers > 0) {
       return `${entry.short_high_fan_careers} under-${this.shortCareerMaxMinutes}m high-fan careers. Short-career gains avg ${this.formatCompactNumber(entry.short_career_avg_fan_gain)}, p95 ${this.formatCompactNumber(entry.short_career_p95_fan_gain)}, max ${this.formatCompactNumber(entry.short_career_max_fan_gain)}.`;
     }
-    return this.sanitizeEvidenceText(entry.evidence?.summary || 'Suspicious activity metrics exceeded the current threshold.');
+    return this.sanitizeEvidenceText(entry.evidence?.summary || 'Suspicion score metrics exceeded the current threshold.');
+  }
+
+  getEvidenceSummary(score: HallEntry): string {
+    return this.sanitizeEvidenceText(score.evidence?.summary || 'Suspicion score metrics exceeded the current threshold.');
+  }
+
+  getEvidenceReasonLabel(reason: EvidenceReason): string {
+    return this.sanitizeEvidenceText(reason.label);
+  }
+
+  getEvidenceSignalLabel(signal: string): string {
+    return this.sanitizeEvidenceText(signal.replace(/_/g, ' '));
   }
 
   getDisplayCaveats(score: HallEntry): string[] {
@@ -527,7 +541,7 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
       case 'fan_gain_rate':
         return `Peak observed pace reached ${this.formatCompactNumber(score.peak_fans_per_minute)} fans/min, with a sustained observed pace of ${this.formatCompactNumber(score.fans_per_active_minute)} fans/min across active snapshots.`;
       case 'heatmap_coverage':
-        return `Activity touched ${score.distinct_weekly_hour_buckets} of 168 weekday/hour slots across the report window. This is schedule coverage context; the short-career fan gain is the direct automation signal.`;
+        return `Activity touched ${score.distinct_weekly_hour_buckets} of 168 weekday/hour slots across the report window. This is schedule coverage context; the short-career fan gain is the stronger suspicion signal.`;
       default:
         return this.sanitizeEvidenceText(reason.message);
     }
@@ -689,7 +703,7 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
       ? 'This lands inside the high-fan short-career window.'
       : 'This is still a short finish, but it stays below the high-fan cutoff.';
 
-    return `This flagged career end landed ${this.formatDuration(snapshot.snapshot_gap_seconds)} after the previous snapshot, gained +${this.formatWholeNumber(snapshot.fan_gain)} fans, and paced at ${this.formatSnapshotRate(snapshot.fans_per_minute)} fans/min. ${previousCareerGap} ${thresholdSummary}`;
+    return `This highlighted career end landed ${this.formatDuration(snapshot.snapshot_gap_seconds)} after the previous snapshot, gained +${this.formatWholeNumber(snapshot.fan_gain)} fans, and paced at ${this.formatSnapshotRate(snapshot.fans_per_minute)} fans/min. ${previousCareerGap} ${thresholdSummary}`;
   }
 
   getCareerEndLabel(count: number | null | undefined): string {
@@ -840,17 +854,43 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
           {
             label: 'Total active time',
             value: this.formatDuration(score.total_active_seconds),
-            hint: `${this.formatWholeNumber(score.total_careers)} careers in this window`
+            hint: `${this.formatWholeNumber(score.total_careers)} careers, ${this.formatDecimalNumber(this.getAverageCareersPerDay(score))}/day`
           },
           {
             label: 'Fans per active minute',
             value: this.formatCompactNumber(score.fans_per_active_minute),
-            hint: `Peak observed ${this.formatCompactNumber(score.peak_fans_per_minute)} fans/min`
+            hint: `Peak observed ${this.formatCompactNumber(score.peak_fans_per_minute)} fans/min, ${this.formatWholeNumber(score.high_fan_rate_windows ?? 0)} high-rate windows`
           },
           {
             label: 'Peak daily load',
             value: this.formatDuration(score.max_daily_active_seconds),
             hint: `${this.formatWholeNumber(score.max_daily_careers)} careers on the busiest day`
+          }
+        ]
+      },
+      {
+        title: 'Career rate samples',
+        description: 'Estimated careers per hour from snapshot intervals. Values are rates; notes show sample coverage.',
+        metrics: [
+          {
+            label: 'Last 20 rate',
+            value: this.formatCareerRateValue(score, 'last_20'),
+            hint: this.formatCareerRateHint(score, 'last_20')
+          },
+          {
+            label: '3-day rate',
+            value: this.formatCareerRateValue(score, 'last_3d'),
+            hint: this.formatCareerRateHint(score, 'last_3d')
+          },
+          {
+            label: '7-day rate',
+            value: this.formatCareerRateValue(score, 'last_7d'),
+            hint: this.formatCareerRateHint(score, 'last_7d')
+          },
+          {
+            label: '30-day rate',
+            value: this.formatCareerRateValue(score, 'last_30d'),
+            hint: this.formatCareerRateHint(score, 'last_30d')
           }
         ]
       },
@@ -903,10 +943,52 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
             label: 'Probe score',
             value: this.formatDecimalNumber(score.probe_score ?? 0),
             hint: `${this.formatWholeNumber(score.days_over_16h)} days over 16h, ${this.formatWholeNumber(score.days_over_20h)} days over 20h`
+          },
+          {
+            label: 'High-rate fan windows',
+            value: this.formatWholeNumber(score.high_fan_rate_windows ?? 0),
+            hint: `+${this.formatCompactNumber(score.high_fan_rate_total_fan_gain ?? 0)} over ${this.formatDuration(score.high_fan_rate_total_seconds ?? 0)}`
           }
         ]
       }
     ];
+  }
+
+  getAverageCareersPerDay(score: HallEntry): number {
+    if (Number.isFinite(score.avg_careers_per_day)) return score.avg_careers_per_day ?? 0;
+    return score.days_observed > 0 ? score.total_careers / score.days_observed : 0;
+  }
+
+  private getCareerRateWindow(score: HallEntry, key: keyof NonNullable<HallEntry['career_rate_breakdown']>): CareerRateWindow | null {
+    return score.career_rate_breakdown?.[key] ?? null;
+  }
+
+  getCareerRatePerHour(
+    score: HallEntry,
+    key: keyof NonNullable<HallEntry['career_rate_breakdown']>,
+    fallback?: number
+  ): number {
+    return this.getCareerRateWindow(score, key)?.careers_per_hour ?? fallback ?? 0;
+  }
+
+  private formatCareerRateValue(
+    score: HallEntry,
+    key: keyof NonNullable<HallEntry['career_rate_breakdown']>,
+    fallback?: number
+  ): string {
+    return this.formatDecimalNumber(this.getCareerRatePerHour(score, key, fallback));
+  }
+
+  private formatCareerRateHint(
+    score: HallEntry,
+    key: keyof NonNullable<HallEntry['career_rate_breakdown']>,
+    fallbackCount?: number,
+    fallbackSeconds?: number
+  ): string {
+    const window = this.getCareerRateWindow(score, key);
+    const sampleCount = window?.sample_count ?? fallbackCount ?? 0;
+    const sampleSeconds = window?.sample_seconds ?? fallbackSeconds ?? 0;
+    return `careers/hour - ${this.formatWholeNumber(sampleCount)} samples, ${this.formatDuration(sampleSeconds)} observed`;
   }
 
   private buildProbeMetricGroups(metrics: ProbeMetrics | null | undefined): InsightGroup[] {
@@ -1082,8 +1164,8 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
     if (key === 'short_high_fan_careers' || key === 'career_length_distribution' || key.includes('short')) {
       return {
         key: 'automation',
-        label: 'Automation',
-        description: 'Short-career and direct run-shape signals.'
+        label: 'Run shape',
+        description: 'Short-career and unusual run-shape signals.'
       };
     }
 
@@ -1114,11 +1196,11 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!score) return [];
 
     const flags: string[] = [];
-    if (score.flag_no_sleep) flags.push('No-sleep flag');
-    if (score.flag_extreme_session) flags.push('Extreme session flag');
-    if (score.flag_inhuman_career_rate) flags.push('Career-rate flag');
-    if (score.flag_247) flags.push('24/7 coverage flag');
-    if (score.flag_marathon) flags.push('Marathon activity flag');
+    if (score.flag_no_sleep) flags.push('No-sleep signal');
+    if (score.flag_extreme_session) flags.push('Extreme session signal');
+    if (score.flag_inhuman_career_rate) flags.push('Career-rate signal');
+    if (score.flag_247) flags.push('24/7 coverage signal');
+    if (score.flag_marathon) flags.push('Marathon activity signal');
 
     return flags;
   }
@@ -1236,6 +1318,10 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
   private sanitizeEvidenceText(text: string): string {
     return text
       .replace('A saturated heatmap can be legal account sharing or very heavy manual play; it is suspicious context, not proof by itself.', 'A saturated heatmap can come from account sharing or very heavy manual play. Treat it as schedule context, not direct proof by itself.')
+      .replace(/suspicious activity metrics/gi, 'suspicion score metrics')
+      .replace(/suspicious activity/gi, 'suspicious activity signals')
+      .replace(/suspicious context/gi, 'schedule context')
+      .replace(/schedule suspicion/gi, 'schedule pattern')
       .replace('legal account sharing or very heavy manual play', 'account sharing or very heavy manual play')
       .replace('account sharing or normal 24/7 play', 'account sharing or very heavy manual play')
       .replace('career finish(es)', 'career finishes');
@@ -1613,8 +1699,8 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
     if (finalParams['page'] === 0) delete finalParams['page'];
     if (finalParams['pageSize'] === 50) delete finalParams['pageSize'];
     if (finalParams['sortBy'] === 'score') delete finalParams['sortBy'];
-    if (finalParams['minDays'] === 3) delete finalParams['minDays'];
+    if (finalParams['minDays'] === this.defaultMinDays) delete finalParams['minDays'];
 
-    this.router.navigate(['/shame'], { queryParams: finalParams });
+    this.router.navigate(['/activity'], { queryParams: finalParams });
   }
 }

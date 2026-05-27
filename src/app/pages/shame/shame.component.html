@@ -1,12 +1,20 @@
 <div class="shame-page">
   <div class="page-header">
     <div class="header-content">
-      <h1>Suspicious Activity</h1>
-      <p>This page ranks accounts by suspicious activity metrics from observed fan snapshots. It is not a ban list.</p>
+      <h1>Top 100 Club Activity Reports</h1>
+      <p>Every observed account in a Top 100 club is listed by default, including 0 scores. The suspicion score ranks how unusual the reconstructed activity looks; it is not proof of botting.</p>
     </div>
   </div>
 
   <div class="content-container">
+    <section class="scope-notice">
+      <mat-icon>info</mat-icon>
+      <div>
+        <strong>Limited snapshot reconstruction</strong>
+        <p>We infer activity from periodic snapshots of Top 100 clubs: login-time changes, fan gains, career changes, and related ranking signals. This is approximate, not full game-client telemetry, so even a 99/100 can be an extreme outlier rather than confirmed botting.</p>
+      </div>
+    </section>
+
     <ng-container *ngIf="selectedViewerId === null; else detailView">
       <div class="filters-container">
         <div class="search-row">
@@ -39,7 +47,7 @@
             </mat-select>
           </mat-form-field>
 
-          <button class="clear-filters-btn" *ngIf="searchTerm || sortBy !== 'score' || minScore !== 0 || minDays !== 3" (click)="clearFilters()">
+          <button class="clear-filters-btn" *ngIf="searchTerm || sortBy !== 'score' || minScore !== 0 || minDays !== defaultMinDays" (click)="clearFilters()">
             <mat-icon>clear</mat-icon>
             Clear
           </button>
@@ -53,7 +61,7 @@
 
       <div class="loading-container" *ngIf="loading">
         <mat-spinner></mat-spinner>
-        <p>Loading suspicious activity metrics...</p>
+        <p>Loading suspicion scores...</p>
       </div>
 
       <div class="error-state" *ngIf="!loading && errorMessage">
@@ -72,7 +80,7 @@
 
             <div class="entry-main">
               <div class="entry-title-row">
-                <a class="entry-name" [routerLink]="['/shame', entry.viewer_id]" queryParamsHandling="preserve">
+                <a class="entry-name" [routerLink]="['/activity', entry.viewer_id]" queryParamsHandling="preserve">
                   {{ entry.trainer_name || 'Unknown Trainer' }}
                 </a>
                 <span class="viewer-id">ID {{ entry.viewer_id }}</span>
@@ -93,7 +101,7 @@
                 <span class="reason-chip"
                       *ngFor="let reason of getTopReasons(entry); trackBy: trackByReasonKey"
                       [ngClass]="[reason.severity, reason.confidence]">
-                  <span class="reason-label">{{ reason.label }}</span>
+                  <span class="reason-label">{{ getEvidenceReasonLabel(reason) }}</span>
                 </span>
               </div>
             </div>
@@ -122,7 +130,7 @@
             </div>
 
             <div class="actions">
-              <a mat-icon-button [routerLink]="['/shame', entry.viewer_id]" queryParamsHandling="preserve" matTooltip="Open activity report" aria-label="Open activity report">
+              <a mat-icon-button [routerLink]="['/activity', entry.viewer_id]" queryParamsHandling="preserve" matTooltip="Open activity report" aria-label="Open activity report">
                 <mat-icon>chevron_right</mat-icon>
               </a>
             </div>
@@ -132,7 +140,7 @@
 
       <div class="no-results" *ngIf="!loading && !errorMessage && !hasResults">
         <mat-icon>search_off</mat-icon>
-        <p>No matching suspicious activity metrics found.</p>
+        <p>No matching suspicion score data found.</p>
         <button class="clear-filters-btn inline" *ngIf="searchTerm" (click)="clearSearch()">Clear search</button>
       </div>
 
@@ -141,14 +149,14 @@
                      [pageSizeOptions]="[25, 50, 100, 200]"
                      [pageIndex]="page"
                      (page)="onPageChange($event)"
-                     aria-label="Select page of suspicious activity metrics">
+                     aria-label="Select page of suspicion score data">
       </mat-paginator>
     </ng-container>
 
     <ng-template #detailView>
-      <a class="back-link" routerLink="/shame" queryParamsHandling="preserve">
+      <a class="back-link" routerLink="/activity" queryParamsHandling="preserve">
         <mat-icon>arrow_back</mat-icon>
-        Back to suspicious activity
+        Back to activity reports
       </a>
 
       <div class="loading-container" *ngIf="detailLoading">
@@ -248,8 +256,12 @@
                 <span class="value compact">{{ score.peak_fans_per_minute | compactNumber }}</span>
               </div>
               <div class="metric-tile metric-tile-compact">
-                <span class="label">Careers/hour</span>
-                <span class="value">{{ score.careers_per_active_hour | number:'1.1-1' }}</span>
+                <span class="label">Last 20 careers/h</span>
+                <span class="value">{{ getCareerRatePerHour(score, 'last_20', score.careers_per_active_hour) | number:'1.1-1' }}</span>
+              </div>
+              <div class="metric-tile metric-tile-compact">
+                <span class="label">Careers/day</span>
+                <span class="value">{{ getAverageCareersPerDay(score) | number:'1.1-1' }}</span>
               </div>
               <div class="metric-tile metric-tile-compact">
                 <span class="label">{{ getPrimarySessionMetricLabel(score) }}</span>
@@ -268,10 +280,6 @@
                 <span class="value full">+{{ score.recent_fan_gain_3d | localeNumber }}</span>
                 <span class="value compact">+{{ score.recent_fan_gain_3d | compactNumber }}</span>
               </div>
-              <div class="metric-tile metric-tile-feature">
-                <span class="label">Behavior / probe</span>
-                <span class="value">{{ score.behavior_change_score | number:'1.1-1' }} / {{ (score.probe_score ?? 0) | number:'1.1-1' }}</span>
-              </div>
             </section>
           </section>
 
@@ -283,7 +291,7 @@
               </div>
               <div class="flag-strip header-flags">
                 <span class="flag-chip" *ngFor="let flag of viewerFlagLabels">{{ flag }}</span>
-                <span class="flag-chip muted" *ngIf="viewerFlagLabels.length === 0">No hard activity flags were raised by the current score.</span>
+                <span class="flag-chip muted" *ngIf="viewerFlagLabels.length === 0">No major activity signals were raised by the current score.</span>
               </div>
             </div>
             <div class="insight-grid">
@@ -305,12 +313,12 @@
 
           <section class="detail-section evidence-section">
             <div class="section-heading">
-              <h3>Why this account was flagged</h3>
-              <p>Signals are ordered from direct automation evidence to broader rate and schedule context.</p>
+              <h3>Why this account received this score</h3>
+              <p>Signals are ordered from stronger suspicion-score inputs to broader rate and schedule context. These are outlier indicators, not proof.</p>
             </div>
             <div class="evidence-empty" *ngIf="!hasEvidenceReasons(score)">
-              <p>{{ score.evidence.summary }}</p>
-              <small *ngIf="score.evidence.strongest_signal">Strongest returned signal: {{ score.evidence.strongest_signal }}</small>
+              <p>{{ getEvidenceSummary(score) }}</p>
+              <small *ngIf="score.evidence.strongest_signal">Primary returned signal: {{ getEvidenceSignalLabel(score.evidence.strongest_signal) }}</small>
               <small *ngIf="!score.evidence.strongest_signal">This payload did not include detailed evidence reasons, so the sections around it are showing the raw score inputs instead.</small>
             </div>
             <div class="evidence-groups" *ngIf="hasEvidenceReasons(score)">
@@ -335,7 +343,7 @@
                     <div class="evidence-row-head">
                       <div class="evidence-title">
                         <div>
-                          <h4>{{ reason.label }}</h4>
+                          <h4>{{ getEvidenceReasonLabel(reason) }}</h4>
                           <span>{{ getConfidenceLabel(reason.confidence) }}</span>
                         </div>
                       </div>
@@ -402,13 +410,13 @@
             <div class="detail-section career-section">
               <div class="section-heading">
                 <h3>Career length buckets</h3>
-                <p>Grouped career windows. Count is how many estimated careers landed there; automation weight only rises when that short window also produced extreme fan gain.</p>
+                <p>Grouped career windows. Count is how many estimated careers landed there; suspicion weight only rises when that short window also produced extreme fan gain.</p>
               </div>
               <div class="bucket-table" *ngIf="careerBucketRows.length > 0">
                 <div class="bucket-row bucket-head">
                   <span>Window</span>
                   <span>Careers</span>
-                  <span>Automation weight</span>
+                  <span>Suspicion weight</span>
                 </div>
                 <div class="bucket-row" *ngFor="let bucket of careerBucketRows" [class.short-window]="bucket.isShortWindow">
                   <div class="bucket-name">
@@ -548,7 +556,7 @@
                         </button>
                         <div class="snapshot-time-stack">
                           <span class="snapshot-time">{{ formatSnapshotTime(snapshot.snapshot_time) }}</span>
-                          <small>{{ hasShortCareerContext(snapshot) ? 'Show prior / next snapshots' : 'Career-end evidence summary' }}</small>
+                          <small>{{ hasShortCareerContext(snapshot) ? 'Show prior / next snapshots' : 'Career-end metric summary' }}</small>
                         </div>
                       </td>
                       <td class="previous-fans">{{ snapshot.previous_snapshot_fans | localeNumber }}</td>
@@ -565,7 +573,7 @@
                       <td colspan="10">
                         <div class="snapshot-detail-shell">
                           <div class="snapshot-detail-summary snapshot-meta-strip">
-                            <span class="snapshot-meta-item snapshot-meta-flag">Flagged short career</span>
+                            <span class="snapshot-meta-item snapshot-meta-flag">Highlighted short career</span>
                             <span class="snapshot-meta-item">
                               <small>Gain</small>
                               <strong>+{{ formatWholeNumber(snapshot.fan_gain) }}</strong>
@@ -626,7 +634,7 @@
                                     <td class="career-end-cell">Career end</td>
                                     <td>
                                       <div class="snapshot-marker-list">
-                                        <span class="snapshot-marker career-end">Flagged short career</span>
+                                        <span class="snapshot-marker career-end">Highlighted short career</span>
                                         <span class="snapshot-marker" *ngIf="snapshot.is_high_fan_short">High-fan short</span>
                                       </div>
                                     </td>
@@ -690,7 +698,7 @@
         <ng-template #missingScore>
           <div class="no-results detail-empty">
             <mat-icon>person_off</mat-icon>
-            <p>No suspicious activity score exists for viewer ID {{ selectedViewerId }}.</p>
+            <p>No suspicion score exists for viewer ID {{ selectedViewerId }}.</p>
           </div>
         </ng-template>
       </ng-container>
