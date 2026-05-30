@@ -79,13 +79,14 @@ class UqlChipWidget extends WidgetType {
     private readonly imageUrl: string | undefined,
     private readonly title: string | undefined,
     private readonly contextClass: string,
+    private readonly rarityClass: string | undefined,
   ) {
     super();
   }
 
   override toDOM(): HTMLElement {
     const el = document.createElement('span');
-    el.className = `uql-cm-chip ${this.contextClass}`.trim();
+    el.className = `uql-cm-chip ${this.contextClass} ${this.rarityClass ? `uql-cm-rarity-${this.rarityClass}` : ''}`.trim();
     if (this.title) el.title = this.title;
     if (this.imageUrl) {
       const img = document.createElement('img');
@@ -106,6 +107,7 @@ class UqlChipWidget extends WidgetType {
     return other.text === this.text
       && other.imageUrl === this.imageUrl
       && other.contextClass === this.contextClass
+      && other.rarityClass === this.rarityClass
       && other.title === this.title;
   }
 
@@ -134,7 +136,7 @@ function buildDecorationsFromSegments(segments: UqlHighlightSegment[], docLength
         from,
         to,
         Decoration.replace({
-          widget: new UqlChipWidget(display, seg.imageUrl, seg.title, ctxClass),
+          widget: new UqlChipWidget(display, seg.imageUrl, seg.title, ctxClass, seg.rarityClass),
           inclusive: false,
         }),
       );
@@ -333,6 +335,7 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
             const parts = ['uql-cm-completion'];
             if (meta?.valueContext) parts.push(`uql-cm-completion-ctx-${meta.valueContext}`);
             if (meta?.scopeContext) parts.push(`uql-cm-completion-scope-${meta.scopeContext}`);
+            if (meta?.rarityClass) parts.push(`uql-cm-completion-rarity-${meta.rarityClass}`);
             return parts.join(' ');
           },
           addToOptions: [
@@ -354,6 +357,7 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
           { key: 'Tab', run: acceptCompletion },
           { key: 'Mod-Space', run: startCompletion },
           { key: 'Escape', run: closeCompletion },
+          { key: 'Space', run: (view) => this.autoInsertInListParens(view) },
           ...completionKeymap,
           ...historyKeymap,
           ...defaultKeymap,
@@ -433,6 +437,22 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
       parent: this.host.nativeElement,
     });
     this.dispatchSegments();
+  }
+
+  private autoInsertInListParens(view: EditorView): boolean {
+    const selection = view.state.selection.main;
+    if (!selection.empty) return false;
+    const cursor = selection.head;
+    const before = view.state.doc.sliceString(0, cursor);
+    const after = view.state.doc.sliceString(cursor);
+    if (/^\s*\(/.test(after)) return false;
+    const beforeOperator = before.replace(/\s+$/g, '');
+    if (!/(?:^|\S\s+)(?:not\s+)?in$/i.test(beforeOperator)) return false;
+    view.dispatch({
+      changes: { from: cursor, to: cursor, insert: ' ()' },
+      selection: { anchor: cursor + 2 },
+    });
+    return true;
   }
 
   private getOverlappingCompletionStart(text: string, from: number, insertValue: string, kind: UqlSuggestion['kind']): number {

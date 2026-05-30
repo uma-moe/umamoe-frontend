@@ -765,6 +765,11 @@ export class InheritanceEntryComponent implements OnInit {
             })),
         ];
         const m = this.affinityService.getSparkMetrics(sources, this.sparkShowPerRun);
+        const isWhiteSpark = sparkInfo.type >= 2 && sparkInfo.type <= 4;
+        if (isWhiteSpark) {
+            return `${this.formatNumber(m.procChancePct, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+        }
+
         // Show expected procs when ≥1, proc chance otherwise — same logic as the planner.
         // Always use 2 decimals with locale-aware formatting.
         return m.expectedProcs >= 1

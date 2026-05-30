@@ -59,11 +59,7 @@
     <div class="content-section" *ngIf="getEncodedSkills(v).length > 0">
       <span class="section-title">Skills</span>
       <div class="sm-skills">
-        <span class="sm-skill" [ngClass]="getSkillRarityClass(sid)" *ngFor="let sid of getEncodedSkills(v)">
-          <img *ngIf="getSkillIcon(sid)" [src]="getSkillIcon(sid)" class="skill-icon" alt="" (error)="$any($event.target).style.display='none'">
-          <span class="skill-name">{{ getSkillName(sid) }}</span>
-          <span class="skill-level">Lv.{{ getSkillLevel(sid) }}</span>
-        </span>
+        <app-skill *ngFor="let sid of getEncodedSkills(v)" [skillId]="sid"></app-skill>
       </div>
     </div>
 

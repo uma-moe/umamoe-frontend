@@ -1,0 +1,135 @@
+:host {
+  display: inline-flex;
+  max-width: 100%;
+}
+
+.skill-chip {
+  --skill-border-color: rgba(255, 255, 255, 0.1);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-height: 27px;
+  padding: 0 6px 0 0;
+  border: 1px solid var(--skill-border-color);
+  border-left: 0;
+  border-radius: 6px;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  position: relative;
+  overflow: visible;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.skill-icon-frame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  width: 27px;
+  min-height: inherit;
+  margin: -1px 0;
+  border-radius: 6px 0 0 6px;
+  background: transparent;
+  flex-shrink: 0;
+  overflow: visible;
+  box-shadow: none;
+}
+
+.skill-icon-frame,
+.skill-name,
+.skill-level {
+  position: relative;
+  z-index: 1;
+}
+
+.skill-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.skill-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.skill-level {
+  flex-shrink: 0;
+  margin-left: 1px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.26);
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.rarity-gold {
+  background: rgba(255, 170, 32, 0.13);
+  --skill-border-color: rgba(255, 193, 7, 0.38);
+  border-color: rgba(255, 193, 7, 0.38);
+  color: #ffe08a;
+}
+
+.rarity-special {
+  background: rgba(33, 150, 243, 0.13);
+  --skill-border-color: rgba(33, 150, 243, 0.4);
+  border-color: rgba(33, 150, 243, 0.4);
+  color: #90caf9;
+}
+
+.rarity-unique-inherited {
+  background: linear-gradient(135deg, rgba(126, 87, 194, 0.26), rgba(171, 71, 188, 0.2));
+  --skill-border-color: rgba(186, 104, 200, 0.42);
+  border-color: rgba(186, 104, 200, 0.42);
+  color: #d7a6e3;
+}
+
+.rarity-unique-main {
+  --skill-border-color: transparent;
+  border-color: transparent;
+  color: #ffe8a6;
+  background: linear-gradient(rgba(34, 28, 14, 0.9), rgba(34, 28, 14, 0.9)) padding-box,
+    linear-gradient(135deg, #ff8a65, #ffd166 30%, #5eead4 58%, #64b5f6 76%, #ce93d8) border-box;
+}
+
+.skill-chip--compact {
+  min-height: 24px;
+  padding: 0 5px 0 0;
+  gap: 4px;
+  font-size: 0.66rem;
+
+  .skill-name {
+    max-width: 128px;
+  }
+
+  .skill-icon-frame {
+    width: 24px;
+    min-height: inherit;
+  }
+
+  .skill-icon {
+    width: 100%;
+    height: 100%;
+  }
+
+  .skill-level {
+    margin-left: 0;
+    padding: 1px 3px;
+    background: rgba(0, 0, 0, 0.28);
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.55rem;
+    line-height: 1.1;
+  }
+}

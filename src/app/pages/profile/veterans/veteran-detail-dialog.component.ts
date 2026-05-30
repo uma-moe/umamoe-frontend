@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { RankBadgeComponent } from '../../../components/rank-badge/rank-badge.component';
 import { LineageDisplayComponent } from '../../../components/lineage-display/lineage-display.component';
+import { SkillComponent } from '../../../components/skill/skill.component';
 import { RaceResultsDialogComponent, RaceResultsDialogData } from '../../../components/race-results-dialog/race-results-dialog.component';
 import { FactorService } from '../../../services/factor.service';
 import { PlannerTransferService } from '../../../services/planner-transfer.service';
@@ -23,7 +24,7 @@ interface WonRace {
 import {
   getAptGrade, getRankGrade, getRankGradeColor, getStarDisplay,
   getDistanceName, getRunningStyleName, getScenarioName, getTotalStats,
-  getCardImage, getSkillName, getSkillLevel, getSkillIcon, getSkillRarityClass,
+  getCardImage,
   getCharacterName, sortEncodedSkills,
 } from '../profile-helpers';
 
@@ -44,7 +45,7 @@ export interface VeteranDetailData {
 @Component({
   selector: 'app-veteran-detail-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule, MatTooltipModule, RankBadgeComponent, LineageDisplayComponent, LocaleNumberPipe],
+  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule, MatTooltipModule, RankBadgeComponent, LineageDisplayComponent, SkillComponent, LocaleNumberPipe],
   templateUrl: './veteran-detail-dialog.component.html',
   styleUrls: ['./veteran-detail-dialog.component.scss'],
   encapsulation: ViewEncapsulation.None,
@@ -130,11 +131,6 @@ export class VeteranDetailDialogComponent {
   getDistanceName = getDistanceName;
   getRunningStyleName = getRunningStyleName;
   getTotalStats = getTotalStats;
-  getSkillName = getSkillName;
-  getSkillLevel = getSkillLevel;
-  getSkillIcon = getSkillIcon;
-  getSkillRarityClass = getSkillRarityClass;
-
   getEncodedSkills(v: VeteranMember): number[] {
     const skills = v.skill_array && v.skill_array.length > 0
       ? v.skill_array.map(s => s.skill_id * 10 + s.level)

@@ -409,12 +409,8 @@
               </div>
 
               <!-- Skills -->
-              <div class="sm-skills" *ngIf="m.skills && m.skills.length > 0">
-                <span class="sm-skill" [ngClass]="getSkillRarityClass(sid)" *ngFor="let sid of m.skills">
-                  <img *ngIf="getSkillIcon(sid)" [src]="getSkillIcon(sid)" class="skill-icon" alt="" (error)="$any($event.target).style.display='none'">
-                  <span class="skill-name">{{ getSkillName(sid) }}</span>
-                  <span class="skill-level">Lv.{{ getSkillLevel(sid) }}</span>
-                </span>
+              <div class="sm-skills" *ngIf="getSortedSkills(m.skills).length > 0">
+                <app-skill *ngFor="let sid of getSortedSkills(m.skills)" [skillId]="sid" [compact]="true"></app-skill>
               </div>
             </div>
           </div>

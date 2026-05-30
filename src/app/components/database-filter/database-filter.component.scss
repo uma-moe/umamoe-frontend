@@ -357,7 +357,7 @@
 
 // The main container uses a 2-row grid approach:
 // Layout: Single flex row, wraps naturally
-// Wide:    [legacy-tree | support-card | min-lb | search-users]
+// Wide:    [legacy-tree grows | support-card + compact min-lb | search-users]
 // Narrower: items wrap to next row with row-gap spacing
 // ≤700px:  everything stacks
 
@@ -424,6 +424,15 @@
     // When legacy wraps to its own row - dividers only
     &.is-wrapped { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1.5px solid var(--border-primary); }
 
+    @media (min-width: 901px) and (max-width: 1700px) {
+        flex: 1 1 100%;
+        min-width: 0;
+        padding-right: 0;
+        padding-bottom: 14px;
+        margin-bottom: 14px;
+        border-bottom: 1.5px solid var(--border-primary);
+    }
+
     @media (max-width: 600px) {
         min-width: 0;
         padding-right: 0;
@@ -439,7 +448,7 @@
 
 .support-lb-group {
     display: flex;
-    flex: 1 1 420px;
+    flex: 0 1 520px;
     gap: 0;
     border-left: 1.5px solid var(--border-primary);
     padding-left: 0;
@@ -452,8 +461,9 @@
     }
 
     > .m-collapse:last-of-type > .filter-section-wrapper {
-        flex: 1 1 240px;
+        flex: 0 1 330px;
         min-width: 0;
+        max-width: 360px;
         border-right: none;
         padding-left: 16px;
     }
@@ -473,6 +483,22 @@
     // When legacy wrapped, support-lb is first on its row
     &.is-wrapped {
         border-left: none;
+
+        > .m-collapse:first-of-type > .filter-section-wrapper { padding-left: 0; }
+    }
+
+    @media (min-width: 901px) and (max-width: 1700px) {
+        border-left: none;
+
+        > .m-collapse:first-of-type > .filter-section-wrapper { padding-left: 0; }
+    }
+
+    @media (min-width: 601px) and (max-width: 900px) {
+        flex: 1 1 100%;
+        border-left: none;
+        padding-bottom: 14px;
+        margin-bottom: 14px;
+        border-bottom: 1.5px solid var(--border-primary);
 
         > .m-collapse:first-of-type > .filter-section-wrapper { padding-left: 0; }
     }
@@ -506,7 +532,7 @@
 // =============================================
 
 .search-wrapper {
-    flex: 1 1 200px;
+    flex: 0 1 340px;
     min-width: 200px;
     border-left: 1.5px solid var(--border-primary);
     padding-left: 16px;
@@ -517,11 +543,25 @@
 
     // When search wraps to its own row - dividers only
     &.is-wrapped {
+        flex: 1 1 100%;
+        width: 100%;
+        min-width: 0;
         border-left: none;
         border-top: 1.5px solid var(--border-primary);
         padding-left: 0;
         padding-top: 14px;
         margin-top: 14px;
+    }
+
+    @media (min-width: 901px) and (max-width: 1700px) {
+        flex: 1 1 340px;
+    }
+
+    @media (min-width: 601px) and (max-width: 900px) {
+        flex: 1 1 100%;
+        min-width: 0;
+        border-left: none;
+        padding-left: 0;
     }
 
     @media (max-width: 600px) {

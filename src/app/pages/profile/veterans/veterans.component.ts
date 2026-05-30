@@ -17,6 +17,7 @@ import { CharacterSelectDialogComponent } from '../../../components/character-se
 import { RaceSchedulerComponent } from '../../../components/race-scheduler/race-scheduler.component';
 import { RankBadgeComponent } from '../../../components/rank-badge/rank-badge.component';
 import { LineageDisplayComponent } from '../../../components/lineage-display/lineage-display.component';
+import { SkillComponent } from '../../../components/skill/skill.component';
 import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
 import { RACE_SADDLE_DATA } from '../../../data/race-saddle.data';
 import { ProfileService } from '../../../services/profile.service';
@@ -29,7 +30,7 @@ import { SKILLS } from '../../../data/skills-data';
 import {
   getAptGrade, getRankGrade, getRankGradeColor, getStarDisplay,
   getDistanceName, getRunningStyleName, getScenarioName, getTotalStats,
-  getCardImage, getSkillName, getSkillLevel, getSkillIcon, getSkillRarityClass,
+  getCardImage, getSkillIcon,
   getCharacterName, getAptIcon, sortEncodedSkills,
 } from '../profile-helpers';
 
@@ -86,14 +87,6 @@ interface CharacterOption {
   image: string | null;
 }
 
-interface SkillDisplay {
-  encodedId: number;
-  icon: string | null;
-  name: string;
-  level: number;
-  rarityClass: string;
-}
-
 interface VeteranDisplay {
   veteran: VeteranMember;
   characterName: string;
@@ -111,7 +104,7 @@ interface VeteranDisplay {
   aptSprint: string; aptMile: string; aptMiddle: string; aptLong: string;
   aptNige: string; aptSenko: string; aptSashi: string; aptOikomi: string;
   // Pre-computed skills
-  skills: SkillDisplay[];
+  skills: number[];
   // Pre-computed factors
   factors: ResolvedFactor[];
   coloredFactors: ResolvedFactor[];
@@ -137,6 +130,7 @@ const APT_GRADES = ['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'];
     MatAutocompleteModule, MatTooltipModule, MatDialogModule, MatSliderModule,
     MatButtonToggleModule, RaceSchedulerComponent, RankBadgeComponent,
     LineageDisplayComponent,
+    SkillComponent,
     LocaleNumberPipe,
   ],
   templateUrl: './veterans.component.html',
@@ -583,13 +577,7 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
       aptSenko: getAptGrade(v.proper_running_style_senko),
       aptSashi: getAptGrade(v.proper_running_style_sashi),
       aptOikomi: getAptGrade(v.proper_running_style_oikomi),
-      skills: encodedSkills.map(sid => ({
-        encodedId: sid,
-        icon: getSkillIcon(sid),
-        name: getSkillName(sid),
-        level: getSkillLevel(sid),
-        rarityClass: getSkillRarityClass(sid),
-      })),
+      skills: encodedSkills,
       factors,
       coloredFactors: factors.filter(f => f.color !== 'white'),
       whiteStarSum: factors.filter(f => f.color === 'white').reduce((s, f) => s + (f.level || 0), 0),
@@ -1001,10 +989,7 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
   getRankGrade(s: number | null): string { return getRankGrade(s); }
   getRankGradeColor(s: number | null): string { return getRankGradeColor(s); }
   getStarDisplay(r: number | null): { filled: boolean; talent: boolean }[] { return getStarDisplay(r); }
-  getSkillName(id: number): string { return getSkillName(id); }
-  getSkillLevel(id: number): number { return getSkillLevel(id); }
   getSkillIcon(id: number): string | null { return getSkillIcon(id); }
-  getSkillRarityClass(id: number): string { return getSkillRarityClass(id); }
 
   /** Convert skill_array [{skill_id,level}] or encoded skills[] to encoded IDs */
   getEncodedSkills(v: VeteranMember): number[] {
@@ -1174,8 +1159,8 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
     return d.veteran.trained_chara_id ?? d.veteran.member_id ?? _i;
   }
 
-  trackBySkill(_i: number, s: SkillDisplay): number {
-    return s.encodedId;
+  trackBySkill(_i: number, skillId: number): number {
+    return skillId;
   }
 
   trackByFactor(_i: number, f: ResolvedFactor): number {

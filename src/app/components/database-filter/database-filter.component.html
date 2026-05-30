@@ -898,17 +898,6 @@
   </div>
 </div>
 
-<div class="uql-preview-section" *ngIf="filterMode !== 'uql' && currentUqlPreview as uqlPreview">
-  <button type="button" class="uql-preview-header" (click)="toggleUqlPreview()">
-    <mat-icon class="collapse-chevron" [class.collapsed]="!uqlPreviewExpanded">expand_more</mat-icon>
-    <span>Current UQL</span>
-    <code>{{ uqlPreview }}</code>
-  </button>
-  <div class="uql-preview-body" [class.expanded]="uqlPreviewExpanded">
-    <pre>{{ uqlPreview }}</pre>
-  </div>
-</div>
-
 <!-- Floating scroll-aware button - shows "Results" when in filter, "Back to Top" when past it -->
 <button class="floating-scroll-btn"
         *ngIf="showFloatingBtn"

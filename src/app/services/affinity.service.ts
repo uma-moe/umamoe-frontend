@@ -428,7 +428,7 @@ export class AffinityService {
    *
    * – If the expected number of procs (E = Σ p·instances) is ≥ 1.0, returns
    *   a "multiple" result so the UI can show "1.60x" instead of a capped %.
-   * – Otherwise returns the true "at-least-one" probability as a percentage,
+   * – Otherwise returns thek true "at-least-one" probability as a percentage,
    *   e.g. "4.90%".
    */
   getSparkMetrics(

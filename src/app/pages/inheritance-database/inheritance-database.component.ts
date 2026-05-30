@@ -1260,6 +1260,21 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     const filterId = parseInt(`${spark.factorId}${spark.level}`, 10);
     const filters = this.currentAdvancedFilters;
     const isFromMainParent = !!this.getLevelFromMainParent(spark, record);
+    const sparkFactorId = parseInt(spark.factorId, 10);
+    const uqlHighlight = filters.uql_highlight;
+    if (uqlHighlight) {
+      if (uqlHighlight.globalSparkIds?.includes(filterId)) return true;
+      if (isFromMainParent && uqlHighlight.mainSparkIds?.length) {
+        const mainLevel = this.getLevelFromMainParent(spark, record);
+        const mainFilterId = mainLevel ? parseInt(`${spark.factorId}${mainLevel}`, 10) : filterId;
+        if (uqlHighlight.mainSparkIds.includes(mainFilterId)) return true;
+      }
+      if (spark.type !== 0 && spark.type !== 1 && spark.type !== 5) {
+        if (uqlHighlight.optionalWhiteFactorIds?.includes(sparkFactorId)) return true;
+        if (uqlHighlight.lineageWhiteFactorIds?.includes(sparkFactorId)) return true;
+        if (isFromMainParent && uqlHighlight.optionalMainWhiteFactorIds?.includes(sparkFactorId)) return true;
+      }
+    }
     const checkGroups = (groups: number[][] | undefined) => {
       if (!groups) return false;
       for (const group of groups) {
@@ -1282,11 +1297,11 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
        if (checkGroups(filters.white_sparks)) return true;
        
        // Check optional white sparks (match by factorId only)
-       if (filters.optional_white_sparks && filters.optional_white_sparks.includes(parseInt(spark.factorId, 10))) {
+       if (filters.optional_white_sparks && filters.optional_white_sparks.includes(sparkFactorId)) {
          return true;
        }
        // Check lineage white sparks (match by factorId only)
-       if (filters.lineage_white && filters.lineage_white.includes(parseInt(spark.factorId, 10))) {
+       if (filters.lineage_white && filters.lineage_white.includes(sparkFactorId)) {
          return true;
        }
     }
@@ -1294,7 +1309,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     // total spark level can be higher than the main parent's individual contribution)
     const checkArrayByFactorId = (arr: number[] | undefined) => {
       if (!arr) return false;
-      const sparkFactorId = parseInt(spark.factorId, 10);
       // Each ID in arr is like 103 (factorId 10 + level 3), extract factor ID by removing last digit
       for (const fullId of arr) {
         const arrFactorId = Math.floor(fullId / 10);
@@ -1318,7 +1332,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
          // main_parent_white_sparks: check by factorId only
          const checkGroupsByFactorId = (groups: number[][] | undefined) => {
            if (!groups) return false;
-           const sparkFactorId = parseInt(spark.factorId, 10);
            for (const group of groups) {
              // Each ID in group is like 20159XX where last digit is level, extract factor ID
              for (const fullId of group) {
@@ -1331,7 +1344,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
          if (checkGroupsByFactorId(filters.main_parent_white_sparks)) return true;
          
          // Check optional main white sparks (match by factorId only)
-         if (filters.optional_main_white_sparks && filters.optional_main_white_sparks.includes(parseInt(spark.factorId, 10))) {
+         if (filters.optional_main_white_sparks && filters.optional_main_white_sparks.includes(sparkFactorId)) {
            return true;
          }
       }

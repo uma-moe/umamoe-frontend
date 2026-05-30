@@ -7,7 +7,7 @@ import { UqlCodeEditorComponent, UqlCompletionResult } from './uql-code-editor.c
 
 type UqlValidationState = 'empty' | 'valid' | 'incomplete' | 'invalid';
 export type UqlSuggestionKind = 'field' | 'operator' | 'function' | 'keyword' | 'value' | 'snippet' | 'punctuation';
-export type UqlValueContext = 'character' | 'blue-factor' | 'pink-factor' | 'green-factor' | 'white-factor' | 'number' | 'text';
+export type UqlValueContext = 'character' | 'support-card' | 'blue-factor' | 'pink-factor' | 'green-factor' | 'white-factor' | 'number' | 'text';
 export type UqlScopeContext = 'main' | 'gp1' | 'gp2' | 'any-gp';
 export type UqlFieldType = 'number' | 'string' | 'array';
 export type UqlHighlightKind = 'keyword' | 'function' | 'field' | 'operator' | 'number' | 'string' | 'paren' | 'identifier' | 'text' | 'punct' | 'ghost' | 'cursor';
@@ -23,6 +23,7 @@ export interface UqlHighlightSegment {
   title?: string;
   valueContext?: UqlValueContext;
   scopeContext?: UqlScopeContext;
+  rarityClass?: string;
 }
 
 export interface UqlSnippet {
@@ -54,6 +55,7 @@ export interface UqlSuggestion {
   scopeContext?: UqlScopeContext;
   backendValue?: string;
   imageUrl?: string;
+  rarityClass?: string;
   fieldType?: UqlFieldType;
   cursorOffset?: number;
 }
@@ -110,7 +112,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   atomicCaretStyle: Record<string, string> | null = null;
   protected readonly simplePredicateDocSnippets = [
     this.createDocSnippet('Speed >= 3 and Wins >= 30'),
-    this.createDocSnippet('White factors >= 12')
+    this.createDocSnippet('White count >= 12'),
+    this.createDocSnippet('Characters in (Special Week, Silence Suzuka)'),
+    this.createDocSnippet('Support card = Kitasan Black [SSR] (Speed) and limitbreak >= 4')
   ];
   protected readonly globalFactorDocSnippets = [
     this.createDocSnippet('Speed >= 6'),
@@ -127,15 +131,20 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   protected readonly whiteSkillDocSnippets = [
     this.createDocSnippet('Main has Right-Handed ○'),
     this.createDocSnippet('GP has any (Right-Handed ○, Left-Handed ○)'),
-    this.createDocSnippet('White sparks has all (Right-Handed ○, Left-Handed ○)'),
+    this.createDocSnippet('White factors in (Speed Straight ○ > 3, Corner Recovery ○)'),
+    this.createDocSnippet('White factors contains all (Right-Handed ○, Left-Handed ○)'),
     this.createDocSnippet('Grandparent does not have Right-Handed ○'),
-    this.createDocSnippet('optional_white(Right-Handed ○, Left-Handed ○)'),
-    this.createDocSnippet('optional_main_white(Right-Handed ○, Left-Handed ○, proc_weight = 5)'),
-    this.createDocSnippet('optional_any_white(Right-Handed ○, Left-Handed ○, type_weight = 250, level_weight = 15)'),
-    this.createDocSnippet('lineage_white(Right-Handed ○, Left-Handed ○, stack_weight = 2000, occurrence_weight = 75)')
+    this.createDocSnippet('optional white = Right-Handed ○'),
+    this.createDocSnippet('optional white in (Right-Handed ○, Left-Handed ○)'),
+    this.createDocSnippet('optional main white in (Right-Handed ○, Left-Handed ○)'),
+    this.createDocSnippet('lineage white in (Right-Handed ○, Left-Handed ○)')
   ];
   protected readonly logicDocSnippets = [
+    this.createDocSnippet('Characters in (Special Week, Silence Suzuka)'),
+    this.createDocSnippet('GP1 character in (Special Week, Silence Suzuka)'),
+    this.createDocSnippet('GP characters not in (Special Week, Silence Suzuka)'),
     this.createDocSnippet('Main character in (Special Week, Silence Suzuka)'),
+    this.createDocSnippet('Support card in (Kitasan Black [SSR] (Speed), Super Creek [SSR] (Stamina))'),
     this.createDocSnippet("Trainer name ilike '%name%'"),
     this.createDocSnippet('(Speed >= 3 or Stamina >= 3) and Wins >= 30')
   ];
@@ -168,13 +177,14 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   private placeholderTargetRewind = 0;
   private knownFactorValueCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownCharacterValueCandidates: UqlKnownSuggestionCandidate[] = [];
+  private knownSupportCardValueCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownFactorFieldCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownFactorSparkValueCandidates = new Map<string, UqlKnownSuggestionCandidate>();
   private knownFieldNames = new Set<string>();
   private readonly placeholderSteps = [
     { text: 'Speed >= 3', rewindTo: 6 },
     { text: 'Speed >= 3 and Wins >= 30', rewindTo: 16 },
-    { text: 'Speed >= 3 and Wins >= 30 and White factors >= 12', rewindTo: 0 },
+    { text: 'Speed >= 3 and Wins >= 30 and White count >= 12', rewindTo: 0 },
     { text: 'Main Speed >= 3', rewindTo: 5 },
     { text: 'Main Speed >= 3 and Main has Right-Handed ○', rewindTo: 21 },
     { text: 'Main Speed >= 3 and Main has Right-Handed ○ and GP Speed >= 3', rewindTo: 0 },
@@ -670,8 +680,8 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     const start = input.selectionStart ?? 0;
     const end = input.selectionEnd ?? start;
     const prefix = this.query.slice(0, start);
-    const { context, allowAnyFactorContext } = this.getValueMatchContext(prefix);
-    if (!context?.endsWith('-factor') || !allowAnyFactorContext) return false;
+    const { context, inFactorArrayList } = this.getValueMatchContext(prefix);
+    if (!context?.endsWith('-factor') || !inFactorArrayList) return false;
 
     event.preventDefault();
     const suffix = this.query.slice(end);
@@ -820,7 +830,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
 
   private getAtomicValueRangeStartingAt(query: string, index: number): { start: number; end: number } | null {
     const match = this.getKnownValueMatchAt(query, index) || this.getKnownNumericValueMatchAt(query, index);
-    if (!match || !match.suggestion.valueContext || (match.suggestion.valueContext !== 'character' && !match.suggestion.valueContext.endsWith('-factor'))) {
+    if (!match || !match.suggestion.valueContext || (match.suggestion.valueContext !== 'character' && match.suggestion.valueContext !== 'support-card' && !match.suggestion.valueContext.endsWith('-factor'))) {
       return null;
     }
     return { start: index, end: index + match.text.length };
@@ -971,6 +981,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   private rebuildHighlightLookups(): void {
     const valueCandidates: UqlKnownSuggestionCandidate[] = [];
     const characterCandidates: UqlKnownSuggestionCandidate[] = [];
+    const supportCardCandidates: UqlKnownSuggestionCandidate[] = [];
     const fieldCandidates: UqlKnownSuggestionCandidate[] = [];
     const factorSparkValueCandidates = new Map<string, UqlKnownSuggestionCandidate>();
     const fieldNames = new Set<string>();
@@ -993,9 +1004,13 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       if (suggestion.kind === 'value' && suggestion.valueContext === 'character') {
         characterCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
       }
+      if (suggestion.kind === 'value' && suggestion.valueContext === 'support-card') {
+        supportCardCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
+      }
     }
     this.knownFactorValueCandidates = valueCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
     this.knownCharacterValueCandidates = characterCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
+    this.knownSupportCardValueCandidates = supportCardCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
     this.knownFactorFieldCandidates = fieldCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
     this.knownFactorSparkValueCandidates = factorSparkValueCandidates;
     this.knownFieldNames = fieldNames;
@@ -1009,9 +1024,11 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       seenCandidates.add(candidate);
       candidates.push({ candidate, lowerCandidate: candidate.toLowerCase(), displayText, suggestion });
     };
+    const displayText = suggestion.valueContext === 'support-card' ? suggestion.label : undefined;
     addCandidate(suggestion.label);
-    addCandidate(suggestion.insertText);
-    addCandidate(suggestion.backendValue);
+    addCandidate(suggestion.insertText, displayText);
+    suggestion.matchPhrases?.forEach(phrase => addCandidate(phrase, displayText));
+    addCandidate(suggestion.backendValue, displayText);
     return candidates;
   }
 
@@ -1072,7 +1089,8 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
           displayText: valueMatch.displayText,
           imageUrl: valueMatch.suggestion.imageUrl,
           title: valueMatch.suggestion.detail,
-          valueContext: valueMatch.suggestion.valueContext
+          valueContext: valueMatch.suggestion.valueContext,
+          rarityClass: valueMatch.suggestion.rarityClass
         });
         i += valueMatch.text.length;
         continue;
@@ -1084,7 +1102,8 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
           displayText: numericValueMatch.displayText,
           imageUrl: numericValueMatch.suggestion.imageUrl,
           title: numericValueMatch.suggestion.detail,
-          valueContext: numericValueMatch.suggestion.valueContext
+          valueContext: numericValueMatch.suggestion.valueContext,
+          rarityClass: numericValueMatch.suggestion.rarityClass
         });
         i += numericValueMatch.text.length;
         continue;
@@ -1191,6 +1210,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (context === 'character') {
       return this.getKnownSuggestionMatchAt(text, index, this.knownCharacterValueCandidates, context);
     }
+    if (context === 'support-card') {
+      return this.getKnownSuggestionMatchAt(text, index, this.knownSupportCardValueCandidates, context);
+    }
     if (context?.endsWith('-factor')) {
       const match = this.getKnownSuggestionMatchAt(text, index, this.knownFactorValueCandidates, context, matchContext.allowAnyFactorContext);
       if (/[0-9]/.test(text[index] || '') && !matchContext.allowAnyFactorContext && match && /[^0-9]/.test(match.text)) return match;
@@ -1207,7 +1229,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   private getKnownNumericValueMatchAt(text: string, index: number): { text: string; displayText?: string; suggestion: UqlSuggestion } | null {
     if (!/[0-9]/.test(text[index] || '')) return null;
     const matchContext = this.getValueMatchContext(text.slice(0, index));
-    if (!matchContext.context?.endsWith('-factor') || !matchContext.allowAnyFactorContext) return null;
+    if (!matchContext.context?.endsWith('-factor') || !matchContext.inFactorArrayList) return null;
     let end = index + 1;
     while (end < text.length && /[0-9]/.test(text[end])) end++;
     const candidateText = text.slice(index, end);
@@ -1253,6 +1275,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (/\bpink[_\s-]?sparks?\b|\bpink factor/.test(haystack)) return 'pink-factor';
     if (/\bgreen[_\s-]?sparks?\b|\bunique skills?\b|\bgreen factor/.test(haystack)) return 'green-factor';
     if (/\bwhite[_\s-]?sparks?\b|\bwhite skills?\b|\bwhite factors?\b|\bwhite factor/.test(haystack)) return 'white-factor';
+    if (/\bsupport[_\s-]?cards?\b|\bsupport card id\b|\bcard id\b/.test(haystack)) return 'support-card';
     return undefined;
   }
 
@@ -1438,6 +1461,8 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     const trimmedPrefix = prefix.trimEnd();
     const scoringSuggestions = this.whiteScoringSuggestionsForPrefix(prefix);
     if (scoringSuggestions.length) return scoringSuggestions;
+    const skillLevelSuggestions = this.skillLevelOperatorSuggestionsForPrefix(prefix);
+    if (skillLevelSuggestions.length) return skillLevelSuggestions;
     const arrayValueSuggestions = this.arrayValueSuggestionsForPrefix(prefix);
     if (arrayValueSuggestions.length) {
       return arrayValueSuggestions;
@@ -1464,59 +1489,65 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (this.isTypingBooleanContinuation(prefix)) {
       return this.continuationSuggestions(trimmedPrefix);
     }
-    if (this.hasExpressionPrefixMatch(query, cursor)) {
-      return this.suggestions.filter(suggestion => suggestion.kind === 'field' || suggestion.kind === 'keyword' || suggestion.kind === 'function' || suggestion.kind === 'snippet');
-    }
     if (this.isAfterKnownValue(prefix) || this.isAfterCompleteLiteralPredicate(trimmedPrefix)) {
       return this.continuationSuggestions(trimmedPrefix);
     }
-    const functionValueSuggestions = this.valueSuggestionsForPrefix(prefix);
-    if (functionValueSuggestions.length) return functionValueSuggestions;
+    const contextualValueSuggestions = this.valueSuggestionsForPrefix(prefix);
+    if (contextualValueSuggestions.length) return contextualValueSuggestions;
+    if (this.hasExpressionPrefixMatch(query, cursor)) {
+      return this.suggestions.filter(suggestion => suggestion.kind === 'field' || suggestion.kind === 'keyword' || suggestion.kind === 'function' || suggestion.kind === 'snippet');
+    }
     return this.expressionStartSuggestions();
   }
 
   private arrayValueSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
     const matchContext = this.getValueMatchContext(prefix);
     const context = matchContext.context;
-    if (!context?.endsWith('-factor') || !matchContext.allowAnyFactorContext) return [];
+    if (!context?.endsWith('-factor') || !matchContext.inFactorArrayList) return [];
     return this.suggestions.filter(suggestion => suggestion.kind === 'value' && this.matchesValueContext(suggestion.valueContext, context, matchContext.allowAnyFactorContext));
   }
 
-  private whiteScoringSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
-    const match = this.getWhiteScoringFunctionContext(prefix);
-    if (!match) return [];
-    const argsMatch = prefix.match(/\b(?:optional_white|optional_main_white|optional_any_white|lineage_white)\s*\((.*)$/i);
-    const argsText = argsMatch?.[1] || '';
-    const currentArg = argsText.slice(argsText.lastIndexOf(',') + 1);
-    if (/=\s*[^,()]*$/i.test(currentArg)) return [];
-    const skillSuggestions = this.suggestions.filter(suggestion => suggestion.kind === 'value' && suggestion.valueContext === 'white-factor');
-    const parameterSuggestions = this.whiteScoringParameterSuggestionsForFunction(match.functionName);
-    if (match.inParameterArea) return parameterSuggestions;
-    if (/,\s*$/.test(argsText)) return [...skillSuggestions, ...parameterSuggestions];
-    return skillSuggestions;
+  private skillLevelOperatorSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
+    const { context, allowAnyFactorContext, inFactorArrayList } = this.getValueMatchContext(prefix);
+    if (!context?.endsWith('-factor') || !inFactorArrayList) return [];
+    const currentClause = this.getCurrentClausePrefix(prefix);
+    const listStart = Math.max(currentClause.lastIndexOf('('), currentClause.lastIndexOf(','));
+    let currentItem: string;
+    if (listStart >= 0) {
+      currentItem = currentClause.slice(listStart + 1);
+    } else {
+      const singleMatch = currentClause.match(/\b(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s+(.*)$/i);
+      if (!singleMatch) return [];
+      currentItem = singleMatch[1];
+    }
+    // Only offer a star level once the skill name is finished (trailing space) and no comparison exists yet.
+    if (!/\s$/.test(currentItem) || /(?:>=|<=|<>|!=|=|>|<)/.test(currentItem)) return [];
+    const skillText = currentItem.trim();
+    if (!skillText || !this.isKnownFactorValue(skillText, context, allowAnyFactorContext)) return [];
+    return this.skillLevelOperatorSuggestions();
   }
 
-  private whiteScoringParameterSuggestionsForFunction(functionName: string): UqlSuggestion[] {
-    const optionalParams: UqlSuggestion[] = [
-      { label: 'proc_weight', insertText: 'proc_weight = 10', kind: 'value', detail: 'Weight matched skills by proc chance' },
-      { label: 'proc_kind', insertText: 'proc_kind = 3', kind: 'value', detail: '3 skill, 2 race, 4 scenario chance table' },
-      { label: 'affinity', insertText: 'affinity = 50', kind: 'value', detail: 'Override row-derived affinity' },
-      { label: 'type_weight', insertText: 'type_weight = 250', kind: 'value', detail: 'Score per distinct requested skill' },
-      { label: 'distinct_weight', insertText: 'distinct_weight = 250', kind: 'value', detail: 'Alias for type_weight' },
-      { label: 'level_weight', insertText: 'level_weight = 15', kind: 'value', detail: 'Score per matched spark level' },
-      { label: 'match_weight', insertText: 'match_weight = 40', kind: 'value', detail: 'Score per matched occurrence' },
-      { label: 'weight', insertText: 'weight = 2', kind: 'value', detail: 'Overall multiplier' },
+  private isKnownFactorValue(value: string, context: UqlValueContext, allowAnyFactorContext: boolean): boolean {
+    const normalized = this.normalizeSuggestionToken(value);
+    if (!normalized) return false;
+    return this.suggestions.some(suggestion => suggestion.kind === 'value'
+      && this.matchesValueContext(suggestion.valueContext, context, allowAnyFactorContext)
+      && (this.normalizeSuggestionToken(suggestion.label) === normalized || this.normalizeSuggestionToken(suggestion.insertText) === normalized));
+  }
+
+  private skillLevelOperatorSuggestions(): UqlSuggestion[] {
+    return [
+      { label: '> stars', insertText: '> ', kind: 'operator', detail: 'This skill above N stars - leave blank to match all star levels' },
+      { label: '>= stars', insertText: '>= ', kind: 'operator', detail: 'This skill at N or more stars' },
+      { label: '= stars', insertText: '= ', kind: 'operator', detail: 'This skill at exactly N stars' },
+      { label: '<= stars', insertText: '<= ', kind: 'operator', detail: 'This skill at N or fewer stars' },
+      { label: '< stars', insertText: '< ', kind: 'operator', detail: 'This skill below N stars' },
     ];
-    const lineageParams: UqlSuggestion[] = [
-      { label: 'stack_weight', insertText: 'stack_weight = 2000', kind: 'value', detail: 'Base stack score' },
-      { label: 'occurrence_weight', insertText: 'occurrence_weight = 75', kind: 'value', detail: 'Score per occurrence' },
-      { label: 'base', insertText: 'base = 120', kind: 'value', detail: 'Base percent for stack formula' },
-      { label: 'base_percent', insertText: 'base_percent = 120', kind: 'value', detail: 'Alias for base' },
-      { label: 'decay', insertText: 'decay = 25', kind: 'value', detail: 'Decay percent between requested skills' },
-      { label: 'decay_percent', insertText: 'decay_percent = 25', kind: 'value', detail: 'Alias for decay' },
-      { label: 'weight', insertText: 'weight = 2', kind: 'value', detail: 'Overall multiplier' },
-    ];
-    return functionName === 'lineage_white' ? lineageParams : optionalParams;
+  }
+
+  private whiteScoringSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
+    if (!this.isInsideWhiteScoringFunction(prefix)) return [];
+    return this.suggestions.filter(suggestion => suggestion.kind === 'value' && suggestion.valueContext === 'white-factor');
   }
 
   private expressionStartSuggestions(): UqlSuggestion[] {
@@ -1569,6 +1600,11 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
         { label: 'has any', insertText: 'has any ()', kind: 'operator', detail: 'At least one listed skill/factor is present', cursorOffset: -1 },
         { label: 'has all', insertText: 'has all ()', kind: 'operator', detail: 'Every listed skill/factor is present', cursorOffset: -1 },
         { label: 'does not have', insertText: 'does not have ', kind: 'operator', detail: 'Exclude one skill/factor' },
+        { label: 'contains', insertText: 'contains ', kind: 'operator', detail: 'Alias for "has one"' },
+        { label: 'contains any', insertText: 'contains any ()', kind: 'operator', detail: 'Alias for "has any"', cursorOffset: -1 },
+        { label: 'contains all', insertText: 'contains all ()', kind: 'operator', detail: 'Alias for "has all"', cursorOffset: -1 },
+        { label: 'in (...)', insertText: 'in ()', kind: 'operator', detail: 'Match any listed skill/factor (like has any)', cursorOffset: -1 },
+        { label: 'not in (...)', insertText: 'not in ()', kind: 'operator', detail: 'Exclude every listed skill/factor', cursorOffset: -1 },
       ];
     }
     return [
@@ -1649,13 +1685,17 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   }
 
   private matchFieldBeforeTrailingOperatorPrefix(trimmedPrefix: string): { fieldType?: UqlFieldType } | null {
-    const match = trimmedPrefix.match(/^(.*?)\s+([A-Za-z][A-Za-z\s]*)$/);
-    if (!match) return null;
-    const operatorToken = match[2].toLowerCase().replace(/\s+/g, ' ').trim();
-    if (!operatorToken) return null;
-    const operators = ['does not have', 'not in', 'has all', 'has any', 'between', 'ilike', 'like', 'has', 'in'];
-    if (!operators.some(operator => operator.startsWith(operatorToken))) return null;
-    return this.matchTrailingField(match[1].trimEnd());
+    const operators = ['does not have', 'not in', 'contains all', 'contains any', 'has all', 'has any', 'between', 'ilike', 'like', 'contains', 'has', 'in'];
+    for (let index = trimmedPrefix.length - 1; index > 0; index--) {
+      if (!/\s/.test(trimmedPrefix[index])) continue;
+      const fieldText = trimmedPrefix.slice(0, index).trimEnd();
+      const operatorToken = trimmedPrefix.slice(index + 1).toLowerCase().replace(/\s+/g, ' ').trim();
+      if (!fieldText || !operatorToken) continue;
+      if (!operators.some(operator => operator.startsWith(operatorToken))) continue;
+      const fieldMatch = this.matchTrailingField(fieldText);
+      if (fieldMatch) return fieldMatch;
+    }
+    return null;
   }
 
   private fieldSuggestionPhraseIndex: Array<{ fieldType?: UqlFieldType; phrases: string[] }> = [];
@@ -1703,9 +1743,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (!normalizedToken) return 0;
     const entry = this.getSuggestionSearchEntry(suggestion);
     if (entry.normalizedLabel.startsWith(normalizedToken) || entry.normalizedInsertText.startsWith(normalizedToken)) return 0;
-    if (entry.haystack.includes(normalizedToken)) return 1;
     const queryTerms = this.extractSuggestionTerms(normalizedToken);
     if (queryTerms.length === 0) return null;
+    if (normalizedToken.length >= 3 && entry.haystack.includes(normalizedToken)) return 1;
     if (this.matchesQueryTerms(entry.searchTerms, queryTerms, true)) return 2;
     if (this.matchesQueryTerms(entry.searchTerms, queryTerms, false)) return 3;
     return null;
@@ -1810,7 +1850,10 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (/(trainer name|trainer_name|name)$/i.test(fieldPrefix)) {
       return { label: "'%name%'", insertText: "'%name%'", kind: 'value', detail: 'Text match value' };
     }
-    if (/^(main|parent)$/i.test(fieldPrefix) || /(character|chara|parent|uma|_id)$/i.test(fieldPrefix)) {
+    if (/(support card|support_card|card)$/i.test(fieldPrefix)) {
+      return { label: 'Support card name', insertText: 'Support card name', kind: 'value', detail: 'Support card name' };
+    }
+    if (/^(main|parent)$/i.test(fieldPrefix) || /(characters?|charas?|chara|umas?|parent|_id)$/i.test(fieldPrefix)) {
       return { label: '1001', insertText: '1001', kind: 'value', detail: 'Character id' };
     }
     return { label: '0', insertText: '0', kind: 'value', detail: 'Any number' };
@@ -1822,12 +1865,23 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     return this.suggestions.filter(suggestion => suggestion.kind === 'value' && this.matchesValueContext(suggestion.valueContext, context, allowAnyFactorContext));
   }
 
-  private getValueMatchContext(prefix: string): { context: UqlValueContext | null; allowAnyFactorContext: boolean } {
+  private getValueMatchContext(prefix: string): { context: UqlValueContext | null; allowAnyFactorContext: boolean; inFactorArrayList: boolean } {
     const context = this.getValueContext(prefix);
+    const inFactorArrayList = !!context?.endsWith('-factor') && this.isArrayFactorValuePrefix(prefix);
     return {
       context,
-      allowAnyFactorContext: !!context?.endsWith('-factor') && this.isArrayFactorValuePrefix(prefix)
+      allowAnyFactorContext: inFactorArrayList && this.shouldAllowAnyFactorContext(prefix),
+      inFactorArrayList,
     };
+  }
+
+  private shouldAllowAnyFactorContext(prefix: string): boolean {
+    const currentClause = this.getCurrentClausePrefix(prefix);
+    const friendlyArrayMatch = currentClause.match(/([^()]+?)\s+(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s*(?:\([^)]*)?[^)]*$/i);
+    if (friendlyArrayMatch) {
+      return this.isScopedParentFactorPrefix(friendlyArrayMatch[1]);
+    }
+    return /^(?:not\s+)?(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains|in|not\s+in)\s*(?:\([^)]*)?[^)]*$/i.test(currentClause.trimStart());
   }
 
   private matchesValueContext(candidateContext: UqlValueContext | undefined, expectedContext: UqlValueContext, allowAnyFactorContext = false): boolean {
@@ -1838,29 +1892,26 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   private isArrayFactorValuePrefix(prefix: string): boolean {
     const currentClause = this.getCurrentClausePrefix(prefix);
     return /(?:contains|overlaps|has_all|contains_all)\s*\(\s*[^,()]+\s*,\s*(?:\([^)]*)?[^)]*$/i.test(currentClause)
-      || /[^()]+?\s+(?:has\s+any|has\s+all|does\s+not\s+have|has)\s*(?:\([^)]*)?[^)]*$/i.test(currentClause)
+      || /[^()]+?\s+(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s*(?:\([^)]*)?[^)]*$/i.test(currentClause)
       || /\b(?:not\s+in|in)\s*\([^)]*$/i.test(currentClause);
   }
 
   private getValueContext(prefix: string): UqlValueContext | null {
     const currentClause = this.getCurrentClausePrefix(prefix);
-    const whiteScoringFunctionContext = this.getWhiteScoringFunctionContext(currentClause);
-    if (whiteScoringFunctionContext) {
-      if (!whiteScoringFunctionContext.inParameterArea) return 'white-factor';
-    }
+    if (this.isInsideWhiteScoringFunction(currentClause)) return 'white-factor';
 
     const functionMatch = currentClause.match(/(?:contains|overlaps|has_all|contains_all)\s*\(\s*([^,()]+)\s*,\s*(?:\([^)]*)?[^)]*$/i);
     if (functionMatch) {
       return this.valueContextForField(functionMatch[1]);
     }
 
-    const friendlyArrayMatch = currentClause.match(/([^()]+?)\s+(?:has\s+any|has\s+all|does\s+not\s+have|has)\s*(?:\([^)]*)?[^)]*$/i);
+    const friendlyArrayMatch = currentClause.match(/([^()]+?)\s+(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s*(?:\([^)]*)?[^)]*$/i);
     if (friendlyArrayMatch) {
       if (this.isScopedParentFactorPrefix(friendlyArrayMatch[1])) return 'white-factor';
       return this.valueContextForField(friendlyArrayMatch[1]);
     }
 
-    if (/^(?:not\s+)?(?:has\s+any|has\s+all|does\s+not\s+have|has)\s*(?:\([^)]*)?[^)]*$/i.test(currentClause.trimStart())) {
+    if (/^(?:not\s+)?(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains|in|not\s+in)\s*(?:\([^)]*)?[^)]*$/i.test(currentClause.trimStart())) {
       return 'white-factor';
     }
 
@@ -1874,23 +1925,8 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     return null;
   }
 
-  private getWhiteScoringFunctionContext(prefix: string): { functionName: string; inParameterArea: boolean } | null {
-    const match = prefix.match(/\b(optional_white|optional_main_white|optional_any_white|lineage_white)\s*\((.*)$/i);
-    if (!match) return null;
-    const functionName = match[1].toLowerCase();
-    const argsText = match[2];
-    const openListIndex = argsText.lastIndexOf('(');
-    const closeListIndex = argsText.lastIndexOf(')');
-    const lastCommaIndex = argsText.lastIndexOf(',');
-    const currentArg = argsText.slice(lastCommaIndex + 1);
-    const parameterNames = functionName === 'lineage_white'
-      ? ['stack_weight', 'occurrence_weight', 'base', 'base_percent', 'decay', 'decay_percent', 'weight']
-      : ['proc_weight', 'proc_kind', 'affinity', 'type_weight', 'distinct_weight', 'level_weight', 'match_weight', 'weight'];
-    const trimmedArg = currentArg.trim().toLowerCase();
-    const hasClosedNestedList = openListIndex >= 0 && openListIndex <= closeListIndex;
-    const isTypingParameter = !!trimmedArg && parameterNames.some(name => name.startsWith(trimmedArg.replace(/\s*=.*$/, '')) || trimmedArg.startsWith(`${name} `) || trimmedArg.startsWith(`${name}=`));
-    const inParameterArea = (hasClosedNestedList && lastCommaIndex > closeListIndex) || isTypingParameter || /[A-Za-z_]\w*\s*=/.test(currentArg);
-    return { functionName, inParameterArea };
+  private isInsideWhiteScoringFunction(prefix: string): boolean {
+    return /\b(?:optional_white|optional_main_white|optional_any_white|lineage_white|optional\s+white|optional\s+main\s+white|optional\s+any\s+white|lineage\s+white)\s*\([^)]*$/i.test(prefix);
   }
 
   private getCurrentClausePrefix(prefix: string): string {
@@ -1942,14 +1978,19 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       if (context) return context;
     }
     if (this.endsWithAny(normalized, [
-      'main character', 'main character runner', 'runner', 'main uma', 'main chara', 'main chara id',
+      'characters', 'character', 'umas', 'uma', 'charas', 'chara',
+      'main character', 'main characters', 'main character runner', 'runner', 'runners', 'main uma', 'main umas', 'main chara', 'main charas', 'main chara id',
       'parent character', 'parent uma', 'main parent character',
-      'grandparent 1', 'grand parent 1', 'gp1', 'left parent', 'left character', 'left uma', 'left chara id',
-      'grandparent 2', 'grand parent 2', 'gp2', 'right parent', 'right character', 'right uma', 'right chara id'
+      'grandparent 1', 'grand parent 1', 'gp1', 'left parent', 'left character', 'left characters', 'left uma', 'left umas', 'left chara', 'left charas', 'left chara id', 'gp1 character', 'gp1 characters', 'gp1 uma', 'gp1 umas', 'gp1 chara', 'gp1 charas',
+      'grandparent 2', 'grand parent 2', 'gp2', 'right parent', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas', 'right chara id', 'gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas',
+      'gp character', 'gp characters', 'grandparent character', 'grandparent characters', 'any gp character', 'any gp characters'
     ])) {
       return 'character';
     }
-    if (this.endsWithAny(normalized, ['white sparks', 'white skills', 'white factors', 'main parent white skills', 'main parent skills', 'parent white skills', 'parent skills', 'main white factors', 'main white sparks'])) {
+    if (this.endsWithAny(normalized, ['support card', 'support', 'card', 'support card id'])) {
+      return 'support-card';
+    }
+    if (this.endsWithAny(normalized, ['white sparks', 'white skills', 'white factors', 'main parent white skills', 'main parent skills', 'parent white skills', 'parent skills', 'main white factors', 'main white sparks', 'optional white', 'optional main white', 'lineage white'])) {
       return 'white-factor';
     }
     if (this.endsWithAny(normalized, ['green sparks', 'unique skills', 'green factors'])) {

@@ -52,6 +52,18 @@
         </header>
 
         <section class="uql-doc-section">
+          <h6>Query Shape</h6>
+          <p>Most filters read as <span class="uql-doc-inline-code">[slot]</span> <span class="uql-doc-inline-code">[field or factor]</span> <span class="uql-doc-inline-code">[operator]</span> <span class="uql-doc-inline-code">[value]</span>. Leaving the slot out makes the filter global or lets it check every relevant slot.</p>
+          <dl class="uql-doc-table">
+            <div><dt>Speed &gt;= 6</dt><dd>Total Speed across the visible lineage.</dd></div>
+            <div><dt>Main Speed &gt;= 3</dt><dd>Speed on the main parent slot only.</dd></div>
+            <div><dt>GP Speed &gt;= 3</dt><dd>Speed on either grandparent slot.</dd></div>
+            <div><dt>Characters in (...)</dt><dd>Main, GP1, or GP2 is in the list.</dd></div>
+            <div><dt>Support card = ...</dt><dd>Support card names work like character names.</dd></div>
+          </dl>
+        </section>
+
+        <section class="uql-doc-section">
           <h6>Start With A Simple Predicate</h6>
           <p>A predicate is one complete condition. Numeric filters use comparison operators such as <span class="uql-doc-inline-code">&gt;=</span>, <span class="uql-doc-inline-code">=</span>, and <span class="uql-doc-inline-code">&lt;=</span>.</p>
           <div class="uql-doc-example-row">
@@ -100,7 +112,7 @@
 
         <section class="uql-doc-section">
           <h6>White Skills And Array Fields</h6>
-          <p>Skill lists use array operators. Use <span class="uql-doc-inline-code">has</span> for one required skill, <span class="uql-doc-inline-code">has any (...)</span> for at least one listed skill, and <span class="uql-doc-inline-code">has all (...)</span> when every listed skill must exist.</p>
+          <p>Skill lists use array operators. Use <span class="uql-doc-inline-code">has</span> for one required skill, <span class="uql-doc-inline-code">in (...)</span> or <span class="uql-doc-inline-code">has any (...)</span> for at least one listed skill, and <span class="uql-doc-inline-code">contains all (...)</span> or <span class="uql-doc-inline-code">has all (...)</span> when every listed skill must exist.</p>
           <div class="uql-doc-code-block">
             <div class="uql-doc-code-toolbar">
               <span class="uql-doc-code-lang">uql</span>
@@ -121,36 +133,41 @@
               </div>
             </div>
           </div>
-          <p>Known skill names are treated as values, even when they contain words such as <span class="uql-doc-inline-code">and</span>, <span class="uql-doc-inline-code">or</span>, <span class="uql-doc-inline-code">in</span>, or <span class="uql-doc-inline-code">all</span>.</p>
+          <p>Known skill names are treated as values, even when they contain words such as <span class="uql-doc-inline-code">and</span>, <span class="uql-doc-inline-code">or</span>, <span class="uql-doc-inline-code">in</span>, or <span class="uql-doc-inline-code">all</span>. Add <span class="uql-doc-inline-code">&gt;</span>, <span class="uql-doc-inline-code">&gt;=</span>, <span class="uql-doc-inline-code">=</span>, <span class="uql-doc-inline-code">&lt;=</span>, or <span class="uql-doc-inline-code">&lt;</span> after a skill name to filter a specific star level; leave it blank to match every star level.</p>
         </section>
 
         <section class="uql-doc-section">
           <h6>Optional And Lineage Sorting</h6>
-          <p>Use optional and lineage white filters when matching skills should influence result order. Add scoring settings as trailing comma attributes.</p>
+          <p>Use optional and lineage white filters when matching skills should influence result order.</p>
           <dl class="uql-doc-table">
-            <div><dt>optional_white(...)</dt><dd>Requires and scores global white skill matches.</dd></div>
-            <div><dt>optional_main_white(...)</dt><dd>Requires and scores main parent white skill matches.</dd></div>
-            <div><dt>optional_any_white(...)</dt><dd>Checks global and main parent white skill matches.</dd></div>
-            <div><dt>lineage_white(...)</dt><dd>Sorts by lineage-style white skill stacking.</dd></div>
+            <div><dt>optional white = ...</dt><dd>Requires and scores one global white skill match.</dd></div>
+            <div><dt>optional white in (...)</dt><dd>Requires and scores listed global white skill matches.</dd></div>
+            <div><dt>optional main white in (...)</dt><dd>Requires and scores main parent white skill matches.</dd></div>
+            <div><dt>lineage white in (...)</dt><dd>Sorts by lineage-style white skill stacking.</dd></div>
           </dl>
+        </section>
+
+        <section class="uql-doc-section">
+          <h6>Support Cards</h6>
+          <p>Support card names can be typed directly. Autocomplete adds rarity and type, such as <span class="uql-doc-inline-code">[SSR] (Speed)</span>. Use <span class="uql-doc-inline-code">limitbreak</span>, <span class="uql-doc-inline-code">limit break</span>, or <span class="uql-doc-inline-code">lb</span> for the minimum limit break.</p>
           <dl class="uql-doc-table">
-            <div><dt>type_weight / distinct_weight</dt><dd>Score per distinct requested optional white skill.</dd></div>
-            <div><dt>level_weight</dt><dd>Score per matched spark level.</dd></div>
-            <div><dt>match_weight</dt><dd>Score per matched occurrence.</dd></div>
-            <div><dt>proc_weight</dt><dd>Adds proc-chance weighted scoring for matched skills.</dd></div>
-            <div><dt>proc_kind</dt><dd>Chance table: 3 skill, 2 race, 4 scenario.</dd></div>
-            <div><dt>affinity</dt><dd>Overrides row-derived affinity for proc scoring.</dd></div>
-            <div><dt>stack_weight</dt><dd>Base lineage stack score.</dd></div>
-            <div><dt>occurrence_weight</dt><dd>Lineage score per occurrence.</dd></div>
-            <div><dt>base / base_percent</dt><dd>Lineage stack base percent.</dd></div>
-            <div><dt>decay / decay_percent</dt><dd>Lineage decay percent between requested skills.</dd></div>
-            <div><dt>weight</dt><dd>Overall multiplier.</dd></div>
+            <div><dt>Support card = ...</dt><dd>The selected support card is in the deck.</dd></div>
+            <div><dt>Support card in (...)</dt><dd>Any listed support card is in the deck.</dd></div>
+            <div><dt>limitbreak &gt;= 4</dt><dd>At least one support card matches the limit-break rule.</dd></div>
+            <div><dt>Support card = ... and limitbreak &gt;= 4</dt><dd>The named support card must match the limit-break rule.</dd></div>
           </dl>
         </section>
 
         <section class="uql-doc-section">
           <h6>Characters, Trainers, And Logic</h6>
-          <p>Character names can be typed directly. Trainer text supports <span class="uql-doc-inline-code">ilike</span> with <span class="uql-doc-inline-code">%</span> wildcards. Use parentheses whenever <span class="uql-doc-inline-code">and</span> and <span class="uql-doc-inline-code">or</span> appear together.</p>
+          <p>Character names can be typed directly. <span class="uql-doc-inline-code">Characters in (...)</span> checks main, GP1, or GP2. Slot-scoped forms such as <span class="uql-doc-inline-code">GP1 character in (...)</span> check only that slot.</p>
+          <dl class="uql-doc-table">
+            <div><dt>Characters in (...)</dt><dd>Any main, GP1, or GP2 character matches.</dd></div>
+            <div><dt>Characters not in (...)</dt><dd>Main, GP1, and GP2 must all be outside the list.</dd></div>
+            <div><dt>GP characters in (...)</dt><dd>Either grandparent character matches.</dd></div>
+            <div><dt>Parent character = ...</dt><dd>The selected main parent card or variant matches.</dd></div>
+          </dl>
+          <p>Trainer text supports <span class="uql-doc-inline-code">ilike</span> with <span class="uql-doc-inline-code">%</span> wildcards. Use parentheses whenever <span class="uql-doc-inline-code">and</span> and <span class="uql-doc-inline-code">or</span> appear together.</p>
           <div class="uql-doc-code-block">
             <div class="uql-doc-code-toolbar">
               <span class="uql-doc-code-lang">uql</span>

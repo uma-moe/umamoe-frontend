@@ -26,6 +26,7 @@ import { SupportCardShort, SupportCardType, Rarity } from '../../models/support-
 import { VeteranMember } from '../../models/profile.model';
 import { LinkedAccount } from '../../models/auth.model';
 import { CHARACTERS, getCharacterById as getMasterCharacterById, getCharacterNameEntries } from '../../data/character.data';
+import { SUPPORT_CARDS } from '../../data/support-cards.data';
 import { SKILLS } from '../../data/skills.data';
 import { getCharacterName } from '../../pages/profile/profile-helpers';
 import { FactorService } from '../../services/factor.service';
@@ -81,6 +82,14 @@ interface FriendlyFieldAlias {
   type?: UqlFieldType;
 }
 
+export interface UqlSparkHighlight {
+  globalSparkIds?: number[];
+  mainSparkIds?: number[];
+  optionalWhiteFactorIds?: number[];
+  optionalMainWhiteFactorIds?: number[];
+  lineageWhiteFactorIds?: number[];
+}
+
 type UqlNamedFactor = FriendlySparkField & { valueContext: UqlFactorValueContext };
 
 interface FriendlySparkComparisonAlias extends FriendlySparkField {
@@ -99,6 +108,15 @@ interface FriendlyFieldAliasReplacement {
   pattern: RegExp;
 }
 
+interface FriendlyCharacterScopeAliasReplacement {
+  alias: string;
+  label: string;
+  fields: string[];
+  comparisonPattern: RegExp;
+  inPattern: RegExp;
+  notInPattern: RegExp;
+}
+
 interface FriendlyArrayAliasReplacement {
   alias: string;
   label: string;
@@ -107,6 +125,11 @@ interface FriendlyArrayAliasReplacement {
   hasAnyPattern: RegExp;
   doesNotHavePattern: RegExp;
   hasPattern: RegExp;
+  containsAllPattern: RegExp;
+  containsAnyPattern: RegExp;
+  inPattern: RegExp;
+  notInPattern: RegExp;
+  containsPattern: RegExp;
 }
 
 interface UqlNamedFactorComparison extends UqlNamedFactor {
@@ -230,6 +253,7 @@ export interface UnifiedSearchParams {
   max_follower_num?: number;
   sort_by?: string;
   uql?: string;
+  uql_highlight?: UqlSparkHighlight;
   player_chara_id_2?: number;
   desired_main_chara_id?: number;
   main_win_saddle?: number[];
@@ -305,13 +329,13 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'Main Skill', insertText: 'Main white factors has Right-Handed ○' },
     { label: 'Any Skills', insertText: 'White sparks has any (Right-Handed ○, Left-Handed ○)' },
     { label: 'All Skills', insertText: 'White sparks has all (Right-Handed ○, Left-Handed ○)' },
-    { label: 'Optional White', insertText: 'optional_white(Right-Handed ○, Left-Handed ○)' },
-    { label: 'Lineage White', insertText: 'lineage_white(Right-Handed ○, Left-Handed ○)' },
-    { label: 'Weighted Optional', insertText: 'optional_white(Right-Handed ○, Left-Handed ○, proc_weight = 10)' },
+    { label: 'Optional White', insertText: 'optional white in (Right-Handed ○, Left-Handed ○)' },
+    { label: 'Optional Main White', insertText: 'optional main white in (Right-Handed ○, Left-Handed ○)' },
+    { label: 'Lineage White', insertText: 'lineage white in (Right-Handed ○, Left-Handed ○)' },
     { label: 'OR group', insertText: '(Speed >= 3 or Stamina >= 3) and Wins >= 30' },
     { label: 'Main Speed', insertText: 'Main Speed >= 3' },
     { label: 'Grandparent Speed', insertText: 'Grandparent Speed >= 3' },
-    { label: 'Either path', insertText: '(Wins >= 35 and White factors >= 12) or (Blue stars >= 9 and Pink stars >= 6)' },
+    { label: 'Either path', insertText: '(Wins >= 35 and White count >= 12) or (Blue stars >= 9 and Pink stars >= 6)' },
     { label: 'Exclude Test', insertText: "not Trainer name ilike '%test%'" }
   ];
   uqlSuggestions: UqlSuggestion[] = [];
@@ -334,21 +358,25 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   ];
   private readonly friendlyFieldAliases: FriendlyFieldAlias[] = [
     { label: 'Wins', aliases: ['wins', 'win count', 'g1 wins'], field: 'win_count', type: 'number' },
-    { label: 'White factors', aliases: ['white factors', 'white factor count', 'white count'], field: 'white_count', type: 'number' },
+    { label: 'White count', aliases: ['white factor count', 'white count'], field: 'white_count', type: 'number' },
     { label: 'Followers', aliases: ['followers', 'follower count'], field: 'follower_num', type: 'number' },
     { label: 'Trainer name', aliases: ['trainer name', 'trainer', 'name'], field: 'trainer_name', type: 'string' },
     { label: 'Trainer ID', aliases: ['trainer id', 'account id'], field: 'account_id', type: 'string' },
-    { label: 'Main character', aliases: ['main character', 'runner', 'main uma', 'main chara'], field: 'main_chara_id', type: 'number' },
+    { label: 'Support card', aliases: ['support card', 'support', 'card', 'support card id'], field: 'support_card_id', type: 'number' },
+    { label: 'LB', aliases: ['lb', 'limitbreak', 'limit break', 'limit_break', 'limit break count', 'limitbreak count', 'limit_break_count', 'min lb', 'minimum lb'], field: 'limit_break_count', type: 'number' },
+    { label: 'Characters', aliases: ['characters', 'character', 'umas', 'uma', 'charas', 'chara'], field: 'characters', type: 'number' },
+    { label: 'Main character', aliases: ['main character', 'main characters', 'runner', 'runners', 'main uma', 'main umas', 'main chara', 'main charas'], field: 'main_chara_id', type: 'number' },
     { label: 'Parent character', aliases: ['parent character', 'parent uma', 'main parent character', 'main parent', 'main', 'parent'], field: 'main_parent_id', type: 'number' },
-    { label: 'GP1 character', aliases: ['grandparent 1', 'grand parent 1', 'gp1', 'left parent', 'left character', 'left uma'], field: 'left_chara_id', type: 'number' },
-    { label: 'GP2 character', aliases: ['grandparent 2', 'grand parent 2', 'gp2', 'right parent', 'right character', 'right uma'], field: 'right_chara_id', type: 'number' },
+    { label: 'GP1 character', aliases: ['gp1 character', 'gp1 characters', 'gp1 uma', 'gp1 umas', 'gp1 chara', 'gp1 charas', 'grandparent 1', 'grandparent 1 character', 'grandparent 1 characters', 'grand parent 1', 'grand parent 1 character', 'grand parent 1 characters', 'left parent', 'left character', 'left characters', 'left uma', 'left umas', 'left chara', 'left charas', 'gp1'], field: 'left_chara_id', type: 'number' },
+    { label: 'GP2 character', aliases: ['gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas', 'grandparent 2', 'grandparent 2 character', 'grandparent 2 characters', 'grand parent 2', 'grand parent 2 character', 'grand parent 2 characters', 'right parent', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas', 'gp2'], field: 'right_chara_id', type: 'number' },
+    { label: 'Grandparent characters', aliases: ['gp characters', 'gp character', 'gp umas', 'gp uma', 'gp charas', 'gp chara', 'grandparent characters', 'grandparent character', 'grand parent characters', 'grand parent character', 'any gp characters', 'any gp character', 'any grandparent characters', 'any grandparent character'], field: 'grandparent_characters', type: 'number' },
     { label: 'Parent rank', aliases: ['parent rank', 'rank'], field: 'parent_rank', type: 'number' },
     { label: 'Blue stars', aliases: ['blue stars', 'blue star sum'], field: 'blue_stars_sum', type: 'number' },
     { label: 'Pink stars', aliases: ['pink stars', 'pink star sum'], field: 'pink_stars_sum', type: 'number' },
     { label: 'Green stars', aliases: ['green stars', 'green star sum'], field: 'green_stars_sum', type: 'number' },
     { label: 'White stars', aliases: ['white stars', 'white star sum'], field: 'white_stars_sum', type: 'number' },
     { label: 'Race affinity', aliases: ['race affinity', 'affinity'], field: 'computed_race_affinity', type: 'number' },
-    { label: 'White sparks', aliases: ['white sparks', 'white skills'], field: 'white_sparks', type: 'array' },
+    { label: 'White factors', aliases: ['white factors', 'white sparks', 'white skills'], field: 'white_sparks', type: 'array' },
     { label: 'Blue sparks', aliases: ['blue sparks'], field: 'blue_sparks', type: 'array' },
     { label: 'Pink sparks', aliases: ['pink sparks'], field: 'pink_sparks', type: 'array' },
     { label: 'Green sparks', aliases: ['green sparks', 'unique skills'], field: 'green_sparks', type: 'array' },
@@ -384,8 +412,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     .flatMap(field => field.aliases.map(alias => this.createFriendlySparkComparisonAlias(field, alias)))
     .sort((left, right) => right.alias.length - left.alias.length);
   private readonly friendlyFieldAliasReplacements: FriendlyFieldAliasReplacement[] = this.friendlyFieldAliases
-    .flatMap(aliasGroup => aliasGroup.aliases.map(alias => this.createFriendlyFieldAliasReplacement(alias, aliasGroup.field)))
+    .flatMap(aliasGroup => [aliasGroup.field, aliasGroup.label, ...aliasGroup.aliases].map(alias => this.createFriendlyFieldAliasReplacement(alias, aliasGroup.field)))
     .sort((left, right) => right.alias.length - left.alias.length);
+  private readonly friendlyCharacterScopeAliasReplacements: FriendlyCharacterScopeAliasReplacement[] = this.buildCharacterScopeAliases()
+    .sort((left, right) => right.alias.length - left.alias.length)
+    .map(scope => this.createFriendlyCharacterScopeAliasReplacement(scope));
   private readonly scopedArrayFields = this.buildScopedArrayFields();
   private readonly friendlyArrayAliasReplacements: FriendlyArrayAliasReplacement[] = [
     ...this.friendlyFieldAliases
@@ -410,7 +441,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     'left_pink_factors', 'left_green_factors', 'left_white_count', 'right_blue_factors',
     'right_pink_factors', 'right_green_factors', 'right_white_count', 'blue_stars_sum',
     'pink_stars_sum', 'green_stars_sum', 'white_stars_sum', 'race_affinity',
-    'computed_race_affinity', 'support_card_count', 'support_cards_count', 'account_id',
+    'computed_race_affinity', 'support_card_count', 'support_cards_count', 'support_card_id', 'limit_break_count', 'account_id',
     'trainer_id', 'trainer_name', 'name', 'blue_sparks', 'pink_sparks', 'green_sparks',
     'white_sparks', 'main_white_factors', 'main_white_sparks', 'left_white_factors',
     'left_white_sparks', 'right_white_factors', 'right_white_sparks', 'main_win_saddles',
@@ -425,10 +456,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     'optional_white', 'optional_main_white', 'optional_any_white', 'lineage_white'
   ]);
   private readonly uqlFunctionParameterNames = new Set([
-    'id', 'card_id', 'support_card_id', 'lb', 'limit_break', 'limit_break_count', 'exp', 'experience',
-    'type_weight', 'distinct_weight', 'level_weight', 'match_weight', 'weight',
-    'proc_weight', 'proc_kind', 'affinity',
-    'stack_weight', 'occurrence_weight', 'base', 'base_percent', 'decay', 'decay_percent'
+    'id', 'card_id', 'support_card_id', 'lb', 'limitbreak', 'limit_break', 'limit_break_count', 'exp', 'experience'
   ]);
   selectedLimitBreak = 0; // Default to LB0+
   includeMaxFollowers = false; // false = exclude max follower accounts (999), true = include (1000)
@@ -635,6 +663,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
   private setupWrappingDetection() {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
     if (!this.mainLayoutRef) return;
     const el = this.mainLayoutRef.nativeElement;
     const detect = () => {
@@ -768,11 +798,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.selectedVeteran && this.selectedAccountId && this.selectedVeteran.member_id != null) {
       state.vet = [this.selectedAccountId, this.selectedVeteran.member_id];
     }
-    return btoa(JSON.stringify(state));
+    return this.encodeBase64Utf8(JSON.stringify(state));
   }
   loadSerializedState(stateStr: string) {
     try {
-      const state: CompressedState = JSON.parse(atob(stateStr));
+      const state: CompressedState = JSON.parse(this.decodeBase64Utf8(stateStr));
       if (state.fm === 'basic' || state.fm === 'advanced' || state.fm === 'uql') {
         this.filterMode = state.fm;
       }
@@ -1903,16 +1933,6 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         type: 'raceSchedule'
       });
     }
-    if (this.filterState.uql) {
-      const displayedUql = this.getNormalizedUqlQuery() || this.filterState.uql;
-      this.activeFilterChips.push({
-        id: 'uql-query',
-        label: `UQL: ${displayedUql}`,
-        name: 'UQL',
-        value: this.truncateUqlChipValue(displayedUql),
-        type: 'uql'
-      });
-    }
   }
   removeActiveFilter(chip: ActiveFilterChip): void {
     switch (chip.type) {
@@ -2093,12 +2113,46 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
   setFilterMode(mode: FilterMode): void {
+    const previousMode = this.filterMode;
+    if (previousMode === 'uql' && mode !== 'uql') {
+      this.applyRepresentableUqlToStructuredFilters();
+    } else if (mode === 'uql' && previousMode !== 'uql') {
+      this.writeStructuredFiltersToUqlQuery();
+    }
     this.filterMode = mode;
     this.applyBasicFilterDefaults();
     if (!this.isExpanded) {
       this.isExpanded = true;
     }
+    setTimeout(() => this.setupWrappingDetection(), 0);
     setTimeout(() => this.updateFloatingBtnState(), 350);
+  }
+
+  private writeStructuredFiltersToUqlQuery(): void {
+    this.onFilterChange();
+    const structuredExpression = this.buildStructuredUqlExpression();
+    if (!structuredExpression) return;
+    this.uqlQuery = `where ${structuredExpression}`;
+    this.validateUqlQuery();
+    this.syncUqlFilterState();
+    this.updateCurrentUqlPreview();
+    this.updateActiveFilterChips();
+  }
+
+  private applyRepresentableUqlToStructuredFilters(): void {
+    const normalizedQuery = this.getNormalizedUqlQuery();
+    if (!normalizedQuery) return;
+    this.validateUqlQuery();
+    if (this.uqlValidationState !== 'valid' || !this.compiledUqlQuery) return;
+
+    const result = this.applyCompiledUqlToStructuredFilters(this.compiledUqlQuery);
+    if (!result.appliedAny) return;
+    if (result.fullyRepresented) {
+      this.uqlQuery = '';
+      this.validateUqlQuery();
+      this.syncUqlFilterState();
+    }
+    this.onFilterChange();
   }
 
   private applyBasicFilterDefaults(emit = true): void {
@@ -2115,9 +2169,105 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private syncUqlFilterState(): void {
-    this.filterState.uql = this.uqlValidationState === 'valid' && this.compiledUqlQuery
-      ? this.compiledUqlQuery
-      : undefined;
+    if (this.uqlValidationState === 'valid' && this.compiledUqlQuery) {
+      this.filterState.uql = this.compiledUqlQuery;
+      this.filterState.uql_highlight = this.buildUqlSparkHighlight(this.compiledUqlQuery);
+    } else {
+      this.filterState.uql = undefined;
+      this.filterState.uql_highlight = undefined;
+    }
+  }
+
+  private buildUqlSparkHighlight(compiledQuery: string): UqlSparkHighlight | undefined {
+    const expression = this.stripLeadingWhere(compiledQuery);
+    const globalSparkIds = new Set<number>();
+    const mainSparkIds = new Set<number>();
+    const optionalWhiteFactorIds = new Set<number>();
+    const optionalMainWhiteFactorIds = new Set<number>();
+    const lineageWhiteFactorIds = new Set<number>();
+
+    const addSparkIds = (fieldName: string, ids: number[]) => {
+      const normalizedField = fieldName.toLowerCase().replace(/[_\s-]+/g, '_').trim();
+      if (!ids.length) return;
+      if (this.isUqlMainSparkHighlightField(normalizedField)) {
+        ids.forEach(id => mainSparkIds.add(id));
+      } else if (this.isUqlGlobalSparkHighlightField(normalizedField)) {
+        ids.forEach(id => globalSparkIds.add(id));
+      }
+    };
+
+    const functionPattern = /\b(contains|overlaps|has_all)\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*(?:\(([^()]*)\)|(\d+))\s*\)/gi;
+    let functionMatch: RegExpExecArray | null;
+    while ((functionMatch = functionPattern.exec(expression)) !== null) {
+      if (/\bnot\s*$/i.test(expression.slice(Math.max(0, functionMatch.index - 8), functionMatch.index))) continue;
+      const ids = functionMatch[3]
+        ? this.parseUqlNumberList(functionMatch[3])
+        : [parseInt(functionMatch[4], 10)].filter(Number.isFinite);
+      addSparkIds(functionMatch[2], ids);
+    }
+
+    const comparisonPattern = /\b([A-Za-z_][A-Za-z0-9_]*)\s*(=|in)\s*(?:\(([^()]*)\)|(\d+))\b/gi;
+    let comparisonMatch: RegExpExecArray | null;
+    while ((comparisonMatch = comparisonPattern.exec(expression)) !== null) {
+      const ids = comparisonMatch[3]
+        ? this.parseUqlNumberList(comparisonMatch[3])
+        : [parseInt(comparisonMatch[4], 10)].filter(Number.isFinite);
+      addSparkIds(comparisonMatch[1], ids);
+    }
+
+    const scoringFunctionPattern = /\b(optional_white|optional_main_white|optional_any_white|lineage_white)\s*\(((?:[^()]|\([^)]*\))*)\)/gi;
+    let scoringMatch: RegExpExecArray | null;
+    while ((scoringMatch = scoringFunctionPattern.exec(expression)) !== null) {
+      const ids = this.parseUqlScoringFactorIds(scoringMatch[2]);
+      switch (scoringMatch[1].toLowerCase()) {
+        case 'optional_main_white':
+          ids.forEach(id => optionalMainWhiteFactorIds.add(id));
+          break;
+        case 'lineage_white':
+          ids.forEach(id => lineageWhiteFactorIds.add(id));
+          break;
+        default:
+          ids.forEach(id => optionalWhiteFactorIds.add(id));
+          break;
+      }
+    }
+
+    const highlight: UqlSparkHighlight = {};
+    if (globalSparkIds.size) highlight.globalSparkIds = [...globalSparkIds];
+    if (mainSparkIds.size) highlight.mainSparkIds = [...mainSparkIds];
+    if (optionalWhiteFactorIds.size) highlight.optionalWhiteFactorIds = [...optionalWhiteFactorIds];
+    if (optionalMainWhiteFactorIds.size) highlight.optionalMainWhiteFactorIds = [...optionalMainWhiteFactorIds];
+    if (lineageWhiteFactorIds.size) highlight.lineageWhiteFactorIds = [...lineageWhiteFactorIds];
+    return Object.keys(highlight).length ? highlight : undefined;
+  }
+
+  private isUqlGlobalSparkHighlightField(fieldName: string): boolean {
+    return ['blue_sparks', 'pink_sparks', 'green_sparks', 'white_sparks', 'left_blue_factors', 'left_pink_factors', 'left_green_factors', 'left_white_factors', 'right_blue_factors', 'right_pink_factors', 'right_green_factors', 'right_white_factors'].includes(fieldName);
+  }
+
+  private isUqlMainSparkHighlightField(fieldName: string): boolean {
+    return ['main_blue_factors', 'main_pink_factors', 'main_green_factors', 'main_white_factors', 'main_parent_white_sparks'].includes(fieldName);
+  }
+
+  private parseUqlScoringFactorIds(argsText: string): number[] {
+    let listText = argsText.trim();
+    if (listText.startsWith('(')) {
+      let depth = 0;
+      for (let index = 0; index < listText.length; index++) {
+        const character = listText[index];
+        if (character === '(') depth++;
+        if (character === ')') depth--;
+        if (depth !== 0) continue;
+        listText = listText.slice(1, index);
+        break;
+      }
+    } else {
+      const paramsMatch = listText.match(/,\s*[A-Za-z_]\w*\s*=/);
+      if (paramsMatch?.index !== undefined) {
+        listText = listText.slice(0, paramsMatch.index);
+      }
+    }
+    return this.parseUqlNumberList(listText).filter(id => id > 0);
   }
   clearUql(): void {
     this.uqlQuery = '';
@@ -2206,6 +2356,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     const compiledQuery = this.getCompiledUqlQuery();
     this.compiledUqlQuery = compiledQuery;
+    const syntaxIssue = this.findInvalidCompiledUqlSyntax(compiledQuery);
+    if (syntaxIssue) {
+      this.uqlValidationState = 'invalid';
+      this.uqlValidationMessage = syntaxIssue;
+      return;
+    }
     const unknownIdentifier = this.findUnknownUqlIdentifier(compiledQuery);
     if (unknownIdentifier) {
       this.uqlValidationState = 'invalid';
@@ -2222,8 +2378,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const scopedSparkCompiled = this.compileFriendlyScopedSparkComparisons(arrayOperatorCompiled);
     const sparkCompiled = this.compileFriendlySparkComparisons(scopedSparkCompiled);
     const factorCompiled = this.compileFriendlyLoadedFactorComparisons(sparkCompiled);
-    const namedValueCompiled = this.compileFriendlyNamedValues(factorCompiled);
-    return this.compileFriendlyFieldAliases(namedValueCompiled).replace(/\s+/g, ' ').trim();
+    const characterScopeCompiled = this.compileFriendlyCharacterScopeExpressions(factorCompiled);
+    const supportCardCompiled = this.compileFriendlySupportCardExpressions(characterScopeCompiled);
+    const scoringFunctionCompiled = this.compileFriendlyScoringFunctionNames(supportCardCompiled);
+    const namedValueCompiled = this.compileFriendlyNamedValues(scoringFunctionCompiled);
+    const fieldAliasCompiled = this.compileFriendlyFieldAliases(namedValueCompiled);
+    return this.normalizeCompiledSupportCardAliases(fieldAliasCompiled).replace(/\s+/g, ' ').trim();
   }
 
   private rebuildUqlDerivedCaches(): void {
@@ -2313,6 +2473,19 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     };
   }
 
+  private createFriendlyCharacterScopeAliasReplacement(scope: { alias: string; label: string; fields: string[] }): FriendlyCharacterScopeAliasReplacement {
+    const aliasPattern = this.escapeRegExp(scope.alias).replace(/\s+/g, '\\s+');
+    const fieldBoundary = `(^|[^A-Za-z0-9_])(${aliasPattern})(?=$|[^A-Za-z0-9_])`;
+    return {
+      alias: scope.alias,
+      label: scope.label,
+      fields: [...scope.fields],
+      comparisonPattern: new RegExp(`${fieldBoundary}\\s*(=|!=|<>)\\s*([^\\s(),][^;)]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'),
+      inPattern: new RegExp(`${fieldBoundary}\\s+in\\s*\\(([^)]*)\\)`, 'gi'),
+      notInPattern: new RegExp(`${fieldBoundary}\\s+not\\s+in\\s*\\(([^)]*)\\)`, 'gi')
+    };
+  }
+
   private createFriendlyArrayAliasReplacement(field: { alias: string; fields: string[]; label: string }): FriendlyArrayAliasReplacement {
     const fieldPattern = this.escapeRegExp(field.alias).replace(/\s+/g, '\\s+');
     const fieldBoundary = `(^|[^A-Za-z0-9_])(${fieldPattern})(?=$|[^A-Za-z0-9_])`;
@@ -2323,7 +2496,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       hasAllPattern: new RegExp(`${fieldBoundary}\\s+has\\s+all\\s*\\(([^)]*)\\)`, 'gi'),
       hasAnyPattern: new RegExp(`${fieldBoundary}\\s+has\\s+any\\s*\\(([^)]*)\\)`, 'gi'),
       doesNotHavePattern: new RegExp(`${fieldBoundary}\\s+does\\s+not\\s+have\\s+([^;()]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'),
-      hasPattern: new RegExp(`${fieldBoundary}\\s+has\\s+([^;()]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi')
+      hasPattern: new RegExp(`${fieldBoundary}\\s+has\\s+([^;()]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'),
+      containsAllPattern: new RegExp(`${fieldBoundary}\\s+contains\\s+all\\s*\\(([^)]*)\\)`, 'gi'),
+      containsAnyPattern: new RegExp(`${fieldBoundary}\\s+contains\\s+any\\s*\\(([^)]*)\\)`, 'gi'),
+      inPattern: new RegExp(`${fieldBoundary}\\s+in\\s*\\(([^)]*)\\)`, 'gi'),
+      notInPattern: new RegExp(`${fieldBoundary}\\s+not\\s+in\\s*\\(([^)]*)\\)`, 'gi'),
+      containsPattern: new RegExp(`${fieldBoundary}\\s+contains\\s+(?!all\\b|any\\b|\\()([^;()]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi')
     };
   }
 
@@ -2342,6 +2520,41 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       { label: 'GP1 has', aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1'], fields: ['left_white_factors'] },
       { label: 'GP2 has', aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2'], fields: ['right_white_factors'] },
       { label: 'Grandparent has', aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'any grandparent', 'any grand parent'], fields: ['left_white_factors', 'right_white_factors'] }
+    ].flatMap(scope => scope.aliases.map(alias => ({ alias, fields: scope.fields, label: scope.label })));
+  }
+
+  private buildCharacterScopeAliases(): Array<{ alias: string; fields: string[]; label: string }> {
+    return [
+      {
+        label: 'Characters',
+        aliases: ['characters', 'character', 'umas', 'uma', 'charas', 'chara'],
+        fields: ['main_chara_id', 'left_chara_id', 'right_chara_id']
+      },
+      {
+        label: 'Main character',
+        aliases: ['main character', 'main characters', 'runner', 'runners', 'main uma', 'main umas', 'main chara', 'main charas'],
+        fields: ['main_chara_id']
+      },
+      {
+        label: 'Parent character',
+        aliases: ['parent character', 'parent uma', 'main parent character'],
+        fields: ['main_parent_id']
+      },
+      {
+        label: 'GP1 character',
+        aliases: ['gp1 character', 'gp1 characters', 'gp1 uma', 'gp1 umas', 'gp1 chara', 'gp1 charas', 'grandparent 1 character', 'grandparent 1 characters', 'grand parent 1 character', 'grand parent 1 characters', 'left character', 'left characters', 'left uma', 'left umas', 'left chara', 'left charas'],
+        fields: ['left_chara_id']
+      },
+      {
+        label: 'GP2 character',
+        aliases: ['gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas', 'grandparent 2 character', 'grandparent 2 characters', 'grand parent 2 character', 'grand parent 2 characters', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas'],
+        fields: ['right_chara_id']
+      },
+      {
+        label: 'Grandparent characters',
+        aliases: ['gp characters', 'gp character', 'gp umas', 'gp uma', 'gp charas', 'gp chara', 'grandparent characters', 'grandparent character', 'grand parent characters', 'grand parent character', 'any gp characters', 'any gp character', 'any grandparent characters', 'any grandparent character'],
+        fields: ['left_chara_id', 'right_chara_id']
+      }
     ].flatMap(scope => scope.aliases.map(alias => ({ alias, fields: scope.fields, label: scope.label })));
   }
 
@@ -2435,6 +2648,45 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       return compiledSegment;
     });
   }
+
+  private compileFriendlyScoringFunctionNames(query: string): string {
+    return this.replaceOutsideStrings(query, segment => {
+      let compiledSegment = segment;
+      const applyFieldSyntax = (fieldPattern: string, functionName: string): void => {
+        compiledSegment = compiledSegment.replace(new RegExp(`\\b${fieldPattern}\\s+in\\s*\\(([^)]*)\\)`, 'gi'), `${functionName}($1)`);
+        compiledSegment = compiledSegment.replace(new RegExp(`\\b${fieldPattern}\\s*=\\s*([^;()]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'), (_match, rawValue: string) => `${functionName}(${rawValue.trim()})`);
+      };
+
+      applyFieldSyntax('optional\\s+main\\s+white', 'optional_main_white');
+      applyFieldSyntax('optional\\s+any\\s+white', 'optional_any_white');
+      applyFieldSyntax('optional\\s+white', 'optional_white');
+      applyFieldSyntax('lineage\\s+white', 'lineage_white');
+
+      return compiledSegment
+        .replace(/\boptional\s+main\s+white\s*\(/gi, 'optional_main_white(')
+        .replace(/\boptional\s+any\s+white\s*\(/gi, 'optional_any_white(')
+        .replace(/\boptional\s+white\s*\(/gi, 'optional_white(')
+        .replace(/\blineage\s+white\s*\(/gi, 'lineage_white(');
+    });
+  }
+
+  private compileFriendlyCharacterScopeExpressions(query: string): string {
+    return this.replaceOutsideStrings(query, segment => {
+      let compiledSegment = segment;
+      this.friendlyCharacterScopeAliasReplacements.forEach(scope => {
+        compiledSegment = compiledSegment.replace(this.resetPattern(scope.notInPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+          return `${leadingText}${this.buildCharacterScopeListClause(scope.fields, listText, true)}`;
+        });
+        compiledSegment = compiledSegment.replace(this.resetPattern(scope.inPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+          return `${leadingText}${this.buildCharacterScopeListClause(scope.fields, listText, false)}`;
+        });
+        compiledSegment = compiledSegment.replace(this.resetPattern(scope.comparisonPattern), (_match, leadingText: string, _aliasText: string, operator: string, rawValue: string) => {
+          return `${leadingText}${this.buildCharacterScopeComparisonClause(scope.fields, operator, rawValue)}`;
+        });
+      });
+      return compiledSegment;
+    });
+  }
   private compileFriendlyLoadedFactorComparisons(query: string): string {
     return this.replaceOutsideStrings(query, segment => {
       let compiledSegment = segment;
@@ -2474,6 +2726,36 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
           if (scopedClause) return `${leadingText}${scopedClause}`;
           return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `contains(${field}, ${rawValue.trim()})`, 'or')}`;
         });
+
+        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.containsAllPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'all', listText);
+          if (scopedClause) return `${leadingText}${scopedClause}`;
+          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `has_all(${field}, (${listText}))`, 'or')}`;
+        });
+
+        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.containsAnyPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'any', listText);
+          if (scopedClause) return `${leadingText}${scopedClause}`;
+          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `overlaps(${field}, (${listText}))`, 'or')}`;
+        });
+
+        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.notInPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'not', listText);
+          if (scopedClause) return `${leadingText}${scopedClause}`;
+          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `not overlaps(${field}, (${listText}))`, 'and')}`;
+        });
+
+        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.inPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'any', listText);
+          if (scopedClause) return `${leadingText}${scopedClause}`;
+          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `overlaps(${field}, (${listText}))`, 'or')}`;
+        });
+
+        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.containsPattern), (_match, leadingText: string, _aliasText: string, rawValue: string) => {
+          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'one', rawValue);
+          if (scopedClause) return `${leadingText}${scopedClause}`;
+          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `contains(${field}, ${rawValue.trim()})`, 'or')}`;
+        });
       });
 
       return compiledSegment;
@@ -2485,7 +2767,6 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     mode: 'one' | 'any' | 'all' | 'not',
     listText: string
   ): string | null {
-    if (!arrayField.label.endsWith(' has')) return null;
     const resolved = this.resolveAnyFactorListItems(listText);
     if (!resolved.length || resolved.some(item => !item.factor)) return null;
     const clauses = resolved.flatMap(item => this.buildScopedSkillPresenceClauses(arrayField.fields, item, mode === 'not'));
@@ -2558,7 +2839,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
   private compileBareFriendlySkillArrayOperators(segment: string): string {
     let compiledSegment = segment;
-    const leadingBoundary = '(^|\\b(?:where|and|or|not)\\s+|\\()';
+    const leadingBoundary = '(^|\\b(?:where|and|or)\\s+|\\()';
     compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*has\\s+all\\s*\\(([^)]*)\\)`, 'gi'), (_match, leadingText: string, listText: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('all', listText);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
@@ -2579,7 +2860,48 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return `${leadingText}contains(white_sparks, ${rawValue.trim()})`;
     });
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*contains\\s+all\\s*\\(([^)]*)\\)`, 'gi'), (_match, leadingText: string, listText: string) => {
+      const contextAwareClause = this.buildBareContextAwareSkillClause('all', listText);
+      if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
+      return `${leadingText}has_all(white_sparks, (${listText}))`;
+    });
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*contains\\s+any\\s*\\(([^)]*)\\)`, 'gi'), (_match, leadingText: string, listText: string) => {
+      const contextAwareClause = this.buildBareContextAwareSkillClause('any', listText);
+      if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
+      return `${leadingText}overlaps(white_sparks, (${listText}))`;
+    });
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*not\\s+in\\s*\\(([^)]*)\\)`, 'gi'), (match, leadingText: string, listText: string) => {
+      const contextAwareClause = this.buildBareContextAwareSkillClause('not', listText);
+      if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
+      return match;
+    });
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*in\\s*\\(([^)]*)\\)`, 'gi'), (match, leadingText: string, listText: string) => {
+      const contextAwareClause = this.buildBareContextAwareSkillClause('any', listText);
+      if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
+      return match;
+    });
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*contains\\s+(?!all\\b|any\\b|\\()([^;()]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'), (match, leadingText: string, rawValue: string) => {
+      const contextAwareClause = this.buildBareContextAwareSkillClause('one', rawValue);
+      if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
+      return match;
+    });
     return compiledSegment;
+  }
+
+  private encodeBase64Utf8(value: string): string {
+    const bytes = new TextEncoder().encode(value);
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    }
+    return btoa(binary);
+  }
+
+  private decodeBase64Utf8(value: string): string {
+    const binary = atob(value);
+    const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
   }
 
   private buildBareContextAwareSkillClause(mode: 'one' | 'any' | 'all' | 'not', listText: string): string | null {
@@ -2608,9 +2930,132 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
   private compileFriendlyComparisonValues(segment: string): string {
     const characterFieldPattern = this.getUqlFieldPattern('character');
-    let compiledSegment = this.replaceComparisonValue(segment, characterFieldPattern, value => this.resolveCharacterUqlValue(value));
-    compiledSegment = this.replaceInListValues(compiledSegment, characterFieldPattern, value => this.resolveCharacterUqlValue(value));
+    let compiledSegment = this.replaceComparisonValue(segment, characterFieldPattern, (value, fieldText) => this.resolveCharacterUqlValue(value, fieldText));
+    compiledSegment = this.replaceInListValues(compiledSegment, characterFieldPattern, (value, fieldText) => this.resolveCharacterUqlValue(value, fieldText));
     return compiledSegment;
+  }
+
+  private compileFriendlySupportCardExpressions(query: string): string {
+    return this.replaceOutsideStrings(query, segment => {
+      let compiledSegment = this.compileFriendlySupportCardFunctionValues(segment);
+      compiledSegment = this.compileFriendlySupportCardFieldValues(compiledSegment);
+      compiledSegment = this.combineSupportCardLimitBreakClauses(compiledSegment);
+      compiledSegment = this.compileStandaloneSupportCardLimitBreak(compiledSegment);
+      return compiledSegment;
+    });
+  }
+
+  private compileFriendlySupportCardFunctionValues(segment: string): string {
+    const functionPattern = /\b(support_card|has_support_card)\s*\(((?:[^()]|\([^)]*\))*)\)/gi;
+    return segment.replace(functionPattern, (match, functionName: string, argsText: string) => {
+      const normalizedArgs = this.normalizeSupportCardFunctionArgs(argsText);
+      return normalizedArgs ? `${functionName}(${normalizedArgs.join(', ')})` : match;
+    });
+  }
+
+  private normalizeSupportCardFunctionArgs(argsText: string): string[] | null {
+    const args = argsText.split(',').map(arg => arg.trim()).filter(Boolean);
+    if (!args.length) return null;
+    let changed = false;
+    const normalizedArgs = args.map((arg, index) => {
+      const idMatch = arg.match(/^(?:(?:id|card_id|support_card_id)\s*=\s*)?(.+)$/i);
+      if (index === 0 && idMatch) {
+        const resolvedId = this.resolveSupportCardUqlValue(idMatch[1]);
+        if (resolvedId) {
+          changed = resolvedId !== arg;
+          return resolvedId;
+        }
+      }
+      const normalizedLimitBreak = this.normalizeSupportCardLimitBreakArg(arg);
+      if (normalizedLimitBreak) {
+        changed = changed || normalizedLimitBreak !== arg;
+        return normalizedLimitBreak;
+      }
+      return arg;
+    });
+    return changed ? normalizedArgs : null;
+  }
+
+  private compileFriendlySupportCardFieldValues(segment: string): string {
+    const supportCardFieldPattern = this.getUqlFieldPattern('support-card');
+    let compiledSegment = this.replaceSupportCardComparisonValues(segment, supportCardFieldPattern);
+    compiledSegment = this.replaceSupportCardInListValues(compiledSegment, supportCardFieldPattern);
+    return compiledSegment;
+  }
+
+  private replaceSupportCardComparisonValues(segment: string, fieldPattern: string): string {
+    const comparisonPattern = new RegExp(`(${fieldPattern})\\s*(=|!=|<>)\\s*((?:[^(),;)]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi');
+    return segment.replace(comparisonPattern, (match, _fieldText: string, operator: string, rawValue: string) => {
+      const resolvedId = this.resolveSupportCardUqlValue(rawValue);
+      if (!resolvedId) return match;
+      const normalizedOperator = operator === '<>' ? '!=' : operator;
+      return normalizedOperator === '!=' ? `not support_card(${resolvedId})` : `support_card(${resolvedId})`;
+    });
+  }
+
+  private replaceSupportCardInListValues(segment: string, fieldPattern: string): string {
+    const inListPattern = new RegExp(`(${fieldPattern})\\s+(not\\s+)?in\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi');
+    return segment.replace(inListPattern, (match, _fieldText: string, notText: string | undefined, listText: string) => {
+      const resolvedIds = this.splitUqlSupportCardListValues(listText).map(value => this.resolveSupportCardUqlValue(value));
+      if (!resolvedIds.length || resolvedIds.some(id => !id)) return match;
+      const negated = !!notText;
+      const clauses = resolvedIds.map(id => `${negated ? 'not ' : ''}support_card(${id})`);
+      return clauses.length === 1 ? clauses[0] : `(${clauses.join(negated ? ' and ' : ' or ')})`;
+    });
+  }
+
+  private splitUqlSupportCardListValues(listText: string): string[] {
+    const namedValues = SUPPORT_CARDS
+      .flatMap(card => [card.name, card.id])
+      .filter((value, index, values) => value && values.indexOf(value) === index)
+      .sort((left, right) => right.length - left.length);
+    return this.splitUqlKnownListValues(listText, namedValues);
+  }
+
+  private combineSupportCardLimitBreakClauses(segment: string): string {
+    const lbPattern = '(?:lb|limitbreak|limit[_\\s-]?break|limit[_\\s-]?break[_\\s-]?count)';
+    const operatorPattern = '(?:>=|<=|!=|<>|=|>|<)';
+    const supportThenLb = new RegExp(`support_card\\((\\d+)\\)\\s+and\\s+${lbPattern}\\s*(${operatorPattern})\\s*(\\d+)`, 'gi');
+    let compiledSegment = segment.replace(supportThenLb, (_match, supportCardId: string, operator: string, value: string) => {
+      return `support_card(${supportCardId}, lb ${operator === '<>' ? '!=' : operator} ${value})`;
+    });
+    const lbThenSupport = new RegExp(`${lbPattern}\\s*(${operatorPattern})\\s*(\\d+)\\s+and\\s+support_card\\((\\d+)\\)`, 'gi');
+    compiledSegment = compiledSegment.replace(lbThenSupport, (_match, operator: string, value: string, supportCardId: string) => {
+      return `support_card(${supportCardId}, lb ${operator === '<>' ? '!=' : operator} ${value})`;
+    });
+    return compiledSegment;
+  }
+
+  private compileStandaloneSupportCardLimitBreak(segment: string): string {
+    const lbPattern = /\b(?:lb|limitbreak|limit[_\s-]?break|limit[_\s-]?break[_\s-]?count)\s*(>=|<=|!=|<>|=|>|<)\s*(\d+)\b/gi;
+    return segment.replace(lbPattern, (match, operator: string, value: string, offset: number, fullText: string) => {
+      if (this.isInsideSupportCardFunction(fullText, offset)) return match;
+      return `support_card(lb ${operator === '<>' ? '!=' : operator} ${value})`;
+    });
+  }
+
+  private isInsideSupportCardFunction(text: string, index: number): boolean {
+    const prefix = text.slice(0, index);
+    const openIndex = prefix.lastIndexOf('support_card(');
+    if (openIndex < 0) return false;
+    const closeIndex = text.indexOf(')', openIndex);
+    return closeIndex >= index;
+  }
+
+  private normalizeSupportCardLimitBreakArg(arg: string): string | null {
+    const match = arg.match(/^(?:lb|limitbreak|limit[_\s-]?break|limit[_\s-]?break[_\s-]?count)\s*(>=|<=|!=|<>|=|>|<)\s*(\d+)$/i);
+    if (!match) return null;
+    return `lb ${match[1] === '<>' ? '!=' : match[1]} ${match[2]}`;
+  }
+
+  private normalizeCompiledSupportCardAliases(query: string): string {
+    return query.replace(/\b(support_card|has_support_card)\s*\(((?:[^()]|\([^)]*\))*)\)/gi, (match, functionName: string, argsText: string) => {
+      const normalizedArgs = argsText
+        .split(',')
+        .map(arg => this.normalizeSupportCardLimitBreakArg(arg.trim()) || arg.trim())
+        .filter(Boolean);
+      return normalizedArgs.length ? `${functionName}(${normalizedArgs.join(', ')})` : match;
+    });
   }
   private compileFriendlyFunctionValues(segment: string): string {
     const singleValuePattern = /\b(contains|has|any)\s*\(\s*([^,()]+?)\s*,\s*([^()]*?)\s*\)/gi;
@@ -2836,17 +3281,19 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return scopedParentField ? Math.min(factor.maxLevel, 3) : factor.maxLevel;
   }
 
-  private replaceComparisonValue(segment: string, fieldPattern: string, resolveValue: (value: string) => string | null): string {
+  private replaceComparisonValue(segment: string, fieldPattern: string, resolveValue: (value: string, fieldText: string) => string | null): string {
     const comparisonPattern = new RegExp(`(${fieldPattern}\\s*(?:=|!=|<>|<=|>=|<|>)\\s*)([^\\s(),][^;)]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi');
     return segment.replace(comparisonPattern, (match, prefix: string, rawValue: string) => {
-      const resolvedValue = resolveValue(rawValue);
+      const fieldText = prefix.replace(/\s*(?:=|!=|<>|<=|>=|<|>)\s*$/, '').trim();
+      const resolvedValue = resolveValue(rawValue, fieldText);
       return resolvedValue ? `${prefix}${resolvedValue}` : match;
     });
   }
-  private replaceInListValues(segment: string, fieldPattern: string, resolveValue: (value: string) => string | null): string {
+  private replaceInListValues(segment: string, fieldPattern: string, resolveValue: (value: string, fieldText: string) => string | null): string {
     const inListPattern = new RegExp(`(${fieldPattern}\\s+(?:not\\s+)?in\\s*\\()([^)]*)(\\))`, 'gi');
     return segment.replace(inListPattern, (_match, prefix: string, listText: string, suffix: string) => {
-      return `${prefix}${this.replaceNamedListValues(listText, resolveValue)}${suffix}`;
+      const fieldText = prefix.replace(/\s+(?:not\s+)?in\s*\($/i, '').trim();
+      return `${prefix}${this.replaceNamedListValues(listText, value => resolveValue(value, fieldText))}${suffix}`;
     });
   }
   private replaceNamedListValues(listText: string, resolveValue: (value: string) => string | null): string {
@@ -2877,28 +3324,93 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     return resolvedItems.join(',');
   }
+
+  private buildCharacterScopeListClause(fields: string[], listText: string, negated: boolean): string {
+    const clauses = fields.map(fieldName => {
+      const resolvedList = this.replaceNamedListValues(listText, value => this.resolveCharacterUqlValue(value, fieldName));
+      return `${fieldName} ${negated ? 'not in' : 'in'} (${resolvedList})`;
+    });
+    if (clauses.length === 1) return clauses[0];
+    return `(${clauses.join(negated ? ' and ' : ' or ')})`;
+  }
+
+  private buildCharacterScopeComparisonClause(fields: string[], operator: string, rawValue: string): string {
+    const normalizedOperator = operator === '<>' ? '!=' : operator;
+    const negated = normalizedOperator === '!=';
+    const clauses = fields.map(fieldName => {
+      const resolvedValue = this.resolveCharacterUqlValue(rawValue, fieldName) || rawValue.trim();
+      return `${fieldName} ${normalizedOperator} ${resolvedValue}`;
+    });
+    if (clauses.length === 1) return clauses[0];
+    return `(${clauses.join(negated ? ' and ' : ' or ')})`;
+  }
+
   private resolveNamedUqlValueForField(fieldText: string, rawValue: string): string | null {
     const value = rawValue.trim();
     if (!value || /^\d+$/.test(value) || /^'.*'$|^".*"$/.test(value)) return null;
     const context = this.getUqlValueContextForField(fieldText);
-    if (context === 'character') return this.resolveCharacterUqlValue(value);
+    if (context === 'character') return this.resolveCharacterUqlValue(value, fieldText);
+    if (context === 'support-card') return this.resolveSupportCardUqlValue(value);
     if (context === 'blue-factor' || context === 'pink-factor' || context === 'green-factor' || context === 'white-factor') {
       const factor = this.resolveFactorUqlValue(value, context);
       return factor ? this.buildSparkId(factor.factorId, 1).toString() : null;
     }
     return null;
   }
-  private resolveCharacterUqlValue(rawValue: string): string | null {
+  private resolveSupportCardUqlValue(rawValue: string): string | null {
+    const value = rawValue.trim().replace(/^(?:id|card_id|support_card_id)\s*=\s*/i, '');
+    if (!value || /^'.*'$|^".*"$/.test(value)) return null;
+    if (/^\d+$/.test(value)) return value;
+    const parsed = this.parseSupportCardUqlDisplayValue(value);
+    const card = SUPPORT_CARDS.find(entry => {
+      if (this.normalizeUqlName(entry.name) !== parsed.name) return false;
+      if (parsed.type && this.normalizeUqlName(this.getSupportCardTypeDisplay(entry.type)) !== parsed.type) return false;
+      if (parsed.rarity && this.normalizeUqlName(this.getSupportCardRarityDisplay(entry.rarity)) !== parsed.rarity) return false;
+      return true;
+    });
+    return card?.id || null;
+  }
+
+  private parseSupportCardUqlDisplayValue(value: string): { name: string; rarity?: string; type?: string } {
+    let text = value.trim();
+    let type: string | undefined;
+    let rarity: string | undefined;
+    const typeMatch = text.match(/\s*\(([^)]+)\)\s*$/);
+    if (typeMatch) {
+      type = this.normalizeUqlName(typeMatch[1]);
+      text = text.slice(0, typeMatch.index).trim();
+    }
+    const rarityMatch = text.match(/\s*\[(R|SR|SSR)\]\s*$/i);
+    if (rarityMatch) {
+      rarity = this.normalizeUqlName(rarityMatch[1]);
+      text = text.slice(0, rarityMatch.index).trim();
+    }
+    return { name: this.normalizeUqlName(text), rarity, type };
+  }
+  private resolveCharacterUqlValue(rawValue: string, fieldText?: string): string | null {
     const normalizedValue = this.normalizeUqlName(rawValue);
     const exactVariant = CHARACTERS.find(entry => this.normalizeUqlName(this.getCharacterUqlDisplayName(entry)) === normalizedValue);
-    if (exactVariant) return exactVariant.id.toString();
+    if (exactVariant) return this.formatCharacterUqlId(exactVariant.id, fieldText);
     const originalVariant = CHARACTERS.find(entry => {
       const isOriginal = this.getCharacterSkinName(entry.id) === 'Original';
       return isOriginal && (this.normalizeUqlName(getCharacterName(entry.id)) === normalizedValue || this.normalizeUqlName(entry.name || '') === normalizedValue);
     });
-    if (originalVariant) return originalVariant.id.toString();
+    if (originalVariant) return this.formatCharacterUqlId(originalVariant.id, fieldText);
     const character = CHARACTERS.find(entry => this.normalizeUqlName(getCharacterName(entry.id)) === normalizedValue || this.normalizeUqlName(entry.name || '') === normalizedValue);
-    return character ? character.id.toString() : null;
+    return character ? this.formatCharacterUqlId(character.id, fieldText) : null;
+  }
+  private formatCharacterUqlId(cardId: number, fieldText?: string): string {
+    return (this.usesBaseCharacterUqlId(fieldText) ? Math.floor(cardId / 100) : cardId).toString();
+  }
+  private usesBaseCharacterUqlId(fieldText?: string): boolean {
+    const canonicalField = this.getCanonicalFriendlyUqlField(fieldText || '');
+    return canonicalField === 'main_chara_id' || canonicalField === 'left_chara_id' || canonicalField === 'right_chara_id';
+  }
+  private getCanonicalFriendlyUqlField(fieldText: string): string {
+    const normalizedField = fieldText.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^(?:not|where)\s+/, '');
+    const matchedField = this.friendlyFieldAliases.find(field => [field.field, field.label, ...field.aliases]
+      .some(alias => alias.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim() === normalizedField));
+    return matchedField?.field || normalizedField.replace(/\s+/g, '_');
   }
   private resolveFactorUqlValue(rawValue: string, context?: UqlValueContext): FriendlySparkField | null {
     const normalizedValue = this.normalizeUqlName(rawValue);
@@ -2916,8 +3428,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
   private getUqlValueContextForField(fieldText: string): UqlValueContext | null {
     const normalized = fieldText.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
-    if (this.endsWithAny(normalized, ['main character', 'main uma', 'main parent', 'main chara', 'main chara id', 'left parent', 'left character', 'left uma', 'left chara id', 'right parent', 'right character', 'right uma', 'right chara id'])) {
+    if (this.endsWithAny(normalized, ['characters', 'character', 'umas', 'uma', 'charas', 'chara', 'main character', 'main characters', 'main uma', 'main umas', 'main parent', 'main chara', 'main charas', 'main chara id', 'left parent', 'left character', 'left characters', 'left uma', 'left umas', 'left chara', 'left charas', 'left chara id', 'right parent', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas', 'right chara id', 'gp1 character', 'gp1 characters', 'gp1 uma', 'gp1 umas', 'gp1 chara', 'gp1 charas', 'gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas', 'gp character', 'gp characters', 'grandparent character', 'grandparent characters'])) {
       return 'character';
+    }
+    if (this.endsWithAny(normalized, ['support card', 'support', 'card', 'support card id'])) {
+      return 'support-card';
     }
     if (this.endsWithAny(normalized, ['white sparks', 'white skills', 'white factors', 'main parent white skills', 'main parent skills', 'parent white skills', 'parent skills', 'main white factors', 'main white sparks'])) {
       return 'white-factor';
@@ -3042,6 +3557,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
   private getFriendlyFieldPriority(field: FriendlyFieldAlias): number {
     if (field.field.endsWith('_chara_id') || field.field === 'main_parent_id') return 0;
+    if (field.field === 'support_card_id') return 1;
+    if (field.field === 'limit_break_count') return 2;
     if (field.field === 'trainer_name' || field.field === 'account_id') return 4;
     if (field.type === 'string') return 6;
     if (['win_count', 'white_count', 'follower_num', 'parent_rank', 'computed_race_affinity'].includes(field.field)) return 8;
@@ -3072,12 +3589,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       { label: 'has skill', insertText: 'has Right-Handed ○', kind: 'snippet', detail: 'Skill present on any parent' },
       { label: 'has any skills', insertText: 'has any (Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'At least one skill present on any parent' },
       { label: 'has all skills', insertText: 'has all (Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Every listed skill present across all parents' },
-      { label: 'optional white skills', insertText: 'optional_white(Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Prefer rows with these white skills in sorting' },
-      { label: 'optional main white skills', insertText: 'optional_main_white(Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Prefer main-parent white skill matches' },
-      { label: 'optional any white skills', insertText: 'optional_any_white(Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Prefer global or main-parent white skill matches' },
-      { label: 'lineage white skills', insertText: 'lineage_white(Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Sort by lineage-style white skill stacking' },
-      { label: 'weighted optional white', insertText: 'optional_white(Right-Handed ○, Left-Handed ○, proc_weight = 10)', kind: 'snippet', detail: 'Use proc-chance weighted optional sorting' },
-      { label: 'weighted lineage white', insertText: 'lineage_white(Right-Handed ○, Left-Handed ○, stack_weight = 2000, occurrence_weight = 75)', kind: 'snippet', detail: 'Tune lineage sorting weights' },
+      { label: 'optional white skills', insertText: 'optional white in (Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Require and rank global white skill matches' },
+      { label: 'optional main white skills', insertText: 'optional main white in (Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Require and rank main-parent white skill matches' },
+      { label: 'lineage white skills', insertText: 'lineage white in (Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Sort by lineage-style white skill stacking' },
       { label: 'Main speed stars', insertText: 'Main Speed >= 3', kind: 'snippet', detail: 'Main slot Speed stars, max 3' },
       { label: 'GP1 speed stars', insertText: 'GP1 Speed >= 3', kind: 'snippet', detail: 'Grandparent 1 Speed stars, max 3' },
       { label: 'GP2 speed stars', insertText: 'GP2 Speed >= 3', kind: 'snippet', detail: 'Grandparent 2 Speed stars, max 3' },
@@ -3104,7 +3618,23 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         searchText: this.getFriendlyFieldSearchText(alias),
         matchPhrases: [alias.label, ...alias.aliases],
         priority: this.getFriendlyFieldPriority(alias),
-        fieldType: alias.type
+        fieldType: alias.type,
+        valueContext: this.getUqlValueContextForField(alias.field) || undefined
+      })),
+      ...[
+        { label: 'Optional white', detail: 'Ranks rows with these global white skill matches', matchPhrases: ['optional white', 'optional skills', 'optional white skills'] },
+        { label: 'Optional main white', detail: 'Ranks rows with these main-parent white skill matches', matchPhrases: ['optional main white', 'optional parent white', 'optional main skills'] },
+        { label: 'Lineage white', detail: 'Ranks rows by lineage-style white skill stacking', matchPhrases: ['lineage white', 'lineage skills', 'lineage white skills'] }
+      ].map(field => ({
+        label: field.label,
+        insertText: field.label,
+        kind: 'field' as const,
+        detail: field.detail,
+        searchText: field.matchPhrases.join(' '),
+        matchPhrases: field.matchPhrases,
+        priority: 13,
+        valueContext: 'white-factor' as const,
+        fieldType: 'array' as UqlFieldType
       })),
       ...[
         { label: 'Main', detail: 'main_white_factors; white factors on the main slot', searchText: 'main parent main has parent has', matchPhrases: ['main', 'parent', 'main parent'], scopeContext: 'main' as const },
@@ -3175,10 +3705,29 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       ...this.greenFactors.map(factor => toFactorSuggestion(factor, 'green-factor', 'Unique skill')),
       ...this.whiteFactors.map(factor => toFactorSuggestion(factor, 'white-factor', 'White factor'))
     ];
+    const supportCardSuggestions = SUPPORT_CARDS.map(card => {
+      const typeLabel = this.getSupportCardTypeDisplay(card.type);
+      const rarityLabel = this.getSupportCardRarityDisplay(card.rarity);
+      const displayLabel = `${card.name} [${rarityLabel}] (${typeLabel})`;
+      return {
+        label: displayLabel,
+        insertText: displayLabel,
+        kind: 'value' as const,
+        detail: `Support card id ${card.id}`,
+        searchText: `${card.name} ${typeLabel} ${rarityLabel} ${card.id} ${card.rarity} ${card.type}`,
+        matchPhrases: [card.name, `${card.name} (${typeLabel})`, displayLabel],
+        valueContext: 'support-card' as const,
+        priority: 2,
+        backendValue: card.id,
+        imageUrl: card.imageUrl,
+        rarityClass: rarityLabel.toLowerCase()
+      };
+    });
     this.uqlSuggestions = [
       ...friendlyFieldSuggestions,
       ...syntaxSuggestions.map(suggestion => ({ ...suggestion, priority: this.getSyntaxSuggestionPriority(suggestion) })),
       ...characterSuggestions,
+      ...supportCardSuggestions,
       ...factorSuggestions
     ];
   }
@@ -3249,11 +3798,38 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
   private endsWithIncompleteUqlToken(expression: string): boolean {
     const trimmedExpression = expression.replace(/;\s*$/, '').trim();
-    return /(?:\bwhere\b|\band\b|\bor\b|\bnot\b|\bin\b|\bbetween\b|\blike\b|\bilike\b|\bhas\b|\bhas\s+any\b|\bhas\s+all\b|\bdoes\s+not\s+have\b|[,(]|=|!=|<>|<=|>=|<|>)$/i.test(trimmedExpression);
+    return /(?:\bwhere\b|\band\b|\bor\b|\bnot\b|\bin\b|\bbetween\b|\blike\b|\bilike\b|\bhas\b|\bhas\s+any\b|\bhas\s+all\b|\bdoes\s+not\s+have\b|\bcontains\b|\bcontains\s+any\b|\bcontains\s+all\b|[,(]|=|!=|<>|<=|>=|<|>)$/i.test(trimmedExpression);
   }
   private hasEmptyUqlValueList(expression: string): boolean {
-    return /(?:^|[\s(])(?:has\s+any|has\s+all)\s*\(\s*\)(?=\s*(?:\)|;|$|\band\b|\bor\b))/i.test(expression)
+    return /(?:^|[\s(])(?:has\s+any|has\s+all|contains\s+any|contains\s+all|not\s+in|in)\s*\(\s*\)(?=\s*(?:\)|;|$|\band\b|\bor\b))/i.test(expression)
       || /\b(?:overlaps|has_all|contains_all|all)\s*\(\s*[^,()]+\s*,\s*\(\s*\)\s*\)/i.test(expression);
+  }
+  private findInvalidCompiledUqlSyntax(query: string): string | null {
+    const queryWithoutStrings = query.replace(/'(?:''|[^'])*'|"(?:""|[^"])*"/g, match => ' '.repeat(match.length));
+    const inPattern = /\b(?:not\s+)?in\s*\(/gi;
+    let match: RegExpExecArray | null;
+    while ((match = inPattern.exec(queryWithoutStrings)) !== null) {
+      const openParenIndex = queryWithoutStrings.indexOf('(', match.index);
+      if (openParenIndex < 0) continue;
+      let depth = 0;
+      let closeParenIndex = -1;
+      for (let index = openParenIndex; index < queryWithoutStrings.length; index++) {
+        const character = queryWithoutStrings[index];
+        if (character === '(') depth++;
+        if (character === ')') depth--;
+        if (depth === 0) {
+          closeParenIndex = index;
+          break;
+        }
+      }
+      if (closeParenIndex < 0) break;
+      const listText = queryWithoutStrings.slice(openParenIndex + 1, closeParenIndex);
+      if (/[()]/.test(listText)) {
+        return 'IN lists only accept literal values, not nested functions';
+      }
+      inPattern.lastIndex = closeParenIndex + 1;
+    }
+    return null;
   }
   private endsWithPartialBooleanContinuation(expression: string): boolean {
     const trimmedExpression = expression.replace(/;\s*$/, '').trim();
@@ -3280,6 +3856,372 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     return null;
   }
+
+  private applyCompiledUqlToStructuredFilters(compiledQuery: string): { appliedAny: boolean; fullyRepresented: boolean } {
+    const expression = this.stripLeadingWhere(compiledQuery);
+    const clauses = this.splitTopLevelConjunctions(expression);
+    if (!clauses.length) return { appliedAny: false, fullyRepresented: false };
+
+    this.clearUqlRepresentableStructuredFilters();
+    let appliedAny = false;
+    let unhandledCount = 0;
+    const pendingExcludeParentIds: { left?: number[]; right?: number[] } = {};
+
+    for (const clause of clauses) {
+      const trimmedClause = this.stripOuterParens(clause.trim());
+      if (!trimmedClause) continue;
+      if (this.applyNumericUqlClauseToStructuredFilters(trimmedClause)) { appliedAny = true; continue; }
+      if (this.applySearchUqlClauseToStructuredFilters(trimmedClause)) { appliedAny = true; continue; }
+      if (this.applySupportCardUqlClauseToStructuredFilters(trimmedClause)) { appliedAny = true; continue; }
+      if (this.applyFactorUqlClauseToStructuredFilters(trimmedClause)) { appliedAny = true; continue; }
+      if (this.applyCharacterUqlClauseToStructuredFilters(trimmedClause, pendingExcludeParentIds)) { appliedAny = true; continue; }
+      unhandledCount++;
+    }
+
+    const pairedExcludeParentIds = this.getSharedNumberList(pendingExcludeParentIds.left, pendingExcludeParentIds.right);
+    if (pairedExcludeParentIds.length) {
+      this.excludeParentCharacters = pairedExcludeParentIds.map(id => this.toCharacterSelection(id));
+      appliedAny = true;
+    }
+
+    return { appliedAny, fullyRepresented: appliedAny && unhandledCount === 0 };
+  }
+
+  private applyNumericUqlClauseToStructuredFilters(clause: string): boolean {
+    const minimumMatch = clause.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*>=\s*(\d+)$/i);
+    if (minimumMatch) {
+      const field = minimumMatch[1].toLowerCase();
+      const value = parseInt(minimumMatch[2], 10);
+      switch (field) {
+        case 'win_count': this.filterState.min_win_count = value; return true;
+        case 'white_count': this.filterState.min_white_count = value; return true;
+        case 'main_white_count': this.filterState.min_main_white_count = value; return true;
+        case 'parent_rank': this.filterState.parent_rank = value; return true;
+        case 'blue_stars_sum': this.filterState.min_blue_stars_sum = value; return true;
+        case 'pink_stars_sum': this.filterState.min_pink_stars_sum = value; return true;
+        case 'green_stars_sum': this.filterState.min_green_stars_sum = value; return true;
+        case 'white_stars_sum': this.filterState.min_white_stars_sum = value; return true;
+        case 'main_blue_factors': this.mainBlueFactorFilters = [this.createAnyFactorFilter(value, 3)]; return true;
+        case 'main_pink_factors': this.mainPinkFactorFilters = [this.createAnyFactorFilter(value, 3)]; return true;
+        case 'main_green_factors': this.mainGreenFactorFilters = [this.createAnyFactorFilter(value, 3)]; return true;
+      }
+    }
+
+    const followerMatch = clause.match(/^follower_num\s*<=\s*(\d+)$/i);
+    if (followerMatch) {
+      this.filterState.max_follower_num = parseInt(followerMatch[1], 10);
+      this.includeMaxFollowers = this.filterState.max_follower_num >= 1000;
+      this.maxFollowersToggled.emit(this.includeMaxFollowers);
+      return true;
+    }
+
+    return false;
+  }
+
+  private applySearchUqlClauseToStructuredFilters(clause: string): boolean {
+    const accountMatch = clause.match(/^account_id\s*=\s*'((?:''|[^'])*)'$/i);
+    if (accountMatch) {
+      this.searchUserId = accountMatch[1].replace(/''/g, "'");
+      return true;
+    }
+    const trainerNameMatch = clause.match(/^trainer_name\s+ilike\s+'%?((?:''|[^'])*)%?'$/i);
+    if (trainerNameMatch) {
+      this.searchUsername = trainerNameMatch[1].replace(/''/g, "'").replace(/^%|%$/g, '');
+      return true;
+    }
+    return false;
+  }
+
+  private applySupportCardUqlClauseToStructuredFilters(clause: string): boolean {
+    const supportCardMatch = clause.match(/^(?:has_)?support_card\s*\((.*)\)$/i);
+    if (!supportCardMatch) return false;
+    const args = this.splitUqlListValues(supportCardMatch[1]);
+    let supportCardId: number | undefined;
+    let limitBreak: number | undefined;
+    for (const arg of args) {
+      const trimmedArg = arg.trim();
+      const idMatch = trimmedArg.match(/^(?:(?:id|card_id|support_card_id)\s*=\s*)?(\d+)$/i);
+      if (idMatch && supportCardId === undefined) {
+        supportCardId = parseInt(idMatch[1], 10);
+        continue;
+      }
+      const lbMatch = trimmedArg.match(/^(?:lb|limitbreak|limit_break|limit_break_count)\s*>=\s*(\d+)$/i);
+      if (lbMatch) limitBreak = parseInt(lbMatch[1], 10);
+    }
+    if (supportCardId !== undefined) this.restoreSelectedSupportCard(supportCardId);
+    if (limitBreak !== undefined) this.selectedLimitBreak = Math.max(0, Math.min(4, limitBreak));
+    return supportCardId !== undefined || limitBreak !== undefined;
+  }
+
+  private applyFactorUqlClauseToStructuredFilters(clause: string): boolean {
+    const containsMatch = clause.match(/^contains\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*(\d+)\s*\)$/i);
+    if (containsMatch) {
+      return this.applySparkIdGroupToStructuredFilters(containsMatch[1], [parseInt(containsMatch[2], 10)]);
+    }
+    const overlapsMatch = clause.match(/^overlaps\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*\(([^()]*)\)\s*\)$/i);
+    if (overlapsMatch) {
+      return this.applySparkIdGroupToStructuredFilters(overlapsMatch[1], this.parseUqlNumberList(overlapsMatch[2]));
+    }
+    return false;
+  }
+
+  private clearUqlRepresentableStructuredFilters(): void {
+    const mainParent = this.treeData.children?.[0];
+    if (mainParent) {
+      mainParent.name = 'Parent 1';
+      mainParent.image = undefined;
+      mainParent.characterId = undefined;
+      if (mainParent.children?.[0]) {
+        mainParent.children[0].name = 'Grandparent 1';
+        mainParent.children[0].image = undefined;
+        mainParent.children[0].characterId = undefined;
+      }
+      if (mainParent.children?.[1]) {
+        mainParent.children[1].name = 'Grandparent 2';
+        mainParent.children[1].image = undefined;
+        mainParent.children[1].characterId = undefined;
+      }
+    }
+    this.includeMainParentCharacters = [];
+    this.includeParentCharacters = [];
+    this.excludeParentCharacters = [];
+    this.excludeMainParentCharacters = [];
+    this.blueFactorFilters = [];
+    this.pinkFactorFilters = [];
+    this.greenFactorFilters = [];
+    this.whiteFactorFilters = [];
+    this.mainBlueFactorFilters = [];
+    this.mainPinkFactorFilters = [];
+    this.mainGreenFactorFilters = [];
+    this.mainWhiteFactorFilters = [];
+    this.selectedSupportCard = null;
+    this.selectedLimitBreak = 0;
+    this.searchUserId = '';
+    this.searchUsername = '';
+    this.includeMaxFollowers = false;
+    this.filterState.min_win_count = undefined;
+    this.filterState.min_white_count = undefined;
+    this.filterState.min_main_white_count = undefined;
+    this.filterState.parent_rank = undefined;
+    this.filterState.max_follower_num = undefined;
+    this.filterState.min_blue_stars_sum = undefined;
+    this.filterState.min_pink_stars_sum = undefined;
+    this.filterState.min_green_stars_sum = undefined;
+    this.filterState.min_white_stars_sum = undefined;
+  }
+
+  private applyCharacterUqlClauseToStructuredFilters(clause: string, pendingExcludeParentIds: { left?: number[]; right?: number[] }): boolean {
+    const globalIncludeMatch = clause.match(/^main_chara_id\s+in\s*\(([^()]*)\)\s+or\s+left_chara_id\s+in\s*\(([^()]*)\)\s+or\s+right_chara_id\s+in\s*\(([^()]*)\)$/i);
+    if (globalIncludeMatch) {
+      const values = this.getSharedNumberList(
+        this.parseUqlNumberList(globalIncludeMatch[1]),
+        this.getSharedNumberList(this.parseUqlNumberList(globalIncludeMatch[2]), this.parseUqlNumberList(globalIncludeMatch[3]))
+      );
+      this.includeMainParentCharacters = values.map(id => this.toCharacterSelection(id));
+      this.includeParentCharacters = values.map(id => this.toCharacterSelection(id));
+      return true;
+    }
+
+    const globalExcludeMatch = clause.match(/^main_chara_id\s+not\s+in\s*\(([^()]*)\)\s+and\s+left_chara_id\s+not\s+in\s*\(([^()]*)\)\s+and\s+right_chara_id\s+not\s+in\s*\(([^()]*)\)$/i);
+    if (globalExcludeMatch) {
+      const values = this.getSharedNumberList(
+        this.parseUqlNumberList(globalExcludeMatch[1]),
+        this.getSharedNumberList(this.parseUqlNumberList(globalExcludeMatch[2]), this.parseUqlNumberList(globalExcludeMatch[3]))
+      );
+      this.excludeMainParentCharacters = values.map(id => this.toCharacterSelection(id));
+      this.excludeParentCharacters = values.map(id => this.toCharacterSelection(id));
+      return true;
+    }
+
+    const gpIncludeMatch = clause.match(/^left_chara_id\s+in\s*\(([^()]*)\)\s+or\s+right_chara_id\s+in\s*\(([^()]*)\)$/i);
+    if (gpIncludeMatch) {
+      const values = this.getSharedNumberList(this.parseUqlNumberList(gpIncludeMatch[1]), this.parseUqlNumberList(gpIncludeMatch[2]));
+      this.includeParentCharacters = values.map(id => this.toCharacterSelection(id));
+      return true;
+    }
+
+    const gpExcludeMatch = clause.match(/^left_chara_id\s+not\s+in\s*\(([^()]*)\)\s+and\s+right_chara_id\s+not\s+in\s*\(([^()]*)\)$/i);
+    if (gpExcludeMatch) {
+      const values = this.getSharedNumberList(this.parseUqlNumberList(gpExcludeMatch[1]), this.parseUqlNumberList(gpExcludeMatch[2]));
+      this.excludeParentCharacters = values.map(id => this.toCharacterSelection(id));
+      return true;
+    }
+
+    const comparisonMatch = clause.match(/^(main_chara_id|left_chara_id|right_chara_id)\s*(=|!=|<>|in|not\s+in)\s*(?:\(([^()]*)\)|(\d+))$/i);
+    if (!comparisonMatch) return false;
+    const field = comparisonMatch[1].toLowerCase();
+    const operator = comparisonMatch[2].toLowerCase().replace(/\s+/g, ' ');
+    const values = comparisonMatch[3]
+      ? this.parseUqlNumberList(comparisonMatch[3])
+      : [parseInt(comparisonMatch[4], 10)];
+    if (!values.length) return false;
+
+    if (field === 'main_chara_id') {
+      if (operator === '=' || operator === 'in') {
+        this.includeMainParentCharacters = values.map(id => this.toCharacterSelection(id));
+      } else {
+        this.excludeMainParentCharacters = values.map(id => this.toCharacterSelection(id));
+      }
+      return true;
+    }
+
+    if (operator === '=' || operator === 'in') {
+      const node = field === 'left_chara_id'
+        ? this.treeData.children?.[0]?.children?.[0]
+        : this.treeData.children?.[0]?.children?.[1];
+      if (node) this.setTreeNodeCharacter(node, values[0]);
+      return true;
+    }
+
+    if (field === 'left_chara_id') pendingExcludeParentIds.left = values;
+    if (field === 'right_chara_id') pendingExcludeParentIds.right = values;
+    return true;
+  }
+
+  private applySparkIdGroupToStructuredFilters(fieldName: string, sparkIds: number[]): boolean {
+    const field = fieldName.toLowerCase();
+    const target = field === 'blue_sparks' ? this.blueFactorFilters
+      : field === 'pink_sparks' ? this.pinkFactorFilters
+      : field === 'green_sparks' ? this.greenFactorFilters
+      : field === 'white_sparks' ? this.whiteFactorFilters
+      : field === 'main_white_factors' || field === 'main_white_sparks' ? this.mainWhiteFactorFilters
+      : null;
+    const availableFactors = field === 'blue_sparks' ? this.blueFactors
+      : field === 'pink_sparks' ? this.pinkFactors
+      : field === 'green_sparks' ? this.greenFactors
+      : field === 'white_sparks' || field === 'main_white_factors' || field === 'main_white_sparks' ? this.whiteFactors
+      : null;
+    if (!target || !availableFactors) return false;
+    const filter = this.createFactorFilterFromSparkIds(sparkIds, availableFactors, field.startsWith('main_') ? 3 : 9);
+    if (!filter) return false;
+    target.push(filter);
+    return true;
+  }
+
+  private createFactorFilterFromSparkIds(sparkIds: number[], availableFactors: any[], maxCap: number): FactorFilter | null {
+    const parsed = sparkIds
+      .map(id => ({ factorId: Math.floor(id / 10), level: id % 10 }))
+      .filter(entry => entry.level > 0 && entry.level <= maxCap);
+    if (!parsed.length) return null;
+    const factorIds = [...new Set(parsed.map(entry => entry.factorId))];
+    const levels = [...new Set(parsed.map(entry => entry.level))].sort((left, right) => left - right);
+    const availableIds = new Set(availableFactors.map(factor => parseInt(factor.id, 10)));
+    const factorId = factorIds.length === 1
+      ? factorIds[0]
+      : factorIds.every(id => availableIds.has(id)) ? null : undefined;
+    if (factorId === undefined) return null;
+    return {
+      uuid: this.getUuid(),
+      factorId,
+      min: levels[0],
+      max: levels[levels.length - 1]
+    };
+  }
+
+  private createAnyFactorFilter(min: number, max: number): FactorFilter {
+    return {
+      uuid: this.getUuid(),
+      factorId: null,
+      min,
+      max
+    };
+  }
+
+  private restoreSelectedSupportCard(id: number): void {
+    this.supportCardService.getSupportCards().subscribe((cards: SupportCardShort[]) => {
+      const card = cards.find((entry: SupportCardShort) => entry.id.toString() === id.toString());
+      if (!card) return;
+      this.selectedSupportCard = {
+        id: card.id.toString(),
+        name: card.name,
+        imageUrl: card.imageUrl,
+        type: card.type,
+        rarity: card.rarity,
+        limitBreak: card.limitBreak,
+        release_date: card.release_date
+      };
+      this.onFilterChange();
+    });
+  }
+
+  private splitTopLevelConjunctions(expression: string): string[] {
+    const clauses: string[] = [];
+    let depth = 0;
+    let quote: string | null = null;
+    let start = 0;
+    for (let index = 0; index < expression.length; index++) {
+      const character = expression[index];
+      if (quote) {
+        if (character === quote) quote = null;
+        continue;
+      }
+      if (character === '\'' || character === '"') { quote = character; continue; }
+      if (character === '(') { depth++; continue; }
+      if (character === ')') { depth--; continue; }
+      if (depth !== 0) continue;
+      const match = expression.slice(index).match(/^\s+and\s+/i);
+      if (!match) continue;
+      clauses.push(expression.slice(start, index).trim());
+      index += match[0].length - 1;
+      start = index + 1;
+    }
+    clauses.push(expression.slice(start).trim());
+    return clauses.filter(Boolean);
+  }
+
+  private parseUqlNumberList(listText: string): number[] {
+    return listText.split(',').map(value => parseInt(value.trim(), 10)).filter(value => Number.isFinite(value));
+  }
+
+  private getSharedNumberList(left: number[] | undefined, right: number[] | undefined): number[] {
+    if (!left?.length || !right?.length) return [];
+    const rightSet = new Set(right);
+    return [...new Set(left.filter(value => rightSet.has(value)))];
+  }
+
+  private toCharacterSelection(rawId: number): { id: number; name: string; image?: string } {
+    const id = this.resolveUqlCharacterSelectionId(rawId);
+    const character = getMasterCharacterById(id);
+    return character
+      ? { id, name: character.name || `ID: ${id}`, image: character.image }
+      : { id, name: `ID: ${id}` };
+  }
+
+  private resolveUqlCharacterSelectionId(rawId: number): number {
+    if (getMasterCharacterById(rawId)) return rawId;
+    const variants = CHARACTERS.filter(character => Math.floor(character.id / 100) === rawId);
+    const originalVariant = variants.find(character => this.getCharacterSkinName(character.id) === 'Original');
+    const matchingVariant = originalVariant || variants.find(character => character.id % 100 === 1) || variants[0];
+    return matchingVariant?.id ?? rawId;
+  }
+
+  private setTreeNodeCharacter(node: TreeNode, rawId: number): void {
+    const selection = this.toCharacterSelection(rawId);
+    node.characterId = selection.id;
+    node.name = selection.name;
+    node.image = selection.image;
+  }
+
+  private stripOuterParens(value: string): string {
+    let text = value.trim();
+    while (text.startsWith('(') && text.endsWith(')')) {
+      let depth = 0;
+      let wrapsWholeText = true;
+      for (let index = 0; index < text.length; index++) {
+        const character = text[index];
+        if (character === '(') depth++;
+        if (character === ')') depth--;
+        if (depth === 0 && index < text.length - 1) {
+          wrapsWholeText = false;
+          break;
+        }
+      }
+      if (!wrapsWholeText) break;
+      text = text.slice(1, -1).trim();
+    }
+    return text;
+  }
+
   private buildStructuredUqlExpression(): string {
     const clauses: string[] = [];
     const addMinimumClause = (fieldName: string, value: number | undefined) => {
@@ -3328,6 +4270,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     addMinimumClause('white_count', this.filterState.min_white_count);
     if (this.filterState.parent_rank && this.filterState.parent_rank > 1) {
       addMinimumClause('parent_rank', this.filterState.parent_rank);
+    }
+    if (this.selectedSupportCard) {
+      clauses.push(`Support card = ${this.selectedSupportCard.name}`);
+      if (this.selectedLimitBreak > 0) clauses.push(`limitbreak >= ${this.selectedLimitBreak}`);
+    } else if (this.selectedLimitBreak > 0) {
+      clauses.push(`limitbreak >= ${this.selectedLimitBreak}`);
     }
     if (this.includeMaxFollowers && this.filterState.max_follower_num) {
       clauses.push(`follower_num <= ${this.filterState.max_follower_num}`);

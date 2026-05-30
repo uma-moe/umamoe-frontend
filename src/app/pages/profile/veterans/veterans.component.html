@@ -713,12 +713,7 @@
 
           <!-- Skills -->
           <div class="sm-skills" *ngIf="d.skills.length > 0">
-            <span class="sm-skill" [ngClass]="sk.rarityClass" *ngFor="let sk of d.skills; trackBy: trackBySkill">
-              <img *ngIf="sk.icon" [src]="sk.icon" class="skill-icon" alt=""
-                (error)="$any($event.target).style.display='none'">
-              <span class="skill-name">{{ sk.name }}</span>
-              <span class="skill-level">Lv.{{ sk.level }}</span>
-            </span>
+            <app-skill *ngFor="let skillId of d.skills; trackBy: trackBySkill" [skillId]="skillId" [compact]="true"></app-skill>
           </div>
 
           <!-- Click hint -->

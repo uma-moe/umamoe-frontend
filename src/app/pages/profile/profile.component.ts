@@ -14,6 +14,7 @@ import { ProfileHeaderComponent } from './profile-header/profile-header.componen
 import { ResolveSparksPipe } from '../../pipes/resolve-sparks.pipe';
 import { InheritanceEntryComponent } from '../../components/inheritance-entry/inheritance-entry.component';
 import { RankBadgeComponent } from '../../components/rank-badge/rank-badge.component';
+import { SkillComponent } from '../../components/skill/skill.component';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { InheritanceRecord } from '../../models/inheritance.model';
 import { PlannerTransferService } from '../../services/planner-transfer.service';
@@ -22,7 +23,7 @@ import { Subscription } from 'rxjs';
 import {
     getAptGrade, getRankGrade, getRankGradeColor, getStarDisplay,
     getDistanceName, getRunningStyleName, getScenarioName, getTotalStats,
-    getCardImage, getSkillName, getSkillLevel, getSkillIcon, getSkillRarityClass,
+    getCardImage, sortEncodedSkills,
 } from './profile-helpers';
 
 export interface CircleMembership {
@@ -37,7 +38,7 @@ export interface CircleMembership {
 @Component({
     selector: 'app-profile',
     standalone: true,
-    imports: [CommonModule, RouterModule, RouterOutlet, MatIconModule, MatSnackBarModule, ResolveSparksPipe, ProfileHeaderComponent, InheritanceEntryComponent, RankBadgeComponent, LocaleNumberPipe],
+    imports: [CommonModule, RouterModule, RouterOutlet, MatIconModule, MatSnackBarModule, ResolveSparksPipe, ProfileHeaderComponent, InheritanceEntryComponent, RankBadgeComponent, SkillComponent, LocaleNumberPipe],
     templateUrl: './profile.component.html',
     styleUrl: './profile.component.scss'
 })
@@ -54,6 +55,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     inheritanceRecord: InheritanceRecord | null = null;
     boundGetLevelFromMainParent = this.getLevelFromMainParent.bind(this);
     private readonly mainParentLevelCache = new WeakMap<InheritanceRecord, Map<string, string>>();
+    private readonly sortedSkillsCache = new WeakMap<number[], number[]>();
 
     // Owner controls
     isOwnProfile = false;
@@ -424,10 +426,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
     getScenarioName(id: number | null): string { return getScenarioName(id); }
     getTotalStats(m: any): number { return getTotalStats(m); }
     getCardImage(cardId: number | null): string | null { return getCardImage(cardId); }
-    getSkillName(skillId: number): string { return getSkillName(skillId); }
-    getSkillLevel(skillId: number): number { return getSkillLevel(skillId); }
-    getSkillIcon(skillId: number): string | null { return getSkillIcon(skillId); }
-    getSkillRarityClass(skillId: number): string { return getSkillRarityClass(skillId); }
+    getSortedSkills(skillIds: number[] | null | undefined): number[] {
+        if (!skillIds?.length) return [];
+        const cached = this.sortedSkillsCache.get(skillIds);
+        if (cached) return cached;
+        const sorted = sortEncodedSkills(skillIds);
+        this.sortedSkillsCache.set(skillIds, sorted);
+        return sorted;
+    }
     getAptGrade(val: number | null): string { return getAptGrade(val); }
     getRankGrade(score: number | null): string { return getRankGrade(score); }
     getRankGradeColor(score: number | null): string { return getRankGradeColor(score); }
