@@ -7,7 +7,7 @@ import { UqlCodeEditorComponent, UqlCompletionResult } from './uql-code-editor.c
 
 type UqlValidationState = 'empty' | 'valid' | 'incomplete' | 'invalid';
 export type UqlSuggestionKind = 'field' | 'operator' | 'function' | 'keyword' | 'value' | 'snippet' | 'punctuation';
-export type UqlValueContext = 'character' | 'support-card' | 'blue-factor' | 'pink-factor' | 'green-factor' | 'white-factor' | 'number' | 'text';
+export type UqlValueContext = 'character' | 'support-card' | 'race-saddle' | 'blue-factor' | 'pink-factor' | 'green-factor' | 'white-factor' | 'number' | 'text';
 export type UqlScopeContext = 'main' | 'gp1' | 'gp2' | 'any-gp';
 export type UqlFieldType = 'number' | 'string' | 'array';
 export type UqlHighlightKind = 'keyword' | 'function' | 'field' | 'operator' | 'number' | 'string' | 'paren' | 'identifier' | 'text' | 'punct' | 'ghost' | 'cursor';
@@ -144,7 +144,8 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     this.createDocSnippet('GP1 character in (Special Week, Silence Suzuka)'),
     this.createDocSnippet('GP characters not in (Special Week, Silence Suzuka)'),
     this.createDocSnippet('Main character in (Special Week, Silence Suzuka)'),
-    this.createDocSnippet('Support card in (Kitasan Black [SSR] (Speed), Super Creek [SSR] (Stamina))'),
+    this.createDocSnippet('Race results has all (Niigata Junior S.)'),
+    this.createDocSnippet('Support card = Kitasan Black [SSR] (Speed)'),
     this.createDocSnippet("Trainer name ilike '%name%'"),
     this.createDocSnippet('(Speed >= 3 or Stamina >= 3) and Wins >= 30')
   ];
@@ -178,6 +179,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   private knownFactorValueCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownCharacterValueCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownSupportCardValueCandidates: UqlKnownSuggestionCandidate[] = [];
+  private knownRaceSaddleValueCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownFactorFieldCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownFactorSparkValueCandidates = new Map<string, UqlKnownSuggestionCandidate>();
   private knownFieldNames = new Set<string>();
@@ -982,6 +984,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     const valueCandidates: UqlKnownSuggestionCandidate[] = [];
     const characterCandidates: UqlKnownSuggestionCandidate[] = [];
     const supportCardCandidates: UqlKnownSuggestionCandidate[] = [];
+    const raceSaddleCandidates: UqlKnownSuggestionCandidate[] = [];
     const fieldCandidates: UqlKnownSuggestionCandidate[] = [];
     const factorSparkValueCandidates = new Map<string, UqlKnownSuggestionCandidate>();
     const fieldNames = new Set<string>();
@@ -1007,10 +1010,14 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       if (suggestion.kind === 'value' && suggestion.valueContext === 'support-card') {
         supportCardCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
       }
+      if (suggestion.kind === 'value' && suggestion.valueContext === 'race-saddle') {
+        raceSaddleCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
+      }
     }
     this.knownFactorValueCandidates = valueCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
     this.knownCharacterValueCandidates = characterCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
     this.knownSupportCardValueCandidates = supportCardCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
+    this.knownRaceSaddleValueCandidates = raceSaddleCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
     this.knownFactorFieldCandidates = fieldCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
     this.knownFactorSparkValueCandidates = factorSparkValueCandidates;
     this.knownFieldNames = fieldNames;
@@ -1213,6 +1220,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (context === 'support-card') {
       return this.getKnownSuggestionMatchAt(text, index, this.knownSupportCardValueCandidates, context);
     }
+    if (context === 'race-saddle') {
+      return this.getKnownSuggestionMatchAt(text, index, this.knownRaceSaddleValueCandidates, context);
+    }
     if (context?.endsWith('-factor')) {
       const match = this.getKnownSuggestionMatchAt(text, index, this.knownFactorValueCandidates, context, matchContext.allowAnyFactorContext);
       if (/[0-9]/.test(text[index] || '') && !matchContext.allowAnyFactorContext && match && /[^0-9]/.test(match.text)) return match;
@@ -1276,6 +1286,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (/\bgreen[_\s-]?sparks?\b|\bunique skills?\b|\bgreen factor/.test(haystack)) return 'green-factor';
     if (/\bwhite[_\s-]?sparks?\b|\bwhite skills?\b|\bwhite factors?\b|\bwhite factor/.test(haystack)) return 'white-factor';
     if (/\bsupport[_\s-]?cards?\b|\bsupport card id\b|\bcard id\b/.test(haystack)) return 'support-card';
+    if (/\bwin[_\s-]?saddles?\b|\brace results?\b|\brace wins?\b/.test(haystack)) return 'race-saddle';
     return undefined;
   }
 
@@ -1989,6 +2000,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     }
     if (this.endsWithAny(normalized, ['support card', 'support', 'card', 'support card id'])) {
       return 'support-card';
+    }
+    if (this.endsWithAny(normalized, ['race results', 'race wins', 'main race wins', 'left race wins', 'right race wins', 'win saddles', 'main win saddles', 'left win saddles', 'right win saddles'])) {
+      return 'race-saddle';
     }
     if (this.endsWithAny(normalized, ['white sparks', 'white skills', 'white factors', 'main parent white skills', 'main parent skills', 'parent white skills', 'parent skills', 'main white factors', 'main white sparks', 'optional white', 'optional main white', 'lineage white'])) {
       return 'white-factor';

@@ -112,7 +112,7 @@
 
         <section class="uql-doc-section">
           <h6>White Skills And Array Fields</h6>
-          <p>Skill lists use array operators. Use <span class="uql-doc-inline-code">has</span> for one required skill, <span class="uql-doc-inline-code">in (...)</span> or <span class="uql-doc-inline-code">has any (...)</span> for at least one listed skill, and <span class="uql-doc-inline-code">contains all (...)</span> or <span class="uql-doc-inline-code">has all (...)</span> when every listed skill must exist.</p>
+          <p>Skill lists use array operators. Use <span class="uql-doc-inline-code">has</span> for one required skill or a loose comma list, <span class="uql-doc-inline-code">in (...)</span> or <span class="uql-doc-inline-code">has any (...)</span> for at least one listed skill, and <span class="uql-doc-inline-code">contains all (...)</span> or <span class="uql-doc-inline-code">has all (...)</span> when every listed skill must exist.</p>
           <div class="uql-doc-code-block">
             <div class="uql-doc-code-toolbar">
               <span class="uql-doc-code-lang">uql</span>
@@ -133,7 +133,17 @@
               </div>
             </div>
           </div>
-          <p>Known skill names are treated as values, even when they contain words such as <span class="uql-doc-inline-code">and</span>, <span class="uql-doc-inline-code">or</span>, <span class="uql-doc-inline-code">in</span>, or <span class="uql-doc-inline-code">all</span>. Add <span class="uql-doc-inline-code">&gt;</span>, <span class="uql-doc-inline-code">&gt;=</span>, <span class="uql-doc-inline-code">=</span>, <span class="uql-doc-inline-code">&lt;=</span>, or <span class="uql-doc-inline-code">&lt;</span> after a skill name to filter a specific star level; leave it blank to match every star level.</p>
+          <p>Known skill names are treated as values, even when they contain words such as <span class="uql-doc-inline-code">and</span>, <span class="uql-doc-inline-code">or</span>, <span class="uql-doc-inline-code">in</span>, or <span class="uql-doc-inline-code">all</span>. Add <span class="uql-doc-inline-code">&gt;</span>, <span class="uql-doc-inline-code">&gt;=</span>, <span class="uql-doc-inline-code">=</span>, <span class="uql-doc-inline-code">&lt;=</span>, or <span class="uql-doc-inline-code">&lt;</span> after a skill name to filter a specific star level; leave it blank to match every star level. A bare <span class="uql-doc-inline-code">has Skill A, Skill B</span> list is intentionally loose and may match any listed skill; use <span class="uql-doc-inline-code">has all (...)</span> for a tight all-match.</p>
+        </section>
+
+        <section class="uql-doc-section">
+          <h6>Race Results</h6>
+          <p>Race-result values autocomplete by race name, then compile to win-saddle IDs for backend comparison. <span class="uql-doc-inline-code">Race results</span> targets the main parent wins; use <span class="uql-doc-inline-code">Main race wins</span>, <span class="uql-doc-inline-code">Left race wins</span>, or <span class="uql-doc-inline-code">Right race wins</span> for a specific slot.</p>
+          <dl class="uql-doc-table">
+            <div><dt>Race results has Niigata Junior S.</dt><dd>Main parent won that race or an adjacent win-saddle group containing it.</dd></div>
+            <div><dt>Race results has all (...)</dt><dd>Every listed race must be covered by a matching win saddle.</dd></div>
+            <div><dt>Left race wins in (...)</dt><dd>Any listed race may match the left grandparent win saddles.</dd></div>
+          </dl>
         </section>
 
         <section class="uql-doc-section">

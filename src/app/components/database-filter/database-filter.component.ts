@@ -28,6 +28,7 @@ import { LinkedAccount } from '../../models/auth.model';
 import { CHARACTERS, getCharacterById as getMasterCharacterById, getCharacterNameEntries } from '../../data/character.data';
 import { SUPPORT_CARDS } from '../../data/support-cards.data';
 import { SKILLS } from '../../data/skills.data';
+import { RACE_SADDLE_DATA } from '../../data/race-saddle.data';
 import { getCharacterName } from '../../pages/profile/profile-helpers';
 import { FactorService } from '../../services/factor.service';
 import { RaceSchedulerComponent } from '../race-scheduler/race-scheduler.component';
@@ -74,6 +75,15 @@ interface FriendlyScopedSparkField {
 
 export type UqlFieldType = 'number' | 'string' | 'array';
 type UqlFactorValueContext = Extract<UqlValueContext, 'blue-factor' | 'pink-factor' | 'green-factor' | 'white-factor'>;
+
+interface UqlRaceSaddleValue {
+  label: string;
+  aliases: string[];
+  searchText: string;
+  saddleIds: number[];
+  raceInstanceId: number;
+  grade?: number;
+}
 
 interface FriendlyFieldAlias {
   label: string;
@@ -381,7 +391,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'Pink sparks', aliases: ['pink sparks'], field: 'pink_sparks', type: 'array' },
     { label: 'Green sparks', aliases: ['green sparks', 'unique skills'], field: 'green_sparks', type: 'array' },
     { label: 'Main white factors', aliases: ['main white factors', 'main white sparks', 'main white skills', 'main skills'], field: 'main_white_factors', type: 'array' },
-    { label: 'Main race wins', aliases: ['main race wins', 'main win saddles'], field: 'main_win_saddles', type: 'array' },
+    { label: 'Main race wins', aliases: ['main race wins', 'main race results', 'main win saddles'], field: 'main_win_saddles', type: 'array' },
     // Additional fields documented in the UQL README so they show up in autocomplete and validate correctly.
     { label: 'Inheritance ID', aliases: ['inheritance id', 'inheritance_id'], field: 'inheritance_id', type: 'number' },
     { label: 'Parent inheritance ID', aliases: ['main parent id', 'main_parent_id', 'parent inheritance id'], field: 'main_parent_id', type: 'number' },
@@ -404,9 +414,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'Support card count', aliases: ['support cards', 'support card count', 'support cards count'], field: 'support_card_count', type: 'number' },
     { label: 'Left white factors', aliases: ['left white factors', 'left white sparks'], field: 'left_white_factors', type: 'array' },
     { label: 'Right white factors', aliases: ['right white factors', 'right white sparks'], field: 'right_white_factors', type: 'array' },
-    { label: 'Left race wins', aliases: ['left race wins', 'left win saddles'], field: 'left_win_saddles', type: 'array' },
-    { label: 'Right race wins', aliases: ['right race wins', 'right win saddles'], field: 'right_win_saddles', type: 'array' },
-    { label: 'Race results', aliases: ['race results'], field: 'race_results', type: 'array' },
+    { label: 'Left race wins', aliases: ['left race wins', 'left race results', 'left win saddles'], field: 'left_win_saddles', type: 'array' },
+    { label: 'Right race wins', aliases: ['right race wins', 'right race results', 'right win saddles'], field: 'right_win_saddles', type: 'array' },
+    { label: 'Race results', aliases: ['race results', 'race wins', 'win saddles'], field: 'main_win_saddles', type: 'array' },
   ];
   private readonly friendlySparkComparisonAliases: FriendlySparkComparisonAlias[] = this.friendlySparkFields
     .flatMap(field => field.aliases.map(alias => this.createFriendlySparkComparisonAlias(field, alias)))
@@ -2704,54 +2714,72 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       let compiledSegment = this.compileBareFriendlySkillArrayOperators(segment);
       this.friendlyArrayAliasReplacements.forEach(arrayField => {
         compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.hasAllPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'all', listText);
+          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
           const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'all', listText);
           if (scopedClause) return `${leadingText}${scopedClause}`;
           return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `has_all(${field}, (${listText}))`, 'or')}`;
         });
 
         compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.hasAnyPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'any', listText);
+          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
           const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'any', listText);
           if (scopedClause) return `${leadingText}${scopedClause}`;
           return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `overlaps(${field}, (${listText}))`, 'or')}`;
         });
 
         compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.doesNotHavePattern), (_match, leadingText: string, _aliasText: string, rawValue: string) => {
+          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'not', rawValue);
+          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
           const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'not', rawValue);
           if (scopedClause) return `${leadingText}${scopedClause}`;
           return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `not contains(${field}, ${rawValue.trim()})`, 'and')}`;
         });
 
         compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.hasPattern), (_match, leadingText: string, _aliasText: string, rawValue: string) => {
+          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'one', rawValue);
+          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
           const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'one', rawValue);
           if (scopedClause) return `${leadingText}${scopedClause}`;
           return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `contains(${field}, ${rawValue.trim()})`, 'or')}`;
         });
 
         compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.containsAllPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'all', listText);
+          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
           const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'all', listText);
           if (scopedClause) return `${leadingText}${scopedClause}`;
           return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `has_all(${field}, (${listText}))`, 'or')}`;
         });
 
         compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.containsAnyPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'any', listText);
+          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
           const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'any', listText);
           if (scopedClause) return `${leadingText}${scopedClause}`;
           return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `overlaps(${field}, (${listText}))`, 'or')}`;
         });
 
         compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.notInPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'not', listText);
+          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
           const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'not', listText);
           if (scopedClause) return `${leadingText}${scopedClause}`;
           return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `not overlaps(${field}, (${listText}))`, 'and')}`;
         });
 
         compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.inPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'any', listText);
+          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
           const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'any', listText);
           if (scopedClause) return `${leadingText}${scopedClause}`;
           return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `overlaps(${field}, (${listText}))`, 'or')}`;
         });
 
         compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.containsPattern), (_match, leadingText: string, _aliasText: string, rawValue: string) => {
+          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'one', rawValue);
+          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
           const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'one', rawValue);
           if (scopedClause) return `${leadingText}${scopedClause}`;
           return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `contains(${field}, ${rawValue.trim()})`, 'or')}`;
@@ -2760,6 +2788,38 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
       return compiledSegment;
     });
+  }
+
+  private buildRaceSaddleArrayClause(fields: string[], mode: 'one' | 'any' | 'all' | 'not', listText: string): string | null {
+    const targetFields = [...new Set(fields.flatMap(field => this.getRaceSaddleTargetFields(field)))];
+    if (!targetFields.length) return null;
+    const resolvedItems = this.resolveRaceSaddleListItems(listText);
+    if (!resolvedItems.length || resolvedItems.some(item => item.saddleIds.length === 0)) return null;
+    const buildAnyClause = (fieldName: string, saddleIds: number[]): string => {
+      const ids = [...new Set(saddleIds)].sort((left, right) => left - right);
+      return ids.length === 1 ? `contains(${fieldName}, ${ids[0]})` : `overlaps(${fieldName}, (${ids.join(', ')}))`;
+    };
+
+    if (mode === 'all') {
+      const clauses = resolvedItems.map(item => this.buildScopedArrayClause(targetFields, field => buildAnyClause(field, item.saddleIds), 'or'));
+      return clauses.length === 1 ? clauses[0] : `(${clauses.join(' and ')})`;
+    }
+
+    const allSaddleIds = [...new Set(resolvedItems.flatMap(item => item.saddleIds))].sort((left, right) => left - right);
+    if (!allSaddleIds.length) return null;
+    if (mode === 'not') {
+      return this.buildScopedArrayClause(targetFields, field => `not ${buildAnyClause(field, allSaddleIds)}`, 'and');
+    }
+    return this.buildScopedArrayClause(targetFields, field => buildAnyClause(field, allSaddleIds), 'or');
+  }
+
+  private getRaceSaddleTargetFields(fieldText: string): string[] {
+    const normalized = fieldText.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^(?:not|where)\s+/, '');
+    if (normalized === 'race results' || normalized === 'race wins' || normalized === 'win saddles') return ['main_win_saddles'];
+    if (normalized === 'main race wins' || normalized === 'main race results' || normalized === 'main win saddles') return ['main_win_saddles'];
+    if (normalized === 'left race wins' || normalized === 'left race results' || normalized === 'left win saddles') return ['left_win_saddles'];
+    if (normalized === 'right race wins' || normalized === 'right race results' || normalized === 'right win saddles') return ['right_win_saddles'];
+    return [];
   }
 
   private buildContextAwareScopedSkillClause(
@@ -3062,6 +3122,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     let compiledSegment = segment.replace(singleValuePattern, (match, functionName: string, fieldText: string, rawValue: string) => {
       const factorClause = this.buildFriendlyFactorSingleFunctionClause(functionName, fieldText, rawValue);
       if (factorClause) return factorClause;
+      const raceSaddleClause = this.buildFriendlyRaceSaddleFunctionClause(functionName, fieldText, rawValue);
+      if (raceSaddleClause) return raceSaddleClause;
       const resolvedValue = this.resolveNamedUqlValueForField(fieldText, rawValue);
       return resolvedValue ? `${functionName}(${fieldText}, ${resolvedValue})` : match;
     });
@@ -3070,6 +3132,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     compiledSegment = compiledSegment.replace(listValuePattern, (match, functionName: string, fieldText: string, listText: string) => {
       const factorClause = this.buildFriendlyFactorListFunctionClause(functionName, fieldText, listText);
       if (factorClause) return factorClause;
+      const raceSaddleClause = this.buildFriendlyRaceSaddleFunctionClause(functionName, fieldText, listText);
+      if (raceSaddleClause) return raceSaddleClause;
       const resolvedList = this.replaceNamedListValues(listText, value => this.resolveNamedUqlValueForField(fieldText, value));
       return resolvedList !== listText ? `${functionName}(${fieldText}, (${resolvedList}))` : match;
     });
@@ -3130,6 +3194,16 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const item = this.parseUqlFactorItem(rawValue, context);
     if (!item.factor) return null;
     return this.buildSkillPresenceClause(fieldText.trim(), item, false);
+  }
+
+  private buildFriendlyRaceSaddleFunctionClause(functionName: string, fieldText: string, listText: string): string | null {
+    const targetFields = this.getRaceSaddleTargetFields(fieldText);
+    if (!targetFields.length) return null;
+    const normalizedFunction = functionName.toLowerCase();
+    const mode = normalizedFunction === 'has_all' || normalizedFunction === 'contains_all' || normalizedFunction === 'all'
+      ? 'all'
+      : 'any';
+    return this.buildRaceSaddleArrayClause(targetFields, mode, listText);
   }
 
   private buildFriendlyFactorListFunctionClause(functionName: string, fieldText: string, listText: string): string | null {
@@ -3351,12 +3425,69 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const context = this.getUqlValueContextForField(fieldText);
     if (context === 'character') return this.resolveCharacterUqlValue(value, fieldText);
     if (context === 'support-card') return this.resolveSupportCardUqlValue(value);
+    if (context === 'race-saddle') {
+      const ids = this.resolveRaceSaddleUqlValue(value);
+      return ids.length ? ids.join(', ') : null;
+    }
     if (context === 'blue-factor' || context === 'pink-factor' || context === 'green-factor' || context === 'white-factor') {
       const factor = this.resolveFactorUqlValue(value, context);
       return factor ? this.buildSparkId(factor.factorId, 1).toString() : null;
     }
     return null;
   }
+
+  private resolveRaceSaddleListItems(listText: string): Array<{ value: string; saddleIds: number[] }> {
+    return this.splitUqlRaceSaddleListValues(listText).map(value => ({
+      value,
+      saddleIds: this.resolveRaceSaddleUqlValue(value)
+    }));
+  }
+
+  private resolveRaceSaddleUqlValue(rawValue: string): number[] {
+    const value = rawValue.trim().replace(/^(?:id|saddle_id|win_saddle_id|race_id|race_instance_id)\s*=\s*/i, '');
+    if (!value || /^'.*'$|^".*"$/.test(value)) return [];
+    if (/^\d+$/.test(value)) return [parseInt(value, 10)];
+    const normalizedValue = this.normalizeUqlName(value);
+    const matchedRace = this.getUqlRaceSaddleValues().find(race => [race.label, ...race.aliases]
+      .some(alias => this.normalizeUqlName(alias) === normalizedValue));
+    return matchedRace?.saddleIds ?? [];
+  }
+
+  private splitUqlRaceSaddleListValues(listText: string): string[] {
+    const namedValues = this.getUqlRaceSaddleValues()
+      .flatMap(race => [race.label, ...race.aliases])
+      .filter((value, index, values) => value && values.indexOf(value) === index)
+      .sort((left, right) => right.length - left.length);
+    return this.splitUqlKnownListValues(listText, namedValues);
+  }
+
+  private getUqlRaceSaddleValues(): UqlRaceSaddleValue[] {
+    const byRaceInstanceId = new Map<number, UqlRaceSaddleValue>();
+    for (const race of (RACE_SADDLE_DATA as any).races ?? []) {
+      const raceInstanceId = Number(race.race_instance_id);
+      if (!Number.isFinite(raceInstanceId)) continue;
+      const saddleIds = (race.win_saddles ?? [])
+        .map((winSaddle: any) => Number(winSaddle.saddle_id))
+        .filter((saddleId: number) => Number.isFinite(saddleId));
+      if (!saddleIds.length) continue;
+      const label = race.short_name || race.name || `Race ${raceInstanceId}`;
+      const aliases = [race.name, race.short_name, race.race_id?.toString(), raceInstanceId.toString()]
+        .filter((alias: string | undefined) => !!alias && alias !== label) as string[];
+      const requiredRaceIds = (race.win_saddles ?? [])
+        .flatMap((winSaddle: any) => winSaddle.required_race_instance_ids ?? [])
+        .map((id: unknown) => String(id));
+      byRaceInstanceId.set(raceInstanceId, {
+        label,
+        aliases: [...new Set(aliases)],
+        searchText: [race.name, race.short_name, raceInstanceId, race.race_id, ...saddleIds, ...requiredRaceIds].filter(Boolean).join(' '),
+        saddleIds: [...new Set<number>(saddleIds)].sort((left, right) => left - right),
+        raceInstanceId,
+        grade: Number(race.grade)
+      });
+    }
+    return [...byRaceInstanceId.values()].sort((left, right) => left.label.localeCompare(right.label));
+  }
+
   private resolveSupportCardUqlValue(rawValue: string): string | null {
     const value = rawValue.trim().replace(/^(?:id|card_id|support_card_id)\s*=\s*/i, '');
     if (!value || /^'.*'$|^".*"$/.test(value)) return null;
@@ -3433,6 +3564,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     if (this.endsWithAny(normalized, ['support card', 'support', 'card', 'support card id'])) {
       return 'support-card';
+    }
+    if (this.endsWithAny(normalized, ['race results', 'race wins', 'main race wins', 'left race wins', 'right race wins', 'win saddles', 'main win saddles', 'left win saddles', 'right win saddles'])) {
+      return 'race-saddle';
     }
     if (this.endsWithAny(normalized, ['white sparks', 'white skills', 'white factors', 'main parent white skills', 'main parent skills', 'parent white skills', 'parent skills', 'main white factors', 'main white sparks'])) {
       return 'white-factor';
@@ -3723,11 +3857,23 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         rarityClass: rarityLabel.toLowerCase()
       };
     });
+    const raceSaddleSuggestions = this.getUqlRaceSaddleValues().map(race => ({
+      label: race.label,
+      insertText: race.label,
+      kind: 'value' as const,
+      detail: `Win saddle ids ${race.saddleIds.join(', ')}`,
+      searchText: race.searchText,
+      matchPhrases: [race.label, ...race.aliases],
+      valueContext: 'race-saddle' as const,
+      priority: 8,
+      backendValue: race.saddleIds.join(', ')
+    }));
     this.uqlSuggestions = [
       ...friendlyFieldSuggestions,
       ...syntaxSuggestions.map(suggestion => ({ ...suggestion, priority: this.getSyntaxSuggestionPriority(suggestion) })),
       ...characterSuggestions,
       ...supportCardSuggestions,
+      ...raceSaddleSuggestions,
       ...factorSuggestions
     ];
   }
