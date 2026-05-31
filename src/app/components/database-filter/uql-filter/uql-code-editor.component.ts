@@ -80,6 +80,8 @@ class UqlChipWidget extends WidgetType {
     private readonly title: string | undefined,
     private readonly contextClass: string,
     private readonly rarityClass: string | undefined,
+    private readonly badgeText: string | undefined,
+    private readonly badgeClass: string | undefined,
   ) {
     super();
   }
@@ -99,6 +101,12 @@ class UqlChipWidget extends WidgetType {
     label.textContent = this.text;
     label.className = 'uql-cm-chip-label';
     el.appendChild(label);
+    if (this.badgeText) {
+      const badge = document.createElement('span');
+      badge.textContent = this.badgeText;
+      badge.className = `uql-cm-chip-badge ${this.badgeClass ? `uql-cm-chip-badge-${this.badgeClass}` : ''}`.trim();
+      el.appendChild(badge);
+    }
     return el;
   }
 
@@ -108,7 +116,9 @@ class UqlChipWidget extends WidgetType {
       && other.imageUrl === this.imageUrl
       && other.contextClass === this.contextClass
       && other.rarityClass === this.rarityClass
-      && other.title === this.title;
+      && other.title === this.title
+      && other.badgeText === this.badgeText
+      && other.badgeClass === this.badgeClass;
   }
 
   override ignoreEvent(): boolean {
@@ -129,14 +139,14 @@ function buildDecorationsFromSegments(segments: UqlHighlightSegment[], docLength
     const to = Math.max(from, Math.min(docLength, rawTo));
     if (from === to) continue;
     if (from < lastTo) continue; // guard against accidental overlap
-    if (seg.imageUrl) {
+    if (seg.kind === 'identifier' && (seg.imageUrl || seg.valueContext === 'race-saddle' || seg.valueContext === 'legacy')) {
       const ctxClass = seg.valueContext ? `uql-cm-ctx-${seg.valueContext}` : '';
       const display = seg.displayText || seg.text;
       builder.add(
         from,
         to,
         Decoration.replace({
-          widget: new UqlChipWidget(display, seg.imageUrl, seg.title, ctxClass, seg.rarityClass),
+          widget: new UqlChipWidget(display, seg.imageUrl, seg.title, ctxClass, seg.rarityClass, seg.badgeText, seg.badgeClass),
           inclusive: false,
         }),
       );
@@ -236,6 +246,7 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
   private view: EditorView | null = null;
   private placeholderCompartment = new Compartment();
   private applyingExternalValue = false;
+  private lastSegmentText: string | null = null;
 
   constructor(private readonly ngZone: NgZone) {}
 
@@ -252,9 +263,9 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
         this.applyingExternalValue = true;
         this.view.dispatch({ changes: { from: 0, to: current.length, insert: next } });
         this.applyingExternalValue = false;
-        this.dispatchSegments();
       }
     } else if (changes['tokenize']) {
+      this.lastSegmentText = null;
       this.dispatchSegments();
     }
     if (changes['placeholder']) {
@@ -336,6 +347,7 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
             if (meta?.valueContext) parts.push(`uql-cm-completion-ctx-${meta.valueContext}`);
             if (meta?.scopeContext) parts.push(`uql-cm-completion-scope-${meta.scopeContext}`);
             if (meta?.rarityClass) parts.push(`uql-cm-completion-rarity-${meta.rarityClass}`);
+            if (meta?.badgeClass) parts.push(`uql-cm-completion-badge-${meta.badgeClass}`);
             return parts.join(' ');
           },
           addToOptions: [
@@ -350,6 +362,17 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
                 return img;
               },
               position: 20,
+            },
+            {
+              render: (c: Completion) => {
+                const meta = (c as Completion & { _uql?: UqlSuggestion })._uql;
+                if (!meta?.badgeText) return null;
+                const badge = document.createElement('span');
+                badge.textContent = meta.badgeText;
+                badge.className = `uql-cm-completion-badge ${meta.badgeClass ? `uql-cm-completion-badge-${meta.badgeClass}` : ''}`.trim();
+                return badge;
+              },
+              position: 35,
             },
           ],
         }),
@@ -478,6 +501,8 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
   private dispatchSegments(): void {
     if (!this.view || !this.tokenize) return;
     const text = this.view.state.doc.toString();
+    if (text === this.lastSegmentText) return;
+    this.lastSegmentText = text;
     const segments = this.tokenize(text);
     this.view.dispatch({ effects: setSegmentsEffect.of(segments) });
   }

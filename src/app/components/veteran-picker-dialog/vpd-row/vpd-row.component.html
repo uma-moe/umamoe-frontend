@@ -5,8 +5,8 @@
     <span class="vpd-name">{{ data.name }}</span>
     <span class="sm-tag scenario" *ngIf="data.tag">{{ data.tag }}</span>
     <span class="vpd-bm-trainer" *ngIf="data.subtitle">{{ data.subtitle }}</span>
-    <span class="vpd-stars" *ngIf="data.rarity">
-      <mat-icon *ngFor="let s of getStarDisplay(data.rarity)"
+    <span class="vpd-stars" *ngIf="displayStars.length">
+      <mat-icon *ngFor="let s of displayStars; trackBy: trackByStar"
         [class.star-filled]="s.filled"
         [class.star-empty]="!s.filled">
         {{ s.filled ? 'star' : 'star_border' }}
@@ -19,7 +19,7 @@
 
   <div class="vpd-sparks" *ngIf="data.sparks.length > 0">
     <span class="spark-item" [ngClass]="spark.color + '-spark'"
-      *ngFor="let spark of data.sparks.slice(0, 16)"
+      *ngFor="let spark of visibleSparks; trackBy: trackBySpark"
       [matTooltip]="spark.name + ' Lv.' + spark.level">
       <span class="spark-level">{{ spark.level }}</span>
       <mat-icon class="spark-star">star</mat-icon>
@@ -39,11 +39,11 @@
 
   <ng-template #parentRows>
   <div class="vpd-parents" *ngIf="data.parents.length > 0">
-    <div class="vpd-parent-row" *ngFor="let parent of data.parents">
+    <div class="vpd-parent-row" *ngFor="let parent of data.parents; trackBy: trackByParent">
       <span class="vpd-parent-label" [ngClass]="'pos-' + parent.position">{{ parent.position }}</span>
       <span class="vpd-parent-name">{{ parent.name }}</span>
       <span class="spark-item spark-item--xs" [ngClass]="s.color + '-spark'"
-        *ngFor="let s of parent.sparks.slice(0, 8)"
+        *ngFor="let s of visibleParentSparks(parent); trackBy: trackBySpark"
         [matTooltip]="s.name + ' Lv.' + s.level">
         <span class="spark-level">{{ s.level }}</span>
         <mat-icon class="spark-star">star</mat-icon>

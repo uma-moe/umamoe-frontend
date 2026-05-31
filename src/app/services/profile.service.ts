@@ -32,6 +32,10 @@ export class ProfileService {
     return this.http.get<UserProfileResponse>(`${this.apiUrl}/${accountId}`);
   }
 
+  getVeteranById(veteranId: string): Observable<VeteranMember> {
+    return this.http.get<VeteranMember>(`${this.apiUrl}/veterans/${encodeURIComponent(veteranId)}`);
+  }
+
   getVisibility(accountId: string): Observable<ProfileVisibility> {
     return this.http.get<ProfileVisibility>(`${this.apiUrl}/${accountId}/visibility`);
   }

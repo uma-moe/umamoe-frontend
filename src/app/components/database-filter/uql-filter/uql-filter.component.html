@@ -38,6 +38,9 @@
             [class.uql-context-green]="segment.valueContext === 'green-factor'"
             [class.uql-context-white]="segment.valueContext === 'white-factor'"
             [class.uql-context-character]="segment.valueContext === 'character'"
+            [class.uql-context-legacy]="segment.valueContext === 'legacy'"
+            [class.uql-context-support-card]="segment.valueContext === 'support-card'"
+            [class.uql-context-race-saddle]="segment.valueContext === 'race-saddle'"
             [class.uql-scope-main]="segment.scopeContext === 'main'"
             [class.uql-scope-gp1]="segment.scopeContext === 'gp1'"
             [class.uql-scope-gp2]="segment.scopeContext === 'gp2'"
@@ -60,6 +63,19 @@
             <div><dt>GP Speed &gt;= 3</dt><dd>Speed on either grandparent slot.</dd></div>
             <div><dt>Characters in (...)</dt><dd>Main, GP1, or GP2 is in the list.</dd></div>
             <div><dt>Support card = ...</dt><dd>Support card names work like character names.</dd></div>
+            <div><dt>target = ...</dt><dd>Sets the affinity target for this editor.</dd></div>
+            <div><dt>owned legacy = []</dt><dd>Opens the legacy picker.</dd></div>
+            <div><dt>owned legacy = [Name #uuid]</dt><dd>Sets your owned legacy for affinity and race comparison.</dd></div>
+          </dl>
+        </section>
+
+        <section class="uql-doc-section">
+          <h6>Editor Directives</h6>
+          <p>Directives change the editor context rather than the backend predicate. Use <span class="uql-doc-inline-code">target = Special Week</span> to set the affinity target. Use <span class="uql-doc-inline-code">owned legacy = []</span> to open the picker; after choosing a legacy, the editor stores it as a bracketed value such as <span class="uql-doc-inline-code">owned legacy = [Special Week #550e8400-e29b-41d4-a716-446655440000]</span>.</p>
+          <dl class="uql-doc-table">
+            <div><dt>owned legacy = []</dt><dd>Picker sentinel; opens your legacy picker.</dd></div>
+            <div><dt>owned legacy = [Special Week #550e8400-e29b-41d4-a716-446655440000]</dt><dd>Selected legacy; contributes P2 character and race wins to the search.</dd></div>
+            <div><dt>legacy = [...], my legacy = [...], your legacy = [...]</dt><dd>Accepted aliases for the same owned legacy directive.</dd></div>
           </dl>
         </section>
 
@@ -112,7 +128,7 @@
 
         <section class="uql-doc-section">
           <h6>White Skills And Array Fields</h6>
-          <p>Skill lists use array operators. Use <span class="uql-doc-inline-code">has</span> for one required skill or a loose comma list, <span class="uql-doc-inline-code">in (...)</span> or <span class="uql-doc-inline-code">has any (...)</span> for at least one listed skill, and <span class="uql-doc-inline-code">contains all (...)</span> or <span class="uql-doc-inline-code">has all (...)</span> when every listed skill must exist.</p>
+          <p>Skill lists use array operators. Use <span class="uql-doc-inline-code">has</span> for one required skill or a comma list where every listed skill must exist, and use <span class="uql-doc-inline-code">in (...)</span> or <span class="uql-doc-inline-code">has any (...)</span> for at least one listed skill.</p>
           <div class="uql-doc-code-block">
             <div class="uql-doc-code-toolbar">
               <span class="uql-doc-code-lang">uql</span>
@@ -133,15 +149,15 @@
               </div>
             </div>
           </div>
-          <p>Known skill names are treated as values, even when they contain words such as <span class="uql-doc-inline-code">and</span>, <span class="uql-doc-inline-code">or</span>, <span class="uql-doc-inline-code">in</span>, or <span class="uql-doc-inline-code">all</span>. Add <span class="uql-doc-inline-code">&gt;</span>, <span class="uql-doc-inline-code">&gt;=</span>, <span class="uql-doc-inline-code">=</span>, <span class="uql-doc-inline-code">&lt;=</span>, or <span class="uql-doc-inline-code">&lt;</span> after a skill name to filter a specific star level; leave it blank to match every star level. A bare <span class="uql-doc-inline-code">has Skill A, Skill B</span> list is intentionally loose and may match any listed skill; use <span class="uql-doc-inline-code">has all (...)</span> for a tight all-match.</p>
+          <p>Known skill names are treated as values, even when they contain words such as <span class="uql-doc-inline-code">and</span>, <span class="uql-doc-inline-code">or</span>, <span class="uql-doc-inline-code">in</span>, or <span class="uql-doc-inline-code">all</span>. Add <span class="uql-doc-inline-code">&gt;</span>, <span class="uql-doc-inline-code">&gt;=</span>, <span class="uql-doc-inline-code">=</span>, <span class="uql-doc-inline-code">&lt;=</span>, or <span class="uql-doc-inline-code">&lt;</span> after a skill name to filter a specific star level; leave it blank to match every star level. A bare <span class="uql-doc-inline-code">has Skill A, Skill B</span> list requires both skills; use <span class="uql-doc-inline-code">has any (...)</span> for a loose match.</p>
         </section>
 
         <section class="uql-doc-section">
-          <h6>Race Results</h6>
-          <p>Race-result values autocomplete by race name, then compile to win-saddle IDs for backend comparison. <span class="uql-doc-inline-code">Race results</span> targets the main parent wins; use <span class="uql-doc-inline-code">Main race wins</span>, <span class="uql-doc-inline-code">Left race wins</span>, or <span class="uql-doc-inline-code">Right race wins</span> for a specific slot.</p>
+          <h6>Race Wins</h6>
+          <p>Race-win values autocomplete by race name, then compile to win-saddle IDs for backend comparison. <span class="uql-doc-inline-code">Race wins</span> targets the main parent wins; use <span class="uql-doc-inline-code">Main race wins</span>, <span class="uql-doc-inline-code">Left race wins</span>, or <span class="uql-doc-inline-code">Right race wins</span> for a specific slot.</p>
           <dl class="uql-doc-table">
-            <div><dt>Race results has Niigata Junior S.</dt><dd>Main parent won that race or an adjacent win-saddle group containing it.</dd></div>
-            <div><dt>Race results has all (...)</dt><dd>Every listed race must be covered by a matching win saddle.</dd></div>
+            <div><dt>Race wins has Niigata Junior Stakes</dt><dd>Main parent won that race or an adjacent win-saddle group containing it.</dd></div>
+            <div><dt>Race wins has all (...)</dt><dd>Every listed race must be covered by a matching win saddle.</dd></div>
             <div><dt>Left race wins in (...)</dt><dd>Any listed race may match the left grandparent win saddles.</dd></div>
           </dl>
         </section>

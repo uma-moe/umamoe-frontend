@@ -11,6 +11,8 @@
     </button>
   </div>
 
+  <ng-container *ngIf="!isClosing">
+
   <!-- ===== SIGN-IN NOTICE ===== -->
   <div class="vpd-signin-notice" *ngIf="!isLoggedIn()">
     <mat-icon>info</mat-icon>
@@ -142,7 +144,7 @@
   </div>
 
   <!-- ===== BODY ===== -->
-  <div class="vpd-body">
+  <div class="vpd-body" (scroll)="onBodyScroll($event)">
 
     <!-- VETERANS TAB -->
     <ng-container *ngIf="tab === 'veterans'">
@@ -197,13 +199,13 @@
           </ng-template>
         </ng-template>
       </div>
-      <div class="vpd-list" *ngIf="!loading && filteredVeterans.length > 0">
+      <cdk-virtual-scroll-viewport class="vpd-virtual-list" itemSize="156" minBufferPx="468" maxBufferPx="936" *ngIf="!loading && filteredVeterans.length > 0">
         <app-vpd-row
-          *ngFor="let vet of visibleVeterans; trackBy: trackByVet"
+          *cdkVirtualFor="let vet of filteredVeterans; trackBy: trackByVet"
           [data]="vetToRowData(vet)"
           (rowClick)="select(vet)">
         </app-vpd-row>
-      </div>
+      </cdk-virtual-scroll-viewport>
     </ng-container>
 
     <!-- BOOKMARKS TAB -->
@@ -230,13 +232,13 @@
             <span>No results</span>
             <button class="vpd-reset-btn" (click)="searchQuery = ''">Clear search</button>
           </div>
-          <div class="vpd-list" *ngIf="filteredBookmarks.length > 0">
+          <cdk-virtual-scroll-viewport class="vpd-virtual-list" itemSize="156" minBufferPx="468" maxBufferPx="936" *ngIf="filteredBookmarks.length > 0">
             <app-vpd-row
-              *ngFor="let bm of visibleBookmarks; trackBy: trackByBookmark"
+              *cdkVirtualFor="let bm of filteredBookmarks; trackBy: trackByBookmark"
               [data]="bookmarkToRowData(bm)"
               (rowClick)="selectBookmark(bm)">
             </app-vpd-row>
-          </div>
+          </cdk-virtual-scroll-viewport>
         </ng-container>
       </ng-container>
     </ng-container>
@@ -313,7 +315,7 @@
         </div>
         <div class="vpd-list">
           <app-vpd-row
-            *ngFor="let p of filteredSavedHistory"
+            *ngFor="let p of visibleSavedHistory; trackBy: trackBySaved"
             [data]="partnerToRowData(p)"
             (rowClick)="selectSavedPartner(p)"
             (deleteClick)="deleteSavedPartner(p, $event)">
@@ -592,4 +594,5 @@
     </ng-container>
 
   </div>
+  </ng-container>
 </div>

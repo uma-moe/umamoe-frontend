@@ -203,7 +203,7 @@ export interface SuccessionChara {
 }
 
 export interface VeteranMember {
-  id?: number;
+  id?: string | number;
   trainer_id?: string;
   distance_type: number | null;
   member_id: number | null;

@@ -14,6 +14,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatSelectModule } from '@angular/material/select';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { RouterModule } from '@angular/router';
 import { Subject, takeUntil, catchError, of } from 'rxjs';
 import { VpdRowComponent, VpdRowData, VpdResolvedSpark, VpdResolvedParent } from './vpd-row/vpd-row.component';
@@ -99,7 +100,7 @@ type ResolvedParent = VpdResolvedParent;
 @Component({
   selector: 'app-veteran-picker-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatDialogModule, MatIconModule, MatButtonModule, MatTooltipModule, MatFormFieldModule, MatInputModule, MatAutocompleteModule, MatSelectModule, VpdRowComponent, SparkEditorComponent],
+  imports: [CommonModule, FormsModule, RouterModule, MatDialogModule, MatIconModule, MatButtonModule, MatTooltipModule, MatFormFieldModule, MatInputModule, MatAutocompleteModule, MatSelectModule, ScrollingModule, VpdRowComponent, SparkEditorComponent],
   templateUrl: './veteran-picker-dialog.component.html',
   styleUrls: ['./veteran-picker-dialog.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -156,6 +157,9 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
 
   private sparkCache = new Map<VeteranMember, ResolvedSpark[]>();
   private parentCache = new Map<VeteranMember, ResolvedParent[]>();
+  private allSparkFilterCache = new WeakMap<VeteranMember, ResolvedSpark[]>();
+  private sparkSumCache = new WeakMap<VeteranMember, Record<SparkColor, number>>();
+  private affinityCache = new WeakMap<VeteranMember, { targetCharaId: number; value: number }>();
   private allFactors: Factor[] = [];
 
   // ── Filtered list memoization ────────────────────────────────────────────
@@ -165,6 +169,9 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   private _bmCacheKey = '';
   private _bmCache: InheritanceRecord[] = [];
   private _bmCacheList: InheritanceRecord[] | null = null;
+  private _savedCacheKey = '';
+  private _savedCache: PartnerInheritance[] = [];
+  private _savedCacheList: PartnerInheritance[] | null = null;
   private _meCacheKey = '';
   private _meCache: StoredManualEntry[] = [];
   private _meCacheList: StoredManualEntry[] | null = null;
@@ -172,12 +179,18 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   // ── Row data memoization (per item) ──────────────────────────────────────
   private _vetRowCache = new WeakMap<VeteranMember, VpdRowData>();
   private _bmRowCache = new WeakMap<InheritanceRecord, VpdRowData>();
+  private _partnerRowCache = new WeakMap<PartnerInheritance, VpdRowData>();
   private _meRowCache = new WeakMap<StoredManualEntry, VpdRowData>();
 
   // ── Progressive rendering ────────────────────────────────────────────────
   /** Number of rows currently rendered for the active tab. Grows over animation frames. */
   renderLimit = 0;
-  private _renderRafScheduled = false;
+  isClosing = false;
+  private _dialogOpened = false;
+  private _renderRafId: number | null = null;
+  private readonly initialRenderBatchSize = 16;
+  private readonly renderBatchSize = 16;
+  private readonly renderBoundaryPx = 360;
   sparkScopes: { value: SparkScope; label: string; short: string }[] = [
     { value: 'any', label: 'Any source', short: 'Any' },
     { value: 'own', label: 'Own sparks', short: 'Own' },
@@ -230,47 +243,64 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
         this.sortKey = 'affinity';
         this._invalidateFiltered();
       }
+      this.clearRowCaches();
       this.cdr.markForCheck();
     });
-    this.factorService.getFactors().pipe(takeUntil(this.destroy$)).subscribe(f => this.allFactors = f);
+    this.factorService.getFactors().pipe(takeUntil(this.destroy$)).subscribe(f => {
+      this.allFactors = f;
+      this.clearRowCaches();
+      this.cdr.markForCheck();
+    });
     this.loadManualEntries();
-    if (this.authService.isLoggedIn()) {
-      this.loadBookmarks();
-    }
-    if (!this.savedHistoryLoaded) {
-      this.savedHistoryLoaded = true;
-      this.loadSavedHistory();
-    }
     // Wait for the dialog open animation to finish before instantiating any
     // rows; first render only the dialog chrome so the open is instant.
     this.dialogRef.afterOpened().pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this._dialogOpened = true;
       this._scheduleRenderExpansion();
     });
   }
 
   private _scheduleRenderExpansion(): void {
-    if (this._renderRafScheduled) return;
-    this._renderRafScheduled = true;
-    const tick = () => {
-      this._renderRafScheduled = false;
+    if (!this._dialogOpened || this._renderRafId !== null || this.isClosing) return;
+    this._renderRafId = requestAnimationFrame(() => {
+      this._renderRafId = null;
       const target = this._currentFilteredLength();
       if (this.renderLimit >= target) return;
-      // First chunk renders the visible viewport; subsequent chunks fill the rest.
-      const step = this.renderLimit === 0 ? 8 : 30;
+      const step = this.renderLimit === 0 ? this.initialRenderBatchSize : this.renderBatchSize;
       this.renderLimit = Math.min(target, this.renderLimit + step);
       this.cdr.markForCheck();
-      if (this.renderLimit < target) {
-        this._renderRafScheduled = true;
-        requestAnimationFrame(tick);
-      }
-    };
-    requestAnimationFrame(tick);
+    });
+  }
+
+  onBodyScroll(event: Event): void {
+    const el = event.currentTarget as HTMLElement | null;
+    if (!el || this.renderLimit >= this._currentFilteredLength()) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - this.renderBoundaryPx) {
+      this._scheduleRenderExpansion();
+    }
+  }
+
+  private prepareForClose(): void {
+    if (this.isClosing) return;
+    this.isClosing = true;
+    this.renderLimit = 0;
+    if (this._renderRafId !== null) {
+      cancelAnimationFrame(this._renderRafId);
+      this._renderRafId = null;
+    }
+    this.cdr.detectChanges();
+  }
+
+  private closeWithVeteran(veteran: VeteranMember): void {
+    this.prepareForClose();
+    this.dialogRef.close(veteran);
   }
 
   private _currentFilteredLength(): number {
     switch (this.tab) {
       case 'veterans': return this.filteredVeterans.length;
       case 'bookmarks': return this.filteredBookmarks.length;
+      case 'saved': return this.filteredSavedHistory.length;
       case 'manual': return this.filteredManualEntries.length;
       default: return 0;
     }
@@ -279,6 +309,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   private _invalidateFiltered(): void {
     this._vetCacheKey = '';
     this._bmCacheKey = '';
+    this._savedCacheKey = '';
     this._meCacheKey = '';
     this._scheduleRenderExpansion();
   }
@@ -287,8 +318,21 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     return `${this.searchQuery}|${this.sortKey}|${this.sparkFilters.join(',')}|${this.factorFilters.map(f => `${f.factorId ?? ''}:${f.scope}:${f.minLevel}`).join(';')}|${this.targetCharaId ?? ''}|${extra}`;
   }
 
+  private clearRowCaches(): void {
+    this._vetRowCache = new WeakMap<VeteranMember, VpdRowData>();
+    this._bmRowCache = new WeakMap<InheritanceRecord, VpdRowData>();
+    this._partnerRowCache = new WeakMap<PartnerInheritance, VpdRowData>();
+    this._meRowCache = new WeakMap<StoredManualEntry, VpdRowData>();
+    this.sparkCache.clear();
+    this.parentCache.clear();
+    this.allSparkFilterCache = new WeakMap<VeteranMember, ResolvedSpark[]>();
+    this.sparkSumCache = new WeakMap<VeteranMember, Record<SparkColor, number>>();
+    this.affinityCache = new WeakMap<VeteranMember, { targetCharaId: number; value: number }>();
+  }
+
   trackByVet = (_: number, v: VeteranMember): any => v;
   trackByBookmark = (_: number, b: InheritanceRecord): any => b;
+  trackBySaved = (_: number, p: PartnerInheritance): string => p.account_id;
   trackByManual = (_: number, e: StoredManualEntry): string => e.id;
 
   onSearchChange(): void {
@@ -298,6 +342,10 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this._renderRafId !== null) {
+      cancelAnimationFrame(this._renderRafId);
+      this._renderRafId = null;
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -365,6 +413,11 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     return list.length > this.renderLimit ? list.slice(0, this.renderLimit) : list;
   }
 
+  get visibleSavedHistory(): PartnerInheritance[] {
+    const list = this.filteredSavedHistory;
+    return list.length > this.renderLimit ? list.slice(0, this.renderLimit) : list;
+  }
+
   private applyFiltersAndSort<T>(
     list: T[],
     getName: (item: T) => string,
@@ -373,10 +426,10 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     getStat: (item: T, key: string) => number
   ): T[] {
     let result = list;
+    const query = this.searchQuery.trim().toLowerCase();
 
-    if (this.searchQuery.trim()) {
-      const q = this.searchQuery.toLowerCase();
-      result = result.filter(item => getName(item).toLowerCase().includes(q));
+    if (query) {
+      result = result.filter(item => getName(item).toLowerCase().includes(query));
     }
 
     if (this.sparkFilters.length > 0) {
@@ -398,12 +451,22 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
       }
     }
 
-    return [...result].sort((a, b) => {
+    const decorated = result.map((item, index) => ({
+      item,
+      index,
+      name: this.sortKey === 'name' ? getName(item) : '',
+      stat: this.sortKey === 'name' ? 0 : getStat(item, this.sortKey),
+    }));
+
+    decorated.sort((a, b) => {
       if (this.sortKey === 'name') {
-        return getName(a).localeCompare(getName(b));
+        const byName = a.name.localeCompare(b.name);
+        return byName !== 0 ? byName : a.index - b.index;
       }
-      return getStat(b, this.sortKey) - getStat(a, this.sortKey);
+      const byStat = b.stat - a.stat;
+      return byStat !== 0 ? byStat : a.index - b.index;
     });
+    return decorated.map(entry => entry.item);
   }
 
   switchAccount(accountId: string): void {
@@ -413,6 +476,9 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     }
     this.sparkCache.clear();
     this.parentCache.clear();
+    this.allSparkFilterCache = new WeakMap<VeteranMember, ResolvedSpark[]>();
+    this.sparkSumCache = new WeakMap<VeteranMember, Record<SparkColor, number>>();
+    this.affinityCache = new WeakMap<VeteranMember, { targetCharaId: number; value: number }>();
     this._invalidateFiltered();
     this.renderLimit = 0;
     this.cdr.markForCheck();
@@ -496,7 +562,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   }
 
   select(veteran: VeteranMember): void {
-    this.dialogRef.close(veteran);
+    this.closeWithVeteran(veteran);
   }
 
   private loadBookmarks(): void {
@@ -591,7 +657,14 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
 
   /** Load history from backend (logged-in) or localStorage (anon). */
   get filteredSavedHistory(): PartnerInheritance[] {
-    return this.applyFiltersAndSort(
+    const list = this.savedHistory;
+    const key = this._filterSignature(`saved|${list.length}`);
+    if (this._savedCacheList === list && this._savedCacheKey === key) {
+      return this._savedCache;
+    }
+    this._savedCacheList = list;
+    this._savedCacheKey = key;
+    this._savedCache = this.applyFiltersAndSort(
       this.savedHistory,
       p => this.getPartnerName(p),
       p => this.getPartnerSparks(p),
@@ -606,6 +679,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
         }
       }
     );
+    return this._savedCache;
   }
 
   getPartnerName(record: PartnerInheritance): string {
@@ -726,7 +800,9 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   }
 
   partnerToRowData(p: PartnerInheritance): VpdRowData {
-    return {
+    const cached = this._partnerRowCache.get(p);
+    if (cached) return cached;
+    const data: VpdRowData = {
       imageUrl: `assets/images/character_stand/chara_stand_${p.main_parent_id}.webp`,
       name: getCharacterName(p.main_parent_id),
       subtitle: p.trainer_name ?? undefined,
@@ -741,6 +817,8 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
       },
       showActions: true,
     };
+    this._partnerRowCache.set(p, data);
+    return data;
   }
 
   loadSavedHistory(): void {
@@ -749,10 +827,12 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$), catchError(() => of([] as PartnerInheritance[])))
         .subscribe(list => {
           this.savedHistory = list;
+          this._invalidateFiltered();
           this.cdr.markForCheck();
         });
     } else {
       this.savedHistory = this.partnerService.readAnonSaved();
+      this._invalidateFiltered();
       this.cdr.markForCheck();
     }
   }
@@ -1175,7 +1255,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
       rarity: record.parent_rarity ?? null,
       talent_level: null, team_rating: null,
     };
-    this.dialogRef.close(vet);
+    this.closeWithVeteran(vet);
   }
 
   private readonly MANUAL_STORAGE_KEY = 'vpd_manual_entries';
@@ -1448,7 +1528,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
       proper_distance_middle: null, proper_distance_long: null,
       rarity: null, talent_level: null, team_rating: null,
     };
-    this.dialogRef.close(vet);
+    this.closeWithVeteran(vet);
   }
 
   deleteManualEntry(entry: StoredManualEntry, event: Event): void {
@@ -1471,8 +1551,6 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
       affinity: this.targetCharaId ? this.getAffinity(vet) : 0,
       sparks: this.getSparks(vet),
       parents: this.getParentSparks(vet),
-      lineageVeteran: vet.succession_chara_array?.some(succession => succession.position_id === 10 || succession.position_id === 20) ? vet : undefined,
-      lineageTargetCharaId: this.targetCharaId,
       sparkSums: {
         blue: this.getSparkSum(vet, 'blue'),
         pink: this.getSparkSum(vet, 'pink'),
@@ -1709,7 +1787,17 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   }
 
   getSparkSum(vet: VeteranMember, color: SparkColor): number {
-    return this.getAllSparksForFilter(vet).filter(s => s.color === color).reduce((sum, s) => sum + s.level, 0);
+    let sums = this.sparkSumCache.get(vet);
+    if (!sums) {
+      sums = { blue: 0, pink: 0, green: 0 };
+      for (const spark of this.getAllSparksForFilter(vet)) {
+        if (spark.color === 'blue' || spark.color === 'pink' || spark.color === 'green') {
+          sums[spark.color] += spark.level;
+        }
+      }
+      this.sparkSumCache.set(vet, sums);
+    }
+    return sums[color];
   }
 
   getTotal(vet: VeteranMember): number {
@@ -1757,9 +1845,15 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   }
 
   getAllSparksForFilter(vet: VeteranMember): ResolvedSpark[] {
+    const cached = this.allSparkFilterCache.get(vet);
+    if (cached) return cached;
     const own = this.getSparks(vet);
-    const parentSparks = this.getParentSparks(vet).flatMap(p => p.sparks);
-    return [...own, ...parentSparks];
+    const combined = [...own];
+    for (const parent of this.getParentSparks(vet)) {
+      combined.push(...parent.sparks);
+    }
+    this.allSparkFilterCache.set(vet, combined);
+    return combined;
   }
 
   private getSparksForScope(vet: VeteranMember, scope: SparkScope): ResolvedSpark[] {
@@ -1779,10 +1873,14 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
 
   getAffinity(vet: VeteranMember): number {
     if (!this.targetCharaId || !this.affinityService.isReady) return 0;
+    const cached = this.affinityCache.get(vet);
+    if (cached?.targetCharaId === this.targetCharaId) return cached.value;
     const vetCharaId = this.getCharaId(vet);
     if (!vetCharaId) return 0;
 
     let total = this.affinityService.getAff2(this.targetCharaId, vetCharaId);
+    const vetWins = vet.win_saddle_id_array ?? [];
+    const vetWinSet = vetWins.length ? new Set(vetWins) : null;
 
     const succession = vet.succession_chara_array;
     if (succession?.length) {
@@ -1791,15 +1889,14 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
         const gpCharaId = sc.card_id ? Math.floor(sc.card_id / 100) : null;
         if (!gpCharaId) continue;
         total += this.affinityService.getAff3(this.targetCharaId, vetCharaId, gpCharaId);
-        const vetWins = vet.win_saddle_id_array ?? [];
         const gpWins = sc.win_saddle_id_array ?? [];
-        if (vetWins.length && gpWins.length) {
-          const vetSet = new Set(vetWins);
-          total += gpWins.filter(w => vetSet.has(w)).length;
+        if (vetWinSet && gpWins.length) {
+          total += gpWins.filter(w => vetWinSet.has(w)).length;
         }
       }
     }
 
+    this.affinityCache.set(vet, { targetCharaId: this.targetCharaId, value: total });
     return total;
   }
 

@@ -76,7 +76,7 @@
           <app-rank-badge [rarity]="record.parent_rarity" size="md"></app-rank-badge>
         </span>
         <span *ngIf="record.parent_rank" class="stat-pill score-stat">
-          <span class="stat-number mono">{{ formatScore(record.parent_rank) }}</span>
+          <span class="stat-number mono">{{ record.parent_rank | localeNumber:'1.0-0' }}</span>
           <span class="stat-label">Score</span>
         </span>
       </div>
@@ -280,10 +280,10 @@
 
       <!-- ── Merged view ── -->
       <div *ngIf="sparkViewMode === 'merged' && !selectedParent" class="spark-container">
-        <div class="spark-row" *ngIf="(record.blue_sparks && record.blue_sparks.length > 0) || (showP2Sparks && getP2BlueSparks().length)">
+        <div class="spark-row" *ngIf="getMergedBlueSparks().length">
           <div class="spark-type-indicator blue"></div>
           <div class="spark-list">
-            <span *ngFor="let sparkInfo of combineSparks([record.main_blue_factors, record.left_blue_factors, record.right_blue_factors], showP2Sparks ? getP2BlueSparks() : [], showP2Sparks ? p2BlueSparkSources : null)"
+            <span *ngFor="let sparkInfo of getMergedBlueSparks(); trackBy: trackByCombinedSpark"
                   class="spark-item blue-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
               [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
@@ -303,10 +303,10 @@
           </div>
         </div>
 
-        <div class="spark-row" *ngIf="(record.pink_sparks && record.pink_sparks.length > 0) || (showP2Sparks && getP2PinkSparks().length)">
+        <div class="spark-row" *ngIf="getMergedPinkSparks().length">
           <div class="spark-type-indicator pink"></div>
           <div class="spark-list">
-            <span *ngFor="let sparkInfo of combineSparks([record.main_pink_factors, record.left_pink_factors, record.right_pink_factors], showP2Sparks ? getP2PinkSparks() : [], showP2Sparks ? p2PinkSparkSources : null)"
+            <span *ngFor="let sparkInfo of getMergedPinkSparks(); trackBy: trackByCombinedSpark"
                   class="spark-item pink-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
               [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
@@ -326,10 +326,10 @@
           </div>
         </div>
 
-        <div class="spark-row" *ngIf="(record.green_sparks && record.green_sparks.length > 0) || (showP2Sparks && getP2GreenSparks().length)">
+        <div class="spark-row" *ngIf="getMergedGreenSparks().length">
           <div class="spark-type-indicator green"></div>
           <div class="spark-list">
-            <span *ngFor="let sparkInfo of combineSparks([record.main_green_factors, record.left_green_factors, record.right_green_factors], showP2Sparks ? getP2GreenSparks() : [], showP2Sparks ? p2GreenSparkSources : null)"
+            <span *ngFor="let sparkInfo of getMergedGreenSparks(); trackBy: trackByCombinedSpark"
                   class="spark-item green-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
               [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
@@ -349,10 +349,10 @@
           </div>
         </div>
 
-        <div class="spark-row" *ngIf="(record.white_sparks && record.white_sparks.length > 0) || (showP2Sparks && getP2WhiteSparks().length)">
+        <div class="spark-row" *ngIf="getMergedWhiteSparks().length">
           <div class="spark-type-indicator white"></div>
           <div class="spark-list">
-            <span *ngFor="let sparkInfo of combineWhiteSparks(showP2Sparks ? getP2WhiteSparks() : [], showP2Sparks ? p2WhiteSparkSources : null)"
+            <span *ngFor="let sparkInfo of getMergedWhiteSparks(); trackBy: trackByCombinedSpark"
                   class="spark-item white-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
               [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
@@ -379,7 +379,7 @@
         <div class="spark-row" *ngIf="record.main_blue_factors || record.left_blue_factors || record.right_blue_factors || (showP2Sparks && getP2BlueSparks().length)">
           <div class="spark-type-indicator blue"></div>
           <div class="spark-list">
-            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_blue_factors) | resolveSparks">
+            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_blue_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item blue-spark from-parent-main">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
@@ -387,7 +387,7 @@
                 <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
-            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_blue_factors) | resolveSparks">
+            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_blue_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item blue-spark from-parent-left">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
@@ -395,7 +395,7 @@
                 <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
-            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_blue_factors) | resolveSparks">
+            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_blue_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item blue-spark from-parent-right">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
@@ -404,7 +404,7 @@
               </span>
             </ng-container>
             <ng-container *ngIf="showP2Sparks">
-              <span *ngFor="let entry of resolveP2SparksWithAffinity(p2BlueSparkSources)" class="spark-item blue-spark from-p2-legacy">
+              <span *ngFor="let entry of getP2BlueSparkEntries(); trackBy: trackByP2SparkEntry" class="spark-item blue-spark from-p2-legacy">
                 <span class="spark-level">{{ entry.spark.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ entry.spark.name }}</span>
@@ -418,7 +418,7 @@
         <div class="spark-row" *ngIf="record.main_pink_factors || record.left_pink_factors || record.right_pink_factors || (showP2Sparks && getP2PinkSparks().length)">
           <div class="spark-type-indicator pink"></div>
           <div class="spark-list">
-            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_pink_factors) | resolveSparks">
+            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_pink_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item pink-spark from-parent-main">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
@@ -426,7 +426,7 @@
                 <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
-            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_pink_factors) | resolveSparks">
+            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_pink_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item pink-spark from-parent-left">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
@@ -434,7 +434,7 @@
                 <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
-            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_pink_factors) | resolveSparks">
+            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_pink_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item pink-spark from-parent-right">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
@@ -443,7 +443,7 @@
               </span>
             </ng-container>
             <ng-container *ngIf="showP2Sparks">
-              <span *ngFor="let entry of resolveP2SparksWithAffinity(p2PinkSparkSources)" class="spark-item pink-spark from-p2-legacy">
+              <span *ngFor="let entry of getP2PinkSparkEntries(); trackBy: trackByP2SparkEntry" class="spark-item pink-spark from-p2-legacy">
                 <span class="spark-level">{{ entry.spark.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ entry.spark.name }}</span>
@@ -457,7 +457,7 @@
         <div class="spark-row" *ngIf="record.main_green_factors || record.left_green_factors || record.right_green_factors || (showP2Sparks && getP2GreenSparks().length)">
           <div class="spark-type-indicator green"></div>
           <div class="spark-list">
-            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_green_factors) | resolveSparks">
+            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_green_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item green-spark from-parent-main">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
@@ -465,7 +465,7 @@
                 <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
-            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_green_factors) | resolveSparks">
+            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_green_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item green-spark from-parent-left">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
@@ -473,7 +473,7 @@
                 <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
-            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_green_factors) | resolveSparks">
+            <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_green_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item green-spark from-parent-right">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
@@ -482,7 +482,7 @@
               </span>
             </ng-container>
             <ng-container *ngIf="showP2Sparks">
-              <span *ngFor="let entry of resolveP2SparksWithAffinity(p2GreenSparkSources)" class="spark-item green-spark from-p2-legacy">
+              <span *ngFor="let entry of getP2GreenSparkEntries(); trackBy: trackByP2SparkEntry" class="spark-item green-spark from-p2-legacy">
                 <span class="spark-level">{{ entry.spark.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ entry.spark.name }}</span>
@@ -496,7 +496,7 @@
         <div class="spark-row" *ngIf="record.main_white_factors?.length || record.left_white_factors?.length || record.right_white_factors?.length || (showP2Sparks && getP2WhiteSparks().length)">
           <div class="spark-type-indicator white"></div>
           <div class="spark-list">
-            <ng-container *ngFor="let sparkInfo of record.main_white_factors | resolveSparks">
+            <ng-container *ngFor="let sparkInfo of record.main_white_factors | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item white-spark from-parent-main"
                     [class.matched-filter]="isSparkMatched(sparkInfo)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
@@ -505,7 +505,7 @@
                 <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
-            <ng-container *ngFor="let sparkInfo of record.left_white_factors | resolveSparks">
+            <ng-container *ngFor="let sparkInfo of record.left_white_factors | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item white-spark from-parent-left"
                     [class.matched-filter]="isSparkMatched(sparkInfo)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
@@ -514,7 +514,7 @@
                 <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
               </span>
             </ng-container>
-            <ng-container *ngFor="let sparkInfo of record.right_white_factors | resolveSparks">
+            <ng-container *ngFor="let sparkInfo of record.right_white_factors | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item white-spark from-parent-right"
                     [class.matched-filter]="isSparkMatched(sparkInfo)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
@@ -524,7 +524,7 @@
               </span>
             </ng-container>
             <ng-container *ngIf="showP2Sparks">
-              <span *ngFor="let entry of resolveP2SparksWithAffinity(p2WhiteSparkSources)" class="spark-item white-spark from-p2-legacy"
+              <span *ngFor="let entry of getP2WhiteSparkEntries(); trackBy: trackByP2SparkEntry" class="spark-item white-spark from-p2-legacy"
                     [class.matched-filter]="isSparkMatched(entry.spark)">
                 <span class="spark-level">{{ entry.spark.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
@@ -542,7 +542,7 @@
         <div class="spark-row" *ngIf="getSelectedBlueFactor().length">
           <div class="spark-type-indicator blue"></div>
           <div class="spark-list">
-            <span *ngFor="let sparkInfo of getSelectedBlueFactor() | resolveSparks"
+            <span *ngFor="let sparkInfo of getSelectedBlueFactor() | resolveSparks; trackBy: trackBySparkInfo"
                   class="spark-item blue-spark parent-own-spark">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
@@ -554,7 +554,7 @@
         <div class="spark-row" *ngIf="getSelectedPinkFactor().length">
           <div class="spark-type-indicator pink"></div>
           <div class="spark-list">
-            <span *ngFor="let sparkInfo of getSelectedPinkFactor() | resolveSparks"
+            <span *ngFor="let sparkInfo of getSelectedPinkFactor() | resolveSparks; trackBy: trackBySparkInfo"
                   class="spark-item pink-spark parent-own-spark">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
@@ -566,7 +566,7 @@
         <div class="spark-row" *ngIf="getSelectedGreenFactor().length">
           <div class="spark-type-indicator green"></div>
           <div class="spark-list">
-            <span *ngFor="let sparkInfo of getSelectedGreenFactor() | resolveSparks"
+            <span *ngFor="let sparkInfo of getSelectedGreenFactor() | resolveSparks; trackBy: trackBySparkInfo"
                   class="spark-item green-spark parent-own-spark">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
@@ -578,7 +578,7 @@
         <div class="spark-row" *ngIf="getSelectedWhiteFactors().length">
           <div class="spark-type-indicator white"></div>
           <div class="spark-list">
-            <span *ngFor="let sparkInfo of getSelectedWhiteFactors() | resolveSparks"
+            <span *ngFor="let sparkInfo of getSelectedWhiteFactors() | resolveSparks; trackBy: trackBySparkInfo"
                   class="spark-item white-spark parent-own-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>

@@ -324,9 +324,6 @@ export class InheritanceService {
     if (filters.p2WinSaddle && filters.p2WinSaddle.length > 0) {
       params = params.set('p2_win_saddle', filters.p2WinSaddle.join(','));
     }
-    if (filters.affinityP2 != null) {
-      params = params.set('affinity_p2', filters.affinityP2.toString());
-    }
     if (filters.uql) {
       params = params.set('uql', filters.uql);
     }

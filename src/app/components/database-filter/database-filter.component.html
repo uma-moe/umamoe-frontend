@@ -14,17 +14,18 @@
 
 <div class="filter-content" [class.expanded]="isExpanded">
   <div class="filter-inner">
-    <app-uql-filter
-      *ngIf="filterMode === 'uql'; else formFilterMode"
-      [query]="uqlQuery"
-      [validationState]="uqlValidationState"
-      [validationMessage]="uqlValidationMessage"
-      [snippets]="uqlStarterSnippets"
-      [suggestions]="uqlSuggestions"
-      (queryChange)="uqlQuery = $event; onUqlChange()"
-      (clear)="clearUql()"
-      (insertSnippet)="insertUqlSnippet($event)">
-    </app-uql-filter>
+    <ng-container *ngIf="filterMode === 'uql'; else formFilterMode">
+      <app-uql-filter
+        [query]="uqlQuery"
+        [validationState]="uqlValidationState"
+        [validationMessage]="uqlValidationMessage"
+        [snippets]="uqlStarterSnippets"
+        [suggestions]="uqlSuggestions"
+        (queryChange)="uqlQuery = $event; onUqlChange()"
+        (clear)="clearUql()"
+        (insertSnippet)="insertUqlSnippet($event)">
+      </app-uql-filter>
+    </ng-container>
 
     <ng-template #formFilterMode>
       <app-database-advanced-filter>
@@ -32,7 +33,7 @@
       </app-database-advanced-filter>
     </ng-template>
 
-    <ng-template #formFilterContent>
+    <ng-template #affinityFilterContent>
     <!-- Affinity Section (first) -->
     <div class="collapsible-section affinity-collapsible">
       <div class="collapsible-header" (click)="toggleSection('affinitySection')">
@@ -80,8 +81,7 @@
               <div class="tree-box legacy-detail-box">
                 <app-veteran-display
                   [veteran]="selectedVeteran"
-                  [targetCharaId]="getAffinityTargetCharaId()"
-                  (affinityChanged)="onVeteranAffinityChanged($event)">
+                  [targetCharaId]="getAffinityTargetCharaId()">
                 </app-veteran-display>
               </div>
               <span class="tree-group-label legacy-detail-label">Inheritance</span>
@@ -90,6 +90,11 @@
         </div>
       </div>
     </div>
+
+    </ng-template>
+
+    <ng-template #formFilterContent>
+    <ng-container *ngTemplateOutlet="affinityFilterContent"></ng-container>
 
     <!-- Single Row Layout: Everything Horizontal -->
     <div class="collapsible-section" *ngIf="filterMode === 'advanced'">

@@ -209,10 +209,9 @@ export interface InheritanceSearchFilters {
   minGreenStarsSum?: number;
   minWhiteStarsSum?: number;
   mainWinSaddle?: number[];
-  // P2 legacy affinity
+  // Selected owned legacy context
   p2MainCharaId?: number;
   p2WinSaddle?: number[];
-  affinityP2?: number;
   uql?: string;
   // Pagination
   page?: number;

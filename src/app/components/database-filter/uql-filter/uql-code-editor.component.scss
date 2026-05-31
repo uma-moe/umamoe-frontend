@@ -124,22 +124,40 @@
 ::ng-deep .uql-cm-ctx-green-factor { color: #81c784; }
 ::ng-deep .uql-cm-ctx-white-factor { color: rgba(255, 255, 255, 0.96); }
 ::ng-deep .uql-cm-ctx-character { color: #b8d7ff; }
+::ng-deep .uql-cm-ctx-legacy { color: #e9c5ff; }
 ::ng-deep .uql-cm-scope-main { color: #7dd3fc; font-weight: 700; }
 ::ng-deep .uql-cm-scope-gp1 { color: #f43f5e; font-weight: 700; }
 ::ng-deep .uql-cm-scope-gp2,
 ::ng-deep .uql-cm-scope-any-gp { color: #a78bfa; font-weight: 700; }
+::ng-deep .uql-cm-ctx-blue-factor.uql-cm-scope-main,
+::ng-deep .uql-cm-ctx-blue-factor.uql-cm-scope-gp1,
+::ng-deep .uql-cm-ctx-blue-factor.uql-cm-scope-gp2,
+::ng-deep .uql-cm-ctx-blue-factor.uql-cm-scope-any-gp { color: #64b5f6; }
+::ng-deep .uql-cm-ctx-pink-factor.uql-cm-scope-main,
+::ng-deep .uql-cm-ctx-pink-factor.uql-cm-scope-gp1,
+::ng-deep .uql-cm-ctx-pink-factor.uql-cm-scope-gp2,
+::ng-deep .uql-cm-ctx-pink-factor.uql-cm-scope-any-gp { color: #f48fb1; }
+::ng-deep .uql-cm-ctx-green-factor.uql-cm-scope-main,
+::ng-deep .uql-cm-ctx-green-factor.uql-cm-scope-gp1,
+::ng-deep .uql-cm-ctx-green-factor.uql-cm-scope-gp2,
+::ng-deep .uql-cm-ctx-green-factor.uql-cm-scope-any-gp { color: #81c784; }
+::ng-deep .uql-cm-ctx-white-factor.uql-cm-scope-main,
+::ng-deep .uql-cm-ctx-white-factor.uql-cm-scope-gp1,
+::ng-deep .uql-cm-ctx-white-factor.uql-cm-scope-gp2,
+::ng-deep .uql-cm-ctx-white-factor.uql-cm-scope-any-gp { color: rgba(255, 255, 255, 0.96); }
 
 ::ng-deep .uql-cm-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  height: 20px;
   padding: 0 6px 0 4px;
   margin: 0 1px;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.04);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
-  line-height: 18px;
-  vertical-align: -3px;
+  line-height: 20px;
+  vertical-align: middle;
   white-space: nowrap;
   color: inherit;
   cursor: text;
@@ -155,7 +173,23 @@
 
   .uql-cm-chip-label {
     color: inherit;
-    line-height: 18px;
+    line-height: 20px;
+  }
+
+  .uql-cm-chip-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 14px;
+    padding: 0 4px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1;
   }
 
   &.uql-cm-ctx-blue-factor {
@@ -179,6 +213,22 @@
     box-shadow: 0 0 0 1px rgba(100, 181, 246, 0.32);
     background: linear-gradient(90deg, rgba(100, 181, 246, 0.14), rgba(255, 255, 255, 0.04));
     color: #dbeafe;
+
+    .uql-cm-chip-img {
+      width: 16px;
+      height: 16px;
+      flex-basis: 16px;
+      border-radius: 4px;
+      object-fit: cover;
+      object-position: top center;
+    }
+  }
+
+  &.uql-cm-ctx-legacy {
+    border: 1px solid rgba(171, 71, 188, 0.28);
+    box-shadow: none;
+    background: linear-gradient(90deg, rgba(171, 71, 188, 0.14), rgba(255, 255, 255, 0.035));
+    color: #f0d3ff;
 
     .uql-cm-chip-img {
       width: 16px;
@@ -222,6 +272,48 @@
       box-shadow: 0 0 10px rgba(125, 201, 255, 0.18);
     }
   }
+
+  &.uql-cm-ctx-race-saddle {
+    gap: 6px;
+    padding: 1px 7px 1px 5px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 4px;
+    box-shadow: none;
+    background: rgba(148, 163, 184, 0.09);
+    color: #edf3fb;
+
+    .uql-cm-chip-label {
+      line-height: 20px;
+    }
+
+    .uql-cm-chip-badge {
+      order: -1;
+      min-width: 18px;
+      height: 14px;
+      padding: 0 4px;
+      border-radius: 999px;
+      font-size: 9px;
+      letter-spacing: 0;
+    }
+
+    .uql-cm-chip-badge-grade-g1 {
+      border-color: rgba(var(--grade-g1-base), 0.34);
+      background: rgba(var(--grade-g1-base), 0.13);
+      color: var(--grade-g1);
+    }
+
+    .uql-cm-chip-badge-grade-g2 {
+      border-color: rgba(var(--grade-g2-base), 0.34);
+      background: rgba(var(--grade-g2-base), 0.13);
+      color: var(--grade-g2);
+    }
+
+    .uql-cm-chip-badge-grade-g3 {
+      border-color: rgba(var(--grade-g3-base), 0.34);
+      background: rgba(var(--grade-g3-base), 0.13);
+      color: var(--grade-g3);
+    }
+  }
 }
 
 // ----- Autocomplete popup (cm-tooltip-autocomplete) -----
@@ -258,6 +350,39 @@
         object-fit: cover;
       }
 
+      .uql-cm-completion-badge {
+        flex: 0 0 auto;
+        min-width: 22px;
+        height: 16px;
+        padding: 0 4px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.07);
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 10px;
+        font-weight: 800;
+        line-height: 14px;
+        text-align: center;
+      }
+
+      .uql-cm-completion-badge-grade-g1 {
+        border-color: rgba(var(--grade-g1-base), 0.42);
+        background: rgba(var(--grade-g1-base), 0.15);
+        color: var(--grade-g1);
+      }
+
+      .uql-cm-completion-badge-grade-g2 {
+        border-color: rgba(var(--grade-g2-base), 0.42);
+        background: rgba(var(--grade-g2-base), 0.15);
+        color: var(--grade-g2);
+      }
+
+      .uql-cm-completion-badge-grade-g3 {
+        border-color: rgba(var(--grade-g3-base), 0.42);
+        background: rgba(var(--grade-g3-base), 0.15);
+        color: var(--grade-g3);
+      }
+
       .cm-completionLabel {
         flex: 1 1 auto;
         min-width: 0;
@@ -283,7 +408,9 @@
       &.uql-cm-completion-ctx-pink-factor .cm-completionLabel { color: #f8a6c4; }
       &.uql-cm-completion-ctx-green-factor .cm-completionLabel { color: #a5d6a7; }
       &.uql-cm-completion-ctx-white-factor .cm-completionLabel { color: rgba(255, 255, 255, 0.95); }
+      &.uql-cm-completion-ctx-race-saddle .cm-completionLabel { color: #e8eef7; }
       &.uql-cm-completion-ctx-character .cm-completionLabel { color: #b8d7ff; }
+      &.uql-cm-completion-ctx-legacy .cm-completionLabel { color: #e9c5ff; }
       &.uql-cm-completion-ctx-support-card .cm-completionLabel { color: #e8eef7; }
       &.uql-cm-completion-scope-main .cm-completionLabel { color: #7dd3fc; }
       &.uql-cm-completion-scope-gp1 .cm-completionLabel { color: #f43f5e; }
@@ -292,6 +419,12 @@
 
       &.uql-cm-completion-ctx-character .uql-cm-completion-img {
         border-color: rgba(100, 181, 246, 0.28);
+        object-position: top center;
+      }
+
+      &.uql-cm-completion-ctx-legacy .uql-cm-completion-img {
+        border-color: rgba(171, 71, 188, 0.32);
+        border-radius: 50%;
         object-position: top center;
       }
 

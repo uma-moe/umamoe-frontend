@@ -750,6 +750,24 @@
   gap: 6px;
 }
 
+.vpd-virtual-list {
+  display: block;
+  height: 100%;
+  min-height: 240px;
+  width: 100%;
+
+  app-vpd-row {
+    box-sizing: border-box;
+    height: 150px;
+    margin-bottom: 6px;
+    width: 100%;
+  }
+
+  ::ng-deep .cdk-virtual-scroll-content-wrapper {
+    width: 100%;
+  }
+}
+
 // Row styles live in vpd-row/vpd-row.component.scss
 
 // Mobile breakpoints

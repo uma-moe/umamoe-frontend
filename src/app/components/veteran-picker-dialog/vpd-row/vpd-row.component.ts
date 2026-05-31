@@ -1,6 +1,6 @@
 import {
   Component, Input, Output, EventEmitter,
-  ChangeDetectionStrategy, HostListener,
+  ChangeDetectionStrategy, HostListener, OnChanges,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
@@ -53,7 +53,7 @@ export interface VpdRowData {
   styleUrls: ['./vpd-row.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class VpdRowComponent {
+export class VpdRowComponent implements OnChanges {
   @Input() data!: VpdRowData;
 
   @Output() rowClick = new EventEmitter<void>();
@@ -61,6 +61,14 @@ export class VpdRowComponent {
   @Output() deleteClick = new EventEmitter<MouseEvent>();
 
   readonly getStarDisplay = getStarDisplay;
+  displayStars: ReturnType<typeof getStarDisplay> = [];
+  visibleSparks: VpdResolvedSpark[] = [];
+  private readonly visibleParentSparkCache = new WeakMap<VpdResolvedSpark[], VpdResolvedSpark[]>();
+
+  ngOnChanges(): void {
+    this.displayStars = this.data?.rarity ? getStarDisplay(this.data.rarity) : [];
+    this.visibleSparks = this.data?.sparks?.length > 16 ? this.data.sparks.slice(0, 16) : (this.data?.sparks ?? []);
+  }
 
   @HostListener('click')
   onHostClick(): void {
@@ -73,5 +81,27 @@ export class VpdRowComponent {
 
   stopProp(event: MouseEvent): void {
     event.stopPropagation();
+  }
+
+  visibleParentSparks(parent: VpdResolvedParent): VpdResolvedSpark[] {
+    const sparks = parent.sparks;
+    if (sparks.length <= 8) return sparks;
+    const cached = this.visibleParentSparkCache.get(sparks);
+    if (cached) return cached;
+    const visible = sparks.slice(0, 8);
+    this.visibleParentSparkCache.set(sparks, visible);
+    return visible;
+  }
+
+  trackByStar(index: number): number {
+    return index;
+  }
+
+  trackBySpark(_: number, spark: VpdResolvedSpark): string {
+    return `${spark.factorId}:${spark.level}:${spark.color}`;
+  }
+
+  trackByParent(_: number, parent: VpdResolvedParent): string {
+    return parent.position;
   }
 }

@@ -181,6 +181,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   private _p2PinkSparkSources: P2SparkSourceEntry[] | null = null;
   private _p2GreenSparkSources: P2SparkSourceEntry[] | null = null;
   private _p2WhiteSparkSources: P2SparkSourceEntry[] | null = null;
+  private advancedSearchSignature: string | null = null;
 
   get currentP2BlueSparks(): number[] | null { return this._p2BlueSparks; }
   get currentP2PinkSparks(): number[] | null { return this._p2PinkSparks; }
@@ -190,6 +191,42 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   get currentP2PinkSparkSources(): P2SparkSourceEntry[] | null { return this._p2PinkSparkSources; }
   get currentP2GreenSparkSources(): P2SparkSourceEntry[] | null { return this._p2GreenSparkSources; }
   get currentP2WhiteSparkSources(): P2SparkSourceEntry[] | null { return this._p2WhiteSparkSources; }
+
+  private stableStringify(value: unknown): string {
+    if (Array.isArray(value)) {
+      return `[${value.map(item => this.stableStringify(item)).join(',')}]`;
+    }
+    if (value && typeof value === 'object') {
+      const objectValue = value as Record<string, unknown>;
+      return `{${Object.keys(objectValue)
+        .filter(key => objectValue[key] !== undefined)
+        .sort()
+        .map(key => `${JSON.stringify(key)}:${this.stableStringify(objectValue[key])}`)
+        .join(',')}}`;
+    }
+    return JSON.stringify(value) ?? 'undefined';
+  }
+
+  private getAdvancedSearchSignature(params: UnifiedSearchParams | null): string {
+    if (!params) return '';
+    const searchParams: Record<string, unknown> = { ...params };
+    delete searchParams['p2_main_chara_id'];
+    delete searchParams['p2_win_saddle'];
+    return this.stableStringify(searchParams);
+  }
+
+  private withSelectedVeteranP2Params(params: UnifiedSearchParams): UnifiedSearchParams {
+    const veteran = this.advancedFilter?.selectedVeteran;
+    if (!veteran) return params;
+    const p2MainCharaId = this.toCharaId(veteran.card_id ?? veteran.trained_chara_id ?? undefined) ?? undefined;
+    const p2WinSaddle = veteran.win_saddle_id_array?.length ? veteran.win_saddle_id_array : undefined;
+    if (!p2MainCharaId && !p2WinSaddle) return params;
+    return {
+      ...params,
+      p2_main_chara_id: params.p2_main_chara_id ?? p2MainCharaId,
+      p2_win_saddle: params.p2_win_saddle ?? p2WinSaddle,
+    };
+  }
 
   private refreshP2SparkCache(): void {
     this._p2BlueSparkSources = this.resolveP2SparkSourcesByColor(0);
@@ -257,8 +294,8 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   boundIsSparkMatched = this.isSparkMatched.bind(this);
   boundGetLevelFromMainParent = this.getLevelFromMainParent.bind(this);
   private readonly mainParentLevelCache = new WeakMap<InheritanceRecord, Map<string, string>>();
-  private readonly initialRecordRenderBatchSize = 4;
-  private readonly recordRenderBatchSize = 3;
+  private readonly initialRecordRenderBatchSize = 8;
+  private readonly recordRenderBatchSize = 8;
   private recordRenderFrame: number | null = null;
   private recordRenderGeneration = 0;
 
@@ -353,11 +390,14 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       if (this.scrollThrottled) return;
       this.scrollThrottled = true;
       requestAnimationFrame(() => {
-        const threshold = 300;
-        const position = window.pageYOffset + window.innerHeight;
-        const height = document.documentElement.scrollHeight;
-        if (this.listMode === 'infinite' && position > height - threshold && this.hasMoreRecords && !this.loading && !this.loadingMore) {
-          this.ngZone.run(() => this.loadMoreRecords());
+        if (this.isNearRenderBoundary()) {
+          this.ngZone.run(() => {
+            if (this.hasUnrenderedRecords) {
+              this.scheduleRecordRenderExpansion(this.recordRenderGeneration);
+            } else if (this.listMode === 'infinite' && this.hasMoreRecords && !this.loading && !this.loadingMore) {
+              this.loadMoreRecords();
+            }
+          });
         }
         this.scrollThrottled = false;
       });
@@ -383,7 +423,22 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     }
   }
   onAdvancedFilterChange(params: UnifiedSearchParams) {
-    this.currentAdvancedFilters = params;
+    if (this.advancedFilter?.isCurrentUqlOwnedLegacyResolutionPending()) {
+      return;
+    }
+    const effectiveParams = this.withSelectedVeteranP2Params(params);
+    if (this.advancedFilter?.currentUqlRequiresOwnedLegacyParams()
+      && (!effectiveParams.p2_main_chara_id || !effectiveParams.p2_win_saddle?.length)) {
+      return;
+    }
+    const previousSearchSignature = this.advancedSearchSignature;
+    const nextSearchSignature = this.getAdvancedSearchSignature(effectiveParams);
+    const isP2OnlyChange = previousSearchSignature !== null && previousSearchSignature === nextSearchSignature;
+    const hasPendingPage = this._pendingPage !== null;
+
+    this.currentAdvancedFilters = effectiveParams;
+    this.advancedSearchSignature = nextSearchSignature;
+    this.refreshP2SparkCache();
     
     // Update URL
     const serialized = this.advancedFilter.getSerializedState();
@@ -396,19 +451,25 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       replaceUrl: true
     });
     // Reset pagination and search (but preserve page when restoring from URL)
-    if (this._pendingPage !== null) {
-      this.currentPage = this._pendingPage;
+    if (hasPendingPage) {
+      this.currentPage = this._pendingPage!;
       this._pendingPage = null;
     } else {
       this.currentPage = 0;
     }
+
+    if (isP2OnlyChange && !hasPendingPage) {
+      this.hasMoreRecords = true;
+      this.searchRecords({ preserveExisting: true });
+      return;
+    }
+
     this.clearRecords();
     this.hasMoreRecords = true;
     this.searchRecords();
     this.boundIsSparkMatched = this.isSparkMatched.bind(this);
     this.bookmarkPage = 0;
     this.applyBookmarkFilters();
-    this.refreshP2SparkCache();
   }
   ngOnDestroy() {
     this.destroy$.next();
@@ -447,7 +508,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     this.bookmarkPage = 0;
     this.applyBookmarkFilters();
   }
-  searchRecords() {
+  searchRecords(options: { preserveExisting?: boolean } = {}) {
     if (this.activeTab === 'bookmarks') {
       this.pendingSearch = true;
       return;
@@ -461,7 +522,8 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       if (this.searchSubscription) {
         this.searchSubscription.unsubscribe();
       }
-      this.loading = true;
+      const preserveExisting = !!options.preserveExisting && this.allRecords.length > 0;
+      this.loading = !preserveExisting;
       this.loadingMore = false;
     } else {
       this.loadingMore = true;
@@ -518,7 +580,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         
         p2MainCharaId: af.p2_main_chara_id,
         p2WinSaddle: af.p2_win_saddle,
-        affinityP2: af.affinity_p2,
         uql: af.uql,
         
         page: this.currentPage,
@@ -679,7 +740,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       });
   }
   loadMoreRecords() {
-    if (!this.hasMoreRecords || this.loading || this.loadingMore || this.isRenderingRecords) {
+    if (!this.hasMoreRecords || this.loading || this.loadingMore || this.isRenderingRecords || this.hasUnrenderedRecords) {
       return;
     }
     this.currentPage++;
@@ -690,6 +751,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   }
 
   get isRenderingRecords(): boolean {
+    return this.recordRenderFrame !== null;
+  }
+
+  get hasUnrenderedRecords(): boolean {
     return this.renderedRecords.length < this.allRecords.length;
   }
 
@@ -715,7 +780,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       this.renderInitialRecordBatch();
       return;
     }
-    this.scheduleRecordRenderExpansion(this.recordRenderGeneration);
+    this.maybeRenderMoreRecordsForViewport();
   }
 
   private renderInitialRecordBatch(): void {
@@ -738,9 +803,9 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       );
       this.renderedRecords = this.allRecords.slice(0, nextCount);
 
-      if (nextCount < this.allRecords.length) {
+      if (nextCount < this.allRecords.length && this.isNearRenderBoundary()) {
         this.scheduleRecordRenderExpansion(generation);
-      } else {
+      } else if (nextCount >= this.allRecords.length) {
         this.maybeLoadMoreRecordsForViewport();
       }
     });
@@ -754,12 +819,22 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
 
   private maybeLoadMoreRecordsForViewport(): void {
     if (this.listMode !== 'infinite' || !this.hasMoreRecords || this.loading || this.loadingMore) return;
+    if (this.isNearRenderBoundary()) {
+      this.loadMoreRecords();
+    }
+  }
+
+  private maybeRenderMoreRecordsForViewport(): void {
+    if (this.hasUnrenderedRecords && this.isNearRenderBoundary()) {
+      this.scheduleRecordRenderExpansion(this.recordRenderGeneration);
+    }
+  }
+
+  private isNearRenderBoundary(): boolean {
     const threshold = 300;
     const position = window.pageYOffset + window.innerHeight;
     const height = document.documentElement.scrollHeight;
-    if (position > height - threshold) {
-      this.loadMoreRecords();
-    }
+    return position > height - threshold;
   }
 
   private getStatLevel(statType: string): number | undefined {
@@ -1689,8 +1764,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   }
 
   private matchesFilters(r: InheritanceRecord, af: UnifiedSearchParams): boolean {
+    if (af.uql && !this.matchesLocalUql(r, af.uql)) return false;
+
     if (af.trainer_id && r.account_id !== af.trainer_id && r.trainer_id !== af.trainer_id) return false;
-    if (af.trainer_name && r.trainer_name && !r.trainer_name.toLowerCase().includes(af.trainer_name.toLowerCase())) return false;
+    if (af.trainer_name && !(r.trainer_name ?? '').toLowerCase().includes(af.trainer_name.toLowerCase())) return false;
 
     if (af.main_parent_id?.length && !af.main_parent_id.includes(r.main_parent_id!)) return false;
     if (af.parent_left_id && r.parent_left_id !== af.parent_left_id) return false;
@@ -1714,6 +1791,8 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
 
     if (af.support_card_id && r.support_card_id !== af.support_card_id) return false;
     if (af.min_limit_break && (r.limit_break_count ?? 0) < af.min_limit_break) return false;
+    if (af.max_limit_break !== undefined && (r.limit_break_count ?? 0) > af.max_limit_break) return false;
+    if (af.min_experience && (r.support_card_experience ?? 0) < af.min_experience) return false;
 
     if (af.max_follower_num && r.follower_num !== null && r.follower_num !== undefined && r.follower_num > af.max_follower_num) return false;
 
@@ -1727,6 +1806,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     if (!checkSparkGroups(af.pink_sparks, r.pink_sparks)) return false;
     if (!checkSparkGroups(af.green_sparks, r.green_sparks)) return false;
     if (!checkSparkGroups(af.white_sparks, r.white_sparks)) return false;
+    if (!checkSparkGroups(af.main_parent_white_sparks, r.main_white_factors)) return false;
 
     const checkMainSparkArray = (required: number[] | undefined, mainFactor: number | undefined): boolean => {
       if (!required?.length) return true;
@@ -1738,13 +1818,249 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     if (!checkMainSparkArray(af.main_parent_pink_sparks, r.main_pink_factors)) return false;
     if (!checkMainSparkArray(af.main_parent_green_sparks, r.main_green_factors)) return false;
 
+    const sparkLevel = (sparkId: number | undefined) => sparkId === undefined ? 0 : sparkId % 10;
+    if (af.min_main_blue_factors && sparkLevel(r.main_blue_factors) < af.min_main_blue_factors) return false;
+    if (af.min_main_pink_factors && sparkLevel(r.main_pink_factors) < af.min_main_pink_factors) return false;
+    if (af.min_main_green_factors && sparkLevel(r.main_green_factors) < af.min_main_green_factors) return false;
+    if (af.min_main_white_count && (r.main_white_count ?? r.main_white_factors?.length ?? 0) < af.min_main_white_count) return false;
+
     const sumSparks = (sparks: number[] | undefined) => (sparks ?? []).reduce((s, id) => s + (id % 10), 0);
     if (af.min_blue_stars_sum && sumSparks(r.blue_sparks) < af.min_blue_stars_sum) return false;
     if (af.min_pink_stars_sum && sumSparks(r.pink_sparks) < af.min_pink_stars_sum) return false;
     if (af.min_green_stars_sum && sumSparks(r.green_sparks) < af.min_green_stars_sum) return false;
     if (af.min_white_stars_sum && sumSparks(r.white_sparks) < af.min_white_stars_sum) return false;
 
+    if (af.main_win_saddle?.length) {
+      const mainWins = new Set(r.main_win_saddles ?? []);
+      if (!af.main_win_saddle.every(id => mainWins.has(id))) return false;
+    }
+
     return true;
+  }
+
+  private matchesLocalUql(record: InheritanceRecord, uql: string): boolean {
+    const expression = uql.replace(/^\s*where\s+/i, '').trim();
+    if (!expression) return true;
+    try {
+      return this.evaluateLocalUqlExpression(record, expression);
+    } catch {
+      return true;
+    }
+  }
+
+  private evaluateLocalUqlExpression(record: InheritanceRecord, expression: string): boolean {
+    const trimmed = this.stripOuterLocalUqlParens(expression.trim());
+    const orParts = this.splitLocalUqlByKeyword(trimmed, 'or');
+    if (orParts.length > 1) return orParts.some(part => this.evaluateLocalUqlExpression(record, part));
+    const andParts = this.splitLocalUqlByKeyword(trimmed, 'and');
+    if (andParts.length > 1) return andParts.every(part => this.evaluateLocalUqlExpression(record, part));
+    const notMatch = trimmed.match(/^not\s+(.+)$/i);
+    if (notMatch) return !this.evaluateLocalUqlExpression(record, notMatch[1]);
+    return this.evaluateLocalUqlPredicate(record, trimmed);
+  }
+
+  private evaluateLocalUqlPredicate(record: InheritanceRecord, predicate: string): boolean {
+    const normalized = predicate.trim();
+    const functionMatch = normalized.match(/^(contains|has|overlaps|any|has_all|contains_all|all)\s*\(\s*([a-z_][a-z0-9_]*)\s*,\s*(.*)\)$/i);
+    if (functionMatch) {
+      const fn = functionMatch[1].toLowerCase();
+      const field = functionMatch[2];
+      const values = this.parseLocalUqlNumberList(functionMatch[3]);
+      const fieldValues = this.getLocalUqlFieldValues(record, field);
+      if (fn === 'has_all' || fn === 'contains_all' || fn === 'all') {
+        return values.every(value => fieldValues.includes(value));
+      }
+      return values.some(value => fieldValues.includes(value));
+    }
+
+    const supportMatch = normalized.match(/^(?:has_)?support_card\s*\((.*)\)$/i);
+    if (supportMatch) return this.evaluateLocalUqlSupportCard(record, supportMatch[1]);
+
+    const notInMatch = normalized.match(/^([a-z_][a-z0-9_]*)\s+not\s+in\s*\((.*)\)$/i);
+    if (notInMatch) {
+      const values = this.parseLocalUqlNumberList(notInMatch[2]);
+      return !this.getLocalUqlFieldValues(record, notInMatch[1]).some(value => values.includes(value));
+    }
+
+    const inMatch = normalized.match(/^([a-z_][a-z0-9_]*)\s+in\s*\((.*)\)$/i);
+    if (inMatch) {
+      const values = this.parseLocalUqlNumberList(inMatch[2]);
+      return this.getLocalUqlFieldValues(record, inMatch[1]).some(value => values.includes(value));
+    }
+
+    const likeMatch = normalized.match(/^([a-z_][a-z0-9_]*)\s+(i?like)\s+['"]?([^'"]*)['"]?$/i);
+    if (likeMatch) {
+      const fieldText = String(this.getLocalUqlFieldValue(record, likeMatch[1]) ?? '');
+      const needle = likeMatch[3].replace(/%/g, '');
+      return likeMatch[2].toLowerCase() === 'ilike'
+        ? fieldText.toLowerCase().includes(needle.toLowerCase())
+        : fieldText.includes(needle);
+    }
+
+    const comparisonMatch = normalized.match(/^([a-z_][a-z0-9_]*|\d+)\s*(=|!=|<>|>=|<=|>|<)\s*([a-z_][a-z0-9_]*|\d+)$/i);
+    if (comparisonMatch) {
+      const left = /^\d+$/.test(comparisonMatch[1]) ? Number(comparisonMatch[1]) : this.getLocalUqlFieldValue(record, comparisonMatch[1]);
+      const right = /^\d+$/.test(comparisonMatch[3]) ? Number(comparisonMatch[3]) : this.getLocalUqlFieldValue(record, comparisonMatch[3]);
+      return this.compareLocalUqlValues(Number(left ?? 0), comparisonMatch[2], Number(right ?? 0));
+    }
+
+    return true;
+  }
+
+  private evaluateLocalUqlSupportCard(record: InheritanceRecord, argsText: string): boolean {
+    const args = this.splitLocalUqlArgs(argsText);
+    let cardId: number | undefined;
+    let matches = true;
+    for (const arg of args) {
+      const trimmed = arg.trim();
+      if (!trimmed) continue;
+      if (/^\d+$/.test(trimmed)) {
+        cardId = Number(trimmed);
+        continue;
+      }
+      const comparison = trimmed.match(/^(?:id|card_id|support_card_id|lb|limitbreak|limit_break|limit_break_count|exp|experience)\s*(=|!=|<>|>=|<=|>|<)\s*(\d+)$/i);
+      if (!comparison) continue;
+      const key = trimmed.split(/\s*(?:=|!=|<>|>=|<=|>|<)\s*/)[0].toLowerCase();
+      const value = Number(comparison[2]);
+      const actual = /^(?:id|card_id|support_card_id)$/.test(key)
+        ? record.support_card_id
+        : /^(?:lb|limitbreak|limit_break|limit_break_count)$/.test(key)
+          ? record.limit_break_count
+          : record.support_card_experience;
+      matches = matches && this.compareLocalUqlValues(Number(actual ?? 0), comparison[1], value);
+    }
+    if (cardId !== undefined && record.support_card_id !== cardId) return false;
+    return matches;
+  }
+
+  private getLocalUqlFieldValue(record: InheritanceRecord, field: string): string | number | null | undefined {
+    switch (field) {
+      case 'inheritance_id': return typeof record.id === 'number' ? record.id : Number(record.id) || undefined;
+      case 'main_chara_id': return this.toCharaId(record.umamusume_id);
+      case 'left_chara_id': return this.toCharaId(record.parent_left_id);
+      case 'right_chara_id': return this.toCharaId(record.parent_right_id);
+      case 'left_parent_id':
+      case 'parent_left_id': return record.parent_left_id;
+      case 'right_parent_id':
+      case 'parent_right_id': return record.parent_right_id;
+      case 'followers': return record.follower_num;
+      case 'wins': return record.win_count;
+      case 'name': return record.trainer_name;
+      case 'race_affinity':
+      case 'computed_race_affinity': return record.affinity_score;
+      case 'support_card_count':
+      case 'support_cards_count': return record.support_card_id ? 1 : 0;
+      case 'blue_stars_sum': return this.sumLocalUqlSparks(record.blue_sparks);
+      case 'pink_stars_sum': return this.sumLocalUqlSparks(record.pink_sparks);
+      case 'green_stars_sum': return this.sumLocalUqlSparks(record.green_sparks);
+      case 'white_stars_sum': return this.sumLocalUqlSparks(record.white_sparks);
+      default: return (record as any)[field];
+    }
+  }
+
+  private getLocalUqlFieldValues(record: InheritanceRecord, field: string): number[] {
+    const value = this.getLocalUqlFieldValue(record, field);
+    if (Array.isArray(value)) return value.filter(entry => typeof entry === 'number');
+    return typeof value === 'number' ? [value] : [];
+  }
+
+  private sumLocalUqlSparks(sparks: number[] | undefined): number {
+    return (sparks ?? []).reduce((sum, sparkId) => sum + (sparkId % 10), 0);
+  }
+
+  private compareLocalUqlValues(actual: number, operator: string, expected: number): boolean {
+    switch (operator) {
+      case '=': return actual === expected;
+      case '!=':
+      case '<>': return actual !== expected;
+      case '>=': return actual >= expected;
+      case '<=': return actual <= expected;
+      case '>': return actual > expected;
+      case '<': return actual < expected;
+      default: return true;
+    }
+  }
+
+  private parseLocalUqlNumberList(valueText: string): number[] {
+    return valueText.replace(/[()]/g, '').split(',')
+      .map(value => Number(value.trim()))
+      .filter(value => Number.isFinite(value));
+  }
+
+  private splitLocalUqlArgs(valueText: string): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let start = 0;
+    for (let index = 0; index < valueText.length; index++) {
+      const char = valueText[index];
+      if (char === '(') depth++;
+      else if (char === ')') depth = Math.max(0, depth - 1);
+      else if (char === ',' && depth === 0) {
+        parts.push(valueText.slice(start, index));
+        start = index + 1;
+      }
+    }
+    parts.push(valueText.slice(start));
+    return parts;
+  }
+
+  private splitLocalUqlByKeyword(expression: string, keyword: 'and' | 'or'): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let quote: string | null = null;
+    let start = 0;
+    for (let index = 0; index < expression.length; index++) {
+      const char = expression[index];
+      if (quote) {
+        if (char === quote) quote = null;
+        continue;
+      }
+      if (char === '\'' || char === '"') {
+        quote = char;
+        continue;
+      }
+      if (char === '(') depth++;
+      else if (char === ')') depth = Math.max(0, depth - 1);
+      if (depth !== 0) continue;
+      const slice = expression.slice(index);
+      const match = slice.match(new RegExp(`^\\s+${keyword}\\s+`, 'i'));
+      if (match) {
+        parts.push(expression.slice(start, index).trim());
+        index += match[0].length - 1;
+        start = index + 1;
+      }
+    }
+    if (!parts.length) return [expression];
+    parts.push(expression.slice(start).trim());
+    return parts.filter(Boolean);
+  }
+
+  private stripOuterLocalUqlParens(expression: string): string {
+    let result = expression;
+    while (result.startsWith('(') && result.endsWith(')') && this.localUqlParensWrapWholeExpression(result)) {
+      result = result.slice(1, -1).trim();
+    }
+    return result;
+  }
+
+  private localUqlParensWrapWholeExpression(expression: string): boolean {
+    let depth = 0;
+    let quote: string | null = null;
+    for (let index = 0; index < expression.length; index++) {
+      const char = expression[index];
+      if (quote) {
+        if (char === quote) quote = null;
+        continue;
+      }
+      if (char === '\'' || char === '"') {
+        quote = char;
+        continue;
+      }
+      if (char === '(') depth++;
+      else if (char === ')') depth--;
+      if (depth === 0 && index < expression.length - 1) return false;
+    }
+    return depth === 0;
   }
 
   get pagedBookmarks(): InheritanceRecord[] {

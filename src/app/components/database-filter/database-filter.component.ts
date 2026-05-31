@@ -73,8 +73,21 @@ interface FriendlyScopedSparkField {
   valueContext: UqlFactorValueContext;
 }
 
-export type UqlFieldType = 'number' | 'string' | 'array';
+export type UqlFieldType = 'number' | 'string' | 'array' | 'directive';
 type UqlFactorValueContext = Extract<UqlValueContext, 'blue-factor' | 'pink-factor' | 'green-factor' | 'white-factor'>;
+
+type UqlEditorDirectiveKind = 'target' | 'legacy';
+
+interface UqlEditorDirective {
+  kind: UqlEditorDirectiveKind;
+  value: string;
+}
+
+interface UqlEditorDirectiveParseResult {
+  queryWithoutDirectives: string;
+  directives: UqlEditorDirective[];
+  issue?: { state: 'incomplete' | 'invalid'; message: string };
+}
 
 interface UqlRaceSaddleValue {
   label: string;
@@ -83,6 +96,8 @@ interface UqlRaceSaddleValue {
   saddleIds: number[];
   raceInstanceId: number;
   grade?: number;
+  gradeLabel?: string;
+  gradeClass?: string;
 }
 
 interface FriendlyFieldAlias {
@@ -264,8 +279,6 @@ export interface UnifiedSearchParams {
   sort_by?: string;
   uql?: string;
   uql_highlight?: UqlSparkHighlight;
-  player_chara_id_2?: number;
-  desired_main_chara_id?: number;
   main_win_saddle?: number[];
   // Parent include/exclude filters (multi-select)
   parent_id?: number[];           // Matches against both left and right parent positions
@@ -273,7 +286,6 @@ export interface UnifiedSearchParams {
   exclude_main_parent_id?: number[]; // Excludes main parent IDs
   p2_main_chara_id?: number;
   p2_win_saddle?: number[];
-  affinity_p2?: number;
 }
 export interface FactorFilter {
   uuid: string;
@@ -313,6 +325,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   @Output() veteranSelected = new EventEmitter<VeteranMember | null>();
   private filterChangeSubject = new Subject<UnifiedSearchParams>();
   private destroy$ = new Subject<void>();
+  private staticUqlSuggestionsCache: UqlSuggestion[] | null = null;
+  private lastUqlFilterStateSignature: string | null = null;
   @ViewChild(RaceSchedulerComponent) raceScheduler!: RaceSchedulerComponent;
   // Wrapping detection
   @ViewChild('mainLayout', { static: false }) mainLayoutRef!: ElementRef<HTMLElement>;
@@ -335,6 +349,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'Wins', insertText: 'Wins >= 30' },
     { label: 'Name', insertText: "Trainer name ilike '%name%'" },
     { label: 'Include Umas', insertText: 'Main character in (Special Week, Silence Suzuka)' },
+    { label: 'Target', insertText: 'target = Special Week' },
+    { label: 'Owned Legacy', insertText: 'owned legacy = []' },
     { label: 'White Skill', insertText: 'White sparks has Right-Handed ○' },
     { label: 'Main Skill', insertText: 'Main white factors has Right-Handed ○' },
     { label: 'Any Skills', insertText: 'White sparks has any (Right-Handed ○, Left-Handed ○)' },
@@ -387,9 +403,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'White stars', aliases: ['white stars', 'white star sum'], field: 'white_stars_sum', type: 'number' },
     { label: 'Race affinity', aliases: ['race affinity', 'affinity'], field: 'computed_race_affinity', type: 'number' },
     { label: 'White factors', aliases: ['white factors', 'white sparks', 'white skills'], field: 'white_sparks', type: 'array' },
-    { label: 'Blue sparks', aliases: ['blue sparks'], field: 'blue_sparks', type: 'array' },
-    { label: 'Pink sparks', aliases: ['pink sparks'], field: 'pink_sparks', type: 'array' },
-    { label: 'Green sparks', aliases: ['green sparks', 'unique skills'], field: 'green_sparks', type: 'array' },
+    { label: 'Blue sparks', aliases: ['blue sparks', 'blue factors'], field: 'blue_sparks', type: 'array' },
+    { label: 'Pink sparks', aliases: ['pink sparks', 'pink factors'], field: 'pink_sparks', type: 'array' },
+    { label: 'Green sparks', aliases: ['green sparks', 'green factors', 'unique skills'], field: 'green_sparks', type: 'array' },
     { label: 'Main white factors', aliases: ['main white factors', 'main white sparks', 'main white skills', 'main skills'], field: 'main_white_factors', type: 'array' },
     { label: 'Main race wins', aliases: ['main race wins', 'main race results', 'main win saddles'], field: 'main_win_saddles', type: 'array' },
     // Additional fields documented in the UQL README so they show up in autocomplete and validate correctly.
@@ -398,25 +414,25 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'GP1 inheritance ID', aliases: ['gp1 id', 'grandparent 1 id', 'left parent id', 'parent left id', 'left_parent_id', 'parent_left_id'], field: 'parent_left_id', type: 'number' },
     { label: 'GP2 inheritance ID', aliases: ['gp2 id', 'grandparent 2 id', 'right parent id', 'parent right id', 'right_parent_id', 'parent_right_id'], field: 'parent_right_id', type: 'number' },
     { label: 'Parent rarity', aliases: ['parent rarity', 'rarity'], field: 'parent_rarity', type: 'number' },
-    { label: 'Main blue factors', aliases: ['main blue factors', 'main blue parsed sparks', 'main blue spark ids'], field: 'main_blue_factors', type: 'number' },
-    { label: 'Main pink factors', aliases: ['main pink factors', 'main pink parsed sparks', 'main pink spark ids'], field: 'main_pink_factors', type: 'number' },
-    { label: 'Main green factors', aliases: ['main green factors', 'main green parsed sparks', 'main green spark ids'], field: 'main_green_factors', type: 'number' },
+    { label: 'Main blue sparks', aliases: ['main blue sparks', 'main blue factors', 'main blue parsed sparks', 'main blue spark ids', 'main blue factor ids'], field: 'main_blue_factors', type: 'number' },
+    { label: 'Main pink sparks', aliases: ['main pink sparks', 'main pink factors', 'main pink parsed sparks', 'main pink spark ids', 'main pink factor ids'], field: 'main_pink_factors', type: 'number' },
+    { label: 'Main green sparks', aliases: ['main green sparks', 'main green factors', 'main unique skills', 'main unique skill', 'main green parsed sparks', 'main green spark ids', 'main green factor ids'], field: 'main_green_factors', type: 'number' },
     { label: 'Main white count', aliases: ['main white count'], field: 'main_white_count', type: 'number' },
-    { label: 'Left blue factors', aliases: ['left blue factors', 'left blue parsed sparks', 'gp1 blue factors', 'gp1 blue spark ids'], field: 'left_blue_factors', type: 'number' },
-    { label: 'Left pink factors', aliases: ['left pink factors', 'left pink parsed sparks', 'gp1 pink factors', 'gp1 pink spark ids'], field: 'left_pink_factors', type: 'number' },
-    { label: 'Left green factors', aliases: ['left green factors', 'left green parsed sparks', 'gp1 green factors', 'gp1 green spark ids'], field: 'left_green_factors', type: 'number' },
+    { label: 'GP1 blue sparks', aliases: ['gp1 blue sparks', 'gp1 blue factors', 'gp1 blue spark ids', 'gp1 blue factor ids', 'left blue sparks', 'left blue factors', 'left blue parsed sparks'], field: 'left_blue_factors', type: 'number' },
+    { label: 'GP1 pink sparks', aliases: ['gp1 pink sparks', 'gp1 pink factors', 'gp1 pink spark ids', 'gp1 pink factor ids', 'left pink sparks', 'left pink factors', 'left pink parsed sparks'], field: 'left_pink_factors', type: 'number' },
+    { label: 'GP1 green sparks', aliases: ['gp1 green sparks', 'gp1 green factors', 'gp1 unique skills', 'gp1 unique skill', 'gp1 green spark ids', 'gp1 green factor ids', 'left green sparks', 'left green factors', 'left unique skills', 'left unique skill', 'left green parsed sparks'], field: 'left_green_factors', type: 'number' },
     { label: 'Left white count', aliases: ['left white count'], field: 'left_white_count', type: 'number' },
-    { label: 'Right blue factors', aliases: ['right blue factors', 'right blue parsed sparks', 'gp2 blue factors', 'gp2 blue spark ids'], field: 'right_blue_factors', type: 'number' },
-    { label: 'Right pink factors', aliases: ['right pink factors', 'right pink parsed sparks', 'gp2 pink factors', 'gp2 pink spark ids'], field: 'right_pink_factors', type: 'number' },
-    { label: 'Right green factors', aliases: ['right green factors', 'right green parsed sparks', 'gp2 green factors', 'gp2 green spark ids'], field: 'right_green_factors', type: 'number' },
+    { label: 'GP2 blue sparks', aliases: ['gp2 blue sparks', 'gp2 blue factors', 'gp2 blue spark ids', 'gp2 blue factor ids', 'right blue sparks', 'right blue factors', 'right blue parsed sparks'], field: 'right_blue_factors', type: 'number' },
+    { label: 'GP2 pink sparks', aliases: ['gp2 pink sparks', 'gp2 pink factors', 'gp2 pink spark ids', 'gp2 pink factor ids', 'right pink sparks', 'right pink factors', 'right pink parsed sparks'], field: 'right_pink_factors', type: 'number' },
+    { label: 'GP2 green sparks', aliases: ['gp2 green sparks', 'gp2 green factors', 'gp2 unique skills', 'gp2 unique skill', 'gp2 green spark ids', 'gp2 green factor ids', 'right green sparks', 'right green factors', 'right unique skills', 'right unique skill', 'right green parsed sparks'], field: 'right_green_factors', type: 'number' },
     { label: 'Right white count', aliases: ['right white count'], field: 'right_white_count', type: 'number' },
     { label: 'Race affinity (raw)', aliases: ['race affinity raw'], field: 'race_affinity', type: 'number' },
     { label: 'Support card count', aliases: ['support cards', 'support card count', 'support cards count'], field: 'support_card_count', type: 'number' },
-    { label: 'Left white factors', aliases: ['left white factors', 'left white sparks'], field: 'left_white_factors', type: 'array' },
-    { label: 'Right white factors', aliases: ['right white factors', 'right white sparks'], field: 'right_white_factors', type: 'array' },
+    { label: 'Left white factors', aliases: ['left white factors', 'left white sparks', 'gp1 white factors', 'gp1 white sparks'], field: 'left_white_factors', type: 'array' },
+    { label: 'Right white factors', aliases: ['right white factors', 'right white sparks', 'gp2 white factors', 'gp2 white sparks'], field: 'right_white_factors', type: 'array' },
     { label: 'Left race wins', aliases: ['left race wins', 'left race results', 'left win saddles'], field: 'left_win_saddles', type: 'array' },
     { label: 'Right race wins', aliases: ['right race wins', 'right race results', 'right win saddles'], field: 'right_win_saddles', type: 'array' },
-    { label: 'Race results', aliases: ['race results', 'race wins', 'win saddles'], field: 'main_win_saddles', type: 'array' },
+    { label: 'Race wins', aliases: ['race wins', 'race results', 'win saddles'], field: 'main_win_saddles', type: 'array' },
   ];
   private readonly friendlySparkComparisonAliases: FriendlySparkComparisonAlias[] = this.friendlySparkFields
     .flatMap(field => field.aliases.map(alias => this.createFriendlySparkComparisonAlias(field, alias)))
@@ -477,10 +493,16 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   selectedVeteranName = '';
   selectedVeteranImage = '';
   linkedAccounts: LinkedAccount[] = [];
+  private linkedAccountsLoaded = false;
+  private loadingLinkedAccounts = false;
   selectedAccountId: string | null = null;
   veterans: { [accountId: string]: VeteranMember[] } = {};
   loadingVeterans: { [accountId: string]: boolean } = {};
+  private fetchedVeteransById = new Map<string, VeteranMember | null>();
+  private loadingVeteransById: { [veteranId: string]: boolean } = {};
   private pendingVeteranRestore: { accountId: string; memberId: number } | null = null;
+  private uqlOwnedLegacyPickerOpen = false;
+  private uqlOwnedLegacyPickerPending = false;
   activeFilterChips: ActiveFilterChip[] = [];
   // Collapsible section state
   collapsedSections = new Set<string>();
@@ -541,6 +563,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private setFactorOptions(factors: any[]): void {
+    this.staticUqlSuggestionsCache = null;
     const normalize = (factor: any) => ({ ...factor, id: parseInt(factor.id, 10) });
     this.blueFactors = factors.filter((f: any) => f.type === 0).map(normalize);
     this.pinkFactors = factors.filter((f: any) => f.type === 1).map(normalize);
@@ -743,6 +766,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.filterMode !== 'basic') state.fm = this.filterMode;
     const normalizedUql = this.getNormalizedUqlQuery();
     if (normalizedUql) state.uql = normalizedUql;
+    if (this.filterMode === 'uql') {
+      return this.encodeBase64Utf8(JSON.stringify(state));
+    }
     // Factors
     if (this.blueFactorFilters.length) state.b = this.blueFactorFilters.map(f => [f.factorId, f.min, f.max]);
     if (this.pinkFactorFilters.length) state.p = this.pinkFactorFilters.map(f => [f.factorId, f.min, f.max]);
@@ -818,6 +844,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       }
       this.uqlQuery = state.uql || '';
       this.validateUqlQuery();
+      if (this.filterMode === 'uql') {
+        this.clearUqlRepresentableStructuredFilters();
+        this.onUqlChange();
+        return;
+      }
       
       // Restore Factors
       const restoreFactors = (source: (number|null)[][] | undefined, target: FactorFilter[], type?: 'green' | 'white' | 'mainWhite' | 'mainGreen') => {
@@ -1250,7 +1281,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       }
     }
   }
-  updateTreeFilters() {
+  updateTreeFilters(emit = true) {
     this.filterState.player_chara_id = this.treeData.characterId;
     
     // Main parent: combine tree selection with include list
@@ -1272,7 +1303,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.filterState.exclude_parent_id = this.excludeParentCharacters.map(c => c.id);
     this.filterState.exclude_main_parent_id = this.excludeMainParentCharacters.map(c => c.id);
     
-    this.onFilterChange();
+    if (emit) {
+      this.onFilterChange();
+    }
   }
   // --- Parent Include/Exclude Character Selection ---
   addIncludeParent() {
@@ -1577,18 +1610,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.filterState.parent_id = includeParentIds.length > 0 ? includeParentIds : this.filterState.parent_id;
     this.filterState.exclude_parent_id = this.excludeParentCharacters.map(c => c.id);
     this.filterState.exclude_main_parent_id = this.excludeMainParentCharacters.map(c => c.id);
-    // P2 legacy params from selected veteran
-    if (this.selectedVeteran) {
-      const vet = this.selectedVeteran;
-      this.filterState.p2_main_chara_id = vet.card_id
-        ? Math.floor(vet.card_id / 100)
-        : (vet.trained_chara_id ?? undefined);
-      this.filterState.p2_win_saddle = vet.win_saddle_id_array ?? undefined;
-    } else {
-      this.filterState.p2_main_chara_id = undefined;
-      this.filterState.p2_win_saddle = undefined;
-      this.filterState.affinity_p2 = undefined;
-    }
+    this.syncSelectedVeteranFilterState();
     // Sync include main parent characters into main_parent_id (merge with tree selection)
     if (this.includeMainParentCharacters.length > 0) {
       const existingMainIds = this.filterState.main_parent_id || [];
@@ -1596,6 +1618,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         if (!existingMainIds.includes(c.id)) existingMainIds.push(c.id);
       });
       this.filterState.main_parent_id = existingMainIds;
+    }
+    if (this.filterMode === 'uql') {
+      this.filterState = this.buildUqlOnlyFilterState();
     }
     // Update active filter chips
     this.updateCurrentUqlPreview();
@@ -1613,6 +1638,19 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
   private updateActiveFilterChips(): void {
     this.activeFilterChips = [];
+    if (this.filterMode === 'uql') {
+      const normalizedQuery = this.getNormalizedUqlQuery();
+      if (normalizedQuery) {
+        this.activeFilterChips.push({
+          id: 'uql',
+          label: 'UQL: Active',
+          name: 'UQL',
+          value: this.uqlValidationState === 'valid' ? 'Active' : 'Editing',
+          type: 'uql'
+        });
+      }
+      return;
+    }
     // Helper to format value part
     const formatValue = (min: number, max: number, maxPossible: number = 9): string => {
       // Clamp max to maxPossible (e.g., main parent factors cap at 3)
@@ -2126,10 +2164,23 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const previousMode = this.filterMode;
     if (previousMode === 'uql' && mode !== 'uql') {
       this.applyRepresentableUqlToStructuredFilters();
-    } else if (mode === 'uql' && previousMode !== 'uql') {
+    } else if (mode === 'uql' && previousMode !== 'uql' && !this.getNormalizedUqlQuery()) {
       this.writeStructuredFiltersToUqlQuery();
+    } else if (mode === 'uql' && previousMode !== 'uql') {
+      this.syncSelectedEditorDirectivesToUqlQuery();
+      this.applyUqlEditorDirectives();
+      this.validateUqlQuery();
+      this.syncUqlFilterState();
+      this.syncSelectedVeteranFilterState();
+      this.updateCurrentUqlPreview();
+      this.updateActiveFilterChips();
     }
     this.filterMode = mode;
+    if (mode === 'uql') {
+      this.filterState = this.buildUqlOnlyFilterState();
+      this.updateActiveFilterChips();
+      this.filterChangeSubject.next({ ...this.filterState });
+    }
     this.applyBasicFilterDefaults();
     if (!this.isExpanded) {
       this.isExpanded = true;
@@ -2141,12 +2192,62 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private writeStructuredFiltersToUqlQuery(): void {
     this.onFilterChange();
     const structuredExpression = this.buildStructuredUqlExpression();
-    if (!structuredExpression) return;
-    this.uqlQuery = `where ${structuredExpression}`;
+    const editorDirectives = this.buildUqlEditorDirectiveClauses();
+    const clauses = [...editorDirectives, structuredExpression].filter(Boolean);
+    if (!clauses.length) return;
+    this.uqlQuery = `where ${clauses.join(' and ')}`;
     this.validateUqlQuery();
     this.syncUqlFilterState();
     this.updateCurrentUqlPreview();
     this.updateActiveFilterChips();
+  }
+
+  private syncSelectedEditorDirectivesToUqlQuery(): void {
+    const normalizedQuery = this.getNormalizedUqlQuery();
+    if (!normalizedQuery) return;
+
+    const selectedDirectives = new Map<UqlEditorDirectiveKind, string>();
+    for (const clause of this.buildUqlEditorDirectiveClauses()) {
+      const directive = this.parseUqlEditorDirectiveClause(clause);
+      if (directive) selectedDirectives.set(directive.kind, clause);
+    }
+
+    if (!selectedDirectives.size) return;
+
+    const hadWhere = /^\s*where\b/i.test(normalizedQuery);
+    const clauses = this.splitTopLevelUqlAndClauses(this.stripLeadingWhere(normalizedQuery));
+    if (!clauses.length) return;
+
+    const seen = new Set<UqlEditorDirectiveKind>();
+    const mergedClauses: string[] = [];
+    for (const clause of clauses) {
+      const directive = this.parseUqlEditorDirectiveClause(clause);
+      if (!directive) {
+        mergedClauses.push(clause);
+        continue;
+      }
+
+      mergedClauses.push(clause);
+      if (selectedDirectives.has(directive.kind)) {
+        seen.add(directive.kind);
+      }
+    }
+
+    const missingDirectives: string[] = [];
+    for (const kind of ['target', 'legacy'] as UqlEditorDirectiveKind[]) {
+      const clause = selectedDirectives.get(kind);
+      if (clause && !seen.has(kind)) missingDirectives.push(clause);
+    }
+
+    if (missingDirectives.length) {
+      let insertIndex = 0;
+      while (insertIndex < mergedClauses.length && this.parseUqlEditorDirectiveClause(mergedClauses[insertIndex])) {
+        insertIndex++;
+      }
+      mergedClauses.splice(insertIndex, 0, ...missingDirectives);
+    }
+
+    this.uqlQuery = `${hadWhere ? 'where ' : ''}${mergedClauses.join(' and ')}`;
   }
 
   private applyRepresentableUqlToStructuredFilters(): void {
@@ -2157,11 +2258,6 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
     const result = this.applyCompiledUqlToStructuredFilters(this.compiledUqlQuery);
     if (!result.appliedAny) return;
-    if (result.fullyRepresented) {
-      this.uqlQuery = '';
-      this.validateUqlQuery();
-      this.syncUqlFilterState();
-    }
     this.onFilterChange();
   }
 
@@ -2171,11 +2267,23 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (emit) this.onFilterChange();
   }
   onUqlChange(): void {
+    this.applyUqlEditorDirectives();
     this.validateUqlQuery();
     this.syncUqlFilterState();
+    this.syncSelectedVeteranFilterState();
+    const nextFilterState = this.buildUqlOnlyFilterState();
+    const nextSignature = JSON.stringify(nextFilterState);
+    const filterStateChanged = nextSignature !== this.lastUqlFilterStateSignature;
+    this.filterState = nextFilterState;
     this.updateCurrentUqlPreview();
     this.updateActiveFilterChips();
-    this.filterChangeSubject.next({ ...this.filterState });
+    if (this.isUqlOwnedLegacyResolutionPending(this.getNormalizedUqlQuery())) {
+      return;
+    }
+    if (filterStateChanged) {
+      this.lastUqlFilterStateSignature = nextSignature;
+      this.filterChangeSubject.next({ ...this.filterState });
+    }
   }
 
   private syncUqlFilterState(): void {
@@ -2186,6 +2294,23 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.filterState.uql = undefined;
       this.filterState.uql_highlight = undefined;
     }
+  }
+
+  private buildUqlOnlyFilterState(): UnifiedSearchParams {
+    const state: UnifiedSearchParams = {};
+    if (this.uqlValidationState === 'valid' && this.compiledUqlQuery) {
+      state.uql = this.compiledUqlQuery;
+      state.uql_highlight = this.buildUqlSparkHighlight(this.compiledUqlQuery);
+    }
+    if (this.treeData.characterId) {
+      state.player_chara_id = this.treeData.characterId;
+    }
+    if (this.selectedVeteran) {
+      const winSaddleIds = this.selectedVeteran.win_saddle_id_array ?? [];
+      state.p2_main_chara_id = this.getVeteranMainCharaId(this.selectedVeteran);
+      state.p2_win_saddle = winSaddleIds.length ? winSaddleIds : undefined;
+    }
+    return state;
   }
 
   private buildUqlSparkHighlight(compiledQuery: string): UqlSparkHighlight | undefined {
@@ -2216,13 +2341,24 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       addSparkIds(functionMatch[2], ids);
     }
 
-    const comparisonPattern = /\b([A-Za-z_][A-Za-z0-9_]*)\s*(=|in)\s*(?:\(([^()]*)\)|(\d+))\b/gi;
+    const comparisonPattern = /\b([A-Za-z_][A-Za-z0-9_]*)\s*(=|in)\s*(?:\(([^()]*)\)|(\d+)\b)/gi;
     let comparisonMatch: RegExpExecArray | null;
     while ((comparisonMatch = comparisonPattern.exec(expression)) !== null) {
       const ids = comparisonMatch[3]
         ? this.parseUqlNumberList(comparisonMatch[3])
         : [parseInt(comparisonMatch[4], 10)].filter(Number.isFinite);
       addSparkIds(comparisonMatch[1], ids);
+    }
+
+    const rangeComparisonPattern = /\b([A-Za-z_][A-Za-z0-9_]*)\s*(>=|>|<=|<|=)\s*(\d+)\b/gi;
+    let rangeComparisonMatch: RegExpExecArray | null;
+    while ((rangeComparisonMatch = rangeComparisonPattern.exec(expression)) !== null) {
+      const fieldName = rangeComparisonMatch[1];
+      const normalizedField = fieldName.toLowerCase().replace(/[_\s-]+/g, '_').trim();
+      if (!this.isUqlMainSparkHighlightField(normalizedField) && !this.isUqlGlobalSparkHighlightField(normalizedField)) continue;
+      const sparkId = parseInt(rangeComparisonMatch[3], 10);
+      const ids = this.expandSparkIdsForComparison(sparkId, rangeComparisonMatch[2]);
+      addSparkIds(fieldName, ids);
     }
 
     const scoringFunctionPattern = /\b(optional_white|optional_main_white|optional_any_white|lineage_white)\s*\(((?:[^()]|\([^)]*\))*)\)/gi;
@@ -2259,6 +2395,26 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return ['main_blue_factors', 'main_pink_factors', 'main_green_factors', 'main_white_factors', 'main_parent_white_sparks'].includes(fieldName);
   }
 
+  private expandSparkIdsForComparison(sparkId: number, operator: string): number[] {
+    if (!Number.isFinite(sparkId) || sparkId <= 0) return [];
+    const factorId = Math.floor(sparkId / 10);
+    const level = sparkId % 10;
+    if (!factorId || level < 0) return [];
+    const makeId = (sparkLevel: number) => factorId * 10 + sparkLevel;
+    switch (operator) {
+      case '>=': return this.rangeInclusive(Math.max(1, level), 9).map(makeId);
+      case '>': return this.rangeInclusive(Math.max(1, level + 1), 9).map(makeId);
+      case '<=': return this.rangeInclusive(1, Math.min(9, level)).map(makeId);
+      case '<': return this.rangeInclusive(1, Math.min(9, level - 1)).map(makeId);
+      default: return [sparkId];
+    }
+  }
+
+  private rangeInclusive(start: number, end: number): number[] {
+    if (end < start) return [];
+    return Array.from({ length: end - start + 1 }, (_value, index) => start + index);
+  }
+
   private parseUqlScoringFactorIds(argsText: string): number[] {
     let listText = argsText.trim();
     if (listText.startsWith('(')) {
@@ -2281,6 +2437,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
   clearUql(): void {
     this.uqlQuery = '';
+    this.clearUqlEditorDirectiveState();
     this.validateUqlQuery();
     this.onFilterChange();
   }
@@ -2348,10 +2505,22 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.uqlValidationMessage = 'Unexpected closing parenthesis';
       return;
     }
-    const expression = this.stripLeadingWhere(normalizedQuery);
+    const directiveParse = this.extractUqlEditorDirectives(normalizedQuery);
+    if (directiveParse.issue) {
+      this.uqlValidationState = directiveParse.issue.state;
+      this.uqlValidationMessage = directiveParse.issue.message;
+      return;
+    }
+    const queryForBackendValidation = directiveParse.directives.length ? directiveParse.queryWithoutDirectives : normalizedQuery;
+    const expression = this.stripLeadingWhere(queryForBackendValidation);
     if (!expression || this.endsWithIncompleteUqlToken(expression)) {
-      this.uqlValidationState = 'incomplete';
-      this.uqlValidationMessage = 'Finish the predicate';
+      if (directiveParse.directives.length && !expression) {
+        this.uqlValidationState = 'valid';
+        this.uqlValidationMessage = 'Ready';
+      } else {
+        this.uqlValidationState = 'incomplete';
+        this.uqlValidationMessage = 'Finish the predicate';
+      }
       return;
     }
     if (this.hasEmptyUqlValueList(expression)) {
@@ -2384,9 +2553,14 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private getCompiledUqlQuery(): string {
     const normalizedQuery = this.getNormalizedUqlQuery();
     if (!normalizedQuery) return '';
-    const arrayOperatorCompiled = this.compileFriendlyArrayOperators(normalizedQuery);
+    const queryWithoutDirectives = this.extractUqlEditorDirectives(normalizedQuery).queryWithoutDirectives;
+    if (!queryWithoutDirectives) return '';
+    const queryForCompilation = this.stripLeadingWhere(queryWithoutDirectives);
+    if (!queryForCompilation) return '';
+    const arrayOperatorCompiled = this.compileFriendlyArrayOperators(queryForCompilation);
     const scopedSparkCompiled = this.compileFriendlyScopedSparkComparisons(arrayOperatorCompiled);
-    const sparkCompiled = this.compileFriendlySparkComparisons(scopedSparkCompiled);
+    const scopedSparkCategoryCompiled = this.compileFriendlyScopedSparkCategoryComparisons(scopedSparkCompiled);
+    const sparkCompiled = this.compileFriendlySparkComparisons(scopedSparkCategoryCompiled);
     const factorCompiled = this.compileFriendlyLoadedFactorComparisons(sparkCompiled);
     const characterScopeCompiled = this.compileFriendlyCharacterScopeExpressions(factorCompiled);
     const supportCardCompiled = this.compileFriendlySupportCardExpressions(characterScopeCompiled);
@@ -2638,6 +2812,59 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       return compiledSegment;
     });
   }
+
+  private compileFriendlyScopedSparkCategoryComparisons(query: string): string {
+    const scopes = [
+      { aliases: ['main', 'parent', 'main parent'], fields: ['main_blue_factors'], color: 'blue' as const },
+      { aliases: ['main', 'parent', 'main parent'], fields: ['main_pink_factors'], color: 'pink' as const },
+      { aliases: ['main', 'parent', 'main parent'], fields: ['main_green_factors'], color: 'green' as const },
+      { aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1'], fields: ['left_blue_factors'], color: 'blue' as const },
+      { aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1'], fields: ['left_pink_factors'], color: 'pink' as const },
+      { aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1'], fields: ['left_green_factors'], color: 'green' as const },
+      { aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2'], fields: ['right_blue_factors'], color: 'blue' as const },
+      { aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2'], fields: ['right_pink_factors'], color: 'pink' as const },
+      { aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2'], fields: ['right_green_factors'], color: 'green' as const },
+      { aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'any grandparent', 'any grand parent'], fields: ['left_blue_factors', 'right_blue_factors'], color: 'blue' as const },
+      { aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'any grandparent', 'any grand parent'], fields: ['left_pink_factors', 'right_pink_factors'], color: 'pink' as const },
+      { aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'any grandparent', 'any grand parent'], fields: ['left_green_factors', 'right_green_factors'], color: 'green' as const }
+    ];
+    const colorAliases = {
+      blue: ['blue spark', 'blue sparks', 'blue factor', 'blue factors'],
+      pink: ['pink spark', 'pink sparks', 'pink factor', 'pink factors'],
+      green: ['green spark', 'green sparks', 'green factor', 'green factors', 'unique skill', 'unique skills']
+    };
+    return this.replaceOutsideStrings(query, segment => {
+      let compiledSegment = segment;
+      for (const scope of scopes) {
+        for (const scopeAlias of scope.aliases) {
+          for (const colorAlias of colorAliases[scope.color]) {
+            const aliasPattern = `${this.escapeRegExp(scopeAlias).replace(/\s+/g, '\\s+')}\\s+${this.escapeRegExp(colorAlias).replace(/\s+/g, '\\s+')}`;
+            const pattern = new RegExp(`(^|[^\\w])(${aliasPattern})\\s*(=|!=|<>|>=|<=|>|<)\\s*(\\d+)`, 'gi');
+            compiledSegment = compiledSegment.replace(pattern, (_match, leadingText: string, _aliasText: string, operator: string, value: string) => {
+              return `${leadingText}${this.buildScopedSparkCategoryComparison(scope.fields, scope.color, operator, parseInt(value, 10))}`;
+            });
+          }
+        }
+      }
+      return compiledSegment;
+    });
+  }
+
+  private buildScopedSparkCategoryComparison(fields: string[], color: 'blue' | 'pink' | 'green', operator: string, value: number): string {
+    const factors = color === 'blue' ? this.blueFactors : color === 'pink' ? this.pinkFactors : this.greenFactors;
+    const levels = operator === '!=' || operator === '<>'
+      ? [value]
+      : this.getSparkLevelsForComparison(operator, value, 3);
+    if (!levels.length) return '(1 = 0)';
+    const ids = factors.flatMap(factor => levels.map(level => this.buildSparkId(Number(factor.id), level)));
+    if (!ids.length) return operator === '!=' || operator === '<>' ? '(1 = 1)' : '(1 = 0)';
+    const buildClause = (field: string) => operator === '!=' || operator === '<>'
+      ? `${field} not in (${ids.join(', ')})`
+      : `${field} in (${ids.join(', ')})`;
+    if (fields.length === 1) return buildClause(fields[0]);
+    const joiner = operator === '!=' || operator === '<>' ? ' and ' : ' or ';
+    return `(${fields.map(buildClause).join(joiner)})`;
+  }
   private compileFriendlySparkComparisons(query: string): string {
     return this.replaceOutsideStrings(query, segment => {
       let compiledSegment = segment;
@@ -2795,19 +3022,20 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (!targetFields.length) return null;
     const resolvedItems = this.resolveRaceSaddleListItems(listText);
     if (!resolvedItems.length || resolvedItems.some(item => item.saddleIds.length === 0)) return null;
+    const effectiveMode = mode === 'one' && resolvedItems.length > 1 ? 'all' : mode;
     const buildAnyClause = (fieldName: string, saddleIds: number[]): string => {
       const ids = [...new Set(saddleIds)].sort((left, right) => left - right);
       return ids.length === 1 ? `contains(${fieldName}, ${ids[0]})` : `overlaps(${fieldName}, (${ids.join(', ')}))`;
     };
 
-    if (mode === 'all') {
+    if (effectiveMode === 'all') {
       const clauses = resolvedItems.map(item => this.buildScopedArrayClause(targetFields, field => buildAnyClause(field, item.saddleIds), 'or'));
       return clauses.length === 1 ? clauses[0] : `(${clauses.join(' and ')})`;
     }
 
     const allSaddleIds = [...new Set(resolvedItems.flatMap(item => item.saddleIds))].sort((left, right) => left - right);
     if (!allSaddleIds.length) return null;
-    if (mode === 'not') {
+    if (effectiveMode === 'not') {
       return this.buildScopedArrayClause(targetFields, field => `not ${buildAnyClause(field, allSaddleIds)}`, 'and');
     }
     return this.buildScopedArrayClause(targetFields, field => buildAnyClause(field, allSaddleIds), 'or');
@@ -2831,7 +3059,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (!resolved.length || resolved.some(item => !item.factor)) return null;
     const clauses = resolved.flatMap(item => this.buildScopedSkillPresenceClauses(arrayField.fields, item, mode === 'not'));
     if (!clauses.length) return null;
-    const joiner = mode === 'all' || mode === 'not' ? ' and ' : ' or ';
+    const strictList = mode === 'all' || mode === 'not' || (mode === 'one' && resolved.length > 1);
+    const joiner = strictList ? ' and ' : ' or ';
     return clauses.length === 1 ? clauses[0] : `(${clauses.join(joiner)})`;
   }
 
@@ -2968,7 +3197,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const resolved = this.resolveAnyFactorListItems(listText);
     if (!resolved.length || resolved.some(item => !item.factor)) return null;
     const clauses = resolved.map(item => this.buildSkillPresenceClause(this.getGlobalSkillFieldForContext(item.factor!.valueContext), item, mode === 'not'));
-    const joiner = mode === 'all' || mode === 'not' ? ' and ' : ' or ';
+    const strictList = mode === 'all' || mode === 'not' || (mode === 'one' && resolved.length > 1);
+    const joiner = strictList ? ' and ' : ' or ';
     return clauses.length === 1 ? clauses[0] : `(${clauses.join(joiner)})`;
   }
 
@@ -3470,9 +3700,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         .map((winSaddle: any) => Number(winSaddle.saddle_id))
         .filter((saddleId: number) => Number.isFinite(saddleId));
       if (!saddleIds.length) continue;
-      const label = race.short_name || race.name || `Race ${raceInstanceId}`;
+      const label = race.name || race.short_name || `Race ${raceInstanceId}`;
       const aliases = [race.name, race.short_name, race.race_id?.toString(), raceInstanceId.toString()]
         .filter((alias: string | undefined) => !!alias && alias !== label) as string[];
+      const grade = Number(race.grade);
       const requiredRaceIds = (race.win_saddles ?? [])
         .flatMap((winSaddle: any) => winSaddle.required_race_instance_ids ?? [])
         .map((id: unknown) => String(id));
@@ -3482,10 +3713,30 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         searchText: [race.name, race.short_name, raceInstanceId, race.race_id, ...saddleIds, ...requiredRaceIds].filter(Boolean).join(' '),
         saddleIds: [...new Set<number>(saddleIds)].sort((left, right) => left - right),
         raceInstanceId,
-        grade: Number(race.grade)
+        grade,
+        gradeLabel: this.getRaceGradeLabel(grade),
+        gradeClass: this.getRaceGradeClass(grade)
       });
     }
     return [...byRaceInstanceId.values()].sort((left, right) => left.label.localeCompare(right.label));
+  }
+
+  private getRaceGradeLabel(grade: number): string | undefined {
+    switch (grade) {
+      case 100: return 'G1';
+      case 200: return 'G2';
+      case 300: return 'G3';
+      default: return undefined;
+    }
+  }
+
+  private getRaceGradeClass(grade: number): string | undefined {
+    switch (grade) {
+      case 100: return 'grade-g1';
+      case 200: return 'grade-g2';
+      case 300: return 'grade-g3';
+      default: return undefined;
+    }
   }
 
   private resolveSupportCardUqlValue(rawValue: string): string | null {
@@ -3518,6 +3769,350 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     return { name: this.normalizeUqlName(text), rarity, type };
   }
+
+  private applyUqlEditorDirectives(): void {
+    const normalizedQuery = this.getNormalizedUqlQuery();
+    if (this.shouldOpenUqlOwnedLegacyPicker(normalizedQuery)) {
+      this.openUqlOwnedLegacyPicker();
+      return;
+    }
+    this.ensureUqlOwnedLegacyData(normalizedQuery);
+    const parsed = this.extractUqlEditorDirectives(normalizedQuery);
+    if (parsed.issue) return;
+
+    const targetDirective = [...parsed.directives].reverse().find(directive => directive.kind === 'target');
+    const legacyDirective = [...parsed.directives].reverse().find(directive => directive.kind === 'legacy');
+
+    let treeChanged = false;
+    if (targetDirective) {
+      const resolvedTarget = this.resolveUqlTargetCharacter(targetDirective.value).match;
+      if (resolvedTarget && this.treeData.characterId !== resolvedTarget.id) {
+        const baseId = Math.floor(resolvedTarget.id / 100);
+        this.clearFromMainParents(baseId);
+        this.treeData.name = resolvedTarget.name || getCharacterName(resolvedTarget.id);
+        this.treeData.image = resolvedTarget.image;
+        this.treeData.characterId = resolvedTarget.id;
+        treeChanged = true;
+      }
+    } else if (this.treeData.characterId) {
+      this.treeData.name = 'Target Character';
+      this.treeData.image = undefined;
+      this.treeData.characterId = undefined;
+      treeChanged = true;
+    }
+
+    if (treeChanged) {
+      this.updateTreeFilters(false);
+    }
+
+    if (legacyDirective) {
+      const resolvedLegacy = this.resolveUqlOwnedLegacy(legacyDirective.value).match;
+      const selectedVeteranId = this.getVeteranUuid(this.selectedVeteran);
+      const resolvedVeteranId = this.getVeteranUuid(resolvedLegacy?.veteran);
+      if (resolvedLegacy && (this.selectedAccountId !== resolvedLegacy.accountId
+        || (!!resolvedVeteranId && selectedVeteranId !== resolvedVeteranId)
+        || (!resolvedVeteranId && this.selectedVeteran?.member_id !== resolvedLegacy.veteran.member_id))) {
+        this.selectedAccountId = resolvedLegacy.accountId;
+        this.selectedVeteran = resolvedLegacy.veteran;
+        this.selectedVeteranName = this.getVeteranName(resolvedLegacy.veteran);
+        this.selectedVeteranImage = this.getVeteranImage(resolvedLegacy.veteran);
+        this.pendingVeteranRestore = null;
+        this.veteranSelected.emit(resolvedLegacy.veteran);
+        this.syncSelectedVeteranFilterState();
+      }
+    } else if (this.selectedVeteran) {
+      this.selectedVeteran = null;
+      this.selectedVeteranName = '';
+      this.selectedVeteranImage = '';
+      this.pendingVeteranRestore = null;
+      this.veteranSelected.emit(null);
+      this.syncSelectedVeteranFilterState();
+    }
+  }
+
+  private clearUqlEditorDirectiveState(): void {
+    let treeChanged = false;
+    if (this.treeData.characterId) {
+      this.treeData.name = 'Target Character';
+      this.treeData.image = undefined;
+      this.treeData.characterId = undefined;
+      treeChanged = true;
+    }
+    if (treeChanged) {
+      this.updateTreeFilters(false);
+    }
+    if (this.selectedVeteran) {
+      this.selectedVeteran = null;
+      this.selectedVeteranName = '';
+      this.selectedVeteranImage = '';
+      this.pendingVeteranRestore = null;
+      this.veteranSelected.emit(null);
+      this.syncSelectedVeteranFilterState();
+    }
+  }
+
+  private shouldOpenUqlOwnedLegacyPicker(query: string): boolean {
+    if (!query.trim()) return false;
+    const expression = this.stripLeadingWhere(query);
+    const clauses = this.splitTopLevelUqlAndClauses(expression);
+    return clauses.some(clause => /^(?:owned\s+legacy|your\s+legacy|my\s+legacy|legacy)\s*=\s*\[\s*\]$/i.test(clause.trim()));
+  }
+
+  private openUqlOwnedLegacyPicker(forceOpen = false): void {
+    if (this.uqlOwnedLegacyPickerOpen || this.uqlOwnedLegacyPickerPending) return;
+    if (!this.linkedAccounts.length && !forceOpen) {
+      this.uqlOwnedLegacyPickerPending = true;
+      this.loadLinkedAccounts(() => {
+        this.uqlOwnedLegacyPickerPending = false;
+        this.openUqlOwnedLegacyPicker(true);
+      }, { preloadSelectedAccount: false, updateSuggestions: false });
+      return;
+    }
+    this.uqlOwnedLegacyPickerOpen = true;
+    this.openVeteranDialog(veteran => {
+      this.uqlOwnedLegacyPickerOpen = false;
+      if (!veteran) return;
+      this.replaceUqlOwnedLegacyPickerPlaceholder(veteran);
+    }, { suppressFilterChange: true });
+  }
+
+  private replaceUqlOwnedLegacyPickerPlaceholder(veteran: VeteranMember): void {
+    const accountId = this.getAccountIdForVeteran(veteran) || this.selectedAccountId || '';
+    const value = this.getOwnedLegacyUqlDisplayValue(accountId, veteran);
+    const replacement = `owned legacy = [${value}]`;
+    const query = this.uqlQuery.trim();
+    const placeholderPattern = /(^|\band\s+)((?:owned\s+legacy|your\s+legacy|my\s+legacy|legacy)\s*=\s*)(?:\[\s*\])?(?=\s*(?:\band\b|$))/i;
+    if (placeholderPattern.test(query)) {
+      this.uqlQuery = query.replace(placeholderPattern, (_match, prefix) => `${prefix}${replacement}`);
+    } else if (!query || /^where$/i.test(query)) {
+      this.uqlQuery = replacement;
+    } else {
+      this.uqlQuery = `${query.replace(/\s+and\s*$/i, '').replace(/;\s*$/, '')} and ${replacement}`;
+    }
+    this.syncSelectedVeteranFilterState();
+    if (this.uqlValidationState === 'empty') {
+      this.uqlValidationState = 'valid';
+      this.uqlValidationMessage = 'Ready';
+    }
+    if (this.filterMode === 'uql') {
+      this.filterState = this.buildUqlOnlyFilterState();
+    }
+    this.updateActiveFilterChips();
+    this.filterChangeSubject.next({ ...this.filterState });
+  }
+
+  private ensureUqlOwnedLegacyData(query: string): void {
+    const veteranIdHint = this.getUqlOwnedLegacyVeteranIdHint(query);
+    const accountHint = this.getUqlOwnedLegacyAccountHint(query);
+    const hasLegacyDirective = this.hasUqlOwnedLegacyDirective(query);
+    if (!hasLegacyDirective) return;
+
+    if (veteranIdHint && !this.fetchedVeteransById.has(veteranIdHint) && !this.loadingVeteransById[veteranIdHint]) {
+      this.loadVeteranById(veteranIdHint);
+      return;
+    }
+    if (veteranIdHint) return;
+
+    if (!this.linkedAccountsLoaded && !this.loadingLinkedAccounts) {
+      this.loadLinkedAccounts(() => {
+        if (accountHint) this.loadVeteransForAccount(accountHint);
+        this.onUqlChange();
+      }, { preloadSelectedAccount: false, updateSuggestions: true });
+      return;
+    }
+
+    if (accountHint && !this.veterans[accountHint] && !this.loadingVeterans[accountHint]) {
+      this.loadVeteransForAccount(accountHint);
+    }
+  }
+
+  private isUqlOwnedLegacyResolutionPending(query: string): boolean {
+    if (!this.hasUqlOwnedLegacyDirective(query)) return false;
+    const veteranIdHint = this.getUqlOwnedLegacyVeteranIdHint(query);
+    if (veteranIdHint) {
+      return !!this.loadingVeteransById[veteranIdHint] || !this.fetchedVeteransById.has(veteranIdHint);
+    }
+    const accountHint = this.getUqlOwnedLegacyAccountHint(query);
+    if (!this.linkedAccountsLoaded || this.loadingLinkedAccounts) return true;
+    if (!accountHint) return Object.values(this.loadingVeterans).some(Boolean);
+    return this.loadingVeterans[accountHint] || !this.veterans[accountHint];
+  }
+
+  isCurrentUqlOwnedLegacyResolutionPending(): boolean {
+    return this.filterMode === 'uql' && this.isUqlOwnedLegacyResolutionPending(this.getNormalizedUqlQuery());
+  }
+
+  currentUqlRequiresOwnedLegacyParams(): boolean {
+    return this.filterMode === 'uql'
+      && this.uqlValidationState !== 'invalid'
+      && this.hasUqlOwnedLegacyDirective(this.getNormalizedUqlQuery());
+  }
+
+  private hasUqlOwnedLegacyDirective(query: string): boolean {
+    const expression = this.stripLeadingWhere(query);
+    if (!expression) return false;
+    return this.splitTopLevelUqlAndClauses(expression)
+      .some(clause => this.parseUqlEditorDirectiveClause(clause)?.kind === 'legacy');
+  }
+
+  private getUqlOwnedLegacyAccountHint(query: string): string | null {
+    const expression = this.stripLeadingWhere(query);
+    if (!expression) return null;
+    for (const clause of this.splitTopLevelUqlAndClauses(expression)) {
+      const directive = this.parseUqlEditorDirectiveClause(clause);
+      if (directive?.kind !== 'legacy' || !directive.value) continue;
+      const value = this.unwrapUqlBracketValue(this.unquoteUqlValue(directive.value));
+      const accountMatch = value.match(/@([A-Za-z0-9_-]+)\s*$/);
+      if (accountMatch) return accountMatch[1];
+      const accountMemberMatch = value.match(/^([A-Za-z0-9_-]+):\d+$/);
+      if (accountMemberMatch) return accountMemberMatch[1];
+    }
+    return null;
+  }
+
+  private getUqlOwnedLegacyVeteranIdHint(query: string): string | null {
+    const expression = this.stripLeadingWhere(query);
+    if (!expression) return null;
+    for (const clause of this.splitTopLevelUqlAndClauses(expression)) {
+      const directive = this.parseUqlEditorDirectiveClause(clause);
+      if (directive?.kind !== 'legacy' || !directive.value) continue;
+      const value = this.unwrapUqlBracketValue(this.unquoteUqlValue(directive.value));
+      const idMatch = value.match(/#([A-Za-z0-9_-]+)\s*$/);
+      if (idMatch && !/^\d+$/.test(idMatch[1])) return idMatch[1];
+    }
+    return null;
+  }
+
+  private getAccountIdForVeteran(veteran: VeteranMember): string | null {
+    if (veteran.trainer_id) return veteran.trainer_id;
+    const veteranId = this.getVeteranUuid(veteran);
+    for (const [accountId, veterans] of Object.entries(this.veterans)) {
+      if (veterans.some(entry => entry === veteran
+        || (!!veteranId && this.getVeteranUuid(entry) === veteranId)
+        || (entry.member_id != null && entry.member_id === veteran.member_id))) {
+        return accountId;
+      }
+    }
+    return null;
+  }
+
+  private getVeteranUuid(veteran: VeteranMember | null | undefined): string | null {
+    if (veteran?.id == null) return null;
+    const value = String(veteran.id).trim();
+    return value || null;
+  }
+
+  private syncSelectedVeteranFilterState(): void {
+    if (this.selectedVeteran) {
+      const veteran = this.selectedVeteran;
+      const winSaddleIds = veteran.win_saddle_id_array ?? [];
+      this.filterState.p2_main_chara_id = this.getVeteranMainCharaId(veteran);
+      this.filterState.p2_win_saddle = winSaddleIds.length ? winSaddleIds : undefined;
+    } else {
+      this.filterState.p2_main_chara_id = undefined;
+      this.filterState.p2_win_saddle = undefined;
+    }
+  }
+
+  private getVeteranMainCharaId(veteran: VeteranMember): number | undefined {
+    const rawId = veteran.card_id ?? veteran.trained_chara_id ?? undefined;
+    if (rawId == null) return undefined;
+    return rawId >= 10000 ? Math.floor(rawId / 100) : rawId;
+  }
+
+  private resolveUqlTargetCharacter(rawValue: string): { match?: (typeof CHARACTERS)[number]; partial: boolean } {
+    const value = this.unwrapUqlBracketValue(this.unquoteUqlValue(rawValue));
+    const normalizedValue = this.normalizeUqlName(value);
+    if (!normalizedValue) return { partial: true };
+    if (/^\d+$/.test(value.trim())) {
+      const match = getMasterCharacterById(parseInt(value.trim(), 10));
+      return match ? { match, partial: false } : { partial: false };
+    }
+    const candidates = CHARACTERS.map(character => ({
+      character,
+      values: [
+        this.getCharacterUqlDisplayName(character),
+        character.name,
+        getCharacterName(character.id),
+        this.getCharacterSkinName(character.id),
+        character.id.toString()
+      ].filter(Boolean) as string[]
+    }));
+    const exact = candidates.find(candidate => candidate.values.some(candidateValue => this.normalizeUqlName(candidateValue) === normalizedValue));
+    if (exact) return { match: exact.character, partial: false };
+    const partial = candidates.some(candidate => candidate.values.some(candidateValue => this.normalizeUqlName(candidateValue).startsWith(normalizedValue)));
+    return { partial };
+  }
+
+  private resolveUqlOwnedLegacy(rawValue: string): { match?: { accountId: string; veteran: VeteranMember }; partial: boolean } {
+    const value = this.unwrapUqlBracketValue(this.unquoteUqlValue(rawValue));
+    const normalizedValue = this.normalizeUqlName(value);
+    if (!normalizedValue) return { partial: true };
+    const uuidMatch = value.match(/#([A-Za-z0-9_-]+)\s*$/);
+    if (uuidMatch && !/^\d+$/.test(uuidMatch[1])) {
+      const veteranId = uuidMatch[1];
+      if (this.selectedVeteran && this.getVeteranUuid(this.selectedVeteran) === veteranId) {
+        return { match: { accountId: this.getAccountIdForVeteran(this.selectedVeteran) || this.selectedAccountId || this.selectedVeteran.trainer_id || '', veteran: this.selectedVeteran }, partial: false };
+      }
+      const fetchedVeteran = this.fetchedVeteransById.get(veteranId);
+      if (fetchedVeteran) {
+        return { match: { accountId: this.getAccountIdForVeteran(fetchedVeteran) || fetchedVeteran.trainer_id || '', veteran: fetchedVeteran }, partial: false };
+      }
+      for (const account of this.linkedAccounts) {
+        const veteran = (this.veterans[account.account_id] ?? []).find(entry => this.getVeteranUuid(entry) === veteranId);
+        if (veteran) return { match: { accountId: account.account_id, veteran }, partial: false };
+      }
+      return { partial: !!this.loadingVeteransById[veteranId] || !this.fetchedVeteransById.has(veteranId) };
+    }
+    const idMatch = value.match(/(?:#|member\s+)(\d+)\s*$/i);
+    if (idMatch) {
+      const memberId = Number(idMatch[1]);
+      if (this.selectedVeteran?.member_id === memberId) {
+        const accountId = this.getAccountIdForVeteran(this.selectedVeteran) || this.selectedAccountId || this.selectedVeteran.trainer_id || '';
+        return { match: { accountId, veteran: this.selectedVeteran }, partial: false };
+      }
+      for (const account of this.linkedAccounts) {
+        const veteran = (this.veterans[account.account_id] ?? []).find(entry => entry.member_id === memberId);
+        if (veteran) return { match: { accountId: account.account_id, veteran }, partial: false };
+      }
+    }
+    const accountMatch = value.match(/@([A-Za-z0-9_-]+)\s*$/);
+    if (accountMatch) {
+      const accountId = accountMatch[1];
+      const normalizedName = this.normalizeUqlName(value.slice(0, accountMatch.index).trim());
+      if (this.selectedVeteran && (this.getAccountIdForVeteran(this.selectedVeteran) === accountId || this.selectedVeteran.trainer_id === accountId)) {
+        return { match: { accountId, veteran: this.selectedVeteran }, partial: false };
+      }
+      const veteran = (this.veterans[accountId] ?? []).find(entry => this.normalizeUqlName(this.getVeteranName(entry)) === normalizedName);
+      if (veteran) return { match: { accountId, veteran }, partial: false };
+    }
+
+    let partial = false;
+    for (const account of this.linkedAccounts) {
+      const accountLabel = account.trainer_name || account.account_id;
+      for (const veteran of this.veterans[account.account_id] ?? []) {
+        if (veteran.member_id == null) continue;
+        const name = this.getVeteranName(veteran);
+        const values = [
+          this.getOwnedLegacyUqlDisplayValue(account.account_id, veteran),
+          name,
+          `${name} ${veteran.member_id}`,
+          `${account.account_id}:${veteran.member_id}`,
+          accountLabel
+        ];
+        for (const candidateValue of values) {
+          const normalizedCandidate = this.normalizeUqlName(candidateValue);
+          if (normalizedCandidate === normalizedValue) {
+            return { match: { accountId: account.account_id, veteran }, partial: false };
+          }
+          partial ||= normalizedCandidate.startsWith(normalizedValue);
+        }
+      }
+    }
+    partial ||= !this.linkedAccountsLoaded || Object.values(this.loadingVeterans).some(Boolean);
+    return { partial };
+  }
+
   private resolveCharacterUqlValue(rawValue: string, fieldText?: string): string | null {
     const normalizedValue = this.normalizeUqlName(rawValue);
     const exactVariant = CHARACTERS.find(entry => this.normalizeUqlName(this.getCharacterUqlDisplayName(entry)) === normalizedValue);
@@ -3530,12 +4125,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const character = CHARACTERS.find(entry => this.normalizeUqlName(getCharacterName(entry.id)) === normalizedValue || this.normalizeUqlName(entry.name || '') === normalizedValue);
     return character ? this.formatCharacterUqlId(character.id, fieldText) : null;
   }
-  private formatCharacterUqlId(cardId: number, fieldText?: string): string {
-    return (this.usesBaseCharacterUqlId(fieldText) ? Math.floor(cardId / 100) : cardId).toString();
-  }
-  private usesBaseCharacterUqlId(fieldText?: string): boolean {
-    const canonicalField = this.getCanonicalFriendlyUqlField(fieldText || '');
-    return canonicalField === 'main_chara_id' || canonicalField === 'left_chara_id' || canonicalField === 'right_chara_id';
+  private formatCharacterUqlId(cardId: number, _fieldText?: string): string {
+    return cardId.toString();
   }
   private getCanonicalFriendlyUqlField(fieldText: string): string {
     const normalizedField = fieldText.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^(?:not|where)\s+/, '');
@@ -3568,16 +4159,16 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.endsWithAny(normalized, ['race results', 'race wins', 'main race wins', 'left race wins', 'right race wins', 'win saddles', 'main win saddles', 'left win saddles', 'right win saddles'])) {
       return 'race-saddle';
     }
-    if (this.endsWithAny(normalized, ['white sparks', 'white skills', 'white factors', 'main parent white skills', 'main parent skills', 'parent white skills', 'parent skills', 'main white factors', 'main white sparks'])) {
+    if (this.endsWithAny(normalized, ['white sparks', 'white skills', 'white factors', 'main parent white skills', 'main parent skills', 'parent white skills', 'parent skills', 'main white factors', 'main white sparks', 'left white factors', 'left white sparks', 'right white factors', 'right white sparks', 'gp1 white factors', 'gp1 white sparks', 'gp2 white factors', 'gp2 white sparks'])) {
       return 'white-factor';
     }
-    if (this.endsWithAny(normalized, ['green sparks', 'unique skills', 'green factors'])) {
+    if (this.endsWithAny(normalized, ['green sparks', 'unique skills', 'green factors', 'main green sparks', 'main green factors', 'main unique skills', 'left green sparks', 'left green factors', 'left unique skills', 'right green sparks', 'right green factors', 'right unique skills', 'gp1 green sparks', 'gp1 green factors', 'gp1 unique skills', 'gp2 green sparks', 'gp2 green factors', 'gp2 unique skills'])) {
       return 'green-factor';
     }
-    if (this.endsWithAny(normalized, ['blue sparks', 'blue factors'])) {
+    if (this.endsWithAny(normalized, ['blue sparks', 'blue factors', 'main blue sparks', 'main blue factors', 'left blue sparks', 'left blue factors', 'right blue sparks', 'right blue factors', 'gp1 blue sparks', 'gp1 blue factors', 'gp2 blue sparks', 'gp2 blue factors'])) {
       return 'blue-factor';
     }
-    if (this.endsWithAny(normalized, ['pink sparks', 'pink factors'])) {
+    if (this.endsWithAny(normalized, ['pink sparks', 'pink factors', 'main pink sparks', 'main pink factors', 'left pink sparks', 'left pink factors', 'right pink sparks', 'right pink factors', 'gp1 pink sparks', 'gp1 pink factors', 'gp2 pink sparks', 'gp2 pink factors'])) {
       return 'pink-factor';
     }
     return null;
@@ -3700,6 +4291,43 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return 12;
   }
 
+  private getScopedSparkCategorySuggestions(): UqlSuggestion[] {
+    return [
+      {
+        label: 'Grandparent blue sparks',
+        insertText: 'Grandparent Blue Sparks',
+        detail: 'left_blue_factors or right_blue_factors; max 3 stars on either grandparent',
+        matchPhrases: ['grandparent blue sparks', 'grandparent blue factors', 'gp blue sparks', 'gp blue factors', 'any gp blue sparks', 'any gp blue factors'],
+        valueContext: 'blue-factor' as const
+      },
+      {
+        label: 'Grandparent pink sparks',
+        insertText: 'Grandparent Pink Sparks',
+        detail: 'left_pink_factors or right_pink_factors; max 3 stars on either grandparent',
+        matchPhrases: ['grandparent pink sparks', 'grandparent pink factors', 'gp pink sparks', 'gp pink factors', 'any gp pink sparks', 'any gp pink factors'],
+        valueContext: 'pink-factor' as const
+      },
+      {
+        label: 'Grandparent green sparks',
+        insertText: 'Grandparent Green Sparks',
+        detail: 'left_green_factors or right_green_factors; max 3 stars on either grandparent',
+        matchPhrases: ['grandparent green sparks', 'grandparent green factors', 'grandparent unique skills', 'gp green sparks', 'gp green factors', 'gp unique skills', 'any gp green sparks', 'any gp green factors', 'any gp unique skills'],
+        valueContext: 'green-factor' as const
+      }
+    ].map(field => ({
+      label: field.label,
+      insertText: field.insertText,
+      kind: 'field' as const,
+      detail: field.detail,
+      searchText: field.matchPhrases.join(' '),
+      matchPhrases: field.matchPhrases,
+      priority: 11,
+      scopeContext: 'any-gp' as const,
+      valueContext: field.valueContext,
+      fieldType: 'number' as UqlFieldType
+    }));
+  }
+
   private getSyntaxSuggestionPriority(suggestion: UqlSuggestion): number {
     if (suggestion.kind === 'keyword') return 10;
     if (suggestion.kind === 'operator') return 12;
@@ -3707,6 +4335,13 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private updateUqlSuggestions(): void {
+    if (this.staticUqlSuggestionsCache) {
+      this.uqlSuggestions = [
+        ...this.staticUqlSuggestionsCache,
+        ...this.getOwnedLegacyUqlSuggestions()
+      ];
+      return;
+    }
     const syntaxSuggestions: UqlSuggestion[] = [
       { label: 'where', insertText: 'where ', kind: 'keyword', detail: 'Start a filter expression' },
       { label: 'and', insertText: ' and ', kind: 'keyword', detail: 'Require both sides' },
@@ -3734,6 +4369,21 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       { label: 'Grandparent has skill', insertText: 'Grandparent has Right-Handed ○', kind: 'snippet', detail: 'Either grandparent has this white factor' },
     ];
     const friendlyFieldSuggestions: UqlSuggestion[] = [
+      ...[
+        { label: 'Target', detail: 'Editor context target character', matchPhrases: ['target', 'affinity target'], valueContext: 'character' as const },
+        { label: 'Owned legacy', insertText: 'owned legacy = []', cursorOffset: -1, detail: 'Pick a legacy from your account', matchPhrases: ['owned legacy', 'legacy', 'your legacy', 'my legacy'], valueContext: 'legacy' as const }
+      ].map(field => ({
+        label: field.label,
+        insertText: field.insertText || field.label,
+        kind: 'field' as const,
+        detail: field.detail,
+        searchText: field.matchPhrases.join(' '),
+        matchPhrases: field.matchPhrases,
+        priority: 0,
+        valueContext: field.valueContext,
+        fieldType: 'directive' as UqlFieldType,
+        cursorOffset: field.cursorOffset
+      })),
       ...this.friendlySparkFields.map(field => ({
         label: field.label,
         insertText: field.label,
@@ -3755,6 +4405,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         fieldType: alias.type,
         valueContext: this.getUqlValueContextForField(alias.field) || undefined
       })),
+      ...this.getScopedSparkCategorySuggestions(),
       ...[
         { label: 'Optional white', detail: 'Ranks rows with these global white skill matches', matchPhrases: ['optional white', 'optional skills', 'optional white skills'] },
         { label: 'Optional main white', detail: 'Ranks rows with these main-parent white skill matches', matchPhrases: ['optional main white', 'optional parent white', 'optional main skills'] },
@@ -3788,7 +4439,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         valueContext: 'white-factor' as const,
         fieldType: 'array' as UqlFieldType
       })),
-      ...this.getScopedSparkFields().map(field => ({
+      ...this.getScopedSparkFields().filter(field => field.valueContext !== 'green-factor').map(field => ({
         label: field.label,
         insertText: field.label,
         kind: 'field' as const,
@@ -3861,14 +4512,17 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       label: race.label,
       insertText: race.label,
       kind: 'value' as const,
-      detail: `Win saddle ids ${race.saddleIds.join(', ')}`,
+      detail: `${race.gradeLabel ? `${race.gradeLabel} · ` : ''}Win saddle ids ${race.saddleIds.join(', ')}`,
       searchText: race.searchText,
       matchPhrases: [race.label, ...race.aliases],
       valueContext: 'race-saddle' as const,
       priority: 8,
-      backendValue: race.saddleIds.join(', ')
+      backendValue: race.saddleIds.join(', '),
+      badgeText: race.gradeLabel,
+      badgeClass: race.gradeClass
     }));
-    this.uqlSuggestions = [
+    const ownedLegacySuggestions = this.getOwnedLegacyUqlSuggestions();
+    this.staticUqlSuggestionsCache = [
       ...friendlyFieldSuggestions,
       ...syntaxSuggestions.map(suggestion => ({ ...suggestion, priority: this.getSyntaxSuggestionPriority(suggestion) })),
       ...characterSuggestions,
@@ -3876,6 +4530,42 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       ...raceSaddleSuggestions,
       ...factorSuggestions
     ];
+    this.uqlSuggestions = [
+      ...this.staticUqlSuggestionsCache,
+      ...ownedLegacySuggestions
+    ];
+  }
+
+  private getOwnedLegacyUqlSuggestions(): UqlSuggestion[] {
+    const suggestions: UqlSuggestion[] = [];
+    const seen = new Set<string>();
+    const addLegacySuggestion = (accountId: string, veteran: VeteranMember, accountLabel = accountId): void => {
+      const veteranId = this.getVeteranUuid(veteran);
+      if (!accountId && veteran.member_id == null && !veteranId) return;
+      const label = this.getOwnedLegacyUqlDisplayValue(accountId, veteran);
+      const name = this.getVeteranName(veteran);
+      const identity = veteranId ? `veteran:${veteranId}` : (veteran.member_id != null ? `member:${veteran.member_id}` : `account:${accountId}`);
+      if (seen.has(identity)) return;
+      seen.add(identity);
+      const idText = veteranId || (veteran.member_id != null ? veteran.member_id.toString() : accountId);
+      suggestions.push({
+        label,
+        insertText: `[${label}]`,
+        kind: 'value' as const,
+        detail: veteranId ? `${accountLabel} · veteran ${veteranId}` : (veteran.member_id != null ? `${accountLabel} · member ${veteran.member_id}` : `${accountLabel} · account ${accountId}`),
+        searchText: `${name} ${label} ${accountLabel} ${accountId} ${idText}`,
+        matchPhrases: [label, name, `${name} ${idText}`],
+        valueContext: 'legacy' as const,
+        priority: 1,
+        backendValue: veteranId || (veteran.member_id != null ? `${accountId}:${veteran.member_id}` : accountId),
+        imageUrl: this.getVeteranUqlCharacterImage(veteran)
+      });
+    };
+    if (this.selectedVeteran) {
+      const accountId = this.getAccountIdForVeteran(this.selectedVeteran) || this.selectedAccountId || '';
+      addLegacySuggestion(accountId, this.selectedVeteran, accountId);
+    }
+    return suggestions;
   }
 
   private getScopeContextForLabel(label: string): UqlSuggestion['scopeContext'] {
@@ -4439,6 +5129,21 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     return clauses.join(' and ');
   }
+
+  private buildUqlEditorDirectiveClauses(): string[] {
+    const clauses: string[] = [];
+    if (this.treeData.characterId) {
+      const character = getMasterCharacterById(this.treeData.characterId);
+      const value = character ? this.getCharacterUqlDisplayName(character) : this.treeData.name;
+      clauses.push(`target = ${value}`);
+    }
+    if (this.selectedVeteran) {
+      const accountId = this.getAccountIdForVeteran(this.selectedVeteran) || this.selectedAccountId || this.selectedVeteran.trainer_id || '';
+      clauses.push(`owned legacy = [${this.getOwnedLegacyUqlDisplayValue(accountId, this.selectedVeteran)}]`);
+    }
+    return clauses;
+  }
+
   private appendArrayOverlapClauses(clauses: string[], fieldName: string, groups: number[][] | undefined): void {
     if (!groups) return;
     groups.forEach(group => {
@@ -4460,6 +5165,137 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private stripLeadingWhere(query: string): string {
     return query.replace(/^\s*where\b\s*/i, '').replace(/;\s*$/, '').trim();
   }
+
+  private extractUqlEditorDirectives(query: string): UqlEditorDirectiveParseResult {
+    const hadWhere = /^\s*where\b/i.test(query);
+    const expression = this.stripLeadingWhere(query);
+    if (!expression) return { queryWithoutDirectives: '', directives: [] };
+    if (/\band\s*$/i.test(expression)) {
+      return {
+        queryWithoutDirectives: query,
+        directives: [],
+        issue: { state: 'incomplete', message: 'Finish the boolean operator' }
+      };
+    }
+    const clauses = this.splitTopLevelUqlAndClauses(expression);
+    const remainingClauses: string[] = [];
+    const directives: UqlEditorDirective[] = [];
+
+    for (const clause of clauses) {
+      const directive = this.parseUqlEditorDirectiveClause(clause);
+      if (!directive) {
+        remainingClauses.push(clause);
+        continue;
+      }
+      if (directive.operator !== '=') {
+        return {
+          queryWithoutDirectives: query,
+          directives,
+          issue: { state: 'invalid', message: `${directive.label} only supports =` }
+        };
+      }
+      if (!directive.value) {
+        return {
+          queryWithoutDirectives: query,
+          directives,
+          issue: { state: 'incomplete', message: `Choose a ${directive.kind === 'target' ? 'target' : 'legacy'}` }
+        };
+      }
+
+      const resolution = directive.kind === 'target'
+        ? this.resolveUqlTargetCharacter(directive.value)
+        : this.resolveUqlOwnedLegacy(directive.value);
+      if (!resolution.match) {
+        return {
+          queryWithoutDirectives: query,
+          directives,
+          issue: {
+            state: resolution.partial ? 'incomplete' : 'invalid',
+            message: resolution.partial
+              ? `Choose a ${directive.kind === 'target' ? 'target' : 'legacy'} from autocomplete`
+              : `Unknown ${directive.kind === 'target' ? 'target' : 'legacy'}: ${directive.value}`
+          }
+        };
+      }
+      directives.push({ kind: directive.kind, value: directive.value });
+    }
+
+    const queryWithoutDirectives = remainingClauses.length
+      ? `${hadWhere ? 'where ' : ''}${remainingClauses.join(' and ')}`
+      : '';
+    return { queryWithoutDirectives, directives };
+  }
+
+  private splitTopLevelUqlAndClauses(expression: string): string[] {
+    const clauses: string[] = [];
+    let start = 0;
+    let depth = 0;
+    let quote: string | null = null;
+    for (let index = 0; index < expression.length; index++) {
+      const character = expression[index];
+      if (quote) {
+        if (character === quote) {
+          const next = expression[index + 1];
+          if (next === quote) {
+            index++;
+          } else {
+            quote = null;
+          }
+        }
+        continue;
+      }
+      if (character === '\'' || character === '"') {
+        quote = character;
+        continue;
+      }
+      if (character === '(') {
+        depth++;
+        continue;
+      }
+      if (character === ')') {
+        depth = Math.max(0, depth - 1);
+        continue;
+      }
+      if (depth === 0 && /^and\b/i.test(expression.slice(index)) && !/[A-Za-z0-9_]/.test(expression[index - 1] || '')) {
+        const clause = expression.slice(start, index).trim();
+        if (clause) clauses.push(clause);
+        index += 2;
+        start = index + 1;
+      }
+    }
+    const finalClause = expression.slice(start).trim();
+    if (finalClause) clauses.push(finalClause);
+    return clauses;
+  }
+
+  private parseUqlEditorDirectiveClause(clause: string): { kind: UqlEditorDirectiveKind; label: string; operator: string; value: string } | null {
+    const match = clause.trim().match(/^(target|owned\s+legacy|your\s+legacy|my\s+legacy|legacy)\s*(not\s+in|has\s+any|has\s+all|has|!=|<>|>=|<=|=|>|<|in|contains)\s*(.*)$/i);
+    if (!match) return null;
+    const label = match[1].replace(/\s+/g, ' ').trim();
+    return {
+      kind: /^target$/i.test(label) ? 'target' : 'legacy',
+      label,
+      operator: match[2].replace(/\s+/g, ' ').toLowerCase(),
+      value: this.unwrapUqlBracketValue(this.unquoteUqlValue(match[3].trim()))
+    };
+  }
+
+  private unwrapUqlBracketValue(value: string): string {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      return trimmed.slice(1, -1).trim();
+    }
+    return trimmed;
+  }
+
+  private unquoteUqlValue(value: string): string {
+    const trimmed = value.trim().replace(/;\s*$/, '').trim();
+    if ((trimmed.startsWith('\'') && trimmed.endsWith('\'')) || (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+      return trimmed.slice(1, -1).replace(/''/g, '\'').replace(/""/g, '"').trim();
+    }
+    return trimmed;
+  }
+
   private truncateUqlChipValue(value: string): string {
     return value.length > 56 ? `${value.slice(0, 53)}...` : value;
   }
@@ -4509,12 +5345,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
   selectVeteran() {
     if (this.linkedAccounts.length === 0) {
-      this.loadLinkedAccounts(() => this.openVeteranDialog());
+      this.loadLinkedAccounts(() => this.openVeteranDialog(), { preloadSelectedAccount: false, updateSuggestions: false });
     } else {
       this.openVeteranDialog();
     }
   }
-  private openVeteranDialog() {
+  private openVeteranDialog(afterSelected?: (veteran: VeteranMember | undefined) => void, options: { suppressFilterChange?: boolean } = {}) {
     const targetCharaId = this.treeData.characterId
       ? Math.floor(this.treeData.characterId / 100)
       : null;
@@ -4523,6 +5359,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       maxWidth: '1100px',
       panelClass: 'modern-dialog-panel',
       autoFocus: false,
+      restoreFocus: false,
+      exitAnimationDuration: '0ms',
       data: {
         linkedAccounts: this.linkedAccounts,
         selectedAccountId: this.selectedAccountId,
@@ -4534,22 +5372,37 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     });
     dialogRef.afterClosed().subscribe((vet: VeteranMember | undefined) => {
       if (vet) {
+        const accountId = this.getAccountIdForVeteran(vet);
+        if (accountId) this.selectedAccountId = accountId;
         this.selectedVeteran = vet;
         this.selectedVeteranName = this.getVeteranName(vet);
         this.selectedVeteranImage = this.getVeteranImage(vet);
         this.veteranSelected.emit(vet);
-        this.onFilterChange();
+        if (!options.suppressFilterChange) {
+          this.onFilterChange();
+        }
       }
+      afterSelected?.(vet);
     });
   }
-  private loadLinkedAccounts(callback?: () => void) {
+  private loadLinkedAccounts(callback?: () => void, options: { preloadSelectedAccount?: boolean; updateSuggestions?: boolean } = {}) {
+    const preloadSelectedAccount = options.preloadSelectedAccount !== false;
+    const updateSuggestions = options.updateSuggestions !== false;
+    this.loadingLinkedAccounts = true;
     this.authService.getLinkedAccounts()
       .pipe(takeUntil(this.destroy$), catchError(() => of([])))
       .subscribe(accounts => {
+        this.loadingLinkedAccounts = false;
+        this.linkedAccountsLoaded = true;
         this.linkedAccounts = accounts;
         if (accounts.length > 0 && !this.selectedAccountId) {
           this.selectedAccountId = accounts[0].account_id;
-          this.loadVeteransForAccount(accounts[0].account_id);
+        }
+        if (preloadSelectedAccount && this.selectedAccountId) {
+          this.loadVeteransForAccount(this.selectedAccountId);
+        }
+        if (updateSuggestions) {
+          this.updateUqlSuggestions();
         }
         this.cdr.markForCheck();
         callback?.();
@@ -4564,21 +5417,47 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         this.loadingVeterans[accountId] = false;
         this.veterans[accountId] = profile?.veterans ?? [];
         this.tryRestoreVeteran();
+        this.updateUqlSuggestions();
+        if (this.filterMode === 'uql' && this.hasUqlOwnedLegacyDirective(this.uqlQuery)) {
+          this.onUqlChange();
+        }
         this.cdr.markForCheck();
       });
   }
+
+  private loadVeteranById(veteranId: string): void {
+    if (!veteranId || this.loadingVeteransById[veteranId] || this.fetchedVeteransById.has(veteranId)) return;
+    this.loadingVeteransById[veteranId] = true;
+    this.profileService.getVeteranById(veteranId)
+      .pipe(takeUntil(this.destroy$), catchError(() => of(null)))
+      .subscribe(veteran => {
+        this.loadingVeteransById[veteranId] = false;
+        this.fetchedVeteransById.set(veteranId, veteran);
+        if (veteran?.trainer_id) {
+          const accountVeterans = this.veterans[veteran.trainer_id] ?? [];
+          const veteranUuid = this.getVeteranUuid(veteran);
+          const existingIndex = accountVeterans.findIndex(entry =>
+            (!!veteranUuid && this.getVeteranUuid(entry) === veteranUuid)
+            || (entry.member_id != null && entry.member_id === veteran.member_id)
+          );
+          this.veterans[veteran.trainer_id] = existingIndex >= 0
+            ? accountVeterans.map((entry, index) => index === existingIndex ? veteran : entry)
+            : [...accountVeterans, veteran];
+        }
+        this.updateUqlSuggestions();
+        if (this.filterMode === 'uql' && this.hasUqlOwnedLegacyDirective(this.uqlQuery)) {
+          this.onUqlChange();
+        }
+        this.cdr.markForCheck();
+      });
+  }
+
   removeVeteran() {
     this.selectedVeteran = null;
     this.selectedVeteranName = '';
     this.selectedVeteranImage = '';
     this.pendingVeteranRestore = null;
-    this.filterState.affinity_p2 = undefined;
     this.veteranSelected.emit(null);
-    this.onFilterChange();
-  }
-
-  onVeteranAffinityChanged(affinity: number) {
-    this.filterState.affinity_p2 = affinity > 0 ? affinity : undefined;
     this.onFilterChange();
   }
 
@@ -4596,6 +5475,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.veteranSelected.emit(vet);
       this.onFilterChange();
     }
+  }
+  private getOwnedLegacyUqlDisplayValue(accountId: string, veteran: VeteranMember): string {
+    const name = this.getVeteranName(veteran);
+    const veteranId = this.getVeteranUuid(veteran);
+    if (veteranId) return `${name} #${veteranId}`;
+    return veteran.member_id != null ? `${name} #${veteran.member_id}` : `${name} @${accountId}`;
   }
   getAffinityTargetCharaId(): number | null {
     return this.treeData.characterId
@@ -4615,6 +5500,14 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (vet.trained_chara_id) {
       const c = CHARACTERS.find(ch => Math.floor(ch.id / 100) === vet.trained_chara_id);
       return c ? `assets/images/character_stand/chara_stand_${c.id}.webp` : '';
+    }
+    return '';
+  }
+  private getVeteranUqlCharacterImage(vet: VeteranMember): string {
+    if (vet.card_id) return `/assets/images/character_stand/chara_stand_${vet.card_id}.png`;
+    if (vet.trained_chara_id) {
+      const c = CHARACTERS.find(ch => Math.floor(ch.id / 100) === vet.trained_chara_id);
+      return c ? `/assets/images/character_stand/chara_stand_${c.id}.png` : '';
     }
     return '';
   }
