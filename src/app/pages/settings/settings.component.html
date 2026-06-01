@@ -155,26 +155,22 @@
       </div>
 
       <div class="card-body">
-        <p class="api-keys-description">API keys authenticate scripts, tools, and external apps that call the uma.moe API. They are not needed for normal website use.</p>
-
-        <div class="api-key-info-panel">
-          <div class="info-panel-item">
-            <mat-icon>shield</mat-icon>
-            <div>
-              <span class="info-panel-title">Keep keys private</span>
-              <span class="info-panel-text">Treat API keys like passwords. Do not share them publicly or commit them to code.</span>
+        <div class="api-key-intro">
+          <div class="api-key-intro-main">
+            <div class="api-key-intro-icon">
+              <mat-icon>terminal</mat-icon>
             </div>
-          </div>
-          <div class="info-panel-item">
-            <mat-icon>manage_accounts</mat-icon>
             <div>
-              <span class="info-panel-title">Revoke unused keys</span>
-              <span class="info-panel-text">Each key is tied to your uma.moe account and can be revoked here at any time.</span>
+              <p class="api-keys-description">API keys authenticate scripts, tools, and external apps that call the uma.moe API. They are not needed for normal website use.</p>
+              <div class="api-key-guidance-list">
+                <span><mat-icon>shield</mat-icon>Keep keys private</span>
+                <span><mat-icon>manage_accounts</mat-icon>Revoke unused keys anytime</span>
+              </div>
             </div>
           </div>
           <a class="api-docs-link" href="/api/docs" target="_blank" rel="noopener noreferrer">
             <mat-icon>article</mat-icon>
-            <span>Open API Docs</span>
+            <span>API Docs</span>
             <mat-icon>open_in_new</mat-icon>
           </a>
         </div>
