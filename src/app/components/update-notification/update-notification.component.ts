@@ -4,7 +4,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 // Increment this number whenever you want to show the update notification again
-export const CURRENT_UPDATE_VERSION = 7;
+export const CURRENT_UPDATE_VERSION = 8;
 export interface ChangeItem {
     text: string;
     link?: string; // Internal route link
@@ -23,6 +23,56 @@ export interface UpdateEntry {
 }
 // Define your updates here - newest first
 export const UPDATE_LOG: UpdateEntry[] = [
+  {
+    title: 'June Update - Search & Veteran Polish',
+    date: '2026-06-01',
+    categories: [
+      {
+        category: 'major',
+        label: 'Search Updates',
+        icon: 'star',
+        color: '#ffc107',
+        items: [
+          {
+            text: 'UQL and basic inheritance filters have been expanded for more precise parent searches',
+            link: '/database'
+          },
+          {
+            text: 'Owned legacy are now part of the Query and will be resolved if the link is shared',
+            link: '/database'
+          },
+        ]
+      },
+      {
+        category: 'improvement',
+        label: 'Improvements',
+        icon: 'upgrade',
+        color: '#ff9800',
+        items: [
+          {
+            text: 'Profile and veteran data loading is more reliable',
+            link: '/profile'
+          },
+          { text: 'Veteran displays' },
+          { text: 'Skills have visually been overhauled' },
+          {
+            text: 'Timeline data has been updated for June events and banners',
+            link: '/timeline'
+          },
+        ]
+      },
+      {
+        category: 'bugfix',
+        label: 'Bug Fixes',
+        icon: 'bug_report',
+        color: '#4caf50',
+        items: [
+          { text: 'Fixed selected veterans not restoring correctly in some saved or shared filter states' },
+          { text: 'Fixed stale app files after updates causing pages to fail loading for some users' },
+        ]
+      }
+    ]
+  },
   {
     title: '30.04 Update - Lineage Planner & More!',
     date: '2026-04-30',

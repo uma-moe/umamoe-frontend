@@ -64,7 +64,7 @@ export function getDistanceName(type: number | null): string {
 
 export function getRunningStyleName(style: number | null): string {
     if (style == null) return '-';
-    const names: Record<number, string> = { 1: 'Runner', 2: 'Leader', 3: 'Betweener', 4: 'Chaser' };
+    const names: Record<number, string> = { 1: 'Front', 2: 'Pace', 3: 'Late', 4: 'End' };
     return names[style] || `Style ${style}`;
 }
 
