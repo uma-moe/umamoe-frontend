@@ -317,7 +317,7 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
         run: |
-          rsync -az \
+          rsync -az --inplace --no-perms --no-owner --no-group \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
             "${{ runner.temp }}/asset-site/data/precomputed-tierlist.json" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_ASSETS_DIR }}/data/"
@@ -422,7 +422,7 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
         run: |
-          rsync -az \
+          rsync -az --inplace --no-perms --no-owner --no-group \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
             "${{ runner.temp }}/asset-site/data/precomputed-tierlist.json" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.PROD_REMOTE_ASSETS_DIR }}/data/"
