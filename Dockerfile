@@ -5,7 +5,8 @@ FROM node:20-bookworm-slim AS deps
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --include=dev \
+	&& test -x node_modules/.bin/ng
 
 FROM deps AS build
 

@@ -330,97 +330,18 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Download shell artifact
+        uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
+          name: shell-site
+          path: ${{ runner.temp }}/shell-site
 
-      - name: Inject production frontend config from secrets
-        id: production_frontend_config
-        shell: bash
-        env:
-          PROD_TURNSTILE_SITE_KEY: ${{ secrets.PROD_TURNSTILE_SITE_KEY }}
-        run: |
-          set -euo pipefail
-
-          if [[ -z "$PROD_TURNSTILE_SITE_KEY" ]]; then
-            echo "::error title=Missing PROD Turnstile site key::Set the PROD_TURNSTILE_SITE_KEY secret to the actual Cloudflare site key value."
-            exit 1
-          fi
-
-          if [[ "$PROD_TURNSTILE_SITE_KEY" == *"{"* || "$PROD_TURNSTILE_SITE_KEY" == *"}"* ]]; then
-            echo "::error title=Invalid PROD Turnstile site key::The configured value looks like a placeholder. Store the raw Cloudflare site key in the GitHub secret, not a template token."
-            exit 1
-          fi
-
-          if [[ "$PROD_TURNSTILE_SITE_KEY" == *"'"* || "$PROD_TURNSTILE_SITE_KEY" == *'"'* ]]; then
-            echo "::error title=Invalid PROD Turnstile site key::The configured value contains quote characters and cannot be injected safely."
-            exit 1
-          fi
-
-          SITE_KEY="$PROD_TURNSTILE_SITE_KEY" perl -0pi -e 'my $replacement = "siteKey: \x27$ENV{SITE_KEY}\x27,"; my $count = s/siteKey:\s*[\x27"][^\x27"]*[\x27"],/$replacement/; die "siteKey property not found\n" unless $count;' src/environments/environment.prod.ts
-
-          if grep -Eq "siteKey: ['\"][^'\"]*[{}][^'\"]*['\"]" src/environments/environment.prod.ts; then
-            echo "::error title=Invalid PROD Turnstile site key injection::The production environment file still contains a placeholder-like siteKey after injection."
-            exit 1
-          fi
-
-          if grep -Eq "siteKey: ['\"]['\"]" src/environments/environment.prod.ts; then
-            echo "::error title=Missing PROD Turnstile site key injection::The production environment file still contains an empty siteKey after injection."
-            exit 1
-          fi
-
-          echo "turnstile_site_key_sha=$(printf '%s' "$PROD_TURNSTILE_SITE_KEY" | sha256sum | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build production shell artifact
-        uses: docker/build-push-action@v6
+      - name: Download assets artifact
+        if: needs.build.outputs.should_deploy_assets == 'true'
+        uses: actions/download-artifact@v4
         with:
-          context: .
-          file: ./Dockerfile
-          target: shell
-          platforms: ${{ env.PLATFORM }}
-          pull: true
-          build-args: |
-            BUILD_SCRIPT=build:prod
-            TURNSTILE_CONFIG_FINGERPRINT=${{ steps.production_frontend_config.outputs.turnstile_site_key_sha }}
-          outputs: type=local,dest=${{ runner.temp }}/production-shell-export
-          cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
-          cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
-
-      - name: Verify production shell artifact frontend config
-        shell: bash
-        env:
-          PROD_TURNSTILE_SITE_KEY: ${{ secrets.PROD_TURNSTILE_SITE_KEY }}
-        run: |
-          set -euo pipefail
-
-          expected_hash="$(printf '%s' "$PROD_TURNSTILE_SITE_KEY" | sha256sum | awk '{print $1}')"
-          found_expected=false
-          mapfile -t built_site_keys < <(find "${{ runner.temp }}/production-shell-export/var/www/html/umamoe" -type f -name '*.js' -print0 | xargs -0 perl -ne 'while (/siteKey:\s*"([^"]*)"/g) { print "$1\n" }')
-
-          if [[ ${#built_site_keys[@]} -eq 0 ]]; then
-            echo "::error title=Missing PROD Turnstile site key in artifact::No compiled siteKey value was found in the exported JavaScript."
-            exit 1
-          fi
-
-          for built_site_key in "${built_site_keys[@]}"; do
-            if [[ -z "$built_site_key" || "$built_site_key" == *"{"* || "$built_site_key" == *"}"* ]]; then
-              echo "::error title=Invalid PROD Turnstile site key in artifact::The exported JavaScript still contains an empty or placeholder-like siteKey."
-              exit 1
-            fi
-
-            if [[ "$(printf '%s' "$built_site_key" | sha256sum | awk '{print $1}')" == "$expected_hash" ]]; then
-              found_expected=true
-            fi
-          done
-
-          if [[ "$found_expected" != "true" ]]; then
-            echo "::error title=PROD Turnstile site key mismatch::The exported JavaScript siteKey does not match the configured GitHub secret."
-            exit 1
-          fi
+          name: asset-site
+          path: ${{ runner.temp }}/asset-site
 
       - name: Mask deployment metadata
         shell: bash
@@ -491,5 +412,17 @@ jobs:
             --exclude 'assets/' \
             --exclude 'statistics/' \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
-            "${{ runner.temp }}/production-shell-export/var/www/html/umamoe/" \
+            "${{ runner.temp }}/shell-site/" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.PROD_REMOTE_SHELL_DIR }}/"
+
+      - name: Deploy production assets bundle
+        if: needs.build.outputs.should_deploy_assets == 'true'
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        run: |
+          rsync -az \
+            -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
+            "${{ runner.temp }}/asset-site/data/precomputed-tierlist.json" \
+            "$DEPLOY_USER@$DEPLOY_HOST:${{ env.PROD_REMOTE_ASSETS_DIR }}/data/"
