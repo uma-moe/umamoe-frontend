@@ -151,7 +151,8 @@ export class ResourceDataService {
     }
 
     if (!this.manifestPromise) {
-      const manifestRequest = this.fetchJsonWithBrowserProof<ResourceManifest>(`${this.resourceBaseUrl}/manifest.json`)
+      const manifestUrl = this.withCacheBuster(`${this.resourceBaseUrl}/manifest.json`, Date.now().toString());
+      const manifestRequest = this.fetchJsonWithBrowserProof<ResourceManifest>(manifestUrl)
         .catch(() => null);
 
       this.manifestPromise = manifestRequest;
@@ -191,8 +192,9 @@ export class ResourceDataService {
   private resolveResource(resourceName: string, manifest: ResourceManifest): ResolvedResource | null {
     const manifestEntry = this.findManifestEntry(resourceName, manifest);
     if (manifestEntry) {
+      const url = this.toAbsoluteResourceUrl(manifestEntry.path);
       return {
-        url: this.toAbsoluteResourceUrl(manifestEntry.path),
+        url: this.withCacheBuster(url, manifestEntry.fingerprint),
         fingerprint: manifestEntry.fingerprint,
       };
     }
@@ -297,6 +299,15 @@ export class ResourceDataService {
     }
 
     return `${this.resourceBaseUrl}/${path.replace(/^\/+/, '')}`;
+  }
+
+  private withCacheBuster(url: string, value?: string): string {
+    if (!value) {
+      return url;
+    }
+
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}v=${encodeURIComponent(value)}`;
   }
 
   private async readCachedResource<T>(resourceName: string): Promise<T | null> {
