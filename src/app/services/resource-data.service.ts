@@ -10,6 +10,12 @@ type ManifestEntry = string | {
   currentPath?: string;
   url?: string;
   href?: string;
+  sha256?: string;
+  current_sha256?: string;
+  currentSha256?: string;
+  checksum?: string;
+  digest?: string;
+  hash?: string;
 };
 
 interface ResourceManifest {
@@ -17,6 +23,8 @@ interface ResourceManifest {
   resource_version?: string;
   master_version?: string;
   current_version?: string;
+  generated_at?: string;
+  generatedAt?: string;
   files?: Record<string, ManifestEntry> | ManifestEntry[];
   artifacts?: Record<string, ManifestEntry> | ManifestEntry[];
   resources?: Record<string, ManifestEntry> | ManifestEntry[];
@@ -24,11 +32,18 @@ interface ResourceManifest {
   entries?: Record<string, ManifestEntry> | ManifestEntry[];
 }
 
+interface ResolvedResource {
+  url: string;
+  fingerprint?: string;
+}
+
 interface ResourceCacheMeta {
   url: string;
   version: string;
   cacheName: string;
   cachedAt: number;
+  manifestGeneratedAt?: string;
+  fingerprint?: string;
 }
 
 export const NON_BANNER_RESOURCE_NAMES = [
@@ -111,17 +126,18 @@ export class ResourceDataService {
       }
 
       const version = this.getManifestVersion(manifest);
-      const url = this.resolveResourceUrl(resourceName, manifest);
-      if (!version || !url) {
+      const manifestGeneratedAt = this.getManifestGeneratedAt(manifest);
+      const resource = this.resolveResource(resourceName, manifest);
+      if (!version || !resource) {
         return;
       }
 
       const meta = this.readCacheMeta(resourceName);
-      if (emittedCached && meta?.version === version && meta.url === url) {
+      if (emittedCached && this.isCacheFresh(meta, version, resource, manifestGeneratedAt)) {
         return;
       }
 
-      const data = await this.fetchAndCacheResource<T>(resourceName, url, version);
+      const data = await this.fetchAndCacheResource<T>(resourceName, resource, version, manifestGeneratedAt);
       subject.next(data);
       void this.cleanupOldCaches(version);
     } catch (error) {
@@ -168,10 +184,17 @@ export class ResourceDataService {
       || null;
   }
 
-  private resolveResourceUrl(resourceName: string, manifest: ResourceManifest): string | null {
-    const manifestPath = this.findManifestPath(resourceName, manifest);
-    if (manifestPath) {
-      return this.toAbsoluteResourceUrl(manifestPath);
+  private getManifestGeneratedAt(manifest: ResourceManifest): string | null {
+    return manifest.generated_at || manifest.generatedAt || null;
+  }
+
+  private resolveResource(resourceName: string, manifest: ResourceManifest): ResolvedResource | null {
+    const manifestEntry = this.findManifestEntry(resourceName, manifest);
+    if (manifestEntry) {
+      return {
+        url: this.toAbsoluteResourceUrl(manifestEntry.path),
+        fingerprint: manifestEntry.fingerprint,
+      };
     }
 
     if (this.manifestHasExplicitEntries(manifest)) {
@@ -179,10 +202,10 @@ export class ResourceDataService {
     }
 
     const version = this.getManifestVersion(manifest);
-    return version ? `${this.resourceBaseUrl}/${version}/${resourceName}.json.gz` : null;
+    return version ? { url: `${this.resourceBaseUrl}/${version}/${resourceName}.json.gz` } : null;
   }
 
-  private findManifestPath(resourceName: string, manifest: ResourceManifest): string | null {
+  private findManifestEntry(resourceName: string, manifest: ResourceManifest): { path: string; fingerprint?: string } | null {
     const candidates = [resourceName, `${resourceName}.json`, `${resourceName}.json.gz`];
     const containers = [manifest.files, manifest.artifacts, manifest.resources, manifest.paths, manifest.entries];
 
@@ -193,9 +216,9 @@ export class ResourceDataService {
 
       if (Array.isArray(container)) {
         for (const entry of container) {
-          const path = this.findMatchingEntryPath(entry, candidates);
-          if (path) {
-            return path;
+          const match = this.findMatchingEntry(entry, candidates);
+          if (match) {
+            return match;
           }
         }
         continue;
@@ -205,7 +228,7 @@ export class ResourceDataService {
         const entry = container[candidate];
         const path = this.entryToPath(entry);
         if (path) {
-          return path;
+          return { path, fingerprint: this.entryToFingerprint(entry) ?? undefined };
         }
       }
     }
@@ -230,22 +253,38 @@ export class ResourceDataService {
     return entry.current_path || entry.currentPath || entry.url || entry.href || entry.path || null;
   }
 
-  private findMatchingEntryPath(entry: ManifestEntry | undefined, candidates: string[]): string | null {
+  private entryToFingerprint(entry: ManifestEntry | undefined): string | null {
+    if (!entry || typeof entry === 'string') {
+      return null;
+    }
+
+    return entry.current_sha256
+      || entry.currentSha256
+      || entry.sha256
+      || entry.checksum
+      || entry.digest
+      || entry.hash
+      || null;
+  }
+
+  private findMatchingEntry(entry: ManifestEntry | undefined, candidates: string[]): { path: string; fingerprint?: string } | null {
     if (!entry) {
       return null;
     }
 
     if (typeof entry === 'string') {
-      return candidates.some(candidate => entry.endsWith(candidate)) ? entry : null;
+      return candidates.some(candidate => entry.endsWith(candidate)) ? { path: entry } : null;
     }
 
     const entryName = entry.name;
+    const path = this.entryToPath(entry);
     if (entryName && candidates.includes(entryName)) {
-      return this.entryToPath(entry);
+      return path ? { path, fingerprint: this.entryToFingerprint(entry) ?? undefined } : null;
     }
 
-    const path = this.entryToPath(entry);
-    return path && candidates.some(candidate => path.endsWith(candidate)) ? path : null;
+    return path && candidates.some(candidate => path.endsWith(candidate))
+      ? { path, fingerprint: this.entryToFingerprint(entry) ?? undefined }
+      : null;
   }
 
   private toAbsoluteResourceUrl(path: string): string {
@@ -275,7 +314,13 @@ export class ResourceDataService {
     return this.parseJsonResponse<T>(cachedResponse, meta.url);
   }
 
-  private async fetchAndCacheResource<T>(resourceName: string, url: string, version: string): Promise<T> {
+  private async fetchAndCacheResource<T>(
+    resourceName: string,
+    resource: ResolvedResource,
+    version: string,
+    manifestGeneratedAt: string | null,
+  ): Promise<T> {
+    const url = resource.url;
     const response = await this.fetchWithBrowserProof(url, { cache: 'no-cache' });
     if (!response.ok) {
       throw new Error(`${response.status} ${response.statusText}`);
@@ -285,10 +330,58 @@ export class ResourceDataService {
     if (this.canUseCacheStorage()) {
       const cache = await caches.open(cacheName);
       await cache.put(url, response.clone());
-      this.writeCacheMeta(resourceName, { url, version, cacheName, cachedAt: Date.now() });
+      this.writeCacheMeta(resourceName, {
+        url,
+        version,
+        cacheName,
+        cachedAt: Date.now(),
+        manifestGeneratedAt: manifestGeneratedAt ?? undefined,
+        fingerprint: resource.fingerprint,
+      });
     }
 
     return this.parseJsonResponse<T>(response, url);
+  }
+
+  private isCacheFresh(
+    meta: ResourceCacheMeta | null,
+    version: string,
+    resource: ResolvedResource,
+    manifestGeneratedAt: string | null,
+  ): boolean {
+    if (!meta || meta.version !== version || meta.url !== resource.url) {
+      return false;
+    }
+
+    if (resource.fingerprint) {
+      return meta.fingerprint === resource.fingerprint;
+    }
+
+    if (this.isManifestNewer(manifestGeneratedAt, meta.manifestGeneratedAt)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private isManifestNewer(currentGeneratedAt: string | null, cachedGeneratedAt?: string): boolean {
+    if (!currentGeneratedAt || !cachedGeneratedAt) {
+      return !!currentGeneratedAt && !cachedGeneratedAt;
+    }
+
+    const currentTime = this.parseManifestTimestamp(currentGeneratedAt);
+    const cachedTime = this.parseManifestTimestamp(cachedGeneratedAt);
+    if (currentTime === null || cachedTime === null) {
+      return currentGeneratedAt !== cachedGeneratedAt;
+    }
+
+    return currentTime > cachedTime;
+  }
+
+  private parseManifestTimestamp(value: string): number | null {
+    const normalizedValue = value.replace(/(\.\d{3})\d+(?=(?:Z|[+-]\d{2}:?\d{2})?$)/i, '$1');
+    const time = Date.parse(normalizedValue);
+    return Number.isNaN(time) ? null : time;
   }
 
   private async fetchJsonWithBrowserProof<T>(url: string): Promise<T> {

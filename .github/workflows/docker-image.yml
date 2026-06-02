@@ -330,11 +330,43 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Download shell artifact
-        uses: actions/download-artifact@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          name: shell-site
-          path: ${{ runner.temp }}/shell-site
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build production shell artifact
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: shell
+          platforms: ${{ env.PLATFORM }}
+          pull: true
+          build-args: |
+            BUILD_SCRIPT=build:prod
+            TURNSTILE_CONFIG_FINGERPRINT=production
+          outputs: type=local,dest=${{ runner.temp }}/production-shell-export
+          cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
+          cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
+
+      - name: Verify production API target
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -R "https://beta.uma.moe" "${{ runner.temp }}/production-shell-export/var/www/html/umamoe"; then
+            echo "::error title=Production artifact points to beta::The production shell bundle contains beta.uma.moe URLs."
+            exit 1
+          fi
+
+          if ! grep -R "https://uma.moe" "${{ runner.temp }}/production-shell-export/var/www/html/umamoe" >/dev/null; then
+            echo "::error title=Production API URL missing::The production shell bundle does not contain the expected uma.moe URL."
+            exit 1
+          fi
 
       - name: Download assets artifact
         if: needs.build.outputs.should_deploy_assets == 'true'
@@ -412,7 +444,7 @@ jobs:
             --exclude 'assets/' \
             --exclude 'statistics/' \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
-            "${{ runner.temp }}/shell-site/" \
+            "${{ runner.temp }}/production-shell-export/var/www/html/umamoe/" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.PROD_REMOTE_SHELL_DIR }}/"
 
       - name: Deploy production assets bundle
