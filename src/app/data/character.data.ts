@@ -23,6 +23,10 @@ export interface RawCharacterData {
   full_image_url: string;
   type_icon_url: string | null;
   type_icon_alt: string | null;
+  isReleased_en?: boolean;
+  isReleased_tw?: boolean | null;
+  isReleased_cn?: boolean | null;
+  isReleased_jp?: boolean | null;
 }
 
 let rawCharacterData: RawCharacterData[] = normalizeCharacterData(characterData);
@@ -34,7 +38,19 @@ function normalizeCharacterData(data: unknown): RawCharacterData[] {
   }
 
   const defaultData = (data as any)?.default;
-  return Array.isArray(defaultData) ? defaultData as RawCharacterData[] : [];
+  if (Array.isArray(defaultData)) {
+    return defaultData as RawCharacterData[];
+  }
+
+  if (defaultData && typeof defaultData === 'object') {
+    return Object.values(defaultData) as RawCharacterData[];
+  }
+
+  if (data && typeof data === 'object') {
+    return Object.values(data) as RawCharacterData[];
+  }
+
+  return [];
 }
 
 function normalizeCharacterNames(data: unknown): CharacterNameMap {
@@ -56,7 +72,11 @@ function buildCharacters(rawData: RawCharacterData[], names: CharacterNameMap): 
     full_image: char.full_image,
     full_image_url: char.full_image_url,
     type_icon_url: char.type_icon_url,
-    type_icon_alt: char.type_icon_alt
+    type_icon_alt: char.type_icon_alt,
+    isReleased_en: char.isReleased_en,
+    isReleased_tw: char.isReleased_tw,
+    isReleased_cn: char.isReleased_cn,
+    isReleased_jp: char.isReleased_jp,
   };
   });
 }

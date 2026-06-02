@@ -10,6 +10,10 @@ export interface RawSupportCardData {
     rarity: number;
     type: string;
     release_date: string;
+    isReleased_en?: boolean;
+    isReleased_tw?: boolean | null;
+    isReleased_cn?: boolean | null;
+    isReleased_jp?: boolean | null;
 }
 // Helper function to map string type to enum
 function mapStringTypeToEnum(type: string): SupportCardType {
@@ -31,7 +35,19 @@ function normalizeSupportCardData(data: unknown): RawSupportCardData[] {
     }
 
     const defaultData = (data as any)?.default;
-    return Array.isArray(defaultData) ? defaultData as RawSupportCardData[] : [];
+    if (Array.isArray(defaultData)) {
+        return defaultData as RawSupportCardData[];
+    }
+
+    if (defaultData && typeof defaultData === 'object') {
+        return Object.values(defaultData) as RawSupportCardData[];
+    }
+
+    if (data && typeof data === 'object') {
+        return Object.values(data) as RawSupportCardData[];
+    }
+
+    return [];
 }
 
 function buildSupportCards(rawData: RawSupportCardData[]): SupportCardShort[] {
@@ -41,6 +57,10 @@ function buildSupportCards(rawData: RawSupportCardData[]): SupportCardShort[] {
         type: mapStringTypeToEnum(card.type),
         rarity: card.rarity,
         release_date: card.release_date,
+        isReleased_en: card.isReleased_en,
+        isReleased_tw: card.isReleased_tw,
+        isReleased_cn: card.isReleased_cn,
+        isReleased_jp: card.isReleased_jp,
         limitBreak: 0, // Default limit break
         imageUrl: `/assets/images/support_card/half/support_card_s_${card.id}.webp`,
     }));
