@@ -10,4 +10,8 @@ export interface Character {
   full_image_url: string;
   type_icon_url: string | null;
   type_icon_alt: string | null;
+  isReleased_en?: boolean;
+  isReleased_tw?: boolean | null;
+  isReleased_cn?: boolean | null;
+  isReleased_jp?: boolean | null;
 }

@@ -27,6 +27,10 @@ export interface SupportCardShort {
   rarity: Rarity;
   limitBreak: number;
   release_date: string;
+  isReleased_en?: boolean;
+  isReleased_tw?: boolean | null;
+  isReleased_cn?: boolean | null;
+  isReleased_jp?: boolean | null;
   // Display
   imageUrl: string;
 }

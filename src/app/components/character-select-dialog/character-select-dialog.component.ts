@@ -630,7 +630,7 @@ export class CharacterSelectDialogComponent implements OnInit {
     this.characterService
       .getCharacters()
       .subscribe((characters: Character[]) => {
-        this.characters = characters;
+        this.characters = characters.filter(character => character.isReleased_en === true);
         this.sort$.next(this.sort);
         this.cdr.markForCheck();
       });
