@@ -48,8 +48,6 @@ venv/
 .Trashes
 ehthumbs.db
 Thumbs.db
-/src/environments/environment.prod.ts
-
 statistics/
 assets/
 src/assets/
