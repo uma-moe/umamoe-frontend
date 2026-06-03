@@ -75,7 +75,12 @@ export class TurnstileService {
     return environment.turnstile.proofTtlHeaderName;
   }
 
+  get proofSourceHeaderName(): string {
+    return 'X-Browser-Proof-Source';
+  }
+
   prime(): Promise<void> {
+    void this.getProofToken(environment.turnstile.action, false).catch(() => undefined);
     return Promise.resolve();
   }
 
@@ -128,7 +133,18 @@ export class TurnstileService {
     return this.hasUsableBrowserProof(cached, normalizedAction) ? cached.token : '';
   }
 
-  storeBrowserProof(token: string, ttlSeconds: number, action = environment.turnstile.action): void {
+  storeBrowserProof(
+    token: string,
+    ttlSeconds: number,
+    action = environment.turnstile.action,
+    source = 'turnstile',
+  ): void {
+    const normalizedSource = (source || 'turnstile').trim().toLowerCase();
+    if (normalizedSource !== 'turnstile') {
+      this.prime();
+      return;
+    }
+
     const normalizedToken = token.trim();
     if (!normalizedToken || !Number.isFinite(ttlSeconds) || ttlSeconds <= 0) {
       return;

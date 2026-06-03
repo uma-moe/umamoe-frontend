@@ -58,6 +58,7 @@ export class TurnstileInterceptor implements HttpInterceptor {
     }
 
     if (!forceRefresh) {
+      this.turnstileService.prime();
       return req.clone({
         withCredentials: true,
       });
@@ -92,7 +93,8 @@ export class TurnstileInterceptor implements HttpInterceptor {
 
     const proofToken = event.headers.get(this.turnstileService.proofHeaderName)?.trim() ?? '';
     const ttlSeconds = Number(event.headers.get(this.turnstileService.proofTtlHeaderName) ?? '0');
-    this.turnstileService.storeBrowserProof(proofToken, ttlSeconds, environment.turnstile.action);
+    const source = event.headers.get(this.turnstileService.proofSourceHeaderName)?.trim() ?? 'turnstile';
+    this.turnstileService.storeBrowserProof(proofToken, ttlSeconds, environment.turnstile.action, source);
   }
 
   private retryWithFreshProof(
@@ -121,7 +123,10 @@ export class TurnstileInterceptor implements HttpInterceptor {
     }
 
     const errorCode = this.extractErrorCode(error.error);
-    return errorCode === 'browser_proof_required' || errorCode === 'turnstile_invalid';
+    return errorCode === 'browser_proof_required'
+      || errorCode === 'turnstile_invalid'
+      || errorCode === 'browser_context_mismatch'
+      || errorCode === 'invalid_browser_proof';
   }
 
   private extractErrorCode(errorBody: unknown): string | null {
@@ -132,6 +137,14 @@ export class TurnstileInterceptor implements HttpInterceptor {
 
       if (errorBody.includes('turnstile_invalid')) {
         return 'turnstile_invalid';
+      }
+
+      if (errorBody.includes('browser_context_mismatch')) {
+        return 'browser_context_mismatch';
+      }
+
+      if (errorBody.includes('invalid_browser_proof')) {
+        return 'invalid_browser_proof';
       }
 
       return null;

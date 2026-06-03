@@ -463,6 +463,10 @@ export class ResourceDataService {
       ? await this.turnstileService.ensureBrowserProof(environment.turnstile.action, true)
       : this.turnstileService.getCachedProofToken(environment.turnstile.action);
 
+    if (!proofToken && !forceRefresh) {
+      this.turnstileService.prime();
+    }
+
     if (proofToken) {
       headers.set(this.turnstileService.proofHeaderName, proofToken);
     }
@@ -477,7 +481,8 @@ export class ResourceDataService {
   private captureBrowserProof(response: Response): void {
     const proofToken = response.headers.get(this.turnstileService.proofHeaderName)?.trim() ?? '';
     const ttlSeconds = Number(response.headers.get(this.turnstileService.proofTtlHeaderName) ?? '0');
-    this.turnstileService.storeBrowserProof(proofToken, ttlSeconds, environment.turnstile.action);
+    const source = response.headers.get(this.turnstileService.proofSourceHeaderName)?.trim() ?? 'turnstile';
+    this.turnstileService.storeBrowserProof(proofToken, ttlSeconds, environment.turnstile.action, source);
   }
 
   private async shouldRetryWithFreshProof(response: Response): Promise<boolean> {
@@ -486,7 +491,10 @@ export class ResourceDataService {
     }
 
     const errorCode = await this.extractErrorCode(response);
-    return errorCode === 'browser_proof_required' || errorCode === 'turnstile_invalid';
+    return errorCode === 'browser_proof_required'
+      || errorCode === 'turnstile_invalid'
+      || errorCode === 'browser_context_mismatch'
+      || errorCode === 'invalid_browser_proof';
   }
 
   private async extractErrorCode(response: Response): Promise<string | null> {
@@ -505,6 +513,14 @@ export class ResourceDataService {
 
       if (body.includes('turnstile_invalid')) {
         return 'turnstile_invalid';
+      }
+
+      if (body.includes('browser_context_mismatch')) {
+        return 'browser_context_mismatch';
+      }
+
+      if (body.includes('invalid_browser_proof')) {
+        return 'invalid_browser_proof';
       }
     } catch {}
 

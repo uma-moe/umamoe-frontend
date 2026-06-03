@@ -26,7 +26,7 @@ export class AuthInterceptor implements HttpInterceptor {
       catchError((error: HttpErrorResponse) => {
         // On 401, clear the token but don't force navigation -
         // let the calling code (fetchMe, components) handle UX.
-        if (error.status === 401 && this.isApiRequest(req.url)) {
+        if (error.status === 401 && this.shouldClearTokenOnUnauthorized(req.url)) {
           localStorage.removeItem('auth_token');
         }
         return throwError(() => error);
@@ -41,5 +41,13 @@ export class AuthInterceptor implements HttpInterceptor {
       url.startsWith('/ingest/') ||
       url.startsWith('/search/')
     );
+  }
+
+  private shouldClearTokenOnUnauthorized(url: string): boolean {
+    if (!url.includes('/api/auth/')) {
+      return false;
+    }
+
+    return this.isApiRequest(url);
   }
 }
