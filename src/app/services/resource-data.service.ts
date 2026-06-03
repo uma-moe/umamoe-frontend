@@ -508,9 +508,9 @@ export class ResourceDataService {
       return cachedProofToken;
     }
 
-    let proofToken = await this.turnstileService.getProofToken(action, forceRefresh);
+    let proofToken = await this.turnstileService.ensureBrowserProof(action, forceRefresh);
     if (!proofToken && !forceRefresh) {
-      proofToken = await this.turnstileService.getProofToken(action, true);
+      proofToken = await this.turnstileService.ensureBrowserProof(action, true);
     }
 
     if (!proofToken) {

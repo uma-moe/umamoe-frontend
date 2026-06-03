@@ -75,19 +75,21 @@ export class TurnstileService {
     return environment.turnstile.proofTtlHeaderName;
   }
 
-  prime(): void {
+  prime(): Promise<void> {
     if (!environment.turnstile.enabled) {
-      return;
+      return Promise.resolve();
     }
 
     if (!environment.turnstile.siteKey) {
       this.warnMissingSiteKey();
-      return;
+      return Promise.resolve();
     }
 
-    void this.getProofToken(environment.turnstile.action).catch(error => {
-      console.warn('Initial browser proof warmup failed:', error);
-    });
+    return this.getProofToken(environment.turnstile.action)
+      .then(() => undefined)
+      .catch(error => {
+        console.warn('Initial browser proof warmup failed:', error);
+      });
   }
 
   async getProofToken(action = environment.turnstile.action, forceRefresh = false): Promise<string> {
@@ -127,6 +129,15 @@ export class TurnstileService {
     } finally {
       this.clearBrowserProofTask(proofTask);
     }
+  }
+
+  async ensureBrowserProof(action = environment.turnstile.action, forceRefresh = false): Promise<string> {
+    const proofToken = await this.getProofToken(action, forceRefresh);
+    if (!proofToken && environment.turnstile.enabled) {
+      throw new Error('Browser proof token is required but could not be created');
+    }
+
+    return proofToken;
   }
 
   getCachedProofToken(action = environment.turnstile.action): string {

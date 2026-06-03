@@ -65,10 +65,7 @@ export class TurnstileInterceptor implements HttpInterceptor {
     }
 
     try {
-      const proofToken = await this.turnstileService.getProofToken(environment.turnstile.action, forceRefresh);
-      if (!proofToken) {
-        return req;
-      }
+      const proofToken = await this.turnstileService.ensureBrowserProof(environment.turnstile.action, forceRefresh);
 
       return req.clone({
         setHeaders: {

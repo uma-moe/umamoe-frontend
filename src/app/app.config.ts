@@ -58,8 +58,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: APP_INITIALIZER,
       useFactory: (turnstileService: TurnstileService) => () => {
-        turnstileService.prime();
-        return Promise.resolve();
+        return turnstileService.prime();
       },
       deps: [TurnstileService],
       multi: true
