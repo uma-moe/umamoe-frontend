@@ -85,7 +85,9 @@ export class TurnstileService {
       return;
     }
 
-    void this.loadScript().catch(() => undefined);
+    void this.getProofToken(environment.turnstile.action).catch(error => {
+      console.warn('Initial browser proof warmup failed:', error);
+    });
   }
 
   async getProofToken(action = environment.turnstile.action, forceRefresh = false): Promise<string> {

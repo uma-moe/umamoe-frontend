@@ -46,6 +46,13 @@ interface ResourceCacheMeta {
   fingerprint?: string;
 }
 
+class BrowserProofUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BrowserProofUnavailableError';
+  }
+}
+
 export const NON_BANNER_RESOURCE_NAMES = [
   'affinity',
   'aptitudes',
@@ -77,6 +84,7 @@ export class ResourceDataService {
   private loadStarted = new Set<string>();
   private manifest: ResourceManifest | null = null;
   private manifestPromise: Promise<ResourceManifest> | null = null;
+  private manifestProofRetryAt = 0;
   private retryAttempts = new Map<string, number>();
   private retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -154,6 +162,10 @@ export class ResourceDataService {
     }
 
     if (!this.manifestPromise) {
+      if (Date.now() < this.manifestProofRetryAt) {
+        throw new BrowserProofUnavailableError('Waiting before retrying resource manifest proof');
+      }
+
       const manifestUrl = this.withCacheBuster(`${this.resourceBaseUrl}/manifest.json`, Date.now().toString());
       this.manifestPromise = this.fetchJsonWithBrowserProof<ResourceManifest>(manifestUrl);
     }
@@ -166,6 +178,12 @@ export class ResourceDataService {
 
       this.manifest = manifest;
       return manifest;
+    } catch (error) {
+      if (error instanceof BrowserProofUnavailableError) {
+        this.manifestProofRetryAt = Date.now() + 5000;
+      }
+
+      throw error;
     } finally {
       this.manifestPromise = null;
     }
@@ -458,7 +476,12 @@ export class ResourceDataService {
     forceRefresh: boolean,
   ): Promise<Response> {
     const headers = new Headers(init.headers);
-    const proofToken = await this.getProofToken(forceRefresh);
+    const proofToken = await this.ensureProofToken(forceRefresh).catch(error => {
+      throw new BrowserProofUnavailableError(
+        error instanceof Error ? error.message : 'Browser proof token could not be created'
+      );
+    });
+
     if (proofToken) {
       headers.set(this.turnstileService.proofHeaderName, proofToken);
     }
@@ -470,8 +493,12 @@ export class ResourceDataService {
     });
   }
 
-  private async getProofToken(forceRefresh: boolean): Promise<string> {
+  private async ensureProofToken(forceRefresh: boolean): Promise<string> {
     if (!this.turnstileService.enabled) {
+      if (environment.turnstile.enabled) {
+        throw new BrowserProofUnavailableError('Turnstile is enabled but browser proof is not configured');
+      }
+
       return '';
     }
 
@@ -481,7 +508,16 @@ export class ResourceDataService {
       return cachedProofToken;
     }
 
-    return this.turnstileService.getProofToken(action, forceRefresh);
+    let proofToken = await this.turnstileService.getProofToken(action, forceRefresh);
+    if (!proofToken && !forceRefresh) {
+      proofToken = await this.turnstileService.getProofToken(action, true);
+    }
+
+    if (!proofToken) {
+      throw new BrowserProofUnavailableError('Browser proof token is required for protected resources');
+    }
+
+    return proofToken;
   }
 
   private getProofTokenFromHeaders(headersInit?: HeadersInit): string | null {
