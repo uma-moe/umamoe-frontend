@@ -90,8 +90,14 @@ export class SettingsComponent implements OnInit {
   }
 
   linkAccount(): void {
-    const id = this.newAccountId.trim();
-    if (!id) return;
+    const id = this.normalizeAccountId(this.newAccountId);
+    this.newAccountId = id;
+    if (!this.isValidAccountId(id)) {
+      this.linkSuccess = '';
+      this.linkError = 'Account ID must be exactly 12 digits.';
+      return;
+    }
+
     this.linking = true;
     this.linkError = '';
     this.linkSuccess = '';
@@ -109,6 +115,21 @@ export class SettingsComponent implements OnInit {
         this.linking = false;
       }
     });
+  }
+
+  onAccountIdInput(value: string): void {
+    this.newAccountId = this.normalizeAccountId(value);
+    if (this.linkError && this.isValidAccountId(this.newAccountId)) {
+      this.linkError = '';
+    }
+  }
+
+  isValidAccountId(accountId: string): boolean {
+    return /^\d{12}$/.test(accountId);
+  }
+
+  private normalizeAccountId(value: string): string {
+    return value.replace(/\D/g, '').slice(0, 12);
   }
 
   verifyAccount(accountId: string): void {

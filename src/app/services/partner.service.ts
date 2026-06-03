@@ -124,9 +124,9 @@ export class PartnerService implements OnDestroy {
         return;
       }
       const url = `${environment.apiUrl}/api/v4/partner/lookup/${taskId}/stream`;
-      // EventSource does not support custom headers, so JWT-based auth on the
-      // SSE endpoint is intentionally bypassed (the endpoint is not user-gated).
-      const source = new EventSource(url, { withCredentials: false });
+      // EventSource cannot send custom headers, but it can carry the browser
+      // proof cookie minted by the normal credentialed API flow.
+      const source = new EventSource(url, { withCredentials: true });
 
       const emit = (evt: PartnerLookupEvent) => {
         this.zone.run(() => subscriber.next(evt));

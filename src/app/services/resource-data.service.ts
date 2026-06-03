@@ -46,13 +46,6 @@ interface ResourceCacheMeta {
   fingerprint?: string;
 }
 
-class BrowserProofUnavailableError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'BrowserProofUnavailableError';
-  }
-}
-
 export const NON_BANNER_RESOURCE_NAMES = [
   'affinity',
   'aptitudes',
@@ -84,7 +77,6 @@ export class ResourceDataService {
   private loadStarted = new Set<string>();
   private manifest: ResourceManifest | null = null;
   private manifestPromise: Promise<ResourceManifest> | null = null;
-  private manifestProofRetryAt = 0;
   private retryAttempts = new Map<string, number>();
   private retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -162,10 +154,6 @@ export class ResourceDataService {
     }
 
     if (!this.manifestPromise) {
-      if (Date.now() < this.manifestProofRetryAt) {
-        throw new BrowserProofUnavailableError('Waiting before retrying resource manifest proof');
-      }
-
       const manifestUrl = this.withCacheBuster(`${this.resourceBaseUrl}/manifest.json`, Date.now().toString());
       this.manifestPromise = this.fetchJsonWithBrowserProof<ResourceManifest>(manifestUrl);
     }
@@ -178,12 +166,6 @@ export class ResourceDataService {
 
       this.manifest = manifest;
       return manifest;
-    } catch (error) {
-      if (error instanceof BrowserProofUnavailableError) {
-        this.manifestProofRetryAt = Date.now() + 5000;
-      }
-
-      throw error;
     } finally {
       this.manifestPromise = null;
     }
@@ -457,9 +439,8 @@ export class ResourceDataService {
 
   private async fetchWithBrowserProof(url: string, init: RequestInit): Promise<Response> {
     const response = await this.performFetchWithBrowserProof(url, init, false);
-    if (response.status === 403) {
-      const failedProofToken = this.getProofTokenFromHeaders(init.headers) ?? undefined;
-      this.turnstileService.invalidateBrowserProof(failedProofToken);
+    if (await this.shouldRetryWithFreshProof(response)) {
+      this.turnstileService.invalidateBrowserProof();
 
       const retryResponse = await this.performFetchWithBrowserProof(url, init, true);
       this.captureBrowserProof(retryResponse);
@@ -476,11 +457,11 @@ export class ResourceDataService {
     forceRefresh: boolean,
   ): Promise<Response> {
     const headers = new Headers(init.headers);
-    const proofToken = await this.ensureProofToken(forceRefresh).catch(error => {
-      throw new BrowserProofUnavailableError(
-        error instanceof Error ? error.message : 'Browser proof token could not be created'
-      );
-    });
+    headers.set('Accept', headers.get('Accept') ?? 'application/json');
+
+    const proofToken = forceRefresh
+      ? await this.turnstileService.ensureBrowserProof(environment.turnstile.action, true)
+      : this.turnstileService.getCachedProofToken(environment.turnstile.action);
 
     if (proofToken) {
       headers.set(this.turnstileService.proofHeaderName, proofToken);
@@ -493,45 +474,41 @@ export class ResourceDataService {
     });
   }
 
-  private async ensureProofToken(forceRefresh: boolean): Promise<string> {
-    if (!this.turnstileService.enabled) {
-      if (environment.turnstile.enabled) {
-        throw new BrowserProofUnavailableError('Turnstile is enabled but browser proof is not configured');
-      }
-
-      return '';
-    }
-
-    const action = environment.turnstile.action;
-    const cachedProofToken = forceRefresh ? '' : this.turnstileService.getCachedProofToken(action);
-    if (cachedProofToken) {
-      return cachedProofToken;
-    }
-
-    let proofToken = await this.turnstileService.ensureBrowserProof(action, forceRefresh);
-    if (!proofToken && !forceRefresh) {
-      proofToken = await this.turnstileService.ensureBrowserProof(action, true);
-    }
-
-    if (!proofToken) {
-      throw new BrowserProofUnavailableError('Browser proof token is required for protected resources');
-    }
-
-    return proofToken;
-  }
-
-  private getProofTokenFromHeaders(headersInit?: HeadersInit): string | null {
-    if (!headersInit) {
-      return null;
-    }
-
-    return new Headers(headersInit).get(this.turnstileService.proofHeaderName)?.trim() ?? null;
-  }
-
   private captureBrowserProof(response: Response): void {
     const proofToken = response.headers.get(this.turnstileService.proofHeaderName)?.trim() ?? '';
     const ttlSeconds = Number(response.headers.get(this.turnstileService.proofTtlHeaderName) ?? '0');
     this.turnstileService.storeBrowserProof(proofToken, ttlSeconds, environment.turnstile.action);
+  }
+
+  private async shouldRetryWithFreshProof(response: Response): Promise<boolean> {
+    if (response.status !== 403) {
+      return false;
+    }
+
+    const errorCode = await this.extractErrorCode(response);
+    return errorCode === 'browser_proof_required' || errorCode === 'turnstile_invalid';
+  }
+
+  private async extractErrorCode(response: Response): Promise<string | null> {
+    try {
+      const contentType = response.headers.get('Content-Type') ?? '';
+      if (contentType.includes('application/json')) {
+        const body = await response.clone().json() as { error?: unknown; code?: unknown };
+        const errorCode = body?.error ?? body?.code;
+        return typeof errorCode === 'string' ? errorCode : null;
+      }
+
+      const body = await response.clone().text();
+      if (body.includes('browser_proof_required')) {
+        return 'browser_proof_required';
+      }
+
+      if (body.includes('turnstile_invalid')) {
+        return 'turnstile_invalid';
+      }
+    } catch {}
+
+    return null;
   }
 
   private async parseJsonResponse<T>(response: Response, url: string): Promise<T> {

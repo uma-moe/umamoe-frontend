@@ -52,7 +52,7 @@ export class TurnstileService {
   private scriptPromise: Promise<void> | null = null;
   private proofQueue: Promise<void> = Promise.resolve();
   private cachedBrowserProof: CachedBrowserProofToken | null = null;
-  private browserProofTask: Promise<CachedBrowserProofToken> | null = null;
+  private browserProofTask: Promise<CachedBrowserProofToken | null> | null = null;
   private warnedMissingSiteKey = false;
 
   constructor(
@@ -76,20 +76,7 @@ export class TurnstileService {
   }
 
   prime(): Promise<void> {
-    if (!environment.turnstile.enabled) {
-      return Promise.resolve();
-    }
-
-    if (!environment.turnstile.siteKey) {
-      this.warnMissingSiteKey();
-      return Promise.resolve();
-    }
-
-    return this.getProofToken(environment.turnstile.action)
-      .then(() => undefined)
-      .catch(error => {
-        console.warn('Initial browser proof warmup failed:', error);
-      });
+    return Promise.resolve();
   }
 
   async getProofToken(action = environment.turnstile.action, forceRefresh = false): Promise<string> {
@@ -125,19 +112,14 @@ export class TurnstileService {
 
     try {
       const proof = await proofTask;
-      return proof.token;
+      return proof?.token ?? '';
     } finally {
       this.clearBrowserProofTask(proofTask);
     }
   }
 
   async ensureBrowserProof(action = environment.turnstile.action, forceRefresh = false): Promise<string> {
-    const proofToken = await this.getProofToken(action, forceRefresh);
-    if (!proofToken && environment.turnstile.enabled) {
-      throw new Error('Browser proof token is required but could not be created');
-    }
-
-    return proofToken;
+    return this.getProofToken(action, forceRefresh);
   }
 
   getCachedProofToken(action = environment.turnstile.action): string {
@@ -178,7 +160,7 @@ export class TurnstileService {
       && Date.now() < proof.expiresAt - environment.turnstile.proofRefreshSkewMs;
   }
 
-  private async exchangeBrowserProof(action: string): Promise<CachedBrowserProofToken> {
+  private async exchangeBrowserProof(action: string): Promise<CachedBrowserProofToken | null> {
     const turnstileToken = await this.executeTokenRequest(action);
     const response = await firstValueFrom(this.exchangeHttp.post(this.getExchangeUrl(), null, {
       observe: 'response',
@@ -193,9 +175,7 @@ export class TurnstileService {
     const ttlSeconds = Number(response.headers.get(environment.turnstile.proofTtlHeaderName) ?? '0');
 
     if (!token || !Number.isFinite(ttlSeconds) || ttlSeconds <= 0) {
-      throw new Error(
-        'Browser proof exchange succeeded but proof headers were unavailable. Ensure CORS exposes X-Browser-Proof and X-Browser-Proof-TTL.',
-      );
+      return null;
     }
 
     const proof = {
@@ -339,7 +319,7 @@ export class TurnstileService {
     console.warn('Turnstile is enabled but no site key is configured. API proof headers will not be added.');
   }
 
-  private clearBrowserProofTask(tokenTask: Promise<CachedBrowserProofToken>): void {
+  private clearBrowserProofTask(tokenTask: Promise<CachedBrowserProofToken | null>): void {
     if (this.browserProofTask === tokenTask) {
       this.browserProofTask = null;
     }

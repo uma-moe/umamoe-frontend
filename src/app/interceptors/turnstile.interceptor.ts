@@ -17,11 +17,11 @@ export class TurnstileInterceptor implements HttpInterceptor {
   constructor(private turnstileService: TurnstileService) {}
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    if (!this.shouldAttachTurnstile(req)) {
+    if (!this.shouldHandleRequest(req)) {
       return next.handle(req);
     }
 
-    return from(this.prepareRequest(req, false, true)).pipe(
+    return from(this.prepareRequest(req, false)).pipe(
       switchMap(preparedReq => next.handle(preparedReq).pipe(
         tap(event => this.captureBrowserProof(event)),
         catchError(error => this.retryWithFreshProof(error, req, preparedReq, next)),
@@ -29,11 +29,7 @@ export class TurnstileInterceptor implements HttpInterceptor {
     );
   }
 
-  private shouldAttachTurnstile(req: HttpRequest<unknown>): boolean {
-    if (!environment.turnstile.enabled || !environment.turnstile.siteKey) {
-      return false;
-    }
-
+  private shouldHandleRequest(req: HttpRequest<unknown>): boolean {
     if (req.method.toUpperCase() === 'OPTIONS') {
       return false;
     }
@@ -50,34 +46,36 @@ export class TurnstileInterceptor implements HttpInterceptor {
     return this.isOwnApiRequest(req.url);
   }
 
-  private async prepareRequest(
-    req: HttpRequest<unknown>,
-    forceRefresh: boolean,
-    allowFailOpen: boolean,
-  ): Promise<HttpRequest<unknown>> {
+  private async prepareRequest(req: HttpRequest<unknown>, forceRefresh: boolean): Promise<HttpRequest<unknown>> {
     const cachedProofToken = forceRefresh ? '' : this.turnstileService.getCachedProofToken(environment.turnstile.action);
     if (cachedProofToken) {
       return req.clone({
+        withCredentials: true,
         setHeaders: {
           [this.turnstileService.proofHeaderName]: cachedProofToken,
         },
       });
     }
 
-    try {
-      const proofToken = await this.turnstileService.ensureBrowserProof(environment.turnstile.action, forceRefresh);
-
+    if (!forceRefresh) {
       return req.clone({
+        withCredentials: true,
+      });
+    }
+
+    try {
+      const proofToken = await this.turnstileService.ensureBrowserProof(environment.turnstile.action, true);
+      const clonedReq = req.clone({ withCredentials: true });
+      if (!proofToken) {
+        return clonedReq;
+      }
+
+      return clonedReq.clone({
         setHeaders: {
           [this.turnstileService.proofHeaderName]: proofToken,
         },
       });
     } catch (error) {
-      if (allowFailOpen && environment.turnstile.failOpen) {
-        console.warn('Browser proof refresh failed; sending request without proof because failOpen is enabled.', error);
-        return req;
-      }
-
       throw new HttpErrorResponse({
         error,
         status: 0,
@@ -110,8 +108,10 @@ export class TurnstileInterceptor implements HttpInterceptor {
     const failedProofToken = sentReq.headers.get(this.turnstileService.proofHeaderName) ?? undefined;
     this.turnstileService.invalidateBrowserProof(failedProofToken);
 
-    return from(this.prepareRequest(originalReq, true, false)).pipe(
-      switchMap(retryReq => next.handle(retryReq)),
+    return from(this.prepareRequest(originalReq, true)).pipe(
+      switchMap(retryReq => next.handle(retryReq).pipe(
+        tap(event => this.captureBrowserProof(event)),
+      )),
     );
   }
 
@@ -125,11 +125,24 @@ export class TurnstileInterceptor implements HttpInterceptor {
   }
 
   private extractErrorCode(errorBody: unknown): string | null {
+    if (typeof errorBody === 'string') {
+      if (errorBody.includes('browser_proof_required')) {
+        return 'browser_proof_required';
+      }
+
+      if (errorBody.includes('turnstile_invalid')) {
+        return 'turnstile_invalid';
+      }
+
+      return null;
+    }
+
     if (!errorBody || typeof errorBody !== 'object') {
       return null;
     }
 
-    const errorCode = (errorBody as { error?: unknown }).error;
+    const errorCode = (errorBody as { error?: unknown; code?: unknown }).error
+      ?? (errorBody as { code?: unknown }).code;
     return typeof errorCode === 'string' ? errorCode : null;
   }
 

@@ -96,11 +96,16 @@
                 type="text"
                 class="custom-input"
                 [(ngModel)]="newAccountId"
-                placeholder="Account / Viewer ID"
+                inputmode="numeric"
+                autocomplete="off"
+                maxlength="12"
+                pattern="[0-9]{12}"
+                placeholder="12-digit Account / Viewer ID"
+                (ngModelChange)="onAccountIdInput($event)"
                 (keydown.enter)="linkAccount()"
               />
             </div>
-            <button class="action-btn primary" (click)="linkAccount()" [disabled]="linking || !newAccountId.trim()">
+            <button class="action-btn primary" (click)="linkAccount()" [disabled]="linking || !isValidAccountId(newAccountId)">
               <mat-icon>{{ linking ? 'hourglass_top' : 'add_link' }}</mat-icon>
               <span>{{ linking ? 'Linking…' : 'Link Account' }}</span>
             </button>

@@ -1,5 +1,6 @@
 ﻿import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, ViewChildren, QueryList, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -328,9 +329,9 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
               this.profileService.patchProfileCtx({ profile: p });
             });
           },
-          error: () => {
+          error: error => {
             this.uploading = false;
-            this.uploadFeedback = { type: 'error', message: 'Upload failed. Check format and try again.' };
+            this.uploadFeedback = { type: 'error', message: this.getUploadErrorMessage(error) };
             this.cdr.markForCheck();
           },
         });
@@ -341,6 +342,65 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     };
     reader.readAsText(file);
+  }
+
+  private getUploadErrorMessage(error: unknown): string {
+    const fallback = 'Upload failed. Check format and try again.';
+
+    if (error instanceof HttpErrorResponse) {
+      const detail = this.extractErrorDetail(error.error) || error.message;
+      const status = error.status ? `${error.status} ${error.statusText || 'Error'}`.trim() : '';
+      return status && detail
+        ? `Upload failed (${status}): ${detail}`
+        : detail || fallback;
+    }
+
+    const detail = this.extractErrorDetail(error);
+    return detail ? `Upload failed: ${detail}` : fallback;
+  }
+
+  private extractErrorDetail(errorBody: unknown): string | null {
+    if (!errorBody) {
+      return null;
+    }
+
+    if (typeof errorBody === 'string') {
+      return errorBody.trim() || null;
+    }
+
+    if (errorBody instanceof Error) {
+      return errorBody.message || null;
+    }
+
+    if (Array.isArray(errorBody)) {
+      const messages = errorBody
+        .map(entry => this.extractErrorDetail(entry))
+        .filter((entry): entry is string => !!entry);
+      return messages.length ? messages.join('; ') : null;
+    }
+
+    if (typeof errorBody !== 'object') {
+      return String(errorBody);
+    }
+
+    const body = errorBody as Record<string, unknown>;
+    for (const key of ['message', 'error', 'detail', 'reason', 'title']) {
+      const detail = this.extractErrorDetail(body[key]);
+      if (detail) {
+        return detail;
+      }
+    }
+
+    const errors = this.extractErrorDetail(body['errors']);
+    if (errors) {
+      return errors;
+    }
+
+    try {
+      return JSON.stringify(errorBody);
+    } catch {
+      return null;
+    }
   }
 
   // ── Filters & sort ────────────────────────────

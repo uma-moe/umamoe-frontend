@@ -9,7 +9,6 @@ import { RateLimitInterceptor } from './interceptors/rate-limit.interceptor';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { TurnstileInterceptor } from './interceptors/turnstile.interceptor';
 import { StatsService } from './services/stats.service';
-import { TurnstileService } from './services/turnstile.service';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
@@ -53,14 +52,6 @@ export const appConfig: ApplicationConfig = {
         return Promise.resolve();
       },
       deps: [StatsService],
-      multi: true
-    },
-    {
-      provide: APP_INITIALIZER,
-      useFactory: (turnstileService: TurnstileService) => () => {
-        return turnstileService.prime();
-      },
-      deps: [TurnstileService],
       multi: true
     }
   ]
