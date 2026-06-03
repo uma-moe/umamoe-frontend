@@ -397,10 +397,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'GP2 character', aliases: ['gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas', 'grandparent 2', 'grandparent 2 character', 'grandparent 2 characters', 'grand parent 2', 'grand parent 2 character', 'grand parent 2 characters', 'right parent', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas', 'gp2'], field: 'right_chara_id', type: 'number' },
     { label: 'Grandparent characters', aliases: ['gp characters', 'gp character', 'gp umas', 'gp uma', 'gp charas', 'gp chara', 'grandparent characters', 'grandparent character', 'grand parent characters', 'grand parent character', 'any gp characters', 'any gp character', 'any grandparent characters', 'any grandparent character'], field: 'grandparent_characters', type: 'number' },
     { label: 'Parent rank', aliases: ['parent rank', 'rank'], field: 'parent_rank', type: 'number' },
-    { label: 'Blue stars', aliases: ['blue stars', 'blue star sum'], field: 'blue_stars_sum', type: 'number' },
-    { label: 'Pink stars', aliases: ['pink stars', 'pink star sum'], field: 'pink_stars_sum', type: 'number' },
-    { label: 'Green stars', aliases: ['green stars', 'green star sum'], field: 'green_stars_sum', type: 'number' },
-    { label: 'White stars', aliases: ['white stars', 'white star sum'], field: 'white_stars_sum', type: 'number' },
+    { label: 'Blue stars', aliases: ['blue stars', 'blue star sum', 'blue sparks total', 'total blue sparks', 'lineage blue sparks', 'lineage blue stars'], field: 'blue_stars_sum', type: 'number' },
+    { label: 'Pink stars', aliases: ['pink stars', 'pink star sum', 'pink sparks total', 'total pink sparks', 'lineage pink sparks', 'lineage pink stars'], field: 'pink_stars_sum', type: 'number' },
+    { label: 'Green stars', aliases: ['green stars', 'green star sum', 'green sparks total', 'total green sparks', 'lineage green sparks', 'lineage green stars'], field: 'green_stars_sum', type: 'number' },
+    { label: 'White stars', aliases: ['white stars', 'white star sum', 'white sparks total', 'total white sparks', 'lineage white sparks', 'lineage white stars'], field: 'white_stars_sum', type: 'number' },
     { label: 'Race affinity', aliases: ['race affinity', 'affinity'], field: 'computed_race_affinity', type: 'number' },
     { label: 'White factors', aliases: ['white factors', 'white sparks', 'white skills'], field: 'white_sparks', type: 'array' },
     { label: 'Blue sparks', aliases: ['blue sparks', 'blue factors'], field: 'blue_sparks', type: 'array' },
@@ -414,9 +414,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'GP1 inheritance ID', aliases: ['gp1 id', 'grandparent 1 id', 'left parent id', 'parent left id', 'left_parent_id', 'parent_left_id'], field: 'parent_left_id', type: 'number' },
     { label: 'GP2 inheritance ID', aliases: ['gp2 id', 'grandparent 2 id', 'right parent id', 'parent right id', 'right_parent_id', 'parent_right_id'], field: 'parent_right_id', type: 'number' },
     { label: 'Parent rarity', aliases: ['parent rarity', 'rarity'], field: 'parent_rarity', type: 'number' },
-    { label: 'Main blue sparks', aliases: ['main blue sparks', 'main blue factors', 'main blue parsed sparks', 'main blue spark ids', 'main blue factor ids'], field: 'main_blue_factors', type: 'number' },
-    { label: 'Main pink sparks', aliases: ['main pink sparks', 'main pink factors', 'main pink parsed sparks', 'main pink spark ids', 'main pink factor ids'], field: 'main_pink_factors', type: 'number' },
-    { label: 'Main green sparks', aliases: ['main green sparks', 'main green factors', 'main unique skills', 'main unique skill', 'main green parsed sparks', 'main green spark ids', 'main green factor ids'], field: 'main_green_factors', type: 'number' },
+    { label: 'Main blue sparks', aliases: ['main blue sparks', 'main blue factors', 'main blue total', 'main blue stars total', 'main blue category count', 'main blue parsed sparks', 'main blue spark ids', 'main blue factor ids'], field: 'main_blue_factors', type: 'number' },
+    { label: 'Main pink sparks', aliases: ['main pink sparks', 'main pink factors', 'main pink total', 'main pink stars total', 'main pink category count', 'main pink parsed sparks', 'main pink spark ids', 'main pink factor ids'], field: 'main_pink_factors', type: 'number' },
+    { label: 'Main green sparks', aliases: ['main green sparks', 'main green factors', 'main green total', 'main green stars total', 'main green category count', 'main unique skills', 'main unique skill', 'main green parsed sparks', 'main green spark ids', 'main green factor ids'], field: 'main_green_factors', type: 'number' },
     { label: 'Main white count', aliases: ['main white count'], field: 'main_white_count', type: 'number' },
     { label: 'GP1 blue sparks', aliases: ['gp1 blue sparks', 'gp1 blue factors', 'gp1 blue spark ids', 'gp1 blue factor ids', 'left blue sparks', 'left blue factors', 'left blue parsed sparks'], field: 'left_blue_factors', type: 'number' },
     { label: 'GP1 pink sparks', aliases: ['gp1 pink sparks', 'gp1 pink factors', 'gp1 pink spark ids', 'gp1 pink factor ids', 'left pink sparks', 'left pink factors', 'left pink parsed sparks'], field: 'left_pink_factors', type: 'number' },
@@ -4246,14 +4246,18 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return parseInt(`${factorId}${level}`, 10);
   }
   private replaceOutsideStrings(query: string, replaceSegment: (segment: string) => string): string {
-    const stringPattern = /'(?:''|[^'])*'|"(?:""|[^"])*"/g;
     let result = '';
     let lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = stringPattern.exec(query)) !== null) {
-      result += replaceSegment(query.slice(lastIndex, match.index));
-      result += match[0];
-      lastIndex = match.index + match[0].length;
+    for (let index = 0; index < query.length; index++) {
+      if (!this.isUqlQuoteStart(query, index)) {
+        continue;
+      }
+
+      const stringEnd = this.findUqlStringEnd(query, index);
+      result += replaceSegment(query.slice(lastIndex, index));
+      result += query.slice(index, stringEnd);
+      lastIndex = stringEnd;
+      index = stringEnd - 1;
     }
     result += replaceSegment(query.slice(lastIndex));
     return result;
@@ -4267,6 +4271,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         break;
       case 'main_parent_id':
         extraTerms.push('parent char', 'parent character', 'main parent char', 'main parent character');
+        break;
+      case 'blue_stars_sum':
+      case 'pink_stars_sum':
+      case 'green_stars_sum':
+      case 'white_stars_sum':
+        extraTerms.push('total sparks', 'total stars', 'lineage total', 'lineage spark total');
         break;
       case 'left_chara_id':
         extraTerms.push('gp char', 'gp cha', 'gp1 char', 'gp1 character', 'grandparent character', 'left char', 'left character');
@@ -4286,9 +4296,68 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (field.field === 'limit_break_count') return 2;
     if (field.field === 'trainer_name' || field.field === 'account_id') return 4;
     if (field.type === 'string') return 6;
+    if (['main_blue_factors', 'main_pink_factors', 'main_green_factors', 'left_blue_factors', 'left_pink_factors', 'left_green_factors', 'right_blue_factors', 'right_pink_factors', 'right_green_factors'].includes(field.field)) return 24;
     if (['win_count', 'white_count', 'follower_num', 'parent_rank', 'computed_race_affinity'].includes(field.field)) return 8;
     if (field.type === 'array') return 16;
     return 12;
+  }
+
+  private getFriendlyFieldSuggestionDetail(field: FriendlyFieldAlias): string {
+    switch (field.field) {
+      case 'blue_stars_sum':
+        return 'blue_stars_sum; total blue stars across the lineage, e.g. Blue stars >= 9';
+      case 'pink_stars_sum':
+        return 'pink_stars_sum; total pink stars across the lineage, e.g. Pink stars >= 6';
+      case 'green_stars_sum':
+        return 'green_stars_sum; total green stars across the lineage';
+      case 'white_stars_sum':
+        return 'white_stars_sum; total white stars across the lineage';
+      case 'main_blue_factors':
+        return 'main_blue_factors; main slot blue category total, max 3. For a specific stat, use Main Speed >= 1';
+      case 'main_pink_factors':
+        return 'main_pink_factors; main slot pink category total, max 3. For a specific aptitude, use Main End Closer >= 1';
+      case 'main_green_factors':
+        return 'main_green_factors; main slot green category total, max 3. For a specific unique skill, use Main [skill] >= 1';
+      case 'left_blue_factors':
+      case 'right_blue_factors':
+        return `${field.field}; category star count. For a specific stat, use ${field.field.startsWith('left') ? 'GP1' : 'GP2'} Speed >= 1`;
+      case 'left_pink_factors':
+      case 'right_pink_factors':
+        return `${field.field}; category star count. For a specific aptitude, use ${field.field.startsWith('left') ? 'GP1' : 'GP2'} End Closer >= 1`;
+      case 'left_green_factors':
+      case 'right_green_factors':
+        return `${field.field}; category star count. For a specific unique skill, use ${field.field.startsWith('left') ? 'GP1' : 'GP2'} [skill] >= 1`;
+      default:
+        return field.field;
+    }
+  }
+
+  private getScopedSparkFieldSearchText(field: FriendlyScopedSparkField): string {
+    const colorLabel = this.getUqlFactorColorLabel(field.valueContext);
+    const coloredLabel = field.label.replace(/^(\S+)/, `$1 ${colorLabel}`);
+    return [
+      field.label,
+      `${field.label} stars`,
+      `${field.label} spark`,
+      coloredLabel,
+      `${coloredLabel} sparks`,
+      `${coloredLabel} factors`,
+      ...field.aliases
+    ].join(' ');
+  }
+
+  private getUqlFactorColorLabel(context: UqlFactorValueContext): string {
+    switch (context) {
+      case 'blue-factor': return 'blue';
+      case 'pink-factor': return 'pink';
+      case 'green-factor': return 'green';
+      case 'white-factor': return 'white';
+    }
+    return 'spark';
+  }
+
+  private getScopedSparkFieldPriority(field: FriendlyScopedSparkField): number {
+    return field.valueContext === 'blue-factor' || field.valueContext === 'pink-factor' ? 7 : 28;
   }
 
   private getScopedSparkCategorySuggestions(): UqlSuggestion[] {
@@ -4398,7 +4467,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         label: alias.label,
         insertText: alias.label,
         kind: 'field' as const,
-        detail: alias.field,
+        detail: this.getFriendlyFieldSuggestionDetail(alias),
         searchText: this.getFriendlyFieldSearchText(alias),
         matchPhrases: [alias.label, ...alias.aliases],
         priority: this.getFriendlyFieldPriority(alias),
@@ -4443,10 +4512,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         label: field.label,
         insertText: field.label,
         kind: 'field' as const,
-        detail: `${field.fields.map(entry => entry.field).join(' or ')}; max 3 stars on a specific slot`,
-        searchText: field.aliases.join(' '),
+        detail: `${field.fields.map(entry => entry.field).join(' or ')}; max 3 stars on a specific slot; compare a named factor like Main End Closer >= 1`,
+        searchText: this.getScopedSparkFieldSearchText(field),
         matchPhrases: [field.label, ...field.aliases],
-        priority: 28,
+        priority: this.getScopedSparkFieldPriority(field),
         scopeContext: this.getScopeContextForLabel(field.label),
         valueContext: field.valueContext,
         fieldType: 'number' as UqlFieldType
@@ -4619,7 +4688,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         }
         continue;
       }
-      if (character === '\'' || character === '"') {
+      if (this.isUqlQuoteStart(query, index)) {
         quoteCharacter = character;
       } else if (character === '(') {
         openParentheses++;
@@ -4641,7 +4710,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       || /\b(?:overlaps|has_all|contains_all|all)\s*\(\s*[^,()]+\s*,\s*\(\s*\)\s*\)/i.test(expression);
   }
   private findInvalidCompiledUqlSyntax(query: string): string | null {
-    const queryWithoutStrings = query.replace(/'(?:''|[^'])*'|"(?:""|[^"])*"/g, match => ' '.repeat(match.length));
+    const queryWithoutStrings = this.replaceUqlStrings(query, match => ' '.repeat(match.length));
     const inPattern = /\b(?:not\s+)?in\s*\(/gi;
     let match: RegExpExecArray | null;
     while ((match = inPattern.exec(queryWithoutStrings)) !== null) {
@@ -4991,7 +5060,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         if (character === quote) quote = null;
         continue;
       }
-      if (character === '\'' || character === '"') { quote = character; continue; }
+      if (this.isUqlQuoteStart(expression, index)) { quote = character; continue; }
       if (character === '(') { depth++; continue; }
       if (character === ')') { depth--; continue; }
       if (depth !== 0) continue;
@@ -5244,7 +5313,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         }
         continue;
       }
-      if (character === '\'' || character === '"') {
+      if (this.isUqlQuoteStart(expression, index)) {
         quote = character;
         continue;
       }
@@ -5294,6 +5363,52 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       return trimmed.slice(1, -1).replace(/''/g, '\'').replace(/""/g, '"').trim();
     }
     return trimmed;
+  }
+
+  private replaceUqlStrings(query: string, replaceString: (value: string) => string): string {
+    let result = '';
+    let lastIndex = 0;
+    for (let index = 0; index < query.length; index++) {
+      if (!this.isUqlQuoteStart(query, index)) {
+        continue;
+      }
+
+      const stringEnd = this.findUqlStringEnd(query, index);
+      result += query.slice(lastIndex, index);
+      result += replaceString(query.slice(index, stringEnd));
+      lastIndex = stringEnd;
+      index = stringEnd - 1;
+    }
+    return result + query.slice(lastIndex);
+  }
+
+  private findUqlStringEnd(query: string, start: number): number {
+    const quote = query[start];
+    let index = start + 1;
+    while (index < query.length) {
+      if (query[index] === quote) {
+        if (query[index + 1] === quote) {
+          index += 2;
+          continue;
+        }
+        return index + 1;
+      }
+      index++;
+    }
+    return query.length;
+  }
+
+  private isUqlQuoteStart(text: string, index: number): boolean {
+    const character = text[index];
+    if (character !== '\'' && character !== '"') {
+      return false;
+    }
+
+    return character !== '\'' || !this.isUqlIdentifierCharacter(text[index - 1]);
+  }
+
+  private isUqlIdentifierCharacter(character: string | undefined): boolean {
+    return !!character && /[A-Za-z0-9_\u00C0-\uFFFF]/.test(character);
   }
 
   private truncateUqlChipValue(value: string): string {

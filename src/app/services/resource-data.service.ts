@@ -70,12 +70,15 @@ export const NON_BANNER_RESOURCE_NAMES = [
 export class ResourceDataService {
   private static readonly CACHE_PREFIX = 'umamoe-resource-data';
   private static readonly META_PREFIX = 'umamoe_resource_meta_v1:';
+  private static readonly RETRY_DELAYS_MS = [1000, 3000, 7000, 15000, 30000];
   private static jsonParseWorkerUrl: string | null = null;
 
   private subjects = new Map<string, ReplaySubject<unknown>>();
   private loadStarted = new Set<string>();
   private manifest: ResourceManifest | null = null;
-  private manifestPromise: Promise<ResourceManifest | null> | null = null;
+  private manifestPromise: Promise<ResourceManifest> | null = null;
+  private retryAttempts = new Map<string, number>();
+  private retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(private turnstileService: TurnstileService) {}
 
@@ -121,50 +124,80 @@ export class ResourceDataService {
 
     try {
       const manifest = await this.fetchManifest();
-      if (!manifest) {
-        return;
-      }
-
       const version = this.getManifestVersion(manifest);
       const manifestGeneratedAt = this.getManifestGeneratedAt(manifest);
       const resource = this.resolveResource(resourceName, manifest);
       if (!version || !resource) {
+        this.clearResourceRetry(resourceName);
         return;
       }
 
       const meta = this.readCacheMeta(resourceName);
       if (emittedCached && this.isCacheFresh(meta, version, resource, manifestGeneratedAt)) {
+        this.clearResourceRetry(resourceName);
         return;
       }
 
       const data = await this.fetchAndCacheResource<T>(resourceName, resource, version, manifestGeneratedAt);
       subject.next(data);
+      this.clearResourceRetry(resourceName);
       void this.cleanupOldCaches(version);
     } catch (error) {
       console.warn(`Failed to refresh resource ${resourceName}:`, error);
+      this.scheduleResourceRetry(resourceName, subject);
     }
   }
 
-  private async fetchManifest(): Promise<ResourceManifest | null> {
+  private async fetchManifest(): Promise<ResourceManifest> {
     if (this.manifest) {
       return this.manifest;
     }
 
     if (!this.manifestPromise) {
       const manifestUrl = this.withCacheBuster(`${this.resourceBaseUrl}/manifest.json`, Date.now().toString());
-      const manifestRequest = this.fetchJsonWithBrowserProof<ResourceManifest>(manifestUrl)
-        .catch(() => null);
-
-      this.manifestPromise = manifestRequest;
+      this.manifestPromise = this.fetchJsonWithBrowserProof<ResourceManifest>(manifestUrl);
     }
 
-    const manifest = await this.manifestPromise;
-    if (manifest) {
+    try {
+      const manifest = await this.manifestPromise;
+      if (!manifest) {
+        throw new Error('Resource manifest response was empty');
+      }
+
       this.manifest = manifest;
+      return manifest;
+    } finally {
+      this.manifestPromise = null;
+    }
+  }
+
+  private scheduleResourceRetry<T>(resourceName: string, subject: ReplaySubject<T>): void {
+    if (this.retryTimers.has(resourceName)) {
+      return;
     }
 
-    this.manifestPromise = null;
-    return manifest;
+    const attempt = this.retryAttempts.get(resourceName) ?? 0;
+    const delay = ResourceDataService.RETRY_DELAYS_MS[
+      Math.min(attempt, ResourceDataService.RETRY_DELAYS_MS.length - 1)
+    ];
+
+    this.retryAttempts.set(resourceName, attempt + 1);
+    const timer = setTimeout(() => {
+      this.retryTimers.delete(resourceName);
+      void this.loadResource(resourceName, subject);
+    }, delay);
+
+    this.retryTimers.set(resourceName, timer);
+  }
+
+  private clearResourceRetry(resourceName: string): void {
+    const timer = this.retryTimers.get(resourceName);
+    if (timer) {
+      clearTimeout(timer);
+      this.retryTimers.delete(resourceName);
+    }
+
+    this.retryAttempts.delete(resourceName);
   }
 
   private get resourceBaseUrl(): string {

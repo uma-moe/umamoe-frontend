@@ -108,6 +108,7 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
 
   private saddleToRaceMap = new Map<number, number[]>();
   wonRaceIds = new Set<number>();
+  private wonCellLookup = new Map<string, RaceEntry[]>();
   /** Map race_instance_id → RaceEntry for quick lookup */
   private raceMap = new Map<number, RaceEntry>();
 
@@ -141,6 +142,7 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
     this.cellSelection.clear();
     this.saddleToRaceMap.clear();
     this.wonRaceIds.clear();
+    this.wonCellLookup.clear();
     this.raceMap.clear();
     this.programIdToRaceInstanceId.clear();
     this.ranLookup.clear();
@@ -212,12 +214,73 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
 
   private updateWonRaces(): void {
     this.wonRaceIds.clear();
+    this.wonCellLookup.clear();
     for (const saddleId of this.winSaddleIds) {
       const raceIds = this.saddleToRaceMap.get(saddleId);
       if (raceIds) {
         for (const rid of raceIds) this.wonRaceIds.add(rid);
       }
     }
+    this.buildOrderedWonCellLookup();
+  }
+
+  private buildOrderedWonCellLookup(): void {
+    const usedSlots = new Set<string>();
+
+    for (const saddleId of this.winSaddleIds ?? []) {
+      for (const race of this.getRacesForSaddle(saddleId)) {
+        const slot = this.getChronologicalRaceSlots(race)
+          .find(candidate => !usedSlots.has(this.cellKey(candidate.year, candidate.month, candidate.half)));
+        if (!slot) continue;
+
+        const key = this.cellKey(slot.year, slot.month, slot.half);
+        usedSlots.add(key);
+        this.wonCellLookup.set(key, [...(this.wonCellLookup.get(key) ?? []), race]);
+      }
+    }
+  }
+
+  private getRacesForSaddle(saddleId: number): RaceEntry[] {
+    const raceIds = this.saddleToRaceMap.get(saddleId) ?? [];
+    return raceIds
+      .map(id => this.raceMap.get(id))
+      .filter((race): race is RaceEntry => !!race)
+      .sort((left, right) => this.compareRaceByFirstSlot(left, right));
+  }
+
+  private getChronologicalRaceSlots(race: RaceEntry): { year: 'junior' | 'classic' | 'senior'; month: number; half: number }[] {
+    const slots = new Map<string, { year: 'junior' | 'classic' | 'senior'; month: number; half: number }>();
+
+    for (const sched of race.schedule) {
+      for (const year of getYearsForPermission(sched.race_permission)) {
+        const key = this.cellKey(year, sched.month, sched.half);
+        if (!slots.has(key)) {
+          slots.set(key, { year, month: sched.month, half: sched.half });
+        }
+      }
+    }
+
+    return [...slots.values()].sort((left, right) => this.compareSlots(left, right));
+  }
+
+  private compareRaceByFirstSlot(left: RaceEntry, right: RaceEntry): number {
+    const leftSlot = this.getChronologicalRaceSlots(left)[0];
+    const rightSlot = this.getChronologicalRaceSlots(right)[0];
+    if (!leftSlot && !rightSlot) return 0;
+    if (!leftSlot) return 1;
+    if (!rightSlot) return -1;
+    return this.compareSlots(leftSlot, rightSlot);
+  }
+
+  private compareSlots(
+    left: { year: 'junior' | 'classic' | 'senior'; month: number; half: number },
+    right: { year: 'junior' | 'classic' | 'senior'; month: number; half: number },
+  ): number {
+    const yearOrder: Record<'junior' | 'classic' | 'senior', number> = { junior: 0, classic: 1, senior: 2 };
+    const yearCmp = yearOrder[left.year] - yearOrder[right.year];
+    if (yearCmp !== 0) return yearCmp;
+    if (left.month !== right.month) return left.month - right.month;
+    return left.half - right.half;
   }
 
   /**
@@ -306,8 +369,8 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
   /** Get won races for a cell.
    *  - If race_results are available, pins perm-3 races to their actual year and suppresses
    *    won badges when a different race was run in the slot.
-   *  - If only saddle data is available (no race_results), shows won badges in the latest
-   *    available year for perm-3 races to avoid duplicates across years. */
+   *  - If only saddle data is available, consumes ordered saddle IDs and places each race
+   *    into the first still-free slot it can occupy. */
   getWonInCell(year: string, month: number, half: number): RaceEntry[] {
     const hasRunData = this.ranCount > 0;
     const ran = hasRunData ? this.getRanInCell(year, month, half) : [];
@@ -324,16 +387,9 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
           s.month === month && s.half === half && this.ranLookup.has(`${s.program_id}_${year}`)
         );
       } else {
-        // Without run data: collect ALL possible years from every schedule entry in this slot,
-        // then show only in the latest year to avoid duplicates when a race has multiple entries
-        // (e.g. Arima Kinen: perm-2 classic + perm-3 classic/senior → should only show once)
-        const allYears = new Set<string>();
-        for (const s of r.schedule) {
-          if (s.month !== month || s.half !== half) continue;
-          for (const y of getYearsForPermission(s.race_permission)) allYears.add(y);
-        }
-        const last = ['junior', 'classic', 'senior'].filter(y => allYears.has(y)).pop();
-        return last === year;
+        return this.wonCellLookup.get(this.cellKey(year, month, half))?.some(
+          wonRace => wonRace.race_instance_id === r.race_instance_id
+        ) ?? false;
       }
     });
   }

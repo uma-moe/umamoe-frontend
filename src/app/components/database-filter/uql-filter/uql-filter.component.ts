@@ -435,7 +435,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
         index++;
         continue;
       }
-      if (character === '\'' || character === '"') {
+      if (this.isUqlQuoteStart(query, index)) {
         quoteCharacter = character;
         index++;
         continue;
@@ -614,8 +614,17 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     let quote: string | null = null;
     for (let i = 0; i < text.length; i++) {
       const c = text[i];
-      if (quote) { if (c === quote) quote = null; }
-      else if (c === "'" || c === '"') quote = c;
+      if (quote) {
+        if (c === quote) {
+          if (text[i + 1] === quote) {
+            i++;
+          } else {
+            quote = null;
+          }
+        }
+      } else if (this.isUqlQuoteStart(text, i)) {
+        quote = c;
+      }
     }
     return quote !== null;
   }
@@ -1101,9 +1110,18 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
         continue;
       }
       // strings
-      if (c === "'" || c === '"') {
+      if (this.isUqlQuoteStart(text, i)) {
         let j = i + 1;
-        while (j < len && text[j] !== c) j++;
+        while (j < len) {
+          if (text[j] === c) {
+            if (text[j + 1] === c) {
+              j += 2;
+              continue;
+            }
+            break;
+          }
+          j++;
+        }
         const end = Math.min(len, j + 1);
         push('string', text.slice(i, end), i);
         i = end;
@@ -1562,11 +1580,17 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     const trimmedPrefix = prefix.trimEnd();
     const scoringSuggestions = this.whiteScoringSuggestionsForPrefix(prefix);
     if (scoringSuggestions.length) return scoringSuggestions;
+    const scopedSkillLevelSuggestions = this.scopedSkillLevelOperatorSuggestionsForPrefix(prefix);
+    if (scopedSkillLevelSuggestions.length) return scopedSkillLevelSuggestions;
     const skillLevelSuggestions = this.skillLevelOperatorSuggestionsForPrefix(prefix);
     if (skillLevelSuggestions.length) return skillLevelSuggestions;
     const arrayValueSuggestions = this.arrayValueSuggestionsForPrefix(prefix);
     if (arrayValueSuggestions.length) {
       return arrayValueSuggestions;
+    }
+    const scopedSparkValueSuggestions = this.scopedSparkValueSuggestionsForPrefix(prefix);
+    if (scopedSparkValueSuggestions.length) {
+      return scopedSparkValueSuggestions;
     }
     const scopePrefixSuggestions = this.scopePrefixFieldSuggestionsForPrefix(prefix);
     if (scopePrefixSuggestions.length) {
@@ -1632,11 +1656,29 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     return this.skillLevelOperatorSuggestions();
   }
 
+  private scopedSkillLevelOperatorSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
+    if (!/\s$/.test(prefix)) return [];
+    const scopedValue = this.getScopedSparkValuePrefix(prefix);
+    if (!scopedValue) return [];
+    const valueText = scopedValue.valuePrefix.trim();
+    if (!valueText || /(?:>=|<=|<>|!=|=|>|<)/.test(valueText)) return [];
+    if (!this.isKnownAnyFactorValue(valueText)) return [];
+    return this.skillLevelOperatorSuggestions();
+  }
+
   private isKnownFactorValue(value: string, context: UqlValueContext, allowAnyFactorContext: boolean): boolean {
     const normalized = this.normalizeSuggestionToken(value);
     if (!normalized) return false;
     return this.suggestions.some(suggestion => suggestion.kind === 'value'
       && this.matchesValueContext(suggestion.valueContext, context, allowAnyFactorContext)
+      && (this.normalizeSuggestionToken(suggestion.label) === normalized || this.normalizeSuggestionToken(suggestion.insertText) === normalized));
+  }
+
+  private isKnownAnyFactorValue(value: string): boolean {
+    const normalized = this.normalizeSuggestionToken(value);
+    if (!normalized) return false;
+    return this.suggestions.some(suggestion => suggestion.kind === 'value'
+      && !!suggestion.valueContext?.endsWith('-factor')
       && (this.normalizeSuggestionToken(suggestion.label) === normalized || this.normalizeSuggestionToken(suggestion.insertText) === normalized));
   }
 
@@ -1671,6 +1713,49 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       if (scopeToken === 'gp2') return scope === 'gp2';
       return scope === 'gp1' || scope === 'gp2' || scope === 'any-gp';
     });
+  }
+
+  private scopedSparkValueSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
+    const scopedValue = this.getScopedSparkValuePrefix(prefix);
+    if (!scopedValue) return [];
+    return this.suggestions
+      .filter(suggestion => suggestion.kind === 'value' && !!suggestion.valueContext?.endsWith('-factor'))
+      .map(suggestion => ({
+        ...suggestion,
+        priority: Math.min(suggestion.priority ?? this.defaultSuggestionPriority(suggestion), 6),
+        detail: `${this.getScopeLabel(scopedValue.scopeToken)} ${suggestion.detail || 'spark'}; compare stars with >=, =, <=`
+      }));
+  }
+
+  private getScopedSparkValuePrefix(prefix: string): { scopeToken: 'main' | 'gp1' | 'gp2' | 'gp'; valuePrefix: string } | null {
+    const currentClause = this.getCurrentClausePrefix(prefix);
+    const scopeAliases: Array<{ token: 'main' | 'gp1' | 'gp2' | 'gp'; aliases: string[] }> = [
+      { token: 'main', aliases: ['main parent', 'main', 'parent'] },
+      { token: 'gp1', aliases: ['grand parent 1', 'grandparent 1', 'left parent', 'gp1', 'left'] },
+      { token: 'gp2', aliases: ['grand parent 2', 'grandparent 2', 'right parent', 'gp2', 'right'] },
+      { token: 'gp', aliases: ['any grand parent', 'any grandparent', 'grand parent', 'grandparent', 'any gp', 'gp'] },
+    ];
+
+    for (const scope of scopeAliases) {
+      for (const alias of scope.aliases) {
+        const match = currentClause.match(new RegExp(`^\\s*${this.escapeRegExp(alias).replace(/\\s+/g, '\\s+')}\\s+`, 'i'));
+        if (!match) continue;
+        const valuePrefix = currentClause.slice(match[0].length);
+        if (/[,();]|\b(?:where|and|or|not|has|contains|in|like|ilike)\b/i.test(valuePrefix)) return null;
+        return { scopeToken: scope.token, valuePrefix };
+      }
+    }
+
+    return null;
+  }
+
+  private getScopeLabel(scopeToken: 'main' | 'gp1' | 'gp2' | 'gp'): string {
+    switch (scopeToken) {
+      case 'main': return 'Main';
+      case 'gp1': return 'GP1';
+      case 'gp2': return 'GP2';
+      case 'gp': return 'Grandparent';
+    }
   }
 
   private getTrailingScopeToken(prefix: string): 'main' | 'gp1' | 'gp2' | 'gp' | null {
@@ -1969,7 +2054,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     for (let i = 0; i < text.length; i++) {
       const c = text[i];
       if (quote) { if (c === quote) quote = null; continue; }
-      if (c === "'" || c === '"') { quote = c; continue; }
+      if (this.isUqlQuoteStart(text, i)) { quote = c; continue; }
       if (c === '(') open++;
       else if (c === ')') open--;
     }
@@ -2095,7 +2180,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
         if (character === quoteCharacter) quoteCharacter = null;
         continue;
       }
-      if (character === '\'' || character === '"') {
+      if (this.isUqlQuoteStart(prefix, index)) {
         quoteCharacter = character;
         continue;
       }
@@ -2190,6 +2275,8 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       return { start: cursor, end: cursor, token: '' };
     }
     if (suggestion.kind === 'value') {
+      const scopedValueRange = this.getScopedSparkValueCompletionRange(query, cursor);
+      if (scopedValueRange) return scopedValueRange;
       const valueRange = this.getCurrentValueRange(query, cursor);
       if (valueRange) return valueRange;
     }
@@ -2201,6 +2288,10 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
 
   private getCompletionRangeForSuggestions(query: string, cursor: number, suggestions: UqlSuggestion[]): { start: number; end: number; token: string } {
     if (suggestions.some(suggestion => suggestion.kind === 'value')) {
+      const scopedValueRange = this.getScopedSparkValueCompletionRange(query, cursor);
+      if (scopedValueRange) {
+        return { ...scopedValueRange, token: query.slice(scopedValueRange.start, cursor) };
+      }
       const valueRange = this.getCurrentValueRange(query, cursor);
       if (valueRange) {
         return { ...valueRange, token: query.slice(valueRange.start, cursor) };
@@ -2211,6 +2302,19 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       return this.getFieldOrSnippetCompletionRange(query, cursor);
     }
     return this.getCurrentWordRange(query, cursor);
+  }
+
+  private getScopedSparkValueCompletionRange(query: string, cursor: number): { start: number; end: number; token: string } | null {
+    const beforeCursor = query.slice(0, cursor);
+    const currentClause = this.getCurrentClausePrefix(beforeCursor);
+    const scopedValue = this.getScopedSparkValuePrefix(beforeCursor);
+    if (!scopedValue) return null;
+    const start = cursor - scopedValue.valuePrefix.length;
+    return {
+      start,
+      end: cursor,
+      token: query.slice(start, cursor)
+    };
   }
 
   private getOperatorCompletionRange(query: string, cursor: number): { start: number; end: number; token: string } {
@@ -2281,7 +2385,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
           if (char === quote) quote = null;
           continue;
         }
-        if (char === "'" || char === '"') {
+        if (this.isUqlQuoteStart(query, i)) {
           quote = char;
           continue;
         }
@@ -2295,7 +2399,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
         if (char === quote) quote = null;
         continue;
       }
-      if (char === "'" || char === '"') {
+      if (this.isUqlQuoteStart(query, i)) {
         quote = char;
         continue;
       }
@@ -2347,5 +2451,18 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
 
   private escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private isUqlQuoteStart(text: string, index: number): boolean {
+    const character = text[index];
+    if (character !== '\'' && character !== '"') {
+      return false;
+    }
+
+    return character !== '\'' || !this.isUqlIdentifierCharacter(text[index - 1]);
+  }
+
+  private isUqlIdentifierCharacter(character: string | undefined): boolean {
+    return !!character && /[A-Za-z0-9_\u00C0-\uFFFF]/.test(character);
   }
 }

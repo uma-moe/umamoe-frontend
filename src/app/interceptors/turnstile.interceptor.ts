@@ -64,10 +64,6 @@ export class TurnstileInterceptor implements HttpInterceptor {
       });
     }
 
-    if (!forceRefresh && this.canBootstrapWithoutProof(req)) {
-      return req;
-    }
-
     try {
       const proofToken = await this.turnstileService.getProofToken(environment.turnstile.action, forceRefresh);
       if (!proofToken) {
@@ -138,11 +134,6 @@ export class TurnstileInterceptor implements HttpInterceptor {
 
     const errorCode = (errorBody as { error?: unknown }).error;
     return typeof errorCode === 'string' ? errorCode : null;
-  }
-
-  private canBootstrapWithoutProof(req: HttpRequest<unknown>): boolean {
-    const method = req.method.toUpperCase();
-    return method === 'GET' || method === 'HEAD';
   }
 
   private isProofExchangeRequest(url: string): boolean {

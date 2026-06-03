@@ -207,7 +207,7 @@ export class LineageDisplayComponent implements OnInit, OnChanges, OnDestroy {
         charId: this.getNodeCardId(view.node) ?? undefined,
         charName: view.name,
         winSaddleIds,
-        runRaceIds: [],
+        runRaceIds: view.node.veteran?.race_results ?? [],
       } as RaceResultsDialogData,
       panelClass: 'modern-dialog-panel',
       width: '1100px',

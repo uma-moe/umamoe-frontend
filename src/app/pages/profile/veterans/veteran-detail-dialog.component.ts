@@ -101,9 +101,10 @@ export class VeteranDetailDialogComponent {
 
   openRaceHistory(): void {
     const winSaddles = this.v.win_saddle_id_array ?? [];
+    const runRaceIds = this.v.race_results ?? [];
     const charName = getCharacterName(this.v.card_id);
     this.dialog.open(RaceResultsDialogComponent, {
-      data: { charId: this.v.card_id, charName, winSaddleIds: winSaddles, runRaceIds: [] } as RaceResultsDialogData,
+      data: { charId: this.v.card_id, charName, winSaddleIds: winSaddles, runRaceIds } as RaceResultsDialogData,
       panelClass: 'modern-dialog-panel',
       width: '1100px',
       maxWidth: '95vw',

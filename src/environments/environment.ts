@@ -2,7 +2,7 @@ export const environment = {
   production: false,
   apiUrl: '',  // relative paths - proxied by ng serve via proxy.conf.json
   resourceUrl: '/resources',
-  statusApiUrl: '',
+  statusApiUrl: 'https://status.uma.moe/api/v1/endpoints/statuses',
   enableSearchV3: true, // Enable V3 unified search API
   christmasTheme: false,
   turnstile: {

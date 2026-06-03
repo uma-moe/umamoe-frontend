@@ -1100,8 +1100,9 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     if (hasVeteranWins) {
       // View-only for veterans/succession with existing race data
       const winSaddleIds = node.veteran?.win_saddle_id_array ?? node.succession?.win_saddle_id_array ?? [];
+      const runRaceIds = node.veteran?.race_results ?? [];
       this.dialog.open(RaceResultsDialogComponent, {
-        data: { charId, charName, winSaddleIds, runRaceIds: [] } as RaceResultsDialogData,
+        data: { charId, charName, winSaddleIds, runRaceIds } as RaceResultsDialogData,
         panelClass: 'modern-dialog-panel',
         width: '1100px',
         maxWidth: '95vw',
