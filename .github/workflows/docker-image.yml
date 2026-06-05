@@ -85,7 +85,7 @@ jobs:
         shell: bash
         env:
           BETA_TURNSTILE_SITE_KEY: ${{ secrets.BETA_TURNSTILE_SITE_KEY }}
-          BETA_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.BETA_GOOGLE_ANALYTICS_MEASUREMENT_ID }}
+          BETA_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.GOOGLE_ANALYTICS_MEASUREMENT }}
         run: |
           set -euo pipefail
 
