@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { HttpBackend, HttpClient } from '@angular/common/http';
 import { Inject, Injectable, NgZone } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 type TurnstileTheme = 'auto' | 'light' | 'dark';
@@ -53,7 +53,10 @@ export class TurnstileService {
   private proofQueue: Promise<void> = Promise.resolve();
   private cachedBrowserProof: CachedBrowserProofToken | null = null;
   private browserProofTask: Promise<CachedBrowserProofToken | null> | null = null;
+  private primeTask: Promise<void> | null = null;
+  private proofReadySubject = new BehaviorSubject<boolean>(false);
   private warnedMissingSiteKey = false;
+  private warnedPrimeFailure = false;
 
   constructor(
     @Inject(DOCUMENT) private document: Document,
@@ -64,7 +67,7 @@ export class TurnstileService {
   }
 
   get enabled(): boolean {
-    return !!environment.turnstile.enabled && !!environment.turnstile.siteKey;
+    return !!environment.turnstile.enabled && (!!environment.turnstile.siteKey || !!this.localDevToken);
   }
 
   get proofHeaderName(): string {
@@ -79,9 +82,25 @@ export class TurnstileService {
     return 'X-Browser-Proof-Source';
   }
 
+  get proofReady$(): Observable<boolean> {
+    return this.proofReadySubject.asObservable();
+  }
+
   prime(): Promise<void> {
-    void this.getProofToken(environment.turnstile.action, false).catch(() => undefined);
-    return Promise.resolve();
+    if (!this.enabled) {
+      return Promise.resolve();
+    }
+
+    if (!this.primeTask) {
+      this.primeTask = this.getProofToken(environment.turnstile.action, false)
+        .then(() => undefined)
+        .catch(error => this.warnPrimeFailure(error))
+        .finally(() => {
+          this.primeTask = null;
+        });
+    }
+
+    return this.primeTask;
   }
 
   async getProofToken(action = environment.turnstile.action, forceRefresh = false): Promise<string> {
@@ -89,7 +108,7 @@ export class TurnstileService {
       return '';
     }
 
-    if (!environment.turnstile.siteKey) {
+    if (!environment.turnstile.siteKey && !this.localDevToken) {
       this.warnMissingSiteKey();
       return '';
     }
@@ -155,6 +174,7 @@ export class TurnstileService {
       action: this.normalizeAction(action),
       expiresAt: Date.now() + ttlSeconds * 1000,
     };
+    this.proofReadySubject.next(true);
   }
 
   invalidateBrowserProof(token?: string): void {
@@ -164,6 +184,7 @@ export class TurnstileService {
 
     if (!token || this.cachedBrowserProof.token === token) {
       this.cachedBrowserProof = null;
+      this.proofReadySubject.next(false);
     }
   }
 
@@ -217,6 +238,11 @@ export class TurnstileService {
   }
 
   private async executeTokenRequest(action: string): Promise<string> {
+    const localDevToken = this.localDevToken;
+    if (localDevToken) {
+      return localDevToken;
+    }
+
     await this.loadScript();
 
     const turnstile = window.turnstile;
@@ -326,6 +352,14 @@ export class TurnstileService {
     return normalized || 'api_request';
   }
 
+  private get localDevToken(): string {
+    if (environment.production) {
+      return '';
+    }
+
+    return ((environment.turnstile as any).devToken ?? '').trim();
+  }
+
   private warnMissingSiteKey(): void {
     if (this.warnedMissingSiteKey) {
       return;
@@ -333,6 +367,15 @@ export class TurnstileService {
 
     this.warnedMissingSiteKey = true;
     console.warn('Turnstile is enabled but no site key is configured. API proof headers will not be added.');
+  }
+
+  private warnPrimeFailure(error: unknown): void {
+    if (this.warnedPrimeFailure) {
+      return;
+    }
+
+    this.warnedPrimeFailure = true;
+    console.warn('Turnstile browser proof priming failed.', error);
   }
 
   private clearBrowserProofTask(tokenTask: Promise<CachedBrowserProofToken | null>): void {

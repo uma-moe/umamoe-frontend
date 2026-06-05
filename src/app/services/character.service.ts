@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 import { map, filter, take } from 'rxjs/operators';
 import { Character } from '../models/character.model';
 import { MasterDataService } from './master-data.service';
+import { ResourceLoadError } from './resource-data.service';
 @Injectable({
   providedIn: 'root'
 })
@@ -13,6 +14,14 @@ export class CharacterService {
 
   get characters$(): Observable<Character[]> {
     return this.masterData.characters$;
+  }
+
+  get resourcesPending$(): Observable<boolean> {
+    return this.masterData.charactersPending$;
+  }
+
+  get resourceError$(): Observable<ResourceLoadError | null> {
+    return this.masterData.charactersError$;
   }
 
   getCharacters(): Observable<Character[]> {

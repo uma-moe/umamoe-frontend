@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, ReplaySubject } from 'rxjs';
+import { BehaviorSubject, Observable, ReplaySubject } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { TurnstileService } from './turnstile.service';
 
@@ -46,6 +46,24 @@ interface ResourceCacheMeta {
   fingerprint?: string;
 }
 
+export interface ResourceLoadError {
+  resourceName: string;
+  message: string;
+  attempt: number;
+  occurredAt: string;
+  url?: string;
+}
+
+class ResourceHttpError extends Error {
+  constructor(
+    message: string,
+    readonly url: string,
+  ) {
+    super(message);
+    this.name = 'ResourceHttpError';
+  }
+}
+
 export const NON_BANNER_RESOURCE_NAMES = [
   'affinity',
   'aptitudes',
@@ -77,6 +95,8 @@ export class ResourceDataService {
   private loadStarted = new Set<string>();
   private manifest: ResourceManifest | null = null;
   private manifestPromise: Promise<ResourceManifest> | null = null;
+  private resourcePendingSubjects = new Map<string, BehaviorSubject<boolean>>();
+  private resourceErrorSubjects = new Map<string, BehaviorSubject<ResourceLoadError | null>>();
   private retryAttempts = new Map<string, number>();
   private retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -98,6 +118,14 @@ export class ResourceDataService {
     return subject.asObservable();
   }
 
+  resourcePending(resourceName: string): Observable<boolean> {
+    return this.getResourcePendingSubject(resourceName).asObservable();
+  }
+
+  resourceError(resourceName: string): Observable<ResourceLoadError | null> {
+    return this.getResourceErrorSubject(resourceName).asObservable();
+  }
+
   preloadResource(resourceName: string): void {
     if (this.loadStarted.has(resourceName)) {
       return;
@@ -110,6 +138,7 @@ export class ResourceDataService {
   }
 
   private async loadResource<T>(resourceName: string, subject: ReplaySubject<T>): Promise<void> {
+    this.setResourcePending(resourceName, true);
     let emittedCached = false;
 
     try {
@@ -129,23 +158,44 @@ export class ResourceDataService {
       const resource = this.resolveResource(resourceName, manifest);
       if (!version || !resource) {
         this.clearResourceRetry(resourceName);
+        this.setResourcePending(resourceName, false);
+        this.setResourceError(resourceName, null);
         return;
       }
 
       const meta = this.readCacheMeta(resourceName);
       if (emittedCached && this.isCacheFresh(meta, version, resource, manifestGeneratedAt)) {
         this.clearResourceRetry(resourceName);
+        this.setResourcePending(resourceName, false);
+        this.setResourceError(resourceName, null);
         return;
       }
 
+      await this.waitForBrowserProofBeforeResourceFetch();
       const data = await this.fetchAndCacheResource<T>(resourceName, resource, version, manifestGeneratedAt);
       subject.next(data);
       this.clearResourceRetry(resourceName);
+      this.setResourcePending(resourceName, false);
+      this.setResourceError(resourceName, null);
       void this.cleanupOldCaches(version);
     } catch (error) {
       console.warn(`Failed to refresh resource ${resourceName}:`, error);
+      this.setResourcePending(resourceName, true);
+      this.setResourceError(resourceName, this.toResourceLoadError(resourceName, error));
       this.scheduleResourceRetry(resourceName, subject);
     }
+  }
+
+  private async waitForBrowserProofBeforeResourceFetch(): Promise<void> {
+    if (!environment.turnstile.enabled) {
+      return;
+    }
+
+    if (this.turnstileService.getCachedProofToken(environment.turnstile.action)) {
+      return;
+    }
+
+    await this.turnstileService.ensureBrowserProof(environment.turnstile.action);
   }
 
   private async fetchManifest(): Promise<ResourceManifest> {
@@ -198,6 +248,56 @@ export class ResourceDataService {
     }
 
     this.retryAttempts.delete(resourceName);
+  }
+
+  private getResourcePendingSubject(resourceName: string): BehaviorSubject<boolean> {
+    let subject = this.resourcePendingSubjects.get(resourceName);
+    if (!subject) {
+      subject = new BehaviorSubject<boolean>(false);
+      this.resourcePendingSubjects.set(resourceName, subject);
+    }
+
+    return subject;
+  }
+
+  private setResourcePending(resourceName: string, pending: boolean): void {
+    const subject = this.getResourcePendingSubject(resourceName);
+    if (subject.value !== pending) {
+      subject.next(pending);
+    }
+  }
+
+  private getResourceErrorSubject(resourceName: string): BehaviorSubject<ResourceLoadError | null> {
+    let subject = this.resourceErrorSubjects.get(resourceName);
+    if (!subject) {
+      subject = new BehaviorSubject<ResourceLoadError | null>(null);
+      this.resourceErrorSubjects.set(resourceName, subject);
+    }
+
+    return subject;
+  }
+
+  private setResourceError(resourceName: string, error: ResourceLoadError | null): void {
+    this.getResourceErrorSubject(resourceName).next(error);
+  }
+
+  private toResourceLoadError(resourceName: string, error: unknown): ResourceLoadError {
+    const attempt = (this.retryAttempts.get(resourceName) ?? 0) + 1;
+    const base = {
+      resourceName,
+      attempt,
+      occurredAt: new Date().toISOString(),
+    };
+
+    if (error instanceof ResourceHttpError) {
+      return { ...base, message: error.message, url: error.url };
+    }
+
+    if (error instanceof Error) {
+      return { ...base, message: error.message || error.name };
+    }
+
+    return { ...base, message: String(error) };
   }
 
   private get resourceBaseUrl(): string {
@@ -367,7 +467,7 @@ export class ResourceDataService {
     const url = resource.url;
     const response = await this.fetchWithBrowserProof(url, { cache: 'no-cache' });
     if (!response.ok) {
-      throw new Error(`${response.status} ${response.statusText}`);
+      throw new ResourceHttpError(`${response.status} ${response.statusText || 'HTTP error'}`, url);
     }
 
     const cacheName = this.getCacheName(version);
@@ -431,7 +531,7 @@ export class ResourceDataService {
   private async fetchJsonWithBrowserProof<T>(url: string): Promise<T> {
     const response = await this.fetchWithBrowserProof(url, { cache: 'no-cache' });
     if (!response.ok) {
-      throw new Error(`${response.status} ${response.statusText}`);
+      throw new ResourceHttpError(`${response.status} ${response.statusText || 'HTTP error'}`, url);
     }
 
     return response.json() as Promise<T>;

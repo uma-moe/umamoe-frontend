@@ -1,14 +1,17 @@
 import { CommonModule } from '@angular/common';
 import { Component, Inject, Input, OnInit, Optional } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Observable } from 'rxjs';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Rarity, SupportCardShort, SupportCardType } from '../../models/support-card.model';
 import { SupportCardService } from '../../services/support-card.service';
+import { ResourceLoadError } from '../../services/resource-data.service';
 
 export interface SupportCardSelectDialogData {
   initialCard?: SupportCardShort | null;
@@ -26,6 +29,7 @@ export interface SupportCardSelectDialogData {
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
+    MatProgressSpinnerModule,
     MatSelectModule,
   ],
   template: `
@@ -47,6 +51,22 @@ export interface SupportCardSelectDialogData {
             class="search-input"
           />
           <mat-icon *ngIf="searchControl.value" class="clear-icon" (click)="searchControl.setValue(''); filterCards()">close</mat-icon>
+        </div>
+        <div class="resource-status" *ngIf="resourcesPending$ | async">
+          <mat-progress-spinner
+            class="resource-spinner"
+            mode="indeterminate"
+            [diameter]="16"
+            [strokeWidth]="2"
+          ></mat-progress-spinner>
+          <span>Still fetching resources...</span>
+        </div>
+        <div class="resource-error" *ngIf="resourcesError$ | async as resourceError">
+          <mat-icon>error_outline</mat-icon>
+          <div>
+            <span>Resource fetch failed</span>
+            <code>{{ formatResourceError(resourceError) }}</code>
+          </div>
         </div>
         <div class="quick-filters">
           <mat-form-field appearance="fill" class="filter-field">
@@ -102,6 +122,8 @@ export class SupportCardSelectDialogComponent implements OnInit {
   supportCards: SupportCardShort[] = [];
   filteredCardsSync: SupportCardShort[] = [];
   selectedCard: SupportCardShort | null = null;
+  resourcesPending$!: Observable<boolean>;
+  resourcesError$!: Observable<ResourceLoadError | null>;
 
   readonly cardTypes = [
     { value: SupportCardType.SPEED, label: 'Speed' },
@@ -122,7 +144,10 @@ export class SupportCardSelectDialogComponent implements OnInit {
     private dialogRef: MatDialogRef<SupportCardSelectDialogComponent>,
     private supportCardService: SupportCardService,
     @Optional() @Inject(MAT_DIALOG_DATA) private dialogData: SupportCardSelectDialogData | null,
-  ) {}
+  ) {
+    this.resourcesPending$ = this.supportCardService.supportCardsPending$;
+    this.resourcesError$ = this.supportCardService.supportCardsError$;
+  }
 
   ngOnInit(): void {
     this.loadSupportCards();
@@ -218,5 +243,19 @@ export class SupportCardSelectDialogComponent implements OnInit {
 
   cancel(): void {
     this.dialogRef.close();
+  }
+
+  formatResourceError(error: ResourceLoadError): string {
+    const parts = [
+      `resource=${error.resourceName}`,
+      `attempt=${error.attempt}`,
+      `time=${error.occurredAt}`,
+      `error=${error.message}`,
+    ];
+    if (error.url) {
+      parts.push(`url=${error.url}`);
+    }
+
+    return parts.join(' | ');
   }
 }

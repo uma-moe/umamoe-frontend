@@ -43,6 +43,22 @@
         <mat-icon>close</mat-icon>
       </button>
     </div>
+    <div class="se-resource-status" *ngIf="resourcesPending$ | async">
+      <mat-progress-spinner
+        class="se-resource-spinner"
+        mode="indeterminate"
+        [diameter]="14"
+        [strokeWidth]="2"
+      ></mat-progress-spinner>
+      <span>Still fetching resources...</span>
+    </div>
+    <div class="se-resource-error" *ngIf="resourcesError$ | async as resourceError">
+      <mat-icon>error_outline</mat-icon>
+      <div>
+        <span>Resource fetch failed</span>
+        <code>{{ formatResourceError(resourceError) }}</code>
+      </div>
+    </div>
   </div>
 </div>
 

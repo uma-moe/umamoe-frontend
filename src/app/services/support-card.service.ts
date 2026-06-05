@@ -17,6 +17,7 @@ import {
 import { PaginatedResponse, ApiResponse, SearchResult } from '../models/common.model';
 import { getSupportCardById as getCardById, getSupportCardsByIds } from '../data/support-cards.data';
 import { MasterDataService } from './master-data.service';
+import { ResourceLoadError } from './resource-data.service';
 // V3 API interfaces
 interface V3SearchResult {
   items: V3UnifiedAccountRecord[];
@@ -73,6 +74,14 @@ export class SupportCardService {
 
   private get supportCards$(): Observable<SupportCardShort[]> {
     return this.masterData.supportCards$;
+  }
+
+  get supportCardsPending$(): Observable<boolean> {
+    return this.masterData.supportCardsPending$;
+  }
+
+  get supportCardsError$(): Observable<ResourceLoadError | null> {
+    return this.masterData.supportCardsError$;
   }
   // Map V3 backend response to frontend format
   private mapV3BackendToFrontend(

@@ -11,6 +11,7 @@ import { UpdateNotificationService } from './services/update-notification.servic
 import { RateLimitService } from './services/rate-limit.service';
 import { AuthService } from './services/auth.service';
 import { MasterDataService } from './services/master-data.service';
+import { TurnstileService } from './services/turnstile.service';
 import { environment } from '../environments/environment';
 import { filter, throttleTime } from 'rxjs';
 @Component({
@@ -33,6 +34,7 @@ export class AppComponent implements OnInit {
     private authService: AuthService,
     private masterDataService: MasterDataService,
     private activatedRoute: ActivatedRoute,
+    private turnstileService: TurnstileService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
   // Debug shortcut: Ctrl+Shift+L to test rate limit popup (dev only)
@@ -48,6 +50,8 @@ export class AppComponent implements OnInit {
 
     // Handle OAuth token from any URL (backend redirects to /?token=...)
     if (isPlatformBrowser(this.platformId)) {
+      void this.turnstileService.prime();
+
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
       if (token) {

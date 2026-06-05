@@ -12,11 +12,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Observable, BehaviorSubject, combineLatest } from 'rxjs';
 import { startWith, map } from 'rxjs/operators';
 import { CharacterService } from '../../services/character.service';
 import { AffinityService, PlannerRaceWins, PlannerSlotPosition, TreeSlots } from '../../services/affinity.service';
 import { Character } from '../../models/character.model';
+import { ResourceLoadError } from '../../services/resource-data.service';
 
 export type CharacterSelectMode = 'include' | 'exclude' | 'target';
 export type CharacterSelectSort = 'default' | 'name' | 'affinity';
@@ -72,6 +74,7 @@ interface DisplayCharacter extends Character {
     MatIconModule,
     MatListModule,
     MatMenuModule,
+    MatProgressSpinnerModule,
   ],
   template: `
     <div class="select-dialog" [class.mode-include]="mode === 'include'" [class.mode-exclude]="mode === 'exclude'">
@@ -117,6 +120,22 @@ interface DisplayCharacter extends Character {
             class="search-input"
           />
           <mat-icon *ngIf="searchControl.value" class="clear-icon" (click)="searchControl.setValue('')">close</mat-icon>
+        </div>
+        <div class="resource-status" *ngIf="resourcesPending$ | async">
+          <mat-progress-spinner
+            class="resource-spinner"
+            mode="indeterminate"
+            [diameter]="16"
+            [strokeWidth]="2"
+          ></mat-progress-spinner>
+          <span>Still fetching resources...</span>
+        </div>
+        <div class="resource-error" *ngIf="resourcesError$ | async as resourceError">
+          <mat-icon>error_outline</mat-icon>
+          <div>
+            <span>Resource fetch failed</span>
+            <code>{{ formatResourceError(resourceError) }}</code>
+          </div>
         </div>
         <div class="character-grid">
           <div
@@ -305,6 +324,62 @@ interface DisplayCharacter extends Character {
           &:hover {
             color: rgba(255, 255, 255, 0.6);
           }
+        }
+      }
+      .resource-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 32px;
+        padding: 8px 10px;
+        margin: -8px 0 12px;
+        border: 1px solid rgba(100, 181, 246, 0.2);
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(100, 181, 246, 0.12), rgba(129, 199, 132, 0.06));
+        color: rgba(255, 255, 255, 0.76);
+        font-size: 12px;
+        font-weight: 600;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        .resource-spinner {
+          width: 16px !important;
+          height: 16px !important;
+          flex: 0 0 16px;
+        }
+      }
+      .resource-error {
+        display: grid;
+        grid-template-columns: 18px minmax(0, 1fr);
+        gap: 8px;
+        padding: 8px 10px;
+        margin: -6px 0 12px;
+        border: 1px solid rgba(239, 83, 80, 0.22);
+        border-radius: 8px;
+        background: rgba(239, 83, 80, 0.08);
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 12px;
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          color: #ef9a9a;
+          margin-top: 1px;
+        }
+        span {
+          display: block;
+          margin-bottom: 4px;
+          font-weight: 700;
+        }
+        code {
+          display: block;
+          max-width: 100%;
+          padding: 6px 7px;
+          border-radius: 6px;
+          background: rgba(0, 0, 0, 0.24);
+          color: rgba(255, 255, 255, 0.76);
+          font-size: 11px;
+          line-height: 1.35;
+          white-space: normal;
+          word-break: break-word;
         }
       }
       .character-grid {
@@ -575,6 +650,8 @@ export class CharacterSelectDialogComponent implements OnInit {
   searchControl = new FormControl('');
   characters: Character[] = [];
   filteredCharacters!: Observable<DisplayCharacter[]>;
+  resourcesPending$!: Observable<boolean>;
+  resourcesError$!: Observable<ResourceLoadError | null>;
   multiSelect = false;
   selectedCharacters: Character[] = [];
   existingIds: number[] = [];
@@ -598,6 +675,8 @@ export class CharacterSelectDialogComponent implements OnInit {
     private dialogRef: MatDialogRef<CharacterSelectDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: CharacterSelectDialogData | null
   ) {
+    this.resourcesPending$ = this.characterService.resourcesPending$;
+    this.resourcesError$ = this.characterService.resourceError$;
     if (data) {
       this.multiSelect = !!data.multiSelect;
       this.existingIds = data.existingIds || [];
@@ -704,6 +783,20 @@ export class CharacterSelectDialogComponent implements OnInit {
       case 'affinity': return 'Affinity';
       default: return 'Default';
     }
+  }
+
+  formatResourceError(error: ResourceLoadError): string {
+    const parts = [
+      `resource=${error.resourceName}`,
+      `attempt=${error.attempt}`,
+      `time=${error.occurredAt}`,
+      `error=${error.message}`,
+    ];
+    if (error.url) {
+      parts.push(`url=${error.url}`);
+    }
+
+    return parts.join(' | ');
   }
 
   trackById = (_: number, c: DisplayCharacter) => c.id;

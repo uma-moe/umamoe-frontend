@@ -6,13 +6,16 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
+import { Observable } from 'rxjs';
 import { FactorService, Factor, SparkInfo } from '../../services/factor.service';
+import { ResourceLoadError } from '../../services/resource-data.service';
 
 @Component({
   selector: 'app-spark-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, OverlayModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatProgressSpinnerModule, OverlayModule],
   templateUrl: './spark-editor.component.html',
   styleUrls: ['./spark-editor.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,11 +47,16 @@ export class SparkEditorComponent {
   searchResults: Factor[] = [];
   addLevel = 3;
   isOpen = false;
+  resourcesPending$!: Observable<boolean>;
+  resourcesError$!: Observable<ResourceLoadError | null>;
 
   constructor(
     private factorService: FactorService,
     private cdr: ChangeDetectorRef,
-  ) {}
+  ) {
+    this.resourcesPending$ = this.factorService.resourcesPending$;
+    this.resourcesError$ = this.factorService.resourceError$;
+  }
 
   // ── Display helpers ───────────────────────────────────────────────────────
 
@@ -146,5 +154,19 @@ export class SparkEditorComponent {
     event.stopPropagation();
     this.addLevel = level;
     this.cdr.markForCheck();
+  }
+
+  formatResourceError(error: ResourceLoadError): string {
+    const parts = [
+      `resource=${error.resourceName}`,
+      `attempt=${error.attempt}`,
+      `time=${error.occurredAt}`,
+      `error=${error.message}`,
+    ];
+    if (error.url) {
+      parts.push(`url=${error.url}`);
+    }
+
+    return parts.join(' | ');
   }
 }

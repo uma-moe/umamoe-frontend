@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, combineLatest } from 'rxjs';
+import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs';
 import factorsData from '../../data/factors.json';
 import {
   CharacterNameMap,
@@ -31,7 +31,7 @@ import { Character } from '../models/character.model';
 import { Skill } from '../models/skill.model';
 import { SupportCardShort } from '../models/support-card.model';
 import { Campaign, ChampionsMeeting, LegendRace, StoryEvent } from '../models/timeline.model';
-import { NON_BANNER_RESOURCE_NAMES, ResourceDataService } from './resource-data.service';
+import { NON_BANNER_RESOURCE_NAMES, ResourceDataService, ResourceLoadError } from './resource-data.service';
 import type { Factor } from './factor.service';
 
 @Injectable({ providedIn: 'root' })
@@ -56,7 +56,27 @@ export class MasterDataService {
   private timelineRefreshSubject = new BehaviorSubject<void>(undefined);
   readonly timelineRefresh$ = this.timelineRefreshSubject.asObservable();
 
-  constructor(private resourceData: ResourceDataService) {}
+  readonly charactersPending$: Observable<boolean>;
+  readonly supportCardsPending$: Observable<boolean>;
+  readonly factorsPending$: Observable<boolean>;
+  readonly charactersError$: Observable<ResourceLoadError | null>;
+  readonly supportCardsError$: Observable<ResourceLoadError | null>;
+  readonly factorsError$: Observable<ResourceLoadError | null>;
+
+  constructor(private resourceData: ResourceDataService) {
+    this.charactersPending$ = combineLatest([
+      this.resourceData.resourcePending('character'),
+      this.resourceData.resourcePending('character_names')
+    ]).pipe(map(([charactersPending, namesPending]) => charactersPending || namesPending));
+    this.supportCardsPending$ = this.resourceData.resourcePending('support-cards-db');
+    this.factorsPending$ = this.resourceData.resourcePending('factors');
+    this.charactersError$ = combineLatest([
+      this.resourceData.resourceError('character'),
+      this.resourceData.resourceError('character_names')
+    ]).pipe(map(([charactersError, namesError]) => charactersError || namesError));
+    this.supportCardsError$ = this.resourceData.resourceError('support-cards-db');
+    this.factorsError$ = this.resourceData.resourceError('factors');
+  }
 
   init(): void {
     if (this.initialized) {

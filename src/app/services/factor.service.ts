@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { MasterDataService } from './master-data.service';
+import { ResourceLoadError } from './resource-data.service';
 export interface Factor {
   id: string;
   text: string;
@@ -22,6 +23,15 @@ export class FactorService {
     this.masterData.init();
     this.masterData.factors$.subscribe(factors => this.setFactors(factors));
   }
+
+  get resourcesPending$(): Observable<boolean> {
+    return this.masterData.factorsPending$;
+  }
+
+  get resourceError$(): Observable<ResourceLoadError | null> {
+    return this.masterData.factorsError$;
+  }
+
   private setFactors(factors: Factor[]): void {
     this.factors$.next(factors);
     // Create a map for quick lookups
