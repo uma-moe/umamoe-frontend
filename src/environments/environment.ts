@@ -5,9 +5,13 @@ export const environment = {
   statusApiUrl: 'https://status.uma.moe/api/v1/endpoints/statuses',
   enableSearchV3: true, // Enable V3 unified search API
   christmasTheme: false,
+  googleAnalytics: {
+    measurementId: '',
+  },
   turnstile: {
-    enabled: false,
-    siteKey: '',
+    enabled: true,
+    siteKey: '0x4AAAAAADJqTbxKd66xUeWw',
+    devToken: '',
     challengeHeaderName: 'X-Turnstile-Token',
     proofHeaderName: 'X-Browser-Proof',
     proofTtlHeaderName: 'X-Browser-Proof-TTL',

@@ -24,6 +24,10 @@ export class CharacterService {
     return this.masterData.charactersError$;
   }
 
+  get resourcesUsingCachedData$(): Observable<boolean> {
+    return this.masterData.charactersUsingCachedData$;
+  }
+
   getCharacters(): Observable<Character[]> {
     return this.characters$;
   }

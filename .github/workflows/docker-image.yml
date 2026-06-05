@@ -85,6 +85,7 @@ jobs:
         shell: bash
         env:
           BETA_TURNSTILE_SITE_KEY: ${{ secrets.BETA_TURNSTILE_SITE_KEY }}
+          BETA_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.BETA_GOOGLE_ANALYTICS_MEASUREMENT_ID }}
         run: |
           set -euo pipefail
 
@@ -108,9 +109,25 @@ jobs:
             fi
           }
 
+          validate_google_analytics_measurement_id() {
+            local env_name="$1"
+            local measurement_id="$2"
+
+            if [[ -z "$measurement_id" ]]; then
+              return 0
+            fi
+
+            if [[ ! "$measurement_id" =~ ^G-[A-Z0-9]+$ ]]; then
+              echo "::error title=Invalid ${env_name} Google Analytics measurement ID::Expected a GA4 measurement ID like G-XXXXXXXXXX."
+              exit 1
+            fi
+          }
+
           validate_turnstile_site_key "BETA" "$BETA_TURNSTILE_SITE_KEY"
+          validate_google_analytics_measurement_id "BETA" "$BETA_GOOGLE_ANALYTICS_MEASUREMENT_ID"
 
           SITE_KEY="$BETA_TURNSTILE_SITE_KEY" perl -0pi -e 'my $replacement = "siteKey: \x27$ENV{SITE_KEY}\x27,"; my $count = s/siteKey:\s*[\x27"][^\x27"]*[\x27"],/$replacement/; die "siteKey property not found\n" unless $count;' src/environments/environment.beta.ts
+          GA_MEASUREMENT_ID="$BETA_GOOGLE_ANALYTICS_MEASUREMENT_ID" perl -0pi -e 'my $replacement = "measurementId: \x27$ENV{GA_MEASUREMENT_ID}\x27,"; my $count = s/measurementId:\s*[\x27"][^\x27"]*[\x27"],/$replacement/; die "Google Analytics measurementId property not found\n" unless $count;' src/environments/environment.beta.ts
 
           if grep -Eq "siteKey: ['\"][^'\"]*[{}][^'\"]*['\"]" src/environments/environment.beta.ts; then
             echo "::error title=Invalid BETA Turnstile site key injection::The beta environment file still contains a placeholder-like siteKey after injection."
@@ -122,7 +139,13 @@ jobs:
             exit 1
           fi
 
+          if [[ -n "$BETA_GOOGLE_ANALYTICS_MEASUREMENT_ID" ]] && grep -Eq "measurementId: ['\"]['\"]" src/environments/environment.beta.ts; then
+            echo "::error title=Missing BETA Google Analytics measurement ID injection::The beta environment file still contains an empty measurementId after injection."
+            exit 1
+          fi
+
           echo "turnstile_site_key_sha=$(printf '%s' "$BETA_TURNSTILE_SITE_KEY" | sha256sum | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "frontend_config_sha=$(printf '%s:%s' "$BETA_TURNSTILE_SITE_KEY" "$BETA_GOOGLE_ANALYTICS_MEASUREMENT_ID" | sha256sum | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
       - name: Decide whether assets should deploy
         id: assets_plan
@@ -150,7 +173,7 @@ jobs:
           pull: true
           build-args: |
             BUILD_SCRIPT=${{ steps.plan.outputs.build_script }}
-            TURNSTILE_CONFIG_FINGERPRINT=${{ steps.frontend_config.outputs.turnstile_site_key_sha }}
+            FRONTEND_CONFIG_FINGERPRINT=${{ steps.frontend_config.outputs.frontend_config_sha }}
           outputs: type=local,dest=${{ runner.temp }}/shell-export
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
@@ -159,6 +182,7 @@ jobs:
         shell: bash
         env:
           BETA_TURNSTILE_SITE_KEY: ${{ secrets.BETA_TURNSTILE_SITE_KEY }}
+          BETA_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.BETA_GOOGLE_ANALYTICS_MEASUREMENT_ID }}
         run: |
           set -euo pipefail
 
@@ -187,6 +211,28 @@ jobs:
             exit 1
           fi
 
+          if [[ -n "$BETA_GOOGLE_ANALYTICS_MEASUREMENT_ID" ]]; then
+            expected_ga_hash="$(printf '%s' "$BETA_GOOGLE_ANALYTICS_MEASUREMENT_ID" | sha256sum | awk '{print $1}')"
+            found_expected_ga=false
+            mapfile -t built_ga_ids < <(find "${{ runner.temp }}/shell-export/var/www/html/umamoe" -type f -name '*.js' -print0 | xargs -0 perl -ne 'while (/measurementId:\s*"([^"]*)"/g) { print "$1\n" }')
+
+            if [[ ${#built_ga_ids[@]} -eq 0 ]]; then
+              echo "::error title=Missing BETA Google Analytics measurement ID in artifact::No compiled measurementId value was found in the exported JavaScript."
+              exit 1
+            fi
+
+            for built_ga_id in "${built_ga_ids[@]}"; do
+              if [[ "$(printf '%s' "$built_ga_id" | sha256sum | awk '{print $1}')" == "$expected_ga_hash" ]]; then
+                found_expected_ga=true
+              fi
+            done
+
+            if [[ "$found_expected_ga" != "true" ]]; then
+              echo "::error title=BETA Google Analytics measurement ID mismatch::The exported JavaScript measurementId does not match the configured GitHub secret."
+              exit 1
+            fi
+          fi
+
       - name: Build assets artifact
         if: steps.assets_plan.outputs.should_build == 'true'
         uses: docker/build-push-action@v6
@@ -198,7 +244,7 @@ jobs:
           pull: true
           build-args: |
             BUILD_SCRIPT=${{ steps.plan.outputs.build_script }}
-            TURNSTILE_CONFIG_FINGERPRINT=${{ steps.frontend_config.outputs.turnstile_site_key_sha }}
+            FRONTEND_CONFIG_FINGERPRINT=${{ steps.frontend_config.outputs.frontend_config_sha }}
           outputs: type=local,dest=${{ runner.temp }}/assets-export
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
@@ -355,6 +401,7 @@ jobs:
         shell: bash
         env:
           PROD_TURNSTILE_SITE_KEY: ${{ secrets.PROD_TURNSTILE_SITE_KEY }}
+          PROD_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.PROD_GOOGLE_ANALYTICS_MEASUREMENT_ID }}
         run: |
           set -euo pipefail
 
@@ -378,9 +425,25 @@ jobs:
             fi
           }
 
+          validate_google_analytics_measurement_id() {
+            local env_name="$1"
+            local measurement_id="$2"
+
+            if [[ -z "$measurement_id" ]]; then
+              return 0
+            fi
+
+            if [[ ! "$measurement_id" =~ ^G-[A-Z0-9]+$ ]]; then
+              echo "::error title=Invalid ${env_name} Google Analytics measurement ID::Expected a GA4 measurement ID like G-XXXXXXXXXX."
+              exit 1
+            fi
+          }
+
           validate_turnstile_site_key "PROD" "$PROD_TURNSTILE_SITE_KEY"
+          validate_google_analytics_measurement_id "PROD" "$PROD_GOOGLE_ANALYTICS_MEASUREMENT_ID"
 
           SITE_KEY="$PROD_TURNSTILE_SITE_KEY" perl -0pi -e 'my $replacement = "siteKey: \x27$ENV{SITE_KEY}\x27,"; my $count = s/siteKey:\s*[\x27"][^\x27"]*[\x27"],/$replacement/; die "siteKey property not found\n" unless $count;' src/environments/environment.prod.ts
+          GA_MEASUREMENT_ID="$PROD_GOOGLE_ANALYTICS_MEASUREMENT_ID" perl -0pi -e 'my $replacement = "measurementId: \x27$ENV{GA_MEASUREMENT_ID}\x27,"; my $count = s/measurementId:\s*[\x27"][^\x27"]*[\x27"],/$replacement/; die "Google Analytics measurementId property not found\n" unless $count;' src/environments/environment.prod.ts
 
           if grep -Eq "siteKey: ['\"][^'\"]*[{}][^'\"]*['\"]" src/environments/environment.prod.ts; then
             echo "::error title=Invalid PROD Turnstile site key injection::The production environment file still contains a placeholder-like siteKey after injection."
@@ -392,7 +455,13 @@ jobs:
             exit 1
           fi
 
+          if [[ -n "$PROD_GOOGLE_ANALYTICS_MEASUREMENT_ID" ]] && grep -Eq "measurementId: ['\"]['\"]" src/environments/environment.prod.ts; then
+            echo "::error title=Missing PROD Google Analytics measurement ID injection::The production environment file still contains an empty measurementId after injection."
+            exit 1
+          fi
+
           echo "turnstile_site_key_sha=$(printf '%s' "$PROD_TURNSTILE_SITE_KEY" | sha256sum | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "frontend_config_sha=$(printf '%s:%s' "$PROD_TURNSTILE_SITE_KEY" "$PROD_GOOGLE_ANALYTICS_MEASUREMENT_ID" | sha256sum | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
       - name: Build production shell artifact
         uses: docker/build-push-action@v6
@@ -404,7 +473,7 @@ jobs:
           pull: true
           build-args: |
             BUILD_SCRIPT=build:prod
-            TURNSTILE_CONFIG_FINGERPRINT=${{ steps.production_frontend_config.outputs.turnstile_site_key_sha }}
+            FRONTEND_CONFIG_FINGERPRINT=${{ steps.production_frontend_config.outputs.frontend_config_sha }}
           outputs: type=local,dest=${{ runner.temp }}/production-shell-export
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
@@ -413,6 +482,7 @@ jobs:
         shell: bash
         env:
           PROD_TURNSTILE_SITE_KEY: ${{ secrets.PROD_TURNSTILE_SITE_KEY }}
+          PROD_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.PROD_GOOGLE_ANALYTICS_MEASUREMENT_ID }}
         run: |
           set -euo pipefail
 
@@ -449,6 +519,28 @@ jobs:
           if [[ "$found_expected" != "true" ]]; then
             echo "::error title=PROD Turnstile site key mismatch::The exported JavaScript siteKey does not match the configured GitHub secret."
             exit 1
+          fi
+
+          if [[ -n "$PROD_GOOGLE_ANALYTICS_MEASUREMENT_ID" ]]; then
+            expected_ga_hash="$(printf '%s' "$PROD_GOOGLE_ANALYTICS_MEASUREMENT_ID" | sha256sum | awk '{print $1}')"
+            found_expected_ga=false
+            mapfile -t built_ga_ids < <(find "${{ runner.temp }}/production-shell-export/var/www/html/umamoe" -type f -name '*.js' -print0 | xargs -0 perl -ne 'while (/measurementId:\s*"([^"]*)"/g) { print "$1\n" }')
+
+            if [[ ${#built_ga_ids[@]} -eq 0 ]]; then
+              echo "::error title=Missing PROD Google Analytics measurement ID in artifact::No compiled measurementId value was found in the exported JavaScript."
+              exit 1
+            fi
+
+            for built_ga_id in "${built_ga_ids[@]}"; do
+              if [[ "$(printf '%s' "$built_ga_id" | sha256sum | awk '{print $1}')" == "$expected_ga_hash" ]]; then
+                found_expected_ga=true
+              fi
+            done
+
+            if [[ "$found_expected_ga" != "true" ]]; then
+              echo "::error title=PROD Google Analytics measurement ID mismatch::The exported JavaScript measurementId does not match the configured GitHub secret."
+              exit 1
+            fi
           fi
 
       - name: Download assets artifact

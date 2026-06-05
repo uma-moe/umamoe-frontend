@@ -57,7 +57,7 @@ import { Subscription } from 'rxjs';
                   <mat-icon>analytics</mat-icon>
                   <span class="category-name">Analytics</span>
                 </div>
-                <p class="category-desc">Help us understand how visitors use the site so we can improve it.</p>
+                <p class="category-desc">Google Analytics page views help us understand how visitors use the site so we can improve it.</p>
               </div>
               <div class="toggle">
                 <div class="toggle-track" [class.on]="choices.analytics"><div class="toggle-thumb"></div></div>

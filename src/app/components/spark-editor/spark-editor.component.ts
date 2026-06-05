@@ -49,6 +49,7 @@ export class SparkEditorComponent {
   isOpen = false;
   resourcesPending$!: Observable<boolean>;
   resourcesError$!: Observable<ResourceLoadError | null>;
+  resourcesUsingCachedData$!: Observable<boolean>;
 
   constructor(
     private factorService: FactorService,
@@ -56,6 +57,7 @@ export class SparkEditorComponent {
   ) {
     this.resourcesPending$ = this.factorService.resourcesPending$;
     this.resourcesError$ = this.factorService.resourceError$;
+    this.resourcesUsingCachedData$ = this.factorService.resourcesUsingCachedData$;
   }
 
   // ── Display helpers ───────────────────────────────────────────────────────

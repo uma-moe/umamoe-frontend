@@ -16,8 +16,8 @@ COPY src ./src
 COPY scripts/precompute-tierlist.js scripts/tierlist-calculation-engine.js scripts/compress-images.js ./scripts/
 
 ARG BUILD_SCRIPT=build:prod
-ARG TURNSTILE_CONFIG_FINGERPRINT=local
-RUN printf '%s' "${TURNSTILE_CONFIG_FINGERPRINT}" > /tmp/turnstile-config-fingerprint && npm run ${BUILD_SCRIPT}
+ARG FRONTEND_CONFIG_FINGERPRINT=local
+RUN printf '%s' "${FRONTEND_CONFIG_FINGERPRINT}" > /tmp/frontend-config-fingerprint && npm run ${BUILD_SCRIPT}
 
 FROM alpine:3.20 AS shell-files
 

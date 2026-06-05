@@ -128,12 +128,12 @@ interface DisplayCharacter extends Character {
             [diameter]="16"
             [strokeWidth]="2"
           ></mat-progress-spinner>
-          <span>Still fetching resources...</span>
+          <span>{{ (resourcesUsingCachedData$ | async) ? 'Using cached resources; refreshing...' : 'Still fetching resources...' }}</span>
         </div>
         <div class="resource-error" *ngIf="resourcesError$ | async as resourceError">
           <mat-icon>error_outline</mat-icon>
           <div>
-            <span>Resource fetch failed</span>
+            <span>{{ (resourcesUsingCachedData$ | async) ? 'Resource refresh failed' : 'Resource fetch failed' }}</span>
             <code>{{ formatResourceError(resourceError) }}</code>
           </div>
         </div>
@@ -652,6 +652,7 @@ export class CharacterSelectDialogComponent implements OnInit {
   filteredCharacters!: Observable<DisplayCharacter[]>;
   resourcesPending$!: Observable<boolean>;
   resourcesError$!: Observable<ResourceLoadError | null>;
+  resourcesUsingCachedData$!: Observable<boolean>;
   multiSelect = false;
   selectedCharacters: Character[] = [];
   existingIds: number[] = [];
@@ -677,6 +678,7 @@ export class CharacterSelectDialogComponent implements OnInit {
   ) {
     this.resourcesPending$ = this.characterService.resourcesPending$;
     this.resourcesError$ = this.characterService.resourceError$;
+    this.resourcesUsingCachedData$ = this.characterService.resourcesUsingCachedData$;
     if (data) {
       this.multiSelect = !!data.multiSelect;
       this.existingIds = data.existingIds || [];

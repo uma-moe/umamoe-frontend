@@ -97,6 +97,7 @@ export class ResourceDataService {
   private manifestPromise: Promise<ResourceManifest> | null = null;
   private resourcePendingSubjects = new Map<string, BehaviorSubject<boolean>>();
   private resourceErrorSubjects = new Map<string, BehaviorSubject<ResourceLoadError | null>>();
+  private resourceCachedSubjects = new Map<string, BehaviorSubject<boolean>>();
   private retryAttempts = new Map<string, number>();
   private retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -126,6 +127,10 @@ export class ResourceDataService {
     return this.getResourceErrorSubject(resourceName).asObservable();
   }
 
+  resourceUsingCachedData(resourceName: string): Observable<boolean> {
+    return this.getResourceCachedSubject(resourceName).asObservable();
+  }
+
   preloadResource(resourceName: string): void {
     if (this.loadStarted.has(resourceName)) {
       return;
@@ -145,10 +150,14 @@ export class ResourceDataService {
       const cached = await this.readCachedResource<T>(resourceName);
       if (cached !== null) {
         emittedCached = true;
+        this.setResourceUsingCachedData(resourceName, true);
         subject.next(cached);
+      } else {
+        this.setResourceUsingCachedData(resourceName, false);
       }
     } catch (error) {
       console.warn(`Failed to read cached resource ${resourceName}:`, error);
+      this.setResourceUsingCachedData(resourceName, false);
     }
 
     try {
@@ -177,6 +186,7 @@ export class ResourceDataService {
       this.clearResourceRetry(resourceName);
       this.setResourcePending(resourceName, false);
       this.setResourceError(resourceName, null);
+      this.setResourceUsingCachedData(resourceName, false);
       void this.cleanupOldCaches(version);
     } catch (error) {
       console.warn(`Failed to refresh resource ${resourceName}:`, error);
@@ -279,6 +289,23 @@ export class ResourceDataService {
 
   private setResourceError(resourceName: string, error: ResourceLoadError | null): void {
     this.getResourceErrorSubject(resourceName).next(error);
+  }
+
+  private getResourceCachedSubject(resourceName: string): BehaviorSubject<boolean> {
+    let subject = this.resourceCachedSubjects.get(resourceName);
+    if (!subject) {
+      subject = new BehaviorSubject<boolean>(false);
+      this.resourceCachedSubjects.set(resourceName, subject);
+    }
+
+    return subject;
+  }
+
+  private setResourceUsingCachedData(resourceName: string, usingCachedData: boolean): void {
+    const subject = this.getResourceCachedSubject(resourceName);
+    if (subject.value !== usingCachedData) {
+      subject.next(usingCachedData);
+    }
   }
 
   private toResourceLoadError(resourceName: string, error: unknown): ResourceLoadError {

@@ -62,6 +62,9 @@ export class MasterDataService {
   readonly charactersError$: Observable<ResourceLoadError | null>;
   readonly supportCardsError$: Observable<ResourceLoadError | null>;
   readonly factorsError$: Observable<ResourceLoadError | null>;
+  readonly charactersUsingCachedData$: Observable<boolean>;
+  readonly supportCardsUsingCachedData$: Observable<boolean>;
+  readonly factorsUsingCachedData$: Observable<boolean>;
 
   constructor(private resourceData: ResourceDataService) {
     this.charactersPending$ = combineLatest([
@@ -76,6 +79,12 @@ export class MasterDataService {
     ]).pipe(map(([charactersError, namesError]) => charactersError || namesError));
     this.supportCardsError$ = this.resourceData.resourceError('support-cards-db');
     this.factorsError$ = this.resourceData.resourceError('factors');
+    this.charactersUsingCachedData$ = combineLatest([
+      this.resourceData.resourceUsingCachedData('character'),
+      this.resourceData.resourceUsingCachedData('character_names')
+    ]).pipe(map(([charactersCached, namesCached]) => charactersCached || namesCached));
+    this.supportCardsUsingCachedData$ = this.resourceData.resourceUsingCachedData('support-cards-db');
+    this.factorsUsingCachedData$ = this.resourceData.resourceUsingCachedData('factors');
   }
 
   init(): void {

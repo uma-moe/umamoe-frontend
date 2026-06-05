@@ -32,6 +32,10 @@ export class FactorService {
     return this.masterData.factorsError$;
   }
 
+  get resourcesUsingCachedData$(): Observable<boolean> {
+    return this.masterData.factorsUsingCachedData$;
+  }
+
   private setFactors(factors: Factor[]): void {
     this.factors$.next(factors);
     // Create a map for quick lookups

@@ -83,6 +83,10 @@ export class SupportCardService {
   get supportCardsError$(): Observable<ResourceLoadError | null> {
     return this.masterData.supportCardsError$;
   }
+
+  get supportCardsUsingCachedData$(): Observable<boolean> {
+    return this.masterData.supportCardsUsingCachedData$;
+  }
   // Map V3 backend response to frontend format
   private mapV3BackendToFrontend(
     response: V3SearchResult,

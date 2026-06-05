@@ -59,12 +59,12 @@ export interface SupportCardSelectDialogData {
             [diameter]="16"
             [strokeWidth]="2"
           ></mat-progress-spinner>
-          <span>Still fetching resources...</span>
+          <span>{{ (resourcesUsingCachedData$ | async) ? 'Using cached resources; refreshing...' : 'Still fetching resources...' }}</span>
         </div>
         <div class="resource-error" *ngIf="resourcesError$ | async as resourceError">
           <mat-icon>error_outline</mat-icon>
           <div>
-            <span>Resource fetch failed</span>
+            <span>{{ (resourcesUsingCachedData$ | async) ? 'Resource refresh failed' : 'Resource fetch failed' }}</span>
             <code>{{ formatResourceError(resourceError) }}</code>
           </div>
         </div>
@@ -124,6 +124,7 @@ export class SupportCardSelectDialogComponent implements OnInit {
   selectedCard: SupportCardShort | null = null;
   resourcesPending$!: Observable<boolean>;
   resourcesError$!: Observable<ResourceLoadError | null>;
+  resourcesUsingCachedData$!: Observable<boolean>;
 
   readonly cardTypes = [
     { value: SupportCardType.SPEED, label: 'Speed' },
@@ -147,6 +148,7 @@ export class SupportCardSelectDialogComponent implements OnInit {
   ) {
     this.resourcesPending$ = this.supportCardService.supportCardsPending$;
     this.resourcesError$ = this.supportCardService.supportCardsError$;
+    this.resourcesUsingCachedData$ = this.supportCardService.supportCardsUsingCachedData$;
   }
 
   ngOnInit(): void {

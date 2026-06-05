@@ -11,8 +11,8 @@ import { MatIconModule } from '@angular/material/icon';
       <div class="notice-content">
         <mat-icon>security</mat-icon>
         <p>
-          This site does not use tracking cookies. Only essential data is stored locally for authentication.
-          <a href="/privacy" target="_blank">Learn more</a>
+          Analytics cookies are optional and only run after consent. Essential data is stored locally for authentication.
+          <a href="/privacy-policy" target="_blank">Learn more</a>
         </p>
         <button mat-raised-button color="primary" (click)="accept()">
           <mat-icon>check</mat-icon>
