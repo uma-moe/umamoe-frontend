@@ -367,8 +367,7 @@ jobs:
 
           remote_tmp="/tmp/umamoe-assets-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-beta"
           remote_file="$remote_tmp/precomputed-tierlist.json"
-          remote_target_dir="${{ env.BETA_REMOTE_ASSETS_DIR }}/data"
-          remote_target="$remote_target_dir/precomputed-tierlist.json"
+          remote_target="${{ env.BETA_REMOTE_ASSETS_DIR }}/data/precomputed-tierlist.json"
 
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "rm -rf '$remote_tmp' && mkdir -p '$remote_tmp'"
@@ -379,7 +378,7 @@ jobs:
             "$DEPLOY_USER@$DEPLOY_HOST:$remote_file"
 
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "if mkdir -p '$remote_target_dir' && rm -f '$remote_target' && install -m 0644 '$remote_file' '$remote_target' 2>/dev/null; then rm -rf '$remote_tmp'; elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then sudo mkdir -p '$remote_target_dir' && sudo rm -f '$remote_target' && sudo install -m 0644 -o '$DEPLOY_USER' '$remote_file' '$remote_target' && rm -rf '$remote_tmp'; else echo 'Cannot write $remote_target as $DEPLOY_USER, and passwordless sudo is unavailable.' >&2; rm -rf '$remote_tmp'; exit 1; fi"
+            "if install -D -m 0644 '$remote_file' '$remote_target' 2>/dev/null; then rm -rf '$remote_tmp'; elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then sudo install -D -m 0644 -o '$DEPLOY_USER' '$remote_file' '$remote_target' && rm -rf '$remote_tmp'; else echo 'Cannot write $remote_target as $DEPLOY_USER, and passwordless sudo is unavailable.' >&2; rm -rf '$remote_tmp'; exit 1; fi"
 
   deploy_production:
     if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta'
@@ -634,8 +633,7 @@ jobs:
 
           remote_tmp="/tmp/umamoe-assets-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-production"
           remote_file="$remote_tmp/precomputed-tierlist.json"
-          remote_target_dir="${{ env.PROD_REMOTE_ASSETS_DIR }}/data"
-          remote_target="$remote_target_dir/precomputed-tierlist.json"
+          remote_target="${{ env.PROD_REMOTE_ASSETS_DIR }}/data/precomputed-tierlist.json"
 
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "rm -rf '$remote_tmp' && mkdir -p '$remote_tmp'"
@@ -646,4 +644,4 @@ jobs:
             "$DEPLOY_USER@$DEPLOY_HOST:$remote_file"
 
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "if mkdir -p '$remote_target_dir' && rm -f '$remote_target' && install -m 0644 '$remote_file' '$remote_target' 2>/dev/null; then rm -rf '$remote_tmp'; elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then sudo mkdir -p '$remote_target_dir' && sudo rm -f '$remote_target' && sudo install -m 0644 -o '$DEPLOY_USER' '$remote_file' '$remote_target' && rm -rf '$remote_tmp'; else echo 'Cannot write $remote_target as $DEPLOY_USER, and passwordless sudo is unavailable.' >&2; rm -rf '$remote_tmp'; exit 1; fi"
+            "if install -D -m 0644 '$remote_file' '$remote_target' 2>/dev/null; then rm -rf '$remote_tmp'; elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then sudo install -D -m 0644 -o '$DEPLOY_USER' '$remote_file' '$remote_target' && rm -rf '$remote_tmp'; else echo 'Cannot write $remote_target as $DEPLOY_USER, and passwordless sudo is unavailable.' >&2; rm -rf '$remote_tmp'; exit 1; fi"
