@@ -401,7 +401,7 @@ jobs:
         shell: bash
         env:
           PROD_TURNSTILE_SITE_KEY: ${{ secrets.PROD_TURNSTILE_SITE_KEY }}
-          PROD_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.PROD_GOOGLE_ANALYTICS_MEASUREMENT_ID }}
+          PROD_GOOGLE_ANALYTICS_MEASUREMENT_ID: ${{ secrets.GOOGLE_ANALYTICS_MEASUREMENT }}
         run: |
           set -euo pipefail
 
