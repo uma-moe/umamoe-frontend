@@ -325,18 +325,18 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       this.currentPage = urlPage - 1;
       this.listMode = 'paginated';
     }
-    this.title.setTitle('Database | honse.moe');
+    this.title.setTitle('Database | uma.moe');
     this.meta.addTags([
       { name: 'description', content: 'Browse and search the Umamusume database. Find optimal inheritance skills and support cards for your team.' },
-      { property: 'og:title', content: 'Database | honse.moe' },
+      { property: 'og:title', content: 'Database | uma.moe' },
       { property: 'og:description', content: 'Browse and search the Umamusume database. Find optimal inheritance skills and support cards for your team.' },
       { property: 'og:type', content: 'website' },
-      { property: 'og:url', content: 'https://honsemoe.com/database' },
-      { property: 'og:image', content: 'https://honsemoe.com/assets/logo.webp' },
+      { property: 'og:url', content: 'https://uma.moe/database' },
+      { property: 'og:image', content: 'https://uma.moe/assets/logo.webp' },
       { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: 'Database | honse.moe' },
+      { name: 'twitter:title', content: 'Database | uma.moe' },
       { name: 'twitter:description', content: 'Browse and search the Umamusume database. Find optimal inheritance skills and support cards for your team.' },
-      { name: 'twitter:image', content: 'https://honsemoe.com/assets/logo.webp' }
+      { name: 'twitter:image', content: 'https://uma.moe/assets/logo.webp' }
     ]);
   }
   ngOnInit() {
@@ -356,7 +356,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         this.searchRecords();
         
         // Update page title and meta tags to reflect trainer filter
-        this.title.setTitle(`Database - Trainer ${trainerId} | honse.moe`);
+        this.title.setTitle(`Database - Trainer ${trainerId} | uma.moe`);
         this.meta.updateTag({ 
           name: 'description', 
           content: `Browse records for trainer ${trainerId} in the Umamusume database.` 
@@ -370,7 +370,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         this.searchRecords();
         
         // Reset title and meta tags
-        this.title.setTitle('Database | honse.moe');
+        this.title.setTitle('Database | uma.moe');
         this.meta.updateTag({ 
           name: 'description', 
           content: 'Browse and search the Umamusume database. Find optimal inheritance skills and support cards for your team.' 

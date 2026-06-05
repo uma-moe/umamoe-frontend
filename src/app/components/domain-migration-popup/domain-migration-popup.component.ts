@@ -20,26 +20,19 @@ import { MatIconModule } from '@angular/material/icon';
       </div>
       <div mat-dialog-content class="popup-content">
         <div class="domain-change">
-          <div class="old-domain">
-            <span class="domain-label">Old:</span>
-            <span class="domain-name old">honse.moe</span>
-          </div>
-          <mat-icon class="arrow-icon">arrow_forward</mat-icon>
           <div class="new-domain">
-            <span class="domain-label">New:</span>
+            <span class="domain-label">Current domain</span>
             <span class="domain-name new">uma.moe</span>
           </div>
         </div>
         
         <p class="migration-message">
-          We've moved to a new domain! <strong>honse.moe</strong> is now <strong>uma.moe</strong> - 
-          the same great Umamusume resource hub with a cleaner, more memorable name.
+          <strong>uma.moe</strong> is the official home of this Umamusume resource hub.
         </p>
         
         <div class="migration-details">
           <ul>
-            <li><strong>honse.moe</strong>&nbsp;still works but will redirect to&nbsp;<strong>uma.moe</strong></li>
-            <li>All your bookmarks will automatically redirect</li>
+            <li>Update bookmarks to use&nbsp;<strong>uma.moe</strong></li>
             <li>No data or features have changed</li>
           </ul>
         </div>

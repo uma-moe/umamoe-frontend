@@ -33,13 +33,13 @@ export class ToolsComponent implements OnInit, OnDestroy {
     private title: Title,
     private statsService: StatsService
   ) {
-    this.title.setTitle('Tools & Calculators - honse.moe');
+    this.title.setTitle('Tools & Calculators - uma.moe');
     this.meta.addTags([
       { name: 'description', content: 'Calculation tools and utilities for Umamusume trainers including statistics, training calculators, and simulation tools' },
-      { property: 'og:title', content: 'Tools & Calculators - honse.moe' },
+      { property: 'og:title', content: 'Tools & Calculators - uma.moe' },
       { property: 'og:description', content: 'Comprehensive toolkit for Umamusume trainers with calculation tools and simulation utilities' },
       { property: 'og:type', content: 'website' },
-      { property: 'og:url', content: 'https://honsemoe.com/tools' }
+      { property: 'og:url', content: 'https://uma.moe/tools' }
     ]);
   }
   ngOnInit(): void {

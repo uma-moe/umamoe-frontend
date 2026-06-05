@@ -8,7 +8,7 @@ export class DomainStorageService {
     this.checkAndMigrateDomain();
   }
   /**
-   * Check if we're on www.honse.moe and redirect to honse.moe for localStorage consistency
+   * Check if we're on www.uma.moe or uma.moe for localStorage consistency
    * Updated to support both domains without forced redirects
    */
   private checkAndMigrateDomain(): void {
@@ -16,9 +16,9 @@ export class DomainStorageService {
     if (typeof window === 'undefined') return;
     const currentHost = window.location.hostname;
     
-    // Support both www.honse.moe and honse.moe without redirecting
+    // Support both www.uma.moe and uma.moe without redirecting
     // Both domains should work independently now that CORS credentials are enabled
-    if (currentHost === 'www.honse.moe' || currentHost === 'honse.moe') {
+    if (currentHost === 'www.uma.moe' || currentHost === 'uma.moe') {
       localStorage.setItem(this.MIGRATION_KEY, 'true');
     }
   }
@@ -70,7 +70,7 @@ export class DomainStorageService {
    * Get the canonical domain (without www)
    */
   getCanonicalDomain(): string {
-    if (typeof window === 'undefined') return 'honse.moe';
+    if (typeof window === 'undefined') return 'uma.moe';
     return window.location.hostname.replace('www.', '');
   }
 }

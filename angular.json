@@ -106,7 +106,7 @@
             "open": false,
             "disableHostCheck": true,
             "allowedHosts": [
-              "honse.moe",
+              "uma.moe",
               "localhost",
               "127.0.0.1"
             ]

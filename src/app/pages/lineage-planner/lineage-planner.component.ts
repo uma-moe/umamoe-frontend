@@ -216,10 +216,10 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     private route: ActivatedRoute,
     private plannerTransfer: PlannerTransferService,
   ) {
-    this.title.setTitle('Lineage Planner - honse.moe');
+    this.title.setTitle('Lineage Planner - uma.moe');
     this.meta.addTags([
       { name: 'description', content: 'Plan your full inheritance lineage tree for Umamusume training' },
-      { property: 'og:title', content: 'Lineage Planner - honse.moe' },
+      { property: 'og:title', content: 'Lineage Planner - uma.moe' },
       { property: 'og:description', content: 'Plan inheritance combinations across 4 generations' },
     ]);
   }

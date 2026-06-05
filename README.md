@@ -1,210 +1,79 @@
-# Uma.moe Frontend
+# uma.moe
 
-A comprehensive Umamusume: Pretty Derby database and resource hub built with Angular. Explore character data, inheritance records, support cards, tierlists, and detailed statistics for the popular mobile game.
+uma.moe is a companion website for **Umamusume: Pretty Derby**, focused on practical tools for players of the global version. It brings together database search, inheritance planning, release tracking, rankings, statistics, and account utilities in one place.
 
-![Uma.moe](https://img.shields.io/badge/uma.moe-live-success)
+Visit the live site: [uma.moe](https://uma.moe)
+
+![uma.moe](https://img.shields.io/badge/uma.moe-live-success)
 ![Angular](https://img.shields.io/badge/Angular-17-red)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## 🏇 Features
+## What It Does
 
-### 📊 **Statistics & Analytics**
-- Comprehensive character usage statistics across different race distances
-- Team composition analysis and meta trends
-- Support card popularity and effectiveness tracking
-- Real-time data visualization with interactive charts
-
-### 🧬 **Inheritance Database**
-- Extensive inheritance record database with search and filtering
-- Factor tracking (blue, pink, green, white sparks)
-- Parent lineage visualization
-- Support card integration data
-
-### 🃏 **Support Cards**
-- Complete support card database with detailed stats
-- Card effectiveness analysis and recommendations
-- Banner tracking and gacha information
-- Limit break and experience data
-
-### 📈 **Tierlists & Rankings**
-- Data-driven character tierlists
-- Performance analysis across race distances
-- Meta evolution tracking
-- Precomputed rankings for optimal performance
-
-### 🎯 **Advanced Features**
-- Multi-distance race analysis
-- Character-specific performance metrics
-- Team class distribution insights
-- Interactive data exploration tools
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js (v18 or higher)
-- npm or yarn
-- Angular CLI (v17+)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/Tunnelbliick/umamoe-frontend.git
-   cd umamoe-frontend
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Start development server**
-   ```bash
-   npm start
-   ```
-
-4. **Open your browser**
-   Navigate to `http://localhost:4200`
-
-## 🛠️ Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm start` | Start development server |
-| `npm run build` | Build for production (includes precomputation) |
-| `npm run build:dev` | Build for development |
-| `npm run build:prod` | Production build with optimizations |
-| `npm run precompute` | Run tierlist precomputation |
-| `npm run watch` | Build and watch for changes |
-| `npm test` | Run unit tests |
-| `npm run lint` | Lint the codebase |
-
-## 🏗️ Project Structure
-
-```
-src/
-├── app/
-│   ├── components/           # Reusable UI components
-│   │   ├── statistics-chart/
-│   │   ├── class-filter/
-│   │   ├── card-details-dialog/
-│   │   └── ...
-│   ├── pages/               # Route components
-│   │   ├── statistics/
-│   │   ├── inheritance-database/
-│   │   └── ...
-│   ├── services/            # Angular services
-│   │   ├── statistics.service.ts
-│   │   ├── inheritance.service.ts
-│   │   └── ...
-│   ├── models/              # TypeScript interfaces
-│   └── data/                # Static data files
-├── assets/                  # Static assets
-│   ├── images/
-│   └── data/
-└── environments/            # Environment configs
-```
-
-## 📱 Key Components
-
-### Statistics Dashboard
-Real-time analytics dashboard showing:
-- Character usage trends
-- Distance-specific performance data
-- Support card meta analysis
-- Team composition insights
+uma.moe is built around the workflows players repeat often: finding useful parents, planning inheritance, checking upcoming content, comparing performance, and understanding account or club progress.
 
 ### Inheritance Database
-Comprehensive breeding record system featuring:
-- Advanced search and filtering
-- Factor visualization
-- Performance tracking
-- Community submissions
 
-### Support Card Library
-Complete card database with:
-- Detailed card information
-- Effectiveness ratings
-- Banner history
-- Optimization recommendations
+Search community and account-linked inheritance records with filters for characters, factors, races, support cards, affinity, trainer IDs, and other practical borrowing criteria. The database is designed for narrowing down useful parents quickly rather than browsing raw records one by one.
 
-## 🔧 Configuration
+### Lineage Planner
 
-### Environment Setup
-Configure your environment variables in:
-- `src/environments/environment.ts` (development)
-- `src/environments/environment.prod.ts` (production)
+Plan full inheritance trees across parents and grandparents. The planner supports manual entries, saved veterans, bookmarks, imports, exports, and transfer flows from the database so players can move from search to planning without rebuilding the same information.
 
-### Proxy Configuration
-API proxy settings are configured in `proxy.conf.json` for development.
+### Timeline
 
-## 📊 Data Processing
+Track expected global release timing for characters, support cards, banners, events, campaigns, and major updates. The timeline is built for planning ahead and comparing future content at a glance.
 
-The application includes several data processing scripts:
+### Tierlists, Rankings, and Statistics
 
-- **`scripts/statistic.py`** - Generates statistical datasets
-- **`scripts/precompute-tierlist.js`** - Precomputes tierlist data
-- **`scripts/db-convert.py`** - Database conversion utilities
-- **`scripts/factor-convert.py`** - Factor data processing
+Explore precomputed rankings, trainer leaderboards, circle activity, and statistics pages that summarize game data into usable comparisons. These pages are meant to answer questions like what is popular, what is performing well, and how progress changes over time.
 
-## 🎨 Styling
+### Account Tools
 
-The project uses Angular Material with custom SCSS:
-- `src/styles.scss` - Global styles
-- `src/styles/utilities.scss` - Utility classes
-- Component-specific SCSS files
+Optional accounts let players link game data, manage saved veterans, bookmark database entries, view profiles, and keep useful planning state across sessions. Most browsing tools remain useful without an account.
 
-## 🚀 Production Build
+### Cookie and Privacy Controls
 
-For production deployment:
+The site includes a cookie consent flow for optional categories such as analytics and advertising. Google Analytics is only loaded after analytics consent is granted.
 
-```bash
-npm run build:prod
-```
+## Design Goals
 
-This will:
-1. Run tierlist precomputation
-2. Build the application with production optimizations
-3. Generate optimized assets in the `dist/` folder
+- Make daily Umamusume planning faster and less repetitive.
+- Prefer searchable, filterable tools over static reference pages.
+- Keep information dense enough for experienced players while staying usable on mobile.
+- Support both anonymous browsing and account-backed workflows.
 
-## 🤝 Contributing
+## Project Status
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+This repository contains the Angular frontend for the live uma.moe site. It is not packaged as a turnkey self-hosted release: the production site also depends on backend services, data pipelines, deployment secrets, generated assets, and operational infrastructure that are managed alongside the project.
 
-## 📈 Performance
+The codebase is still useful for understanding and contributing to the frontend, but the README intentionally describes the product rather than presenting this as a generic installable application.
 
-The application is optimized for performance with:
-- Lazy loading of route modules
-- OnPush change detection strategy
-- Precomputed data for faster loading
-- Efficient data caching
-- Image optimization
+## Tech Snapshot
 
-## 🔗 Related Projects
+- Angular 17 frontend
+- TypeScript
+- Angular Material
+- SCSS styling
+- Route-level lazy loading
+- Precomputed static datasets for heavier pages
+- GitHub Actions based deployment for the hosted site
 
-- **Backend API** - Powers the inheritance database and statistics
-- **Data Processing Pipeline** - Handles game data extraction and analysis
-- **Mobile App** - Companion mobile application
+## Related Systems
 
-## 📄 License
+- Backend API for accounts, profiles, rankings, circles, bookmarks, and database data
+- Resource/data pipeline for extracted and generated game data
+- Static asset generation for precomputed views and optimized media
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Disclaimer
 
-## 🎯 Live Demo
+uma.moe is an unofficial fan project and is not affiliated with Cygames or the official Umamusume: Pretty Derby publishers.
 
-Visit [uma.moe](https://uma.moe) to see the application in action!
+## License
 
-## 🙏 Acknowledgments
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
-- Cygames for creating Umamusume: Pretty Derby
-- The Umamusume community for data contributions
-- Contributors and maintainers of this project
+## Acknowledgments
 
----
-
-*Built with ❤️ for the Umamusume community*
+Thanks to the Umamusume community for data, testing, feedback, and all the tiny edge cases that make planning tools worth building.

@@ -44,18 +44,18 @@ export class HomeComponent implements OnInit, OnDestroy {
     private cookieConsentService: CookieConsentService,
     private milestoneService: MilestoneService
   ) {
-    this.title.setTitle('honse.moe Umamusume Database & Tools');
+    this.title.setTitle('uma.moe Umamusume Database & Tools');
     this.meta.addTags([
       { name: 'description', content: 'Umamusume Database, Timeline, Tierlist, and tools for the global version' },
-      { property: 'og:title', content: 'honse.moe Umamusume Database & Tools' },
+      { property: 'og:title', content: 'uma.moe Umamusume Database & Tools' },
       { property: 'og:description', content: 'Umamusume Database, Timeline, Tierlist, and tools for the global version.' },
       { property: 'og:type', content: 'website' },
-      { property: 'og:url', content: 'https://honsemoe.com/' },
-      { property: 'og:image', content: 'https://honsemoe.com/assets/logo.webp' },
+      { property: 'og:url', content: 'https://uma.moe/' },
+      { property: 'og:image', content: 'https://uma.moe/assets/logo.webp' },
       { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: 'honse.moe Umamusume Database & Tools' },
+      { name: 'twitter:title', content: 'uma.moe Umamusume Database & Tools' },
       { name: 'twitter:description', content: 'Meta-based Umamusume Database, Timeline, Tierlist, and tools for the global version.' },
-      { name: 'twitter:image', content: 'https://honsemoe.com/assets/logo.webp' }
+      { name: 'twitter:image', content: 'https://uma.moe/assets/logo.webp' }
     ]);
   }
   ngOnInit() {

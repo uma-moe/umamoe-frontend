@@ -26,7 +26,7 @@ export class CorsInterceptor implements HttpInterceptor {
   }
   private isApiRequest(url: string): boolean {
     // Check if the request is to our API endpoints
-    // Note: Apache redirects www.honse.moe -> honse.moe, but we handle both domains
+    // Note: Apache redirects www.uma.moe -> uma.moe, but we handle both domains
     return (url.includes('/api/') || url.includes('/search/')) && (
       url.includes(environment.apiUrl) ||
       url.startsWith('/api/') ||
@@ -35,12 +35,12 @@ export class CorsInterceptor implements HttpInterceptor {
       url.startsWith('http://127.0.0.1:3001/api/') ||
       url.startsWith('http://localhost:3001/search/') ||
       url.startsWith('http://127.0.0.1:3001/search/') ||
-      url.startsWith('https://honse.moe/api/') ||
-      url.startsWith('https://www.honse.moe/api/') ||
-      url.startsWith('https://honse.moe/search/') ||
-      url.startsWith('https://www.honse.moe/search/') ||
-      url.includes('honse.moe/api/') ||
-      url.includes('honse.moe/search/')
+      url.startsWith('https://uma.moe/api/') ||
+      url.startsWith('https://www.uma.moe/api/') ||
+      url.startsWith('https://uma.moe/search/') ||
+      url.startsWith('https://www.uma.moe/search/') ||
+      url.includes('uma.moe/api/') ||
+      url.includes('uma.moe/search/')
     );
   }
 }

@@ -128,18 +128,18 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     cardTransformOffset = 25;
     private resizeObserver?: ResizeObserver;
     constructor(private timelineService: TimelineService, private ngZone: NgZone, private cdr: ChangeDetectorRef, private meta: Meta, private title: Title) {
-        this.title.setTitle('Timeline | honse.moe');
+        this.title.setTitle('Timeline | uma.moe');
         this.meta.addTags([
             { name: 'description', content: 'Check the estimated release timeline for the global version. When does your favorite character release?' },
-            { property: 'og:title', content: 'Timeline | honse.moe Umamusume Tools' },
+            { property: 'og:title', content: 'Timeline | uma.moe Umamusume Tools' },
             { property: 'og:description', content: 'Check the estimated release timeline for the global version. When does your favorite character release?' },
             { property: 'og:type', content: 'website' },
-            { property: 'og:url', content: 'https://honse.moe/timeline' },
-            { property: 'og:image', content: 'https://honse.moe/assets/logo.webp' },
+            { property: 'og:url', content: 'https://uma.moe/timeline' },
+            { property: 'og:image', content: 'https://uma.moe/assets/logo.webp' },
             { name: 'twitter:card', content: 'summary_large_image' },
-            { name: 'twitter:title', content: 'Timeline | honse.moe' },
+            { name: 'twitter:title', content: 'Timeline | uma.moe' },
             { name: 'twitter:description', content: 'Check the estimated release timeline for the global version. When does your favorite character release?' },
-            { name: 'twitter:image', content: 'https://honse.moe/assets/logo.webp' }
+            { name: 'twitter:image', content: 'https://uma.moe/assets/logo.webp' }
         ]);
     }
     @HostListener('window:resize', ['$event'])
