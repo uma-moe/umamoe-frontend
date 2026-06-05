@@ -30,7 +30,12 @@ export class GoogleAnalyticsService {
     private ngZone: NgZone,
     @Inject(DOCUMENT) private document: Document,
     @Inject(PLATFORM_ID) private platformId: Object,
-  ) {}
+  ) {
+    this.debug('service constructed', {
+      production: environment.production,
+      measurementId: this.redactedMeasurementId,
+    });
+  }
 
   init(): void {
     const browser = isPlatformBrowser(this.platformId);
@@ -101,9 +106,13 @@ export class GoogleAnalyticsService {
     script.id = this.scriptId;
     script.async = true;
     script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(this.measurementId)}`;
+    const nonce = this.getScriptNonce();
+    if (nonce) {
+      script.nonce = nonce;
+    }
     script.onload = () => this.debug('script loaded');
     script.onerror = event => this.debug('script failed to load', event);
-    this.debug('append script', { src: script.src });
+    this.debug('append script', { src: script.src, hasNonce: !!nonce });
     this.document.head.appendChild(script);
   }
 
@@ -224,11 +233,16 @@ export class GoogleAnalyticsService {
     }
 
     if (data === undefined) {
-      console.info(`[GoogleAnalytics] ${message}`);
+      console.warn(`[GoogleAnalytics] ${message}`);
       return;
     }
 
-    console.info(`[GoogleAnalytics] ${message}`, data);
+    console.warn(`[GoogleAnalytics] ${message}`, data);
+  }
+
+  private getScriptNonce(): string {
+    const nonceScript = this.document.querySelector<HTMLScriptElement>('script[nonce]');
+    return nonceScript?.nonce || nonceScript?.getAttribute('nonce') || '';
   }
 
   private get redactedMeasurementId(): string {
