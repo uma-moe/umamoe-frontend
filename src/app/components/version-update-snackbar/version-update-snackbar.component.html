@@ -1,14 +1,10 @@
 <div class="version-update" role="status" aria-live="polite">
-  <div class="version-update__accent" aria-hidden="true"></div>
-
   <div class="version-update__icon" aria-hidden="true">
-    <mat-icon>system_update_alt</mat-icon>
+    <mat-icon>refresh</mat-icon>
   </div>
 
   <div class="version-update__copy">
-    <div class="version-update__eyebrow">Update ready</div>
-    <div class="version-update__title">A fresh build is live</div>
-    <div class="version-update__body">Reload to use the newest site files.</div>
+    <div class="version-update__title">Update available</div>
     <div class="version-update__versions" [title]="data.currentVersion + ' -> ' + data.deployedVersion">
       <span>{{ currentVersion }}</span>
       <mat-icon>arrow_forward</mat-icon>
@@ -17,12 +13,8 @@
   </div>
 
   <div class="version-update__actions">
-    <button type="button" mat-button class="version-update__dismiss" (click)="dismiss()">
-      Later
-    </button>
-
     <button type="button" mat-flat-button class="version-update__reload" (click)="reload()">
-      <mat-icon>restart_alt</mat-icon>
+      <mat-icon>refresh</mat-icon>
       <span>Reload</span>
     </button>
   </div>

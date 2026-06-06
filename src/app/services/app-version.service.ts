@@ -15,10 +15,8 @@ export class AppVersionService {
   private readonly versionUrl = '/version.json';
   private readonly reloadVersionParam = '__uma_version';
   private readonly minimumCheckIntervalMs = 60000;
-  private readonly dismissSnoozeMs = 15 * 60 * 1000;
   private readonly currentVersion = this.readCurrentVersion();
   private lastCheckedAt = 0;
-  private snoozedUntil = 0;
   private checking = false;
   private promptOpen = false;
   private initialized = false;
@@ -62,10 +60,6 @@ export class AppVersionService {
     }
 
     const now = Date.now();
-    if (!force && now < this.snoozedUntil) {
-      return;
-    }
-
     if (!force && now - this.lastCheckedAt < this.minimumCheckIntervalMs) {
       return;
     }
@@ -128,11 +122,8 @@ export class AppVersionService {
         this.forceReload(deployedVersion);
       });
 
-      snackBarRef.afterDismissed().subscribe(result => {
+      snackBarRef.afterDismissed().subscribe(() => {
         this.promptOpen = false;
-        if (!result.dismissedByAction) {
-          this.snoozedUntil = Date.now() + this.dismissSnoozeMs;
-        }
       });
     });
   }

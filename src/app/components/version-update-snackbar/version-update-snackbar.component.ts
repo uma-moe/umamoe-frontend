@@ -33,10 +33,6 @@ export class VersionUpdateSnackbarComponent {
     this.snackBarRef.dismissWithAction();
   }
 
-  dismiss(): void {
-    this.snackBarRef.dismiss();
-  }
-
   private formatVersion(version: string): string {
     const trimmedVersion = version.trim();
     if (!trimmedVersion) {
