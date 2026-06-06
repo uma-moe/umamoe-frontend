@@ -19,7 +19,6 @@ declare global {
 export class GoogleAnalyticsService {
   private readonly measurementId = environment.googleAnalytics.measurementId.trim();
   private readonly scriptId = 'google-analytics-gtag';
-  private readonly debugEnabled = !environment.production;
   private initialized = false;
   private trackingEnabled = false;
   private lastTrackedUrl = '';
@@ -30,41 +29,18 @@ export class GoogleAnalyticsService {
     private ngZone: NgZone,
     @Inject(DOCUMENT) private document: Document,
     @Inject(PLATFORM_ID) private platformId: Object,
-  ) {
-    this.debug('service constructed', {
-      production: environment.production,
-      measurementId: this.redactedMeasurementId,
-    });
-  }
+  ) {}
 
   init(): void {
     const browser = isPlatformBrowser(this.platformId);
     if (!browser || !this.measurementId) {
-      this.debug('init skipped', {
-        browser,
-        hasMeasurementId: !!this.measurementId,
-        measurementId: this.redactedMeasurementId,
-      });
       return;
     }
-
-    this.debug('init', {
-      measurementId: this.redactedMeasurementId,
-      currentConsent: this.cookieConsentService.consent,
-      currentUrl: this.router.url,
-    });
 
     this.cookieConsentService.consent$.pipe(
       map(consent => consent?.analytics ?? false),
       distinctUntilChanged(),
-    ).subscribe(analyticsAllowed => {
-      this.debug('analytics consent changed', { analyticsAllowed });
-      if (analyticsAllowed) {
-        this.enableTracking();
-      } else {
-        this.disableTracking();
-      }
-    });
+    ).subscribe(analyticsAllowed => analyticsAllowed ? this.enableTracking() : this.disableTracking());
 
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),
@@ -75,11 +51,9 @@ export class GoogleAnalyticsService {
 
   private enableTracking(): void {
     if (this.trackingEnabled) {
-      this.debug('enable skipped: already tracking');
       return;
     }
 
-    this.debug('enable tracking');
     this.trackingEnabled = true;
     this.setGaDisabled(false);
     this.ensureScript();
@@ -88,7 +62,6 @@ export class GoogleAnalyticsService {
   }
 
   private disableTracking(): void {
-    this.debug('disable tracking');
     this.trackingEnabled = false;
     this.lastTrackedUrl = '';
     this.setGaDisabled(true);
@@ -98,7 +71,6 @@ export class GoogleAnalyticsService {
 
   private ensureScript(): void {
     if (this.document.getElementById(this.scriptId)) {
-      this.debug('script already present');
       return;
     }
 
@@ -110,9 +82,6 @@ export class GoogleAnalyticsService {
     if (nonce) {
       script.nonce = nonce;
     }
-    script.onload = () => this.debug('script loaded');
-    script.onerror = event => this.debug('script failed to load', event);
-    this.debug('append script', { src: script.src, hasNonce: !!nonce });
     this.document.head.appendChild(script);
   }
 
@@ -124,31 +93,25 @@ export class GoogleAnalyticsService {
     } as GtagFunction;
 
     windowRef.gtag('consent', 'update', { analytics_storage: 'granted' });
-    this.debug('gtag consent granted');
 
     if (this.initialized) {
-      this.debug('gtag already initialized');
       return;
     }
 
     windowRef.gtag('js', new Date());
     this.initialized = true;
-    this.debug('gtag initialized');
   }
 
   private trackPageView(url: string): void {
     if (!this.trackingEnabled) {
-      this.debug('page view skipped: tracking disabled', { url });
       return;
     }
 
     if (!this.window.gtag) {
-      this.debug('page view skipped: gtag missing', { url });
       return;
     }
 
     if (url === this.lastTrackedUrl) {
-      this.debug('page view skipped: duplicate url', { url });
       return;
     }
 
@@ -156,11 +119,6 @@ export class GoogleAnalyticsService {
     const pageLocation = new URL(url, this.document.location.origin).href;
 
     this.ngZone.runOutsideAngular(() => {
-      this.debug('send page view', {
-        page_location: pageLocation,
-        page_path: url,
-        page_title: this.document.title,
-      });
       this.window.gtag?.('config', this.measurementId, {
         page_location: pageLocation,
         page_path: url,
@@ -220,36 +178,14 @@ export class GoogleAnalyticsService {
 
   private setGaDisabled(disabled: boolean): void {
     (this.window as GoogleAnalyticsWindow)[`ga-disable-${this.measurementId}`] = disabled;
-    this.debug('ga-disable flag updated', { disabled });
   }
 
   private get window(): Window {
     return this.document.defaultView ?? window;
   }
 
-  private debug(message: string, data?: unknown): void {
-    if (!this.debugEnabled) {
-      return;
-    }
-
-    if (data === undefined) {
-      console.warn(`[GoogleAnalytics] ${message}`);
-      return;
-    }
-
-    console.warn(`[GoogleAnalytics] ${message}`, data);
-  }
-
   private getScriptNonce(): string {
     const nonceScript = this.document.querySelector<HTMLScriptElement>('script[nonce]');
     return nonceScript?.nonce || nonceScript?.getAttribute('nonce') || '';
-  }
-
-  private get redactedMeasurementId(): string {
-    if (!this.measurementId) {
-      return '(empty)';
-    }
-
-    return `${this.measurementId.slice(0, 4)}...${this.measurementId.slice(-4)}`;
   }
 }
