@@ -13,6 +13,7 @@ interface AppVersionManifest {
 @Injectable({ providedIn: 'root' })
 export class AppVersionService {
   private readonly versionUrl = '/version.json';
+  private readonly reloadVersionParam = '__uma_version';
   private readonly minimumCheckIntervalMs = 60000;
   private readonly dismissSnoozeMs = 15 * 60 * 1000;
   private readonly currentVersion = this.readCurrentVersion();
@@ -35,6 +36,7 @@ export class AppVersionService {
     }
 
     this.initialized = true;
+    this.removeReloadVersionParam();
     void this.checkForUpdate(true);
 
     this.ngZone.runOutsideAngular(() => {
@@ -74,7 +76,7 @@ export class AppVersionService {
     try {
       const deployedVersion = await this.fetchDeployedVersion();
       if (deployedVersion && deployedVersion !== this.currentVersion) {
-        this.showReloadPrompt();
+        this.showReloadPrompt(deployedVersion);
       }
     } catch {
       // Version checks are best-effort; the app should keep running offline.
@@ -104,7 +106,7 @@ export class AppVersionService {
     return manifest.version?.trim() || null;
   }
 
-  private showReloadPrompt(): void {
+  private showReloadPrompt(deployedVersion: string): void {
     if (this.promptOpen) {
       return;
     }
@@ -116,10 +118,14 @@ export class AppVersionService {
         horizontalPosition: 'center',
         verticalPosition: 'bottom',
         panelClass: ['update-available-snackbar'],
+        data: {
+          currentVersion: this.currentVersion,
+          deployedVersion,
+        },
       });
 
       snackBarRef.onAction().subscribe(() => {
-        this.window.location.reload();
+        this.forceReload(deployedVersion);
       });
 
       snackBarRef.afterDismissed().subscribe(result => {
@@ -129,6 +135,23 @@ export class AppVersionService {
         }
       });
     });
+  }
+
+  private forceReload(deployedVersion: string): void {
+    const url = new URL(this.window.location.href);
+    url.searchParams.set(this.reloadVersionParam, deployedVersion);
+    this.window.location.replace(url.href);
+  }
+
+  private removeReloadVersionParam(): void {
+    const url = new URL(this.window.location.href);
+    if (!url.searchParams.has(this.reloadVersionParam)) {
+      return;
+    }
+
+    url.searchParams.delete(this.reloadVersionParam);
+    const cleanUrl = `${url.pathname}${url.search}${url.hash}`;
+    this.window.history.replaceState(this.window.history.state, this.document.title, cleanUrl);
   }
 
   private readCurrentVersion(): string {

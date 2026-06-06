@@ -164,6 +164,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Prepare beta app version
+        id: app_version
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "version=beta-build.${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+
       - name: Build shell artifact
         uses: docker/build-push-action@v6
         with:
@@ -175,7 +182,7 @@ jobs:
           build-args: |
             BUILD_SCRIPT=${{ steps.plan.outputs.build_script }}
             FRONTEND_CONFIG_FINGERPRINT=${{ steps.frontend_config.outputs.frontend_config_sha }}
-            APP_BUILD_VERSION=${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-beta
+            APP_BUILD_VERSION=${{ steps.app_version.outputs.version }}
             APP_BUILD_COMMIT=${{ github.sha }}
             APP_BUILD_ENVIRONMENT=beta
           outputs: type=local,dest=${{ runner.temp }}/shell-export
@@ -240,7 +247,7 @@ jobs:
             exit 1
           fi
 
-          expected_app_version="${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-beta"
+          expected_app_version="${{ steps.app_version.outputs.version }}"
           shell_root="${{ runner.temp }}/shell-export/var/www/html/umamoe"
           if [[ ! -f "$shell_root/version.json" ]]; then
             echo "::error title=Missing BETA version manifest::The beta shell artifact does not include version.json."
@@ -406,6 +413,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Prepare production app version
+        id: production_app_version
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "version=prod-build.${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+
       - name: Inject production frontend config from GitHub settings
         id: production_frontend_config
         shell: bash
@@ -485,7 +499,7 @@ jobs:
           build-args: |
             BUILD_SCRIPT=build:prod
             FRONTEND_CONFIG_FINGERPRINT=${{ steps.production_frontend_config.outputs.frontend_config_sha }}
-            APP_BUILD_VERSION=${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-prod
+            APP_BUILD_VERSION=${{ steps.production_app_version.outputs.version }}
             APP_BUILD_COMMIT=${{ github.sha }}
             APP_BUILD_ENVIRONMENT=production
           outputs: type=local,dest=${{ runner.temp }}/production-shell-export
@@ -560,7 +574,7 @@ jobs:
             exit 1
           fi
 
-          expected_app_version="${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-prod"
+          expected_app_version="${{ steps.production_app_version.outputs.version }}"
           shell_root="${{ runner.temp }}/production-shell-export/var/www/html/umamoe"
           if [[ ! -f "$shell_root/version.json" ]]; then
             echo "::error title=Missing PROD version manifest::The production shell artifact does not include version.json."

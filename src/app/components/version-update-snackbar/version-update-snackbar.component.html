@@ -9,6 +9,11 @@
     <div class="version-update__eyebrow">Update ready</div>
     <div class="version-update__title">A fresh build is live</div>
     <div class="version-update__body">Reload to use the newest site files.</div>
+    <div class="version-update__versions" [title]="data.currentVersion + ' -> ' + data.deployedVersion">
+      <span>{{ currentVersion }}</span>
+      <mat-icon>arrow_forward</mat-icon>
+      <span>{{ deployedVersion }}</span>
+    </div>
   </div>
 
   <div class="version-update__actions">
