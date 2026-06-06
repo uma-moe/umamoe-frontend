@@ -23,8 +23,21 @@ FROM alpine:3.20 AS shell-files
 
 WORKDIR /var/www/html/umamoe
 
+ARG APP_BUILD_VERSION=local
+ARG APP_BUILD_COMMIT=local
+ARG APP_BUILD_ENVIRONMENT=local
+ARG APP_BUILD_TIME=
+
 COPY --from=build /app/dist/browser/ ./
-RUN rm -rf assets
+RUN set -eu; \
+	rm -rf assets; \
+	build_time="${APP_BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"; \
+	printf '{\n  "version": "%s",\n  "commit": "%s",\n  "environment": "%s",\n  "builtAt": "%s"\n}\n' \
+		"$APP_BUILD_VERSION" \
+		"$APP_BUILD_COMMIT" \
+		"$APP_BUILD_ENVIRONMENT" \
+		"$build_time" > version.json; \
+	sed -i "s|<meta name=\"app-build-version\" content=\"[^\"]*\">|<meta name=\"app-build-version\" content=\"$APP_BUILD_VERSION\">|" index.html
 
 FROM scratch AS shell
 

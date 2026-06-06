@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { MATERIAL_SANITY_CHECKS } from '@angular/material/core';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { routes } from './app.routes';
 import { CorsInterceptor } from './interceptors/cors.interceptor';
 import { RateLimitInterceptor } from './interceptors/rate-limit.interceptor';
@@ -14,6 +15,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideAnimationsAsync(),
     provideHttpClient(withInterceptorsFromDi()),
+    importProvidersFrom(MatSnackBarModule),
     {
       // Avoid first-open synchronous style/layout read in MatCommonModule
       // (`_checkThemeIsPresent`), which can cause a visible hold before

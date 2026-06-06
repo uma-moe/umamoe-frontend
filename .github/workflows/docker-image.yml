@@ -175,6 +175,9 @@ jobs:
           build-args: |
             BUILD_SCRIPT=${{ steps.plan.outputs.build_script }}
             FRONTEND_CONFIG_FINGERPRINT=${{ steps.frontend_config.outputs.frontend_config_sha }}
+            APP_BUILD_VERSION=${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-beta
+            APP_BUILD_COMMIT=${{ github.sha }}
+            APP_BUILD_ENVIRONMENT=beta
           outputs: type=local,dest=${{ runner.temp }}/shell-export
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
@@ -234,6 +237,21 @@ jobs:
 
           if [[ "$found_expected_ga" != "true" ]]; then
             echo "::error title=BETA Google Analytics measurement ID mismatch::The exported JavaScript measurementId does not match the configured GitHub value."
+            exit 1
+          fi
+
+          expected_app_version="${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-beta"
+          shell_root="${{ runner.temp }}/shell-export/var/www/html/umamoe"
+          if [[ ! -f "$shell_root/version.json" ]]; then
+            echo "::error title=Missing BETA version manifest::The beta shell artifact does not include version.json."
+            exit 1
+          fi
+          if ! grep -Fq "\"version\": \"$expected_app_version\"" "$shell_root/version.json"; then
+            echo "::error title=BETA version manifest mismatch::version.json does not match the expected build version."
+            exit 1
+          fi
+          if ! grep -Fq "name=\"app-build-version\" content=\"$expected_app_version\"" "$shell_root/index.html"; then
+            echo "::error title=BETA app shell version mismatch::index.html does not contain the expected app-build-version meta tag."
             exit 1
           fi
 
@@ -479,6 +497,9 @@ jobs:
           build-args: |
             BUILD_SCRIPT=build:prod
             FRONTEND_CONFIG_FINGERPRINT=${{ steps.production_frontend_config.outputs.frontend_config_sha }}
+            APP_BUILD_VERSION=${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-prod
+            APP_BUILD_COMMIT=${{ github.sha }}
+            APP_BUILD_ENVIRONMENT=production
           outputs: type=local,dest=${{ runner.temp }}/production-shell-export
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
@@ -548,6 +569,21 @@ jobs:
 
           if [[ "$found_expected_ga" != "true" ]]; then
             echo "::error title=PROD Google Analytics measurement ID mismatch::The exported JavaScript measurementId does not match the configured GitHub value."
+            exit 1
+          fi
+
+          expected_app_version="${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-prod"
+          shell_root="${{ runner.temp }}/production-shell-export/var/www/html/umamoe"
+          if [[ ! -f "$shell_root/version.json" ]]; then
+            echo "::error title=Missing PROD version manifest::The production shell artifact does not include version.json."
+            exit 1
+          fi
+          if ! grep -Fq "\"version\": \"$expected_app_version\"" "$shell_root/version.json"; then
+            echo "::error title=PROD version manifest mismatch::version.json does not match the expected build version."
+            exit 1
+          fi
+          if ! grep -Fq "name=\"app-build-version\" content=\"$expected_app_version\"" "$shell_root/index.html"; then
+            echo "::error title=PROD app shell version mismatch::index.html does not contain the expected app-build-version meta tag."
             exit 1
           fi
 

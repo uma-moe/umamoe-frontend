@@ -3,10 +3,25 @@
 
 # Revalidate the SPA shell so new hashed bundle references are picked up after deploys
 /
-  Cache-Control: no-cache, must-revalidate
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
 
 /index.html
-  Cache-Control: no-cache, must-revalidate
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/version.json
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
 
 # Cache hashed assets for 1 year (they have unique hashes)
 /*.js

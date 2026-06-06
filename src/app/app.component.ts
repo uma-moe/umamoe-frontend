@@ -13,6 +13,7 @@ import { AuthService } from './services/auth.service';
 import { MasterDataService } from './services/master-data.service';
 import { TurnstileService } from './services/turnstile.service';
 import { GoogleAnalyticsService } from './services/google-analytics.service';
+import { AppVersionService } from './services/app-version.service';
 import { environment } from '../environments/environment';
 import { filter, throttleTime } from 'rxjs';
 @Component({
@@ -37,6 +38,7 @@ export class AppComponent implements OnInit {
     private activatedRoute: ActivatedRoute,
     private turnstileService: TurnstileService,
     private googleAnalyticsService: GoogleAnalyticsService,
+    private appVersionService: AppVersionService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
   // Debug shortcut: Ctrl+Shift+L to test rate limit popup (dev only)
@@ -50,6 +52,7 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     this.masterDataService.init();
     this.googleAnalyticsService.init();
+    this.appVersionService.init();
 
     // Handle OAuth token from any URL (backend redirects to /?token=...)
     if (isPlatformBrowser(this.platformId)) {
