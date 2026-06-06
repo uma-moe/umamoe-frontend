@@ -1,6 +1,7 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { Inject, Injectable, NgZone, PLATFORM_ID } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { VersionUpdateSnackbarComponent } from '../components/version-update-snackbar/version-update-snackbar.component';
 
 interface AppVersionManifest {
   version?: string;
@@ -13,8 +14,10 @@ interface AppVersionManifest {
 export class AppVersionService {
   private readonly versionUrl = '/version.json';
   private readonly minimumCheckIntervalMs = 60000;
+  private readonly dismissSnoozeMs = 15 * 60 * 1000;
   private readonly currentVersion = this.readCurrentVersion();
   private lastCheckedAt = 0;
+  private snoozedUntil = 0;
   private checking = false;
   private promptOpen = false;
   private initialized = false;
@@ -57,6 +60,10 @@ export class AppVersionService {
     }
 
     const now = Date.now();
+    if (!force && now < this.snoozedUntil) {
+      return;
+    }
+
     if (!force && now - this.lastCheckedAt < this.minimumCheckIntervalMs) {
       return;
     }
@@ -104,7 +111,7 @@ export class AppVersionService {
 
     this.ngZone.run(() => {
       this.promptOpen = true;
-      const snackBarRef = this.snackBar.open('A new version is available.', 'Reload', {
+      const snackBarRef = this.snackBar.openFromComponent(VersionUpdateSnackbarComponent, {
         duration: 0,
         horizontalPosition: 'center',
         verticalPosition: 'bottom',
@@ -115,8 +122,11 @@ export class AppVersionService {
         this.window.location.reload();
       });
 
-      snackBarRef.afterDismissed().subscribe(() => {
+      snackBarRef.afterDismissed().subscribe(result => {
         this.promptOpen = false;
+        if (!result.dismissedByAction) {
+          this.snoozedUntil = Date.now() + this.dismissSnoozeMs;
+        }
       });
     });
   }

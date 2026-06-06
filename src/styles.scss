@@ -1469,6 +1469,21 @@ body.christmas-theme {
   }
 }
 
+.mat-mdc-snack-bar-container.update-available-snackbar {
+  --mdc-snackbar-container-color: transparent;
+
+  .mdc-snackbar__surface {
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .mdc-snackbar__label {
+    padding: 0 !important;
+  }
+}
+
 // ===== GLOBAL: FACTOR AUTOCOMPLETE / SELECT PANEL =====
 
 // Field styles for the standard dark autocomplete/select inputs
