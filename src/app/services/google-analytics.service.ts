@@ -22,6 +22,7 @@ export class GoogleAnalyticsService {
   private initialized = false;
   private trackingEnabled = false;
   private lastTrackedUrl = '';
+  private lastNavigationUrl = '';
 
   constructor(
     private cookieConsentService: CookieConsentService,
@@ -45,7 +46,8 @@ export class GoogleAnalyticsService {
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),
     ).subscribe(event => {
-      this.trackPageView(event.urlAfterRedirects);
+      this.lastNavigationUrl = event.urlAfterRedirects;
+      this.deferTrackPageView(event.urlAfterRedirects);
     });
   }
 
@@ -58,7 +60,11 @@ export class GoogleAnalyticsService {
     this.setGaDisabled(false);
     this.ensureScript();
     this.ensureConfigured();
-    this.trackPageView(this.router.url);
+
+    const currentUrl = this.getCurrentStableUrl();
+    if (currentUrl) {
+      this.deferTrackPageView(currentUrl);
+    }
   }
 
   private disableTracking(): void {
@@ -99,6 +105,7 @@ export class GoogleAnalyticsService {
     }
 
     windowRef.gtag('js', new Date());
+    windowRef.gtag('config', this.measurementId, { send_page_view: false });
     this.initialized = true;
   }
 
@@ -111,20 +118,46 @@ export class GoogleAnalyticsService {
       return;
     }
 
-    if (url === this.lastTrackedUrl) {
+    const trackedUrl = this.sanitizeUrlForAnalytics(url);
+
+    if (!trackedUrl || trackedUrl === this.lastTrackedUrl) {
       return;
     }
 
-    this.lastTrackedUrl = url;
-    const pageLocation = new URL(url, this.document.location.origin).href;
+    this.lastTrackedUrl = trackedUrl;
+    const pageLocation = new URL(trackedUrl, this.document.location.origin).href;
 
     this.ngZone.runOutsideAngular(() => {
-      this.window.gtag?.('config', this.measurementId, {
+      this.window.gtag?.('event', 'page_view', {
         page_location: pageLocation,
-        page_path: url,
+        page_path: trackedUrl,
         page_title: this.document.title,
+        send_to: this.measurementId,
       });
     });
+  }
+
+  private deferTrackPageView(url: string): void {
+    this.window.setTimeout(() => this.trackPageView(url), 0);
+  }
+
+  private getCurrentStableUrl(): string {
+    if (this.lastNavigationUrl) {
+      return this.lastNavigationUrl;
+    }
+
+    return this.router.navigated ? this.router.url : '';
+  }
+
+  private sanitizeUrlForAnalytics(url: string): string {
+    const parsedUrl = new URL(url, this.document.location.origin);
+    const sensitiveParams = ['token', 'access_token', 'id_token', 'refresh_token', 'code', 'state'];
+
+    for (const param of sensitiveParams) {
+      parsedUrl.searchParams.delete(param);
+    }
+
+    return `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
   }
 
   private expireGoogleAnalyticsCookies(): void {
