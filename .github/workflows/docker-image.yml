@@ -370,7 +370,7 @@ jobs:
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
         run: |
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "mkdir -p '${{ env.BETA_REMOTE_SHELL_DIR }}' '${{ env.BETA_REMOTE_ASSETS_DIR }}'"
+            "mkdir -p '${{ env.BETA_REMOTE_SHELL_DIR }}' '${{ env.BETA_REMOTE_ASSETS_DIR }}/data'"
 
       - name: Deploy beta shell bundle
         shell: bash
@@ -392,7 +392,8 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
         run: |
-          rsync -az --inplace --no-perms --no-owner --no-group \
+          # Avoid --inplace: stale remote files may not be writable by the deploy user.
+          rsync -az --no-perms --no-owner --no-group \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
             "${{ runner.temp }}/asset-site/data/precomputed-tierlist.json" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_ASSETS_DIR }}/data/"
@@ -653,7 +654,7 @@ jobs:
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
         run: |
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "mkdir -p '${{ env.PROD_REMOTE_SHELL_DIR }}' '${{ env.PROD_REMOTE_ASSETS_DIR }}'"
+            "mkdir -p '${{ env.PROD_REMOTE_SHELL_DIR }}' '${{ env.PROD_REMOTE_ASSETS_DIR }}/data'"
 
       - name: Deploy production shell bundle
         shell: bash
@@ -675,7 +676,8 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
         run: |
-          rsync -az --inplace --no-perms --no-owner --no-group \
+          # Avoid --inplace: stale remote files may not be writable by the deploy user.
+          rsync -az --no-perms --no-owner --no-group \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
             "${{ runner.temp }}/asset-site/data/precomputed-tierlist.json" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.PROD_REMOTE_ASSETS_DIR }}/data/"
