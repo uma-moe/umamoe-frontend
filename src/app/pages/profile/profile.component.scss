@@ -3,7 +3,7 @@
 // --- Profile Page ---------------------------------
 // Consistent with circle-details & rankings page patterns
 
-.profile-page { min-height: calc(100vh - 60px); background: var(--bg-secondary); }
+.profile-page { flex: 1 1 auto; background: var(--bg-secondary); }
 
 // --- Loading / Error states ----------------------
 .loading-container, .error-container {
@@ -692,9 +692,6 @@
 }
 
 @media (max-width: 480px) {
-  // Navbar is shorter so adjust min-height
-  .profile-page { min-height: calc(100vh - 52px); }
-
   // Page header
   .page-header { padding: 1rem 0; }
 

@@ -19,8 +19,8 @@ import { Subscription } from 'rxjs';
               <mat-icon>cookie</mat-icon>
               <span>Cookie Settings</span>
             </div>
-            <p>We use cookies to keep you logged in and to improve our services. Some cookies are optional and help us understand how you use the site or display relevant ads. You can change your preferences at any time.</p>
-            <p class="privacy-link">Read our <a routerLink="/privacy-policy">Privacy Policy</a> for more information.</p>
+            <p>We use essential cookies to keep the site working. Optional analytics and advertising help us improve uma.moe.</p>
+            <p class="privacy-link">You can change this anytime. <a routerLink="/privacy-policy">Privacy Policy</a></p>
           </div>
           <div class="banner-actions">
             <button class="consent-btn secondary" (click)="showDetails = true">Customize</button>
@@ -57,7 +57,7 @@ import { Subscription } from 'rxjs';
                   <mat-icon>analytics</mat-icon>
                   <span class="category-name">Analytics</span>
                 </div>
-                <p class="category-desc">Google Analytics page views help us understand how visitors use the site so we can improve it.</p>
+                <p class="category-desc">Allow Google Analytics cookies and full page-view reporting. When off, Google may receive cookieless consent-mode signals for aggregate modeling.</p>
               </div>
               <div class="toggle">
                 <div class="toggle-track" [class.on]="choices.analytics"><div class="toggle-thumb"></div></div>

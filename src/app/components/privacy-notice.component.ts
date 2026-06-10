@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
       <div class="notice-content">
         <mat-icon>security</mat-icon>
         <p>
-          Analytics cookies are optional and only run after consent. Essential data is stored locally for authentication.
+          Analytics cookies are optional and only run after consent. Google Analytics uses cookieless consent-mode signals when analytics cookies are off.
           <a href="/privacy-policy" target="_blank">Learn more</a>
         </p>
         <button mat-raised-button color="primary" (click)="accept()">

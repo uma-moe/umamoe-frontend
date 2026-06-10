@@ -35,7 +35,7 @@ Optional accounts let players link game data, manage saved veterans, bookmark da
 
 ### Cookie and Privacy Controls
 
-The site includes a cookie consent flow for optional categories such as analytics and advertising. Google Analytics is only loaded after analytics consent is granted.
+The site includes a cookie consent flow for optional categories such as analytics and advertising. Google Analytics uses Consent Mode v2 with denied defaults, so analytics cookies and full reporting only run after analytics consent is granted.
 
 ## Design Goals
 

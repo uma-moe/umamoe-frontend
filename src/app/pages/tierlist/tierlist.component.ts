@@ -19,6 +19,7 @@ import { CardHoverMenuComponent as CardHoverMenuSimpleComponent } from '../../co
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { CardDetailsDialogComponent } from '../../components/card-details-dialog/card-details-dialog.component';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { AppVersionService } from '../../services/app-version.service';
 interface TierGroup {
   tier: string;
   cards: PrecomputedCardData[];
@@ -92,7 +93,8 @@ export class TierlistComponent implements OnInit, OnDestroy {
   isMobile: boolean = false;
   constructor(
     private tierlistService: TierlistOptimizedService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private appVersionService: AppVersionService
   ) {
     this.initializeTypeTierlists();
   }
@@ -142,7 +144,7 @@ export class TierlistComponent implements OnInit, OnDestroy {
           console.error('Error loading precomputed tierlists:', error);
           this.typeTierlists.forEach(typeData => {
             typeData.loading = false;
-            typeData.error = 'Failed to load tierlist';
+            typeData.error = this.withBuild('Failed to load tierlist');
           });
           this.loading = false;
         }
@@ -340,5 +342,9 @@ export class TierlistComponent implements OnInit, OnDestroy {
     if (this.isMobile && event.card) {
       this.openCardDialog(event.card);
     }
+  }
+
+  private withBuild(message: string): string {
+    return this.appVersionService.appendBuildTag(message);
   }
 }

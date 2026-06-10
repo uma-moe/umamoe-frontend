@@ -6,7 +6,7 @@
 }
 // @keyframes spin is in global utilities.scss
 
-.circle-details-page { min-height: calc(100vh - 60px); background: var(--bg-secondary); padding-bottom: 2rem; }
+.circle-details-page { flex: 1 1 auto; background: var(--bg-secondary); padding-bottom: 2rem; }
 
 .page-header {
   background: var(--surface-1);

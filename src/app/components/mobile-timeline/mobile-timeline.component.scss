@@ -510,14 +510,22 @@
     left: 0;
     right: 0;
     z-index: 1000;
-    background: var(--bg-secondary);
-    border-top: 1px solid var(--border-primary);
-    backdrop-filter: blur(20px);
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    background: transparent;
+    border-top: 1px solid transparent;
+    backdrop-filter: none;
+    box-shadow: none;
+    pointer-events: none;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     transform: translateY(calc(100% - 50px));
 
-    &.expanded { transform: translateY(0); }
+    &.expanded {
+        background: var(--bg-secondary);
+        border-top-color: var(--border-primary);
+        backdrop-filter: blur(20px);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+        pointer-events: auto;
+        transform: translateY(0);
+    }
 }
 
 .filter-toggle-btn {
@@ -529,6 +537,7 @@
     color: var(--bg-primary) !important;
     box-shadow: var(--shadow-lg);
     z-index: 1001;
+    pointer-events: auto;
 
     mat-icon { transition: transform 0.3s ease; }
 

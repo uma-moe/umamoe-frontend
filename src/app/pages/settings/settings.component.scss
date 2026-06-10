@@ -1,6 +1,6 @@
 @use '../../../styles/mixins' as *;
 
-.settings-page { min-height: calc(100vh - 60px); }
+.settings-page { flex: 1 1 auto; }
 
 .page-header {
   padding: 2rem 0;

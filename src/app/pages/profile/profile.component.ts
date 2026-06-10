@@ -18,6 +18,7 @@ import { SkillComponent } from '../../components/skill/skill.component';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { InheritanceRecord } from '../../models/inheritance.model';
 import { PlannerTransferService } from '../../services/planner-transfer.service';
+import { AppVersionService } from '../../services/app-version.service';
 import { Meta, Title } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import {
@@ -73,13 +74,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
         private snackBar: MatSnackBar,
         private plannerTransfer: PlannerTransferService,
         private title: Title,
-        private meta: Meta
+        private meta: Meta,
+        private appVersionService: AppVersionService
     ) { }
 
     ngOnInit(): void {
         this.accountId = this.route.snapshot.paramMap.get('accountId') || '';
         if (!this.accountId) {
-            this.error = 'No account ID provided.';
+            this.error = this.withBuild('No account ID provided.');
             this.loading = false;
             return;
         }
@@ -180,11 +182,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
             error: (err) => {
                 this.loading = false;
                 if (err.status === 404) {
-                    this.error = 'Trainer not found.';
+                    this.error = this.withBuild('Trainer not found.');
                 } else if (err.status === 403) {
                     this.profileHidden = true;
                 } else {
-                    this.error = 'Failed to load profile.';
+                    this.error = this.withBuild('Failed to load profile.');
                 }
             }
         });
@@ -363,7 +365,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         navigator.clipboard?.writeText(trainerId).then(() => {
             this.snackBar.open('Trainer ID copied', 'Close', { duration: 2000 });
         }).catch(() => {
-            this.snackBar.open('Could not copy trainer ID', 'Close', { duration: 2500 });
+            this.snackBar.open(this.withBuild('Could not copy trainer ID'), 'Close', { duration: 2500 });
         });
     }
 
@@ -438,6 +440,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
     getRankGrade(score: number | null): string { return getRankGrade(score); }
     getRankGradeColor(score: number | null): string { return getRankGradeColor(score); }
     getStarDisplay(rarity: number | null): { filled: boolean; talent: boolean }[] { return getStarDisplay(rarity); }
+
+    private withBuild(message: string): string {
+        return this.appVersionService.appendBuildTag(message);
+    }
 
 }
 

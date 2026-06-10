@@ -18,7 +18,9 @@ export const environment = {
     action: 'api_request',
     theme: 'auto' as const,
     appearance: 'interaction-only' as const,
-    tokenTimeoutMs: 15000,
+    tokenTimeoutMs: 45000,
+    scriptTimeoutMs: 15000,
+    recoveryPromptMs: 10000,
     proofRefreshSkewMs: 5000,
     failOpen: false,
   }

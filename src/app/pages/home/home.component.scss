@@ -1,7 +1,15 @@
 @use '../../../styles/mixins' as *;
 
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .home {
-  min-height: calc(100vh - var(--header-height));
+  flex: 1 1 auto;
+  min-height: 0;
   background: var(--bg-primary);
   display: flex;
   flex-direction: column;
@@ -173,37 +181,6 @@
   &:hover { transform: translateY(-2px); border-color: var(--border-secondary); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
 }
 
-.footer {
-  padding: 2rem;
-  text-align: center;
-  border-top: 1px solid var(--border-primary);
-  background: rgba(0, 0, 0, 0.3);
-  margin-top: auto;
-}
-
-.footer-links {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  margin-bottom: 1rem;
-
-  a {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--text-secondary);
-    text-decoration: none;
-    font-size: 0.875rem;
-    transition: color 0.3s ease;
-
-    &:hover { color: var(--accent-primary); }
-
-    mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
-  }
-}
-
-.footer-text { font-size: 0.75rem; color: var(--text-muted); margin: 0; }
-
 .new-badge {
   @include status-badge;
   display: inline-block;
@@ -277,11 +254,8 @@
 
   .stat-number { font-size: 1.25rem; }
 
-  .footer-links { gap: 1rem; }
 }
 
 @include breakpoint(480px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
-
-  .footer-links { flex-direction: column; gap: 0.5rem; }
 }

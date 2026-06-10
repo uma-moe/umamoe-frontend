@@ -22,6 +22,7 @@ import { SkillComponent } from '../../../components/skill/skill.component';
 import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
 import { RACE_SADDLE_DATA } from '../../../data/race-saddle.data';
 import { ProfileService } from '../../../services/profile.service';
+import { AppVersionService } from '../../../services/app-version.service';
 import { FactorService, SparkInfo } from '../../../services/factor.service';
 import { PlannerTransferService } from '../../../services/planner-transfer.service';
 import { VeteranMember, SuccessionChara, FactorInfoEntry } from '../../../models/profile.model';
@@ -243,6 +244,7 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
     private router: Router,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
+    private appVersionService: AppVersionService,
   ) { }
 
   ngOnInit(): void {
@@ -309,7 +311,7 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private processFile(file: File): void {
     if (!file.name.endsWith('.json')) {
-      this.uploadFeedback = { type: 'error', message: 'Only .json files are accepted.' };
+      this.uploadFeedback = { type: 'error', message: this.withBuild('Only .json files are accepted.') };
       return;
     }
     this.uploading = true;
@@ -337,7 +339,7 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
         });
       } catch {
         this.uploading = false;
-        this.uploadFeedback = { type: 'error', message: 'Invalid JSON file.' };
+        this.uploadFeedback = { type: 'error', message: this.withBuild('Invalid JSON file.') };
         this.cdr.markForCheck();
       }
     };
@@ -350,13 +352,14 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
     if (error instanceof HttpErrorResponse) {
       const detail = this.extractErrorDetail(error.error) || error.message;
       const status = error.status ? `${error.status} ${error.statusText || 'Error'}`.trim() : '';
-      return status && detail
+      const message = status && detail
         ? `Upload failed (${status}): ${detail}`
         : detail || fallback;
+      return this.withBuild(message);
     }
 
     const detail = this.extractErrorDetail(error);
-    return detail ? `Upload failed: ${detail}` : fallback;
+    return this.withBuild(detail ? `Upload failed: ${detail}` : fallback);
   }
 
   private extractErrorDetail(errorBody: unknown): string | null {
@@ -401,6 +404,10 @@ export class VeteransComponent implements OnInit, OnDestroy, AfterViewInit {
     } catch {
       return null;
     }
+  }
+
+  private withBuild(message: string): string {
+    return this.appVersionService.appendBuildTag(message);
   }
 
   // ── Filters & sort ────────────────────────────

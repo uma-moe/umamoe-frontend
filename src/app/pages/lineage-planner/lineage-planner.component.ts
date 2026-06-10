@@ -36,6 +36,8 @@ import { RaceResultsDialogComponent, RaceResultsDialogData } from '../../compone
 import { RaceWinPickerDialogComponent, RaceWinPickerDialogData } from '../../components/race-results-dialog/race-win-picker-dialog.component';
 import { Meta, Title } from '@angular/platform-browser';
 import { preferRasterAsset } from '../../utils/raster-asset';
+import { AppVersionService } from '../../services/app-version.service';
+import { AnalyticsEventParams, GoogleAnalyticsService } from '../../services/google-analytics.service';
 
 @Component({
   selector: 'app-lineage-planner',
@@ -215,6 +217,8 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
     private plannerTransfer: PlannerTransferService,
+    private appVersionService: AppVersionService,
+    private googleAnalyticsService: GoogleAnalyticsService,
   ) {
     this.title.setTitle('Lineage Planner - uma.moe');
     this.meta.addTags([
@@ -222,6 +226,19 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       { property: 'og:title', content: 'Lineage Planner - uma.moe' },
       { property: 'og:description', content: 'Plan inheritance combinations across 4 generations' },
     ]);
+  }
+
+  private trackPlannerEvent(eventName: string, params: AnalyticsEventParams = {}): void {
+    this.googleAnalyticsService.trackEvent(eventName, {
+      feature: 'lineage_planner',
+      filled_node_count: this.getFilledNodeCount(),
+      linked_account_count: this.linkedAccounts.length,
+      ...params,
+    });
+  }
+
+  private getFilledNodeCount(): number {
+    return Array.from(this.nodes.values()).filter(node => this.hasContent(node)).length;
   }
 
   ngOnInit(): void {
@@ -817,7 +834,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     try {
       localStorage.setItem(LineagePlannerComponent.SAVES_KEY, JSON.stringify(saves));
     } catch {
-      this.snackBar.open('Failed to write to localStorage (storage full?)', 'OK', { duration: 4000 });
+      this.snackBar.open(this.withBuild('Failed to write to localStorage (storage full?)'), 'OK', { duration: 4000 });
     }
   }
 
@@ -828,6 +845,10 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       .sort((a, b) => a.localeCompare(b))
       .map(name => ({ name, nodeCount: Array.isArray(saves[name]) ? saves[name].length : 0 }));
     const hasCurrent = this.buildPayload().length > 0;
+    this.trackPlannerEvent('open_lineage_saves', {
+      save_count: entries.length,
+      has_current_tree: hasCurrent,
+    });
 
     const ref = this.dialog.open<TreeSavesDialogComponent, TreeSavesDialogData, TreeSavesDialogResult>(
       TreeSavesDialogComponent,
@@ -902,17 +923,28 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     saves[name] = payload;
     this.writeSaves(saves);
     this.snackBar.open(`Saved "${name}".`, 'OK', { duration: 2500 });
+    this.trackPlannerEvent('save_lineage_tree', {
+      node_count: payload.length,
+      status: 'success',
+    });
   }
 
   private handleLoadAction(name: string): void {
     const saves = this.readSaves();
     const payload = saves[name];
     if (!payload) {
-      this.snackBar.open(`Save "${name}" not found.`, 'OK', { duration: 3000 });
+      this.trackPlannerEvent('load_lineage_tree', {
+        status: 'not_found',
+      });
+      this.snackBar.open(this.withBuild(`Save "${name}" not found.`), 'OK', { duration: 3000 });
       return;
     }
     this.applyPayload(payload);
     this.snackBar.open(`Loaded "${name}".`, 'OK', { duration: 2500 });
+    this.trackPlannerEvent('load_lineage_tree', {
+      node_count: payload.length,
+      status: 'success',
+    });
   }
 
   private async handleDeleteAction(name: string): Promise<void> {
@@ -928,6 +960,9 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     delete saves[name];
     this.writeSaves(saves);
     this.snackBar.open(`Deleted "${name}".`, 'OK', { duration: 2500 });
+    this.trackPlannerEvent('delete_lineage_tree', {
+      status: 'success',
+    });
     this.openSavesDialog();
   }
 
@@ -963,8 +998,16 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     try {
       await navigator.clipboard.writeText(data);
       this.snackBar.open('Copied tree to clipboard.', 'OK', { duration: 2500 });
+      this.trackPlannerEvent('export_lineage_tree', {
+        format: 'clipboard',
+        status: 'success',
+      });
     } catch {
-      this.snackBar.open('Clipboard unavailable. Use "Download .json" instead.', 'OK', { duration: 4000 });
+      this.snackBar.open(this.withBuild('Clipboard unavailable. Use "Download .json" instead.'), 'OK', { duration: 4000 });
+      this.trackPlannerEvent('export_lineage_tree', {
+        format: 'clipboard',
+        status: 'error',
+      });
     }
   }
 
@@ -984,6 +1027,10 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+    this.trackPlannerEvent('export_lineage_tree', {
+      format: 'file',
+      status: 'success',
+    });
   }
 
   async importFromClipboard(): Promise<void> {
@@ -991,31 +1038,40 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     try {
       raw = await navigator.clipboard.readText();
     } catch {
-      this.snackBar.open('Clipboard unavailable. Use "Import .json" instead.', 'OK', { duration: 4000 });
+      this.snackBar.open(this.withBuild('Clipboard unavailable. Use "Import .json" instead.'), 'OK', { duration: 4000 });
       return;
     }
-    this.applyImportString(raw);
+    this.applyImportString(raw, 'clipboard');
   }
 
   private importFromFile(file: File): void {
     const reader = new FileReader();
     reader.onload = () => {
-      this.applyImportString(typeof reader.result === 'string' ? reader.result : '');
+      this.applyImportString(typeof reader.result === 'string' ? reader.result : '', 'file');
     };
     reader.onerror = () => {
-      this.snackBar.open('Failed to read file.', 'OK', { duration: 3000 });
+      this.snackBar.open(this.withBuild('Failed to read file.'), 'OK', { duration: 3000 });
+      this.trackPlannerEvent('import_lineage_tree', {
+        source: 'file',
+        status: 'read_error',
+      });
     };
     reader.readAsText(file);
   }
 
-  private applyImportString(raw: string): void {
+  private applyImportString(raw: string, source: 'clipboard' | 'file'): void {
     const payload = this.parseImportString(raw);
     if (!payload) {
-      this.snackBar.open('Invalid tree data — could not parse.', 'OK', { duration: 4000 });
+      this.snackBar.open(this.withBuild('Invalid tree data — could not parse.'), 'OK', { duration: 4000 });
       return;
     }
     this.applyPayload(payload);
     this.snackBar.open('Imported tree.', 'OK', { duration: 2500 });
+    this.trackPlannerEvent('import_lineage_tree', {
+      source,
+      status: 'success',
+      node_count: payload.length,
+    });
   }
 
   toggleNodePicker(position: string, event: Event): void {
@@ -1034,6 +1090,10 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     event.stopPropagation();
     const targetNode = this.nodes.get('target');
     const targetCharaId = targetNode ? this.getNodeCharaId(targetNode) : null;
+    this.trackPlannerEvent('open_lineage_veteran_picker', {
+      slot_position: position,
+      has_target: !!targetCharaId,
+    });
     const dialogRef = this.dialog.open(VeteranPickerDialogComponent, {
       width: '92vw',
       maxWidth: '1100px',
@@ -1051,6 +1111,9 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     dialogRef.afterClosed().subscribe((vet: import('../../models/profile.model').VeteranMember | undefined) => {
       if (vet) {
         this.selectVeteran(position, vet);
+        this.trackPlannerEvent('select_lineage_veteran', {
+          slot_position: position,
+        });
       }
     });
   }
@@ -1066,6 +1129,11 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       const n = this.nodes.get(pos);
       raceWinsByPosition[pos] = n ? this.getWinSaddles(n) : [];
     }
+    this.trackPlannerEvent('open_lineage_character_picker', {
+      slot_position: position,
+      affinity_target_count: affinityTargetIds.length,
+      exclude_count: excludeIds.length,
+    });
     const dialogRef = this.dialog.open(CharacterSelectDialogComponent, {
       width: '90%',
       maxWidth: '600px',
@@ -1083,6 +1151,9 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       if (result) {
         this.selectCharacter(position, result);
         this.activeNode = null;
+        this.trackPlannerEvent('select_lineage_character', {
+          slot_position: position,
+        });
       }
     });
   }
@@ -1101,6 +1172,11 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       // View-only for veterans/succession with existing race data
       const winSaddleIds = node.veteran?.win_saddle_id_array ?? node.succession?.win_saddle_id_array ?? [];
       const runRaceIds = node.veteran?.race_results ?? [];
+      this.trackPlannerEvent('open_lineage_race_results', {
+        slot_position: position,
+        mode: 'view',
+        win_count: winSaddleIds.length,
+      });
       this.dialog.open(RaceResultsDialogComponent, {
         data: { charId, charName, winSaddleIds, runRaceIds } as RaceResultsDialogData,
         panelClass: 'modern-dialog-panel',
@@ -1111,6 +1187,11 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       });
     } else {
       // Editable picker for manually-selected characters
+      this.trackPlannerEvent('open_lineage_race_results', {
+        slot_position: position,
+        mode: 'edit',
+        win_count: node.manualWinSaddleIds?.length ?? 0,
+      });
       const dialogRef = this.dialog.open(RaceWinPickerDialogComponent, {
         data: { charName, charId, winSaddleIds: node.manualWinSaddleIds } as RaceWinPickerDialogData,
         panelClass: 'modern-dialog-panel',
@@ -1124,6 +1205,10 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
           node.manualWinSaddleIds = saddleIds;
           this.affinityRecalc$.next();
           this.cdr.markForCheck();
+          this.trackPlannerEvent('save_lineage_race_results', {
+            slot_position: position,
+            win_count: saddleIds.length,
+          });
         }
       });
     }
@@ -1618,6 +1703,10 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       duration: 4000,
       panelClass: 'error-snackbar',
     });
+  }
+
+  private withBuild(message: string): string {
+    return this.appVersionService.appendBuildTag(message);
   }
 
   // -- Affinity visual breakdown --

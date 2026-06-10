@@ -129,7 +129,7 @@
 
     <div
       *ngFor="let item of timelineItems; trackBy: trackByItemDate"
-      [id]="'timeline-item-' + item.daysSinceStart"
+      [attr.id]="item.type === 'today' ? todayElementId : null"
       class="tl-item"
       >
       <!-- Spine dot -->

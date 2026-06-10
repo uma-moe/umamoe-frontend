@@ -6,6 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 
 import { AuthService } from '../../services/auth.service';
+import { AppVersionService } from '../../services/app-version.service';
+import { AnalyticsEventParams, GoogleAnalyticsService } from '../../services/google-analytics.service';
 import { LinkedAccount, Identity, User, ApiKey } from '../../models/auth.model';
 import { getCharacterById } from '../../data/character.data';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
@@ -52,7 +54,21 @@ export class SettingsComponent implements OnInit {
   newlyCreatedKey: string | null = null;
   copiedApiKey = false;
 
-  constructor(public authService: AuthService) {}
+  constructor(
+    public authService: AuthService,
+    private appVersionService: AppVersionService,
+    private googleAnalyticsService: GoogleAnalyticsService,
+  ) {}
+
+  private trackSettingsEvent(eventName: string, params: AnalyticsEventParams = {}): void {
+    this.googleAnalyticsService.trackEvent(eventName, {
+      feature: 'settings',
+      linked_account_count: this.accounts.length,
+      identity_count: this.identities.length,
+      api_key_count: this.apiKeys.length,
+      ...params,
+    });
+  }
 
   ngOnInit(): void {
     this.authService.user$.subscribe(u => this.user = u);
@@ -94,7 +110,7 @@ export class SettingsComponent implements OnInit {
     this.newAccountId = id;
     if (!this.isValidAccountId(id)) {
       this.linkSuccess = '';
-      this.linkError = 'Account ID must be exactly 12 digits.';
+      this.linkError = this.withBuild('Account ID must be exactly 12 digits.');
       return;
     }
 
@@ -107,12 +123,21 @@ export class SettingsComponent implements OnInit {
         this.linking = false;
         this.linkSuccess = `Account ${account?.account_id || id} linked! Follow the verification steps below.`;
         this.loadAccounts();
+        this.trackSettingsEvent('link_game_account', {
+          status: 'success',
+        });
       },
       error: err => {
         console.error('Link account error:', err.status, err.error);
-        this.linkError = err.error?.message || err.error?.error
-          || (err.status === 0 ? 'Network error - is the backend running?' : `Request failed (${err.status})`);
+        this.linkError = this.withBuild(
+          err.error?.message || err.error?.error
+          || (err.status === 0 ? 'Network error - is the backend running?' : `Request failed (${err.status})`)
+        );
         this.linking = false;
+        this.trackSettingsEvent('link_game_account', {
+          status: 'error',
+          error_status: err.status || 0,
+        });
       }
     });
   }
@@ -141,17 +166,30 @@ export class SettingsComponent implements OnInit {
         this.verifying[accountId] = false;
         this.startCooldown(accountId);
         if (res?.status === 'timeout') {
-          this.verifyError[accountId] = res.message || 'Verification timed out. Make sure the token is in your profile comment and try again.';
+          this.verifyError[accountId] = this.withBuild(res.message || 'Verification timed out. Make sure the token is in your profile comment and try again.');
+          this.trackSettingsEvent('verify_game_account', {
+            status: 'timeout',
+          });
         } else if (res?.status && res.status !== 'verified') {
-          this.verifyError[accountId] = res.message || 'Verification was not successful. Please try again.';
+          this.verifyError[accountId] = this.withBuild(res.message || 'Verification was not successful. Please try again.');
+          this.trackSettingsEvent('verify_game_account', {
+            status: 'not_verified',
+          });
         } else {
           this.loadAccounts();
+          this.trackSettingsEvent('verify_game_account', {
+            status: 'verified',
+          });
         }
       },
       error: err => {
-        this.verifyError[accountId] = err.error?.message || err.error?.error || 'Verification failed';
+        this.verifyError[accountId] = this.withBuild(err.error?.message || err.error?.error || 'Verification failed');
         this.verifying[accountId] = false;
         this.startCooldown(accountId);
+        this.trackSettingsEvent('verify_game_account', {
+          status: 'error',
+          error_status: err.status || 0,
+        });
       }
     });
   }
@@ -200,6 +238,7 @@ export class SettingsComponent implements OnInit {
   copyToken(token: string): void {
     navigator.clipboard.writeText(token);
     this.copiedToken = token;
+    this.trackSettingsEvent('copy_verification_token');
     setTimeout(() => this.copiedToken = '', 2000);
   }
 
@@ -237,24 +276,45 @@ export class SettingsComponent implements OnInit {
         this.newKeyName = '';
         this.creatingKey = false;
         this.loadApiKeys();
+        this.trackSettingsEvent('create_api_key', {
+          status: 'success',
+        });
       },
       error: err => {
-        this.apiKeyError = err.error?.message || err.error?.error || `Request failed (${err.status})`;
+        this.apiKeyError = this.withBuild(err.error?.message || err.error?.error || `Request failed (${err.status})`);
         this.creatingKey = false;
+        this.trackSettingsEvent('create_api_key', {
+          status: 'error',
+          error_status: err.status || 0,
+        });
       }
     });
   }
 
   revokeApiKey(key: ApiKey): void {
     this.authService.revokeApiKey(key.id).subscribe({
-      next: () => this.loadApiKeys(),
-      error: () => {}
+      next: () => {
+        this.loadApiKeys();
+        this.trackSettingsEvent('revoke_api_key', {
+          status: 'success',
+        });
+      },
+      error: () => {
+        this.trackSettingsEvent('revoke_api_key', {
+          status: 'error',
+        });
+      }
     });
   }
 
   copyApiKey(key: string): void {
     navigator.clipboard.writeText(key);
     this.copiedApiKey = true;
+    this.trackSettingsEvent('copy_api_key');
     setTimeout(() => this.copiedApiKey = false, 2000);
+  }
+
+  private withBuild(message: string): string {
+    return this.appVersionService.appendBuildTag(message);
   }
 }

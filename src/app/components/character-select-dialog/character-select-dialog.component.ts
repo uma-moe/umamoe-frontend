@@ -792,10 +792,35 @@ export class CharacterSelectDialogComponent implements OnInit {
       `resource=${error.resourceName}`,
       `attempt=${error.attempt}`,
       `time=${error.occurredAt}`,
+      `build=${error.buildVersion}`,
+      `build_label=${error.buildVersionLabel}`,
       `error=${error.message}`,
     ];
     if (error.url) {
       parts.push(`url=${error.url}`);
+    }
+
+    if (error.browserProof) {
+      parts.push(`proof_stage=${error.browserProof.stage}`);
+      parts.push(`proof_ready=${error.browserProof.ready}`);
+      parts.push(`proof_attempt=${error.browserProof.attempt}`);
+      parts.push(`proof_updated=${error.browserProof.updatedAt}`);
+      parts.push(`proof_mode=${error.browserProof.mode ?? 'unknown'}`);
+      if (error.browserProof.elapsedMs != null) {
+        parts.push(`proof_elapsed_ms=${error.browserProof.elapsedMs}`);
+      }
+      if (error.browserProof.error) {
+        parts.push(`proof_error=${error.browserProof.error}`);
+      }
+      if (error.browserProof.errorCode) {
+        parts.push(`proof_code=${error.browserProof.errorCode}`);
+      }
+      if (error.browserProof.message) {
+        parts.push(`proof_message=${error.browserProof.message}`);
+      }
+      parts.push(`turnstile_script_loaded=${error.browserProof.scriptLoaded}`);
+      parts.push(`turnstile_token_timeout_ms=${error.browserProof.tokenTimeoutMs}`);
+      parts.push(`turnstile_script_timeout_ms=${error.browserProof.scriptTimeoutMs}`);
     }
 
     return parts.join(' | ');

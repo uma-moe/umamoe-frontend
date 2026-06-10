@@ -1,4 +1,49 @@
 <app-navigation></app-navigation>
-<router-outlet></router-outlet>
+<div
+  class="browser-verification-panel"
+  *ngIf="turnstileRecovery$ | async as recovery"
+  [class.browser-verification-panel--visible]="recovery.visible"
+>
+  <ng-container *ngIf="recovery.visible">
+    <div class="browser-verification-panel__content">
+      <div class="browser-verification-panel__copy">
+        <div class="browser-verification-panel__title">{{ recovery.title }}</div>
+        <p>{{ recovery.message }}</p>
+        <div class="browser-verification-panel__meta">
+          <span>Build {{ recovery.debug.buildVersionLabel }}</span>
+          <span>{{ recovery.statusLabel }}</span>
+        </div>
+      </div>
+
+      <div class="browser-verification-panel__check-shell">
+        <div class="browser-verification-panel__check" id="cf-turnstile-interactive-proof"></div>
+        <div class="browser-verification-panel__check-hint">
+          <strong>{{ recovery.checkTitle }}</strong>
+          <span>{{ recovery.checkMessage }}</span>
+        </div>
+      </div>
+
+      <div class="browser-verification-panel__actions" *ngIf="recovery.showAction">
+        <button
+          class="browser-verification-panel__button"
+          type="button"
+          (click)="retryTurnstileInteractive($event)"
+          [disabled]="!recovery.canRetry"
+        >
+          {{ recovery.buttonLabel }}
+        </button>
+      </div>
+
+      <details class="browser-verification-panel__details">
+        <summary>Status for support</summary>
+        <code>{{ formatTurnstileDebug(recovery.debug) }}</code>
+      </details>
+    </div>
+  </ng-container>
+</div>
+<main class="app-shell-main">
+  <router-outlet></router-outlet>
+</main>
+<app-footer></app-footer>
 <app-snow *ngIf="isChristmas$ | async"></app-snow>
 <app-cookie-consent></app-cookie-consent>

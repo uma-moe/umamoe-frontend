@@ -29,6 +29,7 @@ import { FactorService, Factor, SparkInfo } from '../../services/factor.service'
 import { AffinityService } from '../../services/affinity.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { AuthService } from '../../services/auth.service';
+import { AppVersionService } from '../../services/app-version.service';
 import { PartnerService, PartnerInheritance, PartnerLookupEvent } from '../../services/partner.service';
 import {
   getCharacterName, getCardImage, getAptGrade,
@@ -208,6 +209,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     private bookmarkService: BookmarkService,
     private authService: AuthService,
     private partnerService: PartnerService,
+    private appVersionService: AppVersionService,
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog,
   ) {
@@ -621,7 +623,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
         error: err => {
           this.savedLoading = false;
           this.savedPhase = 'error';
-          this.savedError = (err?.error?.error as string) || err?.message || 'Lookup failed';
+          this.savedError = this.withBuild((err?.error?.error as string) || err?.message || 'Lookup failed');
           this.cdr.markForCheck();
         },
       });
@@ -644,15 +646,19 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
       case 'failed':
         this.savedLoading = false;
         this.savedPhase = 'error';
-        this.savedError = evt.error || 'Lookup failed';
+        this.savedError = this.withBuild(evt.error || 'Lookup failed');
         break;
       case 'timeout':
         this.savedLoading = false;
         this.savedPhase = 'timeout';
-        this.savedError = 'The worker did not respond in time. Please try again.';
+        this.savedError = this.withBuild('The worker did not respond in time. Please try again.');
         break;
     }
     this.cdr.markForCheck();
+  }
+
+  private withBuild(message: string): string {
+    return this.appVersionService.appendBuildTag(message);
   }
 
   /** Load history from backend (logged-in) or localStorage (anon). */

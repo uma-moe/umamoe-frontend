@@ -1,0 +1,56 @@
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="assets/logo.webp" alt="" class="footer-logo" width="24" height="24" />
+      <div class="footer-copy">
+        <span class="footer-title">uma.moe</span>
+        <span class="footer-note">Umamusume tools, data, and planning.</span>
+      </div>
+    </div>
+
+    <nav class="footer-links" aria-label="Community and site links">
+      <a class="footer-link discord-link" [href]="discordUrl" target="_blank" rel="noopener noreferrer">
+        <span class="brand-icon discord-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M20.32 4.37A19.8 19.8 0 0 0 15.43 2.85c-.21.38-.46.9-.63 1.3a18.27 18.27 0 0 0-5.49 0c-.17-.4-.42-.92-.64-1.3A19.74 19.74 0 0 0 3.78 4.38C.69 8.96-.15 13.31.27 17.61a19.94 19.94 0 0 0 6.04 3.05c.49-.66.92-1.36 1.28-2.08-.7-.26-1.37-.59-2-.96.17-.12.33-.25.49-.38a14.25 14.25 0 0 0 11.84 0c.16.13.32.26.49.38-.63.37-1.3.7-2 .96.36.72.79 1.42 1.28 2.08a19.9 19.9 0 0 0 6.04-3.05c.5-5-.84-9.31-3.41-13.24ZM8.02 14.96c-1.18 0-2.15-1.08-2.15-2.41s.95-2.41 2.15-2.41 2.17 1.09 2.15 2.41c0 1.33-.95 2.41-2.15 2.41Zm7.96 0c-1.18 0-2.15-1.08-2.15-2.41s.95-2.41 2.15-2.41 2.17 1.09 2.15 2.41c0 1.33-.95 2.41-2.15 2.41Z" />
+          </svg>
+        </span>
+        <span>Discord</span>
+      </a>
+
+      <a class="footer-link kofi-link" [href]="kofiUrl" target="_blank" rel="noopener noreferrer">
+        <span class="brand-icon kofi-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M4 5.25h12.6c2.48 0 4.4 1.74 4.4 4.08 0 2.3-1.92 4.07-4.4 4.07h-.72v.72A4.13 4.13 0 0 1 11.75 18.25H8.13A4.13 4.13 0 0 1 4 14.12V5.25Zm11.88 2.05v4.05h.72c1.25 0 2.25-.85 2.25-2.02 0-1.18-1-2.03-2.25-2.03h-.72Z" />
+            <path d="M9.93 14.13 7.32 11.7c-1.03-.96-1.08-2.58-.1-3.55.8-.8 2.06-.82 2.71.04.66-.86 1.92-.84 2.72-.04.98.97.93 2.59-.1 3.55l-2.62 2.43Z" class="kofi-heart" />
+          </svg>
+        </span>
+        <span>Support us</span>
+      </a>
+
+      <a class="footer-link" [href]="statusUrl" target="_blank" rel="noopener noreferrer">
+        <mat-icon>monitor_heart</mat-icon>
+        <span>Status</span>
+      </a>
+
+      <a class="footer-link" routerLink="/privacy-policy">
+        <mat-icon>shield</mat-icon>
+        <span>Privacy</span>
+      </a>
+    </nav>
+
+    <div class="footer-meta">
+      <button
+        type="button"
+        class="build-chip"
+        [class.copied]="copied"
+        [matTooltip]="buildTooltip"
+        [attr.aria-label]="buildTooltip"
+        (click)="copyBuildVersion()">
+        <mat-icon>{{ copied ? 'check' : 'tag' }}</mat-icon>
+        <span>{{ buildVersionLabel }}</span>
+      </button>
+      <span class="copyright">&copy; {{ currentYear }}</span>
+    </div>
+  </div>
+</footer>

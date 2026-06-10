@@ -22,6 +22,7 @@ import { DiscordLinkPipe } from '../../../pipes/discord-link.pipe';
 import { MemberDisplaySettingsDialogComponent } from './member-display-settings-dialog.component';
 import { AnimatedNumberComponent } from '../../../components/animated-number/animated-number.component';
 import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
+import { AnalyticsEventParams, GoogleAnalyticsService } from '../../../services/google-analytics.service';
 Chart.register(...registerables);
 export type CalculationType = 'monthly_gain' | 'weekly_gain' | 'daily_gain' | 'avg_daily_gain' | 'daily_avg' | 'projected_monthly' | 'total_fans';
 export type ExportFormat = 'csv' | 'json' | 'xlsx';
@@ -265,7 +266,8 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     private ngZone: NgZone,
     private dialog: MatDialog,
     private cdr: ChangeDetectorRef,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private googleAnalyticsService: GoogleAnalyticsService,
   ) {
     // Initialize with JST date to handle month rollover correctly
     const now = new Date();
@@ -278,6 +280,16 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     this.todayYear = this.currentYear;
     this.todayMonth = this.currentMonth;
     this.loadConfig();
+  }
+
+  private trackCircleEvent(eventName: string, params: AnalyticsEventParams = {}): void {
+    this.googleAnalyticsService.trackEvent(eventName, {
+      feature: 'circle_details',
+      member_count: this.members.length,
+      selected_metric: this.config.selectedCalculation,
+      view_month_offset: this.getViewedMonthOffset(),
+      ...params,
+    });
   }
   ngOnInit(): void {
     document.addEventListener('mousemove', this._mouseMoveHandler);
@@ -305,6 +317,25 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     const parsed = Number(value);
     if (!Number.isInteger(parsed) || parsed < min || parsed > max) return null;
     return parsed;
+  }
+
+  private getViewedMonthOffset(): number {
+    return ((this.currentYear - this.todayYear) * 12) + (this.currentMonth - this.todayMonth);
+  }
+
+  private getVisibleCircleMetricCount(): number {
+    return [
+      this.config.showTotalFans,
+      this.config.showSevenDayAvg,
+      this.config.showDailyGain,
+      this.config.showDailyAvg,
+      this.config.showLastUpdated,
+      this.config.showWeeklyGain,
+      this.config.showProjectedMonthly,
+      this.config.showMonthlyGain,
+      this.config.showRole,
+      this.config.showTrainerId,
+    ].filter(Boolean).length;
   }
 
   private normalizeExportFormat(format: string | null): ExportFormat | null {
@@ -346,6 +377,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     this.sortMembers();
   }
   openSettingsDialog(): void {
+    this.trackCircleEvent('open_circle_display_settings');
     const dialogRef = this.dialog.open(MemberDisplaySettingsDialogComponent, {
       width: '500px',
       maxWidth: 'calc(100vw - 16px)',
@@ -359,12 +391,19 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       if (result) {
         this.config = result;
         this.saveConfig();
+        this.trackCircleEvent('save_circle_display_settings', {
+          visible_metric_count: this.getVisibleCircleMetricCount(),
+          include_prior_club: this.config.includePriorClubData,
+        });
       }
     });
   }
   setCalculation(type: CalculationType): void {
     this.config.selectedCalculation = type;
     this.saveConfig();
+    this.trackCircleEvent('change_circle_metric', {
+      metric: type,
+    });
   }
   getMemberValue(member: any): number {
     switch (this.config.selectedCalculation) {
@@ -428,7 +467,13 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     event.preventDefault();
     const value = trainerId != null ? String(trainerId) : '';
     if (!value) return;
-    const done = () => this.snackBar.open(`Copied ${value}`, 'OK', { duration: 1500 });
+    const done = () => {
+      this.trackCircleEvent('copy_trainer_id', {
+        source: 'circle_member',
+        members_list_mode: this.membersListMode,
+      });
+      this.snackBar.open(`Copied ${value}`, 'OK', { duration: 1500 });
+    };
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(value).then(done).catch(() => done());
     } else {
@@ -525,10 +570,16 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   }
   toggleMemberChartMode(): void {
     this.memberChartMode = this.memberChartMode === 'cumulative' ? 'delta' : 'cumulative';
+    this.trackCircleEvent('change_circle_member_chart', {
+      chart_mode: this.memberChartMode,
+    });
     this.initMemberChart();
   }
   toggleIncludePriorClubData(): void {
     this.config.includePriorClubData = !this.config.includePriorClubData;
+    this.trackCircleEvent('toggle_circle_prior_club', {
+      enabled: this.config.includePriorClubData,
+    });
     this.saveConfig();
     // Re-process all member data with new setting
     if (this.allMemberData && this.allMemberData.length > 0) {
@@ -544,6 +595,9 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   }
   toggleMemberViewMode(): void {
     this.memberViewMode = this.memberViewMode === 'chart' ? 'calendar' : 'chart';
+    this.trackCircleEvent('change_circle_member_view', {
+      view_mode: this.memberViewMode,
+    });
     if (this.memberViewMode === 'calendar') {
       this.buildCalendarData();
       setTimeout(() => this.updateCalendarZoom(), 0);
@@ -554,6 +608,9 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   }
   toggleMembersListMode(): void {
     this.membersListMode = this.membersListMode === 'grid' ? 'row' : 'grid';
+    this.trackCircleEvent('change_circle_member_list', {
+      list_mode: this.membersListMode,
+    });
   }
   buildCalendarData(): void {
     let data = this.allMemberData.filter(m => m.year == this.currentYear && m.month == this.currentMonth);
@@ -1642,6 +1699,13 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   exportStats(format: 'csv' | 'json' | 'xlsx'): void {
     if (!this.circle || !this.members.length) return;
     const c = this.config;
+    this.trackCircleEvent('export_circle_stats', {
+      format,
+      active_member_count: this.members.filter(m => (m as any).isActive).length,
+      visible_metric_count: this.getVisibleCircleMetricCount(),
+      include_prior_club: c.includePriorClubData,
+      export_source: this.exportMenuOpen ? 'menu' : (this.directExportStarted ? 'direct_route' : 'programmatic'),
+    });
     const filename = `circle_${this.circle.circle_id}_${this.currentYear}_${this.currentMonth}_stats`;
     const daysInMonth = new Date(this.currentYear, this.currentMonth, 0).getDate();
     // ── Column spec: order + visibility respects current display settings ──────

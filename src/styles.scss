@@ -300,6 +300,20 @@ app-root {
   overflow-x: hidden;
 }
 
+// Routed component hosts are inserted dynamically, so keep the app-shell
+// layout contract in global CSS rather than relying only on component scoping.
+.app-shell-main > router-outlet {
+  display: none;
+}
+
+.app-shell-main > :not(router-outlet) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
 // Domain Migration Dialog Styles
 .domain-migration-dialog .mat-mdc-dialog-container {
   background: var(--bg-secondary) !important;

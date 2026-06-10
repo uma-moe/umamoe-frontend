@@ -19,6 +19,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { AppVersionService } from '../../services/app-version.service';
 export interface TrainerSubmissionConfig {
   title: string;
   subtitle: string;
@@ -118,6 +119,7 @@ export class TrainerSubmitDialogComponent implements OnInit {
     private fb: FormBuilder,
     private http: HttpClient,
     private snackBar: MatSnackBar,
+    private appVersionService: AppVersionService,
     public dialogRef: MatDialogRef<TrainerSubmitDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: TrainerSubmissionConfig
   ) {
@@ -202,12 +204,12 @@ export class TrainerSubmitDialogComponent implements OnInit {
               panelClass: ['warning-snackbar']
             });
           } else if (apiError.status === 400) {
-            this.snackBar.open('Invalid trainer ID format. Please check your input.', 'Close', {
+            this.snackBar.open(this.withBuild('Invalid trainer ID format. Please check your input.'), 'Close', {
               duration: 4000,
               panelClass: ['error-snackbar']
             });
           } else {
-            this.snackBar.open('Failed to submit trainer ID. Please try again.', 'Close', {
+            this.snackBar.open(this.withBuild('Failed to submit trainer ID. Please try again.'), 'Close', {
               duration: 3000,
               panelClass: ['error-snackbar']
             });
@@ -220,7 +222,7 @@ export class TrainerSubmitDialogComponent implements OnInit {
       }
     } catch (error) {
       console.error('Error submitting trainer ID:', error);
-      this.snackBar.open('An unexpected error occurred. Please try again.', 'Close', {
+      this.snackBar.open(this.withBuild('An unexpected error occurred. Please try again.'), 'Close', {
         duration: 3000,
         panelClass: ['error-snackbar']
       });
@@ -277,5 +279,9 @@ export class TrainerSubmitDialogComponent implements OnInit {
   }
   close() {
     this.dialogRef.close();
+  }
+
+  private withBuild(message: string): string {
+    return this.appVersionService.appendBuildTag(message);
   }
 }

@@ -103,7 +103,7 @@ export class TurnstileInterceptor implements HttpInterceptor {
     sentReq: HttpRequest<unknown>,
     next: HttpHandler,
   ): Observable<HttpEvent<unknown>> {
-    if (!(error instanceof HttpErrorResponse) || !this.shouldRetryWithFreshProof(error)) {
+    if (!(error instanceof HttpErrorResponse) || !this.shouldRetryWithFreshProof(error, sentReq)) {
       return throwError(() => error);
     }
 
@@ -117,16 +117,22 @@ export class TurnstileInterceptor implements HttpInterceptor {
     );
   }
 
-  private shouldRetryWithFreshProof(error: HttpErrorResponse): boolean {
-    if (error.status !== 403) {
-      return false;
+  private shouldRetryWithFreshProof(error: HttpErrorResponse, sentReq: HttpRequest<unknown>): boolean {
+    const errorCode = this.extractErrorCode(error.error);
+    if (error.status === 403) {
+      return errorCode === 'browser_proof_required'
+        || errorCode === 'turnstile_invalid'
+        || errorCode === 'browser_context_mismatch'
+        || errorCode === 'invalid_browser_proof';
     }
 
-    const errorCode = this.extractErrorCode(error.error);
-    return errorCode === 'browser_proof_required'
-      || errorCode === 'turnstile_invalid'
-      || errorCode === 'browser_context_mismatch'
-      || errorCode === 'invalid_browser_proof';
+    return error.status === 429
+      && !sentReq.headers.has(this.turnstileService.proofHeaderName)
+      && (
+        errorCode === 'browser_proof_warmup_rate_limited'
+        || errorCode === 'browser_proof_warmup_exhausted'
+        || errorCode === 'rate_limited'
+      );
   }
 
   private extractErrorCode(errorBody: unknown): string | null {
@@ -145,6 +151,18 @@ export class TurnstileInterceptor implements HttpInterceptor {
 
       if (errorBody.includes('invalid_browser_proof')) {
         return 'invalid_browser_proof';
+      }
+
+      if (errorBody.includes('browser_proof_warmup_rate_limited')) {
+        return 'browser_proof_warmup_rate_limited';
+      }
+
+      if (errorBody.includes('browser_proof_warmup_exhausted')) {
+        return 'browser_proof_warmup_exhausted';
+      }
+
+      if (errorBody.includes('rate_limited')) {
+        return 'rate_limited';
       }
 
       return null;

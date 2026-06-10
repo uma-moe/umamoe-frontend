@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, ReplaySubject } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { TurnstileService } from './turnstile.service';
+import { AppVersionService } from './app-version.service';
+import { TurnstileDebugState, TurnstileService } from './turnstile.service';
 
 type ManifestEntry = string | {
   name?: string;
@@ -46,12 +47,20 @@ interface ResourceCacheMeta {
   fingerprint?: string;
 }
 
+interface BrowserProofFetchResult {
+  response: Response;
+  sentProof: boolean;
+}
+
 export interface ResourceLoadError {
   resourceName: string;
   message: string;
   attempt: number;
   occurredAt: string;
   url?: string;
+  buildVersion: string;
+  buildVersionLabel: string;
+  browserProof?: TurnstileDebugState;
 }
 
 class ResourceHttpError extends Error {
@@ -101,7 +110,10 @@ export class ResourceDataService {
   private retryAttempts = new Map<string, number>();
   private retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  constructor(private turnstileService: TurnstileService) {}
+  constructor(
+    private turnstileService: TurnstileService,
+    private appVersionService: AppVersionService,
+  ) {}
 
   watchResource<T>(resourceName: string, fallback: T): Observable<T> {
     let subject = this.subjects.get(resourceName) as ReplaySubject<T> | undefined;
@@ -314,6 +326,9 @@ export class ResourceDataService {
       resourceName,
       attempt,
       occurredAt: new Date().toISOString(),
+      buildVersion: this.appVersionService.getCurrentVersion(),
+      buildVersionLabel: this.appVersionService.getCurrentVersionLabel(),
+      browserProof: this.getBrowserProofDebugSnapshot(),
     };
 
     if (error instanceof ResourceHttpError) {
@@ -325,6 +340,14 @@ export class ResourceDataService {
     }
 
     return { ...base, message: String(error) };
+  }
+
+  private getBrowserProofDebugSnapshot(): TurnstileDebugState | undefined {
+    if (!environment.turnstile.enabled) {
+      return undefined;
+    }
+
+    return { ...this.turnstileService.currentProofDebug };
   }
 
   private get resourceBaseUrl(): string {
@@ -565,24 +588,24 @@ export class ResourceDataService {
   }
 
   private async fetchWithBrowserProof(url: string, init: RequestInit): Promise<Response> {
-    const response = await this.performFetchWithBrowserProof(url, init, false);
-    if (await this.shouldRetryWithFreshProof(response)) {
+    const result = await this.performFetchWithBrowserProof(url, init, false);
+    if (await this.shouldRetryWithFreshProof(result.response, result.sentProof)) {
       this.turnstileService.invalidateBrowserProof();
 
-      const retryResponse = await this.performFetchWithBrowserProof(url, init, true);
-      this.captureBrowserProof(retryResponse);
-      return retryResponse;
+      const retryResult = await this.performFetchWithBrowserProof(url, init, true);
+      this.captureBrowserProof(retryResult.response);
+      return retryResult.response;
     }
 
-    this.captureBrowserProof(response);
-    return response;
+    this.captureBrowserProof(result.response);
+    return result.response;
   }
 
   private async performFetchWithBrowserProof(
     url: string,
     init: RequestInit,
     forceRefresh: boolean,
-  ): Promise<Response> {
+  ): Promise<BrowserProofFetchResult> {
     const headers = new Headers(init.headers);
     headers.set('Accept', headers.get('Accept') ?? 'application/json');
 
@@ -598,11 +621,16 @@ export class ResourceDataService {
       headers.set(this.turnstileService.proofHeaderName, proofToken);
     }
 
-    return fetch(url, {
+    const response = await fetch(url, {
       ...init,
       headers,
       credentials: init.credentials ?? 'include',
     });
+
+    return {
+      response,
+      sentProof: !!proofToken,
+    };
   }
 
   private captureBrowserProof(response: Response): void {
@@ -612,16 +640,22 @@ export class ResourceDataService {
     this.turnstileService.storeBrowserProof(proofToken, ttlSeconds, environment.turnstile.action, source);
   }
 
-  private async shouldRetryWithFreshProof(response: Response): Promise<boolean> {
-    if (response.status !== 403) {
-      return false;
+  private async shouldRetryWithFreshProof(response: Response, sentProof: boolean): Promise<boolean> {
+    const errorCode = await this.extractErrorCode(response);
+    if (response.status === 403) {
+      return errorCode === 'browser_proof_required'
+        || errorCode === 'turnstile_invalid'
+        || errorCode === 'browser_context_mismatch'
+        || errorCode === 'invalid_browser_proof';
     }
 
-    const errorCode = await this.extractErrorCode(response);
-    return errorCode === 'browser_proof_required'
-      || errorCode === 'turnstile_invalid'
-      || errorCode === 'browser_context_mismatch'
-      || errorCode === 'invalid_browser_proof';
+    return response.status === 429
+      && !sentProof
+      && (
+        errorCode === 'browser_proof_warmup_rate_limited'
+        || errorCode === 'browser_proof_warmup_exhausted'
+        || errorCode === 'rate_limited'
+      );
   }
 
   private async extractErrorCode(response: Response): Promise<string | null> {
@@ -648,6 +682,18 @@ export class ResourceDataService {
 
       if (body.includes('invalid_browser_proof')) {
         return 'invalid_browser_proof';
+      }
+
+      if (body.includes('browser_proof_warmup_rate_limited')) {
+        return 'browser_proof_warmup_rate_limited';
+      }
+
+      if (body.includes('browser_proof_warmup_exhausted')) {
+        return 'browser_proof_warmup_exhausted';
+      }
+
+      if (body.includes('rate_limited')) {
+        return 'rate_limited';
       }
     } catch {}
 

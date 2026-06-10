@@ -13,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { combineLatest, Subject, takeUntil } from 'rxjs';
 import { ShameService } from '../../services/shame.service';
+import { AppVersionService } from '../../services/app-version.service';
 import { CompactNumberPipe } from '../../pipes/compact-number.pipe';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import {
@@ -230,7 +231,8 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
     private shameService: ShameService,
     private route: ActivatedRoute,
     private router: Router,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private appVersionService: AppVersionService
   ) { }
 
   ngOnInit(): void {
@@ -304,7 +306,7 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
         this.entries = [];
         this.totalEntries = 0;
         this.loading = false;
-        this.errorMessage = 'Could not load suspicion scores.';
+        this.errorMessage = this.withBuild('Could not load suspicion scores.');
       }
     });
   }
@@ -324,7 +326,7 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       error: () => {
         this.detailLoading = false;
-        this.errorMessage = 'Could not load this viewer report.';
+        this.errorMessage = this.withBuild('Could not load this viewer report.');
         this.resetDetailDerivedState();
         this.destroyDailyChart();
       }
@@ -1702,5 +1704,9 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
     if (finalParams['minDays'] === this.defaultMinDays) delete finalParams['minDays'];
 
     this.router.navigate(['/activity'], { queryParams: finalParams });
+  }
+
+  private withBuild(message: string): string {
+    return this.appVersionService.appendBuildTag(message);
   }
 }

@@ -6,7 +6,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { Subject, takeUntil } from 'rxjs';
 import { StatsService, StatsResponse } from '../../services/stats.service';
 import { DomainMigrationService } from '../../services/domain-migration.service';
-import { CookieConsentService } from '../../services/cookie-consent.service';
 import { DomainMigrationPopupComponent } from '../../components/domain-migration-popup/domain-migration-popup.component';
 import { MilestoneService } from '../../services/milestone.service';
 import { MilestonePopupComponent } from '../../components/milestone-popup/milestone-popup.component';
@@ -41,7 +40,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     private dialog: MatDialog,
     private domainMigrationService: DomainMigrationService,
     private themeService: ThemeService,
-    private cookieConsentService: CookieConsentService,
     private milestoneService: MilestoneService
   ) {
     this.title.setTitle('uma.moe Umamusume Database & Tools');
@@ -89,9 +87,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   onLogoError(event: Event) {
     const target = event.target as HTMLImageElement;
     target.src = 'assets/logo.webp';
-  }
-  openCookieSettings(): void {
-    this.cookieConsentService.reopenBanner();
   }
   private checkForMilestonePopup() {
     setTimeout(() => {

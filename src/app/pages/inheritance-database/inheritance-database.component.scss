@@ -1,7 +1,7 @@
 @use '../../../styles/mixins' as *;
 
 .inheritance-database {
-  min-height: calc(100vh - 60px);
+  flex: 1 1 auto;
   background: var(--bg-secondary);
   overflow-x: hidden;
   overflow-x: clip;

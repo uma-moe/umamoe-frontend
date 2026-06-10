@@ -1,6 +1,6 @@
 @use '../../../styles/mixins' as *;
 
-.circles-page { min-height: calc(100vh - 60px); background: var(--bg-secondary); }
+.circles-page { flex: 1 1 auto; background: var(--bg-secondary); }
 
 // Uses shared page-header-gradient mixin from _mixins
 .page-header {

@@ -14,7 +14,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
 .lineage-planner {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - var(--header-height));
+  flex: 1 1 auto;
   background: var(--bg-secondary);
 }
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -51,11 +51,12 @@ interface EventFilters {
     styleUrls: ['./mobile-timeline.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class MobileTimelineComponent implements OnInit, OnDestroy {
+export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     // Configuration - use UTC date
     globalReleaseDate = new Date(Date.UTC(2025, 5, 26, 22, 0, 0)); // June 26, 2025, 22:00 UTC
     timelineItems: MobileTimelineItem[] = [];
     timelineEvents: TimelineEvent[] = [];
+    readonly todayElementId = 'mobile-timeline-today';
     // Event filtering
     eventFilters: EventFilters = {
         showCharacters: true,
@@ -73,24 +74,30 @@ export class MobileTimelineComponent implements OnInit, OnDestroy {
     private eventsSubscription?: Subscription;
     private todayUpdateInterval?: number;
     private initialScrollDone = false;
+    private initialScrollScheduled = false;
+    private viewInitialized = false;
+    private destroyed = false;
     constructor(
         private timelineService: TimelineService,
-        private cdr: ChangeDetectorRef
+        private cdr: ChangeDetectorRef,
+        private hostRef: ElementRef<HTMLElement>
     ) { }
     ngOnInit(): void {
         this.eventsSubscription = this.timelineService.events$.subscribe(events => {
             this.timelineEvents = events;
             this.generateTimelineItems();
             this.cdr.detectChanges();
-            if (!this.initialScrollDone && events.length > 0) {
-                this.initialScrollDone = true;
-                setTimeout(() => this.scrollToToday(), 100);
-            }
+            this.scheduleInitialScrollToToday();
         });
         // Set up periodic updates for the today marker (every 5 minutes)
         this.setupTodayMarkerUpdate();
     }
+    ngAfterViewInit(): void {
+        this.viewInitialized = true;
+        this.scheduleInitialScrollToToday();
+    }
     ngOnDestroy(): void {
+        this.destroyed = true;
         if (this.eventsSubscription) {
             this.eventsSubscription.unsubscribe();
         }
@@ -397,14 +404,154 @@ export class MobileTimelineComponent implements OnInit, OnDestroy {
     onImageError(event: any): void {
         (event.target as HTMLImageElement).style.display = 'none';
     }
-    scrollToToday(): void {
-        const todayItem = this.timelineItems.find(item => item.type === 'today');
-        if (todayItem) {
-            const element = document.getElementById(`timeline-item-${todayItem.daysSinceStart}`);
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+    private scheduleInitialScrollToToday(): void {
+        if (
+            this.initialScrollDone ||
+            this.initialScrollScheduled ||
+            !this.viewInitialized ||
+            this.timelineEvents.length === 0 ||
+            !this.timelineItems.some(item => item.type === 'today')
+        ) {
+            return;
         }
+
+        this.initialScrollScheduled = true;
+        void this.scrollToTodayAfterInitialLayout();
+    }
+
+    private async scrollToTodayAfterInitialLayout(): Promise<void> {
+        const initialScrollY = window.scrollY;
+
+        try {
+            await this.waitForInitialTimelineLayout();
+
+            if (this.destroyed || this.initialScrollDone) {
+                return;
+            }
+
+            if (Math.abs(window.scrollY - initialScrollY) > 80) {
+                this.initialScrollDone = true;
+                return;
+            }
+
+            if (this.scrollToToday('auto')) {
+                this.initialScrollDone = true;
+                await this.waitForFrames(2);
+                if (!this.destroyed) {
+                    this.scrollToToday('auto');
+                }
+            }
+        } finally {
+            this.initialScrollScheduled = false;
+        }
+    }
+
+    private async waitForInitialTimelineLayout(): Promise<void> {
+        await this.waitForFrames(2);
+        await this.waitForTimelineImages();
+        await this.waitForStableTimelineHeight();
+    }
+
+    private waitForTimelineImages(timeoutMs = 3000): Promise<void> {
+        const feed = this.hostRef.nativeElement.querySelector<HTMLElement>('.tl-feed');
+        if (!feed) {
+            return Promise.resolve();
+        }
+
+        const images = Array.from(feed.querySelectorAll<HTMLImageElement>('img'))
+            .filter(image => !image.complete);
+
+        if (images.length === 0) {
+            return Promise.resolve();
+        }
+
+        return new Promise(resolve => {
+            let finished = false;
+            let timeoutId: number | undefined;
+            const pendingImages = new Set(images);
+
+            const finish = (): void => {
+                if (finished) {
+                    return;
+                }
+
+                finished = true;
+                if (timeoutId !== undefined) {
+                    window.clearTimeout(timeoutId);
+                }
+                images.forEach(image => {
+                    image.removeEventListener('load', onSettle);
+                    image.removeEventListener('error', onSettle);
+                });
+                resolve();
+            };
+
+            const onSettle = (event: Event): void => {
+                const image = event.currentTarget as HTMLImageElement | null;
+                if (image) {
+                    pendingImages.delete(image);
+                }
+                if (pendingImages.size === 0) {
+                    finish();
+                }
+            };
+
+            timeoutId = window.setTimeout(finish, timeoutMs);
+            images.forEach(image => {
+                image.addEventListener('load', onSettle, { once: true });
+                image.addEventListener('error', onSettle, { once: true });
+                if (image.complete) {
+                    pendingImages.delete(image);
+                }
+            });
+
+            if (pendingImages.size === 0) {
+                finish();
+            }
+        });
+    }
+
+    private async waitForStableTimelineHeight(stableFrameTarget = 3, maxFrames = 20): Promise<void> {
+        const timeline = this.hostRef.nativeElement.querySelector<HTMLElement>('.tl-feed') ?? this.hostRef.nativeElement;
+        let lastHeight = -1;
+        let stableFrames = 0;
+
+        for (let frame = 0; frame < maxFrames && stableFrames < stableFrameTarget && !this.destroyed; frame++) {
+            await this.waitForFrames(1);
+            const height = timeline.scrollHeight;
+            if (lastHeight >= 0 && Math.abs(height - lastHeight) <= 1) {
+                stableFrames++;
+            } else {
+                stableFrames = 0;
+            }
+            lastHeight = height;
+        }
+    }
+
+    private waitForFrames(frameCount: number): Promise<void> {
+        return new Promise(resolve => {
+            const tick = (): void => {
+                if (this.destroyed || frameCount <= 0) {
+                    resolve();
+                    return;
+                }
+
+                frameCount--;
+                window.requestAnimationFrame(tick);
+            };
+
+            tick();
+        });
+    }
+
+    scrollToToday(behavior: ScrollBehavior = 'smooth'): boolean {
+        const element = this.hostRef.nativeElement.querySelector<HTMLElement>(`#${this.todayElementId}`);
+        if (!element) {
+            return false;
+        }
+
+        element.scrollIntoView({ behavior, block: 'center' });
+        return true;
     }
     toggleFilterPanel(): void {
         this.isFilterPanelExpanded = !this.isFilterPanelExpanded;

@@ -44,6 +44,47 @@ export class AppVersionService {
     });
   }
 
+  getCurrentVersion(): string {
+    return this.currentVersion || 'local';
+  }
+
+  getCurrentVersionLabel(): string {
+    return this.formatVersion(this.getCurrentVersion());
+  }
+
+  getSupportBuildTag(): string {
+    return `build=${this.getCurrentVersion()} (${this.getCurrentVersionLabel()})`;
+  }
+
+  appendBuildTag(message: string): string {
+    const normalizedMessage = (message || 'Unknown error').trim();
+    if (normalizedMessage.includes('build=')) {
+      return normalizedMessage;
+    }
+    return `${normalizedMessage} | ${this.getSupportBuildTag()}`;
+  }
+
+  formatVersion(version: string): string {
+    const trimmedVersion = version.trim();
+    if (!trimmedVersion) {
+      return 'unknown';
+    }
+
+    const buildVersion = trimmedVersion.match(/^(beta|prod)-build\.(\d+)\.(\d+)$/i);
+    if (buildVersion) {
+      const [, environment, runNumber, attempt] = buildVersion;
+      return `${environment} build #${runNumber}.${attempt}`;
+    }
+
+    const githubBuild = trimmedVersion.match(/^([a-f0-9]{40})-(\d+)-(\d+)-(.+)$/i);
+    if (githubBuild) {
+      const [, commit, runId, attempt, environment] = githubBuild;
+      return `${commit.slice(0, 7)} - #${runId}.${attempt} - ${environment}`;
+    }
+
+    return trimmedVersion;
+  }
+
   private readonly handleVisibilityChange = (): void => {
     if (this.document.visibilityState === 'visible') {
       void this.checkForUpdate();

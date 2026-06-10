@@ -21,6 +21,8 @@ import { SupportCardService } from '../../services/support-card.service';
 import { AffinityService } from '../../services/affinity.service';
 import { AuthService } from '../../services/auth.service';
 import { BookmarkService } from '../../services/bookmark.service';
+import { AppVersionService } from '../../services/app-version.service';
+import { AnalyticsEventParams, GoogleAnalyticsService } from '../../services/google-analytics.service';
 import { InheritanceFilterComponent, InheritanceFilters } from './inheritance-filter.component';
 import { TrainerSubmitDialogComponent, TrainerSubmissionConfig } from '../../components/trainer-submit-dialog/trainer-submit-dialog.component';
 import { TrainerIdFormatPipe } from '../../pipes/trainer-id-format.pipe';
@@ -215,6 +217,69 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     return this.stableStringify(searchParams);
   }
 
+  private trackDatabaseEvent(eventName: string, params: AnalyticsEventParams = {}): void {
+    this.googleAnalyticsService.trackEvent(eventName, {
+      feature: 'inheritance_database',
+      ...params,
+    });
+  }
+
+  private trackAdvancedFilterChange(params: UnifiedSearchParams, changeType: string): void {
+    this.trackDatabaseEvent('filter_inheritance_database', {
+      change_type: changeType,
+      sort_by: this.currentSortBy,
+      filter_count: this.countAnalyticsFilterValues(params),
+      blue_groups: params.blue_sparks?.length ?? 0,
+      pink_groups: params.pink_sparks?.length ?? 0,
+      green_groups: params.green_sparks?.length ?? 0,
+      white_groups: params.white_sparks?.length ?? 0,
+      has_uql: !!params.uql,
+      has_trainer_lookup: !!(params.trainer_id || this.trainerIdFilter),
+      has_p2_context: !!(params.p2_main_chara_id || params.p2_win_saddle?.length),
+      has_support_filter: !!params.support_card_id,
+      has_legacy_filter: !!(params.main_legacy_white?.length || params.left_legacy_white?.length || params.right_legacy_white?.length),
+    });
+  }
+
+  private trackLegacyFilterChange(filters: InheritanceFilters | null): void {
+    this.trackDatabaseEvent('filter_inheritance_database', {
+      change_type: 'legacy',
+      sort_by: this.currentSortBy,
+      filter_count: this.countAnalyticsFilterValues(filters ?? {}),
+      blue_groups: filters?.mainStats?.filter(stat => !!stat.type && !!stat.level).length ?? 0,
+      pink_groups: filters?.aptitudes?.filter(stat => !!stat.type && !!stat.level).length ?? 0,
+      green_groups: filters?.skills?.filter(stat => !!stat.type && !!stat.level).length ?? 0,
+      white_groups: filters?.whiteSparks?.filter(stat => !!stat.type && !!stat.level).length ?? 0,
+      has_trainer_lookup: !!this.trainerIdFilter,
+    });
+  }
+
+  private countAnalyticsFilterValues(value: unknown): number {
+    if (value === null || value === undefined) {
+      return 0;
+    }
+
+    if (Array.isArray(value)) {
+      return value.reduce((count, item) => count + this.countAnalyticsFilterValues(item), 0);
+    }
+
+    if (typeof value === 'object') {
+      return Object.entries(value as Record<string, unknown>)
+        .filter(([key]) => !key.includes('highlight'))
+        .reduce((count, [, item]) => count + this.countAnalyticsFilterValues(item), 0);
+    }
+
+    if (typeof value === 'string') {
+      return value.trim() ? 1 : 0;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isFinite(value) && value > 0 ? 1 : 0;
+    }
+
+    return value === true ? 1 : 0;
+  }
+
   private withSelectedVeteranP2Params(params: UnifiedSearchParams): UnifiedSearchParams {
     const veteran = this.advancedFilter?.selectedVeteran;
     if (!veteran) return params;
@@ -315,6 +380,8 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     private affinityService: AffinityService,
     public authService: AuthService,
     public bookmarkService: BookmarkService,
+    private appVersionService: AppVersionService,
+    private googleAnalyticsService: GoogleAnalyticsService,
   ) {
     // Restore list mode preference
     const saved = localStorage.getItem(this.LIST_MODE_KEY);
@@ -439,6 +506,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     this.currentAdvancedFilters = effectiveParams;
     this.advancedSearchSignature = nextSearchSignature;
     this.refreshP2SparkCache();
+    this.trackAdvancedFilterChange(
+      effectiveParams,
+      isP2OnlyChange ? 'p2_context' : (hasPendingPage ? 'url_restore' : 'manual'),
+    );
     
     // Update URL
     const serialized = this.advancedFilter.getSerializedState();
@@ -483,6 +554,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     if (!environment.production) {
     }
     this.currentFilters = filters;
+    this.trackLegacyFilterChange(filters);
     this.currentPage = 0; // Reset to first page
     this.clearRecords();
     this.hasMoreRecords = true;
@@ -490,9 +562,17 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   }
   onMaxFollowersToggled(includeMax: boolean) {
     this.includeMaxFollowers = includeMax;
+    this.trackDatabaseEvent('toggle_inheritance_max_followers', {
+      enabled: includeMax,
+      source: 'filter_panel',
+    });
   }
   onHeaderMaxFollowersToggle(checked: boolean) {
     this.includeMaxFollowers = checked;
+    this.trackDatabaseEvent('toggle_inheritance_max_followers', {
+      enabled: checked,
+      source: 'results_header',
+    });
     // Sync back to the advanced filter component
     if (this.advancedFilter) {
       this.advancedFilter.toggleMaxFollowers(checked);
@@ -500,6 +580,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   }
   onSortChanged(event: any) {
     this.currentSortBy = event.value;
+    this.trackDatabaseEvent('sort_inheritance_database', {
+      sort_by: this.currentSortBy,
+      active_tab: this.activeTab,
+    });
     this.currentPage = 0;
     this.clearRecords();
     this.hasMoreRecords = true;
@@ -734,7 +818,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
           
           // Don't show generic error for rate limiting (handled by interceptor popup)
           if (error.status !== 429) {
-            this.snackBar.open('Error loading records', 'Close', { duration: 3000 });
+            this.snackBar.open(this.withBuild('Error loading records'), 'Close', { duration: 3000 });
           }
         }
       });
@@ -743,6 +827,12 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     if (!this.hasMoreRecords || this.loading || this.loadingMore || this.isRenderingRecords || this.hasUnrenderedRecords) {
       return;
     }
+    this.trackDatabaseEvent('load_more_inheritance_records', {
+      next_page: this.currentPage + 1,
+      page_size: this.pageSize,
+      sort_by: this.currentSortBy,
+      total_records: this.totalRecords,
+    });
     this.currentPage++;
     this.searchRecords();
   }
@@ -1080,11 +1170,15 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
             this.voteProtection.completeVoting(recordId, true);
             // Update vote state to reflect the new vote
             this.voteStates.set(recordId, this.voteProtection.getVoteState(recordId));
+            this.trackDatabaseEvent('rate_inheritance_record', {
+              vote_type: voteType,
+              status: 'success',
+            });
           },
           error: (error) => {
             console.error('Error voting:', error);
             this.snackBar.open(
-              `Failed to vote: ${error.message || 'Unknown error'}`,
+              this.withBuild(`Failed to vote: ${error.message || 'Unknown error'}`),
               'Close',
               { duration: 3000 }
             );
@@ -1092,6 +1186,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
             this.voteProtection.completeVoting(recordId, false);
             // Update vote state
             this.voteStates.set(recordId, this.voteProtection.getVoteState(recordId));
+            this.trackDatabaseEvent('rate_inheritance_record', {
+              vote_type: voteType,
+              status: 'error',
+            });
           }
         });
     });
@@ -1137,7 +1235,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         error: (error) => {
           console.error('Error fetching record details:', error);
           this.snackBar.open(
-            `Failed to load record details: ${error.message || 'Unknown error'}`,
+            this.withBuild(`Failed to load record details: ${error.message || 'Unknown error'}`),
             'Close',
             { duration: 3000 }
           );
@@ -1147,20 +1245,35 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   async shareRecord(record: InheritanceRecord) {
     if (!record?.id) return;
     const url = `${window.location.origin}/inheritance/${record.id}`;
+    const onCopySuccess = () => this.trackDatabaseEvent('copy_inheritance_link', {
+      source: 'record_action',
+    });
     try {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText('');
         await navigator.clipboard.writeText(url);
+        onCopySuccess();
         this.snackBar.open('Link copied to clipboard', 'Close', { duration: 2000 });
       } else {
-        this.fallbackCopyToClipboard(url);
+        this.fallbackCopyToClipboard(url, {
+          successMessage: 'Link copied to clipboard',
+          failureMessage: 'Failed to copy link',
+          onSuccess: onCopySuccess,
+        });
       }
     } catch (error) {
       console.warn('Clipboard API failed for share, using fallback:', error);
-      this.fallbackCopyToClipboard(url);
+      this.fallbackCopyToClipboard(url, {
+        successMessage: 'Link copied to clipboard',
+        failureMessage: 'Failed to copy link',
+        onSuccess: onCopySuccess,
+      });
     }
   }
   openSubmitDialog() {
+    this.trackDatabaseEvent('open_trainer_submit', {
+      source: 'database',
+    });
     const config: TrainerSubmissionConfig = {
       title: 'Share Trainer ID',
       subtitle: 'Help the community grow'
@@ -1177,6 +1290,9 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         }
         // For now, just show success message since we're only collecting trainer ID
         this.snackBar.open('Trainer ID submitted successfully!', 'Close', { duration: 3000 });
+        this.trackDatabaseEvent('submit_trainer_id', {
+          source: 'database_dialog',
+        });
         // Refresh the records list
         this.searchRecords();
       }
@@ -1195,21 +1311,32 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     }
     try {
       // Check if clipboard API is supported and we have permission
+      const onCopySuccess = () => this.trackDatabaseEvent('copy_trainer_id', {
+        source: 'database_record',
+      });
       if (navigator.clipboard && window.isSecureContext) {
         // Clear clipboard first, then write new content
         await navigator.clipboard.writeText('');
         await navigator.clipboard.writeText(trainerId);
+        onCopySuccess();
         this.snackBar.open(`Trainer ID copied: ${trainerId}`, 'Close', { duration: 2000 });
       } else {
         // Use fallback method
-        this.fallbackCopyToClipboard(trainerId);
+        this.fallbackCopyToClipboard(trainerId, { onSuccess: onCopySuccess });
       }
     } catch (error) {
       console.warn('Clipboard API failed, using fallback:', error);
-      this.fallbackCopyToClipboard(trainerId);
+      this.fallbackCopyToClipboard(trainerId, {
+        onSuccess: () => this.trackDatabaseEvent('copy_trainer_id', {
+          source: 'database_record',
+        }),
+      });
     }
   }
-  private fallbackCopyToClipboard(text: string) {
+  private fallbackCopyToClipboard(
+    text: string,
+    options: { successMessage?: string; failureMessage?: string; onSuccess?: () => void } = {},
+  ) {
     // Create a temporary textarea element
     const textArea = document.createElement('textarea');
     textArea.value = text;
@@ -1228,13 +1355,14 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     try {
       const successful = document.execCommand('copy');
       if (successful) {
-        this.snackBar.open(`Trainer ID copied: ${text}`, 'Close', { duration: 2000 });
+        options.onSuccess?.();
+        this.snackBar.open(options.successMessage || `Trainer ID copied: ${text}`, 'Close', { duration: 2000 });
       } else {
-        this.snackBar.open('Failed to copy trainer ID', 'Close', { duration: 2000 });
+        this.snackBar.open(this.withBuild(options.failureMessage || 'Failed to copy trainer ID'), 'Close', { duration: 2000 });
       }
     } catch (err) {
       console.error('Fallback copy failed:', err);
-      this.snackBar.open('Failed to copy trainer ID', 'Close', { duration: 2000 });
+      this.snackBar.open(this.withBuild(options.failureMessage || 'Failed to copy trainer ID'), 'Close', { duration: 2000 });
     } finally {
       document.body.removeChild(textArea);
     }
@@ -1258,13 +1386,21 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         next: () => {
           // this.voteProtection.markReportCompleted(trainerId);
           this.snackBar.open('Trainer reported as unavailable', 'Close', { duration: 2000 });
+          this.trackDatabaseEvent('report_trainer_unavailable', {
+            source: 'database_record',
+            status: 'success',
+          });
           this.searchRecords();
         },
         error: (error: any) => {
           // this.voteProtection.markReportFailed(trainerId);
           console.error('Failed to report trainer:', error);
           // For now, show success even if backend fails (graceful degradation)
-          this.snackBar.open('Report submitted (service temporarily unavailable)', 'Close', { duration: 3000 });
+          this.snackBar.open(this.withBuild('Report submitted (service temporarily unavailable)'), 'Close', { duration: 3000 });
+          this.trackDatabaseEvent('report_trainer_unavailable', {
+            source: 'database_record',
+            status: 'fallback',
+          });
         }
       });
   }
@@ -1278,6 +1414,11 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     const vet = this.advancedFilter?.selectedVeteran || null;
 
     this.plannerTransfer.set({ record, targetCharaId: target, veteran: vet });
+    this.trackDatabaseEvent('open_lineage_planner', {
+      source: 'database_record',
+      has_target_context: !!target,
+      has_veteran_context: !!vet,
+    });
     const url = this.router.serializeUrl(
       this.router.createUrlTree(['/tools/lineage-planner'], { queryParams: { from: 'db' } })
     );
@@ -1462,8 +1603,11 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     if (!trainerId || trainerId.trim() === '') return;
     navigator.clipboard.writeText(trainerId).then(() => {
       this.snackBar.open('Trainer ID copied to clipboard', 'Close', { duration: 2000 });
+      this.trackDatabaseEvent('copy_trainer_id', {
+        source: 'inheritance_entry',
+      });
     }).catch(() => {
-      this.snackBar.open('Failed to copy Trainer ID', 'Close', { duration: 2000 });
+      this.snackBar.open(this.withBuild('Failed to copy Trainer ID'), 'Close', { duration: 2000 });
     });
   }
 
@@ -1531,8 +1675,23 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     const text = lines.join('\n');
     navigator.clipboard.writeText(text).then(() => {
       this.snackBar.open('Inheritance info copied to clipboard', 'Close', { duration: 2000 });
+      this.trackDatabaseEvent('copy_inheritance_info', {
+        source: 'inheritance_entry',
+        has_trainer_lookup: !!trainerId,
+        line_count: lines.length,
+        stat_count: stats.length,
+      });
     }).catch(() => {
-      this.fallbackCopyToClipboard(text);
+      this.fallbackCopyToClipboard(text, {
+        successMessage: 'Inheritance info copied to clipboard',
+        failureMessage: 'Failed to copy inheritance info',
+        onSuccess: () => this.trackDatabaseEvent('copy_inheritance_info', {
+          source: 'inheritance_entry_fallback',
+          has_trainer_lookup: !!trainerId,
+          line_count: lines.length,
+          stat_count: stats.length,
+        }),
+      });
     });
   }
 
@@ -1541,6 +1700,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   switchTab(tab: 'database' | 'bookmarks'): void {
     if (this.activeTab === tab) return;
     this.activeTab = tab;
+    this.trackDatabaseEvent('switch_inheritance_tab', {
+      target_tab: tab,
+      bookmark_count: this.bookmarkService.count,
+    });
     if (tab === 'bookmarks') {
       if (this.bookmarksDirty) {
         this.bookmarksDirty = false;
@@ -1569,7 +1732,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         },
         error: () => {
           this.bookmarksLoading = false;
-          this.snackBar.open('Failed to load bookmarks', 'Close', { duration: 3000 });
+          this.snackBar.open(this.withBuild('Failed to load bookmarks'), 'Close', { duration: 3000 });
         }
       });
   }
@@ -1577,11 +1740,20 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   onBookmarkToggle(event: { id: string; bookmarked: boolean }): void {
     if (!this.authService.isLoggedIn()) {
       this.snackBar.open('Sign in to bookmark records', 'Close', { duration: 3000 });
+      this.trackDatabaseEvent('bookmark_inheritance_record', {
+        action_type: event.bookmarked ? 'add' : 'remove',
+        status: 'requires_login',
+      });
       return;
     }
     if (event.bookmarked) {
       if (this.bookmarkService.count >= this.maxBookmarks) {
         this.snackBar.open(`Bookmark limit reached (${this.maxBookmarks})`, 'Close', { duration: 3000 });
+        this.trackDatabaseEvent('bookmark_inheritance_record', {
+          action_type: 'add',
+          status: 'limit_reached',
+          bookmark_count: this.bookmarkService.count,
+        });
         return;
       }
       this.bookmarkService.addBookmark(event.id)
@@ -1590,8 +1762,19 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
           next: () => {
             this.snackBar.open('Bookmarked', 'Close', { duration: 1500 });
             this.bookmarksDirty = true;
+            this.trackDatabaseEvent('bookmark_inheritance_record', {
+              action_type: 'add',
+              status: 'success',
+              bookmark_count: this.bookmarkService.count,
+            });
           },
-          error: () => this.snackBar.open('Failed to bookmark', 'Close', { duration: 3000 })
+          error: () => {
+            this.snackBar.open(this.withBuild('Failed to bookmark'), 'Close', { duration: 3000 });
+            this.trackDatabaseEvent('bookmark_inheritance_record', {
+              action_type: 'add',
+              status: 'error',
+            });
+          }
         });
     } else {
       this.bookmarkService.removeBookmark(event.id)
@@ -1604,8 +1787,19 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
               this.bookmarkRecords = this.bookmarkRecords.filter(r => r.account_id !== event.id);
               this.applyBookmarkFilters();
             }
+            this.trackDatabaseEvent('bookmark_inheritance_record', {
+              action_type: 'remove',
+              status: 'success',
+              bookmark_count: this.bookmarkService.count,
+            });
           },
-          error: () => this.snackBar.open('Failed to remove bookmark', 'Close', { duration: 3000 })
+          error: () => {
+            this.snackBar.open(this.withBuild('Failed to remove bookmark'), 'Close', { duration: 3000 });
+            this.trackDatabaseEvent('bookmark_inheritance_record', {
+              action_type: 'remove',
+              status: 'error',
+            });
+          }
         });
     }
   }
@@ -1668,7 +1862,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         },
         error: () => {
           this.bookmarkBulkBusy = false;
-          this.snackBar.open('Failed to remove modified bookmarks', 'Close', { duration: 3000 });
+          this.snackBar.open(this.withBuild('Failed to remove modified bookmarks'), 'Close', { duration: 3000 });
         },
       });
   }
@@ -1709,7 +1903,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         },
         error: () => {
           this.bookmarkBulkBusy = false;
-          this.snackBar.open('Failed to clear bookmarks', 'Close', { duration: 3000 });
+          this.snackBar.open(this.withBuild('Failed to clear bookmarks'), 'Close', { duration: 3000 });
         },
       });
   }
@@ -1720,6 +1914,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     clearTimeout(this.clearAllTimer);
     this.clearAllTimer = null;
     this.clearAllArmed = false;
+  }
+
+  private withBuild(message: string): string {
+    return this.appVersionService.appendBuildTag(message);
   }
 
   private computeBookmarkAffinity(records: InheritanceRecord[]): void {
