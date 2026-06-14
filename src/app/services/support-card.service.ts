@@ -350,65 +350,19 @@ export class SupportCardService {
     return this.getSupportCardById(id);
   }
   /**
-   * Get support cards that have been released globally by a specific date
-   * Uses the timeline calculation logic similar to the character service
-   * Includes a 2-day grace period for upcoming releases
+   * Get support cards marked as globally released by the resource data.
    */
-  getReleasedSupportCards(cutoffDate?: Date, gracePeriodDays: number = 2): Observable<SupportCardShort[]> {
-    const globalReleaseDate = new Date('2025-06-26'); // Global game launch
-    const baseCutoffDate = cutoffDate || new Date(); // Default to today
-    // Add grace period to the cutoff date
-    const effectiveCutoffDate = new Date(baseCutoffDate);
-    effectiveCutoffDate.setDate(effectiveCutoffDate.getDate() + gracePeriodDays);
+  getReleasedSupportCards(): Observable<SupportCardShort[]> {
     return this.supportCards$.pipe(
       filter(cards => cards.length > 0),
-      map(cards => {
-        const releaseDatesAreGlobal = this.hasGlobalReleaseDates(cards, globalReleaseDate);
-        return cards.filter(card => {
-          const releaseDate = new Date(card.release_date);
-          if (isNaN(releaseDate.getTime())) return false;
-
-          if (releaseDatesAreGlobal) {
-            return releaseDate <= effectiveCutoffDate;
-          }
-
-          const estimatedGlobalDate = this.calculateGlobalReleaseDate(releaseDate, globalReleaseDate);
-          return estimatedGlobalDate <= effectiveCutoffDate;
-        });
-      })
+      map(cards => cards.filter(card => card.isReleased_en === true))
     );
   }
-
-  private hasGlobalReleaseDates(cards: SupportCardShort[], globalLaunchDate: Date): boolean {
-    const releaseDates = cards
-      .map(card => new Date(card.release_date))
-      .filter(releaseDate => !isNaN(releaseDate.getTime()));
-
-    return releaseDates.length > 0 && releaseDates.every(releaseDate => releaseDate >= globalLaunchDate);
-  }
-
   /**
-   * Calculate estimated global release date based on timeline service logic
-   * This mirrors the calculation used in character.service.ts
+   * Search support cards marked as globally released.
    */
-  private calculateGlobalReleaseDate(jpDate: Date, globalLaunchDate: Date): Date {
-    const jpLaunchDate = new Date('2021-02-24'); // JP game launch
-    const catchupRate = 1 / 1.42; // Global is catching up at 1.6x speed
-    // Days since JP launch
-    const daysSinceJpLaunch = Math.floor((jpDate.getTime() - jpLaunchDate.getTime()) / (1000 * 60 * 60 * 24));
-    // Calculate adjusted days for global (faster release schedule)
-    const adjustedDays = Math.floor(daysSinceJpLaunch * catchupRate);
-    // Global release date = Global launch + adjusted days
-    const globalDate = new Date(globalLaunchDate);
-    globalDate.setDate(globalDate.getDate() + adjustedDays);
-    globalDate.setHours(22, 0, 0, 0); // Normalize to start of the day
-    return globalDate;
-  }
-  /**
-   * Search support cards by name or character and apply release date filtering
-   */
-  searchReleasedSupportCards(query: string, cutoffDate?: Date, gracePeriodDays: number = 2): Observable<SupportCardShort[]> {
-    return this.getReleasedSupportCards(cutoffDate, gracePeriodDays).pipe(
+  searchReleasedSupportCards(query: string): Observable<SupportCardShort[]> {
+    return this.getReleasedSupportCards().pipe(
       map(cards => cards.filter(card =>
         card.name.toLowerCase().includes(query.toLowerCase()) ||
         card.id.toString().includes(query)
@@ -418,8 +372,8 @@ export class SupportCardService {
   /**
    * Get released support cards by type
    */
-  getReleasedSupportCardsByType(type: number, cutoffDate?: Date, gracePeriodDays: number = 2): Observable<SupportCardShort[]> {
-    return this.getReleasedSupportCards(cutoffDate, gracePeriodDays).pipe(
+  getReleasedSupportCardsByType(type: number): Observable<SupportCardShort[]> {
+    return this.getReleasedSupportCards().pipe(
       map(cards => cards.filter(card => card.type === type))
     );
   }

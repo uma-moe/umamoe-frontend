@@ -240,14 +240,29 @@
 // (legacy .vpd-tabs / .vpd-tab classes removed — replaced by mat-tab-nav-bar)
 
 .vpd-tab-count {
-  background: rgba(100, 181, 246, 0.2);
-  color: var(--accent-primary);
+  min-width: 20px;
+  text-align: center;
+  background: rgba(100, 181, 246, 0.18);
+  border: 1px solid rgba(100, 181, 246, 0.32);
+  color: #bbdefb;
   border-radius: var(--radius-pill);
   font-size: 0.68rem;
   font-weight: 700;
   padding: 0 5px;
   line-height: 1.6;
   flex-shrink: 0;
+
+  &.loading {
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+}
+
+.vpd-tab-btn.active .vpd-tab-count {
+  background: rgba(100, 181, 246, 0.28);
+  border-color: rgba(100, 181, 246, 0.5);
+  color: #e3f2fd;
 }
 
 .vpd-close-btn {

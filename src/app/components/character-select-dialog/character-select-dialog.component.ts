@@ -709,9 +709,9 @@ export class CharacterSelectDialogComponent implements OnInit {
 
   ngOnInit() {
     this.characterService
-      .getCharacters()
+      .getReleasedCharacters()
       .subscribe((characters: Character[]) => {
-        this.characters = characters.filter(character => character.isReleased_en === true);
+        this.characters = characters;
         this.sort$.next(this.sort);
         this.cdr.markForCheck();
       });

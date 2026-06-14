@@ -40,6 +40,7 @@ interface CachedBrowserProofToken {
   token: string;
   action: string;
   expiresAt: number;
+  source: string;
 }
 
 interface TurnstileTokenRequest {
@@ -299,10 +300,10 @@ export class TurnstileService {
     await this.getProofToken(action, true, 'interactive');
   }
 
-  getCachedProofToken(action = environment.turnstile.action): string {
+  getCachedProofToken(action = environment.turnstile.action, options?: { includeWarmup?: boolean }): string {
     const normalizedAction = this.normalizeAction(action);
     const cached = this.cachedBrowserProof;
-    return this.hasUsableBrowserProof(cached, normalizedAction) ? cached.token : '';
+    return this.hasUsableBrowserProof(cached, normalizedAction, options?.includeWarmup === true) ? cached.token : '';
   }
 
   storeBrowserProof(
@@ -316,11 +317,26 @@ export class TurnstileService {
       return;
     }
 
+    const normalizedToken = token.trim();
+    const normalizedAction = this.normalizeAction(action);
+
     if (normalizedSource !== 'turnstile') {
+      if (normalizedToken && Number.isFinite(ttlSeconds) && ttlSeconds > 0) {
+        const existingProof = this.cachedBrowserProof;
+        if (!this.hasUsableBrowserProof(existingProof, normalizedAction)) {
+          this.cachedBrowserProof = {
+            token: normalizedToken,
+            action: normalizedAction,
+            expiresAt: Date.now() + ttlSeconds * 1000,
+            source: normalizedSource,
+          };
+        }
+      }
+
       this.updateProofDebug({
         stage: 'warmup',
         ready: false,
-        action: this.normalizeAction(action),
+        action: normalizedAction,
         source: normalizedSource,
         message: 'Using temporary browser warmup proof while Turnstile verification completes.',
       });
@@ -328,15 +344,15 @@ export class TurnstileService {
       return;
     }
 
-    const normalizedToken = token.trim();
     if (!normalizedToken || !Number.isFinite(ttlSeconds) || ttlSeconds <= 0) {
       return;
     }
 
     this.cachedBrowserProof = {
       token: normalizedToken,
-      action: this.normalizeAction(action),
+      action: normalizedAction,
       expiresAt: Date.now() + ttlSeconds * 1000,
+      source: normalizedSource,
     };
     this.supportSimulationMode = 'none';
     this.supportSimulationMessage = '';
@@ -345,7 +361,7 @@ export class TurnstileService {
     this.updateProofDebug({
       stage: 'ready',
       ready: true,
-      action: this.normalizeAction(action),
+      action: normalizedAction,
       source: normalizedSource,
       message: 'Turnstile browser proof is ready.',
     });
@@ -370,10 +386,16 @@ export class TurnstileService {
   private hasUsableBrowserProof(
     proof: CachedBrowserProofToken | null,
     action: string,
+    includeWarmup = false,
   ): proof is CachedBrowserProofToken {
+    const refreshSkewMs = proof?.source === 'turnstile'
+      ? environment.turnstile.proofRefreshSkewMs
+      : 0;
+
     return !!proof
       && proof.action === action
-      && Date.now() < proof.expiresAt - environment.turnstile.proofRefreshSkewMs;
+      && (proof.source === 'turnstile' || includeWarmup)
+      && Date.now() < proof.expiresAt - refreshSkewMs;
   }
 
   private getSimulatedSupportProof(action: string, mode: TurnstileProofMode): Promise<string> {
@@ -577,6 +599,7 @@ export class TurnstileService {
       token: proofToken,
       action,
       expiresAt: Date.now() + ttlSeconds * 1000,
+      source: 'turnstile',
     };
     this.storeBrowserProof(proofToken, ttlSeconds, action);
     return proof;

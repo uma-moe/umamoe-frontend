@@ -10,6 +10,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 import { ScrollingModule, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { TimelineService } from '../../services/timeline.service';
@@ -59,6 +60,7 @@ const CONFIRMED_GLOBAL_ANNIVERSARIES = new Map<number, Date>([
         MatCheckboxModule,
         MatFormFieldModule,
         MatInputModule,
+        MatProgressSpinnerModule,
         FormsModule,
         ScrollingModule,
         MobileTimelineComponent
@@ -127,6 +129,12 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     cardVerticalOffsetTop = 60;     // For items above the timeline
     cardTransformOffset = 25;
     private resizeObserver?: ResizeObserver;
+    private viewInitialized = false;
+    private destroyed = false;
+    private initialTodayScrollDone = false;
+    private initialTodayScrollScheduled = false;
+    readonly timelineLoading$ = this.timelineService.loading$;
+    readonly timelineError$ = this.timelineService.error$;
     constructor(private timelineService: TimelineService, private ngZone: NgZone, private cdr: ChangeDetectorRef, private meta: Meta, private title: Title) {
         this.title.setTitle('Timeline | uma.moe');
         this.meta.addTags([
@@ -327,10 +335,12 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             this.updateVisibleItemsSync(true);
             // Trigger change detection manually
             this.cdr.detectChanges();
+            this.scheduleInitialScrollToToday();
         });
         this.generateTimelineItems();
     }
     ngAfterViewInit(): void {
+        this.viewInitialized = true;
         this.setupScrollListener();
         this.setupResizeObserver();
         this.calculateDynamicScale();
@@ -364,13 +374,14 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
                 // Initial viewport calculation
                 this.updateVisibleItems();
             }
-            this.scrollToToday();
+            this.scheduleInitialScrollToToday();
         }, 100);
         this.updateVisibleItemsSync(true);
         // Trigger change detection manually
         this.cdr.detectChanges();
     }
     ngOnDestroy(): void {
+        this.destroyed = true;
         if (this.eventsSubscription) {
             this.eventsSubscription.unsubscribe();
         }
@@ -686,11 +697,20 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             }
         }
     }
-    scrollToToday(): void {
+    scrollToToday(behavior: ScrollBehavior = 'auto'): boolean {
         const todayItem = this.allTimelineItems.find(item => item.type === 'today');
-        if (todayItem && this.timelineContainer) {
-            this.timelineContainer.nativeElement.scrollLeft = todayItem.position - (this.timelineContainer.nativeElement.clientWidth / 2);
+        if (!todayItem || !this.timelineContainer) {
+            return false;
         }
+        const container = this.timelineContainer.nativeElement;
+        const targetScrollLeft = Math.max(0, todayItem.position - (container.clientWidth / 2));
+        if (typeof container.scrollTo === 'function') {
+            container.scrollTo({ left: targetScrollLeft, behavior });
+        } else {
+            container.scrollLeft = targetScrollLeft;
+        }
+        this.updateVisibleItemsSync(true);
+        return true;
     }
     scrollToStart(): void {
         if (this.timelineContainer) {
@@ -701,6 +721,56 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.timelineContainer) {
             this.timelineContainer.nativeElement.scrollLeft = this.totalWidth;
         }
+    }
+    private scheduleInitialScrollToToday(): void {
+        if (
+            this.initialTodayScrollDone ||
+            this.initialTodayScrollScheduled ||
+            !this.viewInitialized ||
+            this.isMobile ||
+            this.timelineEvents.length === 0 ||
+            !this.timelineContainer ||
+            !this.allTimelineItems.some(item => item.type === 'today')
+        ) {
+            return;
+        }
+
+        this.initialTodayScrollScheduled = true;
+        void this.scrollToTodayAfterInitialLayout();
+    }
+    private async scrollToTodayAfterInitialLayout(): Promise<void> {
+        try {
+            await this.waitForFrames(2);
+            if (this.destroyed || this.initialTodayScrollDone) {
+                return;
+            }
+
+            if (this.scrollToToday('auto')) {
+                this.initialTodayScrollDone = true;
+                await this.waitForFrames(2);
+                if (!this.destroyed) {
+                    this.scrollToToday('auto');
+                    this.cdr.detectChanges();
+                }
+            }
+        } finally {
+            this.initialTodayScrollScheduled = false;
+        }
+    }
+    private waitForFrames(frameCount: number): Promise<void> {
+        return new Promise(resolve => {
+            const tick = (): void => {
+                if (this.destroyed || frameCount <= 0) {
+                    resolve();
+                    return;
+                }
+
+                frameCount--;
+                window.requestAnimationFrame(tick);
+            };
+
+            tick();
+        });
     }
     onScroll(event: Event): void {
         // Handle scroll events if needed - keep minimal to avoid performance issues
@@ -890,30 +960,14 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     private generateAnniversaryMarkers(endDate: Date): void {
         // Use UTC dates to avoid timezone issues
-        const jpLaunchDate = new Date(Date.UTC(2021, 1, 24)); // February 24, 2021 (month is 0-indexed)
-        const globalReleaseDate = new Date(Date.UTC(2025, 5, 26, 22, 0, 0)); // June 26, 2025 22:00 UTC
         // Generate half-year and full-year anniversaries based on JP timeline
         let anniversaryCount = 0;
         while (true) {
             anniversaryCount++;
-            // Calculate the JP anniversary date by adding 6-month intervals
-            // Use precise year/month arithmetic to avoid setMonth() issues
-            const monthsToAdd = anniversaryCount * 6;
-            const jpAnniversaryYear = jpLaunchDate.getUTCFullYear() + Math.floor(monthsToAdd / 12);
-            const jpAnniversaryMonth = jpLaunchDate.getUTCMonth() + (monthsToAdd % 12);
-            // Handle month overflow
-            const finalYear = jpAnniversaryYear + Math.floor(jpAnniversaryMonth / 12);
-            const finalMonth = jpAnniversaryMonth % 12;
-            const jpAnniversaryDate = new Date(Date.UTC(finalYear, finalMonth, jpLaunchDate.getUTCDate()));
-            let globalAnniversaryDate: Date;
             const confirmedAnniversaryDate = CONFIRMED_GLOBAL_ANNIVERSARIES.get(anniversaryCount);
-            if (confirmedAnniversaryDate) {
-                // Use confirmed date when available (already in UTC)
-                globalAnniversaryDate = new Date(confirmedAnniversaryDate);
-            } else {
-                // Use timeline service for consistent dynamic acceleration interpolation
-                globalAnniversaryDate = this.timelineService.calculateGlobalDate(jpAnniversaryDate);
-            }
+            const globalAnniversaryDate = confirmedAnniversaryDate
+                ? new Date(confirmedAnniversaryDate)
+                : this.getProjectedGlobalAnniversaryDate(anniversaryCount);
             // Stop if the anniversary is beyond our timeline end date
             if (globalAnniversaryDate > endDate) {
                 break;
@@ -935,6 +989,12 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
                 position: position + this.initialOffset
             });
         }
+    }
+    private getProjectedGlobalAnniversaryDate(anniversaryCount: number): Date {
+        const date = new Date(this.globalReleaseDate);
+        date.setUTCMonth(date.getUTCMonth() + anniversaryCount * 6);
+        date.setUTCHours(22, 0, 0, 0);
+        return date;
     }
     // Chrome scroll fix utility method
     forceScrollbarUpdate(): void {

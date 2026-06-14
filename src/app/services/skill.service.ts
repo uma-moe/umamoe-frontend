@@ -82,20 +82,17 @@ export class SkillService {
         );
     }
     /**
-     * Get unique skills from characters that have been released globally
-     * This filters unique skills to only include those from released characters
+     * Get unique skills from characters marked as globally released by resources.
      */
-    getUniqueSkillsFromReleasedCharacters(cutoffDate?: Date): Observable<Skill[]> {
+    getUniqueSkillsFromReleasedCharacters(): Observable<Skill[]> {
         return combineLatest([
             this.getUniqueSkills(),
-            this.characterService.getReleasedCharacters(cutoffDate)
+            this.characterService.getReleasedCharacters()
         ]).pipe(
             map(([uniqueSkills, releasedCharacters]) => {
-                // Create a set of released character names for efficient lookup
                 const releaseCharacterIds = new Set(
                     releasedCharacters.map(char => +char.id)
                 );
-                // Filter unique skills based on whether they belong to released characters
                 return uniqueSkills.filter(skill => {
                     if (!environment.production) {
                     }

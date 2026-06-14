@@ -227,26 +227,16 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         return eventDate >= this.globalReleaseDate;
     }
     private generateAnniversaryMarkers(endDate: Date): void {
-        const jpLaunchDate = new Date(Date.UTC(2021, 1, 24)); // February 24, 2021
         const CONFIRMED_GLOBAL_ANNIVERSARIES = new Map<number, Date>([
             [1, new Date(Date.UTC(2025, 9, 26, 22, 0, 0))]
         ]);
         let anniversaryCount = 0;
         while (true) {
             anniversaryCount++;
-            const monthsToAdd = anniversaryCount * 6;
-            const jpAnniversaryYear = jpLaunchDate.getUTCFullYear() + Math.floor(monthsToAdd / 12);
-            const jpAnniversaryMonth = jpLaunchDate.getUTCMonth() + (monthsToAdd % 12);
-            const finalYear = jpAnniversaryYear + Math.floor(jpAnniversaryMonth / 12);
-            const finalMonth = jpAnniversaryMonth % 12;
-            const jpAnniversaryDate = new Date(Date.UTC(finalYear, finalMonth, jpLaunchDate.getUTCDate()));
-            let globalAnniversaryDate: Date;
             const confirmedAnniversaryDate = CONFIRMED_GLOBAL_ANNIVERSARIES.get(anniversaryCount);
-            if (confirmedAnniversaryDate) {
-                globalAnniversaryDate = new Date(confirmedAnniversaryDate);
-            } else {
-                globalAnniversaryDate = this.timelineService.calculateGlobalDate(jpAnniversaryDate);
-            }
+            const globalAnniversaryDate = confirmedAnniversaryDate
+                ? new Date(confirmedAnniversaryDate)
+                : this.getProjectedGlobalAnniversaryDate(anniversaryCount);
             if (globalAnniversaryDate > endDate) {
                 break;
             }
@@ -263,6 +253,12 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
                 daysFromToday: this.calculateDaysFromTodayUTC(globalAnniversaryDate)
             });
         }
+    }
+    private getProjectedGlobalAnniversaryDate(anniversaryCount: number): Date {
+        const date = new Date(this.globalReleaseDate);
+        date.setUTCMonth(date.getUTCMonth() + anniversaryCount * 6);
+        date.setUTCHours(22, 0, 0, 0);
+        return date;
     }
     private generateYearMarkers(endDate: Date): void {
         const currentDate = new Date(this.globalReleaseDate);

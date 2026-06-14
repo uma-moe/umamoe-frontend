@@ -131,6 +131,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   savedVeterans: VeteranMember[] = [];
   savedLoading = false;
   savedLoaded = false;
+  savedHistoryLoading = false;
   private savedHistoryLoaded = false;
 
   /** Phase of the SSE-driven lookup. */
@@ -214,7 +215,9 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     private dialog: MatDialog,
   ) {
     this.accounts = data.linkedAccounts.filter(a => a.verification_status === 'verified');
-    this.selectedId = data.selectedAccountId;
+    this.selectedId = data.selectedAccountId && this.accounts.some(account => account.account_id === data.selectedAccountId)
+      ? data.selectedAccountId
+      : this.accounts[0]?.account_id ?? null;
     this.characters = data.characters;
     this.veterans = { ...data.veterans };
     this.loadingVeterans = { ...data.loadingVeterans };
@@ -225,6 +228,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     if (this.selectedId && this.veterans[this.selectedId] === undefined) {
       this.loadVeterans(this.selectedId);
     }
+    this.preloadTabCounts();
     this.characterService.getReleasedCharacters()
       .pipe(takeUntil(this.destroy$))
       .subscribe(characters => {
@@ -358,6 +362,18 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
 
   get currentVeterans(): VeteranMember[] {
     return this.selectedId ? (this.veterans[this.selectedId] ?? []) : [];
+  }
+
+  get veteransTabCount(): string {
+    return this.loading ? '...' : `${this.currentVeterans.length}`;
+  }
+
+  get bookmarksTabCount(): string {
+    return this.bookmarksLoading ? '...' : `${this.bookmarks.length}`;
+  }
+
+  get savedTabCount(): string {
+    return this.savedHistoryLoading ? '...' : `${this.savedHistory.length}`;
   }
 
   get hasActiveVeteranFilters(): boolean {
@@ -580,6 +596,17 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
         this._invalidateFiltered();
         this.cdr.markForCheck();
       });
+  }
+
+  private preloadTabCounts(): void {
+    if (this.authService.isLoggedIn() && !this.bookmarksLoaded && !this.bookmarksLoading) {
+      this.loadBookmarks();
+    }
+
+    if (!this.savedHistoryLoaded && !this.savedHistoryLoading) {
+      this.savedHistoryLoaded = true;
+      this.loadSavedHistory();
+    }
   }
 
   /** Switch tabs and lazy-load data the first time a remote-backed tab is opened. */
@@ -828,16 +855,22 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   }
 
   loadSavedHistory(): void {
+    if (this.savedHistoryLoading) return;
+    this.savedHistoryLoading = true;
+    this.cdr.markForCheck();
+
     if (this.authService.isLoggedIn()) {
       this.partnerService.listSaved()
         .pipe(takeUntil(this.destroy$), catchError(() => of([] as PartnerInheritance[])))
         .subscribe(list => {
+          this.savedHistoryLoading = false;
           this.savedHistory = list;
           this._invalidateFiltered();
           this.cdr.markForCheck();
         });
     } else {
       this.savedHistory = this.partnerService.readAnonSaved();
+      this.savedHistoryLoading = false;
       this._invalidateFiltered();
       this.cdr.markForCheck();
     }

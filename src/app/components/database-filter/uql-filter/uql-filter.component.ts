@@ -140,7 +140,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     this.createDocSnippet('GP has any (Right-Handed ○, Left-Handed ○)'),
     this.createDocSnippet('White factors in (Speed Straight ○ > 3, Corner Recovery ○)'),
     this.createDocSnippet('White factors contains all (Right-Handed ○, Left-Handed ○)'),
-    this.createDocSnippet('Grandparent does not have Right-Handed ○'),
+    this.createDocSnippet('Great parent does not have Right-Handed ○'),
     this.createDocSnippet('optional white = Right-Handed ○'),
     this.createDocSnippet('optional white in (Right-Handed ○, Left-Handed ○)'),
     this.createDocSnippet('optional main white in (Right-Handed ○, Left-Handed ○)'),
@@ -207,8 +207,8 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     { text: 'GP has any (Right-Handed ○, Left-Handed ○) and Blue stars >= 9', rewindTo: 0 },
     { text: 'Main character in (Special Week, Silence Suzuka)', rewindTo: 15 },
     { text: "Main character in (Special Week, Silence Suzuka) and Trainer name ilike '%name%'", rewindTo: 0 },
-    { text: '(Grandparent Speed >= 3 or GP1 Turf >= 2) and Wins >= 30', rewindTo: 28 },
-    { text: '(Grandparent Speed >= 3 or GP1 Turf >= 2) and Wins >= 30 and not Trainer name ilike \'%test%\'', rewindTo: 0 }
+    { text: '(Great parent Speed >= 3 or GP1 Turf >= 2) and Wins >= 30', rewindTo: 28 },
+    { text: '(Great parent Speed >= 3 or GP1 Turf >= 2) and Wins >= 30 and not Trainer name ilike \'%test%\'', rewindTo: 0 }
   ];
 
   constructor() {
@@ -1402,9 +1402,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (suggestion.scopeContext) return suggestion.scopeContext;
     const haystack = `${suggestion.label} ${suggestion.insertText} ${suggestion.searchText || ''}`.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
     if (/^(?:main|parent|main parent)\b/.test(haystack)) return 'main';
-    if (/^(?:gp1|left|left parent|grandparent 1|grand parent 1)\b/.test(haystack)) return 'gp1';
-    if (/^(?:gp2|right|right parent|grandparent 2|grand parent 2)\b/.test(haystack)) return 'gp2';
-    if (/^(?:gp|any gp|grandparent|grand parent|any grandparent|any grand parent)\b/.test(haystack)) return 'any-gp';
+    if (/^(?:gp1|left|left parent|grandparent 1|grand parent 1|great parent 1)\b/.test(haystack)) return 'gp1';
+    if (/^(?:gp2|right|right parent|grandparent 2|grand parent 2|great parent 2)\b/.test(haystack)) return 'gp2';
+    if (/^(?:gp|any gp|grandparent|grand parent|great parent|any grandparent|any grand parent|any great parent)\b/.test(haystack)) return 'any-gp';
     return undefined;
   }
 
@@ -1731,9 +1731,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     const currentClause = this.getCurrentClausePrefix(prefix);
     const scopeAliases: Array<{ token: 'main' | 'gp1' | 'gp2' | 'gp'; aliases: string[] }> = [
       { token: 'main', aliases: ['main parent', 'main', 'parent'] },
-      { token: 'gp1', aliases: ['grand parent 1', 'grandparent 1', 'left parent', 'gp1', 'left'] },
-      { token: 'gp2', aliases: ['grand parent 2', 'grandparent 2', 'right parent', 'gp2', 'right'] },
-      { token: 'gp', aliases: ['any grand parent', 'any grandparent', 'grand parent', 'grandparent', 'any gp', 'gp'] },
+      { token: 'gp1', aliases: ['great parent 1', 'grand parent 1', 'grandparent 1', 'left parent', 'gp1', 'left'] },
+      { token: 'gp2', aliases: ['great parent 2', 'grand parent 2', 'grandparent 2', 'right parent', 'gp2', 'right'] },
+      { token: 'gp', aliases: ['any great parent', 'great parent', 'any grand parent', 'any grandparent', 'grand parent', 'grandparent', 'any gp', 'gp'] },
     ];
 
     for (const scope of scopeAliases) {
@@ -1754,16 +1754,16 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       case 'main': return 'Main';
       case 'gp1': return 'GP1';
       case 'gp2': return 'GP2';
-      case 'gp': return 'Grandparent';
+      case 'gp': return 'Great parent';
     }
   }
 
   private getTrailingScopeToken(prefix: string): 'main' | 'gp1' | 'gp2' | 'gp' | null {
     const phrase = this.getCurrentClausePrefix(prefix).toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
     if (['main', 'parent', 'main parent'].includes(phrase)) return 'main';
-    if (['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1'].includes(phrase)) return 'gp1';
-    if (['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2'].includes(phrase)) return 'gp2';
-    if (['gp', 'any gp', 'grandparent', 'grand parent', 'any grandparent', 'any grand parent'].includes(phrase)) return 'gp';
+    if (['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1', 'great parent 1'].includes(phrase)) return 'gp1';
+    if (['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2', 'great parent 2'].includes(phrase)) return 'gp2';
+    if (['gp', 'any gp', 'grandparent', 'grand parent', 'great parent', 'any grandparent', 'any grand parent', 'any great parent'].includes(phrase)) return 'gp';
     return null;
   }
 
@@ -2206,9 +2206,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     const normalized = fieldText.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^(?:not|where)\s+/, '');
     return [
       'main', 'parent', 'main parent',
-      'gp', 'any gp', 'grandparent', 'grand parent', 'any grandparent', 'any grand parent',
-      'gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1',
-      'gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2'
+      'gp', 'any gp', 'grandparent', 'grand parent', 'great parent', 'any grandparent', 'any grand parent', 'any great parent',
+      'gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1', 'great parent 1',
+      'gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2', 'great parent 2'
     ].includes(normalized);
   }
 
@@ -2224,9 +2224,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       'characters', 'character', 'umas', 'uma', 'charas', 'chara',
       'main character', 'main characters', 'main character runner', 'runner', 'runners', 'main uma', 'main umas', 'main chara', 'main charas', 'main chara id',
       'parent character', 'parent uma', 'main parent character',
-      'grandparent 1', 'grand parent 1', 'gp1', 'left parent', 'left character', 'left characters', 'left uma', 'left umas', 'left chara', 'left charas', 'left chara id', 'gp1 character', 'gp1 characters', 'gp1 uma', 'gp1 umas', 'gp1 chara', 'gp1 charas',
-      'grandparent 2', 'grand parent 2', 'gp2', 'right parent', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas', 'right chara id', 'gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas',
-      'gp character', 'gp characters', 'grandparent character', 'grandparent characters', 'any gp character', 'any gp characters'
+      'grandparent 1', 'grand parent 1', 'great parent 1', 'gp1', 'left parent', 'left character', 'left characters', 'left uma', 'left umas', 'left chara', 'left charas', 'left chara id', 'gp1 character', 'gp1 characters', 'gp1 uma', 'gp1 umas', 'gp1 chara', 'gp1 charas',
+      'grandparent 2', 'grand parent 2', 'great parent 2', 'gp2', 'right parent', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas', 'right chara id', 'gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas',
+      'gp character', 'gp characters', 'grandparent character', 'grandparent characters', 'great parent character', 'great parent characters', 'any gp character', 'any gp characters', 'any great parent character', 'any great parent characters'
     ])) {
       return 'character';
     }

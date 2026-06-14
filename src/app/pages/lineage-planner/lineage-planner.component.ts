@@ -39,6 +39,18 @@ import { preferRasterAsset } from '../../utils/raster-asset';
 import { AppVersionService } from '../../services/app-version.service';
 import { AnalyticsEventParams, GoogleAnalyticsService } from '../../services/google-analytics.service';
 
+interface LineagePlannerShareNode {
+  p: number;
+  c?: number;
+  s?: number[];
+  r?: number[];
+}
+
+interface LineagePlannerShareState {
+  v: 1;
+  n: LineagePlannerShareNode[];
+}
+
 @Component({
   selector: 'app-lineage-planner',
   standalone: true,
@@ -87,6 +99,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   private static readonly STORAGE_KEY = 'lineage-planner-state-v1';
   private static readonly SAVES_KEY = 'lineage-planner-saves-v1';
   private static readonly EXPORT_VERSION = 1;
+  private static readonly SHARE_QUERY_PARAM = 'tree';
 
   // Affinity
   private affinityRecalc$ = new Subject<void>();
@@ -257,6 +270,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
         this.fetchAffinity();
         this.recalculateTargetInheritance();
         this.saveToLocalStorage();
+        this.updateShareUrl();
       });
 
     // Load affinity lookup data - then load query params so affinity is ready
@@ -344,8 +358,14 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   private loadFromQueryParams(): void {
+    const sharedTree = this.route.snapshot.queryParamMap.get(LineagePlannerComponent.SHARE_QUERY_PARAM);
+    if (sharedTree) {
+      if (this.loadFromShareParam(sharedTree)) return;
+      this.snackBar.open(this.withBuild('Invalid lineage planner URL state.'), 'OK', { duration: 4000 });
+    }
+
     const from = this.route.snapshot.queryParamMap.get('from');
-    if (from === 'db') {
+    if (from === 'db' || from === 'profile') {
       this.loadFromTransfer();
       return;
     }
@@ -737,6 +757,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   clearAll(): void {
     this.initializeTree();
     try { localStorage.removeItem(LineagePlannerComponent.STORAGE_KEY); } catch {}
+    this.updateShareUrl();
     this.cdr.markForCheck();
   }
 
@@ -799,6 +820,137 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       });
     }
     return payload;
+  }
+
+  private buildShareState(): LineagePlannerShareState | null {
+    const nodes: LineagePlannerShareNode[] = [];
+
+    for (let i = 0; i < BTREE_ORDER.length; i++) {
+      const position = BTREE_ORDER[i];
+      const node = this.nodes.get(position);
+      if (!node) continue;
+
+      const cardId = this.getNodeCardId(node);
+      const sparks = this.getShareSparkIds(node.resolvedSparks);
+      const races = this.getShareNumberList(this.getWinSaddles(node));
+      if (!cardId && sparks.length === 0 && races.length === 0) continue;
+
+      const entry: LineagePlannerShareNode = { p: i };
+      if (cardId) entry.c = cardId;
+      if (sparks.length) entry.s = sparks;
+      if (races.length) entry.r = races;
+      nodes.push(entry);
+    }
+
+    return nodes.length ? { v: 1, n: nodes } : null;
+  }
+
+  private loadFromShareParam(value: string): boolean {
+    const state = this.decodeShareState(value);
+    if (!state) return false;
+    this.applyShareState(state);
+    return true;
+  }
+
+  private applyShareState(state: LineagePlannerShareState): void {
+    this.initializeTree();
+
+    for (const entry of state.n) {
+      if (!Number.isInteger(entry.p) || entry.p < 0 || entry.p >= BTREE_ORDER.length) continue;
+      const node = this.nodes.get(BTREE_ORDER[entry.p]);
+      if (!node) continue;
+
+      if (entry.c != null && Number.isFinite(entry.c)) {
+        node.character = this.findCharacterForShareId(entry.c);
+      }
+
+      const sparks = this.getShareNumberList(entry.s);
+      if (sparks.length) {
+        node.resolvedSparks = this.factorService.resolveSparks(sparks);
+      }
+
+      const races = this.getShareNumberList(entry.r);
+      if (races.length) {
+        node.manualWinSaddleIds = races;
+      }
+    }
+
+    this.affinityRecalc$.next();
+    this.cdr.markForCheck();
+  }
+
+  private updateShareUrl(): void {
+    if (typeof window === 'undefined') return;
+
+    const url = new URL(window.location.href);
+    const state = this.buildShareState();
+    if (state) {
+      url.searchParams.set(LineagePlannerComponent.SHARE_QUERY_PARAM, this.encodeShareState(state));
+      url.searchParams.delete('cards');
+      url.searchParams.delete('from');
+    } else {
+      url.searchParams.delete(LineagePlannerComponent.SHARE_QUERY_PARAM);
+      url.searchParams.delete('cards');
+      url.searchParams.delete('from');
+    }
+
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState(window.history.state, '', nextUrl);
+    }
+  }
+
+  private encodeShareState(state: LineagePlannerShareState): string {
+    const bytes = new TextEncoder().encode(JSON.stringify(state));
+    let binary = '';
+    bytes.forEach(byte => binary += String.fromCharCode(byte));
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  private decodeShareState(value: string): LineagePlannerShareState | null {
+    try {
+      const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+      const binary = atob(padded);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      const parsed = JSON.parse(new TextDecoder().decode(bytes)) as Partial<LineagePlannerShareState>;
+      if (parsed.v !== 1 || !Array.isArray(parsed.n)) return null;
+      return { v: 1, n: parsed.n };
+    } catch {
+      return null;
+    }
+  }
+
+  private getShareSparkIds(sparks: SparkInfo[] | undefined | null): number[] {
+    if (!sparks?.length) return [];
+    const ids: number[] = [];
+    for (const spark of sparks) {
+      const factorId = Number(spark.factorId);
+      const level = Number(spark.level);
+      if (!Number.isFinite(factorId) || !Number.isFinite(level)) continue;
+      ids.push(factorId * 10 + level);
+    }
+    return ids;
+  }
+
+  private getShareNumberList(values: number[] | undefined | null): number[] {
+    if (!Array.isArray(values)) return [];
+    return values
+      .filter((value): value is number => Number.isFinite(value))
+      .map(value => Math.trunc(value));
+  }
+
+  private findCharacterForShareId(id: number): Character | null {
+    if (!Number.isFinite(id)) return null;
+    const normalizedId = Math.trunc(id);
+    const charaId = normalizedId >= 10000 ? Math.floor(normalizedId / 100) : normalizedId;
+    return CHARACTERS.find(character => character.id === normalizedId)
+      ?? CHARACTERS.find(character => Math.floor(character.id / 100) === charaId)
+      ?? null;
   }
 
   /** Apply a payload (in the same shape as auto-save) to the tree. */

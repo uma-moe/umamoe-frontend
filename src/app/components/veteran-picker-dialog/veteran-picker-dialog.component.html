@@ -23,24 +23,24 @@
     <nav class="vpd-tabbar" role="tablist" aria-label="Veteran picker sections">
      <button type="button" class="vpd-tab-btn"
        [class.active]="tab === 'veterans'"
-       (click)="setTab('veterans')">
+      (click)="setTab('veterans')">
       <mat-icon>people</mat-icon>
       <span class="vpd-tab-label">Veterans</span>
-      <span class="vpd-tab-count">{{ currentVeterans.length }}</span>
+      <span class="vpd-tab-count" [class.loading]="loading">{{ veteransTabCount }}</span>
      </button>
      <button type="button" class="vpd-tab-btn"
        [class.active]="tab === 'bookmarks'"
        (click)="setTab('bookmarks')">
       <mat-icon>bookmark</mat-icon>
       <span class="vpd-tab-label">Bookmarks</span>
-      <span class="vpd-tab-count">{{ bookmarks.length }}</span>
+      <span class="vpd-tab-count" [class.loading]="bookmarksLoading">{{ bookmarksTabCount }}</span>
      </button>
      <button type="button" class="vpd-tab-btn"
        [class.active]="tab === 'saved'"
        (click)="setTab('saved')">
       <mat-icon>manage_accounts</mat-icon>
       <span class="vpd-tab-label">Partner</span>
-      <span class="vpd-tab-count">{{ savedHistory.length }}</span>
+      <span class="vpd-tab-count" [class.loading]="savedHistoryLoading">{{ savedTabCount }}</span>
      </button>
      <button type="button" class="vpd-tab-btn"
        [class.active]="tab === 'manual'"
@@ -300,15 +300,20 @@
         <p *ngIf="savedError">{{ savedError }}</p>
       </div>
 
+      <div class="vpd-state" *ngIf="savedHistoryLoading">
+        <mat-icon class="spin">sync</mat-icon>
+        <span>Loading saved partners...</span>
+      </div>
+
       <!-- Idle / no history -->
-      <div class="vpd-state" *ngIf="savedPhase === 'idle' && savedHistory.length === 0">
+      <div class="vpd-state" *ngIf="!savedHistoryLoading && savedPhase === 'idle' && savedHistory.length === 0">
         <mat-icon>group_search</mat-icon>
         <span>No saved partners yet</span>
         <p>Enter a Trainer ID above to fetch someone's inheritance data.</p>
       </div>
 
       <!-- Saved partners list -->
-      <ng-container *ngIf="savedPhase === 'idle' && savedHistory.length > 0">
+      <ng-container *ngIf="!savedHistoryLoading && savedPhase === 'idle' && savedHistory.length > 0">
         <div class="vpd-saved-history-header">
           <mat-icon>save</mat-icon>
           <span>Saved partners</span>

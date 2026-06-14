@@ -16,21 +16,10 @@ import {
   replaceSupportCardsData
 } from '../data/support-cards.data';
 import { SKILLS, replaceSkillsData } from '../data/skills.data';
-import {
-  getAllCampaigns,
-  getAllChampionsMeetings,
-  getAllLegendRaces,
-  getAllStoryEvents,
-  replaceCampaignsData,
-  replaceChampionsMeetingsData,
-  replaceLegendRacesData,
-  replaceStoryEventsData
-} from '../data/timeline-data';
 import { getRaceSaddleData, replaceRaceSaddleData } from '../data/race-saddle.data';
 import { Character } from '../models/character.model';
 import { Skill } from '../models/skill.model';
 import { SupportCardShort } from '../models/support-card.model';
-import { Campaign, ChampionsMeeting, LegendRace, StoryEvent } from '../models/timeline.model';
 import { NON_BANNER_RESOURCE_NAMES, ResourceDataService, ResourceLoadError } from './resource-data.service';
 import type { Factor } from './factor.service';
 
@@ -52,9 +41,6 @@ export class MasterDataService {
 
   private raceSaddleDataSubject = new BehaviorSubject(getRaceSaddleData());
   readonly raceSaddleData$ = this.raceSaddleDataSubject.asObservable();
-
-  private timelineRefreshSubject = new BehaviorSubject<void>(undefined);
-  readonly timelineRefresh$ = this.timelineRefreshSubject.asObservable();
 
   readonly charactersPending$: Observable<boolean>;
   readonly supportCardsPending$: Observable<boolean>;
@@ -123,23 +109,6 @@ export class MasterDataService {
     this.resourceData.watchResource('race_to_saddle_mapping', getRaceSaddleData())
       .subscribe(data => {
         this.raceSaddleDataSubject.next(replaceRaceSaddleData(data));
-      });
-
-    this.watchTimelineResource<StoryEvent>('story_events', getAllStoryEvents(), replaceStoryEventsData);
-    this.watchTimelineResource<ChampionsMeeting>('champions_meeting', getAllChampionsMeetings(), replaceChampionsMeetingsData);
-    this.watchTimelineResource<LegendRace>('legend_races', getAllLegendRaces(), replaceLegendRacesData);
-    this.watchTimelineResource<Campaign>('campaigns', getAllCampaigns(), replaceCampaignsData);
-  }
-
-  private watchTimelineResource<T>(
-    resourceName: string,
-    fallback: T[],
-    replaceFn: (data: unknown) => T[]
-  ): void {
-    this.resourceData.watchResource<T[]>(resourceName, fallback)
-      .subscribe(data => {
-        replaceFn(data);
-        this.timelineRefreshSubject.next();
       });
   }
 

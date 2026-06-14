@@ -157,9 +157,9 @@ export class SupportCardSelectDialogComponent implements OnInit {
   }
 
   private loadSupportCards(): void {
-    this.supportCardService.getSupportCards().subscribe({
+    this.supportCardService.getReleasedSupportCards().subscribe({
       next: (cards: SupportCardShort[]) => {
-        this.supportCards = cards.filter(card => card.isReleased_en === true);
+        this.supportCards = cards;
         this.filterCards();
       },
       error: (error: unknown) => {

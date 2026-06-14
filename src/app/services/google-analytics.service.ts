@@ -19,6 +19,11 @@ interface ConsentModeState {
   analytics_storage: ConsentValue;
 }
 
+interface ConsentModeUpdate {
+  state: ConsentModeState;
+  choiceMade: boolean;
+}
+
 declare global {
   interface Window {
     dataLayer?: unknown[];
@@ -42,8 +47,12 @@ export class GoogleAnalyticsService {
   private initialized = false;
   private defaultConsentSet = false;
   private lastTrackedUrl = '';
+  private lastTrackedPageLocation = '';
   private lastNavigationUrl = '';
   private buildContext?: AnalyticsEventParams;
+  private currentConsentState: ConsentModeState = this.deniedConsentState;
+  private consentChoiceMade = false;
+  private engagementTimerId?: number;
 
   constructor(
     private cookieConsentService: CookieConsentService,
@@ -70,9 +79,12 @@ export class GoogleAnalyticsService {
     this.setDefaultConsent();
 
     this.cookieConsentService.consent$.pipe(
-      map(consent => this.toConsentModeState(consent)),
-      distinctUntilChanged((previous, current) => this.sameConsentModeState(previous, current)),
-    ).subscribe(consentState => this.updateConsent(consentState));
+      map(consent => ({
+        state: this.toConsentModeState(consent),
+        choiceMade: consent !== null,
+      })),
+      distinctUntilChanged((previous, current) => this.sameConsentModeUpdate(previous, current)),
+    ).subscribe(update => this.updateConsent(update));
 
     this.ensureScript();
     this.ensureConfigured();
@@ -147,6 +159,7 @@ export class GoogleAnalyticsService {
     const eventParams = this.sanitizeEventParams({
       ...params,
       ...this.getBuildContext(),
+      ...this.getConsentContext(),
     });
 
     this.ngZone.runOutsideAngular(() => {
@@ -157,11 +170,25 @@ export class GoogleAnalyticsService {
     });
   }
 
-  private updateConsent(consentState: ConsentModeState): void {
-    this.window.gtag?.('consent', 'update', consentState);
+  private updateConsent(update: ConsentModeUpdate): void {
+    const previousConsentState = this.currentConsentState;
+    const previousChoiceMade = this.consentChoiceMade;
 
-    if (consentState.analytics_storage === 'denied') {
+    this.currentConsentState = update.state;
+    this.consentChoiceMade = update.choiceMade;
+    this.window.gtag?.('consent', 'update', update.state);
+
+    if (update.state.analytics_storage === 'denied') {
       this.expireGoogleAnalyticsCookies();
+    }
+
+    if (
+      this.initialized
+      && (!this.sameConsentModeState(previousConsentState, update.state) || previousChoiceMade !== update.choiceMade)
+    ) {
+      this.trackEvent('cookie_consent_update', {
+        source: 'cookie_banner',
+      });
     }
   }
 
@@ -188,6 +215,11 @@ export class GoogleAnalyticsService {
       && previous.analytics_storage === current.analytics_storage;
   }
 
+  private sameConsentModeUpdate(previous: ConsentModeUpdate, current: ConsentModeUpdate): boolean {
+    return previous.choiceMade === current.choiceMade
+      && this.sameConsentModeState(previous.state, current.state);
+  }
+
   private trackPageView(url: string): void {
     if (!this.initialized) {
       return;
@@ -205,17 +237,30 @@ export class GoogleAnalyticsService {
 
     this.lastTrackedUrl = trackedUrl;
     const pageLocation = new URL(trackedUrl, this.document.location.origin).href;
-    const buildContext = this.sanitizeEventParams(this.getBuildContext());
+    const pageReferrer = this.lastTrackedPageLocation || this.document.referrer || undefined;
+    this.lastTrackedPageLocation = pageLocation;
+    const pageContext = this.sanitizeEventParams({
+      ...this.getBuildContext(),
+      ...this.getConsentContext(),
+    });
 
     this.ngZone.runOutsideAngular(() => {
-      this.window.gtag?.('event', 'page_view', {
-        ...buildContext,
+      this.window.gtag?.('set', {
         page_location: pageLocation,
         page_path: trackedUrl,
+        page_title: this.document.title,
+      });
+      this.window.gtag?.('event', 'page_view', {
+        ...pageContext,
+        page_location: pageLocation,
+        page_path: trackedUrl,
+        page_referrer: pageReferrer,
         page_title: this.document.title,
         send_to: this.measurementId,
       });
     });
+
+    this.scheduleEngagementPulse(trackedUrl, pageLocation);
   }
 
   private getBuildContext(): AnalyticsEventParams {
@@ -235,6 +280,16 @@ export class GoogleAnalyticsService {
     };
 
     return this.buildContext;
+  }
+
+  private getConsentContext(): AnalyticsEventParams {
+    return {
+      analytics_storage_state: this.currentConsentState.analytics_storage,
+      ad_storage_state: this.currentConsentState.ad_storage,
+      ad_user_data_state: this.currentConsentState.ad_user_data,
+      ad_personalization_state: this.currentConsentState.ad_personalization,
+      consent_choice_made: this.consentChoiceMade ? 'yes' : 'no',
+    };
   }
 
   private parseBuildVersion(buildVersion: string): { channel: string; number?: number; attempt?: number } {
@@ -356,6 +411,26 @@ export class GoogleAnalyticsService {
 
   private deferTrackPageView(url: string): void {
     this.window.setTimeout(() => this.trackPageView(url), 0);
+  }
+
+  private scheduleEngagementPulse(pagePath: string, pageLocation: string): void {
+    if (this.engagementTimerId !== undefined) {
+      this.window.clearTimeout(this.engagementTimerId);
+    }
+
+    this.engagementTimerId = this.window.setTimeout(() => {
+      this.engagementTimerId = undefined;
+
+      if (this.document.visibilityState === 'hidden' || this.lastTrackedPageLocation !== pageLocation) {
+        return;
+      }
+
+      this.trackEvent('app_engaged', {
+        page_path: pagePath,
+        engagement_time_msec: 15000,
+        visible_seconds: 15,
+      });
+    }, 15000);
   }
 
   private getCurrentStableUrl(): string {

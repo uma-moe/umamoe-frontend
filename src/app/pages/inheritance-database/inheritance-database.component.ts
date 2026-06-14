@@ -447,7 +447,8 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     // Initial search (will include trainer_id if present in URL)
     // Skip if filters param is present, as ngAfterViewInit will handle it
     const hasFilters = this.route.snapshot.queryParams['filters'];
-    if (!this.trainerIdFilter && !hasFilters) {
+    const hasSavedFilters = !hasFilters && DatabaseFilterComponent.hasSavedFilterState();
+    if (!this.trainerIdFilter && !hasFilters && !hasSavedFilters) {
       this.searchRecords();
     }
     this.ngZone.runOutsideAngular(() => this.initScrollListener());

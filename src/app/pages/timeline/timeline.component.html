@@ -1,4 +1,28 @@
 <div class="timeline-page">
+  <div
+    class="timeline-resource-error"
+    *ngIf="timelineError$ | async as timelineError"
+    role="alert"
+  >
+    <div class="timeline-resource-error-panel">
+      <mat-icon>cloud_off</mat-icon>
+      <div>
+        <strong>Timeline resources failed to load</strong>
+        <span>{{ timelineError.message }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="timeline-loading-overlay"
+    *ngIf="timelineLoading$ | async"
+    role="status"
+    aria-label="Loading timeline"
+  >
+    <mat-spinner diameter="44"></mat-spinner>
+    <span>Loading timeline resources...</span>
+  </div>
+
   <!-- Mobile Timeline -->
   <app-mobile-timeline *ngIf="isMobile"></app-mobile-timeline>
 

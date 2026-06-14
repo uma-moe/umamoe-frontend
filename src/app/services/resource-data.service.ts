@@ -52,6 +52,10 @@ interface BrowserProofFetchResult {
   sentProof: boolean;
 }
 
+export interface ResourceLoadOptions {
+  useWarmupProof?: boolean;
+}
+
 export interface ResourceLoadError {
   resourceName: string;
   message: string;
@@ -76,21 +80,21 @@ class ResourceHttpError extends Error {
 export const NON_BANNER_RESOURCE_NAMES = [
   'affinity',
   'aptitudes',
-  'campaigns',
   'card-events',
   'cards',
-  'champions_meeting',
   'character',
   'character_names',
   'factors',
-  'legend_races',
   'race_program',
   'race_to_saddle_mapping',
   'reduced_cards',
   'skills',
-  'story_events',
   'support-cards-db',
   'supports'
+] as const;
+
+export const TIMELINE_RESOURCE_NAMES = [
+  'banner_timeline'
 ] as const;
 
 @Injectable({ providedIn: 'root' })
@@ -109,13 +113,16 @@ export class ResourceDataService {
   private resourceCachedSubjects = new Map<string, BehaviorSubject<boolean>>();
   private retryAttempts = new Map<string, number>();
   private retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private resourceLoadOptions = new Map<string, ResourceLoadOptions>();
 
   constructor(
     private turnstileService: TurnstileService,
     private appVersionService: AppVersionService,
   ) {}
 
-  watchResource<T>(resourceName: string, fallback: T): Observable<T> {
+  watchResource<T>(resourceName: string, fallback: T, options: ResourceLoadOptions = {}): Observable<T> {
+    this.mergeResourceLoadOptions(resourceName, options);
+
     let subject = this.subjects.get(resourceName) as ReplaySubject<T> | undefined;
     if (!subject) {
       subject = new ReplaySubject<T>(1);
@@ -143,7 +150,9 @@ export class ResourceDataService {
     return this.getResourceCachedSubject(resourceName).asObservable();
   }
 
-  preloadResource(resourceName: string): void {
+  preloadResource(resourceName: string, options: ResourceLoadOptions = {}): void {
+    this.mergeResourceLoadOptions(resourceName, options);
+
     if (this.loadStarted.has(resourceName)) {
       return;
     }
@@ -156,6 +165,7 @@ export class ResourceDataService {
 
   private async loadResource<T>(resourceName: string, subject: ReplaySubject<T>): Promise<void> {
     this.setResourcePending(resourceName, true);
+    const options = this.getResourceLoadOptions(resourceName);
     let emittedCached = false;
 
     try {
@@ -173,7 +183,7 @@ export class ResourceDataService {
     }
 
     try {
-      const manifest = await this.fetchManifest();
+      const manifest = await this.fetchManifest(options);
       const version = this.getManifestVersion(manifest);
       const manifestGeneratedAt = this.getManifestGeneratedAt(manifest);
       const resource = this.resolveResource(resourceName, manifest);
@@ -192,8 +202,8 @@ export class ResourceDataService {
         return;
       }
 
-      await this.waitForBrowserProofBeforeResourceFetch();
-      const data = await this.fetchAndCacheResource<T>(resourceName, resource, version, manifestGeneratedAt);
+      await this.waitForBrowserProofBeforeResourceFetch(options);
+      const data = await this.fetchAndCacheResource<T>(resourceName, resource, version, manifestGeneratedAt, options);
       subject.next(data);
       this.clearResourceRetry(resourceName);
       this.setResourcePending(resourceName, false);
@@ -208,26 +218,33 @@ export class ResourceDataService {
     }
   }
 
-  private async waitForBrowserProofBeforeResourceFetch(): Promise<void> {
+  private async waitForBrowserProofBeforeResourceFetch(options: ResourceLoadOptions): Promise<void> {
     if (!environment.turnstile.enabled) {
       return;
     }
 
-    if (this.turnstileService.getCachedProofToken(environment.turnstile.action)) {
+    if (this.turnstileService.getCachedProofToken(environment.turnstile.action, {
+      includeWarmup: options.useWarmupProof === true,
+    })) {
+      return;
+    }
+
+    if (options.useWarmupProof) {
+      this.turnstileService.prime();
       return;
     }
 
     await this.turnstileService.ensureBrowserProof(environment.turnstile.action);
   }
 
-  private async fetchManifest(): Promise<ResourceManifest> {
+  private async fetchManifest(options: ResourceLoadOptions): Promise<ResourceManifest> {
     if (this.manifest) {
       return this.manifest;
     }
 
     if (!this.manifestPromise) {
       const manifestUrl = this.withCacheBuster(`${this.resourceBaseUrl}/manifest.json`, Date.now().toString());
-      this.manifestPromise = this.fetchJsonWithBrowserProof<ResourceManifest>(manifestUrl);
+      this.manifestPromise = this.fetchJsonWithBrowserProof<ResourceManifest>(manifestUrl, options);
     }
 
     try {
@@ -270,6 +287,21 @@ export class ResourceDataService {
     }
 
     this.retryAttempts.delete(resourceName);
+  }
+
+  private mergeResourceLoadOptions(resourceName: string, options: ResourceLoadOptions): void {
+    if (!options.useWarmupProof) {
+      return;
+    }
+
+    this.resourceLoadOptions.set(resourceName, {
+      ...this.resourceLoadOptions.get(resourceName),
+      useWarmupProof: true,
+    });
+  }
+
+  private getResourceLoadOptions(resourceName: string): ResourceLoadOptions {
+    return this.resourceLoadOptions.get(resourceName) ?? {};
   }
 
   private getResourcePendingSubject(resourceName: string): BehaviorSubject<boolean> {
@@ -513,9 +545,10 @@ export class ResourceDataService {
     resource: ResolvedResource,
     version: string,
     manifestGeneratedAt: string | null,
+    options: ResourceLoadOptions,
   ): Promise<T> {
     const url = resource.url;
-    const response = await this.fetchWithBrowserProof(url, { cache: 'no-cache' });
+    const response = await this.fetchWithBrowserProof(url, { cache: 'no-cache' }, options);
     if (!response.ok) {
       throw new ResourceHttpError(`${response.status} ${response.statusText || 'HTTP error'}`, url);
     }
@@ -578,8 +611,8 @@ export class ResourceDataService {
     return Number.isNaN(time) ? null : time;
   }
 
-  private async fetchJsonWithBrowserProof<T>(url: string): Promise<T> {
-    const response = await this.fetchWithBrowserProof(url, { cache: 'no-cache' });
+  private async fetchJsonWithBrowserProof<T>(url: string, options: ResourceLoadOptions): Promise<T> {
+    const response = await this.fetchWithBrowserProof(url, { cache: 'no-cache' }, options);
     if (!response.ok) {
       throw new ResourceHttpError(`${response.status} ${response.statusText || 'HTTP error'}`, url);
     }
@@ -587,12 +620,12 @@ export class ResourceDataService {
     return response.json() as Promise<T>;
   }
 
-  private async fetchWithBrowserProof(url: string, init: RequestInit): Promise<Response> {
-    const result = await this.performFetchWithBrowserProof(url, init, false);
+  private async fetchWithBrowserProof(url: string, init: RequestInit, options: ResourceLoadOptions): Promise<Response> {
+    const result = await this.performFetchWithBrowserProof(url, init, false, options);
     if (await this.shouldRetryWithFreshProof(result.response, result.sentProof)) {
       this.turnstileService.invalidateBrowserProof();
 
-      const retryResult = await this.performFetchWithBrowserProof(url, init, true);
+      const retryResult = await this.performFetchWithBrowserProof(url, init, true, options);
       this.captureBrowserProof(retryResult.response);
       return retryResult.response;
     }
@@ -605,13 +638,16 @@ export class ResourceDataService {
     url: string,
     init: RequestInit,
     forceRefresh: boolean,
+    options: ResourceLoadOptions,
   ): Promise<BrowserProofFetchResult> {
     const headers = new Headers(init.headers);
     headers.set('Accept', headers.get('Accept') ?? 'application/json');
 
     const proofToken = forceRefresh
       ? await this.turnstileService.ensureBrowserProof(environment.turnstile.action, true)
-      : this.turnstileService.getCachedProofToken(environment.turnstile.action);
+      : this.turnstileService.getCachedProofToken(environment.turnstile.action, {
+          includeWarmup: options.useWarmupProof === true,
+        });
 
     if (!proofToken && !forceRefresh) {
       this.turnstileService.prime();

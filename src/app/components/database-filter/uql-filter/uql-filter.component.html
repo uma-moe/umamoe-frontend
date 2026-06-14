@@ -60,7 +60,7 @@
           <dl class="uql-doc-table">
             <div><dt>Speed &gt;= 6</dt><dd>Total Speed across the visible lineage.</dd></div>
             <div><dt>Main Speed &gt;= 3</dt><dd>Speed on the main parent slot only.</dd></div>
-            <div><dt>GP Speed &gt;= 3</dt><dd>Speed on either grandparent slot.</dd></div>
+            <div><dt>GP Speed &gt;= 3</dt><dd>Speed on either great parent slot.</dd></div>
             <div><dt>Characters in (...)</dt><dd>Main, GP1, or GP2 is in the list.</dd></div>
             <div><dt>Support card = ...</dt><dd>Support card names work like character names.</dd></div>
             <div><dt>target = ...</dt><dd>Sets the affinity target for this editor.</dd></div>
@@ -115,9 +115,9 @@
           <p>Put a slot prefix before a factor name to target one position in the inheritance tree.</p>
           <dl class="uql-doc-table">
             <div><dt>Main, Parent, Main parent</dt><dd>Main slot</dd></div>
-            <div><dt>GP1, Left, Grandparent 1</dt><dd>Left grandparent slot</dd></div>
-            <div><dt>GP2, Right, Grandparent 2</dt><dd>Right grandparent slot</dd></div>
-            <div><dt>GP, Any GP, Grandparent</dt><dd>Either GP1 or GP2 may match</dd></div>
+            <div><dt>GP1, Left, Great parent 1</dt><dd>Left great parent slot</dd></div>
+            <div><dt>GP2, Right, Great parent 2</dt><dd>Right great parent slot</dd></div>
+            <div><dt>GP, Any GP, Great parent</dt><dd>Either GP1 or GP2 may match</dd></div>
           </dl>
           <div class="uql-doc-example-row">
             <button type="button" class="uql-doc-snippet-button" *ngFor="let snippet of slotPrefixDocSnippets" (click)="insertSnippet.emit(snippet.text)">
@@ -158,7 +158,7 @@
           <dl class="uql-doc-table">
             <div><dt>Race wins has Niigata Junior Stakes</dt><dd>Main parent won that race or an adjacent win-saddle group containing it.</dd></div>
             <div><dt>Race wins has all (...)</dt><dd>Every listed race must be covered by a matching win saddle.</dd></div>
-            <div><dt>Left race wins in (...)</dt><dd>Any listed race may match the left grandparent win saddles.</dd></div>
+            <div><dt>Left race wins in (...)</dt><dd>Any listed race may match the left great parent win saddles.</dd></div>
           </dl>
         </section>
 
@@ -190,7 +190,7 @@
           <dl class="uql-doc-table">
             <div><dt>Characters in (...)</dt><dd>Any main, GP1, or GP2 character matches.</dd></div>
             <div><dt>Characters not in (...)</dt><dd>Main, GP1, and GP2 must all be outside the list.</dd></div>
-            <div><dt>GP characters in (...)</dt><dd>Either grandparent character matches.</dd></div>
+            <div><dt>GP characters in (...)</dt><dd>Either great parent character matches.</dd></div>
             <div><dt>Parent character = ...</dt><dd>The selected main parent card or variant matches.</dd></div>
           </dl>
           <p>Trainer text supports <span class="uql-doc-inline-code">ilike</span> with <span class="uql-doc-inline-code">%</span> wildcards. Use parentheses whenever <span class="uql-doc-inline-code">and</span> and <span class="uql-doc-inline-code">or</span> appear together.</p>

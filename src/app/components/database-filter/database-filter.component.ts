@@ -191,6 +191,7 @@ interface CompressedState {
   lb?: number; // limit break
   
   uid?: string; // search user id
+  un?: string; // search username
   
   // Other scalars
   mwc?: number; // min win count
@@ -214,6 +215,13 @@ interface CompressedState {
   // Race schedule: [yearIdx, month, half, raceInstanceId][]
   rs?: [number, number, number, number][];
   vet?: [string, number];
+}
+
+interface SavedDatabaseFilterState {
+  version: 2;
+  mode: FilterMode;
+  formState?: string;
+  uqlState?: string;
 }
 export interface TreeNode {
   id: string;
@@ -319,12 +327,28 @@ export interface FactorFilter {
   styleUrl: './database-filter.component.scss'
 })
 export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy {
+  static readonly SAVED_FILTER_STATE_KEY = 'database-filter-state-v2';
+  static readonly SAVED_FILTER_MODE_KEY = 'database-filter-mode-v1';
+
+  static hasSavedFilterState(): boolean {
+    if (typeof localStorage === 'undefined') return false;
+    try {
+      const saved = localStorage.getItem(DatabaseFilterComponent.SAVED_FILTER_STATE_KEY);
+      if (!saved) return false;
+      const parsed = JSON.parse(saved) as Partial<SavedDatabaseFilterState>;
+      return parsed.version === 2 && !!(parsed.formState || parsed.uqlState);
+    } catch {
+      return false;
+    }
+  }
+
   @Input() resultCount: number | null = null;
   @Output() filterChange = new EventEmitter<UnifiedSearchParams>();
   @Output() maxFollowersToggled = new EventEmitter<boolean>();
   @Output() veteranSelected = new EventEmitter<VeteranMember | null>();
   private filterChangeSubject = new Subject<UnifiedSearchParams>();
   private destroy$ = new Subject<void>();
+  private restoredSavedFilterState = false;
   private staticUqlSuggestionsCache: UqlSuggestion[] | null = null;
   private lastUqlFilterStateSignature: string | null = null;
   @ViewChild(RaceSchedulerComponent) raceScheduler!: RaceSchedulerComponent;
@@ -348,8 +372,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'Speed', insertText: 'Speed >= 3' },
     { label: 'Wins', insertText: 'Wins >= 30' },
     { label: 'Name', insertText: "Trainer name ilike '%name%'" },
-    { label: 'Include Umas', insertText: 'Main character in (Special Week, Silence Suzuka)' },
-    { label: 'Target', insertText: 'target = Special Week' },
+    { label: 'Match Umas', insertText: 'Main character in (Special Week, Silence Suzuka)' },
+    { label: 'Target (ace)', insertText: 'target = Special Week' },
     { label: 'Owned Legacy', insertText: 'owned legacy = []' },
     { label: 'White Skill', insertText: 'White sparks has Right-Handed ○' },
     { label: 'Main Skill', insertText: 'Main white factors has Right-Handed ○' },
@@ -360,9 +384,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'Lineage White', insertText: 'lineage white in (Right-Handed ○, Left-Handed ○)' },
     { label: 'OR group', insertText: '(Speed >= 3 or Stamina >= 3) and Wins >= 30' },
     { label: 'Main Speed', insertText: 'Main Speed >= 3' },
-    { label: 'Grandparent Speed', insertText: 'Grandparent Speed >= 3' },
+    { label: 'Great parent Speed', insertText: 'Great parent Speed >= 3' },
     { label: 'Either path', insertText: '(Wins >= 35 and White count >= 12) or (Blue stars >= 9 and Pink stars >= 6)' },
-    { label: 'Exclude Test', insertText: "not Trainer name ilike '%test%'" }
+    { label: 'Omit Test', insertText: "not Trainer name ilike '%test%'" }
   ];
   uqlSuggestions: UqlSuggestion[] = [];
   private readonly friendlySparkFields: FriendlySparkField[] = [
@@ -392,10 +416,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'LB', aliases: ['lb', 'limitbreak', 'limit break', 'limit_break', 'limit break count', 'limitbreak count', 'limit_break_count', 'min lb', 'minimum lb'], field: 'limit_break_count', type: 'number' },
     { label: 'Characters', aliases: ['characters', 'character', 'umas', 'uma', 'charas', 'chara'], field: 'characters', type: 'number' },
     { label: 'Main character', aliases: ['main character', 'main characters', 'runner', 'runners', 'main uma', 'main umas', 'main chara', 'main charas'], field: 'main_chara_id', type: 'number' },
-    { label: 'Parent character', aliases: ['parent character', 'parent uma', 'main parent character', 'main parent', 'main', 'parent'], field: 'main_parent_id', type: 'number' },
-    { label: 'GP1 character', aliases: ['gp1 character', 'gp1 characters', 'gp1 uma', 'gp1 umas', 'gp1 chara', 'gp1 charas', 'grandparent 1', 'grandparent 1 character', 'grandparent 1 characters', 'grand parent 1', 'grand parent 1 character', 'grand parent 1 characters', 'left parent', 'left character', 'left characters', 'left uma', 'left umas', 'left chara', 'left charas', 'gp1'], field: 'left_chara_id', type: 'number' },
-    { label: 'GP2 character', aliases: ['gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas', 'grandparent 2', 'grandparent 2 character', 'grandparent 2 characters', 'grand parent 2', 'grand parent 2 character', 'grand parent 2 characters', 'right parent', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas', 'gp2'], field: 'right_chara_id', type: 'number' },
-    { label: 'Grandparent characters', aliases: ['gp characters', 'gp character', 'gp umas', 'gp uma', 'gp charas', 'gp chara', 'grandparent characters', 'grandparent character', 'grand parent characters', 'grand parent character', 'any gp characters', 'any gp character', 'any grandparent characters', 'any grandparent character'], field: 'grandparent_characters', type: 'number' },
+    { label: 'Main parent (p1/2)', aliases: ['parent character', 'parent uma', 'main parent character', 'main parent', 'main', 'parent'], field: 'main_parent_id', type: 'number' },
+    { label: 'Great parent 1 (gp1)', aliases: ['gp1 character', 'gp1 characters', 'gp1 uma', 'gp1 umas', 'gp1 chara', 'gp1 charas', 'grandparent 1', 'grandparent 1 character', 'grandparent 1 characters', 'grand parent 1', 'grand parent 1 character', 'grand parent 1 characters', 'great parent 1', 'great parent 1 character', 'left parent', 'left character', 'left characters', 'left uma', 'left umas', 'left chara', 'left charas', 'gp1'], field: 'left_chara_id', type: 'number' },
+    { label: 'Great parent 2 (gp2)', aliases: ['gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas', 'grandparent 2', 'grandparent 2 character', 'grandparent 2 characters', 'grand parent 2', 'grand parent 2 character', 'grand parent 2 characters', 'great parent 2', 'great parent 2 character', 'right parent', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas', 'gp2'], field: 'right_chara_id', type: 'number' },
+    { label: 'Great parent (gp1/2)', aliases: ['gp characters', 'gp character', 'gp umas', 'gp uma', 'gp charas', 'gp chara', 'grandparent characters', 'grandparent character', 'grand parent characters', 'grand parent character', 'great parent characters', 'great parent character', 'any gp characters', 'any gp character', 'any grandparent characters', 'any grandparent character', 'any great parent characters', 'any great parent character'], field: 'grandparent_characters', type: 'number' },
     { label: 'Parent rank', aliases: ['parent rank', 'rank'], field: 'parent_rank', type: 'number' },
     { label: 'Blue stars', aliases: ['blue stars', 'blue star sum', 'blue sparks total', 'total blue sparks', 'lineage blue sparks', 'lineage blue stars'], field: 'blue_stars_sum', type: 'number' },
     { label: 'Pink stars', aliases: ['pink stars', 'pink star sum', 'pink sparks total', 'total pink sparks', 'lineage pink sparks', 'lineage pink stars'], field: 'pink_stars_sum', type: 'number' },
@@ -538,9 +562,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   raceScheduleRaceCount = 0;
   ngOnInit() {
     this.updateUqlSuggestions();
+    this.restoreInitialFilterModePreference();
     this.applyBasicFilterDefaults();
-    // Default Quick Filters collapsed at all sizes
-    this.collapsedSections.add('quickFilters');
+    // Keep Quick Filters open on desktop; mobile still starts compact below.
+    if (window.innerWidth <= 600) {
+      this.collapsedSections.add('quickFilters');
+    }
     // On mobile, default all sections to collapsed
     if (window.innerWidth <= 600) {
       this.collapsedSections.add('mLegacyTree');
@@ -573,36 +600,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.updateUqlSuggestions();
   }
   // Filter State
-  filterState: UnifiedSearchParams = {
-    blue_sparks: [],
-    pink_sparks: [],
-    green_sparks: [],
-    white_sparks: [],
-    
-    blue_sparks_9star: false,
-    pink_sparks_9star: false,
-    green_sparks_9star: false,
-    min_win_count: 0,
-    min_white_count: 0,
-    min_main_blue_factors: undefined,
-    min_main_pink_factors: undefined,
-    min_main_green_factors: undefined,
-    min_main_white_count: 0,
-    
-    main_parent_blue_sparks: [],
-    main_parent_pink_sparks: [],
-    main_parent_green_sparks: [],
-    main_parent_white_sparks: [],
-    parent_rank: 1,
-    parent_rarity: undefined,
-    max_follower_num: 999,
-    
-    parent_id: [],
-    exclude_parent_id: [],
-    exclude_main_parent_id: [],
-    
-    min_experience: undefined,
-  };
+  filterState: UnifiedSearchParams = this.createDefaultFilterState();
   // Filtered Options for Autocomplete
   filteredGreenFactorOptions: any[][] = [];
   filteredWhiteFactorOptions: any[][] = [];
@@ -624,10 +622,52 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   ) {
     this.rebuildUqlDerivedCaches();
   }
+
+  private createDefaultFilterState(): UnifiedSearchParams {
+    return {
+      blue_sparks: [],
+      pink_sparks: [],
+      green_sparks: [],
+      white_sparks: [],
+
+      blue_sparks_9star: false,
+      pink_sparks_9star: false,
+      green_sparks_9star: false,
+      min_win_count: 0,
+      min_white_count: 0,
+      min_main_blue_factors: undefined,
+      min_main_pink_factors: undefined,
+      min_main_green_factors: undefined,
+      min_main_white_count: 0,
+
+      main_parent_blue_sparks: [],
+      main_parent_pink_sparks: [],
+      main_parent_green_sparks: [],
+      main_parent_white_sparks: [],
+      parent_rank: 1,
+      parent_rarity: undefined,
+      max_follower_num: 999,
+
+      parent_id: [],
+      exclude_parent_id: [],
+      exclude_main_parent_id: [],
+
+      min_experience: undefined,
+    };
+  }
+
+  private restoreInitialFilterModePreference(): void {
+    const savedMode = this.readSavedFilterState()?.mode;
+    if (savedMode) {
+      this.filterMode = savedMode;
+    }
+  }
+
   ngAfterViewInit() {
     this.setupWrappingDetection();
     this.setupScrollListener();
     this.setupHostResizeObserver();
+    setTimeout(() => this.loadSavedFilterStateIfNeeded());
   }
   ngOnDestroy() {
     this.resizeObserver?.disconnect();
@@ -763,7 +803,6 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   // --- Serialization Logic ---
   getSerializedState(): string {
     const state: CompressedState = {};
-    if (this.filterMode !== 'basic') state.fm = this.filterMode;
     const normalizedUql = this.getNormalizedUqlQuery();
     if (normalizedUql) state.uql = normalizedUql;
     if (this.filterMode === 'uql') {
@@ -808,6 +847,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.selectedSupportCard) state.sc = this.selectedSupportCard.id;
     if (this.selectedLimitBreak > 0) state.lb = this.selectedLimitBreak;
     if (this.searchUserId) state.uid = this.searchUserId;
+    if (this.searchUsername) state.un = this.searchUsername;
     
     if (this.filterState.min_win_count) state.mwc = this.filterState.min_win_count;
     if (this.filterState.min_white_count) state.mwh = this.filterState.min_white_count;
@@ -836,11 +876,146 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     return this.encodeBase64Utf8(JSON.stringify(state));
   }
-  loadSerializedState(stateStr: string) {
+
+  private applySelectedVeteran(veteran: VeteranMember, accountId: string | null): void {
+    if (accountId) this.selectedAccountId = accountId;
+    this.selectedVeteran = veteran;
+    this.selectedVeteranName = this.getVeteranName(veteran);
+    this.selectedVeteranImage = this.getVeteranImage(veteran);
+    this.pendingVeteranRestore = null;
+    this.veteranSelected.emit(veteran);
+    this.syncSelectedVeteranFilterState();
+    this.cdr.markForCheck();
+  }
+
+  private readSavedFilterState(): SavedDatabaseFilterState | null {
+    try {
+      const savedMode = this.readSavedFilterMode();
+      const saved = localStorage.getItem(DatabaseFilterComponent.SAVED_FILTER_STATE_KEY);
+      if (!saved) {
+        return savedMode ? { version: 2, mode: savedMode } : null;
+      }
+      const parsed = JSON.parse(saved) as Partial<SavedDatabaseFilterState>;
+      if (parsed.version !== 2) return null;
+      if (parsed.mode !== 'basic' && parsed.mode !== 'advanced' && parsed.mode !== 'uql') return null;
+      return {
+        version: 2,
+        mode: savedMode ?? parsed.mode,
+        formState: parsed.formState,
+        uqlState: parsed.uqlState
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private readUqlQueryFromSerializedState(stateStr: string | undefined): string {
+    if (!stateStr) return '';
     try {
       const state: CompressedState = JSON.parse(this.decodeBase64Utf8(stateStr));
-      if (state.fm === 'basic' || state.fm === 'advanced' || state.fm === 'uql') {
+      return state.uql || '';
+    } catch {
+      return '';
+    }
+  }
+
+  private readSavedFilterMode(): FilterMode | null {
+    try {
+      const mode = localStorage.getItem(DatabaseFilterComponent.SAVED_FILTER_MODE_KEY);
+      return mode === 'basic' || mode === 'advanced' || mode === 'uql' ? mode : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private persistCurrentFilterMode(): void {
+    try {
+      localStorage.setItem(DatabaseFilterComponent.SAVED_FILTER_MODE_KEY, this.filterMode);
+      const previous = this.readSavedFilterState();
+      const next: SavedDatabaseFilterState = {
+        version: 2,
+        mode: this.filterMode,
+        formState: previous?.formState,
+        uqlState: previous?.uqlState
+      };
+      localStorage.setItem(DatabaseFilterComponent.SAVED_FILTER_STATE_KEY, JSON.stringify(next));
+    } catch {
+      // Ignore unavailable storage; filters still work normally for the session.
+    }
+  }
+
+  private persistCurrentFilterState(): void {
+    try {
+      const previous = this.readSavedFilterState();
+      const next: SavedDatabaseFilterState = {
+        version: 2,
+        mode: this.filterMode,
+        formState: previous?.formState,
+        uqlState: previous?.uqlState
+      };
+
+      if (this.filterMode === 'uql') {
+        next.uqlState = this.getSerializedState();
+      } else {
+        next.formState = this.getSerializedState();
+      }
+
+      localStorage.setItem(DatabaseFilterComponent.SAVED_FILTER_MODE_KEY, this.filterMode);
+      localStorage.setItem(DatabaseFilterComponent.SAVED_FILTER_STATE_KEY, JSON.stringify(next));
+    } catch {
+      // Ignore unavailable storage; filters still work normally for the session.
+    }
+  }
+
+  private hasFiltersQueryParam(): boolean {
+    try {
+      return new URLSearchParams(window.location.search).has('filters');
+    } catch {
+      return false;
+    }
+  }
+
+  private loadSavedFilterStateIfNeeded(): void {
+    if (this.restoredSavedFilterState || this.hasFiltersQueryParam()) return;
+    const saved = this.readSavedFilterState();
+    if (!saved) return;
+    const serialized = saved.mode === 'uql'
+      ? (saved.uqlState || saved.formState)
+      : (saved.formState || saved.uqlState);
+
+    this.restoredSavedFilterState = true;
+    if (!serialized) {
+      this.restoreSavedFilterMode(saved.mode);
+      this.persistCurrentFilterMode();
+      return;
+    }
+
+    this.loadSerializedState(serialized, saved.mode);
+    this.restoreSavedFilterMode(saved.mode);
+    this.persistCurrentFilterMode();
+  }
+
+  private restoreSavedFilterMode(mode: FilterMode): void {
+    this.filterMode = mode;
+    if (mode === 'uql') {
+      this.validateUqlQuery();
+      this.filterState = this.buildUqlOnlyFilterState();
+      this.updateCurrentUqlPreview();
+    }
+    this.applyBasicFilterDefaults(false);
+    this.updateActiveFilterChips();
+    this.cdr.markForCheck();
+  }
+
+  loadSerializedState(stateStr: string, modeOverride: FilterMode | null = this.readSavedFilterMode()) {
+    try {
+      const state: CompressedState = JSON.parse(this.decodeBase64Utf8(stateStr));
+      if (modeOverride) {
+        this.filterMode = modeOverride;
+      } else if (state.fm === 'basic' || state.fm === 'advanced' || state.fm === 'uql') {
         this.filterMode = state.fm;
+      } else if (state.uql) {
+        this.filterMode = 'uql';
       }
       this.uqlQuery = state.uql || '';
       this.validateUqlQuery();
@@ -971,9 +1146,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         });
       }
       // Restore Scalars
-      if (state.lb !== undefined) this.selectedLimitBreak = state.lb;
+      this.selectedLimitBreak = state.lb !== undefined ? state.lb : 0;
       this.applyBasicFilterDefaults(false);
       if (state.uid) this.searchUserId = state.uid;
+      if (state.un) this.searchUsername = state.un;
       
       if (state.mwc !== undefined) this.filterState.min_win_count = state.mwc;
       if (state.mwh !== undefined) this.filterState.min_white_count = state.mwh;
@@ -1128,7 +1304,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   // --- Tree Logic ---
   treeData: TreeNode = {
     id: 'target',
-    name: 'Target Character',
+    name: 'Target (ace)',
     layer: 0,
     children: [
       {
@@ -1136,8 +1312,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         name: 'Parent 1',
         layer: 1,
         children: [
-          { id: 'p2-1', name: 'Grandparent 1', layer: 2 },
-          { id: 'p2-2', name: 'Grandparent 2', layer: 2 }
+          { id: 'p2-1', name: 'Great parent 1', layer: 2 },
+          { id: 'p2-2', name: 'Great parent 2', layer: 2 }
         ]
       },
       {
@@ -1145,8 +1321,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         name: 'Parent 2',
         layer: 1,
         children: [
-          { id: 'p2-3', name: 'Grandparent 3', layer: 2 },
-          { id: 'p2-4', name: 'Grandparent 4', layer: 2 }
+          { id: 'p2-3', name: 'Great parent 3', layer: 2 },
+          { id: 'p2-4', name: 'Great parent 4', layer: 2 }
         ]
       }
     ]
@@ -1157,6 +1333,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     setTimeout(() => this.updateFloatingBtnState(), 350);
   }
   toggleSection(section: string) {
+    if (section === 'quickFilters' && window.innerWidth > 600) return;
     if (this.collapsedSections.has(section)) {
       this.collapsedSections.delete(section);
     } else {
@@ -1164,6 +1341,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
   isSectionCollapsed(section: string): boolean {
+    if (section === 'quickFilters' && window.innerWidth > 600) return false;
     return this.collapsedSections.has(section);
   }
   getCharacterImagePath(imageName: string | undefined): string {
@@ -1238,7 +1416,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   /** Clear character from Target tree node */
   private clearFromTarget(baseId: number) {
     if (this.treeData.characterId && Math.floor(this.treeData.characterId / 100) === baseId) {
-      this.treeData.name = 'Target Character';
+      this.treeData.name = 'Target (ace)';
       this.treeData.image = undefined;
       this.treeData.characterId = undefined;
     }
@@ -1272,7 +1450,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         if (child.children) {
           for (const grandchild of child.children) {
             if (grandchild.characterId && Math.floor(grandchild.characterId / 100) === baseId) {
-              grandchild.name = 'Grandparent';
+              grandchild.name = 'Great parent';
               grandchild.image = undefined;
               grandchild.characterId = undefined;
             }
@@ -1625,6 +1803,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     // Update active filter chips
     this.updateCurrentUqlPreview();
     this.updateActiveFilterChips();
+    this.persistCurrentFilterState();
     // Emit a shallow copy of the filter state to ensure change detection
     this.filterChangeSubject.next({ ...this.filterState });
   }
@@ -1755,8 +1934,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.treeData.characterId) {
       this.activeFilterChips.push({
         id: 'tree-target',
-        label: `Target: ${this.treeData.name}`,
-        name: 'Target',
+        label: `Target (ace): ${this.treeData.name}`,
+        name: 'Target (ace)',
         value: this.treeData.name,
         type: 'character'
       });
@@ -1764,8 +1943,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.treeData.children?.[0]?.characterId) {
       this.activeFilterChips.push({
         id: 'tree-parent1',
-        label: `Main Parent: ${this.treeData.children[0].name}`,
-        name: 'Main Parent',
+        label: `Main parent (p1/2): ${this.treeData.children[0].name}`,
+        name: 'Main parent (p1/2)',
         value: this.treeData.children[0].name,
         type: 'character'
       });
@@ -1774,8 +1953,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.treeData.children?.[0]?.children?.[0]?.characterId) {
       this.activeFilterChips.push({
         id: 'tree-gp1',
-        label: `GP: ${this.treeData.children[0].children[0].name}`,
-        name: 'GP',
+        label: `Great parent (gp1): ${this.treeData.children[0].children[0].name}`,
+        name: 'Great parent (gp1)',
         value: this.treeData.children[0].children[0].name,
         type: 'character'
       });
@@ -1783,8 +1962,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.treeData.children?.[0]?.children?.[1]?.characterId) {
       this.activeFilterChips.push({
         id: 'tree-gp2',
-        label: `GP: ${this.treeData.children[0].children[1].name}`,
-        name: 'GP',
+        label: `Great parent (gp2): ${this.treeData.children[0].children[1].name}`,
+        name: 'Great parent (gp2)',
         value: this.treeData.children[0].children[1].name,
         type: 'character'
       });
@@ -1793,8 +1972,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.includeMainParentCharacters.forEach((char, index) => {
       this.activeFilterChips.push({
         id: `include-main-parent-${index}`,
-        label: `Include Main: ${char.name}`,
-        name: 'Inc. Main',
+        label: `Main parent (p1/2): ${char.name}`,
+        name: 'Main parent (p1/2)',
         value: char.name,
         type: 'includeMainParent',
         filterIndex: index
@@ -1804,8 +1983,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.includeParentCharacters.forEach((char, index) => {
       this.activeFilterChips.push({
         id: `include-parent-${index}`,
-        label: `Include Parent: ${char.name}`,
-        name: 'Inc. Parent',
+        label: `Great parent (gp1/2): ${char.name}`,
+        name: 'Great parent (gp1/2)',
         value: char.name,
         type: 'includeParent',
         filterIndex: index
@@ -1815,8 +1994,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.excludeParentCharacters.forEach((char, index) => {
       this.activeFilterChips.push({
         id: `exclude-parent-${index}`,
-        label: `Exclude Parent: ${char.name}`,
-        name: 'Excl. Parent',
+        label: `No great parent (gp1/2): ${char.name}`,
+        name: 'No great parent (gp1/2)',
         value: char.name,
         type: 'excludeParent',
         filterIndex: index
@@ -1826,8 +2005,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.excludeMainParentCharacters.forEach((char, index) => {
       this.activeFilterChips.push({
         id: `exclude-main-parent-${index}`,
-        label: `Exclude Main: ${char.name}`,
-        name: 'Excl. Main',
+        label: `No main parent (p1/2): ${char.name}`,
+        name: 'No main parent (p1/2)',
         value: char.name,
         type: 'excludeMainParent',
         filterIndex: index
@@ -1982,6 +2161,67 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       });
     }
   }
+
+  clearCurrentFilters(event?: MouseEvent): void {
+    event?.stopPropagation();
+    if (this.filterMode === 'uql') {
+      this.clearUql();
+      return;
+    }
+
+    this.clearStructuredFilters();
+    this.onFilterChange();
+  }
+
+  private clearStructuredFilters(): void {
+    this.blueFactorFilters = [];
+    this.pinkFactorFilters = [];
+    this.greenFactorFilters = [];
+    this.whiteFactorFilters = [];
+    this.mainBlueFactorFilters = [];
+    this.mainPinkFactorFilters = [];
+    this.mainGreenFactorFilters = [];
+    this.mainWhiteFactorFilters = [];
+    this.optionalWhiteFactorFilters = [];
+    this.optionalMainWhiteFactorFilters = [];
+    this.lineageWhiteFactorFilters = [];
+    this.filteredGreenFactorOptions = [];
+    this.filteredWhiteFactorOptions = [];
+    this.filteredMainWhiteFactorOptions = [];
+    this.filteredMainGreenFactorOptions = [];
+    this.filteredOptionalWhiteFactorOptions = [];
+    this.filteredOptionalMainWhiteFactorOptions = [];
+    this.filteredLineageWhiteFactorOptions = [];
+
+    this.includeMainParentCharacters = [];
+    this.includeParentCharacters = [];
+    this.excludeParentCharacters = [];
+    this.excludeMainParentCharacters = [];
+    this.clearNodeRecursive(this.treeData);
+
+    this.selectedSupportCard = null;
+    this.selectedLimitBreak = 0;
+    this.searchUserId = '';
+    this.searchUsername = '';
+
+    if (this.selectedVeteran) {
+      this.veteranSelected.emit(null);
+    }
+    this.selectedVeteran = null;
+    this.selectedVeteranName = '';
+    this.selectedVeteranImage = '';
+    this.pendingVeteranRestore = null;
+
+    if (this.includeMaxFollowers) {
+      this.maxFollowersToggled.emit(false);
+    }
+    this.includeMaxFollowers = false;
+
+    this.filterState = this.createDefaultFilterState();
+    this.raceScheduleRaceCount = 0;
+    this.raceScheduler?.clearSelection();
+  }
+
   removeActiveFilter(chip: ActiveFilterChip): void {
     switch (chip.type) {
       case 'blue':
@@ -2162,10 +2402,26 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
   setFilterMode(mode: FilterMode): void {
     const previousMode = this.filterMode;
+    this.persistCurrentFilterState();
+    const savedState = this.readSavedFilterState();
     if (previousMode === 'uql' && mode !== 'uql') {
-      this.applyRepresentableUqlToStructuredFilters();
+      if (savedState?.formState) {
+        this.loadSerializedState(savedState.formState, mode);
+        this.filterMode = mode;
+      } else {
+        this.applyRepresentableUqlToStructuredFilters();
+      }
     } else if (mode === 'uql' && previousMode !== 'uql' && !this.getNormalizedUqlQuery()) {
-      this.writeStructuredFiltersToUqlQuery();
+      const savedUqlQuery = this.readUqlQueryFromSerializedState(savedState?.uqlState);
+      if (savedUqlQuery) {
+        this.uqlQuery = savedUqlQuery;
+        this.validateUqlQuery();
+        this.syncUqlFilterState();
+        this.updateCurrentUqlPreview();
+        this.updateActiveFilterChips();
+      } else {
+        this.writeStructuredFiltersToUqlQuery();
+      }
     } else if (mode === 'uql' && previousMode !== 'uql') {
       this.syncSelectedEditorDirectivesToUqlQuery();
       this.applyUqlEditorDirectives();
@@ -2176,12 +2432,15 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.updateActiveFilterChips();
     }
     this.filterMode = mode;
+    this.persistCurrentFilterMode();
     if (mode === 'uql') {
       this.filterState = this.buildUqlOnlyFilterState();
       this.updateActiveFilterChips();
+      this.persistCurrentFilterState();
       this.filterChangeSubject.next({ ...this.filterState });
     }
     this.applyBasicFilterDefaults();
+    this.persistCurrentFilterMode();
     if (!this.isExpanded) {
       this.isExpanded = true;
     }
@@ -2282,7 +2541,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     if (filterStateChanged) {
       this.lastUqlFilterStateSignature = nextSignature;
+      this.persistCurrentFilterState();
       this.filterChangeSubject.next({ ...this.filterState });
+    } else {
+      this.persistCurrentFilterState();
     }
   }
 
@@ -2701,9 +2963,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private buildScopedArrayFields(): Array<{ alias: string; fields: string[]; label: string }> {
     return [
       { label: 'Main has', aliases: ['main', 'parent', 'main parent'], fields: ['main_white_factors'] },
-      { label: 'GP1 has', aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1'], fields: ['left_white_factors'] },
-      { label: 'GP2 has', aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2'], fields: ['right_white_factors'] },
-      { label: 'Grandparent has', aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'any grandparent', 'any grand parent'], fields: ['left_white_factors', 'right_white_factors'] }
+      { label: 'GP1 has', aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1', 'great parent 1'], fields: ['left_white_factors'] },
+      { label: 'GP2 has', aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2', 'great parent 2'], fields: ['right_white_factors'] },
+      { label: 'Great parent has', aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'great parent', 'any grandparent', 'any grand parent', 'any great parent'], fields: ['left_white_factors', 'right_white_factors'] }
     ].flatMap(scope => scope.aliases.map(alias => ({ alias, fields: scope.fields, label: scope.label })));
   }
 
@@ -2720,23 +2982,23 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         fields: ['main_chara_id']
       },
       {
-        label: 'Parent character',
+        label: 'Main parent (p1/2)',
         aliases: ['parent character', 'parent uma', 'main parent character'],
         fields: ['main_parent_id']
       },
       {
-        label: 'GP1 character',
-        aliases: ['gp1 character', 'gp1 characters', 'gp1 uma', 'gp1 umas', 'gp1 chara', 'gp1 charas', 'grandparent 1 character', 'grandparent 1 characters', 'grand parent 1 character', 'grand parent 1 characters', 'left character', 'left characters', 'left uma', 'left umas', 'left chara', 'left charas'],
+        label: 'Great parent 1 (gp1)',
+        aliases: ['gp1 character', 'gp1 characters', 'gp1 uma', 'gp1 umas', 'gp1 chara', 'gp1 charas', 'grandparent 1 character', 'grandparent 1 characters', 'grand parent 1 character', 'grand parent 1 characters', 'great parent 1 character', 'great parent 1 characters', 'left character', 'left characters', 'left uma', 'left umas', 'left chara', 'left charas'],
         fields: ['left_chara_id']
       },
       {
-        label: 'GP2 character',
-        aliases: ['gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas', 'grandparent 2 character', 'grandparent 2 characters', 'grand parent 2 character', 'grand parent 2 characters', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas'],
+        label: 'Great parent 2 (gp2)',
+        aliases: ['gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas', 'grandparent 2 character', 'grandparent 2 characters', 'grand parent 2 character', 'grand parent 2 characters', 'great parent 2 character', 'great parent 2 characters', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas'],
         fields: ['right_chara_id']
       },
       {
-        label: 'Grandparent characters',
-        aliases: ['gp characters', 'gp character', 'gp umas', 'gp uma', 'gp charas', 'gp chara', 'grandparent characters', 'grandparent character', 'grand parent characters', 'grand parent character', 'any gp characters', 'any gp character', 'any grandparent characters', 'any grandparent character'],
+        label: 'Great parent (gp1/2)',
+        aliases: ['gp characters', 'gp character', 'gp umas', 'gp uma', 'gp charas', 'gp chara', 'grandparent characters', 'grandparent character', 'grand parent characters', 'grand parent character', 'great parent characters', 'great parent character', 'any gp characters', 'any gp character', 'any grandparent characters', 'any grandparent character', 'any great parent characters', 'any great parent character'],
         fields: ['left_chara_id', 'right_chara_id']
       }
     ].flatMap(scope => scope.aliases.map(alias => ({ alias, fields: scope.fields, label: scope.label })));
@@ -2756,7 +3018,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       },
       {
         label: 'GP1',
-        aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1'],
+        aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1', 'great parent 1'],
         fieldsByContext: {
           'blue-factor': [{ field: 'left_blue_factors', type: 'number' as const }],
           'pink-factor': [{ field: 'left_pink_factors', type: 'number' as const }],
@@ -2766,7 +3028,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       },
       {
         label: 'GP2',
-        aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2'],
+        aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2', 'great parent 2'],
         fieldsByContext: {
           'blue-factor': [{ field: 'right_blue_factors', type: 'number' as const }],
           'pink-factor': [{ field: 'right_pink_factors', type: 'number' as const }],
@@ -2775,8 +3037,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         }
       },
       {
-        label: 'Grandparent',
-        aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'any grandparent', 'any grand parent'],
+        label: 'Great parent',
+        aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'great parent', 'any grandparent', 'any grand parent', 'any great parent'],
         fieldsByContext: {
           'blue-factor': [{ field: 'left_blue_factors', type: 'number' as const }, { field: 'right_blue_factors', type: 'number' as const }],
           'pink-factor': [{ field: 'left_pink_factors', type: 'number' as const }, { field: 'right_pink_factors', type: 'number' as const }],
@@ -2818,15 +3080,15 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       { aliases: ['main', 'parent', 'main parent'], fields: ['main_blue_factors'], color: 'blue' as const },
       { aliases: ['main', 'parent', 'main parent'], fields: ['main_pink_factors'], color: 'pink' as const },
       { aliases: ['main', 'parent', 'main parent'], fields: ['main_green_factors'], color: 'green' as const },
-      { aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1'], fields: ['left_blue_factors'], color: 'blue' as const },
-      { aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1'], fields: ['left_pink_factors'], color: 'pink' as const },
-      { aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1'], fields: ['left_green_factors'], color: 'green' as const },
-      { aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2'], fields: ['right_blue_factors'], color: 'blue' as const },
-      { aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2'], fields: ['right_pink_factors'], color: 'pink' as const },
-      { aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2'], fields: ['right_green_factors'], color: 'green' as const },
-      { aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'any grandparent', 'any grand parent'], fields: ['left_blue_factors', 'right_blue_factors'], color: 'blue' as const },
-      { aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'any grandparent', 'any grand parent'], fields: ['left_pink_factors', 'right_pink_factors'], color: 'pink' as const },
-      { aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'any grandparent', 'any grand parent'], fields: ['left_green_factors', 'right_green_factors'], color: 'green' as const }
+      { aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1', 'great parent 1'], fields: ['left_blue_factors'], color: 'blue' as const },
+      { aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1', 'great parent 1'], fields: ['left_pink_factors'], color: 'pink' as const },
+      { aliases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1', 'great parent 1'], fields: ['left_green_factors'], color: 'green' as const },
+      { aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2', 'great parent 2'], fields: ['right_blue_factors'], color: 'blue' as const },
+      { aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2', 'great parent 2'], fields: ['right_pink_factors'], color: 'pink' as const },
+      { aliases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2', 'great parent 2'], fields: ['right_green_factors'], color: 'green' as const },
+      { aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'great parent', 'any grandparent', 'any grand parent', 'any great parent'], fields: ['left_blue_factors', 'right_blue_factors'], color: 'blue' as const },
+      { aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'great parent', 'any grandparent', 'any grand parent', 'any great parent'], fields: ['left_pink_factors', 'right_pink_factors'], color: 'pink' as const },
+      { aliases: ['gp', 'any gp', 'grandparent', 'grand parent', 'great parent', 'any grandparent', 'any grand parent', 'any great parent'], fields: ['left_green_factors', 'right_green_factors'], color: 'green' as const }
     ];
     const colorAliases = {
       blue: ['blue spark', 'blue sparks', 'blue factor', 'blue factors'],
@@ -3795,7 +4057,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         treeChanged = true;
       }
     } else if (this.treeData.characterId) {
-      this.treeData.name = 'Target Character';
+      this.treeData.name = 'Target (ace)';
       this.treeData.image = undefined;
       this.treeData.characterId = undefined;
       treeChanged = true;
@@ -3812,13 +4074,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       if (resolvedLegacy && (this.selectedAccountId !== resolvedLegacy.accountId
         || (!!resolvedVeteranId && selectedVeteranId !== resolvedVeteranId)
         || (!resolvedVeteranId && this.selectedVeteran?.member_id !== resolvedLegacy.veteran.member_id))) {
-        this.selectedAccountId = resolvedLegacy.accountId;
-        this.selectedVeteran = resolvedLegacy.veteran;
-        this.selectedVeteranName = this.getVeteranName(resolvedLegacy.veteran);
-        this.selectedVeteranImage = this.getVeteranImage(resolvedLegacy.veteran);
-        this.pendingVeteranRestore = null;
-        this.veteranSelected.emit(resolvedLegacy.veteran);
-        this.syncSelectedVeteranFilterState();
+        this.applySelectedVeteran(resolvedLegacy.veteran, resolvedLegacy.accountId);
       }
     } else if (this.selectedVeteran) {
       this.selectedVeteran = null;
@@ -3833,7 +4089,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private clearUqlEditorDirectiveState(): void {
     let treeChanged = false;
     if (this.treeData.characterId) {
-      this.treeData.name = 'Target Character';
+      this.treeData.name = 'Target (ace)';
       this.treeData.image = undefined;
       this.treeData.characterId = undefined;
       treeChanged = true;
@@ -3898,6 +4154,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.filterState = this.buildUqlOnlyFilterState();
     }
     this.updateActiveFilterChips();
+    this.persistCurrentFilterState();
     this.filterChangeSubject.next({ ...this.filterState });
   }
 
@@ -4150,7 +4407,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
   private getUqlValueContextForField(fieldText: string): UqlValueContext | null {
     const normalized = fieldText.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
-    if (this.endsWithAny(normalized, ['characters', 'character', 'umas', 'uma', 'charas', 'chara', 'main character', 'main characters', 'main uma', 'main umas', 'main parent', 'main chara', 'main charas', 'main chara id', 'left parent', 'left character', 'left characters', 'left uma', 'left umas', 'left chara', 'left charas', 'left chara id', 'right parent', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas', 'right chara id', 'gp1 character', 'gp1 characters', 'gp1 uma', 'gp1 umas', 'gp1 chara', 'gp1 charas', 'gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas', 'gp character', 'gp characters', 'grandparent character', 'grandparent characters'])) {
+    if (this.endsWithAny(normalized, ['characters', 'character', 'umas', 'uma', 'charas', 'chara', 'main character', 'main characters', 'main uma', 'main umas', 'main parent', 'main chara', 'main charas', 'main chara id', 'left parent', 'left character', 'left characters', 'left uma', 'left umas', 'left chara', 'left charas', 'left chara id', 'right parent', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas', 'right chara id', 'gp1 character', 'gp1 characters', 'gp1 uma', 'gp1 umas', 'gp1 chara', 'gp1 charas', 'gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas', 'gp character', 'gp characters', 'grandparent character', 'grandparent characters', 'great parent character', 'great parent characters'])) {
       return 'character';
     }
     if (this.endsWithAny(normalized, ['support card', 'support', 'card', 'support card id'])) {
@@ -4363,24 +4620,24 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private getScopedSparkCategorySuggestions(): UqlSuggestion[] {
     return [
       {
-        label: 'Grandparent blue sparks',
-        insertText: 'Grandparent Blue Sparks',
-        detail: 'left_blue_factors or right_blue_factors; max 3 stars on either grandparent',
-        matchPhrases: ['grandparent blue sparks', 'grandparent blue factors', 'gp blue sparks', 'gp blue factors', 'any gp blue sparks', 'any gp blue factors'],
+        label: 'Great parent blue sparks',
+        insertText: 'Great parent Blue Sparks',
+        detail: 'left_blue_factors or right_blue_factors; max 3 stars on either great parent',
+        matchPhrases: ['great parent blue sparks', 'great parent blue factors', 'grandparent blue sparks', 'grandparent blue factors', 'gp blue sparks', 'gp blue factors', 'any gp blue sparks', 'any gp blue factors'],
         valueContext: 'blue-factor' as const
       },
       {
-        label: 'Grandparent pink sparks',
-        insertText: 'Grandparent Pink Sparks',
-        detail: 'left_pink_factors or right_pink_factors; max 3 stars on either grandparent',
-        matchPhrases: ['grandparent pink sparks', 'grandparent pink factors', 'gp pink sparks', 'gp pink factors', 'any gp pink sparks', 'any gp pink factors'],
+        label: 'Great parent pink sparks',
+        insertText: 'Great parent Pink Sparks',
+        detail: 'left_pink_factors or right_pink_factors; max 3 stars on either great parent',
+        matchPhrases: ['great parent pink sparks', 'great parent pink factors', 'grandparent pink sparks', 'grandparent pink factors', 'gp pink sparks', 'gp pink factors', 'any gp pink sparks', 'any gp pink factors'],
         valueContext: 'pink-factor' as const
       },
       {
-        label: 'Grandparent green sparks',
-        insertText: 'Grandparent Green Sparks',
-        detail: 'left_green_factors or right_green_factors; max 3 stars on either grandparent',
-        matchPhrases: ['grandparent green sparks', 'grandparent green factors', 'grandparent unique skills', 'gp green sparks', 'gp green factors', 'gp unique skills', 'any gp green sparks', 'any gp green factors', 'any gp unique skills'],
+        label: 'Great parent green sparks',
+        insertText: 'Great parent Green Sparks',
+        detail: 'left_green_factors or right_green_factors; max 3 stars on either great parent',
+        matchPhrases: ['great parent green sparks', 'great parent green factors', 'great parent unique skills', 'grandparent green sparks', 'grandparent green factors', 'grandparent unique skills', 'gp green sparks', 'gp green factors', 'gp unique skills', 'any gp green sparks', 'any gp green factors', 'any gp unique skills'],
         valueContext: 'green-factor' as const
       }
     ].map(field => ({
@@ -4419,11 +4676,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       { label: 'greater than or equal', insertText: '>= ', kind: 'operator', detail: 'At least' },
       { label: 'less than or equal', insertText: '<= ', kind: 'operator', detail: 'At most' },
       { label: 'equals', insertText: '= ', kind: 'operator', detail: 'Exact match' },
-      { label: 'include in list', insertText: 'in ()', kind: 'operator', detail: 'Match any listed value' },
-      { label: 'exclude list', insertText: 'not in ()', kind: 'operator', detail: 'Reject listed values' },
+      { label: 'match list', insertText: 'in ()', kind: 'operator', detail: 'Match any listed value' },
+      { label: 'omit list', insertText: 'not in ()', kind: 'operator', detail: 'Reject listed values' },
       { label: 'Parentheses', insertText: '(Speed >= 3 or Stamina >= 3)', kind: 'snippet', detail: 'Group OR logic' },
-      { label: 'Include list', insertText: 'Main character in (Special Week, Silence Suzuka)', kind: 'snippet', detail: 'Use in (...) for includes' },
-      { label: 'Exclude list', insertText: 'Main character not in (Special Week, Silence Suzuka)', kind: 'snippet', detail: 'Use not in (...) for excludes' },
+      { label: 'Match list', insertText: 'Main character in (Special Week, Silence Suzuka)', kind: 'snippet', detail: 'Use in (...) for listed values' },
+      { label: 'Omit list', insertText: 'Main character not in (Special Week, Silence Suzuka)', kind: 'snippet', detail: 'Use not in (...) for omitted values' },
       { label: 'has skill', insertText: 'has Right-Handed ○', kind: 'snippet', detail: 'Skill present on any parent' },
       { label: 'has any skills', insertText: 'has any (Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'At least one skill present on any parent' },
       { label: 'has all skills', insertText: 'has all (Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Every listed skill present across all parents' },
@@ -4431,15 +4688,15 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       { label: 'optional main white skills', insertText: 'optional main white in (Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Require and rank main-parent white skill matches' },
       { label: 'lineage white skills', insertText: 'lineage white in (Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Sort by lineage-style white skill stacking' },
       { label: 'Main speed stars', insertText: 'Main Speed >= 3', kind: 'snippet', detail: 'Main slot Speed stars, max 3' },
-      { label: 'GP1 speed stars', insertText: 'GP1 Speed >= 3', kind: 'snippet', detail: 'Grandparent 1 Speed stars, max 3' },
-      { label: 'GP2 speed stars', insertText: 'GP2 Speed >= 3', kind: 'snippet', detail: 'Grandparent 2 Speed stars, max 3' },
-      { label: 'Grandparent speed stars', insertText: 'Grandparent Speed >= 3', kind: 'snippet', detail: 'Either grandparent has Speed stars, max 3' },
+      { label: 'GP1 speed stars', insertText: 'GP1 Speed >= 3', kind: 'snippet', detail: 'Great parent 1 Speed stars, max 3' },
+      { label: 'GP2 speed stars', insertText: 'GP2 Speed >= 3', kind: 'snippet', detail: 'Great parent 2 Speed stars, max 3' },
+      { label: 'Great parent speed stars', insertText: 'Great parent Speed >= 3', kind: 'snippet', detail: 'Either great parent has Speed stars, max 3' },
       { label: 'Main has skill', insertText: 'Main has Right-Handed ○', kind: 'snippet', detail: 'Specific white factor on the main slot' },
-      { label: 'Grandparent has skill', insertText: 'Grandparent has Right-Handed ○', kind: 'snippet', detail: 'Either grandparent has this white factor' },
+      { label: 'Great parent has skill', insertText: 'Great parent has Right-Handed ○', kind: 'snippet', detail: 'Either great parent has this white factor' },
     ];
     const friendlyFieldSuggestions: UqlSuggestion[] = [
       ...[
-        { label: 'Target', detail: 'Editor context target character', matchPhrases: ['target', 'affinity target'], valueContext: 'character' as const },
+        { label: 'Target (ace)', insertText: 'target', detail: 'Editor context target character', matchPhrases: ['target', 'target ace', 'affinity target'], valueContext: 'character' as const },
         { label: 'Owned legacy', insertText: 'owned legacy = []', cursorOffset: -1, detail: 'Pick a legacy from your account', matchPhrases: ['owned legacy', 'legacy', 'your legacy', 'my legacy'], valueContext: 'legacy' as const }
       ].map(field => ({
         label: field.label,
@@ -4492,10 +4749,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       })),
       ...[
         { label: 'Main', detail: 'main_white_factors; white factors on the main slot', searchText: 'main parent main has parent has', matchPhrases: ['main', 'parent', 'main parent'], scopeContext: 'main' as const },
-        { label: 'GP1', detail: 'left_white_factors; white factors on grandparent 1', searchText: 'gp1 left grandparent 1 grand parent 1 left has', matchPhrases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1'], scopeContext: 'gp1' as const },
-        { label: 'GP2', detail: 'right_white_factors; white factors on grandparent 2', searchText: 'gp2 right grandparent 2 grand parent 2 right has', matchPhrases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2'], scopeContext: 'gp2' as const },
-        { label: 'Any GP', detail: 'left_white_factors or right_white_factors; white factors on either grandparent', searchText: 'gp any gp grandparent grand parent any grandparent has', matchPhrases: ['gp', 'any gp', 'grandparent', 'grand parent', 'any grandparent', 'any grand parent'], scopeContext: 'any-gp' as const },
-        { label: 'Grandparent', detail: 'left_white_factors or right_white_factors; white factors on either grandparent', searchText: 'gp any gp grandparent grand parent any grandparent has', matchPhrases: ['gp', 'any gp', 'grandparent', 'grand parent', 'any grandparent', 'any grand parent'], scopeContext: 'any-gp' as const }
+        { label: 'GP1', detail: 'left_white_factors; white factors on great parent 1', searchText: 'gp1 left grandparent 1 grand parent 1 great parent 1 left has', matchPhrases: ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1', 'great parent 1'], scopeContext: 'gp1' as const },
+        { label: 'GP2', detail: 'right_white_factors; white factors on great parent 2', searchText: 'gp2 right grandparent 2 grand parent 2 great parent 2 right has', matchPhrases: ['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2', 'great parent 2'], scopeContext: 'gp2' as const },
+        { label: 'Any GP', detail: 'left_white_factors or right_white_factors; white factors on either great parent', searchText: 'gp any gp grandparent grand parent great parent any grandparent any great parent has', matchPhrases: ['gp', 'any gp', 'grandparent', 'grand parent', 'great parent', 'any grandparent', 'any grand parent', 'any great parent'], scopeContext: 'any-gp' as const },
+        { label: 'Great parent', detail: 'left_white_factors or right_white_factors; white factors on either great parent', searchText: 'gp any gp grandparent grand parent great parent any grandparent any great parent has', matchPhrases: ['gp', 'any gp', 'grandparent', 'grand parent', 'great parent', 'any grandparent', 'any grand parent', 'any great parent'], scopeContext: 'any-gp' as const }
       ].map(field => ({
         label: field.label,
         insertText: field.label,
@@ -4640,9 +4897,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private getScopeContextForLabel(label: string): UqlSuggestion['scopeContext'] {
     const normalized = label.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
     if (/^(?:main|parent|main parent)\b/.test(normalized)) return 'main';
-    if (/^(?:gp1|left|left parent|grandparent 1|grand parent 1)\b/.test(normalized)) return 'gp1';
-    if (/^(?:gp2|right|right parent|grandparent 2|grand parent 2)\b/.test(normalized)) return 'gp2';
-    if (/^(?:gp|any gp|grandparent|grand parent|any grandparent|any grand parent)\b/.test(normalized)) return 'any-gp';
+    if (/^(?:gp1|left|left parent|grandparent 1|grand parent 1|great parent 1)\b/.test(normalized)) return 'gp1';
+    if (/^(?:gp2|right|right parent|grandparent 2|grand parent 2|great parent 2)\b/.test(normalized)) return 'gp2';
+    if (/^(?:gp|any gp|grandparent|grand parent|great parent|any grandparent|any grand parent|any great parent)\b/.test(normalized)) return 'any-gp';
     return undefined;
   }
 
@@ -4877,12 +5134,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       mainParent.image = undefined;
       mainParent.characterId = undefined;
       if (mainParent.children?.[0]) {
-        mainParent.children[0].name = 'Grandparent 1';
+        mainParent.children[0].name = 'Great parent 1';
         mainParent.children[0].image = undefined;
         mainParent.children[0].characterId = undefined;
       }
       if (mainParent.children?.[1]) {
-        mainParent.children[1].name = 'Grandparent 2';
+        mainParent.children[1].name = 'Great parent 2';
         mainParent.children[1].image = undefined;
         mainParent.children[1].characterId = undefined;
       }
@@ -5487,12 +5744,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     });
     dialogRef.afterClosed().subscribe((vet: VeteranMember | undefined) => {
       if (vet) {
-        const accountId = this.getAccountIdForVeteran(vet);
-        if (accountId) this.selectedAccountId = accountId;
-        this.selectedVeteran = vet;
-        this.selectedVeteranName = this.getVeteranName(vet);
-        this.selectedVeteranImage = this.getVeteranImage(vet);
-        this.veteranSelected.emit(vet);
+        const accountId = this.getAccountIdForVeteran(vet) || this.selectedAccountId || vet.trainer_id || null;
+        this.applySelectedVeteran(vet, accountId);
         if (!options.suppressFilterChange) {
           this.onFilterChange();
         }
@@ -5583,11 +5836,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (!vets) return;
     const vet = vets.find(v => v.member_id === memberId);
     if (vet) {
-      this.pendingVeteranRestore = null;
-      this.selectedVeteran = vet;
-      this.selectedVeteranName = this.getVeteranName(vet);
-      this.selectedVeteranImage = this.getVeteranImage(vet);
-      this.veteranSelected.emit(vet);
+      this.applySelectedVeteran(vet, accountId);
       this.onFilterChange();
     }
   }
@@ -5651,7 +5900,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.updateTreeFilters();
   }
   private clearNodeRecursive(node: TreeNode) {
-    node.name = node.layer === 0 ? 'Target Character' : (node.layer === 1 ? 'Parent' : 'Grandparent');
+    node.name = node.layer === 0 ? 'Target (ace)' : (node.layer === 1 ? 'Parent' : 'Great parent');
     node.image = undefined;
     node.characterId = undefined;
     // If clearing a parent, recursively clear children

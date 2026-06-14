@@ -57,6 +57,7 @@ scripts/*
 !scripts/precompute-tierlist.js
 !scripts/tierlist-calculation-engine.js
 !scripts/compress-images.js
+!scripts/verify-google-analytics-build.js
 
 .github/copilot-instructions.md
 /src/assets/*
