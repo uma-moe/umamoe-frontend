@@ -26,10 +26,17 @@
 
       <div class="header-actions">
         <button mat-button class="action-btn planner-btn"
-                (click)="openInPlanner.emit(record); $event.stopPropagation()"
+                (click)="onOpenInPlanner($event)"
                 matTooltip="Open in Lineage Planner">
           <mat-icon>account_tree</mat-icon>
           <span class="btn-text">Plan</span>
+        </button>
+        <button mat-button class="action-btn share-btn"
+                (click)="onShareRecord($event)"
+                [disabled]="!record.account_id && !record.trainer_id"
+                matTooltip="Copy share link">
+          <mat-icon>ios_share</mat-icon>
+          <span class="btn-text">Share</span>
         </button>
         <button *ngIf="record.race_results?.length" mat-button class="action-btn race-results-btn"
                 (click)="openRaceResults('main', $event)"
@@ -45,11 +52,11 @@
           <span class="btn-text">{{ reportButtonText }}</span>
         </button>
         <button *ngIf="showBookmarkButton" mat-button
-                class="action-btn bookmark-btn" [class.bookmarked]="isBookmarked"
+                class="action-btn bookmark-btn" [class.bookmarked]="isRecordBookmarked()"
                 (click)="onBookmarkToggle($event)"
-                [matTooltip]="isBookmarked ? 'Remove bookmark' : 'Bookmark this record'">
-          <mat-icon>{{ isBookmarked ? 'bookmark' : 'bookmark_border' }}</mat-icon>
-          <span class="btn-text">{{ isBookmarked ? 'Saved' : 'Save' }}</span>
+                [matTooltip]="isRecordBookmarked() ? 'Remove bookmark' : 'Bookmark this record'">
+          <mat-icon>{{ isRecordBookmarked() ? 'bookmark' : 'bookmark_border' }}</mat-icon>
+          <span class="btn-text">{{ isRecordBookmarked() ? 'Saved' : 'Save' }}</span>
         </button>
       </div>
     </div>

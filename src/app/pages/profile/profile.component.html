@@ -321,10 +321,13 @@
             [reportButtonText]="'Update inheritance'"
             [reportButtonIcon]="'sync'"
             [reportButtonTooltip]="'Report this inheritance as outdated and queue a database refresh'"
-            [mainParentLevelFn]="boundGetLevelFromMainParent"
-            (copyTrainerId)="copyTrainerId($event.accountId, $event.event)"
-            (reportUnavailable)="requestInheritanceUpdate($event.accountId, $event.event)"
-            (openInPlanner)="openInPlanner($event)">
+            reportConfirmMessage="Report trainer {trainerId}'s inheritance as outdated and queue a refresh? It can take up to 5 minutes to update in the database."
+            reportSuccessMessage="Update requested. It can take up to 5 minutes to appear in the database."
+            reportFallbackMessage="Update request submitted. It can take up to 5 minutes to appear in the database."
+            plannerSource="profile"
+            analyticsFeature="profile"
+            analyticsSource="profile_inheritance"
+            >
           </app-inheritance-entry>
         </div>
       </section>

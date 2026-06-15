@@ -1,23 +1,19 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, RouterOutlet, ActivatedRoute, Router } from '@angular/router';
+import { RouterModule, RouterOutlet, ActivatedRoute } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { ProfileService } from '../../services/profile.service';
-import { InheritanceService } from '../../services/inheritance.service';
 import { UserProfileResponse, CircleHistoryEntry, ProfileVisibility } from '../../models/profile.model';
 import { AuthService } from '../../services/auth.service';
 import { getCharacterById } from '../../data/character.data';
 import { getSupportCardById } from '../../data/support-cards.data';
-import { FactorService, SparkInfo } from '../../services/factor.service';
 import { ProfileHeaderComponent } from './profile-header/profile-header.component';
-import { ResolveSparksPipe } from '../../pipes/resolve-sparks.pipe';
 import { InheritanceEntryComponent } from '../../components/inheritance-entry/inheritance-entry.component';
 import { RankBadgeComponent } from '../../components/rank-badge/rank-badge.component';
 import { SkillComponent } from '../../components/skill/skill.component';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { InheritanceRecord } from '../../models/inheritance.model';
-import { PlannerTransferService } from '../../services/planner-transfer.service';
 import { AppVersionService } from '../../services/app-version.service';
 import { Meta, Title } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
@@ -39,7 +35,7 @@ export interface CircleMembership {
 @Component({
     selector: 'app-profile',
     standalone: true,
-    imports: [CommonModule, RouterModule, RouterOutlet, MatIconModule, MatSnackBarModule, ResolveSparksPipe, ProfileHeaderComponent, InheritanceEntryComponent, RankBadgeComponent, SkillComponent, LocaleNumberPipe],
+    imports: [CommonModule, RouterModule, RouterOutlet, MatIconModule, MatSnackBarModule, ProfileHeaderComponent, InheritanceEntryComponent, RankBadgeComponent, SkillComponent, LocaleNumberPipe],
     templateUrl: './profile.component.html',
     styleUrl: './profile.component.scss'
 })
@@ -54,8 +50,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     selectedStadiumTab = 0;
     hasActiveChild = false;
     inheritanceRecord: InheritanceRecord | null = null;
-    boundGetLevelFromMainParent = this.getLevelFromMainParent.bind(this);
-    private readonly mainParentLevelCache = new WeakMap<InheritanceRecord, Map<string, string>>();
     private readonly sortedSkillsCache = new WeakMap<number[], number[]>();
 
     // Owner controls
@@ -66,13 +60,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     constructor(
         private route: ActivatedRoute,
-        private router: Router,
         private profileService: ProfileService,
-        private inheritanceService: InheritanceService,
         private authService: AuthService,
-        private factorService: FactorService,
-        private snackBar: MatSnackBar,
-        private plannerTransfer: PlannerTransferService,
         private title: Title,
         private meta: Meta,
         private appVersionService: AppVersionService
@@ -255,10 +244,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
         return card?.name || `Card #${this.profile.support_card.support_card_id}`;
     }
 
-    resolveSparks(sparkIds: number[]): SparkInfo[] {
-        return this.factorService.resolveSparks(sparkIds);
-    }
-
     private static compactFmt = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
 
     formatNumber(n: number): string {
@@ -334,64 +319,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
             upvotes: 0,
             downvotes: 0,
         };
-    }
-
-    getLevelFromMainParent(currentSpark: SparkInfo, record: InheritanceRecord): string | undefined {
-        return this.getMainParentLevelMap(record).get(String(currentSpark.factorId));
-    }
-
-    private getMainParentLevelMap(record: InheritanceRecord): Map<string, string> {
-        const cached = this.mainParentLevelCache.get(record);
-        if (cached) return cached;
-
-        const levels = new Map<string, string>();
-        const addSpark = (spark: number | null | undefined) => {
-            if (spark === null || spark === undefined) return;
-            levels.set(String(Math.floor(spark / 10)), String(spark % 10));
-        };
-        addSpark(record.main_blue_factors);
-        addSpark(record.main_pink_factors);
-        addSpark(record.main_green_factors);
-        for (const spark of record.main_white_factors ?? []) {
-            addSpark(spark);
-        }
-        this.mainParentLevelCache.set(record, levels);
-        return levels;
-    }
-
-    copyTrainerId(trainerId: string, event: Event): void {
-        event.stopPropagation();
-        if (!trainerId) return;
-        navigator.clipboard?.writeText(trainerId).then(() => {
-            this.snackBar.open('Trainer ID copied', 'Close', { duration: 2000 });
-        }).catch(() => {
-            this.snackBar.open(this.withBuild('Could not copy trainer ID'), 'Close', { duration: 2500 });
-        });
-    }
-
-    requestInheritanceUpdate(trainerId: string, event: Event): void {
-        event.stopPropagation();
-        if (!trainerId) return;
-        const confirmed = confirm(`Report trainer ${trainerId}'s inheritance as outdated and queue a refresh? It can take up to 5 minutes to update in the database.`);
-        if (!confirmed) return;
-
-        this.inheritanceService.reportUserUnavailable(trainerId).subscribe({
-            next: () => {
-                this.snackBar.open('Update requested. It can take up to 5 minutes to appear in the database.', 'Close', { duration: 5000 });
-            },
-            error: (error) => {
-                console.error('Failed to request inheritance update:', error);
-                this.snackBar.open('Update request submitted. It can take up to 5 minutes to appear in the database.', 'Close', { duration: 5000 });
-            }
-        });
-    }
-
-    openInPlanner(record: InheritanceRecord): void {
-        this.plannerTransfer.set({ record });
-        const url = this.router.serializeUrl(
-            this.router.createUrlTree(['/tools/lineage-planner'], { queryParams: { from: 'profile' } })
-        );
-        window.open(url, '_blank');
     }
 
     getTeamClassName(teamClass: number | null): string {

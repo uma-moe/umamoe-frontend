@@ -15,36 +15,22 @@ import { Subject, Subscription, takeUntil } from 'rxjs';
 import { Meta, Title } from '@angular/platform-browser';
 import { InheritanceService } from '../../services/inheritance.service';
 import { VoteProtectionService, VoteState } from '../../services/vote-protection.service';
-import { PlannerTransferService } from '../../services/planner-transfer.service';
-import { FactorService, SparkInfo } from '../../services/factor.service';
 import { SupportCardService } from '../../services/support-card.service';
-import { AffinityService } from '../../services/affinity.service';
 import { AuthService } from '../../services/auth.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { AppVersionService } from '../../services/app-version.service';
 import { AnalyticsEventParams, GoogleAnalyticsService } from '../../services/google-analytics.service';
 import { InheritanceFilterComponent, InheritanceFilters } from './inheritance-filter.component';
 import { TrainerSubmitDialogComponent, TrainerSubmissionConfig } from '../../components/trainer-submit-dialog/trainer-submit-dialog.component';
-import { TrainerIdFormatPipe } from '../../pipes/trainer-id-format.pipe';
-import { ResolveSparksPipe } from '../../pipes/resolve-sparks.pipe';
 import {
   InheritanceRecord,
   InheritanceSearchFilters
 } from '../../models/inheritance.model';
-import { SearchResult } from '../../models/common.model';
 import { SupportCardShort } from '../../models/support-card.model';
 import { environment } from '../../../environments/environment';
 import { DatabaseFilterComponent, UnifiedSearchParams } from '../../components/database-filter/database-filter.component';
 import { InheritanceEntryComponent } from '../../components/inheritance-entry/inheritance-entry.component';
-import { getCharacterById } from '../../data/character.data';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
-
-type P2SparkSource = 'main' | 'left' | 'right';
-
-interface P2SparkSourceEntry {
-  id: number;
-  source: P2SparkSource;
-}
 
 @Component({
   selector: 'app-inheritance-database',
@@ -62,8 +48,6 @@ interface P2SparkSourceEntry {
     MatFormFieldModule,
     MatSelectModule,
     InheritanceFilterComponent,
-    TrainerIdFormatPipe,
-    ResolveSparksPipe,
     DatabaseFilterComponent,
     InheritanceEntryComponent,
     LocaleNumberPipe,
@@ -132,67 +116,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     return cardId >= 10000 ? Math.floor(cardId / 100) : cardId;
   }
 
-  private getSelectedVeteranSuccession(positionId: 10 | 20) {
-    return this.advancedFilter?.selectedVeteran?.succession_chara_array?.find(s => s.position_id === positionId) ?? null;
-  }
-
-  get currentTargetCharaId(): number | null {
-    return this.toCharaId(this.advancedFilter?.treeData?.characterId);
-  }
-
-  get currentP2CharaId(): number | null {
-    // Mirror AdvancedFilter's P2 normalization so the selected legacy is passed
-    // into AffinityService as a base chara id, not a raw card id.
-    const vet = this.advancedFilter?.selectedVeteran;
-    if (vet) {
-      return this.toCharaId(vet.card_id ?? vet.trained_chara_id ?? undefined);
-    }
-    return this.toCharaId(this.advancedFilter?.treeData?.children?.[1]?.characterId);
-  }
-
-  get currentGp2LeftCharaId(): number | null {
-    const sc = this.getSelectedVeteranSuccession(10);
-    if (sc) return this.toCharaId(sc.card_id);
-    return this.toCharaId(this.advancedFilter?.treeData?.children?.[1]?.children?.[0]?.characterId);
-  }
-
-  get currentGp2RightCharaId(): number | null {
-    const sc = this.getSelectedVeteranSuccession(20);
-    if (sc) return this.toCharaId(sc.card_id);
-    return this.toCharaId(this.advancedFilter?.treeData?.children?.[1]?.children?.[1]?.characterId);
-  }
-
-  get currentP2WinSaddleIds(): number[] | null {
-    return this.advancedFilter?.selectedVeteran?.win_saddle_id_array ?? null;
-  }
-
-  get currentGp2LeftWinSaddleIds(): number[] | null {
-    return this.getSelectedVeteranSuccession(10)?.win_saddle_id_array ?? null;
-  }
-
-  get currentGp2RightWinSaddleIds(): number[] | null {
-    return this.getSelectedVeteranSuccession(20)?.win_saddle_id_array ?? null;
-  }
-
-  // Cached P2 spark arrays - only recomputed in onAdvancedFilterChange, never on every CD cycle
-  private _p2BlueSparks: number[] | null = null;
-  private _p2PinkSparks: number[] | null = null;
-  private _p2GreenSparks: number[] | null = null;
-  private _p2WhiteSparks: number[] | null = null;
-  private _p2BlueSparkSources: P2SparkSourceEntry[] | null = null;
-  private _p2PinkSparkSources: P2SparkSourceEntry[] | null = null;
-  private _p2GreenSparkSources: P2SparkSourceEntry[] | null = null;
-  private _p2WhiteSparkSources: P2SparkSourceEntry[] | null = null;
   private advancedSearchSignature: string | null = null;
-
-  get currentP2BlueSparks(): number[] | null { return this._p2BlueSparks; }
-  get currentP2PinkSparks(): number[] | null { return this._p2PinkSparks; }
-  get currentP2GreenSparks(): number[] | null { return this._p2GreenSparks; }
-  get currentP2WhiteSparks(): number[] | null { return this._p2WhiteSparks; }
-  get currentP2BlueSparkSources(): P2SparkSourceEntry[] | null { return this._p2BlueSparkSources; }
-  get currentP2PinkSparkSources(): P2SparkSourceEntry[] | null { return this._p2PinkSparkSources; }
-  get currentP2GreenSparkSources(): P2SparkSourceEntry[] | null { return this._p2GreenSparkSources; }
-  get currentP2WhiteSparkSources(): P2SparkSourceEntry[] | null { return this._p2WhiteSparkSources; }
 
   private stableStringify(value: unknown): string {
     if (Array.isArray(value)) {
@@ -293,55 +217,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     };
   }
 
-  private refreshP2SparkCache(): void {
-    this._p2BlueSparkSources = this.resolveP2SparkSourcesByColor(0);
-    this._p2PinkSparkSources = this.resolveP2SparkSourcesByColor(1);
-    this._p2GreenSparkSources = this.resolveP2SparkSourcesByColor(5);
-    this._p2WhiteSparkSources = this.resolveP2SparkSourcesByColor(2, 3, 4);
-
-    this._p2BlueSparks = this._p2BlueSparkSources?.map(s => s.id) ?? null;
-    this._p2PinkSparks = this._p2PinkSparkSources?.map(s => s.id) ?? null;
-    this._p2GreenSparks = this._p2GreenSparkSources?.map(s => s.id) ?? null;
-    this._p2WhiteSparks = this._p2WhiteSparkSources?.map(s => s.id) ?? null;
-  }
-
-  private resolveP2SparkSourcesByColor(...types: number[]): P2SparkSourceEntry[] | null {
-    const vet = this.advancedFilter?.selectedVeteran;
-    if (!vet) return null;
-    const typeSet = new Set(types);
-
-    const allEntries: P2SparkSourceEntry[] = [];
-
-    if (vet.inheritance) {
-      const inh = vet.inheritance;
-      allEntries.push(
-        ...(inh.blue_sparks || []).map(id => ({ id, source: 'main' as const })),
-        ...(inh.pink_sparks || []).map(id => ({ id, source: 'main' as const })),
-        ...(inh.green_sparks || []).map(id => ({ id, source: 'main' as const })),
-        ...(inh.white_sparks || []).map(id => ({ id, source: 'main' as const })),
-      );
-    } else {
-      const own = vet.factor_info_array?.length
-        ? vet.factor_info_array.map(e => e.factor_id)
-        : (vet.factors ?? []);
-      allEntries.push(...own.map(id => ({ id, source: 'main' as const })));
-    }
-
-    if (vet.succession_chara_array?.length) {
-      for (const sc of vet.succession_chara_array) {
-        if (sc.position_id !== 10 && sc.position_id !== 20) continue;
-        const source: P2SparkSource = sc.position_id === 10 ? 'left' : 'right';
-        const gpIds = sc.factor_info_array?.length
-          ? sc.factor_info_array.map(e => e.factor_id)
-          : (sc.factor_id_array || []);
-        allEntries.push(...gpIds.map(id => ({ id, source })));
-      }
-    }
-
-    const filtered = allEntries.filter(s => typeSet.has(this.factorService.resolveSpark(s.id).type));
-    return filtered.length ? filtered : null;
-  }
-
   sortOptions = [
     { value: 'affinity_score', label: 'Affinity' },
     { value: 'win_count', label: 'G1 Wins' },
@@ -355,10 +230,14 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   // Trainer ID filter from URL parameters
   trainerIdFilter: string | null = null;
 
-  // Bound method references for child component inputs
-  boundIsSparkMatched = this.isSparkMatched.bind(this);
-  boundGetLevelFromMainParent = this.getLevelFromMainParent.bind(this);
-  private readonly mainParentLevelCache = new WeakMap<InheritanceRecord, Map<string, string>>();
+  get entryFilterTree() {
+    return this.advancedFilter?.treeData ?? null;
+  }
+
+  get entrySelectedVeteran() {
+    return this.advancedFilter?.selectedVeteran ?? null;
+  }
+
   private readonly initialRecordRenderBatchSize = 8;
   private readonly recordRenderBatchSize = 8;
   private recordRenderFrame: number | null = null;
@@ -369,15 +248,12 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     private router: Router,
     private inheritanceService: InheritanceService,
     private voteProtection: VoteProtectionService,
-    private factorService: FactorService,
     private supportCardService: SupportCardService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
     private meta: Meta,
     private title: Title,
     private ngZone: NgZone,
-    private plannerTransfer: PlannerTransferService,
-    private affinityService: AffinityService,
     public authService: AuthService,
     public bookmarkService: BookmarkService,
     private appVersionService: AppVersionService,
@@ -407,7 +283,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     ]);
   }
   ngOnInit() {
-    this.affinityService.load();
     if (this.authService.isLoggedIn()) {
       this.bookmarkService.loadBookmarks().pipe(takeUntil(this.destroy$)).subscribe();
     }
@@ -506,7 +381,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
 
     this.currentAdvancedFilters = effectiveParams;
     this.advancedSearchSignature = nextSearchSignature;
-    this.refreshP2SparkCache();
     this.trackAdvancedFilterChange(
       effectiveParams,
       isP2OnlyChange ? 'p2_context' : (hasPendingPage ? 'url_restore' : 'manual'),
@@ -539,7 +413,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     this.clearRecords();
     this.hasMoreRecords = true;
     this.searchRecords();
-    this.boundIsSparkMatched = this.isSparkMatched.bind(this);
     this.bookmarkPage = 0;
     this.applyBookmarkFilters();
   }
@@ -589,7 +462,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     this.clearRecords();
     this.hasMoreRecords = true;
     this.searchRecords();
-    this.boundIsSparkMatched = this.isSparkMatched.bind(this);
     this.bookmarkPage = 0;
     this.applyBookmarkFilters();
   }
@@ -1058,40 +930,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   isV1Record(record: InheritanceRecord): boolean {
     return typeof record.id === 'string';
   }
-  // Helper methods for resolving spark IDs to meaningful names
-  resolveSparks(sparkIds: number[]): SparkInfo[] {
-    return this.factorService.resolveSparks(sparkIds);
-  }
-  // Get main parent factors for each spark type
-  getMainParentFactors(record: InheritanceRecord, sparkType: 'blue' | 'pink' | 'green' | 'white'): SparkInfo[] {
-    if (!this.isV2Record(record)) return [];
-    let sparkArray: number[] = [];
-    let mainCount = 0;
-    switch (sparkType) {
-      case 'blue':
-        sparkArray = record.blue_sparks || [];
-        mainCount = record.main_blue_factors || 0;
-        break;
-      case 'pink':
-        sparkArray = record.pink_sparks || [];
-        mainCount = record.main_pink_factors || 0;
-        break;
-      case 'green':
-        sparkArray = record.green_sparks || [];
-        mainCount = record.main_green_factors || 0;
-        break;
-      case 'white':
-        sparkArray = record.white_sparks || [];
-        mainCount = record.main_white_count || 0;
-        break;
-    }
-    // Return the first N sparks (main parent contribution)
-    const mainParentSparkIds = sparkArray.slice(0, mainCount);
-    return this.resolveSparks(mainParentSparkIds);
-  }
-  resolveSpark(sparkId: number): SparkInfo {
-    return this.factorService.resolveSpark(sparkId);
-  }
   isVotingInProgress(recordId: string): boolean {
     const voteState = this.voteStates.get(recordId);
     if (!voteState) {
@@ -1243,34 +1081,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         }
       });
   }
-  async shareRecord(record: InheritanceRecord) {
-    if (!record?.id) return;
-    const url = `${window.location.origin}/inheritance/${record.id}`;
-    const onCopySuccess = () => this.trackDatabaseEvent('copy_inheritance_link', {
-      source: 'record_action',
-    });
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText('');
-        await navigator.clipboard.writeText(url);
-        onCopySuccess();
-        this.snackBar.open('Link copied to clipboard', 'Close', { duration: 2000 });
-      } else {
-        this.fallbackCopyToClipboard(url, {
-          successMessage: 'Link copied to clipboard',
-          failureMessage: 'Failed to copy link',
-          onSuccess: onCopySuccess,
-        });
-      }
-    } catch (error) {
-      console.warn('Clipboard API failed for share, using fallback:', error);
-      this.fallbackCopyToClipboard(url, {
-        successMessage: 'Link copied to clipboard',
-        failureMessage: 'Failed to copy link',
-        onSuccess: onCopySuccess,
-      });
-    }
-  }
   openSubmitDialog() {
     this.trackDatabaseEvent('open_trainer_submit', {
       source: 'database',
@@ -1300,135 +1110,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     });
   }
   // Scroll detection is handled via passive event listener registered in initScrollListener()
-  // Copy trainer ID to clipboard
-  async copyTrainerId(trainerId: string, event?: Event) {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    if (!trainerId) {
-      this.snackBar.open('No trainer ID to copy', 'Close', { duration: 2000 });
-      return;
-    }
-    try {
-      // Check if clipboard API is supported and we have permission
-      const onCopySuccess = () => this.trackDatabaseEvent('copy_trainer_id', {
-        source: 'database_record',
-      });
-      if (navigator.clipboard && window.isSecureContext) {
-        // Clear clipboard first, then write new content
-        await navigator.clipboard.writeText('');
-        await navigator.clipboard.writeText(trainerId);
-        onCopySuccess();
-        this.snackBar.open(`Trainer ID copied: ${trainerId}`, 'Close', { duration: 2000 });
-      } else {
-        // Use fallback method
-        this.fallbackCopyToClipboard(trainerId, { onSuccess: onCopySuccess });
-      }
-    } catch (error) {
-      console.warn('Clipboard API failed, using fallback:', error);
-      this.fallbackCopyToClipboard(trainerId, {
-        onSuccess: () => this.trackDatabaseEvent('copy_trainer_id', {
-          source: 'database_record',
-        }),
-      });
-    }
-  }
-  private fallbackCopyToClipboard(
-    text: string,
-    options: { successMessage?: string; failureMessage?: string; onSuccess?: () => void } = {},
-  ) {
-    // Create a temporary textarea element
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    // Make it invisible and non-interactive
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-999999px';
-    textArea.style.top = '-999999px';
-    textArea.style.opacity = '0';
-    textArea.setAttribute('readonly', '');
-    textArea.setAttribute('aria-hidden', 'true');
-    // Add to DOM, select, copy, then remove
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    textArea.setSelectionRange(0, 99999); // For mobile devices
-    try {
-      const successful = document.execCommand('copy');
-      if (successful) {
-        options.onSuccess?.();
-        this.snackBar.open(options.successMessage || `Trainer ID copied: ${text}`, 'Close', { duration: 2000 });
-      } else {
-        this.snackBar.open(this.withBuild(options.failureMessage || 'Failed to copy trainer ID'), 'Close', { duration: 2000 });
-      }
-    } catch (err) {
-      console.error('Fallback copy failed:', err);
-      this.snackBar.open(this.withBuild(options.failureMessage || 'Failed to copy trainer ID'), 'Close', { duration: 2000 });
-    } finally {
-      document.body.removeChild(textArea);
-    }
-  }
-  // Report trainer friend list as full
-  reportUnavailable(trainerId: string, event: Event) {
-    event.stopPropagation();
-    // Show confirmation dialog
-    const confirmed = confirm(`Report trainer ${trainerId} as unavailable or friend list full?`);
-    if (!confirmed) {
-      return;
-    }
-    // Attempt to start the report process
-    // if (!this.voteProtection.attemptReport(trainerId)) {
-    //   return; // Protection service will show appropriate message
-    // }
-    // Call backend API to report user
-    this.inheritanceService.reportUserUnavailable(trainerId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          // this.voteProtection.markReportCompleted(trainerId);
-          this.snackBar.open('Trainer reported as unavailable', 'Close', { duration: 2000 });
-          this.trackDatabaseEvent('report_trainer_unavailable', {
-            source: 'database_record',
-            status: 'success',
-          });
-          this.searchRecords();
-        },
-        error: (error: any) => {
-          // this.voteProtection.markReportFailed(trainerId);
-          console.error('Failed to report trainer:', error);
-          // For now, show success even if backend fails (graceful degradation)
-          this.snackBar.open(this.withBuild('Report submitted (service temporarily unavailable)'), 'Close', { duration: 3000 });
-          this.trackDatabaseEvent('report_trainer_unavailable', {
-            source: 'database_record',
-            status: 'fallback',
-          });
-        }
-      });
-  }
-  // Check if trainer has been reported
-  hasReportedTrainer(trainerId: string): boolean {
-    return this.voteProtection.hasReported(trainerId);
-  }
-
-  openInPlanner(record: InheritanceRecord): void {
-    const target = this.advancedFilter?.treeData?.characterId || null;
-    const vet = this.advancedFilter?.selectedVeteran || null;
-
-    this.plannerTransfer.set({ record, targetCharaId: target, veteran: vet });
-    this.trackDatabaseEvent('open_lineage_planner', {
-      source: 'database_record',
-      has_target_context: !!target,
-      has_veteran_context: !!vet,
-    });
-    const url = this.router.serializeUrl(
-      this.router.createUrlTree(['/tools/lineage-planner'], { queryParams: { from: 'db' } })
-    );
-    window.open(url, '_blank');
-  }
-  // Check if reporting is in progress
-  isReportingInProgress(trainerId: string): boolean {
-    return this.voteProtection.isReportingInProgress(trainerId);
-  }
   @HostListener('window:resize', ['$event'])
   onResize(event: any): void {
     this.checkMobileBreakpoint();
@@ -1450,123 +1131,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       'affinity_score': 'affinity_score'
     };
     return sortMapping[sortBy] || 'win_count';
-  }
-  getLevelFromMainParent(currentspark: SparkInfo, record: InheritanceRecord): string | undefined {
-    return this.getMainParentLevelMap(record).get(String(currentspark.factorId));
-  }
-  private getMainParentLevelMap(record: InheritanceRecord): Map<string, string> {
-    const cached = this.mainParentLevelCache.get(record);
-    if (cached) return cached;
-
-    const levels = new Map<string, string>();
-    const addSpark = (spark: number | null | undefined) => {
-      if (spark === null || spark === undefined) return;
-      levels.set(String(Math.floor(spark / 10)), String(spark % 10));
-    };
-    addSpark(record.main_blue_factors);
-    addSpark(record.main_pink_factors);
-    addSpark(record.main_green_factors);
-    for (const spark of record.main_white_factors ?? []) {
-      addSpark(spark);
-    }
-    this.mainParentLevelCache.set(record, levels);
-    return levels;
-  }
-  isSparkMatched(spark: SparkInfo, record: InheritanceRecord): boolean {
-    if (!this.currentAdvancedFilters) return false;
-    const filterId = parseInt(`${spark.factorId}${spark.level}`, 10);
-    const filters = this.currentAdvancedFilters;
-    const isFromMainParent = !!this.getLevelFromMainParent(spark, record);
-    const sparkFactorId = parseInt(spark.factorId, 10);
-    const uqlHighlight = filters.uql_highlight;
-    if (uqlHighlight) {
-      if (uqlHighlight.globalSparkIds?.includes(filterId)) return true;
-      if (isFromMainParent && uqlHighlight.mainSparkIds?.length) {
-        const mainLevel = this.getLevelFromMainParent(spark, record);
-        const mainFilterId = mainLevel ? parseInt(`${spark.factorId}${mainLevel}`, 10) : filterId;
-        if (uqlHighlight.mainSparkIds.includes(mainFilterId)) return true;
-      }
-      if (spark.type !== 0 && spark.type !== 1 && spark.type !== 5) {
-        if (uqlHighlight.optionalWhiteFactorIds?.includes(sparkFactorId)) return true;
-        if (uqlHighlight.lineageWhiteFactorIds?.includes(sparkFactorId)) return true;
-        if (isFromMainParent && uqlHighlight.optionalMainWhiteFactorIds?.includes(sparkFactorId)) return true;
-      }
-    }
-    const checkGroups = (groups: number[][] | undefined) => {
-      if (!groups) return false;
-      for (const group of groups) {
-        if (group.includes(filterId)) return true;
-      }
-      return false;
-    };
-    const checkArray = (arr: number[] | undefined) => {
-      if (!arr) return false;
-      return arr.includes(filterId);
-    };
-    // Check global filters (apply to any spark)
-    if (spark.type === 0) { // Blue
-       if (checkGroups(filters.blue_sparks)) return true;
-    } else if (spark.type === 1) { // Pink
-       if (checkGroups(filters.pink_sparks)) return true;
-    } else if (spark.type === 5) { // Green
-       if (checkGroups(filters.green_sparks)) return true;
-    } else { // White
-       if (checkGroups(filters.white_sparks)) return true;
-       
-       // Check optional white sparks (match by factorId only)
-       if (filters.optional_white_sparks && filters.optional_white_sparks.includes(sparkFactorId)) {
-         return true;
-       }
-       // Check lineage white sparks (match by factorId only)
-       if (filters.lineage_white && filters.lineage_white.includes(sparkFactorId)) {
-         return true;
-       }
-    }
-    // Helper to check arrays by factorId only (for main parent filters where the 
-    // total spark level can be higher than the main parent's individual contribution)
-    const checkArrayByFactorId = (arr: number[] | undefined) => {
-      if (!arr) return false;
-      // Each ID in arr is like 103 (factorId 10 + level 3), extract factor ID by removing last digit
-      for (const fullId of arr) {
-        const arrFactorId = Math.floor(fullId / 10);
-        if (arrFactorId === sparkFactorId) return true;
-      }
-      return false;
-    };
-    // Check main parent filters - only highlight if the spark actually comes from the main parent
-    if (isFromMainParent) {
-      // Match by factorId only since the displayed spark shows the TOTAL level across all parents,
-      // but the filter is for main parent only.
-      // e.g., filter for "main parent has 3★ speed" should highlight a result showing "9★ speed total"
-      // as long as the main parent contributes to that speed factor.
-      if (spark.type === 0) { // Blue
-         if (checkArrayByFactorId(filters.main_parent_blue_sparks)) return true;
-      } else if (spark.type === 1) { // Pink
-         if (checkArrayByFactorId(filters.main_parent_pink_sparks)) return true;
-      } else if (spark.type === 5) { // Green
-         if (checkArrayByFactorId(filters.main_parent_green_sparks)) return true;
-      } else { // White
-         // main_parent_white_sparks: check by factorId only
-         const checkGroupsByFactorId = (groups: number[][] | undefined) => {
-           if (!groups) return false;
-           for (const group of groups) {
-             // Each ID in group is like 20159XX where last digit is level, extract factor ID
-             for (const fullId of group) {
-               const groupFactorId = Math.floor(fullId / 10);
-               if (groupFactorId === sparkFactorId) return true;
-             }
-           }
-           return false;
-         };
-         if (checkGroupsByFactorId(filters.main_parent_white_sparks)) return true;
-         
-         // Check optional main white sparks (match by factorId only)
-         if (filters.optional_main_white_sparks && filters.optional_main_white_sparks.includes(sparkFactorId)) {
-           return true;
-         }
-      }
-    }
-    return false;
   }
   // Support card helper methods
   getSupportCardInfo(supportCardId: number): Promise<SupportCardShort | undefined> {
@@ -1599,103 +1163,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       wrapper.classList.add('image-error');
     }
   }
-  copyUserId(trainerId: string | undefined, event: Event) {
-    event.stopPropagation();
-    if (!trainerId || trainerId.trim() === '') return;
-    navigator.clipboard.writeText(trainerId).then(() => {
-      this.snackBar.open('Trainer ID copied to clipboard', 'Close', { duration: 2000 });
-      this.trackDatabaseEvent('copy_trainer_id', {
-        source: 'inheritance_entry',
-      });
-    }).catch(() => {
-      this.snackBar.open(this.withBuild('Failed to copy Trainer ID'), 'Close', { duration: 2000 });
-    });
-  }
-
-  /** Wrapper for the child component's copyInfo event (no native Event needed) */
-  onEntryCopyInfo(record: InheritanceRecord): void {
-    this.copyRecordInfo(record, new Event('click'));
-  }
-
-  copyRecordInfo(record: InheritanceRecord, event: Event) {
-    event.stopPropagation();
-    const lines: string[] = [];
-
-    // Trainer info
-    const trainerId = record.account_id || record.trainer_id || '';
-    if (record.trainer_name) {
-      lines.push(`Trainer: ${record.trainer_name} (${trainerId})`);
-    } else if (trainerId) {
-      lines.push(`Trainer ID: ${trainerId}`);
-    }
-
-    // Character names
-    if (record.main_parent_id && record.parent_left_id && record.parent_right_id) {
-      const main = getCharacterById(record.main_parent_id);
-      const left = getCharacterById(record.parent_left_id);
-      const right = getCharacterById(record.parent_right_id);
-      lines.push(`Main: ${main?.name || record.main_parent_id}`);
-      lines.push(`Parents: ${left?.name || record.parent_left_id} / ${right?.name || record.parent_right_id}`);
-    } else if (record.main && record.parent1 && record.parent2) {
-      lines.push(`Main: ${record.main.name}`);
-      lines.push(`Parents: ${record.parent1.name} / ${record.parent2.name}`);
-    }
-
-    // Stats
-    const stats: string[] = [];
-    if (record.affinity_score !== undefined) stats.push(`Affinity: ${record.affinity_score}`);
-    if (record.win_count !== undefined) stats.push(`G1 Wins: ${record.win_count}`);
-    if (record.white_count !== undefined) stats.push(`White Skills: ${record.white_count}`);
-    if (stats.length) lines.push(stats.join(' | '));
-
-    // Factors
-    const formatSparks = (sparks: number[], label: string) => {
-      if (!sparks?.length) return;
-      const resolved = this.factorService.resolveSparks(sparks);
-      const items = resolved.map(s => `${s.level}★ ${s.name}`);
-      lines.push(`${label}: ${items.join(', ')}`);
-    };
-
-    if (record.blue_sparks || record.pink_sparks || record.green_sparks || record.white_sparks) {
-      formatSparks(record.blue_sparks || [], 'Blue');
-      formatSparks(record.pink_sparks || [], 'Pink');
-      formatSparks(record.green_sparks || [], 'Green');
-      formatSparks(record.white_sparks || [], 'White');
-    } else {
-      if (record.blue_factors?.length) {
-        lines.push(`Blue: ${record.blue_factors.map(f => `${f.level}★ ${f.type}`).join(', ')}`);
-      }
-      if (record.pink_factors?.length) {
-        lines.push(`Pink: ${record.pink_factors.map(f => `${f.level}★ ${f.type}`).join(', ')}`);
-      }
-      if (record.unique_skills?.length) {
-        lines.push(`Unique: ${record.unique_skills.map(f => `${f.level}★ ${f.skill.name}`).join(', ')}`);
-      }
-    }
-
-    const text = lines.join('\n');
-    navigator.clipboard.writeText(text).then(() => {
-      this.snackBar.open('Inheritance info copied to clipboard', 'Close', { duration: 2000 });
-      this.trackDatabaseEvent('copy_inheritance_info', {
-        source: 'inheritance_entry',
-        has_trainer_lookup: !!trainerId,
-        line_count: lines.length,
-        stat_count: stats.length,
-      });
-    }).catch(() => {
-      this.fallbackCopyToClipboard(text, {
-        successMessage: 'Inheritance info copied to clipboard',
-        failureMessage: 'Failed to copy inheritance info',
-        onSuccess: () => this.trackDatabaseEvent('copy_inheritance_info', {
-          source: 'inheritance_entry_fallback',
-          has_trainer_lookup: !!trainerId,
-          line_count: lines.length,
-          stat_count: stats.length,
-        }),
-      });
-    });
-  }
-
   // --- Bookmarks Tab ---
 
   switchTab(tab: 'database' | 'bookmarks'): void {
@@ -1738,70 +1205,16 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       });
   }
 
-  onBookmarkToggle(event: { id: string; bookmarked: boolean }): void {
-    if (!this.authService.isLoggedIn()) {
-      this.snackBar.open('Sign in to bookmark records', 'Close', { duration: 3000 });
-      this.trackDatabaseEvent('bookmark_inheritance_record', {
-        action_type: event.bookmarked ? 'add' : 'remove',
-        status: 'requires_login',
-      });
+  onEntryRecordActionComplete(event: { action: 'bookmark' | 'report'; id: string; bookmarked?: boolean }): void {
+    if (event.action === 'report') {
+      this.searchRecords();
       return;
     }
-    if (event.bookmarked) {
-      if (this.bookmarkService.count >= this.maxBookmarks) {
-        this.snackBar.open(`Bookmark limit reached (${this.maxBookmarks})`, 'Close', { duration: 3000 });
-        this.trackDatabaseEvent('bookmark_inheritance_record', {
-          action_type: 'add',
-          status: 'limit_reached',
-          bookmark_count: this.bookmarkService.count,
-        });
-        return;
-      }
-      this.bookmarkService.addBookmark(event.id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.snackBar.open('Bookmarked', 'Close', { duration: 1500 });
-            this.bookmarksDirty = true;
-            this.trackDatabaseEvent('bookmark_inheritance_record', {
-              action_type: 'add',
-              status: 'success',
-              bookmark_count: this.bookmarkService.count,
-            });
-          },
-          error: () => {
-            this.snackBar.open(this.withBuild('Failed to bookmark'), 'Close', { duration: 3000 });
-            this.trackDatabaseEvent('bookmark_inheritance_record', {
-              action_type: 'add',
-              status: 'error',
-            });
-          }
-        });
-    } else {
-      this.bookmarkService.removeBookmark(event.id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.snackBar.open('Bookmark removed', 'Close', { duration: 1500 });
-            this.bookmarksDirty = true;
-            if (this.activeTab === 'bookmarks') {
-              this.bookmarkRecords = this.bookmarkRecords.filter(r => r.account_id !== event.id);
-              this.applyBookmarkFilters();
-            }
-            this.trackDatabaseEvent('bookmark_inheritance_record', {
-              action_type: 'remove',
-              status: 'success',
-              bookmark_count: this.bookmarkService.count,
-            });
-          },
-          error: () => {
-            this.snackBar.open(this.withBuild('Failed to remove bookmark'), 'Close', { duration: 3000 });
-            this.trackDatabaseEvent('bookmark_inheritance_record', {
-              action_type: 'remove',
-              status: 'error',
-            });
-          }
-        });
+
+    this.bookmarksDirty = true;
+    if (this.activeTab === 'bookmarks' && event.bookmarked === false) {
+      this.bookmarkRecords = this.bookmarkRecords.filter(r => r.account_id !== event.id);
+      this.applyBookmarkFilters();
     }
   }
 
@@ -1819,7 +1232,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     if (!this.includeMaxFollowers) {
       records = records.filter(r => r.follower_num !== 1000);
     }
-    this.computeBookmarkAffinity(records);
     records = this.sortBookmarks(records);
     this.filteredBookmarks = records;
   }
@@ -1919,32 +1331,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
 
   private withBuild(message: string): string {
     return this.appVersionService.appendBuildTag(message);
-  }
-
-  private computeBookmarkAffinity(records: InheritanceRecord[]): void {
-    const targetId = this.currentTargetCharaId;
-    if (!targetId || !this.affinityService.isReady) return;
-
-    for (const r of records) {
-      const mainId = r.main_parent_id ? (r.main_parent_id >= 10000 ? Math.floor(r.main_parent_id / 100) : r.main_parent_id) : null;
-      const leftId = r.parent_left_id ? (r.parent_left_id >= 10000 ? Math.floor(r.parent_left_id / 100) : r.parent_left_id) : null;
-      const rightId = r.parent_right_id ? (r.parent_right_id >= 10000 ? Math.floor(r.parent_right_id / 100) : r.parent_right_id) : null;
-
-      if (!mainId) continue;
-
-      const pair = this.affinityService.getAff2(targetId, mainId);
-      const tripleLeft = leftId ? this.affinityService.getAff3(targetId, mainId, leftId) : 0;
-      const tripleRight = rightId ? this.affinityService.getAff3(targetId, mainId, rightId) : 0;
-      let total = pair + tripleLeft + tripleRight;
-
-      const mainSaddles = r.main_win_saddles ?? [];
-      const leftSaddles = new Set(r.left_win_saddles ?? []);
-      const rightSaddles = new Set(r.right_win_saddles ?? []);
-      total += mainSaddles.filter(w => leftSaddles.has(w)).length;
-      total += mainSaddles.filter(w => rightSaddles.has(w)).length;
-
-      r.affinity_score = total;
-    }
   }
 
   private sortBookmarks(records: InheritanceRecord[]): InheritanceRecord[] {
