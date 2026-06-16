@@ -15,6 +15,16 @@ export interface TimelineEvent {
   imagePath?: string; // Path to banner image
   gametoraURL?: string;
 }
+
+export interface TimelineAnniversary {
+  index: number;
+  label: string;
+  jpDate: Date;
+  globalDate: Date;
+  isConfirmed: boolean;
+  scheduleAdjustmentDays?: number;
+}
+
 export enum EventType {
   CHARACTER_BANNER = 'character_banner',
   SUPPORT_CARD_BANNER = 'support_card_banner',

@@ -1,14 +1,24 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, combineLatest, Observable } from 'rxjs';
 import { debounceTime, map } from 'rxjs/operators';
-import { TimelineEvent, EventType, TimelineFilters } from '../models/timeline.model';
+import { TimelineEvent, EventType, TimelineFilters, TimelineAnniversary } from '../models/timeline.model';
 import { ResourceDataService, ResourceLoadError } from './resource-data.service';
 
 const TIMELINE_RESOURCE_NAME = 'banner_timeline';
 
 interface BannerTimelineResource {
   version?: number;
+  anniversaries?: BannerTimelineResourceAnniversary[];
   events?: BannerTimelineResourceEvent[];
+}
+
+interface BannerTimelineResourceAnniversary {
+  index?: number;
+  label?: string;
+  jp_date?: string | null;
+  global_date?: string | null;
+  is_confirmed?: boolean;
+  schedule_adjustment_days?: number | null;
 }
 
 interface BannerTimelineResourceEvent {
@@ -31,7 +41,9 @@ interface BannerTimelineResourceEvent {
 @Injectable({ providedIn: 'root' })
 export class TimelineService {
   private readonly eventsSubject = new BehaviorSubject<TimelineEvent[]>([]);
+  private readonly anniversariesSubject = new BehaviorSubject<TimelineAnniversary[]>([]);
   readonly events$ = this.eventsSubject.asObservable();
+  readonly anniversaries$ = this.anniversariesSubject.asObservable();
   readonly loading$: Observable<boolean>;
   readonly error$: Observable<ResourceLoadError | null>;
 
@@ -55,6 +67,7 @@ export class TimelineService {
       debounceTime(0)
     ).subscribe(resource => {
       this.resourceEvents = this.processBannerTimelineResource(resource);
+      this.anniversariesSubject.next(this.processBannerTimelineAnniversaries(resource));
       this.publishEvents();
     });
   }
@@ -142,6 +155,17 @@ export class TimelineService {
       .sort((a, b) => this.compareTimelineEvents(a, b));
   }
 
+  private processBannerTimelineAnniversaries(resource: BannerTimelineResource | null): TimelineAnniversary[] {
+    if (!resource || !Array.isArray(resource.anniversaries)) {
+      return [];
+    }
+
+    return resource.anniversaries
+      .map(anniversary => this.toTimelineAnniversary(anniversary))
+      .filter((anniversary): anniversary is TimelineAnniversary => anniversary !== null)
+      .sort((a, b) => a.globalDate.getTime() - b.globalDate.getTime());
+  }
+
   private toTimelineEvent(event: BannerTimelineResourceEvent): TimelineEvent | null {
     const type = this.toEventType(event.type);
     const jpReleaseDate = this.parseResourceDate(event.jp_release_date);
@@ -174,6 +198,31 @@ export class TimelineService {
       relatedSupportCards: this.toStringArray(event.related_support_cards),
       imagePath: event.image_path || undefined,
       gametoraURL: event.gametora_url || undefined
+    };
+  }
+
+  private toTimelineAnniversary(anniversary: BannerTimelineResourceAnniversary): TimelineAnniversary | null {
+    const jpDate = this.parseResourceDate(anniversary.jp_date);
+    const globalDate = this.parseResourceDate(anniversary.global_date);
+
+    if (
+      typeof anniversary.index !== 'number' ||
+      typeof anniversary.label !== 'string' ||
+      !jpDate ||
+      !globalDate
+    ) {
+      return null;
+    }
+
+    return {
+      index: anniversary.index,
+      label: anniversary.label,
+      jpDate,
+      globalDate,
+      isConfirmed: anniversary.is_confirmed === true,
+      scheduleAdjustmentDays: typeof anniversary.schedule_adjustment_days === 'number'
+        ? anniversary.schedule_adjustment_days
+        : undefined
     };
   }
 

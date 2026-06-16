@@ -14,9 +14,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 import { ScrollingModule, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { TimelineService } from '../../services/timeline.service';
-import { TimelineEvent, EventType } from '../../models/timeline.model';
+import { TimelineEvent, EventType, TimelineAnniversary } from '../../models/timeline.model';
 import { MobileTimelineComponent } from '../../components/mobile-timeline/mobile-timeline.component';
-import { Subscription } from 'rxjs';
+import { combineLatest, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Meta, Title } from '@angular/platform-browser';
 interface TimelineItem {
@@ -40,11 +40,6 @@ interface EventFilters {
     showCampaigns: boolean;
     searchQuery: string;
 }
-const CONFIRMED_GLOBAL_ANNIVERSARIES = new Map<number, Date>([
-    // 1 => First half-anniversary (6 months after launch)
-    // Oct 26, 2025 at 22:00 UTC = Oct 26, 2025 at 23:00 CET (11:00 PM) in Europe after DST ends
-    [1, new Date(Date.UTC(2025, 9, 26, 22, 0, 0))]
-]);
 @Component({
     selector: 'app-timeline',
     standalone: true,
@@ -109,6 +104,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private eventsSubscription?: Subscription;
     private scrollSubscription?: Subscription;
     timelineEvents: TimelineEvent[] = [];
+    timelineAnniversaries: TimelineAnniversary[] = [];
     // Drag to scroll properties
     isDragging = false;
     hasDragged = false;
@@ -328,9 +324,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         // Check initial screen size
         this.checkMobileBreakpoint();
         this.checkCompactMode();
-        // Subscribe to timeline events from the service
-        this.eventsSubscription = this.timelineService.events$.subscribe(events => {
+        // Subscribe to timeline data from the service
+        this.eventsSubscription = combineLatest([
+            this.timelineService.events$,
+            this.timelineService.anniversaries$
+        ]).subscribe(([events, anniversaries]) => {
             this.timelineEvents = events;
+            this.timelineAnniversaries = anniversaries;
             this.generateTimelineItems();
             this.updateVisibleItemsSync(true);
             // Trigger change detection manually
@@ -959,42 +959,20 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         return this.timelineEvents.length;
     }
     private generateAnniversaryMarkers(endDate: Date): void {
-        // Use UTC dates to avoid timezone issues
-        // Generate half-year and full-year anniversaries based on JP timeline
-        let anniversaryCount = 0;
-        while (true) {
-            anniversaryCount++;
-            const confirmedAnniversaryDate = CONFIRMED_GLOBAL_ANNIVERSARIES.get(anniversaryCount);
-            const globalAnniversaryDate = confirmedAnniversaryDate
-                ? new Date(confirmedAnniversaryDate)
-                : this.getProjectedGlobalAnniversaryDate(anniversaryCount);
-            // Stop if the anniversary is beyond our timeline end date
-            if (globalAnniversaryDate > endDate) {
-                break;
-            }
+        this.timelineAnniversaries.forEach(anniversary => {
+            const globalAnniversaryDate = anniversary.globalDate;
+            if (globalAnniversaryDate > endDate) return;
+
             // Calculate position using consistent UTC precision
-            var daysSinceStart = Math.round((globalAnniversaryDate.getTime() - this.globalReleaseDate.getTime()) / (1000 * 60 * 60 * 24));
-            if (anniversaryCount == 2 || anniversaryCount == 5 || anniversaryCount == 8) {
-                //daysSinceStart += 1;
-            }
+            const daysSinceStart = Math.round((globalAnniversaryDate.getTime() - this.globalReleaseDate.getTime()) / (1000 * 60 * 60 * 24));
             const position = daysSinceStart * this.pixelsPerDay;
-            const isFullYear = anniversaryCount % 2 === 0;
-            const anniversaryLabel = isFullYear
-                ? `${anniversaryCount / 2} Year Anniversary`
-                : `${Math.floor(anniversaryCount / 2)}.5 Year Anniversary`;
             this.allTimelineItems.push({
                 date: new Date(globalAnniversaryDate),
-                label: anniversaryLabel,
+                label: anniversary.label,
                 type: 'anniversary',
                 position: position + this.initialOffset
             });
-        }
-    }
-    private getProjectedGlobalAnniversaryDate(anniversaryCount: number): Date {
-        const date = new Date(this.globalReleaseDate);
-        date.setUTCMonth(date.getUTCMonth() + anniversaryCount * 6);
-        date.setUTCHours(22, 0, 0, 0);
-        return date;
+        });
     }
     // Chrome scroll fix utility method
     forceScrollbarUpdate(): void {
