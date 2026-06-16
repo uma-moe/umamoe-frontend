@@ -990,7 +990,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       return;
     }
 
-    this.loadSerializedState(serialized, saved.mode);
+    this.loadSerializedState(serialized, saved.mode, { emitImmediately: true });
     this.restoreSavedFilterMode(saved.mode);
     this.persistCurrentFilterMode();
   }
@@ -1007,7 +1007,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.cdr.markForCheck();
   }
 
-  loadSerializedState(stateStr: string, modeOverride: FilterMode | null = this.readSavedFilterMode()) {
+  loadSerializedState(
+    stateStr: string,
+    modeOverride: FilterMode | null = this.readSavedFilterMode(),
+    options: { emitImmediately?: boolean } = {},
+  ) {
     try {
       const state: CompressedState = JSON.parse(this.decodeBase64Utf8(stateStr));
       if (modeOverride) {
@@ -1021,7 +1025,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.validateUqlQuery();
       if (this.filterMode === 'uql') {
         this.clearUqlRepresentableStructuredFilters();
-        this.onUqlChange();
+        this.onUqlChange({ emitImmediately: options.emitImmediately });
         return;
       }
       
@@ -1219,7 +1223,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
           }
         });
       }
-      this.onFilterChange();
+      this.onFilterChange({ emitImmediately: options.emitImmediately });
     } catch (e) {
       console.error('Failed to load filter state', e);
     }
@@ -1665,7 +1669,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     });
     return groups;
   }
-  onFilterChange() {
+  onFilterChange(options: { emitImmediately?: boolean } = {}) {
     this.validateUqlQuery();
     this.syncUqlFilterState();
     // Sanitize star sum filters - convert null to undefined and clamp values
@@ -1804,8 +1808,17 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.updateCurrentUqlPreview();
     this.updateActiveFilterChips();
     this.persistCurrentFilterState();
-    // Emit a shallow copy of the filter state to ensure change detection
-    this.filterChangeSubject.next({ ...this.filterState });
+    this.emitFilterChange(options.emitImmediately === true);
+  }
+
+  private emitFilterChange(immediate = false): void {
+    const filters = { ...this.filterState };
+    if (immediate) {
+      this.filterChange.emit(filters);
+      return;
+    }
+
+    this.filterChangeSubject.next(filters);
   }
   onRaceSelectionChanged(raceIds: number[]): void {
     this.raceScheduleRaceCount = raceIds.length;
@@ -2525,7 +2538,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.selectedLimitBreak = 4;
     if (emit) this.onFilterChange();
   }
-  onUqlChange(): void {
+  onUqlChange(options: { emitImmediately?: boolean } = {}): void {
     this.applyUqlEditorDirectives();
     this.validateUqlQuery();
     this.syncUqlFilterState();
@@ -2542,7 +2555,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (filterStateChanged) {
       this.lastUqlFilterStateSignature = nextSignature;
       this.persistCurrentFilterState();
-      this.filterChangeSubject.next({ ...this.filterState });
+      this.emitFilterChange(options.emitImmediately === true);
     } else {
       this.persistCurrentFilterState();
     }
