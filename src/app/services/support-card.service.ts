@@ -419,7 +419,9 @@ export class SupportCardService {
     follower_num?: number;
     status?: string;
     report_count: number;
+    view_count: number;
     copy_count: number;
+    theoretical_copy_count: number;
   }> {
     return this.http.get<any>(`${this.apiUrl}/tasks/trainer/${trainerId}/status`)
       .pipe(
@@ -430,7 +432,9 @@ export class SupportCardService {
             available: true,
             status: 'unknown',
             report_count: 0,
-            copy_count: 0
+            view_count: 0,
+            copy_count: 0,
+            theoretical_copy_count: 0
           });
         })
       );

@@ -133,6 +133,19 @@ export interface ProfileSupportCard {
   experience: number;
 }
 
+export interface BorrowStats {
+  trainer_id: string;
+  inheritance_id: number;
+  support_card_id: number;
+  view_count: number;
+  copy_count: number;
+  theoretical_copy_count: number;
+  last_known_follower_num: number | null;
+  last_viewed_at: string | null;
+  last_copied_at: string | null;
+  last_recheck_at: string | null;
+}
+
 export interface TeamStadiumMember {
   id: number;
   trainer_id: string;
@@ -258,6 +271,7 @@ export interface UserProfileResponse {
   };
   inheritance: ProfileInheritance | null;
   support_card: ProfileSupportCard | null;
+  borrow_stats?: BorrowStats | null;
   team_stadium: TeamStadiumMember[];
   veterans?: VeteranMember[];
 }

@@ -65,6 +65,41 @@ interface V3SupportCardRecord {
   limit_break_count: number | null;
   experience: number;
 }
+type BorrowInteractionType = 'view' | 'copy';
+
+export interface BorrowInteractionContext {
+  inheritance_id?: number | null;
+  support_card_id?: number | null;
+  support_card_limit_break?: number | null;
+  support_card_experience?: number | null;
+}
+
+export interface BorrowInteractionResponse {
+  success: boolean;
+  accepted: boolean;
+  trainer_id: string;
+  inheritance_id: number;
+  support_card_id: number;
+  action: BorrowInteractionType;
+  total_count: number;
+  view_count: number;
+  copy_count: number;
+  theoretical_copy_count: number;
+  task_created: boolean;
+}
+
+interface BorrowViewBatchItem extends BorrowInteractionContext {
+  trainer_id: string;
+}
+
+interface BorrowViewBatchResponse {
+  success: boolean;
+  submitted_count: number;
+  received_count: number;
+  accepted_count: number;
+  duplicate_count: number;
+}
+
 interface VoteRequest {
   vote: number; // 1 for upvote, -1 for downvote
 }
@@ -78,10 +113,16 @@ interface VoteResponse {
 export class InheritanceService {
   private readonly apiUrl = '/api/v3'; // Updated to use v3 unified API
   private readonly searchApiUrl = '/search';
+  private readonly borrowViewBatchDelayMs = 2000;
+  private readonly borrowViewMaxBatchSize = 50;
+  private readonly borrowViewBatchUrl = '/api/tasks/borrow/views';
   private searchResults$ = new BehaviorSubject<SearchResult<InheritanceRecord> | null>(null);
   private characters$ = new BehaviorSubject<UmaMusumeCharacter[]>([]);
+  private borrowViewQueue = new Map<string, BorrowViewBatchItem>();
+  private borrowViewFlushTimer: ReturnType<typeof setTimeout> | null = null;
   constructor(private http: HttpClient) {
     this.loadCharacters();
+    this.registerBorrowViewFlushHandlers();
   }
   // Health check endpoint
   checkHealth(): Observable<any> {
@@ -472,17 +513,145 @@ export class InheritanceService {
       })
     );
   }
-  // Track when a trainer ID is copied
-  trackTrainerCopy(trainerId: string): Observable<{ success: boolean; copy_count: number; task_created: boolean }> {
-    return this.http.post<{ success: boolean; copy_count: number; task_created: boolean }>(
-      `/api/tasks/track-copy/${trainerId}`,
-      {}
+  queueBorrowView(trainerId: string, context: BorrowInteractionContext = {}): void {
+    const item: BorrowViewBatchItem = {
+      trainer_id: trainerId,
+      inheritance_id: context.inheritance_id ?? null,
+      support_card_id: context.support_card_id ?? null,
+      support_card_limit_break: context.support_card_limit_break ?? null,
+      support_card_experience: context.support_card_experience ?? null,
+    };
+
+    this.borrowViewQueue.set(this.borrowViewBatchKey(item), item);
+    if (this.borrowViewQueue.size >= this.borrowViewMaxBatchSize) {
+      this.flushBorrowViews();
+      return;
+    }
+
+    this.scheduleBorrowViewFlush();
+  }
+
+  trackBorrowView(trainerId: string, context: BorrowInteractionContext = {}): Observable<BorrowInteractionResponse> {
+    return this.trackBorrowInteraction(trainerId, 'view', context);
+  }
+
+  trackBorrowCopy(trainerId: string, context: BorrowInteractionContext = {}): Observable<BorrowInteractionResponse> {
+    return this.trackBorrowInteraction(trainerId, 'copy', context);
+  }
+
+  private trackBorrowInteraction(
+    trainerId: string,
+    action: BorrowInteractionType,
+    context: BorrowInteractionContext,
+  ): Observable<BorrowInteractionResponse> {
+    return this.http.post<BorrowInteractionResponse>(
+      `/api/tasks/borrow/${encodeURIComponent(trainerId)}/${action}`,
+      context
     ).pipe(
       catchError(error => {
-        console.error('Error tracking trainer copy:', error);
-        // Don't throw error for tracking, just log it
-        return of({ success: false, copy_count: 0, task_created: false });
+        console.error(`Error tracking borrow ${action}:`, error);
+        return of({
+          success: false,
+          accepted: false,
+          trainer_id: trainerId,
+          inheritance_id: context.inheritance_id ?? 0,
+          support_card_id: context.support_card_id ?? 0,
+          action,
+          total_count: 0,
+          view_count: 0,
+          copy_count: 0,
+          theoretical_copy_count: 0,
+          task_created: false,
+        });
       })
+    );
+  }
+
+  private scheduleBorrowViewFlush(): void {
+    if (this.borrowViewFlushTimer) {
+      return;
+    }
+
+    this.borrowViewFlushTimer = setTimeout(() => this.flushBorrowViews(), this.borrowViewBatchDelayMs);
+  }
+
+  private flushBorrowViews(useBeacon = false): void {
+    if (this.borrowViewFlushTimer) {
+      clearTimeout(this.borrowViewFlushTimer);
+      this.borrowViewFlushTimer = null;
+    }
+
+    const views = Array.from(this.borrowViewQueue.values());
+    this.borrowViewQueue.clear();
+    if (views.length === 0) {
+      return;
+    }
+
+    const payload = { views };
+    if (useBeacon && this.sendBorrowViewBeacon(payload)) {
+      return;
+    }
+
+    this.http.post<BorrowViewBatchResponse>(this.borrowViewBatchUrl, payload).pipe(
+      catchError(error => {
+        console.error('Error tracking borrow view batch:', error);
+        return of({
+          success: false,
+          submitted_count: views.length,
+          received_count: 0,
+          accepted_count: 0,
+          duplicate_count: 0,
+        });
+      })
+    ).subscribe();
+  }
+
+  private sendBorrowViewBeacon(payload: { views: BorrowViewBatchItem[] }): boolean {
+    if (typeof navigator === 'undefined' || typeof navigator.sendBeacon !== 'function') {
+      return false;
+    }
+
+    try {
+      const body = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+      return navigator.sendBeacon(this.borrowViewBatchUrl, body);
+    } catch {
+      return false;
+    }
+  }
+
+  private registerBorrowViewFlushHandlers(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.addEventListener('pagehide', () => this.flushBorrowViews(true));
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          this.flushBorrowViews(true);
+        }
+      });
+    }
+  }
+
+  private borrowViewBatchKey(item: BorrowViewBatchItem): string {
+    return [
+      item.trainer_id,
+      item.inheritance_id ?? 0,
+      item.support_card_id ?? 0,
+      item.support_card_limit_break ?? '',
+      item.support_card_experience ?? '',
+    ].join(':');
+  }
+
+  // Track when a trainer ID is copied
+  trackTrainerCopy(trainerId: string): Observable<{ success: boolean; copy_count: number; task_created: boolean }> {
+    return this.trackBorrowCopy(trainerId).pipe(
+      map(response => ({
+        success: response.success,
+        copy_count: response.copy_count,
+        task_created: response.task_created,
+      }))
     );
   }
   // Get trainer availability status
@@ -492,7 +661,9 @@ export class InheritanceService {
     follower_num?: number;
     status?: string;
     report_count: number;
+    view_count: number;
     copy_count: number;
+    theoretical_copy_count: number;
   }> {
     return this.http.get<any>(`/api/tasks/trainer/${trainerId}/status`)
       .pipe(
@@ -503,7 +674,9 @@ export class InheritanceService {
             available: true,
             status: 'unknown',
             report_count: 0,
-            copy_count: 0
+            view_count: 0,
+            copy_count: 0,
+            theoretical_copy_count: 0
           });
         })
       );

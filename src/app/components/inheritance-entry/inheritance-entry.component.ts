@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, OnInit, OnChanges, ChangeDetectorRef, DestroyRef, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, OnInit, OnChanges, ChangeDetectorRef, DestroyRef, ElementRef, NgZone, SimpleChanges } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,7 +16,7 @@ import { AppVersionService } from '../../services/app-version.service';
 import { AuthService } from '../../services/auth.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { GoogleAnalyticsService } from '../../services/google-analytics.service';
-import { InheritanceService } from '../../services/inheritance.service';
+import { BorrowInteractionContext, InheritanceService } from '../../services/inheritance.service';
 import { PlannerTransferService } from '../../services/planner-transfer.service';
 import { getCharacterById } from '../../data/character.data';
 import { ResolveSparksPipe } from '../../pipes/resolve-sparks.pipe';
@@ -125,6 +125,10 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     private readonly p2SparkDisplayCache = new Map<string, P2SparkDisplayEntry[]>();
     private readonly p2SparkSourceCache = new Map<string, P2SparkSourceEntry[] | null>();
     private readonly mainParentLevelCache = new WeakMap<InheritanceRecord, Map<string, string>>();
+    private readonly borrowViewClientIntervalMs = 30 * 60 * 1000;
+    private readonly borrowCopyClientIntervalMs = 30 * 1000;
+    private borrowViewObserver: IntersectionObserver | null = null;
+    private borrowViewTrackingReady = false;
     private recordTotalAffinityCacheKey: string | null = null;
     private recordTotalAffinityCacheValue: number | null = null;
 
@@ -142,7 +146,11 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         private googleAnalyticsService: GoogleAnalyticsService,
         private cdr: ChangeDetectorRef,
         private destroyRef: DestroyRef,
-    ) {}
+        private host: ElementRef<HTMLElement>,
+        private ngZone: NgZone,
+    ) {
+        this.destroyRef.onDestroy(() => this.disconnectBorrowViewObserver());
+    }
 
     ngOnInit(): void {
         this.affinityService.load()
@@ -151,6 +159,9 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
                 this.clearComputedCaches();
                 this.cdr.markForCheck();
             });
+
+        this.borrowViewTrackingReady = true;
+        this.startBorrowViewTracking();
     }
 
     ngOnChanges(changes: SimpleChanges): void {
@@ -160,6 +171,10 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         ) {
             this.clearComputedCaches();
         }
+
+        if (changes['record'] && this.borrowViewTrackingReady) {
+            this.startBorrowViewTracking();
+        }
     }
 
     private clearComputedCaches(): void {
@@ -168,6 +183,116 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         this.mergedSparkCache.clear();
         this.p2SparkDisplayCache.clear();
         this.p2SparkSourceCache.clear();
+    }
+
+    private startBorrowViewTracking(): void {
+        this.disconnectBorrowViewObserver();
+
+        const id = this.getTrainerId();
+        const context = this.getBorrowInteractionContext();
+        const key = this.borrowInteractionKey(id, context);
+        if (!id || !this.isV2Record() || this.hasRecentBorrowInteraction('view', key, this.borrowViewClientIntervalMs)) {
+            return;
+        }
+
+        if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+            this.trackBorrowView(id, context, key);
+            return;
+        }
+
+        this.ngZone.runOutsideAngular(() => {
+            this.borrowViewObserver = new IntersectionObserver((entries) => {
+                if (!entries.some(entry => entry.isIntersecting)) {
+                    return;
+                }
+
+                this.disconnectBorrowViewObserver();
+                this.ngZone.run(() => this.trackBorrowView(id, context, key));
+            }, { threshold: [0, 0.25] });
+
+            this.borrowViewObserver.observe(this.host.nativeElement);
+        });
+    }
+
+    private disconnectBorrowViewObserver(): void {
+        this.borrowViewObserver?.disconnect();
+        this.borrowViewObserver = null;
+    }
+
+    private trackBorrowView(trainerId: string, context: BorrowInteractionContext, key: string): void {
+        if (!this.markBorrowInteractionTracked('view', key, this.borrowViewClientIntervalMs)) {
+            return;
+        }
+
+        this.inheritanceService.queueBorrowView(trainerId, context);
+    }
+
+    private trackBorrowCopy(trainerId: string): void {
+        const context = this.getBorrowInteractionContext();
+        const key = this.borrowInteractionKey(trainerId, context);
+        if (!this.markBorrowInteractionTracked('copy', key, this.borrowCopyClientIntervalMs)) {
+            return;
+        }
+
+        this.inheritanceService.trackBorrowCopy(trainerId, context)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe();
+    }
+
+    private getBorrowInteractionContext(): BorrowInteractionContext {
+        return {
+            inheritance_id: typeof this.record?.id === 'number' ? this.record.id : null,
+            support_card_id: this.record?.support_card_id ?? null,
+            support_card_limit_break: this.record?.limit_break_count ?? this.supportCardLimitBreak ?? null,
+            support_card_experience: this.record?.support_card_experience ?? null,
+        };
+    }
+
+    private borrowInteractionKey(trainerId: string, context: BorrowInteractionContext): string {
+        return [
+            trainerId,
+            context.inheritance_id ?? 0,
+            context.support_card_id ?? 0,
+            context.support_card_limit_break ?? '',
+            context.support_card_experience ?? '',
+        ].join(':');
+    }
+
+    private hasRecentBorrowInteraction(action: 'view' | 'copy', key: string, intervalMs: number): boolean {
+        if (typeof window === 'undefined') {
+            return false;
+        }
+
+        try {
+            const previous = Number(window.sessionStorage.getItem(this.borrowInteractionStorageKey(action, key)));
+            return Number.isFinite(previous) && previous > 0 && Date.now() - previous < intervalMs;
+        } catch {
+            return false;
+        }
+    }
+
+    private markBorrowInteractionTracked(action: 'view' | 'copy', key: string, intervalMs: number): boolean {
+        if (typeof window === 'undefined') {
+            return true;
+        }
+
+        try {
+            const storageKey = this.borrowInteractionStorageKey(action, key);
+            const now = Date.now();
+            const previous = Number(window.sessionStorage.getItem(storageKey));
+            if (Number.isFinite(previous) && previous > 0 && now - previous < intervalMs) {
+                return false;
+            }
+            window.sessionStorage.setItem(storageKey, String(now));
+        } catch {
+            return true;
+        }
+
+        return true;
+    }
+
+    private borrowInteractionStorageKey(action: 'view' | 'copy', key: string): string {
+        return `uma.borrow.${action}.${key}`;
     }
 
     onBookmarkToggle(event: Event): void {
@@ -462,7 +587,10 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         void this.copyTextToClipboard(id, {
             successMessage: `Trainer ID copied: ${id}`,
             failureMessage: 'Failed to copy trainer ID',
-            onSuccess: () => this.trackEntryEvent('copy_trainer_id'),
+            onSuccess: () => {
+                this.trackEntryEvent('copy_trainer_id');
+                this.trackBorrowCopy(id);
+            },
         });
     }
 
