@@ -681,16 +681,53 @@ h1 {
     height: 100%;
     display: flex;
     align-items: center;
-    overflow: hidden;
+    justify-content: center;
+    padding: 0 12px;
+    overflow: visible;
   }
 
   .legend-race-image {
-    position: absolute;
-    width: 60%;
-    height: 80%;
+    position: relative;
+    flex: 1 1 78px;
+    width: auto;
+    min-width: 54px;
+    max-width: 88px;
+    height: 92%;
+    margin: 0 -4px;
     object-fit: contain;
     border-radius: var(--radius-xs);
     transition: transform 0.2s ease;
+  }
+}
+
+.event-card.event-type-character_banner,
+.event-card.event-type-support_card_banner,
+.event-card.event-type-paid_banner {
+  .event-image {
+    position: relative;
+    z-index: 2;
+    margin-bottom: -25px;
+    overflow: visible;
+  }
+
+  .event-content {
+    position: relative;
+    z-index: 3;
+  }
+}
+
+.event-card.event-type-character_banner,
+.event-card.event-type-support_card_banner,
+.event-card.event-type-paid_banner,
+.event-card.event-type-legend_race,
+.event-card.event-type-champions_meeting {
+  min-height: 280px;
+}
+
+.event-card.event-type-legend_race,
+.event-card.event-type-champions_meeting {
+  .event-content {
+    min-height: 160px;
   }
 }
 
@@ -967,6 +1004,49 @@ h1 {
 .event-avatar-character .event-avatar-img {
   transform: scale(1.05);
   transform-origin: bottom center;
+}
+
+.event-card.event-type-character_banner,
+.event-card.event-type-support_card_banner {
+  .event-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .event-avatar-strip-shell {
+    margin-top: auto;
+  }
+
+  .event-avatar-strip {
+    align-items: flex-end;
+    padding: 2px 0 0;
+  }
+
+  .event-avatar-strip-shell.expanded-avatar-row {
+    --avatar-size: 56px;
+    --avatar-gap: 5px;
+  }
+
+  .event-avatar-strip-shell.tight-avatar-row {
+    --avatar-size: 56px;
+    --avatar-gap: 5px;
+    width: 100%;
+
+    .event-avatar-strip {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+
+  .event-avatar-strip-shell.has-overflow-avatars {
+    --avatar-size: 44px;
+    --avatar-gap: 5px;
+    margin-top: 0.25rem;
+
+    .event-avatar-strip {
+      padding: 4px 0 9px;
+    }
+  }
 }
 
 .timeline-avatar-hover-card {

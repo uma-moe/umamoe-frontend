@@ -29,6 +29,8 @@
         *ngIf="characterAvatars.length"
         class="event-avatar-strip-shell character-avatars"
         [class.has-overflow-avatars]="characterAvatars.length > 4"
+        [class.expanded-avatar-row]="characterAvatars.length <= 3"
+        [class.tight-avatar-row]="characterAvatars.length === 4"
         aria-label="Characters"
         (pointerleave)="scheduleAvatarHoverHide()"
       >
@@ -68,6 +70,8 @@
           type="button"
           class="avatar-scroll-hint"
           [attr.aria-label]="'Show ' + (characterAvatars.length - 4) + ' more characters'"
+          (pointerdown)="$event.stopPropagation()"
+          (mousedown)="$event.stopPropagation()"
           (click)="scrollAvatarStripForward($event)"
         >
           <span>+{{ characterAvatars.length - 4 }}</span>
@@ -82,6 +86,8 @@
         *ngIf="supportAvatars.length"
         class="event-avatar-strip-shell support-avatars"
         [class.has-overflow-avatars]="supportAvatars.length > 4"
+        [class.expanded-avatar-row]="supportAvatars.length <= 3"
+        [class.tight-avatar-row]="supportAvatars.length === 4"
         aria-label="Support cards"
         (pointerleave)="scheduleAvatarHoverHide()"
       >
@@ -121,6 +127,8 @@
           type="button"
           class="avatar-scroll-hint"
           [attr.aria-label]="'Show ' + (supportAvatars.length - 4) + ' more support cards'"
+          (pointerdown)="$event.stopPropagation()"
+          (mousedown)="$event.stopPropagation()"
           (click)="scrollAvatarStripForward($event)"
         >
           <span>+{{ supportAvatars.length - 4 }}</span>
@@ -466,12 +474,6 @@
                           [style.z-index]="
                             (item.eventData.relatedCharacters?.length || 0) - i
                           "
-                          [style.left.px]="
-                            (270 /
-                              (item.eventData.relatedCharacters?.length || 0)) *
-                              i -
-                            40
-                          "
                           loading="lazy"
                           decoding="async"
                           (error)="onImageError($event)"
@@ -631,12 +633,6 @@
                         [alt]="img || 'Event'"
                         [style.z-index]="
                           (item.eventData.relatedCharacters?.length || 0) - i
-                        "
-                        [style.left.px]="
-                          (270 /
-                            (item.eventData.relatedCharacters?.length || 0)) *
-                            i -
-                          40
                         "
                         loading="lazy"
                         decoding="async"

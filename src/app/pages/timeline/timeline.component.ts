@@ -918,10 +918,9 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             return;
         }
 
-        strip.scrollBy({
-            left: Math.max(strip.clientWidth * 0.85, 84),
-            behavior: 'smooth'
-        });
+        const maxScrollLeft = Math.max(0, strip.scrollWidth - strip.clientWidth);
+        const scrollAmount = Math.max(strip.clientWidth * 0.85, 84);
+        strip.scrollLeft = Math.min(maxScrollLeft, strip.scrollLeft + scrollAmount);
     }
     getPredictionInsight(event?: TimelineEvent): TimelinePredictionInsight | null {
         return this.timelinePredictionService.buildInsight(event, this.timelineCalculation);
