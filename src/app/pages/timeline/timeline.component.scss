@@ -324,7 +324,20 @@ h1 {
   cursor: grab;
   user-select: none;
 
-  &:active { cursor: grabbing; }
+  &.is-dragging { cursor: grabbing; }
+
+  a,
+  button,
+  input,
+  textarea,
+  select,
+  [role="button"],
+  [role="link"],
+  .mat-mdc-button-base,
+  .event-avatar-strip-shell,
+  .timeline-avatar-hover-card {
+    cursor: pointer;
+  }
 
   &::-webkit-scrollbar { height: 16px; width: 16px; }
   &::-webkit-scrollbar-track { background: var(--bg-tertiary); border-radius: var(--radius-md); margin: 0 4px; }
@@ -648,7 +661,7 @@ h1 {
       position: absolute;
       top: 0; bottom: 0;
       z-index: 10;
-      pointer-events: auto;
+      pointer-events: none;
       left: 50%; right: 0;
     }
     &:first-of-type::before { left: 0; right: 50%; }
@@ -712,7 +725,7 @@ h1 {
 
   .event-content {
     position: relative;
-    z-index: 3;
+    z-index: 20;
   }
 }
 

@@ -93,10 +93,6 @@ export const NON_BANNER_RESOURCE_NAMES = [
   'supports'
 ] as const;
 
-export const TIMELINE_RESOURCE_NAMES = [
-  'banner_timeline'
-] as const;
-
 @Injectable({ providedIn: 'root' })
 export class ResourceDataService {
   private static readonly CACHE_PREFIX = 'umamoe-resource-data';
@@ -164,6 +160,7 @@ export class ResourceDataService {
   }
 
   private async loadResource<T>(resourceName: string, subject: ReplaySubject<T>): Promise<void> {
+    this.setResourceUsingCachedData(resourceName, this.hasCachedResourceMeta(resourceName));
     this.setResourcePending(resourceName, true);
     const options = this.getResourceLoadOptions(resourceName);
     let emittedCached = false;
@@ -195,7 +192,10 @@ export class ResourceDataService {
       }
 
       const meta = this.readCacheMeta(resourceName);
-      if (emittedCached && this.isCacheFresh(meta, version, resource, manifestGeneratedAt)) {
+      if (
+        emittedCached &&
+        this.isCacheFresh(meta, version, resource, manifestGeneratedAt)
+      ) {
         this.clearResourceRetry(resourceName);
         this.setResourcePending(resourceName, false);
         this.setResourceError(resourceName, null);
@@ -212,6 +212,13 @@ export class ResourceDataService {
       void this.cleanupOldCaches(version);
     } catch (error) {
       console.warn(`Failed to refresh resource ${resourceName}:`, error);
+      if (emittedCached) {
+        this.setResourcePending(resourceName, false);
+        this.setResourceError(resourceName, null);
+        this.scheduleResourceRetry(resourceName, subject);
+        return;
+      }
+
       this.setResourcePending(resourceName, true);
       this.setResourceError(resourceName, this.toResourceLoadError(resourceName, error));
       this.scheduleResourceRetry(resourceName, subject);
@@ -856,6 +863,10 @@ self.onmessage = async (event) => {
     } catch {
       return null;
     }
+  }
+
+  private hasCachedResourceMeta(resourceName: string): boolean {
+    return this.canUseCacheStorage() && this.readCacheMeta(resourceName) !== null;
   }
 
   private writeCacheMeta(resourceName: string, meta: ResourceCacheMeta): void {

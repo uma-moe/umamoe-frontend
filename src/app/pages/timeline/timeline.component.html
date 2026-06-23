@@ -154,7 +154,7 @@
     (blur)="hideAvatarHover()"
     [attr.aria-label]="'Open ' + (hoverAvatar?.displayName || hoverAvatar?.name || 'item') + ' on Gametora'"
   >
-    <strong>{{ hoverAvatar?.name }}</strong>
+    <strong>{{ hoverAvatar?.displayName || hoverAvatar?.name }}</strong>
     <small>{{ hoverAvatar?.subLabel }}</small>
     <span class="hover-card-action">
       <mat-icon>open_in_new</mat-icon>
@@ -390,8 +390,8 @@
       <div
         #timelineContainer
         class="timeline-container"
+        [class.is-dragging]="isDragging"
         (mousedown)="onMouseDown($event)"
-        [style.cursor]="isDragging ? 'grabbing' : 'grab'"
       >
         <div class="timeline-track" [style.width.px]="totalWidth">
           <!-- Main timeline line (centered vertically) -->
@@ -551,6 +551,7 @@
                         class="event-ext-link"
                         matTooltip="View event on Gametora"
                         aria-label="View event on Gametora"
+                        (mousedown)="$event.stopPropagation()"
                         (click)="onLinkClick($event)"
                       >
                         <mat-icon>open_in_new</mat-icon>
@@ -562,6 +563,7 @@
                           mat-icon-button
                           matTooltip="Prediction details"
                           aria-label="Show prediction details"
+                          (mousedown)="$event.stopPropagation()"
                           (click)="openPredictionDetails(item.eventData, item, prediction, $event)"
                         >
                           <mat-icon>info</mat-icon>
@@ -569,7 +571,7 @@
                       </ng-container>
                     </div>
                     <div class="event-title">
-                      {{ item.eventData?.title || item.label }}
+                      {{ getTimelineEventTitle(item.eventData) || item.label }}
                     </div>
 
                     <div
@@ -711,6 +713,7 @@
                       class="event-ext-link"
                       matTooltip="View event on Gametora"
                       aria-label="View event on Gametora"
+                      (mousedown)="$event.stopPropagation()"
                       (click)="onLinkClick($event)"
                     >
                       <mat-icon>open_in_new</mat-icon>
@@ -722,6 +725,7 @@
                         mat-icon-button
                         matTooltip="Prediction details"
                         aria-label="Show prediction details"
+                        (mousedown)="$event.stopPropagation()"
                         (click)="openPredictionDetails(item.eventData, item, prediction, $event)"
                       >
                         <mat-icon>info</mat-icon>
@@ -729,7 +733,7 @@
                     </ng-container>
                   </div>
                   <div class="event-title">
-                    {{ item.eventData?.title || item.label }}
+                    {{ getTimelineEventTitle(item.eventData) || item.label }}
                   </div>
 
                   <div

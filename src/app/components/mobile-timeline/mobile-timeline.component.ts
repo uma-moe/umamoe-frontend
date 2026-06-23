@@ -651,6 +651,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
             insight: prediction,
             calculation: this.timelineCalculation,
             eventTypeLabel: this.getEventTypeLabel(event.type),
+            displayTitle: this.getMobileEventTitle(event),
             dateLabel: this.formatPredictionEventDate(event)
         };
 
@@ -860,7 +861,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
             return this.getLegendRaceTitle(event.title);
         }
 
-        return event.title || this.getEventTypeLabel(event.type);
+        return this.timelineAvatarService.getEventDisplayTitle(event) || this.getEventTypeLabel(event.type);
     }
     hasMobileMeta(event?: TimelineEvent): boolean {
         return !!this.getMobileEventEndLabel(event);

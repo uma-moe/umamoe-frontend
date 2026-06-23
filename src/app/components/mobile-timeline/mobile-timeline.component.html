@@ -207,7 +207,7 @@
     (blur)="hideAvatarHover()"
     [attr.aria-label]="'Open ' + (hoverAvatar?.displayName || hoverAvatar?.name || 'item') + ' on Gametora'"
   >
-    <strong>{{ hoverAvatar?.name }}</strong>
+    <strong>{{ hoverAvatar?.displayName || hoverAvatar?.name }}</strong>
     <small>{{ hoverAvatar?.subLabel }}</small>
     <span class="hover-card-action">
       <mat-icon>open_in_new</mat-icon>

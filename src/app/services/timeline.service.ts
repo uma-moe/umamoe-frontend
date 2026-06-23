@@ -52,6 +52,7 @@ interface BannerTimelineResourceAnniversary {
 
 interface BannerTimelineResourceEvent {
   id?: string;
+  gacha_id?: unknown;
   type?: string;
   title?: string;
   description?: string;
@@ -62,6 +63,8 @@ interface BannerTimelineResourceEvent {
   banner_duration_days?: number;
   tags?: unknown;
   pickup_card_ids?: unknown;
+  pick_up_card_ids?: unknown;
+  pickupCardIds?: unknown;
   related_characters?: unknown;
   related_support_cards?: unknown;
   image_path?: string | null;
@@ -251,13 +254,21 @@ export class TimelineService {
       isConfirmed: event.is_confirmed === true,
       bannerDuration,
       tags: this.toStringArray(event.tags),
-      pickupCardIds: this.toNumberArray(event.pickup_card_ids),
+      pickupCardIds: this.resolvePickupCardIds(event),
       relatedCharacters: this.toStringArray(event.related_characters),
       relatedSupportCards: this.toStringArray(event.related_support_cards),
       imagePath: event.image_path || undefined,
       gametoraURL: event.gametora_url || undefined,
       prediction: this.toTimelinePrediction(event.prediction)
     };
+  }
+
+  private resolvePickupCardIds(event: BannerTimelineResourceEvent): number[] {
+    return this.toNumberArray(
+      event.pickup_card_ids
+      ?? event.pick_up_card_ids
+      ?? event.pickupCardIds
+    ) ?? [];
   }
 
   private toTimelineCalculation(calculation?: BannerTimelineResourceCalculation): TimelineCalculation | null {
@@ -498,7 +509,9 @@ export class TimelineService {
       return undefined;
     }
 
-    const numbers = value.filter((item): item is number => typeof item === 'number');
+    const numbers = value
+      .map(item => typeof item === 'number' ? item : Number(item))
+      .filter((item): item is number => Number.isFinite(item));
     return numbers.length > 0 ? numbers : undefined;
   }
 

@@ -11,6 +11,7 @@ export interface TimelinePredictionDialogData {
   insight: TimelinePredictionInsight;
   calculation: TimelineCalculation | null;
   eventTypeLabel: string;
+  displayTitle?: string;
   dateLabel: string;
 }
 
@@ -29,7 +30,7 @@ interface PlacementFact {
       <header class="tpd-header">
         <div class="tpd-title">
           <span>{{ data.eventTypeLabel }}</span>
-          <h2>{{ data.event.title }}</h2>
+          <h2>{{ data.displayTitle || data.event.title }}</h2>
         </div>
         <button
           mat-icon-button

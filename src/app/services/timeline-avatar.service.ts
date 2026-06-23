@@ -18,6 +18,11 @@ export interface TimelineAvatar {
   gametoraUrl: string;
 }
 
+interface CharacterCardIdentity {
+  baseName: string;
+  variantName?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TimelineAvatarService {
   private lookupRevision = 0;
@@ -44,7 +49,11 @@ export class TimelineAvatarService {
   }
 
   getCharacterAvatars(event?: TimelineEvent): TimelineAvatar[] {
-    if (!event?.relatedCharacters?.length || event.type === EventType.LEGEND_RACE) {
+    if (!event || event.type === EventType.LEGEND_RACE) {
+      return [];
+    }
+
+    if (!event.relatedCharacters?.length && this.getCharacterPickupIds(event).length === 0) {
       return [];
     }
 
@@ -59,7 +68,11 @@ export class TimelineAvatarService {
   }
 
   getSupportAvatars(event?: TimelineEvent): TimelineAvatar[] {
-    if (!event?.relatedSupportCards?.length) {
+    if (!event) {
+      return [];
+    }
+
+    if (!event.relatedSupportCards?.length && this.getSupportPickupIds(event).length === 0) {
       return [];
     }
 
@@ -79,9 +92,35 @@ export class TimelineAvatarService {
       return true;
     }
 
-    return this.getEventSearchValues(event).some(value =>
-      this.normalizeLookupKey(value).includes(searchKey)
+    const searchValues = this.getEventSearchValues(event)
+      .map(value => this.normalizeLookupKey(value))
+      .filter(value => value.length > 0);
+    const combinedSearchKey = searchValues.join('');
+    const queryTokens = this.getSearchTokens(query);
+
+    return searchValues.some(value => value.includes(searchKey))
+      || combinedSearchKey.includes(searchKey)
+      || queryTokens.every(token => searchValues.some(value => value.includes(token)));
+  }
+
+  getEventDisplayTitle(event: TimelineEvent | undefined): string {
+    if (!event) {
+      return '';
+    }
+
+    const titleAvatars = this.getTitleAvatars(event);
+    if (titleAvatars.length === 0) {
+      return event.title;
+    }
+
+    const extraCount = Math.max(
+      titleAvatars.length - 1,
+      this.extractExistingMoreCount(event.title) ?? 0
     );
+
+    return extraCount > 0
+      ? `${titleAvatars[0].displayName} + ${extraCount} more`
+      : titleAvatars[0].displayName;
   }
 
   private updateLookups(characters: Character[], supportCards: SupportCardShort[]): void {
@@ -112,15 +151,26 @@ export class TimelineAvatarService {
 
   private buildCharacterAvatars(event: TimelineEvent): TimelineAvatar[] {
     const names = event.relatedCharacters ?? [];
-    const ids = event.pickupCardIds ?? [];
-    const count = Math.max(names.length, ids.length);
+    const ids = this.getCharacterPickupIds(event);
     const avatars: TimelineAvatar[] = [];
+    const usedKeys = new Set<string>();
 
-    for (let index = 0; index < count; index++) {
-      const avatar = this.resolveCharacterAvatar(ids[index], names[index]);
+    for (const id of ids) {
+      const avatar = this.resolveCharacterAvatar(id);
       if (avatar) {
         avatars.push(avatar);
+        usedKeys.add(avatar.key);
       }
+    }
+
+    if (ids.length === 0) {
+      names.forEach(name => {
+        const avatar = this.resolveCharacterAvatar(undefined, name);
+        if (avatar && !usedKeys.has(avatar.key)) {
+          avatars.push(avatar);
+          usedKeys.add(avatar.key);
+        }
+      });
     }
 
     return avatars;
@@ -128,18 +178,45 @@ export class TimelineAvatarService {
 
   private buildSupportAvatars(event: TimelineEvent): TimelineAvatar[] {
     const names = event.relatedSupportCards ?? [];
-    const ids = event.pickupCardIds ?? [];
-    const count = Math.max(names.length, ids.length);
+    const ids = this.getSupportPickupIds(event);
     const avatars: TimelineAvatar[] = [];
+    const usedKeys = new Set<string>();
 
-    for (let index = 0; index < count; index++) {
+    for (let index = 0; index < ids.length; index++) {
       const avatar = this.resolveSupportAvatar(ids[index], names[index]);
       if (avatar) {
         avatars.push(avatar);
+        usedKeys.add(avatar.key);
       }
     }
 
+    if (ids.length === 0) {
+      names.forEach(name => {
+        const avatar = this.resolveSupportAvatar(undefined, name);
+        if (avatar && !usedKeys.has(avatar.key)) {
+          avatars.push(avatar);
+          usedKeys.add(avatar.key);
+        }
+      });
+    }
+
     return avatars;
+  }
+
+  private getCharacterPickupIds(event: TimelineEvent): number[] {
+    return (event.pickupCardIds ?? []).filter(id => this.isCharacterCardId(id));
+  }
+
+  private getSupportPickupIds(event: TimelineEvent): number[] {
+    return (event.pickupCardIds ?? []).filter(id => this.isSupportCardId(id));
+  }
+
+  private isCharacterCardId(id: number): boolean {
+    return this.characterById.has(id) || id >= 100000;
+  }
+
+  private isSupportCardId(id: number): boolean {
+    return this.supportCardById.has(String(id)) || id < 100000;
   }
 
   private resolveCharacterAvatar(cardId?: number, displayName?: string): TimelineAvatar | null {
@@ -152,9 +229,10 @@ export class TimelineAvatarService {
       return null;
     }
 
-    const id = matchedCharacter?.id ?? cardId!;
-    const baseName = matchedCharacter?.name || displayName || `Character ${id}`;
-    const variantName = this.getCharacterVariantName(id);
+    const id = cardId ?? matchedCharacter!.id;
+    const cardIdentity = this.resolveCharacterCardIdentity(id);
+    const baseName = cardIdentity?.baseName || matchedCharacter?.name || displayName || `Character ${id}`;
+    const variantName = cardIdentity?.variantName;
     const displayNameWithVariant = variantName ? `${baseName} (${variantName})` : baseName;
     const image = matchedCharacter
       ? this.getCharacterImageUrl(matchedCharacter)
@@ -167,7 +245,7 @@ export class TimelineAvatarService {
       displayName: displayNameWithVariant,
       subLabel: variantName ? `${variantName} - Character` : 'Character',
       variantName,
-      searchTerms: variantName ? [variantName] : [],
+      searchTerms: variantName ? [variantName, `${baseName} ${variantName}`] : [],
       imageUrl: image,
       gametoraUrl: this.characterGametoraUrl(id, baseName)
     };
@@ -224,6 +302,7 @@ export class TimelineAvatarService {
     const supportAvatars = this.getSupportAvatars(event);
 
     return [
+      this.getEventDisplayTitle(event),
       event.title,
       event.description,
       ...(event.relatedCharacters ?? []),
@@ -239,16 +318,42 @@ export class TimelineAvatarService {
     ].filter((value): value is string => typeof value === 'string' && value.length > 0);
   }
 
-  private getCharacterVariantName(id: number): string | undefined {
+  private getTitleAvatars(event: TimelineEvent): TimelineAvatar[] {
+    switch (event.type) {
+      case EventType.CHARACTER_BANNER:
+        return this.getCharacterAvatars(event);
+      case EventType.SUPPORT_CARD_BANNER:
+        return this.getSupportAvatars(event);
+      case EventType.PAID_BANNER: {
+        const characterAvatars = this.getCharacterAvatars(event);
+        return characterAvatars.length > 0 ? characterAvatars : this.getSupportAvatars(event);
+      }
+      default:
+        return [];
+    }
+  }
+
+  private extractExistingMoreCount(title: string): number | undefined {
+    const match = title.match(/\+\s*(\d+)\s+more/i);
+    return match ? Number(match[1]) : undefined;
+  }
+
+  private resolveCharacterCardIdentity(id: number): CharacterCardIdentity | undefined {
     const characterId = Math.floor(id / 100);
     const skinId = String(id % 100).padStart(2, '0');
-    const skinName = getCharacterNameEntry(characterId)?.skins?.[skinId];
-
-    if (!skinName || skinName.toLowerCase() === 'original') {
+    const entry = getCharacterNameEntry(characterId);
+    if (!entry?.name) {
       return undefined;
     }
 
-    return skinName;
+    const skinName = entry.skins?.[skinId];
+    const variantName = skinName && skinName.toLowerCase() !== 'original'
+      ? skinName
+      : undefined;
+    return {
+      baseName: entry.name,
+      variantName
+    };
   }
 
   private getSupportTypeInfo(type?: SupportCardType): { label: string; searchTerms: string[] } {
@@ -280,6 +385,16 @@ export class TimelineAvatarService {
       .normalize('NFKD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '');
+  }
+
+  private getSearchTokens(value: string): string[] {
+    return value
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .split(/[^a-z0-9]+/g)
+      .map(token => this.normalizeLookupKey(token))
+      .filter(token => token.length > 0);
   }
 
   private toGametoraSlug(value: string): string {

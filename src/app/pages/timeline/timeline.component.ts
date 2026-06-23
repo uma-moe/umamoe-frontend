@@ -123,6 +123,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     // Drag to scroll properties
     isDragging = false;
     hasDragged = false;
+    private isDragArmed = false;
+    private readonly dragActivationThreshold = 12;
     private startX = 0;
     private scrollStart = 0;
     private dragAnimationFrame?: number;
@@ -183,6 +185,10 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     @HostListener('wheel', ['$event'])
     onWheel(event: WheelEvent): void {
         if (!this.timelineContainer || this.isMobile) return;
+        if (this.isTimelineInteractiveTarget(event.target, '.event-avatar-strip-shell, .timeline-avatar-hover-card')) {
+            return;
+        }
+
         this.hideAvatarHover();
         // Always handle wheel events for horizontal scrolling on the timeline
         event.preventDefault();
@@ -248,16 +254,17 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!this.timelineContainer || this.isMobile) return;
         // Only handle left mouse button, ignore middle mouse button for page scrolling
         if (event.button !== 0) return;
+        if (this.isTimelineInteractiveTarget(event.target)) {
+            this.hasDragged = false;
+            this.stopTimelineMomentum();
+            return;
+        }
+
         this.hideAvatarHover();
-        event.preventDefault();
-        this.isDragging = true;
+        this.isDragArmed = true;
         this.hasDragged = false;
         this.isDecelerating = false;
-        // Cancel any ongoing momentum
-        if (this.momentumAnimation) {
-            cancelAnimationFrame(this.momentumAnimation);
-            this.momentumAnimation = undefined;
-        }
+        this.stopTimelineMomentum();
         const container = this.timelineContainer.nativeElement;
         // Get the exact mouse position relative to the page
         this.startX = event.pageX;
@@ -269,20 +276,25 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         // Add global mouse event listeners
         document.addEventListener('mousemove', this.boundMouseMove);
         document.addEventListener('mouseup', this.boundMouseUp);
-        // Change cursor to indicate dragging
-        container.style.cursor = 'grabbing';
-        document.body.style.userSelect = 'none';
-        // Add dragging class for CSS optimizations
-        container.classList.add('is-dragging');
     }
     private onMouseMove(event: MouseEvent): void {
-        if (!this.isDragging || !this.timelineContainer) return;
-        event.preventDefault();
+        if ((!this.isDragArmed && !this.isDragging) || !this.timelineContainer) return;
         const container = this.timelineContainer.nativeElement;
         const currentTime = performance.now();
         const currentX = event.pageX;
+        const deltaX = currentX - this.startX;
+
+        if (!this.isDragging) {
+            if (Math.abs(deltaX) < this.dragActivationThreshold) {
+                return;
+            }
+
+            this.beginTimelineDrag(container);
+        }
+
+        event.preventDefault();
         // Check if we've moved enough to consider it a drag
-        if (!this.hasDragged && Math.abs(currentX - this.startX) > 5) {
+        if (!this.hasDragged) {
             this.hasDragged = true;
         }
         // Calculate velocity for momentum
@@ -293,7 +305,6 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.lastX = currentX;
         this.lastTime = currentTime;
         // Calculate new scroll position
-        const deltaX = currentX - this.startX;
         const newScrollLeft = this.scrollStart - deltaX;
         // Apply scroll immediately without requestAnimationFrame for instant feedback
         container.scrollLeft = newScrollLeft;
@@ -301,21 +312,93 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.updateVisibleItemsSync();
     }
     private onMouseUp(event: MouseEvent): void {
-        if (!this.isDragging) return;
+        if (!this.isDragArmed && !this.isDragging) return;
+        const wasDragging = this.isDragging;
+        this.isDragArmed = false;
         this.isDragging = false;
         // Remove global mouse event listeners
         document.removeEventListener('mousemove', this.boundMouseMove);
         document.removeEventListener('mouseup', this.boundMouseUp);
+
+        if (!wasDragging) {
+            this.hasDragged = false;
+            return;
+        }
+
         // Reset cursor and user selection
         if (this.timelineContainer) {
             const container = this.timelineContainer.nativeElement;
-            container.style.cursor = 'grab';
-            container.classList.remove('is-dragging');
+            this.endTimelineDrag(container);
         }
         document.body.style.userSelect = '';
         // Start momentum scrolling if velocity is significant
         if (Math.abs(this.velocityX) > 0.5) {
             this.startMomentum();
+        }
+
+        window.setTimeout(() => {
+            this.hasDragged = false;
+        }, 0);
+    }
+    private beginTimelineDrag(container: HTMLElement): void {
+        this.isDragging = true;
+        this.isDragArmed = false;
+        this.blurActiveTimelineElement(container);
+        container.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
+        container.classList.add('is-dragging');
+    }
+    private endTimelineDrag(container: HTMLElement): void {
+        container.style.cursor = '';
+        container.classList.remove('is-dragging');
+    }
+    private blurActiveTimelineElement(container: HTMLElement): void {
+        const activeElement = document.activeElement;
+        if (activeElement instanceof HTMLElement && container.contains(activeElement)) {
+            activeElement.blur();
+        }
+    }
+    private isTimelineInteractiveTarget(target: EventTarget | null, extraSelector = ''): boolean {
+        const targetElement = this.getTimelineEventElement(target);
+        if (!targetElement) {
+            return false;
+        }
+
+        const interactiveSelector = [
+            'a',
+            'button',
+            'input',
+            'textarea',
+            'select',
+            '[role="button"]',
+            '[role="link"]',
+            '.mat-mdc-button-base',
+            '.mat-mdc-checkbox',
+            '.event-card',
+            '.event-avatar-strip-shell',
+            '.timeline-avatar-hover-card',
+            extraSelector
+        ].filter(Boolean).join(',');
+
+        return targetElement.closest(interactiveSelector) !== null;
+    }
+    private getTimelineEventElement(target: EventTarget | null): Element | null {
+        if (target instanceof Element) {
+            return target;
+        }
+
+        if (target instanceof Node) {
+            return target.parentElement;
+        }
+
+        return null;
+    }
+    private stopTimelineMomentum(): void {
+        this.isDecelerating = false;
+        this.velocityX = 0;
+        if (this.momentumAnimation) {
+            cancelAnimationFrame(this.momentumAnimation);
+            this.momentumAnimation = undefined;
         }
     }
     private startMomentum(): void {
@@ -427,6 +510,11 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         // Clean up drag event listeners
         document.removeEventListener('mousemove', this.boundMouseMove);
         document.removeEventListener('mouseup', this.boundMouseUp);
+        this.isDragArmed = false;
+        this.isDragging = false;
+        if (this.timelineContainer) {
+            this.endTimelineDrag(this.timelineContainer.nativeElement);
+        }
         // Clean up animations
         if (this.dragAnimationFrame) {
             cancelAnimationFrame(this.dragAnimationFrame);
@@ -909,6 +997,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     scrollAvatarStripForward(event: MouseEvent): void {
         event.preventDefault();
         event.stopPropagation();
+        this.releasePointerFocus(event);
         this.hideAvatarHover();
 
         const button = event.currentTarget as HTMLElement | null;
@@ -925,9 +1014,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     getPredictionInsight(event?: TimelineEvent): TimelinePredictionInsight | null {
         return this.timelinePredictionService.buildInsight(event, this.timelineCalculation);
     }
+    getTimelineEventTitle(event?: TimelineEvent): string {
+        return this.timelineAvatarService.getEventDisplayTitle(event);
+    }
     openPredictionDetails(event: TimelineEvent | undefined, item: TimelineItem | undefined, prediction: TimelinePredictionInsight | null, clickEvent?: MouseEvent): void {
         clickEvent?.preventDefault();
         clickEvent?.stopPropagation();
+        this.releasePointerFocus(clickEvent);
 
         if (!event || !prediction) {
             return;
@@ -938,6 +1031,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             insight: prediction,
             calculation: this.timelineCalculation,
             eventTypeLabel: this.eventTypeToLabel(event.type),
+            displayTitle: this.getTimelineEventTitle(event),
             dateLabel: item ? this.formatDate(item) : this.formatPredictionEventDate(event)
         };
 
@@ -1378,6 +1472,19 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.hasDragged) {
             event.preventDefault();
             event.stopPropagation();
+            return;
+        }
+
+        this.releasePointerFocus(event);
+    }
+    private releasePointerFocus(event?: MouseEvent): void {
+        if (!event || event.detail === 0) {
+            return;
+        }
+
+        const target = event.currentTarget;
+        if (target instanceof HTMLElement) {
+            window.setTimeout(() => target.blur(), 0);
         }
     }
     // Format date to ensure consistent display in user's local timezone
