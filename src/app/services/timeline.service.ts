@@ -1,15 +1,44 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, combineLatest, Observable } from 'rxjs';
 import { debounceTime, map } from 'rxjs/operators';
-import { TimelineEvent, EventType, TimelineFilters, TimelineAnniversary } from '../models/timeline.model';
+import {
+  EventType,
+  TimelineAnniversary,
+  TimelineCalculation,
+  TimelineCalendarLikelihood,
+  TimelineCountLikelihood,
+  TimelineEvent,
+  TimelineEventTypeCalendarLikelihood,
+  TimelineFilters,
+  TimelineNamedLikelihood,
+  TimelinePrediction
+} from '../models/timeline.model';
 import { ResourceDataService, ResourceLoadError } from './resource-data.service';
 
 const TIMELINE_RESOURCE_NAME = 'banner_timeline';
 
 interface BannerTimelineResource {
   version?: number;
+  calculation?: BannerTimelineResourceCalculation;
   anniversaries?: BannerTimelineResourceAnniversary[];
   events?: BannerTimelineResourceEvent[];
+}
+
+interface BannerTimelineResourceCalculation {
+  jp_launch_date?: string | null;
+  global_launch_date?: string | null;
+  fallback_acceleration_rate?: number;
+  observed_acceleration_rate?: number;
+  confirmed_anchor_count?: number;
+  character_banner_month_count_likelihoods?: unknown;
+  character_banner_gap_likelihoods?: unknown;
+  character_banner_weekday_likelihoods?: unknown;
+  character_banner_month_day_likelihoods?: unknown;
+  event_type_calendar_likelihoods?: unknown;
+  latest_closed_global_month?: string | null;
+  unconfirmed_schedule_floor?: string | null;
+  latest_confirmed_jp_date?: string | null;
+  latest_confirmed_global_date?: string | null;
 }
 
 interface BannerTimelineResourceAnniversary {
@@ -32,18 +61,45 @@ interface BannerTimelineResourceEvent {
   is_confirmed?: boolean;
   banner_duration_days?: number;
   tags?: unknown;
+  pickup_card_ids?: unknown;
   related_characters?: unknown;
   related_support_cards?: unknown;
   image_path?: string | null;
   gametora_url?: string | null;
+  prediction?: BannerTimelineResourcePrediction;
+}
+
+interface BannerTimelineResourcePrediction {
+  kind?: string;
+  acceleration_rate?: number;
+  schedule_adjustment_days?: number;
+  calendar_likelihood?: BannerTimelineResourceCalendarLikelihood;
+  anchor_jp_date?: string | null;
+  anchor_global_date?: string | null;
+}
+
+interface BannerTimelineResourceCalendarLikelihood {
+  month_character_banner_count?: number;
+  month_character_banner_count_probability?: number;
+  weekday?: string;
+  weekday_probability?: number;
+  day_of_month?: number;
+  day_of_month_probability?: number;
+  previous_character_gap_days?: number;
+  previous_character_gap_probability?: number;
+  next_character_gap_days?: number;
+  next_character_gap_probability?: number;
+  score?: number;
 }
 
 @Injectable({ providedIn: 'root' })
 export class TimelineService {
   private readonly eventsSubject = new BehaviorSubject<TimelineEvent[]>([]);
   private readonly anniversariesSubject = new BehaviorSubject<TimelineAnniversary[]>([]);
+  private readonly calculationSubject = new BehaviorSubject<TimelineCalculation | null>(null);
   readonly events$ = this.eventsSubject.asObservable();
   readonly anniversaries$ = this.anniversariesSubject.asObservable();
+  readonly calculation$ = this.calculationSubject.asObservable();
   readonly loading$: Observable<boolean>;
   readonly error$: Observable<ResourceLoadError | null>;
 
@@ -67,6 +123,7 @@ export class TimelineService {
       debounceTime(0)
     ).subscribe(resource => {
       this.resourceEvents = this.processBannerTimelineResource(resource);
+      this.calculationSubject.next(this.toTimelineCalculation(resource?.calculation));
       this.anniversariesSubject.next(this.processBannerTimelineAnniversaries(resource));
       this.publishEvents();
     });
@@ -194,11 +251,183 @@ export class TimelineService {
       isConfirmed: event.is_confirmed === true,
       bannerDuration,
       tags: this.toStringArray(event.tags),
+      pickupCardIds: this.toNumberArray(event.pickup_card_ids),
       relatedCharacters: this.toStringArray(event.related_characters),
       relatedSupportCards: this.toStringArray(event.related_support_cards),
       imagePath: event.image_path || undefined,
-      gametoraURL: event.gametora_url || undefined
+      gametoraURL: event.gametora_url || undefined,
+      prediction: this.toTimelinePrediction(event.prediction)
     };
+  }
+
+  private toTimelineCalculation(calculation?: BannerTimelineResourceCalculation): TimelineCalculation | null {
+    if (!calculation) {
+      return null;
+    }
+
+    return {
+      jpLaunchDate: this.parseResourceDate(calculation.jp_launch_date),
+      globalLaunchDate: this.parseResourceDate(calculation.global_launch_date),
+      fallbackAccelerationRate: typeof calculation.fallback_acceleration_rate === 'number'
+        ? calculation.fallback_acceleration_rate
+        : undefined,
+      observedAccelerationRate: typeof calculation.observed_acceleration_rate === 'number'
+        ? calculation.observed_acceleration_rate
+        : undefined,
+      confirmedAnchorCount: typeof calculation.confirmed_anchor_count === 'number'
+        ? calculation.confirmed_anchor_count
+        : undefined,
+      characterBannerMonthCountLikelihoods: this.toCountLikelihoodArray(calculation.character_banner_month_count_likelihoods),
+      characterBannerGapLikelihoods: this.toCountLikelihoodArray(calculation.character_banner_gap_likelihoods),
+      characterBannerWeekdayLikelihoods: this.toNamedLikelihoodArray(calculation.character_banner_weekday_likelihoods),
+      characterBannerMonthDayLikelihoods: this.toCountLikelihoodArray(calculation.character_banner_month_day_likelihoods),
+      eventTypeCalendarLikelihoods: this.toEventTypeCalendarLikelihoods(calculation.event_type_calendar_likelihoods),
+      latestClosedGlobalMonth: calculation.latest_closed_global_month || undefined,
+      unconfirmedScheduleFloor: this.parseResourceDate(calculation.unconfirmed_schedule_floor),
+      latestConfirmedJpDate: this.parseResourceDate(calculation.latest_confirmed_jp_date),
+      latestConfirmedGlobalDate: this.parseResourceDate(calculation.latest_confirmed_global_date)
+    };
+  }
+
+  private toTimelinePrediction(prediction?: BannerTimelineResourcePrediction): TimelinePrediction | undefined {
+    if (!prediction || !this.isPredictionKind(prediction.kind)) {
+      return undefined;
+    }
+
+    return {
+      kind: prediction.kind,
+      accelerationRate: typeof prediction.acceleration_rate === 'number'
+        ? prediction.acceleration_rate
+        : undefined,
+      scheduleAdjustmentDays: typeof prediction.schedule_adjustment_days === 'number'
+        ? prediction.schedule_adjustment_days
+        : undefined,
+      calendarLikelihood: this.toCalendarLikelihood(prediction.calendar_likelihood),
+      anchorJpDate: this.parseResourceDate(prediction.anchor_jp_date),
+      anchorGlobalDate: this.parseResourceDate(prediction.anchor_global_date)
+    };
+  }
+
+  private isPredictionKind(value: string | undefined): value is TimelinePrediction['kind'] {
+    return value === 'confirmed'
+      || value === 'interpolated'
+      || value === 'extrapolated'
+      || value === 'fallback';
+  }
+
+  private toCalendarLikelihood(value?: BannerTimelineResourceCalendarLikelihood): TimelineCalendarLikelihood | undefined {
+    if (
+      !value ||
+      typeof value.month_character_banner_count !== 'number' ||
+      typeof value.month_character_banner_count_probability !== 'number' ||
+      typeof value.weekday !== 'string' ||
+      typeof value.weekday_probability !== 'number' ||
+      typeof value.day_of_month !== 'number' ||
+      typeof value.day_of_month_probability !== 'number' ||
+      typeof value.score !== 'number'
+    ) {
+      return undefined;
+    }
+
+    return {
+      monthCharacterBannerCount: value.month_character_banner_count,
+      monthCharacterBannerCountProbability: value.month_character_banner_count_probability,
+      weekday: value.weekday,
+      weekdayProbability: value.weekday_probability,
+      dayOfMonth: value.day_of_month,
+      dayOfMonthProbability: value.day_of_month_probability,
+      previousCharacterGapDays: typeof value.previous_character_gap_days === 'number'
+        ? value.previous_character_gap_days
+        : undefined,
+      previousCharacterGapProbability: typeof value.previous_character_gap_probability === 'number'
+        ? value.previous_character_gap_probability
+        : undefined,
+      nextCharacterGapDays: typeof value.next_character_gap_days === 'number'
+        ? value.next_character_gap_days
+        : undefined,
+      nextCharacterGapProbability: typeof value.next_character_gap_probability === 'number'
+        ? value.next_character_gap_probability
+        : undefined,
+      score: value.score
+    };
+  }
+
+  private toEventTypeCalendarLikelihoods(value: unknown): TimelineEventTypeCalendarLikelihood[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map(item => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+
+        const record = item as Record<string, unknown>;
+        const type = this.toEventType(typeof record['type'] === 'string' ? record['type'] : undefined);
+        const samples = record['samples'];
+        if (!type || typeof samples !== 'number') {
+          return null;
+        }
+
+        return {
+          type,
+          samples,
+          weekdayLikelihoods: this.toNamedLikelihoodArray(record['weekday_likelihoods']),
+          monthDayLikelihoods: this.toCountLikelihoodArray(record['month_day_likelihoods'])
+        };
+      })
+      .filter((item): item is TimelineEventTypeCalendarLikelihood => item !== null);
+  }
+
+  private toCountLikelihoodArray(value: unknown): TimelineCountLikelihood[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map(item => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+
+        const record = item as Record<string, unknown>;
+        return typeof record['value'] === 'number' &&
+          typeof record['samples'] === 'number' &&
+          typeof record['probability'] === 'number'
+          ? {
+            value: record['value'],
+            samples: record['samples'],
+            probability: record['probability']
+          }
+          : null;
+      })
+      .filter((item): item is TimelineCountLikelihood => item !== null);
+  }
+
+  private toNamedLikelihoodArray(value: unknown): TimelineNamedLikelihood[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map(item => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+
+        const record = item as Record<string, unknown>;
+        return typeof record['value'] === 'string' &&
+          typeof record['samples'] === 'number' &&
+          typeof record['probability'] === 'number'
+          ? {
+            value: record['value'],
+            samples: record['samples'],
+            probability: record['probability']
+          }
+          : null;
+      })
+      .filter((item): item is TimelineNamedLikelihood => item !== null);
   }
 
   private toTimelineAnniversary(anniversary: BannerTimelineResourceAnniversary): TimelineAnniversary | null {
@@ -262,6 +491,15 @@ export class TimelineService {
     }
 
     return value.filter((item): item is string => typeof item === 'string');
+  }
+
+  private toNumberArray(value: unknown): number[] | undefined {
+    if (!Array.isArray(value)) {
+      return undefined;
+    }
+
+    const numbers = value.filter((item): item is number => typeof item === 'number');
+    return numbers.length > 0 ? numbers : undefined;
   }
 
   private compareTimelineEvents(a: TimelineEvent, b: TimelineEvent): number {

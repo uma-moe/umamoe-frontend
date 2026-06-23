@@ -10,10 +10,71 @@ export interface TimelineEvent {
   isConfirmed: boolean;
   bannerDuration?: number; // days
   tags?: string[];
+  pickupCardIds?: number[];
   relatedCharacters?: string[];
   relatedSupportCards?: string[];
   imagePath?: string; // Path to banner image
   gametoraURL?: string;
+  prediction?: TimelinePrediction;
+}
+
+export interface TimelinePrediction {
+  kind: 'confirmed' | 'interpolated' | 'extrapolated' | 'fallback';
+  accelerationRate?: number;
+  scheduleAdjustmentDays?: number;
+  calendarLikelihood?: TimelineCalendarLikelihood;
+  anchorJpDate?: Date;
+  anchorGlobalDate?: Date;
+}
+
+export interface TimelineCalendarLikelihood {
+  monthCharacterBannerCount: number;
+  monthCharacterBannerCountProbability: number;
+  weekday: string;
+  weekdayProbability: number;
+  dayOfMonth: number;
+  dayOfMonthProbability: number;
+  previousCharacterGapDays?: number;
+  previousCharacterGapProbability?: number;
+  nextCharacterGapDays?: number;
+  nextCharacterGapProbability?: number;
+  score: number;
+}
+
+export interface TimelineCountLikelihood {
+  value: number;
+  samples: number;
+  probability: number;
+}
+
+export interface TimelineNamedLikelihood {
+  value: string;
+  samples: number;
+  probability: number;
+}
+
+export interface TimelineEventTypeCalendarLikelihood {
+  type: EventType;
+  samples: number;
+  weekdayLikelihoods: TimelineNamedLikelihood[];
+  monthDayLikelihoods: TimelineCountLikelihood[];
+}
+
+export interface TimelineCalculation {
+  jpLaunchDate?: Date;
+  globalLaunchDate?: Date;
+  fallbackAccelerationRate?: number;
+  observedAccelerationRate?: number;
+  confirmedAnchorCount?: number;
+  characterBannerMonthCountLikelihoods: TimelineCountLikelihood[];
+  characterBannerGapLikelihoods: TimelineCountLikelihood[];
+  characterBannerWeekdayLikelihoods: TimelineNamedLikelihood[];
+  characterBannerMonthDayLikelihoods: TimelineCountLikelihood[];
+  eventTypeCalendarLikelihoods: TimelineEventTypeCalendarLikelihood[];
+  latestClosedGlobalMonth?: string;
+  unconfirmedScheduleFloor?: Date;
+  latestConfirmedJpDate?: Date;
+  latestConfirmedGlobalDate?: Date;
 }
 
 export interface TimelineAnniversary {

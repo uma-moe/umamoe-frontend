@@ -23,6 +23,137 @@
     <span>Loading timeline resources...</span>
   </div>
 
+  <ng-template #eventAvatarRows let-event>
+    <ng-container *ngIf="getCharacterAvatars(event) as characterAvatars">
+      <div
+        *ngIf="characterAvatars.length"
+        class="event-avatar-strip-shell character-avatars"
+        [class.has-overflow-avatars]="characterAvatars.length > 4"
+        aria-label="Characters"
+        (pointerleave)="scheduleAvatarHoverHide()"
+      >
+        <div
+          class="event-avatar-strip"
+          (wheel)="onAvatarStripWheel($event)"
+          (scroll)="hideAvatarHover()"
+        >
+          <a
+            *ngFor="
+              let avatar of characterAvatars;
+              trackBy: trackByAvatarKey
+            "
+            [href]="avatar.gametoraUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="event-avatar-link event-avatar-character"
+            [attr.aria-label]="'Open ' + avatar.displayName + ' on Gametora'"
+            (pointerenter)="showAvatarHover($event, avatar)"
+            (focus)="showAvatarHover($event, avatar)"
+            (pointerleave)="scheduleAvatarHoverHide()"
+            (blur)="scheduleAvatarHoverHide()"
+            (click)="onLinkClick($event)"
+          >
+            <img
+              [src]="avatar.imageUrl"
+              [alt]="avatar.displayName"
+              loading="lazy"
+              decoding="async"
+              (error)="onImageError($event)"
+              class="event-avatar-img"
+            />
+          </a>
+        </div>
+        <button
+          *ngIf="characterAvatars.length > 4"
+          type="button"
+          class="avatar-scroll-hint"
+          [attr.aria-label]="'Show ' + (characterAvatars.length - 4) + ' more characters'"
+          (click)="scrollAvatarStripForward($event)"
+        >
+          <span>+{{ characterAvatars.length - 4 }}</span>
+          <small>more</small>
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="getSupportAvatars(event) as supportAvatars">
+      <div
+        *ngIf="supportAvatars.length"
+        class="event-avatar-strip-shell support-avatars"
+        [class.has-overflow-avatars]="supportAvatars.length > 4"
+        aria-label="Support cards"
+        (pointerleave)="scheduleAvatarHoverHide()"
+      >
+        <div
+          class="event-avatar-strip"
+          (wheel)="onAvatarStripWheel($event)"
+          (scroll)="hideAvatarHover()"
+        >
+          <a
+            *ngFor="
+              let avatar of supportAvatars;
+              trackBy: trackByAvatarKey
+            "
+            [href]="avatar.gametoraUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="event-avatar-link event-avatar-support"
+            [attr.aria-label]="'Open ' + avatar.displayName + ' on Gametora'"
+            (pointerenter)="showAvatarHover($event, avatar)"
+            (focus)="showAvatarHover($event, avatar)"
+            (pointerleave)="scheduleAvatarHoverHide()"
+            (blur)="scheduleAvatarHoverHide()"
+            (click)="onLinkClick($event)"
+          >
+            <img
+              [src]="avatar.imageUrl"
+              [alt]="avatar.displayName"
+              loading="lazy"
+              decoding="async"
+              (error)="onImageError($event)"
+              class="event-avatar-img"
+            />
+          </a>
+        </div>
+        <button
+          *ngIf="supportAvatars.length > 4"
+          type="button"
+          class="avatar-scroll-hint"
+          [attr.aria-label]="'Show ' + (supportAvatars.length - 4) + ' more support cards'"
+          (click)="scrollAvatarStripForward($event)"
+        >
+          <span>+{{ supportAvatars.length - 4 }}</span>
+          <small>more</small>
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </ng-container>
+  </ng-template>
+
+  <a
+    class="timeline-avatar-hover-card"
+    [class.is-visible]="hoverAvatar !== null"
+    [class.is-support]="hoverAvatar?.kind === 'support'"
+    [href]="hoverAvatar?.gametoraUrl || null"
+    target="_blank"
+    rel="noopener noreferrer"
+    [style.left.px]="hoverAvatarPosition.left"
+    [style.top.px]="hoverAvatarPosition.top"
+    (pointerenter)="cancelAvatarHoverHide()"
+    (pointerleave)="hideAvatarHover()"
+    (focus)="cancelAvatarHoverHide()"
+    (blur)="hideAvatarHover()"
+    [attr.aria-label]="'Open ' + (hoverAvatar?.displayName || hoverAvatar?.name || 'item') + ' on Gametora'"
+  >
+    <strong>{{ hoverAvatar?.name }}</strong>
+    <small>{{ hoverAvatar?.subLabel }}</small>
+    <span class="hover-card-action">
+      <mat-icon>open_in_new</mat-icon>
+      View on Gametora
+    </span>
+  </a>
+
   <!-- Mobile Timeline -->
   <app-mobile-timeline *ngIf="isMobile"></app-mobile-timeline>
 
@@ -300,13 +431,7 @@
               [style.bottom]="item.side === 'top' ? '50%' : 'auto'"
               [style.top]="item.side === 'bottom' ? '50%' : (item.type === 'today' || item.type === 'anniversary' || item.type === 'milestone') ? '100%' : 'auto'"
             >
-              <a
-                *ngIf="item.eventData?.gametoraURL"
-                [href]="item.eventData?.gametoraURL"
-                target="_blank"
-                rel="noopener noreferrer"
-                (click)="onLinkClick($event)"
-              >
+              <ng-container *ngIf="item.eventData?.gametoraURL">
                 <!-- Event cards (only for events, not milestones) -->
                 <mat-card
                   *ngIf="item.type === 'event'"
@@ -316,12 +441,12 @@
                   [style.--group-index]="item.groupIndex || 0"
                   [style.--group-offset.px]="
                     item.isGrouped && item.groupIndex !== undefined
-                      ? item.groupIndex * 290
+                      ? item.groupIndex * groupedCardOffset
                       : 0
                   "
                   [style.transform]="
                     item.isGrouped && item.groupIndex !== undefined
-                      ? 'translateX(' + item.groupIndex * 290 + 'px)'
+                      ? 'translateX(' + item.groupIndex * groupedCardOffset + 'px)'
                       : 'none'
                   "
                 >
@@ -347,6 +472,8 @@
                               i -
                             40
                           "
+                          loading="lazy"
+                          decoding="async"
                           (error)="onImageError($event)"
                           class="legend-race-image"
                         />
@@ -356,6 +483,8 @@
                       <img
                         [src]="item.eventData.imagePath"
                         [alt]="item.eventData.title || 'Event'"
+                        loading="lazy"
+                        decoding="async"
                         (error)="onImageError($event)"
                       />
                     </ng-container>
@@ -412,6 +541,30 @@
                       <div class="event-type">
                         {{ eventTypeToLabel(item.eventData?.type) }}
                       </div>
+                      <a
+                        *ngIf="item.eventData?.gametoraURL"
+                        [href]="item.eventData?.gametoraURL"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="event-ext-link"
+                        matTooltip="View event on Gametora"
+                        aria-label="View event on Gametora"
+                        (click)="onLinkClick($event)"
+                      >
+                        <mat-icon>open_in_new</mat-icon>
+                      </a>
+                      <ng-container *ngIf="getPredictionInsight(item.eventData) as prediction">
+                        <button
+                          type="button"
+                          class="event-info-btn"
+                          mat-icon-button
+                          matTooltip="Prediction details"
+                          aria-label="Show prediction details"
+                          (click)="openPredictionDetails(item.eventData, item, prediction, $event)"
+                        >
+                          <mat-icon>info</mat-icon>
+                        </button>
+                      </ng-container>
                     </div>
                     <div class="event-title">
                       {{ item.eventData?.title || item.label }}
@@ -433,45 +586,15 @@
                       {{ formatDate(item) }}
                     </div>
 
-                    <!-- Character/Support Card info -->
-                    <div
-                      *ngIf="
-                        item.eventData &&
-                        item.eventData.relatedCharacters &&
-                        item.eventData.relatedCharacters.length > 0 &&
-                        item.eventData.type !== 'legend_race'
+                    <ng-container
+                      *ngTemplateOutlet="
+                        eventAvatarRows;
+                        context: { $implicit: item.eventData }
                       "
-                      class="event-tags"
-                    >
-                      <mat-chip
-                        *ngFor="let char of item.eventData.relatedCharacters"
-                        class="character-chip"
-                      >
-                        {{ char }}
-                      </mat-chip>
-                    </div>
-
-                    <!-- Support Card info -->
-                    <div
-                      *ngIf="
-                        item.eventData &&
-                        item.eventData.relatedSupportCards &&
-                        item.eventData.relatedSupportCards.length > 0
-                      "
-                      class="event-tags"
-                    >
-                      <mat-chip
-                        *ngFor="
-                          let support of item.eventData.relatedSupportCards
-                        "
-                        class="support-chip"
-                      >
-                        {{ support }}
-                      </mat-chip>
-                    </div>
+                    ></ng-container>
                   </div>
                 </mat-card>
-              </a>
+              </ng-container>
 
               <mat-card
                 *ngIf="
@@ -484,12 +607,12 @@
                 [style.--group-index]="item.groupIndex || 0"
                 [style.--group-offset.px]="
                   item.isGrouped && item.groupIndex !== undefined
-                    ? item.groupIndex * 290
+                    ? item.groupIndex * groupedCardOffset
                     : 0
                 "
                 [style.transform]="
                   item.isGrouped && item.groupIndex !== undefined
-                    ? 'translateX(' + item.groupIndex * 290 + 'px)'
+                    ? 'translateX(' + item.groupIndex * groupedCardOffset + 'px)'
                     : 'none'
                 "
               >
@@ -515,6 +638,8 @@
                             i -
                           40
                         "
+                        loading="lazy"
+                        decoding="async"
                         (error)="onImageError($event)"
                         class="legend-race-image"
                       />
@@ -524,6 +649,8 @@
                     <img
                       [src]="item.eventData.imagePath"
                       [alt]="item.eventData.title || 'Event'"
+                      loading="lazy"
+                      decoding="async"
                       (error)="onImageError($event)"
                     />
                   </ng-container>
@@ -580,6 +707,30 @@
                     <div class="event-type">
                       {{ eventTypeToLabel(item.eventData?.type) }}
                     </div>
+                    <a
+                      *ngIf="item.eventData?.gametoraURL"
+                      [href]="item.eventData?.gametoraURL"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="event-ext-link"
+                      matTooltip="View event on Gametora"
+                      aria-label="View event on Gametora"
+                      (click)="onLinkClick($event)"
+                    >
+                      <mat-icon>open_in_new</mat-icon>
+                    </a>
+                    <ng-container *ngIf="getPredictionInsight(item.eventData) as prediction">
+                      <button
+                        type="button"
+                        class="event-info-btn"
+                        mat-icon-button
+                        matTooltip="Prediction details"
+                        aria-label="Show prediction details"
+                        (click)="openPredictionDetails(item.eventData, item, prediction, $event)"
+                      >
+                        <mat-icon>info</mat-icon>
+                      </button>
+                    </ng-container>
                   </div>
                   <div class="event-title">
                     {{ item.eventData?.title || item.label }}
@@ -601,40 +752,12 @@
                     {{ formatDate(item) }}
                   </div>
 
-                  <!-- Character/Support Card info -->
-                  <div
-                    *ngIf="
-                      item.eventData &&
-                      item.eventData.relatedCharacters &&
-                      item.eventData.relatedCharacters.length > 0 &&
-                      item.eventData.type !== 'legend_race'
+                  <ng-container
+                    *ngTemplateOutlet="
+                      eventAvatarRows;
+                      context: { $implicit: item.eventData }
                     "
-                    class="event-tags"
-                  >
-                    <mat-chip
-                      *ngFor="let char of item.eventData.relatedCharacters"
-                      class="character-chip"
-                    >
-                      {{ char }}
-                    </mat-chip>
-                  </div>
-
-                  <!-- Support Card info -->
-                  <div
-                    *ngIf="
-                      item.eventData &&
-                      item.eventData.relatedSupportCards &&
-                      item.eventData.relatedSupportCards.length > 0
-                    "
-                    class="event-tags"
-                  >
-                    <mat-chip
-                      *ngFor="let support of item.eventData.relatedSupportCards"
-                      class="support-chip"
-                    >
-                      {{ support }}
-                    </mat-chip>
-                  </div>
+                  ></ng-container>
                 </div>
               </mat-card>
 

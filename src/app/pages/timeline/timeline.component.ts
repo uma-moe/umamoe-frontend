@@ -4,7 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -14,8 +14,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 import { ScrollingModule, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { TimelineService } from '../../services/timeline.service';
-import { TimelineEvent, EventType, TimelineAnniversary } from '../../models/timeline.model';
+import { TimelineCalculation, TimelineEvent, EventType, TimelineAnniversary } from '../../models/timeline.model';
 import { MobileTimelineComponent } from '../../components/mobile-timeline/mobile-timeline.component';
+import { TimelineAvatar, TimelineAvatarService } from '../../services/timeline-avatar.service';
+import { TimelinePredictionInsight, TimelinePredictionService } from '../../services/timeline-prediction.service';
+import { TimelinePredictionDialogComponent, TimelinePredictionDialogData } from './timeline-prediction-dialog.component';
 import { combineLatest, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Meta, Title } from '@angular/platform-browser';
@@ -40,6 +43,7 @@ interface EventFilters {
     showCampaigns: boolean;
     searchQuery: string;
 }
+
 @Component({
     selector: 'app-timeline',
     standalone: true,
@@ -49,7 +53,7 @@ interface EventFilters {
         MatButtonModule,
         MatIconModule,
         MatTooltipModule,
-        MatChipsModule,
+        MatDialogModule,
         MatSlideToggleModule,
         MatButtonToggleModule,
         MatCheckboxModule,
@@ -75,7 +79,12 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     isCompactMode = false; // For floating filter card
     compactModeHeightThreshold = 1200; // Height threshold for compact mode
     // Virtual rendering configuration
-    itemSize = 300; // Width per item for spacing calculation
+    readonly groupedCardOffset = 288;
+    private readonly timelineCardSlotWidth = 296;
+    private readonly timelineMarkerSlotWidth = 64;
+    private readonly timelineAnchorGap = 280;
+    private readonly timelineEndPadding = 360;
+    itemSize = this.timelineCardSlotWidth; // Width per item for spacing calculation
     allTimelineItems: TimelineItem[] = []; // All items (for data)
     visibleTimelineItems: TimelineItem[] = []; // Only visible items (for rendering)
     viewportWidth = 0;
@@ -105,6 +114,12 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private scrollSubscription?: Subscription;
     timelineEvents: TimelineEvent[] = [];
     timelineAnniversaries: TimelineAnniversary[] = [];
+    timelineCalculation: TimelineCalculation | null = null;
+    hoverAvatar: TimelineAvatar | null = null;
+    hoverAvatarPosition = { left: 0, top: 0 };
+    private readonly avatarHoverCardWidth = 182;
+    private readonly avatarHoverCardHeight = 72;
+    private avatarHoverHideTimer?: number;
     // Drag to scroll properties
     isDragging = false;
     hasDragged = false;
@@ -131,7 +146,16 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private initialTodayScrollScheduled = false;
     readonly timelineLoading$ = this.timelineService.loading$;
     readonly timelineError$ = this.timelineService.error$;
-    constructor(private timelineService: TimelineService, private ngZone: NgZone, private cdr: ChangeDetectorRef, private meta: Meta, private title: Title) {
+    constructor(
+        private timelineService: TimelineService,
+        private timelineAvatarService: TimelineAvatarService,
+        private timelinePredictionService: TimelinePredictionService,
+        private dialog: MatDialog,
+        private ngZone: NgZone,
+        private cdr: ChangeDetectorRef,
+        private meta: Meta,
+        private title: Title
+    ) {
         this.title.setTitle('Timeline | uma.moe');
         this.meta.addTags([
             { name: 'description', content: 'Check the estimated release timeline for the global version. When does your favorite character release?' },
@@ -150,8 +174,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     onResize(event: any): void {
         this.checkMobileBreakpoint();
         this.checkCompactMode();
-        this.calculateDynamicScale();
         if (!this.isMobile) {
+            this.calculateDynamicScale();
             // Recalculate viewport for desktop timeline
             this.updateVisibleItems();
         }
@@ -159,6 +183,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     @HostListener('wheel', ['$event'])
     onWheel(event: WheelEvent): void {
         if (!this.timelineContainer || this.isMobile) return;
+        this.hideAvatarHover();
         // Always handle wheel events for horizontal scrolling on the timeline
         event.preventDefault();
         const container = this.timelineContainer.nativeElement;
@@ -223,6 +248,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!this.timelineContainer || this.isMobile) return;
         // Only handle left mouse button, ignore middle mouse button for page scrolling
         if (event.button !== 0) return;
+        this.hideAvatarHover();
         event.preventDefault();
         this.isDragging = true;
         this.hasDragged = false;
@@ -327,17 +353,26 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         // Subscribe to timeline data from the service
         this.eventsSubscription = combineLatest([
             this.timelineService.events$,
-            this.timelineService.anniversaries$
-        ]).subscribe(([events, anniversaries]) => {
+            this.timelineService.anniversaries$,
+            this.timelineService.calculation$
+        ]).subscribe(([events, anniversaries, calculation]) => {
             this.timelineEvents = events;
             this.timelineAnniversaries = anniversaries;
+            this.timelineCalculation = calculation;
+            if (this.isMobile) {
+                this.clearDesktopTimelineItems();
+                this.cdr.detectChanges();
+                return;
+            }
             this.generateTimelineItems();
             this.updateVisibleItemsSync(true);
             // Trigger change detection manually
             this.cdr.detectChanges();
             this.scheduleInitialScrollToToday();
         });
-        this.generateTimelineItems();
+        if (!this.isMobile) {
+            this.generateTimelineItems();
+        }
     }
     ngAfterViewInit(): void {
         this.viewInitialized = true;
@@ -382,6 +417,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     ngOnDestroy(): void {
         this.destroyed = true;
+        this.cancelAvatarHoverHide();
         if (this.eventsSubscription) {
             this.eventsSubscription.unsubscribe();
         }
@@ -456,12 +492,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
                 !this.eventFilters.showStoryEvents) return false;
             // Apply search filter - only search in tags (characters and support cards)
             if (this.eventFilters.searchQuery.trim()) {
-                const searchTerm = this.eventFilters.searchQuery.toLowerCase().trim();
-                const charactersMatch = event.relatedCharacters?.some(char =>
-                    char.toLowerCase().includes(searchTerm));
-                const supportsMatch = event.relatedSupportCards?.some(support =>
-                    support.toLowerCase().includes(searchTerm));
-                if (!charactersMatch && !supportsMatch) {
+                if (!this.timelineAvatarService.eventMatchesSearch(event, this.eventFilters.searchQuery)) {
                     return false;
                 }
             }
@@ -576,17 +607,17 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private assignSequentialPositions(): void {
         // Sort all items by date for sequential placement
         this.allTimelineItems.sort((a, b) => a.date.getTime() - b.date.getTime());
-        const CARD_SLOT_WIDTH = 310;        // Base width per event card slot
-        const GROUPED_CARD_EXTRA = 290;     // Extra width per additional grouped event
-        const MARKER_SLOT_WIDTH = 80;       // Width for non-event markers when alone
-        const ANCHOR_GAP = 400;              // Gap after previous card's anchor
+        const CARD_SLOT_WIDTH = this.timelineCardSlotWidth;
+        const GROUPED_CARD_EXTRA = this.groupedCardOffset;
+        const MARKER_SLOT_WIDTH = this.timelineMarkerSlotWidth;
+        const ANCHOR_GAP = this.timelineAnchorGap;
         // Overlay markers (today, anniversary) should not participate in layout;
         // they get interpolated afterward.
         const OVERLAY_TYPES = new Set(['today', 'anniversary']);
         // Track end positions per side and a shared last-anchor position
         let topEndPosition = this.initialOffset;
         let bottomEndPosition = this.initialOffset;
-        let lastAnchor = this.initialOffset;
+        let lastAnchor = this.initialOffset - ANCHOR_GAP;
         let i = 0;
         while (i < this.allTimelineItems.length) {
             const currentItem = this.allTimelineItems[i];
@@ -654,7 +685,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             }
         }
         // Update total width based on sequential layout
-        this.totalWidth = Math.max(topEndPosition, bottomEndPosition) + 500;
+        this.totalWidth = Math.max(topEndPosition, bottomEndPosition) + this.timelineEndPadding;
     }
     /**
      * After sequential positions are assigned, interpolate overlay markers
@@ -773,6 +804,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         });
     }
     onScroll(event: Event): void {
+        this.hideAvatarHover();
         // Handle scroll events if needed - keep minimal to avoid performance issues
     }
     getDateFromPosition(position: number): Date {
@@ -803,7 +835,126 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         });
     }
     onImageError(event: any): void {
-        (event.target as HTMLImageElement).style.display = 'none';
+        const image = event.target as HTMLImageElement;
+        image.style.display = 'none';
+        const avatarLink = image.closest<HTMLElement>('.event-avatar-link, .ev-avatar-link');
+        if (avatarLink) {
+            avatarLink.style.display = 'none';
+        }
+    }
+    getCharacterAvatars(event?: TimelineEvent): TimelineAvatar[] {
+        return this.timelineAvatarService.getCharacterAvatars(event);
+    }
+    getSupportAvatars(event?: TimelineEvent): TimelineAvatar[] {
+        return this.timelineAvatarService.getSupportAvatars(event);
+    }
+    trackByAvatarKey(index: number, avatar: TimelineAvatar): string {
+        return avatar.key;
+    }
+    showAvatarHover(event: Event, avatar: TimelineAvatar): void {
+        const target = event.currentTarget as HTMLElement | null;
+        if (!target) {
+            return;
+        }
+        this.cancelAvatarHoverHide();
+
+        const rect = target.getBoundingClientRect();
+        const gutter = 8;
+        const width = this.avatarHoverCardWidth;
+        const height = this.avatarHoverCardHeight;
+        let left = rect.left + rect.width / 2 - width / 2;
+        let top = rect.bottom + 8;
+
+        left = Math.max(gutter, Math.min(left, window.innerWidth - width - gutter));
+        if (top + height > window.innerHeight - gutter) {
+            top = Math.max(gutter, rect.top - height - 8);
+        }
+
+        this.hoverAvatar = avatar;
+        this.hoverAvatarPosition = { left, top };
+        this.cdr.detectChanges();
+    }
+    scheduleAvatarHoverHide(): void {
+        this.cancelAvatarHoverHide();
+        this.avatarHoverHideTimer = window.setTimeout(() => this.hideAvatarHover(), 140);
+    }
+    cancelAvatarHoverHide(): void {
+        if (this.avatarHoverHideTimer) {
+            window.clearTimeout(this.avatarHoverHideTimer);
+            this.avatarHoverHideTimer = undefined;
+        }
+    }
+    hideAvatarHover(): void {
+        this.cancelAvatarHoverHide();
+        if (!this.hoverAvatar) {
+            return;
+        }
+        this.hoverAvatar = null;
+        this.cdr.detectChanges();
+    }
+    onAvatarStripWheel(event: WheelEvent): void {
+        const strip = event.currentTarget as HTMLElement | null;
+        if (!strip || strip.scrollWidth <= strip.clientWidth) {
+            return;
+        }
+
+        this.hideAvatarHover();
+        event.preventDefault();
+        event.stopPropagation();
+
+        const rawDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+        const multiplier = event.deltaMode === 1 ? 18 : event.deltaMode === 2 ? strip.clientWidth : 1;
+        strip.scrollLeft += rawDelta * multiplier * 1.8;
+    }
+    scrollAvatarStripForward(event: MouseEvent): void {
+        event.preventDefault();
+        event.stopPropagation();
+        this.hideAvatarHover();
+
+        const button = event.currentTarget as HTMLElement | null;
+        const shell = button?.closest<HTMLElement>('.event-avatar-strip-shell');
+        const strip = shell?.querySelector<HTMLElement>('.event-avatar-strip');
+        if (!strip) {
+            return;
+        }
+
+        strip.scrollBy({
+            left: Math.max(strip.clientWidth * 0.85, 84),
+            behavior: 'smooth'
+        });
+    }
+    getPredictionInsight(event?: TimelineEvent): TimelinePredictionInsight | null {
+        return this.timelinePredictionService.buildInsight(event, this.timelineCalculation);
+    }
+    openPredictionDetails(event: TimelineEvent | undefined, item: TimelineItem | undefined, prediction: TimelinePredictionInsight | null, clickEvent?: MouseEvent): void {
+        clickEvent?.preventDefault();
+        clickEvent?.stopPropagation();
+
+        if (!event || !prediction) {
+            return;
+        }
+
+        const data: TimelinePredictionDialogData = {
+            event,
+            insight: prediction,
+            calculation: this.timelineCalculation,
+            eventTypeLabel: this.eventTypeToLabel(event.type),
+            dateLabel: item ? this.formatDate(item) : this.formatPredictionEventDate(event)
+        };
+
+        this.dialog.open(TimelinePredictionDialogComponent, {
+            data,
+            autoFocus: false,
+            maxWidth: '100vw',
+            restoreFocus: false,
+            panelClass: 'timeline-prediction-dialog-panel'
+        });
+    }
+    trackByPredictionMetric(index: number, metric: { label: string }): string {
+        return metric.label;
+    }
+    trackByPredictionAlternative(index: number, alternative: { label: string; reason: string }): string {
+        return `${alternative.label}-${alternative.reason}`;
     }
     // TrackBy function to optimize *ngFor performance
     trackTimelineItem(index: number, item: TimelineItem): any {
@@ -830,12 +981,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             .map((item: TimelineItem, index: number) => ({ item, index }))
             .filter(({ item }: { item: TimelineItem }) => {
                 if (item.type !== 'event' || !item.eventData) return false;
-                const searchTerm = this.eventFilters.searchQuery.toLowerCase().trim();
-                const charactersMatch = item.eventData.relatedCharacters?.some((char: string) =>
-                    char.toLowerCase().includes(searchTerm));
-                const supportsMatch = item.eventData.relatedSupportCards?.some((support: string) =>
-                    support.toLowerCase().includes(searchTerm));
-                return charactersMatch || supportsMatch;
+                return this.timelineAvatarService.eventMatchesSearch(item.eventData, this.eventFilters.searchQuery);
             })
             .map(({ index }: { index: number }) => index);
     }
@@ -943,12 +1089,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
                 !this.eventFilters.showStoryEvents) return false;
             // Apply search filter - only search in tags (characters and support cards)
             if (this.eventFilters.searchQuery.trim()) {
-                const searchTerm = this.eventFilters.searchQuery.toLowerCase().trim();
-                const charactersMatch = event.relatedCharacters?.some(char =>
-                    char.toLowerCase().includes(searchTerm));
-                const supportsMatch = event.relatedSupportCards?.some(support =>
-                    support.toLowerCase().includes(searchTerm));
-                if (!charactersMatch && !supportsMatch) {
+                if (!this.timelineAvatarService.eventMatchesSearch(event, this.eventFilters.searchQuery)) {
                     return false;
                 }
             }
@@ -1031,8 +1172,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             const item = this.allTimelineItems[i];
             const itemStart = item.position;
             const itemWidth = item.isGrouped ?
-                ((item.groupIndex || 0) * 290 + 300) :
-                300;
+                ((item.groupIndex || 0) * this.groupedCardOffset + this.timelineCardSlotWidth) :
+                this.timelineCardSlotWidth;
             const itemEnd = itemStart + itemWidth;
             if (itemEnd >= viewportStart && itemStart <= viewportEnd) {
                 newVisibleItems.push(item);
@@ -1103,8 +1244,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             const itemStart = item.position;
             // Calculate item end position more accurately
             const itemWidth = item.isGrouped ?
-                ((item.groupIndex || 0) * 290 + 300) :
-                300;
+                ((item.groupIndex || 0) * this.groupedCardOffset + this.timelineCardSlotWidth) :
+                this.timelineCardSlotWidth;
             const itemEnd = itemStart + itemWidth;
             // Very generous visibility check - include items that might be partially visible
             const isVisible = itemEnd >= viewportStart && itemStart <= viewportEnd;
@@ -1187,6 +1328,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         const wasIsMobile = this.isMobile;
         this.isMobile = window.innerWidth < this.mobileBreakpoint;
         if (wasIsMobile !== this.isMobile) {
+            if (this.isMobile) {
+                this.clearDesktopTimelineItems();
+            } else {
+                this.generateTimelineItems();
+                this.updateVisibleItemsSync(true);
+                this.scheduleInitialScrollToToday();
+            }
             this.cdr.detectChanges();
         }
     }
@@ -1196,6 +1344,11 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (wasCompactMode !== this.isCompactMode) {
             this.cdr.detectChanges();
         }
+    }
+    private clearDesktopTimelineItems(): void {
+        this.allTimelineItems = [];
+        this.visibleTimelineItems = [];
+        this.totalWidth = 0;
     }
     eventTypeToLabel(type: EventType | undefined): string {
         switch (type) {
@@ -1296,6 +1449,26 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (diffDays <= 14) return `(${Math.round(diffDays / 7)} week${diffDays > 7 ? 's' : ''})`;
         if (diffDays <= 30) return `(${Math.round(diffDays / 7)} weeks)`;
         return `(${Math.round(diffDays / 30)} month${diffDays > 30 ? 's' : ''})`;
+    }
+    private formatPredictionEventDate(event: TimelineEvent): string {
+        const date = event.globalReleaseDate || event.estimatedGlobalDate || event.jpReleaseDate;
+        if (!date) {
+            return '';
+        }
+
+        const options: Intl.DateTimeFormatOptions = {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        };
+        const prefix = event.isConfirmed ? '' : '~';
+        const start = date.toLocaleDateString('en-US', options);
+        if (!event.estimatedEndDate) {
+            return `${prefix}${start}`;
+        }
+
+        const end = event.estimatedEndDate.toLocaleDateString('en-US', options);
+        return `${prefix}${start} - ${end}`;
     }
     // Dynamic scaling based on viewport height
     private setupResizeObserver(): void {

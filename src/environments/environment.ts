@@ -9,7 +9,7 @@ export const environment = {
     measurementId: '',
   },
   turnstile: {
-    enabled: true,
+    enabled: false,
     siteKey: '0x4AAAAAADJqTbxKd66xUeWw',
     devToken: '',
     challengeHeaderName: 'X-Turnstile-Token',

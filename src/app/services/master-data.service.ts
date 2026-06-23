@@ -25,7 +25,9 @@ import type { Factor } from './factor.service';
 
 @Injectable({ providedIn: 'root' })
 export class MasterDataService {
-  private initialized = false;
+  private characterSupportInitialized = false;
+  private supplementalResourcesInitialized = false;
+  private remainingResourcesPreloaded = false;
 
   private charactersSubject = new BehaviorSubject<Character[]>(getAllCharacters());
   readonly characters$ = this.charactersSubject.asObservable();
@@ -74,16 +76,17 @@ export class MasterDataService {
   }
 
   init(): void {
-    if (this.initialized) {
-      return;
-    }
-
-    this.initialized = true;
-    this.loadCoreResources();
+    this.initCharacterSupportResources();
+    this.initSupplementalResources();
     this.preloadRemainingNonBannerResources();
   }
 
-  private loadCoreResources(): void {
+  initCharacterSupportResources(): void {
+    if (this.characterSupportInitialized) {
+      return;
+    }
+
+    this.characterSupportInitialized = true;
     combineLatest([
       this.resourceData.watchResource<RawCharacterData[]>('character', getRawCharacterData()),
       this.resourceData.watchResource<CharacterNameMap>('character_names', getCharacterNameEntries())
@@ -95,7 +98,14 @@ export class MasterDataService {
       .subscribe(cards => {
         this.supportCardsSubject.next([...replaceSupportCardsData(cards)]);
       });
+  }
 
+  private initSupplementalResources(): void {
+    if (this.supplementalResourcesInitialized) {
+      return;
+    }
+
+    this.supplementalResourcesInitialized = true;
     this.resourceData.watchResource<Skill[]>('skills', SKILLS)
       .subscribe(skills => {
         this.skillsSubject.next([...replaceSkillsData(skills)]);
@@ -113,6 +123,11 @@ export class MasterDataService {
   }
 
   private preloadRemainingNonBannerResources(): void {
+    if (this.remainingResourcesPreloaded) {
+      return;
+    }
+
+    this.remainingResourcesPreloaded = true;
     for (const resourceName of NON_BANNER_RESOURCE_NAMES) {
       this.resourceData.preloadResource(resourceName);
     }

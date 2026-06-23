@@ -1,17 +1,21 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { TimelineService } from '../../services/timeline.service';
-import { TimelineEvent, EventType } from '../../models/timeline.model';
-import { Subscription } from 'rxjs';
+import { TimelineCalculation, TimelineEvent, EventType, TimelineAnniversary } from '../../models/timeline.model';
+import { combineLatest, Subscription } from 'rxjs';
+import { TimelineAvatar, TimelineAvatarService } from '../../services/timeline-avatar.service';
+import { TimelinePredictionInsight, TimelinePredictionService } from '../../services/timeline-prediction.service';
+import { TimelinePredictionDialogComponent, TimelinePredictionDialogData } from '../../pages/timeline/timeline-prediction-dialog.component';
+
 interface MobileTimelineItem {
     date: Date;
     label: string;
@@ -19,9 +23,11 @@ interface MobileTimelineItem {
     eventData?: TimelineEvent;
     groupedEvents?: TimelineEvent[]; // For multiple events on the same date
     isGrouped?: boolean;
+    isConfirmed?: boolean;
     daysSinceStart: number;
     daysFromToday: number;
 }
+
 interface EventFilters {
     showCharacters: boolean;
     showSupports: boolean;
@@ -32,6 +38,29 @@ interface EventFilters {
     showCampaigns: boolean;
     searchQuery: string;
 }
+
+interface MobileTimelineEventView {
+    characterAvatars: TimelineAvatar[];
+    supportAvatars: TimelineAvatar[];
+    visibleCharacterAvatars: TimelineAvatar[];
+    visibleSupportAvatars: TimelineAvatar[];
+    hiddenCharacterCount: number;
+    hiddenSupportCount: number;
+    characterAvatarsExpanded: boolean;
+    supportAvatarsExpanded: boolean;
+    canToggleCharacterAvatars: boolean;
+    canToggleSupportAvatars: boolean;
+    prediction: TimelinePredictionInsight | null;
+    title: string;
+    endLabel: string;
+    hasMeta: boolean;
+    hasMedia: boolean;
+    hasPickups: boolean;
+    showPlaceholder: boolean;
+    showDescription: boolean;
+    isLegendRace: boolean;
+}
+
 @Component({
     selector: 'app-mobile-timeline',
     standalone: true,
@@ -41,7 +70,7 @@ interface EventFilters {
         MatButtonModule,
         MatIconModule,
         MatTooltipModule,
-        MatChipsModule,
+        MatDialogModule,
         MatCheckboxModule,
         MatFormFieldModule,
         MatInputModule,
@@ -56,6 +85,18 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     globalReleaseDate = new Date(Date.UTC(2025, 5, 26, 22, 0, 0)); // June 26, 2025, 22:00 UTC
     timelineItems: MobileTimelineItem[] = [];
     timelineEvents: TimelineEvent[] = [];
+    timelineAnniversaries: TimelineAnniversary[] = [];
+    timelineCalculation: TimelineCalculation | null = null;
+    hoverAvatar: TimelineAvatar | null = null;
+    hoverAvatarPosition = { left: 0, top: 0 };
+    private readonly avatarHoverCardWidth = 178;
+    private readonly avatarHoverCardHeight = 70;
+    private readonly initialAvatarRenderLimit = 4;
+    private readonly bannerAvatarRenderLimit = 6;
+    private readonly compactBannerAvatarRenderLimit = 5;
+    private readonly compactBannerAvatarMediaQuery = '(max-width: 360px)';
+    private readonly paidBannerAvatarRenderLimit = 5;
+    private avatarHoverHideTimer?: number;
     readonly todayElementId = 'mobile-timeline-today';
     // Event filtering
     eventFilters: EventFilters = {
@@ -77,14 +118,35 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     private initialScrollScheduled = false;
     private viewInitialized = false;
     private destroyed = false;
+    private eventViewCache = new WeakMap<TimelineEvent, {
+        avatarRevision: number;
+        renderRevision: number;
+        calculation: TimelineCalculation | null;
+        view: MobileTimelineEventView;
+    }>();
+    private avatarRenderLimits = new WeakMap<TimelineEvent, { character?: number; support?: number }>();
+    private avatarRenderRevision = 0;
+    private compactBannerAvatarRows = false;
+
     constructor(
         private timelineService: TimelineService,
+        private timelineAvatarService: TimelineAvatarService,
+        private timelinePredictionService: TimelinePredictionService,
+        private dialog: MatDialog,
         private cdr: ChangeDetectorRef,
         private hostRef: ElementRef<HTMLElement>
     ) { }
     ngOnInit(): void {
-        this.eventsSubscription = this.timelineService.events$.subscribe(events => {
+        this.updateCompactBannerAvatarRows();
+        this.eventsSubscription = combineLatest([
+            this.timelineService.events$,
+            this.timelineService.anniversaries$,
+            this.timelineService.calculation$
+        ]).subscribe(([events, anniversaries, calculation]) => {
             this.timelineEvents = events;
+            this.timelineAnniversaries = anniversaries;
+            this.timelineCalculation = calculation;
+            this.eventViewCache = new WeakMap();
             this.generateTimelineItems();
             this.cdr.detectChanges();
             this.scheduleInitialScrollToToday();
@@ -98,6 +160,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     }
     ngOnDestroy(): void {
         this.destroyed = true;
+        this.cancelAvatarHoverHide();
         if (this.eventsSubscription) {
             this.eventsSubscription.unsubscribe();
         }
@@ -214,12 +277,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
             !this.eventFilters.showStoryEvents) return false;
         // Apply search filter
         if (this.eventFilters.searchQuery.trim()) {
-            const searchTerm = this.eventFilters.searchQuery.toLowerCase().trim();
-            const charactersMatch = event.relatedCharacters?.some(char =>
-                char.toLowerCase().includes(searchTerm));
-            const supportsMatch = event.relatedSupportCards?.some(support =>
-                support.toLowerCase().includes(searchTerm));
-            if (!charactersMatch && !supportsMatch) {
+            if (!this.timelineAvatarService.eventMatchesSearch(event, this.eventFilters.searchQuery)) {
                 return false;
             }
         }
@@ -227,38 +285,22 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         return eventDate >= this.globalReleaseDate;
     }
     private generateAnniversaryMarkers(endDate: Date): void {
-        const CONFIRMED_GLOBAL_ANNIVERSARIES = new Map<number, Date>([
-            [1, new Date(Date.UTC(2025, 9, 26, 22, 0, 0))]
-        ]);
-        let anniversaryCount = 0;
-        while (true) {
-            anniversaryCount++;
-            const confirmedAnniversaryDate = CONFIRMED_GLOBAL_ANNIVERSARIES.get(anniversaryCount);
-            const globalAnniversaryDate = confirmedAnniversaryDate
-                ? new Date(confirmedAnniversaryDate)
-                : this.getProjectedGlobalAnniversaryDate(anniversaryCount);
-            if (globalAnniversaryDate > endDate) {
-                break;
+        this.timelineAnniversaries.forEach(anniversary => {
+            const globalAnniversaryDate = anniversary.globalDate;
+            if (globalAnniversaryDate > endDate || globalAnniversaryDate < this.globalReleaseDate) {
+                return;
             }
+
             const daysSinceStart = this.calculateDaysSinceStartUTC(globalAnniversaryDate);
-            const isFullYear = anniversaryCount % 2 === 0;
-            const anniversaryLabel = isFullYear
-                ? `${anniversaryCount / 2} Year Anniversary`
-                : `${Math.floor(anniversaryCount / 2)}.5 Year Anniversary`;
             this.timelineItems.push({
                 date: new Date(globalAnniversaryDate),
-                label: anniversaryLabel,
+                label: anniversary.label,
                 type: 'anniversary',
+                isConfirmed: anniversary.isConfirmed,
                 daysSinceStart,
                 daysFromToday: this.calculateDaysFromTodayUTC(globalAnniversaryDate)
             });
-        }
-    }
-    private getProjectedGlobalAnniversaryDate(anniversaryCount: number): Date {
-        const date = new Date(this.globalReleaseDate);
-        date.setUTCMonth(date.getUTCMonth() + anniversaryCount * 6);
-        date.setUTCHours(22, 0, 0, 0);
-        return date;
+        });
     }
     private generateYearMarkers(endDate: Date): void {
         const currentDate = new Date(this.globalReleaseDate);
@@ -398,7 +440,233 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         return this.timelineEvents.filter(e => e.type === EventType.CAMPAIGN).length;
     }
     onImageError(event: any): void {
-        (event.target as HTMLImageElement).style.display = 'none';
+        const image = event.target as HTMLImageElement;
+        image.style.display = 'none';
+        const avatarLink = image.closest<HTMLElement>('.ev-avatar-link');
+        if (avatarLink) {
+            avatarLink.style.display = 'none';
+        }
+    }
+    @HostListener('window:resize')
+    onWindowResize(): void {
+        this.updateCompactBannerAvatarRows();
+    }
+
+    getCharacterAvatars(event?: TimelineEvent): TimelineAvatar[] {
+        return this.timelineAvatarService.getCharacterAvatars(event);
+    }
+
+    getSupportAvatars(event?: TimelineEvent): TimelineAvatar[] {
+        return this.timelineAvatarService.getSupportAvatars(event);
+    }
+
+    trackByAvatarKey(index: number, avatar: TimelineAvatar): string {
+        return avatar.key;
+    }
+    showAvatarHover(event: Event, avatar: TimelineAvatar): void {
+        const target = event.currentTarget as HTMLElement | null;
+        if (!target) {
+            return;
+        }
+        this.cancelAvatarHoverHide();
+
+        const rect = target.getBoundingClientRect();
+        const gutter = 8;
+        const width = this.avatarHoverCardWidth;
+        const height = this.avatarHoverCardHeight;
+        let left = rect.left + rect.width / 2 - width / 2;
+        let top = rect.bottom + 8;
+
+        left = Math.max(gutter, Math.min(left, window.innerWidth - width - gutter));
+        if (top + height > window.innerHeight - gutter) {
+            top = Math.max(gutter, rect.top - height - 8);
+        }
+
+        this.hoverAvatar = avatar;
+        this.hoverAvatarPosition = { left, top };
+        this.cdr.detectChanges();
+    }
+    scheduleAvatarHoverHide(): void {
+        this.cancelAvatarHoverHide();
+        this.avatarHoverHideTimer = window.setTimeout(() => this.hideAvatarHover(), 140);
+    }
+    cancelAvatarHoverHide(): void {
+        if (this.avatarHoverHideTimer) {
+            window.clearTimeout(this.avatarHoverHideTimer);
+            this.avatarHoverHideTimer = undefined;
+        }
+    }
+    hideAvatarHover(): void {
+        this.cancelAvatarHoverHide();
+        if (!this.hoverAvatar) {
+            return;
+        }
+        this.hoverAvatar = null;
+        this.cdr.detectChanges();
+    }
+    toggleAvatarExpansion(event: TimelineEvent | undefined, kind: 'character' | 'support', domEvent: Event): void {
+        domEvent.preventDefault();
+        domEvent.stopPropagation();
+        this.hideAvatarHover();
+
+        if (!event) {
+            return;
+        }
+
+        const avatars = kind === 'character'
+            ? this.timelineAvatarService.getCharacterAvatars(event)
+            : this.timelineAvatarService.getSupportAvatars(event);
+        const currentLimit = this.getAvatarRenderLimit(event, kind, avatars.length);
+        const initialLimit = this.getInitialAvatarRenderLimit(event);
+        if (avatars.length <= initialLimit) {
+            return;
+        }
+
+        const state = this.getAvatarRenderState(event);
+        state[kind] = currentLimit >= avatars.length
+            ? initialLimit
+            : avatars.length;
+        this.avatarRenderRevision++;
+        this.eventViewCache.delete(event);
+        this.cdr.detectChanges();
+    }
+    getPredictionInsight(event?: TimelineEvent): TimelinePredictionInsight | null {
+        return this.timelinePredictionService.buildInsight(event, this.timelineCalculation);
+    }
+    getMobileEventView(event?: TimelineEvent): MobileTimelineEventView | null {
+        if (!event) {
+            return null;
+        }
+
+        const avatarRevision = this.timelineAvatarService.revision;
+        const cached = this.eventViewCache.get(event);
+        if (cached &&
+            cached.avatarRevision === avatarRevision &&
+            cached.renderRevision === this.avatarRenderRevision &&
+            cached.calculation === this.timelineCalculation) {
+            return cached.view;
+        }
+
+        const characterAvatars = this.timelineAvatarService.getCharacterAvatars(event);
+        const supportAvatars = this.timelineAvatarService.getSupportAvatars(event);
+        const characterLimit = this.getAvatarRenderLimit(event, 'character', characterAvatars.length);
+        const supportLimit = this.getAvatarRenderLimit(event, 'support', supportAvatars.length);
+        const visibleCharacterAvatars = characterAvatars.slice(0, characterLimit);
+        const visibleSupportAvatars = supportAvatars.slice(0, supportLimit);
+        const initialLimit = this.getInitialAvatarRenderLimit(event);
+        const characterAvatarsExpanded = characterAvatars.length > initialLimit &&
+            characterLimit >= characterAvatars.length;
+        const supportAvatarsExpanded = supportAvatars.length > initialLimit &&
+            supportLimit >= supportAvatars.length;
+        const showDescription = this.shouldShowMobileDescription(event);
+        const isLegendRace = event.type === EventType.LEGEND_RACE;
+        const showPlaceholder = this.shouldShowMobilePlaceholder(event, showDescription);
+        const hasMedia = !!event.imagePath || isLegendRace || showPlaceholder;
+        const endLabel = this.getMobileEventEndLabel(event);
+        const view: MobileTimelineEventView = {
+            characterAvatars,
+            supportAvatars,
+            visibleCharacterAvatars,
+            visibleSupportAvatars,
+            hiddenCharacterCount: Math.max(0, characterAvatars.length - visibleCharacterAvatars.length),
+            hiddenSupportCount: Math.max(0, supportAvatars.length - visibleSupportAvatars.length),
+            characterAvatarsExpanded,
+            supportAvatarsExpanded,
+            canToggleCharacterAvatars: characterAvatars.length > initialLimit,
+            canToggleSupportAvatars: supportAvatars.length > initialLimit,
+            prediction: this.timelinePredictionService.buildInsight(event, this.timelineCalculation),
+            title: this.getMobileEventTitle(event),
+            endLabel,
+            hasMeta: !!endLabel,
+            hasMedia,
+            hasPickups: characterAvatars.length > 0 || supportAvatars.length > 0,
+            showPlaceholder,
+            showDescription,
+            isLegendRace
+        };
+
+        this.eventViewCache.set(event, {
+            avatarRevision,
+            renderRevision: this.avatarRenderRevision,
+            calculation: this.timelineCalculation,
+            view
+        });
+        return view;
+    }
+    private getAvatarRenderState(event: TimelineEvent): { character?: number; support?: number } {
+        let state = this.avatarRenderLimits.get(event);
+        if (!state) {
+            state = {};
+            this.avatarRenderLimits.set(event, state);
+        }
+        return state;
+    }
+    private getAvatarRenderLimit(event: TimelineEvent, kind: 'character' | 'support', total: number): number {
+        const initialLimit = this.getInitialAvatarRenderLimit(event);
+        if (total <= initialLimit) {
+            return total;
+        }
+
+        const configuredLimit = this.avatarRenderLimits.get(event)?.[kind];
+        return Math.min(total, configuredLimit ?? initialLimit);
+    }
+    private getInitialAvatarRenderLimit(event: TimelineEvent): number {
+        if (event.type === EventType.CHARACTER_BANNER || event.type === EventType.SUPPORT_CARD_BANNER) {
+            return this.compactBannerAvatarRows
+                ? this.compactBannerAvatarRenderLimit
+                : this.bannerAvatarRenderLimit;
+        }
+
+        return event.type === EventType.PAID_BANNER
+            ? this.paidBannerAvatarRenderLimit
+            : this.initialAvatarRenderLimit;
+    }
+    private updateCompactBannerAvatarRows(): void {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return;
+        }
+
+        const shouldUseCompactRows = window.matchMedia(this.compactBannerAvatarMediaQuery).matches;
+        if (shouldUseCompactRows === this.compactBannerAvatarRows) {
+            return;
+        }
+
+        this.compactBannerAvatarRows = shouldUseCompactRows;
+        this.avatarRenderRevision++;
+        this.eventViewCache = new WeakMap();
+        if (!this.destroyed) {
+            this.cdr.detectChanges();
+        }
+    }
+    openPredictionDetails(event: TimelineEvent | undefined, prediction: TimelinePredictionInsight | null, clickEvent?: MouseEvent): void {
+        clickEvent?.preventDefault();
+        clickEvent?.stopPropagation();
+
+        if (!event || !prediction) {
+            return;
+        }
+
+        const data: TimelinePredictionDialogData = {
+            event,
+            insight: prediction,
+            calculation: this.timelineCalculation,
+            eventTypeLabel: this.getEventTypeLabel(event.type),
+            dateLabel: this.formatPredictionEventDate(event)
+        };
+
+        this.dialog.open(TimelinePredictionDialogComponent, {
+            data,
+            autoFocus: false,
+            maxWidth: '100vw',
+            restoreFocus: false,
+            panelClass: 'timeline-prediction-dialog-panel'
+        });
+    }
+    trackByPredictionMetric(index: number, metric: { label: string }): string {
+        return metric.label;
+    }
+    trackByPredictionAlternative(index: number, alternative: { label: string; reason: string }): string {
+        return `${alternative.label}-${alternative.reason}`;
     }
     private scheduleInitialScrollToToday(): void {
         if (
@@ -455,7 +723,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         }
 
         const images = Array.from(feed.querySelectorAll<HTMLImageElement>('img'))
-            .filter(image => !image.complete);
+            .filter(image => !image.complete && image.loading !== 'lazy');
 
         if (images.length === 0) {
             return Promise.resolve();
@@ -556,6 +824,9 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     trackByItemDate(index: number, item: MobileTimelineItem): string {
         return `${item.date.getTime()}-${item.type}-${item.isGrouped ? 'grouped' : 'single'}`;
     }
+    trackByGroupedEventId(index: number, event: TimelineEvent): string {
+        return event.id;
+    }
     // Helper methods for event type checking
     isCharacterBanner(eventType?: EventType): boolean {
         return eventType === EventType.CHARACTER_BANNER;
@@ -583,6 +854,42 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     getEventTitle(event?: TimelineEvent): string {
         return event?.title || '';
     }
+    getMobileEventTitle(event?: TimelineEvent): string {
+        if (!event) return '';
+        if (event.type === EventType.LEGEND_RACE) {
+            return this.getLegendRaceTitle(event.title);
+        }
+
+        return event.title || this.getEventTypeLabel(event.type);
+    }
+    hasMobileMeta(event?: TimelineEvent): boolean {
+        return !!this.getMobileEventEndLabel(event);
+    }
+    getMobileEventEndLabel(event?: TimelineEvent): string {
+        if (!event?.estimatedEndDate) return '';
+
+        return `Until ${event.estimatedEndDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric'
+        })}`;
+    }
+    hasMobileMedia(event?: TimelineEvent): boolean {
+        return !!event?.imagePath ||
+            event?.type === EventType.LEGEND_RACE ||
+            this.shouldShowMobilePlaceholder(event);
+    }
+    shouldShowMobilePlaceholder(event?: TimelineEvent, showDescription = this.shouldShowMobileDescription(event)): boolean {
+        if (!event || event.imagePath || event.type === EventType.LEGEND_RACE) return false;
+
+        return !showDescription;
+    }
+    shouldShowMobileDescription(event?: TimelineEvent): boolean {
+        if (!event?.description) return false;
+
+        return event.type === EventType.CHAMPIONS_MEETING ||
+            event.type === EventType.STORY_EVENT ||
+            event.type === EventType.CAMPAIGN;
+    }
     // Format date for mobile timeline items
     formatDateForItem(item: MobileTimelineItem): string {
         if (!item.date) return '';
@@ -595,7 +902,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
             return date.toLocaleDateString('en-US', dateOptions);
         };
         // Check confirmation status from event data or grouped events
-        let isConfirmed = true;
+        let isConfirmed = item.isConfirmed !== false;
         if (item.eventData) {
             isConfirmed = item.eventData.isConfirmed !== false;
         } else if (item.groupedEvents && item.groupedEvents.length > 0) {
@@ -622,6 +929,24 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         const prefix = isConfirmed ? '' : '~';
         
         return `${prefix}${formatSingleDate(eventDate)}`;
+    }
+    private formatPredictionEventDate(event: TimelineEvent): string {
+        const eventDate = event.globalReleaseDate || event.estimatedGlobalDate || event.jpReleaseDate;
+        if (!eventDate) return '';
+
+        const dateOptions: Intl.DateTimeFormatOptions = {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+        };
+        const prefix = event.isConfirmed ? '' : '~';
+        const start = eventDate.toLocaleDateString('en-US', dateOptions);
+        if (!event.estimatedEndDate) {
+            return `${prefix}${start}`;
+        }
+
+        const end = event.estimatedEndDate.toLocaleDateString('en-US', dateOptions);
+        return `${prefix}${start} - ${end}`;
     }
     // Helper methods for template display
     getEventTypeIcon(type?: EventType): string {
