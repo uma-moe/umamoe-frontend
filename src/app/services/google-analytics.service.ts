@@ -1,10 +1,11 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { Inject, Injectable, NgZone, PLATFORM_ID } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
-import { distinctUntilChanged, filter, map } from 'rxjs';
+import { combineLatest, distinctUntilChanged, filter, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AppVersionService } from './app-version.service';
 import { CookieConsent, CookieConsentService } from './cookie-consent.service';
+import { FuseAdsService, GoogleAdConsentState } from './fuse-ads.service';
 
 type GtagFunction = (...args: unknown[]) => void;
 type ConsentValue = 'granted' | 'denied';
@@ -22,6 +23,7 @@ interface ConsentModeState {
 interface ConsentModeUpdate {
   state: ConsentModeState;
   choiceMade: boolean;
+  adConsentSource: string;
 }
 
 declare global {
@@ -52,10 +54,12 @@ export class GoogleAnalyticsService {
   private buildContext?: AnalyticsEventParams;
   private currentConsentState: ConsentModeState = this.deniedConsentState;
   private consentChoiceMade = false;
+  private adConsentSource = 'disabled';
   private engagementTimerId?: number;
 
   constructor(
     private cookieConsentService: CookieConsentService,
+    private fuseAdsService: FuseAdsService,
     private appVersionService: AppVersionService,
     private router: Router,
     private ngZone: NgZone,
@@ -78,10 +82,14 @@ export class GoogleAnalyticsService {
     this.setGaDisabled(false);
     this.setDefaultConsent();
 
-    this.cookieConsentService.consent$.pipe(
-      map(consent => ({
-        state: this.toConsentModeState(consent),
+    combineLatest([
+      this.cookieConsentService.consent$,
+      this.fuseAdsService.googleAdConsent$,
+    ]).pipe(
+      map(([consent, adConsent]) => ({
+        state: this.toConsentModeState(consent, adConsent),
         choiceMade: consent !== null,
+        adConsentSource: adConsent.source,
       })),
       distinctUntilChanged((previous, current) => this.sameConsentModeUpdate(previous, current)),
     ).subscribe(update => this.updateConsent(update));
@@ -176,6 +184,7 @@ export class GoogleAnalyticsService {
 
     this.currentConsentState = update.state;
     this.consentChoiceMade = update.choiceMade;
+    this.adConsentSource = update.adConsentSource;
     this.window.gtag?.('consent', 'update', update.state);
 
     if (update.state.analytics_storage === 'denied') {
@@ -192,14 +201,13 @@ export class GoogleAnalyticsService {
     }
   }
 
-  private toConsentModeState(consent: CookieConsent | null): ConsentModeState {
+  private toConsentModeState(consent: CookieConsent | null, adConsent: GoogleAdConsentState): ConsentModeState {
     const analyticsConsent = consent?.analytics === true;
-    const advertisingConsent = consent?.advertising === true;
 
     return {
-      ad_storage: this.toConsentValue(advertisingConsent),
-      ad_user_data: this.toConsentValue(advertisingConsent),
-      ad_personalization: this.toConsentValue(advertisingConsent),
+      ad_storage: adConsent.adStorage,
+      ad_user_data: adConsent.adUserData,
+      ad_personalization: adConsent.adPersonalization,
       analytics_storage: this.toConsentValue(analyticsConsent),
     };
   }
@@ -217,6 +225,7 @@ export class GoogleAnalyticsService {
 
   private sameConsentModeUpdate(previous: ConsentModeUpdate, current: ConsentModeUpdate): boolean {
     return previous.choiceMade === current.choiceMade
+      && previous.adConsentSource === current.adConsentSource
       && this.sameConsentModeState(previous.state, current.state);
   }
 
@@ -288,6 +297,7 @@ export class GoogleAnalyticsService {
       ad_storage_state: this.currentConsentState.ad_storage,
       ad_user_data_state: this.currentConsentState.ad_user_data,
       ad_personalization_state: this.currentConsentState.ad_personalization,
+      ad_consent_source: this.adConsentSource,
       consent_choice_made: this.consentChoiceMade ? 'yes' : 'no',
     };
   }

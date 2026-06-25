@@ -17,6 +17,7 @@ import { InheritanceRecord } from '../../models/inheritance.model';
 import { AppVersionService } from '../../services/app-version.service';
 import { Meta, Title } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
+import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
 import {
     getAptGrade, getRankGrade, getRankGradeColor, getStarDisplay,
     getDistanceName, getRunningStyleName, getScenarioName, getTotalStats,
@@ -35,7 +36,7 @@ export interface CircleMembership {
 @Component({
     selector: 'app-profile',
     standalone: true,
-    imports: [CommonModule, RouterModule, RouterOutlet, MatIconModule, MatSnackBarModule, ProfileHeaderComponent, InheritanceEntryComponent, RankBadgeComponent, SkillComponent, LocaleNumberPipe],
+    imports: [CommonModule, RouterModule, RouterOutlet, MatIconModule, MatSnackBarModule, ProfileHeaderComponent, InheritanceEntryComponent, RankBadgeComponent, SkillComponent, LocaleNumberPipe, AdInContentComponent],
     templateUrl: './profile.component.html',
     styleUrl: './profile.component.scss'
 })

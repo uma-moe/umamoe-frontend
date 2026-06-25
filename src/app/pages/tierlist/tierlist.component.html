@@ -71,6 +71,13 @@
     <span>This tierlist is no longer maintained and may be outdated. It remains available for reference.</span>
   </div>
 
+  <app-ad-in-content
+    surface="tierlist"
+    label="tierlist"
+    [contentTopBridge]="true"
+    viewport="mobile"
+  ></app-ad-in-content>
+
   <div class="loading-container" *ngIf="loading">
     <mat-spinner></mat-spinner>
     <p>Calculating tierlist...</p>
@@ -173,6 +180,14 @@
       </mat-sidenav-content>
     </mat-sidenav-container>
   </div>
+
+  <app-ad-in-content
+    *ngIf="!loading"
+    surface="tierlist"
+    label="tierlist"
+    [index]="2"
+    viewport="mobile"
+  ></app-ad-in-content>
 
   <div class="tierlist-info" *ngIf="!loading">
     <mat-card class="info-card">

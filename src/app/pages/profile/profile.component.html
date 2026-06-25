@@ -56,6 +56,13 @@
       </div>
     </nav>
 
+    <app-ad-in-content
+      surface="profile"
+      label="profile"
+      [contentTopBridge]="true"
+      viewport="mobile"
+    ></app-ad-in-content>
+
     <div class="content-container" *ngIf="!hasActiveChild">
       <!-- Fan History Table -->
       <section class="details-card" *ngIf="profile.fan_history.monthly.length > 0 && (isOwnProfile || isSectionVisible('fan_history'))">
@@ -101,6 +108,14 @@
           </div>
         </div>
       </section>
+
+      <app-ad-in-content
+        *ngIf="profile.fan_history.monthly.length > 0 && (isOwnProfile || isSectionVisible('fan_history'))"
+        surface="profile"
+        label="profile"
+        [index]="2"
+        viewport="mobile"
+      ></app-ad-in-content>
 
       <!-- Rolling Gains & All-Time Stats Row -->
       <div class="cards-row" *ngIf="isOwnProfile || isSectionVisible('rolling_alltime')">
@@ -262,6 +277,14 @@
         </section>
       </div>
 
+      <app-ad-in-content
+        *ngIf="(profile.fan_history.rolling || profile.fan_history.alltime) && (isOwnProfile || isSectionVisible('rolling_alltime'))"
+        surface="profile"
+        label="profile"
+        [index]="3"
+        viewport="mobile"
+      ></app-ad-in-content>
+
       <!-- Circle Monthly Details -->
       <section class="details-card" *ngIf="profile.circle_history.length > 0 && (isOwnProfile || isSectionVisible('circle_history'))">
         <div class="card-header">
@@ -331,6 +354,14 @@
           </app-inheritance-entry>
         </div>
       </section>
+
+      <app-ad-in-content
+        *ngIf="inheritanceRecord && (isOwnProfile || isSectionVisible('inheritance'))"
+        surface="profile"
+        label="profile"
+        [index]="4"
+        viewport="mobile"
+      ></app-ad-in-content>
 
       <!-- Team Stadium -->
       <div class="stadium-section" *ngIf="profile.team_stadium && profile.team_stadium.length > 0 && (isOwnProfile || isSectionVisible('team_stadium'))">

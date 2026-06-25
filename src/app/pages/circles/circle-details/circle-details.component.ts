@@ -23,6 +23,7 @@ import { MemberDisplaySettingsDialogComponent } from './member-display-settings-
 import { AnimatedNumberComponent } from '../../../components/animated-number/animated-number.component';
 import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
 import { AnalyticsEventParams, GoogleAnalyticsService } from '../../../services/google-analytics.service';
+import { AdInContentComponent } from '../../../components/ads/ad-in-content.component';
 Chart.register(...registerables);
 export type CalculationType = 'monthly_gain' | 'weekly_gain' | 'daily_gain' | 'avg_daily_gain' | 'daily_avg' | 'projected_monthly' | 'total_fans';
 export type ExportFormat = 'csv' | 'json' | 'xlsx';
@@ -78,7 +79,8 @@ export interface CalendarDay {
     MatSnackBarModule,
     DiscordLinkPipe,
     AnimatedNumberComponent,
-    LocaleNumberPipe
+    LocaleNumberPipe,
+    AdInContentComponent
   ],
   templateUrl: './circle-details.component.html',
   styleUrl: './circle-details.component.scss'

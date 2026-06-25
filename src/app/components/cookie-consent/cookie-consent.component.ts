@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { CookieConsentService, CookieConsent } from '../../services/cookie-consent.service';
+import { FuseAdsService } from '../../services/fuse-ads.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -19,8 +20,11 @@ import { Subscription } from 'rxjs';
               <mat-icon>cookie</mat-icon>
               <span>Cookie Settings</span>
             </div>
-            <p>We use essential cookies to keep the site working. Optional analytics and advertising help us improve uma.moe.</p>
-            <p class="privacy-link">You can change this anytime. <a routerLink="/privacy-policy">Privacy Policy</a></p>
+            <p>We use essential cookies to keep the site working. Optional analytics help us improve uma.moe, and advertising can support the site.</p>
+            <p class="privacy-link">
+              You can change this anytime.
+              <a routerLink="/privacy-policy">Privacy Policy</a>
+            </p>
           </div>
           <div class="banner-actions">
             <button class="consent-btn secondary" (click)="showDetails = true">Customize</button>
@@ -34,7 +38,10 @@ import { Subscription } from 'rxjs';
             <mat-icon>cookie</mat-icon>
             <span>Cookie Settings</span>
           </div>
-          <p class="details-description">Choose which cookies you'd like to allow. Essential cookies are required for the site to function. Read our <a routerLink="/privacy-policy">Privacy Policy</a> for details.</p>
+          <p class="details-description">
+            Choose which optional cookies and ad preferences you'd like to allow. Essential cookies are required for the site to function.
+            Advertising is controlled here and applies to ads served through our ad partners.
+          </p>
 
           <div class="consent-categories">
             <label class="consent-category essential">
@@ -64,18 +71,32 @@ import { Subscription } from 'rxjs';
               </div>
             </label>
 
-            <label class="consent-category" (click)="choices.advertising = !choices.advertising">
+            <label class="consent-category advertising" (click)="toggleAdvertising()">
               <div class="category-info">
                 <div class="category-header">
                   <mat-icon>campaign</mat-icon>
                   <span class="category-name">Advertising</span>
                 </div>
-                <p class="category-desc">Used to show you relevant ads and measure their effectiveness.</p>
+                <p class="category-desc">Allow ad delivery and ad personalization where available.</p>
               </div>
               <div class="toggle">
                 <div class="toggle-track" [class.on]="choices.advertising"><div class="toggle-thumb"></div></div>
               </div>
             </label>
+
+            <div class="ad-privacy-panel" (click)="$event.stopPropagation()">
+              <button
+                type="button"
+                class="ad-privacy-button"
+                [disabled]="adPrivacyControlsOpening"
+                (click)="openAdPrivacyControls($event)">
+                <mat-icon>{{ adPrivacyControlsOpening ? 'hourglass_empty' : 'tune' }}</mat-icon>
+                <span>Ad privacy controls</span>
+              </button>
+              <span class="ad-privacy-note" *ngIf="adPrivacyControlsNotice">
+                {{ adPrivacyControlsNotice }}
+              </span>
+            </div>
           </div>
 
           <div class="banner-actions">
@@ -86,10 +107,6 @@ import { Subscription } from 'rxjs';
       </div>
     </div>
 
-    <!-- Small floating button to reopen settings (shown after consent is given) -->
-    <button class="cookie-settings-fab" *ngIf="consentService.hasConsented && !showBanner" (click)="reopenSettings()" title="Cookie Settings" aria-label="Cookie Settings">
-      <mat-icon>cookie</mat-icon>
-    </button>
   `,
   styles: [`
     .cookie-banner {
@@ -249,6 +266,10 @@ import { Subscription } from 'rxjs';
         cursor: default;
         opacity: 0.7;
       }
+
+      &.advertising {
+        align-items: center;
+      }
     }
 
     .category-info {
@@ -292,6 +313,59 @@ import { Subscription } from 'rxjs';
       padding-left: 1.6rem;
     }
 
+    .ad-privacy-panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.65rem 1rem;
+      border: 1px solid rgba(100, 181, 246, 0.16);
+      border-radius: 10px;
+      background: rgba(100, 181, 246, 0.06);
+    }
+
+    .ad-privacy-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      min-height: 32px;
+      padding: 0 0.75rem;
+      border: 1px solid rgba(100, 181, 246, 0.28);
+      border-radius: 8px;
+      background: rgba(100, 181, 246, 0.12);
+      color: #90caf9;
+      font: inherit;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+
+      &:hover:not(:disabled) {
+        border-color: rgba(100, 181, 246, 0.45);
+        background: rgba(100, 181, 246, 0.18);
+        color: #bbdefb;
+      }
+
+      &:disabled {
+        opacity: 0.68;
+        cursor: wait;
+      }
+    }
+
+    .ad-privacy-note {
+      color: rgba(255, 255, 255, 0.48);
+      font-size: 0.72rem;
+      line-height: 1.35;
+      text-align: right;
+    }
+
     // --- Toggle switch ---
     .toggle {
       flex-shrink: 0;
@@ -331,38 +405,6 @@ import { Subscription } from 'rxjs';
       }
     }
 
-    // --- Floating cookie settings FAB ---
-    .cookie-settings-fab {
-      position: fixed;
-      bottom: 1rem;
-      left: 1rem;
-      z-index: 9999;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: rgba(30, 30, 30, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: rgba(255, 255, 255, 0.4);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-      backdrop-filter: blur(8px);
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-
-      &:hover {
-        background: rgba(40, 40, 40, 0.95);
-        border-color: rgba(255, 255, 255, 0.2);
-        color: #ffb74d;
-      }
-    }
-
     @keyframes slideUp {
       from {
         transform: translateY(100%);
@@ -392,16 +434,39 @@ import { Subscription } from 'rxjs';
         width: 100%;
         text-align: center;
       }
+
+      .consent-category.advertising {
+        align-items: center;
+      }
+
+      .ad-privacy-panel {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .ad-privacy-button {
+        width: 100%;
+      }
+
+      .ad-privacy-note {
+        text-align: left;
+      }
     }
   `]
 })
 export class CookieConsentComponent implements OnInit, OnDestroy {
   showBanner = false;
   showDetails = false;
-  choices: CookieConsent = { essential: true, analytics: false, advertising: false };
+  choices: CookieConsent = { essential: true, analytics: false, advertising: true };
   private sub?: Subscription;
+  adPrivacyControlsOpening = false;
+  adPrivacyControlsNotice = '';
+  private adPrivacyControlsTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(public consentService: CookieConsentService) {}
+  constructor(
+    public consentService: CookieConsentService,
+    private fuseAdsService: FuseAdsService,
+  ) {}
 
   ngOnInit(): void {
     // Show banner if user hasn't consented yet
@@ -426,6 +491,9 @@ export class CookieConsentComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    if (this.adPrivacyControlsTimer !== null) {
+      clearTimeout(this.adPrivacyControlsTimer);
+    }
   }
 
   acceptAll(): void {
@@ -444,6 +512,35 @@ export class CookieConsentComponent implements OnInit, OnDestroy {
     this.consentService.saveChoices(this.choices);
     this.showBanner = false;
     this.showDetails = false;
+  }
+
+  toggleAdvertising(): void {
+    this.choices.advertising = !this.choices.advertising;
+  }
+
+  openAdPrivacyControls(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.adPrivacyControlsOpening = true;
+    this.adPrivacyControlsNotice = 'Opening regional controls...';
+
+    const controlsRequested = this.fuseAdsService.openPrivacyControls();
+    if (!controlsRequested) {
+      this.adPrivacyControlsOpening = false;
+      this.adPrivacyControlsNotice = 'Ad privacy controls are unavailable in this build.';
+      return;
+    }
+
+    if (this.adPrivacyControlsTimer !== null) {
+      clearTimeout(this.adPrivacyControlsTimer);
+    }
+
+    this.adPrivacyControlsTimer = setTimeout(() => {
+      this.adPrivacyControlsOpening = false;
+      this.adPrivacyControlsNotice = '';
+      this.adPrivacyControlsTimer = null;
+    }, 2400);
   }
 
   reopenSettings(): void {

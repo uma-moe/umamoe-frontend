@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener, QueryList, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,6 +15,7 @@ import { combineLatest, Subscription } from 'rxjs';
 import { TimelineAvatar, TimelineAvatarService } from '../../services/timeline-avatar.service';
 import { TimelinePredictionInsight, TimelinePredictionService } from '../../services/timeline-prediction.service';
 import { TimelinePredictionDialogComponent, TimelinePredictionDialogData } from '../../pages/timeline/timeline-prediction-dialog.component';
+import { AdInContentComponent } from '../ads/ad-in-content.component';
 
 interface MobileTimelineItem {
     date: Date;
@@ -26,6 +27,12 @@ interface MobileTimelineItem {
     isConfirmed?: boolean;
     daysSinceStart: number;
     daysFromToday: number;
+    mobileInContentAdIndex?: number;
+}
+
+interface VirtualTimelineRow {
+    index: number;
+    item: MobileTimelineItem;
 }
 
 interface EventFilters {
@@ -74,21 +81,27 @@ interface MobileTimelineEventView {
         MatCheckboxModule,
         MatFormFieldModule,
         MatInputModule,
-        FormsModule
+        FormsModule,
+        AdInContentComponent
     ],
     templateUrl: './mobile-timeline.component.html',
     styleUrls: ['./mobile-timeline.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy {
+    @ViewChildren('virtualTimelineRow') private virtualTimelineRowsRef?: QueryList<ElementRef<HTMLElement>>;
+
     // Configuration - use UTC date
     globalReleaseDate = new Date(Date.UTC(2025, 5, 26, 22, 0, 0)); // June 26, 2025, 22:00 UTC
     timelineItems: MobileTimelineItem[] = [];
     timelineEvents: TimelineEvent[] = [];
     timelineAnniversaries: TimelineAnniversary[] = [];
     timelineCalculation: TimelineCalculation | null = null;
+    virtualTimelineRows: VirtualTimelineRow[] = [];
+    virtualTopSpacerHeight = 0;
+    virtualBottomSpacerHeight = 0;
     hoverAvatar: TimelineAvatar | null = null;
-    hoverAvatarPosition = { left: 0, top: 0 };
+    hoverAvatarPosition = { left: -10000, top: -10000 };
     private readonly avatarHoverCardWidth = 178;
     private readonly avatarHoverCardHeight = 70;
     private readonly initialAvatarRenderLimit = 4;
@@ -98,6 +111,10 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     private readonly paidBannerAvatarRenderLimit = 5;
     private avatarHoverHideTimer?: number;
     readonly todayElementId = 'mobile-timeline-today';
+    private readonly mobileInContentFirstEventIndex = 5;
+    private readonly mobileInContentCadence = 8;
+    private readonly virtualOverscanPx = 1300;
+    private readonly virtualInitialRows = 18;
     // Event filtering
     eventFilters: EventFilters = {
         showCharacters: true,
@@ -113,7 +130,14 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     isFilterPanelExpanded = false;
     // Subscriptions
     private eventsSubscription?: Subscription;
+    private virtualRowsSubscription?: Subscription;
     private todayUpdateInterval?: number;
+    private virtualFrame: number | null = null;
+    private measureFrame: number | null = null;
+    private timelineItemHeights: number[] = [];
+    private timelineHeightPrefix: number[] = [0];
+    private virtualStartIndex = 0;
+    private virtualEndIndex = 0;
     private initialScrollDone = false;
     private initialScrollScheduled = false;
     private viewInitialized = false;
@@ -156,14 +180,30 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     }
     ngAfterViewInit(): void {
         this.viewInitialized = true;
+        this.virtualRowsSubscription = this.virtualTimelineRowsRef?.changes.subscribe(() => {
+            this.scheduleVirtualRowMeasurement();
+        });
+        this.updateVirtualTimelineRange();
+        this.scheduleVirtualRowMeasurement();
         this.scheduleInitialScrollToToday();
     }
+
+    shouldShowMobileInContentAd(index: number): boolean {
+        return Boolean(this.timelineItems[index]?.mobileInContentAdIndex);
+    }
+
+    getMobileInContentAdSlotIndex(index: number): number {
+        return this.timelineItems[index]?.mobileInContentAdIndex ?? 1;
+    }
+
     ngOnDestroy(): void {
         this.destroyed = true;
         this.cancelAvatarHoverHide();
+        this.cancelVirtualFrames();
         if (this.eventsSubscription) {
             this.eventsSubscription.unsubscribe();
         }
+        this.virtualRowsSubscription?.unsubscribe();
         if (this.todayUpdateInterval) {
             clearInterval(this.todayUpdateInterval);
         }
@@ -256,7 +296,262 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         this.generateYearMarkers(actualEndDate);
         // Sort by date
         this.timelineItems.sort((a, b) => a.date.getTime() - b.date.getTime());
+        this.assignMobileInContentAds();
+        this.resetVirtualTimeline();
     }
+
+    private assignMobileInContentAds(): void {
+        let eventItemCount = 0;
+        let adCount = 0;
+
+        this.timelineItems.forEach(item => {
+            item.mobileInContentAdIndex = undefined;
+
+            if (item.type !== 'event') {
+                return;
+            }
+
+            eventItemCount += 1;
+
+            if (eventItemCount < this.mobileInContentFirstEventIndex) {
+                return;
+            }
+
+            const eventOffset = eventItemCount - this.mobileInContentFirstEventIndex;
+            if (eventOffset % this.mobileInContentCadence !== 0) {
+                return;
+            }
+
+            adCount += 1;
+            item.mobileInContentAdIndex = ((adCount - 1) % 4) + 1;
+        });
+    }
+
+    private resetVirtualTimeline(): void {
+        this.timelineItemHeights = this.timelineItems.map(item => this.estimateTimelineItemHeight(item));
+        this.rebuildTimelineHeightPrefix();
+        this.virtualStartIndex = -1;
+        this.virtualEndIndex = -1;
+        this.virtualTimelineRows = [];
+
+        if (!this.viewInitialized) {
+            this.applyVirtualRange(0, Math.min(this.timelineItems.length, this.virtualInitialRows), false);
+            return;
+        }
+
+        this.updateVirtualTimelineRange(false);
+        this.scheduleVirtualRowMeasurement();
+    }
+
+    private scheduleVirtualTimelineUpdate(): void {
+        if (typeof window === 'undefined' || this.destroyed || this.virtualFrame !== null) {
+            return;
+        }
+
+        this.virtualFrame = window.requestAnimationFrame(() => {
+            this.virtualFrame = null;
+            this.updateVirtualTimelineRange();
+        });
+    }
+
+    private updateVirtualTimelineRange(requestDetectChanges = true): void {
+        const itemCount = this.timelineItems.length;
+        if (itemCount === 0) {
+            this.applyVirtualRange(0, 0, requestDetectChanges);
+            return;
+        }
+
+        if (typeof window === 'undefined' || !this.viewInitialized) {
+            this.applyVirtualRange(0, Math.min(itemCount, this.virtualInitialRows), requestDetectChanges);
+            return;
+        }
+
+        const feedTop = this.getFeedPageTop();
+        const viewportTop = Math.max(0, window.scrollY - feedTop);
+        const viewportBottom = viewportTop + window.innerHeight;
+        const startOffset = Math.max(0, viewportTop - this.virtualOverscanPx);
+        const endOffset = Math.min(this.getTotalTimelineHeight(), viewportBottom + this.virtualOverscanPx);
+        const startIndex = Math.max(0, this.findTimelineIndexForOffset(startOffset) - 2);
+        const endIndex = Math.min(itemCount, this.findTimelineIndexForOffset(endOffset) + 4);
+
+        this.applyVirtualRange(startIndex, Math.max(endIndex, startIndex + 1), requestDetectChanges);
+    }
+
+    private applyVirtualRange(startIndex: number, endIndex: number, requestDetectChanges: boolean): void {
+        const normalizedStart = Math.max(0, Math.min(startIndex, this.timelineItems.length));
+        const normalizedEnd = Math.max(normalizedStart, Math.min(endIndex, this.timelineItems.length));
+        const rangeChanged = normalizedStart !== this.virtualStartIndex || normalizedEnd !== this.virtualEndIndex;
+
+        this.virtualStartIndex = normalizedStart;
+        this.virtualEndIndex = normalizedEnd;
+        this.virtualTopSpacerHeight = this.getTimelineOffset(normalizedStart);
+        this.virtualBottomSpacerHeight = Math.max(0, this.getTotalTimelineHeight() - this.getTimelineOffset(normalizedEnd));
+
+        if (rangeChanged || this.virtualTimelineRows.length !== normalizedEnd - normalizedStart) {
+            this.virtualTimelineRows = this.timelineItems
+                .slice(normalizedStart, normalizedEnd)
+                .map((item, offset) => ({ item, index: normalizedStart + offset }));
+            this.scheduleVirtualRowMeasurement();
+        }
+
+        if (requestDetectChanges && !this.destroyed) {
+            this.cdr.detectChanges();
+        }
+    }
+
+    private scheduleVirtualRowMeasurement(): void {
+        if (typeof window === 'undefined' || this.destroyed || this.measureFrame !== null) {
+            return;
+        }
+
+        this.measureFrame = window.requestAnimationFrame(() => {
+            this.measureFrame = null;
+            this.measureVirtualRows();
+        });
+    }
+
+    private measureVirtualRows(): void {
+        if (!this.virtualTimelineRowsRef) {
+            return;
+        }
+
+        let changed = false;
+        this.virtualTimelineRowsRef.forEach(row => {
+            const element = row.nativeElement;
+            const index = Number(element.dataset['timelineIndex']);
+            if (!Number.isFinite(index)) {
+                return;
+            }
+
+            const measuredHeight = Math.ceil(element.getBoundingClientRect().height);
+            if (measuredHeight <= 0) {
+                return;
+            }
+
+            const previousHeight = this.timelineItemHeights[index] ?? 0;
+            if (Math.abs(previousHeight - measuredHeight) <= 2) {
+                return;
+            }
+
+            this.timelineItemHeights[index] = measuredHeight;
+            changed = true;
+        });
+
+        if (!changed) {
+            return;
+        }
+
+        this.rebuildTimelineHeightPrefix();
+        this.virtualTopSpacerHeight = this.getTimelineOffset(this.virtualStartIndex);
+        this.virtualBottomSpacerHeight = Math.max(0, this.getTotalTimelineHeight() - this.getTimelineOffset(this.virtualEndIndex));
+        this.scheduleVirtualTimelineUpdate();
+        this.cdr.detectChanges();
+    }
+
+    private rebuildTimelineHeightPrefix(): void {
+        this.timelineHeightPrefix = [0];
+        for (let index = 0; index < this.timelineItemHeights.length; index++) {
+            this.timelineHeightPrefix[index + 1] = this.timelineHeightPrefix[index] + this.timelineItemHeights[index];
+        }
+    }
+
+    private estimateTimelineItemHeight(item: MobileTimelineItem): number {
+        let height = 68;
+
+        if (item.type === 'event') {
+            const eventCount = item.isGrouped ? Math.max(1, item.groupedEvents?.length ?? 1) : 1;
+            height = item.isGrouped ? 46 + (eventCount * 196) + ((eventCount - 1) * 7) : 206;
+
+            const primaryEvent = item.eventData ?? item.groupedEvents?.[0];
+            if (primaryEvent?.type === EventType.LEGEND_RACE) {
+                height += item.isGrouped ? eventCount * 18 : 18;
+            } else if (
+                primaryEvent?.type === EventType.CHAMPIONS_MEETING ||
+                primaryEvent?.type === EventType.STORY_EVENT ||
+                primaryEvent?.type === EventType.CAMPAIGN
+            ) {
+                height += item.isGrouped ? eventCount * 24 : 24;
+            }
+        } else if (item.type === 'today' || item.type === 'milestone' || item.type === 'anniversary') {
+            height = 72;
+        } else if (item.type === 'year') {
+            height = 42;
+        }
+
+        if (item.mobileInContentAdIndex) {
+            height += this.estimateMobileInContentAdHeight(item.mobileInContentAdIndex);
+        }
+
+        return height;
+    }
+
+    private estimateMobileInContentAdHeight(index: number): number {
+        switch (index) {
+            case 1:
+                return 86;
+            case 2:
+                return 286;
+            case 3:
+                return 636;
+            case 4:
+                return 336;
+            default:
+                return 120;
+        }
+    }
+
+    private findTimelineIndexForOffset(offset: number): number {
+        const lastIndex = Math.max(0, this.timelineItems.length - 1);
+        if (offset <= 0) {
+            return 0;
+        }
+
+        let low = 0;
+        let high = lastIndex;
+
+        while (low < high) {
+            const mid = Math.floor((low + high) / 2);
+            if (this.getTimelineOffset(mid + 1) < offset) {
+                low = mid + 1;
+            } else {
+                high = mid;
+            }
+        }
+
+        return low;
+    }
+
+    private getTimelineOffset(index: number): number {
+        const safeIndex = Math.max(0, Math.min(index, this.timelineHeightPrefix.length - 1));
+        return this.timelineHeightPrefix[safeIndex] ?? 0;
+    }
+
+    private getTotalTimelineHeight(): number {
+        return this.timelineHeightPrefix[this.timelineHeightPrefix.length - 1] ?? 0;
+    }
+
+    private getFeedPageTop(): number {
+        const feed = this.hostRef.nativeElement.querySelector<HTMLElement>('.tl-feed');
+        const element = feed ?? this.hostRef.nativeElement;
+        return element.getBoundingClientRect().top + window.scrollY;
+    }
+
+    private cancelVirtualFrames(): void {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        if (this.virtualFrame !== null) {
+            window.cancelAnimationFrame(this.virtualFrame);
+            this.virtualFrame = null;
+        }
+
+        if (this.measureFrame !== null) {
+            window.cancelAnimationFrame(this.measureFrame);
+            this.measureFrame = null;
+        }
+    }
+
     private shouldShowEvent(event: TimelineEvent): boolean {
         // Apply event type filters
         if (event.type === EventType.CHARACTER_BANNER && !this.eventFilters.showCharacters) return false;
@@ -446,10 +741,22 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         if (avatarLink) {
             avatarLink.style.display = 'none';
         }
+        this.scheduleVirtualRowMeasurement();
     }
     @HostListener('window:resize')
     onWindowResize(): void {
         this.updateCompactBannerAvatarRows();
+        this.timelineItemHeights = this.timelineItems.map((item, index) => (
+            this.timelineItemHeights[index] || this.estimateTimelineItemHeight(item)
+        ));
+        this.rebuildTimelineHeightPrefix();
+        this.scheduleVirtualTimelineUpdate();
+        this.scheduleVirtualRowMeasurement();
+    }
+
+    @HostListener('window:scroll')
+    onWindowScroll(): void {
+        this.scheduleVirtualTimelineUpdate();
     }
 
     getCharacterAvatars(event?: TimelineEvent): TimelineAvatar[] {
@@ -502,6 +809,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
             return;
         }
         this.hoverAvatar = null;
+        this.hoverAvatarPosition = { left: -10000, top: -10000 };
         this.cdr.detectChanges();
     }
     toggleAvatarExpansion(event: TimelineEvent | undefined, kind: 'character' | 'support', domEvent: Event): void {
@@ -529,6 +837,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         this.avatarRenderRevision++;
         this.eventViewCache.delete(event);
         this.cdr.detectChanges();
+        this.scheduleVirtualRowMeasurement();
     }
     getPredictionInsight(event?: TimelineEvent): TimelinePredictionInsight | null {
         return this.timelinePredictionService.buildInsight(event, this.timelineCalculation);
@@ -810,6 +1119,17 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     }
 
     scrollToToday(behavior: ScrollBehavior = 'smooth'): boolean {
+        const todayIndex = this.timelineItems.findIndex(item => item.type === 'today');
+        if (todayIndex >= 0 && typeof window !== 'undefined') {
+            const feedTop = this.getFeedPageTop();
+            const rowCenter = this.getTimelineOffset(todayIndex) + ((this.timelineItemHeights[todayIndex] ?? 72) / 2);
+            const targetTop = Math.max(0, feedTop + rowCenter - (window.innerHeight / 2));
+            window.scrollTo({ top: targetTop, behavior });
+            this.updateVirtualTimelineRange(false);
+            this.cdr.detectChanges();
+            return true;
+        }
+
         const element = this.hostRef.nativeElement.querySelector<HTMLElement>(`#${this.todayElementId}`);
         if (!element) {
             return false;
@@ -824,6 +1144,10 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     }
     trackByItemDate(index: number, item: MobileTimelineItem): string {
         return `${item.date.getTime()}-${item.type}-${item.isGrouped ? 'grouped' : 'single'}`;
+    }
+    trackByVirtualTimelineRow(index: number, row: VirtualTimelineRow): string {
+        const item = row.item;
+        return `${row.index}-${item.date.getTime()}-${item.type}-${item.isGrouped ? 'grouped' : 'single'}`;
     }
     trackByGroupedEventId(index: number, event: TimelineEvent): string {
         return event.id;

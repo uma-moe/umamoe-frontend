@@ -6,6 +6,12 @@
     </div>
   </div>
 
+  <app-ad-in-content
+    surface="activity"
+    label="activity"
+    viewport="mobile"
+  ></app-ad-in-content>
+
   <div class="content-container">
     <section class="scope-notice">
       <mat-icon>info</mat-icon>
@@ -70,72 +76,81 @@
       </div>
 
       <div class="leaderboard shame-list" *ngIf="!loading && !errorMessage && entries.length > 0">
-        <div class="shame-row"
-             *ngFor="let entry of entries; index as index; trackBy: trackByViewerId"
-             [ngClass]="getScoreTierClass(entry.suspicion_score)">
-          <div class="card-header">
-            <div class="rank-section">
-              <span class="rank-number mono">#{{ rowRank(index) }}</span>
-            </div>
-
-            <div class="entry-main">
-              <div class="entry-title-row">
-                <a class="entry-name" [routerLink]="['/activity', entry.viewer_id]" queryParamsHandling="preserve">
-                  {{ entry.trainer_name || 'Unknown Trainer' }}
-                </a>
-                <span class="viewer-id">ID {{ entry.viewer_id }}</span>
+        <ng-container *ngFor="let entry of entries; index as index; trackBy: trackByViewerId">
+          <div class="shame-row"
+               [ngClass]="getScoreTierClass(entry.suspicion_score)">
+            <div class="card-header">
+              <div class="rank-section">
+                <span class="rank-number mono">#{{ rowRank(index) }}</span>
               </div>
 
-              <div class="entry-facts">
-                <a class="circle-link" *ngIf="entry.circle_id" [routerLink]="['/circles', entry.circle_id]">
-                  <mat-icon>groups</mat-icon>
-                  <span>{{ entry.circle_name || 'Club' }}</span>
-                  <span *ngIf="entry.circle_monthly_rank">#{{ entry.circle_monthly_rank }}</span>
-                </a>
-                <span class="info-tag">{{ entry.days_observed }}d observed</span>
-                <span class="info-tag">{{ entry.total_careers | localeNumber }} careers</span>
+              <div class="entry-main">
+                <div class="entry-title-row">
+                  <a class="entry-name" [routerLink]="['/activity', entry.viewer_id]" queryParamsHandling="preserve">
+                    {{ entry.trainer_name || 'Unknown Trainer' }}
+                  </a>
+                  <span class="viewer-id">ID {{ entry.viewer_id }}</span>
+                </div>
+
+                <div class="entry-facts">
+                  <a class="circle-link" *ngIf="entry.circle_id" [routerLink]="['/circles', entry.circle_id]">
+                    <mat-icon>groups</mat-icon>
+                    <span>{{ entry.circle_name || 'Club' }}</span>
+                    <span *ngIf="entry.circle_monthly_rank">#{{ entry.circle_monthly_rank }}</span>
+                  </a>
+                  <span class="info-tag">{{ entry.days_observed }}d observed</span>
+                  <span class="info-tag">{{ entry.total_careers | localeNumber }} careers</span>
+                </div>
+
+                <div class="entry-reasons">
+                  <span class="info-tag">{{ getVerdictSignalLabel(entry.evidence.verdict) }}</span>
+                  <span class="reason-chip"
+                        *ngFor="let reason of getTopReasons(entry); trackBy: trackByReasonKey"
+                        [ngClass]="[reason.severity, reason.confidence]">
+                    <span class="reason-label">{{ getEvidenceReasonLabel(reason) }}</span>
+                  </span>
+                </div>
               </div>
 
-              <div class="entry-reasons">
-                <span class="info-tag">{{ getVerdictSignalLabel(entry.evidence.verdict) }}</span>
-                <span class="reason-chip"
-                      *ngFor="let reason of getTopReasons(entry); trackBy: trackByReasonKey"
-                      [ngClass]="[reason.severity, reason.confidence]">
-                  <span class="reason-label">{{ getEvidenceReasonLabel(reason) }}</span>
+              <div class="metrics-section">
+                <div class="metric primary">
+                  <span class="value">{{ entry.total_fan_gain | compactNumber }}</span>
+                  <span class="label">Fan gain</span>
+                </div>
+                <div class="metric">
+                  <span class="value">{{ formatDuration(entry.total_active_seconds) }}</span>
+                  <span class="label">Active</span>
+                </div>
+                <div class="metric">
+                  <span class="value">{{ entry.careers_per_active_hour | number:'1.1-1' }}</span>
+                  <span class="label">Careers/hr</span>
+                </div>
+              </div>
+
+              <div class="score-section">
+                <span class="score-label">{{ getScoreBandLabel(entry.suspicion_score) }}</span>
+                <span class="score-line">
+                  <span class="score-value mono">{{ entry.suspicion_score }}</span>
+                  <span class="score-max">/100</span>
                 </span>
               </div>
-            </div>
 
-            <div class="metrics-section">
-              <div class="metric primary">
-                <span class="value">{{ entry.total_fan_gain | compactNumber }}</span>
-                <span class="label">Fan gain</span>
+              <div class="actions">
+                <a mat-icon-button [routerLink]="['/activity', entry.viewer_id]" queryParamsHandling="preserve" matTooltip="Open activity report" aria-label="Open activity report">
+                  <mat-icon>chevron_right</mat-icon>
+                </a>
               </div>
-              <div class="metric">
-                <span class="value">{{ formatDuration(entry.total_active_seconds) }}</span>
-                <span class="label">Active</span>
-              </div>
-              <div class="metric">
-                <span class="value">{{ entry.careers_per_active_hour | number:'1.1-1' }}</span>
-                <span class="label">Careers/hr</span>
-              </div>
-            </div>
-
-            <div class="score-section">
-              <span class="score-label">{{ getScoreBandLabel(entry.suspicion_score) }}</span>
-              <span class="score-line">
-                <span class="score-value mono">{{ entry.suspicion_score }}</span>
-                <span class="score-max">/100</span>
-              </span>
-            </div>
-
-            <div class="actions">
-              <a mat-icon-button [routerLink]="['/activity', entry.viewer_id]" queryParamsHandling="preserve" matTooltip="Open activity report" aria-label="Open activity report">
-                <mat-icon>chevron_right</mat-icon>
-              </a>
             </div>
           </div>
-        </div>
+
+          <app-ad-in-content
+            *ngIf="index === 14 || index === 34"
+            surface="activity"
+            label="activity"
+            [index]="index === 14 ? 2 : 3"
+            viewport="mobile"
+          ></app-ad-in-content>
+        </ng-container>
       </div>
 
       <div class="no-results" *ngIf="!loading && !errorMessage && !hasResults">
@@ -282,6 +297,13 @@
               </div>
             </section>
           </section>
+
+          <app-ad-in-content
+            surface="activity"
+            label="activity"
+            [index]="2"
+            viewport="mobile"
+          ></app-ad-in-content>
 
           <section class="detail-section insight-section" *ngIf="scoreInsightGroups.length > 0">
             <div class="section-heading split-heading">
@@ -435,6 +457,13 @@
               </div>
             </div>
           </section>
+
+          <app-ad-in-content
+            surface="activity"
+            label="activity"
+            [index]="3"
+            viewport="mobile"
+          ></app-ad-in-content>
 
           <section class="detail-section daily-section" *ngIf="dailyActivityRows.length > 0">
             <div class="section-heading daily-heading">

@@ -1,0 +1,43 @@
+<ng-container *ngIf="(adsCanRender$ | async) || fallbackPreviewEnabled">
+  <ng-container *ngIf="config.sideRails && sideRailsVisible">
+    <aside
+      *ngIf="(sideRailLayout === 'left' || sideRailLayout === 'both') && (config.sideRails.left.fuseId || fallbackPreviewEnabled)"
+      class="ad-side-rail ad-side-rail--left"
+      [class.ad-side-rail--overlay]="config.sideRailOverlay"
+      aria-label="Sponsored side rail"
+      [style.left.px]="sideRailLeft"
+      [style.top.px]="sideRailTop"
+      [style.--ad-side-rail-width]="sideRailWidth + 'px'"
+    >
+      <app-ad-slot
+        [config]="config.sideRails.left"
+        [forceFallback]="fallbackPreviewEnabled"
+      ></app-ad-slot>
+    </aside>
+    <aside
+      *ngIf="(sideRailLayout === 'right' || sideRailLayout === 'both') && (config.sideRails.right.fuseId || fallbackPreviewEnabled)"
+      class="ad-side-rail ad-side-rail--right"
+      [class.ad-side-rail--overlay]="config.sideRailOverlay"
+      aria-label="Sponsored side rail"
+      [style.right.px]="sideRailRight"
+      [style.top.px]="sideRailTop"
+      [style.--ad-side-rail-width]="sideRailWidth + 'px'"
+    >
+      <app-ad-slot
+        [config]="config.sideRails.right"
+        [forceFallback]="fallbackPreviewEnabled"
+      ></app-ad-slot>
+    </aside>
+  </ng-container>
+
+  <ng-container *ngIf="persistentBottomPopupConfig as bottomPopup">
+    <aside class="ad-bottom-popup" *ngIf="!bottomPopupClosed" aria-label="Sponsored bottom popup">
+      <app-ad-slot
+        [config]="bottomPopup"
+        [closable]="true"
+        [forceFallback]="fallbackPreviewEnabled"
+        (close)="closeBottomPopup()"
+      ></app-ad-slot>
+    </aside>
+  </ng-container>
+</ng-container>

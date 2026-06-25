@@ -38,6 +38,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { preferRasterAsset } from '../../utils/raster-asset';
 import { AppVersionService } from '../../services/app-version.service';
 import { AnalyticsEventParams, GoogleAnalyticsService } from '../../services/google-analytics.service';
+import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
 
 interface LineagePlannerShareNode {
   p: number;
@@ -68,6 +69,7 @@ interface LineagePlannerShareState {
     MatSnackBarModule,
     MatTabsModule,
     SparkEditorComponent,
+    AdInContentComponent,
   ],
   templateUrl: './lineage-planner.component.html',
   styleUrl: './lineage-planner.component.scss',

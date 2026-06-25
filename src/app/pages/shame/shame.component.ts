@@ -16,6 +16,7 @@ import { ShameService } from '../../services/shame.service';
 import { AppVersionService } from '../../services/app-version.service';
 import { CompactNumberPipe } from '../../pipes/compact-number.pipe';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
+import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
 import {
   DailyPoint,
   EvidenceReason,
@@ -125,7 +126,8 @@ interface EvidenceGroupView {
     MatSelectModule,
     MatTooltipModule,
     CompactNumberPipe,
-    LocaleNumberPipe
+    LocaleNumberPipe,
+    AdInContentComponent
   ],
   templateUrl: './shame.component.html',
   styleUrl: './shame.component.scss'

@@ -314,6 +314,68 @@ app-root {
   min-height: 0;
 }
 
+html {
+  --ad-bottom-popup-offset: 0px;
+  --ad-bottom-filter-panel-offset: 0px;
+}
+
+html.ad-bottom-popup-visible {
+  --ad-bottom-popup-offset: 108px;
+  --ad-bottom-filter-panel-offset: 108px;
+}
+
+html.ad-bottom-popup-visible .bottom-filter-panel {
+  bottom: var(--ad-bottom-filter-panel-offset) !important;
+}
+
+app-ad-in-content.ad-in-content-host--content-top-bridge-active + :where(
+  .content-container,
+  .planner-scroll,
+  .main-content,
+  .floating-filter-card,
+  .timeline-wrapper
+) {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+@media (max-width: 720px) {
+  html.ad-bottom-popup-visible {
+    --ad-bottom-popup-offset: 56px;
+    --ad-bottom-filter-panel-offset: 28px;
+  }
+}
+
+@media (min-width: 1320px) and (max-width: 1919px) {
+  html.ad-left-rail-reserved {
+    --ad-layout-start-space: calc(var(--ad-left-rail-reserve, 152px) + 1.5rem);
+    --ad-layout-end-space: max(1rem, env(safe-area-inset-right));
+  }
+
+  html.ad-left-rail-reserved .app-shell-main > :not(router-outlet) :where(
+    .content-container,
+    .page-header .header-content,
+    .timeline-controls,
+    .current-date-display,
+    .timeline-wrapper,
+    .tierlist-container,
+    .planner-scroll,
+    .section-content,
+    .main-layout
+  ) {
+    width: calc(100vw - var(--ad-layout-start-space) - var(--ad-layout-end-space)) !important;
+    max-width: none !important;
+    margin-left: var(--ad-layout-start-space) !important;
+    margin-right: var(--ad-layout-end-space) !important;
+  }
+}
+
+@media (min-width: 1920px) {
+  html.ad-side-rail-page {
+    --page-max-width: 1800px;
+  }
+}
+
 // Domain Migration Dialog Styles
 .domain-migration-dialog .mat-mdc-dialog-container {
   background: var(--bg-secondary) !important;

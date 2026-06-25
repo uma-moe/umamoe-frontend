@@ -31,6 +31,7 @@ import { environment } from '../../../environments/environment';
 import { DatabaseFilterComponent, UnifiedSearchParams } from '../../components/database-filter/database-filter.component';
 import { InheritanceEntryComponent } from '../../components/inheritance-entry/inheritance-entry.component';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
+import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
 
 @Component({
   selector: 'app-inheritance-database',
@@ -51,6 +52,7 @@ import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
     DatabaseFilterComponent,
     InheritanceEntryComponent,
     LocaleNumberPipe,
+    AdInContentComponent,
     RouterModule
   ],
   templateUrl: './inheritance-database.component.html',
@@ -814,6 +816,18 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     return this._totalPages;
   }
   _totalPages = 1;
+
+  shouldShowDatabaseInterscroller(recordIndex: number): boolean {
+    return this.listMode === 'infinite'
+      && recordIndex >= 7
+      && (recordIndex - 7) % 12 === 0;
+  }
+
+  getDatabaseInterscrollerIndex(recordIndex: number): number {
+    const slotNumber = Math.floor((recordIndex - 7) / 12);
+    return ((slotNumber + 1) % 4) + 1;
+  }
+
   toggleListMode() {
     this.listMode = this.listMode === 'infinite' ? 'paginated' : 'infinite';
     localStorage.setItem(this.LIST_MODE_KEY, this.listMode);

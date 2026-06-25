@@ -89,6 +89,12 @@
     </div>
   </nav>
 
+  <app-ad-in-content
+    surface="statistics"
+    label="statistics"
+    viewport="mobile"
+  ></app-ad-in-content>
+
   <!-- Loading Indicator -->
   <div class="loading" *ngIf="globalLoading">
     <mat-spinner></mat-spinner>
@@ -207,6 +213,13 @@
         </div>
       </section>
 
+      <app-ad-in-content
+        surface="statistics"
+        label="statistics"
+        [index]="2"
+        viewport="mobile"
+      ></app-ad-in-content>
+
       <!-- Support Card Analysis Section -->
       <section class="support-card-section" id="support-cards">
         <div class="section-header">
@@ -267,6 +280,13 @@
           </div>
         </div>
       </section>
+
+      <app-ad-in-content
+        surface="statistics"
+        label="statistics"
+        [index]="3"
+        viewport="mobile"
+      ></app-ad-in-content>
 
       <!-- Skills Analysis Section -->
       <section class="skills-section" id="skills">
@@ -436,6 +456,13 @@
           </div>
         </div>
       </section>
+
+      <app-ad-in-content
+        surface="statistics"
+        label="statistics"
+        [index]="4"
+        viewport="mobile"
+      ></app-ad-in-content>
 
       <!-- Character Analysis Section -->
       <section class="character-section" id="characters">

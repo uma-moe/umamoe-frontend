@@ -12,7 +12,7 @@ const CONSENT_KEY = 'cookie-consent';
 const DEFAULT_CONSENT: CookieConsent = {
   essential: true,
   analytics: false,
-  advertising: false,
+  advertising: true,
 };
 
 @Injectable({ providedIn: 'root' })
@@ -76,7 +76,10 @@ export class CookieConsentService {
     if (!stored) return null;
     try {
       const parsed = JSON.parse(stored);
-      return { ...DEFAULT_CONSENT, ...parsed, essential: true };
+      const advertising = typeof parsed.advertising === 'boolean'
+        ? parsed.advertising
+        : DEFAULT_CONSENT.advertising;
+      return { ...DEFAULT_CONSENT, ...parsed, advertising, essential: true };
     } catch {
       return null;
     }

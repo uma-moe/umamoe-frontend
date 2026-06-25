@@ -238,9 +238,20 @@
   <!-- Timeline feed -->
   <div class="tl-feed">
     <div class="tl-spine"></div>
-
     <div
-      *ngFor="let item of timelineItems; trackBy: trackByItemDate"
+      class="tl-virtual-spacer"
+      aria-hidden="true"
+      [style.height.px]="virtualTopSpacerHeight"
+    ></div>
+
+    <ng-container *ngFor="let row of virtualTimelineRows; trackBy: trackByVirtualTimelineRow">
+    <div
+      #virtualTimelineRow
+      class="tl-virtual-row"
+      [attr.data-timeline-index]="row.index"
+    >
+    <ng-container *ngIf="row.item as item">
+    <div
       [attr.id]="item.type === 'today' ? todayElementId : null"
       class="tl-item"
       >
@@ -306,6 +317,24 @@
         </ng-container>
       </div>
     </div>
+
+    <app-ad-in-content
+      *ngIf="shouldShowMobileInContentAd(row.index)"
+      class="tl-incontent-ad"
+      surface="timeline"
+      label="timeline"
+      [index]="getMobileInContentAdSlotIndex(row.index)"
+      viewport="mobile"
+    ></app-ad-in-content>
+    </ng-container>
+    </div>
+    </ng-container>
+
+    <div
+      class="tl-virtual-spacer"
+      aria-hidden="true"
+      [style.height.px]="virtualBottomSpacerHeight"
+    ></div>
   </div>
 
 

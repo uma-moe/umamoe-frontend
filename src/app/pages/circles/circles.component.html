@@ -6,6 +6,13 @@
     </div>
   </div>
 
+  <app-ad-in-content
+    surface="leaderboard"
+    label="leaderboard"
+    [contentTopBridge]="true"
+    viewport="mobile"
+  ></app-ad-in-content>
+
   <div class="content-container">
     <div class="filters-container">
       <div class="search-row">
@@ -67,7 +74,8 @@
     </div>
 
     <div class="results-grid" *ngIf="!loading && filteredCircles.length > 0">
-      <div class="circle-card" *ngFor="let circle of filteredCircles; trackBy: trackByCircleId"
+      <ng-container *ngFor="let circle of filteredCircles; let i = index; trackBy: trackByCircleId">
+      <div class="circle-card"
            [attr.data-circle-id]="circle.circle_id"
            [class.rank-1]="circle.monthly_rank === 1"
            [class.rank-2]="circle.monthly_rank === 2"
@@ -143,6 +151,16 @@
           <p class="comment" [innerHTML]="circle.comment | discordLink"></p>
         </div>
       </div>
+
+      <ng-container *ngIf="getLeaderboardAdSlot(i) as adSlot">
+        <app-ad-slot
+          *ngIf="((adsCanRender$ | async) && adSlot.fuseId) || fallbackPreviewEnabled"
+          class="leaderboard-incontent-ad"
+          [config]="adSlot"
+          [forceFallback]="fallbackPreviewEnabled"
+        ></app-ad-slot>
+      </ng-container>
+      </ng-container>
     </div>
 
     <div class="no-results" *ngIf="!loading && filteredCircles.length === 0">

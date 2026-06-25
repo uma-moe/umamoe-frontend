@@ -28,6 +28,7 @@ import { TeamClassBottomSheetComponent, BottomSheetData } from '../../components
 import { ColorsService } from '../../services/colors.service';
 import { CharacterService } from '../../services/character.service';
 import { SupportCardType } from '../../models/support-card.model';
+import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
 import {
   STATISTICS_DISTANCES,
   getStatisticsDistanceColor,
@@ -81,7 +82,8 @@ interface SupportCardCombinationAggregate {
     MatCheckboxModule,
     ReactiveFormsModule,
     StatisticsChartComponent,
-    ClassFilterComponent
+    ClassFilterComponent,
+    AdInContentComponent
   ],
   templateUrl: './statistics.component.html',
   styleUrl: './statistics.component.scss'

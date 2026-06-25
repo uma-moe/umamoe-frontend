@@ -7,6 +7,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { Subject, takeUntil } from 'rxjs';
 import { StatsService, StatsResponse } from '../../services/stats.service';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
+import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
 @Component({
   selector: 'app-tools',
   standalone: true,
@@ -15,7 +16,8 @@ import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
     RouterModule,
     MatIconModule,
     MatCardModule,
-    LocaleNumberPipe
+    LocaleNumberPipe,
+    AdInContentComponent
   ],
   templateUrl: './tools.component.html',
   styleUrl: './tools.component.scss'

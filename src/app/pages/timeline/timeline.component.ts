@@ -19,6 +19,7 @@ import { MobileTimelineComponent } from '../../components/mobile-timeline/mobile
 import { TimelineAvatar, TimelineAvatarService } from '../../services/timeline-avatar.service';
 import { TimelinePredictionInsight, TimelinePredictionService } from '../../services/timeline-prediction.service';
 import { TimelinePredictionDialogComponent, TimelinePredictionDialogData } from './timeline-prediction-dialog.component';
+import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
 import { combineLatest, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Meta, Title } from '@angular/platform-browser';
@@ -62,7 +63,8 @@ interface EventFilters {
         MatProgressSpinnerModule,
         FormsModule,
         ScrollingModule,
-        MobileTimelineComponent
+        MobileTimelineComponent,
+        AdInContentComponent
     ],
     templateUrl: './timeline.component.html',
     styleUrls: ['./timeline.component.scss'],
@@ -75,7 +77,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     endDate = new Date('2027-06-26'); // 2 years instead of 4
     // Responsive design
     isMobile = false;
-    mobileBreakpoint = 950; // Width in pixels for mobile breakpoint
+    mobileBreakpoint = 1150; // Width in pixels for mobile breakpoint
     isCompactMode = false; // For floating filter card
     compactModeHeightThreshold = 1200; // Height threshold for compact mode
     // Virtual rendering configuration
@@ -116,7 +118,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     timelineAnniversaries: TimelineAnniversary[] = [];
     timelineCalculation: TimelineCalculation | null = null;
     hoverAvatar: TimelineAvatar | null = null;
-    hoverAvatarPosition = { left: 0, top: 0 };
+    hoverAvatarPosition = { left: -10000, top: -10000 };
     private readonly avatarHoverCardWidth = 182;
     private readonly avatarHoverCardHeight = 72;
     private avatarHoverHideTimer?: number;
@@ -978,6 +980,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             return;
         }
         this.hoverAvatar = null;
+        this.hoverAvatarPosition = { left: -10000, top: -10000 };
         this.cdr.detectChanges();
     }
     onAvatarStripWheel(event: WheelEvent): void {

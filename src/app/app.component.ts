@@ -6,6 +6,7 @@ import { NavigationComponent } from './components/navigation/navigation.componen
 import { FooterComponent } from './components/footer/footer.component';
 import { SnowComponent } from './components/snow/snow.component';
 import { CookieConsentComponent } from './components/cookie-consent/cookie-consent.component';
+import { AdLayoutComponent } from './components/ads/ad-layout.component';
 import { StatsService } from './services/stats.service';
 import { ThemeService } from './services/theme.service';
 import { UpdateNotificationService } from './services/update-notification.service';
@@ -14,6 +15,7 @@ import { AuthService } from './services/auth.service';
 import { MasterDataService } from './services/master-data.service';
 import { TurnstileDebugState, TurnstileService } from './services/turnstile.service';
 import { GoogleAnalyticsService } from './services/google-analytics.service';
+import { FuseAdsService } from './services/fuse-ads.service';
 import { AppVersionService } from './services/app-version.service';
 import { environment } from '../environments/environment';
 import { BehaviorSubject, Observable, combineLatest, filter, map, throttleTime, timer } from 'rxjs';
@@ -40,7 +42,16 @@ interface TurnstileRecoveryNotice {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, NavigationComponent, FooterComponent, SnowComponent, CookieConsentComponent, MatDialogModule],
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    NavigationComponent,
+    FooterComponent,
+    SnowComponent,
+    CookieConsentComponent,
+    MatDialogModule,
+    AdLayoutComponent,
+  ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
@@ -63,6 +74,7 @@ export class AppComponent implements OnInit {
     private activatedRoute: ActivatedRoute,
     private turnstileService: TurnstileService,
     private googleAnalyticsService: GoogleAnalyticsService,
+    private fuseAdsService: FuseAdsService,
     private appVersionService: AppVersionService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
@@ -91,6 +103,7 @@ export class AppComponent implements OnInit {
     }
 
     this.masterDataService.init();
+    this.fuseAdsService.init();
     this.googleAnalyticsService.init();
     this.appVersionService.init();
 

@@ -20,6 +20,7 @@ import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { CardDetailsDialogComponent } from '../../components/card-details-dialog/card-details-dialog.component';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { AppVersionService } from '../../services/app-version.service';
+import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
 interface TierGroup {
   tier: string;
   cards: PrecomputedCardData[];
@@ -50,7 +51,8 @@ interface TypeTierlist {
     MatFormFieldModule,
     TierlistScatterChartComponent,
     CardHoverMenuSimpleComponent,
-    LocaleNumberPipe
+    LocaleNumberPipe,
+    AdInContentComponent
   ],
   templateUrl: './tierlist.component.html',
   styleUrls: ['./tierlist.component.scss'],

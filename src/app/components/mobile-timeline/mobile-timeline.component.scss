@@ -67,6 +67,23 @@
 
 .tl-feed { position: relative; }
 
+.tl-incontent-ad {
+    display: block;
+    margin: 2px 0 18px;
+    padding-left: calc(var(--mobile-rail-x) + 22px);
+}
+
+.tl-virtual-row {
+    position: relative;
+    z-index: 1;
+}
+
+.tl-virtual-spacer {
+    width: 100%;
+    min-height: 0;
+    pointer-events: none;
+}
+
 .tl-spine {
     position: absolute;
     left: var(--mobile-rail-x);

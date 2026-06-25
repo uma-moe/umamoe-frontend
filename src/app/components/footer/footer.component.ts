@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppVersionService } from '../../services/app-version.service';
+import { CookieConsentService } from '../../services/cookie-consent.service';
 
 @Component({
   selector: 'app-footer',
@@ -22,6 +23,7 @@ export class FooterComponent {
 
   constructor(
     private appVersionService: AppVersionService,
+    private cookieConsentService: CookieConsentService,
     @Inject(DOCUMENT) private document: Document,
     @Inject(PLATFORM_ID) private platformId: Object,
   ) {}
@@ -63,6 +65,10 @@ export class FooterComponent {
       this.copied = false;
       this.copyResetTimer = null;
     }, 1600) ?? null;
+  }
+
+  openCookieSettings(): void {
+    this.cookieConsentService.reopenBanner();
   }
 
 }

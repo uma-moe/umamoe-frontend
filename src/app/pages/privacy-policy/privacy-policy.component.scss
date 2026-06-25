@@ -156,6 +156,47 @@
   &:hover { text-decoration-style: solid; }
 }
 
+.fuse-privacy-card {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem 1.15rem;
+  margin: 1rem 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-1);
+
+  p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+}
+
+.fuse-privacy-copy {
+  display: grid;
+  gap: 0.25rem;
+
+  strong {
+    color: var(--text-primary);
+    font-size: 0.88rem;
+  }
+
+  span {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.55;
+  }
+}
+
+.fuse-privacy-tool {
+  min-height: 36px;
+  font-size: 0.75rem;
+}
+
+:host ::ng-deep #fuse-privacy-tool {
+  font-size: 0.75rem;
+}
+
 // --- GDPR Rights Grid ---
 .rights-grid {
   display: grid;
@@ -241,9 +282,9 @@
 // --- Back to Top ---
 .back-to-top {
   position: fixed;
-  bottom: 1.5rem;
+  bottom: calc(1.5rem + var(--ad-bottom-popup-offset, 0px));
   right: 1.5rem;
-  z-index: 1000;
+  z-index: 1450;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -259,7 +300,10 @@
 
   &:hover { background: rgba(40, 40, 40, 0.95); border-color: var(--border-secondary); color: var(--accent-primary); }
 
-  @media (max-width: 768px) { bottom: 1rem; right: 1rem; }
+  @media (max-width: 768px) {
+    bottom: calc(1rem + var(--ad-bottom-popup-offset, 0px));
+    right: 1rem;
+  }
 }
 
 // --- Responsive ---

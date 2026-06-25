@@ -18,6 +18,13 @@
     </div>
   </div>
 
+  <app-ad-in-content
+    surface="database"
+    label="database"
+    [contentTopBridge]="true"
+    viewport="mobile"
+  ></app-ad-in-content>
+
   <div class="content-container">
     <!-- Filters -->
   <app-database-filter 
@@ -149,28 +156,35 @@
         *ngIf="!loading && allRecords && allRecords.length"
         class="results-grid"
       >
-        <div
-          *ngFor="let record of renderedRecords; trackBy: trackByRecordId"
-          class="result-card-shell"
-        >
-          <app-inheritance-entry
-            [record]="record"
-            [showDatabaseHeader]="true"
-            [isMaxFollowers]="isMaxFollowers(record)"
-            [activeFilters]="currentAdvancedFilters"
-            [filterTree]="entryFilterTree"
-            [selectedVeteran]="entrySelectedVeteran"
-            [sparkViewMode]="splitSparksMode ? 'split' : 'merged'"
-            plannerSource="db"
-            [sparkShowPerRun]="sparkShowPerRun"
-            (sparkShowPerRunChange)="sparkShowPerRun = $event"
-            [showP2Sparks]="showP2Sparks"
-            (showP2SparksChange)="showP2Sparks = $event"
-            [showBookmarkButton]="true"
-            [isBookmarked]="bookmarkService.isBookmarked(record.account_id ?? '')"
-            (recordActionComplete)="onEntryRecordActionComplete($event)">
-          </app-inheritance-entry>
-        </div>
+        <ng-container *ngFor="let record of renderedRecords; let i = index; trackBy: trackByRecordId">
+          <div class="result-card-shell">
+            <app-inheritance-entry
+              [record]="record"
+              [showDatabaseHeader]="true"
+              [isMaxFollowers]="isMaxFollowers(record)"
+              [activeFilters]="currentAdvancedFilters"
+              [filterTree]="entryFilterTree"
+              [selectedVeteran]="entrySelectedVeteran"
+              [sparkViewMode]="splitSparksMode ? 'split' : 'merged'"
+              plannerSource="db"
+              [sparkShowPerRun]="sparkShowPerRun"
+              (sparkShowPerRunChange)="sparkShowPerRun = $event"
+              [showP2Sparks]="showP2Sparks"
+              (showP2SparksChange)="showP2Sparks = $event"
+              [showBookmarkButton]="true"
+              [isBookmarked]="bookmarkService.isBookmarked(record.account_id ?? '')"
+              (recordActionComplete)="onEntryRecordActionComplete($event)">
+            </app-inheritance-entry>
+          </div>
+
+          <app-ad-in-content
+            *ngIf="shouldShowDatabaseInterscroller(i)"
+            surface="database"
+            label="database"
+            [index]="getDatabaseInterscrollerIndex(i)"
+            viewport="mobile"
+          ></app-ad-in-content>
+        </ng-container>
 
         <div *ngIf="isRenderingRecords" class="render-progress" aria-live="polite">
           <mat-spinner diameter="20"></mat-spinner>
@@ -331,25 +345,35 @@
       </div>
 
       <div *ngIf="authService.isLoggedIn() && !bookmarksLoading && pagedBookmarks.length" class="results-grid">
-        <div *ngFor="let record of pagedBookmarks; trackBy: trackByRecordId">
-          <app-inheritance-entry
-            [record]="record"
-            [showDatabaseHeader]="true"
-            [isMaxFollowers]="isMaxFollowers(record)"
-            [activeFilters]="currentAdvancedFilters"
-            [filterTree]="entryFilterTree"
-            [selectedVeteran]="entrySelectedVeteran"
-            [sparkViewMode]="splitSparksMode ? 'split' : 'merged'"
-            plannerSource="db"
-            [sparkShowPerRun]="sparkShowPerRun"
-            (sparkShowPerRunChange)="sparkShowPerRun = $event"
-            [showP2Sparks]="showP2Sparks"
-            (showP2SparksChange)="showP2Sparks = $event"
-            [showBookmarkButton]="true"
-            [isBookmarked]="true"
-            (recordActionComplete)="onEntryRecordActionComplete($event)">
-          </app-inheritance-entry>
-        </div>
+        <ng-container *ngFor="let record of pagedBookmarks; let i = index; trackBy: trackByRecordId">
+          <div>
+            <app-inheritance-entry
+              [record]="record"
+              [showDatabaseHeader]="true"
+              [isMaxFollowers]="isMaxFollowers(record)"
+              [activeFilters]="currentAdvancedFilters"
+              [filterTree]="entryFilterTree"
+              [selectedVeteran]="entrySelectedVeteran"
+              [sparkViewMode]="splitSparksMode ? 'split' : 'merged'"
+              plannerSource="db"
+              [sparkShowPerRun]="sparkShowPerRun"
+              (sparkShowPerRunChange)="sparkShowPerRun = $event"
+              [showP2Sparks]="showP2Sparks"
+              (showP2SparksChange)="showP2Sparks = $event"
+              [showBookmarkButton]="true"
+              [isBookmarked]="true"
+              (recordActionComplete)="onEntryRecordActionComplete($event)">
+            </app-inheritance-entry>
+          </div>
+
+          <app-ad-in-content
+            *ngIf="i === 7"
+            surface="database"
+            label="database"
+            [index]="4"
+            viewport="mobile"
+          ></app-ad-in-content>
+        </ng-container>
       </div>
 
       <div *ngIf="authService.isLoggedIn() && !bookmarksLoading && filteredBookmarks.length === 0" class="no-results">

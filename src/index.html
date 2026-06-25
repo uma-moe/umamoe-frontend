@@ -10,9 +10,67 @@
   <meta property="og:title" content="uma.moe - Umamusume Database & Tools" />
   <meta property="og:description" content="Umamusume Database, Timeline, Tierlist, and tools for the global version" />
   <meta property="og:image" content="https://uma.moe/assets/logo.webp" />
+  <script>
+    (function(win, doc) {
+      if (win.__tcfapi) return;
+      var locatorName = '__tcfapiLocator';
+      var queue = [];
+
+      function ensureLocatorFrame() {
+        if (win.frames[locatorName]) return;
+        if (!doc.body) {
+          win.setTimeout(ensureLocatorFrame, 5);
+          return;
+        }
+
+        var frame = doc.createElement('iframe');
+        frame.name = locatorName;
+        frame.style.cssText = 'display:none';
+        doc.body.appendChild(frame);
+      }
+
+      win.__tcfapi = function(command, version, callback, parameter) {
+        if (!arguments.length) return queue;
+        if (command === 'ping' && typeof callback === 'function') {
+          callback({ cmpLoaded: false, cmpStatus: 'stub' }, true);
+          return;
+        }
+        queue.push(arguments);
+      };
+
+      win.addEventListener('message', function(event) {
+        var data = event.data;
+        if (typeof data === 'string') {
+          try { data = JSON.parse(data); } catch (ignore) { return; }
+        }
+
+        var call = data && data.__tcfapiCall;
+        if (!call) return;
+
+        win.__tcfapi(call.command, call.version, function(returnValue, success) {
+          var response = {
+            __tcfapiReturn: {
+              returnValue: returnValue,
+              success: success,
+              callId: call.callId
+            }
+          };
+
+          event.source && event.source.postMessage(
+            typeof event.data === 'string' ? JSON.stringify(response) : response,
+            '*'
+          );
+        }, call.parameter);
+      }, false);
+
+      ensureLocatorFrame();
+    })(window, document);
+  </script>
   <link rel="preconnect" href="https://challenges.cloudflare.com" />
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons"
-      rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/icon?family=Material+Icons&amp;display=block" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons&amp;display=block" rel="stylesheet">
   <link rel="icon" type="image/x-icon" href="assets/logo.svg">
 </head>
 <body>

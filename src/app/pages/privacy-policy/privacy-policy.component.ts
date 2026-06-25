@@ -17,7 +17,7 @@ import { CookieConsentService } from '../../services/cookie-consent.service';
   styleUrl: './privacy-policy.component.scss'
 })
 export class PrivacyPolicyComponent {
-  lastUpdated = new Date('2026-03-11');
+  lastUpdated = new Date('2026-06-24');
   
   constructor(
     private meta: Meta,

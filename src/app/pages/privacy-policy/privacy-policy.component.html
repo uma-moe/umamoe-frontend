@@ -57,7 +57,7 @@
 
       <h3>What We Don't Collect</h3>
       <ul>
-        <li>We do not use tracking pixels or fingerprinting.</li>
+        <li>We do not use fingerprinting.</li>
         <li>We do not collect detailed behavioral profiles.</li>
         <li>We do not collect precise location data.</li>
       </ul>
@@ -95,8 +95,7 @@
       <p>
         We use cookies and browser local storage to operate the Service. When you first visit, a consent
         banner lets you choose which optional cookie categories to enable. You can change your preferences
-        at any time via the cookie icon in the bottom-left corner or from the Cookie Settings link in
-        the footer.
+        at any time from the Cookie Settings link in the footer.
       </p>
 
       <h3>Essential (Always On)</h3>
@@ -122,11 +121,14 @@
       </ul>
 
       <h3>Advertising (Optional - Consent Required)</h3>
-      <p>Used to show relevant ads and measure their effectiveness, when advertising is enabled.</p>
+      <p>
+        Used to show ads and measure their effectiveness, when advertising is enabled. Advertising consent
+        and opt-out controls are managed through Publift Fuse and its regional consent tools.
+      </p>
       <ul>
-        <li>Ad personalization cookies from ad networks</li>
-        <li>Conversion tracking</li>
-        <li>Google Consent Mode advertising signals such as ad storage, ad user data, and ad personalization</li>
+        <li>Ad delivery and measurement cookies from ad technology partners</li>
+        <li>Regional consent and opt-out preferences for ad personalisation</li>
+        <li>Google Consent Mode advertising signals such as ad storage, ad user data, and ad personalization, derived from the Fuse consent state</li>
       </ul>
 
       <h3>Managing Cookies</h3>
@@ -143,19 +145,44 @@
       <h2><mat-icon>ads_click</mat-icon> Advertising</h2>
 
       <p>
-        We do not currently display advertisements. If we introduce ads in the future, the following will apply:
+        We may display advertisements through Publift Fuse. Fuse provides the regional consent and opt-out
+        controls required for advertising in jurisdictions such as Europe and California.
       </p>
       <ul>
-        <li>Advertising cookies will only be activated with your explicit consent.</li>
-        <li>You will be able to opt out at any time through our cookie settings.</li>
-        <li>No personally identifiable information will be shared with ad networks without your consent.</li>
+        <li>In GDPR regions, ad personalisation only runs according to the consent choices recorded by the CMP.</li>
+        <li>In California, users can opt out of sale or sharing choices through the Fuse privacy portal.</li>
+        <li>Outside regions where a CMP is required, ads may run by default without showing a consent prompt.</li>
+        <li>Our local cookie banner manages analytics preferences; ad privacy choices are managed by Fuse.</li>
       </ul>
+
+      <h3>Regional Ad Privacy Controls</h3>
+      <p>
+        If ad privacy controls are available for your region, you can use the Fuse preference portal below.
+        The portal is provided by Publift and may only appear in regions where these controls are required.
+      </p>
+
+      <div class="fuse-privacy-card">
+        <div class="fuse-privacy-copy">
+          <strong>California Consumer Privacy Act (CCPA)</strong>
+          <span>
+            Californian residents can declare their preferences for the sale or sharing of data for advertising
+            and marketing purposes.
+          </span>
+        </div>
+        <div class="fuse-privacy-tool" data-fuse-privacy-tool></div>
+        <p>
+          We use a third party to provide monetisation technologies for our site. You can review Publift's
+          privacy and cookie policy at
+          <a href="https://publift.com/privacy-policy/" target="_blank" rel="noopener">publift.com/privacy-policy</a>.
+        </p>
+      </div>
 
       <h3>Opting Out</h3>
       <ul>
         <li><a href="https://adssettings.google.com" target="_blank" rel="noopener">Google Ad Settings</a></li>
         <li><a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener">Digital Advertising Alliance</a></li>
-        <li>Use our <a (click)="openCookieSettings()" class="inline-action">cookie settings</a> to disable advertising cookies</li>
+        <li>Use the Fuse preference portal above where available in your region</li>
+        <li>Use our <a (click)="openCookieSettings()" class="inline-action">cookie settings</a> to manage analytics cookies</li>
       </ul>
     </section>
 

@@ -12,6 +12,7 @@ import { MilestonePopupComponent } from '../../components/milestone-popup/milest
 import { Meta, Title } from '@angular/platform-browser';
 import { ThemeService } from '../../services/theme.service';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
+import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -19,7 +20,8 @@ import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
     CommonModule,
     RouterModule,
     MatIconModule,
-    LocaleNumberPipe
+    LocaleNumberPipe,
+    AdInContentComponent
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'

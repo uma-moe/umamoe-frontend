@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy, NgZone, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Inject, OnInit, OnDestroy, NgZone, ChangeDetectorRef } from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatInputModule } from '@angular/material/input';
@@ -16,6 +16,11 @@ import { CircleService } from '../../services/circle.service';
 import { Circle, CircleSearchFilters } from '../../models/circle.model';
 import { DiscordLinkPipe } from '../../pipes/discord-link.pipe';
 import { AnimatedNumberComponent } from '../../components/animated-number/animated-number.component';
+import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
+import { AdSlotComponent } from '../../components/ads/ad-slot.component';
+import { AdSlotConfig, getLeaderboardInContentSlots } from '../../components/ads/ad-layout.config';
+import { isAdFallbackPreviewEnabled } from '../../components/ads/ad-fallback-preview';
+import { FuseAdsService } from '../../services/fuse-ads.service';
 @Component({
   selector: 'app-circles',
   standalone: true,
@@ -33,7 +38,9 @@ import { AnimatedNumberComponent } from '../../components/animated-number/animat
     MatSlideToggleModule,
     FormsModule,
     DiscordLinkPipe,
-    AnimatedNumberComponent
+    AnimatedNumberComponent,
+    AdInContentComponent,
+    AdSlotComponent
   ],
   templateUrl: './circles.component.html',
   styleUrl: './circles.component.scss'
@@ -113,13 +120,32 @@ export class CirclesComponent implements OnInit, OnDestroy {
   secondsUntilRefresh = 0;
   liveRefreshing = false;
   readonly LIVE_REFRESH_SECONDS = 5 * 60;
+  readonly leaderboardAdSlots = getLeaderboardInContentSlots();
+  readonly adsCanRender$ = this.fuseAdsService.adsCanRender$;
+  readonly fallbackPreviewEnabled: boolean;
+
   constructor(
     private cdr: ChangeDetectorRef,
     private circleService: CircleService,
     private route: ActivatedRoute,
     private router: Router,
-    private ngZone: NgZone
-  ) { }
+    private ngZone: NgZone,
+    private fuseAdsService: FuseAdsService,
+    @Inject(DOCUMENT) private document: Document,
+  ) {
+    this.fallbackPreviewEnabled = isAdFallbackPreviewEnabled(this.document);
+  }
+
+  getLeaderboardAdSlot(rowIndex: number): AdSlotConfig | null {
+    const oneBasedPosition = rowIndex + 1;
+    if (oneBasedPosition % 12 !== 0) {
+      return null;
+    }
+
+    const slotIndex = (oneBasedPosition / 12) - 1;
+    return this.leaderboardAdSlots[slotIndex] ?? null;
+  }
+
   ngOnInit(): void {
     this.route.queryParams.pipe(
       takeUntil(this.destroy$)

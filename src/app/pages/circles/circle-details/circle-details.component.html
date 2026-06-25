@@ -60,6 +60,13 @@
     </div>
   </div>
 
+  <app-ad-in-content
+    surface="circle_detail"
+    label="club detail"
+    [contentTopBridge]="true"
+    viewport="mobile"
+  ></app-ad-in-content>
+
   <div class="content-container">
     <!-- Top Row: Info & Circle Chart -->
     <div class="top-grid">
@@ -130,6 +137,13 @@
         </div>
       </div>
     </div>
+
+    <app-ad-in-content
+      surface="circle_detail"
+      label="club detail"
+      [index]="2"
+      viewport="mobile"
+    ></app-ad-in-content>
 
     <!-- Middle Row: Member Progression Chart -->
     <div class="details-card full-width-chart">
@@ -238,6 +252,14 @@
         </button>
       </div>
     </div>
+
+    <app-ad-in-content
+      surface="circle_detail"
+      label="club detail"
+      [index]="3"
+      viewport="mobile"
+    ></app-ad-in-content>
+
     <div class="members-filter-row">
       <mat-form-field appearance="outline" class="factor-autocomplete-field search-user-field members-filter-field" subscriptSizing="dynamic">
         <input

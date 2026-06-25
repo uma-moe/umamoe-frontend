@@ -1,0 +1,56 @@
+<div
+  class="ad-slot"
+  [class]="'ad-slot--' + config.kind"
+  [class.ad-slot--waiting]="slotWaiting"
+  [class.ad-slot--force-fallback]="fallbackPreviewEnabled"
+  [class.ad-slot--fallback-strip]="isFallbackStrip"
+  [class.ad-slot--fallback-compact]="isFallbackCompact"
+  [class.ad-slot--fallback-card]="isFallbackCard"
+  [style.--ad-slot-width]="slotWidthStyle"
+  [style.--ad-slot-height]="slotHeightStyle"
+  [attr.data-ad-placement]="config.placement"
+  [attr.data-ad-sizes]="sizesLabel"
+  [attr.aria-label]="config.label"
+>
+  <div
+    #adTarget
+    class="ad-slot-target"
+    [id]="slotElementId"
+    [attr.data-fuse]="config.fuseId || null"
+    [attr.data-ad-placement]="config.placement"
+    [attr.data-ad-sizes]="sizesLabel"
+  ></div>
+
+  <div class="ad-slot-fallback" *ngIf="showFallback">
+    <mat-icon aria-hidden="true">favorite</mat-icon>
+    <div class="ad-slot-fallback-copy">
+      <strong>Thank you for using uma.moe</strong>
+      <span>You can support us independently on Ko-fi. Any support is appreciated; nothing is mandatory.</span>
+    </div>
+    <a
+      class="ad-slot-support-link"
+      href="https://ko-fi.com/umamoe"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Support uma.moe on Ko-fi"
+    >
+      <mat-icon aria-hidden="true">volunteer_activism</mat-icon>
+      <span>Ko-fi</span>
+    </a>
+  </div>
+
+  <div class="ad-slot-meta" aria-hidden="true">
+    <span>{{ config.label }}</span>
+    <small>{{ sizesLabel }}</small>
+  </div>
+
+  <button
+    *ngIf="closable"
+    type="button"
+    class="ad-slot-close"
+    aria-label="Close sponsored footer"
+    (click)="close.emit()"
+  >
+    <mat-icon aria-hidden="true">close</mat-icon>
+  </button>
+</div>

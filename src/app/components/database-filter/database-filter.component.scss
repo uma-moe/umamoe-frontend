@@ -1981,7 +1981,7 @@
 
 // Floating scroll-aware button - fixed at bottom-right
 .floating-scroll-btn {
-    position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+    position: fixed; bottom: calc(20px + var(--ad-bottom-popup-offset, 0px)); right: 20px; z-index: 1000;
     display: flex; align-items: center; gap: 6px; padding: 10px 20px;
     border-radius: 24px; border: 1.5px solid; font-size: 13px; font-weight: 600;
     cursor: pointer; transition: all 0.25s ease; backdrop-filter: blur(12px);
@@ -1998,7 +1998,7 @@
         &:hover { background: rgba(255, 255, 255, 0.18); border-color: var(--text-muted); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); }
     }
 
-    @media (max-width: 600px) { bottom: 16px; right: 16px; padding: 8px 16px; font-size: 12px; }
+    @media (max-width: 600px) { bottom: calc(16px + var(--ad-bottom-popup-offset, 0px)); right: 16px; padding: 8px 16px; font-size: 12px; }
 }
 
 @keyframes floatIn {

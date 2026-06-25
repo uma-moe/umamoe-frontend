@@ -15,6 +15,7 @@ import { RankingService } from '../../services/ranking.service';
 import { UserFanRankingMonthly, UserFanRankingAlltime, UserFanRankingGains } from '../../models/ranking.model';
 import { CompactNumberPipe } from '../../pipes/compact-number.pipe';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
+import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
 type RankingTab = 'monthly' | 'alltime' | 'gains';
 @Component({
   selector: 'app-rankings',
@@ -32,7 +33,8 @@ type RankingTab = 'monthly' | 'alltime' | 'gains';
     MatTabsModule,
     FormsModule,
     CompactNumberPipe,
-    LocaleNumberPipe
+    LocaleNumberPipe,
+    AdInContentComponent
   ],
   templateUrl: './rankings.component.html',
   styleUrl: './rankings.component.scss'

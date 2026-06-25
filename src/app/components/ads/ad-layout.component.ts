@@ -1,0 +1,536 @@
+import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { Component, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
+import { Subscription, filter } from 'rxjs';
+import { AdSlotComponent } from './ad-slot.component';
+import { isAdFallbackPreviewEnabled } from './ad-fallback-preview';
+import { AdRouteConfig, AdSlotConfig, getAdRouteConfig, getPageInitFuseIds } from './ad-layout.config';
+import { FuseAdsService } from '../../services/fuse-ads.service';
+
+const BOTTOM_POPUP_DISMISSED_KEY = 'umamoe-ad-footer-dismissed-v1';
+const AD_SIDE_RAIL_PAGE_CLASS = 'ad-side-rail-page';
+const AD_LEFT_RAIL_RESERVED_CLASS = 'ad-left-rail-reserved';
+const AD_BOTTOM_POPUP_VISIBLE_CLASS = 'ad-bottom-popup-visible';
+const DEFAULT_SIDE_RAIL_MIN_WIDTH = 1320;
+const DEFAULT_SIDE_RAIL_ANCHOR_SELECTORS = [
+  '.content-container',
+  '.tierlist-container',
+  '.planner-scroll',
+  '.section-content',
+  '.quick-links',
+  '.hero-content',
+  '.page-header .header-content',
+];
+const SIDE_RAIL_COMPACT_WIDTH = 120;
+const SIDE_RAIL_WIDE_WIDTH = 160;
+const SIDE_RAIL_EDGE_GAP = 16;
+const SIDE_RAIL_CONTENT_GAP = 16;
+const SINGLE_SIDE_RAIL_MAX_WIDTH = 1535;
+const LEFT_RAIL_RESERVE_MAX_WIDTH = 1919;
+const CONTENT_TOP_MIN_WIDTH = 900;
+const CONTENT_TOP_MAX_WIDTH = DEFAULT_SIDE_RAIL_MIN_WIDTH - 1;
+const SIDE_RAIL_MAX_HEIGHT = 600;
+const SIDE_RAIL_MIN_HEIGHT = 420;
+const SIDE_RAIL_NAV_OFFSET = 60;
+const SIDE_RAIL_VERTICAL_MARGIN = 16;
+const SIDE_RAIL_FRAME_TOP_SELECTORS = ['.page-header'];
+const SIDE_RAIL_LAYOUT_RETRY_MS = [80, 300, 900];
+type SideRailLayout = 'none' | 'left' | 'right' | 'both';
+
+@Component({
+  selector: 'app-ad-layout',
+  standalone: true,
+  imports: [CommonModule, AdSlotComponent],
+  templateUrl: './ad-layout.component.html',
+  styleUrls: ['./ad-layout.component.scss'],
+})
+export class AdLayoutComponent implements OnInit, OnDestroy {
+  config: AdRouteConfig = getAdRouteConfig('/');
+  readonly adsCanRender$ = this.fuseAdsService.adsCanRender$;
+  persistentBottomPopupConfig?: AdSlotConfig;
+  bottomPopupClosed = false;
+  fallbackPreviewEnabled = false;
+  sideRailsVisible = false;
+  sideRailLayout: SideRailLayout = 'none';
+  sideRailLeft = SIDE_RAIL_EDGE_GAP;
+  sideRailRight = SIDE_RAIL_EDGE_GAP;
+  sideRailTop = 50;
+  sideRailWidth = SIDE_RAIL_WIDE_WIDTH;
+  contentTopAllowed = true;
+  private routerSub?: Subscription;
+  private layoutFrame: number | null = null;
+  private layoutRetryTimers: number[] = [];
+  private observedAnchor: HTMLElement | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+
+  constructor(
+    private router: Router,
+    private fuseAdsService: FuseAdsService,
+    @Inject(DOCUMENT) private document: Document,
+    @Inject(PLATFORM_ID) private platformId: Object,
+  ) {}
+
+  ngOnInit(): void {
+    this.updateFallbackPreviewState();
+    this.restoreBottomPopupPreference();
+    this.syncConfig(this.router.url);
+    this.routerSub = this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe(event => {
+        this.syncConfig(event.urlAfterRedirects);
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.routerSub?.unsubscribe();
+    this.cancelSideRailLayout();
+    this.updateAdShellReservation(false);
+    this.updateBottomPopupRootState(false);
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    const contentTopAllowedChanged = this.updateContentTopAllowed();
+
+    if (contentTopAllowedChanged && this.contentTopAllowed && this.config.contentTop?.fuseId) {
+      this.fuseAdsService.pageInit([this.config.contentTop.fuseId]);
+    }
+
+    this.scheduleSideRailLayout();
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    this.scheduleSideRailLayout();
+  }
+
+  private syncConfig(url: string): void {
+    this.updateFallbackPreviewState();
+    this.config = getAdRouteConfig(url);
+    this.updateContentTopAllowed();
+    this.initializePersistentBottomPopup(this.config);
+    this.updateBottomPopupRootState();
+    this.fuseAdsService.pageInit(this.getActivePageInitFuseIds(this.config));
+    this.sideRailsVisible = false;
+    this.disconnectAnchorObserver();
+    this.scheduleSideRailLayout(true);
+  }
+
+  private updateFallbackPreviewState(): void {
+    this.fallbackPreviewEnabled = isAdFallbackPreviewEnabled(this.document);
+  }
+
+  closeBottomPopup(): void {
+    this.bottomPopupClosed = true;
+    this.updateBottomPopupRootState(false);
+
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.document.defaultView?.localStorage.setItem(BOTTOM_POPUP_DISMISSED_KEY, '1');
+  }
+
+  private initializePersistentBottomPopup(config: AdRouteConfig): void {
+    if ((this.bottomPopupClosed && !this.fallbackPreviewEnabled) || this.persistentBottomPopupConfig || !config.bottomPopup) {
+      return;
+    }
+
+    this.persistentBottomPopupConfig = config.bottomPopup;
+    this.fuseAdsService.pageInit([config.bottomPopup.fuseId]);
+  }
+
+  private updateBottomPopupRootState(visible = Boolean(this.persistentBottomPopupConfig && !this.bottomPopupClosed)): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.document.documentElement.classList.toggle(AD_BOTTOM_POPUP_VISIBLE_CLASS, visible);
+  }
+
+  private restoreBottomPopupPreference(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.bottomPopupClosed = !this.fallbackPreviewEnabled
+      && this.document.defaultView?.localStorage.getItem(BOTTOM_POPUP_DISMISSED_KEY) === '1';
+  }
+
+  private updateContentTopAllowed(): boolean {
+    const previous = this.contentTopAllowed;
+
+    if (!isPlatformBrowser(this.platformId)) {
+      this.contentTopAllowed = true;
+      return previous !== this.contentTopAllowed;
+    }
+
+    const view = this.document.defaultView;
+    const viewportWidth = view?.innerWidth ?? this.document.documentElement.clientWidth;
+    const sideRailMinWidth = this.config.sideRailMinWidth ?? DEFAULT_SIDE_RAIL_MIN_WIDTH;
+    const contentTopMaxWidth = Math.min(CONTENT_TOP_MAX_WIDTH, sideRailMinWidth - 1);
+    this.contentTopAllowed = viewportWidth >= CONTENT_TOP_MIN_WIDTH && viewportWidth <= contentTopMaxWidth;
+
+    return previous !== this.contentTopAllowed;
+  }
+
+  private getActivePageInitFuseIds(config: AdRouteConfig): string[] {
+    const ids = getPageInitFuseIds(config);
+
+    if (this.contentTopAllowed || !config.contentTop?.fuseId) {
+      return ids;
+    }
+
+    return ids.filter(id => id !== config.contentTop?.fuseId);
+  }
+
+  private scheduleSideRailLayout(withRetries = false): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.sideRailsVisible = false;
+      return;
+    }
+
+    const view = this.document.defaultView;
+    if (!view) {
+      this.sideRailsVisible = false;
+      return;
+    }
+
+    if (this.layoutFrame !== null) {
+      view.cancelAnimationFrame(this.layoutFrame);
+    }
+
+    this.layoutFrame = view.requestAnimationFrame(() => {
+      this.layoutFrame = null;
+      this.updateSideRailLayout();
+    });
+
+    if (!withRetries) {
+      return;
+    }
+
+    this.clearLayoutRetryTimers();
+    this.layoutRetryTimers = SIDE_RAIL_LAYOUT_RETRY_MS.map(delay => view.setTimeout(() => {
+      this.updateSideRailLayout();
+    }, delay));
+  }
+
+  private updateSideRailLayout(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.sideRailsVisible = false;
+      return;
+    }
+
+    const view = this.document.defaultView;
+    if (!view) {
+      this.sideRailsVisible = false;
+      return;
+    }
+
+    const viewportWidth = this.document.documentElement.clientWidth || view.innerWidth;
+    const minWidth = this.config.sideRailMinWidth ?? DEFAULT_SIDE_RAIL_MIN_WIDTH;
+    const hasConfiguredRail = Boolean(
+      this.config.sideRails && (
+        this.fallbackPreviewEnabled
+        || this.config.sideRails.left.fuseId
+        || this.config.sideRails.right.fuseId
+      ),
+    );
+    this.updateAdShellReservation(
+      Boolean(this.config.sideRails && hasConfiguredRail && viewportWidth >= minWidth),
+      this.shouldReserveLeftRail(viewportWidth, minWidth, hasConfiguredRail),
+      viewportWidth,
+    );
+
+    if (!this.config.sideRails || !hasConfiguredRail || viewportWidth < minWidth) {
+      this.sideRailsVisible = false;
+      this.sideRailLayout = 'none';
+      return;
+    }
+
+    const anchor = this.findSideRailAnchor(viewportWidth, view);
+    if (!anchor) {
+      this.sideRailsVisible = false;
+      this.sideRailLayout = 'none';
+      return;
+    }
+
+    const verticalAnchor = this.config.sideRailVerticalAnchorSelectors?.length
+      ? this.findSideRailAnchor(
+        viewportWidth,
+        view,
+        this.config.sideRailVerticalAnchorSelectors,
+      )
+      : null;
+    const anchorRect = this.getAdRailFrame(anchor.rect, viewportWidth);
+    const leftGutter = Math.max(0, anchorRect.left);
+    const rightGutter = Math.max(0, viewportWidth - anchorRect.right);
+    const sideRailWidth = this.getSideRailWidth(viewportWidth);
+    const sideRailOverlay = this.config.sideRailOverlay === true;
+    const minimumGutter = sideRailOverlay ? 0 : sideRailWidth;
+    const sideRailLayout = this.resolveSideRailLayout(
+      viewportWidth,
+      leftGutter,
+      rightGutter,
+      minimumGutter,
+    );
+
+    if (sideRailLayout === 'none') {
+      this.sideRailsVisible = false;
+      this.sideRailLayout = 'none';
+      return;
+    }
+
+    this.watchAnchorSize(anchor.element);
+    this.sideRailWidth = sideRailWidth;
+    this.sideRailLeft = sideRailOverlay
+      ? SIDE_RAIL_EDGE_GAP
+      : this.centerRailInGutter(leftGutter, sideRailWidth);
+    this.sideRailRight = sideRailOverlay
+      ? SIDE_RAIL_EDGE_GAP
+      : this.centerRailInGutter(rightGutter, sideRailWidth);
+    this.sideRailTop = verticalAnchor
+      ? this.centerRailOnAnchor(verticalAnchor.rect, view)
+      : this.centerRailInViewportFrame(view);
+    this.sideRailLayout = sideRailLayout;
+    this.sideRailsVisible = true;
+  }
+
+  private resolveSideRailLayout(
+    viewportWidth: number,
+    leftGutter: number,
+    rightGutter: number,
+    minimumGutter: number,
+  ): SideRailLayout {
+    const hasLeftRail = Boolean(this.fallbackPreviewEnabled || this.config.sideRails?.left.fuseId);
+    const hasRightRail = Boolean(this.fallbackPreviewEnabled || this.config.sideRails?.right.fuseId);
+    const leftAvailable = hasLeftRail && leftGutter >= minimumGutter;
+    const rightAvailable = hasRightRail && rightGutter >= minimumGutter;
+    const singleRailMaxWidth = this.config.singleSideRailMaxWidth ?? SINGLE_SIDE_RAIL_MAX_WIDTH;
+
+    if (this.config.sideRailOverlay) {
+      return this.resolveSingleSideRail(hasLeftRail, hasRightRail);
+    }
+
+    if (viewportWidth > singleRailMaxWidth && leftAvailable && rightAvailable) {
+      return 'both';
+    }
+
+    return this.resolveSingleSideRail(leftAvailable, rightAvailable);
+  }
+
+  private resolveSingleSideRail(leftAvailable: boolean, rightAvailable: boolean): SideRailLayout {
+    const preferredSide = this.config.preferredSideRail ?? 'left';
+
+    if (preferredSide === 'left') {
+      return leftAvailable ? 'left' : rightAvailable ? 'right' : 'none';
+    }
+
+    return rightAvailable ? 'right' : leftAvailable ? 'left' : 'none';
+  }
+
+  private getSideRailWidth(viewportWidth: number): number {
+    const singleRailMaxWidth = this.config.singleSideRailMaxWidth ?? SINGLE_SIDE_RAIL_MAX_WIDTH;
+    return viewportWidth <= singleRailMaxWidth ? SIDE_RAIL_COMPACT_WIDTH : SIDE_RAIL_WIDE_WIDTH;
+  }
+
+  private shouldReserveLeftRail(viewportWidth: number, minWidth: number, hasConfiguredRail: boolean): boolean {
+    const preferredSide = this.config.preferredSideRail ?? 'left';
+
+    return Boolean(
+      this.config.sideRails
+      && this.config.reserveLeftRail !== false
+      && hasConfiguredRail
+      && preferredSide === 'left'
+      && viewportWidth >= minWidth
+      && viewportWidth <= LEFT_RAIL_RESERVE_MAX_WIDTH,
+    );
+  }
+
+  private updateAdShellReservation(sideRailPage: boolean, reserveLeftRail = false, viewportWidth?: number): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const root = this.document.documentElement;
+    root.classList.toggle(AD_SIDE_RAIL_PAGE_CLASS, sideRailPage);
+    root.classList.toggle(AD_LEFT_RAIL_RESERVED_CLASS, reserveLeftRail);
+
+    if (!reserveLeftRail || !viewportWidth) {
+      root.style.removeProperty('--ad-left-rail-width');
+      root.style.removeProperty('--ad-left-rail-reserve');
+      return;
+    }
+
+    const railWidth = this.getSideRailWidth(viewportWidth);
+    const reserve = railWidth + SIDE_RAIL_EDGE_GAP + SIDE_RAIL_CONTENT_GAP;
+    root.style.setProperty('--ad-left-rail-width', `${railWidth}px`);
+    root.style.setProperty('--ad-left-rail-reserve', `${reserve}px`);
+  }
+
+  private findSideRailAnchor(
+    viewportWidth: number,
+    view: Window,
+    selectorOverride?: string[],
+  ): { element: HTMLElement; rect: DOMRect } | null {
+    const selectors = selectorOverride
+      ? selectorOverride
+      : this.config.sideRailAnchorSelectors?.length
+        ? this.config.sideRailAnchorSelectors
+      : DEFAULT_SIDE_RAIL_ANCHOR_SELECTORS;
+
+    if (!selectors.length) {
+      return null;
+    }
+
+    for (const selector of selectors) {
+      const elements = Array.from(this.document.querySelectorAll<HTMLElement>(selector));
+
+      for (const element of elements) {
+        const rect = element.getBoundingClientRect();
+        const style = view.getComputedStyle(element);
+        const isUsable = rect.width > 0
+          && rect.height > 0
+          && rect.left >= 0
+          && rect.right <= viewportWidth
+          && style.display !== 'none'
+          && style.visibility !== 'hidden';
+
+        if (isUsable) {
+          return { element, rect };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private getAdRailFrame(rect: DOMRect, viewportWidth: number): Pick<DOMRect, 'left' | 'right' | 'width'> {
+    const maxWidth = this.config.sideRailAnchorMaxWidth;
+    if (!maxWidth || rect.width <= maxWidth) {
+      return rect;
+    }
+
+    const width = Math.min(maxWidth, viewportWidth);
+    const left = Math.round((viewportWidth - width) / 2);
+    return {
+      left,
+      right: left + width,
+      width,
+    };
+  }
+
+  private centerRailInGutter(gutterWidth: number, railWidth: number): number {
+    if (gutterWidth <= railWidth) {
+      return Math.max(0, gutterWidth - railWidth);
+    }
+
+    const centered = Math.round((gutterWidth - railWidth) / 2);
+    const minOffset = gutterWidth >= railWidth + SIDE_RAIL_EDGE_GAP ? SIDE_RAIL_EDGE_GAP : 0;
+    const contentBoundedOffset = Math.max(0, gutterWidth - railWidth - SIDE_RAIL_CONTENT_GAP);
+    const maxOffset = Math.max(minOffset, contentBoundedOffset);
+
+    return Math.min(Math.max(minOffset, centered), maxOffset);
+  }
+
+  private centerRailOnAnchor(anchorRect: DOMRect, view: Window): number {
+    const railHeight = this.getRailHeight(view);
+    const minCenter = SIDE_RAIL_NAV_OFFSET + SIDE_RAIL_VERTICAL_MARGIN + (railHeight / 2);
+    const maxCenter = view.innerHeight - SIDE_RAIL_VERTICAL_MARGIN - (railHeight / 2);
+    const anchorCenter = anchorRect.top + (anchorRect.height / 2);
+
+    return Math.round(Math.min(Math.max(anchorCenter, minCenter), maxCenter));
+  }
+
+  private centerRailInViewportFrame(view: Window): number {
+    const railHeight = this.getRailHeight(view);
+    const frameTop = this.getViewportFrameTop(view);
+    const frameBottom = this.getViewportFrameBottom(view);
+    const frameCenter = frameTop + ((frameBottom - frameTop) / 2);
+    const minCenter = frameTop + (railHeight / 2);
+    const maxCenter = frameBottom - (railHeight / 2);
+
+    if (minCenter > maxCenter) {
+      return Math.round(frameCenter);
+    }
+
+    return Math.round(Math.min(Math.max(frameCenter, minCenter), maxCenter));
+  }
+
+  private getRailHeight(view: Window): number {
+    return Math.min(
+      SIDE_RAIL_MAX_HEIGHT,
+      Math.max(SIDE_RAIL_MIN_HEIGHT, view.innerHeight - SIDE_RAIL_NAV_OFFSET - 120),
+    );
+  }
+
+  private getViewportFrameTop(view: Window): number {
+    const fallbackTop = SIDE_RAIL_NAV_OFFSET + SIDE_RAIL_VERTICAL_MARGIN;
+
+    for (const selector of SIDE_RAIL_FRAME_TOP_SELECTORS) {
+      const element = this.document.querySelector<HTMLElement>(selector);
+      if (!element) {
+        continue;
+      }
+
+      const rect = element.getBoundingClientRect();
+      const style = view.getComputedStyle(element);
+      const isVisible = rect.height > 0
+        && rect.bottom > SIDE_RAIL_NAV_OFFSET
+        && rect.top < view.innerHeight
+        && style.display !== 'none'
+        && style.visibility !== 'hidden';
+
+      if (isVisible) {
+        return Math.max(fallbackTop, Math.round(rect.bottom + SIDE_RAIL_VERTICAL_MARGIN));
+      }
+    }
+
+    return fallbackTop;
+  }
+
+  private getViewportFrameBottom(view: Window): number {
+    return view.innerHeight - SIDE_RAIL_VERTICAL_MARGIN;
+  }
+
+  private watchAnchorSize(anchor: HTMLElement): void {
+    if (this.observedAnchor === anchor || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    this.disconnectAnchorObserver();
+    this.observedAnchor = anchor;
+    this.resizeObserver = new ResizeObserver(() => this.scheduleSideRailLayout());
+    this.resizeObserver.observe(anchor);
+  }
+
+  private cancelSideRailLayout(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      const view = this.document.defaultView;
+      if (view && this.layoutFrame !== null) {
+        view.cancelAnimationFrame(this.layoutFrame);
+      }
+    }
+
+    this.layoutFrame = null;
+    this.clearLayoutRetryTimers();
+    this.disconnectAnchorObserver();
+  }
+
+  private clearLayoutRetryTimers(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      const view = this.document.defaultView;
+      if (view) {
+        this.layoutRetryTimers.forEach(timer => view.clearTimeout(timer));
+      }
+    }
+
+    this.layoutRetryTimers = [];
+  }
+
+  private disconnectAnchorObserver(): void {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    this.observedAnchor = null;
+  }
+}
