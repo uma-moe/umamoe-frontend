@@ -22,7 +22,19 @@ export interface SupportCard {
 }
 export interface SupportCardShort {
   id: string;
+  /**
+   * Character/owner display name. Kept as `name` for existing UI and filter code.
+   */
   name: string;
+  characterName?: string;
+  /**
+   * True support-card display name, e.g. "[The Brightest Star in Japan!] Special Week".
+   */
+  cardName?: string;
+  /**
+   * Title-only portion of the support-card name, e.g. "The Brightest Star in Japan!".
+   */
+  cardTitle?: string;
   type: SupportCardType;
   rarity: Rarity;
   limitBreak: number;

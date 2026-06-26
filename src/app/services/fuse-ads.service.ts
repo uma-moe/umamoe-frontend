@@ -52,6 +52,17 @@ interface TcfPingData {
   cmpStatus?: string;
 }
 
+interface TcfApiCall {
+  command: string;
+  version: number;
+  parameter?: unknown;
+  callId?: string;
+}
+
+interface TcfApiMessage {
+  __tcfapiCall?: TcfApiCall;
+}
+
 interface UspData {
   uspString?: string;
 }
@@ -74,6 +85,7 @@ declare global {
     fusetag?: FuseTag;
     __tcfapi?: TcfApi;
     __uspapi?: UspApi;
+    __umamoeTcfStubReady?: boolean;
   }
 }
 
@@ -110,6 +122,7 @@ export class FuseAdsService {
   private fuseRuntimeStarted = false;
   private tcfListenerAttached = false;
   private uspListenerAttached = false;
+  private tcfPostMessageListenerAttached = false;
   private tcfRetryCount = 0;
   private rawRuntimeState: FuseRuntimeState = this.defaultRuntimeState;
   private regionalGoogleAdConsentState: GoogleAdConsentState = {
@@ -453,6 +466,7 @@ export class FuseAdsService {
     this.setRegionalGoogleAdConsent({ ...DENIED_AD_CONSENT, source: 'pending' });
 
     this.ngZone.runOutsideAngular(() => {
+      this.ensureTcfApiStub();
       this.ensureFuseScript();
       this.attachTcfListener();
       this.attachUspListener();
@@ -477,6 +491,99 @@ export class FuseAdsService {
         // Some regional CMP APIs may not expose this command.
       }
     }
+  }
+
+  private ensureTcfApiStub(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.ensureTcfLocatorFrame();
+
+    if (this.window.__tcfapi) {
+      return;
+    }
+
+    const queue: IArguments[] = [];
+
+    const stub = function(
+      this: void,
+      command?: string,
+      _version?: number,
+      callback?: (data: unknown, success: boolean) => void,
+    ): IArguments[] | void {
+      if (!arguments.length) {
+        return queue;
+      }
+
+      if (command === 'ping' && typeof callback === 'function') {
+        callback({ cmpLoaded: false, cmpStatus: 'stub' }, true);
+        return;
+      }
+
+      queue.push(arguments);
+    };
+
+    this.window.__tcfapi = stub as unknown as TcfApi;
+    this.window.__umamoeTcfStubReady = true;
+    this.attachTcfPostMessageBridge();
+  }
+
+  private ensureTcfLocatorFrame(): void {
+    const locatorName = '__tcfapiLocator';
+
+    if (this.document.querySelector(`iframe[name="${locatorName}"]`)) {
+      return;
+    }
+
+    if (!this.document.body) {
+      this.window.setTimeout(() => this.ensureTcfLocatorFrame(), 5);
+      return;
+    }
+
+    const frame = this.document.createElement('iframe');
+    frame.name = locatorName;
+    frame.style.cssText = 'display:none';
+    this.document.body.appendChild(frame);
+  }
+
+  private attachTcfPostMessageBridge(): void {
+    if (this.tcfPostMessageListenerAttached) {
+      return;
+    }
+
+    this.tcfPostMessageListenerAttached = true;
+    this.window.addEventListener('message', event => {
+      let data: unknown = event.data;
+
+      if (typeof data === 'string') {
+        try {
+          data = JSON.parse(data);
+        } catch {
+          return;
+        }
+      }
+
+      const call = (data as TcfApiMessage | null)?.__tcfapiCall;
+      if (!call || !this.window.__tcfapi) {
+        return;
+      }
+
+      this.window.__tcfapi(call.command, call.version, (returnValue, success) => {
+        const response = {
+          __tcfapiReturn: {
+            returnValue,
+            success,
+            callId: call.callId,
+          },
+        };
+
+        event.source?.postMessage(
+          typeof event.data === 'string' ? JSON.stringify(response) : response,
+          { targetOrigin: '*' },
+        );
+      }, call.parameter);
+    }, false);
   }
 
   private setRegionalGoogleAdConsent(state: GoogleAdConsentState): void {

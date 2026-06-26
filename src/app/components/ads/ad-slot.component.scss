@@ -3,6 +3,10 @@
   width: 100%;
 }
 
+:host(.ad-slot-host--collapsed) {
+  display: none;
+}
+
 .ad-slot {
   --ad-slot-width: min(970px, calc(100vw - 2rem));
   --ad-slot-height: 90px;
@@ -37,6 +41,10 @@
   opacity: 0;
   pointer-events: none;
   transform: translateY(8px);
+}
+
+.ad-slot--collapsed {
+  display: none;
 }
 
 .ad-slot--waiting .ad-slot-meta {

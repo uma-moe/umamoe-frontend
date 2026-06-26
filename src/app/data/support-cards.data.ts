@@ -7,6 +7,17 @@ import { SupportCardShort, SupportCardType } from '../models/support-card.model'
 export interface RawSupportCardData {
     id: string;
     name: string;
+    character_name?: string;
+    characterName?: string;
+    card_name?: string;
+    cardName?: string;
+    support_card_name?: string;
+    supportCardName?: string;
+    card_title?: string;
+    cardTitle?: string;
+    support_card_title?: string;
+    supportCardTitle?: string;
+    title?: string;
     rarity: number;
     type: string;
     release_date: string;
@@ -50,20 +61,44 @@ function normalizeSupportCardData(data: unknown): RawSupportCardData[] {
     return [];
 }
 
+function firstString(...values: Array<string | undefined | null>): string | undefined {
+    return values.find(value => typeof value === 'string' && value.trim().length > 0)?.trim();
+}
+
 function buildSupportCards(rawData: RawSupportCardData[]): SupportCardShort[] {
-    return rawData.map(card => ({
-        id: card.id,
-        name: card.name,
-        type: mapStringTypeToEnum(card.type),
-        rarity: card.rarity,
-        release_date: card.release_date,
-        isReleased_en: card.isReleased_en,
-        isReleased_tw: card.isReleased_tw,
-        isReleased_cn: card.isReleased_cn,
-        isReleased_jp: card.isReleased_jp,
-        limitBreak: 0, // Default limit break
-        imageUrl: `/assets/images/support_card/half/support_card_s_${card.id}.webp`,
-    }));
+    return rawData.map(card => {
+        const characterName = firstString(card.character_name, card.characterName, card.name) ?? card.name;
+        const cardName = firstString(
+            card.card_name,
+            card.cardName,
+            card.support_card_name,
+            card.supportCardName,
+            card.title,
+        );
+        const cardTitle = firstString(
+            card.card_title,
+            card.cardTitle,
+            card.support_card_title,
+            card.supportCardTitle,
+        );
+
+        return {
+            id: card.id,
+            name: characterName,
+            characterName,
+            cardName,
+            cardTitle,
+            type: mapStringTypeToEnum(card.type),
+            rarity: card.rarity,
+            release_date: card.release_date,
+            isReleased_en: card.isReleased_en,
+            isReleased_tw: card.isReleased_tw,
+            isReleased_cn: card.isReleased_cn,
+            isReleased_jp: card.isReleased_jp,
+            limitBreak: 0, // Default limit break
+            imageUrl: `/assets/images/support_card/half/support_card_s_${card.id}.webp`,
+        };
+    });
 }
 
 let rawSupportCardsData: RawSupportCardData[] = normalizeSupportCardData(supportCardsData);
@@ -93,9 +128,96 @@ export function getSupportCardsByType(type: SupportCardType): SupportCardShort[]
     return SUPPORT_CARDS.filter(card => card.type === type);
 }
 export function searchSupportCards(query: string): SupportCardShort[] {
-    const lowercaseQuery = query.toLowerCase();
-    return SUPPORT_CARDS.filter(card =>
-        card.name.toLowerCase().includes(lowercaseQuery) ||
-        card.id.toString().includes(query)
-    );
+    return SUPPORT_CARDS.filter(card => matchesSupportCardSearch(card, query));
+}
+
+export function matchesSupportCardSearch(card: SupportCardShort, query: string): boolean {
+    const normalizedQuery = normalizeSearchText(query);
+    if (!normalizedQuery) {
+        return true;
+    }
+
+    const normalizedValues = getSupportCardSearchValues(card).map(normalizeSearchText);
+    if (normalizedValues.some(value => value.includes(normalizedQuery))) {
+        return true;
+    }
+
+    const queryTokens = tokenizeSearchText(query);
+    if (queryTokens.length === 0) {
+        return true;
+    }
+
+    const combinedValues = normalizedValues.join(' ');
+    return queryTokens.every(token => combinedValues.includes(token));
+}
+
+export function getSupportCardSearchValues(card: SupportCardShort): string[] {
+    const displayTitle = getSupportCardDisplayTitle(card);
+    const characterName = getSupportCardCharacterName(card);
+    const values = [
+        card.id,
+        card.name,
+        characterName,
+        card.characterName,
+        card.cardName,
+        card.cardTitle,
+        displayTitle,
+    ];
+
+    if (displayTitle && characterName) {
+        values.push(`${displayTitle} ${characterName}`);
+        values.push(`${characterName} ${displayTitle}`);
+    }
+
+    return values.filter((value): value is string => typeof value === 'string' && value.length > 0);
+}
+
+export function getSupportCardDisplayName(card: SupportCardShort): string {
+    return getSupportCardDisplayTitle(card) ?? getSupportCardCharacterName(card) ?? card.name;
+}
+
+export function getSupportCardCharacterName(card: SupportCardShort): string | undefined {
+    return firstString(card.characterName, card.name);
+}
+
+export function getSupportCardDisplayTitle(card: SupportCardShort): string | undefined {
+    return firstString(stripTitleBrackets(card.cardTitle), extractTitleFromCardName(card.cardName));
+}
+
+function extractTitleFromCardName(cardName: string | undefined): string | undefined {
+    if (!cardName) {
+        return undefined;
+    }
+
+    const match = cardName.trim().match(/^\[([^\]]+)\]/);
+    return match ? match[1].trim() : undefined;
+}
+
+function stripTitleBrackets(value: string | undefined): string | undefined {
+    if (!value) {
+        return undefined;
+    }
+
+    const trimmed = value.trim();
+    const bracketed = trimmed.match(/^\[([^\]]+)\]$/);
+    return (bracketed ? bracketed[1] : trimmed).trim();
+}
+
+function tokenizeSearchText(value: string): string[] {
+    return [
+        ...new Set(
+            normalizeSearchText(value)
+                .split(' ')
+                .filter(token => token.length > 0)
+        )
+    ];
+}
+
+function normalizeSearchText(value: string): string {
+    return value
+        .trim()
+        .toLowerCase()
+        .replace(/[\[\](),.!?'"“”‘’:_/\\-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 }

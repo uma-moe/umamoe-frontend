@@ -20,12 +20,14 @@ const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = 1319;
       class="ad-in-content"
       [class.ad-in-content--content-top-bridge]="isContentTopBridgeActive"
       [class.ad-in-content--interscroller]="isInterscroller"
+      [class.ad-in-content--collapsed]="slotCollapsed"
       *ngIf="((adsCanRender$ | async) && config.fuseId) || fallbackPreviewEnabled"
       aria-label="Sponsored content"
     >
       <app-ad-slot
         [config]="config"
         [forceFallback]="fallbackPreviewEnabled"
+        (collapsedChange)="slotCollapsed = $event"
       ></app-ad-slot>
     </section>
   `,
@@ -50,6 +52,13 @@ const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = 1319;
 
     .ad-in-content--interscroller {
       margin: 2px 0;
+    }
+
+    .ad-in-content--collapsed {
+      display: none;
+      height: 0;
+      margin: 0;
+      overflow: hidden;
     }
 
     :host.ad-in-content-host--mobile {
@@ -99,6 +108,7 @@ export class AdInContentComponent implements OnChanges {
   readonly adsCanRender$: Observable<boolean> = this.fuseAdsService.adsCanRender$;
   readonly fallbackPreviewEnabled: boolean;
   config: AdSlotConfig = getInContentSlot('home', 'home', 1);
+  slotCollapsed = false;
   private routeConfig: AdRouteConfig = getAdRouteConfig('/');
   private viewportWidth = 0;
 
@@ -165,6 +175,7 @@ export class AdInContentComponent implements OnChanges {
   }
 
   private updateConfig(): void {
+    this.slotCollapsed = false;
     this.routeConfig = getAdRouteConfig(this.router.url);
     const label = this.label || this.surface;
 

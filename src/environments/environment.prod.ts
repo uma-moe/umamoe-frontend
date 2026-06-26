@@ -9,7 +9,7 @@ export const environment = {
     measurementId: '',
   },
   fuse: {
-    enabled: true,
+    enabled: false,
     alwaysShowFallbacks: false,
     scriptUrl: 'https://cdn.fuseplatform.net/publift/tags/2/4302/fuse.js',
     blockingTimeoutMs: 1200,

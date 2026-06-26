@@ -7,7 +7,6 @@ import { isAdFallbackPreviewEnabled } from './ad-fallback-preview';
 import { AdRouteConfig, AdSlotConfig, getAdRouteConfig, getPageInitFuseIds } from './ad-layout.config';
 import { FuseAdsService } from '../../services/fuse-ads.service';
 
-const BOTTOM_POPUP_DISMISSED_KEY = 'umamoe-ad-footer-dismissed-v1';
 const AD_SIDE_RAIL_PAGE_CLASS = 'ad-side-rail-page';
 const AD_LEFT_RAIL_RESERVED_CLASS = 'ad-left-rail-reserved';
 const AD_BOTTOM_POPUP_VISIBLE_CLASS = 'ad-bottom-popup-visible';
@@ -56,6 +55,8 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   sideRailRight = SIDE_RAIL_EDGE_GAP;
   sideRailTop = 50;
   sideRailWidth = SIDE_RAIL_WIDE_WIDTH;
+  leftSideRailCollapsed = false;
+  rightSideRailCollapsed = false;
   contentTopAllowed = true;
   private routerSub?: Subscription;
   private layoutFrame: number | null = null;
@@ -72,7 +73,6 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.updateFallbackPreviewState();
-    this.restoreBottomPopupPreference();
     this.syncConfig(this.router.url);
     this.routerSub = this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
@@ -107,8 +107,10 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   private syncConfig(url: string): void {
     this.updateFallbackPreviewState();
     this.config = getAdRouteConfig(url);
+    this.leftSideRailCollapsed = false;
+    this.rightSideRailCollapsed = false;
     this.updateContentTopAllowed();
-    this.initializePersistentBottomPopup(this.config);
+    this.initializePageBottomPopup(this.config);
     this.updateBottomPopupRootState();
     this.fuseAdsService.pageInit(this.getActivePageInitFuseIds(this.config));
     this.sideRailsVisible = false;
@@ -123,20 +125,26 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   closeBottomPopup(): void {
     this.bottomPopupClosed = true;
     this.updateBottomPopupRootState(false);
-
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
-    }
-
-    this.document.defaultView?.localStorage.setItem(BOTTOM_POPUP_DISMISSED_KEY, '1');
   }
 
-  private initializePersistentBottomPopup(config: AdRouteConfig): void {
-    if ((this.bottomPopupClosed && !this.fallbackPreviewEnabled) || this.persistentBottomPopupConfig || !config.bottomPopup) {
+  onSideRailCollapsed(side: 'left' | 'right', collapsed: boolean): void {
+    if (side === 'left') {
+      this.leftSideRailCollapsed = collapsed;
+    } else {
+      this.rightSideRailCollapsed = collapsed;
+    }
+
+    this.scheduleSideRailLayout();
+  }
+
+  private initializePageBottomPopup(config: AdRouteConfig): void {
+    this.bottomPopupClosed = false;
+    this.persistentBottomPopupConfig = config.bottomPopup;
+
+    if (!config.bottomPopup?.fuseId) {
       return;
     }
 
-    this.persistentBottomPopupConfig = config.bottomPopup;
     this.fuseAdsService.pageInit([config.bottomPopup.fuseId]);
   }
 
@@ -146,15 +154,6 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     }
 
     this.document.documentElement.classList.toggle(AD_BOTTOM_POPUP_VISIBLE_CLASS, visible);
-  }
-
-  private restoreBottomPopupPreference(): void {
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
-    }
-
-    this.bottomPopupClosed = !this.fallbackPreviewEnabled
-      && this.document.defaultView?.localStorage.getItem(BOTTOM_POPUP_DISMISSED_KEY) === '1';
   }
 
   private updateContentTopAllowed(): boolean {
@@ -232,8 +231,8 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     const hasConfiguredRail = Boolean(
       this.config.sideRails && (
         this.fallbackPreviewEnabled
-        || this.config.sideRails.left.fuseId
-        || this.config.sideRails.right.fuseId
+        || (this.config.sideRails.left.fuseId && !this.leftSideRailCollapsed)
+        || (this.config.sideRails.right.fuseId && !this.rightSideRailCollapsed)
       ),
     );
     this.updateAdShellReservation(
@@ -302,8 +301,14 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     rightGutter: number,
     minimumGutter: number,
   ): SideRailLayout {
-    const hasLeftRail = Boolean(this.fallbackPreviewEnabled || this.config.sideRails?.left.fuseId);
-    const hasRightRail = Boolean(this.fallbackPreviewEnabled || this.config.sideRails?.right.fuseId);
+    const hasLeftRail = Boolean(
+      this.fallbackPreviewEnabled
+      || (this.config.sideRails?.left.fuseId && !this.leftSideRailCollapsed),
+    );
+    const hasRightRail = Boolean(
+      this.fallbackPreviewEnabled
+      || (this.config.sideRails?.right.fuseId && !this.rightSideRailCollapsed),
+    );
     const leftAvailable = hasLeftRail && leftGutter >= minimumGutter;
     const rightAvailable = hasRightRail && rightGutter >= minimumGutter;
     const singleRailMaxWidth = this.config.singleSideRailMaxWidth ?? SINGLE_SIDE_RAIL_MAX_WIDTH;
@@ -341,6 +346,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       this.config.sideRails
       && this.config.reserveLeftRail !== false
       && hasConfiguredRail
+      && !this.leftSideRailCollapsed
       && preferredSide === 'left'
       && viewportWidth >= minWidth
       && viewportWidth <= LEFT_RAIL_RESERVE_MAX_WIDTH,

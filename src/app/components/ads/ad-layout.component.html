@@ -3,6 +3,7 @@
     <aside
       *ngIf="(sideRailLayout === 'left' || sideRailLayout === 'both') && (config.sideRails.left.fuseId || fallbackPreviewEnabled)"
       class="ad-side-rail ad-side-rail--left"
+      [class.ad-side-rail--collapsed]="leftSideRailCollapsed"
       [class.ad-side-rail--overlay]="config.sideRailOverlay"
       aria-label="Sponsored side rail"
       [style.left.px]="sideRailLeft"
@@ -12,11 +13,13 @@
       <app-ad-slot
         [config]="config.sideRails.left"
         [forceFallback]="fallbackPreviewEnabled"
+        (collapsedChange)="onSideRailCollapsed('left', $event)"
       ></app-ad-slot>
     </aside>
     <aside
       *ngIf="(sideRailLayout === 'right' || sideRailLayout === 'both') && (config.sideRails.right.fuseId || fallbackPreviewEnabled)"
       class="ad-side-rail ad-side-rail--right"
+      [class.ad-side-rail--collapsed]="rightSideRailCollapsed"
       [class.ad-side-rail--overlay]="config.sideRailOverlay"
       aria-label="Sponsored side rail"
       [style.right.px]="sideRailRight"
@@ -26,6 +29,7 @@
       <app-ad-slot
         [config]="config.sideRails.right"
         [forceFallback]="fallbackPreviewEnabled"
+        (collapsedChange)="onSideRailCollapsed('right', $event)"
       ></app-ad-slot>
     </aside>
   </ng-container>

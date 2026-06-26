@@ -190,6 +190,11 @@
   margin: 0.35rem 0 0.55rem;
 }
 
+.leaderboard-incontent-ad.ad-slot-host--collapsed {
+  display: none;
+  margin: 0;
+}
+
 .circle-card {
   position: relative;
   background: var(--surface-1);

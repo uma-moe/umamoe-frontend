@@ -15,7 +15,7 @@ import {
   SupportCardRecordV2Enriched
 } from '../models/support-card.model';
 import { PaginatedResponse, ApiResponse, SearchResult } from '../models/common.model';
-import { getSupportCardById as getCardById, getSupportCardsByIds } from '../data/support-cards.data';
+import { getSupportCardById as getCardById, getSupportCardsByIds, matchesSupportCardSearch } from '../data/support-cards.data';
 import { MasterDataService } from './master-data.service';
 import { ResourceLoadError } from './resource-data.service';
 // V3 API interfaces
@@ -363,10 +363,7 @@ export class SupportCardService {
    */
   searchReleasedSupportCards(query: string): Observable<SupportCardShort[]> {
     return this.getReleasedSupportCards().pipe(
-      map(cards => cards.filter(card =>
-        card.name.toLowerCase().includes(query.toLowerCase()) ||
-        card.id.toString().includes(query)
-      ))
+      map(cards => cards.filter(card => matchesSupportCardSearch(card, query)))
     );
   }
   /**

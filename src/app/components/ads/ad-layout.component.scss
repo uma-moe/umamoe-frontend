@@ -40,6 +40,10 @@
   pointer-events: none;
 }
 
+.ad-side-rail--collapsed {
+  display: none;
+}
+
 .ad-bottom-popup {
   position: fixed;
   right: 0;

@@ -291,6 +291,16 @@
     max-width: 100%;
   }
 
+  .card-title {
+    max-width: 100%;
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1.25;
+    text-align: center;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
   .card-meta {
     display: flex;
     gap: 4px;
@@ -330,6 +340,8 @@
     .card-thumb { width: 64px; height: 64px; }
 
     .card-name { font-size: 11px; }
+
+    .card-title { font-size: 9px; }
   }
 
   .quick-filters { gap: 6px; }

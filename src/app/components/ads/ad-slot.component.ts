@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   EventEmitter,
+  HostBinding,
   Inject,
   HostListener,
   Input,
@@ -40,11 +41,13 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() closable = false;
   @Input() forceFallback = false;
   @Output() close = new EventEmitter<void>();
+  @Output() collapsedChange = new EventEmitter<boolean>();
   @ViewChild('adTarget') private adTarget?: ElementRef<HTMLElement>;
 
   readonly instanceId = ++adSlotId;
   showFallback = false;
   slotWaiting = true;
+  slotCollapsed = false;
   fallbackPreviewEnabled = false;
   private fallbackReady = false;
   private fallbackTimer: number | null = null;
@@ -101,6 +104,11 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     return Boolean(size && size.height >= 180 && size.width <= 340);
   }
 
+  @HostBinding('class.ad-slot-host--collapsed')
+  get collapsedHost(): boolean {
+    return this.slotCollapsed;
+  }
+
   ngAfterViewInit(): void {
     if (!isPlatformBrowser(this.platformId)) {
       this.watchSlot();
@@ -132,6 +140,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.clearWatchers();
     this.showFallback = false;
     this.slotWaiting = true;
+    this.setCollapsed(false);
     this.fallbackPreviewEnabled = this.forceFallback;
     this.fallbackReady = this.fallbackPreviewEnabled;
 
@@ -175,7 +184,18 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       && Boolean(this.config.fuseId);
 
     this.showFallback = canShowBlockedFooterFallback && !hasAdMarkup;
-    this.slotWaiting = !hasAdMarkup && !this.showFallback;
+    const shouldCollapse = this.fallbackReady && !hasAdMarkup && !this.showFallback;
+    this.setCollapsed(shouldCollapse);
+    this.slotWaiting = !hasAdMarkup && !this.showFallback && !shouldCollapse;
+  }
+
+  private setCollapsed(collapsed: boolean): void {
+    if (this.slotCollapsed === collapsed) {
+      return;
+    }
+
+    this.slotCollapsed = collapsed;
+    this.collapsedChange.emit(collapsed);
   }
 
   private usesConfigDrivenSize(): boolean {

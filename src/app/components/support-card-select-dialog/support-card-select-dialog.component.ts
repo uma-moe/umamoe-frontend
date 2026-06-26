@@ -12,6 +12,12 @@ import { MatSelectModule } from '@angular/material/select';
 import { Rarity, SupportCardShort, SupportCardType } from '../../models/support-card.model';
 import { SupportCardService } from '../../services/support-card.service';
 import { ResourceLoadError } from '../../services/resource-data.service';
+import {
+  getSupportCardCharacterName,
+  getSupportCardDisplayName,
+  getSupportCardDisplayTitle,
+  matchesSupportCardSearch
+} from '../../data/support-cards.data';
 
 export interface SupportCardSelectDialogData {
   initialCard?: SupportCardShort | null;
@@ -47,7 +53,7 @@ export interface SupportCardSelectDialogData {
           <input
             [formControl]="searchControl"
             (input)="filterCards()"
-            placeholder="Search by name..."
+            placeholder="Search by character or card name..."
             class="search-input"
           />
           <mat-icon *ngIf="searchControl.value" class="clear-icon" (click)="searchControl.setValue(''); filterCards()">close</mat-icon>
@@ -96,9 +102,10 @@ export interface SupportCardSelectDialogData {
             (click)="selectCard(card)"
           >
             <div class="card-thumb">
-              <img [src]="card.imageUrl" [alt]="card.name" (error)="onImageError($event)">
+              <img [src]="card.imageUrl" [alt]="getDisplayCardName(card)" (error)="onImageError($event)">
             </div>
-            <span class="card-name">{{card.name}}</span>
+            <span class="card-name">{{getDisplayCardName(card)}}</span>
+            <span class="card-title" *ngIf="getDisplayCardSubtitle(card) as subtitle">{{subtitle}}</span>
             <div class="card-meta">
               <span class="type-badge">{{getTypeDisplayName(card.type)}}</span>
               <span class="rarity-badge">{{getRarityDisplayName(card.rarity)}}</span>
@@ -173,10 +180,7 @@ export class SupportCardSelectDialogComponent implements OnInit {
       return this.applyFilters(this.supportCards);
     }
 
-    const filterValue = value.toLowerCase();
-    const filtered = this.supportCards.filter(card =>
-      card.name.toLowerCase().includes(filterValue),
-    );
+    const filtered = this.supportCards.filter(card => matchesSupportCardSearch(card, value));
     return this.applyFilters(filtered);
   }
 
@@ -191,10 +195,12 @@ export class SupportCardSelectDialogComponent implements OnInit {
     }
 
     return filtered.sort((a, b) => {
-      if (a.type === SupportCardType.SPEED && b.type !== SupportCardType.SPEED) return -1;
-      if (a.type !== SupportCardType.SPEED && b.type === SupportCardType.SPEED) return 1;
-      if (a.rarity > b.rarity) return -1;
-      if (a.rarity < b.rarity) return 1;
+      const releaseCompare = this.releaseTime(b) - this.releaseTime(a);
+      if (releaseCompare !== 0) return releaseCompare;
+
+      const idCompare = Number(b.id) - Number(a.id);
+      if (Number.isFinite(idCompare) && idCompare !== 0) return idCompare;
+
       return a.name.localeCompare(b.name);
     });
   }
@@ -228,6 +234,21 @@ export class SupportCardSelectDialogComponent implements OnInit {
       [Rarity.SSR]: 'SSR',
     };
     return rarityMap[rarity] || 'Unknown';
+  }
+
+  getDisplayCardName(card: SupportCardShort): string {
+    return getSupportCardDisplayName(card);
+  }
+
+  getDisplayCardSubtitle(card: SupportCardShort): string | null {
+    return getSupportCardDisplayTitle(card)
+      ? getSupportCardCharacterName(card) ?? null
+      : null;
+  }
+
+  private releaseTime(card: SupportCardShort): number {
+    const time = Date.parse(card.release_date);
+    return Number.isFinite(time) ? time : 0;
   }
 
   onImageError(event: Event): void {
