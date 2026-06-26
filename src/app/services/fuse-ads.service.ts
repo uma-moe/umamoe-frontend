@@ -28,10 +28,23 @@ interface FuseQueue {
   push(callback: () => void): number | void;
 }
 
+interface FuseSlotRenderEndedEvent {
+  slotId: string;
+  hasCreative: boolean;
+}
+
 interface FuseTag {
   que?: FuseQueue | Array<() => void>;
   pageInit?: (options?: { blockingFuseIds?: string[]; blockingTimeout?: number }) => void;
   registerZone?: (id: string) => void;
+  onSlotRenderEnded?: (callback: (event: FuseSlotRenderEndedEvent) => void) => void;
+  onSlotsInitialised?: (callback: () => void) => void;
+  onTagInitialised?: (callback: () => void) => void;
+}
+
+interface PendingFuseCall {
+  label: string;
+  callback: (fusetag: FuseTag) => void;
 }
 
 interface TcfPurposeConsents {
@@ -100,6 +113,8 @@ const AD_DEBUG_QUERY_KEYS = ['ad_debug', 'ads_debug', 'fuse_debug'];
 const FUSE_ENABLED_STORAGE_KEY = 'umamoe-fuse-enabled-v1';
 const FUSE_ENABLED_QUERY_KEYS = ['fuse', 'fuse_enabled', 'ads_enabled'];
 const PAGE_INIT_DEBOUNCE_MS = 60;
+const FUSE_API_RETRY_MS = 100;
+const FUSE_API_MAX_RETRIES = 80;
 type AdDebugLevel = 'debug' | 'warn' | 'error';
 
 @Injectable({ providedIn: 'root' })
@@ -138,6 +153,10 @@ export class FuseAdsService {
   private pendingPageInitFuseIds = new Set<string>();
   private pageInitTimer: number | null = null;
   private registeredZones = new Map<string, string>();
+  private pendingFuseCalls: PendingFuseCall[] = [];
+  private fuseCallFlushTimer: number | null = null;
+  private fuseCallFlushRetries = 0;
+  private fuseDebugCallbacksAttached = false;
   private localConsent: CookieConsent | null = null;
   private consentSub?: Subscription;
 
@@ -165,10 +184,18 @@ export class FuseAdsService {
       this.window.clearTimeout(this.pageInitTimer);
     }
 
+    if (this.fuseCallFlushTimer !== null && isPlatformBrowser(this.platformId)) {
+      this.window.clearTimeout(this.fuseCallFlushTimer);
+    }
+
+    const clearedPendingFuseCalls = this.pendingFuseCalls.length;
     this.pageInitTimer = null;
+    this.fuseCallFlushTimer = null;
+    this.fuseCallFlushRetries = 0;
     this.pendingPageInitFuseIds.clear();
+    this.pendingFuseCalls = [];
     this.registeredZones.clear();
-    this.debug('page view ad state reset', { reason });
+    this.debug('page view ad state reset', { reason, clearedPendingFuseCalls });
   }
 
   init(): void {
@@ -249,7 +276,7 @@ export class FuseAdsService {
     this.enqueueFuseCall(fusetag => {
       this.debug('registerZone executing', { zoneElementId, fuseId });
       fusetag.registerZone?.(zoneElementId);
-    });
+    }, `registerZone:${zoneElementId}:${fuseId}`);
     this.schedulePageInit([fuseId], 'zone registered');
   }
 
@@ -433,6 +460,7 @@ export class FuseAdsService {
         ...this.runtimeStateSubject.value,
         scriptLoaded: true,
       });
+      this.schedulePendingFuseCallFlush('script already present');
       return;
     }
 
@@ -446,6 +474,7 @@ export class FuseAdsService {
         ...this.runtimeStateSubject.value,
         scriptLoaded: true,
       });
+      this.schedulePendingFuseCallFlush('script loaded');
     });
     script.addEventListener('error', () => {
       this.debugError('Fuse script failed to load', { src: script.src });
@@ -482,18 +511,126 @@ export class FuseAdsService {
     return fusetag;
   }
 
-  private enqueueFuseCall(callback: (fusetag: FuseTag) => void): void {
+  private enqueueFuseCall(callback: (fusetag: FuseTag) => void, label = 'Fuse call'): void {
     const fusetag = this.ensureFuseQueue();
-    const queue = fusetag.que;
 
-    if (queue && typeof queue.push === 'function') {
-      this.debug('Fuse call pushed to queue', { queueType: Array.isArray(queue) ? 'array' : typeof queue });
-      queue.push(() => callback(fusetag));
+    if (this.isFuseApiReady(fusetag)) {
+      this.attachFuseDebugCallbacks(fusetag);
+      this.debug('Fuse API ready; executing call', { label });
+      callback(fusetag);
       return;
     }
 
-    this.debug('Fuse call executing immediately');
-    callback(fusetag);
+    this.pendingFuseCalls.push({ label, callback });
+    this.debugWarn('Fuse API not ready; deferring call', {
+      label,
+      pendingFuseCalls: this.pendingFuseCalls.map(call => call.label),
+      fusetagKeys: Object.keys(fusetag),
+      queueType: Array.isArray(fusetag.que) ? 'array' : typeof fusetag.que,
+    });
+    this.schedulePendingFuseCallFlush(`deferred ${label}`);
+  }
+
+  private schedulePendingFuseCallFlush(reason: string): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.flushPendingFuseCalls(reason);
+      return;
+    }
+
+    if (this.fuseCallFlushTimer !== null) {
+      return;
+    }
+
+    this.fuseCallFlushTimer = this.window.setTimeout(() => {
+      this.fuseCallFlushTimer = null;
+      this.flushPendingFuseCalls(reason);
+    }, FUSE_API_RETRY_MS);
+  }
+
+  private flushPendingFuseCalls(reason: string): void {
+    if (this.pendingFuseCalls.length === 0) {
+      this.fuseCallFlushRetries = 0;
+      return;
+    }
+
+    const fusetag = this.ensureFuseQueue();
+    if (!this.isFuseApiReady(fusetag)) {
+      this.fuseCallFlushRetries += 1;
+
+      if (this.fuseCallFlushRetries >= FUSE_API_MAX_RETRIES) {
+        this.debugError('Fuse API never became ready; pending calls remain blocked', {
+          reason,
+          pendingFuseCalls: this.pendingFuseCalls.map(call => call.label),
+          fusetagKeys: Object.keys(fusetag),
+          hasQueue: Boolean(fusetag.que),
+          queueType: Array.isArray(fusetag.que) ? 'array' : typeof fusetag.que,
+          runtimeState: this.runtimeStateSubject.value,
+        });
+        return;
+      }
+
+      this.debugWarn('Fuse API still not ready; retrying pending calls', {
+        reason,
+        retry: this.fuseCallFlushRetries,
+        pendingFuseCalls: this.pendingFuseCalls.map(call => call.label),
+        fusetagKeys: Object.keys(fusetag),
+      });
+      this.schedulePendingFuseCallFlush(reason);
+      return;
+    }
+
+    const calls = this.pendingFuseCalls.splice(0);
+    this.fuseCallFlushRetries = 0;
+    this.attachFuseDebugCallbacks(fusetag);
+    this.debug('Fuse API ready; flushing pending calls', {
+      reason,
+      calls: calls.map(call => call.label),
+    });
+
+    for (const call of calls) {
+      try {
+        this.debug('Fuse pending call executing', { label: call.label });
+        call.callback(fusetag);
+      } catch (error) {
+        this.debugError('Fuse pending call failed', { label: call.label, error });
+      }
+    }
+
+    if (this.pendingFuseCalls.length > 0) {
+      this.schedulePendingFuseCallFlush('pending calls added during flush');
+    }
+  }
+
+  private isFuseApiReady(fusetag: FuseTag): boolean {
+    return typeof fusetag.registerZone === 'function' && typeof fusetag.pageInit === 'function';
+  }
+
+  private attachFuseDebugCallbacks(fusetag: FuseTag): void {
+    if (!this.debugEnabled || this.fuseDebugCallbacksAttached) {
+      return;
+    }
+
+    this.fuseDebugCallbacksAttached = true;
+    this.debug('Fuse debug callbacks attaching', {
+      hasOnTagInitialised: typeof fusetag.onTagInitialised === 'function',
+      hasOnSlotsInitialised: typeof fusetag.onSlotsInitialised === 'function',
+      hasOnSlotRenderEnded: typeof fusetag.onSlotRenderEnded === 'function',
+    });
+
+    fusetag.onTagInitialised?.(() => {
+      this.debug('Fuse tag initialised callback');
+    });
+
+    fusetag.onSlotsInitialised?.(() => {
+      this.debug('Fuse slots initialised callback');
+    });
+
+    fusetag.onSlotRenderEnded?.(event => {
+      this.debug('Fuse slot render ended', {
+        slotId: event.slotId,
+        hasCreative: event.hasCreative,
+      });
+    });
   }
 
   private schedulePageInit(fuseIds: string[], reason: string): void {
@@ -553,7 +690,7 @@ export class FuseAdsService {
         blockingFuseIds,
         blockingTimeout: environment.fuse.blockingTimeoutMs,
       });
-    });
+    }, `pageInit:${blockingFuseIds.join(',')}`);
   }
 
   private getRegisteredZonesSummary(): Array<{ zoneElementId: string; fuseId: string }> {
