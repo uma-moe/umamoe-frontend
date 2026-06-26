@@ -26,7 +26,11 @@ import { SupportCardShort, SupportCardType, Rarity } from '../../models/support-
 import { VeteranMember } from '../../models/profile.model';
 import { LinkedAccount } from '../../models/auth.model';
 import { CHARACTERS, getCharacterById as getMasterCharacterById, getCharacterNameEntries } from '../../data/character.data';
-import { SUPPORT_CARDS } from '../../data/support-cards.data';
+import {
+  SUPPORT_CARDS,
+  getSupportCardDisplayName as getSupportCardDataDisplayName,
+  getSupportCardDisplayTitle as getSupportCardDataDisplayTitle
+} from '../../data/support-cards.data';
 import { SKILLS } from '../../data/skills.data';
 import { RACE_SADDLE_DATA } from '../../data/race-saddle.data';
 import { getCharacterName } from '../../pages/profile/profile-helpers';
@@ -2027,11 +2031,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     });
     // Support Card
     if (this.selectedSupportCard) {
+      const supportCardLabel = this.getSupportCardDisplayLabel(this.selectedSupportCard);
       this.activeFilterChips.push({
         id: 'support-card',
-        label: `Card: ${this.selectedSupportCard.name}`,
+        label: `Card: ${supportCardLabel}`,
         name: 'Card',
-        value: this.selectedSupportCard.name,
+        value: supportCardLabel,
         type: 'supportCard'
       });
     }
@@ -5447,7 +5452,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       addMinimumClause('parent_rank', this.filterState.parent_rank);
     }
     if (this.selectedSupportCard) {
-      clauses.push(`Support card = ${this.selectedSupportCard.name}`);
+      clauses.push(`Support card = ${this.getSupportCardDisplayLabel(this.selectedSupportCard)}`);
       if (this.selectedLimitBreak > 0) clauses.push(`limitbreak >= ${this.selectedLimitBreak}`);
     } else if (this.selectedLimitBreak > 0) {
       clauses.push(`limitbreak >= ${this.selectedLimitBreak}`);
@@ -5727,6 +5732,19 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   removeSupportCard() {
     this.selectedSupportCard = null;
     this.onFilterChange();
+  }
+  getSupportCardDisplayTitle(card: SupportCardShort): string {
+    return getSupportCardDataDisplayTitle(card) ?? getSupportCardDataDisplayName(card);
+  }
+  getSupportCardDisplayName(card: SupportCardShort): string {
+    const title = this.getSupportCardDisplayTitle(card).trim().toLowerCase();
+    const name = getSupportCardDataDisplayName(card);
+    return name.trim().toLowerCase() === title ? '' : name;
+  }
+  getSupportCardDisplayLabel(card: SupportCardShort): string {
+    const title = this.getSupportCardDisplayTitle(card);
+    const name = this.getSupportCardDisplayName(card);
+    return name ? `${title} ${name}` : title;
   }
   selectVeteran() {
     if (this.linkedAccounts.length === 0) {

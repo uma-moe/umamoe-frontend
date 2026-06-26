@@ -102,10 +102,10 @@ export interface SupportCardSelectDialogData {
             (click)="selectCard(card)"
           >
             <div class="card-thumb">
-              <img [src]="card.imageUrl" [alt]="getDisplayCardName(card)" (error)="onImageError($event)">
+              <img [src]="card.imageUrl" [alt]="getDisplayCardAlt(card)" (error)="onImageError($event)">
             </div>
-            <span class="card-name">{{getDisplayCardName(card)}}</span>
-            <span class="card-title" *ngIf="getDisplayCardSubtitle(card) as subtitle">{{subtitle}}</span>
+            <span class="card-title">{{getDisplayCardTitle(card)}}</span>
+            <span class="card-name" *ngIf="getDisplayCardName(card) as displayName">{{displayName}}</span>
             <div class="card-meta">
               <span class="type-badge">{{getTypeDisplayName(card.type)}}</span>
               <span class="rarity-badge">{{getRarityDisplayName(card.rarity)}}</span>
@@ -237,13 +237,19 @@ export class SupportCardSelectDialogComponent implements OnInit {
   }
 
   getDisplayCardName(card: SupportCardShort): string {
-    return getSupportCardDisplayName(card);
+    const displayName = getSupportCardDisplayName(card);
+    return displayName.trim().toLowerCase() === this.getDisplayCardTitle(card).trim().toLowerCase()
+      ? ''
+      : displayName;
   }
 
-  getDisplayCardSubtitle(card: SupportCardShort): string | null {
-    return getSupportCardDisplayTitle(card)
-      ? getSupportCardCharacterName(card) ?? null
-      : null;
+  getDisplayCardTitle(card: SupportCardShort): string {
+    return getSupportCardDisplayTitle(card) ?? getSupportCardCharacterName(card) ?? card.name;
+  }
+
+  getDisplayCardAlt(card: SupportCardShort): string {
+    const displayName = this.getDisplayCardName(card);
+    return displayName ? `${this.getDisplayCardTitle(card)} ${displayName}` : this.getDisplayCardTitle(card);
   }
 
   private releaseTime(card: SupportCardShort): number {

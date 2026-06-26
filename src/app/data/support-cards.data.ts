@@ -210,7 +210,7 @@ export function getSupportCardCharacterName(card: SupportCardShort): string | un
 }
 
 export function getSupportCardDisplayTitle(card: SupportCardShort): string | undefined {
-    return firstString(stripTitleBrackets(card.cardTitle), extractTitleFromCardName(card.cardFullName), extractTitleFromCardName(card.cardName));
+    return firstString(formatCardTitle(card.cardTitle), extractTitleFromCardName(card.cardFullName), extractTitleFromCardName(card.cardName), getSupportCardCharacterName(card));
 }
 
 function extractTitleFromCardName(cardName: string | undefined): string | undefined {
@@ -219,17 +219,20 @@ function extractTitleFromCardName(cardName: string | undefined): string | undefi
     }
 
     const match = cardName.trim().match(/^\[([^\]]+)\]/);
-    return match ? match[1].trim() : undefined;
+    return match ? `[${match[1].trim()}]` : undefined;
 }
 
-function stripTitleBrackets(value: string | undefined): string | undefined {
+function formatCardTitle(value: string | undefined): string | undefined {
     if (!value) {
         return undefined;
     }
 
     const trimmed = value.trim();
-    const bracketed = trimmed.match(/^\[([^\]]+)\]$/);
-    return (bracketed ? bracketed[1] : trimmed).trim();
+    if (!trimmed) {
+        return undefined;
+    }
+
+    return trimmed.startsWith('[') && trimmed.endsWith(']') ? trimmed : `[${trimmed}]`;
 }
 
 function stripTitleFromFullName(cardFullName: string | undefined): string | undefined {

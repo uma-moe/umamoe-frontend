@@ -818,7 +818,8 @@
               <div class="selected-support-card" *ngIf="selectedSupportCard">
                 <img [src]="selectedSupportCard.imageUrl" class="card-thumb">
                 <div class="card-info">
-                  <span class="card-name">{{selectedSupportCard.name}}</span>
+                  <span class="card-title">{{getSupportCardDisplayTitle(selectedSupportCard)}}</span>
+                  <span class="card-name" *ngIf="getSupportCardDisplayName(selectedSupportCard) as cardName">{{cardName}}</span>
                   <div class="card-badges">
                     <span class="badge type-badge">{{getSupportCardTypeDisplay(selectedSupportCard.type)}}</span>
                     <span class="badge rarity-badge">{{getSupportCardRarityDisplay(selectedSupportCard.rarity)}}</span>
