@@ -11,6 +11,7 @@ export const environment = {
   fuse: {
     enabled: false,
     alwaysShowFallbacks: false,
+    debugLogging: true,
     scriptUrl: 'https://cdn.fuseplatform.net/publift/tags/2/4302/fuse.js',
     blockingTimeoutMs: 1200,
     slots: {

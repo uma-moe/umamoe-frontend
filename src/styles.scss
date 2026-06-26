@@ -1547,6 +1547,7 @@ body.christmas-theme {
 
 .mat-mdc-snack-bar-container.update-available-snackbar {
   --mdc-snackbar-container-color: transparent;
+  margin-bottom: calc(var(--ad-bottom-popup-offset, 0px) + max(8px, env(safe-area-inset-bottom))) !important;
 
   .mdc-snackbar__surface {
     padding: 0 !important;

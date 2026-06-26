@@ -95,6 +95,11 @@ const DENIED_AD_CONSENT: GoogleAdConsentState = {
   adPersonalization: 'denied',
   source: 'pending',
 };
+const AD_DEBUG_STORAGE_KEY = 'umamoe-ad-debug-v1';
+const AD_DEBUG_QUERY_KEYS = ['ad_debug', 'ads_debug', 'fuse_debug'];
+const FUSE_ENABLED_STORAGE_KEY = 'umamoe-fuse-enabled-v1';
+const FUSE_ENABLED_QUERY_KEYS = ['fuse', 'fuse_enabled', 'ads_enabled'];
+type AdDebugLevel = 'debug' | 'warn' | 'error';
 
 @Injectable({ providedIn: 'root' })
 export class FuseAdsService {
@@ -139,6 +144,18 @@ export class FuseAdsService {
     @Inject(PLATFORM_ID) private platformId: Object,
   ) {}
 
+  debug(message: string, data?: unknown): void {
+    this.writeDebug('debug', message, data);
+  }
+
+  debugWarn(message: string, data?: unknown): void {
+    this.writeDebug('warn', message, data);
+  }
+
+  debugError(message: string, data?: unknown): void {
+    this.writeDebug('error', message, data);
+  }
+
   init(): void {
     if (!isPlatformBrowser(this.platformId) || this.started) {
       return;
@@ -146,8 +163,16 @@ export class FuseAdsService {
 
     this.started = true;
     this.attachLocalConsentListener();
+    this.debug('init', {
+      enabled: this.enabled,
+      hasScriptUrl: this.hasScriptUrl,
+      scriptUrl: environment.fuse.scriptUrl,
+      localConsent: this.summarizeLocalConsent(),
+      localAllowsAds: this.localAllowsAds,
+    });
 
     if (!this.enabled) {
+      this.debugWarn('init skipped: Fuse disabled by environment');
       this.setRuntimeState({
         enabled: false,
         configured: false,
@@ -170,6 +195,7 @@ export class FuseAdsService {
     this.setRegionalGoogleAdConsent({ ...DENIED_AD_CONSENT, source: configured ? 'pending' : 'disabled' });
 
     if (!configured) {
+      this.debugWarn('init skipped: missing Fuse script URL');
       return;
     }
 
@@ -179,10 +205,21 @@ export class FuseAdsService {
   pageInit(fuseIds: string[]): void {
     const blockingFuseIds = [...new Set(fuseIds.filter(Boolean))];
     if (!this.canUseFuse || blockingFuseIds.length === 0) {
+      this.debugWarn('pageInit skipped', {
+        requestedFuseIds: fuseIds,
+        blockingFuseIds,
+        canUseFuse: this.canUseFuse,
+        runtimeState: this.runtimeStateSubject.value,
+      });
       return;
     }
 
+    this.debug('pageInit queued', {
+      blockingFuseIds,
+      blockingTimeout: environment.fuse.blockingTimeoutMs,
+    });
     this.enqueueFuseCall(fusetag => {
+      this.debug('pageInit executing', { blockingFuseIds });
       fusetag.pageInit?.({
         blockingFuseIds,
         blockingTimeout: environment.fuse.blockingTimeoutMs,
@@ -192,19 +229,33 @@ export class FuseAdsService {
 
   registerZone(zoneElementId: string, fuseId: string): void {
     if (!this.canUseFuse || !zoneElementId || !fuseId) {
+      this.debugWarn('registerZone skipped', {
+        zoneElementId,
+        fuseId,
+        canUseFuse: this.canUseFuse,
+        runtimeState: this.runtimeStateSubject.value,
+      });
       return;
     }
 
+    this.debug('registerZone queued', { zoneElementId, fuseId });
     this.enqueueFuseCall(fusetag => {
+      this.debug('registerZone executing', { zoneElementId, fuseId });
       fusetag.registerZone?.(zoneElementId);
     });
   }
 
   openPrivacyControls(): boolean {
     if (!isPlatformBrowser(this.platformId) || !this.enabled || !this.hasScriptUrl) {
+      this.debugWarn('privacy controls skipped', {
+        isBrowser: isPlatformBrowser(this.platformId),
+        enabled: this.enabled,
+        hasScriptUrl: this.hasScriptUrl,
+      });
       return false;
     }
 
+    this.debug('privacy controls requested');
     this.startFuseRuntime(false);
 
     this.ngZone.runOutsideAngular(() => {
@@ -219,29 +270,38 @@ export class FuseAdsService {
   private attachTcfListener(): void {
     const tcfApi = this.window.__tcfapi;
     if (!tcfApi) {
+      this.debugWarn('TCF listener waiting: __tcfapi missing', { retryCount: this.tcfRetryCount });
       this.retryTcfListener();
       return;
     }
 
     if (this.tcfListenerAttached) {
+      this.debug('TCF listener already attached');
       return;
     }
 
     this.tcfListenerAttached = true;
+    this.debug('TCF listener attaching');
 
     try {
       tcfApi('ping', 2, (pingData, success) => {
+        this.debug('TCF ping response', { success, pingData });
         if (success) {
           this.handleTcfPing(pingData as TcfPingData);
         }
       });
 
       tcfApi('addEventListener', 2, (tcData, success) => {
+        this.debug('TCF event response', {
+          success,
+          tcData: this.summarizeTcfData(tcData as TcfData),
+        });
         if (success) {
           this.handleTcfData(tcData as TcfData);
         }
       });
-    } catch {
+    } catch (error) {
+      this.debugError('TCF listener failed', error);
       this.setRuntimeState({
         ...this.runtimeStateSubject.value,
         cmpStatus: 'error',
@@ -251,28 +311,37 @@ export class FuseAdsService {
 
   private retryTcfListener(): void {
     if (this.tcfRetryCount >= 20) {
+      this.debugWarn('TCF listener retries exhausted');
       return;
     }
 
     this.tcfRetryCount += 1;
+    this.debug('TCF listener retry scheduled', { retryCount: this.tcfRetryCount });
     this.window.setTimeout(() => this.attachTcfListener(), 250);
   }
 
   private attachUspListener(): void {
     const uspApi = this.window.__uspapi;
     if (!uspApi || this.uspListenerAttached) {
+      this.debug('USP listener skipped', {
+        hasUspApi: Boolean(uspApi),
+        uspListenerAttached: this.uspListenerAttached,
+      });
       return;
     }
 
     this.uspListenerAttached = true;
+    this.debug('USP listener attaching');
 
     try {
       uspApi('getUSPData', 1, (uspData, success) => {
+        this.debug('USP data response', { success, uspData });
         if (success) {
           this.handleUspData(uspData as UspData);
         }
       });
-    } catch {
+    } catch (error) {
+      this.debugError('USP listener failed', error);
       return;
     }
   }
@@ -351,6 +420,7 @@ export class FuseAdsService {
 
   private ensureFuseScript(): void {
     if (this.document.getElementById('publift-fuse-js')) {
+      this.debug('Fuse script already present');
       this.setRuntimeState({
         ...this.runtimeStateSubject.value,
         scriptLoaded: true,
@@ -363,12 +433,14 @@ export class FuseAdsService {
     script.async = true;
     script.src = environment.fuse.scriptUrl.trim();
     script.addEventListener('load', () => {
+      this.debug('Fuse script loaded', { src: script.src });
       this.setRuntimeState({
         ...this.runtimeStateSubject.value,
         scriptLoaded: true,
       });
     });
     script.addEventListener('error', () => {
+      this.debugError('Fuse script failed to load', { src: script.src });
       this.setRuntimeState({
         ...this.runtimeStateSubject.value,
         scriptLoaded: false,
@@ -381,6 +453,10 @@ export class FuseAdsService {
       script.nonce = nonce;
     }
 
+    this.debug('Fuse script injecting', {
+      src: script.src,
+      hasNonce: Boolean(nonce),
+    });
     this.document.head.appendChild(script);
   }
 
@@ -388,11 +464,13 @@ export class FuseAdsService {
     const current = this.window.fusetag;
     if (current) {
       current.que = current.que ?? [];
+      this.debug('Fuse queue reused');
       return current;
     }
 
     const fusetag: FuseTag = { que: [] };
     this.window.fusetag = fusetag;
+    this.debug('Fuse queue created');
     return fusetag;
   }
 
@@ -401,10 +479,12 @@ export class FuseAdsService {
     const queue = fusetag.que;
 
     if (queue && typeof queue.push === 'function') {
+      this.debug('Fuse call pushed to queue', { queueType: Array.isArray(queue) ? 'array' : typeof queue });
       queue.push(() => callback(fusetag));
       return;
     }
 
+    this.debug('Fuse call executing immediately');
     callback(fusetag);
   }
 
@@ -414,6 +494,11 @@ export class FuseAdsService {
       ...state,
       adsCanRender: state.adsCanRender && this.localAllowsAds,
     };
+    this.debug('runtime state updated', {
+      requestedState: state,
+      effectiveState,
+      localAllowsAds: this.localAllowsAds,
+    });
     this.runtimeStateSubject.next(effectiveState);
     this.adsCanRenderSubject.next(effectiveState.adsCanRender);
   }
@@ -426,11 +511,19 @@ export class FuseAdsService {
     this.localConsent = this.cookieConsentService.consent;
     this.consentSub = this.cookieConsentService.consent$.subscribe(consent => {
       this.localConsent = consent;
+      this.debug('local consent changed', {
+        localConsent: this.summarizeLocalConsent(),
+        localAllowsAds: this.localAllowsAds,
+      });
       this.refreshEffectiveConsentState();
     });
   }
 
   private refreshEffectiveConsentState(): void {
+    this.debug('refresh effective consent state', {
+      localConsent: this.summarizeLocalConsent(),
+      rawRuntimeState: this.rawRuntimeState,
+    });
     this.startFuseRuntimeIfAllowed();
     this.setRuntimeState(this.rawRuntimeState);
     this.applyEffectiveGoogleAdConsent();
@@ -438,9 +531,16 @@ export class FuseAdsService {
 
   private startFuseRuntimeIfAllowed(): void {
     if (!this.enabled || !this.hasScriptUrl || !this.localAllowsAds) {
+      this.debugWarn('Fuse runtime not started', {
+        enabled: this.enabled,
+        hasScriptUrl: this.hasScriptUrl,
+        localAllowsAds: this.localAllowsAds,
+        localConsent: this.summarizeLocalConsent(),
+      });
       return;
     }
 
+    this.debug('Fuse runtime allowed to start');
     this.startFuseRuntime(true);
   }
 
@@ -456,11 +556,13 @@ export class FuseAdsService {
     };
 
     if (this.fuseRuntimeStarted) {
+      this.debug('Fuse runtime already started; refreshing state', { runtimeState });
       this.setRuntimeState(runtimeState);
       return;
     }
 
     this.fuseRuntimeStarted = true;
+    this.debug('Fuse runtime starting', { runtimeState });
     this.ensureFuseQueue();
     this.setRuntimeState({ ...runtimeState, scriptLoaded: false, cmpStatus: 'pending' });
     this.setRegionalGoogleAdConsent({ ...DENIED_AD_CONSENT, source: 'pending' });
@@ -617,13 +719,103 @@ export class FuseAdsService {
     return granted ? 'granted' : 'denied';
   }
 
+  private writeDebug(level: AdDebugLevel, message: string, data?: unknown): void {
+    if (!this.debugEnabled) {
+      return;
+    }
+
+    const method = console[level] ?? console.debug;
+    if (data === undefined) {
+      method.call(console, `[uma.ads] ${message}`);
+      return;
+    }
+
+    method.call(console, `[uma.ads] ${message}`, data);
+  }
+
+  private summarizeLocalConsent(): CookieConsent | null {
+    return this.localConsent
+      ? {
+        essential: this.localConsent.essential,
+        analytics: this.localConsent.analytics,
+        advertising: this.localConsent.advertising,
+      }
+      : null;
+  }
+
+  private summarizeTcfData(tcData: TcfData): Partial<TcfData> & { tcStringLength?: number } {
+    return {
+      gdprApplies: tcData.gdprApplies,
+      eventStatus: tcData.eventStatus,
+      cmpStatus: tcData.cmpStatus,
+      tcStringLength: tcData.tcString?.length,
+      purpose: tcData.purpose,
+    };
+  }
+
+  private getBooleanOverride(queryKeys: string[], storageKey: string): boolean | null {
+    if (!isPlatformBrowser(this.platformId)) {
+      return null;
+    }
+
+    const queryOverride = this.getQueryBooleanOverride(queryKeys);
+    if (queryOverride !== null) {
+      this.setStoredBooleanOverride(storageKey, queryOverride);
+      return queryOverride;
+    }
+
+    try {
+      const stored = this.window.localStorage.getItem(storageKey);
+      return stored === null ? null : this.parseBooleanOverride(stored);
+    } catch {
+      return null;
+    }
+  }
+
+  private getQueryBooleanOverride(queryKeys: string[]): boolean | null {
+    const params = new URLSearchParams(this.window.location.search);
+
+    for (const key of queryKeys) {
+      if (!params.has(key)) {
+        continue;
+      }
+
+      return this.parseBooleanOverride(params.get(key) ?? '');
+    }
+
+    return null;
+  }
+
+  private parseBooleanOverride(value: string): boolean {
+    const normalized = value.trim().toLowerCase();
+    return !['0', 'false', 'off', 'no', 'disabled'].includes(normalized);
+  }
+
+  private setStoredBooleanOverride(storageKey: string, value: boolean): void {
+    try {
+      this.window.localStorage.setItem(storageKey, value ? '1' : '0');
+    } catch {
+      return;
+    }
+  }
+
+  private get debugEnabled(): boolean {
+    const override = this.getBooleanOverride(AD_DEBUG_QUERY_KEYS, AD_DEBUG_STORAGE_KEY);
+    if (override !== null) {
+      return override;
+    }
+
+    return (environment.fuse as { debugLogging?: boolean }).debugLogging === true;
+  }
+
   private get canUseFuse(): boolean {
     const state = this.runtimeStateSubject.value;
     return state.enabled && state.configured;
   }
 
   private get enabled(): boolean {
-    return environment.fuse.enabled === true;
+    const override = this.getBooleanOverride(FUSE_ENABLED_QUERY_KEYS, FUSE_ENABLED_STORAGE_KEY);
+    return override ?? environment.fuse.enabled === true;
   }
 
   private get hasScriptUrl(): boolean {

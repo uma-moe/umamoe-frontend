@@ -112,7 +112,21 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.updateContentTopAllowed();
     this.initializePageBottomPopup(this.config);
     this.updateBottomPopupRootState();
-    this.fuseAdsService.pageInit(this.getActivePageInitFuseIds(this.config));
+    const pageInitFuseIds = this.getActivePageInitFuseIds(this.config);
+    this.fuseAdsService.debug('route ad config synced', {
+      url,
+      enabled: this.config.enabled,
+      contentTopAllowed: this.contentTopAllowed,
+      bottomPopupFuseId: this.config.bottomPopup?.fuseId,
+      pageInitFuseIds,
+      sideRails: this.config.sideRails
+        ? {
+          left: this.config.sideRails.left.fuseId,
+          right: this.config.sideRails.right.fuseId,
+        }
+        : undefined,
+    });
+    this.fuseAdsService.pageInit(pageInitFuseIds);
     this.sideRailsVisible = false;
     this.disconnectAnchorObserver();
     this.scheduleSideRailLayout(true);

@@ -51,6 +51,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   fallbackPreviewEnabled = false;
   private fallbackReady = false;
   private fallbackTimer: number | null = null;
+  private lastDebugState = '';
   private mutationObserver: MutationObserver | null = null;
   private viewportWidth = 0;
 
@@ -141,10 +142,26 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.showFallback = false;
     this.slotWaiting = true;
     this.setCollapsed(false);
+    this.lastDebugState = '';
     this.fallbackPreviewEnabled = this.forceFallback;
     this.fallbackReady = this.fallbackPreviewEnabled;
+    this.fuseAdsService.debug('slot watch start', {
+      instanceId: this.instanceId,
+      slotElementId: this.slotElementId,
+      placement: this.config.placement,
+      fuseId: this.config.fuseId,
+      kind: this.config.kind,
+      sizes: this.activeSizes,
+      forceFallback: this.forceFallback,
+    });
 
     if (!isPlatformBrowser(this.platformId) || !this.adTarget?.nativeElement) {
+      this.fuseAdsService.debugWarn('slot watch skipped', {
+        instanceId: this.instanceId,
+        placement: this.config.placement,
+        isBrowser: isPlatformBrowser(this.platformId),
+        hasTarget: Boolean(this.adTarget?.nativeElement),
+      });
       return;
     }
 
@@ -162,6 +179,11 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     if (!this.fallbackPreviewEnabled) {
       this.fallbackTimer = window.setTimeout(() => {
         this.fallbackReady = true;
+        this.fuseAdsService.debugWarn('slot fallback timeout reached', {
+          instanceId: this.instanceId,
+          placement: this.config.placement,
+          fuseId: this.config.fuseId,
+        });
         this.updateFallbackState(target);
       }, FALLBACK_REVEAL_DELAY_MS);
     }
@@ -175,6 +197,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     if (this.fallbackPreviewEnabled) {
       this.showFallback = true;
       this.slotWaiting = false;
+      this.debugSlotState(target, hasAdMarkup, false);
       return;
     }
 
@@ -187,6 +210,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     const shouldCollapse = this.fallbackReady && !hasAdMarkup && !this.showFallback;
     this.setCollapsed(shouldCollapse);
     this.slotWaiting = !hasAdMarkup && !this.showFallback && !shouldCollapse;
+    this.debugSlotState(target, hasAdMarkup, shouldCollapse);
   }
 
   private setCollapsed(collapsed: boolean): void {
@@ -196,6 +220,62 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
     this.slotCollapsed = collapsed;
     this.collapsedChange.emit(collapsed);
+  }
+
+  private debugSlotState(target: HTMLElement, hasAdMarkup: boolean, shouldCollapse: boolean): void {
+    const debugState = JSON.stringify({
+      hasAdMarkup,
+      showFallback: this.showFallback,
+      slotWaiting: this.slotWaiting,
+      slotCollapsed: this.slotCollapsed,
+      fallbackReady: this.fallbackReady,
+      childCount: target.children.length,
+      textLength: target.textContent?.trim().length ?? 0,
+    });
+
+    if (debugState === this.lastDebugState) {
+      return;
+    }
+
+    this.lastDebugState = debugState;
+    this.fuseAdsService.debug(shouldCollapse ? 'slot collapsed after no-fill' : 'slot state changed', {
+      instanceId: this.instanceId,
+      slotElementId: this.slotElementId,
+      placement: this.config.placement,
+      fuseId: this.config.fuseId,
+      kind: this.config.kind,
+      hasAdMarkup,
+      showFallback: this.showFallback,
+      slotWaiting: this.slotWaiting,
+      slotCollapsed: this.slotCollapsed,
+      fallbackReady: this.fallbackReady,
+      targetRect: this.readRect(target),
+      children: this.summarizeChildren(target),
+    });
+  }
+
+  private summarizeChildren(target: HTMLElement): Array<Record<string, unknown>> {
+    return Array.from(target.children).slice(0, 5).map(child => {
+      const element = child as HTMLElement;
+      return {
+        tag: element.tagName.toLowerCase(),
+        id: element.id || undefined,
+        className: element.className || undefined,
+        dataFuse: element.getAttribute('data-fuse') || undefined,
+        rect: this.readRect(element),
+        textLength: element.textContent?.trim().length ?? 0,
+      };
+    });
+  }
+
+  private readRect(element: HTMLElement): { width: number; height: number; top: number; left: number } {
+    const rect = element.getBoundingClientRect();
+    return {
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+      top: Math.round(rect.top),
+      left: Math.round(rect.left),
+    };
   }
 
   private usesConfigDrivenSize(): boolean {
