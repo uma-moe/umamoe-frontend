@@ -5,7 +5,14 @@ import { environment } from '../../environments/environment';
 import { CookieConsent, CookieConsentService } from './cookie-consent.service';
 
 type ConsentValue = 'granted' | 'denied';
-type GoogleAdConsentSource = 'disabled' | 'pending' | 'cmp' | 'regional-default' | 'ccpa-opt-out' | 'local-opt-out';
+type GoogleAdConsentSource =
+  | 'disabled'
+  | 'pending'
+  | 'cmp'
+  | 'regional-default'
+  | 'ccpa-opt-out'
+  | 'local-opt-out'
+  | 'debug-forced';
 
 export interface GoogleAdConsentState {
   adStorage: ConsentValue;
@@ -121,8 +128,15 @@ const DENIED_AD_CONSENT: GoogleAdConsentState = {
   adPersonalization: 'denied',
   source: 'pending',
 };
+const GRANTED_AD_CONSENT: GoogleAdConsentState = {
+  adStorage: 'granted',
+  adUserData: 'granted',
+  adPersonalization: 'granted',
+  source: 'debug-forced',
+};
 const AD_DEBUG_STORAGE_KEY = 'umamoe-ad-debug-v1';
 const AD_DEBUG_QUERY_KEYS = ['ad_debug', 'ads_debug', 'fuse_debug'];
+const FORCE_AD_CONSENT_QUERY_KEYS = ['force_ad_consent', 'ad_consent', 'ads_consent'];
 const FUSE_ENABLED_STORAGE_KEY = 'umamoe-fuse-enabled-v1';
 const FUSE_ENABLED_QUERY_KEYS = ['fuse', 'fuse_enabled', 'ads_enabled'];
 const FUSE_API_RETRY_MS = 100;
@@ -226,6 +240,7 @@ export class FuseAdsService {
       scriptUrl: environment.fuse.scriptUrl,
       localConsent: this.summarizeLocalConsent(),
       localAllowsAds: this.localAllowsAds,
+      adConsentForced: this.adConsentForced,
     });
 
     if (!this.enabled) {
@@ -733,6 +748,7 @@ export class FuseAdsService {
       this.debug('local consent changed', {
         localConsent: this.summarizeLocalConsent(),
         localAllowsAds: this.localAllowsAds,
+        adConsentForced: this.adConsentForced,
       });
       this.refreshEffectiveConsentState();
     });
@@ -741,6 +757,7 @@ export class FuseAdsService {
   private refreshEffectiveConsentState(): void {
     this.debug('refresh effective consent state', {
       localConsent: this.summarizeLocalConsent(),
+      adConsentForced: this.adConsentForced,
       rawRuntimeState: this.rawRuntimeState,
     });
     this.startFuseRuntimeIfAllowed();
@@ -913,6 +930,15 @@ export class FuseAdsService {
   }
 
   private applyEffectiveGoogleAdConsent(): void {
+    if (this.adConsentForced) {
+      this.googleAdConsentSubject.next({
+        ...GRANTED_AD_CONSENT,
+        gdprApplies: this.regionalGoogleAdConsentState.gdprApplies,
+        uspString: this.regionalGoogleAdConsentState.uspString,
+      });
+      return;
+    }
+
     if (this.localConsent === null) {
       this.googleAdConsentSubject.next({
         ...DENIED_AD_CONSENT,
@@ -1041,8 +1067,12 @@ export class FuseAdsService {
     return environment.fuse.scriptUrl.trim().length > 0;
   }
 
+  private get adConsentForced(): boolean {
+    return this.getQueryBooleanOverride(FORCE_AD_CONSENT_QUERY_KEYS) === true;
+  }
+
   private get localAllowsAds(): boolean {
-    return this.localConsent?.advertising === true;
+    return this.adConsentForced || this.localConsent?.advertising === true;
   }
 
   private getScriptNonce(): string {
