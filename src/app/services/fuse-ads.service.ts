@@ -145,6 +145,9 @@ export class FuseAdsService {
   private readonly slotRenderEndedSubject = new Subject<FuseSlotRenderResult>();
   readonly slotRenderEnded$ = this.slotRenderEndedSubject.asObservable();
 
+  private readonly supportFallbackAllowedSubject = new BehaviorSubject<boolean>(false);
+  readonly supportFallbackAllowed$ = this.supportFallbackAllowedSubject.asObservable();
+
   private readonly runtimeStateSubject = new BehaviorSubject<FuseRuntimeState>(this.defaultRuntimeState);
   readonly runtimeState$ = this.runtimeStateSubject.asObservable();
 
@@ -169,6 +172,7 @@ export class FuseAdsService {
   private pendingFuseCalls: PendingFuseCall[] = [];
   private fuseCallFlushTimer: number | null = null;
   private fuseCallFlushRetries = 0;
+  private fuseApiBlocked = false;
   private fuseDebugCallbacksAttached = false;
   private localConsent: CookieConsent | null = null;
   private consentSub?: Subscription;
@@ -483,6 +487,7 @@ export class FuseAdsService {
       this.schedulePendingFuseCallFlush('script loaded');
     });
     script.addEventListener('error', () => {
+      this.setSupportFallbackAllowed(true, 'Fuse script failed to load');
       this.debugError('Fuse script failed to load', { src: script.src });
       this.setRuntimeState({
         ...this.runtimeStateSubject.value,
@@ -521,6 +526,8 @@ export class FuseAdsService {
     const fusetag = this.ensureFuseQueue();
 
     if (this.isFuseApiReady(fusetag)) {
+      this.fuseApiBlocked = false;
+      this.setSupportFallbackAllowed(false, 'Fuse API ready');
       this.attachFuseDebugCallbacks(fusetag);
       this.debug('Fuse API ready; executing call', { label });
       callback(fusetag);
@@ -564,6 +571,8 @@ export class FuseAdsService {
       this.fuseCallFlushRetries += 1;
 
       if (this.fuseCallFlushRetries >= FUSE_API_MAX_RETRIES) {
+        this.fuseApiBlocked = true;
+        this.setSupportFallbackAllowed(true, 'Fuse API never became ready');
         this.debugError('Fuse API never became ready; pending calls remain blocked', {
           reason,
           pendingFuseCalls: this.pendingFuseCalls.map(call => call.label),
@@ -587,6 +596,8 @@ export class FuseAdsService {
 
     const calls = this.pendingFuseCalls.splice(0);
     this.fuseCallFlushRetries = 0;
+    this.fuseApiBlocked = false;
+    this.setSupportFallbackAllowed(false, 'Fuse API ready');
     this.attachFuseDebugCallbacks(fusetag);
     this.debug('Fuse API ready; flushing pending calls', {
       reason,
@@ -692,6 +703,19 @@ export class FuseAdsService {
     });
     this.runtimeStateSubject.next(effectiveState);
     this.adsCanRenderSubject.next(effectiveState.adsCanRender);
+  }
+
+  private setSupportFallbackAllowed(allowed: boolean, reason: string): void {
+    if (this.supportFallbackAllowedSubject.value === allowed) {
+      return;
+    }
+
+    this.debug(allowed ? 'support fallback enabled' : 'support fallback disabled', {
+      reason,
+      fuseApiBlocked: this.fuseApiBlocked,
+      runtimeState: this.runtimeStateSubject.value,
+    });
+    this.supportFallbackAllowedSubject.next(allowed);
   }
 
   private attachLocalConsentListener(): void {

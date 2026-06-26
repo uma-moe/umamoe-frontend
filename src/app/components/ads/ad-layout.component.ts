@@ -155,12 +155,6 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   private initializePageBottomPopup(config: AdRouteConfig): void {
     this.bottomPopupClosed = false;
     this.persistentBottomPopupConfig = config.bottomPopup;
-
-    if (!config.bottomPopup?.fuseId) {
-      return;
-    }
-
-    this.fuseAdsService.pageInit([config.bottomPopup.fuseId], 'bottom popup config');
   }
 
   private updateBottomPopupRootState(visible = Boolean(this.persistentBottomPopupConfig && !this.bottomPopupClosed)): void {
@@ -189,13 +183,16 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   }
 
   private getActivePageInitFuseIds(config: AdRouteConfig): string[] {
-    const ids = getPageInitFuseIds(config);
+    const ids = [
+      ...getPageInitFuseIds(config),
+      config.bottomPopup?.fuseId,
+    ].filter((id): id is string => Boolean(id));
 
     if (this.contentTopAllowed || !config.contentTop?.fuseId) {
-      return ids;
+      return [...new Set(ids)];
     }
 
-    return ids.filter(id => id !== config.contentTop?.fuseId);
+    return [...new Set(ids.filter(id => id !== config.contentTop?.fuseId))];
   }
 
   private scheduleSideRailLayout(withRetries = false): void {

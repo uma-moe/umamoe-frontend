@@ -56,7 +56,9 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   private lastDebugState = '';
   private mutationObserver: MutationObserver | null = null;
   private slotRenderSub?: Subscription;
+  private supportFallbackSub?: Subscription;
   private slotCreativeState: SlotCreativeState = 'pending';
+  private supportFallbackAllowed = false;
   private viewportWidth = 0;
 
   constructor(
@@ -150,6 +152,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.fallbackPreviewEnabled = this.forceFallback;
     this.fallbackReady = this.fallbackPreviewEnabled;
     this.slotCreativeState = 'pending';
+    this.supportFallbackAllowed = false;
     this.fuseAdsService.debug('slot watch start', {
       instanceId: this.instanceId,
       slotElementId: this.slotElementId,
@@ -181,6 +184,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       characterData: true,
     });
     this.watchSlotRenderResult(target);
+    this.watchSupportFallbackState(target);
 
     if (!this.fallbackPreviewEnabled) {
       this.fallbackTimer = window.setTimeout(() => {
@@ -214,6 +218,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     const canShowBlockedFooterFallback = this.closable
       && this.config.kind === 'sticky-footer'
       && noFillReady
+      && this.supportFallbackAllowed
       && Boolean(this.config.fuseId);
 
     this.showFallback = canShowBlockedFooterFallback;
@@ -242,6 +247,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       hasAdMarkup,
       hasLikelyCreativeMarkup,
       slotCreativeState: this.slotCreativeState,
+      supportFallbackAllowed: this.supportFallbackAllowed,
       showFallback: this.showFallback,
       slotWaiting: this.slotWaiting,
       slotCollapsed: this.slotCollapsed,
@@ -264,6 +270,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       hasAdMarkup,
       hasLikelyCreativeMarkup,
       slotCreativeState: this.slotCreativeState,
+      supportFallbackAllowed: this.supportFallbackAllowed,
       showFallback: this.showFallback,
       slotWaiting: this.slotWaiting,
       slotCollapsed: this.slotCollapsed,
@@ -293,6 +300,18 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
         fuseId: this.config.fuseId,
         result,
       });
+      this.updateFallbackState(target);
+    });
+  }
+
+  private watchSupportFallbackState(target: HTMLElement): void {
+    this.supportFallbackSub = this.fuseAdsService.supportFallbackAllowed$.subscribe(allowed => {
+      this.supportFallbackAllowed = allowed;
+
+      if (allowed) {
+        this.fallbackReady = true;
+      }
+
       this.updateFallbackState(target);
     });
   }
@@ -412,6 +431,8 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.mutationObserver = null;
     this.slotRenderSub?.unsubscribe();
     this.slotRenderSub = undefined;
+    this.supportFallbackSub?.unsubscribe();
+    this.supportFallbackSub = undefined;
   }
 
   private clearFallbackTimer(): void {
