@@ -1,6 +1,6 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { Inject, Injectable, NgZone, PLATFORM_ID } from '@angular/core';
-import { BehaviorSubject, Subscription } from 'rxjs';
+import { BehaviorSubject, Subject, Subscription } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { CookieConsent, CookieConsentService } from './cookie-consent.service';
 
@@ -28,9 +28,22 @@ interface FuseQueue {
   push(callback: () => void): number | void;
 }
 
+export interface FuseSlotRenderResult {
+  slotId: string;
+  hasCreative: boolean;
+  gptSlotElementId?: string;
+}
+
+interface FuseGptSlotRenderEvent {
+  slot?: {
+    getSlotElementId?: () => string;
+  };
+}
+
 interface FuseSlotRenderEndedEvent {
   slotId: string;
   hasCreative: boolean;
+  gptEvent?: FuseGptSlotRenderEvent;
 }
 
 interface FuseTag {
@@ -112,7 +125,6 @@ const AD_DEBUG_STORAGE_KEY = 'umamoe-ad-debug-v1';
 const AD_DEBUG_QUERY_KEYS = ['ad_debug', 'ads_debug', 'fuse_debug'];
 const FUSE_ENABLED_STORAGE_KEY = 'umamoe-fuse-enabled-v1';
 const FUSE_ENABLED_QUERY_KEYS = ['fuse', 'fuse_enabled', 'ads_enabled'];
-const PAGE_INIT_DEBOUNCE_MS = 60;
 const FUSE_API_RETRY_MS = 100;
 const FUSE_API_MAX_RETRIES = 80;
 type AdDebugLevel = 'debug' | 'warn' | 'error';
@@ -129,6 +141,9 @@ export class FuseAdsService {
 
   private readonly adsCanRenderSubject = new BehaviorSubject<boolean>(false);
   readonly adsCanRender$ = this.adsCanRenderSubject.asObservable();
+
+  private readonly slotRenderEndedSubject = new Subject<FuseSlotRenderResult>();
+  readonly slotRenderEnded$ = this.slotRenderEndedSubject.asObservable();
 
   private readonly runtimeStateSubject = new BehaviorSubject<FuseRuntimeState>(this.defaultRuntimeState);
   readonly runtimeState$ = this.runtimeStateSubject.asObservable();
@@ -150,8 +165,6 @@ export class FuseAdsService {
     ...DENIED_AD_CONSENT,
     source: 'disabled',
   };
-  private pendingPageInitFuseIds = new Set<string>();
-  private pageInitTimer: number | null = null;
   private registeredZones = new Map<string, string>();
   private pendingFuseCalls: PendingFuseCall[] = [];
   private fuseCallFlushTimer: number | null = null;
@@ -180,19 +193,13 @@ export class FuseAdsService {
   }
 
   beginPageView(reason: string): void {
-    if (this.pageInitTimer !== null && isPlatformBrowser(this.platformId)) {
-      this.window.clearTimeout(this.pageInitTimer);
-    }
-
     if (this.fuseCallFlushTimer !== null && isPlatformBrowser(this.platformId)) {
       this.window.clearTimeout(this.fuseCallFlushTimer);
     }
 
     const clearedPendingFuseCalls = this.pendingFuseCalls.length;
-    this.pageInitTimer = null;
     this.fuseCallFlushTimer = null;
     this.fuseCallFlushRetries = 0;
-    this.pendingPageInitFuseIds.clear();
     this.pendingFuseCalls = [];
     this.registeredZones.clear();
     this.debug('page view ad state reset', { reason, clearedPendingFuseCalls });
@@ -257,7 +264,7 @@ export class FuseAdsService {
       return;
     }
 
-    this.schedulePageInit(blockingFuseIds, reason);
+    this.queuePageInit(blockingFuseIds, reason);
   }
 
   registerZone(zoneElementId: string, fuseId: string): void {
@@ -277,7 +284,6 @@ export class FuseAdsService {
       this.debug('registerZone executing', { zoneElementId, fuseId });
       fusetag.registerZone?.(zoneElementId);
     }, `registerZone:${zoneElementId}:${fuseId}`);
-    this.schedulePageInit([fuseId], 'zone registered');
   }
 
   openPrivacyControls(): boolean {
@@ -606,7 +612,7 @@ export class FuseAdsService {
   }
 
   private attachFuseDebugCallbacks(fusetag: FuseTag): void {
-    if (!this.debugEnabled || this.fuseDebugCallbacksAttached) {
+    if (this.fuseDebugCallbacksAttached) {
       return;
     }
 
@@ -626,54 +632,27 @@ export class FuseAdsService {
     });
 
     fusetag.onSlotRenderEnded?.(event => {
-      this.debug('Fuse slot render ended', {
+      const result: FuseSlotRenderResult = {
         slotId: event.slotId,
         hasCreative: event.hasCreative,
-      });
+        gptSlotElementId: this.getGptSlotElementId(event),
+      };
+
+      this.debug('Fuse slot render ended', result);
+      this.ngZone.run(() => this.slotRenderEndedSubject.next(result));
     });
   }
 
-  private schedulePageInit(fuseIds: string[], reason: string): void {
-    fuseIds.filter(Boolean).forEach(fuseId => this.pendingPageInitFuseIds.add(fuseId));
-
-    this.debug('pageInit scheduled', {
-      reason,
-      pendingFuseIds: Array.from(this.pendingPageInitFuseIds),
-      registeredZones: this.getRegisteredZonesSummary(),
-      delayMs: PAGE_INIT_DEBOUNCE_MS,
-    });
-
-    if (!isPlatformBrowser(this.platformId)) {
-      this.flushPageInit(reason);
-      return;
+  private getGptSlotElementId(event: FuseSlotRenderEndedEvent): string | undefined {
+    try {
+      return event.gptEvent?.slot?.getSlotElementId?.();
+    } catch {
+      return undefined;
     }
-
-    if (this.pageInitTimer !== null) {
-      return;
-    }
-
-    this.pageInitTimer = this.window.setTimeout(() => {
-      this.pageInitTimer = null;
-      this.flushPageInit('debounced flush');
-    }, PAGE_INIT_DEBOUNCE_MS);
   }
 
-  private flushPageInit(reason: string): void {
-    const blockingFuseIds = Array.from(this.pendingPageInitFuseIds);
-    this.pendingPageInitFuseIds.clear();
-
-    if (!this.canUseFuse || blockingFuseIds.length === 0) {
-      this.debugWarn('pageInit flush skipped', {
-        reason,
-        blockingFuseIds,
-        canUseFuse: this.canUseFuse,
-        runtimeState: this.runtimeStateSubject.value,
-        registeredZones: this.getRegisteredZonesSummary(),
-      });
-      return;
-    }
-
-    this.debug('pageInit queued after zone registration window', {
+  private queuePageInit(blockingFuseIds: string[], reason: string): void {
+    this.debug('pageInit queued', {
       reason,
       blockingFuseIds,
       blockingTimeout: environment.fuse.blockingTimeoutMs,

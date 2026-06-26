@@ -16,13 +16,15 @@ import {
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { Subscription } from 'rxjs';
 import { AdSlotConfig } from './ad-layout.config';
-import { FuseAdsService } from '../../services/fuse-ads.service';
+import { FuseAdsService, FuseSlotRenderResult } from '../../services/fuse-ads.service';
 import { environment } from '../../../environments/environment';
 
 let adSlotId = 0;
 const FALLBACK_REVEAL_DELAY_MS = Math.max(environment.fuse.blockingTimeoutMs + 800, 2200);
 const SIZE_PATTERN = /^(\d+)x(\d+)$/;
+type SlotCreativeState = 'pending' | 'filled' | 'empty';
 
 interface AdSlotSize {
   width: number;
@@ -53,6 +55,8 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   private fallbackTimer: number | null = null;
   private lastDebugState = '';
   private mutationObserver: MutationObserver | null = null;
+  private slotRenderSub?: Subscription;
+  private slotCreativeState: SlotCreativeState = 'pending';
   private viewportWidth = 0;
 
   constructor(
@@ -145,6 +149,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.lastDebugState = '';
     this.fallbackPreviewEnabled = this.forceFallback;
     this.fallbackReady = this.fallbackPreviewEnabled;
+    this.slotCreativeState = 'pending';
     this.fuseAdsService.debug('slot watch start', {
       instanceId: this.instanceId,
       slotElementId: this.slotElementId,
@@ -175,6 +180,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       subtree: true,
       characterData: true,
     });
+    this.watchSlotRenderResult(target);
 
     if (!this.fallbackPreviewEnabled) {
       this.fallbackTimer = window.setTimeout(() => {
@@ -192,25 +198,29 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private updateFallbackState(target: HTMLElement): void {
-    const hasAdMarkup = target.children.length > 0 || Boolean(target.textContent?.trim());
+    const hasAdMarkup = this.hasAnyAdMarkup(target);
+    const hasLikelyCreativeMarkup = this.hasLikelyCreativeMarkup(target);
 
     if (this.fallbackPreviewEnabled) {
       this.showFallback = true;
       this.slotWaiting = false;
-      this.debugSlotState(target, hasAdMarkup, false);
+      this.debugSlotState(target, hasAdMarkup, false, hasLikelyCreativeMarkup);
       return;
     }
 
+    const hasFilledCreative = this.slotCreativeState === 'filled'
+      || (this.slotCreativeState !== 'empty' && hasLikelyCreativeMarkup);
+    const noFillReady = this.fallbackReady && !hasFilledCreative;
     const canShowBlockedFooterFallback = this.closable
       && this.config.kind === 'sticky-footer'
-      && this.fallbackReady
+      && noFillReady
       && Boolean(this.config.fuseId);
 
-    this.showFallback = canShowBlockedFooterFallback && !hasAdMarkup;
-    const shouldCollapse = this.fallbackReady && !hasAdMarkup && !this.showFallback;
+    this.showFallback = canShowBlockedFooterFallback;
+    const shouldCollapse = noFillReady && !this.showFallback;
     this.setCollapsed(shouldCollapse);
-    this.slotWaiting = !hasAdMarkup && !this.showFallback && !shouldCollapse;
-    this.debugSlotState(target, hasAdMarkup, shouldCollapse);
+    this.slotWaiting = !hasFilledCreative && !this.showFallback && !shouldCollapse;
+    this.debugSlotState(target, hasAdMarkup, shouldCollapse, hasLikelyCreativeMarkup);
   }
 
   private setCollapsed(collapsed: boolean): void {
@@ -222,9 +232,16 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.collapsedChange.emit(collapsed);
   }
 
-  private debugSlotState(target: HTMLElement, hasAdMarkup: boolean, shouldCollapse: boolean): void {
+  private debugSlotState(
+    target: HTMLElement,
+    hasAdMarkup: boolean,
+    shouldCollapse: boolean,
+    hasLikelyCreativeMarkup: boolean,
+  ): void {
     const debugState = JSON.stringify({
       hasAdMarkup,
+      hasLikelyCreativeMarkup,
+      slotCreativeState: this.slotCreativeState,
       showFallback: this.showFallback,
       slotWaiting: this.slotWaiting,
       slotCollapsed: this.slotCollapsed,
@@ -245,6 +262,8 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       fuseId: this.config.fuseId,
       kind: this.config.kind,
       hasAdMarkup,
+      hasLikelyCreativeMarkup,
+      slotCreativeState: this.slotCreativeState,
       showFallback: this.showFallback,
       slotWaiting: this.slotWaiting,
       slotCollapsed: this.slotCollapsed,
@@ -252,6 +271,76 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       targetRect: this.readRect(target),
       children: this.summarizeChildren(target),
     });
+  }
+
+  private watchSlotRenderResult(target: HTMLElement): void {
+    this.slotRenderSub = this.fuseAdsService.slotRenderEnded$.subscribe(result => {
+      if (!this.isRenderResultForTarget(result, target)) {
+        return;
+      }
+
+      this.slotCreativeState = result.hasCreative ? 'filled' : 'empty';
+
+      if (!result.hasCreative) {
+        this.fallbackReady = true;
+        this.clearFallbackTimer();
+      }
+
+      this.fuseAdsService.debug('slot render result matched', {
+        instanceId: this.instanceId,
+        slotElementId: this.slotElementId,
+        placement: this.config.placement,
+        fuseId: this.config.fuseId,
+        result,
+      });
+      this.updateFallbackState(target);
+    });
+  }
+
+  private isRenderResultForTarget(result: FuseSlotRenderResult, target: HTMLElement): boolean {
+    const ids = [result.slotId, result.gptSlotElementId].filter((id): id is string => Boolean(id));
+
+    return ids.some(id => (
+      id === this.slotElementId
+      || id === target.id
+      || Boolean(target.querySelector(`#${this.escapeSelectorId(id)}`))
+    ));
+  }
+
+  private hasAnyAdMarkup(target: HTMLElement): boolean {
+    return target.children.length > 0 || Boolean(target.textContent?.trim());
+  }
+
+  private hasLikelyCreativeMarkup(target: HTMLElement): boolean {
+    const mediaElements = target.querySelectorAll<HTMLElement | SVGElement>(
+      'iframe, img, picture, video, canvas, object, embed, svg',
+    );
+
+    return Array.from(mediaElements).some(element => this.isVisibleCreativeElement(element));
+  }
+
+  private isVisibleCreativeElement(element: HTMLElement | SVGElement): boolean {
+    const rect = element.getBoundingClientRect();
+    if (rect.width < 8 || rect.height < 8) {
+      return false;
+    }
+
+    const view = element.ownerDocument.defaultView;
+    const style = view?.getComputedStyle(element);
+
+    return !style
+      || (
+        style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+      );
+  }
+
+  private escapeSelectorId(id: string): string {
+    const css = (globalThis as { CSS?: { escape?: (value: string) => string } }).CSS;
+    return css?.escape
+      ? css.escape(id)
+      : id.replace(/([ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, '\\$1');
   }
 
   private summarizeChildren(target: HTMLElement): Array<Record<string, unknown>> {
@@ -318,12 +407,18 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private clearWatchers(): void {
+    this.clearFallbackTimer();
+    this.mutationObserver?.disconnect();
+    this.mutationObserver = null;
+    this.slotRenderSub?.unsubscribe();
+    this.slotRenderSub = undefined;
+  }
+
+  private clearFallbackTimer(): void {
     if (this.fallbackTimer !== null && isPlatformBrowser(this.platformId)) {
       window.clearTimeout(this.fallbackTimer);
     }
 
     this.fallbackTimer = null;
-    this.mutationObserver?.disconnect();
-    this.mutationObserver = null;
   }
 }
