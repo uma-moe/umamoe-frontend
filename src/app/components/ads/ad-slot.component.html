@@ -7,6 +7,7 @@
   [class.ad-slot--fallback-compact]="isFallbackCompact"
   [class.ad-slot--fallback-card]="isFallbackCard"
   [class.ad-slot--collapsed]="slotCollapsed"
+  [class.ad-slot--diagnostic]="showDiagnostic"
   [style.--ad-slot-width]="slotWidthStyle"
   [style.--ad-slot-height]="slotHeightStyle"
   [attr.data-ad-placement]="config.placement"
@@ -38,6 +39,18 @@
       <mat-icon aria-hidden="true">volunteer_activism</mat-icon>
       <span>Ko-fi</span>
     </a>
+  </div>
+
+  <div class="ad-slot-diagnostic" *ngIf="showDiagnostic">
+    <mat-icon aria-hidden="true">error_outline</mat-icon>
+    <div class="ad-slot-diagnostic-copy">
+      <strong>{{ diagnosticTitle }}</strong>
+      <span>{{ diagnosticDetail }}</span>
+    </div>
+    <div class="ad-slot-diagnostic-meta">
+      <span>{{ config.placement }}</span>
+      <small>{{ config.fuseId || 'missing fuse id' }}</small>
+    </div>
   </div>
 
   <div class="ad-slot-meta" aria-hidden="true">

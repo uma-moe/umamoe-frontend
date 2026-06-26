@@ -48,6 +48,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   readonly instanceId = ++adSlotId;
   showFallback = false;
+  showDiagnostic = false;
   slotWaiting = true;
   slotCollapsed = false;
   fallbackPreviewEnabled = false;
@@ -111,6 +112,30 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     return Boolean(size && size.height >= 180 && size.width <= 340);
   }
 
+  get diagnosticTitle(): string {
+    if (this.slotCreativeState === 'empty') {
+      return 'No creative returned';
+    }
+
+    if (this.fallbackReady) {
+      return 'No visible creative';
+    }
+
+    return 'Waiting for creative';
+  }
+
+  get diagnosticDetail(): string {
+    if (this.slotCreativeState === 'empty') {
+      return 'Publift reported this slot as empty.';
+    }
+
+    if (this.fallbackReady) {
+      return 'Fuse inserted markup, but no visible iframe/image was found.';
+    }
+
+    return 'The zone is registered and waiting for Fuse/GAM.';
+  }
+
   @HostBinding('class.ad-slot-host--collapsed')
   get collapsedHost(): boolean {
     return this.slotCollapsed;
@@ -146,6 +171,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   private watchSlot(): void {
     this.clearWatchers();
     this.showFallback = false;
+    this.showDiagnostic = false;
     this.slotWaiting = true;
     this.setCollapsed(false);
     this.lastDebugState = '';
@@ -220,11 +246,15 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       && noFillReady
       && this.supportFallbackAllowed
       && Boolean(this.config.fuseId);
+    const canShowDiagnostic = noFillReady
+      && !canShowBlockedFooterFallback
+      && this.fuseAdsService.diagnosticPlaceholdersEnabled;
 
     this.showFallback = canShowBlockedFooterFallback;
-    const shouldCollapse = noFillReady && !this.showFallback;
+    this.showDiagnostic = canShowDiagnostic;
+    const shouldCollapse = noFillReady && !this.showFallback && !this.showDiagnostic;
     this.setCollapsed(shouldCollapse);
-    this.slotWaiting = !hasFilledCreative && !this.showFallback && !shouldCollapse;
+    this.slotWaiting = !hasFilledCreative && !this.showFallback && !this.showDiagnostic && !shouldCollapse;
     this.debugSlotState(target, hasAdMarkup, shouldCollapse, hasLikelyCreativeMarkup);
   }
 
@@ -249,6 +279,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       slotCreativeState: this.slotCreativeState,
       supportFallbackAllowed: this.supportFallbackAllowed,
       showFallback: this.showFallback,
+      showDiagnostic: this.showDiagnostic,
       slotWaiting: this.slotWaiting,
       slotCollapsed: this.slotCollapsed,
       fallbackReady: this.fallbackReady,
@@ -272,6 +303,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       slotCreativeState: this.slotCreativeState,
       supportFallbackAllowed: this.supportFallbackAllowed,
       showFallback: this.showFallback,
+      showDiagnostic: this.showDiagnostic,
       slotWaiting: this.slotWaiting,
       slotCollapsed: this.slotCollapsed,
       fallbackReady: this.fallbackReady,

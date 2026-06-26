@@ -47,6 +47,14 @@
   display: none;
 }
 
+.ad-slot--diagnostic {
+  border-color: rgba(255, 183, 77, 0.34);
+  background:
+    linear-gradient(135deg, rgba(255, 183, 77, 0.12), rgba(100, 181, 246, 0.08)),
+    rgba(13, 16, 18, 0.96);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
 .ad-slot--waiting .ad-slot-meta {
   display: none;
 }
@@ -82,6 +90,11 @@
   display: none;
 }
 
+.ad-slot--diagnostic .ad-slot-target {
+  opacity: 0.1;
+  pointer-events: none;
+}
+
 .ad-slot-fallback {
   position: absolute;
   inset: 0;
@@ -96,6 +109,88 @@
     linear-gradient(135deg, rgba(100, 181, 246, 0.1), rgba(129, 199, 132, 0.1)),
     rgba(13, 16, 18, 0.98);
   animation: ad-fallback-enter 0.36s ease-out both;
+}
+
+.ad-slot-diagnostic {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.72rem 0.9rem;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 183, 77, 0.08) 0,
+      rgba(255, 183, 77, 0.08) 8px,
+      transparent 8px,
+      transparent 16px
+    ),
+    rgba(12, 14, 16, 0.9);
+  color: var(--text-primary);
+  pointer-events: none;
+}
+
+.ad-slot-diagnostic > mat-icon {
+  width: 24px;
+  height: 24px;
+  color: #ffb74d;
+  font-size: 24px;
+}
+
+.ad-slot-diagnostic-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  line-height: 1.18;
+}
+
+.ad-slot-diagnostic-copy strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ad-slot-diagnostic-copy span {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ad-slot-diagnostic-meta {
+  min-width: 7.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  align-items: flex-end;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1.12;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.ad-slot-diagnostic-meta span,
+.ad-slot-diagnostic-meta small {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ad-slot-diagnostic-meta small {
+  color: rgba(255, 255, 255, 0.38);
+  text-transform: none;
 }
 
 .ad-slot-fallback > mat-icon {
@@ -273,6 +368,43 @@
   text-align: center;
 }
 
+.ad-slot--side-rail .ad-slot-diagnostic {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto;
+  align-content: center;
+  justify-items: center;
+  gap: 0.65rem;
+  padding: 1rem 0.55rem;
+  text-align: center;
+}
+
+.ad-slot--side-rail .ad-slot-diagnostic-copy {
+  align-items: center;
+}
+
+.ad-slot--side-rail .ad-slot-diagnostic-copy strong {
+  white-space: normal;
+}
+
+.ad-slot--side-rail .ad-slot-diagnostic-copy span {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.ad-slot--side-rail .ad-slot-diagnostic-meta {
+  min-width: 0;
+  align-items: center;
+  text-align: center;
+}
+
+.ad-slot--side-rail .ad-slot-diagnostic-meta span,
+.ad-slot--side-rail .ad-slot-diagnostic-meta small {
+  max-width: 100%;
+}
+
 .ad-slot--fallback-strip .ad-slot-fallback {
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 0.38rem;
@@ -335,6 +467,27 @@
 
 .ad-slot--fallback-card .ad-slot-fallback-copy {
   align-items: center;
+}
+
+.ad-slot--fallback-strip .ad-slot-diagnostic {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.36rem;
+  padding: 0.25rem 0.45rem;
+}
+
+.ad-slot--fallback-strip .ad-slot-diagnostic > mat-icon {
+  width: 17px;
+  height: 17px;
+  font-size: 17px;
+}
+
+.ad-slot--fallback-strip .ad-slot-diagnostic-copy strong {
+  font-size: 0.68rem;
+}
+
+.ad-slot--fallback-strip .ad-slot-diagnostic-copy span,
+.ad-slot--fallback-strip .ad-slot-diagnostic-meta {
+  display: none;
 }
 
 @keyframes ad-fallback-enter {
@@ -458,6 +611,30 @@
     width: 16px;
     height: 16px;
     font-size: 16px;
+  }
+
+  .ad-slot-diagnostic {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.42rem;
+    padding: 0.42rem 0.58rem;
+  }
+
+  .ad-slot-diagnostic > mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+
+  .ad-slot-diagnostic-copy strong {
+    font-size: 0.68rem;
+  }
+
+  .ad-slot-diagnostic-copy span {
+    font-size: 0.6rem;
+  }
+
+  .ad-slot-diagnostic-meta {
+    display: none;
   }
 
   .ad-slot--sticky-footer .ad-slot-fallback {

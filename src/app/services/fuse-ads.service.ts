@@ -196,6 +196,10 @@ export class FuseAdsService {
     this.writeDebug('error', message, data);
   }
 
+  get diagnosticPlaceholdersEnabled(): boolean {
+    return this.debugEnabled;
+  }
+
   beginPageView(reason: string): void {
     if (this.fuseCallFlushTimer !== null && isPlatformBrowser(this.platformId)) {
       this.window.clearTimeout(this.fuseCallFlushTimer);
