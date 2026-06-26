@@ -28,13 +28,17 @@ export interface SupportCardShort {
   name: string;
   characterName?: string;
   /**
-   * True support-card display name, e.g. "[The Brightest Star in Japan!] Special Week".
+   * True support-card name without the bracketed title, e.g. "Heirs to the Throne".
    */
   cardName?: string;
   /**
    * Title-only portion of the support-card name, e.g. "The Brightest Star in Japan!".
    */
   cardTitle?: string;
+  /**
+   * Full support-card name, e.g. "[Esteemed and Adored] Heirs to the Throne".
+   */
+  cardFullName?: string;
   type: SupportCardType;
   rarity: Rarity;
   limitBreak: number;

@@ -17,6 +17,10 @@ export interface RawSupportCardData {
     cardTitle?: string;
     support_card_title?: string;
     supportCardTitle?: string;
+    card_full_name?: string;
+    cardFullName?: string;
+    support_card_full_name?: string;
+    supportCardFullName?: string;
     title?: string;
     rarity: number;
     type: string;
@@ -81,6 +85,12 @@ function buildSupportCards(rawData: RawSupportCardData[]): SupportCardShort[] {
             card.support_card_title,
             card.supportCardTitle,
         );
+        const cardFullName = firstString(
+            card.card_full_name,
+            card.cardFullName,
+            card.support_card_full_name,
+            card.supportCardFullName,
+        );
 
         return {
             id: card.id,
@@ -88,6 +98,7 @@ function buildSupportCards(rawData: RawSupportCardData[]): SupportCardShort[] {
             characterName,
             cardName,
             cardTitle,
+            cardFullName,
             type: mapStringTypeToEnum(card.type),
             rarity: card.rarity,
             release_date: card.release_date,
@@ -152,28 +163,46 @@ export function matchesSupportCardSearch(card: SupportCardShort, query: string):
 }
 
 export function getSupportCardSearchValues(card: SupportCardShort): string[] {
+    const displayName = getSupportCardDisplayName(card);
     const displayTitle = getSupportCardDisplayTitle(card);
     const characterName = getSupportCardCharacterName(card);
     const values = [
         card.id,
         card.name,
+        displayName,
         characterName,
         card.characterName,
         card.cardName,
         card.cardTitle,
+        card.cardFullName,
         displayTitle,
     ];
+
+    if (displayName && displayTitle) {
+        values.push(`${displayTitle} ${displayName}`);
+        values.push(`${displayName} ${displayTitle}`);
+    }
+
+    if (displayName && characterName) {
+        values.push(`${displayName} ${characterName}`);
+        values.push(`${characterName} ${displayName}`);
+    }
 
     if (displayTitle && characterName) {
         values.push(`${displayTitle} ${characterName}`);
         values.push(`${characterName} ${displayTitle}`);
     }
 
+    if (displayName && displayTitle && characterName) {
+        values.push(`${displayTitle} ${displayName} ${characterName}`);
+        values.push(`${characterName} ${displayTitle} ${displayName}`);
+    }
+
     return values.filter((value): value is string => typeof value === 'string' && value.length > 0);
 }
 
 export function getSupportCardDisplayName(card: SupportCardShort): string {
-    return getSupportCardDisplayTitle(card) ?? getSupportCardCharacterName(card) ?? card.name;
+    return firstString(stripTitleFromFullName(card.cardName), stripTitleFromFullName(card.cardFullName), getSupportCardCharacterName(card)) ?? card.name;
 }
 
 export function getSupportCardCharacterName(card: SupportCardShort): string | undefined {
@@ -181,7 +210,7 @@ export function getSupportCardCharacterName(card: SupportCardShort): string | un
 }
 
 export function getSupportCardDisplayTitle(card: SupportCardShort): string | undefined {
-    return firstString(stripTitleBrackets(card.cardTitle), extractTitleFromCardName(card.cardName));
+    return firstString(stripTitleBrackets(card.cardTitle), extractTitleFromCardName(card.cardFullName), extractTitleFromCardName(card.cardName));
 }
 
 function extractTitleFromCardName(cardName: string | undefined): string | undefined {
@@ -203,6 +232,14 @@ function stripTitleBrackets(value: string | undefined): string | undefined {
     return (bracketed ? bracketed[1] : trimmed).trim();
 }
 
+function stripTitleFromFullName(cardFullName: string | undefined): string | undefined {
+    if (!cardFullName) {
+        return undefined;
+    }
+
+    return cardFullName.trim().replace(/^\[[^\]]+\]\s*/, '').trim();
+}
+
 function tokenizeSearchText(value: string): string[] {
     return [
         ...new Set(
@@ -217,7 +254,7 @@ function normalizeSearchText(value: string): string {
     return value
         .trim()
         .toLowerCase()
-        .replace(/[\[\](),.!?'"“”‘’:_/\\-]+/g, ' ')
+        .replace(/[\[\](),.!?'"`:_/\\-]+/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 }
