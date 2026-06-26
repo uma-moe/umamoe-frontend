@@ -107,6 +107,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   private syncConfig(url: string): void {
     this.updateFallbackPreviewState();
     this.config = getAdRouteConfig(url);
+    this.fuseAdsService.beginPageView(url);
     this.leftSideRailCollapsed = false;
     this.rightSideRailCollapsed = false;
     this.updateContentTopAllowed();
@@ -126,7 +127,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
         }
         : undefined,
     });
-    this.fuseAdsService.pageInit(pageInitFuseIds);
+    this.fuseAdsService.pageInit(pageInitFuseIds, 'route config');
     this.sideRailsVisible = false;
     this.disconnectAnchorObserver();
     this.scheduleSideRailLayout(true);
@@ -159,7 +160,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.fuseAdsService.pageInit([config.bottomPopup.fuseId]);
+    this.fuseAdsService.pageInit([config.bottomPopup.fuseId], 'bottom popup config');
   }
 
   private updateBottomPopupRootState(visible = Boolean(this.persistentBottomPopupConfig && !this.bottomPopupClosed)): void {

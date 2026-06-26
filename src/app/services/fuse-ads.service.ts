@@ -99,6 +99,7 @@ const AD_DEBUG_STORAGE_KEY = 'umamoe-ad-debug-v1';
 const AD_DEBUG_QUERY_KEYS = ['ad_debug', 'ads_debug', 'fuse_debug'];
 const FUSE_ENABLED_STORAGE_KEY = 'umamoe-fuse-enabled-v1';
 const FUSE_ENABLED_QUERY_KEYS = ['fuse', 'fuse_enabled', 'ads_enabled'];
+const PAGE_INIT_DEBOUNCE_MS = 60;
 type AdDebugLevel = 'debug' | 'warn' | 'error';
 
 @Injectable({ providedIn: 'root' })
@@ -134,6 +135,9 @@ export class FuseAdsService {
     ...DENIED_AD_CONSENT,
     source: 'disabled',
   };
+  private pendingPageInitFuseIds = new Set<string>();
+  private pageInitTimer: number | null = null;
+  private registeredZones = new Map<string, string>();
   private localConsent: CookieConsent | null = null;
   private consentSub?: Subscription;
 
@@ -154,6 +158,17 @@ export class FuseAdsService {
 
   debugError(message: string, data?: unknown): void {
     this.writeDebug('error', message, data);
+  }
+
+  beginPageView(reason: string): void {
+    if (this.pageInitTimer !== null && isPlatformBrowser(this.platformId)) {
+      this.window.clearTimeout(this.pageInitTimer);
+    }
+
+    this.pageInitTimer = null;
+    this.pendingPageInitFuseIds.clear();
+    this.registeredZones.clear();
+    this.debug('page view ad state reset', { reason });
   }
 
   init(): void {
@@ -202,10 +217,11 @@ export class FuseAdsService {
     this.startFuseRuntimeIfAllowed();
   }
 
-  pageInit(fuseIds: string[]): void {
+  pageInit(fuseIds: string[], reason = 'requested'): void {
     const blockingFuseIds = [...new Set(fuseIds.filter(Boolean))];
     if (!this.canUseFuse || blockingFuseIds.length === 0) {
       this.debugWarn('pageInit skipped', {
+        reason,
         requestedFuseIds: fuseIds,
         blockingFuseIds,
         canUseFuse: this.canUseFuse,
@@ -214,17 +230,7 @@ export class FuseAdsService {
       return;
     }
 
-    this.debug('pageInit queued', {
-      blockingFuseIds,
-      blockingTimeout: environment.fuse.blockingTimeoutMs,
-    });
-    this.enqueueFuseCall(fusetag => {
-      this.debug('pageInit executing', { blockingFuseIds });
-      fusetag.pageInit?.({
-        blockingFuseIds,
-        blockingTimeout: environment.fuse.blockingTimeoutMs,
-      });
-    });
+    this.schedulePageInit(blockingFuseIds, reason);
   }
 
   registerZone(zoneElementId: string, fuseId: string): void {
@@ -239,10 +245,12 @@ export class FuseAdsService {
     }
 
     this.debug('registerZone queued', { zoneElementId, fuseId });
+    this.registeredZones.set(zoneElementId, fuseId);
     this.enqueueFuseCall(fusetag => {
       this.debug('registerZone executing', { zoneElementId, fuseId });
       fusetag.registerZone?.(zoneElementId);
     });
+    this.schedulePageInit([fuseId], 'zone registered');
   }
 
   openPrivacyControls(): boolean {
@@ -486,6 +494,73 @@ export class FuseAdsService {
 
     this.debug('Fuse call executing immediately');
     callback(fusetag);
+  }
+
+  private schedulePageInit(fuseIds: string[], reason: string): void {
+    fuseIds.filter(Boolean).forEach(fuseId => this.pendingPageInitFuseIds.add(fuseId));
+
+    this.debug('pageInit scheduled', {
+      reason,
+      pendingFuseIds: Array.from(this.pendingPageInitFuseIds),
+      registeredZones: this.getRegisteredZonesSummary(),
+      delayMs: PAGE_INIT_DEBOUNCE_MS,
+    });
+
+    if (!isPlatformBrowser(this.platformId)) {
+      this.flushPageInit(reason);
+      return;
+    }
+
+    if (this.pageInitTimer !== null) {
+      return;
+    }
+
+    this.pageInitTimer = this.window.setTimeout(() => {
+      this.pageInitTimer = null;
+      this.flushPageInit('debounced flush');
+    }, PAGE_INIT_DEBOUNCE_MS);
+  }
+
+  private flushPageInit(reason: string): void {
+    const blockingFuseIds = Array.from(this.pendingPageInitFuseIds);
+    this.pendingPageInitFuseIds.clear();
+
+    if (!this.canUseFuse || blockingFuseIds.length === 0) {
+      this.debugWarn('pageInit flush skipped', {
+        reason,
+        blockingFuseIds,
+        canUseFuse: this.canUseFuse,
+        runtimeState: this.runtimeStateSubject.value,
+        registeredZones: this.getRegisteredZonesSummary(),
+      });
+      return;
+    }
+
+    this.debug('pageInit queued after zone registration window', {
+      reason,
+      blockingFuseIds,
+      blockingTimeout: environment.fuse.blockingTimeoutMs,
+      registeredZones: this.getRegisteredZonesSummary(),
+    });
+
+    this.enqueueFuseCall(fusetag => {
+      this.debug('pageInit executing', {
+        reason,
+        blockingFuseIds,
+        registeredZones: this.getRegisteredZonesSummary(),
+      });
+      fusetag.pageInit?.({
+        blockingFuseIds,
+        blockingTimeout: environment.fuse.blockingTimeoutMs,
+      });
+    });
+  }
+
+  private getRegisteredZonesSummary(): Array<{ zoneElementId: string; fuseId: string }> {
+    return Array.from(this.registeredZones.entries()).map(([zoneElementId, fuseId]) => ({
+      zoneElementId,
+      fuseId,
+    }));
   }
 
   private setRuntimeState(state: FuseRuntimeState): void {

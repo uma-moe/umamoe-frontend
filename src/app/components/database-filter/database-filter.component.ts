@@ -226,6 +226,7 @@ interface SavedDatabaseFilterState {
   mode: FilterMode;
   formState?: string;
   uqlState?: string;
+  defaultMlbFilterRemoved?: boolean;
 }
 export interface TreeNode {
   id: string;
@@ -567,7 +568,6 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   ngOnInit() {
     this.updateUqlSuggestions();
     this.restoreInitialFilterModePreference();
-    this.applyBasicFilterDefaults();
     // Keep Quick Filters open on desktop; mobile still starts compact below.
     if (window.innerWidth <= 600) {
       this.collapsedSections.add('quickFilters');
@@ -902,15 +902,51 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       const parsed = JSON.parse(saved) as Partial<SavedDatabaseFilterState>;
       if (parsed.version !== 2) return null;
       if (parsed.mode !== 'basic' && parsed.mode !== 'advanced' && parsed.mode !== 'uql') return null;
-      return {
+      const state: SavedDatabaseFilterState = {
         version: 2,
         mode: savedMode ?? parsed.mode,
         formState: parsed.formState,
-        uqlState: parsed.uqlState
+        uqlState: parsed.uqlState,
+        defaultMlbFilterRemoved: parsed.defaultMlbFilterRemoved === true
       };
+      return this.migrateSavedDefaultMlbFilter(state);
     } catch {
       return null;
     }
+  }
+
+  private migrateSavedDefaultMlbFilter(state: SavedDatabaseFilterState): SavedDatabaseFilterState {
+    if (state.defaultMlbFilterRemoved) {
+      return state;
+    }
+
+    const migrated: SavedDatabaseFilterState = {
+      ...state,
+      formState: state.formState ? this.removeDefaultMlbFromSerializedState(state.formState) : state.formState,
+      defaultMlbFilterRemoved: true
+    };
+
+    try {
+      localStorage.setItem(DatabaseFilterComponent.SAVED_FILTER_STATE_KEY, JSON.stringify(migrated));
+    } catch {
+      // Ignore unavailable storage; returning the migrated state is enough for this session.
+    }
+
+    return migrated;
+  }
+
+  private removeDefaultMlbFromSerializedState(stateStr: string): string {
+    try {
+      const state: CompressedState = JSON.parse(this.decodeBase64Utf8(stateStr));
+      if (state.lb === 4) {
+        delete state.lb;
+        return this.encodeBase64Utf8(JSON.stringify(state));
+      }
+    } catch {
+      return stateStr;
+    }
+
+    return stateStr;
   }
 
   private readUqlQueryFromSerializedState(stateStr: string | undefined): string {
@@ -940,7 +976,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         version: 2,
         mode: this.filterMode,
         formState: previous?.formState,
-        uqlState: previous?.uqlState
+        uqlState: previous?.uqlState,
+        defaultMlbFilterRemoved: true
       };
       localStorage.setItem(DatabaseFilterComponent.SAVED_FILTER_STATE_KEY, JSON.stringify(next));
     } catch {
@@ -955,7 +992,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         version: 2,
         mode: this.filterMode,
         formState: previous?.formState,
-        uqlState: previous?.uqlState
+        uqlState: previous?.uqlState,
+        defaultMlbFilterRemoved: true
       };
 
       if (this.filterMode === 'uql') {
@@ -1006,7 +1044,6 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.filterState = this.buildUqlOnlyFilterState();
       this.updateCurrentUqlPreview();
     }
-    this.applyBasicFilterDefaults(false);
     this.updateActiveFilterChips();
     this.cdr.markForCheck();
   }
@@ -1155,7 +1192,6 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       }
       // Restore Scalars
       this.selectedLimitBreak = state.lb !== undefined ? state.lb : 0;
-      this.applyBasicFilterDefaults(false);
       if (state.uid) this.searchUserId = state.uid;
       if (state.un) this.searchUsername = state.un;
       
@@ -2457,7 +2493,6 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.persistCurrentFilterState();
       this.filterChangeSubject.next({ ...this.filterState });
     }
-    this.applyBasicFilterDefaults();
     this.persistCurrentFilterMode();
     if (!this.isExpanded) {
       this.isExpanded = true;
@@ -2538,11 +2573,6 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.onFilterChange();
   }
 
-  private applyBasicFilterDefaults(emit = true): void {
-    if (this.filterMode !== 'basic' || this.selectedLimitBreak === 4) return;
-    this.selectedLimitBreak = 4;
-    if (emit) this.onFilterChange();
-  }
   onUqlChange(options: { emitImmediately?: boolean } = {}): void {
     this.applyUqlEditorDirectives();
     this.validateUqlQuery();
