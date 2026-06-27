@@ -114,6 +114,8 @@ interface FriendlyFieldAlias {
 export interface UqlSparkHighlight {
   globalSparkIds?: number[];
   mainSparkIds?: number[];
+  leftSparkIds?: number[];
+  rightSparkIds?: number[];
   optionalWhiteFactorIds?: number[];
   optionalMainWhiteFactorIds?: number[];
   lineageWhiteFactorIds?: number[];
@@ -2634,6 +2636,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const expression = this.stripLeadingWhere(compiledQuery);
     const globalSparkIds = new Set<number>();
     const mainSparkIds = new Set<number>();
+    const leftSparkIds = new Set<number>();
+    const rightSparkIds = new Set<number>();
     const optionalWhiteFactorIds = new Set<number>();
     const optionalMainWhiteFactorIds = new Set<number>();
     const lineageWhiteFactorIds = new Set<number>();
@@ -2643,6 +2647,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       if (!ids.length) return;
       if (this.isUqlMainSparkHighlightField(normalizedField)) {
         ids.forEach(id => mainSparkIds.add(id));
+      } else if (this.isUqlLeftSparkHighlightField(normalizedField)) {
+        ids.forEach(id => leftSparkIds.add(id));
+      } else if (this.isUqlRightSparkHighlightField(normalizedField)) {
+        ids.forEach(id => rightSparkIds.add(id));
       } else if (this.isUqlGlobalSparkHighlightField(normalizedField)) {
         ids.forEach(id => globalSparkIds.add(id));
       }
@@ -2672,7 +2680,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     while ((rangeComparisonMatch = rangeComparisonPattern.exec(expression)) !== null) {
       const fieldName = rangeComparisonMatch[1];
       const normalizedField = fieldName.toLowerCase().replace(/[_\s-]+/g, '_').trim();
-      if (!this.isUqlMainSparkHighlightField(normalizedField) && !this.isUqlGlobalSparkHighlightField(normalizedField)) continue;
+      if (
+        !this.isUqlMainSparkHighlightField(normalizedField)
+        && !this.isUqlLeftSparkHighlightField(normalizedField)
+        && !this.isUqlRightSparkHighlightField(normalizedField)
+        && !this.isUqlGlobalSparkHighlightField(normalizedField)
+      ) continue;
       const sparkId = parseInt(rangeComparisonMatch[3], 10);
       const ids = this.expandSparkIdsForComparison(sparkId, rangeComparisonMatch[2]);
       addSparkIds(fieldName, ids);
@@ -2698,6 +2711,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const highlight: UqlSparkHighlight = {};
     if (globalSparkIds.size) highlight.globalSparkIds = [...globalSparkIds];
     if (mainSparkIds.size) highlight.mainSparkIds = [...mainSparkIds];
+    if (leftSparkIds.size) highlight.leftSparkIds = [...leftSparkIds];
+    if (rightSparkIds.size) highlight.rightSparkIds = [...rightSparkIds];
     if (optionalWhiteFactorIds.size) highlight.optionalWhiteFactorIds = [...optionalWhiteFactorIds];
     if (optionalMainWhiteFactorIds.size) highlight.optionalMainWhiteFactorIds = [...optionalMainWhiteFactorIds];
     if (lineageWhiteFactorIds.size) highlight.lineageWhiteFactorIds = [...lineageWhiteFactorIds];
@@ -2705,11 +2720,19 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private isUqlGlobalSparkHighlightField(fieldName: string): boolean {
-    return ['blue_sparks', 'pink_sparks', 'green_sparks', 'white_sparks', 'left_blue_factors', 'left_pink_factors', 'left_green_factors', 'left_white_factors', 'right_blue_factors', 'right_pink_factors', 'right_green_factors', 'right_white_factors'].includes(fieldName);
+    return ['blue_sparks', 'pink_sparks', 'green_sparks', 'white_sparks'].includes(fieldName);
   }
 
   private isUqlMainSparkHighlightField(fieldName: string): boolean {
     return ['main_blue_factors', 'main_pink_factors', 'main_green_factors', 'main_white_factors', 'main_parent_white_sparks'].includes(fieldName);
+  }
+
+  private isUqlLeftSparkHighlightField(fieldName: string): boolean {
+    return ['left_blue_factors', 'left_pink_factors', 'left_green_factors', 'left_white_factors'].includes(fieldName);
+  }
+
+  private isUqlRightSparkHighlightField(fieldName: string): boolean {
+    return ['right_blue_factors', 'right_pink_factors', 'right_green_factors', 'right_white_factors'].includes(fieldName);
   }
 
   private expandSparkIdsForComparison(sparkId: number, operator: string): number[] {

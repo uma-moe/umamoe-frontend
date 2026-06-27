@@ -387,7 +387,8 @@
           <div class="spark-type-indicator blue"></div>
           <div class="spark-list">
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_blue_factors) | resolveSparks; trackBy: trackBySparkInfo">
-              <span class="spark-item blue-spark from-parent-main">
+              <span class="spark-item blue-spark from-parent-main"
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'main')">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -395,7 +396,8 @@
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_blue_factors) | resolveSparks; trackBy: trackBySparkInfo">
-              <span class="spark-item blue-spark from-parent-left">
+              <span class="spark-item blue-spark from-parent-left"
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'left')">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -403,7 +405,8 @@
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_blue_factors) | resolveSparks; trackBy: trackBySparkInfo">
-              <span class="spark-item blue-spark from-parent-right">
+              <span class="spark-item blue-spark from-parent-right"
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'right')">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -426,7 +429,8 @@
           <div class="spark-type-indicator pink"></div>
           <div class="spark-list">
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_pink_factors) | resolveSparks; trackBy: trackBySparkInfo">
-              <span class="spark-item pink-spark from-parent-main">
+              <span class="spark-item pink-spark from-parent-main"
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'main')">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -434,7 +438,8 @@
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_pink_factors) | resolveSparks; trackBy: trackBySparkInfo">
-              <span class="spark-item pink-spark from-parent-left">
+              <span class="spark-item pink-spark from-parent-left"
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'left')">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -442,7 +447,8 @@
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_pink_factors) | resolveSparks; trackBy: trackBySparkInfo">
-              <span class="spark-item pink-spark from-parent-right">
+              <span class="spark-item pink-spark from-parent-right"
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'right')">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -465,7 +471,8 @@
           <div class="spark-type-indicator green"></div>
           <div class="spark-list">
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_green_factors) | resolveSparks; trackBy: trackBySparkInfo">
-              <span class="spark-item green-spark from-parent-main">
+              <span class="spark-item green-spark from-parent-main"
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'main')">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -473,7 +480,8 @@
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_green_factors) | resolveSparks; trackBy: trackBySparkInfo">
-              <span class="spark-item green-spark from-parent-left">
+              <span class="spark-item green-spark from-parent-left"
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'left')">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -481,7 +489,8 @@
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_green_factors) | resolveSparks; trackBy: trackBySparkInfo">
-              <span class="spark-item green-spark from-parent-right">
+              <span class="spark-item green-spark from-parent-right"
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'right')">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -505,7 +514,7 @@
           <div class="spark-list">
             <ng-container *ngFor="let sparkInfo of record.main_white_factors | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item white-spark from-parent-main"
-                    [class.matched-filter]="isSparkMatched(sparkInfo)">
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'main')">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -514,7 +523,7 @@
             </ng-container>
             <ng-container *ngFor="let sparkInfo of record.left_white_factors | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item white-spark from-parent-left"
-                    [class.matched-filter]="isSparkMatched(sparkInfo)">
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'left')">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -523,7 +532,7 @@
             </ng-container>
             <ng-container *ngFor="let sparkInfo of record.right_white_factors | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item white-spark from-parent-right"
-                    [class.matched-filter]="isSparkMatched(sparkInfo)">
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'right')">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -550,7 +559,8 @@
           <div class="spark-type-indicator blue"></div>
           <div class="spark-list">
             <span *ngFor="let sparkInfo of getSelectedBlueFactor() | resolveSparks; trackBy: trackBySparkInfo"
-                  class="spark-item blue-spark parent-own-spark">
+                  class="spark-item blue-spark parent-own-spark"
+                  [class.matched-filter]="isSelectedParentSparkMatched(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -562,7 +572,8 @@
           <div class="spark-type-indicator pink"></div>
           <div class="spark-list">
             <span *ngFor="let sparkInfo of getSelectedPinkFactor() | resolveSparks; trackBy: trackBySparkInfo"
-                  class="spark-item pink-spark parent-own-spark">
+                  class="spark-item pink-spark parent-own-spark"
+                  [class.matched-filter]="isSelectedParentSparkMatched(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -574,7 +585,8 @@
           <div class="spark-type-indicator green"></div>
           <div class="spark-list">
             <span *ngFor="let sparkInfo of getSelectedGreenFactor() | resolveSparks; trackBy: trackBySparkInfo"
-                  class="spark-item green-spark parent-own-spark">
+                  class="spark-item green-spark parent-own-spark"
+                  [class.matched-filter]="isSelectedParentSparkMatched(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -587,7 +599,7 @@
           <div class="spark-list">
             <span *ngFor="let sparkInfo of getSelectedWhiteFactors() | resolveSparks; trackBy: trackBySparkInfo"
                   class="spark-item white-spark parent-own-spark"
-                  [class.matched-filter]="isSparkMatched(sparkInfo)">
+                  [class.matched-filter]="isSelectedParentSparkMatched(sparkInfo)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>

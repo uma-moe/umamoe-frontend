@@ -53,6 +53,12 @@ interface P2SparkDisplayEntry {
 }
 
 type EntryRecordAction = 'bookmark' | 'report';
+type ParentSparkSource = 'main' | 'left' | 'right';
+
+interface SparkMatchSource {
+    source: ParentSparkSource;
+    level: number;
+}
 
 @Component({
     selector: 'app-inheritance-entry',
@@ -485,25 +491,25 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         return this.factorService.resolveSparks(sparkIds);
     }
 
-    isSparkMatched(spark: SparkInfo): boolean {
+    isSparkMatched(spark: SparkInfo, source?: ParentSparkSource): boolean {
         if (!this.activeFilters) return false;
         const filterId = parseInt(`${spark.factorId}${spark.level}`, 10);
         const filters = this.activeFilters;
-        const isFromMainParent = !!this.getLevelFromMainParent(spark);
         const sparkFactorId = parseInt(spark.factorId, 10);
+        const matchSources = this.getSparkMatchSources(spark, source);
+        const hasSource = (parent: ParentSparkSource): boolean =>
+            matchSources.some(entry => entry.source === parent);
         const uqlHighlight = filters.uql_highlight;
 
         if (uqlHighlight) {
             if (uqlHighlight.globalSparkIds?.includes(filterId)) return true;
-            if (isFromMainParent && uqlHighlight.mainSparkIds?.length) {
-                const mainLevel = this.getLevelFromMainParent(spark);
-                const mainFilterId = mainLevel ? parseInt(`${spark.factorId}${mainLevel}`, 10) : filterId;
-                if (uqlHighlight.mainSparkIds.includes(mainFilterId)) return true;
-            }
+            if (this.matchesSourceSparkIds(matchSources, 'main', sparkFactorId, uqlHighlight.mainSparkIds)) return true;
+            if (this.matchesSourceSparkIds(matchSources, 'left', sparkFactorId, uqlHighlight.leftSparkIds)) return true;
+            if (this.matchesSourceSparkIds(matchSources, 'right', sparkFactorId, uqlHighlight.rightSparkIds)) return true;
             if (spark.type !== 0 && spark.type !== 1 && spark.type !== 5) {
                 if (uqlHighlight.optionalWhiteFactorIds?.includes(sparkFactorId)) return true;
                 if (uqlHighlight.lineageWhiteFactorIds?.includes(sparkFactorId)) return true;
-                if (isFromMainParent && uqlHighlight.optionalMainWhiteFactorIds?.includes(sparkFactorId)) return true;
+                if (hasSource('main') && uqlHighlight.optionalMainWhiteFactorIds?.includes(sparkFactorId)) return true;
             }
         }
 
@@ -526,10 +532,13 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         } else {
             if (checkGroups(filters.white_sparks)) return true;
             if (filters.optional_white_sparks?.includes(sparkFactorId)) return true;
-            if (filters.lineage_white?.includes(sparkFactorId)) return true;
+            if (matchSources.length && filters.lineage_white?.includes(sparkFactorId)) return true;
+            if (this.matchesSourceFactorIds(matchSources, 'main', sparkFactorId, filters.main_legacy_white)) return true;
+            if (this.matchesSourceFactorIds(matchSources, 'left', sparkFactorId, filters.left_legacy_white)) return true;
+            if (this.matchesSourceFactorIds(matchSources, 'right', sparkFactorId, filters.right_legacy_white)) return true;
         }
 
-        if (isFromMainParent) {
+        if (hasSource('main')) {
             if (spark.type === 0) {
                 if (checkArrayByFactorId(filters.main_parent_blue_sparks)) return true;
             } else if (spark.type === 1) {
@@ -543,6 +552,50 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         }
 
         return false;
+    }
+
+    private getSparkMatchSources(spark: SparkInfo, source?: ParentSparkSource): SparkMatchSource[] {
+        if (source) {
+            return [{ source, level: spark.level }];
+        }
+
+        const combined = spark as Partial<CombinedSparkInfo>;
+        if (Array.isArray(combined.p1Sources) && combined.p1Sources.length) {
+            return combined.p1Sources.map(entry => ({
+                source: entry.parentKey,
+                level: entry.level,
+            }));
+        }
+
+        const mainLevel = this.getLevelFromMainParent(spark);
+        return mainLevel ? [{ source: 'main', level: parseInt(mainLevel, 10) }] : [];
+    }
+
+    private matchesSourceSparkIds(
+        sources: SparkMatchSource[],
+        source: ParentSparkSource,
+        factorId: number,
+        sparkIds?: number[],
+    ): boolean {
+        if (!sparkIds?.length) return false;
+        return sources.some(entry =>
+            entry.source === source && sparkIds.includes(factorId * 10 + entry.level)
+        );
+    }
+
+    private matchesSourceFactorIds(
+        sources: SparkMatchSource[],
+        source: ParentSparkSource,
+        factorId: number,
+        factorIds?: number[],
+    ): boolean {
+        return !!factorIds?.includes(factorId) && sources.some(entry => entry.source === source);
+    }
+
+    isSelectedParentSparkMatched(spark: SparkInfo): boolean {
+        return this.selectedParent
+            ? this.isSparkMatched(spark, this.selectedParent)
+            : this.isSparkMatched(spark);
     }
 
     getLevelFromMainParent(spark: SparkInfo): string | undefined {
