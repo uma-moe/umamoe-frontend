@@ -16,7 +16,7 @@ import { AppVersionService } from '../../services/app-version.service';
 import { AuthService } from '../../services/auth.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { GoogleAnalyticsService } from '../../services/google-analytics.service';
-import { BorrowInteractionContext, InheritanceService } from '../../services/inheritance.service';
+import { BorrowInteractionContext, BorrowInteractionResponse, InheritanceService } from '../../services/inheritance.service';
 import { PlannerTransferService } from '../../services/planner-transfer.service';
 import { getCharacterById } from '../../data/character.data';
 import { ResolveSparksPipe } from '../../pipes/resolve-sparks.pipe';
@@ -234,9 +234,29 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
             return;
         }
 
+        const previousCopyCount = this.optimisticallyIncrementBorrowCopyCount();
         this.inheritanceService.trackBorrowCopy(trainerId, context)
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe();
+            .subscribe(response => this.reconcileBorrowCopyCount(previousCopyCount, response));
+    }
+
+    private optimisticallyIncrementBorrowCopyCount(): number {
+        const previousCopyCount = this.record.borrow_copy_count ?? 0;
+        this.record.borrow_copy_count = previousCopyCount + 1;
+        this.cdr.markForCheck();
+        return previousCopyCount;
+    }
+
+    private reconcileBorrowCopyCount(previousCopyCount: number, response: BorrowInteractionResponse): void {
+        const backendCopyCount = response.copy_count ?? response.total_count ?? 0;
+        if (response.success && response.accepted) {
+            this.record.borrow_copy_count = Math.max(this.record.borrow_copy_count ?? 0, backendCopyCount);
+        } else if (response.success && backendCopyCount > 0) {
+            this.record.borrow_copy_count = Math.max(previousCopyCount, backendCopyCount);
+        } else {
+            this.record.borrow_copy_count = previousCopyCount;
+        }
+        this.cdr.markForCheck();
     }
 
     private getBorrowInteractionContext(): BorrowInteractionContext {
