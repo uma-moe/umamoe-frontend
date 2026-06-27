@@ -230,7 +230,7 @@
           <div class="vpd-state" *ngIf="bookmarks.length > 0 && filteredBookmarks.length === 0">
             <mat-icon>search_off</mat-icon>
             <span>No results</span>
-            <button class="vpd-reset-btn" (click)="searchQuery = ''">Clear search</button>
+            <button class="vpd-reset-btn" (click)="searchQuery = ''; onSearchChange()">Clear search</button>
           </div>
           <cdk-virtual-scroll-viewport class="vpd-virtual-list" itemSize="156" minBufferPx="468" maxBufferPx="936" *ngIf="filteredBookmarks.length > 0">
             <app-vpd-row

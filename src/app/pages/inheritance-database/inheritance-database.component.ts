@@ -1545,6 +1545,8 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       case 'followers': return record.follower_num;
       case 'wins': return record.win_count;
       case 'name': return record.trainer_name;
+      case 'affinity':
+      case 'affinity_score': return record.affinity_score;
       case 'race_affinity':
       case 'computed_race_affinity': return record.affinity_score;
       case 'support_card_count':

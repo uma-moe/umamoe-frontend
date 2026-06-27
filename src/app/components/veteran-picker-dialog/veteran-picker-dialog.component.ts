@@ -39,6 +39,15 @@ import { CharacterSelectDialogComponent } from '../character-select-dialog/chara
 import { RaceWinPickerDialogComponent, RaceWinPickerDialogData } from '../race-results-dialog/race-win-picker-dialog.component';
 import { TreeSlots, SlotName, CandidateScore } from '../../services/affinity.service';
 import { preferRasterAsset } from '../../utils/raster-asset';
+import {
+  VeteranPickerFactorColor,
+  VeteranPickerSessionState,
+  VeteranPickerSessionStateService,
+  VeteranPickerSortKey,
+  VeteranPickerSparkColor,
+  VeteranPickerSparkScope,
+  VeteranPickerTabId,
+} from './veteran-picker-session-state.service';
 
 export interface VeteranPickerDialogData {
   linkedAccounts: LinkedAccount[];
@@ -47,13 +56,14 @@ export interface VeteranPickerDialogData {
   veterans: { [accountId: string]: VeteranMember[] };
   loadingVeterans: { [accountId: string]: boolean };
   targetCharaId: number | null;
+  sessionStateScope?: string | null;
 }
 
-type TabId = 'veterans' | 'bookmarks' | 'saved' | 'manual';
-type SortKey = 'total' | 'blue' | 'pink' | 'green' | 'name' | 'affinity';
-type SparkColor = 'blue' | 'pink' | 'green';
-type FactorColor = 'blue' | 'pink' | 'green' | 'white';
-type SparkScope = 'any' | 'own' | 'p1' | 'p2';
+type TabId = VeteranPickerTabId;
+type SortKey = VeteranPickerSortKey;
+type SparkColor = VeteranPickerSparkColor;
+type FactorColor = VeteranPickerFactorColor;
+type SparkScope = VeteranPickerSparkScope;
 
 interface FactorFilterRow {
   factorId: string | null;
@@ -193,6 +203,8 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   private readonly initialRenderBatchSize = 16;
   private readonly renderBatchSize = 16;
   private readonly renderBoundaryPx = 360;
+  private restoredSessionSort = false;
+  private sortKeyExplicit = false;
   sparkScopes: { value: SparkScope; label: string; short: string }[] = [
     { value: 'any', label: 'Any source', short: 'Any' },
     { value: 'own', label: 'Own sparks', short: 'Own' },
@@ -211,6 +223,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private partnerService: PartnerService,
     private appVersionService: AppVersionService,
+    private sessionState: VeteranPickerSessionStateService,
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog,
   ) {
@@ -222,6 +235,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     this.veterans = { ...data.veterans };
     this.loadingVeterans = { ...data.loadingVeterans };
     this.targetCharaId = data.targetCharaId;
+    this.restoreSessionState();
   }
 
   ngOnInit(): void {
@@ -245,7 +259,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       });
     this.affinityService.load().pipe(takeUntil(this.destroy$)).subscribe(() => {
-      if (this.targetCharaId && this.affinityService.isReady) {
+      if (this.targetCharaId && this.affinityService.isReady && !this.restoredSessionSort) {
         this.sortKey = 'affinity';
         this._invalidateFiltered();
       }
@@ -324,6 +338,90 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     return `${this.searchQuery}|${this.sortKey}|${this.sparkFilters.join(',')}|${this.factorFilters.map(f => `${f.factorId ?? ''}:${f.scope}:${f.minLevel}`).join(';')}|${this.targetCharaId ?? ''}|${extra}`;
   }
 
+  private restoreSessionState(): void {
+    const state = this.sessionState.get(this.data.sessionStateScope);
+    if (!state) return;
+
+    if (this.isTabId(state.tab)) {
+      this.tab = state.tab;
+    }
+
+    if (state.selectedAccountId && this.accounts.some(account => account.account_id === state.selectedAccountId)) {
+      this.selectedId = state.selectedAccountId;
+    }
+
+    this.searchQuery = state.searchQuery ?? '';
+    this.sparkFilters = (state.sparkFilters ?? []).filter((color): color is SparkColor => this.isSparkColor(color));
+    this.factorFilters = (state.factorFilters ?? [])
+      .filter(filter => filter.factorId)
+      .map(filter => ({
+        factorId: filter.factorId,
+        name: filter.name,
+        color: this.isFactorColor(filter.color) ? filter.color : 'white',
+        searchQuery: '',
+        searchResults: [],
+        scope: this.isSparkScope(filter.scope) ? filter.scope : 'any',
+        minLevel: this.normalizeMinLevel(filter.minLevel),
+      }));
+
+    if (this.isSortKey(state.sortKey) && this.isSortKeyAvailable(state.sortKey)) {
+      this.sortKey = state.sortKey;
+      this.sortKeyExplicit = state.sortKeyExplicit;
+      this.restoredSessionSort = state.sortKeyExplicit;
+    }
+  }
+
+  private saveSessionState(): void {
+    const sortKey = this.isSortKeyAvailable(this.sortKey) ? this.sortKey : 'total';
+    const state: VeteranPickerSessionState = {
+      tab: this.tab,
+      selectedAccountId: this.selectedId,
+      sortKey,
+      sortKeyExplicit: this.sortKeyExplicit,
+      searchQuery: this.searchQuery,
+      sparkFilters: [...this.sparkFilters],
+      factorFilters: this.factorFilters
+        .filter((filter): filter is FactorFilterRow & { factorId: string } => !!filter.factorId)
+        .map(filter => ({
+          factorId: filter.factorId,
+          name: filter.name,
+          color: filter.color,
+          scope: filter.scope,
+          minLevel: this.normalizeMinLevel(filter.minLevel),
+        })),
+    };
+    this.sessionState.set(this.data.sessionStateScope, state);
+  }
+
+  private isTabId(value: unknown): value is TabId {
+    return value === 'veterans' || value === 'bookmarks' || value === 'saved' || value === 'manual';
+  }
+
+  private isSortKey(value: unknown): value is SortKey {
+    return value === 'total' || value === 'blue' || value === 'pink' || value === 'green' || value === 'name' || value === 'affinity';
+  }
+
+  private isSortKeyAvailable(sortKey: SortKey): boolean {
+    return sortKey !== 'affinity' || !!this.targetCharaId;
+  }
+
+  private isSparkColor(value: unknown): value is SparkColor {
+    return value === 'blue' || value === 'pink' || value === 'green';
+  }
+
+  private isFactorColor(value: unknown): value is FactorColor {
+    return value === 'blue' || value === 'pink' || value === 'green' || value === 'white';
+  }
+
+  private isSparkScope(value: unknown): value is SparkScope {
+    return value === 'any' || value === 'own' || value === 'p1' || value === 'p2';
+  }
+
+  private normalizeMinLevel(value: number): number {
+    if (value === 2 || value === 3) return value;
+    return 1;
+  }
+
   private clearRowCaches(): void {
     this._vetRowCache = new WeakMap<VeteranMember, VpdRowData>();
     this._bmRowCache = new WeakMap<InheritanceRecord, VpdRowData>();
@@ -344,6 +442,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   onSearchChange(): void {
     this.renderLimit = 0;
     this._invalidateFiltered();
+    this.saveSessionState();
     this.cdr.markForCheck();
   }
 
@@ -352,6 +451,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
       cancelAnimationFrame(this._renderRafId);
       this._renderRafId = null;
     }
+    this.saveSessionState();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -499,11 +599,14 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     this.affinityCache = new WeakMap<VeteranMember, { targetCharaId: number; value: number }>();
     this._invalidateFiltered();
     this.renderLimit = 0;
+    this.saveSessionState();
     this.cdr.markForCheck();
   }
 
   onSortChange(): void {
+    this.sortKeyExplicit = true;
     this._invalidateFiltered();
+    this.saveSessionState();
     this.cdr.markForCheck();
   }
 
@@ -519,6 +622,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
       this.sparkFilters.push(color);
     }
     this._invalidateFiltered();
+    this.saveSessionState();
     this.cdr.markForCheck();
   }
 
@@ -545,6 +649,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     row.searchQuery = '';
     row.searchResults = [];
     this._invalidateFiltered();
+    this.saveSessionState();
     this.cdr.markForCheck();
   }
 
@@ -556,11 +661,13 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   removeFactorFilter(index: number): void {
     this.factorFilters.splice(index, 1);
     this._invalidateFiltered();
+    this.saveSessionState();
     this.cdr.markForCheck();
   }
 
   onFactorRowChanged(): void {
     this._invalidateFiltered();
+    this.saveSessionState();
     this.cdr.markForCheck();
   }
 
@@ -614,6 +721,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     this.tab = tab;
     this.renderLimit = 0;
     this._scheduleRenderExpansion();
+    this.saveSessionState();
     if (tab === 'bookmarks' && !this.bookmarksLoaded && this.authService.isLoggedIn()) {
       this.loadBookmarks();
     } else if (tab === 'saved' && !this.savedHistoryLoaded) {

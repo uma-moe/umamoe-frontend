@@ -32,6 +32,7 @@ import { LineageNode, TREE_POSITIONS, BTREE_ORDER } from './lineage-planner.mode
 import { CharacterSelectDialogComponent } from '../../components/character-select-dialog/character-select-dialog.component';
 import { SparkEditorComponent } from '../../components/spark-editor/spark-editor.component';
 import { VeteranPickerDialogComponent, VeteranPickerDialogData } from '../../components/veteran-picker-dialog/veteran-picker-dialog.component';
+import { LINEAGE_PLANNER_VETERAN_PICKER_SCOPE } from '../../components/veteran-picker-dialog/veteran-picker-session-state.service';
 import { RaceResultsDialogComponent, RaceResultsDialogData } from '../../components/race-results-dialog/race-results-dialog.component';
 import { RaceWinPickerDialogComponent, RaceWinPickerDialogData } from '../../components/race-results-dialog/race-win-picker-dialog.component';
 import { Meta, Title } from '@angular/platform-browser';
@@ -1260,6 +1261,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
         veterans: this.veterans,
         loadingVeterans: this.loadingVeterans,
         targetCharaId,
+        sessionStateScope: LINEAGE_PLANNER_VETERAN_PICKER_SCOPE,
       } as VeteranPickerDialogData,
     });
     dialogRef.afterClosed().subscribe((vet: import('../../models/profile.model').VeteranMember | undefined) => {

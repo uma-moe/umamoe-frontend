@@ -125,6 +125,8 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   ];
   protected readonly globalFactorDocSnippets = [
     this.createDocSnippet('Speed >= 6'),
+    this.createDocSnippet('Dirt = 0'),
+    this.createDocSnippet('(Stamina + Power + Wit) >= 7'),
     this.createDocSnippet('Blue stars >= 9')
   ];
   protected readonly specificSlotDocSnippets = [
@@ -152,6 +154,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     this.createDocSnippet('GP characters not in (Special Week, Silence Suzuka)'),
     this.createDocSnippet('Main character in (Special Week, Silence Suzuka)'),
     this.createDocSnippet('Race wins has all (Niigata Junior Stakes)'),
+    this.createDocSnippet('affinity >= 150'),
     this.createDocSnippet('Support card = Kitasan Black [SSR] (Speed)'),
     this.createDocSnippet("Trainer name ilike '%name%'"),
     this.createDocSnippet('(Speed >= 3 or Stamina >= 3) and Wins >= 30')
@@ -957,6 +960,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   }
 
   private getSuggestionInsertText(suggestion: UqlSuggestion): string {
+    if (suggestion.kind === 'value' && suggestion.valueContext?.endsWith('-factor') && suggestion.backendValue) {
+      return suggestion.backendValue;
+    }
     return suggestion.insertText;
   }
 

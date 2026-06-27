@@ -375,6 +375,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   currentUqlPreview = '';
   readonly uqlStarterSnippets: UqlSnippet[] = [
     { label: 'Speed', insertText: 'Speed >= 3' },
+    { label: 'No Dirt', insertText: 'Dirt = 0' },
+    { label: 'Spark Sum', insertText: '(Stamina + Power + Wit) >= 7' },
+    { label: 'Affinity', insertText: 'affinity >= 150' },
     { label: 'Wins', insertText: 'Wins >= 30' },
     { label: 'Name', insertText: "Trainer name ilike '%name%'" },
     { label: 'Match Umas', insertText: 'Main character in (Special Week, Silence Suzuka)' },
@@ -430,7 +433,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'Pink stars', aliases: ['pink stars', 'pink star sum', 'pink sparks total', 'total pink sparks', 'lineage pink sparks', 'lineage pink stars'], field: 'pink_stars_sum', type: 'number' },
     { label: 'Green stars', aliases: ['green stars', 'green star sum', 'green sparks total', 'total green sparks', 'lineage green sparks', 'lineage green stars'], field: 'green_stars_sum', type: 'number' },
     { label: 'White stars', aliases: ['white stars', 'white star sum', 'white sparks total', 'total white sparks', 'lineage white sparks', 'lineage white stars'], field: 'white_stars_sum', type: 'number' },
-    { label: 'Race affinity', aliases: ['race affinity', 'affinity'], field: 'computed_race_affinity', type: 'number' },
+    { label: 'Affinity', aliases: ['affinity', 'total affinity', 'legacy affinity'], field: 'affinity', type: 'number' },
+    { label: 'Race affinity', aliases: ['race affinity'], field: 'computed_race_affinity', type: 'number' },
     { label: 'White factors', aliases: ['white factors', 'white sparks', 'white skills'], field: 'white_sparks', type: 'array' },
     { label: 'Blue sparks', aliases: ['blue sparks', 'blue factors'], field: 'blue_sparks', type: 'array' },
     { label: 'Pink sparks', aliases: ['pink sparks', 'pink factors'], field: 'pink_sparks', type: 'array' },
@@ -495,7 +499,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     'main_pink_factors', 'main_green_factors', 'main_white_count', 'left_blue_factors',
     'left_pink_factors', 'left_green_factors', 'left_white_count', 'right_blue_factors',
     'right_pink_factors', 'right_green_factors', 'right_white_count', 'blue_stars_sum',
-    'pink_stars_sum', 'green_stars_sum', 'white_stars_sum', 'race_affinity',
+    'pink_stars_sum', 'green_stars_sum', 'white_stars_sum', 'affinity', 'affinity_score', 'race_affinity',
     'computed_race_affinity', 'support_card_count', 'support_cards_count', 'support_card_id', 'limit_break_count', 'account_id',
     'trainer_id', 'trainer_name', 'name', 'blue_sparks', 'pink_sparks', 'green_sparks',
     'white_sparks', 'main_white_factors', 'main_white_sparks', 'left_white_factors',
@@ -508,6 +512,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private readonly uqlFunctions = new Set([
     'contains', 'has', 'overlaps', 'any', 'has_all', 'contains_all', 'all',
     'support_card', 'has_support_card',
+    'spark_sum',
     'optional_white', 'optional_main_white', 'optional_any_white', 'lineage_white'
   ]);
   private readonly uqlFunctionParameterNames = new Set([
@@ -1795,8 +1800,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       .filter(f => f.factorId && f.factorId > 0)
       .map(f => f.factorId!);
     this.filterState.lineage_white = lineageWhiteIds.length ? lineageWhiteIds : undefined;
-    // Extract white sparks from the selected veteran's parents and merge with lineage_white
-    if (this.selectedVeteran?.succession_chara_array?.length) {
+    // Extract white sparks from the selected veteran's parents only when the
+    // user asked for lineage white matching. Picking a legacy by itself should
+    // provide P2 context, not silently add a white-factor filter.
+    if (lineageWhiteIds.length && this.selectedVeteran?.succession_chara_array?.length) {
       const whiteFactorIdSet = new Set(this.whiteFactors.map(f => f.id));
       const getWhiteIds = (positionId: number): number[] => {
         const sc = this.selectedVeteran!.succession_chara_array!.find(s => s.position_id === positionId);
@@ -2868,7 +2875,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const queryForCompilation = this.stripLeadingWhere(queryWithoutDirectives);
     if (!queryForCompilation) return '';
     const arrayOperatorCompiled = this.compileFriendlyArrayOperators(queryForCompilation);
-    const scopedSparkCompiled = this.compileFriendlyScopedSparkComparisons(arrayOperatorCompiled);
+    const factorSumCompiled = this.compileFriendlyFactorSumComparisons(arrayOperatorCompiled);
+    const scopedSparkCompiled = this.compileFriendlyScopedSparkComparisons(factorSumCompiled);
     const scopedSparkCategoryCompiled = this.compileFriendlyScopedSparkCategoryComparisons(scopedSparkCompiled);
     const sparkCompiled = this.compileFriendlySparkComparisons(scopedSparkCategoryCompiled);
     const factorCompiled = this.compileFriendlyLoadedFactorComparisons(sparkCompiled);
@@ -2937,7 +2945,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return {
       ...field,
       alias,
-      comparisonPattern: new RegExp(`(^|[^A-Za-z0-9_])(${aliasPattern})(?=$|[^A-Za-z0-9_])\\s*(=|!=|<>|<=|>=|<|>)\\s*(\\d+)`, 'gi')
+      comparisonPattern: new RegExp(`(^|[^A-Za-z0-9_])(${aliasPattern})(?=$|[^A-Za-z0-9_])\\s*(==|=|!=|<>|<=|>=|<|>)\\s*(\\d+)`, 'gi')
     };
   }
 
@@ -2946,7 +2954,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return {
       ...field,
       alias,
-      comparisonPattern: new RegExp(`(^|[^A-Za-z0-9_])(${aliasPattern})(?=$|[^A-Za-z0-9_])\\s*(=|!=|<>|<=|>=|<|>)\\s*(\\d+)`, 'gi')
+      comparisonPattern: new RegExp(`(^|[^A-Za-z0-9_])(${aliasPattern})(?=$|[^A-Za-z0-9_])\\s*(==|=|!=|<>|<=|>=|<|>)\\s*(\\d+)`, 'gi')
     };
   }
 
@@ -2954,7 +2962,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const labelPattern = this.escapeRegExp(factor.label).replace(/\s+/g, '\\s+');
     return {
       ...factor,
-      comparisonPattern: new RegExp(`(^|[\\s(,])${labelPattern}\\s*(=|!=|<>|<=|>=|<|>)\\s*(\\d+)`, 'gi')
+      comparisonPattern: new RegExp(`(^|[\\s(,])${labelPattern}\\s*(==|=|!=|<>|<=|>=|<|>)\\s*(\\d+)`, 'gi')
     };
   }
 
@@ -2974,9 +2982,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       alias: scope.alias,
       label: scope.label,
       fields: [...scope.fields],
-      comparisonPattern: new RegExp(`${fieldBoundary}\\s*(=|!=|<>)\\s*([^\\s(),][^;)]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'),
-      inPattern: new RegExp(`${fieldBoundary}\\s+in\\s*\\(([^)]*)\\)`, 'gi'),
-      notInPattern: new RegExp(`${fieldBoundary}\\s+not\\s+in\\s*\\(([^)]*)\\)`, 'gi')
+      comparisonPattern: new RegExp(`${fieldBoundary}\\s*(==|=|!=|<>)\\s*([^\\s(),][^;)]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'),
+      inPattern: new RegExp(`${fieldBoundary}\\s+in\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'),
+      notInPattern: new RegExp(`${fieldBoundary}\\s+not\\s+in\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi')
     };
   }
 
@@ -2987,15 +2995,15 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       alias: field.alias,
       label: field.label,
       fields: [...field.fields],
-      hasAllPattern: new RegExp(`${fieldBoundary}\\s+has\\s+all\\s*\\(([^)]*)\\)`, 'gi'),
-      hasAnyPattern: new RegExp(`${fieldBoundary}\\s+has\\s+any\\s*\\(([^)]*)\\)`, 'gi'),
-      doesNotHavePattern: new RegExp(`${fieldBoundary}\\s+does\\s+not\\s+have\\s+([^;()]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'),
-      hasPattern: new RegExp(`${fieldBoundary}\\s+has\\s+([^;()]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'),
-      containsAllPattern: new RegExp(`${fieldBoundary}\\s+contains\\s+all\\s*\\(([^)]*)\\)`, 'gi'),
-      containsAnyPattern: new RegExp(`${fieldBoundary}\\s+contains\\s+any\\s*\\(([^)]*)\\)`, 'gi'),
-      inPattern: new RegExp(`${fieldBoundary}\\s+in\\s*\\(([^)]*)\\)`, 'gi'),
-      notInPattern: new RegExp(`${fieldBoundary}\\s+not\\s+in\\s*\\(([^)]*)\\)`, 'gi'),
-      containsPattern: new RegExp(`${fieldBoundary}\\s+contains\\s+(?!all\\b|any\\b|\\()([^;()]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi')
+      hasAllPattern: new RegExp(`${fieldBoundary}\\s+has\\s+all\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'),
+      hasAnyPattern: new RegExp(`${fieldBoundary}\\s+has\\s+any\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'),
+      doesNotHavePattern: new RegExp(`${fieldBoundary}\\s+does\\s+not\\s+have\\s+((?:[^;()]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'),
+      hasPattern: new RegExp(`${fieldBoundary}\\s+has\\s+((?:[^;()]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'),
+      containsAllPattern: new RegExp(`${fieldBoundary}\\s+contains\\s+all\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'),
+      containsAnyPattern: new RegExp(`${fieldBoundary}\\s+contains\\s+any\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'),
+      inPattern: new RegExp(`${fieldBoundary}\\s+in\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'),
+      notInPattern: new RegExp(`${fieldBoundary}\\s+not\\s+in\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'),
+      containsPattern: new RegExp(`${fieldBoundary}\\s+contains\\s+(?!all\\b|any\\b|\\()((?:[^;()]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi')
     };
   }
 
@@ -3149,7 +3157,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         for (const scopeAlias of scope.aliases) {
           for (const colorAlias of colorAliases[scope.color]) {
             const aliasPattern = `${this.escapeRegExp(scopeAlias).replace(/\s+/g, '\\s+')}\\s+${this.escapeRegExp(colorAlias).replace(/\s+/g, '\\s+')}`;
-            const pattern = new RegExp(`(^|[^\\w])(${aliasPattern})\\s*(=|!=|<>|>=|<=|>|<)\\s*(\\d+)`, 'gi');
+            const pattern = new RegExp(`(^|[^\\w])(${aliasPattern})\\s*(==|=|!=|<>|>=|<=|>|<)\\s*(\\d+)`, 'gi');
             compiledSegment = compiledSegment.replace(pattern, (_match, leadingText: string, _aliasText: string, operator: string, value: string) => {
               return `${leadingText}${this.buildScopedSparkCategoryComparison(scope.fields, scope.color, operator, parseInt(value, 10))}`;
             });
@@ -3161,18 +3169,19 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private buildScopedSparkCategoryComparison(fields: string[], color: 'blue' | 'pink' | 'green', operator: string, value: number): string {
+    const normalizedOperator = this.normalizeUqlComparisonOperator(operator) || operator;
     const factors = color === 'blue' ? this.blueFactors : color === 'pink' ? this.pinkFactors : this.greenFactors;
-    const levels = operator === '!=' || operator === '<>'
+    const levels = normalizedOperator === '!='
       ? [value]
-      : this.getSparkLevelsForComparison(operator, value, 3);
+      : this.getSparkLevelsForComparison(normalizedOperator, value, 3);
     if (!levels.length) return '(1 = 0)';
     const ids = factors.flatMap(factor => levels.map(level => this.buildSparkId(Number(factor.id), level)));
-    if (!ids.length) return operator === '!=' || operator === '<>' ? '(1 = 1)' : '(1 = 0)';
-    const buildClause = (field: string) => operator === '!=' || operator === '<>'
+    if (!ids.length) return normalizedOperator === '!=' ? '(1 = 1)' : '(1 = 0)';
+    const buildClause = (field: string) => normalizedOperator === '!='
       ? `${field} not in (${ids.join(', ')})`
       : `${field} in (${ids.join(', ')})`;
     if (fields.length === 1) return buildClause(fields[0]);
-    const joiner = operator === '!=' || operator === '<>' ? ' and ' : ' or ';
+    const joiner = normalizedOperator === '!=' ? ' and ' : ' or ';
     return `(${fields.map(buildClause).join(joiner)})`;
   }
   private compileFriendlySparkComparisons(query: string): string {
@@ -3200,8 +3209,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return this.replaceOutsideStrings(query, segment => {
       let compiledSegment = segment;
       const applyFieldSyntax = (fieldPattern: string, functionName: string): void => {
-        compiledSegment = compiledSegment.replace(new RegExp(`\\b${fieldPattern}\\s+in\\s*\\(([^)]*)\\)`, 'gi'), `${functionName}($1)`);
-        compiledSegment = compiledSegment.replace(new RegExp(`\\b${fieldPattern}\\s*=\\s*([^;()]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'), (_match, rawValue: string) => `${functionName}(${rawValue.trim()})`);
+        compiledSegment = compiledSegment.replace(new RegExp(`\\b${fieldPattern}\\s+in\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'), `${functionName}($1)`);
+        compiledSegment = compiledSegment.replace(new RegExp(`\\b${fieldPattern}\\s*(?:==|=)\\s*((?:[^;()]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'), (_match, rawValue: string) => `${functionName}(${rawValue.trim()})`);
       };
 
       applyFieldSyntax('optional\\s+main\\s+white', 'optional_main_white');
@@ -3242,6 +3251,35 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
           return `${leadingText}${this.buildSparkComparison(factor, operator, parseInt(value, 10))}`;
         });
       });
+      return compiledSegment;
+    });
+  }
+
+  private compileFriendlyFactorSumComparisons(query: string): string {
+    return this.replaceOutsideStrings(query, segment => {
+      const operatorPattern = '(==|=|!=|<>|>=|<=|>|<)';
+      const compileExpression = (expression: string): string | null => {
+        const terms = expression.split('+').map(term => term.trim()).filter(Boolean);
+        if (terms.length < 2) return null;
+        const compiledTerms = terms.map(term => {
+          const factor = this.resolveFactorUqlValue(term) as UqlNamedFactor | null;
+          if (!factor) return null;
+          return `spark_sum(${this.getGlobalSkillFieldForContext(factor.valueContext)}, ${factor.factorId})`;
+        });
+        if (compiledTerms.some(term => !term)) return null;
+        return compiledTerms.join(' + ');
+      };
+
+      let compiledSegment = segment.replace(new RegExp(`\\(([^()]*\\+[^()]*)\\)\\s*${operatorPattern}\\s*(\\d+)`, 'gi'), (match, expression: string, operator: string, value: string) => {
+        const compiledExpression = compileExpression(expression);
+        return compiledExpression ? `(${compiledExpression}) ${this.normalizeUqlComparisonOperator(operator)} ${value}` : match;
+      });
+
+      compiledSegment = compiledSegment.replace(new RegExp(`(^|\\b(?:where|and|or)\\s+)([^;()]*\\+[^;()]*?)\\s*${operatorPattern}\\s*(\\d+)`, 'gi'), (match, leadingText: string, expression: string, operator: string, value: string) => {
+        const compiledExpression = compileExpression(expression);
+        return compiledExpression ? `${leadingText}${compiledExpression} ${this.normalizeUqlComparisonOperator(operator)} ${value}` : match;
+      });
+
       return compiledSegment;
     });
   }
@@ -3405,7 +3443,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
   private buildSkillPresenceClause(fieldName: string, item: UqlSkillListItem, negated: boolean): string {
     const factor = item.factor!;
-    const normalizedOperator = item.operator === '<>' ? '!=' : item.operator;
+    const normalizedOperator = item.operator ? this.normalizeUqlComparisonOperator(item.operator) : undefined;
     if (normalizedOperator === '!=' && item.level !== undefined) {
       const sparkId = this.buildSparkId(factor.factorId, item.level);
       const normalizedField = fieldName.toLowerCase().replace(/[_\s-]+/g, '_').trim();
@@ -3439,47 +3477,47 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private compileBareFriendlySkillArrayOperators(segment: string): string {
     let compiledSegment = segment;
     const leadingBoundary = '(^|\\b(?:where|and|or)\\s+|\\()';
-    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*has\\s+all\\s*\\(([^)]*)\\)`, 'gi'), (_match, leadingText: string, listText: string) => {
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*has\\s+all\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'), (_match, leadingText: string, listText: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('all', listText);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return `${leadingText}has_all(white_sparks, (${listText}))`;
     });
-    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*has\\s+any\\s*\\(([^)]*)\\)`, 'gi'), (_match, leadingText: string, listText: string) => {
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*has\\s+any\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'), (_match, leadingText: string, listText: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('any', listText);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return `${leadingText}overlaps(white_sparks, (${listText}))`;
     });
-    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*does\\s+not\\s+have\\s+([^;()]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'), (_match, leadingText: string, rawValue: string) => {
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*does\\s+not\\s+have\\s+((?:[^;()]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'), (_match, leadingText: string, rawValue: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('not', rawValue);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return `${leadingText}not contains(white_sparks, ${rawValue.trim()})`;
     });
-    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*has\\s+([^;()]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'), (_match, leadingText: string, rawValue: string) => {
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*has\\s+((?:[^;()]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'), (_match, leadingText: string, rawValue: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('one', rawValue);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return `${leadingText}contains(white_sparks, ${rawValue.trim()})`;
     });
-    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*contains\\s+all\\s*\\(([^)]*)\\)`, 'gi'), (_match, leadingText: string, listText: string) => {
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*contains\\s+all\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'), (_match, leadingText: string, listText: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('all', listText);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return `${leadingText}has_all(white_sparks, (${listText}))`;
     });
-    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*contains\\s+any\\s*\\(([^)]*)\\)`, 'gi'), (_match, leadingText: string, listText: string) => {
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*contains\\s+any\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'), (_match, leadingText: string, listText: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('any', listText);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return `${leadingText}overlaps(white_sparks, (${listText}))`;
     });
-    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*not\\s+in\\s*\\(([^)]*)\\)`, 'gi'), (match, leadingText: string, listText: string) => {
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*not\\s+in\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'), (match, leadingText: string, listText: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('not', listText);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return match;
     });
-    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*in\\s*\\(([^)]*)\\)`, 'gi'), (match, leadingText: string, listText: string) => {
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*in\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'), (match, leadingText: string, listText: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('any', listText);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return match;
     });
-    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*contains\\s+(?!all\\b|any\\b|\\()([^;()]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'), (match, leadingText: string, rawValue: string) => {
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*contains\\s+(?!all\\b|any\\b|\\()((?:[^;()]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'), (match, leadingText: string, rawValue: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('one', rawValue);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return match;
@@ -3494,11 +3532,20 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     for (let index = 0; index < bytes.length; index += chunkSize) {
       binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
     }
-    return btoa(binary);
+    return btoa(binary)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/g, '');
   }
 
   private decodeBase64Utf8(value: string): string {
-    const binary = atob(value);
+    const normalized = value
+      .trim()
+      .replace(/\s/g, '+')
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+    const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), '=');
+    const binary = atob(padded);
     const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
     return new TextDecoder().decode(bytes);
   }
@@ -3554,7 +3601,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private normalizeSupportCardFunctionArgs(argsText: string): string[] | null {
-    const args = argsText.split(',').map(arg => arg.trim()).filter(Boolean);
+    const args = this.splitUqlDelimitedValues(argsText);
     if (!args.length) return null;
     let changed = false;
     const normalizedArgs = args.map((arg, index) => {
@@ -3584,11 +3631,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private replaceSupportCardComparisonValues(segment: string, fieldPattern: string): string {
-    const comparisonPattern = new RegExp(`(${fieldPattern})\\s*(=|!=|<>)\\s*((?:[^(),;)]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi');
+    const comparisonPattern = new RegExp(`(${fieldPattern})\\s*(==|=|!=|<>)\\s*((?:[^(),;)]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi');
     return segment.replace(comparisonPattern, (match, _fieldText: string, operator: string, rawValue: string) => {
       const resolvedId = this.resolveSupportCardUqlValue(rawValue);
       if (!resolvedId) return match;
-      const normalizedOperator = operator === '<>' ? '!=' : operator;
+      const normalizedOperator = this.normalizeUqlComparisonOperator(operator);
       return normalizedOperator === '!=' ? `not support_card(${resolvedId})` : `support_card(${resolvedId})`;
     });
   }
@@ -3614,23 +3661,23 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
   private combineSupportCardLimitBreakClauses(segment: string): string {
     const lbPattern = '(?:lb|limitbreak|limit[_\\s-]?break|limit[_\\s-]?break[_\\s-]?count)';
-    const operatorPattern = '(?:>=|<=|!=|<>|=|>|<)';
+    const operatorPattern = '(?:>=|<=|!=|<>|==|=|>|<)';
     const supportThenLb = new RegExp(`support_card\\((\\d+)\\)\\s+and\\s+${lbPattern}\\s*(${operatorPattern})\\s*(\\d+)`, 'gi');
     let compiledSegment = segment.replace(supportThenLb, (_match, supportCardId: string, operator: string, value: string) => {
-      return `support_card(${supportCardId}, lb ${operator === '<>' ? '!=' : operator} ${value})`;
+      return `support_card(${supportCardId}, lb ${this.normalizeUqlComparisonOperator(operator)} ${value})`;
     });
     const lbThenSupport = new RegExp(`${lbPattern}\\s*(${operatorPattern})\\s*(\\d+)\\s+and\\s+support_card\\((\\d+)\\)`, 'gi');
     compiledSegment = compiledSegment.replace(lbThenSupport, (_match, operator: string, value: string, supportCardId: string) => {
-      return `support_card(${supportCardId}, lb ${operator === '<>' ? '!=' : operator} ${value})`;
+      return `support_card(${supportCardId}, lb ${this.normalizeUqlComparisonOperator(operator)} ${value})`;
     });
     return compiledSegment;
   }
 
   private compileStandaloneSupportCardLimitBreak(segment: string): string {
-    const lbPattern = /\b(?:lb|limitbreak|limit[_\s-]?break|limit[_\s-]?break[_\s-]?count)\s*(>=|<=|!=|<>|=|>|<)\s*(\d+)\b/gi;
+    const lbPattern = /\b(?:lb|limitbreak|limit[_\s-]?break|limit[_\s-]?break[_\s-]?count)\s*(>=|<=|!=|<>|==|=|>|<)\s*(\d+)\b/gi;
     return segment.replace(lbPattern, (match, operator: string, value: string, offset: number, fullText: string) => {
       if (this.isInsideSupportCardFunction(fullText, offset)) return match;
-      return `support_card(lb ${operator === '<>' ? '!=' : operator} ${value})`;
+      return `support_card(lb ${this.normalizeUqlComparisonOperator(operator)} ${value})`;
     });
   }
 
@@ -3643,22 +3690,21 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private normalizeSupportCardLimitBreakArg(arg: string): string | null {
-    const match = arg.match(/^(?:lb|limitbreak|limit[_\s-]?break|limit[_\s-]?break[_\s-]?count)\s*(>=|<=|!=|<>|=|>|<)\s*(\d+)$/i);
+    const match = arg.match(/^(?:lb|limitbreak|limit[_\s-]?break|limit[_\s-]?break[_\s-]?count)\s*(>=|<=|!=|<>|==|=|>|<)\s*(\d+)$/i);
     if (!match) return null;
-    return `lb ${match[1] === '<>' ? '!=' : match[1]} ${match[2]}`;
+    return `lb ${this.normalizeUqlComparisonOperator(match[1])} ${match[2]}`;
   }
 
   private normalizeCompiledSupportCardAliases(query: string): string {
     return query.replace(/\b(support_card|has_support_card)\s*\(((?:[^()]|\([^)]*\))*)\)/gi, (match, functionName: string, argsText: string) => {
-      const normalizedArgs = argsText
-        .split(',')
+      const normalizedArgs = this.splitUqlDelimitedValues(argsText)
         .map(arg => this.normalizeSupportCardLimitBreakArg(arg.trim()) || arg.trim())
         .filter(Boolean);
       return normalizedArgs.length ? `${functionName}(${normalizedArgs.join(', ')})` : match;
     });
   }
   private compileFriendlyFunctionValues(segment: string): string {
-    const singleValuePattern = /\b(contains|has|any)\s*\(\s*([^,()]+?)\s*,\s*([^()]*?)\s*\)/gi;
+    const singleValuePattern = /\b(contains|has|any)\s*\(\s*([^,()]+?)\s*,\s*((?:[^()]|\([^)]*\))*?)\s*\)/gi;
     let compiledSegment = segment.replace(singleValuePattern, (match, functionName: string, fieldText: string, rawValue: string) => {
       const factorClause = this.buildFriendlyFactorSingleFunctionClause(functionName, fieldText, rawValue);
       if (factorClause) return factorClause;
@@ -3668,7 +3714,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       return resolvedValue ? `${functionName}(${fieldText}, ${resolvedValue})` : match;
     });
 
-    const listValuePattern = /\b(overlaps|has_all|contains_all|all)\s*\(\s*([^,()]+?)\s*,\s*\(([^)]*)\)\s*\)/gi;
+    const listValuePattern = /\b(overlaps|has_all|contains_all|all)\s*\(\s*([^,()]+?)\s*,\s*\(((?:[^()]|\([^)]*\))*)\)\s*\)/gi;
     compiledSegment = compiledSegment.replace(listValuePattern, (match, functionName: string, fieldText: string, listText: string) => {
       const factorClause = this.buildFriendlyFactorListFunctionClause(functionName, fieldText, listText);
       if (factorClause) return factorClause;
@@ -3775,10 +3821,46 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private splitUqlListValues(listText: string): string[] {
-    return listText
-      .split(',')
-      .map(value => value.trim())
-      .filter(Boolean);
+    return this.splitUqlDelimitedValues(listText);
+  }
+
+  private splitUqlDelimitedValues(listText: string, preserveWhitespace = false): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let quote: string | null = null;
+    let start = 0;
+    for (let index = 0; index < listText.length; index++) {
+      const character = listText[index];
+      if (quote) {
+        if (character === quote) {
+          if (listText[index + 1] === quote) {
+            index++;
+          } else {
+            quote = null;
+          }
+        }
+        continue;
+      }
+      if (this.isUqlQuoteStart(listText, index)) {
+        quote = character;
+        continue;
+      }
+      if (character === '(') {
+        depth++;
+        continue;
+      }
+      if (character === ')') {
+        depth = Math.max(0, depth - 1);
+        continue;
+      }
+      if (character !== ',' || depth !== 0) continue;
+      parts.push(listText.slice(start, index));
+      start = index + 1;
+    }
+    parts.push(listText.slice(start));
+    return parts
+      .map(value => preserveWhitespace ? value : value.trim())
+      .filter(value => value.trim().length > 0);
   }
 
   private splitUqlFactorListValues(listText: string, context: UqlValueContext): string[] {
@@ -3826,9 +3908,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
   private parseUqlFactorItem(rawValue: string, context?: UqlValueContext): UqlSkillListItem {
     const trimmedValue = rawValue.trim();
-    const comparisonMatch = trimmedValue.match(/^(.*?)(?:\s*(>=|<=|!=|<>|=|>|<)\s*(\d+))\s*$/);
+    const comparisonMatch = trimmedValue.match(/^(.*?)(?:\s*(>=|<=|!=|<>|==|=|>|<)\s*(\d+))\s*$/);
     const value = comparisonMatch ? comparisonMatch[1].trim() : trimmedValue;
-    const operator = comparisonMatch?.[2] === '<>' ? '!=' : comparisonMatch?.[2];
+    const operator = comparisonMatch?.[2] ? this.normalizeUqlComparisonOperator(comparisonMatch[2]) : undefined;
     const level = comparisonMatch?.[3] ? parseInt(comparisonMatch[3], 10) : undefined;
     return {
       value,
@@ -3869,7 +3951,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       let boundary = end;
       while (boundary < listText.length && /\s/.test(listText[boundary])) boundary++;
       if (boundary < listText.length && listText[boundary] !== ',' && !/[<>=!]/.test(listText[boundary])) continue;
-      const comparisonMatch = listText.slice(boundary).match(/^\s*(?:>=|<=|!=|<>|=|>|<)\s*\d+/);
+      const comparisonMatch = listText.slice(boundary).match(/^\s*(?:>=|<=|!=|<>|==|=|>|<)\s*\d+/);
       const comparisonEnd = comparisonMatch ? boundary + comparisonMatch[0].length : end;
       return { text: listText.slice(index, comparisonEnd), end: comparisonEnd };
     }
@@ -3896,22 +3978,22 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private replaceComparisonValue(segment: string, fieldPattern: string, resolveValue: (value: string, fieldText: string) => string | null): string {
-    const comparisonPattern = new RegExp(`(${fieldPattern}\\s*(?:=|!=|<>|<=|>=|<|>)\\s*)([^\\s(),][^;)]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi');
+    const comparisonPattern = new RegExp(`(${fieldPattern}\\s*(?:==|=|!=|<>|<=|>=|<|>)\\s*)([^\\s(),][^;)]*?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi');
     return segment.replace(comparisonPattern, (match, prefix: string, rawValue: string) => {
-      const fieldText = prefix.replace(/\s*(?:=|!=|<>|<=|>=|<|>)\s*$/, '').trim();
+      const fieldText = prefix.replace(/\s*(?:==|=|!=|<>|<=|>=|<|>)\s*$/, '').trim();
       const resolvedValue = resolveValue(rawValue, fieldText);
       return resolvedValue ? `${prefix}${resolvedValue}` : match;
     });
   }
   private replaceInListValues(segment: string, fieldPattern: string, resolveValue: (value: string, fieldText: string) => string | null): string {
-    const inListPattern = new RegExp(`(${fieldPattern}\\s+(?:not\\s+)?in\\s*\\()([^)]*)(\\))`, 'gi');
+    const inListPattern = new RegExp(`(${fieldPattern}\\s+(?:not\\s+)?in\\s*\\()((?:[^()]|\\([^)]*\\))*)(\\))`, 'gi');
     return segment.replace(inListPattern, (_match, prefix: string, listText: string, suffix: string) => {
       const fieldText = prefix.replace(/\s+(?:not\s+)?in\s*\($/i, '').trim();
       return `${prefix}${this.replaceNamedListValues(listText, value => resolveValue(value, fieldText))}${suffix}`;
     });
   }
   private replaceNamedListValues(listText: string, resolveValue: (value: string) => string | null): string {
-    const items = listText.split(',');
+    const items = this.splitUqlDelimitedValues(listText, true);
     const resolvedItems: string[] = [];
     for (let index = 0; index < items.length; index++) {
       let bestMatch: { endIndex: number; text: string } | null = null;
@@ -3949,7 +4031,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private buildCharacterScopeComparisonClause(fields: string[], operator: string, rawValue: string): string {
-    const normalizedOperator = operator === '<>' ? '!=' : operator;
+    const normalizedOperator = this.normalizeUqlComparisonOperator(operator) || operator;
     const negated = normalizedOperator === '!=';
     const clauses = fields.map(fieldName => {
       const resolvedValue = this.resolveCharacterUqlValue(rawValue, fieldName) || rawValue.trim();
@@ -4209,6 +4291,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private ensureUqlOwnedLegacyData(query: string): void {
     const veteranIdHint = this.getUqlOwnedLegacyVeteranIdHint(query);
     const accountHint = this.getUqlOwnedLegacyAccountHint(query);
+    const memberIdHint = this.getUqlOwnedLegacyMemberIdHint(query);
     const hasLegacyDirective = this.hasUqlOwnedLegacyDirective(query);
     if (!hasLegacyDirective) return;
 
@@ -4221,6 +4304,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (!this.linkedAccountsLoaded && !this.loadingLinkedAccounts) {
       this.loadLinkedAccounts(() => {
         if (accountHint) this.loadVeteransForAccount(accountHint);
+        else if (memberIdHint != null) this.loadVeteransForLegacyMemberHint();
         this.onUqlChange();
       }, { preloadSelectedAccount: false, updateSuggestions: true });
       return;
@@ -4228,6 +4312,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
     if (accountHint && !this.veterans[accountHint] && !this.loadingVeterans[accountHint]) {
       this.loadVeteransForAccount(accountHint);
+      return;
+    }
+
+    if (!accountHint && memberIdHint != null) {
+      this.loadVeteransForLegacyMemberHint();
     }
   }
 
@@ -4238,9 +4327,13 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       return !!this.loadingVeteransById[veteranIdHint] || !this.fetchedVeteransById.has(veteranIdHint);
     }
     const accountHint = this.getUqlOwnedLegacyAccountHint(query);
+    const memberIdHint = this.getUqlOwnedLegacyMemberIdHint(query);
     if (!this.linkedAccountsLoaded || this.loadingLinkedAccounts) return true;
-    if (!accountHint) return Object.values(this.loadingVeterans).some(Boolean);
-    return this.loadingVeterans[accountHint] || !this.veterans[accountHint];
+    if (accountHint) return this.loadingVeterans[accountHint] || !this.veterans[accountHint];
+    if (memberIdHint != null) {
+      return this.linkedAccounts.some(account => this.loadingVeterans[account.account_id] || !this.veterans[account.account_id]);
+    }
+    return Object.values(this.loadingVeterans).some(Boolean);
   }
 
   isCurrentUqlOwnedLegacyResolutionPending(): boolean {
@@ -4286,6 +4379,31 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       if (idMatch && !/^\d+$/.test(idMatch[1])) return idMatch[1];
     }
     return null;
+  }
+
+  private getUqlOwnedLegacyMemberIdHint(query: string): number | null {
+    const expression = this.stripLeadingWhere(query);
+    if (!expression) return null;
+    for (const clause of this.splitTopLevelUqlAndClauses(expression)) {
+      const directive = this.parseUqlEditorDirectiveClause(clause);
+      if (directive?.kind !== 'legacy' || !directive.value) continue;
+      const value = this.unwrapUqlBracketValue(this.unquoteUqlValue(directive.value));
+      const accountMemberMatch = value.match(/^[A-Za-z0-9_-]+:(\d+)$/);
+      if (accountMemberMatch) return Number(accountMemberMatch[1]);
+      const idMatch = value.match(/(?:#|member\s+)(\d+)(?=\s*(?:@|$))/i);
+      if (idMatch) return Number(idMatch[1]);
+    }
+    return null;
+  }
+
+  private loadVeteransForLegacyMemberHint(): void {
+    if (!this.linkedAccountsLoaded) return;
+    for (const account of this.linkedAccounts) {
+      const accountId = account.account_id;
+      if (!this.veterans[accountId] && !this.loadingVeterans[accountId]) {
+        this.loadVeteransForAccount(accountId);
+      }
+    }
   }
 
   private getAccountIdForVeteran(veteran: VeteranMember): string | null {
@@ -4384,11 +4502,21 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const accountMatch = value.match(/@([A-Za-z0-9_-]+)\s*$/);
     if (accountMatch) {
       const accountId = accountMatch[1];
-      const normalizedName = this.normalizeUqlName(value.slice(0, accountMatch.index).trim());
+      const valueBeforeAccount = value.slice(0, accountMatch.index).trim();
+      const memberMatch = valueBeforeAccount.match(/(?:#|member\s+)(\d+)\s*$/i);
+      const memberId = memberMatch ? Number(memberMatch[1]) : null;
+      const normalizedName = this.normalizeUqlName(memberMatch
+        ? valueBeforeAccount.slice(0, memberMatch.index).trim()
+        : valueBeforeAccount);
       if (this.selectedVeteran && (this.getAccountIdForVeteran(this.selectedVeteran) === accountId || this.selectedVeteran.trainer_id === accountId)) {
-        return { match: { accountId, veteran: this.selectedVeteran }, partial: false };
+        if (memberId == null || this.selectedVeteran.member_id === memberId) {
+          return { match: { accountId, veteran: this.selectedVeteran }, partial: false };
+        }
       }
-      const veteran = (this.veterans[accountId] ?? []).find(entry => this.normalizeUqlName(this.getVeteranName(entry)) === normalizedName);
+      const veteran = (this.veterans[accountId] ?? []).find(entry => {
+        if (memberId != null) return entry.member_id === memberId;
+        return this.normalizeUqlName(this.getVeteranName(entry)) === normalizedName;
+      });
       if (veteran) return { match: { accountId, veteran }, partial: false };
     }
 
@@ -4501,7 +4629,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return value.replace(/[○◎◯]/g, '').replace(/\s+[oO]$/g, '').replace(/\s+/g, ' ').trim();
   }
   private buildScopedSparkComparison(field: FriendlyScopedSparkField, operator: string, value: number): string {
-    const normalizedOperator = operator === '<>' ? '!=' : operator;
+    const normalizedOperator = this.normalizeUqlComparisonOperator(operator);
     const clauses = field.fields.map(target => target.type === 'array'
       ? this.buildSparkComparison({ ...field, field: target.field }, normalizedOperator, value)
       : this.buildSingleSparkFieldComparison(target.field, field.factorId, normalizedOperator, value, field.maxLevel));
@@ -4510,10 +4638,13 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return `(${clauses.join(joiner)})`;
   }
   private buildSingleSparkFieldComparison(fieldName: string, factorId: number, operator: string, value: number, maxLevel: number): string {
-    if (operator === '!=') {
+    const normalizedOperator = this.normalizeUqlComparisonOperator(operator);
+    const zeroClause = this.buildZeroSparkComparisonClause(fieldName, factorId, normalizedOperator, value, maxLevel);
+    if (zeroClause) return zeroClause;
+    if (normalizedOperator === '!=') {
       return `${fieldName} != ${this.buildSparkId(factorId, value)}`;
     }
-    const levels = this.getSparkLevelsForComparison(operator, value, maxLevel);
+    const levels = this.getSparkLevelsForComparison(normalizedOperator, value, maxLevel);
     if (!levels.length) return '(1 = 0)';
     const sparkIds = levels.map(level => this.buildSparkId(factorId, level));
     if (sparkIds.length === 1) return `${fieldName} = ${sparkIds[0]}`;
@@ -4525,7 +4656,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return `(${clauses.join(` ${joiner} `)})`;
   }
   private buildSparkComparison(field: FriendlySparkField, operator: string, value: number): string {
-    const normalizedOperator = operator === '<>' ? '!=' : operator;
+    const normalizedOperator = this.normalizeUqlComparisonOperator(operator);
+    const zeroClause = this.buildZeroSparkComparisonClause(field.field, field.factorId, normalizedOperator, value, field.maxLevel);
+    if (zeroClause) return zeroClause;
     const levels = this.getSparkLevelsForComparison(normalizedOperator, value, field.maxLevel);
     if (normalizedOperator === '!=') {
       const sparkId = this.buildSparkId(field.factorId, value);
@@ -4535,6 +4668,35 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const sparkIds = levels.map(level => this.buildSparkId(field.factorId, level));
     if (sparkIds.length === 1) return `contains(${field.field}, ${sparkIds[0]})`;
     return `overlaps(${field.field}, (${sparkIds.join(', ')}))`;
+  }
+  private normalizeUqlComparisonOperator(operator: string): string {
+    if (operator === '==' || operator === '=') return '=';
+    if (operator === '<>') return '!=';
+    return operator;
+  }
+  private buildZeroSparkComparisonClause(fieldName: string, factorId: number, operator: string | undefined, value: number, maxLevel: number): string | null {
+    if (!Number.isFinite(value) || value !== 0 || !operator) return null;
+    const ids = this.rangeInclusive(1, maxLevel).map(level => this.buildSparkId(factorId, level));
+    if (!ids.length) return null;
+    const normalizedField = fieldName.toLowerCase().replace(/[_\s-]+/g, '_').trim();
+    const isArrayField = normalizedField.endsWith('_sparks') || normalizedField.endsWith('_white_factors');
+    const anyMatch = isArrayField
+      ? `overlaps(${fieldName}, (${ids.join(', ')}))`
+      : `${fieldName} in (${ids.join(', ')})`;
+    switch (operator) {
+      case '=':
+      case '<=':
+        return `not ${anyMatch}`;
+      case '!=':
+      case '>':
+        return anyMatch;
+      case '<':
+        return '(1 = 0)';
+      case '>=':
+        return '(1 = 1)';
+      default:
+        return null;
+    }
   }
   private getSparkLevelsForComparison(operator: string, value: number, maxLevel: number): number[] {
     const levels = Array.from({ length: maxLevel }, (_entry, index) => index + 1);
@@ -4602,7 +4764,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (field.field === 'trainer_name' || field.field === 'account_id') return 4;
     if (field.type === 'string') return 6;
     if (['main_blue_factors', 'main_pink_factors', 'main_green_factors', 'left_blue_factors', 'left_pink_factors', 'left_green_factors', 'right_blue_factors', 'right_pink_factors', 'right_green_factors'].includes(field.field)) return 24;
-    if (['win_count', 'white_count', 'follower_num', 'parent_rank', 'computed_race_affinity'].includes(field.field)) return 8;
+    if (['win_count', 'white_count', 'follower_num', 'parent_rank', 'affinity', 'computed_race_affinity'].includes(field.field)) return 8;
     if (field.type === 'array') return 16;
     return 12;
   }
@@ -4918,7 +5080,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       if (!accountId && veteran.member_id == null && !veteranId) return;
       const label = this.getOwnedLegacyUqlDisplayValue(accountId, veteran);
       const name = this.getVeteranName(veteran);
-      const identity = veteranId ? `veteran:${veteranId}` : (veteran.member_id != null ? `member:${veteran.member_id}` : `account:${accountId}`);
+      const identity = veteranId ? `veteran:${veteranId}` : (veteran.member_id != null ? `member:${accountId}:${veteran.member_id}` : `account:${accountId}`);
       if (seen.has(identity)) return;
       seen.add(identity);
       const idText = veteranId || (veteran.member_id != null ? veteran.member_id.toString() : accountId);
@@ -5467,14 +5629,17 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (excludeMainParentIds.length) {
       clauses.push(`main_chara_id not in (${this.formatUqlNumberList(excludeMainParentIds)})`);
     }
-    this.appendArrayOverlapClauses(clauses, 'blue_sparks', this.filterState.blue_sparks);
-    this.appendArrayOverlapClauses(clauses, 'pink_sparks', this.filterState.pink_sparks);
-    this.appendArrayOverlapClauses(clauses, 'green_sparks', this.filterState.green_sparks);
-    this.appendArrayOverlapClauses(clauses, 'white_sparks', this.filterState.white_sparks);
-    this.appendArrayOverlapClauses(clauses, 'main_white_factors', this.filterState.main_parent_white_sparks);
-    addMinimumClause('main_blue_factors', this.filterState.min_main_blue_factors);
-    addMinimumClause('main_pink_factors', this.filterState.min_main_pink_factors);
-    addMinimumClause('main_green_factors', this.filterState.min_main_green_factors);
+    this.appendFactorFilterUqlClauses(clauses, this.blueFactorFilters, this.blueFactors, 'blue_sparks');
+    this.appendFactorFilterUqlClauses(clauses, this.pinkFactorFilters, this.pinkFactors, 'pink_sparks');
+    this.appendFactorFilterUqlClauses(clauses, this.greenFactorFilters, this.greenFactors, 'green_sparks');
+    this.appendFactorFilterUqlClauses(clauses, this.whiteFactorFilters, this.whiteFactors, 'white_sparks');
+    this.appendFactorFilterUqlClauses(clauses, this.mainBlueFactorFilters, this.blueFactors, 'main_blue_factors', 'Main ', 3);
+    this.appendFactorFilterUqlClauses(clauses, this.mainPinkFactorFilters, this.pinkFactors, 'main_pink_factors', 'Main ', 3);
+    this.appendFactorFilterUqlClauses(clauses, this.mainGreenFactorFilters, this.greenFactors, 'main_green_factors', 'Main ', 3);
+    this.appendFactorFilterUqlClauses(clauses, this.mainWhiteFactorFilters, this.whiteFactors, 'main_white_factors', 'Main ', 3);
+    if (!this.mainBlueFactorFilters.length) addMinimumClause('main_blue_factors', this.filterState.min_main_blue_factors);
+    if (!this.mainPinkFactorFilters.length) addMinimumClause('main_pink_factors', this.filterState.min_main_pink_factors);
+    if (!this.mainGreenFactorFilters.length) addMinimumClause('main_green_factors', this.filterState.min_main_green_factors);
     addMinimumClause('main_white_count', this.filterState.min_main_white_count);
     addMinimumClause('win_count', this.filterState.min_win_count);
     addMinimumClause('white_count', this.filterState.min_white_count);
@@ -5482,7 +5647,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       addMinimumClause('parent_rank', this.filterState.parent_rank);
     }
     if (this.selectedSupportCard) {
-      clauses.push(`Support card = ${this.getSupportCardDisplayLabel(this.selectedSupportCard)}`);
+      clauses.push(`support_card_id = ${this.selectedSupportCard.id}`);
       if (this.selectedLimitBreak > 0) clauses.push(`limitbreak >= ${this.selectedLimitBreak}`);
     } else if (this.selectedLimitBreak > 0) {
       clauses.push(`limitbreak >= ${this.selectedLimitBreak}`);
@@ -5516,6 +5681,65 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       clauses.push(`owned legacy = [${this.getOwnedLegacyUqlDisplayValue(accountId, this.selectedVeteran)}]`);
     }
     return clauses;
+  }
+
+  private appendFactorFilterUqlClauses(
+    clauses: string[],
+    filters: FactorFilter[],
+    availableFactors: any[],
+    fieldName: string,
+    labelPrefix = '',
+    maxCap = 9,
+  ): void {
+    for (const filter of filters) {
+      const friendlyClause = this.buildFriendlyFactorFilterUqlClause(filter, availableFactors, labelPrefix, maxCap);
+      if (friendlyClause) {
+        clauses.push(friendlyClause);
+        continue;
+      }
+
+      const groups = this.generateSparkIdGroups([filter], availableFactors, maxCap);
+      groups.forEach(group => clauses.push(this.buildSparkGroupUqlClause(fieldName, group)));
+    }
+  }
+
+  private buildFriendlyFactorFilterUqlClause(
+    filter: FactorFilter,
+    availableFactors: any[],
+    labelPrefix: string,
+    maxCap: number,
+  ): string | null {
+    if (!filter.factorId || filter.factorId <= 0) return null;
+    const factorName = availableFactors.find(factor => parseInt(factor.id, 10) === filter.factorId)?.text?.trim();
+    if (!factorName || !this.isSafeFriendlyUqlLabel(factorName)) return null;
+
+    const min = Math.max(1, Math.min(maxCap, filter.min || 1));
+    const max = Math.max(min, Math.min(maxCap, filter.max ?? maxCap));
+    const label = `${labelPrefix}${factorName}`;
+    if (min === max) return `${label} = ${min}`;
+    if (min <= 1 && max >= maxCap) return `${label} >= 1`;
+    if (min <= 1) return `${label} <= ${max}`;
+    if (max >= maxCap) return `${label} >= ${min}`;
+    return null;
+  }
+
+  private isSafeFriendlyUqlLabel(value: string): boolean {
+    return !/['";]/.test(value);
+  }
+
+  private buildSparkGroupUqlClause(fieldName: string, group: number[]): string {
+    const values = this.getUniqueNumbers(group);
+    if (!values.length) return '(1 = 0)';
+    const normalizedField = fieldName.toLowerCase().replace(/[_\s-]+/g, '_').trim();
+    const arrayField = normalizedField.endsWith('_sparks') || normalizedField.endsWith('_white_factors');
+    if (arrayField) {
+      return values.length === 1
+        ? `contains(${fieldName}, ${values[0]})`
+        : `overlaps(${fieldName}, (${this.formatUqlNumberList(values)}))`;
+    }
+    return values.length === 1
+      ? `${fieldName} = ${values[0]}`
+      : `${fieldName} in (${this.formatUqlNumberList(values)})`;
   }
 
   private appendArrayOverlapClauses(clauses: string[], fieldName: string, groups: number[][] | undefined): void {
@@ -5643,13 +5867,13 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private parseUqlEditorDirectiveClause(clause: string): { kind: UqlEditorDirectiveKind; label: string; operator: string; value: string } | null {
-    const match = clause.trim().match(/^(target|owned\s+legacy|your\s+legacy|my\s+legacy|legacy)\s*(not\s+in|has\s+any|has\s+all|has|!=|<>|>=|<=|=|>|<|in|contains)\s*(.*)$/i);
+    const match = clause.trim().match(/^(target|owned\s+legacy|your\s+legacy|my\s+legacy|legacy)\s*(not\s+in|has\s+any|has\s+all|has|!=|<>|>=|<=|==|=|>|<|in|contains)\s*(.*)$/i);
     if (!match) return null;
     const label = match[1].replace(/\s+/g, ' ').trim();
     return {
       kind: /^target$/i.test(label) ? 'target' : 'legacy',
       label,
-      operator: match[2].replace(/\s+/g, ' ').toLowerCase(),
+      operator: this.normalizeUqlComparisonOperator(match[2].replace(/\s+/g, ' ').toLowerCase()) || match[2].replace(/\s+/g, ' ').toLowerCase(),
       value: this.unwrapUqlBracketValue(this.unquoteUqlValue(match[3].trim()))
     };
   }
@@ -5905,7 +6129,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const name = this.getVeteranName(veteran);
     const veteranId = this.getVeteranUuid(veteran);
     if (veteranId) return `${name} #${veteranId}`;
-    return veteran.member_id != null ? `${name} #${veteran.member_id}` : `${name} @${accountId}`;
+    if (veteran.member_id != null && accountId) return `${name} #${veteran.member_id} @${accountId}`;
+    if (veteran.member_id != null) return `${name} #${veteran.member_id}`;
+    return `${name} @${accountId}`;
   }
   getAffinityTargetCharaId(): number | null {
     return this.treeData.characterId
