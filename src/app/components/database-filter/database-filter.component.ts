@@ -2991,20 +2991,63 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private createFriendlyArrayAliasReplacement(field: { alias: string; fields: string[]; label: string }): FriendlyArrayAliasReplacement {
     const fieldPattern = this.escapeRegExp(field.alias).replace(/\s+/g, '\\s+');
     const fieldBoundary = `(^|[^A-Za-z0-9_])(${fieldPattern})(?=$|[^A-Za-z0-9_])`;
+    const skillClauseBoundary = this.getFriendlySkillClauseBoundaryLookahead();
     return {
       alias: field.alias,
       label: field.label,
       fields: [...field.fields],
       hasAllPattern: new RegExp(`${fieldBoundary}\\s+has\\s+all\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'),
       hasAnyPattern: new RegExp(`${fieldBoundary}\\s+has\\s+any\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'),
-      doesNotHavePattern: new RegExp(`${fieldBoundary}\\s+does\\s+not\\s+have\\s+((?:[^;()]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'),
-      hasPattern: new RegExp(`${fieldBoundary}\\s+has\\s+((?:[^;()]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'),
+      doesNotHavePattern: new RegExp(`${fieldBoundary}\\s+does\\s+not\\s+have\\s+((?:[^;()]|\\([^)]*\\))+?)${skillClauseBoundary}`, 'gi'),
+      hasPattern: new RegExp(`${fieldBoundary}\\s+has\\s+((?:[^;()]|\\([^)]*\\))+?)${skillClauseBoundary}`, 'gi'),
       containsAllPattern: new RegExp(`${fieldBoundary}\\s+contains\\s+all\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'),
       containsAnyPattern: new RegExp(`${fieldBoundary}\\s+contains\\s+any\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'),
       inPattern: new RegExp(`${fieldBoundary}\\s+in\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'),
       notInPattern: new RegExp(`${fieldBoundary}\\s+not\\s+in\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'),
-      containsPattern: new RegExp(`${fieldBoundary}\\s+contains\\s+(?!all\\b|any\\b|\\()((?:[^;()]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi')
+      containsPattern: new RegExp(`${fieldBoundary}\\s+contains\\s+(?!all\\b|any\\b|\\()((?:[^;()]|\\([^)]*\\))+?)${skillClauseBoundary}`, 'gi')
     };
+  }
+
+  private getFriendlySkillClauseBoundaryLookahead(): string {
+    return `(?=\\s+(?:and|or)\\s+(?:${this.getUqlPredicateStartPattern()})|\\)|;|$)`;
+  }
+
+  private getUqlPredicateStartPattern(): string {
+    const phrases = [
+      ...this.friendlyFieldAliases.flatMap(field => [field.field, field.label, ...field.aliases]),
+      ...this.friendlySparkFields.flatMap(field => [field.label, ...field.aliases]),
+      ...this.friendlyCharacterScopeAliasReplacements.map(scope => scope.alias),
+      ...this.scopedArrayFields.map(field => field.alias),
+      'target',
+      'owned legacy',
+      'your legacy',
+      'my legacy',
+      'legacy',
+      'has',
+      'contains',
+      'does not have',
+      'in',
+      'not in',
+      'contains',
+      'has',
+      'overlaps',
+      'any',
+      'has_all',
+      'contains_all',
+      'all',
+      'support_card',
+      'has_support_card',
+      'spark_sum',
+      'optional_white',
+      'optional_main_white',
+      'optional_any_white',
+      'lineage_white'
+    ];
+    const phrasePattern = [...new Set(phrases.filter(Boolean))]
+      .sort((left, right) => right.length - left.length)
+      .map(phrase => this.escapeRegExp(phrase).replace(/\s+/g, '\\s+'))
+      .join('|');
+    return `(?:${phrasePattern})(?=$|[^A-Za-z0-9_])|[A-Za-z_]\\w*\\s*\\(`;
   }
 
   private resetPattern(pattern: RegExp): RegExp {
@@ -3477,6 +3520,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private compileBareFriendlySkillArrayOperators(segment: string): string {
     let compiledSegment = segment;
     const leadingBoundary = '(^|\\b(?:where|and|or)\\s+|\\()';
+    const skillClauseBoundary = this.getFriendlySkillClauseBoundaryLookahead();
     compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*has\\s+all\\s*\\(((?:[^()]|\\([^)]*\\))*)\\)`, 'gi'), (_match, leadingText: string, listText: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('all', listText);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
@@ -3487,12 +3531,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return `${leadingText}overlaps(white_sparks, (${listText}))`;
     });
-    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*does\\s+not\\s+have\\s+((?:[^;()]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'), (_match, leadingText: string, rawValue: string) => {
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*does\\s+not\\s+have\\s+((?:[^;()]|\\([^)]*\\))+?)${skillClauseBoundary}`, 'gi'), (_match, leadingText: string, rawValue: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('not', rawValue);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return `${leadingText}not contains(white_sparks, ${rawValue.trim()})`;
     });
-    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*has\\s+((?:[^;()]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'), (_match, leadingText: string, rawValue: string) => {
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*has\\s+((?:[^;()]|\\([^)]*\\))+?)${skillClauseBoundary}`, 'gi'), (_match, leadingText: string, rawValue: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('one', rawValue);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return `${leadingText}contains(white_sparks, ${rawValue.trim()})`;
@@ -3517,7 +3561,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return match;
     });
-    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*contains\\s+(?!all\\b|any\\b|\\()((?:[^;()]|\\([^)]*\\))+?)(?=\\s+(?:and|or)\\b|\\)|;|$)`, 'gi'), (match, leadingText: string, rawValue: string) => {
+    compiledSegment = compiledSegment.replace(new RegExp(`${leadingBoundary}\\s*contains\\s+(?!all\\b|any\\b|\\()((?:[^;()]|\\([^)]*\\))+?)${skillClauseBoundary}`, 'gi'), (match, leadingText: string, rawValue: string) => {
       const contextAwareClause = this.buildBareContextAwareSkillClause('one', rawValue);
       if (contextAwareClause) return `${leadingText}${contextAwareClause}`;
       return match;
@@ -3899,15 +3943,15 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private parseUqlFactorListItems(listText: string, context: UqlValueContext): UqlSkillListItem[] {
-    return this.splitUqlFactorListValues(listText, context).map(value => this.parseUqlFactorItem(value, context));
+    return this.splitUqlFactorListValues(this.stripOuterParens(listText), context).map(value => this.parseUqlFactorItem(value, context));
   }
 
   private parseUqlAnyFactorListItems(listText: string): UqlSkillListItem[] {
-    return this.splitUqlAnyFactorListValues(listText).map(value => this.parseUqlFactorItem(value));
+    return this.splitUqlAnyFactorListValues(this.stripOuterParens(listText)).map(value => this.parseUqlFactorItem(value));
   }
 
   private parseUqlFactorItem(rawValue: string, context?: UqlValueContext): UqlSkillListItem {
-    const trimmedValue = rawValue.trim();
+    const trimmedValue = this.stripOuterParens(rawValue.trim());
     const comparisonMatch = trimmedValue.match(/^(.*?)(?:\s*(>=|<=|!=|<>|==|=|>|<)\s*(\d+))\s*$/);
     const value = comparisonMatch ? comparisonMatch[1].trim() : trimmedValue;
     const operator = comparisonMatch?.[2] ? this.normalizeUqlComparisonOperator(comparisonMatch[2]) : undefined;
@@ -5854,7 +5898,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         depth = Math.max(0, depth - 1);
         continue;
       }
-      if (depth === 0 && /^and\b/i.test(expression.slice(index)) && !/[A-Za-z0-9_]/.test(expression[index - 1] || '')) {
+      if (depth === 0
+        && /^and\b/i.test(expression.slice(index))
+        && (!expression[index - 1] || /\s|\)/.test(expression[index - 1]))
+        && (!expression[index + 3] || /\s|\(/.test(expression[index + 3]))) {
         const clause = expression.slice(start, index).trim();
         if (clause) clauses.push(clause);
         index += 2;

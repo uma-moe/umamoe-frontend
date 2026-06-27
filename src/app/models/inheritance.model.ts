@@ -75,6 +75,8 @@ export interface InheritanceRecord {
   // V2 API additional fields
   win_count?: number;
   white_count?: number;
+  borrow_view_count?: number;
+  borrow_copy_count?: number;
   affinity_score?: number;
   follower_num?: number | null;
   last_updated?: string | null;
@@ -236,7 +238,7 @@ export interface InheritanceSearchFilters {
   verified?: boolean;
   verificationStatus?: string;
   minRating?: number;
-  sortBy?: 'submitted_at' | 'upvotes' | 'downvotes' | 'trainer_id' | 'verified' | 'submittedAt' | 'createdAt' | 'rating' | 'votes' | 'views' | 'totalStats' | 'speed' | 'stamina' | 'power' | 'guts' | 'wisdom' | 'win_count' | 'white_count' | 'score' | 'affinity_score';
+  sortBy?: 'trending' | 'submitted_at' | 'upvotes' | 'downvotes' | 'trainer_id' | 'verified' | 'submittedAt' | 'createdAt' | 'rating' | 'votes' | 'views' | 'totalStats' | 'speed' | 'stamina' | 'power' | 'guts' | 'wisdom' | 'win_count' | 'white_count' | 'score' | 'affinity_score';
   sortOrder?: 'asc' | 'desc';
 }
 export interface InheritanceSubmission {

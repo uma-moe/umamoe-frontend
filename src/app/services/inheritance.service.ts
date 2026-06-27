@@ -20,6 +20,8 @@ interface V3UnifiedAccountRecord {
   account_id: string;
   trainer_name: string;
   follower_num: number | null;
+  borrow_view_count: number;
+  borrow_copy_count: number;
   last_updated: string | null;
   inheritance: V3InheritanceRecord | null;
   support_card: V3SupportCardRecord | null;
@@ -68,6 +70,7 @@ interface V3SupportCardRecord {
 type BorrowInteractionType = 'view' | 'copy';
 
 export interface BorrowInteractionContext {
+  borrow_key?: string | null;
   inheritance_id?: number | null;
   support_card_id?: number | null;
   support_card_limit_break?: number | null;
@@ -78,6 +81,7 @@ export interface BorrowInteractionResponse {
   success: boolean;
   accepted: boolean;
   trainer_id: string;
+  borrow_key?: string;
   inheritance_id: number;
   support_card_id: number;
   action: BorrowInteractionType;
@@ -115,7 +119,7 @@ export class InheritanceService {
   private readonly searchApiUrl = '/search';
   private readonly borrowViewBatchDelayMs = 2000;
   private readonly borrowViewMaxBatchSize = 50;
-  private readonly borrowViewBatchUrl = '/api/tasks/borrow/views';
+  private readonly borrowViewBatchUrl = '/api/borrow/views';
   private searchResults$ = new BehaviorSubject<SearchResult<InheritanceRecord> | null>(null);
   private characters$ = new BehaviorSubject<UmaMusumeCharacter[]>([]);
   private borrowViewQueue = new Map<string, BorrowViewBatchItem>();
@@ -455,6 +459,8 @@ export class InheritanceService {
       right_win_saddles: inheritance.right_win_saddles,
       race_results: inheritance.race_results,
       follower_num: v3Record.follower_num,
+      borrow_view_count: v3Record.borrow_view_count ?? 0,
+      borrow_copy_count: v3Record.borrow_copy_count ?? 0,
       last_updated: v3Record.last_updated,
       // Map support card data
       support_card_id: v3Record.support_card?.support_card_id,
@@ -516,6 +522,7 @@ export class InheritanceService {
   queueBorrowView(trainerId: string, context: BorrowInteractionContext = {}): void {
     const item: BorrowViewBatchItem = {
       trainer_id: trainerId,
+      borrow_key: context.borrow_key ?? null,
       inheritance_id: context.inheritance_id ?? null,
       support_card_id: context.support_card_id ?? null,
       support_card_limit_break: context.support_card_limit_break ?? null,
@@ -545,7 +552,7 @@ export class InheritanceService {
     context: BorrowInteractionContext,
   ): Observable<BorrowInteractionResponse> {
     return this.http.post<BorrowInteractionResponse>(
-      `/api/tasks/borrow/${encodeURIComponent(trainerId)}/${action}`,
+      `/api/borrow/${encodeURIComponent(trainerId)}/${action}`,
       context
     ).pipe(
       catchError(error => {
@@ -554,6 +561,7 @@ export class InheritanceService {
           success: false,
           accepted: false,
           trainer_id: trainerId,
+          borrow_key: context.borrow_key ?? undefined,
           inheritance_id: context.inheritance_id ?? 0,
           support_card_id: context.support_card_id ?? 0,
           action,
@@ -637,6 +645,7 @@ export class InheritanceService {
   private borrowViewBatchKey(item: BorrowViewBatchItem): string {
     return [
       item.trainer_id,
+      item.borrow_key ?? '',
       item.inheritance_id ?? 0,
       item.support_card_id ?? 0,
       item.support_card_limit_break ?? '',
@@ -665,7 +674,7 @@ export class InheritanceService {
     copy_count: number;
     theoretical_copy_count: number;
   }> {
-    return this.http.get<any>(`/api/tasks/trainer/${trainerId}/status`)
+    return this.http.get<any>(`/api/borrow/trainer/${trainerId}/status`)
       .pipe(
         catchError(error => {
           console.error('Error getting trainer status:', error);
@@ -720,6 +729,7 @@ export class InheritanceService {
   // Map frontend sort options to backend sort fields
   private mapSortByToBackend(sortBy: string): string {
     const sortMapping: { [key: string]: string } = {
+      'trending': 'trending',
       'win_count': 'win_count',
       'white_count': 'white_count', 
       'score': 'parent_rank', // Map score to parent_rank in backend
@@ -727,6 +737,6 @@ export class InheritanceService {
       'follower_num': 'follower_num',
       'affinity_score': 'affinity_score'
     };
-    return sortMapping[sortBy] || 'win_count';
+    return sortMapping[sortBy] || 'trending';
   }
 }

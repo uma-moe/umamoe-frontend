@@ -241,6 +241,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
 
     private getBorrowInteractionContext(): BorrowInteractionContext {
         return {
+            borrow_key: this.buildBorrowKey(),
             inheritance_id: typeof this.record?.id === 'number' ? this.record.id : null,
             support_card_id: this.record?.support_card_id ?? null,
             support_card_limit_break: this.record?.limit_break_count ?? this.supportCardLimitBreak ?? null,
@@ -251,11 +252,76 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     private borrowInteractionKey(trainerId: string, context: BorrowInteractionContext): string {
         return [
             trainerId,
+            context.borrow_key ?? '',
             context.inheritance_id ?? 0,
             context.support_card_id ?? 0,
             context.support_card_limit_break ?? '',
             context.support_card_experience ?? '',
         ].join(':');
+    }
+
+    private buildBorrowKey(): string {
+        const parts: string[] = [];
+        const pushNumber = (value: number | null | undefined, fallback = 0): void => {
+            parts.push(String(Number.isFinite(value as number) ? value : fallback));
+        };
+        const pushArray = (values: readonly number[] | null | undefined): void => {
+            parts.push((values ?? []).join(','));
+        };
+
+        pushNumber(this.record?.main_parent_id);
+        pushNumber(this.record?.parent_left_id);
+        pushNumber(this.record?.parent_right_id);
+        pushNumber(this.record?.parent_rank);
+        pushNumber(this.record?.parent_rarity);
+        pushArray(this.record?.blue_sparks);
+        pushArray(this.record?.pink_sparks);
+        pushArray(this.record?.green_sparks);
+        pushArray(this.record?.white_sparks);
+        pushNumber(this.record?.win_count);
+        pushNumber(this.record?.white_count);
+        pushNumber(this.record?.main_blue_factors);
+        pushNumber(this.record?.main_pink_factors);
+        pushNumber(this.record?.main_green_factors);
+        pushArray(this.record?.main_white_factors);
+        pushNumber(this.record?.main_white_count);
+        pushNumber(this.record?.left_blue_factors);
+        pushNumber(this.record?.left_pink_factors);
+        pushNumber(this.record?.left_green_factors);
+        pushArray(this.record?.left_white_factors);
+        pushNumber(this.record?.left_white_count);
+        pushNumber(this.record?.right_blue_factors);
+        pushNumber(this.record?.right_pink_factors);
+        pushNumber(this.record?.right_green_factors);
+        pushArray(this.record?.right_white_factors);
+        pushNumber(this.record?.right_white_count);
+        pushArray(this.record?.main_win_saddles);
+        pushArray(this.record?.left_win_saddles);
+        pushArray(this.record?.right_win_saddles);
+        pushArray(this.record?.race_results);
+        pushNumber(this.record?.support_card_id);
+        pushNumber(this.record?.limit_break_count ?? this.supportCardLimitBreak, -1);
+        pushNumber(this.record?.support_card_experience, -1);
+
+        return `bk1:${this.fastBorrowHash64(parts.join('|'))}`;
+    }
+
+    private fastBorrowHash64(input: string): string {
+        let h1 = 0xdeadbeef >>> 0;
+        let h2 = 0x41c6ce57 >>> 0;
+
+        for (let index = 0; index < input.length; index++) {
+            const value = input.charCodeAt(index) & 0xff;
+            h1 = Math.imul(h1 ^ value, 2654435761) >>> 0;
+            h2 = Math.imul(h2 ^ value, 1597334677) >>> 0;
+        }
+
+        h1 = (Math.imul(h1 ^ (h1 >>> 16), 2246822507)
+            ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)) >>> 0;
+        h2 = (Math.imul(h2 ^ (h2 >>> 16), 2246822507)
+            ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)) >>> 0;
+
+        return `${h2.toString(16).padStart(8, '0')}${h1.toString(16).padStart(8, '0')}`;
     }
 
     private hasRecentBorrowInteraction(action: 'view' | 'copy', key: string, intervalMs: number): boolean {
@@ -324,7 +390,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         }
 
         const request = nextBookmarked
-            ? this.bookmarkService.addBookmark(id)
+            ? this.bookmarkService.addBookmark(id, this.getBorrowInteractionContext())
             : this.bookmarkService.removeBookmark(id);
 
         request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({

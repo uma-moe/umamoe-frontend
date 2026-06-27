@@ -294,6 +294,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
             white_sparks: inh.white_sparks,
             win_count: inh.win_count,
             white_count: inh.white_count,
+            borrow_view_count: profile.borrow_stats?.view_count ?? 0,
+            borrow_copy_count: profile.borrow_stats?.copy_count ?? 0,
             affinity_score: inh.affinity_score ?? undefined,
             main_blue_factors: inh.main_blue_factors,
             main_pink_factors: inh.main_pink_factors,

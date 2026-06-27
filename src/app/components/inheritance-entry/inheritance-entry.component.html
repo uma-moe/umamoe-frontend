@@ -601,6 +601,16 @@
 
   <!-- Record Footer -->
   <div class="record-footer" *ngIf="showDatabaseHeader && isV2Record()">
+    <div class="borrow-stats" *ngIf="record.borrow_view_count !== undefined || record.borrow_copy_count !== undefined">
+      <span class="borrow-stat" matTooltip="Borrow views">
+        <mat-icon>visibility</mat-icon>
+        <span class="borrow-stat-value mono">{{ record.borrow_view_count ?? 0 | localeNumber }}</span>
+      </span>
+      <span class="borrow-stat copy-stat" matTooltip="Trainer ID copies">
+        <mat-icon>content_copy</mat-icon>
+        <span class="borrow-stat-value mono">{{ record.borrow_copy_count ?? 0 | localeNumber }}</span>
+      </span>
+    </div>
     <span class="footer-meta verified-meta" matTooltip="Verified record">
       <mat-icon class="verified-icon">verified</mat-icon>
       <span class="verified-text">Verified</span>

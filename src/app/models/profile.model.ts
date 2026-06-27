@@ -135,6 +135,7 @@ export interface ProfileSupportCard {
 
 export interface BorrowStats {
   trainer_id: string;
+  borrow_key: string;
   inheritance_id: number;
   support_card_id: number;
   view_count: number;

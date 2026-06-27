@@ -399,7 +399,7 @@ export class SupportCardService {
   // Track when a trainer ID is copied (for automatic re-checking)
   trackTrainerCopy(trainerId: string): Observable<{ success: boolean; copy_count: number; task_created: boolean }> {
     return this.http.post<{ success: boolean; copy_count: number; task_created: boolean }>(
-      `${this.apiUrl}/tasks/track-copy/${trainerId}`,
+      `${this.apiUrl}/borrow/track-copy/${trainerId}`,
       {}
     ).pipe(
       catchError(error => {
@@ -420,7 +420,7 @@ export class SupportCardService {
     copy_count: number;
     theoretical_copy_count: number;
   }> {
-    return this.http.get<any>(`${this.apiUrl}/tasks/trainer/${trainerId}/status`)
+    return this.http.get<any>(`${this.apiUrl}/borrow/trainer/${trainerId}/status`)
       .pipe(
         catchError(error => {
           console.error('Error getting trainer status:', error);

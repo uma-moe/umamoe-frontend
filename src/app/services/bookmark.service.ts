@@ -49,7 +49,15 @@ interface BookmarkInheritanceResponse {
     account_id: string;
     support_card_id: number;
     limit_break_count?: number | null;
+    experience: number;
   } | null;
+}
+
+export interface BookmarkSnapshotContext {
+  borrow_key?: string | null;
+  support_card_id?: number | null;
+  support_card_limit_break?: number | null;
+  support_card_experience?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -100,8 +108,14 @@ export class BookmarkService {
     );
   }
 
-  addBookmark(accountId: string): Observable<void> {
-    return this.http.post<void>(`${environment.apiUrl}/api/auth/bookmarks/${accountId}`, {}).pipe(
+  addBookmark(accountId: string, context?: BookmarkSnapshotContext): Observable<void> {
+    const body = {
+      borrow_key: context?.borrow_key ?? undefined,
+      support_card_id: context?.support_card_id ?? undefined,
+      support_card_limit_break: context?.support_card_limit_break ?? undefined,
+      support_card_experience: context?.support_card_experience ?? undefined,
+    };
+    return this.http.post<void>(`${environment.apiUrl}/api/auth/bookmarks/${accountId}`, body).pipe(
       tap(() => {
         this.bookmarkedIds.add(accountId);
       }),
@@ -212,6 +226,7 @@ export class BookmarkService {
       is_stale: item.is_stale ?? false,
       support_card_id: item.support_card?.support_card_id,
       limit_break_count: item.support_card?.limit_break_count ?? undefined,
+      support_card_experience: item.support_card?.experience,
       upvotes: 0,
       downvotes: 0,
       user_vote: null,

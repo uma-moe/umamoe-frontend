@@ -81,8 +81,9 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   currentPage = 0;
   totalRecords = 0; // Total records from the search result
   // Sorting properties
-  currentSortBy = 'affinity_score';
+  currentSortBy = 'trending';
   currentSortOrder: 'asc' | 'desc' = 'desc';
+  private sortSelectionMode: 'auto' | 'manual' = 'auto';
   includeMaxFollowers = false;
   splitSparksMode = false;
   sparkShowPerRun = false;
@@ -220,6 +221,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   }
 
   sortOptions = [
+    { value: 'trending', label: 'Trending' },
     { value: 'affinity_score', label: 'Affinity' },
     { value: 'win_count', label: 'G1 Wins' },
     { value: 'white_count', label: 'White Count' },
@@ -383,6 +385,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
 
     this.currentAdvancedFilters = effectiveParams;
     this.advancedSearchSignature = nextSearchSignature;
+    this.applyAutomaticSortForFilters();
     this.trackAdvancedFilterChange(
       effectiveParams,
       isP2OnlyChange ? 'p2_context' : (hasPendingPage ? 'url_restore' : 'manual'),
@@ -430,6 +433,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     if (!environment.production) {
     }
     this.currentFilters = filters;
+    this.applyAutomaticSortForFilters();
     this.trackLegacyFilterChange(filters);
     this.currentPage = 0; // Reset to first page
     this.clearRecords();
@@ -456,6 +460,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   }
   onSortChanged(event: any) {
     this.currentSortBy = event.value;
+    this.sortSelectionMode = 'manual';
     this.trackDatabaseEvent('sort_inheritance_database', {
       sort_by: this.currentSortBy,
       active_tab: this.activeTab,
@@ -472,6 +477,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       this.pendingSearch = true;
       return;
     }
+    this.applyAutomaticSortForFilters();
     // If loading more (pagination), prevent duplicates
     if (this.currentPage > 0 && (this.loading || this.loadingMore)) {
       return;
@@ -885,16 +891,69 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     this._visiblePagesCache = { page: cur, total, result };
     return result;
   }
-  hasActiveFilters(): boolean {
-    if (!this.currentFilters && !this.trainerIdFilter) return false;
+
+  private applyAutomaticSortForFilters(): void {
+    if (this.sortSelectionMode !== 'auto') return;
+    this.currentSortBy = this.hasFiltersForAffinityDefault() ? 'affinity_score' : 'trending';
+  }
+
+  private hasFiltersForAffinityDefault(): boolean {
     return !!(
       this.trainerIdFilter ||
-      this.currentFilters?.selectedCharacterId ||
-      (this.currentFilters?.mainStats && this.currentFilters.mainStats.length > 0) ||
-      (this.currentFilters?.aptitudes && this.currentFilters.aptitudes.length > 0) ||
-      (this.currentFilters?.skills && this.currentFilters.skills.length > 0) ||
-      (this.currentFilters?.whiteSparks && this.currentFilters.whiteSparks.length > 0)
+      this.hasMeaningfulAdvancedFilters(this.currentAdvancedFilters) ||
+      this.hasMeaningfulLegacyFilters(this.currentFilters)
     );
+  }
+
+  private hasMeaningfulAdvancedFilters(params: UnifiedSearchParams | null): boolean {
+    if (!params) return false;
+    const ignoredKeys = new Set([
+      'page',
+      'limit',
+      'search_type',
+      'sort_by',
+      'sort_order',
+      'uql_highlight',
+    ]);
+
+    return Object.entries(params).some(([key, value]) => {
+      if (ignoredKeys.has(key)) return false;
+      if (key === 'max_follower_num') {
+        return typeof value === 'number' && value !== 999 && value !== 1000;
+      }
+      return this.hasMeaningfulFilterValue(value);
+    });
+  }
+
+  private hasMeaningfulFilterValue(value: unknown): boolean {
+    if (value === null || value === undefined) return false;
+    if (Array.isArray(value)) return value.some(item => this.hasMeaningfulFilterValue(item));
+    if (typeof value === 'object') {
+      return Object.values(value as Record<string, unknown>).some(item => this.hasMeaningfulFilterValue(item));
+    }
+    if (typeof value === 'string') return value.trim().length > 0;
+    if (typeof value === 'number') return Number.isFinite(value) && value > 0;
+    return value === true;
+  }
+
+  private hasMeaningfulLegacyFilters(filters: InheritanceFilters | null): boolean {
+    if (!filters) return false;
+    const hasSparkRows = (rows?: Array<{ type?: string; level?: number }>) =>
+      rows?.some(row => !!row.type && !!row.level && row.level > 0) ?? false;
+    return !!(
+      filters.selectedCharacterId ||
+      hasSparkRows(filters.mainStats) ||
+      hasSparkRows(filters.aptitudes) ||
+      hasSparkRows(filters.skills) ||
+      hasSparkRows(filters.whiteSparks) ||
+      (filters.parentRank && filters.parentRank > 0) ||
+      (filters.winCount && filters.winCount > 0) ||
+      (filters.whiteCount && filters.whiteCount > 0)
+    );
+  }
+
+  hasActiveFilters(): boolean {
+    return this.hasFiltersForAffinityDefault();
   }
   hasOptionalWhiteFilters(): boolean {
     if (!this.currentAdvancedFilters) return false;
@@ -905,7 +964,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   }
   getSortLabel(): string {
     const option = this.sortOptions.find(o => o.value === this.currentSortBy);
-    return option?.label || 'Affinity';
+    return option?.label || 'Trending';
   }
   getStarArray(rating: number): number[] {
     if (!rating || rating < 0) return [];
@@ -1134,6 +1193,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   }
   private mapSortByToBackend(sortBy: string): InheritanceSearchFilters['sortBy'] {
     const sortMapping: { [key: string]: InheritanceSearchFilters['sortBy'] } = {
+      'trending': 'trending',
       'win_count': 'win_count',
       'white_count': 'white_count',
       'score': 'score',
@@ -1144,7 +1204,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       'verified': 'verified',
       'affinity_score': 'affinity_score'
     };
-    return sortMapping[sortBy] || 'win_count';
+    return sortMapping[sortBy] || 'trending';
   }
   // Support card helper methods
   getSupportCardInfo(supportCardId: number): Promise<SupportCardShort | undefined> {
@@ -1352,6 +1412,11 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     return records.sort((a, b) => {
       let va: number, vb: number;
       switch (sortBy) {
+        case 'trending': {
+          const copyDelta = (b.borrow_copy_count ?? 0) - (a.borrow_copy_count ?? 0);
+          if (copyDelta !== 0) return copyDelta;
+          return (b.borrow_view_count ?? 0) - (a.borrow_view_count ?? 0);
+        }
         case 'affinity_score': va = a.affinity_score ?? 0; vb = b.affinity_score ?? 0; break;
         case 'win_count': va = a.win_count ?? 0; vb = b.win_count ?? 0; break;
         case 'white_count': va = a.white_count ?? 0; vb = b.white_count ?? 0; break;
