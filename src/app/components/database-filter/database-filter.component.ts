@@ -3108,7 +3108,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const queryForCompilation = this.stripLeadingWhere(queryWithoutDirectives);
     if (!queryForCompilation) return '';
     const arrayOperatorCompiled = this.compileFriendlyArrayOperators(queryForCompilation);
-    const factorSumCompiled = this.compileFriendlyFactorSumComparisons(arrayOperatorCompiled);
+    const scalarArithmeticCompiled = this.compileFriendlyScalarArithmeticFactorAliases(arrayOperatorCompiled);
+    const factorSumCompiled = this.compileFriendlyFactorSumComparisons(scalarArithmeticCompiled);
     const scopedSparkCompiled = this.compileFriendlyScopedSparkComparisons(factorSumCompiled);
     const scopedSparkCategoryCompiled = this.compileFriendlyScopedSparkCategoryComparisons(scopedSparkCompiled);
     const sparkCategoryCompiled = this.compileFriendlySparkCategoryComparisons(scopedSparkCategoryCompiled);
@@ -3577,6 +3578,61 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       });
       return compiledSegment;
     });
+  }
+
+  private compileFriendlyScalarArithmeticFactorAliases(query: string): string {
+    const factors = this.getScopedUqlNamedFactors()
+      .flatMap(factor => [factor.label, ...factor.aliases]
+        .filter(Boolean)
+        .map(alias => ({ alias, factor })))
+      .sort((left, right) => right.alias.length - left.alias.length);
+
+    return this.replaceOutsideStrings(query, segment => {
+      let compiledSegment = segment;
+      for (const { alias, factor } of factors) {
+        const aliasPattern = this.escapeRegExp(alias).replace(/\s+/g, '\\s+');
+        const pattern = new RegExp(`(^|[^A-Za-z0-9_])(${aliasPattern})(?=[^A-Za-z0-9_]|$)`, 'gi');
+        compiledSegment = compiledSegment.replace(pattern, (match: string, leadingText: string, _aliasText: string, offset: number) => {
+          const aliasStart = offset + leadingText.length;
+          const aliasEnd = offset + match.length;
+          if (!this.isUqlArithmeticScalarAliasContext(compiledSegment, aliasStart, aliasEnd)) {
+            return match;
+          }
+          return `${leadingText}spark_sum(${this.getGlobalSkillFieldForContext(factor.valueContext)}, ${factor.factorId})`;
+        });
+      }
+      return compiledSegment;
+    });
+  }
+
+  private isUqlArithmeticScalarAliasContext(segment: string, aliasStart: number, aliasEnd: number): boolean {
+    const leftBoundary = this.findUqlScalarAliasWindowBoundary(segment, aliasStart, -1);
+    const rightBoundary = this.findUqlScalarAliasWindowBoundary(segment, aliasEnd, 1);
+    const window = segment.slice(leftBoundary, rightBoundary);
+    return /[+*/%]|\bmod\b/i.test(window);
+  }
+
+  private findUqlScalarAliasWindowBoundary(segment: string, start: number, direction: -1 | 1): number {
+    if (direction < 0) {
+      for (let index = start - 1; index >= 0; index--) {
+        if (this.isUqlScalarAliasBoundaryAt(segment, index, direction)) return index + 1;
+      }
+      return 0;
+    }
+    for (let index = start; index < segment.length; index++) {
+      if (this.isUqlScalarAliasBoundaryAt(segment, index, direction)) return index;
+    }
+    return segment.length;
+  }
+
+  private isUqlScalarAliasBoundaryAt(segment: string, index: number, direction: -1 | 1): boolean {
+    const char = segment[index];
+    if (char === ',' || char === ';') return true;
+    if (/[<>=!]/.test(char)) return true;
+    const remaining = direction < 0 ? segment.slice(0, index + 1) : segment.slice(index);
+    return direction < 0
+      ? /\b(?:where|and|or|not)\s*$/i.test(remaining)
+      : /^\s*\b(?:and|or)\b/i.test(remaining);
   }
 
   private compileFriendlyFactorSumComparisons(query: string): string {
