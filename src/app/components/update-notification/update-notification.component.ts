@@ -4,7 +4,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 // Increment this number whenever you want to show the update notification again
-export const CURRENT_UPDATE_VERSION = 8;
+export const CURRENT_UPDATE_VERSION = 9;
 export interface ChangeItem {
     text: string;
     link?: string; // Internal route link
@@ -23,6 +23,65 @@ export interface UpdateEntry {
 }
 // Define your updates here - newest first
 export const UPDATE_LOG: UpdateEntry[] = [
+  {
+    title: 'Search & UQL Update',
+    date: '2026-06-28',
+    categories: [
+      {
+        category: 'major',
+        label: 'UQL',
+        icon: 'star',
+        color: '#ffc107',
+        items: [
+          { text: 'optional white in (February S., priority = 0)', link: '/database' },
+          { text: 'lineage white in (Ramp Up, priority = 2)' },
+          { text: '0 is highest priority; higher numbers tie-break later' },
+          { text: 'Arithmetic: (Stamina + Power + Wit) >= 7; Wins % 2 = 0' },
+          { text: 'Dirt = 0 means missing Dirt; == now works' },
+          { text: 'Owned legacy: owned legacy = [] + affinity >= 150' },
+        ]
+      },
+      {
+        category: 'improvement',
+        label: 'Lineage Picker',
+        icon: 'upgrade',
+        color: '#ff9800',
+        items: [
+          { text: 'Remembers search, filters, tab/account, and sort', link: '/tools/lineage-planner' },
+          { text: 'Spark, factor, scope, and star settings persist' },
+          { text: 'Refresh clears memory; other pickers open fresh' },
+        ]
+      },
+      {
+        category: 'minor',
+        label: 'Borrow Search',
+        icon: 'add_circle',
+        color: '#64b5f6',
+        items: [
+          { text: 'View/copy stats shown; trainer ID copy count updates', link: '/database' },
+          { text: 'Trending sort added; default only without filters' },
+          { text: 'Spark-filtered searches still default to affinity' },
+        ]
+      },
+      {
+        category: 'bugfix',
+        label: 'Sharing & Fixes',
+        icon: 'bug_report',
+        color: '#4caf50',
+        items: [
+          { text: 'Prio controls for Preferred and Lineage whites', link: '/database' },
+          { text: 'Advanced filters generate cleaner readable UQL' },
+          { text: 'optional_white(...) links restore as readable UQL' },
+          { text: 'Shared URLs keep selected legacy context safely' },
+          { text: 'Manual, partner, and bookmark picks share safer' },
+          { text: 'Invalid UQL highlights errors; names handle punctuation' },
+          { text: 'Owned legacy is faster and avoids hidden white filters' },
+          { text: 'Manual Unknown legacy and UQL sync fixes' },
+          { text: 'Bookmark refresh and GP spark highlights fixed' },
+        ]
+      }
+    ]
+  },
   {
     title: 'June Update - Search & Veteran Polish',
     date: '2026-06-01',
