@@ -842,6 +842,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (normalizedUql) state.uql = normalizedUql;
     if (this.filterMode === 'uql') {
       this.addSerializedP2Context(state);
+      if (Object.keys(state).length === 0) {
+        return '';
+      }
       return this.encodeBase64Utf8(JSON.stringify(state));
     }
     // Factors
@@ -910,6 +913,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.addSerializedP2Context(state);
     if (this.selectedVeteran && this.selectedAccountId && this.selectedVeteran.member_id != null) {
       state.vet = [this.selectedAccountId, this.selectedVeteran.member_id];
+    }
+    if (Object.keys(state).length === 0) {
+      return '';
     }
     return this.encodeBase64Utf8(JSON.stringify(state));
   }

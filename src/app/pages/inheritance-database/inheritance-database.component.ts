@@ -398,7 +398,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { filters: serialized },
+      queryParams: { filters: serialized || null },
       queryParamsHandling: 'merge',
       replaceUrl: true
     });
@@ -924,6 +924,9 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       if (ignoredKeys.has(key)) return false;
       if (key === 'max_follower_num') {
         return typeof value === 'number' && value !== 999 && value !== 1000;
+      }
+      if (key === 'parent_rank') {
+        return typeof value === 'number' && value > 1;
       }
       return this.hasMeaningfulFilterValue(value);
     });
