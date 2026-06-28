@@ -375,7 +375,8 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     }
     const effectiveParams = this.withSelectedVeteranP2Params(params);
     if (this.advancedFilter?.currentUqlRequiresOwnedLegacyParams()
-      && (!effectiveParams.p2_main_chara_id || !effectiveParams.p2_win_saddle?.length)) {
+      && !effectiveParams.p2_main_chara_id
+      && !effectiveParams.p2_win_saddle?.length) {
       return;
     }
     const previousSearchSignature = this.advancedSearchSignature;
@@ -392,7 +393,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     );
     
     // Update URL
-    const serialized = this.advancedFilter.getSerializedState();
+    const serialized = this.advancedFilter.getSerializedState({ shareable: true });
     // Only update URL if serialized string is not empty/default (optional optimization)
     
     this.router.navigate([], {
@@ -518,7 +519,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         
         optionalWhiteSparks: af.optional_white_sparks,
         optionalMainWhiteSparks: af.optional_main_white_sparks,
+        optionalWhitePriorities: af.optional_white_priorities,
+        optionalMainWhitePriorities: af.optional_main_white_priorities,
         lineageWhite: af.lineage_white,
+        lineageWhitePriorities: af.lineage_white_priorities,
         mainLegacyWhite: af.main_legacy_white,
         leftLegacyWhite: af.left_legacy_white,
         rightLegacyWhite: af.right_legacy_white,
@@ -959,8 +963,19 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     if (!this.currentAdvancedFilters) return false;
     return !!(
       (this.currentAdvancedFilters.optional_white_sparks && this.currentAdvancedFilters.optional_white_sparks.length > 0) ||
-      (this.currentAdvancedFilters.optional_main_white_sparks && this.currentAdvancedFilters.optional_main_white_sparks.length > 0)
+      (this.currentAdvancedFilters.optional_main_white_sparks && this.currentAdvancedFilters.optional_main_white_sparks.length > 0) ||
+      (this.currentAdvancedFilters.lineage_white && this.currentAdvancedFilters.lineage_white.length > 0)
     );
+  }
+  hasMultipleWhitePriorityGroups(): boolean {
+    const priorities = [
+      ...(this.currentAdvancedFilters?.optional_white_priorities ?? []),
+      ...(this.currentAdvancedFilters?.optional_main_white_priorities ?? []),
+      ...(this.currentAdvancedFilters?.lineage_white_priorities ?? []),
+    ]
+      .map(entry => Number(String(entry).split(':')[1] ?? 0))
+      .filter(value => Number.isFinite(value));
+    return new Set(priorities).size > 1;
   }
   getSortLabel(): string {
     const option = this.sortOptions.find(o => o.value === this.currentSortBy);

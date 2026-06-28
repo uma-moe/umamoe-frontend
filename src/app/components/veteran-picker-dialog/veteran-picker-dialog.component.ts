@@ -1015,6 +1015,8 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     const ownGreen = toId(p.main_green_factors);
     const ownWhite = p.main_white_factors || [];
     const v: VeteranMember = {
+      share_source: 'partner',
+      share_inheritance_id: p.id,
       trainer_id: p.account_id,
       distance_type: null,
       member_id: null,
@@ -1348,6 +1350,8 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     const ownWhite = record.main_white_factors || [];
 
     const vet: VeteranMember = {
+      share_source: 'bookmark',
+      share_inheritance_id: record.id,
       card_id: record.main_parent_id ?? null,
       trained_chara_id: record.main_parent_id ? Math.floor(record.main_parent_id / 100) : null,
       win_saddle_id_array: record.main_win_saddles || [],
@@ -1645,6 +1649,8 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
 
   selectManualEntry(entry: StoredManualEntry): void {
     const vet: VeteranMember = {
+      share_source: 'manual',
+      share_local_id: entry.id,
       card_id: entry.mainCardId,
       trained_chara_id: entry.mainCardId ? Math.floor(entry.mainCardId / 100) : null,
       factors: entry.ownSparkIds,

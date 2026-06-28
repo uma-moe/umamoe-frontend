@@ -336,6 +336,10 @@
     line-height: 17px;
   }
 
+  &.uql-token-chip-no-image {
+    padding-left: 5px;
+  }
+
   &.uql-context-blue {
     border-color: rgba(100, 181, 246, 0.24);
     background: rgba(100, 181, 246, 0.08);
@@ -798,6 +802,10 @@
       overflow: visible;
       text-overflow: clip;
       line-height: inherit;
+    }
+
+    &.uql-token-chip-no-image {
+      padding-left: 5px;
     }
 
     .uql-token-image {

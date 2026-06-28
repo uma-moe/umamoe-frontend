@@ -137,7 +137,9 @@
       <!-- Optional Whites Sorting Notice -->
       <div *ngIf="hasOptionalWhiteFilters()" class="sorting-notice">
         <mat-icon>info</mat-icon>
-        <span>Results are sorted by preferred white factor matches first, then by {{ getSortLabel() }}</span>
+        <span>
+          Results are sorted by preferred white priority groups first<span *ngIf="hasMultipleWhitePriorityGroups()"> (P0, then P1...)</span>, then by {{ getSortLabel() }}
+        </span>
       </div>
 
       <!-- Loading State -->

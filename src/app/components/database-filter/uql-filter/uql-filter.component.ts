@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { UqlCodeEditorComponent, UqlCompletionResult } from './uql-code-editor.component';
 
-type UqlValidationState = 'empty' | 'valid' | 'incomplete' | 'invalid';
+export type UqlValidationState = 'empty' | 'valid' | 'incomplete' | 'invalid';
 export type UqlSuggestionKind = 'field' | 'operator' | 'function' | 'keyword' | 'value' | 'snippet' | 'punctuation';
 export type UqlValueContext = 'character' | 'legacy' | 'support-card' | 'race-saddle' | 'rank' | 'blue-factor' | 'pink-factor' | 'green-factor' | 'white-factor' | 'number' | 'text';
 export type UqlScopeContext = 'main' | 'gp1' | 'gp2' | 'any-gp';
@@ -26,6 +26,13 @@ export interface UqlHighlightSegment {
   rarityClass?: string;
   badgeText?: string;
   badgeClass?: string;
+}
+
+export interface UqlValidationIssue {
+  from: number;
+  to: number;
+  message: string;
+  state: Extract<UqlValidationState, 'incomplete' | 'invalid'>;
 }
 
 export interface UqlSnippet {
@@ -91,6 +98,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   }
   @Input() validationState: UqlValidationState = 'empty';
   @Input() validationMessage = '';
+  @Input() validationIssue: UqlValidationIssue | null = null;
   @Input() snippets: UqlSnippet[] = [];
   private _suggestions: UqlSuggestion[] = [];
   @Input()
@@ -127,6 +135,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     this.createDocSnippet('Speed >= 6'),
     this.createDocSnippet('Dirt = 0'),
     this.createDocSnippet('(Stamina + Power + Wit) >= 7'),
+    this.createDocSnippet('Wins % 2 = 0'),
     this.createDocSnippet('Blue stars >= 9')
   ];
   protected readonly specificSlotDocSnippets = [
@@ -233,6 +242,12 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     const range = this.getCompletionRangeForSuggestions(text, pos, suggestions);
     return { from: range.start, to: range.end, options: suggestions };
   };
+
+  protected isChipSegment(segment: UqlHighlightSegment): boolean {
+    if (segment.kind !== 'identifier') return false;
+    if (segment.imageUrl || segment.valueContext === 'race-saddle' || segment.valueContext === 'legacy') return true;
+    return !!segment.valueContext?.endsWith('-factor') && (segment.atomic || !!segment.title || !!segment.displayText);
+  }
 
   onEditorValueChange(next: string): void {
     const value = this.stripFixedWhere(next || '');
@@ -990,7 +1005,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   }
 
   // ---- Syntax highlighting overlay ----
-  private readonly highlightKeywords = new Set(['where', 'and', 'or', 'not', 'in', 'between', 'like', 'ilike', 'is', 'null', 'true', 'false', 'has', 'all', 'any']);
+  private readonly highlightKeywords = new Set(['where', 'and', 'or', 'not', 'in', 'between', 'like', 'ilike', 'mod', 'is', 'null', 'true', 'false', 'has', 'all', 'any']);
   private readonly highlightFunctions = new Set([
     'contains', 'overlaps', 'has_all', 'contains_all',
     'optional_white', 'optional_main_white', 'optional_any_white', 'lineage_white'
@@ -1173,7 +1188,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
         continue;
       }
       // numbers
-      if (/[0-9]/.test(c) || (c === '-' && /[0-9]/.test(text[i + 1] ?? ''))) {
+      if (/[0-9]/.test(c)) {
         let j = i + 1;
         while (j < len && /[0-9.]/.test(text[j])) j++;
         push('number', text.slice(i, j), i);
@@ -1200,7 +1215,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
         i += 2;
         continue;
       }
-      if (c === '=' || c === '<' || c === '>') {
+      if (c === '=' || c === '<' || c === '>' || c === '+' || c === '-' || c === '*' || c === '/' || c === '%') {
         push('operator', c, i);
         i++;
         continue;
@@ -1294,6 +1309,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       return this.getKnownSuggestionMatchAt(text, index, this.knownRankValueCandidates, context);
     }
     if (context?.endsWith('-factor')) {
+      if (this.isWhiteScoringParameterAt(text, index)) return null;
       const match = this.getKnownSuggestionMatchAt(text, index, this.knownFactorValueCandidates, context, matchContext.allowAnyFactorContext);
       if (/[0-9]/.test(text[index] || '') && !matchContext.allowAnyFactorContext && match && /[^0-9]/.test(match.text)) return match;
       if (/[0-9]/.test(text[index] || '') && !matchContext.allowAnyFactorContext) return null;
@@ -1309,6 +1325,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   private getKnownNumericValueMatchAt(text: string, index: number): { text: string; displayText?: string; suggestion: UqlSuggestion } | null {
     if (!/[0-9]/.test(text[index] || '')) return null;
     const matchContext = this.getCachedValueMatchContext(text, index);
+    if (matchContext.context?.endsWith('-factor') && this.isWhiteScoringParameterAt(text, index)) return null;
     if (!matchContext.context?.endsWith('-factor') || !matchContext.inFactorArrayList) return null;
     let end = index + 1;
     while (end < text.length && /[0-9]/.test(text[end])) end++;
@@ -1323,6 +1340,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (this.isBooleanOperatorAfterCompletePredicate(text, index)) return null;
     const context = this.getValueContext(text.slice(0, index));
     if (!context || context === 'number' || context === 'text') return null;
+    if (context.endsWith('-factor') && this.isWhiteScoringParameterAt(text, index)) return null;
     const end = this.getCurrentValueEnd(text, index);
     const valueText = text.slice(index, end).trimEnd();
     if (!valueText || /^[,)]/.test(valueText)) return null;
@@ -1645,6 +1663,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   private arrayValueSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
     const matchContext = this.getValueMatchContext(prefix);
     const context = matchContext.context;
+    if (this.isWhiteScoringParameterPrefix(prefix)) return [];
     if (!context?.endsWith('-factor') || !matchContext.inFactorArrayList) return [];
     return this.suggestions.filter(suggestion => suggestion.kind === 'value' && this.matchesValueContext(suggestion.valueContext, context, matchContext.allowAnyFactorContext));
   }
@@ -1706,7 +1725,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   }
 
   private whiteScoringSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
-    if (!this.isInsideWhiteScoringFunction(prefix)) return [];
+    if (this.getWhiteScoringContext(this.getCurrentClausePrefix(prefix)) !== 'skill') return [];
     return this.suggestions.filter(suggestion => suggestion.kind === 'value' && suggestion.valueContext === 'white-factor');
   }
 
@@ -1850,6 +1869,12 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       { label: '<=', insertText: '<= ', kind: 'operator', detail: 'At most' },
       { label: '>', insertText: '> ', kind: 'operator', detail: 'Greater than' },
       { label: '<', insertText: '< ', kind: 'operator', detail: 'Less than' },
+      { label: '+', insertText: '+ ', kind: 'operator', detail: 'Add another numeric expression' },
+      { label: '-', insertText: '- ', kind: 'operator', detail: 'Subtract another numeric expression' },
+      { label: '*', insertText: '* ', kind: 'operator', detail: 'Multiply by another numeric expression' },
+      { label: '/', insertText: '/ ', kind: 'operator', detail: 'Integer-divide by another numeric expression' },
+      { label: '%', insertText: '% ', kind: 'operator', detail: 'Modulo remainder' },
+      { label: 'mod', insertText: 'mod ', kind: 'operator', detail: 'Modulo remainder' },
       { label: 'between', insertText: 'between ', kind: 'operator', detail: 'Range a between b' },
       { label: 'in (...)', insertText: 'in ()', kind: 'operator', detail: 'Include values', cursorOffset: -1 },
       { label: 'not in (...)', insertText: 'not in ()', kind: 'operator', detail: 'Exclude values', cursorOffset: -1 },
@@ -1869,13 +1894,13 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
 
   private isAfterCompletePredicate(trimmedPrefix: string): boolean {
     if (!trimmedPrefix) return false;
-    if (/(?:\bwhere\b|\band\b|\bor\b|\bnot\b|\bin\b|\bbetween\b|\blike\b|\bilike\b|[,(]|=|!=|<>|<=|>=|<|>)$/i.test(trimmedPrefix)) return false;
+    if (/(?:\bwhere\b|\band\b|\bor\b|\bnot\b|\bin\b|\bbetween\b|\blike\b|\bilike\b|\bmod\b|[,(+\-*\/%]|=|!=|<>|<=|>=|<|>)$/i.test(trimmedPrefix)) return false;
     return /(?:\d|'|"|\)|\])$/.test(trimmedPrefix) || /[A-Za-z\u00C0-\uFFFF]$/.test(trimmedPrefix);
   }
 
   private isAfterCompleteLiteralPredicate(trimmedPrefix: string): boolean {
     if (!trimmedPrefix) return false;
-    if (/(?:\bwhere\b|\band\b|\bor\b|\bnot\b|\bin\b|\bbetween\b|\blike\b|\bilike\b|[,(]|=|!=|<>|<=|>=|<|>)$/i.test(trimmedPrefix)) return false;
+    if (/(?:\bwhere\b|\band\b|\bor\b|\bnot\b|\bin\b|\bbetween\b|\blike\b|\bilike\b|\bmod\b|[,(+\-*\/%]|=|!=|<>|<=|>=|<|>)$/i.test(trimmedPrefix)) return false;
     return /(?:\d|'|"|\)|\])$/.test(trimmedPrefix);
   }
 
@@ -2146,6 +2171,8 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
 
   private isArrayFactorValuePrefix(prefix: string): boolean {
     const currentClause = this.getCurrentClausePrefix(prefix);
+    const whiteScoringContext = this.getWhiteScoringContext(currentClause);
+    if (whiteScoringContext) return whiteScoringContext === 'skill';
     return /(?:contains|overlaps|has_all|contains_all)\s*\(\s*[^,()]+\s*,\s*(?:\([^)]*)?[^)]*$/i.test(currentClause)
       || /[^()]+?\s+(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s*(?:\([^)]*)?[^)]*$/i.test(currentClause)
       || /\b(?:not\s+in|in)\s*\([^)]*$/i.test(currentClause);
@@ -2153,7 +2180,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
 
   private getValueContext(prefix: string): UqlValueContext | null {
     const currentClause = this.getCurrentClausePrefix(prefix);
-    if (this.isInsideWhiteScoringFunction(currentClause)) return 'white-factor';
+    const whiteScoringContext = this.getWhiteScoringContext(currentClause);
+    if (whiteScoringContext === 'skill') return 'white-factor';
+    if (whiteScoringContext === 'param') return null;
 
     const functionMatch = currentClause.match(/(?:contains|overlaps|has_all|contains_all)\s*\(\s*([^,()]+)\s*,\s*(?:\([^)]*)?[^)]*$/i);
     if (functionMatch) {
@@ -2181,7 +2210,37 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   }
 
   private isInsideWhiteScoringFunction(prefix: string): boolean {
-    return /\b(?:optional_white|optional_main_white|optional_any_white|lineage_white|optional\s+white|optional\s+main\s+white|optional\s+any\s+white|lineage\s+white)\s*\([^)]*$/i.test(prefix);
+    return this.getWhiteScoringContext(this.getCurrentClausePrefix(prefix)) !== null;
+  }
+
+  private getWhiteScoringContext(prefix: string): 'skill' | 'param' | null {
+    const argsText = this.getOpenWhiteScoringArgs(prefix);
+    if (argsText === null) return null;
+    return this.hasWhiteScoringParameterStarted(argsText) ? 'param' : 'skill';
+  }
+
+  private getOpenWhiteScoringArgs(prefix: string): string | null {
+    const match = prefix.match(/\b(?:optional_white|optional_main_white|optional_any_white|lineage_white|optional\s+white|optional\s+main\s+white|optional\s+any\s+white|lineage\s+white)\s*(?:in\s*)?\(((?:[^()]|\([^)]*\))*)$/i);
+    return match ? match[1] : null;
+  }
+
+  private hasWhiteScoringParameterStarted(argsText: string): boolean {
+    return /(?:^|,)\s*(?:priority|priority_group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|affinity)\s*(?:=|$)/i.test(argsText);
+  }
+
+  private isWhiteScoringParameterPrefix(prefix: string): boolean {
+    const argsText = this.getOpenWhiteScoringArgs(this.getCurrentClausePrefix(prefix));
+    return argsText !== null && this.hasWhiteScoringParameterStarted(argsText);
+  }
+
+  private isWhiteScoringParameterAt(text: string, index: number): boolean {
+    const clausePrefix = this.getCurrentClausePrefix(text.slice(0, index));
+    const argsText = this.getOpenWhiteScoringArgs(clausePrefix);
+    if (argsText === null) return false;
+    if (this.hasWhiteScoringParameterStarted(argsText)) return true;
+    const currentArgumentPrefix = argsText.slice(argsText.lastIndexOf(',') + 1);
+    if (currentArgumentPrefix.trim().length > 0) return false;
+    return /^(?:priority|priority_group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|affinity)\s*=/i.test(text.slice(index));
   }
 
   private getCurrentClausePrefix(prefix: string): string {

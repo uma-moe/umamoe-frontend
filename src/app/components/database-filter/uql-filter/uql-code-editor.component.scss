@@ -147,6 +147,24 @@
 ::ng-deep .uql-cm-ctx-white-factor.uql-cm-scope-gp2,
 ::ng-deep .uql-cm-ctx-white-factor.uql-cm-scope-any-gp { color: rgba(255, 255, 255, 0.96); }
 
+::ng-deep .uql-cm-validation-issue {
+  border-radius: 3px;
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+::ng-deep .uql-cm-validation-invalid {
+  background: rgba(239, 83, 80, 0.14);
+  text-decoration-color: #ef5350;
+}
+
+::ng-deep .uql-cm-validation-incomplete {
+  background: rgba(255, 203, 107, 0.12);
+  text-decoration-color: #ffcb6b;
+}
+
 ::ng-deep .uql-cm-chip {
   display: inline-flex;
   align-items: center;

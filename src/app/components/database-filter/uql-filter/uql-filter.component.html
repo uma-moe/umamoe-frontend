@@ -25,7 +25,8 @@
           <pre class="uql-doc-snippet" [attr.aria-hidden]="hidden ? 'true' : null"><ng-container *ngFor="let segment of snippet.segments"><span
             class="uql-token"
             [ngClass]="'uql-token-' + segment.kind"
-            [class.uql-token-chip]="segment.imageUrl"
+            [class.uql-token-chip]="isChipSegment(segment)"
+            [class.uql-token-chip-no-image]="isChipSegment(segment) && !segment.imageUrl"
             [class.uql-token-atomic]="segment.atomic"
             [class.uql-paren-depth-0]="segment.kind === 'paren' && segment.depth === 0"
             [class.uql-paren-depth-1]="segment.kind === 'paren' && segment.depth === 1"
@@ -222,6 +223,7 @@
       <app-uql-code-editor
         [value]="query"
         [validationState]="validationState"
+        [validationIssue]="validationIssue"
         [placeholder]="animatedPlaceholder"
         [tokenize]="tokenizeForEditor"
         [complete]="completeForEditor"

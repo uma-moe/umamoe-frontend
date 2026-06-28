@@ -188,8 +188,11 @@ export interface InheritanceSearchFilters {
   // Optional White Factors (for scoring/sorting, no level required)
   optionalWhiteSparks?: number[];
   optionalMainWhiteSparks?: number[];
+  optionalWhitePriorities?: string[];
+  optionalMainWhitePriorities?: string[];
   // Lineage White Factors
   lineageWhite?: number[];
+  lineageWhitePriorities?: string[];
   mainLegacyWhite?: number[];
   leftLegacyWhite?: number[];
   rightLegacyWhite?: number[];

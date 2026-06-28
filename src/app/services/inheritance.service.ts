@@ -299,11 +299,20 @@ export class InheritanceService {
     if (filters.optionalWhiteSparks && filters.optionalWhiteSparks.length > 0) {
       params = params.set('optional_white_sparks', filters.optionalWhiteSparks.join(','));
     }
+    if (filters.optionalWhitePriorities && filters.optionalWhitePriorities.length > 0) {
+      params = params.set('optional_white_priorities', filters.optionalWhitePriorities.join(','));
+    }
     if (filters.optionalMainWhiteSparks && filters.optionalMainWhiteSparks.length > 0) {
       params = params.set('optional_main_white_sparks', filters.optionalMainWhiteSparks.join(','));
     }
+    if (filters.optionalMainWhitePriorities && filters.optionalMainWhitePriorities.length > 0) {
+      params = params.set('optional_main_white_priorities', filters.optionalMainWhitePriorities.join(','));
+    }
     if (filters.lineageWhite && filters.lineageWhite.length > 0) {
       params = params.set('lineage_white', filters.lineageWhite.join(','));
+    }
+    if (filters.lineageWhitePriorities && filters.lineageWhitePriorities.length > 0) {
+      params = params.set('lineage_white_priorities', filters.lineageWhitePriorities.join(','));
     }
     if (filters.mainLegacyWhite && filters.mainLegacyWhite.length > 0) {
       params = params.set('main_legacy_white', filters.mainLegacyWhite.join(','));

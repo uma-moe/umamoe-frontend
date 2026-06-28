@@ -39,7 +39,7 @@ import { RaceSchedulerComponent } from '../race-scheduler/race-scheduler.compone
 import { VeteranDisplayComponent } from '../veteran-display/veteran-display.component';
 import { preferRasterAsset } from '../../utils/raster-asset';
 import { AdvancedFilterPanelComponent } from './advanced-filter/advanced-filter.component';
-import { UqlFilterComponent, UqlSuggestion, UqlValueContext } from './uql-filter/uql-filter.component';
+import { UqlFilterComponent, UqlSuggestion, UqlValidationIssue, UqlValueContext } from './uql-filter/uql-filter.component';
 export interface ActiveFilterChip {
   id: string;
   label: string;
@@ -48,7 +48,7 @@ export interface ActiveFilterChip {
   showStar?: boolean;
   rankIcon?: string; // Path to rank icon image
   range?: string; // Star range like "1-9", "5+", etc.
-  type: 'blue' | 'pink' | 'green' | 'white' | 'optionalWhite' | 'optionalMainWhite' | 'mainBlue' | 'mainPink' | 'mainGreen' | 'mainWhite' | 'character' | 'supportCard' | 'other' | 'blueStarSum' | 'pinkStarSum' | 'greenStarSum' | 'whiteStarSum' | 'includeMainParent' | 'includeParent' | 'excludeParent' | 'excludeMainParent' | 'raceSchedule' | 'uql';
+  type: 'blue' | 'pink' | 'green' | 'white' | 'optionalWhite' | 'optionalMainWhite' | 'lineageWhite' | 'mainBlue' | 'mainPink' | 'mainGreen' | 'mainWhite' | 'character' | 'supportCard' | 'other' | 'blueStarSum' | 'pinkStarSum' | 'greenStarSum' | 'whiteStarSum' | 'includeMainParent' | 'includeParent' | 'excludeParent' | 'excludeMainParent' | 'raceSchedule' | 'uql';
   filterIndex?: number;
   filterList?: FactorFilter[];
 }
@@ -91,6 +91,12 @@ interface UqlEditorDirectiveParseResult {
   queryWithoutDirectives: string;
   directives: UqlEditorDirective[];
   issue?: { state: 'incomplete' | 'invalid'; message: string };
+}
+
+interface UqlDelimiterIssue {
+  kind: 'unterminated-string' | 'closing-paren' | 'open-paren';
+  from: number;
+  to: number;
 }
 
 interface UqlRaceSaddleValue {
@@ -174,6 +180,8 @@ interface UqlSkillListItem {
   level?: number;
 }
 
+type PriorityFactorState = number | [number, number];
+
 interface CompressedState {
   fm?: FilterMode;
   uql?: string;
@@ -182,9 +190,9 @@ interface CompressedState {
   g?: (number|null)[][]; // green factors [id, min]
   w?: (number|null)[][]; // white factors [id, min]
   
-  ow?: number[]; // optional white factors [id]
-  omw?: number[]; // optional main white factors [id]
-  lw?: number[]; // lineage white factors [id]
+  ow?: PriorityFactorState[]; // optional white factors [id] or [id, priority]
+  omw?: PriorityFactorState[]; // optional main white factors [id] or [id, priority]
+  lw?: PriorityFactorState[]; // lineage white factors [id] or [id, priority]
   mb?: (number|null)[][]; // main blue
   mp?: (number|null)[][]; // main pink
   mg?: (number|null)[][]; // main green
@@ -218,6 +226,9 @@ interface CompressedState {
   ip?: number[];  // include parent IDs
   ep?: number[];  // exclude parent IDs
   emp?: number[]; // exclude main parent IDs
+  p2c?: number; // compact selected legacy main character context for URL sharing
+  p2w?: number[]; // compact selected legacy race-win context for URL sharing
+  p2i?: number | string; // source inheritance id when the compact context came from a bookmark
   // Race schedule: [yearIdx, month, half, raceInstanceId][]
   rs?: [number, number, number, number][];
   vet?: [string, number];
@@ -277,8 +288,11 @@ export interface UnifiedSearchParams {
   // Optional white sparks (no level requirement, used for sorting by match score)
   optional_white_sparks?: number[];
   optional_main_white_sparks?: number[];
+  optional_white_priorities?: string[];
+  optional_main_white_priorities?: string[];
   // Lineage white sparks (filter by white sparks in the lineage parents)
   lineage_white?: number[];
+  lineage_white_priorities?: string[];
   main_legacy_white?: number[];
   left_legacy_white?: number[];
   right_legacy_white?: number[];
@@ -307,6 +321,7 @@ export interface FactorFilter {
   factorId: number | null;
   min: number;
   max: number;
+  priority?: number;
 }
 @Component({
   selector: 'app-database-filter',
@@ -358,6 +373,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private restoredSavedFilterState = false;
   private staticUqlSuggestionsCache: UqlSuggestion[] | null = null;
   private lastUqlFilterStateSignature: string | null = null;
+  private structuredFiltersDirtyForUql = false;
   @ViewChild(RaceSchedulerComponent) raceScheduler!: RaceSchedulerComponent;
   // Wrapping detection
   @ViewChild('mainLayout', { static: false }) mainLayoutRef!: ElementRef<HTMLElement>;
@@ -373,6 +389,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   compiledUqlQuery = '';
   uqlValidationState: UqlValidationState = 'empty';
   uqlValidationMessage = '';
+  uqlValidationIssue: UqlValidationIssue | null = null;
   uqlPreviewExpanded = false;
   currentUqlPreview = '';
   readonly uqlStarterSnippets: UqlSnippet[] = [
@@ -381,6 +398,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'Spark Sum', insertText: '(Stamina + Power + Wit) >= 7' },
     { label: 'Affinity', insertText: 'affinity >= 150' },
     { label: 'Wins', insertText: 'Wins >= 30' },
+    { label: 'Even Wins', insertText: 'Wins % 2 = 0' },
     { label: 'Name', insertText: "Trainer name ilike '%name%'" },
     { label: 'Match Umas', insertText: 'Main character in (Special Week, Silence Suzuka)' },
     { label: 'Target (ace)', insertText: 'target = Special Week' },
@@ -509,7 +527,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     'left_win_saddles', 'right_win_saddles', 'race_results'
   ]);
   private readonly uqlKeywords = new Set([
-    'where', 'and', 'or', 'not', 'in', 'between', 'like', 'ilike', 'true', 'false', 'null'
+    'where', 'and', 'or', 'not', 'in', 'between', 'like', 'ilike', 'mod', 'true', 'false', 'null'
   ]);
   private readonly uqlFunctions = new Set([
     'contains', 'has', 'overlaps', 'any', 'has_all', 'contains_all', 'all',
@@ -518,7 +536,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     'optional_white', 'optional_main_white', 'optional_any_white', 'lineage_white'
   ]);
   private readonly uqlFunctionParameterNames = new Set([
-    'id', 'card_id', 'support_card_id', 'lb', 'limitbreak', 'limit_break', 'limit_break_count', 'exp', 'experience'
+    'id', 'card_id', 'support_card_id', 'lb', 'limitbreak', 'limit_break', 'limit_break_count', 'exp', 'experience',
+    'priority', 'priority_group', 'group',
+    'type_weight', 'level_weight', 'match_weight', 'stack_weight', 'occurrence_weight',
+    'base', 'decay', 'weight', 'proc_weight', 'affinity'
   ]);
   selectedLimitBreak = 0; // Default to LB0+
   includeMaxFollowers = false; // false = exclude max follower accounts (999), true = include (1000)
@@ -537,6 +558,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private fetchedVeteransById = new Map<string, VeteranMember | null>();
   private loadingVeteransById: { [veteranId: string]: boolean } = {};
   private pendingVeteranRestore: { accountId: string; memberId: number } | null = null;
+  private restoredP2Context: { mainCharaId?: number; winSaddleIds?: number[]; sourceInheritanceId?: number | string } | null = null;
   private uqlOwnedLegacyPickerOpen = false;
   private uqlOwnedLegacyPickerPending = false;
   activeFilterChips: ActiveFilterChip[] = [];
@@ -812,11 +834,14 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
   // --- Serialization Logic ---
-  getSerializedState(): string {
+  getSerializedState(options: { shareable?: boolean } = {}): string {
     const state: CompressedState = {};
-    const normalizedUql = this.getNormalizedUqlQuery();
+    const shouldSanitizeOwnedLegacy = options.shareable === true
+      || (!!this.selectedVeteran && !this.canShareSelectedVeteranAsOwnedLegacyDirective());
+    const normalizedUql = shouldSanitizeOwnedLegacy ? this.getShareableSerializedUqlQuery() : this.getNormalizedUqlQuery();
     if (normalizedUql) state.uql = normalizedUql;
     if (this.filterMode === 'uql') {
+      this.addSerializedP2Context(state);
       return this.encodeBase64Utf8(JSON.stringify(state));
     }
     // Factors
@@ -825,16 +850,16 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.greenFactorFilters.length) state.g = this.greenFactorFilters.map(f => [f.factorId, f.min, f.max]);
     if (this.whiteFactorFilters.length) state.w = this.whiteFactorFilters.map(f => [f.factorId, f.min, f.max]);
     if (this.optionalWhiteFactorFilters.length) {
-      const ids = this.optionalWhiteFactorFilters.filter(f => f.factorId && f.factorId > 0).map(f => f.factorId!);
-      if (ids.length) state.ow = ids;
+      const entries = this.serializePriorityFactorFilters(this.optionalWhiteFactorFilters);
+      if (entries.length) state.ow = entries;
     }
     if (this.optionalMainWhiteFactorFilters.length) {
-      const ids = this.optionalMainWhiteFactorFilters.filter(f => f.factorId && f.factorId > 0).map(f => f.factorId!);
-      if (ids.length) state.omw = ids;
+      const entries = this.serializePriorityFactorFilters(this.optionalMainWhiteFactorFilters);
+      if (entries.length) state.omw = entries;
     }
     if (this.lineageWhiteFactorFilters.length) {
-      const ids = this.lineageWhiteFactorFilters.filter(f => f.factorId && f.factorId > 0).map(f => f.factorId!);
-      if (ids.length) state.lw = ids;
+      const entries = this.serializePriorityFactorFilters(this.lineageWhiteFactorFilters);
+      if (entries.length) state.lw = entries;
     }
     if (this.mainBlueFactorFilters.length) state.mb = this.mainBlueFactorFilters.map(f => [f.factorId, f.min, f.max]);
     if (this.mainPinkFactorFilters.length) state.mp = this.mainPinkFactorFilters.map(f => [f.factorId, f.min, f.max]);
@@ -882,15 +907,78 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       const encoded = this.raceScheduler.getEncodedSelection();
       if (encoded.length) state.rs = encoded;
     }
+    this.addSerializedP2Context(state);
     if (this.selectedVeteran && this.selectedAccountId && this.selectedVeteran.member_id != null) {
       state.vet = [this.selectedAccountId, this.selectedVeteran.member_id];
     }
     return this.encodeBase64Utf8(JSON.stringify(state));
   }
 
+  private addSerializedP2Context(state: CompressedState): void {
+    const context = this.getCurrentP2Context();
+    if (!context) return;
+    if (context.mainCharaId) state.p2c = context.mainCharaId;
+    if (context.winSaddleIds?.length) state.p2w = [...context.winSaddleIds];
+    if (context.sourceInheritanceId != null) state.p2i = context.sourceInheritanceId;
+  }
+
+  private getCurrentP2Context(): { mainCharaId?: number; winSaddleIds?: number[]; sourceInheritanceId?: number | string } | null {
+    if (this.selectedVeteran) {
+      const winSaddleIds = this.selectedVeteran.win_saddle_id_array ?? [];
+      return {
+        mainCharaId: this.getVeteranMainCharaId(this.selectedVeteran),
+        winSaddleIds: winSaddleIds.length ? winSaddleIds : undefined,
+        sourceInheritanceId: this.selectedVeteran.share_source === 'bookmark' ? this.selectedVeteran.share_inheritance_id : undefined,
+      };
+    }
+    return this.restoredP2Context;
+  }
+
+  private restoreSerializedP2Context(state: CompressedState): void {
+    const mainCharaId = typeof state.p2c === 'number' && Number.isFinite(state.p2c) ? state.p2c : undefined;
+    const winSaddleIds = Array.isArray(state.p2w)
+      ? state.p2w.map(value => Number(value)).filter(value => Number.isFinite(value))
+      : undefined;
+    if (!mainCharaId && !winSaddleIds?.length) {
+      this.restoredP2Context = null;
+      return;
+    }
+    this.restoredP2Context = {
+      mainCharaId,
+      winSaddleIds: winSaddleIds?.length ? winSaddleIds : undefined,
+      sourceInheritanceId: state.p2i,
+    };
+    this.filterState.p2_main_chara_id = mainCharaId;
+    this.filterState.p2_win_saddle = winSaddleIds?.length ? winSaddleIds : undefined;
+  }
+
+  private getShareableSerializedUqlQuery(): string {
+    const query = this.getNormalizedUqlQuery();
+    if (!query || !this.hasUqlOwnedLegacyDirective(query)) return query;
+    if (this.canShareSelectedVeteranAsOwnedLegacyDirective()) return query;
+    return this.removeOwnedLegacyDirectiveFromUqlQuery(query);
+  }
+
+  private canShareSelectedVeteranAsOwnedLegacyDirective(): boolean {
+    if (!this.selectedVeteran) return true;
+    if (this.selectedVeteran.share_source === 'bookmark' || this.selectedVeteran.share_source === 'partner' || this.selectedVeteran.share_source === 'manual') {
+      return false;
+    }
+    return !!this.getVeteranUuid(this.selectedVeteran);
+  }
+
+  private removeOwnedLegacyDirectiveFromUqlQuery(query: string): string {
+    const hadWhere = /^\s*where\b/i.test(query);
+    const clauses = this.splitTopLevelUqlAndClauses(this.stripLeadingWhere(query))
+      .filter(clause => this.parseUqlEditorDirectiveClause(clause)?.kind !== 'legacy');
+    if (!clauses.length) return '';
+    return `${hadWhere ? 'where ' : ''}${clauses.join(' and ')}`;
+  }
+
   private applySelectedVeteran(veteran: VeteranMember, accountId: string | null): void {
     if (accountId) this.selectedAccountId = accountId;
     this.selectedVeteran = veteran;
+    this.restoredP2Context = null;
     this.selectedVeteranName = this.getVeteranName(veteran);
     this.selectedVeteranImage = this.getVeteranImage(veteran);
     this.pendingVeteranRestore = null;
@@ -1071,6 +1159,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       }
       this.uqlQuery = this.normalizeRestoredUqlQuery(state.uql || '');
       this.validateUqlQuery();
+      this.restoreSerializedP2Context(state);
       if (this.filterMode === 'uql') {
         this.clearUqlRepresentableStructuredFilters();
         this.onUqlChange({ emitImmediately: options.emitImmediately });
@@ -1128,14 +1217,16 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       
       restoreFactors(state.mw, this.mainWhiteFactorFilters, 'mainWhite');
       // Restore Optional Factors
-      const restoreOptionalFactors = (source: number[] | undefined, target: FactorFilter[], type: 'optionalWhite' | 'optionalMainWhite' | 'lineageWhite') => {
+      const restoreOptionalFactors = (source: PriorityFactorState[] | undefined, target: FactorFilter[], type: 'optionalWhite' | 'optionalMainWhite' | 'lineageWhite') => {
         if (!source) return;
-        source.forEach(id => {
+        source.forEach(entry => {
+          const [id, priority] = Array.isArray(entry) ? entry : [entry, 0];
           const filter: FactorFilter = {
             uuid: this.getUuid(),
             factorId: id,
             min: 1,
-            max: 9
+            max: 9,
+            priority: this.normalizePriorityGroup(priority)
           };
           target.push(filter);
           
@@ -1270,7 +1361,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
           }
         });
       }
-      this.onFilterChange({ emitImmediately: options.emitImmediately });
+      this.onFilterChange({
+        emitImmediately: options.emitImmediately,
+        markStructuredDirtyForUql: false
+      });
     } catch (e) {
       console.error('Failed to load filter state', e);
     }
@@ -1279,13 +1373,32 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private getUuid(): string {
     return `filter_${this.uuidCounter++}`;
   }
+  private normalizePriorityGroup(value: unknown): number {
+    const numeric = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) return 0;
+    return Math.floor(numeric);
+  }
+  private serializePriorityFactorFilters(filters: FactorFilter[]): PriorityFactorState[] {
+    return filters
+      .filter(f => f.factorId && f.factorId > 0)
+      .map(f => {
+        const priority = this.normalizePriorityGroup(f.priority);
+        return priority > 0 ? [f.factorId!, priority] as [number, number] : f.factorId!;
+      });
+  }
+  private serializePriorityParam(filters: FactorFilter[]): string[] {
+    return filters
+      .filter(f => f.factorId && f.factorId > 0)
+      .map(f => `${f.factorId!}:${this.normalizePriorityGroup(f.priority)}`);
+  }
   // --- Factor Filter Management ---
   addFactorFilter(list: FactorFilter[], defaultFactorId: number | null, type?: 'green' | 'white' | 'mainWhite' | 'mainGreen' | 'optionalWhite' | 'optionalMainWhite' | 'lineageWhite') {
     list.push({
       uuid: this.getUuid(),
       factorId: defaultFactorId,
       min: 1,
-      max: 9
+      max: 9,
+      priority: 0
     });
     if (type === 'green') this.filteredGreenFactorOptions.push([...this.greenFactors]);
     if (type === 'white') this.filteredWhiteFactorOptions.push([...this.whiteFactors]);
@@ -1390,6 +1503,17 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     } else {
       this.collapsedSections.add(section);
     }
+  }
+  setFactorPriority(filter: FactorFilter, value: unknown): void {
+    filter.priority = this.normalizePriorityGroup(value);
+    this.onFilterChange();
+  }
+  adjustFactorPriority(filter: FactorFilter, delta: number): void {
+    const nextPriority = Math.max(0, this.getPriorityGroup(filter) + delta);
+    this.setFactorPriority(filter, nextPriority);
+  }
+  getPriorityGroup(filter: FactorFilter): number {
+    return this.normalizePriorityGroup(filter.priority);
   }
   isSectionCollapsed(section: string): boolean {
     if (section === 'quickFilters' && window.innerWidth > 600) return false;
@@ -1718,7 +1842,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     });
     return groups;
   }
-  onFilterChange(options: { emitImmediately?: boolean } = {}) {
+  onFilterChange(options: { emitImmediately?: boolean; markStructuredDirtyForUql?: boolean } = {}) {
     this.validateUqlQuery();
     this.syncUqlFilterState();
     // Sanitize star sum filters - convert null to undefined and clamp values
@@ -1795,15 +1919,18 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.filterState.optional_white_sparks = this.optionalWhiteFactorFilters
       .filter(f => f.factorId && f.factorId > 0)
       .map(f => f.factorId!);
+    this.filterState.optional_white_priorities = this.serializePriorityParam(this.optionalWhiteFactorFilters);
     
     this.filterState.optional_main_white_sparks = this.optionalMainWhiteFactorFilters
       .filter(f => f.factorId && f.factorId > 0)
       .map(f => f.factorId!);
+    this.filterState.optional_main_white_priorities = this.serializePriorityParam(this.optionalMainWhiteFactorFilters);
     // Lineage White Sparks (user-specified white factor IDs to match against lineage parents)
     const lineageWhiteIds = this.lineageWhiteFactorFilters
       .filter(f => f.factorId && f.factorId > 0)
       .map(f => f.factorId!);
     this.filterState.lineage_white = lineageWhiteIds.length ? lineageWhiteIds : undefined;
+    this.filterState.lineage_white_priorities = this.serializePriorityParam(this.lineageWhiteFactorFilters);
     // Extract white sparks from the selected veteran's parents only when the
     // user asked for lineage white matching. Picking a legacy by itself should
     // provide P2 context, not silently add a white-factor filter.
@@ -1851,6 +1978,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         if (!existingMainIds.includes(c.id)) existingMainIds.push(c.id);
       });
       this.filterState.main_parent_id = existingMainIds;
+    }
+    if (this.filterMode !== 'uql' && options.markStructuredDirtyForUql !== false) {
+      this.structuredFiltersDirtyForUql = true;
     }
     if (this.filterMode === 'uql') {
       this.filterState = this.buildUqlOnlyFilterState();
@@ -1968,8 +2098,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         const factorName = this.whiteFactors.find(factor => factor.id === f.factorId)?.text || 'Unknown';
         this.activeFilterChips.push({
           id: `optionalWhite-${index}`,
-          label: `Optional: ${factorName}`,
-          name: 'Optional',
+          label: `P${this.getPriorityGroup(f)} Optional: ${factorName}`,
+          name: `P${this.getPriorityGroup(f)} Optional`,
           value: factorName,
           showStar: false,
           type: 'optionalWhite',
@@ -1984,13 +2114,29 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         const factorName = this.whiteFactors.find(factor => factor.id === f.factorId)?.text || 'Unknown';
         this.activeFilterChips.push({
           id: `optionalMainWhite-${index}`,
-          label: `Main Optional: ${factorName}`,
-          name: 'Main Optional',
+          label: `P${this.getPriorityGroup(f)} Main Optional: ${factorName}`,
+          name: `P${this.getPriorityGroup(f)} Main Optional`,
           value: factorName,
           showStar: false,
           type: 'optionalMainWhite',
           filterIndex: index,
           filterList: this.optionalMainWhiteFactorFilters
+        });
+      }
+    });
+    // Lineage White Factors (ranked according to their priority group)
+    this.lineageWhiteFactorFilters.forEach((f, index) => {
+      if (f.factorId && f.factorId > 0) {
+        const factorName = this.whiteFactors.find(factor => factor.id === f.factorId)?.text || 'Unknown';
+        this.activeFilterChips.push({
+          id: `lineageWhite-${index}`,
+          label: `P${this.getPriorityGroup(f)} Lineage: ${factorName}`,
+          name: `P${this.getPriorityGroup(f)} Lineage`,
+          value: factorName,
+          showStar: false,
+          type: 'lineageWhite',
+          filterIndex: index,
+          filterList: this.lineageWhiteFactorFilters
         });
       }
     });
@@ -2094,6 +2240,17 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         label: `Veteran: ${this.selectedVeteranName}`,
         name: 'Veteran',
         value: this.selectedVeteranName,
+        type: 'character'
+      });
+    } else if (this.restoredP2Context) {
+      const contextLabel = this.restoredP2Context.sourceInheritanceId != null
+        ? `Shared legacy #${this.restoredP2Context.sourceInheritanceId}`
+        : 'Shared legacy context';
+      this.activeFilterChips.push({
+        id: 'veteran',
+        label: contextLabel,
+        name: 'Veteran',
+        value: contextLabel,
         type: 'character'
       });
     }
@@ -2276,6 +2433,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.selectedVeteranName = '';
     this.selectedVeteranImage = '';
     this.pendingVeteranRestore = null;
+    this.restoredP2Context = null;
 
     if (this.includeMaxFollowers) {
       this.maxFollowersToggled.emit(false);
@@ -2337,6 +2495,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       case 'optionalMainWhite':
         if (chip.filterIndex !== undefined) {
           this.removeFactorFilter(this.optionalMainWhiteFactorFilters, chip.filterIndex, 'optionalMainWhite');
+        }
+        break;
+      case 'lineageWhite':
+        if (chip.filterIndex !== undefined) {
+          this.removeFactorFilter(this.lineageWhiteFactorFilters, chip.filterIndex, 'lineageWhite');
         }
         break;
       case 'character':
@@ -2447,6 +2610,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         return 'chip-white';
       case 'optionalWhite':
       case 'optionalMainWhite':
+      case 'lineageWhite':
         return 'chip-optional-white';
       case 'character':
       case 'includeMainParent':
@@ -2476,6 +2640,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       } else {
         this.applyRepresentableUqlToStructuredFilters();
       }
+      this.structuredFiltersDirtyForUql = false;
+    } else if (mode === 'uql' && previousMode !== 'uql' && this.structuredFiltersDirtyForUql) {
+      this.writeStructuredFiltersToUqlQuery({ allowEmpty: true });
+      this.structuredFiltersDirtyForUql = false;
     } else if (mode === 'uql' && previousMode !== 'uql' && this.hasStructuredFiltersForUql()) {
       this.writeStructuredFiltersToUqlQuery();
     } else if (mode === 'uql' && previousMode !== 'uql' && !this.getNormalizedUqlQuery()) {
@@ -2518,12 +2686,21 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return !!(this.buildStructuredUqlExpression() || this.buildUqlEditorDirectiveClauses().length);
   }
 
-  private writeStructuredFiltersToUqlQuery(): void {
-    this.onFilterChange();
+  private writeStructuredFiltersToUqlQuery(options: { allowEmpty?: boolean } = {}): void {
+    this.onFilterChange({ markStructuredDirtyForUql: false });
     const structuredExpression = this.buildStructuredUqlExpression();
     const editorDirectives = this.buildUqlEditorDirectiveClauses();
     const clauses = [...editorDirectives, structuredExpression].filter(Boolean);
-    if (!clauses.length) return;
+    if (!clauses.length) {
+      if (options.allowEmpty) {
+        this.uqlQuery = '';
+        this.validateUqlQuery();
+        this.syncUqlFilterState();
+        this.updateCurrentUqlPreview();
+        this.updateActiveFilterChips();
+      }
+      return;
+    }
     this.uqlQuery = `where ${clauses.join(' and ')}`;
     this.validateUqlQuery();
     this.syncUqlFilterState();
@@ -2632,10 +2809,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.treeData.characterId) {
       state.player_chara_id = this.treeData.characterId;
     }
-    if (this.selectedVeteran) {
-      const winSaddleIds = this.selectedVeteran.win_saddle_id_array ?? [];
-      state.p2_main_chara_id = this.getVeteranMainCharaId(this.selectedVeteran);
-      state.p2_win_saddle = winSaddleIds.length ? winSaddleIds : undefined;
+    const p2Context = this.getCurrentP2Context();
+    if (p2Context) {
+      state.p2_main_chara_id = p2Context.mainCharaId;
+      state.p2_win_saddle = p2Context.winSaddleIds?.length ? p2Context.winSaddleIds : undefined;
     }
     return state;
   }
@@ -2783,6 +2960,31 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     return this.parseUqlNumberList(listText).filter(id => id > 0);
   }
+
+  private parseUqlScoringPriority(argsText: string): number {
+    const priorityMatch = argsText.match(/(?:^|,)\s*(?:priority|priority_group|group)\s*=\s*(-?\d+)/i);
+    return this.normalizePriorityGroup(priorityMatch?.[1]);
+  }
+
+  private addRestoredWhiteScoringFilter(
+    target: FactorFilter[],
+    optionTarget: any[][],
+    factorId: number,
+    priority: number,
+  ): void {
+    if (target.some(filter => this.getNormalizedFactorFilterId(filter) === factorId && this.getPriorityGroup(filter) === priority)) {
+      return;
+    }
+    target.push({
+      uuid: this.getUuid(),
+      factorId,
+      min: 1,
+      max: 9,
+      priority
+    });
+    optionTarget.push([...this.whiteFactors]);
+  }
+
   clearUql(): void {
     this.uqlQuery = '';
     this.clearUqlEditorDirectiveState();
@@ -2830,73 +3032,67 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
   private validateUqlQuery(): void {
+    const editableQuery = this.getEditableUqlQuery();
     const normalizedQuery = this.getNormalizedUqlQuery();
     this.compiledUqlQuery = '';
     if (!normalizedQuery) {
-      this.uqlValidationState = 'empty';
-      this.uqlValidationMessage = '';
+      this.setUqlValidation('empty', '');
       return;
     }
-    const delimiterIssue = this.getUqlDelimiterIssue(normalizedQuery);
-    if (delimiterIssue === 'unterminated-string') {
-      this.uqlValidationState = 'incomplete';
-      this.uqlValidationMessage = 'Finish the string literal';
+    const delimiterIssue = this.getUqlDelimiterIssue(editableQuery);
+    if (delimiterIssue?.kind === 'unterminated-string') {
+      this.setUqlValidation('incomplete', 'Finish the string literal', this.createUqlValidationIssue(editableQuery, 'incomplete', 'Finish the string literal', delimiterIssue.from, delimiterIssue.to));
       return;
     }
-    if (delimiterIssue === 'open-paren') {
-      this.uqlValidationState = 'incomplete';
-      this.uqlValidationMessage = 'Close the parentheses';
+    if (delimiterIssue?.kind === 'open-paren') {
+      this.setUqlValidation('incomplete', 'Close the parentheses', this.createUqlValidationIssue(editableQuery, 'incomplete', 'Close the parentheses', delimiterIssue.from, delimiterIssue.to));
       return;
     }
-    if (delimiterIssue === 'closing-paren') {
-      this.uqlValidationState = 'invalid';
-      this.uqlValidationMessage = 'Unexpected closing parenthesis';
+    if (delimiterIssue?.kind === 'closing-paren') {
+      this.setUqlValidation('invalid', 'Unexpected closing parenthesis', this.createUqlValidationIssue(editableQuery, 'invalid', 'Unexpected closing parenthesis', delimiterIssue.from, delimiterIssue.to));
       return;
     }
     const directiveParse = this.extractUqlEditorDirectives(normalizedQuery);
     if (directiveParse.issue) {
-      this.uqlValidationState = directiveParse.issue.state;
-      this.uqlValidationMessage = directiveParse.issue.message;
+      this.setUqlValidation(
+        directiveParse.issue.state,
+        directiveParse.issue.message,
+        this.createUqlValidationIssue(editableQuery, directiveParse.issue.state, directiveParse.issue.message, ...this.getTrailingUqlIssueRange(editableQuery)),
+      );
       return;
     }
     const queryForBackendValidation = directiveParse.directives.length ? directiveParse.queryWithoutDirectives : normalizedQuery;
     const expression = this.stripLeadingWhere(queryForBackendValidation);
     if (!expression || this.endsWithIncompleteUqlToken(expression)) {
       if (directiveParse.directives.length && !expression) {
-        this.uqlValidationState = 'valid';
-        this.uqlValidationMessage = 'Ready';
+        this.setUqlValidation('valid', 'Ready');
       } else {
-        this.uqlValidationState = 'incomplete';
-        this.uqlValidationMessage = 'Finish the predicate';
+        this.setUqlValidation('incomplete', 'Finish the predicate', this.createUqlValidationIssue(editableQuery, 'incomplete', 'Finish the predicate', ...this.getTrailingUqlIssueRange(editableQuery)));
       }
       return;
     }
     if (this.hasEmptyUqlValueList(expression)) {
-      this.uqlValidationState = 'incomplete';
-      this.uqlValidationMessage = 'Choose at least one skill';
+      this.setUqlValidation('incomplete', 'Choose at least one skill', this.createUqlValidationIssue(editableQuery, 'incomplete', 'Choose at least one skill', ...this.getEmptyUqlValueListRange(editableQuery)));
       return;
     }
     if (this.endsWithPartialBooleanContinuation(expression)) {
-      this.uqlValidationState = 'incomplete';
-      this.uqlValidationMessage = 'Finish the boolean operator';
+      this.setUqlValidation('incomplete', 'Finish the boolean operator', this.createUqlValidationIssue(editableQuery, 'incomplete', 'Finish the boolean operator', ...this.getTrailingUqlIssueRange(editableQuery)));
       return;
     }
     const compiledQuery = this.getCompiledUqlQuery();
     this.compiledUqlQuery = compiledQuery;
-    const syntaxIssue = this.findInvalidCompiledUqlSyntax(compiledQuery);
+    const syntaxIssue = this.findInvalidUqlSyntaxIssue(editableQuery) || this.findInvalidCompiledUqlSyntax(compiledQuery);
     if (syntaxIssue) {
-      this.uqlValidationState = 'invalid';
-      this.uqlValidationMessage = syntaxIssue;
+      this.setUqlValidation('invalid', syntaxIssue.message, this.createUqlValidationIssue(editableQuery, 'invalid', syntaxIssue.message, syntaxIssue.from, syntaxIssue.to));
       return;
     }
     const unknownIdentifier = this.findUnknownUqlIdentifier(compiledQuery);
     if (unknownIdentifier) {
-      this.uqlValidationState = 'invalid';
-      this.uqlValidationMessage = `Unknown field or function: ${unknownIdentifier}`;
+      const message = `Unknown field or function: ${unknownIdentifier}`;
+      this.setUqlValidation('invalid', message, this.createUqlValidationIssue(editableQuery, 'invalid', message, ...this.getUnknownIdentifierIssueRange(editableQuery, unknownIdentifier)));
       return;
     }
-    this.uqlValidationState = 'valid';
-    this.uqlValidationMessage = 'Ready';
+    this.setUqlValidation('valid', 'Ready');
   }
   private getCompiledUqlQuery(): string {
     const normalizedQuery = this.getNormalizedUqlQuery();
@@ -4358,6 +4554,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.veteranSelected.emit(null);
       this.syncSelectedVeteranFilterState();
     }
+    this.restoredP2Context = null;
   }
 
   private shouldOpenUqlOwnedLegacyPicker(query: string): boolean {
@@ -4386,7 +4583,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private replaceUqlOwnedLegacyPickerPlaceholder(veteran: VeteranMember): void {
-    const accountId = this.getAccountIdForVeteran(veteran) || this.selectedAccountId || '';
+    const accountId = this.getOwnedLegacyAccountIdForVeteran(veteran);
+    this.applySelectedVeteran(veteran, accountId || null);
     const value = this.getOwnedLegacyUqlDisplayValue(accountId, veteran);
     const replacement = `owned legacy = [${value}]`;
     const query = this.uqlQuery.trim();
@@ -4412,6 +4610,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private ensureUqlOwnedLegacyData(query: string): void {
+    if (this.getUqlOwnedLegacyDirectiveSelectedVeteranMatch(query)) return;
     const veteranIdHint = this.getUqlOwnedLegacyVeteranIdHint(query);
     const accountHint = this.getUqlOwnedLegacyAccountHint(query);
     const memberIdHint = this.getUqlOwnedLegacyMemberIdHint(query);
@@ -4445,6 +4644,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
   private isUqlOwnedLegacyResolutionPending(query: string): boolean {
     if (!this.hasUqlOwnedLegacyDirective(query)) return false;
+    if (this.getUqlOwnedLegacyDirectiveSelectedVeteranMatch(query)) return false;
     const veteranIdHint = this.getUqlOwnedLegacyVeteranIdHint(query);
     if (veteranIdHint) {
       return !!this.loadingVeteransById[veteranIdHint] || !this.fetchedVeteransById.has(veteranIdHint);
@@ -4519,6 +4719,45 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return null;
   }
 
+  private getUqlOwnedLegacyDirectiveSelectedVeteranMatch(query: string): { accountId: string; veteran: VeteranMember } | null {
+    if (!this.selectedVeteran) return null;
+    const expression = this.stripLeadingWhere(query);
+    if (!expression) return null;
+    for (const clause of this.splitTopLevelUqlAndClauses(expression)) {
+      const directive = this.parseUqlEditorDirectiveClause(clause);
+      if (directive?.kind !== 'legacy' || !directive.value) continue;
+      const value = this.unwrapUqlBracketValue(this.unquoteUqlValue(directive.value));
+      const accountId = this.getOwnedLegacyAccountIdForVeteran(this.selectedVeteran);
+      if (this.matchesSelectedVeteranLegacyValue(value, accountId, this.selectedVeteran)) {
+        return { accountId, veteran: this.selectedVeteran };
+      }
+    }
+    return null;
+  }
+
+  private matchesSelectedVeteranLegacyValue(value: string, accountId: string, veteran: VeteranMember): boolean {
+    const normalizedValue = this.normalizeLegacyDirectiveValue(value);
+    if (!normalizedValue) return false;
+    const name = this.getVeteranName(veteran);
+    const veteranId = this.getVeteranUuid(veteran);
+    const candidates = [
+      this.getOwnedLegacyUqlDisplayValue(accountId, veteran),
+      name,
+      accountId ? `${name} @${accountId}` : undefined,
+      veteranId ? `${name} #${veteranId}` : undefined,
+      veteran.member_id != null ? `${name} #${veteran.member_id}` : undefined,
+      veteran.member_id != null && accountId ? `${name} #${veteran.member_id} @${accountId}` : undefined,
+    ];
+    return candidates.some(candidate => candidate && this.normalizeLegacyDirectiveValue(candidate) === normalizedValue);
+  }
+
+  private normalizeLegacyDirectiveValue(value: string): string {
+    return this.normalizeUqlName(value)
+      .replace(/\s*@\s*$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   private loadVeteransForLegacyMemberHint(): void {
     if (!this.linkedAccountsLoaded) return;
     for (const account of this.linkedAccounts) {
@@ -4542,6 +4781,13 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return null;
   }
 
+  private getOwnedLegacyAccountIdForVeteran(veteran: VeteranMember): string {
+    const accountId = this.getAccountIdForVeteran(veteran);
+    if (accountId) return accountId;
+    if (veteran.share_source === 'manual' || veteran.share_source === 'bookmark') return '';
+    return this.selectedAccountId || '';
+  }
+
   private getVeteranUuid(veteran: VeteranMember | null | undefined): string | null {
     if (veteran?.id == null) return null;
     const value = String(veteran.id).trim();
@@ -4554,6 +4800,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       const winSaddleIds = veteran.win_saddle_id_array ?? [];
       this.filterState.p2_main_chara_id = this.getVeteranMainCharaId(veteran);
       this.filterState.p2_win_saddle = winSaddleIds.length ? winSaddleIds : undefined;
+    } else if (this.restoredP2Context) {
+      this.filterState.p2_main_chara_id = this.restoredP2Context.mainCharaId;
+      this.filterState.p2_win_saddle = this.restoredP2Context.winSaddleIds?.length ? this.restoredP2Context.winSaddleIds : undefined;
     } else {
       this.filterState.p2_main_chara_id = undefined;
       this.filterState.p2_win_saddle = undefined;
@@ -4594,11 +4843,17 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const value = this.unwrapUqlBracketValue(this.unquoteUqlValue(rawValue));
     const normalizedValue = this.normalizeUqlName(value);
     if (!normalizedValue) return { partial: true };
+    if (this.selectedVeteran) {
+      const accountId = this.getOwnedLegacyAccountIdForVeteran(this.selectedVeteran);
+      if (this.matchesSelectedVeteranLegacyValue(value, accountId, this.selectedVeteran)) {
+        return { match: { accountId, veteran: this.selectedVeteran }, partial: false };
+      }
+    }
     const uuidMatch = value.match(/#([A-Za-z0-9_-]+)\s*$/);
     if (uuidMatch && !/^\d+$/.test(uuidMatch[1])) {
       const veteranId = uuidMatch[1];
       if (this.selectedVeteran && this.getVeteranUuid(this.selectedVeteran) === veteranId) {
-        return { match: { accountId: this.getAccountIdForVeteran(this.selectedVeteran) || this.selectedAccountId || this.selectedVeteran.trainer_id || '', veteran: this.selectedVeteran }, partial: false };
+        return { match: { accountId: this.getOwnedLegacyAccountIdForVeteran(this.selectedVeteran), veteran: this.selectedVeteran }, partial: false };
       }
       const fetchedVeteran = this.fetchedVeteransById.get(veteranId);
       if (fetchedVeteran) {
@@ -4614,7 +4869,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (idMatch) {
       const memberId = Number(idMatch[1]);
       if (this.selectedVeteran?.member_id === memberId) {
-        const accountId = this.getAccountIdForVeteran(this.selectedVeteran) || this.selectedAccountId || this.selectedVeteran.trainer_id || '';
+        const accountId = this.getOwnedLegacyAccountIdForVeteran(this.selectedVeteran);
         return { match: { accountId, veteran: this.selectedVeteran }, partial: false };
       }
       for (const account of this.linkedAccounts) {
@@ -4822,6 +5077,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
     return this.replaceOutsideStrings(query, segment => {
       let displaySegment = this.normalizeRestoredUqlSparkFunctions(segment);
+      displaySegment = this.normalizeRestoredUqlScoringFunctions(displaySegment);
       displaySegment = this.normalizeRestoredUqlCharacterComparisons(displaySegment);
       displayLabels.forEach(({ field, label }) => {
         const pattern = new RegExp(`(^|[^A-Za-z0-9_])${this.escapeRegExp(field)}\\b${comparisonLookahead}`, 'gi');
@@ -4841,6 +5097,19 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       return this.buildRestoredFriendlySparkClause(fieldName, [parseInt(rawValue, 10)]) ?? match;
     });
     return displaySegment;
+  }
+
+  private normalizeRestoredUqlScoringFunctions(segment: string): string {
+    return segment.replace(/\b(optional_white|optional_main_white|lineage_white)\s*\(((?:[^()]|\([^)]*\))*)\)/gi, (match, functionName: string, argsText: string) => {
+      const normalizedFunction = functionName.toLowerCase() as 'optional_white' | 'optional_main_white' | 'lineage_white';
+      const parsed = this.splitWhiteScoringFunctionArgs(argsText);
+      if (!parsed) return match;
+      const factorIds = this.parseUqlNumberList(parsed.skillList).filter(id => id > 0);
+      if (!factorIds.length) return match;
+      const values = factorIds.map(id => this.getFriendlyWhiteScoringUqlValue(id));
+      const params = parsed.params.trim();
+      return `${this.getFriendlyWhiteScoringFieldLabel(normalizedFunction)} in (${values.join(', ')}${params ? `, ${params}` : ''})`;
+    });
   }
 
   private normalizeRestoredUqlCharacterComparisons(segment: string): string {
@@ -5148,6 +5417,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       { label: 'match list', insertText: 'in ()', kind: 'operator', detail: 'Match any listed value' },
       { label: 'omit list', insertText: 'not in ()', kind: 'operator', detail: 'Reject listed values' },
       { label: 'Parentheses', insertText: '(Speed >= 3 or Stamina >= 3)', kind: 'snippet', detail: 'Group OR logic' },
+      { label: 'Modulo search', insertText: 'Wins % 2 = 0', kind: 'snippet', detail: 'Use arithmetic operators in numeric comparisons' },
       { label: 'Match list', insertText: 'Main character in (Special Week, Silence Suzuka)', kind: 'snippet', detail: 'Use in (...) for listed values' },
       { label: 'Omit list', insertText: 'Main character not in (Special Week, Silence Suzuka)', kind: 'snippet', detail: 'Use not in (...) for omitted values' },
       { label: 'has skill', insertText: 'has Right-Handed ○', kind: 'snippet', detail: 'Skill present on any parent' },
@@ -5348,28 +5618,51 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const seen = new Set<string>();
     const addLegacySuggestion = (accountId: string, veteran: VeteranMember, accountLabel = accountId): void => {
       const veteranId = this.getVeteranUuid(veteran);
-      if (!accountId && veteran.member_id == null && !veteranId) return;
+      const localIdentity = veteran.share_local_id ?? veteran.share_inheritance_id;
+      if (!accountId && veteran.member_id == null && !veteranId && localIdentity == null && !veteran.share_source) return;
       const label = this.getOwnedLegacyUqlDisplayValue(accountId, veteran);
       const name = this.getVeteranName(veteran);
-      const identity = veteranId ? `veteran:${veteranId}` : (veteran.member_id != null ? `member:${accountId}:${veteran.member_id}` : `account:${accountId}`);
+      const identity = veteranId
+        ? `veteran:${veteranId}`
+        : veteran.member_id != null
+          ? `member:${accountId}:${veteran.member_id}`
+          : accountId
+            ? `account:${accountId}`
+            : `${veteran.share_source ?? 'selected'}:${localIdentity ?? label}`;
       if (seen.has(identity)) return;
       seen.add(identity);
-      const idText = veteranId || (veteran.member_id != null ? veteran.member_id.toString() : accountId);
+      const idText = veteranId
+        || (veteran.member_id != null ? veteran.member_id.toString() : '')
+        || accountId
+        || (localIdentity != null ? String(localIdentity) : veteran.share_source ?? 'selected');
+      const detail = veteranId
+        ? `${accountLabel} - veteran ${veteranId}`
+        : veteran.member_id != null
+          ? `${accountLabel || 'Selected legacy'} - member ${veteran.member_id}`
+          : accountId
+            ? `${accountLabel} - account ${accountId}`
+            : veteran.share_source === 'manual'
+              ? 'Manual legacy'
+              : veteran.share_source === 'partner'
+                ? 'Practice partner'
+                : veteran.share_source === 'bookmark'
+                  ? 'Bookmarked legacy'
+                  : 'Selected legacy';
       suggestions.push({
         label,
         insertText: `[${label}]`,
         kind: 'value' as const,
-        detail: veteranId ? `${accountLabel} · veteran ${veteranId}` : (veteran.member_id != null ? `${accountLabel} · member ${veteran.member_id}` : `${accountLabel} · account ${accountId}`),
+        detail,
         searchText: `${name} ${label} ${accountLabel} ${accountId} ${idText}`,
         matchPhrases: [label, name, `${name} ${idText}`],
         valueContext: 'legacy' as const,
         priority: 1,
-        backendValue: veteranId || (veteran.member_id != null ? `${accountId}:${veteran.member_id}` : accountId),
+        backendValue: veteranId || (veteran.member_id != null ? `${accountId}:${veteran.member_id}` : accountId || undefined),
         imageUrl: this.getVeteranUqlCharacterImage(veteran)
       });
     };
     if (this.selectedVeteran) {
-      const accountId = this.getAccountIdForVeteran(this.selectedVeteran) || this.selectedAccountId || '';
+      const accountId = this.getOwnedLegacyAccountIdForVeteran(this.selectedVeteran);
       addLegacySuggestion(accountId, this.selectedVeteran, accountId);
     }
     return suggestions;
@@ -5411,9 +5704,65 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private getNormalizedUqlQuery(): string {
     return this.uqlQuery.trim().replace(/\s+/g, ' ');
   }
-  private getUqlDelimiterIssue(query: string): 'unterminated-string' | 'closing-paren' | 'open-paren' | null {
+  private getEditableUqlQuery(): string {
+    return (this.uqlQuery || '').replace(/^\s*where\b\s*/i, '');
+  }
+  private setUqlValidation(state: UqlValidationState, message: string, issue: UqlValidationIssue | null = null): void {
+    this.uqlValidationState = state;
+    this.uqlValidationMessage = message;
+    this.uqlValidationIssue = issue;
+  }
+  private createUqlValidationIssue(
+    query: string,
+    state: Extract<UqlValidationState, 'incomplete' | 'invalid'>,
+    message: string,
+    from: number,
+    to: number,
+  ): UqlValidationIssue {
+    const length = query.length;
+    const issueFrom = Math.max(0, Math.min(length, from));
+    const issueTo = Math.max(issueFrom + 1, Math.min(length, to));
+    return {
+      from: issueFrom,
+      to: Math.min(length, issueTo),
+      message,
+      state,
+    };
+  }
+  private getTrailingUqlIssueRange(query: string): [number, number] {
+    const trimmedEnd = query.replace(/\s+$/g, '').replace(/;\s*$/g, '');
+    const match = trimmedEnd.match(/\S+$/);
+    if (!match || match.index === undefined) return [Math.max(0, query.length - 1), query.length];
+    return [match.index, match.index + match[0].length];
+  }
+  private getEmptyUqlValueListRange(query: string): [number, number] {
+    const patterns = [
+      /(?:^|[\s(])(?:has\s+any|has\s+all|contains\s+any|contains\s+all|not\s+in|in)\s*(\(\s*\))/i,
+      /\b(?:overlaps|has_all|contains_all|all)\s*\(\s*[^,()]+\s*,\s*(\(\s*\))/i,
+    ];
+    for (const pattern of patterns) {
+      const match = pattern.exec(query);
+      if (!match?.[1] || match.index === undefined) continue;
+      const from = match.index + match[0].indexOf(match[1]);
+      return [from, from + match[1].length];
+    }
+    return this.getTrailingUqlIssueRange(query);
+  }
+  private getUnknownIdentifierIssueRange(query: string, unknownIdentifier: string): [number, number] {
+    const identifier = unknownIdentifier.replace(/\(\)$/g, '');
+    const escaped = this.escapeRegExp(identifier);
+    const pattern = new RegExp(`(^|[^A-Za-z0-9_.])(${escaped})(?=[^A-Za-z0-9_.]|$)`, 'i');
+    const match = pattern.exec(query);
+    if (match?.[2] && match.index !== undefined) {
+      const from = match.index + match[0].indexOf(match[2]);
+      return [from, from + match[2].length];
+    }
+    return this.getTrailingUqlIssueRange(query);
+  }
+  private getUqlDelimiterIssue(query: string): UqlDelimiterIssue | null {
     let quoteCharacter: string | null = null;
-    let openParentheses = 0;
+    let quoteStart = -1;
+    const openParentheses: number[] = [];
     for (let index = 0; index < query.length; index++) {
       const character = query[index];
       if (quoteCharacter) {
@@ -5428,26 +5777,31 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       }
       if (this.isUqlQuoteStart(query, index)) {
         quoteCharacter = character;
+        quoteStart = index;
       } else if (character === '(') {
-        openParentheses++;
+        openParentheses.push(index);
       } else if (character === ')') {
-        openParentheses--;
-        if (openParentheses < 0) return 'closing-paren';
+        if (!openParentheses.length) return { kind: 'closing-paren', from: index, to: index + 1 };
+        openParentheses.pop();
       }
     }
-    if (quoteCharacter) return 'unterminated-string';
-    if (openParentheses > 0) return 'open-paren';
+    if (quoteCharacter) return { kind: 'unterminated-string', from: Math.max(0, quoteStart), to: query.length };
+    if (openParentheses.length > 0) {
+      const from = openParentheses[openParentheses.length - 1];
+      return { kind: 'open-paren', from, to: from + 1 };
+    }
     return null;
   }
   private endsWithIncompleteUqlToken(expression: string): boolean {
     const trimmedExpression = expression.replace(/;\s*$/, '').trim();
-    return /(?:\bwhere\b|\band\b|\bor\b|\bnot\b|\bin\b|\bbetween\b|\blike\b|\bilike\b|\bhas\b|\bhas\s+any\b|\bhas\s+all\b|\bdoes\s+not\s+have\b|\bcontains\b|\bcontains\s+any\b|\bcontains\s+all\b|[,(]|=|!=|<>|<=|>=|<|>)$/i.test(trimmedExpression);
+    return /(?:\bwhere\b|\band\b|\bor\b|\bnot\b|\bin\b|\bbetween\b|\blike\b|\bilike\b|\bmod\b|\bhas\b|\bhas\s+any\b|\bhas\s+all\b|\bdoes\s+not\s+have\b|\bcontains\b|\bcontains\s+any\b|\bcontains\s+all\b|[,(+\-*\/%]|=|!=|<>|<=|>=|<|>)$/i.test(trimmedExpression);
   }
   private hasEmptyUqlValueList(expression: string): boolean {
     return /(?:^|[\s(])(?:has\s+any|has\s+all|contains\s+any|contains\s+all|not\s+in|in)\s*\(\s*\)(?=\s*(?:\)|;|$|\band\b|\bor\b))/i.test(expression)
       || /\b(?:overlaps|has_all|contains_all|all)\s*\(\s*[^,()]+\s*,\s*\(\s*\)\s*\)/i.test(expression);
   }
-  private findInvalidCompiledUqlSyntax(query: string): string | null {
+  private findInvalidCompiledUqlSyntax(query: string): { message: string; from: number; to: number } | null {
+    const message = 'IN lists only accept literal values, not nested functions';
     const queryWithoutStrings = this.replaceUqlStrings(query, match => ' '.repeat(match.length));
     const inPattern = /\b(?:not\s+)?in\s*\(/gi;
     let match: RegExpExecArray | null;
@@ -5468,11 +5822,16 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       if (closeParenIndex < 0) break;
       const listText = queryWithoutStrings.slice(openParenIndex + 1, closeParenIndex);
       if (/[()]/.test(listText)) {
-        return 'IN lists only accept literal values, not nested functions';
+        const nestedOffset = listText.search(/[()]/);
+        const from = nestedOffset >= 0 ? openParenIndex + 1 + nestedOffset : openParenIndex;
+        return { message, from, to: from + 1 };
       }
       inPattern.lastIndex = closeParenIndex + 1;
     }
     return null;
+  }
+  private findInvalidUqlSyntaxIssue(query: string): { message: string; from: number; to: number } | null {
+    return this.findInvalidCompiledUqlSyntax(query);
   }
   private endsWithPartialBooleanContinuation(expression: string): boolean {
     const trimmedExpression = expression.replace(/;\s*$/, '').trim();
@@ -5597,6 +5956,26 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private applyFactorUqlClauseToStructuredFilters(clause: string): boolean {
+    const scoringMatch = clause.match(/^(optional_white|optional_main_white|lineage_white)\s*\(((?:[^()]|\([^)]*\))*)\)$/i);
+    if (scoringMatch) {
+      const factorIds = this.parseUqlScoringFactorIds(scoringMatch[2]);
+      if (!factorIds.length) return false;
+      const priority = this.parseUqlScoringPriority(scoringMatch[2]);
+      const functionName = scoringMatch[1].toLowerCase();
+      const target = functionName === 'optional_main_white'
+        ? this.optionalMainWhiteFactorFilters
+        : functionName === 'lineage_white'
+          ? this.lineageWhiteFactorFilters
+          : this.optionalWhiteFactorFilters;
+      const optionTarget = functionName === 'optional_main_white'
+        ? this.filteredOptionalMainWhiteFactorOptions
+        : functionName === 'lineage_white'
+          ? this.filteredLineageWhiteFactorOptions
+          : this.filteredOptionalWhiteFactorOptions;
+      factorIds.forEach(factorId => this.addRestoredWhiteScoringFilter(target, optionTarget, factorId, priority));
+      return true;
+    }
+
     const containsMatch = clause.match(/^contains\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*(\d+)\s*\)$/i);
     if (containsMatch) {
       return this.applySparkIdGroupToStructuredFilters(containsMatch[1], [parseInt(containsMatch[2], 10)]);
@@ -5637,6 +6016,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.mainPinkFactorFilters = [];
     this.mainGreenFactorFilters = [];
     this.mainWhiteFactorFilters = [];
+    this.optionalWhiteFactorFilters = [];
+    this.optionalMainWhiteFactorFilters = [];
+    this.lineageWhiteFactorFilters = [];
+    this.filteredOptionalWhiteFactorOptions = [];
+    this.filteredOptionalMainWhiteFactorOptions = [];
+    this.filteredLineageWhiteFactorOptions = [];
     this.selectedSupportCard = null;
     this.selectedLimitBreak = 0;
     this.searchUserId = '';
@@ -5903,6 +6288,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.appendFactorFilterUqlClauses(clauses, this.mainPinkFactorFilters, this.pinkFactors, 'main_pink_factors', 'Main ', 3);
     this.appendFactorFilterUqlClauses(clauses, this.mainGreenFactorFilters, this.greenFactors, 'main_green_factors', 'Main ', 3);
     this.appendFactorFilterUqlClauses(clauses, this.mainWhiteFactorFilters, this.whiteFactors, 'main_white_factors', 'Main ', 3);
+    this.appendPriorityScoringUqlClauses(clauses, this.optionalWhiteFactorFilters, 'optional_white');
+    this.appendPriorityScoringUqlClauses(clauses, this.optionalMainWhiteFactorFilters, 'optional_main_white');
+    this.appendPriorityScoringUqlClauses(clauses, this.lineageWhiteFactorFilters, 'lineage_white');
     if (!this.mainBlueFactorFilters.length) addMinimumClause('Main blue sparks', this.filterState.min_main_blue_factors);
     if (!this.mainPinkFactorFilters.length) addMinimumClause('Main pink sparks', this.filterState.min_main_pink_factors);
     if (!this.mainGreenFactorFilters.length) addMinimumClause('Main green sparks', this.filterState.min_main_green_factors);
@@ -5935,6 +6323,59 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return clauses.join(' and ');
   }
 
+  private appendPriorityScoringUqlClauses(
+    clauses: string[],
+    filters: FactorFilter[],
+    functionName: 'optional_white' | 'optional_main_white' | 'lineage_white',
+  ): void {
+    const groups = new Map<number, Array<{ id: number; value: string }>>();
+    for (const filter of filters) {
+      const factorId = this.getNormalizedFactorFilterId(filter);
+      if (!factorId) continue;
+      const priority = this.getPriorityGroup(filter);
+      const values = groups.get(priority) ?? [];
+      if (!values.some(item => item.id === factorId)) {
+        values.push({
+          id: factorId,
+          value: this.getFriendlyWhiteScoringUqlValue(factorId)
+        });
+      }
+      groups.set(priority, values);
+    }
+
+    [...groups.entries()]
+      .sort(([left], [right]) => left - right)
+      .forEach(([priority, factorValues]) => {
+        factorValues.sort((left, right) => left.id - right.id);
+        const valuesArgument = factorValues.map(item => item.value).join(', ');
+        clauses.push(`${this.getFriendlyWhiteScoringFieldLabel(functionName)} in (${valuesArgument}, priority = ${priority})`);
+      });
+  }
+
+  private getFriendlyWhiteScoringFieldLabel(functionName: 'optional_white' | 'optional_main_white' | 'lineage_white'): string {
+    switch (functionName) {
+      case 'optional_main_white':
+        return 'optional main white';
+      case 'lineage_white':
+        return 'lineage white';
+      default:
+        return 'optional white';
+    }
+  }
+
+  private getFriendlyWhiteScoringUqlValue(factorId: number): string {
+    const factorName = this.whiteFactors
+      .find(factor => parseInt(factor.id, 10) === factorId)
+      ?.text
+      ?.trim();
+    if (!factorName || !this.isSafeFriendlyWhiteScoringLabel(factorName)) return `${factorId}`;
+    return factorName;
+  }
+
+  private isSafeFriendlyWhiteScoringLabel(value: string): boolean {
+    return !!value.trim() && !/[;'"()]/.test(value);
+  }
+
   private formatFriendlyCharacterUqlValue(id: number): string {
     const character = getMasterCharacterById(id);
     const value = character ? this.getCharacterUqlDisplayName(character) : id.toString();
@@ -5955,7 +6396,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       clauses.push(`target = ${value}`);
     }
     if (this.selectedVeteran) {
-      const accountId = this.getAccountIdForVeteran(this.selectedVeteran) || this.selectedAccountId || this.selectedVeteran.trainer_id || '';
+      const accountId = this.getOwnedLegacyAccountIdForVeteran(this.selectedVeteran);
       clauses.push(`owned legacy = [${this.getOwnedLegacyUqlDisplayValue(accountId, this.selectedVeteran)}]`);
     }
     return clauses;
@@ -6443,6 +6884,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.selectedVeteranName = '';
     this.selectedVeteranImage = '';
     this.pendingVeteranRestore = null;
+    this.restoredP2Context = null;
     this.veteranSelected.emit(null);
     this.onFilterChange();
   }
@@ -6464,7 +6906,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (veteranId) return `${name} #${veteranId}`;
     if (veteran.member_id != null && accountId) return `${name} #${veteran.member_id} @${accountId}`;
     if (veteran.member_id != null) return `${name} #${veteran.member_id}`;
-    return `${name} @${accountId}`;
+    return accountId ? `${name} @${accountId}` : name;
   }
   getAffinityTargetCharaId(): number | null {
     return this.treeData.characterId

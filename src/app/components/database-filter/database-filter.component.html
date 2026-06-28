@@ -19,6 +19,7 @@
         [query]="uqlQuery"
         [validationState]="uqlValidationState"
         [validationMessage]="uqlValidationMessage"
+        [validationIssue]="uqlValidationIssue"
         [snippets]="uqlStarterSnippets"
         [suggestions]="uqlSuggestions"
         (queryChange)="uqlQuery = $event; onUqlChange()"
@@ -407,7 +408,11 @@
 
           <!-- Optional White Factors (for scoring/sorting) -->
           <div class="factor-section">
-            <div class="section-label">Preferred White Factors (Sorts by Match Count)</div>
+            <div class="section-label-row">
+              <div class="section-label">Preferred White Factors <span class="section-label-detail">priority group, then match count</span></div>
+              <div class="priority-group-heading" matTooltip="Priority group: 0 sorts first, larger numbers are lower-priority tiebreakers">Priority</div>
+              <div></div>
+            </div>
             <div class="factor-list">
               <div class="factor-row-item optional-factor" *ngFor="let filter of optionalWhiteFactorFilters; let i = index">
                 <div class="row-top">
@@ -422,6 +427,26 @@
                       </mat-option>
                     </mat-autocomplete>
                   </mat-form-field>
+                  <div class="priority-group-control" matTooltip="Priority group: 0 sorts first, larger numbers are lower-priority tiebreakers">
+                    <span class="priority-group-prefix">P</span>
+                    <input
+                      class="priority-group-input"
+                      type="number"
+                      inputmode="numeric"
+                      min="0"
+                      step="1"
+                      [ngModel]="getPriorityGroup(filter)"
+                      (ngModelChange)="setFactorPriority(filter, $event)"
+                      aria-label="Priority group">
+                    <span class="priority-stepper-controls">
+                      <button type="button" class="priority-stepper" (click)="adjustFactorPriority(filter, 1); $event.stopPropagation()" aria-label="Increase priority group number">
+                        <mat-icon>keyboard_arrow_up</mat-icon>
+                      </button>
+                      <button type="button" class="priority-stepper" (click)="adjustFactorPriority(filter, -1); $event.stopPropagation()" aria-label="Decrease priority group number">
+                        <mat-icon>keyboard_arrow_down</mat-icon>
+                      </button>
+                    </span>
+                  </div>
                   <button mat-icon-button color="warn" class="remove-btn" (click)="removeFactorFilter(optionalWhiteFactorFilters, i, 'optionalWhite')">
                     <mat-icon>close</mat-icon>
                   </button>
@@ -435,7 +460,11 @@
 
           <!-- Lineage White Factors -->
           <div class="factor-section" *ngIf="filterMode === 'advanced'">
-            <div class="section-label">Lineage White Factors (Sorts by Lineage depth factor 1.1^n)</div>
+            <div class="section-label-row">
+              <div class="section-label">Lineage White Factors <span class="section-label-detail">priority group, then stack score</span></div>
+              <div class="priority-group-heading" matTooltip="Priority group: 0 sorts first, larger numbers are lower-priority tiebreakers">Priority</div>
+              <div></div>
+            </div>
             <div class="factor-list">
               <div class="factor-row-item optional-factor" *ngFor="let filter of lineageWhiteFactorFilters; let i = index">
                 <div class="row-top">
@@ -450,6 +479,26 @@
                       </mat-option>
                     </mat-autocomplete>
                   </mat-form-field>
+                  <div class="priority-group-control" matTooltip="Priority group: 0 sorts first, larger numbers are lower-priority tiebreakers">
+                    <span class="priority-group-prefix">P</span>
+                    <input
+                      class="priority-group-input"
+                      type="number"
+                      inputmode="numeric"
+                      min="0"
+                      step="1"
+                      [ngModel]="getPriorityGroup(filter)"
+                      (ngModelChange)="setFactorPriority(filter, $event)"
+                      aria-label="Priority group">
+                    <span class="priority-stepper-controls">
+                      <button type="button" class="priority-stepper" (click)="adjustFactorPriority(filter, 1); $event.stopPropagation()" aria-label="Increase priority group number">
+                        <mat-icon>keyboard_arrow_up</mat-icon>
+                      </button>
+                      <button type="button" class="priority-stepper" (click)="adjustFactorPriority(filter, -1); $event.stopPropagation()" aria-label="Decrease priority group number">
+                        <mat-icon>keyboard_arrow_down</mat-icon>
+                      </button>
+                    </span>
+                  </div>
                   <button mat-icon-button color="warn" class="remove-btn" (click)="removeFactorFilter(lineageWhiteFactorFilters, i, 'lineageWhite')">
                     <mat-icon>close</mat-icon>
                   </button>
@@ -613,7 +662,11 @@
 
           <!-- Optional Main White Factors (for scoring/sorting) -->
           <div class="factor-section">
-            <div class="section-label">Preferred White Factors (Sorts by Match Count)</div>
+            <div class="section-label-row">
+              <div class="section-label">Preferred White Factors <span class="section-label-detail">priority group, then match count</span></div>
+              <div class="priority-group-heading" matTooltip="Priority group: 0 sorts first, larger numbers are lower-priority tiebreakers">Priority</div>
+              <div></div>
+            </div>
             <div class="factor-list">
               <div class="factor-row-item optional-factor" *ngFor="let filter of optionalMainWhiteFactorFilters; let i = index">
                 <div class="row-top">
@@ -628,6 +681,26 @@
                       </mat-option>
                     </mat-autocomplete>
                   </mat-form-field>
+                  <div class="priority-group-control" matTooltip="Priority group: 0 sorts first, larger numbers are lower-priority tiebreakers">
+                    <span class="priority-group-prefix">P</span>
+                    <input
+                      class="priority-group-input"
+                      type="number"
+                      inputmode="numeric"
+                      min="0"
+                      step="1"
+                      [ngModel]="getPriorityGroup(filter)"
+                      (ngModelChange)="setFactorPriority(filter, $event)"
+                      aria-label="Priority group">
+                    <span class="priority-stepper-controls">
+                      <button type="button" class="priority-stepper" (click)="adjustFactorPriority(filter, 1); $event.stopPropagation()" aria-label="Increase priority group number">
+                        <mat-icon>keyboard_arrow_up</mat-icon>
+                      </button>
+                      <button type="button" class="priority-stepper" (click)="adjustFactorPriority(filter, -1); $event.stopPropagation()" aria-label="Decrease priority group number">
+                        <mat-icon>keyboard_arrow_down</mat-icon>
+                      </button>
+                    </span>
+                  </div>
                   <button mat-icon-button color="warn" class="remove-btn" (click)="removeFactorFilter(optionalMainWhiteFactorFilters, i, 'optionalMainWhite')">
                     <mat-icon>close</mat-icon>
                   </button>

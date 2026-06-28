@@ -50,7 +50,7 @@ import {
   historyKeymap,
 } from '@codemirror/commands';
 
-import type { UqlHighlightSegment, UqlSuggestion } from './uql-filter.component';
+import type { UqlHighlightSegment, UqlSuggestion, UqlValidationIssue } from './uql-filter.component';
 
 export interface UqlCompletionResult {
   from: number;
@@ -127,6 +127,13 @@ class UqlChipWidget extends WidgetType {
 }
 
 const setSegmentsEffect = StateEffect.define<UqlHighlightSegment[]>();
+const setValidationIssueEffect = StateEffect.define<UqlValidationIssue | null>();
+
+function isChipSegment(seg: UqlHighlightSegment): boolean {
+  if (seg.kind !== 'identifier') return false;
+  if (seg.imageUrl || seg.valueContext === 'race-saddle' || seg.valueContext === 'legacy') return true;
+  return !!seg.valueContext?.endsWith('-factor') && (seg.atomic || !!seg.title || !!seg.displayText);
+}
 
 function buildDecorationsFromSegments(segments: UqlHighlightSegment[], docLength: number): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
@@ -139,7 +146,7 @@ function buildDecorationsFromSegments(segments: UqlHighlightSegment[], docLength
     const to = Math.max(from, Math.min(docLength, rawTo));
     if (from === to) continue;
     if (from < lastTo) continue; // guard against accidental overlap
-    if (seg.kind === 'identifier' && (seg.imageUrl || seg.valueContext === 'race-saddle' || seg.valueContext === 'legacy')) {
+    if (isChipSegment(seg)) {
       const ctxClass = seg.valueContext ? `uql-cm-ctx-${seg.valueContext}` : '';
       const display = seg.displayText || seg.text;
       builder.add(
@@ -175,6 +182,37 @@ const decorationField = StateField.define<DecorationSet>({
     for (const ef of tr.effects) {
       if (ef.is(setSegmentsEffect)) {
         deco = buildDecorationsFromSegments(ef.value, tr.state.doc.length);
+      }
+    }
+    return deco;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+function buildValidationDecorations(issue: UqlValidationIssue | null, docLength: number): DecorationSet {
+  if (!issue) return Decoration.none;
+  const from = Math.max(0, Math.min(docLength, issue.from));
+  const to = Math.max(from, Math.min(docLength, issue.to));
+  if (from === to) return Decoration.none;
+  const classes = [
+    'uql-cm-validation-issue',
+    `uql-cm-validation-${issue.state}`,
+  ];
+  return Decoration.set([
+    Decoration.mark({
+      class: classes.join(' '),
+      attributes: issue.message ? { title: issue.message } : undefined,
+    }).range(from, to),
+  ]);
+}
+
+const validationIssueField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(deco, tr) {
+    deco = deco.map(tr.changes);
+    for (const ef of tr.effects) {
+      if (ef.is(setValidationIssueEffect)) {
+        deco = buildValidationDecorations(ef.value, tr.state.doc.length);
       }
     }
     return deco;
@@ -236,6 +274,7 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
 
   @Input() value = '';
   @Input() validationState: UqlEditorValidationState = 'empty';
+  @Input() validationIssue: UqlValidationIssue | null = null;
   @Input() placeholder = '';
   @Input() tokenize: ((text: string) => UqlHighlightSegment[]) | null = null;
   @Input() complete: ((text: string, pos: number) => UqlCompletionResult | null) | null = null;
@@ -267,6 +306,9 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
     } else if (changes['tokenize']) {
       this.lastSegmentText = null;
       this.dispatchSegments();
+    }
+    if (changes['validationIssue']) {
+      this.dispatchValidationIssue();
     }
     if (changes['placeholder']) {
       this.view.dispatch({
@@ -334,6 +376,7 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
         EditorView.lineWrapping,
         this.placeholderCompartment.of(placeholderExt(this.placeholder || '')),
         decorationField,
+        validationIssueField,
         wherePrefixPlugin,
         autocompletion({
           override: [completionSource],
@@ -460,6 +503,7 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
       parent: this.host.nativeElement,
     });
     this.dispatchSegments();
+    this.dispatchValidationIssue();
   }
 
   private autoInsertInListParens(view: EditorView): boolean {
@@ -505,5 +549,10 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
     this.lastSegmentText = text;
     const segments = this.tokenize(text);
     this.view.dispatch({ effects: setSegmentsEffect.of(segments) });
+  }
+
+  private dispatchValidationIssue(): void {
+    if (!this.view) return;
+    this.view.dispatch({ effects: setValidationIssueEffect.of(this.validationIssue) });
   }
 }

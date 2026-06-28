@@ -218,6 +218,9 @@ export interface SuccessionChara {
 
 export interface VeteranMember {
   id?: string | number;
+  share_source?: 'profile' | 'bookmark' | 'partner' | 'manual';
+  share_inheritance_id?: number | string;
+  share_local_id?: string;
   trainer_id?: string;
   distance_type: number | null;
   member_id: number | null;
