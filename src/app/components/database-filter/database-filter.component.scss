@@ -369,6 +369,8 @@
     margin-bottom: 0;
     align-items: stretch;
     padding: 14px;
+    container-type: inline-size;
+    container-name: database-filter-main;
 
     @media (max-width: 600px) { padding: 6px 0; flex-direction: column; gap: 8px; }
 }
@@ -2009,6 +2011,45 @@
 
 // Final responsive guardrails. Keep this block late so it wins over the older
 // desktop-first filter rules above.
+@container database-filter-main (max-width: 1640px) {
+    .legacy-tree-wrapper {
+        flex: 1 1 100% !important;
+        min-width: 0;
+        padding-right: 0;
+        padding-bottom: 14px;
+        margin-bottom: 14px;
+        border-bottom: 1.5px solid var(--border-primary);
+    }
+
+    .support-lb-group {
+        flex: 0 1 560px;
+        border-left: none;
+
+        > .m-collapse:first-of-type > .filter-section-wrapper { padding-left: 0; }
+    }
+
+    .search-wrapper {
+        flex: 1 1 320px;
+        min-width: 280px;
+    }
+}
+
+@container database-filter-main (max-width: 980px) {
+    .support-lb-group {
+        flex: 1 1 100%;
+        padding-bottom: 14px;
+        margin-bottom: 14px;
+        border-bottom: 1.5px solid var(--border-primary);
+    }
+
+    .search-wrapper {
+        flex: 1 1 100%;
+        min-width: 0;
+        border-left: none;
+        padding-left: 0;
+    }
+}
+
 @media (max-width: 900px) {
     .property-filters-compact,
     .filters-grid-content,

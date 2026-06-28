@@ -430,7 +430,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'Great parent 1 (gp1)', aliases: ['gp1 character', 'gp1 characters', 'gp1 uma', 'gp1 umas', 'gp1 chara', 'gp1 charas', 'grandparent 1', 'grandparent 1 character', 'grandparent 1 characters', 'grand parent 1', 'grand parent 1 character', 'grand parent 1 characters', 'great parent 1', 'great parent 1 character', 'left parent', 'left character', 'left characters', 'left uma', 'left umas', 'left chara', 'left charas', 'gp1'], field: 'left_chara_id', type: 'number' },
     { label: 'Great parent 2 (gp2)', aliases: ['gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas', 'grandparent 2', 'grandparent 2 character', 'grandparent 2 characters', 'grand parent 2', 'grand parent 2 character', 'grand parent 2 characters', 'great parent 2', 'great parent 2 character', 'right parent', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas', 'gp2'], field: 'right_chara_id', type: 'number' },
     { label: 'Great parent (gp1/2)', aliases: ['gp characters', 'gp character', 'gp umas', 'gp uma', 'gp charas', 'gp chara', 'grandparent characters', 'grandparent character', 'grand parent characters', 'grand parent character', 'great parent characters', 'great parent character', 'any gp characters', 'any gp character', 'any grandparent characters', 'any grandparent character', 'any great parent characters', 'any great parent character'], field: 'grandparent_characters', type: 'number' },
-    { label: 'Parent rank', aliases: ['parent rank', 'rank'], field: 'parent_rank', type: 'number' },
+    { label: 'Rank', aliases: ['parent rank', 'rank'], field: 'parent_rank', type: 'number' },
     { label: 'Blue stars', aliases: ['blue stars', 'blue star sum', 'blue sparks total', 'total blue sparks', 'lineage blue sparks', 'lineage blue stars'], field: 'blue_stars_sum', type: 'number' },
     { label: 'Pink stars', aliases: ['pink stars', 'pink star sum', 'pink sparks total', 'total pink sparks', 'lineage pink sparks', 'lineage pink stars'], field: 'pink_stars_sum', type: 'number' },
     { label: 'Green stars', aliases: ['green stars', 'green star sum', 'green sparks total', 'total green sparks', 'lineage green sparks', 'lineage green stars'], field: 'green_stars_sum', type: 'number' },
@@ -960,7 +960,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (!stateStr) return '';
     try {
       const state: CompressedState = JSON.parse(this.decodeBase64Utf8(stateStr));
-      return state.uql || '';
+      return this.normalizeRestoredUqlQuery(state.uql || '');
     } catch {
       return '';
     }
@@ -1069,7 +1069,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       } else if (state.uql) {
         this.filterMode = 'uql';
       }
-      this.uqlQuery = state.uql || '';
+      this.uqlQuery = this.normalizeRestoredUqlQuery(state.uql || '');
       this.validateUqlQuery();
       if (this.filterMode === 'uql') {
         this.clearUqlRepresentableStructuredFilters();
@@ -1666,6 +1666,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private generateSparkIds(filters: FactorFilter[], availableFactors: any[], maxCap: number = 9): number[] {
     const ids: number[] = [];
     filters.forEach(f => {
+      const factorId = this.getNormalizedFactorFilterId(f);
       const min = f.min || 1;
       let max = f.max !== undefined ? f.max : 9;
       
@@ -1675,9 +1676,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       }
       
       for (let lvl = min; lvl <= max; lvl++) {
-        if (f.factorId) {
+        if (factorId) {
           // Specific factor: ID + Level (concatenated)
-          ids.push(parseInt(`${f.factorId}${lvl}`, 10));
+          ids.push(parseInt(`${factorId}${lvl}`, 10));
         } else {
           // "Any" factor: Expand to all available factors in this category
           availableFactors.forEach(factor => {
@@ -1692,6 +1693,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private generateSparkIdGroups(filters: FactorFilter[], availableFactors: any[], maxCap: number = 9): number[][] {
     const groups: number[][] = [];
     filters.forEach(f => {
+      const factorId = this.getNormalizedFactorFilterId(f);
       const ids: number[] = [];
       const min = f.min || 1;
       let max = f.max !== undefined ? f.max : 9;
@@ -1701,8 +1703,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       }
       
       for (let lvl = min; lvl <= max; lvl++) {
-        if (f.factorId) {
-          ids.push(parseInt(`${f.factorId}${lvl}`, 10));
+        if (factorId) {
+          ids.push(parseInt(`${factorId}${lvl}`, 10));
         } else {
           // "Any" factor: Expand to all available factors in this category
           availableFactors.forEach(factor => {
@@ -2474,6 +2476,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       } else {
         this.applyRepresentableUqlToStructuredFilters();
       }
+    } else if (mode === 'uql' && previousMode !== 'uql' && this.hasStructuredFiltersForUql()) {
+      this.writeStructuredFiltersToUqlQuery();
     } else if (mode === 'uql' && previousMode !== 'uql' && !this.getNormalizedUqlQuery()) {
       const savedUqlQuery = this.readUqlQueryFromSerializedState(savedState?.uqlState);
       if (savedUqlQuery) {
@@ -2508,6 +2512,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     setTimeout(() => this.setupWrappingDetection(), 0);
     setTimeout(() => this.updateFloatingBtnState(), 350);
+  }
+
+  private hasStructuredFiltersForUql(): boolean {
+    return !!(this.buildStructuredUqlExpression() || this.buildUqlEditorDirectiveClauses().length);
   }
 
   private writeStructuredFiltersToUqlQuery(): void {
@@ -2901,7 +2909,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const factorSumCompiled = this.compileFriendlyFactorSumComparisons(arrayOperatorCompiled);
     const scopedSparkCompiled = this.compileFriendlyScopedSparkComparisons(factorSumCompiled);
     const scopedSparkCategoryCompiled = this.compileFriendlyScopedSparkCategoryComparisons(scopedSparkCompiled);
-    const sparkCompiled = this.compileFriendlySparkComparisons(scopedSparkCategoryCompiled);
+    const sparkCategoryCompiled = this.compileFriendlySparkCategoryComparisons(scopedSparkCategoryCompiled);
+    const sparkCompiled = this.compileFriendlySparkComparisons(sparkCategoryCompiled);
     const factorCompiled = this.compileFriendlyLoadedFactorComparisons(sparkCompiled);
     const characterScopeCompiled = this.compileFriendlyCharacterScopeExpressions(factorCompiled);
     const supportCardCompiled = this.compileFriendlySupportCardExpressions(characterScopeCompiled);
@@ -3250,6 +3259,53 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const joiner = normalizedOperator === '!=' ? ' and ' : ' or ';
     return `(${fields.map(buildClause).join(joiner)})`;
   }
+
+  private compileFriendlySparkCategoryComparisons(query: string): string {
+    const colorAliases = {
+      blue: ['blue spark', 'blue sparks', 'blue factor', 'blue factors'],
+      pink: ['pink spark', 'pink sparks', 'pink factor', 'pink factors'],
+      green: ['green spark', 'green sparks', 'green factor', 'green factors', 'unique skill', 'unique skills']
+    };
+    const colorFields = {
+      blue: 'blue_sparks',
+      pink: 'pink_sparks',
+      green: 'green_sparks'
+    };
+
+    return this.replaceOutsideStrings(query, segment => {
+      let compiledSegment = segment;
+      for (const color of ['blue', 'pink', 'green'] as const) {
+        for (const alias of colorAliases[color]) {
+          const aliasPattern = this.escapeRegExp(alias).replace(/\s+/g, '\\s+');
+          const pattern = new RegExp(`(^|[^\\w])(${aliasPattern})\\s*(==|=|!=|<>|>=|<=|>|<)\\s*(\\d+)`, 'gi');
+          compiledSegment = compiledSegment.replace(pattern, (_match, leadingText: string, _aliasText: string, operator: string, value: string) => {
+            return `${leadingText}${this.buildSparkCategoryComparison(colorFields[color], color, operator, parseInt(value, 10))}`;
+          });
+        }
+      }
+      return compiledSegment;
+    });
+  }
+
+  private buildSparkCategoryComparison(fieldName: string, color: 'blue' | 'pink' | 'green', operator: string, value: number): string {
+    const normalizedOperator = this.normalizeUqlComparisonOperator(operator) || operator;
+    const factors = color === 'blue' ? this.blueFactors : color === 'pink' ? this.pinkFactors : this.greenFactors;
+    const levels = normalizedOperator === '!='
+      ? [value]
+      : this.getSparkLevelsForComparison(normalizedOperator, value, 9);
+    if (!levels.length) return '(1 = 0)';
+    const ids = factors.flatMap(factor => levels.map(level => this.buildSparkId(Number(factor.id), level)));
+    if (!ids.length) return normalizedOperator === '!=' ? '(1 = 1)' : '(1 = 0)';
+    if (normalizedOperator === '!=') {
+      return ids.length === 1
+        ? `not contains(${fieldName}, ${ids[0]})`
+        : `not overlaps(${fieldName}, (${ids.join(', ')}))`;
+    }
+    return ids.length === 1
+      ? `contains(${fieldName}, ${ids[0]})`
+      : `overlaps(${fieldName}, (${ids.join(', ')}))`;
+  }
+
   private compileFriendlySparkComparisons(query: string): string {
     return this.replaceOutsideStrings(query, segment => {
       let compiledSegment = segment;
@@ -4659,6 +4715,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.endsWithAny(normalized, ['race results', 'race wins', 'main race wins', 'left race wins', 'right race wins', 'win saddles', 'main win saddles', 'left win saddles', 'right win saddles'])) {
       return 'race-saddle';
     }
+    if (this.endsWithAny(normalized, ['rank', 'parent rank'])) {
+      return 'rank';
+    }
     if (this.endsWithAny(normalized, ['white sparks', 'white skills', 'white factors', 'main parent white skills', 'main parent skills', 'parent white skills', 'parent skills', 'main white factors', 'main white sparks', 'left white factors', 'left white sparks', 'right white factors', 'right white sparks', 'gp1 white factors', 'gp1 white sparks', 'gp2 white factors', 'gp2 white sparks'])) {
       return 'white-factor';
     }
@@ -4740,6 +4799,139 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (operator === '==' || operator === '=') return '=';
     if (operator === '<>') return '!=';
     return operator;
+  }
+  private normalizeRestoredUqlQuery(query: string): string {
+    if (!query.trim()) return '';
+    const displayLabels: Array<{ field: string; label: string }> = [
+      { field: 'win_count', label: 'Wins' },
+      { field: 'white_count', label: 'White count' },
+      { field: 'main_white_count', label: 'Main white count' },
+      { field: 'parent_rank', label: 'Rank' },
+      { field: 'follower_num', label: 'Followers' },
+      { field: 'account_id', label: 'Trainer ID' },
+      { field: 'trainer_name', label: 'Trainer name' },
+      { field: 'blue_stars_sum', label: 'Blue stars' },
+      { field: 'pink_stars_sum', label: 'Pink stars' },
+      { field: 'green_stars_sum', label: 'Green stars' },
+      { field: 'white_stars_sum', label: 'White stars' },
+      { field: 'main_blue_factors', label: 'Main blue sparks' },
+      { field: 'main_pink_factors', label: 'Main pink sparks' },
+      { field: 'main_green_factors', label: 'Main green sparks' }
+    ];
+    const comparisonLookahead = '(?=\\s*(?:==|=|!=|<>|>=|<=|>|<|in\\b|not\\s+in\\b|like\\b|ilike\\b|is\\b|between\\b))';
+
+    return this.replaceOutsideStrings(query, segment => {
+      let displaySegment = this.normalizeRestoredUqlSparkFunctions(segment);
+      displaySegment = this.normalizeRestoredUqlCharacterComparisons(displaySegment);
+      displayLabels.forEach(({ field, label }) => {
+        const pattern = new RegExp(`(^|[^A-Za-z0-9_])${this.escapeRegExp(field)}\\b${comparisonLookahead}`, 'gi');
+        displaySegment = displaySegment.replace(pattern, (_match, leadingText: string) => `${leadingText}${label}`);
+      });
+      return displaySegment;
+    });
+  }
+
+  private normalizeRestoredUqlSparkFunctions(segment: string): string {
+    let displaySegment = segment.replace(/\boverlaps\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*\(([^()]*)\)\s*\)/gi, (match, fieldName: string, listText: string, offset: number, fullText: string) => {
+      if (/\bnot\s*$/i.test(fullText.slice(Math.max(0, offset - 8), offset))) return match;
+      return this.buildRestoredFriendlySparkClause(fieldName, this.parseUqlNumberList(listText)) ?? match;
+    });
+    displaySegment = displaySegment.replace(/\bcontains\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*(\d+)\s*\)/gi, (match, fieldName: string, rawValue: string, offset: number, fullText: string) => {
+      if (/\bnot\s*$/i.test(fullText.slice(Math.max(0, offset - 8), offset))) return match;
+      return this.buildRestoredFriendlySparkClause(fieldName, [parseInt(rawValue, 10)]) ?? match;
+    });
+    return displaySegment;
+  }
+
+  private normalizeRestoredUqlCharacterComparisons(segment: string): string {
+    const characterLabels: Record<string, string> = {
+      main_chara_id: 'Main character',
+      left_chara_id: 'GP1 character',
+      right_chara_id: 'GP2 character'
+    };
+    const pattern = /(^|[^A-Za-z0-9_])(main_chara_id|left_chara_id|right_chara_id)\s*(not\s+in|in|==|=|!=|<>)\s*(?:\(([^()]*)\)|(\d+))/gi;
+    return segment.replace(pattern, (match, leadingText: string, fieldName: string, operator: string, listText: string | undefined, rawValue: string | undefined) => {
+      const values = listText !== undefined
+        ? this.parseUqlNumberList(listText)
+        : [parseInt(rawValue || '', 10)].filter(Number.isFinite);
+      if (!values.length) return match;
+      const normalizedOperator = this.normalizeUqlComparisonOperator(operator.toLowerCase().replace(/\s+/g, ' '));
+      const formattedValues = values.map(id => this.formatFriendlyCharacterUqlValue(id));
+      const label = characterLabels[fieldName.toLowerCase()];
+      const valueText = normalizedOperator.includes('in') || formattedValues.length > 1
+        ? `(${formattedValues.join(', ')})`
+        : formattedValues[0];
+      return `${leadingText}${label} ${normalizedOperator} ${valueText}`;
+    });
+  }
+
+  private buildRestoredFriendlySparkClause(fieldName: string, sparkIds: number[]): string | null {
+    const field = fieldName.toLowerCase().replace(/[_\s-]+/g, '_').trim();
+    const config = this.getRestoredSparkFieldConfig(field);
+    if (!config || !sparkIds.length) return null;
+
+    const availableIds = new Set(config.factors.map(factor => parseInt(String(factor.id), 10)).filter(Number.isFinite));
+    if (!availableIds.size) return null;
+    const uniqueSparkIds = [...new Set(sparkIds.filter(Number.isFinite))];
+    const parsed = uniqueSparkIds
+      .map(id => ({ id, factorId: Math.floor(id / 10), level: id % 10 }))
+      .filter(entry => availableIds.has(entry.factorId) && entry.level >= 1 && entry.level <= config.maxCap);
+    if (parsed.length !== uniqueSparkIds.length) return null;
+
+    const factorIds = [...new Set(parsed.map(entry => entry.factorId))].sort((left, right) => left - right);
+    const levels = [...new Set(parsed.map(entry => entry.level))].sort((left, right) => left - right);
+    if (!this.areContiguousUqlSparkLevels(levels)) return null;
+
+    const sparkIdSet = new Set(uniqueSparkIds);
+    const expectedIds = factorIds.flatMap(factorId => levels.map(level => this.buildSparkId(factorId, level)));
+    if (expectedIds.length !== sparkIdSet.size || !expectedIds.every(id => sparkIdSet.has(id))) return null;
+
+    if (factorIds.length === 1) {
+      const factor = config.factors.find(entry => parseInt(String(entry.id), 10) === factorIds[0]);
+      const label = factor?.text?.trim();
+      return label ? this.buildRestoredSparkLevelClause(label, levels[0], levels[levels.length - 1], config.maxCap) : null;
+    }
+
+    const usesEveryFactor = factorIds.length === availableIds.size && factorIds.every(id => availableIds.has(id));
+    return usesEveryFactor
+      ? this.buildRestoredSparkLevelClause(config.label, levels[0], levels[levels.length - 1], config.maxCap)
+      : null;
+  }
+
+  private getRestoredSparkFieldConfig(fieldName: string): { label: string; factors: Array<{ id: number | string; text: string }>; maxCap: number } | null {
+    switch (fieldName) {
+      case 'blue_sparks':
+        return { label: 'Blue sparks', factors: this.getRestoredSparkFactors('blue_sparks'), maxCap: 9 };
+      case 'pink_sparks':
+        return { label: 'Pink sparks', factors: this.getRestoredSparkFactors('pink_sparks'), maxCap: 9 };
+      case 'green_sparks':
+        return { label: 'Green sparks', factors: this.getRestoredSparkFactors('green_sparks'), maxCap: 9 };
+      default:
+        return null;
+    }
+  }
+
+  private getRestoredSparkFactors(fieldName: FriendlySparkField['field']): Array<{ id: number | string; text: string }> {
+    const loadedFactors = fieldName === 'blue_sparks'
+      ? this.blueFactors
+      : fieldName === 'pink_sparks'
+        ? this.pinkFactors
+        : this.greenFactors;
+    if (loadedFactors.length) return loadedFactors;
+    return this.friendlySparkFields
+      .filter(field => field.field === fieldName)
+      .map(field => ({ id: field.factorId, text: field.label }));
+  }
+
+  private areContiguousUqlSparkLevels(levels: number[]): boolean {
+    return levels.length > 0 && levels.every((level, index) => index === 0 || level === levels[index - 1] + 1);
+  }
+
+  private buildRestoredSparkLevelClause(label: string, min: number, max: number, maxCap: number): string | null {
+    if (min === max) return `${label} = ${min}`;
+    if (max >= maxCap) return `${label} >= ${min}`;
+    if (min <= 1) return `${label} <= ${max}`;
+    return null;
   }
   private buildZeroSparkComparisonClause(fieldName: string, factorId: number, operator: string | undefined, value: number, maxLevel: number): string | null {
     if (!Number.isFinite(value) || value !== 0 || !operator) return null;
@@ -5124,6 +5316,17 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       badgeText: race.gradeLabel,
       badgeClass: race.gradeClass
     }));
+    const rankSuggestions = this.rankOptions.map(rank => ({
+      label: `Rank ${rank}`,
+      insertText: rank.toString(),
+      kind: 'value' as const,
+      detail: `Minimum parent rank ${rank}`,
+      searchText: `rank parent rank ${rank}`,
+      valueContext: 'rank' as const,
+      priority: 4,
+      backendValue: rank.toString(),
+      imageUrl: this.getRankIconPath(rank)
+    }));
     const ownedLegacySuggestions = this.getOwnedLegacyUqlSuggestions();
     this.staticUqlSuggestionsCache = [
       ...friendlyFieldSuggestions,
@@ -5131,6 +5334,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       ...characterSuggestions,
       ...supportCardSuggestions,
       ...raceSaddleSuggestions,
+      ...rankSuggestions,
       ...factorSuggestions
     ];
     this.uqlSuggestions = [
@@ -5663,38 +5867,33 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
   private buildStructuredUqlExpression(): string {
     const clauses: string[] = [];
-    const addMinimumClause = (fieldName: string, value: number | undefined) => {
-      if (value !== undefined && value > 0) clauses.push(`${fieldName} >= ${value}`);
+    const addMinimumClause = (fieldLabel: string, value: number | undefined) => {
+      if (value !== undefined && value > 0) clauses.push(`${fieldLabel} >= ${value}`);
     };
-    const addNumberInClause = (fieldName: string, values: Array<number | undefined>) => {
+    const addCharacterClause = (fieldLabel: string, values: Array<number | undefined>, negated = false) => {
       const uniqueValues = this.getUniqueNumbers(values);
-      if (uniqueValues.length === 1) {
-        clauses.push(`${fieldName} = ${uniqueValues[0]}`);
-      } else if (uniqueValues.length > 1) {
-        clauses.push(`${fieldName} in (${this.formatUqlNumberList(uniqueValues)})`);
+      if (!uniqueValues.length) return;
+      const formattedValues = uniqueValues.map(id => this.formatFriendlyCharacterUqlValue(id));
+      if (formattedValues.length === 1) {
+        clauses.push(`${fieldLabel} ${negated ? '!=' : '='} ${formattedValues[0]}`);
+      } else {
+        clauses.push(`${fieldLabel} ${negated ? 'not in' : 'in'} (${formattedValues.join(', ')})`);
       }
     };
     const mainParent = this.treeData.children?.[0];
-    addNumberInClause('main_chara_id', [
+    addCharacterClause('Main character', [
       mainParent?.characterId,
       ...this.includeMainParentCharacters.map(character => character.id)
     ]);
-    addNumberInClause('left_chara_id', [mainParent?.children?.[0]?.characterId]);
-    addNumberInClause('right_chara_id', [mainParent?.children?.[1]?.characterId]);
+    addCharacterClause('GP1 character', [mainParent?.children?.[0]?.characterId]);
+    addCharacterClause('GP2 character', [mainParent?.children?.[1]?.characterId]);
     const includeParentIds = this.getUniqueNumbers(this.includeParentCharacters.map(character => character.id));
-    if (includeParentIds.length) {
-      const values = this.formatUqlNumberList(includeParentIds);
-      clauses.push(`(left_chara_id in (${values}) or right_chara_id in (${values}))`);
-    }
+    addCharacterClause('GP character', includeParentIds);
     const excludeParentIds = this.getUniqueNumbers(this.excludeParentCharacters.map(character => character.id));
-    if (excludeParentIds.length) {
-      const values = this.formatUqlNumberList(excludeParentIds);
-      clauses.push(`left_chara_id not in (${values})`);
-      clauses.push(`right_chara_id not in (${values})`);
-    }
+    addCharacterClause('GP character', excludeParentIds, true);
     const excludeMainParentIds = this.getUniqueNumbers(this.excludeMainParentCharacters.map(character => character.id));
     if (excludeMainParentIds.length) {
-      clauses.push(`main_chara_id not in (${this.formatUqlNumberList(excludeMainParentIds)})`);
+      addCharacterClause('Main character', excludeMainParentIds, true);
     }
     this.appendFactorFilterUqlClauses(clauses, this.blueFactorFilters, this.blueFactors, 'blue_sparks');
     this.appendFactorFilterUqlClauses(clauses, this.pinkFactorFilters, this.pinkFactors, 'pink_sparks');
@@ -5704,14 +5903,14 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.appendFactorFilterUqlClauses(clauses, this.mainPinkFactorFilters, this.pinkFactors, 'main_pink_factors', 'Main ', 3);
     this.appendFactorFilterUqlClauses(clauses, this.mainGreenFactorFilters, this.greenFactors, 'main_green_factors', 'Main ', 3);
     this.appendFactorFilterUqlClauses(clauses, this.mainWhiteFactorFilters, this.whiteFactors, 'main_white_factors', 'Main ', 3);
-    if (!this.mainBlueFactorFilters.length) addMinimumClause('main_blue_factors', this.filterState.min_main_blue_factors);
-    if (!this.mainPinkFactorFilters.length) addMinimumClause('main_pink_factors', this.filterState.min_main_pink_factors);
-    if (!this.mainGreenFactorFilters.length) addMinimumClause('main_green_factors', this.filterState.min_main_green_factors);
-    addMinimumClause('main_white_count', this.filterState.min_main_white_count);
-    addMinimumClause('win_count', this.filterState.min_win_count);
-    addMinimumClause('white_count', this.filterState.min_white_count);
+    if (!this.mainBlueFactorFilters.length) addMinimumClause('Main blue sparks', this.filterState.min_main_blue_factors);
+    if (!this.mainPinkFactorFilters.length) addMinimumClause('Main pink sparks', this.filterState.min_main_pink_factors);
+    if (!this.mainGreenFactorFilters.length) addMinimumClause('Main green sparks', this.filterState.min_main_green_factors);
+    addMinimumClause('Main white count', this.filterState.min_main_white_count);
+    addMinimumClause('Wins', this.filterState.min_win_count);
+    addMinimumClause('White count', this.filterState.min_white_count);
     if (this.filterState.parent_rank && this.filterState.parent_rank > 1) {
-      addMinimumClause('parent_rank', this.filterState.parent_rank);
+      addMinimumClause('Rank', this.filterState.parent_rank);
     }
     if (this.selectedSupportCard) {
       clauses.push(`support_card_id = ${this.selectedSupportCard.id}`);
@@ -5720,20 +5919,32 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       clauses.push(`limitbreak >= ${this.selectedLimitBreak}`);
     }
     if (this.includeMaxFollowers && this.filterState.max_follower_num) {
-      clauses.push(`follower_num <= ${this.filterState.max_follower_num}`);
+      clauses.push(`Followers <= ${this.filterState.max_follower_num}`);
     }
-    addMinimumClause('blue_stars_sum', this.filterState.min_blue_stars_sum);
-    addMinimumClause('pink_stars_sum', this.filterState.min_pink_stars_sum);
-    addMinimumClause('green_stars_sum', this.filterState.min_green_stars_sum);
-    addMinimumClause('white_stars_sum', this.filterState.min_white_stars_sum);
+    addMinimumClause('Blue stars', this.filterState.min_blue_stars_sum);
+    addMinimumClause('Pink stars', this.filterState.min_pink_stars_sum);
+    addMinimumClause('Green stars', this.filterState.min_green_stars_sum);
+    addMinimumClause('White stars', this.filterState.min_white_stars_sum);
     this.appendArrayOverlapClauses(clauses, 'main_win_saddles', this.filterState.main_win_saddle ? [this.filterState.main_win_saddle] : undefined);
     if (this.searchUserId) {
-      clauses.push(`account_id = ${this.quoteUqlString(this.searchUserId)}`);
+      clauses.push(`Trainer ID = ${this.quoteUqlString(this.searchUserId)}`);
     }
     if (this.searchUsername) {
-      clauses.push(`trainer_name ilike ${this.quoteUqlString(`%${this.searchUsername}%`)}`);
+      clauses.push(`Trainer name ilike ${this.quoteUqlString(`%${this.searchUsername}%`)}`);
     }
     return clauses.join(' and ');
+  }
+
+  private formatFriendlyCharacterUqlValue(id: number): string {
+    const character = getMasterCharacterById(id);
+    const value = character ? this.getCharacterUqlDisplayName(character) : id.toString();
+    return this.formatFriendlyUqlValue(value);
+  }
+
+  private formatFriendlyUqlValue(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed || /[(),;'""]/.test(trimmed)) return this.quoteUqlString(trimmed);
+    return trimmed;
   }
 
   private buildUqlEditorDirectiveClauses(): string[] {
@@ -5765,6 +5976,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         continue;
       }
 
+      const friendlyAnyClause = this.buildFriendlyAnyFactorFilterUqlClause(filter, fieldName, labelPrefix, maxCap);
+      if (friendlyAnyClause) {
+        clauses.push(friendlyAnyClause);
+        continue;
+      }
+
       const groups = this.generateSparkIdGroups([filter], availableFactors, maxCap);
       groups.forEach(group => clauses.push(this.buildSparkGroupUqlClause(fieldName, group)));
     }
@@ -5776,8 +5993,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     labelPrefix: string,
     maxCap: number,
   ): string | null {
-    if (!filter.factorId || filter.factorId <= 0) return null;
-    const factorName = availableFactors.find(factor => parseInt(factor.id, 10) === filter.factorId)?.text?.trim();
+    const factorId = this.getNormalizedFactorFilterId(filter);
+    if (!factorId) return null;
+    const factorName = availableFactors.find(factor => parseInt(factor.id, 10) === factorId)?.text?.trim();
     if (!factorName || !this.isSafeFriendlyUqlLabel(factorName)) return null;
 
     const min = Math.max(1, Math.min(maxCap, filter.min || 1));
@@ -5788,6 +6006,51 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (min <= 1) return `${label} <= ${max}`;
     if (max >= maxCap) return `${label} >= ${min}`;
     return null;
+  }
+
+  private buildFriendlyAnyFactorFilterUqlClause(
+    filter: FactorFilter,
+    fieldName: string,
+    labelPrefix: string,
+    maxCap: number,
+  ): string | null {
+    if (this.getNormalizedFactorFilterId(filter)) return null;
+    const label = this.getFriendlySparkCategoryLabel(fieldName, labelPrefix);
+    if (!label) return null;
+
+    const min = Math.max(1, Math.min(maxCap, filter.min || 1));
+    const max = Math.max(min, Math.min(maxCap, filter.max ?? maxCap));
+    if (min === max) return `${label} = ${min}`;
+    if (min <= 1 && max >= maxCap) return `${label} >= 1`;
+    if (min <= 1) return `${label} <= ${max}`;
+    if (max >= maxCap) return `${label} >= ${min}`;
+    return null;
+  }
+
+  private getNormalizedFactorFilterId(filter: FactorFilter): number | null {
+    const id = filter.factorId == null ? null : Number(filter.factorId);
+    return id && Number.isFinite(id) && id > 0 ? id : null;
+  }
+
+  private getFriendlySparkCategoryLabel(fieldName: string, labelPrefix: string): string | null {
+    const normalizedField = fieldName.toLowerCase().replace(/[_\s-]+/g, '_').trim();
+    const prefix = labelPrefix.trim();
+    switch (normalizedField) {
+      case 'blue_sparks':
+        return 'Blue sparks';
+      case 'pink_sparks':
+        return 'Pink sparks';
+      case 'green_sparks':
+        return 'Green sparks';
+      case 'main_blue_factors':
+        return `${prefix || 'Main'} blue sparks`;
+      case 'main_pink_factors':
+        return `${prefix || 'Main'} pink sparks`;
+      case 'main_green_factors':
+        return `${prefix || 'Main'} green sparks`;
+      default:
+        return null;
+    }
   }
 
   private isSafeFriendlyUqlLabel(value: string): boolean {

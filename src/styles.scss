@@ -361,7 +361,7 @@ app-ad-in-content.ad-in-content-host--content-top-bridge-active + :where(
     .tierlist-container,
     .planner-scroll,
     .section-content,
-    .main-layout
+    .statistics-new .main-layout
   ) {
     width: calc(100vw - var(--ad-layout-start-space) - var(--ad-layout-end-space)) !important;
     max-width: none !important;

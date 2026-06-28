@@ -7,7 +7,7 @@ import { UqlCodeEditorComponent, UqlCompletionResult } from './uql-code-editor.c
 
 type UqlValidationState = 'empty' | 'valid' | 'incomplete' | 'invalid';
 export type UqlSuggestionKind = 'field' | 'operator' | 'function' | 'keyword' | 'value' | 'snippet' | 'punctuation';
-export type UqlValueContext = 'character' | 'legacy' | 'support-card' | 'race-saddle' | 'blue-factor' | 'pink-factor' | 'green-factor' | 'white-factor' | 'number' | 'text';
+export type UqlValueContext = 'character' | 'legacy' | 'support-card' | 'race-saddle' | 'rank' | 'blue-factor' | 'pink-factor' | 'green-factor' | 'white-factor' | 'number' | 'text';
 export type UqlScopeContext = 'main' | 'gp1' | 'gp2' | 'any-gp';
 export type UqlFieldType = 'number' | 'string' | 'array' | 'directive';
 export type UqlHighlightKind = 'keyword' | 'function' | 'field' | 'operator' | 'number' | 'string' | 'paren' | 'identifier' | 'text' | 'punct' | 'ghost' | 'cursor';
@@ -191,6 +191,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   private knownLegacyValueCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownSupportCardValueCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownRaceSaddleValueCandidates: UqlKnownSuggestionCandidate[] = [];
+  private knownRankValueCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownFactorFieldCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownFactorSparkValueCandidates = new Map<string, UqlKnownSuggestionCandidate>();
   private knownSuggestionBuckets = new WeakMap<UqlKnownSuggestionCandidate[], Map<string, UqlKnownSuggestionCandidate[]>>();
@@ -960,9 +961,6 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   }
 
   private getSuggestionInsertText(suggestion: UqlSuggestion): string {
-    if (suggestion.kind === 'value' && suggestion.valueContext?.endsWith('-factor') && suggestion.backendValue) {
-      return suggestion.backendValue;
-    }
     return suggestion.insertText;
   }
 
@@ -1016,6 +1014,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     const legacyCandidates: UqlKnownSuggestionCandidate[] = [];
     const supportCardCandidates: UqlKnownSuggestionCandidate[] = [];
     const raceSaddleCandidates: UqlKnownSuggestionCandidate[] = [];
+    const rankCandidates: UqlKnownSuggestionCandidate[] = [];
     const fieldCandidates: UqlKnownSuggestionCandidate[] = [];
     const factorSparkValueCandidates = new Map<string, UqlKnownSuggestionCandidate>();
     const fieldNames = new Set<string>();
@@ -1047,12 +1046,16 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       if (suggestion.kind === 'value' && suggestion.valueContext === 'race-saddle') {
         raceSaddleCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
       }
+      if (suggestion.kind === 'value' && suggestion.valueContext === 'rank') {
+        rankCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
+      }
     }
     this.knownFactorValueCandidates = valueCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
     this.knownCharacterValueCandidates = characterCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
     this.knownLegacyValueCandidates = legacyCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
     this.knownSupportCardValueCandidates = supportCardCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
     this.knownRaceSaddleValueCandidates = raceSaddleCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
+    this.knownRankValueCandidates = rankCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
     this.knownFactorFieldCandidates = fieldCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
     this.knownFactorSparkValueCandidates = factorSparkValueCandidates;
     this.knownFieldNames = fieldNames;
@@ -1287,6 +1290,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (context === 'race-saddle') {
       return this.getKnownSuggestionMatchAt(text, index, this.knownRaceSaddleValueCandidates, context);
     }
+    if (context === 'rank') {
+      return this.getKnownSuggestionMatchAt(text, index, this.knownRankValueCandidates, context);
+    }
     if (context?.endsWith('-factor')) {
       const match = this.getKnownSuggestionMatchAt(text, index, this.knownFactorValueCandidates, context, matchContext.allowAnyFactorContext);
       if (/[0-9]/.test(text[index] || '') && !matchContext.allowAnyFactorContext && match && /[^0-9]/.test(match.text)) return match;
@@ -1401,6 +1407,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (/\bwhite[_\s-]?sparks?\b|\bwhite skills?\b|\bwhite factors?\b|\bwhite factor/.test(haystack)) return 'white-factor';
     if (/\bsupport[_\s-]?cards?\b|\bsupport card id\b|\bcard id\b/.test(haystack)) return 'support-card';
     if (/\bwin[_\s-]?saddles?\b|\brace results?\b|\brace wins?\b/.test(haystack)) return 'race-saddle';
+    if (/\bparent rank\b|\brank\b/.test(haystack)) return 'rank';
     return undefined;
   }
 
@@ -2244,6 +2251,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     }
     if (this.endsWithAny(normalized, ['race results', 'race wins', 'main race wins', 'left race wins', 'right race wins', 'win saddles', 'main win saddles', 'left win saddles', 'right win saddles'])) {
       return 'race-saddle';
+    }
+    if (this.endsWithAny(normalized, ['rank', 'parent rank'])) {
+      return 'rank';
     }
     if (this.endsWithAny(normalized, ['white sparks', 'white skills', 'white factors', 'main parent white skills', 'main parent skills', 'parent white skills', 'parent skills', 'main white factors', 'main white sparks', 'left white factors', 'left white sparks', 'right white factors', 'right white sparks', 'gp1 white factors', 'gp1 white sparks', 'gp2 white factors', 'gp2 white sparks', 'optional white', 'optional main white', 'lineage white'])) {
       return 'white-factor';

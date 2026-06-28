@@ -765,7 +765,7 @@ mat-icon { @include icon-size(16px); }
 }
 
 // Smooth transition breakpoints
-@media (max-width: 1800px) { .content-container { margin-left: 8%; margin-right: 8%; } }
+@media (max-width: 2100px) { .content-container { margin-left: 8%; margin-right: 8%; } }
 @media (max-width: 1650px) { .content-container { margin-left: 6%; margin-right: 6%; } }
 @media (max-width: 1200px) { .content-container { margin-left: 2rem; margin-right: 2rem; } }
 @media (max-width: 800px) { .content-container { margin-left: 0.5rem; margin-right: 0.5rem; } }
