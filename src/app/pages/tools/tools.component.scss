@@ -197,7 +197,7 @@
   box-shadow: 0 2px 8px rgba(255, 152, 0, 0.4);
 }
 
-.stats { padding: 0.75rem 2rem; background: rgba(0, 0, 0, 0.1); }
+.stats { padding: 0.75rem 2rem; background: var(--surface-1); }
 
 .stats-grid {
   display: grid;

@@ -6,12 +6,12 @@
 .veteran-detail-dialog {
   display: flex;
   flex-direction: column;
-  background: #141414;
+  background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
-  color: #e0e0e0;
+  color: var(--text-primary);
   width: 980px;
   max-width: 95vw;
   max-height: 80vh;
@@ -22,7 +22,7 @@
     align-items: center;
     gap: 10px;
     padding: 14px 44px 14px 18px;
-    background: #1a1a1a;
+    background: var(--bg-tertiary);
     border-bottom: 1px solid var(--border-subtle);
     flex-shrink: 0;
     position: relative;
@@ -103,7 +103,7 @@
   .select-body {
     padding: 16px 18px 18px !important;
     margin: 0;
-    background: #141414;
+    background: var(--bg-secondary);
     overflow-y: auto;
     flex: 1;
     max-height: none;

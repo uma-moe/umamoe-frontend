@@ -51,7 +51,7 @@
   // Custom scrollbar styling
   // Firefox
   scrollbar-width: thin;
-  scrollbar-color: var(--text-disabled) rgba(255, 255, 255, 0.05);
+  scrollbar-color: var(--text-disabled) rgba(var(--on-surface-rgb), 0.05);
   
   // Webkit browsers (Chrome, Safari, Edge)
   &::-webkit-scrollbar { background: var(--surface-4); width: 6px; }
@@ -126,7 +126,7 @@
       margin-right: 14px;
       border-radius: var(--radius-sm);
       overflow: hidden;
-      background: rgba(0, 0, 0, 0.4);
+      background: var(--surface-2);
       border: 1px solid var(--border-secondary);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 
@@ -165,7 +165,7 @@
         .item-percentage {
           font-size: 12px;
           color: var(--text-secondary);
-          background: rgba(0, 0, 0, 0.3);
+          background: var(--surface-2);
           padding: 2px 6px;
           border-radius: 10px;
           border: 1px solid var(--border-primary);

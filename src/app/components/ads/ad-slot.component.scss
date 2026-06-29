@@ -55,7 +55,17 @@
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
 }
 
+.ad-slot--has-creative {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
 .ad-slot--waiting .ad-slot-meta {
+  display: none;
+}
+
+.ad-slot--has-creative .ad-slot-meta {
   display: none;
 }
 
@@ -84,6 +94,37 @@
   position: absolute;
   inset: 0;
   z-index: 2;
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  contain: layout paint;
+}
+
+.ad-slot-target > :not(script):not(style) {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  margin: auto !important;
+  overflow: hidden !important;
+}
+
+.ad-slot-target iframe,
+.ad-slot-target img,
+.ad-slot-target picture,
+.ad-slot-target video,
+.ad-slot-target canvas,
+.ad-slot-target object,
+.ad-slot-target embed,
+.ad-slot-target svg {
+  display: block;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  border: 0;
+  object-fit: contain;
 }
 
 .ad-slot--force-fallback .ad-slot-target {

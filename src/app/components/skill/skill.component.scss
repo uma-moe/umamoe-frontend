@@ -4,7 +4,7 @@
 }
 
 .skill-chip {
-  --skill-border-color: rgba(255, 255, 255, 0.1);
+  --skill-border-color: rgba(var(--on-surface-rgb), 0.1);
 
   display: inline-flex;
   align-items: center;
@@ -16,15 +16,15 @@
   border-left: 0;
   border-radius: 6px;
   box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.055);
-  color: rgba(255, 255, 255, 0.76);
+  background: rgba(var(--on-surface-rgb), 0.055);
+  color: rgba(var(--on-surface-rgb), 0.76);
   font-size: 0.74rem;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
   position: relative;
   overflow: visible;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 1px 0 rgba(var(--on-surface-rgb), 0.035);
 }
 
 .skill-icon-frame {
@@ -67,8 +67,8 @@
   margin-left: 1px;
   padding: 2px 4px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.26);
-  color: rgba(255, 255, 255, 0.74);
+  background: rgba(var(--on-surface-rgb), 0.12);
+  color: rgba(var(--on-surface-rgb), 0.74);
   font-size: 0.6rem;
   font-weight: 700;
   line-height: 1.05;
@@ -127,8 +127,8 @@
   .skill-level {
     margin-left: 0;
     padding: 1px 3px;
-    background: rgba(0, 0, 0, 0.28);
-    color: rgba(255, 255, 255, 0.72);
+    background: rgba(var(--on-surface-rgb), 0.12);
+    color: rgba(var(--on-surface-rgb), 0.72);
     font-size: 0.55rem;
     line-height: 1.1;
   }

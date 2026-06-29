@@ -12,7 +12,7 @@
     .white-sparks-filter,
     .additional-filters {
         h4 {
-            color: white;
+            color: var(--text-primary);
             font-size: 18px;
             font-weight: 500;
             border-bottom: 2px solid var(--border-primary);
@@ -30,7 +30,7 @@
 
         h3 {
             margin: 0 0 30px 0;
-            color: white;
+            color: var(--text-primary);
             font-weight: 600;
             font-size: 24px;
             text-align: center;
@@ -56,12 +56,12 @@
         display: flex;
         align-items: center;
         padding: 16px;
-        border: 2px solid #2196f3;
+        border: 2px solid var(--accent-primary);
         border-radius: var(--radius-lg);
-        background: rgba(33, 150, 243, 0.04);
+        background: rgba(var(--accent-primary-rgb), 0.08);
         transition: all 0.2s ease;
 
-        &:hover { background: rgba(33, 150, 243, 0.08); }
+        &:hover { background: rgba(var(--accent-primary-rgb), 0.12); }
     }
 
     .character-image {
@@ -70,7 +70,7 @@
         border-radius: 50%;
         object-fit: cover;
         margin-right: 16px;
-        border: 2px solid #2196f3;
+        border: 2px solid var(--accent-primary);
     }
 
     .character-name {
@@ -83,7 +83,7 @@
     .selected-character .remove-btn {
         margin-left: 12px;
 
-        &:hover { background-color: rgba(244, 67, 54, 0.1); color: var(--color-red); }
+        &:hover { background-color: rgba(var(--accent-error-rgb), 0.1); color: var(--accent-error); }
     }
 
     .main-stats-filter,
@@ -162,7 +162,7 @@
                 .rank-text {
                     font-size: 14px;
                     font-weight: 500;
-                    color: white;
+                    color: var(--text-primary);
                     line-height: 1.2;
                 }
 
@@ -178,7 +178,7 @@
                     &:hover { background: var(--surface-3); }
                 }
 
-                .mat-mdc-form-field-focus-overlay { background-color: rgba(33, 150, 243, 0.1); }
+                .mat-mdc-form-field-focus-overlay { background-color: rgba(var(--accent-primary-rgb), 0.1); }
 
                 .mat-mdc-form-field-infix { min-height: 40px; padding: 8px 0; }
             }
@@ -204,7 +204,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(90deg, transparent 0%, transparent 85%, rgba(244, 67, 54, 0.05) 100%);
+            background: linear-gradient(90deg, transparent 0%, transparent 85%, rgba(var(--accent-error-rgb), 0.05) 100%);
             opacity: 0;
             transition: opacity 0.2s ease;
             pointer-events: none;
@@ -212,7 +212,7 @@
 
         &:hover {
             background: var(--surface-1);
-            border-bottom-color: rgba(33, 150, 243, 0.4);
+            border-bottom-color: rgba(var(--accent-primary-rgb), 0.4);
 
             &::before { opacity: 1; }
 
@@ -268,26 +268,26 @@
 
             .mdc-slider__track { height: 3px; border-radius: 2px; }
 
-            .mdc-slider__track--active_fill { background: linear-gradient(90deg, #2196f3, #1976d2); border-radius: 2px; }
+            .mdc-slider__track--active_fill { background: linear-gradient(90deg, var(--accent-primary), var(--color-blue-dark)); border-radius: 2px; }
 
             .mdc-slider__track--inactive { background-color: var(--surface-4); }
 
             .mdc-slider__thumb { width: 18px; height: 18px; }
 
             .mdc-slider__thumb-knob {
-                background: #2196f3;
-                border: 2px solid #ffffff;
-                box-shadow: 0 1px 4px rgba(33, 150, 243, 0.3);
+                background: var(--accent-primary);
+                border: 2px solid var(--bg-secondary);
+                box-shadow: 0 1px 4px rgba(var(--accent-primary-rgb), 0.3);
                 transition: all 0.2s ease;
             }
 
-            .mdc-slider__thumb:hover .mdc-slider__thumb-knob { background: #1976d2; box-shadow: 0 2px 6px rgba(33, 150, 243, 0.4); transform: scale(1.1); }
+            .mdc-slider__thumb:hover .mdc-slider__thumb-knob { background: var(--color-blue-dark); box-shadow: 0 2px 6px rgba(var(--accent-primary-rgb), 0.4); transform: scale(1.1); }
 
-            .mdc-slider__tick-mark--active { background: #ffffff; opacity: 0.8; }
+            .mdc-slider__tick-mark--active { background: var(--bg-secondary); opacity: 0.8; }
 
             .mdc-slider__value-indicator {
-                background: #2196f3;
-                color: white;
+                background: var(--accent-primary);
+                color: #fff;
                 font-weight: 600;
                 font-size: 12px;
                 border-radius: 3px;
@@ -329,7 +329,7 @@
 
         &:hover {
             opacity: 1 !important;
-            color: rgba(244, 67, 54, 0.9);
+            color: var(--accent-error);
 
             &::after { opacity: 0.5; }
         }

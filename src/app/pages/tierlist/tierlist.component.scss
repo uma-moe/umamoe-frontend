@@ -137,6 +137,14 @@
     border: 1px solid var(--border-primary);
     border-top: none;
   }
+
+  ::ng-deep .mat-mdc-tab .mdc-tab__text-label {
+    color: var(--text-secondary) !important;
+  }
+
+  ::ng-deep .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label {
+    color: var(--accent-primary) !important;
+  }
 }
 
 .tab-content { min-height: 400px; padding: 1.5rem; }
@@ -158,9 +166,9 @@
   @include flex-col-center;
   min-width: 120px;
   padding: 1.5rem 1rem;
-  color: white;
+  color: #0b1018;
   font-weight: bold;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
   position: relative;
   overflow: hidden;
 }
@@ -174,16 +182,16 @@
 
 .tier-count {
   font-size: 0.875rem;
-  opacity: 0.9;
+  opacity: 1;
   margin-top: 0.5rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .tier-percentile {
   font-size: 0.75rem;
-  opacity: 0.8;
+  opacity: 1;
   margin-top: 0.25rem;
-  font-weight: normal;
+  font-weight: 700;
 }
 
 .tier-cards {
@@ -228,7 +236,8 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(to top,
+  background-color: rgba(0, 0, 0, 0.82);
+  background-image: linear-gradient(to top,
       rgba(0, 0, 0, 0.95) 0%,
       rgba(0, 0, 0, 0.7) 60%,
       transparent 100%);

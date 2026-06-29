@@ -132,15 +132,15 @@ $branch-thickness: 2px;
 
     &.n-ggp {
       border-radius: var(--radius-sm);
-      background: rgba(255, 255, 255, 0.035);
+      background: rgba(var(--on-surface-rgb), 0.035);
       box-shadow: none;
       min-height: 40px;
     }
 
     &:not(.n-filled) {
       border-style: dashed;
-      border-color: rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.015);
+      border-color: rgba(var(--on-surface-rgb), 0.1);
+      background: rgba(var(--on-surface-rgb), 0.015);
       box-shadow: none;
     }
 
@@ -298,7 +298,7 @@ $branch-thickness: 2px;
     font-size: 0.58rem;
     font-weight: 700;
     border: 1px solid var(--border-subtle);
-    background: rgba(255, 255, 255, 0.035);
+    background: rgba(var(--on-surface-rgb), 0.035);
     color: var(--text-muted);
 
     &.scenario { color: #b0bec5; }
@@ -342,7 +342,7 @@ $branch-thickness: 2px;
   .n-score-chip {
     gap: 4px;
     padding: 2px 7px;
-    background: rgba(255, 255, 255, 0.035);
+    background: rgba(var(--on-surface-rgb), 0.035);
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
   }
@@ -381,7 +381,7 @@ $branch-thickness: 2px;
     gap: 4px;
     padding: 2px 8px;
     border-radius: var(--radius-sm);
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(var(--on-surface-rgb), 0.03);
     font-size: var(--font-xs);
 
     mat-icon { @include icon-scale(13px); }
@@ -397,7 +397,7 @@ $branch-thickness: 2px;
     padding: 0;
     border: 0;
     border-radius: var(--radius-sm);
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(var(--on-surface-rgb), 0.04);
     color: var(--text-disabled);
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
@@ -581,7 +581,7 @@ $branch-thickness: 2px;
 
     mat-icon {
       @include icon-size(19px);
-      color: rgba(255, 255, 255, 0.25);
+      color: rgba(var(--on-surface-rgb), 0.25);
     }
 
     .n-ggp & {
@@ -640,7 +640,7 @@ $branch-thickness: 2px;
 
     .node {
       border-radius: var(--radius-sm);
-      background: rgba(255, 255, 255, 0.025);
+      background: rgba(var(--on-surface-rgb), 0.025);
     }
 
     .n-inner {

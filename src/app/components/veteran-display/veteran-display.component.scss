@@ -12,9 +12,9 @@
   gap: 3px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-disabled, rgba(255, 255, 255, 0.3));
+  color: var(--text-disabled, rgba(var(--on-surface-rgb), 0.3));
   background: var(--surface-1, #1a1a2e);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.08);
   padding: 3px 8px;
   border-radius: 12px;
   line-height: 1;
@@ -56,7 +56,7 @@
   margin: 0 -6px;
 
   & + .filter-row {
-    border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+    border-top: 1px solid var(--border-subtle, rgba(var(--on-surface-rgb), 0.06));
     padding-top: 5px;
     margin-top: 2px;
   }
@@ -93,9 +93,9 @@
   gap: 2px;
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-disabled, rgba(255, 255, 255, 0.3));
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-disabled, rgba(var(--on-surface-rgb), 0.3));
+  background: rgba(var(--on-surface-rgb), 0.04);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.08);
   padding: 1px 6px;
   border-radius: 10px;
   margin-left: 4px;
@@ -164,14 +164,14 @@
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle, rgba(var(--on-surface-rgb), 0.12));
+  background: rgba(var(--on-surface-rgb), 0.05);
 }
 
 .vd-parent-name {
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  color: var(--text-secondary, rgba(var(--on-surface-rgb), 0.6));
   max-width: 80px;
   overflow: hidden;
   text-overflow: ellipsis;

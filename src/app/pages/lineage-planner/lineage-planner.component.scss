@@ -1,4 +1,4 @@
-﻿@use '../../../styles/mixins' as *;
+@use '../../../styles/mixins' as *;
 
 $node-target: 480px;
 $node-parent: 480px;
@@ -200,7 +200,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
     width: $node-target;
     background: var(--surface-2);
     border-color: var(--border-secondary);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.04);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(var(--on-surface-rgb), 0.04);
   }
   &.n-parent {
     width: $node-parent;
@@ -219,15 +219,15 @@ $col-parent: 2 * $col-gp + $gap-tree;
   }
 
   &:not(.n-filled) {
-    background: rgba(255, 255, 255, 0.015);
+    background: var(--planner-empty-node-bg);
     border-style: dashed;
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--planner-empty-node-border);
     box-shadow: none;
     cursor: pointer;
 
     &:hover {
       border-color: rgba(var(--accent-primary-rgb), 0.4);
-      background: rgba(var(--accent-primary-rgb), 0.03);
+      background: var(--planner-empty-node-hover-bg);
       box-shadow: 0 0 12px rgba(var(--accent-primary-rgb), 0.06);
     }
   }
@@ -404,7 +404,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
   gap: 4px;
   padding: 2px 8px;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--on-surface-rgb), 0.03);
   font-size: var(--font-xs);
 
   mat-icon { @include icon-scale(13px); }
@@ -442,7 +442,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
   width: 24px;
   height: 24px;
   border: none;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--on-surface-rgb), 0.04);
   border-radius: var(--radius-sm);
   color: var(--text-disabled);
   cursor: pointer;
@@ -484,7 +484,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
   right: 0;
   z-index: 100;
   margin-top: 4px;
-  background: #161616;
+  background: var(--surface-overlay);
   border-radius: var(--radius-md);
   border: 1px solid rgba(var(--accent-warning-rgb), 0.2);
   overflow: hidden;
@@ -585,7 +585,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
   font-weight: 700;
 }
 
-.inh-col-learned { color: rgba(255, 255, 255, 0.8); }
+.inh-col-learned { color: rgba(var(--on-surface-rgb), 0.8); }
 .inh-col-upgraded { color: var(--accent-secondary); }
 .inh-col-gold { color: #ffd54f; }
 
@@ -653,7 +653,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
   font-weight: 700;
 }
 
-.inh-t-learned { color: rgba(255, 255, 255, 0.8); }
+.inh-t-learned { color: rgba(var(--on-surface-rgb), 0.8); }
 .inh-t-upgraded { color: var(--accent-secondary); }
 .inh-t-gold { color: #ffd54f; }
 
@@ -712,8 +712,8 @@ $col-parent: 2 * $col-gp + $gap-tree;
 }
 
 .spark-toggle {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--on-surface-rgb), 0.05);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.1);
   border-radius: var(--radius-xs);
   color: var(--text-muted);
   font-size: 0.55rem;
@@ -725,7 +725,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
   letter-spacing: 0.03em;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(var(--on-surface-rgb), 0.1);
     color: var(--text-primary);
   }
 }
@@ -842,7 +842,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
   align-items: center;
   gap: 2px;
   background: none;
-  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border: 1px dashed rgba(var(--on-surface-rgb), 0.12);
   border-radius: var(--radius-xs);
   color: var(--text-disabled);
   font-size: 0.6rem;
@@ -853,9 +853,9 @@ $col-parent: 2 * $col-gp + $gap-tree;
   mat-icon { @include icon-scale(12px); }
 
   &:hover {
-    border-color: rgba(255, 255, 255, 0.25);
+    border-color: rgba(var(--on-surface-rgb), 0.25);
     color: var(--text-muted);
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(var(--on-surface-rgb), 0.03);
   }
 }
 
@@ -893,8 +893,8 @@ $col-parent: 2 * $col-gp + $gap-tree;
   gap: 2px;
 
   button {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(var(--on-surface-rgb), 0.05);
+    border: 1px solid rgba(var(--on-surface-rgb), 0.1);
     border-radius: 3px;
     color: var(--text-disabled);
     font-size: 0.55rem;
@@ -971,7 +971,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
   justify-content: center;
   transition: all 0.2s;
 
-  mat-icon { @include icon-scale(20px); color: rgba(255, 255, 255, 0.25); }
+  mat-icon { @include icon-scale(20px); color: rgba(var(--on-surface-rgb), 0.25); }
 
   .node:hover & {
     background: rgba(var(--accent-primary-rgb), 0.08);
@@ -985,7 +985,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
 
 .n-empty-label {
   font-size: var(--font-sm);
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(var(--on-surface-rgb), 0.35);
   font-weight: 500;
   transition: color 0.2s;
   flex: 1;
@@ -1113,7 +1113,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
       border: 1px solid var(--border-primary);
       border-right: none;
       border-radius: 0;
-      background: rgba(255, 255, 255, 0.025);
+      background: rgba(var(--on-surface-rgb), 0.025);
       color: var(--text-secondary);
       font-size: 0.68rem;
       font-weight: 800;
@@ -1132,7 +1132,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
       border-top: 1px solid var(--border-primary);
       border-bottom: 1px solid var(--border-primary);
       border-right: 1px solid var(--border-subtle);
-      background: rgba(255, 255, 255, 0.025);
+      background: rgba(var(--on-surface-rgb), 0.025);
       color: var(--text-primary);
       font-size: 0.78rem;
       font-weight: 700;
@@ -1192,7 +1192,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
       border-right: none;
       border-top: none;
       border-radius: 0;
-      background: rgba(255, 255, 255, 0.018);
+      background: rgba(var(--on-surface-rgb), 0.018);
       text-align: left;
     }
 
@@ -1205,7 +1205,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
       border-top: none;
       border-bottom: 1px solid var(--border-subtle);
       border-right: 1px solid var(--border-subtle);
-      background: rgba(255, 255, 255, 0.018);
+      background: rgba(var(--on-surface-rgb), 0.018);
       line-height: 1.1;
       text-align: center;
     }
@@ -1291,18 +1291,18 @@ $col-parent: 2 * $col-gp + $gap-tree;
   }
 
   .ot-row--p .ot-label {
-    background: rgba(255, 255, 255, 0.018);
+    background: rgba(var(--on-surface-rgb), 0.018);
   }
 
   .ot-row--gp .ot-label {
-    background: rgba(255, 255, 255, 0.018);
+    background: rgba(var(--on-surface-rgb), 0.018);
   }
 
   .ot-val { font-weight: 700; }
   .ot-c0  { color: var(--accent-primary); background: rgba(100, 181, 246, 0.05) !important; }
   .ot-c1  { color: #f06292; background: rgba(240, 98, 146, 0.05) !important; }
   .ot-c2  { color: var(--accent-secondary); background: rgba(129, 199, 132, 0.05) !important; }
-  .ot-c3, .ot-c4, .ot-c5 { color: var(--text-muted); background: rgba(255, 255, 255, 0.015) !important; }
+  .ot-c3, .ot-c4, .ot-c5 { color: var(--text-muted); background: rgba(var(--on-surface-rgb), 0.015) !important; }
 
   .ot-color,
   .ot-star,
@@ -1320,7 +1320,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
   ::ng-deep .mat-mdc-tab-header {
     --mdc-secondary-navigation-tab-container-height: 38px;
     border-bottom: 1px solid var(--border-subtle);
-    background: rgba(255,255,255,0.015);
+    background: rgba(var(--on-surface-rgb), 0.015);
   }
 
   ::ng-deep .mat-mdc-tab {
@@ -1351,7 +1351,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
   transition: background 0.12s;
 
   &:last-child { border-bottom: none; }
-  &:hover { background: rgba(255, 255, 255, 0.025); }
+  &:hover { background: rgba(var(--on-surface-rgb), 0.025); }
 
   &.summary-header {
     display: grid !important;
@@ -1508,7 +1508,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
 .sum-bar-track {
   flex: 1;
   height: 6px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--on-surface-rgb), 0.07);
   border-radius: 3px;
   overflow: hidden;
   align-self: center;
@@ -1729,7 +1729,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
     gap: 4px;
     padding: 4px 10px;
     background: linear-gradient(135deg, #e91e63 0%, #f06292 100%);
-    border: 1.5px solid rgba(255, 255, 255, 0.18);
+    border: 1.5px solid rgba(var(--on-surface-rgb), 0.18);
     border-radius: var(--radius-pill);
     font-size: 0.78rem;
     font-weight: 800;
@@ -2236,7 +2236,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
       line-height: 1;
       padding: 2px 5px;
       border-radius: 4px;
-      background: rgba(255,255,255,0.05);
+      background: rgba(var(--on-surface-rgb), 0.05);
       flex-shrink: 0;
       mat-icon { display: none; }
       &::after { content: '★'; margin-left: 1px; font-size: 0.7rem; }
@@ -2244,7 +2244,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
     .blue-spark  .sum-star { color: var(--accent-primary);   background: rgba(100,181,246,0.12); }
     .pink-spark  .sum-star { color: #f06292;                 background: rgba(233,30,99,0.12); }
     .green-spark .sum-star { color: var(--accent-secondary); background: rgba(76,175,80,0.12); }
-    .white-spark .sum-star { color: var(--text-muted);       background: rgba(255,255,255,0.06); }
+    .white-spark .sum-star { color: var(--text-muted);       background: rgba(var(--on-surface-rgb), 0.06); }
 
     .sum-rank { display: none; }
     .sum-type { display: none; }
@@ -2324,7 +2324,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
       letter-spacing: 0.04em;
       padding: 2px 6px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.06);
+      background: rgba(var(--on-surface-rgb), 0.06);
       white-space: nowrap;
       align-self: center;
     }
@@ -2435,7 +2435,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
 .fork-stem {
   width: 2px;
   height: 24px;
-  background: var(--border-secondary);
+  background: var(--planner-connector);
 }
 
 .fork-bar {
@@ -2449,7 +2449,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
 .fork-line {
   flex: 1;
   height: 2px;
-  background: var(--border-secondary);
+  background: var(--planner-connector);
 }
 
 .fork-badge {
@@ -2488,7 +2488,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
 .fork-drop {
   width: 2px;
   height: 100%;
-  background: var(--border-secondary);
+  background: var(--planner-connector);
   position: relative;
 }
 

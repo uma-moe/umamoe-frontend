@@ -28,6 +28,7 @@ import { getCharacterById } from '../../data/character.data';
 })
 export class NavigationComponent {
   isChristmas$ = this.themeService.isChristmas$;
+  isLightMode$ = this.themeService.isLightMode$;
   user$ = this.authService.user$;
   isLoggedIn$ = this.authService.isLoggedIn$;
   status$ = this.statusService.status$;
@@ -89,6 +90,9 @@ export class NavigationComponent {
   }
   toggleTheme() {
     this.themeService.toggleChristmasTheme();
+  }
+  toggleColorMode() {
+    this.themeService.toggleColorMode();
   }
   onLogoError(event: Event) {
     const target = event.target as HTMLImageElement;

@@ -13,23 +13,23 @@
   flex-direction: column;
   min-height: 300px; // Ensure minimum height
   overflow: hidden; // Prevent chart overflow
-  
+
   // Firefox scrollbar styling
   scrollbar-width: thin;
-  scrollbar-color: rgba(100, 181, 246, 0.6) rgba(255, 255, 255, 0.05);
-  
+  scrollbar-color: rgba(100, 181, 246, 0.6) rgba(var(--on-surface-rgb), 0.05);
+
   // Webkit scrollbar styling (Chrome, Safari, Edge)
-  &::-webkit-scrollbar { width: 8px; height: 8px; }
+  &::-webkit-scrollbar { width: 8px; height: 8px; }
   &::-webkit-scrollbar-track { background: var(--surface-2); border-radius: var(--radius-xs); }
-  
+
   &::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, rgba(100, 181, 246, 0.6), rgba(33, 150, 243, 0.6));
     border-radius: var(--radius-xs);
     border: 1px solid var(--border-primary);
-    
+
     &:hover { background: linear-gradient(180deg, rgba(100, 181, 246, 0.8), rgba(33, 150, 243, 0.8)); }
   }
-  
+
   &::-webkit-scrollbar-corner { background: var(--surface-2); }
 }
 
@@ -73,32 +73,32 @@
     // Better touch handling
     touch-action: pan-x pan-y;
     -webkit-overflow-scrolling: touch;
-    
+
     canvas {
       touch-action: manipulation;
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
       -webkit-tap-highlight-color: transparent;
-      
+
       // Better mobile rendering
       image-rendering: -webkit-optimize-contrast;
       image-rendering: optimize-contrast;
       image-rendering: crisp-edges;
-      
+
       // Smooth interactions
       transition: none;
-      
+
       // Prevent canvas stretching
       object-fit: contain;
-      
+
       // Performance optimization
       -webkit-backface-visibility: hidden;
       backface-visibility: hidden;
     }
   }
 
-  .chart-header { flex-direction: column; gap: 0.75rem; }
+  .chart-header { flex-direction: column; gap: 0.75rem; }
   .chart-legend { gap: 0.5rem; font-size: 0.75rem; }
 }
 

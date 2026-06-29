@@ -289,7 +289,7 @@
   height: 40px;
   border-radius: 50%;
   border: 1px solid var(--border-primary);
-  background: rgba(30, 30, 30, 0.9);
+  background: var(--surface-overlay);
   color: var(--text-muted);
   cursor: pointer;
   @include flex-center;
@@ -298,7 +298,7 @@
 
   mat-icon { @include icon-size(20px); }
 
-  &:hover { background: rgba(40, 40, 40, 0.95); border-color: var(--border-secondary); color: var(--accent-primary); }
+  &:hover { background: var(--surface-3); border-color: var(--border-secondary); color: var(--accent-primary); }
 
   @media (max-width: 768px) {
     bottom: calc(1rem + var(--ad-bottom-popup-offset, 0px));

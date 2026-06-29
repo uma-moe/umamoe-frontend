@@ -182,7 +182,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--code-surface);
+  --on-surface-rgb: var(--code-on-surface-rgb);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-sm);
   padding: 0.5rem 0.75rem;
@@ -417,7 +418,7 @@
     gap: 0.35rem;
     padding: 3px 8px;
     border-radius: var(--radius-pill);
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(var(--on-surface-rgb), 0.05);
     color: var(--text-secondary);
     font-size: 0.72rem;
     font-weight: 600;
@@ -539,7 +540,7 @@
 .api-key-usage-hint {
   margin-top: 1rem;
   padding: 1rem;
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(var(--on-surface-rgb), 0.025);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
 
@@ -581,7 +582,8 @@
 }
 
 .usage-example-block {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--code-surface);
+  --on-surface-rgb: var(--code-on-surface-rgb);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: 0.6rem 0.85rem;

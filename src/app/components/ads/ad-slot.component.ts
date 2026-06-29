@@ -23,6 +23,7 @@ import { environment } from '../../../environments/environment';
 
 let adSlotId = 0;
 const FALLBACK_REVEAL_DELAY_MS = Math.max(environment.fuse.blockingTimeoutMs + 800, 2200);
+const CREATIVE_REFRESH_GRACE_MS = 2400;
 const SIZE_PATTERN = /^(\d+)x(\d+)$/;
 type SlotCreativeState = 'pending' | 'filled' | 'empty';
 
@@ -51,9 +52,11 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   showDiagnostic = false;
   slotWaiting = true;
   slotCollapsed = false;
+  slotHasCreative = false;
   fallbackPreviewEnabled = false;
   private fallbackReady = false;
   private fallbackTimer: number | null = null;
+  private emptyCreativeTimer: number | null = null;
   private lastDebugState = '';
   private mutationObserver: MutationObserver | null = null;
   private slotRenderSub?: Subscription;
@@ -173,6 +176,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.showFallback = false;
     this.showDiagnostic = false;
     this.slotWaiting = true;
+    this.slotHasCreative = false;
     this.setCollapsed(false);
     this.lastDebugState = '';
     this.fallbackPreviewEnabled = this.forceFallback;
@@ -254,6 +258,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.showDiagnostic = canShowDiagnostic;
     const shouldCollapse = noFillReady && !this.showFallback && !this.showDiagnostic;
     this.setCollapsed(shouldCollapse);
+    this.slotHasCreative = hasFilledCreative;
     this.slotWaiting = !hasFilledCreative && !this.showFallback && !this.showDiagnostic && !shouldCollapse;
     this.debugSlotState(target, hasAdMarkup, shouldCollapse, hasLikelyCreativeMarkup);
   }
@@ -318,9 +323,16 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
         return;
       }
 
-      this.slotCreativeState = result.hasCreative ? 'filled' : 'empty';
+      if (result.hasCreative) {
+        this.clearEmptyCreativeTimer();
+        this.slotCreativeState = 'filled';
+      } else if (this.slotCreativeState === 'filled' || this.slotHasCreative) {
+        this.deferEmptyCreativeState(target);
+      } else {
+        this.slotCreativeState = 'empty';
+      }
 
-      if (!result.hasCreative) {
+      if (!result.hasCreative && this.slotCreativeState === 'empty') {
         this.fallbackReady = true;
         this.clearFallbackTimer();
       }
@@ -459,6 +471,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   private clearWatchers(): void {
     this.clearFallbackTimer();
+    this.clearEmptyCreativeTimer();
     this.mutationObserver?.disconnect();
     this.mutationObserver = null;
     this.slotRenderSub?.unsubscribe();
@@ -473,5 +486,33 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     }
 
     this.fallbackTimer = null;
+  }
+
+  private deferEmptyCreativeState(target: HTMLElement): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.slotCreativeState = 'empty';
+      return;
+    }
+
+    this.clearEmptyCreativeTimer();
+    this.emptyCreativeTimer = window.setTimeout(() => {
+      this.emptyCreativeTimer = null;
+      this.slotCreativeState = this.hasLikelyCreativeMarkup(target) ? 'filled' : 'empty';
+
+      if (this.slotCreativeState === 'empty') {
+        this.fallbackReady = true;
+        this.clearFallbackTimer();
+      }
+
+      this.updateFallbackState(target);
+    }, CREATIVE_REFRESH_GRACE_MS);
+  }
+
+  private clearEmptyCreativeTimer(): void {
+    if (this.emptyCreativeTimer !== null && isPlatformBrowser(this.platformId)) {
+      window.clearTimeout(this.emptyCreativeTimer);
+    }
+
+    this.emptyCreativeTimer = null;
   }
 }

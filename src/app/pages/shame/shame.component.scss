@@ -6,7 +6,7 @@
 }
 
 .page-header {
-  background: rgba(255, 255, 255, 0.018);
+  background: rgba(var(--on-surface-rgb), 0.018);
   backdrop-filter: blur(6px);
   @include page-header-gradient;
   padding: 1.35rem 0;
@@ -15,7 +15,7 @@
     --page-max-width: 1440px;
 
     h1 {
-      color: #ffcc80;
+      color: var(--activity-heading-color);
       font-size: clamp(1.6rem, 2.2vw, 2rem);
       margin-bottom: 0.35rem;
     }
@@ -47,7 +47,7 @@
   mat-icon {
     @include icon-size(20px);
     margin-top: 1px;
-    color: rgba(144, 202, 249, 0.92);
+    color: var(--activity-info-color);
     flex-shrink: 0;
   }
 
@@ -73,7 +73,7 @@
   padding: 0.75rem;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.018);
+  background: rgba(var(--on-surface-rgb), 0.018);
 
   .search-row,
   .search-field {
@@ -208,9 +208,9 @@
   gap: 0.25rem;
   min-height: 20px;
   padding: 0 0.45rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.08);
   border-radius: var(--radius-xs);
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(var(--on-surface-rgb), 0.035);
   color: var(--text-muted);
   font-size: 0.68rem;
   font-weight: 600;
@@ -218,7 +218,7 @@
 }
 
 .circle-link {
-  color: rgba(100, 181, 246, 0.78);
+  color: var(--activity-link-color);
   text-decoration: none;
 
   mat-icon {
@@ -255,8 +255,8 @@
   min-height: 20px;
   padding: 0 0.42rem;
   border-radius: var(--radius-xs);
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.075);
+  background: rgba(var(--on-surface-rgb), 0.025);
   color: var(--text-muted);
   font-size: 0.68rem;
   font-weight: 600;
@@ -270,7 +270,7 @@
   align-items: center;
   flex-shrink: 0;
   padding: 0 0.75rem 0 0.85rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.065);
+  border-left: 1px solid rgba(var(--on-surface-rgb), 0.065);
 }
 
 .metric {
@@ -307,7 +307,7 @@
   flex-shrink: 0;
   min-width: 84px;
   padding: 0 0.15rem 0 0.75rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.065);
+  border-left: 1px solid rgba(var(--on-surface-rgb), 0.065);
 
   .score-label {
     color: var(--text-muted);
@@ -330,23 +330,23 @@
     font-variant-numeric: tabular-nums;
 
     .score-critical & {
-      color: #ef9a9a;
+      color: var(--activity-critical-strong);
     }
 
     .score-high & {
-      color: #ffcc80;
+      color: var(--activity-high-strong);
     }
 
     .score-elevated & {
-      color: #90caf9;
+      color: var(--activity-elevated-strong);
     }
 
     .score-watch & {
-      color: #ce93d8;
+      color: var(--activity-watch-strong);
     }
 
     .score-low & {
-      color: #a5d6a7;
+      color: var(--activity-low-strong);
     }
   }
 
@@ -386,7 +386,7 @@
   padding: 0 0.42rem;
   border-radius: var(--radius-xs);
   border: 1px solid var(--border-subtle);
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(var(--on-surface-rgb), 0.025);
   font-size: 0.68rem;
   font-weight: 600;
   color: var(--text-secondary);
@@ -396,26 +396,26 @@
   }
 
   &.critical {
-    color: #efb0b0;
+    color: var(--activity-critical-color);
     border-color: rgba(229, 115, 115, 0.18);
     background: rgba(229, 115, 115, 0.035);
   }
 
   &.high {
-    color: #e6bd7a;
+    color: var(--activity-high-color);
     border-color: rgba(255, 183, 77, 0.16);
     background: rgba(255, 183, 77, 0.035);
   }
 
   &.medium {
-    color: #9fc9ec;
+    color: var(--activity-medium-color);
     border-color: rgba(100, 181, 246, 0.16);
     background: rgba(100, 181, 246, 0.035);
   }
 
   &.low,
   &.info {
-    color: #abd2ad;
+    color: var(--activity-low-color);
     border-color: rgba(129, 199, 132, 0.14);
     background: rgba(129, 199, 132, 0.035);
   }
@@ -434,7 +434,7 @@
   padding: 4px 8px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--on-surface-rgb), 0.04);
   color: var(--text-secondary);
   font-size: 0.69rem;
   font-weight: 700;
@@ -452,25 +452,25 @@
   }
 
   &.very_high_suspicion {
-    color: #ffcc80;
+    color: var(--activity-high-strong);
     background: rgba(255, 183, 77, 0.08);
     border-color: rgba(255, 183, 77, 0.22);
   }
 
   &.schedule_suspicion {
-    color: #90caf9;
+    color: var(--activity-elevated-strong);
     background: rgba(100, 181, 246, 0.075);
     border-color: rgba(100, 181, 246, 0.22);
   }
 
   &.suspicious {
-    color: #ce93d8;
+    color: var(--activity-watch-strong);
     background: rgba(206, 147, 216, 0.075);
     border-color: rgba(206, 147, 216, 0.2);
   }
 
   &.below_threshold {
-    color: #a5d6a7;
+    color: var(--activity-low-strong);
     background: rgba(129, 199, 132, 0.07);
     border-color: rgba(129, 199, 132, 0.18);
   }
@@ -531,8 +531,8 @@ mat-paginator {
   overflow: hidden;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.018);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  background: rgba(var(--on-surface-rgb), 0.018);
+  box-shadow: inset 0 1px 0 rgba(var(--on-surface-rgb), 0.025);
 
   &.score-critical {
     border-color: rgba(229, 115, 115, 0.2);
@@ -551,8 +551,8 @@ mat-paginator {
   }
 
   &.score-low {
-    border-color: rgba(255, 255, 255, 0.05);
-    background: rgba(255, 255, 255, 0.012);
+    border-color: rgba(var(--on-surface-rgb), 0.05);
+    background: rgba(var(--on-surface-rgb), 0.012);
   }
 }
 
@@ -565,8 +565,8 @@ mat-paginator {
   border: 1px solid var(--border-subtle);
   border-left: 3px solid rgba(255, 183, 77, 0.5);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.02);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  background: rgba(var(--on-surface-rgb), 0.02);
+  box-shadow: inset 0 1px 0 rgba(var(--on-surface-rgb), 0.025);
 
   &.strong_automation_signal {
     border-left-color: rgba(239, 154, 154, 0.72);
@@ -630,8 +630,8 @@ mat-paginator {
   align-content: center;
   min-height: 100%;
   padding: 0 0 0 0.75rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  color: #ffcc80;
+  border-left: 1px solid rgba(var(--on-surface-rgb), 0.08);
+  color: var(--activity-heading-color);
   text-align: center;
   justify-self: end;
   min-width: 86px;
@@ -654,7 +654,7 @@ mat-paginator {
 
   em {
     margin-top: 0.15rem;
-    color: rgba(255, 204, 128, 0.62);
+    color: var(--activity-heading-muted);
     letter-spacing: 0;
   }
 }
@@ -668,18 +668,20 @@ mat-paginator {
 }
 
 .detail-lead.score-watch .score-ring {
-  color: #c5e1a5;
+  color: var(--activity-watch-strong);
 
   em {
-    color: rgba(197, 225, 165, 0.56);
+    color: var(--activity-watch-strong);
+    opacity: 0.7;
   }
 }
 
 .detail-lead.score-elevated .score-ring {
-  color: #90caf9;
+  color: var(--activity-elevated-strong);
 
   em {
-    color: rgba(144, 202, 249, 0.56);
+    color: var(--activity-elevated-strong);
+    opacity: 0.7;
   }
 }
 
@@ -733,7 +735,7 @@ mat-paginator {
 .lead-meta {
   margin-top: 0.1rem;
   padding-top: 0.52rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--on-surface-rgb), 0.06);
   gap: 0.42rem 0.8rem;
 
   mat-icon {
@@ -795,7 +797,7 @@ mat-paginator {
   background: rgba(100, 181, 246, 0.02);
 
   mat-icon {
-    color: #90caf9;
+    color: var(--activity-elevated-strong);
     flex-shrink: 0;
     margin-top: 0.05rem;
   }
@@ -811,7 +813,7 @@ mat-paginator {
 .intro-stack .caveat-callout {
   padding: 0.54rem 0.95rem 0.56rem;
   border: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--on-surface-rgb), 0.06);
   border-radius: 0;
   background: rgba(100, 181, 246, 0.025);
 }
@@ -828,13 +830,13 @@ mat-paginator {
   border: 1px solid rgba(255, 183, 77, 0.18);
   border-left: 3px solid rgba(255, 183, 77, 0.56);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(var(--on-surface-rgb), 0.02);
 }
 
 .intro-stack .automation-panel {
   padding: 0.9rem 1rem;
   border: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--on-surface-rgb), 0.06);
   border-radius: 0;
   background: transparent;
 }
@@ -854,7 +856,7 @@ mat-paginator {
   }
 
   .eyebrow {
-    color: #ffcc80;
+    color: var(--activity-heading-color);
     font-size: 0.68rem;
     font-weight: 850;
     letter-spacing: 0.4px;
@@ -896,7 +898,7 @@ mat-paginator {
   gap: 0.4rem;
   min-width: 0;
   padding: 0.2rem 0 0.2rem 1.1rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(var(--on-surface-rgb), 0.08);
 
   span,
   small {
@@ -906,7 +908,7 @@ mat-paginator {
   }
 
   strong {
-    color: #ffcc80;
+    color: var(--activity-heading-color);
     font-size: 1.9rem;
     line-height: 1;
   }
@@ -917,7 +919,7 @@ mat-paginator {
   display: block;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.065);
+  background: rgba(var(--on-surface-rgb), 0.065);
 }
 
 .score-track {
@@ -927,7 +929,7 @@ mat-paginator {
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, #ef9a9a, #ffcc80);
+    background: linear-gradient(90deg, var(--activity-critical-strong), var(--activity-high-strong));
   }
 }
 
@@ -937,12 +939,12 @@ mat-paginator {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
   padding-top: 0.8rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid rgba(var(--on-surface-rgb), 0.07);
 
   div {
     min-width: 0;
     padding: 0.35rem 0.9rem 0.15rem;
-    border-left: 1px solid rgba(255, 255, 255, 0.065);
+    border-left: 1px solid rgba(var(--on-surface-rgb), 0.065);
 
     &:first-child {
       padding-left: 0;
@@ -989,9 +991,9 @@ mat-paginator {
   span {
     flex-shrink: 0;
     padding: 3px 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(var(--on-surface-rgb), 0.08);
     border-radius: var(--radius-xs);
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(var(--on-surface-rgb), 0.03);
     color: var(--text-secondary);
     font-size: 0.7rem;
     font-weight: 750;
@@ -1014,7 +1016,7 @@ mat-paginator {
   th,
   td {
     padding: 0.48rem 0.65rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.045);
+    border-top: 1px solid rgba(var(--on-surface-rgb), 0.045);
     white-space: nowrap;
   }
 
@@ -1029,7 +1031,7 @@ mat-paginator {
   }
 
   thead tr {
-    background: rgba(255, 255, 255, 0.018);
+    background: rgba(var(--on-surface-rgb), 0.018);
   }
 
   td {
@@ -1050,11 +1052,11 @@ mat-paginator {
   }
 
   tbody tr:nth-child(even) {
-    background: rgba(255, 255, 255, 0.012);
+    background: rgba(var(--on-surface-rgb), 0.012);
   }
 
   .snapshot-row.expanded {
-    background: rgba(255, 255, 255, 0.024);
+    background: rgba(var(--on-surface-rgb), 0.024);
   }
 
   .snapshot-time {
@@ -1112,9 +1114,9 @@ mat-paginator {
   width: 24px;
   height: 24px;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.08);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--on-surface-rgb), 0.03);
   color: var(--text-secondary);
   cursor: pointer;
   transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
@@ -1128,8 +1130,8 @@ mat-paginator {
 
   &:hover,
   &.is-open {
-    border-color: rgba(255, 255, 255, 0.16);
-    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(var(--on-surface-rgb), 0.16);
+    background: rgba(var(--on-surface-rgb), 0.06);
     color: var(--text-primary);
   }
 }
@@ -1150,9 +1152,9 @@ mat-paginator {
   align-items: center;
   min-height: 22px;
   padding: 0 0.48rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.08);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--on-surface-rgb), 0.04);
   color: var(--text-secondary);
   font-size: 0.66rem;
   font-weight: 800;
@@ -1204,7 +1206,7 @@ mat-paginator {
 
 .snapshot-meta-flag {
   padding-right: 0.95rem;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: 1px solid rgba(var(--on-surface-rgb), 0.06);
   color: #f2bcbc;
 }
 
@@ -1226,7 +1228,7 @@ mat-paginator {
   th,
   td {
     padding: 0.6rem 0.95rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    border-top: 1px solid rgba(var(--on-surface-rgb), 0.04);
     text-align: right;
     white-space: nowrap;
   }
@@ -1321,9 +1323,9 @@ mat-paginator {
   align-items: center;
   min-height: 20px;
   padding: 0 0.45rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.08);
   border-radius: var(--radius-xs);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--on-surface-rgb), 0.03);
   color: var(--text-muted);
   font-size: 0.66rem;
   font-weight: 800;
@@ -1341,7 +1343,7 @@ mat-paginator {
   gap: 0.6rem;
   margin-top: 0.9rem;
   padding-top: 0.9rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--on-surface-rgb), 0.06);
 }
 
 .metric-grid {
@@ -1358,7 +1360,7 @@ mat-paginator {
 }
 
 .intro-stack .summary-metric-grid {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--on-surface-rgb), 0.06);
 }
 
 .metric-tile {
@@ -1369,9 +1371,9 @@ mat-paginator {
   min-width: 0;
   min-height: 74px;
   padding: 0.72rem 0.85rem 0.68rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.06);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.012);
+  background: rgba(var(--on-surface-rgb), 0.012);
 
   .label {
     display: block;
@@ -1402,20 +1404,20 @@ mat-paginator {
   padding: 0.42rem 0.7rem 0.38rem;
   border: 0;
   border-radius: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--on-surface-rgb), 0.06);
+  border-right: 1px solid rgba(var(--on-surface-rgb), 0.06);
   background: transparent;
   box-shadow: none;
 
   .label {
     margin-bottom: 0.18rem;
-    color: rgba(255, 204, 128, 0.78);
+    color: var(--activity-heading-muted);
     font-size: 0.54rem;
     letter-spacing: 0.32px;
   }
 
   .value {
-    color: rgba(255, 238, 205, 0.98);
+    color: var(--activity-summary-value-color);
     font-size: 0.9rem;
   }
 }
@@ -1447,11 +1449,11 @@ mat-paginator {
 .summary-metric-grid.score-low .metric-tile,
 .summary-metric-grid.score-low .metric-tile-feature,
 .summary-metric-grid.score-low .metric-tile-compact {
-  background: rgba(255, 255, 255, 0.008);
+  background: rgba(var(--on-surface-rgb), 0.008);
 }
 
 .summary-metric-grid.score-low .metric-tile-accent {
-  background: rgba(255, 255, 255, 0.014);
+  background: rgba(var(--on-surface-rgb), 0.014);
 }
 
 .metric-tile-compact {
@@ -1501,7 +1503,7 @@ mat-paginator {
 
   &+& {
     padding-top: 0.9rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid rgba(var(--on-surface-rgb), 0.06);
   }
 }
 
@@ -1510,7 +1512,7 @@ mat-paginator {
   flex-direction: column;
   gap: 0.2rem;
   padding-bottom: 0.55rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(var(--on-surface-rgb), 0.06);
 
   h4 {
     margin: 0;
@@ -1600,8 +1602,8 @@ mat-paginator {
   font-weight: 750;
 
   &.muted {
-    border-color: rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(var(--on-surface-rgb), 0.08);
+    background: rgba(var(--on-surface-rgb), 0.03);
     color: var(--text-muted);
   }
 }
@@ -1632,7 +1634,7 @@ mat-paginator {
   justify-content: space-between;
   gap: 1rem;
   padding-bottom: 0.7rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(var(--on-surface-rgb), 0.07);
 
   >div:first-child {
     min-width: 0;
@@ -1668,12 +1670,12 @@ mat-paginator {
 }
 
 .evidence-group {
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.06);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(var(--on-surface-rgb), 0.02);
 
   &.expanded {
-    background: rgba(255, 255, 255, 0.024);
+    background: rgba(var(--on-surface-rgb), 0.024);
   }
 }
 
@@ -1756,7 +1758,7 @@ mat-paginator {
 .evidence-row {
   position: relative;
   padding: 0.95rem 0 0.95rem 0.95rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--on-surface-rgb), 0.06);
 
   &:first-child {
     padding-top: 0.15rem;
@@ -1775,16 +1777,16 @@ mat-paginator {
   }
 
   &.critical::before {
-    background: #ef9a9a;
+    background: var(--activity-critical-strong);
   }
 
   &.high::before {
-    background: #ffcc80;
+    background: var(--activity-high-strong);
   }
 
   &.low::before,
   &.info::before {
-    background: #a5d6a7;
+    background: var(--activity-low-strong);
   }
 
   &.contextual {
@@ -1886,9 +1888,9 @@ mat-paginator {
     align-items: center;
     min-height: 22px;
     padding: 2px 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(var(--on-surface-rgb), 0.08);
     border-radius: var(--radius-sm);
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(var(--on-surface-rgb), 0.03);
     color: var(--text-secondary);
     font-size: 0.66rem;
     font-weight: 750;
@@ -1910,7 +1912,7 @@ mat-paginator {
   min-height: 92px;
   margin: 0.15rem 0 0.55rem;
   padding-bottom: 0.2rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  border-bottom: 1px solid rgba(var(--on-surface-rgb), 0.055);
 }
 
 .hourly-profile-label {
@@ -1972,14 +1974,14 @@ mat-paginator {
   min-height: 0;
   border-radius: 4px;
   border: 1px solid transparent;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  box-shadow: inset 0 0 0 1px rgba(var(--on-surface-rgb), 0.02);
 }
 
 .heat-cell.level-0,
 .heat-swatch.level-0,
 .hourly-bar.level-0 {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.035);
+  background: rgba(var(--on-surface-rgb), 0.04);
+  border-color: rgba(var(--on-surface-rgb), 0.035);
 }
 
 .heat-cell.level-1,
@@ -2051,9 +2053,9 @@ mat-paginator {
   align-items: center;
   min-height: 42px;
   padding: 0.45rem 0.55rem;
-  border: 1px solid rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.055);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(var(--on-surface-rgb), 0.025);
 
   &.short-window {
     border-color: rgba(229, 115, 115, 0.22);
@@ -2104,9 +2106,9 @@ mat-paginator {
   height: 30px;
   overflow: hidden;
   padding: 0 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.05);
   border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--surface-2);
 
   span {
     position: absolute;
@@ -2207,7 +2209,7 @@ mat-paginator {
     padding: 2px 8px;
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
-    background: rgba(255, 255, 255, 0.035);
+    background: rgba(var(--on-surface-rgb), 0.035);
     color: var(--text-secondary);
     font-size: 0.66rem;
     font-weight: 800;
@@ -2221,9 +2223,9 @@ mat-paginator {
 .daily-chart-canvas-wrap {
   height: 340px;
   padding: 0.65rem 0.4rem 2.6rem;
-  border: 1px solid rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.055);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(var(--on-surface-rgb), 0.02);
 
   canvas {
     width: 100% !important;
@@ -2246,23 +2248,23 @@ mat-paginator {
   min-width: 0;
   padding: 0.45rem 0.7rem;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.08);
+  background: rgba(var(--on-surface-rgb), 0.03);
+  color: rgba(var(--on-surface-rgb), 0.72);
 
   strong {
     font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.92);
+    color: rgba(var(--on-surface-rgb), 0.92);
   }
 
   small {
     font-size: 0.72rem;
     font-weight: 600;
     letter-spacing: 0.02em;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(var(--on-surface-rgb), 0.5);
   }
 
   &.current {
@@ -2301,7 +2303,8 @@ mat-paginator {
   }
 
   .bias-key {
-    background: rgba(255, 255, 255, 0.82);
+    background: var(--factor-neutral-dot);
+    border: 1px solid rgba(var(--on-surface-rgb), 0.16);
   }
 
   .active-key {
@@ -2309,8 +2312,8 @@ mat-paginator {
   }
 
   .empty-key {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(var(--on-surface-rgb), 0.08);
+    border: 1px solid rgba(var(--on-surface-rgb), 0.08);
   }
 }
 
@@ -2327,7 +2330,7 @@ mat-paginator {
   padding: 0.3rem 0.65rem;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--on-surface-rgb), 0.03);
 
   span,
   small {
@@ -2346,7 +2349,7 @@ mat-paginator {
 
   &.subtle {
     color: var(--text-muted);
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(var(--on-surface-rgb), 0.02);
   }
 }
 
@@ -2364,7 +2367,7 @@ mat-paginator {
   min-height: 40px;
   padding: 0.55rem 0.7rem;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(var(--on-surface-rgb), 0.025);
   color: var(--text-secondary);
   font-size: 0.8rem;
 
@@ -2375,7 +2378,7 @@ mat-paginator {
   }
 
   .streak-fans {
-    color: #a5d6a7;
+    color: var(--activity-low-strong);
     font-weight: 750;
   }
 
@@ -2409,12 +2412,12 @@ mat-paginator {
   }
 
   .summary-metric-grid .metric-tile {
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid rgba(var(--on-surface-rgb), 0.06);
+    border-right: 1px solid rgba(var(--on-surface-rgb), 0.06);
   }
 
   .summary-metric-grid .metric-tile:nth-child(4n) {
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    border-right: 1px solid rgba(var(--on-surface-rgb), 0.06);
   }
 
   .summary-metric-grid .metric-tile:nth-child(2n) {
@@ -2422,7 +2425,7 @@ mat-paginator {
   }
 
   .summary-metric-grid .metric-tile:nth-child(-n + 4) {
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid rgba(var(--on-surface-rgb), 0.06);
   }
 
   .summary-metric-grid .metric-tile:nth-child(-n + 2) {
@@ -2482,23 +2485,23 @@ mat-paginator {
     border-radius: 0;
     border-top: 0;
     border-right: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+    border-bottom: 1px solid rgba(var(--on-surface-rgb), 0.055);
     border-left: 4px solid var(--mobile-severity-color);
     padding: 0.68rem 0.75rem 0.72rem;
-    background: rgba(255, 255, 255, 0.012);
+    background: rgba(var(--on-surface-rgb), 0.012);
 
     &:hover {
       transform: none;
-      border-color: rgba(255, 255, 255, 0.055);
+      border-color: rgba(var(--on-surface-rgb), 0.055);
       border-left-color: var(--mobile-severity-color);
-      background: rgba(255, 255, 255, 0.028);
+      background: rgba(var(--on-surface-rgb), 0.028);
     }
 
-    &.score-critical { --mobile-severity-color: rgba(239, 154, 154, 0.78); }
-    &.score-high { --mobile-severity-color: rgba(255, 204, 128, 0.76); }
-    &.score-elevated { --mobile-severity-color: rgba(144, 202, 249, 0.72); }
-    &.score-watch { --mobile-severity-color: rgba(206, 147, 216, 0.66); }
-    &.score-low { --mobile-severity-color: rgba(165, 214, 167, 0.62); }
+    &.score-critical { --mobile-severity-color: var(--activity-critical-strong); }
+    &.score-high { --mobile-severity-color: var(--activity-high-strong); }
+    &.score-elevated { --mobile-severity-color: var(--activity-elevated-strong); }
+    &.score-watch { --mobile-severity-color: var(--activity-watch-strong); }
+    &.score-low { --mobile-severity-color: var(--activity-low-strong); }
 
     .card-header {
       display: grid;
@@ -2612,12 +2615,12 @@ mat-paginator {
     gap: 0;
     padding: 0.52rem 0 0 calc(30px + 0.62rem);
     border-left: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.055);
+    border-top: 1px solid rgba(var(--on-surface-rgb), 0.055);
 
     .metric {
       align-items: flex-start;
       padding: 0 0.55rem;
-      border-left: 1px solid rgba(255, 255, 255, 0.055);
+      border-left: 1px solid rgba(var(--on-surface-rgb), 0.055);
 
       &:first-child {
         padding-left: 0;
@@ -2655,9 +2658,9 @@ mat-paginator {
       min-width: 32px;
       padding: 0;
       color: var(--text-secondary);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(var(--on-surface-rgb), 0.08);
       border-radius: var(--radius-xs);
-      background: rgba(255, 255, 255, 0.035);
+      background: rgba(var(--on-surface-rgb), 0.035);
 
       mat-icon {
         @include icon-size(20px);
@@ -2793,7 +2796,7 @@ mat-paginator {
     div {
       padding: 0.42rem 0.7rem 0.35rem;
       border-left: 0;
-      border-top: 1px solid rgba(255, 255, 255, 0.075);
+      border-top: 1px solid rgba(var(--on-surface-rgb), 0.075);
     }
   }
 
@@ -2902,7 +2905,7 @@ mat-paginator {
 @media (max-width: 520px) {
   .score-ring {
     justify-self: end;
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid rgba(var(--on-surface-rgb), 0.08);
     border-top: 0;
   }
 
@@ -3015,8 +3018,8 @@ mat-paginator {
         "meta meta";
       gap: 0.35rem 0.65rem;
       padding: 0.55rem 0.65rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.045);
-      background: rgba(255, 255, 255, 0.012);
+      border-top: 1px solid rgba(var(--on-surface-rgb), 0.045);
+      background: rgba(var(--on-surface-rgb), 0.012);
     }
 
     td {
@@ -3123,12 +3126,12 @@ mat-paginator {
       gap: 0.35rem 0.65rem;
       align-items: center;
       padding: 0.58rem 0.65rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.045);
-      background: rgba(255, 255, 255, 0.012);
+      border-top: 1px solid rgba(var(--on-surface-rgb), 0.045);
+      background: rgba(var(--on-surface-rgb), 0.012);
     }
 
     tr.snapshot-row.expanded {
-      background: rgba(255, 255, 255, 0.026);
+      background: rgba(var(--on-surface-rgb), 0.026);
     }
 
     tr.snapshot-row > td {
@@ -3276,7 +3279,7 @@ mat-paginator {
       gap: 0.13rem 0.5rem;
       align-items: center;
       padding: 0.4rem 0.44rem 0.42rem 0.42rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.055);
+      border-top: 1px solid rgba(var(--on-surface-rgb), 0.055);
       border-left: 2px solid transparent;
       background: transparent;
     }
@@ -3446,7 +3449,7 @@ mat-paginator {
     padding-right: 0;
     border-right: 0;
     padding-bottom: 0.15rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(var(--on-surface-rgb), 0.06);
   }
 
   .shame-row .card-header {

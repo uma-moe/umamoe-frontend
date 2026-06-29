@@ -1,6 +1,6 @@
 .site-footer {
   flex-shrink: 0;
-  background: rgba(18, 18, 18, 0.96);
+  background: var(--navbar-bg, rgba(18, 18, 18, 0.96));
   border-top: 1px solid var(--border-primary);
 }
 

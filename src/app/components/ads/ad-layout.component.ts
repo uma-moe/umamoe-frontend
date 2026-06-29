@@ -276,35 +276,65 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     const anchorRect = this.getAdRailFrame(anchor.rect, viewportWidth);
     const leftGutter = Math.max(0, anchorRect.left);
     const rightGutter = Math.max(0, viewportWidth - anchorRect.right);
-    const sideRailWidth = this.getSideRailWidth(viewportWidth);
     const sideRailOverlay = this.config.sideRailOverlay === true;
-    const minimumGutter = sideRailOverlay ? 0 : sideRailWidth;
-    const sideRailLayout = this.resolveSideRailLayout(
+    const railPlacement = this.resolveSideRailPlacement(
       viewportWidth,
       leftGutter,
       rightGutter,
-      minimumGutter,
+      sideRailOverlay,
     );
 
-    if (sideRailLayout === 'none') {
+    if (!railPlacement || railPlacement.layout === 'none') {
       this.sideRailsVisible = false;
       this.sideRailLayout = 'none';
       return;
     }
 
     this.watchAnchorSize(anchor.element);
-    this.sideRailWidth = sideRailWidth;
+    this.sideRailWidth = railPlacement.width;
     this.sideRailLeft = sideRailOverlay
       ? SIDE_RAIL_EDGE_GAP
-      : this.centerRailInGutter(leftGutter, sideRailWidth);
+      : this.centerRailInGutter(leftGutter, railPlacement.width);
     this.sideRailRight = sideRailOverlay
       ? SIDE_RAIL_EDGE_GAP
-      : this.centerRailInGutter(rightGutter, sideRailWidth);
+      : this.centerRailInGutter(rightGutter, railPlacement.width);
     this.sideRailTop = verticalAnchor
       ? this.centerRailOnAnchor(verticalAnchor.rect, view)
       : this.centerRailInViewportFrame(view);
-    this.sideRailLayout = sideRailLayout;
+    this.sideRailLayout = railPlacement.layout;
     this.sideRailsVisible = true;
+  }
+
+  private resolveSideRailPlacement(
+    viewportWidth: number,
+    leftGutter: number,
+    rightGutter: number,
+    sideRailOverlay: boolean,
+  ): { layout: SideRailLayout; width: number } | null {
+    const preferredSide = this.config.preferredSideRail ?? 'left';
+    let fallbackPlacement: { layout: SideRailLayout; width: number } | null = null;
+
+    for (const width of this.getSideRailWidthCandidates(viewportWidth)) {
+      const minimumGutter = sideRailOverlay ? 0 : width;
+      const layout = this.resolveSideRailLayout(
+        viewportWidth,
+        leftGutter,
+        rightGutter,
+        minimumGutter,
+      );
+
+      if (layout !== 'none') {
+        const placement = { layout, width };
+
+        if (layout === 'both' || layout === preferredSide) {
+          return placement;
+        }
+
+        fallbackPlacement ??= placement;
+      }
+    }
+
+    return fallbackPlacement;
   }
 
   private resolveSideRailLayout(
@@ -349,6 +379,15 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   private getSideRailWidth(viewportWidth: number): number {
     const singleRailMaxWidth = this.config.singleSideRailMaxWidth ?? SINGLE_SIDE_RAIL_MAX_WIDTH;
     return viewportWidth <= singleRailMaxWidth ? SIDE_RAIL_COMPACT_WIDTH : SIDE_RAIL_WIDE_WIDTH;
+  }
+
+  private getSideRailWidthCandidates(viewportWidth: number): number[] {
+    const preferredWidth = this.getSideRailWidth(viewportWidth);
+    const widths = preferredWidth >= SIDE_RAIL_WIDE_WIDTH
+      ? [SIDE_RAIL_WIDE_WIDTH, SIDE_RAIL_COMPACT_WIDTH]
+      : [SIDE_RAIL_COMPACT_WIDTH];
+
+    return [...new Set(widths)];
   }
 
   private shouldReserveLeftRail(viewportWidth: number, minWidth: number, hasConfiguredRail: boolean): boolean {

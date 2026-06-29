@@ -1,7 +1,7 @@
 @use '../../../styles/mixins' as *;
 
 .navbar {
-  background: rgba(18, 18, 18, 0.95);
+  background: var(--navbar-bg, rgba(18, 18, 18, 0.95));
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border-primary);
   position: sticky;
@@ -125,12 +125,12 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  background: #1a1a1a;
+  background: var(--surface-overlay, #1a1a1a);
   border: 1px solid var(--border-primary);
   border-radius: 10px;
   padding: 4px;
   min-width: 160px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-dropdown, 0 8px 24px rgba(0, 0, 0, 0.5));
   z-index: 9999;
   display: flex;
   flex-direction: column;
@@ -276,11 +276,11 @@
 }
 
 .nav-dropdown-menu {
-  background: rgba(18, 18, 18, 0.95);
+  background: var(--surface-overlay, rgba(18, 18, 18, 0.95));
   backdrop-filter: blur(10px);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-dropdown, 0 8px 32px rgba(0, 0, 0, 0.3));
   margin-top: 0.5rem;
 
   .mat-mdc-menu-item {
@@ -296,6 +296,36 @@
     &[disabled] { color: var(--text-disabled); opacity: 0.6; }
 
     mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+  }
+}
+
+.color-mode-toggle.mat-mdc-icon-button {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  --mdc-icon-button-state-layer-size: 36px;
+
+  mat-icon {
+    @include icon-size(19px);
+    line-height: 19px;
+  }
+
+  &:hover {
+    background: var(--surface-2);
+    border-color: var(--border-primary);
+    color: var(--text-primary);
+  }
+
+  &.active {
+    color: var(--accent-warning);
+    background: rgba(var(--accent-warning-rgb), 0.12);
+    border-color: rgba(var(--accent-warning-rgb), 0.28);
   }
 }
 
@@ -450,11 +480,11 @@ $nav-badge-colors: (nav-badge-pulse: rgba(255, 107, 53, 0.4), nav-updated-pulse:
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  background: #1a1a1a;
+  background: var(--surface-overlay, #1a1a1a);
   border: 1px solid var(--border-primary);
   border-radius: 10px;
   min-width: 220px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-dropdown, 0 8px 24px rgba(0, 0, 0, 0.5));
   z-index: 9999;
   overflow: hidden;
 }
@@ -492,7 +522,7 @@ $nav-badge-colors: (nav-badge-pulse: rgba(255, 107, 53, 0.4), nav-updated-pulse:
 
   &.status--loading {
     color: var(--text-muted);
-    .status-dot { background: rgba(255, 255, 255, 0.3); }
+    .status-dot { background: rgba(var(--on-surface-rgb), 0.3); }
   }
 }
 
@@ -511,7 +541,7 @@ $nav-badge-colors: (nav-badge-pulse: rgba(255, 107, 53, 0.4), nav-updated-pulse:
   border-radius: 6px;
   font-size: 0.75rem;
 
-  &:hover { background: rgba(255, 255, 255, 0.03); }
+  &:hover { background: var(--surface-1); }
 }
 
 .status-ep-dot {
@@ -559,7 +589,7 @@ $nav-badge-colors: (nav-badge-pulse: rgba(255, 107, 53, 0.4), nav-updated-pulse:
   50% { opacity: 0.5; }
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1320px) {
   .nav-container { gap: 0.75rem; padding: 0 1rem; }
 
   .nav-link { padding: 0.5rem 0.65rem; }
@@ -636,6 +666,15 @@ $nav-badge-colors: (nav-badge-pulse: rgba(255, 107, 53, 0.4), nav-updated-pulse:
     padding: 0.4rem;
 
     mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+  }
+
+  .color-mode-toggle.mat-mdc-icon-button {
+    flex-basis: 32px;
+    width: 32px;
+    height: 32px;
+    --mdc-icon-button-state-layer-size: 32px;
+
+    mat-icon { @include icon-size(17px); }
   }
 
   .user-menu-btn {
@@ -810,7 +849,7 @@ $nav-badge-colors: (nav-badge-pulse: rgba(255, 107, 53, 0.4), nav-updated-pulse:
     background: var(--surface-3) !important; // Subtle hover effect
     transform: scale(1.1);
     
-    mat-icon { filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5)); }
+    mat-icon { filter: drop-shadow(0 0 5px rgba(var(--on-surface-rgb), 0.35)); }
   }
   
   mat-icon { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }

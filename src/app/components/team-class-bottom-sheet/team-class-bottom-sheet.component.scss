@@ -9,7 +9,7 @@
   margin: 0;
   box-shadow: 
     0 -8px 32px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    0 0 0 1px rgba(var(--on-surface-rgb), 0.1) inset;
   position: relative;
   overflow: hidden;
   
@@ -23,9 +23,9 @@
     bottom: 0;
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0.05) 50%,
-      rgba(255, 255, 255, 0.02) 100%
+      rgba(var(--on-surface-rgb), 0.1) 0%,
+      rgba(var(--on-surface-rgb), 0.05) 50%,
+      rgba(var(--on-surface-rgb), 0.02) 100%
     );
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
@@ -44,7 +44,7 @@
   
   h2 {
     margin: 0;
-    color: #ffffff;
+    color: var(--text-primary);
     font-size: 20px;
     font-weight: 500;
   }
@@ -52,12 +52,12 @@
   button {
     color: var(--text-secondary);
     
-    &:hover { color: #ffffff; background: var(--surface-3); }
+    &:hover { color: var(--text-primary); background: var(--surface-3); }
   }
 }
 
 // Content container
-.bottom-sheet-content { padding: 8px 24px 24px; color: #ffffff; }
+.bottom-sheet-content { padding: 8px 24px 24px; color: var(--text-primary); }
 
 // Filter sections
 .filter-section {
@@ -68,7 +68,7 @@
 
 .section-header h3 {
   margin: 0 0 12px 0;
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 16px;
   font-weight: 500;
 }

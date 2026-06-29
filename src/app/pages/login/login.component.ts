@@ -44,22 +44,23 @@ import { MatIconModule } from '@angular/material/icon';
     }
 
     .login-card {
-      background: rgba(30, 30, 30, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
       border-radius: 12px;
       padding: 2.5rem;
       text-align: center;
       max-width: 400px;
       width: 100%;
+      box-shadow: var(--shadow-md);
 
       h2 {
-        color: #fff;
+        color: var(--text-primary);
         margin: 0 0 0.5rem;
         font-size: 1.5rem;
       }
 
       .subtitle {
-        color: rgba(255, 255, 255, 0.5);
+        color: var(--text-secondary);
         margin: 0 0 2rem;
         font-size: 0.875rem;
       }

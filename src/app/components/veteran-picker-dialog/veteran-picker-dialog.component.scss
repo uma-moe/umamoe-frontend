@@ -154,7 +154,7 @@
   background: rgba(33, 150, 243, 0.1);
   border-bottom: 1px solid rgba(33, 150, 243, 0.25);
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(var(--on-surface-rgb), 0.75);
   flex-shrink: 0;
 
   mat-icon {
@@ -254,8 +254,8 @@
 
   &.loading {
     color: var(--text-secondary);
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(var(--on-surface-rgb), 0.08);
+    border-color: rgba(var(--on-surface-rgb), 0.14);
   }
 }
 
@@ -509,7 +509,7 @@
   &.blue-dot { background: #42a5f5; }
   &.pink-dot { background: #ec407a; }
   &.green-dot { background: #66bb6a; }
-  &.white-dot { background: rgba(255, 255, 255, 0.6); }
+  &.white-dot { background: var(--factor-neutral-dot); }
 }
 
 .vpd-fname {
@@ -542,7 +542,7 @@
   &.blue-dot::before { background: #42a5f5; }
   &.pink-dot::before { background: #ec407a; }
   &.green-dot::before { background: #66bb6a; }
-  &.white-dot::before { background: rgba(255, 255, 255, 0.6); }
+  &.white-dot::before { background: var(--factor-neutral-dot); }
 }
 
 .vpd-frow-rm {
@@ -692,7 +692,7 @@
   align-items: center;
   gap: 8px;
   padding: 16px 14px 6px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  color: var(--text-secondary, rgba(var(--on-surface-rgb), 0.6));
   font-size: 0.78rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -715,7 +715,7 @@
   transition: background 0.15s ease;
   flex-shrink: 0;
   mat-icon { font-size: 18px; width: 18px; height: 18px; }
-  &:hover { background: rgba(255, 255, 255, 0.06); color: var(--text-primary); }
+  &:hover { background: rgba(var(--on-surface-rgb), 0.06); color: var(--text-primary); }
 }
 
 // Inline (compact) variant of the login banner
@@ -976,11 +976,11 @@
 
 .vpd-id-hint {
   font-size: 0.7rem;
-  color: var(--text-disabled, rgba(255, 255, 255, 0.3));
+  color: var(--text-disabled, rgba(var(--on-surface-rgb), 0.3));
   line-height: 1.4;
 
   strong {
-    color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+    color: var(--text-secondary, rgba(var(--on-surface-rgb), 0.45));
     font-weight: 600;
   }
 }
@@ -1200,9 +1200,9 @@
   }
 
   &.manual-spark--white {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.7);
+    background: rgba(var(--on-surface-rgb), 0.05);
+    border-color: rgba(var(--on-surface-rgb), 0.15);
+    color: rgba(var(--on-surface-rgb), 0.7);
   }
 }
 
@@ -1355,8 +1355,8 @@
 .vpd-tree-branch-line {
   width: 24px;
   flex-shrink: 0;
-  border-left: 2px solid rgba(255, 255, 255, 0.12);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+  border-left: 2px solid rgba(var(--on-surface-rgb), 0.12);
+  border-bottom: 2px solid rgba(var(--on-surface-rgb), 0.12);
   border-bottom-left-radius: 6px;
   margin-bottom: 16px;
 
@@ -1379,8 +1379,8 @@
 
 .vpd-tree-node {
   border-radius: var(--radius-lg);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.015);
+  border: 1px dashed rgba(var(--on-surface-rgb), 0.1);
+  background: rgba(var(--on-surface-rgb), 0.015);
   display: flex;
   flex-direction: column;
   overflow: visible;
@@ -1434,7 +1434,7 @@
   flex-shrink: 0;
   transition: all 0.2s;
 
-  mat-icon { font-size: 20px; width: 20px; height: 20px; color: rgba(255, 255, 255, 0.2); }
+  mat-icon { font-size: 20px; width: 20px; height: 20px; color: rgba(var(--on-surface-rgb), 0.2); }
 
   .vpd-tree-node:hover & {
     background: rgba(var(--accent-primary-rgb), 0.1);
@@ -1445,7 +1445,7 @@
 
 .vpd-tree-empty-label {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(var(--on-surface-rgb), 0.3);
   font-weight: 500;
   transition: color 0.2s;
 
@@ -1581,7 +1581,7 @@
 
   &--clear {
     color: var(--text-disabled);
-    border-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(var(--on-surface-rgb), 0.06);
     &:hover {
       background: rgba(229, 115, 115, 0.08);
       border-color: rgba(229, 115, 115, 0.3);
@@ -1643,7 +1643,7 @@
   right: 0;
   z-index: 100;
   margin-top: 4px;
-  background: #161616;
+  background: var(--surface-overlay);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-secondary);
   display: flex;
@@ -1657,7 +1657,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 14px;
-  background: #1a1a1a;
+  background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-subtle);
   font-size: var(--font-sm);
   font-weight: 600;
@@ -1752,7 +1752,7 @@
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed rgba(var(--on-surface-rgb), 0.1);
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-disabled);

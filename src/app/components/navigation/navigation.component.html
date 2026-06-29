@@ -61,6 +61,18 @@
         <span>Timeline</span>
       </a>
 
+      <button
+        mat-icon-button
+        type="button"
+        class="color-mode-toggle"
+        [class.active]="isLightMode$ | async"
+        (click)="toggleColorMode()"
+        [attr.aria-label]="(isLightMode$ | async) ? 'Switch to dark mode' : 'Switch to light mode'"
+        [attr.aria-pressed]="(isLightMode$ | async) ? 'true' : 'false'"
+        [matTooltip]="(isLightMode$ | async) ? 'Switch to dark mode' : 'Switch to light mode'">
+        <mat-icon>{{ (isLightMode$ | async) ? 'dark_mode' : 'light_mode' }}</mat-icon>
+      </button>
+
       <!-- <button mat-icon-button (click)="toggleTheme()" class="theme-toggle" [matTooltip]="(isChristmas$ | async) ? 'Disable Christmas Theme' : 'Enable Christmas Theme'">
         <mat-icon [class.active-snowflake]="isChristmas$ | async">ac_unit</mat-icon>
       </button> -->

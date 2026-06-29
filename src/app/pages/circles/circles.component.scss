@@ -79,7 +79,7 @@
         font-size: 16px !important;
         width: 16px !important;
         height: 16px !important;
-        color: rgba(255, 255, 255, 0.55) !important;
+        color: rgba(var(--on-surface-rgb), 0.55) !important;
         margin-right: 0 !important;
       }
     }
@@ -114,15 +114,15 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #f44336;
+    background: var(--accent-error);
     flex-shrink: 0;
-    box-shadow: 0 0 6px rgba(244, 67, 54, 0.7);
+    box-shadow: 0 0 6px rgba(var(--accent-error-rgb), 0.7);
     animation: pulse-dot 2s ease-in-out infinite;
   }
 
   .live-label {
     font-weight: 600;
-    color: #ef5350;
+    color: var(--accent-error);
     font-size: 0.75rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -681,9 +681,9 @@ mat-paginator {
         min-width: 32px;
         padding: 0;
         color: var(--text-secondary);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(var(--on-surface-rgb), 0.08);
         border-radius: var(--radius-xs);
-        background: rgba(255, 255, 255, 0.035);
+        background: rgba(var(--on-surface-rgb), 0.035);
 
         mat-icon { @include icon-size(20px); }
 

@@ -24,8 +24,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--on-surface-rgb), 0.05);
+  border: 1px solid rgba(var(--on-surface-rgb), 0.1);
   border-radius: 8px;
   padding: 5px 10px;
   transition: border-color 0.15s;
@@ -40,7 +40,7 @@
   font-size: 16px;
   width: 16px;
   height: 16px;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(var(--on-surface-rgb), 0.3);
   flex-shrink: 0;
 }
 
@@ -49,24 +49,24 @@
   background: none;
   border: none;
   outline: none;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(var(--on-surface-rgb), 0.9);
   font-size: 13px;
   font-family: inherit;
   min-width: 0;
 
-  &::placeholder { color: rgba(255, 255, 255, 0.3); }
+  &::placeholder { color: rgba(var(--on-surface-rgb), 0.3); }
 }
 
 .toolbar-search-clear {
   font-size: 14px;
   width: 14px;
   height: 14px;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(var(--on-surface-rgb), 0.3);
   cursor: pointer;
   flex-shrink: 0;
   transition: color 0.12s;
 
-  &:hover { color: rgba(255, 255, 255, 0.7); }
+  &:hover { color: rgba(var(--on-surface-rgb), 0.7); }
 }
 
 .toolbar-search-results {
@@ -74,8 +74,8 @@
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: #1e1e1e;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   max-height: 220px;
@@ -90,11 +90,11 @@
   padding: 8px 12px;
   font-size: 13px;
   cursor: pointer;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(var(--on-surface-rgb), 0.05);
   transition: background 0.1s;
 
   &:last-child { border-bottom: none; }
-  &:hover { background: rgba(255, 255, 255, 0.05); }
+  &:hover { background: rgba(var(--on-surface-rgb), 0.05); }
 
   &.already-selected {
     opacity: 0.5;
@@ -117,7 +117,7 @@
 
   .result-name {
     flex: 1;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(var(--on-surface-rgb), 0.85);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

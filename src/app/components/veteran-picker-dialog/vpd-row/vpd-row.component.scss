@@ -123,7 +123,7 @@
 .blue-spark  { color: var(--accent-primary); border-color: rgba(33, 150, 243, 0.4); background: rgba(33, 150, 243, 0.1); }
 .pink-spark  { color: var(--color-pink); border-color: rgba(233, 30, 99, 0.4); background: rgba(233, 30, 99, 0.1); }
 .green-spark { color: var(--accent-secondary); border-color: rgba(76, 175, 80, 0.4); background: rgba(76, 175, 80, 0.1); }
-.white-spark { color: #bdbdbd; border-color: rgba(158, 158, 158, 0.4); background: rgba(158, 158, 158, 0.1); }
+.white-spark { color: var(--spark-white-text); border-color: rgba(158, 158, 158, 0.4); background: rgba(158, 158, 158, 0.1); }
 .spark-more  { font-size: 0.58rem; color: var(--text-disabled); align-self: center; padding-left: 2px; }
 
 .spark-item--xs {
@@ -203,7 +203,7 @@
   mat-icon { font-size: 16px; width: 16px; height: 16px; }
 
   &:hover {
-    background: var(--surface-hover, rgba(255, 255, 255, 0.08));
+    background: var(--surface-hover, rgba(var(--on-surface-rgb), 0.08));
     color: var(--text-primary);
   }
 

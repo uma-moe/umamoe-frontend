@@ -5,11 +5,11 @@
   flex-direction: column;
   gap: 0.5rem;
 
-  &.mobile { padding: 1rem; background: rgba(0, 0, 0, 0.95); border-top: 1px solid var(--border-primary); }
+  &.mobile { padding: 1rem; background: var(--bg-secondary); border-top: 1px solid var(--border-primary); }
 
   &:not(.mobile) {
     padding: 0.75rem;
-    background: rgba(20, 20, 20, 0.6);
+    background: var(--bg-secondary);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
     backdrop-filter: blur(10px);
@@ -80,7 +80,7 @@
   gap: 0.5rem;
   margin-top: 0.5rem;
   padding: 0.75rem;
-  background: rgba(20, 20, 20, 0.6);
+  background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   backdrop-filter: blur(10px);

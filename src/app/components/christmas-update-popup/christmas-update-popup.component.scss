@@ -1,9 +1,9 @@
 @use '../../../styles/mixins' as *;
 
 .christmas-popup-container {
-  background: #1e1e1e; // Dark background
+  background: var(--bg-secondary);
   padding: 1rem;
-  color: #e0e0e0;
+  color: var(--text-primary);
   position: relative;
   overflow: visible; // Allow lights to hang out
   border-radius: var(--radius-md); // Ensure radius if dialog doesn't provide it
@@ -85,7 +85,7 @@
 
   .intro-text {
     margin-bottom: 0.75rem;
-    color: #bdbdbd;
+    color: var(--text-secondary);
     font-size: 0.9rem;
     line-height: 1.4;
   }
@@ -191,7 +191,7 @@
   button { text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
 
   .btn-dont-show {
-    color: #bdbdbd;
+    color: var(--text-secondary);
     border-color: var(--border-secondary);
     
     &:hover { background: var(--surface-2); color: var(--text-primary); border-color: var(--text-muted); }

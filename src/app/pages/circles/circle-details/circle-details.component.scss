@@ -110,15 +110,15 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #f44336;
+  background: var(--accent-error);
   flex-shrink: 0;
-  box-shadow: 0 0 5px rgba(244, 67, 54, 0.7);
+  box-shadow: 0 0 5px rgba(var(--accent-error-rgb), 0.7);
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
 .live-label {
   font-weight: 600;
-  color: #ef5350;
+  color: var(--accent-error);
   font-size: 0.7rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -238,7 +238,7 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  background: #1a1a1a;
+  background: var(--surface-overlay);
   border: 1px solid var(--border-primary);
   border-radius: 10px;
   padding: 4px;
@@ -358,7 +358,7 @@
   gap: 0;
   padding: 0.6rem 0.5rem;
   margin: 0.5rem 0;
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(var(--on-surface-rgb), 0.025);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   max-width: 100%;
@@ -467,7 +467,7 @@
       display: flex;
       align-items: center;
       gap: 0.4rem;
-      color: #ef5350;
+      color: var(--accent-error);
     }
 
     .live-rank {
@@ -566,10 +566,10 @@
   cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s;
   user-select: none;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface-1);
   border: 1px solid transparent;
   
-  &:hover { background: rgba(0, 0, 0, 0.5); border-color: rgba(0, 0, 0, 1); }
+  &:hover { background: var(--surface-3); border-color: var(--border-secondary); }
   &.hidden { opacity: 0.4; text-decoration: line-through; }
 
   .color-indicator {
@@ -622,7 +622,7 @@
 }
 
 .member-card {
-  background: #1e1e1e;
+  background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 0.75rem;
@@ -643,7 +643,7 @@
   @each $rank, $color in (1: #ffd700, 2: #90a4ae, 3: #cd7f32) {
     &.rank-#{$rank} {
       border-color: rgba($color, 0.5);
-      background: linear-gradient(145deg, rgba($color, 0.05), #1e1e1e);
+      background: linear-gradient(145deg, rgba($color, 0.05), var(--bg-secondary));
       .member-header .rank, .member-header .name, .member-header .name-block .name { color: $color; }
     }
   }
@@ -749,8 +749,8 @@
       transition: all 0.15s ease;
 
       @media (hover: none) {
-        background: rgba(255, 255, 255, 0.03);
-        border-color: rgba(255, 255, 255, 0.08);
+        background: rgba(var(--on-surface-rgb), 0.03);
+        border-color: rgba(var(--on-surface-rgb), 0.08);
       }
 
       .copy-prefix {
@@ -778,7 +778,7 @@
 
       &:hover {
         color: var(--text-primary);
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(var(--on-surface-rgb), 0.05);
 
         .copy-prefix {
           opacity: 0.8;
@@ -794,7 +794,7 @@
 
       &:active {
         color: #90caf9;
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(var(--on-surface-rgb), 0.08);
       }
 
       &:focus-visible {
@@ -819,7 +819,7 @@
     &.member { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border-primary); }
   }
 
-  .status-badge.inactive { background: rgba(244, 67, 54, 0.15); color: #ef5350; border: 1px solid rgba(244, 67, 54, 0.3); }
+  .status-badge.inactive { background: rgba(var(--accent-error-rgb), 0.15); color: var(--accent-error); border: 1px solid rgba(var(--accent-error-rgb), 0.3); }
 }
 
 .member-stats {
@@ -994,7 +994,7 @@
     &.empty { background: transparent; border-color: transparent; min-height: 0; }
 
     &.other-month {
-      background: rgba(255, 255, 255, 0.01);
+      background: rgba(var(--on-surface-rgb), 0.01);
       border-color: var(--border-subtle);
       min-height: 50px;
       opacity: 0.35;
@@ -1003,18 +1003,18 @@
     }
 
     &.no-data {
-      background: rgba(255, 255, 255, 0.015);
+      background: rgba(var(--on-surface-rgb), 0.015);
       min-height: 50px;
       
       .day-number { color: var(--text-disabled); }
     }
 
     &.has-data {
-      background: linear-gradient(160deg, rgba(129, 199, 132, 0.04) 0%, rgba(255, 255, 255, 0.02) 100%);
+      background: linear-gradient(160deg, rgba(129, 199, 132, 0.04) 0%, rgba(var(--on-surface-rgb), 0.02) 100%);
       border-color: rgba(129, 199, 132, 0.1);
 
       &:hover {
-        background: linear-gradient(160deg, rgba(129, 199, 132, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+        background: linear-gradient(160deg, rgba(129, 199, 132, 0.08) 0%, rgba(var(--on-surface-rgb), 0.04) 100%);
         border-color: rgba(129, 199, 132, 0.2);
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -1109,7 +1109,7 @@
       top: -4px;
       left: -4px;
       z-index: 200;
-      background: #1e1e1e;
+      background: var(--surface-overlay);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
       padding: 0;
@@ -1201,12 +1201,12 @@
     display: flex;
     align-items: center;
     padding: 0.75rem 1rem;
-    background: #1e1e1e;
+    background: var(--bg-secondary);
     border-radius: var(--radius-sm);
     border: 1px solid var(--border-subtle);
     transition: background 0.2s, border-color 0.2s;
 
-    &:hover { background: #252525; border-color: rgba(100, 181, 246, 0.2); }
+    &:hover { background: var(--surface-2); border-color: rgba(100, 181, 246, 0.2); }
 
     &.inactive { opacity: 0.5; border-style: dashed; }
 
@@ -1313,8 +1313,8 @@
         transition: all 0.15s ease;
 
         @media (hover: none) {
-          background: rgba(255, 255, 255, 0.03);
-          border-color: rgba(255, 255, 255, 0.08);
+          background: rgba(var(--on-surface-rgb), 0.03);
+          border-color: rgba(var(--on-surface-rgb), 0.08);
         }
 
         .copy-prefix {
@@ -1342,7 +1342,7 @@
 
         &:hover {
           color: var(--text-primary);
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(var(--on-surface-rgb), 0.05);
 
           .copy-prefix {
             opacity: 0.8;
@@ -1358,7 +1358,7 @@
 
         &:active {
           color: #90caf9;
-          background: rgba(255, 255, 255, 0.08);
+          background: rgba(var(--on-surface-rgb), 0.08);
         }
 
         &:focus-visible {
@@ -1376,7 +1376,7 @@
       font-weight: 600;
       flex-shrink: 0;
 
-      &.inactive { background: rgba(244, 67, 54, 0.15); color: #ef5350; border: 1px solid rgba(244, 67, 54, 0.3); }
+      &.inactive { background: rgba(var(--accent-error-rgb), 0.15); color: var(--accent-error); border: 1px solid rgba(var(--accent-error-rgb), 0.3); }
     }
   }
 
