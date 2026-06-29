@@ -5,7 +5,6 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { NavigationComponent } from './components/navigation/navigation.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { SnowComponent } from './components/snow/snow.component';
-import { CookieConsentComponent } from './components/cookie-consent/cookie-consent.component';
 import { AdLayoutComponent } from './components/ads/ad-layout.component';
 import { StatsService } from './services/stats.service';
 import { ThemeService } from './services/theme.service';
@@ -48,7 +47,6 @@ interface TurnstileRecoveryNotice {
     NavigationComponent,
     FooterComponent,
     SnowComponent,
-    CookieConsentComponent,
     MatDialogModule,
     AdLayoutComponent,
   ],

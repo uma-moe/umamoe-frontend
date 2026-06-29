@@ -93,16 +93,16 @@
       <h2><mat-icon>cookie</mat-icon> Cookies & Local Storage</h2>
 
       <p>
-        We use cookies and browser local storage to operate the Service. When you first visit, a consent
-        banner lets you choose which optional cookie categories to enable. You can change your preferences
-        at any time from the Cookie Settings link in the footer.
+        We use cookies and browser local storage to operate the Service. Advertising consent and regional
+        privacy choices are handled by Publift Fuse and its consent management tools. You can reopen those
+        controls at any time from the Privacy Choices link in the footer.
       </p>
 
       <h3>Essential (Always On)</h3>
       <p>Required for the site to function. These cannot be disabled.</p>
       <ul>
         <li>Authentication token (JWT) for keeping you signed in</li>
-        <li>Cookie consent preferences</li>
+        <li>Privacy and consent preferences</li>
         <li>UI preferences (theme, filters, etc.)</li>
       </ul>
 
@@ -122,8 +122,8 @@
 
       <h3>Advertising (Optional - Consent Required)</h3>
       <p>
-        Used to show ads and measure their effectiveness, when advertising is enabled. Advertising consent
-        and opt-out controls are managed through Publift Fuse and its regional consent tools.
+        Used to show ads and measure their effectiveness. Advertising consent and opt-out controls are
+        managed through Publift Fuse and its regional consent tools.
       </p>
       <ul>
         <li>Ad delivery and measurement cookies from ad technology partners</li>
@@ -133,10 +133,10 @@
 
       <h3>Managing Cookies</h3>
       <p>
-        Besides our consent banner, you can also control cookies through your browser settings. Disabling
-        essential cookies may prevent the site from functioning correctly. You can
-        <a (click)="openCookieSettings()" class="inline-action">open cookie settings</a> to change
-        your preferences now.
+        Besides the regional privacy controls, you can also control cookies through your browser settings.
+        Disabling essential cookies may prevent the site from functioning correctly. You can
+        <a (click)="openPrivacyChoices()" class="inline-action">open privacy choices</a> to review
+        available advertising privacy controls now.
       </p>
     </section>
 
@@ -152,7 +152,7 @@
         <li>In GDPR regions, ad personalisation only runs according to the consent choices recorded by the CMP.</li>
         <li>In California, users can opt out of sale or sharing choices through the Fuse privacy portal.</li>
         <li>Outside regions where a CMP is required, ads may run by default without showing a consent prompt.</li>
-        <li>Our local cookie banner manages analytics preferences; ad privacy choices are managed by Fuse.</li>
+        <li>Ad privacy choices are managed by Fuse.</li>
       </ul>
 
       <h3>Regional Ad Privacy Controls</h3>
@@ -182,7 +182,7 @@
         <li><a href="https://adssettings.google.com" target="_blank" rel="noopener">Google Ad Settings</a></li>
         <li><a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener">Digital Advertising Alliance</a></li>
         <li>Use the Fuse preference portal above where available in your region</li>
-        <li>Use our <a (click)="openCookieSettings()" class="inline-action">cookie settings</a> to manage analytics cookies</li>
+        <li>Use the <a (click)="openPrivacyChoices()" class="inline-action">privacy choices</a> control where available in your region</li>
       </ul>
     </section>
 

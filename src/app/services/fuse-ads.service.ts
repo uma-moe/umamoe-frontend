@@ -85,17 +85,6 @@ interface TcfPingData {
   cmpStatus?: string;
 }
 
-interface TcfApiCall {
-  command: string;
-  version: number;
-  parameter?: unknown;
-  callId?: string;
-}
-
-interface TcfApiMessage {
-  __tcfapiCall?: TcfApiCall;
-}
-
 interface UspData {
   uspString?: string;
 }
@@ -113,12 +102,19 @@ type UspApi = (
   callback: (data: unknown, success: boolean) => void,
 ) => void;
 
+type GppApi = (
+  command: string,
+  callback: (data: unknown, success: boolean) => void,
+  parameter?: unknown,
+  version?: number,
+) => void;
+
 declare global {
   interface Window {
     fusetag?: FuseTag;
     __tcfapi?: TcfApi;
     __uspapi?: UspApi;
-    __umamoeTcfStubReady?: boolean;
+    __gpp?: GppApi;
   }
 }
 
@@ -141,6 +137,8 @@ const FUSE_ENABLED_STORAGE_KEY = 'umamoe-fuse-enabled-v1';
 const FUSE_ENABLED_QUERY_KEYS = ['fuse', 'fuse_enabled', 'ads_enabled'];
 const FUSE_API_RETRY_MS = 100;
 const FUSE_API_MAX_RETRIES = 80;
+const PRIVACY_CONTROLS_RETRY_MS = 250;
+const PRIVACY_CONTROLS_MAX_RETRIES = 32;
 type AdDebugLevel = 'debug' | 'warn' | 'error';
 
 @Injectable({ providedIn: 'root' })
@@ -175,7 +173,6 @@ export class FuseAdsService {
   private fuseRuntimeStarted = false;
   private tcfListenerAttached = false;
   private uspListenerAttached = false;
-  private tcfPostMessageListenerAttached = false;
   private tcfRetryCount = 0;
   private rawRuntimeState: FuseRuntimeState = this.defaultRuntimeState;
   private regionalGoogleAdConsentState: GoogleAdConsentState = {
@@ -186,6 +183,8 @@ export class FuseAdsService {
   private pendingFuseCalls: PendingFuseCall[] = [];
   private fuseCallFlushTimer: number | null = null;
   private fuseCallFlushRetries = 0;
+  private privacyControlsTimer: number | null = null;
+  private privacyControlsRetries = 0;
   private fuseApiBlocked = false;
   private fuseDebugCallbacksAttached = false;
   private localConsent: CookieConsent | null = null;
@@ -323,9 +322,8 @@ export class FuseAdsService {
     this.startFuseRuntime(false);
 
     this.ngZone.runOutsideAngular(() => {
-      this.requestConsentUi();
-      this.window.setTimeout(() => this.requestConsentUi(), 700);
-      this.window.setTimeout(() => this.requestConsentUi(), 1800);
+      this.privacyControlsRetries = 0;
+      this.requestConsentUiWhenReady();
     });
 
     return true;
@@ -804,18 +802,58 @@ export class FuseAdsService {
     this.setRegionalGoogleAdConsent({ ...DENIED_AD_CONSENT, source: 'pending' });
 
     this.ngZone.runOutsideAngular(() => {
-      this.ensureTcfApiStub();
       this.ensureFuseScript();
       this.attachTcfListener();
       this.attachUspListener();
     });
   }
 
-  private requestConsentUi(): void {
+  private requestConsentUiWhenReady(): void {
+    const requested = this.requestConsentUi();
+    if (requested) {
+      this.debug('privacy controls display command sent', {
+        retryCount: this.privacyControlsRetries,
+      });
+      return;
+    }
+
+    if (this.privacyControlsRetries >= PRIVACY_CONTROLS_MAX_RETRIES) {
+      this.debugWarn('privacy controls unavailable after retries', {
+        retryCount: this.privacyControlsRetries,
+        hasTcfApi: typeof this.window.__tcfapi === 'function',
+        hasUspApi: typeof this.window.__uspapi === 'function',
+        hasGppApi: typeof this.window.__gpp === 'function',
+        runtimeState: this.runtimeStateSubject.value,
+      });
+      return;
+    }
+
+    this.privacyControlsRetries += 1;
+    this.debug('privacy controls waiting for CMP API', {
+      retryCount: this.privacyControlsRetries,
+      hasTcfApi: typeof this.window.__tcfapi === 'function',
+      hasUspApi: typeof this.window.__uspapi === 'function',
+      hasGppApi: typeof this.window.__gpp === 'function',
+    });
+
+    if (this.privacyControlsTimer !== null) {
+      this.window.clearTimeout(this.privacyControlsTimer);
+    }
+
+    this.privacyControlsTimer = this.window.setTimeout(() => {
+      this.privacyControlsTimer = null;
+      this.requestConsentUiWhenReady();
+    }, PRIVACY_CONTROLS_RETRY_MS);
+  }
+
+  private requestConsentUi(): boolean {
+    let requested = false;
+
     const tcfApi = this.window.__tcfapi;
     if (tcfApi) {
       try {
         tcfApi('displayConsentUi', 2, () => undefined);
+        requested = true;
       } catch {
         // Some regional CMP APIs may not expose this command.
       }
@@ -825,103 +863,23 @@ export class FuseAdsService {
     if (uspApi) {
       try {
         uspApi('displayUspUi', 1, () => undefined);
+        requested = true;
       } catch {
         // Some regional CMP APIs may not expose this command.
       }
     }
-  }
 
-  private ensureTcfApiStub(): void {
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
-    }
-
-    this.ensureTcfLocatorFrame();
-
-    if (this.window.__tcfapi) {
-      return;
-    }
-
-    const queue: IArguments[] = [];
-
-    const stub = function(
-      this: void,
-      command?: string,
-      _version?: number,
-      callback?: (data: unknown, success: boolean) => void,
-    ): IArguments[] | void {
-      if (!arguments.length) {
-        return queue;
+    const gppApi = this.window.__gpp;
+    if (gppApi) {
+      try {
+        gppApi('displayConsentUi', () => undefined);
+        requested = true;
+      } catch {
+        // Some regional CMP APIs may not expose this command.
       }
-
-      if (command === 'ping' && typeof callback === 'function') {
-        callback({ cmpLoaded: false, cmpStatus: 'stub' }, true);
-        return;
-      }
-
-      queue.push(arguments);
-    };
-
-    this.window.__tcfapi = stub as unknown as TcfApi;
-    this.window.__umamoeTcfStubReady = true;
-    this.attachTcfPostMessageBridge();
-  }
-
-  private ensureTcfLocatorFrame(): void {
-    const locatorName = '__tcfapiLocator';
-
-    if (this.document.querySelector(`iframe[name="${locatorName}"]`)) {
-      return;
     }
 
-    if (!this.document.body) {
-      this.window.setTimeout(() => this.ensureTcfLocatorFrame(), 5);
-      return;
-    }
-
-    const frame = this.document.createElement('iframe');
-    frame.name = locatorName;
-    frame.style.cssText = 'display:none';
-    this.document.body.appendChild(frame);
-  }
-
-  private attachTcfPostMessageBridge(): void {
-    if (this.tcfPostMessageListenerAttached) {
-      return;
-    }
-
-    this.tcfPostMessageListenerAttached = true;
-    this.window.addEventListener('message', event => {
-      let data: unknown = event.data;
-
-      if (typeof data === 'string') {
-        try {
-          data = JSON.parse(data);
-        } catch {
-          return;
-        }
-      }
-
-      const call = (data as TcfApiMessage | null)?.__tcfapiCall;
-      if (!call || !this.window.__tcfapi) {
-        return;
-      }
-
-      this.window.__tcfapi(call.command, call.version, (returnValue, success) => {
-        const response = {
-          __tcfapiReturn: {
-            returnValue,
-            success,
-            callId: call.callId,
-          },
-        };
-
-        event.source?.postMessage(
-          typeof event.data === 'string' ? JSON.stringify(response) : response,
-          { targetOrigin: '*' },
-        );
-      }, call.parameter);
-    }, false);
+    return requested;
   }
 
   private setRegionalGoogleAdConsent(state: GoogleAdConsentState): void {
@@ -934,24 +892,6 @@ export class FuseAdsService {
       this.googleAdConsentSubject.next({
         ...GRANTED_AD_CONSENT,
         gdprApplies: this.regionalGoogleAdConsentState.gdprApplies,
-        uspString: this.regionalGoogleAdConsentState.uspString,
-      });
-      return;
-    }
-
-    if (this.localConsent === null) {
-      this.googleAdConsentSubject.next({
-        ...DENIED_AD_CONSENT,
-        source: 'pending',
-      });
-      return;
-    }
-
-    if (!this.localAllowsAds) {
-      this.googleAdConsentSubject.next({
-        ...DENIED_AD_CONSENT,
-        gdprApplies: this.regionalGoogleAdConsentState.gdprApplies,
-        source: 'local-opt-out',
         uspString: this.regionalGoogleAdConsentState.uspString,
       });
       return;
@@ -1072,7 +1012,7 @@ export class FuseAdsService {
   }
 
   private get localAllowsAds(): boolean {
-    return this.adConsentForced || this.localConsent?.advertising === true;
+    return true;
   }
 
   private getScriptNonce(): string {

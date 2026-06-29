@@ -4,7 +4,7 @@ import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppVersionService } from '../../services/app-version.service';
-import { CookieConsentService } from '../../services/cookie-consent.service';
+import { FuseAdsService } from '../../services/fuse-ads.service';
 
 @Component({
   selector: 'app-footer',
@@ -23,7 +23,7 @@ export class FooterComponent {
 
   constructor(
     private appVersionService: AppVersionService,
-    private cookieConsentService: CookieConsentService,
+    private fuseAdsService: FuseAdsService,
     @Inject(DOCUMENT) private document: Document,
     @Inject(PLATFORM_ID) private platformId: Object,
   ) {}
@@ -67,8 +67,8 @@ export class FooterComponent {
     }, 1600) ?? null;
   }
 
-  openCookieSettings(): void {
-    this.cookieConsentService.reopenBanner();
+  openPrivacyChoices(): void {
+    this.fuseAdsService.openPrivacyControls();
   }
 
 }

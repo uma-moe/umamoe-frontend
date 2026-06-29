@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
-import { CookieConsentService } from '../../services/cookie-consent.service';
+import { FuseAdsService } from '../../services/fuse-ads.service';
 
 @Component({
   selector: 'app-privacy-policy',
@@ -22,7 +22,7 @@ export class PrivacyPolicyComponent {
   constructor(
     private meta: Meta,
     private title: Title,
-    private cookieConsentService: CookieConsentService
+    private fuseAdsService: FuseAdsService
   ) {
     this.title.setTitle('Privacy Policy | uma.moe');
     this.meta.addTags([
@@ -45,7 +45,7 @@ export class PrivacyPolicyComponent {
     }
   }
 
-  openCookieSettings(): void {
-    this.cookieConsentService.reopenBanner();
+  openPrivacyChoices(): void {
+    this.fuseAdsService.openPrivacyControls();
   }
 }
