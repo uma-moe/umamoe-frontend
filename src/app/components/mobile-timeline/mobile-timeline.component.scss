@@ -175,8 +175,8 @@
     &.dot-story   { border-color: var(--accent-warning);    background: var(--accent-warning); }
     &.dot-champs  { border-color: var(--color-purple);                  background: #9c27b0; }
     &.dot-legend  { border-color: var(--color-pink);                  background: #e91e63; }
-    &.dot-paid    { border-color: var(--color-orange);                  background: #ff9800; }
-    &.dot-campaign { border-color: #26a69a;                 background: #26a69a; }
+    &.dot-paid    { border-color: var(--timeline-paid-color); background: var(--timeline-paid-color); }
+    &.dot-campaign { border-color: var(--timeline-campaign-color); background: var(--timeline-campaign-color); }
 
     &.dot-grouped {
         width: 18px;
@@ -310,8 +310,38 @@
     &.ev-type-story_event         { @include ev-type(#ffb74d, #ffb74d); }
     &.ev-type-champions_meeting   { @include ev-type(#ab47bc, #ce93d8); }
     &.ev-type-legend_race         { @include ev-type(#e91e63, #f48fb1); }
-    &.ev-type-paid_banner         { @include ev-type(#ff9800, #ffcc80); }
-    &.ev-type-campaign            { @include ev-type(#26a69a, #80cbc4); }
+    &.ev-type-paid_banner         {
+        border-left-color: var(--timeline-paid-color);
+        background: linear-gradient(105deg, rgba(var(--timeline-paid-rgb), 0.055) 0%, transparent 52%);
+
+        .ev-badge {
+            color: var(--timeline-paid-label);
+            background: rgba(var(--timeline-paid-rgb), 0.1);
+            border-color: rgba(var(--timeline-paid-rgb), 0.22);
+        }
+
+        .ev-placeholder {
+            background: rgba(var(--timeline-paid-rgb), 0.07);
+            border-color: rgba(var(--timeline-paid-rgb), 0.18);
+            mat-icon { color: var(--timeline-paid-label); opacity: 0.8; }
+        }
+    }
+    &.ev-type-campaign            {
+        border-left-color: var(--timeline-campaign-color);
+        background: linear-gradient(105deg, rgba(var(--timeline-campaign-rgb), 0.055) 0%, transparent 52%);
+
+        .ev-badge {
+            color: var(--timeline-campaign-label);
+            background: rgba(var(--timeline-campaign-rgb), 0.1);
+            border-color: rgba(var(--timeline-campaign-rgb), 0.22);
+        }
+
+        .ev-placeholder {
+            background: rgba(var(--timeline-campaign-rgb), 0.07);
+            border-color: rgba(var(--timeline-campaign-rgb), 0.18);
+            mat-icon { color: var(--timeline-campaign-label); opacity: 0.8; }
+        }
+    }
 
     &.ev-type-champions_meeting .ev-desc {
         display: block;

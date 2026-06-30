@@ -520,6 +520,45 @@
   }
 }
 
+:host-context(.light-theme) {
+  .shame-page {
+    background: var(--document-bg);
+  }
+
+  .filters-container,
+  .intro-stack {
+    background: #ffffff;
+    border-color: var(--light-card-border);
+    box-shadow: var(--light-card-shadow);
+  }
+
+  .scope-notice {
+    background: var(--state-info-bg);
+    border-color: var(--state-info-border);
+    color: var(--state-info-color);
+
+    p {
+      color: var(--text-secondary);
+    }
+  }
+
+  .error-state {
+    background: var(--state-danger-bg);
+    border-color: var(--state-danger-border);
+    color: var(--state-danger-color);
+
+    mat-icon {
+      color: var(--accent-error);
+    }
+  }
+
+  .verdict-badge.strong_automation_signal {
+    color: var(--accent-error);
+    background: rgba(var(--accent-error-rgb), 0.1);
+    border-color: rgba(var(--accent-error-rgb), 0.28);
+  }
+}
+
 mat-paginator {
   background: transparent;
   border: 1px solid var(--border-subtle);

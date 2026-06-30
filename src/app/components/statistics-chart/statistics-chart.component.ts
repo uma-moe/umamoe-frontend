@@ -2,6 +2,8 @@ import { Component, Input, OnInit, OnDestroy, ViewChild, ElementRef, OnChanges, 
 import { CommonModule } from '@angular/common';
 import { Chart, ChartConfiguration, ChartType, registerables } from 'chart.js';
 import { ColorsService } from '../../services/colors.service';
+import { ThemeService } from '../../services/theme.service';
+import { Subscription } from 'rxjs';
 Chart.register(...registerables);
 export interface ChartDataPoint {
   label: string;
@@ -135,7 +137,9 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
   @Input() multiSeries: { [seriesName: string]: ChartDataPoint[] } | any[] = {};
   private chart: Chart | null = null;
   private colorsService = inject(ColorsService);
+  private themeService = inject(ThemeService);
   private cdr = inject(ChangeDetectorRef);
+  private themeSubscription?: Subscription;
   private imageCache = new Map<string, HTMLImageElement>();
   private resizeListener?: () => void;
   private lastDataHash: string = '';
@@ -197,6 +201,12 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     // Compute initial display state
     this.computeDisplayState();
     this.scheduleChartUpdate(false, true);
+    this.themeSubscription = this.themeService.colorMode$.subscribe(() => {
+      this.cdr.markForCheck();
+      if (this.chart) {
+        this.scheduleChartUpdate(false, true);
+      }
+    });
   }
   private computeDisplayState(): void {
     // Compute showImageList
@@ -355,6 +365,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
       clearTimeout(this.chartUpdateTimer);
       this.chartUpdateTimer = null;
     }
+    this.themeSubscription?.unsubscribe();
     // Clear image cache to prevent memory leaks
     this.imageCache.clear();
   }
@@ -530,7 +541,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
           const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
           const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
           ctx.save();
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+          ctx.fillStyle = this.getThemeColor('--chart-center-text', 'rgba(255, 255, 255, 0.9)');
           ctx.font = 'bold 50px Arial';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -729,14 +740,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     if (isVerticalImageBar) {
       labels = this.data.map(item => ''); // Empty labels since we'll draw images
       const intelligentColors = this.data.map((item, index) => {
-        if (item.color) {
-          return item.color;
-        }
-        // Check for character_color from the item data
-        if (item.character_color) {
-          return item.character_color.startsWith('#') ? item.character_color : `#${item.character_color}`;
-        }
-        return this.colorsService.getIntelligentColorForItem(item, index);
+        return this.resolveItemColor(item, index);
       });
       datasets = [{
         label: 'Usage',
@@ -791,14 +795,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
       labels = this.data.map(item => item.label);
       // For single series, try to detect if labels are stats or classes
       const intelligentColors = labels.map((label, index) => {
-        if (this.data[index].color) {
-          return this.data[index].color!;
-        }
-        // Use hash-based colors for compositions
-        if (this.data[index].composition) {
-          return this.generateHashColor(this.data[index].composition!);
-        }
-        return this.colorsService.getIntelligentColorForLabel(label, index);
+        return this.resolveItemColor(this.data[index], index);
       });
       datasets = [{
         label: 'Value',
@@ -810,6 +807,12 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
         borderSkipped: false,
       }];
     }
+    const chartAxisColor = this.getThemeColor('--chart-axis-color', 'rgba(255, 255, 255, 0.7)');
+    const chartGridColor = this.getThemeColor('--chart-grid-color', 'rgba(255, 255, 255, 0.1)');
+    const chartLegendColor = this.getThemeColor('--chart-legend-color', 'rgba(255, 255, 255, 0.8)');
+    const chartTooltipBg = this.getThemeColor('--chart-tooltip-bg', 'rgba(0, 0, 0, 0.8)');
+    const chartTooltipColor = this.getThemeColor('--chart-tooltip-color', '#fff');
+    const chartTooltipBorder = this.getThemeColor('--chart-tooltip-border', 'rgba(255, 255, 255, 0.1)');
     const baseOptions: any = {
       responsive: true,
       maintainAspectRatio: false,
@@ -821,7 +824,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
           ),
           position: 'top',
           labels: {
-            color: 'rgba(255, 255, 255, 0.8)',
+            color: chartLegendColor,
             font: {
               size: 12
             },
@@ -830,10 +833,10 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
           }
         },
         tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          titleColor: '#fff',
-          bodyColor: '#fff',
-          borderColor: 'rgba(255, 255, 255, 0.1)',
+          backgroundColor: chartTooltipBg,
+          titleColor: chartTooltipColor,
+          bodyColor: chartTooltipColor,
+          borderColor: chartTooltipBorder,
           borderWidth: 1,
           callbacks: {
             label: (context: any) => {
@@ -865,13 +868,13 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
       // Bar chart options
       const scaleOptions = {
         ticks: {
-          color: 'rgba(255, 255, 255, 0.7)',
+          color: chartAxisColor,
           font: {
             size: 11
           }
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
+          color: chartGridColor,
           lineWidth: 1
         }
       };
@@ -1052,6 +1055,20 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     return total > 0 ? (item.value / total) * 100 : 0;
   }
   getItemColor(item: ChartDataPoint, index: number): string {
+    return this.resolveItemColor(item, index);
+  }
+
+  private resolveItemColor(item: ChartDataPoint, index: number): string {
+    if (this.isLightTheme()) {
+      if (item.composition) {
+        return this.generateHashColor(item.composition);
+      }
+      if (item.character_color) {
+        return item.character_color.startsWith('#') ? item.character_color : `#${item.character_color}`;
+      }
+      return this.colorsService.getIntelligentColorForItem(item, index);
+    }
+
     if (item.color) {
       return item.color;
     }
@@ -1065,6 +1082,20 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     }
     return this.colorsService.getIntelligentColorForItem(item, index);
   }
+
+  private getThemeColor(token: string, fallback: string): string {
+    if (typeof document === 'undefined') {
+      return fallback;
+    }
+
+    const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+    return value || fallback;
+  }
+
+  private isLightTheme(): boolean {
+    return typeof document !== 'undefined' && document.documentElement.classList.contains('light-theme');
+  }
+
   trackByLabel(index: number, item: ChartDataPoint): string {
     return item.label;
   }

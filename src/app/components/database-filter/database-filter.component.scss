@@ -35,9 +35,9 @@
     align-items: center;
     gap: 2px;
     padding: 2px;
-    border: 1px solid var(--border-subtle);
+    border: 1px solid var(--filter-mode-toggle-border);
     border-radius: var(--radius-sm);
-    background: rgba(var(--on-surface-rgb), 0.04);
+    background: var(--filter-mode-toggle-bg);
     flex-shrink: 0;
 }
 
@@ -55,12 +55,12 @@
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 
-    &:hover { color: var(--text-primary); background: rgba(var(--on-surface-rgb), 0.06); }
+    &:hover { color: var(--text-primary); background: var(--filter-mode-option-hover-bg); }
 
     &.active {
         color: var(--filter-mode-active-color);
         background: var(--filter-mode-active-bg);
-        box-shadow: 0 0 0 1px rgba(33, 150, 243, 0.25) inset;
+        box-shadow: var(--filter-mode-active-shadow);
     }
 }
 

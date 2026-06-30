@@ -9,6 +9,7 @@
   [class.ad-slot--collapsed]="slotCollapsed"
   [class.ad-slot--diagnostic]="showDiagnostic"
   [class.ad-slot--has-creative]="slotHasCreative"
+  [class.ad-slot--retaining-creative]="slotRetainingCreative"
   [style.--ad-slot-width]="slotWidthStyle"
   [style.--ad-slot-height]="slotHeightStyle"
   [attr.data-ad-placement]="config.placement"
@@ -22,6 +23,12 @@
     [attr.data-fuse]="config.fuseId || null"
     [attr.data-ad-placement]="config.placement"
     [attr.data-ad-sizes]="sizesLabel"
+  ></div>
+
+  <div
+    #retainedTarget
+    class="ad-slot-retained"
+    aria-hidden="true"
   ></div>
 
   <div class="ad-slot-fallback" *ngIf="showFallback">

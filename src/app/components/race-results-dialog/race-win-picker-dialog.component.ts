@@ -304,6 +304,95 @@ export interface RaceWinPickerDialogData {
         letter-spacing: 0.03em;
       }
     }
+
+    :host-context(.light-theme) {
+      .race-win-picker {
+        background: var(--dialog-surface-bg);
+        border: 1px solid var(--dialog-border);
+        box-shadow: var(--dialog-shadow);
+      }
+
+      .picker-header,
+      .picker-footer {
+        background: var(--dialog-header-bg);
+        border-color: var(--dialog-soft-border);
+      }
+
+      .picker-title {
+        color: var(--text-primary);
+      }
+
+      .char-name,
+      .selection-count {
+        color: var(--text-muted);
+      }
+
+      .close-btn {
+        color: var(--text-muted);
+
+        &:hover {
+          color: var(--text-primary);
+          background: var(--surface-hover);
+        }
+      }
+
+      .picker-body {
+        background: var(--dialog-surface-bg);
+      }
+
+      .confirm-btn {
+        background: rgba(var(--accent-primary-rgb), 0.12);
+        border-color: rgba(var(--accent-primary-rgb), 0.32);
+        color: var(--accent-primary);
+
+        &:hover {
+          background: rgba(var(--accent-primary-rgb), 0.2);
+          border-color: rgba(var(--accent-primary-rgb), 0.5);
+          color: var(--accent-primary);
+        }
+      }
+
+      .race-search-box {
+        background: var(--dialog-search-bg);
+        border-color: var(--dialog-border);
+
+        &:focus-within {
+          background: var(--dialog-search-focus-bg);
+          border-color: rgba(var(--accent-primary-rgb), 0.5);
+        }
+      }
+
+      .race-search-icon,
+      .race-search-clear {
+        color: var(--text-muted);
+      }
+
+      .race-search-clear:hover {
+        color: var(--text-primary);
+      }
+
+      .race-search-input {
+        color: var(--text-primary);
+
+        &::placeholder { color: var(--dialog-placeholder); }
+      }
+
+      .race-search-results {
+        background: var(--dialog-surface-bg);
+        border-color: var(--dialog-border);
+        box-shadow: var(--dialog-shadow);
+      }
+
+      .race-search-result {
+        border-bottom-color: var(--dialog-soft-border);
+
+        &:hover { background: var(--surface-hover); }
+
+        &.already-selected:hover { background: transparent; }
+
+        .race-res-name { color: var(--text-primary); }
+      }
+    }
   `]
 })
 export class RaceWinPickerDialogComponent {

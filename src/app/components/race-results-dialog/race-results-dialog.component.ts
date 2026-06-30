@@ -389,6 +389,111 @@ export interface RaceResultsDialogData {
       color: rgba(255, 255, 255, 0.2);
       font-style: italic;
     }
+
+    :host-context(.light-theme) {
+      .race-results-dialog {
+        background: var(--dialog-surface-bg);
+        border-color: var(--dialog-border);
+        box-shadow: var(--dialog-shadow);
+      }
+
+      .dialog-header {
+        background: var(--dialog-header-bg);
+        border-bottom-color: var(--dialog-soft-border);
+      }
+
+      .char-portrait {
+        border-color: var(--dialog-avatar-border);
+        background: var(--dialog-avatar-bg);
+      }
+
+      .dialog-title {
+        color: var(--text-primary);
+      }
+
+      .char-name,
+      .legend,
+      .list-turn,
+      .list-pos {
+        color: var(--text-muted);
+      }
+
+      .toolbar-btn,
+      .view-toggle {
+        border-color: var(--dialog-border);
+      }
+
+      .toolbar-btn,
+      .view-toggle-btn {
+        background: var(--dialog-muted-bg);
+        color: var(--text-secondary);
+
+        &:hover {
+          background: var(--surface-hover);
+          color: var(--text-primary);
+          border-color: rgba(var(--accent-primary-rgb), 0.28);
+        }
+      }
+
+      .toolbar-btn.export-btn:hover {
+        border-color: rgba(var(--accent-secondary-rgb), 0.35);
+        color: var(--accent-secondary);
+        background: rgba(var(--accent-secondary-rgb), 0.1);
+      }
+
+      .close-btn {
+        color: var(--text-muted);
+
+        &:hover {
+          color: var(--text-primary);
+          background: var(--surface-hover);
+        }
+      }
+
+      .view-toggle-btn {
+        &:not(:last-child) {
+          border-right-color: var(--dialog-soft-border);
+        }
+
+        &.active {
+          background: rgba(var(--accent-primary-rgb), 0.14);
+          color: var(--accent-primary);
+        }
+      }
+
+      .dialog-body {
+        background: var(--dialog-surface-bg);
+      }
+
+      .list-race-row {
+        border-bottom-color: var(--dialog-soft-border);
+
+        &:hover {
+          background: var(--surface-hover);
+        }
+      }
+
+      .list-name {
+        color: var(--text-primary);
+      }
+
+      .list-empty {
+        color: var(--text-disabled);
+      }
+
+      .list-year-header.junior {
+        background: rgba(var(--accent-primary-rgb), 0.12);
+        color: var(--accent-primary);
+      }
+      .list-year-header.classic {
+        background: rgba(var(--accent-warning-rgb), 0.14);
+        color: var(--accent-warning);
+      }
+      .list-year-header.senior {
+        background: rgba(var(--accent-secondary-rgb), 0.12);
+        color: var(--accent-secondary);
+      }
+    }
   `]
 })
 export class RaceResultsDialogComponent implements AfterViewInit {

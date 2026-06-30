@@ -295,6 +295,30 @@
 
 .loading-container { @include loading-container; }
 
+.login-prompt {
+  h3 {
+    margin: 0.5rem 0;
+    color: var(--text-primary);
+  }
+
+  .login-prompt-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    line-height: 64px;
+    color: var(--text-disabled);
+  }
+
+  .login-prompt-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: var(--text-secondary);
+  }
+}
+
 .results-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

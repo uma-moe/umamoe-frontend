@@ -173,8 +173,8 @@ interface PlacementFact {
     }
 
     .tpd-current.is-confirmed {
-      border-left-color: #81c784;
-      background: rgba(129, 199, 132, 0.08);
+      border-left-color: var(--accent-success);
+      background: rgba(var(--accent-success-rgb), 0.08);
     }
 
     .tpd-current-copy {
@@ -227,24 +227,24 @@ interface PlacementFact {
     }
 
     .tpd-pill-confirmed {
-      color: #b8f5be;
-      background: rgba(129, 199, 132, 0.16);
+      color: var(--accent-success);
+      background: rgba(var(--accent-success-rgb), 0.16);
     }
 
     .tpd-pill-strong {
-      color: #b8f5be;
-      background: rgba(129, 199, 132, 0.16);
+      color: var(--accent-success);
+      background: rgba(var(--accent-success-rgb), 0.16);
     }
 
     .tpd-pill-medium {
-      color: #FFD700;
-      background: rgba(255, 215, 0, 0.13);
+      color: var(--accent-warning);
+      background: rgba(var(--accent-warning-rgb), 0.13);
     }
 
     .tpd-pill-weak,
     .tpd-pill-neutral {
-      color: #8fd0ff;
-      background: rgba(100, 181, 246, 0.14);
+      color: var(--accent-primary);
+      background: rgba(var(--accent-primary-rgb), 0.14);
     }
 
     .tpd-section-head {
@@ -358,20 +358,20 @@ interface PlacementFact {
     }
 
     .tpd-outcome.is-current > span {
-      color: #8fd0ff;
+      color: var(--accent-primary);
     }
 
     .tpd-outcome.is-current .tpd-outcome-marker mat-icon {
-      color: #8fd0ff;
+      color: var(--accent-primary);
     }
 
     .tpd-outcome.is-current .tpd-outcome-date strong {
-      color: #ffffff;
+      color: var(--text-primary);
     }
 
     .tpd-current.is-confirmed + .tpd-why + .tpd-outcomes .tpd-outcome.is-current > span,
     .tpd-current.is-confirmed + .tpd-why + .tpd-outcomes .tpd-outcome.is-current .tpd-outcome-marker mat-icon {
-      color: #b8f5be;
+      color: var(--accent-success);
     }
 
     .tpd-outcome.is-primary {
@@ -422,7 +422,7 @@ interface PlacementFact {
     }
 
     .tpd-outcome > span {
-      color: #FFD700;
+      color: var(--accent-warning);
       font-size: 0.78rem;
       font-weight: 800;
       line-height: 1.2;

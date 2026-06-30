@@ -1451,3 +1451,145 @@ app-class-filter { display: block; transition: all 0.3s ease; }
     &:hover { background-color: rgba(100, 181, 246, 0.1); }
   }
 }
+
+:host-context(.light-theme) {
+  .statistics-new {
+    background: var(--document-bg);
+    --stats-hero-bg:
+      radial-gradient(circle at 80% 18%, rgba(var(--accent-primary-rgb), 0.055) 0%, transparent 34%),
+      radial-gradient(circle at 18% 78%, rgba(var(--accent-secondary-rgb), 0.045) 0%, transparent 32%),
+      linear-gradient(180deg, #ffffff 0%, #f6f8fb 100%);
+    --stats-pill-surface: #ffffff;
+    --stats-sticky-bg: rgba(255, 255, 255, 0.96);
+  }
+
+  .scenario-filter-card,
+  .chart-card,
+  .character-card,
+  .character-details-header,
+  .character-selector .character-card,
+  .global-stats-description {
+    background: #ffffff;
+    border-color: var(--light-card-border);
+    box-shadow: var(--light-card-shadow);
+    backdrop-filter: none;
+  }
+
+  .scenario-filter-card .scenario-toggles,
+  .sample-size,
+  .last-updated,
+  .character-id,
+  .character-selector .search-input-wrapper,
+  .chart-description em {
+    background: rgba(17, 24, 39, 0.045);
+    border-color: var(--border-primary);
+  }
+
+  .scenario-toggle.active,
+  .action-btn.active,
+  .back-button:hover,
+  .character-selector .results-state.empty .reset-button,
+  .character-selector .character-id {
+    background: rgba(var(--accent-primary-rgb), 0.09);
+    border-color: rgba(var(--accent-primary-rgb), 0.28);
+    color: var(--accent-primary);
+    box-shadow: none;
+  }
+
+  .hero-title {
+    background: var(--gradient-heading);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero-icon {
+    filter: drop-shadow(0 4px 8px rgba(37, 99, 235, 0.18));
+  }
+
+  .dataset-selector .dataset-select-field ::ng-deep {
+    .mat-mdc-text-field-wrapper {
+      background: #ffffff;
+      border: 1px solid var(--factor-field-border);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .mdc-notched-outline__leading,
+    .mdc-notched-outline__notch,
+    .mdc-notched-outline__trailing {
+      border-color: transparent !important;
+    }
+
+    .mdc-text-field--focused .mdc-notched-outline {
+      .mdc-notched-outline__leading,
+      .mdc-notched-outline__notch,
+      .mdc-notched-outline__trailing {
+        border-color: transparent !important;
+        box-shadow: none;
+      }
+    }
+  }
+
+  .section-header::before,
+  .chart-description h3::before {
+    background: var(--accent-primary);
+  }
+
+  .chart-card:hover,
+  .character-card:hover,
+  .character-selector .character-card:hover {
+    background: #ffffff;
+    border-color: rgba(var(--accent-primary-rgb), 0.3);
+    box-shadow: var(--shadow-md);
+  }
+
+  .character-card::before {
+    background: rgba(var(--accent-primary-rgb), 0.06);
+  }
+
+  .character-avatar,
+  .character-selector .card-avatar,
+  .character-header,
+  .character-header-avatar {
+    background: rgba(17, 24, 39, 0.045);
+    border-color: var(--border-primary);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .character-info h4 {
+    text-shadow: none;
+  }
+
+  .mat-mdc-form-field-flex,
+  .character-selector .search-input-wrapper {
+    background: #ffffff;
+    border-color: var(--factor-field-border);
+  }
+
+  .mat-mdc-form-field-flex:hover,
+  .mat-focused .mat-mdc-form-field-flex,
+  .character-selector .search-input-wrapper:focus-within {
+    background: #ffffff;
+    border-color: var(--factor-field-focus-border);
+    box-shadow: var(--shadow-glow-blue);
+  }
+
+  .filter-fab-wrapper {
+    background: linear-gradient(to bottom, rgba(243, 245, 248, 0), rgba(243, 245, 248, 0.92) 72%, #f3f5f8 100%);
+  }
+
+  .filter-fab {
+    background-color: var(--accent-primary) !important;
+    box-shadow: var(--shadow-md) !important;
+  }
+
+  .character-selector .card-hover-indicator,
+  ::-webkit-scrollbar-thumb,
+  .global-stats-description {
+    border-color: rgba(var(--accent-primary-rgb), 0.18);
+  }
+
+  .section-navigation .nav-button:hover {
+    background-color: rgba(var(--accent-primary-rgb), 0.08);
+  }
+}

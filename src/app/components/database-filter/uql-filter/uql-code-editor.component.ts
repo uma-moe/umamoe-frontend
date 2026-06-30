@@ -449,9 +449,9 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
             '.cm-line': { padding: '0 0 0 0' },
             '.cm-gutters': {
               background: 'transparent',
-              color: 'rgba(255,255,255,0.28)',
+              color: 'rgba(255,255,255,0.5)',
               border: 'none',
-              borderRight: '1px solid rgba(255,255,255,0.06)',
+              borderRight: '1px solid rgba(255,255,255,0.12)',
               fontFamily: '"JetBrains Mono",monospace',
               fontSize: '12px',
             },

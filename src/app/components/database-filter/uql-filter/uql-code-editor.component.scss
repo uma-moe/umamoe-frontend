@@ -9,8 +9,13 @@
   border: 1px solid rgba(var(--on-surface-rgb), 0.12);
   border-radius: 8px;
   background: var(--code-surface);
+  color: var(--text-primary);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
   --on-surface-rgb: var(--code-on-surface-rgb);
+  --text-primary: rgba(255, 255, 255, 0.94);
+  --text-secondary: rgba(255, 255, 255, 0.76);
+  --text-muted: rgba(255, 255, 255, 0.62);
+  --text-disabled: rgba(255, 255, 255, 0.45);
 
   &:focus-within {
     border-color: rgba(100, 181, 246, 0.55);
@@ -34,6 +39,7 @@
   padding: 0 8px;
   background: rgba(var(--on-surface-rgb), 0.035);
   border-bottom: 1px solid rgba(var(--on-surface-rgb), 0.08);
+  color: var(--text-muted);
 }
 
 .uql-cm-lang {
@@ -79,6 +85,7 @@
 .uql-cm-shell {
   position: relative;
   min-width: 0;
+  color: var(--text-primary);
 }
 
 ::ng-deep .uql-cm-where-prefix {
@@ -93,6 +100,7 @@
 .uql-cm-host {
   position: relative;
   min-width: 0;
+  color: var(--text-primary);
 
   ::ng-deep .cm-editor {
     border-radius: 0 0 8px 8px;

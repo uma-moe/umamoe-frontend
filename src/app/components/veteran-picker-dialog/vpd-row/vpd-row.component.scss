@@ -309,3 +309,96 @@
     mat-icon { font-size: 14px; width: 14px; height: 14px; }
   }
 }
+
+:host-context(.light-theme) {
+  :host {
+    background: #ffffff;
+    border-color: var(--border-primary);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+
+    &:hover {
+      border-color: rgba(var(--accent-primary-rgb), 0.34);
+      background: rgba(var(--accent-primary-rgb), 0.06);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
+    }
+  }
+
+  .vpd-avatar {
+    border-color: rgba(17, 24, 39, 0.16);
+    background: #eef2f7;
+  }
+
+  :host:hover .vpd-avatar {
+    border-color: rgba(var(--accent-primary-rgb), 0.44);
+  }
+
+  .vpd-bm-trainer {
+    background: rgba(17, 24, 39, 0.06);
+    border-color: rgba(17, 24, 39, 0.12);
+    color: var(--text-muted);
+  }
+
+  .vpd-aff {
+    color: var(--color-pink);
+  }
+
+  .blue-spark {
+    color: var(--accent-primary);
+    border-color: rgba(var(--accent-primary-rgb), 0.32);
+    background: rgba(var(--accent-primary-rgb), 0.1);
+  }
+
+  .pink-spark {
+    color: var(--color-pink);
+    border-color: rgba(var(--color-pink-rgb), 0.32);
+    background: rgba(var(--color-pink-rgb), 0.1);
+  }
+
+  .green-spark {
+    color: var(--accent-success);
+    border-color: rgba(var(--accent-success-rgb), 0.32);
+    background: rgba(var(--accent-success-rgb), 0.1);
+  }
+
+  .white-spark {
+    color: var(--text-secondary);
+    border-color: rgba(17, 24, 39, 0.18);
+    background: rgba(17, 24, 39, 0.06);
+  }
+
+  .vpd-parent-label {
+    &.pos-P1,
+    &.pos-P2 {
+      color: var(--accent-warning);
+      background: rgba(var(--accent-warning-rgb), 0.1);
+    }
+  }
+
+  .vpd-parent-name,
+  .spark-more {
+    color: var(--text-muted);
+  }
+
+  .vpd-parents {
+    border-top-color: rgba(17, 24, 39, 0.1);
+  }
+
+  .vpd-row-btn {
+    color: var(--text-muted);
+
+    &:hover {
+      background: rgba(17, 24, 39, 0.07);
+      color: var(--text-primary);
+    }
+
+    &.vpd-row-btn--del:hover {
+      color: var(--accent-error);
+      background: rgba(var(--accent-error-rgb), 0.1);
+    }
+
+    &.vpd-row-btn--edit:hover {
+      color: var(--accent-primary);
+      background: rgba(var(--accent-primary-rgb), 0.1);
+    }
+  }
+}

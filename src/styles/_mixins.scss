@@ -38,9 +38,10 @@
 
 // ===== GLASS EFFECT MIXIN =====
 @mixin glass($opacity: 0.05, $blur: 10px) {
-  background: rgba(var(--on-surface-rgb), $opacity);
+  background: var(--card-surface-bg, rgba(var(--on-surface-rgb), $opacity));
   backdrop-filter: blur($blur);
-  border: 1px solid var(--border-primary);
+  border: 1px solid var(--card-surface-border, var(--border-primary));
+  box-shadow: var(--card-surface-shadow, none);
 }
 
 // ===== PAGE HEADER MIXIN =====
@@ -97,9 +98,10 @@
 
 // ===== CARD BASE MIXIN =====
 @mixin card-base($padding: 1rem, $radius: 8px) {
-  background: var(--surface-2);
-  border: 1px solid var(--border-primary);
+  background: var(--card-surface-bg, var(--surface-2));
+  border: 1px solid var(--card-surface-border, var(--border-primary));
   border-radius: $radius;
+  box-shadow: var(--card-surface-shadow, none);
   padding: $padding;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -319,18 +321,20 @@
 // The primary building block: a dark glass card with subtle border.
 // Use for any container that needs a "panel" appearance.
 @mixin surface($level: 2, $radius: var(--radius-md)) {
-  @if $level == 1 { background: var(--surface-1); }
-  @else if $level == 2 { background: var(--surface-2); }
-  @else if $level == 3 { background: var(--surface-3); }
+  @if $level == 1 { background: var(--card-surface-bg, var(--surface-1)); }
+  @else if $level == 2 { background: var(--card-surface-bg, var(--surface-2)); }
+  @else if $level == 3 { background: var(--card-surface-bg, var(--surface-3)); }
   @else if $level == 4 { background: var(--surface-4); }
-  border: 1px solid var(--border-primary);
+  border: 1px solid var(--card-surface-border, var(--border-primary));
   border-radius: $radius;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  box-shadow: var(--card-surface-shadow, none);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 @mixin surface-hover {
-  background: var(--surface-hover);
-  border-color: var(--border-secondary);
+  background: var(--card-surface-hover-bg, var(--surface-hover));
+  border-color: var(--card-surface-hover-border, var(--border-secondary));
+  box-shadow: var(--card-surface-hover-shadow, none);
 }
 
 @mixin surface-interactive($level: 2, $radius: var(--radius-md)) {
@@ -344,10 +348,11 @@
 
 // Glass panel with backdrop blur (heavier, use sparingly)
 @mixin glass-panel($blur: 10px) {
-  background: var(--surface-2);
+  background: var(--card-surface-bg, var(--surface-2));
   backdrop-filter: blur($blur);
-  border: 1px solid var(--border-primary);
+  border: 1px solid var(--card-surface-border, var(--border-primary));
   border-radius: var(--radius-lg);
+  box-shadow: var(--card-surface-shadow, none);
 }
 
 // Frosted sheet (bottom sheets, heavy overlays)
@@ -854,9 +859,10 @@ $spark-palette: (
 
 // Section card with header
 @mixin section-card() {
-  background: var(--surface-1);
-  border: 1px solid var(--border-subtle);
+  background: var(--card-surface-bg, var(--surface-1));
+  border: 1px solid var(--card-surface-border, var(--border-subtle));
   border-radius: var(--radius-lg);
+  box-shadow: var(--card-surface-shadow, none);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1165,18 +1171,18 @@ $spark-palette: (
 // ===== DISTANCE COLOR VARS (per-distance custom property sets) =====
 @mixin distance-color-vars($palette: 'default') {
   $colors-default: (
-    sprint: (#b86500, #8a4f00),
-    mile: (#2e7d32, #1b5e20),
-    medium: (#1565c0, #0d47a1),
-    long: (#7b1fa2, #4a148c),
-    dirt: (#5d4037, #3e2723),
+    sprint: (#ff9800, #f57c00),
+    mile: (#4caf50, #388e3c),
+    medium: (#2196f3, #1976d2),
+    long: (#9c27b0, #7b1fa2),
+    dirt: (#795548, #5d4037),
   );
   $colors-alt: (
-    sprint: (#c62828, #9f1f1f),
-    mile: (#9a5600, #7a4300),
-    medium: (#1f7a45, #146b3a),
-    long: (#1565c0, #0d47a1),
-    dirt: (#7b1fa2, #5e1a7d),
+    sprint: (#e74c3c, #c0392b),
+    mile: (#f39c12, #e67e22),
+    medium: (#2ecc71, #27ae60),
+    long: (#3498db, #2980b9),
+    dirt: (#9b59b6, #8e44ad),
   );
   $map: if($palette == 'alt', $colors-alt, $colors-default);
   @each $name, $pair in $map {
@@ -1184,6 +1190,22 @@ $spark-palette: (
       --distance-primary: #{nth($pair, 1)};
       --distance-secondary: #{nth($pair, 2)};
       --distance-shadow: #{rgba(nth($pair, 1), 0.3)};
+    }
+  }
+
+  $colors-light: (
+    sprint: (var(--accent-error), var(--accent-error), rgba(var(--accent-error-rgb), 0.28)),
+    mile: (var(--accent-warning), var(--accent-warning), rgba(var(--accent-warning-rgb), 0.28)),
+    medium: (var(--accent-success), var(--accent-success), rgba(var(--accent-success-rgb), 0.28)),
+    long: (var(--accent-primary), var(--accent-primary), rgba(var(--accent-primary-rgb), 0.28)),
+    dirt: (var(--accent-purple), var(--accent-purple), rgba(var(--accent-purple-rgb), 0.28)),
+  );
+
+  @each $name, $pair in $colors-light {
+    :host-context(.light-theme) &[data-distance="#{$name}"] {
+      --distance-primary: #{nth($pair, 1)};
+      --distance-secondary: #{nth($pair, 2)};
+      --distance-shadow: #{nth($pair, 3)};
     }
   }
 }

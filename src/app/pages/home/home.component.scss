@@ -102,7 +102,7 @@
 
   &.tools mat-icon { color: var(--color-purple); }
 
-  &.rankings mat-icon { color: #ff8a65; }
+  &.rankings mat-icon { color: var(--accent-warning); }
 
   // New feature highlighting
   &.new-feature {
@@ -159,7 +159,7 @@
 
 .stats {
   padding: 0.75rem 2rem;
-  background: var(--surface-1);
+  background: var(--document-bg);
 }
 
 .stats-grid {
@@ -174,14 +174,20 @@
 }
 
 .stat-card {
-  background: var(--bg-secondary);
+  background: var(--card-surface-bg);
   padding: 1rem;
   border-radius: var(--border-radius);
-  border: 1px solid var(--border-primary);
+  border: 1px solid var(--card-surface-border);
+  box-shadow: var(--card-surface-shadow);
   text-align: center;
   transition: all 0.3s ease;
   
-  &:hover { transform: translateY(-2px); border-color: var(--border-secondary); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+  &:hover {
+    transform: translateY(-2px);
+    background: var(--card-surface-hover-bg);
+    border-color: var(--card-surface-hover-border);
+    box-shadow: var(--card-surface-hover-shadow);
+  }
 }
 
 .new-badge {

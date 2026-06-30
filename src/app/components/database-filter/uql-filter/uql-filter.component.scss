@@ -1089,3 +1089,59 @@
   }
 }
 
+:host-context(.light-theme) {
+  .uql-editor-card,
+  .uql-wiki-panel {
+    background: #ffffff;
+    border-color: var(--light-card-border);
+    box-shadow: var(--light-card-shadow);
+  }
+
+  .uql-wiki-panel > summary {
+    background: #f8fafc;
+
+    &:hover {
+      background: rgba(var(--accent-primary-rgb), 0.08);
+    }
+  }
+
+  .uql-doc-table {
+    background: rgba(17, 24, 39, 0.045);
+    border-color: rgba(17, 24, 39, 0.14);
+
+    div {
+      border-bottom-color: rgba(17, 24, 39, 0.12);
+    }
+
+    dt {
+      color: var(--accent-success);
+      font-weight: 700;
+    }
+  }
+
+  .uql-doc-code-block {
+    --text-primary: rgba(255, 255, 255, 0.9);
+    --text-secondary: rgba(255, 255, 255, 0.72);
+    --text-muted: rgba(255, 255, 255, 0.58);
+    border-color: rgba(255, 255, 255, 0.16);
+    color: var(--text-primary);
+  }
+
+  .uql-doc-code-toolbar,
+  .uql-doc-code-line {
+    color: var(--text-primary);
+  }
+
+  .uql-doc-code-lang,
+  .uql-doc-copy-button {
+    color: var(--text-muted);
+  }
+
+  .suggestion-item {
+    &.suggestion-context-blue .suggestion-label { color: var(--accent-primary); }
+    &.suggestion-context-pink .suggestion-label { color: var(--color-pink); }
+    &.suggestion-context-green .suggestion-label { color: var(--accent-success); }
+    &.suggestion-context-character .suggestion-label { color: var(--accent-primary); }
+  }
+}
+

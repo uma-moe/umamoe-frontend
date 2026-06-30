@@ -38,7 +38,7 @@
     &:hover {
       color: var(--accent-primary);
 
-      .brand-logo { object-fit: contain; filter: brightness(1.2); }
+      .brand-logo { object-fit: contain; filter: var(--nav-brand-hover-filter); }
     }
   }
 
@@ -47,7 +47,7 @@
   .brand-logo {
     width: 32px;
     height: 32px;
-    background: linear-gradient(45deg, #64b5f6, #81c784);
+    background: var(--gradient-logo);
     border-radius: 50%;
     object-fit: contain;
     vertical-align: middle;
@@ -59,7 +59,7 @@
     font-size: 1.5rem;
     font-weight: 700;
     white-space: nowrap;
-    background: linear-gradient(45deg, #64b5f6, #81c784);
+    background: var(--gradient-logo);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -144,7 +144,7 @@
   width: 100%;
   padding: 8px 12px;
   border-radius: 7px;
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--text-secondary);
   font-size: 0.85rem;
@@ -232,9 +232,13 @@
     white-space: nowrap;
   }
 
-  &:hover { color: var(--text-primary); background: var(--surface-3); }
+  &:hover { color: var(--text-primary); background: var(--nav-link-hover-bg); }
 
-  &.active { color: var(--accent-primary); background: rgba(100, 181, 246, 0.15); }
+  &.active {
+    color: var(--accent-primary);
+    background: var(--nav-link-active-bg);
+    border: 1px solid var(--nav-link-active-border);
+  }
 
   &.github-link {
     padding: 0.5rem;
@@ -324,8 +328,8 @@
 
   &.active {
     color: var(--accent-warning);
-    background: rgba(var(--accent-warning-rgb), 0.12);
-    border-color: rgba(var(--accent-warning-rgb), 0.28);
+    background: var(--color-mode-active-bg);
+    border-color: var(--color-mode-active-border);
   }
 }
 
@@ -454,18 +458,18 @@ $nav-badge-colors: (nav-badge-pulse: rgba(255, 107, 53, 0.4), nav-updated-pulse:
   }
 
   &.status--operational {
-    .status-dot-inner { background: #81c784; box-shadow: 0 0 6px rgba(129, 199, 132, 0.5); }
-    .status-dot-ping { background: #81c784; }
+    .status-dot-inner { background: var(--accent-success); box-shadow: 0 0 6px rgba(var(--accent-success-rgb), 0.5); }
+    .status-dot-ping { background: var(--accent-success); }
   }
 
   &.status--degraded {
-    .status-dot-inner { background: #ffb74d; box-shadow: 0 0 6px rgba(255, 183, 77, 0.5); }
-    .status-dot-ping { background: #ffb74d; }
+    .status-dot-inner { background: var(--accent-warning); box-shadow: 0 0 6px rgba(var(--accent-warning-rgb), 0.5); }
+    .status-dot-ping { background: var(--accent-warning); }
   }
 
   &.status--down {
-    .status-dot-inner { background: #e57373; box-shadow: 0 0 6px rgba(229, 115, 115, 0.5); }
-    .status-dot-ping { background: #e57373; animation-duration: 1s; }
+    .status-dot-inner { background: var(--accent-error); box-shadow: 0 0 6px rgba(var(--accent-error-rgb), 0.5); }
+    .status-dot-ping { background: var(--accent-error); animation-duration: 1s; }
   }
 }
 
@@ -506,18 +510,18 @@ $nav-badge-colors: (nav-badge-pulse: rgba(255, 107, 53, 0.4), nav-updated-pulse:
   }
 
   &.status--operational {
-    color: #81c784;
-    .status-dot { background: #81c784; }
+    color: var(--accent-success);
+    .status-dot { background: var(--accent-success); }
   }
 
   &.status--degraded {
-    color: #ffb74d;
-    .status-dot { background: #ffb74d; }
+    color: var(--accent-warning);
+    .status-dot { background: var(--accent-warning); }
   }
 
   &.status--down {
-    color: #e57373;
-    .status-dot { background: #e57373; }
+    color: var(--accent-error);
+    .status-dot { background: var(--accent-error); }
   }
 
   &.status--loading {
@@ -550,8 +554,8 @@ $nav-badge-colors: (nav-badge-pulse: rgba(255, 107, 53, 0.4), nav-updated-pulse:
   border-radius: 50%;
   flex-shrink: 0;
 
-  &.healthy { background: #81c784; }
-  &.unhealthy { background: #e57373; }
+  &.healthy { background: var(--accent-success); }
+  &.unhealthy { background: var(--accent-error); }
 }
 
 .status-ep-name {

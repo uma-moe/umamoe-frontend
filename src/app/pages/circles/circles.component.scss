@@ -98,6 +98,29 @@
   }
 }
 
+:host-context(.light-theme) {
+  .filters-container {
+    ::ng-deep .circle-search-field {
+      .mat-mdc-form-field-icon-prefix mat-icon,
+      .mat-mdc-form-field-icon-suffix mat-icon,
+      .mat-mdc-input-element::placeholder {
+        color: var(--text-muted) !important;
+      }
+    }
+
+    ::ng-deep .policy-select {
+      .mat-mdc-select-placeholder,
+      .mat-mdc-select-arrow {
+        color: var(--text-muted) !important;
+      }
+
+      .mat-mdc-form-field-icon-prefix mat-icon {
+        color: var(--text-muted) !important;
+      }
+    }
+  }
+}
+
 .live-refresh-bar {
   display: flex;
   align-items: center;

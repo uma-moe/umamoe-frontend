@@ -134,7 +134,7 @@
     .help-icon {
       @include icon-size(14px);
       flex-shrink: 0;
-      color: rgba(100, 181, 246, 0.5);
+      color: var(--accent-primary);
     }
   }
 

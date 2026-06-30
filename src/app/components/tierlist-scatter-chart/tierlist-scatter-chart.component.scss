@@ -53,6 +53,15 @@
   image-rendering: crisp-edges;
 }
 
+:host-context(.light-theme) {
+  .chart-container {
+    background: #ffffff;
+    border-color: var(--light-card-border);
+    box-shadow: var(--light-card-shadow);
+    backdrop-filter: none;
+  }
+}
+
 @media (max-width: 768px) {
   .chart-container {
     padding: 0.5rem;

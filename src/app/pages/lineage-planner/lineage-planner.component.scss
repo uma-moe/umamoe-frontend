@@ -1033,6 +1033,57 @@ $col-parent: 2 * $col-gp + $gap-tree;
   }
 }
 
+:host-context(.light-theme) {
+  .n-empty {
+    background: rgba(17, 24, 39, 0.04);
+  }
+
+  .n-empty-icon {
+    background: rgba(var(--accent-primary-rgb), 0.09);
+    border-color: rgba(var(--accent-primary-rgb), 0.28);
+
+    mat-icon {
+      color: var(--text-muted);
+    }
+
+    .node:hover & {
+      background: rgba(var(--accent-primary-rgb), 0.14);
+      border-color: rgba(var(--accent-primary-rgb), 0.46);
+
+      mat-icon {
+        color: var(--accent-primary);
+      }
+    }
+  }
+
+  .n-empty-label {
+    color: var(--text-muted);
+    font-weight: 650;
+
+    .node:hover & {
+      color: var(--text-primary);
+    }
+  }
+
+  .n-tagline,
+  .n-btn,
+  .n-icon-btn {
+    color: var(--text-muted);
+  }
+
+  .n-tool-btn {
+    background: #ffffff;
+    border-color: var(--border-primary);
+    color: var(--text-secondary);
+
+    &:hover {
+      background: rgba(var(--accent-primary-rgb), 0.1);
+      border-color: rgba(var(--accent-primary-rgb), 0.34);
+      color: var(--accent-primary);
+    }
+  }
+}
+
 .odds-panel {
   margin-top: 1.75rem;
   @include surface(2, var(--radius-lg));

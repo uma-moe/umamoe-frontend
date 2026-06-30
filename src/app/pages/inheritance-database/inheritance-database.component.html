@@ -281,9 +281,9 @@
       </div>
 
       <div *ngIf="!authService.isLoggedIn()" class="no-results login-prompt">
-        <mat-icon style="font-size: 64px; width: 64px; height: 64px; line-height: 64px; color: rgba(255, 255, 255, 0.2);">bookmark_border</mat-icon>
-        <h3 style="margin: 0.5rem 0;">Sign in to use bookmarks</h3>
-        <div style="display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; color: rgba(255,255,255,0.7);">
+        <mat-icon class="login-prompt-icon">bookmark_border</mat-icon>
+        <h3>Sign in to use bookmarks</h3>
+        <div class="login-prompt-action">
           <span>Please</span>
           <button mat-raised-button color="primary" routerLink="/login">Sign in</button>
           <span>to bookmark and save records.</span>

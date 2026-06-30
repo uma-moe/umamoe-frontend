@@ -16,12 +16,10 @@
   height: var(--ad-slot-height);
   margin: 0 auto;
   overflow: hidden;
-  border: 1px solid rgba(var(--accent-primary-rgb), 0.18);
+  border: 1px solid var(--ad-slot-border);
   border-radius: 6px;
-  background:
-    linear-gradient(135deg, rgba(100, 181, 246, 0.12), rgba(129, 199, 132, 0.08)),
-    rgba(14, 16, 18, 0.94);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
+  background: var(--ad-slot-bg);
+  box-shadow: var(--ad-slot-shadow);
   color: var(--text-primary);
   isolation: isolate;
   opacity: 1;
@@ -48,11 +46,9 @@
 }
 
 .ad-slot--diagnostic {
-  border-color: rgba(255, 183, 77, 0.34);
-  background:
-    linear-gradient(135deg, rgba(255, 183, 77, 0.12), rgba(100, 181, 246, 0.08)),
-    rgba(13, 16, 18, 0.96);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  border-color: var(--ad-diagnostic-border);
+  background: var(--ad-diagnostic-bg);
+  box-shadow: var(--ad-diagnostic-shadow);
 }
 
 .ad-slot--has-creative {
@@ -90,10 +86,16 @@
   min-height: 420px;
 }
 
-.ad-slot-target {
+.ad-slot--side-rail .ad-slot-target,
+.ad-slot--side-rail .ad-slot-retained {
+  width: var(--ad-slot-width);
+  max-width: var(--ad-slot-width);
+}
+
+.ad-slot-target,
+.ad-slot-retained {
   position: absolute;
   inset: 0;
-  z-index: 2;
   display: flex;
   width: 100%;
   max-width: 100%;
@@ -105,7 +107,22 @@
   contain: layout paint;
 }
 
-.ad-slot-target > :not(script):not(style) {
+.ad-slot-target {
+  z-index: 2;
+}
+
+.ad-slot-retained {
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ad-slot--retaining-creative .ad-slot-retained {
+  opacity: 1;
+}
+
+.ad-slot-target > :not(script):not(style),
+.ad-slot-retained > :not(script):not(style) {
   max-width: 100% !important;
   max-height: 100% !important;
   margin: auto !important;
@@ -119,12 +136,41 @@
 .ad-slot-target canvas,
 .ad-slot-target object,
 .ad-slot-target embed,
-.ad-slot-target svg {
+.ad-slot-target svg,
+.ad-slot-retained iframe,
+.ad-slot-retained img,
+.ad-slot-retained picture,
+.ad-slot-retained video,
+.ad-slot-retained canvas,
+.ad-slot-retained object,
+.ad-slot-retained embed,
+.ad-slot-retained svg {
   display: block;
   max-width: 100% !important;
   max-height: 100% !important;
   border: 0;
   object-fit: contain;
+}
+
+.ad-slot--side-rail .ad-slot-target > :not(script):not(style),
+.ad-slot--side-rail .ad-slot-retained > :not(script):not(style),
+.ad-slot--side-rail .ad-slot-target iframe,
+.ad-slot--side-rail .ad-slot-target img,
+.ad-slot--side-rail .ad-slot-target picture,
+.ad-slot--side-rail .ad-slot-target video,
+.ad-slot--side-rail .ad-slot-target canvas,
+.ad-slot--side-rail .ad-slot-target object,
+.ad-slot--side-rail .ad-slot-target embed,
+.ad-slot--side-rail .ad-slot-target svg,
+.ad-slot--side-rail .ad-slot-retained iframe,
+.ad-slot--side-rail .ad-slot-retained img,
+.ad-slot--side-rail .ad-slot-retained picture,
+.ad-slot--side-rail .ad-slot-retained video,
+.ad-slot--side-rail .ad-slot-retained canvas,
+.ad-slot--side-rail .ad-slot-retained object,
+.ad-slot--side-rail .ad-slot-retained embed,
+.ad-slot--side-rail .ad-slot-retained svg {
+  width: 100% !important;
 }
 
 .ad-slot--force-fallback .ad-slot-target {
@@ -145,10 +191,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  background:
-    radial-gradient(circle at 88% 16%, rgba(255, 183, 77, 0.14), transparent 32%),
-    linear-gradient(135deg, rgba(100, 181, 246, 0.1), rgba(129, 199, 132, 0.1)),
-    rgba(13, 16, 18, 0.98);
+  background: var(--ad-fallback-bg);
   animation: ad-fallback-enter 0.36s ease-out both;
 }
 
@@ -161,15 +204,7 @@
   align-items: center;
   gap: 0.7rem;
   padding: 0.72rem 0.9rem;
-  background:
-    repeating-linear-gradient(
-      135deg,
-      rgba(255, 183, 77, 0.08) 0,
-      rgba(255, 183, 77, 0.08) 8px,
-      transparent 8px,
-      transparent 16px
-    ),
-    rgba(12, 14, 16, 0.9);
+  background: var(--ad-diagnostic-panel-bg);
   color: var(--text-primary);
   pointer-events: none;
 }
@@ -177,7 +212,7 @@
 .ad-slot-diagnostic > mat-icon {
   width: 24px;
   height: 24px;
-  color: #ffb74d;
+  color: var(--ad-diagnostic-icon-color);
   font-size: 24px;
 }
 
@@ -213,7 +248,7 @@
   flex-direction: column;
   gap: 0.1rem;
   align-items: flex-end;
-  color: rgba(255, 255, 255, 0.52);
+  color: var(--ad-meta-color);
   font-size: 0.58rem;
   font-weight: 800;
   line-height: 1.12;
@@ -230,7 +265,7 @@
 }
 
 .ad-slot-diagnostic-meta small {
-  color: rgba(255, 255, 255, 0.38);
+  color: var(--ad-meta-small-color);
   text-transform: none;
 }
 
@@ -310,7 +345,7 @@
   max-width: calc(100% - 3rem);
   gap: 0.35rem;
   align-items: baseline;
-  color: rgba(255, 255, 255, 0.36);
+  color: var(--ad-meta-color);
   font-size: 0.62rem;
   font-weight: 800;
   line-height: 1.2;
@@ -326,7 +361,7 @@
 }
 
 .ad-slot-meta small {
-  color: rgba(255, 255, 255, 0.28);
+  color: var(--ad-meta-small-color);
   font-size: 0.58rem;
   text-transform: none;
 }
@@ -342,9 +377,9 @@
   width: 30px;
   height: 30px;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--ad-close-border);
   border-radius: 6px;
-  background: rgba(8, 10, 12, 0.72);
+  background: var(--ad-close-bg);
   color: var(--text-secondary);
   cursor: pointer;
   transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
@@ -358,8 +393,8 @@
 
 .ad-slot-close:hover,
 .ad-slot-close:focus-visible {
-  background: rgba(22, 26, 30, 0.92);
-  border-color: rgba(255, 255, 255, 0.28);
+  background: var(--ad-close-hover-bg);
+  border-color: var(--ad-close-hover-border);
   color: var(--text-primary);
   outline: none;
 }

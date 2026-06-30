@@ -108,6 +108,60 @@ export interface ConfirmDialogData {
         &:hover { background: rgba(244, 67, 54, 0.28); }
       }
     }
+
+    :host-context(.light-theme) {
+      .confirm-dialog {
+        background: var(--dialog-surface-bg);
+        border: 1px solid var(--dialog-border);
+        box-shadow: var(--dialog-shadow);
+        color: var(--text-primary);
+      }
+
+      .dialog-header {
+        background: var(--dialog-header-bg);
+        border-bottom-color: var(--dialog-soft-border);
+
+        .header-icon { color: var(--accent-primary); }
+        .header-title { color: var(--text-primary); }
+      }
+
+      .dialog-body .message {
+        color: var(--text-secondary);
+      }
+
+      .dialog-footer {
+        background: var(--dialog-header-bg);
+        border-top-color: var(--dialog-soft-border);
+
+        .cancel-btn {
+          border-color: var(--dialog-border);
+          background: var(--dialog-muted-bg);
+          color: var(--text-secondary);
+
+          &:hover {
+            background: var(--surface-hover);
+            color: var(--text-primary);
+          }
+        }
+
+        .confirm-btn {
+          background: rgba(var(--accent-primary-rgb), 0.12);
+          color: var(--accent-primary);
+
+          &:hover { background: rgba(var(--accent-primary-rgb), 0.2); }
+        }
+      }
+
+      .confirm-dialog.danger {
+        .dialog-header .header-icon { color: var(--accent-error); }
+        .dialog-footer .confirm-btn {
+          background: rgba(var(--accent-error-rgb), 0.12);
+          color: var(--accent-error);
+
+          &:hover { background: rgba(var(--accent-error-rgb), 0.2); }
+        }
+      }
+    }
   `]
 })
 export class ConfirmDialogComponent {

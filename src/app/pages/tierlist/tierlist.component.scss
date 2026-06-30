@@ -415,6 +415,122 @@
   backdrop-filter: none !important;
 }
 
+:host-context(.light-theme) {
+  .tierlist-container {
+    background: var(--document-bg);
+    background-image: none;
+  }
+
+  .header,
+  .tierlist-tabs .mat-mdc-tab-header,
+  .tierlist-tabs .mat-mdc-tab-body-wrapper,
+  .tierlist .tier-row,
+  .tier-cards,
+  .upcoming-sidebar,
+  .info-card,
+  .legend-item,
+  .mobile-popover {
+    background: #ffffff;
+    border-color: var(--light-card-border);
+    box-shadow: var(--light-card-shadow);
+    backdrop-filter: none;
+  }
+
+  .header {
+    border-bottom-color: var(--page-header-border);
+  }
+
+  .legacy-banner {
+    background: rgba(var(--accent-warning-rgb), 0.1);
+    border-bottom-color: rgba(var(--accent-warning-rgb), 0.24);
+    color: var(--text-secondary);
+  }
+
+  .lb-selector {
+    ::ng-deep .mat-mdc-text-field-wrapper {
+      background: #ffffff !important;
+      border-color: var(--factor-field-border) !important;
+    }
+
+    ::ng-deep .mat-mdc-form-field-label,
+    ::ng-deep .mat-mdc-select-value-text {
+      color: var(--text-primary) !important;
+    }
+  }
+
+  .tierlist-tabs .mat-mdc-tab-body-wrapper {
+    background: #ffffff;
+  }
+
+  ::ng-deep .tierlist-tabs .mat-mdc-tab-header,
+  ::ng-deep .tierlist-tabs .mat-mdc-tab-body-wrapper {
+    background: #ffffff !important;
+    border-color: var(--light-card-border) !important;
+    box-shadow: var(--light-card-shadow) !important;
+  }
+
+  ::ng-deep .tierlist-tabs .mat-mdc-tab-body-wrapper {
+    border: 1px solid var(--light-card-border) !important;
+    border-top: none !important;
+    border-radius: 0 0 var(--border-radius) var(--border-radius) !important;
+  }
+
+  .tab-content {
+    background: #ffffff;
+  }
+
+  .tierlist .tier-row {
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
+  }
+
+  .tier-label {
+    background-image: none;
+    color: #ffffff;
+    text-shadow: 0 1px 1px rgba(15, 23, 42, 0.28);
+    box-shadow: inset -1px 0 rgba(15, 23, 42, 0.18);
+  }
+
+  .tier-cards {
+    background: #ffffff;
+  }
+
+  .card-item {
+    border: 1px solid rgba(17, 24, 39, 0.1);
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  }
+
+  .card-item:hover {
+    border-color: rgba(var(--accent-primary-rgb), 0.45);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+  }
+
+  .empty-tier,
+  .tierlist .no-cards {
+    background: #ffffff;
+    border-color: rgba(17, 24, 39, 0.16);
+    color: var(--text-muted);
+  }
+
+  .legend-item:hover {
+    background: rgba(var(--accent-primary-rgb), 0.08);
+    border-color: rgba(var(--accent-primary-rgb), 0.28);
+  }
+
+  .legend-color {
+    border-color: rgba(17, 24, 39, 0.26);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
+  }
+
+  .mobile-popover-overlay {
+    background: rgba(15, 23, 42, 0.42);
+  }
+
+  .mobile-popover-header {
+    background: #ffffff;
+    border-bottom-color: var(--border-primary);
+  }
+}
+
 // @keyframes fadeIn and slideUp are in global utilities.scss
 
 // Hide hover effects on mobile

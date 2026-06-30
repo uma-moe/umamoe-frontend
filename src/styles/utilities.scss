@@ -45,9 +45,10 @@
 
 // ===== STAT CARD UTILITIES =====
 .stat-card {
-  background: linear-gradient(135deg, rgba(var(--accent-primary-rgb), 0.12) 0%, rgba(var(--accent-secondary-rgb), 0.10) 100%);
+  background: var(--card-surface-bg, linear-gradient(135deg, rgba(var(--accent-primary-rgb), 0.12) 0%, rgba(var(--accent-secondary-rgb), 0.10) 100%));
+  border: 1px solid var(--card-surface-border, transparent);
   border-radius: 1.25rem;
-  box-shadow: 0 2px 12px 0 rgba(var(--accent-primary-rgb), 0.08);
+  box-shadow: var(--card-surface-shadow, 0 2px 12px 0 rgba(var(--accent-primary-rgb), 0.08));
   padding: 0.85rem 1rem 0.7rem 1rem;
   min-width: 110px;
   min-height: 70px;
@@ -60,13 +61,14 @@
   overflow: hidden;
 
   &:hover {
-    box-shadow: 0 4px 24px 0 rgba(var(--accent-primary-rgb), 0.18);
-    background: linear-gradient(135deg, rgba(var(--accent-primary-rgb), 0.18) 0%, rgba(var(--accent-secondary-rgb), 0.16) 100%);
+    box-shadow: var(--card-surface-hover-shadow, 0 4px 24px 0 rgba(var(--accent-primary-rgb), 0.18));
+    background: var(--card-surface-hover-bg, linear-gradient(135deg, rgba(var(--accent-primary-rgb), 0.18) 0%, rgba(var(--accent-secondary-rgb), 0.16) 100%));
+    border-color: var(--card-surface-hover-border, transparent);
   }
 
   mat-icon {
     font-size: 1.1rem;
-    color: var(--accent-primary);
+    color: var(--stat-card-icon-color);
     margin-bottom: 0.18rem;
     filter: drop-shadow(0 2px 6px rgba(var(--accent-primary-rgb), 0.12));
     display: flex;
@@ -79,7 +81,7 @@
   .stat-value {
     font-size: 0.98rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--stat-card-value-color);
     margin-bottom: 0.08rem;
     letter-spacing: 0.5px;
     text-shadow: 0 2px 8px rgba(var(--accent-primary-rgb), 0.10);
@@ -87,7 +89,7 @@
 
   .stat-label {
     font-size: 0.72rem;
-    color: var(--text-muted);
+    color: var(--stat-card-label-color);
     font-weight: 500;
     letter-spacing: 0.5px;
     text-transform: uppercase;

@@ -257,8 +257,8 @@ h1 {
       story: (rgba(255, 183, 77, 0.1), rgba(255, 183, 77, 0.35), var(--accent-warning), rgba(255, 183, 77, 0.16), rgba(255, 183, 77, 0.5)),
       champions: (rgba(156, 39, 176, 0.1), rgba(156, 39, 176, 0.35), var(--accent-purple), rgba(156, 39, 176, 0.16), rgba(156, 39, 176, 0.5)),
       legend: (rgba(233, 30, 99, 0.1), rgba(233, 30, 99, 0.35), var(--color-pink), rgba(233, 30, 99, 0.16), rgba(233, 30, 99, 0.5)),
-      paid: (rgba(255, 152, 0, 0.1), rgba(255, 152, 0, 0.35), #ffcc80, rgba(255, 152, 0, 0.16), rgba(255, 152, 0, 0.5)),
-      campaign: (rgba(38, 166, 154, 0.1), rgba(38, 166, 154, 0.35), #80cbc4, rgba(38, 166, 154, 0.16), rgba(38, 166, 154, 0.5)),
+      paid: (rgba(var(--timeline-paid-rgb), 0.1), rgba(var(--timeline-paid-rgb), 0.35), var(--timeline-paid-label), rgba(var(--timeline-paid-rgb), 0.16), rgba(var(--timeline-paid-rgb), 0.5)),
+      campaign: (rgba(var(--timeline-campaign-rgb), 0.1), rgba(var(--timeline-campaign-rgb), 0.35), var(--timeline-campaign-label), rgba(var(--timeline-campaign-rgb), 0.16), rgba(var(--timeline-campaign-rgb), 0.5)),
     );
     @each $type, $colors in $chip-colors {
       &.chip-#{$type} {
@@ -632,7 +632,7 @@ h1 {
   $event-type-colors: (
     champions_meeting: (#9c27b0, var(--color-purple), rgba(156, 39, 176)),
     legend_race: (#e91e63, var(--color-pink), rgba(233, 30, 99)),
-    paid_banner: (#ff9800, var(--color-orange), rgba(255, 152, 0)),
+    paid_banner: (var(--timeline-paid-color), var(--timeline-paid-label), rgba(var(--timeline-paid-rgb), 0.5)),
     story_event: (#ffb74d, var(--accent-warning), rgba(255, 183, 77)),
     character_banner: (var(--accent-primary), var(--accent-primary), var(--accent-primary)),
     support_card_banner: (var(--accent-secondary), var(--accent-secondary), var(--accent-secondary)),
@@ -645,8 +645,8 @@ h1 {
   }
 
   &.event-type-campaign {
-    border-left: 4px solid #26a69a;
-    &:hover { border-color: #26a69a; box-shadow: 0 1px 8px rgba(38, 166, 154, 0.5); }
+    border-left: 4px solid var(--timeline-campaign-color);
+    &:hover { border-color: var(--timeline-campaign-label); box-shadow: 0 1px 8px rgba(var(--timeline-campaign-rgb), 0.5); }
     .event-image { padding-top: 0.5rem; }
   }
 
@@ -759,8 +759,8 @@ h1 {
     story_event: var(--accent-warning),
     champions_meeting: var(--color-purple),
     legend_race: var(--color-pink),
-    paid_banner: var(--color-orange),
-    campaign: #26a69a,
+    paid_banner: var(--timeline-paid-color),
+    campaign: var(--timeline-campaign-color),
     milestone: #FFD700
   );
   @each $type, $color in $placeholder-colors {
@@ -790,8 +790,8 @@ h1 {
       story_event: var(--accent-warning),
       champions_meeting: var(--color-purple),
       legend_race: var(--color-pink),
-      paid_banner: var(--color-orange),
-      campaign: #26a69a
+      paid_banner: var(--timeline-paid-color),
+      campaign: var(--timeline-campaign-color)
     );
     @each $type, $color in $event-icon-colors {
       &.event-icon-#{$type} { color: $color; }
@@ -1366,8 +1366,8 @@ h1 {
             story-events: var(--accent-warning),
             champions: var(--color-purple),
             legend-races: var(--color-pink),
-            paid: var(--color-orange),
-            campaign: #26a69a
+            paid: var(--timeline-paid-color),
+            campaign: var(--timeline-campaign-color)
           );
           @each $type, $color in $compact-toggle-colors {
             .compact-#{$type}-toggle { .compact-checkbox-content mat-icon { color: $color; } }

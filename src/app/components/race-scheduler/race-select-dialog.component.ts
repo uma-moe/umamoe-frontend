@@ -186,6 +186,73 @@ export interface RaceSelectDialogData {
         color: rgba(255, 255, 255, 0.2);
       }
     }
+
+    :host-context(.light-theme) {
+      .race-select-dialog {
+        background: var(--dialog-surface-bg);
+        border-color: var(--dialog-border);
+        box-shadow: var(--dialog-shadow);
+      }
+
+      .dialog-header {
+        background: var(--dialog-header-bg);
+        border-bottom-color: var(--dialog-soft-border);
+
+        h3 { color: var(--text-primary); }
+
+        .cell-context {
+          color: var(--text-muted);
+        }
+
+        .close-btn {
+          color: var(--text-muted);
+
+          &:hover {
+            color: var(--text-primary);
+            background: var(--surface-hover);
+          }
+        }
+      }
+
+      .race-list {
+        background: var(--dialog-surface-bg);
+      }
+
+      .race-option {
+        background: var(--light-card-bg);
+        border-color: var(--light-card-border);
+        color: var(--text-secondary);
+
+        &:hover {
+          background: var(--surface-hover);
+          border-color: rgba(var(--accent-primary-rgb), 0.28);
+        }
+
+        &.selected {
+          border-color: rgba(var(--accent-primary-rgb), 0.48);
+          background: rgba(var(--accent-primary-rgb), 0.12);
+        }
+
+        &.selected.grade-g1 {
+          border-color: rgba(var(--grade-g1-base), 0.5);
+          background: rgba(var(--grade-g1-base), 0.12);
+        }
+
+        &.selected.grade-g2 {
+          border-color: rgba(var(--grade-g2-base), 0.5);
+          background: rgba(var(--grade-g2-base), 0.12);
+        }
+
+        &.selected.grade-g3 {
+          border-color: rgba(var(--grade-g3-base), 0.5);
+          background: rgba(var(--grade-g3-base), 0.12);
+        }
+      }
+
+      .check-icon.unselected {
+        color: var(--text-disabled);
+      }
+    }
   `]
 })
 export class RaceSelectDialogComponent {

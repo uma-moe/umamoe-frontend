@@ -266,6 +266,108 @@ export interface SettingsDialogData {
         }
       }
     }
+
+    :host-context(.light-theme) {
+      .settings-dialog {
+        background: var(--dialog-surface-bg);
+        border: 1px solid var(--dialog-border);
+        box-shadow: var(--dialog-shadow);
+      }
+
+      .dialog-header {
+        background: var(--dialog-header-bg);
+        border-bottom-color: var(--dialog-soft-border);
+
+        .header-icon { color: var(--accent-secondary); }
+        .header-title { color: var(--text-primary); }
+
+        .close-btn {
+          background: var(--dialog-muted-bg);
+          color: var(--text-muted);
+
+          &:hover {
+            background: var(--surface-hover);
+            color: var(--text-primary);
+          }
+        }
+      }
+
+      .dialog-body {
+        background: var(--dialog-surface-bg);
+
+        &::-webkit-scrollbar-thumb {
+          background: rgba(var(--accent-primary-rgb), 0.35);
+        }
+      }
+
+      .section-label {
+        color: var(--text-secondary);
+
+        mat-icon { color: var(--accent-secondary); }
+      }
+
+      .section-hint {
+        color: var(--text-muted);
+      }
+
+      .metric-select {
+        ::ng-deep .mat-mdc-text-field-wrapper {
+          background: var(--dialog-search-bg) !important;
+          border: 1px solid var(--dialog-border) !important;
+        }
+
+        ::ng-deep .mat-mdc-select-value {
+          color: var(--text-primary) !important;
+        }
+
+        ::ng-deep .mat-mdc-select-arrow {
+          color: var(--text-muted) !important;
+        }
+      }
+
+      .checkbox-grid {
+        ::ng-deep .mat-mdc-checkbox {
+          .mdc-form-field {
+            color: var(--text-secondary);
+          }
+
+          .mdc-checkbox__background {
+            border-color: rgba(17, 24, 39, 0.32) !important;
+          }
+
+          &.mat-mdc-checkbox-checked .mdc-checkbox__background {
+            background-color: var(--accent-secondary) !important;
+            border-color: var(--accent-secondary) !important;
+          }
+        }
+      }
+
+      .dialog-footer {
+        background: var(--dialog-header-bg);
+        border-top-color: var(--dialog-soft-border);
+
+        .cancel-btn {
+          border-color: var(--dialog-border);
+          background: var(--dialog-muted-bg);
+          color: var(--text-secondary);
+
+          &:hover {
+            background: var(--surface-hover);
+            color: var(--text-primary);
+          }
+        }
+
+        .apply-btn {
+          background: rgba(var(--accent-secondary-rgb), 0.12);
+          color: var(--accent-secondary);
+
+          &:hover {
+            background: rgba(var(--accent-secondary-rgb), 0.2);
+          }
+        }
+      }
+    }
+
     :host {
       display: block;
       width: 100%;

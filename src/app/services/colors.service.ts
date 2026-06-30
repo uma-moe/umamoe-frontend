@@ -37,31 +37,37 @@ export class ColorsService {
     ]
   };
   getClassColor(classKey: string): string {
-    return this.colors.class[classKey] || this.colors.class['1'];
+    const key = classKey === 'overall' ? 'overall' : String(classKey);
+    return this.getCssColor(`--chart-class-${key}`, this.colors.class[key] || this.colors.class['1']);
   }
+
   getStatColor(statKey: string): string {
-    return this.colors.stat[statKey.toLowerCase()] || '#64b5f6';
+    const key = this.normalizeStatKey(statKey);
+    return this.getCssColor(`--chart-stat-${key}`, this.colors.stat[key] || '#64b5f6');
   }
+
   getChartColors(): string[] {
-    return [...this.colors.chart];
+    return this.colors.chart.map((fallback, index) => this.getCssColor(`--chart-series-${index + 1}`, fallback));
   }
+
   getClassColors(): string[] {
-    return Object.values(this.colors.class);
+    return Object.keys(this.colors.class).map(key => this.getClassColor(key));
   }
+
   getStatColors(): string[] {
-    return Object.values(this.colors.stat);
+    return Object.keys(this.colors.stat).map(key => this.getStatColor(key));
   }
   /**
    * Get color array for team class data in order (Class 1-6)
    */
   getOrderedClassColors(): string[] {
-    return ['1', '2', '3', '4', '5', '6'].map(cls => this.colors.class[cls]);
+    return ['1', '2', '3', '4', '5', '6'].map(cls => this.getClassColor(cls));
   }
   /**
    * Get color array for stats in typical order
    */
   getOrderedStatColors(): string[] {
-    return ['speed', 'stamina', 'power', 'guts', 'wiz', 'friend', 'group'].map(stat => this.colors.stat[stat]);
+    return ['speed', 'stamina', 'power', 'guts', 'wiz', 'friend', 'group'].map(stat => this.getStatColor(stat));
   }
   /**
    * Create a color mapping for series data based on series names
@@ -85,7 +91,7 @@ export class ColorsService {
         }
       }
       // Default to chart colors
-      mapping[name] = this.colors.chart[index % this.colors.chart.length];
+      mapping[name] = this.getChartColors()[index % this.colors.chart.length];
     });
     return mapping;
   }
@@ -104,10 +110,12 @@ export class ColorsService {
     }
     // Convert hash to positive number
     hash = Math.abs(hash);
-    // Generate HSL color with good saturation and lightness for visibility
+    // Generate HSL color with enough contrast for the active theme.
     const hue = hash % 360; // 0-359 degrees
     const saturation = 65 + (hash % 25); // 65-90% for vibrant colors
-    const lightness = 45 + (hash % 20); // 45-65% for good contrast
+    const lightness = this.isLightMode()
+      ? 34 + (hash % 12)
+      : 45 + (hash % 20);
     return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
   }
   /**
@@ -168,5 +176,26 @@ export class ColorsService {
     }
     // Use hash-based color for the label itself
     return this.getHashBasedColor(label);
+  }
+
+  private normalizeStatKey(statKey: string): string {
+    const key = String(statKey || '').toLowerCase();
+    if (key === 'wit' || key === 'intelligence' || key === 'wisdom' || key === 'int') {
+      return 'wiz';
+    }
+    return key;
+  }
+
+  private getCssColor(token: string, fallback: string): string {
+    if (typeof document === 'undefined') {
+      return fallback;
+    }
+
+    const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+    return value || fallback;
+  }
+
+  private isLightMode(): boolean {
+    return typeof document !== 'undefined' && document.documentElement.classList.contains('light-theme');
   }
 }

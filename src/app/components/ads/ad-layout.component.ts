@@ -4,7 +4,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 import { AdSlotComponent } from './ad-slot.component';
 import { isAdFallbackPreviewEnabled } from './ad-fallback-preview';
-import { AdRouteConfig, AdSlotConfig, getAdRouteConfig, getPageInitFuseIds } from './ad-layout.config';
+import { AdRouteConfig, AdSlotConfig, getAdRouteConfig } from './ad-layout.config';
 import { FuseAdsService } from '../../services/fuse-ads.service';
 
 const AD_SIDE_RAIL_PAGE_CLASS = 'ad-side-rail-page';
@@ -22,6 +22,7 @@ const DEFAULT_SIDE_RAIL_ANCHOR_SELECTORS = [
 ];
 const SIDE_RAIL_COMPACT_WIDTH = 120;
 const SIDE_RAIL_WIDE_WIDTH = 160;
+const SIDE_RAIL_LARGE_WIDTH = 300;
 const SIDE_RAIL_EDGE_GAP = 16;
 const SIDE_RAIL_CONTENT_GAP = 16;
 const SINGLE_SIDE_RAIL_MAX_WIDTH = 1535;
@@ -90,12 +91,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
   @HostListener('window:resize')
   onWindowResize(): void {
-    const contentTopAllowedChanged = this.updateContentTopAllowed();
-
-    if (contentTopAllowedChanged && this.contentTopAllowed && this.config.contentTop?.fuseId) {
-      this.fuseAdsService.pageInit([this.config.contentTop.fuseId]);
-    }
-
+    this.updateContentTopAllowed();
     this.scheduleSideRailLayout();
   }
 
@@ -106,29 +102,34 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
   private syncConfig(url: string): void {
     this.updateFallbackPreviewState();
-    this.config = getAdRouteConfig(url);
+    const nextConfig = getAdRouteConfig(url);
+    const preserveVisibleSideRails = this.sideRailsVisible
+      && Boolean(this.config.sideRails)
+      && this.canPreserveSideRailsForRoute(nextConfig);
+
+    this.config = nextConfig;
     this.fuseAdsService.beginPageView(url);
     this.leftSideRailCollapsed = false;
     this.rightSideRailCollapsed = false;
     this.updateContentTopAllowed();
     this.initializePageBottomPopup(this.config);
     this.updateBottomPopupRootState();
-    const pageInitFuseIds = this.getActivePageInitFuseIds(this.config);
     this.fuseAdsService.debug('route ad config synced', {
       url,
       enabled: this.config.enabled,
       contentTopAllowed: this.contentTopAllowed,
       bottomPopupFuseId: this.config.bottomPopup?.fuseId,
-      pageInitFuseIds,
       sideRails: this.config.sideRails
         ? {
           left: this.config.sideRails.left.fuseId,
           right: this.config.sideRails.right.fuseId,
         }
         : undefined,
+      preserveVisibleSideRails,
     });
-    this.fuseAdsService.pageInit(pageInitFuseIds, 'route config');
-    this.sideRailsVisible = false;
+    if (!preserveVisibleSideRails) {
+      this.sideRailsVisible = false;
+    }
     this.disconnectAnchorObserver();
     this.scheduleSideRailLayout(true);
   }
@@ -180,19 +181,6 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.contentTopAllowed = viewportWidth >= CONTENT_TOP_MIN_WIDTH && viewportWidth <= contentTopMaxWidth;
 
     return previous !== this.contentTopAllowed;
-  }
-
-  private getActivePageInitFuseIds(config: AdRouteConfig): string[] {
-    const ids = [
-      ...getPageInitFuseIds(config),
-      config.bottomPopup?.fuseId,
-    ].filter((id): id is string => Boolean(id));
-
-    if (this.contentTopAllowed || !config.contentTop?.fuseId) {
-      return [...new Set(ids)];
-    }
-
-    return [...new Set(ids.filter(id => id !== config.contentTop?.fuseId))];
   }
 
   private scheduleSideRailLayout(withRetries = false): void {
@@ -256,6 +244,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     if (!this.config.sideRails || !hasConfiguredRail || viewportWidth < minWidth) {
       this.sideRailsVisible = false;
       this.sideRailLayout = 'none';
+      this.updateAdShellReservation(false);
       return;
     }
 
@@ -263,6 +252,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     if (!anchor) {
       this.sideRailsVisible = false;
       this.sideRailLayout = 'none';
+      this.updateAdShellReservation(false);
       return;
     }
 
@@ -277,21 +267,31 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     const leftGutter = Math.max(0, anchorRect.left);
     const rightGutter = Math.max(0, viewportWidth - anchorRect.right);
     const sideRailOverlay = this.config.sideRailOverlay === true;
-    const railPlacement = this.resolveSideRailPlacement(
-      viewportWidth,
-      leftGutter,
-      rightGutter,
-      sideRailOverlay,
-    );
+    const reserveLeftRail = this.shouldReserveLeftRail(viewportWidth, minWidth, hasConfiguredRail);
+    const railPlacement = reserveLeftRail
+      ? this.resolveReservedLeftRailPlacement(viewportWidth)
+      : this.resolveSideRailPlacement(
+        viewportWidth,
+        leftGutter,
+        rightGutter,
+        sideRailOverlay,
+      );
 
     if (!railPlacement || railPlacement.layout === 'none') {
       this.sideRailsVisible = false;
       this.sideRailLayout = 'none';
+      this.updateAdShellReservation(false);
       return;
     }
 
     this.watchAnchorSize(anchor.element);
     this.sideRailWidth = railPlacement.width;
+    this.updateAdShellReservation(
+      true,
+      reserveLeftRail,
+      viewportWidth,
+      railPlacement.width,
+    );
     this.sideRailLeft = sideRailOverlay
       ? SIDE_RAIL_EDGE_GAP
       : this.centerRailInGutter(leftGutter, railPlacement.width);
@@ -315,7 +315,9 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     let fallbackPlacement: { layout: SideRailLayout; width: number } | null = null;
 
     for (const width of this.getSideRailWidthCandidates(viewportWidth)) {
-      const minimumGutter = sideRailOverlay ? 0 : width;
+      const minimumGutter = sideRailOverlay
+        ? 0
+        : width + SIDE_RAIL_CONTENT_GAP + SIDE_RAIL_EDGE_GAP;
       const layout = this.resolveSideRailLayout(
         viewportWidth,
         leftGutter,
@@ -335,6 +337,22 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     }
 
     return fallbackPlacement;
+  }
+
+  private resolveReservedLeftRailPlacement(viewportWidth: number): { layout: SideRailLayout; width: number } | null {
+    const hasLeftRail = Boolean(
+      this.fallbackPreviewEnabled
+      || (this.config.sideRails?.left.fuseId && !this.leftSideRailCollapsed),
+    );
+
+    if (!hasLeftRail) {
+      return null;
+    }
+
+    return {
+      layout: 'left',
+      width: this.getReservedSideRailWidth(viewportWidth),
+    };
   }
 
   private resolveSideRailLayout(
@@ -381,11 +399,51 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     return viewportWidth <= singleRailMaxWidth ? SIDE_RAIL_COMPACT_WIDTH : SIDE_RAIL_WIDE_WIDTH;
   }
 
+  private getReservedSideRailWidth(viewportWidth: number): number {
+    const preferredWidth = this.getSideRailWidth(viewportWidth);
+    const maxWidth = this.config.sideRailMaxWidth;
+    const configuredWidths = this.getConfiguredSideRailWidths(viewportWidth);
+    const widths = [
+      preferredWidth,
+      SIDE_RAIL_WIDE_WIDTH,
+      SIDE_RAIL_COMPACT_WIDTH,
+      ...configuredWidths,
+    ].filter(width => (
+      (!maxWidth || width <= maxWidth)
+      && (configuredWidths.length === 0 || configuredWidths.includes(width))
+    ));
+
+    return [...new Set(widths)][0] ?? this.getSideRailWidthCandidates(viewportWidth)[0] ?? preferredWidth;
+  }
+
   private getSideRailWidthCandidates(viewportWidth: number): number[] {
     const preferredWidth = this.getSideRailWidth(viewportWidth);
-    const widths = preferredWidth >= SIDE_RAIL_WIDE_WIDTH
+    const widths = this.config.sideRailOverlay
       ? [SIDE_RAIL_WIDE_WIDTH, SIDE_RAIL_COMPACT_WIDTH]
-      : [SIDE_RAIL_COMPACT_WIDTH];
+      : [SIDE_RAIL_LARGE_WIDTH, preferredWidth, SIDE_RAIL_WIDE_WIDTH, SIDE_RAIL_COMPACT_WIDTH];
+    const maxWidth = this.config.sideRailMaxWidth;
+    const configuredWidths = this.getConfiguredSideRailWidths(viewportWidth);
+    const preferredOrder = configuredWidths.length ? configuredWidths : widths;
+
+    return [...new Set(preferredOrder)]
+      .filter(width => !maxWidth || width <= maxWidth);
+  }
+
+  private getConfiguredSideRailWidths(viewportWidth: number): number[] {
+    const sizes = [
+      ...(this.config.sideRails?.left.sizes ?? []),
+      ...(this.config.sideRails?.right.sizes ?? []),
+    ];
+    const allowExpandedRailSizes = this.config.sideRailOverlay === true
+      || viewportWidth > LEFT_RAIL_RESERVE_MAX_WIDTH;
+
+    const widths = sizes
+      .map(size => /^(\d+)x\d+$/.exec(size)?.[1])
+      .filter((width): width is string => Boolean(width))
+      .map(width => Number(width))
+      .filter(width => Number.isFinite(width) && width > 0)
+      .filter(width => allowExpandedRailSizes || width <= SIDE_RAIL_WIDE_WIDTH)
+      .sort((a, b) => b - a);
 
     return [...new Set(widths)];
   }
@@ -404,7 +462,24 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     );
   }
 
-  private updateAdShellReservation(sideRailPage: boolean, reserveLeftRail = false, viewportWidth?: number): void {
+  private canPreserveSideRailsForRoute(config: AdRouteConfig): boolean {
+    if (!isPlatformBrowser(this.platformId) || !config.sideRails) {
+      return false;
+    }
+
+    const view = this.document.defaultView;
+    const viewportWidth = this.document.documentElement.clientWidth || view?.innerWidth || 0;
+    const minWidth = config.sideRailMinWidth ?? DEFAULT_SIDE_RAIL_MIN_WIDTH;
+
+    return viewportWidth >= minWidth;
+  }
+
+  private updateAdShellReservation(
+    sideRailPage: boolean,
+    reserveLeftRail = false,
+    viewportWidth?: number,
+    reservedRailWidth?: number,
+  ): void {
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }
@@ -419,7 +494,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const railWidth = this.getSideRailWidth(viewportWidth);
+    const railWidth = reservedRailWidth ?? this.getReservedSideRailWidth(viewportWidth);
     const reserve = railWidth + SIDE_RAIL_EDGE_GAP + SIDE_RAIL_CONTENT_GAP;
     root.style.setProperty('--ad-left-rail-width', `${railWidth}px`);
     root.style.setProperty('--ad-left-rail-reserve', `${reserve}px`);
@@ -464,7 +539,11 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
   private getAdRailFrame(rect: DOMRect, viewportWidth: number): Pick<DOMRect, 'left' | 'right' | 'width'> {
     const maxWidth = this.config.sideRailAnchorMaxWidth;
-    if (!maxWidth || rect.width <= maxWidth) {
+    if (
+      !maxWidth
+      || rect.width <= maxWidth
+      || this.document.documentElement.classList.contains(AD_LEFT_RAIL_RESERVED_CLASS)
+    ) {
       return rect;
     }
 

@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Chart, ChartConfiguration, ChartType, registerables, ScatterDataPoint, Plugin } from 'chart.js';
 import { TIER_PERCENTILES } from '../../models/tierlist-calculation.model';
 import { PrecomputedCardData } from '../../models/precomputed-tierlist.model';
+import { ThemeService } from '../../services/theme.service';
+import { Subscription } from 'rxjs';
 Chart.register(...registerables);
 // Custom plugin for rendering card images
 const cardImagePlugin: Plugin = {
@@ -114,16 +116,19 @@ export class TierlistScatterChartComponent implements OnInit, OnDestroy, OnChang
   @Output() cardClick = new EventEmitter<{ card: PrecomputedCardData, event: MouseEvent }>();
   private chart: Chart | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  private themeSubscription?: Subscription;
   showImages = true;
   private dynamicImageSize = 60; // Default size
   tierColors: { [key: string]: string } = {
-    'S+': '#ff1744',
-    'S': '#ff6b35',
-    'A': '#f7931e',
-    'B': '#ffcd3c',
-    'C': '#7cb342',
-    'D': '#26a69a'
+    'S+': '--tier-color-splus',
+    'S': '--tier-color-s',
+    'A': '--tier-color-a',
+    'B': '--tier-color-b',
+    'C': '--tier-color-c',
+    'D': '--tier-color-d'
   };
+  constructor(private themeService: ThemeService) {}
+
   ngOnInit(): void {
     // Wait for DOM to be ready for better mobile initialization
     setTimeout(() => {
@@ -131,11 +136,18 @@ export class TierlistScatterChartComponent implements OnInit, OnDestroy, OnChang
       this.initializeChart();
       this.setupResizeListener();
     }, 50);
+    this.themeSubscription = this.themeService.colorMode$.subscribe(() => {
+      if (!this.chart) return;
+      this.chart.destroy();
+      this.chart = null;
+      setTimeout(() => this.initializeChart(), 0);
+    });
   }
   ngOnDestroy(): void {
     if (this.chart) {
       this.chart.destroy();
     }
+    this.themeSubscription?.unsubscribe();
     // Remove all listeners
     window.removeEventListener('resize', this.onResize.bind(this));
     window.removeEventListener('orientationchange', this.onResize.bind(this));
@@ -153,6 +165,8 @@ export class TierlistScatterChartComponent implements OnInit, OnDestroy, OnChang
     if (!ctx) return;
     const isMobile = window.innerWidth <= 768;
     const containerWidth = this.chartCanvas.nativeElement.parentElement?.clientWidth || 800;
+    const axisColor = this.getThemeColor('--chart-axis-color', 'rgba(255, 255, 255, 0.7)');
+    const gridColor = this.getThemeColor('--chart-grid-color', 'rgba(255, 255, 255, 0.1)');
     
     // Calculate initial point radius based on image size
     const pointRadius = this.dynamicImageSize * 0.6;
@@ -199,7 +213,7 @@ export class TierlistScatterChartComponent implements OnInit, OnDestroy, OnChang
             title: {
               display: !isMobile, // Hide title on mobile to save space
               text: 'Power Score',
-              color: 'rgba(255, 255, 255, 0.8)',
+              color: axisColor,
               font: {
                 size: isMobile ? 11 : 14,
                 weight: 600
@@ -207,11 +221,11 @@ export class TierlistScatterChartComponent implements OnInit, OnDestroy, OnChang
             },
             grid: {
               display: true,
-              color: 'rgba(255, 255, 255, 0.1)',
+              color: gridColor,
               lineWidth: isMobile ? 0.5 : 1
             },
             ticks: {
-              color: 'rgba(255, 255, 255, 0.7)',
+              color: axisColor,
               font: {
                 size: isMobile ? 9 : 12
               },
@@ -342,11 +356,12 @@ export class TierlistScatterChartComponent implements OnInit, OnDestroy, OnChang
     const pointRadius = this.dynamicImageSize * 0.6;
     
     Object.entries(tierDatasets).forEach(([tier, points]) => {
+      const tierColor = this.getTierColor(tier);
       datasets.push({
         label: `Tier ${tier}`,
         data: points,
-        backgroundColor: this.tierColors[tier] || '#888888',
-        borderColor: this.tierColors[tier] || '#888888',
+        backgroundColor: tierColor,
+        borderColor: tierColor,
         borderWidth: isMobile ? 1 : 2, // Thinner borders on mobile
         pointStyle: 'circle',
         pointRadius: pointRadius, // Use dynamic radius
@@ -375,6 +390,16 @@ export class TierlistScatterChartComponent implements OnInit, OnDestroy, OnChang
   }
   private getCardImageUrl(card: PrecomputedCardData): string {
     return `/assets/images/support_card/half/support_card_s_${card.id}.webp`;
+  }
+  private getTierColor(tier: string): string {
+    return this.getThemeColor(this.tierColors[tier], '#888888');
+  }
+  private getThemeColor(token: string | undefined, fallback: string): string {
+    if (!token) return fallback;
+    const host = this.chartCanvas?.nativeElement ?? document.documentElement;
+    const value = getComputedStyle(host).getPropertyValue(token).trim()
+      || getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+    return value || fallback;
   }
   private updateChart(): void {
     if (!this.chart) return;

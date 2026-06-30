@@ -202,14 +202,14 @@ export class TierlistComponent implements OnInit, OnDestroy {
   }
   getTierColor(tier: string): string {
     const colors: { [key: string]: string } = {
-      'S+': '#ff1744',  // Deep red
-      'S': '#ff6b35',   // Orange-red
-      'A': '#f7931e',   // Orange
-      'B': '#ffcd3c',   // Yellow
-      'C': '#7cb342',   // Light green
-      'D': '#26a69a'    // Teal
+      'S+': 'var(--tier-color-splus, #ff1744)',
+      'S': 'var(--tier-color-s, #ff6b35)',
+      'A': 'var(--tier-color-a, #f7931e)',
+      'B': 'var(--tier-color-b, #ffcd3c)',
+      'C': 'var(--tier-color-c, #7cb342)',
+      'D': 'var(--tier-color-d, #26a69a)'
     };
-    return colors[tier] || '#8e8e8e';
+    return colors[tier] || 'var(--text-muted, #8e8e8e)';
   }
   getCardImageUrl(card: PrecomputedCardData): string {
     // You'll need to implement this based on your asset structure
@@ -234,12 +234,12 @@ export class TierlistComponent implements OnInit, OnDestroy {
   getScoreColor(card: PrecomputedCardData): string {
     const score = card.scores[4]; // Use LB4 score
     // Color gradient based on percentile tiers
-    if (score >= 800) return '#ff1744';
-    if (score >= 650) return '#ff6b35';
-    if (score >= 500) return '#f7931e';
-    if (score >= 350) return '#ffcd3c';
-    if (score >= 200) return '#7cb342';
-    return '#26a69a';
+    if (score >= 800) return 'var(--tier-color-splus, #ff1744)';
+    if (score >= 650) return 'var(--tier-color-s, #ff6b35)';
+    if (score >= 500) return 'var(--tier-color-a, #f7931e)';
+    if (score >= 350) return 'var(--tier-color-b, #ffcd3c)';
+    if (score >= 200) return 'var(--tier-color-c, #7cb342)';
+    return 'var(--tier-color-d, #26a69a)';
   }
   trackByCardId(index: number, card: PrecomputedCardData): string {
     return card.id.toString();

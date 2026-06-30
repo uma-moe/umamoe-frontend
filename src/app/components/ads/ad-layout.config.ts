@@ -18,6 +18,7 @@ export interface AdRouteConfig {
   reserveLeftRail?: boolean;
   sideRailAnchorMaxWidth?: number;
   sideRailAnchorSelectors?: string[];
+  sideRailMaxWidth?: number;
   sideRailOverlay?: boolean;
   sideRailMinWidth?: number;
   sideRailVerticalAnchorSelectors?: string[];
@@ -31,7 +32,8 @@ export interface AdRouteConfig {
 }
 
 const BOTTOM_POPUP_SIZES = ['1200x90', '970x90', '728x90', '468x90'];
-const SIDE_RAIL_SIZES = ['120x600', '160x600'];
+const SIDE_RAIL_SIZES = ['300x600', '300x300', '300x250', '250x250', '160x600', '120x600'];
+const SIDE_RAIL_DEFAULT_ANCHOR_MAX_WIDTH = 1536;
 const CONTENT_TOP_SIZES = ['1200x90', '970x90', '728x90', '468x90'];
 const IN_CONTENT_SIZES = ['970x90', '728x90', '468x90', '468x60', '320x100', '300x100', '320x50', '300x50'];
 const MOBILE_INTERSCROLLER_SIZE_GROUPS = [
@@ -87,6 +89,8 @@ interface SideRailPageOptions {
   preferredSideRail?: 'left' | 'right';
   reserveLeftRail?: boolean;
   sideRailAnchorMaxWidth?: number;
+  sideRailMaxWidth?: number;
+  sideRailSizes?: string[];
   sideRailOverlay?: boolean;
   sideRailMinWidth?: number;
   singleSideRailMaxWidth?: number;
@@ -145,6 +149,9 @@ export function getAdRouteConfig(url: string): AdRouteConfig {
   if (path.startsWith('/database')) {
     return sideRailPage('database', 'database', {
       anchorSelectors: ['.inheritance-database .content-container', '.inheritance-database .header-content'],
+      sideRailAnchorMaxWidth: 2048,
+      sideRailMaxWidth: 160,
+      sideRailSizes: ['160x600', '120x600'],
     });
   }
 
@@ -221,15 +228,22 @@ function sideRailPage(surface: string, label: string, options: SideRailPageOptio
     ...(options.contentTop === false ? {} : { contentTop: contentTopSlot(`${surface}_content_top`, `${label} content top`) }),
     preferredSideRail: options.preferredSideRail ?? 'left',
     reserveLeftRail: options.reserveLeftRail ?? true,
-    sideRailAnchorMaxWidth: options.sideRailAnchorMaxWidth,
+    sideRailAnchorMaxWidth: options.sideRailAnchorMaxWidth ?? SIDE_RAIL_DEFAULT_ANCHOR_MAX_WIDTH,
     sideRailAnchorSelectors: options.anchorSelectors,
+    sideRailMaxWidth: options.sideRailMaxWidth,
     sideRailOverlay: options.sideRailOverlay,
     sideRailMinWidth: options.sideRailMinWidth,
     sideRailVerticalAnchorSelectors: options.verticalAnchorSelectors,
     singleSideRailMaxWidth: options.singleSideRailMaxWidth,
     sideRails: {
-      left: sideSlot(`${surface}_sticky_vrec_left`, `${label} left rail`),
-      right: sideSlot(`${surface}_sticky_vrec_right`, `${label} right rail`),
+      left: {
+        ...sideSlot(`${surface}_sticky_vrec_left`, `${label} left rail`),
+        sizes: options.sideRailSizes ?? SIDE_RAIL_SIZES,
+      },
+      right: {
+        ...sideSlot(`${surface}_sticky_vrec_right`, `${label} right rail`),
+        sizes: options.sideRailSizes ?? SIDE_RAIL_SIZES,
+      },
     },
     ...(inContent.length ? { inContent } : {}),
   };

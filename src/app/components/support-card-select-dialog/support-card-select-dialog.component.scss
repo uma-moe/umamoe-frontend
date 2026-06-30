@@ -323,6 +323,86 @@
   }
 }
 
+:host-context(.light-theme) {
+  .select-dialog {
+    background: var(--dialog-surface-bg);
+    border-color: var(--dialog-border);
+    box-shadow: var(--dialog-shadow);
+  }
+
+  .select-header,
+  .select-body {
+    background: var(--dialog-surface-bg);
+  }
+
+  .select-header {
+    border-bottom-color: var(--dialog-soft-border);
+  }
+
+  .search-bar,
+  .filter-field ::ng-deep .mat-mdc-text-field-wrapper {
+    background: var(--dialog-search-bg) !important;
+    border-color: var(--dialog-border) !important;
+  }
+
+  .search-bar:focus-within {
+    background: var(--dialog-search-focus-bg) !important;
+    border-color: rgba(var(--accent-primary-rgb), 0.5) !important;
+    box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb), 0.14);
+  }
+
+  .resource-status {
+    border-color: var(--state-info-border);
+    background: var(--state-info-bg);
+    color: var(--state-info-color);
+  }
+
+  .resource-error {
+    border-color: var(--state-danger-border);
+    background: var(--state-danger-bg);
+    color: var(--state-danger-color);
+
+    mat-icon { color: var(--accent-error); }
+  }
+
+  .card-item {
+    background: transparent;
+
+    &:hover {
+      background: rgba(var(--accent-primary-rgb), 0.08);
+      border-color: rgba(var(--accent-primary-rgb), 0.35);
+    }
+
+    &.selected {
+      background: rgba(var(--accent-primary-rgb), 0.12);
+      border-color: rgba(var(--accent-primary-rgb), 0.5);
+    }
+
+    .card-thumb {
+      background: var(--surface-1);
+      border-color: var(--light-card-border);
+    }
+
+    .card-title {
+      color: var(--text-muted);
+    }
+
+    .card-name {
+      color: var(--text-secondary);
+    }
+
+    .type-badge {
+      background: rgba(var(--accent-primary-rgb), 0.12);
+      color: var(--accent-primary);
+    }
+
+    .rarity-badge {
+      background: rgba(var(--accent-warning-rgb), 0.14);
+      color: var(--accent-warning);
+    }
+  }
+}
+
 @media (max-width: 600px) {
   .select-dialog {
     width: calc(100vw - 8px) !important;

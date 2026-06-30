@@ -13,6 +13,7 @@
       <app-ad-slot
         [config]="config.sideRails.left"
         [forceFallback]="fallbackPreviewEnabled"
+        [maxWidth]="sideRailWidth"
         (collapsedChange)="onSideRailCollapsed('left', $event)"
       ></app-ad-slot>
     </aside>
@@ -29,6 +30,7 @@
       <app-ad-slot
         [config]="config.sideRails.right"
         [forceFallback]="fallbackPreviewEnabled"
+        [maxWidth]="sideRailWidth"
         (collapsedChange)="onSideRailCollapsed('right', $event)"
       ></app-ad-slot>
     </aside>
