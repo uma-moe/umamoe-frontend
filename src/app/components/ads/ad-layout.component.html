@@ -35,15 +35,15 @@
       ></app-ad-slot>
     </aside>
   </ng-container>
+</ng-container>
 
-  <ng-container *ngIf="persistentBottomPopupConfig as bottomPopup">
-    <aside class="ad-bottom-popup" *ngIf="!bottomPopupClosed" aria-label="Sponsored bottom popup">
-      <app-ad-slot
-        [config]="bottomPopup"
-        [closable]="true"
-        [forceFallback]="fallbackPreviewEnabled"
-        (close)="closeBottomPopup()"
-      ></app-ad-slot>
-    </aside>
-  </ng-container>
+<ng-container *ngIf="persistentBottomPopupConfig as bottomPopup">
+  <aside class="ad-bottom-popup" *ngIf="!bottomPopupClosed" aria-label="Sponsored bottom popup">
+    <app-ad-slot
+      [config]="bottomPopup"
+      [closable]="true"
+      [forceFallback]="fallbackPreviewEnabled"
+      (close)="closeBottomPopup()"
+    ></app-ad-slot>
+  </aside>
 </ng-container>

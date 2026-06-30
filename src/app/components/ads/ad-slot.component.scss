@@ -10,18 +10,23 @@
 .ad-slot {
   --ad-slot-width: min(970px, calc(100vw - 2rem));
   --ad-slot-height: 90px;
+  --ad-close-size: 30px;
+  --ad-close-offset: 0.35rem;
+  --ad-control-reserve: 0px;
   position: relative;
   width: var(--ad-slot-width);
   min-width: 0;
   height: var(--ad-slot-height);
+  box-sizing: border-box;
   margin: 0 auto;
   overflow: hidden;
-  border: 1px solid var(--ad-slot-border);
+  border: 0;
   border-radius: 6px;
-  background: var(--ad-slot-bg);
-  box-shadow: var(--ad-slot-shadow);
+  background: transparent;
+  box-shadow: none;
   color: var(--text-primary);
   isolation: isolate;
+  container-type: inline-size;
   opacity: 1;
   transform: translateY(0);
   transition:
@@ -33,9 +38,6 @@
 }
 
 .ad-slot--waiting {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
   opacity: 0;
   pointer-events: none;
   transform: translateY(8px);
@@ -46,15 +48,15 @@
 }
 
 .ad-slot--diagnostic {
-  border-color: var(--ad-diagnostic-border);
+  border: 1px solid var(--ad-diagnostic-border);
   background: var(--ad-diagnostic-bg);
   box-shadow: var(--ad-diagnostic-shadow);
 }
 
-.ad-slot--has-creative {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
+.ad-slot--force-fallback {
+  border: 1px solid var(--ad-slot-border);
+  background: var(--ad-slot-bg);
+  box-shadow: var(--ad-slot-shadow);
 }
 
 .ad-slot--waiting .ad-slot-meta {
@@ -78,6 +80,7 @@
 .ad-slot--sticky-footer {
   --ad-slot-width: min(970px, calc(100vw - 2rem));
   --ad-slot-height: 90px;
+  --ad-control-reserve: 7.4rem;
 }
 
 .ad-slot--side-rail {
@@ -118,7 +121,14 @@
 }
 
 .ad-slot--retaining-creative .ad-slot-retained {
+  z-index: 3;
   opacity: 1;
+}
+
+.ad-slot--retaining-creative .ad-slot-target {
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .ad-slot-target > :not(script):not(style),
@@ -185,7 +195,7 @@
 .ad-slot-fallback {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 3;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -193,6 +203,10 @@
   padding: 0.75rem 1rem;
   background: var(--ad-fallback-bg);
   animation: ad-fallback-enter 0.36s ease-out both;
+}
+
+.ad-slot--sticky-footer .ad-slot-fallback {
+  padding-right: max(1rem, var(--ad-control-reserve));
 }
 
 .ad-slot-diagnostic {
@@ -368,21 +382,27 @@
 
 .ad-slot-close {
   position: absolute;
-  top: 0.35rem;
-  right: 0.35rem;
+  top: var(--ad-close-offset);
+  right: var(--ad-close-offset);
   z-index: 4;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: var(--ad-close-size);
+  height: var(--ad-close-size);
   padding: 0;
   border: 1px solid var(--ad-close-border);
   border-radius: 6px;
   background: var(--ad-close-bg);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    right 0.18s ease,
+    width 0.18s ease,
+    height 0.18s ease;
 }
 
 .ad-slot-close mat-icon {
@@ -635,6 +655,9 @@
   .ad-slot--sticky-footer {
     --ad-slot-width: calc(100vw - 0.75rem);
     --ad-slot-height: 42px;
+    --ad-close-size: 24px;
+    --ad-close-offset: 0.22rem;
+    --ad-control-reserve: 5.35rem;
   }
 
   .ad-slot--interscroller {
@@ -715,7 +738,7 @@
 
   .ad-slot--sticky-footer .ad-slot-fallback {
     gap: 0.34rem;
-    padding: 0.25rem 5.55rem 0.25rem 0.45rem;
+    padding: 0.25rem var(--ad-control-reserve) 0.25rem 0.45rem;
   }
 
   .ad-slot--sticky-footer .ad-slot-fallback > mat-icon {
@@ -742,7 +765,7 @@
   .ad-slot--sticky-footer .ad-slot-support-link {
     position: absolute;
     top: 50%;
-    right: 1.85rem;
+    right: calc(var(--ad-close-size) + (var(--ad-close-offset) * 2));
     transform: translateY(-50%);
     min-width: 24px;
     height: 24px;
@@ -759,9 +782,6 @@
 
   .ad-slot-close {
     top: 50%;
-    right: 0.22rem;
-    width: 24px;
-    height: 24px;
     transform: translateY(-50%);
   }
 
@@ -771,11 +791,35 @@
 }
 
 @media (max-width: 430px) {
+  .ad-slot--sticky-footer {
+    --ad-control-reserve: 4rem;
+  }
+
   .ad-slot--sticky-footer .ad-slot-fallback-copy span {
     display: none;
   }
 
   .ad-slot--sticky-footer .ad-slot-support-link span {
+    display: none;
+  }
+}
+
+@container (max-width: 560px) {
+  .ad-slot--sticky-footer {
+    --ad-control-reserve: 4rem;
+  }
+
+  .ad-slot--sticky-footer .ad-slot-support-link span {
+    display: none;
+  }
+}
+
+@container (max-width: 380px) {
+  .ad-slot--sticky-footer {
+    --ad-control-reserve: 3.7rem;
+  }
+
+  .ad-slot--sticky-footer .ad-slot-fallback-copy span {
     display: none;
   }
 }

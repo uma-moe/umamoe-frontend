@@ -10,7 +10,6 @@ export function isAdFallbackPreviewEnabled(document: Document): boolean {
       : null;
 
     if (value === '1') {
-      view?.localStorage.setItem(FALLBACK_PREVIEW_KEY, '1');
       return true;
     }
 
@@ -26,13 +25,5 @@ export function isAdFallbackPreviewEnabled(document: Document): boolean {
     return true;
   }
 
-  if (environment.production || !view) {
-    return false;
-  }
-
-  try {
-    return view.localStorage.getItem(FALLBACK_PREVIEW_KEY) === '1';
-  } catch {
-    return false;
-  }
+  return false;
 }

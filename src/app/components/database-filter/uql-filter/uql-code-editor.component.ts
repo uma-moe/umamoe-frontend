@@ -381,7 +381,7 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
         autocompletion({
           override: [completionSource],
           activateOnTyping: true,
-          maxRenderedOptions: 200,
+          maxRenderedOptions: 80,
           icons: false,
           closeOnBlur: true,
           optionClass: (c: Completion) => {

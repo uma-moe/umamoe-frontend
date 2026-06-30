@@ -108,10 +108,10 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       && this.canPreserveSideRailsForRoute(nextConfig);
 
     this.config = nextConfig;
-    this.fuseAdsService.beginPageView(url);
     this.leftSideRailCollapsed = false;
     this.rightSideRailCollapsed = false;
     this.updateContentTopAllowed();
+    this.fuseAdsService.beginPageView(url, this.getPageSwapPreloadFuseIds(this.config));
     this.initializePageBottomPopup(this.config);
     this.updateBottomPopupRootState();
     this.fuseAdsService.debug('route ad config synced', {
@@ -181,6 +181,46 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.contentTopAllowed = viewportWidth >= CONTENT_TOP_MIN_WIDTH && viewportWidth <= contentTopMaxWidth;
 
     return previous !== this.contentTopAllowed;
+  }
+
+  private getPageSwapPreloadFuseIds(config: AdRouteConfig): string[] {
+    const ids = [
+      config.bottomPopup?.fuseId,
+      this.contentTopAllowed ? config.contentTop?.fuseId : undefined,
+      ...this.getLikelyInitialSideRailFuseIds(config),
+    ];
+
+    return [...new Set(ids.filter((id): id is string => Boolean(id)))];
+  }
+
+  private getLikelyInitialSideRailFuseIds(config: AdRouteConfig): string[] {
+    if (!isPlatformBrowser(this.platformId) || !config.sideRails) {
+      return [];
+    }
+
+    const view = this.document.defaultView;
+    const viewportWidth = this.document.documentElement.clientWidth || view?.innerWidth || 0;
+    const minWidth = config.sideRailMinWidth ?? DEFAULT_SIDE_RAIL_MIN_WIDTH;
+
+    if (viewportWidth < minWidth) {
+      return [];
+    }
+
+    const preferredSide = config.preferredSideRail ?? 'left';
+    const reserveLeftRail = config.reserveLeftRail !== false
+      && preferredSide === 'left'
+      && viewportWidth <= LEFT_RAIL_RESERVE_MAX_WIDTH;
+
+    if (reserveLeftRail) {
+      return [config.sideRails.left.fuseId];
+    }
+
+    const singleRailMaxWidth = config.singleSideRailMaxWidth ?? SINGLE_SIDE_RAIL_MAX_WIDTH;
+    if (viewportWidth > singleRailMaxWidth) {
+      return [config.sideRails.left.fuseId, config.sideRails.right.fuseId];
+    }
+
+    return [preferredSide === 'right' ? config.sideRails.right.fuseId : config.sideRails.left.fuseId];
   }
 
   private scheduleSideRailLayout(withRetries = false): void {

@@ -165,12 +165,15 @@
 
         <section class="uql-doc-section">
           <h6>Optional And Lineage Sorting</h6>
-          <p>Use optional and lineage white filters when matching skills should influence result order.</p>
+          <p>Use optional and lineage white filters when matching skills should influence result order. Add <span class="uql-doc-inline-code">priority = N</span>, <span class="uql-doc-inline-code">priority_group = N</span>, or <span class="uql-doc-inline-code">group = N</span> inside the list to choose a priority group; group 0 is highest priority and higher groups tie-break later.</p>
           <dl class="uql-doc-table">
             <div><dt>optional white = ...</dt><dd>Requires and scores one global white skill match.</dd></div>
             <div><dt>optional white in (...)</dt><dd>Requires and scores listed global white skill matches.</dd></div>
+            <div><dt>optional white in (..., priority = 0)</dt><dd>Puts these matches in the highest priority group.</dd></div>
+            <div><dt>optional white in (..., priority_group = 1)</dt><dd>Uses priority group 1 as a later tie-breaker.</dd></div>
             <div><dt>optional main white in (...)</dt><dd>Requires and scores main parent white skill matches.</dd></div>
             <div><dt>lineage white in (...)</dt><dd>Sorts by lineage-style white skill stacking.</dd></div>
+            <div><dt>lineage white in (..., group = 2)</dt><dd>Applies the same grouping syntax to lineage sorting.</dd></div>
           </dl>
         </section>
 

@@ -67,6 +67,20 @@ interface PendingFuseCall {
   callback: (fusetag: FuseTag) => void;
 }
 
+interface RetainedAdCreative {
+  container: HTMLElement;
+  overlay: HTMLElement | null;
+  storedAt: number;
+  expiryTimer: number | null;
+}
+
+interface RetainedAdFrame {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 interface TcfPurposeConsents {
   consents?: Record<string, boolean>;
 }
@@ -140,6 +154,7 @@ const FUSE_API_MAX_RETRIES = 80;
 const PAGE_INIT_DEBOUNCE_MS = 80;
 const PRIVACY_CONTROLS_RETRY_MS = 250;
 const PRIVACY_CONTROLS_MAX_RETRIES = 32;
+const RETAINED_AD_CREATIVE_TTL_MS = 5000;
 type AdDebugLevel = 'debug' | 'warn' | 'error';
 
 @Injectable({ providedIn: 'root' })
@@ -191,6 +206,7 @@ export class FuseAdsService {
   private privacyControlsRetries = 0;
   private fuseApiBlocked = false;
   private fuseDebugCallbacksAttached = false;
+  private retainedCreatives = new Map<string, RetainedAdCreative>();
   private localConsent: CookieConsent | null = null;
   private consentSub?: Subscription;
 
@@ -217,7 +233,7 @@ export class FuseAdsService {
     return this.debugEnabled;
   }
 
-  beginPageView(reason: string): void {
+  beginPageView(reason: string, preloadFuseIds: string[] = []): void {
     if (this.fuseCallFlushTimer !== null && isPlatformBrowser(this.platformId)) {
       this.window.clearTimeout(this.fuseCallFlushTimer);
     }
@@ -228,7 +244,14 @@ export class FuseAdsService {
     this.fuseCallFlushRetries = 0;
     this.pendingFuseCalls = [];
     this.registeredZones.clear();
-    this.debug('page view ad state reset', { reason, clearedPendingFuseCalls });
+    this.debug('page view ad state reset', { reason, clearedPendingFuseCalls, preloadFuseIds });
+
+    if (!preloadFuseIds.length) {
+      this.clearRetainedCreatives('page has no preloadable slots');
+      return;
+    }
+
+    this.pageInit(preloadFuseIds, `page swap preload:${reason}`);
   }
 
   init(): void {
@@ -315,6 +338,70 @@ export class FuseAdsService {
 
   requestSlotPageInit(fuseId: string, reason = 'slot registered'): void {
     this.pageInit([fuseId], reason);
+  }
+
+  storeRetainedCreative(key: string, nodes: Node[], frame?: RetainedAdFrame): boolean {
+    if (!isPlatformBrowser(this.platformId) || !key || nodes.length === 0) {
+      return false;
+    }
+
+    this.removeRetainedCreative(key);
+    const container = this.document.createElement('div');
+    const retainedNodes = nodes.filter(node => node.parentNode);
+
+    for (const node of retainedNodes) {
+      container.appendChild(node);
+    }
+
+    if (!container.childNodes.length) {
+      return false;
+    }
+
+    const overlay = frame ? this.createRetainedCreativeOverlay(container, frame) : null;
+    const entry: RetainedAdCreative = {
+      container,
+      overlay,
+      storedAt: Date.now(),
+      expiryTimer: null,
+    };
+    this.retainedCreatives.set(key, entry);
+    entry.expiryTimer = this.window.setTimeout(() => {
+      const currentEntry = this.retainedCreatives.get(key);
+      if (currentEntry?.storedAt === entry.storedAt) {
+        this.removeRetainedCreative(key);
+      }
+    }, RETAINED_AD_CREATIVE_TTL_MS);
+    this.pruneRetainedCreatives();
+    this.debug('retained ad creative stored', {
+      key,
+      nodeCount: container.childNodes.length,
+    });
+
+    return true;
+  }
+
+  takeRetainedCreative(key: string, target: HTMLElement): boolean {
+    if (!isPlatformBrowser(this.platformId) || !key) {
+      return false;
+    }
+
+    this.pruneRetainedCreatives();
+    const entry = this.retainedCreatives.get(key);
+    if (!entry || !entry.container.childNodes.length) {
+      return false;
+    }
+
+    target.replaceChildren();
+    while (entry.container.firstChild) {
+      target.appendChild(entry.container.firstChild);
+    }
+    this.removeRetainedCreative(key);
+    this.debug('retained ad creative restored', {
+      key,
+      nodeCount: target.childNodes.length,
+    });
+
+    return target.childNodes.length > 0;
   }
 
   openPrivacyControls(): boolean {
@@ -787,6 +874,69 @@ export class FuseAdsService {
       runtimeState: this.runtimeStateSubject.value,
     });
     this.supportFallbackAllowedSubject.next(allowed);
+  }
+
+  private pruneRetainedCreatives(): void {
+    const now = Date.now();
+
+    for (const [key, entry] of this.retainedCreatives.entries()) {
+      if (now - entry.storedAt > RETAINED_AD_CREATIVE_TTL_MS) {
+        this.removeRetainedCreative(key);
+      }
+    }
+  }
+
+  private createRetainedCreativeOverlay(container: HTMLElement, frame: RetainedAdFrame): HTMLElement | null {
+    if (frame.width <= 0 || frame.height <= 0) {
+      return null;
+    }
+
+    const overlay = this.document.createElement('div');
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.style.position = 'fixed';
+    overlay.style.left = `${Math.round(frame.left)}px`;
+    overlay.style.top = `${Math.round(frame.top)}px`;
+    overlay.style.width = `${Math.round(frame.width)}px`;
+    overlay.style.height = `${Math.round(frame.height)}px`;
+    overlay.style.zIndex = '1395';
+    overlay.style.overflow = 'hidden';
+    overlay.style.pointerEvents = 'none';
+    overlay.style.contain = 'layout paint';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+
+    container.style.width = '100%';
+    container.style.height = '100%';
+    container.style.display = 'flex';
+    container.style.alignItems = 'center';
+    container.style.justifyContent = 'center';
+    container.style.overflow = 'hidden';
+    overlay.appendChild(container);
+    this.document.body.appendChild(overlay);
+
+    return overlay;
+  }
+
+  private removeRetainedCreative(key: string): void {
+    const entry = this.retainedCreatives.get(key);
+    if (entry?.expiryTimer !== null && entry?.expiryTimer !== undefined) {
+      this.window.clearTimeout(entry.expiryTimer);
+    }
+    entry?.overlay?.remove();
+    this.retainedCreatives.delete(key);
+  }
+
+  private clearRetainedCreatives(reason: string): void {
+    if (this.retainedCreatives.size === 0) {
+      return;
+    }
+
+    const keys = Array.from(this.retainedCreatives.keys());
+    for (const key of keys) {
+      this.removeRetainedCreative(key);
+    }
+    this.debug('retained ad creatives cleared', { reason, keys });
   }
 
   private attachLocalConsentListener(): void {

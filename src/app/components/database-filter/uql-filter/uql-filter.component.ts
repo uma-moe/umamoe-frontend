@@ -85,6 +85,7 @@ export interface UqlSuggestion {
   styleUrl: './uql-filter.component.scss'
 })
 export class UqlFilterComponent implements AfterViewInit, OnDestroy {
+  private readonly maxEditorCompletionOptions = 80;
   @ViewChild('queryInput') queryInput?: ElementRef<HTMLTextAreaElement>;
   @ViewChild('highlightLayer') highlightLayer?: ElementRef<HTMLElement>;
   @ViewChild('suggestionViewport') suggestionViewport?: CdkVirtualScrollViewport;
@@ -154,8 +155,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     this.createDocSnippet('Great parent does not have Right-Handed ○'),
     this.createDocSnippet('optional white = Right-Handed ○'),
     this.createDocSnippet('optional white in (Right-Handed ○, Left-Handed ○)'),
-    this.createDocSnippet('optional main white in (Right-Handed ○, Left-Handed ○)'),
-    this.createDocSnippet('lineage white in (Right-Handed ○, Left-Handed ○)')
+    this.createDocSnippet('optional white in (Right-Handed ○, Left-Handed ○, priority = 0)'),
+    this.createDocSnippet('optional main white in (Right-Handed ○, Left-Handed ○, priority_group = 1)'),
+    this.createDocSnippet('lineage white in (Right-Handed ○, Left-Handed ○, group = 2)')
   ];
   protected readonly logicDocSnippets = [
     this.createDocSnippet('Characters in (Special Week, Silence Suzuka)'),
@@ -240,7 +242,8 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     const { suggestions } = this.getMatchingSuggestions(text, pos);
     if (!suggestions.length) return null;
     const range = this.getCompletionRangeForSuggestions(text, pos, suggestions);
-    return { from: range.start, to: range.end, options: suggestions };
+    const options = suggestions.slice(0, this.maxEditorCompletionOptions);
+    return { from: range.start, to: range.end, options };
   };
 
   protected isChipSegment(segment: UqlHighlightSegment): boolean {
@@ -2220,8 +2223,37 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   }
 
   private getOpenWhiteScoringArgs(prefix: string): string | null {
-    const match = prefix.match(/\b(?:optional_white|optional_main_white|optional_any_white|lineage_white|optional\s+white|optional\s+main\s+white|optional\s+any\s+white|lineage\s+white)\s*(?:in\s*)?\(((?:[^()]|\([^)]*\))*)$/i);
-    return match ? match[1] : null;
+    const openParens: number[] = [];
+    let quoteCharacter: string | null = null;
+    for (let index = 0; index < prefix.length; index++) {
+      const character = prefix[index];
+      if (quoteCharacter) {
+        if (character === quoteCharacter) quoteCharacter = null;
+        continue;
+      }
+      if (this.isUqlQuoteStart(prefix, index)) {
+        quoteCharacter = character;
+        continue;
+      }
+      if (character === '(') {
+        openParens.push(index);
+      } else if (character === ')') {
+        openParens.pop();
+      }
+    }
+
+    for (let index = openParens.length - 1; index >= 0; index--) {
+      const openIndex = openParens[index];
+      if (this.isWhiteScoringCallOpen(prefix, openIndex)) {
+        return prefix.slice(openIndex + 1);
+      }
+    }
+    return null;
+  }
+
+  private isWhiteScoringCallOpen(text: string, openIndex: number): boolean {
+    const beforeOpen = text.slice(0, openIndex).trimEnd();
+    return /(?:^|[^A-Za-z0-9_])(?:optional_white|optional_main_white|optional_any_white|lineage_white|optional\s+white|optional\s+main\s+white|optional\s+any\s+white|lineage\s+white)\s*(?:in\s*)?$/i.test(beforeOpen);
   }
 
   private hasWhiteScoringParameterStarted(argsText: string): boolean {
@@ -2234,8 +2266,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   }
 
   private isWhiteScoringParameterAt(text: string, index: number): boolean {
-    const clausePrefix = this.getCurrentClausePrefix(text.slice(0, index));
-    const argsText = this.getOpenWhiteScoringArgs(clausePrefix);
+    const argsText = this.getOpenWhiteScoringArgs(text.slice(0, index));
     if (argsText === null) return false;
     if (this.hasWhiteScoringParameterStarted(argsText)) return true;
     const currentArgumentPrefix = argsText.slice(argsText.lastIndexOf(',') + 1);
