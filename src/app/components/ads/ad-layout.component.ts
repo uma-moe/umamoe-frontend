@@ -1,7 +1,7 @@
 import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { Component, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
-import { Subscription, filter } from 'rxjs';
+import { Subscription, combineLatest, filter } from 'rxjs';
 import { AdSlotComponent } from './ad-slot.component';
 import { isAdFallbackPreviewEnabled } from './ad-fallback-preview';
 import { AdRouteConfig, AdSlotConfig, getAdRouteConfig } from './ad-layout.config';
@@ -52,6 +52,8 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   persistentBottomPopupConfig?: AdSlotConfig;
   bottomPopupClosed = false;
   fallbackPreviewEnabled = false;
+  adsCanRender = false;
+  supportFallbackAllowed = false;
   sideRailsVisible = false;
   sideRailLayout: SideRailLayout = 'none';
   sideRailLeft = SIDE_RAIL_EDGE_GAP;
@@ -62,6 +64,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   rightSideRailCollapsed = false;
   contentTopAllowed = true;
   private routerSub?: Subscription;
+  private adStateSub?: Subscription;
   private layoutFrame: number | null = null;
   private layoutRetryTimers: number[] = [];
   private observedAnchor: HTMLElement | null = null;
@@ -76,6 +79,21 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.updateFallbackPreviewState();
+    this.adStateSub = combineLatest([
+      this.fuseAdsService.adsCanRender$,
+      this.fuseAdsService.supportFallbackAllowed$,
+    ]).subscribe(([adsCanRender, supportFallbackAllowed]) => {
+      this.adsCanRender = adsCanRender;
+      this.supportFallbackAllowed = supportFallbackAllowed;
+      this.updateBottomPopupRootState();
+
+      if (!this.adLayoutActive) {
+        this.clearAdLayoutGeometry();
+        return;
+      }
+
+      this.scheduleSideRailLayout(true);
+    });
     this.syncConfig(this.router.url);
     this.routerSub = this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
@@ -86,6 +104,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.routerSub?.unsubscribe();
+    this.adStateSub?.unsubscribe();
     this.cancelSideRailLayout();
     this.updateAdShellReservation(false);
     this.updateBottomPopupRootState(false);
@@ -140,6 +159,10 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.fallbackPreviewEnabled = isAdFallbackPreviewEnabled(this.document);
   }
 
+  get adLayoutActive(): boolean {
+    return this.fallbackPreviewEnabled || (this.adsCanRender && !this.supportFallbackAllowed);
+  }
+
   closeBottomPopup(): void {
     this.bottomPopupClosed = true;
     this.updateBottomPopupRootState(false);
@@ -180,7 +203,10 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.document.documentElement.classList.toggle(AD_BOTTOM_POPUP_VISIBLE_CLASS, visible);
+    this.document.documentElement.classList.toggle(
+      AD_BOTTOM_POPUP_VISIBLE_CLASS,
+      visible && this.adLayoutActive,
+    );
   }
 
   private updateContentTopAllowed(): boolean {
@@ -240,6 +266,11 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   }
 
   private scheduleSideRailLayout(withRetries = false): void {
+    if (!this.adLayoutActive) {
+      this.clearAdLayoutGeometry();
+      return;
+    }
+
     if (!isPlatformBrowser(this.platformId)) {
       this.sideRailsVisible = false;
       return;
@@ -271,6 +302,11 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   }
 
   private updateSideRailLayout(): void {
+    if (!this.adLayoutActive) {
+      this.clearAdLayoutGeometry();
+      return;
+    }
+
     if (!isPlatformBrowser(this.platformId)) {
       this.sideRailsVisible = false;
       return;
@@ -758,5 +794,14 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     this.observedAnchor = null;
+  }
+
+  private clearAdLayoutGeometry(): void {
+    this.sideRailsVisible = false;
+    this.sideRailLayout = 'none';
+    this.leftSideRailCollapsed = false;
+    this.rightSideRailCollapsed = false;
+    this.cancelSideRailLayout();
+    this.updateAdShellReservation(false);
   }
 }

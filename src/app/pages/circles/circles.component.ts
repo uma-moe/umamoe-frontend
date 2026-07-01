@@ -122,6 +122,7 @@ export class CirclesComponent implements OnInit, OnDestroy {
   readonly LIVE_REFRESH_SECONDS = 5 * 60;
   readonly leaderboardAdSlots = getLeaderboardInContentSlots();
   readonly adsCanRender$ = this.fuseAdsService.adsCanRender$;
+  readonly supportFallbackAllowed$ = this.fuseAdsService.supportFallbackAllowed$;
   readonly fallbackPreviewEnabled: boolean;
 
   constructor(

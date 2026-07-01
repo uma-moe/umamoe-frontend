@@ -13,6 +13,7 @@
   --ad-close-size: 30px;
   --ad-close-offset: 0.35rem;
   --ad-control-reserve: 0px;
+  --ad-empty-frame-bg: transparent;
   position: relative;
   width: var(--ad-slot-width);
   min-width: 0;
@@ -161,6 +162,13 @@
   max-height: 100% !important;
   border: 0;
   object-fit: contain;
+  background-color: var(--ad-empty-frame-bg) !important;
+  color-scheme: dark;
+}
+
+.ad-slot-target iframe,
+.ad-slot-retained iframe {
+  background: var(--ad-empty-frame-bg) !important;
 }
 
 .ad-slot--interscroller .ad-slot-target,

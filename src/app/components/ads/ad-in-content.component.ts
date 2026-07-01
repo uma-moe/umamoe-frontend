@@ -1,7 +1,7 @@
 import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { Component, HostBinding, HostListener, Inject, Input, OnChanges, PLATFORM_ID } from '@angular/core';
+import { Component, HostBinding, HostListener, Inject, Input, OnChanges, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Subscription, combineLatest } from 'rxjs';
 import { FuseAdsService } from '../../services/fuse-ads.service';
 import { AdRouteConfig, AdSlotConfig, getAdRouteConfig, getInContentSlot, getMobileRailSlot } from './ad-layout.config';
 import { AdSlotComponent } from './ad-slot.component';
@@ -21,7 +21,7 @@ const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = 1319;
       [class.ad-in-content--content-top-bridge]="isContentTopBridgeActive"
       [class.ad-in-content--interscroller]="isInterscroller"
       [class.ad-in-content--collapsed]="slotCollapsed"
-      *ngIf="((adsCanRender$ | async) && config.fuseId) || fallbackPreviewEnabled"
+      *ngIf="(inlineAdLayoutActive && config.fuseId) || fallbackPreviewEnabled"
       aria-label="Sponsored content"
     >
       <app-ad-slot
@@ -98,19 +98,21 @@ const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = 1319;
     }
   `],
 })
-export class AdInContentComponent implements OnChanges {
+export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
   @Input({ required: true }) surface!: string;
   @Input() label = '';
   @Input() index = 1;
   @Input() viewport: InlineAdViewport = 'all';
   @Input() contentTopBridge = false;
 
-  readonly adsCanRender$: Observable<boolean> = this.fuseAdsService.adsCanRender$;
   readonly fallbackPreviewEnabled: boolean;
   config: AdSlotConfig = getInContentSlot('home', 'home', 1);
   slotCollapsed = false;
   private routeConfig: AdRouteConfig = getAdRouteConfig('/');
   private viewportWidth = 0;
+  private adsCanRender = false;
+  private supportFallbackAllowed = false;
+  private adStateSub?: Subscription;
 
   @HostBinding('class.ad-in-content-host--mobile')
   get mobileOnly(): boolean {
@@ -139,6 +141,8 @@ export class AdInContentComponent implements OnChanges {
     );
 
     return Boolean(
+      this.inlineAdLayoutActive
+      &&
       this.contentTopBridge
       && this.routeConfig.contentTop
       && this.viewportWidth >= CONTENT_TOP_BRIDGE_MIN_WIDTH
@@ -148,6 +152,10 @@ export class AdInContentComponent implements OnChanges {
 
   get isInterscroller(): boolean {
     return this.config.kind === 'interscroller';
+  }
+
+  get inlineAdLayoutActive(): boolean {
+    return this.fallbackPreviewEnabled || (this.adsCanRender && !this.supportFallbackAllowed);
   }
 
   constructor(
@@ -162,6 +170,25 @@ export class AdInContentComponent implements OnChanges {
 
   ngOnChanges(): void {
     this.updateConfig();
+  }
+
+  ngOnInit(): void {
+    this.adStateSub = combineLatest([
+      this.fuseAdsService.adsCanRender$,
+      this.fuseAdsService.supportFallbackAllowed$,
+    ]).subscribe(([adsCanRender, supportFallbackAllowed]) => {
+      const previousBridgeState = this.isContentTopBridgeActive;
+      this.adsCanRender = adsCanRender;
+      this.supportFallbackAllowed = supportFallbackAllowed;
+
+      if (previousBridgeState !== this.isContentTopBridgeActive) {
+        this.updateConfig();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.adStateSub?.unsubscribe();
   }
 
   @HostListener('window:resize')

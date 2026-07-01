@@ -154,7 +154,7 @@
 
       <ng-container *ngIf="getLeaderboardAdSlot(i) as adSlot">
         <app-ad-slot
-          *ngIf="((adsCanRender$ | async) && adSlot.fuseId) || fallbackPreviewEnabled"
+          *ngIf="((adsCanRender$ | async) && !(supportFallbackAllowed$ | async) && adSlot.fuseId) || fallbackPreviewEnabled"
           class="leaderboard-incontent-ad"
           [config]="adSlot"
           [forceFallback]="fallbackPreviewEnabled"

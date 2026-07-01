@@ -1,4 +1,4 @@
-<ng-container *ngIf="(adsCanRender$ | async) || fallbackPreviewEnabled">
+<ng-container *ngIf="adLayoutActive">
   <ng-container *ngIf="config.sideRails && sideRailsVisible">
     <aside
       *ngIf="(sideRailLayout === 'left' || sideRailLayout === 'both') && (config.sideRails.left.fuseId || fallbackPreviewEnabled)"

@@ -151,10 +151,10 @@ const FUSE_ENABLED_STORAGE_KEY = 'umamoe-fuse-enabled-v1';
 const FUSE_ENABLED_QUERY_KEYS = ['fuse', 'fuse_enabled', 'ads_enabled'];
 const FUSE_API_RETRY_MS = 100;
 const FUSE_API_MAX_RETRIES = 80;
-const PAGE_INIT_DEBOUNCE_MS = 80;
+const PAGE_INIT_DEBOUNCE_MS = 30;
 const PRIVACY_CONTROLS_RETRY_MS = 250;
 const PRIVACY_CONTROLS_MAX_RETRIES = 32;
-const RETAINED_AD_CREATIVE_TTL_MS = 5000;
+const RETAINED_AD_CREATIVE_TTL_MS = 15000;
 type AdDebugLevel = 'debug' | 'warn' | 'error';
 
 @Injectable({ providedIn: 'root' })

@@ -23,12 +23,14 @@ import { FuseAdsService, FuseSlotRenderResult } from '../../services/fuse-ads.se
 
 let adSlotId = 0;
 const CREATIVE_REFRESH_GRACE_MS = 2400;
-const CREATIVE_SWAP_DELAY_MS = 1100;
+const CREATIVE_SWAP_DELAY_MS = 1800;
 const MARKUP_BIDDING_GRACE_MS = 9000;
+const EMPTY_IFRAME_BACKGROUND = 'transparent';
 const SIZE_PATTERN = /^(\d+)x(\d+)$/;
 const MOBILE_VIEWPORT_MAX_WIDTH = 899;
 const MOBILE_INTERSCROLLER_MAX_ASPECT_HEIGHT = 1.15;
 const MOBILE_INTERSCROLLER_MAX_HEIGHT = 360;
+const INTERSCROLLER_MAX_ASPECT_HEIGHT = 1.15;
 const MOBILE_STICKY_FOOTER_MAX_HEIGHT = 50;
 const DESKTOP_STICKY_FOOTER_MAX_HEIGHT = 90;
 type SlotCreativeState = 'pending' | 'filled' | 'empty';
@@ -75,6 +77,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   private slotCreativeState: SlotCreativeState = 'pending';
   private supportFallbackAllowed = false;
   private slotHasRetainedCreative = false;
+  private slotHasUnsupportedCreative = false;
   private emptyCreativePending = false;
   private markupFirstSeenAt: number | null = null;
   private markupGraceTimer: number | null = null;
@@ -276,6 +279,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.fallbackPreviewEnabled = this.forceFallback;
     this.slotCreativeState = hasRetainedCreative ? 'filled' : 'pending';
     this.supportFallbackAllowed = false;
+    this.slotHasUnsupportedCreative = false;
     this.emptyCreativePending = false;
     this.markupFirstSeenAt = null;
 
@@ -329,16 +333,21 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private updateFallbackState(target: HTMLElement): void {
+    this.prepareIframeSurfaces(target);
     const hasAdMarkup = this.hasAnyAdMarkup(target);
     const hasCurrentCreative = this.hasLikelyCreativeMarkup(target);
+    const hasUnsupportedCreative = !hasCurrentCreative && this.hasUnsupportedCreativeMarkup(target);
     const hasRetainedCreative = this.hasVisibleRetainedCreative();
+    this.slotHasUnsupportedCreative = hasUnsupportedCreative;
     this.updateCreativeLayoutSize(target);
 
     if (hasCurrentCreative && this.slotHasRetainedCreative) {
       this.scheduleRetainedCreativeClear(target);
     }
 
-    const markupStillBidding = this.isMarkupStillBidding(target, hasAdMarkup, hasCurrentCreative);
+    const markupStillBidding = hasUnsupportedCreative
+      ? false
+      : this.isMarkupStillBidding(target, hasAdMarkup, hasCurrentCreative);
 
     if (this.fallbackPreviewEnabled) {
       this.showFallback = true;
@@ -356,11 +365,11 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     const runtimeBlockedWithoutCreative = this.supportFallbackAllowed && !hasDisplayCreative;
     const hasProtectedCreative = hasDisplayCreative
       || (!runtimeBlockedWithoutCreative && markupStillBidding)
-      || (!runtimeBlockedWithoutCreative && this.slotCreativeState === 'filled' && hasAdMarkup);
+      || (!runtimeBlockedWithoutCreative && !hasUnsupportedCreative && this.slotCreativeState === 'filled' && hasAdMarkup);
     const supportFallbackReady = runtimeBlockedWithoutCreative;
-    const noFillReady = !hasProtectedCreative && (
+    const noFillReady = hasUnsupportedCreative || (!hasProtectedCreative && (
       supportFallbackReady || this.slotCreativeState === 'empty'
-    );
+    ));
     const canShowBlockedFooterFallback = this.closable
       && this.config.kind === 'sticky-footer'
       && supportFallbackReady
@@ -428,6 +437,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       slotHasCreative: this.slotHasCreative,
       slotRetainingCreative: this.slotRetainingCreative,
       slotHasRetainedCreative: this.slotHasRetainedCreative,
+      slotHasUnsupportedCreative: this.slotHasUnsupportedCreative,
       emptyCreativePending: this.emptyCreativePending,
       markupFirstSeenAt: this.markupFirstSeenAt,
       childCount: target.children.length,
@@ -456,6 +466,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       slotHasCreative: this.slotHasCreative,
       slotRetainingCreative: this.slotRetainingCreative,
       slotHasRetainedCreative: this.slotHasRetainedCreative,
+      slotHasUnsupportedCreative: this.slotHasUnsupportedCreative,
       emptyCreativePending: this.emptyCreativePending,
       markupFirstSeenAt: this.markupFirstSeenAt,
       targetRect: this.readRect(target),
@@ -510,6 +521,47 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     return target.children.length > 0 || Boolean(target.textContent?.trim());
   }
 
+  private prepareIframeSurfaces(target: HTMLElement): void {
+    target.querySelectorAll<HTMLIFrameElement>('iframe').forEach(iframe => {
+      iframe.style.backgroundColor = EMPTY_IFRAME_BACKGROUND;
+      iframe.style.colorScheme = 'dark';
+      iframe.setAttribute('allowtransparency', 'true');
+
+      if (iframe.dataset['umaEmptyFrameStyled'] !== '1') {
+        iframe.dataset['umaEmptyFrameStyled'] = '1';
+        iframe.addEventListener('load', () => this.applyEmptyIframeBackground(iframe), { passive: true });
+      }
+
+      this.applyEmptyIframeBackground(iframe);
+    });
+  }
+
+  private applyEmptyIframeBackground(iframe: HTMLIFrameElement): void {
+    try {
+      const iframeDocument = iframe.contentDocument;
+      if (!iframeDocument) {
+        return;
+      }
+
+      const body = iframeDocument.body;
+      const documentElement = iframeDocument.documentElement;
+      const hasVisibleContent = Boolean(body?.textContent?.trim())
+        || Boolean(body?.querySelector('img, picture, video, canvas, object, embed, svg, iframe'));
+
+      if (hasVisibleContent) {
+        return;
+      }
+
+        documentElement.style.background = EMPTY_IFRAME_BACKGROUND;
+        if (body) {
+          body.style.margin = '0';
+          body.style.background = EMPTY_IFRAME_BACKGROUND;
+      }
+    } catch {
+      // Cross-origin creatives cannot be inspected; the iframe element itself still has a dark surface.
+    }
+  }
+
   private isMarkupStillBidding(target: HTMLElement, hasAdMarkup: boolean, hasCurrentCreative: boolean): boolean {
     if (!isPlatformBrowser(this.platformId) || !hasAdMarkup || hasCurrentCreative || this.slotCreativeState === 'empty') {
       this.clearMarkupGraceTimer();
@@ -532,6 +584,15 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   private hasLikelyCreativeMarkup(target: HTMLElement): boolean {
     return this.getVisibleCreativeElements(target).length > 0;
+  }
+
+  private hasUnsupportedCreativeMarkup(target: HTMLElement): boolean {
+    if (this.config.kind !== 'interscroller') {
+      return false;
+    }
+
+    const visibleCreativeElements = this.getVisibleCreativeElements(target, false);
+    return visibleCreativeElements.some(element => !this.isCreativeShapeAllowed(element));
   }
 
   private hasVisibleRetainedCreative(): boolean {
@@ -592,16 +653,13 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private getCreativeLayoutSize(element: HTMLElement | SVGElement): AdSlotSize | null {
-    const declaredWidth = this.readElementSizeValue(element, 'width');
-    const declaredHeight = this.readElementSizeValue(element, 'height');
-    const rect = element.getBoundingClientRect();
-    const width = declaredWidth ?? rect.width;
-    const height = declaredHeight ?? rect.height;
+    const sourceSize = this.getCreativeSourceSize(element);
 
-    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    if (!sourceSize) {
       return null;
     }
 
+    const { width, height } = sourceSize;
     const availableWidth = this.getAvailableInterscrollerWidth();
     const clampedWidth = availableWidth > 0 ? Math.min(width, availableWidth) : width;
     const scale = width > 0 ? clampedWidth / width : 1;
@@ -614,12 +672,36 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     };
   }
 
+  private getCreativeSourceSize(element: HTMLElement | SVGElement): AdSlotSize | null {
+    const declaredWidth = this.readElementSizeValue(element, 'width');
+    const declaredHeight = this.readElementSizeValue(element, 'height');
+    const rect = element.getBoundingClientRect();
+    const width = declaredWidth ?? rect.width;
+    const height = declaredHeight ?? rect.height;
+
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return null;
+    }
+
+    return {
+      width: Math.max(1, Math.round(width)),
+      height: Math.max(1, Math.round(height)),
+    };
+  }
+
   private readElementSizeValue(element: HTMLElement | SVGElement, property: 'width' | 'height'): number | null {
     const attributeValue = element.getAttribute(property);
     const parsedAttribute = attributeValue ? Number.parseFloat(attributeValue) : Number.NaN;
 
     if (Number.isFinite(parsedAttribute) && parsedAttribute > 0) {
       return parsedAttribute;
+    }
+
+    const inlineStyleValue = element.style[property];
+    const parsedInlineStyle = inlineStyleValue ? Number.parseFloat(inlineStyleValue) : Number.NaN;
+
+    if (Number.isFinite(parsedInlineStyle) && parsedInlineStyle > 0) {
+      return parsedInlineStyle;
     }
 
     const view = element.ownerDocument.defaultView;
@@ -629,7 +711,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     return Number.isFinite(parsedStyle) && parsedStyle > 0 ? parsedStyle : null;
   }
 
-  private getVisibleCreativeElements(target?: HTMLElement): Array<HTMLElement | SVGElement> {
+  private getVisibleCreativeElements(target?: HTMLElement, requireAllowedShape = true): Array<HTMLElement | SVGElement> {
     if (!target) {
       return [];
     }
@@ -638,7 +720,10 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       this.creativeSelector,
     );
 
-    return Array.from(mediaElements).filter(element => this.isVisibleCreativeElement(element));
+    return Array.from(mediaElements).filter(element => (
+      this.isVisibleCreativeElement(element)
+      && (!requireAllowedShape || this.isCreativeShapeAllowed(element))
+    ));
   }
 
   private getElementArea(element: HTMLElement | SVGElement): number {
@@ -661,6 +746,19 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
         && style.visibility !== 'hidden'
         && style.opacity !== '0'
       );
+  }
+
+  private isCreativeShapeAllowed(element: HTMLElement | SVGElement): boolean {
+    if (this.config.kind !== 'interscroller') {
+      return true;
+    }
+
+    const sourceSize = this.getCreativeSourceSize(element);
+    if (!sourceSize) {
+      return true;
+    }
+
+    return this.isInterscrollerSizeAllowed(sourceSize);
   }
 
   private escapeSelectorId(id: string): string {
@@ -838,7 +936,12 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private isMobileInterscrollerSizeAllowed(size: AdSlotSize): boolean {
-    return size.height <= this.getMaxMobileInterscrollerHeight(size.width);
+    return this.isInterscrollerSizeAllowed(size)
+      && size.height <= this.getMaxMobileInterscrollerHeight(size.width);
+  }
+
+  private isInterscrollerSizeAllowed(size: AdSlotSize): boolean {
+    return size.height <= Math.round(size.width * INTERSCROLLER_MAX_ASPECT_HEIGHT);
   }
 
   private clampMeasuredCreativeHeight(width: number, height: number): number {
