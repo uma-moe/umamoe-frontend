@@ -713,7 +713,7 @@ export class TurnstileService {
         appearance: mode === 'interactive' ? 'always' : environment.turnstile.appearance,
         execution: mode === 'interactive' ? 'render' : 'execute',
         'response-field': false,
-        retry: 'auto',
+        retry: 'never',
         'refresh-expired': 'manual',
         'refresh-timeout': 'auto',
         callback: token => finish(() => resolve({ token, cleanup: cleanupWidget }), false),

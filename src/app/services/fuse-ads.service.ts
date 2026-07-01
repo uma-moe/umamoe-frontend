@@ -18,6 +18,7 @@ export interface GoogleAdConsentState {
   adStorage: ConsentValue;
   adUserData: ConsentValue;
   adPersonalization: ConsentValue;
+  analyticsStorage: ConsentValue;
   source: GoogleAdConsentSource;
   gdprApplies?: boolean;
   uspString?: string;
@@ -136,15 +137,16 @@ const DENIED_AD_CONSENT: GoogleAdConsentState = {
   adStorage: 'denied',
   adUserData: 'denied',
   adPersonalization: 'denied',
+  analyticsStorage: 'denied',
   source: 'pending',
 };
 const GRANTED_AD_CONSENT: GoogleAdConsentState = {
   adStorage: 'granted',
   adUserData: 'granted',
   adPersonalization: 'granted',
+  analyticsStorage: 'granted',
   source: 'debug-forced',
 };
-const AD_DEBUG_STORAGE_KEY = 'umamoe-ad-debug-v1';
 const AD_DEBUG_QUERY_KEYS = ['ad_debug', 'ads_debug', 'fuse_debug'];
 const FORCE_AD_CONSENT_QUERY_KEYS = ['force_ad_consent', 'ad_consent', 'ads_consent'];
 const FUSE_ENABLED_STORAGE_KEY = 'umamoe-fuse-enabled-v1';
@@ -517,6 +519,7 @@ export class FuseAdsService {
         adStorage: 'granted',
         adUserData: 'granted',
         adPersonalization: 'granted',
+        analyticsStorage: 'granted',
         gdprApplies: false,
         source: 'regional-default',
       });
@@ -536,6 +539,7 @@ export class FuseAdsService {
         adStorage: 'granted',
         adUserData: 'granted',
         adPersonalization: 'granted',
+        analyticsStorage: 'granted',
         gdprApplies,
         source: 'regional-default',
       });
@@ -545,11 +549,13 @@ export class FuseAdsService {
     const purposeConsents = tcData.purpose?.consents ?? {};
     const hasPurposeConsent = (purposeId: number): boolean => purposeConsents[String(purposeId)] === true;
     const storageConsent = hasPurposeConsent(1);
+    const analyticsConsent = storageConsent && hasPurposeConsent(8);
 
     this.setRegionalGoogleAdConsent({
       adStorage: this.toConsentValue(storageConsent),
       adUserData: this.toConsentValue(storageConsent && hasPurposeConsent(7)),
       adPersonalization: this.toConsentValue(storageConsent && hasPurposeConsent(3) && hasPurposeConsent(4)),
+      analyticsStorage: this.toConsentValue(analyticsConsent),
       gdprApplies,
       source: 'cmp',
     });
@@ -1161,6 +1167,14 @@ export class FuseAdsService {
     }
   }
 
+  private getTransientBooleanOverride(queryKeys: string[]): boolean | null {
+    if (!isPlatformBrowser(this.platformId)) {
+      return null;
+    }
+
+    return this.getQueryBooleanOverride(queryKeys);
+  }
+
   private getQueryBooleanOverride(queryKeys: string[]): boolean | null {
     const params = new URLSearchParams(this.window.location.search);
 
@@ -1189,7 +1203,7 @@ export class FuseAdsService {
   }
 
   private get debugEnabled(): boolean {
-    const override = this.getBooleanOverride(AD_DEBUG_QUERY_KEYS, AD_DEBUG_STORAGE_KEY);
+    const override = this.getTransientBooleanOverride(AD_DEBUG_QUERY_KEYS);
     if (override !== null) {
       return override;
     }

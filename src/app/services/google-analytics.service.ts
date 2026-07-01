@@ -88,7 +88,7 @@ export class GoogleAnalyticsService {
     ]).pipe(
       map(([consent, adConsent]) => ({
         state: this.toConsentModeState(consent, adConsent),
-        choiceMade: consent !== null,
+        choiceMade: consent !== null || this.hasResolvedFuseConsent(adConsent),
         adConsentSource: adConsent.source,
       })),
       distinctUntilChanged((previous, current) => this.sameConsentModeUpdate(previous, current)),
@@ -202,14 +202,23 @@ export class GoogleAnalyticsService {
   }
 
   private toConsentModeState(consent: CookieConsent | null, adConsent: GoogleAdConsentState): ConsentModeState {
-    const analyticsConsent = consent?.analytics === true;
+    const analyticsStorage = adConsent.source === 'disabled'
+      ? this.toConsentValue(consent?.analytics === true)
+      : adConsent.analyticsStorage;
 
     return {
       ad_storage: adConsent.adStorage,
       ad_user_data: adConsent.adUserData,
       ad_personalization: adConsent.adPersonalization,
-      analytics_storage: this.toConsentValue(analyticsConsent),
+      analytics_storage: analyticsStorage,
     };
+  }
+
+  private hasResolvedFuseConsent(adConsent: GoogleAdConsentState): boolean {
+    return adConsent.source === 'cmp'
+      || adConsent.source === 'regional-default'
+      || adConsent.source === 'ccpa-opt-out'
+      || adConsent.source === 'debug-forced';
   }
 
   private toConsentValue(granted: boolean): ConsentValue {
