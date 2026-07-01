@@ -156,6 +156,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     this.createDocSnippet('optional white = Right-Handed ○'),
     this.createDocSnippet('optional white in (Right-Handed ○, Left-Handed ○)'),
     this.createDocSnippet('optional white in (Right-Handed ○, Left-Handed ○, priority = 0)'),
+    this.createDocSnippet('optional white in (Right-Handed ○, Left-Handed ○, prio group = 0)'),
     this.createDocSnippet('optional main white in (Right-Handed ○, Left-Handed ○, priority_group = 1)'),
     this.createDocSnippet('lineage white in (Right-Handed ○, Left-Handed ○, group = 2)')
   ];
@@ -2257,7 +2258,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   }
 
   private hasWhiteScoringParameterStarted(argsText: string): boolean {
-    return /(?:^|,)\s*(?:priority|priority_group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|affinity)\s*(?:=|$)/i.test(argsText);
+    return /(?:^|,)\s*(?:priority|priority_group|prio_group|prio\s+group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|affinity)\s*(?:=|$)/i.test(argsText);
   }
 
   private isWhiteScoringParameterPrefix(prefix: string): boolean {
@@ -2271,7 +2272,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (this.hasWhiteScoringParameterStarted(argsText)) return true;
     const currentArgumentPrefix = argsText.slice(argsText.lastIndexOf(',') + 1);
     if (currentArgumentPrefix.trim().length > 0) return false;
-    return /^(?:priority|priority_group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|affinity)\s*=/i.test(text.slice(index));
+    return /^(?:priority|priority_group|prio_group|prio\s+group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|affinity)\s*=/i.test(text.slice(index));
   }
 
   private getCurrentClausePrefix(prefix: string): string {

@@ -134,11 +134,6 @@ interface FriendlySparkComparisonAlias extends FriendlySparkField {
   comparisonPattern: RegExp;
 }
 
-interface FriendlyScopedSparkComparisonAlias extends FriendlyScopedSparkField {
-  alias: string;
-  comparisonPattern: RegExp;
-}
-
 interface FriendlyFieldAliasReplacement {
   alias: string;
   field: string;
@@ -409,6 +404,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'All Skills', insertText: 'White sparks has all (Right-Handed ○, Left-Handed ○)' },
     { label: 'Optional White', insertText: 'optional white in (Right-Handed ○, Left-Handed ○)' },
     { label: 'Optional White P0', insertText: 'optional white in (Right-Handed ○, Left-Handed ○, priority = 0)' },
+    { label: 'Optional White Prio', insertText: 'optional white in (Right-Handed ○, Left-Handed ○, prio group = 0)' },
     { label: 'Optional Main White', insertText: 'optional main white in (Right-Handed ○, Left-Handed ○)' },
     { label: 'Optional Main P1', insertText: 'optional main white in (Right-Handed ○, Left-Handed ○, priority_group = 1)' },
     { label: 'Lineage White', insertText: 'lineage white in (Right-Handed ○, Left-Handed ○)' },
@@ -512,7 +508,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private uqlNamedFactorComparisonsByLabelLength: UqlNamedFactorComparison[] = [];
   private scopedUqlNamedFactorsCache: UqlNamedFactor[] = [];
   private scopedSparkFieldsCache: FriendlyScopedSparkField[] = [];
-  private scopedSparkComparisonAliases: FriendlyScopedSparkComparisonAlias[] = [];
+  private scopedSparkComparisonAliasLookup = new Map<string, FriendlyScopedSparkField>();
   private factorValueLookup = new Map<string, UqlNamedFactor>();
   private uqlFieldPatternCache = new Map<UqlValueContext, string>();
   private readonly uqlFields = new Set([
@@ -540,7 +536,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   ]);
   private readonly uqlFunctionParameterNames = new Set([
     'id', 'card_id', 'support_card_id', 'lb', 'limitbreak', 'limit_break', 'limit_break_count', 'exp', 'experience',
-    'priority', 'priority_group', 'group',
+    'priority', 'priority_group', 'prio_group', 'group',
     'type_weight', 'level_weight', 'match_weight', 'stack_weight', 'occurrence_weight',
     'base', 'decay', 'weight', 'proc_weight', 'affinity'
   ]);
@@ -2962,7 +2958,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         break;
       }
     } else {
-      const paramsMatch = listText.match(/,\s*[A-Za-z_]\w*\s*=/);
+      const paramsMatch = listText.match(/,\s*(?:prio\s+group|[A-Za-z_]\w*)\s*=/i);
       if (paramsMatch?.index !== undefined) {
         listText = listText.slice(0, paramsMatch.index);
       }
@@ -2971,7 +2967,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private parseUqlScoringPriority(argsText: string): number {
-    const priorityMatch = argsText.match(/(?:^|,)\s*(?:priority|priority_group|group)\s*=\s*(-?\d+)/i);
+    const priorityMatch = argsText.match(/(?:^|,)\s*(?:priority|priority_group|prio_group|prio\s+group|group)\s*=\s*(-?\d+)/i);
     return this.normalizePriorityGroup(priorityMatch?.[1]);
   }
 
@@ -3110,18 +3106,19 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (!queryWithoutDirectives) return '';
     const queryForCompilation = this.stripLeadingWhere(queryWithoutDirectives);
     if (!queryForCompilation) return '';
-    const arrayOperatorCompiled = this.compileFriendlyArrayOperators(queryForCompilation);
-    const scalarArithmeticCompiled = this.compileFriendlyScalarArithmeticFactorAliases(arrayOperatorCompiled);
-    const factorSumCompiled = this.compileFriendlyFactorSumComparisons(scalarArithmeticCompiled);
-    const scopedSparkCompiled = this.compileFriendlyScopedSparkComparisons(factorSumCompiled);
+    const scoringFunctionNameCompiled = this.compileFriendlyScoringFunctionNames(queryForCompilation);
+    const scoringFunctionValueCompiled = this.compileFriendlyWhiteScoringFunctionValues(scoringFunctionNameCompiled);
+    const arrayOperatorCompiled = this.compileFriendlyArrayOperators(scoringFunctionValueCompiled);
+    const factorSumCompiled = this.compileFriendlyFactorSumComparisons(arrayOperatorCompiled);
+    const scalarArithmeticCompiled = this.compileFriendlyScalarArithmeticFactorAliases(factorSumCompiled);
+    const scopedSparkCompiled = this.compileFriendlyScopedSparkComparisons(scalarArithmeticCompiled);
     const scopedSparkCategoryCompiled = this.compileFriendlyScopedSparkCategoryComparisons(scopedSparkCompiled);
     const sparkCategoryCompiled = this.compileFriendlySparkCategoryComparisons(scopedSparkCategoryCompiled);
     const sparkCompiled = this.compileFriendlySparkComparisons(sparkCategoryCompiled);
     const factorCompiled = this.compileFriendlyLoadedFactorComparisons(sparkCompiled);
     const characterScopeCompiled = this.compileFriendlyCharacterScopeExpressions(factorCompiled);
     const supportCardCompiled = this.compileFriendlySupportCardExpressions(characterScopeCompiled);
-    const scoringFunctionCompiled = this.compileFriendlyScoringFunctionNames(supportCardCompiled);
-    const namedValueCompiled = this.compileFriendlyNamedValues(scoringFunctionCompiled);
+    const namedValueCompiled = this.compileFriendlyNamedValues(supportCardCompiled);
     const fieldAliasCompiled = this.compileFriendlyFieldAliases(namedValueCompiled);
     return this.normalizeCompiledSupportCardAliases(fieldAliasCompiled).replace(/\s+/g, ' ').trim();
   }
@@ -3172,22 +3169,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     });
     this.scopedUqlNamedFactorsCache = [...byKey.values()];
     this.scopedSparkFieldsCache = this.buildScopedSparkFields(this.scopedUqlNamedFactorsCache);
-    this.scopedSparkComparisonAliases = this.scopedSparkFieldsCache
-      .flatMap(field => field.aliases.map(alias => this.createFriendlyScopedSparkComparisonAlias(field, alias)))
-      .sort((left, right) => right.alias.length - left.alias.length);
+    this.scopedSparkComparisonAliasLookup = this.buildScopedSparkComparisonAliasLookup(this.scopedSparkFieldsCache);
     this.uqlFieldPatternCache.clear();
   }
 
   private createFriendlySparkComparisonAlias(field: FriendlySparkField, alias: string): FriendlySparkComparisonAlias {
-    const aliasPattern = this.escapeRegExp(alias).replace(/\s+/g, '\\s+');
-    return {
-      ...field,
-      alias,
-      comparisonPattern: new RegExp(`(^|[^A-Za-z0-9_])(${aliasPattern})(?=$|[^A-Za-z0-9_])\\s*(==|=|!=|<>|<=|>=|<|>)\\s*(\\d+)`, 'gi')
-    };
-  }
-
-  private createFriendlyScopedSparkComparisonAlias(field: FriendlyScopedSparkField, alias: string): FriendlyScopedSparkComparisonAlias {
     const aliasPattern = this.escapeRegExp(alias).replace(/\s+/g, '\\s+');
     return {
       ...field,
@@ -3402,17 +3388,36 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
   private compileFriendlyScopedSparkComparisons(query: string): string {
     return this.replaceOutsideStrings(query, segment => {
-      let compiledSegment = segment;
-      this.scopedSparkComparisonAliases.forEach(field => {
-        compiledSegment = compiledSegment.replace(this.resetPattern(field.comparisonPattern), (_match, leadingText: string, _aliasText: string, operator: string, value: string) => {
-          return `${leadingText}${this.buildScopedSparkComparison(field, operator, parseInt(value, 10))}`;
-        });
+      const comparisonPattern = /(^|[^A-Za-z0-9_])([A-Za-z][^<>=!;()]*?)\s*(==|=|!=|<>|<=|>=|<|>)\s*(\d+)\b/gi;
+      return segment.replace(comparisonPattern, (match, leadingText: string, aliasText: string, operator: string, value: string) => {
+        const resolved = this.resolveScopedSparkComparisonAlias(aliasText);
+        if (!resolved) return match;
+        return `${leadingText}${resolved.prefix}${this.buildScopedSparkComparison(resolved.field, operator, parseInt(value, 10))}`;
       });
-      return compiledSegment;
     });
   }
 
+  private buildScopedSparkComparisonAliasLookup(fields: FriendlyScopedSparkField[]): Map<string, FriendlyScopedSparkField> {
+    const lookup = new Map<string, FriendlyScopedSparkField>();
+    fields.forEach(field => {
+      [field.label, ...field.aliases].forEach(alias => {
+        const normalizedAlias = this.normalizeUqlName(alias);
+        if (normalizedAlias && !lookup.has(normalizedAlias)) lookup.set(normalizedAlias, field);
+      });
+    });
+    return lookup;
+  }
+
+  private resolveScopedSparkComparisonAlias(aliasText: string): { field: FriendlyScopedSparkField; prefix: string } | null {
+    const match = aliasText.match(/^(\s*(?:(?:where|and|or)\s+)?)(.*?)\s*$/i);
+    const prefix = match?.[1] ?? '';
+    const alias = match?.[2] ?? aliasText.trim();
+    const field = this.scopedSparkComparisonAliasLookup.get(this.normalizeUqlName(alias));
+    return field ? { field, prefix } : null;
+  }
+
   private compileFriendlyScopedSparkCategoryComparisons(query: string): string {
+    if (!this.hasFriendlySparkCategoryComparisonSyntax(query)) return query;
     const scopes = [
       { aliases: ['main', 'parent', 'main parent'], fields: ['main_blue_factors'], color: 'blue' as const },
       { aliases: ['main', 'parent', 'main parent'], fields: ['main_pink_factors'], color: 'pink' as const },
@@ -3467,6 +3472,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private compileFriendlySparkCategoryComparisons(query: string): string {
+    if (!this.hasFriendlySparkCategoryComparisonSyntax(query)) return query;
     const colorAliases = {
       blue: ['blue spark', 'blue sparks', 'blue factor', 'blue factors'],
       pink: ['pink spark', 'pink sparks', 'pink factor', 'pink factors'],
@@ -3510,6 +3516,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return ids.length === 1
       ? `contains(${fieldName}, ${ids[0]})`
       : `overlaps(${fieldName}, (${ids.join(', ')}))`;
+  }
+
+  private hasFriendlySparkCategoryComparisonSyntax(query: string): boolean {
+    return /\b(?:blue|pink|green|unique)\s+(?:spark|sparks|factor|factors|skill|skills)\s*(?:==|=|!=|<>|>=|<=|>|<)\s*\d+\b/i.test(query);
   }
 
   private compileFriendlySparkComparisons(query: string): string {
@@ -3573,17 +3583,17 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
   private compileFriendlyLoadedFactorComparisons(query: string): string {
     return this.replaceOutsideStrings(query, segment => {
-      let compiledSegment = segment;
-      this.uqlNamedFactorComparisonsByLabelLength.forEach(factor => {
-        compiledSegment = compiledSegment.replace(this.resetPattern(factor.comparisonPattern), (_match, leadingText: string, operator: string, value: string) => {
-          return `${leadingText}${this.buildSparkComparison(factor, operator, parseInt(value, 10))}`;
-        });
+      const comparisonPattern = /(^|[\s(,])([A-Za-z][^<>=!;()]*?)\s*(==|=|!=|<>|<=|>=|<|>)\s*(\d+)\b/gi;
+      return segment.replace(comparisonPattern, (match, leadingText: string, aliasText: string, operator: string, value: string) => {
+        const factor = this.resolveFactorUqlValue(aliasText) as UqlNamedFactor | null;
+        if (!factor) return match;
+        return `${leadingText}${this.buildSparkComparison(factor, operator, parseInt(value, 10))}`;
       });
-      return compiledSegment;
     });
   }
 
   private compileFriendlyScalarArithmeticFactorAliases(query: string): string {
+    if (!this.hasUqlArithmeticFactorAliasSyntax(query)) return query;
     const factors = this.getScopedUqlNamedFactors()
       .flatMap(factor => [factor.label, ...factor.aliases]
         .filter(Boolean)
@@ -3606,6 +3616,23 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       }
       return compiledSegment;
     });
+  }
+
+  private hasUqlArithmeticFactorAliasSyntax(query: string): boolean {
+    if (!/[*/%]|\bmod\b/i.test(query)) return false;
+    const normalizedQuery = this.normalizeUqlName(query);
+    return this.getScopedUqlNamedFactors().some(factor => [factor.label, ...factor.aliases]
+      .filter(Boolean)
+      .some(alias => this.containsNormalizedUqlPhrase(normalizedQuery, alias)));
+  }
+
+  private containsNormalizedUqlPhrase(normalizedText: string, phrase: string): boolean {
+    const normalizedPhrase = this.normalizeUqlName(phrase);
+    if (!normalizedPhrase) return false;
+    return normalizedText === normalizedPhrase
+      || normalizedText.startsWith(`${normalizedPhrase} `)
+      || normalizedText.endsWith(` ${normalizedPhrase}`)
+      || normalizedText.includes(` ${normalizedPhrase} `);
   }
 
   private isUqlArithmeticScalarAliasContext(segment: string, aliasStart: number, aliasEnd: number): boolean {
@@ -3644,12 +3671,16 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       const compileExpression = (expression: string): string | null => {
         const terms = expression.split('+').map(term => term.trim()).filter(Boolean);
         if (terms.length < 2) return null;
+        let compiledFactorCount = 0;
         const compiledTerms = terms.map(term => {
           const factor = this.resolveFactorUqlValue(term) as UqlNamedFactor | null;
-          if (!factor) return null;
+          if (!factor) {
+            return /^-?\d+(?:\.\d+)?$/.test(term) || /^[A-Za-z_]\w*\s*\(/.test(term) ? term : null;
+          }
+          compiledFactorCount++;
           return `spark_sum(${this.getGlobalSkillFieldForContext(factor.valueContext)}, ${factor.factorId})`;
         });
-        if (compiledTerms.some(term => !term)) return null;
+        if (compiledFactorCount === 0 || compiledTerms.some(term => !term)) return null;
         return compiledTerms.join(' + ');
       };
 
@@ -3669,83 +3700,127 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
   private compileFriendlyArrayOperators(query: string): string {
     return this.replaceOutsideStrings(query, segment => {
-      let compiledSegment = this.compileBareFriendlySkillArrayOperators(segment);
-      this.friendlyArrayAliasReplacements.forEach(arrayField => {
-        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.hasAllPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
-          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'all', listText);
-          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
-          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'all', listText);
-          if (scopedClause) return `${leadingText}${scopedClause}`;
-          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `has_all(${field}, (${listText}))`, 'or')}`;
-        });
+      if (!this.hasFriendlyArrayOperatorKeyword(segment)) return segment;
+      const hasBareSyntax = this.hasBareFriendlySkillArrayOperatorSyntax(segment);
+      const arrayFields = this.getFriendlyArrayAliasReplacementsForSegment(segment);
+      if (!hasBareSyntax && !arrayFields.length) return segment;
+      let compiledSegment = hasBareSyntax ? this.compileBareFriendlySkillArrayOperators(segment) : segment;
+      arrayFields.forEach(arrayField => {
+        if (/\bhas\s+all\s*\(/i.test(compiledSegment)) {
+          compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.hasAllPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+            const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'all', listText);
+            if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
+            const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'all', listText);
+            if (scopedClause) return `${leadingText}${scopedClause}`;
+            return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `has_all(${field}, (${listText}))`, 'or')}`;
+          });
+        }
 
-        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.hasAnyPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
-          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'any', listText);
-          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
-          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'any', listText);
-          if (scopedClause) return `${leadingText}${scopedClause}`;
-          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `overlaps(${field}, (${listText}))`, 'or')}`;
-        });
+        if (/\bhas\s+any\s*\(/i.test(compiledSegment)) {
+          compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.hasAnyPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+            const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'any', listText);
+            if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
+            const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'any', listText);
+            if (scopedClause) return `${leadingText}${scopedClause}`;
+            return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `overlaps(${field}, (${listText}))`, 'or')}`;
+          });
+        }
 
-        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.doesNotHavePattern), (_match, leadingText: string, _aliasText: string, rawValue: string) => {
-          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'not', rawValue);
-          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
-          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'not', rawValue);
-          if (scopedClause) return `${leadingText}${scopedClause}`;
-          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `not contains(${field}, ${rawValue.trim()})`, 'and')}`;
-        });
+        if (/\bdoes\s+not\s+have\b/i.test(compiledSegment)) {
+          compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.doesNotHavePattern), (_match, leadingText: string, _aliasText: string, rawValue: string) => {
+            const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'not', rawValue);
+            if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
+            const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'not', rawValue);
+            if (scopedClause) return `${leadingText}${scopedClause}`;
+            return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `not contains(${field}, ${rawValue.trim()})`, 'and')}`;
+          });
+        }
 
-        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.hasPattern), (_match, leadingText: string, _aliasText: string, rawValue: string) => {
-          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'one', rawValue);
-          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
-          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'one', rawValue);
-          if (scopedClause) return `${leadingText}${scopedClause}`;
-          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `contains(${field}, ${rawValue.trim()})`, 'or')}`;
-        });
+        if (/\bhas\b/i.test(compiledSegment)) {
+          compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.hasPattern), (_match, leadingText: string, _aliasText: string, rawValue: string) => {
+            const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'one', rawValue);
+            if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
+            const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'one', rawValue);
+            if (scopedClause) return `${leadingText}${scopedClause}`;
+            return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `contains(${field}, ${rawValue.trim()})`, 'or')}`;
+          });
+        }
 
-        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.containsAllPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
-          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'all', listText);
-          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
-          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'all', listText);
-          if (scopedClause) return `${leadingText}${scopedClause}`;
-          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `has_all(${field}, (${listText}))`, 'or')}`;
-        });
+        if (/\bcontains\s+all\s*\(/i.test(compiledSegment)) {
+          compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.containsAllPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+            const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'all', listText);
+            if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
+            const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'all', listText);
+            if (scopedClause) return `${leadingText}${scopedClause}`;
+            return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `has_all(${field}, (${listText}))`, 'or')}`;
+          });
+        }
 
-        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.containsAnyPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
-          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'any', listText);
-          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
-          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'any', listText);
-          if (scopedClause) return `${leadingText}${scopedClause}`;
-          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `overlaps(${field}, (${listText}))`, 'or')}`;
-        });
+        if (/\bcontains\s+any\s*\(/i.test(compiledSegment)) {
+          compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.containsAnyPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+            const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'any', listText);
+            if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
+            const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'any', listText);
+            if (scopedClause) return `${leadingText}${scopedClause}`;
+            return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `overlaps(${field}, (${listText}))`, 'or')}`;
+          });
+        }
 
-        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.notInPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
-          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'not', listText);
-          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
-          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'not', listText);
-          if (scopedClause) return `${leadingText}${scopedClause}`;
-          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `not overlaps(${field}, (${listText}))`, 'and')}`;
-        });
+        if (/\bnot\s+in\s*\(/i.test(compiledSegment)) {
+          compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.notInPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+            const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'not', listText);
+            if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
+            const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'not', listText);
+            if (scopedClause) return `${leadingText}${scopedClause}`;
+            return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `not overlaps(${field}, (${listText}))`, 'and')}`;
+          });
+        }
 
-        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.inPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
-          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'any', listText);
-          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
-          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'any', listText);
-          if (scopedClause) return `${leadingText}${scopedClause}`;
-          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `overlaps(${field}, (${listText}))`, 'or')}`;
-        });
+        if (/\bin\s*\(/i.test(compiledSegment)) {
+          compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.inPattern), (_match, leadingText: string, _aliasText: string, listText: string) => {
+            const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'any', listText);
+            if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
+            const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'any', listText);
+            if (scopedClause) return `${leadingText}${scopedClause}`;
+            return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `overlaps(${field}, (${listText}))`, 'or')}`;
+          });
+        }
 
-        compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.containsPattern), (_match, leadingText: string, _aliasText: string, rawValue: string) => {
-          const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'one', rawValue);
-          if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
-          const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'one', rawValue);
-          if (scopedClause) return `${leadingText}${scopedClause}`;
-          return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `contains(${field}, ${rawValue.trim()})`, 'or')}`;
-        });
+        if (/\bcontains\b(?!\s+(?:all|any)\s*\()/i.test(compiledSegment)) {
+          compiledSegment = compiledSegment.replace(this.resetPattern(arrayField.containsPattern), (_match, leadingText: string, _aliasText: string, rawValue: string) => {
+            const raceSaddleClause = this.buildRaceSaddleArrayClause(arrayField.fields, 'one', rawValue);
+            if (raceSaddleClause) return `${leadingText}${raceSaddleClause}`;
+            const scopedClause = this.buildContextAwareScopedSkillClause(arrayField, 'one', rawValue);
+            if (scopedClause) return `${leadingText}${scopedClause}`;
+            return `${leadingText}${this.buildScopedArrayClause(arrayField.fields, field => `contains(${field}, ${rawValue.trim()})`, 'or')}`;
+          });
+        }
       });
 
       return compiledSegment;
     });
+  }
+
+  private hasFriendlyArrayOperatorSyntax(segment: string): boolean {
+    return this.hasFriendlyArrayOperatorKeyword(segment)
+      && (this.hasBareFriendlySkillArrayOperatorSyntax(segment) || this.getFriendlyArrayAliasReplacementsForSegment(segment).length > 0);
+  }
+
+  private hasFriendlyArrayOperatorKeyword(segment: string): boolean {
+    return /(?:^|[^A-Za-z0-9_])(?:does\s+not\s+have|has_all|contains_all|overlaps|not\s+in|has|contains|all|any|in)(?=$|[^A-Za-z0-9_])/i.test(segment);
+  }
+
+  private hasBareFriendlySkillArrayOperatorSyntax(segment: string): boolean {
+    return /(^|\b(?:where|and|or)\s+|\()\s*(?:has\s+(?:all|any)\s*\(|has\b|does\s+not\s+have\b|contains\s+(?:all|any)\s*\(|contains\b|not\s+in\s*\(|in\s*\()/i.test(segment);
+  }
+
+  private getFriendlyArrayAliasReplacementsForSegment(segment: string): FriendlyArrayAliasReplacement[] {
+    return this.friendlyArrayAliasReplacements.filter(arrayField => this.hasFriendlyArrayAliasOperatorSyntax(segment, arrayField.alias));
+  }
+
+  private hasFriendlyArrayAliasOperatorSyntax(segment: string, alias: string): boolean {
+    const aliasPattern = this.escapeRegExp(alias).replace(/\s+/g, '\\s+');
+    return new RegExp(`(^|[^A-Za-z0-9_])${aliasPattern}(?=$|[^A-Za-z0-9_])\\s+(?:does\\s+not\\s+have|has\\s+(?:all|any)|has|contains\\s+(?:all|any)|contains|not\\s+in|in)\\b`, 'i').test(segment);
   }
 
   private buildRaceSaddleArrayClause(fields: string[], mode: 'one' | 'any' | 'all' | 'not', listText: string): string | null {
@@ -4108,12 +4183,14 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       return resolvedList !== listText ? `${functionName}(${fieldText}, (${resolvedList}))` : match;
     });
 
+    return this.compileFriendlyWhiteScoringFunctionValues(compiledSegment);
+  }
+
+  private compileFriendlyWhiteScoringFunctionValues(segment: string): string {
     const scoringFunctionPattern = /\b(optional_white|optional_main_white|optional_any_white|lineage_white)\s*\(((?:[^()]|\([^)]*\))*)\)/gi;
-    compiledSegment = compiledSegment.replace(scoringFunctionPattern, (match, functionName: string, argsText: string) => {
+    return segment.replace(scoringFunctionPattern, (match, functionName: string, argsText: string) => {
       return this.buildFriendlyWhiteScoringFunctionClause(functionName, argsText) || match;
     });
-
-    return compiledSegment;
   }
 
   private buildFriendlyWhiteScoringFunctionClause(functionName: string, argsText: string): string | null {
@@ -4121,11 +4198,17 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (!parsed) return null;
     const resolved = this.parseUqlFactorListItems(parsed.skillList, 'white-factor');
     if (!resolved.length || resolved.some(item => !item.factor && !/^\d+$/.test(item.value))) return null;
-    if (!resolved.some(item => item.factor)) return null;
+    const normalizedParams = this.normalizeWhiteScoringParams(parsed.params.trim());
+    if (!resolved.some(item => item.factor) && normalizedParams === parsed.params.trim()) return null;
     const ids = resolved.map(item => item.factor ? item.factor.factorId.toString() : item.value.trim());
     const listText = parsed.parenthesizedList ? `(${ids.join(', ')})` : ids.join(', ');
-    const normalizedParams = parsed.params.trim();
     return `${functionName}(${normalizedParams ? `${listText}, ${normalizedParams}` : listText})`;
+  }
+
+  private normalizeWhiteScoringParams(params: string): string {
+    return params.replace(/(^|,)\s*(?:priority|priority_group|prio_group|prio\s+group|group)\s*=\s*(-?\d+)/gi, (_match, leadingText: string, value: string) => {
+      return `${leadingText}${leadingText ? ' ' : ''}priority = ${this.normalizePriorityGroup(value)}`;
+    });
   }
 
   private splitWhiteScoringFunctionArgs(argsText: string): { skillList: string; params: string; parenthesizedList: boolean } | null {
@@ -4147,7 +4230,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       }
       return null;
     }
-    const paramsMatch = trimmed.match(/,\s*[A-Za-z_]\w*\s*=/);
+    const paramsMatch = trimmed.match(/,\s*(?:prio\s+group|[A-Za-z_]\w*)\s*=/i);
     if (!paramsMatch || paramsMatch.index === undefined) {
       return { skillList: trimmed, params: '', parenthesizedList: false };
     }
@@ -5490,6 +5573,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       { label: 'has all skills', insertText: 'has all (Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Every listed skill present across all parents' },
       { label: 'optional white skills', insertText: 'optional white in (Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Require and rank global white skill matches' },
       { label: 'optional white priority group', insertText: 'optional white in (Right-Handed ○, Left-Handed ○, priority = 0)', kind: 'snippet', detail: 'Require and rank global white skill matches in priority group 0' },
+      { label: 'optional white prio group', insertText: 'optional white in (Right-Handed ○, Left-Handed ○, prio group = 0)', kind: 'snippet', detail: 'Require and rank global white skill matches in prio group 0' },
       { label: 'optional main white skills', insertText: 'optional main white in (Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Require and rank main-parent white skill matches' },
       { label: 'optional main white priority group', insertText: 'optional main white in (Right-Handed ○, Left-Handed ○, priority_group = 1)', kind: 'snippet', detail: 'Require and rank main-parent white skill matches in priority group 1' },
       { label: 'lineage white skills', insertText: 'lineage white in (Right-Handed ○, Left-Handed ○)', kind: 'snippet', detail: 'Sort by lineage-style white skill stacking' },
