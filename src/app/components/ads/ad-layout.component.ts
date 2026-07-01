@@ -28,6 +28,7 @@ const SIDE_RAIL_CONTENT_GAP = 16;
 const SINGLE_SIDE_RAIL_MAX_WIDTH = 1535;
 const LEFT_RAIL_RESERVE_MAX_WIDTH = 9999;
 const EXPANDED_RESERVED_RAIL_MIN_WIDTH = 1600;
+const LARGE_RESERVED_RAIL_MIN_WIDTH = 1320;
 const CONTENT_TOP_MIN_WIDTH = 900;
 const CONTENT_TOP_MAX_WIDTH = DEFAULT_SIDE_RAIL_MIN_WIDTH - 1;
 const SIDE_RAIL_MAX_HEIGHT = 600;
@@ -208,17 +209,17 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     }
 
     const preferredSide = config.preferredSideRail ?? 'left';
+    const singleRailMaxWidth = config.singleSideRailMaxWidth ?? SINGLE_SIDE_RAIL_MAX_WIDTH;
+    if (viewportWidth > singleRailMaxWidth) {
+      return [config.sideRails.left.fuseId, config.sideRails.right.fuseId];
+    }
+
     const reserveLeftRail = config.reserveLeftRail !== false
       && preferredSide === 'left'
       && viewportWidth <= LEFT_RAIL_RESERVE_MAX_WIDTH;
 
     if (reserveLeftRail) {
       return [config.sideRails.left.fuseId];
-    }
-
-    const singleRailMaxWidth = config.singleSideRailMaxWidth ?? SINGLE_SIDE_RAIL_MAX_WIDTH;
-    if (viewportWidth > singleRailMaxWidth) {
-      return [config.sideRails.left.fuseId, config.sideRails.right.fuseId];
     }
 
     return [preferredSide === 'right' ? config.sideRails.right.fuseId : config.sideRails.left.fuseId];
@@ -276,18 +277,14 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
         || (this.config.sideRails.right.fuseId && !this.rightSideRailCollapsed)
       ),
     );
-    this.updateAdShellReservation(
-      Boolean(this.config.sideRails && hasConfiguredRail && viewportWidth >= minWidth),
-      this.shouldReserveLeftRail(viewportWidth, minWidth, hasConfiguredRail),
-      viewportWidth,
-    );
-
     if (!this.config.sideRails || !hasConfiguredRail || viewportWidth < minWidth) {
       this.sideRailsVisible = false;
       this.sideRailLayout = 'none';
       this.updateAdShellReservation(false);
       return;
     }
+
+    this.updateAdShellReservation(true, false, viewportWidth);
 
     const anchor = this.findSideRailAnchor(viewportWidth, view);
     if (!anchor) {
@@ -308,15 +305,21 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     const leftGutter = Math.max(0, anchorRect.left);
     const rightGutter = Math.max(0, viewportWidth - anchorRect.right);
     const sideRailOverlay = this.config.sideRailOverlay === true;
-    const reserveLeftRail = this.shouldReserveLeftRail(viewportWidth, minWidth, hasConfiguredRail);
-    const railPlacement = reserveLeftRail
+    let reserveLeftRail = false;
+    let railPlacement = this.resolveSideRailPlacement(
+      viewportWidth,
+      leftGutter,
+      rightGutter,
+      sideRailOverlay,
+    );
+    const reserveCandidate = this.shouldReserveLeftRail(viewportWidth, minWidth, hasConfiguredRail)
       ? this.resolveReservedLeftRailPlacement(viewportWidth)
-      : this.resolveSideRailPlacement(
-        viewportWidth,
-        leftGutter,
-        rightGutter,
-        sideRailOverlay,
-      );
+      : null;
+
+    if (reserveCandidate && railPlacement?.layout !== 'both') {
+      reserveLeftRail = true;
+      railPlacement = reserveCandidate;
+    }
 
     if (!railPlacement || railPlacement.layout === 'none') {
       this.sideRailsVisible = false;
@@ -333,12 +336,18 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       viewportWidth,
       railPlacement.width,
     );
+    const placementAnchor = reserveLeftRail
+      ? this.findSideRailAnchor(viewportWidth, view) ?? anchor
+      : anchor;
+    const placementRect = this.getAdRailFrame(placementAnchor.element, placementAnchor.rect, viewportWidth, view);
+    const placementLeftGutter = Math.max(0, placementRect.left);
+    const placementRightGutter = Math.max(0, viewportWidth - placementRect.right);
     this.sideRailLeft = sideRailOverlay
       ? SIDE_RAIL_EDGE_GAP
-      : this.centerRailInGutter(leftGutter, railPlacement.width);
+      : this.centerRailInGutter(placementLeftGutter, railPlacement.width);
     this.sideRailRight = sideRailOverlay
       ? SIDE_RAIL_EDGE_GAP
-      : this.centerRailInGutter(rightGutter, railPlacement.width);
+      : this.centerRailInGutter(placementRightGutter, railPlacement.width);
     this.sideRailTop = verticalAnchor
       ? this.centerRailOnAnchor(verticalAnchor.rect, view)
       : this.centerRailInViewportFrame(view);
@@ -443,7 +452,10 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   private getReservedSideRailWidth(viewportWidth: number): number {
     const preferredWidth = this.getSideRailWidth(viewportWidth);
     const maxWidth = this.config.sideRailMaxWidth;
-    const configuredWidths = this.getConfiguredSideRailWidths(viewportWidth);
+    const configuredWidths = this.getConfiguredSideRailWidths(
+      viewportWidth,
+      viewportWidth >= LARGE_RESERVED_RAIL_MIN_WIDTH,
+    );
     const widths = configuredWidths.length
       ? configuredWidths
       : [
@@ -471,12 +483,13 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       .filter(width => !maxWidth || width <= maxWidth);
   }
 
-  private getConfiguredSideRailWidths(viewportWidth: number): number[] {
+  private getConfiguredSideRailWidths(viewportWidth: number, forceExpandedSizes = false): number[] {
     const sizes = [
       ...(this.config.sideRails?.left.sizes ?? []),
       ...(this.config.sideRails?.right.sizes ?? []),
     ];
-    const allowExpandedRailSizes = this.config.sideRailOverlay === true
+    const allowExpandedRailSizes = forceExpandedSizes
+      || this.config.sideRailOverlay === true
       || viewportWidth >= EXPANDED_RESERVED_RAIL_MIN_WIDTH;
 
     const widths = sizes

@@ -60,6 +60,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   slotRetainingCreative = false;
   fallbackPreviewEnabled = false;
   creativeCloseInlineOffset: number | null = null;
+  private creativeLayoutSize: AdSlotSize | null = null;
   private emptyCreativeTimer: number | null = null;
   private creativeSwapTimer: number | null = null;
   private lastDebugState = '';
@@ -106,6 +107,10 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       return `${clampedWidth}px`;
     }
 
+    if (this.creativeLayoutSize && this.config.kind === 'interscroller') {
+      return `min(${this.creativeLayoutSize.width}px, 100%)`;
+    }
+
     const layoutSize = this.getInterscrollerLayoutSize();
     if (layoutSize) {
       return `min(${layoutSize.width}px, 100%)`;
@@ -121,6 +126,10 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   get slotHeightStyle(): string | null {
+    if (this.creativeLayoutSize && this.config.kind === 'interscroller') {
+      return `${this.creativeLayoutSize.height}px`;
+    }
+
     const layoutSize = this.getInterscrollerLayoutSize();
     if (layoutSize) {
       return `${layoutSize.height}px`;
@@ -256,6 +265,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.slotHasCreative = false;
     this.slotRetainingCreative = hasRetainedCreative;
     this.creativeCloseInlineOffset = null;
+    this.creativeLayoutSize = null;
     this.setCollapsed(false);
     this.lastDebugState = '';
     this.fallbackPreviewEnabled = this.forceFallback;
@@ -317,6 +327,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     const hasAdMarkup = this.hasAnyAdMarkup(target);
     const hasCurrentCreative = this.hasLikelyCreativeMarkup(target);
     const hasRetainedCreative = this.hasVisibleRetainedCreative();
+    this.updateCreativeLayoutSize(target);
 
     if (hasCurrentCreative && this.slotHasRetainedCreative) {
       this.scheduleRetainedCreativeClear(target);
@@ -362,6 +373,27 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.slotWaiting = !hasProtectedCreative && !this.showFallback && !this.showDiagnostic && !shouldCollapse;
     this.updateCreativeCloseOffset(target);
     this.debugSlotState(target, hasAdMarkup, shouldCollapse, hasCurrentCreative);
+  }
+
+  private updateCreativeLayoutSize(target: HTMLElement): void {
+    if (this.config.kind !== 'interscroller') {
+      this.creativeLayoutSize = null;
+      return;
+    }
+
+    const creative = this.findVisibleCreativeElement(target)
+      ?? this.findVisibleCreativeElement(this.retainedTarget?.nativeElement);
+    const nextSize = creative ? this.getCreativeLayoutSize(creative) : null;
+
+    if (
+      this.creativeLayoutSize?.width === nextSize?.width
+      && this.creativeLayoutSize?.height === nextSize?.height
+    ) {
+      return;
+    }
+
+    this.creativeLayoutSize = nextSize;
+    this.changeDetector.markForCheck();
   }
 
   private setCollapsed(collapsed: boolean): void {
@@ -552,6 +584,43 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
         ? element
         : largest
     ));
+  }
+
+  private getCreativeLayoutSize(element: HTMLElement | SVGElement): AdSlotSize | null {
+    const declaredWidth = this.readElementSizeValue(element, 'width');
+    const declaredHeight = this.readElementSizeValue(element, 'height');
+    const rect = element.getBoundingClientRect();
+    const width = declaredWidth ?? rect.width;
+    const height = declaredHeight ?? rect.height;
+
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return null;
+    }
+
+    const availableWidth = this.getAvailableInterscrollerWidth();
+    const clampedWidth = availableWidth > 0 ? Math.min(width, availableWidth) : width;
+    const scale = width > 0 ? clampedWidth / width : 1;
+    const clampedHeight = Math.max(1, Math.round(height * scale));
+
+    return {
+      width: Math.max(1, Math.round(clampedWidth)),
+      height: clampedHeight,
+    };
+  }
+
+  private readElementSizeValue(element: HTMLElement | SVGElement, property: 'width' | 'height'): number | null {
+    const attributeValue = element.getAttribute(property);
+    const parsedAttribute = attributeValue ? Number.parseFloat(attributeValue) : Number.NaN;
+
+    if (Number.isFinite(parsedAttribute) && parsedAttribute > 0) {
+      return parsedAttribute;
+    }
+
+    const view = element.ownerDocument.defaultView;
+    const styleValue = view?.getComputedStyle(element)[property];
+    const parsedStyle = styleValue ? Number.parseFloat(styleValue) : Number.NaN;
+
+    return Number.isFinite(parsedStyle) && parsedStyle > 0 ? parsedStyle : null;
   }
 
   private getVisibleCreativeElements(target?: HTMLElement): Array<HTMLElement | SVGElement> {

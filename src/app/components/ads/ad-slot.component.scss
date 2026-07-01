@@ -75,6 +75,7 @@
 .ad-slot--interscroller {
   --ad-slot-width: min(970px, calc(100vw - 4px));
   --ad-slot-height: 90px;
+  border-radius: 4px;
 }
 
 .ad-slot--sticky-footer {
@@ -160,6 +161,12 @@
   max-height: 100% !important;
   border: 0;
   object-fit: contain;
+}
+
+.ad-slot--interscroller .ad-slot-target,
+.ad-slot--interscroller .ad-slot-retained {
+  align-items: center;
+  justify-content: center;
 }
 
 .ad-slot--side-rail .ad-slot-target > :not(script):not(style),
