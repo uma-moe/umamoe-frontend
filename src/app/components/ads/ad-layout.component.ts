@@ -304,7 +304,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
         this.config.sideRailVerticalAnchorSelectors,
       )
       : null;
-    const anchorRect = this.getAdRailFrame(anchor.rect, viewportWidth);
+    const anchorRect = this.getAdRailFrame(anchor.element, anchor.rect, viewportWidth, view);
     const leftGutter = Math.max(0, anchorRect.left);
     const rightGutter = Math.max(0, viewportWidth - anchorRect.right);
     const sideRailOverlay = this.config.sideRailOverlay === true;
@@ -579,14 +579,20 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  private getAdRailFrame(rect: DOMRect, viewportWidth: number): Pick<DOMRect, 'left' | 'right' | 'width'> {
+  private getAdRailFrame(
+    element: HTMLElement,
+    rect: DOMRect,
+    viewportWidth: number,
+    view: Window,
+  ): Pick<DOMRect, 'left' | 'right' | 'width'> {
+    const paddedRect = this.getContentBoxFrame(element, rect, view);
     const maxWidth = this.config.sideRailAnchorMaxWidth;
     if (
       !maxWidth
-      || rect.width <= maxWidth
+      || paddedRect.width <= maxWidth
       || this.document.documentElement.classList.contains(AD_LEFT_RAIL_RESERVED_CLASS)
     ) {
-      return rect;
+      return paddedRect;
     }
 
     const width = Math.min(maxWidth, viewportWidth);
@@ -596,6 +602,21 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       right: left + width,
       width,
     };
+  }
+
+  private getContentBoxFrame(
+    element: HTMLElement,
+    rect: DOMRect,
+    view: Window,
+  ): Pick<DOMRect, 'left' | 'right' | 'width'> {
+    const style = view.getComputedStyle(element);
+    const paddingLeft = Number.parseFloat(style.paddingLeft) || 0;
+    const paddingRight = Number.parseFloat(style.paddingRight) || 0;
+    const left = rect.left + paddingLeft;
+    const right = rect.right - paddingRight;
+    const width = Math.max(0, right - left);
+
+    return { left, right, width };
   }
 
   private centerRailInGutter(gutterWidth: number, railWidth: number): number {

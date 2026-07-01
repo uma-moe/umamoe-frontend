@@ -337,10 +337,11 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     const canRetainPreviousCreative = hasRetainedCreative;
     const keepSlotStableDuringRefresh = this.emptyCreativePending && this.slotCreativeState === 'filled';
     const hasDisplayCreative = hasCurrentCreative || canRetainPreviousCreative || keepSlotStableDuringRefresh;
+    const runtimeBlockedWithoutCreative = this.supportFallbackAllowed && !hasDisplayCreative;
     const hasProtectedCreative = hasDisplayCreative
-      || markupStillBidding
-      || (this.slotCreativeState === 'filled' && hasAdMarkup);
-    const supportFallbackReady = this.supportFallbackAllowed && !hasProtectedCreative;
+      || (!runtimeBlockedWithoutCreative && markupStillBidding)
+      || (!runtimeBlockedWithoutCreative && this.slotCreativeState === 'filled' && hasAdMarkup);
+    const supportFallbackReady = runtimeBlockedWithoutCreative;
     const noFillReady = !hasProtectedCreative && (
       supportFallbackReady || this.slotCreativeState === 'empty'
     );
