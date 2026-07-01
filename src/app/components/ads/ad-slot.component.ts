@@ -22,7 +22,8 @@ import { FuseAdsService, FuseSlotRenderResult } from '../../services/fuse-ads.se
 
 let adSlotId = 0;
 const CREATIVE_REFRESH_GRACE_MS = 2400;
-const CREATIVE_SWAP_DELAY_MS = 360;
+const CREATIVE_SWAP_DELAY_MS = 500;
+const MARKUP_BIDDING_GRACE_MS = 9000;
 const SIZE_PATTERN = /^(\d+)x(\d+)$/;
 type SlotCreativeState = 'pending' | 'filled' | 'empty';
 
@@ -57,6 +58,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   slotHasCreative = false;
   slotRetainingCreative = false;
   fallbackPreviewEnabled = false;
+  creativeCloseInlineOffset: number | null = null;
   private emptyCreativeTimer: number | null = null;
   private creativeSwapTimer: number | null = null;
   private lastDebugState = '';
@@ -67,9 +69,12 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   private supportFallbackAllowed = false;
   private slotHasRetainedCreative = false;
   private emptyCreativePending = false;
+  private markupFirstSeenAt: number | null = null;
+  private markupGraceTimer: number | null = null;
   private watchSlotQueued = false;
   private preserveQueuedCreative = false;
   private viewportWidth = 0;
+  private observedTarget?: HTMLElement;
 
   constructor(
     private fuseAdsService: FuseAdsService,
@@ -114,6 +119,12 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     }
 
     return `${size.height}px`;
+  }
+
+  get closeInlineOffsetStyle(): string | null {
+    return this.creativeCloseInlineOffset === null
+      ? null
+      : `${this.creativeCloseInlineOffset}px`;
   }
 
   get isFallbackStrip(): boolean {
@@ -182,6 +193,10 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   @HostListener('window:resize')
   onWindowResize(): void {
     this.updateViewportWidth();
+
+    if (this.observedTarget) {
+      this.updateCreativeCloseOffset(this.observedTarget);
+    }
   }
 
   private scheduleWatchSlot(preserveCreative: boolean): void {
@@ -222,12 +237,14 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.slotWaiting = !hasRetainedCreative;
     this.slotHasCreative = false;
     this.slotRetainingCreative = hasRetainedCreative;
+    this.creativeCloseInlineOffset = null;
     this.setCollapsed(false);
     this.lastDebugState = '';
     this.fallbackPreviewEnabled = this.forceFallback;
     this.slotCreativeState = hasRetainedCreative ? 'filled' : 'pending';
     this.supportFallbackAllowed = false;
     this.emptyCreativePending = false;
+    this.markupFirstSeenAt = null;
 
     if (!hasRetainedCreative) {
       this.clearRetainedCreative();
@@ -258,6 +275,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     }
 
     const target = this.adTarget.nativeElement;
+    this.observedTarget = target;
 
     this.fuseAdsService.registerZone(this.slotElementId, this.config.fuseId);
     this.fuseAdsService.requestSlotPageInit(this.config.fuseId, `slot registered:${this.config.placement}`);
@@ -280,27 +298,30 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   private updateFallbackState(target: HTMLElement): void {
     const hasAdMarkup = this.hasAnyAdMarkup(target);
     const hasCurrentCreative = this.hasLikelyCreativeMarkup(target);
+    const hasRetainedCreative = this.hasVisibleRetainedCreative();
 
     if (hasCurrentCreative && this.slotHasRetainedCreative) {
       this.scheduleRetainedCreativeClear(target);
     }
+
+    const markupStillBidding = this.isMarkupStillBidding(target, hasAdMarkup, hasCurrentCreative);
 
     if (this.fallbackPreviewEnabled) {
       this.showFallback = true;
       this.slotWaiting = false;
       this.slotHasCreative = false;
       this.slotRetainingCreative = false;
+      this.creativeCloseInlineOffset = null;
       this.debugSlotState(target, hasAdMarkup, false, hasCurrentCreative);
       return;
     }
 
-    const canRetainPreviousCreative = this.slotHasRetainedCreative;
+    const canRetainPreviousCreative = hasRetainedCreative;
     const keepSlotStableDuringRefresh = this.emptyCreativePending && this.slotCreativeState === 'filled';
     const hasDisplayCreative = hasCurrentCreative || canRetainPreviousCreative || keepSlotStableDuringRefresh;
-    const hasProtectedCreative = hasDisplayCreative || (
-      this.slotCreativeState === 'filled'
-      && hasAdMarkup
-    );
+    const hasProtectedCreative = hasDisplayCreative
+      || markupStillBidding
+      || (this.slotCreativeState === 'filled' && hasAdMarkup);
     const supportFallbackReady = this.supportFallbackAllowed && !hasProtectedCreative;
     const noFillReady = !hasProtectedCreative && (
       supportFallbackReady || this.slotCreativeState === 'empty'
@@ -320,6 +341,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.slotHasCreative = hasProtectedCreative;
     this.slotRetainingCreative = canRetainPreviousCreative;
     this.slotWaiting = !hasProtectedCreative && !this.showFallback && !this.showDiagnostic && !shouldCollapse;
+    this.updateCreativeCloseOffset(target);
     this.debugSlotState(target, hasAdMarkup, shouldCollapse, hasCurrentCreative);
   }
 
@@ -351,6 +373,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       slotRetainingCreative: this.slotRetainingCreative,
       slotHasRetainedCreative: this.slotHasRetainedCreative,
       emptyCreativePending: this.emptyCreativePending,
+      markupFirstSeenAt: this.markupFirstSeenAt,
       childCount: target.children.length,
       textLength: target.textContent?.trim().length ?? 0,
     });
@@ -378,6 +401,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       slotRetainingCreative: this.slotRetainingCreative,
       slotHasRetainedCreative: this.slotHasRetainedCreative,
       emptyCreativePending: this.emptyCreativePending,
+      markupFirstSeenAt: this.markupFirstSeenAt,
       targetRect: this.readRect(target),
       children: this.summarizeChildren(target),
     });
@@ -430,12 +454,102 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     return target.children.length > 0 || Boolean(target.textContent?.trim());
   }
 
+  private isMarkupStillBidding(target: HTMLElement, hasAdMarkup: boolean, hasCurrentCreative: boolean): boolean {
+    if (!isPlatformBrowser(this.platformId) || !hasAdMarkup || hasCurrentCreative || this.slotCreativeState === 'empty') {
+      this.clearMarkupGraceTimer();
+      this.markupFirstSeenAt = null;
+      return false;
+    }
+
+    this.markupFirstSeenAt ??= Date.now();
+    const elapsed = Date.now() - this.markupFirstSeenAt;
+    const remaining = MARKUP_BIDDING_GRACE_MS - elapsed;
+
+    if (remaining <= 0) {
+      this.clearMarkupGraceTimer();
+      return false;
+    }
+
+    this.scheduleMarkupGraceUpdate(target, remaining);
+    return true;
+  }
+
   private hasLikelyCreativeMarkup(target: HTMLElement): boolean {
+    return this.getVisibleCreativeElements(target).length > 0;
+  }
+
+  private hasVisibleRetainedCreative(): boolean {
+    const retained = this.retainedTarget?.nativeElement;
+    return Boolean(retained && this.hasLikelyCreativeMarkup(retained));
+  }
+
+  private updateCreativeCloseOffset(target: HTMLElement): void {
+    if (
+      !this.closable
+      || this.config.kind !== 'sticky-footer'
+      || this.showFallback
+      || this.showDiagnostic
+      || this.slotCollapsed
+      || !isPlatformBrowser(this.platformId)
+    ) {
+      this.creativeCloseInlineOffset = null;
+      return;
+    }
+
+    const shell = this.slotShell?.nativeElement;
+    const retainedCreative = this.findVisibleCreativeElement(this.retainedTarget?.nativeElement);
+    const currentCreative = this.findVisibleCreativeElement(target);
+    const creative = this.slotRetainingCreative
+      ? retainedCreative ?? currentCreative
+      : currentCreative ?? retainedCreative;
+
+    if (!shell || !creative) {
+      this.creativeCloseInlineOffset = null;
+      return;
+    }
+
+    const shellRect = shell.getBoundingClientRect();
+    const creativeRect = creative.getBoundingClientRect();
+    const rightGap = shellRect.right - creativeRect.right;
+
+    if (!Number.isFinite(rightGap) || rightGap < -1) {
+      this.creativeCloseInlineOffset = null;
+      return;
+    }
+
+    const inset = 4;
+    this.creativeCloseInlineOffset = Math.max(0, Math.round(rightGap + inset));
+  }
+
+  private findVisibleCreativeElement(target?: HTMLElement): HTMLElement | SVGElement | null {
+    const visibleElements = this.getVisibleCreativeElements(target);
+
+    if (!visibleElements.length) {
+      return null;
+    }
+
+    return visibleElements.reduce((largest, element) => (
+      this.getElementArea(element) > this.getElementArea(largest)
+        ? element
+        : largest
+    ));
+  }
+
+  private getVisibleCreativeElements(target?: HTMLElement): Array<HTMLElement | SVGElement> {
+    if (!target) {
+      return [];
+    }
+
     const mediaElements = target.querySelectorAll<HTMLElement | SVGElement>(
       this.creativeSelector,
     );
 
-    return Array.from(mediaElements).some(element => this.isVisibleCreativeElement(element));
+    return Array.from(mediaElements).filter(element => this.isVisibleCreativeElement(element));
+  }
+
+  private getElementArea(element: HTMLElement | SVGElement): number {
+    const rect = element.getBoundingClientRect();
+    return rect.width * rect.height;
   }
 
   private isVisibleCreativeElement(element: HTMLElement | SVGElement): boolean {
@@ -581,8 +695,10 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   private clearWatchers(): void {
     this.clearEmptyCreativeTimer();
     this.clearCreativeSwapTimer();
+    this.clearMarkupGraceTimer();
     this.mutationObserver?.disconnect();
     this.mutationObserver = null;
+    this.observedTarget = undefined;
     this.slotRenderSub?.unsubscribe();
     this.slotRenderSub = undefined;
     this.supportFallbackSub?.unsubscribe();
@@ -641,6 +757,25 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.creativeSwapTimer = null;
   }
 
+  private scheduleMarkupGraceUpdate(target: HTMLElement, delay: number): void {
+    if (!isPlatformBrowser(this.platformId) || this.markupGraceTimer !== null) {
+      return;
+    }
+
+    this.markupGraceTimer = window.setTimeout(() => {
+      this.markupGraceTimer = null;
+      this.updateFallbackState(target);
+    }, Math.max(0, delay));
+  }
+
+  private clearMarkupGraceTimer(): void {
+    if (this.markupGraceTimer !== null && isPlatformBrowser(this.platformId)) {
+      window.clearTimeout(this.markupGraceTimer);
+    }
+
+    this.markupGraceTimer = null;
+  }
+
   private retainRemovedCreative(records: MutationRecord[]): void {
     const retained = this.retainedTarget?.nativeElement;
     if (!retained) {
@@ -676,7 +811,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
     const currentCreativeNodes = this.getTopLevelRemovedNodes(
       Array.from(target.childNodes)
-        .filter(node => this.canRetainNode(node) && this.hasCreativeNode(node)),
+        .filter(node => this.canRetainNode(node) && this.hasVisibleCreativeNode(node)),
     );
 
     if (!currentCreativeNodes.length) {
@@ -689,7 +824,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       retained.appendChild(node);
     }
 
-    this.slotHasRetainedCreative = retained.childNodes.length > 0;
+    this.slotHasRetainedCreative = this.hasLikelyCreativeMarkup(retained);
     return this.slotHasRetainedCreative;
   }
 
@@ -701,9 +836,13 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     }
 
     const restored = this.fuseAdsService.takeRetainedCreative(this.retentionKey, retained);
-    this.slotHasRetainedCreative = restored;
+    this.slotHasRetainedCreative = restored && this.hasLikelyCreativeMarkup(retained);
 
-    return restored;
+    if (restored && !this.slotHasRetainedCreative) {
+      retained.replaceChildren();
+    }
+
+    return this.slotHasRetainedCreative;
   }
 
   private storeCreativeForHandoff(): void {
@@ -731,7 +870,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     const retainedNodes = retained
       ? this.getTopLevelRemovedNodes(
         Array.from(retained.childNodes)
-          .filter(node => this.canRetainNode(node) && this.hasCreativeNode(node)),
+          .filter(node => this.canRetainNode(node) && this.hasVisibleCreativeNode(node)),
       )
       : [];
 
@@ -746,7 +885,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
     return this.getTopLevelRemovedNodes(
       Array.from(target.childNodes)
-        .filter(node => this.canRetainNode(node) && this.hasCreativeNode(node)),
+        .filter(node => this.canRetainNode(node) && this.hasVisibleCreativeNode(node)),
     );
   }
 
@@ -792,6 +931,20 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
     const element = node as HTMLElement;
     return this.isCreativeTag(element) || Boolean(element.querySelector(this.creativeSelector));
+  }
+
+  private hasVisibleCreativeNode(node: Node): boolean {
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return false;
+    }
+
+    const element = node as HTMLElement;
+    if (this.isCreativeTag(element) && this.isVisibleCreativeElement(element)) {
+      return true;
+    }
+
+    return Array.from(element.querySelectorAll<HTMLElement | SVGElement>(this.creativeSelector))
+      .some(creative => this.isVisibleCreativeElement(creative));
   }
 
   private isCreativeTag(element: Element): boolean {

@@ -59,7 +59,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     ]);
   }
   ngOnInit() {
-    this.statsService.ensureDailyTracking();
     this.loadStats();
     this.checkForDomainMigrationPopup();
     this.checkForMilestonePopup();

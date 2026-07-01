@@ -18,105 +18,14 @@ export interface FriendlistReportResponse {
   success: boolean;
   message: string;
 }
-interface DailyTrackingInfo {
-  lastVisitDate: string;
-  visitorId: string;
-}
 @Injectable({
   providedIn: 'root'
 })
 export class StatsService {
   private readonly apiUrl = `${environment.apiUrl}/api`;
   private stats$ = new BehaviorSubject<StatsResponse | null>(null);
-  private visitorId: string;
-  private readonly TRACKING_KEY = 'uma_daily_tracking';
-  constructor(private http: HttpClient) {
-    // Generate or retrieve visitor ID from localStorage
-    this.visitorId = this.getOrCreateVisitorId();
-    
-    // Check and track daily visit on service initialization
-    this.checkAndTrackDailyVisit();
-    
-    // Listen for visibility changes to track daily visits for users with permanent tabs
-    this.setupVisibilityTracking();
-  }
-  private setupVisibilityTracking(): void {
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          // User came back to the tab - check if it's a new day
-          this.checkAndTrackDailyVisit();
-        }
-      });
-    }
-  }
-  private getOrCreateVisitorId(): string {
-    try {
-      let visitorId = localStorage.getItem('visitorId');
-      if (!visitorId) {
-        visitorId = 'visitor_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
-        localStorage.setItem('visitorId', visitorId);
-      }
-      return visitorId;
-    } catch (e) {
-      console.warn('Failed to access localStorage for visitorId:', e);
-      return 'visitor_fallback_' + Date.now();
-    }
-  }
-  private getTodayDateString(): string {
-    const today = new Date();
-    return today.toISOString().split('T')[0]; // YYYY-MM-DD format
-  }
-  private getTrackingInfo(): DailyTrackingInfo | null {
-    try {
-      const stored = localStorage.getItem(this.TRACKING_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  }
-  private setTrackingInfo(info: DailyTrackingInfo): void {
-    try {
-      localStorage.setItem(this.TRACKING_KEY, JSON.stringify(info));
-    } catch (e) {
-      console.warn('Failed to save tracking info:', e);
-    }
-  }
-  private checkAndTrackDailyVisit(): void {
-    const today = this.getTodayDateString();
-    const trackingInfo = this.getTrackingInfo();
-    // Check if we've already tracked today
-    if (trackingInfo && trackingInfo.lastVisitDate === today) {
-      // Already tracked today, no need to do anything
-      return;
-    }
-    // New day or first visit - track it
-    this.trackDailyVisit().subscribe({
-      next: () => {
-        // Update local tracking info on successful track
-        this.setTrackingInfo({
-          lastVisitDate: today,
-          visitorId: this.visitorId
-        });
-      },
-      error: (error) => {
-        console.warn('Failed to track daily visit:', error);
-      }
-    });
-  }
-  // Track daily active user (called once per day per user)
-  private trackDailyVisit(): Observable<any> {
-    const payload = {
-      visitorId: this.visitorId,
-      date: this.getTodayDateString()
-    };
-    
-    return this.http.post(`${this.apiUrl}/stats/daily-visit`, payload);
-  }
-  // Public method to manually check and track (useful for SPA route changes)
-  ensureDailyTracking(): void {
-    this.checkAndTrackDailyVisit();
-  }
+  constructor(private http: HttpClient) {}
+
   // Get comprehensive stats
   getStats(days: number = 30): Observable<StatsResponse> {
     return this.http.get<StatsResponse>(`${this.apiUrl}/stats?days=${days}`)

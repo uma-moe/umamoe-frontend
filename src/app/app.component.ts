@@ -1,12 +1,11 @@
 import { Component, OnInit, Inject, PLATFORM_ID, HostListener } from '@angular/core';
-import { RouterOutlet, Router, NavigationEnd, ActivatedRoute } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { NavigationComponent } from './components/navigation/navigation.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { SnowComponent } from './components/snow/snow.component';
 import { AdLayoutComponent } from './components/ads/ad-layout.component';
-import { StatsService } from './services/stats.service';
 import { ThemeService } from './services/theme.service';
 import { UpdateNotificationService } from './services/update-notification.service';
 import { RateLimitService } from './services/rate-limit.service';
@@ -17,7 +16,7 @@ import { GoogleAnalyticsService } from './services/google-analytics.service';
 import { FuseAdsService } from './services/fuse-ads.service';
 import { AppVersionService } from './services/app-version.service';
 import { environment } from '../environments/environment';
-import { BehaviorSubject, Observable, combineLatest, filter, map, throttleTime, timer } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest, map, timer } from 'rxjs';
 
 interface TurnstileRecoveryView {
   debug: TurnstileDebugState;
@@ -61,15 +60,12 @@ export class AppComponent implements OnInit {
   private readonly interactiveNoticeSubject = new BehaviorSubject<TurnstileRecoveryNotice | null>(null);
 
   constructor(
-    private statsService: StatsService, 
-    private router: Router,
     private themeService: ThemeService,
     private dialog: MatDialog,
     private updateNotificationService: UpdateNotificationService,
     private rateLimitService: RateLimitService,
     private authService: AuthService,
     private masterDataService: MasterDataService,
-    private activatedRoute: ActivatedRoute,
     private turnstileService: TurnstileService,
     private googleAnalyticsService: GoogleAnalyticsService,
     private fuseAdsService: FuseAdsService,
@@ -125,13 +121,6 @@ export class AppComponent implements OnInit {
         this.updateNotificationService.checkAndShowUpdate();
       }, 1000);
     }
-    // Ensure tracking on route changes (in case user keeps tab open across days)
-    this.router.events.pipe(
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      throttleTime(60000) // Only check once per minute max
-    ).subscribe(() => {
-      this.statsService.ensureDailyTracking();
-    });
   }
 
   retryTurnstileInteractive(event?: Event): void {

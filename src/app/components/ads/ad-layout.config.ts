@@ -240,11 +240,11 @@ function sideRailPage(surface: string, label: string, options: SideRailPageOptio
     sideRails: {
       left: {
         ...sideSlot(`${surface}_sticky_vrec_left`, `${label} left rail`),
-        sizes: options.sideRailSizes ?? (options.expandedSideRailSizes ? EXPANDED_SIDE_RAIL_SIZES : SIDE_RAIL_SIZES),
+        sizes: options.sideRailSizes ?? (options.expandedSideRailSizes === false ? SIDE_RAIL_SIZES : EXPANDED_SIDE_RAIL_SIZES),
       },
       right: {
         ...sideSlot(`${surface}_sticky_vrec_right`, `${label} right rail`),
-        sizes: options.sideRailSizes ?? (options.expandedSideRailSizes ? EXPANDED_SIDE_RAIL_SIZES : SIDE_RAIL_SIZES),
+        sizes: options.sideRailSizes ?? (options.expandedSideRailSizes === false ? SIDE_RAIL_SIZES : EXPANDED_SIDE_RAIL_SIZES),
       },
     },
     ...(inContent.length ? { inContent } : {}),

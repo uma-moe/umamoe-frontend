@@ -68,7 +68,7 @@
 }
 
 .ad-slot--leaderboard {
-  --ad-slot-width: min(970px, calc(100vw - 2rem));
+  --ad-slot-width: min(1200px, calc(100vw - 2rem));
   --ad-slot-height: 90px;
 }
 
@@ -78,7 +78,7 @@
 }
 
 .ad-slot--sticky-footer {
-  --ad-slot-width: min(970px, calc(100vw - 2rem));
+  --ad-slot-width: min(1200px, calc(100vw - 2rem));
   --ad-slot-height: 90px;
   --ad-control-reserve: 7.4rem;
 }
@@ -383,7 +383,7 @@
 .ad-slot-close {
   position: absolute;
   top: var(--ad-close-offset);
-  right: var(--ad-close-offset);
+  right: var(--ad-close-inline-offset, var(--ad-close-offset));
   z-index: 4;
   display: inline-flex;
   align-items: center;
@@ -765,7 +765,7 @@
   .ad-slot--sticky-footer .ad-slot-support-link {
     position: absolute;
     top: 50%;
-    right: calc(var(--ad-close-size) + (var(--ad-close-offset) * 2));
+    right: calc(var(--ad-close-size) + var(--ad-close-inline-offset, var(--ad-close-offset)) + var(--ad-close-offset));
     transform: translateY(-50%);
     min-width: 24px;
     height: 24px;
