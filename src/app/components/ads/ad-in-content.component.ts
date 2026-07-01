@@ -46,8 +46,8 @@ const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = 1319;
     }
 
     .ad-in-content--content-top-bridge {
-      max-width: min(1200px, calc(100vw - 2rem));
-      margin: 0.75rem auto;
+      max-width: min(1200px, calc(100vw - 1rem));
+      margin: 0.55rem auto;
     }
 
     .ad-in-content--interscroller {

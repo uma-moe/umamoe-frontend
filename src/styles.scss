@@ -1949,8 +1949,8 @@ app-ad-in-content.ad-in-content-host--content-top-bridge-active + :where(
 
 @media (min-width: 1320px) {
   html.ad-left-rail-reserved {
-    --ad-layout-start-space: calc(var(--ad-left-rail-reserve, 152px) + 1.5rem);
-    --ad-layout-end-space: max(1rem, env(safe-area-inset-right));
+    --ad-layout-start-space: calc(var(--ad-left-rail-reserve, 152px) + 0.75rem);
+    --ad-layout-end-space: max(0.5rem, env(safe-area-inset-right));
   }
 
   html.ad-left-rail-reserved .app-shell-main > :not(router-outlet) :where(

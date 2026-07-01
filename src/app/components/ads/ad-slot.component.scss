@@ -8,7 +8,7 @@
 }
 
 .ad-slot {
-  --ad-slot-width: min(970px, calc(100vw - 2rem));
+  --ad-slot-width: min(970px, calc(100vw - 1rem));
   --ad-slot-height: 90px;
   --ad-close-size: 30px;
   --ad-close-offset: 0.35rem;
@@ -69,7 +69,7 @@
 }
 
 .ad-slot--leaderboard {
-  --ad-slot-width: min(1200px, calc(100vw - 2rem));
+  --ad-slot-width: min(1200px, calc(100vw - 1rem));
   --ad-slot-height: 90px;
 }
 
@@ -80,7 +80,7 @@
 }
 
 .ad-slot--sticky-footer {
-  --ad-slot-width: min(1200px, calc(100vw - 2rem));
+  --ad-slot-width: min(1200px, calc(100vw - 1rem));
   --ad-slot-height: 90px;
   --ad-control-reserve: 7.4rem;
 }
