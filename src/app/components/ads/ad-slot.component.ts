@@ -23,9 +23,14 @@ import { FuseAdsService, FuseSlotRenderResult } from '../../services/fuse-ads.se
 
 let adSlotId = 0;
 const CREATIVE_REFRESH_GRACE_MS = 2400;
-const CREATIVE_SWAP_DELAY_MS = 500;
+const CREATIVE_SWAP_DELAY_MS = 1100;
 const MARKUP_BIDDING_GRACE_MS = 9000;
 const SIZE_PATTERN = /^(\d+)x(\d+)$/;
+const MOBILE_VIEWPORT_MAX_WIDTH = 899;
+const MOBILE_INTERSCROLLER_MAX_ASPECT_HEIGHT = 1.15;
+const MOBILE_INTERSCROLLER_MAX_HEIGHT = 360;
+const MOBILE_STICKY_FOOTER_MAX_HEIGHT = 50;
+const DESKTOP_STICKY_FOOTER_MAX_HEIGHT = 90;
 type SlotCreativeState = 'pending' | 'filled' | 'empty';
 
 interface AdSlotSize {
@@ -107,7 +112,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       return `${clampedWidth}px`;
     }
 
-    if (this.creativeLayoutSize && this.config.kind === 'interscroller') {
+    if (this.creativeLayoutSize && this.usesMeasuredCreativeLayout()) {
       return `min(${this.creativeLayoutSize.width}px, 100%)`;
     }
 
@@ -126,7 +131,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   get slotHeightStyle(): string | null {
-    if (this.creativeLayoutSize && this.config.kind === 'interscroller') {
+    if (this.creativeLayoutSize && this.usesMeasuredCreativeLayout()) {
       return `${this.creativeLayoutSize.height}px`;
     }
 
@@ -376,7 +381,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private updateCreativeLayoutSize(target: HTMLElement): void {
-    if (this.config.kind !== 'interscroller') {
+    if (!this.usesMeasuredCreativeLayout()) {
       this.creativeLayoutSize = null;
       return;
     }
@@ -600,7 +605,8 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     const availableWidth = this.getAvailableInterscrollerWidth();
     const clampedWidth = availableWidth > 0 ? Math.min(width, availableWidth) : width;
     const scale = width > 0 ? clampedWidth / width : 1;
-    const clampedHeight = Math.max(1, Math.round(height * scale));
+    const scaledHeight = Math.max(1, Math.round(height * scale));
+    const clampedHeight = this.clampMeasuredCreativeHeight(clampedWidth, scaledHeight);
 
     return {
       width: Math.max(1, Math.round(clampedWidth)),
@@ -692,6 +698,10 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     return this.config.kind === 'interscroller';
   }
 
+  private usesMeasuredCreativeLayout(): boolean {
+    return this.config.kind === 'interscroller' || this.config.kind === 'sticky-footer';
+  }
+
   private getPrimarySize(): AdSlotSize | null {
     const match = SIZE_PATTERN.exec(this.activeSizes[0] ?? '');
 
@@ -775,16 +785,28 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     if (
       this.config.kind === 'interscroller'
       && this.viewportWidth > 0
-      && this.viewportWidth <= 899
+      && this.viewportWidth <= MOBILE_VIEWPORT_MAX_WIDTH
       && this.config.mobileSizes?.length
     ) {
       const mobileMaxWidth = this.getAvailableInterscrollerWidth();
       const fittingMobileSizes = this.config.mobileSizes.filter(size => {
         const parsed = this.parseSize(size);
-        return !parsed || parsed.width <= mobileMaxWidth;
+        return !parsed || (
+          parsed.width <= mobileMaxWidth
+          && this.isMobileInterscrollerSizeAllowed(parsed)
+        );
       });
 
-      return fittingMobileSizes.length ? fittingMobileSizes : this.config.mobileSizes;
+      if (fittingMobileSizes.length) {
+        return fittingMobileSizes;
+      }
+
+      const allowedMobileSizes = this.config.mobileSizes.filter(size => {
+        const parsed = this.parseSize(size);
+        return !parsed || this.isMobileInterscrollerSizeAllowed(parsed);
+      });
+
+      return allowedMobileSizes.length ? allowedMobileSizes : this.config.mobileSizes;
     }
 
     return this.config.sizes;
@@ -813,6 +835,35 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       width: Number(match[1]),
       height: Number(match[2]),
     };
+  }
+
+  private isMobileInterscrollerSizeAllowed(size: AdSlotSize): boolean {
+    return size.height <= this.getMaxMobileInterscrollerHeight(size.width);
+  }
+
+  private clampMeasuredCreativeHeight(width: number, height: number): number {
+    if (this.config.kind === 'sticky-footer') {
+      return Math.min(height, this.getStickyFooterMaxHeight());
+    }
+
+    if (this.config.kind === 'interscroller' && this.viewportWidth <= MOBILE_VIEWPORT_MAX_WIDTH) {
+      return Math.min(height, this.getMaxMobileInterscrollerHeight(width));
+    }
+
+    return height;
+  }
+
+  private getMaxMobileInterscrollerHeight(width: number): number {
+    return Math.min(
+      MOBILE_INTERSCROLLER_MAX_HEIGHT,
+      Math.max(100, Math.round(width * MOBILE_INTERSCROLLER_MAX_ASPECT_HEIGHT)),
+    );
+  }
+
+  private getStickyFooterMaxHeight(): number {
+    return this.viewportWidth > 0 && this.viewportWidth <= 720
+      ? MOBILE_STICKY_FOOTER_MAX_HEIGHT
+      : DESKTOP_STICKY_FOOTER_MAX_HEIGHT;
   }
 
   private updateViewportWidth(): void {

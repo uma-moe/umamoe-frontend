@@ -156,8 +156,23 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   }
 
   private initializePageBottomPopup(config: AdRouteConfig): void {
+    const nextBottomPopup = config.bottomPopup;
     this.bottomPopupClosed = false;
-    this.persistentBottomPopupConfig = config.bottomPopup;
+
+    if (!nextBottomPopup) {
+      this.persistentBottomPopupConfig = undefined;
+      return;
+    }
+
+    if (
+      this.persistentBottomPopupConfig
+      && this.persistentBottomPopupConfig.fuseId === nextBottomPopup.fuseId
+      && this.persistentBottomPopupConfig.kind === nextBottomPopup.kind
+    ) {
+      return;
+    }
+
+    this.persistentBottomPopupConfig = nextBottomPopup;
   }
 
   private updateBottomPopupRootState(visible = Boolean(this.persistentBottomPopupConfig && !this.bottomPopupClosed)): void {
@@ -187,7 +202,6 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
   private getPageSwapPreloadFuseIds(config: AdRouteConfig): string[] {
     const ids = [
-      config.bottomPopup?.fuseId,
       this.contentTopAllowed ? config.contentTop?.fuseId : undefined,
       ...this.getLikelyInitialSideRailFuseIds(config),
     ];
