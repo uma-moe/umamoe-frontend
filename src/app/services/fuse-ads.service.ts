@@ -40,9 +40,16 @@ export interface FuseSlotRenderResult {
   slotId: string;
   hasCreative: boolean;
   gptSlotElementId?: string;
+  renderSize?: FuseSlotRenderSize;
+}
+
+export interface FuseSlotRenderSize {
+  width: number;
+  height: number;
 }
 
 interface FuseGptSlotRenderEvent {
+  size?: unknown;
   slot?: {
     getSlotElementId?: () => string;
   };
@@ -51,6 +58,7 @@ interface FuseGptSlotRenderEvent {
 interface FuseSlotRenderEndedEvent {
   slotId: string;
   hasCreative: boolean;
+  size?: unknown;
   gptEvent?: FuseGptSlotRenderEvent;
 }
 
@@ -766,6 +774,7 @@ export class FuseAdsService {
         slotId: event.slotId,
         hasCreative: event.hasCreative,
         gptSlotElementId: this.getGptSlotElementId(event),
+        renderSize: this.getSlotRenderSize(event),
       };
 
       this.debug('Fuse slot render ended', result);
@@ -779,6 +788,43 @@ export class FuseAdsService {
     } catch {
       return undefined;
     }
+  }
+
+  private getSlotRenderSize(event: FuseSlotRenderEndedEvent): FuseSlotRenderSize | undefined {
+    return this.parseRenderSize(event.gptEvent?.size) ?? this.parseRenderSize(event.size) ?? undefined;
+  }
+
+  private parseRenderSize(value: unknown): FuseSlotRenderSize | null {
+    if (Array.isArray(value) && value.length >= 2) {
+      const width = Number(value[0]);
+      const height = Number(value[1]);
+      return Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0
+        ? { width: Math.round(width), height: Math.round(height) }
+        : null;
+    }
+
+    if (typeof value === 'string') {
+      const match = /^(\d+)\s*x\s*(\d+)$/i.exec(value.trim());
+      if (!match) {
+        return null;
+      }
+
+      return {
+        width: Number(match[1]),
+        height: Number(match[2]),
+      };
+    }
+
+    if (value && typeof value === 'object') {
+      const candidate = value as { width?: unknown; height?: unknown };
+      const width = Number(candidate.width);
+      const height = Number(candidate.height);
+      return Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0
+        ? { width: Math.round(width), height: Math.round(height) }
+        : null;
+    }
+
+    return null;
   }
 
   private queuePageInit(blockingFuseIds: string[], reason: string): void {

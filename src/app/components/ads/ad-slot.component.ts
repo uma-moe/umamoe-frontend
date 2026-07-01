@@ -19,7 +19,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { Subscription } from 'rxjs';
 import { AdSlotConfig } from './ad-layout.config';
-import { FuseAdsService, FuseSlotRenderResult } from '../../services/fuse-ads.service';
+import { FuseAdsService, FuseSlotRenderResult, FuseSlotRenderSize } from '../../services/fuse-ads.service';
 
 let adSlotId = 0;
 const CREATIVE_REFRESH_GRACE_MS = 2400;
@@ -78,6 +78,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   private supportFallbackAllowed = false;
   private slotHasRetainedCreative = false;
   private slotHasUnsupportedCreative = false;
+  private slotRenderSize: FuseSlotRenderSize | null = null;
   private emptyCreativePending = false;
   private markupFirstSeenAt: number | null = null;
   private markupGraceTimer: number | null = null;
@@ -280,6 +281,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.slotCreativeState = hasRetainedCreative ? 'filled' : 'pending';
     this.supportFallbackAllowed = false;
     this.slotHasUnsupportedCreative = false;
+    this.slotRenderSize = null;
     this.emptyCreativePending = false;
     this.markupFirstSeenAt = null;
 
@@ -336,7 +338,8 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.prepareIframeSurfaces(target);
     const hasAdMarkup = this.hasAnyAdMarkup(target);
     const hasCurrentCreative = this.hasLikelyCreativeMarkup(target);
-    const hasUnsupportedCreative = !hasCurrentCreative && this.hasUnsupportedCreativeMarkup(target);
+    const hasUnsupportedCreative = (!hasCurrentCreative && this.hasUnsupportedCreativeMarkup(target))
+      || this.hasUnsupportedRenderedSize();
     const hasRetainedCreative = this.hasVisibleRetainedCreative();
     this.slotHasUnsupportedCreative = hasUnsupportedCreative;
     this.updateCreativeLayoutSize(target);
@@ -438,6 +441,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       slotRetainingCreative: this.slotRetainingCreative,
       slotHasRetainedCreative: this.slotHasRetainedCreative,
       slotHasUnsupportedCreative: this.slotHasUnsupportedCreative,
+      slotRenderSize: this.slotRenderSize,
       emptyCreativePending: this.emptyCreativePending,
       markupFirstSeenAt: this.markupFirstSeenAt,
       childCount: target.children.length,
@@ -483,8 +487,10 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       if (result.hasCreative) {
         this.clearEmptyCreativeTimer();
         this.emptyCreativePending = false;
-        this.slotCreativeState = 'filled';
+        this.slotRenderSize = result.renderSize ?? null;
+        this.slotCreativeState = this.hasUnsupportedRenderedSize() ? 'empty' : 'filled';
       } else {
+        this.slotRenderSize = null;
         this.deferEmptyCreativeState(target);
       }
 
@@ -587,12 +593,12 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private hasUnsupportedCreativeMarkup(target: HTMLElement): boolean {
-    if (this.config.kind !== 'interscroller') {
-      return false;
-    }
-
     const visibleCreativeElements = this.getVisibleCreativeElements(target, false);
     return visibleCreativeElements.some(element => !this.isCreativeShapeAllowed(element));
+  }
+
+  private hasUnsupportedRenderedSize(): boolean {
+    return Boolean(this.slotRenderSize && !this.isCreativeSizeAllowedForSlot(this.slotRenderSize));
   }
 
   private hasVisibleRetainedCreative(): boolean {
@@ -749,16 +755,42 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private isCreativeShapeAllowed(element: HTMLElement | SVGElement): boolean {
-    if (this.config.kind !== 'interscroller') {
-      return true;
-    }
-
     const sourceSize = this.getCreativeSourceSize(element);
     if (!sourceSize) {
       return true;
     }
 
-    return this.isInterscrollerSizeAllowed(sourceSize);
+    return this.isCreativeSizeAllowedForSlot(sourceSize);
+  }
+
+  private isCreativeSizeAllowedForSlot(size: AdSlotSize | FuseSlotRenderSize): boolean {
+    if (!this.isSizeAllowedByConfiguredSlot(size)) {
+      return false;
+    }
+
+    if (this.config.kind === 'interscroller') {
+      return this.isInterscrollerSizeAllowed(size);
+    }
+
+    return true;
+  }
+
+  private isSizeAllowedByConfiguredSlot(size: AdSlotSize | FuseSlotRenderSize): boolean {
+    const allowedSizes = this.activeSizes
+      .map(candidate => this.parseSize(candidate))
+      .filter((candidate): candidate is AdSlotSize => Boolean(candidate));
+
+    if (!allowedSizes.length) {
+      return true;
+    }
+
+    return allowedSizes.some(candidate => this.sizesMatch(candidate, size));
+  }
+
+  private sizesMatch(allowed: AdSlotSize, actual: AdSlotSize | FuseSlotRenderSize): boolean {
+    const tolerance = 2;
+    return Math.abs(allowed.width - actual.width) <= tolerance
+      && Math.abs(allowed.height - actual.height) <= tolerance;
   }
 
   private escapeSelectorId(id: string): string {
