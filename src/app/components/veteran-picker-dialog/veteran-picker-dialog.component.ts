@@ -37,7 +37,7 @@ import {
 } from '../../pages/profile/profile-helpers';
 import { CharacterSelectDialogComponent } from '../character-select-dialog/character-select-dialog.component';
 import { RaceWinPickerDialogComponent, RaceWinPickerDialogData } from '../race-results-dialog/race-win-picker-dialog.component';
-import { TreeSlots, SlotName, CandidateScore } from '../../services/affinity.service';
+import { PlannerRaceWins, TreeSlots, SlotName, CandidateScore } from '../../services/affinity.service';
 import { preferRasterAsset } from '../../utils/raster-asset';
 import {
   VeteranPickerFactorColor,
@@ -884,22 +884,24 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     if (!this.targetCharaId || !this.affinityService.isReady) return 0;
     const charaId = record.main_parent_id ? Math.floor(record.main_parent_id / 100) : null;
     if (!charaId) return 0;
-    let total = this.affinityService.getAff2(this.targetCharaId, charaId);
-    const mainWins = record.main_win_saddles ?? [];
-    const parents = [
-      { id: record.parent_left_id, wins: record.left_win_saddles ?? [] },
-      { id: record.parent_right_id, wins: record.right_win_saddles ?? [] },
-    ];
-    for (const p of parents) {
-      if (!p.id) continue;
-      const gpCharaId = Math.floor(p.id / 100);
-      total += this.affinityService.getAff3(this.targetCharaId, charaId, gpCharaId);
-      if (mainWins.length && p.wins.length) {
-        const mainSet = new Set(mainWins);
-        total += p.wins.filter(w => mainSet.has(w)).length;
-      }
-    }
-    return total;
+    const slots: TreeSlots = {
+      target: this.targetCharaId,
+      p1: charaId,
+      p2: null,
+      gp1Left: record.parent_left_id ? Math.floor(record.parent_left_id / 100) : null,
+      gp1Right: record.parent_right_id ? Math.floor(record.parent_right_id / 100) : null,
+      gp2Left: null,
+      gp2Right: null,
+    };
+    const raceWins: PlannerRaceWins = {
+      p1: record.main_win_saddles ?? [],
+      'p1-1': record.left_win_saddles ?? [],
+      'p1-2': record.right_win_saddles ?? [],
+    };
+    return this.affinityService.getTreeSideTotalAffinity(
+      this.affinityService.calculateTreeWithRace(slots, raceWins),
+      'p1',
+    );
   }
 
   getPartnerParentRows(record: PartnerInheritance): ResolvedParent[] {
@@ -1275,22 +1277,24 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     if (!this.targetCharaId || !this.affinityService.isReady) return 0;
     const charaId = record.main_parent_id ? Math.floor(record.main_parent_id / 100) : null;
     if (!charaId) return 0;
-    let total = this.affinityService.getAff2(this.targetCharaId, charaId);
-    const mainWins = record.main_win_saddles ?? [];
-    const parents = [
-      { id: record.parent_left_id, wins: record.left_win_saddles ?? [] },
-      { id: record.parent_right_id, wins: record.right_win_saddles ?? [] },
-    ];
-    for (const p of parents) {
-      if (!p.id) continue;
-      const gpCharaId = Math.floor(p.id / 100);
-      total += this.affinityService.getAff3(this.targetCharaId, charaId, gpCharaId);
-      if (mainWins.length && p.wins.length) {
-        const mainSet = new Set(mainWins);
-        total += p.wins.filter(w => mainSet.has(w)).length;
-      }
-    }
-    return total;
+    const slots: TreeSlots = {
+      target: this.targetCharaId,
+      p1: charaId,
+      p2: null,
+      gp1Left: record.parent_left_id ? Math.floor(record.parent_left_id / 100) : null,
+      gp1Right: record.parent_right_id ? Math.floor(record.parent_right_id / 100) : null,
+      gp2Left: null,
+      gp2Right: null,
+    };
+    const raceWins: PlannerRaceWins = {
+      p1: record.main_win_saddles ?? [],
+      'p1-1': record.left_win_saddles ?? [],
+      'p1-2': record.right_win_saddles ?? [],
+    };
+    return this.affinityService.getTreeSideTotalAffinity(
+      this.affinityService.calculateTreeWithRace(slots, raceWins),
+      'p1',
+    );
   }
 
   getBookmarkParentRows(record: InheritanceRecord): ResolvedParent[] {
@@ -2031,23 +2035,26 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     const vetCharaId = this.getCharaId(vet);
     if (!vetCharaId) return 0;
 
-    let total = this.affinityService.getAff2(this.targetCharaId, vetCharaId);
-    const vetWins = vet.win_saddle_id_array ?? [];
-    const vetWinSet = vetWins.length ? new Set(vetWins) : null;
-
-    const succession = vet.succession_chara_array;
-    if (succession?.length) {
-      for (const sc of succession) {
-        if (sc.position_id !== 10 && sc.position_id !== 20) continue;
-        const gpCharaId = sc.card_id ? Math.floor(sc.card_id / 100) : null;
-        if (!gpCharaId) continue;
-        total += this.affinityService.getAff3(this.targetCharaId, vetCharaId, gpCharaId);
-        const gpWins = sc.win_saddle_id_array ?? [];
-        if (vetWinSet && gpWins.length) {
-          total += gpWins.filter(w => vetWinSet.has(w)).length;
-        }
-      }
-    }
+    const left = vet.succession_chara_array?.find(sc => sc.position_id === 10);
+    const right = vet.succession_chara_array?.find(sc => sc.position_id === 20);
+    const slots: TreeSlots = {
+      target: this.targetCharaId,
+      p1: vetCharaId,
+      p2: null,
+      gp1Left: left?.card_id ? Math.floor(left.card_id / 100) : null,
+      gp1Right: right?.card_id ? Math.floor(right.card_id / 100) : null,
+      gp2Left: null,
+      gp2Right: null,
+    };
+    const raceWins: PlannerRaceWins = {
+      p1: vet.win_saddle_id_array ?? [],
+      'p1-1': left?.win_saddle_id_array ?? [],
+      'p1-2': right?.win_saddle_id_array ?? [],
+    };
+    const total = this.affinityService.getTreeSideTotalAffinity(
+      this.affinityService.calculateTreeWithRace(slots, raceWins),
+      'p1',
+    );
 
     this.affinityCache.set(vet, { targetCharaId: this.targetCharaId, value: total });
     return total;

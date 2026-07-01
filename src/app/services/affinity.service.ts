@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable, ReplaySubject } from 'rxjs';
 import { SparkInfo } from './factor.service';
 import { ResourceDataService } from './resource-data.service';
+import { getRaceSaddleData } from '../data/race-saddle.data';
 
 export interface AffinityData {
   chars: number[];
@@ -45,6 +46,23 @@ export interface TreeAffinityResult {
   total: number;
 }
 
+export interface RaceAffinityBreakdown {
+  parentPair: number;
+  p1Left: number;
+  p1Right: number;
+  p2Left: number;
+  p2Right: number;
+  p1Grandparent: number;
+  p2Grandparent: number;
+  p1Node: number;
+  p2Node: number;
+  total: number;
+}
+
+export interface TreeAffinityWithRaceResult extends TreeAffinityResult {
+  race: RaceAffinityBreakdown;
+}
+
 export type SlotName = keyof TreeSlots;
 
 export interface SparkDisplayMetrics {
@@ -72,6 +90,7 @@ export interface CandidateScore {
 })
 export class AffinityService {
   private static readonly PLANNER_POSITIONS: PlannerSlotPosition[] = ['target', 'p1', 'p2', 'p1-1', 'p1-2', 'p2-1', 'p2-2'];
+  private static readonly G1_RACE_AFFINITY_VALUE = 3;
   private data$ = new ReplaySubject<AffinityData | null>(1);
   private loaded = false;
   private charIndex = new Map<number, number>();
@@ -79,6 +98,8 @@ export class AffinityService {
   private n = 0;
   private aff2: number[] = [];
   private aff3: number[] = [];
+  private g1WinSaddleSource: readonly unknown[] | null = null;
+  private g1WinSaddleIds = new Set<number>();
 
   constructor(private resourceData: ResourceDataService) {}
 
@@ -171,6 +192,21 @@ export class AffinityService {
     };
   }
 
+  calculateTreeWithRace(
+    slots: TreeSlots,
+    raceWinsByPosition: PlannerRaceWins = {},
+  ): TreeAffinityWithRaceResult | null {
+    const result = this.calculateTree(slots);
+    if (!result) return null;
+
+    const race = this.calculateRaceAffinityBreakdown(raceWinsByPosition);
+    return {
+      ...result,
+      race,
+      total: result.relationTotal + race.total,
+    };
+  }
+
   scorePlannerSlot(
     slotPosition: PlannerSlotPosition,
     charaId: number,
@@ -208,21 +244,22 @@ export class AffinityService {
     if (!result) return 0;
 
     const wins = this.buildPlannerTrialRaceWins(slotPosition, raceWinsByPosition);
+    const race = this.calculateRaceAffinityBreakdown(wins);
     switch (slotPosition) {
       case 'target':
-        return result.total + this.getPlannerTotalRaceAffinityFromWins(wins);
+        return result.relationTotal + race.total;
       case 'p1':
-        return result.playerP1.total + this.getPlannerGPParentOverlap('p1', wins);
+        return result.playerP1.total + race.p1Node;
       case 'p2':
-        return result.playerP2.total + this.getPlannerGPParentOverlap('p2', wins);
+        return result.playerP2.total + race.p2Node;
       case 'p1-1':
-        return result.playerP1.tripleLeft + this.getPlannerGPRaceOverlap('p1-1', wins);
+        return result.playerP1.tripleLeft + race.p1Left;
       case 'p1-2':
-        return result.playerP1.tripleRight + this.getPlannerGPRaceOverlap('p1-2', wins);
+        return result.playerP1.tripleRight + race.p1Right;
       case 'p2-1':
-        return result.playerP2.tripleLeft + this.getPlannerGPRaceOverlap('p2-1', wins);
+        return result.playerP2.tripleLeft + race.p2Left;
       case 'p2-2':
-        return result.playerP2.tripleRight + this.getPlannerGPRaceOverlap('p2-2', wins);
+        return result.playerP2.tripleRight + race.p2Right;
     }
   }
 
@@ -230,23 +267,212 @@ export class AffinityService {
     slotPosition: PlannerSlotPosition,
     raceWinsByPosition: PlannerRaceWins = {},
   ): number {
-    const wins = this.normalizePlannerRaceWins(raceWinsByPosition);
-    switch (slotPosition) {
-      case 'target':
-        return this.getPlannerTotalRaceAffinityFromWins(wins);
-      case 'p1':
-      case 'p2':
-        return this.getPlannerGPParentOverlap(slotPosition, wins);
-      case 'p1-1':
-      case 'p1-2':
-      case 'p2-1':
-      case 'p2-2':
-        return this.getPlannerGPRaceOverlap(slotPosition, wins);
-    }
+    return this.getTreeNodeRaceAffinity(
+      { race: this.calculateRaceAffinityBreakdown(raceWinsByPosition) },
+      slotPosition,
+    );
   }
 
   getPlannerTotalRaceAffinity(raceWinsByPosition: PlannerRaceWins = {}): number {
-    return this.getPlannerTotalRaceAffinityFromWins(this.normalizePlannerRaceWins(raceWinsByPosition));
+    return this.calculateRaceAffinityBreakdown(raceWinsByPosition).total;
+  }
+
+  calculateRaceAffinityBreakdown(raceWinsByPosition: PlannerRaceWins = {}): RaceAffinityBreakdown {
+    const wins = this.normalizePlannerRaceWins(raceWinsByPosition);
+    const parentPair = this.getRaceAffinityBonusBetween(wins.p1, wins.p2);
+    const p1Left = this.getRaceAffinityBonusBetween(wins.p1, wins['p1-1']);
+    const p1Right = this.getRaceAffinityBonusBetween(wins.p1, wins['p1-2']);
+    const p2Left = this.getRaceAffinityBonusBetween(wins.p2, wins['p2-1']);
+    const p2Right = this.getRaceAffinityBonusBetween(wins.p2, wins['p2-2']);
+    const p1Grandparent = p1Left + p1Right;
+    const p2Grandparent = p2Left + p2Right;
+
+    return {
+      parentPair,
+      p1Left,
+      p1Right,
+      p2Left,
+      p2Right,
+      p1Grandparent,
+      p2Grandparent,
+      p1Node: parentPair + p1Grandparent,
+      p2Node: parentPair + p2Grandparent,
+      total: parentPair + p1Grandparent + p2Grandparent,
+    };
+  }
+
+  getTreeNodeBaseAffinity(
+    result: TreeAffinityResult | null | undefined,
+    slotPosition: PlannerSlotPosition,
+  ): number | null {
+    if (!result) return null;
+    switch (slotPosition) {
+      case 'target': return result.relationTotal;
+      case 'p1': return result.playerP1.total;
+      case 'p2': return result.playerP2.total;
+      case 'p1-1': return result.playerP1.tripleLeft || null;
+      case 'p1-2': return result.playerP1.tripleRight || null;
+      case 'p2-1': return result.playerP2.tripleLeft || null;
+      case 'p2-2': return result.playerP2.tripleRight || null;
+    }
+  }
+
+  getTreeNodeDirectBaseAffinity(
+    result: TreeAffinityResult | null | undefined,
+    slotPosition: PlannerSlotPosition,
+  ): number | null {
+    if (!result) return null;
+    switch (slotPosition) {
+      case 'target': return result.relationTotal;
+      case 'p1': return result.playerP1.pair || null;
+      case 'p2': return result.playerP2.pair || null;
+      case 'p1-1': return result.playerP1.tripleLeft || null;
+      case 'p1-2': return result.playerP1.tripleRight || null;
+      case 'p2-1': return result.playerP2.tripleLeft || null;
+      case 'p2-2': return result.playerP2.tripleRight || null;
+    }
+  }
+
+  getTreeNodeRaceAffinity(
+    result: Pick<TreeAffinityWithRaceResult, 'race'> | null | undefined,
+    slotPosition: PlannerSlotPosition,
+  ): number {
+    const race = result?.race;
+    if (!race) return 0;
+    switch (slotPosition) {
+      case 'target': return race.total;
+      case 'p1': return race.p1Node;
+      case 'p2': return race.p2Node;
+      case 'p1-1': return race.p1Left;
+      case 'p1-2': return race.p1Right;
+      case 'p2-1': return race.p2Left;
+      case 'p2-2': return race.p2Right;
+    }
+  }
+
+  getTreeNodeTotalAffinity(
+    result: TreeAffinityWithRaceResult | null | undefined,
+    slotPosition: PlannerSlotPosition,
+  ): number | null {
+    const base = this.getTreeNodeBaseAffinity(result, slotPosition);
+    if (base === null) return null;
+    return base + this.getTreeNodeRaceAffinity(result, slotPosition);
+  }
+
+  getTreeSideTotalAffinity(
+    result: TreeAffinityWithRaceResult | null | undefined,
+    parentPos: 'p1' | 'p2',
+  ): number {
+    if (!result) return 0;
+    return parentPos === 'p1'
+      ? result.playerP1.total + result.race.p1Node
+      : result.playerP2.total + result.race.p2Node;
+  }
+
+  getTreeBreedingBaseAffinity(
+    result: TreeAffinityResult | null | undefined,
+    parentPos: 'p1' | 'p2',
+  ): number | null {
+    if (!result) return null;
+    const breeding = parentPos === 'p1' ? result.p1Breeding : result.p2Breeding;
+    return breeding.total || null;
+  }
+
+  getTreeBreedingPairAffinity(
+    result: TreeAffinityResult | null | undefined,
+    gpPos: 'p1-1' | 'p1-2' | 'p2-1' | 'p2-2',
+  ): number | null {
+    if (!result) return null;
+    switch (gpPos) {
+      case 'p1-1': return result.p1Breeding.left || null;
+      case 'p1-2': return result.p1Breeding.right || null;
+      case 'p2-1': return result.p2Breeding.left || null;
+      case 'p2-2': return result.p2Breeding.right || null;
+    }
+  }
+
+  getTreeBreedingTotalAffinity(
+    result: TreeAffinityWithRaceResult | null | undefined,
+    parentPos: 'p1' | 'p2',
+  ): number | null {
+    const base = this.getTreeBreedingBaseAffinity(result, parentPos) ?? 0;
+    const race = parentPos === 'p1'
+      ? result?.race.p1Grandparent ?? 0
+      : result?.race.p2Grandparent ?? 0;
+    const total = base + race;
+    return total > 0 ? total : null;
+  }
+
+  getTreeBreedingPairTotalAffinity(
+    result: TreeAffinityWithRaceResult | null | undefined,
+    gpPos: 'p1-1' | 'p1-2' | 'p2-1' | 'p2-2',
+  ): number | null {
+    const base = this.getTreeBreedingPairAffinity(result, gpPos) ?? 0;
+    const race = this.getTreeNodeRaceAffinity(result, gpPos);
+    const total = base + race;
+    return total > 0 ? total : null;
+  }
+
+  calculateP2SourceAffinity(
+    slots: TreeSlots,
+    raceWinsByPosition: PlannerRaceWins = {},
+    source: 'main' | 'left' | 'right',
+  ): number {
+    const result = this.calculateTreeWithRace(slots, raceWinsByPosition);
+    if (!result) return 0;
+
+    switch (source) {
+      case 'main':
+        return result.playerP2.total + result.race.p2Node + result.legacy;
+      case 'left':
+        return result.playerP2.tripleLeft
+          + result.race.p2Left
+          + (slots.p1 && slots.gp2Left ? this.getAff2(slots.p1, slots.gp2Left) : 0);
+      case 'right':
+        return result.playerP2.tripleRight
+          + result.race.p2Right
+          + (slots.p1 && slots.gp2Right ? this.getAff2(slots.p1, slots.gp2Right) : 0);
+    }
+  }
+
+  countSharedG1RaceWins(
+    primary: readonly number[] | null | undefined,
+    secondary: readonly number[] | null | undefined,
+  ): number {
+    if (!primary?.length || !secondary?.length) return 0;
+
+    const g1Saddles = this.getG1WinSaddleIds();
+    const secondarySet = new Set<number>();
+    for (const value of secondary) {
+      const saddleId = Number(value);
+      if (Number.isFinite(saddleId) && g1Saddles.has(saddleId)) {
+        secondarySet.add(saddleId);
+      }
+    }
+    if (!secondarySet.size) return 0;
+
+    let count = 0;
+    const counted = new Set<number>();
+    for (const value of primary) {
+      const saddleId = Number(value);
+      if (
+        Number.isFinite(saddleId) &&
+        g1Saddles.has(saddleId) &&
+        secondarySet.has(saddleId) &&
+        !counted.has(saddleId)
+      ) {
+        counted.add(saddleId);
+        count++;
+      }
+    }
+    return count;
+  }
+
+  getRaceAffinityBonusBetween(
+    primary: readonly number[] | null | undefined,
+    secondary: readonly number[] | null | undefined,
+  ): number {
+    return this.countSharedG1RaceWins(primary, secondary) * AffinityService.G1_RACE_AFFINITY_VALUE;
   }
 
   private calcBreeding(
@@ -290,37 +516,29 @@ export class AffinityService {
     return wins;
   }
 
-  private overlapCount(a: readonly number[], b: readonly number[]): number {
-    if (!a.length || !b.length) return 0;
-    const bSet = new Set(b);
-    let count = 0;
-    for (const value of a) {
-      if (bSet.has(value)) count++;
+  private getG1WinSaddleIds(): ReadonlySet<number> {
+    const races = getRaceSaddleData().races ?? [];
+    if (this.g1WinSaddleSource === races) {
+      return this.g1WinSaddleIds;
     }
-    return count;
-  }
 
-  private getPlannerGPParentOverlap(
-    parentPos: 'p1' | 'p2',
-    wins: Record<PlannerSlotPosition, number[]>,
-  ): number {
-    const parentWins = wins[parentPos] ?? [];
-    if (!parentWins.length) return 0;
-    return this.overlapCount(parentWins, wins[`${parentPos}-1`])
-      + this.overlapCount(parentWins, wins[`${parentPos}-2`]);
-  }
+    const ids = new Set<number>();
+    for (const race of races as any[]) {
+      if (Number(race?.grade) !== 100) continue;
 
-  private getPlannerGPRaceOverlap(
-    gpPos: 'p1-1' | 'p1-2' | 'p2-1' | 'p2-2',
-    wins: Record<PlannerSlotPosition, number[]>,
-  ): number {
-    const parentPos = gpPos.substring(0, gpPos.lastIndexOf('-')) as 'p1' | 'p2';
-    return this.overlapCount(wins[parentPos] ?? [], wins[gpPos] ?? []);
-  }
+      for (const winSaddle of race?.win_saddles ?? []) {
+        const saddleId = Number(winSaddle?.saddle_id);
+        const type = Number(winSaddle?.win_saddle_type);
+        const label = String(winSaddle?.win_saddle_type_label ?? '').toUpperCase();
+        if (Number.isFinite(saddleId) && (type === 3 || label === 'G1')) {
+          ids.add(saddleId);
+        }
+      }
+    }
 
-  private getPlannerTotalRaceAffinityFromWins(wins: Record<PlannerSlotPosition, number[]>): number {
-    return this.getPlannerGPParentOverlap('p1', wins)
-      + this.getPlannerGPParentOverlap('p2', wins);
+    this.g1WinSaddleSource = races;
+    this.g1WinSaddleIds = ids;
+    return ids;
   }
 
   rankCandidatesForSlot(

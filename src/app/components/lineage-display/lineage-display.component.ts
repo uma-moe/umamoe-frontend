@@ -283,7 +283,7 @@ export class LineageDisplayComponent implements OnInit, OnChanges, OnDestroy {
     if (!this.affinityService.isReady) return;
 
     const slots = this.buildTreeSlots();
-    const result = this.affinityService.calculateTree(slots);
+    const result = this.affinityService.calculateTreeWithRace(slots, this.buildRaceWinsByPosition());
 
     if (!result || !slots.p1) return;
 
@@ -294,20 +294,20 @@ export class LineageDisplayComponent implements OnInit, OnChanges, OnDestroy {
     if (!parentNode) return;
 
     if (slots.target) {
-      parentNode.affinity = result.playerP1.pair;
-      if (grandparentLeft) grandparentLeft.affinity = slots.gp1Left ? result.playerP1.tripleLeft : null;
-      if (grandparentRight) grandparentRight.affinity = slots.gp1Right ? result.playerP1.tripleRight : null;
+      parentNode.affinity = this.affinityService.getTreeNodeDirectBaseAffinity(result, 'p1');
+      if (grandparentLeft) grandparentLeft.affinity = slots.gp1Left ? this.affinityService.getTreeNodeDirectBaseAffinity(result, 'p1-1') : null;
+      if (grandparentRight) grandparentRight.affinity = slots.gp1Right ? this.affinityService.getTreeNodeDirectBaseAffinity(result, 'p1-2') : null;
 
-      this.baseContributions.p1 = result.playerP1.total;
-      this.baseContributions['p1-1'] = slots.gp1Left ? result.playerP1.tripleLeft : null;
-      this.baseContributions['p1-2'] = slots.gp1Right ? result.playerP1.tripleRight : null;
+      this.baseContributions.p1 = this.affinityService.getTreeNodeBaseAffinity(result, 'p1');
+      this.baseContributions['p1-1'] = slots.gp1Left ? this.affinityService.getTreeNodeBaseAffinity(result, 'p1-1') : null;
+      this.baseContributions['p1-2'] = slots.gp1Right ? this.affinityService.getTreeNodeBaseAffinity(result, 'p1-2') : null;
     } else {
-      if (grandparentLeft) grandparentLeft.affinity = slots.gp1Left ? result.p1Breeding.left : null;
-      if (grandparentRight) grandparentRight.affinity = slots.gp1Right ? result.p1Breeding.right : null;
+      if (grandparentLeft) grandparentLeft.affinity = slots.gp1Left ? this.affinityService.getTreeBreedingPairAffinity(result, 'p1-1') : null;
+      if (grandparentRight) grandparentRight.affinity = slots.gp1Right ? this.affinityService.getTreeBreedingPairAffinity(result, 'p1-2') : null;
 
-      this.baseContributions.p1 = result.p1Breeding.total;
-      this.baseContributions['p1-1'] = slots.gp1Left ? result.p1Breeding.left : null;
-      this.baseContributions['p1-2'] = slots.gp1Right ? result.p1Breeding.right : null;
+      this.baseContributions.p1 = this.affinityService.getTreeBreedingBaseAffinity(result, 'p1');
+      this.baseContributions['p1-1'] = slots.gp1Left ? this.affinityService.getTreeBreedingPairAffinity(result, 'p1-1') : null;
+      this.baseContributions['p1-2'] = slots.gp1Right ? this.affinityService.getTreeBreedingPairAffinity(result, 'p1-2') : null;
     }
   }
 

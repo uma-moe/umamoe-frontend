@@ -23,7 +23,7 @@ import { CharacterService } from '../../services/character.service';
 import { ProfileService } from '../../services/profile.service';
 import { AuthService } from '../../services/auth.service';
 import { FactorService, SparkInfo, Factor } from '../../services/factor.service';
-import { AffinityService, TreeSlots, TreeAffinityResult, SparkDisplayMetrics } from '../../services/affinity.service';
+import { AffinityService, PlannerRaceWins, PlannerSlotPosition, TreeSlots, TreeAffinityWithRaceResult, SparkDisplayMetrics } from '../../services/affinity.service';
 import { SKILLS } from '../../data/skills-data';
 import { CHARACTERS } from '../../data/character.data';
 import { environment } from '../../../environments/environment';
@@ -107,7 +107,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   // Affinity
   private affinityRecalc$ = new Subject<void>();
   private queryParamsLoaded = false;
-  affinityResult: TreeAffinityResult | null = null;
+  affinityResult: TreeAffinityWithRaceResult | null = null;
   affinityTotal: number | null = null;
   affinityPlayerBonus: number | null = null;
   affinityLoading = false;
@@ -1280,11 +1280,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     // the highest-affinity option for a slot.
     const affinityTargetIds = this.getAffinityTargetsForPosition(position);
     const excludeIds = this.getExcludeIdsForPosition(position);
-    const raceWinsByPosition: Record<string, number[]> = {};
-    for (const pos of ['target', 'p1', 'p2', 'p1-1', 'p1-2', 'p2-1', 'p2-2']) {
-      const n = this.nodes.get(pos);
-      raceWinsByPosition[pos] = n ? this.getWinSaddles(n) : [];
-    }
+    const raceWinsByPosition = this.buildPlannerRaceWins();
     this.trackPlannerEvent('open_lineage_character_picker', {
       slot_position: position,
       affinity_target_count: affinityTargetIds.length,
@@ -1579,20 +1575,8 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   getNodeAffinity(node: LineageNode): number {
-    if (node.layer === 1) {
-      // Spark proc on a P1/P2 parent uses the FULL player-side affinity
-      // (pair + both triples to grandparents), matching what the header
-      // shows as the side total. node.affinity only holds the pair.
-      const r = this.affinityResult;
-      const sideTotal = r
-        ? (node.position === 'p1' ? r.playerP1.total
-          : node.position === 'p2' ? r.playerP2.total
-          : (node.affinity ?? 0))
-        : (node.affinity ?? 0);
-      return sideTotal + this.getGPParentOverlap(node);
-    }
-    if (node.layer === 2) {
-      return (node.affinity ?? 0) + this.getGPRaceOverlap(node);
+    if (this.isPlannerAffinityPosition(node.position)) {
+      return this.affinityService.getTreeNodeTotalAffinity(this.affinityResult, node.position) ?? (node.affinity ?? 0);
     }
     return node.affinity ?? 0;
   }
@@ -1623,47 +1607,23 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   getGPParentOverlap(parentNode: LineageNode): number {
-    if (parentNode.layer !== 1) return 0;
-    const parentWins = this.getWinSaddles(parentNode);
-    if (!parentWins.length) return 0;
-    const parentSet = new Set(parentWins);
-    let total = 0;
-    const gp1 = this.nodes.get(parentNode.position + '-1');
-    const gp2 = this.nodes.get(parentNode.position + '-2');
-    for (const gp of [gp1, gp2]) {
-      if (!gp || !this.hasContent(gp)) continue;
-      for (const w of this.getWinSaddles(gp)) {
-        if (parentSet.has(w)) total++;
-      }
-    }
-    return total;
-  }
-
-  getGPRaceOverlap(gpNode: LineageNode): number {
-    if (gpNode.layer !== 2) return 0;
-    const parentPos = gpNode.position.substring(0, gpNode.position.lastIndexOf('-'));
-    const parentNode = this.nodes.get(parentPos);
-    if (!parentNode || !this.hasContent(parentNode)) return 0;
-    const parentWins = this.getWinSaddles(parentNode);
-    if (!parentWins.length) return 0;
-    const parentSet = new Set(parentWins);
-    const gpWins = this.getWinSaddles(gpNode);
-    return gpWins.filter(w => parentSet.has(w)).length;
-  }
-
-  getCrossParentRaceOverlap(): number {
-    // Cross-parent race affinity is disabled until the later P1/P2 rework.
+    if (parentNode.position === 'p1') return this.affinityResult?.race.p1Grandparent ?? 0;
+    if (parentNode.position === 'p2') return this.affinityResult?.race.p2Grandparent ?? 0;
     return 0;
   }
 
+  getGPRaceOverlap(gpNode: LineageNode): number {
+    return this.isPlannerAffinityPosition(gpNode.position)
+      ? this.affinityService.getTreeNodeRaceAffinity(this.affinityResult, gpNode.position)
+      : 0;
+  }
+
+  getCrossParentRaceOverlap(): number {
+    return this.affinityResult?.race.parentPair ?? 0;
+  }
+
   getTotalRaceAffinity(): number {
-    let total = 0;
-    const p1 = this.nodes.get('p1');
-    const p2 = this.nodes.get('p2');
-    if (p1 && this.hasContent(p1)) total += this.getGPParentOverlap(p1);
-    if (p2 && this.hasContent(p2)) total += this.getGPParentOverlap(p2);
-    total += this.getCrossParentRaceOverlap();
-    return total;
+    return this.affinityResult?.race.total ?? 0;
   }
 
   openOverlapDialog(node: LineageNode, event: Event): void {
@@ -1699,48 +1659,31 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     };
   }
 
+  private buildPlannerRaceWins(): PlannerRaceWins {
+    const wins: PlannerRaceWins = {};
+    for (const position of ['target', 'p1', 'p2', 'p1-1', 'p1-2', 'p2-1', 'p2-2'] as PlannerSlotPosition[]) {
+      const node = this.nodes.get(position);
+      wins[position] = node ? this.getWinSaddles(node) : [];
+    }
+    return wins;
+  }
+
   private fetchAffinity(): void {
     if (!this.affinityService.isReady) return;
 
-    const slots = this.buildTreeSlots();
-    const { target, p1, p2, gp1Left, gp1Right, gp2Left, gp2Right } = slots;
-
     this.nodes.forEach(n => n.affinity = null);
 
-    const result = this.affinityService.calculateTree(slots);
+    const slots = this.buildTreeSlots();
+    const result = this.affinityService.calculateTreeWithRace(slots, this.buildPlannerRaceWins());
     this.affinityResult = result;
     this.affinityPlayerBonus = result ? result.playerP1.total + result.playerP2.total : null;
 
-    // Per-node: show what each individual node contributes to player affinity
-    if (target && p1) {
-      const n = this.nodes.get('p1');
-      if (n) n.affinity = this.affinityService.getAff2(target, p1);
-    }
-    if (target && p2) {
-      const n = this.nodes.get('p2');
-      if (n) n.affinity = this.affinityService.getAff2(target, p2);
-    }
-    if (target && p1 && gp1Left) {
-      const n = this.nodes.get('p1-1');
-      if (n) n.affinity = this.affinityService.getAff3(target, p1, gp1Left);
-    }
-    if (target && p1 && gp1Right) {
-      const n = this.nodes.get('p1-2');
-      if (n) n.affinity = this.affinityService.getAff3(target, p1, gp1Right);
-    }
-    if (target && p2 && gp2Left) {
-      const n = this.nodes.get('p2-1');
-      if (n) n.affinity = this.affinityService.getAff3(target, p2, gp2Left);
-    }
-    if (target && p2 && gp2Right) {
-      const n = this.nodes.get('p2-2');
-      if (n) n.affinity = this.affinityService.getAff3(target, p2, gp2Right);
+    for (const position of ['p1', 'p2', 'p1-1', 'p1-2', 'p2-1', 'p2-2'] as PlannerSlotPosition[]) {
+      const node = this.nodes.get(position);
+      if (node) node.affinity = this.affinityService.getTreeNodeDirectBaseAffinity(result, position);
     }
 
-    // Compute total including race affinity
-    const baseTotal = result?.total ?? 0;
-    const raceTotal = this.getTotalRaceAffinity();
-    this.affinityTotal = result ? baseTotal + raceTotal : null;
+    this.affinityTotal = result ? result.total : null;
 
     this.cdr.markForCheck();
   }
@@ -1897,17 +1840,11 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   get p1SideTotal(): number {
-    if (!this.affinityResult) return 0;
-    const p1 = this.nodes.get('p1');
-    const gpOverlap = p1 ? this.getGPParentOverlap(p1) : 0;
-    return this.affinityResult.playerP1.total + gpOverlap;
+    return this.affinityService.getTreeSideTotalAffinity(this.affinityResult, 'p1');
   }
 
   get p2SideTotal(): number {
-    if (!this.affinityResult) return 0;
-    const p2 = this.nodes.get('p2');
-    const gpOverlap = p2 ? this.getGPParentOverlap(p2) : 0;
-    return this.affinityResult.playerP2.total + gpOverlap;
+    return this.affinityService.getTreeSideTotalAffinity(this.affinityResult, 'p2');
   }
 
   get sharedAffinity(): number {
@@ -1926,31 +1863,15 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   getNodeContribution(node: LineageNode): number | null {
-    if (!this.affinityResult) return null;
-    const r = this.affinityResult;
-    switch (node.position) {
-      case 'p1': return this.p1SideTotal;
-      case 'p2': return this.p2SideTotal;
-      case 'p1-1': return (r.playerP1.tripleLeft + this.getGPRaceOverlap(node)) || null;
-      case 'p1-2': return (r.playerP1.tripleRight + this.getGPRaceOverlap(node)) || null;
-      case 'p2-1': return (r.playerP2.tripleLeft + this.getGPRaceOverlap(node)) || null;
-      case 'p2-2': return (r.playerP2.tripleRight + this.getGPRaceOverlap(node)) || null;
-      default: return null;
-    }
+    return this.isPlannerAffinityPosition(node.position)
+      ? this.affinityService.getTreeNodeTotalAffinity(this.affinityResult, node.position)
+      : null;
   }
 
   getBaseContribution(node: LineageNode): number | null {
-    if (!this.affinityResult) return null;
-    const r = this.affinityResult;
-    switch (node.position) {
-      case 'p1': return r.playerP1.total;
-      case 'p2': return r.playerP2.total;
-      case 'p1-1': return r.playerP1.tripleLeft || null;
-      case 'p1-2': return r.playerP1.tripleRight || null;
-      case 'p2-1': return r.playerP2.tripleLeft || null;
-      case 'p2-2': return r.playerP2.tripleRight || null;
-      default: return null;
-    }
+    return this.isPlannerAffinityPosition(node.position)
+      ? this.affinityService.getTreeNodeBaseAffinity(this.affinityResult, node.position)
+      : null;
   }
 
   /** Combined display total: base affinity + race overlap (used in node chip). */
@@ -1971,13 +1892,19 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   getNodeRaceAffinity(node: LineageNode): number {
-    if (node.layer === 1) {
-      return this.getGPParentOverlap(node);
-    }
-    if (node.layer === 2) {
-      return this.getGPRaceOverlap(node);
-    }
-    return 0;
+    return this.isPlannerAffinityPosition(node.position)
+      ? this.affinityService.getTreeNodeRaceAffinity(this.affinityResult, node.position)
+      : 0;
+  }
+
+  private isPlannerAffinityPosition(position: string): position is PlannerSlotPosition {
+    return position === 'target'
+      || position === 'p1'
+      || position === 'p2'
+      || position === 'p1-1'
+      || position === 'p1-2'
+      || position === 'p2-1'
+      || position === 'p2-2';
   }
 
   getAffinitySymbol(value: number): string {

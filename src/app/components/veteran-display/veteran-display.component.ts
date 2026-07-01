@@ -9,7 +9,7 @@ import { VeteranMember } from '../../models/profile.model';
 import { Character } from '../../models/character.model';
 import { CHARACTERS } from '../../data/character.data';
 import { FactorService } from '../../services/factor.service';
-import { AffinityService } from '../../services/affinity.service';
+import { AffinityService, PlannerRaceWins, PlannerSlotPosition, TreeSlots } from '../../services/affinity.service';
 import { getCharacterName, getStarDisplay } from '../../pages/profile/profile-helpers';
 import { Subscription } from 'rxjs';
 
@@ -111,16 +111,30 @@ export class VeteranDisplayComponent implements OnChanges, OnInit, OnDestroy {
 
   private computeAffinity(): void {
     const vetCharaId = this.veteran ? this.getCharaId(this.veteran) : null;
-    const vetWins = new Set(this.veteran?.win_saddle_id_array ?? []);
     if (this.targetCharaId && vetCharaId && this.affinityService.isReady && this.parents.length) {
-      const pair = this.affinityService.getAff2(this.targetCharaId, vetCharaId);
-      for (const p of this.parents) {
-        p.affinity = p.charaId
-          ? this.affinityService.getAff3(this.targetCharaId, vetCharaId, p.charaId)
-          : 0;
-        p.raceAffinity = vetWins.size ? p.winSaddles.filter(w => vetWins.has(w)).length : 0;
+      const slots: TreeSlots = {
+        target: this.targetCharaId,
+        p1: vetCharaId,
+        p2: null,
+        gp1Left: this.parents[0]?.charaId ?? null,
+        gp1Right: this.parents[1]?.charaId ?? null,
+        gp2Left: null,
+        gp2Right: null,
+      };
+      const raceWins: PlannerRaceWins = {
+        p1: this.veteran?.win_saddle_id_array ?? [],
+        'p1-1': this.parents[0]?.winSaddles ?? [],
+        'p1-2': this.parents[1]?.winSaddles ?? [],
+      };
+      const result = this.affinityService.calculateTreeWithRace(slots, raceWins);
+      const positions: PlannerSlotPosition[] = ['p1-1', 'p1-2'];
+      for (let i = 0; i < this.parents.length; i++) {
+        const position = positions[i];
+        const p = this.parents[i];
+        p.affinity = position ? this.affinityService.getTreeNodeDirectBaseAffinity(result, position) ?? 0 : 0;
+        p.raceAffinity = position ? this.affinityService.getTreeNodeRaceAffinity(result, position) : 0;
       }
-      this.affinity = pair + this.parents.reduce((sum, p) => sum + p.affinity + p.raceAffinity, 0);
+      this.affinity = this.affinityService.getTreeSideTotalAffinity(result, 'p1');
     } else {
       for (const p of this.parents) { p.affinity = 0; p.raceAffinity = 0; }
       this.affinity = 0;

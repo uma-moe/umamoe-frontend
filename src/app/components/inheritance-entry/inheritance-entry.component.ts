@@ -11,7 +11,7 @@ import { InheritanceRecord } from '../../models/inheritance.model';
 import type { VeteranMember } from '../../models/profile.model';
 import type { TreeNode, UnifiedSearchParams } from '../database-filter/database-filter.component';
 import { FactorService, SparkInfo } from '../../services/factor.service';
-import { AffinityService, SparkDisplayMetrics, TreeAffinityResult, TreeSlots } from '../../services/affinity.service';
+import { AffinityService, PlannerRaceWins, SparkDisplayMetrics, TreeAffinityWithRaceResult, TreeSlots } from '../../services/affinity.service';
 import { AppVersionService } from '../../services/app-version.service';
 import { AuthService } from '../../services/auth.service';
 import { BookmarkService } from '../../services/bookmark.service';
@@ -123,8 +123,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     private readonly uiLocale = Intl.NumberFormat().resolvedOptions().locale;
     private readonly twoDecimalFormatOptions: Intl.NumberFormatOptions = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
     private readonly numberFormatterCache = new Map<string, Intl.NumberFormat>();
-    private readonly sharedWinsCache = new WeakMap<readonly number[], WeakMap<readonly number[], number>>();
-    private readonly treeAffinityCache = new Map<string, TreeAffinityResult | null>();
+    private readonly treeAffinityCache = new Map<string, TreeAffinityWithRaceResult | null>();
     private readonly emptyNumberArray: number[] = [];
     private readonly singleSparkArrayCache = new Map<number, number[]>();
     private readonly mergedSparkCache = new Map<string, CombinedSparkInfo[]>();
@@ -870,25 +869,6 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         return parentId >= 10000 ? Math.floor(parentId / 100) : parentId;
     }
 
-    private countSharedWins(
-        primary: readonly number[] | null | undefined,
-        secondary: readonly number[] | null | undefined,
-    ): number {
-        if (!primary?.length || !secondary?.length) return 0;
-        let secondaryCache = this.sharedWinsCache.get(primary);
-        const cachedCount = secondaryCache?.get(secondary);
-        if (cachedCount !== undefined) return cachedCount;
-
-        const secondarySet = new Set(secondary);
-        const count = primary.filter(w => secondarySet.has(w)).length;
-        if (!secondaryCache) {
-            secondaryCache = new WeakMap<readonly number[], number>();
-            this.sharedWinsCache.set(primary, secondaryCache);
-        }
-        secondaryCache.set(secondary, count);
-        return count;
-    }
-
     getMainCharaId(): number | null {
         return this.getParentCharaId(this.record.main_parent_id);
     }
@@ -952,7 +932,18 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         };
     }
 
-    private getTreeAffinity(includeP2: boolean): TreeAffinityResult | null {
+    private buildPlannerRaceWins(includeP2: boolean): PlannerRaceWins {
+        return {
+            p1: this.record.main_win_saddles ?? [],
+            p2: includeP2 ? this.p2WinSaddleIds ?? [] : [],
+            'p1-1': this.record.left_win_saddles ?? [],
+            'p1-2': this.record.right_win_saddles ?? [],
+            'p2-1': includeP2 ? this.gp2LeftWinSaddleIds ?? [] : [],
+            'p2-2': includeP2 ? this.gp2RightWinSaddleIds ?? [] : [],
+        };
+    }
+
+    private getTreeAffinity(includeP2: boolean): TreeAffinityWithRaceResult | null {
         if (!this.affinityService.isReady) return null;
         const slots = this.buildTreeSlots(includeP2);
         const cacheKey = this.getTreeAffinityCacheKey(includeP2, slots);
@@ -960,7 +951,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
             return this.treeAffinityCache.get(cacheKey) ?? null;
         }
 
-        const result = this.affinityService.calculateTree(slots);
+        const result = this.affinityService.calculateTreeWithRace(slots, this.buildPlannerRaceWins(includeP2));
         this.treeAffinityCache.set(cacheKey, result);
         return result;
     }
@@ -975,6 +966,12 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
             slots.gp1Right ?? '',
             slots.gp2Left ?? '',
             slots.gp2Right ?? '',
+            (this.record.main_win_saddles ?? []).join(','),
+            (this.record.left_win_saddles ?? []).join(','),
+            (this.record.right_win_saddles ?? []).join(','),
+            includeP2 ? (this.p2WinSaddleIds ?? []).join(',') : '',
+            includeP2 ? (this.gp2LeftWinSaddleIds ?? []).join(',') : '',
+            includeP2 ? (this.gp2RightWinSaddleIds ?? []).join(',') : '',
         ].join('|');
     }
 
@@ -1004,10 +1001,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
             return value;
         }
 
-        // Shared tree affinity handles the base aff2/aff3 math. Race overlap is
-        // still local, and when a selected P2 legacy is present we need both the
-        // P1-side and P2-side parent/GP race wins on top of that base total.
-        value = result.relationTotal + this.getMainRaceCount() + this.getP2RaceCount();
+        value = result.total;
         this.recordTotalAffinityCacheKey = cacheKey;
         this.recordTotalAffinityCacheValue = value;
         return value;
@@ -1041,21 +1035,16 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     }
 
     getParentRaceAffinity(parent: 'main' | 'right'): number {
-        const mainSaddles = this.record.main_win_saddles ?? [];
         if (parent === 'main') {
-            const leftSaddles = new Set(this.record.left_win_saddles ?? []);
-            const rightSaddles = new Set(this.record.right_win_saddles ?? []);
-            return mainSaddles.filter(w => leftSaddles.has(w)).length
-                 + mainSaddles.filter(w => rightSaddles.has(w)).length;
+            return this.getTreeAffinity(this.hasP2Context())?.race.p1Node ?? 0;
         } else {
-            const rightSaddles = this.record.right_win_saddles ?? [];
             return 0;
         }
     }
 
     getMainBaseAffinity(): number | null {
         if (!this.targetCharaId || !this.getMainCharaId()) return null;
-        return this.getTreeAffinity(false)?.playerP1.total ?? null;
+        return this.affinityService.getTreeNodeBaseAffinity(this.getTreeAffinity(false), 'p1');
     }
 
     /**
@@ -1064,10 +1053,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     getMainBreedingBaseAffinity(): number | null {
         const mainId = this.getMainCharaId();
         if (!this.affinityService.isReady || !mainId) return null;
-        const base = this.getTreeAffinity(false)?.p1Breeding.total ?? 0;
-        const race = this.getMainRaceCount();
-        const total = base + race;
-        return total > 0 ? total : null;
+        return this.affinityService.getTreeBreedingTotalAffinity(this.getTreeAffinity(false), 'p1');
     }
 
     /**
@@ -1076,12 +1062,10 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     getMainBreedingPair(side: 'left' | 'right'): number | null {
         const mainId = this.getMainCharaId();
         if (!this.affinityService.isReady || !mainId) return null;
-        const result = this.getTreeAffinity(false);
-        if (!result) return null;
-        const base = side === 'left' ? result.p1Breeding.left : result.p1Breeding.right;
-        const race = this.getGrandparentRaceCount(side);
-        const total = base + race;
-        return total > 0 ? total : null;
+        return this.affinityService.getTreeBreedingPairTotalAffinity(
+            this.getTreeAffinity(false),
+            side === 'left' ? 'p1-1' : 'p1-2',
+        );
     }
 
     /** Not used — kept for safety. */
@@ -1091,7 +1075,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         const mainId = this.getMainCharaId();
         if (!this.affinityService.isReady || !mainId) return '';
 
-        const base = this.getTreeAffinity(false)?.p1Breeding.total ?? 0;
+        const base = this.affinityService.getTreeBreedingBaseAffinity(this.getTreeAffinity(false), 'p1') ?? 0;
         const race = this.getMainRaceCount();
 
         if (base && race) return `Base: ${base} + Race: ${race}`;
@@ -1102,9 +1086,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     getMainBreedingPairTooltip(side: 'left' | 'right'): string {
         if (!this.affinityService.isReady || !this.getMainCharaId()) return '';
         const result = this.getTreeAffinity(false);
-        if (!result) return '';
-
-        const base = side === 'left' ? result.p1Breeding.left : result.p1Breeding.right;
+        const base = this.affinityService.getTreeBreedingPairAffinity(result, side === 'left' ? 'p1-1' : 'p1-2') ?? 0;
         const race = this.getGrandparentRaceCount(side);
 
         if (base && race) return `Base: ${base} + Race: ${race}`;
@@ -1113,19 +1095,18 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     }
 
     getMainRaceCount(): number {
-           return this.countSharedWins(this.record.main_win_saddles, this.record.left_win_saddles)
-               + this.countSharedWins(this.record.main_win_saddles, this.record.right_win_saddles);
+        return this.getTreeAffinity(false)?.race.p1Grandparent ?? 0;
     }
 
     getMainTotalAffinity(): number | null {
         const base = this.getMainBaseAffinity();
         if (base === null) return null;
-        return base + this.getMainRaceCount();
+        return this.affinityService.getTreeNodeTotalAffinity(this.getTreeAffinity(this.hasP2Context()), 'p1');
     }
 
     getMainAffinityTooltip(): string {
         const base = this.getMainBaseAffinity();
-        const race = this.getMainRaceCount();
+        const race = this.getTreeAffinity(this.hasP2Context())?.race.p1Node ?? 0;
         const parts: string[] = [];
         if (base !== null) parts.push(`Base: ${base}`);
         if (race) parts.push(`Race: ${race}`);
@@ -1134,28 +1115,24 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
 
     getGrandparentBaseAffinity(side: 'left' | 'right'): number | null {
         if (!this.targetCharaId || !this.getMainCharaId()) return null;
-        const result = this.getTreeAffinity(false);
-        if (!result) return null;
-        return side === 'left' ? result.playerP1.tripleLeft : result.playerP1.tripleRight;
+        return this.affinityService.getTreeNodeBaseAffinity(
+            this.getTreeAffinity(false),
+            side === 'left' ? 'p1-1' : 'p1-2',
+        );
     }
 
     getGrandparentRaceCount(side: 'left' | 'right'): number {
-        return this.countSharedWins(
-            this.record.main_win_saddles,
-            side === 'left' ? this.record.left_win_saddles : this.record.right_win_saddles,
-        );
+        const race = this.getTreeAffinity(false)?.race;
+        return side === 'left' ? race?.p1Left ?? 0 : race?.p1Right ?? 0;
     }
 
     getP2RaceCount(): number {
-        return this.countSharedWins(this.p2WinSaddleIds, this.gp2LeftWinSaddleIds)
-             + this.countSharedWins(this.p2WinSaddleIds, this.gp2RightWinSaddleIds);
+        return this.getTreeAffinity(true)?.race.p2Grandparent ?? 0;
     }
 
     getP2GrandparentRaceCount(side: 'left' | 'right'): number {
-        return this.countSharedWins(
-            this.p2WinSaddleIds,
-            side === 'left' ? this.gp2LeftWinSaddleIds : this.gp2RightWinSaddleIds,
-        );
+        const race = this.getTreeAffinity(true)?.race;
+        return side === 'left' ? race?.p2Left ?? 0 : race?.p2Right ?? 0;
     }
 
     getGrandparentTotalAffinity(side: 'left' | 'right'): number | null {
@@ -1180,14 +1157,12 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     }
 
     getCrossParentRaceAffinity(): number {
-        const mainSaddles = this.record.main_win_saddles ?? [];
-        const rightSaddles = new Set(this.record.right_win_saddles ?? []);
-        return mainSaddles.filter(w => rightSaddles.has(w)).length;
+        return this.getTreeAffinity(true)?.race.parentPair ?? 0;
     }
 
     getP2BaseAffinity(): number {
         if (!this.targetCharaId || !this.affinityService.isReady || !this.p2CharaId) return 0;
-        return this.getTreeAffinity(true)?.playerP2.total ?? 0;
+        return this.affinityService.getTreeNodeBaseAffinity(this.getTreeAffinity(true), 'p2') ?? 0;
     }
 
     /**
@@ -1210,35 +1185,11 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
      */
     getP2AffinityForSource(source: 'main' | 'left' | 'right'): number {
         if (!this.affinityService.isReady) return 0;
-        let affinity = 0;
-        const mergedTree = this.getTreeAffinity(true);
-
-        // 1. Target-side contribution
-        if (this.targetCharaId && this.p2CharaId && mergedTree) {
-            if (source === 'main') {
-                affinity += mergedTree.playerP2.total;
-            } else {
-                affinity += source === 'left' ? mergedTree.playerP2.tripleLeft : mergedTree.playerP2.tripleRight;
-            }
-        }
-
-        // 2. Local race-overlap contribution on the selected P2 side.
-        affinity += source === 'main'
-            ? this.getP2RaceCount()
-            : this.getP2GrandparentRaceCount(source);
-
-        // 3. Legacy contribution (P1 main horse vs P2 node)
-        const p1MainId = this.getMainCharaId();
-        if (p1MainId) {
-            if (source === 'main') {
-                affinity += mergedTree?.legacy ?? 0;
-            } else {
-                const gpId = source === 'left' ? this.gp2LeftCharaId : this.gp2RightCharaId;
-                if (gpId) {
-                    affinity += this.affinityService.getAff2(p1MainId, gpId);
-                }
-            }
-        }
+        const affinity = this.affinityService.calculateP2SourceAffinity(
+            this.buildTreeSlots(true),
+            this.buildPlannerRaceWins(true),
+            source,
+        );
 
         // 4. Fallback: if we couldn't compute anything direct (missing IDs),
         //    use the server-side relation total so P2 sparks at least reflect
@@ -1257,7 +1208,11 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     }
 
     getP2TotalAffinity(): number {
-        return this.getP2BaseAffinity() + this.getP2RaceCount() + this.getLegacyAffinity();
+        return this.affinityService.calculateP2SourceAffinity(
+            this.buildTreeSlots(true),
+            this.buildPlannerRaceWins(true),
+            'main',
+        );
     }
 
     getMergedAffinity(): number {
