@@ -1,5 +1,6 @@
 import {
   AfterViewInit,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   EventEmitter,
@@ -73,12 +74,15 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   private markupGraceTimer: number | null = null;
   private watchSlotQueued = false;
   private preserveQueuedCreative = false;
+  private containerInlineWidth = 0;
+  private containerResizeObserver: ResizeObserver | null = null;
   private viewportWidth = 0;
   private observedTarget?: HTMLElement;
 
   constructor(
     private fuseAdsService: FuseAdsService,
     private hostElement: ElementRef<HTMLElement>,
+    private changeDetector: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: Object,
   ) {
     this.updateViewportWidth();
@@ -102,6 +106,11 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       return `${clampedWidth}px`;
     }
 
+    const layoutSize = this.getInterscrollerLayoutSize();
+    if (layoutSize) {
+      return `min(${layoutSize.width}px, 100%)`;
+    }
+
     const size = this.getPrimarySize();
 
     if (!size || !this.usesConfigDrivenSize()) {
@@ -112,6 +121,11 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   get slotHeightStyle(): string | null {
+    const layoutSize = this.getInterscrollerLayoutSize();
+    if (layoutSize) {
+      return `${layoutSize.height}px`;
+    }
+
     const size = this.getPrimarySize();
 
     if (!size || !this.usesConfigDrivenSize()) {
@@ -172,6 +186,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   ngAfterViewInit(): void {
+    this.observeContainerInlineWidth();
     this.scheduleWatchSlot(false);
   }
 
@@ -187,12 +202,15 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.storeCreativeForHandoff();
+    this.containerResizeObserver?.disconnect();
+    this.containerResizeObserver = null;
     this.clearWatchers();
   }
 
   @HostListener('window:resize')
   onWindowResize(): void {
     this.updateViewportWidth();
+    this.updateContainerInlineWidth();
 
     if (this.observedTarget) {
       this.updateCreativeCloseOffset(this.observedTarget);
@@ -629,6 +647,32 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     }, null);
   }
 
+  private getInterscrollerLayoutSize(): AdSlotSize | null {
+    if (this.config.kind !== 'interscroller') {
+      return null;
+    }
+
+    const parsedSizes = this.activeSizes
+      .map(size => this.parseSize(size))
+      .filter((size): size is AdSlotSize => Boolean(size));
+
+    if (!parsedSizes.length) {
+      return null;
+    }
+
+    const availableWidth = this.getAvailableInterscrollerWidth() || Number.POSITIVE_INFINITY;
+    const fittingSizes = parsedSizes.filter(size => size.width <= availableWidth);
+    const candidates = fittingSizes.length ? fittingSizes : parsedSizes;
+
+    return candidates.reduce((largest, size) => {
+      if (size.height !== largest.height) {
+        return size.height > largest.height ? size : largest;
+      }
+
+      return size.width > largest.width ? size : largest;
+    });
+  }
+
   private get activeSizes(): string[] {
     const maxWidth = Math.max(0, this.maxWidth);
 
@@ -664,10 +708,28 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       && this.viewportWidth <= 899
       && this.config.mobileSizes?.length
     ) {
-      return this.config.mobileSizes;
+      const mobileMaxWidth = this.getAvailableInterscrollerWidth();
+      const fittingMobileSizes = this.config.mobileSizes.filter(size => {
+        const parsed = this.parseSize(size);
+        return !parsed || parsed.width <= mobileMaxWidth;
+      });
+
+      return fittingMobileSizes.length ? fittingMobileSizes : this.config.mobileSizes;
     }
 
     return this.config.sizes;
+  }
+
+  private getAvailableInterscrollerWidth(): number {
+    const measuredWidth = this.containerInlineWidth > 0
+      ? this.containerInlineWidth
+      : this.viewportWidth;
+
+    if (this.viewportWidth <= 340 && measuredWidth >= 300) {
+      return 300;
+    }
+
+    return Math.max(0, Math.floor(measuredWidth));
   }
 
   private parseSize(size: string): AdSlotSize | null {
@@ -690,6 +752,45 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     }
 
     this.viewportWidth = window.innerWidth;
+  }
+
+  private observeContainerInlineWidth(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.updateContainerInlineWidth();
+
+    const container = this.hostElement.nativeElement.parentElement;
+    if (!container || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    this.containerResizeObserver = new ResizeObserver(() => {
+      const previousWidth = this.containerInlineWidth;
+      this.updateContainerInlineWidth();
+
+      if (previousWidth === this.containerInlineWidth) {
+        return;
+      }
+
+      this.changeDetector.markForCheck();
+      this.scheduleWatchSlot(true);
+    });
+    this.containerResizeObserver.observe(container);
+  }
+
+  private updateContainerInlineWidth(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.containerInlineWidth = 0;
+      return;
+    }
+
+    const container = this.hostElement.nativeElement.parentElement;
+    const rect = container?.getBoundingClientRect();
+    this.containerInlineWidth = rect?.width && Number.isFinite(rect.width)
+      ? Math.max(0, Math.floor(rect.width))
+      : 0;
   }
 
   private clearWatchers(): void {

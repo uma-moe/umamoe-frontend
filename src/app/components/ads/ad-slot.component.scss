@@ -654,14 +654,14 @@
 
   .ad-slot--sticky-footer {
     --ad-slot-width: calc(100vw - 0.75rem);
-    --ad-slot-height: 42px;
+    --ad-slot-height: 50px;
     --ad-close-size: 24px;
     --ad-close-offset: 0.22rem;
     --ad-control-reserve: 5.35rem;
   }
 
   .ad-slot--interscroller {
-    --ad-slot-width: min(320px, calc(100% - 4px), calc(100vw - 4px));
+    --ad-slot-width: min(320px, 100%);
     --ad-slot-height: 100px;
   }
 

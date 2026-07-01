@@ -38,7 +38,7 @@ const SIDE_RAIL_DEFAULT_ANCHOR_MAX_WIDTH = 1536;
 const CONTENT_TOP_SIZES = ['1200x90', '970x90', '728x90', '468x90'];
 const IN_CONTENT_SIZES = ['970x90', '728x90', '468x90', '468x60', '320x100', '300x100', '320x50', '300x50'];
 const MOBILE_INTERSCROLLER_SIZE_GROUPS = [
-  ['320x50'],
+  ['320x50', '300x50'],
   ['300x250', '250x250', '300x300'],
   ['300x600', '160x600', '120x600'],
   ['300x300', '300x250', '250x250', '320x50'],
@@ -152,8 +152,6 @@ export function getAdRouteConfig(url: string): AdRouteConfig {
     return sideRailPage('database', 'database', {
       anchorSelectors: ['.inheritance-database .content-container', '.inheritance-database .header-content'],
       sideRailAnchorMaxWidth: 2048,
-      sideRailMaxWidth: 160,
-      sideRailSizes: ['160x600', '120x600'],
     });
   }
 
@@ -188,6 +186,12 @@ export function getAdRouteConfig(url: string): AdRouteConfig {
   if (path.startsWith('/tools/statistics')) {
     return sideRailPage('statistics', 'statistics', {
       anchorSelectors: ['.statistics-new .main-layout', '.statistics-new .hero-content'],
+      preferredSideRail: 'right',
+      reserveLeftRail: false,
+      sideRailMaxWidth: 160,
+      sideRailOverlay: true,
+      sideRailSizes: ['160x600', '120x600'],
+      singleSideRailMaxWidth: 9999,
     });
   }
 
