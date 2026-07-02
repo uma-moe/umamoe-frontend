@@ -22,13 +22,10 @@ const DEFAULT_SIDE_RAIL_ANCHOR_SELECTORS = [
 ];
 const SIDE_RAIL_COMPACT_WIDTH = 120;
 const SIDE_RAIL_WIDE_WIDTH = 160;
-const SIDE_RAIL_LARGE_WIDTH = 300;
 const SIDE_RAIL_EDGE_GAP = 16;
 const SIDE_RAIL_CONTENT_GAP = 16;
 const SINGLE_SIDE_RAIL_MAX_WIDTH = 1535;
 const LEFT_RAIL_RESERVE_MAX_WIDTH = 9999;
-const EXPANDED_RESERVED_RAIL_MIN_WIDTH = 1600;
-const LARGE_RESERVED_RAIL_MIN_WIDTH = 1320;
 const CONTENT_TOP_MIN_WIDTH = 900;
 const CONTENT_TOP_MAX_WIDTH = DEFAULT_SIDE_RAIL_MIN_WIDTH - 1;
 const SIDE_RAIL_MAX_HEIGHT = 600;
@@ -502,10 +499,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   private getReservedSideRailWidth(viewportWidth: number): number {
     const preferredWidth = this.getSideRailWidth(viewportWidth);
     const maxWidth = this.config.sideRailMaxWidth;
-    const configuredWidths = this.getConfiguredSideRailWidths(
-      viewportWidth,
-      viewportWidth >= LARGE_RESERVED_RAIL_MIN_WIDTH,
-    );
+    const configuredWidths = this.getConfiguredSideRailWidths();
     const widths = configuredWidths.length
       ? configuredWidths
       : [
@@ -524,30 +518,27 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     const preferredWidth = this.getSideRailWidth(viewportWidth);
     const widths = this.config.sideRailOverlay
       ? [SIDE_RAIL_WIDE_WIDTH, SIDE_RAIL_COMPACT_WIDTH]
-      : [SIDE_RAIL_LARGE_WIDTH, preferredWidth, SIDE_RAIL_WIDE_WIDTH, SIDE_RAIL_COMPACT_WIDTH];
+      : [preferredWidth, SIDE_RAIL_WIDE_WIDTH, SIDE_RAIL_COMPACT_WIDTH];
     const maxWidth = this.config.sideRailMaxWidth;
-    const configuredWidths = this.getConfiguredSideRailWidths(viewportWidth);
+    const configuredWidths = this.getConfiguredSideRailWidths();
     const preferredOrder = configuredWidths.length ? configuredWidths : widths;
 
     return [...new Set(preferredOrder)]
       .filter(width => !maxWidth || width <= maxWidth);
   }
 
-  private getConfiguredSideRailWidths(viewportWidth: number, forceExpandedSizes = false): number[] {
+  private getConfiguredSideRailWidths(): number[] {
     const sizes = [
       ...(this.config.sideRails?.left.sizes ?? []),
       ...(this.config.sideRails?.right.sizes ?? []),
     ];
-    const allowExpandedRailSizes = forceExpandedSizes
-      || this.config.sideRailOverlay === true
-      || viewportWidth >= EXPANDED_RESERVED_RAIL_MIN_WIDTH;
 
     const widths = sizes
       .map(size => /^(\d+)x\d+$/.exec(size)?.[1])
       .filter((width): width is string => Boolean(width))
       .map(width => Number(width))
       .filter(width => Number.isFinite(width) && width > 0)
-      .filter(width => allowExpandedRailSizes || width <= SIDE_RAIL_WIDE_WIDTH)
+      .filter(width => width <= SIDE_RAIL_WIDE_WIDTH)
       .sort((a, b) => b - a);
 
     return [...new Set(widths)];

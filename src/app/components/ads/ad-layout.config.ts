@@ -33,7 +33,6 @@ export interface AdRouteConfig {
 
 const BOTTOM_POPUP_SIZES = ['1200x90', '970x90', '728x90', '468x90'];
 const SIDE_RAIL_SIZES = ['160x600', '120x600'];
-const EXPANDED_SIDE_RAIL_SIZES = ['300x600', '300x300', '300x250', '250x250', ...SIDE_RAIL_SIZES];
 const SIDE_RAIL_DEFAULT_ANCHOR_MAX_WIDTH = 1536;
 const CONTENT_TOP_SIZES = ['1200x90', '970x90', '728x90', '468x90'];
 const IN_CONTENT_SIZES = ['970x90', '728x90', '468x90', '468x60', '320x100', '300x100', '320x50', '300x50'];
@@ -92,7 +91,6 @@ interface SideRailPageOptions {
   sideRailAnchorMaxWidth?: number;
   sideRailMaxWidth?: number;
   sideRailSizes?: string[];
-  expandedSideRailSizes?: boolean;
   sideRailOverlay?: boolean;
   sideRailMinWidth?: number;
   singleSideRailMaxWidth?: number;
@@ -151,6 +149,7 @@ export function getAdRouteConfig(url: string): AdRouteConfig {
   if (path.startsWith('/database')) {
     return sideRailPage('database', 'database', {
       anchorSelectors: ['.inheritance-database .content-container', '.inheritance-database .header-content'],
+      inContent: getMobileRailSlots('database', 'database', 8),
       sideRailAnchorMaxWidth: 2048,
     });
   }
@@ -244,11 +243,11 @@ function sideRailPage(surface: string, label: string, options: SideRailPageOptio
     sideRails: {
       left: {
         ...sideSlot(`${surface}_sticky_vrec_left`, `${label} left rail`),
-        sizes: options.sideRailSizes ?? (options.expandedSideRailSizes === false ? SIDE_RAIL_SIZES : EXPANDED_SIDE_RAIL_SIZES),
+        sizes: options.sideRailSizes ?? SIDE_RAIL_SIZES,
       },
       right: {
         ...sideSlot(`${surface}_sticky_vrec_right`, `${label} right rail`),
-        sizes: options.sideRailSizes ?? (options.expandedSideRailSizes === false ? SIDE_RAIL_SIZES : EXPANDED_SIDE_RAIL_SIZES),
+        sizes: options.sideRailSizes ?? SIDE_RAIL_SIZES,
       },
     },
     ...(inContent.length ? { inContent } : {}),
@@ -268,11 +267,11 @@ function landingPage(surface: string, label: string): AdRouteConfig {
     sideRails: {
       left: {
         ...sideSlot(`${surface}_sticky_vrec_left`, `${label} left rail`),
-        sizes: EXPANDED_SIDE_RAIL_SIZES,
+        sizes: SIDE_RAIL_SIZES,
       },
       right: {
         ...sideSlot(`${surface}_sticky_vrec_right`, `${label} right rail`),
-        sizes: EXPANDED_SIDE_RAIL_SIZES,
+        sizes: SIDE_RAIL_SIZES,
       },
     },
   };

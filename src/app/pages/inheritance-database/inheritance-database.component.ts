@@ -835,7 +835,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
 
   getDatabaseInterscrollerIndex(recordIndex: number): number {
     const slotNumber = Math.floor((recordIndex - 7) / 12);
-    return ((slotNumber + 1) % 4) + 1;
+    return (slotNumber % 8) + 1;
   }
 
   toggleListMode() {
