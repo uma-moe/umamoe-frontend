@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
-import { HttpBackend, HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Inject, Injectable, NgZone } from '@angular/core';
-import { BehaviorSubject, firstValueFrom, Observable } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AppVersionService } from './app-version.service';
 
@@ -91,7 +91,6 @@ export class TurnstileService {
   private readonly scriptId = 'cf-turnstile-api';
   private readonly containerId = 'cf-turnstile-api-proof';
   private readonly interactiveContainerId = 'cf-turnstile-interactive-proof';
-  private readonly exchangeHttp: HttpClient;
   private scriptPromise: Promise<void> | null = null;
   private proofQueue: Promise<void> = Promise.resolve();
   private cachedBrowserProof: CachedBrowserProofToken | null = null;
@@ -111,10 +110,7 @@ export class TurnstileService {
     @Inject(DOCUMENT) private document: Document,
     private zone: NgZone,
     private appVersionService: AppVersionService,
-    httpBackend: HttpBackend,
-  ) {
-    this.exchangeHttp = new HttpClient(httpBackend);
-  }
+  ) {}
 
   get enabled(): boolean {
     return !!environment.turnstile.enabled && (!!environment.turnstile.siteKey || !!this.localDevToken);
@@ -579,14 +575,8 @@ export class TurnstileService {
         : 'Exchanging Turnstile token for browser proof.',
     });
 
-    const response = await firstValueFrom(this.exchangeHttp.post(this.getExchangeUrl(), null, {
-      observe: 'response',
-      responseType: 'text',
-      withCredentials: true,
-      headers: {
-        [environment.turnstile.challengeHeaderName]: normalizedToken,
-      },
-    }));
+    const exchangeUrl = this.getExchangeUrl();
+    const response = await this.postTurnstileExchange(exchangeUrl, normalizedToken);
 
     const proofToken = response.headers.get(environment.turnstile.proofHeaderName)?.trim() ?? '';
     const ttlSeconds = Number(response.headers.get(environment.turnstile.proofTtlHeaderName) ?? '0');
@@ -603,6 +593,40 @@ export class TurnstileService {
     };
     this.storeBrowserProof(proofToken, ttlSeconds, action);
     return proof;
+  }
+
+  private async postTurnstileExchange(exchangeUrl: string, turnstileToken: string): Promise<Response> {
+    const fetch = this.document.defaultView?.fetch;
+    if (!fetch) {
+      throw new Error('Browser proof exchange requires fetch support');
+    }
+
+    const response = await fetch(exchangeUrl, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: {
+        Accept: 'application/json, text/plain, */*',
+        [environment.turnstile.challengeHeaderName]: turnstileToken,
+      },
+    });
+
+    if (!response.ok) {
+      let errorBody = response.statusText;
+      try {
+        errorBody = await response.text();
+      } catch {
+        // Keep the status text when the body cannot be read.
+      }
+
+      throw new HttpErrorResponse({
+        error: errorBody,
+        status: response.status,
+        statusText: response.statusText,
+        url: exchangeUrl,
+      });
+    }
+
+    return response;
   }
 
   private getExchangeUrl(): string {

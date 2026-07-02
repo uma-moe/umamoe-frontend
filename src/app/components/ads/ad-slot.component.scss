@@ -92,9 +92,9 @@
 }
 
 .ad-slot--creative-height {
-  height: auto;
+  height: var(--ad-creative-height, auto);
   min-height: 0;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .ad-slot--side-rail .ad-slot-target,
@@ -127,11 +127,11 @@
   position: relative;
   inset: auto;
   width: 100%;
-  height: auto;
+  height: var(--ad-creative-height, auto);
   min-height: 0;
-  max-height: none;
+  max-height: var(--ad-creative-height, none);
   align-items: flex-start;
-  overflow: visible;
+  overflow: hidden;
   contain: none;
   line-height: 0;
 }
@@ -177,9 +177,11 @@
 .ad-slot--creative-height .ad-slot-target > :not(script):not(style),
 .ad-slot--creative-height .ad-slot-retained > :not(script):not(style) {
   align-items: flex-start !important;
-  max-height: none !important;
+  height: var(--ad-creative-height, auto) !important;
+  min-height: 0 !important;
+  max-height: var(--ad-creative-height, none) !important;
   margin: 0 auto !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   line-height: 0 !important;
 }
 
@@ -190,7 +192,11 @@
 
 .ad-slot--creative-height .ad-slot-target > :not(script):not(style) > :not(script):not(style),
 .ad-slot--creative-height .ad-slot-retained > :not(script):not(style) > :not(script):not(style) {
+  height: var(--ad-creative-height, auto) !important;
+  min-height: 0 !important;
+  max-height: var(--ad-creative-height, none) !important;
   margin: 0 auto !important;
+  overflow: hidden !important;
 }
 
 .ad-slot--interscroller .ad-slot-target :where(div, ins),
@@ -206,10 +212,12 @@
 .ad-slot--interscroller.ad-slot--creative-height .ad-slot-target :where(div, ins),
 .ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained :where(div, ins) {
   align-items: flex-start !important;
-  max-height: none !important;
+  height: var(--ad-creative-height, auto) !important;
+  min-height: 0 !important;
+  max-height: var(--ad-creative-height, none) !important;
   margin-top: 0 !important;
   padding-top: 0 !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   line-height: 0 !important;
 }
 

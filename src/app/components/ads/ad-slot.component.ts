@@ -165,6 +165,12 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       && (this.slotHasCreative || this.slotRetainingCreative);
   }
 
+  get creativeHeightStyle(): string | null {
+    return this.usesIntrinsicCreativeHeight && this.creativeLayoutSize
+      ? `${this.creativeLayoutSize.height}px`
+      : null;
+  }
+
   get closeInlineOffsetStyle(): string | null {
     return this.creativeCloseInlineOffset === null
       ? null
@@ -694,12 +700,14 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   private getCreativeLayoutSize(element: HTMLElement | SVGElement): AdSlotSize | null {
     const sourceSize = this.getCreativeSourceSize(element);
+    const renderSize = this.getSlotRenderLayoutSize();
+    const layoutSourceSize = this.getPreferredCreativeLayoutSourceSize(element, sourceSize, renderSize);
 
-    if (!sourceSize) {
+    if (!layoutSourceSize) {
       return null;
     }
 
-    const { width, height } = sourceSize;
+    const { width, height } = layoutSourceSize;
     const availableWidth = this.getAvailableInterscrollerWidth();
     const clampedWidth = availableWidth > 0 ? Math.min(width, availableWidth) : width;
     const scale = width > 0 ? clampedWidth / width : 1;
@@ -709,6 +717,51 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     return {
       width: Math.max(1, Math.round(clampedWidth)),
       height: clampedHeight,
+    };
+  }
+
+  private getPreferredCreativeLayoutSourceSize(
+    element: HTMLElement | SVGElement,
+    sourceSize: AdSlotSize | null,
+    renderSize: AdSlotSize | null,
+  ): AdSlotSize | null {
+    if (!sourceSize) {
+      return renderSize;
+    }
+
+    if (!renderSize) {
+      return sourceSize;
+    }
+
+    return this.shouldShrinkToVisibleCreativeSize(element, sourceSize, renderSize)
+      ? sourceSize
+      : renderSize;
+  }
+
+  private shouldShrinkToVisibleCreativeSize(
+    element: HTMLElement | SVGElement,
+    sourceSize: AdSlotSize,
+    renderSize: AdSlotSize,
+  ): boolean {
+    const tolerance = 2;
+    const similarWidth = sourceSize.width <= renderSize.width + tolerance
+      && sourceSize.width >= Math.max(8, renderSize.width * 0.75);
+    const isMeaningfullyShorter = sourceSize.height + tolerance < renderSize.height;
+
+    return this.isCreativeTag(element)
+      && similarWidth
+      && isMeaningfullyShorter
+      && this.isCreativeSizeAllowedForSlot(sourceSize);
+  }
+
+  private getSlotRenderLayoutSize(): AdSlotSize | null {
+    if (!this.slotRenderSize) {
+      return null;
+    }
+
+    return {
+      width: this.slotRenderSize.width,
+      height: this.slotRenderSize.height,
     };
   }
 
