@@ -88,6 +88,8 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   private preserveQueuedCreative = false;
   private containerInlineWidth = 0;
   private containerResizeObserver: ResizeObserver | null = null;
+  private creativeResizeObserver: ResizeObserver | null = null;
+  private fallbackUpdateFrame: number | null = null;
   private viewportWidth = 0;
   private observedTarget?: HTMLElement;
 
@@ -361,13 +363,17 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
     this.mutationObserver = new MutationObserver(records => {
       this.retainRemovedCreative(records);
-      this.updateFallbackState(target);
+      this.observeCreativeResizeTargets(target);
+      this.scheduleFallbackStateUpdate(target);
     });
     this.mutationObserver.observe(target, {
+      attributes: true,
+      attributeFilter: ['class', 'height', 'style', 'width'],
       childList: true,
       subtree: true,
       characterData: true,
     });
+    this.observeCreativeResizeTargets(target);
     this.watchSlotRenderResult(target);
     this.watchSupportFallbackState(target);
 
@@ -384,11 +390,27 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.slotHasUnsupportedCreative = hasUnexpectedCreativeSize;
     this.updateCreativeLayoutSize(target);
 
+    if (hasCurrentCreative || hasRetainedCreative) {
+      this.clearEmptyCreativeTimer();
+      this.slotCreativeState = 'filled';
+    }
+
     if (hasCurrentCreative && this.slotHasRetainedCreative) {
       this.scheduleRetainedCreativeClear(target);
     }
 
     const markupStillBidding = this.isMarkupStillBidding(target, hasAdMarkup, hasCurrentCreative);
+
+    if (
+      this.slotCreativeState === 'filled'
+      && hasAdMarkup
+      && !hasCurrentCreative
+      && !hasRetainedCreative
+      && !markupStillBidding
+      && !this.emptyCreativePending
+    ) {
+      this.slotCreativeState = 'empty';
+    }
 
     if (this.fallbackPreviewEnabled) {
       this.showFallback = true;
@@ -407,7 +429,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     const runtimeBlockedWithoutCreative = this.supportFallbackAllowed && !hasDisplayCreative;
     const hasProtectedCreative = hasDisplayCreative
       || (!runtimeBlockedWithoutCreative && markupStillBidding)
-      || (!runtimeBlockedWithoutCreative && this.slotCreativeState === 'filled' && hasAdMarkup);
+      || (!runtimeBlockedWithoutCreative && this.slotCreativeState === 'filled' && hasCurrentCreative);
     const supportFallbackReady = runtimeBlockedWithoutCreative;
     const noFillReady = !hasProtectedCreative && (
       supportFallbackReady || this.slotCreativeState === 'empty'
@@ -569,9 +591,17 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   private prepareIframeSurfaces(target: HTMLElement): void {
     target.querySelectorAll<HTMLIFrameElement>('iframe').forEach(iframe => {
-      iframe.style.backgroundColor = EMPTY_IFRAME_BACKGROUND;
-      iframe.style.colorScheme = 'dark';
-      iframe.setAttribute('allowtransparency', 'true');
+      if (iframe.style.backgroundColor !== EMPTY_IFRAME_BACKGROUND) {
+        iframe.style.backgroundColor = EMPTY_IFRAME_BACKGROUND;
+      }
+
+      if (iframe.style.colorScheme !== 'dark') {
+        iframe.style.colorScheme = 'dark';
+      }
+
+      if (iframe.getAttribute('allowtransparency') !== 'true') {
+        iframe.setAttribute('allowtransparency', 'true');
+      }
 
       if (iframe.dataset['umaEmptyFrameStyled'] !== '1') {
         iframe.dataset['umaEmptyFrameStyled'] = '1';
@@ -1140,13 +1170,58 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.clearEmptyCreativeTimer();
     this.clearCreativeSwapTimer();
     this.clearMarkupGraceTimer();
+    this.clearFallbackUpdateFrame();
     this.mutationObserver?.disconnect();
     this.mutationObserver = null;
+    this.creativeResizeObserver?.disconnect();
+    this.creativeResizeObserver = null;
     this.observedTarget = undefined;
     this.slotRenderSub?.unsubscribe();
     this.slotRenderSub = undefined;
     this.supportFallbackSub?.unsubscribe();
     this.supportFallbackSub = undefined;
+  }
+
+  private scheduleFallbackStateUpdate(target: HTMLElement): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.updateFallbackState(target);
+      return;
+    }
+
+    if (this.fallbackUpdateFrame !== null) {
+      return;
+    }
+
+    this.fallbackUpdateFrame = window.requestAnimationFrame(() => {
+      this.fallbackUpdateFrame = null;
+      this.updateFallbackState(target);
+    });
+  }
+
+  private clearFallbackUpdateFrame(): void {
+    if (this.fallbackUpdateFrame !== null && isPlatformBrowser(this.platformId)) {
+      window.cancelAnimationFrame(this.fallbackUpdateFrame);
+    }
+
+    this.fallbackUpdateFrame = null;
+  }
+
+  private observeCreativeResizeTargets(target: HTMLElement): void {
+    if (!isPlatformBrowser(this.platformId) || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    this.creativeResizeObserver ??= new ResizeObserver(() => {
+      this.scheduleFallbackStateUpdate(target);
+    });
+    this.creativeResizeObserver.disconnect();
+    this.creativeResizeObserver.observe(target);
+
+    target.querySelectorAll<HTMLElement | SVGElement>(
+      'div, ins, iframe, img, picture, video, canvas, object, embed, svg',
+    ).forEach(element => {
+      this.creativeResizeObserver?.observe(element);
+    });
   }
 
   private deferEmptyCreativeState(target: HTMLElement): void {

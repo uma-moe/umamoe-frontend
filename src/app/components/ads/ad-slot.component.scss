@@ -92,9 +92,9 @@
 }
 
 .ad-slot--creative-height {
-  height: var(--ad-creative-height, auto);
+  height: auto;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .ad-slot--side-rail .ad-slot-target,
@@ -127,11 +127,11 @@
   position: relative;
   inset: auto;
   width: 100%;
-  height: var(--ad-creative-height, auto);
+  height: auto;
   min-height: 0;
-  max-height: var(--ad-creative-height, none);
-  align-items: flex-start;
-  overflow: hidden;
+  max-height: none;
+  align-items: center;
+  overflow: visible;
   contain: none;
   line-height: 0;
 }
@@ -176,12 +176,11 @@
 
 .ad-slot--creative-height .ad-slot-target > :not(script):not(style),
 .ad-slot--creative-height .ad-slot-retained > :not(script):not(style) {
-  align-items: flex-start !important;
-  height: var(--ad-creative-height, auto) !important;
+  align-items: center !important;
   min-height: 0 !important;
-  max-height: var(--ad-creative-height, none) !important;
+  max-height: none !important;
   margin: 0 auto !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   line-height: 0 !important;
 }
 
@@ -192,11 +191,10 @@
 
 .ad-slot--creative-height .ad-slot-target > :not(script):not(style) > :not(script):not(style),
 .ad-slot--creative-height .ad-slot-retained > :not(script):not(style) > :not(script):not(style) {
-  height: var(--ad-creative-height, auto) !important;
   min-height: 0 !important;
-  max-height: var(--ad-creative-height, none) !important;
+  max-height: none !important;
   margin: 0 auto !important;
-  overflow: hidden !important;
+  overflow: visible !important;
 }
 
 .ad-slot--interscroller .ad-slot-target :where(div, ins),
@@ -211,13 +209,12 @@
 
 .ad-slot--interscroller.ad-slot--creative-height .ad-slot-target :where(div, ins),
 .ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained :where(div, ins) {
-  align-items: flex-start !important;
-  height: var(--ad-creative-height, auto) !important;
+  align-items: center !important;
   min-height: 0 !important;
-  max-height: var(--ad-creative-height, none) !important;
+  max-height: none !important;
   margin-top: 0 !important;
   padding-top: 0 !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   line-height: 0 !important;
 }
 
@@ -769,7 +766,8 @@
 
 @media (max-width: 720px) {
   .ad-slot--leaderboard {
-    display: none;
+    --ad-slot-width: calc(100vw - 0.75rem);
+    --ad-slot-height: 50px;
   }
 
   .ad-slot--sticky-footer {
