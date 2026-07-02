@@ -91,6 +91,12 @@
   min-height: 420px;
 }
 
+.ad-slot--creative-height {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
 .ad-slot--side-rail .ad-slot-target,
 .ad-slot--side-rail .ad-slot-retained {
   width: var(--ad-slot-width);
@@ -116,6 +122,22 @@
   z-index: 2;
 }
 
+.ad-slot--creative-height:not(.ad-slot--retaining-creative) .ad-slot-target,
+.ad-slot--creative-height.ad-slot--retaining-creative .ad-slot-retained {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+  contain: none;
+}
+
+.ad-slot--creative-height:not(.ad-slot--retaining-creative) .ad-slot-retained {
+  display: none;
+}
+
 .ad-slot-retained {
   z-index: 1;
   opacity: 0;
@@ -133,6 +155,12 @@
   pointer-events: none;
 }
 
+.ad-slot--creative-height.ad-slot--retaining-creative .ad-slot-target {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+}
+
 .ad-slot-target > :not(script):not(style),
 .ad-slot-retained > :not(script):not(style) {
   display: flex !important;
@@ -142,6 +170,12 @@
   max-height: 100% !important;
   margin: auto !important;
   overflow: hidden !important;
+}
+
+.ad-slot--creative-height .ad-slot-target > :not(script):not(style),
+.ad-slot--creative-height .ad-slot-retained > :not(script):not(style) {
+  max-height: none !important;
+  overflow: visible !important;
 }
 
 .ad-slot-target > :not(script):not(style) > :not(script):not(style),
@@ -159,8 +193,14 @@
   overflow: hidden !important;
 }
 
-.ad-slot--interscroller .ad-slot-target > :where(div, ins),
-.ad-slot--interscroller .ad-slot-retained > :where(div, ins) {
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-target :where(div, ins),
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained :where(div, ins) {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.ad-slot--interscroller:not(.ad-slot--creative-height) .ad-slot-target > :where(div, ins),
+.ad-slot--interscroller:not(.ad-slot--creative-height) .ad-slot-retained > :where(div, ins) {
   width: 100% !important;
   height: 100% !important;
 }
@@ -188,6 +228,25 @@
   object-fit: contain;
   background-color: var(--ad-empty-frame-bg) !important;
   color-scheme: dark;
+}
+
+.ad-slot--creative-height .ad-slot-target iframe,
+.ad-slot--creative-height .ad-slot-target img,
+.ad-slot--creative-height .ad-slot-target picture,
+.ad-slot--creative-height .ad-slot-target video,
+.ad-slot--creative-height .ad-slot-target canvas,
+.ad-slot--creative-height .ad-slot-target object,
+.ad-slot--creative-height .ad-slot-target embed,
+.ad-slot--creative-height .ad-slot-target svg,
+.ad-slot--creative-height .ad-slot-retained iframe,
+.ad-slot--creative-height .ad-slot-retained img,
+.ad-slot--creative-height .ad-slot-retained picture,
+.ad-slot--creative-height .ad-slot-retained video,
+.ad-slot--creative-height .ad-slot-retained canvas,
+.ad-slot--creative-height .ad-slot-retained object,
+.ad-slot--creative-height .ad-slot-retained embed,
+.ad-slot--creative-height .ad-slot-retained svg {
+  max-height: none !important;
 }
 
 .ad-slot-target iframe,

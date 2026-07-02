@@ -136,6 +136,10 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   get slotHeightStyle(): string | null {
+    if (this.usesIntrinsicCreativeHeight) {
+      return null;
+    }
+
     if (this.creativeLayoutSize && this.usesMeasuredCreativeLayout()) {
       return `${this.creativeLayoutSize.height}px`;
     }
@@ -152,6 +156,12 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     }
 
     return `${size.height}px`;
+  }
+
+  get usesIntrinsicCreativeHeight(): boolean {
+    return Boolean(this.creativeLayoutSize)
+      && this.usesMeasuredCreativeLayout()
+      && (this.slotHasCreative || this.slotRetainingCreative);
   }
 
   get closeInlineOffsetStyle(): string | null {

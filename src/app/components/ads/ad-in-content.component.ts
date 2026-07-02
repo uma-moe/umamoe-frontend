@@ -49,7 +49,8 @@ const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = PUBLIFT_XL_MIN_WIDTH - 1;
       justify-content: center;
       width: 100%;
       margin: 0.65rem 0;
-      contain: layout paint;
+      overflow: visible;
+      contain: layout;
     }
 
     .ad-in-content--content-top-bridge {
