@@ -343,19 +343,17 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.prepareIframeSurfaces(target);
     const hasAdMarkup = this.hasAnyAdMarkup(target);
     const hasCurrentCreative = this.hasLikelyCreativeMarkup(target);
-    const hasUnsupportedCreative = (!hasCurrentCreative && this.hasUnsupportedCreativeMarkup(target))
+    const hasUnexpectedCreativeSize = this.hasUnsupportedCreativeMarkup(target)
       || this.hasUnsupportedRenderedSize();
     const hasRetainedCreative = this.hasVisibleRetainedCreative();
-    this.slotHasUnsupportedCreative = hasUnsupportedCreative;
+    this.slotHasUnsupportedCreative = hasUnexpectedCreativeSize;
     this.updateCreativeLayoutSize(target);
 
     if (hasCurrentCreative && this.slotHasRetainedCreative) {
       this.scheduleRetainedCreativeClear(target);
     }
 
-    const markupStillBidding = hasUnsupportedCreative
-      ? false
-      : this.isMarkupStillBidding(target, hasAdMarkup, hasCurrentCreative);
+    const markupStillBidding = this.isMarkupStillBidding(target, hasAdMarkup, hasCurrentCreative);
 
     if (this.fallbackPreviewEnabled) {
       this.showFallback = true;
@@ -373,11 +371,11 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     const runtimeBlockedWithoutCreative = this.supportFallbackAllowed && !hasDisplayCreative;
     const hasProtectedCreative = hasDisplayCreative
       || (!runtimeBlockedWithoutCreative && markupStillBidding)
-      || (!runtimeBlockedWithoutCreative && !hasUnsupportedCreative && this.slotCreativeState === 'filled' && hasAdMarkup);
+      || (!runtimeBlockedWithoutCreative && this.slotCreativeState === 'filled' && hasAdMarkup);
     const supportFallbackReady = runtimeBlockedWithoutCreative;
-    const noFillReady = hasUnsupportedCreative || (!hasProtectedCreative && (
+    const noFillReady = !hasProtectedCreative && (
       supportFallbackReady || this.slotCreativeState === 'empty'
-    ));
+    );
     const canShowBlockedFooterFallback = this.closable
       && this.config.kind === 'sticky-footer'
       && supportFallbackReady
@@ -493,7 +491,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
         this.clearEmptyCreativeTimer();
         this.emptyCreativePending = false;
         this.slotRenderSize = result.renderSize ?? null;
-        this.slotCreativeState = this.hasUnsupportedRenderedSize() ? 'empty' : 'filled';
+        this.slotCreativeState = 'filled';
       } else {
         this.slotRenderSize = null;
         this.deferEmptyCreativeState(target);
@@ -594,7 +592,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private hasLikelyCreativeMarkup(target: HTMLElement): boolean {
-    return this.getVisibleCreativeElements(target).length > 0;
+    return this.getVisibleCreativeElements(target, false).length > 0;
   }
 
   private hasUnsupportedCreativeMarkup(target: HTMLElement): boolean {
@@ -650,7 +648,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private findVisibleCreativeElement(target?: HTMLElement): HTMLElement | SVGElement | null {
-    const visibleElements = this.getVisibleCreativeElements(target);
+    const visibleElements = this.getVisibleCreativeElements(target, false);
 
     if (!visibleElements.length) {
       return null;
