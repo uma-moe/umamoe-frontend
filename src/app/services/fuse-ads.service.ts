@@ -73,6 +73,7 @@ interface FuseTag {
 
 interface PendingFuseCall {
   label: string;
+  persistent?: boolean;
   callback: (fusetag: FuseTag) => void;
 }
 
@@ -206,6 +207,7 @@ export class FuseAdsService {
     source: 'disabled',
   };
   private registeredZones = new Map<string, string>();
+  private persistentZones = new Map<string, string>();
   private pendingFuseCalls: PendingFuseCall[] = [];
   private fuseCallFlushTimer: number | null = null;
   private fuseCallFlushRetries = 0;
@@ -249,11 +251,12 @@ export class FuseAdsService {
     }
     this.clearPendingPageInit();
 
-    const clearedPendingFuseCalls = this.pendingFuseCalls.length;
+    const pendingBeforeReset = this.pendingFuseCalls.length;
     this.fuseCallFlushTimer = null;
     this.fuseCallFlushRetries = 0;
-    this.pendingFuseCalls = [];
-    this.registeredZones.clear();
+    this.pendingFuseCalls = this.pendingFuseCalls.filter(call => call.persistent);
+    const clearedPendingFuseCalls = pendingBeforeReset - this.pendingFuseCalls.length;
+    this.registeredZones = new Map(this.persistentZones);
     this.debug('page view ad state reset', { reason, clearedPendingFuseCalls, preloadFuseIds });
 
     if (!preloadFuseIds.length) {
@@ -344,6 +347,30 @@ export class FuseAdsService {
       this.debug('registerZone executing', { zoneElementId, fuseId });
       fusetag.registerZone?.(zoneElementId);
     }, `registerZone:${zoneElementId}:${fuseId}`);
+  }
+
+  registerPersistentZone(zoneElementId: string, fuseId: string): void {
+    if (!this.canUseFuse || !zoneElementId || !fuseId) {
+      this.debugWarn('registerPersistentZone skipped', {
+        zoneElementId,
+        fuseId,
+        canUseFuse: this.canUseFuse,
+        runtimeState: this.runtimeStateSubject.value,
+      });
+      return;
+    }
+
+    this.debug('registerPersistentZone queued', { zoneElementId, fuseId });
+    this.persistentZones.set(zoneElementId, fuseId);
+    this.registeredZones.set(zoneElementId, fuseId);
+    this.enqueueFuseCall(fusetag => {
+      this.debug('registerPersistentZone executing', { zoneElementId, fuseId });
+      fusetag.registerZone?.(zoneElementId);
+      fusetag.pageInit?.({
+        blockingFuseIds: [fuseId],
+        blockingTimeout: environment.fuse.blockingTimeoutMs,
+      });
+    }, `persistentZone:${zoneElementId}:${fuseId}`, true);
   }
 
   requestSlotPageInit(fuseId: string, reason = 'slot registered'): void {
@@ -649,7 +676,7 @@ export class FuseAdsService {
     return fusetag;
   }
 
-  private enqueueFuseCall(callback: (fusetag: FuseTag) => void, label = 'Fuse call'): void {
+  private enqueueFuseCall(callback: (fusetag: FuseTag) => void, label = 'Fuse call', persistent = false): void {
     const fusetag = this.ensureFuseQueue();
 
     if (this.isFuseApiReady(fusetag)) {
@@ -661,7 +688,7 @@ export class FuseAdsService {
       return;
     }
 
-    this.pendingFuseCalls.push({ label, callback });
+    this.pendingFuseCalls.push({ label, callback, persistent });
     this.debugWarn('Fuse API not ready; deferring call', {
       label,
       pendingFuseCalls: this.pendingFuseCalls.map(call => call.label),

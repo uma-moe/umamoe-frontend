@@ -1947,7 +1947,7 @@ app-ad-in-content.ad-in-content-host--content-top-bridge-active + :where(
   }
 }
 
-@media (min-width: 1320px) {
+@media (min-width: 1440px) {
   html.ad-left-rail-reserved {
     --ad-layout-start-space: calc(var(--ad-left-rail-reserve, 152px) + 0.75rem);
     --ad-layout-end-space: max(0.5rem, env(safe-area-inset-right));

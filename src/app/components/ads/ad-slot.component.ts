@@ -52,6 +52,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() closable = false;
   @Input() forceFallback = false;
   @Input() maxWidth = 0;
+  @Input() persistent = false;
   @Output() close = new EventEmitter<void>();
   @Output() collapsedChange = new EventEmitter<boolean>();
   @ViewChild('slotShell') private slotShell?: ElementRef<HTMLElement>;
@@ -316,8 +317,12 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     const target = this.adTarget.nativeElement;
     this.observedTarget = target;
 
-    this.fuseAdsService.registerZone(this.slotElementId, this.config.fuseId);
-    this.fuseAdsService.requestSlotPageInit(this.config.fuseId, `slot registered:${this.config.placement}`);
+    if (this.persistent) {
+      this.fuseAdsService.registerPersistentZone(this.slotElementId, this.config.fuseId);
+    } else {
+      this.fuseAdsService.registerZone(this.slotElementId, this.config.fuseId);
+      this.fuseAdsService.requestSlotPageInit(this.config.fuseId, `slot registered:${this.config.placement}`);
+    }
 
     this.mutationObserver = new MutationObserver(records => {
       this.retainRemovedCreative(records);

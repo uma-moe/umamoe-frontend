@@ -4,13 +4,13 @@ import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, combineLatest, filter } from 'rxjs';
 import { AdSlotComponent } from './ad-slot.component';
 import { isAdFallbackPreviewEnabled } from './ad-fallback-preview';
-import { AdRouteConfig, AdSlotConfig, getAdRouteConfig } from './ad-layout.config';
+import { AdRouteConfig, PUBLIFT_XL_MIN_WIDTH, getAdRouteConfig, getGlobalStickyFooterSlot } from './ad-layout.config';
 import { FuseAdsService } from '../../services/fuse-ads.service';
 
 const AD_SIDE_RAIL_PAGE_CLASS = 'ad-side-rail-page';
 const AD_LEFT_RAIL_RESERVED_CLASS = 'ad-left-rail-reserved';
 const AD_BOTTOM_POPUP_VISIBLE_CLASS = 'ad-bottom-popup-visible';
-const DEFAULT_SIDE_RAIL_MIN_WIDTH = 1320;
+const DEFAULT_SIDE_RAIL_MIN_WIDTH = PUBLIFT_XL_MIN_WIDTH;
 const DEFAULT_SIDE_RAIL_ANCHOR_SELECTORS = [
   '.content-container',
   '.tierlist-container',
@@ -27,7 +27,7 @@ const SIDE_RAIL_CONTENT_GAP = 16;
 const SINGLE_SIDE_RAIL_MAX_WIDTH = 1535;
 const LEFT_RAIL_RESERVE_MAX_WIDTH = 9999;
 const CONTENT_TOP_MIN_WIDTH = 900;
-const CONTENT_TOP_MAX_WIDTH = DEFAULT_SIDE_RAIL_MIN_WIDTH - 1;
+const CONTENT_TOP_MAX_WIDTH = PUBLIFT_XL_MIN_WIDTH - 1;
 const SIDE_RAIL_MAX_HEIGHT = 600;
 const SIDE_RAIL_MIN_HEIGHT = 420;
 const SIDE_RAIL_NAV_OFFSET = 60;
@@ -46,7 +46,7 @@ type SideRailLayout = 'none' | 'left' | 'right' | 'both';
 export class AdLayoutComponent implements OnInit, OnDestroy {
   config: AdRouteConfig = getAdRouteConfig('/');
   readonly adsCanRender$ = this.fuseAdsService.adsCanRender$;
-  persistentBottomPopupConfig?: AdSlotConfig;
+  readonly stickyFooterConfig = getGlobalStickyFooterSlot();
   bottomPopupClosed = false;
   fallbackPreviewEnabled = false;
   adsCanRender = false;
@@ -130,13 +130,12 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.rightSideRailCollapsed = false;
     this.updateContentTopAllowed();
     this.fuseAdsService.beginPageView(url, this.getPageSwapPreloadFuseIds(this.config));
-    this.initializePageBottomPopup(this.config);
     this.updateBottomPopupRootState();
     this.fuseAdsService.debug('route ad config synced', {
       url,
       enabled: this.config.enabled,
       contentTopAllowed: this.contentTopAllowed,
-      bottomPopupFuseId: this.config.bottomPopup?.fuseId,
+      stickyFooterFuseId: this.stickyFooterConfig.fuseId,
       sideRails: this.config.sideRails
         ? {
           left: this.config.sideRails.left.fuseId,
@@ -175,27 +174,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.scheduleSideRailLayout();
   }
 
-  private initializePageBottomPopup(config: AdRouteConfig): void {
-    const nextBottomPopup = config.bottomPopup;
-    this.bottomPopupClosed = false;
-
-    if (!nextBottomPopup) {
-      this.persistentBottomPopupConfig = undefined;
-      return;
-    }
-
-    if (
-      this.persistentBottomPopupConfig
-      && this.persistentBottomPopupConfig.fuseId === nextBottomPopup.fuseId
-      && this.persistentBottomPopupConfig.kind === nextBottomPopup.kind
-    ) {
-      return;
-    }
-
-    this.persistentBottomPopupConfig = nextBottomPopup;
-  }
-
-  private updateBottomPopupRootState(visible = Boolean(this.persistentBottomPopupConfig && !this.bottomPopupClosed)): void {
+  private updateBottomPopupRootState(visible = Boolean((this.stickyFooterConfig.fuseId || this.fallbackPreviewEnabled) && !this.bottomPopupClosed)): void {
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }

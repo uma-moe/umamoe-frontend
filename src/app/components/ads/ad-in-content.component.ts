@@ -3,13 +3,20 @@ import { Component, HostBinding, HostListener, Inject, Input, OnChanges, OnDestr
 import { Router } from '@angular/router';
 import { Subscription, combineLatest } from 'rxjs';
 import { FuseAdsService } from '../../services/fuse-ads.service';
-import { AdRouteConfig, AdSlotConfig, getAdRouteConfig, getInContentSlot, getMobileRailSlot } from './ad-layout.config';
+import {
+  AdRouteConfig,
+  AdSlotConfig,
+  PUBLIFT_XL_MIN_WIDTH,
+  getAdRouteConfig,
+  getInContentSlot,
+  getMobileRailSlot,
+} from './ad-layout.config';
 import { AdSlotComponent } from './ad-slot.component';
 import { isAdFallbackPreviewEnabled } from './ad-fallback-preview';
 
 type InlineAdViewport = 'all' | 'desktop' | 'mobile';
 const CONTENT_TOP_BRIDGE_MIN_WIDTH = 900;
-const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = 1319;
+const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = PUBLIFT_XL_MIN_WIDTH - 1;
 
 @Component({
   selector: 'app-ad-in-content',
@@ -73,7 +80,7 @@ const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = 1319;
       display: none;
     }
 
-    @media (min-width: 900px) and (max-width: 1319px) {
+    @media (min-width: 900px) and (max-width: 1439px) {
       :host.ad-in-content-host--content-top-bridge {
         display: block;
       }

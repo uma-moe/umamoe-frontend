@@ -13,7 +13,6 @@ export interface AdSlotConfig {
 
 export interface AdRouteConfig {
   enabled: boolean;
-  bottomPopup?: AdSlotConfig;
   contentTop?: AdSlotConfig;
   reserveLeftRail?: boolean;
   sideRailAnchorMaxWidth?: number;
@@ -30,6 +29,8 @@ export interface AdRouteConfig {
   };
   inContent?: AdSlotConfig[];
 }
+
+export const PUBLIFT_XL_MIN_WIDTH = 1440;
 
 const BOTTOM_POPUP_SIZES = ['1200x90', '970x90', '728x90', '468x90'];
 const SIDE_RAIL_SIZES = ['160x600', '120x600'];
@@ -119,6 +120,10 @@ export function getMobileRailSlot(surface: string, label: string, index = 1): Ad
 
 function getMobileRailSlots(surface: string, label: string, count = 4): AdSlotConfig[] {
   return Array.from({ length: count }, (_, index) => getMobileRailSlot(surface, label, index + 1));
+}
+
+export function getGlobalStickyFooterSlot(): AdSlotConfig {
+  return bottomPopupSlot('sticky_footer', 'sticky footer');
 }
 
 export function getAdRouteConfig(url: string): AdRouteConfig {
@@ -229,7 +234,6 @@ function sideRailPage(surface: string, label: string, options: SideRailPageOptio
 
   return {
     enabled: true,
-    bottomPopup: bottomPopupSlot(`${surface}_sticky_footer`, `${label} bottom popup`),
     ...(options.contentTop === false ? {} : { contentTop: contentTopSlot(`${surface}_content_top`, `${label} content top`) }),
     preferredSideRail: options.preferredSideRail ?? 'left',
     reserveLeftRail: options.reserveLeftRail ?? true,
@@ -257,7 +261,6 @@ function sideRailPage(surface: string, label: string, options: SideRailPageOptio
 function landingPage(surface: string, label: string): AdRouteConfig {
   return {
     enabled: true,
-    bottomPopup: bottomPopupSlot(`${surface}_sticky_footer`, `${label} bottom popup`),
     inContent: getMobileRailSlots(surface, label),
     preferredSideRail: 'left',
     reserveLeftRail: false,
