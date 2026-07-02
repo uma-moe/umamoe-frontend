@@ -160,6 +160,17 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       : `${this.creativeCloseInlineOffset}px`;
   }
 
+  get canShowCloseButton(): boolean {
+    return this.closable
+      && !this.slotCollapsed
+      && (
+        this.slotHasCreative
+        || this.slotRetainingCreative
+        || this.showFallback
+        || this.showDiagnostic
+      );
+  }
+
   get isFallbackStrip(): boolean {
     const size = this.getPrimarySize();
     return Boolean(size && size.height <= 60);

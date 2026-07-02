@@ -135,10 +135,34 @@
 
 .ad-slot-target > :not(script):not(style),
 .ad-slot-retained > :not(script):not(style) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   max-width: 100% !important;
   max-height: 100% !important;
   margin: auto !important;
   overflow: hidden !important;
+}
+
+.ad-slot-target > :not(script):not(style) > :not(script):not(style),
+.ad-slot-retained > :not(script):not(style) > :not(script):not(style) {
+  margin: auto !important;
+}
+
+.ad-slot--interscroller .ad-slot-target :where(div, ins),
+.ad-slot--interscroller .ad-slot-retained :where(div, ins) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+.ad-slot--interscroller .ad-slot-target > :where(div, ins),
+.ad-slot--interscroller .ad-slot-retained > :where(div, ins) {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .ad-slot-target iframe,
