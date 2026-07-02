@@ -5,6 +5,7 @@ import { filter, pairwise, startWith, takeUntil } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { TurnstileService } from './turnstile.service';
 
 /** Mirror of backend `models::PartnerInheritance`. Stays close to the
  *  existing `InheritanceRecord` shape so VPD can reuse its rendering helpers. */
@@ -89,6 +90,7 @@ export class PartnerService implements OnDestroy {
     private http: HttpClient,
     private auth: AuthService,
     private zone: NgZone,
+    private turnstileService: TurnstileService,
   ) {
     // Migrate localStorage entries once when the user transitions from
     // unauthenticated → authenticated (first login or OAuth callback).
@@ -126,57 +128,33 @@ export class PartnerService implements OnDestroy {
       const url = `${environment.apiUrl}/api/v4/partner/lookup/${taskId}/stream`;
       // EventSource cannot send custom headers, but it can carry the browser
       // proof cookie minted by the normal credentialed API flow.
-      const source = new EventSource(url, { withCredentials: true });
+      const controller = new AbortController();
+      let closed = false;
 
       const emit = (evt: PartnerLookupEvent) => {
         this.zone.run(() => subscriber.next(evt));
       };
       const complete = () => {
-        try { source.close(); } catch { /* noop */ }
+        if (closed) {
+          return;
+        }
+
+        closed = true;
         this.zone.run(() => subscriber.complete());
       };
 
-      source.addEventListener('pending', (e: MessageEvent) => {
-        const data = safeJson(e.data);
-        emit({ kind: 'pending', taskId: data?.task_id ?? taskId });
-      });
+      void this.streamLookupWithFetch(url, taskId, controller.signal, emit, complete)
+        .catch(error => {
+          if (controller.signal.aborted || closed) {
+            return;
+          }
 
-      source.addEventListener('processing', (e: MessageEvent) => {
-        const data = safeJson(e.data);
-        emit({ kind: 'processing', taskId: data?.task_id ?? taskId });
-      });
-
-      source.addEventListener('completed', (e: MessageEvent) => {
-        const data = safeJson(e.data) ?? {};
-        const inh = (data.inheritance as PartnerInheritance | null) ?? null;
-        emit({ kind: 'completed', taskId: data.task_id ?? taskId, inheritance: inh });
-        complete();
-      });
-
-      source.addEventListener('failed', (e: MessageEvent) => {
-        const data = safeJson(e.data) ?? {};
-        emit({ kind: 'failed', taskId: data.task_id ?? taskId, error: data.error });
-        complete();
-      });
-
-      source.addEventListener('timeout', () => {
-        emit({ kind: 'timeout', taskId });
-        complete();
-      });
-
-      source.onerror = () => {
-        // Browsers fire `error` on graceful close as well — only treat it as
-        // a failure if we never saw a terminal event.
-        if (source.readyState === EventSource.CLOSED) {
+          emit({ kind: 'failed', taskId, error: error instanceof Error ? error.message : 'SSE connection error' });
           complete();
-        } else {
-          emit({ kind: 'failed', taskId, error: 'SSE connection error' });
-          complete();
-        }
-      };
+        });
 
       return () => {
-        try { source.close(); } catch { /* noop */ }
+        controller.abort();
       };
     });
   }
@@ -291,6 +269,134 @@ export class PartnerService implements OnDestroy {
     } catch {
       // Quota exceeded or storage disabled — silently ignore; the lookup
       // result is still emitted to the caller.
+    }
+  }
+
+  private async streamLookupWithFetch(
+    url: string,
+    taskId: number,
+    signal: AbortSignal,
+    emit: (evt: PartnerLookupEvent) => void,
+    complete: () => void,
+  ): Promise<void> {
+    const headers = new Headers({ Accept: 'text/event-stream' });
+    const authToken = this.auth.getToken();
+    if (authToken) {
+      headers.set('Authorization', `Bearer ${authToken}`);
+    }
+
+    const proofToken = await this.turnstileService.ensureBrowserProof(environment.turnstile.action);
+    if (proofToken) {
+      headers.set(this.turnstileService.proofHeaderName, proofToken);
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers,
+      credentials: 'omit',
+      signal,
+    });
+
+    this.captureBrowserProof(response);
+
+    if (!response.ok) {
+      throw new Error(await response.text() || `SSE request failed with ${response.status}`);
+    }
+
+    if (!response.body) {
+      throw new Error('SSE stream response had no body');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (!signal.aborted) {
+        const { value, done } = await reader.read();
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        buffer = this.processSseBuffer(buffer, taskId, emit, complete);
+      }
+
+      buffer += decoder.decode();
+      this.processSseBuffer(`${buffer}\n\n`, taskId, emit, complete);
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
+  private captureBrowserProof(response: Response): void {
+    const proofToken = response.headers.get(this.turnstileService.proofHeaderName)?.trim() ?? '';
+    const ttlSeconds = Number(response.headers.get(this.turnstileService.proofTtlHeaderName) ?? '0');
+    const source = response.headers.get(this.turnstileService.proofSourceHeaderName)?.trim() ?? 'turnstile';
+    this.turnstileService.storeBrowserProof(proofToken, ttlSeconds, environment.turnstile.action, source);
+  }
+
+  private processSseBuffer(
+    buffer: string,
+    taskId: number,
+    emit: (evt: PartnerLookupEvent) => void,
+    complete: () => void,
+  ): string {
+    const blocks = buffer.split(/\r?\n\r?\n/);
+    const rest = blocks.pop() ?? '';
+
+    for (const block of blocks) {
+      this.processSseBlock(block, taskId, emit, complete);
+    }
+
+    return rest;
+  }
+
+  private processSseBlock(
+    block: string,
+    taskId: number,
+    emit: (evt: PartnerLookupEvent) => void,
+    complete: () => void,
+  ): void {
+    let eventName = 'message';
+    const dataLines: string[] = [];
+
+    for (const line of block.split(/\r?\n/)) {
+      if (!line || line.startsWith(':')) {
+        continue;
+      }
+
+      if (line.startsWith('event:')) {
+        eventName = line.slice('event:'.length).trim();
+      } else if (line.startsWith('data:')) {
+        dataLines.push(line.slice('data:'.length).trimStart());
+      }
+    }
+
+    const data = safeJson(dataLines.join('\n')) ?? {};
+    switch (eventName) {
+      case 'pending':
+        emit({ kind: 'pending', taskId: data.task_id ?? taskId });
+        break;
+      case 'processing':
+        emit({ kind: 'processing', taskId: data.task_id ?? taskId });
+        break;
+      case 'completed':
+        emit({
+          kind: 'completed',
+          taskId: data.task_id ?? taskId,
+          inheritance: (data.inheritance as PartnerInheritance | null) ?? null,
+        });
+        complete();
+        break;
+      case 'failed':
+        emit({ kind: 'failed', taskId: data.task_id ?? taskId, error: data.error });
+        complete();
+        break;
+      case 'timeout':
+        emit({ kind: 'timeout', taskId });
+        complete();
+        break;
     }
   }
 }

@@ -9,6 +9,7 @@ import { CorsInterceptor } from './interceptors/cors.interceptor';
 import { RateLimitInterceptor } from './interceptors/rate-limit.interceptor';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { TurnstileInterceptor } from './interceptors/turnstile.interceptor';
+import { CookielessApiInterceptor } from './interceptors/cookieless-api.interceptor';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
@@ -44,6 +45,11 @@ export const appConfig: ApplicationConfig = {
     {
       provide: HTTP_INTERCEPTORS,
       useClass: RateLimitInterceptor,
+      multi: true
+    },
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: CookielessApiInterceptor,
       multi: true
     }
   ]

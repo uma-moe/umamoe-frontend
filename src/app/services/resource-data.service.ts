@@ -667,7 +667,7 @@ export class ResourceDataService {
     const response = await fetch(url, {
       ...init,
       headers,
-      credentials: init.credentials ?? 'include',
+      credentials: init.credentials ?? 'omit',
     });
 
     return {
