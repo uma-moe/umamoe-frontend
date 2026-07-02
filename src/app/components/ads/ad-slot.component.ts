@@ -65,6 +65,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   slotWaiting = true;
   slotCollapsed = false;
   slotHasCreative = false;
+  slotHasVisibleCreative = false;
   slotRetainingCreative = false;
   fallbackPreviewEnabled = false;
   creativeCloseInlineOffset: number | null = null;
@@ -171,6 +172,12 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   get canShowCloseButton(): boolean {
+    if (this.config.kind === 'sticky-footer') {
+      return this.closable
+        && !this.slotCollapsed
+        && this.slotHasVisibleCreative;
+    }
+
     return this.closable
       && !this.slotCollapsed
       && (
@@ -294,6 +301,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.showDiagnostic = false;
     this.slotWaiting = !hasRetainedCreative;
     this.slotHasCreative = false;
+    this.slotHasVisibleCreative = hasRetainedCreative;
     this.slotRetainingCreative = hasRetainedCreative;
     this.creativeCloseInlineOffset = null;
     this.creativeLayoutSize = null;
@@ -380,6 +388,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       this.showFallback = true;
       this.slotWaiting = false;
       this.slotHasCreative = false;
+      this.slotHasVisibleCreative = false;
       this.slotRetainingCreative = false;
       this.creativeCloseInlineOffset = null;
       this.debugSlotState(target, hasAdMarkup, false, hasCurrentCreative);
@@ -410,6 +419,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     const shouldCollapse = noFillReady && !this.showFallback && !this.showDiagnostic;
     this.setCollapsed(shouldCollapse);
     this.slotHasCreative = hasProtectedCreative;
+    this.slotHasVisibleCreative = hasCurrentCreative || hasRetainedCreative;
     this.slotRetainingCreative = canRetainPreviousCreative;
     this.slotWaiting = !hasProtectedCreative && !this.showFallback && !this.showDiagnostic && !shouldCollapse;
     this.updateCreativeCloseOffset(target);

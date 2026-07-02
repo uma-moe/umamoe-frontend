@@ -130,8 +130,10 @@
   height: auto;
   min-height: 0;
   max-height: none;
+  align-items: flex-start;
   overflow: visible;
   contain: none;
+  line-height: 0;
 }
 
 .ad-slot--creative-height:not(.ad-slot--retaining-creative) .ad-slot-retained {
@@ -174,13 +176,21 @@
 
 .ad-slot--creative-height .ad-slot-target > :not(script):not(style),
 .ad-slot--creative-height .ad-slot-retained > :not(script):not(style) {
+  align-items: flex-start !important;
   max-height: none !important;
+  margin: 0 auto !important;
   overflow: visible !important;
+  line-height: 0 !important;
 }
 
 .ad-slot-target > :not(script):not(style) > :not(script):not(style),
 .ad-slot-retained > :not(script):not(style) > :not(script):not(style) {
   margin: auto !important;
+}
+
+.ad-slot--creative-height .ad-slot-target > :not(script):not(style) > :not(script):not(style),
+.ad-slot--creative-height .ad-slot-retained > :not(script):not(style) > :not(script):not(style) {
+  margin: 0 auto !important;
 }
 
 .ad-slot--interscroller .ad-slot-target :where(div, ins),
@@ -195,8 +205,12 @@
 
 .ad-slot--interscroller.ad-slot--creative-height .ad-slot-target :where(div, ins),
 .ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained :where(div, ins) {
+  align-items: flex-start !important;
   max-height: none !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
   overflow: visible !important;
+  line-height: 0 !important;
 }
 
 .ad-slot--interscroller:not(.ad-slot--creative-height) .ad-slot-target > :where(div, ins),

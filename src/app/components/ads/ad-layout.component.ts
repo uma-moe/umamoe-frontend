@@ -26,7 +26,6 @@ const SIDE_RAIL_EDGE_GAP = 16;
 const SIDE_RAIL_CONTENT_GAP = 16;
 const SINGLE_SIDE_RAIL_MAX_WIDTH = 1535;
 const LEFT_RAIL_RESERVE_MAX_WIDTH = 9999;
-const CONTENT_TOP_MIN_WIDTH = 900;
 const CONTENT_TOP_MAX_WIDTH = PUBLIFT_XL_MIN_WIDTH - 1;
 const SIDE_RAIL_MAX_HEIGHT = 600;
 const SIDE_RAIL_MIN_HEIGHT = 420;
@@ -34,6 +33,7 @@ const SIDE_RAIL_NAV_OFFSET = 60;
 const SIDE_RAIL_VERTICAL_MARGIN = 16;
 const SIDE_RAIL_FRAME_TOP_SELECTORS = ['.page-header'];
 const SIDE_RAIL_LAYOUT_RETRY_MS = [80, 300, 900];
+const BOTTOM_POPUP_DISMISSED_STORAGE_KEY = 'uma.ad.bottom-popup.dismissed';
 type SideRailLayout = 'none' | 'left' | 'right' | 'both';
 
 @Component({
@@ -76,6 +76,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.updateFallbackPreviewState();
+    this.restoreBottomPopupDismissal();
     this.adStateSub = combineLatest([
       this.fuseAdsService.adsCanRender$,
       this.fuseAdsService.supportFallbackAllowed$,
@@ -161,6 +162,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
   closeBottomPopup(): void {
     this.bottomPopupClosed = true;
+    this.storeBottomPopupDismissal();
     this.updateBottomPopupRootState(false);
   }
 
@@ -197,9 +199,35 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     const viewportWidth = view?.innerWidth ?? this.document.documentElement.clientWidth;
     const sideRailMinWidth = this.config.sideRailMinWidth ?? DEFAULT_SIDE_RAIL_MIN_WIDTH;
     const contentTopMaxWidth = Math.min(CONTENT_TOP_MAX_WIDTH, sideRailMinWidth - 1);
-    this.contentTopAllowed = viewportWidth >= CONTENT_TOP_MIN_WIDTH && viewportWidth <= contentTopMaxWidth;
+    this.contentTopAllowed = viewportWidth <= contentTopMaxWidth;
 
     return previous !== this.contentTopAllowed;
+  }
+
+  private restoreBottomPopupDismissal(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    try {
+      this.bottomPopupClosed = this.document.defaultView?.sessionStorage
+        .getItem(BOTTOM_POPUP_DISMISSED_STORAGE_KEY) === '1';
+    } catch {
+      this.bottomPopupClosed = false;
+    }
+  }
+
+  private storeBottomPopupDismissal(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    try {
+      this.document.defaultView?.sessionStorage
+        .setItem(BOTTOM_POPUP_DISMISSED_STORAGE_KEY, '1');
+    } catch {
+      // Session storage can be unavailable in hardened browser contexts.
+    }
   }
 
   private getPageSwapPreloadFuseIds(config: AdRouteConfig): string[] {

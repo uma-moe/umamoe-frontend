@@ -60,6 +60,10 @@ const contentTopSlot = (placement: string, label: string): AdSlotConfig => ({
   sizes: CONTENT_TOP_SIZES,
 });
 
+export function getContentTopSlot(surface: string, label: string): AdSlotConfig {
+  return contentTopSlot(`${surface}_content_top`, `${label} content top`);
+}
+
 const bottomPopupSlot = (placement: string, label: string): AdSlotConfig => ({
   placement,
   fuseId: resolveFuseId(placement),

@@ -8,6 +8,7 @@ import {
   AdSlotConfig,
   PUBLIFT_XL_MIN_WIDTH,
   getAdRouteConfig,
+  getContentTopSlot,
   getInContentSlot,
   getMobileRailSlot,
 } from './ad-layout.config';
@@ -28,7 +29,7 @@ const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = PUBLIFT_XL_MIN_WIDTH - 1;
       [class.ad-in-content--content-top-bridge]="isContentTopBridgeActive"
       [class.ad-in-content--interscroller]="isInterscroller"
       [class.ad-in-content--collapsed]="slotCollapsed"
-      *ngIf="(inlineAdLayoutActive && config.fuseId) || fallbackPreviewEnabled"
+      *ngIf="shouldRenderAd"
       aria-label="Sponsored content"
     >
       <app-ad-slot
@@ -153,9 +154,16 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
       &&
       this.contentTopBridge
       && this.routeConfig.contentTop
-      && this.viewportWidth >= CONTENT_TOP_BRIDGE_MIN_WIDTH
       && this.viewportWidth <= bridgeMaxWidth,
     );
+  }
+
+  get shouldRenderAd(): boolean {
+    if (this.contentTopBridge) {
+      return this.isContentTopBridgeActive && Boolean(this.config.fuseId || this.fallbackPreviewEnabled);
+    }
+
+    return (this.inlineAdLayoutActive && Boolean(this.config.fuseId)) || this.fallbackPreviewEnabled;
   }
 
   get isInterscroller(): boolean {
@@ -214,8 +222,8 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
     this.routeConfig = getAdRouteConfig(this.router.url);
     const label = this.label || this.surface;
 
-    if (this.isContentTopBridgeActive && this.routeConfig.contentTop) {
-      this.config = this.routeConfig.contentTop;
+    if (this.contentTopBridge) {
+      this.config = this.routeConfig.contentTop ?? getContentTopSlot(this.surface, label);
       return;
     }
 
