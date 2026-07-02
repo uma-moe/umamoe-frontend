@@ -53,6 +53,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() forceFallback = false;
   @Input() maxWidth = 0;
   @Input() persistent = false;
+  @Input() providerManaged = false;
   @Output() close = new EventEmitter<void>();
   @Output() collapsedChange = new EventEmitter<boolean>();
   @ViewChild('slotShell') private slotShell?: ElementRef<HTMLElement>;
@@ -111,6 +112,10 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   get slotWidthStyle(): string | null {
+    if (this.providerManaged) {
+      return null;
+    }
+
     if (this.config.kind === 'side-rail' && this.maxWidth > 0) {
       const largestAllowedWidth = this.getLargestActiveWidth();
       const clampedWidth = largestAllowedWidth
@@ -139,6 +144,10 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   get slotHeightStyle(): string | null {
+    if (this.providerManaged) {
+      return null;
+    }
+
     if (this.usesIntrinsicCreativeHeight) {
       return null;
     }
@@ -183,7 +192,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     if (this.config.kind === 'sticky-footer') {
       return this.closable
         && !this.slotCollapsed
-        && this.slotHasVisibleCreative;
+        && (this.slotHasVisibleCreative || this.showFallback);
     }
 
     return this.closable
@@ -249,8 +258,9 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     const configChanged = changes['config'] && !changes['config'].firstChange;
     const forceFallbackChanged = changes['forceFallback'] && !changes['forceFallback'].firstChange;
     const maxWidthChanged = changes['maxWidth'] && !changes['maxWidth'].firstChange;
+    const providerManagedChanged = changes['providerManaged'] && !changes['providerManaged'].firstChange;
 
-    if (configChanged || forceFallbackChanged || maxWidthChanged) {
+    if (configChanged || forceFallbackChanged || maxWidthChanged || providerManagedChanged) {
       this.scheduleWatchSlot((configChanged || maxWidthChanged) && !this.forceFallback);
     }
   }
@@ -401,9 +411,21 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
     const markupStillBidding = this.isMarkupStillBidding(target, hasAdMarkup, hasCurrentCreative);
 
+    if (this.providerManaged) {
+      this.showFallback = false;
+      this.showDiagnostic = false;
+      this.setCollapsed(false);
+      this.slotHasCreative = hasCurrentCreative || hasRetainedCreative || markupStillBidding;
+      this.slotHasVisibleCreative = hasCurrentCreative || hasRetainedCreative;
+      this.slotRetainingCreative = hasRetainedCreative;
+      this.slotWaiting = false;
+      this.creativeCloseInlineOffset = null;
+      this.debugSlotState(target, hasAdMarkup, false, hasCurrentCreative);
+      return;
+    }
+
     if (
-      this.slotCreativeState === 'filled'
-      && hasAdMarkup
+      hasAdMarkup
       && !hasCurrentCreative
       && !hasRetainedCreative
       && !markupStillBidding
@@ -942,10 +964,18 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private usesConfigDrivenSize(): boolean {
+    if (this.providerManaged) {
+      return false;
+    }
+
     return this.config.kind === 'interscroller';
   }
 
   private usesMeasuredCreativeLayout(): boolean {
+    if (this.providerManaged) {
+      return false;
+    }
+
     return this.config.kind === 'interscroller' || this.config.kind === 'sticky-footer';
   }
 

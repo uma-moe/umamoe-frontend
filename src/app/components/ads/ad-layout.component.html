@@ -37,16 +37,27 @@
   </ng-container>
 </ng-container>
 
-<aside
-  class="ad-bottom-popup"
-  *ngIf="!bottomPopupClosed && (stickyFooterConfig.fuseId || fallbackPreviewEnabled)"
+<div
+  *ngIf="shouldShowProviderStickyFooter"
+  class="ad-provider-sticky-footer"
   aria-label="Sponsored sticky footer"
 >
   <app-ad-slot
     [config]="stickyFooterConfig"
-    [closable]="true"
-    [forceFallback]="fallbackPreviewEnabled"
     [persistent]="true"
+    [providerManaged]="true"
+  ></app-ad-slot>
+</div>
+
+<aside
+  class="ad-bottom-popup"
+  *ngIf="shouldShowBottomSupportFallback"
+  aria-label="Support uma.moe"
+>
+  <app-ad-slot
+    [config]="stickyFooterFallbackConfig"
+    [closable]="true"
+    [forceFallback]="true"
     (close)="closeBottomPopup()"
   ></app-ad-slot>
 </aside>

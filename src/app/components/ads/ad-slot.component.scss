@@ -48,6 +48,30 @@
   display: none;
 }
 
+.ad-slot--provider-managed {
+  width: 0;
+  height: 0;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+  transform: none;
+  transition: none;
+  contain: none;
+  isolation: auto;
+}
+
+.ad-slot--provider-managed.ad-slot--waiting {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
 .ad-slot--diagnostic {
   border: 1px solid var(--ad-diagnostic-border);
   background: var(--ad-diagnostic-bg);
@@ -101,6 +125,27 @@
 .ad-slot--side-rail .ad-slot-retained {
   width: var(--ad-slot-width);
   max-width: var(--ad-slot-width);
+}
+
+.ad-slot--provider-managed .ad-slot-target,
+.ad-slot--provider-managed .ad-slot-retained {
+  position: static;
+  inset: auto;
+  display: block;
+  width: 0;
+  height: 0;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  contain: none;
+}
+
+.ad-slot--provider-managed .ad-slot-retained,
+.ad-slot--provider-managed .ad-slot-fallback,
+.ad-slot--provider-managed .ad-slot-diagnostic,
+.ad-slot--provider-managed .ad-slot-meta,
+.ad-slot--provider-managed .ad-slot-close {
+  display: none;
 }
 
 .ad-slot-target,

@@ -47,6 +47,10 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   config: AdRouteConfig = getAdRouteConfig('/');
   readonly adsCanRender$ = this.fuseAdsService.adsCanRender$;
   readonly stickyFooterConfig = getGlobalStickyFooterSlot();
+  readonly stickyFooterFallbackConfig = {
+    ...getGlobalStickyFooterSlot(),
+    fuseId: '',
+  };
   bottomPopupClosed = false;
   fallbackPreviewEnabled = false;
   adsCanRender = false;
@@ -111,6 +115,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   @HostListener('window:resize')
   onWindowResize(): void {
     this.updateContentTopAllowed();
+    this.updateBottomPopupRootState();
     this.scheduleSideRailLayout();
   }
 
@@ -160,6 +165,23 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     return this.fallbackPreviewEnabled || (this.adsCanRender && !this.supportFallbackAllowed);
   }
 
+  get shouldShowProviderStickyFooter(): boolean {
+    return Boolean(
+      this.stickyFooterConfig.fuseId
+      && this.adLayoutActive
+      && !this.supportFallbackAllowed
+      && !this.fallbackPreviewEnabled,
+    );
+  }
+
+  get shouldShowBottomSupportFallback(): boolean {
+    if (this.bottomPopupClosed || !(this.stickyFooterConfig.fuseId || this.fallbackPreviewEnabled)) {
+      return false;
+    }
+
+    return this.supportFallbackAllowed || this.fallbackPreviewEnabled;
+  }
+
   closeBottomPopup(): void {
     this.bottomPopupClosed = true;
     this.storeBottomPopupDismissal();
@@ -176,14 +198,14 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.scheduleSideRailLayout();
   }
 
-  private updateBottomPopupRootState(visible = Boolean((this.stickyFooterConfig.fuseId || this.fallbackPreviewEnabled) && !this.bottomPopupClosed)): void {
+  private updateBottomPopupRootState(visible = this.shouldShowBottomSupportFallback): void {
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }
 
     this.document.documentElement.classList.toggle(
       AD_BOTTOM_POPUP_VISIBLE_CLASS,
-      visible && this.adLayoutActive,
+      visible,
     );
   }
 
