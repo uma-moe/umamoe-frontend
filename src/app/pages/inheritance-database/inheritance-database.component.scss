@@ -1508,31 +1508,24 @@ mat-icon { @include icon-size(16px); }
 
 @media (max-width: 430px) {
   .content-container {
-    width: 100%;
-    max-width: 100%;
+    width: 117.6470588235%;
+    max-width: 117.6470588235vw;
     padding: 1rem 0.25rem;
-    overflow-x: hidden;
-    overflow-x: clip;
+    zoom: 0.85;
+  }
+
+  // iOS Safari does not reliably apply `zoom`, so keep the old compact
+  // layout width and scale the painted result instead.
+  @supports (-webkit-touch-callout: none) {
+    .content-container {
+      max-width: 117.6470588235%;
+      zoom: 1;
+      transform: scale(0.85);
+      transform-origin: top left;
+    }
   }
 
   .record-card { padding: 0.75rem; }
-
-  .results-header {
-    .max-followers-badge,
-    .split-sparks-badge,
-    .list-mode-badge {
-      flex: 0 1 auto;
-      padding: 6px 5px;
-      gap: 4px;
-
-      .badge-icon { @include icon-size(15px); }
-      .badge-label { font-size: 10px; }
-      .badge-status {
-        font-size: 9px;
-        padding: 2px 4px;
-      }
-    }
-  }
 
   .page-header { padding: 1rem 0; }
 

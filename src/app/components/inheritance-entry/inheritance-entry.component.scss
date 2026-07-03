@@ -1554,13 +1554,6 @@
 }
 
 // ─── Record Footer ─────────────────────────────
-@media (max-width: 430px) {
-  .main-character-img { width: 49px; height: 49px; }
-  .parent-character-img { width: 37px; height: 37px; }
-  .support-card-image { max-height: 54px; }
-  .card-limit-break { font-size: 10px; }
-}
-
 .record-footer {
   display: flex;
   align-items: center;

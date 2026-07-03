@@ -1921,12 +1921,6 @@ html {
   --ad-sticky-footer-close-z-index: 901;
 }
 
-@media (max-width: 430px) {
-  html:has(.inheritance-database) {
-    font-size: 85%;
-  }
-}
-
 html.ad-bottom-popup-visible {
   --ad-bottom-popup-offset: 108px;
   --ad-bottom-floating-control-offset: 108px;
