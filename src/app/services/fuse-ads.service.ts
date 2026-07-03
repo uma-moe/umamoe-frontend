@@ -163,7 +163,7 @@ const FORCE_AD_CONSENT_QUERY_KEYS = ['force_ad_consent', 'ad_consent', 'ads_cons
 const FUSE_ENABLED_STORAGE_KEY = 'umamoe-fuse-enabled-v1';
 const FUSE_ENABLED_QUERY_KEYS = ['fuse', 'fuse_enabled', 'ads_enabled'];
 const FUSE_API_RETRY_MS = 100;
-const FUSE_API_MAX_RETRIES = 300;
+const DEFAULT_FUSE_BLOCKING_TIMEOUT_MS = 1200;
 const PAGE_INIT_DEBOUNCE_MS = 30;
 const PRIVACY_CONTROLS_RETRY_MS = 250;
 const PRIVACY_CONTROLS_MAX_RETRIES = 32;
@@ -284,10 +284,25 @@ export class FuseAdsService {
       enabled: this.enabled,
       hasScriptUrl: this.hasScriptUrl,
       scriptUrl: environment.fuse.scriptUrl,
+      fallbackPreviewEnabled: this.fallbackPreviewEnabled,
+      blockingTimeoutMs: this.fuseBlockingTimeoutMs,
       localConsent: this.summarizeLocalConsent(),
       localAllowsAds: this.localAllowsAds,
       adConsentForced: this.adConsentForced,
     });
+
+    if (this.fallbackPreviewEnabled) {
+      this.debugWarn('init skipped: ad fallback preview enabled');
+      this.setRuntimeState({
+        enabled: false,
+        configured: false,
+        scriptLoaded: false,
+        adsCanRender: false,
+        cmpStatus: 'disabled',
+      });
+      this.setRegionalGoogleAdConsent({ ...DENIED_AD_CONSENT, source: 'disabled' });
+      return;
+    }
 
     if (!this.enabled) {
       this.debugWarn('init skipped: Fuse disabled by environment');
@@ -379,6 +394,7 @@ export class FuseAdsService {
       fusetag.registerZone?.(zoneElementId);
       fusetag.pageInit?.({
         blockingFuseIds: [fuseId],
+        blockingTimeout: this.fuseBlockingTimeoutMs,
       });
     }, `persistentZone:${zoneElementId}:${fuseId}`, true);
   }
@@ -657,7 +673,37 @@ export class FuseAdsService {
     script.id = 'publift-fuse-js';
     script.async = true;
     script.src = environment.fuse.scriptUrl.trim();
+    let scriptSettled = false;
+    let scriptTimeout: number | null = null;
+    const clearScriptTimeout = () => {
+      if (scriptTimeout !== null) {
+        this.window.clearTimeout(scriptTimeout);
+        scriptTimeout = null;
+      }
+    };
+    const failScript = (reason: string) => {
+      if (scriptSettled) {
+        return;
+      }
+
+      scriptSettled = true;
+      clearScriptTimeout();
+      script.remove();
+      this.setSupportFallbackAllowed(true, reason);
+      this.debugError(reason, { src: script.src, blockingTimeoutMs: this.fuseBlockingTimeoutMs });
+      this.setRuntimeState({
+        ...this.runtimeStateSubject.value,
+        scriptLoaded: false,
+        cmpStatus: 'error',
+      });
+    };
     script.addEventListener('load', () => {
+      if (scriptSettled) {
+        return;
+      }
+
+      scriptSettled = true;
+      clearScriptTimeout();
       this.debug('Fuse script loaded', { src: script.src });
       this.setRuntimeState({
         ...this.runtimeStateSubject.value,
@@ -666,13 +712,7 @@ export class FuseAdsService {
       this.schedulePendingFuseCallFlush('script loaded');
     });
     script.addEventListener('error', () => {
-      this.setSupportFallbackAllowed(true, 'Fuse script failed to load');
-      this.debugError('Fuse script failed to load', { src: script.src });
-      this.setRuntimeState({
-        ...this.runtimeStateSubject.value,
-        scriptLoaded: false,
-        cmpStatus: 'error',
-      });
+      failScript('Fuse script failed to load');
     });
 
     const nonce = this.getScriptNonce();
@@ -683,18 +723,28 @@ export class FuseAdsService {
     this.debug('Fuse script injecting', {
       src: script.src,
       hasNonce: Boolean(nonce),
+      blockingTimeoutMs: this.fuseBlockingTimeoutMs,
     });
-    this.document.head.appendChild(script);
+    try {
+      this.document.head.appendChild(script);
+      scriptTimeout = this.window.setTimeout(() => {
+        failScript('Fuse script timed out');
+      }, this.fuseBlockingTimeoutMs);
+    } catch (error) {
+      this.debugError('Fuse script injection failed', error);
+      failScript('Fuse script injection failed');
+    }
   }
 
   private ensureFuseQueue(): FuseTag {
     this.syncProviderStickyFooterFlag();
 
-    const current = this.window.fusetag;
-    if (current) {
-      current.que = current.que ?? [];
+    const current = this.window.fusetag as unknown;
+    if (current && (typeof current === 'object' || typeof current === 'function')) {
+      const fusetag = current as FuseTag;
+      fusetag.que = fusetag.que ?? [];
       this.debug('Fuse queue reused');
-      return current;
+      return fusetag;
     }
 
     const fusetag: FuseTag = { que: [] };
@@ -719,7 +769,7 @@ export class FuseAdsService {
       this.setSupportFallbackAllowed(false, 'Fuse API ready');
       this.attachFuseDebugCallbacks(fusetag);
       this.debug('Fuse API ready; executing call', { label });
-      callback(fusetag);
+      this.executeFuseCall(fusetag, { label, callback, persistent });
       return;
     }
 
@@ -759,7 +809,7 @@ export class FuseAdsService {
     if (!this.isFuseApiReady(fusetag)) {
       this.fuseCallFlushRetries += 1;
 
-      if (this.fuseCallFlushRetries >= FUSE_API_MAX_RETRIES) {
+      if (this.fuseCallFlushRetries >= this.maxFuseApiRetries) {
         this.fuseApiBlocked = true;
         this.setSupportFallbackAllowed(true, 'Fuse API never became ready');
         this.debugError('Fuse API never became ready; pending calls remain blocked', {
@@ -768,6 +818,7 @@ export class FuseAdsService {
           fusetagKeys: Object.keys(fusetag),
           hasQueue: Boolean(fusetag.que),
           queueType: Array.isArray(fusetag.que) ? 'array' : typeof fusetag.que,
+          blockingTimeoutMs: this.fuseBlockingTimeoutMs,
           runtimeState: this.runtimeStateSubject.value,
         });
         return;
@@ -794,12 +845,7 @@ export class FuseAdsService {
     });
 
     for (const call of calls) {
-      try {
-        this.debug('Fuse pending call executing', { label: call.label });
-        call.callback(fusetag);
-      } catch (error) {
-        this.debugError('Fuse pending call failed', { label: call.label, error });
-      }
+      this.executeFuseCall(fusetag, call);
     }
 
     if (this.pendingFuseCalls.length > 0) {
@@ -809,6 +855,16 @@ export class FuseAdsService {
 
   private isFuseApiReady(fusetag: FuseTag): boolean {
     return typeof fusetag.registerZone === 'function' && typeof fusetag.pageInit === 'function';
+  }
+
+  private executeFuseCall(fusetag: FuseTag, call: PendingFuseCall): void {
+    try {
+      this.debug('Fuse call executing', { label: call.label });
+      call.callback(fusetag);
+    } catch (error) {
+      this.debugError('Fuse call failed', { label: call.label, error });
+      this.setSupportFallbackAllowed(true, 'Fuse call failed');
+    }
   }
 
   private attachFuseDebugCallbacks(fusetag: FuseTag): void {
@@ -824,29 +880,39 @@ export class FuseAdsService {
       currentBreakpoint: this.getFuseCurrentBreakpoint(fusetag),
     });
 
-    fusetag.onTagInitialised?.(() => {
-      this.debug('Fuse tag initialised callback', {
-        currentBreakpoint: this.getFuseCurrentBreakpoint(fusetag),
+    try {
+      fusetag.onTagInitialised?.(() => {
+        this.debug('Fuse tag initialised callback', {
+          currentBreakpoint: this.getFuseCurrentBreakpoint(fusetag),
+        });
       });
-    });
 
-    fusetag.onSlotsInitialised?.(() => {
-      this.debug('Fuse slots initialised callback', {
-        currentBreakpoint: this.getFuseCurrentBreakpoint(fusetag),
+      fusetag.onSlotsInitialised?.(() => {
+        this.debug('Fuse slots initialised callback', {
+          currentBreakpoint: this.getFuseCurrentBreakpoint(fusetag),
+        });
       });
-    });
 
-    fusetag.onSlotRenderEnded?.(event => {
-      const result: FuseSlotRenderResult = {
-        slotId: event.slotId,
-        hasCreative: event.hasCreative,
-        gptSlotElementId: this.getGptSlotElementId(event),
-        renderSize: this.getSlotRenderSize(event),
-      };
+      fusetag.onSlotRenderEnded?.(event => {
+        try {
+          const result: FuseSlotRenderResult = {
+            slotId: event.slotId,
+            hasCreative: event.hasCreative,
+            gptSlotElementId: this.getGptSlotElementId(event),
+            renderSize: this.getSlotRenderSize(event),
+          };
 
-      this.debug('Fuse slot render ended', result);
-      this.ngZone.run(() => this.slotRenderEndedSubject.next(result));
-    });
+          this.debug('Fuse slot render ended', result);
+          this.ngZone.run(() => this.slotRenderEndedSubject.next(result));
+        } catch (error) {
+          this.debugError('Fuse slot render callback failed', error);
+          this.setSupportFallbackAllowed(true, 'Fuse slot render callback failed');
+        }
+      });
+    } catch (error) {
+      this.debugError('Fuse debug callback registration failed', error);
+      this.setSupportFallbackAllowed(true, 'Fuse debug callback registration failed');
+    }
   }
 
   private getGptSlotElementId(event: FuseSlotRenderEndedEvent): string | undefined {
@@ -910,6 +976,7 @@ export class FuseAdsService {
       });
       fusetag.pageInit?.({
         blockingFuseIds,
+        blockingTimeout: this.fuseBlockingTimeoutMs,
       });
     }, `pageInit:${blockingFuseIds.join(',')}`);
   }
@@ -1377,6 +1444,38 @@ export class FuseAdsService {
 
   private get adConsentForced(): boolean {
     return this.getQueryBooleanOverride(FORCE_AD_CONSENT_QUERY_KEYS) === true;
+  }
+
+  private get fallbackPreviewEnabled(): boolean {
+    if (!isPlatformBrowser(this.platformId)) {
+      return false;
+    }
+
+    try {
+      const fallbackParam = new URLSearchParams(this.window.location.search).get('ad_fallbacks');
+      if (fallbackParam === '1') {
+        return true;
+      }
+
+      if (fallbackParam === '0') {
+        return false;
+      }
+    } catch {
+      return environment.fuse.alwaysShowFallbacks === true;
+    }
+
+    return environment.fuse.alwaysShowFallbacks === true;
+  }
+
+  private get fuseBlockingTimeoutMs(): number {
+    const timeoutMs = Number((environment.fuse as { blockingTimeoutMs?: number }).blockingTimeoutMs);
+    return Number.isFinite(timeoutMs) && timeoutMs > 0
+      ? timeoutMs
+      : DEFAULT_FUSE_BLOCKING_TIMEOUT_MS;
+  }
+
+  private get maxFuseApiRetries(): number {
+    return Math.max(1, Math.ceil(this.fuseBlockingTimeoutMs / FUSE_API_RETRY_MS));
   }
 
   private get localAllowsAds(): boolean {

@@ -52,6 +52,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     hasActiveChild = false;
     inheritanceRecord: InheritanceRecord | null = null;
     private readonly sortedSkillsCache = new WeakMap<number[], number[]>();
+    private static readonly shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     // Owner controls
     isOwnProfile = false;
@@ -258,7 +259,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
 
     getMonthName(month: number): string {
-        return new Date(2000, month - 1, 1).toLocaleString('en', { month: 'short' });
+        return ProfileComponent.shortMonthNames[month - 1] ?? '';
     }
 
     getGainColor(gain: number): string {

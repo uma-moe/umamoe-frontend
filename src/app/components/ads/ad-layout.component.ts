@@ -1,5 +1,5 @@
 import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { Component, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, Inject, NgZone, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, combineLatest, filter } from 'rxjs';
 import { AdSlotComponent } from './ad-slot.component';
@@ -81,6 +81,8 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private fuseAdsService: FuseAdsService,
+    private ngZone: NgZone,
+    private changeDetector: ChangeDetectorRef,
     @Inject(DOCUMENT) private document: Document,
     @Inject(PLATFORM_ID) private platformId: Object,
   ) {}
@@ -98,6 +100,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       this.supportFallbackAllowed = supportFallbackAllowed;
       this.updateProviderStickyFooterPresence();
       this.updateBottomPopupRootState();
+      this.scheduleProviderStickyFooterMeasurementIfPresent();
 
       if (!this.adLayoutActive) {
         this.clearAdLayoutGeometry();
@@ -132,7 +135,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.updateContentTopAllowed();
     this.updateProviderStickyFooterPresence();
     this.updateBottomPopupRootState();
-    this.scheduleProviderStickyFooterMeasurement();
+    this.scheduleProviderStickyFooterMeasurementIfPresent();
     this.scheduleSideRailLayout();
   }
 
@@ -229,10 +232,12 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
         return;
       }
 
-      this.closeProviderStickyFooter();
+      this.ngZone.run(() => this.closeProviderStickyFooter());
     };
 
-    this.document.addEventListener('click', this.providerStickyFooterDismissHandler, true);
+    this.ngZone.runOutsideAngular(() => {
+      this.document.addEventListener('click', this.providerStickyFooterDismissHandler!, true);
+    });
   }
 
   private detachProviderStickyFooterDismissHandler(): void {
@@ -249,18 +254,26 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.providerStickyFooterObserver = new MutationObserver(() => {
-      this.updateProviderStickyFooterPresence();
-      this.updateBottomPopupRootState();
-      this.scheduleProviderStickyFooterMeasurement();
-    });
-    this.providerStickyFooterObserver.observe(this.document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class', 'style', 'hidden'],
-      childList: true,
-      subtree: true,
+    this.ngZone.runOutsideAngular(() => {
+      this.providerStickyFooterObserver = new MutationObserver(records => {
+        if (!records.some(record => this.mutationTouchesProviderStickyFooter(record))) {
+          return;
+        }
+
+        const stateChanged = this.updateProviderStickyFooterPresence();
+        const rootChanged = this.updateBottomPopupRootState();
+        this.scheduleProviderStickyFooterMeasurementIfPresent();
+        this.markProviderStickyFooterChanged(stateChanged || rootChanged);
+      });
+      this.providerStickyFooterObserver.observe(this.document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'hidden'],
+        childList: true,
+        subtree: true,
+      });
     });
     this.updateProviderStickyFooterPresence();
+    this.scheduleProviderStickyFooterMeasurementIfPresent();
   }
 
   private disconnectProviderStickyFooterObserver(): void {
@@ -279,13 +292,21 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     }
 
     if (this.providerStickyFooterMeasureFrame !== null) {
-      view.cancelAnimationFrame(this.providerStickyFooterMeasureFrame);
+      return;
     }
 
-    this.providerStickyFooterMeasureFrame = view.requestAnimationFrame(() => {
-      this.providerStickyFooterMeasureFrame = null;
-      this.updateProviderStickyFooterCloseOffset();
+    this.ngZone.runOutsideAngular(() => {
+      this.providerStickyFooterMeasureFrame = view.requestAnimationFrame(() => {
+        this.providerStickyFooterMeasureFrame = null;
+        this.updateProviderStickyFooterCloseOffset();
+      });
     });
+  }
+
+  private scheduleProviderStickyFooterMeasurementIfPresent(): void {
+    if (this.providerStickyFooterPresent) {
+      this.scheduleProviderStickyFooterMeasurement();
+    }
   }
 
   private cancelProviderStickyFooterMeasurement(): void {
@@ -297,15 +318,18 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.providerStickyFooterMeasureFrame = null;
   }
 
-  private updateProviderStickyFooterPresence(): void {
+  private updateProviderStickyFooterPresence(): boolean {
+    const previous = this.providerStickyFooterPresent;
+
     if (!isPlatformBrowser(this.platformId)) {
       this.providerStickyFooterPresent = false;
-      return;
+      return previous !== this.providerStickyFooterPresent;
     }
 
     if (this.providerStickyFooterClosed || this.supportFallbackAllowed || this.fallbackPreviewEnabled) {
       this.providerStickyFooterPresent = false;
-      return;
+      this.clearProviderStickyFooterCloseOffset();
+      return previous !== this.providerStickyFooterPresent;
     }
 
     this.providerStickyFooterPresent = Array.from(
@@ -313,11 +337,38 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     ).some(element => !element.matches(PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR)
       && this.isVisibleProviderStickyFooterElement(element));
 
-    if (this.providerStickyFooterPresent) {
-      this.scheduleProviderStickyFooterMeasurement();
-    } else {
+    if (!this.providerStickyFooterPresent) {
       this.clearProviderStickyFooterCloseOffset();
     }
+
+    return previous !== this.providerStickyFooterPresent;
+  }
+
+  private mutationTouchesProviderStickyFooter(record: MutationRecord): boolean {
+    if (this.nodeTouchesProviderStickyFooter(record.target)) {
+      return true;
+    }
+
+    return Array.from(record.addedNodes).some(node => this.nodeTouchesProviderStickyFooter(node))
+      || Array.from(record.removedNodes).some(node => this.nodeTouchesProviderStickyFooter(node));
+  }
+
+  private nodeTouchesProviderStickyFooter(node: Node): boolean {
+    if (!(node instanceof Element)) {
+      return false;
+    }
+
+    return node.matches(PROVIDER_STICKY_FOOTER_SELECTOR)
+      || Boolean(node.closest(PROVIDER_STICKY_FOOTER_SELECTOR))
+      || Boolean(node.querySelector(PROVIDER_STICKY_FOOTER_SELECTOR));
+  }
+
+  private markProviderStickyFooterChanged(changed: boolean): void {
+    if (!changed) {
+      return;
+    }
+
+    this.ngZone.run(() => this.changeDetector.markForCheck());
   }
 
   private isVisibleProviderStickyFooterElement(element: HTMLElement): boolean {
@@ -425,30 +476,44 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     ];
 
     for (const target of targets) {
-      target.style.removeProperty(AD_PROVIDER_STICKY_FOOTER_CLOSE_OFFSET_VAR);
+      if (target.style.getPropertyValue(AD_PROVIDER_STICKY_FOOTER_CLOSE_OFFSET_VAR)) {
+        target.style.removeProperty(AD_PROVIDER_STICKY_FOOTER_CLOSE_OFFSET_VAR);
+      }
     }
   }
 
-  private updateProviderStickyFooterRootState(dismissed = this.providerStickyFooterClosed): void {
+  private updateProviderStickyFooterRootState(dismissed = this.providerStickyFooterClosed): boolean {
     if (!isPlatformBrowser(this.platformId)) {
-      return;
+      return false;
     }
 
-    this.document.documentElement.classList.toggle(
+    const root = this.document.documentElement;
+    if (root.classList.contains(AD_PROVIDER_STICKY_FOOTER_DISMISSED_CLASS) === dismissed) {
+      return false;
+    }
+
+    root.classList.toggle(
       AD_PROVIDER_STICKY_FOOTER_DISMISSED_CLASS,
       dismissed,
     );
+    return true;
   }
 
-  private updateBottomPopupRootState(visible = this.shouldShowAnyBottomAd): void {
+  private updateBottomPopupRootState(visible = this.shouldShowAnyBottomAd): boolean {
     if (!isPlatformBrowser(this.platformId)) {
-      return;
+      return false;
     }
 
-    this.document.documentElement.classList.toggle(
+    const root = this.document.documentElement;
+    if (root.classList.contains(AD_BOTTOM_POPUP_VISIBLE_CLASS) === visible) {
+      return false;
+    }
+
+    root.classList.toggle(
       AD_BOTTOM_POPUP_VISIBLE_CLASS,
       visible,
     );
+    return true;
   }
 
   private get shouldShowAnyBottomAd(): boolean {

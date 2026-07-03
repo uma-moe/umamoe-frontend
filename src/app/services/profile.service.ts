@@ -19,7 +19,18 @@ export class ProfileService {
   get profileCtx() { return this._profileCtx.value; }
 
   patchProfileCtx(patch: Partial<{ profile: UserProfileResponse | null; isOwnProfile: boolean; visibility: ProfileVisibility }>): void {
-    this._profileCtx.next({ ...this._profileCtx.value, ...patch });
+    const current = this._profileCtx.value;
+    const next = { ...current, ...patch };
+
+    if (
+      next.profile === current.profile
+      && next.isOwnProfile === current.isOwnProfile
+      && next.visibility === current.visibility
+    ) {
+      return;
+    }
+
+    this._profileCtx.next(next);
   }
 
   resetProfileCtx(): void {

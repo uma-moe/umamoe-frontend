@@ -16,7 +16,7 @@ import { GoogleAnalyticsService } from './services/google-analytics.service';
 import { FuseAdsService } from './services/fuse-ads.service';
 import { AppVersionService } from './services/app-version.service';
 import { environment } from '../environments/environment';
-import { BehaviorSubject, Observable, combineLatest, map, timer } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest, map, of, switchMap, take, timer } from 'rxjs';
 
 interface TurnstileRecoveryView {
   debug: TurnstileDebugState;
@@ -74,10 +74,11 @@ export class AppComponent implements OnInit {
   ) {
     this.turnstileRecovery$ = combineLatest([
       this.turnstileService.proofDebug$,
-      timer(0, 1000),
       this.interactiveNoticeSubject,
     ]).pipe(
-      map(([debug, _tick, notice]) => this.toTurnstileRecoveryView(debug, notice)),
+      switchMap(([debug, notice]) => this.getTurnstileRecoveryTicker(debug, notice).pipe(
+        map(() => this.toTurnstileRecoveryView(debug, notice)),
+      )),
     );
   }
   // Debug shortcut: Ctrl+Shift+L to test rate limit popup (dev only)
@@ -223,6 +224,22 @@ export class AppComponent implements OnInit {
           ? 'Run it again, or open Status for support if this area stays empty.'
           : 'Use Run browser check. If nothing appears, open Status for support.',
     };
+  }
+
+  private getTurnstileRecoveryTicker(
+    debug: TurnstileDebugState,
+    notice: TurnstileRecoveryNotice | null,
+  ): Observable<number> {
+    if (this.isTurnstilePending(debug)) {
+      return timer(0, 1000);
+    }
+
+    const noticeRemainingMs = notice ? notice.expiresAt - Date.now() : 0;
+    if (noticeRemainingMs > 0) {
+      return timer(0, noticeRemainingMs + 50).pipe(take(2));
+    }
+
+    return of(0);
   }
 
   private showInteractiveNotice(state: TurnstileRecoveryNotice['state'], durationMs: number): void {
