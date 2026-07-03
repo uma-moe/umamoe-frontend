@@ -82,13 +82,13 @@ const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = PUBLIFT_XL_MIN_WIDTH - 1;
       display: none;
     }
 
-    @media (max-width: 1439px) {
+    @media (max-width: 1400px) {
       :host.ad-in-content-host--content-top-bridge {
         display: block;
       }
     }
 
-    @media (max-width: 899px) {
+    @media (max-width: 1400px) {
       :host.ad-in-content-host--mobile {
         display: block;
       }

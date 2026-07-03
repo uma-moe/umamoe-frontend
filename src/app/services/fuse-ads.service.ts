@@ -162,7 +162,7 @@ const FORCE_AD_CONSENT_QUERY_KEYS = ['force_ad_consent', 'ad_consent', 'ads_cons
 const FUSE_ENABLED_STORAGE_KEY = 'umamoe-fuse-enabled-v1';
 const FUSE_ENABLED_QUERY_KEYS = ['fuse', 'fuse_enabled', 'ads_enabled'];
 const FUSE_API_RETRY_MS = 100;
-const FUSE_API_MAX_RETRIES = 80;
+const FUSE_API_MAX_RETRIES = 300;
 const PAGE_INIT_DEBOUNCE_MS = 30;
 const PRIVACY_CONTROLS_RETRY_MS = 250;
 const PRIVACY_CONTROLS_MAX_RETRIES = 32;
@@ -347,6 +347,7 @@ export class FuseAdsService {
     this.enqueueFuseCall(fusetag => {
       this.debug('registerZone executing', { zoneElementId, fuseId });
       fusetag.registerZone?.(zoneElementId);
+      this.schedulePageInit([fuseId], `zone registered:${zoneElementId}`);
     }, `registerZone:${zoneElementId}:${fuseId}`);
   }
 

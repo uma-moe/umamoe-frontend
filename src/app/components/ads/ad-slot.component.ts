@@ -413,19 +413,15 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     }
 
     if (this.providerManaged) {
-      const providerNoFillReady = this.slotCreativeState === 'empty'
-        && !hasCurrentCreative
-        && !hasRetainedCreative
-        && !markupStillBidding;
       this.showFallback = false;
       this.showDiagnostic = false;
-      this.setCollapsed(providerNoFillReady);
+      this.setCollapsed(false);
       this.slotHasCreative = hasCurrentCreative || hasRetainedCreative || markupStillBidding;
       this.slotHasVisibleCreative = hasCurrentCreative || hasRetainedCreative;
       this.slotRetainingCreative = hasRetainedCreative;
       this.slotWaiting = false;
       this.updateCreativeCloseOffset(target);
-      this.debugSlotState(target, hasAdMarkup, providerNoFillReady, hasCurrentCreative);
+      this.debugSlotState(target, hasAdMarkup, false, hasCurrentCreative);
       return;
     }
 
@@ -778,8 +774,17 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     renderSize: AdSlotSize,
   ): boolean {
     const tolerance = 2;
+    if (this.config.kind === 'interscroller') {
+      return sourceSize.width <= renderSize.width + tolerance
+        && sourceSize.height <= renderSize.height + tolerance;
+    }
+
     const similarWidth = sourceSize.width <= renderSize.width + tolerance
       && sourceSize.width >= Math.max(8, renderSize.width * 0.75);
+    if (this.config.kind === 'leaderboard') {
+      return this.isCreativeTag(element) && similarWidth;
+    }
+
     const isMeaningfullyShorter = sourceSize.height + tolerance < renderSize.height;
 
     return this.isCreativeTag(element)
@@ -957,7 +962,9 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       return false;
     }
 
-    return this.config.kind === 'interscroller' || this.config.kind === 'sticky-footer';
+    return this.config.kind === 'leaderboard'
+      || this.config.kind === 'interscroller'
+      || this.config.kind === 'sticky-footer';
   }
 
   private getPrimarySize(): AdSlotSize | null {

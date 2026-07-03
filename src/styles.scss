@@ -1398,7 +1398,7 @@ html.light-theme :where(#qc-cmp2-container, .qc-cmp2-container) {
   backdrop-filter: none !important;
 }
 
-:where(#qc-cmp2-ui, .qc-cmp2-container .qc-cmp2-main) {
+:where(#qc-cmp2-ui) {
   position: relative !important;
   inset: auto !important;
   z-index: 2147483647 !important;
@@ -1773,7 +1773,7 @@ html.light-theme :where(#qc-cmp2-container, .qc-cmp2-container) {
 }
 
 @media (max-width: 640px) {
-  :where(#qc-cmp2-ui, .qc-cmp2-container .qc-cmp2-main) {
+  :where(#qc-cmp2-ui) {
     width: calc(100vw - 16px) !important;
     max-height: calc(100vh - 16px) !important;
     border-radius: var(--radius-sm) !important;
@@ -1917,11 +1917,13 @@ app-root {
 
 html {
   --ad-bottom-popup-offset: 0px;
+  --ad-bottom-floating-control-offset: 0px;
   --ad-bottom-filter-panel-offset: 0px;
 }
 
 html.ad-bottom-popup-visible {
   --ad-bottom-popup-offset: 108px;
+  --ad-bottom-floating-control-offset: 108px;
   --ad-bottom-filter-panel-offset: 108px;
 }
 
@@ -1937,6 +1939,7 @@ html.ad-bottom-popup-visible .bottom-filter-panel {
 }
 
 :where(.publift-widget-sticky_footer-button) {
+  position: absolute !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -2001,11 +2004,12 @@ app-ad-in-content.ad-in-content-host--content-top-bridge-active + :where(
 @media (max-width: 720px) {
   html.ad-bottom-popup-visible {
     --ad-bottom-popup-offset: 56px;
+    --ad-bottom-floating-control-offset: 96px;
     --ad-bottom-filter-panel-offset: 28px;
   }
 }
 
-@media (min-width: 1440px) {
+@media (min-width: 1401px) {
   html.ad-left-rail-reserved {
     --ad-layout-start-space: calc(var(--ad-left-rail-reserve, 152px) + 0.75rem);
     --ad-layout-end-space: max(0.5rem, env(safe-area-inset-right));

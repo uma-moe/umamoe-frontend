@@ -30,7 +30,7 @@ export interface AdRouteConfig {
   inContent?: AdSlotConfig[];
 }
 
-export const PUBLIFT_XL_MIN_WIDTH = 1440;
+export const PUBLIFT_XL_MIN_WIDTH = 1401;
 
 const BOTTOM_POPUP_SIZES = ['1200x90', '970x90', '728x90', '468x90'];
 const SIDE_RAIL_SIZES = ['160x600', '120x600'];
@@ -40,9 +40,9 @@ const MOBILE_CONTENT_TOP_SIZES = ['320x50', '300x50'];
 const IN_CONTENT_SIZES = ['970x90', '728x90', '468x90', '468x60', '320x100', '300x100', '320x50', '300x50'];
 const MOBILE_INTERSCROLLER_SIZE_GROUPS = [
   ['320x50', '300x50'],
-  ['300x250', '250x250', '300x300'],
-  ['320x100', '300x100', '300x250'],
-  ['300x300', '300x250', '250x250', '320x50'],
+  ['320x50', '300x50'],
+  ['320x50', '300x50'],
+  ['320x50', '300x50'],
 ];
 
 const sideSlot = (placement: string, label: string): AdSlotConfig => ({

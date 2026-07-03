@@ -256,10 +256,10 @@
 .ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained :where(div, ins) {
   align-items: center !important;
   min-height: 0 !important;
-  max-height: var(--ad-creative-height) !important;
+  max-height: none !important;
   margin-top: 0 !important;
   padding-top: 0 !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   line-height: 0 !important;
 }
 
@@ -272,8 +272,10 @@
 
 .ad-slot--interscroller.ad-slot--creative-height .ad-slot-target > :not(script):not(style),
 .ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained > :not(script):not(style) {
-  height: var(--ad-creative-height) !important;
-  max-height: var(--ad-creative-height) !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
 }
 
 .ad-slot--interscroller:not(.ad-slot--creative-height) .ad-slot-target > :where(div, ins),

@@ -278,7 +278,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     );
   }
 
-  private updateBottomPopupRootState(visible = this.shouldShowBottomSupportFallback): void {
+  private updateBottomPopupRootState(visible = this.shouldShowAnyBottomAd): void {
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }
@@ -287,6 +287,10 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       AD_BOTTOM_POPUP_VISIBLE_CLASS,
       visible,
     );
+  }
+
+  private get shouldShowAnyBottomAd(): boolean {
+    return this.shouldShowBottomSupportFallback || this.shouldShowProviderStickyFooter;
   }
 
   private updateContentTopAllowed(): boolean {
