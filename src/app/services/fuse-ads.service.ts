@@ -64,6 +64,7 @@ interface FuseSlotRenderEndedEvent {
 
 interface FuseTag {
   que?: FuseQueue | Array<() => void>;
+  getCurrentBreakpoint?: () => unknown;
   pageInit?: (options?: { blockingFuseIds?: string[]; blockingTimeout?: number }) => void;
   registerZone?: (id: string) => void;
   onSlotRenderEnded?: (callback: (event: FuseSlotRenderEndedEvent) => void) => void;
@@ -786,14 +787,19 @@ export class FuseAdsService {
       hasOnTagInitialised: typeof fusetag.onTagInitialised === 'function',
       hasOnSlotsInitialised: typeof fusetag.onSlotsInitialised === 'function',
       hasOnSlotRenderEnded: typeof fusetag.onSlotRenderEnded === 'function',
+      currentBreakpoint: this.getFuseCurrentBreakpoint(fusetag),
     });
 
     fusetag.onTagInitialised?.(() => {
-      this.debug('Fuse tag initialised callback');
+      this.debug('Fuse tag initialised callback', {
+        currentBreakpoint: this.getFuseCurrentBreakpoint(fusetag),
+      });
     });
 
     fusetag.onSlotsInitialised?.(() => {
-      this.debug('Fuse slots initialised callback');
+      this.debug('Fuse slots initialised callback', {
+        currentBreakpoint: this.getFuseCurrentBreakpoint(fusetag),
+      });
     });
 
     fusetag.onSlotRenderEnded?.(event => {
@@ -866,6 +872,7 @@ export class FuseAdsService {
       this.debug('pageInit executing', {
         reason,
         blockingFuseIds,
+        currentBreakpoint: this.getFuseCurrentBreakpoint(fusetag),
         registeredZones: this.getRegisteredZonesSummary(),
       });
       fusetag.pageInit?.({
@@ -873,6 +880,18 @@ export class FuseAdsService {
         blockingTimeout: environment.fuse.blockingTimeoutMs,
       });
     }, `pageInit:${blockingFuseIds.join(',')}`);
+  }
+
+  private getFuseCurrentBreakpoint(fusetag: FuseTag): unknown {
+    if (typeof fusetag.getCurrentBreakpoint !== 'function') {
+      return undefined;
+    }
+
+    try {
+      return fusetag.getCurrentBreakpoint();
+    } catch (error) {
+      return { error };
+    }
   }
 
   private getRegisteredZonesSummary(): Array<{ zoneElementId: string; fuseId: string }> {

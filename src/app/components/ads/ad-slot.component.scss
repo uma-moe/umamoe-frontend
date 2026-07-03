@@ -256,11 +256,24 @@
 .ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained :where(div, ins) {
   align-items: center !important;
   min-height: 0 !important;
-  max-height: none !important;
+  max-height: var(--ad-creative-height) !important;
   margin-top: 0 !important;
   padding-top: 0 !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   line-height: 0 !important;
+}
+
+.ad-slot--interscroller.ad-slot--creative-height:not(.ad-slot--retaining-creative) .ad-slot-target,
+.ad-slot--interscroller.ad-slot--creative-height.ad-slot--retaining-creative .ad-slot-retained {
+  height: var(--ad-creative-height);
+  max-height: var(--ad-creative-height);
+  overflow: hidden;
+}
+
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-target > :not(script):not(style),
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained > :not(script):not(style) {
+  height: var(--ad-creative-height) !important;
+  max-height: var(--ad-creative-height) !important;
 }
 
 .ad-slot--interscroller:not(.ad-slot--creative-height) .ad-slot-target > :where(div, ins),
@@ -311,6 +324,25 @@
 .ad-slot--creative-height .ad-slot-retained embed,
 .ad-slot--creative-height .ad-slot-retained svg {
   max-height: none !important;
+}
+
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-target iframe,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-target img,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-target picture,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-target video,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-target canvas,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-target object,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-target embed,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-target svg,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained iframe,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained img,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained picture,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained video,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained canvas,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained object,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained embed,
+.ad-slot--interscroller.ad-slot--creative-height .ad-slot-retained svg {
+  max-height: var(--ad-creative-height) !important;
 }
 
 .ad-slot-target iframe,

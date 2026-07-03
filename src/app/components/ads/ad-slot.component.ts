@@ -569,10 +569,15 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       }
 
       if (result.hasCreative) {
-        this.clearEmptyCreativeTimer();
-        this.emptyCreativePending = false;
         this.slotRenderSize = result.renderSize ?? null;
-        this.slotCreativeState = 'filled';
+
+        if (this.hasLikelyCreativeMarkup(target) || this.hasVisibleRetainedCreative()) {
+          this.clearEmptyCreativeTimer();
+          this.emptyCreativePending = false;
+          this.slotCreativeState = 'filled';
+        } else {
+          this.deferEmptyCreativeState(target, MARKUP_BIDDING_GRACE_MS);
+        }
       } else {
         this.slotRenderSize = null;
         this.deferEmptyCreativeState(target);
@@ -650,10 +655,10 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
         return;
       }
 
-        documentElement.style.background = EMPTY_IFRAME_BACKGROUND;
-        if (body) {
-          body.style.margin = '0';
-          body.style.background = EMPTY_IFRAME_BACKGROUND;
+      documentElement.style.background = EMPTY_IFRAME_BACKGROUND;
+      if (body) {
+        body.style.margin = '0';
+        body.style.background = EMPTY_IFRAME_BACKGROUND;
       }
     } catch {
       // Cross-origin creatives cannot be inspected; the iframe element itself still has a dark surface.
@@ -802,8 +807,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
     return this.isCreativeTag(element)
       && similarWidth
-      && isMeaningfullyShorter
-      && this.isCreativeSizeAllowedForSlot(sourceSize);
+      && isMeaningfullyShorter;
   }
 
   private getSlotRenderLayoutSize(): AdSlotSize | null {
@@ -1033,6 +1037,40 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   private get activeSizes(): string[] {
     const maxWidth = Math.max(0, this.maxWidth);
 
+    if (
+      this.viewportWidth > 0
+      && this.viewportWidth <= MOBILE_VIEWPORT_MAX_WIDTH
+      && this.config.mobileSizes?.length
+    ) {
+      const mobileMaxWidth = this.config.kind === 'interscroller'
+        ? this.getAvailableInterscrollerWidth()
+        : this.viewportWidth;
+      const fittingMobileSizes = this.config.mobileSizes.filter(size => {
+        const parsed = this.parseSize(size);
+        return !parsed || (
+          parsed.width <= mobileMaxWidth
+          && (
+            this.config.kind !== 'interscroller'
+            || this.isMobileInterscrollerSizeAllowed(parsed)
+          )
+        );
+      });
+
+      if (fittingMobileSizes.length) {
+        return fittingMobileSizes;
+      }
+
+      const allowedMobileSizes = this.config.mobileSizes.filter(size => {
+        const parsed = this.parseSize(size);
+        return !parsed || (
+          this.config.kind !== 'interscroller'
+          || this.isMobileInterscrollerSizeAllowed(parsed)
+        );
+      });
+
+      return allowedMobileSizes.length ? allowedMobileSizes : this.config.mobileSizes;
+    }
+
     if (this.config.kind === 'side-rail' && maxWidth > 0) {
       const parsedSizes = this.config.sizes
         .map(size => ({ size, parsed: this.parseSize(size) }))
@@ -1058,34 +1096,6 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
       return nonStandardFittingSizes.length ? nonStandardFittingSizes : this.config.sizes;
     }
-
-    if (
-      this.config.kind === 'interscroller'
-      && this.viewportWidth > 0
-      && this.viewportWidth <= MOBILE_VIEWPORT_MAX_WIDTH
-      && this.config.mobileSizes?.length
-    ) {
-      const mobileMaxWidth = this.getAvailableInterscrollerWidth();
-      const fittingMobileSizes = this.config.mobileSizes.filter(size => {
-        const parsed = this.parseSize(size);
-        return !parsed || (
-          parsed.width <= mobileMaxWidth
-          && this.isMobileInterscrollerSizeAllowed(parsed)
-        );
-      });
-
-      if (fittingMobileSizes.length) {
-        return fittingMobileSizes;
-      }
-
-      const allowedMobileSizes = this.config.mobileSizes.filter(size => {
-        const parsed = this.parseSize(size);
-        return !parsed || this.isMobileInterscrollerSizeAllowed(parsed);
-      });
-
-      return allowedMobileSizes.length ? allowedMobileSizes : this.config.mobileSizes;
-    }
-
     return this.config.sizes;
   }
 
@@ -1254,7 +1264,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     });
   }
 
-  private deferEmptyCreativeState(target: HTMLElement): void {
+  private deferEmptyCreativeState(target: HTMLElement, delayMs = CREATIVE_REFRESH_GRACE_MS): void {
     if (!isPlatformBrowser(this.platformId)) {
       this.slotCreativeState = 'empty';
       return;
@@ -1270,7 +1280,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       this.slotCreativeState = hasCurrentCreative ? 'filled' : 'empty';
 
       this.updateFallbackState(target);
-    }, CREATIVE_REFRESH_GRACE_MS);
+    }, delayMs);
   }
 
   private clearEmptyCreativeTimer(): void {

@@ -36,6 +36,7 @@ const BOTTOM_POPUP_SIZES = ['1200x90', '970x90', '728x90', '468x90'];
 const SIDE_RAIL_SIZES = ['160x600', '120x600'];
 const SIDE_RAIL_DEFAULT_ANCHOR_MAX_WIDTH = 1536;
 const CONTENT_TOP_SIZES = ['1200x90', '970x90', '728x90', '468x90'];
+const MOBILE_CONTENT_TOP_SIZES = ['320x50', '300x50'];
 const IN_CONTENT_SIZES = ['970x90', '728x90', '468x90', '468x60', '320x100', '300x100', '320x50', '300x50'];
 const MOBILE_INTERSCROLLER_SIZE_GROUPS = [
   ['320x50', '300x50'],
@@ -57,6 +58,7 @@ const contentTopSlot = (placement: string, label: string): AdSlotConfig => ({
   fuseId: resolveFuseId(placement),
   kind: 'leaderboard',
   label,
+  mobileSizes: MOBILE_CONTENT_TOP_SIZES,
   sizes: CONTENT_TOP_SIZES,
 });
 
