@@ -44,9 +44,11 @@
 >
   <app-ad-slot
     [config]="stickyFooterConfig"
+    [closable]="true"
     [persistent]="true"
     [providerManaged]="true"
     (collapsedChange)="onProviderStickyFooterCollapsed($event)"
+    (close)="closeProviderStickyFooter()"
   ></app-ad-slot>
 </div>
 

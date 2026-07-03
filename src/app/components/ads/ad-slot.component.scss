@@ -144,8 +144,7 @@
 .ad-slot--provider-managed .ad-slot-retained,
 .ad-slot--provider-managed .ad-slot-fallback,
 .ad-slot--provider-managed .ad-slot-diagnostic,
-.ad-slot--provider-managed .ad-slot-meta,
-.ad-slot--provider-managed .ad-slot-close {
+.ad-slot--provider-managed .ad-slot-meta {
   display: none;
 }
 
@@ -612,6 +611,14 @@
   border-color: var(--ad-close-hover-border);
   color: var(--text-primary);
   outline: none;
+}
+
+.ad-slot--provider-managed.ad-slot--sticky-footer .ad-slot-close {
+  position: fixed;
+  top: auto;
+  bottom: calc(var(--ad-slot-height, 90px) - var(--ad-close-size) - 4px);
+  z-index: 1401;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.28));
 }
 
 .ad-slot--side-rail .ad-slot-fallback {

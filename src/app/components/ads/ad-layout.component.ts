@@ -64,6 +64,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   leftSideRailCollapsed = false;
   rightSideRailCollapsed = false;
   providerStickyFooterCollapsed = false;
+  providerStickyFooterClosed = false;
   contentTopAllowed = true;
   private routerSub?: Subscription;
   private adStateSub?: Subscription;
@@ -174,7 +175,8 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       this.stickyFooterConfig.fuseId
       && this.adLayoutActive
       && !this.supportFallbackAllowed
-      && !this.fallbackPreviewEnabled,
+      && !this.fallbackPreviewEnabled
+      && !this.providerStickyFooterClosed
     );
   }
 
@@ -183,7 +185,9 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    return this.supportFallbackAllowed || this.fallbackPreviewEnabled || this.providerStickyFooterCollapsed;
+    return this.supportFallbackAllowed
+      || this.fallbackPreviewEnabled
+      || (!this.providerStickyFooterClosed && this.providerStickyFooterCollapsed);
   }
 
   closeBottomPopup(): void {
@@ -203,11 +207,21 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   }
 
   onProviderStickyFooterCollapsed(collapsed: boolean): void {
+    if (this.providerStickyFooterClosed) {
+      return;
+    }
+
     if (this.providerStickyFooterCollapsed === collapsed) {
       return;
     }
 
     this.providerStickyFooterCollapsed = collapsed;
+    this.updateBottomPopupRootState();
+  }
+
+  closeProviderStickyFooter(): void {
+    this.providerStickyFooterClosed = true;
+    this.providerStickyFooterCollapsed = false;
     this.updateBottomPopupRootState();
   }
 

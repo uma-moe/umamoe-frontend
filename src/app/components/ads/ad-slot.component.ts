@@ -424,7 +424,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       this.slotHasVisibleCreative = hasCurrentCreative || hasRetainedCreative;
       this.slotRetainingCreative = hasRetainedCreative;
       this.slotWaiting = false;
-      this.creativeCloseInlineOffset = null;
+      this.updateCreativeCloseOffset(target);
       this.debugSlotState(target, hasAdMarkup, providerNoFillReady, hasCurrentCreative);
       return;
     }
@@ -947,7 +947,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       return false;
     }
 
-    return this.config.kind === 'interscroller';
+    return this.config.kind === 'interscroller' || this.config.kind === 'leaderboard';
   }
 
   private usesMeasuredCreativeLayout(): boolean {
