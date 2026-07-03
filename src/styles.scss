@@ -1917,6 +1917,8 @@ html {
   --ad-bottom-popup-offset: 0px;
   --ad-bottom-floating-control-offset: 0px;
   --ad-bottom-filter-panel-offset: 0px;
+  --ad-sticky-footer-z-index: 900;
+  --ad-sticky-footer-close-z-index: 901;
 }
 
 html.ad-bottom-popup-visible {
@@ -1950,6 +1952,14 @@ app-ad-slot :where(
 
 // Fuse injects the sticky footer widget outside Angular in some runtimes, so
 // keep these provider overrides global instead of component-scoped.
+:where(
+  .publift-widget-sticky_footer-container,
+  .publift-widget-sticky_footer-container-background,
+  [class*="publift-widget-sticky_footer"]
+) {
+  z-index: var(--ad-sticky-footer-z-index) !important;
+}
+
 :where(.publift-widget-sticky_footer-container-background) {
   background: transparent !important;
   box-shadow: none !important;
@@ -1976,7 +1986,7 @@ app-ad-slot :where(
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.32) !important;
   opacity: 1 !important;
   transform: none !important;
-  z-index: 2147483647 !important;
+  z-index: var(--ad-sticky-footer-close-z-index) !important;
 }
 
 @media (max-width: 720px) {

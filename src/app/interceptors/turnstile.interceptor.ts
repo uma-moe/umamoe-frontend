@@ -68,7 +68,7 @@ export class TurnstileInterceptor implements HttpInterceptor {
       const proofToken = await this.turnstileService.ensureBrowserProof(environment.turnstile.action, true);
       const clonedReq = req.clone({ withCredentials: true });
       if (!proofToken) {
-        return clonedReq;
+        throw new Error('Turnstile verification returned no usable browser proof');
       }
 
       return clonedReq.clone({

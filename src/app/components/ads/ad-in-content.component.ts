@@ -152,6 +152,11 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
     return this.isContentTopBridgeActive;
   }
 
+  @HostBinding('style.display')
+  get hostDisplay(): string | null {
+    return this.shouldRenderAd ? null : 'none';
+  }
+
   get isContentTopBridgeActive(): boolean {
     const bridgeMaxWidth = Math.min(
       CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH,

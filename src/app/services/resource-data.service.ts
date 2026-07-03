@@ -656,6 +656,10 @@ export class ResourceDataService {
           includeWarmup: options.useWarmupProof === true,
         });
 
+    if (forceRefresh && !proofToken) {
+      throw new Error('Turnstile verification returned no usable browser proof');
+    }
+
     if (!proofToken && !forceRefresh) {
       this.turnstileService.prime();
     }

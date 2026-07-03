@@ -23,6 +23,8 @@
     <nav class="vpd-tabbar" role="tablist" aria-label="Veteran picker sections">
      <button type="button" class="vpd-tab-btn"
        [class.active]="tab === 'veterans'"
+      matTooltip="Veterans"
+      aria-label="Veterans"
       (click)="setTab('veterans')">
       <mat-icon>people</mat-icon>
       <span class="vpd-tab-label">Veterans</span>
@@ -30,6 +32,8 @@
      </button>
      <button type="button" class="vpd-tab-btn"
        [class.active]="tab === 'bookmarks'"
+       matTooltip="Bookmarks"
+       aria-label="Bookmarks"
        (click)="setTab('bookmarks')">
       <mat-icon>bookmark</mat-icon>
       <span class="vpd-tab-label">Bookmarks</span>
@@ -37,6 +41,8 @@
      </button>
      <button type="button" class="vpd-tab-btn"
        [class.active]="tab === 'saved'"
+       matTooltip="Partner lookup"
+       aria-label="Partner lookup"
        (click)="setTab('saved')">
       <mat-icon>manage_accounts</mat-icon>
       <span class="vpd-tab-label">Partner</span>
@@ -44,6 +50,8 @@
      </button>
      <button type="button" class="vpd-tab-btn"
        [class.active]="tab === 'manual'"
+       matTooltip="Manual entries"
+       aria-label="Manual entries"
        (click)="setTab('manual')">
       <mat-icon>edit_note</mat-icon>
       <span class="vpd-tab-label">Manual</span>
@@ -52,7 +60,7 @@
   </nav>
 
   <!-- ===== FILTER BAR ===== -->
-  <div class="vpd-filterbar">
+  <div class="vpd-filterbar" [class.vpd-filterbar--manual]="tab === 'manual'">
     <!-- Account switcher (multi-account, veterans only) -->
     <div class="vpd-accounts" *ngIf="tab === 'veterans' && accounts.length > 1">
       <button

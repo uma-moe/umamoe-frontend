@@ -2284,3 +2284,148 @@
 
   .vpd-factor-section { padding: 4px 10px 5px; }
 }
+
+// Final phone polish: keep the SE layout intentional instead of letting older
+// mobile rules squeeze labels and controls into unreadable fragments.
+@media (max-width: 480px) {
+  :host,
+  .vpd {
+    box-sizing: border-box;
+    height: min(96vh, calc(100dvh - 8px));
+  }
+
+  :host-context(.ad-bottom-popup-visible) {
+    height: min(96vh, calc(100dvh - var(--ad-bottom-floating-control-offset, 96px) - 8px));
+
+    .vpd {
+      height: 100%;
+    }
+  }
+
+  .vpd-topbar {
+    height: 42px;
+    padding: 0 6px 0 12px;
+  }
+
+  .vpd-title {
+    font-size: 0.84rem;
+    gap: 6px;
+    margin-right: 8px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .vpd-close-btn {
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+    transform: none;
+  }
+
+  .vpd-tabbar {
+    min-height: 36px;
+
+    .vpd-tab-btn {
+      flex: 1 1 25%;
+      min-height: 36px;
+      height: 36px;
+      padding: 0 6px;
+      gap: 5px;
+
+      mat-icon {
+        display: block;
+        font-size: 17px;
+        width: 17px;
+        height: 17px;
+      }
+    }
+
+    .vpd-tab-label {
+      display: none;
+    }
+  }
+
+  .vpd-tab-count {
+    min-width: 18px;
+    padding: 0 5px;
+    font-size: 0.58rem;
+    line-height: 1.55;
+  }
+
+  .vpd-filterbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 92px;
+    gap: 6px;
+    align-items: center;
+    padding: 6px 8px;
+  }
+
+  .vpd-filterbar--manual {
+    grid-template-columns: minmax(0, 1fr);
+
+    .vpd-sort {
+      grid-column: 1 / -1;
+      justify-content: space-between;
+      width: 100%;
+    }
+  }
+
+  .vpd-accounts {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .vpd-search {
+    width: 100%;
+    height: 30px;
+    padding: 0 8px;
+    flex: none;
+  }
+
+  .vpd-sort {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-end;
+  }
+
+  ::ng-deep .vpd-sort-field {
+    width: 92px;
+    min-width: 0;
+
+    .mat-mdc-text-field-wrapper {
+      height: 30px !important;
+      padding: 0 6px !important;
+    }
+
+    .mat-mdc-form-field-infix {
+      min-height: 30px !important;
+    }
+
+    .mat-mdc-select-value {
+      font-size: 0.72rem !important;
+    }
+  }
+
+  .vpd-factor-section {
+    padding: 5px 8px 6px;
+  }
+
+  .vpd-add-factor {
+    width: 100%;
+    justify-content: center;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+  }
+
+  .vpd-body {
+    padding: 6px 6px calc(14px + env(safe-area-inset-bottom));
+  }
+
+  :host-context(.ad-bottom-popup-visible) .vpd-body {
+    padding-bottom: calc(var(--ad-bottom-floating-control-offset, 96px) + 12px + env(safe-area-inset-bottom));
+  }
+}

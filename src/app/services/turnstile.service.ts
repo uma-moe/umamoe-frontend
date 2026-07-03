@@ -271,13 +271,15 @@ export class TurnstileService {
     }
 
     const existingTask = this.browserProofTask;
-    if (existingTask) {
+    if (existingTask && !forceRefresh) {
       const proof = await this.waitForProofTask(existingTask, normalizedAction);
       return proof && this.hasUsableBrowserProof(proof, normalizedAction) ? proof.token : '';
     }
 
     const proofTask = this.proofQueue.then(() => this.exchangeBrowserProof(normalizedAction, 'background'));
-    this.browserProofTask = proofTask;
+    if (!forceRefresh) {
+      this.browserProofTask = proofTask;
+    }
     this.proofQueue = proofTask.then(() => undefined, () => undefined);
 
     try {

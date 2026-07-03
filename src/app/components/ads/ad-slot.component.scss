@@ -620,7 +620,7 @@
   position: fixed;
   top: auto;
   bottom: calc(var(--ad-slot-height, 90px) - var(--ad-close-size) - 4px);
-  z-index: 1401;
+  z-index: var(--ad-sticky-footer-close-z-index, 901);
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.28));
 }
 
