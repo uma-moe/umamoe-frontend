@@ -31,6 +31,9 @@ const MOBILE_INTERSCROLLER_MAX_HEIGHT = 360;
 const INTERSCROLLER_MAX_ASPECT_HEIGHT = 1.15;
 const MOBILE_STICKY_FOOTER_MAX_HEIGHT = 50;
 const DESKTOP_STICKY_FOOTER_MAX_HEIGHT = 90;
+const TRACKING_PIXEL_MAX_SIZE = 4;
+const MIN_CREATIVE_LAYOUT_WIDTH = 40;
+const MIN_CREATIVE_LAYOUT_HEIGHT = 24;
 type SlotCreativeState = 'pending' | 'filled' | 'empty';
 
 interface AdSlotSize {
@@ -550,8 +553,15 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       }
 
       if (result.hasCreative) {
-        this.slotRenderSize = result.renderSize ?? null;
-        this.slotCreativeState = 'filled';
+        const hasMeaningfulRenderSize = Boolean(result.renderSize && this.isMeaningfulCreativeSize(result.renderSize));
+        const hasVisibleCreative = this.hasLikelyCreativeMarkup(target) || this.hasVisibleRetainedCreative();
+
+        this.slotRenderSize = hasMeaningfulRenderSize ? result.renderSize ?? null : null;
+        this.slotCreativeState = hasMeaningfulRenderSize || hasVisibleCreative
+          ? 'filled'
+          : result.renderSize
+            ? 'empty'
+            : 'pending';
       } else {
         this.slotRenderSize = null;
         this.slotCreativeState = this.hasLikelyCreativeMarkup(target) || this.hasVisibleRetainedCreative()
@@ -727,11 +737,12 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     const scale = width > 0 ? clampedWidth / width : 1;
     const scaledHeight = Math.max(1, Math.round(height * scale));
     const clampedHeight = this.clampMeasuredCreativeHeight(clampedWidth, scaledHeight);
-
-    return {
+    const layoutSize = {
       width: Math.max(1, Math.round(clampedWidth)),
       height: clampedHeight,
     };
+
+    return this.isMeaningfulCreativeSize(layoutSize) ? layoutSize : null;
   }
 
   private getPreferredCreativeLayoutSourceSize(
@@ -781,10 +792,12 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       return null;
     }
 
-    return {
+    const size = {
       width: this.slotRenderSize.width,
       height: this.slotRenderSize.height,
     };
+
+    return this.isMeaningfulCreativeSize(size) ? size : null;
   }
 
   private getCreativeSourceSize(element: HTMLElement | SVGElement): AdSlotSize | null {
@@ -798,10 +811,12 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       return null;
     }
 
-    return {
+    const size = {
       width: Math.max(1, Math.round(width)),
       height: Math.max(1, Math.round(height)),
     };
+
+    return this.isMeaningfulCreativeSize(size) ? size : null;
   }
 
   private readElementSizeValue(element: HTMLElement | SVGElement, property: 'width' | 'height'): number | null {
@@ -845,7 +860,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   private isVisibleCreativeElement(element: HTMLElement | SVGElement): boolean {
     const rect = element.getBoundingClientRect();
-    if (rect.width < 8 || rect.height < 8) {
+    if (!this.isMeaningfulCreativeSize(rect)) {
       return false;
     }
 
@@ -901,6 +916,10 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   private usesMeasuredCreativeLayout(): boolean {
     if (this.providerManaged) {
+      return false;
+    }
+
+    if (this.config.kind === 'interscroller' && this.viewportWidth <= MOBILE_VIEWPORT_MAX_WIDTH) {
       return false;
     }
 
@@ -1048,6 +1067,19 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       width: Number(match[1]),
       height: Number(match[2]),
     };
+  }
+
+  private isMeaningfulCreativeSize(size: Pick<AdSlotSize, 'width' | 'height'> | null | undefined): boolean {
+    if (!size || !Number.isFinite(size.width) || !Number.isFinite(size.height)) {
+      return false;
+    }
+
+    if (size.width <= TRACKING_PIXEL_MAX_SIZE && size.height <= TRACKING_PIXEL_MAX_SIZE) {
+      return false;
+    }
+
+    return size.width >= MIN_CREATIVE_LAYOUT_WIDTH
+      && size.height >= MIN_CREATIVE_LAYOUT_HEIGHT;
   }
 
   private isMobileInterscrollerSizeAllowed(size: AdSlotSize): boolean {
