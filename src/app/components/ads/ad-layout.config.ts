@@ -170,7 +170,7 @@ export function getAdRouteConfig(url: string): AdRouteConfig {
 
     return sideRailPage(surface, surface, {
       anchorSelectors: ['.content-container', '.page-header .header-content'],
-      inContent: surface === 'leaderboard' ? getMobileRailSlots(surface, surface) : undefined,
+      inContent: surface === 'leaderboard' ? getMobileRailSlots(surface, surface, 1) : undefined,
       sideRailAnchorMaxWidth: surface === 'leaderboard' ? 1536 : undefined,
     });
   }
@@ -178,6 +178,7 @@ export function getAdRouteConfig(url: string): AdRouteConfig {
   if (path.startsWith('/circles/')) {
     return sideRailPage('circle_detail', 'club detail', {
       anchorSelectors: ['.circle-details-page .content-container', '.content-container', '.page-header .header-content'],
+      inContent: getMobileRailSlots('circle_detail', 'club detail', 1),
     });
   }
 

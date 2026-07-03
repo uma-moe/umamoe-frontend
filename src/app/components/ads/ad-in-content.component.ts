@@ -113,6 +113,7 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
   @Input() label = '';
   @Input() index = 1;
   @Input() viewport: InlineAdViewport = 'all';
+  @Input() mobileMaxWidth = CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH;
   @Input() contentTopBridge = false;
 
   readonly fallbackPreviewEnabled: boolean;
@@ -160,6 +161,10 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   get shouldRenderAd(): boolean {
+    if (!this.matchesRequestedViewport) {
+      return false;
+    }
+
     if (this.contentTopBridge) {
       return this.isContentTopBridgeActive && Boolean(this.config.fuseId || this.fallbackPreviewEnabled);
     }
@@ -173,6 +178,18 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
 
   get inlineAdLayoutActive(): boolean {
     return this.fallbackPreviewEnabled || (this.adRuntimeAvailable && !this.supportFallbackAllowed);
+  }
+
+  get matchesRequestedViewport(): boolean {
+    if (this.viewport === 'mobile') {
+      return this.viewportWidth <= this.mobileMaxWidth;
+    }
+
+    if (this.viewport === 'desktop') {
+      return this.viewportWidth > CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH;
+    }
+
+    return true;
   }
 
   constructor(
@@ -211,9 +228,10 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
   @HostListener('window:resize')
   onWindowResize(): void {
     const previousBridgeState = this.isContentTopBridgeActive;
+    const previousViewportState = this.matchesRequestedViewport;
     this.updateViewportWidth();
 
-    if (previousBridgeState !== this.isContentTopBridgeActive) {
+    if (previousBridgeState !== this.isContentTopBridgeActive || previousViewportState !== this.matchesRequestedViewport) {
       this.updateConfig();
     }
   }
