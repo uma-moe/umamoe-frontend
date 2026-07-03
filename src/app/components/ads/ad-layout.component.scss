@@ -57,8 +57,10 @@
 
 .ad-provider-sticky-footer app-ad-slot {
   display: block;
-  width: 0;
-  height: 0;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
   pointer-events: auto;
 }
 

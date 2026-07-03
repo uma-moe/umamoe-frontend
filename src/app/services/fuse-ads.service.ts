@@ -1217,7 +1217,33 @@ export class FuseAdsService {
       return;
     }
 
-    method.call(console, `[uma.ads] ${message}`, data);
+    const serialized = this.serializeDebugData(data);
+    method.call(console, `[uma.ads] ${message}${serialized ? ` ${serialized}` : ''}`, data);
+  }
+
+  private serializeDebugData(data: unknown): string | null {
+    try {
+      return JSON.stringify(data, (_key, value: unknown) => {
+        if (value instanceof Error) {
+          return {
+            name: value.name,
+            message: value.message,
+          };
+        }
+
+        if (typeof Element !== 'undefined' && value instanceof Element) {
+          return {
+            tagName: value.tagName.toLowerCase(),
+            id: value.id || undefined,
+            className: typeof value.className === 'string' ? value.className : undefined,
+          };
+        }
+
+        return value;
+      });
+    } catch {
+      return null;
+    }
   }
 
   private summarizeLocalConsent(): CookieConsent | null {

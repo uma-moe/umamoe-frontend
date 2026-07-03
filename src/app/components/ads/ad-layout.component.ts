@@ -63,6 +63,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   sideRailWidth = SIDE_RAIL_WIDE_WIDTH;
   leftSideRailCollapsed = false;
   rightSideRailCollapsed = false;
+  providerStickyFooterCollapsed = false;
   contentTopAllowed = true;
   private routerSub?: Subscription;
   private adStateSub?: Subscription;
@@ -87,6 +88,9 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     ]).subscribe(([adsCanRender, supportFallbackAllowed]) => {
       this.adsCanRender = adsCanRender;
       this.supportFallbackAllowed = supportFallbackAllowed;
+      if (supportFallbackAllowed) {
+        this.providerStickyFooterCollapsed = false;
+      }
       this.updateBottomPopupRootState();
 
       if (!this.adLayoutActive) {
@@ -179,7 +183,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    return this.supportFallbackAllowed || this.fallbackPreviewEnabled;
+    return this.supportFallbackAllowed || this.fallbackPreviewEnabled || this.providerStickyFooterCollapsed;
   }
 
   closeBottomPopup(): void {
@@ -196,6 +200,15 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     }
 
     this.scheduleSideRailLayout();
+  }
+
+  onProviderStickyFooterCollapsed(collapsed: boolean): void {
+    if (this.providerStickyFooterCollapsed === collapsed) {
+      return;
+    }
+
+    this.providerStickyFooterCollapsed = collapsed;
+    this.updateBottomPopupRootState();
   }
 
   private updateBottomPopupRootState(visible = this.shouldShowBottomSupportFallback): void {

@@ -411,19 +411,6 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
 
     const markupStillBidding = this.isMarkupStillBidding(target, hasAdMarkup, hasCurrentCreative);
 
-    if (this.providerManaged) {
-      this.showFallback = false;
-      this.showDiagnostic = false;
-      this.setCollapsed(false);
-      this.slotHasCreative = hasCurrentCreative || hasRetainedCreative || markupStillBidding;
-      this.slotHasVisibleCreative = hasCurrentCreative || hasRetainedCreative;
-      this.slotRetainingCreative = hasRetainedCreative;
-      this.slotWaiting = false;
-      this.creativeCloseInlineOffset = null;
-      this.debugSlotState(target, hasAdMarkup, false, hasCurrentCreative);
-      return;
-    }
-
     if (
       hasAdMarkup
       && !hasCurrentCreative
@@ -432,6 +419,23 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       && !this.emptyCreativePending
     ) {
       this.slotCreativeState = 'empty';
+    }
+
+    if (this.providerManaged) {
+      const providerNoFillReady = this.slotCreativeState === 'empty'
+        && !hasCurrentCreative
+        && !hasRetainedCreative
+        && !markupStillBidding;
+      this.showFallback = false;
+      this.showDiagnostic = false;
+      this.setCollapsed(providerNoFillReady);
+      this.slotHasCreative = hasCurrentCreative || hasRetainedCreative || markupStillBidding;
+      this.slotHasVisibleCreative = hasCurrentCreative || hasRetainedCreative;
+      this.slotRetainingCreative = hasRetainedCreative;
+      this.slotWaiting = false;
+      this.creativeCloseInlineOffset = null;
+      this.debugSlotState(target, hasAdMarkup, providerNoFillReady, hasCurrentCreative);
+      return;
     }
 
     if (this.fallbackPreviewEnabled) {

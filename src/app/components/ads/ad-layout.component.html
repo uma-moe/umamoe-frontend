@@ -46,6 +46,7 @@
     [config]="stickyFooterConfig"
     [persistent]="true"
     [providerManaged]="true"
+    (collapsedChange)="onProviderStickyFooterCollapsed($event)"
   ></app-ad-slot>
 </div>
 
