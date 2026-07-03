@@ -189,6 +189,7 @@
   z-index: 1;
   opacity: 0;
   pointer-events: none;
+  transition: opacity 0.18s ease;
 }
 
 .ad-slot--retaining-creative .ad-slot-retained {
@@ -197,8 +198,8 @@
 }
 
 .ad-slot--retaining-creative .ad-slot-target {
-  z-index: 1;
-  opacity: 0;
+  z-index: 2;
+  opacity: 1;
   pointer-events: none;
 }
 

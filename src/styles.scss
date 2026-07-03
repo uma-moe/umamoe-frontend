@@ -399,9 +399,7 @@ html.light-theme {
   --stat-card-label-color: #b3e5fc;
 
   --ad-slot-border: rgba(var(--accent-primary-rgb), 0.18);
-  --ad-slot-bg:
-    linear-gradient(135deg, rgba(100, 181, 246, 0.12), rgba(129, 199, 132, 0.08)),
-    rgba(14, 16, 18, 0.94);
+  --ad-slot-bg: transparent;
   --ad-slot-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
   --ad-diagnostic-border: rgba(255, 183, 77, 0.34);
   --ad-diagnostic-bg:
@@ -727,7 +725,7 @@ html.light-theme {
   --stat-card-label-color: var(--text-muted);
 
   --ad-slot-border: rgba(17, 24, 39, 0.14);
-  --ad-slot-bg: #ffffff;
+  --ad-slot-bg: transparent;
   --ad-slot-shadow: var(--shadow-md);
   --ad-diagnostic-border: rgba(var(--accent-warning-rgb), 0.34);
   --ad-diagnostic-bg:
@@ -1929,6 +1927,25 @@ html.ad-bottom-popup-visible {
 
 html.ad-bottom-popup-visible .bottom-filter-panel {
   bottom: var(--ad-bottom-filter-panel-offset) !important;
+}
+
+// Fuse/Publift injects slot children after Angular has stamped component styles,
+// so keep runtime ad surfaces global and transparent.
+app-ad-slot :where(
+  .ad-slot,
+  .ad-slot-target,
+  .ad-slot-retained,
+  .ad-slot-target > :not(script):not(style),
+  .ad-slot-retained > :not(script):not(style),
+  .ad-slot-target :where(div, ins, iframe),
+  .ad-slot-retained :where(div, ins, iframe),
+  [data-fuse],
+  [id^="google_ads_iframe_"],
+  [id*="google_ads_iframe_"],
+  [class*="publift-widget"]
+) {
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 // Fuse injects the sticky footer widget outside Angular in some runtimes, so

@@ -51,16 +51,3 @@
     (close)="closeProviderStickyFooter()"
   ></app-ad-slot>
 </div>
-
-<aside
-  class="ad-bottom-popup"
-  *ngIf="shouldShowBottomSupportFallback"
-  aria-label="Support uma.moe"
->
-  <app-ad-slot
-    [config]="stickyFooterFallbackConfig"
-    [closable]="true"
-    [forceFallback]="true"
-    (close)="closeBottomPopup()"
-  ></app-ad-slot>
-</aside>

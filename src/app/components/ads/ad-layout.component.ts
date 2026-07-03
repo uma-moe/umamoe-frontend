@@ -34,7 +34,6 @@ const SIDE_RAIL_NAV_OFFSET = 60;
 const SIDE_RAIL_VERTICAL_MARGIN = 16;
 const SIDE_RAIL_FRAME_TOP_SELECTORS = ['.page-header'];
 const SIDE_RAIL_LAYOUT_RETRY_MS = [80, 300, 900, 1800, 3200];
-const BOTTOM_POPUP_DISMISSED_STORAGE_KEY = 'uma.ad.bottom-popup.dismissed';
 type SideRailLayout = 'none' | 'left' | 'right' | 'both';
 
 @Component({
@@ -47,11 +46,6 @@ type SideRailLayout = 'none' | 'left' | 'right' | 'both';
 export class AdLayoutComponent implements OnInit, OnDestroy {
   config: AdRouteConfig = getAdRouteConfig('/');
   readonly stickyFooterConfig = getGlobalStickyFooterSlot();
-  readonly stickyFooterFallbackConfig = {
-    ...getGlobalStickyFooterSlot(),
-    fuseId: '',
-  };
-  bottomPopupClosed = false;
   fallbackPreviewEnabled = false;
   adRuntimeAvailable = false;
   supportFallbackAllowed = false;
@@ -85,7 +79,6 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.resetProviderStickyFooterDismissal();
     this.attachProviderStickyFooterDismissHandler();
     this.updateFallbackPreviewState();
-    this.restoreBottomPopupDismissal();
     this.adStateSub = combineLatest([
       this.fuseAdsService.supportFallbackAllowed$,
       this.fuseAdsService.runtimeState$,
@@ -185,22 +178,6 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     );
   }
 
-  get shouldShowBottomSupportFallback(): boolean {
-    if (this.bottomPopupClosed || !(this.stickyFooterConfig.fuseId || this.fallbackPreviewEnabled)) {
-      return false;
-    }
-
-    return this.supportFallbackAllowed
-      || this.fallbackPreviewEnabled
-      || (!this.providerStickyFooterClosed && this.providerStickyFooterCollapsed);
-  }
-
-  closeBottomPopup(): void {
-    this.bottomPopupClosed = true;
-    this.storeBottomPopupDismissal();
-    this.updateBottomPopupRootState(false);
-  }
-
   onSideRailCollapsed(side: 'left' | 'right', collapsed: boolean): void {
     if (side === 'left') {
       this.leftSideRailCollapsed = collapsed;
@@ -290,7 +267,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   }
 
   private get shouldShowAnyBottomAd(): boolean {
-    return this.shouldShowBottomSupportFallback || this.shouldShowProviderStickyFooter;
+    return this.shouldShowProviderStickyFooter;
   }
 
   private updateContentTopAllowed(): boolean {
@@ -316,32 +293,6 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       && runtimeState.cmpStatus !== 'disabled'
       && runtimeState.cmpStatus !== 'not-configured'
       && runtimeState.cmpStatus !== 'error';
-  }
-
-  private restoreBottomPopupDismissal(): void {
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
-    }
-
-    try {
-      this.bottomPopupClosed = this.document.defaultView?.sessionStorage
-        .getItem(BOTTOM_POPUP_DISMISSED_STORAGE_KEY) === '1';
-    } catch {
-      this.bottomPopupClosed = false;
-    }
-  }
-
-  private storeBottomPopupDismissal(): void {
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
-    }
-
-    try {
-      this.document.defaultView?.sessionStorage
-        .setItem(BOTTOM_POPUP_DISMISSED_STORAGE_KEY, '1');
-    } catch {
-      // Session storage can be unavailable in hardened browser contexts.
-    }
   }
 
   private getPageSwapPreloadFuseIds(config: AdRouteConfig): string[] {

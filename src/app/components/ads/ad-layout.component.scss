@@ -64,23 +64,6 @@
   pointer-events: auto;
 }
 
-.ad-bottom-popup {
-  position: fixed;
-  inset-inline: 0;
-  bottom: max(0.5rem, env(safe-area-inset-bottom));
-  z-index: 1400;
-  display: flex;
-  justify-content: center;
-  padding: 0 0.5rem;
-  background: transparent;
-  pointer-events: none;
-}
-
-.ad-bottom-popup app-ad-slot {
-  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.32));
-  pointer-events: auto;
-}
-
 @keyframes ad-rail-enter {
   from {
     opacity: 0;
@@ -103,12 +86,4 @@
   .ad-content-top {
     display: none;
   }
-}
-
-@media (max-width: 720px) {
-  .ad-bottom-popup {
-    bottom: max(0.35rem, env(safe-area-inset-bottom));
-    padding: 0 0.25rem;
-  }
-
 }

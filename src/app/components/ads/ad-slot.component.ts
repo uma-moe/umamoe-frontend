@@ -77,7 +77,6 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   private slotCreativeState: SlotCreativeState = 'pending';
   private supportFallbackAllowed = false;
   private slotHasRetainedCreative = false;
-  private slotHasUnsupportedCreative = false;
   private slotRenderSize: FuseSlotRenderSize | null = null;
   private markupFirstSeenAt: number | null = null;
   private watchSlotQueued = false;
@@ -323,7 +322,6 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.fallbackPreviewEnabled = this.forceFallback;
     this.slotCreativeState = hasRetainedCreative ? 'filled' : 'pending';
     this.supportFallbackAllowed = false;
-    this.slotHasUnsupportedCreative = false;
     this.slotRenderSize = null;
     this.markupFirstSeenAt = null;
 
@@ -387,10 +385,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.prepareIframeSurfaces(target);
     const hasAdMarkup = this.hasAnyAdMarkup(target);
     const hasCurrentCreative = this.hasLikelyCreativeMarkup(target);
-    const hasUnexpectedCreativeSize = this.hasUnsupportedCreativeMarkup(target)
-      || this.hasUnsupportedRenderedSize();
     const hasRetainedCreative = this.hasVisibleRetainedCreative();
-    this.slotHasUnsupportedCreative = hasUnexpectedCreativeSize;
     this.updateCreativeLayoutSize(target);
 
     if (hasCurrentCreative || hasRetainedCreative) {
@@ -514,7 +509,6 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       slotHasCreative: this.slotHasCreative,
       slotRetainingCreative: this.slotRetainingCreative,
       slotHasRetainedCreative: this.slotHasRetainedCreative,
-      slotHasUnsupportedCreative: this.slotHasUnsupportedCreative,
       slotRenderSize: this.slotRenderSize,
       markupFirstSeenAt: this.markupFirstSeenAt,
       childCount: target.children.length,
@@ -543,7 +537,6 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       slotHasCreative: this.slotHasCreative,
       slotRetainingCreative: this.slotRetainingCreative,
       slotHasRetainedCreative: this.slotHasRetainedCreative,
-      slotHasUnsupportedCreative: this.slotHasUnsupportedCreative,
       markupFirstSeenAt: this.markupFirstSeenAt,
       targetRect: this.readRect(target),
       children: this.summarizeChildren(target),
@@ -659,16 +652,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private hasLikelyCreativeMarkup(target: HTMLElement): boolean {
-    return this.getVisibleCreativeElements(target, false).length > 0;
-  }
-
-  private hasUnsupportedCreativeMarkup(target: HTMLElement): boolean {
-    const visibleCreativeElements = this.getVisibleCreativeElements(target, false);
-    return visibleCreativeElements.some(element => !this.isCreativeShapeAllowed(element));
-  }
-
-  private hasUnsupportedRenderedSize(): boolean {
-    return Boolean(this.slotRenderSize && !this.isCreativeSizeAllowedForSlot(this.slotRenderSize));
+    return this.getVisibleCreativeElements(target).length > 0;
   }
 
   private hasVisibleRetainedCreative(): boolean {
@@ -715,7 +699,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private findVisibleCreativeElement(target?: HTMLElement): HTMLElement | SVGElement | null {
-    const visibleElements = this.getVisibleCreativeElements(target, false);
+    const visibleElements = this.getVisibleCreativeElements(target);
 
     if (!visibleElements.length) {
       return null;
@@ -842,7 +826,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     return Number.isFinite(parsedStyle) && parsedStyle > 0 ? parsedStyle : null;
   }
 
-  private getVisibleCreativeElements(target?: HTMLElement, requireAllowedShape = true): Array<HTMLElement | SVGElement> {
+  private getVisibleCreativeElements(target?: HTMLElement): Array<HTMLElement | SVGElement> {
     if (!target) {
       return [];
     }
@@ -851,10 +835,7 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       this.creativeSelector,
     );
 
-    return Array.from(mediaElements).filter(element => (
-      this.isVisibleCreativeElement(element)
-      && (!requireAllowedShape || this.isCreativeShapeAllowed(element))
-    ));
+    return Array.from(mediaElements).filter(element => this.isVisibleCreativeElement(element));
   }
 
   private getElementArea(element: HTMLElement | SVGElement): number {
@@ -877,45 +858,6 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
         && style.visibility !== 'hidden'
         && style.opacity !== '0'
       );
-  }
-
-  private isCreativeShapeAllowed(element: HTMLElement | SVGElement): boolean {
-    const sourceSize = this.getCreativeSourceSize(element);
-    if (!sourceSize) {
-      return true;
-    }
-
-    return this.isCreativeSizeAllowedForSlot(sourceSize);
-  }
-
-  private isCreativeSizeAllowedForSlot(size: AdSlotSize | FuseSlotRenderSize): boolean {
-    if (!this.isSizeAllowedByConfiguredSlot(size)) {
-      return false;
-    }
-
-    if (this.config.kind === 'interscroller') {
-      return this.isInterscrollerSizeAllowed(size);
-    }
-
-    return true;
-  }
-
-  private isSizeAllowedByConfiguredSlot(size: AdSlotSize | FuseSlotRenderSize): boolean {
-    const allowedSizes = this.activeSizes
-      .map(candidate => this.parseSize(candidate))
-      .filter((candidate): candidate is AdSlotSize => Boolean(candidate));
-
-    if (!allowedSizes.length) {
-      return true;
-    }
-
-    return allowedSizes.some(candidate => this.sizesMatch(candidate, size));
-  }
-
-  private sizesMatch(allowed: AdSlotSize, actual: AdSlotSize | FuseSlotRenderSize): boolean {
-    const tolerance = 2;
-    return Math.abs(allowed.width - actual.width) <= tolerance
-      && Math.abs(allowed.height - actual.height) <= tolerance;
   }
 
   private escapeSelectorId(id: string): string {
@@ -1293,6 +1235,13 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     }
 
     this.slotHasRetainedCreative = retained.childNodes.length > 0;
+    if (this.slotHasRetainedCreative) {
+      this.slotRetainingCreative = true;
+      this.slotHasCreative = true;
+      this.slotHasVisibleCreative = true;
+      this.slotWaiting = false;
+      this.changeDetector.markForCheck();
+    }
   }
 
   private retainCurrentCreative(): boolean {
@@ -1357,6 +1306,8 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.clearCreativeSwapTimer();
     this.retainedTarget?.nativeElement.replaceChildren();
     this.slotHasRetainedCreative = false;
+    this.slotRetainingCreative = false;
+    this.changeDetector.markForCheck();
   }
 
   private collectRetainableCreativeNodes(): Node[] {
