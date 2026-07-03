@@ -426,6 +426,14 @@ export class InheritanceService {
         })
       );
   }
+
+  private toNumberArray(value: unknown): number[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map(entry => Number(entry))
+      .filter(entry => Number.isFinite(entry));
+  }
+
   // Map V3 backend record to frontend format
   private mapV3BackendToFrontend(v3Record: V3UnifiedAccountRecord): InheritanceRecord {
     const inheritance = v3Record.inheritance!; // We filter for non-null inheritance above
@@ -441,32 +449,32 @@ export class InheritanceService {
       parent_right_id: inheritance.parent_right_id,
       parent_rank: inheritance.parent_rank,
       parent_rarity: inheritance.parent_rarity,
-      blue_sparks: inheritance.blue_sparks,
-      pink_sparks: inheritance.pink_sparks,
-      green_sparks: inheritance.green_sparks,
-      white_sparks: inheritance.white_sparks,
+      blue_sparks: this.toNumberArray(inheritance.blue_sparks),
+      pink_sparks: this.toNumberArray(inheritance.pink_sparks),
+      green_sparks: this.toNumberArray(inheritance.green_sparks),
+      white_sparks: this.toNumberArray(inheritance.white_sparks),
       win_count: inheritance.win_count,
       white_count: inheritance.white_count,
       affinity_score: (inheritance as any)['affinity_score'],
       main_blue_factors: inheritance.main_blue_factors,
       main_pink_factors: inheritance.main_pink_factors,
       main_green_factors: inheritance.main_green_factors,
-      main_white_factors: inheritance.main_white_factors,
+      main_white_factors: this.toNumberArray(inheritance.main_white_factors),
       main_white_count: inheritance.main_white_count,
       left_blue_factors: inheritance.left_blue_factors,
       left_pink_factors: inheritance.left_pink_factors,
       left_green_factors: inheritance.left_green_factors,
-      left_white_factors: inheritance.left_white_factors,
+      left_white_factors: this.toNumberArray(inheritance.left_white_factors),
       left_white_count: inheritance.left_white_count,
       right_blue_factors: inheritance.right_blue_factors,
       right_pink_factors: inheritance.right_pink_factors,
       right_green_factors: inheritance.right_green_factors,
-      right_white_factors: inheritance.right_white_factors,
+      right_white_factors: this.toNumberArray(inheritance.right_white_factors),
       right_white_count: inheritance.right_white_count,
-      main_win_saddles: inheritance.main_win_saddles,
-      left_win_saddles: inheritance.left_win_saddles,
-      right_win_saddles: inheritance.right_win_saddles,
-      race_results: inheritance.race_results,
+      main_win_saddles: this.toNumberArray(inheritance.main_win_saddles),
+      left_win_saddles: this.toNumberArray(inheritance.left_win_saddles),
+      right_win_saddles: this.toNumberArray(inheritance.right_win_saddles),
+      race_results: this.toNumberArray(inheritance.race_results),
       follower_num: v3Record.follower_num,
       borrow_view_count: v3Record.borrow_view_count ?? 0,
       borrow_copy_count: v3Record.borrow_copy_count ?? 0,

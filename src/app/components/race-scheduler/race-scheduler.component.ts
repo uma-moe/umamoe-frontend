@@ -87,8 +87,22 @@ function getYearsForPermission(perm: number): ('junior' | 'classic' | 'senior')[
 export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
   @Input() selectable = true;
   @Input() showSearch = false;
-  @Input() winSaddleIds: number[] = [];
-  @Input() runRaceIds: number[] = [];
+  private _winSaddleIds: number[] = [];
+  private _runRaceIds: number[] = [];
+  @Input()
+  set winSaddleIds(value: number[] | null | undefined) {
+    this._winSaddleIds = RaceSchedulerComponent.normalizeNumberArray(value);
+  }
+  get winSaddleIds(): number[] {
+    return this._winSaddleIds;
+  }
+  @Input()
+  set runRaceIds(value: number[] | null | undefined) {
+    this._runRaceIds = RaceSchedulerComponent.normalizeNumberArray(value);
+  }
+  get runRaceIds(): number[] {
+    return this._runRaceIds;
+  }
   @Output() selectionChanged = new EventEmitter<number[]>();
 
   @ViewChild('importInput') importInput!: ElementRef<HTMLInputElement>;
@@ -126,6 +140,13 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
   private raceDataSub?: Subscription;
 
   constructor(private dialog: MatDialog, private masterData: MasterDataService) {}
+
+  private static normalizeNumberArray(value: unknown): number[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map(entry => Number(entry))
+      .filter(entry => Number.isFinite(entry));
+  }
 
   ngOnInit(): void {
     this.masterData.init();
@@ -324,8 +345,10 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
     const usedSlots = new Set<string>(); // key: "year_month_half"
 
     for (const resultId of this.runRaceIds) {
+      if (!Number.isFinite(resultId) || resultId <= 0) continue;
       const programId = Math.floor(resultId / 100);
       const position = resultId % 100;
+      if (!Number.isFinite(position) || position <= 0) continue;
 
       const raceId = this.programIdToRaceInstanceId.get(programId);
       if (!raceId) continue;

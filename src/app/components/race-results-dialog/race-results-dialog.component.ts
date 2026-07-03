@@ -508,7 +508,20 @@ export class RaceResultsDialogComponent implements AfterViewInit {
   constructor(
     public dialogRef: MatDialogRef<RaceResultsDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: RaceResultsDialogData
-  ) {}
+  ) {
+    this.data = {
+      ...data,
+      winSaddleIds: this.normalizeNumberArray(data.winSaddleIds),
+      runRaceIds: this.normalizeNumberArray(data.runRaceIds),
+    };
+  }
+
+  private normalizeNumberArray(value: unknown): number[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map(entry => Number(entry))
+      .filter(entry => Number.isFinite(entry));
+  }
 
   ngAfterViewInit(): void {
     // Scheduler is now initialized; pre-build list data
@@ -554,6 +567,7 @@ export class RaceResultsDialogComponent implements AfterViewInit {
         for (const half of s.halves) {
           // Ran races (includes won with position=1)
           for (const entry of s.getRanInCell(year, month, half)) {
+            if (!entry?.race) continue;
             if (seenIds.has(entry.race.race_instance_id)) continue;
             seenIds.add(entry.race.race_instance_id);
             group.races.push({
@@ -572,6 +586,7 @@ export class RaceResultsDialogComponent implements AfterViewInit {
 
           // Won-only races (from saddle data, not already covered by run data)
           for (const race of s.getWonInCell(year, month, half)) {
+            if (!race) continue;
             if (seenIds.has(race.race_instance_id)) continue;
             seenIds.add(race.race_instance_id);
             group.races.push({
@@ -602,6 +617,7 @@ export class RaceResultsDialogComponent implements AfterViewInit {
       for (const month of sched.months) {
         for (const half of sched.halves) {
           for (const entry of sched.getRanInCell(year, month, half)) {
+            if (!entry?.race) continue;
             entries.push({
               raceName: entry.race.name,
               grade: sched.getGradeLabel(entry.race.grade),

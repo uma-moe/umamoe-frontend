@@ -82,7 +82,7 @@ const getMobileInterscrollerSizes = (index: number): string[] => (
 
 const inContentSlot = (placement: string, label: string, index = 1): AdSlotConfig => ({
   placement,
-  fuseId: resolveFuseId(placement),
+  fuseId: resolveInterscrollerFuseId(placement),
   kind: 'interscroller',
   label,
   mobileSizes: getMobileInterscrollerSizes(index),
@@ -116,7 +116,7 @@ export function getMobileRailSlot(surface: string, label: string, index = 1): Ad
 
   return {
     placement,
-    fuseId: resolveFuseId(placement),
+    fuseId: resolveInterscrollerFuseId(placement),
     kind: 'interscroller',
     label: `${label} mobile in-content ${index}`,
     mobileSizes: sizes,
@@ -280,6 +280,11 @@ function landingPage(surface: string, label: string): AdRouteConfig {
 function resolveFuseId(placement: string): string {
   const slots = environment.fuse.slots as Record<string, string>;
   return slots[placement]?.trim() ?? '';
+}
+
+function resolveInterscrollerFuseId(placement: string): string {
+  const firstPlacement = placement.replace(/_interscroller_\d+$/, '_interscroller_1');
+  return resolveFuseId(firstPlacement) || resolveFuseId(placement);
 }
 
 function normalizePath(url: string): string {

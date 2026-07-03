@@ -366,6 +366,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private filterChangeSubject = new Subject<UnifiedSearchParams>();
   private destroy$ = new Subject<void>();
   private restoredSavedFilterState = false;
+  private skipSavedStateRestoreOnNextModeSwitch = false;
   private staticUqlSuggestionsCache: UqlSuggestion[] | null = null;
   private lastUqlFilterStateSignature: string | null = null;
   private structuredFiltersDirtyForUql = false;
@@ -1151,9 +1152,13 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   loadSerializedState(
     stateStr: string,
     modeOverride: FilterMode | null = this.readSavedFilterMode(),
-    options: { emitImmediately?: boolean } = {},
+    options: { emitImmediately?: boolean; persist?: boolean } = {},
   ) {
     try {
+      const shouldPersist = options.persist !== false;
+      if (!shouldPersist) {
+        this.skipSavedStateRestoreOnNextModeSwitch = true;
+      }
       const state: CompressedState = JSON.parse(this.decodeBase64Utf8(stateStr));
       if (modeOverride) {
         this.filterMode = modeOverride;
@@ -1167,7 +1172,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.restoreSerializedP2Context(state);
       if (this.filterMode === 'uql') {
         this.clearUqlRepresentableStructuredFilters();
-        this.onUqlChange({ emitImmediately: options.emitImmediately });
+        this.onUqlChange({ emitImmediately: options.emitImmediately, persist: shouldPersist });
         return;
       }
       
@@ -1368,7 +1373,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       }
       this.onFilterChange({
         emitImmediately: options.emitImmediately,
-        markStructuredDirtyForUql: false
+        markStructuredDirtyForUql: false,
+        persist: shouldPersist
       });
     } catch (e) {
       console.error('Failed to load filter state', e);
@@ -1847,7 +1853,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     });
     return groups;
   }
-  onFilterChange(options: { emitImmediately?: boolean; markStructuredDirtyForUql?: boolean } = {}) {
+  onFilterChange(options: { emitImmediately?: boolean; markStructuredDirtyForUql?: boolean; persist?: boolean } = {}) {
     this.validateUqlQuery();
     this.syncUqlFilterState();
     // Sanitize star sum filters - convert null to undefined and clamp values
@@ -1993,7 +1999,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     // Update active filter chips
     this.updateCurrentUqlPreview();
     this.updateActiveFilterChips();
-    this.persistCurrentFilterState();
+    if (options.persist !== false) {
+      this.skipSavedStateRestoreOnNextModeSwitch = false;
+      this.persistCurrentFilterState();
+    }
     this.emitFilterChange(options.emitImmediately === true);
   }
 
@@ -2636,13 +2645,17 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
   setFilterMode(mode: FilterMode): void {
     const previousMode = this.filterMode;
-    this.persistCurrentFilterState();
-    const savedState = this.readSavedFilterState();
+    const shouldUseSavedState = !this.skipSavedStateRestoreOnNextModeSwitch;
+    if (shouldUseSavedState) {
+      this.persistCurrentFilterState();
+    }
+    const savedState = shouldUseSavedState ? this.readSavedFilterState() : null;
     if (previousMode === 'uql' && mode !== 'uql') {
       if (savedState?.formState) {
         this.loadSerializedState(savedState.formState, mode);
         this.filterMode = mode;
       } else {
+        this.filterMode = mode;
         this.applyRepresentableUqlToStructuredFilters();
       }
       this.structuredFiltersDirtyForUql = false;
@@ -2672,14 +2685,21 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.updateActiveFilterChips();
     }
     this.filterMode = mode;
-    this.persistCurrentFilterMode();
+    if (shouldUseSavedState) {
+      this.persistCurrentFilterMode();
+    }
     if (mode === 'uql') {
       this.filterState = this.buildUqlOnlyFilterState();
       this.updateActiveFilterChips();
-      this.persistCurrentFilterState();
+      if (shouldUseSavedState) {
+        this.persistCurrentFilterState();
+      }
       this.filterChangeSubject.next({ ...this.filterState });
     }
-    this.persistCurrentFilterMode();
+    if (shouldUseSavedState) {
+      this.persistCurrentFilterMode();
+    }
+    this.skipSavedStateRestoreOnNextModeSwitch = false;
     if (!this.isExpanded) {
       this.isExpanded = true;
     }
@@ -2772,7 +2792,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.onFilterChange();
   }
 
-  onUqlChange(options: { emitImmediately?: boolean } = {}): void {
+  onUqlChange(options: { emitImmediately?: boolean; persist?: boolean } = {}): void {
     this.applyUqlEditorDirectives();
     this.validateUqlQuery();
     this.syncUqlFilterState();
@@ -2788,10 +2808,16 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     if (filterStateChanged) {
       this.lastUqlFilterStateSignature = nextSignature;
-      this.persistCurrentFilterState();
+      if (options.persist !== false) {
+        this.skipSavedStateRestoreOnNextModeSwitch = false;
+        this.persistCurrentFilterState();
+      }
       this.emitFilterChange(options.emitImmediately === true);
     } else {
-      this.persistCurrentFilterState();
+      if (options.persist !== false) {
+        this.skipSavedStateRestoreOnNextModeSwitch = false;
+        this.persistCurrentFilterState();
+      }
     }
   }
 

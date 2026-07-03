@@ -366,7 +366,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       // Load state
       // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError if the load triggers immediate changes
       setTimeout(() => {
-        this.advancedFilter.loadSerializedState(filters, null, { emitImmediately: true });
+        this.advancedFilter.loadSerializedState(filters, null, { emitImmediately: true, persist: false });
       });
     }
   }
