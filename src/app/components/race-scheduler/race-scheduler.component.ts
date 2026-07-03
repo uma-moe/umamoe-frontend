@@ -123,6 +123,8 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
   private saddleToRaceMap = new Map<number, number[]>();
   wonRaceIds = new Set<number>();
   private wonCellLookup = new Map<string, RaceEntry[]>();
+  private ranCellLookup = new Map<string, { race: RaceEntry; position: number }[]>();
+  private displayWonCellLookup = new Map<string, RaceEntry[]>();
   /** Map race_instance_id → RaceEntry for quick lookup */
   private raceMap = new Map<number, RaceEntry>();
 
@@ -164,6 +166,8 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
     this.saddleToRaceMap.clear();
     this.wonRaceIds.clear();
     this.wonCellLookup.clear();
+    this.ranCellLookup.clear();
+    this.displayWonCellLookup.clear();
     this.raceMap.clear();
     this.programIdToRaceInstanceId.clear();
     this.ranLookup.clear();
@@ -181,6 +185,7 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
     this.buildGrid();
     this.updateWonRaces();
     this.updateRunRaces();
+    this.rebuildDisplayCellLookups();
     if (this.selectable) {
       this.initSelectionFromWinSaddleIds();
       if (this.cellSelection.size > 0) {
@@ -192,9 +197,11 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['winSaddleIds'] && !changes['winSaddleIds'].firstChange) {
       this.updateWonRaces();
+      this.rebuildDisplayCellLookups();
     }
     if (changes['runRaceIds'] && !changes['runRaceIds'].firstChange) {
       this.updateRunRaces();
+      this.rebuildDisplayCellLookups();
     }
   }
 
@@ -369,6 +376,28 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
+  private rebuildDisplayCellLookups(): void {
+    this.ranCellLookup.clear();
+    this.displayWonCellLookup.clear();
+
+    for (const year of this.years) {
+      for (const month of this.months) {
+        for (const half of this.halves) {
+          const key = this.cellKey(year, month, half);
+          const ranEntries = this.computeRanInCell(year, month, half);
+          if (ranEntries.length) {
+            this.ranCellLookup.set(key, ranEntries);
+          }
+
+          const wonEntries = this.computeWonInCell(year, month, half, ranEntries);
+          if (wonEntries.length) {
+            this.displayWonCellLookup.set(key, wonEntries);
+          }
+        }
+      }
+    }
+  }
+
   private cellKey(year: string, month: number, half: number): string {
     return `${year}_${month}_${half}`;
   }
@@ -395,9 +424,17 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
    *  - If only saddle data is available, consumes ordered saddle IDs and places each race
    *    into the first still-free slot it can occupy. */
   getWonInCell(year: string, month: number, half: number): RaceEntry[] {
+    return this.displayWonCellLookup.get(this.cellKey(year, month, half)) ?? [];
+  }
+
+  private computeWonInCell(
+    year: string,
+    month: number,
+    half: number,
+    ran: { race: RaceEntry; position: number }[] = this.computeRanInCell(year, month, half),
+  ): RaceEntry[] {
     const hasRunData = this.ranCount > 0;
-    const ran = hasRunData ? this.getRanInCell(year, month, half) : [];
-    const ranRaceIds = ran.length > 0 ? new Set(ran.map(e => e.race.race_instance_id)) : null;
+    const ranRaceIds = hasRunData && ran.length > 0 ? new Set(ran.map(e => e.race.race_instance_id)) : null;
 
     return (this.grid[year]?.[month]?.[half] ?? []).filter(r => {
       if (!this.wonRaceIds.has(r.race_instance_id)) return false;
@@ -421,6 +458,10 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
    *  Matches by program_id + month + half, pinned to exact year via ranLookup.
    *  Position 1 = won, position > 1 = ran. */
   getRanInCell(year: string, month: number, half: number): { race: RaceEntry; position: number }[] {
+    return this.ranCellLookup.get(this.cellKey(year, month, half)) ?? [];
+  }
+
+  private computeRanInCell(year: string, month: number, half: number): { race: RaceEntry; position: number }[] {
     if (this.ranCount === 0) return [];
     const result: { race: RaceEntry; position: number }[] = [];
     for (const race of (this.grid[year]?.[month]?.[half] ?? [])) {

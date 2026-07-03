@@ -64,6 +64,13 @@ const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = PUBLIFT_XL_MIN_WIDTH - 1;
       margin: 2px 0;
     }
 
+    .ad-in-content--interscroller:has(.ad-slot--waiting) {
+      display: none;
+      height: 0;
+      margin: 0;
+      overflow: hidden;
+    }
+
     .ad-in-content--collapsed {
       display: none;
       height: 0;

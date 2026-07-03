@@ -236,6 +236,16 @@ interface SavedDatabaseFilterState {
   uqlState?: string;
   defaultMlbFilterRemoved?: boolean;
 }
+
+interface SavedDatabaseFilterPreset {
+  version: 1;
+  id: string;
+  name: string;
+  mode: FilterMode;
+  state: string;
+  createdAt: number;
+  updatedAt: number;
+}
 export interface TreeNode {
   id: string;
   name: string;
@@ -346,6 +356,7 @@ export interface FactorFilter {
 export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy {
   static readonly SAVED_FILTER_STATE_KEY = 'database-filter-state-v2';
   static readonly SAVED_FILTER_MODE_KEY = 'database-filter-mode-v1';
+  static readonly FILTER_PRESETS_KEY = 'database-filter-presets-v1';
 
   static hasSavedFilterState(): boolean {
     if (typeof localStorage === 'undefined') return false;
@@ -370,6 +381,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private staticUqlSuggestionsCache: UqlSuggestion[] | null = null;
   private lastUqlFilterStateSignature: string | null = null;
   private structuredFiltersDirtyForUql = false;
+  private filterPresetActiveCountCache = new Map<string, number>();
   @ViewChild(RaceSchedulerComponent) raceScheduler!: RaceSchedulerComponent;
   // Wrapping detection
   @ViewChild('mainLayout', { static: false }) mainLayoutRef!: ElementRef<HTMLElement>;
@@ -381,6 +393,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private floatingBtnFrame: number | null = null;
   isExpanded = false;
   filterMode: FilterMode = 'basic';
+  filterPresets: SavedDatabaseFilterPreset[] = [];
+  filterPresetPanelOpen = false;
+  filterPresetNameDraft = '';
+  filterPresetMessage = '';
+  private filterPresetMessageTimeout: ReturnType<typeof setTimeout> | null = null;
   uqlQuery = '';
   compiledUqlQuery = '';
   uqlValidationState: UqlValidationState = 'empty';
@@ -596,6 +613,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   raceScheduleRaceCount = 0;
   ngOnInit() {
     this.updateUqlSuggestions();
+    this.filterPresets = this.readFilterPresets();
     this.restoreInitialFilterModePreference();
     // Keep Quick Filters open on desktop; mobile still starts compact below.
     if (window.innerWidth <= 600) {
@@ -707,6 +725,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.hostResizeObserver?.disconnect();
     if (this.wrappingDetectFrame !== null) cancelAnimationFrame(this.wrappingDetectFrame);
     if (this.floatingBtnFrame !== null) cancelAnimationFrame(this.floatingBtnFrame);
+    if (this.filterPresetMessageTimeout !== null) clearTimeout(this.filterPresetMessageTimeout);
     this.teardownScrollListener();
     this.destroy$.next();
     this.destroy$.complete();
@@ -1067,6 +1086,343 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     } catch {
       return null;
     }
+  }
+
+  private readFilterPresets(): SavedDatabaseFilterPreset[] {
+    if (typeof localStorage === 'undefined') return [];
+    try {
+      const saved = localStorage.getItem(DatabaseFilterComponent.FILTER_PRESETS_KEY);
+      if (!saved) return [];
+      const parsed = JSON.parse(saved) as unknown;
+      const entries = this.extractFilterPresetEntries(parsed);
+
+      return entries
+        .map(entry => this.normalizeSavedFilterPreset(entry))
+        .filter((entry): entry is SavedDatabaseFilterPreset => entry !== null)
+        .sort((a, b) => b.updatedAt - a.updatedAt || a.name.localeCompare(b.name));
+    } catch {
+      return [];
+    }
+  }
+
+  private extractFilterPresetEntries(parsed: unknown): unknown[] {
+    if (Array.isArray(parsed)) return parsed;
+    if (typeof parsed === 'object' && parsed !== null && Array.isArray((parsed as { presets?: unknown }).presets)) {
+      return (parsed as { presets: unknown[] }).presets;
+    }
+    return [];
+  }
+
+  private normalizeSavedFilterPreset(entry: unknown): SavedDatabaseFilterPreset | null {
+    if (typeof entry !== 'object' || entry === null) return null;
+    const candidate = entry as Partial<SavedDatabaseFilterPreset>;
+    const name = this.normalizeFilterPresetName(candidate.name);
+    if (!name) return null;
+    const mode = this.normalizeFilterPresetMode(candidate.mode);
+    if (!mode) return null;
+    const state = typeof candidate.state === 'string' ? candidate.state : '';
+    if (state) {
+      try {
+        JSON.parse(this.decodeBase64Utf8(state));
+      } catch {
+        return null;
+      }
+    }
+    const now = Date.now();
+    const createdAt = typeof candidate.createdAt === 'number' && Number.isFinite(candidate.createdAt)
+      ? candidate.createdAt
+      : now;
+    const updatedAt = typeof candidate.updatedAt === 'number' && Number.isFinite(candidate.updatedAt)
+      ? candidate.updatedAt
+      : createdAt;
+    const id = typeof candidate.id === 'string' && candidate.id.trim()
+      ? candidate.id
+      : this.createFilterPresetId(name, createdAt);
+
+    return {
+      version: 1,
+      id,
+      name,
+      mode,
+      state,
+      createdAt,
+      updatedAt
+    };
+  }
+
+  private writeFilterPresets(): void {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(DatabaseFilterComponent.FILTER_PRESETS_KEY, JSON.stringify(this.filterPresets));
+    } catch {
+      this.showFilterPresetMessage('Preset storage is full.');
+    }
+  }
+
+  private normalizeFilterPresetMode(mode: unknown): FilterMode | null {
+    return mode === 'basic' || mode === 'advanced' || mode === 'uql' ? mode : null;
+  }
+
+  private normalizeFilterPresetName(value: unknown): string {
+    return typeof value === 'string'
+      ? value.trim().replace(/\s+/g, ' ').slice(0, 60)
+      : '';
+  }
+
+  private createFilterPresetId(name: string, createdAt: number): string {
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'preset';
+    return `${slug}-${createdAt.toString(36)}`;
+  }
+
+  toggleFilterPresetPanel(event?: Event): void {
+    event?.stopPropagation();
+    this.filterPresetPanelOpen = !this.filterPresetPanelOpen;
+    if (this.filterPresetPanelOpen) {
+      this.filterPresets = this.readFilterPresets();
+    }
+  }
+
+  saveCurrentFilterPreset(event?: Event): void {
+    event?.stopPropagation();
+    const name = this.normalizeFilterPresetName(this.filterPresetNameDraft);
+    if (!name) {
+      this.showFilterPresetMessage('Name required.');
+      return;
+    }
+
+    const now = Date.now();
+    const presets = this.readFilterPresets();
+    const existingIndex = presets.findIndex(preset => preset.name.toLowerCase() === name.toLowerCase());
+    const existing = existingIndex >= 0 ? presets[existingIndex] : null;
+    const next: SavedDatabaseFilterPreset = {
+      version: 1,
+      id: existing?.id ?? this.createFilterPresetId(name, now),
+      name,
+      mode: this.filterMode,
+      state: this.getSerializedState(),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now
+    };
+
+    if (existingIndex >= 0) {
+      presets[existingIndex] = next;
+    } else {
+      presets.unshift(next);
+    }
+
+    this.filterPresets = presets.sort((a, b) => b.updatedAt - a.updatedAt || a.name.localeCompare(b.name));
+    this.writeFilterPresets();
+    this.filterPresetNameDraft = name;
+    this.showFilterPresetMessage(existing ? 'Preset updated.' : 'Preset saved.');
+  }
+
+  exportFilterPresets(event?: Event): void {
+    event?.stopPropagation();
+    const presets = this.readFilterPresets();
+    if (!presets.length) {
+      this.showFilterPresetMessage('No presets to export.');
+      return;
+    }
+
+    this.filterPresets = presets;
+    const transferText = this.encodeBase64Utf8(JSON.stringify({
+      type: 'uma.moe.database-filter-presets',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      presets
+    }));
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(transferText).then(
+        () => this.ngZone.run(() => this.showFilterPresetMessage('Export copied.')),
+        () => this.ngZone.run(() => this.showFilterPresetExportPrompt(transferText))
+      );
+    } else {
+      this.showFilterPresetExportPrompt(transferText);
+    }
+  }
+
+  importFilterPresetsFromText(event?: Event): void {
+    event?.stopPropagation();
+    const transferText = window.prompt('Paste filter preset export string')?.trim() ?? '';
+    if (!transferText) {
+      return;
+    }
+
+    this.importFilterPresetTransferText(transferText);
+  }
+
+  private showFilterPresetExportPrompt(transferText: string): void {
+    window.prompt('Copy filter preset export string', transferText);
+    this.showFilterPresetMessage('Export string ready.');
+  }
+
+  private importFilterPresetTransferText(transferText: string): void {
+    try {
+      const payload = JSON.parse(this.decodeBase64Utf8(transferText)) as unknown;
+      const imported = this.extractFilterPresetEntries(payload)
+        .map(entry => this.normalizeSavedFilterPreset(entry))
+        .filter((entry): entry is SavedDatabaseFilterPreset => entry !== null);
+      if (!imported.length) {
+        this.showFilterPresetMessage('No presets found.');
+        return;
+      }
+
+      const importedCount = this.mergeImportedFilterPresets(imported);
+      this.showFilterPresetMessage(`Imported ${importedCount} preset${importedCount === 1 ? '' : 's'}.`);
+    } catch {
+      this.showFilterPresetMessage('Invalid export string.');
+    }
+  }
+
+  private mergeImportedFilterPresets(imported: SavedDatabaseFilterPreset[]): number {
+    const now = Date.now();
+    const presets = this.readFilterPresets();
+    const usedIds = new Set(presets.map(preset => preset.id));
+    let importedCount = 0;
+
+    for (const preset of imported) {
+      const nameKey = preset.name.toLowerCase();
+      const existingIndex = presets.findIndex(entry => entry.name.toLowerCase() === nameKey);
+      if (existingIndex >= 0) {
+        const existing = presets[existingIndex];
+        presets[existingIndex] = {
+          ...preset,
+          id: existing.id,
+          createdAt: existing.createdAt,
+          updatedAt: now + importedCount
+        };
+        importedCount += 1;
+        continue;
+      }
+
+      let id = preset.id;
+      let collisionOffset = 0;
+      while (usedIds.has(id)) {
+        collisionOffset += 1;
+        id = this.createFilterPresetId(preset.name, now + importedCount + collisionOffset);
+      }
+      usedIds.add(id);
+      presets.push({
+        ...preset,
+        id,
+        createdAt: preset.createdAt,
+        updatedAt: now + importedCount
+      });
+      importedCount += 1;
+    }
+
+    this.filterPresets = presets.sort((a, b) => b.updatedAt - a.updatedAt || a.name.localeCompare(b.name));
+    this.writeFilterPresets();
+    return importedCount;
+  }
+
+  loadFilterPreset(preset: SavedDatabaseFilterPreset, event?: Event): void {
+    event?.stopPropagation();
+    this.resetAllFilterInputsForPresetLoad();
+    this.filterMode = preset.mode;
+    this.filterPresetNameDraft = preset.name;
+
+    if (preset.state) {
+      this.loadSerializedState(preset.state, preset.mode, { emitImmediately: true });
+    } else if (preset.mode === 'uql') {
+      this.onUqlChange({ emitImmediately: true });
+    } else {
+      this.onFilterChange({ emitImmediately: true, markStructuredDirtyForUql: false });
+    }
+
+    this.persistCurrentFilterMode();
+    this.filterPresetPanelOpen = false;
+    this.showFilterPresetMessage('Preset loaded.');
+  }
+
+  deleteFilterPreset(preset: SavedDatabaseFilterPreset, event?: Event): void {
+    event?.stopPropagation();
+    this.filterPresets = this.readFilterPresets().filter(entry => entry.id !== preset.id);
+    this.writeFilterPresets();
+    this.showFilterPresetMessage('Preset deleted.');
+  }
+
+  trackFilterPreset(_index: number, preset: SavedDatabaseFilterPreset): string {
+    return preset.id;
+  }
+
+  getFilterPresetModeLabel(mode: FilterMode): string {
+    switch (mode) {
+      case 'advanced': return 'Advanced';
+      case 'uql': return 'UQL';
+      default: return 'Basic';
+    }
+  }
+
+  getFilterPresetActiveFilterCount(preset: SavedDatabaseFilterPreset): number {
+    const cacheKey = `${preset.id}:${preset.updatedAt}:${preset.state}`;
+    const cached = this.filterPresetActiveCountCache.get(cacheKey);
+    if (cached !== undefined) return cached;
+
+    const count = this.computeFilterPresetActiveFilterCount(preset);
+    this.filterPresetActiveCountCache.set(cacheKey, count);
+    return count;
+  }
+
+  private computeFilterPresetActiveFilterCount(preset: SavedDatabaseFilterPreset): number {
+    if (!preset.state) return 0;
+    try {
+      const state: CompressedState = JSON.parse(this.decodeBase64Utf8(preset.state));
+      if (preset.mode === 'uql' || state.fm === 'uql') {
+        return this.normalizeRestoredUqlQuery(state.uql || '') ? 1 : 0;
+      }
+
+      let count = 0;
+      const addArrayCount = (value: unknown[] | undefined) => {
+        if (Array.isArray(value)) count += value.length;
+      };
+
+      addArrayCount(state.b);
+      addArrayCount(state.p);
+      addArrayCount(state.g);
+      addArrayCount(state.w);
+      addArrayCount(state.ow);
+      addArrayCount(state.omw);
+      addArrayCount(state.lw);
+      addArrayCount(state.mb);
+      addArrayCount(state.mp);
+      addArrayCount(state.mg);
+      addArrayCount(state.mw);
+      if (Array.isArray(state.t)) count += state.t.filter(value => value !== null && value !== undefined).length;
+      if (state.sc) count += 1;
+      if (state.lb !== undefined && state.lb > 0) count += 1;
+      if (state.uid) count += 1;
+      if (state.un) count += 1;
+      if (state.mwc !== undefined && state.mwc > 0) count += 1;
+      if (state.mwh !== undefined && state.mwh > 0) count += 1;
+      if (state.pr !== undefined && state.pr !== 1) count += 1;
+      if (state.mf !== undefined) count += 1;
+      if (state.bss !== undefined) count += 1;
+      if (state.pss !== undefined) count += 1;
+      if (state.gss !== undefined) count += 1;
+      if (state.wss !== undefined) count += 1;
+      if (state.mmwc !== undefined && state.mmwc > 0) count += 1;
+      addArrayCount(state.imp);
+      addArrayCount(state.ip);
+      addArrayCount(state.ep);
+      addArrayCount(state.emp);
+      if (Array.isArray(state.rs) && state.rs.length) count += 1;
+      if (state.vet) count += 1;
+
+      return count;
+    } catch {
+      return 0;
+    }
+  }
+
+  private showFilterPresetMessage(message: string): void {
+    this.filterPresetMessage = message;
+    if (this.filterPresetMessageTimeout !== null) clearTimeout(this.filterPresetMessageTimeout);
+    this.filterPresetMessageTimeout = setTimeout(() => {
+      this.filterPresetMessage = '';
+      this.filterPresetMessageTimeout = null;
+      this.cdr.markForCheck();
+    }, 2200);
   }
 
   private persistCurrentFilterMode(): void {
@@ -2457,6 +2813,21 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.filterState = this.createDefaultFilterState();
     this.raceScheduleRaceCount = 0;
     this.raceScheduler?.clearSelection();
+  }
+
+  private resetAllFilterInputsForPresetLoad(): void {
+    this.clearStructuredFilters();
+    this.uqlQuery = '';
+    this.compiledUqlQuery = '';
+    this.uqlValidationState = 'empty';
+    this.uqlValidationMessage = '';
+    this.uqlValidationIssue = null;
+    this.uqlPreviewExpanded = false;
+    this.currentUqlPreview = '';
+    this.clearUqlEditorDirectiveState();
+    this.lastUqlFilterStateSignature = null;
+    this.structuredFiltersDirtyForUql = false;
+    this.updateActiveFilterChips();
   }
 
   removeActiveFilter(chip: ActiveFilterChip): void {

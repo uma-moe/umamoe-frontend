@@ -33,6 +33,7 @@ import {
   keymap,
   lineNumbers,
   placeholder as placeholderExt,
+  tooltips,
 } from '@codemirror/view';
 import {
   Completion,
@@ -243,6 +244,111 @@ const wherePrefixPlugin = ViewPlugin.fromClass(
   { decorations: (v) => v.decorations },
 );
 
+const autocompleteTooltipPlacementPlugin = ViewPlugin.fromClass(
+  class {
+    private animationFrame = 0;
+    private timeout = 0;
+    private readonly maxMobileWidth = 640;
+    private readonly inset = 8;
+    private readonly handleResize = () => this.schedule();
+    private readonly measureReq = {
+      read: () => null,
+      write: () => this.placeAutocompleteTooltipBelow(),
+      key: this,
+    };
+
+    constructor(private readonly view: EditorView) {
+      this.view.dom.ownerDocument.defaultView?.addEventListener('resize', this.handleResize);
+      this.schedule();
+    }
+
+    update(update: ViewUpdate): void {
+      if (update.transactions.length || update.geometryChanged || update.viewportChanged || update.focusChanged) {
+        this.schedule();
+      }
+    }
+
+    destroy(): void {
+      const win = this.view.dom.ownerDocument.defaultView;
+      if (this.animationFrame) {
+        win?.cancelAnimationFrame(this.animationFrame);
+      }
+      if (this.timeout) {
+        win?.clearTimeout(this.timeout);
+      }
+      win?.removeEventListener('resize', this.handleResize);
+    }
+
+    private schedule(): void {
+      const win = this.view.dom.ownerDocument.defaultView;
+      if (!win) return;
+      this.view.requestMeasure(this.measureReq);
+      if (this.animationFrame) win.cancelAnimationFrame(this.animationFrame);
+      this.animationFrame = win.requestAnimationFrame(() => {
+        this.animationFrame = 0;
+        this.view.requestMeasure(this.measureReq);
+        this.placeAutocompleteTooltipBelow();
+      });
+      if (this.timeout) win.clearTimeout(this.timeout);
+      this.timeout = win.setTimeout(() => {
+        this.timeout = 0;
+        this.view.requestMeasure(this.measureReq);
+        this.placeAutocompleteTooltipBelow();
+      }, 24);
+    }
+
+    private placeAutocompleteTooltipBelow(): void {
+      const doc = this.view.dom.ownerDocument;
+      const docEl = doc.documentElement;
+      const tooltip =
+        this.view.dom.querySelector<HTMLElement>('.cm-tooltip.cm-tooltip-autocomplete')
+        ?? doc.querySelector<HTMLElement>('.cm-tooltip.cm-tooltip-autocomplete');
+      if (!tooltip) return;
+
+      const frame = this.view.dom.closest<HTMLElement>('.uql-cm-frame');
+      if (!frame) return;
+
+      const frameRect = frame.getBoundingClientRect();
+      const scrollerRect = this.view.scrollDOM.getBoundingClientRect();
+      const selectionRect = this.view.coordsAtPos(this.view.state.selection.main.head);
+      const isAbsolute = tooltip.style.position === 'absolute';
+      const parentRect = isAbsolute
+        ? (tooltip.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? this.view.dom.getBoundingClientRect()
+        : { left: 0, top: 0 };
+
+      const minTop = Math.max(this.inset, scrollerRect.top + 4);
+      const preferredBelowTop = Math.max(minTop, (selectionRect?.bottom ?? scrollerRect.top) + 4);
+      const nextTop = preferredBelowTop;
+
+      tooltip.style.setProperty('top', `${nextTop - parentRect.top}px`, 'important');
+
+      if (docEl.clientWidth <= this.maxMobileWidth) {
+        const left = Math.max(this.inset, frameRect.left + this.inset);
+        const right = Math.min(docEl.clientWidth - this.inset, frameRect.right - this.inset);
+        const width = Math.max(0, right - left);
+        tooltip.dataset['uqlMobilePositioned'] = 'true';
+        tooltip.style.setProperty('left', `${left - parentRect.left}px`, 'important');
+        tooltip.style.setProperty('width', `${width}px`, 'important');
+        tooltip.style.setProperty('max-width', `${width}px`, 'important');
+        tooltip.style.setProperty('min-width', '0', 'important');
+      } else {
+        this.resetMobilePositioning(tooltip);
+      }
+
+      tooltip.classList.remove('cm-tooltip-above');
+      tooltip.classList.add('cm-tooltip-below');
+    }
+
+    private resetMobilePositioning(tooltip: HTMLElement): void {
+      if (tooltip.dataset['uqlMobilePositioned'] !== 'true') return;
+      delete tooltip.dataset['uqlMobilePositioned'];
+      tooltip.style.removeProperty('width');
+      tooltip.style.removeProperty('max-width');
+      tooltip.style.removeProperty('min-width');
+    }
+  }
+);
+
 @Component({
   selector: 'app-uql-code-editor',
   standalone: true,
@@ -378,10 +484,23 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
         decorationField,
         validationIssueField,
         wherePrefixPlugin,
+        tooltips({
+          parent: this.host.nativeElement.ownerDocument.body,
+          tooltipSpace: (view: EditorView) => {
+            const docEl = view.dom.ownerDocument.documentElement;
+            return {
+              top: 0,
+              left: 0,
+              right: docEl.clientWidth,
+              bottom: docEl.clientHeight + 10000,
+            };
+          },
+        }),
         autocompletion({
           override: [completionSource],
           activateOnTyping: true,
           maxRenderedOptions: 80,
+          aboveCursor: false,
           icons: false,
           closeOnBlur: true,
           optionClass: (c: Completion) => {
@@ -419,6 +538,7 @@ export class UqlCodeEditorComponent implements AfterViewInit, OnChanges, OnDestr
             },
           ],
         }),
+        autocompleteTooltipPlacementPlugin,
         keymap.of([
           { key: 'Tab', run: acceptCompletion },
           { key: 'Mod-Space', run: startCompletion },

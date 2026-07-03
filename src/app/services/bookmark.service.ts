@@ -188,6 +188,7 @@ export class BookmarkService {
     return {
       id: inh.inheritance_id,
       account_id: item.account_id,
+      trainer_id: item.account_id,
       trainer_name: item.trainer_name,
       umamusume_id: inh.main_parent_id,
       main_parent_id: inh.main_parent_id,

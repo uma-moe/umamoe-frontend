@@ -1566,14 +1566,14 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
 
     const notInMatch = normalized.match(/^([a-z_][a-z0-9_]*)\s+not\s+in\s*\((.*)\)$/i);
     if (notInMatch) {
-      const values = this.parseLocalUqlNumberList(notInMatch[2]);
-      return !this.getLocalUqlFieldValues(record, notInMatch[1]).some(value => values.includes(value));
+      const values = this.parseLocalUqlValueList(notInMatch[2]);
+      return !this.getLocalUqlFieldComparableValues(record, notInMatch[1]).some(value => this.localUqlValuesEqual(value, values));
     }
 
     const inMatch = normalized.match(/^([a-z_][a-z0-9_]*)\s+in\s*\((.*)\)$/i);
     if (inMatch) {
-      const values = this.parseLocalUqlNumberList(inMatch[2]);
-      return this.getLocalUqlFieldValues(record, inMatch[1]).some(value => values.includes(value));
+      const values = this.parseLocalUqlValueList(inMatch[2]);
+      return this.getLocalUqlFieldComparableValues(record, inMatch[1]).some(value => this.localUqlValuesEqual(value, values));
     }
 
     const likeMatch = normalized.match(/^([a-z_][a-z0-9_]*)\s+(i?like)\s+['"]?([^'"]*)['"]?$/i);
@@ -1585,11 +1585,11 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         : fieldText.includes(needle);
     }
 
-    const comparisonMatch = normalized.match(/^([a-z_][a-z0-9_]*|\d+)\s*(=|!=|<>|>=|<=|>|<)\s*([a-z_][a-z0-9_]*|\d+)$/i);
+    const comparisonMatch = normalized.match(/^([a-z_][a-z0-9_]*|\d+|'(?:''|[^'])*'|"(?:\\"|[^"])*")\s*(=|==|!=|<>|>=|<=|>|<)\s*([a-z_][a-z0-9_]*|\d+|'(?:''|[^'])*'|"(?:\\"|[^"])*")$/i);
     if (comparisonMatch) {
-      const left = /^\d+$/.test(comparisonMatch[1]) ? Number(comparisonMatch[1]) : this.getLocalUqlFieldValue(record, comparisonMatch[1]);
-      const right = /^\d+$/.test(comparisonMatch[3]) ? Number(comparisonMatch[3]) : this.getLocalUqlFieldValue(record, comparisonMatch[3]);
-      return this.compareLocalUqlValues(Number(left ?? 0), comparisonMatch[2], Number(right ?? 0));
+      const left = this.resolveLocalUqlComparableValue(record, comparisonMatch[1]);
+      const right = this.resolveLocalUqlComparableValue(record, comparisonMatch[3]);
+      return this.compareLocalUqlComparableValues(left, comparisonMatch[2], right);
     }
 
     return true;
@@ -1622,7 +1622,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   }
 
   private getLocalUqlFieldValue(record: InheritanceRecord, field: string): string | number | null | undefined {
-    switch (field) {
+    const normalizedField = field.toLowerCase();
+    switch (normalizedField) {
+      case 'account_id':
+      case 'trainer_id': return record.account_id ?? record.trainer_id;
       case 'inheritance_id': return typeof record.id === 'number' ? record.id : Number(record.id) || undefined;
       case 'main_chara_id': return this.toCharaId(record.umamusume_id);
       case 'left_chara_id': return this.toCharaId(record.parent_left_id);
@@ -1633,6 +1636,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       case 'parent_right_id': return record.parent_right_id;
       case 'followers': return record.follower_num;
       case 'wins': return record.win_count;
+      case 'trainer_name':
       case 'name': return record.trainer_name;
       case 'affinity':
       case 'affinity_score': return record.affinity_score;
@@ -1644,7 +1648,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       case 'pink_stars_sum': return this.sumLocalUqlSparks(record.pink_sparks);
       case 'green_stars_sum': return this.sumLocalUqlSparks(record.green_sparks);
       case 'white_stars_sum': return this.sumLocalUqlSparks(record.white_sparks);
-      default: return (record as any)[field];
+      default: return (record as any)[normalizedField] ?? (record as any)[field];
     }
   }
 
@@ -1654,6 +1658,12 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     return typeof value === 'number' ? [value] : [];
   }
 
+  private getLocalUqlFieldComparableValues(record: InheritanceRecord, field: string): Array<string | number> {
+    const value = this.getLocalUqlFieldValue(record, field);
+    if (Array.isArray(value)) return value.filter(entry => typeof entry === 'number');
+    return typeof value === 'number' || typeof value === 'string' ? [value] : [];
+  }
+
   private sumLocalUqlSparks(sparks: number[] | undefined): number {
     return (sparks ?? []).reduce((sum, sparkId) => sum + (sparkId % 10), 0);
   }
@@ -1661,6 +1671,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   private compareLocalUqlValues(actual: number, operator: string, expected: number): boolean {
     switch (operator) {
       case '=': return actual === expected;
+      case '==': return actual === expected;
       case '!=':
       case '<>': return actual !== expected;
       case '>=': return actual >= expected;
@@ -1671,10 +1682,58 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     }
   }
 
+  private compareLocalUqlComparableValues(
+    actual: string | number | null | undefined,
+    operator: string,
+    expected: string | number | null | undefined,
+  ): boolean {
+    const normalizedOperator = operator === '==' ? '=' : operator;
+    if (typeof actual === 'string' || typeof expected === 'string') {
+      const actualText = String(actual ?? '');
+      const expectedText = String(expected ?? '');
+      switch (normalizedOperator) {
+        case '=': return actualText === expectedText;
+        case '!=':
+        case '<>': return actualText !== expectedText;
+        default: return this.compareLocalUqlValues(Number(actualText || 0), normalizedOperator, Number(expectedText || 0));
+      }
+    }
+    return this.compareLocalUqlValues(Number(actual ?? 0), normalizedOperator, Number(expected ?? 0));
+  }
+
+  private resolveLocalUqlComparableValue(record: InheritanceRecord, value: string): string | number | null | undefined {
+    if (/^\d+$/.test(value)) return Number(value);
+    if (/^'(?:''|[^'])*'$/.test(value)) return value.slice(1, -1).replace(/''/g, "'");
+    if (/^"(?:\\"|[^"])*"$/.test(value)) return value.slice(1, -1).replace(/\\"/g, '"');
+    return this.getLocalUqlFieldValue(record, value);
+  }
+
   private parseLocalUqlNumberList(valueText: string): number[] {
     return valueText.replace(/[()]/g, '').split(',')
       .map(value => Number(value.trim()))
       .filter(value => Number.isFinite(value));
+  }
+
+  private parseLocalUqlValueList(valueText: string): Array<string | number> {
+    return this.splitLocalUqlArgs(valueText.replace(/^\s*\(|\)\s*$/g, ''))
+      .map(value => this.parseLocalUqlLiteralValue(value.trim()))
+      .filter((value): value is string | number => value !== null);
+  }
+
+  private parseLocalUqlLiteralValue(value: string): string | number | null {
+    if (/^\d+$/.test(value)) return Number(value);
+    if (/^'(?:''|[^'])*'$/.test(value)) return value.slice(1, -1).replace(/''/g, "'");
+    if (/^"(?:\\"|[^"])*"$/.test(value)) return value.slice(1, -1).replace(/\\"/g, '"');
+    return null;
+  }
+
+  private localUqlValuesEqual(actual: string | number, expectedValues: Array<string | number>): boolean {
+    return expectedValues.some(expected => {
+      if (typeof actual === 'string' || typeof expected === 'string') {
+        return String(actual) === String(expected);
+      }
+      return actual === expected;
+    });
   }
 
   private splitLocalUqlArgs(valueText: string): string[] {

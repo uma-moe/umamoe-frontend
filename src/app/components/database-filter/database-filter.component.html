@@ -5,6 +5,91 @@
     </mat-icon>
   </button>
   <h2>Filters</h2>
+  <div class="filter-presets" (click)="$event.stopPropagation()">
+    <button
+      type="button"
+      class="preset-toggle-btn"
+      [class.active]="filterPresetPanelOpen"
+      (click)="toggleFilterPresetPanel($event)"
+      matTooltip="Filter presets">
+      <mat-icon>bookmarks</mat-icon>
+      <span class="preset-toggle-label">Presets</span>
+      <span class="preset-count" *ngIf="filterPresets.length">{{ filterPresets.length }}</span>
+    </button>
+    <div class="filter-presets-panel" *ngIf="filterPresetPanelOpen">
+      <div class="preset-panel-head">
+        <div class="preset-panel-title-row">
+          <span class="preset-panel-title">Filter presets</span>
+          <span class="preset-panel-count">{{ filterPresets.length }}</span>
+        </div>
+        <div class="preset-panel-actions">
+          <button
+            type="button"
+            class="preset-utility-btn"
+            [disabled]="!filterPresets.length"
+            (click)="exportFilterPresets($event)"
+            matTooltip="Export presets">
+            <mat-icon>download</mat-icon>
+          </button>
+          <button
+            type="button"
+            class="preset-utility-btn"
+            (click)="importFilterPresetsFromText($event)"
+            matTooltip="Import presets">
+            <mat-icon>upload</mat-icon>
+          </button>
+        </div>
+      </div>
+      <div class="preset-save-row">
+        <input
+          type="text"
+          class="preset-name-input"
+          placeholder="Preset name"
+          maxlength="60"
+          [(ngModel)]="filterPresetNameDraft"
+          (keydown.enter)="saveCurrentFilterPreset($event)" />
+        <button
+          type="button"
+          class="preset-save-btn"
+          [disabled]="!filterPresetNameDraft.trim()"
+          (click)="saveCurrentFilterPreset($event)"
+          matTooltip="Save current filters">
+          <mat-icon>save</mat-icon>
+        </button>
+      </div>
+      <div class="preset-message" *ngIf="filterPresetMessage">{{ filterPresetMessage }}</div>
+      <div class="preset-list" *ngIf="filterPresets.length; else noFilterPresets">
+        <div class="preset-item" *ngFor="let preset of filterPresets; trackBy: trackFilterPreset">
+          <button
+            type="button"
+            class="preset-load-btn"
+            (click)="loadFilterPreset(preset, $event)"
+            matTooltip="Replace current filters">
+            <span class="preset-name">{{ preset.name }}</span>
+            <span class="preset-meta">
+              <span class="preset-filter-count">
+                {{ getFilterPresetActiveFilterCount(preset) }} filter{{ getFilterPresetActiveFilterCount(preset) === 1 ? '' : 's' }}
+              </span>
+              <span class="preset-mode" *ngIf="preset.mode === 'uql'">{{ getFilterPresetModeLabel(preset.mode) }}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            class="preset-delete-btn"
+            (click)="deleteFilterPreset(preset, $event)"
+            matTooltip="Delete preset">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </div>
+      <ng-template #noFilterPresets>
+        <div class="preset-empty">
+          <mat-icon>bookmark_add</mat-icon>
+          <span>No presets yet</span>
+        </div>
+      </ng-template>
+    </div>
+  </div>
   <div class="filter-mode-toggle" (click)="$event.stopPropagation()" aria-label="Filter mode">
     <button type="button" class="filter-mode-option" [class.active]="filterMode === 'basic'" (click)="setFilterMode('basic')">Basic</button>
     <button type="button" class="filter-mode-option" [class.active]="filterMode === 'advanced'" (click)="setFilterMode('advanced')">Advanced</button>
