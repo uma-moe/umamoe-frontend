@@ -10,6 +10,7 @@ import {
   getAdRouteConfig,
   getContentTopSlot,
   getInContentSlot,
+  getMobileContentTopSlot,
   getMobileRailSlot,
 } from './ad-layout.config';
 import { AdSlotComponent } from './ad-slot.component';
@@ -223,7 +224,10 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
     const label = this.label || this.surface;
 
     if (this.contentTopBridge) {
-      this.config = this.routeConfig.contentTop ?? getContentTopSlot(this.surface, label);
+      const mobileContentTop = getMobileContentTopSlot(label);
+      this.config = this.viewport === 'mobile' && mobileContentTop.fuseId
+        ? mobileContentTop
+        : this.routeConfig.contentTop ?? getContentTopSlot(this.surface, label);
       return;
     }
 

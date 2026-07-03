@@ -152,13 +152,14 @@
         </div>
       </div>
 
-      <ng-container *ngIf="getLeaderboardAdSlot(i) as adSlot">
-        <app-ad-slot
-          *ngIf="((adsCanRender$ | async) && !(supportFallbackAllowed$ | async) && adSlot.fuseId) || fallbackPreviewEnabled"
+      <ng-container *ngIf="getLeaderboardInterscrollerIndex(i) as adIndex">
+        <app-ad-in-content
           class="leaderboard-incontent-ad"
-          [config]="adSlot"
-          [forceFallback]="fallbackPreviewEnabled"
-        ></app-ad-slot>
+          surface="leaderboard"
+          label="leaderboard"
+          [index]="adIndex"
+          viewport="mobile"
+        ></app-ad-in-content>
       </ng-container>
       </ng-container>
     </div>

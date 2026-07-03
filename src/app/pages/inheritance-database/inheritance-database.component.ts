@@ -828,13 +828,18 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   _totalPages = 1;
 
   shouldShowDatabaseInterscroller(recordIndex: number): boolean {
+    const firstPlacement = 2;
+    const interval = 8;
+
     return this.listMode === 'infinite'
-      && recordIndex >= 7
-      && (recordIndex - 7) % 12 === 0;
+      && recordIndex >= firstPlacement
+      && (recordIndex - firstPlacement) % interval === 0;
   }
 
   getDatabaseInterscrollerIndex(recordIndex: number): number {
-    const slotNumber = Math.floor((recordIndex - 7) / 12);
+    const firstPlacement = 2;
+    const interval = 8;
+    const slotNumber = Math.floor((recordIndex - firstPlacement) / interval);
     return (slotNumber % 8) + 1;
   }
 

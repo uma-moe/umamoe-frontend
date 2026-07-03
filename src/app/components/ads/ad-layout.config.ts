@@ -32,7 +32,6 @@ export interface AdRouteConfig {
 
 export const PUBLIFT_XL_MIN_WIDTH = 1401;
 
-const BOTTOM_POPUP_SIZES = ['1200x90', '970x90', '728x90', '468x90'];
 const SIDE_RAIL_SIZES = ['160x600', '120x600'];
 const SIDE_RAIL_DEFAULT_ANCHOR_MAX_WIDTH = 1536;
 const CONTENT_TOP_SIZES = ['1200x90', '970x90', '728x90', '468x90'];
@@ -66,13 +65,16 @@ export function getContentTopSlot(surface: string, label: string): AdSlotConfig 
   return contentTopSlot(`${surface}_content_top`, `${label} content top`);
 }
 
-const bottomPopupSlot = (placement: string, label: string): AdSlotConfig => ({
-  placement,
-  fuseId: resolveFuseId(placement),
-  kind: 'sticky-footer',
-  label,
-  sizes: BOTTOM_POPUP_SIZES,
-});
+export function getMobileContentTopSlot(label: string): AdSlotConfig {
+  return {
+    placement: 'mobile_header',
+    fuseId: resolveFuseId('mobile_header'),
+    kind: 'leaderboard',
+    label: `${label} mobile header`,
+    mobileSizes: MOBILE_CONTENT_TOP_SIZES,
+    sizes: MOBILE_CONTENT_TOP_SIZES,
+  };
+}
 
 const getMobileInterscrollerSizes = (index: number): string[] => (
   MOBILE_INTERSCROLLER_SIZE_GROUPS[(Math.max(1, index) - 1) % MOBILE_INTERSCROLLER_SIZE_GROUPS.length]
@@ -104,21 +106,19 @@ interface SideRailPageOptions {
   verticalAnchorSelectors?: string[];
 }
 
-export function getLeaderboardInContentSlots(): AdSlotConfig[] {
-  return [1, 2, 3, 4, 5, 6, 7, 8].map(index => (
-    inContentSlot(`leaderboard_incontent_${index}`, `leaderboard in-content ${index}`, index)
-  ));
-}
-
 export function getInContentSlot(surface: string, label: string, index = 1): AdSlotConfig {
   return inContentSlot(`${surface}_interscroller_${index}`, `${label} in-content ${index}`, index);
 }
 
 export function getMobileRailSlot(surface: string, label: string, index = 1): AdSlotConfig {
   const sizes = getMobileInterscrollerSizes(index);
+  const placement = `${surface}_interscroller_${index}`;
 
   return {
-    ...inContentSlot(`${surface}_interscroller_${index}`, `${label} mobile rail ${index}`),
+    placement,
+    fuseId: resolveFuseId(placement),
+    kind: 'interscroller',
+    label: `${label} mobile in-content ${index}`,
     mobileSizes: sizes,
     sizes,
   };
@@ -126,10 +126,6 @@ export function getMobileRailSlot(surface: string, label: string, index = 1): Ad
 
 function getMobileRailSlots(surface: string, label: string, count = 4): AdSlotConfig[] {
   return Array.from({ length: count }, (_, index) => getMobileRailSlot(surface, label, index + 1));
-}
-
-export function getGlobalStickyFooterSlot(): AdSlotConfig {
-  return bottomPopupSlot('sticky_footer', 'sticky footer');
 }
 
 export function getAdRouteConfig(url: string): AdRouteConfig {
@@ -174,9 +170,7 @@ export function getAdRouteConfig(url: string): AdRouteConfig {
 
     return sideRailPage(surface, surface, {
       anchorSelectors: ['.content-container', '.page-header .header-content'],
-      inContent: surface === 'leaderboard'
-        ? [...getMobileRailSlots(surface, surface), ...getLeaderboardInContentSlots()]
-        : undefined,
+      inContent: surface === 'leaderboard' ? getMobileRailSlots(surface, surface) : undefined,
       sideRailAnchorMaxWidth: surface === 'leaderboard' ? 1536 : undefined,
     });
   }

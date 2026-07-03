@@ -55,13 +55,6 @@
     &:hover { border-color: rgba(255, 215, 0, 0.5); }
   }
 
-  &.top-2 {
-    background: linear-gradient(135deg, rgba(192, 192, 192, 0.07) 0%, rgba(192, 192, 192, 0.02) 100%);
-    border-color: rgba(192, 192, 192, 0.25);
-    .lb-rank .rank-num { color: #c0c0c0; font-size: 1.35rem; }
-    &:hover { border-color: rgba(192, 192, 192, 0.45); }
-  }
-
   &.top-3 {
     background: linear-gradient(135deg, rgba(205, 127, 50, 0.07) 0%, rgba(205, 127, 50, 0.02) 100%);
     border-color: rgba(205, 127, 50, 0.25);

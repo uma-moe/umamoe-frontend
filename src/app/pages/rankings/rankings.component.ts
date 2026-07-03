@@ -128,6 +128,18 @@ export class RankingsComponent implements OnInit, OnDestroy {
       case 'gains': return this.gainsRankings.length > 0;
     }
   }
+
+  getRankingInterscrollerIndex(rowIndex: number): number | null {
+    const firstPlacement = 6;
+    const interval = 12;
+
+    if (rowIndex < firstPlacement || (rowIndex - firstPlacement) % interval !== 0) {
+      return null;
+    }
+
+    return (Math.floor((rowIndex - firstPlacement) / interval) % 8) + 1;
+  }
+
   loadRankings(): void {
     this.loading = true;
     switch (this.activeTab) {

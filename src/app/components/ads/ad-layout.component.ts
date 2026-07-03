@@ -4,13 +4,18 @@ import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, combineLatest, filter } from 'rxjs';
 import { AdSlotComponent } from './ad-slot.component';
 import { isAdFallbackPreviewEnabled } from './ad-fallback-preview';
-import { AdRouteConfig, PUBLIFT_XL_MIN_WIDTH, getAdRouteConfig, getGlobalStickyFooterSlot } from './ad-layout.config';
+import { AdRouteConfig, PUBLIFT_XL_MIN_WIDTH, getAdRouteConfig } from './ad-layout.config';
 import { FuseAdsService, FuseRuntimeState } from '../../services/fuse-ads.service';
 
 const AD_SIDE_RAIL_PAGE_CLASS = 'ad-side-rail-page';
 const AD_LEFT_RAIL_RESERVED_CLASS = 'ad-left-rail-reserved';
 const AD_BOTTOM_POPUP_VISIBLE_CLASS = 'ad-bottom-popup-visible';
 const AD_PROVIDER_STICKY_FOOTER_DISMISSED_CLASS = 'ad-provider-sticky-footer-dismissed';
+const PROVIDER_STICKY_FOOTER_SELECTOR = [
+  '.publift-widget-sticky_footer-container',
+  '.publift-widget-sticky_footer-container-background',
+  '[class*="publift-widget-sticky_footer"]',
+].join(',');
 const DEFAULT_SIDE_RAIL_MIN_WIDTH = PUBLIFT_XL_MIN_WIDTH;
 const DEFAULT_SIDE_RAIL_ANCHOR_SELECTORS = [
   '.content-container',
@@ -45,7 +50,6 @@ type SideRailLayout = 'none' | 'left' | 'right' | 'both';
 })
 export class AdLayoutComponent implements OnInit, OnDestroy {
   config: AdRouteConfig = getAdRouteConfig('/');
-  readonly stickyFooterConfig = getGlobalStickyFooterSlot();
   fallbackPreviewEnabled = false;
   adRuntimeAvailable = false;
   supportFallbackAllowed = false;
@@ -57,8 +61,8 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   sideRailWidth = SIDE_RAIL_WIDE_WIDTH;
   leftSideRailCollapsed = false;
   rightSideRailCollapsed = false;
-  providerStickyFooterCollapsed = false;
   providerStickyFooterClosed = false;
+  providerStickyFooterPresent = false;
   contentTopAllowed = true;
   private routerSub?: Subscription;
   private adStateSub?: Subscription;
@@ -67,6 +71,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   private observedAnchor: HTMLElement | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private providerStickyFooterDismissHandler?: (event: Event) => void;
+  private providerStickyFooterObserver: MutationObserver | null = null;
 
   constructor(
     private router: Router,
@@ -78,6 +83,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.resetProviderStickyFooterDismissal();
     this.attachProviderStickyFooterDismissHandler();
+    this.observeProviderStickyFooterPresence();
     this.updateFallbackPreviewState();
     this.adStateSub = combineLatest([
       this.fuseAdsService.supportFallbackAllowed$,
@@ -85,9 +91,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     ]).subscribe(([supportFallbackAllowed, runtimeState]) => {
       this.adRuntimeAvailable = this.isAdRuntimeAvailable(runtimeState);
       this.supportFallbackAllowed = supportFallbackAllowed;
-      if (supportFallbackAllowed) {
-        this.providerStickyFooterCollapsed = false;
-      }
+      this.updateProviderStickyFooterPresence();
       this.updateBottomPopupRootState();
 
       if (!this.adLayoutActive) {
@@ -109,6 +113,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.routerSub?.unsubscribe();
     this.adStateSub?.unsubscribe();
     this.detachProviderStickyFooterDismissHandler();
+    this.disconnectProviderStickyFooterObserver();
     this.cancelSideRailLayout();
     this.updateAdShellReservation(false);
     this.updateBottomPopupRootState(false);
@@ -118,6 +123,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   @HostListener('window:resize')
   onWindowResize(): void {
     this.updateContentTopAllowed();
+    this.updateProviderStickyFooterPresence();
     this.updateBottomPopupRootState();
     this.scheduleSideRailLayout();
   }
@@ -144,7 +150,6 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       url,
       enabled: this.config.enabled,
       contentTopAllowed: this.contentTopAllowed,
-      stickyFooterFuseId: this.stickyFooterConfig.fuseId,
       sideRails: this.config.sideRails
         ? {
           left: this.config.sideRails.left.fuseId,
@@ -170,11 +175,11 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
   get shouldShowProviderStickyFooter(): boolean {
     return Boolean(
-      this.stickyFooterConfig.fuseId
-      && this.adLayoutActive
+      this.adLayoutActive
       && !this.supportFallbackAllowed
       && !this.fallbackPreviewEnabled
       && !this.providerStickyFooterClosed
+      && this.providerStickyFooterPresent
     );
   }
 
@@ -188,22 +193,9 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.scheduleSideRailLayout();
   }
 
-  onProviderStickyFooterCollapsed(collapsed: boolean): void {
-    if (this.providerStickyFooterClosed) {
-      return;
-    }
-
-    if (this.providerStickyFooterCollapsed === collapsed) {
-      return;
-    }
-
-    this.providerStickyFooterCollapsed = collapsed;
-    this.updateBottomPopupRootState();
-  }
-
   closeProviderStickyFooter(): void {
     this.providerStickyFooterClosed = true;
-    this.providerStickyFooterCollapsed = false;
+    this.fuseAdsService.dismissProviderStickyFooter();
     this.updateBottomPopupRootState();
     this.updateProviderStickyFooterRootState(true);
   }
@@ -214,7 +206,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     }
 
     this.providerStickyFooterClosed = false;
-    this.providerStickyFooterCollapsed = false;
+    this.providerStickyFooterPresent = false;
     this.updateProviderStickyFooterRootState(false);
   }
 
@@ -242,6 +234,61 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
     this.document.removeEventListener('click', this.providerStickyFooterDismissHandler, true);
     this.providerStickyFooterDismissHandler = undefined;
+  }
+
+  private observeProviderStickyFooterPresence(): void {
+    if (!isPlatformBrowser(this.platformId) || this.providerStickyFooterObserver) {
+      return;
+    }
+
+    this.providerStickyFooterObserver = new MutationObserver(() => {
+      this.updateProviderStickyFooterPresence();
+      this.updateBottomPopupRootState();
+    });
+    this.providerStickyFooterObserver.observe(this.document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'style', 'hidden'],
+      childList: true,
+      subtree: true,
+    });
+    this.updateProviderStickyFooterPresence();
+  }
+
+  private disconnectProviderStickyFooterObserver(): void {
+    this.providerStickyFooterObserver?.disconnect();
+    this.providerStickyFooterObserver = null;
+  }
+
+  private updateProviderStickyFooterPresence(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.providerStickyFooterPresent = false;
+      return;
+    }
+
+    if (this.providerStickyFooterClosed || this.supportFallbackAllowed || this.fallbackPreviewEnabled) {
+      this.providerStickyFooterPresent = false;
+      return;
+    }
+
+    this.providerStickyFooterPresent = Array.from(
+      this.document.querySelectorAll<HTMLElement>(PROVIDER_STICKY_FOOTER_SELECTOR),
+    ).some(element => this.isVisibleProviderStickyFooterElement(element));
+  }
+
+  private isVisibleProviderStickyFooterElement(element: HTMLElement): boolean {
+    if (element.closest('app-ad-slot')) {
+      return false;
+    }
+
+    const view = this.document.defaultView;
+    const style = view?.getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+
+    return rect.width > 0
+      && rect.height > 0
+      && style?.display !== 'none'
+      && style?.visibility !== 'hidden'
+      && style?.opacity !== '0';
   }
 
   private updateProviderStickyFooterRootState(dismissed = this.providerStickyFooterClosed): void {

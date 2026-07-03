@@ -137,6 +137,7 @@ type GppApi = (
 declare global {
   interface Window {
     fusetag?: FuseTag;
+    enableStickyFooter?: boolean;
     __tcfapi?: TcfApi;
     __uspapi?: UspApi;
     __gpp?: GppApi;
@@ -219,6 +220,7 @@ export class FuseAdsService {
   private privacyControlsRetries = 0;
   private fuseApiBlocked = false;
   private fuseDebugCallbacksAttached = false;
+  private providerStickyFooterDismissed = false;
   private retainedCreatives = new Map<string, RetainedAdCreative>();
   private localConsent: CookieConsent | null = null;
   private consentSub?: Subscription;
@@ -247,6 +249,8 @@ export class FuseAdsService {
   }
 
   beginPageView(reason: string, preloadFuseIds: string[] = []): void {
+    this.syncProviderStickyFooterFlag();
+
     if (this.fuseCallFlushTimer !== null && isPlatformBrowser(this.platformId)) {
       this.window.clearTimeout(this.fuseCallFlushTimer);
     }
@@ -275,6 +279,7 @@ export class FuseAdsService {
 
     this.started = true;
     this.attachLocalConsentListener();
+    this.syncProviderStickyFooterFlag();
     this.debug('init', {
       enabled: this.enabled,
       hasScriptUrl: this.hasScriptUrl,
@@ -316,6 +321,8 @@ export class FuseAdsService {
   }
 
   pageInit(fuseIds: string[], reason = 'requested'): void {
+    this.syncProviderStickyFooterFlag();
+
     const blockingFuseIds = [...new Set(fuseIds.filter(Boolean))];
     if (!this.canUseFuse || blockingFuseIds.length === 0) {
       this.debugWarn('pageInit skipped', {
@@ -352,6 +359,8 @@ export class FuseAdsService {
   }
 
   registerPersistentZone(zoneElementId: string, fuseId: string): void {
+    this.syncProviderStickyFooterFlag();
+
     if (!this.canUseFuse || !zoneElementId || !fuseId) {
       this.debugWarn('registerPersistentZone skipped', {
         zoneElementId,
@@ -457,6 +466,15 @@ export class FuseAdsService {
     });
 
     return true;
+  }
+
+  dismissProviderStickyFooter(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.providerStickyFooterDismissed = true;
+    this.syncProviderStickyFooterFlag();
   }
 
   private attachTcfListener(): void {
@@ -623,6 +641,8 @@ export class FuseAdsService {
   }
 
   private ensureFuseScript(): void {
+    this.syncProviderStickyFooterFlag();
+
     if (this.document.getElementById('publift-fuse-js')) {
       this.debug('Fuse script already present');
       this.setRuntimeState({
@@ -668,6 +688,8 @@ export class FuseAdsService {
   }
 
   private ensureFuseQueue(): FuseTag {
+    this.syncProviderStickyFooterFlag();
+
     const current = this.window.fusetag;
     if (current) {
       current.que = current.que ?? [];
@@ -679,6 +701,14 @@ export class FuseAdsService {
     this.window.fusetag = fusetag;
     this.debug('Fuse queue created');
     return fusetag;
+  }
+
+  private syncProviderStickyFooterFlag(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.window.enableStickyFooter = !this.providerStickyFooterDismissed;
   }
 
   private enqueueFuseCall(callback: (fusetag: FuseTag) => void, label = 'Fuse call', persistent = false): void {

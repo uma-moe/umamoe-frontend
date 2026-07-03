@@ -93,7 +93,6 @@
       <ng-container *ngFor="let entry of monthlyRankings; let i = index">
         <div class="lb-row"
              [class.top-1]="entry.rank === 1"
-             [class.top-2]="entry.rank === 2"
              [class.top-3]="entry.rank === 3">
           <div class="lb-rank">
             <span class="rank-num">#{{ entry.rank }}</span>
@@ -131,13 +130,14 @@
           </div>
         </div>
 
-        <app-ad-in-content
-          *ngIf="i === 19 || i === 49"
-          surface="rankings"
-          label="rankings"
-          [index]="i === 19 ? 2 : 3"
-          viewport="mobile"
-        ></app-ad-in-content>
+        <ng-container *ngIf="getRankingInterscrollerIndex(i) as adIndex">
+          <app-ad-in-content
+            surface="rankings"
+            label="rankings"
+            [index]="adIndex"
+            viewport="mobile"
+          ></app-ad-in-content>
+        </ng-container>
       </ng-container>
     </div>
 
@@ -146,7 +146,6 @@
       <ng-container *ngFor="let entry of alltimeRankings; let i = index">
         <div class="lb-row"
              [class.top-1]="getAlltimeRank(entry) === 1"
-             [class.top-2]="getAlltimeRank(entry) === 2"
              [class.top-3]="getAlltimeRank(entry) === 3">
           <div class="lb-rank">
             <span class="rank-num">#{{ getAlltimeRank(entry) }}</span>
@@ -191,13 +190,14 @@
           </div>
         </div>
 
-        <app-ad-in-content
-          *ngIf="i === 19 || i === 49"
-          surface="rankings"
-          label="rankings"
-          [index]="i === 19 ? 2 : 3"
-          viewport="mobile"
-        ></app-ad-in-content>
+        <ng-container *ngIf="getRankingInterscrollerIndex(i) as adIndex">
+          <app-ad-in-content
+            surface="rankings"
+            label="rankings"
+            [index]="adIndex"
+            viewport="mobile"
+          ></app-ad-in-content>
+        </ng-container>
       </ng-container>
     </div>
 
@@ -206,7 +206,6 @@
       <ng-container *ngFor="let entry of gainsRankings; let i = index">
         <div class="lb-row"
              [class.top-1]="getGainRank(entry) === 1"
-             [class.top-2]="getGainRank(entry) === 2"
              [class.top-3]="getGainRank(entry) === 3">
           <div class="lb-rank">
             <span class="rank-num">#{{ getGainRank(entry) }}</span>
@@ -241,13 +240,14 @@
           </div>
         </div>
 
-        <app-ad-in-content
-          *ngIf="i === 19 || i === 49"
-          surface="rankings"
-          label="rankings"
-          [index]="i === 19 ? 2 : 3"
-          viewport="mobile"
-        ></app-ad-in-content>
+        <ng-container *ngIf="getRankingInterscrollerIndex(i) as adIndex">
+          <app-ad-in-content
+            surface="rankings"
+            label="rankings"
+            [index]="adIndex"
+            viewport="mobile"
+          ></app-ad-in-content>
+        </ng-container>
       </ng-container>
     </div>
 
