@@ -1961,7 +1961,7 @@ app-ad-slot :where(
   align-items: center !important;
   justify-content: center !important;
   top: 4px !important;
-  right: max(4px, env(safe-area-inset-right)) !important;
+  right: var(--ad-provider-sticky-footer-close-inline-offset, max(4px, env(safe-area-inset-right))) !important;
   width: var(--ad-close-size, 30px) !important;
   min-width: var(--ad-close-size, 30px) !important;
   height: var(--ad-close-size, 30px) !important;
@@ -1977,6 +1977,12 @@ app-ad-slot :where(
   opacity: 1 !important;
   transform: none !important;
   z-index: 2147483647 !important;
+}
+
+@media (max-width: 720px) {
+  :where(.publift-widget-sticky_footer-button) {
+    right: max(4px, env(safe-area-inset-right)) !important;
+  }
 }
 
 :where(.publift-widget-sticky_footer-button)::before {
@@ -2040,8 +2046,7 @@ app-ad-in-content.ad-in-content-host--content-top-bridge-active + :where(
     .timeline-wrapper,
     .tierlist-container,
     .planner-scroll,
-    .section-content,
-    .statistics-new .main-layout
+    .section-content
   ) {
     width: calc(100vw - var(--ad-layout-start-space) - var(--ad-layout-end-space)) !important;
     max-width: none !important;

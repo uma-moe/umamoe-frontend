@@ -188,15 +188,11 @@ export function getAdRouteConfig(url: string): AdRouteConfig {
   }
 
   if (path.startsWith('/tools/statistics')) {
-    return sideRailPage('statistics', 'statistics', {
-      anchorSelectors: ['.statistics-new .main-layout', '.statistics-new .hero-content'],
-      preferredSideRail: 'right',
+    return {
+      enabled: true,
+      inContent: getMobileRailSlots('statistics', 'statistics', 8),
       reserveLeftRail: false,
-      sideRailMaxWidth: 160,
-      sideRailOverlay: true,
-      sideRailSizes: ['160x600', '120x600'],
-      singleSideRailMaxWidth: 9999,
-    });
+    };
   }
 
   if (path.startsWith('/tools/lineage-planner')) {

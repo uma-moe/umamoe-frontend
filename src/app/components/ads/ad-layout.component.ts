@@ -11,11 +11,14 @@ const AD_SIDE_RAIL_PAGE_CLASS = 'ad-side-rail-page';
 const AD_LEFT_RAIL_RESERVED_CLASS = 'ad-left-rail-reserved';
 const AD_BOTTOM_POPUP_VISIBLE_CLASS = 'ad-bottom-popup-visible';
 const AD_PROVIDER_STICKY_FOOTER_DISMISSED_CLASS = 'ad-provider-sticky-footer-dismissed';
+const AD_PROVIDER_STICKY_FOOTER_CLOSE_OFFSET_VAR = '--ad-provider-sticky-footer-close-inline-offset';
 const PROVIDER_STICKY_FOOTER_SELECTOR = [
   '.publift-widget-sticky_footer-container',
   '.publift-widget-sticky_footer-container-background',
   '[class*="publift-widget-sticky_footer"]',
 ].join(',');
+const PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR = '.publift-widget-sticky_footer-button';
+const PROVIDER_STICKY_FOOTER_DESKTOP_CLOSE_MIN_WIDTH = 720;
 const DEFAULT_SIDE_RAIL_MIN_WIDTH = PUBLIFT_XL_MIN_WIDTH;
 const DEFAULT_SIDE_RAIL_ANCHOR_SELECTORS = [
   '.content-container',
@@ -73,6 +76,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   private resizeObserver: ResizeObserver | null = null;
   private providerStickyFooterDismissHandler?: (event: Event) => void;
   private providerStickyFooterObserver: MutationObserver | null = null;
+  private providerStickyFooterMeasureFrame: number | null = null;
 
   constructor(
     private router: Router,
@@ -115,6 +119,8 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.adStateSub?.unsubscribe();
     this.detachProviderStickyFooterDismissHandler();
     this.disconnectProviderStickyFooterObserver();
+    this.cancelProviderStickyFooterMeasurement();
+    this.clearProviderStickyFooterCloseOffset();
     this.cancelSideRailLayout();
     this.updateAdShellReservation(false);
     this.updateBottomPopupRootState(false);
@@ -126,6 +132,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.updateContentTopAllowed();
     this.updateProviderStickyFooterPresence();
     this.updateBottomPopupRootState();
+    this.scheduleProviderStickyFooterMeasurement();
     this.scheduleSideRailLayout();
   }
 
@@ -218,7 +225,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
     this.providerStickyFooterDismissHandler = event => {
       const target = event.target instanceof Element ? event.target : null;
-      if (!target?.closest('.publift-widget-sticky_footer-button')) {
+      if (!target?.closest(PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR)) {
         return;
       }
 
@@ -245,6 +252,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.providerStickyFooterObserver = new MutationObserver(() => {
       this.updateProviderStickyFooterPresence();
       this.updateBottomPopupRootState();
+      this.scheduleProviderStickyFooterMeasurement();
     });
     this.providerStickyFooterObserver.observe(this.document.documentElement, {
       attributes: true,
@@ -260,6 +268,35 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.providerStickyFooterObserver = null;
   }
 
+  private scheduleProviderStickyFooterMeasurement(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const view = this.document.defaultView;
+    if (!view) {
+      return;
+    }
+
+    if (this.providerStickyFooterMeasureFrame !== null) {
+      view.cancelAnimationFrame(this.providerStickyFooterMeasureFrame);
+    }
+
+    this.providerStickyFooterMeasureFrame = view.requestAnimationFrame(() => {
+      this.providerStickyFooterMeasureFrame = null;
+      this.updateProviderStickyFooterCloseOffset();
+    });
+  }
+
+  private cancelProviderStickyFooterMeasurement(): void {
+    if (!isPlatformBrowser(this.platformId) || this.providerStickyFooterMeasureFrame === null) {
+      return;
+    }
+
+    this.document.defaultView?.cancelAnimationFrame(this.providerStickyFooterMeasureFrame);
+    this.providerStickyFooterMeasureFrame = null;
+  }
+
   private updateProviderStickyFooterPresence(): void {
     if (!isPlatformBrowser(this.platformId)) {
       this.providerStickyFooterPresent = false;
@@ -273,7 +310,14 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
     this.providerStickyFooterPresent = Array.from(
       this.document.querySelectorAll<HTMLElement>(PROVIDER_STICKY_FOOTER_SELECTOR),
-    ).some(element => this.isVisibleProviderStickyFooterElement(element));
+    ).some(element => !element.matches(PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR)
+      && this.isVisibleProviderStickyFooterElement(element));
+
+    if (this.providerStickyFooterPresent) {
+      this.scheduleProviderStickyFooterMeasurement();
+    } else {
+      this.clearProviderStickyFooterCloseOffset();
+    }
   }
 
   private isVisibleProviderStickyFooterElement(element: HTMLElement): boolean {
@@ -290,6 +334,99 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       && style?.display !== 'none'
       && style?.visibility !== 'hidden'
       && style?.opacity !== '0';
+  }
+
+  private updateProviderStickyFooterCloseOffset(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const view = this.document.defaultView;
+    const viewportWidth = this.document.documentElement.clientWidth || view?.innerWidth || 0;
+    if (!view || viewportWidth < PROVIDER_STICKY_FOOTER_DESKTOP_CLOSE_MIN_WIDTH) {
+      this.clearProviderStickyFooterCloseOffset();
+      return;
+    }
+
+    const button = this.document.querySelector<HTMLElement>(PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR);
+    const shell = this.findVisibleProviderStickyFooterShell(button);
+    const creative = shell ? this.findVisibleProviderStickyFooterCreative(shell) : null;
+
+    if (!button || !shell || !creative || this.providerStickyFooterClosed) {
+      this.clearProviderStickyFooterCloseOffset();
+      return;
+    }
+
+    const containingBlock = button.offsetParent instanceof HTMLElement ? button.offsetParent : shell;
+    const containerRect = containingBlock.getBoundingClientRect();
+    const creativeRect = creative.getBoundingClientRect();
+    const rightGap = containerRect.right - creativeRect.right;
+
+    if (!Number.isFinite(rightGap) || rightGap < -1) {
+      this.clearProviderStickyFooterCloseOffset();
+      return;
+    }
+
+    this.setProviderStickyFooterCloseOffset(Math.max(4, Math.round(rightGap + 4)));
+  }
+
+  private findVisibleProviderStickyFooterShell(button: HTMLElement | null): HTMLElement | null {
+    const buttonShell = button?.parentElement?.closest(PROVIDER_STICKY_FOOTER_SELECTOR);
+    if (buttonShell instanceof HTMLElement && this.isVisibleProviderStickyFooterElement(buttonShell)) {
+      return buttonShell;
+    }
+
+    return Array.from(this.document.querySelectorAll<HTMLElement>(PROVIDER_STICKY_FOOTER_SELECTOR))
+      .filter(element => !element.matches(PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR))
+      .filter(element => this.isVisibleProviderStickyFooterElement(element))
+      .sort((a, b) => this.getElementArea(b) - this.getElementArea(a))[0] ?? null;
+  }
+
+  private findVisibleProviderStickyFooterCreative(shell: HTMLElement): HTMLElement | null {
+    return Array.from(shell.querySelectorAll<HTMLElement>('iframe, img, video, canvas, object, embed'))
+      .filter(element => {
+        const rect = element.getBoundingClientRect();
+        const style = this.document.defaultView?.getComputedStyle(element);
+
+        return rect.width >= 40
+          && rect.height >= 24
+          && style?.display !== 'none'
+          && style?.visibility !== 'hidden'
+          && style?.opacity !== '0';
+      })
+      .sort((a, b) => this.getElementArea(b) - this.getElementArea(a))[0] ?? null;
+  }
+
+  private getElementArea(element: HTMLElement): number {
+    const rect = element.getBoundingClientRect();
+    return Math.max(0, rect.width) * Math.max(0, rect.height);
+  }
+
+  private setProviderStickyFooterCloseOffset(offset: number): void {
+    const value = `${offset}px`;
+    const targets = [
+      this.document.documentElement,
+      ...Array.from(this.document.querySelectorAll<HTMLElement>(PROVIDER_STICKY_FOOTER_SELECTOR)),
+      ...Array.from(this.document.querySelectorAll<HTMLElement>(PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR)),
+    ];
+
+    for (const target of targets) {
+      if (target.style.getPropertyValue(AD_PROVIDER_STICKY_FOOTER_CLOSE_OFFSET_VAR) !== value) {
+        target.style.setProperty(AD_PROVIDER_STICKY_FOOTER_CLOSE_OFFSET_VAR, value);
+      }
+    }
+  }
+
+  private clearProviderStickyFooterCloseOffset(): void {
+    const targets = [
+      this.document.documentElement,
+      ...Array.from(this.document.querySelectorAll<HTMLElement>(PROVIDER_STICKY_FOOTER_SELECTOR)),
+      ...Array.from(this.document.querySelectorAll<HTMLElement>(PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR)),
+    ];
+
+    for (const target of targets) {
+      target.style.removeProperty(AD_PROVIDER_STICKY_FOOTER_CLOSE_OFFSET_VAR);
+    }
   }
 
   private updateProviderStickyFooterRootState(dismissed = this.providerStickyFooterClosed): void {
@@ -362,7 +499,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     const viewportWidth = this.document.documentElement.clientWidth || view?.innerWidth || 0;
     const minWidth = config.sideRailMinWidth ?? DEFAULT_SIDE_RAIL_MIN_WIDTH;
 
-    if (viewportWidth >= minWidth) {
+    if (config.sideRails && viewportWidth >= minWidth) {
       return [];
     }
 

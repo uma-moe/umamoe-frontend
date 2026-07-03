@@ -26,9 +26,6 @@ const CREATIVE_SWAP_DELAY_MS = 1800;
 const EMPTY_IFRAME_BACKGROUND = 'transparent';
 const SIZE_PATTERN = /^(\d+)x(\d+)$/;
 const MOBILE_VIEWPORT_MAX_WIDTH = 899;
-const MOBILE_INTERSCROLLER_MAX_ASPECT_HEIGHT = 1.15;
-const MOBILE_INTERSCROLLER_MAX_HEIGHT = 360;
-const INTERSCROLLER_MAX_ASPECT_HEIGHT = 1.15;
 const MOBILE_STICKY_FOOTER_MAX_HEIGHT = 50;
 const DESKTOP_STICKY_FOOTER_MAX_HEIGHT = 90;
 const TRACKING_PIXEL_MAX_SIZE = 4;
@@ -919,10 +916,6 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       return false;
     }
 
-    if (this.config.kind === 'interscroller' && this.viewportWidth <= MOBILE_VIEWPORT_MAX_WIDTH) {
-      return false;
-    }
-
     return this.config.kind === 'leaderboard'
       || this.config.kind === 'interscroller'
       || this.config.kind === 'sticky-footer';
@@ -992,28 +985,14 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
         : this.viewportWidth;
       const fittingMobileSizes = this.config.mobileSizes.filter(size => {
         const parsed = this.parseSize(size);
-        return !parsed || (
-          parsed.width <= mobileMaxWidth
-          && (
-            this.config.kind !== 'interscroller'
-            || this.isMobileInterscrollerSizeAllowed(parsed)
-          )
-        );
+        return !parsed || parsed.width <= mobileMaxWidth;
       });
 
       if (fittingMobileSizes.length) {
         return fittingMobileSizes;
       }
 
-      const allowedMobileSizes = this.config.mobileSizes.filter(size => {
-        const parsed = this.parseSize(size);
-        return !parsed || (
-          this.config.kind !== 'interscroller'
-          || this.isMobileInterscrollerSizeAllowed(parsed)
-        );
-      });
-
-      return allowedMobileSizes.length ? allowedMobileSizes : this.config.mobileSizes;
+      return this.config.mobileSizes;
     }
 
     if (this.config.kind === 'side-rail' && maxWidth > 0) {
@@ -1082,32 +1061,12 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
       && size.height >= MIN_CREATIVE_LAYOUT_HEIGHT;
   }
 
-  private isMobileInterscrollerSizeAllowed(size: AdSlotSize): boolean {
-    return this.isInterscrollerSizeAllowed(size)
-      && size.height <= this.getMaxMobileInterscrollerHeight(size.width);
-  }
-
-  private isInterscrollerSizeAllowed(size: AdSlotSize): boolean {
-    return size.height <= Math.round(size.width * INTERSCROLLER_MAX_ASPECT_HEIGHT);
-  }
-
-  private clampMeasuredCreativeHeight(width: number, height: number): number {
+  private clampMeasuredCreativeHeight(_width: number, height: number): number {
     if (this.config.kind === 'sticky-footer') {
       return Math.min(height, this.getStickyFooterMaxHeight());
     }
 
-    if (this.config.kind === 'interscroller' && this.viewportWidth <= MOBILE_VIEWPORT_MAX_WIDTH) {
-      return Math.min(height, this.getMaxMobileInterscrollerHeight(width));
-    }
-
     return height;
-  }
-
-  private getMaxMobileInterscrollerHeight(width: number): number {
-    return Math.min(
-      MOBILE_INTERSCROLLER_MAX_HEIGHT,
-      Math.max(100, Math.round(width * MOBILE_INTERSCROLLER_MAX_ASPECT_HEIGHT)),
-    );
   }
 
   private getStickyFooterMaxHeight(): number {

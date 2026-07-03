@@ -44,17 +44,6 @@
   @media (max-width: 640px) { padding: 0.5rem; }
 }
 
-:host-context(.ad-side-rail-page) .main-layout {
-  @media (min-width: 1320px) {
-    --statistics-right-rail-space: 208px;
-
-    width: calc(100vw - var(--statistics-right-rail-space));
-    max-width: 1600px;
-    margin-left: 0;
-    margin-right: auto;
-  }
-}
-
 .sidebar {
   width: 280px;
   flex-shrink: 0;
