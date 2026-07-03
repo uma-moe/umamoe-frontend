@@ -369,13 +369,8 @@ export class FuseAdsService {
       fusetag.registerZone?.(zoneElementId);
       fusetag.pageInit?.({
         blockingFuseIds: [fuseId],
-        blockingTimeout: environment.fuse.blockingTimeoutMs,
       });
     }, `persistentZone:${zoneElementId}:${fuseId}`, true);
-  }
-
-  requestSlotPageInit(fuseId: string, reason = 'slot registered'): void {
-    this.pageInit([fuseId], reason);
   }
 
   storeRetainedCreative(key: string, nodes: Node[], frame?: RetainedAdFrame): boolean {
@@ -543,11 +538,9 @@ export class FuseAdsService {
   }
 
   private handleTcfPing(pingData: TcfPingData): void {
-    const cmpReady = pingData.cmpLoaded === true || pingData.cmpStatus === 'loaded';
-
     this.setRuntimeState({
       ...this.runtimeStateSubject.value,
-      cmpStatus: cmpReady ? 'ready' : 'pending',
+      cmpStatus: pingData.gdprApplies === false ? 'ready' : 'pending',
     });
 
     if (pingData.gdprApplies === false) {
@@ -564,11 +557,16 @@ export class FuseAdsService {
 
   private handleTcfData(tcData: TcfData): void {
     const gdprApplies = tcData.gdprApplies;
+    const cmpReady = gdprApplies === false || this.isTcfConsentChoiceReady(tcData);
 
     this.setRuntimeState({
       ...this.runtimeStateSubject.value,
-      cmpStatus: 'ready',
+      cmpStatus: cmpReady ? 'ready' : 'pending',
     });
+
+    if (!cmpReady) {
+      return;
+    }
 
     if (gdprApplies === false) {
       this.setRegionalGoogleAdConsent({
@@ -616,6 +614,11 @@ export class FuseAdsService {
       source: 'ccpa-opt-out',
       uspString,
     });
+  }
+
+  private isTcfConsentChoiceReady(tcData: TcfData): boolean {
+    return tcData.eventStatus === 'tcloaded'
+      || tcData.eventStatus === 'useractioncomplete';
   }
 
   private ensureFuseScript(): void {
@@ -864,7 +867,6 @@ export class FuseAdsService {
     this.debug('pageInit queued', {
       reason,
       blockingFuseIds,
-      blockingTimeout: environment.fuse.blockingTimeoutMs,
       registeredZones: this.getRegisteredZonesSummary(),
     });
 
@@ -877,7 +879,6 @@ export class FuseAdsService {
       });
       fusetag.pageInit?.({
         blockingFuseIds,
-        blockingTimeout: environment.fuse.blockingTimeoutMs,
       });
     }, `pageInit:${blockingFuseIds.join(',')}`);
   }
@@ -950,7 +951,7 @@ export class FuseAdsService {
     this.rawRuntimeState = state;
     const effectiveState = {
       ...state,
-      adsCanRender: state.adsCanRender && this.localAllowsAds,
+      adsCanRender: state.adsCanRender && this.localAllowsAds && state.cmpStatus !== 'pending',
     };
     this.debug('runtime state updated', {
       requestedState: state,
