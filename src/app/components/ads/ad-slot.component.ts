@@ -565,7 +565,9 @@ export class AdSlotComponent implements AfterViewInit, OnChanges, OnDestroy {
         this.slotCreativeState = 'filled';
       } else {
         this.slotRenderSize = null;
-        this.slotCreativeState = 'empty';
+        this.slotCreativeState = this.hasLikelyCreativeMarkup(target) || this.hasVisibleRetainedCreative()
+          ? 'filled'
+          : 'empty';
       }
 
       this.fuseAdsService.debug('slot render result matched', {

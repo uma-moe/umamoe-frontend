@@ -5,11 +5,12 @@ import { Subscription, combineLatest, filter } from 'rxjs';
 import { AdSlotComponent } from './ad-slot.component';
 import { isAdFallbackPreviewEnabled } from './ad-fallback-preview';
 import { AdRouteConfig, PUBLIFT_XL_MIN_WIDTH, getAdRouteConfig, getGlobalStickyFooterSlot } from './ad-layout.config';
-import { FuseAdsService } from '../../services/fuse-ads.service';
+import { FuseAdsService, FuseRuntimeState } from '../../services/fuse-ads.service';
 
 const AD_SIDE_RAIL_PAGE_CLASS = 'ad-side-rail-page';
 const AD_LEFT_RAIL_RESERVED_CLASS = 'ad-left-rail-reserved';
 const AD_BOTTOM_POPUP_VISIBLE_CLASS = 'ad-bottom-popup-visible';
+const AD_PROVIDER_STICKY_FOOTER_DISMISSED_CLASS = 'ad-provider-sticky-footer-dismissed';
 const DEFAULT_SIDE_RAIL_MIN_WIDTH = PUBLIFT_XL_MIN_WIDTH;
 const DEFAULT_SIDE_RAIL_ANCHOR_SELECTORS = [
   '.content-container',
@@ -32,7 +33,7 @@ const SIDE_RAIL_MIN_HEIGHT = 420;
 const SIDE_RAIL_NAV_OFFSET = 60;
 const SIDE_RAIL_VERTICAL_MARGIN = 16;
 const SIDE_RAIL_FRAME_TOP_SELECTORS = ['.page-header'];
-const SIDE_RAIL_LAYOUT_RETRY_MS = [80, 300, 900];
+const SIDE_RAIL_LAYOUT_RETRY_MS = [80, 300, 900, 1800, 3200];
 const BOTTOM_POPUP_DISMISSED_STORAGE_KEY = 'uma.ad.bottom-popup.dismissed';
 type SideRailLayout = 'none' | 'left' | 'right' | 'both';
 
@@ -45,7 +46,6 @@ type SideRailLayout = 'none' | 'left' | 'right' | 'both';
 })
 export class AdLayoutComponent implements OnInit, OnDestroy {
   config: AdRouteConfig = getAdRouteConfig('/');
-  readonly adsCanRender$ = this.fuseAdsService.adsCanRender$;
   readonly stickyFooterConfig = getGlobalStickyFooterSlot();
   readonly stickyFooterFallbackConfig = {
     ...getGlobalStickyFooterSlot(),
@@ -53,7 +53,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   };
   bottomPopupClosed = false;
   fallbackPreviewEnabled = false;
-  adsCanRender = false;
+  adRuntimeAvailable = false;
   supportFallbackAllowed = false;
   sideRailsVisible = false;
   sideRailLayout: SideRailLayout = 'none';
@@ -72,6 +72,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   private layoutRetryTimers: number[] = [];
   private observedAnchor: HTMLElement | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  private providerStickyFooterDismissHandler?: (event: Event) => void;
 
   constructor(
     private router: Router,
@@ -81,13 +82,15 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.resetProviderStickyFooterDismissal();
+    this.attachProviderStickyFooterDismissHandler();
     this.updateFallbackPreviewState();
     this.restoreBottomPopupDismissal();
     this.adStateSub = combineLatest([
-      this.fuseAdsService.adsCanRender$,
       this.fuseAdsService.supportFallbackAllowed$,
-    ]).subscribe(([adsCanRender, supportFallbackAllowed]) => {
-      this.adsCanRender = adsCanRender;
+      this.fuseAdsService.runtimeState$,
+    ]).subscribe(([supportFallbackAllowed, runtimeState]) => {
+      this.adRuntimeAvailable = this.isAdRuntimeAvailable(runtimeState);
       this.supportFallbackAllowed = supportFallbackAllowed;
       if (supportFallbackAllowed) {
         this.providerStickyFooterCollapsed = false;
@@ -112,9 +115,11 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.routerSub?.unsubscribe();
     this.adStateSub?.unsubscribe();
+    this.detachProviderStickyFooterDismissHandler();
     this.cancelSideRailLayout();
     this.updateAdShellReservation(false);
     this.updateBottomPopupRootState(false);
+    this.updateProviderStickyFooterRootState(false);
   }
 
   @HostListener('window:resize')
@@ -167,7 +172,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   }
 
   get adLayoutActive(): boolean {
-    return this.fallbackPreviewEnabled || (this.adsCanRender && !this.supportFallbackAllowed);
+    return this.fallbackPreviewEnabled || (this.adRuntimeAvailable && !this.supportFallbackAllowed);
   }
 
   get shouldShowProviderStickyFooter(): boolean {
@@ -223,6 +228,54 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.providerStickyFooterClosed = true;
     this.providerStickyFooterCollapsed = false;
     this.updateBottomPopupRootState();
+    this.updateProviderStickyFooterRootState(true);
+  }
+
+  private resetProviderStickyFooterDismissal(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.providerStickyFooterClosed = false;
+    this.providerStickyFooterCollapsed = false;
+    this.updateProviderStickyFooterRootState(false);
+  }
+
+  private attachProviderStickyFooterDismissHandler(): void {
+    if (!isPlatformBrowser(this.platformId) || this.providerStickyFooterDismissHandler) {
+      return;
+    }
+
+    this.providerStickyFooterDismissHandler = event => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target?.closest('.publift-widget-sticky_footer-button')) {
+        return;
+      }
+
+      this.closeProviderStickyFooter();
+    };
+
+    this.document.addEventListener('click', this.providerStickyFooterDismissHandler, true);
+  }
+
+  private detachProviderStickyFooterDismissHandler(): void {
+    if (!isPlatformBrowser(this.platformId) || !this.providerStickyFooterDismissHandler) {
+      return;
+    }
+
+    this.document.removeEventListener('click', this.providerStickyFooterDismissHandler, true);
+    this.providerStickyFooterDismissHandler = undefined;
+  }
+
+  private updateProviderStickyFooterRootState(dismissed = this.providerStickyFooterClosed): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.document.documentElement.classList.toggle(
+      AD_PROVIDER_STICKY_FOOTER_DISMISSED_CLASS,
+      dismissed,
+    );
   }
 
   private updateBottomPopupRootState(visible = this.shouldShowBottomSupportFallback): void {
@@ -251,6 +304,14 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.contentTopAllowed = viewportWidth <= contentTopMaxWidth;
 
     return previous !== this.contentTopAllowed;
+  }
+
+  private isAdRuntimeAvailable(runtimeState: FuseRuntimeState): boolean {
+    return runtimeState.enabled
+      && runtimeState.configured
+      && runtimeState.cmpStatus !== 'disabled'
+      && runtimeState.cmpStatus !== 'not-configured'
+      && runtimeState.cmpStatus !== 'error';
   }
 
   private restoreBottomPopupDismissal(): void {

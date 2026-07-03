@@ -2,7 +2,7 @@ import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { Component, HostBinding, HostListener, Inject, Input, OnChanges, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subscription, combineLatest } from 'rxjs';
-import { FuseAdsService } from '../../services/fuse-ads.service';
+import { FuseAdsService, FuseRuntimeState } from '../../services/fuse-ads.service';
 import {
   AdRouteConfig,
   AdSlotConfig,
@@ -119,7 +119,7 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
   slotCollapsed = false;
   private routeConfig: AdRouteConfig = getAdRouteConfig('/');
   private viewportWidth = 0;
-  private adsCanRender = false;
+  private adRuntimeAvailable = false;
   private supportFallbackAllowed = false;
   private adStateSub?: Subscription;
 
@@ -171,7 +171,7 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   get inlineAdLayoutActive(): boolean {
-    return this.fallbackPreviewEnabled || (this.adsCanRender && !this.supportFallbackAllowed);
+    return this.fallbackPreviewEnabled || (this.adRuntimeAvailable && !this.supportFallbackAllowed);
   }
 
   constructor(
@@ -190,11 +190,11 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.adStateSub = combineLatest([
-      this.fuseAdsService.adsCanRender$,
       this.fuseAdsService.supportFallbackAllowed$,
-    ]).subscribe(([adsCanRender, supportFallbackAllowed]) => {
+      this.fuseAdsService.runtimeState$,
+    ]).subscribe(([supportFallbackAllowed, runtimeState]) => {
       const previousBridgeState = this.isContentTopBridgeActive;
-      this.adsCanRender = adsCanRender;
+      this.adRuntimeAvailable = this.isAdRuntimeAvailable(runtimeState);
       this.supportFallbackAllowed = supportFallbackAllowed;
 
       if (previousBridgeState !== this.isContentTopBridgeActive) {
@@ -240,5 +240,13 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
 
     const view = this.document.defaultView;
     this.viewportWidth = view?.innerWidth ?? this.document.documentElement.clientWidth;
+  }
+
+  private isAdRuntimeAvailable(runtimeState: FuseRuntimeState): boolean {
+    return runtimeState.enabled
+      && runtimeState.configured
+      && runtimeState.cmpStatus !== 'disabled'
+      && runtimeState.cmpStatus !== 'not-configured'
+      && runtimeState.cmpStatus !== 'error';
   }
 }

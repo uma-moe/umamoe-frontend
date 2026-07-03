@@ -64,14 +64,6 @@
   pointer-events: auto;
 }
 
-:host ::ng-deep .ad-provider-sticky-footer .publift-widget-sticky_footer-container-background {
-  background: transparent !important;
-}
-
-:host ::ng-deep .ad-provider-sticky-footer .publift-widget-sticky_footer-button {
-  display: none !important;
-}
-
 .ad-bottom-popup {
   position: fixed;
   inset-inline: 0;

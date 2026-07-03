@@ -1929,6 +1929,64 @@ html.ad-bottom-popup-visible .bottom-filter-panel {
   bottom: var(--ad-bottom-filter-panel-offset) !important;
 }
 
+// Fuse injects the sticky footer widget outside Angular in some runtimes, so
+// keep these provider overrides global instead of component-scoped.
+:where(.publift-widget-sticky_footer-container-background) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+:where(.publift-widget-sticky_footer-button) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  top: 4px !important;
+  right: max(4px, env(safe-area-inset-right)) !important;
+  width: var(--ad-close-size, 30px) !important;
+  min-width: var(--ad-close-size, 30px) !important;
+  height: var(--ad-close-size, 30px) !important;
+  min-height: var(--ad-close-size, 30px) !important;
+  padding: 0 !important;
+  border: 1px solid var(--ad-close-border) !important;
+  border-radius: 6px !important;
+  background: var(--ad-close-bg) !important;
+  color: var(--text-primary) !important;
+  font-size: 0 !important;
+  line-height: 1 !important;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.32) !important;
+  opacity: 1 !important;
+  transform: none !important;
+  z-index: 2147483647 !important;
+}
+
+:where(.publift-widget-sticky_footer-button)::before {
+  content: 'x';
+  color: var(--text-primary);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+:where(.publift-widget-sticky_footer-button > *) {
+  display: none !important;
+}
+
+:where(.publift-widget-sticky_footer-button:hover) {
+  border-color: var(--ad-close-hover-border) !important;
+  background: var(--ad-close-hover-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+html.ad-provider-sticky-footer-dismissed :where(
+  .publift-widget-sticky_footer-container,
+  .publift-widget-sticky_footer-container-background,
+  [class*="publift-widget-sticky_footer"]
+) {
+  display: none !important;
+  pointer-events: none !important;
+}
+
 app-ad-in-content.ad-in-content-host--content-top-bridge-active + :where(
   .content-container,
   .planner-scroll,
