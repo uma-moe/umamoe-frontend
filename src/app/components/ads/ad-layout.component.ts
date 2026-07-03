@@ -39,6 +39,7 @@ const SIDE_RAIL_NAV_OFFSET = 60;
 const SIDE_RAIL_VERTICAL_MARGIN = 16;
 const SIDE_RAIL_FRAME_TOP_SELECTORS = ['.page-header'];
 const SIDE_RAIL_LAYOUT_RETRY_MS = [80, 300, 900, 1800, 3200];
+const PAGE_SWAP_PRELOAD_IN_CONTENT_COUNT = 4;
 type SideRailLayout = 'none' | 'left' | 'right' | 'both';
 
 @Component({
@@ -346,9 +347,28 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     const ids = [
       this.contentTopAllowed ? config.contentTop?.fuseId : undefined,
       ...this.getLikelyInitialSideRailFuseIds(config),
+      ...this.getLikelyInitialInContentFuseIds(config),
     ];
 
     return [...new Set(ids.filter((id): id is string => Boolean(id)))];
+  }
+
+  private getLikelyInitialInContentFuseIds(config: AdRouteConfig): string[] {
+    if (!isPlatformBrowser(this.platformId) || !config.inContent?.length) {
+      return [];
+    }
+
+    const view = this.document.defaultView;
+    const viewportWidth = this.document.documentElement.clientWidth || view?.innerWidth || 0;
+    const minWidth = config.sideRailMinWidth ?? DEFAULT_SIDE_RAIL_MIN_WIDTH;
+
+    if (viewportWidth >= minWidth) {
+      return [];
+    }
+
+    return config.inContent
+      .slice(0, PAGE_SWAP_PRELOAD_IN_CONTENT_COUNT)
+      .map(slot => slot.fuseId);
   }
 
   private getLikelyInitialSideRailFuseIds(config: AdRouteConfig): string[] {

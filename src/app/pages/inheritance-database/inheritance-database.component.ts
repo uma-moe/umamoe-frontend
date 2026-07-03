@@ -244,6 +244,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
 
   private readonly initialRecordRenderBatchSize = 8;
   private readonly recordRenderBatchSize = 8;
+  private readonly recordRenderAheadViewportMultiplier = 2;
   private recordRenderFrame: number | null = null;
   private recordRenderGeneration = 0;
 
@@ -806,7 +807,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   }
 
   private isNearRenderBoundary(): boolean {
-    const threshold = 300;
+    const threshold = Math.max(900, window.innerHeight * this.recordRenderAheadViewportMultiplier);
     const position = window.pageYOffset + window.innerHeight;
     const height = document.documentElement.scrollHeight;
     return position > height - threshold;

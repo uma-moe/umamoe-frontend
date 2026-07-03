@@ -113,7 +113,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     readonly todayElementId = 'mobile-timeline-today';
     private readonly mobileInContentFirstEventIndex = 5;
     private readonly mobileInContentCadence = 8;
-    private readonly virtualOverscanPx = 1300;
+    private readonly virtualOverscanPx = 2400;
     private readonly virtualInitialRows = 18;
     // Event filtering
     eventFilters: EventFilters = {
