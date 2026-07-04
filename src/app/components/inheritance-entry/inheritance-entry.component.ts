@@ -882,7 +882,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     }
 
     get targetCharaId(): number | null {
-        return this.getParentCharaId(this.filterTree?.characterId);
+        return this.getParentCharaId(this.filterTree?.characterId ?? this.activeFilters?.player_chara_id);
     }
 
     get p2CharaId(): number | null {
@@ -992,7 +992,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
 
         let value: number | null;
         if (!this.targetCharaId || !this.getMainCharaId()) {
-            value = this.record.affinity_score ?? this.getMainBreedingBaseAffinity();
+            value = this.getMainBreedingBaseAffinity() ?? this.record.affinity_score ?? null;
             this.recordTotalAffinityCacheKey = cacheKey;
             this.recordTotalAffinityCacheValue = value;
             return value;
@@ -1000,7 +1000,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
 
         const result = this.getTreeAffinity(this.hasP2Context());
         if (!result) {
-            value = this.record.affinity_score ?? this.getMainBreedingBaseAffinity();
+            value = this.getMainBreedingBaseAffinity() ?? this.record.affinity_score ?? null;
             this.recordTotalAffinityCacheKey = cacheKey;
             this.recordTotalAffinityCacheValue = value;
             return value;

@@ -25,7 +25,7 @@ interface BookmarkInheritanceResponse {
     white_sparks: number[] | null;
     win_count: number;
     white_count: number;
-    affinity_score: number;
+    affinity_score: number | null;
     main_blue_factors: number;
     main_pink_factors: number;
     main_green_factors: number;
@@ -208,7 +208,7 @@ export class BookmarkService {
       white_sparks: this.toNumberArray(inh.white_sparks),
       win_count: hasMainWinSaddles ? this.affinityService.countG1RaceWins(mainWinSaddles) : inh.win_count,
       white_count: inh.white_count,
-      affinity_score: inh.affinity_score,
+      affinity_score: inh.affinity_score ?? undefined,
       main_blue_factors: inh.main_blue_factors,
       main_pink_factors: inh.main_pink_factors,
       main_green_factors: inh.main_green_factors,

@@ -1556,10 +1556,11 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
 
   private getBookmarkTotalAffinity(record: InheritanceRecord): number | null {
     if (!this.getBookmarkTargetCharaId() || !this.toCharaId(record.main_parent_id)) {
-      return record.affinity_score ?? this.getBookmarkMainBreedingAffinity(record);
+      return this.getBookmarkMainBreedingAffinity(record) ?? record.affinity_score ?? null;
     }
 
     return this.getBookmarkTreeAffinity(record, this.hasBookmarkP2Context())?.total
+      ?? this.getBookmarkMainBreedingAffinity(record)
       ?? record.affinity_score
       ?? null;
   }

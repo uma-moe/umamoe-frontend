@@ -299,6 +299,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
             white_sparks: this.toNumberArray(inh.white_sparks),
             win_count: hasMainWinSaddles ? this.affinityService.countG1RaceWins(mainWinSaddles) : inh.win_count,
             white_count: inh.white_count,
+            affinity_score: inh.affinity_score ?? undefined,
             borrow_view_count: profile.borrow_stats?.view_count ?? 0,
             borrow_copy_count: profile.borrow_stats?.copy_count ?? 0,
             main_blue_factors: inh.main_blue_factors,
