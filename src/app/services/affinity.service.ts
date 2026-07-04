@@ -468,6 +468,20 @@ export class AffinityService {
     return count;
   }
 
+  countG1RaceWins(wins: readonly number[] | null | undefined): number {
+    if (!wins?.length) return 0;
+
+    const g1Saddles = this.getG1WinSaddleIds();
+    let count = 0;
+    for (const value of wins) {
+      const saddleId = Number(value);
+      if (Number.isFinite(saddleId) && g1Saddles.has(saddleId)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   getRaceAffinityBonusBetween(
     primary: readonly number[] | null | undefined,
     secondary: readonly number[] | null | undefined,

@@ -18,6 +18,7 @@ import { VoteProtectionService, VoteState } from '../../services/vote-protection
 import { SupportCardService } from '../../services/support-card.service';
 import { AuthService } from '../../services/auth.service';
 import { BookmarkService } from '../../services/bookmark.service';
+import { AffinityService, PlannerRaceWins, TreeAffinityWithRaceResult, TreeSlots } from '../../services/affinity.service';
 import { AppVersionService } from '../../services/app-version.service';
 import { AnalyticsEventParams, GoogleAnalyticsService } from '../../services/google-analytics.service';
 import { InheritanceFilterComponent, InheritanceFilters } from './inheritance-filter.component';
@@ -32,6 +33,7 @@ import { DatabaseFilterComponent, UnifiedSearchParams } from '../../components/d
 import { InheritanceEntryComponent } from '../../components/inheritance-entry/inheritance-entry.component';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
+import type { SuccessionChara } from '../../models/profile.model';
 
 @Component({
   selector: 'app-inheritance-database',
@@ -114,12 +116,13 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   private clearAllTimer: any = null;
   readonly maxBookmarks = BookmarkService.MAX_BOOKMARKS;
 
-  private toCharaId(cardId: number | undefined): number | null {
+  private toCharaId(cardId: number | null | undefined): number | null {
     if (!cardId) return null;
     return cardId >= 10000 ? Math.floor(cardId / 100) : cardId;
   }
 
   private advancedSearchSignature: string | null = null;
+  private readonly emptyNumberArray: number[] = [];
 
   private stableStringify(value: unknown): string {
     if (Array.isArray(value)) {
@@ -261,6 +264,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     private ngZone: NgZone,
     public authService: AuthService,
     public bookmarkService: BookmarkService,
+    private affinityService: AffinityService,
     private appVersionService: AppVersionService,
     private googleAnalyticsService: GoogleAnalyticsService,
   ) {
@@ -288,6 +292,14 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     ]);
   }
   ngOnInit() {
+    this.affinityService.load()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        if (this.bookmarkRecords.length) {
+          this.applyBookmarkFilters();
+        }
+      });
+
     if (this.authService.isLoggedIn()) {
       this.bookmarkService.loadBookmarks().pipe(takeUntil(this.destroy$)).subscribe();
     }
@@ -1441,14 +1453,121 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
           if (copyDelta !== 0) return copyDelta;
           return (b.borrow_view_count ?? 0) - (a.borrow_view_count ?? 0);
         }
-        case 'affinity_score': va = a.affinity_score ?? 0; vb = b.affinity_score ?? 0; break;
-        case 'win_count': va = a.win_count ?? 0; vb = b.win_count ?? 0; break;
+        case 'affinity_score': va = this.getBookmarkTotalAffinity(a) ?? 0; vb = this.getBookmarkTotalAffinity(b) ?? 0; break;
+        case 'win_count': va = this.getBookmarkG1WinCount(a); vb = this.getBookmarkG1WinCount(b); break;
         case 'white_count': va = a.white_count ?? 0; vb = b.white_count ?? 0; break;
         case 'score': va = a.parent_rank ?? 0; vb = b.parent_rank ?? 0; break;
         default: return 0; // submitted_at - keep original order (newest first from API)
       }
       return vb - va;
     });
+  }
+
+  private getBookmarkG1WinCount(record: InheritanceRecord): number {
+    if (Array.isArray(record.main_win_saddles)) {
+      return this.affinityService.countG1RaceWins(record.main_win_saddles);
+    }
+    return record.win_count ?? 0;
+  }
+
+  private getBookmarkTargetCharaId(): number | null {
+    return this.toCharaId(this.entryFilterTree?.characterId ?? this.currentAdvancedFilters?.player_chara_id);
+  }
+
+  private getBookmarkP2CharaId(): number | null {
+    const veteran = this.entrySelectedVeteran;
+    if (veteran) {
+      return this.toCharaId(veteran.card_id ?? veteran.trained_chara_id);
+    }
+    return this.toCharaId(this.entryFilterTree?.children?.[1]?.characterId ?? this.currentAdvancedFilters?.p2_main_chara_id);
+  }
+
+  private getBookmarkGp2CharaId(positionId: 10 | 20): number | null {
+    const succession = this.getBookmarkSelectedVeteranSuccession(positionId);
+    if (succession) return this.toCharaId(succession.card_id);
+    const childIndex = positionId === 10 ? 0 : 1;
+    return this.toCharaId(this.entryFilterTree?.children?.[1]?.children?.[childIndex]?.characterId);
+  }
+
+  private getBookmarkSelectedVeteranSuccession(positionId: 10 | 20): SuccessionChara | null {
+    return this.entrySelectedVeteran?.succession_chara_array?.find(s => s.position_id === positionId) ?? null;
+  }
+
+  private getBookmarkP2WinSaddleIds(): number[] {
+    return this.entrySelectedVeteran?.win_saddle_id_array
+      ?? this.currentAdvancedFilters?.p2_win_saddle
+      ?? this.emptyNumberArray;
+  }
+
+  private getBookmarkGp2WinSaddleIds(positionId: 10 | 20): number[] {
+    return this.getBookmarkSelectedVeteranSuccession(positionId)?.win_saddle_id_array ?? this.emptyNumberArray;
+  }
+
+  private hasBookmarkP2Context(): boolean {
+    return this.getBookmarkP2CharaId() !== null
+      || this.getBookmarkGp2CharaId(10) !== null
+      || this.getBookmarkGp2CharaId(20) !== null
+      || this.getBookmarkP2WinSaddleIds().length > 0
+      || this.getBookmarkGp2WinSaddleIds(10).length > 0
+      || this.getBookmarkGp2WinSaddleIds(20).length > 0;
+  }
+
+  private buildBookmarkTreeSlots(record: InheritanceRecord, includeP2: boolean): TreeSlots {
+    return {
+      target: this.getBookmarkTargetCharaId(),
+      p1: this.toCharaId(record.main_parent_id),
+      p2: includeP2 ? this.getBookmarkP2CharaId() : null,
+      gp1Left: this.toCharaId(record.parent_left_id),
+      gp1Right: this.toCharaId(record.parent_right_id),
+      gp2Left: includeP2 ? this.getBookmarkGp2CharaId(10) : null,
+      gp2Right: includeP2 ? this.getBookmarkGp2CharaId(20) : null,
+    };
+  }
+
+  private buildBookmarkRaceWins(record: InheritanceRecord, includeP2: boolean): PlannerRaceWins {
+    return {
+      p1: record.main_win_saddles ?? this.emptyNumberArray,
+      p2: includeP2 ? this.getBookmarkP2WinSaddleIds() : this.emptyNumberArray,
+      'p1-1': record.left_win_saddles ?? this.emptyNumberArray,
+      'p1-2': record.right_win_saddles ?? this.emptyNumberArray,
+      'p2-1': includeP2 ? this.getBookmarkGp2WinSaddleIds(10) : this.emptyNumberArray,
+      'p2-2': includeP2 ? this.getBookmarkGp2WinSaddleIds(20) : this.emptyNumberArray,
+    };
+  }
+
+  private getBookmarkTreeAffinity(
+    record: InheritanceRecord,
+    includeP2: boolean,
+  ): TreeAffinityWithRaceResult | null {
+    if (!this.affinityService.isReady) return null;
+    return this.affinityService.calculateTreeWithRace(
+      this.buildBookmarkTreeSlots(record, includeP2),
+      this.buildBookmarkRaceWins(record, includeP2),
+    );
+  }
+
+  private getBookmarkMainBreedingAffinity(record: InheritanceRecord): number | null {
+    if (!this.affinityService.isReady || !this.toCharaId(record.main_parent_id)) return null;
+    return this.affinityService.getTreeBreedingTotalAffinity(
+      this.getBookmarkTreeAffinity(record, false),
+      'p1',
+    );
+  }
+
+  private getBookmarkTotalAffinity(record: InheritanceRecord): number | null {
+    if (!this.getBookmarkTargetCharaId() || !this.toCharaId(record.main_parent_id)) {
+      return record.affinity_score ?? this.getBookmarkMainBreedingAffinity(record);
+    }
+
+    return this.getBookmarkTreeAffinity(record, this.hasBookmarkP2Context())?.total
+      ?? record.affinity_score
+      ?? null;
+  }
+
+  private getBookmarkRaceAffinity(record: InheritanceRecord): number {
+    return this.affinityService.calculateRaceAffinityBreakdown(
+      this.buildBookmarkRaceWins(record, this.hasBookmarkP2Context()),
+    ).total;
   }
 
   private matchesFilters(r: InheritanceRecord, af: UnifiedSearchParams): boolean {
@@ -1472,7 +1591,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       if (af.exclude_main_parent_id.includes(r.main_parent_id!)) return false;
     }
 
-    if (af.min_win_count && (r.win_count ?? 0) < af.min_win_count) return false;
+    if (af.min_win_count && this.getBookmarkG1WinCount(r) < af.min_win_count) return false;
     if (af.min_white_count && (r.white_count ?? 0) < af.min_white_count) return false;
     if (af.parent_rank && (r.parent_rank ?? 0) < af.parent_rank) return false;
     if (af.parent_rarity && (r.parent_rarity ?? 0) < af.parent_rarity) return false;
@@ -1635,13 +1754,14 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       case 'right_parent_id':
       case 'parent_right_id': return record.parent_right_id;
       case 'followers': return record.follower_num;
-      case 'wins': return record.win_count;
+      case 'wins':
+      case 'win_count': return this.getBookmarkG1WinCount(record);
       case 'trainer_name':
       case 'name': return record.trainer_name;
       case 'affinity':
-      case 'affinity_score': return record.affinity_score;
+      case 'affinity_score': return this.getBookmarkTotalAffinity(record);
       case 'race_affinity':
-      case 'computed_race_affinity': return record.affinity_score;
+      case 'computed_race_affinity': return this.getBookmarkRaceAffinity(record);
       case 'support_card_count':
       case 'support_cards_count': return record.support_card_id ? 1 : 0;
       case 'blue_stars_sum': return this.sumLocalUqlSparks(record.blue_sparks);

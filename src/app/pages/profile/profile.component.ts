@@ -15,6 +15,7 @@ import { SkillComponent } from '../../components/skill/skill.component';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { InheritanceRecord } from '../../models/inheritance.model';
 import { AppVersionService } from '../../services/app-version.service';
+import { AffinityService } from '../../services/affinity.service';
 import { Meta, Title } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
@@ -66,7 +67,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
         private authService: AuthService,
         private title: Title,
         private meta: Meta,
-        private appVersionService: AppVersionService
+        private appVersionService: AppVersionService,
+        private affinityService: AffinityService
     ) { }
 
     ngOnInit(): void {
@@ -280,6 +282,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
     private buildInheritanceRecord(profile: UserProfileResponse): InheritanceRecord | null {
         if (!profile.inheritance) return null;
         const inh = profile.inheritance;
+        const mainWinSaddles = this.toNumberArray(inh.main_win_saddles);
+        const hasMainWinSaddles = Array.isArray(inh.main_win_saddles);
         return {
             id: inh.inheritance_id,
             account_id: inh.account_id,
@@ -289,40 +293,46 @@ export class ProfileComponent implements OnInit, OnDestroy {
             parent_right_id: inh.parent_right_id,
             parent_rank: inh.parent_rank,
             parent_rarity: inh.parent_rarity,
-            blue_sparks: inh.blue_sparks,
-            pink_sparks: inh.pink_sparks,
-            green_sparks: inh.green_sparks,
-            white_sparks: inh.white_sparks,
-            win_count: inh.win_count,
+            blue_sparks: this.toNumberArray(inh.blue_sparks),
+            pink_sparks: this.toNumberArray(inh.pink_sparks),
+            green_sparks: this.toNumberArray(inh.green_sparks),
+            white_sparks: this.toNumberArray(inh.white_sparks),
+            win_count: hasMainWinSaddles ? this.affinityService.countG1RaceWins(mainWinSaddles) : inh.win_count,
             white_count: inh.white_count,
             borrow_view_count: profile.borrow_stats?.view_count ?? 0,
             borrow_copy_count: profile.borrow_stats?.copy_count ?? 0,
-            affinity_score: inh.affinity_score ?? undefined,
             main_blue_factors: inh.main_blue_factors,
             main_pink_factors: inh.main_pink_factors,
             main_green_factors: inh.main_green_factors,
-            main_white_factors: inh.main_white_factors,
+            main_white_factors: this.toNumberArray(inh.main_white_factors),
             main_white_count: inh.main_white_count,
             left_blue_factors: inh.left_blue_factors,
             left_pink_factors: inh.left_pink_factors,
             left_green_factors: inh.left_green_factors,
-            left_white_factors: inh.left_white_factors,
+            left_white_factors: this.toNumberArray(inh.left_white_factors),
             left_white_count: inh.left_white_count,
             right_blue_factors: inh.right_blue_factors,
             right_pink_factors: inh.right_pink_factors,
             right_green_factors: inh.right_green_factors,
-            right_white_factors: inh.right_white_factors,
+            right_white_factors: this.toNumberArray(inh.right_white_factors),
             right_white_count: inh.right_white_count,
             support_card_id: profile.support_card?.support_card_id,
             limit_break_count: profile.support_card?.limit_break_count,
             support_card_experience: profile.support_card?.experience,
-            race_results: inh.race_results,
-            main_win_saddles: inh.main_win_saddles,
-            left_win_saddles: inh.left_win_saddles,
-            right_win_saddles: inh.right_win_saddles,
+            race_results: this.toNumberArray(inh.race_results),
+            main_win_saddles: mainWinSaddles,
+            left_win_saddles: this.toNumberArray(inh.left_win_saddles),
+            right_win_saddles: this.toNumberArray(inh.right_win_saddles),
             upvotes: 0,
             downvotes: 0,
         };
+    }
+
+    private toNumberArray(value: unknown): number[] {
+        if (!Array.isArray(value)) return [];
+        return value
+            .map(entry => Number(entry))
+            .filter(entry => Number.isFinite(entry));
     }
 
     getTeamClassName(teamClass: number | null): string {

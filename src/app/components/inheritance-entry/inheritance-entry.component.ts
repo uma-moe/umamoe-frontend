@@ -889,7 +889,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         if (this.selectedVeteran) {
             return this.getParentCharaId(this.selectedVeteran.card_id ?? this.selectedVeteran.trained_chara_id ?? undefined);
         }
-        return this.getParentCharaId(this.filterTree?.children?.[1]?.characterId);
+        return this.getParentCharaId(this.filterTree?.children?.[1]?.characterId ?? this.activeFilters?.p2_main_chara_id);
     }
 
     get gp2LeftCharaId(): number | null {
@@ -905,7 +905,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     }
 
     get p2WinSaddleIds(): number[] | null {
-        return this.selectedVeteran?.win_saddle_id_array ?? null;
+        return this.selectedVeteran?.win_saddle_id_array ?? this.activeFilters?.p2_win_saddle ?? null;
     }
 
     get gp2LeftWinSaddleIds(): number[] | null {
@@ -976,7 +976,12 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     }
 
     private hasP2Context(): boolean {
-        return this.p2CharaId !== null || this.gp2LeftCharaId !== null || this.gp2RightCharaId !== null;
+        return this.p2CharaId !== null
+            || this.gp2LeftCharaId !== null
+            || this.gp2RightCharaId !== null
+            || !!this.p2WinSaddleIds?.length
+            || !!this.gp2LeftWinSaddleIds?.length
+            || !!this.gp2RightWinSaddleIds?.length;
     }
 
     getRecordTotalAffinity(): number | null {

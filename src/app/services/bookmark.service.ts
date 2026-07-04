@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of, tap, catchError, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { InheritanceRecord } from '../models/inheritance.model';
+import { AffinityService } from './affinity.service';
 
 interface BookmarkInheritanceResponse {
   account_id: string;
@@ -18,32 +19,32 @@ interface BookmarkInheritanceResponse {
     parent_right_id: number;
     parent_rank: number;
     parent_rarity: number;
-    blue_sparks: number[];
-    pink_sparks: number[];
-    green_sparks: number[];
-    white_sparks: number[];
+    blue_sparks: number[] | null;
+    pink_sparks: number[] | null;
+    green_sparks: number[] | null;
+    white_sparks: number[] | null;
     win_count: number;
     white_count: number;
     affinity_score: number;
     main_blue_factors: number;
     main_pink_factors: number;
     main_green_factors: number;
-    main_white_factors: number[];
+    main_white_factors: number[] | null;
     main_white_count: number;
     left_blue_factors: number;
     left_pink_factors: number;
     left_green_factors: number;
-    left_white_factors: number[];
+    left_white_factors: number[] | null;
     left_white_count: number;
     right_blue_factors: number;
     right_pink_factors: number;
     right_green_factors: number;
-    right_white_factors: number[];
+    right_white_factors: number[] | null;
     right_white_count: number;
-    main_win_saddles: number[];
-    left_win_saddles: number[];
-    right_win_saddles: number[];
-    race_results: number[];
+    main_win_saddles: number[] | null;
+    left_win_saddles: number[] | null;
+    right_win_saddles: number[] | null;
+    race_results: number[] | null;
   };
   support_card?: {
     account_id: string;
@@ -71,7 +72,10 @@ export class BookmarkService {
 
   bookmarks$ = this.bookmarksSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private affinityService: AffinityService,
+  ) {}
 
   get count(): number {
     return this.bookmarkedIds.size;
@@ -185,6 +189,8 @@ export class BookmarkService {
 
   private mapToRecord(item: BookmarkInheritanceResponse): InheritanceRecord {
     const inh = item.inheritance;
+    const mainWinSaddles = this.toNumberArray(inh.main_win_saddles);
+    const hasMainWinSaddles = Array.isArray(inh.main_win_saddles);
     return {
       id: inh.inheritance_id,
       account_id: item.account_id,
@@ -196,32 +202,32 @@ export class BookmarkService {
       parent_right_id: inh.parent_right_id,
       parent_rank: inh.parent_rank,
       parent_rarity: inh.parent_rarity,
-      blue_sparks: inh.blue_sparks,
-      pink_sparks: inh.pink_sparks,
-      green_sparks: inh.green_sparks,
-      white_sparks: inh.white_sparks,
-      win_count: inh.win_count,
+      blue_sparks: this.toNumberArray(inh.blue_sparks),
+      pink_sparks: this.toNumberArray(inh.pink_sparks),
+      green_sparks: this.toNumberArray(inh.green_sparks),
+      white_sparks: this.toNumberArray(inh.white_sparks),
+      win_count: hasMainWinSaddles ? this.affinityService.countG1RaceWins(mainWinSaddles) : inh.win_count,
       white_count: inh.white_count,
       affinity_score: inh.affinity_score,
       main_blue_factors: inh.main_blue_factors,
       main_pink_factors: inh.main_pink_factors,
       main_green_factors: inh.main_green_factors,
-      main_white_factors: inh.main_white_factors,
+      main_white_factors: this.toNumberArray(inh.main_white_factors),
       main_white_count: inh.main_white_count,
       left_blue_factors: inh.left_blue_factors,
       left_pink_factors: inh.left_pink_factors,
       left_green_factors: inh.left_green_factors,
-      left_white_factors: inh.left_white_factors,
+      left_white_factors: this.toNumberArray(inh.left_white_factors),
       left_white_count: inh.left_white_count,
       right_blue_factors: inh.right_blue_factors,
       right_pink_factors: inh.right_pink_factors,
       right_green_factors: inh.right_green_factors,
-      right_white_factors: inh.right_white_factors,
+      right_white_factors: this.toNumberArray(inh.right_white_factors),
       right_white_count: inh.right_white_count,
-      main_win_saddles: inh.main_win_saddles,
-      left_win_saddles: inh.left_win_saddles,
-      right_win_saddles: inh.right_win_saddles,
-      race_results: inh.race_results,
+      main_win_saddles: mainWinSaddles,
+      left_win_saddles: this.toNumberArray(inh.left_win_saddles),
+      right_win_saddles: this.toNumberArray(inh.right_win_saddles),
+      race_results: this.toNumberArray(inh.race_results),
       follower_num: item.follower_num ?? null,
       last_updated: item.last_updated ?? null,
       is_stale: item.is_stale ?? false,
@@ -232,5 +238,12 @@ export class BookmarkService {
       downvotes: 0,
       user_vote: null,
     };
+  }
+
+  private toNumberArray(value: unknown): number[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map(entry => Number(entry))
+      .filter(entry => Number.isFinite(entry));
   }
 }
