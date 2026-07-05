@@ -11,6 +11,7 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { Subject, Subscription, takeUntil } from 'rxjs';
 import { Meta, Title } from '@angular/platform-browser';
 import { InheritanceService } from '../../services/inheritance.service';
@@ -50,6 +51,7 @@ import type { SuccessionChara } from '../../models/profile.model';
     MatTooltipModule,
     MatFormFieldModule,
     MatSelectModule,
+    TourAnchorMatMenuDirective,
     InheritanceFilterComponent,
     DatabaseFilterComponent,
     InheritanceEntryComponent,

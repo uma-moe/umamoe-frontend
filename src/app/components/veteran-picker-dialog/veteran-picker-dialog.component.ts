@@ -436,7 +436,8 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
 
   trackByVet = (_: number, v: VeteranMember): any => v;
   trackByBookmark = (_: number, b: InheritanceRecord): any => b;
-  trackBySaved = (_: number, p: PartnerInheritance): string => p.account_id;
+  trackBySaved = (_: number, p: PartnerInheritance): string =>
+    p.id != null ? `id:${p.id}` : `${p.account_id}:${p.content_hash ?? p.updated_at ?? p.main_parent_id}`;
   trackByManual = (_: number, e: StoredManualEntry): string => e.id;
 
   onSearchChange(): void {
@@ -995,7 +996,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   deleteSavedPartner(partner: PartnerInheritance, event: Event): void {
     event.stopPropagation();
     if (this.authService.isLoggedIn()) {
-      this.partnerService.deleteSaved(partner.account_id)
+      this.partnerService.deleteSaved(partner)
         .pipe(takeUntil(this.destroy$), catchError(() => of(null)))
         .subscribe(() => this.loadSavedHistory());
     } else {

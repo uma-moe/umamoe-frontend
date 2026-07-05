@@ -1,15 +1,15 @@
 <div class="tools">
   <!-- Hero Section -->
   <section class="hero">
-    <div class="hero-content">
+    <div class="hero-content" tourAnchor="tools-page">
       <div class="hero-branding">
         <mat-icon class="hero-icon">build</mat-icon>
         <h1 class="hero-title">Tools & Calculators</h1>
       </div>
       <p class="hero-subtitle">Calculation tools and utilities for Umamusume trainers</p>
 
-      <div class="quick-links">
-        <a routerLink="/tools/statistics" class="quick-link statistics">
+      <div class="quick-links" tourAnchor="tools-links">
+        <a routerLink="/tools/statistics" class="quick-link statistics" tourAnchor="tools-statistics">
           <mat-icon>bar_chart</mat-icon>
           <div class="link-content">
             <span class="link-title">Team Stadium Statistics</span>
@@ -17,7 +17,7 @@
           </div>
         </a>
 
-        <div class="quick-link stamina disabled">
+        <div class="quick-link stamina disabled" tourAnchor="tools-planned">
           <mat-icon>battery_charging_full</mat-icon>
           <div class="link-content">
             <span class="link-title">Stamina Calculator</span>
@@ -35,7 +35,7 @@
           <div class="coming-soon-badge">COMING SOON</div>
         </div>
 
-        <a routerLink="/tools/lineage-planner" class="quick-link lineage-planner new-feature">
+        <a routerLink="/tools/lineage-planner" class="quick-link lineage-planner new-feature" tourAnchor="tools-lineage">
           <mat-icon>account_tree</mat-icon>
           <div class="link-content">
             <span class="link-title">Lineage Planner<span class="new-badge">NEW</span></span>
@@ -53,7 +53,7 @@
   ></app-ad-in-content>
 
   <!-- Stats Grid -->
-  <section class="stats">
+  <section class="stats" tourAnchor="tools-site-stats">
     <div class="stats-grid">
       <div class="stat-card">
         <mat-icon>task_alt</mat-icon>

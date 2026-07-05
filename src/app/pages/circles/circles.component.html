@@ -1,6 +1,6 @@
 <div class="circles-page">
   <div class="page-header">
-    <div class="header-content">
+    <div class="header-content" tourAnchor="clubs-page">
       <h1>Club Leaderboard</h1>
       <p>Find and compare Umamusume clubs.</p>
     </div>
@@ -15,8 +15,8 @@
   ></app-ad-in-content>
 
   <div class="content-container">
-    <div class="filters-container">
-      <div class="search-row">
+    <div class="filters-container" tourAnchor="clubs-filters">
+      <div class="search-row" tourAnchor="clubs-search">
         <mat-form-field appearance="outline" class="circle-search-field factor-autocomplete-field search-user-field" subscriptSizing="dynamic">
           <input matInput (input)="onSearch($event)" placeholder="Search Clubs" [value]="searchTerm">
           <mat-icon matSuffix class="input-icon">search</mat-icon>
@@ -24,7 +24,7 @@
       </div>
 
       <div class="filter-bar">
-        <div class="filter-chips">
+        <div class="filter-chips" tourAnchor="clubs-join-style">
           <button class="filter-chip chip-open" [class.active]="joinStyleFilter === 'open'" (click)="setJoinStyleFilter(joinStyleFilter === 'open' ? 'all' : 'open')">
             <mat-icon>lock_open</mat-icon> Open
           </button>
@@ -39,7 +39,7 @@
           </button>
         </div>
 
-        <div class="filter-dropdowns">
+        <div class="filter-dropdowns" tourAnchor="clubs-playstyle">
           <mat-form-field appearance="outline" class="factor-autocomplete-field factor-select-field policy-select" subscriptSizing="dynamic">
             <mat-icon matPrefix>sports_esports</mat-icon>
             <mat-select [(value)]="policyFilter" (selectionChange)="onPolicyFilterChange()" placeholder="Playstyle" panelClass="factor-autocomplete-panel">
@@ -55,7 +55,7 @@
       </div>
     </div>
 
-    <div class="live-refresh-bar" *ngIf="isTop100View">
+    <div class="live-refresh-bar" *ngIf="isTop100View" tourAnchor="clubs-live-refresh">
       <span class="live-dot"></span>
       <span class="live-label">Live</span>
       <span class="countdown" *ngIf="!liveRefreshing">Next update in {{formatCountdown(secondsUntilRefresh)}}</span>
@@ -70,11 +70,11 @@
       <p>Loading clubs...</p>
     </div>
 
-    <div class="results-info" *ngIf="!loading && (joinStyleFilter !== 'all' || hasOpenSpots || policyFilter !== null)">
+    <div class="results-info" *ngIf="!loading && (joinStyleFilter !== 'all' || hasOpenSpots || policyFilter !== null)" tourAnchor="clubs-results-info">
       <span class="results-count">Showing {{filteredCircles.length}} of {{circles.length}} clubs on this page</span>
     </div>
 
-    <div class="results-grid" *ngIf="!loading && filteredCircles.length > 0">
+    <div class="results-grid" *ngIf="!loading && filteredCircles.length > 0" tourAnchor="clubs-results">
       <ng-container *ngFor="let circle of filteredCircles; let i = index; trackBy: trackByCircleId">
       <div class="circle-card"
            [attr.data-circle-id]="circle.circle_id"
@@ -172,7 +172,8 @@
       <button class="clear-filters-btn inline" (click)="clearAllFilters()">Clear all filters</button>
     </div>
 
-    <mat-paginator [length]="totalCircles"
+    <mat-paginator tourAnchor="clubs-paginator"
+                   [length]="totalCircles"
                    [pageSize]="filters.pageSize"
                    [pageSizeOptions]="[20, 50, 100]"
                    [pageIndex]="filters.page"

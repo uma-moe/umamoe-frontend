@@ -10,6 +10,7 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { Subject, takeUntil, forkJoin } from 'rxjs';
 import { TierlistOptimizedService } from '../../services/tierlist-optimized.service';
 import { TIER_NAMES, TIER_PERCENTILES, TYPE_NAMES, UpcomingCard } from '../../models/tierlist-calculation.model';
@@ -49,6 +50,7 @@ interface TypeTierlist {
     MatDialogModule,
     MatSelectModule,
     MatFormFieldModule,
+    TourAnchorMatMenuDirective,
     TierlistScatterChartComponent,
     CardHoverMenuSimpleComponent,
     LocaleNumberPipe,

@@ -10,6 +10,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { combineLatest, Subject, takeUntil } from 'rxjs';
 import { ShameService } from '../../services/shame.service';
@@ -125,6 +126,7 @@ interface EvidenceGroupView {
     MatProgressSpinnerModule,
     MatSelectModule,
     MatTooltipModule,
+    TourAnchorMatMenuDirective,
     CompactNumberPipe,
     LocaleNumberPipe,
     AdInContentComponent

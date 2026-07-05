@@ -1,11 +1,11 @@
-<div class="filter-header" [class.filter-header--expanded]="isExpanded" (click)="toggleExpanded()">
+<div class="filter-header" [class.filter-header--expanded]="isExpanded" (click)="toggleExpanded()" tourAnchor="filter-header">
   <button mat-icon-button class="expand-button">
     <mat-icon class="expand-icon" [class.expanded]="isExpanded">
       expand_more
     </mat-icon>
   </button>
   <h2>Filters</h2>
-  <div class="filter-presets" (click)="$event.stopPropagation()">
+  <div class="filter-presets" (click)="$event.stopPropagation()" tourAnchor="filter-presets">
     <button
       type="button"
       class="preset-toggle-btn"
@@ -90,7 +90,7 @@
       </ng-template>
     </div>
   </div>
-  <div class="filter-mode-toggle" (click)="$event.stopPropagation()" aria-label="Filter mode">
+  <div class="filter-mode-toggle" (click)="$event.stopPropagation()" aria-label="Filter mode" tourAnchor="filter-modes">
     <button type="button" class="filter-mode-option" [class.active]="filterMode === 'basic'" (click)="setFilterMode('basic')">Basic</button>
     <button type="button" class="filter-mode-option" [class.active]="filterMode === 'advanced'" (click)="setFilterMode('advanced')">Advanced</button>
     <button type="button" class="filter-mode-option" [class.active]="filterMode === 'uql'" (click)="setFilterMode('uql')">UQL</button>
@@ -128,8 +128,8 @@
       </div>
       <div class="collapsible-body" [class.collapsed]="isSectionCollapsed('affinitySection')">
         <div class="collapsible-body-inner">
-          <div class="affinity-tree-section">
-            <div class="tree-group tree-group--affinity-target">
+          <div class="affinity-tree-section" tourAnchor="filter-affinity">
+            <div class="tree-group tree-group--affinity-target" tourAnchor="filter-target">
               <div class="tree-box target-box affinity-target-box">
                 <div class="tree-circle target-circle" [class.has-character]="treeData.characterId" (click)="selectNode(treeData)">
                   <img *ngIf="treeData.characterId && treeData.image" [src]="getCharacterImagePath(treeData.image)" class="circle-img" [alt]="treeData.name">
@@ -146,7 +146,7 @@
 
             <span class="tree-vdivider"></span>
 
-            <div class="tree-group tree-group--affinity-veteran">
+            <div class="tree-group tree-group--affinity-veteran" tourAnchor="filter-veteran">
               <div class="tree-box veteran-box">
                 <div class="tree-circle veteran-circle" [class.has-character]="selectedVeteran" (click)="selectVeteran()">
                   <img *ngIf="selectedVeteran && selectedVeteranImage" [src]="selectedVeteranImage" class="circle-img" [alt]="selectedVeteranName">
@@ -192,7 +192,7 @@
         <div class="collapsible-body-inner">
     <div class="main-layout" #mainLayout [class.legacy-wrapped]="legacyWrapped" [class.search-wrapped]="searchWrapped">
       <!-- Legacy Tree & Character Filters -->
-      <div class="filter-section-wrapper legacy-tree-wrapper" [class.is-wrapped]="legacyWrapped">
+      <div class="filter-section-wrapper legacy-tree-wrapper" [class.is-wrapped]="legacyWrapped" tourAnchor="filter-include-exclude">
         <h4 class="section-header legacy-tree-header" (click)="toggleSection('mLegacyTree')">
           <mat-icon class="mobile-chevron" [class.collapsed]="isSectionCollapsed('mLegacyTree')">expand_more</mat-icon>
           Include / Exclude Umas
@@ -277,7 +277,7 @@
       <ng-container *ngTemplateOutlet="supportCardLbSection; context: { wrapped: legacyWrapped, collapsed: isSectionCollapsed('mSupportCard'), showMobileHeader: true }"></ng-container>
 
       <!-- Search Users -->
-      <div class="filter-section-wrapper search-wrapper" [class.is-wrapped]="searchWrapped">
+      <div class="filter-section-wrapper search-wrapper" [class.is-wrapped]="searchWrapped" tourAnchor="filter-trainer-search">
         <h4 class="section-header" (click)="toggleSection('mSearchUsers')">
           <mat-icon class="mobile-chevron" [class.collapsed]="isSectionCollapsed('mSearchUsers')">expand_more</mat-icon>
           Search Users
@@ -341,7 +341,7 @@
 
       <div class="filters-grid-content">
         <!-- Group 1: Inheritance Stats -->
-        <div class="filter-group">
+        <div class="filter-group" tourAnchor="filter-factor-groups">
           <h5 class="group-title collapsible-group-title" (click)="toggleSection('inheritanceFactors')">
             <mat-icon class="collapse-chevron" [class.collapsed]="isSectionCollapsed('inheritanceFactors')">expand_more</mat-icon>
             {{ filterMode === 'basic' ? 'Spark Filters' : 'Inheritance Factors' }}
@@ -349,10 +349,13 @@
           <div class="collapsible-body" [class.collapsed]="isSectionCollapsed('inheritanceFactors')">
           <div class="collapsible-body-inner">
           <!-- Blue Factors -->
-          <div class="factor-section">
+          <div class="factor-section" tourAnchor="filter-star-range">
             <div class="section-label">Blue Factors (Stats)</div>
             <div class="factor-list">
-              <div class="factor-row-item blue-factor" *ngFor="let filter of blueFactorFilters; let i = index">
+              <div
+                class="factor-row-item blue-factor"
+                *ngFor="let filter of blueFactorFilters; let i = index"
+                [tourAnchor]="filter.uuid === tourBlueFactorAnchorUuid ? 'filter-blue-factor-row' : ''">
                 <div class="row-top">
                   <mat-form-field appearance="outline" class="factor-select factor-select-field" subscriptSizing="dynamic">
                     <mat-select [(ngModel)]="filter.factorId" (selectionChange)="onFilterChange()" panelClass="factor-autocomplete-panel">
@@ -365,17 +368,17 @@
                   </button>
                 </div>
                 
-                <div class="row-bottom">
+                <div class="row-bottom" [tourAnchor]="filter.uuid === tourBlueFactorAnchorUuid ? 'filter-blue-factor-slider' : ''">
                   <mat-slider min="1" max="9" step="1" showTickMarks>
-                    <input matSliderStartThumb [(ngModel)]="filter.min" (valueChange)="onFilterChange()">
-                    <input matSliderEndThumb [(ngModel)]="filter.max" (valueChange)="onFilterChange()">
+                    <input matSliderStartThumb [(ngModel)]="filter.min" (valueChange)="onBlueFactorSliderChange()">
+                    <input matSliderEndThumb [(ngModel)]="filter.max" (valueChange)="onBlueFactorSliderChange()">
                   </mat-slider>
                   <div class="slider-labels-row">
                     <span *ngFor="let val of [1,2,3,4,5,6,7,8,9]" [class.active]="val >= filter.min && val <= filter.max">{{val}}★</span>
                   </div>
                 </div>
               </div>
-              <button mat-button class="add-btn" (click)="addFactorFilter(blueFactorFilters, 0)">
+              <button mat-button class="add-btn" (click)="addBlueFactorFilter()" tourAnchor="filter-add-factor">
                 <mat-icon>add</mat-icon> Add Blue Factor
               </button>
             </div>
@@ -492,7 +495,7 @@
           </div>
 
           <!-- Optional White Factors (for scoring/sorting) -->
-          <div class="factor-section">
+          <div class="factor-section" tourAnchor="filter-preferred-white">
             <div class="section-label-row">
               <div class="section-label">Preferred White Factors <span class="section-label-detail">priority group, then match count</span></div>
               <div class="priority-group-heading" matTooltip="Priority group: 0 sorts first, larger numbers are lower-priority tiebreakers">Priority</div>
@@ -544,7 +547,7 @@
           </div>
 
           <!-- Lineage White Factors -->
-          <div class="factor-section" *ngIf="filterMode === 'advanced'">
+          <div class="factor-section" *ngIf="filterMode === 'advanced'" tourAnchor="filter-lineage-white">
             <div class="section-label-row">
               <div class="section-label">Lineage White Factors <span class="section-label-detail">priority group, then stack score</span></div>
               <div class="priority-group-heading" matTooltip="Priority group: 0 sorts first, larger numbers are lower-priority tiebreakers">Priority</div>
@@ -599,7 +602,7 @@
         </div>
 
         <!-- Group 2: Main Parent Specifics -->
-        <div class="filter-group" *ngIf="filterMode === 'advanced'">
+        <div class="filter-group" *ngIf="filterMode === 'advanced'" tourAnchor="filter-main-parent-factors">
           <h5 class="group-title collapsible-group-title" (click)="toggleSection('mainParentFactors')">
             <mat-icon class="collapse-chevron" [class.collapsed]="isSectionCollapsed('mainParentFactors')">expand_more</mat-icon>
             Main Parent Factors
@@ -939,7 +942,7 @@
         </div>
 
         <!-- Group 5: Race Schedule -->
-        <div class="filter-group race-schedule-group" *ngIf="filterMode === 'advanced'">
+        <div class="filter-group race-schedule-group" *ngIf="filterMode === 'advanced'" tourAnchor="filter-race-schedule">
           <h5 class="group-title collapsible-group-title" (click)="toggleSection('raceSchedule')">
             <mat-icon class="collapse-chevron" [class.collapsed]="isSectionCollapsed('raceSchedule')">expand_more</mat-icon>
             Race Schedule Filter
@@ -965,7 +968,7 @@
         </h4>
         <!-- Support Card Filter -->
         <div class="m-collapse" [class.m-collapsed]="collapsed">
-          <div class="filter-section-wrapper">
+          <div class="filter-section-wrapper" tourAnchor="filter-support-card">
             <h4 class="section-header">Support Card</h4>
             <div class="filter-item">
               <div class="selector-compact" *ngIf="!selectedSupportCard" (click)="selectSupportCard()">
@@ -993,7 +996,7 @@
 
         <!-- LB Selector -->
         <div class="m-collapse" [class.m-collapsed]="collapsed">
-          <div class="filter-section-wrapper">
+          <div class="filter-section-wrapper" tourAnchor="filter-limit-break">
             <h4 class="section-header">Min LB</h4>
             <div class="filter-item lb-filter-item">
               <div class="lb-diamonds-compact">
@@ -1016,7 +1019,7 @@
                 step="1"
                 class="limit-break-slider-compact compact-slider-dark"
                 [displayWith]="formatLabel">
-                <input matSliderThumb [(ngModel)]="selectedLimitBreak" (valueChange)="onFilterChange()">
+                <input matSliderThumb [(ngModel)]="selectedLimitBreak" (valueChange)="onLimitBreakSliderChange()">
               </mat-slider>
               <div class="slider-labels-compact">
                 <span class="lbl-0" [class.active]="selectedLimitBreak === 0">LB0</span>

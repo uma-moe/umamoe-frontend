@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTabsModule } from '@angular/material/tabs';
 import { FormsModule } from '@angular/forms';
+import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { Subject, takeUntil } from 'rxjs';
 import { RankingService } from '../../services/ranking.service';
 import { UserFanRankingMonthly, UserFanRankingAlltime, UserFanRankingGains } from '../../models/ranking.model';
@@ -32,6 +33,7 @@ type RankingTab = 'monthly' | 'alltime' | 'gains';
     MatSelectModule,
     MatTabsModule,
     FormsModule,
+    TourAnchorMatMenuDirective,
     CompactNumberPipe,
     LocaleNumberPipe,
     AdInContentComponent

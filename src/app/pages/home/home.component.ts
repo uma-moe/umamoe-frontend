@@ -13,6 +13,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { ThemeService } from '../../services/theme.service';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
+import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -21,7 +22,8 @@ import { AdInContentComponent } from '../../components/ads/ad-in-content.compone
     RouterModule,
     MatIconModule,
     LocaleNumberPipe,
-    AdInContentComponent
+    AdInContentComponent,
+    TourAnchorMatMenuDirective
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'

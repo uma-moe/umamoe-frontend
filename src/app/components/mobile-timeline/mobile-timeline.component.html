@@ -216,7 +216,7 @@
   </a>
 
   <!-- Header -->
-  <div class="tl-header">
+  <div class="tl-header" tourAnchor="timeline-page">
     <div class="tl-header-left">
       <mat-icon class="tl-header-icon">timeline</mat-icon>
       <div class="tl-header-text">
@@ -236,7 +236,7 @@
   </div>
 
   <!-- Timeline feed -->
-  <div class="tl-feed">
+  <div class="tl-feed" tourAnchor="timeline-track">
     <div class="tl-spine"></div>
     <div
       class="tl-virtual-spacer"
@@ -358,7 +358,7 @@
     <!-- Filter Content -->
     <div class="filter-content" [class.visible]="isFilterPanelExpanded">
       <!-- Search -->
-      <mat-form-field appearance="outline" class="search-field">
+      <mat-form-field appearance="outline" class="search-field" tourAnchor="timeline-search">
         <mat-label>Search events</mat-label>
         <input
           matInput
@@ -370,7 +370,7 @@
       </mat-form-field>
 
       <!-- Filter toggles -->
-      <div class="filter-toggles">
+      <div class="filter-toggles" tourAnchor="timeline-filter-types">
         <mat-checkbox
           [(ngModel)]="eventFilters.showCharacters"
           (change)="toggleCharacterFilter()"

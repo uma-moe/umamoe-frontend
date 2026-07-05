@@ -20,6 +20,20 @@
   }
 }
 
+.timeline-virtual-tour-target {
+  position: fixed !important;
+  z-index: 0;
+  min-width: 1px;
+  min-height: 1px;
+  border-radius: var(--radius-md);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.timeline-virtual-tour-target.touranchor--is-active {
+  position: fixed !important;
+}
+
 .timeline-loading-overlay,
 .timeline-resource-error {
   position: absolute;

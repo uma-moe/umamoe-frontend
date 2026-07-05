@@ -1,6 +1,6 @@
 <div class="shame-page">
   <div class="page-header">
-    <div class="header-content">
+    <div class="header-content" tourAnchor="activity-page">
       <h1>Top 100 Club Activity Reports</h1>
       <p>Every observed account in a Top 100 club is listed by default, including 0 scores. The suspicion score ranks how unusual the reconstructed activity looks; it is not proof of botting.</p>
     </div>
@@ -13,7 +13,7 @@
   ></app-ad-in-content>
 
   <div class="content-container">
-    <section class="scope-notice">
+    <section class="scope-notice" tourAnchor="activity-scope">
       <mat-icon>info</mat-icon>
       <div>
         <strong>Limited snapshot reconstruction</strong>
@@ -22,8 +22,8 @@
     </section>
 
     <ng-container *ngIf="selectedViewerId === null; else detailView">
-      <div class="filters-container">
-        <div class="search-row">
+      <div class="filters-container" tourAnchor="activity-filters">
+        <div class="search-row" tourAnchor="activity-search">
           <mat-form-field appearance="outline" class="search-field">
             <mat-label>Search by Trainer Name or Viewer ID</mat-label>
             <input matInput (input)="onSearch($event)" placeholder="Search by name or ID" [value]="searchTerm">
@@ -32,14 +32,14 @@
         </div>
 
         <div class="filter-bar">
-          <mat-form-field appearance="outline" class="compact-select sort-select">
+          <mat-form-field appearance="outline" class="compact-select sort-select" tourAnchor="activity-sort">
             <mat-icon matPrefix>sort</mat-icon>
             <mat-select [(value)]="sortBy" (selectionChange)="onSortChange()">
               <mat-option *ngFor="let option of sortOptions" [value]="option.value">{{ option.label }}</mat-option>
             </mat-select>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="compact-select days-select">
+          <mat-form-field appearance="outline" class="compact-select days-select" tourAnchor="activity-thresholds">
             <mat-icon matPrefix>calendar_today</mat-icon>
             <mat-select [(value)]="minDays" (selectionChange)="onMinDaysChange()">
               <mat-option *ngFor="let days of minDaysOptions" [value]="days">{{ days }}+ observed days</mat-option>
@@ -60,7 +60,7 @@
         </div>
       </div>
 
-      <div class="list-meta" *ngIf="!loading && !errorMessage">
+      <div class="list-meta" *ngIf="!loading && !errorMessage" tourAnchor="activity-meta">
         <span>{{ totalEntries | localeNumber }} accounts</span>
         <span *ngIf="lastRefreshedAt">Updated {{ lastRefreshedAt | date:'medium' }}</span>
       </div>
@@ -75,7 +75,7 @@
         <p>{{ errorMessage }}</p>
       </div>
 
-      <div class="leaderboard shame-list" *ngIf="!loading && !errorMessage && entries.length > 0">
+      <div class="leaderboard shame-list" *ngIf="!loading && !errorMessage && entries.length > 0" tourAnchor="activity-results">
         <ng-container *ngFor="let entry of entries; index as index; trackBy: trackByViewerId">
           <div class="shame-row"
                [ngClass]="getScoreTierClass(entry.suspicion_score)">
@@ -112,7 +112,7 @@
                 </div>
               </div>
 
-              <div class="metrics-section">
+              <div class="metrics-section" [tourAnchor]="index === 0 ? 'activity-metrics' : ''">
                 <div class="metric primary">
                   <span class="value">{{ entry.total_fan_gain | compactNumber }}</span>
                   <span class="label">Fan gain</span>
@@ -127,7 +127,7 @@
                 </div>
               </div>
 
-              <div class="score-section">
+              <div class="score-section" [tourAnchor]="index === 0 ? 'activity-score' : ''">
                 <span class="score-label">{{ getScoreBandLabel(entry.suspicion_score) }}</span>
                 <span class="score-line">
                   <span class="score-value mono">{{ entry.suspicion_score }}</span>
@@ -135,7 +135,7 @@
                 </span>
               </div>
 
-              <div class="actions">
+              <div class="actions" [tourAnchor]="index === 0 ? 'activity-detail-link' : ''">
                 <a mat-icon-button [routerLink]="['/activity', entry.viewer_id]" queryParamsHandling="preserve" matTooltip="Open activity report" aria-label="Open activity report">
                   <mat-icon>chevron_right</mat-icon>
                 </a>
@@ -159,7 +159,8 @@
         <button class="clear-filters-btn inline" *ngIf="searchTerm" (click)="clearSearch()">Clear search</button>
       </div>
 
-      <mat-paginator [length]="totalEntries"
+      <mat-paginator tourAnchor="activity-paginator"
+                     [length]="totalEntries"
                      [pageSize]="pageSize"
                      [pageSizeOptions]="[25, 50, 100, 200]"
                      [pageIndex]="page"

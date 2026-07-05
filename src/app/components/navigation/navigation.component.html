@@ -20,46 +20,51 @@
     </div>
 
     <div class="nav-links">
-      <a routerLink="/database" routerLinkActive="active" class="nav-link updated-feature">
+      <a routerLink="/database" routerLinkActive="active" class="nav-link nav-link--database updated-feature" aria-label="Database" tourAnchor="nav-database">
         <mat-icon>dataset</mat-icon>
-        <span
-          >Database<span class="updated-badge">Updated</span>
-         </span
-        >
+        <span class="nav-link-label">Database<span class="updated-badge">Updated</span></span>
       </a>
 
-      <a routerLink="/circles" routerLinkActive="active" class="nav-link">
+      <a routerLink="/circles" routerLinkActive="active" class="nav-link nav-link--clubs" aria-label="Clubs" tourAnchor="nav-clubs">
         <mat-icon>groups</mat-icon>
-        <span
-          >Clubs
-          </span
-        >
+        <span class="nav-link-label">Clubs</span>
       </a>
 
-      <a routerLink="/rankings" routerLinkActive="active" class="nav-link">
+      <a routerLink="/rankings" routerLinkActive="active" class="nav-link nav-link--rankings" aria-label="Rankings" tourAnchor="nav-rankings">
         <mat-icon>trending_up</mat-icon>
-        <span>Rankings</span>
+        <span class="nav-link-label">Rankings</span>
       </a>
 
-      <a routerLink="/activity" routerLinkActive="active" class="nav-link new-feature">
+      <a routerLink="/activity" routerLinkActive="active" class="nav-link nav-link--activity new-feature" aria-label="Activity" tourAnchor="nav-activity">
         <mat-icon>analytics</mat-icon>
-        <span>Activity<span class="new-badge">New</span></span>
+        <span class="nav-link-label">Activity<span class="new-badge">New</span></span>
       </a>
 
-      <a routerLink="/tierlist" routerLinkActive="active" class="nav-link">
+      <a routerLink="/tierlist" routerLinkActive="active" class="nav-link nav-link--tierlist" aria-label="Tierlist" tourAnchor="nav-tierlist">
         <mat-icon>leaderboard</mat-icon>
-        <span>Tierlist</span>
+        <span class="nav-link-label">Tierlist</span>
       </a>
 
-      <a routerLink="/tools" routerLinkActive="active" class="nav-link">
+      <a routerLink="/tools" routerLinkActive="active" class="nav-link nav-link--tools" aria-label="Tools" tourAnchor="nav-tools">
         <mat-icon>build</mat-icon>
-        <span>Tools</span>
+        <span class="nav-link-label">Tools</span>
       </a>
 
-      <a routerLink="/timeline" routerLinkActive="active" class="nav-link">
+      <a routerLink="/timeline" routerLinkActive="active" class="nav-link nav-link--timeline" aria-label="Timeline" tourAnchor="nav-timeline">
         <mat-icon>schedule</mat-icon>
-        <span>Timeline</span>
+        <span class="nav-link-label">Timeline</span>
       </a>
+
+      <button
+        mat-icon-button
+        type="button"
+        class="tour-start-btn"
+        (click)="startGettingStartedTour($event)"
+        aria-label="Start guided tour"
+        matTooltip="Start guided tour"
+        tourAnchor="nav-tour">
+        <mat-icon>help_outline</mat-icon>
+      </button>
 
       <button
         mat-icon-button
@@ -153,9 +158,9 @@
       </ng-container>
 
       <ng-template #loginBtn>
-        <a routerLink="/login" class="nav-link login-btn">
+        <a routerLink="/login" class="nav-link login-btn" aria-label="Sign in">
           <mat-icon>login</mat-icon>
-          <span>Sign in</span>
+          <span class="nav-link-label">Sign in</span>
         </a>
       </ng-template>
     </div>

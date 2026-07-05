@@ -12,7 +12,9 @@ import { TurnstileService } from './turnstile.service';
 export interface PartnerInheritance {
   id?: number;
   account_id: string;
+  content_hash?: string;
   main_parent_id: number;
+  scenario_id?: number;
   parent_left_id: number;
   parent_right_id: number;
   parent_rank: number;
@@ -202,9 +204,12 @@ export class PartnerService implements OnDestroy {
   }
 
   /** Delete a saved partner from the backend. */
-  deleteSaved(accountId: string): Observable<{ success: boolean; deleted: number }> {
+  deleteSaved(partner: PartnerInheritance): Observable<{ success: boolean; deleted: number }> {
+    const key = partner.id != null
+      ? `id/${encodeURIComponent(String(partner.id))}`
+      : encodeURIComponent(partner.account_id);
     return this.http.delete<{ success: boolean; deleted: number }>(
-      `${environment.apiUrl}/api/v4/partner/saved/${encodeURIComponent(accountId)}`,
+      `${environment.apiUrl}/api/v4/partner/saved/${key}`,
     );
   }
 

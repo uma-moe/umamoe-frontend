@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
+import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { Meta, Title } from '@angular/platform-browser';
 import { Subject, takeUntil } from 'rxjs';
 import { StatsService, StatsResponse } from '../../services/stats.service';
@@ -16,6 +17,7 @@ import { AdInContentComponent } from '../../components/ads/ad-in-content.compone
     RouterModule,
     MatIconModule,
     MatCardModule,
+    TourAnchorMatMenuDirective,
     LocaleNumberPipe,
     AdInContentComponent
   ],

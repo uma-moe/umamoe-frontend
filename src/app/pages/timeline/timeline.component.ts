@@ -13,6 +13,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 import { ScrollingModule, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
+import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { TimelineService } from '../../services/timeline.service';
 import { TimelineCalculation, TimelineEvent, EventType, TimelineAnniversary } from '../../models/timeline.model';
 import { MobileTimelineComponent } from '../../components/mobile-timeline/mobile-timeline.component';
@@ -45,6 +46,13 @@ interface EventFilters {
     searchQuery: string;
 }
 
+interface TourTargetRect {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+}
+
 @Component({
     selector: 'app-timeline',
     standalone: true,
@@ -63,6 +71,7 @@ interface EventFilters {
         MatProgressSpinnerModule,
         FormsModule,
         ScrollingModule,
+        TourAnchorMatMenuDirective,
         MobileTimelineComponent,
         AdInContentComponent
     ],
@@ -144,10 +153,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     cardVerticalOffsetTop = 60;     // For items above the timeline
     cardTransformOffset = 25;
     private resizeObserver?: ResizeObserver;
+    private timelineTourTargetFrame?: number;
     private viewInitialized = false;
     private destroyed = false;
     private initialTodayScrollDone = false;
     private initialTodayScrollScheduled = false;
+    timelineTourEventCardTarget: TourTargetRect = { left: 0, top: 0, width: 320, height: 220 };
+    timelineTourTodayTarget: TourTargetRect = { left: 0, top: 0, width: 420, height: 56 };
     readonly timelineLoading$ = this.timelineService.loading$;
     readonly timelineError$ = this.timelineService.error$;
     constructor(
@@ -182,8 +194,20 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             this.calculateDynamicScale();
             // Recalculate viewport for desktop timeline
             this.updateVisibleItems();
+            this.scheduleTimelineTourTargetUpdate();
         }
     }
+
+    @HostListener('window:umamoe:prepare-timeline-tour')
+    prepareTimelineTour(): void {
+        this.setFallbackTimelineTourTargets();
+        if (!this.isMobile) {
+            this.scrollToToday('auto');
+            this.cdr.detectChanges();
+        }
+        this.scheduleTimelineTourTargetUpdate();
+    }
+
     @HostListener('wheel', ['$event'])
     onWheel(event: WheelEvent): void {
         if (!this.timelineContainer || this.isMobile) return;
@@ -458,6 +482,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!this.isMobile) {
             this.generateTimelineItems();
         }
+        this.setFallbackTimelineTourTargets();
     }
     ngAfterViewInit(): void {
         this.viewInitialized = true;
@@ -499,6 +524,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.updateVisibleItemsSync(true);
         // Trigger change detection manually
         this.cdr.detectChanges();
+        this.scheduleTimelineTourTargetUpdate();
     }
     ngOnDestroy(): void {
         this.destroyed = true;
@@ -528,9 +554,122 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
         }
+        if (this.timelineTourTargetFrame !== undefined) {
+            cancelAnimationFrame(this.timelineTourTargetFrame);
+            this.timelineTourTargetFrame = undefined;
+        }
         // Reset body styles
         document.body.style.userSelect = '';
     }
+
+    private setFallbackTimelineTourTargets(): void {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const cardWidth = Math.min(320, Math.max(260, window.innerWidth - 48));
+        const cardHeight = Math.min(260, Math.max(150, window.innerHeight * 0.32));
+        const todayWidth = Math.min(420, Math.max(180, window.innerWidth - 48));
+        const todayHeight = 56;
+
+        this.timelineTourEventCardTarget = {
+            left: Math.max(24, (window.innerWidth - cardWidth) / 2),
+            top: Math.max(96, (window.innerHeight - cardHeight) / 2),
+            width: cardWidth,
+            height: cardHeight
+        };
+        this.timelineTourTodayTarget = {
+            left: Math.max(24, (window.innerWidth - todayWidth) / 2),
+            top: Math.max(120, (window.innerHeight * 0.58) - (todayHeight / 2)),
+            width: todayWidth,
+            height: todayHeight
+        };
+    }
+
+    private scheduleTimelineTourTargetUpdate(): void {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        if (this.timelineTourTargetFrame !== undefined) {
+            window.cancelAnimationFrame(this.timelineTourTargetFrame);
+        }
+
+        this.timelineTourTargetFrame = window.requestAnimationFrame(() => {
+            this.timelineTourTargetFrame = undefined;
+            if (this.destroyed) {
+                return;
+            }
+
+            this.updateTimelineTourTargetsFromDom();
+            this.cdr.detectChanges();
+        });
+    }
+
+    private updateTimelineTourTargetsFromDom(): void {
+        this.setFallbackTimelineTourTargets();
+
+        if (this.isMobile || typeof document === 'undefined' || typeof window === 'undefined') {
+            return;
+        }
+
+        const card = this.findBestVisibleTimelineElement('.desktop-timeline .event-card');
+        if (card) {
+            this.timelineTourEventCardTarget = this.rectToTourTarget(card.getBoundingClientRect());
+        }
+
+        const todayMarker = this.findBestVisibleTimelineElement('.desktop-timeline .today-label, .desktop-timeline .marker-today');
+        if (todayMarker) {
+            this.timelineTourTodayTarget = this.rectToTourTarget(todayMarker.getBoundingClientRect(), 18, 52, 160);
+        }
+    }
+
+    private findBestVisibleTimelineElement(selector: string): HTMLElement | null {
+        if (typeof document === 'undefined' || typeof window === 'undefined') {
+            return null;
+        }
+
+        const viewportCenterX = window.innerWidth / 2;
+        const viewportCenterY = window.innerHeight / 2;
+        let bestElement: HTMLElement | null = null;
+        let bestScore = Number.POSITIVE_INFINITY;
+
+        document.querySelectorAll<HTMLElement>(selector).forEach(element => {
+            const rect = element.getBoundingClientRect();
+            if (
+                rect.width <= 0 ||
+                rect.height <= 0 ||
+                rect.right <= 0 ||
+                rect.left >= window.innerWidth ||
+                rect.bottom <= 0 ||
+                rect.top >= window.innerHeight
+            ) {
+                return;
+            }
+
+            const elementCenterX = rect.left + rect.width / 2;
+            const elementCenterY = rect.top + rect.height / 2;
+            const score = Math.abs(elementCenterX - viewportCenterX) + Math.abs(elementCenterY - viewportCenterY) * 0.7;
+            if (score < bestScore) {
+                bestScore = score;
+                bestElement = element;
+            }
+        });
+
+        return bestElement;
+    }
+
+    private rectToTourTarget(rect: DOMRect, padding = 0, minHeight = 0, minWidth = 0): TourTargetRect {
+        const width = Math.max(minWidth, rect.width + padding * 2);
+        const height = Math.max(minHeight, rect.height + padding * 2);
+        return {
+            left: rect.left + rect.width / 2 - width / 2,
+            top: rect.top + rect.height / 2 - height / 2,
+            width,
+            height
+        };
+    }
+
     private generateTimelineItems(): void {
         this.allTimelineItems = [];
         // First, calculate the actual end date based on the last event
@@ -1295,6 +1434,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             }
         }
         this.visibleTimelineItems = newVisibleItems;
+        this.scheduleTimelineTourTargetUpdate();
         if (!environment.production) {
         }
     }
@@ -1378,6 +1518,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             }
         }
         this.visibleTimelineItems = newVisibleItems;
+        this.scheduleTimelineTourTargetUpdate();
         // Remove the arbitrary limit - let it render more items if needed
         // The user prefers too many items over items disappearing
         if (!environment.production) {

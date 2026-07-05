@@ -16,6 +16,7 @@ import { TimelineAvatar, TimelineAvatarService } from '../../services/timeline-a
 import { TimelinePredictionInsight, TimelinePredictionService } from '../../services/timeline-prediction.service';
 import { TimelinePredictionDialogComponent, TimelinePredictionDialogData } from '../../pages/timeline/timeline-prediction-dialog.component';
 import { AdInContentComponent } from '../ads/ad-in-content.component';
+import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 
 interface MobileTimelineItem {
     date: Date;
@@ -82,7 +83,8 @@ interface MobileTimelineEventView {
         MatFormFieldModule,
         MatInputModule,
         FormsModule,
-        AdInContentComponent
+        AdInContentComponent,
+        TourAnchorMatMenuDirective
     ],
     templateUrl: './mobile-timeline.component.html',
     styleUrls: ['./mobile-timeline.component.scss'],
@@ -757,6 +759,16 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     @HostListener('window:scroll')
     onWindowScroll(): void {
         this.scheduleVirtualTimelineUpdate();
+    }
+
+    @HostListener('window:umamoe:prepare-timeline-tour')
+    prepareTimelineTour(): void {
+        if (this.isFilterPanelExpanded) {
+            return;
+        }
+
+        this.isFilterPanelExpanded = true;
+        this.cdr.detectChanges();
     }
 
     getCharacterAvatars(event?: TimelineEvent): TimelineAvatar[] {

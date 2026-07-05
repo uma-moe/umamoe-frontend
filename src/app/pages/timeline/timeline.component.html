@@ -1,5 +1,24 @@
 <div class="timeline-page">
   <div
+    class="timeline-virtual-tour-target timeline-virtual-tour-target-card"
+    tourAnchor="timeline-event-card"
+    aria-hidden="true"
+    [style.left.px]="timelineTourEventCardTarget.left"
+    [style.top.px]="timelineTourEventCardTarget.top"
+    [style.width.px]="timelineTourEventCardTarget.width"
+    [style.height.px]="timelineTourEventCardTarget.height"
+  ></div>
+  <div
+    class="timeline-virtual-tour-target timeline-virtual-tour-target-today"
+    tourAnchor="timeline-today"
+    aria-hidden="true"
+    [style.left.px]="timelineTourTodayTarget.left"
+    [style.top.px]="timelineTourTodayTarget.top"
+    [style.width.px]="timelineTourTodayTarget.width"
+    [style.height.px]="timelineTourTodayTarget.height"
+  ></div>
+
+  <div
     class="timeline-resource-error"
     *ngIf="timelineError$ | async as timelineError"
     role="alert"
@@ -168,7 +187,7 @@
   <!-- Desktop Timeline -->
   <div *ngIf="!isMobile" class="desktop-timeline">
     <!-- Regular Header (shown when NOT in compact mode) -->
-    <div class="page-header" *ngIf="!isCompactMode">
+    <div class="page-header" *ngIf="!isCompactMode" tourAnchor="timeline-page">
       <div class="header-content">
 
         <!-- Left: Branding -->
@@ -184,10 +203,10 @@
         <div class="header-divider"></div>
 
         <!-- Right: Search + Filters -->
-        <div class="filter-controls">
+        <div class="filter-controls" tourAnchor="timeline-filters">
 
           <!-- Search row -->
-          <div class="search-row">
+          <div class="search-row" tourAnchor="timeline-search">
             <mat-form-field appearance="outline" class="search-field compact-field-dark">
               <input
                 matInput
@@ -211,7 +230,7 @@
           </div>
 
           <!-- Filter chips -->
-          <div class="filter-chips">
+          <div class="filter-chips" tourAnchor="timeline-filter-types">
             <button class="filter-chip chip-character" [class.active]="eventFilters.showCharacters" (click)="toggleCharacterFilter()">
               <mat-icon>person</mat-icon><span>Characters</span>
             </button>
@@ -240,7 +259,7 @@
     </div>
 
     <!-- Compact Header (shown when in compact mode) -->
-    <div class="compact-header" *ngIf="isCompactMode">
+    <div class="compact-header" *ngIf="isCompactMode" tourAnchor="timeline-page">
       <div class="compact-header-content">
         <h1 class="hero-title">
           <mat-icon class="page-icon">timeline</mat-icon>Timeline
@@ -267,7 +286,7 @@
       <mat-card-header> </mat-card-header>
       <mat-card-content>
         <!-- Search Field -->
-        <mat-form-field appearance="outline" class="compact-search-field compact-field-dark">
+        <mat-form-field appearance="outline" class="compact-search-field compact-field-dark" tourAnchor="timeline-search">
           <input
             matInput
             [(ngModel)]="eventFilters.searchQuery"
@@ -310,7 +329,7 @@
 
         <!-- Compact Filter Checkboxes -->
         <div class="compact-filter-section">
-          <div class="compact-filter-toggles">
+          <div class="compact-filter-toggles" tourAnchor="timeline-filter-types">
             <mat-checkbox
               [checked]="eventFilters.showCharacters"
               (change)="toggleCharacterFilter()"
@@ -393,7 +412,7 @@
     </mat-card>
 
     <!-- Timeline Container -->
-    <div class="timeline-wrapper" [class.compact-timeline]="isCompactMode">
+    <div class="timeline-wrapper" [class.compact-timeline]="isCompactMode" tourAnchor="timeline-track">
       <div
         #timelineContainer
         class="timeline-container"

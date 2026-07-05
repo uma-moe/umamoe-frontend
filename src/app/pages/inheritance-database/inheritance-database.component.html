@@ -1,6 +1,6 @@
 <div class="inheritance-database">
   <div class="page-header">
-    <div class="header-content">
+    <div class="header-content" tourAnchor="database-page">
       <h1>Database</h1>
       <p>Find optimal inheritance pairings and support cards for Uma Musume.</p>
 
@@ -10,6 +10,7 @@
           color="primary"
           (click)="openSubmitDialog()"
           class="action-btn"
+          tourAnchor="database-submit"
         >
           <mat-icon>add</mat-icon>
           Add Trainer ID
@@ -28,6 +29,7 @@
   <div class="content-container">
     <!-- Filters -->
   <app-database-filter 
+    tourAnchor="database-filter"
     [resultCount]="activeTab === 'database' ? totalRecords : filteredBookmarks.length"
     (filterChange)="onAdvancedFilterChange($event)"
     (maxFollowersToggled)="onMaxFollowersToggled($event)">
@@ -35,7 +37,7 @@
   </app-database-filter>
 
     <!-- Tab bar -->
-    <div class="tab-bar">
+    <div class="tab-bar" tourAnchor="database-tabs">
       <button class="tab-btn" [class.active]="activeTab === 'database'" (click)="switchTab('database')">
         <mat-icon>storage</mat-icon>
         Database
@@ -52,7 +54,7 @@
 
     <!-- Results Section (Database tab) -->
     <div class="results-section" [hidden]="activeTab !== 'database'">
-      <div class="results-header">
+      <div class="results-header" tourAnchor="database-results">
         <div class="results-info">
           <h2>Results</h2>
           <p *ngIf="!loading">

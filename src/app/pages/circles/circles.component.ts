@@ -11,6 +11,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
+import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil, tap } from 'rxjs';
 import { CircleService } from '../../services/circle.service';
 import { Circle, CircleSearchFilters } from '../../models/circle.model';
@@ -33,6 +34,7 @@ import { AdInContentComponent } from '../../components/ads/ad-in-content.compone
     MatChipsModule,
     MatSlideToggleModule,
     FormsModule,
+    TourAnchorMatMenuDirective,
     DiscordLinkPipe,
     AnimatedNumberComponent,
     AdInContentComponent

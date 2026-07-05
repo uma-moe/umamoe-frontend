@@ -3750,3 +3750,336 @@ html.light-theme {
     border-color: var(--factor-field-border) !important;
   }
 }
+
+.tour-intro-dialog-panel {
+  width: min(390px, calc(100vw - 24px)) !important;
+
+  .mat-mdc-dialog-container {
+    padding: 0;
+  }
+
+  .mdc-dialog__surface {
+    background: var(--surface-overlay) !important;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-dropdown) !important;
+    color: var(--text-primary);
+    overflow: hidden !important;
+  }
+
+  // Compatibility pass for older hot-loaded dialog markup.
+  app-page-tour-intro-dialog {
+    display: block;
+  }
+
+  .dialog-header {
+    align-items: flex-start !important;
+    border-bottom: 0 !important;
+    display: grid !important;
+    gap: 12px !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    padding: 18px 18px 0 !important;
+  }
+
+  .header-icon {
+    display: none !important;
+  }
+
+  .header-copy {
+    min-width: 0;
+  }
+
+  .header-copy h2 {
+    color: var(--text-primary) !important;
+    font-size: 1.08rem !important;
+    font-weight: 750 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.25 !important;
+    margin: 0 !important;
+  }
+
+  .header-copy p {
+    display: none !important;
+  }
+
+  .close-btn {
+    color: var(--text-muted) !important;
+    height: 34px !important;
+    margin: -6px -6px 0 0 !important;
+    width: 34px !important;
+  }
+
+  .dialog-content {
+    border-bottom: 0 !important;
+    display: block !important;
+    padding: 12px 18px 16px !important;
+  }
+
+  .dialog-content > p {
+    color: var(--text-primary) !important;
+    font-size: 0.94rem !important;
+    line-height: 1.55 !important;
+    margin: 0 !important;
+  }
+
+  .restart-note {
+    display: none !important;
+  }
+
+  .tour-intro__icon,
+  .tour-intro__copy > p,
+  .tour-intro__subtitle {
+    display: none !important;
+  }
+
+  .tour-intro__copy {
+    min-width: 0;
+  }
+
+  mat-dialog-content {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  mat-dialog-content .tour-intro__hint {
+    display: none !important;
+  }
+
+  mat-dialog-actions {
+    align-items: center !important;
+    border-top: 1px solid var(--border-primary);
+    display: grid !important;
+    gap: 12px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    justify-content: stretch !important;
+    margin: 0 !important;
+    padding: 14px 18px 16px !important;
+  }
+
+  mat-dialog-actions::before {
+    color: var(--text-muted);
+    content: 'Available later from the ? button.';
+    font-size: 0.78rem;
+    grid-column: 2;
+    line-height: 1.35;
+    text-align: center;
+  }
+
+  mat-dialog-actions button:first-child {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  mat-dialog-actions button[color="primary"] {
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  mat-dialog-actions button[color="primary"] .mdc-button__label {
+    font-size: 0;
+  }
+
+  mat-dialog-actions button[color="primary"] .mdc-button__label::before {
+    content: 'Start';
+    font-size: 0.875rem;
+  }
+}
+
+// Ngx UI Tour Material popovers, adapted to the uma.moe theme.
+.mat-mdc-menu-panel.tour-step.umamoe-tour-step {
+  width: min(410px, calc(100vw - 24px)) !important;
+  min-width: min(280px, calc(100vw - 24px)) !important;
+  max-width: min(410px, calc(100vw - 24px)) !important;
+  z-index: 1102 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+
+  .mat-mdc-menu-content {
+    padding: 0 !important;
+  }
+
+  .mat-mdc-card {
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    background: var(--surface-overlay) !important;
+    color: var(--text-primary) !important;
+    box-shadow: var(--shadow-dropdown);
+    overflow: hidden;
+  }
+
+  .mat-mdc-card-header {
+    padding: 14px 14px 0;
+  }
+
+  .header-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: -8px;
+    width: 100%;
+  }
+
+  .mat-mdc-card-title {
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mat-mdc-card-content {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.45;
+    margin: 8px 0;
+  }
+
+  .mat-mdc-card-actions {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px 12px;
+
+    &.no-progress {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    > * {
+      max-width: fit-content;
+    }
+
+    > *:last-child {
+      justify-self: flex-end;
+    }
+  }
+
+  .mat-mdc-button {
+    color: var(--accent-primary) !important;
+    font-weight: 700;
+  }
+
+  .close {
+    margin-right: -8px;
+  }
+
+  .progress {
+    color: var(--text-muted) !important;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
+.cdk-overlay-pane:has(.mat-mdc-menu-panel.tour-step.umamoe-tour-step) {
+  z-index: 1102 !important;
+}
+
+.cdk-overlay-container:has(.mat-mdc-menu-panel.tour-step.umamoe-tour-step) {
+  z-index: 1102 !important;
+}
+
+body[data-tour-step-id="filter-add-factor"],
+body[data-tour-step-id="filter-blue-factor-slider"],
+body[data-tour-step-id="filter-limit-break"] {
+  .mat-mdc-menu-panel.tour-step.umamoe-tour-step .next {
+    cursor: not-allowed;
+    opacity: 0.45;
+    pointer-events: none;
+  }
+}
+
+body[data-tour-step-id="timeline-page"],
+body[data-tour-step-id="timeline-track"] {
+  .cdk-overlay-pane:has(.mat-mdc-menu-panel.tour-step.umamoe-tour-step) {
+    position: fixed !important;
+    top: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+  }
+
+  .mat-mdc-menu-panel.tour-step.umamoe-tour-step {
+    margin: 0 !important;
+
+    &::before,
+    &::after {
+      display: none !important;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .cdk-overlay-pane:has(.mat-mdc-menu-panel.tour-step.umamoe-tour-step) {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+  }
+
+  .mat-mdc-menu-panel.tour-step.umamoe-tour-step {
+    width: calc(100vw - 16px) !important;
+    min-width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+
+    .mat-mdc-card-header {
+      padding: 12px 12px 0;
+    }
+
+    .mat-mdc-card-title {
+      font-size: 0.95rem;
+    }
+
+    .mat-mdc-card-content {
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    .mat-mdc-card-actions {
+      padding: 0 10px 10px;
+      gap: 2px;
+    }
+  }
+}
+
+.mat-mdc-menu-panel.tour-step.umamoe-tour-step.arrow.mat-menu-below:not(.horizontal)::after {
+  border-bottom-color: var(--surface-overlay) !important;
+}
+
+.mat-mdc-menu-panel.tour-step.umamoe-tour-step.arrow.mat-menu-below:not(.horizontal)::before {
+  border-bottom-color: var(--border-primary) !important;
+}
+
+.mat-mdc-menu-panel.tour-step.umamoe-tour-step.arrow.mat-menu-above:not(.horizontal)::after {
+  border-top-color: var(--surface-overlay) !important;
+}
+
+.mat-mdc-menu-panel.tour-step.umamoe-tour-step.arrow.mat-menu-above:not(.horizontal)::before {
+  border-top-color: var(--border-primary) !important;
+}
+
+.mat-mdc-menu-panel.tour-step.umamoe-tour-step.arrow.mat-menu-before.horizontal::after {
+  border-left-color: var(--surface-overlay) !important;
+}
+
+.mat-mdc-menu-panel.tour-step.umamoe-tour-step.arrow.mat-menu-before.horizontal::before {
+  border-left-color: var(--border-primary) !important;
+}
+
+.mat-mdc-menu-panel.tour-step.umamoe-tour-step.arrow.mat-menu-after.horizontal::after {
+  border-right-color: var(--surface-overlay) !important;
+}
+
+.mat-mdc-menu-panel.tour-step.umamoe-tour-step.arrow.mat-menu-after.horizontal::before {
+  border-right-color: var(--border-primary) !important;
+}
+
+.touranchor--is-active {
+  position: relative;
+  z-index: 1001;
+  outline: 2px solid rgba(var(--accent-primary-rgb), 0.7);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(var(--accent-primary-rgb), 0.14);
+}

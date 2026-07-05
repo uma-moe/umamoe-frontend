@@ -1,7 +1,7 @@
 <div class="home">
   <!-- Hero Section -->
   <section class="hero">
-    <div class="hero-content">
+    <div class="hero-content" tourAnchor="home-welcome">
       <div class="hero-branding">
         <div class="hero-logo-img-wrapper">
           <img
@@ -17,8 +17,8 @@
       </div>
       <p class="hero-subtitle">Umamusume resource hub for the global version</p>
 
-      <div class="quick-links">
-        <a routerLink="/database" class="quick-link inheritance updated-feature">
+      <div class="quick-links" tourAnchor="home-links">
+        <a routerLink="/database" class="quick-link inheritance updated-feature" tourAnchor="home-database-link">
           <mat-icon>dataset</mat-icon>
           <div class="link-content">
             <span class="link-title"
@@ -29,7 +29,7 @@
           </div>
         </a>
 
-        <a routerLink="/circles" class="quick-link support-cards">
+        <a routerLink="/circles" class="quick-link support-cards" tourAnchor="home-clubs-link">
           <mat-icon>groups</mat-icon>
           <div class="link-content">
             <span class="link-title"
@@ -39,7 +39,7 @@
           </div>
         </a>
 
-        <a routerLink="/rankings" class="quick-link rankings">
+        <a routerLink="/rankings" class="quick-link rankings" tourAnchor="home-rankings-link">
           <mat-icon>trending_up</mat-icon>
           <div class="link-content">
             <span class="link-title">Rankings</span>
@@ -47,7 +47,7 @@
           </div>
         </a>
 
-        <a routerLink="/tierlist" class="quick-link tierlists">
+        <a routerLink="/tierlist" class="quick-link tierlists" tourAnchor="home-tierlist-link">
           <mat-icon>leaderboard</mat-icon>
           <div class="link-content">
             <span class="link-title">Tierlists</span>
@@ -55,7 +55,7 @@
           </div>
         </a>
 
-        <a routerLink="/timeline" class="quick-link timeline">
+        <a routerLink="/timeline" class="quick-link timeline" tourAnchor="home-timeline-link">
           <mat-icon>schedule</mat-icon>
           <div class="link-content">
             <span class="link-title">Timeline</span>
@@ -63,7 +63,7 @@
           </div>
         </a>
 
-        <a routerLink="/tools" class="quick-link tools">
+        <a routerLink="/tools" class="quick-link tools" tourAnchor="home-tools-link">
           <mat-icon>build</mat-icon>
           <div class="link-content">
             <span class="link-title">Tools & Analytics</span>
@@ -81,7 +81,7 @@
   ></app-ad-in-content>
 
   <!-- Stats Grid -->
-  <section class="stats">
+  <section class="stats" tourAnchor="home-stats">
     <div class="stats-grid">
       <div class="stat-card">
         <mat-icon>task_alt</mat-icon>

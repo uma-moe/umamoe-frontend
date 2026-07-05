@@ -1,9 +1,9 @@
 <div class="tierlist-container">
   <div class="header">
-    <div class="header-content">
+    <div class="header-content" tourAnchor="tierlist-page">
       <h1>Support Card Tierlist <span class="legacy-badge">Legacy</span></h1>
       <div class="header-actions">
-        <mat-form-field appearance="outline" class="lb-selector">
+        <mat-form-field appearance="outline" class="lb-selector" tourAnchor="tierlist-lb">
           <mat-label>Limit Break Level</mat-label>
           <mat-select [(value)]="selectedLB" (selectionChange)="onLBChange($event.value)">
             <mat-select-trigger>
@@ -66,7 +66,7 @@
     </div>
   </div>
 
-  <div class="legacy-banner">
+  <div class="legacy-banner" tourAnchor="tierlist-legacy">
     <mat-icon>info</mat-icon>
     <span>This tierlist is no longer maintained and may be outdated. It remains available for reference.</span>
   </div>
@@ -90,6 +90,7 @@
       <mat-sidenav-content class="main-tierlist">
         <!-- Power chart -->
         <app-tierlist-scatter-chart
+          tourAnchor="tierlist-chart"
           [cards]="getCurrentTypeCards()"
           [selectedType]="typeTierlists[selectedTabIndex].type || -1"
           [selectedLB]="selectedLB"
@@ -101,6 +102,7 @@
         <mat-tab-group 
           [(selectedIndex)]="selectedTabIndex" 
           class="tierlist-tabs"
+          tourAnchor="tierlist-tabs"
           animationDuration="300ms">
           
           <mat-tab 
@@ -118,7 +120,7 @@
                 <p>{{ typeData.error }}</p>
               </div>
 
-              <div class="tierlist" *ngIf="!typeData.loading && !typeData.error">
+              <div class="tierlist" *ngIf="!typeData.loading && !typeData.error" tourAnchor="tierlist-rows">
                 <div 
                   class="tier-row" 
                   *ngFor="let tier of typeData.tiers"
@@ -189,7 +191,7 @@
     viewport="mobile"
   ></app-ad-in-content>
 
-  <div class="tierlist-info" *ngIf="!loading">
+  <div class="tierlist-info" *ngIf="!loading" tourAnchor="tierlist-info">
     <mat-card class="info-card">
       <mat-card-header>
         <mat-card-title>Tierlist Information</mat-card-title>

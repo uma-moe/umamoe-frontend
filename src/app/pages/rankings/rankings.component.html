@@ -1,6 +1,6 @@
 <div class="rankings-page">
   <div class="page-header">
-    <div class="header-content">
+    <div class="header-content" tourAnchor="rankings-page">
       <h1>Trainer Rankings</h1>
       <p>Global trainer fan rankings monthly, all-time, and recent gains.</p>
     </div>
@@ -15,7 +15,7 @@
 
   <div class="content-container">
     <!-- Tabs -->
-    <div class="tab-bar">
+    <div class="tab-bar" tourAnchor="rankings-tabs">
       <button class="tab-btn" [class.active]="activeTab === 'monthly'" (click)="onTabChange(0)">
         <mat-icon>calendar_month</mat-icon>
         <span>Monthly</span>
@@ -31,8 +31,8 @@
     </div>
 
     <!-- Filters -->
-    <div class="filters-container">
-      <div class="search-row">
+    <div class="filters-container" tourAnchor="rankings-filters">
+      <div class="search-row" tourAnchor="rankings-search">
         <mat-form-field appearance="outline" class="search-field">
           <mat-label>Search by Trainer Name, Viewer ID, or Circle Name</mat-label>
           <input matInput (input)="onSearch($event)" placeholder="Search by name, ID, or circle" [value]="searchTerm">
@@ -40,7 +40,7 @@
         </mat-form-field>
       </div>
 
-      <div class="filter-bar">
+      <div class="filter-bar" tourAnchor="rankings-time-controls">
         <ng-container *ngIf="activeTab === 'monthly'">
           <mat-form-field appearance="outline" class="compact-select month-select">
             <mat-icon matPrefix>event</mat-icon>
@@ -89,7 +89,7 @@
     </div>
 
     <!-- ==================== MONTHLY ==================== -->
-    <div class="leaderboard" *ngIf="!loading && activeTab === 'monthly' && monthlyRankings.length > 0">
+    <div class="leaderboard" *ngIf="!loading && activeTab === 'monthly' && monthlyRankings.length > 0" tourAnchor="rankings-results">
       <ng-container *ngFor="let entry of monthlyRankings; let i = index">
         <div class="lb-row"
              [class.top-1]="entry.rank === 1"
@@ -142,7 +142,7 @@
     </div>
 
     <!-- ==================== ALL-TIME ==================== -->
-    <div class="leaderboard" *ngIf="!loading && activeTab === 'alltime' && alltimeRankings.length > 0">
+    <div class="leaderboard" *ngIf="!loading && activeTab === 'alltime' && alltimeRankings.length > 0" tourAnchor="rankings-results">
       <ng-container *ngFor="let entry of alltimeRankings; let i = index">
         <div class="lb-row"
              [class.top-1]="getAlltimeRank(entry) === 1"
@@ -202,7 +202,7 @@
     </div>
 
     <!-- ==================== GAINS ==================== -->
-    <div class="leaderboard" *ngIf="!loading && activeTab === 'gains' && gainsRankings.length > 0">
+    <div class="leaderboard" *ngIf="!loading && activeTab === 'gains' && gainsRankings.length > 0" tourAnchor="rankings-results">
       <ng-container *ngFor="let entry of gainsRankings; let i = index">
         <div class="lb-row"
              [class.top-1]="getGainRank(entry) === 1"
@@ -259,7 +259,8 @@
     </div>
 
     <!-- Pagination -->
-    <mat-paginator [length]="totalRankings"
+    <mat-paginator tourAnchor="rankings-pagination"
+                   [length]="totalRankings"
                    [pageSize]="pageSize"
                    [pageSizeOptions]="[50, 100]"
                    [pageIndex]="page"

@@ -1,11 +1,15 @@
 import { Component, OnInit, Inject, PLATFORM_ID, HostListener } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
 import { NavigationComponent } from './components/navigation/navigation.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { SnowComponent } from './components/snow/snow.component';
 import { AdLayoutComponent } from './components/ads/ad-layout.component';
+import { TourService, TourStepTemplateComponent } from 'ngx-ui-tour-md-menu';
 import { ThemeService } from './services/theme.service';
 import { UpdateNotificationService } from './services/update-notification.service';
 import { RateLimitService } from './services/rate-limit.service';
@@ -15,6 +19,7 @@ import { TurnstileDebugState, TurnstileService } from './services/turnstile.serv
 import { GoogleAnalyticsService } from './services/google-analytics.service';
 import { FuseAdsService } from './services/fuse-ads.service';
 import { AppVersionService } from './services/app-version.service';
+import { GettingStartedTourService } from './services/getting-started-tour.service';
 import { environment } from '../environments/environment';
 import { BehaviorSubject, Observable, combineLatest, map, of, switchMap, take, timer } from 'rxjs';
 
@@ -46,8 +51,12 @@ interface TurnstileRecoveryNotice {
     NavigationComponent,
     FooterComponent,
     SnowComponent,
+    MatButtonModule,
+    MatCardModule,
     MatDialogModule,
+    MatIconModule,
     AdLayoutComponent,
+    TourStepTemplateComponent,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
@@ -61,7 +70,6 @@ export class AppComponent implements OnInit {
 
   constructor(
     private themeService: ThemeService,
-    private dialog: MatDialog,
     private updateNotificationService: UpdateNotificationService,
     private rateLimitService: RateLimitService,
     private authService: AuthService,
@@ -70,6 +78,8 @@ export class AppComponent implements OnInit {
     private googleAnalyticsService: GoogleAnalyticsService,
     private fuseAdsService: FuseAdsService,
     private appVersionService: AppVersionService,
+    private gettingStartedTourService: GettingStartedTourService,
+    public tourService: TourService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.turnstileRecovery$ = combineLatest([
@@ -101,6 +111,7 @@ export class AppComponent implements OnInit {
     this.fuseAdsService.init();
     this.googleAnalyticsService.init();
     this.appVersionService.init();
+    this.gettingStartedTourService.init();
 
     // Handle OAuth token from any URL (backend redirects to /?token=...)
     if (isPlatformBrowser(this.platformId)) {

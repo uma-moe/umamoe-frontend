@@ -12,6 +12,8 @@ import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/ma
 import { MatChipsModule } from '@angular/material/chips';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
+import { Direction, TourState } from 'ngx-ui-tour-core';
+import { TourAnchorMatMenuDirective, TourService } from 'ngx-ui-tour-md-menu';
 import { Subject } from 'rxjs';
 import { debounceTime, takeUntil, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
@@ -54,6 +56,13 @@ export interface ActiveFilterChip {
 }
 export type FilterMode = 'basic' | 'advanced' | 'uql';
 export type UqlValidationState = 'empty' | 'valid' | 'incomplete' | 'invalid';
+
+interface FilterChangeOptions {
+  emitImmediately?: boolean;
+  markStructuredDirtyForUql?: boolean;
+  persist?: boolean;
+  suppressEmit?: boolean;
+}
 
 export interface UqlSnippet {
   label: string;
@@ -344,6 +353,7 @@ export interface FactorFilter {
     MatAutocompleteModule,
     MatChipsModule,
     FormsModule,
+    TourAnchorMatMenuDirective,
     RaceSchedulerComponent,
     VeteranDisplayComponent,
     AdvancedFilterPanelComponent,
@@ -581,6 +591,33 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   activeFilterChips: ActiveFilterChip[] = [];
   // Collapsible section state
   collapsedSections = new Set<string>();
+  private filterTourStateBeforeStart: { isExpanded: boolean; filterMode: FilterMode; collapsedSections: string[] } | null = null;
+  private tourFilterSearchSuppressedUntil = 0;
+  tourBlueFactorAnchorUuid: string | null = null;
+  private readonly guidedTourStepOrder = [
+    'database-page',
+    'add-trainer',
+    'filter-open',
+    'filter-modes',
+    'filter-presets',
+    'filter-affinity',
+    'filter-target',
+    'filter-veteran',
+    'filter-add-factor',
+    'filter-blue-factor-row',
+    'filter-blue-factor-slider',
+    'filter-star-range',
+    'filter-support-card',
+    'filter-limit-break',
+    'filter-include-exclude',
+    'filter-trainer-search',
+    'filter-main-parent-factors',
+    'filter-preferred-white',
+    'filter-lineage-white',
+    'filter-race-schedule',
+    'tabs',
+    'results',
+  ];
   // Scroll-aware floating button state
   showFloatingBtn = false;
   floatingBtnMode: 'results' | 'top' = 'results';
@@ -615,6 +652,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.updateUqlSuggestions();
     this.filterPresets = this.readFilterPresets();
     this.restoreInitialFilterModePreference();
+    this.registerTourPreparationHandlers();
     // Keep Quick Filters open on desktop; mobile still starts compact below.
     if (window.innerWidth <= 600) {
       this.collapsedSections.add('quickFilters');
@@ -638,6 +676,113 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.factorService.getFactors()
       .pipe(takeUntil(this.destroy$))
       .subscribe(factors => this.setFactorOptions(factors));
+  }
+
+  private registerTourPreparationHandlers(): void {
+    this.tourService.stepHide$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(({ step, direction }) => {
+        const stepId = this.getAdjacentTourStepId(step.stepId, direction);
+        if (stepId) {
+          this.prepareForTourStep(stepId);
+        }
+      });
+
+    this.tourService.stepShow$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(({ step }) => this.prepareForTourStep(step.stepId));
+
+    this.tourService.end$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.restoreFilterStateAfterTour());
+  }
+
+  private getAdjacentTourStepId(currentStepId: string | undefined, direction: Direction): string | null {
+    if (!currentStepId) return null;
+    const currentIndex = this.guidedTourStepOrder.indexOf(currentStepId);
+    if (currentIndex < 0) return null;
+    const offset = direction === Direction.Backwards ? -1 : 1;
+    return this.guidedTourStepOrder[currentIndex + offset] ?? null;
+  }
+
+  private prepareForTourStep(stepId: string | undefined): void {
+    switch (stepId) {
+      case 'filter-open':
+      case 'filter-modes':
+      case 'filter-presets':
+        this.prepareTourFilterMode(this.filterMode);
+        break;
+      case 'filter-affinity':
+      case 'filter-target':
+      case 'filter-veteran':
+        this.prepareTourFilterMode('basic', ['inheritanceFactors']);
+        break;
+      case 'filter-add-factor':
+      case 'filter-blue-factor-row':
+      case 'filter-blue-factor-slider':
+      case 'filter-star-range':
+        this.prepareTourFilterMode('basic', ['inheritanceFactors']);
+        break;
+      case 'filter-support-card':
+      case 'filter-limit-break':
+        this.prepareTourFilterMode('basic', ['generalCriteria', 'mSupportCard']);
+        break;
+      case 'filter-include-exclude':
+        this.prepareTourFilterMode('advanced', ['quickFilters', 'mLegacyTree']);
+        break;
+      case 'filter-trainer-search':
+        this.prepareTourFilterMode('advanced', ['quickFilters', 'mSearchUsers']);
+        break;
+      case 'filter-main-parent-factors':
+        this.prepareTourFilterMode('advanced', ['mainParentFactors']);
+        break;
+      case 'filter-preferred-white':
+      case 'filter-lineage-white':
+        this.prepareTourFilterMode('advanced', ['inheritanceFactors']);
+        break;
+      case 'filter-race-schedule':
+        this.prepareTourFilterMode('advanced', ['raceSchedule']);
+        break;
+    }
+  }
+
+  private prepareTourFilterMode(mode: FilterMode, openSections: string[] = []): void {
+    this.captureFilterTourState();
+    if (this.filterMode !== mode) {
+      this.skipSavedStateRestoreOnNextModeSwitch = true;
+      this.setFilterMode(mode);
+    }
+
+    this.isExpanded = true;
+    openSections.forEach(section => this.collapsedSections.delete(section));
+    setTimeout(() => this.setupWrappingDetection(), 0);
+    setTimeout(() => this.updateFloatingBtnState(), 350);
+    this.cdr.markForCheck();
+  }
+
+  private captureFilterTourState(): void {
+    if (this.filterTourStateBeforeStart) return;
+    this.filterTourStateBeforeStart = {
+      isExpanded: this.isExpanded,
+      filterMode: this.filterMode,
+      collapsedSections: [...this.collapsedSections],
+    };
+  }
+
+  private restoreFilterStateAfterTour(): void {
+    const previousState = this.filterTourStateBeforeStart;
+    if (!previousState) return;
+    this.filterTourStateBeforeStart = null;
+
+    if (this.filterMode !== previousState.filterMode) {
+      this.skipSavedStateRestoreOnNextModeSwitch = true;
+      this.setFilterMode(previousState.filterMode);
+    }
+    this.isExpanded = previousState.isExpanded;
+    this.collapsedSections = new Set(previousState.collapsedSections);
+    setTimeout(() => this.setupWrappingDetection(), 0);
+    setTimeout(() => this.updateFloatingBtnState(), 350);
+    this.cdr.markForCheck();
   }
 
   private setFactorOptions(factors: any[]): void {
@@ -669,7 +814,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     private profileService: ProfileService,
     private elementRef: ElementRef,
     private ngZone: NgZone,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private tourService: TourService
   ) {
     this.rebuildUqlDerivedCaches();
   }
@@ -1759,7 +1905,21 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       .map(f => `${f.factorId!}:${this.normalizePriorityGroup(f.priority)}`);
   }
   // --- Factor Filter Management ---
-  addFactorFilter(list: FactorFilter[], defaultFactorId: number | null, type?: 'green' | 'white' | 'mainWhite' | 'mainGreen' | 'optionalWhite' | 'optionalMainWhite' | 'lineageWhite') {
+  addBlueFactorFilter() {
+    const shouldAdvanceTour = this.tourService.currentStep?.stepId === 'filter-add-factor';
+    this.addFactorFilter(this.blueFactorFilters, 0, undefined, this.getTourFilterChangeOptions(shouldAdvanceTour));
+    if (shouldAdvanceTour) {
+      this.tourBlueFactorAnchorUuid = this.blueFactorFilters[this.blueFactorFilters.length - 1]?.uuid ?? null;
+      this.advanceTourAfterInteractiveAction('filter-add-factor', 'filter-blue-factor-row');
+    }
+  }
+
+  addFactorFilter(
+    list: FactorFilter[],
+    defaultFactorId: number | null,
+    type?: 'green' | 'white' | 'mainWhite' | 'mainGreen' | 'optionalWhite' | 'optionalMainWhite' | 'lineageWhite',
+    options: FilterChangeOptions = {},
+  ) {
     list.push({
       uuid: this.getUuid(),
       factorId: defaultFactorId,
@@ -1782,7 +1942,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     // Only trigger filter change if a valid factor is already selected
     // For white factors with null default, don't trigger until user selects something
     if (defaultFactorId !== null) {
-      this.onFilterChange();
+      this.onFilterChange(options);
     }
   }
   removeFactorFilter(list: FactorFilter[], index: number, type?: 'green' | 'white' | 'mainWhite' | 'mainGreen' | 'optionalWhite' | 'optionalMainWhite' | 'lineageWhite') {
@@ -2209,7 +2369,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     });
     return groups;
   }
-  onFilterChange(options: { emitImmediately?: boolean; markStructuredDirtyForUql?: boolean; persist?: boolean } = {}) {
+  onFilterChange(options: FilterChangeOptions = {}) {
     this.validateUqlQuery();
     this.syncUqlFilterState();
     // Sanitize star sum filters - convert null to undefined and clamp values
@@ -2359,7 +2519,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.skipSavedStateRestoreOnNextModeSwitch = false;
       this.persistCurrentFilterState();
     }
-    this.emitFilterChange(options.emitImmediately === true);
+    if (options.suppressEmit !== true) {
+      this.emitFilterChange(options.emitImmediately === true);
+    }
   }
 
   private emitFilterChange(immediate = false): void {
@@ -7269,6 +7431,44 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   setLimitBreak(level: number) {
     this.selectedLimitBreak = level;
     this.onFilterChange();
+  }
+  onLimitBreakSliderChange() {
+    const shouldAdvanceTour = this.tourService.currentStep?.stepId === 'filter-limit-break';
+    this.onFilterChange(this.getTourFilterChangeOptions(shouldAdvanceTour));
+    if (shouldAdvanceTour) {
+      this.advanceTourAfterInteractiveAction('filter-limit-break', 'filter-include-exclude');
+    }
+  }
+  onBlueFactorSliderChange() {
+    const shouldAdvanceTour = this.tourService.currentStep?.stepId === 'filter-blue-factor-slider';
+    this.onFilterChange(this.getTourFilterChangeOptions(shouldAdvanceTour));
+    if (shouldAdvanceTour) {
+      this.advanceTourAfterInteractiveAction('filter-blue-factor-slider', 'filter-star-range');
+    }
+  }
+  private getTourFilterChangeOptions(isTourInstruction: boolean): FilterChangeOptions {
+    if (isTourInstruction) {
+      this.tourFilterSearchSuppressedUntil = Date.now() + 2500;
+    }
+    return isTourInstruction || Date.now() < this.tourFilterSearchSuppressedUntil
+      ? { persist: false, suppressEmit: true }
+      : {};
+  }
+  private advanceTourAfterInteractiveAction(currentStepId: string, nextStepId: string) {
+    const advance = () => {
+      if (this.tourService.currentStep?.stepId === nextStepId) return;
+      if (this.tourService.getStatus() === TourState.ON && this.tourService.currentStep?.stepId === currentStepId) {
+        this.tourService.next();
+        return;
+      }
+      if (this.tourService.getStatus() === TourState.OFF) {
+        this.tourService.startAt(nextStepId);
+      }
+    };
+
+    setTimeout(advance, 180);
+    setTimeout(advance, 720);
+    setTimeout(advance, 1600);
   }
   toggleLimitBreak(level: number) {
     if (this.selectedLimitBreak === level) {

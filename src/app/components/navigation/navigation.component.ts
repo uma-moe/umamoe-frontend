@@ -6,9 +6,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { ThemeService } from '../../services/theme.service';
 import { AuthService } from '../../services/auth.service';
 import { StatusService, OverallStatus, EndpointStatus } from '../../services/status.service';
+import { GettingStartedTourService } from '../../services/getting-started-tour.service';
 import { LinkedAccount } from '../../models/auth.model';
 import { getCharacterById } from '../../data/character.data';
 @Component({
@@ -21,7 +23,8 @@ import { getCharacterById } from '../../data/character.data';
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
-    MatTooltipModule
+    MatTooltipModule,
+    TourAnchorMatMenuDirective
   ],
   templateUrl: './navigation.component.html',
   styleUrl: './navigation.component.scss'
@@ -42,7 +45,8 @@ export class NavigationComponent {
     private router: Router,
     private themeService: ThemeService,
     public authService: AuthService,
-    private statusService: StatusService
+    private statusService: StatusService,
+    private gettingStartedTourService: GettingStartedTourService
   ) {}
 
   toggleUserMenu(event: Event) {
@@ -93,6 +97,10 @@ export class NavigationComponent {
   }
   toggleColorMode() {
     this.themeService.toggleColorMode();
+  }
+  startGettingStartedTour(event: Event) {
+    event.stopPropagation();
+    this.gettingStartedTourService.startForCurrentPage();
   }
   onLogoError(event: Event) {
     const target = event.target as HTMLImageElement;
