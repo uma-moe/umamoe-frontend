@@ -368,9 +368,20 @@ jobs:
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+          REMOTE_SHELL_DIR: ${{ env.BETA_REMOTE_SHELL_DIR }}
+          REMOTE_ASSETS_DIR: ${{ env.BETA_REMOTE_ASSETS_DIR }}
         run: |
+          set -euo pipefail
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "mkdir -p '${{ env.BETA_REMOTE_SHELL_DIR }}' '${{ env.BETA_REMOTE_ASSETS_DIR }}/data'"
+            "set -e;
+             mkdir -p '$REMOTE_SHELL_DIR' '$REMOTE_ASSETS_DIR/data';
+             chmod u+rwx '$REMOTE_ASSETS_DIR' '$REMOTE_ASSETS_DIR/data' 2>/dev/null || true;
+             if ! touch '$REMOTE_ASSETS_DIR/data/.rsync-write-test' 2>/dev/null; then
+               echo 'Remote assets data directory is not writable by the deploy user: $REMOTE_ASSETS_DIR/data' >&2;
+               echo 'Fix ownership on the server, for example: sudo chown -R $DEPLOY_USER $REMOTE_ASSETS_DIR/data' >&2;
+               exit 1;
+             fi;
+             rm -f '$REMOTE_ASSETS_DIR/data/.rsync-write-test'"
 
       - name: Deploy beta shell bundle
         shell: bash
@@ -652,9 +663,20 @@ jobs:
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+          REMOTE_SHELL_DIR: ${{ env.PROD_REMOTE_SHELL_DIR }}
+          REMOTE_ASSETS_DIR: ${{ env.PROD_REMOTE_ASSETS_DIR }}
         run: |
+          set -euo pipefail
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "mkdir -p '${{ env.PROD_REMOTE_SHELL_DIR }}' '${{ env.PROD_REMOTE_ASSETS_DIR }}/data'"
+            "set -e;
+             mkdir -p '$REMOTE_SHELL_DIR' '$REMOTE_ASSETS_DIR/data';
+             chmod u+rwx '$REMOTE_ASSETS_DIR' '$REMOTE_ASSETS_DIR/data' 2>/dev/null || true;
+             if ! touch '$REMOTE_ASSETS_DIR/data/.rsync-write-test' 2>/dev/null; then
+               echo 'Remote assets data directory is not writable by the deploy user: $REMOTE_ASSETS_DIR/data' >&2;
+               echo 'Fix ownership on the server, for example: sudo chown -R $DEPLOY_USER $REMOTE_ASSETS_DIR/data' >&2;
+               exit 1;
+             fi;
+             rm -f '$REMOTE_ASSETS_DIR/data/.rsync-write-test'"
 
       - name: Deploy production shell bundle
         shell: bash
