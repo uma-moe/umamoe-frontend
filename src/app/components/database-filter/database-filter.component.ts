@@ -244,6 +244,7 @@ interface SavedDatabaseFilterState {
   formState?: string;
   uqlState?: string;
   defaultMlbFilterRemoved?: boolean;
+  hiddenP2ContextRemoved?: boolean;
 }
 
 interface SavedDatabaseFilterPreset {
@@ -999,14 +1000,15 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
   // --- Serialization Logic ---
-  getSerializedState(options: { shareable?: boolean } = {}): string {
+  getSerializedState(options: { shareable?: boolean; includeP2Context?: boolean } = {}): string {
     const state: CompressedState = {};
+    const includeP2Context = options.includeP2Context !== false;
     const shouldSanitizeOwnedLegacy = options.shareable === true
       || (!!this.selectedVeteran && !this.canShareSelectedVeteranAsOwnedLegacyDirective());
     const normalizedUql = shouldSanitizeOwnedLegacy ? this.getShareableSerializedUqlQuery() : this.getNormalizedUqlQuery();
     if (normalizedUql) state.uql = normalizedUql;
     if (this.filterMode === 'uql') {
-      this.addSerializedP2Context(state);
+      if (includeP2Context) this.addSerializedP2Context(state);
       if (Object.keys(state).length === 0) {
         return '';
       }
@@ -1075,7 +1077,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       const encoded = this.raceScheduler.getEncodedSelection();
       if (encoded.length) state.rs = encoded;
     }
-    this.addSerializedP2Context(state);
+    if (includeP2Context) this.addSerializedP2Context(state);
     if (this.selectedVeteran && this.selectedAccountId && this.selectedVeteran.member_id != null) {
       state.vet = [this.selectedAccountId, this.selectedVeteran.member_id];
     }
@@ -1173,12 +1175,19 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         mode: savedMode ?? parsed.mode,
         formState: parsed.formState,
         uqlState: parsed.uqlState,
-        defaultMlbFilterRemoved: parsed.defaultMlbFilterRemoved === true
+        defaultMlbFilterRemoved: parsed.defaultMlbFilterRemoved === true,
+        hiddenP2ContextRemoved: parsed.hiddenP2ContextRemoved === true
       };
-      return this.migrateSavedDefaultMlbFilter(state);
+      return this.migrateSavedFilterState(state);
     } catch {
       return null;
     }
+  }
+
+  private migrateSavedFilterState(state: SavedDatabaseFilterState): SavedDatabaseFilterState {
+    let migrated = this.migrateSavedDefaultMlbFilter(state);
+    migrated = this.migrateSavedHiddenP2Context(migrated);
+    return migrated;
   }
 
   private migrateSavedDefaultMlbFilter(state: SavedDatabaseFilterState): SavedDatabaseFilterState {
@@ -1213,6 +1222,40 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
 
     return stateStr;
+  }
+
+  private migrateSavedHiddenP2Context(state: SavedDatabaseFilterState): SavedDatabaseFilterState {
+    if (state.hiddenP2ContextRemoved) {
+      return state;
+    }
+
+    const migrated: SavedDatabaseFilterState = {
+      ...state,
+      formState: state.formState ? this.removeHiddenP2ContextFromSerializedState(state.formState) : state.formState,
+      uqlState: state.uqlState ? this.removeHiddenP2ContextFromSerializedState(state.uqlState) : state.uqlState,
+      hiddenP2ContextRemoved: true
+    };
+
+    try {
+      localStorage.setItem(DatabaseFilterComponent.SAVED_FILTER_STATE_KEY, JSON.stringify(migrated));
+    } catch {
+      // Ignore unavailable storage; returning the migrated state is enough for this session.
+    }
+
+    return migrated;
+  }
+
+  private removeHiddenP2ContextFromSerializedState(stateStr: string): string {
+    try {
+      const state: CompressedState = JSON.parse(this.decodeBase64Utf8(stateStr));
+      delete state.p2c;
+      delete state.p2w;
+      delete state.p2i;
+      if (Object.keys(state).length === 0) return '';
+      return this.encodeBase64Utf8(JSON.stringify(state));
+    } catch {
+      return stateStr;
+    }
   }
 
   private readUqlQueryFromSerializedState(stateStr: string | undefined): string {
@@ -1580,7 +1623,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         mode: this.filterMode,
         formState: previous?.formState,
         uqlState: previous?.uqlState,
-        defaultMlbFilterRemoved: true
+        defaultMlbFilterRemoved: true,
+        hiddenP2ContextRemoved: true
       };
       localStorage.setItem(DatabaseFilterComponent.SAVED_FILTER_STATE_KEY, JSON.stringify(next));
     } catch {
@@ -1596,13 +1640,14 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         mode: this.filterMode,
         formState: previous?.formState,
         uqlState: previous?.uqlState,
-        defaultMlbFilterRemoved: true
+        defaultMlbFilterRemoved: true,
+        hiddenP2ContextRemoved: true
       };
 
       if (this.filterMode === 'uql') {
-        next.uqlState = this.getSerializedState();
+        next.uqlState = this.getSerializedState({ includeP2Context: false });
       } else {
-        next.formState = this.getSerializedState();
+        next.formState = this.getSerializedState({ includeP2Context: false });
       }
 
       localStorage.setItem(DatabaseFilterComponent.SAVED_FILTER_MODE_KEY, this.filterMode);
@@ -1624,14 +1669,13 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.restoredSavedFilterState || this.hasFiltersQueryParam()) return;
     const saved = this.readSavedFilterState();
     if (!saved) return;
-    const serialized = saved.mode === 'uql'
-      ? (saved.uqlState || saved.formState)
-      : (saved.formState || saved.uqlState);
+    const serialized = saved.mode === 'uql' ? saved.uqlState : saved.formState;
 
     this.restoredSavedFilterState = true;
     if (!serialized) {
       this.restoreSavedFilterMode(saved.mode);
       this.persistCurrentFilterMode();
+      this.emitFilterChange(true);
       return;
     }
 
@@ -1662,6 +1706,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         this.skipSavedStateRestoreOnNextModeSwitch = true;
       }
       const state: CompressedState = JSON.parse(this.decodeBase64Utf8(stateStr));
+      this.clearStructuredFilters();
       if (modeOverride) {
         this.filterMode = modeOverride;
       } else if (state.fm === 'basic' || state.fm === 'advanced' || state.fm === 'uql') {
@@ -1697,24 +1742,6 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
           if (type === 'mainGreen') this.filteredMainGreenFactorOptions.push([...this.greenFactors]);
         });
       };
-      // Clear existing
-      this.blueFactorFilters = [];
-      this.pinkFactorFilters = [];
-      this.greenFactorFilters = [];
-      this.whiteFactorFilters = [];
-      this.mainBlueFactorFilters = [];
-      this.mainPinkFactorFilters = [];
-      this.mainGreenFactorFilters = [];
-      this.mainWhiteFactorFilters = [];
-      this.optionalWhiteFactorFilters = [];
-      this.optionalMainWhiteFactorFilters = [];
-      this.lineageWhiteFactorFilters = [];
-      this.filteredGreenFactorOptions = [];
-      this.filteredWhiteFactorOptions = [];
-      this.filteredMainWhiteFactorOptions = [];
-      this.filteredOptionalWhiteFactorOptions = [];
-      this.filteredOptionalMainWhiteFactorOptions = [];
-      this.filteredLineageWhiteFactorOptions = [];
       restoreFactors(state.b, this.blueFactorFilters);
       restoreFactors(state.p, this.pinkFactorFilters);
       restoreFactors(state.g, this.greenFactorFilters, 'green');
