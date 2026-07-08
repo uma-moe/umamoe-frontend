@@ -169,6 +169,9 @@ const PRIVACY_CONTROLS_RETRY_MS = 250;
 const PRIVACY_CONTROLS_MAX_RETRIES = 32;
 const RETAINED_AD_CREATIVE_TTL_MS = 15000;
 type AdDebugLevel = 'debug' | 'warn' | 'error';
+interface BeginPageViewOptions {
+  allowPageInit?: boolean;
+}
 
 @Injectable({ providedIn: 'root' })
 export class FuseAdsService {
@@ -221,6 +224,7 @@ export class FuseAdsService {
   private fuseApiBlocked = false;
   private fuseDebugCallbacksAttached = false;
   private providerStickyFooterDismissed = false;
+  private pageInitAllowed = true;
   private retainedCreatives = new Map<string, RetainedAdCreative>();
   private localConsent: CookieConsent | null = null;
   private consentSub?: Subscription;
@@ -248,8 +252,9 @@ export class FuseAdsService {
     return this.debugEnabled;
   }
 
-  beginPageView(reason: string, preloadFuseIds: string[] = []): void {
+  beginPageView(reason: string, preloadFuseIds: string[] = [], options: BeginPageViewOptions = {}): void {
     this.syncProviderStickyFooterFlag();
+    this.pageInitAllowed = options.allowPageInit ?? true;
 
     if (this.fuseCallFlushTimer !== null && isPlatformBrowser(this.platformId)) {
       this.window.clearTimeout(this.fuseCallFlushTimer);
@@ -262,10 +267,23 @@ export class FuseAdsService {
     this.pendingFuseCalls = this.pendingFuseCalls.filter(call => call.persistent);
     const clearedPendingFuseCalls = pendingBeforeReset - this.pendingFuseCalls.length;
     this.registeredZones = new Map(this.persistentZones);
-    this.debug('page view ad state reset', { reason, clearedPendingFuseCalls, preloadFuseIds });
+    this.debug('page view ad state reset', {
+      reason,
+      clearedPendingFuseCalls,
+      preloadFuseIds,
+      pageInitAllowed: this.pageInitAllowed,
+    });
 
     if (!preloadFuseIds.length) {
       this.clearRetainedCreatives('page has no preloadable slots');
+      return;
+    }
+
+    if (!this.pageInitAllowed) {
+      this.debug('pageInit suppressed for initial page load preload', {
+        reason,
+        preloadFuseIds,
+      });
       return;
     }
 
@@ -339,6 +357,15 @@ export class FuseAdsService {
     this.syncProviderStickyFooterFlag();
 
     const blockingFuseIds = [...new Set(fuseIds.filter(Boolean))];
+    if (!this.pageInitAllowed) {
+      this.debug('pageInit suppressed for initial page load', {
+        reason,
+        requestedFuseIds: fuseIds,
+        blockingFuseIds,
+      });
+      return;
+    }
+
     if (!this.canUseFuse || blockingFuseIds.length === 0) {
       this.debugWarn('pageInit skipped', {
         reason,
@@ -369,6 +396,14 @@ export class FuseAdsService {
     this.enqueueFuseCall(fusetag => {
       this.debug('registerZone executing', { zoneElementId, fuseId });
       fusetag.registerZone?.(zoneElementId);
+      if (!this.pageInitAllowed) {
+        this.debug('pageInit suppressed for initial page load zone registration', {
+          zoneElementId,
+          fuseId,
+        });
+        return;
+      }
+
       this.schedulePageInit([fuseId], `zone registered:${zoneElementId}`);
     }, `registerZone:${zoneElementId}:${fuseId}`);
   }
@@ -392,6 +427,14 @@ export class FuseAdsService {
     this.enqueueFuseCall(fusetag => {
       this.debug('registerPersistentZone executing', { zoneElementId, fuseId });
       fusetag.registerZone?.(zoneElementId);
+      if (!this.pageInitAllowed) {
+        this.debug('persistent pageInit suppressed for initial page load', {
+          zoneElementId,
+          fuseId,
+        });
+        return;
+      }
+
       fusetag.pageInit?.({
         blockingFuseIds: [fuseId],
         blockingTimeout: this.fuseBlockingTimeoutMs,

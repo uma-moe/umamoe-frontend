@@ -77,6 +77,8 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   private providerStickyFooterDismissHandler?: (event: Event) => void;
   private providerStickyFooterObserver: MutationObserver | null = null;
   private providerStickyFooterMeasureFrame: number | null = null;
+  private initialSyncedUrl = '';
+  private hasHandledRouterNavigation = false;
 
   constructor(
     private router: Router,
@@ -109,11 +111,16 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
       this.scheduleSideRailLayout(true);
     });
-    this.syncConfig(this.router.url);
+    this.initialSyncedUrl = this.router.url;
+    this.syncConfig(this.initialSyncedUrl, false);
     this.routerSub = this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe(event => {
-        this.syncConfig(event.urlAfterRedirects);
+        const eventUrl = event.urlAfterRedirects;
+        const isInitialNavigationEcho = !this.hasHandledRouterNavigation
+          && this.urlsMatch(eventUrl, this.initialSyncedUrl);
+        this.hasHandledRouterNavigation = true;
+        this.syncConfig(eventUrl, !isInitialNavigationEcho);
       });
   }
 
@@ -144,7 +151,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.scheduleSideRailLayout();
   }
 
-  private syncConfig(url: string): void {
+  private syncConfig(url: string, allowPageInit: boolean): void {
     this.updateFallbackPreviewState();
     const nextConfig = getAdRouteConfig(url);
     const preserveVisibleSideRails = this.sideRailsVisible
@@ -155,11 +162,14 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.leftSideRailCollapsed = false;
     this.rightSideRailCollapsed = false;
     this.updateContentTopAllowed();
-    this.fuseAdsService.beginPageView(url, this.getPageSwapPreloadFuseIds(this.config));
+    this.fuseAdsService.beginPageView(url, this.getPageSwapPreloadFuseIds(this.config), {
+      allowPageInit,
+    });
     this.updateBottomPopupRootState();
     this.fuseAdsService.debug('route ad config synced', {
       url,
       enabled: this.config.enabled,
+      allowPageInit,
       contentTopAllowed: this.contentTopAllowed,
       sideRails: this.config.sideRails
         ? {
@@ -178,6 +188,14 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
   private updateFallbackPreviewState(): void {
     this.fallbackPreviewEnabled = isAdFallbackPreviewEnabled(this.document);
+  }
+
+  private urlsMatch(left: string, right: string): boolean {
+    return this.stripUrlFragment(left) === this.stripUrlFragment(right);
+  }
+
+  private stripUrlFragment(url: string): string {
+    return (url || '/').split('#')[0];
   }
 
   get adLayoutActive(): boolean {
