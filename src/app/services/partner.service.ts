@@ -171,22 +171,42 @@ export class PartnerService implements OnDestroy {
         next: created => {
           // Backend already had cached data — no streaming needed.
           if (created.task_id == null) {
-            const result = created.result ?? null;
-            const inh = result?.inheritance ? { ...result.inheritance, trainer_name: result.trainer_name ?? null } : null;
+            const inh = this.inheritanceFromLookupResult(created.result);
             if (!isLoggedIn && inh) { this.saveAnon(inh, label); }
             subscriber.next({ kind: 'completed', taskId: 0, inheritance: inh });
             subscriber.complete();
             return;
           }
+          let awaitingAnonymousResult = false;
           const inner = this.streamLookup(created.task_id).subscribe({
             next: evt => {
+              if (evt.kind === 'completed' && !evt.inheritance && !isLoggedIn) {
+                awaitingAnonymousResult = true;
+                const followup = this.createLookup(partnerId, label).subscribe({
+                  next: refreshed => {
+                    const inh = this.inheritanceFromLookupResult(refreshed.result);
+                    if (inh) {
+                      this.saveAnon(inh, label);
+                    }
+                    subscriber.next({ kind: 'completed', taskId: evt.taskId, inheritance: inh });
+                    subscriber.complete();
+                  },
+                  error: err => subscriber.error(err),
+                });
+                subscriber.add(followup);
+                return;
+              }
               if (evt.kind === 'completed' && evt.inheritance && !isLoggedIn) {
                 this.saveAnon(evt.inheritance, label);
               }
               subscriber.next(evt);
             },
             error: err => subscriber.error(err),
-            complete: () => subscriber.complete(),
+            complete: () => {
+              if (!awaitingAnonymousResult) {
+                subscriber.complete();
+              }
+            },
           });
           subscriber.add(inner);
         },
@@ -194,6 +214,12 @@ export class PartnerService implements OnDestroy {
       });
       subscriber.add(sub);
     });
+  }
+
+  private inheritanceFromLookupResult(result?: PartnerLookupResult | null): PartnerInheritance | null {
+    return result?.inheritance
+      ? { ...result.inheritance, trainer_name: result.trainer_name ?? null }
+      : null;
   }
 
   /** List of partner inheritances saved to the backend for the current user. */
