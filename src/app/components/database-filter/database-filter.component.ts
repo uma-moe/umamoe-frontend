@@ -3396,6 +3396,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.uqlValidationState === 'valid' && this.compiledUqlQuery) {
       state.uql = this.compiledUqlQuery;
       state.uql_highlight = this.buildUqlSparkHighlight(this.compiledUqlQuery);
+      // A follower predicate is the user's explicit replacement for the normal
+      // max-follower exclusion. Without this, the service adds its default 999
+      // cap and makes predicates such as "Followers = 1000" impossible.
+      if (/\bfollower_num\b/i.test(this.compiledUqlQuery)) {
+        state.max_follower_num = 1000;
+      }
     }
     if (this.treeData.characterId) {
       state.player_chara_id = this.treeData.characterId;
