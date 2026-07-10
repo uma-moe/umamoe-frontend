@@ -391,6 +391,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private skipSavedStateRestoreOnNextModeSwitch = false;
   private staticUqlSuggestionsCache: UqlSuggestion[] | null = null;
   private lastUqlFilterStateSignature: string | null = null;
+  private pendingFactorDependentFilterChange: FilterChangeOptions | null = null;
   private structuredFiltersDirtyForUql = false;
   private filterPresetActiveCountCache = new Map<string, number>();
   @ViewChild(RaceSchedulerComponent) raceScheduler!: RaceSchedulerComponent;
@@ -795,6 +796,25 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.whiteFactors = factors.filter((f: any) => f.type === 2 || f.type === 3 || f.type === 4).map(normalize);
     this.rebuildUqlDerivedCaches();
     this.updateUqlSuggestions();
+    if (this.pendingFactorDependentFilterChange && !this.hasUnavailableAnyFactorOptions()) {
+      const pendingChange = this.pendingFactorDependentFilterChange;
+      this.pendingFactorDependentFilterChange = null;
+      this.onFilterChange(pendingChange);
+    }
+  }
+
+  private hasUnavailableAnyFactorOptions(): boolean {
+    const hasAnyFactor = (filters: FactorFilter[]) =>
+      filters.some(filter => this.getNormalizedFactorFilterId(filter) === null);
+
+    return (hasAnyFactor(this.blueFactorFilters) && this.blueFactors.length === 0)
+      || (hasAnyFactor(this.pinkFactorFilters) && this.pinkFactors.length === 0)
+      || (hasAnyFactor(this.greenFactorFilters) && this.greenFactors.length === 0)
+      || (hasAnyFactor(this.whiteFactorFilters) && this.whiteFactors.length === 0)
+      || (hasAnyFactor(this.mainBlueFactorFilters) && this.blueFactors.length === 0)
+      || (hasAnyFactor(this.mainPinkFactorFilters) && this.pinkFactors.length === 0)
+      || (hasAnyFactor(this.mainGreenFactorFilters) && this.greenFactors.length === 0)
+      || (hasAnyFactor(this.mainWhiteFactorFilters) && this.whiteFactors.length === 0);
   }
   // Filter State
   filterState: UnifiedSearchParams = this.createDefaultFilterState();
@@ -2542,6 +2562,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     // Update active filter chips
     this.updateCurrentUqlPreview();
     this.updateActiveFilterChips();
+    if (this.hasUnavailableAnyFactorOptions()) {
+      this.pendingFactorDependentFilterChange = { ...options };
+      this.cdr.markForCheck();
+      return;
+    }
+    this.pendingFactorDependentFilterChange = null;
     if (options.persist !== false) {
       this.skipSavedStateRestoreOnNextModeSwitch = false;
       this.persistCurrentFilterState();
@@ -2955,6 +2981,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private clearStructuredFilters(): void {
+    this.pendingFactorDependentFilterChange = null;
     this.blueFactorFilters = [];
     this.pinkFactorFilters = [];
     this.greenFactorFilters = [];
@@ -3396,6 +3423,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.uqlValidationState === 'valid' && this.compiledUqlQuery) {
       state.uql = this.compiledUqlQuery;
       state.uql_highlight = this.buildUqlSparkHighlight(this.compiledUqlQuery);
+      // A follower predicate is the user's explicit replacement for the normal
+      // max-follower exclusion. Without this, the service adds its default 999
+      // cap and makes predicates such as "Followers = 1000" impossible.
+      if (/\bfollower_num\b/i.test(this.compiledUqlQuery)) {
+        state.max_follower_num = 1000;
+      }
     }
     if (this.treeData.characterId) {
       state.player_chara_id = this.treeData.characterId;
