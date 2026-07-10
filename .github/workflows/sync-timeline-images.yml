@@ -1,0 +1,74 @@
+name: Sync Timeline Images
+
+on:
+  schedule:
+    # Runs after the resources archive's 13:00 JST metadata check.
+    - cron: '15 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-timeline-images
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out frontend
+        uses: actions/checkout@v4
+
+      - name: Check out resources
+        uses: actions/checkout@v4
+        with:
+          repository: uma-moe/umamoe-resources
+          path: .sync/umamoe-resources
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .sync/umamoe-resources
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install image converter
+        run: python -m pip install 'Pillow==11.3.0'
+
+      - name: Generate current timeline
+        shell: bash
+        run: |
+          cargo run --locked \
+            --manifest-path .sync/umamoe-resources/Cargo.toml \
+            -- generate \
+            --master .sync/umamoe-resources/master.mdb \
+            --out "${RUNNER_TEMP}/timeline-resources" \
+            --write-json
+
+      - name: Download only missing timeline images
+        shell: bash
+        run: |
+          timeline_json="$(find "${RUNNER_TEMP}/timeline-resources" -name banner_timeline.json -print -quit)"
+          test -n "${timeline_json}"
+          python .sync/umamoe-resources/scripts/sync_umapyoi_timeline_images.py \
+            --timeline-json "${timeline_json}" \
+            --frontend-root . \
+            --request-interval-ms 250
+
+      - name: Commit new WebP assets
+        shell: bash
+        run: |
+          if git diff --quiet -- src/assets/timeline-images && [[ -z "$(git ls-files --others --exclude-standard src/assets/timeline-images)" ]]; then
+            echo "Timeline images are already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/assets/timeline-images
+          git commit -m "chore: sync JP timeline images"
+          git push

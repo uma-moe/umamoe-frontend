@@ -60,7 +60,10 @@ scripts/*
 !scripts/verify-google-analytics-build.js
 
 .github/copilot-instructions.md
+!src/assets/
 /src/assets/*
+!/src/assets/timeline-images/
+!/src/assets/timeline-images/**
 
 # WebP conversion cache
 .webp-cache/

@@ -310,6 +310,13 @@
     &.ev-type-story_event         { @include ev-type(#ffb74d, #ffb74d); }
     &.ev-type-champions_meeting   { @include ev-type(#ab47bc, #ce93d8); }
     &.ev-type-legend_race         { @include ev-type(#e91e63, #f48fb1); }
+    &.ev-type-league_of_heroes    { @include ev-type(#26a69a, #4db6ac); }
+    &.ev-type-masters_challenge   { @include ev-type(#7e57c2, #9575cd); }
+    &.ev-type-trainer_skills_test { @include ev-type(#42a5f5, #64b5f6); }
+    &.ev-type-factor_research     { @include ev-type(#26c6da, #4dd0e1); }
+    &.ev-type-strongest_team      { @include ev-type(#ef5350, #e57373); }
+    &.ev-type-racing_carnival     { @include ev-type(#ffa726, #ffb74d); }
+    &.ev-type-scenario_release    { @include ev-type(#66bb6a, #81c784); }
     &.ev-type-paid_banner         {
         border-left-color: var(--timeline-paid-color);
         background: linear-gradient(105deg, rgba(var(--timeline-paid-rgb), 0.055) 0%, transparent 52%);
@@ -436,6 +443,23 @@
     &:hover { opacity: 1; }
 
     mat-icon { @include icon-size(15px); }
+}
+
+.ev-gacha-type {
+    display: inline-flex;
+    flex: 0 1 auto;
+    overflow: hidden;
+    max-width: 128px;
+    padding: 3px 8px;
+    border: 1px solid rgba(129, 199, 132, 0.28);
+    border-radius: 999px;
+    color: #a5d6a7;
+    background: rgba(102, 187, 106, 0.1);
+    font-size: 0.61rem;
+    font-weight: 700;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .ev-body {

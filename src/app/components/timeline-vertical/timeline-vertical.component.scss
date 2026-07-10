@@ -250,6 +250,13 @@
     &.event-type-champions_meeting { border-left-color: #ab47bc; }
     &.event-type-legend_race { border-left-color: #f06292; }
     &.event-type-paid_banner { border-left-color: #ff8a65; }
+    &.event-type-league_of_heroes { border-left-color: #26a69a; }
+    &.event-type-masters_challenge { border-left-color: #7e57c2; }
+    &.event-type-trainer_skills_test { border-left-color: #42a5f5; }
+    &.event-type-factor_research { border-left-color: #26c6da; }
+    &.event-type-strongest_team { border-left-color: #ef5350; }
+    &.event-type-racing_carnival { border-left-color: #ffa726; }
+    &.event-type-scenario_release { border-left-color: #66bb6a; }
 
     ::ng-deep {
       .mat-mdc-card-header { padding: 16px 16px 8px 16px; }

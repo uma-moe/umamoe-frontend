@@ -9,6 +9,8 @@ export interface TimelineEvent {
   estimatedGlobalDate?: Date;
   isConfirmed: boolean;
   bannerDuration?: number; // days
+  gachaType?: number;
+  gachaTypeName?: string;
   tags?: string[];
   pickupCardIds?: number[];
   relatedCharacters?: string[];
@@ -99,6 +101,12 @@ export enum EventType {
   COLLABORATION = 'collaboration',
   CHAMPIONS_MEETING = 'champions_meeting',
   LEGEND_RACE = 'legend_race',
+  LEAGUE_OF_HEROES = 'league_of_heroes',
+  MASTERS_CHALLENGE = 'masters_challenge',
+  TRAINER_SKILLS_TEST = 'trainer_skills_test',
+  FACTOR_RESEARCH = 'factor_research',
+  STRONGEST_TEAM = 'strongest_team',
+  RACING_CARNIVAL = 'racing_carnival',
   EVENT = 'event' // General event type for backward compatibility
 }
 export interface TimelineFilters {

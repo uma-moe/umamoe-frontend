@@ -43,6 +43,13 @@ interface EventFilters {
     showLegendRaces: boolean;
     showPaidBanners: boolean;
     showCampaigns: boolean;
+    showLeagueOfHeroes: boolean;
+    showMastersChallenge: boolean;
+    showTrainerSkillsTest: boolean;
+    showFactorResearch: boolean;
+    showStrongestTeam: boolean;
+    showRacingCarnival: boolean;
+    showScenarioReleases: boolean;
     searchQuery: string;
 }
 
@@ -115,6 +122,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         showLegendRaces: true,
         showPaidBanners: true,
         showCampaigns: true,
+        showLeagueOfHeroes: true,
+        showMastersChallenge: true,
+        showTrainerSkillsTest: true,
+        showFactorResearch: true,
+        showStrongestTeam: true,
+        showRacingCarnival: true,
+        showScenarioReleases: true,
         searchQuery: ''
     };
     // Search navigation
@@ -710,6 +724,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             if (event.type === EventType.CHAMPIONS_MEETING && !this.eventFilters.showChampionsMeetings) return false;
             if (event.type === EventType.LEGEND_RACE && !this.eventFilters.showLegendRaces) return false;
             if (event.type === EventType.CAMPAIGN && !this.eventFilters.showCampaigns) return false;
+            if (event.type === EventType.LEAGUE_OF_HEROES && !this.eventFilters.showLeagueOfHeroes) return false;
+            if (event.type === EventType.MASTERS_CHALLENGE && !this.eventFilters.showMastersChallenge) return false;
+            if (event.type === EventType.TRAINER_SKILLS_TEST && !this.eventFilters.showTrainerSkillsTest) return false;
+            if (event.type === EventType.FACTOR_RESEARCH && !this.eventFilters.showFactorResearch) return false;
+            if (event.type === EventType.STRONGEST_TEAM && !this.eventFilters.showStrongestTeam) return false;
+            if (event.type === EventType.RACING_CARNIVAL && !this.eventFilters.showRacingCarnival) return false;
+            if (event.type === EventType.SCENARIO_RELEASE && !this.eventFilters.showScenarioReleases) return false;
             // Handle other event types (updates, etc.) under story events
             if (event.type !== EventType.CHARACTER_BANNER &&
                 event.type !== EventType.SUPPORT_CARD_BANNER &&
@@ -718,6 +739,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
                 event.type !== EventType.CHAMPIONS_MEETING &&
                 event.type !== EventType.LEGEND_RACE &&
                 event.type !== EventType.CAMPAIGN &&
+                event.type !== EventType.LEAGUE_OF_HEROES &&
+                event.type !== EventType.MASTERS_CHALLENGE &&
+                event.type !== EventType.TRAINER_SKILLS_TEST &&
+                event.type !== EventType.FACTOR_RESEARCH &&
+                event.type !== EventType.STRONGEST_TEAM &&
+                event.type !== EventType.RACING_CARNIVAL &&
+                event.type !== EventType.SCENARIO_RELEASE &&
                 !this.eventFilters.showStoryEvents) return false;
             // Apply search filter - only search in tags (characters and support cards)
             if (this.eventFilters.searchQuery.trim()) {
@@ -1301,6 +1329,40 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.updateVisibleItemsSync(true);
         this.cdr.detectChanges();
     }
+    toggleLeagueOfHeroesFilter(): void {
+        this.eventFilters.showLeagueOfHeroes = !this.eventFilters.showLeagueOfHeroes;
+        this.refreshTimelineFilters();
+    }
+    toggleMastersChallengeFilter(): void {
+        this.eventFilters.showMastersChallenge = !this.eventFilters.showMastersChallenge;
+        this.refreshTimelineFilters();
+    }
+    toggleTrainerSkillsTestFilter(): void {
+        this.eventFilters.showTrainerSkillsTest = !this.eventFilters.showTrainerSkillsTest;
+        this.refreshTimelineFilters();
+    }
+    toggleFactorResearchFilter(): void {
+        this.eventFilters.showFactorResearch = !this.eventFilters.showFactorResearch;
+        this.refreshTimelineFilters();
+    }
+    toggleStrongestTeamFilter(): void {
+        this.eventFilters.showStrongestTeam = !this.eventFilters.showStrongestTeam;
+        this.refreshTimelineFilters();
+    }
+    toggleRacingCarnivalFilter(): void {
+        this.eventFilters.showRacingCarnival = !this.eventFilters.showRacingCarnival;
+        this.refreshTimelineFilters();
+    }
+    toggleScenarioReleasesFilter(): void {
+        this.eventFilters.showScenarioReleases = !this.eventFilters.showScenarioReleases;
+        this.refreshTimelineFilters();
+    }
+    private refreshTimelineFilters(): void {
+        this.generateTimelineItems();
+        this.updateSearchResults();
+        this.updateVisibleItemsSync(true);
+        this.cdr.detectChanges();
+    }
     getCampaignCount(): number {
         return this.timelineEvents.filter(e => e.type === EventType.CAMPAIGN).length;
     }
@@ -1313,6 +1375,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             if (event.type === EventType.CHAMPIONS_MEETING && !this.eventFilters.showChampionsMeetings) return false;
             if (event.type === EventType.LEGEND_RACE && !this.eventFilters.showLegendRaces) return false;
             if (event.type === EventType.CAMPAIGN && !this.eventFilters.showCampaigns) return false;
+            if (event.type === EventType.LEAGUE_OF_HEROES && !this.eventFilters.showLeagueOfHeroes) return false;
+            if (event.type === EventType.MASTERS_CHALLENGE && !this.eventFilters.showMastersChallenge) return false;
+            if (event.type === EventType.TRAINER_SKILLS_TEST && !this.eventFilters.showTrainerSkillsTest) return false;
+            if (event.type === EventType.FACTOR_RESEARCH && !this.eventFilters.showFactorResearch) return false;
+            if (event.type === EventType.STRONGEST_TEAM && !this.eventFilters.showStrongestTeam) return false;
+            if (event.type === EventType.RACING_CARNIVAL && !this.eventFilters.showRacingCarnival) return false;
+            if (event.type === EventType.SCENARIO_RELEASE && !this.eventFilters.showScenarioReleases) return false;
             // Handle other event types under story events
             if (event.type !== EventType.CHARACTER_BANNER &&
                 event.type !== EventType.SUPPORT_CARD_BANNER &&
@@ -1321,6 +1390,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
                 event.type !== EventType.CHAMPIONS_MEETING &&
                 event.type !== EventType.LEGEND_RACE &&
                 event.type !== EventType.CAMPAIGN &&
+                event.type !== EventType.LEAGUE_OF_HEROES &&
+                event.type !== EventType.MASTERS_CHALLENGE &&
+                event.type !== EventType.TRAINER_SKILLS_TEST &&
+                event.type !== EventType.FACTOR_RESEARCH &&
+                event.type !== EventType.STRONGEST_TEAM &&
+                event.type !== EventType.RACING_CARNIVAL &&
+                event.type !== EventType.SCENARIO_RELEASE &&
                 !this.eventFilters.showStoryEvents) return false;
             // Apply search filter - only search in tags (characters and support cards)
             if (this.eventFilters.searchQuery.trim()) {
@@ -1603,6 +1679,20 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
                 return 'Legend Race';
             case EventType.CAMPAIGN:
                 return 'Mission Campaign';
+            case EventType.LEAGUE_OF_HEROES:
+                return 'League of Heroes';
+            case EventType.MASTERS_CHALLENGE:
+                return 'Masters Challenge';
+            case EventType.TRAINER_SKILLS_TEST:
+                return 'Trainer Skills Test';
+            case EventType.FACTOR_RESEARCH:
+                return 'Factor Research';
+            case EventType.STRONGEST_TEAM:
+                return 'Aim! The Strongest Team';
+            case EventType.RACING_CARNIVAL:
+                return 'Racing Carnival';
+            case EventType.SCENARIO_RELEASE:
+                return 'Training Scenario';
             default:
                 return 'Unknown Event';
         }
@@ -1630,6 +1720,38 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (target instanceof HTMLElement) {
             window.setTimeout(() => target.blur(), 0);
         }
+    }
+    eventTypeToIcon(type: EventType | undefined): string {
+        switch (type) {
+            case EventType.CHARACTER_BANNER: return 'person';
+            case EventType.SUPPORT_CARD_BANNER: return 'style';
+            case EventType.PAID_BANNER: return 'payments';
+            case EventType.STORY_EVENT: return 'auto_stories';
+            case EventType.CHAMPIONS_MEETING: return 'emoji_events';
+            case EventType.LEGEND_RACE: return 'sports_motorsports';
+            case EventType.LEAGUE_OF_HEROES: return 'groups';
+            case EventType.MASTERS_CHALLENGE: return 'military_tech';
+            case EventType.TRAINER_SKILLS_TEST: return 'school';
+            case EventType.FACTOR_RESEARCH: return 'science';
+            case EventType.STRONGEST_TEAM: return 'group_work';
+            case EventType.RACING_CARNIVAL: return 'sports_score';
+            case EventType.SCENARIO_RELEASE: return 'landscape';
+            case EventType.CAMPAIGN:
+            default: return 'campaign';
+        }
+    }
+    gachaTypeLabel(event: TimelineEvent | undefined): string {
+        if (!event?.gachaType) return '';
+        const labels: Record<string, string> = {
+            standard_pickup: 'Standard Pickup',
+            guaranteed: 'Guaranteed',
+            group_select: 'Group Select',
+            twinkle_collection: 'Twinkle Collection',
+            select_pickup_rerun: 'Select Pickup Rerun',
+            select_step_up: 'Select Step-Up',
+            select_pickup_stamp_sheet: 'Select Pickup Stamp Sheet'
+        };
+        return labels[event.gachaTypeName || ''] || `Gacha Type ${event.gachaType}`;
     }
     // Format date to ensure consistent display in user's local timezone
     formatDate(item: TimelineItem): string {
