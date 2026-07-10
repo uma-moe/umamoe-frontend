@@ -312,6 +312,13 @@ export class TimelineVerticalComponent implements OnInit, OnDestroy {
       case EventType.LEGEND_RACE: return 'sports_score';
       case EventType.PAID_BANNER: return 'paid';
       case EventType.CAMPAIGN: return 'assignment';
+      case EventType.LEAGUE_OF_HEROES: return 'groups';
+      case EventType.MASTERS_CHALLENGE: return 'military_tech';
+      case EventType.TRAINER_SKILLS_TEST: return 'school';
+      case EventType.FACTOR_RESEARCH: return 'science';
+      case EventType.STRONGEST_TEAM: return 'group_work';
+      case EventType.RACING_CARNIVAL: return 'sports_score';
+      case EventType.SCENARIO_RELEASE: return 'landscape';
       default: return 'event';
     }
   }
@@ -324,6 +331,13 @@ export class TimelineVerticalComponent implements OnInit, OnDestroy {
       case EventType.LEGEND_RACE: return 'event-type-legend_race';
       case EventType.PAID_BANNER: return 'event-type-paid_banner';
       case EventType.CAMPAIGN: return 'event-type-campaign';
+      case EventType.LEAGUE_OF_HEROES: return 'event-type-league_of_heroes';
+      case EventType.MASTERS_CHALLENGE: return 'event-type-masters_challenge';
+      case EventType.TRAINER_SKILLS_TEST: return 'event-type-trainer_skills_test';
+      case EventType.FACTOR_RESEARCH: return 'event-type-factor_research';
+      case EventType.STRONGEST_TEAM: return 'event-type-strongest_team';
+      case EventType.RACING_CARNIVAL: return 'event-type-racing_carnival';
+      case EventType.SCENARIO_RELEASE: return 'event-type-scenario_release';
       default: return '';
     }
   }

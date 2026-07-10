@@ -53,6 +53,8 @@ interface BannerTimelineResourceAnniversary {
 interface BannerTimelineResourceEvent {
   id?: string;
   gacha_id?: unknown;
+  gacha_type?: unknown;
+  gacha_type_name?: unknown;
   type?: string;
   title?: string;
   description?: string;
@@ -253,6 +255,8 @@ export class TimelineService {
       estimatedEndDate,
       isConfirmed: event.is_confirmed === true,
       bannerDuration,
+      gachaType: typeof event.gacha_type === 'number' ? event.gacha_type : undefined,
+      gachaTypeName: typeof event.gacha_type_name === 'string' ? event.gacha_type_name : undefined,
       tags: this.toStringArray(event.tags),
       pickupCardIds: this.resolvePickupCardIds(event),
       relatedCharacters: this.toStringArray(event.related_characters),
@@ -480,6 +484,12 @@ export class TimelineService {
       case EventType.COLLABORATION:
       case EventType.CHAMPIONS_MEETING:
       case EventType.LEGEND_RACE:
+      case EventType.LEAGUE_OF_HEROES:
+      case EventType.MASTERS_CHALLENGE:
+      case EventType.TRAINER_SKILLS_TEST:
+      case EventType.FACTOR_RESEARCH:
+      case EventType.STRONGEST_TEAM:
+      case EventType.RACING_CARNIVAL:
       case EventType.EVENT:
         return type;
       default:

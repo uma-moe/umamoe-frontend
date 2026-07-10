@@ -44,6 +44,13 @@ interface EventFilters {
     showLegendRaces: boolean;
     showPaidBanners: boolean;
     showCampaigns: boolean;
+    showLeagueOfHeroes: boolean;
+    showMastersChallenge: boolean;
+    showTrainerSkillsTest: boolean;
+    showFactorResearch: boolean;
+    showStrongestTeam: boolean;
+    showRacingCarnival: boolean;
+    showScenarioReleases: boolean;
     searchQuery: string;
 }
 
@@ -126,6 +133,13 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         showLegendRaces: true,
         showPaidBanners: true,
         showCampaigns: true,
+        showLeagueOfHeroes: true,
+        showMastersChallenge: true,
+        showTrainerSkillsTest: true,
+        showFactorResearch: true,
+        showStrongestTeam: true,
+        showRacingCarnival: true,
+        showScenarioReleases: true,
         searchQuery: ''
     };
     // UI state
@@ -563,6 +577,13 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         if (event.type === EventType.CHAMPIONS_MEETING && !this.eventFilters.showChampionsMeetings) return false;
         if (event.type === EventType.LEGEND_RACE && !this.eventFilters.showLegendRaces) return false;
         if (event.type === EventType.CAMPAIGN && !this.eventFilters.showCampaigns) return false;
+        if (event.type === EventType.LEAGUE_OF_HEROES && !this.eventFilters.showLeagueOfHeroes) return false;
+        if (event.type === EventType.MASTERS_CHALLENGE && !this.eventFilters.showMastersChallenge) return false;
+        if (event.type === EventType.TRAINER_SKILLS_TEST && !this.eventFilters.showTrainerSkillsTest) return false;
+        if (event.type === EventType.FACTOR_RESEARCH && !this.eventFilters.showFactorResearch) return false;
+        if (event.type === EventType.STRONGEST_TEAM && !this.eventFilters.showStrongestTeam) return false;
+        if (event.type === EventType.RACING_CARNIVAL && !this.eventFilters.showRacingCarnival) return false;
+        if (event.type === EventType.SCENARIO_RELEASE && !this.eventFilters.showScenarioReleases) return false;
         // Handle other event types under story events
         if (event.type !== EventType.CHARACTER_BANNER &&
             event.type !== EventType.SUPPORT_CARD_BANNER &&
@@ -571,6 +592,13 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
             event.type !== EventType.CHAMPIONS_MEETING &&
             event.type !== EventType.LEGEND_RACE &&
             event.type !== EventType.CAMPAIGN &&
+            event.type !== EventType.LEAGUE_OF_HEROES &&
+            event.type !== EventType.MASTERS_CHALLENGE &&
+            event.type !== EventType.TRAINER_SKILLS_TEST &&
+            event.type !== EventType.FACTOR_RESEARCH &&
+            event.type !== EventType.STRONGEST_TEAM &&
+            event.type !== EventType.RACING_CARNIVAL &&
+            event.type !== EventType.SCENARIO_RELEASE &&
             !this.eventFilters.showStoryEvents) return false;
         // Apply search filter
         if (this.eventFilters.searchQuery.trim()) {
@@ -708,6 +736,34 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
+    toggleLeagueOfHeroesFilter(): void {
+        this.generateTimelineItems();
+        this.cdr.detectChanges();
+    }
+    toggleMastersChallengeFilter(): void {
+        this.generateTimelineItems();
+        this.cdr.detectChanges();
+    }
+    toggleTrainerSkillsTestFilter(): void {
+        this.generateTimelineItems();
+        this.cdr.detectChanges();
+    }
+    toggleFactorResearchFilter(): void {
+        this.generateTimelineItems();
+        this.cdr.detectChanges();
+    }
+    toggleStrongestTeamFilter(): void {
+        this.generateTimelineItems();
+        this.cdr.detectChanges();
+    }
+    toggleRacingCarnivalFilter(): void {
+        this.generateTimelineItems();
+        this.cdr.detectChanges();
+    }
+    toggleScenarioReleasesFilter(): void {
+        this.generateTimelineItems();
+        this.cdr.detectChanges();
+    }
     getFilteredEventCount(): number {
         return this.timelineEvents.filter(event => this.shouldShowEvent(event)).length;
     }
@@ -735,6 +791,27 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     }
     getCampaignCount(): number {
         return this.timelineEvents.filter(e => e.type === EventType.CAMPAIGN).length;
+    }
+    getLeagueOfHeroesCount(): number {
+        return this.timelineEvents.filter(e => e.type === EventType.LEAGUE_OF_HEROES).length;
+    }
+    getMastersChallengeCount(): number {
+        return this.timelineEvents.filter(e => e.type === EventType.MASTERS_CHALLENGE).length;
+    }
+    getTrainerSkillsTestCount(): number {
+        return this.timelineEvents.filter(e => e.type === EventType.TRAINER_SKILLS_TEST).length;
+    }
+    getFactorResearchCount(): number {
+        return this.timelineEvents.filter(e => e.type === EventType.FACTOR_RESEARCH).length;
+    }
+    getStrongestTeamCount(): number {
+        return this.timelineEvents.filter(e => e.type === EventType.STRONGEST_TEAM).length;
+    }
+    getRacingCarnivalCount(): number {
+        return this.timelineEvents.filter(e => e.type === EventType.RACING_CARNIVAL).length;
+    }
+    getScenarioReleaseCount(): number {
+        return this.timelineEvents.filter(e => e.type === EventType.SCENARIO_RELEASE).length;
     }
     onImageError(event: any): void {
         const image = event.target as HTMLImageElement;
@@ -1295,8 +1372,29 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
             case EventType.LEGEND_RACE:         return 'sports_motorsports';
             case EventType.PAID_BANNER:         return 'payments';
             case EventType.CAMPAIGN:            return 'assignment';
+            case EventType.LEAGUE_OF_HEROES:    return 'groups';
+            case EventType.MASTERS_CHALLENGE:   return 'military_tech';
+            case EventType.TRAINER_SKILLS_TEST: return 'school';
+            case EventType.FACTOR_RESEARCH:     return 'science';
+            case EventType.STRONGEST_TEAM:      return 'group_work';
+            case EventType.RACING_CARNIVAL:     return 'sports_score';
+            case EventType.SCENARIO_RELEASE:    return 'landscape';
             default:                            return 'event';
         }
+    }
+
+    gachaTypeLabel(event: TimelineEvent | undefined): string {
+        if (!event?.gachaType) return '';
+        const labels: Record<string, string> = {
+            standard_pickup: 'Standard Pickup',
+            guaranteed: 'Guaranteed',
+            group_select: 'Group Select',
+            twinkle_collection: 'Twinkle Collection',
+            select_pickup_rerun: 'Select Pickup Rerun',
+            select_step_up: 'Select Step-Up',
+            select_pickup_stamp_sheet: 'Select Pickup Stamp Sheet'
+        };
+        return labels[event.gachaTypeName || ''] || `Gacha Type ${event.gachaType}`;
     }
 
     getEventTypeLabel(type?: EventType): string {
@@ -1308,6 +1406,13 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
             case EventType.LEGEND_RACE:         return 'Legend Race';
             case EventType.PAID_BANNER:         return 'Paid Banner';
             case EventType.CAMPAIGN:            return 'Mission Campaign';
+            case EventType.LEAGUE_OF_HEROES:    return 'League of Heroes';
+            case EventType.MASTERS_CHALLENGE:   return 'Masters Challenge';
+            case EventType.TRAINER_SKILLS_TEST: return 'Trainer Skills Test';
+            case EventType.FACTOR_RESEARCH:     return 'Factor Research';
+            case EventType.STRONGEST_TEAM:      return 'Aim! The Strongest Team';
+            case EventType.RACING_CARNIVAL:     return 'Racing Carnival';
+            case EventType.SCENARIO_RELEASE:    return 'Training Scenario';
             default:                            return 'Event';
         }
     }

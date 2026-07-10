@@ -252,6 +252,27 @@
             <button class="filter-chip chip-campaign" [class.active]="eventFilters.showCampaigns" (click)="toggleCampaignsFilter()">
               <mat-icon>campaign</mat-icon><span>Mission Campaigns</span>
             </button>
+            <button class="filter-chip chip-league" [class.active]="eventFilters.showLeagueOfHeroes" (click)="toggleLeagueOfHeroesFilter()">
+              <mat-icon>groups</mat-icon><span>League of Heroes</span>
+            </button>
+            <button class="filter-chip chip-masters" [class.active]="eventFilters.showMastersChallenge" (click)="toggleMastersChallengeFilter()">
+              <mat-icon>military_tech</mat-icon><span>Masters Challenge</span>
+            </button>
+            <button class="filter-chip chip-skills" [class.active]="eventFilters.showTrainerSkillsTest" (click)="toggleTrainerSkillsTestFilter()">
+              <mat-icon>school</mat-icon><span>Trainer Skills Test</span>
+            </button>
+            <button class="filter-chip chip-factor" [class.active]="eventFilters.showFactorResearch" (click)="toggleFactorResearchFilter()">
+              <mat-icon>science</mat-icon><span>Factor Research</span>
+            </button>
+            <button class="filter-chip chip-strongest" [class.active]="eventFilters.showStrongestTeam" (click)="toggleStrongestTeamFilter()">
+              <mat-icon>group_work</mat-icon><span>Strongest Team</span>
+            </button>
+            <button class="filter-chip chip-carnival" [class.active]="eventFilters.showRacingCarnival" (click)="toggleRacingCarnivalFilter()">
+              <mat-icon>sports_score</mat-icon><span>Racing Carnival</span>
+            </button>
+            <button class="filter-chip chip-scenario" [class.active]="eventFilters.showScenarioReleases" (click)="toggleScenarioReleasesFilter()">
+              <mat-icon>landscape</mat-icon><span>Training Scenarios</span>
+            </button>
           </div>
 
         </div>
@@ -406,6 +427,28 @@
                 <span>Mission Campaigns</span>
               </div>
             </mat-checkbox>
+
+            <mat-checkbox [checked]="eventFilters.showLeagueOfHeroes" (change)="toggleLeagueOfHeroesFilter()" class="compact-league-toggle">
+              <div class="compact-checkbox-content"><mat-icon>groups</mat-icon><span>League of Heroes</span></div>
+            </mat-checkbox>
+            <mat-checkbox [checked]="eventFilters.showMastersChallenge" (change)="toggleMastersChallengeFilter()" class="compact-masters-toggle">
+              <div class="compact-checkbox-content"><mat-icon>military_tech</mat-icon><span>Masters Challenge</span></div>
+            </mat-checkbox>
+            <mat-checkbox [checked]="eventFilters.showTrainerSkillsTest" (change)="toggleTrainerSkillsTestFilter()" class="compact-skills-toggle">
+              <div class="compact-checkbox-content"><mat-icon>school</mat-icon><span>Trainer Skills Test</span></div>
+            </mat-checkbox>
+            <mat-checkbox [checked]="eventFilters.showFactorResearch" (change)="toggleFactorResearchFilter()" class="compact-factor-toggle">
+              <div class="compact-checkbox-content"><mat-icon>science</mat-icon><span>Factor Research</span></div>
+            </mat-checkbox>
+            <mat-checkbox [checked]="eventFilters.showStrongestTeam" (change)="toggleStrongestTeamFilter()" class="compact-strongest-toggle">
+              <div class="compact-checkbox-content"><mat-icon>group_work</mat-icon><span>Strongest Team</span></div>
+            </mat-checkbox>
+            <mat-checkbox [checked]="eventFilters.showRacingCarnival" (change)="toggleRacingCarnivalFilter()" class="compact-carnival-toggle">
+              <div class="compact-checkbox-content"><mat-icon>sports_score</mat-icon><span>Racing Carnival</span></div>
+            </mat-checkbox>
+            <mat-checkbox [checked]="eventFilters.showScenarioReleases" (change)="toggleScenarioReleasesFilter()" class="compact-scenario-toggle">
+              <div class="compact-checkbox-content"><mat-icon>landscape</mat-icon><span>Training Scenarios</span></div>
+            </mat-checkbox>
           </div>
         </div>
       </mat-card-content>
@@ -539,7 +582,7 @@
                           ? "emoji_events"
                           : item.eventData?.type === "legend_race"
                           ? "sports_motorsports"
-                          : "campaign"
+                          : eventTypeToIcon(item.eventData?.type)
                       }}
                     </mat-icon>
                   </div>
@@ -563,12 +606,13 @@
                             ? "emoji_events"
                             : item.eventData?.type === "legend_race"
                             ? "sports_motorsports"
-                            : "campaign"
+                          : eventTypeToIcon(item.eventData?.type)
                         }}
                       </mat-icon>
                       <div class="event-type">
                         {{ eventTypeToLabel(item.eventData?.type) }}
                       </div>
+                      <span class="event-gacha-type" *ngIf="item.eventData?.gachaType">{{ gachaTypeLabel(item.eventData) }}</span>
                       <a
                         *ngIf="item.eventData?.gametoraURL"
                         [href]="item.eventData?.gametoraURL"
@@ -701,7 +745,7 @@
                         ? "emoji_events"
                         : item.eventData?.type === "legend_race"
                         ? "sports_motorsports"
-                        : "campaign"
+                          : eventTypeToIcon(item.eventData?.type)
                     }}
                   </mat-icon>
                 </div>
@@ -725,12 +769,13 @@
                           ? "emoji_events"
                           : item.eventData?.type === "legend_race"
                           ? "sports_motorsports"
-                          : "campaign"
+                          : eventTypeToIcon(item.eventData?.type)
                       }}
                     </mat-icon>
                     <div class="event-type">
                       {{ eventTypeToLabel(item.eventData?.type) }}
                     </div>
+                    <span class="event-gacha-type" *ngIf="item.eventData?.gachaType">{{ gachaTypeLabel(item.eventData) }}</span>
                     <a
                       *ngIf="item.eventData?.gametoraURL"
                       [href]="item.eventData?.gametoraURL"

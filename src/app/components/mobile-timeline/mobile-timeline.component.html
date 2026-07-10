@@ -43,6 +43,7 @@
             <mat-icon>{{ getEventTypeIcon(event?.type) }}</mat-icon>
             {{ getEventTypeLabel(event?.type) }}
           </span>
+          <span class="ev-gacha-type" *ngIf="event?.gachaType">{{ gachaTypeLabel(event) }}</span>
           <span class="ev-end-chip" *ngIf="eventView.endLabel">{{ eventView.endLabel }}</span>
         </div>
         <div class="ev-actions">
@@ -425,6 +426,28 @@
           class="filter-toggle campaign-toggle"
         >
           Mission Campaigns ({{ getCampaignCount() }})
+        </mat-checkbox>
+
+        <mat-checkbox [(ngModel)]="eventFilters.showLeagueOfHeroes" (change)="toggleLeagueOfHeroesFilter()" class="filter-toggle league-toggle">
+          League of Heroes ({{ getLeagueOfHeroesCount() }})
+        </mat-checkbox>
+        <mat-checkbox [(ngModel)]="eventFilters.showMastersChallenge" (change)="toggleMastersChallengeFilter()" class="filter-toggle masters-toggle">
+          Masters Challenge ({{ getMastersChallengeCount() }})
+        </mat-checkbox>
+        <mat-checkbox [(ngModel)]="eventFilters.showTrainerSkillsTest" (change)="toggleTrainerSkillsTestFilter()" class="filter-toggle skills-toggle">
+          Trainer Skills Test ({{ getTrainerSkillsTestCount() }})
+        </mat-checkbox>
+        <mat-checkbox [(ngModel)]="eventFilters.showFactorResearch" (change)="toggleFactorResearchFilter()" class="filter-toggle factor-toggle">
+          Factor Research ({{ getFactorResearchCount() }})
+        </mat-checkbox>
+        <mat-checkbox [(ngModel)]="eventFilters.showStrongestTeam" (change)="toggleStrongestTeamFilter()" class="filter-toggle strongest-toggle">
+          Strongest Team ({{ getStrongestTeamCount() }})
+        </mat-checkbox>
+        <mat-checkbox [(ngModel)]="eventFilters.showRacingCarnival" (change)="toggleRacingCarnivalFilter()" class="filter-toggle carnival-toggle">
+          Racing Carnival ({{ getRacingCarnivalCount() }})
+        </mat-checkbox>
+        <mat-checkbox [(ngModel)]="eventFilters.showScenarioReleases" (change)="toggleScenarioReleasesFilter()" class="filter-toggle scenario-toggle">
+          Training Scenarios ({{ getScenarioReleaseCount() }})
         </mat-checkbox>
       </div>
     </div>

@@ -273,6 +273,13 @@ h1 {
       legend: (rgba(233, 30, 99, 0.1), rgba(233, 30, 99, 0.35), var(--color-pink), rgba(233, 30, 99, 0.16), rgba(233, 30, 99, 0.5)),
       paid: (rgba(var(--timeline-paid-rgb), 0.1), rgba(var(--timeline-paid-rgb), 0.35), var(--timeline-paid-label), rgba(var(--timeline-paid-rgb), 0.16), rgba(var(--timeline-paid-rgb), 0.5)),
       campaign: (rgba(var(--timeline-campaign-rgb), 0.1), rgba(var(--timeline-campaign-rgb), 0.35), var(--timeline-campaign-label), rgba(var(--timeline-campaign-rgb), 0.16), rgba(var(--timeline-campaign-rgb), 0.5)),
+      league: (rgba(38, 166, 154, 0.1), rgba(38, 166, 154, 0.35), #4db6ac, rgba(38, 166, 154, 0.16), rgba(38, 166, 154, 0.5)),
+      masters: (rgba(126, 87, 194, 0.1), rgba(126, 87, 194, 0.35), #9575cd, rgba(126, 87, 194, 0.16), rgba(126, 87, 194, 0.5)),
+      skills: (rgba(66, 165, 245, 0.1), rgba(66, 165, 245, 0.35), #64b5f6, rgba(66, 165, 245, 0.16), rgba(66, 165, 245, 0.5)),
+      factor: (rgba(38, 198, 218, 0.1), rgba(38, 198, 218, 0.35), #4dd0e1, rgba(38, 198, 218, 0.16), rgba(38, 198, 218, 0.5)),
+      strongest: (rgba(239, 83, 80, 0.1), rgba(239, 83, 80, 0.35), #e57373, rgba(239, 83, 80, 0.16), rgba(239, 83, 80, 0.5)),
+      carnival: (rgba(255, 167, 38, 0.1), rgba(255, 167, 38, 0.35), #ffb74d, rgba(255, 167, 38, 0.16), rgba(255, 167, 38, 0.5)),
+      scenario: (rgba(102, 187, 106, 0.1), rgba(102, 187, 106, 0.35), #81c784, rgba(102, 187, 106, 0.16), rgba(102, 187, 106, 0.5)),
     );
     @each $type, $colors in $chip-colors {
       &.chip-#{$type} {
@@ -650,6 +657,13 @@ h1 {
     story_event: (#ffb74d, var(--accent-warning), rgba(255, 183, 77)),
     character_banner: (var(--accent-primary), var(--accent-primary), var(--accent-primary)),
     support_card_banner: (var(--accent-secondary), var(--accent-secondary), var(--accent-secondary)),
+    league_of_heroes: (#26a69a, #4db6ac, rgba(38, 166, 154, 0.45)),
+    masters_challenge: (#7e57c2, #9575cd, rgba(126, 87, 194, 0.45)),
+    trainer_skills_test: (#42a5f5, #64b5f6, rgba(66, 165, 245, 0.45)),
+    factor_research: (#26c6da, #4dd0e1, rgba(38, 198, 218, 0.45)),
+    strongest_team: (#ef5350, #e57373, rgba(239, 83, 80, 0.45)),
+    racing_carnival: (#ffa726, #ffb74d, rgba(255, 167, 38, 0.45)),
+    scenario_release: (#66bb6a, #81c784, rgba(102, 187, 106, 0.45)),
   );
   @each $type, $colors in $event-type-colors {
     &.event-type-#{$type} {
@@ -824,6 +838,22 @@ h1 {
     white-space: nowrap;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+  }
+
+  .event-gacha-type {
+    flex: 0 1 auto;
+    overflow: hidden;
+    max-width: 118px;
+    padding: 2px 6px;
+    border: 1px solid rgba(129, 199, 132, 0.28);
+    border-radius: 999px;
+    color: #a5d6a7;
+    background: rgba(102, 187, 106, 0.1);
+    font-size: 0.58rem;
+    font-weight: 700;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -1381,7 +1411,14 @@ h1 {
             champions: var(--color-purple),
             legend-races: var(--color-pink),
             paid: var(--timeline-paid-color),
-            campaign: var(--timeline-campaign-color)
+            campaign: var(--timeline-campaign-color),
+            league: #4db6ac,
+            masters: #9575cd,
+            skills: #64b5f6,
+            factor: #4dd0e1,
+            strongest: #e57373,
+            carnival: #ffb74d,
+            scenario: #81c784
           );
           @each $type, $color in $compact-toggle-colors {
             .compact-#{$type}-toggle { .compact-checkbox-content mat-icon { color: $color; } }
