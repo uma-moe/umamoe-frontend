@@ -385,7 +385,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   @Output() filterChange = new EventEmitter<UnifiedSearchParams>();
   @Output() maxFollowersToggled = new EventEmitter<boolean>();
   @Output() veteranSelected = new EventEmitter<VeteranMember | null>();
-  private filterChangeSubject = new Subject<UnifiedSearchParams>();
+  private filterChangeSubject = new Subject<{ filters: UnifiedSearchParams; version: number }>();
+  private filterChangeEmissionVersion = 0;
   private destroy$ = new Subject<void>();
   private restoredSavedFilterState = false;
   private skipSavedStateRestoreOnNextModeSwitch = false;
@@ -672,8 +673,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     this.filterChangeSubject.pipe(
       debounceTime(800) // Increased to prevent rate limiting
-    ).subscribe(filters => {
-      this.filterChange.emit(filters);
+    ).subscribe(({ filters, version }) => {
+      if (version === this.filterChangeEmissionVersion) {
+        this.filterChange.emit(filters);
+      }
     });
     this.factorService.getFactors()
       .pipe(takeUntil(this.destroy$))
@@ -2563,6 +2566,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.updateCurrentUqlPreview();
     this.updateActiveFilterChips();
     if (this.hasUnavailableAnyFactorOptions()) {
+      this.filterChangeEmissionVersion++;
       this.pendingFactorDependentFilterChange = { ...options };
       this.cdr.markForCheck();
       return;
@@ -2579,12 +2583,13 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
   private emitFilterChange(immediate = false): void {
     const filters = { ...this.filterState };
+    const version = ++this.filterChangeEmissionVersion;
     if (immediate) {
       this.filterChange.emit(filters);
       return;
     }
 
-    this.filterChangeSubject.next(filters);
+    this.filterChangeSubject.next({ filters, version });
   }
   onRaceSelectionChanged(raceIds: number[]): void {
     this.raceScheduleRaceCount = raceIds.length;
@@ -3281,7 +3286,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       if (shouldUseSavedState) {
         this.persistCurrentFilterState();
       }
-      this.filterChangeSubject.next({ ...this.filterState });
+      this.emitFilterChange();
     }
     if (shouldUseSavedState) {
       this.persistCurrentFilterMode();
@@ -5373,7 +5378,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     this.updateActiveFilterChips();
     this.persistCurrentFilterState();
-    this.filterChangeSubject.next({ ...this.filterState });
+    this.emitFilterChange();
   }
 
   private ensureUqlOwnedLegacyData(query: string): void {
