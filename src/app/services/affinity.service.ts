@@ -99,7 +99,7 @@ export class AffinityService {
   private aff2: number[] = [];
   private aff3: number[] = [];
   private g1WinSaddleSource: readonly unknown[] | null = null;
-  private g1WinSaddleIds = new Set<number>();
+  private g1WinSaddleGroupsById = new Map<number, number>();
 
   constructor(private resourceData: ResourceDataService) {}
 
@@ -441,27 +441,13 @@ export class AffinityService {
   ): number {
     if (!primary?.length || !secondary?.length) return 0;
 
-    const g1Saddles = this.getG1WinSaddleIds();
-    const secondarySet = new Set<number>();
-    for (const value of secondary) {
-      const saddleId = Number(value);
-      if (Number.isFinite(saddleId) && g1Saddles.has(saddleId)) {
-        secondarySet.add(saddleId);
-      }
-    }
-    if (!secondarySet.size) return 0;
+    const primaryGroups = this.normalizeG1WinSaddleGroups(primary);
+    const secondaryGroups = this.normalizeG1WinSaddleGroups(secondary);
+    if (!primaryGroups.size || !secondaryGroups.size) return 0;
 
     let count = 0;
-    const counted = new Set<number>();
-    for (const value of primary) {
-      const saddleId = Number(value);
-      if (
-        Number.isFinite(saddleId) &&
-        g1Saddles.has(saddleId) &&
-        secondarySet.has(saddleId) &&
-        !counted.has(saddleId)
-      ) {
-        counted.add(saddleId);
+    for (const groupId of primaryGroups) {
+      if (secondaryGroups.has(groupId)) {
         count++;
       }
     }
@@ -470,16 +456,7 @@ export class AffinityService {
 
   countG1RaceWins(wins: readonly number[] | null | undefined): number {
     if (!wins?.length) return 0;
-
-    const g1Saddles = this.getG1WinSaddleIds();
-    let count = 0;
-    for (const value of wins) {
-      const saddleId = Number(value);
-      if (Number.isFinite(saddleId) && g1Saddles.has(saddleId)) {
-        count++;
-      }
-    }
-    return count;
+    return this.normalizeG1WinSaddleGroups(wins).size;
   }
 
   getRaceAffinityBonusBetween(
@@ -530,29 +507,47 @@ export class AffinityService {
     return wins;
   }
 
-  private getG1WinSaddleIds(): ReadonlySet<number> {
+  private normalizeG1WinSaddleGroups(wins: readonly number[]): Set<number> {
+    const groupsById = this.getG1WinSaddleGroupsById();
+    const groups = new Set<number>();
+    for (const value of wins) {
+      const saddleId = Number(value);
+      if (!Number.isFinite(saddleId)) continue;
+
+      const groupId = groupsById.get(saddleId);
+      if (groupId !== undefined) {
+        groups.add(groupId);
+      }
+    }
+    return groups;
+  }
+
+  private getG1WinSaddleGroupsById(): ReadonlyMap<number, number> {
     const races = getRaceSaddleData().races ?? [];
     if (this.g1WinSaddleSource === races) {
-      return this.g1WinSaddleIds;
+      return this.g1WinSaddleGroupsById;
     }
 
-    const ids = new Set<number>();
+    const groupsById = new Map<number, number>();
     for (const race of races as any[]) {
-      if (Number(race?.grade) !== 100) continue;
-
       for (const winSaddle of race?.win_saddles ?? []) {
         const saddleId = Number(winSaddle?.saddle_id);
+        const groupId = Number(winSaddle?.group_id);
         const type = Number(winSaddle?.win_saddle_type);
         const label = String(winSaddle?.win_saddle_type_label ?? '').toUpperCase();
-        if (Number.isFinite(saddleId) && (type === 3 || label === 'G1')) {
-          ids.add(saddleId);
+        if (
+          Number.isFinite(saddleId) &&
+          Number.isFinite(groupId) &&
+          (type === 3 || label === 'G1')
+        ) {
+          groupsById.set(saddleId, groupId);
         }
       }
     }
 
     this.g1WinSaddleSource = races;
-    this.g1WinSaddleIds = ids;
-    return ids;
+    this.g1WinSaddleGroupsById = groupsById;
+    return groupsById;
   }
 
   rankCandidatesForSlot(
