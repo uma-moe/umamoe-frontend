@@ -1,5 +1,8 @@
 import { Injectable } from '@angular/core';
 import { EventType, TimelineEvent } from '../models/timeline.model';
+import { getCharacterNameEntry } from '../data/character.data';
+import { getSupportCardById } from '../data/support-cards.data';
+import { SupportCardType } from '../models/support-card.model';
 
 export interface TimelineAvatar {
   key: string;
@@ -221,18 +224,22 @@ export class TimelineAvatarService {
     }
 
     const id = Math.trunc(cardId);
-    const publicName = this.cleanPublicName(displayName, `Character ${id}`);
+    const characterNameEntry = getCharacterNameEntry(Math.floor(id / 100));
+    const publicName = this.cleanPublicName(displayName, characterNameEntry?.name ?? `Character ${id}`);
     const identity = this.parseCharacterName(publicName);
-    const baseName = identity.baseName;
-    const variantName = identity.variantName;
-    const displayNameWithVariant = variantName ? `${baseName} (${variantName})` : baseName;
+    const baseName = characterNameEntry?.name ?? identity.baseName;
+    const skinCode = String(id).padStart(6, '0').slice(-2);
+    const masterVariant = characterNameEntry?.skins?.[skinCode];
+    const variantName = identity.variantName
+      ?? (masterVariant && !/^original$/i.test(masterVariant) ? masterVariant : undefined);
+    const displayNameWithVariant = variantName ? `${baseName} [${variantName}]` : baseName;
 
     return {
       key: `character-${id}-${displayNameWithVariant}`,
       kind: 'character',
       name: baseName,
       displayName: displayNameWithVariant,
-      subLabel: variantName ? `${variantName} - Character` : 'Character',
+      subLabel: variantName ? `${variantName} variant` : 'Character',
       variantName,
       searchTerms: variantName ? [variantName, `${baseName} ${variantName}`] : [],
       imageUrl: `/assets/images/character_stand/chara_stand_${id}.webp`,
@@ -247,14 +254,16 @@ export class TimelineAvatarService {
 
     const cardIdValue = String(Math.trunc(cardId));
     const name = this.cleanPublicName(displayName, `Support ${cardIdValue}`);
+    const supportCard = getSupportCardById(cardIdValue);
+    const supportType = supportCard ? this.supportTypeLabel(supportCard.type) : null;
 
     return {
       key: `support-${cardIdValue}-${name}`,
       kind: 'support',
       name,
       displayName: name,
-      subLabel: 'Support',
-      searchTerms: ['support'],
+      subLabel: supportType ? `${supportType} Support` : 'Support card',
+      searchTerms: ['support', ...(supportType ? [supportType] : [])],
       imageUrl: `/assets/images/support_card/half/support_card_s_${cardIdValue}.webp`,
       gametoraUrl: `https://gametora.com/umamusume/supports/${cardIdValue}-${this.toGametoraSlug(name)}`
     };
@@ -266,11 +275,24 @@ export class TimelineAvatarService {
   }
 
   private parseCharacterName(displayName: string): { baseName: string; variantName?: string } {
-    const match = /^(.*?)\s*\(([^()]+)\)\s*$/.exec(displayName);
-    if (!match || !match[1].trim() || !match[2].trim()) {
+    const match = /^(.*?)\s*(?:\(([^()]+)\)|\[([^\[\]]+)\])\s*$/.exec(displayName);
+    const variantName = match?.[2] ?? match?.[3];
+    if (!match || !match[1].trim() || !variantName?.trim()) {
       return { baseName: displayName };
     }
-    return { baseName: match[1].trim(), variantName: match[2].trim() };
+    return { baseName: match[1].trim(), variantName: variantName.trim() };
+  }
+
+  private supportTypeLabel(type: SupportCardType): string {
+    switch (type) {
+      case SupportCardType.SPEED: return 'Speed';
+      case SupportCardType.STAMINA: return 'Stamina';
+      case SupportCardType.POWER: return 'Power';
+      case SupportCardType.GUTS: return 'Guts';
+      case SupportCardType.WISDOM: return 'Wisdom';
+      case SupportCardType.FRIEND: return 'Friend';
+      default: return '';
+    }
   }
 
   private getEventSearchValues(event: TimelineEvent): string[] {

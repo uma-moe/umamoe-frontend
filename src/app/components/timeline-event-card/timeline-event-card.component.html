@@ -8,6 +8,7 @@
   [class.can-plan]="card.canPlan"
   [class.is-planning]="planQueued"
   [class.has-reward]="rewardSummary"
+  [class.has-race-pickups]="card.raceLines.length && (card.avatars.length || card.canPlan || rewardSummary)"
   [attr.data-event-type]="event.type"
   [attr.data-event-id]="event.id"
 >
@@ -78,9 +79,7 @@
           *ngFor="let item of reward.items; trackBy: trackReward"
           [attr.title]="item.label"
         >
-          <mat-icon *ngIf="item.kind === 'free_pulls'" aria-hidden="true">casino</mat-icon>
           <img
-            *ngIf="item.kind !== 'free_pulls'"
             [src]="rewardIconPath(item)"
             alt=""
             width="20"
@@ -89,7 +88,7 @@
             decoding="async"
             (error)="onImageError($event)"
           />
-          <span>{{ item.kind === 'free_pulls' ? item.label : item.countLabel }}</span>
+          <span>{{ item.kind === 'free_pulls' ? (item.amount + '×') : item.countLabel }}</span>
         </span>
       </div>
 

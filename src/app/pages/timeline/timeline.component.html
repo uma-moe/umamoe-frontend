@@ -138,20 +138,20 @@
         <button type="button" (click)="toggleFilterPanel()" aria-label="Close filters"><mat-icon>close</mat-icon></button>
       </div>
       <div class="filter-options">
-        <label><input type="checkbox" [checked]="eventFilters.showCharacters" (change)="toggleCharacterFilter()" />Characters</label>
-        <label><input type="checkbox" [checked]="eventFilters.showSupports" (change)="toggleSupportFilter()" />Support cards</label>
-        <label><input type="checkbox" [checked]="eventFilters.showPaidBanners" (change)="togglePaidBannersFilter()" />Paid banners</label>
-        <label><input type="checkbox" [checked]="eventFilters.showStoryEvents" (change)="toggleStoryEventsFilter()" />Story events</label>
-        <label><input type="checkbox" [checked]="eventFilters.showCampaigns" (change)="toggleCampaignsFilter()" />Campaigns</label>
-        <label><input type="checkbox" [checked]="eventFilters.showChampionsMeetings" (change)="toggleChampionsMeetingsFilter()" />Champions Meeting</label>
-        <label><input type="checkbox" [checked]="eventFilters.showLegendRaces" (change)="toggleLegendRacesFilter()" />Legend Races</label>
-        <label><input type="checkbox" [checked]="eventFilters.showLeagueOfHeroes" (change)="toggleLeagueOfHeroesFilter()" />League of Heroes</label>
-        <label><input type="checkbox" [checked]="eventFilters.showMastersChallenge" (change)="toggleMastersChallengeFilter()" />Masters Challenge</label>
-        <label><input type="checkbox" [checked]="eventFilters.showTrainerSkillsTest" (change)="toggleTrainerSkillsTestFilter()" />Trainer Skills Test</label>
-        <label><input type="checkbox" [checked]="eventFilters.showFactorResearch" (change)="toggleFactorResearchFilter()" />Factor Research</label>
-        <label><input type="checkbox" [checked]="eventFilters.showStrongestTeam" (change)="toggleStrongestTeamFilter()" />Strongest Team</label>
-        <label><input type="checkbox" [checked]="eventFilters.showRacingCarnival" (change)="toggleRacingCarnivalFilter()" />Racing Carnival</label>
-        <label><input type="checkbox" [checked]="eventFilters.showScenarioReleases" (change)="toggleScenarioReleasesFilter()" />Training scenarios</label>
+        <label data-filter-type="character"><input type="checkbox" [checked]="eventFilters.showCharacters" (change)="toggleCharacterFilter()" /><mat-icon>person</mat-icon><span>Characters</span></label>
+        <label data-filter-type="support"><input type="checkbox" [checked]="eventFilters.showSupports" (change)="toggleSupportFilter()" /><mat-icon>style</mat-icon><span>Support cards</span></label>
+        <label data-filter-type="paid"><input type="checkbox" [checked]="eventFilters.showPaidBanners" (change)="togglePaidBannersFilter()" /><mat-icon>payments</mat-icon><span>Paid banners</span></label>
+        <label data-filter-type="story"><input type="checkbox" [checked]="eventFilters.showStoryEvents" (change)="toggleStoryEventsFilter()" /><mat-icon>auto_stories</mat-icon><span>Story events</span></label>
+        <label data-filter-type="campaign"><input type="checkbox" [checked]="eventFilters.showCampaigns" (change)="toggleCampaignsFilter()" /><mat-icon>campaign</mat-icon><span>Campaigns</span></label>
+        <label data-filter-type="champions"><input type="checkbox" [checked]="eventFilters.showChampionsMeetings" (change)="toggleChampionsMeetingsFilter()" /><mat-icon>emoji_events</mat-icon><span>Champions Meeting</span></label>
+        <label data-filter-type="legend"><input type="checkbox" [checked]="eventFilters.showLegendRaces" (change)="toggleLegendRacesFilter()" /><mat-icon>sports_motorsports</mat-icon><span>Legend Races</span></label>
+        <label data-filter-type="league"><input type="checkbox" [checked]="eventFilters.showLeagueOfHeroes" (change)="toggleLeagueOfHeroesFilter()" /><mat-icon>groups</mat-icon><span>League of Heroes</span></label>
+        <label data-filter-type="masters"><input type="checkbox" [checked]="eventFilters.showMastersChallenge" (change)="toggleMastersChallengeFilter()" /><mat-icon>military_tech</mat-icon><span>Masters Challenge</span></label>
+        <label data-filter-type="skills"><input type="checkbox" [checked]="eventFilters.showTrainerSkillsTest" (change)="toggleTrainerSkillsTestFilter()" /><mat-icon>school</mat-icon><span>Trainer Skills Test</span></label>
+        <label data-filter-type="research"><input type="checkbox" [checked]="eventFilters.showFactorResearch" (change)="toggleFactorResearchFilter()" /><mat-icon>science</mat-icon><span>Factor Research</span></label>
+        <label data-filter-type="strongest"><input type="checkbox" [checked]="eventFilters.showStrongestTeam" (change)="toggleStrongestTeamFilter()" /><mat-icon>group_work</mat-icon><span>Strongest Team</span></label>
+        <label data-filter-type="carnival"><input type="checkbox" [checked]="eventFilters.showRacingCarnival" (change)="toggleRacingCarnivalFilter()" /><mat-icon>sports_score</mat-icon><span>Racing Carnival</span></label>
+        <label data-filter-type="scenario"><input type="checkbox" [checked]="eventFilters.showScenarioReleases" (change)="toggleScenarioReleasesFilter()" /><mat-icon>landscape</mat-icon><span>Training scenarios</span></label>
       </div>
     </aside>
 

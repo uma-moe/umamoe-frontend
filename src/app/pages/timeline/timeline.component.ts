@@ -95,6 +95,21 @@ interface TourTargetRect {
     height: number;
 }
 
+export function timelineLaneDateLabel(date: Date): string {
+    const weekday = date.toLocaleDateString(undefined, {
+        weekday: 'short',
+        timeZone: 'UTC'
+    }).replace(/[.,]+$/u, '');
+    const calendarDate = date.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: 'UTC'
+    }).replace(/,/gu, '');
+
+    return `${weekday}\u2003${calendarDate}`;
+}
+
 @Component({
     selector: 'app-timeline',
     standalone: true,
@@ -140,6 +155,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly timelineLaneStep = 296;
     private readonly timelineLaneStartPadding = 28;
     private readonly timelineLaneEndPadding = 48;
+    private readonly emptyMonthSpacing = 116;
     private readonly timelineLaneEventLimit = 3;
     private readonly timelineCardSlotWidth = 296;
     private readonly timelineMarkerSlotWidth = 64;
@@ -183,6 +199,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     // Search navigation
     searchResultIndices: number[] = [];
     currentSearchIndex: number = -1;
+    filteredEventCount = 0;
     // Service subscription
     private eventsSubscription?: Subscription;
     private scrollSubscription?: Subscription;
@@ -217,6 +234,9 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private velocityX = 0;
     private momentumAnimation?: number;
     private isDecelerating = false;
+    private wheelAnimationFrame?: number;
+    private pendingWheelDelta = 0;
+    private searchRefreshTimer?: number;
     // Dynamic scaling properties
     cardScale = 1;
     cardVerticalOffsetBottom = 60;  // For items below the timeline
@@ -287,25 +307,32 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     @HostListener('wheel', ['$event'])
     onWheel(event: WheelEvent): void {
         if (!this.timelineContainer || this.isMobile) return;
-        if (this.isTimelineInteractiveTarget(event.target, '.event-avatar-strip-shell, .timeline-avatar-hover-card')) {
+        const container = this.timelineContainer.nativeElement as HTMLElement;
+        const target = this.getTimelineEventElement(event.target);
+        if (!target || !container.contains(target) || event.ctrlKey) return;
+        if (target.closest('.event-avatar-strip-shell, .timeline-avatar-hover-card')) {
             return;
         }
 
         this.hideAvatarHover();
-        const container = this.timelineContainer.nativeElement;
         const horizontalDelta = Math.abs(event.deltaX);
         const verticalDelta = Math.abs(event.deltaY);
-        const hasHorizontalIntent = event.shiftKey || horizontalDelta > verticalDelta;
+        const scrollAmount = horizontalDelta > verticalDelta ? event.deltaX : event.deltaY;
+        if (!scrollAmount) return;
 
-        // Preserve native vertical scrolling for stacked lanes. Shift+wheel and
-        // primarily horizontal gestures continue to pan the date axis.
-        if (!hasHorizontalIntent) return;
+        const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+        const canMove = scrollAmount < 0 ? container.scrollLeft > 0 : container.scrollLeft < maxScrollLeft;
+        if (!canMove) return;
 
         event.preventDefault();
-        const scrollAmount = event.shiftKey && verticalDelta >= horizontalDelta
-            ? event.deltaY
-            : event.deltaX;
-        container.scrollLeft += scrollAmount * 10;
+        this.pendingWheelDelta += scrollAmount;
+        if (this.wheelAnimationFrame !== undefined) return;
+
+        this.wheelAnimationFrame = requestAnimationFrame(() => {
+            container.scrollLeft += this.pendingWheelDelta;
+            this.pendingWheelDelta = 0;
+            this.wheelAnimationFrame = undefined;
+        });
     }
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent): void {
@@ -569,6 +596,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             this.timelineService.calculation$
         ]).pipe(auditTime(0)).subscribe(([events, anniversaries, calculation]) => {
             this.timelineEvents = events;
+            this.filteredEventCount = events.length;
             this.timelineAnniversaries = anniversaries;
             this.timelineCalculation = calculation;
             if (this.activeTab !== 'timeline' || this.isMobile) {
@@ -652,6 +680,14 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         }
         if (this.momentumAnimation) {
             cancelAnimationFrame(this.momentumAnimation);
+        }
+        if (this.wheelAnimationFrame !== undefined) {
+            cancelAnimationFrame(this.wheelAnimationFrame);
+            this.wheelAnimationFrame = undefined;
+        }
+        if (this.searchRefreshTimer !== undefined) {
+            window.clearTimeout(this.searchRefreshTimer);
+            this.searchRefreshTimer = undefined;
         }
         // Clean up resize observer
         if (this.resizeObserver) {
@@ -791,47 +827,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             actualEndDate = this.endDate;
         }
         // Generate events from service data with filtering and grouping
-        const filteredEvents = this.timelineEvents.filter(event => {
-            // Apply event type filters
-            if (event.type === EventType.CHARACTER_BANNER && !this.eventFilters.showCharacters) return false;
-            if (event.type === EventType.SUPPORT_CARD_BANNER && !this.eventFilters.showSupports) return false;
-            if (event.type === EventType.PAID_BANNER && !this.eventFilters.showPaidBanners) return false;
-            if (event.type === EventType.STORY_EVENT && !this.eventFilters.showStoryEvents) return false;
-            if (event.type === EventType.CHAMPIONS_MEETING && !this.eventFilters.showChampionsMeetings) return false;
-            if (event.type === EventType.LEGEND_RACE && !this.eventFilters.showLegendRaces) return false;
-            if (event.type === EventType.CAMPAIGN && !this.eventFilters.showCampaigns) return false;
-            if (event.type === EventType.LEAGUE_OF_HEROES && !this.eventFilters.showLeagueOfHeroes) return false;
-            if (event.type === EventType.MASTERS_CHALLENGE && !this.eventFilters.showMastersChallenge) return false;
-            if (event.type === EventType.TRAINER_SKILLS_TEST && !this.eventFilters.showTrainerSkillsTest) return false;
-            if (event.type === EventType.FACTOR_RESEARCH && !this.eventFilters.showFactorResearch) return false;
-            if (event.type === EventType.STRONGEST_TEAM && !this.eventFilters.showStrongestTeam) return false;
-            if (event.type === EventType.RACING_CARNIVAL && !this.eventFilters.showRacingCarnival) return false;
-            if (event.type === EventType.SCENARIO_RELEASE && !this.eventFilters.showScenarioReleases) return false;
-            // Handle other event types (updates, etc.) under story events
-            if (event.type !== EventType.CHARACTER_BANNER &&
-                event.type !== EventType.SUPPORT_CARD_BANNER &&
-                event.type !== EventType.PAID_BANNER &&
-                event.type !== EventType.STORY_EVENT &&
-                event.type !== EventType.CHAMPIONS_MEETING &&
-                event.type !== EventType.LEGEND_RACE &&
-                event.type !== EventType.CAMPAIGN &&
-                event.type !== EventType.LEAGUE_OF_HEROES &&
-                event.type !== EventType.MASTERS_CHALLENGE &&
-                event.type !== EventType.TRAINER_SKILLS_TEST &&
-                event.type !== EventType.FACTOR_RESEARCH &&
-                event.type !== EventType.STRONGEST_TEAM &&
-                event.type !== EventType.RACING_CARNIVAL &&
-                event.type !== EventType.SCENARIO_RELEASE &&
-                !this.eventFilters.showStoryEvents) return false;
-            // Apply search filter - only search in tags (characters and support cards)
-            if (this.eventFilters.searchQuery.trim()) {
-                if (!this.timelineAvatarService.eventMatchesSearch(event, this.eventFilters.searchQuery)) {
-                    return false;
-                }
-            }
-            const eventDate = event.globalReleaseDate || event.jpReleaseDate;
-            return eventDate >= this.globalReleaseDate;
-        });
+        const filteredEvents = this.timelineEvents.filter(event => this.eventPassesFilters(event));
+        this.filteredEventCount = filteredEvents.length;
         // Group events by date (same day)
         const eventsByDate = new Map<string, { date: Date, events: TimelineEvent[] }>();
         filteredEvents.forEach(event => {
@@ -848,7 +845,6 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         // The desktop template renders fixed date lanes. Stop before the retired
         // duration-based card layout duplicates every event and re-packs it.
         this.updateTimelineLaneMetrics();
-        this.updateVisibleItems();
         return;
         this.totalDays = Math.ceil((actualEndDate.getTime() - this.globalReleaseDate.getTime()) / (1000 * 60 * 60 * 24));
         this.updateTimelineWidth();
@@ -988,23 +984,23 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             .filter(([, lane]) => lane.date >= this.globalReleaseDate)
             .sort(([, a], [, b]) => a.date.getTime() - b.date.getTime());
 
+        let emptyMonthOffset = 0;
         this.allTimelineLanes = sorted.map(([key, lane], index) => {
             const expanded = previousExpansion.get(key) === true;
             const previousDate = index > 0 ? sorted[index - 1][1].date : null;
             const gapDaysBefore = previousDate
                 ? Math.max(0, Math.round((lane.date.getTime() - previousDate.getTime()) / 86_400_000))
                 : 0;
+            if (previousDate) {
+                const elapsedMonths = (lane.date.getUTCFullYear() - previousDate.getUTCFullYear()) * 12
+                    + lane.date.getUTCMonth() - previousDate.getUTCMonth();
+                emptyMonthOffset += Math.max(0, elapsedMonths - 1) * this.emptyMonthSpacing;
+            }
             return {
                 key,
                 date: lane.date,
-                dateLabel: lane.date.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    timeZone: 'UTC'
-                }),
-                position: this.timelineLaneStartPadding + index * this.timelineLaneStep,
+                dateLabel: timelineLaneDateLabel(lane.date),
+                position: this.timelineLaneStartPadding + index * this.timelineLaneStep + emptyMonthOffset,
                 gapDaysBefore,
                 events: lane.events,
                 visibleEvents: expanded ? lane.events : lane.events.slice(0, this.timelineLaneEventLimit),
@@ -1035,7 +1031,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
                 : lastTrackPosition;
             spans.push({
                 key: `${monthStart.getUTCFullYear()}-${String(monthStart.getUTCMonth() + 1).padStart(2, '0')}`,
-                label: monthStart.toLocaleDateString('en-US', {
+                label: monthStart.toLocaleDateString(undefined, {
                     month: 'long',
                     year: 'numeric',
                     timeZone: 'UTC'
@@ -1313,7 +1309,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         const scrollPosition = this.timelineContainer.nativeElement.scrollLeft;
         const centerPosition = scrollPosition + (this.timelineContainer.nativeElement.clientWidth / 2);
         const date = this.getDateFromPosition(centerPosition);
-        return date.toLocaleDateString('en-US', {
+        return date.toLocaleDateString(undefined, {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
@@ -1455,11 +1451,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     // Filter methods
     onSearchChange(): void {
-        // Only regenerate if search actually changed
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        if (this.searchRefreshTimer !== undefined) {
+            window.clearTimeout(this.searchRefreshTimer);
+        }
+        this.searchRefreshTimer = window.setTimeout(() => {
+            this.searchRefreshTimer = undefined;
+            this.refreshTimelineFilters();
+        }, 90);
     }
     private updateSearchResults(): void {
         this.searchResultIndices = [];
@@ -1467,13 +1465,9 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!this.eventFilters.searchQuery.trim()) {
             return;
         }
-        // Find all timeline items that match the search
-        this.searchResultIndices = this.allTimelineLanes
-            .map((lane, index) => ({ lane, index }))
-            .filter(({ lane }) => lane.events.some(event =>
-                this.timelineAvatarService.eventMatchesSearch(event, this.eventFilters.searchQuery)
-            ))
-            .map(({ index }) => index);
+        // Every generated lane already contains at least one event that passed
+        // the active search, so avoid searching the full avatar metadata twice.
+        this.searchResultIndices = this.allTimelineLanes.map((_lane, index) => index);
     }
     jumpToNextResult(): void {
         if (this.searchResultIndices.length === 0) return;
@@ -1509,52 +1503,31 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     toggleCharacterFilter(): void {
         this.eventFilters.showCharacters = !this.eventFilters.showCharacters;
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        this.refreshTimelineFilters();
     }
     toggleSupportFilter(): void {
         this.eventFilters.showSupports = !this.eventFilters.showSupports;
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        this.refreshTimelineFilters();
     }
     toggleStoryEventsFilter(): void {
         this.eventFilters.showStoryEvents = !this.eventFilters.showStoryEvents;
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        this.refreshTimelineFilters();
     }
     toggleChampionsMeetingsFilter(): void {
         this.eventFilters.showChampionsMeetings = !this.eventFilters.showChampionsMeetings;
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        this.refreshTimelineFilters();
     }
     toggleLegendRacesFilter(): void {
         this.eventFilters.showLegendRaces = !this.eventFilters.showLegendRaces;
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        this.refreshTimelineFilters();
     }
     togglePaidBannersFilter(): void {
         this.eventFilters.showPaidBanners = !this.eventFilters.showPaidBanners;
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        this.refreshTimelineFilters();
     }
     toggleCampaignsFilter(): void {
         this.eventFilters.showCampaigns = !this.eventFilters.showCampaigns;
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        this.refreshTimelineFilters();
     }
     toggleLeagueOfHeroesFilter(): void {
         this.eventFilters.showLeagueOfHeroes = !this.eventFilters.showLeagueOfHeroes;
@@ -1590,49 +1563,38 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.updateVisibleItemsSync(true);
         this.cdr.detectChanges();
     }
+    private eventPassesFilters(event: TimelineEvent): boolean {
+        switch (event.type) {
+            case EventType.CHARACTER_BANNER: if (!this.eventFilters.showCharacters) return false; break;
+            case EventType.SUPPORT_CARD_BANNER: if (!this.eventFilters.showSupports) return false; break;
+            case EventType.PAID_BANNER: if (!this.eventFilters.showPaidBanners) return false; break;
+            case EventType.STORY_EVENT: if (!this.eventFilters.showStoryEvents) return false; break;
+            case EventType.CHAMPIONS_MEETING: if (!this.eventFilters.showChampionsMeetings) return false; break;
+            case EventType.LEGEND_RACE: if (!this.eventFilters.showLegendRaces) return false; break;
+            case EventType.CAMPAIGN: if (!this.eventFilters.showCampaigns) return false; break;
+            case EventType.LEAGUE_OF_HEROES: if (!this.eventFilters.showLeagueOfHeroes) return false; break;
+            case EventType.MASTERS_CHALLENGE: if (!this.eventFilters.showMastersChallenge) return false; break;
+            case EventType.TRAINER_SKILLS_TEST: if (!this.eventFilters.showTrainerSkillsTest) return false; break;
+            case EventType.FACTOR_RESEARCH: if (!this.eventFilters.showFactorResearch) return false; break;
+            case EventType.STRONGEST_TEAM: if (!this.eventFilters.showStrongestTeam) return false; break;
+            case EventType.RACING_CARNIVAL: if (!this.eventFilters.showRacingCarnival) return false; break;
+            case EventType.SCENARIO_RELEASE: if (!this.eventFilters.showScenarioReleases) return false; break;
+            default: if (!this.eventFilters.showStoryEvents) return false;
+        }
+
+        const query = this.eventFilters.searchQuery.trim();
+        if (query && !this.timelineAvatarService.eventMatchesSearch(event, query)) {
+            return false;
+        }
+
+        const eventDate = event.globalReleaseDate || event.jpReleaseDate;
+        return eventDate >= this.globalReleaseDate;
+    }
     getCampaignCount(): number {
         return this.timelineEvents.filter(e => e.type === EventType.CAMPAIGN).length;
     }
     getFilteredEventCount(): number {
-        return this.timelineEvents.filter(event => {
-            if (event.type === EventType.CHARACTER_BANNER && !this.eventFilters.showCharacters) return false;
-            if (event.type === EventType.SUPPORT_CARD_BANNER && !this.eventFilters.showSupports) return false;
-            if (event.type === EventType.PAID_BANNER && !this.eventFilters.showPaidBanners) return false;
-            if (event.type === EventType.STORY_EVENT && !this.eventFilters.showStoryEvents) return false;
-            if (event.type === EventType.CHAMPIONS_MEETING && !this.eventFilters.showChampionsMeetings) return false;
-            if (event.type === EventType.LEGEND_RACE && !this.eventFilters.showLegendRaces) return false;
-            if (event.type === EventType.CAMPAIGN && !this.eventFilters.showCampaigns) return false;
-            if (event.type === EventType.LEAGUE_OF_HEROES && !this.eventFilters.showLeagueOfHeroes) return false;
-            if (event.type === EventType.MASTERS_CHALLENGE && !this.eventFilters.showMastersChallenge) return false;
-            if (event.type === EventType.TRAINER_SKILLS_TEST && !this.eventFilters.showTrainerSkillsTest) return false;
-            if (event.type === EventType.FACTOR_RESEARCH && !this.eventFilters.showFactorResearch) return false;
-            if (event.type === EventType.STRONGEST_TEAM && !this.eventFilters.showStrongestTeam) return false;
-            if (event.type === EventType.RACING_CARNIVAL && !this.eventFilters.showRacingCarnival) return false;
-            if (event.type === EventType.SCENARIO_RELEASE && !this.eventFilters.showScenarioReleases) return false;
-            // Handle other event types under story events
-            if (event.type !== EventType.CHARACTER_BANNER &&
-                event.type !== EventType.SUPPORT_CARD_BANNER &&
-                event.type !== EventType.PAID_BANNER &&
-                event.type !== EventType.STORY_EVENT &&
-                event.type !== EventType.CHAMPIONS_MEETING &&
-                event.type !== EventType.LEGEND_RACE &&
-                event.type !== EventType.CAMPAIGN &&
-                event.type !== EventType.LEAGUE_OF_HEROES &&
-                event.type !== EventType.MASTERS_CHALLENGE &&
-                event.type !== EventType.TRAINER_SKILLS_TEST &&
-                event.type !== EventType.FACTOR_RESEARCH &&
-                event.type !== EventType.STRONGEST_TEAM &&
-                event.type !== EventType.RACING_CARNIVAL &&
-                event.type !== EventType.SCENARIO_RELEASE &&
-                !this.eventFilters.showStoryEvents) return false;
-            // Apply search filter - only search in tags (characters and support cards)
-            if (this.eventFilters.searchQuery.trim()) {
-                if (!this.timelineAvatarService.eventMatchesSearch(event, this.eventFilters.searchQuery)) {
-                    return false;
-                }
-            }
-            return true;
-        }).length;
+        return this.filteredEventCount;
     }
     getTotalEventCount(): number {
         return this.timelineEvents.length;
@@ -1840,7 +1802,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             this.ngZone.runOutsideAngular(() => {
                 let scrollTimeout: number;
                 let lastUpdateTime = 0;
-                const throttleDelay = 8; // ~120fps for immediate updates during scroll
+                const throttleDelay = 16; // One virtual-range update per rendered frame.
                 const scrollHandler = () => {
                     const now = performance.now();
                     // Immediate update if enough time has passed (throttled to ~120fps)
@@ -2009,12 +1971,16 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
 
     openEventDetails(event: TimelineEvent): void {
         if (this.hasDragged) return;
-        const data: TimelineEventDetailsData = { event, calculation: this.timelineCalculation };
+        const data: TimelineEventDetailsData = {
+            event,
+            calculation: this.timelineCalculation,
+            rewardSummary: this.plannerRewardSummaries.get(event.id) ?? null,
+        };
         this.dialog.open(TimelineEventDetailsComponent, {
             data,
-            width: '720px',
-            maxWidth: 'calc(100vw - 32px)',
-            maxHeight: '86vh',
+            width: '560px',
+            maxWidth: 'calc(100vw - 24px)',
+            maxHeight: '82vh',
             autoFocus: 'dialog',
             restoreFocus: true,
             panelClass: ['timeline-event-details-panel', 'timeline-event-details-dialog']
@@ -2158,14 +2124,14 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             day: 'numeric'
         };
         const formatSingleDate = (date: Date): string => {
-            return date.toLocaleDateString('en-US', dateOptions);
+            return date.toLocaleDateString(undefined, dateOptions);
         };
         const formatDateRange = (startDate: Date, endDate: Date, isUnconfirmed = false): string => {
             const prefix = isUnconfirmed ? '~' : '';
             // If same year, use compact format for start date
             if (startDate.getFullYear() === endDate.getFullYear()) {
-                const startStr = startDate.toLocaleDateString('en-US', compactDateOptions);
-                const endStr = endDate.toLocaleDateString('en-US', dateOptions);
+                const startStr = startDate.toLocaleDateString(undefined, compactDateOptions);
+                const endStr = endDate.toLocaleDateString(undefined, dateOptions);
                 return `${prefix}${startStr} – ${endStr}`; // Using en dash (–) instead of "to"
             }
             // Different years, show full dates
@@ -2224,12 +2190,12 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             day: 'numeric'
         };
         const prefix = event.isConfirmed ? '' : '~';
-        const start = date.toLocaleDateString('en-US', options);
+        const start = date.toLocaleDateString(undefined, options);
         if (!event.estimatedEndDate) {
             return `${prefix}${start}`;
         }
 
-        const end = event.estimatedEndDate.toLocaleDateString('en-US', options);
+        const end = event.estimatedEndDate.toLocaleDateString(undefined, options);
         return `${prefix}${start} - ${end}`;
     }
     // Dynamic scaling based on viewport height

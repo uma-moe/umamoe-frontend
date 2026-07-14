@@ -140,12 +140,12 @@ export class TimelineVerticalComponent implements OnInit, OnDestroy {
         });
       }
       // Add month marker if month changed
-      const monthStr = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const monthStr = date.toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
       if (monthStr !== currentMonth) {
         currentMonth = monthStr;
         items.push({
           date,
-          label: date.toLocaleDateString('en-US', { month: 'long' }),
+          label: date.toLocaleDateString(undefined, { month: 'long', timeZone: 'UTC' }),
           type: 'month'
         });
       }

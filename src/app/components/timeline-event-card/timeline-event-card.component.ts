@@ -146,7 +146,7 @@ export function timelineEventContextLabel(event: TimelineEvent): string {
 }
 
 export function timelineEventRaceLines(event: TimelineEvent): string[] {
-  if (![EventType.CHAMPIONS_MEETING, EventType.LEAGUE_OF_HEROES].includes(event.type)) {
+  if (![EventType.CHAMPIONS_MEETING, EventType.LEAGUE_OF_HEROES, EventType.LEGEND_RACE].includes(event.type)) {
     return [];
   }
 
@@ -205,22 +205,12 @@ export function timelineEventDateLabel(event: TimelineEvent): string {
   const start = event.globalReleaseDate ?? event.estimatedGlobalDate ?? event.jpReleaseDate;
   const end = event.estimatedEndDate;
   const full: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' };
-  const short: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', timeZone: 'UTC' };
-  const dayOnly: Intl.DateTimeFormatOptions = { day: 'numeric', timeZone: 'UTC' };
 
   if (!end || end.getTime() <= start.getTime()) {
-    return start.toLocaleDateString('en-US', full);
+    return start.toLocaleDateString(undefined, full);
   }
 
-  if (start.getUTCFullYear() === end.getUTCFullYear() && start.getUTCMonth() === end.getUTCMonth()) {
-    return `${start.toLocaleDateString('en-US', short)} – ${end.toLocaleDateString('en-US', dayOnly)}, ${end.getUTCFullYear()}`;
-  }
-
-  if (start.getUTCFullYear() === end.getUTCFullYear()) {
-    return `${start.toLocaleDateString('en-US', short)} – ${end.toLocaleDateString('en-US', full)}`;
-  }
-
-  return `${start.toLocaleDateString('en-US', full)} – ${end.toLocaleDateString('en-US', full)}`;
+  return `${start.toLocaleDateString(undefined, full)} – ${end.toLocaleDateString(undefined, full)}`;
 }
 
 @Component({
@@ -257,7 +247,9 @@ export class TimelineEventCardComponent implements OnChanges {
     const visibleAvatarCount = showAllParticipants ? avatars.length : 2;
 
     const displayTitle = this.avatarService.getEventDisplayTitle(this.event);
-    const raceLines = avatars.length ? [] : timelineEventRaceLines(this.event);
+    const raceLines = this.event.type === EventType.LEGEND_RACE || avatars.length === 0
+      ? timelineEventRaceLines(this.event)
+      : [];
 
     this.view = {
       title: this.event.type === EventType.CHAMPIONS_MEETING && !/^champions meeting\b/i.test(displayTitle)
@@ -308,6 +300,9 @@ export class TimelineEventCardComponent implements OnChanges {
   }
 
   rewardIconPath(item: TimelineRewardItem): string {
+    if (item.kind === 'free_pulls' && this.event.type === EventType.SUPPORT_CARD_BANNER) {
+      return 'assets/images/item/item_icon_00111.webp';
+    }
     return item.iconPath;
   }
 

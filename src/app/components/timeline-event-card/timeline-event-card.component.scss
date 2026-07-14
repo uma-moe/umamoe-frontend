@@ -14,7 +14,6 @@
   color: var(--text-primary);
   background: linear-gradient(var(--surface-2), var(--surface-2)), var(--bg-primary);
   border: 1px solid var(--border-primary);
-  border-top: 2px solid rgba(var(--event-accent-rgb), 0.72);
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
   transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
@@ -97,13 +96,13 @@
   min-width: 0;
   height: 120px;
   padding: 5px 9px 6px;
-  grid-template-rows: 16px auto 16px minmax(49px, 1fr);
+  grid-template-rows: 16px minmax(21px, auto) 17px minmax(48px, 1fr);
   background: linear-gradient(180deg, rgba(var(--event-accent-rgb), 0.065), transparent 20px);
 }
 
 .no-pickups .card-body {
   height: 120px;
-  grid-template-rows: 16px auto 16px minmax(49px, 1fr);
+  grid-template-rows: 16px minmax(21px, auto) 17px minmax(48px, 1fr);
 }
 
 .card-metadata {
@@ -193,6 +192,7 @@ h3 {
   overflow: hidden;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  margin-top: 2px;
 }
 
 .card-schedule mat-icon {
@@ -266,7 +266,7 @@ h3 {
   font-variant-numeric: tabular-nums;
   line-height: 20px;
   white-space: nowrap;
-  order: 1;
+  order: 2;
 }
 
 .card-reward-item {
@@ -285,23 +285,17 @@ h3 {
   object-fit: contain;
 }
 
-.card-reward-item > mat-icon {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
-  font-size: 16px;
-  line-height: 16px;
-}
-
 .card-reward-item.is-free-pulls {
-  gap: 4px;
-  color: rgb(var(--event-accent-rgb));
-  font-size: 9.75px;
+  gap: 3px;
+  color: var(--text-secondary);
+  font-size: 10px;
   font-weight: 720;
 }
 
-.card-reward-item.is-free-pulls > mat-icon {
-  color: currentColor;
+.card-reward-item.is-free-pulls img {
+  width: 22px;
+  height: 22px;
+  flex-basis: 22px;
 }
 
 .card-reward-item > span {
@@ -315,7 +309,7 @@ h3 {
   box-sizing: border-box;
   display: flex;
   min-width: 0;
-  height: 49px;
+  height: 48px;
   padding-top: 4px;
   align-self: end;
   pointer-events: none;
@@ -324,8 +318,49 @@ h3 {
   gap: 6px;
 }
 
+.timeline-event-card.has-race-pickups {
+  height: 211px;
+}
+
+.timeline-event-card.no-media.has-race-pickups {
+  height: 141px;
+}
+
+.has-race-pickups .card-body {
+  height: 140px;
+  grid-template-rows: 16px minmax(21px, auto) 19px minmax(66px, 1fr);
+}
+
+.has-race-pickups .card-footer {
+  height: 66px;
+  flex-wrap: wrap;
+  align-content: flex-end;
+  row-gap: 2px;
+}
+
+.has-race-pickups .card-race-summary {
+  display: flex;
+  width: 100%;
+  height: 14px;
+  flex: 0 0 100%;
+  align-items: center;
+  gap: 7px;
+  order: -1;
+}
+
+.has-race-pickups .card-race-summary span {
+  min-width: 0;
+  padding-right: 7px;
+  border-right: 1px solid var(--border-subtle);
+}
+
+.has-race-pickups .card-race-summary span:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
 .no-pickups .card-footer {
-  height: 49px;
+  height: 48px;
 }
 
 .card-race-summary {
@@ -546,6 +581,10 @@ h3 {
   height: 193px;
 }
 
+.timeline-event-card.is-mobile.has-race-pickups {
+  height: 211px;
+}
+
 .timeline-event-card.is-mobile.no-pickups {
   height: 193px;
 }
@@ -560,11 +599,11 @@ h3 {
 
 .timeline-event-card.is-mobile.no-pickups .card-body {
   height: 120px;
-  grid-template-rows: 16px auto 16px minmax(49px, 1fr);
+  grid-template-rows: 16px minmax(21px, auto) 17px minmax(48px, 1fr);
 }
 
 .timeline-event-card.is-mobile.no-pickups .card-footer {
-  height: 49px;
+  height: 48px;
 }
 
 .is-mobile .card-metadata {

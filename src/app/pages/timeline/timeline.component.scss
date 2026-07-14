@@ -307,7 +307,7 @@
   );
   width: min(460px, calc(100vw - 24px));
   padding: 10px;
-  background: var(--card-surface-bg, var(--surface-2));
+  background: var(--surface-overlay);
   border: 1px solid var(--card-surface-border, var(--border-primary));
   border-radius: var(--radius-md);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
@@ -330,25 +330,56 @@
 }
 
 .filter-options label {
+  --filter-accent-rgb: var(--accent-primary-rgb);
   display: flex;
   min-width: 0;
   height: 30px;
   align-items: center;
   gap: 7px;
-  color: var(--text-secondary);
+  color: rgba(var(--filter-accent-rgb), 0.88);
   cursor: pointer;
   font-size: 11px;
 }
 
 .filter-options label:hover {
-  color: var(--text-primary);
+  color: rgb(var(--filter-accent-rgb));
+}
+
+.filter-options label mat-icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  color: currentColor;
+  font-size: 14px;
+  line-height: 14px;
+}
+
+.filter-options label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .filter-options input {
   width: 14px;
   height: 14px;
-  accent-color: var(--accent-primary);
+  accent-color: rgb(var(--filter-accent-rgb));
 }
+
+.filter-options label[data-filter-type='character'] { --filter-accent-rgb: 66, 165, 245; }
+.filter-options label[data-filter-type='support'],
+.filter-options label[data-filter-type='champions'] { --filter-accent-rgb: 186, 104, 200; }
+.filter-options label[data-filter-type='paid'],
+.filter-options label[data-filter-type='story'],
+.filter-options label[data-filter-type='carnival'] { --filter-accent-rgb: 255, 183, 77; }
+.filter-options label[data-filter-type='campaign'],
+.filter-options label[data-filter-type='league'] { --filter-accent-rgb: 77, 182, 172; }
+.filter-options label[data-filter-type='legend'] { --filter-accent-rgb: 233, 30, 99; }
+.filter-options label[data-filter-type='masters'],
+.filter-options label[data-filter-type='skills'] { --filter-accent-rgb: 149, 117, 205; }
+.filter-options label[data-filter-type='research'] { --filter-accent-rgb: 77, 208, 225; }
+.filter-options label[data-filter-type='strongest'] { --filter-accent-rgb: 229, 115, 115; }
+.filter-options label[data-filter-type='scenario'] { --filter-accent-rgb: 129, 199, 132; }
 
 .timeline-wrapper {
   display: flex;

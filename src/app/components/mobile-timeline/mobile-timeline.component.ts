@@ -354,11 +354,15 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
 
     openEventDetails(event?: TimelineEvent): void {
         if (!event) return;
-        const data: TimelineEventDetailsData = { event, calculation: this.timelineCalculation };
+        const data: TimelineEventDetailsData = {
+            event,
+            calculation: this.timelineCalculation,
+            rewardSummary: this.plannerRewardSummaries.get(event.id) ?? null,
+        };
         this.dialog.open(TimelineEventDetailsComponent, {
             data,
-            width: '680px',
-            maxWidth: 'calc(100vw - 24px)',
+            width: '560px',
+            maxWidth: 'calc(100vw - 16px)',
             maxHeight: '88vh',
             autoFocus: 'dialog',
             restoreFocus: true,
@@ -1335,7 +1339,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     getMobileEventEndLabel(event?: TimelineEvent): string {
         if (!event?.estimatedEndDate) return '';
 
-        return `Until ${event.estimatedEndDate.toLocaleDateString('en-US', {
+        return `Until ${event.estimatedEndDate.toLocaleDateString(undefined, {
             month: 'short',
             day: 'numeric'
         })}`;
@@ -1366,7 +1370,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
             day: 'numeric',
         };
         const formatSingleDate = (date: Date): string => {
-            return date.toLocaleDateString('en-US', dateOptions);
+            return date.toLocaleDateString(undefined, dateOptions);
         };
         // Check confirmation status from event data or grouped events
         let isConfirmed = item.isConfirmed !== false;
@@ -1389,7 +1393,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
             day: 'numeric',
         };
         const formatSingleDate = (date: Date): string => {
-            return date.toLocaleDateString('en-US', dateOptions);
+            return date.toLocaleDateString(undefined, dateOptions);
         };
         // Simple date formatting with confirmation indicator
         const isConfirmed = event.isConfirmed;
@@ -1407,12 +1411,12 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
             day: 'numeric',
         };
         const prefix = event.isConfirmed ? '' : '~';
-        const start = eventDate.toLocaleDateString('en-US', dateOptions);
+        const start = eventDate.toLocaleDateString(undefined, dateOptions);
         if (!event.estimatedEndDate) {
             return `${prefix}${start}`;
         }
 
-        const end = event.estimatedEndDate.toLocaleDateString('en-US', dateOptions);
+        const end = event.estimatedEndDate.toLocaleDateString(undefined, dateOptions);
         return `${prefix}${start} - ${end}`;
     }
     // Helper methods for template display

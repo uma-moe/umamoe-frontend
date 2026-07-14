@@ -171,7 +171,7 @@ describe('TimelineEventCardComponent', () => {
       description: '3200m - Long - Turf'
     });
     expect(component.view?.contextLabel).toBe('3200m · Long · Turf');
-    expect(component.view?.raceLines).toEqual([]);
+    expect(component.view?.raceLines.length).toBe(1);
   });
 
   it('shows the full League of Heroes race setup in the reserved footer', () => {
@@ -214,5 +214,28 @@ describe('TimelineEventCardComponent', () => {
     expect(component.view?.visibleAvatars.length).toBe(4);
     expect(component.view?.visibleAvatars.every(avatar => avatar.kind === 'character')).toBeTrue();
     expect(component.view?.hiddenAvatarCount).toBe(0);
+  });
+
+  it('uses the character skin name as a bracketed variant', () => {
+    const component = createComponent();
+    setEvent(component, {
+      type: EventType.CHARACTER_BANNER,
+      pickupCardIds: [100102],
+      relatedCharacters: ['Special Week']
+    });
+
+    expect(component.view?.avatars[0].displayName).toBe('Special Week [Summer]');
+    expect(component.view?.title).toBe('Special Week [Summer]');
+  });
+
+  it('labels support cards with their training specialty', () => {
+    const component = createComponent();
+    setEvent(component, {
+      type: EventType.SUPPORT_CARD_BANNER,
+      pickupCardIds: [30001],
+      relatedSupportCards: ['Special Week']
+    });
+
+    expect(component.view?.avatars[0].subLabel).toBe('Guts Support');
   });
 });

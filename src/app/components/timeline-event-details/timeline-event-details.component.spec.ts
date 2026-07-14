@@ -94,6 +94,8 @@ describe('TimelineEventDetailsComponent planner action', () => {
       new TimelinePredictionService(),
       { isEventActive: () => false } as never,
       { setEventActive } as never,
+      { loadGachasForEvents: () => Promise.resolve([]) } as never,
+      { markForCheck: () => undefined } as never,
     );
 
     component.togglePlanner();
