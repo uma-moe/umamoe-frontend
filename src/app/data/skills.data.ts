@@ -6,6 +6,17 @@ import { Skill } from '../models/skill.model';
 
 type SkillRecord = Partial<Skill> & Record<string, unknown>;
 
+const INCREMENTAL_SKILL_COLLECTION_KEYS = [
+  'skills',
+  'data',
+  'items',
+  'records',
+  'upserts',
+  'added',
+  'updated',
+  'changed',
+] as const;
+
 function normalizeBooleanFlag(value: unknown): boolean {
   return value === true || value === 'true';
 }
@@ -56,23 +67,35 @@ function normalizeSkill(skill: SkillRecord): Skill {
 
 function normalizeSkillRecords(data: unknown): SkillRecord[] {
   if (Array.isArray(data)) {
-    return data as SkillRecord[];
+    return data.filter(isSkillRecord);
   }
 
   if (data && typeof data === 'object') {
-    const defaultData = (data as { default?: unknown }).default;
-    if (Array.isArray(defaultData)) {
-      return defaultData as SkillRecord[];
+    const record = data as Record<string, unknown>;
+    const nestedRecords: SkillRecord[] = [];
+    let foundCollection = false;
+
+    for (const key of ['default', ...INCREMENTAL_SKILL_COLLECTION_KEYS]) {
+      if (!(key in record)) {
+        continue;
+      }
+
+      foundCollection = true;
+      nestedRecords.push(...normalizeSkillRecords(record[key]));
     }
 
-     if (defaultData && typeof defaultData === 'object') {
-      return Object.values(defaultData as Record<string, SkillRecord>);
+    if (foundCollection) {
+      return nestedRecords;
     }
 
-    return Object.values(data as Record<string, SkillRecord>);
+    return Object.values(record).filter(isSkillRecord);
   }
 
   return [];
+}
+
+function isSkillRecord(value: unknown): value is SkillRecord {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
 // Export the skills data with proper typing
@@ -82,7 +105,9 @@ function normalizeSkillsData(data: unknown): Skill[] {
     .filter(skill => Number.isFinite(skill.skill_id) && skill.skill_id > 0);
 }
 
-export const SKILLS: Skill[] = normalizeSkillsData(skillsData);
+const BUNDLED_SKILLS = normalizeSkillsData(skillsData);
+
+export const SKILLS: Skill[] = [...BUNDLED_SKILLS];
 
 // Pre-built lookup maps for O(1) access
 const SKILL_BY_SKILL_ID = new Map<number, Skill>();
@@ -100,7 +125,35 @@ function rebuildSkillMaps(): void {
 rebuildSkillMaps();
 
 export function replaceSkillsData(data: unknown): Skill[] {
-  SKILLS.splice(0, SKILLS.length, ...normalizeSkillsData(data));
+  const mergedById = new Map<number, Skill>();
+  const skillOrder: number[] = [];
+
+  for (const skill of BUNDLED_SKILLS) {
+    mergedById.set(skill.skill_id, { ...skill });
+    skillOrder.push(skill.skill_id);
+  }
+
+  for (const record of normalizeSkillRecords(data)) {
+    const skillId = typeof record.skill_id === 'number'
+      ? record.skill_id
+      : Number(record.skill_id ?? 0);
+    if (!Number.isFinite(skillId) || skillId <= 0) {
+      continue;
+    }
+
+    const existing = mergedById.get(skillId);
+    const normalized = normalizeSkill(existing ? { ...existing, ...record } : record);
+    if (!mergedById.has(skillId)) {
+      skillOrder.push(skillId);
+    }
+    mergedById.set(skillId, normalized);
+  }
+
+  SKILLS.splice(
+    0,
+    SKILLS.length,
+    ...skillOrder.map(skillId => mergedById.get(skillId)!),
+  );
   rebuildSkillMaps();
   return SKILLS;
 }
