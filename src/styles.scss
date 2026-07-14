@@ -2250,6 +2250,21 @@ body.christmas-theme {
 }
 
 // Modern Dialog Panel (removes default styles for custom styling)
+.timeline-event-details-panel {
+  .mat-mdc-dialog-container {
+    --mdc-dialog-container-color: var(--bg-secondary);
+  }
+
+  .mat-mdc-dialog-surface {
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--radius-sm) !important;
+    box-shadow: var(--shadow-dropdown) !important;
+  }
+}
+
 .modern-dialog-panel,
 .trainer-submit-dialog-panel,
 .milestone-dialog-panel {

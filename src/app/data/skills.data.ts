@@ -82,7 +82,8 @@ function normalizeSkillsData(data: unknown): Skill[] {
     .filter(skill => Number.isFinite(skill.skill_id) && skill.skill_id > 0);
 }
 
-export const SKILLS: Skill[] = normalizeSkillsData(skillsData);
+const BUNDLED_SKILLS: Skill[] = normalizeSkillsData(skillsData);
+export const SKILLS: Skill[] = [...BUNDLED_SKILLS];
 
 // Pre-built lookup maps for O(1) access
 const SKILL_BY_SKILL_ID = new Map<number, Skill>();
@@ -100,7 +101,21 @@ function rebuildSkillMaps(): void {
 rebuildSkillMaps();
 
 export function replaceSkillsData(data: unknown): Skill[] {
-  SKILLS.splice(0, SKILLS.length, ...normalizeSkillsData(data));
+  const resourceSkills = normalizeSkillsData(data);
+  if (resourceSkills.length === 0) {
+    return SKILLS;
+  }
+
+  // Resources are authoritative when an ID exists there, but the generated
+  // artifact does not contain every legacy skill bundled with the frontend.
+  // Keep the bundle as a fallback so a partial/invalid resource refresh can
+  // never collapse profile skill chips to raw numeric IDs.
+  const mergedSkills = new Map(BUNDLED_SKILLS.map(skill => [skill.skill_id, skill]));
+  for (const skill of resourceSkills) {
+    mergedSkills.set(skill.skill_id, skill);
+  }
+
+  SKILLS.splice(0, SKILLS.length, ...mergedSkills.values());
   rebuildSkillMaps();
   return SKILLS;
 }

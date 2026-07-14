@@ -1,5 +1,5 @@
-import { Component, OnInit, Inject, PLATFORM_ID, HostListener } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, OnInit, Inject, Injector, PLATFORM_ID, HostListener } from '@angular/core';
+import { NavigationStart, Router, RouterOutlet } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -14,14 +14,13 @@ import { ThemeService } from './services/theme.service';
 import { UpdateNotificationService } from './services/update-notification.service';
 import { RateLimitService } from './services/rate-limit.service';
 import { AuthService } from './services/auth.service';
-import { MasterDataService } from './services/master-data.service';
 import { TurnstileDebugState, TurnstileService } from './services/turnstile.service';
 import { GoogleAnalyticsService } from './services/google-analytics.service';
 import { FuseAdsService } from './services/fuse-ads.service';
 import { AppVersionService } from './services/app-version.service';
 import { GettingStartedTourService } from './services/getting-started-tour.service';
 import { environment } from '../environments/environment';
-import { BehaviorSubject, Observable, combineLatest, map, of, switchMap, take, timer } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest, filter, map, of, switchMap, take, timer } from 'rxjs';
 
 interface TurnstileRecoveryView {
   debug: TurnstileDebugState;
@@ -67,18 +66,20 @@ export class AppComponent implements OnInit {
   turnstileRecovery$: Observable<TurnstileRecoveryView>;
   interactiveVerificationPending = false;
   private readonly interactiveNoticeSubject = new BehaviorSubject<TurnstileRecoveryNotice | null>(null);
+  private masterDataInitPromise: Promise<void> | null = null;
 
   constructor(
     private themeService: ThemeService,
     private updateNotificationService: UpdateNotificationService,
     private rateLimitService: RateLimitService,
     private authService: AuthService,
-    private masterDataService: MasterDataService,
+    private injector: Injector,
     private turnstileService: TurnstileService,
     private googleAnalyticsService: GoogleAnalyticsService,
     private fuseAdsService: FuseAdsService,
     private appVersionService: AppVersionService,
     private gettingStartedTourService: GettingStartedTourService,
+    private router: Router,
     public tourService: TourService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
@@ -107,7 +108,7 @@ export class AppComponent implements OnInit {
       turnstileDebugApplied = this.applyTurnstileDebugParam(browserParams);
     }
 
-    this.masterDataService.init();
+    this.initializeMasterDataForRoute();
     this.fuseAdsService.init();
     this.googleAnalyticsService.init();
     this.appVersionService.init();
@@ -133,6 +134,37 @@ export class AppComponent implements OnInit {
         this.updateNotificationService.checkAndShowUpdate();
       }, 1000);
     }
+  }
+
+  private initializeMasterDataForRoute(): void {
+    if (!isPlatformBrowser(this.platformId) || !this.isTimelinePath(window.location.pathname)) {
+      void this.initMasterData();
+      return;
+    }
+
+    this.router.events.pipe(
+      filter((event): event is NavigationStart => event instanceof NavigationStart),
+      filter(event => !this.isTimelinePath(event.url.split(/[?#]/, 1)[0])),
+      take(1),
+    ).subscribe(() => void this.initMasterData());
+  }
+
+  private initMasterData(): Promise<void> {
+    if (!this.masterDataInitPromise) {
+      this.masterDataInitPromise = import('./services/master-data.service')
+        .then(({ MasterDataService }) => {
+          this.injector.get(MasterDataService).init();
+        })
+        .catch(error => {
+          this.masterDataInitPromise = null;
+          console.warn('Unable to initialize master data.', error);
+        });
+    }
+    return this.masterDataInitPromise;
+  }
+
+  private isTimelinePath(path: string): boolean {
+    return path === '/timeline' || path === '/timeline/';
   }
 
   retryTurnstileInteractive(event?: Event): void {

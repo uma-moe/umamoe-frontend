@@ -1,0 +1,146 @@
+<section class="event-details" [attr.data-event-type]="event.type">
+  <header class="details-header">
+    <div class="details-heading">
+      <div class="details-metadata">
+        <mat-icon aria-hidden="true">{{ icon }}</mat-icon>
+        <span>{{ metadata }}</span>
+      </div>
+      <h2 mat-dialog-title>{{ title }}</h2>
+      <time>{{ dateLabel }}</time>
+    </div>
+    <button mat-icon-button type="button" aria-label="Close event details" (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <mat-dialog-content>
+    <img
+      *ngIf="event.imagePath"
+      class="details-banner"
+      [src]="event.imagePath"
+      [alt]="title"
+      width="512"
+      height="125"
+      decoding="async"
+      (error)="onImageError($event)"
+    />
+
+    <section class="event-facts" *ngIf="eventFacts.length">
+      <div class="event-facts-heading">
+        <h3>Race details</h3>
+      </div>
+      <dl>
+        <div *ngFor="let fact of eventFacts; trackBy: trackFact">
+          <mat-icon aria-hidden="true">{{ fact.icon }}</mat-icon>
+          <dt>{{ fact.label }}</dt>
+          <dd>
+            <strong>{{ fact.primary }}</strong>
+            <span *ngIf="fact.secondary">{{ fact.secondary }}</span>
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <details class="additional-event-information" *ngIf="showAdditionalEventInformation">
+      <summary>More event information</summary>
+      <div class="details-description" [innerHTML]="event.description"></div>
+    </details>
+
+    <section
+      class="details-description"
+      [class.is-highlighted]="highlightEventInformation"
+      *ngIf="event.description && !descriptionIsRepresentedByFacts"
+    >
+      <h3 *ngIf="highlightEventInformation">Event information</h3>
+      <div [innerHTML]="event.description"></div>
+    </section>
+
+    <section class="pickup-section" *ngIf="characterAvatars.length">
+      <h3>Characters</h3>
+      <div class="pickup-grid">
+        <a
+          *ngFor="let avatar of characterAvatars; trackBy: trackAvatar"
+          [href]="avatar.gametoraUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img
+            [src]="avatar.imageUrl"
+            [alt]="avatar.displayName"
+            width="40"
+            height="40"
+            loading="lazy"
+            decoding="async"
+            (error)="onImageError($event)"
+          />
+          <span>
+            <strong>{{ avatar.displayName }}</strong>
+            <small>{{ avatar.subLabel }}</small>
+          </span>
+        </a>
+      </div>
+    </section>
+
+    <section class="pickup-section" *ngIf="supportAvatars.length">
+      <h3>Support cards</h3>
+      <div class="pickup-grid">
+        <a
+          *ngFor="let avatar of supportAvatars; trackBy: trackAvatar"
+          [href]="avatar.gametoraUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img
+            [src]="avatar.imageUrl"
+            [alt]="avatar.displayName"
+            width="40"
+            height="40"
+            loading="lazy"
+            decoding="async"
+            (error)="onImageError($event)"
+          />
+          <span>
+            <strong>{{ avatar.displayName }}</strong>
+            <small>{{ avatar.subLabel }}</small>
+          </span>
+        </a>
+      </div>
+    </section>
+
+    <section class="prediction-section" *ngIf="prediction as insight">
+      <button type="button" class="prediction-toggle" (click)="togglePrediction()" [attr.aria-expanded]="predictionExpanded">
+        <span>
+          <mat-icon>event_available</mat-icon>
+          <strong>Why this date?</strong>
+        </span>
+        <mat-icon>{{ predictionExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+      </button>
+      <div class="prediction-body" *ngIf="predictionExpanded">
+        <p>{{ insight.subtitle }}</p>
+        <dl>
+          <div *ngFor="let metric of insight.metrics; trackBy: trackMetric">
+            <dt>{{ metric.label }}</dt>
+            <dd>{{ metric.value }}</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+  </mat-dialog-content>
+
+  <footer class="details-actions" *ngIf="event.gametoraURL || event.umapyoiURL || canPlan">
+    <nav class="details-source-links" aria-label="Event sources" *ngIf="event.gametoraURL || event.umapyoiURL">
+      <a *ngIf="event.umapyoiURL" [href]="event.umapyoiURL" target="_blank" rel="noopener noreferrer">
+        <span>News post</span>
+        <mat-icon aria-hidden="true">open_in_new</mat-icon>
+      </a>
+      <a *ngIf="event.gametoraURL" [href]="event.gametoraURL" target="_blank" rel="noopener noreferrer">
+        <span>GameTora</span>
+        <mat-icon aria-hidden="true">open_in_new</mat-icon>
+      </a>
+    </nav>
+    <button *ngIf="canPlan" mat-flat-button type="button" class="details-plan-action" [class.is-added]="planned" [attr.aria-pressed]="planned" (click)="togglePlanner()">
+      <mat-icon>{{ planned ? 'remove_circle_outline' : 'add_chart' }}</mat-icon>
+      {{ planned ? 'Remove from Carat Planner' : 'Add to Carat Planner' }}
+    </button>
+  </footer>
+</section>

@@ -1,0 +1,505 @@
+import {
+  CaratPlan,
+  CaratPlannerDataBundle,
+  FREE_PULL_CAMPAIGN_EXCLUDED_SELECTION,
+  PlannerGachaEntry,
+  PlannerTarget,
+} from '../models/carat-planner.model';
+import { CaratPlannerCalculationService } from './carat-planner-calculation.service';
+
+describe('CaratPlannerCalculationService', () => {
+  let service: CaratPlannerCalculationService;
+
+  beforeEach(() => {
+    service = new CaratPlannerCalculationService();
+  });
+
+  it('calculates pickup odds with fractional rates and guaranteed spark copies', () => {
+    const oneCopy = service.calculateOdds(100, 1, 0.0075, 200);
+    expect(oneCopy.pickupRate).toBe(0.0075);
+    expect(oneCopy.exchangeCopies).toBe(0);
+    expect(oneCopy.randomCopiesNeeded).toBe(1);
+    expect(oneCopy.probability).toBeCloseTo(1 - Math.pow(1 - 0.0075, 100), 12);
+
+    const sparkedCopy = service.calculateOdds(200, 1, 0.0075, 200);
+    expect(sparkedCopy.exchangeCopies).toBe(1);
+    expect(sparkedCopy.randomCopiesNeeded).toBe(0);
+    expect(sparkedCopy.probability).toBe(1);
+
+    const secondCopy = service.calculateOdds(200, 2, 0.0075, 200);
+    expect(secondCopy.exchangeCopies).toBe(1);
+    expect(secondCopy.randomCopiesNeeded).toBe(1);
+    expect(secondCopy.probability).toBeCloseTo(1 - Math.pow(1 - 0.0075, 200), 12);
+    expect(service.calculateOdds(200, 2, 0.0075, 200)).toBe(secondCopy);
+  });
+
+  it('reports exact marginal and joint odds for multiple pickup goals', () => {
+    const target = makeTarget({
+      plannedPulls: 2,
+      pickupGoals: [
+        { pickupId: 1, desiredCopies: 1 },
+        { pickupId: 2, desiredCopies: 1 },
+      ],
+    });
+    const gacha = makeGacha({
+      spark_pulls: undefined,
+      pickups: [
+        { pickup_id: 1, rate: 0.2, exchangeable: true },
+        { pickup_id: 2, rate: 0.3, exchangeable: true },
+      ],
+    });
+
+    const odds = service.calculateTargetOdds(2, target, gacha);
+    expect(odds.goalOdds?.[0].probability).toBeCloseTo(1 - Math.pow(0.8, 2), 12);
+    expect(odds.goalOdds?.[1].probability).toBeCloseTo(1 - Math.pow(0.7, 2), 12);
+    expect(odds.jointProbabilityExact).toBeTrue();
+    expect(odds.jointProbability).toBeCloseTo(0.12, 12);
+    expect(odds.probability).toBeCloseTo(0.12, 12);
+  });
+
+  it('shares spark exchanges across pickup goals while respecting non-exchangeable pickups', () => {
+    const target = makeTarget({
+      pickupGoals: [
+        { pickupId: 1, desiredCopies: 1 },
+        { pickupId: 2, desiredCopies: 1 },
+      ],
+    });
+    const gacha = makeGacha({
+      pickups: [
+        { pickup_id: 1, rate: 0.2, exchangeable: false },
+        { pickup_id: 2, rate: 0.3, exchangeable: true },
+      ],
+    });
+
+    const odds = service.calculateTargetOdds(2, target, gacha, 2);
+    expect(odds.sparkCopiesAvailable).toBe(1);
+    expect(odds.goalOdds?.[0].exchangeCopiesAvailable).toBe(0);
+    expect(odds.goalOdds?.[1].exchangeCopiesAvailable).toBe(1);
+    expect(odds.jointProbability).toBeCloseTo(1 - Math.pow(0.8, 2), 12);
+  });
+
+  it('reports earned spark copies when the selected pickup rate is unavailable', () => {
+    const target = makeTarget({
+      pickupGoals: [{ pickupId: 99, desiredCopies: 1 }],
+    });
+    const gacha = makeGacha({ pickups: [] });
+
+    const odds = service.calculateTargetOdds(400, target, gacha, 200);
+
+    expect(odds.goalOdds?.[0].pickupRate).toBeUndefined();
+    expect(odds.jointProbabilityExact).toBeFalse();
+    expect(odds.sparkCopiesAvailable).toBe(2);
+  });
+
+  it('applies income before a target, then spends free pulls, tickets, and jewels in order', () => {
+    const plan = makePlan({
+      balances: { freeJewels: 150, paidJewels: 300, umaTickets: 2, supportTickets: 0 },
+      enabledIncomeRuleIds: ['daily-jewels'],
+      enabledRewardIds: ['ticket-gift'],
+      targets: [makeTarget({ plannedPulls: 15 })],
+    });
+    const data: CaratPlannerDataBundle = {
+      core: { jewel_cost_per_pull: 150, default_spark_pulls: 200 },
+      income: {
+        rules: [{
+          id: 'daily-jewels',
+          label: 'Daily jewels',
+          currency: 'free_jewels',
+          amount: 150,
+          cadence: 'daily',
+          start_date: '2026-01-01',
+        }],
+      },
+      rewards: {
+        rewards: [{
+          id: 'ticket-gift',
+          label: 'Scout ticket',
+          currency: 'uma_ticket',
+          amount: 1,
+          available_at: '2026-01-03',
+        }],
+      },
+    };
+    const projection = service.project(plan, data, [makeGacha({ free_pulls: 10 })]);
+    const target = projection.targets[0];
+
+    expect(target.income.length).toBe(4);
+    expect(target.balanceBefore).toEqual({ freeJewels: 600, paidJewels: 300, umaTickets: 3, supportTickets: 0 });
+    expect(target.freePullsUsed).toBe(10);
+    expect(target.ticketPullsUsed).toBe(3);
+    expect(target.freeJewelPulls).toBe(2);
+    expect(target.paidJewelPulls).toBe(0);
+    expect(target.fundedPulls).toBe(15);
+    expect(target.unfilledPulls).toBe(0);
+    expect(target.balanceAfter).toEqual({ freeJewels: 300, paidJewels: 300, umaTickets: 0, supportTickets: 0 });
+  });
+
+  it('counts free pulls and tickets toward the spark threshold', () => {
+    const plan = makePlan({
+      balances: { freeJewels: 25_500, paidJewels: 0, umaTickets: 20, supportTickets: 0 },
+      targets: [makeTarget({ plannedPulls: 200, desiredCopies: 1 })],
+    });
+    const projection = service.project(plan, emptyData(), [makeGacha({ free_pulls: 10 })]);
+    const target = projection.targets[0];
+
+    expect(target.freePullsUsed).toBe(10);
+    expect(target.ticketPullsUsed).toBe(20);
+    expect(target.freeJewelPulls).toBe(170);
+    expect(target.fundedPulls).toBe(200);
+    expect(target.odds.exchangeCopies).toBe(1);
+    expect(target.odds.probability).toBe(1);
+  });
+
+  it('reports cumulative reward Carats separately at each pull target', () => {
+    const plan = makePlan({
+      enabledRewardIds: ['first-reward', 'second-reward'],
+      targets: [
+        makeTarget({ id: 'first', bannerEnd: '2026-01-03', plannedPulls: 0 }),
+        makeTarget({ id: 'second', bannerEnd: '2026-01-06', plannedPulls: 0 }),
+      ],
+    });
+    const data: CaratPlannerDataBundle = {
+      ...emptyData(),
+      rewards: { rewards: [
+        { id: 'first-reward', label: 'First reward', currency: 'free_jewels', amount: 300, available_at: '2026-01-02' },
+        { id: 'second-reward', label: 'Second reward', currency: 'free_jewels', amount: 400, available_at: '2026-01-05' },
+      ] },
+    };
+
+    const projection = service.project(plan, data);
+
+    expect(projection.targets.map(target => target.rewardCaratsGained)).toEqual([300, 700]);
+  });
+
+  it('caps shared free-pull campaigns and can stock the full pool for a later banner', () => {
+    const early = makeTarget({
+      id: 'early', eventId: 'support-early', gachaId: 30111,
+      bannerKind: 'support', bannerEnd: '2026-08-29', plannedPulls: 200,
+    });
+    const duplicateEarly = makeTarget({
+      id: 'early-copy', eventId: 'support-early', gachaId: 30111,
+      bannerKind: 'support', bannerEnd: '2026-08-29', plannedPulls: 200,
+    });
+    const later = makeTarget({
+      id: 'later', eventId: 'support-later', gachaId: 30113,
+      bannerKind: 'support', bannerEnd: '2026-09-03', plannedPulls: 200,
+    });
+    const plan = makePlan({ targets: [later, duplicateEarly, early] });
+    const data: CaratPlannerDataBundle = {
+      ...emptyData(),
+      rewards: {
+        rewards: [],
+        free_pull_campaigns: [{
+          id: 'anniversary-100',
+          label: 'Anniversary free pulls',
+          total_pulls: 100,
+          allocation_mode: 'daily_with_one_time_stock',
+          pulls_per_day: 10,
+          entitlement_days: 10,
+          eligible_gacha_ids: [30111, 30113],
+          default_allocations: [
+            { event_id: 'support-early', gacha_id: 30111, pulls: 60 },
+            { event_id: 'support-later', gacha_id: 30113, pulls: 40 },
+          ],
+        }],
+      },
+    };
+    const gachas = [
+      makeGacha({ event_id: 'support-early', gacha_id: 30111, banner_kind: 'support', free_pulls: 60 }),
+      makeGacha({ event_id: 'support-later', gacha_id: 30113, banner_kind: 'support', free_pulls: 40 }),
+    ];
+
+    const daily = service.project(plan, data, gachas);
+    expect(daily.targets.map(target => [target.targetId, target.freePullsAvailable, target.freePullsUsed])).toEqual([
+      ['early', 60, 60],
+      ['early-copy', 0, 0],
+      ['later', 40, 40],
+    ]);
+    expect(daily.targets.reduce((total, target) => total + target.freePullsAvailable, 0)).toBe(100);
+
+    const stockedPlan = clone(plan);
+    stockedPlan.freePullCampaignSelections = { 'anniversary-100': 'support-later' };
+    const stocked = service.project(stockedPlan, data, gachas);
+    expect(stocked).not.toBe(daily);
+    expect(stocked.targets.map(target => [target.targetId, target.freePullsAvailable, target.freePullsUsed])).toEqual([
+      ['early', 0, 0],
+      ['early-copy', 0, 0],
+      ['later', 100, 100],
+    ]);
+    expect(stocked.targets.reduce((total, target) => total + target.freePullsAvailable, 0)).toBe(100);
+
+    const excludedPlan = clone(plan);
+    excludedPlan.freePullCampaignSelections = {
+      'anniversary-100': FREE_PULL_CAMPAIGN_EXCLUDED_SELECTION,
+    };
+    const excluded = service.project(excludedPlan, data, gachas);
+    expect(excluded.targets.map(target => target.freePullsAvailable)).toEqual([0, 0, 0]);
+  });
+
+  it('uses the first published pickup when a target has not selected one yet', () => {
+    const plan = makePlan({
+      balances: { freeJewels: 150, paidJewels: 0, umaTickets: 0, supportTickets: 0 },
+      targets: [makeTarget({ plannedPulls: 1 })],
+    });
+    const projection = service.project(plan, emptyData(), [makeGacha({
+      pickups: [
+        { pickup_id: 11, label: 'First pickup', rate: 0.01, exchangeable: true },
+        { pickup_id: 12, label: 'Second pickup', rate: 0.02, exchangeable: true },
+      ],
+    })]);
+
+    expect(projection.targets[0].odds.pickupRate).toBe(0.01);
+    expect(projection.targets[0].odds.probability).toBeCloseTo(0.01, 12);
+  });
+
+  it('prefers an event-scoped gacha when a future event reuses a numeric gacha ID', () => {
+    const target = makeTarget({
+      eventId: 'future-event',
+      gachaId: 30130,
+      plannedPulls: 1,
+      pickupGoals: [{ pickupId: 104201, desiredCopies: 1 }],
+    });
+    const plan = makePlan({
+      balances: { freeJewels: 150, paidJewels: 0, umaTickets: 0, supportTickets: 0 },
+      targets: [target],
+    });
+    const reusedOldPool = makeGacha({
+      event_id: 'old-event',
+      gacha_id: 30130,
+      pickups: [{ pickup_id: 100001, rate: 0.003333 }],
+    });
+    const eventResolved = makeGacha({
+      event_id: 'future-event',
+      gacha_id: 30130,
+      pickups: [{ pickup_id: 104201, rate: 0.0075 }],
+    });
+
+    const projection = service.project(plan, emptyData(), [reusedOldPool, eventResolved]);
+    expect(projection.targets[0].odds.pickupRate).toBe(0.0075);
+  });
+
+  it('expands recurring, scenario, reward, and custom income deterministically', () => {
+    const plan = makePlan({
+      enabledIncomeRuleIds: ['daily', 'scenario-low', 'scenario-high'],
+      enabledRewardIds: ['gift', 'unknown-gift'],
+      scenarioSelections: { league: 'high' },
+      customIncome: [{
+        id: 'custom',
+        label: 'Every other day',
+        currency: 'free_jewels',
+        amount: 7,
+        cadence: 'interval',
+        startDate: '2026-01-01',
+        every: 2,
+      }],
+    });
+    const data: CaratPlannerDataBundle = {
+      core: {},
+      income: {
+        rules: [
+          { id: 'daily', label: 'Daily', currency: 'free_jewels', amount: 10, cadence: 'daily', start_date: '2026-01-01' },
+          { id: 'scenario-low', label: 'Low league', currency: 'free_jewels', amount: 100, cadence: 'once', start_date: '2026-01-02', scenario_group: 'league', scenario_option: 'low' },
+          { id: 'scenario-high', label: 'High league', currency: 'free_jewels', amount: 200, cadence: 'once', start_date: '2026-01-02', scenario_group: 'league', scenario_option: 'high' },
+        ],
+      },
+      rewards: {
+        rewards: [
+          { id: 'gift', label: 'Gift', currency: 'free_jewels', amount: 50, available_at: '2026-01-03' },
+          { id: 'unknown-gift', label: 'Unknown gift', currency: 'free_jewels', amount: null, available_at: '2026-01-03' },
+        ],
+      },
+    };
+
+    const ledger = service.buildLedger(plan, data, '2026-01-03');
+    expect(ledger.map(entry => `${entry.date}:${entry.amount}:${entry.source}`)).toEqual([
+      '2026-01-01:7:custom',
+      '2026-01-01:10:rule',
+      '2026-01-02:10:rule',
+      '2026-01-02:200:rule',
+      '2026-01-03:7:custom',
+      '2026-01-03:10:rule',
+      '2026-01-03:50:reward',
+    ]);
+  });
+
+  it('excludes inactive event targets and rewards without deleting their saved configuration', () => {
+    const target = makeTarget({ eventId: 'banner-1', plannedPulls: 50 });
+    const plan = makePlan({
+      enabledRewardIds: ['event-reward'],
+      disabledEventIds: ['banner-1'],
+      targets: [target],
+    });
+    const data: CaratPlannerDataBundle = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards: [{
+        id: 'event-reward',
+        label: 'Event reward',
+        event_id: 'banner-1',
+        currency: 'free_jewels',
+        amount: 500,
+        available_at: '2026-01-02',
+      }] },
+    };
+
+    expect(service.project(plan, data).targets).toEqual([]);
+    expect(service.buildLedger(plan, data, '2026-01-10')).toEqual([]);
+    expect(plan.targets[0]).toBe(target);
+    expect(plan.enabledRewardIds).toEqual(['event-reward']);
+
+    const restored = { ...plan, disabledEventIds: [] };
+    expect(service.project(restored, data).targets.length).toBe(1);
+    expect(service.buildLedger(restored, data, '2026-01-10').map(entry => entry.id)).toEqual(['reward:event-reward']);
+  });
+
+  it('keeps saved targets before the plan start out of balances and re-enables them when the start moves back', () => {
+    const past = makeTarget({ id: 'past', eventId: 'past', bannerEnd: '2025-12-31', plannedPulls: 200 });
+    const boundary = makeTarget({ id: 'boundary', eventId: 'boundary', bannerEnd: '2026-01-01', plannedPulls: 10 });
+    const future = makeTarget({ id: 'future', eventId: 'future', bannerEnd: '2026-01-02', plannedPulls: 50 });
+    const plan = makePlan({
+      balances: { freeJewels: 30_000, paidJewels: 0, umaTickets: 0, supportTickets: 0 },
+      targets: [future, past, boundary],
+    });
+
+    const projection = service.project(plan, emptyData());
+
+    expect(projection.targets.map(target => target.targetId)).toEqual(['boundary', 'future']);
+    expect(projection.targets[0].balanceBefore.freeJewels).toBe(30_000);
+    expect(projection.finalBalances.freeJewels).toBe(21_000);
+    expect(plan.targets).toEqual([future, past, boundary]);
+    expect(plan.targets[1]).toBe(past);
+
+    const earlierPlan = { ...plan, projectionStartDate: '2025-01-01' };
+    expect(service.project(earlierPlan, emptyData()).targets.map(target => target.targetId))
+      .toEqual(['past', 'boundary', 'future']);
+  });
+
+  it('uses the resolved custom pull date at the plan boundary', () => {
+    const oldBannerFuturePull = makeTarget({
+      id: 'old-banner-future-pull',
+      bannerStart: '2025-01-01',
+      bannerEnd: '2025-01-10',
+      pullTiming: 'custom',
+      customPullDate: '2026-01-01',
+    });
+    const futureBannerPastPull = makeTarget({
+      id: 'future-banner-past-pull',
+      bannerStart: '2026-02-01',
+      bannerEnd: '2026-02-10',
+      pullTiming: 'custom',
+      customPullDate: '2025-12-31',
+    });
+
+    expect(service.project(makePlan({ targets: [futureBannerPastPull, oldBannerFuturePull] }), emptyData())
+      .targets.map(target => target.targetId)).toEqual(['old-banner-future-pull']);
+  });
+
+  it('reuses only the unchanged target prefix and fully invalidates for balance, income, or data changes', () => {
+    const data = emptyData();
+    const gachas = [makeGacha()];
+    const plan = makePlan({
+      balances: { freeJewels: 90_000, paidJewels: 0, umaTickets: 0, supportTickets: 0 },
+      targets: [
+        makeTarget({ id: 'target-1', bannerEnd: '2026-01-10', plannedPulls: 10 }),
+        makeTarget({ id: 'target-2', bannerEnd: '2026-01-20', plannedPulls: 20 }),
+        makeTarget({ id: 'target-3', bannerEnd: '2026-01-30', plannedPulls: 30 }),
+      ],
+    });
+    const initial = service.project(plan, data, gachas);
+    expect(service.project(plan, data, gachas)).toBe(initial);
+
+    const suffixChanged = clone(plan);
+    suffixChanged.targets[1].plannedPulls = 25;
+    const incremental = service.project(suffixChanged, data, gachas);
+    expect(incremental.targets[0]).toBe(initial.targets[0]);
+    expect(incremental.targets[1]).not.toBe(initial.targets[1]);
+    expect(incremental.targets[2]).not.toBe(initial.targets[2]);
+    expect(incremental).toEqual(new CaratPlannerCalculationService().project(suffixChanged, data, gachas));
+
+    const incomeChanged = clone(suffixChanged);
+    incomeChanged.customIncome.push({
+      id: 'bonus',
+      label: 'Bonus',
+      currency: 'free_jewels',
+      amount: 100,
+      cadence: 'once',
+      startDate: '2026-01-05',
+    });
+    const afterIncome = service.project(incomeChanged, data, gachas);
+    expect(afterIncome.targets.every((target, index) => target !== incremental.targets[index])).toBeTrue();
+
+    const balanceChanged = clone(incomeChanged);
+    balanceChanged.balances.freeJewels++;
+    const afterBalance = service.project(balanceChanged, data, gachas);
+    expect(afterBalance.targets.every((target, index) => target !== afterIncome.targets[index])).toBeTrue();
+
+    const changedData: CaratPlannerDataBundle = { ...data, core: { ...data.core, jewel_cost_per_pull: 100 } };
+    const afterData = service.project(balanceChanged, changedData, gachas);
+    expect(afterData.targets.every((target, index) => target !== afterBalance.targets[index])).toBeTrue();
+  });
+});
+
+function makePlan(overrides: Partial<CaratPlan> = {}): CaratPlan {
+  return {
+    id: 'plan-1',
+    name: 'Plan',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    projectionStartDate: '2026-01-01',
+    balances: { freeJewels: 0, paidJewels: 0, umaTickets: 0, supportTickets: 0 },
+    enabledIncomeRuleIds: [],
+    enabledRewardIds: [],
+    enabledRewardEventIds: [],
+    disabledEventIds: [],
+    scenarioSelections: {},
+    customIncome: [],
+    targets: [],
+    ...overrides,
+  };
+}
+
+function makeTarget(overrides: Partial<PlannerTarget> = {}): PlannerTarget {
+  return {
+    id: 'target-1',
+    eventId: 'event-1',
+    gachaId: 101,
+    title: 'Character banner',
+    bannerKind: 'character',
+    bannerStart: '2026-01-01',
+    bannerEnd: '2026-01-03',
+    pullTiming: 'end',
+    plannedPulls: 0,
+    desiredCopies: 1,
+    useTickets: true,
+    allowPaidJewels: false,
+    ...overrides,
+  };
+}
+
+function makeGacha(overrides: Partial<PlannerGachaEntry> = {}): PlannerGachaEntry {
+  return {
+    event_id: 'event-1',
+    gacha_id: 101,
+    banner_kind: 'character',
+    start_date: '2026-01-01',
+    end_date: '2026-01-03',
+    jewel_cost_per_pull: 150,
+    spark_pulls: 200,
+    free_pulls: 0,
+    ticket_currency: 'uma_ticket',
+    pickups: [{ pickup_id: 1, rate: 0.0075, exchangeable: true }],
+    ...overrides,
+  };
+}
+
+function emptyData(): CaratPlannerDataBundle {
+  return {
+    core: { jewel_cost_per_pull: 150, default_spark_pulls: 200 },
+    income: { rules: [] },
+    rewards: { rewards: [] },
+  };
+}
+
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}

@@ -1,0 +1,138 @@
+<article
+  *ngIf="view as card"
+  class="timeline-event-card"
+  [class.is-mobile]="mobile"
+  [class.has-media]="card.hasMedia"
+  [class.no-media]="!card.hasMedia"
+  [class.no-pickups]="!card.avatars.length"
+  [class.can-plan]="card.canPlan"
+  [class.is-planning]="planQueued"
+  [class.has-reward]="rewardSummary"
+  [attr.data-event-type]="event.type"
+  [attr.data-event-id]="event.id"
+>
+  <button
+    type="button"
+    class="card-open-action"
+    [attr.aria-label]="'Open details for ' + card.title"
+    (click)="activate()"
+  ></button>
+
+  <div class="card-media" *ngIf="card.hasMedia">
+    <img
+      [src]="event.imagePath"
+      [alt]="card.title"
+      width="512"
+      height="125"
+      loading="lazy"
+      decoding="async"
+      (error)="onImageError($event)"
+    />
+  </div>
+
+  <div class="card-body">
+    <div class="card-metadata">
+      <div class="card-metadata-content" [attr.title]="card.metadata">
+        <span class="card-kind">
+          <mat-icon aria-hidden="true">{{ card.icon }}</mat-icon>
+          <span>{{ card.typeLabel }}</span>
+        </span>
+        <span class="card-metadata-item" *ngIf="card.gachaLabel">{{ card.gachaLabel }}</span>
+        <span class="card-metadata-item is-rerun" *ngIf="card.isRerun">Rerun</span>
+        <span class="card-metadata-item is-predicted" *ngIf="card.isPredicted">Predicted</span>
+      </div>
+
+    </div>
+
+    <h3>{{ card.title }}</h3>
+
+    <div class="card-schedule" [attr.title]="card.raceLines.length ? card.raceLines.join(' · ') : (card.contextLabel || card.dateLabel)">
+      <mat-icon aria-hidden="true">calendar_today</mat-icon>
+      <time>{{ card.dateLabel }}</time>
+      <span class="card-context" *ngIf="!card.raceLines.length && card.contextLabel">{{ card.contextLabel }}</span>
+      <span class="card-details-hint" *ngIf="card.avatars.length || card.raceLines.length || card.canPlan || rewardSummary" aria-hidden="true">
+        <span>Info</span>
+        <mat-icon>chevron_right</mat-icon>
+      </span>
+    </div>
+
+    <div class="card-footer">
+      <div class="card-empty-footer" *ngIf="!card.avatars.length && !card.raceLines.length && !card.canPlan && !rewardSummary" aria-hidden="true">
+        <span>Event details</span>
+        <mat-icon>arrow_forward</mat-icon>
+      </div>
+
+      <div class="card-race-summary" *ngIf="card.raceLines.length" aria-label="Race information">
+        <span *ngFor="let line of card.raceLines">{{ line }}</span>
+      </div>
+
+      <div
+        class="card-reward-summary"
+        *ngIf="rewardSummary as reward"
+        [attr.aria-label]="'Rewards: ' + reward.label"
+        [attr.title]="reward.label"
+      >
+        <span
+          class="card-reward-item"
+          [class.is-free-pulls]="item.kind === 'free_pulls'"
+          *ngFor="let item of reward.items; trackBy: trackReward"
+          [attr.title]="item.label"
+        >
+          <mat-icon *ngIf="item.kind === 'free_pulls'" aria-hidden="true">casino</mat-icon>
+          <img
+            *ngIf="item.kind !== 'free_pulls'"
+            [src]="rewardIconPath(item)"
+            alt=""
+            width="20"
+            height="20"
+            loading="lazy"
+            decoding="async"
+            (error)="onImageError($event)"
+          />
+          <span>{{ item.kind === 'free_pulls' ? item.label : item.countLabel }}</span>
+        </span>
+      </div>
+
+      <div class="card-pickups" *ngIf="card.avatars.length" aria-label="Featured pickups">
+        <span
+          *ngFor="let avatar of card.visibleAvatars; trackBy: trackAvatar"
+          class="card-pickup"
+          [class.is-character]="avatar.kind === 'character'"
+          [class.is-support]="avatar.kind === 'support'"
+          [attr.title]="avatar.displayName"
+        >
+          <img
+            [src]="avatar.imageUrl"
+            [alt]="avatar.displayName"
+            [attr.width]="avatar.kind === 'character' ? 44 : 42"
+            [attr.height]="avatar.kind === 'character' ? 52 : 42"
+            loading="lazy"
+            decoding="async"
+            (error)="onImageError($event)"
+          />
+        </span>
+        <span class="pickup-overflow" *ngIf="card.hiddenAvatarCount">+{{ card.hiddenAvatarCount }}</span>
+      </div>
+
+      <div class="card-actions" *ngIf="card.canPlan">
+        <button
+          type="button"
+          class="card-plan-action"
+          [class.is-added]="planQueued"
+          [attr.aria-pressed]="planQueued"
+          [attr.aria-label]="card.isRewardOnly
+            ? (planQueued ? 'Exclude ' + card.title + ' rewards from the Carat Planner' : 'Include ' + card.title + ' rewards in the Carat Planner')
+            : (planQueued ? 'Remove ' + card.title + ' from Carat Planner' : 'Add ' + card.title + ' to Carat Planner')"
+          aria-live="polite"
+          [title]="card.isRewardOnly
+            ? (planQueued ? 'Reward counted in the Carat Planner projection — click to exclude' : 'Count this reward in the Carat Planner projection')
+            : (planQueued ? 'Remove from Carat Planner' : 'Add to Carat Planner')"
+          (click)="plan($event)"
+        >
+          <mat-icon aria-hidden="true">{{ card.isRewardOnly ? (planQueued ? 'calculate' : 'add_circle_outline') : (planQueued ? 'check_circle' : 'add_chart') }}</mat-icon>
+          <span>{{ card.isRewardOnly ? (planQueued ? 'Counted' : 'Count') : (planQueued ? 'Added' : 'Plan') }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</article>

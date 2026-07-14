@@ -17,7 +17,21 @@ const DIST = path.resolve(__dirname, '..', 'dist', 'browser');
 const DIST_ASSETS = path.join(DIST, 'assets');
 const CACHE_DIR = path.resolve(__dirname, '..', '.webp-cache');
 const ZIP_OUTPUT = path.resolve(__dirname, '..', 'dist', 'release.zip');
+const EN_IMAGE_STATE = path.resolve(
+  __dirname,
+  '..',
+  'timeline-image-sync',
+  'english-image-sources.json',
+);
 const WEBP_QUALITY = 80;
+
+function loadCanonicalWebpPaths() {
+  if (!fs.existsSync(EN_IMAGE_STATE)) return new Set();
+  const state = JSON.parse(fs.readFileSync(EN_IMAGE_STATE, 'utf8'));
+  return new Set(Object.keys(state));
+}
+
+const CANONICAL_WEBP_PATHS = loadCanonicalWebpPaths();
 
 function hashBuffer(buf) {
   return crypto.createHash('xxhash64' in crypto ? 'xxhash64' : 'md5').update(buf).digest('hex');
@@ -45,6 +59,24 @@ async function convertToWebp(filePath) {
   const original = fs.readFileSync(filePath);
   const originalSize = original.length;
   const webpPath = filePath.replace(/\.png$/i, '.webp');
+
+  const relativeAssetPath = path.relative(DIST_ASSETS, webpPath).split(path.sep).join('/');
+  const sourceAssetPath = `src/assets/${relativeAssetPath}`;
+
+  // EN timeline replacements are canonical even when the older JP PNG still
+  // exists in the source asset cache. Preserve only those explicitly recorded
+  // assets byte-for-byte; all other PNGs keep the normal compression behavior.
+  if (fs.existsSync(webpPath) && CANONICAL_WEBP_PATHS.has(sourceAssetPath)) {
+    fs.unlinkSync(filePath);
+    return {
+      file: filePath,
+      before: originalSize,
+      after: 0,
+      converted: false,
+      preserved: true,
+    };
+  }
+
   const hash = hashBuffer(original);
   const cachePath = path.join(CACHE_DIR, hash + '.webp');
 
@@ -107,6 +139,7 @@ async function run() {
   let convertedCount = 0;
   let cachedCount = 0;
   let skippedCount = 0;
+  let preservedCount = 0;
 
   const BATCH_SIZE = 50;
   for (let i = 0; i < files.length; i += BATCH_SIZE) {
@@ -119,6 +152,7 @@ async function run() {
       if (r.converted) convertedCount++;
       if (r.cached) cachedCount++;
       if (r.skipped) skippedCount++;
+      if (r.preserved) preservedCount++;
     }
 
     const progress = Math.min(i + BATCH_SIZE, files.length);
@@ -138,6 +172,7 @@ async function run() {
   console.log(`  Converted:     ${convertedCount} (.png → .webp)`);
   console.log(`  From cache:    ${cachedCount}`);
   console.log(`  Freshly done:  ${convertedCount - cachedCount}`);
+  console.log(`  Preserved:     ${preservedCount} canonical WebP files`);
   console.log(`  Skipped:       ${skippedCount} (unsupported format)`);
   console.log(`  References:    ${refCount} updated in JS/CSS/HTML`);
   console.log(`  Before:        ${(totalBefore / 1024 / 1024).toFixed(2)} MB`);

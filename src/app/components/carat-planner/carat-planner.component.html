@@ -1,0 +1,659 @@
+<section class="cp" *ngIf="plan">
+  <mat-card appearance="outlined" class="cp-manager">
+    <mat-card-content>
+      <div class="cp-plan-identity">
+        <label class="cp-field cp-plan-select">
+          <span>Saved plan</span>
+          <span class="cp-control cp-control--icon">
+            <mat-icon aria-hidden="true">bookmark</mat-icon>
+            <select [ngModel]="plan.id" (ngModelChange)="selectPlan($event)" aria-label="Saved plan">
+              <option *ngFor="let item of collection.plans; trackBy: trackById" [value]="item.id">
+                {{ item.name }}
+              </option>
+            </select>
+          </span>
+        </label>
+
+        <label class="cp-field cp-name-field">
+          <span>Plan name</span>
+          <input class="cp-control" [(ngModel)]="plan.name" (blur)="save()" maxlength="80" autocomplete="off">
+        </label>
+      </div>
+
+      <div class="cp-actions" role="group" aria-label="Plan actions">
+        <button class="cp-action cp-action--primary" type="button" (click)="createPlan()">
+          <mat-icon>add</mat-icon><span>New plan</span>
+        </button>
+        <button class="cp-action" type="button" matTooltip="Duplicate plan" aria-label="Duplicate plan" (click)="duplicatePlan()">
+          <mat-icon>content_copy</mat-icon><span>Duplicate</span>
+        </button>
+        <button class="cp-action cp-action--icon" type="button" matTooltip="Export plan" aria-label="Export plan" (click)="exportPlan()">
+          <mat-icon>download</mat-icon>
+        </button>
+        <input #importFile class="cp-file-input" type="file" accept="application/json" (change)="importPlan($event)">
+        <button class="cp-action cp-action--icon" type="button" matTooltip="Import plan" aria-label="Import plan" (click)="importFile.click()">
+          <mat-icon>upload</mat-icon>
+        </button>
+        <button class="cp-action cp-action--icon cp-danger" type="button" matTooltip="Delete plan" aria-label="Delete plan"
+          (click)="deletePlan()" [disabled]="collection.plans.length < 2">
+          <mat-icon>delete_outline</mat-icon>
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="cp-status cp-status--loading" *ngIf="resourceState.loading" role="status" aria-live="polite">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    <div><mat-icon>sync</mat-icon><span>Loading rates, rewards, and income data&hellip;</span></div>
+  </div>
+
+  <div class="cp-status cp-status--error" *ngIf="resourceState.error" role="alert">
+    <mat-icon>warning_amber</mat-icon>
+    <div>
+      <strong>Some planner data is unavailable</strong>
+      <span>{{ resourceState.error }}</span>
+    </div>
+    <button class="cp-action" type="button" (click)="retryResources()">
+      <mat-icon>refresh</mat-icon>Retry
+    </button>
+  </div>
+
+  <div class="cp-status cp-status--error" *ngIf="importError" role="alert">
+    <mat-icon>error_outline</mat-icon>
+    <div><strong>Plan could not be imported</strong><span>{{ importError }}</span></div>
+  </div>
+
+  <mat-card appearance="outlined" class="cp-overview" aria-label="Projected resources">
+    <mat-card-content>
+      <div class="cp-stat cp-stat--carats">
+        <span class="cp-stat-icon"><mat-icon>diamond</mat-icon></span>
+        <div><strong>{{ projection?.finalBalances?.freeJewels | number }}</strong><span>Free Carats</span></div>
+      </div>
+      <div class="cp-stat">
+        <span class="cp-stat-icon"><mat-icon>confirmation_number</mat-icon></span>
+        <div><strong>{{ projection?.finalBalances?.umaTickets | number }}</strong><span>Uma tickets</span></div>
+      </div>
+      <div class="cp-stat">
+        <span class="cp-stat-icon"><mat-icon>style</mat-icon></span>
+        <div><strong>{{ projection?.finalBalances?.supportTickets | number }}</strong><span>Support tickets</span></div>
+      </div>
+      <div class="cp-stat">
+        <span class="cp-stat-icon"><mat-icon>flag</mat-icon></span>
+        <div><strong>{{ plannedPullTotal | number }}</strong><span>Planned pulls</span></div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <section class="cp-setup" aria-label="Plan setup">
+    <div class="cp-setup-tabs" role="group" aria-label="Planner inputs">
+      <button class="cp-setup-tab" type="button" [class.is-active]="activeSetupPanel === 'resources'"
+        [attr.aria-expanded]="activeSetupPanel === 'resources'" aria-controls="cp-setup-workspace"
+        (click)="toggleSetupPanel('resources')">
+        <mat-icon aria-hidden="true">account_balance_wallet</mat-icon>
+        <span><strong>Resources</strong><small>{{ plan.projectionStartDate + 'T00:00:00Z' | date:'mediumDate':'UTC' }} &middot; {{ plan.balances.freeJewels | number }} free Carats &middot; {{ (plan.balances.umaTickets + plan.balances.supportTickets) | number }} tickets</small></span>
+        <mat-icon class="cp-setup-chevron" aria-hidden="true">expand_more</mat-icon>
+      </button>
+      <button class="cp-setup-tab" type="button" [class.is-active]="activeSetupPanel === 'income'"
+        [attr.aria-expanded]="activeSetupPanel === 'income'" aria-controls="cp-setup-workspace"
+        (click)="toggleSetupPanel('income')">
+        <mat-icon aria-hidden="true">trending_up</mat-icon>
+        <span><strong>Income</strong><small>{{ activeIncomeAssumptionCount }} sources<span *ngIf="enabledIncomeTotalLabel"> &middot; {{ enabledIncomeTotalLabel }}</span></small></span>
+        <mat-icon class="cp-setup-chevron" aria-hidden="true">expand_more</mat-icon>
+      </button>
+      <button class="cp-setup-tab" type="button" [class.is-active]="activeSetupPanel === 'rewards'"
+        [attr.aria-expanded]="activeSetupPanel === 'rewards'" aria-controls="cp-setup-workspace"
+        (click)="toggleSetupPanel('rewards')">
+        <mat-icon aria-hidden="true">redeem</mat-icon>
+        <span><strong>Rewards</strong><small>{{ activeRewardCount }} included<span *ngIf="enabledRewardTotalLabel"> &middot; {{ enabledRewardTotalLabel }}</span></small></span>
+        <mat-icon class="cp-setup-chevron" aria-hidden="true">expand_more</mat-icon>
+      </button>
+    </div>
+
+    <div id="cp-setup-workspace" class="cp-setup-workspace" *ngIf="activeSetupPanel"
+      [ngSwitch]="activeSetupPanel" role="region" [attr.aria-label]="activeSetupPanel + ' settings'">
+      <div class="cp-setup-panel cp-setup-panel--resources" *ngSwitchCase="'resources'">
+        <label class="cp-field"><span>Start date</span><input class="cp-control" type="date" [(ngModel)]="plan.projectionStartDate" (ngModelChange)="projectionStartChanged()"></label>
+        <fieldset class="cp-resource-group">
+          <legend>Carats</legend>
+          <label class="cp-field"><span>Free</span><span class="cp-control cp-control--icon"><mat-icon>diamond</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.freeJewels" (ngModelChange)="save()"></span></label>
+          <label class="cp-field"><span>Paid</span><span class="cp-control cp-control--icon"><mat-icon>paid</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.paidJewels" (ngModelChange)="save()"></span></label>
+        </fieldset>
+        <fieldset class="cp-resource-group">
+          <legend>Tickets</legend>
+          <label class="cp-field"><span>Uma</span><span class="cp-control cp-control--icon"><mat-icon>confirmation_number</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.umaTickets" (ngModelChange)="save()"></span></label>
+          <label class="cp-field"><span>Support</span><span class="cp-control cp-control--icon"><mat-icon>style</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.supportTickets" (ngModelChange)="save()"></span></label>
+        </fieldset>
+      </div>
+
+      <div class="cp-setup-panel cp-setup-panel--income" *ngSwitchCase="'income'">
+        <div class="cp-scenario-list" *ngIf="scenarioGroupOptions.length">
+          <fieldset class="cp-scenario" *ngFor="let group of scenarioGroupOptions">
+            <legend><mat-icon aria-hidden="true">{{ scenarioGroupIcon(group.id) }}</mat-icon>{{ group.label }}</legend>
+            <mat-form-field appearance="outline" class="compact-select cp-scenario-select" subscriptSizing="dynamic">
+              <mat-select [value]="plan.scenarioSelections[group.id] || ''"
+                (selectionChange)="setScenario(group.id, $event.value)" [attr.aria-label]="group.label">
+                <mat-select-trigger>
+                  <ng-container *ngIf="selectedScenarioOption(group) as selected; else scenarioNotIncluded">
+                    <span class="cp-scenario-option">
+                      <img *ngIf="scenarioOptionIconPath(group.id, selected.value) as iconPath" [src]="iconPath" width="24" height="28" alt="">
+                      <mat-icon *ngIf="!scenarioOptionIconPath(group.id, selected.value)" aria-hidden="true">{{ scenarioGroupIcon(group.id) }}</mat-icon>
+                      <strong>{{ selected.label }}</strong>
+                      <small *ngIf="selected.amountLabel">{{ selected.amountLabel }}</small>
+                    </span>
+                  </ng-container>
+                  <ng-template #scenarioNotIncluded>
+                    <span class="cp-scenario-option is-muted"><mat-icon aria-hidden="true">block</mat-icon><span>Not included</span></span>
+                  </ng-template>
+                </mat-select-trigger>
+                <mat-option value=""><span class="cp-scenario-option is-muted"><mat-icon aria-hidden="true">block</mat-icon><span>Not included</span></span></mat-option>
+                <mat-option *ngFor="let option of group.options" [value]="option.value">
+                  <span class="cp-scenario-option">
+                    <img *ngIf="scenarioOptionIconPath(group.id, option.value) as iconPath" [src]="iconPath" width="24" height="28" alt="">
+                    <mat-icon *ngIf="!scenarioOptionIconPath(group.id, option.value)" aria-hidden="true">{{ scenarioGroupIcon(group.id) }}</mat-icon>
+                    <strong>{{ option.label }}</strong>
+                    <small *ngIf="option.amountLabel">{{ option.amountLabel }}</small>
+                  </span>
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </fieldset>
+        </div>
+
+        <section class="cp-income-rules" *ngIf="displayedRules.length" aria-labelledby="cp-income-rules-heading">
+          <header>
+            <div><strong id="cp-income-rules-heading">Recurring income</strong><span>Choose the sources that apply to you.</span></div>
+            <span class="cp-income-total" *ngIf="enabledIncomeTotalLabel">{{ enabledIncomeTotalLabel }}</span>
+          </header>
+          <div class="cp-income-rule-list">
+            <button class="cp-income-rule" type="button" *ngFor="let rule of displayedRules; trackBy: trackById"
+              [class.is-active]="plan.enabledIncomeRuleIds.includes(rule.id)"
+              [attr.aria-pressed]="plan.enabledIncomeRuleIds.includes(rule.id)"
+              (click)="toggleRule(rule, !plan.enabledIncomeRuleIds.includes(rule.id))">
+              <span class="cp-income-rule-icon">
+                <img *ngIf="incomeRuleIconPath(rule) as iconPath" [src]="iconPath" width="22" height="22" alt="">
+                <mat-icon *ngIf="!incomeRuleIconPath(rule)" aria-hidden="true">event_repeat</mat-icon>
+              </span>
+              <span class="cp-income-rule-copy"><strong>{{ rule.label }}</strong><small>{{ incomeRuleScheduleLabel(rule) }}</small></span>
+              <span class="cp-income-rule-amount">+{{ rule.amount | number }}</span>
+              <mat-icon class="cp-income-rule-state" aria-hidden="true">{{ plan.enabledIncomeRuleIds.includes(rule.id) ? 'check' : 'add' }}</mat-icon>
+            </button>
+          </div>
+        </section>
+
+        <section class="cp-custom-income" aria-labelledby="cp-custom-income-heading">
+          <header>
+            <div><strong id="cp-custom-income-heading">Custom income</strong><span>{{ plan.customIncome.length || 'No' }} custom sources</span></div>
+            <button type="button" class="cp-action" (click)="addCustomIncome()"><mat-icon>add</mat-icon>Add income</button>
+          </header>
+          <div class="cp-custom-list" *ngIf="plan.customIncome.length">
+            <div class="cp-custom" *ngFor="let item of plan.customIncome; trackBy: trackById">
+              <label class="cp-field cp-custom-name"><span>Income name</span><input class="cp-control" [(ngModel)]="item.label" (blur)="save()"></label>
+              <label class="cp-field"><span>Amount</span><input class="cp-control" type="number" min="0" [(ngModel)]="item.amount" (ngModelChange)="save()"></label>
+              <label class="cp-field"><span>Resource</span><select class="cp-control" [(ngModel)]="item.currency" (ngModelChange)="save()"><option value="free_jewels">Carats</option><option value="uma_ticket">Uma ticket</option><option value="support_ticket">Support ticket</option></select></label>
+              <label class="cp-field"><span>Frequency</span><select class="cp-control" [(ngModel)]="item.cadence" (ngModelChange)="save()"><option value="once">Once</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label>
+              <label class="cp-field"><span>Starts</span><input class="cp-control" type="date" [(ngModel)]="item.startDate" (ngModelChange)="save()"></label>
+              <button class="cp-action cp-action--icon cp-danger" type="button" matTooltip="Remove income"
+                [attr.aria-label]="'Remove custom income ' + item.label" (click)="removeCustomIncome(item.id)">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="cp-setup-panel cp-setup-panel--rewards" *ngSwitchCase="'rewards'">
+        <div class="cp-reward-toolbar">
+          <div class="cp-reward-query">
+            <label class="cp-field cp-reward-search">
+              <span class="sr-only">Find a reward</span>
+              <span class="cp-control cp-control--icon cp-control--action">
+                <mat-icon>search</mat-icon>
+                <input [ngModel]="rewardSearch" (ngModelChange)="searchRewards($event)" autocomplete="off"
+                  placeholder="Find an event or reward">
+                <button *ngIf="rewardSearch" type="button" aria-label="Clear reward search" (click)="searchRewards('')"><mat-icon>close</mat-icon></button>
+              </span>
+            </label>
+            <span class="cp-reward-auto-note">
+              <mat-icon aria-hidden="true">check_circle</mat-icon>
+              <span><strong>Upcoming rewards are counted</strong><small>Uncheck only what you will not collect.</small></span>
+            </span>
+          </div>
+          <div class="cp-reward-period" role="group" aria-label="Reward period">
+            <button class="cp-reward-period-action" [class.is-active]="!showPastRewards" type="button"
+              [attr.aria-pressed]="!showPastRewards" (click)="setPastRewardsVisible(false)">
+              Upcoming <span>{{ upcomingRewardGroupCount }}</span>
+            </button>
+            <button class="cp-reward-period-action" [class.is-active]="showPastRewards" type="button"
+              [attr.aria-pressed]="showPastRewards" (click)="setPastRewardsVisible(true)">
+              Past <span>{{ pastRewardGroupCount }}</span>
+            </button>
+          </div>
+        </div>
+
+        <ng-template #freePullCampaignTile let-campaign>
+          <div class="cp-free-pull-campaign" [class.is-past]="campaign.isPast">
+            <span class="cp-free-pull-campaign-art" aria-hidden="true">
+              <ng-container *ngFor="let allocation of campaign.allocations">
+                <img *ngIf="allocation.imagePath" [src]="allocation.imagePath" width="512" height="125" loading="lazy" alt="">
+              </ng-container>
+              <mat-icon *ngIf="!campaign.allocations[0]?.imagePath">casino</mat-icon>
+            </span>
+            <span class="cp-free-pull-campaign-copy">
+              <span class="cp-free-pull-campaign-heading">
+                <strong>{{ campaign.label }}</strong>
+                <time *ngIf="campaign.availableAt">{{ campaign.availableAt + 'T00:00:00Z' | date:'mediumDate':'UTC' }}</time>
+              </span>
+              <small>
+                {{ campaign.totalPulls | number }} banner-limited pulls total
+                <ng-container *ngIf="campaign.pullsPerDay"> &middot; {{ campaign.pullsPerDay }} per day</ng-container>
+                &middot; one shared campaign
+              </small>
+              <span>Eligible banners only<ng-container *ngIf="campaign.stockDestination"> &middot; JP daily-use split is an estimate; the switch-day pull was flexible.</ng-container></span>
+            </span>
+
+            <span *ngIf="campaign.isPast; else freePullPlan" class="cp-free-pull-campaign-past">
+              <mat-icon aria-hidden="true">history</mat-icon> Past campaign
+            </span>
+            <ng-template #freePullPlan>
+              <span class="cp-free-pull-plan" role="group" [attr.aria-label]="'Plan ' + campaign.label">
+                <button *ngIf="campaign.stockDestination" class="cp-free-pull-mode" type="button"
+                  [disabled]="!canSelectFreePullCampaign(campaign, isFreePullCampaignChoiceSelected(campaign, 'stock') ? 'schedule' : 'stock')"
+                  [matTooltip]="isFreePullCampaignChoiceSelected(campaign, 'stock') ? freePullCampaignStockLabel(campaign) : freePullCampaignScheduleLabel(campaign)"
+                  (click)="switchFreePullCampaignAllocation(campaign)">
+                  <mat-icon aria-hidden="true">swap_horiz</mat-icon>
+                  <span>{{ isFreePullCampaignChoiceSelected(campaign, 'stock') ? 'Later banner' : 'Daily split' }}</span>
+                </button>
+                <button class="cp-free-pull-toggle" type="button"
+                  [class.is-added]="isFreePullCampaignReady(campaign)"
+                  [attr.aria-pressed]="isFreePullCampaignReady(campaign)"
+                  [disabled]="!canSelectFreePullCampaign(campaign, isFreePullCampaignChoiceSelected(campaign, 'stock') ? 'stock' : 'schedule')"
+                  (click)="toggleFreePullCampaignPlan(campaign)">
+                  <mat-icon aria-hidden="true">{{ isFreePullCampaignReady(campaign) ? 'check_circle' : 'add_chart' }}</mat-icon>
+                  <span>{{ isFreePullCampaignReady(campaign) ? 'Added' : 'Add to plan' }}</span>
+                </button>
+              </span>
+            </ng-template>
+
+            <a *ngIf="campaign.sourceUrl" class="cp-free-pull-campaign-source" [href]="campaign.sourceUrl"
+              target="_blank" rel="noopener noreferrer"
+              [attr.aria-label]="'Open news post for ' + campaign.label + ' in a new tab'"
+              title="News post (opens in a new tab)">
+              <mat-icon aria-hidden="true">open_in_new</mat-icon>
+            </a>
+          </div>
+        </ng-template>
+
+        <ng-template #rewardTile let-group>
+            <span class="cp-reward-art" aria-hidden="true">
+              <img *ngIf="group.imagePath" [src]="group.imagePath" width="512" height="125" loading="lazy" alt="">
+              <mat-icon *ngIf="!group.imagePath">redeem</mat-icon>
+            </span>
+            <span class="cp-reward-copy">
+              <strong>{{ group.title }}</strong>
+              <time *ngIf="group.availableAt">{{ group.availableAt + 'T00:00:00Z' | date:'mediumDate':'UTC' }}</time>
+            </span>
+            <span class="cp-reward-benefits" [attr.title]="group.benefits.length ? group.benefits[0].text : null">
+              <span class="cp-reward-benefit" *ngFor="let benefit of group.benefits; trackBy: trackByRewardBenefit"
+                [attr.data-kind]="benefit.kind">
+                <img *ngIf="benefit.iconPath" [src]="benefit.iconPath" width="22" height="22" loading="lazy" alt="" aria-hidden="true">
+                <mat-icon *ngIf="!benefit.iconPath" aria-hidden="true">{{ benefit.icon }}</mat-icon>
+                <span>{{ benefit.text }}</span>
+              </span>
+            </span>
+        </ng-template>
+
+        <div class="cp-reward-viewport"
+          [attr.aria-label]="showPastRewards ? 'Past event rewards, newest first' : 'Current and upcoming event rewards, earliest first'">
+          <div class="cp-reward-grid">
+            <ng-container *ngFor="let item of visibleRewardItems; trackBy: trackById">
+              <ng-container *ngIf="item.campaign as campaign">
+                <ng-container *ngTemplateOutlet="freePullCampaignTile; context: { $implicit: campaign }"></ng-container>
+              </ng-container>
+              <div *ngIf="item.group as group" class="cp-reward-cell" [class.has-source]="group.sourceUrl">
+                <div class="cp-reward-row" [class.is-active]="isRewardGroupActive(group)"
+                  [class.is-excluded]="!isRewardGroupActive(group)" [class.is-automatic]="isAutomaticFreePullGroup(group)" [class.is-past]="showPastRewards">
+                  <ng-container *ngTemplateOutlet="rewardTile; context: { $implicit: group }"></ng-container>
+                  <span class="cp-reward-actions" *ngIf="!showPastRewards; else pastRewardState">
+                    <button *ngIf="isRewardGroupSelectable(group)" type="button"
+                      class="cp-reward-include-toggle"
+                      [class.is-added]="isRewardGroupActive(group)"
+                      [attr.aria-pressed]="isRewardGroupActive(group)"
+                      [attr.aria-label]="(isRewardGroupActive(group) ? 'Exclude ' : 'Include ') + group.title + ' rewards'"
+                      [matTooltip]="isRewardGroupActive(group) ? 'Included in projection — click to exclude' : 'Excluded — click to include'"
+                      (click)="toggleRewardGroupSelection(group)">
+                      <mat-icon aria-hidden="true">{{ isRewardGroupActive(group) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+                    </button>
+                    <button *ngIf="isRewardGroupBannerActionable(group)" type="button"
+                      [class.is-added]="isRewardGroupBannerPlanned(group)"
+                      [attr.aria-pressed]="isRewardGroupBannerPlanned(group)"
+                      [attr.aria-label]="(isRewardGroupBannerPlanned(group) ? 'Remove ' : 'Add ') + group.title + ' banner ' + (isRewardGroupBannerPlanned(group) ? 'from' : 'to') + ' the plan'"
+                      (click)="toggleRewardGroupBanner(group)">
+                      <mat-icon aria-hidden="true">{{ isRewardGroupBannerPlanned(group) ? 'check_circle' : 'add_chart' }}</mat-icon>
+                      <span>{{ isRewardGroupBannerPlanned(group) ? 'Added' : 'Plan' }}</span>
+                    </button>
+                  </span>
+                  <ng-template #pastRewardState>
+                    <span class="cp-reward-past"><mat-icon aria-hidden="true">history</mat-icon> Past</span>
+                  </ng-template>
+                </div>
+                <a *ngIf="group.sourceUrl" class="cp-reward-source" [href]="group.sourceUrl" target="_blank"
+                  rel="noopener noreferrer"
+                  [attr.aria-label]="'Open ' + (group.sourceLabel || 'source') + ' for ' + group.title + ' in a new tab'"
+                  [attr.title]="(group.sourceLabel || 'Source') + ' (opens in a new tab)'">
+                  <mat-icon aria-hidden="true">open_in_new</mat-icon>
+                </a>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+        <p class="cp-reward-empty" *ngIf="!visibleRewardItems.length">
+          <ng-container *ngIf="rewardSelectionFilter === 'included' && !rewardSearch; else rewardSearchEmpty">
+            No rewards or linked banner benefits are in the plan for this period yet.
+          </ng-container>
+          <ng-template #rewardSearchEmpty>
+          <ng-container *ngIf="rewardSearch; else noRewardsInPeriod">No {{ showPastRewards ? 'past' : 'upcoming' }} rewards match this search.</ng-container>
+          <ng-template #noRewardsInPeriod>
+            {{ showPastRewards ? 'No historical rewards are available.' : 'No usable rewards are scheduled from the plan start date.' }}
+          </ng-template>
+          </ng-template>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cp-targets" aria-labelledby="cp-targets-heading">
+    <div class="cp-target-heading">
+      <div class="cp-section-title">
+        <span class="cp-title-icon"><mat-icon>track_changes</mat-icon></span>
+        <div><h2 id="cp-targets-heading">Pull targets</h2><p>Usable pulls run top to bottom by pull date, earliest first. Past targets stay below.</p></div>
+      </div>
+
+      <div class="cp-picker">
+        <div class="cp-field">
+          <label for="cp-banner-search">Add a banner</label>
+          <span class="cp-control cp-control--icon cp-control--action">
+          <mat-icon>search</mat-icon>
+          <input id="cp-banner-search" [ngModel]="eventSearch" (focus)="showEventPicker = true"
+            (ngModelChange)="searchEvents($event)" (keydown)="onEventPickerKeydown($event)"
+            autocomplete="off" aria-label="Search character or support banners" aria-haspopup="listbox"
+            aria-controls="cp-banner-options" [attr.aria-expanded]="showEventPicker"
+            [attr.aria-activedescendant]="showEventPicker && filteredEvents.length ? 'cp-banner-option-' + eventPickerActiveIndex : null">
+          <button *ngIf="eventSearch" type="button" aria-label="Clear banner search" (click)="searchEvents('')">
+            <mat-icon>close</mat-icon>
+          </button>
+          </span>
+        </div>
+
+        <cdk-virtual-scroll-viewport id="cp-banner-options" *ngIf="showEventPicker" itemSize="68" class="cp-event-viewport" role="listbox">
+          <button class="cp-event-option" type="button" role="option" *cdkVirtualFor="let event of filteredEvents; let optionIndex = index; trackBy: trackById"
+            [id]="'cp-banner-option-' + optionIndex" [class.is-active]="optionIndex === eventPickerActiveIndex"
+            [attr.aria-selected]="optionIndex === eventPickerActiveIndex" [disabled]="isEventAdded(event.id)"
+            (mouseenter)="eventPickerActiveIndex = optionIndex" (click)="addEvent(event)">
+            <span class="cp-event-art" aria-hidden="true">
+              <img *ngIf="event.imagePath" [src]="event.imagePath" width="512" height="125" loading="lazy" alt="">
+              <mat-icon *ngIf="!event.imagePath">{{ event.type?.includes('support') ? 'style' : 'person' }}</mat-icon>
+            </span>
+            <span class="cp-event-copy"><strong>{{ eventDisplayTitle(event) }}</strong><time>{{ event.globalReleaseDate || event.estimatedGlobalDate || event.jpReleaseDate | date:'mediumDate':'UTC' }}</time></span>
+            <span class="cp-event-action"><mat-icon>{{ isEventAdded(event.id) ? 'check' : 'add' }}</mat-icon><span class="cp-event-action-label">{{ isEventAdded(event.id) ? 'Added' : 'Add' }}</span></span>
+          </button>
+        </cdk-virtual-scroll-viewport>
+      </div>
+    </div>
+
+    <div class="cp-empty" *ngIf="activeTargets.length === 0">
+      <span class="cp-empty-icon"><mat-icon>event_available</mat-icon></span>
+      <div><strong>No pull targets yet</strong><p>Choose a character or support banner above to calculate what you can afford.</p></div>
+    </div>
+
+    <div class="cp-target-list" *ngIf="activeTargets.length">
+      <mat-card appearance="outlined" class="cp-target" *ngFor="let target of activeTargets; trackBy: trackById"
+        [class.is-past-target]="isTargetBeforePlan(target)">
+        <div class="cp-target-main">
+          <div class="cp-target-image" *ngIf="target.imagePath">
+            <img [src]="target.imagePath" width="112" height="48" loading="lazy" alt="">
+          </div>
+          <div class="cp-target-title">
+            <strong>{{ targetDisplayTitle(target) }}</strong>
+            <span class="cp-target-date">
+              <mat-icon>date_range</mat-icon>
+              <span class="cp-target-date-text">
+                {{ target.bannerStart + 'T00:00:00Z' | date:'mediumDate':'UTC' }}
+                <span aria-hidden="true">&ndash;</span>
+                {{ target.bannerEnd + 'T00:00:00Z' | date:'mediumDate':'UTC' }}
+              </span>
+            </span>
+          </div>
+        </div>
+
+        <div class="cp-target-controls cp-target-controls--primary">
+          <label class="cp-field"><span>Pull on</span><select class="cp-control" [(ngModel)]="target.pullTiming" (ngModelChange)="save()"><option value="start">Banner start</option><option value="end">Banner end</option><option value="custom">Custom date</option></select></label>
+          <label class="cp-field" *ngIf="target.pullTiming === 'custom'"><span>Pull date</span><input class="cp-control" type="date" [(ngModel)]="target.customPullDate" (ngModelChange)="save()"></label>
+          <label class="cp-field"><span>Planned pulls</span><input class="cp-control" type="number" min="0" max="5000" [(ngModel)]="target.plannedPulls" (ngModelChange)="save()"></label>
+          <details class="cp-payment-menu">
+            <summary aria-label="Payment settings" title="Payment settings"><mat-icon aria-hidden="true">tune</mat-icon></summary>
+            <div class="cp-payment-popover">
+              <strong>Payment settings</strong>
+              <span>Choose which balances this target may use.</span>
+            <div class="cp-target-options">
+              <mat-checkbox [(ngModel)]="target.useTickets" (ngModelChange)="save()">Use tickets first</mat-checkbox>
+              <mat-checkbox [(ngModel)]="target.allowPaidJewels" (ngModelChange)="save()">Allow paid Carats</mat-checkbox>
+            </div>
+            </div>
+          </details>
+          <button class="cp-action cp-action--icon cp-danger cp-target-remove" type="button" matTooltip="Remove target"
+            [attr.aria-label]="'Remove ' + targetDisplayTitle(target) + ' from pull targets'" (click)="removeTarget(target.id)">
+            <mat-icon>delete_outline</mat-icon>
+          </button>
+        </div>
+
+        <div class="cp-target-past-note" *ngIf="isTargetBeforePlan(target)" role="note">
+          <mat-icon aria-hidden="true">history</mat-icon>
+          <span><strong>Before plan start</strong><small>Kept for editing, but excluded from this projection.</small></span>
+        </div>
+
+        <details class="cp-pickup-details" *ngIf="oddsByTarget.get(target.id) as odds"
+          (toggle)="setPickupDetailsOpen(target.id, $event)">
+          <summary>
+            <span class="cp-target-funding" *ngIf="projectionByTarget.get(target.id) as result"
+              [class.is-short]="result.shortfallJewels > 0"
+              [matTooltip]="fundingBreakdownTooltip(result)" matTooltipPosition="above">
+              <mat-icon aria-hidden="true">{{ result.shortfallJewels > 0 ? 'warning_amber' : 'check_circle' }}</mat-icon>
+              <span>
+                <strong *ngIf="result.shortfallJewels > 0; else fundedTarget">{{ result.fundedPulls }} / {{ result.plannedPulls }} funded</strong>
+                <ng-template #fundedTarget><strong>{{ result.fundedPulls }} funded</strong></ng-template>
+                <small>
+                  <span>{{ fundingInlineLabel(target, result) }}</span>
+                  <span class="cp-reward-contribution" *ngIf="result.rewardCaratsGained > 0">
+                    &middot; +{{ result.rewardCaratsGained | number }} from rewards
+                  </span>
+                </small>
+              </span>
+            </span>
+
+            <span class="cp-pickup-summary-label">Rolling for</span>
+            <span class="cp-pickup-summary-goals" *ngIf="odds.goals.length; else noSelectedGoals">
+              <span class="cp-pickup-summary-goal" *ngFor="let goal of odds.goals | slice:0:3; trackBy: trackByPickupGoal">
+                <span class="cp-pickup-summary-art">
+                  <img *ngIf="goal.imagePath" [src]="goal.imagePath" width="24" height="24" loading="lazy" alt="">
+                  <mat-icon *ngIf="!goal.imagePath" aria-hidden="true">{{ target.bannerKind === 'support' ? 'style' : 'person' }}</mat-icon>
+                </span>
+                <span>{{ goal.label }}</span>
+                <strong [attr.aria-label]="pickupGoalOddsAriaLabel(goal)">{{ pickupGoalOddsLabel(goal) }}</strong>
+              </span>
+              <span class="cp-pickup-summary-more" *ngIf="odds.goals.length > 3">{{ odds.goals.length - 3 }} more</span>
+            </span>
+            <ng-template #noSelectedGoals><span class="cp-pickup-summary-empty">Choose featured pickups</span></ng-template>
+
+            <span class="cp-pickup-summary-chance"
+              [class.is-strong]="odds.allGoalsProbability !== undefined && odds.allGoalsProbability >= 0.5"
+              [class.is-unavailable]="odds.goals.length && !odds.ratesAvailable"
+              [attr.aria-label]="odds.allGoalsProbability === undefined ? null : 'Chance of meeting every selected goal: ' + formatProbability(odds.allGoalsProbability)">
+              <small *ngIf="odds.ratesInferred">Estimated standard rates</small>
+              <small *ngIf="!odds.ratesInferred && odds.combined.guaranteedHits">{{ odds.combined.guaranteedHits }} {{ odds.combined.guaranteedHits === 1 ? 'spark' : 'sparks' }} available</small>
+              <strong *ngIf="!odds.goals.length">Choose pickups</strong>
+              <strong *ngIf="odds.goals.length && !odds.ratesAvailable">Rates unavailable</strong>
+              <strong *ngIf="odds.goals.length && odds.ratesAvailable && odds.allGoalsProbability !== undefined">{{ formatProbability(odds.allGoalsProbability) }}</strong>
+            </span>
+            <mat-icon class="cp-disclosure-icon" aria-hidden="true">expand_more</mat-icon>
+          </summary>
+
+          <div class="cp-pickup-details-body" *ngIf="isPickupDetailsOpen(target.id)">
+            <section class="cp-goal-editor" [attr.aria-label]="'Rate-up goals for ' + targetDisplayTitle(target)">
+              <div class="cp-goal-editor-header">
+                <span class="cp-goal-editor-title">
+                  <strong>Rate-up goals</strong>
+                  <small>Choose who you want and how many copies.</small>
+                </span>
+
+                <details class="cp-goal-picker" *ngIf="pickupOptions(target).length">
+                  <summary>
+                    <mat-icon aria-hidden="true">add_circle_outline</mat-icon>
+                    <span>Choose rate-ups</span>
+                    <small>{{ odds.goals.length }} selected</small>
+                  </summary>
+                  <div class="cp-goal-picker-popover" role="group"
+                    [attr.aria-label]="'Featured rate-ups on ' + targetDisplayTitle(target)">
+                    <span class="cp-goal-picker-heading">
+                      <strong>Featured on this banner</strong>
+                      <small>Select more than one if you want both.</small>
+                    </span>
+                    <button class="cp-goal-picker-option" type="button"
+                      *ngFor="let pickup of pickupOptions(target); trackBy: trackByPickupOption"
+                      [class.is-selected]="isPickupGoalSelected(target, pickup.pickup_id)"
+                      [attr.aria-pressed]="isPickupGoalSelected(target, pickup.pickup_id)"
+                      [attr.aria-label]="(isPickupGoalSelected(target, pickup.pickup_id) ? 'Remove ' : 'Select ') + (pickup.label || targetDisplayTitle(target))"
+                      (click)="togglePickupGoal(target, pickup.pickup_id)">
+                      <span class="cp-goal-picker-art" [class.is-support]="target.bannerKind === 'support'">
+                        <img *ngIf="pickup.imagePath" [src]="pickup.imagePath" width="34" height="34" loading="lazy" alt="">
+                        <mat-icon *ngIf="!pickup.imagePath" aria-hidden="true">{{ target.bannerKind === 'support' ? 'style' : 'person' }}</mat-icon>
+                      </span>
+                      <span class="cp-goal-picker-name">
+                        <strong>{{ pickup.label || targetDisplayTitle(target) }}</strong>
+                        <small>{{ formatProbability(pickup.rate, 2) }} {{ odds.ratesInferred ? 'estimated ' : '' }}per pull</small>
+                      </span>
+                      <mat-icon aria-hidden="true">{{ isPickupGoalSelected(target, pickup.pickup_id) ? 'check_circle' : 'add' }}</mat-icon>
+                    </button>
+                  </div>
+                </details>
+              </div>
+
+              <div class="cp-selected-goal-list" *ngIf="odds.goals.length; else noConfiguredGoals">
+                <article class="cp-selected-goal-row" *ngFor="let goal of odds.goals; trackBy: trackByPickupGoal">
+                  <span class="cp-selected-goal-art" [class.is-support]="target.bannerKind === 'support'">
+                    <img *ngIf="goal.imagePath" [src]="goal.imagePath" width="40" height="40" loading="lazy" alt="">
+                    <mat-icon *ngIf="!goal.imagePath" aria-hidden="true">{{ target.bannerKind === 'support' ? 'style' : 'person' }}</mat-icon>
+                  </span>
+                  <span class="cp-selected-goal-name">
+                    <strong [matTooltip]="goal.label">{{ goal.label }}</strong>
+                    <small>{{ formatProbability(goal.rate, 2) }} {{ odds.ratesInferred ? 'estimated ' : '' }}per pull</small>
+                  </span>
+                  <div class="cp-selected-goal-copy">
+                    <span [id]="'copy-goal-' + target.id + '-' + goal.pickupId">Copies</span>
+                    <div class="cp-copy-stepper" role="group"
+                      [attr.aria-labelledby]="'copy-goal-' + target.id + '-' + goal.pickupId">
+                      <button type="button" (click)="adjustPickupGoalCopies(target, goal.pickupId, -1)"
+                        [disabled]="goal.desiredCopies <= 1" [attr.aria-label]="'Decrease desired copies of ' + goal.label">
+                        <mat-icon>remove</mat-icon>
+                      </button>
+                      <output [attr.aria-label]="goal.desiredCopies + ' desired copies'">{{ goal.desiredCopies }}</output>
+                      <button type="button" (click)="adjustPickupGoalCopies(target, goal.pickupId, 1)"
+                        [disabled]="goal.desiredCopies >= 20" [attr.aria-label]="'Increase desired copies of ' + goal.label">
+                        <mat-icon>add</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                  <span class="cp-selected-goal-chance" [class.is-unavailable]="goal.probability === undefined"
+                    [attr.aria-label]="pickupGoalOddsAriaLabel(goal)">
+                    <strong>{{ pickupGoalOddsLabel(goal) }}</strong>
+                  </span>
+                  <button class="cp-selected-goal-remove" type="button" matTooltip="Remove goal"
+                    [attr.aria-label]="'Remove ' + goal.label + ' from rate-up goals'"
+                    (click)="togglePickupGoal(target, goal.pickupId)">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </article>
+              </div>
+
+              <ng-template #noConfiguredGoals>
+                <p class="cp-selected-goal-empty">No rate-up selected yet. Use <strong>Choose rate-ups</strong> to add one or more.</p>
+              </ng-template>
+
+              <p class="cp-pickup-unavailable" *ngIf="pickupOptions(target).length === 0">
+                Featured pickup data is not available for this banner yet.
+              </p>
+            </section>
+
+          <div class="cp-goal-rollup" *ngIf="odds.goals.length && odds.ratesAvailable">
+            <div class="cp-goal-rollup-header">
+              <div>
+                <h4>Selected pickup outcomes at {{ odds.combined.pulls | number }} pulls</h4>
+                <p><span *ngIf="odds.ratesInferred">Estimated from standard banner rates &middot; </span>Only selected featured cards count here<span *ngIf="odds.combined.guaranteedHits"> &middot; totals include {{ odds.combined.guaranteedHits }} shared exchange {{ odds.combined.guaranteedHits === 1 ? 'copy' : 'copies' }}</span></p>
+              </div>
+              <div class="cp-all-goals-status" role="status" aria-live="polite"
+                [class.is-strong]="odds.allGoalsProbability !== undefined && odds.allGoalsProbability >= 0.5">
+                <span>All goals</span>
+                <strong>{{ odds.allGoalsProbability === undefined ? 'Rate unavailable' : formatProbability(odds.allGoalsProbability) }}</strong>
+                <small *ngIf="odds.allGoalsStatus">{{ odds.allGoalsStatus }}</small>
+              </div>
+            </div>
+
+            <section class="cp-rarity-context" *ngIf="odds.combined.pool as pool"
+              [attr.aria-label]="'Full ' + topRarityLabel(target) + ' pool odds'">
+              <div class="cp-rarity-context-header">
+                <div>
+                  <span>{{ odds.ratesInferred ? 'Estimated' : 'Full' }} {{ topRarityLabel(target) }} pool</span>
+                  <strong>{{ formatProbability(pool.topRarityRate, 2) }} <small>per pull</small></strong>
+                </div>
+                <dl>
+                  <div><dt>At least one</dt><dd>{{ formatProbability(pool.probabilityAtLeastOneTopRarity) }}</dd></div>
+                  <div><dt>Average in {{ odds.combined.pulls | number }}</dt><dd>{{ formatCopies(pool.expectedTopRarityHits) }}</dd></div>
+                </dl>
+              </div>
+              <div class="cp-rarity-stack" role="img" [attr.aria-label]="poolDistributionLabel(target, pool)">
+                <span data-pool="selected" [style.width.%]="poolSegmentWidth(pool.selectedRateUpRate, pool)"></span>
+                <span data-pool="featured" [style.width.%]="poolSegmentWidth(pool.unselectedFeaturedRate, pool)"></span>
+                <span data-pool="off-banner" [style.width.%]="poolSegmentWidth(pool.offBannerTopRarityRate, pool)"></span>
+              </div>
+              <ul class="cp-rarity-legend">
+                <li><i data-pool="selected"></i><span>Selected featured</span><b>{{ formatProbability(pool.selectedRateUpRate, 2) }}</b><small>{{ formatCopies(pool.expectedSelectedRateUpHits) }} avg</small></li>
+                <li *ngIf="pool.unselectedFeaturedRate > 0"><i data-pool="featured"></i><span>Other featured</span><b>{{ formatProbability(pool.unselectedFeaturedRate, 2) }}</b><small>{{ formatCopies(pool.expectedUnselectedFeaturedHits) }} avg</small></li>
+                <li *ngIf="pool.offBannerTopRarityRate > 0"><i data-pool="off-banner"></i><span>Off-banner</span><b>{{ formatProbability(pool.offBannerTopRarityRate, 2) }}</b><small>{{ formatCopies(pool.expectedOffBannerTopRarityHits) }} avg</small></li>
+              </ul>
+            </section>
+
+            <div class="cp-outcome-chart">
+              <div class="cp-outcome-stack" role="img"
+                [attr.aria-label]="outcomeDistributionLabel(odds)">
+                <span *ngFor="let segment of odds.segments; trackBy: trackByOutcome"
+                  [attr.data-outcome]="segment.tone" [style.width.%]="segment.width"
+                  [matTooltip]="segment.semanticLabel + ' \u00b7 ' + segment.rangeLabel + ': ' + formatProbability(segment.probability)"></span>
+              </div>
+              <ul class="cp-outcome-legend" aria-label="Selected rate-up outcome probabilities">
+                <li *ngFor="let segment of odds.segments; trackBy: trackByOutcome">
+                  <i [attr.data-outcome]="segment.tone" aria-hidden="true"></i>
+                  <span><strong>{{ segment.semanticLabel }}</strong><small>{{ segment.rangeLabel }}</small></span>
+                  <b>{{ formatProbability(segment.probability) }}</b>
+                </li>
+              </ul>
+              <div class="cp-outcome-summary">
+                <span><small>Avg selected copies</small><strong>{{ formatCopies(odds.combined.expectedHits) }}</strong></span>
+                <span><small>Median copies</small><strong>{{ odds.combined.medianHits }}</strong></span>
+                <span><small>Median first rate-up</small><strong>{{ odds.combined.medianFirstHitPull ? ('Pull ' + odds.combined.medianFirstHitPull) : 'Not reached' }}</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="cp-goal-rollup cp-goal-rollup--unavailable" *ngIf="odds.goals.length && !odds.ratesAvailable">
+            <mat-icon aria-hidden="true">info_outline</mat-icon>
+            <span>Exact odds will appear when this banner's published pickup rates are available.</span>
+          </div>
+          </div>
+        </details>
+      </mat-card>
+    </div>
+
+    <p class="cp-disclaimer" *ngIf="activeTargets.length">
+      <mat-icon>info_outline</mat-icon>Each pickup uses its published rate. Available exchange copies are shared across the selected goals and allocated after the pulls.
+    </p>
+  </section>
+</section>

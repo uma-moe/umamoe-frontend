@@ -6,6 +6,7 @@
     "ng": "ng",
     "start": "ng serve",
     "compress": "node scripts/compress-images.js",
+    "sync:planner-item-icons": "node scripts/sync-planner-item-icons.mjs",
     "build": "npm run precompute && ng build && npm run compress",
     "build:prod": "npm run precompute && ng build --configuration production && npm run compress",
     "build:beta": "npm run precompute && ng build --configuration beta && npm run compress",

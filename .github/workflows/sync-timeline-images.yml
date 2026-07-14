@@ -33,12 +33,13 @@ jobs:
         with:
           workspaces: .sync/umamoe-resources
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: '3.12'
+          node-version: '22'
+          cache: npm
 
       - name: Install image converter
-        run: python -m pip install 'Pillow==11.3.0'
+        run: npm ci
 
       - name: Generate current timeline
         shell: bash
@@ -50,25 +51,33 @@ jobs:
             --out "${RUNNER_TEMP}/timeline-resources" \
             --write-json
 
-      - name: Download only missing timeline images
+      - name: Sync timeline images and available EN replacements
         shell: bash
         run: |
           timeline_json="$(find "${RUNNER_TEMP}/timeline-resources" -name banner_timeline.json -print -quit)"
           test -n "${timeline_json}"
-          python .sync/umamoe-resources/scripts/sync_umapyoi_timeline_images.py \
+          node .sync/umamoe-resources/scripts/sync_umapyoi_timeline_images.mjs \
             --timeline-json "${timeline_json}" \
             --frontend-root . \
-            --request-interval-ms 250
+            --request-interval-ms 250 \
+            --changed-files-output "${RUNNER_TEMP}/timeline-image-changes.txt"
 
-      - name: Commit new WebP assets
+      - name: Commit changed WebP assets
         shell: bash
         run: |
-          if git diff --quiet -- src/assets/timeline-images && [[ -z "$(git ls-files --others --exclude-standard src/assets/timeline-images)" ]]; then
+          changes="${RUNNER_TEMP}/timeline-image-changes.txt"
+          if [[ ! -s "${changes}" ]]; then
+            echo "Timeline images are already current."
+            exit 0
+          fi
+          while IFS= read -r path; do
+            [[ -n "${path}" ]] && git add -f -- "${path}"
+          done < "${changes}"
+          if git diff --cached --quiet; then
             echo "Timeline images are already current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/assets/timeline-images
-          git commit -m "chore: sync JP timeline images"
+          git commit -m "chore: sync timeline images"
           git push

@@ -1,10 +1,5 @@
 import { Injectable } from '@angular/core';
-import { combineLatest } from 'rxjs';
-import { getCharacterNameEntry } from '../data/character.data';
-import { Character } from '../models/character.model';
-import { SupportCardShort, SupportCardType } from '../models/support-card.model';
 import { EventType, TimelineEvent } from '../models/timeline.model';
-import { MasterDataService } from './master-data.service';
 
 export interface TimelineAvatar {
   key: string;
@@ -18,38 +13,17 @@ export interface TimelineAvatar {
   gametoraUrl: string;
 }
 
-interface CharacterCardIdentity {
-  baseName: string;
-  variantName?: string;
-}
-
 @Injectable({ providedIn: 'root' })
 export class TimelineAvatarService {
-  private lookupRevision = 0;
-  private characterById = new Map<number, Character>();
-  private charactersByName = new Map<string, Character[]>();
-  private supportCardById = new Map<string, SupportCardShort>();
-  private supportCardsByName = new Map<string, SupportCardShort[]>();
   private characterAvatarCache = new WeakMap<TimelineEvent, TimelineAvatar[]>();
   private supportAvatarCache = new WeakMap<TimelineEvent, TimelineAvatar[]>();
 
-  constructor(private masterData: MasterDataService) {
-    combineLatest([
-      this.masterData.characters$,
-      this.masterData.supportCards$
-    ]).subscribe(([characters, supportCards]) => {
-      this.updateLookups(characters, supportCards);
-    });
-
-    this.masterData.initCharacterSupportResources();
-  }
-
   get revision(): number {
-    return this.lookupRevision;
+    return 0;
   }
 
   getCharacterAvatars(event?: TimelineEvent): TimelineAvatar[] {
-    if (!event || event.type === EventType.LEGEND_RACE) {
+    if (!event) {
       return [];
     }
 
@@ -123,54 +97,64 @@ export class TimelineAvatarService {
       : titleAvatars[0].displayName;
   }
 
-  private updateLookups(characters: Character[], supportCards: SupportCardShort[]): void {
-    this.characterById = new Map(characters.map(character => [character.id, character]));
-    this.charactersByName = this.groupByName(characters);
-    this.supportCardById = new Map(supportCards.map(card => [card.id, card]));
-    this.supportCardsByName = this.groupByName(supportCards);
-    this.characterAvatarCache = new WeakMap<TimelineEvent, TimelineAvatar[]>();
-    this.supportAvatarCache = new WeakMap<TimelineEvent, TimelineAvatar[]>();
-    this.lookupRevision++;
-  }
-
-  private groupByName<T extends { name: string }>(items: T[]): Map<string, T[]> {
-    const index = new Map<string, T[]>();
-
-    items.forEach(item => {
-      const key = this.normalizeLookupKey(item.name);
-      const group = index.get(key);
-      if (group) {
-        group.push(item);
-      } else {
-        index.set(key, [item]);
-      }
-    });
-
-    return index;
-  }
-
   private buildCharacterAvatars(event: TimelineEvent): TimelineAvatar[] {
+    if (event.type === EventType.LEGEND_RACE) {
+      return this.buildLegendRaceAvatars(event);
+    }
+
     const names = event.relatedCharacters ?? [];
     const ids = this.getCharacterPickupIds(event);
     const avatars: TimelineAvatar[] = [];
     const usedKeys = new Set<string>();
 
-    for (const id of ids) {
-      const avatar = this.resolveCharacterAvatar(id);
-      if (avatar) {
+    for (let index = 0; index < ids.length; index++) {
+      const avatar = this.resolveCharacterAvatar(ids[index], names[index]);
+      if (avatar && !usedKeys.has(avatar.key)) {
         avatars.push(avatar);
         usedKeys.add(avatar.key);
       }
     }
 
-    if (ids.length === 0) {
-      names.forEach(name => {
-        const avatar = this.resolveCharacterAvatar(undefined, name);
-        if (avatar && !usedKeys.has(avatar.key)) {
-          avatars.push(avatar);
-          usedKeys.add(avatar.key);
-        }
+    return avatars;
+  }
+
+  private buildLegendRaceAvatars(event: TimelineEvent): TimelineAvatar[] {
+    const avatars: TimelineAvatar[] = [];
+    const usedIds = new Set<number>();
+    const relatedCharacters = event.relatedCharacters ?? [];
+    const explicitIds = (event.pickupCardIds ?? []).filter(id => this.isCharacterCardId(id));
+
+    const participants: Array<{ cardId: number; relatedCharacter?: string }> = explicitIds.map((cardId, index) => ({
+      cardId,
+      relatedCharacter: relatedCharacters[index]
+    }));
+
+    for (const relatedCharacter of relatedCharacters) {
+      const legacyCardId = this.extractCharacterCardId(relatedCharacter);
+      if (legacyCardId !== undefined && !participants.some(participant => participant.cardId === legacyCardId)) {
+        participants.push({ cardId: legacyCardId, relatedCharacter });
+      }
+    }
+
+    for (const participant of participants) {
+      if (usedIds.has(participant.cardId)) continue;
+
+      const assetPath = participant.relatedCharacter
+        ? this.normalizePublicAssetPath(participant.relatedCharacter)
+        : undefined;
+      const publicName = participant.relatedCharacter && !assetPath
+        ? participant.relatedCharacter
+        : undefined;
+
+      const avatar = this.resolveCharacterAvatar(participant.cardId, publicName);
+      if (!avatar) continue;
+
+      avatars.push({
+        ...avatar,
+        imageUrl: assetPath ?? avatar.imageUrl,
+        subLabel: 'Legend Race participant'
       });
+      usedIds.add(participant.cardId);
     }
 
     return avatars;
@@ -184,27 +168,25 @@ export class TimelineAvatarService {
 
     for (let index = 0; index < ids.length; index++) {
       const avatar = this.resolveSupportAvatar(ids[index], names[index]);
-      if (avatar) {
+      if (avatar && !usedKeys.has(avatar.key)) {
         avatars.push(avatar);
         usedKeys.add(avatar.key);
       }
-    }
-
-    if (ids.length === 0) {
-      names.forEach(name => {
-        const avatar = this.resolveSupportAvatar(undefined, name);
-        if (avatar && !usedKeys.has(avatar.key)) {
-          avatars.push(avatar);
-          usedKeys.add(avatar.key);
-        }
-      });
     }
 
     return avatars;
   }
 
   private getCharacterPickupIds(event: TimelineEvent): number[] {
-    return (event.pickupCardIds ?? []).filter(id => this.isCharacterCardId(id));
+    const pickupIds = (event.pickupCardIds ?? []).filter(id => this.isCharacterCardId(id));
+    if (event.type !== EventType.LEGEND_RACE) return pickupIds;
+
+    return [
+      ...pickupIds,
+      ...(event.relatedCharacters ?? [])
+        .map(value => this.extractCharacterCardId(value))
+        .filter((id): id is number => id !== undefined)
+    ];
   }
 
   private getSupportPickupIds(event: TimelineEvent): number[] {
@@ -212,31 +194,38 @@ export class TimelineAvatarService {
   }
 
   private isCharacterCardId(id: number): boolean {
-    return this.characterById.has(id) || id >= 100000;
+    return Number.isFinite(id) && id >= 100000;
   }
 
   private isSupportCardId(id: number): boolean {
-    return this.supportCardById.has(String(id)) || id < 100000;
+    return Number.isFinite(id) && id > 0 && id < 100000;
+  }
+
+  private extractCharacterCardId(value: string): number | undefined {
+    const match = /chara_stand_(\d+)\.webp(?:$|[?#])/i.exec(value);
+    if (!match) return undefined;
+
+    const id = Number(match[1]);
+    return this.isCharacterCardId(id) ? id : undefined;
+  }
+
+  private normalizePublicAssetPath(value: string): string | undefined {
+    const normalized = value.trim().replace(/\\/g, '/');
+    if (!normalized || !/chara_stand_\d+\.webp(?:$|[?#])/i.test(normalized)) return undefined;
+    return normalized.startsWith('/') ? normalized : `/${normalized}`;
   }
 
   private resolveCharacterAvatar(cardId?: number, displayName?: string): TimelineAvatar | null {
-    const character = typeof cardId === 'number'
-      ? this.characterById.get(cardId)
-      : undefined;
-    const matchedCharacter = character ?? this.findCharacterByName(displayName);
-
-    if (!matchedCharacter && typeof cardId !== 'number') {
+    if (typeof cardId !== 'number') {
       return null;
     }
 
-    const id = cardId ?? matchedCharacter!.id;
-    const cardIdentity = this.resolveCharacterCardIdentity(id);
-    const baseName = cardIdentity?.baseName || matchedCharacter?.name || displayName || `Character ${id}`;
-    const variantName = cardIdentity?.variantName;
+    const id = Math.trunc(cardId);
+    const publicName = this.cleanPublicName(displayName, `Character ${id}`);
+    const identity = this.parseCharacterName(publicName);
+    const baseName = identity.baseName;
+    const variantName = identity.variantName;
     const displayNameWithVariant = variantName ? `${baseName} (${variantName})` : baseName;
-    const image = matchedCharacter
-      ? this.getCharacterImageUrl(matchedCharacter)
-      : `/assets/images/character_stand/chara_stand_${id}.webp`;
 
     return {
       key: `character-${id}-${displayNameWithVariant}`,
@@ -246,55 +235,42 @@ export class TimelineAvatarService {
       subLabel: variantName ? `${variantName} - Character` : 'Character',
       variantName,
       searchTerms: variantName ? [variantName, `${baseName} ${variantName}`] : [],
-      imageUrl: image,
+      imageUrl: `/assets/images/character_stand/chara_stand_${id}.webp`,
       gametoraUrl: this.characterGametoraUrl(id, baseName)
     };
   }
 
   private resolveSupportAvatar(cardId?: number, displayName?: string): TimelineAvatar | null {
-    const id = typeof cardId === 'number' ? String(cardId) : undefined;
-    const supportCard = id ? this.supportCardById.get(id) : undefined;
-    const matchedCard = supportCard ?? this.findSupportCardByName(displayName);
-
-    if (!matchedCard && !id) {
+    if (typeof cardId !== 'number') {
       return null;
     }
 
-    const cardIdValue = matchedCard?.id ?? id!;
-    const name = displayName || matchedCard?.name || `Support ${cardIdValue}`;
-    const image = matchedCard?.imageUrl ?? `/assets/images/support_card/half/support_card_s_${cardIdValue}.webp`;
-    const typeInfo = this.getSupportTypeInfo(matchedCard?.type);
+    const cardIdValue = String(Math.trunc(cardId));
+    const name = this.cleanPublicName(displayName, `Support ${cardIdValue}`);
 
     return {
       key: `support-${cardIdValue}-${name}`,
       kind: 'support',
       name,
       displayName: name,
-      subLabel: typeInfo.label,
-      searchTerms: typeInfo.searchTerms,
-      imageUrl: image,
+      subLabel: 'Support',
+      searchTerms: ['support'],
+      imageUrl: `/assets/images/support_card/half/support_card_s_${cardIdValue}.webp`,
       gametoraUrl: `https://gametora.com/umamusume/supports/${cardIdValue}-${this.toGametoraSlug(name)}`
     };
   }
 
-  private findCharacterByName(name?: string): Character | undefined {
-    if (!name) {
-      return undefined;
-    }
-
-    return this.charactersByName.get(this.normalizeLookupKey(name))?.[0];
+  private cleanPublicName(value: string | undefined, fallback: string): string {
+    const name = value?.trim();
+    return name && !/^unknown[_\s-]*\d+$/i.test(name) ? name : fallback;
   }
 
-  private findSupportCardByName(name?: string): SupportCardShort | undefined {
-    if (!name) {
-      return undefined;
+  private parseCharacterName(displayName: string): { baseName: string; variantName?: string } {
+    const match = /^(.*?)\s*\(([^()]+)\)\s*$/.exec(displayName);
+    if (!match || !match[1].trim() || !match[2].trim()) {
+      return { baseName: displayName };
     }
-
-    return this.supportCardsByName.get(this.normalizeLookupKey(name))?.[0];
-  }
-
-  private getCharacterImageUrl(character: Character): string {
-    return `/assets/images/character_stand/${this.preferWebp(character.image)}`;
+    return { baseName: match[1].trim(), variantName: match[2].trim() };
   }
 
   private getEventSearchValues(event: TimelineEvent): string[] {
@@ -336,47 +312,6 @@ export class TimelineAvatarService {
   private extractExistingMoreCount(title: string): number | undefined {
     const match = title.match(/\+\s*(\d+)\s+more/i);
     return match ? Number(match[1]) : undefined;
-  }
-
-  private resolveCharacterCardIdentity(id: number): CharacterCardIdentity | undefined {
-    const characterId = Math.floor(id / 100);
-    const skinId = String(id % 100).padStart(2, '0');
-    const entry = getCharacterNameEntry(characterId);
-    if (!entry?.name) {
-      return undefined;
-    }
-
-    const skinName = entry.skins?.[skinId];
-    const variantName = skinName && skinName.toLowerCase() !== 'original'
-      ? skinName
-      : undefined;
-    return {
-      baseName: entry.name,
-      variantName
-    };
-  }
-
-  private getSupportTypeInfo(type?: SupportCardType): { label: string; searchTerms: string[] } {
-    switch (type) {
-      case SupportCardType.SPEED:
-        return { label: 'Speed', searchTerms: ['speed'] };
-      case SupportCardType.STAMINA:
-        return { label: 'Stamina', searchTerms: ['stamina'] };
-      case SupportCardType.POWER:
-        return { label: 'Power', searchTerms: ['power'] };
-      case SupportCardType.GUTS:
-        return { label: 'Guts', searchTerms: ['guts'] };
-      case SupportCardType.WISDOM:
-        return { label: 'Wit', searchTerms: ['wit', 'wisdom', 'intelligence'] };
-      case SupportCardType.FRIEND:
-        return { label: 'Friend', searchTerms: ['friend', 'group'] };
-      default:
-        return { label: 'Support', searchTerms: ['support'] };
-    }
-  }
-
-  private preferWebp(fileName: string): string {
-    return fileName.replace(/\.[^.]+$/, '.webp');
   }
 
   private normalizeLookupKey(value: string): string {

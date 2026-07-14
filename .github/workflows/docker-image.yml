@@ -408,6 +408,22 @@ jobs:
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
             "${{ runner.temp }}/asset-site/data/precomputed-tierlist.json" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_ASSETS_DIR }}/data/"
+          for relative_dir in \
+            images/character/banner \
+            images/support/banner \
+            images/paid/banner \
+            images/story \
+            timeline-images; do
+            source_dir="${{ runner.temp }}/asset-site/${relative_dir}"
+            if [[ -d "$source_dir" ]]; then
+              ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+                "mkdir -p '${{ env.BETA_REMOTE_ASSETS_DIR }}/${relative_dir}'"
+              rsync -az --no-perms --no-owner --no-group \
+                -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
+                "$source_dir/" \
+                "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_ASSETS_DIR }}/${relative_dir}/"
+            fi
+          done
 
   deploy_production:
     if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta'
@@ -703,3 +719,19 @@ jobs:
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
             "${{ runner.temp }}/asset-site/data/precomputed-tierlist.json" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.PROD_REMOTE_ASSETS_DIR }}/data/"
+          for relative_dir in \
+            images/character/banner \
+            images/support/banner \
+            images/paid/banner \
+            images/story \
+            timeline-images; do
+            source_dir="${{ runner.temp }}/asset-site/${relative_dir}"
+            if [[ -d "$source_dir" ]]; then
+              ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+                "mkdir -p '${{ env.PROD_REMOTE_ASSETS_DIR }}/${relative_dir}'"
+              rsync -az --no-perms --no-owner --no-group \
+                -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
+                "$source_dir/" \
+                "$DEPLOY_USER@$DEPLOY_HOST:${{ env.PROD_REMOTE_ASSETS_DIR }}/${relative_dir}/"
+            fi
+          done

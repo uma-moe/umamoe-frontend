@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener, QueryList, ViewChildren } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, HostListener, QueryList, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,12 +11,17 @@ import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { TimelineService } from '../../services/timeline.service';
 import { TimelineCalculation, TimelineEvent, EventType, TimelineAnniversary } from '../../models/timeline.model';
-import { combineLatest, Subscription } from 'rxjs';
+import { auditTime, combineLatest, Subscription } from 'rxjs';
 import { TimelineAvatar, TimelineAvatarService } from '../../services/timeline-avatar.service';
 import { TimelinePredictionInsight, TimelinePredictionService } from '../../services/timeline-prediction.service';
 import { TimelinePredictionDialogComponent, TimelinePredictionDialogData } from '../../pages/timeline/timeline-prediction-dialog.component';
 import { AdInContentComponent } from '../ads/ad-in-content.component';
 import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
+import { TimelineEventCardComponent } from '../timeline-event-card/timeline-event-card.component';
+import { TimelineEventDetailsComponent, TimelineEventDetailsData } from '../timeline-event-details/timeline-event-details.component';
+import { CaratPlannerTimelineService } from '../../services/carat-planner-timeline.service';
+import { compareTimelineEventsForDisplay } from '../../utils/timeline-event-order';
+import { TimelineRewardSummary } from '../../utils/planner-reward-summary';
 
 interface MobileTimelineItem {
     date: Date;
@@ -29,11 +34,22 @@ interface MobileTimelineItem {
     daysSinceStart: number;
     daysFromToday: number;
     mobileInContentAdIndex?: number;
+    imagePath?: string;
 }
 
 interface VirtualTimelineRow {
     index: number;
     item: MobileTimelineItem;
+}
+
+function compareMobileTimelineItems(a: MobileTimelineItem, b: MobileTimelineItem): number {
+    const dayA = Date.UTC(a.date.getUTCFullYear(), a.date.getUTCMonth(), a.date.getUTCDate());
+    const dayB = Date.UTC(b.date.getUTCFullYear(), b.date.getUTCMonth(), b.date.getUTCDate());
+    const dayDifference = dayA - dayB;
+    if (dayDifference !== 0) return dayDifference;
+    const rank = (item: MobileTimelineItem): number => item.type === 'anniversary' ? 2 : item.type === 'event' ? 1 : 0;
+    const rankDifference = rank(a) - rank(b);
+    return rankDifference !== 0 ? rankDifference : a.date.getTime() - b.date.getTime();
 }
 
 interface EventFilters {
@@ -91,13 +107,16 @@ interface MobileTimelineEventView {
         MatInputModule,
         FormsModule,
         AdInContentComponent,
-        TourAnchorMatMenuDirective
+        TourAnchorMatMenuDirective,
+        TimelineEventCardComponent
     ],
     templateUrl: './mobile-timeline.component.html',
     styleUrls: ['./mobile-timeline.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy {
+    @Input() plannedEventIds: ReadonlySet<string> = new Set<string>();
+    @Input() plannerRewardSummaries: ReadonlyMap<string, TimelineRewardSummary> = new Map<string, TimelineRewardSummary>();
     @ViewChildren('virtualTimelineRow') private virtualTimelineRowsRef?: QueryList<ElementRef<HTMLElement>>;
 
     // Configuration - use UTC date
@@ -122,8 +141,8 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     readonly todayElementId = 'mobile-timeline-today';
     private readonly mobileInContentFirstEventIndex = 5;
     private readonly mobileInContentCadence = 8;
-    private readonly virtualOverscanPx = 2400;
-    private readonly virtualInitialRows = 18;
+    private readonly virtualOverscanPx = 1000;
+    private readonly virtualInitialRows = 12;
     // Event filtering
     eventFilters: EventFilters = {
         showCharacters: true,
@@ -167,6 +186,8 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     private avatarRenderLimits = new WeakMap<TimelineEvent, { character?: number; support?: number }>();
     private avatarRenderRevision = 0;
     private compactBannerAvatarRows = false;
+    footerVisible = false;
+    private footerObserver?: IntersectionObserver;
 
     constructor(
         private timelineService: TimelineService,
@@ -174,7 +195,8 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         private timelinePredictionService: TimelinePredictionService,
         private dialog: MatDialog,
         private cdr: ChangeDetectorRef,
-        private hostRef: ElementRef<HTMLElement>
+        private hostRef: ElementRef<HTMLElement>,
+        private plannerTimeline: CaratPlannerTimelineService
     ) { }
     ngOnInit(): void {
         this.updateCompactBannerAvatarRows();
@@ -182,7 +204,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
             this.timelineService.events$,
             this.timelineService.anniversaries$,
             this.timelineService.calculation$
-        ]).subscribe(([events, anniversaries, calculation]) => {
+        ]).pipe(auditTime(0)).subscribe(([events, anniversaries, calculation]) => {
             this.timelineEvents = events;
             this.timelineAnniversaries = anniversaries;
             this.timelineCalculation = calculation;
@@ -202,6 +224,17 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         this.updateVirtualTimelineRange();
         this.scheduleVirtualRowMeasurement();
         this.scheduleInitialScrollToToday();
+        const footer = document.querySelector('app-footer');
+        if (footer && typeof IntersectionObserver !== 'undefined') {
+            this.footerObserver = new IntersectionObserver(entries => {
+                const footerVisible = entries.some(entry => entry.isIntersecting);
+                if (footerVisible !== this.footerVisible) {
+                    this.footerVisible = footerVisible;
+                    this.cdr.markForCheck();
+                }
+            });
+            this.footerObserver.observe(footer);
+        }
     }
 
     shouldShowMobileInContentAd(index: number): boolean {
@@ -214,6 +247,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
 
     ngOnDestroy(): void {
         this.destroyed = true;
+        this.footerObserver?.disconnect();
         this.cancelAvatarHoverHide();
         this.cancelVirtualFrames();
         if (this.eventsSubscription) {
@@ -282,6 +316,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         });
         // Add grouped events to timeline
         eventsByDate.forEach((events, dateKey) => {
+            events.sort(compareTimelineEventsForDisplay);
             const eventDate = new Date(dateKey);
             const daysSinceStart = this.calculateDaysSinceStartUTC(eventDate);
             if (events.length === 1) {
@@ -310,10 +345,33 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         });
         // Add year markers
         this.generateYearMarkers(actualEndDate);
-        // Sort by date
-        this.timelineItems.sort((a, b) => a.date.getTime() - b.date.getTime());
+        // Sort by UTC day first so anniversary/campaign markers follow that day's
+        // ordered event stack even when their source timestamps use different hours.
+        this.timelineItems.sort(compareMobileTimelineItems);
         this.assignMobileInContentAds();
         this.resetVirtualTimeline();
+    }
+
+    openEventDetails(event?: TimelineEvent): void {
+        if (!event) return;
+        const data: TimelineEventDetailsData = { event, calculation: this.timelineCalculation };
+        this.dialog.open(TimelineEventDetailsComponent, {
+            data,
+            width: '680px',
+            maxWidth: 'calc(100vw - 24px)',
+            maxHeight: '88vh',
+            autoFocus: 'dialog',
+            restoreFocus: true,
+            panelClass: ['timeline-event-details-panel', 'timeline-event-details-dialog']
+        });
+    }
+
+    addEventToPlanner(event: TimelineEvent): void {
+        this.plannerTimeline.setEventActive(event, true);
+    }
+
+    removeEventFromPlanner(event: TimelineEvent): void {
+        this.plannerTimeline.setEventActive(event, false);
     }
 
     private assignMobileInContentAds(): void {
@@ -475,21 +533,15 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         let height = 68;
 
         if (item.type === 'event') {
-            const eventCount = item.isGrouped ? Math.max(1, item.groupedEvents?.length ?? 1) : 1;
-            height = item.isGrouped ? 46 + (eventCount * 196) + ((eventCount - 1) * 7) : 206;
-
-            const primaryEvent = item.eventData ?? item.groupedEvents?.[0];
-            if (primaryEvent?.type === EventType.LEGEND_RACE) {
-                height += item.isGrouped ? eventCount * 18 : 18;
-            } else if (
-                primaryEvent?.type === EventType.CHAMPIONS_MEETING ||
-                primaryEvent?.type === EventType.STORY_EVENT ||
-                primaryEvent?.type === EventType.CAMPAIGN
-            ) {
-                height += item.isGrouped ? eventCount * 24 : 24;
-            }
+            const events = item.isGrouped
+                ? item.groupedEvents ?? []
+                : item.eventData ? [item.eventData] : [];
+            const cardHeight = events.reduce((total, event) => total + (event.imagePath ? 193 : 123), 0);
+            const cardGaps = Math.max(0, events.length - 1) * 7;
+            // Sticky date row (30 + 6 margin), cards, and the item bottom gap (13).
+            height = 49 + cardHeight + cardGaps;
         } else if (item.type === 'today' || item.type === 'milestone' || item.type === 'anniversary') {
-            height = 72;
+            height = item.type === 'anniversary' && item.imagePath ? 164 : 72;
         } else if (item.type === 'year') {
             height = 42;
         }
@@ -622,6 +674,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
                 label: anniversary.label,
                 type: 'anniversary',
                 isConfirmed: anniversary.isConfirmed,
+                imagePath: anniversary.imagePath,
                 daysSinceStart,
                 daysFromToday: this.calculateDaysFromTodayUTC(globalAnniversaryDate)
             });
@@ -825,9 +878,9 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     @HostListener('window:resize')
     onWindowResize(): void {
         this.updateCompactBannerAvatarRows();
-        this.timelineItemHeights = this.timelineItems.map((item, index) => (
-            this.timelineItemHeights[index] || this.estimateTimelineItemHeight(item)
-        ));
+        // Width changes can reflow every card. Re-estimate all rows before the
+        // next virtual-range calculation instead of retaining stale measurements.
+        this.timelineItemHeights = this.timelineItems.map(item => this.estimateTimelineItemHeight(item));
         this.rebuildTimelineHeightPrefix();
         this.scheduleVirtualTimelineUpdate();
         this.scheduleVirtualRowMeasurement();
@@ -1386,15 +1439,30 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     gachaTypeLabel(event: TimelineEvent | undefined): string {
         if (!event?.gachaType) return '';
         const labels: Record<string, string> = {
+            standard_pool: 'Standard Pool',
+            makeup_debut: 'Makeup Debut',
             standard_pickup: 'Standard Pickup',
             guaranteed: 'Guaranteed',
             group_select: 'Group Select',
             twinkle_collection: 'Twinkle Collection',
-            select_pickup_rerun: 'Select Pickup Rerun',
+            pick_2: 'Pick 2',
+            select_pickup_rerun: 'Pick 2',
+            special_guaranteed: 'Special Guaranteed',
             select_step_up: 'Select Step-Up',
-            select_pickup_stamp_sheet: 'Select Pickup Stamp Sheet'
+            stamp_sheet: 'Stamp Sheet',
+            select_pickup_stamp_sheet: 'Stamp Sheet'
         };
-        return labels[event.gachaTypeName || ''] || `Gacha Type ${event.gachaType}`;
+        const numericLabels: Record<number, string> = {
+            1: 'Standard Pool', 2: 'Makeup Debut', 3: 'Standard Pickup',
+            5: 'Guaranteed', 10: 'Group Select', 11: 'Twinkle Collection',
+            12: 'Pick 2', 13: 'Special Guaranteed', 14: 'Select Step-Up',
+            15: 'Stamp Sheet'
+        };
+        return labels[event.gachaTypeName || ''] || numericLabels[event.gachaType] || `Gacha Type ${event.gachaType}`;
+    }
+
+    isRerunBanner(event: TimelineEvent | undefined): boolean {
+        return event?.tags?.includes('rerun-banner') === true;
     }
 
     getEventTypeLabel(type?: EventType): string {
@@ -1441,6 +1509,16 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     // Check if event has gametora link
     hasGametoraLink(event?: TimelineEvent): boolean {
         return !!(event?.gametoraURL);
+    }
+
+    openUmapyoiLink(event?: TimelineEvent): void {
+        if (event?.umapyoiURL) {
+            window.open(event.umapyoiURL, '_blank', 'noopener,noreferrer');
+        }
+    }
+
+    hasUmapyoiLink(event?: TimelineEvent): boolean {
+        return !!event?.umapyoiURL;
     }
 }
 
