@@ -28,4 +28,24 @@ describe('skill master data', () => {
     expect(getSkillBySkillId(100381)?.icon).toBe(bundledIcon);
     expect(getSkillBySkillId(100411)?.name).toBe('Genius x Bakushin = Victory');
   });
+
+  it('resolves inherited unique skills past empty incremental placeholders', () => {
+    replaceSkillsData({
+      upserts: [
+        { skill_id: 900021 },
+        { skill_id: 900041 },
+        { skill_id: 900061 },
+        { skill_id: 900131 },
+        { skill_id: 900271 },
+        { skill_id: 900301 },
+      ],
+    });
+
+    expect(getSkillName(9000211)).toBe('The View from the Lead Is Mine!');
+    expect(getSkillName(9000411)).toBe('Red Shift/LP1211-M');
+    expect(getSkillName(9000611)).toBe('Triumphant Pulse');
+    expect(getSkillName(9001311)).toBe('The Duty of Dignity Calls');
+    expect(getSkillName(9002711)).toBe("Let's Pump Some Iron!");
+    expect(getSkillName(9003011)).toBe('Blue Rose Closer');
+  });
 });
