@@ -62,6 +62,7 @@ export interface SettingsDialogData {
           <p class="section-hint">Select which metrics to display for each member.</p>
           <div class="checkbox-grid">
             <mat-checkbox [(ngModel)]="data.config.showTotalFans">Total Fans</mat-checkbox>
+            <mat-checkbox [(ngModel)]="data.config.showTodayGain">Today</mat-checkbox>
             <mat-checkbox [(ngModel)]="data.config.showSevenDayAvg">7 Day Average</mat-checkbox>
             <mat-checkbox [(ngModel)]="data.config.showDailyAvg">Daily Average (Month)</mat-checkbox>
             <mat-checkbox [(ngModel)]="data.config.showDailyGain">Daily Gain</mat-checkbox>

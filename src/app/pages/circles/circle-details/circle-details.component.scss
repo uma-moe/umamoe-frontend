@@ -1199,7 +1199,7 @@
     font-weight: 600;
     letter-spacing: 0.05em;
 
-    .col-value, .col-total, .col-daily, .col-weekly, .col-avg, .col-date { text-align: left; }
+    .col-value, .col-total, .col-today, .col-daily, .col-weekly, .col-avg, .col-date { text-align: left; }
   }
 
   .member-row {
@@ -1435,7 +1435,7 @@
     @include text-ellipsis;
   }
 
-  .col-daily, .col-weekly, .col-avg {
+  .col-today, .col-daily, .col-weekly, .col-avg {
     flex: 1;
     min-width: 0;
     text-align: left;
@@ -1674,7 +1674,7 @@
     .col-name { font-size: 0.8rem; flex: 1.5; }
     .col-value { flex: 1; font-size: 0.75rem; }
     .col-total { display: none; }
-    .col-daily, .col-weekly, .col-avg { flex: 0.8; font-size: 0.7rem; }
+    .col-today, .col-daily, .col-weekly, .col-avg { flex: 0.8; font-size: 0.7rem; }
     .col-date { display: none; }
     .col-role { display: none; }
   }

@@ -339,6 +339,13 @@
             </span>
           </div>
 
+          <div class="stat-row" *ngIf="config.showTodayGain && config.selectedCalculation !== 'today_gain'">
+            <span class="label">Today</span>
+            <span class="value gain mono" [class.positive]="(member.today_gain || 0) > 0">
+              <app-animated-number [value]="member.today_gain || 0" [sign]="true"></app-animated-number>
+            </span>
+          </div>
+
           <div class="stat-row" *ngIf="config.showProjectedMonthly && config.selectedCalculation !== 'projected_monthly'">
             <span class="label">Projected Monthly</span>
             <span class="value gain mono" [class.positive]="(member.projected_monthly || 0) > 0">
@@ -397,6 +404,7 @@
         <span class="col-role" *ngIf="config.showRole">Role</span>
         <span class="col-value">{{getCalculationShortLabel()}}</span>
         <span class="col-total" *ngIf="config.showTotalFans && config.selectedCalculation !== 'total_fans'">Total Fans</span>
+        <span class="col-today" *ngIf="config.showTodayGain && config.selectedCalculation !== 'today_gain'">Today</span>
         <span class="col-daily" *ngIf="config.showDailyGain && config.selectedCalculation !== 'daily_gain'">Daily</span>
         <span class="col-weekly" *ngIf="config.showWeeklyGain && config.selectedCalculation !== 'weekly_gain'">Weekly</span>
         <span class="col-avg" *ngIf="config.showSevenDayAvg && config.selectedCalculation !== 'avg_daily_gain'">7d Avg</span>
@@ -441,6 +449,9 @@
         </span>
         <span class="col-total" *ngIf="config.showTotalFans && config.selectedCalculation !== 'total_fans'">
           <app-animated-number [value]="member.fan_count"></app-animated-number>
+        </span>
+        <span class="col-today gain mono" [class.positive]="(member.today_gain || 0) > 0" *ngIf="config.showTodayGain && config.selectedCalculation !== 'today_gain'">
+          <app-animated-number [value]="member.today_gain || 0" [sign]="true"></app-animated-number>
         </span>
         <span class="col-daily gain mono" [class.positive]="(member.daily_gain || 0) > 0" *ngIf="config.showDailyGain && config.selectedCalculation !== 'daily_gain'">
           <app-animated-number [value]="member.daily_gain || 0" [sign]="true"></app-animated-number>
