@@ -64,19 +64,22 @@
             <div><dt>GP Speed &gt;= 3</dt><dd>Speed on either great parent slot.</dd></div>
             <div><dt>Characters in (...)</dt><dd>Main, GP1, or GP2 is in the list.</dd></div>
             <div><dt>Support card = ...</dt><dd>Support card names work like character names.</dd></div>
+            <div><dt>Scenario = Aoharu</dt><dd>Filters by the training scenario ID while keeping the scenario name readable.</dd></div>
             <div><dt>target = ...</dt><dd>Sets the affinity target for this editor.</dd></div>
             <div><dt>owned legacy = []</dt><dd>Opens the legacy picker.</dd></div>
             <div><dt>owned legacy = [Name #uuid]</dt><dd>Sets your owned legacy for affinity and race comparison.</dd></div>
+            <div><dt>sort by = Total Blue stars</dt><dd>Sorts matching rows by the selected spark-color total.</dd></div>
           </dl>
         </section>
 
         <section class="uql-doc-section">
           <h6>Editor Directives</h6>
-          <p>Directives change the editor context rather than the backend predicate. Use <span class="uql-doc-inline-code">target = Special Week</span> to set the affinity target. Use <span class="uql-doc-inline-code">owned legacy = []</span> to open the picker; after choosing a legacy, the editor stores it as a bracketed value such as <span class="uql-doc-inline-code">owned legacy = [Special Week #550e8400-e29b-41d4-a716-446655440000]</span>.</p>
+          <p>Directives change the editor context or result order rather than the backend predicate. Use <span class="uql-doc-inline-code">target = Special Week</span> to set the affinity target. Use <span class="uql-doc-inline-code">owned legacy = []</span> to open the picker; after choosing a legacy, the editor stores it as a bracketed value such as <span class="uql-doc-inline-code">owned legacy = [Special Week #550e8400-e29b-41d4-a716-446655440000]</span>. Use <span class="uql-doc-inline-code">sort by = Total White stars</span> to order results by a color total.</p>
           <dl class="uql-doc-table">
             <div><dt>owned legacy = []</dt><dd>Picker sentinel; opens your legacy picker.</dd></div>
             <div><dt>owned legacy = [Special Week #550e8400-e29b-41d4-a716-446655440000]</dt><dd>Selected legacy; contributes P2 character and race wins to the search.</dd></div>
             <div><dt>legacy = [...], my legacy = [...], your legacy = [...]</dt><dd>Accepted aliases for the same owned legacy directive.</dd></div>
+            <div><dt>sort by = Total Blue/Red/Green/White stars</dt><dd>Sorts descending by that color's total stars. Red is the UI alias for pink sparks.</dd></div>
           </dl>
         </section>
 

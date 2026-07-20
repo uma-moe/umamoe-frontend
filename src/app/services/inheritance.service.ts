@@ -29,6 +29,7 @@ interface V3UnifiedAccountRecord {
 interface V3InheritanceRecord {
   inheritance_id: number;
   account_id: string;
+  scenario_id: number;
   main_parent_id: number;
   parent_left_id: number;
   parent_right_id: number;
@@ -38,6 +39,10 @@ interface V3InheritanceRecord {
   pink_sparks: number[];
   green_sparks: number[];
   white_sparks: number[];
+  blue_stars_sum: number;
+  pink_stars_sum: number;
+  green_stars_sum: number;
+  white_stars_sum: number;
   win_count: number;
   white_count: number;
   affinity_score: number;
@@ -279,6 +284,9 @@ export class InheritanceService {
         params = params.append('white_sparks', group.join(','));
       });
     }
+    if (filters.scenarioIds && filters.scenarioIds.length > 0) {
+      params = params.set('scenario_id', filters.scenarioIds.join(','));
+    }
     // Main Parent Factors
     if (filters.mainParentBlueSparks && filters.mainParentBlueSparks.length > 0) {
       params = params.set('main_parent_blue_sparks', filters.mainParentBlueSparks.join(','));
@@ -442,6 +450,7 @@ export class InheritanceService {
     return {
       id: inheritance.inheritance_id,
       account_id: v3Record.account_id,
+      scenario_id: inheritance.scenario_id,
       trainer_name: v3Record.trainer_name,
       umamusume_id: inheritance.main_parent_id,
       main_parent_id: inheritance.main_parent_id,
@@ -453,6 +462,10 @@ export class InheritanceService {
       pink_sparks: this.toNumberArray(inheritance.pink_sparks),
       green_sparks: this.toNumberArray(inheritance.green_sparks),
       white_sparks: this.toNumberArray(inheritance.white_sparks),
+      blue_stars_sum: inheritance.blue_stars_sum,
+      pink_stars_sum: inheritance.pink_stars_sum,
+      green_stars_sum: inheritance.green_stars_sum,
+      white_stars_sum: inheritance.white_stars_sum,
       win_count: inheritance.win_count,
       white_count: inheritance.white_count,
       affinity_score: (inheritance as any)['affinity_score'],
@@ -752,7 +765,11 @@ export class InheritanceService {
       'score': 'parent_rank', // Map score to parent_rank in backend
       'submitted_at': 'last_updated', // Map submitted_at to last_updated in V2 API
       'follower_num': 'follower_num',
-      'affinity_score': 'affinity_score'
+      'affinity_score': 'affinity_score',
+      'blue_stars_sum': 'blue_stars_sum',
+      'pink_stars_sum': 'pink_stars_sum',
+      'green_stars_sum': 'green_stars_sum',
+      'white_stars_sum': 'white_stars_sum'
     };
     return sortMapping[sortBy] || 'trending';
   }

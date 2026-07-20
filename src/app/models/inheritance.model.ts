@@ -39,6 +39,7 @@ export interface BackendCreateInheritanceRecord {
 export interface InheritanceRecord {
   id: number | string; // Support both v1 (string) and v2 (number) IDs
   account_id?: string; // V2 API field
+  scenario_id?: number;
   trainer_id?: string; // V1 API field
   trainer_name?: string; // V2 API field
   submitted_at?: Date; // V1 API field
@@ -65,6 +66,10 @@ export interface InheritanceRecord {
   pink_sparks?: number[];
   green_sparks?: number[];
   white_sparks?: number[];
+  blue_stars_sum?: number;
+  pink_stars_sum?: number;
+  green_stars_sum?: number;
+  white_stars_sum?: number;
   
   // V1 API factor objects (legacy)
   blue_factors?: BackendFactor[];
@@ -179,6 +184,7 @@ export interface InheritanceSearchFilters {
   pinkSparkGroups?: number[][];
   greenSparkGroups?: number[][];
   whiteSparkGroups?: number[][];
+  scenarioIds?: number[];
   // Main Parent Factors
   mainParentBlueSparks?: number[];
   mainParentPinkSparks?: number[];
@@ -241,7 +247,7 @@ export interface InheritanceSearchFilters {
   verified?: boolean;
   verificationStatus?: string;
   minRating?: number;
-  sortBy?: 'trending' | 'submitted_at' | 'upvotes' | 'downvotes' | 'trainer_id' | 'verified' | 'submittedAt' | 'createdAt' | 'rating' | 'votes' | 'views' | 'totalStats' | 'speed' | 'stamina' | 'power' | 'guts' | 'wisdom' | 'win_count' | 'white_count' | 'score' | 'affinity_score';
+  sortBy?: 'trending' | 'submitted_at' | 'upvotes' | 'downvotes' | 'trainer_id' | 'verified' | 'submittedAt' | 'createdAt' | 'rating' | 'votes' | 'views' | 'totalStats' | 'speed' | 'stamina' | 'power' | 'guts' | 'wisdom' | 'win_count' | 'white_count' | 'score' | 'affinity_score' | 'blue_stars_sum' | 'pink_stars_sum' | 'green_stars_sum' | 'white_stars_sum';
   sortOrder?: 'asc' | 'desc';
 }
 export interface InheritanceSubmission {

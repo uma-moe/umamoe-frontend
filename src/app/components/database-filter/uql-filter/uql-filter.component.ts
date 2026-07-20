@@ -1357,7 +1357,20 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
 
   private getPartialLegacyChipMetadata(valueText: string): { displayText: string; imageUrl?: string; title?: string } {
     const displayText = valueText.trim().replace(/^\[\s*/, '').replace(/\s*\]$/, '');
-    const characterName = displayText.replace(/\s+(?:#\d+|@[A-Za-z0-9_-]+)\s*$/i, '').trim();
+    const normalizedDisplayText = this.normalizeSuggestionToken(displayText).replace(/\s+/g, ' ').trim();
+    const legacySuggestion = normalizedDisplayText
+      ? this.suggestions.find(suggestion => {
+          if (suggestion.kind !== 'value' || suggestion.valueContext !== 'legacy') return false;
+          const values = [suggestion.label, ...(suggestion.matchPhrases || [])]
+            .map(value => this.normalizeSuggestionToken(value).replace(/\s+/g, ' ').trim())
+            .filter(Boolean);
+          return values.some(value => value === normalizedDisplayText);
+        })
+      : undefined;
+    const characterName = displayText
+      .replace(/\s+@[A-Za-z0-9_-]+\s*$/i, '')
+      .replace(/\s+#\S+\s*$/i, '')
+      .trim();
     const normalizedName = this.normalizeSuggestionToken(characterName).replace(/\s+/g, ' ').trim();
     const characterSuggestion = normalizedName
       ? this.suggestions.find(suggestion => {
@@ -1368,10 +1381,11 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
           return values.some(value => value === normalizedName || value.startsWith(`${normalizedName} `) || normalizedName.startsWith(`${value} `));
         })
       : undefined;
+    const matchedSuggestion = legacySuggestion ?? characterSuggestion;
     return {
       displayText,
-      imageUrl: characterSuggestion?.imageUrl,
-      title: characterSuggestion?.detail
+      imageUrl: matchedSuggestion?.imageUrl,
+      title: matchedSuggestion?.detail
     };
   }
 

@@ -867,6 +867,24 @@
                 </mat-select>
               </mat-form-field>
             </div>
+            <div class="input-wrapper">
+              <div class="input-label">Training Scenario</div>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="scenario-id-select">
+                <mat-select
+                  multiple
+                  placeholder="Any Scenario"
+                  panelClass="factor-autocomplete-panel"
+                  [(ngModel)]="filterState.scenario_id"
+                  (selectionChange)="onFilterChange()">
+                  <mat-select-trigger>
+                    <span class="scenario-selection-label">{{ getScenarioFilterLabel() }}</span>
+                  </mat-select-trigger>
+                  <mat-option *ngFor="let scenario of scenarioOptions" [value]="scenario.id">
+                    <span>{{ scenario.name }}</span>
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
             <div class="input-wrapper toggle-wrapper">
               <div class="input-label">Max Follower Accounts</div>
               <button
