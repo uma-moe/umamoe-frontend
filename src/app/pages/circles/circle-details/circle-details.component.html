@@ -80,13 +80,17 @@
             <span class="label">Leader Name</span>
             <span class="value">{{circle?.leader_name || circle?.leader_viewer_id}}</span>
           </div>
-          <div class="info-row" [class.no-border]="!isLiveDataFresh">
+          <div class="info-row" [class.no-border]="!isLiveDataFresh && !lastDataUpdatedAt">
             <span class="label">Monthly Fans</span>
             <span class="value highlight mono"><app-animated-number [value]="displayedMonthlyPoint"></app-animated-number></span>
           </div>
-          <div class="info-row live-row no-border" *ngIf="isLiveDataFresh">
+          <div class="info-row live-row" *ngIf="isLiveDataFresh" [class.no-border]="!lastDataUpdatedAt">
             <span class="label"><span class="live-dot"></span> Live Points</span>
             <span class="value highlight mono"><app-animated-number [value]="circle!.live_points!"></app-animated-number></span>
+          </div>
+          <div class="info-row updated-row no-border" *ngIf="lastDataUpdatedAt as updatedAt">
+            <span class="label">Data Updated</span>
+            <span class="value" [title]="(updatedAt | date:'medium') || updatedAt">{{formatTimeAgo(updatedAt)}}</span>
           </div>
           <div class="club-rank-row" *ngIf="clubRank" [class.max-rank]="!fansToNextTier">
             <div class="tier-side lower" *ngIf="fansToLowerTier !== undefined && fansToLowerTier !== null">
@@ -377,9 +381,9 @@
             </span>
           </div>
 
-          <div class="stat-row">
+          <div class="stat-row" *ngIf="config.showLastUpdated">
             <span class="label">Last Updated</span>
-            <span class="value date">{{member.last_updated | date:'dd.MM.yyyy'}}</span>
+            <span class="value date" [title]="(member.last_updated | date:'medium') || member.last_updated">{{formatTimeAgo(member.last_updated)}}</span>
           </div>
         </div>
       </div>
@@ -448,7 +452,7 @@
           <app-animated-number [value]="member.seven_day_avg || 0" [sign]="true"></app-animated-number>
         </span>
         <span class="col-date" *ngIf="config.showLastUpdated">
-          {{member.last_updated | date:'dd.MM'}}
+          <span [title]="(member.last_updated | date:'medium') || member.last_updated">{{formatTimeAgo(member.last_updated)}}</span>
         </span>
       </div>
     </div>

@@ -25,7 +25,7 @@ import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
 import { AnalyticsEventParams, GoogleAnalyticsService } from '../../../services/google-analytics.service';
 import { AdInContentComponent } from '../../../components/ads/ad-in-content.component';
 Chart.register(...registerables);
-export type CalculationType = 'monthly_gain' | 'weekly_gain' | 'daily_gain' | 'avg_daily_gain' | 'daily_avg' | 'projected_monthly' | 'total_fans';
+export type CalculationType = 'today_gain' | 'monthly_gain' | 'weekly_gain' | 'daily_gain' | 'avg_daily_gain' | 'daily_avg' | 'projected_monthly' | 'total_fans';
 export type ExportFormat = 'csv' | 'json' | 'xlsx';
 export interface ChartLegendItem {
   name: string;
@@ -240,7 +240,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   calendarWeeks: CalendarDay[][] = [];
   computedMonthlyPoint: number = 0;
   config: CircleDetailsConfig = {
-    selectedCalculation: 'monthly_gain',
+    selectedCalculation: 'today_gain',
     showTotalFans: true,
     showSevenDayAvg: true,
     showDailyGain: true,
@@ -254,6 +254,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     includePriorClubData: true
   };
   calculationTypes: { value: CalculationType; label: string; shortLabel: string }[] = [
+    { value: 'today_gain', label: 'Today', shortLabel: 'Today' },
     { value: 'monthly_gain', label: 'Monthly Gain', shortLabel: 'Monthly' },
     { value: 'weekly_gain', label: 'Weekly Gain', shortLabel: 'Weekly' },
     { value: 'daily_gain', label: 'Daily Gain', shortLabel: 'Daily' },
@@ -409,6 +410,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   }
   getMemberValue(member: any): number {
     switch (this.config.selectedCalculation) {
+      case 'today_gain': return member.today_gain;
       case 'monthly_gain': return member.monthly_gain;
       case 'weekly_gain': return member.weekly_gain;
       case 'daily_gain': return member.daily_gain;
@@ -421,6 +423,8 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   }
   getPriorContribution(member: any): number {
     switch (this.config.selectedCalculation) {
+      case 'today_gain':
+        return member.priorInToday || 0;
       case 'monthly_gain':
       case 'daily_avg':
       case 'projected_monthly':
@@ -436,10 +440,10 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     }
   }
   getCalculationLabel(): string {
-    return this.calculationTypes.find(t => t.value === this.config.selectedCalculation)?.label || 'Monthly Gain';
+    return this.calculationTypes.find(t => t.value === this.config.selectedCalculation)?.label || 'Today';
   }
   getCalculationShortLabel(): string {
-    return this.calculationTypes.find(t => t.value === this.config.selectedCalculation)?.shortLabel || 'Monthly';
+    return this.calculationTypes.find(t => t.value === this.config.selectedCalculation)?.shortLabel || 'Today';
   }
   getClubRankIcon(rank: number | undefined): string | null {
     if (!rank || rank < 1 || rank > 11) return null;
@@ -733,6 +737,48 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     const lastResetUtc = jstMidnight - 9 * 3600000;
     return liveDate.getTime() >= lastResetUtc;
   }
+  get lastDataUpdatedAt(): string | undefined {
+    if (this.isCurrentMonth && this.circle?.last_live_update && this.isValidTimestamp(this.circle.last_live_update)) {
+      return this.circle.last_live_update;
+    }
+
+    const candidates = [
+      this.circle?.last_updated,
+      ...this.allMemberData
+        .filter(member => member.year == this.currentYear && member.month == this.currentMonth)
+        .map(member => member.last_updated),
+    ].filter((value): value is string => !!value && this.isValidTimestamp(value));
+
+    return candidates.reduce<string | undefined>((latest, value) => {
+      if (!latest) return value;
+      return new Date(value).getTime() > new Date(latest).getTime() ? value : latest;
+    }, undefined);
+  }
+  formatTimeAgo(value: string | undefined): string {
+    if (!value) return 'unknown';
+    const timestamp = new Date(value).getTime();
+    if (!Number.isFinite(timestamp)) return 'unknown';
+
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+    if (elapsedSeconds < 60) return elapsedSeconds < 10 ? 'just now' : `${elapsedSeconds}s ago`;
+
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`;
+
+    const elapsedHours = Math.floor(elapsedMinutes / 60);
+    if (elapsedHours < 24) return `${elapsedHours}h ago`;
+
+    const elapsedDays = Math.floor(elapsedHours / 24);
+    if (elapsedDays < 30) return `${elapsedDays}d ago`;
+
+    const elapsedMonths = Math.floor(elapsedDays / 30);
+    if (elapsedMonths < 12) return `${elapsedMonths}mo ago`;
+
+    return `${Math.floor(elapsedDays / 365)}y ago`;
+  }
+  private isValidTimestamp(value: string): boolean {
+    return Number.isFinite(new Date(value).getTime());
+  }
   formatCountdown(s: number): string {
     const m = Math.floor(s / 60);
     const sec = s % 60;
@@ -949,7 +995,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       const effectiveLatestValue = canUseNextMonthStart ? m.next_month_start! : lastFanCount;
       // fan_count: expose the true latest fan count (includes last-day delta when available)
       const fanCountForDisplay = effectiveLatestValue;
-      // Calculate daily gain
+      // The latest delta is the in-progress gain for the current day.
       let dailyGain = 0;
       let priorInDaily = 0;
       if (isActive) {
@@ -978,6 +1024,25 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
             }
           } else if (lastFanCount > 0) {
             dailyGain = lastFanCount;
+          }
+        }
+      }
+      const todayGain = dailyGain;
+      const priorInToday = priorInDaily;
+
+      // For the current month, Daily Gain means the most recent completed day.
+      // The latest point above is live/in-progress and is exposed separately as Today.
+      if (this.isCurrentMonth && !canUseNextMonthStart) {
+        dailyGain = 0;
+        priorInDaily = 0;
+        const completedPoints: { index: number; value: number }[] = [];
+        for (let i = lastIndex - 1; i >= 0 && completedPoints.length < 2; i--) {
+          if (absFans[i] > 0) completedPoints.push({ index: i, value: absFans[i] });
+        }
+        if (isActive && completedPoints.length === 2) {
+          dailyGain = completedPoints[0].value - completedPoints[1].value;
+          if (completedPoints.some(point => isPriorCircle[point.index] || false)) {
+            priorInDaily = dailyGain;
           }
         }
       }
@@ -1054,6 +1119,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
         fan_count: fanCountForDisplay,
         last_updated: m.last_updated,
         role: this.getMemberRole(m),
+        today_gain: todayGain,
         daily_gain: dailyGain,
         monthly_gain: monthlyGain,
         seven_day_avg: sevenDayAvg,
@@ -1061,6 +1127,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
         weekly_gain: weeklyGain,
         projected_monthly: projectedMonthly,
         priorCircleGain: priorCircleGain,
+        priorInToday: priorInToday,
         priorInDaily: priorInDaily,
         priorInWeekly: priorInWeekly,
         hasPriorCircleData: lastPriorIndex >= 0,
@@ -1714,6 +1781,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     type ColSpec = { label: string; get: (m: CircleMember, idx: number) => string | number; sum: boolean };
     // The primary metric (selectedCalculation) is ALWAYS included as a column.
     const primarySpecMap: Record<CalculationType, ColSpec> = {
+      today_gain:        { label: 'Today',             get: m => m.today_gain ?? 0,                    sum: true  },
       monthly_gain:      { label: 'Monthly Gain',      get: m => m.monthly_gain ?? 0,                  sum: true  },
       weekly_gain:       { label: 'Weekly Gain',       get: m => m.weekly_gain ?? 0,                   sum: true  },
       daily_gain:        { label: 'Daily Gain',        get: m => m.daily_gain ?? 0,                    sum: true  },

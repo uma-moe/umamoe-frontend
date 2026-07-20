@@ -61,6 +61,7 @@ export interface CircleMember {
   fan_count: number;
   last_updated: string;
   role: 'leader' | 'officer' | 'member';
+  today_gain?: number;
   daily_gain?: number;
   daily_avg?: number;
   monthly_gain?: number;
@@ -68,6 +69,7 @@ export interface CircleMember {
   weekly_gain?: number;
   projected_monthly?: number;
   priorCircleGain?: number; // Fans gained in a prior circle before joining this one
+  priorInToday?: number;
   priorInDaily?: number;
   priorInWeekly?: number;
   hasPriorCircleData?: boolean;

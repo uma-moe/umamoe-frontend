@@ -478,6 +478,11 @@
     }
   }
 
+  &.updated-row .value {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+
   &.description {
     flex-direction: column;
     align-items: flex-start;
