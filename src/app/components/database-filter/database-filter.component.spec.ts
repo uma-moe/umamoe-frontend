@@ -73,4 +73,13 @@ describe('DatabaseFilterComponent UQL compilation', () => {
 
     expect(onUqlChange).toHaveBeenCalledWith({ emitImmediately: true, persist: false });
   });
+
+  it('maps the white skills amount UQL sort to raw white count', () => {
+    const component = createComponent();
+
+    expect((component as any).resolveUqlSort('White skills amount')).toEqual({
+      match: 'white_count',
+      partial: false,
+    });
+  });
 });

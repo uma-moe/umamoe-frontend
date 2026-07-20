@@ -230,7 +230,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     { value: 'trending', label: 'Trending' },
     { value: 'affinity_score', label: 'Affinity' },
     { value: 'win_count', label: 'G1 Wins' },
-    { value: 'white_count', label: 'White Count' },
+    { value: 'white_count', label: 'White Skills Amount' },
     { value: 'blue_stars_sum', label: 'Total Blue Stars' },
     { value: 'pink_stars_sum', label: 'Total Red Stars' },
     { value: 'green_stars_sum', label: 'Total Green Stars' },
@@ -1486,7 +1486,14 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         case 'score': va = a.parent_rank ?? 0; vb = b.parent_rank ?? 0; break;
         default: return 0; // submitted_at - keep original order (newest first from API)
       }
-      return vb - va;
+      const primaryComparison = vb - va;
+      if (primaryComparison !== 0) return primaryComparison;
+      if (['white_count', 'blue_stars_sum', 'pink_stars_sum', 'green_stars_sum', 'white_stars_sum'].includes(sortBy)) {
+        const affinityA = this.getBookmarkTotalAffinity(a) ?? 0;
+        const affinityB = this.getBookmarkTotalAffinity(b) ?? 0;
+        return affinityB - affinityA;
+      }
+      return 0;
     });
   }
 

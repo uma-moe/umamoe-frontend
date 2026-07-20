@@ -444,6 +444,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'Sort Red', insertText: 'sort by = Total Red stars' },
     { label: 'Sort Green', insertText: 'sort by = Total Green stars' },
     { label: 'Sort White', insertText: 'sort by = Total White stars' },
+    { label: 'Sort White Skills', insertText: 'sort by = White skills amount' },
     { label: 'White Skill', insertText: 'White sparks has Right-Handed ○' },
     { label: 'Main Skill', insertText: 'Main white factors has Right-Handed ○' },
     { label: 'Any Skills', insertText: 'White sparks has any (Right-Handed ○, Left-Handed ○)' },
@@ -5734,6 +5735,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       { match: 'pink_stars_sum', aliases: ['pink', 'red', 'pink stars', 'red stars', 'pink sparks', 'red sparks', 'total pink stars', 'total red stars', 'total pink sparks', 'total red sparks', 'pink stars sum', 'red stars sum', 'pink_stars_sum', 'red_stars_sum'] },
       { match: 'green_stars_sum', aliases: ['green', 'green stars', 'green sparks', 'total green stars', 'total green sparks', 'green stars sum', 'green_stars_sum'] },
       { match: 'white_stars_sum', aliases: ['white', 'white stars', 'white sparks', 'total white stars', 'total white sparks', 'white stars sum', 'white_stars_sum'] },
+      { match: 'white_count', aliases: ['white count', 'white skill count', 'white skills count', 'white skill amount', 'white skills amount', 'white factor count', 'white factors amount', 'total white skills', 'white_count', 'white_skill_count', 'white_skills_amount'] },
     ];
     const exact = candidates.find(candidate => candidate.aliases.some(alias => this.normalizeUqlName(alias) === normalizedValue));
     if (exact) return { match: exact.match, partial: false };
@@ -6315,6 +6317,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       { label: 'Sort by total red stars', insertText: 'sort by = Total Red stars', kind: 'snippet', detail: 'Order by total red/pink spark stars, highest first' },
       { label: 'Sort by total green stars', insertText: 'sort by = Total Green stars', kind: 'snippet', detail: 'Order by total green spark stars, highest first' },
       { label: 'Sort by total white stars', insertText: 'sort by = Total White stars', kind: 'snippet', detail: 'Order by total white spark stars, highest first' },
+      { label: 'Sort by white skills amount', insertText: 'sort by = White skills amount', kind: 'snippet', detail: 'Order by raw white skill count, then affinity' },
       { label: 'and', insertText: ' and ', kind: 'keyword', detail: 'Require both sides' },
       { label: 'or', insertText: ' or ', kind: 'keyword', detail: 'Match either side' },
       { label: 'not', insertText: 'not ', kind: 'keyword', detail: 'Negate a predicate' },
