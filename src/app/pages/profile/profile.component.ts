@@ -250,12 +250,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     private static compactFmt = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
 
-    formatNumber(n: number): string {
+    formatNumber(n: number | null | undefined): string {
+        if (n == null || !Number.isFinite(n)) return '-';
         if (Math.abs(n) >= 100_000) return ProfileComponent.compactFmt.format(n);
         return n.toLocaleString();
     }
 
-    formatRank(n: number): string {
+    formatRank(n: number | null | undefined): string {
+        if (n == null || !Number.isFinite(n)) return '-';
         if (Math.abs(n) >= 100_000) return ProfileComponent.compactFmt.format(n);
         return n.toLocaleString();
     }
