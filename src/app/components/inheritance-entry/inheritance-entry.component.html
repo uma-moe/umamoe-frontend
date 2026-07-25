@@ -1,4 +1,4 @@
-<div class="record-card">
+<div class="record-card" [class.hide-skills-mode]="hideSkillsMode">
   <!-- Record Header -->
   <div class="record-header" [class.has-database-header]="showDatabaseHeader">
 
@@ -44,12 +44,20 @@
           <mat-icon>emoji_events</mat-icon>
           <span class="btn-text">Races</span>
         </button>
+        <button *ngIf="getOptimalRaces().length" mat-button class="action-btn optimal-races-btn"
+                (click)="openOptimalRaces($event)"
+                matTooltip="G1 races that overlap P1/P2 and maximize future affinity">
+          <mat-icon>military_tech</mat-icon>
+          <span class="btn-text btn-text-desktop">Optimal Races</span>
+          <span class="btn-text btn-text-mobile">Best</span>
+        </button>
         <button *ngIf="isV2Record()" mat-button class="action-btn unavailable-btn"
                 (click)="onReportUnavailable($event)"
                 [disabled]="!record.account_id && !record.trainer_id"
                 [matTooltip]="reportButtonTooltip">
           <mat-icon>{{ reportButtonIcon }}</mat-icon>
-          <span class="btn-text">{{ reportButtonText }}</span>
+          <span class="btn-text btn-text-desktop">{{ reportButtonText }}</span>
+          <span class="btn-text btn-text-mobile">Report</span>
         </button>
         <button *ngIf="showBookmarkButton" mat-button
                 class="action-btn bookmark-btn" [class.bookmarked]="isRecordBookmarked()"
@@ -64,9 +72,15 @@
     <!-- Stats Row: affinity / G1 / white / rank / score -->
     <div class="record-header-stats">
       <div class="main-stats">
-        <span *ngIf="getRecordTotalAffinity() !== null" class="stat-pill affinity-stat">
+        <span *ngIf="getRecordTotalAffinity() !== null" class="stat-pill affinity-stat"
+              [matTooltip]="getRecordAffinityTooltip()">
           <span class="stat-number mono">{{ getRecordTotalAffinity() | localeNumber }}</span>
           <span class="stat-label">Affinity</span>
+        </span>
+        <span *ngIf="getCrossParentRaceAffinity() as crossRace" class="stat-pill cross-race-stat"
+              matTooltip="Race affinity from G1 wins shared by P1 and P2; counted once in the total">
+          <span class="stat-number mono">{{ crossRace | localeNumber }}</span>
+          <span class="stat-label">P1–P2 Race</span>
         </span>
         <span *ngIf="record.win_count !== undefined" class="stat-pill wins-stat">
           <span class="stat-number mono">{{ record.win_count | localeNumber }}</span>
@@ -76,6 +90,21 @@
           <span class="stat-number mono">{{ record.white_count | localeNumber }}</span>
           <span class="stat-label">White Skills</span>
         </span>
+        <ng-container *ngIf="getScenarioHeaderImageUrl() as scenarioImageUrl">
+          <span class="scenario-header-divider" aria-hidden="true"></span>
+          <span class="scenario-header-mark" [matTooltip]="getScenarioHeaderName()">
+            <img
+              [src]="scenarioImageUrl"
+              [alt]="getScenarioHeaderName()"
+              class="scenario-header-image"
+              [class.ura-finals]="record.scenario_id === 0"
+              [class.mant]="record.scenario_id === 2 || record.scenario_id === 3"
+              [class.grand-concert]="record.scenario_id === 4"
+              loading="lazy"
+              decoding="async"
+              fetchpriority="low">
+          </span>
+        </ng-container>
       </div>
 
       <div *ngIf="isV2Record() && (record.parent_rank || record.parent_rarity)" class="rank-score-section">
@@ -106,14 +135,14 @@
     <div *ngIf="record.main && record.parent1 && record.parent2" class="parents">
       <img [src]="'/assets/images/character_stand/' + record.main.image"
            [alt]="record.main.name + ' Image'"
-           class="parent-image main-parent" loading="lazy">
+           class="parent-image main-parent" loading="lazy" decoding="async" fetchpriority="low">
       <div class="sub-parents">
         <img [src]="'/assets/images/character_stand/' + record.parent1.image"
              [alt]="record.parent1.name + ' Image'"
-             class="parent-image secondary-parent" loading="lazy">
+             class="parent-image secondary-parent" loading="lazy" decoding="async" fetchpriority="low">
         <img [src]="'/assets/images/character_stand/' + record.parent2.image"
              [alt]="record.parent2.name + ' Image'"
-             class="parent-image secondary-parent" loading="lazy">
+             class="parent-image secondary-parent" loading="lazy" decoding="async" fetchpriority="low">
       </div>
     </div>
 
@@ -123,10 +152,16 @@
         <div class="main-character">
           <div class="portrait-wrapper portrait-main"
                [class.portrait-selected-main]="selectedParent === 'main'"
-               (click)="selectParent('main', $event)">
+               role="button"
+               tabindex="0"
+               [attr.aria-pressed]="selectedParent === 'main'"
+               matTooltip="Focus primary parent sparks · click again to clear"
+               (click)="selectParent('main', $event)"
+               (keydown.enter)="selectParent('main', $event)"
+               (keydown.space)="selectParent('main', $event)">
               <img [src]="getCharacterImageUrl(record.main_parent_id)"
                  [alt]="'Main Character ' + record.main_parent_id"
-                 class="character-image main-character-img" loading="lazy">
+                 class="character-image main-character-img" loading="lazy" decoding="async" fetchpriority="low">
           </div>
           <div class="parent-affinity-badges" *ngIf="getMainTotalAffinity() as total">
             <span class="affinity-badge base" #mainTip="matTooltip" [matTooltip]="getMainAffinityTooltip()" (click)="mainTip.toggle(); $event.stopPropagation()">
@@ -158,10 +193,16 @@
           <div class="parent-with-badges">
             <div class="portrait-wrapper portrait-gp"
                  [class.portrait-selected-left]="selectedParent === 'left'"
-                 (click)="selectParent('left', $event)">
+                 role="button"
+                 tabindex="0"
+                 [attr.aria-pressed]="selectedParent === 'left'"
+                 matTooltip="Focus Legacy 1 sparks · click again to clear"
+                 (click)="selectParent('left', $event)"
+                 (keydown.enter)="selectParent('left', $event)"
+                 (keydown.space)="selectParent('left', $event)">
                   <img [src]="getCharacterImageUrl(record.parent_left_id)"
                    [alt]="'Grandparent Left ' + record.parent_left_id"
-                   class="character-image parent-character-img" loading="lazy">
+                   class="character-image parent-character-img" loading="lazy" decoding="async" fetchpriority="low">
             </div>
             <div class="parent-affinity-badges" *ngIf="getGrandparentTotalAffinity('left') as total">
               <span class="affinity-badge base gp" #gpLeftTip="matTooltip" [matTooltip]="getGrandparentAffinityTooltip('left')" (click)="gpLeftTip.toggle(); $event.stopPropagation()">
@@ -175,15 +216,21 @@
                 <mat-icon>favorite</mat-icon>{{ breed }}
               </span>
             </div>
-            <span class="node-role-label node-role-gp">GP</span>
+            <span class="node-role-label node-role-gp">LEGACY 1</span>
           </div>
           <div class="parent-with-badges">
             <div class="portrait-wrapper portrait-gp"
                  [class.portrait-selected-right]="selectedParent === 'right'"
-                 (click)="selectParent('right', $event)">
+                 role="button"
+                 tabindex="0"
+                 [attr.aria-pressed]="selectedParent === 'right'"
+                 matTooltip="Focus Legacy 2 sparks · click again to clear"
+                 (click)="selectParent('right', $event)"
+                 (keydown.enter)="selectParent('right', $event)"
+                 (keydown.space)="selectParent('right', $event)">
                   <img [src]="getCharacterImageUrl(record.parent_right_id)"
                    [alt]="'Grandparent Right ' + record.parent_right_id"
-                   class="character-image parent-character-img" loading="lazy">
+                   class="character-image parent-character-img" loading="lazy" decoding="async" fetchpriority="low">
             </div>
             <div class="parent-affinity-badges" *ngIf="getGrandparentTotalAffinity('right') as total">
               <span class="affinity-badge base gp" #gpRightTip="matTooltip" [matTooltip]="getGrandparentAffinityTooltip('right')" (click)="gpRightTip.toggle(); $event.stopPropagation()">
@@ -197,7 +244,7 @@
                 <mat-icon>favorite</mat-icon>{{ breed }}
               </span>
             </div>
-            <span class="node-role-label node-role-gp">GP</span>
+            <span class="node-role-label node-role-gp">LEGACY 2</span>
           </div>
         </div>
       </div><!-- /.lineage-frame -->
@@ -207,9 +254,12 @@
           <img [src]="getSupportCardImageUrl(record.support_card_id)"
                [alt]="'Support Card ' + record.support_card_id"
                class="support-card-image"
+               loading="lazy"
+               decoding="async"
+               fetchpriority="low"
                (error)="handleSupportCardImageError($event)">
           <div class="card-limit-break" *ngIf="record.limit_break_count !== undefined">
-            <ng-container *ngFor="let icon of getLimitBreakArray(record.limit_break_count)">
+            <ng-container *ngFor="let icon of getLimitBreakArray(record.limit_break_count); trackBy: trackByIndex">
               <span class="limit-break-icon" *ngIf="!icon.filled">
                 <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px">
                   <path d="M480-64 224-480l256-416 256 416L480-64Zm0-139 170-277-170-278-169 278 169 277Zm0-277Z"/>
@@ -226,9 +276,9 @@
 
       <!-- Support Card (from external input, e.g. profile) -->
       <div *ngIf="!record.support_card_id && supportCardImageUrl" class="support-card-section">
-          <img [src]="supportCardImageUrl" alt="Support Card" class="support-card-image">
+          <img [src]="supportCardImageUrl" alt="Support Card" class="support-card-image" loading="lazy" decoding="async" fetchpriority="low">
           <div class="card-limit-break" *ngIf="supportCardLimitBreak != null">
-            <ng-container *ngFor="let icon of getLimitBreakArray(supportCardLimitBreak!)">
+            <ng-container *ngFor="let icon of getLimitBreakArray(supportCardLimitBreak!); trackBy: trackByIndex">
               <span class="limit-break-icon" *ngIf="!icon.filled">
                 <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px">
                   <path d="M480-64 224-480l256-416 256 416L480-64Zm0-139 170-277-170-278-169 278 169 277Zm0-277Z"/>
@@ -247,21 +297,21 @@
     <!-- V1 API: Factor objects -->
     <div *ngIf="record.blue_factors || record.pink_factors || record.unique_skills" class="factors">
       <div class="blue-factors" *ngIf="record.blue_factors">
-        <div class="blue-factor factor" *ngFor="let factor of record.blue_factors">
+        <div class="blue-factor factor" *ngFor="let factor of record.blue_factors; trackBy: trackByFactor">
           <span>{{ factor.level }}</span>
           <mat-icon>star</mat-icon>
           <span>{{ factor.type }}</span>
         </div>
       </div>
       <div class="pink-factors" *ngIf="record.pink_factors">
-        <div class="pink-factor factor" *ngFor="let factor of record.pink_factors">
+        <div class="pink-factor factor" *ngFor="let factor of record.pink_factors; trackBy: trackByFactor">
           <span>{{ factor.level }}</span>
           <mat-icon>star</mat-icon>
           <span>{{ factor.type }}</span>
         </div>
       </div>
       <div class="unique-skill-factors" *ngIf="record.unique_skills">
-        <div class="unique-skill-factor factor" *ngFor="let factor of record.unique_skills">
+        <div class="unique-skill-factor factor" *ngFor="let factor of record.unique_skills; trackBy: trackByFactor">
           <span>{{ factor.level }}</span>
           <mat-icon>star</mat-icon>
           <span>{{ factor.skill.name }}</span>
@@ -293,7 +343,14 @@
             <span *ngFor="let sparkInfo of getMergedBlueSparks(); trackBy: trackByCombinedSpark"
                   class="spark-item blue-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
-              [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
+                  [class.from-main-parent]="getLevelFromMainParent(sparkInfo)"
+                  [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                  role="button"
+                  tabindex="0"
+                  [matTooltip]="'Hide ' + sparkInfo.name"
+                  (click)="hideSpark(sparkInfo, $event)"
+                  (keydown.enter)="hideSpark(sparkInfo, $event)"
+                  (keydown.space)="hideSpark(sparkInfo, $event)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -316,7 +373,14 @@
             <span *ngFor="let sparkInfo of getMergedPinkSparks(); trackBy: trackByCombinedSpark"
                   class="spark-item pink-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
-              [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
+                  [class.from-main-parent]="getLevelFromMainParent(sparkInfo)"
+                  [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                  role="button"
+                  tabindex="0"
+                  [matTooltip]="'Hide ' + sparkInfo.name"
+                  (click)="hideSpark(sparkInfo, $event)"
+                  (keydown.enter)="hideSpark(sparkInfo, $event)"
+                  (keydown.space)="hideSpark(sparkInfo, $event)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -339,7 +403,14 @@
             <span *ngFor="let sparkInfo of getMergedGreenSparks(); trackBy: trackByCombinedSpark"
                   class="spark-item green-spark"
                   [class.matched-filter]="isSparkMatched(sparkInfo)"
-              [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
+                  [class.from-main-parent]="getLevelFromMainParent(sparkInfo)"
+                  [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                  role="button"
+                  tabindex="0"
+                  [matTooltip]="'Hide ' + sparkInfo.name"
+                  (click)="hideSpark(sparkInfo, $event)"
+                  (keydown.enter)="hideSpark(sparkInfo, $event)"
+                  (keydown.space)="hideSpark(sparkInfo, $event)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
@@ -356,28 +427,6 @@
           </div>
         </div>
 
-        <div class="spark-row" *ngIf="getMergedWhiteSparks().length">
-          <div class="spark-type-indicator white"></div>
-          <div class="spark-list">
-            <span *ngFor="let sparkInfo of getMergedWhiteSparks(); trackBy: trackByCombinedSpark"
-                  class="spark-item white-spark"
-                  [class.matched-filter]="isSparkMatched(sparkInfo)"
-              [class.from-main-parent]="getLevelFromMainParent(sparkInfo)">
-              <span class="spark-level">{{ sparkInfo.level }}</span>
-              <mat-icon class="spark-star">star</mat-icon>
-              <span class="spark-name">{{ sparkInfo.name }}</span>
-              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
-              <mat-icon *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-icon">person</mat-icon>
-              <span *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-contribution">
-                {{ getLevelFromMainParent(sparkInfo) }}<mat-icon class="spark-star">star</mat-icon>
-              </span>
-              <mat-icon *ngIf="sparkInfo.p2Level" class="parent-icon p2-icon">person</mat-icon>
-              <span *ngIf="sparkInfo.p2Level" class="parent-contribution p2-contribution">
-                {{ sparkInfo.p2Level }}<mat-icon class="spark-star">star</mat-icon>
-              </span>
-            </span>
-          </div>
-        </div>
       </div>
 
       <!-- ── Split view: all parents inline per row ── -->
@@ -388,37 +437,50 @@
           <div class="spark-list">
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_blue_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item blue-spark from-parent-main"
-                    [class.matched-filter]="isSparkMatched(sparkInfo, 'main')">
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'main')"
+                    [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                    [matTooltip]="'Hide ' + sparkInfo.name"
+                    (click)="hideSpark(sparkInfo, $event)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ sparkDisplayForSource(sparkInfo, 'main') }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_blue_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item blue-spark from-parent-left"
-                    [class.matched-filter]="isSparkMatched(sparkInfo, 'left')">
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'left')"
+                    [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                    [matTooltip]="'Hide ' + sparkInfo.name"
+                    (click)="hideSpark(sparkInfo, $event)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ sparkDisplayForSource(sparkInfo, 'left') }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_blue_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item blue-spark from-parent-right"
-                    [class.matched-filter]="isSparkMatched(sparkInfo, 'right')">
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'right')"
+                    [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                    [matTooltip]="'Hide ' + sparkInfo.name"
+                    (click)="hideSpark(sparkInfo, $event)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ sparkDisplayForSource(sparkInfo, 'right') }}</span>
               </span>
             </ng-container>
             <ng-container *ngIf="showP2Sparks">
-              <span *ngFor="let entry of getP2BlueSparkEntries(); trackBy: trackByP2SparkEntry" class="spark-item blue-spark from-p2-legacy">
+              <span *ngFor="let entry of getP2BlueSparkEntries(); trackBy: trackByP2SparkEntry"
+                    class="spark-item blue-spark from-p2-legacy"
+                    [class.spark-hidden]="isSparkHidden(entry.spark)"
+                    [matTooltip]="'Hide ' + entry.spark.name"
+                    (click)="hideSpark(entry.spark, $event)">
                 <span class="spark-level">{{ entry.spark.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ entry.spark.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ sparkDisplayForAffinity(entry.spark, entry.affinity) }}</span>
                 <mat-icon class="parent-icon p2-icon">person</mat-icon>
               </span>
             </ng-container>
@@ -430,37 +492,50 @@
           <div class="spark-list">
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_pink_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item pink-spark from-parent-main"
-                    [class.matched-filter]="isSparkMatched(sparkInfo, 'main')">
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'main')"
+                    [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                    [matTooltip]="'Hide ' + sparkInfo.name"
+                    (click)="hideSpark(sparkInfo, $event)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ sparkDisplayForSource(sparkInfo, 'main') }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_pink_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item pink-spark from-parent-left"
-                    [class.matched-filter]="isSparkMatched(sparkInfo, 'left')">
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'left')"
+                    [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                    [matTooltip]="'Hide ' + sparkInfo.name"
+                    (click)="hideSpark(sparkInfo, $event)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ sparkDisplayForSource(sparkInfo, 'left') }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_pink_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item pink-spark from-parent-right"
-                    [class.matched-filter]="isSparkMatched(sparkInfo, 'right')">
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'right')"
+                    [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                    [matTooltip]="'Hide ' + sparkInfo.name"
+                    (click)="hideSpark(sparkInfo, $event)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ sparkDisplayForSource(sparkInfo, 'right') }}</span>
               </span>
             </ng-container>
             <ng-container *ngIf="showP2Sparks">
-              <span *ngFor="let entry of getP2PinkSparkEntries(); trackBy: trackByP2SparkEntry" class="spark-item pink-spark from-p2-legacy">
+              <span *ngFor="let entry of getP2PinkSparkEntries(); trackBy: trackByP2SparkEntry"
+                    class="spark-item pink-spark from-p2-legacy"
+                    [class.spark-hidden]="isSparkHidden(entry.spark)"
+                    [matTooltip]="'Hide ' + entry.spark.name"
+                    (click)="hideSpark(entry.spark, $event)">
                 <span class="spark-level">{{ entry.spark.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ entry.spark.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ sparkDisplayForAffinity(entry.spark, entry.affinity) }}</span>
                 <mat-icon class="parent-icon p2-icon">person</mat-icon>
               </span>
             </ng-container>
@@ -472,80 +547,50 @@
           <div class="spark-list">
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.main_green_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item green-spark from-parent-main"
-                    [class.matched-filter]="isSparkMatched(sparkInfo, 'main')">
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'main')"
+                    [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                    [matTooltip]="'Hide ' + sparkInfo.name"
+                    (click)="hideSpark(sparkInfo, $event)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ sparkDisplayForSource(sparkInfo, 'main') }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.left_green_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item green-spark from-parent-left"
-                    [class.matched-filter]="isSparkMatched(sparkInfo, 'left')">
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'left')"
+                    [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                    [matTooltip]="'Hide ' + sparkInfo.name"
+                    (click)="hideSpark(sparkInfo, $event)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ sparkDisplayForSource(sparkInfo, 'left') }}</span>
               </span>
             </ng-container>
             <ng-container *ngFor="let sparkInfo of getParentSingleSpark(record.right_green_factors) | resolveSparks; trackBy: trackBySparkInfo">
               <span class="spark-item green-spark from-parent-right"
-                    [class.matched-filter]="isSparkMatched(sparkInfo, 'right')">
+                    [class.matched-filter]="isSparkMatched(sparkInfo, 'right')"
+                    [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                    [matTooltip]="'Hide ' + sparkInfo.name"
+                    (click)="hideSpark(sparkInfo, $event)">
                 <span class="spark-level">{{ sparkInfo.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ sparkDisplayForSource(sparkInfo, 'right') }}</span>
               </span>
             </ng-container>
             <ng-container *ngIf="showP2Sparks">
-              <span *ngFor="let entry of getP2GreenSparkEntries(); trackBy: trackByP2SparkEntry" class="spark-item green-spark from-p2-legacy">
+              <span *ngFor="let entry of getP2GreenSparkEntries(); trackBy: trackByP2SparkEntry"
+                    class="spark-item green-spark from-p2-legacy"
+                    [class.spark-hidden]="isSparkHidden(entry.spark)"
+                    [matTooltip]="'Hide ' + entry.spark.name"
+                    (click)="hideSpark(entry.spark, $event)">
                 <span class="spark-level">{{ entry.spark.level }}</span>
                 <mat-icon class="spark-star">star</mat-icon>
                 <span class="spark-name">{{ entry.spark.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
-                <mat-icon class="parent-icon p2-icon">person</mat-icon>
-              </span>
-            </ng-container>
-          </div>
-        </div>
-        <!-- White: main + left + right inline -->
-        <div class="spark-row" *ngIf="record.main_white_factors?.length || record.left_white_factors?.length || record.right_white_factors?.length || (showP2Sparks && getP2WhiteSparks().length)">
-          <div class="spark-type-indicator white"></div>
-          <div class="spark-list">
-            <ng-container *ngFor="let sparkInfo of record.main_white_factors | resolveSparks; trackBy: trackBySparkInfo">
-              <span class="spark-item white-spark from-parent-main"
-                    [class.matched-filter]="isSparkMatched(sparkInfo, 'main')">
-                <span class="spark-level">{{ sparkInfo.level }}</span>
-                <mat-icon class="spark-star">star</mat-icon>
-                <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
-              </span>
-            </ng-container>
-            <ng-container *ngFor="let sparkInfo of record.left_white_factors | resolveSparks; trackBy: trackBySparkInfo">
-              <span class="spark-item white-spark from-parent-left"
-                    [class.matched-filter]="isSparkMatched(sparkInfo, 'left')">
-                <span class="spark-level">{{ sparkInfo.level }}</span>
-                <mat-icon class="spark-star">star</mat-icon>
-                <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
-              </span>
-            </ng-container>
-            <ng-container *ngFor="let sparkInfo of record.right_white_factors | resolveSparks; trackBy: trackBySparkInfo">
-              <span class="spark-item white-spark from-parent-right"
-                    [class.matched-filter]="isSparkMatched(sparkInfo, 'right')">
-                <span class="spark-level">{{ sparkInfo.level }}</span>
-                <mat-icon class="spark-star">star</mat-icon>
-                <span class="spark-name">{{ sparkInfo.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
-              </span>
-            </ng-container>
-            <ng-container *ngIf="showP2Sparks">
-              <span *ngFor="let entry of getP2WhiteSparkEntries(); trackBy: trackByP2SparkEntry" class="spark-item white-spark from-p2-legacy"
-                    [class.matched-filter]="isSparkMatched(entry.spark)">
-                <span class="spark-level">{{ entry.spark.level }}</span>
-                <mat-icon class="spark-star">star</mat-icon>
-                <span class="spark-name">{{ entry.spark.name }}</span>
-                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(entry.spark, entry.affinity)) }}</span>
+                <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ sparkDisplayForAffinity(entry.spark, entry.affinity) }}</span>
                 <mat-icon class="parent-icon p2-icon">person</mat-icon>
               </span>
             </ng-container>
@@ -560,11 +605,14 @@
           <div class="spark-list">
             <span *ngFor="let sparkInfo of getSelectedBlueFactor() | resolveSparks; trackBy: trackBySparkInfo"
                   class="spark-item blue-spark parent-own-spark"
-                  [class.matched-filter]="isSelectedParentSparkMatched(sparkInfo)">
+                  [class.matched-filter]="isSelectedParentSparkMatched(sparkInfo)"
+                  [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                  [matTooltip]="'Hide ' + sparkInfo.name"
+                  (click)="hideSpark(sparkInfo, $event)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
-              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ selectedParentSparkDisplay(sparkInfo) }}</span>
             </span>
           </div>
         </div>
@@ -573,11 +621,14 @@
           <div class="spark-list">
             <span *ngFor="let sparkInfo of getSelectedPinkFactor() | resolveSparks; trackBy: trackBySparkInfo"
                   class="spark-item pink-spark parent-own-spark"
-                  [class.matched-filter]="isSelectedParentSparkMatched(sparkInfo)">
+                  [class.matched-filter]="isSelectedParentSparkMatched(sparkInfo)"
+                  [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                  [matTooltip]="'Hide ' + sparkInfo.name"
+                  (click)="hideSpark(sparkInfo, $event)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
-              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ selectedParentSparkDisplay(sparkInfo) }}</span>
             </span>
           </div>
         </div>
@@ -586,26 +637,79 @@
           <div class="spark-list">
             <span *ngFor="let sparkInfo of getSelectedGreenFactor() | resolveSparks; trackBy: trackBySparkInfo"
                   class="spark-item green-spark parent-own-spark"
-                  [class.matched-filter]="isSelectedParentSparkMatched(sparkInfo)">
+                  [class.matched-filter]="isSelectedParentSparkMatched(sparkInfo)"
+                  [class.spark-hidden]="isSparkHidden(sparkInfo)"
+                  [matTooltip]="'Hide ' + sparkInfo.name"
+                  (click)="hideSpark(sparkInfo, $event)">
               <span class="spark-level">{{ sparkInfo.level }}</span>
               <mat-icon class="spark-star">star</mat-icon>
               <span class="spark-name">{{ sparkInfo.name }}</span>
-              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
+              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ selectedParentSparkDisplay(sparkInfo) }}</span>
             </span>
           </div>
         </div>
-        <div class="spark-row" *ngIf="getSelectedWhiteFactors().length">
-          <div class="spark-type-indicator white"></div>
-          <div class="spark-list">
-            <span *ngFor="let sparkInfo of getSelectedWhiteFactors() | resolveSparks; trackBy: trackBySparkInfo"
-                  class="spark-item white-spark parent-own-spark"
-                  [class.matched-filter]="isSelectedParentSparkMatched(sparkInfo)">
-              <span class="spark-level">{{ sparkInfo.level }}</span>
-              <mat-icon class="spark-star">star</mat-icon>
-              <span class="spark-name">{{ sparkInfo.name }}</span>
-              <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ formatSparkPct(sparkDisplayChance(sparkInfo)) }}</span>
-            </span>
-          </div>
+      </div>
+
+      <!-- White sparks stay grouped consistently across merged, split, and focused views. -->
+      <div class="white-spark-group" *ngIf="hasWhiteSparkEntries()">
+        <div class="spark-type-indicator white" aria-hidden="true"></div>
+        <div class="white-spark-sections">
+          <ng-container *ngFor="let section of whiteSparkSections; trackBy: trackByWhiteSparkSection">
+            <section
+              *ngIf="getWhiteSparkTotalCount(section.key) > 0"
+              class="white-spark-section">
+              <button
+                type="button"
+                class="white-spark-section-header"
+                [attr.aria-expanded]="!isWhiteSectionCollapsed(section.key)"
+                [matTooltip]="isWhiteSectionCollapsed(section.key) ? 'Expand ' + section.label : 'Collapse ' + section.label"
+                (click)="toggleWhiteSection(section.key, $event)">
+                <span class="white-section-label">{{ section.label }}</span>
+                <span
+                  class="white-section-chevron"
+                  [class.collapsed]="isWhiteSectionCollapsed(section.key)"
+                  aria-hidden="true"></span>
+              </button>
+
+              <div class="white-spark-list" *ngIf="!isWhiteSectionCollapsed(section.key)">
+                <span
+                  *ngFor="let entry of getWhiteSparkDisplayEntries(section.key); trackBy: trackByWhiteSparkEntry"
+                  class="spark-item white-spark"
+                  [class.parent-own-spark]="selectedParent !== null"
+                  [class.from-parent-main]="entry.source === 'main' && !entry.isP2"
+                  [class.from-parent-left]="entry.source === 'left' && !entry.isP2"
+                  [class.from-parent-right]="entry.source === 'right' && !entry.isP2"
+                  [class.from-p2-legacy]="entry.isP2"
+                  [class.from-main-parent]="!!entry.combined && !!getLevelFromMainParent(entry.spark)"
+                  [class.matched-filter]="isWhiteSparkEntryMatched(entry)"
+                  [class.revealed-hidden-spark]="isSparkHidden(entry.spark)">
+                  <span class="spark-level">{{ entry.spark.level }}</span>
+                  <mat-icon class="spark-star">star</mat-icon>
+                  <span class="spark-name">{{ entry.spark.name }}</span>
+                  <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ whiteSparkDisplayChance(entry) }}</span>
+                  <mat-icon *ngIf="entry.combined && getLevelFromMainParent(entry.spark)" class="parent-icon">person</mat-icon>
+                  <span *ngIf="entry.combined && getLevelFromMainParent(entry.spark)" class="parent-contribution">
+                    {{ getLevelFromMainParent(entry.spark) }}<mat-icon class="spark-star">star</mat-icon>
+                  </span>
+                  <mat-icon *ngIf="entry.combined?.p2Level || entry.isP2" class="parent-icon p2-icon">person</mat-icon>
+                  <span *ngIf="entry.combined?.p2Level" class="parent-contribution p2-contribution">
+                    {{ entry.combined?.p2Level }}<mat-icon class="spark-star">star</mat-icon>
+                  </span>
+                  <mat-icon *ngIf="isSparkHidden(entry.spark)" class="hidden-spark-indicator">visibility_off</mat-icon>
+                </span>
+                <button
+                  type="button"
+                  class="white-section-hidden-summary"
+                  *ngIf="getWhiteSparkHiddenCount(section.key) as hiddenCount"
+                  [class.expanded]="isHiddenWhiteSectionExpanded(section.key)"
+                  [attr.aria-expanded]="isHiddenWhiteSectionExpanded(section.key)"
+                  [matTooltip]="isHiddenWhiteSectionExpanded(section.key) ? 'Collapse hidden sparks' : 'Show hidden sparks'"
+                  (click)="toggleHiddenWhiteSection(section.key, $event)">
+                  {{ isHiddenWhiteSectionExpanded(section.key) ? '−' : '+' }} {{ hiddenCount }} hidden
+                </button>
+              </div>
+            </section>
+          </ng-container>
         </div>
       </div>
     </div>

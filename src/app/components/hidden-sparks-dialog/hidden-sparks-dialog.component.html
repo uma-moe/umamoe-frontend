@@ -1,0 +1,78 @@
+<section class="hidden-sparks-dialog">
+  <header class="dialog-header">
+    <span class="header-icon">
+      <mat-icon>visibility_off</mat-icon>
+    </span>
+    <span class="header-copy">
+      <strong>Hide Sparks</strong>
+      <small>Choose white factors that should be hidden from every inheritance result.</small>
+    </span>
+    <span class="hidden-count">{{ hiddenFactorIds.length }} hidden</span>
+    <button
+      mat-icon-button
+      type="button"
+      class="close-btn"
+      mat-dialog-close
+      aria-label="Close Hide Sparks dialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <mat-dialog-content class="dialog-content">
+    <app-white-factor-type-picker
+      browseLabel="Find white factors"
+      [embedded]="true"
+      [showPriority]="false"
+      [allowSelectionToggle]="true"
+      actionVerb="Hide"
+      [factors]="data.factors"
+      [selectedFactors]="hiddenFactorSelections"
+      (addFactors)="addFactors($event)"
+      (removeFactor)="removeFactor($event)">
+    </app-white-factor-type-picker>
+
+    <section class="selection-section">
+      <div class="selection-heading">
+        <span>
+          <strong>Hidden sparks</strong>
+          <small>Remove a spark here to show it again.</small>
+        </span>
+        <button
+          *ngIf="hiddenFactorIds.length"
+          type="button"
+          class="clear-button"
+          (click)="clearAll()">
+          Clear all
+        </button>
+      </div>
+
+      <div class="hidden-list" *ngIf="hiddenFactorIds.length; else emptySelection">
+        <button
+          *ngFor="let factorId of hiddenFactorIds; trackBy: trackFactor"
+          type="button"
+          class="hidden-chip"
+          (click)="removeFactor(factorId)"
+          [matTooltip]="'Show ' + getFactorName(factorId)">
+          <img *ngIf="getFactorIcon(factorId) as iconUrl" [src]="iconUrl" alt="">
+          <span>{{ getFactorName(factorId) }}</span>
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <ng-template #emptySelection>
+        <div class="empty-selection">
+          <mat-icon>visibility</mat-icon>
+          <span>No sparks are hidden.</span>
+        </div>
+      </ng-template>
+    </section>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="dialog-actions">
+    <button mat-button type="button" class="cancel-btn" mat-dialog-close>Cancel</button>
+    <button mat-flat-button type="button" class="save-btn" (click)="save()">
+      <mat-icon>check</mat-icon>
+      Save {{ hiddenFactorIds.length }} hidden
+    </button>
+  </mat-dialog-actions>
+</section>

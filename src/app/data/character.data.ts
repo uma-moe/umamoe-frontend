@@ -5,7 +5,7 @@ import characterData from '../../data/character.json';
 import characterNamesData from '../../data/character_names.json';
 import { Character } from '../models/character.model';
 // Character name entries from character_names.json
-interface CharacterNameEntry {
+export interface CharacterNameEntry {
   name: string;
   skins: Record<string, string>;
 }

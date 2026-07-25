@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, OnDestroy, NgZone, ChangeDetectionStrategy, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, OnDestroy, NgZone, ChangeDetectionStrategy, ChangeDetectorRef, HostBinding, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,9 +21,19 @@ import { TimelineAvatar, TimelineAvatarService } from '../../services/timeline-a
 import { TimelinePredictionInsight, TimelinePredictionService } from '../../services/timeline-prediction.service';
 import { TimelinePredictionDialogComponent, TimelinePredictionDialogData } from './timeline-prediction-dialog.component';
 import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
-import { combineLatest, Subscription } from 'rxjs';
+import { auditTime, combineLatest, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Meta, Title } from '@angular/platform-browser';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { TimelineEventCardComponent } from '../../components/timeline-event-card/timeline-event-card.component';
+import { TimelineEventDetailsComponent, TimelineEventDetailsData } from '../../components/timeline-event-details/timeline-event-details.component';
+import { CaratPlannerComponent } from '../../components/carat-planner/carat-planner.component';
+import { CaratPlannerResourceService } from '../../services/carat-planner-resource.service';
+import { CaratPlannerPersistenceService } from '../../services/carat-planner-persistence.service';
+import { CaratPlannerTimelineService } from '../../services/carat-planner-timeline.service';
+import { compareTimelineEventsForDisplay } from '../../utils/timeline-event-order';
+import { buildTimelineRewardSummaries, TimelineRewardSummary } from '../../utils/planner-reward-summary';
+import { isCaratPlannerAvailable } from '../../utils/carat-planner-availability';
 interface TimelineItem {
     date: Date;
     label: string;
@@ -43,7 +53,50 @@ interface EventFilters {
     showLegendRaces: boolean;
     showPaidBanners: boolean;
     showCampaigns: boolean;
+    showLeagueOfHeroes: boolean;
+    showMastersChallenge: boolean;
+    showTrainerSkillsTest: boolean;
+    showFactorResearch: boolean;
+    showStrongestTeam: boolean;
+    showRacingCarnival: boolean;
+    showScenarioReleases: boolean;
     searchQuery: string;
+}
+
+interface TimelineDateLane {
+    key: string;
+    date: Date;
+    dateLabel: string;
+    position: number;
+    gapDaysBefore: number;
+    events: TimelineEvent[];
+    visibleEvents: TimelineEvent[];
+    hiddenEventCount: number;
+    expanded: boolean;
+    markers: TimelineLaneMarker[];
+}
+
+interface TimelineLaneMarker {
+    label: string;
+    type: 'launch' | 'anniversary';
+    imagePath?: string;
+}
+
+interface TimelineMonthSpan {
+    key: string;
+    label: string;
+    position: number;
+    width: number;
+}
+
+type DesktopTimelineDirection = 'horizontal' | 'vertical';
+type TimelineSpacingMode = 'compact' | 'calendar';
+
+interface TimelineMonthGroup {
+    key: string;
+    label: string;
+    lanes: TimelineDateLane[];
+    eventCount: number;
 }
 
 interface TourTargetRect {
@@ -51,6 +104,21 @@ interface TourTargetRect {
     top: number;
     width: number;
     height: number;
+}
+
+export function timelineLaneDateLabel(date: Date): string {
+    const weekday = date.toLocaleDateString(undefined, {
+        weekday: 'short',
+        timeZone: 'UTC'
+    }).replace(/[.,]+$/u, '');
+    const calendarDate = date.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: 'UTC'
+    }).replace(/,/gu, '');
+
+    return `${weekday}\u2003${calendarDate}`;
 }
 
 @Component({
@@ -73,7 +141,10 @@ interface TourTargetRect {
         ScrollingModule,
         TourAnchorMatMenuDirective,
         MobileTimelineComponent,
-        AdInContentComponent
+        AdInContentComponent,
+        RouterLink,
+        TimelineEventCardComponent,
+        CaratPlannerComponent
     ],
     templateUrl: './timeline.component.html',
     styleUrls: ['./timeline.component.scss'],
@@ -91,6 +162,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     compactModeHeightThreshold = 1200; // Height threshold for compact mode
     // Virtual rendering configuration
     readonly groupedCardOffset = 288;
+    readonly timelineLaneWidth = 280;
+    private readonly timelineLaneStep = 296;
+    private readonly timelineLaneStartPadding = 28;
+    private readonly timelineLaneEndPadding = 48;
+    private readonly emptyMonthSpacing = 116;
+    private readonly calendarGapPixelsPerDay = 14;
+    private readonly timelineLaneEventLimit = 3;
     private readonly timelineCardSlotWidth = 296;
     private readonly timelineMarkerSlotWidth = 64;
     private readonly timelineAnchorGap = 280;
@@ -98,6 +176,18 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     itemSize = this.timelineCardSlotWidth; // Width per item for spacing calculation
     allTimelineItems: TimelineItem[] = []; // All items (for data)
     visibleTimelineItems: TimelineItem[] = []; // Only visible items (for rendering)
+    allTimelineLanes: TimelineDateLane[] = [];
+    visibleTimelineLanes: TimelineDateLane[] = [];
+    timelineMonthSpans: TimelineMonthSpan[] = [];
+    timelineMonthGroups: TimelineMonthGroup[] = [];
+    timelineTrackMinHeight = 560;
+    desktopTimelineDirection: DesktopTimelineDirection = 'horizontal';
+    verticalTimelineInitialized = false;
+    timelineSpacingMode: TimelineSpacingMode = 'compact';
+    timelineLayoutAnimating = false;
+    todayLanePosition = 0;
+    showTodayMarker = false;
+    filterPanelOpen = false;
     viewportWidth = 0;
     scrollLeft = 0;
     bufferSize = 5; // Number of items to render outside viewport for smooth scrolling
@@ -115,14 +205,35 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         showLegendRaces: true,
         showPaidBanners: true,
         showCampaigns: true,
+        showLeagueOfHeroes: true,
+        showMastersChallenge: true,
+        showTrainerSkillsTest: true,
+        showFactorResearch: true,
+        showStrongestTeam: true,
+        showRacingCarnival: true,
+        showScenarioReleases: true,
         searchQuery: ''
     };
     // Search navigation
     searchResultIndices: number[] = [];
     currentSearchIndex: number = -1;
+    filteredEventCount = 0;
     // Service subscription
     private eventsSubscription?: Subscription;
     private scrollSubscription?: Subscription;
+    private tabSubscription?: Subscription;
+    private plannerSubscription?: Subscription;
+    activeTab: 'timeline' | 'carat-planner' = 'timeline';
+    readonly caratPlannerAvailable = isCaratPlannerAvailable();
+
+    @HostBinding('class.planner-tab-active')
+    get plannerTabActive(): boolean {
+        return this.caratPlannerAvailable && this.activeTab === 'carat-planner';
+    }
+    requestedPlannerEventId: string | null = null;
+    plannedEventIds = new Set<string>();
+    plannerEventCount = 0;
+    plannerRewardSummaries = new Map<string, TimelineRewardSummary>();
     timelineEvents: TimelineEvent[] = [];
     timelineAnniversaries: TimelineAnniversary[] = [];
     timelineCalculation: TimelineCalculation | null = null;
@@ -147,6 +258,9 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private velocityX = 0;
     private momentumAnimation?: number;
     private isDecelerating = false;
+    private wheelAnimationFrame?: number;
+    private pendingWheelDelta = 0;
+    private searchRefreshTimer?: number;
     // Dynamic scaling properties
     cardScale = 1;
     cardVerticalOffsetBottom = 60;  // For items below the timeline
@@ -158,6 +272,10 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private destroyed = false;
     private initialTodayScrollDone = false;
     private initialTodayScrollScheduled = false;
+    private savedDesktopScrollLeft = 0;
+    private savedDesktopScrollTop = 0;
+    private timelineLayoutAnimationTimer?: number;
+    private readonly timelinePreferencesKey = 'umamoe.timeline.desktop-preferences.v1';
     timelineTourEventCardTarget: TourTargetRect = { left: 0, top: 0, width: 320, height: 220 };
     timelineTourTodayTarget: TourTargetRect = { left: 0, top: 0, width: 420, height: 56 };
     readonly timelineLoading$ = this.timelineService.loading$;
@@ -170,7 +288,12 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         private ngZone: NgZone,
         private cdr: ChangeDetectorRef,
         private meta: Meta,
-        private title: Title
+        private title: Title,
+        private route: ActivatedRoute,
+        private router: Router,
+        private plannerResources: CaratPlannerResourceService,
+        private plannerPersistence: CaratPlannerPersistenceService,
+        private plannerTimeline: CaratPlannerTimelineService
     ) {
         this.title.setTitle('Timeline | uma.moe');
         this.meta.addTags([
@@ -191,7 +314,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.checkMobileBreakpoint();
         this.checkCompactMode();
         if (!this.isMobile) {
-            this.calculateDynamicScale();
+            this.cardScale = 1;
             // Recalculate viewport for desktop timeline
             this.updateVisibleItems();
             this.scheduleTimelineTourTargetUpdate();
@@ -210,28 +333,45 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
 
     @HostListener('wheel', ['$event'])
     onWheel(event: WheelEvent): void {
-        if (!this.timelineContainer || this.isMobile) return;
-        if (this.isTimelineInteractiveTarget(event.target, '.event-avatar-strip-shell, .timeline-avatar-hover-card')) {
+        if (!this.timelineContainer || this.isMobile || this.desktopTimelineDirection === 'vertical') return;
+        const container = this.timelineContainer.nativeElement as HTMLElement;
+        const target = this.getTimelineEventElement(event.target);
+        if (!target || !container.contains(target) || event.ctrlKey) return;
+        if (target.closest('.event-avatar-strip-shell, .timeline-avatar-hover-card')) {
             return;
         }
 
         this.hideAvatarHover();
-        // Always handle wheel events for horizontal scrolling on the timeline
-        event.preventDefault();
-        const container = this.timelineContainer.nativeElement;
-        // Determine scroll direction and amount
-        let scrollAmount = 0;
-        // If it's already a horizontal wheel event (some mice/trackpads support this)
-        if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
-            scrollAmount = event.deltaX;
-        } else {
-            // Convert vertical wheel to horizontal scroll
-            scrollAmount = event.deltaY;
+        const horizontalDelta = Math.abs(event.deltaX);
+        const verticalDelta = Math.abs(event.deltaY);
+        const eventLane = target.closest('.timeline-date-lane');
+        const canScrollVertically = container.scrollHeight > container.clientHeight + 1;
+        if (eventLane && !event.shiftKey && verticalDelta > horizontalDelta && canScrollVertically) {
+            const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+            const canMoveVertically = event.deltaY < 0 ? container.scrollTop > 0 : container.scrollTop < maxScrollTop;
+            if (canMoveVertically) {
+                event.preventDefault();
+                container.scrollTop += event.deltaY;
+                return;
+            }
         }
-        // Multiply by 10 for faster scrolling as requested
-        scrollAmount *= 10;
-        // Apply the scroll
-        container.scrollLeft += scrollAmount;
+
+        const scrollAmount = horizontalDelta > verticalDelta ? event.deltaX : event.deltaY;
+        if (!scrollAmount) return;
+
+        const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+        const canMove = scrollAmount < 0 ? container.scrollLeft > 0 : container.scrollLeft < maxScrollLeft;
+        if (!canMove) return;
+
+        event.preventDefault();
+        this.pendingWheelDelta += scrollAmount;
+        if (this.wheelAnimationFrame !== undefined) return;
+
+        this.wheelAnimationFrame = requestAnimationFrame(() => {
+            container.scrollLeft += this.pendingWheelDelta;
+            this.pendingWheelDelta = 0;
+            this.wheelAnimationFrame = undefined;
+        });
     }
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent): void {
@@ -242,24 +382,39 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             return;
         }
         const container = this.timelineContainer.nativeElement;
-        const scrollAmount = 300; // Pixels to scroll
-        const pageScrollAmount = container.clientWidth * 0.8; // 80% of viewport for page up/down
+        const isVertical = this.desktopTimelineDirection === 'vertical';
+        const scrollAmount = 300;
+        const pageScrollAmount = (isVertical ? container.clientHeight : container.clientWidth) * 0.8;
         switch (event.key) {
             case 'ArrowLeft':
+                if (isVertical) break;
                 event.preventDefault();
                 container.scrollLeft -= scrollAmount;
                 break;
             case 'ArrowRight':
+                if (isVertical) break;
                 event.preventDefault();
                 container.scrollLeft += scrollAmount;
                 break;
+            case 'ArrowUp':
+                if (!isVertical) break;
+                event.preventDefault();
+                container.scrollTop -= scrollAmount;
+                break;
+            case 'ArrowDown':
+                if (!isVertical) break;
+                event.preventDefault();
+                container.scrollTop += scrollAmount;
+                break;
             case 'PageUp':
                 event.preventDefault();
-                container.scrollLeft -= pageScrollAmount;
+                if (isVertical) container.scrollTop -= pageScrollAmount;
+                else container.scrollLeft -= pageScrollAmount;
                 break;
             case 'PageDown':
                 event.preventDefault();
-                container.scrollLeft += pageScrollAmount;
+                if (isVertical) container.scrollTop += pageScrollAmount;
+                else container.scrollLeft += pageScrollAmount;
                 break;
             case 'Home':
                 if (event.ctrlKey) {
@@ -277,7 +432,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     // Drag to scroll functionality
     onMouseDown(event: MouseEvent): void {
-        if (!this.timelineContainer || this.isMobile) return;
+        if (!this.timelineContainer || this.isMobile || this.desktopTimelineDirection === 'vertical') return;
         // Only handle left mouse button, ignore middle mouse button for page scrolling
         if (event.button !== 0) return;
         if (this.isTimelineInteractiveTarget(event.target)) {
@@ -401,6 +556,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             '.mat-mdc-button-base',
             '.mat-mdc-checkbox',
             '.event-card',
+            '.timeline-event-card',
             '.event-avatar-strip-shell',
             '.timeline-avatar-hover-card',
             extraSelector
@@ -428,7 +584,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         }
     }
     private startMomentum(): void {
-        if (!this.timelineContainer || this.isDecelerating) return;
+        if (!this.timelineContainer || this.isDecelerating || this.desktopTimelineDirection === 'vertical') return;
         this.isDecelerating = true;
         const container = this.timelineContainer.nativeElement;
         const friction = 0.92; // Slightly lower friction for smoother deceleration
@@ -456,6 +612,37 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         animate();
     }
     ngOnInit(): void {
+        this.restoreTimelinePreferences();
+        this.plannerSubscription = this.plannerPersistence.collection$.subscribe(collection => {
+            const plan = collection.plans.find(item => item.id === collection.activePlanId) ?? collection.plans[0];
+            const disabledEventIds = new Set(plan?.disabledEventIds ?? []);
+            this.plannedEventIds = new Set([
+                ...(plan?.targets.filter(target => !disabledEventIds.has(target.eventId)).map(target => target.eventId) ?? []),
+                ...(plan?.enabledRewardEventIds ?? [])
+            ].filter(eventId => !disabledEventIds.has(eventId)));
+            this.plannerEventCount = plan?.targets.filter(target => !disabledEventIds.has(target.eventId)).length ?? 0;
+            this.cdr.markForCheck();
+        });
+        this.loadTimelineRewardSummaries();
+        this.tabSubscription = this.route.queryParamMap.subscribe(params => {
+            const nextTab = this.caratPlannerAvailable && params.get('tab') === 'carat-planner'
+                ? 'carat-planner'
+                : 'timeline';
+            const changed = nextTab !== this.activeTab;
+            if (changed && nextTab === 'carat-planner') {
+                this.deactivateDesktopTimelineSurface();
+            }
+            this.activeTab = nextTab;
+            this.requestedPlannerEventId = this.caratPlannerAvailable ? params.get('banner') : null;
+            if (changed && nextTab === 'timeline' && !this.isMobile) {
+                window.setTimeout(() => {
+                    if (this.destroyed || this.activeTab !== 'timeline' || this.isMobile) return;
+                    this.cdr.detectChanges();
+                    this.initializeDesktopTimelineSurface();
+                });
+            }
+            this.cdr.markForCheck();
+        });
         // Check initial screen size
         this.checkMobileBreakpoint();
         this.checkCompactMode();
@@ -464,11 +651,12 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             this.timelineService.events$,
             this.timelineService.anniversaries$,
             this.timelineService.calculation$
-        ]).subscribe(([events, anniversaries, calculation]) => {
+        ]).pipe(auditTime(0)).subscribe(([events, anniversaries, calculation]) => {
             this.timelineEvents = events;
+            this.filteredEventCount = events.length;
             this.timelineAnniversaries = anniversaries;
             this.timelineCalculation = calculation;
-            if (this.isMobile) {
+            if (this.activeTab !== 'timeline' || this.isMobile) {
                 this.clearDesktopTimelineItems();
                 this.cdr.detectChanges();
                 return;
@@ -486,9 +674,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     ngAfterViewInit(): void {
         this.viewInitialized = true;
-        this.setupScrollListener();
-        this.setupResizeObserver();
-        this.calculateDynamicScale();
+        this.initializeDesktopTimelineSurface();
         // Detect if we're in Chrome
         const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
         // Chrome-specific scroll fix: Force reflow to ensure scrollbars are recognized
@@ -535,6 +721,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.scrollSubscription) {
             this.scrollSubscription.unsubscribe();
         }
+        this.tabSubscription?.unsubscribe();
+        this.plannerSubscription?.unsubscribe();
         // Clean up drag event listeners
         document.removeEventListener('mousemove', this.boundMouseMove);
         document.removeEventListener('mouseup', this.boundMouseUp);
@@ -550,6 +738,14 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.momentumAnimation) {
             cancelAnimationFrame(this.momentumAnimation);
         }
+        if (this.wheelAnimationFrame !== undefined) {
+            cancelAnimationFrame(this.wheelAnimationFrame);
+            this.wheelAnimationFrame = undefined;
+        }
+        if (this.searchRefreshTimer !== undefined) {
+            window.clearTimeout(this.searchRefreshTimer);
+            this.searchRefreshTimer = undefined;
+        }
         // Clean up resize observer
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
@@ -557,6 +753,10 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.timelineTourTargetFrame !== undefined) {
             cancelAnimationFrame(this.timelineTourTargetFrame);
             this.timelineTourTargetFrame = undefined;
+        }
+        if (this.timelineLayoutAnimationTimer !== undefined) {
+            window.clearTimeout(this.timelineLayoutAnimationTimer);
+            this.timelineLayoutAnimationTimer = undefined;
         }
         // Reset body styles
         document.body.style.userSelect = '';
@@ -613,12 +813,12 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             return;
         }
 
-        const card = this.findBestVisibleTimelineElement('.desktop-timeline .event-card');
+        const card = this.findBestVisibleTimelineElement('.desktop-timeline .timeline-event-card');
         if (card) {
             this.timelineTourEventCardTarget = this.rectToTourTarget(card.getBoundingClientRect());
         }
 
-        const todayMarker = this.findBestVisibleTimelineElement('.desktop-timeline .today-label, .desktop-timeline .marker-today');
+        const todayMarker = this.findBestVisibleTimelineElement('.desktop-timeline .timeline-today-marker');
         if (todayMarker) {
             this.timelineTourTodayTarget = this.rectToTourTarget(todayMarker.getBoundingClientRect(), 18, 52, 160);
         }
@@ -687,47 +887,9 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             // Fallback to original end date if no events
             actualEndDate = this.endDate;
         }
-        this.totalDays = Math.ceil((actualEndDate.getTime() - this.globalReleaseDate.getTime()) / (1000 * 60 * 60 * 24));
-        this.updateTimelineWidth();
-        const currentDate = new Date(this.globalReleaseDate);
-        let position = 0;
-        // Add rocket marker for global release (just a marker, no card)
-        this.allTimelineItems.push({
-            date: new Date(this.globalReleaseDate),
-            label: 'Global Launch',
-            type: 'milestone',
-            position: this.initialOffset
-        });
-        // Generate anniversary markers
-        this.generateAnniversaryMarkers(actualEndDate);
         // Generate events from service data with filtering and grouping
-        const filteredEvents = this.timelineEvents.filter(event => {
-            // Apply event type filters
-            if (event.type === EventType.CHARACTER_BANNER && !this.eventFilters.showCharacters) return false;
-            if (event.type === EventType.SUPPORT_CARD_BANNER && !this.eventFilters.showSupports) return false;
-            if (event.type === EventType.PAID_BANNER && !this.eventFilters.showPaidBanners) return false;
-            if (event.type === EventType.STORY_EVENT && !this.eventFilters.showStoryEvents) return false;
-            if (event.type === EventType.CHAMPIONS_MEETING && !this.eventFilters.showChampionsMeetings) return false;
-            if (event.type === EventType.LEGEND_RACE && !this.eventFilters.showLegendRaces) return false;
-            if (event.type === EventType.CAMPAIGN && !this.eventFilters.showCampaigns) return false;
-            // Handle other event types (updates, etc.) under story events
-            if (event.type !== EventType.CHARACTER_BANNER &&
-                event.type !== EventType.SUPPORT_CARD_BANNER &&
-                event.type !== EventType.PAID_BANNER &&
-                event.type !== EventType.STORY_EVENT &&
-                event.type !== EventType.CHAMPIONS_MEETING &&
-                event.type !== EventType.LEGEND_RACE &&
-                event.type !== EventType.CAMPAIGN &&
-                !this.eventFilters.showStoryEvents) return false;
-            // Apply search filter - only search in tags (characters and support cards)
-            if (this.eventFilters.searchQuery.trim()) {
-                if (!this.timelineAvatarService.eventMatchesSearch(event, this.eventFilters.searchQuery)) {
-                    return false;
-                }
-            }
-            const eventDate = event.globalReleaseDate || event.jpReleaseDate;
-            return eventDate >= this.globalReleaseDate;
-        });
+        const filteredEvents = this.timelineEvents.filter(event => this.eventPassesFilters(event));
+        this.filteredEventCount = filteredEvents.length;
         // Group events by date (same day)
         const eventsByDate = new Map<string, { date: Date, events: TimelineEvent[] }>();
         filteredEvents.forEach(event => {
@@ -739,8 +901,23 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             }
             eventsByDate.get(dateKey)!.events.push(event);
         });
-        // Generate timeline items for grouped events
-        // Side assignment is deferred to assignSequentialPositions for optimal packing
+        eventsByDate.forEach(group => group.events.sort(compareTimelineEventsForDisplay));
+        this.buildTimelineLanes(eventsByDate, actualEndDate);
+        // The desktop template renders fixed date lanes. Stop before the retired
+        // duration-based card layout duplicates every event and re-packs it.
+        this.updateTimelineLaneMetrics();
+        return;
+        this.totalDays = Math.ceil((actualEndDate.getTime() - this.globalReleaseDate.getTime()) / (1000 * 60 * 60 * 24));
+        this.updateTimelineWidth();
+        const currentDate = new Date(this.globalReleaseDate);
+        let position = 0;
+        this.allTimelineItems.push({
+            date: new Date(this.globalReleaseDate),
+            label: 'Global Launch',
+            type: 'milestone',
+            position: this.initialOffset
+        });
+        this.generateAnniversaryMarkers(actualEndDate);
         const sortedEventDates = Array.from(eventsByDate.entries())
             .sort(([, a], [, b]) => a.date.getTime() - b.date.getTime());
         sortedEventDates.forEach(([dateKey, { date: eventDate, events }]) => {
@@ -821,8 +998,193 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.assignSequentialPositions();
         // Now interpolate overlay markers (today, anniversary) into correct relative positions
         this.interpolateOverlayMarkers();
+        this.updateTimelineLaneMetrics();
         // After generating all items, update visible items
         this.updateVisibleItems();
+    }
+
+    private buildTimelineLanes(
+        eventsByDate: Map<string, { date: Date; events: TimelineEvent[] }>,
+        actualEndDate: Date
+    ): void {
+        const laneMap = new Map<string, { date: Date; events: TimelineEvent[]; markers: TimelineLaneMarker[] }>();
+
+        eventsByDate.forEach(({ date, events }, key) => {
+            laneMap.set(key, { date: new Date(date), events, markers: [] });
+        });
+
+        if (!this.eventFilters.searchQuery.trim()) {
+            const launchKey = this.utcDateKey(this.globalReleaseDate);
+            const launchLane = laneMap.get(launchKey) ?? {
+                date: new Date(this.globalReleaseDate),
+                events: [],
+                markers: []
+            };
+            launchLane.markers.push({ label: 'Global launch', type: 'launch' });
+            laneMap.set(launchKey, launchLane);
+
+            this.timelineAnniversaries.forEach(anniversary => {
+                if (anniversary.globalDate > actualEndDate) return;
+                const key = this.utcDateKey(anniversary.globalDate);
+                const lane = laneMap.get(key) ?? {
+                    date: new Date(anniversary.globalDate),
+                    events: [],
+                    markers: []
+                };
+                lane.markers.push({
+                    label: anniversary.label,
+                    type: 'anniversary',
+                    imagePath: anniversary.imagePath
+                });
+                laneMap.set(key, lane);
+            });
+        }
+
+        const previousExpansion = new Map(this.allTimelineLanes.map(lane => [lane.key, lane.expanded]));
+        const sorted = Array.from(laneMap.entries())
+            .filter(([, lane]) => lane.date >= this.globalReleaseDate)
+            .sort(([, a], [, b]) => a.date.getTime() - b.date.getTime());
+
+        let emptyMonthOffset = 0;
+        let previousPosition = this.timelineLaneStartPadding;
+        this.allTimelineLanes = sorted.map(([key, lane], index) => {
+            const expanded = previousExpansion.get(key) === true;
+            const previousDate = index > 0 ? sorted[index - 1][1].date : null;
+            const gapDaysBefore = previousDate
+                ? Math.max(0, Math.round((lane.date.getTime() - previousDate.getTime()) / 86_400_000))
+                : 0;
+            let position = this.timelineLaneStartPadding;
+            if (previousDate) {
+                if (this.timelineSpacingMode === 'calendar') {
+                    position = previousPosition
+                        + this.timelineLaneStep
+                        + Math.max(0, gapDaysBefore - 1) * this.calendarGapPixelsPerDay;
+                } else {
+                    const elapsedMonths = (lane.date.getUTCFullYear() - previousDate.getUTCFullYear()) * 12
+                        + lane.date.getUTCMonth() - previousDate.getUTCMonth();
+                    emptyMonthOffset += Math.max(0, elapsedMonths - 1) * this.emptyMonthSpacing;
+                    position = this.timelineLaneStartPadding + index * this.timelineLaneStep + emptyMonthOffset;
+                }
+            }
+            previousPosition = position;
+            return {
+                key,
+                date: lane.date,
+                dateLabel: timelineLaneDateLabel(lane.date),
+                position,
+                gapDaysBefore,
+                events: lane.events,
+                visibleEvents: expanded ? lane.events : lane.events.slice(0, this.timelineLaneEventLimit),
+                hiddenEventCount: expanded ? 0 : Math.max(0, lane.events.length - this.timelineLaneEventLimit),
+                expanded,
+                markers: lane.markers
+            };
+        });
+        this.timelineMonthSpans = this.buildTimelineMonthSpans(this.allTimelineLanes);
+        this.timelineMonthGroups = this.buildTimelineMonthGroups(this.allTimelineLanes);
+        this.updateTimelineTrackHeight();
+    }
+
+    private buildTimelineMonthSpans(lanes: TimelineDateLane[]): TimelineMonthSpan[] {
+        if (!lanes.length) return [];
+        const firstLane = lanes[0];
+        const lastLane = lanes[lanes.length - 1];
+        const lastTrackPosition = lastLane.position + this.timelineLaneWidth + this.timelineLaneEndPadding;
+        const spans: TimelineMonthSpan[] = [];
+        let monthStart = new Date(Date.UTC(firstLane.date.getUTCFullYear(), firstLane.date.getUTCMonth(), 1));
+        const finalMonthStart = new Date(Date.UTC(lastLane.date.getUTCFullYear(), lastLane.date.getUTCMonth(), 1));
+
+        while (monthStart <= finalMonthStart) {
+            const nextMonthStart = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1));
+            const position = spans.length === 0
+                ? 0
+                : this.positionForDate(monthStart) + this.timelineLaneWidth / 2;
+            const end = nextMonthStart <= lastLane.date
+                ? this.positionForDate(nextMonthStart) + this.timelineLaneWidth / 2
+                : lastTrackPosition;
+            spans.push({
+                key: `${monthStart.getUTCFullYear()}-${String(monthStart.getUTCMonth() + 1).padStart(2, '0')}`,
+                label: monthStart.toLocaleDateString(undefined, {
+                    month: 'long',
+                    year: 'numeric',
+                    timeZone: 'UTC'
+                }),
+                position,
+                width: Math.max(1, end - position)
+            });
+            monthStart = nextMonthStart;
+        }
+
+        return spans;
+    }
+
+    private buildTimelineMonthGroups(lanes: TimelineDateLane[]): TimelineMonthGroup[] {
+        const groups: TimelineMonthGroup[] = [];
+        lanes.forEach(lane => {
+            const key = `${lane.date.getUTCFullYear()}-${String(lane.date.getUTCMonth() + 1).padStart(2, '0')}`;
+            let group = groups[groups.length - 1];
+            if (!group || group.key !== key) {
+                group = {
+                    key,
+                    label: lane.date.toLocaleDateString(undefined, {
+                        month: 'long',
+                        year: 'numeric',
+                        timeZone: 'UTC'
+                    }),
+                    lanes: [],
+                    eventCount: 0
+                };
+                groups.push(group);
+            }
+            group.lanes.push(lane);
+            group.eventCount += lane.events.length;
+        });
+        return groups;
+    }
+
+    private updateTimelineTrackHeight(): void {
+        const requiredHeight = this.allTimelineLanes.reduce((maximum, lane) => {
+            const markerHeight = lane.markers.reduce((height, marker) => height + (marker.imagePath ? 108 : 42), 0);
+            const cardsHeight = lane.visibleEvents.length
+                ? lane.visibleEvents.length * 220 + Math.max(0, lane.visibleEvents.length - 1) * 9
+                : 0;
+            const overflowHeight = lane.events.length > this.timelineLaneEventLimit ? 38 : 0;
+            return Math.max(maximum, 31 + 60 + markerHeight + cardsHeight + overflowHeight + 24);
+        }, 0);
+        this.timelineTrackMinHeight = Math.max(360, requiredHeight);
+    }
+
+    private updateTimelineLaneMetrics(): void {
+        const finalLane = this.allTimelineLanes[this.allTimelineLanes.length - 1];
+        this.totalWidth = finalLane
+            ? finalLane.position + this.timelineLaneWidth + this.timelineLaneEndPadding
+            : this.timelineLaneWidth + this.timelineLaneEndPadding;
+        this.todayLanePosition = this.positionForDate(new Date());
+        this.showTodayMarker = this.allTimelineLanes.length > 0
+            && new Date() >= this.allTimelineLanes[0].date
+            && new Date() <= this.allTimelineLanes[this.allTimelineLanes.length - 1].date;
+    }
+
+    private positionForDate(date: Date): number {
+        if (!this.allTimelineLanes.length) return 0;
+        if (date <= this.allTimelineLanes[0].date) return this.allTimelineLanes[0].position;
+        const last = this.allTimelineLanes[this.allTimelineLanes.length - 1];
+        if (date >= last.date) return last.position;
+
+        for (let index = 1; index < this.allTimelineLanes.length; index++) {
+            const next = this.allTimelineLanes[index];
+            if (next.date < date) continue;
+            const previous = this.allTimelineLanes[index - 1];
+            const duration = next.date.getTime() - previous.date.getTime();
+            const progress = duration > 0 ? (date.getTime() - previous.date.getTime()) / duration : 0;
+            return previous.position + progress * (next.position - previous.position);
+        }
+
+        return last.position;
+    }
+
+    private utcDateKey(date: Date): string {
+        return `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
     }
     private updateTimelineWidth(): void {
         this.totalWidth = this.totalDays * this.pixelsPerDay;
@@ -958,12 +1320,15 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         }
     }
     scrollToToday(behavior: ScrollBehavior = 'auto'): boolean {
-        const todayItem = this.allTimelineItems.find(item => item.type === 'today');
-        if (!todayItem || !this.timelineContainer) {
+        if (!this.allTimelineLanes.length || !this.timelineContainer) {
             return false;
         }
-        const container = this.timelineContainer.nativeElement;
-        const targetScrollLeft = Math.max(0, todayItem.position - (container.clientWidth / 2));
+        const container = this.timelineContainer.nativeElement as HTMLElement;
+        if (this.desktopTimelineDirection === 'vertical') {
+            const targetLane = this.closestLaneToDate(new Date());
+            return targetLane ? this.scrollToVerticalLane(targetLane, behavior) : false;
+        }
+        const targetScrollLeft = Math.max(0, this.todayLanePosition - (container.clientWidth / 2) + (this.timelineLaneWidth / 2));
         if (typeof container.scrollTo === 'function') {
             container.scrollTo({ left: targetScrollLeft, behavior });
         } else {
@@ -974,12 +1339,17 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     scrollToStart(): void {
         if (this.timelineContainer) {
-            this.timelineContainer.nativeElement.scrollLeft = 0;
+            if (this.desktopTimelineDirection === 'vertical') this.timelineContainer.nativeElement.scrollTop = 0;
+            else this.timelineContainer.nativeElement.scrollLeft = 0;
         }
     }
     scrollToEnd(): void {
         if (this.timelineContainer) {
-            this.timelineContainer.nativeElement.scrollLeft = this.totalWidth;
+            if (this.desktopTimelineDirection === 'vertical') {
+                this.timelineContainer.nativeElement.scrollTop = this.timelineContainer.nativeElement.scrollHeight;
+            } else {
+                this.timelineContainer.nativeElement.scrollLeft = this.totalWidth;
+            }
         }
     }
     private scheduleInitialScrollToToday(): void {
@@ -990,7 +1360,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             this.isMobile ||
             this.timelineEvents.length === 0 ||
             !this.timelineContainer ||
-            !this.allTimelineItems.some(item => item.type === 'today')
+            !this.showTodayMarker
         ) {
             return;
         }
@@ -1057,7 +1427,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         const scrollPosition = this.timelineContainer.nativeElement.scrollLeft;
         const centerPosition = scrollPosition + (this.timelineContainer.nativeElement.clientWidth / 2);
         const date = this.getDateFromPosition(centerPosition);
-        return date.toLocaleDateString('en-US', {
+        return date.toLocaleDateString(undefined, {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
@@ -1199,11 +1569,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     // Filter methods
     onSearchChange(): void {
-        // Only regenerate if search actually changed
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        if (this.searchRefreshTimer !== undefined) {
+            window.clearTimeout(this.searchRefreshTimer);
+        }
+        this.searchRefreshTimer = window.setTimeout(() => {
+            this.searchRefreshTimer = undefined;
+            this.refreshTimelineFilters();
+        }, 90);
     }
     private updateSearchResults(): void {
         this.searchResultIndices = [];
@@ -1211,14 +1583,9 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!this.eventFilters.searchQuery.trim()) {
             return;
         }
-        // Find all timeline items that match the search
-        this.searchResultIndices = this.allTimelineItems
-            .map((item: TimelineItem, index: number) => ({ item, index }))
-            .filter(({ item }: { item: TimelineItem }) => {
-                if (item.type !== 'event' || !item.eventData) return false;
-                return this.timelineAvatarService.eventMatchesSearch(item.eventData, this.eventFilters.searchQuery);
-            })
-            .map(({ index }: { index: number }) => index);
+        // Every generated lane already contains at least one event that passed
+        // the active search, so avoid searching the full avatar metadata twice.
+        this.searchResultIndices = this.allTimelineLanes.map((_lane, index) => index);
     }
     jumpToNextResult(): void {
         if (this.searchResultIndices.length === 0) return;
@@ -1235,13 +1602,15 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private scrollToSearchResult(): void {
         if (this.currentSearchIndex === -1 || !this.timelineContainer) return;
         const resultIndex = this.searchResultIndices[this.currentSearchIndex];
-        const targetItem = this.allTimelineItems[resultIndex];
-        if (targetItem) {
-            const scrollPosition = targetItem.position - (this.timelineContainer.nativeElement.clientWidth / 2);
-            // Use immediate scroll instead of smooth scroll for faster navigation
-            this.timelineContainer.nativeElement.scrollLeft = Math.max(0, scrollPosition);
-            // Force immediate update of visible items
-            this.updateVisibleItemsSync(true);
+        const targetLane = this.allTimelineLanes[resultIndex];
+        if (targetLane) {
+            if (this.desktopTimelineDirection === 'vertical') {
+                this.scrollToVerticalLane(targetLane, 'smooth');
+            } else {
+                const scrollPosition = targetLane.position - (this.timelineContainer.nativeElement.clientWidth / 2) + (this.timelineLaneWidth / 2);
+                this.timelineContainer.nativeElement.scrollLeft = Math.max(0, scrollPosition);
+                this.updateVisibleItemsSync(true);
+            }
             this.cdr.detectChanges();
         }
     }
@@ -1254,82 +1623,98 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     toggleCharacterFilter(): void {
         this.eventFilters.showCharacters = !this.eventFilters.showCharacters;
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        this.refreshTimelineFilters();
     }
     toggleSupportFilter(): void {
         this.eventFilters.showSupports = !this.eventFilters.showSupports;
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        this.refreshTimelineFilters();
     }
     toggleStoryEventsFilter(): void {
         this.eventFilters.showStoryEvents = !this.eventFilters.showStoryEvents;
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        this.refreshTimelineFilters();
     }
     toggleChampionsMeetingsFilter(): void {
         this.eventFilters.showChampionsMeetings = !this.eventFilters.showChampionsMeetings;
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        this.refreshTimelineFilters();
     }
     toggleLegendRacesFilter(): void {
         this.eventFilters.showLegendRaces = !this.eventFilters.showLegendRaces;
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+        this.refreshTimelineFilters();
     }
     togglePaidBannersFilter(): void {
         this.eventFilters.showPaidBanners = !this.eventFilters.showPaidBanners;
+        this.refreshTimelineFilters();
+    }
+    toggleCampaignsFilter(): void {
+        this.eventFilters.showCampaigns = !this.eventFilters.showCampaigns;
+        this.refreshTimelineFilters();
+    }
+    toggleLeagueOfHeroesFilter(): void {
+        this.eventFilters.showLeagueOfHeroes = !this.eventFilters.showLeagueOfHeroes;
+        this.refreshTimelineFilters();
+    }
+    toggleMastersChallengeFilter(): void {
+        this.eventFilters.showMastersChallenge = !this.eventFilters.showMastersChallenge;
+        this.refreshTimelineFilters();
+    }
+    toggleTrainerSkillsTestFilter(): void {
+        this.eventFilters.showTrainerSkillsTest = !this.eventFilters.showTrainerSkillsTest;
+        this.refreshTimelineFilters();
+    }
+    toggleFactorResearchFilter(): void {
+        this.eventFilters.showFactorResearch = !this.eventFilters.showFactorResearch;
+        this.refreshTimelineFilters();
+    }
+    toggleStrongestTeamFilter(): void {
+        this.eventFilters.showStrongestTeam = !this.eventFilters.showStrongestTeam;
+        this.refreshTimelineFilters();
+    }
+    toggleRacingCarnivalFilter(): void {
+        this.eventFilters.showRacingCarnival = !this.eventFilters.showRacingCarnival;
+        this.refreshTimelineFilters();
+    }
+    toggleScenarioReleasesFilter(): void {
+        this.eventFilters.showScenarioReleases = !this.eventFilters.showScenarioReleases;
+        this.refreshTimelineFilters();
+    }
+    private refreshTimelineFilters(): void {
         this.generateTimelineItems();
         this.updateSearchResults();
         this.updateVisibleItemsSync(true);
         this.cdr.detectChanges();
     }
-    toggleCampaignsFilter(): void {
-        this.eventFilters.showCampaigns = !this.eventFilters.showCampaigns;
-        this.generateTimelineItems();
-        this.updateSearchResults();
-        this.updateVisibleItemsSync(true);
-        this.cdr.detectChanges();
+    private eventPassesFilters(event: TimelineEvent): boolean {
+        switch (event.type) {
+            case EventType.CHARACTER_BANNER: if (!this.eventFilters.showCharacters) return false; break;
+            case EventType.SUPPORT_CARD_BANNER: if (!this.eventFilters.showSupports) return false; break;
+            case EventType.PAID_BANNER: if (!this.eventFilters.showPaidBanners) return false; break;
+            case EventType.STORY_EVENT: if (!this.eventFilters.showStoryEvents) return false; break;
+            case EventType.CHAMPIONS_MEETING: if (!this.eventFilters.showChampionsMeetings) return false; break;
+            case EventType.LEGEND_RACE: if (!this.eventFilters.showLegendRaces) return false; break;
+            case EventType.CAMPAIGN: if (!this.eventFilters.showCampaigns) return false; break;
+            case EventType.LEAGUE_OF_HEROES: if (!this.eventFilters.showLeagueOfHeroes) return false; break;
+            case EventType.MASTERS_CHALLENGE: if (!this.eventFilters.showMastersChallenge) return false; break;
+            case EventType.TRAINER_SKILLS_TEST: if (!this.eventFilters.showTrainerSkillsTest) return false; break;
+            case EventType.FACTOR_RESEARCH: if (!this.eventFilters.showFactorResearch) return false; break;
+            case EventType.STRONGEST_TEAM: if (!this.eventFilters.showStrongestTeam) return false; break;
+            case EventType.RACING_CARNIVAL: if (!this.eventFilters.showRacingCarnival) return false; break;
+            case EventType.SCENARIO_RELEASE: if (!this.eventFilters.showScenarioReleases) return false; break;
+            default: if (!this.eventFilters.showStoryEvents) return false;
+        }
+
+        const query = this.eventFilters.searchQuery.trim();
+        if (query && !this.timelineAvatarService.eventMatchesSearch(event, query)) {
+            return false;
+        }
+
+        const eventDate = event.globalReleaseDate || event.jpReleaseDate;
+        return eventDate >= this.globalReleaseDate;
     }
     getCampaignCount(): number {
         return this.timelineEvents.filter(e => e.type === EventType.CAMPAIGN).length;
     }
     getFilteredEventCount(): number {
-        return this.timelineEvents.filter(event => {
-            if (event.type === EventType.CHARACTER_BANNER && !this.eventFilters.showCharacters) return false;
-            if (event.type === EventType.SUPPORT_CARD_BANNER && !this.eventFilters.showSupports) return false;
-            if (event.type === EventType.PAID_BANNER && !this.eventFilters.showPaidBanners) return false;
-            if (event.type === EventType.STORY_EVENT && !this.eventFilters.showStoryEvents) return false;
-            if (event.type === EventType.CHAMPIONS_MEETING && !this.eventFilters.showChampionsMeetings) return false;
-            if (event.type === EventType.LEGEND_RACE && !this.eventFilters.showLegendRaces) return false;
-            if (event.type === EventType.CAMPAIGN && !this.eventFilters.showCampaigns) return false;
-            // Handle other event types under story events
-            if (event.type !== EventType.CHARACTER_BANNER &&
-                event.type !== EventType.SUPPORT_CARD_BANNER &&
-                event.type !== EventType.PAID_BANNER &&
-                event.type !== EventType.STORY_EVENT &&
-                event.type !== EventType.CHAMPIONS_MEETING &&
-                event.type !== EventType.LEGEND_RACE &&
-                event.type !== EventType.CAMPAIGN &&
-                !this.eventFilters.showStoryEvents) return false;
-            // Apply search filter - only search in tags (characters and support cards)
-            if (this.eventFilters.searchQuery.trim()) {
-                if (!this.timelineAvatarService.eventMatchesSearch(event, this.eventFilters.searchQuery)) {
-                    return false;
-                }
-            }
-            return true;
-        }).length;
+        return this.filteredEventCount;
     }
     getTotalEventCount(): number {
         return this.timelineEvents.length;
@@ -1364,6 +1749,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     // Virtual scrolling implementation
     private updateVisibleItems(): void {
+        this.updateVisibleLanes();
+        return;
         if (!this.timelineContainer) {
             // Initial load: show items that would be visible at scroll position 0
             // Since items start at initialOffset, we want to show items from that position
@@ -1440,6 +1827,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     // Synchronous version for immediate scroll updates (no Angular zone)
     private updateVisibleItemsSync(isInitial?: boolean): void {
+        this.updateVisibleLanes(isInitial === true);
+        return;
         if (!this.timelineContainer) {
             return;
         }
@@ -1526,12 +1915,14 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     private setupScrollListener(): void {
         if (this.timelineContainer) {
+            this.scrollSubscription?.unsubscribe();
             this.scrollSubscription = new Subscription();
+            const container = this.timelineContainer.nativeElement as HTMLElement;
             // Use immediate + throttled scroll updates for smooth rendering during scroll
             this.ngZone.runOutsideAngular(() => {
                 let scrollTimeout: number;
                 let lastUpdateTime = 0;
-                const throttleDelay = 8; // ~120fps for immediate updates during scroll
+                const throttleDelay = 16; // One virtual-range update per rendered frame.
                 const scrollHandler = () => {
                     const now = performance.now();
                     // Immediate update if enough time has passed (throttled to ~120fps)
@@ -1551,10 +1942,10 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
                         });
                     }, 50); // Cleanup after 50ms of no scrolling
                 };
-                this.timelineContainer.nativeElement.addEventListener('scroll', scrollHandler, { passive: true });
+                container.addEventListener('scroll', scrollHandler, { passive: true });
                 if (this.scrollSubscription) {
                     this.scrollSubscription.add(() => {
-                        this.timelineContainer.nativeElement.removeEventListener('scroll', scrollHandler);
+                        container.removeEventListener('scroll', scrollHandler);
                         clearTimeout(scrollTimeout);
                     });
                 }
@@ -1563,29 +1954,326 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     private checkMobileBreakpoint(): void {
         const wasIsMobile = this.isMobile;
-        this.isMobile = window.innerWidth < this.mobileBreakpoint;
+        this.isMobile = window.matchMedia(`(max-width: ${this.mobileBreakpoint - 1}px)`).matches;
         if (wasIsMobile !== this.isMobile) {
             if (this.isMobile) {
+                this.deactivateDesktopTimelineSurface();
                 this.clearDesktopTimelineItems();
-            } else {
-                this.generateTimelineItems();
-                this.updateVisibleItemsSync(true);
-                this.scheduleInitialScrollToToday();
             }
             this.cdr.detectChanges();
+            if (!this.isMobile && this.activeTab === 'timeline') {
+                window.setTimeout(() => this.initializeDesktopTimelineSurface());
+            }
         }
     }
     private checkCompactMode(): void {
-        const wasCompactMode = this.isCompactMode;
-        this.isCompactMode = window.innerHeight < this.compactModeHeightThreshold;
-        if (wasCompactMode !== this.isCompactMode) {
-            this.cdr.detectChanges();
-        }
+        this.isCompactMode = false;
     }
     private clearDesktopTimelineItems(): void {
         this.allTimelineItems = [];
         this.visibleTimelineItems = [];
+        this.allTimelineLanes = [];
+        this.visibleTimelineLanes = [];
+        this.timelineMonthSpans = [];
+        this.timelineMonthGroups = [];
+        this.timelineTrackMinHeight = 560;
         this.totalWidth = 0;
+    }
+
+    private initializeDesktopTimelineSurface(): void {
+        if (!this.viewInitialized || this.destroyed || this.activeTab !== 'timeline' || this.isMobile || !this.timelineContainer) {
+            return;
+        }
+
+        this.scrollSubscription?.unsubscribe();
+        this.scrollSubscription = undefined;
+        this.resizeObserver?.disconnect();
+        this.resizeObserver = undefined;
+        this.generateTimelineItems();
+        if (this.desktopTimelineDirection === 'vertical') {
+            this.timelineContainer.nativeElement.scrollTop = this.savedDesktopScrollTop;
+        } else {
+            this.timelineContainer.nativeElement.scrollLeft = this.savedDesktopScrollLeft;
+        }
+        this.setupScrollListener();
+        this.setupResizeObserver();
+        this.calculateDynamicScale();
+        this.updateVisibleItemsSync(true);
+        this.scheduleInitialScrollToToday();
+        this.scheduleTimelineTourTargetUpdate();
+        this.cdr.detectChanges();
+    }
+
+    private deactivateDesktopTimelineSurface(): void {
+        if (this.timelineContainer) {
+            if (this.desktopTimelineDirection === 'vertical') {
+                this.savedDesktopScrollTop = this.timelineContainer.nativeElement.scrollTop;
+            } else {
+                this.savedDesktopScrollLeft = this.timelineContainer.nativeElement.scrollLeft;
+            }
+        }
+        this.stopTimelineMomentum();
+        this.scrollSubscription?.unsubscribe();
+        this.scrollSubscription = undefined;
+        this.resizeObserver?.disconnect();
+        this.resizeObserver = undefined;
+    }
+
+    private updateVisibleLanes(force = false): void {
+        if (this.desktopTimelineDirection === 'vertical') {
+            this.visibleTimelineLanes = [];
+            this.scheduleTimelineTourTargetUpdate();
+            return;
+        }
+        if (!this.timelineContainer) {
+            this.visibleTimelineLanes = this.allTimelineLanes.slice(0, 8);
+            return;
+        }
+
+        const container = this.timelineContainer.nativeElement as HTMLElement;
+        const nextScrollLeft = Math.max(0, container.scrollLeft);
+        const nextViewportWidth = container.clientWidth;
+        if (!force
+            && Math.abs(nextScrollLeft - this.scrollLeft) < 8
+            && Math.abs(nextViewportWidth - this.viewportWidth) < 8
+            && this.visibleTimelineLanes.length) {
+            return;
+        }
+
+        this.scrollLeft = nextScrollLeft;
+        this.viewportWidth = nextViewportWidth;
+        const buffer = this.timelineLaneStep * 3;
+        const start = nextScrollLeft - buffer;
+        const end = nextScrollLeft + nextViewportWidth + buffer;
+        this.visibleTimelineLanes = this.allTimelineLanes.filter(lane =>
+            lane.position + this.timelineLaneWidth >= start && lane.position <= end
+        );
+        this.scheduleTimelineTourTargetUpdate();
+    }
+
+    trackTimelineLane(_index: number, lane: TimelineDateLane): string {
+        return lane.key;
+    }
+
+    trackTimelineMonth(_index: number, month: TimelineMonthGroup): string {
+        return month.key;
+    }
+
+    trackTimelineEvent(_index: number, event: TimelineEvent): string {
+        return event.id;
+    }
+
+    toggleLaneExpansion(lane: TimelineDateLane): void {
+        lane.expanded = !lane.expanded;
+        lane.visibleEvents = lane.expanded ? lane.events : lane.events.slice(0, this.timelineLaneEventLimit);
+        lane.hiddenEventCount = lane.expanded ? 0 : Math.max(0, lane.events.length - this.timelineLaneEventLimit);
+        this.updateTimelineTrackHeight();
+        this.cdr.detectChanges();
+    }
+
+    setDesktopTimelineDirection(direction: DesktopTimelineDirection): void {
+        if (direction === this.desktopTimelineDirection || !this.timelineContainer) return;
+        const container = this.timelineContainer.nativeElement as HTMLElement;
+        if (this.desktopTimelineDirection === 'horizontal') {
+            this.savedDesktopScrollLeft = container.scrollLeft;
+        } else {
+            this.savedDesktopScrollTop = container.scrollTop;
+        }
+        this.stopTimelineMomentum();
+        this.desktopTimelineDirection = direction;
+        if (direction === 'vertical') this.verticalTimelineInitialized = true;
+        this.filterPanelOpen = false;
+        this.persistTimelinePreferences();
+        if (direction === 'horizontal') this.updateVisibleItemsSync(true);
+        this.cdr.detectChanges();
+
+        window.requestAnimationFrame(() => {
+            if (!this.timelineContainer || this.desktopTimelineDirection !== direction) return;
+            const nextContainer = this.timelineContainer.nativeElement as HTMLElement;
+            if (direction === 'vertical') {
+                nextContainer.scrollLeft = 0;
+                nextContainer.scrollTop = this.savedDesktopScrollTop;
+                if (!this.savedDesktopScrollTop) this.scrollToToday('auto');
+            } else {
+                nextContainer.scrollTop = 0;
+                nextContainer.scrollLeft = this.savedDesktopScrollLeft;
+                this.updateVisibleItemsSync(true);
+                if (!this.savedDesktopScrollLeft) this.scrollToToday('auto');
+            }
+            this.scheduleTimelineTourTargetUpdate();
+            this.cdr.detectChanges();
+        });
+    }
+
+    toggleTimelineSpacing(): void {
+        if (this.desktopTimelineDirection !== 'horizontal') return;
+        const anchorDate = this.horizontalViewportAnchorDate();
+        this.timelineSpacingMode = this.timelineSpacingMode === 'compact' ? 'calendar' : 'compact';
+        this.persistTimelinePreferences();
+        this.timelineLayoutAnimating = true;
+        if (this.timelineLayoutAnimationTimer !== undefined) {
+            window.clearTimeout(this.timelineLayoutAnimationTimer);
+        }
+        this.generateTimelineItems();
+        this.updateVisibleItemsSync(true);
+        this.cdr.detectChanges();
+
+        window.requestAnimationFrame(() => {
+            if (!this.timelineContainer || this.desktopTimelineDirection !== 'horizontal') return;
+            const container = this.timelineContainer.nativeElement as HTMLElement;
+            const target = Math.max(0, this.positionForDate(anchorDate) - container.clientWidth / 2 + this.timelineLaneWidth / 2);
+            container.scrollTo({ left: target, behavior: 'smooth' });
+            this.updateVisibleItemsSync(true);
+        });
+        this.timelineLayoutAnimationTimer = window.setTimeout(() => {
+            this.timelineLayoutAnimating = false;
+            this.timelineLayoutAnimationTimer = undefined;
+            this.cdr.markForCheck();
+        }, 360);
+    }
+
+    isLaneToday(lane: TimelineDateLane): boolean {
+        return this.utcDateKey(lane.date) === this.utcDateKey(new Date());
+    }
+
+    private horizontalViewportAnchorDate(): Date {
+        if (!this.timelineContainer || !this.allTimelineLanes.length) return new Date();
+        const container = this.timelineContainer.nativeElement as HTMLElement;
+        const center = container.scrollLeft + container.clientWidth / 2;
+        return this.allTimelineLanes.reduce((closest, lane) => {
+            const closestDistance = Math.abs(closest.position + this.timelineLaneWidth / 2 - center);
+            const laneDistance = Math.abs(lane.position + this.timelineLaneWidth / 2 - center);
+            return laneDistance < closestDistance ? lane : closest;
+        }).date;
+    }
+
+    private closestLaneToDate(date: Date): TimelineDateLane | null {
+        if (!this.allTimelineLanes.length) return null;
+        return this.allTimelineLanes.reduce((closest, lane) =>
+            Math.abs(lane.date.getTime() - date.getTime()) < Math.abs(closest.date.getTime() - date.getTime())
+                ? lane
+                : closest
+        );
+    }
+
+    private scrollToVerticalLane(lane: TimelineDateLane, behavior: ScrollBehavior): boolean {
+        if (!this.timelineContainer) return false;
+        const container = this.timelineContainer.nativeElement as HTMLElement;
+        const target = container.querySelector(`[data-lane-key="${lane.key}"]`) as HTMLElement | null;
+        if (!target) return false;
+        const top = target.offsetTop - (container.clientHeight / 2) + (target.clientHeight / 2);
+        container.scrollTo({ top: Math.max(0, top), behavior });
+        return true;
+    }
+
+    private restoreTimelinePreferences(): void {
+        if (typeof window === 'undefined') return;
+        try {
+            const preferences = JSON.parse(window.localStorage.getItem(this.timelinePreferencesKey) ?? '{}') as {
+                direction?: DesktopTimelineDirection;
+                spacing?: TimelineSpacingMode;
+            };
+            if (preferences.direction === 'horizontal' || preferences.direction === 'vertical') {
+                this.desktopTimelineDirection = preferences.direction;
+                this.verticalTimelineInitialized = preferences.direction === 'vertical';
+            }
+            if (preferences.spacing === 'compact' || preferences.spacing === 'calendar') {
+                this.timelineSpacingMode = preferences.spacing;
+            }
+        } catch {
+            // Ignore stale or blocked local preferences.
+        }
+    }
+
+    private persistTimelinePreferences(): void {
+        if (typeof window === 'undefined') return;
+        try {
+            window.localStorage.setItem(this.timelinePreferencesKey, JSON.stringify({
+                direction: this.desktopTimelineDirection,
+                spacing: this.timelineSpacingMode
+            }));
+        } catch {
+            // The timeline remains fully usable when storage is unavailable.
+        }
+    }
+
+    toggleFilterPanel(): void {
+        this.filterPanelOpen = !this.filterPanelOpen;
+        this.cdr.detectChanges();
+    }
+
+    prefetchPlannerManifest(): void {
+        if (!this.caratPlannerAvailable) return;
+        this.plannerResources.prefetchManifest();
+    }
+
+    private loadTimelineRewardSummaries(): void {
+        void this.plannerResources.loadRewards().then(rewards => {
+            if (this.destroyed) return;
+            this.plannerRewardSummaries = buildTimelineRewardSummaries(rewards);
+            this.cdr.markForCheck();
+        }).catch(() => {
+            // Reward summaries are progressive enhancement; the public timeline remains usable without them.
+        });
+    }
+
+    get activeFilterCount(): number {
+        return [
+            this.eventFilters.showCharacters,
+            this.eventFilters.showSupports,
+            this.eventFilters.showStoryEvents,
+            this.eventFilters.showChampionsMeetings,
+            this.eventFilters.showLegendRaces,
+            this.eventFilters.showPaidBanners,
+            this.eventFilters.showCampaigns,
+            this.eventFilters.showLeagueOfHeroes,
+            this.eventFilters.showMastersChallenge,
+            this.eventFilters.showTrainerSkillsTest,
+            this.eventFilters.showFactorResearch,
+            this.eventFilters.showStrongestTeam,
+            this.eventFilters.showRacingCarnival,
+            this.eventFilters.showScenarioReleases
+        ].filter(enabled => !enabled).length;
+    }
+
+    openEventDetails(event: TimelineEvent): void {
+        if (this.hasDragged) return;
+        const data: TimelineEventDetailsData = {
+            event,
+            calculation: this.timelineCalculation,
+            rewardSummary: this.plannerRewardSummaries.get(event.id) ?? null,
+            plannerEnabled: this.caratPlannerAvailable,
+        };
+        this.dialog.open(TimelineEventDetailsComponent, {
+            data,
+            width: '560px',
+            maxWidth: 'calc(100vw - 24px)',
+            maxHeight: '82vh',
+            autoFocus: 'dialog',
+            restoreFocus: true,
+            panelClass: ['timeline-event-details-panel', 'timeline-event-details-dialog']
+        });
+    }
+
+    addEventToPlanner(event: TimelineEvent): void {
+        if (!this.caratPlannerAvailable) return;
+        this.plannerTimeline.setEventActive(event, true);
+    }
+
+    removeEventFromPlanner(event: TimelineEvent): void {
+        if (!this.caratPlannerAvailable) return;
+        this.plannerTimeline.setEventActive(event, false);
+    }
+
+    isEventPlanned(event: TimelineEvent): boolean {
+        return this.caratPlannerAvailable && this.plannedEventIds.has(event.id);
+    }
+
+    isPlannerEligible(event: TimelineEvent): boolean {
+        if (!this.caratPlannerAvailable) return false;
+        const isPullTarget = [EventType.CHARACTER_BANNER, EventType.SUPPORT_CARD_BANNER].includes(event.type)
+            && Boolean(event.plannerDataAvailable || event.gachaId || event.gachaIds?.length);
+        return isPullTarget || event.plannerRewardAvailable === true;
     }
     eventTypeToLabel(type: EventType | undefined): string {
         switch (type) {
@@ -1603,6 +2291,20 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
                 return 'Legend Race';
             case EventType.CAMPAIGN:
                 return 'Mission Campaign';
+            case EventType.LEAGUE_OF_HEROES:
+                return 'League of Heroes';
+            case EventType.MASTERS_CHALLENGE:
+                return 'Masters Challenge';
+            case EventType.TRAINER_SKILLS_TEST:
+                return 'Trainer Skills Test';
+            case EventType.FACTOR_RESEARCH:
+                return 'Factor Research';
+            case EventType.STRONGEST_TEAM:
+                return 'Aim! The Strongest Team';
+            case EventType.RACING_CARNIVAL:
+                return 'Racing Carnival';
+            case EventType.SCENARIO_RELEASE:
+                return 'Training Scenario';
             default:
                 return 'Unknown Event';
         }
@@ -1631,6 +2333,53 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             window.setTimeout(() => target.blur(), 0);
         }
     }
+    eventTypeToIcon(type: EventType | undefined): string {
+        switch (type) {
+            case EventType.CHARACTER_BANNER: return 'person';
+            case EventType.SUPPORT_CARD_BANNER: return 'style';
+            case EventType.PAID_BANNER: return 'payments';
+            case EventType.STORY_EVENT: return 'auto_stories';
+            case EventType.CHAMPIONS_MEETING: return 'emoji_events';
+            case EventType.LEGEND_RACE: return 'sports_motorsports';
+            case EventType.LEAGUE_OF_HEROES: return 'groups';
+            case EventType.MASTERS_CHALLENGE: return 'military_tech';
+            case EventType.TRAINER_SKILLS_TEST: return 'school';
+            case EventType.FACTOR_RESEARCH: return 'science';
+            case EventType.STRONGEST_TEAM: return 'group_work';
+            case EventType.RACING_CARNIVAL: return 'sports_score';
+            case EventType.SCENARIO_RELEASE: return 'landscape';
+            case EventType.CAMPAIGN:
+            default: return 'campaign';
+        }
+    }
+    gachaTypeLabel(event: TimelineEvent | undefined): string {
+        if (!event?.gachaType) return '';
+        const labels: Record<string, string> = {
+            standard_pool: 'Standard Pool',
+            makeup_debut: 'Makeup Debut',
+            standard_pickup: 'Standard Pickup',
+            guaranteed: 'Guaranteed',
+            group_select: 'Group Select',
+            twinkle_collection: 'Twinkle Collection',
+            pick_2: 'Pick 2',
+            select_pickup_rerun: 'Pick 2',
+            special_guaranteed: 'Special Guaranteed',
+            select_step_up: 'Select Step-Up',
+            stamp_sheet: 'Stamp Sheet',
+            select_pickup_stamp_sheet: 'Stamp Sheet'
+        };
+        const numericLabels: Record<number, string> = {
+            1: 'Standard Pool', 2: 'Makeup Debut', 3: 'Standard Pickup',
+            5: 'Guaranteed', 10: 'Group Select', 11: 'Twinkle Collection',
+            12: 'Pick 2', 13: 'Special Guaranteed', 14: 'Select Step-Up',
+            15: 'Stamp Sheet'
+        };
+        return labels[event.gachaTypeName || ''] || numericLabels[event.gachaType] || `Gacha Type ${event.gachaType}`;
+    }
+
+    isRerunBanner(event: TimelineEvent | undefined): boolean {
+        return event?.tags?.includes('rerun-banner') === true;
+    }
     // Format date to ensure consistent display in user's local timezone
     formatDate(item: TimelineItem): string {
         if (!item.date) return '';
@@ -1646,14 +2395,14 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             day: 'numeric'
         };
         const formatSingleDate = (date: Date): string => {
-            return date.toLocaleDateString('en-US', dateOptions);
+            return date.toLocaleDateString(undefined, dateOptions);
         };
         const formatDateRange = (startDate: Date, endDate: Date, isUnconfirmed = false): string => {
             const prefix = isUnconfirmed ? '~' : '';
             // If same year, use compact format for start date
             if (startDate.getFullYear() === endDate.getFullYear()) {
-                const startStr = startDate.toLocaleDateString('en-US', compactDateOptions);
-                const endStr = endDate.toLocaleDateString('en-US', dateOptions);
+                const startStr = startDate.toLocaleDateString(undefined, compactDateOptions);
+                const endStr = endDate.toLocaleDateString(undefined, dateOptions);
                 return `${prefix}${startStr} – ${endStr}`; // Using en dash (–) instead of "to"
             }
             // Different years, show full dates
@@ -1712,12 +2461,12 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             day: 'numeric'
         };
         const prefix = event.isConfirmed ? '' : '~';
-        const start = date.toLocaleDateString('en-US', options);
+        const start = date.toLocaleDateString(undefined, options);
         if (!event.estimatedEndDate) {
             return `${prefix}${start}`;
         }
 
-        const end = event.estimatedEndDate.toLocaleDateString('en-US', options);
+        const end = event.estimatedEndDate.toLocaleDateString(undefined, options);
         return `${prefix}${start} - ${end}`;
     }
     // Dynamic scaling based on viewport height
@@ -1734,26 +2483,10 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.resizeObserver.observe(this.timelineContainer.nativeElement);
     }
     private calculateDynamicScale(): void {
-        if (!this.timelineContainer || this.isMobile) {
-            this.cardScale = 1;
-            this.cardVerticalOffsetBottom = 60;
-            this.cardVerticalOffsetTop = 60;
-            return;
-        }
-        const viewportHeight = window.innerHeight;
-        const minHeight = 400;
-        const maxHeight = 900;
-        const minScale = 0.35;
-        const maxScale = 1.0;
-        const normalizedHeight = Math.max(0, Math.min(1, (viewportHeight - minHeight) / (maxHeight - minHeight)));
-        this.cardScale = minScale + (normalizedHeight * (maxScale - minScale));
-        // Use the same offset calculation for both top and bottom to ensure symmetry
-        const baseOffset = 60;
-        this.cardVerticalOffsetBottom = baseOffset;
-        this.cardVerticalOffsetTop = baseOffset;
-        this.cardTransformOffset = 25 * this.cardScale;
-        if (!environment.production) {
-        }
+        this.cardScale = 1;
+        this.cardVerticalOffsetBottom = 0;
+        this.cardVerticalOffsetTop = 0;
+        this.cardTransformOffset = 0;
     }
     getTransformOffset(side?: 'top' | 'bottom'): number {
         // Use consistent fixed offsets for both sides

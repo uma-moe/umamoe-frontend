@@ -2250,6 +2250,21 @@ body.christmas-theme {
 }
 
 // Modern Dialog Panel (removes default styles for custom styling)
+.timeline-event-details-panel {
+  .mat-mdc-dialog-container {
+    --mdc-dialog-container-color: var(--bg-secondary);
+  }
+
+  .mat-mdc-dialog-surface {
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-dropdown) !important;
+  }
+}
+
 .modern-dialog-panel,
 .trainer-submit-dialog-panel,
 .milestone-dialog-panel {
@@ -2263,6 +2278,24 @@ body.christmas-theme {
       box-shadow: none !important;
       border-radius: 0 !important;
     }
+  }
+}
+
+.hidden-sparks-dialog-panel {
+  .mat-mdc-dialog-container {
+    --mdc-dialog-container-color: transparent;
+    --mdc-dialog-container-elevation-shadow: none;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .mat-mdc-dialog-surface {
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: var(--radius-xl) !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
 }
 

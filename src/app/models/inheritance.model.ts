@@ -39,7 +39,6 @@ export interface BackendCreateInheritanceRecord {
 export interface InheritanceRecord {
   id: number | string; // Support both v1 (string) and v2 (number) IDs
   account_id?: string; // V2 API field
-  scenario_id?: number;
   trainer_id?: string; // V1 API field
   trainer_name?: string; // V2 API field
   submitted_at?: Date; // V1 API field
@@ -55,6 +54,7 @@ export interface InheritanceRecord {
   parent_right_id?: number; // V2 API right parent ID
   parent_rank?: number; // V2 API parent rank
   parent_rarity?: number; // V2 API parent rarity
+  scenario_id?: number | null; // V3 API training scenario ID
   
   // V1 API character objects (legacy)
   main?: Character;
@@ -153,6 +153,7 @@ export interface InheritanceSearchFilters {
   excludeMainParentId?: number[]; // Excludes main parent IDs
   minParentRank?: number;
   minParentRarity?: number;
+  scenarioIds?: number[];
   // Blue Sparks (Main Stats) - 1-9 levels
   speedSpark?: number;
   staminaSpark?: number;
@@ -184,7 +185,6 @@ export interface InheritanceSearchFilters {
   pinkSparkGroups?: number[][];
   greenSparkGroups?: number[][];
   whiteSparkGroups?: number[][];
-  scenarioIds?: number[];
   // Main Parent Factors
   mainParentBlueSparks?: number[];
   mainParentPinkSparks?: number[];
@@ -210,6 +210,18 @@ export interface InheritanceSearchFilters {
   // V2 API minimum requirements
   minWinCount?: number;
   minWhiteCount?: number;
+  minCommonWhiteCount?: number;
+  minCommonWhiteStarsSum?: number;
+  minScenarioWhiteCount?: number;
+  minScenarioWhiteStarsSum?: number;
+  minRaceWhiteCount?: number;
+  minRaceWhiteStarsSum?: number;
+  minMainCommonWhiteCount?: number;
+  minMainCommonWhiteStarsSum?: number;
+  minMainScenarioWhiteCount?: number;
+  minMainScenarioWhiteStarsSum?: number;
+  minMainRaceWhiteCount?: number;
+  minMainRaceWhiteStarsSum?: number;
   maxFollowerNum?: number;
   // Support Card Filters
   supportCardId?: number;

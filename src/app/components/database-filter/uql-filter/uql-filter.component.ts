@@ -198,6 +198,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   private placeholderDeleting = false;
   private placeholderPauseTicks = 0;
   private placeholderTargetRewind = 0;
+  private readonly animatePlaceholder = this.shouldAnimatePlaceholder();
   private knownFactorValueCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownCharacterValueCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownLegacyValueCandidates: UqlKnownSuggestionCandidate[] = [];
@@ -228,6 +229,9 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   ];
 
   constructor() {
+    if (!this.animatePlaceholder) {
+      this.animatedPlaceholder = 'Speed >= 3';
+    }
     this.refreshDocSnippets();
   }
 
@@ -364,6 +368,10 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   }
 
   private startPlaceholderAnimation(): void {
+    if (!this.animatePlaceholder) {
+      this.animatedPlaceholder = 'Speed >= 3';
+      return;
+    }
     if (this.placeholderTimer || this.editorFocused || this.query) return;
     if (!this.animatedPlaceholder && this.placeholderCharIndex === 0) {
       this.placeholderStepIndex = this.placeholderStepIndex % this.placeholderSteps.length;
@@ -422,6 +430,15 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
         ? this.randomDelay(18, 46)
         : this.randomDelay(34, 92);
     this.schedulePlaceholderTick(nextDelay);
+  }
+
+  private shouldAnimatePlaceholder(): boolean {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
+    const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+    const hardwareConcurrency = navigator.hardwareConcurrency;
+    return !(typeof deviceMemory === 'number' && deviceMemory <= 4)
+      && !(typeof hardwareConcurrency === 'number' && hardwareConcurrency <= 4);
   }
 
   private getPlaceholderRewindTarget(preferredRewind: number, textLength: number): number {

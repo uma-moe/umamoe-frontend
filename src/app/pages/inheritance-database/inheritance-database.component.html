@@ -52,6 +52,65 @@
       </span>
     </div>
 
+    <ng-template #focusAndHideControls>
+      <div class="header-focus-control" aria-label="Default inheritance spark focus">
+        <span class="header-focus-label">Default Focus</span>
+        <div class="focus-options">
+          <button
+            type="button"
+            class="focus-option"
+            [class.active]="defaultParentFocus === null"
+            [attr.aria-pressed]="defaultParentFocus === null"
+            (click)="setDefaultParentFocus(null)">
+            <mat-icon>account_tree</mat-icon>
+            <span>All</span>
+          </button>
+          <button
+            type="button"
+            class="focus-option focus-primary"
+            [class.active]="defaultParentFocus === 'main'"
+            [attr.aria-pressed]="defaultParentFocus === 'main'"
+            (click)="setDefaultParentFocus('main')"
+            matTooltip="Show Main Parent sparks on every result">
+            <mat-icon>person</mat-icon>
+            <span>Main Parent</span>
+          </button>
+          <button
+            type="button"
+            class="focus-option focus-legacy-one"
+            [class.active]="defaultParentFocus === 'left'"
+            [attr.aria-pressed]="defaultParentFocus === 'left'"
+            (click)="setDefaultParentFocus('left')"
+            matTooltip="Show Great Parent 1 sparks on every result">
+            <mat-icon>looks_one</mat-icon>
+            <span>Great Parent 1</span>
+          </button>
+          <button
+            type="button"
+            class="focus-option focus-legacy-two"
+            [class.active]="defaultParentFocus === 'right'"
+            [attr.aria-pressed]="defaultParentFocus === 'right'"
+            (click)="setDefaultParentFocus('right')"
+            matTooltip="Show Great Parent 2 sparks on every result">
+            <mat-icon>looks_two</mat-icon>
+            <span>Great Parent 2</span>
+          </button>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="hide-sparks-badge"
+        [class.active]="hiddenSparkFactorIds.length > 0"
+        [class.inactive]="hiddenSparkFactorIds.length === 0"
+        (click)="openHiddenSparksDialog()"
+        matTooltip="Choose white sparks to hide">
+        <mat-icon class="badge-icon">visibility_off</mat-icon>
+        <span class="badge-label">Hide Sparks</span>
+        <span class="badge-status">{{ hiddenSparkFactorIds.length }} hidden</span>
+      </button>
+    </ng-template>
+
     <!-- Results Section (Database tab) -->
     <div class="results-section" [hidden]="activeTab !== 'database'">
       <div class="results-header" tourAnchor="database-results">
@@ -68,6 +127,7 @@
           </p>
         </div>
         <div class="header-spacer"></div>
+        <ng-container *ngTemplateOutlet="focusAndHideControls"></ng-container>
         <button
           class="split-sparks-badge"
           [class.active]="splitSparksMode"
@@ -104,7 +164,7 @@
           <button class="page-btn" [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">
             <mat-icon>chevron_left</mat-icon>
           </button>
-          <ng-container *ngFor="let p of getVisiblePages()">
+          <ng-container *ngFor="let p of getVisiblePages(); trackBy: trackByPageNumber">
             <span *ngIf="p === -1" class="page-ellipsis">&hellip;</span>
             <button *ngIf="p >= 0" class="page-num" [class.active]="p === currentPage" (click)="goToPage(p)">{{ p + 1 }}</button>
             <span *ngIf="p === -2" class="page-num page-hidden">&nbsp;</span>
@@ -137,9 +197,8 @@
               <mat-option value="submitted_at">Newest First</mat-option>
             </mat-select>
           </mat-form-field>
-          </div>
+        </div>
       </div>
-
       <!-- Optional Whites Sorting Notice -->
       <div *ngIf="hasOptionalWhiteFilters()" class="sorting-notice">
         <mat-icon>info</mat-icon>
@@ -175,6 +234,8 @@
               [filterTree]="entryFilterTree"
               [selectedVeteran]="entrySelectedVeteran"
               [sparkViewMode]="splitSparksMode ? 'split' : 'merged'"
+              [defaultParentFocus]="defaultParentFocus"
+              [hiddenSparkFactorIds]="hiddenSparkFactorIds"
               plannerSource="db"
               [sparkShowPerRun]="sparkShowPerRun"
               (sparkShowPerRunChange)="sparkShowPerRun = $event"
@@ -231,7 +292,7 @@
         <button class="page-btn" [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">
           <mat-icon>chevron_left</mat-icon>
         </button>
-        <ng-container *ngFor="let p of getVisiblePages()">
+        <ng-container *ngFor="let p of getVisiblePages(); trackBy: trackByPageNumber">
           <span *ngIf="p === -1" class="page-ellipsis">&hellip;</span>
           <button *ngIf="p >= 0" class="page-num" [class.active]="p === currentPage" (click)="goToPage(p)">{{ p + 1 }}</button>
           <span *ngIf="p === -2" class="page-num page-hidden">&nbsp;</span>
@@ -256,6 +317,7 @@
           </p>
         </div>
         <div class="header-spacer"></div>
+        <ng-container *ngTemplateOutlet="focusAndHideControls"></ng-container>
         <button
           class="split-sparks-badge"
           [class.active]="splitSparksMode"
@@ -289,7 +351,6 @@
         </mat-form-field>
         </div>
       </div>
-
       <div *ngIf="!authService.isLoggedIn()" class="no-results login-prompt">
         <mat-icon class="login-prompt-icon">bookmark_border</mat-icon>
         <h3>Sign in to use bookmarks</h3>
@@ -369,6 +430,8 @@
               [filterTree]="entryFilterTree"
               [selectedVeteran]="entrySelectedVeteran"
               [sparkViewMode]="splitSparksMode ? 'split' : 'merged'"
+              [defaultParentFocus]="defaultParentFocus"
+              [hiddenSparkFactorIds]="hiddenSparkFactorIds"
               plannerSource="db"
               [sparkShowPerRun]="sparkShowPerRun"
               (sparkShowPerRunChange)="sparkShowPerRun = $event"

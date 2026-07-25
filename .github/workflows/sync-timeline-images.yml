@@ -1,0 +1,83 @@
+name: Sync Timeline Images
+
+on:
+  schedule:
+    # Runs after the resources archive's 13:00 JST metadata check.
+    - cron: '15 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-timeline-images
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out frontend
+        uses: actions/checkout@v4
+
+      - name: Check out resources
+        uses: actions/checkout@v4
+        with:
+          repository: uma-moe/umamoe-resources
+          path: .sync/umamoe-resources
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .sync/umamoe-resources
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install image converter
+        run: npm ci
+
+      - name: Generate current timeline
+        shell: bash
+        run: |
+          cargo run --locked \
+            --manifest-path .sync/umamoe-resources/Cargo.toml \
+            -- generate \
+            --master .sync/umamoe-resources/master.mdb \
+            --out "${RUNNER_TEMP}/timeline-resources" \
+            --write-json
+
+      - name: Sync timeline images and available EN replacements
+        shell: bash
+        run: |
+          timeline_json="$(find "${RUNNER_TEMP}/timeline-resources" -name banner_timeline.json -print -quit)"
+          test -n "${timeline_json}"
+          node .sync/umamoe-resources/scripts/sync_umapyoi_timeline_images.mjs \
+            --timeline-json "${timeline_json}" \
+            --frontend-root . \
+            --request-interval-ms 250 \
+            --changed-files-output "${RUNNER_TEMP}/timeline-image-changes.txt"
+
+      - name: Commit changed WebP assets
+        shell: bash
+        run: |
+          changes="${RUNNER_TEMP}/timeline-image-changes.txt"
+          if [[ ! -s "${changes}" ]]; then
+            echo "Timeline images are already current."
+            exit 0
+          fi
+          while IFS= read -r path; do
+            [[ -n "${path}" ]] && git add -f -- "${path}"
+          done < "${changes}"
+          if git diff --cached --quiet; then
+            echo "Timeline images are already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: sync timeline images"
+          git push

@@ -1,0 +1,239 @@
+<section class="event-details" [attr.data-event-type]="event.type">
+  <header class="details-header">
+    <div class="details-heading">
+      <div class="details-metadata">
+        <mat-icon aria-hidden="true">{{ icon }}</mat-icon>
+        <span>{{ metadata }}</span>
+        <span class="prediction-fit" *ngIf="prediction?.fitLabel as fit">{{ fit }} date fit</span>
+      </div>
+      <h2>{{ title }}</h2>
+      <time>{{ dateLabel }}</time>
+    </div>
+    <button class="details-close" mat-icon-button type="button" aria-label="Close event details" (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <mat-dialog-content>
+    <img
+      *ngIf="event.imagePath"
+      class="details-banner"
+      [src]="event.imagePath"
+      [alt]="title"
+      width="512"
+      height="125"
+      decoding="async"
+      (error)="onImageError($event)"
+    />
+
+    <section class="detail-section rate-section" *ngIf="hasBannerRates">
+      <div class="section-heading">
+        <div>
+          <mat-icon aria-hidden="true">percent</mat-icon>
+          <h3>Rate-up rates</h3>
+        </div>
+        <span *ngIf="gacha">{{ rateSummaryLabel }}</span>
+        <span *ngIf="ratesLoading">Loading rates…</span>
+      </div>
+
+      <div class="rate-pickup-grid" *ngIf="pickupRates.length">
+        <a
+          *ngFor="let pickup of pickupRates; trackBy: trackPickupRate"
+          [href]="pickup.avatar.gametoraUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img
+            [src]="pickup.avatar.imageUrl"
+            [alt]="pickup.avatar.displayName"
+            width="46"
+            height="46"
+            loading="lazy"
+            decoding="async"
+            (error)="onImageError($event)"
+          />
+          <span>
+            <strong>{{ pickup.avatar.displayName }}</strong>
+            <small>{{ pickup.avatar.subLabel }}</small>
+            <em>{{ pickup.rateLabel || (ratesLoading ? 'Loading rate…' : 'Rate unavailable') }}</em>
+          </span>
+        </a>
+      </div>
+
+      <p class="rate-note is-unavailable" *ngIf="ratesUnavailable">Published rates are not available for this banner yet.</p>
+    </section>
+
+    <section class="detail-section reward-section" *ngIf="displayedRewards.length || rewardSummary?.variable">
+      <div class="section-heading">
+        <div>
+          <mat-icon aria-hidden="true">redeem</mat-icon>
+          <h3>Event rewards</h3>
+        </div>
+        <span>Available with this event</span>
+      </div>
+      <div class="reward-outcomes" *ngIf="rewardSummary?.variableOutcomes?.length">
+        <div class="reward-outcomes-heading">
+          <strong>{{ rewardSummary?.outcomeHeading }}</strong>
+          <small>{{ rewardSummary?.variableOutcomeCount }} {{ rewardSummary?.mode === 'placement' ? 'placements' : 'milestones' }}</small>
+        </div>
+        <p class="reward-outcomes-description">{{ rewardSummary?.outcomeDescription }}</p>
+        <div class="reward-outcome-list">
+          <div *ngFor="let outcome of rewardSummary?.variableOutcomes; trackBy: trackRewardOutcome">
+            <strong>{{ rewardOutcomeLabel(outcome.label) }}</strong>
+            <span class="reward-outcome-items">
+              <span
+                class="reward-outcome-item"
+                *ngFor="let item of outcome.items; trackBy: trackRewardOutcomeItem"
+                [attr.title]="item.label"
+              >
+                <img *ngIf="item.iconPath; else materialOutcomeIcon" [src]="item.iconPath" alt="" width="16" height="16" loading="lazy" decoding="async" />
+                <ng-template #materialOutcomeIcon><mat-icon aria-hidden="true">{{ item.icon }}</mat-icon></ng-template>
+                <b>{{ item.countLabel }}</b>
+              </span>
+            </span>
+            <small class="reward-outcome-description" *ngIf="outcome.description">{{ outcome.description }}</small>
+            <small class="reward-outcome-empty" *ngIf="!outcome.items.length && !outcome.description">Outcome recorded; item totals are not available.</small>
+          </div>
+        </div>
+      </div>
+      <p class="reward-outcome-note" *ngIf="rewardSummary?.variable && !rewardSummary?.variableOutcomes?.length">
+        Reward tiers exist for this event, but itemized outcomes are not available in the loaded resource.
+      </p>      <div class="reward-list">
+        <div
+          *ngFor="let reward of displayedRewards; trackBy: trackReward"
+          [class.is-free-pulls]="reward.kind === 'free_pulls'"
+          [attr.aria-label]="reward.label"
+          [attr.title]="reward.label"
+        >
+          <img [src]="rewardIconPath(reward)" alt="" width="22" height="22" (error)="onImageError($event)" />
+          <strong>{{ reward.kind === 'free_pulls' ? (reward.amount + '×') : reward.countLabel }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="detail-section event-facts" *ngIf="eventFacts.length">
+      <div class="section-heading">
+        <div>
+          <mat-icon aria-hidden="true">flag</mat-icon>
+          <h3>Race details</h3>
+        </div>
+      </div>
+      <dl>
+        <div *ngFor="let fact of eventFacts; trackBy: trackFact">
+          <mat-icon aria-hidden="true">{{ fact.icon }}</mat-icon>
+          <dt>{{ fact.label }}</dt>
+          <dd>
+            <strong>{{ fact.primary }}</strong>
+            <span *ngIf="fact.secondary">{{ fact.secondary }}</span>
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section
+      class="detail-section details-description"
+      [class.is-highlighted]="highlightEventInformation"
+      *ngIf="event.description"
+    >
+      <div class="section-heading" *ngIf="highlightEventInformation">
+        <div>
+          <mat-icon aria-hidden="true">info</mat-icon>
+          <h3>Event information</h3>
+        </div>
+      </div>
+      <div class="description-scroll" [innerHTML]="event.description"></div>
+      <a
+        class="description-full-link"
+        *ngIf="descriptionIsExcerpt && event.umapyoiURL"
+        [href]="event.umapyoiURL"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Full article <mat-icon aria-hidden="true">open_in_new</mat-icon>
+      </a>
+    </section>
+
+    <section class="detail-section pickup-section character-pickups" *ngIf="characterAvatars.length && !hasBannerRates">
+      <div class="section-heading"><div><mat-icon aria-hidden="true">person</mat-icon><h3>Characters</h3></div></div>
+      <div class="pickup-grid">
+        <a *ngFor="let avatar of characterAvatars; trackBy: trackAvatar" [href]="avatar.gametoraUrl" target="_blank" rel="noopener noreferrer">
+          <img [src]="avatar.imageUrl" [alt]="avatar.displayName" width="48" height="50" loading="lazy" decoding="async" (error)="onImageError($event)" />
+          <span><strong>{{ avatar.displayName }}</strong><small>{{ avatar.subLabel }}</small></span>
+        </a>
+      </div>
+    </section>
+
+    <section class="detail-section pickup-section support-pickups" *ngIf="supportAvatars.length && !hasBannerRates">
+      <div class="section-heading"><div><mat-icon aria-hidden="true">style</mat-icon><h3>Support cards</h3></div></div>
+      <div class="pickup-grid">
+        <a *ngFor="let avatar of supportAvatars; trackBy: trackAvatar" [href]="avatar.gametoraUrl" target="_blank" rel="noopener noreferrer">
+          <img [src]="avatar.imageUrl" [alt]="avatar.displayName" width="48" height="48" loading="lazy" decoding="async" (error)="onImageError($event)" />
+          <span><strong>{{ avatar.displayName }}</strong><small>{{ avatar.subLabel }}</small></span>
+        </a>
+      </div>
+    </section>
+
+    <section class="detail-section prediction-section" *ngIf="prediction as insight">
+      <div class="section-heading">
+        <div>
+          <mat-icon aria-hidden="true">event_available</mat-icon>
+          <h3>{{ event.isConfirmed ? 'Date source' : 'Date prediction' }}</h3>
+        </div>
+      </div>
+      <p class="prediction-summary">{{ insight.subtitle }}</p>
+
+      <div class="prediction-panel">
+        <div class="current-prediction">
+          <span><small>Current estimate</small><strong>{{ predictionDateLabel }}</strong></span>
+          <b>{{ insight.fitLabel || 'Estimated' }}</b>
+        </div>
+
+        <div class="prediction-factors" *ngIf="predictionMetricGroups.length">
+          <div *ngFor="let group of predictionMetricGroups; trackBy: trackMetricGroup" [attr.data-group]="group.key">
+            <span class="factor-label"><mat-icon aria-hidden="true">{{ group.icon }}</mat-icon>{{ group.label }}</span>
+            <dl>
+              <div *ngFor="let metric of group.metrics; trackBy: trackMetric">
+                <dt>{{ metric.label }}</dt>
+                <dd>{{ metric.value }}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <div class="prediction-alternatives" *ngIf="insight.alternatives.length">
+          <div class="alternatives-heading">
+            <strong>Alternative date fit</strong>
+          </div>
+          <div class="alternatives-list">
+            <div *ngFor="let alternative of insight.alternatives">
+              <strong>{{ alternative.label }}</strong>
+              <small>{{ alternative.reason }}</small>
+              <span class="alternative-fit-track" aria-hidden="true">
+                <i [style.width.%]="alternative.fitScore * 100"></i>
+              </span>
+              <b>{{ alternative.probabilityLabel }}</b>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </mat-dialog-content>
+
+  <footer class="details-actions" *ngIf="event.gametoraURL || event.umapyoiURL || freePullSourceUrl || canPlan">
+    <nav class="details-source-links" aria-label="Event sources" *ngIf="event.gametoraURL || event.umapyoiURL || freePullSourceUrl">
+      <a *ngIf="event.umapyoiURL" [href]="event.umapyoiURL" target="_blank" rel="noopener noreferrer">
+        <span>News post</span><mat-icon aria-hidden="true">open_in_new</mat-icon>
+      </a>
+      <a *ngIf="freePullSourceUrl" [href]="freePullSourceUrl" target="_blank" rel="noopener noreferrer">
+        <span>Free-pull source</span><mat-icon aria-hidden="true">open_in_new</mat-icon>
+      </a>
+      <a *ngIf="event.gametoraURL" [href]="event.gametoraURL" target="_blank" rel="noopener noreferrer">
+        <span>GameTora</span><mat-icon aria-hidden="true">open_in_new</mat-icon>
+      </a>
+    </nav>
+    <button *ngIf="canPlan" mat-flat-button type="button" class="details-plan-action" [class.is-added]="planned" [attr.aria-pressed]="planned" (click)="togglePlanner()">
+      <mat-icon>{{ planned ? 'remove_circle_outline' : 'add_chart' }}</mat-icon>
+      {{ planned ? 'Remove from planner' : 'Add to planner' }}
+    </button>
+  </footer>
+</section>

@@ -105,8 +105,7 @@ function normalizeSkillsData(data: unknown): Skill[] {
     .filter(skill => Number.isFinite(skill.skill_id) && skill.skill_id > 0);
 }
 
-const BUNDLED_SKILLS = normalizeSkillsData(skillsData);
-
+const BUNDLED_SKILLS: Skill[] = normalizeSkillsData(skillsData);
 export const SKILLS: Skill[] = [...BUNDLED_SKILLS];
 
 // Pre-built lookup maps for O(1) access

@@ -11,19 +11,22 @@ import { InheritanceRecord } from '../../models/inheritance.model';
 import type { VeteranMember } from '../../models/profile.model';
 import type { TreeNode, UnifiedSearchParams } from '../database-filter/database-filter.component';
 import { FactorService, SparkInfo } from '../../services/factor.service';
-import { AffinityService, PlannerRaceWins, SparkDisplayMetrics, TreeAffinityWithRaceResult, TreeSlots } from '../../services/affinity.service';
+import { AffinityService, OptimalRaceRecommendation, PlannerRaceWins, SparkDisplayMetrics, TreeAffinityWithRaceResult, TreeSlots } from '../../services/affinity.service';
 import { AppVersionService } from '../../services/app-version.service';
 import { AuthService } from '../../services/auth.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { GoogleAnalyticsService } from '../../services/google-analytics.service';
+import { InheritanceDisplayStateService, WhiteSparkSectionKey } from '../../services/inheritance-display-state.service';
 import { BorrowInteractionContext, BorrowInteractionResponse, InheritanceService } from '../../services/inheritance.service';
 import { PlannerTransferService } from '../../services/planner-transfer.service';
+import { SharedVisibilityObserverService } from '../../services/shared-visibility-observer.service';
 import { getCharacterById } from '../../data/character.data';
 import { ResolveSparksPipe } from '../../pipes/resolve-sparks.pipe';
 import { TrainerIdFormatPipe } from '../../pipes/trainer-id-format.pipe';
 import { RaceResultsDialogComponent, RaceResultsDialogData } from '../race-results-dialog/race-results-dialog.component';
 import { RankBadgeComponent } from '../rank-badge/rank-badge.component';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
+import { OptimalRacesDialogComponent, OptimalRacesDialogData } from '../optimal-races-dialog/optimal-races-dialog.component';
 
 interface CombinedSparkSourceEntry {
     level: number;
@@ -54,6 +57,15 @@ interface P2SparkDisplayEntry {
 
 type EntryRecordAction = 'bookmark' | 'report';
 type ParentSparkSource = 'main' | 'left' | 'right';
+type WhiteSparkCategory = WhiteSparkSectionKey;
+
+interface WhiteSparkDisplayEntry {
+    spark: SparkInfo;
+    combined?: CombinedSparkInfo;
+    source?: ParentSparkSource;
+    affinity?: number;
+    isP2?: boolean;
+}
 
 interface SparkMatchSource {
     source: ParentSparkSource;
@@ -111,8 +123,15 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
 
     /** Spark display mode - driven by parent (global toggle) */
     @Input() sparkViewMode: 'merged' | 'split' = 'merged';
+    /** Default focus driven by the results toolbar. Portrait clicks remain local overrides. */
+    @Input() defaultParentFocus: ParentSparkSource | null = null;
+    /** White factors hidden globally by the results toolbar. */
+    @Input() hiddenSparkFactorIds: readonly number[] = [];
+    /** Enables direct spark clicks while the global Hide Skills tool is open. */
+    @Input() hideSkillsMode = false;
+    @Output() hideSparkRequested = new EventEmitter<number>();
     /** Currently focused parent in split view */
-    selectedParent: 'main' | 'left' | 'right' | null = null;
+    selectedParent: ParentSparkSource | null = null;
 
     @Input() sparkShowPerRun = false;
     @Output() sparkShowPerRunChange = new EventEmitter<boolean>();
@@ -129,13 +148,32 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     private readonly mergedSparkCache = new Map<string, CombinedSparkInfo[]>();
     private readonly p2SparkDisplayCache = new Map<string, P2SparkDisplayEntry[]>();
     private readonly p2SparkSourceCache = new Map<string, P2SparkSourceEntry[] | null>();
+    private readonly whiteSparkDisplayCache = new Map<string, WhiteSparkDisplayEntry[]>();
+    private readonly whiteSparkSectionCache = new Map<string, WhiteSparkDisplayEntry[]>();
+    private readonly sparkMetricDisplayCache = new Map<string, string>();
+    private readonly sparkMatchCache = new Map<string, boolean>();
     private readonly mainParentLevelCache = new WeakMap<InheritanceRecord, Map<string, string>>();
+    private readonly expandedHiddenWhiteSections = new Set<WhiteSparkCategory>();
+    private hiddenSparkFactorIdSet = new Set<number>();
+    private readonly limitBreakArrayCache = Array.from({ length: 5 }, (_, count) =>
+        Array.from({ length: 4 }, (_entry, index) => ({ filled: index < count }))
+    );
     private readonly borrowViewClientIntervalMs = 30 * 60 * 1000;
     private readonly borrowCopyClientIntervalMs = 30 * 1000;
-    private borrowViewObserver: IntersectionObserver | null = null;
+    private stopBorrowViewTracking: (() => void) | null = null;
     private borrowViewTrackingReady = false;
     private recordTotalAffinityCacheKey: string | null = null;
     private recordTotalAffinityCacheValue: number | null = null;
+    private optimalRacesCacheKey: string | null = null;
+    private optimalRacesCacheValue: OptimalRaceRecommendation[] = [];
+    readonly whiteSparkSections: ReadonlyArray<{
+        key: WhiteSparkCategory;
+        label: string;
+    }> = [
+        { key: 'scenario', label: 'Scenario whites' },
+        { key: 'normal', label: 'Normal whites' },
+        { key: 'race', label: 'Race whites' },
+    ];
 
     constructor(
         private factorService: FactorService,
@@ -149,10 +187,12 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         private plannerTransfer: PlannerTransferService,
         private appVersionService: AppVersionService,
         private googleAnalyticsService: GoogleAnalyticsService,
+        private inheritanceDisplayState: InheritanceDisplayStateService,
         private cdr: ChangeDetectorRef,
         private destroyRef: DestroyRef,
         private host: ElementRef<HTMLElement>,
         private ngZone: NgZone,
+        private sharedVisibilityObserver: SharedVisibilityObserverService,
     ) {
         this.destroyRef.onDestroy(() => this.disconnectBorrowViewObserver());
     }
@@ -164,6 +204,9 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
                 this.clearComputedCaches();
                 this.cdr.markForCheck();
             });
+        this.inheritanceDisplayState.collapsedWhiteSections$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => this.cdr.markForCheck());
 
         this.borrowViewTrackingReady = true;
         this.startBorrowViewTracking();
@@ -172,9 +215,24 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     ngOnChanges(changes: SimpleChanges): void {
         if (
             changes['record'] || changes['filterTree'] || changes['selectedVeteran'] ||
-            changes['activeFilters'] || changes['showP2Sparks']
+            changes['activeFilters'] || changes['showP2Sparks'] || changes['sparkViewMode']
         ) {
             this.clearComputedCaches();
+        }
+        if (changes['hiddenSparkFactorIds']) {
+            this.hiddenSparkFactorIdSet = new Set(
+                (this.hiddenSparkFactorIds ?? [])
+                    .map(Number)
+                    .filter(Number.isFinite)
+            );
+            this.whiteSparkSectionCache.clear();
+        }
+
+        if (changes['defaultParentFocus'] || changes['record']) {
+            this.selectedParent = this.defaultParentFocus;
+        }
+        if (changes['record']) {
+            this.expandedHiddenWhiteSections.clear();
         }
 
         if (changes['record'] && this.borrowViewTrackingReady) {
@@ -185,9 +243,15 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     private clearComputedCaches(): void {
         this.treeAffinityCache.clear();
         this.recordTotalAffinityCacheKey = null;
+        this.optimalRacesCacheKey = null;
+        this.optimalRacesCacheValue = [];
         this.mergedSparkCache.clear();
         this.p2SparkDisplayCache.clear();
         this.p2SparkSourceCache.clear();
+        this.whiteSparkDisplayCache.clear();
+        this.whiteSparkSectionCache.clear();
+        this.sparkMetricDisplayCache.clear();
+        this.sparkMatchCache.clear();
     }
 
     private startBorrowViewTracking(): void {
@@ -200,28 +264,18 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
             return;
         }
 
-        if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
-            this.trackBorrowView(id, context, key);
-            return;
-        }
-
-        this.ngZone.runOutsideAngular(() => {
-            this.borrowViewObserver = new IntersectionObserver((entries) => {
-                if (!entries.some(entry => entry.isIntersecting)) {
-                    return;
-                }
-
-                this.disconnectBorrowViewObserver();
+        this.stopBorrowViewTracking = this.sharedVisibilityObserver.observeOnce(
+            this.host.nativeElement,
+            () => {
+                this.stopBorrowViewTracking = null;
                 this.ngZone.run(() => this.trackBorrowView(id, context, key));
-            }, { threshold: [0, 0.25] });
-
-            this.borrowViewObserver.observe(this.host.nativeElement);
-        });
+            },
+        );
     }
 
     private disconnectBorrowViewObserver(): void {
-        this.borrowViewObserver?.disconnect();
-        this.borrowViewObserver = null;
+        this.stopBorrowViewTracking?.();
+        this.stopBorrowViewTracking = null;
     }
 
     private trackBorrowView(trainerId: string, context: BorrowInteractionContext, key: string): void {
@@ -478,7 +532,10 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     }
 
     getLimitBreakArray(count: number): { filled: boolean }[] {
-        return Array.from({ length: 4 }, (_, i) => ({ filled: i < count }));
+        const normalizedCount = Number.isFinite(count)
+            ? Math.max(0, Math.min(4, Math.trunc(count)))
+            : 0;
+        return this.limitBreakArrayCache[normalizedCount];
     }
 
     getRarityIcon(rarity: number): string {
@@ -491,6 +548,15 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     }
 
     isSparkMatched(spark: SparkInfo, source?: ParentSparkSource): boolean {
+        const cacheKey = `${spark.factorId}:${spark.level}:${source ?? 'all'}`;
+        const cached = this.sparkMatchCache.get(cacheKey);
+        if (cached !== undefined) return cached;
+        const matched = this.computeSparkMatched(spark, source);
+        this.sparkMatchCache.set(cacheKey, matched);
+        return matched;
+    }
+
+    private computeSparkMatched(spark: SparkInfo, source?: ParentSparkSource): boolean {
         if (!this.activeFilters) return false;
         const filterId = parseInt(`${spark.factorId}${spark.level}`, 10);
         const filters = this.activeFilters;
@@ -624,9 +690,11 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         return (this.record.blue_sparks || []).reduce((sum, id) => sum + (id % 10), 0);
     }
 
-    selectParent(parent: 'main' | 'left' | 'right', event: Event): void {
+    selectParent(parent: ParentSparkSource, event: Event): void {
+        event.preventDefault();
         event.stopPropagation();
         this.selectedParent = this.selectedParent === parent ? null : parent;
+        this.sparkMatchCache.clear();
     }
 
     /** Wraps a single nullable factor ID in an array for use with the resolveSparks pipe */
@@ -674,6 +742,222 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         return arr ?? [];
     }
 
+    getWhiteSparkEntries(category: WhiteSparkCategory): WhiteSparkDisplayEntry[] {
+        return this.getCachedWhiteSparkSection(category, false, false);
+    }
+
+    getWhiteSparkDisplayEntries(category: WhiteSparkCategory): WhiteSparkDisplayEntry[] {
+        return this.getCachedWhiteSparkSection(
+            category,
+            this.isHiddenWhiteSectionExpanded(category),
+            false,
+        );
+    }
+
+    getWhiteSparkTotalCount(category: WhiteSparkCategory): number {
+        return this.getCachedWhiteSparkSection(category, true, true).length;
+    }
+
+    hasWhiteSparkEntries(): boolean {
+        return this.getAllWhiteSparkEntries().length > 0;
+    }
+
+    getScenarioHeaderImageUrl(): string | null {
+        return this.factorService.getScenarioLogoUrl(this.record.scenario_id);
+    }
+
+    getScenarioHeaderName(): string {
+        return this.factorService.getScenarioName(this.record.scenario_id);
+    }
+
+    isWhiteSectionCollapsed(category: WhiteSparkCategory): boolean {
+        return this.inheritanceDisplayState.isWhiteSectionCollapsed(category);
+    }
+
+    toggleWhiteSection(category: WhiteSparkCategory, event: Event): void {
+        event.preventDefault();
+        event.stopPropagation();
+        this.inheritanceDisplayState.toggleWhiteSection(category);
+    }
+
+    isHiddenWhiteSectionExpanded(category: WhiteSparkCategory): boolean {
+        return this.expandedHiddenWhiteSections.has(category);
+    }
+
+    toggleHiddenWhiteSection(category: WhiteSparkCategory, event: Event): void {
+        event.preventDefault();
+        event.stopPropagation();
+        if (this.expandedHiddenWhiteSections.has(category)) {
+            this.expandedHiddenWhiteSections.delete(category);
+        } else {
+            this.expandedHiddenWhiteSections.add(category);
+        }
+        this.whiteSparkSectionCache.clear();
+        this.cdr.markForCheck();
+    }
+
+    hideSpark(spark: SparkInfo, event: Event): void {
+        if (!this.hideSkillsMode || ![2, 3, 4].includes(spark.type)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const factorId = Number(spark.factorId);
+        if (Number.isFinite(factorId)) this.hideSparkRequested.emit(factorId);
+    }
+
+    isSparkHidden(spark: SparkInfo): boolean {
+        const factorId = Number(spark.factorId);
+        return Number.isFinite(factorId) && this.hiddenSparkFactorIdSet.has(factorId);
+    }
+
+    getWhiteSparkHiddenCount(category: WhiteSparkCategory): number {
+        return this.getWhiteSparkTotalCount(category) - this.getWhiteSparkEntries(category).length;
+    }
+
+    private getCachedWhiteSparkSection(
+        category: WhiteSparkCategory,
+        includeHidden: boolean,
+        preserveOriginalOrder: boolean,
+    ): WhiteSparkDisplayEntry[] {
+        const cacheKey = [
+            category,
+            this.sparkViewMode,
+            this.selectedParent ?? 'all',
+            this.showP2Sparks ? 1 : 0,
+            includeHidden ? 1 : 0,
+            preserveOriginalOrder ? 1 : 0,
+            [...this.hiddenSparkFactorIdSet].join(','),
+        ].join('|');
+        const cached = this.whiteSparkSectionCache.get(cacheKey);
+        if (cached) return cached;
+
+        const entries = this.getAllWhiteSparkEntries()
+            .filter(entry => this.whiteSparkCategory(entry.spark) === category);
+        let value: WhiteSparkDisplayEntry[];
+        if (preserveOriginalOrder) {
+            value = entries;
+        } else {
+            const visibleEntries = entries.filter(entry => !this.isSparkHidden(entry.spark));
+            value = includeHidden
+                ? [...visibleEntries, ...entries.filter(entry => this.isSparkHidden(entry.spark))]
+                : visibleEntries;
+        }
+        this.whiteSparkSectionCache.set(cacheKey, value);
+        return value;
+    }
+
+    whiteSparkDisplayChance(entry: WhiteSparkDisplayEntry): string {
+        if (entry.combined) return this.combinedSparkDisplayChance(entry.combined);
+
+        const affinity = entry.affinity
+            ?? (entry.source ? this.getP1AffinityForSource(entry.source) : this.resolveDisplayAffinity());
+        return this.sparkDisplayForAffinity(entry.spark, affinity);
+    }
+
+    isWhiteSparkEntryMatched(entry: WhiteSparkDisplayEntry): boolean {
+        if (entry.isP2) return this.isSparkMatched(entry.spark);
+        return entry.source
+            ? this.isSparkMatched(entry.spark, entry.source)
+            : this.isSparkMatched(entry.spark);
+    }
+
+    private getAllWhiteSparkEntries(): WhiteSparkDisplayEntry[] {
+        const cacheKey = [
+            this.record.id,
+            this.sparkViewMode,
+            this.selectedParent ?? 'all',
+            this.showP2Sparks ? 1 : 0,
+            this.record.main_white_factors?.join(',') ?? '',
+            this.record.left_white_factors?.join(',') ?? '',
+            this.record.right_white_factors?.join(',') ?? '',
+            this.affinityContextKey(),
+        ].join('|');
+        const cached = this.whiteSparkDisplayCache.get(cacheKey);
+        if (cached) return cached;
+
+        let entries: WhiteSparkDisplayEntry[];
+        if (this.selectedParent) {
+            entries = this.factorService.resolveSparks(this.getSelectedWhiteFactors()).map(spark => ({
+                spark,
+                source: this.selectedParent!,
+            }));
+        } else if (this.sparkViewMode === 'merged') {
+            entries = this.getMergedWhiteSparks().map(spark => ({
+                spark,
+                combined: spark,
+            }));
+        } else {
+            entries = [
+                ...this.resolveWhiteSparkSource(this.record.main_white_factors, 'main'),
+                ...this.resolveWhiteSparkSource(this.record.left_white_factors, 'left'),
+                ...this.resolveWhiteSparkSource(this.record.right_white_factors, 'right'),
+            ];
+            if (this.showP2Sparks) {
+                entries.push(...this.getP2WhiteSparkEntries().map(entry => ({
+                    spark: entry.spark,
+                    source: entry.source,
+                    affinity: entry.affinity,
+                    isP2: true,
+                })));
+            }
+        }
+
+        this.whiteSparkDisplayCache.set(cacheKey, entries);
+        return entries;
+    }
+
+    private resolveWhiteSparkSource(
+        ids: number[] | null | undefined,
+        source: ParentSparkSource,
+    ): WhiteSparkDisplayEntry[] {
+        return this.factorService.resolveSparks(ids ?? []).map(spark => ({ spark, source }));
+    }
+
+    private whiteSparkCategory(spark: SparkInfo): WhiteSparkCategory {
+        if (spark.type === 4) return 'scenario';
+        if (spark.type === 2) return 'race';
+        return 'normal';
+    }
+
+    private getCurrentViewSparks(): SparkInfo[] {
+        const whiteSparks = this.getAllWhiteSparkEntries().map(entry => entry.spark);
+        if (this.selectedParent) {
+            return [
+                ...this.factorService.resolveSparks(this.getSelectedBlueFactor()),
+                ...this.factorService.resolveSparks(this.getSelectedPinkFactor()),
+                ...this.factorService.resolveSparks(this.getSelectedGreenFactor()),
+                ...whiteSparks,
+            ];
+        }
+
+        if (this.sparkViewMode === 'merged') {
+            return [
+                ...this.getMergedBlueSparks(),
+                ...this.getMergedPinkSparks(),
+                ...this.getMergedGreenSparks(),
+                ...whiteSparks,
+            ];
+        }
+
+        const p1Ids = [
+            this.record.main_blue_factors,
+            this.record.left_blue_factors,
+            this.record.right_blue_factors,
+            this.record.main_pink_factors,
+            this.record.left_pink_factors,
+            this.record.right_pink_factors,
+            this.record.main_green_factors,
+            this.record.left_green_factors,
+            this.record.right_green_factors,
+        ].filter((id): id is number => !!id);
+        const p2Ids = this.showP2Sparks
+            ? [...this.getP2BlueSparks(), ...this.getP2PinkSparks(), ...this.getP2GreenSparks()]
+            : [];
+        return [
+            ...this.factorService.resolveSparks([...p1Ids, ...p2Ids]),
+            ...whiteSparks,
+        ];
+    }
+
     hasWinSaddles(parent: 'main' | 'left' | 'right'): boolean {
         const saddles = parent === 'main' ? this.record.main_win_saddles
                       : parent === 'left' ? this.record.left_win_saddles
@@ -694,9 +978,9 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         this.dialog.open(RaceResultsDialogComponent, {
             data: { charId, charName, winSaddleIds: saddles, runRaceIds } as RaceResultsDialogData,
             panelClass: 'modern-dialog-panel',
-            width: '1100px',
-            maxWidth: '95vw',
-            maxHeight: '90vh',
+            width: '1320px',
+            maxWidth: '98vw',
+            maxHeight: '94vh',
             autoFocus: false,
         });
     }
@@ -729,6 +1013,25 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
                 this.trackEntryEvent('copy_trainer_id');
                 this.trackBorrowCopy(id);
             },
+        });
+    }
+
+    openOptimalRaces(event: Event): void {
+        event.stopPropagation();
+        const recommendations = this.getOptimalRaces();
+        if (!recommendations.length) return;
+
+        this.trackEntryEvent('open_optimal_races', {
+            recommendation_count: recommendations.length,
+            both_parent_count: recommendations.filter(race => race.overlapCount === 2).length,
+        });
+        this.dialog.open(OptimalRacesDialogComponent, {
+            data: { recommendations } as OptimalRacesDialogData,
+            panelClass: 'modern-dialog-panel',
+            width: '1320px',
+            maxWidth: '98vw',
+            maxHeight: '94vh',
+            autoFocus: false,
         });
     }
 
@@ -1000,7 +1303,10 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
 
         const result = this.getTreeAffinity(this.hasP2Context());
         if (!result) {
-            value = this.getMainBreedingBaseAffinity() ?? this.record.affinity_score ?? null;
+            // A contextual total must use the same complete local tree
+            // calculation as the lineage planner. Do not briefly substitute
+            // the server's record-only score while affinity data is loading.
+            value = null;
             this.recordTotalAffinityCacheKey = cacheKey;
             this.recordTotalAffinityCacheValue = value;
             return value;
@@ -1010,6 +1316,20 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         this.recordTotalAffinityCacheKey = cacheKey;
         this.recordTotalAffinityCacheValue = value;
         return value;
+    }
+
+    getRecordAffinityTooltip(): string {
+        if (!this.targetCharaId || !this.getMainCharaId()) {
+            return this.getMainBreedingTooltip();
+        }
+
+        const result = this.getTreeAffinity(this.hasP2Context());
+        if (!result) return '';
+
+        const race = result.race.parentPair
+            ? `Race: ${result.race.total} (includes P1–P2: ${result.race.parentPair})`
+            : `Race: ${result.race.total}`;
+        return `Base: ${result.relationTotal} + ${race}`;
     }
 
     private getRecordTotalAffinityCacheKey(): string {
@@ -1165,6 +1485,19 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         return this.getTreeAffinity(true)?.race.parentPair ?? 0;
     }
 
+    getOptimalRaces(): OptimalRaceRecommendation[] {
+        const p1Wins = this.record.main_win_saddles ?? this.emptyNumberArray;
+        const p2Wins = this.p2WinSaddleIds ?? this.emptyNumberArray;
+        const cacheKey = `${p1Wins.join(',')}|${p2Wins.join(',')}`;
+        if (this.optimalRacesCacheKey === cacheKey) {
+            return this.optimalRacesCacheValue;
+        }
+
+        this.optimalRacesCacheKey = cacheKey;
+        this.optimalRacesCacheValue = this.affinityService.getOptimalRaceRecommendations(p1Wins, p2Wins);
+        return this.optimalRacesCacheValue;
+    }
+
     getP2BaseAffinity(): number {
         if (!this.targetCharaId || !this.affinityService.isReady || !this.p2CharaId) return 0;
         return this.affinityService.getTreeNodeBaseAffinity(this.getTreeAffinity(true), 'p2') ?? 0;
@@ -1228,6 +1561,23 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         return this.getMainTotalAffinity() ?? 0;
     }
 
+    /**
+     * Affinity applied to a spark inherited from one specific P1 node.
+     * Combined and split views both resolve through this method so a
+     * single-source spark cannot change odds when the display mode changes.
+     */
+    getP1AffinityForSource(source: ParentSparkSource): number {
+        if (source === 'main') {
+            return this.getMainTotalAffinity()
+                ?? this.getMainBreedingBaseAffinity()
+                ?? this.record.affinity_score
+                ?? 0;
+        }
+        return this.getGrandparentTotalAffinity(source)
+            ?? this.getMainBreedingPair(source)
+            ?? 0;
+    }
+
     canComputeAffinity(): boolean {
         return this.targetCharaId !== null && this.affinityService.isReady && this.getMainCharaId() !== null;
     }
@@ -1245,9 +1595,34 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         return this.getRecordTotalAffinity() ?? 0;
     }
 
-    sparkDisplayChance(spark: SparkInfo, affinityOverride?: number): number {
-        const affinity = affinityOverride ?? this.resolveDisplayAffinity();
-        return this.affinityService.sparkDisplayChance(spark, affinity, this.sparkShowPerRun);
+    sparkDisplayForSource(spark: SparkInfo, source: ParentSparkSource): string {
+        return this.sparkDisplayForAffinity(spark, this.getP1AffinityForSource(source));
+    }
+
+    sparkDisplayForAffinity(spark: SparkInfo, affinity: number): string {
+        const cacheKey = [
+            'single',
+            spark.factorId,
+            spark.level,
+            spark.type,
+            affinity,
+            this.sparkShowPerRun ? 1 : 0,
+        ].join(':');
+        const cached = this.sparkMetricDisplayCache.get(cacheKey);
+        if (cached) return cached;
+        const metrics = this.affinityService.getSparkMetrics(
+            [{ spark, affinity }],
+            this.sparkShowPerRun,
+        );
+        const value = this.formatSparkMetrics(metrics, spark.type);
+        this.sparkMetricDisplayCache.set(cacheKey, value);
+        return value;
+    }
+
+    selectedParentSparkDisplay(spark: SparkInfo): string {
+        return this.selectedParent
+            ? this.sparkDisplayForSource(spark, this.selectedParent)
+            : this.sparkDisplayForAffinity(spark, this.resolveDisplayAffinity());
     }
 
     /**
@@ -1442,6 +1817,28 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         return `${entry.spark.factorId}:${entry.spark.level}:${entry.source}:${entry.affinity}`;
     }
 
+    trackByWhiteSparkSection(_: number, section: { key: WhiteSparkCategory }): WhiteSparkCategory {
+        return section.key;
+    }
+
+    trackByWhiteSparkEntry(_: number, entry: WhiteSparkDisplayEntry): string {
+        return [
+            entry.spark.factorId,
+            entry.spark.level,
+            entry.source ?? 'combined',
+            entry.affinity ?? '',
+            entry.isP2 ? 1 : 0,
+        ].join(':');
+    }
+
+    trackByFactor(index: number, factor: any): string | number {
+        return factor.id ?? factor.skill?.id ?? factor.skill?.name ?? index;
+    }
+
+    trackByIndex(index: number): number {
+        return index;
+    }
+
     // HTML-facing: p1Ids order MUST be [main, left, right]
     combineSparks(
         p1Ids: (number | undefined)[],
@@ -1505,34 +1902,42 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     }
 
     combinedSparkDisplayChance(sparkInfo: CombinedSparkInfo): string {
-        const affinityForKey = (key: 'main' | 'left' | 'right'): number => {
-            if (key === 'main') {
-                return this.getMainTotalAffinity() ?? this.getMainBreedingBaseAffinity() ?? this.record.affinity_score ?? 0;
-            }
-            return this.getGrandparentTotalAffinity(key) ?? this.getMainBreedingPair(key) ?? 0;
-        };
         const sources = [
-            ...sparkInfo.p1Sources.map(s => ({ spark: { ...sparkInfo, level: s.level }, affinity: affinityForKey(s.parentKey) })),
+            ...sparkInfo.p1Sources.map(s => ({
+                spark: { ...sparkInfo, level: s.level },
+                affinity: this.getP1AffinityForSource(s.parentKey),
+            })),
             ...sparkInfo.p2Sources.map(s => ({
                 spark: { ...sparkInfo, level: s.level },
                 affinity: this.getP2AffinityForSource(s.source),
             })),
         ];
+        const cacheKey = [
+            'combined',
+            sparkInfo.factorId,
+            sparkInfo.type,
+            this.sparkShowPerRun ? 1 : 0,
+            ...sources.map(source => `${source.spark.level}@${source.affinity}`),
+        ].join(':');
+        const cached = this.sparkMetricDisplayCache.get(cacheKey);
+        if (cached) return cached;
         const m = this.affinityService.getSparkMetrics(sources, this.sparkShowPerRun);
-        const isWhiteSpark = sparkInfo.type >= 2 && sparkInfo.type <= 4;
+        const value = this.formatSparkMetrics(m, sparkInfo.type);
+        this.sparkMetricDisplayCache.set(cacheKey, value);
+        return value;
+    }
+
+    private formatSparkMetrics(metrics: SparkDisplayMetrics, sparkType: number): string {
+        const isWhiteSpark = sparkType >= 2 && sparkType <= 4;
         if (isWhiteSpark) {
-            return `${this.formatNumber(m.procChancePct, this.twoDecimalFormatOptions)}%`;
+            return `${this.formatNumber(metrics.procChancePct, this.twoDecimalFormatOptions)}%`;
         }
 
         // Show expected procs when ≥1, proc chance otherwise — same logic as the planner.
         // Always use 2 decimals with locale-aware formatting.
-        return m.expectedProcs >= 1
-            ? `${this.formatNumber(m.expectedProcs, this.twoDecimalFormatOptions)}x`
-            : `${this.formatNumber(m.procChancePct, this.twoDecimalFormatOptions)}%`;
-    }
-
-    formatSparkPct(value: number): string {
-        return `${this.formatNumber(value, this.twoDecimalFormatOptions)}%`;
+        return metrics.expectedProcs >= 1
+            ? `${this.formatNumber(metrics.expectedProcs, this.twoDecimalFormatOptions)}x`
+            : `${this.formatNumber(metrics.procChancePct, this.twoDecimalFormatOptions)}%`;
     }
 
     private formatNumber(value: number, options: Intl.NumberFormatOptions): string {

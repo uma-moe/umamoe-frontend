@@ -1,5 +1,6 @@
 .site-footer {
   flex-shrink: 0;
+  min-height: var(--site-footer-height, 65px);
   background: var(--navbar-bg, rgba(18, 18, 18, 0.96));
   border-top: 1px solid var(--border-primary);
 }
@@ -7,7 +8,7 @@
 .footer-inner {
   width: 100%;
   max-width: 1400px;
-  min-height: 64px;
+  min-height: calc(var(--site-footer-height, 65px) - 1px);
   margin: 0 auto;
   padding: 0.85rem clamp(0.75rem, 2.5vw, 2rem);
   display: grid;

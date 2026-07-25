@@ -1,0 +1,2119 @@
+import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { ScrollingModule } from '@angular/cdk/scrolling';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { Subject, takeUntil } from 'rxjs';
+import {
+  CaratPlan,
+  CaratPlanCollection,
+  CaratPlanProjection,
+  CaratPlannerDataBundle,
+  CaratPlannerTimelineEvent,
+  FREE_PULL_CAMPAIGN_DEFAULT_SELECTION,
+  FREE_PULL_CAMPAIGN_EXCLUDED_SELECTION,
+  PlannerBannerKind,
+  PlannerCustomIncome,
+  PlannerEventBenefit,
+  PlannerFreePullCampaign,
+  PlannerFreePullCampaignAllocation,
+  PlannerGachaEntry,
+  PlannerIncomeRule,
+  PlannerPickupGoal,
+  PlannerPickupRate,
+  PlannerRewardEntry,
+  PlannerTarget,
+  PlannerTargetProjection,
+} from '../../models/carat-planner.model';
+import { CaratPlannerCalculationService } from '../../services/carat-planner-calculation.service';
+import { CaratPlannerPersistenceService } from '../../services/carat-planner-persistence.service';
+import { CaratPlannerResourceService, CaratPlannerResourceState } from '../../services/carat-planner-resource.service';
+import {
+  CaratPullPoolComposition,
+  CaratPullProbabilityResult,
+  CaratPullProbabilityService,
+} from '../../services/carat-pull-probability.service';
+import { TimelineAvatarService } from '../../services/timeline-avatar.service';
+
+const EMPTY_DATA: CaratPlannerDataBundle = {
+  core: {},
+  income: { rules: [] },
+  rewards: { rewards: [], event_benefits: [] },
+};
+const INTEGER_FORMATTER = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+const PLANNER_CURRENCY_ITEM_IDS: Readonly<Record<string, number>> = {
+  carats: 43,
+  uma_ticket: 41,
+  support_ticket: 111,
+};
+const PREPARED_PLANNER_ITEM_IDS = new Set([41, 43, 111, 141, 164, 165, 178, 197, 205, 214, 255]);
+
+function matchesJewelCurrency(currency: string): boolean {
+  return currency === 'free_jewels' || currency === 'paid_jewels';
+}
+
+type PlannerOutcomeTone = 'miss' | 'below' | 'expected' | 'lucky' | 'neutral';
+
+interface PlannerOutcomeSegment {
+  tone: PlannerOutcomeTone;
+  semanticLabel: string;
+  rangeLabel: string;
+  probability: number;
+  width: number;
+}
+
+interface PlannerPickupOptionView extends PlannerPickupRate {
+  label: string;
+  subLabel?: string;
+  imagePath?: string;
+  fallbackImagePath?: string;
+}
+
+interface PlannerPickupGoalView {
+  pickupId: number;
+  label: string;
+  subLabel?: string;
+  imagePath?: string;
+  fallbackImagePath?: string;
+  rate: number;
+  desiredCopies: number;
+  probability?: number;
+}
+
+interface PlannerScenarioOptionView {
+  value: string;
+  label: string;
+  amountLabel: string;
+}
+
+interface PlannerScenarioGroupView {
+  id: string;
+  label: string;
+  options: PlannerScenarioOptionView[];
+}
+
+interface PlannerRewardBenefitView {
+  id: string;
+  kind: string;
+  label: string;
+  amount?: number | null;
+  text: string;
+  icon: string;
+  iconPath?: string;
+  plannerEffect: string;
+}
+
+interface PlannerRewardGroupView {
+  id: string;
+  eventId?: string;
+  title: string;
+  availableAt: string;
+  imagePath?: string;
+  sourceUrl?: string;
+  sourceLabel?: string;
+  rewards: readonly PlannerRewardEntry[];
+  eventBenefits: readonly PlannerEventBenefit[];
+  benefits: readonly PlannerRewardBenefitView[];
+  visibleBenefits: readonly PlannerRewardBenefitView[];
+  hiddenBenefitCount: number;
+  searchText: string;
+  isPast: boolean;
+}
+
+interface PlannerFreePullCampaignAllocationView extends PlannerFreePullCampaignAllocation {
+  title: string;
+  imagePath?: string;
+}
+
+interface PlannerFreePullCampaignView {
+  id: string;
+  campaign: PlannerFreePullCampaign;
+  label: string;
+  totalPulls: number;
+  pullsPerDay?: number;
+  allocations: readonly PlannerFreePullCampaignAllocationView[];
+  stockDestination?: PlannerFreePullCampaignAllocationView;
+  sourceUrl?: string;
+  availableAt: string;
+  searchText: string;
+  isPast: boolean;
+}
+
+interface PlannerRewardListItem {
+  id: string;
+  kind: 'reward' | 'free-pull-campaign';
+  availableAt: string;
+  isPast: boolean;
+  group?: PlannerRewardGroupView;
+  campaign?: PlannerFreePullCampaignView;
+}
+
+interface PlannerOddsView {
+  goals: readonly PlannerPickupGoalView[];
+  combined: CaratPullProbabilityResult;
+  allGoalsProbability?: number;
+  allGoalsStatus?: string;
+  ratesAvailable: boolean;
+  ratesInferred: boolean;
+  segments: readonly PlannerOutcomeSegment[];
+}
+
+type PlannerSetupPanel = 'resources' | 'income' | 'rewards';
+type RewardSelectionFilter = 'all' | 'included';
+type FreePullCampaignChoice = 'schedule' | 'stock';
+
+@Component({
+  selector: 'app-carat-planner',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    ScrollingModule,
+    MatButtonModule,
+    MatCheckboxModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatProgressBarModule,
+    MatSelectModule,
+    MatTooltipModule,
+  ],
+  templateUrl: './carat-planner.component.html',
+  styleUrl: './carat-planner.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class CaratPlannerComponent implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
+  private allEvents: readonly CaratPlannerTimelineEvent[] = [];
+  private pendingRequestedEventId: string | null = null;
+  private handledRequestedEventId: string | null = null;
+  private plannerDataReady = false;
+  private activePlanResourceKey: string | null = null;
+  private planResourceRequest = 0;
+  private destroyed = false;
+  private readonly expandedPickupTargetIds = new Set<string>();
+  private readonly pickupGoalCopyMemory = new Map<string, number>();
+
+  @Input() set events(value: readonly CaratPlannerTimelineEvent[] | null | undefined) {
+    this.allEvents = value ?? [];
+    this.filterEvents();
+    this.filterRewards();
+    this.tryAddRequestedEvent();
+  }
+
+  @Input() set requestedEventId(value: string | null | undefined) {
+    this.pendingRequestedEventId = value?.trim() || null;
+    if (this.pendingRequestedEventId !== this.handledRequestedEventId) {
+      this.tryAddRequestedEvent();
+    }
+  }
+
+  collection!: CaratPlanCollection;
+  plan!: CaratPlan;
+  data = EMPTY_DATA;
+  resourceState: CaratPlannerResourceState = { loading: false, ready: false, usingCache: false, error: null };
+  projection: CaratPlanProjection | null = null;
+  projectionByTarget = new Map<string, PlannerTargetProjection>();
+  gachaByTarget = new Map<string, PlannerGachaEntry>();
+  pickupOptionsByTarget = new Map<string, readonly PlannerPickupOptionView[]>();
+  pickupGoalViewsByTarget = new Map<string, readonly PlannerPickupGoalView[]>();
+  selectedPickupIdsByTarget = new Map<string, ReadonlySet<number>>();
+  oddsByTarget = new Map<string, PlannerOddsView>();
+  filteredEvents: CaratPlannerTimelineEvent[] = [];
+  scenarioGroupOptions: PlannerScenarioGroupView[] = [];
+  displayedRules: PlannerIncomeRule[] = [];
+  rewardGroups: PlannerRewardGroupView[] = [];
+  displayedRewardGroups: PlannerRewardGroupView[] = [];
+  displayedRewards: PlannerRewardEntry[] = [];
+  freePullCampaignViews: PlannerFreePullCampaignView[] = [];
+  displayedFreePullCampaigns: PlannerFreePullCampaignView[] = [];
+  displayedRewardItems: PlannerRewardListItem[] = [];
+  upcomingRewardGroupCount = 0;
+  pastRewardGroupCount = 0;
+  eventSearch = '';
+  rewardSearch = '';
+  rewardSelectionFilter: RewardSelectionFilter = 'all';
+  showPastRewards = false;
+  showEventPicker = false;
+  eventPickerActiveIndex = 0;
+  importError = '';
+  activeSetupPanel: PlannerSetupPanel | null = null;
+
+  constructor(
+    private readonly calculations: CaratPlannerCalculationService,
+    private readonly probabilities: CaratPullProbabilityService,
+    private readonly persistence: CaratPlannerPersistenceService,
+    private readonly resources: CaratPlannerResourceService,
+    private readonly avatars: TimelineAvatarService,
+    private readonly cdr: ChangeDetectorRef,
+  ) {}
+
+  ngOnInit(): void {
+    this.persistence.collection$.pipe(takeUntil(this.destroy$)).subscribe(collection => {
+      this.collection = collection;
+      this.plan = this.persistence.activePlan;
+      this.filterEvents();
+      this.filterRewards();
+      this.tryAddRequestedEvent();
+      this.recalculate();
+      this.syncActivePlanResources();
+      this.cdr.markForCheck();
+    });
+    this.resources.state$.pipe(takeUntil(this.destroy$)).subscribe(state => {
+      this.resourceState = state;
+      this.cdr.markForCheck();
+    });
+    this.loadResources();
+  }
+
+  retryResources(): void {
+    this.loadResources();
+  }
+
+  closeEventPicker(): void {
+    this.showEventPicker = false;
+  }
+
+  onEventPickerKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.closeEventPicker();
+      return;
+    }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.showEventPicker = true;
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      this.eventPickerActiveIndex = this.nextSelectableEventIndex(this.eventPickerActiveIndex, direction);
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const selected = this.filteredEvents[this.eventPickerActiveIndex];
+      if (selected && !this.isEventAdded(selected.id)) {
+        this.addEvent(selected);
+      } else {
+        this.addFirstMatchingEvent();
+      }
+    }
+  }
+
+  isEventAdded(eventId: string): boolean {
+    if ((this.plan.disabledEventIds ?? []).includes(eventId)) return false;
+    return this.plan.targets.some(target => target.eventId === eventId)
+      || (this.plan.enabledRewardEventIds ?? []).includes(eventId);
+  }
+
+  eventDisplayTitle(event: CaratPlannerTimelineEvent): string {
+    return this.rewardEventDisplayTitle(event);
+  }
+
+  targetDisplayTitle(target: PlannerTarget): string {
+    const event = this.allEvents.find(item => item.id === target.eventId);
+    if (event) return this.rewardEventDisplayTitle(event);
+    return this.cleanRewardLabel(target.title).replace(/\s*\+\s*\d+\s*more\b/gi, '').trim();
+  }
+
+  get activeTargets(): PlannerTarget[] {
+    const disabledEventIds = new Set(this.plan?.disabledEventIds ?? []);
+    return (this.plan?.targets ?? [])
+      .filter(target => !disabledEventIds.has(target.eventId))
+      .sort((left, right) => {
+        const leftPast = this.isTargetBeforePlan(left);
+        const rightPast = this.isTargetBeforePlan(right);
+        if (leftPast !== rightPast) return leftPast ? 1 : -1;
+        const dateOrder = this.calculations.resolvePullDate(left)
+          .localeCompare(this.calculations.resolvePullDate(right));
+        return (leftPast ? -dateOrder : dateOrder) || left.id.localeCompare(right.id);
+      });
+  }
+
+  get plannedPullTotal(): number {
+    return this.activeTargets
+      .filter(target => !this.isTargetBeforePlan(target))
+      .reduce((total, target) => total + Math.max(0, Number(target.plannedPulls) || 0), 0);
+  }
+
+  get totalShortfallCarats(): number {
+    return this.activeTargets
+      .filter(target => !this.isTargetBeforePlan(target))
+      .reduce((total, target) =>
+        total + Math.max(0, this.projectionByTarget.get(target.id)?.shortfallJewels ?? 0), 0);
+  }
+
+  isTargetBeforePlan(target: PlannerTarget): boolean {
+    return Boolean(this.plan && this.calculations.isTargetBeforeProjectionStart(this.plan, target));
+  }
+
+  get activeRewardCount(): number {
+    return this.rewardGroups.filter(group => this.isRewardGroupActive(group)).length
+      + this.freePullCampaignViews.filter(campaign => this.isFreePullCampaignReady(campaign)).length;
+  }
+
+  get plannedRewardGroupCount(): number {
+    return this.rewardGroups.filter(group =>
+      this.isRewardGroupActive(group) || this.isRewardGroupLinkedToPlan(group)).length
+      + this.freePullCampaignViews.filter(campaign => this.isFreePullCampaignLinked(campaign)).length;
+  }
+
+  get visibleRewardGroups(): PlannerRewardGroupView[] {
+    return this.visibleRewardItems
+      .map(item => item.group)
+      .filter((group): group is PlannerRewardGroupView => Boolean(group));
+  }
+
+  get visibleFreePullCampaigns(): PlannerFreePullCampaignView[] {
+    return this.visibleRewardItems
+      .map(item => item.campaign)
+      .filter((campaign): campaign is PlannerFreePullCampaignView => Boolean(campaign));
+  }
+
+  get visibleRewardItems(): PlannerRewardListItem[] {
+    return this.displayedRewardItems;
+  }
+
+  get activeIncomeAssumptionCount(): number {
+    if (!this.plan) return 0;
+    const enabledRuleIds = new Set(this.plan.enabledIncomeRuleIds);
+    const recurringSources = this.displayedRules.filter(rule => enabledRuleIds.has(rule.id)).length;
+    const selectedScenarios = Object.values(this.plan.scenarioSelections).filter(Boolean).length;
+    const customSources = this.plan.customIncome.filter(item => Number(item.amount) > 0).length;
+    return recurringSources + selectedScenarios + customSources;
+  }
+
+  get enabledIncomeTotalLabel(): string {
+    if (!this.plan) return '';
+    const enabledRuleIds = new Set(this.plan.enabledIncomeRuleIds);
+    const totals = new Map<PlannerIncomeRule['cadence'], number>();
+    for (const rule of this.data.income.rules) {
+      if (!enabledRuleIds.has(rule.id) || !matchesJewelCurrency(rule.currency) || !this.matchesSelectedScenario(rule)) continue;
+      totals.set(rule.cadence, (totals.get(rule.cadence) ?? 0) + Math.max(0, Number(rule.amount) || 0));
+    }
+    for (const item of this.plan.customIncome) {
+      if (!matchesJewelCurrency(item.currency)) continue;
+      totals.set(item.cadence, (totals.get(item.cadence) ?? 0) + Math.max(0, Number(item.amount) || 0));
+    }
+
+    const labels: string[] = [];
+    const append = (cadence: PlannerIncomeRule['cadence'], suffix: string) => {
+      const amount = totals.get(cadence) ?? 0;
+      if (amount > 0) labels.push(`+${INTEGER_FORMATTER.format(amount)} ${suffix}`);
+    };
+    append('daily', '/ day');
+    append('weekly', '/ week');
+    append('monthly', '/ month');
+    append('interval', '/ interval');
+    append('once', 'one-time');
+    return labels.join(' · ');
+  }
+
+  get enabledRewardTotalLabel(): string {
+    const activeGroups = this.rewardGroups.filter(group => this.isRewardGroupActive(group));
+    const activeRewards = activeGroups.flatMap(group => group.rewards);
+    const activeBenefits = activeGroups
+      .flatMap(group => group.eventBenefits)
+      .filter(benefit => benefit.kind !== 'free_pulls');
+    const activeFreePullBenefits = this.rewardGroups
+      .filter(group => this.isRewardGroupBannerPlanned(group))
+      .flatMap(group => group.eventBenefits)
+      .filter(benefit => benefit.kind === 'free_pulls');
+    const carats = activeRewards.reduce((total, reward) =>
+      matchesJewelCurrency(reward.currency) && Number.isFinite(reward.amount)
+        ? total + Math.max(0, Number(reward.amount))
+        : total, 0);
+    const tickets = activeRewards.reduce((total, reward) =>
+      (reward.currency === 'uma_ticket' || reward.currency === 'support_ticket') && Number.isFinite(reward.amount)
+        ? total + Math.max(0, Number(reward.amount))
+        : total, 0);
+    const freePulls = activeFreePullBenefits.reduce((total, benefit) =>
+      benefit.kind === 'free_pulls' && Number.isFinite(benefit.amount)
+        ? total + Math.max(0, Number(benefit.amount))
+        : total, 0)
+      + this.freePullCampaignViews.reduce((total, campaign) =>
+        this.isFreePullCampaignReady(campaign) ? total + campaign.totalPulls : total, 0);
+    const selectors = activeBenefits.reduce((total, benefit) =>
+      benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector'
+        ? total + Math.max(1, Number(benefit.amount) || 1)
+        : total, 0);
+    const parts: string[] = [];
+    if (carats > 0) parts.push(`${INTEGER_FORMATTER.format(carats)} Carats`);
+    if (tickets > 0) parts.push(`${INTEGER_FORMATTER.format(tickets)} ${tickets === 1 ? 'ticket' : 'tickets'}`);
+    if (freePulls > 0) parts.push(`${INTEGER_FORMATTER.format(freePulls)} free pulls`);
+    if (selectors > 0) parts.push(`${INTEGER_FORMATTER.format(selectors)} ${selectors === 1 ? 'selector' : 'selectors'}`);
+    return parts.join(' · ');
+  }
+
+  isRewardActive(reward: PlannerRewardEntry): boolean {
+    return this.plan.enabledRewardIds.includes(reward.id)
+      && (!reward.event_id || !(this.plan.disabledEventIds ?? []).includes(reward.event_id));
+  }
+
+  isRewardGroupActive(group: PlannerRewardGroupView): boolean {
+    if (group.isPast) return false;
+    if (group.eventId && (this.plan.disabledEventIds ?? []).includes(group.eventId)) return false;
+    const selectableRewards = group.rewards.filter(reward =>
+      Number.isFinite(reward.amount) && Number(reward.amount) > 0);
+    const hasTrackedInformationalBenefit = group.eventBenefits.some(benefit =>
+      benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector');
+    if (selectableRewards.length === 0 && !hasTrackedInformationalBenefit) return false;
+    const rewardsActive = selectableRewards.length === 0
+      || selectableRewards.every(reward => this.isRewardActive(reward));
+    const informationalActive = !hasTrackedInformationalBenefit
+      || Boolean(group.eventId && (this.plan.enabledRewardEventIds ?? []).includes(group.eventId));
+    return rewardsActive && informationalActive;
+  }
+
+  isRewardGroupSelectable(group: PlannerRewardGroupView): boolean {
+    const hasLedgerReward = group.rewards.some(reward => Number.isFinite(reward.amount) && Number(reward.amount) > 0);
+    const hasSelector = group.eventBenefits.some(benefit =>
+      benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector');
+    return hasLedgerReward || hasSelector;
+  }
+
+  isAutomaticFreePullGroup(group: PlannerRewardGroupView): boolean {
+    return !this.isRewardGroupSelectable(group)
+      && this.hasFreePullBenefit(group);
+  }
+
+  hasFreePullBenefit(group: PlannerRewardGroupView): boolean {
+    return group.eventBenefits.some(benefit => benefit.kind === 'free_pulls' && Number(benefit.amount) > 0);
+  }
+
+  isRewardGroupBannerActionable(group: PlannerRewardGroupView): boolean {
+    if (!this.hasFreePullBenefit(group) || !group.eventId) return false;
+    const event = this.allEvents.find(item => item.id === group.eventId);
+    return Boolean(event && (event.type?.includes('character') || event.type?.includes('support')));
+  }
+
+  isRewardGroupActionable(group: PlannerRewardGroupView): boolean {
+    return this.isRewardGroupSelectable(group) || this.isRewardGroupBannerActionable(group);
+  }
+
+  isRewardGroupActionActive(group: PlannerRewardGroupView): boolean {
+    const rewardsActive = !this.isRewardGroupSelectable(group) || this.isRewardGroupActive(group);
+    const bannerActive = !this.isRewardGroupBannerActionable(group) || this.isRewardGroupBannerPlanned(group);
+    return rewardsActive && bannerActive;
+  }
+
+  rewardGroupActionLabel(group: PlannerRewardGroupView): string {
+    const verb = this.isRewardGroupActionActive(group) ? 'Remove' : 'Add';
+    if (this.isRewardGroupSelectable(group) && this.isRewardGroupBannerActionable(group)) {
+      return `${verb} ${group.title} rewards and banner ${verb === 'Remove' ? 'from' : 'to'} the plan`;
+    }
+    if (this.isRewardGroupSelectable(group)) return `${verb} ${group.title} rewards`;
+    return `${verb} ${group.title} banner ${verb === 'Remove' ? 'from' : 'to'} the plan`;
+  }
+
+  toggleRewardGroupAction(group: PlannerRewardGroupView): void {
+    const enable = !this.isRewardGroupActionActive(group);
+    if (this.isRewardGroupSelectable(group)) {
+      this.toggleRewardGroup(group, enable);
+    }
+    if (!this.isRewardGroupBannerActionable(group) || !group.eventId) return;
+    const event = this.allEvents.find(item => item.id === group.eventId);
+    if (!event) return;
+    this.persistence.setEventActive(
+      event,
+      enable,
+      this.plannerDataReady ? this.data.rewards.rewards : [],
+    );
+  }
+
+  isRewardGroupBannerPlanned(group: PlannerRewardGroupView): boolean {
+    if (!group.eventId || (this.plan.disabledEventIds ?? []).includes(group.eventId)) return false;
+    return this.plan.targets.some(target =>
+      target.eventId === group.eventId
+      && !this.calculations.isTargetBeforeProjectionStart(this.plan, target));
+  }
+
+  isRewardGroupLinkedToPlan(group: PlannerRewardGroupView): boolean {
+    return group.eventBenefits.some(benefit =>
+      benefit.kind === 'free_pulls' && Number(benefit.amount) > 0)
+      && this.isRewardGroupBannerPlanned(group);
+  }
+
+  freePullCampaignScheduleLabel(campaign: PlannerFreePullCampaignView): string {
+    return campaign.allocations
+      .map(allocation => `${INTEGER_FORMATTER.format(allocation.pulls)} ${allocation.title}`)
+      .join(' + ');
+  }
+
+  freePullCampaignStockLabel(campaign: PlannerFreePullCampaignView): string {
+    const destination = campaign.stockDestination;
+    return destination
+      ? `All ${INTEGER_FORMATTER.format(campaign.totalPulls)} on ${destination.title}`
+      : `${INTEGER_FORMATTER.format(campaign.totalPulls)} pulls`;
+  }
+
+  isFreePullCampaignChoiceSelected(
+    campaign: PlannerFreePullCampaignView,
+    choice: FreePullCampaignChoice,
+  ): boolean {
+    const stored = this.plan.freePullCampaignSelections?.[campaign.id];
+    if (choice === 'stock') {
+      return Boolean(campaign.stockDestination && stored === campaign.stockDestination.event_id);
+    }
+    if (stored === FREE_PULL_CAMPAIGN_EXCLUDED_SELECTION) return false;
+    if (stored === FREE_PULL_CAMPAIGN_DEFAULT_SELECTION) return true;
+    if (stored) return false;
+    return this.freePullCampaignTargetsReady(campaign.allocations);
+  }
+
+  isFreePullCampaignChoiceReady(
+    campaign: PlannerFreePullCampaignView,
+    choice: FreePullCampaignChoice,
+  ): boolean {
+    const allocations = choice === 'stock' && campaign.stockDestination
+      ? [campaign.stockDestination]
+      : campaign.allocations;
+    return this.freePullCampaignTargetsReady(allocations);
+  }
+
+  isFreePullCampaignReady(campaign: PlannerFreePullCampaignView): boolean {
+    if (this.isFreePullCampaignChoiceSelected(campaign, 'stock')) {
+      return this.isFreePullCampaignChoiceReady(campaign, 'stock');
+    }
+    return this.isFreePullCampaignChoiceSelected(campaign, 'schedule')
+      && this.isFreePullCampaignChoiceReady(campaign, 'schedule');
+  }
+
+  isFreePullCampaignLinked(campaign: PlannerFreePullCampaignView): boolean {
+    const stored = this.plan.freePullCampaignSelections?.[campaign.id];
+    if (stored === FREE_PULL_CAMPAIGN_EXCLUDED_SELECTION) return false;
+    if (stored) return true;
+    return campaign.allocations.some(allocation => this.isCampaignAllocationPlanned(allocation));
+  }
+
+  canSelectFreePullCampaign(
+    campaign: PlannerFreePullCampaignView,
+    choice: FreePullCampaignChoice,
+  ): boolean {
+    const allocations = choice === 'stock' && campaign.stockDestination
+      ? [campaign.stockDestination]
+      : campaign.allocations;
+    return allocations.length > 0 && allocations.every(allocation => Boolean(this.findCampaignEvent(allocation)));
+  }
+
+  selectFreePullCampaign(campaign: PlannerFreePullCampaignView, choice: FreePullCampaignChoice): void {
+    const selectedAndReady = this.isFreePullCampaignChoiceSelected(campaign, choice)
+      && this.isFreePullCampaignChoiceReady(campaign, choice);
+    if (selectedAndReady) {
+      this.plan.freePullCampaignSelections = {
+        ...(this.plan.freePullCampaignSelections ?? {}),
+        [campaign.id]: FREE_PULL_CAMPAIGN_EXCLUDED_SELECTION,
+      };
+      this.save();
+      return;
+    }
+
+    const allocations = choice === 'stock' && campaign.stockDestination
+      ? [campaign.stockDestination]
+      : campaign.allocations;
+    if (!allocations.length) return;
+
+    const events = allocations.map(allocation => this.findCampaignEvent(allocation));
+    if (events.some((event): event is undefined => !event)) return;
+
+    let nextPlan = this.plan;
+    const seenEventIds = new Set<string>();
+    for (const event of events) {
+      if (!event || seenEventIds.has(event.id)) continue;
+      seenEventIds.add(event.id);
+      nextPlan = this.persistence.setEventActive(
+        event,
+        true,
+        this.plannerDataReady ? this.data.rewards.rewards : [],
+      );
+    }
+
+    const selections = { ...(nextPlan.freePullCampaignSelections ?? {}) };
+    selections[campaign.id] = choice === 'stock' && campaign.stockDestination
+      ? campaign.stockDestination.event_id
+      : FREE_PULL_CAMPAIGN_DEFAULT_SELECTION;
+    nextPlan.freePullCampaignSelections = selections;
+    this.plan = nextPlan;
+    this.save();
+  }
+
+  toggleFreePullCampaignPlan(campaign: PlannerFreePullCampaignView): void {
+    const choice: FreePullCampaignChoice = this.isFreePullCampaignChoiceSelected(campaign, 'stock')
+      ? 'stock'
+      : 'schedule';
+    this.selectFreePullCampaign(campaign, choice);
+  }
+
+  switchFreePullCampaignAllocation(campaign: PlannerFreePullCampaignView): void {
+    const choice: FreePullCampaignChoice = this.isFreePullCampaignChoiceSelected(campaign, 'stock')
+      ? 'schedule'
+      : 'stock';
+    this.selectFreePullCampaign(campaign, choice);
+  }
+
+  toggleRewardGroupSelection(group: PlannerRewardGroupView): void {
+    if (!this.isRewardGroupSelectable(group)) return;
+    this.toggleRewardGroup(group, !this.isRewardGroupActive(group));
+  }
+
+  toggleRewardGroupBanner(group: PlannerRewardGroupView): void {
+    if (!this.isRewardGroupBannerActionable(group) || !group.eventId) return;
+    const event = this.allEvents.find(item => item.id === group.eventId);
+    if (!event) return;
+    this.persistence.setEventActive(
+      event,
+      !this.isRewardGroupBannerPlanned(group),
+      this.plannerDataReady ? this.data.rewards.rewards : [],
+    );
+  }
+
+  addFirstMatchingEvent(): void {
+    const event = this.filteredEvents.find(item => !this.isEventAdded(item.id));
+    if (event) {
+      this.addEvent(event);
+    }
+  }
+
+  projectionStartChanged(): void {
+    this.save();
+    this.filterEvents();
+    this.filterRewards();
+  }
+
+  toggleSetupPanel(panel: PlannerSetupPanel): void {
+    this.activeSetupPanel = this.activeSetupPanel === panel ? null : panel;
+  }
+
+  toggleAssumptions(): void {
+    this.activeSetupPanel = this.activeSetupPanel ? null : 'resources';
+  }
+
+  selectSetupPanel(panel: PlannerSetupPanel): void {
+    this.activeSetupPanel = panel;
+  }
+
+  private loadResources(): void {
+    void this.resources.loadInitial().then(data => {
+      if (this.destroyed) return;
+      this.data = data;
+      const rewardSelectionChanged = this.syncAutomaticRewardSelection();
+      this.rebuildAssumptionViews();
+      this.plannerDataReady = true;
+      this.activePlanResourceKey = null;
+      this.syncActivePlanResources(true);
+      if (this.plan && (rewardSelectionChanged || this.syncEnabledRewardEventIds())) {
+        this.save();
+      }
+      this.tryAddRequestedEvent();
+      this.cdr.markForCheck();
+    }).catch(() => {
+      if (!this.destroyed) this.cdr.markForCheck();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    this.planResourceRequest++;
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  selectPlan(planId: string): void {
+    this.persistence.setActive(planId);
+  }
+
+  createPlan(): void {
+    this.persistence.createPlan('New plan');
+  }
+
+  duplicatePlan(): void {
+    this.persistence.duplicatePlan(this.plan.id);
+  }
+
+  deletePlan(): void {
+    if (this.collection.plans.length > 1 && confirm(`Delete "${this.plan.name}"?`)) {
+      this.persistence.deletePlan(this.plan.id);
+    }
+  }
+
+  save(): void {
+    this.persistence.savePlan(this.plan);
+  }
+
+  searchEvents(value: string): void {
+    this.eventSearch = value;
+    this.showEventPicker = true;
+    this.filterEvents();
+    this.eventPickerActiveIndex = this.nextSelectableEventIndex(-1, 1);
+  }
+
+  addEvent(event: CaratPlannerTimelineEvent): void {
+    if (event.plannerRewardAvailable && !this.plannerDataReady) return;
+    this.persistence.setEventActive(event, true, this.plannerDataReady ? this.data.rewards.rewards : []);
+    this.showEventPicker = false;
+    this.eventSearch = '';
+  }
+
+  removeTarget(targetId: string): void {
+    const target = this.plan.targets.find(item => item.id === targetId);
+    if (!target) return;
+    this.expandedPickupTargetIds.delete(targetId);
+    const event = this.allEvents.find(item => item.id === target.eventId) ?? {
+      id: target.eventId,
+      title: target.title,
+      type: `${target.bannerKind}_banner`,
+      globalReleaseDate: target.bannerStart,
+      estimatedEndDate: target.bannerEnd,
+      imagePath: target.imagePath,
+      gachaId: target.gachaId,
+      gachaIds: target.gachaIds,
+      pickupCardIds: target.pickupGoals?.map(goal => goal.pickupId)
+        ?? (target.pickupId === undefined ? [] : [target.pickupId]),
+      plannerRewardAvailable: (this.plan.enabledRewardEventIds ?? []).includes(target.eventId),
+    };
+    this.persistence.setEventActive(event, false);
+  }
+
+  addCustomIncome(): void {
+    const item: PlannerCustomIncome = {
+      id: this.id('income'),
+      label: 'Custom income',
+      currency: 'free_jewels',
+      amount: 0,
+      cadence: 'once',
+      startDate: this.plan.projectionStartDate,
+      every: 1,
+    };
+    this.plan.customIncome.push(item);
+    this.save();
+  }
+
+  removeCustomIncome(id: string): void {
+    this.plan.customIncome = this.plan.customIncome.filter(item => item.id !== id);
+    this.save();
+  }
+
+  toggleRule(rule: PlannerIncomeRule, enabled: boolean): void {
+    const values = new Set(this.plan.enabledIncomeRuleIds);
+    enabled ? values.add(rule.id) : values.delete(rule.id);
+    this.plan.enabledIncomeRuleIds = [...values];
+    this.save();
+  }
+
+  toggleReward(reward: PlannerRewardEntry, enabled: boolean): void {
+    const values = new Set(this.plan.enabledRewardIds);
+    const disabled = new Set(this.plan.disabledRewardIds ?? []);
+    enabled ? values.add(reward.id) : values.delete(reward.id);
+    enabled ? disabled.delete(reward.id) : disabled.add(reward.id);
+    this.plan.enabledRewardIds = [...values];
+    this.plan.disabledRewardIds = [...disabled];
+    if (enabled && reward.event_id) {
+      this.plan.disabledEventIds = (this.plan.disabledEventIds ?? []).filter(eventId => eventId !== reward.event_id);
+    }
+    this.syncEnabledRewardEventIds();
+    this.save();
+  }
+
+  toggleRewardGroup(group: PlannerRewardGroupView, enabled: boolean): void {
+    this.updateRewardGroups([group], enabled);
+  }
+
+  setDisplayedRewardsEnabled(enabled: boolean): void {
+    if (this.displayedRewardGroups.length > 0) {
+      this.updateRewardGroups(this.displayedRewardGroups, enabled);
+      return;
+    }
+
+    const values = new Set(this.plan.enabledRewardIds);
+    const disabled = new Set(this.plan.disabledRewardIds ?? []);
+    const eventIdsToEnable = new Set<string>();
+    for (const reward of this.displayedRewards) {
+      if (enabled) {
+        values.add(reward.id);
+        disabled.delete(reward.id);
+        if (reward.event_id) eventIdsToEnable.add(reward.event_id);
+      } else {
+        values.delete(reward.id);
+        disabled.add(reward.id);
+      }
+    }
+    this.plan.enabledRewardIds = [...values];
+    this.plan.disabledRewardIds = [...disabled];
+    if (enabled && eventIdsToEnable.size) {
+      this.plan.disabledEventIds = (this.plan.disabledEventIds ?? [])
+        .filter(eventId => !eventIdsToEnable.has(eventId));
+    }
+    this.syncEnabledRewardEventIds();
+    this.save();
+  }
+
+  private updateRewardGroups(groups: readonly PlannerRewardGroupView[], enabled: boolean): void {
+    const rewardIds = new Set(this.plan.enabledRewardIds);
+    const disabledRewardIds = new Set(this.plan.disabledRewardIds ?? []);
+    const eventIds = new Set(this.plan.enabledRewardEventIds ?? []);
+    const affectedEventIds = new Set(groups
+      .map(group => group.eventId)
+      .filter((eventId): eventId is string => Boolean(eventId)));
+
+    for (const group of groups) {
+      for (const reward of group.rewards) {
+        if (!Number.isFinite(reward.amount) || Number(reward.amount) <= 0) continue;
+        enabled ? rewardIds.add(reward.id) : rewardIds.delete(reward.id);
+        enabled ? disabledRewardIds.delete(reward.id) : disabledRewardIds.add(reward.id);
+      }
+      if (group.eventId) {
+        enabled ? eventIds.add(group.eventId) : eventIds.delete(group.eventId);
+      }
+    }
+
+    this.plan.enabledRewardIds = [...rewardIds];
+    this.plan.disabledRewardIds = [...disabledRewardIds];
+    this.plan.enabledRewardEventIds = [...eventIds];
+    if (enabled && affectedEventIds.size > 0) {
+      this.plan.disabledEventIds = (this.plan.disabledEventIds ?? [])
+        .filter(eventId => !affectedEventIds.has(eventId));
+    }
+    this.syncEnabledRewardEventIds();
+    this.save();
+  }
+
+  rewardDetailsTooltip(reward: PlannerRewardEntry): string {
+    const confidenceNote = reward.confidence === 'historical_partial'
+      ? 'Historical partial snapshot; totals may be incomplete.'
+      : '';
+    const evidence = reward.evidence?.replace(/\s+/g, ' ').trim();
+    if (evidence) {
+      const excerpt = evidence.length > 220 ? `${evidence.slice(0, 217)}...` : evidence;
+      return [confidenceNote, excerpt].filter(Boolean).join(' ');
+    }
+    if (reward.source_items?.length) {
+      const itemCount = reward.source_items.reduce((total, item) => total + Math.max(0, Number(item.mission_count) || 1), 0);
+      return [
+        confidenceNote,
+        `${itemCount} source reward ${itemCount === 1 ? 'entry' : 'entries'} extracted from the event data.`,
+      ].filter(Boolean).join(' ');
+    }
+    return confidenceNote;
+  }
+
+  setScenario(group: string, option: string): void {
+    if (option) {
+      this.plan.scenarioSelections[group] = option;
+    } else {
+      delete this.plan.scenarioSelections[group];
+    }
+    const values = new Set(this.plan.enabledIncomeRuleIds);
+    for (const rule of this.data.income.rules.filter(item => item.scenario_group === group)) {
+      values.add(rule.id);
+    }
+    this.plan.enabledIncomeRuleIds = [...values];
+    this.save();
+  }
+
+  scenarioGroupIcon(groupId: string): string {
+    if (groupId === 'team_trials_class') return 'stadium';
+    if (groupId === 'club_rank') return 'groups';
+    return 'tune';
+  }
+
+  scenarioOptionIconPath(groupId: string, optionValue: string): string | null {
+    if (groupId !== 'club_rank') return null;
+    const rank = Number(optionValue.match(/\d+/)?.[0]);
+    if (!Number.isInteger(rank) || rank < 1 || rank > 11) return null;
+    return `assets/images/icon/circle_rank/utx_ico_circle_rank_${String(rank).padStart(2, '0')}.webp`;
+  }
+
+  selectedScenarioOption(group: PlannerScenarioGroupView): PlannerScenarioOptionView | null {
+    const selectedValue = this.plan.scenarioSelections[group.id];
+    return group.options.find(option => option.value === selectedValue) ?? null;
+  }
+
+  incomeRuleIconPath(_rule: PlannerIncomeRule): string | null {
+    return null;
+  }
+
+  incomeRuleScheduleLabel(rule: PlannerIncomeRule): string {
+    switch (rule.cadence) {
+      case 'daily': return 'Every day';
+      case 'weekly': {
+        const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        return Number.isInteger(rule.weekday) && rule.weekday! >= 0 && rule.weekday! < weekdays.length
+          ? `Every ${weekdays[rule.weekday!]}`
+          : 'Every week';
+      }
+      case 'monthly': return rule.day_of_month ? `Day ${rule.day_of_month} each month` : 'Every month';
+      case 'interval': return `Every ${Math.max(1, Number(rule.every) || 1)} days`;
+      case 'once': return 'One-time income';
+    }
+  }
+
+  rewardIconPath(_reward: PlannerRewardEntry): string | null {
+    return null;
+  }
+
+  private rebuildAssumptionViews(): void {
+    const groups = new Map<string, Set<string>>();
+    for (const rule of this.data.income.rules) {
+      if (rule.scenario_group && rule.scenario_option) {
+        const options = groups.get(rule.scenario_group) ?? new Set<string>();
+        options.add(rule.scenario_option);
+        groups.set(rule.scenario_group, options);
+      }
+    }
+    this.scenarioGroupOptions = [...groups].map(([id, options]) => ({
+      id,
+      label: id === 'team_trials_class' ? 'Team Trials class' : id === 'club_rank' ? 'Club rank' : this.humanize(id),
+      options: [...options]
+        .sort((left, right) => this.scenarioOptionNumber(left) - this.scenarioOptionNumber(right))
+        .map(value => ({
+          value,
+          label: this.scenarioOptionLabel(id, value),
+          amountLabel: this.scenarioOptionAmountLabel(id, value),
+        })),
+    }));
+    this.displayedRules = this.data.income.rules.filter(rule => !rule.scenario_group);
+    this.filterRewards();
+  }
+
+  searchRewards(value: string): void {
+    this.rewardSearch = value;
+    this.filterRewards();
+  }
+
+  setRewardSelectionFilter(filter: RewardSelectionFilter): void {
+    if (this.rewardSelectionFilter === filter) return;
+    this.rewardSelectionFilter = filter;
+    this.filterRewards();
+  }
+
+  setPastRewardsVisible(visible: boolean): void {
+    if (this.showPastRewards === visible) return;
+    this.showPastRewards = visible;
+    this.filterRewards();
+  }
+
+  isPastRewardGroup(group: PlannerRewardGroupView): boolean {
+    return group.isPast;
+  }
+
+  private filterRewards(): void {
+    const query = this.rewardSearch.trim().toLowerCase();
+    this.freePullCampaignViews = this.buildFreePullCampaignViews();
+    const matchingCampaigns = this.freePullCampaignViews
+      .filter(campaign => !query || campaign.searchText.includes(query))
+      .filter(campaign => this.rewardSelectionFilter === 'all' || this.isFreePullCampaignLinked(campaign));
+    this.displayedFreePullCampaigns = matchingCampaigns
+      .filter(campaign => campaign.isPast === this.showPastRewards);
+    this.rewardGroups = this.buildRewardGroups();
+    const matching = this.rewardGroups
+      .filter(group => !query || group.searchText.includes(query))
+      .filter(group => this.rewardSelectionFilter === 'all'
+        || this.isRewardGroupActive(group)
+        || this.isRewardGroupLinkedToPlan(group));
+    const upcoming = matching
+      .filter(group => !this.isPastRewardGroup(group))
+      .sort((left, right) => this.compareRewardDates(left, right, 1));
+    const past = matching
+      .filter(group => this.isPastRewardGroup(group))
+      .sort((left, right) => this.compareRewardDates(left, right, -1));
+    this.upcomingRewardGroupCount = matching.filter(group => !this.isPastRewardGroup(group)).length
+      + matchingCampaigns.filter(campaign => !campaign.isPast).length;
+    this.pastRewardGroupCount = matching.length + matchingCampaigns.length - this.upcomingRewardGroupCount;
+    this.displayedRewardGroups = this.showPastRewards ? past : upcoming;
+    const direction = this.showPastRewards ? -1 : 1;
+    this.displayedRewardItems = [
+      ...this.displayedRewardGroups.map(group => ({
+        id: `group:${group.id}`,
+        kind: 'reward' as const,
+        availableAt: group.availableAt,
+        isPast: group.isPast,
+        group,
+      })),
+      ...this.displayedFreePullCampaigns.map(campaign => ({
+        id: `campaign:${campaign.id}`,
+        kind: 'free-pull-campaign' as const,
+        availableAt: campaign.availableAt,
+        isPast: campaign.isPast,
+        campaign,
+      })),
+    ].sort((left, right) => this.compareRewardListItems(left, right, direction));
+    this.displayedRewards = this.displayedRewardGroups.flatMap(group => [...group.rewards]);
+    this.cdr.markForCheck();
+  }
+
+  private compareRewardDates(left: PlannerRewardGroupView, right: PlannerRewardGroupView, direction: 1 | -1): number {
+    const leftDate = this.optionalDateKey(left.availableAt);
+    const rightDate = this.optionalDateKey(right.availableAt);
+    if (!leftDate && !rightDate) return left.title.localeCompare(right.title);
+    if (!leftDate) return 1;
+    if (!rightDate) return -1;
+    return direction * leftDate.localeCompare(rightDate) || left.title.localeCompare(right.title);
+  }
+
+  private compareRewardListItems(
+    left: PlannerRewardListItem,
+    right: PlannerRewardListItem,
+    direction: 1 | -1,
+  ): number {
+    const leftDate = this.optionalDateKey(left.availableAt);
+    const rightDate = this.optionalDateKey(right.availableAt);
+    if (!leftDate && !rightDate) return left.id.localeCompare(right.id);
+    if (!leftDate) return 1;
+    if (!rightDate) return -1;
+    return direction * leftDate.localeCompare(rightDate) || left.id.localeCompare(right.id);
+  }
+
+  private buildFreePullCampaignViews(): PlannerFreePullCampaignView[] {
+    const projectionStart = this.optionalDateKey(this.plan?.projectionStartDate);
+    return (this.data.rewards.free_pull_campaigns ?? [])
+      .filter(campaign => Boolean(campaign.id) && Number(campaign.total_pulls) > 0)
+      .map(campaign => {
+        const allocations = (campaign.default_allocations ?? [])
+          .filter(allocation => Boolean(allocation.event_id) && Number(allocation.pulls) > 0)
+          .map(allocation => {
+            const event = this.findCampaignEvent(allocation);
+            return {
+              ...allocation,
+              pulls: Math.max(0, Math.trunc(Number(allocation.pulls) || 0)),
+              title: event
+                ? this.rewardEventDisplayTitle(event)
+                : `Gacha ${allocation.gacha_id ?? allocation.event_id}`,
+              imagePath: event?.imagePath,
+            } satisfies PlannerFreePullCampaignAllocationView;
+          });
+        const supportsStock = allocations.length > 1 && (
+          campaign.stockable === true
+          || campaign.allocation_mode === 'daily_with_one_time_stock'
+        );
+        const eventDates = allocations
+          .map(allocation => this.findCampaignEvent(allocation))
+          .map(event => this.optionalDateKey(
+            event?.globalReleaseDate ?? event?.estimatedGlobalDate ?? event?.jpReleaseDate,
+          ))
+          .filter((date): date is string => Boolean(date));
+        const isPast = Boolean(projectionStart && eventDates.length > 0
+          && eventDates.every(date => date < projectionStart));
+        const orderedDates = [...eventDates].sort();
+        const usableDates = projectionStart ? orderedDates.filter(date => date >= projectionStart) : orderedDates;
+        const availableAt = isPast
+          ? orderedDates[orderedDates.length - 1] ?? ''
+          : usableDates[0] ?? orderedDates[0] ?? '';
+        const rawLabel = campaign.label?.trim() ?? '';
+        const cleanedRawLabel = this.cleanRewardLabel(rawLabel);
+        const totalPulls = Math.max(0, Math.trunc(Number(campaign.total_pulls) || 0));
+        const label = !cleanedRawLabel
+          || cleanedRawLabel.length > 64
+          || /free\s+(?:gacha|pull)/i.test(cleanedRawLabel)
+          ? `${INTEGER_FORMATTER.format(totalPulls)} free-pull campaign`
+          : cleanedRawLabel;
+        const sourceUrl = campaign.source_url?.trim();
+        return {
+          id: campaign.id,
+          campaign,
+          label,
+          totalPulls,
+          pullsPerDay: Number(campaign.pulls_per_day) > 0
+            ? Math.trunc(Number(campaign.pulls_per_day))
+            : undefined,
+          allocations,
+          stockDestination: supportsStock ? allocations[allocations.length - 1] : undefined,
+          sourceUrl: sourceUrl && /^https?:\/\//i.test(sourceUrl) ? sourceUrl : undefined,
+          availableAt,
+          searchText: [
+            label,
+            rawLabel,
+            'free pulls',
+            supportsStock ? 'gacha stock' : '',
+            ...allocations.flatMap(allocation => [allocation.title, String(allocation.pulls)]),
+          ].filter(Boolean).join(' ').toLowerCase(),
+          isPast,
+        } satisfies PlannerFreePullCampaignView;
+      })
+      .filter(campaign => campaign.allocations.length > 0);
+  }
+
+  private findCampaignEvent(
+    allocation: Pick<PlannerFreePullCampaignAllocation, 'event_id' | 'gacha_id'>,
+  ): CaratPlannerTimelineEvent | undefined {
+    return this.allEvents.find(event => event.id === allocation.event_id)
+      ?? (allocation.gacha_id === undefined ? undefined : this.allEvents.find(event =>
+        event.gachaId === allocation.gacha_id || (event.gachaIds ?? []).includes(allocation.gacha_id!),
+      ));
+  }
+
+  private isCampaignAllocationPlanned(allocation: PlannerFreePullCampaignAllocationView): boolean {
+    const event = this.findCampaignEvent(allocation);
+    if (event) return this.isEventPlanned(event.id);
+    if ((this.plan.disabledEventIds ?? []).includes(allocation.event_id)) return false;
+    return this.plan.targets.some(target =>
+      target.eventId === allocation.event_id
+      || (allocation.gacha_id !== undefined
+        && (target.gachaId === allocation.gacha_id || (target.gachaIds ?? []).includes(allocation.gacha_id))),
+    );
+  }
+
+  private freePullCampaignTargetsReady(
+    allocations: readonly PlannerFreePullCampaignAllocationView[],
+  ): boolean {
+    return allocations.length > 0 && allocations.every(allocation => this.isCampaignAllocationPlanned(allocation));
+  }
+
+  private isEventPlanned(eventId: string): boolean {
+    return !(this.plan.disabledEventIds ?? []).includes(eventId)
+      && this.plan.targets.some(target =>
+        target.eventId === eventId && !this.calculations.isTargetBeforeProjectionStart(this.plan, target));
+  }
+
+  private buildRewardGroups(): PlannerRewardGroupView[] {
+    const grouped = new Map<string, {
+      eventId?: string;
+      rewards: PlannerRewardEntry[];
+      eventBenefits: PlannerEventBenefit[];
+    }>();
+
+    for (const reward of this.data.rewards.rewards ?? []) {
+      const id = reward.event_id ? `event:${reward.event_id}` : `reward:${reward.id}`;
+      const group = grouped.get(id) ?? { eventId: reward.event_id, rewards: [], eventBenefits: [] };
+      group.rewards.push(reward);
+      grouped.set(id, group);
+    }
+    const managedCampaignIds = new Set(
+      (this.data.rewards.free_pull_campaigns ?? []).map(campaign => campaign.id),
+    );
+    for (const benefit of this.data.rewards.event_benefits ?? []) {
+      if (benefit.kind === 'free_pulls'
+        && benefit.campaign_id
+        && managedCampaignIds.has(benefit.campaign_id)) continue;
+      const id = `event:${benefit.event_id}`;
+      const group = grouped.get(id) ?? { eventId: benefit.event_id, rewards: [], eventBenefits: [] };
+      group.eventBenefits.push(benefit);
+      grouped.set(id, group);
+    }
+
+    return [...grouped.entries()]
+      .map(([id, group]) => {
+        const event = group.eventId ? this.allEvents.find(item => item.id === group.eventId) : undefined;
+        const dates = [
+          ...group.rewards.map(reward => reward.available_at),
+          ...group.eventBenefits.map(benefit => benefit.available_at),
+        ].map(value => this.optionalDateKey(value))
+          .filter((value): value is string => Boolean(value))
+          .sort();
+        const eventDate = this.optionalDateKey(event?.globalReleaseDate ?? event?.estimatedGlobalDate ?? event?.jpReleaseDate);
+        if (dates.length === 0 && eventDate) dates.push(eventDate);
+        const projectionStart = this.optionalDateKey(this.plan?.projectionStartDate);
+        const usableDates = projectionStart ? dates.filter(date => date >= projectionStart) : dates;
+        const isPast = Boolean(projectionStart && dates.length > 0 && usableDates.length === 0);
+        const applicableRewards = isPast || !projectionStart
+          ? group.rewards
+          : group.rewards.filter(reward => this.isRewardDateUsable(reward.available_at, projectionStart));
+        const applicableBenefits = isPast || !projectionStart
+          ? group.eventBenefits
+          : group.eventBenefits.filter(benefit => this.isRewardDateUsable(benefit.available_at, projectionStart));
+        const benefits = this.buildRewardBenefitViews(applicableRewards, applicableBenefits);
+        const source = this.rewardGroupSource(applicableRewards, applicableBenefits);
+        const title = this.cleanRewardLabel((event ? this.rewardEventDisplayTitle(event) : undefined)
+          ?? group.rewards[0]?.label
+          ?? group.eventBenefits[0]?.label
+          ?? 'Event rewards');
+        return {
+          id,
+          eventId: group.eventId,
+          title,
+          availableAt: isPast ? dates[dates.length - 1] : usableDates[0] ?? dates[0] ?? '',
+          imagePath: event?.imagePath,
+          sourceUrl: source?.url,
+          sourceLabel: source?.label,
+          rewards: applicableRewards,
+          eventBenefits: applicableBenefits,
+          benefits,
+          visibleBenefits: benefits,
+          hiddenBenefitCount: 0,
+          searchText: [
+            title,
+            group.eventId,
+            ...group.rewards.flatMap(reward => [reward.label, reward.currency]),
+            ...group.eventBenefits.flatMap(benefit => [benefit.label, benefit.kind]),
+            ...benefits.map(benefit => benefit.text),
+          ].filter(Boolean).join(' ').toLowerCase(),
+          isPast,
+        } satisfies PlannerRewardGroupView;
+      })
+      .sort((left, right) => this.compareRewardDates(left, right, 1));
+  }
+
+  private rewardEventDisplayTitle(event: CaratPlannerTimelineEvent): string {
+    const title = (event.title?.trim() || 'Event rewards').replace(/["'”](?=[!?.,]+$)/g, '');
+    if (!/\+\s*\d+\s*more\b/i.test(title)) return title;
+    const preferredNames = [
+      event.relatedCharacters,
+      event.relatedSupportCardNames,
+      event.relatedSupportCards,
+    ].find(values => values?.some(name => name.trim())) ?? [];
+    const names = [...new Set(preferredNames.map(name => name.trim()).filter(Boolean))];
+    if (names.length > 0) return names.join(', ');
+    return title.replace(/\s*\+\s*\d+\s*more\b/gi, '').trim();
+  }
+
+  private cleanRewardLabel(value: string): string {
+    return value
+      .replace(/(\bVol\.\s*\d+)["'\u201c\u201d\u2018\u2019]+/giu, '$1')
+      .replace(/["'\u201c\u201d\u2018\u2019]+([!?]+)["'\u201c\u201d\u2018\u2019]*$/u, '$1')
+      .replace(/["'\u201c\u201d\u2018\u2019]+$/u, '')
+      .trim();
+  }
+
+  private isRewardDateUsable(value: string, projectionStart: string): boolean {
+    const date = this.optionalDateKey(value);
+    return !date || date >= projectionStart;
+  }
+
+  private rewardGroupSource(
+    rewards: readonly PlannerRewardEntry[],
+    eventBenefits: readonly PlannerEventBenefit[],
+  ): { url: string; label: string } | undefined {
+    const candidates = [
+      ...eventBenefits.filter(benefit => benefit.kind === 'free_pulls'),
+      ...rewards,
+      ...eventBenefits,
+    ];
+    for (const candidate of candidates) {
+      const url = candidate.source_url?.trim();
+      if (!url || !/^https?:\/\//i.test(url)) continue;
+      const isNews = candidate.provenance === 'global_news'
+        || candidate.provenance === 'jp_news'
+        || url.toLowerCase().includes('/news/');
+      return { url, label: isNews ? 'News post' : 'Source' };
+    }
+    return undefined;
+  }
+
+  private buildRewardBenefitViews(
+    rewards: readonly PlannerRewardEntry[],
+    eventBenefits: readonly PlannerEventBenefit[],
+  ): PlannerRewardBenefitView[] {
+    const benefits: PlannerRewardBenefitView[] = eventBenefits.map(benefit => ({
+      id: benefit.id,
+      kind: benefit.kind,
+      label: benefit.label,
+      amount: benefit.amount,
+      text: this.eventBenefitText(benefit),
+      icon: this.rewardBenefitIcon(benefit.kind),
+      iconPath: this.rewardBenefitItemIcon(benefit.kind, benefit.item_id),
+      plannerEffect: benefit.planner_effect,
+    }));
+    const totals = new Map<string, number>();
+    for (const reward of rewards) {
+      if (!Number.isFinite(reward.amount) || Number(reward.amount) <= 0) continue;
+      const kind = matchesJewelCurrency(reward.currency) ? 'carats' : reward.currency;
+      totals.set(kind, (totals.get(kind) ?? 0) + Number(reward.amount));
+    }
+    for (const [kind, amount] of totals) {
+      benefits.push({
+        id: `currency:${kind}`,
+        kind,
+        label: this.rewardCurrencyLabel(kind, amount),
+        amount,
+        text: `${INTEGER_FORMATTER.format(amount)} ${this.rewardCurrencyLabel(kind, amount)}`,
+        icon: this.rewardBenefitIcon(kind),
+        iconPath: this.rewardBenefitItemIcon(kind),
+        plannerEffect: 'ledger',
+      });
+    }
+    if (benefits.length === 0 && rewards.some(reward => !Number.isFinite(reward.amount))) {
+      benefits.push({
+        id: 'reward-details',
+        kind: 'other',
+        label: 'Reward details',
+        amount: null,
+        text: 'Reward details',
+        icon: 'redeem',
+        plannerEffect: 'informational',
+      });
+    }
+    return benefits.sort((left, right) => this.rewardBenefitOrder(left.kind) - this.rewardBenefitOrder(right.kind));
+  }
+
+  private eventBenefitText(benefit: PlannerEventBenefit): string {
+    const amount = Number.isFinite(benefit.amount) ? Math.max(0, Number(benefit.amount)) : null;
+    if (benefit.kind === 'free_pulls' && amount !== null) {
+      if (benefit.confidence === 'schedule_partitioned') {
+        return `${INTEGER_FORMATTER.format(amount)} schedule-derived free ${amount === 1 ? 'pull' : 'pulls'}`;
+      }
+      const predicted = benefit.provenance === 'jp_news'
+        || benefit.confidence === 'schedule_derived';
+      return `${INTEGER_FORMATTER.format(amount)} ${predicted ? 'predicted free' : 'free'} ${amount === 1 ? 'pull' : 'pulls'}`;
+    }
+    if ((benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector') && amount !== null && amount > 1) {
+      return `${benefit.label} ×${INTEGER_FORMATTER.format(amount)}`;
+    }
+    return benefit.label;
+  }
+
+  private rewardCurrencyLabel(kind: string, amount: number): string {
+    if (kind === 'carats') return 'Carats';
+    if (kind === 'uma_ticket') return amount === 1 ? 'Uma ticket' : 'Uma tickets';
+    if (kind === 'support_ticket') return amount === 1 ? 'Support ticket' : 'Support tickets';
+    return amount === 1 ? 'reward' : 'rewards';
+  }
+
+  private rewardBenefitIcon(kind: string): string {
+    if (kind === 'free_pulls') return 'casino';
+    if (kind === 'trainee_selector') return 'person';
+    if (kind === 'support_selector' || kind === 'support_ticket') return 'style';
+    if (kind === 'uma_ticket') return 'confirmation_number';
+    if (kind === 'carats') return 'diamond';
+    return 'redeem';
+  }
+
+  private rewardBenefitItemIcon(kind: string, itemId?: number): string | undefined {
+    const resolvedItemId = Number(itemId ?? PLANNER_CURRENCY_ITEM_IDS[kind]);
+    if (!Number.isInteger(resolvedItemId) || !PREPARED_PLANNER_ITEM_IDS.has(resolvedItemId)) return undefined;
+    return `assets/images/item/item_icon_${resolvedItemId.toString().padStart(5, '0')}.webp`;
+  }
+
+  private rewardBenefitOrder(kind: string): number {
+    if (kind === 'free_pulls') return 0;
+    if (kind === 'trainee_selector' || kind === 'support_selector') return 1;
+    if (kind === 'uma_ticket' || kind === 'support_ticket') return 2;
+    if (kind === 'carats') return 3;
+    return 4;
+  }
+
+  private humanize(value: string): string {
+    return value.replace(/_/g, ' ').replace(/\b\w/g, character => character.toUpperCase());
+  }
+
+  private scenarioOptionLabel(groupId: string, value: string): string {
+    const number = this.scenarioOptionNumber(value);
+    if (groupId === 'team_trials_class' && number > 0) return `Class ${number}`;
+    if (groupId === 'club_rank' && number > 0) {
+      return ['D', 'D+', 'C', 'C+', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS'][number - 1]
+        ?? this.humanize(value);
+    }
+    return this.humanize(value);
+  }
+
+  private scenarioOptionNumber(value: string): number {
+    return Number(value.match(/\d+/)?.[0]) || Number.MAX_SAFE_INTEGER;
+  }
+
+  private scenarioOptionAmountLabel(groupId: string, value: string): string {
+    const rules = this.data.income.rules.filter(rule =>
+      rule.scenario_group === groupId
+      && rule.scenario_option === value
+      && matchesJewelCurrency(rule.currency));
+    const amount = rules.reduce((total, rule) => total + Math.max(0, Number(rule.amount) || 0), 0);
+    if (amount <= 0) return '';
+    const cadence = rules[0]?.cadence;
+    const suffix = cadence === 'daily' ? '/day'
+      : cadence === 'weekly' ? '/wk'
+        : cadence === 'monthly' ? '/mo'
+          : cadence === 'interval' ? '/period'
+            : '';
+    return `+${INTEGER_FORMATTER.format(amount)}${suffix}`;
+  }
+
+  pickupOptions(target: PlannerTarget): readonly PlannerPickupOptionView[] {
+    return this.pickupOptionsByTarget.get(target.id) ?? [];
+  }
+
+  trackByPickupOption(_: number, pickup: PlannerPickupOptionView): number {
+    return pickup.pickup_id;
+  }
+
+  trackByPickupGoal(_: number, goal: PlannerPickupGoalView): number {
+    return goal.pickupId;
+  }
+
+  setPickupDetailsOpen(targetId: string, event: Event): void {
+    const open = (event.currentTarget as HTMLDetailsElement | null)?.open === true;
+    open ? this.expandedPickupTargetIds.add(targetId) : this.expandedPickupTargetIds.delete(targetId);
+  }
+
+  isPickupDetailsOpen(targetId: string): boolean {
+    return this.expandedPickupTargetIds.has(targetId);
+  }
+
+  isPickupGoalSelected(target: PlannerTarget, pickupId: number): boolean {
+    return this.selectedPickupIdsByTarget.get(target.id)?.has(pickupId)
+      ?? this.pickupGoals(target).some(goal => goal.pickupId === pickupId);
+  }
+
+  pickupGoalView(target: PlannerTarget, pickupId: number): PlannerPickupGoalView | undefined {
+    return this.pickupGoalViewsByTarget.get(target.id)?.find(goal => goal.pickupId === pickupId);
+  }
+
+  togglePickupGoal(target: PlannerTarget, pickupId: number): void {
+    const normalizedId = Number(pickupId);
+    if (!Number.isFinite(normalizedId)) return;
+
+    const goals = this.pickupGoals(target);
+    const existingIndex = goals.findIndex(goal => goal.pickupId === normalizedId);
+    const memoryKey = this.pickupGoalMemoryKey(target.id, normalizedId);
+    if (existingIndex >= 0) {
+      this.pickupGoalCopyMemory.set(memoryKey, goals[existingIndex].desiredCopies);
+      target.pickupGoals = goals.filter((_, index) => index !== existingIndex);
+    } else {
+      target.pickupGoals = [...goals, {
+        pickupId: normalizedId,
+        desiredCopies: this.pickupGoalCopyMemory.get(memoryKey) ?? 1,
+      }];
+    }
+    this.syncLegacyPickupGoal(target);
+    this.save();
+  }
+
+  adjustPickupGoalCopies(target: PlannerTarget, pickupId: number, delta: -1 | 1): void {
+    const goals = this.pickupGoals(target);
+    const goal = goals.find(item => item.pickupId === pickupId);
+    if (!goal) return;
+    goal.desiredCopies = Math.max(1, Math.min(20, goal.desiredCopies + delta));
+    target.pickupGoals = goals;
+    this.pickupGoalCopyMemory.set(this.pickupGoalMemoryKey(target.id, pickupId), goal.desiredCopies);
+    this.syncLegacyPickupGoal(target);
+    this.save();
+  }
+
+  formatProbability(value: number, digits = 1): string {
+    if (!Number.isFinite(value)) return '\u2014';
+    const percentage = value * 100;
+    const decimals = percentage > 0 && percentage < 0.1 ? 2 : digits;
+    return `${percentage.toFixed(decimals)}%`;
+  }
+
+  formatCopies(value: number): string {
+    return value.toFixed(value >= 10 ? 1 : 2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+  }
+
+  pickupGoalOddsLabel(goal: PlannerPickupGoalView): string {
+    return goal.probability === undefined ? 'Unavailable' : this.formatProbability(goal.probability);
+  }
+
+  pickupGoalOddsAriaLabel(goal: PlannerPickupGoalView): string {
+    if (goal.probability === undefined) return `Odds unavailable for ${goal.label}`;
+    const copies = goal.desiredCopies === 1 ? 'copy' : 'copies';
+    return `${this.formatProbability(goal.probability)} chance of at least ${goal.desiredCopies} ${copies} of ${goal.label}`;
+  }
+
+  trackByOutcome(_: number, item: PlannerOutcomeSegment): string {
+    return item.tone;
+  }
+
+  outcomeDistributionLabel(odds: PlannerOddsView): string {
+    const exchanges = odds.combined.guaranteedHits > 0
+      ? ` Includes ${odds.combined.guaranteedHits} exchange ${odds.combined.guaranteedHits === 1 ? 'copy' : 'copies'}.`
+      : '';
+    const outcomes = odds.segments
+      .map(segment => `${segment.semanticLabel}, ${segment.rangeLabel}, ${this.formatProbability(segment.probability)}`)
+      .join('; ');
+    return `Selected rate-up outcome distribution at ${odds.combined.pulls} pulls: ${outcomes}.${exchanges}`;
+  }
+
+  topRarityLabel(target: PlannerTarget): string {
+    return this.gachaByTarget.get(target.id)?.banner_kind === 'support' ? 'SSR' : '3\u2605';
+  }
+
+  poolSegmentWidth(rate: number, pool: CaratPullPoolComposition): number {
+    return pool.topRarityRate > 0 ? rate / pool.topRarityRate * 100 : 0;
+  }
+
+  poolDistributionLabel(target: PlannerTarget, pool: CaratPullPoolComposition): string {
+    const rarity = this.topRarityLabel(target);
+    return `${rarity} pool per draw: selected featured ${this.formatProbability(pool.selectedRateUpRate, 2)}, `
+      + `other featured ${this.formatProbability(pool.unselectedFeaturedRate, 2)}, `
+      + `off-banner ${this.formatProbability(pool.offBannerTopRarityRate, 2)}; `
+      + `total ${this.formatProbability(pool.topRarityRate, 2)}.`;
+  }
+
+  freePullsTooltip(target: PlannerTarget): string {
+    const gacha = this.gachaByTarget.get(target.id);
+    const freePulls = Math.max(0, Number(gacha?.free_pulls) || 0);
+    if (!gacha || freePulls === 0) return 'No free-pull campaign is attached to this banner.';
+
+    const confidence = gacha.free_pulls_confidence === 'schedule_partitioned'
+      || gacha.free_pulls_confidence === 'schedule_derived'
+      ? 'Schedule-partitioned across overlapping banners'
+      : gacha.free_pulls_confidence === 'exact'
+        ? 'Exact campaign-to-banner match'
+        : gacha.free_pulls_confidence === 'source_text'
+          ? 'Read directly from the campaign text'
+          : 'Best available campaign match';
+    const provenance = gacha.free_pulls_provenance === 'jp_news'
+      ? 'Japanese news post'
+      : gacha.free_pulls_provenance === 'global_master'
+        ? 'Global master data'
+        : gacha.free_pulls_provenance === 'global_news'
+          ? 'Global news post'
+          : gacha.free_pulls_provenance === 'jp_fallback'
+            ? 'Japanese fallback data'
+            : 'Planner resource data';
+    return `${freePulls} free pulls. ${confidence}. Source: ${provenance}.`;
+  }
+
+  fundingBreakdownTooltip(result: PlannerTargetProjection): string {
+    const parts = [`${result.fundedPulls} of ${result.plannedPulls} planned pulls funded`];
+    if (result.freePullsUsed > 0) parts.push(`${result.freePullsUsed} campaign free pulls`);
+    if (result.ticketPullsUsed > 0) parts.push(`${result.ticketPullsUsed} tickets`);
+    if (result.freeJewelPulls > 0) parts.push(`${result.freeJewelPulls} pulls from free Carats`);
+    if (result.paidJewelPulls > 0) parts.push(`${result.paidJewelPulls} pulls from paid Carats`);
+    if (result.shortfallJewels > 0) parts.push(`${INTEGER_FORMATTER.format(result.shortfallJewels)} Carats short`);
+    parts.push(`${INTEGER_FORMATTER.format(result.balanceAfter.freeJewels)} free Carats after`);
+    if (result.balanceAfter.paidJewels > 0) {
+      parts.push(`${INTEGER_FORMATTER.format(result.balanceAfter.paidJewels)} paid Carats after`);
+    }
+    return parts.join('. ');
+  }
+
+  fundingInlineLabel(target: PlannerTarget, result: PlannerTargetProjection): string {
+    const resourcePulls = result.ticketPullsUsed + result.freeJewelPulls + result.paidJewelPulls;
+    const parts = result.shortfallJewels > 0
+      ? [`${INTEGER_FORMATTER.format(result.shortfallJewels)} Carats short`]
+      : [];
+    parts.push(`${INTEGER_FORMATTER.format(resourcePulls)} from resources`);
+    if (result.freePullsUsed > 0) {
+      const gacha = this.gachaByTarget.get(target.id);
+      const predicted = gacha?.free_pulls_provenance === 'jp_news'
+        || gacha?.free_pulls_confidence === 'schedule_partitioned'
+        || gacha?.free_pulls_confidence === 'schedule_derived';
+      parts.push(`${INTEGER_FORMATTER.format(result.freePullsUsed)} ${predicted ? 'predicted free' : 'free'}`);
+    }
+    return parts.join(' · ');
+  }
+
+  exportPlan(): void {
+    const blob = new Blob([this.persistence.exportPlan()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${this.plan.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'carat-plan'}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async importPlan(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      this.persistence.importJson(await file.text());
+      this.importError = '';
+    } catch (error) {
+      this.importError = error instanceof Error ? error.message : 'Unable to import plan.';
+    } finally {
+      input.value = '';
+      this.cdr.markForCheck();
+    }
+  }
+
+  trackById(_: number, item: { id: string }): string {
+    return item.id;
+  }
+
+  trackByRewardBenefit(_: number, benefit: PlannerRewardBenefitView): string {
+    return benefit.id;
+  }
+
+  private applyResourceDefaults(): boolean {
+    if (this.plan.resourceDefaultsApplied) return false;
+    this.plan.enabledIncomeRuleIds = this.data.income.rules.filter(rule => rule.default_enabled && !rule.scenario_group).map(rule => rule.id);
+    this.syncEnabledRewardEventIds();
+    this.plan.resourceDefaultsApplied = true;
+    this.save();
+    return true;
+  }
+
+  private syncAutomaticRewardSelection(): boolean {
+    if (!this.plan) return false;
+    const disabledRewardIds = new Set(this.plan.disabledRewardIds ?? []);
+    const nextEnabledRewardIds = this.data.rewards.rewards
+      .filter(reward => Number.isFinite(reward.amount) && Number(reward.amount) > 0)
+      .map(reward => reward.id)
+      .filter(rewardId => !disabledRewardIds.has(rewardId))
+      .sort();
+    const current = [...this.plan.enabledRewardIds].sort();
+    const changed = current.length !== nextEnabledRewardIds.length
+      || current.some((rewardId, index) => rewardId !== nextEnabledRewardIds[index]);
+    if (changed) this.plan.enabledRewardIds = nextEnabledRewardIds;
+    return changed;
+  }
+
+  private syncEnabledRewardEventIds(): boolean {
+    if (!this.plan) return false;
+    const enabledRewardIds = new Set(this.plan.enabledRewardIds);
+    const disabledEventIds = new Set(this.plan.disabledEventIds ?? []);
+    const loadedRewardEventIds = new Set(this.data.rewards.rewards
+      .map(reward => reward.event_id)
+      .filter((eventId): eventId is string => Boolean(eventId)));
+    const allBenefitEventIds = new Set((this.data.rewards.event_benefits ?? [])
+      .map(benefit => benefit.event_id)
+      .filter(Boolean));
+    const selectorBenefitEventIds = new Set((this.data.rewards.event_benefits ?? [])
+      .filter(benefit => benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector')
+      .map(benefit => benefit.event_id)
+      .filter(Boolean));
+    allBenefitEventIds.forEach(eventId => loadedRewardEventIds.add(eventId));
+    const nextEventIds = new Set((this.plan.enabledRewardEventIds ?? [])
+      .filter(eventId => !disabledEventIds.has(eventId)
+        && (!loadedRewardEventIds.has(eventId) || selectorBenefitEventIds.has(eventId))));
+    this.data.rewards.rewards
+      .filter(reward =>
+        Boolean(reward.event_id)
+        && Number.isFinite(reward.amount)
+        && Number(reward.amount) > 0
+        && enabledRewardIds.has(reward.id)
+        && !disabledEventIds.has(reward.event_id!)
+      )
+      .forEach(reward => nextEventIds.add(reward.event_id!));
+    const next = [...nextEventIds].sort();
+    const current = [...(this.plan.enabledRewardEventIds ?? [])].sort();
+    if (current.length === next.length && current.every((eventId, index) => eventId === next[index])) {
+      return false;
+    }
+    this.plan.enabledRewardEventIds = next;
+    return true;
+  }
+
+  private matchesSelectedScenario(rule: PlannerIncomeRule): boolean {
+    return !rule.scenario_group
+      || this.plan.scenarioSelections[rule.scenario_group] === rule.scenario_option;
+  }
+
+  private async loadTargetGachas(): Promise<void> {
+    const events = this.plan.targets
+      .filter(target => !(this.plan.disabledEventIds ?? []).includes(target.eventId))
+      .filter(target => target.bannerKind === 'character' || target.bannerKind === 'support')
+      .map(target => {
+        const event = this.allEvents.find(item => item.id === target.eventId);
+        const selectedPickupIds = this.pickupGoals(target).map(goal => goal.pickupId);
+        if (event) {
+          return event.pickupCardIds?.length || selectedPickupIds.length === 0
+            ? event
+            : { ...event, pickupCardIds: selectedPickupIds };
+        }
+        return {
+          id: target.eventId,
+          title: target.title,
+          type: `${target.bannerKind}_banner`,
+          gachaId: target.gachaId,
+          gachaIds: target.gachaIds,
+          globalReleaseDate: target.bannerStart,
+          pickupCardIds: selectedPickupIds,
+        };
+      });
+    await this.resources.loadGachasForEvents(events);
+  }
+
+  private syncActivePlanResources(force = false): void {
+    if (!this.plan || !this.plannerDataReady || this.destroyed) return;
+    if (this.applyResourceDefaults()) return;
+
+    const key = this.planResourceKey();
+    if (!force && key === this.activePlanResourceKey) return;
+    this.activePlanResourceKey = key;
+    const request = ++this.planResourceRequest;
+
+    void this.loadTargetGachas().then(() => {
+      if (this.destroyed || request !== this.planResourceRequest) return;
+      this.recalculate();
+      this.cdr.markForCheck();
+    }).catch(() => {
+      if (!this.destroyed && request === this.planResourceRequest) this.cdr.markForCheck();
+    });
+  }
+
+  private planResourceKey(): string {
+    const targets = this.plan.targets
+      .filter(target => !(this.plan.disabledEventIds ?? []).includes(target.eventId))
+      .filter(target => !this.isTargetBeforePlan(target))
+      .filter(target => target.bannerKind === 'character' || target.bannerKind === 'support')
+      .map(target => ({
+        eventId: target.eventId,
+        gachaId: target.gachaId,
+        gachaIds: [...(target.gachaIds ?? [])].sort((left, right) => left - right),
+        bannerStart: target.bannerStart,
+      }))
+      .sort((left, right) => left.eventId.localeCompare(right.eventId));
+    return JSON.stringify({ planId: this.plan.id, targets });
+  }
+
+  private recalculate(): void {
+    if (!this.plan) return;
+    const gachas = this.resources.loadedGachas;
+    this.gachaByTarget.clear();
+    this.pickupOptionsByTarget.clear();
+    this.pickupGoalViewsByTarget.clear();
+    this.selectedPickupIdsByTarget.clear();
+    for (const target of this.activeTargets) {
+      const ids = new Set([target.gachaId, ...(target.gachaIds ?? [])]);
+      const gacha = gachas.find(item => item.event_id === target.eventId) ?? gachas.find(item => ids.has(item.gacha_id));
+      if (gacha) this.gachaByTarget.set(target.id, gacha);
+    }
+    this.projection = this.calculations.project(this.plan, this.data, gachas);
+    this.projectionByTarget = new Map(this.projection.targets.map(item => [item.targetId, item]));
+    this.oddsByTarget.clear();
+    for (const target of this.activeTargets) {
+      const gacha = this.gachaByTarget.get(target.id);
+      const result = this.projectionByTarget.get(target.id);
+      if (!result) continue;
+
+      const options = this.buildPickupOptions(target, gacha);
+      this.pickupOptionsByTarget.set(target.id, options);
+      const selectedGoals = this.pickupGoals(target);
+      selectedGoals.forEach(goal => {
+        this.pickupGoalCopyMemory.set(this.pickupGoalMemoryKey(target.id, goal.pickupId), goal.desiredCopies);
+      });
+      const goals = selectedGoals.map(goal => {
+        const option = options.find(item => item.pickup_id === goal.pickupId)
+          ?? this.buildPickupOption(target, { pickup_id: goal.pickupId, rate: Number.NaN });
+        const goalOdds = result.odds.goalOdds?.find(item => item.pickupId === goal.pickupId);
+        return {
+          pickupId: goal.pickupId,
+          label: option.label,
+          subLabel: option.subLabel,
+          imagePath: option.imagePath,
+          fallbackImagePath: option.fallbackImagePath,
+          rate: option.rate,
+          desiredCopies: goal.desiredCopies,
+          probability: goalOdds?.probability,
+        } satisfies PlannerPickupGoalView;
+      });
+      this.pickupGoalViewsByTarget.set(target.id, goals);
+      this.selectedPickupIdsByTarget.set(target.id, new Set(goals.map(goal => goal.pickupId)));
+
+      const validSelectedOptions = goals
+        .map(goal => options.find(option => option.pickup_id === goal.pickupId))
+        .filter((option): option is PlannerPickupOptionView => !!option && Number.isFinite(option.rate));
+      const ratesAvailable = goals.length > 0 && validSelectedOptions.length === goals.length;
+      const sparkPulls = gacha?.spark_pulls ?? this.data.core.default_spark_pulls;
+      const allRateUpRates = options
+        .map(option => option.rate)
+        .filter(rate => Number.isFinite(rate));
+      const topRarityRate = gacha?.rarity_rates?.find(rate => rate.rarity === 3)?.rate;
+      const combined = this.probabilities.calculate({
+        pulls: result.fundedPulls,
+        rateUpRates: validSelectedOptions.map(option => option.rate),
+        allRateUpRates: allRateUpRates.length === options.length ? allRateUpRates : undefined,
+        topRarityRate,
+        sparkPulls,
+        sparkExchangeable: validSelectedOptions.some(option => option.exchangeable !== false),
+      });
+      this.oddsByTarget.set(target.id, {
+        goals,
+        combined,
+        allGoalsProbability: ratesAvailable && result.odds.jointProbabilityExact
+          ? result.odds.jointProbability
+          : undefined,
+        allGoalsStatus: this.allGoalsStatus(result, goals, ratesAvailable),
+        ratesAvailable,
+        ratesInferred: gacha?.rates_confidence === 'inferred_standard',
+        segments: this.outcomeSegments(combined),
+      });
+    }
+  }
+
+  private pickupGoals(target: PlannerTarget): PlannerPickupGoal[] {
+    if (target.pickupGoals) {
+      return target.pickupGoals.map(goal => ({ ...goal }));
+    }
+    return target.pickupId === undefined
+      ? []
+      : [{ pickupId: target.pickupId, desiredCopies: target.desiredCopies }];
+  }
+
+  private syncLegacyPickupGoal(target: PlannerTarget): void {
+    const firstGoal = target.pickupGoals?.[0];
+    target.pickupId = firstGoal?.pickupId;
+    target.desiredCopies = firstGoal?.desiredCopies ?? 1;
+  }
+
+  private pickupGoalMemoryKey(targetId: string, pickupId: number): string {
+    return `${targetId}:${pickupId}`;
+  }
+
+  private buildPickupOptions(target: PlannerTarget, gacha?: PlannerGachaEntry): PlannerPickupOptionView[] {
+    const protectedPickups = gacha?.pickups ?? [];
+    const event = this.allEvents.find(item => item.id === target.eventId);
+    const publicFallbacks = protectedPickups.length === 0
+      ? (event?.pickupCardIds ?? []).map(pickupId => ({ pickup_id: pickupId, rate: Number.NaN }))
+      : [];
+    const sources: PlannerPickupRate[] = [...protectedPickups, ...publicFallbacks];
+    const selectedIds = this.pickupGoals(target).map(goal => goal.pickupId);
+    for (const pickupId of selectedIds) {
+      if (!sources.some(item => item.pickup_id === pickupId)) {
+        sources.push({ pickup_id: pickupId, rate: Number.NaN });
+      }
+    }
+    const seen = new Set<number>();
+    return sources
+      .filter(pickup => {
+        if (!Number.isFinite(pickup.pickup_id) || seen.has(pickup.pickup_id)) return false;
+        seen.add(pickup.pickup_id);
+        return true;
+      })
+      .map(pickup => this.buildPickupOption(target, pickup));
+  }
+
+  private buildPickupOption(target: PlannerTarget, pickup: PlannerPickupRate): PlannerPickupOptionView {
+    const event = this.allEvents.find(item => item.id === target.eventId);
+    const pickupIndex = event?.pickupCardIds?.indexOf(pickup.pickup_id) ?? -1;
+    const relatedName = pickupIndex >= 0
+      ? target.bannerKind === 'support'
+        ? event?.relatedSupportCards?.[pickupIndex]
+        : event?.relatedCharacters?.[pickupIndex]
+      : undefined;
+    const supportTitle = target.bannerKind === 'support' && pickupIndex >= 0
+      ? event?.relatedSupportCardNames?.[pickupIndex]
+      : undefined;
+    const resourceLabel = pickup.label?.trim();
+    const displayNameHint = relatedName && !this.isGenericPickupLabel(relatedName)
+      ? relatedName
+      : resourceLabel && !this.isGenericPickupLabel(resourceLabel)
+        ? resourceLabel
+        : undefined;
+    const avatar = this.avatars.getPickupAvatarByKind(
+      target.bannerKind === 'support' ? 'support' : 'character',
+      pickup.pickup_id,
+      displayNameHint,
+    );
+    const resolvedName = avatar?.displayName
+      ?? displayNameHint
+      ?? `${target.bannerKind === 'support' ? 'Support' : 'Character'} ${pickup.pickup_id}`;
+    const label = supportTitle
+      && !this.isGenericPickupLabel(supportTitle)
+      && supportTitle.toLowerCase() !== resolvedName.toLowerCase()
+      ? `${resolvedName} — ${supportTitle}`
+      : resolvedName;
+    return {
+      ...pickup,
+      label,
+      subLabel: avatar?.subLabel,
+      imagePath: avatar?.imageUrl,
+      fallbackImagePath: avatar?.fallbackImageUrl,
+    };
+  }
+
+  onPickupImageError(event: Event, fallbackImagePath?: string): void {
+    const image = event.target as HTMLImageElement | null;
+    if (!image) return;
+
+    if (fallbackImagePath && image.dataset['fallbackApplied'] !== 'true') {
+      image.dataset['fallbackApplied'] = 'true';
+      image.src = fallbackImagePath;
+      return;
+    }
+
+    image.hidden = true;
+    image.parentElement?.classList.add('is-missing');
+  }
+
+  private isGenericPickupLabel(label: string): boolean {
+    return /^(?:umamusume|character|support(?: card)?)\s+\d+$/i.test(label);
+  }
+
+  private allGoalsStatus(
+    result: PlannerTargetProjection,
+    goals: readonly PlannerPickupGoalView[],
+    ratesAvailable: boolean,
+  ): string {
+    if (goals.length === 0) return 'Choose at least one pickup';
+    if (!ratesAvailable) return 'Published rate unavailable';
+    if (!result.odds.jointProbabilityExact) return 'Goal combination is too large to calculate exactly';
+    const sparks = result.odds.sparkCopiesAvailable ?? 0;
+    return sparks > 0
+      ? `${sparks} shared exchange ${sparks === 1 ? 'copy' : 'copies'} included`
+      : 'Exact joint chance';
+  }
+
+  private outcomeSegments(result: CaratPullProbabilityResult): PlannerOutcomeSegment[] {
+    if (result.pulls === 0 || result.combinedRateUpRate <= 0) {
+      return [{
+        tone: 'neutral',
+        semanticLabel: result.guaranteedHits > 0 ? 'Exchange copies only' : 'No chance configured',
+        rangeLabel: this.copyRangeLabel(result.guaranteedHits, result.guaranteedHits),
+        probability: 1,
+        width: 100,
+      }];
+    }
+
+    const lowerQuartile = result.buckets.find(bucket => bucket.cumulativeProbability >= 0.25)?.randomHits ?? 0;
+    const upperQuartile = result.buckets.find(bucket => bucket.cumulativeProbability >= 0.75)?.randomHits
+      ?? result.buckets.at(-1)?.randomHits
+      ?? 0;
+    const groups = new Map<PlannerOutcomeTone, {
+      semanticLabel: string;
+      probability: number;
+      minHits: number;
+      maxHits: number;
+    }>();
+
+    for (const bucket of result.buckets) {
+      if (bucket.probability <= 0) continue;
+      const tone: PlannerOutcomeTone = bucket.randomHits === 0
+        ? 'miss'
+        : bucket.randomHits < lowerQuartile
+          ? 'below'
+          : bucket.randomHits <= upperQuartile
+            ? 'expected'
+            : 'lucky';
+      const semanticLabel = tone === 'miss'
+        ? result.guaranteedHits > 0 ? 'Exchange only' : 'No rate-up'
+        : tone === 'below'
+          ? 'Below expected'
+          : tone === 'expected'
+            ? 'Expected range'
+            : 'Above expected';
+      const existing = groups.get(tone);
+      if (existing) {
+        existing.probability += bucket.probability;
+        existing.minHits = Math.min(existing.minHits, bucket.hits);
+        existing.maxHits = Math.max(existing.maxHits, bucket.hits);
+      } else {
+        groups.set(tone, {
+          semanticLabel,
+          probability: bucket.probability,
+          minHits: bucket.hits,
+          maxHits: bucket.hits,
+        });
+      }
+    }
+
+    const orderedTones: readonly PlannerOutcomeTone[] = ['miss', 'below', 'expected', 'lucky'];
+    return orderedTones.flatMap(tone => {
+      const group = groups.get(tone);
+      if (!group || group.probability < 1e-12) return [];
+      return [{
+        tone,
+        semanticLabel: group.semanticLabel,
+        rangeLabel: tone === 'lucky'
+          ? `${group.minHits} or more ${group.minHits === 1 ? 'copy' : 'copies'}`
+          : this.copyRangeLabel(group.minHits, group.maxHits),
+        probability: group.probability,
+        width: Math.max(0, group.probability * 100),
+      }];
+    });
+  }
+
+  private copyRangeLabel(minHits: number, maxHits: number): string {
+    if (minHits === maxHits) return `${minHits} ${minHits === 1 ? 'copy' : 'copies'}`;
+    return `${minHits}\u2013${maxHits} copies`;
+  }
+
+  private nextSelectableEventIndex(start: number, direction: 1 | -1): number {
+    if (!this.filteredEvents.length) return 0;
+    let index = start;
+    for (let attempt = 0; attempt < this.filteredEvents.length; attempt++) {
+      index = (index + direction + this.filteredEvents.length) % this.filteredEvents.length;
+      if (!this.isEventAdded(this.filteredEvents[index].id)) return index;
+    }
+    return Math.max(0, Math.min(start, this.filteredEvents.length - 1));
+  }
+
+  private filterEvents(): void {
+    const query = this.eventSearch.trim();
+    const referenceDate = [new Date().toISOString().slice(0, 10), this.plan?.projectionStartDate ?? '']
+      .sort()
+      .at(-1) ?? new Date().toISOString().slice(0, 10);
+    this.filteredEvents = this.allEvents
+      .filter(event => {
+        const kind = this.bannerKind(event.type);
+        return kind === 'character' || kind === 'support';
+      })
+      .filter(event => !query || this.eventMatchesPickerSearch(event, query))
+      .sort((a, b) => {
+        const aTitle = a.title.toLowerCase();
+        const bTitle = b.title.toLowerCase();
+        if (query) {
+          const aMatchRank = this.eventPickerMatchRank(a, query);
+          const bMatchRank = this.eventPickerMatchRank(b, query);
+          if (aMatchRank !== bMatchRank) return aMatchRank - bMatchRank;
+        }
+
+        const aDate = this.dateKey(a.globalReleaseDate ?? a.estimatedGlobalDate ?? a.jpReleaseDate);
+        const bDate = this.dateKey(b.globalReleaseDate ?? b.estimatedGlobalDate ?? b.jpReleaseDate);
+        const aUpcoming = aDate >= referenceDate;
+        const bUpcoming = bDate >= referenceDate;
+        if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+        const dateOrder = aUpcoming ? aDate.localeCompare(bDate) : bDate.localeCompare(aDate);
+        return dateOrder || aTitle.localeCompare(bTitle);
+      });
+    this.cdr?.markForCheck();
+  }
+
+  private eventMatchesPickerSearch(event: CaratPlannerTimelineEvent, query: string): boolean {
+    const searchKey = this.normalizeSearchValue(query);
+    if (!searchKey) return true;
+    const values = this.eventPickerSearchValues(event).map(value => this.normalizeSearchValue(value));
+    const tokens = query
+      .split(/[^a-z0-9]+/i)
+      .map(value => this.normalizeSearchValue(value))
+      .filter(Boolean);
+    return values.some(value => value.includes(searchKey))
+      || tokens.every(token => values.some(value => value.includes(token)));
+  }
+
+  private eventPickerMatchRank(event: CaratPlannerTimelineEvent, query: string): number {
+    const searchKey = this.normalizeSearchValue(query);
+    const title = this.normalizeSearchValue(event.title);
+    const participantValues = this.eventPickerSearchValues(event)
+      .slice(1)
+      .map(value => this.normalizeSearchValue(value));
+    if (title === searchKey) return 0;
+    if (participantValues.some(value => value === searchKey)) return 1;
+    if (title.startsWith(searchKey)) return 2;
+    if (participantValues.some(value => value.startsWith(searchKey))) return 3;
+    return 4;
+  }
+
+  private eventPickerSearchValues(event: CaratPlannerTimelineEvent): string[] {
+    return [
+      event.title,
+      ...(event.relatedCharacters ?? []),
+      ...(event.relatedSupportCards ?? []),
+      ...(event.tags ?? []),
+    ].filter(value => value.length > 0);
+  }
+
+  private normalizeSearchValue(value: string): string {
+    return value
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '');
+  }
+
+  private tryAddRequestedEvent(): void {
+    const eventId = this.pendingRequestedEventId;
+    if (!eventId || !this.plan || eventId === this.handledRequestedEventId) return;
+    const event = this.allEvents.find(item => item.id === eventId);
+    if (!event) return;
+    if (event.plannerRewardAvailable && !this.plannerDataReady) return;
+    this.handledRequestedEventId = eventId;
+    this.addEvent(event);
+  }
+
+  private bannerKind(type?: string): PlannerBannerKind {
+    if (type?.includes('character')) return 'character';
+    if (type?.includes('support')) return 'support';
+    if (type?.includes('paid')) return 'paid';
+    return 'other';
+  }
+
+  private dateKey(value?: Date | string): string {
+    if (!value) return new Date().toISOString().slice(0, 10);
+    const date = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(date.getTime()) ? new Date().toISOString().slice(0, 10) : date.toISOString().slice(0, 10);
+  }
+
+  private optionalDateKey(value?: Date | string): string | null {
+    if (!value) return null;
+    const date = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+  }
+
+  private id(prefix: string): string {
+    return `${prefix}-${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
+  }
+}

@@ -588,9 +588,10 @@ export class TimelinePredictionService {
   }
 
   private formatShortDate(date: Date): string {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(undefined, {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: 'UTC'
     });
   }
 

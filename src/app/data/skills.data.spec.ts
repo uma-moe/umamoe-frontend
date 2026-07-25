@@ -1,5 +1,5 @@
 import { getSkillName } from '../pages/profile/profile-helpers';
-import { getSkillBySkillId, replaceSkillsData } from './skills.data';
+import { getAllSkills, getSkillBySkillId, replaceSkillsData } from './skills.data';
 
 describe('skill master data', () => {
   afterEach(() => {
@@ -27,6 +27,22 @@ describe('skill master data', () => {
     expect(getSkillBySkillId(100381)?.name).toBe('Updated Curren Skill');
     expect(getSkillBySkillId(100381)?.icon).toBe(bundledIcon);
     expect(getSkillBySkillId(100411)?.name).toBe('Genius x Bakushin = Victory');
+  });
+
+  it('uses resource entries without dropping bundled-only skills', () => {
+    const bundledCount = getAllSkills().length;
+
+    replaceSkillsData([{
+      skill_id: 100381,
+      name: 'Resource Curren Skill',
+      rarity: 5,
+      icon: 'utx_ico_skill_20013.webp',
+    }]);
+
+    expect(getSkillName(1003812)).toBe('Resource Curren Skill');
+    expect(getSkillName(2006511)).toBe('Turbo Sprint');
+    expect(getSkillBySkillId(200651)).toBeDefined();
+    expect(getAllSkills().length).toBeGreaterThanOrEqual(bundledCount);
   });
 
   it('resolves inherited unique skills past empty incremental placeholders', () => {
