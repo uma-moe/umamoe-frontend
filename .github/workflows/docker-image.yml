@@ -409,10 +409,7 @@ jobs:
             "${{ runner.temp }}/asset-site/data/precomputed-tierlist.json" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_ASSETS_DIR }}/data/"
           for relative_dir in \
-            images/character/banner \
-            images/support/banner \
-            images/paid/banner \
-            images/story \
+            images \
             timeline-images; do
             source_dir="${{ runner.temp }}/asset-site/${relative_dir}"
             if [[ -d "$source_dir" ]]; then
@@ -426,7 +423,7 @@ jobs:
           done
 
   deploy_production:
-    if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta'
+    if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta' && (github.ref_name == 'main' || github.ref_name == 'master')
     needs:
       - build
       - deploy_beta
@@ -720,10 +717,7 @@ jobs:
             "${{ runner.temp }}/asset-site/data/precomputed-tierlist.json" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.PROD_REMOTE_ASSETS_DIR }}/data/"
           for relative_dir in \
-            images/character/banner \
-            images/support/banner \
-            images/paid/banner \
-            images/story \
+            images \
             timeline-images; do
             source_dir="${{ runner.temp }}/asset-site/${relative_dir}"
             if [[ -d "$source_dir" ]]; then
