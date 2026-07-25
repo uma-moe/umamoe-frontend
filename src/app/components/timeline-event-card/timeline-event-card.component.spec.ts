@@ -236,6 +236,6 @@ describe('TimelineEventCardComponent', () => {
       relatedSupportCards: ['Special Week']
     });
 
-    expect(component.view?.avatars[0].subLabel).toBe('Guts Support');
+    expect(component.view?.avatars[0].subLabel).toBe('SSR · Guts Support');
   });
 });

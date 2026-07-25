@@ -4,7 +4,7 @@ export type PlannerBannerKind = 'character' | 'support' | 'paid' | 'other';
 
 export type PlannerIncomeCadence = 'once' | 'daily' | 'weekly' | 'monthly' | 'interval';
 
-export type PlannerDataProvenance = 'global_master' | 'global_news' | 'jp_news' | 'jp_fallback' | 'configured';
+export type PlannerDataProvenance = 'global_master' | 'jp_master' | 'global_news' | 'jp_news' | 'jp_fallback' | 'configured';
 
 export type PlannerRateProvenance = PlannerDataProvenance | 'standard_inference';
 
@@ -85,6 +85,19 @@ export interface PlannerRewardResource {
   rewards: PlannerRewardEntry[];
   event_benefits?: PlannerEventBenefit[];
   free_pull_campaigns?: PlannerFreePullCampaign[];
+  competitive_variants?: PlannerCompetitiveRewardVariant[];
+}
+
+export interface PlannerCompetitiveRewardVariant {
+  id: string;
+  competition: string;
+  event_id: string;
+  master_event_id: number;
+  label: string;
+  source_items: PlannerSourceItem[];
+  provenance?: PlannerDataProvenance;
+  confidence?: string;
+  default_enabled?: boolean;
 }
 
 export type PlannerEventBenefitKind = 'free_pulls' | 'trainee_selector' | 'support_selector' | string;
@@ -156,6 +169,8 @@ export interface PlannerGachaEntry {
   free_pulls?: number;
   ticket_currency?: Extract<PlannerCurrency, 'uma_ticket' | 'support_ticket'>;
   pickups?: PlannerPickupRate[];
+  /** Every explicitly featured pickup, including lower-rarity SR/R support cards. */
+  featured_pickups?: PlannerPickupRate[];
   /** Exact per-draw rarity totals from the game master, expressed as fractions. */
   rarity_rates?: PlannerRarityRate[];
   provenance?: PlannerDataProvenance;

@@ -54,7 +54,8 @@
           />
           <span>
             <strong>{{ pickup.avatar.displayName }}</strong>
-            <small>{{ pickup.rateLabel || (ratesLoading ? 'Loading rate…' : 'Rate unavailable') }}</small>
+            <small>{{ pickup.avatar.subLabel }}</small>
+            <em>{{ pickup.rateLabel || (ratesLoading ? 'Loading rate…' : 'Rate unavailable') }}</em>
           </span>
         </a>
       </div>
@@ -62,7 +63,7 @@
       <p class="rate-note is-unavailable" *ngIf="ratesUnavailable">Published rates are not available for this banner yet.</p>
     </section>
 
-    <section class="detail-section reward-section" *ngIf="displayedRewards.length">
+    <section class="detail-section reward-section" *ngIf="displayedRewards.length || rewardSummary?.variable">
       <div class="section-heading">
         <div>
           <mat-icon aria-hidden="true">redeem</mat-icon>
@@ -70,10 +71,42 @@
         </div>
         <span>Available with this event</span>
       </div>
-      <div class="reward-list">
-        <div *ngFor="let reward of displayedRewards; trackBy: trackReward" [class.is-free-pulls]="reward.kind === 'free_pulls'">
-          <img [src]="rewardIconPath(reward)" [alt]="reward.label" width="22" height="22" (error)="onImageError($event)" />
-          <strong>{{ reward.kind === 'free_pulls' ? (reward.amount + ' free pulls') : reward.label }}</strong>
+      <div class="reward-outcomes" *ngIf="rewardSummary?.variableOutcomes?.length">
+        <div class="reward-outcomes-heading">
+          <strong>{{ rewardSummary?.outcomeHeading }}</strong>
+          <small>{{ rewardSummary?.variableOutcomeCount }} {{ rewardSummary?.mode === 'placement' ? 'placements' : 'milestones' }}</small>
+        </div>
+        <p class="reward-outcomes-description">{{ rewardSummary?.outcomeDescription }}</p>
+        <div class="reward-outcome-list">
+          <div *ngFor="let outcome of rewardSummary?.variableOutcomes; trackBy: trackRewardOutcome">
+            <strong>{{ rewardOutcomeLabel(outcome.label) }}</strong>
+            <span class="reward-outcome-items">
+              <span
+                class="reward-outcome-item"
+                *ngFor="let item of outcome.items; trackBy: trackRewardOutcomeItem"
+                [attr.title]="item.label"
+              >
+                <img *ngIf="item.iconPath; else materialOutcomeIcon" [src]="item.iconPath" alt="" width="16" height="16" loading="lazy" decoding="async" />
+                <ng-template #materialOutcomeIcon><mat-icon aria-hidden="true">{{ item.icon }}</mat-icon></ng-template>
+                <b>{{ item.countLabel }}</b>
+              </span>
+            </span>
+            <small class="reward-outcome-description" *ngIf="outcome.description">{{ outcome.description }}</small>
+            <small class="reward-outcome-empty" *ngIf="!outcome.items.length && !outcome.description">Outcome recorded; item totals are not available.</small>
+          </div>
+        </div>
+      </div>
+      <p class="reward-outcome-note" *ngIf="rewardSummary?.variable && !rewardSummary?.variableOutcomes?.length">
+        Reward tiers exist for this event, but itemized outcomes are not available in the loaded resource.
+      </p>      <div class="reward-list">
+        <div
+          *ngFor="let reward of displayedRewards; trackBy: trackReward"
+          [class.is-free-pulls]="reward.kind === 'free_pulls'"
+          [attr.aria-label]="reward.label"
+          [attr.title]="reward.label"
+        >
+          <img [src]="rewardIconPath(reward)" alt="" width="22" height="22" (error)="onImageError($event)" />
+          <strong>{{ reward.kind === 'free_pulls' ? (reward.amount + '×') : reward.countLabel }}</strong>
         </div>
       </div>
     </section>
@@ -97,15 +130,10 @@
       </dl>
     </section>
 
-    <details class="additional-event-information" *ngIf="showAdditionalEventInformation">
-      <summary>More event information</summary>
-      <div class="details-description" [innerHTML]="event.description"></div>
-    </details>
-
     <section
       class="detail-section details-description"
       [class.is-highlighted]="highlightEventInformation"
-      *ngIf="event.description && !descriptionIsRepresentedByFacts"
+      *ngIf="event.description"
     >
       <div class="section-heading" *ngIf="highlightEventInformation">
         <div>

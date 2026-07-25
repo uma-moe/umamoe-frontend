@@ -10,7 +10,7 @@ import { Character } from '../../models/character.model';
 import { CHARACTERS } from '../../data/character.data';
 import { FactorService } from '../../services/factor.service';
 import { AffinityService, PlannerRaceWins, PlannerSlotPosition, TreeSlots } from '../../services/affinity.service';
-import { getCharacterName, getStarDisplay } from '../../pages/profile/profile-helpers';
+import { getCharacterDisplayName, getStarDisplay } from '../../utils/character-display.util';
 import { Subscription } from 'rxjs';
 
 interface ResolvedSpark {
@@ -145,10 +145,10 @@ export class VeteranDisplayComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   private resolveName(vet: VeteranMember): string {
-    if (vet.card_id) return getCharacterName(vet.card_id);
+    if (vet.card_id) return getCharacterDisplayName(vet.card_id);
     if (vet.trained_chara_id) {
       const c = CHARACTERS.find(ch => Math.floor(ch.id / 100) === vet.trained_chara_id);
-      return c ? getCharacterName(c.id) : `Uma #${vet.trained_chara_id}`;
+      return c ? getCharacterDisplayName(c.id) : `Uma #${vet.trained_chara_id}`;
     }
     return 'Unknown';
   }
@@ -234,7 +234,7 @@ export class VeteranDisplayComponent implements OnChanges, OnInit, OnDestroy {
       });
 
       parents.push({
-        name: getCharacterName(sc.card_id),
+        name: getCharacterDisplayName(sc.card_id),
         position: posLabels[sc.position_id] || `P${sc.position_id}`,
         image: sc.card_id ? `assets/images/character_stand/chara_stand_${sc.card_id}.webp` : '',
         charaId: sc.card_id ? Math.floor(sc.card_id / 100) : null,

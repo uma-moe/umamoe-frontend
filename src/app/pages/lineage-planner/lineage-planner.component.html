@@ -8,6 +8,12 @@
         <p>Optimize your inheritance tree and find the best parent pairings.</p>
       </div>
       <div class="header-actions">
+        <button *ngIf="getOptimalRaces().length" mat-stroked-button class="optimal-races-btn"
+                (click)="openOptimalRaces()"
+                matTooltip="G1 races that overlap P1/P2 and maximize future affinity">
+          <mat-icon>military_tech</mat-icon>
+          Optimal Races
+        </button>
         <button mat-stroked-button class="saves-btn" (click)="openSavesDialog()"
                 matTooltip="Save, load, share or import a planner tree">
           <mat-icon>bookmark</mat-icon>
@@ -44,10 +50,17 @@
           <div class="fork-stem"></div>
           <div class="fork-bar">
             <div class="fork-line"></div>
-            <div class="fork-badge" *ngIf="affinityResult && sharedAffinity"
-              matTooltip="Shared: aff(P1,P2) {{ affinityResult.legacy }}">
-              <mat-icon>favorite</mat-icon>
-              <span class="cb-legacy">{{ sharedAffinity }}</span>
+            <div class="fork-badge" *ngIf="affinityResult && (sharedAffinity || crossParentRaceAffinity)"
+              [matTooltip]="getCrossParentAffinityTooltip()">
+              <ng-container *ngIf="sharedAffinity">
+                <mat-icon>favorite</mat-icon>
+                <span class="cb-legacy">{{ sharedAffinity }}</span>
+              </ng-container>
+              <span class="cb-sep" *ngIf="sharedAffinity && crossParentRaceAffinity">+</span>
+              <ng-container *ngIf="crossParentRaceAffinity">
+                <mat-icon class="fork-race-icon">emoji_events</mat-icon>
+                <span class="cb-race">{{ crossParentRaceAffinity }}</span>
+              </ng-container>
             </div>
             <div class="fork-line"></div>
           </div>
@@ -484,7 +497,8 @@
           <div class="n-meta">
             <div class="n-name-row">
               <span class="n-name">{{ getCharacterName(node) }}</span>
-              <span class="n-aff-badge" *ngIf="node.layer === 0 && affinityTotal != null">
+              <span class="n-aff-badge" *ngIf="node.layer === 0 && affinityTotal != null"
+                    [matTooltip]="getTotalAffinityTooltip()">
                 <span class="aff-symbol">{{ getAffinitySymbol(affinityTotal) }}</span>
                 <span class="aff-val">{{ affinityTotal }}</span>
               </span>

@@ -125,6 +125,20 @@ $col-parent: 2 * $col-gp + $gap-tree;
       background: rgba(229, 115, 115, 0.08) !important;
     }
   }
+
+  .optimal-races-btn {
+    color: #ffca28 !important;
+    border-color: rgba(255, 202, 40, 0.32) !important;
+    background: rgba(255, 202, 40, 0.07) !important;
+    font-size: var(--font-sm) !important;
+
+    mat-icon { @include icon-scale(16px); }
+
+    &:hover {
+      border-color: rgba(255, 202, 40, 0.55) !important;
+      background: rgba(255, 202, 40, 0.14) !important;
+    }
+  }
 }
 
 .planner-scroll {
@@ -1031,6 +1045,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
     background: var(--surface-3);
     border-color: var(--border-secondary);
   }
+
 }
 
 :host-context(.light-theme) {
@@ -2526,6 +2541,10 @@ $col-parent: 2 * $col-gp + $gap-tree;
     @include icon-scale(14px);
     color: #e91e63;
   }
+
+  mat-icon.fork-race-icon {
+    color: #ffca28;
+  }
 }
 
 .fork-drops {
@@ -2584,6 +2603,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
 
 .cb-player { color: #e91e63; font-weight: 700; font-family: var(--font-mono); }
 .cb-legacy { color: #81c784; font-weight: 700; font-family: var(--font-mono); }
+.cb-race   { color: #ffca28; font-weight: 700; font-family: var(--font-mono); }
 .cb-breed  { color: #64b5f6; font-weight: 700; font-family: var(--font-mono); }
 .cb-sep    { color: var(--text-disabled); }
 .cb-lbl    { font-size: 0.6rem; font-weight: 400; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.03em; }

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, OnDestroy, SimpleChanges, ViewChild, ElementRef } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, Output, EventEmitter, OnInit, OnChanges, OnDestroy, SimpleChanges, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,6 +7,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { RaceSelectDialogComponent, RaceSelectDialogData } from './race-select-dialog.component';
 import { MasterDataService } from '../../services/master-data.service';
 import { Subscription } from 'rxjs';
+import { getRaceThumbnailUrl } from '../../utils/race-image.util';
 
 export interface ScheduleEntry {
   raceName: string;
@@ -28,6 +29,15 @@ export interface RaceEntry {
   short_name: string;
   schedule: { program_id: number; month: number; half: number; race_permission: number; program_group: number }[];
   win_saddles: { saddle_id: number; win_saddle_type: number; required_race_instance_ids: number[] }[];
+}
+
+export interface OptimalRaceDisplay {
+  saddleId: number;
+  raceInstanceId: number;
+  name: string;
+  overlapsP1: boolean;
+  overlapsP2: boolean;
+  affinityGain: number;
 }
 
 /** Map from turn string "MM_H" to { month, half } */
@@ -82,11 +92,14 @@ function getYearsForPermission(perm: number): ('junior' | 'classic' | 'senior')[
   standalone: true,
   imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule, MatDialogModule],
   templateUrl: './race-scheduler.component.html',
-  styleUrl: './race-scheduler.component.scss'
+  styleUrl: './race-scheduler.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
   @Input() selectable = true;
   @Input() showSearch = false;
+  @Input() showLegend = true;
+  @Input() optimalRaceRecommendations: readonly OptimalRaceDisplay[] = [];
   private _winSaddleIds: number[] = [];
   private _runRaceIds: number[] = [];
   @Input()
@@ -121,10 +134,12 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
   cellSelection = new Map<string, number>();
 
   private saddleToRaceMap = new Map<number, number[]>();
+  private raceToSingleSaddleMap = new Map<number, number[]>();
   wonRaceIds = new Set<number>();
   private wonCellLookup = new Map<string, RaceEntry[]>();
   private ranCellLookup = new Map<string, { race: RaceEntry; position: number }[]>();
   private displayWonCellLookup = new Map<string, RaceEntry[]>();
+  private optimalCellLookup = new Map<string, { race: RaceEntry; recommendation: OptimalRaceDisplay }[]>();
   /** Map race_instance_id → RaceEntry for quick lookup */
   private raceMap = new Map<number, RaceEntry>();
 
@@ -141,7 +156,11 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
   private ranCount = 0;
   private raceDataSub?: Subscription;
 
-  constructor(private dialog: MatDialog, private masterData: MasterDataService) {}
+  constructor(
+    private dialog: MatDialog,
+    private masterData: MasterDataService,
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   private static normalizeNumberArray(value: unknown): number[] {
     if (!Array.isArray(value)) return [];
@@ -151,7 +170,7 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.masterData.init();
+    this.masterData.initSupplementalResources();
     this.raceDataSub = this.masterData.raceSaddleData$.subscribe(data => this.initializeRaceData(data));
   }
 
@@ -164,6 +183,7 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
     this.grid = {};
     this.cellSelection.clear();
     this.saddleToRaceMap.clear();
+    this.raceToSingleSaddleMap.clear();
     this.wonRaceIds.clear();
     this.wonCellLookup.clear();
     this.ranCellLookup.clear();
@@ -186,12 +206,14 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
     this.updateWonRaces();
     this.updateRunRaces();
     this.rebuildDisplayCellLookups();
+    this.updateOptimalRaces();
     if (this.selectable) {
       this.initSelectionFromWinSaddleIds();
       if (this.cellSelection.size > 0) {
         this.selectionChanged.emit([...this.selectedRaceIds]);
       }
     }
+    this.cdr.markForCheck();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -202,6 +224,9 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
     if (changes['runRaceIds'] && !changes['runRaceIds'].firstChange) {
       this.updateRunRaces();
       this.rebuildDisplayCellLookups();
+    }
+    if (changes['optimalRaceRecommendations'] && !changes['optimalRaceRecommendations'].firstChange) {
+      this.updateOptimalRaces();
     }
   }
 
@@ -214,6 +239,14 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
         for (const rid of ws.required_race_instance_ids) {
           const arr = this.saddleToRaceMap.get(ws.saddle_id)!;
           if (!arr.includes(rid)) arr.push(rid);
+        }
+        if (
+          ws.required_race_instance_ids.length === 1
+          && ws.required_race_instance_ids[0] === race.race_instance_id
+        ) {
+          const saddles = this.raceToSingleSaddleMap.get(race.race_instance_id) ?? [];
+          if (!saddles.includes(ws.saddle_id)) saddles.push(ws.saddle_id);
+          this.raceToSingleSaddleMap.set(race.race_instance_id, saddles);
         }
       }
     }
@@ -257,8 +290,7 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
 
     for (const saddleId of this.winSaddleIds ?? []) {
       for (const race of this.getRacesForSaddle(saddleId)) {
-        const slot = this.getChronologicalRaceSlots(race)
-          .find(candidate => !usedSlots.has(this.cellKey(candidate.year, candidate.month, candidate.half)));
+        const slot = this.getNextAvailableRaceSlot(race, usedSlots);
         if (!slot) continue;
 
         const key = this.cellKey(slot.year, slot.month, slot.half);
@@ -291,6 +323,15 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
     return [...slots.values()].sort((left, right) => this.compareSlots(left, right));
   }
 
+  private getNextAvailableRaceSlot(
+    race: RaceEntry,
+    usedSlots: ReadonlySet<string>,
+  ): { year: 'junior' | 'classic' | 'senior'; month: number; half: number } | null {
+    return this.getChronologicalRaceSlots(race)
+      .find(candidate => !usedSlots.has(this.cellKey(candidate.year, candidate.month, candidate.half)))
+      ?? null;
+  }
+
   private compareRaceByFirstSlot(left: RaceEntry, right: RaceEntry): number {
     const leftSlot = this.getChronologicalRaceSlots(left)[0];
     const rightSlot = this.getChronologicalRaceSlots(right)[0];
@@ -309,6 +350,39 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
     if (yearCmp !== 0) return yearCmp;
     if (left.month !== right.month) return left.month - right.month;
     return left.half - right.half;
+  }
+
+  private updateOptimalRaces(): void {
+    this.optimalCellLookup.clear();
+    const usedSlots = new Set<string>();
+
+    for (const recommendation of this.optimalRaceRecommendations ?? []) {
+      const race = this.resolveRace(
+        Number(recommendation.saddleId),
+        Number(recommendation.raceInstanceId),
+      );
+      const slot = race ? this.getNextAvailableRaceSlot(race, usedSlots) : null;
+      if (!race || !slot) continue;
+
+      const key = this.cellKey(slot.year, slot.month, slot.half);
+      usedSlots.add(key);
+      this.optimalCellLookup.set(key, [{ race, recommendation }]);
+    }
+  }
+
+  /**
+   * Resolve every saddle-backed race through the same mapping used by the
+   * regular race display. The instance id remains a fallback for older data.
+   */
+  private resolveRace(saddleId: number, fallbackRaceInstanceId?: number): RaceEntry | null {
+    if (Number.isFinite(saddleId) && saddleId > 0) {
+      const saddleRace = this.getRacesForSaddle(saddleId)[0];
+      if (saddleRace) return saddleRace;
+    }
+
+    return Number.isFinite(fallbackRaceInstanceId)
+      ? this.raceMap.get(Number(fallbackRaceInstanceId)) ?? null
+      : null;
   }
 
   /**
@@ -427,6 +501,33 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
     return this.displayWonCellLookup.get(this.cellKey(year, month, half)) ?? [];
   }
 
+  getOptimalInCell(
+    year: string,
+    month: number,
+    half: number,
+  ): { race: RaceEntry; recommendation: OptimalRaceDisplay }[] {
+    return this.optimalCellLookup.get(this.cellKey(year, month, half)) ?? [];
+  }
+
+  get hasOptimalRecommendations(): boolean {
+    return this.optimalRaceRecommendations.length > 0;
+  }
+
+  getRaceImageUrl(race: RaceEntry): string | null {
+    return getRaceThumbnailUrl(race.thumbnail_id);
+  }
+
+  hideBrokenRaceImage(event: Event): void {
+    (event.currentTarget as HTMLImageElement).hidden = true;
+  }
+
+  getOptimalTooltip(entry: { race: RaceEntry; recommendation: OptimalRaceDisplay }): string {
+    const parentLabel = entry.recommendation.overlapsP1 && entry.recommendation.overlapsP2
+      ? 'P1 + P2'
+      : entry.recommendation.overlapsP1 ? 'P1' : 'P2';
+    return `${entry.race.name} - ${parentLabel} - +${entry.recommendation.affinityGain} affinity`;
+  }
+
   private computeWonInCell(
     year: string,
     month: number,
@@ -498,7 +599,7 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
     const ref = this.dialog.open(RaceSelectDialogComponent, {
       panelClass: 'modern-dialog-panel',
       data: { races, selectedId: currentId, cellLabel } as RaceSelectDialogData,
-      width: '380px',
+      width: '500px',
       maxWidth: '95vw',
     });
 
@@ -511,6 +612,7 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
         this.cellSelection.set(key, result);
       }
       this.selectionChanged.emit([...this.selectedRaceIds]);
+      this.cdr.markForCheck();
     });
   }
 
@@ -537,13 +639,9 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
   /** Get saddle IDs corresponding to selected races */
   getSelectedSaddleIds(): number[] {
     const saddles = new Set<number>();
-    for (const race of this.allRaces) {
-      if (!this.selectedRaceIds.has(race.race_instance_id)) continue;
-      for (const ws of race.win_saddles) {
-        if (ws.required_race_instance_ids.length === 1 &&
-            ws.required_race_instance_ids[0] === race.race_instance_id) {
-          saddles.add(ws.saddle_id);
-        }
+    for (const raceId of this.selectedRaceIds) {
+      for (const saddleId of this.raceToSingleSaddleMap.get(raceId) ?? []) {
+        saddles.add(saddleId);
       }
     }
     return [...saddles];
@@ -618,6 +716,7 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
       }
       // Reset input so same file can be re-imported
       (event.target as HTMLInputElement).value = '';
+      this.cdr.markForCheck();
     };
     reader.readAsText(file);
   }
@@ -680,6 +779,7 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
       if (!yearKey) continue;
       this.cellSelection.set(this.cellKey(yearKey, month, half), raceId);
     }
+    this.cdr.markForCheck();
   }
 
   /** Returns the total number of distinct year-slots this race can occupy across the schedule. */
@@ -758,12 +858,39 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   hideSearchResults(): void {
-    setTimeout(() => { this.raceSearchResults = []; }, 150);
+    setTimeout(() => {
+      this.raceSearchResults = [];
+      this.cdr.markForCheck();
+    }, 150);
   }
 
   clearSearchInput(event: MouseEvent): void {
     event.preventDefault();
     this.raceSearchQuery = '';
     this.raceSearchResults = [];
+  }
+
+  trackByYear(_index: number, year: string): string {
+    return year;
+  }
+
+  trackByMonthPair(_index: number, pair: [number, number]): number {
+    return pair[0];
+  }
+
+  trackByNumber(_index: number, value: number): number {
+    return value;
+  }
+
+  trackByRace(_index: number, race: RaceEntry): number {
+    return race.race_instance_id;
+  }
+
+  trackByOptimalRace(_index: number, entry: { race: RaceEntry }): number {
+    return entry.race.race_instance_id;
+  }
+
+  trackByRanRace(_index: number, entry: { race: RaceEntry; position: number }): string {
+    return `${entry.race.race_instance_id}:${entry.position}`;
   }
 }

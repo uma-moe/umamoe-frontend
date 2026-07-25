@@ -98,19 +98,26 @@
 </div>
 
 <div class="filter-content" [class.expanded]="isExpanded">
-  <div class="filter-inner">
+  <div class="filter-inner" *ngIf="isExpanded">
     <ng-container *ngIf="filterMode === 'uql'; else formFilterMode">
-      <app-uql-filter
-        [query]="uqlQuery"
-        [validationState]="uqlValidationState"
-        [validationMessage]="uqlValidationMessage"
-        [validationIssue]="uqlValidationIssue"
-        [snippets]="uqlStarterSnippets"
-        [suggestions]="uqlSuggestions"
-        (queryChange)="uqlQuery = $event; onUqlChange()"
-        (clear)="clearUql()"
-        (insertSnippet)="insertUqlSnippet($event)">
-      </app-uql-filter>
+      @defer (when filterMode === 'uql') {
+        <app-uql-filter-deferred
+          [query]="uqlQuery"
+          [validationState]="uqlValidationState"
+          [validationMessage]="uqlValidationMessage"
+          [validationIssue]="uqlValidationIssue"
+          [snippets]="uqlStarterSnippets"
+          [suggestions]="uqlSuggestions"
+          (queryChange)="uqlQuery = $event; onUqlChange()"
+          (clear)="clearUql()"
+          (insertSnippet)="insertUqlSnippet($event)">
+        </app-uql-filter-deferred>
+      } @placeholder {
+        <div class="deferred-filter-loading" aria-live="polite">
+          <mat-icon>hourglass_empty</mat-icon>
+          <span>Loading UQL editor…</span>
+        </div>
+      }
     </ng-container>
 
     <ng-template #formFilterMode>
@@ -209,7 +216,7 @@
                 </button>
                 <span class="filter-row-label include-label" *ngIf="includeMainParentCharacters.length === 0">Allow</span>
                 <div class="filter-row-chips">
-                  <div class="filter-chip include" *ngFor="let char of includeMainParentCharacters; let i = index">
+                  <div class="filter-chip include" *ngFor="let char of includeMainParentCharacters; let i = index; trackBy: trackByStableId">
                     <img *ngIf="char.image" [src]="getCharacterImagePath(char.image)" class="filter-chip-img" [alt]="char.name">
                     <span class="filter-chip-name">{{ char.name }}</span>
                     <mat-icon class="filter-chip-remove" (click)="removeIncludeMainParent(i); $event.stopPropagation()">close</mat-icon>
@@ -223,7 +230,7 @@
                 </button>
                 <span class="filter-row-label exclude-label" *ngIf="excludeMainParentCharacters.length === 0">Hide</span>
                 <div class="filter-row-chips">
-                  <div class="filter-chip exclude" *ngFor="let char of excludeMainParentCharacters; let i = index">
+                  <div class="filter-chip exclude" *ngFor="let char of excludeMainParentCharacters; let i = index; trackBy: trackByStableId">
                     <img *ngIf="char.image" [src]="getCharacterImagePath(char.image)" class="filter-chip-img" [alt]="char.name">
                     <span class="filter-chip-name">{{ char.name }}</span>
                     <mat-icon class="filter-chip-remove" (click)="removeExcludeMainParent(i); $event.stopPropagation()">close</mat-icon>
@@ -246,7 +253,7 @@
                 </button>
                 <span class="filter-row-label include-label" *ngIf="includeParentCharacters.length === 0">Allow</span>
                 <div class="filter-row-chips">
-                  <div class="filter-chip include" *ngFor="let char of includeParentCharacters; let i = index">
+                  <div class="filter-chip include" *ngFor="let char of includeParentCharacters; let i = index; trackBy: trackByStableId">
                     <img *ngIf="char.image" [src]="getCharacterImagePath(char.image)" class="filter-chip-img" [alt]="char.name">
                     <span class="filter-chip-name">{{ char.name }}</span>
                     <mat-icon class="filter-chip-remove" (click)="removeIncludeParent(i); $event.stopPropagation()">close</mat-icon>
@@ -260,7 +267,7 @@
                 </button>
                 <span class="filter-row-label exclude-label" *ngIf="excludeParentCharacters.length === 0">Hide</span>
                 <div class="filter-row-chips">
-                  <div class="filter-chip exclude" *ngFor="let char of excludeParentCharacters; let i = index">
+                  <div class="filter-chip exclude" *ngFor="let char of excludeParentCharacters; let i = index; trackBy: trackByStableId">
                     <img *ngIf="char.image" [src]="getCharacterImagePath(char.image)" class="filter-chip-img" [alt]="char.name">
                     <span class="filter-chip-name">{{ char.name }}</span>
                     <mat-icon class="filter-chip-remove" (click)="removeExcludeParent(i); $event.stopPropagation()">close</mat-icon>
@@ -333,6 +340,98 @@
       </div>
     </div>
 
+    <ng-template #whiteCategoryFilter let-scope="scope" let-heading="heading">
+      <div class="white-category-filter">
+        <div class="white-category-heading">
+          <span class="section-label">{{ heading }}</span>
+          <small class="section-label-detail">Minimum count or total stars</small>
+        </div>
+        <div class="white-category-tabs" role="group" [attr.aria-label]="heading">
+          <button
+            type="button"
+            class="white-category-tab"
+            [class.selected]="getExpandedWhiteCategory(scope) === 'common'"
+            [class.active]="getWhiteCategorySummary('common', scope)"
+            [attr.aria-expanded]="getExpandedWhiteCategory(scope) === 'common'"
+            (click)="toggleWhiteCategory('common', scope)">
+            <mat-icon>auto_awesome</mat-icon>
+            <span>Common</span>
+            <small *ngIf="getWhiteCategoryTabSummary('common', scope) as summary">{{ summary }}</small>
+            <mat-icon class="category-chevron">expand_more</mat-icon>
+          </button>
+          <button
+            type="button"
+            class="white-category-tab"
+            [class.selected]="getExpandedWhiteCategory(scope) === 'scenario'"
+            [class.active]="getWhiteCategorySummary('scenario', scope)"
+            [attr.aria-expanded]="getExpandedWhiteCategory(scope) === 'scenario'"
+            (click)="toggleWhiteCategory('scenario', scope)">
+            <mat-icon>flag</mat-icon>
+            <span>Scenario</span>
+            <small *ngIf="getWhiteCategoryTabSummary('scenario', scope) as summary">{{ summary }}</small>
+            <mat-icon class="category-chevron">expand_more</mat-icon>
+          </button>
+          <button
+            type="button"
+            class="white-category-tab"
+            [class.selected]="getExpandedWhiteCategory(scope) === 'race'"
+            [class.active]="getWhiteCategorySummary('race', scope)"
+            [attr.aria-expanded]="getExpandedWhiteCategory(scope) === 'race'"
+            (click)="toggleWhiteCategory('race', scope)">
+            <mat-icon>emoji_events</mat-icon>
+            <span>Race</span>
+            <small *ngIf="getWhiteCategoryTabSummary('race', scope) as summary">{{ summary }}</small>
+            <mat-icon class="category-chevron">expand_more</mat-icon>
+          </button>
+        </div>
+        <div class="white-category-fields input-grid" *ngIf="getExpandedWhiteCategory(scope) as category">
+          <div class="input-wrapper">
+            <div class="input-label">Minimum {{ getWhiteCategoryLabel(category) | lowercase }} count</div>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <input
+                matInput
+                type="number"
+                inputmode="numeric"
+                min="0"
+                placeholder="0"
+                [ngModel]="getWhiteCategoryMetricValue(category, 'count', scope)"
+                (ngModelChange)="setWhiteCategoryMetric(category, 'count', $event, scope)">
+              <div matSuffix class="spinner-controls">
+                <mat-icon (click)="adjustWhiteCategoryMetric(category, 'count', 1, scope)">keyboard_arrow_up</mat-icon>
+                <mat-icon (click)="adjustWhiteCategoryMetric(category, 'count', -1, scope)">keyboard_arrow_down</mat-icon>
+              </div>
+            </mat-form-field>
+          </div>
+          <div class="input-wrapper">
+            <div class="input-label">Minimum {{ getWhiteCategoryLabel(category) | lowercase }} stars</div>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <input
+                matInput
+                type="number"
+                inputmode="numeric"
+                min="0"
+                placeholder="0"
+                [ngModel]="getWhiteCategoryMetricValue(category, 'stars', scope)"
+                (ngModelChange)="setWhiteCategoryMetric(category, 'stars', $event, scope)">
+              <div matSuffix class="spinner-controls">
+                <mat-icon (click)="adjustWhiteCategoryMetric(category, 'stars', 1, scope)">keyboard_arrow_up</mat-icon>
+                <mat-icon (click)="adjustWhiteCategoryMetric(category, 'stars', -1, scope)">keyboard_arrow_down</mat-icon>
+              </div>
+            </mat-form-field>
+          </div>
+          <button
+            type="button"
+            class="white-category-clear"
+            [class.visible]="getWhiteCategorySummary(category, scope)"
+            [disabled]="!getWhiteCategorySummary(category, scope)"
+            [matTooltip]="'Clear ' + getWhiteCategoryLabel(category) + ' filters'"
+            (click)="clearWhiteCategory(category, scope)">
+            <mat-icon>restart_alt</mat-icon>
+          </button>
+        </div>
+      </div>
+    </ng-template>
+
     <!-- Property Filters Section (Full Width Below - Compact) -->
     <div class="property-filters-compact">
       <div class="filters-header-compact">
@@ -354,13 +453,13 @@
             <div class="factor-list">
               <div
                 class="factor-row-item blue-factor"
-                *ngFor="let filter of blueFactorFilters; let i = index"
+                *ngFor="let filter of blueFactorFilters; let i = index; trackBy: trackByStableId"
                 [tourAnchor]="filter.uuid === tourBlueFactorAnchorUuid ? 'filter-blue-factor-row' : ''">
                 <div class="row-top">
                   <mat-form-field appearance="outline" class="factor-select factor-select-field" subscriptSizing="dynamic">
                     <mat-select [(ngModel)]="filter.factorId" (selectionChange)="onFilterChange()" panelClass="factor-autocomplete-panel">
                       <mat-option [value]="0">Any</mat-option>
-                      <mat-option *ngFor="let f of blueFactors" [value]="f.id">{{f.text}}</mat-option>
+                      <mat-option *ngFor="let f of blueFactors; trackBy: trackByStableId" [value]="f.id">{{f.text}}</mat-option>
                     </mat-select>
                   </mat-form-field>
                   <button mat-icon-button color="warn" class="remove-btn" (click)="removeFactorFilter(blueFactorFilters, i)">
@@ -374,7 +473,7 @@
                     <input matSliderEndThumb [(ngModel)]="filter.max" (valueChange)="onBlueFactorSliderChange()">
                   </mat-slider>
                   <div class="slider-labels-row">
-                    <span *ngFor="let val of [1,2,3,4,5,6,7,8,9]" [class.active]="val >= filter.min && val <= filter.max">{{val}}★</span>
+                    <span *ngFor="let val of [1,2,3,4,5,6,7,8,9]; trackBy: trackByIndex" [class.active]="val >= filter.min && val <= filter.max">{{val}}★</span>
                   </div>
                 </div>
               </div>
@@ -388,12 +487,12 @@
           <div class="factor-section">
             <div class="section-label">Pink Factors (Aptitude)</div>
             <div class="factor-list">
-              <div class="factor-row-item pink-factor" *ngFor="let filter of pinkFactorFilters; let i = index">
+              <div class="factor-row-item pink-factor" *ngFor="let filter of pinkFactorFilters; let i = index; trackBy: trackByStableId">
                 <div class="row-top">
                   <mat-form-field appearance="outline" class="factor-select factor-select-field" subscriptSizing="dynamic">
                     <mat-select [(ngModel)]="filter.factorId" (selectionChange)="onFilterChange()" panelClass="factor-autocomplete-panel">
                       <mat-option [value]="0">Any</mat-option>
-                      <mat-option *ngFor="let f of pinkFactors" [value]="f.id">{{f.text}}</mat-option>
+                      <mat-option *ngFor="let f of pinkFactors; trackBy: trackByStableId" [value]="f.id">{{f.text}}</mat-option>
                     </mat-select>
                   </mat-form-field>
                   <button mat-icon-button color="warn" class="remove-btn" (click)="removeFactorFilter(pinkFactorFilters, i)">
@@ -407,7 +506,7 @@
                     <input matSliderEndThumb [(ngModel)]="filter.max" (valueChange)="onFilterChange()">
                   </mat-slider>
                   <div class="slider-labels-row">
-                    <span *ngFor="let val of [1,2,3,4,5,6,7,8,9]" [class.active]="val >= filter.min && val <= filter.max">{{val}}★</span>
+                    <span *ngFor="let val of [1,2,3,4,5,6,7,8,9]; trackBy: trackByIndex" [class.active]="val >= filter.min && val <= filter.max">{{val}}★</span>
                   </div>
                 </div>
               </div>
@@ -421,7 +520,7 @@
           <div class="factor-section">
             <div class="section-label">Green Factors (Unique)</div>
             <div class="factor-list">
-              <div class="factor-row-item green-factor" *ngFor="let filter of greenFactorFilters; let i = index">
+              <div class="factor-row-item green-factor" *ngFor="let filter of greenFactorFilters; let i = index; trackBy: trackByStableId">
                 <div class="row-top">
                   <mat-form-field appearance="outline" class="factor-select factor-autocomplete-field" subscriptSizing="dynamic">
                     <input type="text" matInput [matAutocomplete]="autoGreen" 
@@ -430,7 +529,7 @@
                            placeholder="Search Green Factor">
                     <mat-autocomplete #autoGreen="matAutocomplete" class="factor-autocomplete-panel" (optionSelected)="onFactorSelected($event, filter)">
                       <mat-option [value]="0">Any</mat-option>
-                      <mat-option *ngFor="let f of filteredGreenFactorOptions[i]" [value]="f.id">
+                      <mat-option *ngFor="let f of filteredGreenFactorOptions[i]; trackBy: trackByStableId" [value]="f.id">
                         {{f.text}}
                       </mat-option>
                     </mat-autocomplete>
@@ -446,7 +545,7 @@
                     <input matSliderEndThumb [(ngModel)]="filter.max" (valueChange)="onFilterChange()">
                   </mat-slider>
                   <div class="slider-labels-row">
-                    <span *ngFor="let val of [1,2,3]" [class.active]="val >= filter.min && val <= filter.max">{{val}}★</span>
+                    <span *ngFor="let val of [1,2,3]; trackBy: trackByIndex" [class.active]="val >= filter.min && val <= filter.max">{{val}}★</span>
                   </div>
                 </div>
               </div>
@@ -460,16 +559,20 @@
           <div class="factor-section">
             <div class="section-label">White Factors - Required (Skills/Races)</div>
             <div class="factor-list">
-              <div class="factor-row-item" *ngFor="let filter of whiteFactorFilters; let i = index">
+              <div class="factor-row-item" *ngFor="let filter of whiteFactorFilters; let i = index; trackBy: trackByStableId">
                 <div class="row-top">
                   <mat-form-field appearance="outline" class="factor-select full-width factor-autocomplete-field" subscriptSizing="dynamic">
+                    <img *ngIf="getWhiteFactorIcon(filter.factorId) as icon" matPrefix [src]="icon" class="factor-input-skill-icon" alt="">
                     <input type="text" matInput [matAutocomplete]="autoWhite" 
                            [ngModel]="getFactorText(filter.factorId, 'white')"
                            (ngModelChange)="filterFactors($event, 'white', i)"
                            placeholder="Search White Factor">
                     <mat-autocomplete #autoWhite="matAutocomplete" class="factor-autocomplete-panel" (optionSelected)="onFactorSelected($event, filter)">
-                      <mat-option *ngFor="let f of filteredWhiteFactorOptions[i]" [value]="f.id">
-                        {{f.text}}
+                      <mat-option *ngFor="let f of filteredWhiteFactorOptions[i]; trackBy: trackByStableId" [value]="f.id">
+                        <span class="factor-option-content">
+                          <img *ngIf="getWhiteFactorIcon(f.id) as icon" [src]="icon" class="factor-option-skill-icon" alt="">
+                          <span>{{f.text}}</span>
+                        </span>
                       </mat-option>
                     </mat-autocomplete>
                   </mat-form-field>
@@ -484,7 +587,7 @@
                     <input matSliderEndThumb [(ngModel)]="filter.max" (valueChange)="onFilterChange()">
                   </mat-slider>
                   <div class="slider-labels-row">
-                    <span *ngFor="let val of [1,2,3,4,5,6,7,8,9]" [class.active]="val >= filter.min && val <= filter.max">{{val}}★</span>
+                    <span *ngFor="let val of [1,2,3,4,5,6,7,8,9]; trackBy: trackByIndex" [class.active]="val >= filter.min && val <= filter.max">{{val}}★</span>
                   </div>
                 </div>
               </div>
@@ -501,17 +604,26 @@
               <div class="priority-group-heading" matTooltip="Priority group: 0 sorts first, larger numbers are lower-priority tiebreakers">Priority</div>
               <div></div>
             </div>
+            <app-white-factor-type-picker
+              [factors]="whiteFactors"
+              [selectedFactors]="optionalWhiteFactorFilters"
+              (addFactors)="addWhiteFactorsFromPicker($event, optionalWhiteFactorFilters, 'optionalWhite')">
+            </app-white-factor-type-picker>
             <div class="factor-list">
-              <div class="factor-row-item optional-factor" *ngFor="let filter of optionalWhiteFactorFilters; let i = index">
+              <div class="factor-row-item optional-factor" *ngFor="let filter of optionalWhiteFactorFilters; let i = index; trackBy: trackByStableId">
                 <div class="row-top">
                   <mat-form-field appearance="outline" class="factor-select full-width factor-autocomplete-field" subscriptSizing="dynamic">
+                    <img *ngIf="getWhiteFactorIcon(filter.factorId) as icon" matPrefix [src]="icon" class="factor-input-skill-icon" alt="">
                     <input type="text" matInput [matAutocomplete]="autoOptionalWhite" 
                            [ngModel]="getFactorText(filter.factorId, 'white')"
                            (ngModelChange)="filterFactors($event, 'optionalWhite', i)"
                            placeholder="Search White Factor">
                     <mat-autocomplete #autoOptionalWhite="matAutocomplete" class="factor-autocomplete-panel" (optionSelected)="onFactorSelected($event, filter)">
-                      <mat-option *ngFor="let f of filteredOptionalWhiteFactorOptions[i]" [value]="f.id">
-                        {{f.text}}
+                      <mat-option *ngFor="let f of filteredOptionalWhiteFactorOptions[i]; trackBy: trackByStableId" [value]="f.id">
+                        <span class="factor-option-content">
+                          <img *ngIf="getWhiteFactorIcon(f.id) as icon" [src]="icon" class="factor-option-skill-icon" alt="">
+                          <span>{{f.text}}</span>
+                        </span>
                       </mat-option>
                     </mat-autocomplete>
                   </mat-form-field>
@@ -553,17 +665,27 @@
               <div class="priority-group-heading" matTooltip="Priority group: 0 sorts first, larger numbers are lower-priority tiebreakers">Priority</div>
               <div></div>
             </div>
+            <app-white-factor-type-picker
+              browseLabel="Find lineage white factors"
+              [factors]="whiteFactors"
+              [selectedFactors]="lineageWhiteFactorFilters"
+              (addFactors)="addWhiteFactorsFromPicker($event, lineageWhiteFactorFilters, 'lineageWhite')">
+            </app-white-factor-type-picker>
             <div class="factor-list">
-              <div class="factor-row-item optional-factor" *ngFor="let filter of lineageWhiteFactorFilters; let i = index">
+              <div class="factor-row-item optional-factor" *ngFor="let filter of lineageWhiteFactorFilters; let i = index; trackBy: trackByStableId">
                 <div class="row-top">
                   <mat-form-field appearance="outline" class="factor-select full-width factor-autocomplete-field" subscriptSizing="dynamic">
+                    <img *ngIf="getWhiteFactorIcon(filter.factorId) as icon" matPrefix [src]="icon" class="factor-input-skill-icon" alt="">
                     <input type="text" matInput [matAutocomplete]="autoLineageWhite"
                            [ngModel]="getFactorText(filter.factorId, 'white')"
                            (ngModelChange)="filterFactors($event, 'lineageWhite', i)"
                            placeholder="Search White Factor">
                     <mat-autocomplete #autoLineageWhite="matAutocomplete" class="factor-autocomplete-panel" (optionSelected)="onFactorSelected($event, filter)">
-                      <mat-option *ngFor="let f of filteredLineageWhiteFactorOptions[i]" [value]="f.id">
-                        {{f.text}}
+                      <mat-option *ngFor="let f of filteredLineageWhiteFactorOptions[i]; trackBy: trackByStableId" [value]="f.id">
+                        <span class="factor-option-content">
+                          <img *ngIf="getWhiteFactorIcon(f.id) as icon" [src]="icon" class="factor-option-skill-icon" alt="">
+                          <span>{{f.text}}</span>
+                        </span>
                       </mat-option>
                     </mat-autocomplete>
                   </mat-form-field>
@@ -613,12 +735,12 @@
           <div class="factor-section">
             <div class="section-label">Blue Factors (Stats)</div>
             <div class="factor-list">
-              <div class="factor-row-item blue-factor" *ngFor="let filter of mainBlueFactorFilters; let i = index">
+              <div class="factor-row-item blue-factor" *ngFor="let filter of mainBlueFactorFilters; let i = index; trackBy: trackByStableId">
                 <div class="row-top">
                   <mat-form-field appearance="outline" class="factor-select factor-select-field" subscriptSizing="dynamic">
                     <mat-select [(ngModel)]="filter.factorId" (selectionChange)="onFilterChange()" panelClass="factor-autocomplete-panel">
                       <mat-option [value]="0">Any</mat-option>
-                      <mat-option *ngFor="let f of blueFactors" [value]="f.id">{{f.text}}</mat-option>
+                      <mat-option *ngFor="let f of blueFactors; trackBy: trackByStableId" [value]="f.id">{{f.text}}</mat-option>
                     </mat-select>
                   </mat-form-field>
                   <button mat-icon-button color="warn" class="remove-btn" (click)="removeFactorFilter(mainBlueFactorFilters, i)">
@@ -631,7 +753,7 @@
                     <input matSliderThumb [(ngModel)]="filter.min" (valueChange)="onFilterChange()">
                   </mat-slider>
                   <div class="slider-labels-row">
-                    <span *ngFor="let val of [1,2,3]" [class.active]="val >= filter.min">{{val}}★</span>
+                    <span *ngFor="let val of [1,2,3]; trackBy: trackByIndex" [class.active]="val >= filter.min">{{val}}★</span>
                   </div>
                 </div>
               </div>
@@ -645,12 +767,12 @@
           <div class="factor-section">
             <div class="section-label">Pink Factors (Aptitude)</div>
             <div class="factor-list">
-              <div class="factor-row-item pink-factor" *ngFor="let filter of mainPinkFactorFilters; let i = index">
+              <div class="factor-row-item pink-factor" *ngFor="let filter of mainPinkFactorFilters; let i = index; trackBy: trackByStableId">
                 <div class="row-top">
                   <mat-form-field appearance="outline" class="factor-select factor-select-field" subscriptSizing="dynamic">
                     <mat-select [(ngModel)]="filter.factorId" (selectionChange)="onFilterChange()" panelClass="factor-autocomplete-panel">
                       <mat-option [value]="0">Any</mat-option>
-                      <mat-option *ngFor="let f of pinkFactors" [value]="f.id">{{f.text}}</mat-option>
+                      <mat-option *ngFor="let f of pinkFactors; trackBy: trackByStableId" [value]="f.id">{{f.text}}</mat-option>
                     </mat-select>
                   </mat-form-field>
                   <button mat-icon-button color="warn" class="remove-btn" (click)="removeFactorFilter(mainPinkFactorFilters, i)">
@@ -663,7 +785,7 @@
                     <input matSliderThumb [(ngModel)]="filter.min" (valueChange)="onFilterChange()">
                   </mat-slider>
                   <div class="slider-labels-row">
-                    <span *ngFor="let val of [1,2,3]" [class.active]="val >= filter.min">{{val}}★</span>
+                    <span *ngFor="let val of [1,2,3]; trackBy: trackByIndex" [class.active]="val >= filter.min">{{val}}★</span>
                   </div>
                 </div>
               </div>
@@ -677,7 +799,7 @@
           <div class="factor-section">
             <div class="section-label">Green Factors (Unique)</div>
             <div class="factor-list">
-              <div class="factor-row-item green-factor" *ngFor="let filter of mainGreenFactorFilters; let i = index">
+              <div class="factor-row-item green-factor" *ngFor="let filter of mainGreenFactorFilters; let i = index; trackBy: trackByStableId">
                 <div class="row-top">
                   <mat-form-field appearance="outline" class="factor-select full-width factor-autocomplete-field" subscriptSizing="dynamic">
                     <input type="text" matInput [matAutocomplete]="autoMainGreen" 
@@ -686,7 +808,7 @@
                            placeholder="Search Green Factor (Unique)">
                     <mat-autocomplete #autoMainGreen="matAutocomplete" class="factor-autocomplete-panel" (optionSelected)="onFactorSelected($event, filter)">
                       <mat-option [value]="0">Any</mat-option>
-                      <mat-option *ngFor="let f of filteredMainGreenFactorOptions[i]" [value]="f.id">
+                      <mat-option *ngFor="let f of filteredMainGreenFactorOptions[i]; trackBy: trackByStableId" [value]="f.id">
                         {{f.text}}
                       </mat-option>
                     </mat-autocomplete>
@@ -701,7 +823,7 @@
                     <input matSliderThumb [(ngModel)]="filter.min" (valueChange)="onFilterChange()">
                   </mat-slider>
                   <div class="slider-labels-row">
-                    <span *ngFor="let val of [1,2,3]" [class.active]="val >= filter.min">{{val}}★</span>
+                    <span *ngFor="let val of [1,2,3]; trackBy: trackByIndex" [class.active]="val >= filter.min">{{val}}★</span>
                   </div>
                 </div>
               </div>
@@ -715,16 +837,20 @@
           <div class="factor-section">
             <div class="section-label">White Factors - Required (Skills/Races)</div>
             <div class="factor-list">
-              <div class="factor-row-item" *ngFor="let filter of mainWhiteFactorFilters; let i = index">
+              <div class="factor-row-item" *ngFor="let filter of mainWhiteFactorFilters; let i = index; trackBy: trackByStableId">
                 <div class="row-top">
                   <mat-form-field appearance="outline" class="factor-select full-width factor-autocomplete-field" subscriptSizing="dynamic">
+                    <img *ngIf="getWhiteFactorIcon(filter.factorId) as icon" matPrefix [src]="icon" class="factor-input-skill-icon" alt="">
                     <input type="text" matInput [matAutocomplete]="autoMainWhite" 
                            [ngModel]="getFactorText(filter.factorId, 'white')"
                            (ngModelChange)="filterFactors($event, 'mainWhite', i)"
                            placeholder="Search White Factor (Skills/Races)">
                     <mat-autocomplete #autoMainWhite="matAutocomplete" class="factor-autocomplete-panel" (optionSelected)="onFactorSelected($event, filter)">
-                      <mat-option *ngFor="let f of filteredMainWhiteFactorOptions[i]" [value]="f.id">
-                        {{f.text}}
+                      <mat-option *ngFor="let f of filteredMainWhiteFactorOptions[i]; trackBy: trackByStableId" [value]="f.id">
+                        <span class="factor-option-content">
+                          <img *ngIf="getWhiteFactorIcon(f.id) as icon" [src]="icon" class="factor-option-skill-icon" alt="">
+                          <span>{{f.text}}</span>
+                        </span>
                       </mat-option>
                     </mat-autocomplete>
                   </mat-form-field>
@@ -738,7 +864,7 @@
                     <input matSliderThumb [(ngModel)]="filter.min" (valueChange)="onFilterChange()">
                   </mat-slider>
                   <div class="slider-labels-row">
-                    <span *ngFor="let val of [1,2,3]" [class.active]="val >= filter.min">{{val}}★</span>
+                    <span *ngFor="let val of [1,2,3]; trackBy: trackByIndex" [class.active]="val >= filter.min">{{val}}★</span>
                   </div>
                 </div>
               </div>
@@ -755,17 +881,27 @@
               <div class="priority-group-heading" matTooltip="Priority group: 0 sorts first, larger numbers are lower-priority tiebreakers">Priority</div>
               <div></div>
             </div>
+            <app-white-factor-type-picker
+              browseLabel="Find main-parent white factors"
+              [factors]="whiteFactors"
+              [selectedFactors]="optionalMainWhiteFactorFilters"
+              (addFactors)="addWhiteFactorsFromPicker($event, optionalMainWhiteFactorFilters, 'optionalMainWhite')">
+            </app-white-factor-type-picker>
             <div class="factor-list">
-              <div class="factor-row-item optional-factor" *ngFor="let filter of optionalMainWhiteFactorFilters; let i = index">
+              <div class="factor-row-item optional-factor" *ngFor="let filter of optionalMainWhiteFactorFilters; let i = index; trackBy: trackByStableId">
                 <div class="row-top">
                   <mat-form-field appearance="outline" class="factor-select full-width factor-autocomplete-field" subscriptSizing="dynamic">
+                    <img *ngIf="getWhiteFactorIcon(filter.factorId) as icon" matPrefix [src]="icon" class="factor-input-skill-icon" alt="">
                     <input type="text" matInput [matAutocomplete]="autoOptionalMainWhite" 
                            [ngModel]="getFactorText(filter.factorId, 'white')"
                            (ngModelChange)="filterFactors($event, 'optionalMainWhite', i)"
                            placeholder="Search White Factor">
                     <mat-autocomplete #autoOptionalMainWhite="matAutocomplete" class="factor-autocomplete-panel" (optionSelected)="onFactorSelected($event, filter)">
-                      <mat-option *ngFor="let f of filteredOptionalMainWhiteFactorOptions[i]" [value]="f.id">
-                        {{f.text}}
+                      <mat-option *ngFor="let f of filteredOptionalMainWhiteFactorOptions[i]; trackBy: trackByStableId" [value]="f.id">
+                        <span class="factor-option-content">
+                          <img *ngIf="getWhiteFactorIcon(f.id) as icon" [src]="icon" class="factor-option-skill-icon" alt="">
+                          <span>{{f.text}}</span>
+                        </span>
                       </mat-option>
                     </mat-autocomplete>
                   </mat-form-field>
@@ -800,18 +936,9 @@
             </div>
           </div>
 
-          <div class="input-grid single-column">
-            <div class="input-wrapper">
-              <div class="input-label">Min White Count</div>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <input matInput type="number" [(ngModel)]="filterState.min_main_white_count" (ngModelChange)="onFilterChange()" min="0" placeholder="0">
-                <div matSuffix class="spinner-controls">
-                  <mat-icon (click)="increment('min_main_white_count')">keyboard_arrow_up</mat-icon>
-                  <mat-icon (click)="decrement('min_main_white_count')">keyboard_arrow_down</mat-icon>
-                </div>
-              </mat-form-field>
-            </div>
-          </div>
+          <ng-container
+            *ngTemplateOutlet="whiteCategoryFilter; context: { scope: 'main', heading: 'Main Parent White Categories' }">
+          </ng-container>
           </div>
           </div>
         </div>
@@ -830,6 +957,34 @@
           </ng-container>
           <ng-template #generalCriteriaFields>
           <div class="input-grid">
+            <div class="input-wrapper scenario-filter-wrapper">
+              <div class="input-label">Training Scenario</div>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="scenario-select-field">
+                <mat-select
+                  multiple
+                  [ngModel]="getSelectedScenarioOptionIds()"
+                  (ngModelChange)="onScenarioSelectionChange($event)"
+                  panelClass="scenario-select-panel"
+                  placeholder="Any scenario">
+                  <mat-select-trigger>
+                    <div class="selected-scenario-display">
+                      <img
+                        *ngIf="getSelectedScenarioOptionIds().length === 1"
+                        [src]="getScenarioLogoUrl(getSelectedScenarioOptionIds()[0])"
+                        class="scenario-trigger-logo"
+                        alt="">
+                      <span>{{ getSelectedScenarioSummary() }}</span>
+                    </div>
+                  </mat-select-trigger>
+                  <mat-option *ngFor="let scenarioId of scenarioOptionIds; trackBy: trackByIndex" [value]="scenarioId">
+                    <span class="scenario-option-content">
+                      <img [src]="getScenarioLogoUrl(scenarioId)" class="scenario-option-logo" alt="">
+                      <span>{{ getScenarioName(scenarioId) }}</span>
+                    </span>
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
             <div class="input-wrapper">
               <div class="input-label">Min Win Count</div>
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -859,7 +1014,7 @@
                       <img [src]="getRankIconPath(filterState.parent_rank)" class="rank-icon" (error)="onRankIconError($event, filterState.parent_rank)">
                     </div>
                   </mat-select-trigger>
-                  <mat-option *ngFor="let rank of rankOptions" [value]="rank">
+                  <mat-option *ngFor="let rank of rankOptions; trackBy: trackByIndex" [value]="rank">
                     <div class="rank-option-content">
                       <img [src]="getRankIconPath(rank)" class="rank-icon" (error)="onRankIconError($event, rank)">
                     </div>
@@ -893,6 +1048,11 @@
           </h5>
           <div class="collapsible-body" [class.collapsed]="isSectionCollapsed('totalStarCount')">
           <div class="collapsible-body-inner">
+          <ng-container
+            *ngIf="filterMode === 'advanced'"
+            [ngTemplateOutlet]="whiteCategoryFilter"
+            [ngTemplateOutletContext]="{ scope: 'lineage', heading: 'White Factor Categories' }">
+          </ng-container>
           <p class="filter-description">Filter by the combined star count across all factors of each type</p>
           <div class="input-grid">
             <div class="input-wrapper">
@@ -949,10 +1109,17 @@
           </h5>
           <div class="collapsible-body" [class.collapsed]="isSectionCollapsed('raceSchedule')">
             <div class="collapsible-body-inner">
-              <app-race-scheduler
-                [showSearch]="true"
-                (selectionChanged)="onRaceSelectionChanged($event)">
-              </app-race-scheduler>
+              @defer (on viewport) {
+                <app-race-scheduler
+                  [showSearch]="true"
+                  (selectionChanged)="onRaceSelectionChanged($event)">
+                </app-race-scheduler>
+              } @placeholder {
+                <div class="deferred-filter-loading" aria-label="Race schedule loads when scrolled into view">
+                  <mat-icon>calendar_month</mat-icon>
+                  <span>Race schedule</span>
+                </div>
+              }
             </div>
           </div>
         </div>
@@ -1041,7 +1208,7 @@
   <div class="active-filters-container">
     <span class="active-filters-label">Active Filters:</span>
     <div class="active-filters-chips">
-      <div *ngFor="let chip of activeFilterChips" 
+      <div *ngFor="let chip of activeFilterChips; trackBy: trackByStableId"
            class="filter-chip" 
            [ngClass]="getChipColorClass(chip.type)"
            (click)="removeActiveFilter(chip)">

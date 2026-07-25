@@ -15,6 +15,7 @@
 
       <nav class="timeline-tabs" aria-label="Timeline tools">
         <a
+          *ngIf="caratPlannerAvailable"
           class="timeline-tab"
           [class.is-active]="activeTab === 'timeline'"
           [routerLink]="['/timeline']"
@@ -76,11 +77,12 @@
   <app-mobile-timeline
     *ngIf="activeTab === 'timeline' && isMobile"
     tourAnchor="timeline-page"
+    [plannerEnabled]="caratPlannerAvailable"
     [plannedEventIds]="plannedEventIds"
     [plannerRewardSummaries]="plannerRewardSummaries"
   ></app-mobile-timeline>
 
-  <section class="planner-tab-page" *ngIf="activeTab === 'carat-planner'">
+  <section class="planner-tab-page" *ngIf="caratPlannerAvailable && activeTab === 'carat-planner'">
     <app-carat-planner [events]="timelineEvents" [requestedEventId]="requestedPlannerEventId"></app-carat-planner>
   </section>
 
@@ -112,6 +114,45 @@
       </div>
 
       <span class="timeline-count">{{ getFilteredEventCount() }} / {{ getTotalEventCount() }}</span>
+
+      <div class="timeline-view-switch" role="group" aria-label="Timeline direction">
+        <button
+          type="button"
+          aria-label="Use horizontal timeline"
+          [class.is-active]="desktopTimelineDirection === 'horizontal'"
+          [attr.aria-pressed]="desktopTimelineDirection === 'horizontal'"
+          matTooltip="Horizontal timeline"
+          (click)="setDesktopTimelineDirection('horizontal')"
+        >
+          <mat-icon>view_week</mat-icon>
+          <span>Horizontal</span>
+        </button>
+        <button
+          type="button"
+          aria-label="Use vertical timeline"
+          [class.is-active]="desktopTimelineDirection === 'vertical'"
+          [attr.aria-pressed]="desktopTimelineDirection === 'vertical'"
+          matTooltip="Vertical timeline"
+          (click)="setDesktopTimelineDirection('vertical')"
+        >
+          <mat-icon>view_agenda</mat-icon>
+          <span>Vertical</span>
+        </button>
+      </div>
+
+      <button
+        type="button"
+        class="toolbar-button timeline-spacing-button"
+        [attr.aria-label]="timelineSpacingMode === 'calendar' ? 'Use compact date gaps' : 'Space gaps by elapsed days'"
+        [class.is-active]="timelineSpacingMode === 'calendar'"
+        [disabled]="desktopTimelineDirection === 'vertical'"
+        [attr.aria-pressed]="timelineSpacingMode === 'calendar'"
+        [matTooltip]="desktopTimelineDirection === 'vertical' ? 'Calendar spacing applies to the horizontal view' : (timelineSpacingMode === 'calendar' ? 'Use compact gaps' : 'Space gaps by elapsed days')"
+        (click)="toggleTimelineSpacing()"
+      >
+        <mat-icon>{{ timelineSpacingMode === 'calendar' ? 'date_range' : 'compress' }}</mat-icon>
+        <span>{{ timelineSpacingMode === 'calendar' ? 'Calendar gaps' : 'Compact gaps' }}</span>
+      </button>
 
       <button type="button" class="toolbar-button" (click)="scrollToToday('smooth')">
         <mat-icon>today</mat-icon>
@@ -155,15 +196,24 @@
       </div>
     </aside>
 
-    <div class="timeline-wrapper" tourAnchor="timeline-track">
+    <div class="timeline-wrapper" [class.is-vertical-view]="desktopTimelineDirection === 'vertical'" tourAnchor="timeline-track">
       <div
         #timelineContainer
         class="timeline-container"
         [class.is-dragging]="isDragging"
+        [class.is-vertical]="desktopTimelineDirection === 'vertical'"
+        tabindex="0"
+        [attr.aria-label]="desktopTimelineDirection === 'vertical' ? 'Vertical event timeline' : 'Horizontal event timeline. Scroll or drag to move through dates.'"
         (mousedown)="onMouseDown($event)"
         (scroll)="onScroll($event)"
       >
-        <div class="timeline-track" [style.width.px]="totalWidth">
+        <div
+          class="timeline-track"
+          [hidden]="desktopTimelineDirection !== 'horizontal'"
+          [class.is-layout-animating]="timelineLayoutAnimating"
+          [style.width.px]="totalWidth"
+          [style.min-height.px]="timelineTrackMinHeight"
+        >
           <div
             *ngFor="let month of timelineMonthSpans"
             class="timeline-month-span"
@@ -187,6 +237,8 @@
           <section
             *ngFor="let lane of visibleTimelineLanes; trackBy: trackTimelineLane"
             class="timeline-date-lane"
+            [class.is-expanded]="lane.expanded"
+            [attr.data-lane-key]="lane.key"
             [style.left.px]="lane.position"
             [style.width.px]="timelineLaneWidth"
           >
@@ -242,6 +294,78 @@
               <mat-icon>{{ lane.expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
             </button>
           </section>
+        </div>
+
+        <div
+          *ngIf="verticalTimelineInitialized"
+          class="vertical-timeline"
+          [hidden]="desktopTimelineDirection !== 'vertical'"
+        >
+            <section
+              *ngFor="let month of timelineMonthGroups; trackBy: trackTimelineMonth"
+              class="vertical-month-group"
+            >
+              <header class="vertical-month-header">
+                <h2>{{ month.label }}</h2>
+                <span>{{ month.lanes.length }} dates · {{ month.eventCount }} events</span>
+              </header>
+
+              <section
+                *ngFor="let lane of month.lanes; trackBy: trackTimelineLane"
+                class="vertical-date-row"
+                [class.is-today]="isLaneToday(lane)"
+                [attr.data-lane-key]="lane.key"
+              >
+                <header class="vertical-date-header">
+                  <time>{{ lane.dateLabel }}</time>
+                  <span>{{ lane.events.length }} {{ lane.events.length === 1 ? 'event' : 'events' }}</span>
+                </header>
+
+                <div class="vertical-date-content">
+                  <div class="vertical-marker-grid" *ngIf="lane.markers.length">
+                    <div
+                      class="lane-marker"
+                      *ngFor="let marker of lane.markers"
+                      [class.has-banner]="marker.imagePath"
+                      [class.is-anniversary]="marker.type === 'anniversary'"
+                    >
+                      <img
+                        *ngIf="marker.imagePath"
+                        class="lane-marker-banner"
+                        [src]="marker.imagePath"
+                        [alt]="marker.label"
+                        width="512"
+                        height="125"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      <div class="lane-marker-label">
+                        <mat-icon aria-hidden="true">{{ marker.type === 'anniversary' ? 'redeem' : 'flag' }}</mat-icon>
+                        <span>{{ marker.label }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="vertical-event-grid">
+                    <ng-container *ngFor="let event of lane.events; trackBy: trackTimelineEvent">
+                      @defer (on viewport) {
+                        <app-timeline-event-card
+                          [event]="event"
+                          [plannerEligible]="isPlannerEligible(event)"
+                          [planned]="isEventPlanned(event)"
+                          [rewardSummary]="plannerRewardSummaries.get(event.id) || null"
+                          (openDetails)="openEventDetails($event)"
+                          (addToPlanner)="addEventToPlanner($event)"
+                          (removeFromPlanner)="removeEventFromPlanner($event)"
+                        ></app-timeline-event-card>
+                      } @placeholder {
+                        <div class="vertical-card-placeholder" aria-hidden="true"></div>
+                      }
+                    </ng-container>
+                  </div>
+                </div>
+              </section>
+            </section>
         </div>
       </div>
     </div>

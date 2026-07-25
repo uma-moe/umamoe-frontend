@@ -1,6 +1,7 @@
 :host {
   display: block;
   width: 100%;
+  container-type: inline-size;
 }
 
 .timeline-event-card {
@@ -269,6 +270,36 @@ h3 {
   order: 2;
 }
 
+.card-variable-reward {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: rgb(var(--event-accent-rgb));
+}
+
+.card-variable-reward mat-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  line-height: 16px;
+}
+
+.card-reward-context {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.card-reward-item.is-variable mat-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  color: rgb(var(--event-accent-rgb));
+  font-size: 17px;
+  line-height: 17px;
+}
+
 .card-reward-item {
   display: inline-flex;
   min-width: 0;
@@ -319,44 +350,56 @@ h3 {
 }
 
 .timeline-event-card.has-race-pickups {
-  height: 211px;
+  height: 217px;
 }
 
 .timeline-event-card.no-media.has-race-pickups {
-  height: 141px;
+  height: 147px;
 }
 
 .has-race-pickups .card-body {
-  height: 140px;
-  grid-template-rows: 16px minmax(21px, auto) 19px minmax(66px, 1fr);
+  height: 146px;
+  grid-template-rows: 16px minmax(21px, auto) 19px 72px;
 }
 
 .has-race-pickups .card-footer {
-  height: 66px;
-  flex-wrap: wrap;
-  align-content: flex-end;
-  row-gap: 2px;
+  display: grid;
+  height: 72px;
+  padding-top: 4px;
+  align-content: stretch;
+  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 39px 28px;
+  gap: 1px;
 }
 
-.has-race-pickups .card-race-summary {
-  display: flex;
-  width: 100%;
-  height: 14px;
-  flex: 0 0 100%;
-  align-items: center;
-  gap: 7px;
-  order: -1;
+.has-race-pickups .card-reward-summary {
+  box-sizing: border-box;
+  width: calc(100% + 18px);
+  height: 28px;
+  margin: 0 -9px -6px;
+  padding: 4px 9px 5px;
+  align-self: end;
+  gap: 5px;
+  background: rgba(var(--event-accent-rgb), 0.045);
+  border-top: 1px solid var(--border-subtle);
+  font-size: 9px;
+  line-height: 18px;
+  order: 0;
 }
 
-.has-race-pickups .card-race-summary span {
-  min-width: 0;
-  padding-right: 7px;
+.has-race-pickups .card-reward-context {
+  padding-right: 6px;
   border-right: 1px solid var(--border-subtle);
+  font-size: 8px;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
 }
 
-.has-race-pickups .card-race-summary span:last-child {
-  padding-right: 0;
-  border-right: 0;
+.has-race-pickups .card-reward-item img {
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
 }
 
 .no-pickups .card-footer {
@@ -364,28 +407,37 @@ h3 {
 }
 
 .card-race-summary {
-  display: grid;
+  display: flex;
+  width: 100%;
   min-width: 0;
   flex: 1 1 auto;
   align-self: center;
-  align-content: center;
-  gap: 1px;
+  align-items: flex-start;
   order: 0;
 }
 
-.card-race-summary span {
+.card-race-lines {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  align-content: start;
+  gap: 0;
+}
+
+.card-race-lines > span {
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: 10px;
-  font-weight: 560;
-  line-height: 14px;
+  font-size: 9.25px;
+  font-weight: 570;
+  line-height: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.card-race-summary span:first-child {
+.card-race-lines > span:first-child {
   color: var(--text-primary);
-  font-weight: 650;
+  font-size: 10.25px;
+  font-weight: 700;
 }
 
 .card-empty-footer {
@@ -643,4 +695,76 @@ h3 {
   .timeline-event-card {
     transition: none;
   }
+}
+
+.timeline-event-card.has-race-pickups.no-pickups .card-footer,
+.timeline-event-card.is-mobile.has-race-pickups.no-pickups .card-footer {
+  height: 72px;
+}
+
+.timeline-event-card.is-mobile.has-race-pickups.no-pickups,
+.timeline-event-card.is-mobile.has-race-pickups {
+  height: 217px;
+}
+
+.timeline-event-card.is-mobile.has-race-pickups.no-pickups .card-body {
+  height: 146px;
+  grid-template-rows: 16px minmax(21px, auto) 19px 72px;
+}
+
+.timeline-event-card.is-mobile.no-media.has-race-pickups {
+  height: 147px;
+}
+
+.timeline-event-card[data-event-type='legend_race'].has-media.has-race-pickups,
+.timeline-event-card.is-mobile[data-event-type='legend_race'].has-media.has-race-pickups {
+  height: 248px;
+}
+
+.timeline-event-card[data-event-type='legend_race'].no-media.has-race-pickups,
+.timeline-event-card.is-mobile[data-event-type='legend_race'].no-media.has-race-pickups {
+  height: 178px;
+}
+
+.timeline-event-card[data-event-type='legend_race'].has-race-pickups .card-body,
+.timeline-event-card.is-mobile[data-event-type='legend_race'].has-race-pickups .card-body {
+  height: 177px;
+  grid-template-rows: 16px minmax(21px, auto) 19px minmax(110px, 1fr);
+}
+
+.timeline-event-card[data-event-type='legend_race'].has-race-pickups .card-footer {
+  height: 110px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 24px 46px 28px;
+  grid-template-areas:
+    'race'
+    'pickups'
+    'rewards';
+  gap: 4px;
+}
+
+.timeline-event-card[data-event-type='legend_race'] .card-race-summary {
+  grid-area: race;
+  align-self: center;
+}
+
+.timeline-event-card[data-event-type='legend_race'] .card-pickups {
+  height: 46px;
+  grid-area: pickups;
+  align-self: end;
+  gap: 7px;
+}
+
+.timeline-event-card[data-event-type='legend_race'] .card-pickup,
+.timeline-event-card.is-mobile[data-event-type='legend_race'] .card-pickup {
+  width: 46px;
+  height: 46px;
+  flex-basis: 46px;
+}
+
+.timeline-event-card[data-event-type='legend_race'] .card-reward-summary {
+  width: calc(100% + 18px);
+  grid-area: rewards;
+  align-self: end;
+  justify-content: flex-start;
 }

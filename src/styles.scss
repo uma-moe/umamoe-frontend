@@ -2281,6 +2281,24 @@ body.christmas-theme {
   }
 }
 
+.hidden-sparks-dialog-panel {
+  .mat-mdc-dialog-container {
+    --mdc-dialog-container-color: transparent;
+    --mdc-dialog-container-elevation-shadow: none;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .mat-mdc-dialog-surface {
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: var(--radius-xl) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}
+
 @media (max-width: 600px) {
   .modern-dialog-panel {
     max-width: calc(100vw - 16px) !important;

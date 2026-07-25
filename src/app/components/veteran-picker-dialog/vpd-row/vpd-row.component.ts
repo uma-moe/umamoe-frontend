@@ -5,7 +5,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { getStarDisplay } from '../../../pages/profile/profile-helpers';
+import { getStarDisplay } from '../../../utils/character-display.util';
 import { VeteranMember } from '../../../models/profile.model';
 import { LineageDisplayComponent } from '../../lineage-display/lineage-display.component';
 

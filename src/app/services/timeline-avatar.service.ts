@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { EventType, TimelineEvent } from '../models/timeline.model';
-import { getCharacterNameEntry } from '../data/character.data';
+import { getAllCharacters, getCharacterNameEntry } from '../data/character.data';
 import { getSupportCardById } from '../data/support-cards.data';
-import { SupportCardType } from '../models/support-card.model';
+import { Rarity, SupportCardType } from '../models/support-card.model';
 
 export interface TimelineAvatar {
   key: string;
@@ -13,6 +13,7 @@ export interface TimelineAvatar {
   variantName?: string;
   searchTerms?: string[];
   imageUrl: string;
+  fallbackImageUrl?: string;
   gametoraUrl: string;
 }
 
@@ -61,6 +62,22 @@ export class TimelineAvatarService {
     const avatars = this.buildSupportAvatars(event);
     this.supportAvatarCache.set(event, avatars);
     return avatars;
+  }
+
+  getPickupAvatar(event: TimelineEvent, pickupId: number, displayName?: string): TimelineAvatar | null {
+    return event.type === EventType.SUPPORT_CARD_BANNER || this.isSupportCardId(pickupId)
+      ? this.resolveSupportAvatar(pickupId, displayName)
+      : this.resolveCharacterAvatar(pickupId, displayName);
+  }
+
+  getPickupAvatarByKind(
+    kind: 'character' | 'support',
+    pickupId: number,
+    displayName?: string,
+  ): TimelineAvatar | null {
+    return kind === 'support'
+      ? this.resolveSupportAvatar(pickupId, displayName)
+      : this.resolveCharacterAvatar(pickupId, displayName);
   }
 
   eventMatchesSearch(event: TimelineEvent | undefined, query: string): boolean {
@@ -233,6 +250,13 @@ export class TimelineAvatarService {
     const variantName = identity.variantName
       ?? (masterVariant && !/^original$/i.test(masterVariant) ? masterVariant : undefined);
     const displayNameWithVariant = variantName ? `${baseName} [${variantName}]` : baseName;
+    const fallbackCharacter = getAllCharacters().find(character =>
+      character.id !== id
+      && Math.floor(character.id / 100) === Math.floor(id / 100)
+      && character.id % 100 === 1
+    ) ?? getAllCharacters().find(character =>
+      character.id !== id && Math.floor(character.id / 100) === Math.floor(id / 100)
+    );
 
     return {
       key: `character-${id}-${displayNameWithVariant}`,
@@ -243,6 +267,9 @@ export class TimelineAvatarService {
       variantName,
       searchTerms: variantName ? [variantName, `${baseName} ${variantName}`] : [],
       imageUrl: `/assets/images/character_stand/chara_stand_${id}.webp`,
+      fallbackImageUrl: fallbackCharacter
+        ? `/assets/images/character_stand/chara_stand_${fallbackCharacter.id}.webp`
+        : undefined,
       gametoraUrl: this.characterGametoraUrl(id, baseName)
     };
   }
@@ -253,16 +280,17 @@ export class TimelineAvatarService {
     }
 
     const cardIdValue = String(Math.trunc(cardId));
-    const name = this.cleanPublicName(displayName, `Support ${cardIdValue}`);
     const supportCard = getSupportCardById(cardIdValue);
+    const name = this.cleanPublicName(displayName, supportCard?.name ?? `Support ${cardIdValue}`);
     const supportType = supportCard ? this.supportTypeLabel(supportCard.type) : null;
+    const rarity = supportCard ? this.supportRarityLabel(supportCard.rarity) : null;
 
     return {
       key: `support-${cardIdValue}-${name}`,
       kind: 'support',
       name,
       displayName: name,
-      subLabel: supportType ? `${supportType} Support` : 'Support card',
+      subLabel: [rarity, supportType ? `${supportType} Support` : 'Support card'].filter(Boolean).join(' · '),
       searchTerms: ['support', ...(supportType ? [supportType] : [])],
       imageUrl: `/assets/images/support_card/half/support_card_s_${cardIdValue}.webp`,
       gametoraUrl: `https://gametora.com/umamusume/supports/${cardIdValue}-${this.toGametoraSlug(name)}`
@@ -271,7 +299,11 @@ export class TimelineAvatarService {
 
   private cleanPublicName(value: string | undefined, fallback: string): string {
     const name = value?.trim();
-    return name && !/^unknown[_\s-]*\d+$/i.test(name) ? name : fallback;
+    return name
+      && !/^unknown[_\s-]*\d+$/i.test(name)
+      && !/^(?:support card|umamusume|character)\s+\d+$/i.test(name)
+      ? name
+      : fallback;
   }
 
   private parseCharacterName(displayName: string): { baseName: string; variantName?: string } {
@@ -291,6 +323,15 @@ export class TimelineAvatarService {
       case SupportCardType.GUTS: return 'Guts';
       case SupportCardType.WISDOM: return 'Wisdom';
       case SupportCardType.FRIEND: return 'Friend';
+      default: return '';
+    }
+  }
+
+  private supportRarityLabel(rarity: Rarity): string {
+    switch (rarity) {
+      case Rarity.SSR: return 'SSR';
+      case Rarity.SR: return 'SR';
+      case Rarity.R: return 'R';
       default: return '';
     }
   }

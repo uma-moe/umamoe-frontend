@@ -54,6 +54,7 @@ export interface InheritanceRecord {
   parent_right_id?: number; // V2 API right parent ID
   parent_rank?: number; // V2 API parent rank
   parent_rarity?: number; // V2 API parent rarity
+  scenario_id?: number | null; // V3 API training scenario ID
   
   // V1 API character objects (legacy)
   main?: Character;
@@ -148,6 +149,7 @@ export interface InheritanceSearchFilters {
   excludeMainParentId?: number[]; // Excludes main parent IDs
   minParentRank?: number;
   minParentRarity?: number;
+  scenarioIds?: number[];
   // Blue Sparks (Main Stats) - 1-9 levels
   speedSpark?: number;
   staminaSpark?: number;
@@ -204,6 +206,18 @@ export interface InheritanceSearchFilters {
   // V2 API minimum requirements
   minWinCount?: number;
   minWhiteCount?: number;
+  minCommonWhiteCount?: number;
+  minCommonWhiteStarsSum?: number;
+  minScenarioWhiteCount?: number;
+  minScenarioWhiteStarsSum?: number;
+  minRaceWhiteCount?: number;
+  minRaceWhiteStarsSum?: number;
+  minMainCommonWhiteCount?: number;
+  minMainCommonWhiteStarsSum?: number;
+  minMainScenarioWhiteCount?: number;
+  minMainScenarioWhiteStarsSum?: number;
+  minMainRaceWhiteCount?: number;
+  minMainRaceWhiteStarsSum?: number;
   maxFollowerNum?: number;
   // Support Card Filters
   supportCardId?: number;

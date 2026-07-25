@@ -40,6 +40,65 @@ describe('AffinityService race saddle groups', () => {
     expect(service.countG1RaceWins([14, 147, 39, 156, 159, 165, 1])).toBe(3);
   });
 
+  it('counts the P1-P2 race overlap once in the tree total', () => {
+    const race = service.calculateRaceAffinityBreakdown({
+      p1: [14, 39],
+      p2: [147, 165],
+      'p1-1': [156],
+      'p1-2': [147],
+      'p2-1': [165],
+      'p2-2': [14],
+    });
+
+    expect(race.parentPair).toBe(3);
+    expect(race.p1Grandparent).toBe(6);
+    expect(race.p2Grandparent).toBe(6);
+    expect(race.p1Node).toBe(9);
+    expect(race.p2Node).toBe(9);
+    expect(race.total).toBe(15);
+    expect(race.p1Node + race.p2Node - race.parentPair).toBe(race.total);
+  });
+
+  it('ranks races shared by both parents ahead of one-parent overlaps', () => {
+    replaceRaceSaddleData({
+      races: [
+        {
+          race_instance_id: 1001,
+          name: 'Both Parents Cup',
+          short_name: 'Both Cup',
+          schedule: [{ turn_label: 'Apr Late' }],
+          win_saddles: [{ saddle_id: 10, group_id: 100, win_saddle_type: 3 }],
+        },
+        {
+          race_instance_id: 1002,
+          name: 'P1 Cup',
+          short_name: 'P1 Cup',
+          schedule: [{ turn_label: 'May Early' }],
+          win_saddles: [{ saddle_id: 20, group_id: 200, win_saddle_type: 3 }],
+        },
+        {
+          race_instance_id: 1003,
+          name: 'P2 Cup',
+          short_name: 'P2 Cup',
+          schedule: [{ turn_label: 'Jun Late' }],
+          win_saddles: [{ saddle_id: 30, group_id: 300, win_saddle_type: 3 }],
+        },
+      ],
+    });
+
+    const recommendations = service.getOptimalRaceRecommendations([10, 20], [10, 30]);
+
+    expect(recommendations.map(race => race.name)).toEqual([
+      'Both Parents Cup',
+      'P1 Cup',
+      'P2 Cup',
+    ]);
+    expect(recommendations.map(race => race.affinityGain)).toEqual([6, 3, 3]);
+    expect(recommendations[0].overlapsP1).toBeTrue();
+    expect(recommendations[0].overlapsP2).toBeTrue();
+    expect(recommendations[0].scheduleLabel).toBe('Apr Late');
+  });
+
   it('rebuilds the saddle map when resource data is replaced', () => {
     expect(service.countSharedG1RaceWins([14], [147])).toBe(1);
 

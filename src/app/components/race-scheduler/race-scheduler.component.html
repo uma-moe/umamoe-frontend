@@ -1,4 +1,8 @@
-<div class="race-scheduler">
+<div
+  class="race-scheduler"
+  [class.selectable-mode]="selectable"
+  [class.optimal-mode]="!selectable && hasOptimalRecommendations"
+  [class.results-mode]="!selectable && !hasOptimalRecommendations">
   <!-- Toolbar: search + import/export -->
   <div class="scheduler-toolbar" *ngIf="selectable">
     <div class="toolbar-search" *ngIf="showSearch">
@@ -18,11 +22,22 @@
       <div class="toolbar-search-results" *ngIf="raceSearchResults.length > 0">
         <div
           class="toolbar-search-result"
-          *ngFor="let r of raceSearchResults"
+          *ngFor="let r of raceSearchResults; trackBy: trackByRace"
           (mousedown)="addSearchResult(r, $event)"
-          [class.already-selected]="isFullySelected(r)">
-          <span class="result-grade" [ngClass]="getGradeClass(r.grade)">{{ getGradeLabel(r.grade) }}</span>
-          <span class="result-name">{{ r.name }}</span>
+          [class.already-selected]="isFullySelected(r)"
+          [ngClass]="getGradeClass(r.grade)"
+          [attr.aria-label]="r.name + ' (' + getGradeLabel(r.grade) + ')'"
+          [matTooltip]="r.name + ' (' + getGradeLabel(r.grade) + ')'">
+          <img
+            *ngIf="getRaceImageUrl(r) as raceImageUrl"
+            [src]="raceImageUrl"
+            alt=""
+            class="result-race-image"
+            (error)="hideBrokenRaceImage($event)"
+            loading="lazy"
+            decoding="async"
+            fetchpriority="low">
+          <span class="result-name race-image-fallback">{{ r.name }}</span>
           <span class="result-slot-count" *ngIf="getRaceMaxSlots(r.race_instance_id) > 1">
             {{ getRaceSelectedCount(r.race_instance_id) }}/{{ getRaceMaxSlots(r.race_instance_id) }}
           </span>
@@ -45,18 +60,18 @@
   </div>
 
   <div class="scheduler-grid">
-    <div class="year-column" *ngFor="let year of years">
+    <div class="year-column" *ngFor="let year of years; trackBy: trackByYear">
       <div class="year-header" [ngClass]="year">{{ yearLabels[year] }}</div>
 
-      <div class="month-block" *ngFor="let pair of monthPairs">
+      <div class="month-block" *ngFor="let pair of monthPairs; trackBy: trackByMonthPair">
         <!-- 4 cells per row: early m1, late m1, early m2, late m2 -->
         <div class="half-row">
-          <ng-container *ngFor="let month of pair">
+          <ng-container *ngFor="let month of pair; trackBy: trackByNumber">
             <div
               class="half-cell"
-              *ngFor="let half of halves"
+              *ngFor="let half of halves; trackBy: trackByNumber"
               [class.has-races]="getCellRaces(year, month, half).length > 0"
-              [class.has-selection]="!!getSelectedInCell(year, month, half)"
+              [class.has-selection]="!!getSelectedInCell(year, month, half) || getOptimalInCell(year, month, half).length > 0"
               (click)="openRaceDialog(year, month, half)">
 
               <!-- Selected race in this cell -->
@@ -65,36 +80,83 @@
                   class="race-badge"
                   [ngClass]="getGradeClass(race.grade)"
                   [matTooltip]="race.name + ' (' + getGradeLabel(race.grade) + ')'">
-                  <span class="badge-label">{{ race.short_name }}</span>
+                  <img
+                    *ngIf="getRaceImageUrl(race) as raceImageUrl"
+                    [src]="raceImageUrl"
+                    alt=""
+                    class="race-title-image"
+                    (error)="hideBrokenRaceImage($event)"
+                    loading="lazy"
+                    decoding="async"
+                    fetchpriority="low">
+                  <span class="badge-label race-image-fallback">{{ race.short_name }}</span>
                   <button class="badge-remove" (click)="deselectRace(year, month, half, $event)">
                     <mat-icon>close</mat-icon>
                   </button>
                 </div>
               </ng-container>
 
+              <!-- Optimal-race recommendations in calendar mode -->
+              <ng-container *ngIf="!selectable && hasOptimalRecommendations">
+                <div
+                  *ngFor="let entry of getOptimalInCell(year, month, half); trackBy: trackByOptimalRace"
+                  class="race-badge optimal"
+                  [ngClass]="getGradeClass(entry.race.grade)"
+                  [matTooltip]="getOptimalTooltip(entry)">
+                  <img
+                    *ngIf="getRaceImageUrl(entry.race) as raceImageUrl"
+                    [src]="raceImageUrl"
+                    alt=""
+                    class="race-title-image"
+                    (error)="hideBrokenRaceImage($event)"
+                    loading="lazy"
+                    decoding="async"
+                    fetchpriority="low">
+                  <span class="badge-label race-image-fallback">{{ entry.race.short_name }}</span>
+                  <span class="optimal-gain">+{{ entry.recommendation.affinityGain }}</span>
+                </div>
+              </ng-container>
+
               <!-- Race results in this cell (display mode) - position 1 = won, else ran -->
-              <ng-container *ngIf="!selectable">
-                <ng-container *ngFor="let entry of getRanInCell(year, month, half)">
+              <ng-container *ngIf="!selectable && !hasOptimalRecommendations">
+                <ng-container *ngFor="let entry of getRanInCell(year, month, half); trackBy: trackByRanRace">
                   <div
                     class="race-badge"
                     [class.won]="entry.position === 1"
                     [class.ran]="entry.position !== 1"
                     [ngClass]="[getGradeClass(entry.race.grade), getPositionClass(entry.position)]"
                     [matTooltip]="entry.race.name + (entry.position === 1 ? ' - Won' : ' - ' + entry.position + getOrdinalSuffix(entry.position) + ' place')">
-                    <mat-icon *ngIf="entry.position === 1" class="won-icon">emoji_events</mat-icon>
-                    <span *ngIf="entry.position !== 1" class="position-num">{{ entry.position }}</span>
-                    <span class="badge-label">{{ entry.race.short_name }}</span>
+                    <mat-icon class="placement-cup">emoji_events</mat-icon>
+                    <img
+                      *ngIf="getRaceImageUrl(entry.race) as raceImageUrl"
+                      [src]="raceImageUrl"
+                      alt=""
+                      class="race-title-image"
+                      (error)="hideBrokenRaceImage($event)"
+                      loading="lazy"
+                      decoding="async"
+                      fetchpriority="low">
+                    <span class="badge-label race-image-fallback">{{ entry.race.short_name }}</span>
                   </div>
                 </ng-container>
                 <!-- Won races from saddle data (when no run result covers this cell) -->
                 <ng-container *ngIf="getRanInCell(year, month, half).length === 0">
-                  <ng-container *ngFor="let race of getWonInCell(year, month, half)">
+                  <ng-container *ngFor="let race of getWonInCell(year, month, half); trackBy: trackByRace">
                     <div
                       class="race-badge won"
                       [ngClass]="getGradeClass(race.grade)"
                       [matTooltip]="race.name + ' - Won'">
-                      <mat-icon class="won-icon">emoji_events</mat-icon>
-                      <span class="badge-label">{{ race.short_name }}</span>
+                      <mat-icon class="placement-cup">emoji_events</mat-icon>
+                      <img
+                        *ngIf="getRaceImageUrl(race) as raceImageUrl"
+                        [src]="raceImageUrl"
+                        alt=""
+                        class="race-title-image"
+                        (error)="hideBrokenRaceImage($event)"
+                        loading="lazy"
+                        decoding="async"
+                        fetchpriority="low">
+                      <span class="badge-label race-image-fallback">{{ race.short_name }}</span>
                     </div>
                   </ng-container>
                 </ng-container>
@@ -123,7 +185,7 @@
   </div>
 
   <!-- Grade color legend -->
-  <div class="grade-legend">
+  <div class="grade-legend" *ngIf="showLegend">
     <span class="legend-item grade-g1-legend">G1</span>
     <span class="legend-item grade-g2-legend">G2</span>
     <span class="legend-item grade-g3-legend">G3</span>
@@ -132,13 +194,10 @@
       <mat-icon>emoji_events</mat-icon> Won
     </span>
     <span class="legend-item ran-legend">
-      <span class="pos-dot pos-1st-dot"></span> 1st
+      <mat-icon class="legend-cup pos-2nd-cup">emoji_events</mat-icon> 2nd
     </span>
     <span class="legend-item ran-legend">
-      <span class="pos-dot pos-2nd-dot"></span> 2nd
-    </span>
-    <span class="legend-item ran-legend">
-      <span class="pos-dot pos-3rd-dot"></span> 3rd
+      <mat-icon class="legend-cup pos-3rd-cup">emoji_events</mat-icon> 3rd
     </span>
   </div>
 </div>

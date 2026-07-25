@@ -59,6 +59,19 @@ export interface RaceAffinityBreakdown {
   total: number;
 }
 
+export interface OptimalRaceRecommendation {
+  groupId: number;
+  saddleId: number;
+  raceInstanceId: number;
+  name: string;
+  shortName: string;
+  scheduleLabel: string;
+  overlapsP1: boolean;
+  overlapsP2: boolean;
+  overlapCount: 1 | 2;
+  affinityGain: 3 | 6;
+}
+
 export interface TreeAffinityWithRaceResult extends TreeAffinityResult {
   race: RaceAffinityBreakdown;
 }
@@ -100,6 +113,7 @@ export class AffinityService {
   private aff3: number[] = [];
   private g1WinSaddleSource: readonly unknown[] | null = null;
   private g1WinSaddleGroupsById = new Map<number, number>();
+  private g1RaceByGroup = new Map<number, Omit<OptimalRaceRecommendation, 'overlapsP1' | 'overlapsP2' | 'overlapCount' | 'affinityGain'>>();
 
   constructor(private resourceData: ResourceDataService) {}
 
@@ -466,6 +480,45 @@ export class AffinityService {
     return this.countSharedG1RaceWins(primary, secondary) * AffinityService.G1_RACE_AFFINITY_VALUE;
   }
 
+  /**
+   * G1 races worth winning on a new parent built from P1/P2.
+   * A race shared with one parent adds +3 affinity in the next generation;
+   * a race shared with both parents adds +6.
+   */
+  getOptimalRaceRecommendations(
+    p1Wins: readonly number[] | null | undefined,
+    p2Wins: readonly number[] | null | undefined,
+  ): OptimalRaceRecommendation[] {
+    this.getG1WinSaddleGroupsById();
+    const p1Groups = this.normalizeG1WinSaddleGroups(p1Wins ?? []);
+    const p2Groups = this.normalizeG1WinSaddleGroups(p2Wins ?? []);
+    const groups = new Set<number>([...p1Groups, ...p2Groups]);
+    const recommendations: OptimalRaceRecommendation[] = [];
+
+    for (const groupId of groups) {
+      const race = this.g1RaceByGroup.get(groupId);
+      if (!race) continue;
+
+      const overlapsP1 = p1Groups.has(groupId);
+      const overlapsP2 = p2Groups.has(groupId);
+      const overlapCount = (overlapsP1 && overlapsP2 ? 2 : 1) as 1 | 2;
+      recommendations.push({
+        ...race,
+        overlapsP1,
+        overlapsP2,
+        overlapCount,
+        affinityGain: (overlapCount * AffinityService.G1_RACE_AFFINITY_VALUE) as 3 | 6,
+      });
+    }
+
+    recommendations.sort((a, b) =>
+      b.overlapCount - a.overlapCount
+      || a.raceInstanceId - b.raceInstanceId
+      || a.name.localeCompare(b.name),
+    );
+    return recommendations;
+  }
+
   private calcBreeding(
     parent: number,
     gpLeft: number | null,
@@ -529,6 +582,7 @@ export class AffinityService {
     }
 
     const groupsById = new Map<number, number>();
+    const raceByGroup = new Map<number, Omit<OptimalRaceRecommendation, 'overlapsP1' | 'overlapsP2' | 'overlapCount' | 'affinityGain'>>();
     for (const race of races as any[]) {
       for (const winSaddle of race?.win_saddles ?? []) {
         const saddleId = Number(winSaddle?.saddle_id);
@@ -541,13 +595,39 @@ export class AffinityService {
           (type === 3 || label === 'G1')
         ) {
           groupsById.set(saddleId, groupId);
+          if (!raceByGroup.has(groupId)) {
+            raceByGroup.set(groupId, {
+              groupId,
+              saddleId,
+              raceInstanceId: Number(race?.race_instance_id) || 0,
+              name: String(race?.name ?? race?.short_name ?? `G1 race ${groupId}`),
+              shortName: String(race?.short_name ?? race?.name ?? `G1 race ${groupId}`),
+              scheduleLabel: this.getRaceScheduleLabel(race),
+            });
+          }
         }
       }
     }
 
     this.g1WinSaddleSource = races;
     this.g1WinSaddleGroupsById = groupsById;
+    this.g1RaceByGroup = raceByGroup;
     return groupsById;
+  }
+
+  private getRaceScheduleLabel(race: any): string {
+    const schedule = Array.isArray(race?.schedule) ? race.schedule[0] : null;
+    if (!schedule) return '';
+
+    const turnLabel = String(schedule.turn_label ?? '').trim();
+    if (turnLabel) return turnLabel;
+
+    const month = Number(schedule.month);
+    const half = Number(schedule.half);
+    if (!Number.isFinite(month) || month < 1 || month > 12) return '';
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[month - 1]}${half === 1 ? ' Early' : half === 2 ? ' Late' : ''}`;
   }
 
   rankCandidatesForSlot(

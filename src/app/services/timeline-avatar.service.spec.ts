@@ -90,6 +90,19 @@ describe('TimelineAvatarService', () => {
     expect(service.getCharacterAvatars(event)).toEqual([]);
   });
 
+  it('hydrates future pickup IDs from bundled character and support masters', () => {
+    const service = new TimelineAvatarService();
+
+    const character = service.getPickupAvatarByKind('character', 113202);
+    const support = service.getPickupAvatarByKind('support', 30289);
+
+    expect(character?.displayName).toBe('Loves Only You');
+    expect(character?.fallbackImageUrl)
+      .toBe('/assets/images/character_stand/chara_stand_113201.webp');
+    expect(support?.displayName).toBe('Forever Young');
+    expect(support?.subLabel).toContain('Wisdom Support');
+  });
+
   it('uses public related names for timeline search', () => {
     const service = new TimelineAvatarService();
     const event = createCharacterBanner([100702], ['Gold Ship']);

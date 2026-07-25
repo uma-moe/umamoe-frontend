@@ -4,6 +4,7 @@ import { CaratPlan, CaratPlanCollection, CaratPlannerDataBundle, PlannerTarget }
 import { CaratPlannerCalculationService } from '../../services/carat-planner-calculation.service';
 import { CaratPlannerPersistenceService } from '../../services/carat-planner-persistence.service';
 import { CaratPullProbabilityService } from '../../services/carat-pull-probability.service';
+import { TimelineAvatarService } from '../../services/timeline-avatar.service';
 import { CaratPlannerComponent } from './carat-planner.component';
 
 describe('CaratPlannerComponent banner ordering', () => {
@@ -24,6 +25,7 @@ describe('CaratPlannerComponent banner ordering', () => {
       new CaratPullProbabilityService(),
       persistence as never,
       { loadGachasForEvents: () => new Promise<never>(() => undefined) } as never,
+      new TimelineAvatarService(),
       { markForCheck: () => undefined } as unknown as ChangeDetectorRef,
     );
     component.plan = realPersistence.activePlan;
@@ -94,6 +96,29 @@ describe('CaratPlannerComponent banner ordering', () => {
       'past-old', 'past-new', 'boundary', 'future-soon', 'future-late',
     ]);
     expect(component.plannedPullTotal).toBe(150);
+  });
+
+  it('summarizes shortfalls only for targets inside the active projection', () => {
+    const component = createComponent();
+    const target = (id: string, pullDate: string): PlannerTarget => ({
+      id,
+      eventId: id,
+      title: id,
+      bannerKind: 'character',
+      bannerStart: pullDate,
+      bannerEnd: pullDate,
+      pullTiming: 'end',
+      plannedPulls: 200,
+      desiredCopies: 1,
+      useTickets: true,
+      allowPaidJewels: false,
+    });
+    component.plan.targets = [target('past', '2029-01-01'), target('first', '2030-02-01'), target('second', '2030-03-01')];
+    component.projectionByTarget.set('past', { shortfallJewels: 900 } as never);
+    component.projectionByTarget.set('first', { shortfallJewels: 300 } as never);
+    component.projectionByTarget.set('second', { shortfallJewels: 600 } as never);
+
+    expect(component.totalShortfallCarats).toBe(900);
   });
 
   it('ranks exact and title-prefix matches before other textual matches', () => {
@@ -372,6 +397,29 @@ describe('CaratPlannerComponent banner ordering', () => {
 
     expect(option.label).toBe('Mejiro McQueen — Heirs to the Throne');
     expect(option.imagePath).toBe('/assets/images/support_card/half/support_card_s_30031.webp');
+  });
+
+  it('hydrates future character pickup names and artwork fallbacks from master data', () => {
+    const component = createComponent();
+    component.events = [{
+      id: 'future-character',
+      title: 'Future character',
+      type: 'character_banner',
+      globalReleaseDate: '2031-01-01',
+      pickupCardIds: [113202],
+    }];
+    component.addEvent(component.filteredEvents[0]);
+    const target = component.plan.targets[0];
+    const option = (component as unknown as {
+      buildPickupOption: (
+        targetValue: typeof target,
+        pickup: { pickup_id: number; rate: number; label?: string },
+      ) => { label: string; imagePath?: string; fallbackImagePath?: string };
+    }).buildPickupOption(target, { pickup_id: 113202, rate: 0.0075, label: 'Character 113202' });
+
+    expect(option.label).toBe('Loves Only You');
+    expect(option.imagePath).toBe('/assets/images/character_stand/chara_stand_113202.webp');
+    expect(option.fallbackImagePath).toBe('/assets/images/character_stand/chara_stand_113201.webp');
   });
 
   it('builds compact scenario selectors with site-native club rank artwork', () => {
@@ -921,6 +969,19 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.activeSetupPanel).toBeNull();
   });
 
+  it('opens assumptions on balance and switches tabs without closing the workspace', () => {
+    const component = createComponent();
+
+    component.toggleAssumptions();
+    expect(component.activeSetupPanel).toBe('resources');
+
+    component.selectSetupPanel('rewards');
+    expect(component.activeSetupPanel).toBe('rewards');
+
+    component.toggleAssumptions();
+    expect(component.activeSetupPanel).toBeNull();
+  });
+
   it('keeps the complete funding breakdown in the compact summary tooltip', () => {
     const component = createComponent();
 
@@ -1041,6 +1102,7 @@ describe('CaratPlannerComponent active-plan resources', () => {
       new CaratPullProbabilityService(),
       persistence as never,
       resources as never,
+      new TimelineAvatarService(),
       cdr,
     );
     component.events = [

@@ -1,46 +1,100 @@
 <section class="cp" *ngIf="plan">
-  <mat-card appearance="outlined" class="cp-manager">
-    <mat-card-content>
-      <div class="cp-plan-identity">
-        <label class="cp-field cp-plan-select">
-          <span>Saved plan</span>
-          <span class="cp-control cp-control--icon">
-            <mat-icon aria-hidden="true">bookmark</mat-icon>
-            <select [ngModel]="plan.id" (ngModelChange)="selectPlan($event)" aria-label="Saved plan">
-              <option *ngFor="let item of collection.plans; trackBy: trackById" [value]="item.id">
-                {{ item.name }}
-              </option>
-            </select>
+  <section class="cp-workbench" aria-label="Planner controls and projection">
+  <header class="cp-manager">
+    <div class="cp-plan-identity">
+      <label class="cp-field cp-plan-select">
+        <span>Saved plan</span>
+        <span class="cp-control cp-control--icon">
+          <mat-icon aria-hidden="true">bookmark</mat-icon>
+          <select [ngModel]="plan.id" (ngModelChange)="selectPlan($event)" aria-label="Saved plan">
+            <option *ngFor="let item of collection.plans; trackBy: trackById" [value]="item.id">
+              {{ item.name }}
+            </option>
+          </select>
+        </span>
+      </label>
+
+      <label class="cp-field cp-name-field">
+        <span>Plan name</span>
+        <input class="cp-control" [(ngModel)]="plan.name" (blur)="save()" maxlength="80" autocomplete="off">
+      </label>
+    </div>
+
+    <div class="cp-actions" role="group" aria-label="Plan actions">
+      <button class="cp-action cp-action--primary" type="button" (click)="createPlan()">
+        <mat-icon>add</mat-icon><span>New plan</span>
+      </button>
+      <details #planActionsMenu class="cp-plan-more">
+        <summary class="cp-action cp-action--icon" aria-label="More plan actions" title="More plan actions">
+          <mat-icon aria-hidden="true">more_horiz</mat-icon>
+        </summary>
+        <div class="cp-plan-menu">
+          <button type="button" (click)="planActionsMenu.open = false; duplicatePlan()"><mat-icon>content_copy</mat-icon><span>Duplicate plan</span></button>
+          <button type="button" (click)="planActionsMenu.open = false; exportPlan()"><mat-icon>download</mat-icon><span>Export plan</span></button>
+          <input #importFile class="cp-file-input" type="file" accept="application/json" (change)="importPlan($event)">
+          <button type="button" (click)="planActionsMenu.open = false; importFile.click()"><mat-icon>upload</mat-icon><span>Import plan</span></button>
+          <button class="cp-danger" type="button" (click)="planActionsMenu.open = false; deletePlan()" [disabled]="collection.plans.length < 2">
+            <mat-icon>delete_outline</mat-icon><span>Delete plan</span>
+          </button>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <div class="cp-workbench-main">
+    <div class="cp-picker cp-picker--primary">
+      <label class="cp-field" for="cp-banner-search">Add a character or support banner</label>
+      <span class="cp-control cp-control--icon cp-control--action">
+        <mat-icon>search</mat-icon>
+        <input id="cp-banner-search" [ngModel]="eventSearch" (focus)="showEventPicker = true"
+          (ngModelChange)="searchEvents($event)" (keydown)="onEventPickerKeydown($event)"
+          placeholder="Search characters or support cards&hellip;" autocomplete="off"
+          aria-label="Search character or support banners" aria-haspopup="listbox"
+          aria-controls="cp-banner-options" [attr.aria-expanded]="showEventPicker"
+          [attr.aria-activedescendant]="showEventPicker && filteredEvents.length ? 'cp-banner-option-' + eventPickerActiveIndex : null">
+        <button *ngIf="eventSearch" type="button" aria-label="Clear banner search" (click)="searchEvents('')">
+          <mat-icon>close</mat-icon>
+        </button>
+      </span>
+
+      <cdk-virtual-scroll-viewport id="cp-banner-options" *ngIf="showEventPicker" itemSize="68" class="cp-event-viewport" role="listbox">
+        <button class="cp-event-option" type="button" role="option" *cdkVirtualFor="let event of filteredEvents; let optionIndex = index; trackBy: trackById"
+          [id]="'cp-banner-option-' + optionIndex" [class.is-active]="optionIndex === eventPickerActiveIndex"
+          [attr.aria-selected]="optionIndex === eventPickerActiveIndex" [disabled]="isEventAdded(event.id)"
+          (mouseenter)="eventPickerActiveIndex = optionIndex" (click)="addEvent(event)">
+          <span class="cp-event-art" aria-hidden="true">
+            <img *ngIf="event.imagePath" [src]="event.imagePath" width="512" height="125" loading="lazy" alt="">
+            <mat-icon *ngIf="!event.imagePath">{{ event.type?.includes('support') ? 'style' : 'person' }}</mat-icon>
           </span>
-        </label>
+          <span class="cp-event-copy"><strong>{{ eventDisplayTitle(event) }}</strong><time>{{ event.globalReleaseDate || event.estimatedGlobalDate || event.jpReleaseDate | date:'mediumDate':'UTC' }}</time></span>
+          <span class="cp-event-action"><mat-icon>{{ isEventAdded(event.id) ? 'check' : 'add' }}</mat-icon><span class="cp-event-action-label">{{ isEventAdded(event.id) ? 'Added' : 'Add' }}</span></span>
+        </button>
+      </cdk-virtual-scroll-viewport>
+    </div>
 
-        <label class="cp-field cp-name-field">
-          <span>Plan name</span>
-          <input class="cp-control" [(ngModel)]="plan.name" (blur)="save()" maxlength="80" autocomplete="off">
-        </label>
+    <div class="cp-overview" aria-label="Projection summary">
+      <div class="cp-stat cp-stat--status" [class.is-short]="totalShortfallCarats > 0">
+        <span class="cp-stat-icon"><mat-icon>{{ totalShortfallCarats > 0 ? 'warning_amber' : 'check_circle' }}</mat-icon></span>
+        <div>
+          <strong>{{ totalShortfallCarats > 0 ? (totalShortfallCarats | number) : 'Funded' }}</strong>
+          <span>{{ totalShortfallCarats > 0 ? 'Carats short' : 'Plan status' }}</span>
+        </div>
       </div>
-
-      <div class="cp-actions" role="group" aria-label="Plan actions">
-        <button class="cp-action cp-action--primary" type="button" (click)="createPlan()">
-          <mat-icon>add</mat-icon><span>New plan</span>
-        </button>
-        <button class="cp-action" type="button" matTooltip="Duplicate plan" aria-label="Duplicate plan" (click)="duplicatePlan()">
-          <mat-icon>content_copy</mat-icon><span>Duplicate</span>
-        </button>
-        <button class="cp-action cp-action--icon" type="button" matTooltip="Export plan" aria-label="Export plan" (click)="exportPlan()">
-          <mat-icon>download</mat-icon>
-        </button>
-        <input #importFile class="cp-file-input" type="file" accept="application/json" (change)="importPlan($event)">
-        <button class="cp-action cp-action--icon" type="button" matTooltip="Import plan" aria-label="Import plan" (click)="importFile.click()">
-          <mat-icon>upload</mat-icon>
-        </button>
-        <button class="cp-action cp-action--icon cp-danger" type="button" matTooltip="Delete plan" aria-label="Delete plan"
-          (click)="deletePlan()" [disabled]="collection.plans.length < 2">
-          <mat-icon>delete_outline</mat-icon>
-        </button>
+      <div class="cp-stat">
+        <span class="cp-stat-icon"><mat-icon>diamond</mat-icon></span>
+        <div><strong>{{ projection?.finalBalances?.freeJewels | number }}</strong><span>Carats left</span></div>
       </div>
-    </mat-card-content>
-  </mat-card>
+      <div class="cp-stat">
+        <span class="cp-stat-icon"><mat-icon>confirmation_number</mat-icon></span>
+        <div><strong>{{ ((projection?.finalBalances?.umaTickets || 0) + (projection?.finalBalances?.supportTickets || 0)) | number }}</strong><span>Tickets left</span></div>
+      </div>
+      <div class="cp-stat">
+        <span class="cp-stat-icon"><mat-icon>flag</mat-icon></span>
+        <div><strong>{{ plannedPullTotal | number }}</strong><span>Planned pulls</span></div>
+      </div>
+    </div>
+  </div>
+  </section>
 
   <div class="cp-status cp-status--loading" *ngIf="resourceState.loading" role="status" aria-live="polite">
     <mat-progress-bar mode="indeterminate"></mat-progress-bar>
@@ -63,49 +117,36 @@
     <div><strong>Plan could not be imported</strong><span>{{ importError }}</span></div>
   </div>
 
-  <mat-card appearance="outlined" class="cp-overview" aria-label="Projected resources">
-    <mat-card-content>
-      <div class="cp-stat cp-stat--carats">
-        <span class="cp-stat-icon"><mat-icon>diamond</mat-icon></span>
-        <div><strong>{{ projection?.finalBalances?.freeJewels | number }}</strong><span>Free Carats</span></div>
-      </div>
-      <div class="cp-stat">
-        <span class="cp-stat-icon"><mat-icon>confirmation_number</mat-icon></span>
-        <div><strong>{{ projection?.finalBalances?.umaTickets | number }}</strong><span>Uma tickets</span></div>
-      </div>
-      <div class="cp-stat">
-        <span class="cp-stat-icon"><mat-icon>style</mat-icon></span>
-        <div><strong>{{ projection?.finalBalances?.supportTickets | number }}</strong><span>Support tickets</span></div>
-      </div>
-      <div class="cp-stat">
-        <span class="cp-stat-icon"><mat-icon>flag</mat-icon></span>
-        <div><strong>{{ plannedPullTotal | number }}</strong><span>Planned pulls</span></div>
-      </div>
-    </mat-card-content>
-  </mat-card>
+  <section class="cp-setup" aria-label="Plan assumptions" [class.is-open]="activeSetupPanel">
+    <button class="cp-assumptions-bar" type="button" [attr.aria-expanded]="!!activeSetupPanel"
+      aria-controls="cp-setup-workspace" (click)="toggleAssumptions()">
+      <span class="cp-assumptions-title"><mat-icon aria-hidden="true">tune</mat-icon><span><strong>Plan assumptions</strong><small>Balance, income and automatically counted rewards</small></span></span>
+      <span class="cp-assumptions-summary" aria-hidden="true">
+        <span><strong>{{ plan.balances.freeJewels | number }}</strong> starting Carats</span>
+        <span><strong>{{ activeIncomeAssumptionCount }}</strong> income sources</span>
+        <span><strong>{{ activeRewardCount }}</strong> rewards counted</span>
+      </span>
+      <mat-icon class="cp-disclosure-icon" aria-hidden="true">expand_more</mat-icon>
+    </button>
 
-  <section class="cp-setup" aria-label="Plan setup">
-    <div class="cp-setup-tabs" role="group" aria-label="Planner inputs">
-      <button class="cp-setup-tab" type="button" [class.is-active]="activeSetupPanel === 'resources'"
-        [attr.aria-expanded]="activeSetupPanel === 'resources'" aria-controls="cp-setup-workspace"
-        (click)="toggleSetupPanel('resources')">
+    <div class="cp-setup-tabs" *ngIf="activeSetupPanel" role="tablist" aria-label="Planner assumptions">
+      <button class="cp-setup-tab" type="button" role="tab" [class.is-active]="activeSetupPanel === 'resources'"
+        [attr.aria-selected]="activeSetupPanel === 'resources'" aria-controls="cp-setup-workspace"
+        (click)="selectSetupPanel('resources')">
         <mat-icon aria-hidden="true">account_balance_wallet</mat-icon>
-        <span><strong>Resources</strong><small>{{ plan.projectionStartDate + 'T00:00:00Z' | date:'mediumDate':'UTC' }} &middot; {{ plan.balances.freeJewels | number }} free Carats &middot; {{ (plan.balances.umaTickets + plan.balances.supportTickets) | number }} tickets</small></span>
-        <mat-icon class="cp-setup-chevron" aria-hidden="true">expand_more</mat-icon>
+        <span><strong>Balance</strong><small>{{ plan.projectionStartDate + 'T00:00:00Z' | date:'mediumDate':'UTC' }} &middot; {{ plan.balances.freeJewels | number }} Carats</small></span>
       </button>
-      <button class="cp-setup-tab" type="button" [class.is-active]="activeSetupPanel === 'income'"
-        [attr.aria-expanded]="activeSetupPanel === 'income'" aria-controls="cp-setup-workspace"
-        (click)="toggleSetupPanel('income')">
+      <button class="cp-setup-tab" type="button" role="tab" [class.is-active]="activeSetupPanel === 'income'"
+        [attr.aria-selected]="activeSetupPanel === 'income'" aria-controls="cp-setup-workspace"
+        (click)="selectSetupPanel('income')">
         <mat-icon aria-hidden="true">trending_up</mat-icon>
         <span><strong>Income</strong><small>{{ activeIncomeAssumptionCount }} sources<span *ngIf="enabledIncomeTotalLabel"> &middot; {{ enabledIncomeTotalLabel }}</span></small></span>
-        <mat-icon class="cp-setup-chevron" aria-hidden="true">expand_more</mat-icon>
       </button>
-      <button class="cp-setup-tab" type="button" [class.is-active]="activeSetupPanel === 'rewards'"
-        [attr.aria-expanded]="activeSetupPanel === 'rewards'" aria-controls="cp-setup-workspace"
-        (click)="toggleSetupPanel('rewards')">
+      <button class="cp-setup-tab" type="button" role="tab" [class.is-active]="activeSetupPanel === 'rewards'"
+        [attr.aria-selected]="activeSetupPanel === 'rewards'" aria-controls="cp-setup-workspace"
+        (click)="selectSetupPanel('rewards')">
         <mat-icon aria-hidden="true">redeem</mat-icon>
-        <span><strong>Rewards</strong><small>{{ activeRewardCount }} included<span *ngIf="enabledRewardTotalLabel"> &middot; {{ enabledRewardTotalLabel }}</span></small></span>
-        <mat-icon class="cp-setup-chevron" aria-hidden="true">expand_more</mat-icon>
+        <span><strong>Rewards</strong><small>{{ activeRewardCount }} counted automatically<span *ngIf="enabledRewardTotalLabel"> &middot; {{ enabledRewardTotalLabel }}</span></small></span>
       </button>
     </div>
 
@@ -364,49 +405,18 @@
   <section class="cp-targets" aria-labelledby="cp-targets-heading">
     <div class="cp-target-heading">
       <div class="cp-section-title">
-        <span class="cp-title-icon"><mat-icon>track_changes</mat-icon></span>
-        <div><h2 id="cp-targets-heading">Pull targets</h2><p>Usable pulls run top to bottom by pull date, earliest first. Past targets stay below.</p></div>
+        <div><h2 id="cp-targets-heading">Pull plan</h2><p>Earliest pull first. Open a row to change rate-up goals or inspect the odds.</p></div>
       </div>
-
-      <div class="cp-picker">
-        <div class="cp-field">
-          <label for="cp-banner-search">Add a banner</label>
-          <span class="cp-control cp-control--icon cp-control--action">
-          <mat-icon>search</mat-icon>
-          <input id="cp-banner-search" [ngModel]="eventSearch" (focus)="showEventPicker = true"
-            (ngModelChange)="searchEvents($event)" (keydown)="onEventPickerKeydown($event)"
-            autocomplete="off" aria-label="Search character or support banners" aria-haspopup="listbox"
-            aria-controls="cp-banner-options" [attr.aria-expanded]="showEventPicker"
-            [attr.aria-activedescendant]="showEventPicker && filteredEvents.length ? 'cp-banner-option-' + eventPickerActiveIndex : null">
-          <button *ngIf="eventSearch" type="button" aria-label="Clear banner search" (click)="searchEvents('')">
-            <mat-icon>close</mat-icon>
-          </button>
-          </span>
-        </div>
-
-        <cdk-virtual-scroll-viewport id="cp-banner-options" *ngIf="showEventPicker" itemSize="68" class="cp-event-viewport" role="listbox">
-          <button class="cp-event-option" type="button" role="option" *cdkVirtualFor="let event of filteredEvents; let optionIndex = index; trackBy: trackById"
-            [id]="'cp-banner-option-' + optionIndex" [class.is-active]="optionIndex === eventPickerActiveIndex"
-            [attr.aria-selected]="optionIndex === eventPickerActiveIndex" [disabled]="isEventAdded(event.id)"
-            (mouseenter)="eventPickerActiveIndex = optionIndex" (click)="addEvent(event)">
-            <span class="cp-event-art" aria-hidden="true">
-              <img *ngIf="event.imagePath" [src]="event.imagePath" width="512" height="125" loading="lazy" alt="">
-              <mat-icon *ngIf="!event.imagePath">{{ event.type?.includes('support') ? 'style' : 'person' }}</mat-icon>
-            </span>
-            <span class="cp-event-copy"><strong>{{ eventDisplayTitle(event) }}</strong><time>{{ event.globalReleaseDate || event.estimatedGlobalDate || event.jpReleaseDate | date:'mediumDate':'UTC' }}</time></span>
-            <span class="cp-event-action"><mat-icon>{{ isEventAdded(event.id) ? 'check' : 'add' }}</mat-icon><span class="cp-event-action-label">{{ isEventAdded(event.id) ? 'Added' : 'Add' }}</span></span>
-          </button>
-        </cdk-virtual-scroll-viewport>
-      </div>
+      <span class="cp-target-count">{{ activeTargets.length }} {{ activeTargets.length === 1 ? 'target' : 'targets' }}</span>
     </div>
 
     <div class="cp-empty" *ngIf="activeTargets.length === 0">
       <span class="cp-empty-icon"><mat-icon>event_available</mat-icon></span>
-      <div><strong>No pull targets yet</strong><p>Choose a character or support banner above to calculate what you can afford.</p></div>
+      <div><strong>Your plan is ready for its first banner</strong><p>Search above to add one. We will start with 200 pulls at banner end and select the first featured rate-up for you.</p></div>
     </div>
 
     <div class="cp-target-list" *ngIf="activeTargets.length">
-      <mat-card appearance="outlined" class="cp-target" *ngFor="let target of activeTargets; trackBy: trackById"
+      <article class="cp-target" *ngFor="let target of activeTargets; trackBy: trackById"
         [class.is-past-target]="isTargetBeforePlan(target)">
         <div class="cp-target-main">
           <div class="cp-target-image" *ngIf="target.imagePath">
@@ -426,18 +436,18 @@
         </div>
 
         <div class="cp-target-controls cp-target-controls--primary">
-          <label class="cp-field"><span>Pull on</span><select class="cp-control" [(ngModel)]="target.pullTiming" (ngModelChange)="save()"><option value="start">Banner start</option><option value="end">Banner end</option><option value="custom">Custom date</option></select></label>
-          <label class="cp-field" *ngIf="target.pullTiming === 'custom'"><span>Pull date</span><input class="cp-control" type="date" [(ngModel)]="target.customPullDate" (ngModelChange)="save()"></label>
-          <label class="cp-field"><span>Planned pulls</span><input class="cp-control" type="number" min="0" max="5000" [(ngModel)]="target.plannedPulls" (ngModelChange)="save()"></label>
+          <label class="cp-field cp-pull-count"><span>Pulls</span><input class="cp-control" type="number" min="0" max="5000" step="10" [(ngModel)]="target.plannedPulls" (ngModelChange)="save()"></label>
           <details class="cp-payment-menu">
-            <summary aria-label="Payment settings" title="Payment settings"><mat-icon aria-hidden="true">tune</mat-icon></summary>
+            <summary aria-label="Target options" title="Target options"><mat-icon aria-hidden="true">tune</mat-icon></summary>
             <div class="cp-payment-popover">
-              <strong>Payment settings</strong>
-              <span>Choose which balances this target may use.</span>
-            <div class="cp-target-options">
-              <mat-checkbox [(ngModel)]="target.useTickets" (ngModelChange)="save()">Use tickets first</mat-checkbox>
-              <mat-checkbox [(ngModel)]="target.allowPaidJewels" (ngModelChange)="save()">Allow paid Carats</mat-checkbox>
-            </div>
+              <strong>Target options</strong>
+              <span>The recommended defaults use tickets first and pull at banner end.</span>
+              <label class="cp-field"><span>Pull on</span><select class="cp-control" [(ngModel)]="target.pullTiming" (ngModelChange)="save()"><option value="start">Banner start</option><option value="end">Banner end</option><option value="custom">Custom date</option></select></label>
+              <label class="cp-field" *ngIf="target.pullTiming === 'custom'"><span>Pull date</span><input class="cp-control" type="date" [(ngModel)]="target.customPullDate" (ngModelChange)="save()"></label>
+              <div class="cp-target-options">
+                <mat-checkbox [(ngModel)]="target.useTickets" (ngModelChange)="save()">Use tickets first</mat-checkbox>
+                <mat-checkbox [(ngModel)]="target.allowPaidJewels" (ngModelChange)="save()">Allow paid Carats</mat-checkbox>
+              </div>
             </div>
           </details>
           <button class="cp-action cp-action--icon cp-danger cp-target-remove" type="button" matTooltip="Remove target"
@@ -470,14 +480,15 @@
               </span>
             </span>
 
-            <span class="cp-pickup-summary-label">Rolling for</span>
+            <span class="cp-pickup-summary-label">Goals</span>
             <span class="cp-pickup-summary-goals" *ngIf="odds.goals.length; else noSelectedGoals">
               <span class="cp-pickup-summary-goal" *ngFor="let goal of odds.goals | slice:0:3; trackBy: trackByPickupGoal">
                 <span class="cp-pickup-summary-art">
-                  <img *ngIf="goal.imagePath" [src]="goal.imagePath" width="24" height="24" loading="lazy" alt="">
-                  <mat-icon *ngIf="!goal.imagePath" aria-hidden="true">{{ target.bannerKind === 'support' ? 'style' : 'person' }}</mat-icon>
+                  <img *ngIf="goal.imagePath" [src]="goal.imagePath" width="30" height="30" loading="lazy" alt=""
+                    (error)="onPickupImageError($event, goal.fallbackImagePath)">
+                  <mat-icon aria-hidden="true">{{ target.bannerKind === 'support' ? 'style' : 'person' }}</mat-icon>
                 </span>
-                <span>{{ goal.label }}</span>
+                <span [matTooltip]="goal.label">{{ goal.label }}</span>
                 <strong [attr.aria-label]="pickupGoalOddsAriaLabel(goal)">{{ pickupGoalOddsLabel(goal) }}</strong>
               </span>
               <span class="cp-pickup-summary-more" *ngIf="odds.goals.length > 3">{{ odds.goals.length - 3 }} more</span>
@@ -524,12 +535,15 @@
                       [attr.aria-label]="(isPickupGoalSelected(target, pickup.pickup_id) ? 'Remove ' : 'Select ') + (pickup.label || targetDisplayTitle(target))"
                       (click)="togglePickupGoal(target, pickup.pickup_id)">
                       <span class="cp-goal-picker-art" [class.is-support]="target.bannerKind === 'support'">
-                        <img *ngIf="pickup.imagePath" [src]="pickup.imagePath" width="34" height="34" loading="lazy" alt="">
-                        <mat-icon *ngIf="!pickup.imagePath" aria-hidden="true">{{ target.bannerKind === 'support' ? 'style' : 'person' }}</mat-icon>
+                        <img *ngIf="pickup.imagePath" [src]="pickup.imagePath" width="40" height="40" loading="lazy" alt=""
+                          (error)="onPickupImageError($event, pickup.fallbackImagePath)">
+                        <mat-icon aria-hidden="true">{{ target.bannerKind === 'support' ? 'style' : 'person' }}</mat-icon>
                       </span>
                       <span class="cp-goal-picker-name">
                         <strong>{{ pickup.label || targetDisplayTitle(target) }}</strong>
-                        <small>{{ formatProbability(pickup.rate, 2) }} {{ odds.ratesInferred ? 'estimated ' : '' }}per pull</small>
+                        <small>
+                          <span *ngIf="pickup.subLabel">{{ pickup.subLabel }} &middot; </span>{{ formatProbability(pickup.rate, 2) }} {{ odds.ratesInferred ? 'estimated ' : '' }}per pull
+                        </small>
                       </span>
                       <mat-icon aria-hidden="true">{{ isPickupGoalSelected(target, pickup.pickup_id) ? 'check_circle' : 'add' }}</mat-icon>
                     </button>
@@ -540,12 +554,15 @@
               <div class="cp-selected-goal-list" *ngIf="odds.goals.length; else noConfiguredGoals">
                 <article class="cp-selected-goal-row" *ngFor="let goal of odds.goals; trackBy: trackByPickupGoal">
                   <span class="cp-selected-goal-art" [class.is-support]="target.bannerKind === 'support'">
-                    <img *ngIf="goal.imagePath" [src]="goal.imagePath" width="40" height="40" loading="lazy" alt="">
-                    <mat-icon *ngIf="!goal.imagePath" aria-hidden="true">{{ target.bannerKind === 'support' ? 'style' : 'person' }}</mat-icon>
+                    <img *ngIf="goal.imagePath" [src]="goal.imagePath" width="46" height="46" loading="lazy" alt=""
+                      (error)="onPickupImageError($event, goal.fallbackImagePath)">
+                    <mat-icon aria-hidden="true">{{ target.bannerKind === 'support' ? 'style' : 'person' }}</mat-icon>
                   </span>
                   <span class="cp-selected-goal-name">
                     <strong [matTooltip]="goal.label">{{ goal.label }}</strong>
-                    <small>{{ formatProbability(goal.rate, 2) }} {{ odds.ratesInferred ? 'estimated ' : '' }}per pull</small>
+                    <small>
+                      <span *ngIf="goal.subLabel">{{ goal.subLabel }} &middot; </span>{{ formatProbability(goal.rate, 2) }} {{ odds.ratesInferred ? 'estimated ' : '' }}per pull
+                    </small>
                   </span>
                   <div class="cp-selected-goal-copy">
                     <span [id]="'copy-goal-' + target.id + '-' + goal.pickupId">Copies</span>
@@ -649,7 +666,7 @@
           </div>
           </div>
         </details>
-      </mat-card>
+      </article>
     </div>
 
     <p class="cp-disclaimer" *ngIf="activeTargets.length">

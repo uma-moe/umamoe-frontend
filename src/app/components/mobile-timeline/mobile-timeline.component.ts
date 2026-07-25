@@ -115,6 +115,7 @@ interface MobileTimelineEventView {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy {
+    @Input() plannerEnabled = false;
     @Input() plannedEventIds: ReadonlySet<string> = new Set<string>();
     @Input() plannerRewardSummaries: ReadonlyMap<string, TimelineRewardSummary> = new Map<string, TimelineRewardSummary>();
     @ViewChildren('virtualTimelineRow') private virtualTimelineRowsRef?: QueryList<ElementRef<HTMLElement>>;
@@ -358,6 +359,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
             event,
             calculation: this.timelineCalculation,
             rewardSummary: this.plannerRewardSummaries.get(event.id) ?? null,
+            plannerEnabled: this.plannerEnabled,
         };
         this.dialog.open(TimelineEventDetailsComponent, {
             data,
@@ -371,10 +373,12 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     }
 
     addEventToPlanner(event: TimelineEvent): void {
+        if (!this.plannerEnabled) return;
         this.plannerTimeline.setEventActive(event, true);
     }
 
     removeEventFromPlanner(event: TimelineEvent): void {
+        if (!this.plannerEnabled) return;
         this.plannerTimeline.setEventActive(event, false);
     }
 

@@ -16,7 +16,6 @@ import { Subject, Subscription, takeUntil } from 'rxjs';
 import { Meta, Title } from '@angular/platform-browser';
 import { InheritanceService } from '../../services/inheritance.service';
 import { VoteProtectionService, VoteState } from '../../services/vote-protection.service';
-import { SupportCardService } from '../../services/support-card.service';
 import { AuthService } from '../../services/auth.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { AffinityService, PlannerRaceWins, TreeAffinityWithRaceResult, TreeSlots } from '../../services/affinity.service';
@@ -28,13 +27,14 @@ import {
   InheritanceRecord,
   InheritanceSearchFilters
 } from '../../models/inheritance.model';
-import { SupportCardShort } from '../../models/support-card.model';
 import { environment } from '../../../environments/environment';
 import { DatabaseFilterComponent, UnifiedSearchParams } from '../../components/database-filter/database-filter.component';
 import { InheritanceEntryComponent } from '../../components/inheritance-entry/inheritance-entry.component';
+import { HiddenSparksDialogComponent } from '../../components/hidden-sparks-dialog/hidden-sparks-dialog.component';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
 import type { SuccessionChara } from '../../models/profile.model';
+import { Factor, FactorService } from '../../services/factor.service';
 
 @Component({
   selector: 'app-inheritance-database',
@@ -77,11 +77,12 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   currentFilters: InheritanceFilters | null = null;
   currentAdvancedFilters: UnifiedSearchParams | null = null;
   hasMoreRecords = true;
+  readonly lowEndDevice = this.detectLowEndDevice();
   // Scroll / pagination mode
   listMode: 'infinite' | 'paginated' = 'infinite';
   private readonly LIST_MODE_KEY = 'db-list-mode';
   // Pagination properties
-  pageSize = 12;
+  pageSize = this.lowEndDevice ? 8 : 12;
   currentPage = 0;
   totalRecords = 0; // Total records from the search result
   // Sorting properties
@@ -92,6 +93,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   splitSparksMode = false;
   sparkShowPerRun = false;
   showP2Sparks = false;
+  defaultParentFocus: 'main' | 'left' | 'right' | null = null;
+  whiteFactorOptions: Factor[] = [];
+  hiddenSparkFactorIds: number[] = [];
+  private readonly hiddenSparkStorageKey = 'db-hidden-spark-factors';
 
   // Bookmarks tab
   activeTab: 'database' | 'bookmarks' = 'database';
@@ -125,6 +130,12 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
 
   private advancedSearchSignature: string | null = null;
   private readonly emptyNumberArray: number[] = [];
+
+  setDefaultParentFocus(parent: 'main' | 'left' | 'right' | null): void {
+    this.defaultParentFocus = parent !== null && this.defaultParentFocus === parent
+      ? null
+      : parent;
+  }
 
   private stableStringify(value: unknown): string {
     if (Array.isArray(value)) {
@@ -247,9 +258,9 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     return this.advancedFilter?.selectedVeteran ?? null;
   }
 
-  private readonly initialRecordRenderBatchSize = 8;
-  private readonly recordRenderBatchSize = 8;
-  private readonly recordRenderAheadViewportMultiplier = 2;
+  private readonly initialRecordRenderBatchSize = this.lowEndDevice ? 4 : 8;
+  private readonly recordRenderBatchSize = this.lowEndDevice ? 4 : 8;
+  private readonly recordRenderAheadViewportMultiplier = this.lowEndDevice ? 1 : 2;
   private recordRenderFrame: number | null = null;
   private recordRenderGeneration = 0;
 
@@ -258,7 +269,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     private router: Router,
     private inheritanceService: InheritanceService,
     private voteProtection: VoteProtectionService,
-    private supportCardService: SupportCardService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
     private meta: Meta,
@@ -269,10 +279,18 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     private affinityService: AffinityService,
     private appVersionService: AppVersionService,
     private googleAnalyticsService: GoogleAnalyticsService,
+    private factorService: FactorService,
   ) {
     // Restore list mode preference
     const saved = localStorage.getItem(this.LIST_MODE_KEY);
-    if (saved === 'paginated' || saved === 'infinite') this.listMode = saved;
+    if (saved === 'paginated' || saved === 'infinite') {
+      this.listMode = saved;
+    } else if (this.lowEndDevice) {
+      // Infinite scrolling retains every loaded result component. Prefer a
+      // bounded page on memory-constrained devices until the user opts in.
+      this.listMode = 'paginated';
+    }
+    this.hiddenSparkFactorIds = this.loadHiddenSparkFactorIds();
     // Restore page from URL - also force paginated mode
     const urlPage = parseInt(this.route.snapshot.queryParams['page'], 10);
     if (!isNaN(urlPage) && urlPage > 0) {
@@ -294,6 +312,12 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     ]);
   }
   ngOnInit() {
+    this.factorService.getFactors()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(factors => {
+        this.whiteFactorOptions = factors.filter(factor => [2, 3, 4].includes(factor.type));
+      });
+
     this.affinityService.load()
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
@@ -346,6 +370,43 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       this.searchRecords();
     }
     this.ngZone.runOutsideAngular(() => this.initScrollListener());
+  }
+
+  openHiddenSparksDialog(): void {
+    this.dialog.open(HiddenSparksDialogComponent, {
+      data: {
+        factors: this.whiteFactorOptions,
+        hiddenFactorIds: this.hiddenSparkFactorIds,
+      },
+      autoFocus: false,
+      width: 'min(760px, 94vw)',
+      maxWidth: '94vw',
+      maxHeight: '90vh',
+      panelClass: 'hidden-sparks-dialog-panel',
+    }).afterClosed()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((factorIds: number[] | undefined) => {
+        if (!factorIds) return;
+        this.hiddenSparkFactorIds = [
+          ...new Set(factorIds.map(Number).filter(id => Number.isFinite(id) && id > 0)),
+        ].sort((left, right) => left - right);
+        this.persistHiddenSparkFactorIds();
+      });
+  }
+
+  private loadHiddenSparkFactorIds(): number[] {
+    try {
+      const saved = JSON.parse(localStorage.getItem(this.hiddenSparkStorageKey) ?? '[]');
+      return Array.isArray(saved)
+        ? [...new Set(saved.map(Number).filter(id => Number.isFinite(id) && id > 0))]
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private persistHiddenSparkFactorIds(): void {
+    localStorage.setItem(this.hiddenSparkStorageKey, JSON.stringify(this.hiddenSparkFactorIds));
   }
   private initScrollListener() {
     this.scrollListener = () => {
@@ -549,9 +610,22 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         
         minWinCount: af.min_win_count,
         minWhiteCount: af.min_white_count,
+        minCommonWhiteCount: af.min_common_white_count,
+        minCommonWhiteStarsSum: af.min_common_white_stars_sum,
+        minScenarioWhiteCount: af.min_scenario_white_count,
+        minScenarioWhiteStarsSum: af.min_scenario_white_stars_sum,
+        minRaceWhiteCount: af.min_race_white_count,
+        minRaceWhiteStarsSum: af.min_race_white_stars_sum,
+        minMainCommonWhiteCount: af.min_main_common_white_count,
+        minMainCommonWhiteStarsSum: af.min_main_common_white_stars_sum,
+        minMainScenarioWhiteCount: af.min_main_scenario_white_count,
+        minMainScenarioWhiteStarsSum: af.min_main_scenario_white_stars_sum,
+        minMainRaceWhiteCount: af.min_main_race_white_count,
+        minMainRaceWhiteStarsSum: af.min_main_race_white_stars_sum,
         maxFollowerNum: af.max_follower_num,
         minParentRank: af.parent_rank,
         minParentRarity: af.parent_rarity,
+        scenarioIds: af.scenario_id,
         supportCardId: af.support_card_id,
         minLimitBreak: af.min_limit_break,
         
@@ -740,6 +814,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     return record.id;
   }
 
+  trackByPageNumber(index: number, page: number): number {
+    return page < 0 ? -(index + 1) : page;
+  }
+
   get isRenderingRecords(): boolean {
     return this.recordRenderFrame !== null;
   }
@@ -825,6 +903,14 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     const position = window.pageYOffset + window.innerHeight;
     const height = document.documentElement.scrollHeight;
     return position > height - threshold;
+  }
+
+  private detectLowEndDevice(): boolean {
+    if (typeof navigator === 'undefined') return false;
+    const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+    const hardwareConcurrency = navigator.hardwareConcurrency;
+    return (typeof deviceMemory === 'number' && deviceMemory <= 4)
+      || (typeof hardwareConcurrency === 'number' && hardwareConcurrency <= 4);
   }
 
   private getStatLevel(statType: string): number | undefined {
@@ -942,6 +1028,9 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
 
     return Object.entries(params).some(([key, value]) => {
       if (ignoredKeys.has(key)) return false;
+      if (key === 'scenario_id') {
+        return Array.isArray(value) && value.length > 0;
+      }
       if (key === 'max_follower_num') {
         return typeof value === 'number' && value !== 999 && value !== 1000;
       }
@@ -1245,12 +1334,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     return sortMapping[sortBy] || 'trending';
   }
   // Support card helper methods
-  getSupportCardInfo(supportCardId: number): Promise<SupportCardShort | undefined> {
-    return this.supportCardService.getSupportCardById(supportCardId.toString()).pipe().toPromise();
-  }
-  getSupportCardImageUrl(supportCardId: number): string {
-    return `/assets/images/support_card/half/support_card_s_${supportCardId}.webp`;
-  }
   getSupportCardName(supportCardId: number): string {
     // For now, return a fallback until we implement card lookup
     return `Support Card ${supportCardId}`;
@@ -1598,6 +1681,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     if (af.min_white_count && (r.white_count ?? 0) < af.min_white_count) return false;
     if (af.parent_rank && (r.parent_rank ?? 0) < af.parent_rank) return false;
     if (af.parent_rarity && (r.parent_rarity ?? 0) < af.parent_rarity) return false;
+    if (af.scenario_id?.length && (r.scenario_id == null || !af.scenario_id.includes(r.scenario_id))) return false;
 
     if (af.support_card_id && r.support_card_id !== af.support_card_id) return false;
     if (af.min_limit_break && (r.limit_break_count ?? 0) < af.min_limit_break) return false;
@@ -1639,6 +1723,32 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     if (af.min_pink_stars_sum && sumSparks(r.pink_sparks) < af.min_pink_stars_sum) return false;
     if (af.min_green_stars_sum && sumSparks(r.green_sparks) < af.min_green_stars_sum) return false;
     if (af.min_white_stars_sum && sumSparks(r.white_sparks) < af.min_white_stars_sum) return false;
+    if (
+      af.min_common_white_count || af.min_common_white_stars_sum
+      || af.min_scenario_white_count || af.min_scenario_white_stars_sum
+      || af.min_race_white_count || af.min_race_white_stars_sum
+    ) {
+      const categoryStats = this.getWhiteCategoryStats(r.white_sparks);
+      if (af.min_common_white_count && categoryStats.common.count < af.min_common_white_count) return false;
+      if (af.min_common_white_stars_sum && categoryStats.common.stars < af.min_common_white_stars_sum) return false;
+      if (af.min_scenario_white_count && categoryStats.scenario.count < af.min_scenario_white_count) return false;
+      if (af.min_scenario_white_stars_sum && categoryStats.scenario.stars < af.min_scenario_white_stars_sum) return false;
+      if (af.min_race_white_count && categoryStats.race.count < af.min_race_white_count) return false;
+      if (af.min_race_white_stars_sum && categoryStats.race.stars < af.min_race_white_stars_sum) return false;
+    }
+    if (
+      af.min_main_common_white_count || af.min_main_common_white_stars_sum
+      || af.min_main_scenario_white_count || af.min_main_scenario_white_stars_sum
+      || af.min_main_race_white_count || af.min_main_race_white_stars_sum
+    ) {
+      const categoryStats = this.getWhiteCategoryStats(r.main_white_factors);
+      if (af.min_main_common_white_count && categoryStats.common.count < af.min_main_common_white_count) return false;
+      if (af.min_main_common_white_stars_sum && categoryStats.common.stars < af.min_main_common_white_stars_sum) return false;
+      if (af.min_main_scenario_white_count && categoryStats.scenario.count < af.min_main_scenario_white_count) return false;
+      if (af.min_main_scenario_white_stars_sum && categoryStats.scenario.stars < af.min_main_scenario_white_stars_sum) return false;
+      if (af.min_main_race_white_count && categoryStats.race.count < af.min_main_race_white_count) return false;
+      if (af.min_main_race_white_stars_sum && categoryStats.race.stars < af.min_main_race_white_stars_sum) return false;
+    }
 
     if (af.main_win_saddle?.length) {
       const mainWins = new Set(r.main_win_saddles ?? []);
@@ -1771,6 +1881,18 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       case 'pink_stars_sum': return this.sumLocalUqlSparks(record.pink_sparks);
       case 'green_stars_sum': return this.sumLocalUqlSparks(record.green_sparks);
       case 'white_stars_sum': return this.sumLocalUqlSparks(record.white_sparks);
+      case 'common_white_count': return this.getWhiteCategoryStats(record.white_sparks).common.count;
+      case 'common_white_stars_sum': return this.getWhiteCategoryStats(record.white_sparks).common.stars;
+      case 'scenario_white_count': return this.getWhiteCategoryStats(record.white_sparks).scenario.count;
+      case 'scenario_white_stars_sum': return this.getWhiteCategoryStats(record.white_sparks).scenario.stars;
+      case 'race_white_count': return this.getWhiteCategoryStats(record.white_sparks).race.count;
+      case 'race_white_stars_sum': return this.getWhiteCategoryStats(record.white_sparks).race.stars;
+      case 'main_common_white_count': return this.getWhiteCategoryStats(record.main_white_factors).common.count;
+      case 'main_common_white_stars_sum': return this.getWhiteCategoryStats(record.main_white_factors).common.stars;
+      case 'main_scenario_white_count': return this.getWhiteCategoryStats(record.main_white_factors).scenario.count;
+      case 'main_scenario_white_stars_sum': return this.getWhiteCategoryStats(record.main_white_factors).scenario.stars;
+      case 'main_race_white_count': return this.getWhiteCategoryStats(record.main_white_factors).race.count;
+      case 'main_race_white_stars_sum': return this.getWhiteCategoryStats(record.main_white_factors).race.stars;
       default: return (record as any)[normalizedField] ?? (record as any)[field];
     }
   }
@@ -1789,6 +1911,32 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
 
   private sumLocalUqlSparks(sparks: number[] | undefined): number {
     return (sparks ?? []).reduce((sum, sparkId) => sum + (sparkId % 10), 0);
+  }
+
+  private getWhiteCategoryStats(sparks: number[] | undefined): {
+    common: { count: number; stars: number };
+    scenario: { count: number; stars: number };
+    race: { count: number; stars: number };
+  } {
+    const stats = {
+      common: { count: 0, stars: 0 },
+      scenario: { count: 0, stars: 0 },
+      race: { count: 0, stars: 0 },
+    };
+    for (const spark of sparks ?? []) {
+      const category = Math.floor(Math.floor(spark / 10) / 100000);
+      const target = category === 1
+        ? stats.race
+        : category === 2
+          ? stats.common
+          : category === 3
+            ? stats.scenario
+            : null;
+      if (!target) continue;
+      target.count += 1;
+      target.stars += spark % 10;
+    }
+    return stats;
   }
 
   private compareLocalUqlValues(actual: number, operator: string, expected: number): boolean {

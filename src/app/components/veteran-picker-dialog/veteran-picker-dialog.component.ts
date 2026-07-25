@@ -32,9 +32,13 @@ import { AuthService } from '../../services/auth.service';
 import { AppVersionService } from '../../services/app-version.service';
 import { PartnerService, PartnerInheritance, PartnerLookupEvent } from '../../services/partner.service';
 import {
-  getCharacterName, getCardImage, getAptGrade,
-  getScenarioName, getStarDisplay, getTotalStats,
-} from '../../pages/profile/profile-helpers';
+  getAptitudeGrade as getAptGrade,
+  getCharacterCardImage as getCardImage,
+  getCharacterDisplayName as getCharacterName,
+  getScenarioDisplayName as getScenarioName,
+  getStarDisplay,
+  getTotalStats,
+} from '../../utils/character-display.util';
 import { CharacterSelectDialogComponent } from '../character-select-dialog/character-select-dialog.component';
 import { RaceWinPickerDialogComponent, RaceWinPickerDialogData } from '../race-results-dialog/race-win-picker-dialog.component';
 import { PlannerRaceWins, TreeSlots, SlotName, CandidateScore } from '../../services/affinity.service';

@@ -25,12 +25,12 @@ import { FactorService, SparkInfo } from '../../services/factor.service';
 import { CHARACTERS } from '../../data/character.data';
 import { LineageNode } from '../../pages/lineage-planner/lineage-planner.model';
 import {
-  getCardImage,
-  getCharacterName,
-  getDistanceName,
-  getScenarioName,
+  getCharacterCardImage as getCardImage,
+  getCharacterDisplayName as getCharacterName,
+  getDistanceDisplayName as getDistanceName,
+  getScenarioDisplayName as getScenarioName,
   getStarDisplay,
-} from '../../pages/profile/profile-helpers';
+} from '../../utils/character-display.util';
 
 type LineageDisplayMode = 'full' | 'compact';
 type LineageAffinityPosition = 'p1' | 'p1-1' | 'p1-2';

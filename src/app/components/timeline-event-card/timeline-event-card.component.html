@@ -8,7 +8,7 @@
   [class.can-plan]="card.canPlan"
   [class.is-planning]="planQueued"
   [class.has-reward]="rewardSummary"
-  [class.has-race-pickups]="card.raceLines.length && (card.avatars.length || card.canPlan || rewardSummary)"
+  [class.has-race-pickups]="card.raceLines.length"
   [attr.data-event-type]="event.type"
   [attr.data-event-id]="event.id"
 >
@@ -64,7 +64,9 @@
       </div>
 
       <div class="card-race-summary" *ngIf="card.raceLines.length" aria-label="Race information">
-        <span *ngFor="let line of card.raceLines">{{ line }}</span>
+        <span class="card-race-lines">
+          <span *ngFor="let line of card.raceLines">{{ line }}</span>
+        </span>
       </div>
 
       <div
@@ -73,23 +75,37 @@
         [attr.aria-label]="'Rewards: ' + reward.label"
         [attr.title]="reward.label"
       >
-        <span
-          class="card-reward-item"
-          [class.is-free-pulls]="item.kind === 'free_pulls'"
-          *ngFor="let item of reward.items; trackBy: trackReward"
-          [attr.title]="item.label"
-        >
-          <img
-            [src]="rewardIconPath(item)"
-            alt=""
-            width="20"
-            height="20"
-            loading="lazy"
-            decoding="async"
-            (error)="onImageError($event)"
-          />
-          <span>{{ item.kind === 'free_pulls' ? (item.amount + '×') : item.countLabel }}</span>
-        </span>
+        <ng-container *ngIf="reward.variable; else fixedRewardItems">
+          <span class="card-reward-context">{{ reward.previewLabel }}</span>
+          <span
+            class="card-reward-item is-variable"
+            *ngFor="let item of reward.previewItems"
+            [attr.title]="item.countLabel + ' ' + item.label"
+          >
+            <img *ngIf="item.iconPath; else materialRewardIcon" [src]="item.iconPath" alt="" width="20" height="20" loading="lazy" decoding="async" />
+            <ng-template #materialRewardIcon><mat-icon aria-hidden="true">{{ item.icon }}</mat-icon></ng-template>
+            <span>{{ item.countLabel }}</span>
+          </span>
+        </ng-container>
+        <ng-template #fixedRewardItems>
+          <span
+            class="card-reward-item"
+            [class.is-free-pulls]="item.kind === 'free_pulls'"
+            *ngFor="let item of reward.items; trackBy: trackReward"
+            [attr.title]="item.label"
+          >
+            <img
+              [src]="rewardIconPath(item)"
+              alt=""
+              width="20"
+              height="20"
+              loading="lazy"
+              decoding="async"
+              (error)="onImageError($event)"
+            />
+            <span>{{ item.kind === 'free_pulls' ? (item.amount + '×') : item.countLabel }}</span>
+          </span>
+        </ng-template>
       </div>
 
       <div class="card-pickups" *ngIf="card.avatars.length" aria-label="Featured pickups">

@@ -1,5 +1,14 @@
 @use '../../../styles/mixins' as *;
 
+@media (prefers-reduced-motion: reduce), (update: slow) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 :host {
     display: block;
     width: 100%;
@@ -482,7 +491,26 @@
 
     &.expanded { grid-template-rows: 1fr; }
 
-    .filter-inner { overflow: hidden; min-width: 0; padding-left: 1px; }
+    .filter-inner {
+        overflow: hidden;
+        min-width: 0;
+        padding-left: 1px;
+        content-visibility: hidden;
+    }
+
+    &.expanded .filter-inner { content-visibility: visible; }
+}
+
+.deferred-filter-loading {
+    min-height: 96px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+
+    mat-icon { @include icon-size(18px); }
 }
 
 // =============================================
@@ -1957,6 +1985,35 @@
 
 .factor-row-item .factor-select { flex: 1; }
 
+.factor-input-skill-icon {
+    width: 22px;
+    height: 22px;
+    margin: 0 7px 0 1px;
+    border-radius: 5px;
+    object-fit: contain;
+}
+
+.factor-option-content {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+.factor-option-skill-icon {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    border-radius: 5px;
+    object-fit: contain;
+}
+
 .factor-row-item mat-slider { width: calc(100% - 20px); margin-left: 5px; height: 32px; display: flex; align-items: center; }
 
 .factor-row-item .slider-labels-row {
@@ -2030,6 +2087,137 @@
     &.single-column { grid-template-columns: minmax(0, 1fr); }
 }
 
+.white-category-filter {
+    display: grid;
+    gap: 5px;
+    margin: 2px 0 8px;
+}
+
+.white-category-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+
+    .section-label {
+        margin-bottom: 0;
+    }
+
+    small {
+        margin-left: 0;
+        text-align: right;
+    }
+}
+
+.white-category-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.white-category-tab {
+    min-width: 0;
+    height: 32px;
+    display: grid;
+    grid-template-columns: 15px auto minmax(0, 1fr) 13px;
+    align-items: center;
+    gap: 4px;
+    padding: 0 6px;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 10px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+
+    > mat-icon {
+        @include icon-size(14px);
+        color: var(--text-muted);
+    }
+
+    > span {
+        min-width: 0;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    > small {
+        min-width: 0;
+        color: var(--color-orange);
+        font-size: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: right;
+    }
+
+    .category-chevron {
+        transition: transform 0.15s ease;
+    }
+
+    &:hover,
+    &.selected {
+        border-color: rgba(var(--accent-primary-rgb), 0.38);
+        background: var(--filter-mode-option-hover-bg);
+        color: var(--text-primary);
+    }
+
+    &.selected {
+        color: var(--filter-mode-active-color);
+        background: var(--filter-mode-active-bg);
+        box-shadow: var(--filter-mode-active-shadow);
+    }
+
+    &.selected .category-chevron {
+        transform: rotate(180deg);
+    }
+
+    &.active {
+        > mat-icon:first-child {
+            color: var(--color-orange);
+        }
+    }
+}
+
+.white-category-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 30px;
+    align-items: end;
+    gap: 8px;
+    min-width: 0;
+    padding-top: 2px;
+}
+
+.white-category-clear {
+    width: 30px;
+    height: 38px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0.45;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+
+    mat-icon { @include icon-size(16px); }
+
+    &.visible { opacity: 1; }
+
+    &:disabled { cursor: default; }
+
+    &:not(:disabled):hover {
+        border-color: rgba(255, 183, 77, 0.45);
+        background: rgba(255, 183, 77, 0.08);
+        color: var(--color-orange);
+    }
+}
+
 .input-wrapper {
     display: flex;
     flex-direction: column;
@@ -2046,6 +2234,24 @@
 
     &.toggle-wrapper {
         justify-content: flex-start;
+    }
+}
+
+@media (max-width: 600px) {
+    .white-category-heading small {
+        display: none;
+    }
+
+    .white-category-tab {
+        grid-template-columns: 14px minmax(0, 1fr) 12px;
+
+        > small {
+            display: none;
+        }
+    }
+
+    .white-category-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) 30px;
     }
 }
 
@@ -2162,6 +2368,49 @@
 .rank-option-content {
     @include flex-center;
     padding: 4px 0;
+}
+
+.scenario-filter-wrapper {
+    grid-column: 1 / -1;
+}
+
+.selected-scenario-display,
+.scenario-option-content {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+}
+
+.selected-scenario-display {
+    height: 100%;
+    color: var(--text-primary);
+
+    span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+.scenario-trigger-logo {
+    width: 48px;
+    height: 24px;
+    flex: 0 0 auto;
+    object-fit: contain;
+}
+
+.scenario-option-content {
+    width: 100%;
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.scenario-option-logo {
+    width: 58px;
+    height: 30px;
+    flex: 0 0 auto;
+    object-fit: contain;
 }
 
 // Active Filters Chips Section

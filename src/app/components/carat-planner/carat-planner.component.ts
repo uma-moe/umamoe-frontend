@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnDestroy
 import { FormsModule } from '@angular/forms';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -40,6 +39,7 @@ import {
   CaratPullProbabilityResult,
   CaratPullProbabilityService,
 } from '../../services/carat-pull-probability.service';
+import { TimelineAvatarService } from '../../services/timeline-avatar.service';
 
 const EMPTY_DATA: CaratPlannerDataBundle = {
   core: {},
@@ -70,13 +70,17 @@ interface PlannerOutcomeSegment {
 
 interface PlannerPickupOptionView extends PlannerPickupRate {
   label: string;
+  subLabel?: string;
   imagePath?: string;
+  fallbackImagePath?: string;
 }
 
 interface PlannerPickupGoalView {
   pickupId: number;
   label: string;
+  subLabel?: string;
   imagePath?: string;
+  fallbackImagePath?: string;
   rate: number;
   desiredCopies: number;
   probability?: number;
@@ -172,7 +176,6 @@ type FreePullCampaignChoice = 'schedule' | 'stock';
     FormsModule,
     ScrollingModule,
     MatButtonModule,
-    MatCardModule,
     MatCheckboxModule,
     MatFormFieldModule,
     MatIconModule,
@@ -246,6 +249,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     private readonly probabilities: CaratPullProbabilityService,
     private readonly persistence: CaratPlannerPersistenceService,
     private readonly resources: CaratPlannerResourceService,
+    private readonly avatars: TimelineAvatarService,
     private readonly cdr: ChangeDetectorRef,
   ) {}
 
@@ -332,6 +336,13 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     return this.activeTargets
       .filter(target => !this.isTargetBeforePlan(target))
       .reduce((total, target) => total + Math.max(0, Number(target.plannedPulls) || 0), 0);
+  }
+
+  get totalShortfallCarats(): number {
+    return this.activeTargets
+      .filter(target => !this.isTargetBeforePlan(target))
+      .reduce((total, target) =>
+        total + Math.max(0, this.projectionByTarget.get(target.id)?.shortfallJewels ?? 0), 0);
   }
 
   isTargetBeforePlan(target: PlannerTarget): boolean {
@@ -673,6 +684,14 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   toggleSetupPanel(panel: PlannerSetupPanel): void {
     this.activeSetupPanel = this.activeSetupPanel === panel ? null : panel;
+  }
+
+  toggleAssumptions(): void {
+    this.activeSetupPanel = this.activeSetupPanel ? null : 'resources';
+  }
+
+  selectSetupPanel(panel: PlannerSetupPanel): void {
+    this.activeSetupPanel = panel;
   }
 
   private loadResources(): void {
@@ -1753,7 +1772,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         return {
           pickupId: goal.pickupId,
           label: option.label,
+          subLabel: option.subLabel,
           imagePath: option.imagePath,
+          fallbackImagePath: option.fallbackImagePath,
           rate: option.rate,
           desiredCopies: goal.desiredCopies,
           probability: goalOdds?.probability,
@@ -1847,20 +1868,45 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       ? event?.relatedSupportCardNames?.[pickupIndex]
       : undefined;
     const resourceLabel = pickup.label?.trim();
-    const label = relatedName
-      ? supportTitle && supportTitle.toLowerCase() !== relatedName.toLowerCase()
-        ? `${relatedName} — ${supportTitle}`
-        : relatedName
+    const displayNameHint = relatedName && !this.isGenericPickupLabel(relatedName)
+      ? relatedName
       : resourceLabel && !this.isGenericPickupLabel(resourceLabel)
         ? resourceLabel
-        : `${target.bannerKind === 'support' ? 'Support' : 'Character'} ${pickup.pickup_id}`;
+        : undefined;
+    const avatar = this.avatars.getPickupAvatarByKind(
+      target.bannerKind === 'support' ? 'support' : 'character',
+      pickup.pickup_id,
+      displayNameHint,
+    );
+    const resolvedName = avatar?.displayName
+      ?? displayNameHint
+      ?? `${target.bannerKind === 'support' ? 'Support' : 'Character'} ${pickup.pickup_id}`;
+    const label = supportTitle
+      && !this.isGenericPickupLabel(supportTitle)
+      && supportTitle.toLowerCase() !== resolvedName.toLowerCase()
+      ? `${resolvedName} — ${supportTitle}`
+      : resolvedName;
     return {
       ...pickup,
       label,
-      imagePath: target.bannerKind === 'support'
-        ? `/assets/images/support_card/half/support_card_s_${pickup.pickup_id}.webp`
-        : `/assets/images/character_stand/chara_stand_${pickup.pickup_id}.webp`,
+      subLabel: avatar?.subLabel,
+      imagePath: avatar?.imageUrl,
+      fallbackImagePath: avatar?.fallbackImageUrl,
     };
+  }
+
+  onPickupImageError(event: Event, fallbackImagePath?: string): void {
+    const image = event.target as HTMLImageElement | null;
+    if (!image) return;
+
+    if (fallbackImagePath && image.dataset['fallbackApplied'] !== 'true') {
+      image.dataset['fallbackApplied'] = 'true';
+      image.src = fallbackImagePath;
+      return;
+    }
+
+    image.hidden = true;
+    image.parentElement?.classList.add('is-missing');
   }
 
   private isGenericPickupLabel(label: string): boolean {

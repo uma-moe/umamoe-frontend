@@ -3,7 +3,9 @@ import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RaceEntry } from './race-scheduler.component';
+import { getRaceThumbnailUrl } from '../../utils/race-image.util';
 
 export interface RaceSelectDialogData {
   races: RaceEntry[];
@@ -15,7 +17,7 @@ export interface RaceSelectDialogData {
 @Component({
   selector: 'app-race-select-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule, MatTooltipModule],
   template: `
     <div class="race-select-dialog">
       <div class="dialog-header">
@@ -31,13 +33,19 @@ export interface RaceSelectDialogData {
           class="race-option"
           [class.selected]="selectedId === race.race_instance_id"
           [ngClass]="getGradeClass(race.grade)"
+          [attr.aria-label]="race.name + ' (' + getGradeLabel(race.grade) + ')'"
+          [matTooltip]="race.name + ' (' + getGradeLabel(race.grade) + ')'"
           (click)="pick(race)">
-          <span class="grade-badge" [ngClass]="getGradeClass(race.grade)">
-            {{ getGradeLabel(race.grade) }}
-          </span>
-          <span class="race-name">{{ race.name }}</span>
+          <img
+            *ngIf="getRaceImageUrl(race) as raceImageUrl"
+            [src]="raceImageUrl"
+            alt=""
+            class="race-title-image"
+            (error)="hideBrokenRaceImage($event)"
+            loading="lazy"
+            decoding="async">
+          <span class="race-name race-image-fallback">{{ race.name }}</span>
           <mat-icon class="check-icon" *ngIf="selectedId === race.race_instance_id">radio_button_checked</mat-icon>
-          <mat-icon class="check-icon unselected" *ngIf="selectedId !== race.race_instance_id">radio_button_unchecked</mat-icon>
         </button>
       </div>
     </div>
@@ -48,8 +56,8 @@ export interface RaceSelectDialogData {
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 12px;
       overflow: hidden;
-      min-width: 280px;
-      max-width: 400px;
+      min-width: 320px;
+      max-width: 520px;
     }
 
     .dialog-header {
@@ -96,95 +104,82 @@ export interface RaceSelectDialogData {
       padding: 8px;
       max-height: 400px;
       overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+      gap: 6px;
     }
 
     .race-option {
-      display: flex;
+      --race-outline: rgba(255, 255, 255, 0.16);
+      position: relative;
+      display: grid;
+      place-items: center;
       align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 8px;
+      aspect-ratio: 2 / 1;
+      min-width: 0;
+      padding: 0;
+      border: 2px solid var(--race-outline);
+      border-radius: 5px;
       background: rgba(255, 255, 255, 0.02);
       cursor: pointer;
       transition: all 0.15s ease;
       color: rgba(255, 255, 255, 0.8);
+      overflow: hidden;
+
+      &.grade-g1 { --race-outline: var(--grade-g1); }
+      &.grade-g2 { --race-outline: var(--grade-g2); }
+      &.grade-g3 { --race-outline: var(--grade-g3); }
 
       &:hover {
-        background: rgba(255, 255, 255, 0.06);
-        border-color: rgba(255, 255, 255, 0.12);
+        filter: brightness(1.12);
       }
 
       &.selected {
-        border-color: rgba(33, 150, 243, 0.4);
-        background: rgba(33, 150, 243, 0.08);
-      }
-
-      &.selected.grade-g1 {
-        border-color: rgba(var(--grade-g1-base), 0.4);
-        background: rgba(var(--grade-g1-base), 0.08);
-      }
-
-      &.selected.grade-g2 {
-        border-color: rgba(var(--grade-g2-base), 0.4);
-        background: rgba(var(--grade-g2-base), 0.08);
-      }
-
-      &.selected.grade-g3 {
-        border-color: rgba(var(--grade-g3-base), 0.4);
-        background: rgba(var(--grade-g3-base), 0.08);
+        box-shadow:
+          0 0 0 2px var(--dialog-surface-bg, #1a1a1a),
+          0 0 0 4px var(--race-outline);
       }
     }
 
-    .grade-badge {
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      flex-shrink: 0;
+    .race-title-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
 
-      &.grade-g1 {
-        background: rgba(var(--grade-g1-base), 0.15);
-        color: var(--grade-g1);
-        border: 1px solid rgba(var(--grade-g1-base), 0.3);
-      }
-      &.grade-g2 {
-        background: rgba(var(--grade-g2-base), 0.15);
-        color: var(--grade-g2);
-        border: 1px solid rgba(var(--grade-g2-base), 0.3);
-      }
-      &.grade-g3 {
-        background: rgba(var(--grade-g3-base), 0.15);
-        color: var(--grade-g3);
-        border: 1px solid rgba(var(--grade-g3-base), 0.3);
-      }
+    .race-title-image:not([hidden]) + .race-image-fallback {
+      display: none;
     }
 
     .race-name {
+      position: relative;
+      z-index: 0;
+      padding: 8px;
       font-size: 13px;
       font-weight: 500;
-      flex: 1;
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
+      text-align: center;
     }
 
     .check-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
+      position: absolute;
+      z-index: 2;
+      top: 4px;
+      right: 4px;
+      display: grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(12, 16, 20, 0.88);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+      font-size: 16px;
       color: #66bb6a;
-      flex-shrink: 0;
-
-      &.unselected {
-        color: rgba(255, 255, 255, 0.2);
-      }
     }
 
     :host-context(.light-theme) {
@@ -220,38 +215,17 @@ export interface RaceSelectDialogData {
 
       .race-option {
         background: var(--light-card-bg);
-        border-color: var(--light-card-border);
         color: var(--text-secondary);
 
         &:hover {
-          background: var(--surface-hover);
-          border-color: rgba(var(--accent-primary-rgb), 0.28);
-        }
-
-        &.selected {
-          border-color: rgba(var(--accent-primary-rgb), 0.48);
-          background: rgba(var(--accent-primary-rgb), 0.12);
-        }
-
-        &.selected.grade-g1 {
-          border-color: rgba(var(--grade-g1-base), 0.5);
-          background: rgba(var(--grade-g1-base), 0.12);
-        }
-
-        &.selected.grade-g2 {
-          border-color: rgba(var(--grade-g2-base), 0.5);
-          background: rgba(var(--grade-g2-base), 0.12);
-        }
-
-        &.selected.grade-g3 {
-          border-color: rgba(var(--grade-g3-base), 0.5);
-          background: rgba(var(--grade-g3-base), 0.12);
+          filter: brightness(1.06);
         }
       }
+    }
 
-      .check-icon.unselected {
-        color: var(--text-disabled);
-      }
+    @media (max-width: 360px) {
+      .race-select-dialog { min-width: 280px; }
+      .race-list { grid-template-columns: 1fr; }
     }
   `]
 })
@@ -290,5 +264,13 @@ export class RaceSelectDialogComponent {
       case 300: return 'G3';
       default: return '';
     }
+  }
+
+  getRaceImageUrl(race: RaceEntry): string | null {
+    return getRaceThumbnailUrl(race.thumbnail_id);
+  }
+
+  hideBrokenRaceImage(event: Event): void {
+    (event.currentTarget as HTMLImageElement).hidden = true;
   }
 }

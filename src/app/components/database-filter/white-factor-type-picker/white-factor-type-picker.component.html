@@ -1,0 +1,150 @@
+<div
+  class="white-factor-browser"
+  [class.expanded]="expanded || embedded"
+  [class.embedded]="embedded"
+  [class.hide-mode]="actionVerb === 'Hide'">
+  <button
+    *ngIf="!embedded"
+    type="button"
+    class="browser-toggle"
+    (click)="toggleExpanded()"
+    [attr.aria-expanded]="expanded">
+    <span class="browser-toggle-copy">
+      <mat-icon>tune</mat-icon>
+      <span>{{ browseLabel }}</span>
+    </span>
+    <span class="browser-toggle-summary" *ngIf="activeCategoryCount > 0">
+      {{ activeCategoryCount }} {{ activeCategoryCount === 1 ? 'type' : 'types' }}
+    </span>
+    <mat-icon class="browser-toggle-chevron">expand_more</mat-icon>
+  </button>
+
+  <div class="browser-panel" *ngIf="expanded || embedded">
+    <div class="browser-controls">
+      <label class="factor-search">
+        <mat-icon>search</mat-icon>
+        <input
+          type="search"
+          [ngModel]="searchTerm"
+          (ngModelChange)="setSearchTerm($event)"
+          placeholder="Search white factors"
+          aria-label="Search white factors">
+      </label>
+
+      <label *ngIf="showPriority" class="browser-priority" matTooltip="New factors are added to this priority group. P0 sorts first.">
+        <span>Add to</span>
+        <span class="priority-value">
+          <strong>P</strong>
+          <input
+            type="number"
+            inputmode="numeric"
+            min="0"
+            step="1"
+            [ngModel]="priority"
+            (ngModelChange)="normalizePriority($event)"
+            aria-label="Priority group for newly added factors">
+          <span class="priority-arrows">
+            <button type="button" (click)="adjustPriority(1)" aria-label="Increase priority group">
+              <mat-icon>keyboard_arrow_up</mat-icon>
+            </button>
+            <button type="button" (click)="adjustPriority(-1)" aria-label="Decrease priority group">
+              <mat-icon>keyboard_arrow_down</mat-icon>
+            </button>
+          </span>
+        </span>
+      </label>
+    </div>
+
+    <div class="effect-toolbar">
+      <div class="effect-groups" aria-label="White factor effect types">
+        <section class="effect-section">
+          <span class="effect-section-label">Types</span>
+          <div class="effect-grid">
+            <button
+              *ngFor="let category of standardCategories; trackBy: trackCategory"
+              type="button"
+              class="effect-button"
+              [class.selected]="isCategorySelected(category.key)"
+              [class.debuff]="category.tone === 'debuff'"
+              [class.penalty]="category.tone === 'penalty'"
+              [attr.aria-label]="category.label"
+              [attr.aria-pressed]="isCategorySelected(category.key)"
+              [matTooltip]="category.label + ' · ' + category.factorCount + ' factors'"
+              (click)="toggleCategory(category.key)">
+              <span class="effect-icon-frame">
+                <img *ngIf="category.iconUrl; else normalMaterialCategoryIcon" [src]="category.iconUrl" alt="">
+                <ng-template #normalMaterialCategoryIcon>
+                  <mat-icon>{{ category.materialIcon || 'category' }}</mat-icon>
+                </ng-template>
+              </span>
+            </button>
+            <button
+              *ngIf="hasCriteria"
+              type="button"
+              class="clear-button icon-only"
+              (click)="clearCriteria()"
+              matTooltip="Clear skill filters"
+              aria-label="Clear skill filters">
+              <mat-icon>restart_alt</mat-icon>
+            </button>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <ng-container *ngIf="hasCriteria">
+      <div class="result-summary">
+        <span>
+          <strong>{{ matchingFactors.length }}</strong>
+          {{ matchingFactors.length === 1 ? 'factor' : 'factors' }}
+        </span>
+      </div>
+
+      <div class="factor-result-groups" *ngIf="matchingFactors.length > 0; else noMatches">
+        <div class="factor-results">
+          <ng-container *ngFor="let factor of normalMatchingFactors; trackBy: trackFactor">
+            <ng-container *ngTemplateOutlet="factorResult; context: { $implicit: factor }"></ng-container>
+          </ng-container>
+        </div>
+
+        <section class="upgraded-result-section" *ngIf="upgradedMatchingFactors.length">
+          <div class="result-section-divider">
+            <span>Upgraded</span>
+          </div>
+          <div class="factor-results">
+            <ng-container *ngFor="let factor of upgradedMatchingFactors; trackBy: trackFactor">
+              <ng-container *ngTemplateOutlet="factorResult; context: { $implicit: factor }"></ng-container>
+            </ng-container>
+          </div>
+        </section>
+      </div>
+
+      <ng-template #factorResult let-factor>
+        <button
+          type="button"
+          class="factor-result"
+          [class.selected]="isFactorSelected(factor.id)"
+          [disabled]="isFactorSelected(factor.id) && !allowSelectionToggle"
+          [matTooltip]="getFactorActionTooltip(factor)"
+          (click)="addFactor(factor)">
+          <span class="result-icon-frame">
+            <img *ngIf="factor.iconUrl; else genericFactorIcon" [src]="factor.iconUrl" alt="">
+            <ng-template #genericFactorIcon>
+              <mat-icon>auto_awesome</mat-icon>
+            </ng-template>
+          </span>
+          <span>{{ factor.text }}</span>
+          <mat-icon class="result-action">{{ getFactorActionIcon(factor) }}</mat-icon>
+        </button>
+      </ng-template>
+
+      <ng-template #noMatches>
+        <div class="empty-browser-state compact">
+          <mat-icon>search_off</mat-icon>
+          <span>No white factors match these types and search terms.</span>
+        </div>
+      </ng-template>
+    </ng-container>
+  </div>
+</div>

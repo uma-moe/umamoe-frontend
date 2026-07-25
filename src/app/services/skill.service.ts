@@ -3,20 +3,26 @@ import { Observable, BehaviorSubject, combineLatest } from 'rxjs';
 import { map, filter, take } from 'rxjs/operators';
 import { Skill } from '../models/skill.model';
 import { CharacterService } from './character.service';
-import { getAllSkills, hasUniqueFlag } from '../data/skills-data';
 import { environment } from '../../environments/environment';
-import { MasterDataService } from './master-data.service';
+import { ResourceDataService } from './resource-data.service';
+
+function hasUniqueFlag(skill: Pick<Skill, 'unique'>): boolean {
+    return skill.unique === true;
+}
+
 @Injectable({
     providedIn: 'root'
 })
 export class SkillService {
     private skillsSubject = new BehaviorSubject<Skill[]>([]);
     public skills$ = this.skillsSubject.asObservable();
-    constructor(private characterService: CharacterService, private masterData: MasterDataService) {
-        // Load skills from bundled data immediately
-        this.skillsSubject.next(getAllSkills());
-        this.masterData.init();
-        this.masterData.skills$.subscribe(skills => this.skillsSubject.next(skills));
+    constructor(private characterService: CharacterService, private resourceData: ResourceDataService) {
+        void import('../data/skills.data')
+            .then(({ SKILLS, replaceSkillsData }) => {
+                this.resourceData.watchResource<Skill[]>('skills', SKILLS)
+                    .subscribe(skills => this.skillsSubject.next([...replaceSkillsData(skills)]));
+            })
+            .catch(error => console.warn('Unable to initialize skill master data.', error));
     }
     getSkills(): Observable<Skill[]> {
         return this.skills$;

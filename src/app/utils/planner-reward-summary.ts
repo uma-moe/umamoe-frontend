@@ -8,6 +8,40 @@ export interface TimelineRewardSummary {
   selectors: number;
   label: string;
   items: TimelineRewardItem[];
+  variable: boolean;
+  variableOutcomeCount: number;
+  variableRewardLabels: string[];
+  variableOutcomes: TimelineRewardOutcome[];
+  mode: TimelineRewardMode;
+  previewLabel: string;
+  previewItems: TimelineRewardPreviewItem[];
+  outcomeHeading: string;
+  outcomeDescription: string;
+}
+
+export type TimelineRewardMode = 'fixed' | 'placement' | 'cumulative' | 'per_opponent';
+
+export interface TimelineRewardPreviewItem {
+  key: string;
+  label: string;
+  countLabel: string;
+  icon: string;
+  iconPath?: string;
+}
+
+export interface TimelineRewardOutcome {
+  key: string;
+  label: string;
+  items: TimelineRewardOutcomeItem[];
+  description?: string;
+}
+
+export interface TimelineRewardOutcomeItem {
+  key: string;
+  label: string;
+  countLabel: string;
+  icon: string;
+  iconPath?: string;
 }
 
 export type TimelineRewardItemKind =
@@ -33,8 +67,26 @@ interface MutableRewardSummary {
   supportTickets: number;
   freePulls: number;
   selectorItems: Map<string, MutableSelectorReward>;
+  variableOutcomeIds: Set<string>;
+  variableRewardLabels: Set<string>;
+  variableOutcomes: TimelineRewardOutcome[];
+  variableOutcomeGroups: Map<string, MutableRewardOutcomeGroup>;
+  competition: string | null;
+  competitiveTotals: Map<string, MutableCompetitiveTotal>;
 }
 
+interface MutableCompetitiveTotal {
+  label: string;
+  amount: number;
+  icon: string;
+  iconPath?: string;
+}
+
+interface MutableRewardOutcomeGroup {
+  outcome: TimelineRewardOutcome;
+  wins: Set<number>;
+  ranks: Set<number>;
+}
 interface MutableSelectorReward {
   kind: 'trainee_selector' | 'support_selector';
   itemId: number;
@@ -47,6 +99,12 @@ const REWARD_ITEM_IDS = {
   carats: 43,
   uma_ticket: 41,
   support_ticket: 111,
+  dream_glimmer: 44,
+  money: 59,
+  support_points: 110,
+  goddess_statues: 115,
+  rainbow_crystal: 149,
+  gold_crystal: 150,
   trainee_selector: 164,
   support_selector: 165,
 } as const;
@@ -75,7 +133,7 @@ function rewardItem(
 }
 
 export function buildTimelineRewardSummaries(
-  resource: Pick<PlannerRewardResource, 'rewards' | 'event_benefits' | 'free_pull_campaigns'>,
+  resource: Pick<PlannerRewardResource, 'rewards' | 'event_benefits' | 'free_pull_campaigns' | 'competitive_variants'>,
 ): Map<string, TimelineRewardSummary> {
   const totals = new Map<string, MutableRewardSummary>();
   const summaryFor = (eventId: string): MutableRewardSummary => {
@@ -87,6 +145,12 @@ export function buildTimelineRewardSummaries(
       supportTickets: 0,
       freePulls: 0,
       selectorItems: new Map(),
+      variableOutcomeIds: new Set(),
+      variableRewardLabels: new Set(),
+      variableOutcomes: [],
+      variableOutcomeGroups: new Map(),
+      competition: null,
+      competitiveTotals: new Map(),
     };
     totals.set(eventId, created);
     return created;
@@ -104,6 +168,34 @@ export function buildTimelineRewardSummaries(
     }
   }
 
+  for (const variant of resource.competitive_variants ?? []) {
+    if (!variant.event_id) continue;
+    const summary = summaryFor(variant.event_id);
+    summary.competition ??= variant.competition;
+    summary.variableOutcomeIds.add(variant.id);
+    const outcomeItems = competitiveOutcomeItems(variant.source_items ?? []);
+    const outcomeLabel = competitiveOutcomeLabel(variant.competition, variant.label);
+    const grouped = variant.competition === 'champions_meeting'
+      && !outcomeItems.length
+      && groupChampionsOutcome(summary, variant.id, outcomeLabel);
+    if (!grouped) {
+      summary.variableOutcomes.push({
+        key: variant.id,
+        label: outcomeLabel,
+        items: outcomeItems,
+      });
+    }
+    if (variant.competition !== 'champions_meeting') {
+      addCompetitiveTotals(summary.competitiveTotals, variant.source_items ?? []);
+    }
+    for (const item of variant.source_items ?? []) {
+      if (item.item_category === 90 && item.item_id === 43) summary.variableRewardLabels.add('Carats');
+      else if (item.item_category === 40 && item.item_id === 41) summary.variableRewardLabels.add('Trainee tickets');
+      else if (item.item_category === 40 && item.item_id === 111) summary.variableRewardLabels.add('Support tickets');
+      else if (item.item_category === 164 && item.item_id === 149) summary.variableRewardLabels.add('Rainbow crystals');
+      else if (item.item_category === 164 && item.item_id === 150) summary.variableRewardLabels.add('Gold crystals');
+    }
+  }
   const managedCampaignIds = new Set((resource.free_pull_campaigns ?? []).map(campaign => campaign.id));
   for (const benefit of resource.event_benefits ?? []) {
     if (!benefit.event_id || !Number.isFinite(benefit.amount) || Number(benefit.amount) <= 0) continue;
@@ -141,6 +233,11 @@ export function buildTimelineRewardSummaries(
 
   const summaries = new Map<string, TimelineRewardSummary>();
   for (const [eventId, total] of totals) {
+    if (total.competition === 'champions_meeting') {
+      // CM reward sets are server-authored and absent from most master snapshots.
+      // Prefer the published Global finals table over empty master outcome rows.
+      total.variableOutcomes = classicChampionsFinalOutcomes();
+    }
     const tickets = total.umaTickets + total.supportTickets;
     const selectors = [...total.selectorItems.values()].reduce((sum, item) => sum + item.amount, 0);
     const parts: string[] = [];
@@ -148,6 +245,8 @@ export function buildTimelineRewardSummaries(
     if (tickets > 0) parts.push(`${INTEGER_FORMATTER.format(tickets)} ${tickets === 1 ? 'ticket' : 'tickets'}`);
     if (total.freePulls > 0) parts.push(`${INTEGER_FORMATTER.format(total.freePulls)} free pulls`);
     if (selectors > 0) parts.push(`${INTEGER_FORMATTER.format(selectors)} ${selectors === 1 ? 'selector' : 'selectors'}`);
+    const variableOutcomeCount = total.variableOutcomes.length;
+    if (variableOutcomeCount > 0) parts.push('Rewards vary by result');
 
     const items: TimelineRewardItem[] = [];
     if (total.carats > 0) {
@@ -185,6 +284,7 @@ export function buildTimelineRewardSummaries(
 
     const label = parts.join(' \u00b7 ');
     if (label) {
+      const presentation = competitivePresentation(total);
       summaries.set(eventId, {
         eventId,
         carats: total.carats,
@@ -193,8 +293,251 @@ export function buildTimelineRewardSummaries(
         selectors,
         label,
         items,
+        variable: variableOutcomeCount > 0,
+        variableOutcomeCount,
+        variableRewardLabels: [...total.variableRewardLabels],
+        variableOutcomes: total.variableOutcomes,
+        ...presentation,
       });
     }
   }
   return summaries;
+}
+function competitivePresentation(total: MutableRewardSummary): Pick<
+  TimelineRewardSummary,
+  'mode' | 'previewLabel' | 'previewItems' | 'outcomeHeading' | 'outcomeDescription'
+> {
+  if (!total.competition) {
+    return {
+      mode: 'fixed',
+      previewLabel: '',
+      previewItems: [],
+      outcomeHeading: '',
+      outcomeDescription: '',
+    };
+  }
+
+  if (total.competition === 'champions_meeting') {
+    return {
+      mode: 'placement',
+      previewLabel: 'Finals',
+      previewItems: [
+        previewItem('carats', 'Carats', '500–2,500', 'diamond', itemIconPath(REWARD_ITEM_IDS.carats)),
+        previewItem('uma-ticket', 'Trainee tickets', '1–5', 'confirmation_number', itemIconPath(REWARD_ITEM_IDS.uma_ticket)),
+        previewItem('support-ticket', 'Support tickets', 'up to 5', 'confirmation_number', itemIconPath(REWARD_ITEM_IDS.support_ticket)),
+      ],
+      outcomeHeading: 'Final placement rewards',
+      outcomeDescription: 'Final reward depends on league, group, and place. Round rewards are separate.',
+    };
+  }
+
+  const previewItems = competitiveTotalsToPreview(total.competitiveTotals);
+  if (total.competition === 'legend_race') {
+    return {
+      mode: 'per_opponent',
+      previewLabel: 'All clears',
+      previewItems,
+      outcomeHeading: 'First-clear rewards',
+      outcomeDescription: 'Each opponent grants this reward once; clearing all grants the combined card total.',
+    };
+  }
+  if (total.competition === 'league_of_heroes') {
+    return {
+      mode: 'cumulative',
+      previewLabel: 'Cumulative',
+      previewItems,
+      outcomeHeading: 'Cumulative rank rewards',
+      outcomeDescription: 'Milestones stack. The card shows the total of every extracted tier.',
+    };
+  }
+  return {
+    mode: 'cumulative',
+    previewLabel: 'All milestones',
+    previewItems,
+    outcomeHeading: 'Cumulative team rewards',
+    outcomeDescription: 'Team-rank milestones stack. Event-mission rewards are additional.',
+  };
+}
+
+function previewItem(key: string, label: string, countLabel: string, icon: string, iconPath?: string): TimelineRewardPreviewItem {
+  return { key, label, countLabel, icon, iconPath };
+}
+
+function addCompetitiveTotals(
+  totals: Map<string, MutableCompetitiveTotal>,
+  sourceItems: Array<{ item_category: number; item_id: number; amount: number }>,
+): void {
+  for (const item of sourceItems) {
+    const descriptor = competitiveItemDescriptor(item.item_category, item.item_id);
+    if (!descriptor || !Number.isFinite(item.amount) || item.amount <= 0) continue;
+    const existing = totals.get(descriptor.key);
+    if (existing) existing.amount += item.amount;
+    else totals.set(descriptor.key, { ...descriptor, amount: item.amount });
+  }
+}
+
+function competitiveTotalsToPreview(totals: Map<string, MutableCompetitiveTotal>): TimelineRewardPreviewItem[] {
+  const priority = ['carats', 'uma-ticket', 'support-ticket', 'rainbow-crystal', 'gold-crystal', 'character-pieces', 'money'];
+  return [...totals.entries()]
+    .sort(([left], [right]) => {
+      const leftIndex = priority.indexOf(left);
+      const rightIndex = priority.indexOf(right);
+      return (leftIndex < 0 ? 99 : leftIndex) - (rightIndex < 0 ? 99 : rightIndex);
+    })
+    .slice(0, 3)
+    .map(([key, item]) => previewItem(key, item.label, INTEGER_FORMATTER.format(item.amount), item.icon, item.iconPath));
+}
+
+function classicChampionsFinalOutcomes(): TimelineRewardOutcome[] {
+  return [
+    championsFinalOutcome('Graded · Group A · 1st', 2500, 5, 5, 30, 100000, 25000),
+    championsFinalOutcome('Graded · Group A · 2nd', 1800, 4, 4, 25, 70000, 20000),
+    championsFinalOutcome('Graded · Group A · 3rd', 1200, 3, 3, 20, 50000, 15000),
+    championsFinalOutcome('Graded · Group B · 1st', 1200, 3, 3, 20, 60000, 20000),
+    championsFinalOutcome('Graded · Group B · 2nd', 900, 2, 2, 15, 50000, 15000),
+    championsFinalOutcome('Graded · Group B · 3rd', 700, 1, 1, 10, 40000, 10000),
+    championsFinalOutcome('Open · Group A · 1st', 1000, 3, 3, 20, 60000, 20000),
+    championsFinalOutcome('Open · Group A · 2nd', 850, 2, 2, 15, 50000, 15000),
+    championsFinalOutcome('Open · Group A · 3rd', 700, 1, 1, 10, 40000, 10000),
+    championsFinalOutcome('Open · Group B · 1st', 700, 2, 1, 10, 40000, 15000),
+    championsFinalOutcome('Open · Group B · 2nd', 600, 2, 0, 7, 30000, 10000),
+    championsFinalOutcome('Open · Group B · 3rd', 500, 1, 0, 5, 20000, 5000),
+  ];
+}
+
+function championsFinalOutcome(
+  label: string,
+  carats: number,
+  umaTickets: number,
+  supportTickets: number,
+  goddessStatues: number,
+  money: number,
+  supportPoints: number,
+): TimelineRewardOutcome {
+  const items = [
+    outcomeItem('carats', 'Carats', carats, 'diamond', itemIconPath(REWARD_ITEM_IDS.carats)),
+    outcomeItem('uma-ticket', 'Trainee tickets', umaTickets, 'confirmation_number', itemIconPath(REWARD_ITEM_IDS.uma_ticket)),
+  ];
+  if (supportTickets > 0) {
+    items.push(outcomeItem('support-ticket', 'Support tickets', supportTickets, 'confirmation_number', itemIconPath(REWARD_ITEM_IDS.support_ticket)));
+  }
+  items.push(
+    outcomeItem('goddess-statues', 'Goddess statues', goddessStatues, 'favorite', itemIconPath(REWARD_ITEM_IDS.goddess_statues)),
+    outcomeItem('money', 'Money', money, 'paid', itemIconPath(REWARD_ITEM_IDS.money)),
+    outcomeItem('support-points', 'Support points', supportPoints, 'trending_up', itemIconPath(REWARD_ITEM_IDS.support_points)),
+  );
+  return { key: `cm-${label}`, label, items };
+}
+function outcomeItem(key: string, label: string, amount: number, icon: string, iconPath?: string): TimelineRewardOutcomeItem {
+  return { key, label, countLabel: INTEGER_FORMATTER.format(amount), icon, iconPath };
+}
+function groupChampionsOutcome(summary: MutableRewardSummary, variantId: string, label: string): boolean {
+  const match = /^League\s+(\d+)\s*·\s*Round\s+(\d+)\s*·\s*(\d+)\s+wins(?:\s*·\s*Rank\s+(\d+))?$/i.exec(label);
+  if (!match) return false;
+
+  const league = Number(match[1]);
+  const round = Number(match[2]);
+  const wins = Number(match[3]);
+  const rank = match[4] ? Number(match[4]) : 0;
+  const key = 'champions-league-' + league + '-round-' + round;
+  let group = summary.variableOutcomeGroups.get(key);
+  if (!group) {
+    const outcome: TimelineRewardOutcome = {
+      key: variantId + '-group',
+      label: 'League ' + league + ' · Round ' + round,
+      items: [],
+    };
+    group = { outcome, wins: new Set(), ranks: new Set() };
+    summary.variableOutcomeGroups.set(key, group);
+    summary.variableOutcomes.push(outcome);
+  }
+
+  if (rank > 0) group.ranks.add(rank);
+  else group.wins.add(wins);
+
+  const details: string[] = [];
+  if (group.wins.size) details.push(formatOutcomeRange(group.wins) + ' wins');
+  if (group.ranks.size) details.push('Ranks ' + formatOutcomeRange(group.ranks));
+  group.outcome.description = details.join(' · ');
+  return true;
+}
+
+function formatOutcomeRange(values: Set<number>): string {
+  const sorted = [...values].sort((a, b) => a - b);
+  if (sorted.length === 1) return String(sorted[0]);
+  const contiguous = sorted.every((value, index) => index === 0 || value === sorted[index - 1] + 1);
+  return contiguous
+    ? sorted[0] + '–' + sorted[sorted.length - 1]
+    : sorted.join(', ');
+}
+function competitiveOutcomeLabel(competition: string, label: string): string {
+  const champions = /League\s+(\d+),\s*round\s+(\d+),\s*(\d+)\s+wins?,\s*rank\s+(\d+)/i.exec(label);
+  if (champions) {
+    const rank = Number(champions[4]) > 0 ? ' · Rank ' + champions[4] : '';
+    return 'League ' + champions[1] + ' · Round ' + champions[2] + ' · ' + champions[3] + ' wins' + rank;
+  }
+
+  const heroes = /League rank type\s+(\d+),\s*rank\s+(\d+)\s*\(([-\d]+)\)/i.exec(label);
+  if (heroes) return 'League ' + heroes[1] + ' · Rank ' + heroes[2] + ' · ' + heroes[3] + ' pts';
+
+  const teamRank = /Team rank\s+(\d+)\s*\(([-\d]+)\s+evaluation points\)/i.exec(label);
+  if (teamRank) return 'Team rank ' + teamRank[1] + ' · ' + teamRank[2] + ' evaluation';
+  if (/event missions/i.test(label)) return 'Event missions · Full completion';
+  if (competition === 'legend_race') return label.replace(/^Legend race\s*[-:]\s*/i, '');
+  return label.replace(/\s*\((?:rate|reward set)[^)]+\)\s*$/i, '').trim();
+}
+
+function competitiveOutcomeItems(
+  sourceItems: Array<{ item_category: number; item_id: number; amount: number }>,
+): TimelineRewardOutcomeItem[] {
+  const totals = new Map<string, { label: string; amount: number; icon: string; iconPath?: string }>();
+  for (const item of sourceItems) {
+    const descriptor = competitiveItemDescriptor(item.item_category, item.item_id);
+    if (!descriptor || !Number.isFinite(item.amount) || item.amount <= 0) continue;
+    const existing = totals.get(descriptor.key);
+    if (existing) existing.amount += item.amount;
+    else totals.set(descriptor.key, { ...descriptor, amount: item.amount });
+  }
+  return [...totals.entries()].map(([key, item]) => ({
+    key,
+    label: item.label,
+    countLabel: INTEGER_FORMATTER.format(item.amount),
+    icon: item.icon,
+    iconPath: item.iconPath,
+  }));
+}
+
+function competitiveItemDescriptor(
+  category: number,
+  itemId: number,
+): { key: string; label: string; icon: string; iconPath?: string } | null {
+  if (category === 90 && itemId === 43) {
+    return { key: 'carats', label: 'Carats', icon: 'diamond', iconPath: itemIconPath(REWARD_ITEM_IDS.carats) };
+  }
+  if (category === 40 && itemId === 41) {
+    return { key: 'uma-ticket', label: 'Trainee ticket', icon: 'confirmation_number', iconPath: itemIconPath(REWARD_ITEM_IDS.uma_ticket) };
+  }
+  if (category === 40 && itemId === 111) {
+    return { key: 'support-ticket', label: 'Support ticket', icon: 'confirmation_number', iconPath: itemIconPath(REWARD_ITEM_IDS.support_ticket) };
+  }
+  if (category === 164 && itemId === 149) {
+    return { key: 'rainbow-crystal', label: 'Rainbow crystal', icon: 'auto_awesome', iconPath: itemIconPath(REWARD_ITEM_IDS.rainbow_crystal) };
+  }
+  if (category === 164 && itemId === 150) {
+    return { key: 'gold-crystal', label: 'Gold crystal', icon: 'auto_awesome', iconPath: itemIconPath(REWARD_ITEM_IDS.gold_crystal) };
+  }
+  if (category === 102) return { key: 'character-pieces', label: 'Character pieces', icon: 'person' };
+  if (category === 91 && itemId === 59) {
+    return { key: 'money', label: 'Money', icon: 'paid', iconPath: itemIconPath(REWARD_ITEM_IDS.money) };
+  }
+  if (category === 93 && itemId === 44) {
+    return { key: 'goddess-statues', label: 'Goddess statues', icon: 'favorite', iconPath: itemIconPath(REWARD_ITEM_IDS.goddess_statues) };
+  }
+  if (category === 103 && itemId === 98) {
+    return { key: 'support-points', label: 'Support points', icon: 'trending_up', iconPath: itemIconPath(REWARD_ITEM_IDS.support_points) };
+  }
+  if (category === 97 && itemId === 115) {
+    return { key: 'dream-glimmer', label: 'Dream Glimmer', icon: 'auto_awesome', iconPath: itemIconPath(REWARD_ITEM_IDS.dream_glimmer) };
+  }
+  return null;
 }

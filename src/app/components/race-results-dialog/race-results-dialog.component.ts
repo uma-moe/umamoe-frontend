@@ -5,10 +5,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RaceSchedulerComponent } from '../race-scheduler/race-scheduler.component';
+import { getRaceThumbnailUrl } from '../../utils/race-image.util';
 
 interface ListRace {
   name: string;
   shortName: string;
+  thumbnailId: number;
   grade: number;
   gradeLabel: string;
   month: number;
@@ -80,14 +82,26 @@ export interface RaceResultsDialogData {
             <div class="list-year-header" [ngClass]="group.year">{{ group.yearLabel }}</div>
             <div class="list-race-row" *ngFor="let race of group.races">
               <span class="list-turn">{{ getMonthName(race.month) }} {{ race.half === 1 ? 'Early' : 'Late' }}</span>
-              <span class="list-grade" [ngClass]="'lg-' + race.gradeLabel.toLowerCase()">{{ race.gradeLabel }}</span>
-              <span class="list-name">{{ race.name }}</span>
-              <span class="list-result" *ngIf="race.won">
+              <span
+                class="list-result"
+                [class.pos-1st]="race.won || race.position === 1"
+                [class.pos-2nd]="race.position === 2"
+                [class.pos-3rd]="race.position === 3"
+                [class.pos-other]="!race.won && race.position !== 1 && race.position !== 2 && race.position !== 3"
+                [matTooltip]="race.won ? 'Won' : (race.position + getOrdinal(race.position || 0) + ' place')">
                 <mat-icon class="list-trophy">emoji_events</mat-icon>
               </span>
-              <span class="list-result list-pos" *ngIf="!race.won && race.position">
-                {{ race.position }}{{ getOrdinal(race.position) }}
-              </span>
+              <span class="list-grade" [ngClass]="'lg-' + race.gradeLabel.toLowerCase()">{{ race.gradeLabel }}</span>
+              <img
+                *ngIf="getListRaceImageUrl(race) as raceImageUrl"
+                [src]="raceImageUrl"
+                alt=""
+                class="list-race-image"
+                [matTooltip]="race.name"
+                (error)="hideBrokenRaceImage($event)"
+                loading="lazy"
+                decoding="async">
+              <span class="list-name">{{ race.name }}</span>
             </div>
             <div class="list-empty" *ngIf="group.races.length === 0">No races</div>
           </div>
@@ -97,6 +111,10 @@ export interface RaceResultsDialogData {
   `,
   styles: [`
     .race-results-dialog {
+      width: min(1320px, 98vw);
+      max-height: min(900px, 94vh);
+      display: flex;
+      flex-direction: column;
       background: #1a1a1a;
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 12px;
@@ -224,9 +242,10 @@ export interface RaceResultsDialogData {
     }
 
     .dialog-body {
+      min-height: 0;
       padding: 12px 16px 16px;
       overflow: auto;
-      max-height: 75vh;
+      max-height: 82vh;
 
       &.list-mode {
         overflow-y: auto;
@@ -236,7 +255,7 @@ export interface RaceResultsDialogData {
 
     app-race-scheduler {
       display: block;
-      min-width: 860px;
+      min-width: 1040px;
     }
 
     @media (max-width: 768px) {
@@ -368,19 +387,21 @@ export interface RaceResultsDialogData {
       flex-shrink: 0;
       display: flex;
       align-items: center;
+      justify-content: center;
+      width: 18px;
+
+      &.pos-1st { color: #ffd700; }
+      &.pos-2nd { color: #c0c0c0; }
+      &.pos-3rd { color: #cd7f32; }
+      &.pos-other { color: var(--text-muted); }
     }
 
     .list-trophy {
       font-size: 14px;
       width: 14px;
       height: 14px;
-      color: #f5c83a;
-    }
-
-    .list-pos {
-      font-size: 10px;
-      font-weight: 700;
-      color: rgba(255, 255, 255, 0.45);
+      color: inherit;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.72));
     }
 
     .list-empty {
@@ -388,6 +409,14 @@ export interface RaceResultsDialogData {
       font-size: 11px;
       color: rgba(255, 255, 255, 0.2);
       font-style: italic;
+    }
+
+    .list-race-image {
+      flex: 0 0 40px;
+      width: 40px;
+      height: 20px;
+      object-fit: cover;
+      object-position: center;
     }
 
     :host-context(.light-theme) {
@@ -413,8 +442,7 @@ export interface RaceResultsDialogData {
 
       .char-name,
       .legend,
-      .list-turn,
-      .list-pos {
+      .list-turn {
         color: var(--text-muted);
       }
 
@@ -573,6 +601,7 @@ export class RaceResultsDialogComponent implements AfterViewInit {
             group.races.push({
               name: entry.race.name,
               shortName: entry.race.short_name,
+              thumbnailId: entry.race.thumbnail_id,
               grade: entry.race.grade,
               gradeLabel: s.getGradeLabel(entry.race.grade),
               month,
@@ -592,6 +621,7 @@ export class RaceResultsDialogComponent implements AfterViewInit {
             group.races.push({
               name: race.name,
               shortName: race.short_name,
+              thumbnailId: race.thumbnail_id,
               grade: race.grade,
               gradeLabel: s.getGradeLabel(race.grade),
               month,
@@ -639,5 +669,13 @@ export class RaceResultsDialogComponent implements AfterViewInit {
     a.download = `race-history-${safeName}-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  getListRaceImageUrl(race: ListRace): string | null {
+    return getRaceThumbnailUrl(race.thumbnailId);
+  }
+
+  hideBrokenRaceImage(event: Event): void {
+    (event.currentTarget as HTMLImageElement).hidden = true;
   }
 }

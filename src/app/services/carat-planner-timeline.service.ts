@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { CaratPlannerTimelineEvent } from '../models/carat-planner.model';
 import { CaratPlannerPersistenceService } from './carat-planner-persistence.service';
 import { CaratPlannerResourceService } from './carat-planner-resource.service';
+import { isCaratPlannerAvailable } from '../utils/carat-planner-availability';
 
 @Injectable({ providedIn: 'root' })
 export class CaratPlannerTimelineService {
@@ -13,6 +14,8 @@ export class CaratPlannerTimelineService {
   ) {}
 
   setEventActive(event: CaratPlannerTimelineEvent, active: boolean): void {
+    if (!isCaratPlannerAvailable()) return;
+
     const planId = this.persistence.activePlan.id;
     this.persistence.setEventActive(event, active);
     if (!event.plannerRewardAvailable || !active) return;

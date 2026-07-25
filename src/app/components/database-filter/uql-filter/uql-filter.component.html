@@ -128,6 +128,17 @@
         </section>
 
         <section class="uql-doc-section">
+          <h6>White Category Totals</h6>
+          <p>Use readable field names with spaces; backend-style underscore names are not required in the editor.</p>
+          <dl class="uql-doc-table">
+            <div><dt>Common white count &gt;= 3</dt><dd>Minimum common white factors across the lineage.</dd></div>
+            <div><dt>Scenario white stars &gt;= 5</dt><dd>Minimum scenario-white total stars across the lineage.</dd></div>
+            <div><dt>Main race white count &gt;= 2</dt><dd>Minimum race whites on the main-parent slot.</dd></div>
+            <div><dt>Main common white stars &gt;= 4</dt><dd>Minimum common-white total stars on the main-parent slot.</dd></div>
+          </dl>
+        </section>
+
+        <section class="uql-doc-section">
           <h6>White Skills And Array Fields</h6>
           <p>Skill lists use array operators. Use <span class="uql-doc-inline-code">has</span> for one required skill or a comma list where every listed skill must exist, and use <span class="uql-doc-inline-code">in (...)</span> or <span class="uql-doc-inline-code">has any (...)</span> for at least one listed skill.</p>
           <div class="uql-doc-code-block">
@@ -165,13 +176,13 @@
 
         <section class="uql-doc-section">
           <h6>Optional And Lineage Sorting</h6>
-          <p>Use optional and lineage white filters when matching skills should influence result order. Add <span class="uql-doc-inline-code">priority = N</span>, <span class="uql-doc-inline-code">priority_group = N</span>, <span class="uql-doc-inline-code">prio group = N</span>, or <span class="uql-doc-inline-code">group = N</span> inside the list to choose a priority group; group 0 is highest priority and higher groups tie-break later.</p>
+          <p>Use optional and lineage white filters when matching skills should influence result order. Add <span class="uql-doc-inline-code">priority = N</span>, <span class="uql-doc-inline-code">priority group = N</span>, <span class="uql-doc-inline-code">prio group = N</span>, or <span class="uql-doc-inline-code">group = N</span> inside the list to choose a priority group; group 0 is highest priority and higher groups tie-break later.</p>
           <dl class="uql-doc-table">
             <div><dt>optional white = ...</dt><dd>Requires and scores one global white skill match.</dd></div>
             <div><dt>optional white in (...)</dt><dd>Requires and scores listed global white skill matches.</dd></div>
             <div><dt>optional white in (..., priority = 0)</dt><dd>Puts these matches in the highest priority group.</dd></div>
             <div><dt>optional white in (..., prio group = 0)</dt><dd>Uses the shorthand form for the highest priority group.</dd></div>
-            <div><dt>optional white in (..., priority_group = 1)</dt><dd>Uses priority group 1 as a later tie-breaker.</dd></div>
+            <div><dt>optional white in (..., priority group = 1)</dt><dd>Uses priority group 1 as a later tie-breaker.</dd></div>
             <div><dt>optional main white in (...)</dt><dd>Requires and scores main parent white skill matches.</dd></div>
             <div><dt>lineage white in (...)</dt><dd>Sorts by lineage-style white skill stacking.</dd></div>
             <div><dt>lineage white in (..., group = 2)</dt><dd>Applies the same grouping syntax to lineage sorting.</dd></div>

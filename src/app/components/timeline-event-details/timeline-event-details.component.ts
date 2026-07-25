@@ -25,6 +25,7 @@ export interface TimelineEventDetailsData {
   event: TimelineEvent;
   calculation?: TimelineCalculation | null;
   rewardSummary?: TimelineRewardSummary | null;
+  plannerEnabled?: boolean;
 }
 
 export interface TimelineEventFact {
@@ -266,10 +267,10 @@ export class TimelineEventDetailsComponent implements OnInit {
     this.showAdditionalEventInformation = this.event.type === EventType.LEAGUE_OF_HEROES
       && this.descriptionIsRepresentedByFacts
       && /<(?:h[1-6]|p|li|div)\b/i.test(this.event.description ?? '');
-    this.canPlan = ([EventType.CHARACTER_BANNER, EventType.SUPPORT_CARD_BANNER].includes(this.event.type)
+    this.canPlan = this.data.plannerEnabled === true && (([EventType.CHARACTER_BANNER, EventType.SUPPORT_CARD_BANNER].includes(this.event.type)
       && Boolean(this.event.plannerDataAvailable || this.event.gachaId || this.event.gachaIds?.length))
-      || this.event.plannerRewardAvailable === true;
-    this.planned = this.plannerPersistence.isEventActive(this.event.id);
+      || this.event.plannerRewardAvailable === true);
+    this.planned = this.canPlan && this.plannerPersistence.isEventActive(this.event.id);
     this.hasBannerRates = [EventType.CHARACTER_BANNER, EventType.SUPPORT_CARD_BANNER].includes(this.event.type)
       && Boolean(this.event.plannerDataAvailable || this.event.gachaId || this.event.gachaIds?.length);
     this.pickupRates = this.hasBannerRates ? this.buildPickupRates(null) : [];
@@ -305,6 +306,7 @@ export class TimelineEventDetailsComponent implements OnInit {
   }
 
   togglePlanner(): void {
+    if (!this.canPlan) return;
     this.planned = !this.planned;
     this.plannerTimeline.setEventActive(this.event, this.planned);
   }
@@ -334,8 +336,23 @@ export class TimelineEventDetailsComponent implements OnInit {
     return reward.key;
   }
 
+  trackRewardOutcome(_index: number, outcome: { key: string }): string {
+    return outcome.key;
+  }
+
+  trackRewardOutcomeItem(_index: number, item: { key: string }): string {
+    return item.key;
+  }
+
   trackPickupRate(_index: number, pickup: TimelinePickupRateView): string {
     return pickup.avatar.key;
+  }
+
+  rewardOutcomeLabel(label: string): string {
+    return label.replace(/Character (\d+)/i, (_match, id: string) => {
+      const avatar = this.characterAvatars.find(candidate => candidate.key.startsWith('character-' + id + '-'));
+      return avatar?.displayName ?? 'Character ' + id;
+    });
   }
 
   rewardIconPath(item: TimelineRewardItem): string {
@@ -390,24 +407,26 @@ export class TimelineEventDetailsComponent implements OnInit {
     const avatars = this.event.type === EventType.SUPPORT_CARD_BANNER
       ? this.supportAvatars
       : this.characterAvatars;
-    const pickupIds = this.event.pickupCardIds ?? [];
-    const rates = gacha?.pickups ?? [];
-    const byId = new Map(rates.map(rate => [rate.pickup_id, rate.rate]));
+    const rates = gacha?.featured_pickups?.length ? gacha.featured_pickups : gacha?.pickups ?? [];
+    const orderedRates = this.event.type === EventType.SUPPORT_CARD_BANNER
+      ? [...rates].sort((left, right) => right.pickup_id - left.pickup_id)
+      : rates;
 
-    const mapped = avatars.map((avatar, index) => {
-      const exact = pickupIds[index] === undefined ? undefined : byId.get(pickupIds[index]);
-      const rate = exact ?? rates[index]?.rate;
-      return {
-        avatar,
-        rateLabel: Number.isFinite(rate) ? `${this.formatRate(rate!)} per pull` : null,
-      };
-    });
+    if (orderedRates.length) {
+      const loaded: TimelinePickupRateView[] = [];
+      for (const rate of orderedRates) {
+        const avatar = this.avatarService.getPickupAvatar(this.event, rate.pickup_id, rate.label);
+        if (!avatar) continue;
+        loaded.push({
+          avatar,
+          rateLabel: Number.isFinite(rate.rate) ? this.formatRate(rate.rate) + ' per pull' : null,
+        });
+      }
+      return loaded;
+    }
 
-    // Related-card metadata can include lower-rarity variants. Once the
-    // protected banner rates are loaded, retain only actual featured pickups.
-    return gacha?.pickups?.length ? mapped.filter(pickup => pickup.rateLabel !== null) : mapped;
+    return avatars.map(avatar => ({ avatar, rateLabel: null }));
   }
-
   private formatRate(rate: number): string {
     return new Intl.NumberFormat(undefined, {
       style: 'percent',

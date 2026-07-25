@@ -34,6 +34,7 @@ interface V3InheritanceRecord {
   parent_right_id: number;
   parent_rank: number;
   parent_rarity: number;
+  scenario_id: number | null;
   blue_sparks: number[];
   pink_sparks: number[];
   green_sparks: number[];
@@ -144,6 +145,7 @@ export class InheritanceService {
       .set('page', page.toString())
       .set('limit', pageSize.toString())
       .set('search_type', 'inheritance');
+    let effectiveUql = filters.uql;
     // Add trainer_id filter for direct trainer lookup
     if (filters.trainerId) {
       params = params.set('trainer_id', filters.trainerId);
@@ -191,6 +193,27 @@ export class InheritanceService {
     }
     if (filters.minParentRarity !== undefined) {
       params = params.set('parent_rarity', filters.minParentRarity.toString());
+    }
+    if (filters.scenarioIds?.length) {
+      const scenarioIds = [...new Set(filters.scenarioIds)]
+        .filter(id => Number.isInteger(id) && id >= 0)
+        .sort((a, b) => a - b);
+      if (scenarioIds.includes(0)) {
+        // The structured endpoint reserves zero as its empty/default value.
+        // UQL still exposes the actual indexed scenario_id, including URA (0).
+        const scenarioClause = scenarioIds.length === 1
+          ? 'scenario_id = 0'
+          : `scenario_id in (${scenarioIds.join(',')})`;
+        const existingExpression = effectiveUql
+          ?.trim()
+          .replace(/^\s*where\b\s*/i, '')
+          .replace(/;\s*$/, '');
+        effectiveUql = existingExpression
+          ? `where (${existingExpression}) and (${scenarioClause})`
+          : `where ${scenarioClause}`;
+      } else if (scenarioIds.length) {
+        params = params.set('scenario_id', scenarioIds.join(','));
+      }
     }
     // Map individual spark filters to backend spark IDs (factorId + level)
     const blueSparkValues: number[] = [];
@@ -332,7 +355,7 @@ export class InheritanceService {
     if (filters.minMainGreenFactors !== undefined) {
       params = params.set('min_main_green_factors', filters.minMainGreenFactors.toString());
     }
-    if (filters.minMainWhiteCount !== undefined) {
+    if (filters.minMainWhiteCount != null && filters.minMainWhiteCount > 0) {
       params = params.set('min_main_white_count', filters.minMainWhiteCount.toString());
     }
     // Add minimum filters
@@ -341,6 +364,42 @@ export class InheritanceService {
     }
     if (filters.minWhiteCount !== undefined) {
       params = params.set('min_white_count', filters.minWhiteCount.toString());
+    }
+    if (filters.minCommonWhiteCount != null && filters.minCommonWhiteCount > 0) {
+      params = params.set('min_common_white_count', filters.minCommonWhiteCount.toString());
+    }
+    if (filters.minCommonWhiteStarsSum != null && filters.minCommonWhiteStarsSum > 0) {
+      params = params.set('min_common_white_stars_sum', filters.minCommonWhiteStarsSum.toString());
+    }
+    if (filters.minScenarioWhiteCount != null && filters.minScenarioWhiteCount > 0) {
+      params = params.set('min_scenario_white_count', filters.minScenarioWhiteCount.toString());
+    }
+    if (filters.minScenarioWhiteStarsSum != null && filters.minScenarioWhiteStarsSum > 0) {
+      params = params.set('min_scenario_white_stars_sum', filters.minScenarioWhiteStarsSum.toString());
+    }
+    if (filters.minRaceWhiteCount != null && filters.minRaceWhiteCount > 0) {
+      params = params.set('min_race_white_count', filters.minRaceWhiteCount.toString());
+    }
+    if (filters.minRaceWhiteStarsSum != null && filters.minRaceWhiteStarsSum > 0) {
+      params = params.set('min_race_white_stars_sum', filters.minRaceWhiteStarsSum.toString());
+    }
+    if (filters.minMainCommonWhiteCount != null && filters.minMainCommonWhiteCount > 0) {
+      params = params.set('min_main_common_white_count', filters.minMainCommonWhiteCount.toString());
+    }
+    if (filters.minMainCommonWhiteStarsSum != null && filters.minMainCommonWhiteStarsSum > 0) {
+      params = params.set('min_main_common_white_stars_sum', filters.minMainCommonWhiteStarsSum.toString());
+    }
+    if (filters.minMainScenarioWhiteCount != null && filters.minMainScenarioWhiteCount > 0) {
+      params = params.set('min_main_scenario_white_count', filters.minMainScenarioWhiteCount.toString());
+    }
+    if (filters.minMainScenarioWhiteStarsSum != null && filters.minMainScenarioWhiteStarsSum > 0) {
+      params = params.set('min_main_scenario_white_stars_sum', filters.minMainScenarioWhiteStarsSum.toString());
+    }
+    if (filters.minMainRaceWhiteCount != null && filters.minMainRaceWhiteCount > 0) {
+      params = params.set('min_main_race_white_count', filters.minMainRaceWhiteCount.toString());
+    }
+    if (filters.minMainRaceWhiteStarsSum != null && filters.minMainRaceWhiteStarsSum > 0) {
+      params = params.set('min_main_race_white_stars_sum', filters.minMainRaceWhiteStarsSum.toString());
     }
     // Support Card Filters
     if (filters.supportCardId !== undefined) {
@@ -378,8 +437,8 @@ export class InheritanceService {
     if (filters.p2WinSaddle && filters.p2WinSaddle.length > 0) {
       params = params.set('p2_win_saddle', filters.p2WinSaddle.join(','));
     }
-    if (filters.uql) {
-      params = params.set('uql', filters.uql);
+    if (effectiveUql) {
+      params = params.set('uql', effectiveUql);
     }
     // Add sorting parameters
     if (filters.sortBy) {
@@ -449,6 +508,7 @@ export class InheritanceService {
       parent_right_id: inheritance.parent_right_id,
       parent_rank: inheritance.parent_rank,
       parent_rarity: inheritance.parent_rarity,
+      scenario_id: inheritance.scenario_id,
       blue_sparks: this.toNumberArray(inheritance.blue_sparks),
       pink_sparks: this.toNumberArray(inheritance.pink_sparks),
       green_sparks: this.toNumberArray(inheritance.green_sparks),

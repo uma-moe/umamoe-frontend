@@ -4,7 +4,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 // Increment this number whenever you want to show the update notification again
-export const CURRENT_UPDATE_VERSION = 9;
+export const CURRENT_UPDATE_VERSION = 10;
 export interface ChangeItem {
     text: string;
     link?: string; // Internal route link
@@ -15,6 +15,7 @@ export interface ChangeCategory {
     icon: string;
     color: string;
     items: ChangeItem[];
+    betaOnly?: boolean;
 }
 export interface UpdateEntry {
     title: string;
@@ -23,6 +24,100 @@ export interface UpdateEntry {
 }
 // Define your updates here - newest first
 export const UPDATE_LOG: UpdateEntry[] = [
+  {
+    title: 'July Update - Inheritance, Races & Planning',
+    date: '2026-07-26',
+    categories: [
+      {
+        category: 'major',
+        label: 'Inheritance Results',
+        icon: 'auto_awesome',
+        color: '#64b5f6',
+        items: [
+          { text: 'Inheritance results have a compact new card layout with clearer main and great-parent contributions', link: '/database' },
+          { text: 'Split and combined spark views now use the same chance calculations' },
+          { text: 'Scenario, common, and race spark sections can be collapsed across every result' },
+          { text: 'Hide Sparks remembers unwanted factors and can reveal them again per result' },
+          { text: 'Scenario badges now use each record\'s scenario ID and corrected English logos' },
+        ]
+      },
+      {
+        category: 'major',
+        label: 'Filters & UQL',
+        icon: 'filter_alt',
+        color: '#ab47bc',
+        items: [
+          { text: 'Filter common, scenario, and race whites by minimum count or total stars', link: '/database' },
+          { text: 'White-category filters work for both the full lineage and the main parent' },
+          { text: 'Training Scenario and the new white filters are available in Advanced and UQL' },
+          { text: 'Generated UQL uses readable field names for the new filter criteria' },
+          { text: 'Special sparks now show normal and upgraded choices together with corrected icons' },
+        ]
+      },
+      {
+        category: 'improvement',
+        label: 'Race Tools',
+        icon: 'emoji_events',
+        color: '#ffca28',
+        items: [
+          { text: 'Race Schedule now uses in-game race art in a denser, faster calendar', link: '/database' },
+          { text: 'Race and Optimal Race views share the same image resolver and calendar layout' },
+          { text: 'Conflicting optimal races move into the next available slot instead of overlapping' },
+          { text: 'Race grades and results use outlines and cup colors while names remain available on hover' },
+          { text: 'Race History combines compact race art, names, grades, and result cups' },
+        ]
+      },
+      {
+        category: 'major',
+        label: 'Carat Planner',
+        icon: 'diamond',
+        color: '#ec407a',
+        betaOnly: true,
+        items: [
+          { text: 'Create, rename, duplicate, import, export, and switch between saved plans', link: '/timeline?tab=carat-planner' },
+          { text: 'Search banners and plan multiple character or support-card rate-up goals' },
+          { text: 'Configure starting balances, recurring income, custom income, and upcoming rewards' },
+          { text: 'Inspect published rates, pull probabilities, copy targets, and exchange allocation' },
+        ]
+      },
+      {
+        category: 'improvement',
+        label: 'Timeline',
+        icon: 'view_timeline',
+        color: '#26a69a',
+        items: [
+          { text: 'Switch between horizontal and vertical timelines with compact gaps, Today, search, and event filters', link: '/timeline' },
+          { text: 'Timeline cards and event details have been redesigned for clearer scanning' },
+          { text: 'Event details now include rates, rewards, race information, predictions, and source links' },
+          { text: 'The timeline fills the available screen and has improved responsive and mobile layouts' },
+        ]
+      },
+      {
+        category: 'improvement',
+        label: 'Circles',
+        icon: 'groups',
+        color: '#42a5f5',
+        items: [
+          { text: 'Circle pages now show live rank, tier progress, monthly navigation, and clearer club information', link: '/circles' },
+          { text: 'Member progression can be explored as a chart or calendar with daily contributor breakdowns' },
+          { text: 'Search members, open profiles, copy trainer IDs, and switch between grid and list views' },
+          { text: 'Customize member metrics, include prior-circle progress, and export data as Excel, CSV, or JSON' },
+        ]
+      },
+      {
+        category: 'bugfix',
+        label: 'Performance & Mobile',
+        icon: 'speed',
+        color: '#66bb6a',
+        items: [
+          { text: 'Large filter and database sections now defer expensive work until it is needed' },
+          { text: 'Reduced repeated calculations, observers, image work, CPU use, and memory pressure' },
+          { text: 'Improved mobile layouts across Database, Inheritance, Race tools, Timeline, and Carat Planner' },
+          { text: 'Fixed scenario and race mappings, parent highlighting, shared filters, and several stale-state issues' },
+        ]
+      }
+    ]
+  },
   {
     title: 'Search & UQL Update',
     date: '2026-06-28',
@@ -736,10 +831,18 @@ export const UPDATE_LOG: UpdateEntry[] = [
   `]
 })
 export class UpdateNotificationComponent implements OnInit {
-    updates = UPDATE_LOG;
+    updates: UpdateEntry[] = [];
     fallbackTitle = "What's New";
     constructor(private dialogRef: MatDialogRef<UpdateNotificationComponent>) { }
-    ngOnInit() { }
+    ngOnInit() {
+        const isBetaHost = typeof window !== 'undefined'
+            && window.location.hostname.toLowerCase() === 'beta.uma.moe';
+
+        this.updates = UPDATE_LOG.map(update => ({
+            ...update,
+            categories: update.categories.filter(category => !category.betaOnly || isBetaHost)
+        }));
+    }
     formatDate(dateStr: string): string {
         const date = new Date(dateStr);
         return date.toLocaleDateString('en-US', {

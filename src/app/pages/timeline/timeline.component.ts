@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, OnDestroy, NgZone, ChangeDetectionStrategy, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, OnDestroy, NgZone, ChangeDetectionStrategy, ChangeDetectorRef, HostBinding, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -33,6 +33,7 @@ import { CaratPlannerPersistenceService } from '../../services/carat-planner-per
 import { CaratPlannerTimelineService } from '../../services/carat-planner-timeline.service';
 import { compareTimelineEventsForDisplay } from '../../utils/timeline-event-order';
 import { buildTimelineRewardSummaries, TimelineRewardSummary } from '../../utils/planner-reward-summary';
+import { isCaratPlannerAvailable } from '../../utils/carat-planner-availability';
 interface TimelineItem {
     date: Date;
     label: string;
@@ -86,6 +87,16 @@ interface TimelineMonthSpan {
     label: string;
     position: number;
     width: number;
+}
+
+type DesktopTimelineDirection = 'horizontal' | 'vertical';
+type TimelineSpacingMode = 'compact' | 'calendar';
+
+interface TimelineMonthGroup {
+    key: string;
+    label: string;
+    lanes: TimelineDateLane[];
+    eventCount: number;
 }
 
 interface TourTargetRect {
@@ -156,6 +167,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly timelineLaneStartPadding = 28;
     private readonly timelineLaneEndPadding = 48;
     private readonly emptyMonthSpacing = 116;
+    private readonly calendarGapPixelsPerDay = 14;
     private readonly timelineLaneEventLimit = 3;
     private readonly timelineCardSlotWidth = 296;
     private readonly timelineMarkerSlotWidth = 64;
@@ -167,6 +179,12 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     allTimelineLanes: TimelineDateLane[] = [];
     visibleTimelineLanes: TimelineDateLane[] = [];
     timelineMonthSpans: TimelineMonthSpan[] = [];
+    timelineMonthGroups: TimelineMonthGroup[] = [];
+    timelineTrackMinHeight = 560;
+    desktopTimelineDirection: DesktopTimelineDirection = 'horizontal';
+    verticalTimelineInitialized = false;
+    timelineSpacingMode: TimelineSpacingMode = 'compact';
+    timelineLayoutAnimating = false;
     todayLanePosition = 0;
     showTodayMarker = false;
     filterPanelOpen = false;
@@ -206,6 +224,12 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private tabSubscription?: Subscription;
     private plannerSubscription?: Subscription;
     activeTab: 'timeline' | 'carat-planner' = 'timeline';
+    readonly caratPlannerAvailable = isCaratPlannerAvailable();
+
+    @HostBinding('class.planner-tab-active')
+    get plannerTabActive(): boolean {
+        return this.caratPlannerAvailable && this.activeTab === 'carat-planner';
+    }
     requestedPlannerEventId: string | null = null;
     plannedEventIds = new Set<string>();
     plannerEventCount = 0;
@@ -249,6 +273,9 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private initialTodayScrollDone = false;
     private initialTodayScrollScheduled = false;
     private savedDesktopScrollLeft = 0;
+    private savedDesktopScrollTop = 0;
+    private timelineLayoutAnimationTimer?: number;
+    private readonly timelinePreferencesKey = 'umamoe.timeline.desktop-preferences.v1';
     timelineTourEventCardTarget: TourTargetRect = { left: 0, top: 0, width: 320, height: 220 };
     timelineTourTodayTarget: TourTargetRect = { left: 0, top: 0, width: 420, height: 56 };
     readonly timelineLoading$ = this.timelineService.loading$;
@@ -306,7 +333,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
 
     @HostListener('wheel', ['$event'])
     onWheel(event: WheelEvent): void {
-        if (!this.timelineContainer || this.isMobile) return;
+        if (!this.timelineContainer || this.isMobile || this.desktopTimelineDirection === 'vertical') return;
         const container = this.timelineContainer.nativeElement as HTMLElement;
         const target = this.getTimelineEventElement(event.target);
         if (!target || !container.contains(target) || event.ctrlKey) return;
@@ -317,6 +344,18 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.hideAvatarHover();
         const horizontalDelta = Math.abs(event.deltaX);
         const verticalDelta = Math.abs(event.deltaY);
+        const eventLane = target.closest('.timeline-date-lane');
+        const canScrollVertically = container.scrollHeight > container.clientHeight + 1;
+        if (eventLane && !event.shiftKey && verticalDelta > horizontalDelta && canScrollVertically) {
+            const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+            const canMoveVertically = event.deltaY < 0 ? container.scrollTop > 0 : container.scrollTop < maxScrollTop;
+            if (canMoveVertically) {
+                event.preventDefault();
+                container.scrollTop += event.deltaY;
+                return;
+            }
+        }
+
         const scrollAmount = horizontalDelta > verticalDelta ? event.deltaX : event.deltaY;
         if (!scrollAmount) return;
 
@@ -343,24 +382,39 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             return;
         }
         const container = this.timelineContainer.nativeElement;
-        const scrollAmount = 300; // Pixels to scroll
-        const pageScrollAmount = container.clientWidth * 0.8; // 80% of viewport for page up/down
+        const isVertical = this.desktopTimelineDirection === 'vertical';
+        const scrollAmount = 300;
+        const pageScrollAmount = (isVertical ? container.clientHeight : container.clientWidth) * 0.8;
         switch (event.key) {
             case 'ArrowLeft':
+                if (isVertical) break;
                 event.preventDefault();
                 container.scrollLeft -= scrollAmount;
                 break;
             case 'ArrowRight':
+                if (isVertical) break;
                 event.preventDefault();
                 container.scrollLeft += scrollAmount;
                 break;
+            case 'ArrowUp':
+                if (!isVertical) break;
+                event.preventDefault();
+                container.scrollTop -= scrollAmount;
+                break;
+            case 'ArrowDown':
+                if (!isVertical) break;
+                event.preventDefault();
+                container.scrollTop += scrollAmount;
+                break;
             case 'PageUp':
                 event.preventDefault();
-                container.scrollLeft -= pageScrollAmount;
+                if (isVertical) container.scrollTop -= pageScrollAmount;
+                else container.scrollLeft -= pageScrollAmount;
                 break;
             case 'PageDown':
                 event.preventDefault();
-                container.scrollLeft += pageScrollAmount;
+                if (isVertical) container.scrollTop += pageScrollAmount;
+                else container.scrollLeft += pageScrollAmount;
                 break;
             case 'Home':
                 if (event.ctrlKey) {
@@ -378,7 +432,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     // Drag to scroll functionality
     onMouseDown(event: MouseEvent): void {
-        if (!this.timelineContainer || this.isMobile) return;
+        if (!this.timelineContainer || this.isMobile || this.desktopTimelineDirection === 'vertical') return;
         // Only handle left mouse button, ignore middle mouse button for page scrolling
         if (event.button !== 0) return;
         if (this.isTimelineInteractiveTarget(event.target)) {
@@ -530,7 +584,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         }
     }
     private startMomentum(): void {
-        if (!this.timelineContainer || this.isDecelerating) return;
+        if (!this.timelineContainer || this.isDecelerating || this.desktopTimelineDirection === 'vertical') return;
         this.isDecelerating = true;
         const container = this.timelineContainer.nativeElement;
         const friction = 0.92; // Slightly lower friction for smoother deceleration
@@ -558,6 +612,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         animate();
     }
     ngOnInit(): void {
+        this.restoreTimelinePreferences();
         this.plannerSubscription = this.plannerPersistence.collection$.subscribe(collection => {
             const plan = collection.plans.find(item => item.id === collection.activePlanId) ?? collection.plans[0];
             const disabledEventIds = new Set(plan?.disabledEventIds ?? []);
@@ -570,13 +625,15 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         });
         this.loadTimelineRewardSummaries();
         this.tabSubscription = this.route.queryParamMap.subscribe(params => {
-            const nextTab = params.get('tab') === 'carat-planner' ? 'carat-planner' : 'timeline';
+            const nextTab = this.caratPlannerAvailable && params.get('tab') === 'carat-planner'
+                ? 'carat-planner'
+                : 'timeline';
             const changed = nextTab !== this.activeTab;
             if (changed && nextTab === 'carat-planner') {
                 this.deactivateDesktopTimelineSurface();
             }
             this.activeTab = nextTab;
-            this.requestedPlannerEventId = params.get('banner');
+            this.requestedPlannerEventId = this.caratPlannerAvailable ? params.get('banner') : null;
             if (changed && nextTab === 'timeline' && !this.isMobile) {
                 window.setTimeout(() => {
                     if (this.destroyed || this.activeTab !== 'timeline' || this.isMobile) return;
@@ -696,6 +753,10 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.timelineTourTargetFrame !== undefined) {
             cancelAnimationFrame(this.timelineTourTargetFrame);
             this.timelineTourTargetFrame = undefined;
+        }
+        if (this.timelineLayoutAnimationTimer !== undefined) {
+            window.clearTimeout(this.timelineLayoutAnimationTimer);
+            this.timelineLayoutAnimationTimer = undefined;
         }
         // Reset body styles
         document.body.style.userSelect = '';
@@ -985,22 +1046,32 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             .sort(([, a], [, b]) => a.date.getTime() - b.date.getTime());
 
         let emptyMonthOffset = 0;
+        let previousPosition = this.timelineLaneStartPadding;
         this.allTimelineLanes = sorted.map(([key, lane], index) => {
             const expanded = previousExpansion.get(key) === true;
             const previousDate = index > 0 ? sorted[index - 1][1].date : null;
             const gapDaysBefore = previousDate
                 ? Math.max(0, Math.round((lane.date.getTime() - previousDate.getTime()) / 86_400_000))
                 : 0;
+            let position = this.timelineLaneStartPadding;
             if (previousDate) {
-                const elapsedMonths = (lane.date.getUTCFullYear() - previousDate.getUTCFullYear()) * 12
-                    + lane.date.getUTCMonth() - previousDate.getUTCMonth();
-                emptyMonthOffset += Math.max(0, elapsedMonths - 1) * this.emptyMonthSpacing;
+                if (this.timelineSpacingMode === 'calendar') {
+                    position = previousPosition
+                        + this.timelineLaneStep
+                        + Math.max(0, gapDaysBefore - 1) * this.calendarGapPixelsPerDay;
+                } else {
+                    const elapsedMonths = (lane.date.getUTCFullYear() - previousDate.getUTCFullYear()) * 12
+                        + lane.date.getUTCMonth() - previousDate.getUTCMonth();
+                    emptyMonthOffset += Math.max(0, elapsedMonths - 1) * this.emptyMonthSpacing;
+                    position = this.timelineLaneStartPadding + index * this.timelineLaneStep + emptyMonthOffset;
+                }
             }
+            previousPosition = position;
             return {
                 key,
                 date: lane.date,
                 dateLabel: timelineLaneDateLabel(lane.date),
-                position: this.timelineLaneStartPadding + index * this.timelineLaneStep + emptyMonthOffset,
+                position,
                 gapDaysBefore,
                 events: lane.events,
                 visibleEvents: expanded ? lane.events : lane.events.slice(0, this.timelineLaneEventLimit),
@@ -1010,6 +1081,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             };
         });
         this.timelineMonthSpans = this.buildTimelineMonthSpans(this.allTimelineLanes);
+        this.timelineMonthGroups = this.buildTimelineMonthGroups(this.allTimelineLanes);
+        this.updateTimelineTrackHeight();
     }
 
     private buildTimelineMonthSpans(lanes: TimelineDateLane[]): TimelineMonthSpan[] {
@@ -1043,6 +1116,42 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         }
 
         return spans;
+    }
+
+    private buildTimelineMonthGroups(lanes: TimelineDateLane[]): TimelineMonthGroup[] {
+        const groups: TimelineMonthGroup[] = [];
+        lanes.forEach(lane => {
+            const key = `${lane.date.getUTCFullYear()}-${String(lane.date.getUTCMonth() + 1).padStart(2, '0')}`;
+            let group = groups[groups.length - 1];
+            if (!group || group.key !== key) {
+                group = {
+                    key,
+                    label: lane.date.toLocaleDateString(undefined, {
+                        month: 'long',
+                        year: 'numeric',
+                        timeZone: 'UTC'
+                    }),
+                    lanes: [],
+                    eventCount: 0
+                };
+                groups.push(group);
+            }
+            group.lanes.push(lane);
+            group.eventCount += lane.events.length;
+        });
+        return groups;
+    }
+
+    private updateTimelineTrackHeight(): void {
+        const requiredHeight = this.allTimelineLanes.reduce((maximum, lane) => {
+            const markerHeight = lane.markers.reduce((height, marker) => height + (marker.imagePath ? 108 : 42), 0);
+            const cardsHeight = lane.visibleEvents.length
+                ? lane.visibleEvents.length * 220 + Math.max(0, lane.visibleEvents.length - 1) * 9
+                : 0;
+            const overflowHeight = lane.events.length > this.timelineLaneEventLimit ? 38 : 0;
+            return Math.max(maximum, 31 + 60 + markerHeight + cardsHeight + overflowHeight + 24);
+        }, 0);
+        this.timelineTrackMinHeight = Math.max(360, requiredHeight);
     }
 
     private updateTimelineLaneMetrics(): void {
@@ -1214,7 +1323,11 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!this.allTimelineLanes.length || !this.timelineContainer) {
             return false;
         }
-        const container = this.timelineContainer.nativeElement;
+        const container = this.timelineContainer.nativeElement as HTMLElement;
+        if (this.desktopTimelineDirection === 'vertical') {
+            const targetLane = this.closestLaneToDate(new Date());
+            return targetLane ? this.scrollToVerticalLane(targetLane, behavior) : false;
+        }
         const targetScrollLeft = Math.max(0, this.todayLanePosition - (container.clientWidth / 2) + (this.timelineLaneWidth / 2));
         if (typeof container.scrollTo === 'function') {
             container.scrollTo({ left: targetScrollLeft, behavior });
@@ -1226,12 +1339,17 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     scrollToStart(): void {
         if (this.timelineContainer) {
-            this.timelineContainer.nativeElement.scrollLeft = 0;
+            if (this.desktopTimelineDirection === 'vertical') this.timelineContainer.nativeElement.scrollTop = 0;
+            else this.timelineContainer.nativeElement.scrollLeft = 0;
         }
     }
     scrollToEnd(): void {
         if (this.timelineContainer) {
-            this.timelineContainer.nativeElement.scrollLeft = this.totalWidth;
+            if (this.desktopTimelineDirection === 'vertical') {
+                this.timelineContainer.nativeElement.scrollTop = this.timelineContainer.nativeElement.scrollHeight;
+            } else {
+                this.timelineContainer.nativeElement.scrollLeft = this.totalWidth;
+            }
         }
     }
     private scheduleInitialScrollToToday(): void {
@@ -1486,11 +1604,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         const resultIndex = this.searchResultIndices[this.currentSearchIndex];
         const targetLane = this.allTimelineLanes[resultIndex];
         if (targetLane) {
-            const scrollPosition = targetLane.position - (this.timelineContainer.nativeElement.clientWidth / 2) + (this.timelineLaneWidth / 2);
-            // Use immediate scroll instead of smooth scroll for faster navigation
-            this.timelineContainer.nativeElement.scrollLeft = Math.max(0, scrollPosition);
-            // Force immediate update of visible items
-            this.updateVisibleItemsSync(true);
+            if (this.desktopTimelineDirection === 'vertical') {
+                this.scrollToVerticalLane(targetLane, 'smooth');
+            } else {
+                const scrollPosition = targetLane.position - (this.timelineContainer.nativeElement.clientWidth / 2) + (this.timelineLaneWidth / 2);
+                this.timelineContainer.nativeElement.scrollLeft = Math.max(0, scrollPosition);
+                this.updateVisibleItemsSync(true);
+            }
             this.cdr.detectChanges();
         }
     }
@@ -1834,7 +1954,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     private checkMobileBreakpoint(): void {
         const wasIsMobile = this.isMobile;
-        this.isMobile = window.innerWidth < this.mobileBreakpoint;
+        this.isMobile = window.matchMedia(`(max-width: ${this.mobileBreakpoint - 1}px)`).matches;
         if (wasIsMobile !== this.isMobile) {
             if (this.isMobile) {
                 this.deactivateDesktopTimelineSurface();
@@ -1855,6 +1975,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.allTimelineLanes = [];
         this.visibleTimelineLanes = [];
         this.timelineMonthSpans = [];
+        this.timelineMonthGroups = [];
+        this.timelineTrackMinHeight = 560;
         this.totalWidth = 0;
     }
 
@@ -1868,7 +1990,11 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.resizeObserver?.disconnect();
         this.resizeObserver = undefined;
         this.generateTimelineItems();
-        this.timelineContainer.nativeElement.scrollLeft = this.savedDesktopScrollLeft;
+        if (this.desktopTimelineDirection === 'vertical') {
+            this.timelineContainer.nativeElement.scrollTop = this.savedDesktopScrollTop;
+        } else {
+            this.timelineContainer.nativeElement.scrollLeft = this.savedDesktopScrollLeft;
+        }
         this.setupScrollListener();
         this.setupResizeObserver();
         this.calculateDynamicScale();
@@ -1880,7 +2006,11 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
 
     private deactivateDesktopTimelineSurface(): void {
         if (this.timelineContainer) {
-            this.savedDesktopScrollLeft = this.timelineContainer.nativeElement.scrollLeft;
+            if (this.desktopTimelineDirection === 'vertical') {
+                this.savedDesktopScrollTop = this.timelineContainer.nativeElement.scrollTop;
+            } else {
+                this.savedDesktopScrollLeft = this.timelineContainer.nativeElement.scrollLeft;
+            }
         }
         this.stopTimelineMomentum();
         this.scrollSubscription?.unsubscribe();
@@ -1890,6 +2020,11 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     private updateVisibleLanes(force = false): void {
+        if (this.desktopTimelineDirection === 'vertical') {
+            this.visibleTimelineLanes = [];
+            this.scheduleTimelineTourTargetUpdate();
+            return;
+        }
         if (!this.timelineContainer) {
             this.visibleTimelineLanes = this.allTimelineLanes.slice(0, 8);
             return;
@@ -1920,6 +2055,10 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         return lane.key;
     }
 
+    trackTimelineMonth(_index: number, month: TimelineMonthGroup): string {
+        return month.key;
+    }
+
     trackTimelineEvent(_index: number, event: TimelineEvent): string {
         return event.id;
     }
@@ -1928,7 +2067,134 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         lane.expanded = !lane.expanded;
         lane.visibleEvents = lane.expanded ? lane.events : lane.events.slice(0, this.timelineLaneEventLimit);
         lane.hiddenEventCount = lane.expanded ? 0 : Math.max(0, lane.events.length - this.timelineLaneEventLimit);
+        this.updateTimelineTrackHeight();
         this.cdr.detectChanges();
+    }
+
+    setDesktopTimelineDirection(direction: DesktopTimelineDirection): void {
+        if (direction === this.desktopTimelineDirection || !this.timelineContainer) return;
+        const container = this.timelineContainer.nativeElement as HTMLElement;
+        if (this.desktopTimelineDirection === 'horizontal') {
+            this.savedDesktopScrollLeft = container.scrollLeft;
+        } else {
+            this.savedDesktopScrollTop = container.scrollTop;
+        }
+        this.stopTimelineMomentum();
+        this.desktopTimelineDirection = direction;
+        if (direction === 'vertical') this.verticalTimelineInitialized = true;
+        this.filterPanelOpen = false;
+        this.persistTimelinePreferences();
+        if (direction === 'horizontal') this.updateVisibleItemsSync(true);
+        this.cdr.detectChanges();
+
+        window.requestAnimationFrame(() => {
+            if (!this.timelineContainer || this.desktopTimelineDirection !== direction) return;
+            const nextContainer = this.timelineContainer.nativeElement as HTMLElement;
+            if (direction === 'vertical') {
+                nextContainer.scrollLeft = 0;
+                nextContainer.scrollTop = this.savedDesktopScrollTop;
+                if (!this.savedDesktopScrollTop) this.scrollToToday('auto');
+            } else {
+                nextContainer.scrollTop = 0;
+                nextContainer.scrollLeft = this.savedDesktopScrollLeft;
+                this.updateVisibleItemsSync(true);
+                if (!this.savedDesktopScrollLeft) this.scrollToToday('auto');
+            }
+            this.scheduleTimelineTourTargetUpdate();
+            this.cdr.detectChanges();
+        });
+    }
+
+    toggleTimelineSpacing(): void {
+        if (this.desktopTimelineDirection !== 'horizontal') return;
+        const anchorDate = this.horizontalViewportAnchorDate();
+        this.timelineSpacingMode = this.timelineSpacingMode === 'compact' ? 'calendar' : 'compact';
+        this.persistTimelinePreferences();
+        this.timelineLayoutAnimating = true;
+        if (this.timelineLayoutAnimationTimer !== undefined) {
+            window.clearTimeout(this.timelineLayoutAnimationTimer);
+        }
+        this.generateTimelineItems();
+        this.updateVisibleItemsSync(true);
+        this.cdr.detectChanges();
+
+        window.requestAnimationFrame(() => {
+            if (!this.timelineContainer || this.desktopTimelineDirection !== 'horizontal') return;
+            const container = this.timelineContainer.nativeElement as HTMLElement;
+            const target = Math.max(0, this.positionForDate(anchorDate) - container.clientWidth / 2 + this.timelineLaneWidth / 2);
+            container.scrollTo({ left: target, behavior: 'smooth' });
+            this.updateVisibleItemsSync(true);
+        });
+        this.timelineLayoutAnimationTimer = window.setTimeout(() => {
+            this.timelineLayoutAnimating = false;
+            this.timelineLayoutAnimationTimer = undefined;
+            this.cdr.markForCheck();
+        }, 360);
+    }
+
+    isLaneToday(lane: TimelineDateLane): boolean {
+        return this.utcDateKey(lane.date) === this.utcDateKey(new Date());
+    }
+
+    private horizontalViewportAnchorDate(): Date {
+        if (!this.timelineContainer || !this.allTimelineLanes.length) return new Date();
+        const container = this.timelineContainer.nativeElement as HTMLElement;
+        const center = container.scrollLeft + container.clientWidth / 2;
+        return this.allTimelineLanes.reduce((closest, lane) => {
+            const closestDistance = Math.abs(closest.position + this.timelineLaneWidth / 2 - center);
+            const laneDistance = Math.abs(lane.position + this.timelineLaneWidth / 2 - center);
+            return laneDistance < closestDistance ? lane : closest;
+        }).date;
+    }
+
+    private closestLaneToDate(date: Date): TimelineDateLane | null {
+        if (!this.allTimelineLanes.length) return null;
+        return this.allTimelineLanes.reduce((closest, lane) =>
+            Math.abs(lane.date.getTime() - date.getTime()) < Math.abs(closest.date.getTime() - date.getTime())
+                ? lane
+                : closest
+        );
+    }
+
+    private scrollToVerticalLane(lane: TimelineDateLane, behavior: ScrollBehavior): boolean {
+        if (!this.timelineContainer) return false;
+        const container = this.timelineContainer.nativeElement as HTMLElement;
+        const target = container.querySelector(`[data-lane-key="${lane.key}"]`) as HTMLElement | null;
+        if (!target) return false;
+        const top = target.offsetTop - (container.clientHeight / 2) + (target.clientHeight / 2);
+        container.scrollTo({ top: Math.max(0, top), behavior });
+        return true;
+    }
+
+    private restoreTimelinePreferences(): void {
+        if (typeof window === 'undefined') return;
+        try {
+            const preferences = JSON.parse(window.localStorage.getItem(this.timelinePreferencesKey) ?? '{}') as {
+                direction?: DesktopTimelineDirection;
+                spacing?: TimelineSpacingMode;
+            };
+            if (preferences.direction === 'horizontal' || preferences.direction === 'vertical') {
+                this.desktopTimelineDirection = preferences.direction;
+                this.verticalTimelineInitialized = preferences.direction === 'vertical';
+            }
+            if (preferences.spacing === 'compact' || preferences.spacing === 'calendar') {
+                this.timelineSpacingMode = preferences.spacing;
+            }
+        } catch {
+            // Ignore stale or blocked local preferences.
+        }
+    }
+
+    private persistTimelinePreferences(): void {
+        if (typeof window === 'undefined') return;
+        try {
+            window.localStorage.setItem(this.timelinePreferencesKey, JSON.stringify({
+                direction: this.desktopTimelineDirection,
+                spacing: this.timelineSpacingMode
+            }));
+        } catch {
+            // The timeline remains fully usable when storage is unavailable.
+        }
     }
 
     toggleFilterPanel(): void {
@@ -1937,6 +2203,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     prefetchPlannerManifest(): void {
+        if (!this.caratPlannerAvailable) return;
         this.plannerResources.prefetchManifest();
     }
 
@@ -1975,6 +2242,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             event,
             calculation: this.timelineCalculation,
             rewardSummary: this.plannerRewardSummaries.get(event.id) ?? null,
+            plannerEnabled: this.caratPlannerAvailable,
         };
         this.dialog.open(TimelineEventDetailsComponent, {
             data,
@@ -1988,18 +2256,21 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     addEventToPlanner(event: TimelineEvent): void {
+        if (!this.caratPlannerAvailable) return;
         this.plannerTimeline.setEventActive(event, true);
     }
 
     removeEventFromPlanner(event: TimelineEvent): void {
+        if (!this.caratPlannerAvailable) return;
         this.plannerTimeline.setEventActive(event, false);
     }
 
     isEventPlanned(event: TimelineEvent): boolean {
-        return this.plannedEventIds.has(event.id);
+        return this.caratPlannerAvailable && this.plannedEventIds.has(event.id);
     }
 
     isPlannerEligible(event: TimelineEvent): boolean {
+        if (!this.caratPlannerAvailable) return false;
         const isPullTarget = [EventType.CHARACTER_BANNER, EventType.SUPPORT_CARD_BANNER].includes(event.type)
             && Boolean(event.plannerDataAvailable || event.gachaId || event.gachaIds?.length);
         return isPullTarget || event.plannerRewardAvailable === true;

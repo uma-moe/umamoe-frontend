@@ -23,7 +23,7 @@ import { CharacterService } from '../../services/character.service';
 import { ProfileService } from '../../services/profile.service';
 import { AuthService } from '../../services/auth.service';
 import { FactorService, SparkInfo, Factor } from '../../services/factor.service';
-import { AffinityService, PlannerRaceWins, PlannerSlotPosition, TreeSlots, TreeAffinityWithRaceResult, SparkDisplayMetrics } from '../../services/affinity.service';
+import { AffinityService, OptimalRaceRecommendation, PlannerRaceWins, PlannerSlotPosition, TreeSlots, TreeAffinityWithRaceResult, SparkDisplayMetrics } from '../../services/affinity.service';
 import { SKILLS } from '../../data/skills-data';
 import { CHARACTERS } from '../../data/character.data';
 import { environment } from '../../../environments/environment';
@@ -40,6 +40,7 @@ import { preferRasterAsset } from '../../utils/raster-asset';
 import { AppVersionService } from '../../services/app-version.service';
 import { AnalyticsEventParams, GoogleAnalyticsService } from '../../services/google-analytics.service';
 import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
+import { OptimalRacesDialogComponent, OptimalRacesDialogData } from '../../components/optimal-races-dialog/optimal-races-dialog.component';
 
 interface LineagePlannerShareNode {
   p: number;
@@ -111,6 +112,8 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   affinityTotal: number | null = null;
   affinityPlayerBonus: number | null = null;
   affinityLoading = false;
+  private optimalRacesCacheKey: string | null = null;
+  private optimalRacesCacheValue: OptimalRaceRecommendation[] = [];
 
   // Slot fitter
 
@@ -1622,8 +1625,60 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     return this.affinityResult?.race.parentPair ?? 0;
   }
 
+  get crossParentRaceAffinity(): number {
+    return this.affinityResult?.race.parentPair ?? 0;
+  }
+
   getTotalRaceAffinity(): number {
     return this.affinityResult?.race.total ?? 0;
+  }
+
+  getTotalAffinityTooltip(): string {
+    if (!this.affinityResult) return '';
+    const race = this.affinityResult.race.parentPair
+      ? `Race: ${this.affinityResult.race.total} (includes P1–P2: ${this.affinityResult.race.parentPair})`
+      : `Race: ${this.affinityResult.race.total}`;
+    return `Base: ${this.affinityResult.relationTotal} + ${race}`;
+  }
+
+  getCrossParentAffinityTooltip(): string {
+    const parts: string[] = [];
+    if (this.sharedAffinity) parts.push(`Base P1–P2: ${this.sharedAffinity}`);
+    if (this.crossParentRaceAffinity) parts.push(`Shared G1 race affinity: ${this.crossParentRaceAffinity}`);
+    return parts.join(' + ');
+  }
+
+  getOptimalRaces(): OptimalRaceRecommendation[] {
+    const p1 = this.nodes.get('p1');
+    const p2 = this.nodes.get('p2');
+    const p1Wins = p1 ? this.getWinSaddles(p1) : [];
+    const p2Wins = p2 ? this.getWinSaddles(p2) : [];
+    const cacheKey = `${p1Wins.join(',')}|${p2Wins.join(',')}`;
+    if (this.optimalRacesCacheKey === cacheKey) {
+      return this.optimalRacesCacheValue;
+    }
+
+    this.optimalRacesCacheKey = cacheKey;
+    this.optimalRacesCacheValue = this.affinityService.getOptimalRaceRecommendations(p1Wins, p2Wins);
+    return this.optimalRacesCacheValue;
+  }
+
+  openOptimalRaces(): void {
+    const recommendations = this.getOptimalRaces();
+    if (!recommendations.length) return;
+
+    this.trackPlannerEvent('open_optimal_races', {
+      recommendation_count: recommendations.length,
+      both_parent_count: recommendations.filter(race => race.overlapCount === 2).length,
+    });
+    this.dialog.open(OptimalRacesDialogComponent, {
+      data: { recommendations } as OptimalRacesDialogData,
+      panelClass: 'modern-dialog-panel',
+      width: '620px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      autoFocus: false,
+    });
   }
 
   openOverlapDialog(node: LineageNode, event: Event): void {
@@ -1672,6 +1727,8 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     if (!this.affinityService.isReady) return;
 
     this.nodes.forEach(n => n.affinity = null);
+    this.optimalRacesCacheKey = null;
+    this.optimalRacesCacheValue = [];
 
     const slots = this.buildTreeSlots();
     const result = this.affinityService.calculateTreeWithRace(slots, this.buildPlannerRaceWins());

@@ -48,4 +48,141 @@ describe('buildTimelineRewardSummaries', () => {
       iconPath: 'assets/images/item/item_icon_00041.webp',
     }));
   });
+  it('keeps result-based competitive rewards informative without inventing a total', () => {
+    const summaries = buildTimelineRewardSummaries({
+      rewards: [],
+      competitive_variants: [{
+        id: 'loh-platinum',
+        competition: 'league_of_heroes',
+        event_id: 'loh-1',
+        master_event_id: 1,
+        label: 'Platinum',
+        source_items: [
+          { item_category: 90, item_id: 43, amount: 1200 },
+          { item_category: 40, item_id: 41, amount: 3 },
+          { item_category: 164, item_id: 149, amount: 1 },
+          { item_category: 164, item_id: 150, amount: 1 },
+        ],
+      }],
+    });
+
+    expect(summaries.get('loh-1')).toEqual(jasmine.objectContaining({
+      carats: 0,
+      variable: true,
+      variableOutcomeCount: 1,
+      variableRewardLabels: ['Carats', 'Trainee tickets', 'Rainbow crystals', 'Gold crystals'],
+      label: 'Rewards vary by result',
+      mode: 'cumulative',
+      previewLabel: 'Cumulative',
+      previewItems: [
+        jasmine.objectContaining({ key: 'carats', countLabel: '1,200' }),
+        jasmine.objectContaining({ key: 'uma-ticket', countLabel: '3' }),
+        jasmine.objectContaining({ key: 'rainbow-crystal', countLabel: '1' }),
+      ],
+      variableOutcomes: [jasmine.objectContaining({
+        key: 'loh-platinum',
+        label: 'Platinum',
+        items: [
+          jasmine.objectContaining({ key: 'carats', countLabel: '1,200' }),
+          jasmine.objectContaining({ key: 'uma-ticket', countLabel: '3' }),
+          jasmine.objectContaining({ key: 'rainbow-crystal', countLabel: '1' }),
+          jasmine.objectContaining({ key: 'gold-crystal', countLabel: '1' }),
+        ],
+      })],
+    }));
+  });
+
+  it('uses the published Global finals table when Champions Meeting master reward sets are absent', () => {
+    const summaries = buildTimelineRewardSummaries({
+      rewards: [],
+      competitive_variants: [{
+        id: 'cm-outcome', competition: 'champions_meeting', event_id: 'cm-1', master_event_id: 1,
+        label: 'League 1, round 4, 0 wins, rank 1 (rate 10000, reward set 121)', source_items: [],
+      }],
+    });
+
+    expect(summaries.get('cm-1')).toEqual(jasmine.objectContaining({
+      mode: 'placement',
+      previewLabel: 'Finals',
+      variableOutcomeCount: 12,
+      previewItems: [
+        jasmine.objectContaining({ key: 'carats', countLabel: '500–2,500' }),
+        jasmine.objectContaining({ key: 'uma-ticket', countLabel: '1–5' }),
+        jasmine.objectContaining({ key: 'support-ticket', countLabel: 'up to 5' }),
+      ],
+      variableOutcomes: jasmine.arrayContaining([
+        jasmine.objectContaining({ label: 'Graded · Group A · 1st', items: jasmine.arrayContaining([
+          jasmine.objectContaining({ key: 'carats', countLabel: '2,500' }),
+        ]) }),
+        jasmine.objectContaining({ label: 'Open · Group B · 3rd', items: jasmine.arrayContaining([
+          jasmine.objectContaining({ key: 'carats', countLabel: '500' }),
+        ]) }),
+      ]),
+    }));
+  });  it('keeps exact Legend Race first-clear rewards as separate opponent outcomes', () => {
+    const summaries = buildTimelineRewardSummaries({
+      rewards: [],
+      competitive_variants: [{
+        id: 'legend-race-opponent',
+        competition: 'legend_race',
+        event_id: 'legend-race-1',
+        master_event_id: 2,
+        label: 'First clear vs Character 101401',
+        source_items: [
+          { item_category: 102, item_id: 101401, amount: 10 },
+          { item_category: 90, item_id: 43, amount: 150 },
+          { item_category: 91, item_id: 59, amount: 10000 },
+        ],
+      }],
+    });
+
+    expect(summaries.get('legend-race-1')).toEqual(jasmine.objectContaining({
+      mode: 'per_opponent',
+      previewLabel: 'All clears',
+      previewItems: [
+        jasmine.objectContaining({ key: 'carats', countLabel: '150' }),
+        jasmine.objectContaining({ key: 'character-pieces', countLabel: '10' }),
+        jasmine.objectContaining({ key: 'money', countLabel: '10,000' }),
+      ],
+    }));
+    expect(summaries.get('legend-race-1')?.variableOutcomes).toEqual([jasmine.objectContaining({
+      label: 'First clear vs Character 101401',
+      items: [
+        jasmine.objectContaining({ key: 'character-pieces', countLabel: '10' }),
+        jasmine.objectContaining({ key: 'carats', countLabel: '150' }),
+        jasmine.objectContaining({ key: 'money', countLabel: '10,000' }),
+      ],
+    })]);
+  });
+  it('adds every Strongest Team milestone and mission reward into the attainable total', () => {
+    const summaries = buildTimelineRewardSummaries({
+      rewards: [],
+      competitive_variants: [
+        {
+          id: 'team-rank-1', competition: 'strongest_team', event_id: 'team-1', master_event_id: 1,
+          label: 'Team rank 1 (0-999 evaluation points)',
+          source_items: [{ item_category: 90, item_id: 43, amount: 100 }],
+        },
+        {
+          id: 'team-rank-2', competition: 'strongest_team', event_id: 'team-1', master_event_id: 1,
+          label: 'Team rank 2 (1000-1999 evaluation points)',
+          source_items: [{ item_category: 90, item_id: 43, amount: 200 }],
+        },
+        {
+          id: 'team-missions', competition: 'strongest_team', event_id: 'team-1', master_event_id: 1,
+          label: 'Event missions (full completion)',
+          source_items: [{ item_category: 40, item_id: 41, amount: 1 }],
+        },
+      ],
+    });
+
+    expect(summaries.get('team-1')).toEqual(jasmine.objectContaining({
+      mode: 'cumulative',
+      previewLabel: 'All milestones',
+      previewItems: [
+        jasmine.objectContaining({ key: 'carats', countLabel: '300' }),
+        jasmine.objectContaining({ key: 'uma-ticket', countLabel: '1' }),
+      ],
+    }));
+  });
 });

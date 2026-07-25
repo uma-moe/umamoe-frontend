@@ -104,6 +104,8 @@ export class ResourceDataService {
   private loadStarted = new Set<string>();
   private manifest: ResourceManifest | null = null;
   private manifestPromise: Promise<ResourceManifest> | null = null;
+  private manifestFailure: { error: unknown; retryAfter: number } | null = null;
+  private manifestFailureCount = 0;
   private resourcePendingSubjects = new Map<string, BehaviorSubject<boolean>>();
   private resourceErrorSubjects = new Map<string, BehaviorSubject<ResourceLoadError | null>>();
   private resourceCachedSubjects = new Map<string, BehaviorSubject<boolean>>();
@@ -249,9 +251,24 @@ export class ResourceDataService {
       return this.manifest;
     }
 
+    if (this.manifestFailure && Date.now() < this.manifestFailure.retryAfter) {
+      throw this.manifestFailure.error;
+    }
+
     if (!this.manifestPromise) {
       const manifestUrl = this.withCacheBuster(`${this.resourceBaseUrl}/manifest.json`, Date.now().toString());
-      this.manifestPromise = this.fetchJsonWithBrowserProof<ResourceManifest>(manifestUrl, options);
+      this.manifestPromise = this.fetchJsonWithBrowserProof<ResourceManifest>(manifestUrl, options)
+        .catch(error => {
+          const retryDelay = ResourceDataService.RETRY_DELAYS_MS[
+            Math.min(this.manifestFailureCount, ResourceDataService.RETRY_DELAYS_MS.length - 1)
+          ];
+          this.manifestFailureCount++;
+          this.manifestFailure = {
+            error,
+            retryAfter: Date.now() + retryDelay,
+          };
+          throw error;
+        });
     }
 
     try {
@@ -261,6 +278,8 @@ export class ResourceDataService {
       }
 
       this.manifest = manifest;
+      this.manifestFailure = null;
+      this.manifestFailureCount = 0;
       return manifest;
     } finally {
       this.manifestPromise = null;
