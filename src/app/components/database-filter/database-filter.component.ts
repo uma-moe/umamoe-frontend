@@ -95,7 +95,7 @@ interface FriendlyScopedSparkField {
 export type UqlFieldType = 'number' | 'string' | 'array' | 'directive';
 type UqlFactorValueContext = Extract<UqlValueContext, 'blue-factor' | 'pink-factor' | 'green-factor' | 'white-factor'>;
 
-type UqlEditorDirectiveKind = 'target' | 'legacy';
+type UqlEditorDirectiveKind = 'target' | 'legacy' | 'sort';
 
 interface UqlEditorDirective {
   kind: UqlEditorDirectiveKind;
@@ -199,6 +199,7 @@ interface CompressedState {
   p?: (number|null)[][]; // pink factors [id, min]
   g?: (number|null)[][]; // green factors [id, min]
   w?: (number|null)[][]; // white factors [id, min]
+  sid?: number[]; // training scenario ids
   
   ow?: PriorityFactorState[]; // optional white factors [id] or [id, priority]
   omw?: PriorityFactorState[]; // optional main white factors [id] or [id, priority]
@@ -253,7 +254,6 @@ interface CompressedState {
   p2i?: number | string; // source inheritance id when the compact context came from a bookmark
   // Race schedule: [yearIdx, month, half, raceInstanceId][]
   rs?: [number, number, number, number][];
-  sid?: number[]; // training scenario IDs
   vet?: [string, number];
 }
 
@@ -353,6 +353,7 @@ export interface UnifiedSearchParams {
   trainer_name?: string;
   max_follower_num?: number;
   sort_by?: string;
+  sort_order?: 'asc' | 'desc';
   uql?: string;
   uql_highlight?: UqlSparkHighlight;
   main_win_saddle?: number[];
@@ -469,6 +470,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'Match Umas', insertText: 'Main character in (Special Week, Silence Suzuka)' },
     { label: 'Target (ace)', insertText: 'target = Special Week' },
     { label: 'Owned Legacy', insertText: 'owned legacy = []' },
+    { label: 'Scenario', insertText: 'Scenario = Aoharu' },
+    { label: 'Sort Blue', insertText: 'sort by = Total Blue stars' },
+    { label: 'Sort Red', insertText: 'sort by = Total Red stars' },
+    { label: 'Sort Green', insertText: 'sort by = Total Green stars' },
+    { label: 'Sort White', insertText: 'sort by = Total White stars' },
+    { label: 'Sort White Skills', insertText: 'sort by = White skills amount' },
     { label: 'White Skill', insertText: 'White sparks has Right-Handed ○' },
     { label: 'Main Skill', insertText: 'Main white factors has Right-Handed ○' },
     { label: 'Any Skills', insertText: 'White sparks has any (Right-Handed ○, Left-Handed ○)' },
@@ -531,9 +538,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     { label: 'Great parent 2 (gp2)', aliases: ['gp2 character', 'gp2 characters', 'gp2 uma', 'gp2 umas', 'gp2 chara', 'gp2 charas', 'grandparent 2', 'grandparent 2 character', 'grandparent 2 characters', 'grand parent 2', 'grand parent 2 character', 'grand parent 2 characters', 'great parent 2', 'great parent 2 character', 'right parent', 'right character', 'right characters', 'right uma', 'right umas', 'right chara', 'right charas', 'gp2'], field: 'right_chara_id', type: 'number' },
     { label: 'Great parent (gp1/2)', aliases: ['gp characters', 'gp character', 'gp umas', 'gp uma', 'gp charas', 'gp chara', 'grandparent characters', 'grandparent character', 'grand parent characters', 'grand parent character', 'great parent characters', 'great parent character', 'any gp characters', 'any gp character', 'any grandparent characters', 'any grandparent character', 'any great parent characters', 'any great parent character'], field: 'grandparent_characters', type: 'number' },
     { label: 'Rank', aliases: ['parent rank', 'rank'], field: 'parent_rank', type: 'number' },
-    { label: 'Scenario', aliases: ['training scenario', 'scenario id', 'scenario_id'], field: 'scenario_id', type: 'number' },
+    { label: 'Scenario', aliases: ['scenario', 'training scenario', 'scenario id', 'scenario_id'], field: 'scenario_id', type: 'number' },
     { label: 'Blue stars', aliases: ['blue stars', 'blue star sum', 'blue sparks total', 'total blue sparks', 'lineage blue sparks', 'lineage blue stars'], field: 'blue_stars_sum', type: 'number' },
-    { label: 'Pink stars', aliases: ['pink stars', 'pink star sum', 'pink sparks total', 'total pink sparks', 'lineage pink sparks', 'lineage pink stars'], field: 'pink_stars_sum', type: 'number' },
+    { label: 'Pink stars', aliases: ['pink stars', 'pink star sum', 'pink sparks total', 'total pink sparks', 'lineage pink sparks', 'lineage pink stars', 'red stars', 'red star sum', 'red sparks total', 'total red sparks'], field: 'pink_stars_sum', type: 'number' },
     { label: 'Green stars', aliases: ['green stars', 'green star sum', 'green sparks total', 'total green sparks', 'lineage green sparks', 'lineage green stars'], field: 'green_stars_sum', type: 'number' },
     { label: 'White stars', aliases: ['white stars', 'white star sum', 'white sparks total', 'total white sparks', 'lineage white sparks', 'lineage white stars'], field: 'white_stars_sum', type: 'number' },
     { label: 'Affinity', aliases: ['affinity', 'total affinity', 'legacy affinity'], field: 'affinity', type: 'number' },
@@ -605,7 +612,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     'main_pink_factors', 'main_green_factors', 'main_white_count', 'left_blue_factors',
     'left_pink_factors', 'left_green_factors', 'left_white_count', 'right_blue_factors',
     'right_pink_factors', 'right_green_factors', 'right_white_count', 'blue_stars_sum',
-    'pink_stars_sum', 'green_stars_sum', 'white_stars_sum', 'affinity', 'affinity_score', 'race_affinity',
+    'pink_stars_sum', 'red_stars_sum', 'green_stars_sum', 'white_stars_sum', 'scenario_id', 'scenario', 'affinity', 'affinity_score', 'race_affinity',
     'computed_race_affinity', 'support_card_count', 'support_cards_count', 'support_card_id', 'limit_break_count', 'account_id',
     'trainer_id', 'trainer_name', 'name', 'blue_sparks', 'pink_sparks', 'green_sparks',
     'white_sparks', 'main_white_factors', 'main_white_sparks', 'left_white_factors',
@@ -861,20 +868,21 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.blueFactors = factors.filter((f: any) => f.type === 0).map(normalize);
     this.pinkFactors = factors.filter((f: any) => f.type === 1).map(normalize);
     this.greenFactors = factors.filter((f: any) => f.type === 5).map(normalize);
-      this.whiteFactors = factors.filter((f: any) => f.type === 2 || f.type === 3 || f.type === 4).map(normalize);
-      this.whiteFactorIconById.clear();
-      this.whiteFactors.forEach(factor => {
-        const icon = this.factorService.getFactorImageUrl({
-          factorId: String(factor.id),
-          level: 1,
-          name: factor.text,
-          type: factor.type,
-        });
-        if (icon) this.whiteFactorIconById.set(factor.id, icon);
+    this.whiteFactors = factors.filter((f: any) => f.type === 2 || f.type === 3 || f.type === 4).map(normalize);
+    this.whiteFactorIconById.clear();
+    this.whiteFactors.forEach(factor => {
+      const icon = this.factorService.getFactorImageUrl({
+        factorId: String(factor.id),
+        level: 1,
+        name: factor.text,
+        type: factor.type,
       });
+      if (icon) this.whiteFactorIconById.set(factor.id, icon);
+    });
     this.rebuildUqlDerivedCaches();
-    if (this.filterMode === 'uql') {
-      this.updateUqlSuggestions();
+    this.updateUqlSuggestions();
+    if (factors.length > 0 && this.filterMode === 'uql' && this.getNormalizedUqlQuery()) {
+      this.onUqlChange({ emitImmediately: true, persist: false });
     }
     if (this.pendingFactorDependentFilterChange && !this.hasUnavailableAnyFactorOptions()) {
       const pendingChange = this.pendingFactorDependentFilterChange;
@@ -927,6 +935,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       pink_sparks: [],
       green_sparks: [],
       white_sparks: [],
+      scenario_id: [],
 
       blue_sparks_9star: false,
       pink_sparks_9star: false,
@@ -1283,6 +1292,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.selectedVeteranImage = this.getVeteranImage(veteran);
     this.pendingVeteranRestore = null;
     this.veteranSelected.emit(veteran);
+    this.updateUqlSuggestions();
     this.syncSelectedVeteranFilterState();
     this.cdr.markForCheck();
   }
@@ -2586,6 +2596,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     });
     return groups;
   }
+
   onFilterChange(options: FilterChangeOptions = {}) {
     this.validateUqlQuery();
     this.syncUqlFilterState();
@@ -2713,7 +2724,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const includeParentIds = this.includeParentCharacters.map(c => c.id);
     this.filterState.parent_id = includeParentIds.length > 0 ? includeParentIds : this.filterState.parent_id;
     this.filterState.exclude_parent_id = this.excludeParentCharacters.map(c => c.id);
-    this.filterState.exclude_main_parent_id = this.excludeMainParentCharacters.map(c => c.id);
+    this.filterState.exclude_main_parent_id = this.withOwnedLegacyMainParentExclusion(
+      this.excludeMainParentCharacters.map(c => c.id)
+    );
     this.syncSelectedVeteranFilterState();
     // Sync include main parent characters into main_parent_id (merge with tree selection)
     if (this.includeMainParentCharacters.length > 0) {
@@ -2853,7 +2866,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     
     // White Factors (Inheritance)
     addFactorChips(this.whiteFactorFilters, this.whiteFactors, 'white', '');
-    
+
     // Main Parent Blue Factors
     addFactorChips(this.mainBlueFactorFilters, this.blueFactors, 'mainBlue', 'Main: ', 3);
     
@@ -3234,6 +3247,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.selectedVeteranImage = '';
     this.pendingVeteranRestore = null;
     this.restoredP2Context = null;
+    this.updateUqlSuggestions();
 
     if (this.includeMaxFollowers) {
       this.maxFollowersToggled.emit(false);
@@ -3443,6 +3457,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       case 'greenStarSum':
         return 'chip-green';
       case 'white':
+      case 'scenario':
       case 'mainWhite':
       case 'whiteStarSum':
       case 'whiteCategory':
@@ -3459,8 +3474,6 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       case 'excludeMainParent':
         return 'chip-exclude';
       case 'supportCard':
-        return 'chip-support';
-      case 'scenario':
         return 'chip-support';
       case 'raceSchedule':
         return 'chip-green';
@@ -3673,6 +3686,16 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         state.max_follower_num = 1000;
       }
     }
+    if (this.uqlValidationState === 'valid') {
+      const sortDirective = [...this.extractUqlEditorDirectives(this.getNormalizedUqlQuery()).directives]
+        .reverse()
+        .find(directive => directive.kind === 'sort');
+      const sortBy = sortDirective ? this.resolveUqlSort(sortDirective.value).match : undefined;
+      if (sortBy) {
+        state.sort_by = sortBy;
+        state.sort_order = 'desc';
+      }
+    }
     if (this.treeData.characterId) {
       state.player_chara_id = this.treeData.characterId;
     }
@@ -3681,6 +3704,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       state.p2_main_chara_id = p2Context.mainCharaId;
       state.p2_win_saddle = p2Context.winSaddleIds?.length ? p2Context.winSaddleIds : undefined;
     }
+    state.exclude_main_parent_id = this.withOwnedLegacyMainParentExclusion(state.exclude_main_parent_id);
     return state;
   }
 
@@ -3948,7 +3972,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     const compiledQuery = this.getCompiledUqlQuery();
     this.compiledUqlQuery = compiledQuery;
-    const syntaxIssue = this.findInvalidUqlSyntaxIssue(editableQuery) || this.findInvalidCompiledUqlSyntax(compiledQuery);
+    const syntaxIssue = this.findInvalidCompiledUqlSyntax(compiledQuery);
     if (syntaxIssue) {
       this.setUqlValidation('invalid', syntaxIssue.message, this.createUqlValidationIssue(editableQuery, 'invalid', syntaxIssue.message, syntaxIssue.from, syntaxIssue.to));
       return;
@@ -4133,7 +4157,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       .sort((left, right) => right.length - left.length)
       .map(phrase => this.escapeRegExp(phrase).replace(/\s+/g, '\\s+'))
       .join('|');
-    return `(?:${phrasePattern})(?=$|[^A-Za-z0-9_])|[A-Za-z_]\\w*\\s*\\(`;
+    return `(?:${phrasePattern})(?=$|[^A-Za-z0-9_])|[A-Za-z_]\\w*\\s*\\(|\\(`;
   }
 
   private resetPattern(pattern: RegExp): RegExp {
@@ -4900,7 +4924,19 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const characterFieldPattern = this.getUqlFieldPattern('character');
     let compiledSegment = this.replaceComparisonValue(segment, characterFieldPattern, (value, fieldText) => this.resolveCharacterUqlValue(value, fieldText));
     compiledSegment = this.replaceInListValues(compiledSegment, characterFieldPattern, (value, fieldText) => this.resolveCharacterUqlValue(value, fieldText));
+    const scenarioFieldPattern = '(?:scenario_id|scenario\\s+id|training\\s+scenario|scenario)';
+    compiledSegment = this.replaceComparisonValue(compiledSegment, scenarioFieldPattern, value => this.resolveScenarioUqlValue(value));
+    compiledSegment = this.replaceInListValues(compiledSegment, scenarioFieldPattern, value => this.resolveScenarioUqlValue(value));
     return compiledSegment;
+  }
+
+  private resolveScenarioUqlValue(rawValue: string): string | null {
+    const value = rawValue.trim().replace(/^['"]|['"]$/g, '');
+    if (/^\d+$/.test(value)) return value;
+    const normalizedValue = this.normalizeUqlName(value);
+    return this.scenarioOptionIds
+      .find(id => this.normalizeUqlName(this.getScenarioName(id)) === normalizedValue)
+      ?.toString() ?? null;
   }
 
   private compileFriendlySupportCardExpressions(query: string): string {
@@ -5541,6 +5577,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.selectedVeteranImage = '';
       this.pendingVeteranRestore = null;
       this.veteranSelected.emit(null);
+      this.updateUqlSuggestions();
       this.syncSelectedVeteranFilterState();
     }
   }
@@ -5562,6 +5599,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.selectedVeteranImage = '';
       this.pendingVeteranRestore = null;
       this.veteranSelected.emit(null);
+      this.updateUqlSuggestions();
       this.syncSelectedVeteranFilterState();
     }
     this.restoredP2Context = null;
@@ -5804,6 +5842,21 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     return value || null;
   }
 
+  private withOwnedLegacyMainParentExclusion(excludedIds: number[] | undefined): number[] | undefined {
+    const result = [...(excludedIds ?? [])];
+    const ownedLegacyMainCharaId = this.getCurrentP2Context()?.mainCharaId;
+    if (ownedLegacyMainCharaId != null) {
+      const normalizedOwnedLegacyId = this.normalizeMainCharaId(ownedLegacyMainCharaId);
+      const alreadyExcluded = result.some(id => this.normalizeMainCharaId(id) === normalizedOwnedLegacyId);
+      if (!alreadyExcluded) result.push(normalizedOwnedLegacyId);
+    }
+    return result.length ? result : undefined;
+  }
+
+  private normalizeMainCharaId(rawId: number): number {
+    return rawId >= 10000 ? Math.floor(rawId / 100) : rawId;
+  }
+
   private syncSelectedVeteranFilterState(): void {
     if (this.selectedVeteran) {
       const veteran = this.selectedVeteran;
@@ -5822,7 +5875,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   private getVeteranMainCharaId(veteran: VeteranMember): number | undefined {
     const rawId = veteran.card_id ?? veteran.trained_chara_id ?? undefined;
     if (rawId == null) return undefined;
-    return rawId >= 10000 ? Math.floor(rawId / 100) : rawId;
+    return this.normalizeMainCharaId(rawId);
   }
 
   private resolveUqlTargetCharacter(rawValue: string): { match?: (typeof CHARACTERS)[number]; partial: boolean } {
@@ -5846,6 +5899,23 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const exact = candidates.find(candidate => candidate.values.some(candidateValue => this.normalizeUqlName(candidateValue) === normalizedValue));
     if (exact) return { match: exact.character, partial: false };
     const partial = candidates.some(candidate => candidate.values.some(candidateValue => this.normalizeUqlName(candidateValue).startsWith(normalizedValue)));
+    return { partial };
+  }
+
+  private resolveUqlSort(rawValue: string): { match?: string; partial: boolean } {
+    const value = this.unwrapUqlBracketValue(this.unquoteUqlValue(rawValue));
+    const normalizedValue = this.normalizeUqlName(value);
+    if (!normalizedValue) return { partial: true };
+    const candidates = [
+      { match: 'blue_stars_sum', aliases: ['blue', 'blue stars', 'blue sparks', 'total blue stars', 'total blue sparks', 'blue stars sum', 'blue_stars_sum'] },
+      { match: 'pink_stars_sum', aliases: ['pink', 'red', 'pink stars', 'red stars', 'pink sparks', 'red sparks', 'total pink stars', 'total red stars', 'total pink sparks', 'total red sparks', 'pink stars sum', 'red stars sum', 'pink_stars_sum', 'red_stars_sum'] },
+      { match: 'green_stars_sum', aliases: ['green', 'green stars', 'green sparks', 'total green stars', 'total green sparks', 'green stars sum', 'green_stars_sum'] },
+      { match: 'white_stars_sum', aliases: ['white', 'white stars', 'white sparks', 'total white stars', 'total white sparks', 'white stars sum', 'white_stars_sum'] },
+      { match: 'white_count', aliases: ['white count', 'white skill count', 'white skills count', 'white skill amount', 'white skills amount', 'white factor count', 'white factors amount', 'total white skills', 'white_count', 'white_skill_count', 'white_skills_amount'] },
+    ];
+    const exact = candidates.find(candidate => candidate.aliases.some(alias => this.normalizeUqlName(alias) === normalizedValue));
+    if (exact) return { match: exact.match, partial: false };
+    const partial = candidates.some(candidate => candidate.aliases.some(alias => this.normalizeUqlName(alias).startsWith(normalizedValue)));
     return { partial };
   }
 
@@ -6418,6 +6488,12 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     const syntaxSuggestions: UqlSuggestion[] = [
       { label: 'where', insertText: 'where ', kind: 'keyword', detail: 'Start a filter expression' },
+      { label: 'Scenario', insertText: 'Scenario = Aoharu', kind: 'snippet', detail: 'Filter by the training scenario ID using its readable name' },
+      { label: 'Sort by total blue stars', insertText: 'sort by = Total Blue stars', kind: 'snippet', detail: 'Order by total blue spark stars, highest first' },
+      { label: 'Sort by total red stars', insertText: 'sort by = Total Red stars', kind: 'snippet', detail: 'Order by total red/pink spark stars, highest first' },
+      { label: 'Sort by total green stars', insertText: 'sort by = Total Green stars', kind: 'snippet', detail: 'Order by total green spark stars, highest first' },
+      { label: 'Sort by total white stars', insertText: 'sort by = Total White stars', kind: 'snippet', detail: 'Order by total white spark stars, highest first' },
+      { label: 'Sort by white skills amount', insertText: 'sort by = White skills amount', kind: 'snippet', detail: 'Order by raw white skill count, then affinity' },
       { label: 'and', insertText: ' and ', kind: 'keyword', detail: 'Require both sides' },
       { label: 'or', insertText: ' or ', kind: 'keyword', detail: 'Match either side' },
       { label: 'not', insertText: 'not ', kind: 'keyword', detail: 'Negate a predicate' },
@@ -6843,9 +6919,6 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     return null;
   }
-  private findInvalidUqlSyntaxIssue(query: string): { message: string; from: number; to: number } | null {
-    return this.findInvalidCompiledUqlSyntax(query);
-  }
   private endsWithPartialBooleanContinuation(expression: string): boolean {
     const trimmedExpression = expression.replace(/;\s*$/, '').trim();
     const match = trimmedExpression.match(/(?:\d|'|"|\))\s+([A-Za-z]+)$/);
@@ -7085,6 +7158,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.filterState.min_pink_stars_sum = undefined;
     this.filterState.min_green_stars_sum = undefined;
     this.filterState.min_white_stars_sum = undefined;
+    this.filterState.scenario_id = [];
   }
 
   private applyCharacterUqlClauseToStructuredFilters(clause: string, pendingExcludeParentIds: { left?: number[]; right?: number[] }): boolean {
@@ -7638,13 +7712,15 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         return {
           queryWithoutDirectives: query,
           directives,
-          issue: { state: 'incomplete', message: `Choose a ${directive.kind === 'target' ? 'target' : 'legacy'}` }
+          issue: { state: 'incomplete', message: `Choose a ${directive.kind === 'target' ? 'target' : directive.kind === 'sort' ? 'sort field' : 'legacy'}` }
         };
       }
 
       const resolution = directive.kind === 'target'
         ? this.resolveUqlTargetCharacter(directive.value)
-        : this.resolveUqlOwnedLegacy(directive.value);
+        : directive.kind === 'sort'
+          ? this.resolveUqlSort(directive.value)
+          : this.resolveUqlOwnedLegacy(directive.value);
       if (!resolution.match) {
         return {
           queryWithoutDirectives: query,
@@ -7652,8 +7728,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
           issue: {
             state: resolution.partial ? 'incomplete' : 'invalid',
             message: resolution.partial
-              ? `Choose a ${directive.kind === 'target' ? 'target' : 'legacy'} from autocomplete`
-              : `Unknown ${directive.kind === 'target' ? 'target' : 'legacy'}: ${directive.value}`
+              ? `Choose a ${directive.kind === 'target' ? 'target' : directive.kind === 'sort' ? 'sort field' : 'legacy'} from autocomplete`
+              : `Unknown ${directive.kind === 'target' ? 'target' : directive.kind === 'sort' ? 'sort field' : 'legacy'}: ${directive.value}`
           }
         };
       }
@@ -7712,11 +7788,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private parseUqlEditorDirectiveClause(clause: string): { kind: UqlEditorDirectiveKind; label: string; operator: string; value: string } | null {
-    const match = clause.trim().match(/^(target|owned\s+legacy|your\s+legacy|my\s+legacy|legacy)\s*(not\s+in|has\s+any|has\s+all|has|!=|<>|>=|<=|==|=|>|<|in|contains)\s*(.*)$/i);
+    const match = clause.trim().match(/^(target|sort\s+by|sort|owned\s+legacy|your\s+legacy|my\s+legacy|legacy)\s*(not\s+in|has\s+any|has\s+all|has|!=|<>|>=|<=|==|=|>|<|in|contains)\s*(.*)$/i);
     if (!match) return null;
     const label = match[1].replace(/\s+/g, ' ').trim();
     return {
-      kind: /^target$/i.test(label) ? 'target' : 'legacy',
+      kind: /^target$/i.test(label) ? 'target' : /^sort(?:\s+by)?$/i.test(label) ? 'sort' : 'legacy',
       label,
       operator: this.normalizeUqlComparisonOperator(match[2].replace(/\s+/g, ' ').toLowerCase()) || match[2].replace(/\s+/g, ' ').toLowerCase(),
       value: this.unwrapUqlBracketValue(this.unquoteUqlValue(match[3].trim()))
@@ -8001,6 +8077,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.pendingVeteranRestore = null;
     this.restoredP2Context = null;
     this.veteranSelected.emit(null);
+    this.updateUqlSuggestions();
     this.onFilterChange();
   }
 

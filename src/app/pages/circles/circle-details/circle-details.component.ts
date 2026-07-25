@@ -25,7 +25,7 @@ import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
 import { AnalyticsEventParams, GoogleAnalyticsService } from '../../../services/google-analytics.service';
 import { AdInContentComponent } from '../../../components/ads/ad-in-content.component';
 Chart.register(...registerables);
-export type CalculationType = 'monthly_gain' | 'weekly_gain' | 'daily_gain' | 'avg_daily_gain' | 'daily_avg' | 'projected_monthly' | 'total_fans';
+export type CalculationType = 'today_gain' | 'monthly_gain' | 'weekly_gain' | 'daily_gain' | 'avg_daily_gain' | 'daily_avg' | 'projected_monthly' | 'total_fans';
 export type ExportFormat = 'csv' | 'json' | 'xlsx';
 export interface ChartLegendItem {
   name: string;
@@ -36,6 +36,7 @@ export interface ChartLegendItem {
 export interface CircleDetailsConfig {
   selectedCalculation: CalculationType;
   showTotalFans: boolean;
+  showTodayGain: boolean;
   showSevenDayAvg: boolean;
   showDailyGain: boolean;
   showDailyAvg: boolean;
@@ -242,6 +243,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   config: CircleDetailsConfig = {
     selectedCalculation: 'monthly_gain',
     showTotalFans: true,
+    showTodayGain: true,
     showSevenDayAvg: true,
     showDailyGain: true,
     showDailyAvg: false,
@@ -254,6 +256,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     includePriorClubData: true
   };
   calculationTypes: { value: CalculationType; label: string; shortLabel: string }[] = [
+    { value: 'today_gain', label: 'Today', shortLabel: 'Today' },
     { value: 'monthly_gain', label: 'Monthly Gain', shortLabel: 'Monthly' },
     { value: 'weekly_gain', label: 'Weekly Gain', shortLabel: 'Weekly' },
     { value: 'daily_gain', label: 'Daily Gain', shortLabel: 'Daily' },
@@ -328,6 +331,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   private getVisibleCircleMetricCount(): number {
     return [
       this.config.showTotalFans,
+      this.config.showTodayGain,
       this.config.showSevenDayAvg,
       this.config.showDailyGain,
       this.config.showDailyAvg,
@@ -409,6 +413,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   }
   getMemberValue(member: any): number {
     switch (this.config.selectedCalculation) {
+      case 'today_gain': return member.today_gain;
       case 'monthly_gain': return member.monthly_gain;
       case 'weekly_gain': return member.weekly_gain;
       case 'daily_gain': return member.daily_gain;
@@ -421,6 +426,8 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   }
   getPriorContribution(member: any): number {
     switch (this.config.selectedCalculation) {
+      case 'today_gain':
+        return member.priorInToday || 0;
       case 'monthly_gain':
       case 'daily_avg':
       case 'projected_monthly':
@@ -733,6 +740,48 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     const lastResetUtc = jstMidnight - 9 * 3600000;
     return liveDate.getTime() >= lastResetUtc;
   }
+  get lastDataUpdatedAt(): string | undefined {
+    if (this.isCurrentMonth && this.circle?.last_live_update && this.isValidTimestamp(this.circle.last_live_update)) {
+      return this.circle.last_live_update;
+    }
+
+    const candidates = [
+      this.circle?.last_updated,
+      ...this.allMemberData
+        .filter(member => member.year == this.currentYear && member.month == this.currentMonth)
+        .map(member => member.last_updated),
+    ].filter((value): value is string => !!value && this.isValidTimestamp(value));
+
+    return candidates.reduce<string | undefined>((latest, value) => {
+      if (!latest) return value;
+      return new Date(value).getTime() > new Date(latest).getTime() ? value : latest;
+    }, undefined);
+  }
+  formatTimeAgo(value: string | undefined): string {
+    if (!value) return 'unknown';
+    const timestamp = new Date(value).getTime();
+    if (!Number.isFinite(timestamp)) return 'unknown';
+
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+    if (elapsedSeconds < 60) return elapsedSeconds < 10 ? 'just now' : `${elapsedSeconds}s ago`;
+
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`;
+
+    const elapsedHours = Math.floor(elapsedMinutes / 60);
+    if (elapsedHours < 24) return `${elapsedHours}h ago`;
+
+    const elapsedDays = Math.floor(elapsedHours / 24);
+    if (elapsedDays < 30) return `${elapsedDays}d ago`;
+
+    const elapsedMonths = Math.floor(elapsedDays / 30);
+    if (elapsedMonths < 12) return `${elapsedMonths}mo ago`;
+
+    return `${Math.floor(elapsedDays / 365)}y ago`;
+  }
+  private isValidTimestamp(value: string): boolean {
+    return Number.isFinite(new Date(value).getTime());
+  }
   formatCountdown(s: number): string {
     const m = Math.floor(s / 60);
     const sec = s % 60;
@@ -949,7 +998,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       const effectiveLatestValue = canUseNextMonthStart ? m.next_month_start! : lastFanCount;
       // fan_count: expose the true latest fan count (includes last-day delta when available)
       const fanCountForDisplay = effectiveLatestValue;
-      // Calculate daily gain
+      // The latest delta is the in-progress gain for the current day.
       let dailyGain = 0;
       let priorInDaily = 0;
       if (isActive) {
@@ -978,6 +1027,25 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
             }
           } else if (lastFanCount > 0) {
             dailyGain = lastFanCount;
+          }
+        }
+      }
+      const todayGain = dailyGain;
+      const priorInToday = priorInDaily;
+
+      // For the current month, Daily Gain means the most recent completed day.
+      // The latest point above is live/in-progress and is exposed separately as Today.
+      if (this.isCurrentMonth && !canUseNextMonthStart) {
+        dailyGain = 0;
+        priorInDaily = 0;
+        const completedPoints: { index: number; value: number }[] = [];
+        for (let i = lastIndex - 1; i >= 0 && completedPoints.length < 2; i--) {
+          if (absFans[i] > 0) completedPoints.push({ index: i, value: absFans[i] });
+        }
+        if (isActive && completedPoints.length === 2) {
+          dailyGain = completedPoints[0].value - completedPoints[1].value;
+          if (completedPoints.some(point => isPriorCircle[point.index] || false)) {
+            priorInDaily = dailyGain;
           }
         }
       }
@@ -1054,6 +1122,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
         fan_count: fanCountForDisplay,
         last_updated: m.last_updated,
         role: this.getMemberRole(m),
+        today_gain: todayGain,
         daily_gain: dailyGain,
         monthly_gain: monthlyGain,
         seven_day_avg: sevenDayAvg,
@@ -1061,6 +1130,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
         weekly_gain: weeklyGain,
         projected_monthly: projectedMonthly,
         priorCircleGain: priorCircleGain,
+        priorInToday: priorInToday,
         priorInDaily: priorInDaily,
         priorInWeekly: priorInWeekly,
         hasPriorCircleData: lastPriorIndex >= 0,
@@ -1108,42 +1178,37 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     }
     const daysInMonth = new Date(this.currentYear, this.currentMonth, 0).getDate();
     this.history = [];
-    // Build delta-based cumulative progression
-    // This sums individual member deltas per day (excludes join/leave effects)
-    let cumulativeTotal = 0;
-    let baselineSet = false;
-    for (let day = 0; day < daysInMonth; day++) {
+    // Match the Member Progression cumulative view: fans[0] is the month-start
+    // baseline and day d shows the accumulated gain through fans[d].
+    // Summing member deltas also avoids artificial jumps when members join or leave.
+    const effectiveMemberFans = membersData.map(member =>
+      this.buildEffectiveFans(member.daily_fans || [], member.next_month_start)
+    );
+    let cumulativeGain = 0;
+    for (let day = 1; day <= daysInMonth; day++) {
       let hasData = false;
       let dayDelta = 0;
-      let dayAbsTotal = 0;
-      membersData.forEach(m => {
-        if (!m.daily_fans || m.daily_fans[day] <= 0) return; // Only count positive = current circle
+      effectiveMemberFans.forEach(fans => {
+        if ((fans[day] ?? 0) <= 0) return; // Only count positive = current circle
         hasData = true;
-        dayAbsTotal += m.daily_fans[day];
         // Find this member's previous positive (current circle) value
         let prevValue = 0;
         for (let p = day - 1; p >= 0; p--) {
-          if (m.daily_fans[p] > 0) { prevValue = m.daily_fans[p]; break; }
+          if ((fans[p] ?? 0) > 0) { prevValue = fans[p]; break; }
         }
         if (prevValue > 0) {
-          dayDelta += m.daily_fans[day] - prevValue;
+          dayDelta += fans[day] - prevValue;
         }
       });
       if (hasData) {
-        if (!baselineSet) {
-          cumulativeTotal = dayAbsTotal;
-          baselineSet = true;
-        } else {
-          cumulativeTotal += dayDelta;
-        }
-        const date = new Date(this.currentYear, this.currentMonth - 1, day + 1);
+        cumulativeGain += dayDelta;
+        const date = new Date(this.currentYear, this.currentMonth - 1, day);
         this.history.push({
           date: date.toISOString(),
-          fan_count: cumulativeTotal
+          fan_count: cumulativeGain
         });
       }
     }
-    
   }
   changeMonth(delta: number): void {
     let newMonth = this.currentMonth + delta;
@@ -1192,7 +1257,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
           return `${day}.${month}`;
         }),
         datasets: [{
-          label: 'Total Fans',
+          label: 'Club Gain',
           data: this.history.map(h => h.fan_count),
           borderColor: '#64b5f6',
           backgroundColor: 'rgba(100, 181, 246, 0.1)',
@@ -1714,6 +1779,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     type ColSpec = { label: string; get: (m: CircleMember, idx: number) => string | number; sum: boolean };
     // The primary metric (selectedCalculation) is ALWAYS included as a column.
     const primarySpecMap: Record<CalculationType, ColSpec> = {
+      today_gain:        { label: 'Today',             get: m => m.today_gain ?? 0,                    sum: true  },
       monthly_gain:      { label: 'Monthly Gain',      get: m => m.monthly_gain ?? 0,                  sum: true  },
       weekly_gain:       { label: 'Weekly Gain',       get: m => m.weekly_gain ?? 0,                   sum: true  },
       daily_gain:        { label: 'Daily Gain',        get: m => m.daily_gain ?? 0,                    sum: true  },
@@ -1735,6 +1801,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       // Primary metric - always present (label automatically reflects selectedCalculation)
       primarySpec,
       // Additional metrics - only added if they are not already the primary
+      ...(c.showTodayGain        && sel !== 'today_gain'        ? [{ label: 'Today',             get: (m: CircleMember) => m.today_gain ?? 0,                    sum: true  }] : []),
       ...(c.showMonthlyGain      && sel !== 'monthly_gain'      ? [{ label: 'Monthly Gain',      get: (m: CircleMember) => m.monthly_gain ?? 0,                  sum: true  }] : []),
       ...(c.showWeeklyGain       && sel !== 'weekly_gain'       ? [{ label: 'Weekly Gain',       get: (m: CircleMember) => m.weekly_gain ?? 0,                   sum: true  }] : []),
       ...(c.showDailyGain        && sel !== 'daily_gain'        ? [{ label: 'Daily Gain',        get: (m: CircleMember) => m.daily_gain ?? 0,                    sum: true  }] : []),

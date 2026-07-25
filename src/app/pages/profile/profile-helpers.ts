@@ -90,35 +90,37 @@ export function getCharacterName(cardId: number | null): string {
 }
 
 function findSkill(skillId: number): { skill: ReturnType<typeof getSkillBySkillId>; inherited: boolean } {
-    let result: { skill: ReturnType<typeof getSkillBySkillId>; inherited: boolean };
+    let result: { skill: ReturnType<typeof getSkillBySkillId>; inherited: boolean } | undefined;
     let skill = getSkillBySkillId(skillId);
     if (skill) { result = { skill, inherited: hasInheritedFlag(skill) }; }
     else {
         const baseId = Math.floor(skillId / 10);
-        skill = getSkillBySkillId(baseId);
-        if (skill) { result = { skill, inherited: hasInheritedFlag(skill) }; }
-        else {
-            const baseIdStr = String(baseId);
-            if (baseIdStr.startsWith('9')) {
-                const rest = baseIdStr.substring(1);
-                let found = false;
-                for (const prefix of ['1', '2', '3']) {
-                    skill = getSkillBySkillId(Number(prefix + rest));
-                    if (skill) { result = { skill, inherited: true }; found = true; break; }
-                }
-                if (!found) result = { skill: undefined, inherited: false };
-            } else {
-                result = { skill: undefined, inherited: false };
+        const baseIdStr = String(baseId);
+
+        // Incremental resources can include empty 900xxx placeholder records for
+        // inherited unique skills. Resolve their canonical 100xxx/200xxx/300xxx
+        // skill before consulting the placeholder so the chip keeps its metadata.
+        if (baseIdStr.startsWith('9')) {
+            const rest = baseIdStr.substring(1);
+            for (const prefix of ['1', '2', '3']) {
+                skill = getSkillBySkillId(Number(prefix + rest));
+                if (skill) { result = { skill, inherited: true }; break; }
             }
         }
+
+        if (!result) {
+            skill = getSkillBySkillId(baseId);
+            result = skill
+                ? { skill, inherited: hasInheritedFlag(skill) }
+                : { skill: undefined, inherited: false };
+        }
     }
-    return result!;
+    return result;
 }
 
 export function getSkillName(skillId: number): string {
     const { skill } = findSkill(skillId);
-    if (!skill) return `Skill ${skillId}`;
-    return skill.name;
+    return skill?.name?.trim() || `Skill ${skillId}`;
 }
 
 export function getSkillLevel(skillId: number): number {

@@ -39,6 +39,10 @@ interface V3InheritanceRecord {
   pink_sparks: number[];
   green_sparks: number[];
   white_sparks: number[];
+  blue_stars_sum: number;
+  pink_stars_sum: number;
+  green_stars_sum: number;
+  white_stars_sum: number;
   win_count: number;
   white_count: number;
   affinity_score: number;
@@ -513,6 +517,10 @@ export class InheritanceService {
       pink_sparks: this.toNumberArray(inheritance.pink_sparks),
       green_sparks: this.toNumberArray(inheritance.green_sparks),
       white_sparks: this.toNumberArray(inheritance.white_sparks),
+      blue_stars_sum: inheritance.blue_stars_sum,
+      pink_stars_sum: inheritance.pink_stars_sum,
+      green_stars_sum: inheritance.green_stars_sum,
+      white_stars_sum: inheritance.white_stars_sum,
       win_count: inheritance.win_count,
       white_count: inheritance.white_count,
       affinity_score: (inheritance as any)['affinity_score'],
@@ -812,7 +820,11 @@ export class InheritanceService {
       'score': 'parent_rank', // Map score to parent_rank in backend
       'submitted_at': 'last_updated', // Map submitted_at to last_updated in V2 API
       'follower_num': 'follower_num',
-      'affinity_score': 'affinity_score'
+      'affinity_score': 'affinity_score',
+      'blue_stars_sum': 'blue_stars_sum',
+      'pink_stars_sum': 'pink_stars_sum',
+      'green_stars_sum': 'green_stars_sum',
+      'white_stars_sum': 'white_stars_sum'
     };
     return sortMapping[sortBy] || 'trending';
   }

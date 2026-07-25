@@ -80,13 +80,17 @@
             <span class="label">Leader Name</span>
             <span class="value">{{circle?.leader_name || circle?.leader_viewer_id}}</span>
           </div>
-          <div class="info-row" [class.no-border]="!isLiveDataFresh">
+          <div class="info-row" [class.no-border]="!isLiveDataFresh && !lastDataUpdatedAt">
             <span class="label">Monthly Fans</span>
             <span class="value highlight mono"><app-animated-number [value]="displayedMonthlyPoint"></app-animated-number></span>
           </div>
-          <div class="info-row live-row no-border" *ngIf="isLiveDataFresh">
+          <div class="info-row live-row" *ngIf="isLiveDataFresh" [class.no-border]="!lastDataUpdatedAt">
             <span class="label"><span class="live-dot"></span> Live Points</span>
             <span class="value highlight mono"><app-animated-number [value]="circle!.live_points!"></app-animated-number></span>
+          </div>
+          <div class="info-row updated-row no-border" *ngIf="lastDataUpdatedAt as updatedAt">
+            <span class="label">Data Updated</span>
+            <span class="value" [title]="(updatedAt | date:'medium') || updatedAt">{{formatTimeAgo(updatedAt)}}</span>
           </div>
           <div class="club-rank-row" *ngIf="clubRank" [class.max-rank]="!fansToNextTier">
             <div class="tier-side lower" *ngIf="fansToLowerTier !== undefined && fansToLowerTier !== null">
@@ -335,6 +339,13 @@
             </span>
           </div>
 
+          <div class="stat-row" *ngIf="config.showTodayGain && config.selectedCalculation !== 'today_gain'">
+            <span class="label">Today</span>
+            <span class="value gain mono" [class.positive]="(member.today_gain || 0) > 0">
+              <app-animated-number [value]="member.today_gain || 0" [sign]="true"></app-animated-number>
+            </span>
+          </div>
+
           <div class="stat-row" *ngIf="config.showProjectedMonthly && config.selectedCalculation !== 'projected_monthly'">
             <span class="label">Projected Monthly</span>
             <span class="value gain mono" [class.positive]="(member.projected_monthly || 0) > 0">
@@ -377,9 +388,9 @@
             </span>
           </div>
 
-          <div class="stat-row">
+          <div class="stat-row" *ngIf="config.showLastUpdated">
             <span class="label">Last Updated</span>
-            <span class="value date">{{member.last_updated | date:'dd.MM.yyyy'}}</span>
+            <span class="value date" [title]="(member.last_updated | date:'medium') || member.last_updated">{{formatTimeAgo(member.last_updated)}}</span>
           </div>
         </div>
       </div>
@@ -393,6 +404,7 @@
         <span class="col-role" *ngIf="config.showRole">Role</span>
         <span class="col-value">{{getCalculationShortLabel()}}</span>
         <span class="col-total" *ngIf="config.showTotalFans && config.selectedCalculation !== 'total_fans'">Total Fans</span>
+        <span class="col-today" *ngIf="config.showTodayGain && config.selectedCalculation !== 'today_gain'">Today</span>
         <span class="col-daily" *ngIf="config.showDailyGain && config.selectedCalculation !== 'daily_gain'">Daily</span>
         <span class="col-weekly" *ngIf="config.showWeeklyGain && config.selectedCalculation !== 'weekly_gain'">Weekly</span>
         <span class="col-avg" *ngIf="config.showSevenDayAvg && config.selectedCalculation !== 'avg_daily_gain'">7d Avg</span>
@@ -438,6 +450,9 @@
         <span class="col-total" *ngIf="config.showTotalFans && config.selectedCalculation !== 'total_fans'">
           <app-animated-number [value]="member.fan_count"></app-animated-number>
         </span>
+        <span class="col-today gain mono" [class.positive]="(member.today_gain || 0) > 0" *ngIf="config.showTodayGain && config.selectedCalculation !== 'today_gain'">
+          <app-animated-number [value]="member.today_gain || 0" [sign]="true"></app-animated-number>
+        </span>
         <span class="col-daily gain mono" [class.positive]="(member.daily_gain || 0) > 0" *ngIf="config.showDailyGain && config.selectedCalculation !== 'daily_gain'">
           <app-animated-number [value]="member.daily_gain || 0" [sign]="true"></app-animated-number>
         </span>
@@ -448,7 +463,7 @@
           <app-animated-number [value]="member.seven_day_avg || 0" [sign]="true"></app-animated-number>
         </span>
         <span class="col-date" *ngIf="config.showLastUpdated">
-          {{member.last_updated | date:'dd.MM'}}
+          <span [title]="(member.last_updated | date:'medium') || member.last_updated">{{formatTimeAgo(member.last_updated)}}</span>
         </span>
       </div>
     </div>

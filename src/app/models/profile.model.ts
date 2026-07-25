@@ -44,10 +44,10 @@ export interface FanHistoryMonthly {
   total_fans: number;
   monthly_gain: number;
   active_days: number;
-  avg_daily: number;
-  avg_3d: number;
+  avg_daily: number | null;
+  avg_3d: number | null;
   avg_7d: number | null;
-  avg_monthly: number;
+  avg_monthly: number | null;
   rank: number;
   circle_id: number;
   circle_name: string;
@@ -73,9 +73,9 @@ export interface FanHistoryAlltime {
   total_fans: number;
   total_gain: number;
   active_days: number;
-  avg_day: number;
-  avg_week: number;
-  avg_month: number;
+  avg_day: number | null;
+  avg_week: number | null;
+  avg_month: number | null;
   rank: number;
   rank_total_fans: number;
   rank_total_gain: number;

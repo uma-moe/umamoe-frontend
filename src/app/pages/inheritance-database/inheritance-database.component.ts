@@ -89,6 +89,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   currentSortBy = 'trending';
   currentSortOrder: 'asc' | 'desc' = 'desc';
   private sortSelectionMode: 'auto' | 'manual' = 'auto';
+  private uqlSortActive = false;
   includeMaxFollowers = false;
   splitSparksMode = false;
   sparkShowPerRun = false;
@@ -240,7 +241,11 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     { value: 'trending', label: 'Trending' },
     { value: 'affinity_score', label: 'Affinity' },
     { value: 'win_count', label: 'G1 Wins' },
-    { value: 'white_count', label: 'White Count' },
+    { value: 'white_count', label: 'White Skills Amount' },
+    { value: 'blue_stars_sum', label: 'Total Blue Stars' },
+    { value: 'pink_stars_sum', label: 'Total Red Stars' },
+    { value: 'green_stars_sum', label: 'Total Green Stars' },
+    { value: 'white_stars_sum', label: 'Total White Stars' },
     { value: 'score', label: 'Score' },
     { value: 'submitted_at', label: 'Most Recent' },
   ];
@@ -462,7 +467,16 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
 
     this.currentAdvancedFilters = effectiveParams;
     this.advancedSearchSignature = nextSearchSignature;
-    this.applyAutomaticSortForFilters();
+    if (effectiveParams.sort_by) {
+      this.currentSortBy = effectiveParams.sort_by;
+      this.uqlSortActive = true;
+    } else {
+      if (this.uqlSortActive) {
+        this.uqlSortActive = false;
+        this.sortSelectionMode = 'auto';
+      }
+      this.applyAutomaticSortForFilters();
+    }
     this.trackAdvancedFilterChange(
       effectiveParams,
       isP2OnlyChange ? 'p2_context' : (hasPendingPage ? 'url_restore' : 'manual'),
@@ -538,6 +552,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   onSortChanged(event: any) {
     this.currentSortBy = event.value;
     this.sortSelectionMode = 'manual';
+    this.uqlSortActive = false;
     this.trackDatabaseEvent('sort_inheritance_database', {
       sort_by: this.currentSortBy,
       active_tab: this.activeTab,
@@ -588,6 +603,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         pinkSparkGroups: af.pink_sparks,
         greenSparkGroups: af.green_sparks,
         whiteSparkGroups: af.white_sparks,
+        scenarioIds: af.scenario_id,
         mainParentBlueSparks: af.main_parent_blue_sparks,
         mainParentPinkSparks: af.main_parent_pink_sparks,
         mainParentGreenSparks: af.main_parent_green_sparks,
@@ -625,7 +641,6 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         maxFollowerNum: af.max_follower_num,
         minParentRank: af.parent_rank,
         minParentRarity: af.parent_rarity,
-        scenarioIds: af.scenario_id,
         supportCardId: af.support_card_id,
         minLimitBreak: af.min_limit_break,
         
@@ -1003,6 +1018,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   }
 
   private applyAutomaticSortForFilters(): void {
+    if (this.uqlSortActive) return;
     if (this.sortSelectionMode !== 'auto') return;
     this.currentSortBy = this.hasFiltersForAffinityDefault() ? 'affinity_score' : 'trending';
   }
@@ -1329,7 +1345,11 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       'downvotes': 'downvotes',
       'trainer_id': 'trainer_id',
       'verified': 'verified',
-      'affinity_score': 'affinity_score'
+      'affinity_score': 'affinity_score',
+      'blue_stars_sum': 'blue_stars_sum',
+      'pink_stars_sum': 'pink_stars_sum',
+      'green_stars_sum': 'green_stars_sum',
+      'white_stars_sum': 'white_stars_sum'
     };
     return sortMapping[sortBy] || 'trending';
   }
@@ -1541,11 +1561,26 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         case 'affinity_score': va = this.getBookmarkTotalAffinity(a) ?? 0; vb = this.getBookmarkTotalAffinity(b) ?? 0; break;
         case 'win_count': va = this.getBookmarkG1WinCount(a); vb = this.getBookmarkG1WinCount(b); break;
         case 'white_count': va = a.white_count ?? 0; vb = b.white_count ?? 0; break;
+        case 'blue_stars_sum': va = a.blue_stars_sum ?? this.getSparkStarSum(a.blue_sparks); vb = b.blue_stars_sum ?? this.getSparkStarSum(b.blue_sparks); break;
+        case 'pink_stars_sum': va = a.pink_stars_sum ?? this.getSparkStarSum(a.pink_sparks); vb = b.pink_stars_sum ?? this.getSparkStarSum(b.pink_sparks); break;
+        case 'green_stars_sum': va = a.green_stars_sum ?? this.getSparkStarSum(a.green_sparks); vb = b.green_stars_sum ?? this.getSparkStarSum(b.green_sparks); break;
+        case 'white_stars_sum': va = a.white_stars_sum ?? this.getSparkStarSum(a.white_sparks); vb = b.white_stars_sum ?? this.getSparkStarSum(b.white_sparks); break;
         case 'score': va = a.parent_rank ?? 0; vb = b.parent_rank ?? 0; break;
         default: return 0; // submitted_at - keep original order (newest first from API)
       }
-      return vb - va;
+      const primaryComparison = vb - va;
+      if (primaryComparison !== 0) return primaryComparison;
+      if (['white_count', 'blue_stars_sum', 'pink_stars_sum', 'green_stars_sum', 'white_stars_sum'].includes(sortBy)) {
+        const affinityA = this.getBookmarkTotalAffinity(a) ?? 0;
+        const affinityB = this.getBookmarkTotalAffinity(b) ?? 0;
+        return affinityB - affinityA;
+      }
+      return 0;
     });
+  }
+
+  private getSparkStarSum(sparks: number[] | undefined): number {
+    return (sparks ?? []).reduce((total, sparkId) => total + Math.abs(sparkId) % 10, 0);
   }
 
   private getBookmarkG1WinCount(record: InheritanceRecord): number {
@@ -1674,7 +1709,8 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       if (af.exclude_parent_id.some(id => r.parent_left_id === id || r.parent_right_id === id)) return false;
     }
     if (af.exclude_main_parent_id?.length) {
-      if (af.exclude_main_parent_id.includes(r.main_parent_id!)) return false;
+      const mainParentCharaId = this.toCharaId(r.main_parent_id);
+      if (af.exclude_main_parent_id.some(id => this.toCharaId(id) === mainParentCharaId)) return false;
     }
 
     if (af.min_win_count && this.getBookmarkG1WinCount(r) < af.min_win_count) return false;
@@ -1859,6 +1895,8 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       case 'account_id':
       case 'trainer_id': return record.account_id ?? record.trainer_id;
       case 'inheritance_id': return typeof record.id === 'number' ? record.id : Number(record.id) || undefined;
+      case 'scenario':
+      case 'scenario_id': return record.scenario_id;
       case 'main_chara_id': return this.toCharaId(record.umamusume_id);
       case 'left_chara_id': return this.toCharaId(record.parent_left_id);
       case 'right_chara_id': return this.toCharaId(record.parent_right_id);
@@ -1878,7 +1916,8 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       case 'support_card_count':
       case 'support_cards_count': return record.support_card_id ? 1 : 0;
       case 'blue_stars_sum': return this.sumLocalUqlSparks(record.blue_sparks);
-      case 'pink_stars_sum': return this.sumLocalUqlSparks(record.pink_sparks);
+      case 'pink_stars_sum':
+      case 'red_stars_sum': return this.sumLocalUqlSparks(record.pink_sparks);
       case 'green_stars_sum': return this.sumLocalUqlSparks(record.green_sparks);
       case 'white_stars_sum': return this.sumLocalUqlSparks(record.white_sparks);
       case 'common_white_count': return this.getWhiteCategoryStats(record.white_sparks).common.count;
