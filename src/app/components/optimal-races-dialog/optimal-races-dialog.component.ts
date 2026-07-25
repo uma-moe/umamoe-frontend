@@ -48,7 +48,6 @@ export interface OptimalRacesDialogData {
   styles: [`
     .optimal-races-dialog {
       width: 100%;
-      height: min(900px, 90vh);
       max-height: 90vh;
       display: flex;
       flex-direction: column;
@@ -138,7 +137,7 @@ export interface OptimalRacesDialogData {
     }
 
     @media (max-width: 520px) {
-      .optimal-races-dialog { height: min(860px, 94dvh); max-height: 94dvh; }
+      .optimal-races-dialog { max-height: 94dvh; }
       header { padding: 14px 12px 11px; }
       .legend { padding-inline: 12px; }
       .race-calendar { padding: 8px 10px 12px; }

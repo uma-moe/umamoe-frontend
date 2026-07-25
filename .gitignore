@@ -74,6 +74,7 @@ scripts/*
 /src/assets/images/scenario/*
 !/src/assets/images/scenario/scenario_logo_*.png
 !/src/assets/images/scenario/ura_finals_logo.png
+!/src/assets/images/scenario/grand_concert_logo.png
 !/src/assets/images/skills/
 /src/assets/images/skills/*
 !/src/assets/images/skills/utx_ico_skill_*.webp
