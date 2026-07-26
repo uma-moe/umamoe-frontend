@@ -527,11 +527,11 @@ export class TimelineService {
         && Math.abs(event.jpReleaseDate.getTime() - targetTime) <= maximumDistance
       )
       .sort((left, right) => {
-        const phaseDifference = phaseRank(left.title) - phaseRank(right.title);
-        if (phaseDifference !== 0) return phaseDifference;
         const distanceDifference = Math.abs(left.jpReleaseDate.getTime() - targetTime)
           - Math.abs(right.jpReleaseDate.getTime() - targetTime);
         if (distanceDifference !== 0) return distanceDifference;
+        const phaseDifference = phaseRank(left.title) - phaseRank(right.title);
+        if (phaseDifference !== 0) return phaseDifference;
         return left.jpReleaseDate.getTime() - right.jpReleaseDate.getTime();
       })[0];
   }

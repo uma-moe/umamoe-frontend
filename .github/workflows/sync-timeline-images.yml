@@ -2,12 +2,13 @@ name: Sync Timeline Images
 
 on:
   schedule:
-    # Runs after the resources archive's 13:00 JST metadata check.
-    - cron: '15 4 * * *'
+    # Leave time for the resources archive and generated timeline to deploy first.
+    - cron: '30 5 * * *'
   workflow_dispatch:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: sync-timeline-images
@@ -17,21 +18,28 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - branch: beta
+            timeline_url: https://beta.uma.moe/resources/current/banner_timeline.json.gz
+            deploy: false
+          - branch: main
+            timeline_url: https://uma.moe/resources/current/banner_timeline.json.gz
+            deploy: true
     steps:
       - name: Check out frontend
         uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
 
       - name: Check out resources
         uses: actions/checkout@v4
         with:
           repository: uma-moe/umamoe-resources
+          ref: main
           path: .sync/umamoe-resources
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: .sync/umamoe-resources
 
       - uses: actions/setup-node@v4
         with:
@@ -41,33 +49,30 @@ jobs:
       - name: Install image converter
         run: npm ci
 
-      - name: Generate current timeline
+      - name: Download deployed timeline
         shell: bash
         run: |
-          cargo run --locked \
-            --manifest-path .sync/umamoe-resources/Cargo.toml \
-            -- generate \
-            --master .sync/umamoe-resources/master.mdb \
-            --out "${RUNNER_TEMP}/timeline-resources" \
-            --write-json
+          curl --fail --location --retry 4 --compressed \
+            "${{ matrix.timeline_url }}" \
+            --output "${RUNNER_TEMP}/banner_timeline.json"
 
       - name: Sync timeline images and available EN replacements
         shell: bash
         run: |
-          timeline_json="$(find "${RUNNER_TEMP}/timeline-resources" -name banner_timeline.json -print -quit)"
-          test -n "${timeline_json}"
           node .sync/umamoe-resources/scripts/sync_umapyoi_timeline_images.mjs \
-            --timeline-json "${timeline_json}" \
+            --timeline-json "${RUNNER_TEMP}/banner_timeline.json" \
             --frontend-root . \
             --request-interval-ms 250 \
             --changed-files-output "${RUNNER_TEMP}/timeline-image-changes.txt"
 
       - name: Commit changed WebP assets
+        id: commit
         shell: bash
         run: |
           changes="${RUNNER_TEMP}/timeline-image-changes.txt"
           if [[ ! -s "${changes}" ]]; then
             echo "Timeline images are already current."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           while IFS= read -r path; do
@@ -75,9 +80,18 @@ jobs:
           done < "${changes}"
           if git diff --cached --quiet; then
             echo "Timeline images are already current."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore: sync timeline images"
-          git push
+          git push origin "HEAD:${{ matrix.branch }}"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy updated production artwork
+        if: steps.commit.outputs.changed == 'true' && matrix.deploy
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run docker-image.yml --ref main --field deploy_assets=true

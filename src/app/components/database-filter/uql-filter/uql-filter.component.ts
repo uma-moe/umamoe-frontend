@@ -45,6 +45,8 @@ interface UqlDocSnippet {
   segments: UqlHighlightSegment[];
 }
 
+type UqlReferenceTopic = 'fields' | 'scopes' | 'operators' | 'values' | 'directives' | 'scoring';
+
 interface UqlKnownSuggestionCandidate {
   candidate: string;
   lowerCandidate: string;
@@ -124,7 +126,12 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   @Output() clear = new EventEmitter<void>();
   @Output() insertSnippet = new EventEmitter<string>();
   visibleSuggestions: UqlSuggestion[] = [];
+  protected activeReferenceTopic: UqlReferenceTopic = 'fields';
   atomicCaretStyle: Record<string, string> | null = null;
+
+  protected setReferenceTopic(topic: UqlReferenceTopic): void {
+    this.activeReferenceTopic = topic;
+  }
   protected readonly simplePredicateDocSnippets = [
     this.createDocSnippet('Speed >= 3 and Wins >= 30'),
     this.createDocSnippet('White count >= 12'),
@@ -135,9 +142,14 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   protected readonly threeWayMatchDocSnippets = [
     this.createDocSnippet('Main has all (Groundwork, Ignited Spirit WIT) and GP1 has all (Groundwork, Ignited Spirit WIT) and GP2 has all (Groundwork, Ignited Spirit WIT)')
   ];
+  protected readonly scoringParameterDocSnippets = [
+    this.createDocSnippet('optional white in (Groundwork, Ignited Spirit WIT, priority = 0, type_weight = 150, level_weight = 2)'),
+    this.createDocSnippet('lineage white in (Groundwork, Ignited Spirit WIT, priority = 1, stack_weight = 1200, base = 115, decay = 50)')
+  ];
   private readonly docSnippetGroups = [
     this.simplePredicateDocSnippets,
-    this.threeWayMatchDocSnippets
+    this.threeWayMatchDocSnippets,
+    this.scoringParameterDocSnippets
   ];
   readonly suggestionItemSize = 30;
   private readonly maxSuggestionViewportHeight = 240;
@@ -2204,7 +2216,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   }
 
   private hasWhiteScoringParameterStarted(argsText: string): boolean {
-    return /(?:^|,)\s*(?:priority|priority_group|prio_group|prio\s+group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|affinity)\s*(?:=|$)/i.test(argsText);
+    return /(?:^|,)\s*(?:priority|priority_group|prio_group|prio\s+group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|proc_kind|affinity)\s*(?:=|$)/i.test(argsText);
   }
 
   private isWhiteScoringParameterPrefix(prefix: string): boolean {
@@ -2218,7 +2230,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (this.hasWhiteScoringParameterStarted(argsText)) return true;
     const currentArgumentPrefix = argsText.slice(argsText.lastIndexOf(',') + 1);
     if (currentArgumentPrefix.trim().length > 0) return false;
-    return /^(?:priority|priority_group|prio_group|prio\s+group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|affinity)\s*=/i.test(text.slice(index));
+    return /^(?:priority|priority_group|prio_group|prio\s+group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|proc_kind|affinity)\s*=/i.test(text.slice(index));
   }
 
   private getCurrentClausePrefix(prefix: string): string {
