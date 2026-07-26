@@ -136,11 +136,32 @@ export interface OptimalRacesDialogData {
       line-height: 1.4;
     }
 
+    @media (max-width: 768px) {
+      app-race-scheduler { min-width: 0; }
+      .race-calendar {
+        overflow-x: hidden;
+        overscroll-behavior-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
     @media (max-width: 520px) {
       .optimal-races-dialog { max-height: 94dvh; }
-      header { padding: 14px 12px 11px; }
-      .legend { padding-inline: 12px; }
-      .race-calendar { padding: 8px 10px 12px; }
+      header { gap: 9px; padding: 12px 10px 10px; }
+      .title-icon { width: 32px; height: 32px; border-radius: 8px; }
+      .title-icon mat-icon { width: 18px; height: 18px; font-size: 18px; }
+      h2 { font-size: 0.95rem; }
+      p { margin-top: 2px; font-size: 0.69rem; line-height: 1.3; }
+      .close-button { width: 30px; height: 30px; flex: 0 0 30px; }
+      .legend {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4px 10px;
+        padding: 8px 10px;
+        font-size: 0.64rem;
+      }
+      .race-calendar { padding: 8px 9px 10px; }
+      footer { display: none; }
     }
   `],
 })
