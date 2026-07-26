@@ -20,18 +20,15 @@ jobs:
     steps:
       - name: Check out frontend
         uses: actions/checkout@v4
+        with:
+          ref: beta
 
       - name: Check out resources
         uses: actions/checkout@v4
         with:
           repository: uma-moe/umamoe-resources
+          ref: main
           path: .sync/umamoe-resources
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: .sync/umamoe-resources
 
       - uses: actions/setup-node@v4
         with:
@@ -41,23 +38,18 @@ jobs:
       - name: Install image converter
         run: npm ci
 
-      - name: Generate current timeline
+      - name: Download deployed beta timeline
         shell: bash
         run: |
-          cargo run --locked \
-            --manifest-path .sync/umamoe-resources/Cargo.toml \
-            -- generate \
-            --master .sync/umamoe-resources/master.mdb \
-            --out "${RUNNER_TEMP}/timeline-resources" \
-            --write-json
+          curl --fail --location --retry 4 --compressed \
+            https://beta.uma.moe/resources/current/banner_timeline.json.gz \
+            --output "${RUNNER_TEMP}/banner_timeline.json"
 
       - name: Sync timeline images and available EN replacements
         shell: bash
         run: |
-          timeline_json="$(find "${RUNNER_TEMP}/timeline-resources" -name banner_timeline.json -print -quit)"
-          test -n "${timeline_json}"
           node .sync/umamoe-resources/scripts/sync_umapyoi_timeline_images.mjs \
-            --timeline-json "${timeline_json}" \
+            --timeline-json "${RUNNER_TEMP}/banner_timeline.json" \
             --frontend-root . \
             --request-interval-ms 250 \
             --changed-files-output "${RUNNER_TEMP}/timeline-image-changes.txt"
@@ -80,4 +72,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore: sync timeline images"
-          git push
+          git push origin HEAD:beta
