@@ -34,11 +34,9 @@ export const UPDATE_LOG: UpdateEntry[] = [
         icon: 'auto_awesome',
         color: '#64b5f6',
         items: [
-          { text: 'Inheritance results have a compact new card layout with clearer main and great-parent contributions', link: '/database' },
-          { text: 'Split and combined spark views now use the same chance calculations' },
-          { text: 'Scenario, common, and race spark sections can be collapsed across every result' },
-          { text: 'Hide Sparks remembers unwanted factors and can reveal them again per result' },
-          { text: 'Scenario badges now use each record\'s scenario ID and corrected English logos' },
+          { text: 'Inheritance results have a compact new layout that makes main and great-parent contributions easier to compare', link: '/database' },
+          { text: 'Collapse common, scenario, and race spark groups or hide unwanted sparks; your choices are remembered' },
+          { text: 'Split and combined views now show consistent inheritance chances and corrected scenario badges' },
         ]
       },
       {
@@ -47,11 +45,9 @@ export const UPDATE_LOG: UpdateEntry[] = [
         icon: 'filter_alt',
         color: '#ab47bc',
         items: [
-          { text: 'Filter common, scenario, and race whites by minimum count or total stars', link: '/database' },
-          { text: 'White-category filters work for both the full lineage and the main parent' },
-          { text: 'Training Scenario and the new white filters are available in Advanced and UQL' },
-          { text: 'Generated UQL uses readable field names for the new filter criteria' },
-          { text: 'Special sparks now show normal and upgraded choices together with corrected icons' },
+          { text: 'Filter common, scenario, and race whites by count or total stars for the full lineage or main parent', link: '/database' },
+          { text: 'A new UQL guide explains scopes, exact three-way matching, every available property, operators, and ranking parameters', link: '/database' },
+          { text: 'Training Scenario and special-spark filters now include clearer normal and upgraded choices' },
         ]
       },
       {
@@ -60,11 +56,9 @@ export const UPDATE_LOG: UpdateEntry[] = [
         icon: 'emoji_events',
         color: '#ffca28',
         items: [
-          { text: 'Race Schedule now uses in-game race art in a denser, faster calendar', link: '/database' },
-          { text: 'Race and Optimal Race views share the same image resolver and calendar layout' },
-          { text: 'Conflicting optimal races move into the next available slot instead of overlapping' },
-          { text: 'Race grades and results use outlines and cup colors while names remain available on hover' },
-          { text: 'Race History combines compact race art, names, grades, and result cups' },
+          { text: 'Race Schedule now uses in-game race art in a denser calendar', link: '/database' },
+          { text: 'Conflicting optimal races automatically move into the next available slot' },
+          { text: 'Race views and history now show clearer grade, result, and cup visuals with names available on hover' },
         ]
       },
       {
@@ -75,9 +69,8 @@ export const UPDATE_LOG: UpdateEntry[] = [
         betaOnly: true,
         items: [
           { text: 'Create, rename, duplicate, import, export, and switch between saved plans', link: '/timeline?tab=carat-planner' },
-          { text: 'Search banners and plan multiple character or support-card rate-up goals' },
-          { text: 'Configure starting balances, recurring income, custom income, and upcoming rewards' },
-          { text: 'Inspect published rates, pull probabilities, copy targets, and exchange allocation' },
+          { text: 'Search banners and plan multiple character or support-card goals with pull probabilities and exchange targets' },
+          { text: 'Project your balance using recurring income, custom income, and upcoming rewards' },
         ]
       },
       {
@@ -87,9 +80,8 @@ export const UPDATE_LOG: UpdateEntry[] = [
         color: '#26a69a',
         items: [
           { text: 'Switch between horizontal and vertical timelines with compact gaps, Today, search, and event filters', link: '/timeline' },
-          { text: 'Timeline cards and event details have been redesigned for clearer scanning' },
-          { text: 'Event details now include rates, rewards, race information, predictions, and source links' },
-          { text: 'The timeline fills the available screen and has improved responsive and mobile layouts' },
+          { text: 'Redesigned event cards and details make rates, rewards, races, predictions, and sources easier to scan' },
+          { text: 'Improved full-screen and mobile layouts make better use of the available space' },
         ]
       },
       {
@@ -100,20 +92,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
         items: [
           { text: 'Circle pages now show live rank, tier progress, monthly navigation, and clearer club information', link: '/circles' },
           { text: 'Member progression can be explored as a chart or calendar with daily contributor breakdowns' },
-          { text: 'Search members, open profiles, copy trainer IDs, and switch between grid and list views' },
-          { text: 'Customize member metrics, include prior-circle progress, and export data as Excel, CSV, or JSON' },
-        ]
-      },
-      {
-        category: 'bugfix',
-        label: 'Performance & Mobile',
-        icon: 'speed',
-        color: '#66bb6a',
-        items: [
-          { text: 'Large filter and database sections now defer expensive work until it is needed' },
-          { text: 'Reduced repeated calculations, observers, image work, CPU use, and memory pressure' },
-          { text: 'Improved mobile layouts across Database, Inheritance, Race tools, Timeline, and Carat Planner' },
-          { text: 'Fixed scenario and race mappings, parent highlighting, shared filters, and several stale-state issues' },
+          { text: 'Search members, customize visible metrics, open profiles, and export circle data' },
         ]
       }
     ]

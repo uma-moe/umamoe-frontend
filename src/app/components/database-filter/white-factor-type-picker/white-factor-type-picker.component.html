@@ -70,6 +70,7 @@
               [attr.aria-label]="category.label"
               [attr.aria-pressed]="isCategorySelected(category.key)"
               [matTooltip]="category.label + ' · ' + category.factorCount + ' factors'"
+              matTooltipTouchGestures="off"
               (click)="toggleCategory(category.key)">
               <span class="effect-icon-frame">
                 <img *ngIf="category.iconUrl; else normalMaterialCategoryIcon" [src]="category.iconUrl" alt="">
@@ -84,6 +85,7 @@
               class="clear-button icon-only"
               (click)="clearCriteria()"
               matTooltip="Clear skill filters"
+              matTooltipTouchGestures="off"
               aria-label="Clear skill filters">
               <mat-icon>restart_alt</mat-icon>
             </button>
@@ -127,6 +129,7 @@
           [class.selected]="isFactorSelected(factor.id)"
           [disabled]="isFactorSelected(factor.id) && !allowSelectionToggle"
           [matTooltip]="getFactorActionTooltip(factor)"
+          matTooltipTouchGestures="off"
           (click)="addFactor(factor)">
           <span class="result-icon-frame">
             <img *ngIf="factor.iconUrl; else genericFactorIcon" [src]="factor.iconUrl" alt="">

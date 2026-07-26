@@ -632,7 +632,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     'id', 'card_id', 'support_card_id', 'lb', 'limitbreak', 'limit_break', 'limit_break_count', 'exp', 'experience',
     'priority', 'priority_group', 'prio_group', 'group',
     'type_weight', 'level_weight', 'match_weight', 'stack_weight', 'occurrence_weight',
-    'base', 'decay', 'weight', 'proc_weight', 'affinity'
+    'base', 'decay', 'weight', 'proc_weight', 'proc_kind', 'affinity'
   ]);
   selectedLimitBreak = 0; // Default to LB0+
   readonly scenarioOptionIds = [0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];

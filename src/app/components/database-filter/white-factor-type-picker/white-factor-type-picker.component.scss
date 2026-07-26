@@ -386,6 +386,9 @@
 .factor-result-groups {
   max-height: 260px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   padding-right: 2px;
 
   .factor-results {
@@ -503,15 +506,28 @@
   }
 
   .browser-controls {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
   }
 
   .browser-priority {
-    justify-content: flex-end;
+    justify-content: initial;
+  }
+
+  .factor-results,
+  .factor-result-groups {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 
   .factor-results {
     grid-template-columns: 1fr;
+  }
+
+  .factor-result {
+    touch-action: pan-y;
   }
 
   .result-summary {
