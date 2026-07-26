@@ -28,8 +28,8 @@ export interface OptimalRacesDialogData {
       </header>
 
       <div class="legend">
-        <span><strong>+6</strong> overlaps P1 and P2</span>
-        <span><strong>+3</strong> overlaps one parent</span>
+        <span><strong>+6</strong> both parents</span>
+        <span><strong>+3</strong> one parent</span>
       </div>
 
       <div class="race-calendar">
@@ -136,11 +136,30 @@ export interface OptimalRacesDialogData {
       line-height: 1.4;
     }
 
+    @media (max-width: 768px) {
+      app-race-scheduler { min-width: 0; }
+      .race-calendar {
+        overflow-x: hidden;
+        overscroll-behavior-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
     @media (max-width: 520px) {
-      .optimal-races-dialog { max-height: 94dvh; }
-      header { padding: 14px 12px 11px; }
-      .legend { padding-inline: 12px; }
-      .race-calendar { padding: 8px 10px 12px; }
+      .optimal-races-dialog { max-height: min(84dvh, 660px); }
+      header { align-items: center; gap: 8px; padding: 8px 8px 7px; }
+      .title-icon, p { display: none; }
+      h2 { font-size: 0.9rem; }
+      .close-button { width: 28px; height: 28px; flex: 0 0 28px; }
+      .legend {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4px 8px;
+        padding: 5px 8px;
+        font-size: 0.61rem;
+      }
+      .race-calendar { padding: 5px 7px 7px; }
+      footer { display: none; }
     }
   `],
 })

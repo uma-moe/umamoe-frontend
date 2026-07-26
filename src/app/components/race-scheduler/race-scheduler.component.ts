@@ -40,6 +40,14 @@ export interface OptimalRaceDisplay {
   affinityGain: number;
 }
 
+interface OptimalRaceSlotDisplay {
+  race: RaceEntry;
+  recommendation: OptimalRaceDisplay;
+  year: 'junior' | 'classic' | 'senior';
+  month: number;
+  half: number;
+}
+
 /** Map from turn string "MM_H" to { month, half } */
 function parseTurn(turn: string): { month: number; half: number } | null {
   const parts = turn.split('_');
@@ -117,6 +125,7 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
     return this._runRaceIds;
   }
   @Output() selectionChanged = new EventEmitter<number[]>();
+  @Output() scheduleReady = new EventEmitter<void>();
 
   @ViewChild('importInput') importInput!: ElementRef<HTMLInputElement>;
 
@@ -140,6 +149,11 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
   private ranCellLookup = new Map<string, { race: RaceEntry; position: number }[]>();
   private displayWonCellLookup = new Map<string, RaceEntry[]>();
   private optimalCellLookup = new Map<string, { race: RaceEntry; recommendation: OptimalRaceDisplay }[]>();
+  optimalDisplayByYear: Record<'junior' | 'classic' | 'senior', OptimalRaceSlotDisplay[]> = {
+    junior: [],
+    classic: [],
+    senior: [],
+  };
   /** Map race_instance_id → RaceEntry for quick lookup */
   private raceMap = new Map<number, RaceEntry>();
 
@@ -214,6 +228,7 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
       }
     }
     this.cdr.markForCheck();
+    this.scheduleReady.emit();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -354,6 +369,11 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
 
   private updateOptimalRaces(): void {
     this.optimalCellLookup.clear();
+    const displayByYear: Record<'junior' | 'classic' | 'senior', OptimalRaceSlotDisplay[]> = {
+      junior: [],
+      classic: [],
+      senior: [],
+    };
     const usedSlots = new Set<string>();
 
     for (const recommendation of this.optimalRaceRecommendations ?? []) {
@@ -367,7 +387,13 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
       const key = this.cellKey(slot.year, slot.month, slot.half);
       usedSlots.add(key);
       this.optimalCellLookup.set(key, [{ race, recommendation }]);
+      displayByYear[slot.year].push({ race, recommendation, ...slot });
     }
+
+    for (const entries of Object.values(displayByYear)) {
+      entries.sort((left, right) => left.month - right.month || left.half - right.half);
+    }
+    this.optimalDisplayByYear = displayByYear;
   }
 
   /**
@@ -526,6 +552,11 @@ export class RaceSchedulerComponent implements OnInit, OnChanges, OnDestroy {
       ? 'P1 + P2'
       : entry.recommendation.overlapsP1 ? 'P1' : 'P2';
     return `${entry.race.name} - ${parentLabel} - +${entry.recommendation.affinityGain} affinity`;
+  }
+
+  getOptimalParentLabel(recommendation: OptimalRaceDisplay): string {
+    if (recommendation.overlapsP1 && recommendation.overlapsP2) return 'P1 + P2';
+    return recommendation.overlapsP1 ? 'P1' : 'P2';
   }
 
   private computeWonInCell(

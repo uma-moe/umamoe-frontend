@@ -79,7 +79,8 @@
                 <div
                   class="race-badge"
                   [ngClass]="getGradeClass(race.grade)"
-                  [matTooltip]="race.name + ' (' + getGradeLabel(race.grade) + ')'">
+                  [matTooltip]="race.name + ' (' + getGradeLabel(race.grade) + ')'"
+                  matTooltipTouchGestures="off">
                   <img
                     *ngIf="getRaceImageUrl(race) as raceImageUrl"
                     [src]="raceImageUrl"
@@ -102,7 +103,8 @@
                   *ngFor="let entry of getOptimalInCell(year, month, half); trackBy: trackByOptimalRace"
                   class="race-badge optimal"
                   [ngClass]="getGradeClass(entry.race.grade)"
-                  [matTooltip]="getOptimalTooltip(entry)">
+                  [matTooltip]="getOptimalTooltip(entry)"
+                  matTooltipTouchGestures="off">
                   <img
                     *ngIf="getRaceImageUrl(entry.race) as raceImageUrl"
                     [src]="raceImageUrl"
@@ -125,7 +127,8 @@
                     [class.won]="entry.position === 1"
                     [class.ran]="entry.position !== 1"
                     [ngClass]="[getGradeClass(entry.race.grade), getPositionClass(entry.position)]"
-                    [matTooltip]="entry.race.name + (entry.position === 1 ? ' - Won' : ' - ' + entry.position + getOrdinalSuffix(entry.position) + ' place')">
+                    [matTooltip]="entry.race.name + (entry.position === 1 ? ' - Won' : ' - ' + entry.position + getOrdinalSuffix(entry.position) + ' place')"
+                    matTooltipTouchGestures="off">
                     <mat-icon class="placement-cup">emoji_events</mat-icon>
                     <img
                       *ngIf="getRaceImageUrl(entry.race) as raceImageUrl"
@@ -145,7 +148,8 @@
                     <div
                       class="race-badge won"
                       [ngClass]="getGradeClass(race.grade)"
-                      [matTooltip]="race.name + ' - Won'">
+                      [matTooltip]="race.name + ' - Won'"
+                      matTooltipTouchGestures="off">
                       <mat-icon class="placement-cup">emoji_events</mat-icon>
                       <img
                         *ngIf="getRaceImageUrl(race) as raceImageUrl"
@@ -182,6 +186,38 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div class="mobile-optimal-list" *ngIf="!selectable && hasOptimalRecommendations">
+    <ng-container *ngFor="let year of years; trackBy: trackByYear">
+      <section class="mobile-optimal-year" *ngIf="optimalDisplayByYear[year].length">
+        <h3 class="mobile-optimal-year-label" [ngClass]="year">{{ yearLabels[year] }}</h3>
+        <article
+          class="mobile-optimal-race"
+          *ngFor="let entry of optimalDisplayByYear[year]; trackBy: trackByOptimalRace"
+          [ngClass]="getGradeClass(entry.race.grade)"
+          [attr.aria-label]="getOptimalTooltip(entry)">
+          <div class="mobile-optimal-meta">
+            <time class="mobile-optimal-date">{{ getCellLabel(entry.month, entry.half) }}</time>
+            <span class="mobile-optimal-name">{{ entry.race.name }}</span>
+          </div>
+          <div class="mobile-optimal-art">
+            <img
+              *ngIf="getRaceImageUrl(entry.race) as raceImageUrl"
+              [src]="raceImageUrl"
+              alt=""
+              (error)="hideBrokenRaceImage($event)"
+              loading="lazy"
+              decoding="async">
+            <span>{{ entry.race.short_name || entry.race.name }}</span>
+          </div>
+          <div class="mobile-optimal-affinity">
+            <strong>+{{ entry.recommendation.affinityGain }}</strong>
+            <span>{{ getOptimalParentLabel(entry.recommendation) }}</span>
+          </div>
+        </article>
+      </section>
+    </ng-container>
   </div>
 
   <!-- Grade color legend -->

@@ -73,7 +73,8 @@ export interface RaceResultsDialogData {
           [style.display]="viewMode === 'grid' ? 'block' : 'none'"
           [selectable]="false"
           [winSaddleIds]="data.winSaddleIds"
-          [runRaceIds]="data.runRaceIds || []">
+          [runRaceIds]="data.runRaceIds || []"
+          (scheduleReady)="buildListFromScheduler()">
         </app-race-scheduler>
 
         <!-- List view -->
@@ -88,7 +89,8 @@ export interface RaceResultsDialogData {
                 [class.pos-2nd]="race.position === 2"
                 [class.pos-3rd]="race.position === 3"
                 [class.pos-other]="!race.won && race.position !== 1 && race.position !== 2 && race.position !== 3"
-                [matTooltip]="race.won ? 'Won' : (race.position + getOrdinal(race.position || 0) + ' place')">
+                [matTooltip]="race.won ? 'Won' : (race.position + getOrdinal(race.position || 0) + ' place')"
+                matTooltipTouchGestures="off">
                 <mat-icon class="list-trophy">emoji_events</mat-icon>
               </span>
               <span class="list-grade" [ngClass]="'lg-' + race.gradeLabel.toLowerCase()">{{ race.gradeLabel }}</span>
@@ -98,6 +100,7 @@ export interface RaceResultsDialogData {
                 alt=""
                 class="list-race-image"
                 [matTooltip]="race.name"
+                matTooltipTouchGestures="off"
                 (error)="hideBrokenRaceImage($event)"
                 loading="lazy"
                 decoding="async">
@@ -419,6 +422,67 @@ export interface RaceResultsDialogData {
       object-position: center;
     }
 
+    @media (max-width: 520px) {
+      .race-results-dialog {
+        width: calc(100vw - 16px);
+        max-height: 94dvh;
+      }
+
+      .dialog-header {
+        gap: 8px;
+        padding: 9px 10px;
+      }
+
+      .header-left { gap: 7px; min-width: 0; }
+      .header-text { min-width: 0; }
+      .char-portrait { width: 36px; height: 36px; }
+      .dialog-title { font-size: 13px; }
+      .char-name {
+        max-width: 92px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .header-right { gap: 4px; }
+      .toolbar-btn.export-btn {
+        width: 28px;
+        height: 28px;
+        justify-content: center;
+        padding: 0;
+
+        span { display: none; }
+      }
+      .close-btn {
+        width: 28px;
+        height: 28px;
+        justify-content: center;
+        padding: 0;
+      }
+
+      .dialog-body {
+        max-height: calc(94dvh - 56px);
+        padding: 8px;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .race-list-view { gap: 8px; }
+      .list-race-row {
+        display: grid;
+        grid-template-columns: 54px 18px 20px 48px minmax(0, 1fr);
+        gap: 6px;
+        padding: 6px 4px;
+        touch-action: pan-y;
+      }
+      .list-turn { min-width: 0; }
+      .list-grade { min-width: 0; }
+      .list-race-image {
+        width: 48px;
+        height: 24px;
+        flex-basis: auto;
+      }
+    }
+
     :host-context(.light-theme) {
       .race-results-dialog {
         background: var(--dialog-surface-bg);
@@ -527,7 +591,9 @@ export interface RaceResultsDialogData {
 export class RaceResultsDialogComponent implements AfterViewInit {
   @ViewChild('scheduler') scheduler!: RaceSchedulerComponent;
 
-  viewMode: 'grid' | 'list' = 'grid';
+  viewMode: 'grid' | 'list' = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+    ? 'list'
+    : 'grid';
   listGroups: { year: string; yearLabel: string; races: ListRace[] }[] = [];
 
   private static MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -576,7 +642,7 @@ export class RaceResultsDialogComponent implements AfterViewInit {
   }
 
   /** Build list data directly from the scheduler's computed cells - single source of truth */
-  private buildListFromScheduler(): void {
+  buildListFromScheduler(): void {
     const s = this.scheduler;
     if (!s) return;
 
