@@ -28,8 +28,8 @@ export interface OptimalRacesDialogData {
       </header>
 
       <div class="legend">
-        <span><strong>+6</strong> overlaps P1 and P2</span>
-        <span><strong>+3</strong> overlaps one parent</span>
+        <span><strong>+6</strong> both parents</span>
+        <span><strong>+3</strong> one parent</span>
       </div>
 
       <div class="race-calendar">
@@ -146,21 +146,19 @@ export interface OptimalRacesDialogData {
     }
 
     @media (max-width: 520px) {
-      .optimal-races-dialog { max-height: 94dvh; }
-      header { gap: 9px; padding: 12px 10px 10px; }
-      .title-icon { width: 32px; height: 32px; border-radius: 8px; }
-      .title-icon mat-icon { width: 18px; height: 18px; font-size: 18px; }
-      h2 { font-size: 0.95rem; }
-      p { margin-top: 2px; font-size: 0.69rem; line-height: 1.3; }
-      .close-button { width: 30px; height: 30px; flex: 0 0 30px; }
+      .optimal-races-dialog { max-height: min(84dvh, 660px); }
+      header { align-items: center; gap: 8px; padding: 8px 8px 7px; }
+      .title-icon, p { display: none; }
+      h2 { font-size: 0.9rem; }
+      .close-button { width: 28px; height: 28px; flex: 0 0 28px; }
       .legend {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 4px 10px;
-        padding: 8px 10px;
-        font-size: 0.64rem;
+        gap: 4px 8px;
+        padding: 5px 8px;
+        font-size: 0.61rem;
       }
-      .race-calendar { padding: 8px 9px 10px; }
+      .race-calendar { padding: 5px 7px 7px; }
       footer { display: none; }
     }
   `],
