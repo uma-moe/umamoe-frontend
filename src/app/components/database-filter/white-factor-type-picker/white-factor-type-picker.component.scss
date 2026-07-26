@@ -386,10 +386,21 @@
 .factor-result-groups {
   max-height: 260px;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
+  scrollbar-color: rgba(var(--on-surface-rgb), 0.2) transparent;
+  scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   padding-right: 2px;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(var(--on-surface-rgb), 0.2);
+  }
 
   .factor-results {
     max-height: none;
@@ -515,11 +526,10 @@
     justify-content: initial;
   }
 
-  .factor-results,
   .factor-result-groups {
-    max-height: none;
-    overflow: visible;
-    padding-right: 0;
+    max-height: clamp(300px, 48dvh, 520px);
+    overflow-y: auto;
+    padding-right: 3px;
   }
 
   .factor-results {
