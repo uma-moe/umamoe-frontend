@@ -14,12 +14,13 @@
     <details class="uql-wiki-panel">
       <summary>
         <span class="uql-wiki-summary-main">
-          <mat-icon>menu_book</mat-icon>
-          <span>Wiki & examples</span>
+          <mat-icon>school</mat-icon>
+          <span>Learn UQL</span>
         </span>
-        <small>Open syntax help, slot names, and examples</small>
+        <small>Start here · quick recipes and reference</small>
         <mat-icon class="uql-wiki-chevron">expand_more</mat-icon>
       </summary>
+
       <article class="uql-doc-article">
         <ng-template #uqlDocSnippetTemplate let-snippet let-hidden="hidden">
           <pre class="uql-doc-snippet" [attr.aria-hidden]="hidden ? 'true' : null"><ng-container *ngFor="let segment of snippet.segments"><span
@@ -50,190 +51,136 @@
         </ng-template>
 
         <header class="uql-doc-hero">
-          <p class="uql-doc-kicker">Advanced Filter Docs</p>
-          <h5>Write compact filters with readable names.</h5>
-          <p>UQL is a predicate language for filtering inheritances. The editor already supplies the fixed <span class="uql-doc-inline-code">where</span> line, so you write only the condition that should be true for each result.</p>
+          <p class="uql-doc-kicker">UQL in a minute</p>
+          <h5>Describe what every result must have.</h5>
+          <p>The editor adds <span class="uql-doc-inline-code">where</span> for you. Start with one condition, then join more with <span class="uql-doc-inline-code">and</span> or <span class="uql-doc-inline-code">or</span>. Autocomplete handles the exact field and skill names.</p>
         </header>
 
-        <section class="uql-doc-section">
-          <h6>Query Shape</h6>
-          <p>Most filters read as <span class="uql-doc-inline-code">[slot]</span> <span class="uql-doc-inline-code">[field or factor]</span> <span class="uql-doc-inline-code">[operator]</span> <span class="uql-doc-inline-code">[value]</span>. Leaving the slot out makes the filter global or lets it check every relevant slot.</p>
-          <dl class="uql-doc-table">
+        <section class="uql-doc-section" aria-labelledby="uql-first-query">
+          <h6 id="uql-first-query">Read a query from left to right</h6>
+          <ol class="uql-doc-step-grid">
+            <li>
+              <span class="uql-doc-step-number">1</span>
+              <div><strong>Pick something</strong><p>A stat, factor, skill, character, or race.</p></div>
+            </li>
+            <li>
+              <span class="uql-doc-step-number">2</span>
+              <div><strong>Say how to match it</strong><p>Use <span class="uql-doc-inline-code">&gt;=</span>, <span class="uql-doc-inline-code">=</span>, <span class="uql-doc-inline-code">has</span>, or <span class="uql-doc-inline-code">in</span>.</p></div>
+            </li>
+            <li>
+              <span class="uql-doc-step-number">3</span>
+              <div><strong>Add another condition</strong><p><span class="uql-doc-inline-code">and</span> requires both; <span class="uql-doc-inline-code">or</span> accepts either.</p></div>
+            </li>
+          </ol>
+          <p class="uql-doc-example-intro">Click an example to add it to your query:</p>
+          <div class="uql-doc-example-row">
+            <button
+              type="button"
+              class="uql-doc-snippet-button"
+              *ngFor="let snippet of simplePredicateDocSnippets"
+              [attr.aria-label]="'Use example: ' + snippet.text"
+              (click)="insertSnippet.emit(snippet.text)">
+              <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet, hidden: true }"></ng-container>
+            </button>
+          </div>
+        </section>
+
+        <section class="uql-doc-section uql-doc-featured" aria-labelledby="uql-three-way">
+          <div class="uql-doc-featured-heading">
+            <span class="uql-doc-featured-icon"><mat-icon>account_tree</mat-icon></span>
+            <div>
+              <p class="uql-doc-kicker">Common recipe</p>
+              <h6 id="uql-three-way">Require the same skills in all three slots</h6>
+            </div>
+          </div>
+          <p>Write one requirement for <span class="uql-doc-inline-code">Main</span>, <span class="uql-doc-inline-code">GP1</span>, and <span class="uql-doc-inline-code">GP2</span>, then connect them with <span class="uql-doc-inline-code">and</span>. This guarantees a three-way match.</p>
+          <button
+            type="button"
+            class="uql-doc-snippet-button uql-doc-snippet-button-wide"
+            *ngFor="let snippet of threeWayMatchDocSnippets"
+            [attr.aria-label]="'Use three-way match example: ' + snippet.text"
+            (click)="insertSnippet.emit(snippet.text)">
+            <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet, hidden: true }"></ng-container>
+          </button>
+          <p class="uql-doc-note"><mat-icon>info</mat-icon><span><span class="uql-doc-inline-code">lineage white</span> ranks matches by depth; it does not guarantee that every slot matches. Use the explicit three-slot form when all three are required.</span></p>
+        </section>
+
+        <section class="uql-doc-section" aria-labelledby="uql-scope">
+          <h6 id="uql-scope">Scope decides where UQL looks</h6>
+          <p>Leave the scope out for a lineage-wide total. Add a scope when the exact slot matters.</p>
+          <dl class="uql-doc-table uql-doc-table-compact">
             <div><dt>Speed &gt;= 6</dt><dd>Total Speed across the visible lineage.</dd></div>
-            <div><dt>Main Speed &gt;= 3</dt><dd>Speed on the main parent slot only.</dd></div>
-            <div><dt>GP Speed &gt;= 3</dt><dd>Speed on either great parent slot.</dd></div>
-            <div><dt>Characters in (...)</dt><dd>Main, GP1, or GP2 is in the list.</dd></div>
-            <div><dt>Support card = ...</dt><dd>Support card names work like character names.</dd></div>
-            <div><dt>Scenario = Aoharu</dt><dd>Filters by the training scenario ID while keeping the scenario name readable.</dd></div>
-            <div><dt>target = ...</dt><dd>Sets the affinity target for this editor.</dd></div>
-            <div><dt>owned legacy = []</dt><dd>Opens the legacy picker.</dd></div>
-            <div><dt>owned legacy = [Name #uuid]</dt><dd>Sets your owned legacy for affinity and race comparison.</dd></div>
-            <div><dt>sort by = Total Blue stars</dt><dd>Sorts matching rows by the selected spark-color total.</dd></div>
-            <div><dt>sort by = White skills amount</dt><dd>Sorts by raw white skill count rather than star total.</dd></div>
+            <div><dt>Main Speed &gt;= 3</dt><dd>Only the main parent.</dd></div>
+            <div><dt>GP1 Speed &gt;= 3</dt><dd>Only the left great parent.</dd></div>
+            <div><dt>GP2 Speed &gt;= 3</dt><dd>Only the right great parent.</dd></div>
+            <div><dt>GP Speed &gt;= 3</dt><dd>Either great parent may match.</dd></div>
           </dl>
         </section>
 
-        <section class="uql-doc-section">
-          <h6>Editor Directives</h6>
-          <p>Directives change the editor context or result order rather than the backend predicate. Use <span class="uql-doc-inline-code">target = Special Week</span> to set the affinity target. Use <span class="uql-doc-inline-code">owned legacy = []</span> to open the picker; after choosing a legacy, the editor stores it as a bracketed value such as <span class="uql-doc-inline-code">owned legacy = [Special Week #550e8400-e29b-41d4-a716-446655440000]</span>. Use <span class="uql-doc-inline-code">sort by = Total White stars</span> for star total or <span class="uql-doc-inline-code">sort by = White skills amount</span> for raw white skill count.</p>
-          <dl class="uql-doc-table">
-            <div><dt>owned legacy = []</dt><dd>Picker sentinel; opens your legacy picker.</dd></div>
-            <div><dt>owned legacy = [Special Week #550e8400-e29b-41d4-a716-446655440000]</dt><dd>Selected legacy; contributes P2 character and race wins to the search.</dd></div>
-            <div><dt>legacy = [...], my legacy = [...], your legacy = [...]</dt><dd>Accepted aliases for the same owned legacy directive.</dd></div>
-            <div><dt>sort by = Total Blue/Red/Green/White stars</dt><dd>Sorts descending by that color's total stars. Red is the UI alias for pink sparks. Affinity breaks equal totals.</dd></div>
-            <div><dt>sort by = White skills amount</dt><dd>Sorts descending by white skill count, with affinity breaking equal counts.</dd></div>
-          </dl>
-        </section>
+        <section class="uql-doc-section" aria-labelledby="uql-reference">
+          <h6 id="uql-reference">Reference</h6>
+          <p>Open a section only when you need it.</p>
 
-        <section class="uql-doc-section">
-          <h6>Start With A Simple Predicate</h6>
-          <p>A predicate is one complete condition. Numeric filters use comparison operators such as <span class="uql-doc-inline-code">&gt;=</span>, <span class="uql-doc-inline-code">=</span>, and <span class="uql-doc-inline-code">&lt;=</span>.</p>
-          <div class="uql-doc-example-row">
-            <button type="button" class="uql-doc-snippet-button" *ngFor="let snippet of simplePredicateDocSnippets" (click)="insertSnippet.emit(snippet.text)">
-              <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet, hidden: true }"></ng-container>
-            </button>
-          </div>
-        </section>
-
-        <section class="uql-doc-section">
-          <h6>Global Factors Versus Specific Slots</h6>
-          <p>Global factor names search across the whole visible lineage pool, so they can use totals like 6 or 9 stars. Slot filters look at one uma slot, so they use natural 1-3 star values.</p>
-          <div class="uql-doc-callout-grid">
-            <div>
-              <strong>Global factor total</strong>
-              <p>Use this when location does not matter.</p>
-              <ng-container *ngFor="let snippet of globalFactorDocSnippets">
-                <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet }"></ng-container>
-              </ng-container>
-            </div>
-            <div>
-              <strong>Specific slot factor</strong>
-              <p>Use this when the exact uma slot matters.</p>
-              <ng-container *ngFor="let snippet of specificSlotDocSnippets">
-                <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet }"></ng-container>
-              </ng-container>
-            </div>
-          </div>
-        </section>
-
-        <section class="uql-doc-section">
-          <h6>Slot Prefixes</h6>
-          <p>Put a slot prefix before a factor name to target one position in the inheritance tree.</p>
-          <dl class="uql-doc-table">
-            <div><dt>Main, Parent, Main parent</dt><dd>Main slot</dd></div>
-            <div><dt>GP1, Left, Great parent 1</dt><dd>Left great parent slot</dd></div>
-            <div><dt>GP2, Right, Great parent 2</dt><dd>Right great parent slot</dd></div>
-            <div><dt>GP, Any GP, Great parent</dt><dd>Either GP1 or GP2 may match</dd></div>
-          </dl>
-          <div class="uql-doc-example-row">
-            <button type="button" class="uql-doc-snippet-button" *ngFor="let snippet of slotPrefixDocSnippets" (click)="insertSnippet.emit(snippet.text)">
-              <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet, hidden: true }"></ng-container>
-            </button>
-          </div>
-        </section>
-
-        <section class="uql-doc-section">
-          <h6>White Category Totals</h6>
-          <p>Use readable field names with spaces; backend-style underscore names are not required in the editor.</p>
-          <dl class="uql-doc-table">
-            <div><dt>Common white count &gt;= 3</dt><dd>Minimum common white factors across the lineage.</dd></div>
-            <div><dt>Scenario white stars &gt;= 5</dt><dd>Minimum scenario-white total stars across the lineage.</dd></div>
-            <div><dt>Main race white count &gt;= 2</dt><dd>Minimum race whites on the main-parent slot.</dd></div>
-            <div><dt>Main common white stars &gt;= 4</dt><dd>Minimum common-white total stars on the main-parent slot.</dd></div>
-          </dl>
-        </section>
-
-        <section class="uql-doc-section">
-          <h6>White Skills And Array Fields</h6>
-          <p>Skill lists use array operators. Use <span class="uql-doc-inline-code">has</span> for one required skill or a comma list where every listed skill must exist, and use <span class="uql-doc-inline-code">in (...)</span> or <span class="uql-doc-inline-code">has any (...)</span> for at least one listed skill.</p>
-          <div class="uql-doc-code-block">
-            <div class="uql-doc-code-toolbar">
-              <span class="uql-doc-code-lang">uql</span>
-              <button
-                type="button"
-                class="uql-doc-copy-button"
-                [class.copied]="copiedDocBlock === 'white-skills'"
-                [attr.aria-label]="copiedDocBlock === 'white-skills' ? 'Copied white skill examples' : 'Copy white skill examples'"
-                (click)="copyDocSnippets(whiteSkillDocSnippets, 'white-skills')">
-                <mat-icon>{{ copiedDocBlock === 'white-skills' ? 'done' : 'content_copy' }}</mat-icon>
-                <span>{{ copiedDocBlock === 'white-skills' ? 'Copied' : 'Copy' }}</span>
-              </button>
-            </div>
-            <div class="uql-doc-code-lines">
-              <div class="uql-doc-code-line" *ngFor="let snippet of whiteSkillDocSnippets; let line = index">
-                <span class="uql-doc-code-line-number" aria-hidden="true">{{ line + 1 }}</span>
-                <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet }"></ng-container>
+          <div class="uql-doc-reference-list">
+            <details class="uql-doc-reference">
+              <summary>
+                <span><strong>Slots and operators</strong><small>Target a position and control how it matches</small></span>
+                <mat-icon>expand_more</mat-icon>
+              </summary>
+              <div class="uql-doc-reference-body">
+                <dl class="uql-doc-table uql-doc-table-compact">
+                  <div><dt>Main</dt><dd>Main or parent slot.</dd></div>
+                  <div><dt>GP1 / Left</dt><dd>Left great parent.</dd></div>
+                  <div><dt>GP2 / Right</dt><dd>Right great parent.</dd></div>
+                  <div><dt>GP / Any GP</dt><dd>Either great parent.</dd></div>
+                  <div><dt>= != &gt; &gt;= &lt; &lt;=</dt><dd>Compare a value, count, or star total.</dd></div>
+                  <div><dt>and / or / not</dt><dd>Require both, allow either, or exclude a condition.</dd></div>
+                  <div><dt>in (...) / not in (...)</dt><dd>Match any listed value, or exclude all listed values.</dd></div>
+                  <div><dt>has / has all (...)</dt><dd>Require one skill or every listed skill.</dd></div>
+                  <div><dt>has any (...)</dt><dd>Require at least one listed skill.</dd></div>
+                </dl>
+                <p>When mixing <span class="uql-doc-inline-code">and</span> with <span class="uql-doc-inline-code">or</span>, use parentheses: <span class="uql-doc-inline-code">(Speed &gt;= 3 or Stamina &gt;= 3) and Wins &gt;= 30</span>.</p>
               </div>
-            </div>
-          </div>
-          <p>Known skill names are treated as values, even when they contain words such as <span class="uql-doc-inline-code">and</span>, <span class="uql-doc-inline-code">or</span>, <span class="uql-doc-inline-code">in</span>, or <span class="uql-doc-inline-code">all</span>. Add <span class="uql-doc-inline-code">&gt;</span>, <span class="uql-doc-inline-code">&gt;=</span>, <span class="uql-doc-inline-code">=</span>, <span class="uql-doc-inline-code">&lt;=</span>, or <span class="uql-doc-inline-code">&lt;</span> after a skill name to filter a specific star level; leave it blank to match every star level. A bare <span class="uql-doc-inline-code">has Skill A, Skill B</span> list requires both skills; use <span class="uql-doc-inline-code">has any (...)</span> for a loose match.</p>
-        </section>
+            </details>
 
-        <section class="uql-doc-section">
-          <h6>Race Wins</h6>
-          <p>Race-win values autocomplete by race name, then compile to win-saddle IDs for backend comparison. <span class="uql-doc-inline-code">Race wins</span> targets the main parent wins; use <span class="uql-doc-inline-code">Main race wins</span>, <span class="uql-doc-inline-code">Left race wins</span>, or <span class="uql-doc-inline-code">Right race wins</span> for a specific slot.</p>
-          <dl class="uql-doc-table">
-            <div><dt>Race wins has Niigata Junior Stakes</dt><dd>Main parent won that race or an adjacent win-saddle group containing it.</dd></div>
-            <div><dt>Race wins has all (...)</dt><dd>Every listed race must be covered by a matching win saddle.</dd></div>
-            <div><dt>Left race wins in (...)</dt><dd>Any listed race may match the left great parent win saddles.</dd></div>
-          </dl>
-        </section>
-
-        <section class="uql-doc-section">
-          <h6>Optional And Lineage Sorting</h6>
-          <p>Use optional and lineage white filters when matching skills should influence result order. Add <span class="uql-doc-inline-code">priority = N</span>, <span class="uql-doc-inline-code">priority group = N</span>, <span class="uql-doc-inline-code">prio group = N</span>, or <span class="uql-doc-inline-code">group = N</span> inside the list to choose a priority group; group 0 is highest priority and higher groups tie-break later.</p>
-          <dl class="uql-doc-table">
-            <div><dt>optional white = ...</dt><dd>Requires and scores one global white skill match.</dd></div>
-            <div><dt>optional white in (...)</dt><dd>Requires and scores listed global white skill matches.</dd></div>
-            <div><dt>optional white in (..., priority = 0)</dt><dd>Puts these matches in the highest priority group.</dd></div>
-            <div><dt>optional white in (..., prio group = 0)</dt><dd>Uses the shorthand form for the highest priority group.</dd></div>
-            <div><dt>optional white in (..., priority group = 1)</dt><dd>Uses priority group 1 as a later tie-breaker.</dd></div>
-            <div><dt>optional main white in (...)</dt><dd>Requires and scores main parent white skill matches.</dd></div>
-            <div><dt>lineage white in (...)</dt><dd>Sorts by lineage-style white skill stacking.</dd></div>
-            <div><dt>lineage white in (..., group = 2)</dt><dd>Applies the same grouping syntax to lineage sorting.</dd></div>
-          </dl>
-        </section>
-
-        <section class="uql-doc-section">
-          <h6>Support Cards</h6>
-          <p>Support card names can be typed directly. Autocomplete adds rarity and type, such as <span class="uql-doc-inline-code">[SSR] (Speed)</span>. Use <span class="uql-doc-inline-code">limitbreak</span>, <span class="uql-doc-inline-code">limit break</span>, or <span class="uql-doc-inline-code">lb</span> for the minimum limit break.</p>
-          <dl class="uql-doc-table">
-            <div><dt>Support card = ...</dt><dd>The selected support card is in the deck.</dd></div>
-            <div><dt>Support card in (...)</dt><dd>Any listed support card is in the deck.</dd></div>
-            <div><dt>limitbreak &gt;= 4</dt><dd>At least one support card matches the limit-break rule.</dd></div>
-            <div><dt>Support card = ... and limitbreak &gt;= 4</dt><dd>The named support card must match the limit-break rule.</dd></div>
-          </dl>
-        </section>
-
-        <section class="uql-doc-section">
-          <h6>Characters, Trainers, And Logic</h6>
-          <p>Character names can be typed directly. <span class="uql-doc-inline-code">Characters in (...)</span> checks main, GP1, or GP2. Slot-scoped forms such as <span class="uql-doc-inline-code">GP1 character in (...)</span> check only that slot.</p>
-          <dl class="uql-doc-table">
-            <div><dt>Characters in (...)</dt><dd>Any main, GP1, or GP2 character matches.</dd></div>
-            <div><dt>Characters not in (...)</dt><dd>Main, GP1, and GP2 must all be outside the list.</dd></div>
-            <div><dt>GP characters in (...)</dt><dd>Either great parent character matches.</dd></div>
-            <div><dt>Parent character = ...</dt><dd>The selected main parent card or variant matches.</dd></div>
-          </dl>
-          <p>Trainer text supports <span class="uql-doc-inline-code">ilike</span> with <span class="uql-doc-inline-code">%</span> wildcards. Use parentheses whenever <span class="uql-doc-inline-code">and</span> and <span class="uql-doc-inline-code">or</span> appear together.</p>
-          <div class="uql-doc-code-block">
-            <div class="uql-doc-code-toolbar">
-              <span class="uql-doc-code-lang">uql</span>
-              <button
-                type="button"
-                class="uql-doc-copy-button"
-                [class.copied]="copiedDocBlock === 'logic'"
-                [attr.aria-label]="copiedDocBlock === 'logic' ? 'Copied logic examples' : 'Copy logic examples'"
-                (click)="copyDocSnippets(logicDocSnippets, 'logic')">
-                <mat-icon>{{ copiedDocBlock === 'logic' ? 'done' : 'content_copy' }}</mat-icon>
-                <span>{{ copiedDocBlock === 'logic' ? 'Copied' : 'Copy' }}</span>
-              </button>
-            </div>
-            <div class="uql-doc-code-lines">
-              <div class="uql-doc-code-line" *ngFor="let snippet of logicDocSnippets; let line = index">
-                <span class="uql-doc-code-line-number" aria-hidden="true">{{ line + 1 }}</span>
-                <ng-container *ngTemplateOutlet="uqlDocSnippetTemplate; context: { $implicit: snippet }"></ng-container>
+            <details class="uql-doc-reference">
+              <summary>
+                <span><strong>Skills, characters, and races</strong><small>Readable names, lists, and star levels</small></span>
+                <mat-icon>expand_more</mat-icon>
+              </summary>
+              <div class="uql-doc-reference-body">
+                <p>Type readable names and choose the correct autocomplete result. Quotes and backend IDs are usually unnecessary.</p>
+                <dl class="uql-doc-table uql-doc-table-compact">
+                  <div><dt>Main has Right-Handed ○</dt><dd>The main parent has this skill at any star level.</dd></div>
+                  <div><dt>White factors in (Skill A &gt; 3, Skill B)</dt><dd>Match either skill; the first also needs more than 3 stars.</dd></div>
+                  <div><dt>Characters in (...)</dt><dd>Any Main, GP1, or GP2 character is in the list.</dd></div>
+                  <div><dt>Race wins has all (...)</dt><dd>The main parent covers every listed race.</dd></div>
+                  <div><dt>Left race wins in (...)</dt><dd>The left great parent covers any listed race.</dd></div>
+                  <div><dt>Support card = ... and limitbreak &gt;= 4</dt><dd>The named support card is at least limit break 4.</dd></div>
+                  <div><dt>Trainer name ilike '%name%'</dt><dd>Case-insensitive text search; <span class="uql-doc-inline-code">%</span> is a wildcard.</dd></div>
+                </dl>
               </div>
-            </div>
+            </details>
+
+            <details class="uql-doc-reference">
+              <summary>
+                <span><strong>Editor tools and ranking</strong><small>Affinity context, owned legacies, and result order</small></span>
+                <mat-icon>expand_more</mat-icon>
+              </summary>
+              <div class="uql-doc-reference-body">
+                <p>These directives configure the editor or result order. They are not ordinary filter conditions.</p>
+                <dl class="uql-doc-table uql-doc-table-compact">
+                  <div><dt>target = Special Week</dt><dd>Set the affinity target.</dd></div>
+                  <div><dt>owned legacy = []</dt><dd>Open your legacy picker for affinity and race comparison.</dd></div>
+                  <div><dt>sort by = Total White stars</dt><dd>Sort by white star total.</dd></div>
+                  <div><dt>sort by = White skills amount</dt><dd>Sort by raw white skill count.</dd></div>
+                  <div><dt>optional white in (...)</dt><dd>Score and rank matching skills.</dd></div>
+                  <div><dt>lineage white in (...)</dt><dd>Rank by lineage-style skill stacking.</dd></div>
+                  <div><dt>priority = 0</dt><dd>Place a scoring group first; higher numbers break later ties.</dd></div>
+                </dl>
+                <p class="uql-doc-note"><mat-icon>lightbulb</mat-icon><span>Ranking changes which matches appear first. To make a match mandatory, write it as a normal condition.</span></p>
+              </div>
+            </details>
           </div>
         </section>
       </article>
@@ -256,6 +203,5 @@
       <span>{{ validationMessage || 'Type a field, pick an operator, then keep chaining with and/or.' }}</span>
       <span class="uql-key-hint">Ctrl+Space suggestions</span>
     </div>
-
   </div>
 </section>

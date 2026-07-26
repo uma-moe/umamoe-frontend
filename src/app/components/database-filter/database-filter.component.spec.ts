@@ -43,6 +43,9 @@ describe('DatabaseFilterComponent', () => {
     { id: '9003', text: 'Racing Spirit: Stamina +', type: 2 },
     { id: '9004', text: 'Racing Spirit: Wit', type: 2 },
     { id: '9005', text: 'Racing Spirit: Wit +', type: 2 },
+    { id: '9006', text: 'Groundwork', type: 2 },
+    { id: '9007', text: 'Ignited Spirit WIT', type: 2 },
+    { id: '9100', text: 'Visible Unique', type: 5 },
   ];
 
   const validate = (component: DatabaseFilterComponent, query: string): string => {
@@ -157,6 +160,30 @@ describe('DatabaseFilterComponent', () => {
         component,
         'Main Dirt >= 2 and Main has any (Racing Spirit: Stamina, Racing Spirit: Stamina +) and Main has any (Racing Spirit: Wit, Racing Spirit: Wit +) and Main has (Uma Stan)',
       );
+    });
+
+    it('compiles an explicit three-way skill match for every lineage slot', () => {
+      const component = createComponent();
+      (component as any).setFactorOptions(factors);
+
+      const compiled = validate(
+        component,
+        'Main has all (Groundwork, Ignited Spirit WIT) and GP1 has all (Groundwork, Ignited Spirit WIT) and GP2 has all (Groundwork, Ignited Spirit WIT)',
+      );
+
+      expect(compiled).toContain('main_white_factors');
+      expect(compiled).toContain('left_white_factors');
+      expect(compiled).toContain('right_white_factors');
+    });
+
+    it('exposes scoped green-factor properties in UQL autocomplete', () => {
+      const component = createComponent();
+
+      (component as any).setFactorOptions(factors);
+
+      expect(component.uqlSuggestions.some(suggestion =>
+        suggestion.kind === 'field' && suggestion.label === 'Main Visible Unique',
+      )).toBeTrue();
     });
 
     it('revalidates restored UQL when factor data becomes available', () => {
