@@ -2281,6 +2281,16 @@ body.christmas-theme {
   }
 }
 
+.optimal-races-dialog-panel {
+  .mat-mdc-dialog-container,
+  .mat-mdc-dialog-surface {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 94vh !important;
+    overflow: hidden !important;
+  }
+}
+
 .hidden-sparks-dialog-panel {
   .mat-mdc-dialog-container {
     --mdc-dialog-container-color: transparent;

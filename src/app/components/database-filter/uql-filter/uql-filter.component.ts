@@ -132,53 +132,12 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     this.createDocSnippet('Characters in (Special Week, Silence Suzuka)'),
     this.createDocSnippet('Support card = Kitasan Black [SSR] (Speed) and limitbreak >= 4')
   ];
-  protected readonly globalFactorDocSnippets = [
-    this.createDocSnippet('Speed >= 6'),
-    this.createDocSnippet('Dirt = 0'),
-    this.createDocSnippet('(Stamina + Power + Wit) >= 7'),
-    this.createDocSnippet('Wins % 2 = 0'),
-    this.createDocSnippet('Blue stars >= 9')
+  protected readonly threeWayMatchDocSnippets = [
+    this.createDocSnippet('Main has all (Groundwork, Ignited Spirit WIT) and GP1 has all (Groundwork, Ignited Spirit WIT) and GP2 has all (Groundwork, Ignited Spirit WIT)')
   ];
-  protected readonly specificSlotDocSnippets = [
-    this.createDocSnippet('Main Speed >= 3'),
-    this.createDocSnippet('GP1 Turf >= 2')
-  ];
-  protected readonly slotPrefixDocSnippets = [
-    this.createDocSnippet('Main Speed >= 3'),
-    this.createDocSnippet('GP Speed >= 3')
-  ];
-  protected readonly whiteSkillDocSnippets = [
-    this.createDocSnippet('Main has Right-Handed ○'),
-    this.createDocSnippet('GP has any (Right-Handed ○, Left-Handed ○)'),
-    this.createDocSnippet('White factors in (Speed Straight ○ > 3, Corner Recovery ○)'),
-    this.createDocSnippet('White factors contains all (Right-Handed ○, Left-Handed ○)'),
-    this.createDocSnippet('Great parent does not have Right-Handed ○'),
-    this.createDocSnippet('optional white = Right-Handed ○'),
-    this.createDocSnippet('optional white in (Right-Handed ○, Left-Handed ○)'),
-    this.createDocSnippet('optional white in (Right-Handed ○, Left-Handed ○, priority = 0)'),
-    this.createDocSnippet('optional white in (Right-Handed ○, Left-Handed ○, prio group = 0)'),
-    this.createDocSnippet('optional main white in (Right-Handed ○, Left-Handed ○, priority_group = 1)'),
-    this.createDocSnippet('lineage white in (Right-Handed ○, Left-Handed ○, group = 2)')
-  ];
-  protected readonly logicDocSnippets = [
-    this.createDocSnippet('Characters in (Special Week, Silence Suzuka)'),
-    this.createDocSnippet('GP1 character in (Special Week, Silence Suzuka)'),
-    this.createDocSnippet('GP characters not in (Special Week, Silence Suzuka)'),
-    this.createDocSnippet('Main character in (Special Week, Silence Suzuka)'),
-    this.createDocSnippet('Race wins has all (Niigata Junior Stakes)'),
-    this.createDocSnippet('affinity >= 150'),
-    this.createDocSnippet('Support card = Kitasan Black [SSR] (Speed)'),
-    this.createDocSnippet("Trainer name ilike '%name%'"),
-    this.createDocSnippet('(Speed >= 3 or Stamina >= 3) and Wins >= 30')
-  ];
-  protected copiedDocBlock = '';
   private readonly docSnippetGroups = [
     this.simplePredicateDocSnippets,
-    this.globalFactorDocSnippets,
-    this.specificSlotDocSnippets,
-    this.slotPrefixDocSnippets,
-    this.whiteSkillDocSnippets,
-    this.logicDocSnippets
+    this.threeWayMatchDocSnippets
   ];
   readonly suggestionItemSize = 30;
   private readonly maxSuggestionViewportHeight = 240;
@@ -191,7 +150,6 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   private suggestionMenuExplicit = false;
   private blurTimer: ReturnType<typeof setTimeout> | null = null;
   private placeholderTimer: ReturnType<typeof setTimeout> | null = null;
-  private docCopyTimer: ReturnType<typeof setTimeout> | null = null;
   private editorFocused = false;
   private placeholderStepIndex = 0;
   private placeholderCharIndex = 0;
@@ -271,41 +229,6 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.stopPlaceholderAnimation();
     this.clearBlurTimer();
-    this.clearDocCopyTimer();
-  }
-
-  protected copyDocSnippets(snippets: readonly UqlDocSnippet[], blockKey: string): void {
-    const text = snippets.map(snippet => snippet.text).join('\n');
-    const copyPromise = navigator.clipboard?.writeText
-      ? navigator.clipboard.writeText(text).catch(() => this.copyTextWithFallback(text))
-      : this.copyTextWithFallback(text);
-    copyPromise.then(() => {
-      this.copiedDocBlock = blockKey;
-      this.clearDocCopyTimer();
-      this.docCopyTimer = setTimeout(() => {
-        this.copiedDocBlock = '';
-      }, 1400);
-    });
-  }
-
-  private copyTextWithFallback(text: string): Promise<void> {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', 'true');
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    textarea.style.top = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-    return Promise.resolve();
-  }
-
-  private clearDocCopyTimer(): void {
-    if (!this.docCopyTimer) return;
-    clearTimeout(this.docCopyTimer);
-    this.docCopyTimer = null;
   }
 
   get lineNumbers(): number[] {
@@ -1765,15 +1688,14 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   }
 
   private expressionStartSuggestions(): UqlSuggestion[] {
-    return this.suggestions.filter(suggestion => (suggestion.kind === 'field' || suggestion.kind === 'keyword' || suggestion.kind === 'function' || suggestion.kind === 'snippet')
-      && this.isVisibleFieldSuggestion(suggestion));
+    return this.suggestions.filter(suggestion => suggestion.kind === 'field' || suggestion.kind === 'keyword' || suggestion.kind === 'function' || suggestion.kind === 'snippet');
   }
 
   private scopePrefixFieldSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
     const scopeToken = this.getTrailingScopeToken(prefix);
     if (!scopeToken) return [];
     return this.suggestions.filter(suggestion => {
-      if (suggestion.kind !== 'field' || !this.isVisibleFieldSuggestion(suggestion)) return false;
+      if (suggestion.kind !== 'field') return false;
       const scope = suggestion.scopeContext || this.inferSuggestionScopeContext(suggestion);
       if (scopeToken === 'main') return scope === 'main';
       if (scopeToken === 'gp1') return scope === 'gp1';
@@ -1834,12 +1756,6 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     return null;
   }
 
-  private isVisibleFieldSuggestion(suggestion: UqlSuggestion): boolean {
-    if (suggestion.kind !== 'field') return true;
-    if (suggestion.valueContext !== 'green-factor' && suggestion.valueContext !== 'white-factor') return true;
-    return !/max\s+3\s+stars\s+on\s+a\s+specific\s+slot/i.test(suggestion.detail || '');
-  }
-
   private isAfterBooleanKeyword(trimmedPrefix: string): boolean {
     return /(?:^|\s|\()(?:(?:and)|(?:or)|(?:not))$/i.test(trimmedPrefix);
   }
@@ -1862,7 +1778,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     if (!phraseToken) return false;
     const normalizedToken = this.normalizeSuggestionToken(phraseToken);
     return this._suggestions.some(suggestion => {
-      if ((suggestion.kind !== 'field' && suggestion.kind !== 'keyword' && suggestion.kind !== 'function' && suggestion.kind !== 'snippet') || !this.isVisibleFieldSuggestion(suggestion)) {
+      if (suggestion.kind !== 'field' && suggestion.kind !== 'keyword' && suggestion.kind !== 'function' && suggestion.kind !== 'snippet') {
         return false;
       }
       return this.getSuggestionMatchRank(suggestion, normalizedToken) !== null;
@@ -2106,7 +2022,6 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     const index: Array<{ fieldType?: UqlFieldType; phrases: string[] }> = [];
     for (const suggestion of this._suggestions) {
       if (suggestion.kind !== 'field') continue;
-      if (!this.isVisibleFieldSuggestion(suggestion)) continue;
       const raw = [suggestion.insertText, suggestion.label, ...(suggestion.matchPhrases || [])];
       const phrases: string[] = [];
       for (const value of raw) {

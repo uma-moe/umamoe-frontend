@@ -1673,10 +1673,10 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     });
     this.dialog.open(OptimalRacesDialogComponent, {
       data: { recommendations } as OptimalRacesDialogData,
-      panelClass: 'modern-dialog-panel',
-      width: '620px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
+      panelClass: ['modern-dialog-panel', 'optimal-races-dialog-panel'],
+      width: '1320px',
+      maxWidth: '96vw',
+      maxHeight: '94vh',
       autoFocus: false,
     });
   }

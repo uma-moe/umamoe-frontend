@@ -6594,7 +6594,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         valueContext: 'white-factor' as const,
         fieldType: 'array' as UqlFieldType
       })),
-      ...this.getScopedSparkFields().filter(field => field.valueContext !== 'green-factor').map(field => ({
+      ...this.getScopedSparkFields().map(field => ({
         label: field.label,
         insertText: field.label,
         kind: 'field' as const,

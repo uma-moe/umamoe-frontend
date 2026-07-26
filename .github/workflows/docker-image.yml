@@ -375,13 +375,19 @@ jobs:
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "set -e;
              mkdir -p '$REMOTE_SHELL_DIR' '$REMOTE_ASSETS_DIR/data';
-             chmod u+rwx '$REMOTE_ASSETS_DIR' '$REMOTE_ASSETS_DIR/data' 2>/dev/null || true;
-             if ! touch '$REMOTE_ASSETS_DIR/data/.rsync-write-test' 2>/dev/null; then
-               echo 'Remote assets data directory is not writable by the deploy user: $REMOTE_ASSETS_DIR/data' >&2;
-               echo 'Fix ownership on the server, for example: sudo chown -R $DEPLOY_USER $REMOTE_ASSETS_DIR/data' >&2;
-               exit 1;
+             if ! test -w '$REMOTE_ASSETS_DIR' || { test -d '$REMOTE_ASSETS_DIR/images' && ! test -w '$REMOTE_ASSETS_DIR/images'; }; then
+               docker run --rm -v '$REMOTE_ASSETS_DIR:/target' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target;
              fi;
-             rm -f '$REMOTE_ASSETS_DIR/data/.rsync-write-test'"
+             mkdir -p '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
+             chmod -R u+rwX '$REMOTE_ASSETS_DIR';
+             for writable_dir in '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images'; do
+               write_test=\"\$writable_dir/.rsync-write-test\";
+               if ! touch \"\$write_test\" 2>/dev/null; then
+                 echo \"Remote asset directory is not writable by the deploy user: \$writable_dir\" >&2;
+                 exit 1;
+               fi;
+               rm -f \"\$write_test\";
+             done"
 
       - name: Deploy beta shell bundle
         shell: bash
@@ -409,10 +415,7 @@ jobs:
             "${{ runner.temp }}/asset-site/data/precomputed-tierlist.json" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_ASSETS_DIR }}/data/"
           for relative_dir in \
-            images/character/banner \
-            images/support/banner \
-            images/paid/banner \
-            images/story \
+            images \
             timeline-images; do
             source_dir="${{ runner.temp }}/asset-site/${relative_dir}"
             if [[ -d "$source_dir" ]]; then
@@ -426,7 +429,7 @@ jobs:
           done
 
   deploy_production:
-    if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta'
+    if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta' && (github.ref_name == 'main' || github.ref_name == 'master')
     needs:
       - build
       - deploy_beta
@@ -686,13 +689,19 @@ jobs:
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "set -e;
              mkdir -p '$REMOTE_SHELL_DIR' '$REMOTE_ASSETS_DIR/data';
-             chmod u+rwx '$REMOTE_ASSETS_DIR' '$REMOTE_ASSETS_DIR/data' 2>/dev/null || true;
-             if ! touch '$REMOTE_ASSETS_DIR/data/.rsync-write-test' 2>/dev/null; then
-               echo 'Remote assets data directory is not writable by the deploy user: $REMOTE_ASSETS_DIR/data' >&2;
-               echo 'Fix ownership on the server, for example: sudo chown -R $DEPLOY_USER $REMOTE_ASSETS_DIR/data' >&2;
-               exit 1;
+             if ! test -w '$REMOTE_ASSETS_DIR' || { test -d '$REMOTE_ASSETS_DIR/images' && ! test -w '$REMOTE_ASSETS_DIR/images'; }; then
+               docker run --rm -v '$REMOTE_ASSETS_DIR:/target' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target;
              fi;
-             rm -f '$REMOTE_ASSETS_DIR/data/.rsync-write-test'"
+             mkdir -p '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
+             chmod -R u+rwX '$REMOTE_ASSETS_DIR';
+             for writable_dir in '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images'; do
+               write_test=\"\$writable_dir/.rsync-write-test\";
+               if ! touch \"\$write_test\" 2>/dev/null; then
+                 echo \"Remote asset directory is not writable by the deploy user: \$writable_dir\" >&2;
+                 exit 1;
+               fi;
+               rm -f \"\$write_test\";
+             done"
 
       - name: Deploy production shell bundle
         shell: bash
@@ -720,10 +729,7 @@ jobs:
             "${{ runner.temp }}/asset-site/data/precomputed-tierlist.json" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.PROD_REMOTE_ASSETS_DIR }}/data/"
           for relative_dir in \
-            images/character/banner \
-            images/support/banner \
-            images/paid/banner \
-            images/story \
+            images \
             timeline-images; do
             source_dir="${{ runner.temp }}/asset-site/${relative_dir}"
             if [[ -d "$source_dir" ]]; then
