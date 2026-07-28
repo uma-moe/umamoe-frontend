@@ -15,10 +15,11 @@ import {
   PlannerPullTiming,
   PlannerRewardEntry,
   PlannerTarget,
+  PlannerVariableRewardSelection,
 } from '../models/carat-planner.model';
 import {
   hasProjectableSourceItems,
-  isProjectableCompetitiveVariant,
+  isAutomaticCompetitiveVariant,
 } from '../utils/planner-reward-currencies';
 
 @Injectable({ providedIn: 'root' })
@@ -148,7 +149,7 @@ export class CaratPlannerPersistenceService {
           )
         );
         const eventVariants = competitiveVariants.filter(variant =>
-          variant.event_id === event.id && isProjectableCompetitiveVariant(variant));
+          variant.event_id === event.id && isAutomaticCompetitiveVariant(variant));
         const enabledRewardIds = new Set(plan.enabledRewardIds);
         const disabledRewardIds = new Set(plan.disabledRewardIds ?? []);
         const selectableIds = [
@@ -292,6 +293,7 @@ export class CaratPlannerPersistenceService {
       enabledRewardEventIds: [],
       disabledEventIds: [],
       scenarioSelections: {},
+      variableRewardSelections: {},
       freePullCampaignSelections: {},
       resourceDefaultsApplied: false,
       customIncome: [],
@@ -374,6 +376,7 @@ export class CaratPlannerPersistenceService {
       enabledRewardEventIds: this.stringArray(record['enabledRewardEventIds'], 5000),
       disabledEventIds: this.stringArray(record['disabledEventIds'], 5000),
       scenarioSelections: this.stringRecord(record['scenarioSelections']),
+      variableRewardSelections: this.sanitizeVariableRewardSelections(record['variableRewardSelections']),
       freePullCampaignSelections: this.stringRecord(record['freePullCampaignSelections']),
       resourceDefaultsApplied: record['resourceDefaultsApplied'] === true,
       customIncome: Array.isArray(record['customIncome'])
@@ -414,6 +417,30 @@ export class CaratPlannerPersistenceService {
       endDate: this.validDateKey(record['endDate']) || undefined,
       every: Math.max(1, this.nonNegativeInt(record['every']) || 1),
     };
+  }
+
+  private sanitizeVariableRewardSelections(value: unknown): Record<string, PlannerVariableRewardSelection> {
+    const record = this.asRecord(value);
+    if (!record) return {};
+    const selections: Record<string, PlannerVariableRewardSelection> = {};
+    for (const [eventId, rawSelection] of Object.entries(record).slice(0, 500)) {
+      const selection = this.asRecord(rawSelection);
+      const cleanEventId = this.cleanText(eventId, 160);
+      const optionId = this.cleanText(selection?.['optionId'], 200);
+      const label = this.cleanText(selection?.['label'], 240);
+      const availableAt = this.validDateKey(selection?.['availableAt']);
+      const amountsRecord = this.asRecord(selection?.['amounts']);
+      if (!cleanEventId || !optionId || !label || !availableAt || !amountsRecord) continue;
+      const amounts: Partial<Record<PlannerCurrency, number>> = {};
+      for (const currency of [
+        'free_jewels', 'paid_jewels', 'uma_ticket', 'support_ticket', 'rainbow_crystal', 'gold_crystal',
+      ] as const) {
+        const amount = Math.min(10_000_000, this.nonNegativeInt(amountsRecord[currency]));
+        if (amount > 0) amounts[currency] = amount;
+      }
+      selections[cleanEventId] = { optionId, label, availableAt, amounts };
+    }
+    return selections;
   }
 
   private sanitizeTarget(value: unknown): PlannerTarget | null {

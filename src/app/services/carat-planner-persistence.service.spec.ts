@@ -351,7 +351,7 @@ describe('CaratPlannerPersistenceService', () => {
     expect(service.activePlan.enabledRewardEventIds).toEqual(['crystal-campaign']);
   });
 
-  it('activates deterministic competitive rewards with their timeline event', () => {
+  it('keeps variable competitive rewards pending until the user selects a result', () => {
     const service = createService();
     const event = {
       id: 'legend-race-1021',
@@ -371,7 +371,7 @@ describe('CaratPlannerPersistenceService', () => {
 
     service.setEventActive(event, true, [], variants);
 
-    expect(service.activePlan.enabledRewardIds).toEqual(['legend-clear']);
+    expect(service.activePlan.enabledRewardIds).toEqual([]);
     expect(service.activePlan.enabledRewardEventIds).toEqual(['legend-race-1021']);
     expect(service.isEventActive(event.id)).toBeTrue();
   });

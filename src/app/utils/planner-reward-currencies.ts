@@ -1,8 +1,17 @@
 import {
   PlannerCompetitiveRewardVariant,
   PlannerCurrency,
+  PlannerRewardEntry,
   PlannerSourceItem,
 } from '../models/carat-planner.model';
+
+export interface PlannerRewardBundle {
+  id: string;
+  eventId?: string;
+  label: string;
+  availableAt: string;
+  totals: Map<PlannerCurrency, number>;
+}
 
 export function plannerCurrencyForSourceItem(
   item: Pick<PlannerSourceItem, 'item_category' | 'item_id'>,
@@ -16,13 +25,73 @@ export function plannerCurrencyForSourceItem(
 }
 
 export function plannerSourceItemAmount(
-  item: Pick<PlannerSourceItem, 'amount' | 'mission_count'>,
+  item: Pick<PlannerSourceItem, 'amount'>,
 ): number {
-  const amount = Number.isFinite(item.amount) ? Math.max(0, Math.trunc(item.amount)) : 0;
-  const missions = Number.isFinite(item.mission_count)
-    ? Math.max(1, Math.trunc(item.mission_count ?? 1))
-    : 1;
-  return amount * missions;
+  // Generated mission source rows already contain SUM(item_num). mission_count
+  // describes how many missions contributed to that sum; it is not a multiplier.
+  return Number.isFinite(item.amount) ? Math.max(0, Math.trunc(item.amount)) : 0;
+}
+
+/**
+ * Collapses the generator's sibling rows for one structured reward bundle.
+ * Older artifacts copied the same source_items array onto every currency row,
+ * so consuming source_items per row could count crystals two or four times.
+ */
+export function plannerRewardBundles(
+  rewards: readonly PlannerRewardEntry[],
+): PlannerRewardBundle[] {
+  const grouped = new Map<string, PlannerRewardEntry[]>();
+  for (const reward of rewards) {
+    const baseId = reward.id.replace(
+      /-(?:free_jewels|paid_jewels|uma_ticket|support_ticket|rainbow_crystal|gold_crystal|items)$/,
+      '',
+    );
+    const key = `${reward.event_id ?? ''}|${reward.available_at}|${baseId}`;
+    const rows = grouped.get(key) ?? [];
+    rows.push(reward);
+    grouped.set(key, rows);
+  }
+
+  return [...grouped.values()].map(rows => {
+    const totals = new Map<PlannerCurrency, number>();
+    const represented = new Set<PlannerCurrency>();
+    const sourceItems = new Map<string, PlannerSourceItem>();
+
+    for (const reward of rows) {
+      const amount = Number.isFinite(reward.amount) ? Math.trunc(Number(reward.amount)) : 0;
+      if (amount !== 0) {
+        totals.set(reward.currency, (totals.get(reward.currency) ?? 0) + amount);
+        represented.add(reward.currency);
+      }
+      for (const item of reward.source_items ?? []) {
+        const itemKey = [
+          item.item_category,
+          item.item_id,
+          item.amount,
+          item.mission_count ?? '',
+          item.order_min ?? '',
+          item.order_max ?? '',
+          item.bonus ?? '',
+        ].join(':');
+        sourceItems.set(itemKey, item);
+      }
+    }
+
+    for (const [currency, amount] of plannerSourceItemTotals([...sourceItems.values()])) {
+      if (!represented.has(currency)) totals.set(currency, (totals.get(currency) ?? 0) + amount);
+    }
+
+    return {
+      id: rows[0].id.replace(
+        /-(?:free_jewels|paid_jewels|uma_ticket|support_ticket|rainbow_crystal|gold_crystal|items)$/,
+        '',
+      ),
+      eventId: rows[0]?.event_id,
+      label: rows[0]?.label ?? 'Event rewards',
+      availableAt: rows[0]?.available_at ?? '',
+      totals,
+    };
+  });
 }
 
 export function plannerSourceItemTotals(
@@ -43,14 +112,17 @@ export function hasProjectableSourceItems(items: readonly PlannerSourceItem[] | 
 }
 
 /**
- * Competitive master rows are cumulative/per-opponent for every currently
- * extracted competition except Champions Meeting, whose rows are alternative
- * placements and therefore cannot safely be added to a balance automatically.
+ * Whether a competitive row contains resources the planner understands. These
+ * rows are selectable outcomes; they must not all be added automatically.
  */
 export function isProjectableCompetitiveVariant(
   variant: Pick<PlannerCompetitiveRewardVariant, 'competition' | 'default_enabled' | 'source_items'>,
 ): boolean {
-  return variant.competition !== 'champions_meeting'
-    && variant.default_enabled !== false
-    && hasProjectableSourceItems(variant.source_items);
+  return hasProjectableSourceItems(variant.source_items);
+}
+
+export function isAutomaticCompetitiveVariant(
+  variant: Pick<PlannerCompetitiveRewardVariant, 'default_enabled' | 'source_items'>,
+): boolean {
+  return variant.default_enabled === true && hasProjectableSourceItems(variant.source_items);
 }

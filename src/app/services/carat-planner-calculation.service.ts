@@ -16,10 +16,8 @@ import {
   PlannerTargetProjection,
 } from '../models/carat-planner.model';
 import {
-  isProjectableCompetitiveVariant,
-  plannerSourceItemTotals,
+  plannerRewardBundles,
 } from '../utils/planner-reward-currencies';
-import { timelineEventMasterId } from '../utils/timeline-event-image';
 import { CaratPullProbabilityService } from './carat-pull-probability.service';
 
 const DAY_MS = 86_400_000;
@@ -159,31 +157,19 @@ export class CaratPlannerCalculationService {
       ledger.push(...this.expandRule(rule, startDate, endDate));
     }
 
-    for (const reward of data.rewards.rewards ?? []) {
-      if (!enabledRewards.has(reward.id)
-        || (reward.event_id ? disabledEvents.has(reward.event_id) : false)) continue;
-      const date = this.toDateKey(reward.available_at);
+    const activeRewards = (data.rewards.rewards ?? []).filter(reward =>
+      enabledRewards.has(reward.id)
+      && !(reward.event_id ? disabledEvents.has(reward.event_id) : false));
+    for (const bundle of plannerRewardBundles(activeRewards)) {
+      const date = this.toDateKey(bundle.availableAt);
       if (!date || date < startDate || date > endDate) {
         continue;
       }
-      const hasTopLevelAmount = Number.isFinite(reward.amount) && (reward.amount ?? 0) !== 0;
-      if (hasTopLevelAmount) {
-        ledger.push({
-          id: `reward:${reward.id}`,
-          label: reward.label,
-          date,
-          currency: reward.currency,
-          amount: Math.trunc(reward.amount ?? 0),
-          source: 'reward',
-        });
-      }
-
-      for (const [currency, amount] of plannerSourceItemTotals(reward.source_items ?? [])) {
-        if (hasTopLevelAmount && reward.currency === currency) continue;
+      for (const [currency, amount] of bundle.totals) {
         if (amount === 0) continue;
         ledger.push({
-          id: `reward:${reward.id}:${currency}`,
-          label: reward.label,
+          id: `reward:${bundle.id}:${currency}`,
+          label: bundle.label,
           date,
           currency,
           amount,
@@ -192,17 +178,17 @@ export class CaratPlannerCalculationService {
       }
     }
 
-    for (const variant of data.rewards.competitive_variants ?? []) {
-      if (!enabledRewards.has(variant.id)
-        || disabledEvents.has(variant.event_id)
-        || !isProjectableCompetitiveVariant(variant)) continue;
-      const date = this.competitiveVariantDate(variant, events);
+    for (const [eventId, selection] of Object.entries(plan.variableRewardSelections ?? {})) {
+      if (disabledEvents.has(eventId)) continue;
+      const date = this.toDateKey(selection.availableAt)
+        || this.competitiveEventDate(eventId, events);
       if (!date || date < startDate || date > endDate) continue;
-      for (const [currency, amount] of plannerSourceItemTotals(variant.source_items ?? [])) {
+      for (const [currency, rawAmount] of Object.entries(selection.amounts) as [PlannerCurrency, number][]) {
+        const amount = this.nonNegativeInt(rawAmount);
         if (amount <= 0) continue;
         ledger.push({
-          id: `competitive:${variant.id}:${currency}`,
-          label: variant.label,
+          id: `competitive:${eventId}:${selection.optionId}:${currency}`,
+          label: selection.label,
           date,
           currency,
           amount,
@@ -518,6 +504,8 @@ export class CaratPlannerCalculationService {
       disabledRewardIds: [...new Set(plan.disabledRewardIds ?? [])].sort(),
       disabledEventIds: [...new Set(plan.disabledEventIds ?? [])].sort(),
       scenarios,
+      variableRewardSelections: Object.entries(plan.variableRewardSelections ?? {})
+        .sort(([left], [right]) => left.localeCompare(right)),
       freePullCampaignSelections,
       customIncome,
       dataToken: this.objectToken(data),
@@ -526,16 +514,13 @@ export class CaratPlannerCalculationService {
     });
   }
 
-  private competitiveVariantDate(
-    variant: { event_id: string; master_event_id: number; competition: string; available_at?: string },
+  private competitiveEventDate(
+    eventId: string,
     events: readonly CaratPlannerTimelineEvent[],
   ): string {
-    const explicit = this.toDateKey(variant.available_at);
-    if (explicit) return explicit;
-    const event = events.find(item => item.id === variant.event_id)
-      ?? events.find(item => item.type === variant.competition
-        && timelineEventMasterId(item.id) === variant.master_event_id);
-    return this.toDateKey(event?.globalReleaseDate ?? event?.estimatedGlobalDate ?? event?.jpReleaseDate);
+    const event = events.find(item => item.id === eventId);
+    return this.toDateKey(event?.estimatedEndDate)
+      || this.toDateKey(event?.globalReleaseDate ?? event?.estimatedGlobalDate ?? event?.jpReleaseDate);
   }
 
   private resolveFreePullCampaigns(

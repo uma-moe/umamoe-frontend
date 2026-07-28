@@ -234,6 +234,14 @@ export interface PlannerCustomIncome {
   every?: number;
 }
 
+/** A user-selected outcome for an event whose rewards depend on performance. */
+export interface PlannerVariableRewardSelection {
+  optionId: string;
+  label: string;
+  availableAt: string;
+  amounts: Partial<Record<PlannerCurrency, number>>;
+}
+
 export type PlannerPullTiming = 'start' | 'end' | 'custom';
 
 export interface PlannerPickupGoal {
@@ -282,6 +290,8 @@ export interface CaratPlan {
   enabledRewardEventIds: string[];
   disabledEventIds?: string[];
   scenarioSelections: Record<string, string>;
+  /** Event id -> selected competitive result and the resulting projected resources. */
+  variableRewardSelections?: Record<string, PlannerVariableRewardSelection>;
   /** Optional campaign -> destination event override. Missing means use the published default schedule. */
   freePullCampaignSelections?: Record<string, string>;
   resourceDefaultsApplied?: boolean;
