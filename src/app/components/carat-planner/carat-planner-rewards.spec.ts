@@ -75,12 +75,16 @@ describe('CaratPlannerComponent reward coverage', () => {
     expect(missionGroup?.imagePath).toBe('/assets/team-event.webp');
     expect(missionGroup?.benefits.map(benefit => [benefit.kind, benefit.amount])).toEqual([
       ['uma_ticket', 1],
-      ['carats', 200],
+      ['carats', 100],
     ]);
     expect(legendGroup?.imagePath).toBe('assets/timeline-images/jp/events/legend-race/1021.webp');
     expect(legendGroup?.benefits.map(benefit => [benefit.kind, benefit.amount])).toEqual([
-      ['carats', 150],
+      ['competitive_outcomes', null],
     ]);
-    expect(component.plan.enabledRewardIds).toEqual(['legend-clear', 'team-missions']);
+    expect(legendGroup?.variableOptions[0]).toEqual(jasmine.objectContaining({
+      id: 'legend-clear',
+      amountLabel: '150 Carats',
+    }));
+    expect(component.plan.enabledRewardIds).toEqual(['team-missions']);
   });
 });

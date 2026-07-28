@@ -1,9 +1,12 @@
 import { PlannerRewardResource } from '../models/carat-planner.model';
+import { plannerRewardBundles } from './planner-reward-currencies';
 
 export interface TimelineRewardSummary {
   eventId: string;
   carats: number;
   tickets: number;
+  rainbowCrystals: number;
+  goldCrystals: number;
   freePulls: number;
   selectors: number;
   label: string;
@@ -40,6 +43,7 @@ export interface TimelineRewardOutcomeItem {
   key: string;
   label: string;
   countLabel: string;
+  amount: number;
   icon: string;
   iconPath?: string;
 }
@@ -48,6 +52,8 @@ export type TimelineRewardItemKind =
   | 'carats'
   | 'uma_ticket'
   | 'support_ticket'
+  | 'rainbow_crystal'
+  | 'gold_crystal'
   | 'free_pulls'
   | 'trainee_selector'
   | 'support_selector';
@@ -65,6 +71,8 @@ interface MutableRewardSummary {
   carats: number;
   umaTickets: number;
   supportTickets: number;
+  rainbowCrystals: number;
+  goldCrystals: number;
   freePulls: number;
   selectorItems: Map<string, MutableSelectorReward>;
   variableOutcomeIds: Set<string>;
@@ -143,6 +151,8 @@ export function buildTimelineRewardSummaries(
       carats: 0,
       umaTickets: 0,
       supportTickets: 0,
+      rainbowCrystals: 0,
+      goldCrystals: 0,
       freePulls: 0,
       selectorItems: new Map(),
       variableOutcomeIds: new Set(),
@@ -156,15 +166,15 @@ export function buildTimelineRewardSummaries(
     return created;
   };
 
-  for (const reward of resource.rewards ?? []) {
-    if (!reward.event_id || !Number.isFinite(reward.amount) || Number(reward.amount) <= 0) continue;
-    const summary = summaryFor(reward.event_id);
-    if (reward.currency === 'free_jewels' || reward.currency === 'paid_jewels') {
-      summary.carats += Number(reward.amount);
-    } else if (reward.currency === 'uma_ticket') {
-      summary.umaTickets += Number(reward.amount);
-    } else if (reward.currency === 'support_ticket') {
-      summary.supportTickets += Number(reward.amount);
+  for (const bundle of plannerRewardBundles(resource.rewards ?? [])) {
+    if (!bundle.eventId) continue;
+    const summary = summaryFor(bundle.eventId);
+    for (const [currency, amount] of bundle.totals) {
+      if (currency === 'free_jewels' || currency === 'paid_jewels') summary.carats += amount;
+      else if (currency === 'uma_ticket') summary.umaTickets += amount;
+      else if (currency === 'support_ticket') summary.supportTickets += amount;
+      else if (currency === 'rainbow_crystal') summary.rainbowCrystals += amount;
+      else if (currency === 'gold_crystal') summary.goldCrystals += amount;
     }
   }
 
@@ -243,6 +253,8 @@ export function buildTimelineRewardSummaries(
     const parts: string[] = [];
     if (total.carats > 0) parts.push(`${INTEGER_FORMATTER.format(total.carats)} Carats`);
     if (tickets > 0) parts.push(`${INTEGER_FORMATTER.format(tickets)} ${tickets === 1 ? 'ticket' : 'tickets'}`);
+    if (total.rainbowCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(total.rainbowCrystals)} rainbow LB`);
+    if (total.goldCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(total.goldCrystals)} gold LB`);
     if (total.freePulls > 0) parts.push(`${INTEGER_FORMATTER.format(total.freePulls)} free pulls`);
     if (selectors > 0) parts.push(`${INTEGER_FORMATTER.format(selectors)} ${selectors === 1 ? 'selector' : 'selectors'}`);
     const variableOutcomeCount = total.variableOutcomes.length;
@@ -268,6 +280,12 @@ export function buildTimelineRewardSummaries(
         REWARD_ITEM_IDS.support_ticket,
       ));
     }
+    if (total.rainbowCrystals > 0) {
+      items.push(rewardItem('rainbow_crystal', total.rainbowCrystals, 'rainbow LB crystals', REWARD_ITEM_IDS.rainbow_crystal));
+    }
+    if (total.goldCrystals > 0) {
+      items.push(rewardItem('gold_crystal', total.goldCrystals, 'gold LB crystals', REWARD_ITEM_IDS.gold_crystal));
+    }
     if (total.freePulls > 0) {
       // The event card swaps this to the support ticket asset for support banners.
       items.push(rewardItem('free_pulls', total.freePulls, 'free pulls', REWARD_ITEM_IDS.uma_ticket, ' pulls'));
@@ -289,6 +307,8 @@ export function buildTimelineRewardSummaries(
         eventId,
         carats: total.carats,
         tickets,
+        rainbowCrystals: total.rainbowCrystals,
+        goldCrystals: total.goldCrystals,
         freePulls: total.freePulls,
         selectors,
         label,
@@ -388,7 +408,7 @@ function competitiveTotalsToPreview(totals: Map<string, MutableCompetitiveTotal>
     .map(([key, item]) => previewItem(key, item.label, INTEGER_FORMATTER.format(item.amount), item.icon, item.iconPath));
 }
 
-function classicChampionsFinalOutcomes(): TimelineRewardOutcome[] {
+export function classicChampionsFinalOutcomes(): TimelineRewardOutcome[] {
   return [
     championsFinalOutcome('Graded · Group A · 1st', 2500, 5, 5, 30, 100000, 25000),
     championsFinalOutcome('Graded · Group A · 2nd', 1800, 4, 4, 25, 70000, 20000),
@@ -429,7 +449,7 @@ function championsFinalOutcome(
   return { key: `cm-${label}`, label, items };
 }
 function outcomeItem(key: string, label: string, amount: number, icon: string, iconPath?: string): TimelineRewardOutcomeItem {
-  return { key, label, countLabel: INTEGER_FORMATTER.format(amount), icon, iconPath };
+  return { key, label, amount, countLabel: INTEGER_FORMATTER.format(amount), icon, iconPath };
 }
 function groupChampionsOutcome(summary: MutableRewardSummary, variantId: string, label: string): boolean {
   const match = /^League\s+(\d+)\s*·\s*Round\s+(\d+)\s*·\s*(\d+)\s+wins(?:\s*·\s*Rank\s+(\d+))?$/i.exec(label);
@@ -501,6 +521,7 @@ function competitiveOutcomeItems(
   return [...totals.entries()].map(([key, item]) => ({
     key,
     label: item.label,
+    amount: item.amount,
     countLabel: INTEGER_FORMATTER.format(item.amount),
     icon: item.icon,
     iconPath: item.iconPath,

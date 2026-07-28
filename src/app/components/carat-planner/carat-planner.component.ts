@@ -11,13 +11,10 @@ import {
   Optional,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ScrollingModule } from '@angular/cdk/scrolling';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subject, takeUntil } from 'rxjs';
 import {
@@ -45,9 +42,12 @@ import {
 } from '../../models/carat-planner.model';
 import {
   hasProjectableSourceItems,
+  isAutomaticCompetitiveVariant,
   isProjectableCompetitiveVariant,
+  plannerRewardBundles,
   plannerSourceItemTotals,
 } from '../../utils/planner-reward-currencies';
+import { classicChampionsFinalOutcomes } from '../../utils/planner-reward-summary';
 import {
   resolveBundledTimelineEventImagePath,
   timelineEventMasterId,
@@ -132,6 +132,13 @@ interface PlannerRewardBenefitView {
   plannerEffect: string;
 }
 
+interface PlannerVariableRewardOptionView {
+  id: string;
+  label: string;
+  amountLabel: string;
+  amounts: Partial<Record<PlannerCurrency, number>>;
+}
+
 interface PlannerRewardGroupView {
   id: string;
   eventId?: string;
@@ -142,6 +149,7 @@ interface PlannerRewardGroupView {
   sourceLabel?: string;
   rewards: readonly PlannerRewardEntry[];
   competitiveVariants: readonly PlannerCompetitiveRewardVariant[];
+  variableOptions: readonly PlannerVariableRewardOptionView[];
   eventBenefits: readonly PlannerEventBenefit[];
   benefits: readonly PlannerRewardBenefitView[];
   visibleBenefits: readonly PlannerRewardBenefitView[];
@@ -198,13 +206,10 @@ type FreePullCampaignChoice = 'schedule' | 'stock';
   imports: [
     CommonModule,
     FormsModule,
-    ScrollingModule,
     MatButtonModule,
     MatCheckboxModule,
-    MatFormFieldModule,
     MatIconModule,
     MatProgressBarModule,
-    MatSelectModule,
     MatTooltipModule,
   ],
   templateUrl: './carat-planner.component.html',
@@ -526,22 +531,20 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (group.isPast) return false;
     if (group.eventId && (this.plan.disabledEventIds ?? []).includes(group.eventId)) return false;
     const selectableRewards = group.rewards.filter(reward => this.hasProjectableReward(reward));
-    const selectableVariants = group.competitiveVariants.filter(variant => isProjectableCompetitiveVariant(variant));
     const hasTrackedInformationalBenefit = group.eventBenefits.some(benefit =>
       benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector');
-    if (selectableRewards.length === 0 && selectableVariants.length === 0 && !hasTrackedInformationalBenefit) return false;
+    const variableActive = Boolean(group.eventId && this.plan.variableRewardSelections?.[group.eventId]);
+    if (selectableRewards.length === 0 && !hasTrackedInformationalBenefit) return variableActive;
     const rewardsActive = selectableRewards.length === 0
       || selectableRewards.every(reward => this.isRewardActive(reward));
-    const variantsActive = selectableVariants.length === 0
-      || selectableVariants.every(variant => this.plan.enabledRewardIds.includes(variant.id));
     const informationalActive = !hasTrackedInformationalBenefit
       || Boolean(group.eventId && (this.plan.enabledRewardEventIds ?? []).includes(group.eventId));
-    return rewardsActive && variantsActive && informationalActive;
+    return rewardsActive && informationalActive;
   }
 
   isRewardGroupSelectable(group: PlannerRewardGroupView): boolean {
     const hasLedgerReward = group.rewards.some(reward => this.hasProjectableReward(reward))
-      || group.competitiveVariants.some(variant => isProjectableCompetitiveVariant(variant));
+      || group.competitiveVariants.some(variant => isAutomaticCompetitiveVariant(variant));
     const hasSelector = group.eventBenefits.some(benefit =>
       benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector');
     return hasLedgerReward || hasSelector;
@@ -605,9 +608,35 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   isRewardGroupLinkedToPlan(group: PlannerRewardGroupView): boolean {
-    return group.eventBenefits.some(benefit =>
+    return Boolean(group.eventId && this.plan.variableRewardSelections?.[group.eventId])
+      || group.eventBenefits.some(benefit =>
       benefit.kind === 'free_pulls' && Number(benefit.amount) > 0)
       && this.isRewardGroupBannerPlanned(group);
+  }
+
+  selectedVariableRewardOptionId(group: PlannerRewardGroupView): string {
+    return group.eventId ? this.plan.variableRewardSelections?.[group.eventId]?.optionId ?? '' : '';
+  }
+
+  setVariableRewardSelection(group: PlannerRewardGroupView, optionId: string): void {
+    if (!group.eventId) return;
+    const selections = { ...(this.plan.variableRewardSelections ?? {}) };
+    const option = group.variableOptions.find(item => item.id === optionId);
+    if (!option) {
+      delete selections[group.eventId];
+    } else {
+      const event = this.allEvents.find(item => item.id === group.eventId);
+      selections[group.eventId] = {
+        optionId: option.id,
+        label: `${group.title}: ${option.label}`,
+        availableAt: this.optionalDateKey(event?.estimatedEndDate) ?? group.availableAt,
+        amounts: { ...option.amounts },
+      };
+      this.plan.disabledEventIds = (this.plan.disabledEventIds ?? [])
+        .filter(eventId => eventId !== group.eventId);
+    }
+    this.plan.variableRewardSelections = selections;
+    this.save();
   }
 
   freePullCampaignScheduleLabel(campaign: PlannerFreePullCampaignView): string {
@@ -945,7 +974,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         enabled ? disabledRewardIds.delete(reward.id) : disabledRewardIds.add(reward.id);
       }
       for (const variant of group.competitiveVariants) {
-        if (!isProjectableCompetitiveVariant(variant)) continue;
+        if (!isAutomaticCompetitiveVariant(variant)) continue;
         enabled ? rewardIds.add(variant.id) : rewardIds.delete(variant.id);
         enabled ? disabledRewardIds.delete(variant.id) : disabledRewardIds.add(variant.id);
       }
@@ -1330,7 +1359,13 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           ? group.competitiveVariants
           : group.competitiveVariants.filter(variant =>
             this.isRewardDateUsable(variant.available_at ?? eventDate ?? '', projectionStart));
-        const benefits = this.buildRewardBenefitViews(applicableRewards, applicableBenefits, applicableVariants);
+        const variableOptions = this.buildVariableRewardOptions(applicableVariants);
+        const benefits = this.buildRewardBenefitViews(
+          group.eventId,
+          applicableRewards,
+          applicableBenefits,
+          variableOptions,
+        );
         const source = this.rewardGroupSource(applicableRewards, applicableBenefits);
         const title = this.cleanRewardLabel((event ? this.rewardEventDisplayTitle(event) : undefined)
           ?? group.rewards[0]?.label
@@ -1351,6 +1386,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           sourceLabel: source?.label,
           rewards: applicableRewards,
           competitiveVariants: applicableVariants,
+          variableOptions,
           eventBenefits: applicableBenefits,
           benefits,
           visibleBenefits: benefits,
@@ -1458,9 +1494,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   private buildRewardBenefitViews(
+    eventId: string | undefined,
     rewards: readonly PlannerRewardEntry[],
     eventBenefits: readonly PlannerEventBenefit[],
-    competitiveVariants: readonly PlannerCompetitiveRewardVariant[],
+    variableOptions: readonly PlannerVariableRewardOptionView[],
   ): PlannerRewardBenefitView[] {
     const benefits: PlannerRewardBenefitView[] = eventBenefits.map(benefit => ({
       id: benefit.id,
@@ -1478,18 +1515,13 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       const kind = this.rewardKindForCurrency(currency);
       totals.set(kind, (totals.get(kind) ?? 0) + amount);
     };
-    for (const reward of rewards) {
-      const hasTopLevelAmount = Number.isFinite(reward.amount) && Number(reward.amount) > 0;
-      if (hasTopLevelAmount) {
-        addCurrency(reward.currency, Number(reward.amount));
-      }
-      for (const [currency, amount] of plannerSourceItemTotals(reward.source_items ?? [])) {
-        if (!hasTopLevelAmount || currency !== reward.currency) addCurrency(currency, amount);
-      }
+    for (const bundle of plannerRewardBundles(rewards)) {
+      for (const [currency, amount] of bundle.totals) addCurrency(currency, amount);
     }
-    for (const variant of competitiveVariants.filter(item => isProjectableCompetitiveVariant(item))) {
-      for (const [currency, amount] of plannerSourceItemTotals(variant.source_items ?? [])) {
-        addCurrency(currency, amount);
+    const selection = eventId ? this.plan.variableRewardSelections?.[eventId] : undefined;
+    if (selection) {
+      for (const [currency, amount] of Object.entries(selection.amounts) as [PlannerCurrency, number][]) {
+        addCurrency(currency, Number(amount));
       }
     }
     for (const [kind, amount] of totals) {
@@ -1504,14 +1536,13 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         plannerEffect: 'ledger',
       });
     }
-    if (competitiveVariants.length > 0
-      && !competitiveVariants.some(variant => isProjectableCompetitiveVariant(variant))) {
+    if (variableOptions.length > 0 && !selection) {
       benefits.push({
         id: 'competitive-outcomes',
         kind: 'competitive_outcomes',
         label: 'Rewards vary by result',
         amount: null,
-        text: 'Rewards vary by result',
+        text: 'Choose expected result',
         icon: 'emoji_events',
         plannerEffect: 'informational',
       });
@@ -1528,6 +1559,91 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       });
     }
     return benefits.sort((left, right) => this.rewardBenefitOrder(left.kind) - this.rewardBenefitOrder(right.kind));
+  }
+
+  private buildVariableRewardOptions(
+    variants: readonly PlannerCompetitiveRewardVariant[],
+  ): PlannerVariableRewardOptionView[] {
+    const projectable = variants.filter(variant => isProjectableCompetitiveVariant(variant));
+    if (variants[0]?.competition === 'champions_meeting') {
+      return classicChampionsFinalOutcomes().map(outcome => {
+        const amounts: Partial<Record<PlannerCurrency, number>> = {};
+        for (const item of outcome.items) {
+          const currency = this.outcomeItemCurrency(item.key);
+          if (currency) amounts[currency] = (amounts[currency] ?? 0) + item.amount;
+        }
+        return { id: outcome.key, label: outcome.label, amountLabel: this.variableAmountLabel(amounts), amounts };
+      });
+    }
+    if (projectable.length === 0) return [];
+
+    const missionVariants = projectable.filter(variant => /event missions/i.test(variant.label));
+    const resultVariants = projectable
+      .filter(variant => !missionVariants.includes(variant))
+      .sort((left, right) => this.competitiveOutcomeOrder(left) - this.competitiveOutcomeOrder(right)
+        || left.label.localeCompare(right.label));
+    const totals: Partial<Record<PlannerCurrency, number>> = {};
+    const options = resultVariants.map((variant, index) => {
+      for (const [currency, amount] of plannerSourceItemTotals(variant.source_items)) {
+        totals[currency] = (totals[currency] ?? 0) + amount;
+      }
+      const amounts = { ...totals };
+      const label = variant.competition === 'legend_race'
+        ? `${index + 1} ${index === 0 ? 'opponent' : 'opponents'} cleared`
+        : this.cleanCompetitiveOutcomeLabel(variant.label);
+      return { id: variant.id, label, amountLabel: this.variableAmountLabel(amounts), amounts };
+    });
+
+    if (missionVariants.length > 0) {
+      const amounts = { ...totals };
+      for (const mission of missionVariants) {
+        for (const [currency, amount] of plannerSourceItemTotals(mission.source_items)) {
+          amounts[currency] = (amounts[currency] ?? 0) + amount;
+        }
+      }
+      options.push({
+        id: missionVariants.map(variant => variant.id).join('+'),
+        label: 'All milestones + event missions',
+        amountLabel: this.variableAmountLabel(amounts),
+        amounts,
+      });
+    }
+    return options;
+  }
+
+  private competitiveOutcomeOrder(variant: PlannerCompetitiveRewardVariant): number {
+    const rangeStart = Number(variant.label.match(/\((\d+)(?:-|\s)/)?.[1]);
+    if (Number.isFinite(rangeStart)) return rangeStart;
+    const rank = Number(variant.label.match(/(?:Team rank|rank)\s+(\d+)/i)?.[1]);
+    if (Number.isFinite(rank)) return rank;
+    return Number(variant.source_items[0]?.order_min) || Number.MAX_SAFE_INTEGER;
+  }
+
+  private cleanCompetitiveOutcomeLabel(label: string): string {
+    return label
+      .replace(/^League rank type\s+\d+,\s*/i, '')
+      .replace(/\s*\((?:rate|reward set)[^)]+\)\s*$/i, '')
+      .trim();
+  }
+
+  private outcomeItemCurrency(key: string): PlannerCurrency | undefined {
+    if (key === 'carats') return 'free_jewels';
+    if (key === 'uma-ticket') return 'uma_ticket';
+    if (key === 'support-ticket') return 'support_ticket';
+    if (key === 'rainbow-crystal') return 'rainbow_crystal';
+    if (key === 'gold-crystal') return 'gold_crystal';
+    return undefined;
+  }
+
+  private variableAmountLabel(amounts: Partial<Record<PlannerCurrency, number>>): string {
+    const parts: string[] = [];
+    const carats = (amounts.free_jewels ?? 0) + (amounts.paid_jewels ?? 0);
+    if (carats > 0) parts.push(`${INTEGER_FORMATTER.format(carats)} Carats`);
+    if (amounts.uma_ticket) parts.push(`${INTEGER_FORMATTER.format(amounts.uma_ticket)} Uma tix`);
+    if (amounts.support_ticket) parts.push(`${INTEGER_FORMATTER.format(amounts.support_ticket)} support tix`);
+    if (amounts.rainbow_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.rainbow_crystal)} rainbow LB`);
+    if (amounts.gold_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.gold_crystal)} gold LB`);
+    return parts.join(' · ') || 'Other rewards only';
   }
 
   private rewardKindForCurrency(currency: PlannerCurrency): string {
@@ -1835,7 +1951,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         .filter(reward => this.hasProjectableReward(reward))
         .map(reward => reward.id),
       ...(this.data.rewards.competitive_variants ?? [])
-        .filter(variant => isProjectableCompetitiveVariant(variant))
+        .filter(variant => isAutomaticCompetitiveVariant(variant))
         .map(variant => variant.id),
     ]
       .filter(rewardId => !disabledRewardIds.has(rewardId))
@@ -1879,7 +1995,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       .forEach(reward => nextEventIds.add(reward.event_id!));
     (this.data.rewards.competitive_variants ?? [])
       .filter(variant =>
-        isProjectableCompetitiveVariant(variant)
+        isAutomaticCompetitiveVariant(variant)
         && enabledRewardIds.has(variant.id)
         && !disabledEventIds.has(variant.event_id))
       .forEach(variant => nextEventIds.add(variant.event_id));

@@ -57,8 +57,8 @@
         </button>
       </span>
 
-      <cdk-virtual-scroll-viewport id="cp-banner-options" *ngIf="showEventPicker" itemSize="68" class="cp-event-viewport" role="listbox">
-        <button class="cp-event-option" type="button" role="option" *cdkVirtualFor="let event of filteredEvents; let optionIndex = index; trackBy: trackById"
+      <div id="cp-banner-options" *ngIf="showEventPicker" class="cp-event-viewport" role="listbox" tabindex="-1">
+        <button class="cp-event-option" type="button" role="option" *ngFor="let event of filteredEvents; let optionIndex = index; trackBy: trackById"
           [id]="'cp-banner-option-' + optionIndex" [class.is-active]="optionIndex === eventPickerActiveIndex"
           [attr.aria-selected]="optionIndex === eventPickerActiveIndex" [disabled]="isEventAdded(event.id)"
           (mouseenter)="eventPickerActiveIndex = optionIndex" (click)="addEvent(event)">
@@ -69,7 +69,7 @@
           <span class="cp-event-copy"><strong>{{ eventDisplayTitle(event) }}</strong><time>{{ event.globalReleaseDate || event.estimatedGlobalDate || event.jpReleaseDate | date:'mediumDate':'UTC' }}</time></span>
           <span class="cp-event-action"><mat-icon>{{ isEventAdded(event.id) ? 'check' : 'add' }}</mat-icon><span class="cp-event-action-label">{{ isEventAdded(event.id) ? 'Added' : 'Add' }}</span></span>
         </button>
-      </cdk-virtual-scroll-viewport>
+      </div>
     </div>
 
     <div class="cp-overview" aria-label="Projection summary">
@@ -179,33 +179,21 @@
         <div class="cp-scenario-list" *ngIf="scenarioGroupOptions.length">
           <fieldset class="cp-scenario" *ngFor="let group of scenarioGroupOptions">
             <legend><mat-icon aria-hidden="true">{{ scenarioGroupIcon(group.id) }}</mat-icon>{{ group.label }}</legend>
-            <mat-form-field appearance="outline" class="compact-select cp-scenario-select" subscriptSizing="dynamic">
-              <mat-select [value]="plan.scenarioSelections[group.id] || ''"
-                (selectionChange)="setScenario(group.id, $event.value)" [attr.aria-label]="group.label">
-                <mat-select-trigger>
-                  <ng-container *ngIf="selectedScenarioOption(group) as selected; else scenarioNotIncluded">
-                    <span class="cp-scenario-option">
-                      <img *ngIf="scenarioOptionIconPath(group.id, selected.value) as iconPath" [src]="iconPath" width="24" height="28" alt="">
-                      <mat-icon *ngIf="!scenarioOptionIconPath(group.id, selected.value)" aria-hidden="true">{{ scenarioGroupIcon(group.id) }}</mat-icon>
-                      <strong>{{ selected.label }}</strong>
-                      <small *ngIf="selected.amountLabel">{{ selected.amountLabel }}</small>
-                    </span>
-                  </ng-container>
-                  <ng-template #scenarioNotIncluded>
-                    <span class="cp-scenario-option is-muted"><mat-icon aria-hidden="true">block</mat-icon><span>Not included</span></span>
-                  </ng-template>
-                </mat-select-trigger>
-                <mat-option value=""><span class="cp-scenario-option is-muted"><mat-icon aria-hidden="true">block</mat-icon><span>Not included</span></span></mat-option>
-                <mat-option *ngFor="let option of group.options" [value]="option.value">
-                  <span class="cp-scenario-option">
-                    <img *ngIf="scenarioOptionIconPath(group.id, option.value) as iconPath" [src]="iconPath" width="24" height="28" alt="">
-                    <mat-icon *ngIf="!scenarioOptionIconPath(group.id, option.value)" aria-hidden="true">{{ scenarioGroupIcon(group.id) }}</mat-icon>
-                    <strong>{{ option.label }}</strong>
-                    <small *ngIf="option.amountLabel">{{ option.amountLabel }}</small>
-                  </span>
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
+            <div class="cp-scenario-options" role="radiogroup" [attr.aria-label]="group.label">
+              <button type="button" class="cp-scenario-choice is-muted"
+                [class.is-selected]="!plan.scenarioSelections[group.id]" role="radio"
+                [attr.aria-checked]="!plan.scenarioSelections[group.id]" (click)="setScenario(group.id, '')">
+                <mat-icon aria-hidden="true">block</mat-icon><span>Not included</span>
+              </button>
+              <button type="button" class="cp-scenario-choice" *ngFor="let option of group.options"
+                [class.is-selected]="plan.scenarioSelections[group.id] === option.value" role="radio"
+                [attr.aria-checked]="plan.scenarioSelections[group.id] === option.value"
+                (click)="setScenario(group.id, option.value)">
+                <img *ngIf="scenarioOptionIconPath(group.id, option.value) as iconPath" [src]="iconPath" width="24" height="28" alt="">
+                <mat-icon *ngIf="!scenarioOptionIconPath(group.id, option.value)" aria-hidden="true">{{ scenarioGroupIcon(group.id) }}</mat-icon>
+                <strong>{{ option.label }}</strong><small *ngIf="option.amountLabel">{{ option.amountLabel }}</small>
+              </button>
+            </div>
           </fieldset>
         </div>
 
@@ -364,6 +352,14 @@
                   [class.is-excluded]="!isRewardGroupActive(group)" [class.is-automatic]="isAutomaticFreePullGroup(group)" [class.is-past]="showPastRewards">
                   <ng-container *ngTemplateOutlet="rewardTile; context: { $implicit: group }"></ng-container>
                   <span class="cp-reward-actions" *ngIf="!showPastRewards; else pastRewardState">
+                    <label class="cp-variable-reward" *ngIf="group.variableOptions.length">
+                      <span class="sr-only">Expected result for {{ group.title }}</span>
+                      <select class="cp-control" [ngModel]="selectedVariableRewardOptionId(group)"
+                        (ngModelChange)="setVariableRewardSelection(group, $event)">
+                        <option value="">Result not counted</option>
+                        <option *ngFor="let option of group.variableOptions" [value]="option.id">{{ option.label }} · {{ option.amountLabel }}</option>
+                      </select>
+                    </label>
                     <button *ngIf="isRewardGroupSelectable(group)" type="button"
                       class="cp-reward-include-toggle"
                       [class.is-added]="isRewardGroupActive(group)"
@@ -390,7 +386,7 @@
                   rel="noopener noreferrer"
                   [attr.aria-label]="'Open ' + (group.sourceLabel || 'source') + ' for ' + group.title + ' in a new tab'"
                   [attr.title]="(group.sourceLabel || 'Source') + ' (opens in a new tab)'">
-                  <mat-icon aria-hidden="true">open_in_new</mat-icon>
+                  <span>{{ group.sourceLabel || 'Source' }}</span><mat-icon aria-hidden="true">open_in_new</mat-icon>
                 </a>
               </div>
             </ng-container>
@@ -452,6 +448,11 @@
 
         <div class="cp-target-controls cp-target-controls--primary">
           <label class="cp-field cp-pull-count"><span>Pulls</span><input class="cp-control" type="number" min="0" max="5000" step="10" [(ngModel)]="target.plannedPulls" (ngModelChange)="save()"></label>
+          <fieldset class="cp-crystal-plan cp-crystal-plan--quick" *ngIf="target.bannerKind === 'support'">
+            <legend>LB use</legend>
+            <label><img src="assets/images/item/item_icon_00149.webp" width="18" height="18" alt="Rainbow"><input class="cp-control" type="number" min="0" max="20" step="1" [(ngModel)]="target.rainbowCrystalsPlanned" (ngModelChange)="save()" aria-label="Rainbow LB crystals to use on this banner"></label>
+            <label><img src="assets/images/item/item_icon_00150.webp" width="18" height="18" alt="Gold"><input class="cp-control" type="number" min="0" max="20" step="1" [(ngModel)]="target.goldCrystalsPlanned" (ngModelChange)="save()" aria-label="Gold LB crystals to use on this banner"></label>
+          </fieldset>
           <details class="cp-payment-menu cp-popover" (toggle)="onPopoverToggle($event)">
             <summary aria-label="Target options" title="Target options"><mat-icon aria-hidden="true">tune</mat-icon></summary>
             <div class="cp-payment-popover">
@@ -463,11 +464,6 @@
                 <mat-checkbox [(ngModel)]="target.useTickets" (ngModelChange)="save()">Use tickets first</mat-checkbox>
                 <mat-checkbox [(ngModel)]="target.allowPaidJewels" (ngModelChange)="save()">Allow paid Carats</mat-checkbox>
               </div>
-              <fieldset class="cp-crystal-plan" *ngIf="target.bannerKind === 'support'">
-                <legend>LB crystals to use after pulling</legend>
-                <label><img src="assets/images/item/item_icon_00149.webp" width="18" height="18" alt="Rainbow"><input class="cp-control" type="number" min="0" max="20" step="1" [(ngModel)]="target.rainbowCrystalsPlanned" (ngModelChange)="save()" aria-label="Rainbow LB crystals to use"></label>
-                <label><img src="assets/images/item/item_icon_00150.webp" width="18" height="18" alt="Gold"><input class="cp-control" type="number" min="0" max="20" step="1" [(ngModel)]="target.goldCrystalsPlanned" (ngModelChange)="save()" aria-label="Gold LB crystals to use"></label>
-              </fieldset>
             </div>
           </details>
           <button class="cp-action cp-action--icon cp-danger cp-target-remove" type="button" matTooltip="Remove target"

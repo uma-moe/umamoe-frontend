@@ -144,7 +144,7 @@ describe('CaratPlannerCalculationService', () => {
         rainbowCrystals: 1,
         goldCrystals: 2,
       },
-      enabledRewardIds: ['crystal-reward'],
+      enabledRewardIds: ['anniversary-free_jewels', 'anniversary-items'],
       targets: [makeTarget({
         bannerKind: 'support',
         plannedPulls: 0,
@@ -156,7 +156,17 @@ describe('CaratPlannerCalculationService', () => {
       core: {},
       income: { rules: [] },
       rewards: { rewards: [{
-        id: 'crystal-reward',
+        id: 'anniversary-free_jewels',
+        label: 'LB crystals',
+        currency: 'free_jewels',
+        amount: 500,
+        available_at: '2026-01-02',
+        source_items: [
+          { item_category: 164, item_id: 149, amount: 2 },
+          { item_category: 164, item_id: 150, amount: 1 },
+        ],
+      }, {
+        id: 'anniversary-items',
         label: 'LB crystals',
         currency: 'free_jewels',
         amount: null,
@@ -179,9 +189,17 @@ describe('CaratPlannerCalculationService', () => {
     expect(target.balanceAfter.goldCrystals).toBe(2);
   });
 
-  it('projects mission source items and deterministic competitive event rewards', () => {
+  it('projects mission source totals and the competitive outcome selected by the user', () => {
     const plan = makePlan({
-      enabledRewardIds: ['mission-rewards', 'legend-clear', 'champions-result'],
+      enabledRewardIds: ['mission-rewards'],
+      variableRewardSelections: {
+        'legend-race-1021': {
+          optionId: 'legend-clear',
+          label: 'Legend Race: 1 opponent cleared',
+          availableAt: '2026-01-04',
+          amounts: { free_jewels: 150 },
+        },
+      },
       targets: [makeTarget({ bannerEnd: '2026-01-10', plannedPulls: 0 })],
     });
     const data: CaratPlannerDataBundle = {
@@ -228,12 +246,12 @@ describe('CaratPlannerCalculationService', () => {
     }]);
     const target = projection.targets[0];
 
-    expect(target.balanceBefore.freeJewels).toBe(350);
+    expect(target.balanceBefore.freeJewels).toBe(250);
     expect(target.balanceBefore.umaTickets).toBe(1);
     expect(target.income.map(entry => entry.id)).toEqual([
       'reward:mission-rewards:free_jewels',
       'reward:mission-rewards:uma_ticket',
-      'competitive:legend-clear:free_jewels',
+      'competitive:legend-race-1021:legend-clear:free_jewels',
     ]);
     expect(target.income.some(entry => entry.id.includes('champions-result'))).toBeFalse();
   });
@@ -453,7 +471,7 @@ describe('CaratPlannerCalculationService', () => {
 
     const restored = { ...plan, disabledEventIds: [] };
     expect(service.project(restored, data).targets.length).toBe(1);
-    expect(service.buildLedger(restored, data, '2026-01-10').map(entry => entry.id)).toEqual(['reward:event-reward']);
+    expect(service.buildLedger(restored, data, '2026-01-10').map(entry => entry.id)).toEqual(['reward:event-reward:free_jewels']);
   });
 
   it('keeps saved targets before the plan start out of balances and re-enables them when the start moves back', () => {
