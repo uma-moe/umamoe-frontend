@@ -88,7 +88,7 @@ describe('TimelineEventDetailsComponent planner action', () => {
     const close = jasmine.createSpy('close');
     const setEventActive = jasmine.createSpy('setEventActive');
     const component = new TimelineEventDetailsComponent(
-      { event },
+      { event, plannerEnabled: true },
       { close } as never,
       new TimelineAvatarService(),
       new TimelinePredictionService(),
@@ -107,5 +107,27 @@ describe('TimelineEventDetailsComponent planner action', () => {
     expect(component.planned).toBeFalse();
     expect(setEventActive).toHaveBeenCalledWith(event, false);
     expect(close).not.toHaveBeenCalled();
+  });
+
+  it('allows locally summarized reward events even without a server eligibility flag', () => {
+    const event = raceEvent(EventType.LEGEND_RACE, '3200m - Long - Turf');
+    const setEventActive = jasmine.createSpy('setEventActive');
+    const component = new TimelineEventDetailsComponent(
+      { event, plannerEnabled: true, rewardSummary: { eventId: event.id } as never },
+      { close: () => undefined } as never,
+      new TimelineAvatarService(),
+      new TimelinePredictionService(),
+      { isEventActive: () => false } as never,
+      { setEventActive } as never,
+      {} as never,
+      { markForCheck: () => undefined } as never,
+    );
+
+    expect(component.canPlan).toBeTrue();
+    component.togglePlanner();
+    expect(setEventActive).toHaveBeenCalledOnceWith(
+      jasmine.objectContaining({ id: event.id, plannerRewardAvailable: true }),
+      true,
+    );
   });
 });

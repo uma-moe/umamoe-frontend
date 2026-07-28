@@ -269,7 +269,8 @@ export class TimelineEventDetailsComponent implements OnInit {
       && /<(?:h[1-6]|p|li|div)\b/i.test(this.event.description ?? '');
     this.canPlan = this.data.plannerEnabled === true && (([EventType.CHARACTER_BANNER, EventType.SUPPORT_CARD_BANNER].includes(this.event.type)
       && Boolean(this.event.plannerDataAvailable || this.event.gachaId || this.event.gachaIds?.length))
-      || this.event.plannerRewardAvailable === true);
+      || this.event.plannerRewardAvailable === true
+      || Boolean(this.rewardSummary && this.rewardSummary.mode !== 'placement'));
     this.planned = this.canPlan && this.plannerPersistence.isEventActive(this.event.id);
     this.hasBannerRates = [EventType.CHARACTER_BANNER, EventType.SUPPORT_CARD_BANNER].includes(this.event.type)
       && Boolean(this.event.plannerDataAvailable || this.event.gachaId || this.event.gachaIds?.length);
@@ -308,7 +309,12 @@ export class TimelineEventDetailsComponent implements OnInit {
   togglePlanner(): void {
     if (!this.canPlan) return;
     this.planned = !this.planned;
-    this.plannerTimeline.setEventActive(this.event, this.planned);
+    const plannerEvent = this.event.plannerRewardAvailable !== true
+      && this.rewardSummary
+      && this.rewardSummary.mode !== 'placement'
+      ? { ...this.event, plannerRewardAvailable: true }
+      : this.event;
+    this.plannerTimeline.setEventActive(plannerEvent, this.planned);
   }
 
   onImageError(event: Event): void {

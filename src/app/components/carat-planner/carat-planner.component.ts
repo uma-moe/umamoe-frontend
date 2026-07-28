@@ -1,5 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnDestroy, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  HostListener,
+  Input,
+  OnDestroy,
+  OnInit,
+  Optional,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,7 +29,9 @@ import {
   FREE_PULL_CAMPAIGN_DEFAULT_SELECTION,
   FREE_PULL_CAMPAIGN_EXCLUDED_SELECTION,
   PlannerBannerKind,
+  PlannerCompetitiveRewardVariant,
   PlannerCustomIncome,
+  PlannerCurrency,
   PlannerEventBenefit,
   PlannerFreePullCampaign,
   PlannerFreePullCampaignAllocation,
@@ -31,6 +43,15 @@ import {
   PlannerTarget,
   PlannerTargetProjection,
 } from '../../models/carat-planner.model';
+import {
+  hasProjectableSourceItems,
+  isProjectableCompetitiveVariant,
+  plannerSourceItemTotals,
+} from '../../utils/planner-reward-currencies';
+import {
+  resolveBundledTimelineEventImagePath,
+  timelineEventMasterId,
+} from '../../utils/timeline-event-image';
 import { CaratPlannerCalculationService } from '../../services/carat-planner-calculation.service';
 import { CaratPlannerPersistenceService } from '../../services/carat-planner-persistence.service';
 import { CaratPlannerResourceService, CaratPlannerResourceState } from '../../services/carat-planner-resource.service';
@@ -51,8 +72,10 @@ const PLANNER_CURRENCY_ITEM_IDS: Readonly<Record<string, number>> = {
   carats: 43,
   uma_ticket: 41,
   support_ticket: 111,
+  rainbow_crystal: 149,
+  gold_crystal: 150,
 };
-const PREPARED_PLANNER_ITEM_IDS = new Set([41, 43, 111, 141, 164, 165, 178, 197, 205, 214, 255]);
+const PREPARED_PLANNER_ITEM_IDS = new Set([41, 43, 44, 59, 110, 111, 115, 141, 149, 150, 164, 165, 178, 197, 205, 214, 255]);
 
 function matchesJewelCurrency(currency: string): boolean {
   return currency === 'free_jewels' || currency === 'paid_jewels';
@@ -118,6 +141,7 @@ interface PlannerRewardGroupView {
   sourceUrl?: string;
   sourceLabel?: string;
   rewards: readonly PlannerRewardEntry[];
+  competitiveVariants: readonly PlannerCompetitiveRewardVariant[];
   eventBenefits: readonly PlannerEventBenefit[];
   benefits: readonly PlannerRewardBenefitView[];
   visibleBenefits: readonly PlannerRewardBenefitView[];
@@ -204,6 +228,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.filterEvents();
     this.filterRewards();
     this.tryAddRequestedEvent();
+    if (this.plannerDataReady && this.plan) this.recalculate();
   }
 
   @Input() set requestedEventId(value: string | null | undefined) {
@@ -251,6 +276,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     private readonly resources: CaratPlannerResourceService,
     private readonly avatars: TimelineAvatarService,
     private readonly cdr: ChangeDetectorRef,
+    @Optional() private readonly elementRef: ElementRef<HTMLElement> | null = null,
   ) {}
 
   ngOnInit(): void {
@@ -260,8 +286,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       this.filterEvents();
       this.filterRewards();
       this.tryAddRequestedEvent();
-      this.recalculate();
-      this.syncActivePlanResources();
+      if (!this.syncActivePlanResources()) this.recalculate();
       this.cdr.markForCheck();
     });
     this.resources.state$.pipe(takeUntil(this.destroy$)).subscribe(state => {
@@ -277,6 +302,48 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   closeEventPicker(): void {
     this.showEventPicker = false;
+  }
+
+  onPopoverToggle(event: Event): void {
+    const opened = event.currentTarget as HTMLDetailsElement | null;
+    if (!opened?.open) return;
+    this.closeEventPicker();
+    this.plannerRoot()?.querySelectorAll<HTMLDetailsElement>('details.cp-popover[open]').forEach(details => {
+      if (details !== opened) details.open = false;
+    });
+  }
+
+  @HostListener('document:pointerdown', ['$event'])
+  onDocumentPointerDown(event: PointerEvent): void {
+    const root = this.plannerRoot();
+    const target = event.target;
+    if (!root || !(target instanceof Node)) return;
+
+    let changed = false;
+    const picker = root.querySelector('.cp-picker--primary');
+    if (this.showEventPicker && !picker?.contains(target)) {
+      this.showEventPicker = false;
+      changed = true;
+    }
+    root.querySelectorAll<HTMLDetailsElement>('details.cp-popover[open]').forEach(details => {
+      if (!details.contains(target)) {
+        details.open = false;
+        changed = true;
+      }
+    });
+    if (changed) this.cdr.markForCheck();
+  }
+
+  @HostListener('document:keydown.escape', ['$event'])
+  onDocumentEscape(event: KeyboardEvent): void {
+    const root = this.plannerRoot();
+    if (!root) return;
+    const openPopovers = root.querySelectorAll<HTMLDetailsElement>('details.cp-popover[open]');
+    if (!this.showEventPicker && openPopovers.length === 0) return;
+    this.showEventPicker = false;
+    openPopovers.forEach(details => details.open = false);
+    event.preventDefault();
+    this.cdr.markForCheck();
   }
 
   onEventPickerKeydown(event: KeyboardEvent): void {
@@ -413,7 +480,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   get enabledRewardTotalLabel(): string {
     const activeGroups = this.rewardGroups.filter(group => this.isRewardGroupActive(group));
-    const activeRewards = activeGroups.flatMap(group => group.rewards);
+    const ledgerBenefits = activeGroups.flatMap(group => group.benefits)
+      .filter(benefit => benefit.plannerEffect === 'ledger');
     const activeBenefits = activeGroups
       .flatMap(group => group.eventBenefits)
       .filter(benefit => benefit.kind !== 'free_pulls');
@@ -421,14 +489,14 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       .filter(group => this.isRewardGroupBannerPlanned(group))
       .flatMap(group => group.eventBenefits)
       .filter(benefit => benefit.kind === 'free_pulls');
-    const carats = activeRewards.reduce((total, reward) =>
-      matchesJewelCurrency(reward.currency) && Number.isFinite(reward.amount)
-        ? total + Math.max(0, Number(reward.amount))
+    const benefitTotal = (kinds: readonly string[]) => ledgerBenefits.reduce((total, benefit) =>
+      kinds.includes(benefit.kind) && Number.isFinite(benefit.amount)
+        ? total + Math.max(0, Number(benefit.amount))
         : total, 0);
-    const tickets = activeRewards.reduce((total, reward) =>
-      (reward.currency === 'uma_ticket' || reward.currency === 'support_ticket') && Number.isFinite(reward.amount)
-        ? total + Math.max(0, Number(reward.amount))
-        : total, 0);
+    const carats = benefitTotal(['carats']);
+    const tickets = benefitTotal(['uma_ticket', 'support_ticket']);
+    const rainbowCrystals = benefitTotal(['rainbow_crystal']);
+    const goldCrystals = benefitTotal(['gold_crystal']);
     const freePulls = activeFreePullBenefits.reduce((total, benefit) =>
       benefit.kind === 'free_pulls' && Number.isFinite(benefit.amount)
         ? total + Math.max(0, Number(benefit.amount))
@@ -442,6 +510,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const parts: string[] = [];
     if (carats > 0) parts.push(`${INTEGER_FORMATTER.format(carats)} Carats`);
     if (tickets > 0) parts.push(`${INTEGER_FORMATTER.format(tickets)} ${tickets === 1 ? 'ticket' : 'tickets'}`);
+    if (rainbowCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(rainbowCrystals)} rainbow LB`);
+    if (goldCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(goldCrystals)} gold LB`);
     if (freePulls > 0) parts.push(`${INTEGER_FORMATTER.format(freePulls)} free pulls`);
     if (selectors > 0) parts.push(`${INTEGER_FORMATTER.format(selectors)} ${selectors === 1 ? 'selector' : 'selectors'}`);
     return parts.join(' · ');
@@ -455,20 +525,23 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   isRewardGroupActive(group: PlannerRewardGroupView): boolean {
     if (group.isPast) return false;
     if (group.eventId && (this.plan.disabledEventIds ?? []).includes(group.eventId)) return false;
-    const selectableRewards = group.rewards.filter(reward =>
-      Number.isFinite(reward.amount) && Number(reward.amount) > 0);
+    const selectableRewards = group.rewards.filter(reward => this.hasProjectableReward(reward));
+    const selectableVariants = group.competitiveVariants.filter(variant => isProjectableCompetitiveVariant(variant));
     const hasTrackedInformationalBenefit = group.eventBenefits.some(benefit =>
       benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector');
-    if (selectableRewards.length === 0 && !hasTrackedInformationalBenefit) return false;
+    if (selectableRewards.length === 0 && selectableVariants.length === 0 && !hasTrackedInformationalBenefit) return false;
     const rewardsActive = selectableRewards.length === 0
       || selectableRewards.every(reward => this.isRewardActive(reward));
+    const variantsActive = selectableVariants.length === 0
+      || selectableVariants.every(variant => this.plan.enabledRewardIds.includes(variant.id));
     const informationalActive = !hasTrackedInformationalBenefit
       || Boolean(group.eventId && (this.plan.enabledRewardEventIds ?? []).includes(group.eventId));
-    return rewardsActive && informationalActive;
+    return rewardsActive && variantsActive && informationalActive;
   }
 
   isRewardGroupSelectable(group: PlannerRewardGroupView): boolean {
-    const hasLedgerReward = group.rewards.some(reward => Number.isFinite(reward.amount) && Number(reward.amount) > 0);
+    const hasLedgerReward = group.rewards.some(reward => this.hasProjectableReward(reward))
+      || group.competitiveVariants.some(variant => isProjectableCompetitiveVariant(variant));
     const hasSelector = group.eventBenefits.some(benefit =>
       benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector');
     return hasLedgerReward || hasSelector;
@@ -520,6 +593,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       event,
       enable,
       this.plannerDataReady ? this.data.rewards.rewards : [],
+      this.plannerDataReady ? this.data.rewards.competitive_variants ?? [] : [],
     );
   }
 
@@ -627,6 +701,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         event,
         true,
         this.plannerDataReady ? this.data.rewards.rewards : [],
+        this.plannerDataReady ? this.data.rewards.competitive_variants ?? [] : [],
       );
     }
 
@@ -666,6 +741,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       event,
       !this.isRewardGroupBannerPlanned(group),
       this.plannerDataReady ? this.data.rewards.rewards : [],
+      this.plannerDataReady ? this.data.rewards.competitive_variants ?? [] : [],
     );
   }
 
@@ -751,7 +827,12 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   addEvent(event: CaratPlannerTimelineEvent): void {
     if (event.plannerRewardAvailable && !this.plannerDataReady) return;
-    this.persistence.setEventActive(event, true, this.plannerDataReady ? this.data.rewards.rewards : []);
+    this.persistence.setEventActive(
+      event,
+      true,
+      this.plannerDataReady ? this.data.rewards.rewards : [],
+      this.plannerDataReady ? this.data.rewards.competitive_variants ?? [] : [],
+    );
     this.showEventPicker = false;
     this.eventSearch = '';
   }
@@ -859,9 +940,14 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
     for (const group of groups) {
       for (const reward of group.rewards) {
-        if (!Number.isFinite(reward.amount) || Number(reward.amount) <= 0) continue;
+        if (!this.hasProjectableReward(reward)) continue;
         enabled ? rewardIds.add(reward.id) : rewardIds.delete(reward.id);
         enabled ? disabledRewardIds.delete(reward.id) : disabledRewardIds.add(reward.id);
+      }
+      for (const variant of group.competitiveVariants) {
+        if (!isProjectableCompetitiveVariant(variant)) continue;
+        enabled ? rewardIds.add(variant.id) : rewardIds.delete(variant.id);
+        enabled ? disabledRewardIds.delete(variant.id) : disabledRewardIds.add(variant.id);
       }
       if (group.eventId) {
         enabled ? eventIds.add(group.eventId) : eventIds.delete(group.eventId);
@@ -1170,13 +1256,30 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const grouped = new Map<string, {
       eventId?: string;
       rewards: PlannerRewardEntry[];
+      competitiveVariants: PlannerCompetitiveRewardVariant[];
       eventBenefits: PlannerEventBenefit[];
     }>();
 
     for (const reward of this.data.rewards.rewards ?? []) {
       const id = reward.event_id ? `event:${reward.event_id}` : `reward:${reward.id}`;
-      const group = grouped.get(id) ?? { eventId: reward.event_id, rewards: [], eventBenefits: [] };
+      const group = grouped.get(id) ?? {
+        eventId: reward.event_id,
+        rewards: [],
+        competitiveVariants: [],
+        eventBenefits: [],
+      };
       group.rewards.push(reward);
+      grouped.set(id, group);
+    }
+    for (const variant of this.data.rewards.competitive_variants ?? []) {
+      const id = `event:${variant.event_id}`;
+      const group = grouped.get(id) ?? {
+        eventId: variant.event_id,
+        rewards: [],
+        competitiveVariants: [],
+        eventBenefits: [],
+      };
+      group.competitiveVariants.push(variant);
       grouped.set(id, group);
     }
     const managedCampaignIds = new Set(
@@ -1187,17 +1290,28 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         && benefit.campaign_id
         && managedCampaignIds.has(benefit.campaign_id)) continue;
       const id = `event:${benefit.event_id}`;
-      const group = grouped.get(id) ?? { eventId: benefit.event_id, rewards: [], eventBenefits: [] };
+      const group = grouped.get(id) ?? {
+        eventId: benefit.event_id,
+        rewards: [],
+        competitiveVariants: [],
+        eventBenefits: [],
+      };
       group.eventBenefits.push(benefit);
       grouped.set(id, group);
     }
 
     return [...grouped.entries()]
       .map(([id, group]) => {
-        const event = group.eventId ? this.allEvents.find(item => item.id === group.eventId) : undefined;
+        const event = this.findRewardGroupEvent(
+          group.eventId,
+          group.rewards,
+          group.eventBenefits,
+          group.competitiveVariants,
+        );
         const dates = [
           ...group.rewards.map(reward => reward.available_at),
           ...group.eventBenefits.map(benefit => benefit.available_at),
+          ...group.competitiveVariants.map(variant => variant.available_at),
         ].map(value => this.optionalDateKey(value))
           .filter((value): value is string => Boolean(value))
           .sort();
@@ -1212,21 +1326,31 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         const applicableBenefits = isPast || !projectionStart
           ? group.eventBenefits
           : group.eventBenefits.filter(benefit => this.isRewardDateUsable(benefit.available_at, projectionStart));
-        const benefits = this.buildRewardBenefitViews(applicableRewards, applicableBenefits);
+        const applicableVariants = isPast || !projectionStart
+          ? group.competitiveVariants
+          : group.competitiveVariants.filter(variant =>
+            this.isRewardDateUsable(variant.available_at ?? eventDate ?? '', projectionStart));
+        const benefits = this.buildRewardBenefitViews(applicableRewards, applicableBenefits, applicableVariants);
         const source = this.rewardGroupSource(applicableRewards, applicableBenefits);
         const title = this.cleanRewardLabel((event ? this.rewardEventDisplayTitle(event) : undefined)
           ?? group.rewards[0]?.label
           ?? group.eventBenefits[0]?.label
+          ?? (group.competitiveVariants[0]
+            ? `${this.humanize(group.competitiveVariants[0].competition)} rewards`
+            : undefined)
           ?? 'Event rewards');
+        const firstVariant = group.competitiveVariants[0];
         return {
           id,
           eventId: group.eventId,
           title,
           availableAt: isPast ? dates[dates.length - 1] : usableDates[0] ?? dates[0] ?? '',
-          imagePath: event?.imagePath,
+          imagePath: event?.imagePath
+            ?? resolveBundledTimelineEventImagePath(firstVariant?.competition, firstVariant?.master_event_id),
           sourceUrl: source?.url,
           sourceLabel: source?.label,
           rewards: applicableRewards,
+          competitiveVariants: applicableVariants,
           eventBenefits: applicableBenefits,
           benefits,
           visibleBenefits: benefits,
@@ -1236,12 +1360,55 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
             group.eventId,
             ...group.rewards.flatMap(reward => [reward.label, reward.currency]),
             ...group.eventBenefits.flatMap(benefit => [benefit.label, benefit.kind]),
+            ...group.competitiveVariants.flatMap(variant => [variant.label, variant.competition]),
             ...benefits.map(benefit => benefit.text),
           ].filter(Boolean).join(' ').toLowerCase(),
           isPast,
         } satisfies PlannerRewardGroupView;
       })
       .sort((left, right) => this.compareRewardDates(left, right, 1));
+  }
+
+  private findRewardGroupEvent(
+    eventId: string | undefined,
+    rewards: readonly PlannerRewardEntry[],
+    eventBenefits: readonly PlannerEventBenefit[],
+    competitiveVariants: readonly PlannerCompetitiveRewardVariant[],
+  ): CaratPlannerTimelineEvent | undefined {
+    if (eventId) {
+      const exact = this.allEvents.find(event => event.id === eventId);
+      if (exact) return exact;
+    }
+
+    const gachaIds = new Set<number>([
+      ...rewards.map(reward => reward.gacha_id),
+      ...eventBenefits.map(benefit => benefit.gacha_id),
+    ].filter((id): id is number => Number.isFinite(id)));
+    if (gachaIds.size > 0) {
+      const gachaMatch = this.allEvents.find(event =>
+        (event.gachaId !== undefined && gachaIds.has(event.gachaId))
+        || event.gachaIds?.some(id => gachaIds.has(id)));
+      if (gachaMatch) return gachaMatch;
+    }
+
+    for (const variant of competitiveVariants) {
+      const masterMatch = this.allEvents.find(event =>
+        event.type === variant.competition
+        && (
+          timelineEventMasterId(event.id) === variant.master_event_id
+          || event.imagePath?.endsWith(`/${variant.master_event_id}.webp`)
+        ));
+      if (masterMatch) return masterMatch;
+    }
+
+    const eventMasterId = timelineEventMasterId(eventId);
+    if (eventMasterId !== undefined && eventId) {
+      const normalizedId = eventId.replace(/-/g, '_').toLowerCase();
+      return this.allEvents.find(event =>
+        timelineEventMasterId(event.id) === eventMasterId
+        && Boolean(event.type && normalizedId.includes(event.type)));
+    }
+    return undefined;
   }
 
   private rewardEventDisplayTitle(event: CaratPlannerTimelineEvent): string {
@@ -1293,6 +1460,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private buildRewardBenefitViews(
     rewards: readonly PlannerRewardEntry[],
     eventBenefits: readonly PlannerEventBenefit[],
+    competitiveVariants: readonly PlannerCompetitiveRewardVariant[],
   ): PlannerRewardBenefitView[] {
     const benefits: PlannerRewardBenefitView[] = eventBenefits.map(benefit => ({
       id: benefit.id,
@@ -1305,10 +1473,24 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       plannerEffect: benefit.planner_effect,
     }));
     const totals = new Map<string, number>();
+    const addCurrency = (currency: PlannerCurrency, amount: number) => {
+      if (amount <= 0) return;
+      const kind = this.rewardKindForCurrency(currency);
+      totals.set(kind, (totals.get(kind) ?? 0) + amount);
+    };
     for (const reward of rewards) {
-      if (!Number.isFinite(reward.amount) || Number(reward.amount) <= 0) continue;
-      const kind = matchesJewelCurrency(reward.currency) ? 'carats' : reward.currency;
-      totals.set(kind, (totals.get(kind) ?? 0) + Number(reward.amount));
+      const hasTopLevelAmount = Number.isFinite(reward.amount) && Number(reward.amount) > 0;
+      if (hasTopLevelAmount) {
+        addCurrency(reward.currency, Number(reward.amount));
+      }
+      for (const [currency, amount] of plannerSourceItemTotals(reward.source_items ?? [])) {
+        if (!hasTopLevelAmount || currency !== reward.currency) addCurrency(currency, amount);
+      }
+    }
+    for (const variant of competitiveVariants.filter(item => isProjectableCompetitiveVariant(item))) {
+      for (const [currency, amount] of plannerSourceItemTotals(variant.source_items ?? [])) {
+        addCurrency(currency, amount);
+      }
     }
     for (const [kind, amount] of totals) {
       benefits.push({
@@ -1320,6 +1502,18 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         icon: this.rewardBenefitIcon(kind),
         iconPath: this.rewardBenefitItemIcon(kind),
         plannerEffect: 'ledger',
+      });
+    }
+    if (competitiveVariants.length > 0
+      && !competitiveVariants.some(variant => isProjectableCompetitiveVariant(variant))) {
+      benefits.push({
+        id: 'competitive-outcomes',
+        kind: 'competitive_outcomes',
+        label: 'Rewards vary by result',
+        amount: null,
+        text: 'Rewards vary by result',
+        icon: 'emoji_events',
+        plannerEffect: 'informational',
       });
     }
     if (benefits.length === 0 && rewards.some(reward => !Number.isFinite(reward.amount))) {
@@ -1334,6 +1528,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       });
     }
     return benefits.sort((left, right) => this.rewardBenefitOrder(left.kind) - this.rewardBenefitOrder(right.kind));
+  }
+
+  private rewardKindForCurrency(currency: PlannerCurrency): string {
+    return matchesJewelCurrency(currency) ? 'carats' : currency;
   }
 
   private eventBenefitText(benefit: PlannerEventBenefit): string {
@@ -1356,6 +1554,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (kind === 'carats') return 'Carats';
     if (kind === 'uma_ticket') return amount === 1 ? 'Uma ticket' : 'Uma tickets';
     if (kind === 'support_ticket') return amount === 1 ? 'Support ticket' : 'Support tickets';
+    if (kind === 'rainbow_crystal') return amount === 1 ? 'Rainbow LB crystal' : 'Rainbow LB crystals';
+    if (kind === 'gold_crystal') return amount === 1 ? 'Gold LB crystal' : 'Gold LB crystals';
     return amount === 1 ? 'reward' : 'rewards';
   }
 
@@ -1365,6 +1565,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (kind === 'support_selector' || kind === 'support_ticket') return 'style';
     if (kind === 'uma_ticket') return 'confirmation_number';
     if (kind === 'carats') return 'diamond';
+    if (kind === 'rainbow_crystal' || kind === 'gold_crystal') return 'auto_awesome';
     return 'redeem';
   }
 
@@ -1378,8 +1579,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (kind === 'free_pulls') return 0;
     if (kind === 'trainee_selector' || kind === 'support_selector') return 1;
     if (kind === 'uma_ticket' || kind === 'support_ticket') return 2;
-    if (kind === 'carats') return 3;
-    return 4;
+    if (kind === 'rainbow_crystal' || kind === 'gold_crystal') return 3;
+    if (kind === 'carats') return 4;
+    return 5;
   }
 
   private humanize(value: string): string {
@@ -1628,9 +1830,14 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private syncAutomaticRewardSelection(): boolean {
     if (!this.plan) return false;
     const disabledRewardIds = new Set(this.plan.disabledRewardIds ?? []);
-    const nextEnabledRewardIds = this.data.rewards.rewards
-      .filter(reward => Number.isFinite(reward.amount) && Number(reward.amount) > 0)
-      .map(reward => reward.id)
+    const nextEnabledRewardIds = [
+      ...this.data.rewards.rewards
+        .filter(reward => this.hasProjectableReward(reward))
+        .map(reward => reward.id),
+      ...(this.data.rewards.competitive_variants ?? [])
+        .filter(variant => isProjectableCompetitiveVariant(variant))
+        .map(variant => variant.id),
+    ]
       .filter(rewardId => !disabledRewardIds.has(rewardId))
       .sort();
     const current = [...this.plan.enabledRewardIds].sort();
@@ -1647,6 +1854,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const loadedRewardEventIds = new Set(this.data.rewards.rewards
       .map(reward => reward.event_id)
       .filter((eventId): eventId is string => Boolean(eventId)));
+    (this.data.rewards.competitive_variants ?? [])
+      .map(variant => variant.event_id)
+      .filter(Boolean)
+      .forEach(eventId => loadedRewardEventIds.add(eventId));
     const allBenefitEventIds = new Set((this.data.rewards.event_benefits ?? [])
       .map(benefit => benefit.event_id)
       .filter(Boolean));
@@ -1661,12 +1872,17 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.data.rewards.rewards
       .filter(reward =>
         Boolean(reward.event_id)
-        && Number.isFinite(reward.amount)
-        && Number(reward.amount) > 0
+        && this.hasProjectableReward(reward)
         && enabledRewardIds.has(reward.id)
         && !disabledEventIds.has(reward.event_id!)
       )
       .forEach(reward => nextEventIds.add(reward.event_id!));
+    (this.data.rewards.competitive_variants ?? [])
+      .filter(variant =>
+        isProjectableCompetitiveVariant(variant)
+        && enabledRewardIds.has(variant.id)
+        && !disabledEventIds.has(variant.event_id))
+      .forEach(variant => nextEventIds.add(variant.event_id));
     const next = [...nextEventIds].sort();
     const current = [...(this.plan.enabledRewardEventIds ?? [])].sort();
     if (current.length === next.length && current.every((eventId, index) => eventId === next[index])) {
@@ -1706,12 +1922,12 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     await this.resources.loadGachasForEvents(events);
   }
 
-  private syncActivePlanResources(force = false): void {
-    if (!this.plan || !this.plannerDataReady || this.destroyed) return;
-    if (this.applyResourceDefaults()) return;
+  private syncActivePlanResources(force = false): boolean {
+    if (!this.plan || !this.plannerDataReady || this.destroyed) return false;
+    if (this.applyResourceDefaults()) return true;
 
     const key = this.planResourceKey();
-    if (!force && key === this.activePlanResourceKey) return;
+    if (!force && key === this.activePlanResourceKey) return false;
     this.activePlanResourceKey = key;
     const request = ++this.planResourceRequest;
 
@@ -1722,6 +1938,12 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     }).catch(() => {
       if (!this.destroyed && request === this.planResourceRequest) this.cdr.markForCheck();
     });
+    return true;
+  }
+
+  private hasProjectableReward(reward: PlannerRewardEntry): boolean {
+    if (Number.isFinite(reward.amount) && Number(reward.amount) > 0) return true;
+    return hasProjectableSourceItems(reward.source_items);
   }
 
   private planResourceKey(): string {
@@ -1751,7 +1973,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       const gacha = gachas.find(item => item.event_id === target.eventId) ?? gachas.find(item => ids.has(item.gacha_id));
       if (gacha) this.gachaByTarget.set(target.id, gacha);
     }
-    this.projection = this.calculations.project(this.plan, this.data, gachas);
+    this.projection = this.calculations.project(this.plan, this.data, gachas, this.allEvents);
     this.projectionByTarget = new Map(this.projection.targets.map(item => [item.targetId, item]));
     this.oddsByTarget.clear();
     for (const target of this.activeTargets) {
@@ -2115,5 +2337,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   private id(prefix: string): string {
     return `${prefix}-${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
+  }
+
+  private plannerRoot(): HTMLElement | null {
+    return this.elementRef?.nativeElement ?? null;
   }
 }

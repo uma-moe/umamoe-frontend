@@ -124,6 +124,7 @@ export class CaratPlannerResourceService {
           rewards: Array.isArray(rewards?.rewards) ? rewards.rewards : [],
           event_benefits: Array.isArray(rewards?.event_benefits) ? rewards.event_benefits : [],
           free_pull_campaigns: Array.isArray(rewards?.free_pull_campaigns) ? rewards.free_pull_campaigns : [],
+          competitive_variants: Array.isArray(rewards?.competitive_variants) ? rewards.competitive_variants : [],
         };
         this.bundle = { ...this.bundle, rewards: normalized };
         return normalized;

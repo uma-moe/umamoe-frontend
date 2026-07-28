@@ -9,12 +9,17 @@ import {
   PlannerBalances,
   PlannerCurrency,
   PlannerCustomIncome,
+  PlannerCompetitiveRewardVariant,
   PlannerIncomeCadence,
   PlannerPickupGoal,
   PlannerPullTiming,
   PlannerRewardEntry,
   PlannerTarget,
 } from '../models/carat-planner.model';
+import {
+  hasProjectableSourceItems,
+  isProjectableCompetitiveVariant,
+} from '../utils/planner-reward-currencies';
 
 @Injectable({ providedIn: 'root' })
 export class CaratPlannerPersistenceService {
@@ -76,6 +81,7 @@ export class CaratPlannerPersistenceService {
     event: CaratPlannerTimelineEvent,
     active: boolean,
     rewards: readonly PlannerRewardEntry[] = [],
+    competitiveVariants: readonly PlannerCompetitiveRewardVariant[] = [],
   ): CaratPlan {
     const plan = this.activePlan;
     const disabledEventIds = new Set(plan.disabledEventIds ?? []);
@@ -130,22 +136,29 @@ export class CaratPlannerPersistenceService {
       const enabledRewardEventIds = new Set(plan.enabledRewardEventIds ?? []);
       if (!active) {
         enabledRewardEventIds.delete(event.id);
-      } else if (rewards.length === 0) {
+      } else if (rewards.length === 0 && competitiveVariants.length === 0) {
         enabledRewardEventIds.add(event.id);
       } else {
         const eventRewards = rewards.filter(reward =>
           reward.event_id === event.id
           && (
             (Number.isFinite(reward.amount) && Number(reward.amount) > 0)
+            || hasProjectableSourceItems(reward.source_items)
             || reward.source_items?.some(item => item.item_category === 41 || item.item_category === 42)
           )
         );
+        const eventVariants = competitiveVariants.filter(variant =>
+          variant.event_id === event.id && isProjectableCompetitiveVariant(variant));
         const enabledRewardIds = new Set(plan.enabledRewardIds);
         const disabledRewardIds = new Set(plan.disabledRewardIds ?? []);
-        if (!eventRewards.some(reward => enabledRewardIds.has(reward.id))) {
-          eventRewards
-            .filter(reward => !disabledRewardIds.has(reward.id))
-            .forEach(reward => enabledRewardIds.add(reward.id));
+        const selectableIds = [
+          ...eventRewards.map(reward => reward.id),
+          ...eventVariants.map(variant => variant.id),
+        ];
+        if (!selectableIds.some(id => enabledRewardIds.has(id))) {
+          selectableIds
+            .filter(id => !disabledRewardIds.has(id))
+            .forEach(id => enabledRewardIds.add(id));
         }
         plan.enabledRewardIds = [...enabledRewardIds];
         enabledRewardEventIds.add(event.id);
@@ -265,7 +278,14 @@ export class CaratPlannerPersistenceService {
       createdAt: now,
       updatedAt: now,
       projectionStartDate: now.slice(0, 10),
-      balances: { freeJewels: 0, paidJewels: 0, umaTickets: 0, supportTickets: 0 },
+      balances: {
+        freeJewels: 0,
+        paidJewels: 0,
+        umaTickets: 0,
+        supportTickets: 0,
+        rainbowCrystals: 0,
+        goldCrystals: 0,
+      },
       enabledIncomeRuleIds: [],
       enabledRewardIds: [],
       disabledRewardIds: [],
@@ -372,6 +392,8 @@ export class CaratPlannerPersistenceService {
       paidJewels: this.nonNegativeInt(record?.['paidJewels']),
       umaTickets: this.nonNegativeInt(record?.['umaTickets']),
       supportTickets: this.nonNegativeInt(record?.['supportTickets']),
+      rainbowCrystals: this.nonNegativeInt(record?.['rainbowCrystals']),
+      goldCrystals: this.nonNegativeInt(record?.['goldCrystals']),
     };
   }
 
@@ -410,6 +432,8 @@ export class CaratPlannerPersistenceService {
         ? []
         : [{ pickupId: legacyPickupId, desiredCopies: legacyDesiredCopies }];
     const firstGoal = pickupGoals[0];
+    const rainbowCrystalsPlanned = Math.min(20, this.nonNegativeInt(record['rainbowCrystalsPlanned']));
+    const goldCrystalsPlanned = Math.min(20, this.nonNegativeInt(record['goldCrystalsPlanned']));
     return {
       id: this.cleanText(record['id'], 100) || this.id('target'),
       eventId,
@@ -429,6 +453,8 @@ export class CaratPlannerPersistenceService {
       useTickets: record['useTickets'] !== false,
       ticketLimit: this.optionalInt(record['ticketLimit']),
       allowPaidJewels: record['allowPaidJewels'] === true,
+      ...(rainbowCrystalsPlanned > 0 ? { rainbowCrystalsPlanned } : {}),
+      ...(goldCrystalsPlanned > 0 ? { goldCrystalsPlanned } : {}),
     };
   }
 
@@ -535,7 +561,13 @@ export class CaratPlannerPersistenceService {
   }
 
   private currency(value: unknown): PlannerCurrency {
-    return value === 'paid_jewels' || value === 'uma_ticket' || value === 'support_ticket' ? value : 'free_jewels';
+    return value === 'paid_jewels'
+      || value === 'uma_ticket'
+      || value === 'support_ticket'
+      || value === 'rainbow_crystal'
+      || value === 'gold_crystal'
+      ? value
+      : 'free_jewels';
   }
 
   private cadence(value: unknown): PlannerIncomeCadence {

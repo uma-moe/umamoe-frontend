@@ -374,7 +374,15 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
 
     addEventToPlanner(event: TimelineEvent): void {
         if (!this.plannerEnabled) return;
-        this.plannerTimeline.setEventActive(event, true);
+        const plannerEvent = event.plannerRewardAvailable !== true && this.hasProjectableRewardSummary(event.id)
+            ? { ...event, plannerRewardAvailable: true }
+            : event;
+        this.plannerTimeline.setEventActive(plannerEvent, true);
+    }
+
+    hasProjectableRewardSummary(eventId: string): boolean {
+        const summary = this.plannerRewardSummaries.get(eventId);
+        return Boolean(summary && summary.mode !== 'placement');
     }
 
     removeEventFromPlanner(event: TimelineEvent): void {

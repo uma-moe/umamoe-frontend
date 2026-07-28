@@ -24,6 +24,8 @@ describe('CaratPlannerPersistenceService', () => {
           paidJewels: '42.9',
           umaTickets: 'not-a-number',
           supportTickets: 3.8,
+          rainbowCrystals: 2.9,
+          goldCrystals: -4,
         },
         enabledIncomeRuleIds: ['daily', 'daily', 42],
         enabledRewardIds: ['gift', 'gift'],
@@ -63,6 +65,8 @@ describe('CaratPlannerPersistenceService', () => {
             useTickets: false,
             ticketLimit: null,
             allowPaidJewels: 'true',
+            rainbowCrystalsPlanned: 99,
+            goldCrystalsPlanned: -1,
           },
           { id: 'invalid-target', eventId: '', title: '', bannerStart: '2026-01-01' },
         ],
@@ -74,7 +78,7 @@ describe('CaratPlannerPersistenceService', () => {
     expect(plan.name).toBe('x'.repeat(80));
     expect(plan.projectionStartDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(plan.projectionStartDate).not.toBe('2026-02-31');
-    expect(plan.balances).toEqual({ freeJewels: 0, paidJewels: 42, umaTickets: 0, supportTickets: 3 });
+    expect(plan.balances).toEqual({ freeJewels: 0, paidJewels: 42, umaTickets: 0, supportTickets: 3, rainbowCrystals: 2, goldCrystals: 0 });
     expect(plan.enabledIncomeRuleIds).toEqual(['daily']);
     expect(plan.enabledRewardIds).toEqual(['gift']);
     expect(plan.enabledRewardEventIds).toEqual(['campaign-1']);
@@ -110,6 +114,7 @@ describe('CaratPlannerPersistenceService', () => {
       pickupGoals: [],
       useTickets: false,
       allowPaidJewels: false,
+      rainbowCrystalsPlanned: 20,
     });
     expect(plan.targets[0].gachaId).toBeUndefined();
     expect(plan.targets[0].imagePath).toBeUndefined();
@@ -143,11 +148,11 @@ describe('CaratPlannerPersistenceService', () => {
 
     const stored = JSON.parse(localStorage.getItem(CaratPlannerPersistenceService.STORAGE_KEY) ?? '{}');
     const storedPlan = stored.plans.find((plan: { id: string }) => plan.id === 'saved-plan');
-    expect(storedPlan.balances).toEqual({ freeJewels: 1234, paidJewels: 0, umaTickets: 2, supportTickets: 3 });
+    expect(storedPlan.balances).toEqual({ freeJewels: 1234, paidJewels: 0, umaTickets: 2, supportTickets: 3, rainbowCrystals: 0, goldCrystals: 0 });
 
     const restored = createService().activePlan;
     expect(restored.id).toBe('saved-plan');
-    expect(restored.balances).toEqual({ freeJewels: 1234, paidJewels: 0, umaTickets: 2, supportTickets: 3 });
+    expect(restored.balances).toEqual({ freeJewels: 1234, paidJewels: 0, umaTickets: 2, supportTickets: 3, rainbowCrystals: 0, goldCrystals: 0 });
     expect(restored.targets[0].bannerKind).toBe('support');
   });
 
@@ -318,6 +323,56 @@ describe('CaratPlannerPersistenceService', () => {
 
     expect(service.activePlan.enabledRewardIds).toEqual(['selector-details']);
     expect(service.activePlan.enabledRewardEventIds).toEqual(['selector-campaign']);
+    expect(service.isEventActive(event.id)).toBeTrue();
+  });
+
+  it('activates reward events that only contain LB crystals in their item breakdown', () => {
+    const service = createService();
+    const event = {
+      id: 'crystal-campaign',
+      title: 'Crystal campaign',
+      type: 'campaign',
+      plannerRewardAvailable: true,
+      globalReleaseDate: '2026-03-01',
+    };
+    const rewards = [{
+      id: 'crystal-details',
+      label: 'LB crystal rewards',
+      event_id: event.id,
+      currency: 'free_jewels' as const,
+      amount: null,
+      available_at: '2026-03-01',
+      source_items: [{ item_category: 164, item_id: 149, amount: 1 }],
+    }];
+
+    service.setEventActive(event, true, rewards);
+
+    expect(service.activePlan.enabledRewardIds).toEqual(['crystal-details']);
+    expect(service.activePlan.enabledRewardEventIds).toEqual(['crystal-campaign']);
+  });
+
+  it('activates deterministic competitive rewards with their timeline event', () => {
+    const service = createService();
+    const event = {
+      id: 'legend-race-1021',
+      title: 'Legend Race',
+      type: 'legend_race',
+      plannerRewardAvailable: true,
+      globalReleaseDate: '2026-03-01',
+    };
+    const variants = [{
+      id: 'legend-clear',
+      competition: 'legend_race',
+      event_id: event.id,
+      master_event_id: 1021,
+      label: 'First clear',
+      source_items: [{ item_category: 90, item_id: 43, amount: 150 }],
+    }];
+
+    service.setEventActive(event, true, [], variants);
+
+    expect(service.activePlan.enabledRewardIds).toEqual(['legend-clear']);
+    expect(service.activePlan.enabledRewardEventIds).toEqual(['legend-race-1021']);
     expect(service.isEventActive(event.id)).toBeTrue();
   });
 
