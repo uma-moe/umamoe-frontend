@@ -1,4 +1,10 @@
-export type PlannerCurrency = 'free_jewels' | 'paid_jewels' | 'uma_ticket' | 'support_ticket';
+export type PlannerCurrency =
+  | 'free_jewels'
+  | 'paid_jewels'
+  | 'uma_ticket'
+  | 'support_ticket'
+  | 'rainbow_crystal'
+  | 'gold_crystal';
 
 export type PlannerBannerKind = 'character' | 'support' | 'paid' | 'other';
 
@@ -15,6 +21,8 @@ export interface PlannerBalances {
   paidJewels: number;
   umaTickets: number;
   supportTickets: number;
+  rainbowCrystals: number;
+  goldCrystals: number;
 }
 
 export interface PlannerCoreResource {
@@ -95,6 +103,7 @@ export interface PlannerCompetitiveRewardVariant {
   master_event_id: number;
   label: string;
   source_items: PlannerSourceItem[];
+  available_at?: string;
   provenance?: PlannerDataProvenance;
   confidence?: string;
   default_enabled?: boolean;
@@ -253,6 +262,10 @@ export interface PlannerTarget {
   useTickets: boolean;
   ticketLimit?: number;
   allowPaidJewels: boolean;
+  /** Rainbow LB crystals the player is willing to spend after pulling this support banner. */
+  rainbowCrystalsPlanned?: number;
+  /** Gold LB crystals the player is willing to spend after pulling this support banner. */
+  goldCrystalsPlanned?: number;
 }
 
 export interface CaratPlan {
@@ -264,7 +277,7 @@ export interface CaratPlan {
   balances: PlannerBalances;
   enabledIncomeRuleIds: string[];
   enabledRewardIds: string[];
-  /** Reward ids explicitly excluded by the user. New quantified rewards are included unless listed here. */
+  /** Fixed or deterministic-variant reward ids explicitly excluded by the user. */
   disabledRewardIds?: string[];
   enabledRewardEventIds: string[];
   disabledEventIds?: string[];
@@ -333,6 +346,8 @@ export interface PlannerTargetProjection {
   ticketPullsUsed: number;
   freeJewelPulls: number;
   paidJewelPulls: number;
+  rainbowCrystalsUsed: number;
+  goldCrystalsUsed: number;
   unfilledPulls: number;
   jewelCost: number;
   shortfallJewels: number;

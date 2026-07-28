@@ -93,7 +93,7 @@ describe('CaratPlannerCalculationService', () => {
 
   it('applies income before a target, then spends free pulls, tickets, and jewels in order', () => {
     const plan = makePlan({
-      balances: { freeJewels: 150, paidJewels: 300, umaTickets: 2, supportTickets: 0 },
+      balances: { freeJewels: 150, paidJewels: 300, umaTickets: 2, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 },
       enabledIncomeRuleIds: ['daily-jewels'],
       enabledRewardIds: ['ticket-gift'],
       targets: [makeTarget({ plannedPulls: 15 })],
@@ -124,19 +124,123 @@ describe('CaratPlannerCalculationService', () => {
     const target = projection.targets[0];
 
     expect(target.income.length).toBe(4);
-    expect(target.balanceBefore).toEqual({ freeJewels: 600, paidJewels: 300, umaTickets: 3, supportTickets: 0 });
+    expect(target.balanceBefore).toEqual({ freeJewels: 600, paidJewels: 300, umaTickets: 3, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 });
     expect(target.freePullsUsed).toBe(10);
     expect(target.ticketPullsUsed).toBe(3);
     expect(target.freeJewelPulls).toBe(2);
     expect(target.paidJewelPulls).toBe(0);
     expect(target.fundedPulls).toBe(15);
     expect(target.unfilledPulls).toBe(0);
-    expect(target.balanceAfter).toEqual({ freeJewels: 300, paidJewels: 300, umaTickets: 0, supportTickets: 0 });
+    expect(target.balanceAfter).toEqual({ freeJewels: 300, paidJewels: 300, umaTickets: 0, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 });
+  });
+
+  it('projects LB-crystal rewards and support-banner crystal budgets', () => {
+    const plan = makePlan({
+      balances: {
+        freeJewels: 0,
+        paidJewels: 0,
+        umaTickets: 0,
+        supportTickets: 0,
+        rainbowCrystals: 1,
+        goldCrystals: 2,
+      },
+      enabledRewardIds: ['crystal-reward'],
+      targets: [makeTarget({
+        bannerKind: 'support',
+        plannedPulls: 0,
+        rainbowCrystalsPlanned: 2,
+        goldCrystalsPlanned: 1,
+      })],
+    });
+    const data: CaratPlannerDataBundle = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards: [{
+        id: 'crystal-reward',
+        label: 'LB crystals',
+        currency: 'free_jewels',
+        amount: null,
+        available_at: '2026-01-02',
+        source_items: [
+          { item_category: 164, item_id: 149, amount: 2 },
+          { item_category: 164, item_id: 150, amount: 1 },
+        ],
+      }] },
+    };
+
+    const projection = service.project(plan, data);
+    const target = projection.targets[0];
+
+    expect(target.balanceBefore.rainbowCrystals).toBe(3);
+    expect(target.balanceBefore.goldCrystals).toBe(3);
+    expect(target.rainbowCrystalsUsed).toBe(2);
+    expect(target.goldCrystalsUsed).toBe(1);
+    expect(target.balanceAfter.rainbowCrystals).toBe(1);
+    expect(target.balanceAfter.goldCrystals).toBe(2);
+  });
+
+  it('projects mission source items and deterministic competitive event rewards', () => {
+    const plan = makePlan({
+      enabledRewardIds: ['mission-rewards', 'legend-clear', 'champions-result'],
+      targets: [makeTarget({ bannerEnd: '2026-01-10', plannedPulls: 0 })],
+    });
+    const data: CaratPlannerDataBundle = {
+      core: {},
+      income: { rules: [] },
+      rewards: {
+        rewards: [{
+          id: 'mission-rewards',
+          label: 'Event missions',
+          event_id: 'team-event',
+          currency: 'free_jewels',
+          amount: null,
+          available_at: '2026-01-03',
+          source_items: [
+            { item_category: 90, item_id: 43, amount: 100, mission_count: 2 },
+            { item_category: 40, item_id: 41, amount: 1 },
+          ],
+        }],
+        competitive_variants: [
+          {
+            id: 'legend-clear',
+            competition: 'legend_race',
+            event_id: 'legend-race-1021',
+            master_event_id: 1021,
+            label: 'First clear',
+            source_items: [{ item_category: 90, item_id: 43, amount: 150 }],
+          },
+          {
+            id: 'champions-result',
+            competition: 'champions_meeting',
+            event_id: 'champions-1',
+            master_event_id: 1,
+            label: 'Placement reward',
+            source_items: [{ item_category: 90, item_id: 43, amount: 2500 }],
+          },
+        ],
+      },
+    };
+    const projection = service.project(plan, data, [], [{
+      id: 'global-legend-race-1021',
+      title: 'Legend Race',
+      type: 'legend_race',
+      globalReleaseDate: '2026-01-04',
+    }]);
+    const target = projection.targets[0];
+
+    expect(target.balanceBefore.freeJewels).toBe(350);
+    expect(target.balanceBefore.umaTickets).toBe(1);
+    expect(target.income.map(entry => entry.id)).toEqual([
+      'reward:mission-rewards:free_jewels',
+      'reward:mission-rewards:uma_ticket',
+      'competitive:legend-clear:free_jewels',
+    ]);
+    expect(target.income.some(entry => entry.id.includes('champions-result'))).toBeFalse();
   });
 
   it('counts free pulls and tickets toward the spark threshold', () => {
     const plan = makePlan({
-      balances: { freeJewels: 25_500, paidJewels: 0, umaTickets: 20, supportTickets: 0 },
+      balances: { freeJewels: 25_500, paidJewels: 0, umaTickets: 20, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 },
       targets: [makeTarget({ plannedPulls: 200, desiredCopies: 1 })],
     });
     const projection = service.project(plan, emptyData(), [makeGacha({ free_pulls: 10 })]);
@@ -238,7 +342,7 @@ describe('CaratPlannerCalculationService', () => {
 
   it('uses the first published pickup when a target has not selected one yet', () => {
     const plan = makePlan({
-      balances: { freeJewels: 150, paidJewels: 0, umaTickets: 0, supportTickets: 0 },
+      balances: { freeJewels: 150, paidJewels: 0, umaTickets: 0, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 },
       targets: [makeTarget({ plannedPulls: 1 })],
     });
     const projection = service.project(plan, emptyData(), [makeGacha({
@@ -260,7 +364,7 @@ describe('CaratPlannerCalculationService', () => {
       pickupGoals: [{ pickupId: 104201, desiredCopies: 1 }],
     });
     const plan = makePlan({
-      balances: { freeJewels: 150, paidJewels: 0, umaTickets: 0, supportTickets: 0 },
+      balances: { freeJewels: 150, paidJewels: 0, umaTickets: 0, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 },
       targets: [target],
     });
     const reusedOldPool = makeGacha({
@@ -357,7 +461,7 @@ describe('CaratPlannerCalculationService', () => {
     const boundary = makeTarget({ id: 'boundary', eventId: 'boundary', bannerEnd: '2026-01-01', plannedPulls: 10 });
     const future = makeTarget({ id: 'future', eventId: 'future', bannerEnd: '2026-01-02', plannedPulls: 50 });
     const plan = makePlan({
-      balances: { freeJewels: 30_000, paidJewels: 0, umaTickets: 0, supportTickets: 0 },
+      balances: { freeJewels: 30_000, paidJewels: 0, umaTickets: 0, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 },
       targets: [future, past, boundary],
     });
 
@@ -398,7 +502,7 @@ describe('CaratPlannerCalculationService', () => {
     const data = emptyData();
     const gachas = [makeGacha()];
     const plan = makePlan({
-      balances: { freeJewels: 90_000, paidJewels: 0, umaTickets: 0, supportTickets: 0 },
+      balances: { freeJewels: 90_000, paidJewels: 0, umaTickets: 0, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 },
       targets: [
         makeTarget({ id: 'target-1', bannerEnd: '2026-01-10', plannedPulls: 10 }),
         makeTarget({ id: 'target-2', bannerEnd: '2026-01-20', plannedPulls: 20 }),
@@ -446,7 +550,7 @@ function makePlan(overrides: Partial<CaratPlan> = {}): CaratPlan {
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     projectionStartDate: '2026-01-01',
-    balances: { freeJewels: 0, paidJewels: 0, umaTickets: 0, supportTickets: 0 },
+    balances: { freeJewels: 0, paidJewels: 0, umaTickets: 0, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 },
     enabledIncomeRuleIds: [],
     enabledRewardIds: [],
     enabledRewardEventIds: [],

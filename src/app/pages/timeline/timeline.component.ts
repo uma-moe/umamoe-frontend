@@ -2257,7 +2257,10 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
 
     addEventToPlanner(event: TimelineEvent): void {
         if (!this.caratPlannerAvailable) return;
-        this.plannerTimeline.setEventActive(event, true);
+        const plannerEvent = event.plannerRewardAvailable !== true && this.hasProjectableRewardSummary(event.id)
+            ? { ...event, plannerRewardAvailable: true }
+            : event;
+        this.plannerTimeline.setEventActive(plannerEvent, true);
     }
 
     removeEventFromPlanner(event: TimelineEvent): void {
@@ -2273,7 +2276,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!this.caratPlannerAvailable) return false;
         const isPullTarget = [EventType.CHARACTER_BANNER, EventType.SUPPORT_CARD_BANNER].includes(event.type)
             && Boolean(event.plannerDataAvailable || event.gachaId || event.gachaIds?.length);
-        return isPullTarget || event.plannerRewardAvailable === true;
+        return isPullTarget
+            || event.plannerRewardAvailable === true
+            || this.hasProjectableRewardSummary(event.id);
+    }
+    private hasProjectableRewardSummary(eventId: string): boolean {
+        const summary = this.plannerRewardSummaries.get(eventId);
+        return Boolean(summary && summary.mode !== 'placement');
     }
     eventTypeToLabel(type: EventType | undefined): string {
         switch (type) {

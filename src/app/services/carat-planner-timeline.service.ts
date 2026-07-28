@@ -7,6 +7,8 @@ import { isCaratPlannerAvailable } from '../utils/carat-planner-availability';
 @Injectable({ providedIn: 'root' })
 export class CaratPlannerTimelineService {
   private readonly rewardOperation = new Map<string, number>();
+  private readonly pendingOperations = new Map<string, { event: CaratPlannerTimelineEvent; active: boolean }>();
+  private flushTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     private readonly persistence: CaratPlannerPersistenceService,
@@ -16,6 +18,20 @@ export class CaratPlannerTimelineService {
   setEventActive(event: CaratPlannerTimelineEvent, active: boolean): void {
     if (!isCaratPlannerAvailable()) return;
 
+    // Timeline cards update optimistically. Defer persistence and resource work
+    // to the next task so the pressed state can paint without waiting for a
+    // planner collection clone, localStorage write, or protected-data load.
+    this.pendingOperations.set(event.id, { event, active });
+    if (this.flushTimer !== undefined) return;
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = undefined;
+      const operations = [...this.pendingOperations.values()];
+      this.pendingOperations.clear();
+      operations.forEach(operation => this.commitEventActive(operation.event, operation.active));
+    }, 0);
+  }
+
+  private commitEventActive(event: CaratPlannerTimelineEvent, active: boolean): void {
     const planId = this.persistence.activePlan.id;
     this.persistence.setEventActive(event, active);
     if (!event.plannerRewardAvailable || !active) return;
@@ -29,7 +45,12 @@ export class CaratPlannerTimelineService {
       if (collection.activePlanId !== planId || (collection.plans.find(plan => plan.id === planId)?.disabledEventIds ?? []).includes(event.id)) {
         return;
       }
-      this.persistence.setEventActive(event, true, data.rewards.rewards);
+      this.persistence.setEventActive(
+        event,
+        true,
+        data.rewards.rewards,
+        data.rewards.competitive_variants ?? [],
+      );
     }).catch(() => undefined);
   }
 }

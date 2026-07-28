@@ -17,6 +17,10 @@ import {
 } from '../models/timeline.model';
 import { ResourceDataService, ResourceLoadError } from './resource-data.service';
 import { compareTimelineEventsForDisplay } from '../utils/timeline-event-order';
+import {
+  resolveBundledTimelineEventImagePath,
+  timelineEventMasterId,
+} from '../utils/timeline-event-image';
 
 const TIMELINE_RESOURCE_NAME = 'banner_timeline';
 const ENGLISH_TIMELINE_IMAGE_PATHS = englishTimelineImagePathsJson as Record<string, string>;
@@ -278,7 +282,8 @@ export class TimelineService {
       relatedCharacters: this.toStringArray(event.related_characters),
       relatedSupportCards: this.toStringArray(event.related_support_cards),
       relatedSupportCardNames: this.toStringArray(event.related_support_card_names),
-      imagePath: this.resolveTimelineImagePath(event.image_path),
+      imagePath: this.resolveTimelineImagePath(event.image_path)
+        ?? resolveBundledTimelineEventImagePath(event.type, timelineEventMasterId(event.id)),
       gametoraURL: event.gametora_url || undefined,
       umapyoiURL: event.umapyoi_url || undefined,
       prediction: this.toTimelinePrediction(event.prediction)

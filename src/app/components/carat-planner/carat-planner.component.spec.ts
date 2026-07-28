@@ -1007,7 +1007,14 @@ describe('CaratPlannerComponent banner ordering', () => {
 
 describe('CaratPlannerComponent active-plan resources', () => {
   const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-  const balances = { freeJewels: 0, paidJewels: 0, umaTickets: 0, supportTickets: 0 };
+  const balances = {
+    freeJewels: 0,
+    paidJewels: 0,
+    umaTickets: 0,
+    supportTickets: 0,
+    rainbowCrystals: 0,
+    goldCrystals: 0,
+  };
   const makePlan = (id: string, eventId: string): CaratPlan => ({
     id,
     name: id,

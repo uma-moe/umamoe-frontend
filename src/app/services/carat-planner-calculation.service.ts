@@ -3,6 +3,7 @@ import {
   CaratPlan,
   CaratPlanProjection,
   CaratPlannerDataBundle,
+  CaratPlannerTimelineEvent,
   FREE_PULL_CAMPAIGN_EXCLUDED_SELECTION,
   PickupOddsResult,
   PlannerBalances,
@@ -14,6 +15,11 @@ import {
   PlannerTarget,
   PlannerTargetProjection,
 } from '../models/carat-planner.model';
+import {
+  isProjectableCompetitiveVariant,
+  plannerSourceItemTotals,
+} from '../utils/planner-reward-currencies';
+import { timelineEventMasterId } from '../utils/timeline-event-image';
 import { CaratPullProbabilityService } from './carat-pull-probability.service';
 
 const DAY_MS = 86_400_000;
@@ -43,13 +49,14 @@ export class CaratPlannerCalculationService {
     plan: CaratPlan,
     data: CaratPlannerDataBundle,
     gachas: readonly PlannerGachaEntry[] = [],
+    events: readonly CaratPlannerTimelineEvent[] = [],
   ): CaratPlanProjection {
     const orderedTargets = plan.targets
       .filter(target => !(plan.disabledEventIds ?? []).includes(target.eventId))
       .filter(target => !this.isTargetBeforeProjectionStart(plan, target))
       .sort((a, b) => this.resolvePullDate(a).localeCompare(this.resolvePullDate(b)) || a.id.localeCompare(b.id));
     const campaignFreePulls = this.resolveFreePullCampaigns(plan, data, orderedTargets);
-    const baseKey = this.projectionBaseKey(plan, data, gachas);
+    const baseKey = this.projectionBaseKey(plan, data, gachas, events);
     const targetKeys = orderedTargets.map(target => this.targetKey(target));
     const cached = this.projectionCache.get(plan.id);
     let reusableTargets = 0;
@@ -69,7 +76,7 @@ export class CaratPlannerCalculationService {
       : plan.projectionStartDate;
     const ledger = cached?.baseKey === baseKey && cached.finalDate === finalDate
       ? cached.ledger
-      : this.buildLedger(plan, data, finalDate);
+      : this.buildLedger(plan, data, finalDate, events);
     const balances = reusableTargets > 0 && cached
       ? this.copyBalances(cached.projection.targets[reusableTargets - 1].balanceAfter)
       : this.copyBalances(plan.balances);
@@ -128,7 +135,12 @@ export class CaratPlannerCalculationService {
     return projection;
   }
 
-  buildLedger(plan: CaratPlan, data: CaratPlannerDataBundle, throughDate: string): PlannerLedgerEntry[] {
+  buildLedger(
+    plan: CaratPlan,
+    data: CaratPlannerDataBundle,
+    throughDate: string,
+    events: readonly CaratPlannerTimelineEvent[] = [],
+  ): PlannerLedgerEntry[] {
     const startDate = this.toDateKey(plan.projectionStartDate);
     const endDate = this.toDateKey(throughDate);
     if (!startDate || !endDate || endDate < startDate) {
@@ -149,23 +161,54 @@ export class CaratPlannerCalculationService {
 
     for (const reward of data.rewards.rewards ?? []) {
       if (!enabledRewards.has(reward.id)
-        || (reward.event_id ? disabledEvents.has(reward.event_id) : false)
-        || !Number.isFinite(reward.amount)
-        || (reward.amount ?? 0) === 0) {
-        continue;
-      }
+        || (reward.event_id ? disabledEvents.has(reward.event_id) : false)) continue;
       const date = this.toDateKey(reward.available_at);
       if (!date || date < startDate || date > endDate) {
         continue;
       }
-      ledger.push({
-        id: `reward:${reward.id}`,
-        label: reward.label,
-        date,
-        currency: reward.currency,
-        amount: Math.trunc(reward.amount ?? 0),
-        source: 'reward',
-      });
+      const hasTopLevelAmount = Number.isFinite(reward.amount) && (reward.amount ?? 0) !== 0;
+      if (hasTopLevelAmount) {
+        ledger.push({
+          id: `reward:${reward.id}`,
+          label: reward.label,
+          date,
+          currency: reward.currency,
+          amount: Math.trunc(reward.amount ?? 0),
+          source: 'reward',
+        });
+      }
+
+      for (const [currency, amount] of plannerSourceItemTotals(reward.source_items ?? [])) {
+        if (hasTopLevelAmount && reward.currency === currency) continue;
+        if (amount === 0) continue;
+        ledger.push({
+          id: `reward:${reward.id}:${currency}`,
+          label: reward.label,
+          date,
+          currency,
+          amount,
+          source: 'reward',
+        });
+      }
+    }
+
+    for (const variant of data.rewards.competitive_variants ?? []) {
+      if (!enabledRewards.has(variant.id)
+        || disabledEvents.has(variant.event_id)
+        || !isProjectableCompetitiveVariant(variant)) continue;
+      const date = this.competitiveVariantDate(variant, events);
+      if (!date || date < startDate || date > endDate) continue;
+      for (const [currency, amount] of plannerSourceItemTotals(variant.source_items ?? [])) {
+        if (amount <= 0) continue;
+        ledger.push({
+          id: `competitive:${variant.id}:${currency}`,
+          label: variant.label,
+          date,
+          currency,
+          amount,
+          source: 'reward',
+        });
+      }
     }
 
     for (const custom of plan.customIncome) {
@@ -332,6 +375,14 @@ export class CaratPlannerCalculationService {
 
     const fundedPulls = plannedPulls - remainingPulls;
     const sparkPulls = gacha?.spark_pulls ?? data.core.default_spark_pulls;
+    const rainbowCrystalsUsed = target.bannerKind === 'support'
+      ? Math.min(balances.rainbowCrystals, this.nonNegativeInt(target.rainbowCrystalsPlanned))
+      : 0;
+    const goldCrystalsUsed = target.bannerKind === 'support'
+      ? Math.min(balances.goldCrystals, this.nonNegativeInt(target.goldCrystalsPlanned))
+      : 0;
+    balances.rainbowCrystals -= rainbowCrystalsUsed;
+    balances.goldCrystals -= goldCrystalsUsed;
 
     return {
       targetId: target.id,
@@ -347,6 +398,8 @@ export class CaratPlannerCalculationService {
       ticketPullsUsed,
       freeJewelPulls,
       paidJewelPulls,
+      rainbowCrystalsUsed,
+      goldCrystalsUsed,
       unfilledPulls: remainingPulls,
       jewelCost,
       shortfallJewels: remainingPulls * jewelCost,
@@ -439,6 +492,7 @@ export class CaratPlannerCalculationService {
     plan: CaratPlan,
     data: CaratPlannerDataBundle,
     gachas: readonly PlannerGachaEntry[],
+    events: readonly CaratPlannerTimelineEvent[],
   ): string {
     const customIncome = [...plan.customIncome]
       .sort((a, b) => a.id.localeCompare(b.id))
@@ -468,7 +522,20 @@ export class CaratPlannerCalculationService {
       customIncome,
       dataToken: this.objectToken(data),
       gachaTokens,
+      eventsToken: events.length > 0 ? this.objectToken(events) : 0,
     });
+  }
+
+  private competitiveVariantDate(
+    variant: { event_id: string; master_event_id: number; competition: string; available_at?: string },
+    events: readonly CaratPlannerTimelineEvent[],
+  ): string {
+    const explicit = this.toDateKey(variant.available_at);
+    if (explicit) return explicit;
+    const event = events.find(item => item.id === variant.event_id)
+      ?? events.find(item => item.type === variant.competition
+        && timelineEventMasterId(item.id) === variant.master_event_id);
+    return this.toDateKey(event?.globalReleaseDate ?? event?.estimatedGlobalDate ?? event?.jpReleaseDate);
   }
 
   private resolveFreePullCampaigns(
@@ -548,6 +615,8 @@ export class CaratPlannerCalculationService {
       useTickets: target.useTickets,
       ticketLimit: target.ticketLimit,
       allowPaidJewels: target.allowPaidJewels,
+      rainbowCrystalsPlanned: target.rainbowCrystalsPlanned,
+      goldCrystalsPlanned: target.goldCrystalsPlanned,
     });
   }
 
@@ -650,6 +719,8 @@ export class CaratPlannerCalculationService {
       case 'paid_jewels': return 'paidJewels';
       case 'uma_ticket': return 'umaTickets';
       case 'support_ticket': return 'supportTickets';
+      case 'rainbow_crystal': return 'rainbowCrystals';
+      case 'gold_crystal': return 'goldCrystals';
       default: return 'freeJewels';
     }
   }
@@ -660,6 +731,8 @@ export class CaratPlannerCalculationService {
       paidJewels: this.nonNegativeInt(value.paidJewels),
       umaTickets: this.nonNegativeInt(value.umaTickets),
       supportTickets: this.nonNegativeInt(value.supportTickets),
+      rainbowCrystals: this.nonNegativeInt(value.rainbowCrystals),
+      goldCrystals: this.nonNegativeInt(value.goldCrystals),
     };
   }
 
