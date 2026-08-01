@@ -374,12 +374,12 @@ jobs:
           set -euo pipefail
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "set -e;
-             mkdir -p '$REMOTE_SHELL_DIR' '$REMOTE_ASSETS_DIR/data';
-             if ! test -w '$REMOTE_ASSETS_DIR' || { test -d '$REMOTE_ASSETS_DIR/images' && ! test -w '$REMOTE_ASSETS_DIR/images'; }; then
-               docker run --rm -v '$REMOTE_ASSETS_DIR:/target' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target;
+             mkdir -p '$REMOTE_SHELL_DIR' '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
+             if ! test -w '$REMOTE_ASSETS_DIR/data' || ! test -w '$REMOTE_ASSETS_DIR/images'; then
+               docker run --rm -v '$REMOTE_ASSETS_DIR/data:/target/data' -v '$REMOTE_ASSETS_DIR/images:/target/images' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target/data /target/images;
              fi;
-             mkdir -p '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
-             chmod -R u+rwX '$REMOTE_ASSETS_DIR';
+             # Statistics may be a protected mount managed outside this deploy.
+             chmod -R u+rwX '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
              for writable_dir in '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images'; do
                write_test=\"\$writable_dir/.rsync-write-test\";
                if ! touch \"\$write_test\" 2>/dev/null; then
@@ -688,12 +688,12 @@ jobs:
           set -euo pipefail
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "set -e;
-             mkdir -p '$REMOTE_SHELL_DIR' '$REMOTE_ASSETS_DIR/data';
-             if ! test -w '$REMOTE_ASSETS_DIR' || { test -d '$REMOTE_ASSETS_DIR/images' && ! test -w '$REMOTE_ASSETS_DIR/images'; }; then
-               docker run --rm -v '$REMOTE_ASSETS_DIR:/target' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target;
+             mkdir -p '$REMOTE_SHELL_DIR' '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
+             if ! test -w '$REMOTE_ASSETS_DIR/data' || ! test -w '$REMOTE_ASSETS_DIR/images'; then
+               docker run --rm -v '$REMOTE_ASSETS_DIR/data:/target/data' -v '$REMOTE_ASSETS_DIR/images:/target/images' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target/data /target/images;
              fi;
-             mkdir -p '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
-             chmod -R u+rwX '$REMOTE_ASSETS_DIR';
+             # Statistics may be a protected mount managed outside this deploy.
+             chmod -R u+rwX '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
              for writable_dir in '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images'; do
                write_test=\"\$writable_dir/.rsync-write-test\";
                if ! touch \"\$write_test\" 2>/dev/null; then
