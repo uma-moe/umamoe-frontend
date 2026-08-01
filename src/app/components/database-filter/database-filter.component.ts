@@ -1790,6 +1790,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
       if (this.filterMode === 'uql') {
         next.uqlState = this.getSerializedState({ includeP2Context: false });
+        // An empty UQL editor is an explicit clear. Do not leave an older
+        // structured state behind to be restored when the user changes modes.
+        if (!next.uqlState) {
+          next.formState = '';
+        }
       } else {
         next.formState = this.getSerializedState({ includeP2Context: false });
       }
@@ -3198,13 +3203,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
   clearCurrentFilters(event?: MouseEvent): void {
     event?.stopPropagation();
-    if (this.filterMode === 'uql') {
-      this.clearUql();
-      return;
-    }
-
-    this.clearStructuredFilters();
-    this.onFilterChange();
+    this.clearUql();
   }
 
   private clearStructuredFilters(): void {
@@ -3491,7 +3490,11 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
     const savedState = shouldUseSavedState ? this.readSavedFilterState() : null;
     if (previousMode === 'uql' && mode !== 'uql') {
-      if (savedState?.formState) {
+      if (!this.getNormalizedUqlQuery()) {
+        // Clearing UQL must not revive an earlier structured query when the
+        // user returns to Basic or Advanced mode.
+        this.clearStructuredFilters();
+      } else if (savedState?.formState) {
         this.loadSerializedState(savedState.formState, mode);
         this.filterMode = mode;
       } else {
@@ -3877,10 +3880,32 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   clearUql(): void {
+    // The mode selector retains both representations so switching modes is
+    // non-destructive. A deliberate clear is the exception: it resets both
+    // representations, otherwise a saved structured filter can immediately
+    // reappear after leaving UQL.
+    this.clearStructuredFilters();
     this.uqlQuery = '';
     this.clearUqlEditorDirectiveState();
     this.validateUqlQuery();
     this.onFilterChange();
+    this.clearPersistedFilterStates();
+  }
+
+  private clearPersistedFilterStates(): void {
+    try {
+      localStorage.setItem(DatabaseFilterComponent.SAVED_FILTER_MODE_KEY, this.filterMode);
+      localStorage.setItem(DatabaseFilterComponent.SAVED_FILTER_STATE_KEY, JSON.stringify({
+        version: 2,
+        mode: this.filterMode,
+        formState: '',
+        uqlState: '',
+        defaultMlbFilterRemoved: true,
+        hiddenP2ContextRemoved: true,
+      } satisfies SavedDatabaseFilterState));
+    } catch {
+      // Ignore unavailable storage; the in-memory filter state is already clear.
+    }
   }
   insertUqlSnippet(insertText: string): void {
     const expression = this.stripLeadingWhere(insertText);
