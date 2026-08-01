@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+  <title id="title">Future support card artwork placeholder</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#204c3b"/>
+      <stop offset=".5" stop-color="#164861"/>
+      <stop offset="1" stop-color="#643459"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#bcf1da"/>
+      <stop offset="1" stop-color="#8bc9f3"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="24" fill="url(#bg)"/>
+  <path d="m45 58 116-26c12-3 23 5 26 17l25 113c3 12-5 23-17 26L80 214c-12 3-23-5-26-17L28 84c-3-12 5-23 17-26Z" fill="#0c1720" opacity=".35"/>
+  <rect x="57" y="34" width="142" height="180" rx="16" fill="url(#card)" transform="rotate(6 128 124)"/>
+  <circle cx="130" cy="101" r="39" fill="#14354c" opacity=".72"/>
+  <path d="M76 194c6-45 25-67 58-67 32 0 52 22 58 67" fill="#14354c" opacity=".72"/>
+  <path d="m103 69 8-28 20 23m28 6-7-29-21 23" fill="#14354c" opacity=".72"/>
+  <rect x="58" y="208" width="140" height="31" rx="15.5" fill="#101722" opacity=".9"/>
+  <text x="128" y="229" fill="#ffffff" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2" text-anchor="middle">FUTURE SUPPORT</text>
+</svg>

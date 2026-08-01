@@ -52,6 +52,10 @@ import {
   resolveBundledTimelineEventImagePath,
   timelineEventMasterId,
 } from '../../utils/timeline-event-image';
+import {
+  PLANNER_COMPETITION_ASSUMPTION_GROUPS,
+  plannerCompetitionAssumptionGroup,
+} from '../../utils/carat-planner-competition-assumptions';
 import { CaratPlannerCalculationService } from '../../services/carat-planner-calculation.service';
 import { CaratPlannerPersistenceService } from '../../services/carat-planner-persistence.service';
 import { CaratPlannerResourceService, CaratPlannerResourceState } from '../../services/carat-planner-resource.service';
@@ -96,6 +100,7 @@ interface PlannerPickupOptionView extends PlannerPickupRate {
   subLabel?: string;
   imagePath?: string;
   fallbackImagePath?: string;
+  placeholderImagePath?: string;
 }
 
 interface PlannerPickupGoalView {
@@ -104,6 +109,7 @@ interface PlannerPickupGoalView {
   subLabel?: string;
   imagePath?: string;
   fallbackImagePath?: string;
+  placeholderImagePath?: string;
   rate: number;
   desiredCopies: number;
   probability?: number;
@@ -118,6 +124,7 @@ interface PlannerScenarioOptionView {
 interface PlannerScenarioGroupView {
   id: string;
   label: string;
+  scheduleLabel: string;
   options: PlannerScenarioOptionView[];
 }
 
@@ -199,6 +206,7 @@ interface PlannerOddsView {
 type PlannerSetupPanel = 'resources' | 'income' | 'rewards';
 type RewardSelectionFilter = 'all' | 'included';
 type FreePullCampaignChoice = 'schedule' | 'stock';
+type BannerSearchFilter = 'all' | 'character' | 'support' | 'rerun';
 
 @Component({
   selector: 'app-carat-planner',
@@ -266,6 +274,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   upcomingRewardGroupCount = 0;
   pastRewardGroupCount = 0;
   eventSearch = '';
+  bannerSearchFilter: BannerSearchFilter = 'all';
   rewardSearch = '';
   rewardSelectionFilter: RewardSelectionFilter = 'all';
   showPastRewards = false;
@@ -512,6 +521,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector'
         ? total + Math.max(1, Number(benefit.amount) || 1)
         : total, 0);
+    const unknownRewards = activeGroups.flatMap(group => group.rewards)
+      .filter(reward => !this.hasProjectableReward(reward) && this.isRewardActive(reward))
+      .length;
     const parts: string[] = [];
     if (carats > 0) parts.push(`${INTEGER_FORMATTER.format(carats)} Carats`);
     if (tickets > 0) parts.push(`${INTEGER_FORMATTER.format(tickets)} ${tickets === 1 ? 'ticket' : 'tickets'}`);
@@ -519,6 +531,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (goldCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(goldCrystals)} gold LB`);
     if (freePulls > 0) parts.push(`${INTEGER_FORMATTER.format(freePulls)} free pulls`);
     if (selectors > 0) parts.push(`${INTEGER_FORMATTER.format(selectors)} ${selectors === 1 ? 'selector' : 'selectors'}`);
+    if (unknownRewards > 0) parts.push(`${INTEGER_FORMATTER.format(unknownRewards)} unknown`);
     return parts.join(' · ');
   }
 
@@ -534,7 +547,11 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const hasTrackedInformationalBenefit = group.eventBenefits.some(benefit =>
       benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector');
     const variableActive = Boolean(group.eventId && this.plan.variableRewardSelections?.[group.eventId]);
-    if (selectableRewards.length === 0 && !hasTrackedInformationalBenefit) return variableActive;
+    const unknownRewardActive = group.rewards.some(reward =>
+      !this.hasProjectableReward(reward) && this.isRewardActive(reward));
+    if (selectableRewards.length === 0 && !hasTrackedInformationalBenefit) {
+      return variableActive || unknownRewardActive;
+    }
     const rewardsActive = selectableRewards.length === 0
       || selectableRewards.every(reward => this.isRewardActive(reward));
     const informationalActive = !hasTrackedInformationalBenefit
@@ -854,6 +871,14 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.eventPickerActiveIndex = this.nextSelectableEventIndex(-1, 1);
   }
 
+  setBannerSearchFilter(filter: BannerSearchFilter): void {
+    if (this.bannerSearchFilter === filter) return;
+    this.bannerSearchFilter = filter;
+    this.showEventPicker = true;
+    this.filterEvents();
+    this.eventPickerActiveIndex = this.nextSelectableEventIndex(-1, 1);
+  }
+
   addEvent(event: CaratPlannerTimelineEvent): void {
     if (event.plannerRewardAvailable && !this.plannerDataReady) return;
     this.persistence.setEventActive(
@@ -1027,9 +1052,18 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.save();
   }
 
+  cycleScenario(group: PlannerScenarioGroupView, direction: 1 | -1): void {
+    const values = ['', ...group.options.map(option => option.value)];
+    const current = Math.max(0, values.indexOf(this.plan.scenarioSelections[group.id] ?? ''));
+    const next = (current + direction + values.length) % values.length;
+    this.setScenario(group.id, values[next]);
+  }
+
   scenarioGroupIcon(groupId: string): string {
     if (groupId === 'team_trials_class') return 'stadium';
     if (groupId === 'club_rank') return 'groups';
+    const competition = plannerCompetitionAssumptionGroup(groupId);
+    if (competition) return competition.icon;
     return 'tune';
   }
 
@@ -1077,9 +1111,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         groups.set(rule.scenario_group, options);
       }
     }
-    this.scenarioGroupOptions = [...groups].map(([id, options]) => ({
+    const resourceGroups = [...groups].map(([id, options]) => ({
       id,
       label: id === 'team_trials_class' ? 'Team Trials class' : id === 'club_rank' ? 'Club rank' : this.humanize(id),
+      scheduleLabel: this.scenarioScheduleLabel(id),
       options: [...options]
         .sort((left, right) => this.scenarioOptionNumber(left) - this.scenarioOptionNumber(right))
         .map(value => ({
@@ -1088,6 +1123,17 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           amountLabel: this.scenarioOptionAmountLabel(id, value),
         })),
     }));
+    const competitionGroups = PLANNER_COMPETITION_ASSUMPTION_GROUPS.map(group => ({
+      id: group.id,
+      label: group.label,
+      scheduleLabel: group.scheduleLabel,
+      options: group.options.map(option => ({
+        value: option.value,
+        label: option.label,
+        amountLabel: this.competitionAssumptionAmountLabel(option.amounts),
+      })),
+    }));
+    this.scenarioGroupOptions = [...resourceGroups, ...competitionGroups];
     this.displayedRules = this.data.income.rules.filter(rule => !rule.scenario_group);
     this.filterRewards();
   }
@@ -1367,7 +1413,13 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           variableOptions,
         );
         const source = this.rewardGroupSource(applicableRewards, applicableBenefits);
+        const groupedResourceCount = group.rewards.length
+          + group.eventBenefits.length
+          + group.competitiveVariants.length;
         const title = this.cleanRewardLabel((event ? this.rewardEventDisplayTitle(event) : undefined)
+          ?? (group.eventId && groupedResourceCount > 1
+            ? this.humanize(group.eventId).replace(/^./, character => character.toLowerCase())
+            : undefined)
           ?? group.rewards[0]?.label
           ?? group.eventBenefits[0]?.label
           ?? (group.competitiveVariants[0]
@@ -1654,10 +1706,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const amount = Number.isFinite(benefit.amount) ? Math.max(0, Number(benefit.amount)) : null;
     if (benefit.kind === 'free_pulls' && amount !== null) {
       if (benefit.confidence === 'schedule_partitioned') {
-        return `${INTEGER_FORMATTER.format(amount)} schedule-derived free ${amount === 1 ? 'pull' : 'pulls'}`;
+        const qualifier = benefit.source_url ? 'schedule-derived free' : 'predicted free';
+        return `${INTEGER_FORMATTER.format(amount)} ${qualifier} ${amount === 1 ? 'pull' : 'pulls'}`;
       }
-      const predicted = benefit.provenance === 'jp_news'
-        || benefit.confidence === 'schedule_derived';
+      const predicted = benefit.confidence === 'schedule_derived';
       return `${INTEGER_FORMATTER.format(amount)} ${predicted ? 'predicted free' : 'free'} ${amount === 1 ? 'pull' : 'pulls'}`;
     }
     if ((benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector') && amount !== null && amount > 1) {
@@ -1732,6 +1784,25 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           : cadence === 'interval' ? '/period'
             : '';
     return `+${INTEGER_FORMATTER.format(amount)}${suffix}`;
+  }
+
+  private scenarioScheduleLabel(groupId: string): string {
+    const rule = this.data.income.rules.find(item => item.scenario_group === groupId);
+    if (!rule) return 'Optional income';
+    if (rule.cadence === 'weekly') return 'Weekly payout';
+    if (rule.cadence === 'monthly') return 'Monthly payout';
+    if (rule.cadence === 'daily') return 'Daily payout';
+    return this.incomeRuleScheduleLabel(rule);
+  }
+
+  private competitionAssumptionAmountLabel(
+    amounts: Readonly<Partial<Record<PlannerCurrency, number>>>,
+  ): string {
+    const carats = (amounts.free_jewels ?? 0) + (amounts.paid_jewels ?? 0);
+    const tickets = (amounts.uma_ticket ?? 0) + (amounts.support_ticket ?? 0);
+    const parts = carats > 0 ? [`+${INTEGER_FORMATTER.format(carats)}`] : [];
+    if (tickets > 0) parts.push(`${INTEGER_FORMATTER.format(tickets)} tix`);
+    return `${parts.join(' + ')} / event`;
   }
 
   pickupOptions(target: PlannerTarget): readonly PlannerPickupOptionView[] {
@@ -2113,6 +2184,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           subLabel: option.subLabel,
           imagePath: option.imagePath,
           fallbackImagePath: option.fallbackImagePath,
+          placeholderImagePath: option.placeholderImagePath,
           rate: option.rate,
           desiredCopies: goal.desiredCopies,
           probability: goalOdds?.probability,
@@ -2224,22 +2296,32 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       && supportTitle.toLowerCase() !== resolvedName.toLowerCase()
       ? `${resolvedName} — ${supportTitle}`
       : resolvedName;
+    const placeholderImagePath = target.bannerKind === 'support'
+      ? 'assets/images/planner-placeholder-support.svg'
+      : 'assets/images/planner-placeholder-character.svg';
     return {
       ...pickup,
       label,
       subLabel: avatar?.subLabel,
-      imagePath: avatar?.imageUrl,
+      imagePath: avatar?.imageUrl ?? placeholderImagePath,
       fallbackImagePath: avatar?.fallbackImageUrl,
+      placeholderImagePath,
     };
   }
 
-  onPickupImageError(event: Event, fallbackImagePath?: string): void {
+  onPickupImageError(event: Event, fallbackImagePath?: string, placeholderImagePath?: string): void {
     const image = event.target as HTMLImageElement | null;
     if (!image) return;
 
     if (fallbackImagePath && image.dataset['fallbackApplied'] !== 'true') {
       image.dataset['fallbackApplied'] = 'true';
       image.src = fallbackImagePath;
+      return;
+    }
+
+    if (placeholderImagePath && image.dataset['placeholderApplied'] !== 'true') {
+      image.dataset['placeholderApplied'] = 'true';
+      image.src = placeholderImagePath;
       return;
     }
 
@@ -2357,7 +2439,11 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.filteredEvents = this.allEvents
       .filter(event => {
         const kind = this.bannerKind(event.type);
-        return kind === 'character' || kind === 'support';
+        if (kind !== 'character' && kind !== 'support') return false;
+        if (this.bannerSearchFilter === 'character') return kind === 'character';
+        if (this.bannerSearchFilter === 'support') return kind === 'support';
+        if (this.bannerSearchFilter === 'rerun') return this.isRerunBanner(event);
+        return true;
       })
       .filter(event => !query || this.eventMatchesPickerSearch(event, query))
       .sort((a, b) => {
@@ -2406,12 +2492,24 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   private eventPickerSearchValues(event: CaratPlannerTimelineEvent): string[] {
+    const kind = this.bannerKind(event.type);
     return [
       event.title,
       ...(event.relatedCharacters ?? []),
       ...(event.relatedSupportCards ?? []),
+      ...(event.relatedSupportCardNames ?? []),
       ...(event.tags ?? []),
+      event.type ?? '',
+      event.gachaTypeName ?? '',
+      kind === 'character' ? 'uma character trainee scout banner' : '',
+      kind === 'support' ? 'support card scout banner' : '',
+      this.isRerunBanner(event) ? 'rerun re-run revival returning encore' : '',
     ].filter(value => value.length > 0);
+  }
+
+  private isRerunBanner(event: CaratPlannerTimelineEvent): boolean {
+    return [event.title, event.type, event.gachaTypeName, ...(event.tags ?? [])]
+      .some(value => /rerun|re-run|revival|returning|encore/i.test(value ?? ''));
   }
 
   private normalizeSearchValue(value: string): string {

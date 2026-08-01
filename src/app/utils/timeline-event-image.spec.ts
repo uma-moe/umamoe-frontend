@@ -1,5 +1,6 @@
 import {
   resolveBundledTimelineEventImagePath,
+  resolveTimelineEventImagePath,
   timelineEventMasterId,
 } from './timeline-event-image';
 
@@ -15,5 +16,12 @@ describe('timeline event image fallbacks', () => {
     expect(timelineEventMasterId('global-legend-race-1021')).toBe(1021);
     expect(timelineEventMasterId('campaign-without-id')).toBeUndefined();
     expect(resolveBundledTimelineEventImagePath('legend_race', 999999)).toBeUndefined();
+  });
+
+  it('prefers a known bundled fallback over an unbundled resource path', () => {
+    expect(resolveTimelineEventImagePath('assets/missing/campaign.webp', 'campaign', 887))
+      .toBe('assets/timeline-images/en/events/campaign/887.webp');
+    expect(resolveTimelineEventImagePath(undefined, 'legend_race', 1021))
+      .toBe('assets/timeline-images/jp/events/legend-race/1021.webp');
   });
 });

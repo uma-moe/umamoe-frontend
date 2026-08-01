@@ -94,7 +94,7 @@ export class CaratPlannerPersistenceService {
       const existing = plan.targets.find(target => target.eventId === event.id);
       const bannerStart = this.timelineDateKey(
         event.globalReleaseDate ?? event.estimatedGlobalDate ?? event.jpReleaseDate,
-      );
+      ) || new Date().toISOString().slice(0, 10);
       const bannerEnd = this.timelineDateKey(event.estimatedEndDate) || bannerStart;
       if (existing) {
         existing.title = event.title;
@@ -613,9 +613,9 @@ export class CaratPlannerPersistenceService {
   }
 
   private timelineDateKey(value?: Date | string): string {
-    if (!value) return new Date().toISOString().slice(0, 10);
+    if (!value) return '';
     const date = value instanceof Date ? value : new Date(value);
-    return Number.isNaN(date.getTime()) ? new Date().toISOString().slice(0, 10) : date.toISOString().slice(0, 10);
+    return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
   }
 
   private pullTiming(value: unknown): PlannerPullTiming {

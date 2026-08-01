@@ -184,6 +184,37 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.plan.targets).toEqual([]);
   });
 
+  it('searches support titles and filters ordinary, support, and rerun banners', () => {
+    const component = createComponent();
+    component.events = [
+      { id: 'uma', title: 'Regular trainee scout', type: 'character_banner', globalReleaseDate: '2031-01-01' },
+      {
+        id: 'tachyon-support',
+        title: 'Featured support scout',
+        type: 'support_card_banner',
+        globalReleaseDate: '2031-02-01',
+        relatedSupportCardNames: ['Agnes Tachyon Lab Coat'],
+      },
+      {
+        id: 'rerun-support',
+        title: 'Returning supports',
+        type: 'support_card_banner',
+        gachaTypeName: 'Rerun Scout',
+        globalReleaseDate: '2031-03-01',
+      },
+    ];
+
+    component.searchEvents('Tachyon');
+    expect(component.filteredEvents.map(event => event.id)).toEqual(['tachyon-support']);
+
+    component.searchEvents('');
+    component.setBannerSearchFilter('rerun');
+    expect(component.filteredEvents.map(event => event.id)).toEqual(['rerun-support']);
+
+    component.setBannerSearchFilter('support');
+    expect(component.filteredEvents.map(event => event.id)).toEqual(['tachyon-support', 'rerun-support']);
+  });
+
   it('uses the banner start when its end date is missing or invalid', () => {
     const component = createComponent();
 
@@ -414,12 +445,13 @@ describe('CaratPlannerComponent banner ordering', () => {
       buildPickupOption: (
         targetValue: typeof target,
         pickup: { pickup_id: number; rate: number; label?: string },
-      ) => { label: string; imagePath?: string; fallbackImagePath?: string };
+      ) => { label: string; imagePath?: string; fallbackImagePath?: string; placeholderImagePath: string };
     }).buildPickupOption(target, { pickup_id: 113202, rate: 0.0075, label: 'Character 113202' });
 
     expect(option.label).toBe('Loves Only You');
     expect(option.imagePath).toBe('/assets/images/character_stand/chara_stand_113202.webp');
     expect(option.fallbackImagePath).toBe('/assets/images/character_stand/chara_stand_113201.webp');
+    expect(option.placeholderImagePath).toBe('assets/images/planner-placeholder-character.svg');
   });
 
   it('builds compact scenario selectors with site-native club rank artwork', () => {
@@ -445,6 +477,12 @@ describe('CaratPlannerComponent banner ordering', () => {
       { value: 'rank_2', label: 'D+', amountLabel: '+225/mo' },
       { value: 'rank_11', label: 'SS', amountLabel: '+4,500/mo' },
     ]);
+    expect(component.scenarioGroupOptions[2].options[0]).toEqual({
+      value: 'champion', label: 'Champion', amountLabel: '+3,300 + 10 tix / event',
+    });
+    expect(component.scenarioGroupOptions[3].options[4]).toEqual({
+      value: 'gold_4', label: 'Gold 4', amountLabel: '+1,300 + 4 tix / event',
+    });
     expect(component.scenarioGroupIcon('team_trials_class')).toBe('stadium');
     expect(component.scenarioOptionIconPath('club_rank', 'rank_11'))
       .toBe('assets/images/icon/circle_rank/utx_ico_circle_rank_11.webp');
@@ -457,6 +495,8 @@ describe('CaratPlannerComponent banner ordering', () => {
     });
     component.plan.scenarioSelections = {};
     expect(component.selectedScenarioOption(component.scenarioGroupOptions[1])).toBeNull();
+    component.cycleScenario(component.scenarioGroupOptions[2], 1);
+    expect(component.plan.scenarioSelections['champions_meeting_result']).toBe('champion');
   });
 
   it('summarizes only active assumptions and rewards', () => {
@@ -1102,6 +1142,7 @@ describe('CaratPlannerComponent active-plan resources', () => {
         finalBalances: { ...plan.balances },
         unallocatedIncome: [],
       }),
+      isTargetBeforeProjectionStart: () => false,
     };
     const cdr = { markForCheck: jasmine.createSpy('markForCheck') } as unknown as ChangeDetectorRef;
     const component = new CaratPlannerComponent(

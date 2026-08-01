@@ -18,6 +18,7 @@ import {
 import {
   plannerRewardBundles,
 } from '../utils/planner-reward-currencies';
+import { PLANNER_COMPETITION_ASSUMPTION_GROUPS } from '../utils/carat-planner-competition-assumptions';
 import { CaratPullProbabilityService } from './carat-pull-probability.service';
 
 const DAY_MS = 86_400_000;
@@ -194,6 +195,30 @@ export class CaratPlannerCalculationService {
           amount,
           source: 'reward',
         });
+      }
+    }
+
+    for (const group of PLANNER_COMPETITION_ASSUMPTION_GROUPS) {
+      const selectedOption = group.options.find(option => option.value === plan.scenarioSelections[group.id]);
+      if (!selectedOption) continue;
+      for (const event of events) {
+        if (event.type !== group.eventType
+          || disabledEvents.has(event.id)
+          || plan.variableRewardSelections?.[event.id]) continue;
+        const date = this.competitiveEventDate(event.id, events);
+        if (!date || date < startDate || date > endDate) continue;
+        for (const [currency, rawAmount] of Object.entries(selectedOption.amounts) as [PlannerCurrency, number][]) {
+          const amount = this.nonNegativeInt(rawAmount);
+          if (amount <= 0) continue;
+          ledger.push({
+            id: `competition-assumption:${event.id}:${selectedOption.value}:${currency}`,
+            label: `${group.label}: ${selectedOption.label}`,
+            date,
+            currency,
+            amount,
+            source: 'rule',
+          });
+        }
       }
     }
 

@@ -34,3 +34,16 @@ export function resolveBundledTimelineEventImagePath(
   return ENGLISH_TIMELINE_IMAGE_PATHS[logicalPath]
     ?? JAPANESE_TIMELINE_IMAGE_PATHS[logicalPath];
 }
+
+export function resolveTimelineEventImagePath(
+  imagePath: string | null | undefined,
+  eventType: string | null | undefined,
+  masterEventId: number | null | undefined,
+): string | undefined {
+  const bundledFallback = resolveBundledTimelineEventImagePath(eventType, masterEventId);
+  if (!imagePath) return bundledFallback;
+  return ENGLISH_TIMELINE_IMAGE_PATHS[imagePath]
+    ?? JAPANESE_TIMELINE_IMAGE_PATHS[imagePath]
+    ?? bundledFallback
+    ?? imagePath;
+}

@@ -134,6 +134,38 @@ describe('CaratPlannerCalculationService', () => {
     expect(target.balanceAfter).toEqual({ freeJewels: 300, paidJewels: 300, umaTickets: 0, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 });
   });
 
+  it('applies CM and LoH assumptions on matching event dates and lets explicit outcomes override them', () => {
+    const plan = makePlan({
+      scenarioSelections: {
+        champions_meeting_result: 'group_b_second',
+        league_of_heroes_rank: 'gold_4',
+      },
+      variableRewardSelections: {
+        'champions-meeting-2': {
+          optionId: 'specific-result',
+          label: 'Specific CM result',
+          availableAt: '2026-01-20',
+          amounts: { free_jewels: 900, uma_ticket: 2, support_ticket: 2 },
+        },
+      },
+      targets: [makeTarget({ bannerEnd: '2026-02-01', customPullDate: '2026-02-01' })],
+    });
+    const events = [
+      { id: 'champions-meeting-1', title: 'CM 1', type: 'champions_meeting', estimatedEndDate: '2026-01-10' },
+      { id: 'champions-meeting-2', title: 'CM 2', type: 'champions_meeting', estimatedEndDate: '2026-01-20' },
+      { id: 'league-of-heroes-1', title: 'LoH', type: 'league_of_heroes', estimatedEndDate: '2026-01-25' },
+    ];
+
+    const projection = service.project(plan, { core: {}, income: { rules: [] }, rewards: { rewards: [] } }, [], events);
+    const target = projection.targets[0];
+
+    expect(target.balanceBefore.freeJewels).toBe(1250 + 900 + 1300);
+    expect(target.balanceBefore.umaTickets).toBe(2 + 2 + 2);
+    expect(target.balanceBefore.supportTickets).toBe(2 + 2 + 2);
+    expect(target.income.filter(entry => entry.id.includes('champions-meeting-2')).length).toBe(3);
+    expect(target.income.some(entry => entry.id.startsWith('competition-assumption:champions-meeting-2'))).toBeFalse();
+  });
+
   it('projects LB-crystal rewards and support-banner crystal budgets', () => {
     const plan = makePlan({
       balances: {
