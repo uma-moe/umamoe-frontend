@@ -123,6 +123,51 @@ describe('DatabaseFilterComponent', () => {
     });
   });
 
+  describe('clearing filters', () => {
+    afterEach(() => {
+      localStorage.removeItem(DatabaseFilterComponent.SAVED_FILTER_STATE_KEY);
+      localStorage.removeItem(DatabaseFilterComponent.SAVED_FILTER_MODE_KEY);
+    });
+
+    it('does not restore structured filters after a cleared UQL query', () => {
+      const component = createComponent();
+      component.blueFactorFilters = [{ uuid: 'speed', factorId: 1, min: 3, max: 9 }];
+      component.onFilterChange();
+
+      component.filterMode = 'uql';
+      component.uqlQuery = 'Wins >= 30';
+      component.onUqlChange();
+
+      // This also covers deleting all text in the editor rather than using
+      // the Clear current button.
+      component.uqlQuery = '';
+      component.onUqlChange();
+      component.setFilterMode('advanced');
+
+      expect(component.blueFactorFilters).toEqual([]);
+      expect(component.uqlQuery).toBe('');
+      expect(component.getSerializedState()).toBe('');
+
+      const saved = JSON.parse(localStorage.getItem(DatabaseFilterComponent.SAVED_FILTER_STATE_KEY) || '{}');
+      expect(saved.formState).toBe('');
+      expect(saved.uqlState).toBe('');
+    });
+
+    it('clears both representations through Clear current', () => {
+      const component = createComponent();
+      component.filterMode = 'uql';
+      component.blueFactorFilters = [{ uuid: 'speed', factorId: 1, min: 3, max: 9 }];
+      component.uqlQuery = 'Wins >= 30';
+
+      component.clearCurrentFilters();
+      component.setFilterMode('advanced');
+
+      expect(component.blueFactorFilters).toEqual([]);
+      expect(component.uqlQuery).toBe('');
+      expect(component.getSerializedState()).toBe('');
+    });
+  });
+
   describe('UQL compilation', () => {
     it('exposes every supported scenario while grouping API IDs 2 and 3', () => {
       const component = createComponent();
