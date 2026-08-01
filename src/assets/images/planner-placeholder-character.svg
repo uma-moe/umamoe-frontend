@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+  <title id="title">Future Umamusume artwork placeholder</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#17334f"/>
+      <stop offset="1" stop-color="#582f72"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#9fdcff"/>
+      <stop offset="1" stop-color="#d7a8ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="24" fill="url(#bg)"/>
+  <circle cx="128" cy="112" r="78" fill="#ffffff" opacity=".07"/>
+  <path d="M86 67 96 25l29 31m45 11-10-42-29 31" fill="url(#glow)" opacity=".95"/>
+  <circle cx="128" cy="94" r="48" fill="url(#glow)"/>
+  <path d="M45 232c8-58 37-87 83-87s75 29 83 87" fill="url(#glow)"/>
+  <path d="M89 84c10-31 33-45 67-38 20 18 24 43 13 74-5-30-19-47-42-52-6 18-19 31-39 39-4-8-4-16 1-23Z" fill="#18263b" opacity=".72"/>
+  <rect x="78" y="211" width="100" height="28" rx="14" fill="#101722" opacity=".86"/>
+  <text x="128" y="231" fill="#ffffff" font-family="Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="3" text-anchor="middle">FUTURE UMA</text>
+</svg>

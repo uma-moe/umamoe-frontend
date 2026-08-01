@@ -46,7 +46,7 @@ describe('planner gacha rate policy', () => {
     expect(exact.rarity_rates?.[0].rate).toBe(0.04);
   });
 
-  it('keeps partially overlapping published data without inventing the missing pickup rate', () => {
+  it('keeps published values and fills a missing standard-banner pickup rate', () => {
     const partial = fallback({
       provenance: 'global_master',
       confidence: 'exact',
@@ -55,9 +55,12 @@ describe('planner gacha rate policy', () => {
     });
 
     const resolved = resolve(partial, [1001, 1002]);
-    expect(resolved).toBe(partial);
-    expect(resolved.pickups).toEqual([{ pickup_id: 1001, rate: 0.006, exchangeable: true }]);
-    expect(resolved.pickups?.some(pickup => pickup.pickup_id === 1002)).toBeFalse();
+    expect(resolved).not.toBe(partial);
+    expect(resolved.pickups).toEqual([
+      { pickup_id: 1001, rate: 0.006, exchangeable: true },
+      jasmine.objectContaining({ pickup_id: 1002, rate: 0.0075, exchangeable: true }),
+    ]);
+    expect(resolved.rates_confidence).toBe('inferred_standard');
   });
 
   it('infers tagged standard rates for a future ordinary banner', () => {
@@ -134,15 +137,22 @@ describe('planner gacha rate policy', () => {
     expect(resolved.rates_confidence).toBe('inferred_standard');
   });
 
-  it('leaves Pick 2, paid-range, past, and oversized pools unavailable', () => {
+  it('uses standard fallback rates for past and up-to-four-pickup ordinary banners', () => {
+    const past = fallback({ start_date: '2029-12-31T00:00:00Z' });
+    const fourPickups = fallback();
+
+    expect(resolve(past, [1001]).pickups?.[0].rate).toBe(0.0075);
+    expect(resolve(fourPickups, [1001, 1002, 1003, 1004]).pickups?.map(pickup => pickup.rate))
+      .toEqual([0.0075, 0.0075, 0.0075, 0.0075]);
+  });
+
+  it('leaves Pick 2, paid-range, and oversized special pools unavailable', () => {
     const pickTwo = fallback();
     const paidRange = fallback({ gacha_id: 50_226 });
-    const past = fallback({ start_date: '2029-12-31T00:00:00Z' });
     const oversized = fallback();
     expect(resolve(pickTwo, [1001, 1002], 12)).toBe(pickTwo);
     expect(resolve(paidRange, [1001])).toBe(paidRange);
-    expect(resolve(past, [1001])).toBe(past);
-    expect(resolve(oversized, [1001, 1002, 1003])).toBe(oversized);
+    expect(resolve(oversized, [1001, 1002, 1003, 1004, 1005])).toBe(oversized);
   });
 
   it('sanitizes a colliding special pool without applying standard rates', () => {

@@ -2,6 +2,31 @@ import { CaratPlannerDataBundle } from '../models/carat-planner.model';
 import { CaratPlannerResourceService, CaratPlannerResourceState } from './carat-planner-resource.service';
 
 describe('CaratPlannerResourceService banner detail failures', () => {
+  it('creates standard-rate fallback data when a future ordinary banner has no gacha shard', async () => {
+    const service = new CaratPlannerResourceService({} as never, 'browser' as unknown as object);
+    const bundle: CaratPlannerDataBundle = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards: [] },
+    };
+    (service as any).bundle = bundle;
+    (service as any).initialPromise = Promise.resolve(bundle);
+
+    const [gacha] = await service.loadGachasForEvents([{
+      id: 'future-support',
+      title: 'Future support',
+      type: 'support_card_banner',
+      globalReleaseDate: '2031-01-01',
+      estimatedEndDate: '2031-01-10',
+      pickupCardIds: [301001, 301002],
+    }]);
+
+    expect(gacha.event_id).toBe('future-support');
+    expect(gacha.pickups?.map(pickup => pickup.rate)).toEqual([0.0075, 0.0075]);
+    expect(gacha.rarity_rates).toContain(jasmine.objectContaining({ rarity: 3, rate: 0.03 }));
+    expect(gacha.rates_confidence).toBe('inferred_standard');
+  });
+
   it('publishes a visible error when a protected gacha shard fails', async () => {
     const service = new CaratPlannerResourceService({} as never, 'browser' as unknown as object);
     const bundle: CaratPlannerDataBundle = {

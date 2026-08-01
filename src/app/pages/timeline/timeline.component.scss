@@ -1008,38 +1008,26 @@ app-mobile-timeline {
 
 @media (max-width: 768px) {
   .timeline-page-header {
-    padding: 0.9rem 0;
+    position: sticky;
+    z-index: 90;
+    top: var(--navbar-height);
+    padding: 6px 0;
+    background: color-mix(in srgb, var(--surface-overlay) 94%, transparent);
+    border-bottom: 1px solid var(--border-primary);
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(12px);
   }
 
   .timeline-page-header .header-content {
-    display: grid;
-    gap: 0.75rem;
+    display: block;
   }
 
-  .timeline-page-header .timeline-heading-copy h1 {
-    margin-bottom: 0.3rem;
-    font-size: 1.65rem;
-  }
-
-  .timeline-heading-meta {
-    gap: 8px;
-  }
-
-  .timeline-page-header .timeline-heading-meta p {
-    overflow: hidden;
-    font-size: 0.875rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .timeline-heading-meta span {
-    padding-left: 8px;
-    font-size: 0.68rem;
-  }
+  .timeline-page-header .timeline-heading-copy { display: none; }
 
   .timeline-page-header .timeline-tabs {
     width: 100%;
-    height: 34px;
+    height: 40px;
+    box-sizing: border-box;
   }
 
   .timeline-page-header .timeline-tab {

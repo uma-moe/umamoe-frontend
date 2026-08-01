@@ -48,7 +48,7 @@
         <mat-icon>search</mat-icon>
         <input id="cp-banner-search" [ngModel]="eventSearch" (focus)="showEventPicker = true"
           (ngModelChange)="searchEvents($event)" (keydown)="onEventPickerKeydown($event)"
-          placeholder="Search characters or support cards&hellip;" autocomplete="off"
+          placeholder="Search names, banner types, or reruns&hellip;" autocomplete="off"
           aria-label="Search character or support banners" aria-haspopup="listbox"
           aria-controls="cp-banner-options" [attr.aria-expanded]="showEventPicker"
           [attr.aria-activedescendant]="showEventPicker && filteredEvents.length ? 'cp-banner-option-' + eventPickerActiveIndex : null">
@@ -56,6 +56,13 @@
           <mat-icon>close</mat-icon>
         </button>
       </span>
+
+      <div class="cp-banner-filters" role="group" aria-label="Banner type">
+        <button type="button" [class.is-active]="bannerSearchFilter === 'all'" [attr.aria-pressed]="bannerSearchFilter === 'all'" (click)="setBannerSearchFilter('all')">All</button>
+        <button type="button" [class.is-active]="bannerSearchFilter === 'character'" [attr.aria-pressed]="bannerSearchFilter === 'character'" (click)="setBannerSearchFilter('character')">Uma</button>
+        <button type="button" [class.is-active]="bannerSearchFilter === 'support'" [attr.aria-pressed]="bannerSearchFilter === 'support'" (click)="setBannerSearchFilter('support')">Support</button>
+        <button type="button" [class.is-active]="bannerSearchFilter === 'rerun'" [attr.aria-pressed]="bannerSearchFilter === 'rerun'" (click)="setBannerSearchFilter('rerun')">Reruns</button>
+      </div>
 
       <div id="cp-banner-options" *ngIf="showEventPicker" class="cp-event-viewport" role="listbox" tabindex="-1">
         <button class="cp-event-option" type="button" role="option" *ngFor="let event of filteredEvents; let optionIndex = index; trackBy: trackById"
@@ -69,6 +76,7 @@
           <span class="cp-event-copy"><strong>{{ eventDisplayTitle(event) }}</strong><time>{{ event.globalReleaseDate || event.estimatedGlobalDate || event.jpReleaseDate | date:'mediumDate':'UTC' }}</time></span>
           <span class="cp-event-action"><mat-icon>{{ isEventAdded(event.id) ? 'check' : 'add' }}</mat-icon><span class="cp-event-action-label">{{ isEventAdded(event.id) ? 'Added' : 'Add' }}</span></span>
         </button>
+        <p class="cp-event-empty" *ngIf="!filteredEvents.length">No banners match this search and type.</p>
       </div>
     </div>
 
@@ -176,26 +184,27 @@
       </div>
 
       <div class="cp-setup-panel cp-setup-panel--income" *ngSwitchCase="'income'">
-        <div class="cp-scenario-list" *ngIf="scenarioGroupOptions.length">
-          <fieldset class="cp-scenario" *ngFor="let group of scenarioGroupOptions">
-            <legend><mat-icon aria-hidden="true">{{ scenarioGroupIcon(group.id) }}</mat-icon>{{ group.label }}</legend>
-            <div class="cp-scenario-options" role="radiogroup" [attr.aria-label]="group.label">
-              <button type="button" class="cp-scenario-choice is-muted"
-                [class.is-selected]="!plan.scenarioSelections[group.id]" role="radio"
-                [attr.aria-checked]="!plan.scenarioSelections[group.id]" (click)="setScenario(group.id, '')">
-                <mat-icon aria-hidden="true">block</mat-icon><span>Not included</span>
-              </button>
-              <button type="button" class="cp-scenario-choice" *ngFor="let option of group.options"
-                [class.is-selected]="plan.scenarioSelections[group.id] === option.value" role="radio"
-                [attr.aria-checked]="plan.scenarioSelections[group.id] === option.value"
-                (click)="setScenario(group.id, option.value)">
-                <img *ngIf="scenarioOptionIconPath(group.id, option.value) as iconPath" [src]="iconPath" width="24" height="28" alt="">
-                <mat-icon *ngIf="!scenarioOptionIconPath(group.id, option.value)" aria-hidden="true">{{ scenarioGroupIcon(group.id) }}</mat-icon>
-                <strong>{{ option.label }}</strong><small *ngIf="option.amountLabel">{{ option.amountLabel }}</small>
-              </button>
-            </div>
-          </fieldset>
-        </div>
+        <section class="cp-income-assumptions" *ngIf="scenarioGroupOptions.length" aria-labelledby="cp-income-assumptions-heading">
+          <header>
+            <div><strong id="cp-income-assumptions-heading">Performance assumptions</strong><span>Use the arrows to choose the result you normally expect.</span></div>
+          </header>
+          <div class="cp-scenario-list">
+            <article class="cp-scenario" *ngFor="let group of scenarioGroupOptions">
+              <span class="cp-scenario-copy"><mat-icon aria-hidden="true">{{ scenarioGroupIcon(group.id) }}</mat-icon><span><strong>{{ group.label }}</strong><small>{{ group.scheduleLabel }}</small></span></span>
+              <div class="cp-scenario-stepper" role="group" [attr.aria-label]="group.label">
+                <button type="button" (click)="cycleScenario(group, -1)" [attr.aria-label]="'Previous ' + group.label + ' option'"><mat-icon>chevron_left</mat-icon></button>
+                <button type="button" class="cp-scenario-current" (click)="cycleScenario(group, 1)" [attr.aria-label]="'Change ' + group.label">
+                  <ng-container *ngIf="selectedScenarioOption(group) as selected; else scenarioNotIncluded">
+                    <img *ngIf="scenarioOptionIconPath(group.id, selected.value) as iconPath" [src]="iconPath" width="24" height="28" alt="">
+                    <span><strong>{{ selected.label }}</strong><small *ngIf="selected.amountLabel">{{ selected.amountLabel }}</small></span>
+                  </ng-container>
+                  <ng-template #scenarioNotIncluded><span class="is-muted"><strong>Not included</strong><small>0 projected</small></span></ng-template>
+                </button>
+                <button type="button" (click)="cycleScenario(group, 1)" [attr.aria-label]="'Next ' + group.label + ' option'"><mat-icon>chevron_right</mat-icon></button>
+              </div>
+            </article>
+          </div>
+        </section>
 
         <section class="cp-income-rules" *ngIf="displayedRules.length" aria-labelledby="cp-income-rules-heading">
           <header>
@@ -360,6 +369,14 @@
                         <option *ngFor="let option of group.variableOptions" [value]="option.id">{{ option.label }} · {{ option.amountLabel }}</option>
                       </select>
                     </label>
+                    <button *ngIf="isRewardGroupBannerActionable(group)" type="button"
+                      [class.is-added]="isRewardGroupBannerPlanned(group)"
+                      [attr.aria-pressed]="isRewardGroupBannerPlanned(group)"
+                      [attr.aria-label]="(isRewardGroupBannerPlanned(group) ? 'Remove ' : 'Add ') + group.title + ' banner ' + (isRewardGroupBannerPlanned(group) ? 'from' : 'to') + ' the plan'"
+                      (click)="toggleRewardGroupBanner(group)">
+                      <mat-icon aria-hidden="true">{{ isRewardGroupBannerPlanned(group) ? 'check_circle' : 'add_chart' }}</mat-icon>
+                      <span>{{ isRewardGroupBannerPlanned(group) ? 'Added' : 'Plan' }}</span>
+                    </button>
                     <button *ngIf="isRewardGroupSelectable(group)" type="button"
                       class="cp-reward-include-toggle"
                       [class.is-added]="isRewardGroupActive(group)"
@@ -368,14 +385,6 @@
                       [matTooltip]="isRewardGroupActive(group) ? 'Included in projection — click to exclude' : 'Excluded — click to include'"
                       (click)="toggleRewardGroupSelection(group)">
                       <mat-icon aria-hidden="true">{{ isRewardGroupActive(group) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
-                    </button>
-                    <button *ngIf="isRewardGroupBannerActionable(group)" type="button"
-                      [class.is-added]="isRewardGroupBannerPlanned(group)"
-                      [attr.aria-pressed]="isRewardGroupBannerPlanned(group)"
-                      [attr.aria-label]="(isRewardGroupBannerPlanned(group) ? 'Remove ' : 'Add ') + group.title + ' banner ' + (isRewardGroupBannerPlanned(group) ? 'from' : 'to') + ' the plan'"
-                      (click)="toggleRewardGroupBanner(group)">
-                      <mat-icon aria-hidden="true">{{ isRewardGroupBannerPlanned(group) ? 'check_circle' : 'add_chart' }}</mat-icon>
-                      <span>{{ isRewardGroupBannerPlanned(group) ? 'Added' : 'Plan' }}</span>
                     </button>
                   </span>
                   <ng-template #pastRewardState>
@@ -501,7 +510,7 @@
               <span class="cp-pickup-summary-goal" *ngFor="let goal of odds.goals | slice:0:3; trackBy: trackByPickupGoal">
                 <span class="cp-pickup-summary-art">
                   <img *ngIf="goal.imagePath" [src]="goal.imagePath" width="30" height="30" loading="lazy" alt=""
-                    (error)="onPickupImageError($event, goal.fallbackImagePath)">
+                    (error)="onPickupImageError($event, goal.fallbackImagePath, goal.placeholderImagePath)">
                   <mat-icon aria-hidden="true">{{ target.bannerKind === 'support' ? 'style' : 'person' }}</mat-icon>
                 </span>
                 <span [matTooltip]="goal.label">{{ goal.label }}</span>
@@ -552,7 +561,7 @@
                       (click)="togglePickupGoal(target, pickup.pickup_id)">
                       <span class="cp-goal-picker-art" [class.is-support]="target.bannerKind === 'support'">
                         <img *ngIf="pickup.imagePath" [src]="pickup.imagePath" width="40" height="40" loading="lazy" alt=""
-                          (error)="onPickupImageError($event, pickup.fallbackImagePath)">
+                          (error)="onPickupImageError($event, pickup.fallbackImagePath, pickup.placeholderImagePath)">
                         <mat-icon aria-hidden="true">{{ target.bannerKind === 'support' ? 'style' : 'person' }}</mat-icon>
                       </span>
                       <span class="cp-goal-picker-name">
@@ -571,7 +580,7 @@
                 <article class="cp-selected-goal-row" *ngFor="let goal of odds.goals; trackBy: trackByPickupGoal">
                   <span class="cp-selected-goal-art" [class.is-support]="target.bannerKind === 'support'">
                     <img *ngIf="goal.imagePath" [src]="goal.imagePath" width="46" height="46" loading="lazy" alt=""
-                      (error)="onPickupImageError($event, goal.fallbackImagePath)">
+                      (error)="onPickupImageError($event, goal.fallbackImagePath, goal.placeholderImagePath)">
                     <mat-icon aria-hidden="true">{{ target.bannerKind === 'support' ? 'style' : 'person' }}</mat-icon>
                   </span>
                   <span class="cp-selected-goal-name">

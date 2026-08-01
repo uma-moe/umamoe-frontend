@@ -159,9 +159,9 @@ export class CaratPlannerResourceService {
     try {
       await Promise.all([...shards].map(shard => this.loadGachaShard(shard)));
       const entries = events.map(event => {
-        const loaded = this.findLoadedGacha(event);
-        if (!loaded) return undefined;
-        const resolved = resolvePlannerGachaRates(loaded, {
+        const source = this.findLoadedGacha(event) ?? this.syntheticStandardGacha(event);
+        if (!source) return undefined;
+        const resolved = resolvePlannerGachaRates(source, {
           featuredPickupIds: event.pickupCardIds ?? [],
           gachaType: event.gachaType,
           eventType: event.type,
@@ -341,9 +341,10 @@ export class CaratPlannerResourceService {
         }
       }
     }
-    const date = event.globalReleaseDate ?? event.estimatedGlobalDate ?? event.jpReleaseDate;
-    const year = date ? new Date(date).getUTCFullYear() : NaN;
-    return Number.isFinite(year) ? String(year) : null;
+    // The protected core index is authoritative. Guessing a shard from the
+    // event year makes unreleased banners fail before standard rates can be
+    // inferred, and can also request files that do not exist yet.
+    return null;
   }
 
   private findLoadedGacha(event: CaratPlannerTimelineEvent): PlannerGachaEntry | undefined {
@@ -358,6 +359,35 @@ export class CaratPlannerResourceService {
       }
     }
     return this.gachaByEventId.get(event.id);
+  }
+
+  private syntheticStandardGacha(event: CaratPlannerTimelineEvent): PlannerGachaEntry | undefined {
+    const bannerKind = event.type?.includes('support')
+      ? 'support'
+      : event.type?.includes('character')
+        ? 'character'
+        : undefined;
+    if (!bannerKind) return undefined;
+    const start = this.isoDate(event.globalReleaseDate ?? event.estimatedGlobalDate ?? event.jpReleaseDate);
+    if (!start) return undefined;
+    return {
+      event_id: event.id,
+      gacha_id: event.gachaId ?? event.gachaIds?.[0] ?? 0,
+      gacha_type: event.gachaType,
+      banner_kind: bannerKind,
+      start_date: start,
+      end_date: this.isoDate(event.estimatedEndDate) ?? start,
+      pickups: [],
+      rarity_rates: [],
+      provenance: 'jp_fallback',
+      confidence: 'timeline_schedule_defaults',
+    };
+  }
+
+  private isoDate(value: Date | string | undefined): string | undefined {
+    if (!value) return undefined;
+    const date = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
   }
 
   private storeGacha(entry: PlannerGachaEntry): void {

@@ -21,7 +21,8 @@ const STANDARD_GACHA_TYPE = 3;
 const RATE_TOLERANCE = 1e-12;
 
 /**
- * Adds an explicitly tagged standard-rate estimate to a future JP fallback.
+ * Adds an explicitly tagged standard-rate estimate to an ordinary banner
+ * whenever published pickup or top-rarity rates are incomplete.
  * Published values are retained field-by-field and always take precedence.
  */
 export function resolvePlannerGachaRates(
@@ -60,11 +61,6 @@ export function resolvePlannerGachaRates(
   if (!isInferenceEligible(identityValidatedEntry, context, featuredPickupIds.length)) {
     return identityValidatedEntry;
   }
-
-  const isPublishedExact = entry.provenance === 'global_master' && entry.confidence === 'exact';
-  const isTimelineFallback = entry.provenance === 'jp_fallback'
-    && entry.confidence === 'timeline_schedule_defaults';
-  if (!isTimelineFallback && !(isPublishedExact && publishedIdentityMismatch)) return identityValidatedEntry;
 
   // A reused gacha ID can point at an unrelated old Global pool. Once the
   // event's advertised pickup identity fails validation, none of that pool's
@@ -121,13 +117,11 @@ function isInferenceEligible(
   featuredPickupCount: number,
 ): boolean {
   if (entry.banner_kind !== 'character' && entry.banner_kind !== 'support') return false;
-  if ((context.gachaType ?? entry.gacha_type) !== STANDARD_GACHA_TYPE) return false;
-  if (featuredPickupCount < 1 || featuredPickupCount > 2) return false;
+  const gachaType = context.gachaType ?? entry.gacha_type;
+  if (gachaType !== undefined && gachaType !== STANDARD_GACHA_TYPE) return false;
+  if (featuredPickupCount < 1 || featuredPickupCount > 4) return false;
   if (entry.gacha_id >= 50_000 && entry.gacha_id < 60_000) return false;
-  if (/paid|select|guaranteed/i.test(context.eventType ?? '')) return false;
-  const start = Date.parse(entry.start_date);
-  const now = context.now instanceof Date ? context.now.getTime() : context.now ?? Date.now();
-  return Number.isFinite(start) && Number.isFinite(now) && start > now;
+  return !/paid|select|guaranteed|step.?up|pick.?2/i.test(context.eventType ?? '');
 }
 
 function isValidRate(value: number): boolean {

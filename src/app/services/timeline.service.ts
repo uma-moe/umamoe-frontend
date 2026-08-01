@@ -1,8 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, combineLatest, Observable } from 'rxjs';
 import { debounceTime, map } from 'rxjs/operators';
-import englishTimelineImagePathsJson from '../../assets/timeline-images/en/manifest.json';
-import japaneseTimelineImagePathsJson from '../../assets/timeline-images/jp/manifest.json';
 import {
   EventType,
   TimelineAnniversary,
@@ -18,14 +16,11 @@ import {
 import { ResourceDataService, ResourceLoadError } from './resource-data.service';
 import { compareTimelineEventsForDisplay } from '../utils/timeline-event-order';
 import {
-  resolveBundledTimelineEventImagePath,
+  resolveTimelineEventImagePath,
   timelineEventMasterId,
 } from '../utils/timeline-event-image';
 
 const TIMELINE_RESOURCE_NAME = 'banner_timeline';
-const ENGLISH_TIMELINE_IMAGE_PATHS = englishTimelineImagePathsJson as Record<string, string>;
-const JAPANESE_TIMELINE_IMAGE_PATHS = japaneseTimelineImagePathsJson as Record<string, string>;
-
 interface BannerTimelineResource {
   version?: number;
   calculation?: BannerTimelineResourceCalculation;
@@ -282,8 +277,7 @@ export class TimelineService {
       relatedCharacters: this.toStringArray(event.related_characters),
       relatedSupportCards: this.toStringArray(event.related_support_cards),
       relatedSupportCardNames: this.toStringArray(event.related_support_card_names),
-      imagePath: this.resolveTimelineImagePath(event.image_path)
-        ?? resolveBundledTimelineEventImagePath(event.type, timelineEventMasterId(event.id)),
+      imagePath: resolveTimelineEventImagePath(event.image_path, event.type, timelineEventMasterId(event.id)),
       gametoraURL: event.gametora_url || undefined,
       umapyoiURL: event.umapyoi_url || undefined,
       prediction: this.toTimelinePrediction(event.prediction)
@@ -509,7 +503,7 @@ export class TimelineService {
       scheduleAdjustmentDays: typeof anniversary.schedule_adjustment_days === 'number'
         ? anniversary.schedule_adjustment_days
         : undefined,
-      imagePath: this.resolveTimelineImagePath(anniversary.image_path) ?? source?.imagePath,
+      imagePath: resolveTimelineEventImagePath(anniversary.image_path, undefined, undefined) ?? source?.imagePath,
       sourceEventId: anniversary.source_event_id || source?.id
     };
   }
@@ -539,14 +533,6 @@ export class TimelineService {
         if (phaseDifference !== 0) return phaseDifference;
         return left.jpReleaseDate.getTime() - right.jpReleaseDate.getTime();
       })[0];
-  }
-
-  private resolveTimelineImagePath(imagePath: string | null | undefined): string | undefined {
-    return imagePath
-      ? ENGLISH_TIMELINE_IMAGE_PATHS[imagePath]
-        ?? JAPANESE_TIMELINE_IMAGE_PATHS[imagePath]
-        ?? imagePath
-      : undefined;
   }
 
   private toEventType(type: string | undefined): EventType | null {
