@@ -17,6 +17,8 @@
   "assets/images/campaign/207.webp": "assets/timeline-images/jp/images/campaign/207.webp",
   "assets/images/campaign/208.webp": "assets/timeline-images/jp/images/campaign/208.webp",
   "assets/images/campaign/209.webp": "assets/timeline-images/jp/images/campaign/209.webp",
+  "assets/images/campaign/217.webp": "assets/timeline-images/jp/images/campaign/217.webp",
+  "assets/images/campaign/218.webp": "assets/timeline-images/jp/images/campaign/218.webp",
   "assets/images/campaign/277.webp": "assets/timeline-images/jp/images/campaign/277.webp",
   "assets/images/campaign/304.webp": "assets/timeline-images/jp/images/campaign/304.webp",
   "assets/images/campaign/305.webp": "assets/timeline-images/jp/images/campaign/305.webp",
@@ -694,6 +696,8 @@
   "assets/timeline-images/gacha/character/30450.webp": "assets/timeline-images/jp/gacha/character/30450.webp",
   "assets/timeline-images/gacha/character/30452.webp": "assets/timeline-images/jp/gacha/character/30452.webp",
   "assets/timeline-images/gacha/character/30454.webp": "assets/timeline-images/jp/gacha/character/30454.webp",
+  "assets/timeline-images/gacha/character/30456.webp": "assets/timeline-images/jp/gacha/character/30456.webp",
+  "assets/timeline-images/gacha/character/30458.webp": "assets/timeline-images/jp/gacha/character/30458.webp",
   "assets/timeline-images/gacha/paid/50224.webp": "assets/timeline-images/jp/gacha/paid/50224.webp",
   "assets/timeline-images/gacha/paid/50225.webp": "assets/timeline-images/jp/gacha/paid/50225.webp",
   "assets/timeline-images/gacha/paid/50226.webp": "assets/timeline-images/jp/gacha/paid/50226.webp",
@@ -705,9 +709,11 @@
   "assets/timeline-images/gacha/paid/50232.webp": "assets/timeline-images/jp/gacha/paid/50232.webp",
   "assets/timeline-images/gacha/paid/50233.webp": "assets/timeline-images/jp/gacha/paid/50233.webp",
   "assets/timeline-images/gacha/paid/50234.webp": "assets/timeline-images/jp/gacha/paid/50234.webp",
+  "assets/timeline-images/gacha/paid/50235.webp": "assets/timeline-images/jp/gacha/paid/50235.webp",
   "assets/timeline-images/gacha/paid/50236.webp": "assets/timeline-images/jp/gacha/paid/50236.webp",
   "assets/timeline-images/gacha/paid/50237.webp": "assets/timeline-images/jp/gacha/paid/50237.webp",
   "assets/timeline-images/gacha/paid/50238.webp": "assets/timeline-images/jp/gacha/paid/50238.webp",
+  "assets/timeline-images/gacha/paid/50239.webp": "assets/timeline-images/jp/gacha/paid/50239.webp",
   "assets/timeline-images/gacha/support/30197.webp": "assets/timeline-images/jp/gacha/support/30197.webp",
   "assets/timeline-images/gacha/support/30209.webp": "assets/timeline-images/jp/gacha/support/30209.webp",
   "assets/timeline-images/gacha/support/30215.webp": "assets/timeline-images/jp/gacha/support/30215.webp",
@@ -748,5 +754,6 @@
   "assets/timeline-images/gacha/support/30447.webp": "assets/timeline-images/jp/gacha/support/30447.webp",
   "assets/timeline-images/gacha/support/30449.webp": "assets/timeline-images/jp/gacha/support/30449.webp",
   "assets/timeline-images/gacha/support/30453.webp": "assets/timeline-images/jp/gacha/support/30453.webp",
-  "assets/timeline-images/gacha/support/30455.webp": "assets/timeline-images/jp/gacha/support/30455.webp"
+  "assets/timeline-images/gacha/support/30455.webp": "assets/timeline-images/jp/gacha/support/30455.webp",
+  "assets/timeline-images/gacha/support/30457.webp": "assets/timeline-images/jp/gacha/support/30457.webp"
 }

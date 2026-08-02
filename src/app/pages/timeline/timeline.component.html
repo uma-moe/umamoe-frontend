@@ -274,12 +274,8 @@
               <app-timeline-event-card
                 *ngFor="let event of lane.visibleEvents; trackBy: trackTimelineEvent"
                 [event]="event"
-                [plannerEligible]="isPlannerEligible(event)"
-                [planned]="isEventPlanned(event)"
                 [rewardSummary]="plannerRewardSummaries.get(event.id) || null"
                 (openDetails)="openEventDetails($event)"
-                (addToPlanner)="addEventToPlanner($event)"
-                (removeFromPlanner)="removeEventFromPlanner($event)"
               ></app-timeline-event-card>
             </div>
 
@@ -351,12 +347,8 @@
                       @defer (on viewport) {
                         <app-timeline-event-card
                           [event]="event"
-                          [plannerEligible]="isPlannerEligible(event)"
-                          [planned]="isEventPlanned(event)"
                           [rewardSummary]="plannerRewardSummaries.get(event.id) || null"
                           (openDetails)="openEventDetails($event)"
-                          (addToPlanner)="addEventToPlanner($event)"
-                          (removeFromPlanner)="removeEventFromPlanner($event)"
                         ></app-timeline-event-card>
                       } @placeholder {
                         <div class="vertical-card-placeholder" aria-hidden="true"></div>
