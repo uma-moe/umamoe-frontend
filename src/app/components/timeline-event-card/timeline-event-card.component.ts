@@ -20,8 +20,6 @@ export interface TimelineCompactCardView {
   visibleAvatars: TimelineAvatar[];
   hiddenAvatarCount: number;
   hasMedia: boolean;
-  canPlan: boolean;
-  isRewardOnly: boolean;
 }
 
 const GACHA_TYPE_LABELS: Record<string, string> = {
@@ -224,21 +222,15 @@ export function timelineEventDateLabel(event: TimelineEvent): string {
 export class TimelineEventCardComponent implements OnChanges {
   @Input({ required: true }) event!: TimelineEvent;
   @Input() mobile = false;
-  @Input() plannerEligible = false;
-  @Input() planned = false;
   @Input() rewardSummary: TimelineRewardSummary | null = null;
   @Output() openDetails = new EventEmitter<TimelineEvent>();
-  @Output() addToPlanner = new EventEmitter<TimelineEvent>();
-  @Output() removeFromPlanner = new EventEmitter<TimelineEvent>();
 
   view: TimelineCompactCardView | null = null;
-  planQueued = false;
 
   constructor(private readonly avatarService: TimelineAvatarService) {}
 
   ngOnChanges(): void {
     if (!this.event) return;
-    this.planQueued = this.planned;
     const avatars = [
       ...this.avatarService.getCharacterAvatars(this.event),
       ...this.avatarService.getSupportAvatars(this.event)
@@ -267,31 +259,12 @@ export class TimelineEventCardComponent implements OnChanges {
       avatars,
       visibleAvatars: avatars.slice(0, visibleAvatarCount),
       hiddenAvatarCount: Math.max(0, avatars.length - visibleAvatarCount),
-      hasMedia: Boolean(this.event.imagePath),
-      isRewardOnly: this.plannerEligible
-        && ![EventType.CHARACTER_BANNER, EventType.SUPPORT_CARD_BANNER].includes(this.event.type),
-      canPlan: this.plannerEligible || (
-        [EventType.CHARACTER_BANNER, EventType.SUPPORT_CARD_BANNER].includes(this.event.type)
-        && Boolean(this.event.plannerDataAvailable || this.event.gachaId || this.event.gachaIds?.length)
-      )
+      hasMedia: Boolean(this.event.imagePath)
     };
   }
 
   activate(): void {
     this.openDetails.emit(this.event);
-  }
-
-  plan(event: MouseEvent): void {
-    event.stopPropagation();
-    const wasPlanned = this.planQueued;
-    this.planQueued = !wasPlanned;
-
-    if (wasPlanned) {
-      this.removeFromPlanner.emit(this.event);
-      return;
-    }
-
-    this.addToPlanner.emit(this.event);
   }
 
   onImageError(event: Event): void {

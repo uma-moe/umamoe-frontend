@@ -24,9 +24,11 @@ jobs:
         include:
           - branch: beta
             timeline_url: https://beta.uma.moe/resources/current/banner_timeline.json.gz
+            site_origin: https://beta.uma.moe
             deploy: false
           - branch: main
             timeline_url: https://uma.moe/resources/current/banner_timeline.json.gz
+            site_origin: https://uma.moe
             deploy: true
     steps:
       - name: Check out frontend
@@ -53,6 +55,8 @@ jobs:
         shell: bash
         run: |
           curl --fail --location --retry 4 --compressed \
+            --header "Origin: ${{ matrix.site_origin }}" \
+            --referer "${{ matrix.site_origin }}/timeline" \
             "${{ matrix.timeline_url }}" \
             --output "${RUNNER_TEMP}/banner_timeline.json"
 

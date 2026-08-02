@@ -44,12 +44,8 @@
                 *ngIf="item.type === 'event' && !item.isGrouped && item.eventData"
                 [event]="item.eventData"
                 [mobile]="true"
-                [plannerEligible]="plannerEnabled && (item.eventData.plannerRewardAvailable === true || hasProjectableRewardSummary(item.eventData.id))"
-                [planned]="plannerEnabled && plannedEventIds.has(item.eventData.id)"
                 [rewardSummary]="plannerRewardSummaries.get(item.eventData.id) || null"
                 (openDetails)="openEventDetails($event)"
-                (addToPlanner)="addEventToPlanner($event)"
-                (removeFromPlanner)="removeEventFromPlanner($event)"
               ></app-timeline-event-card>
 
               <div class="tl-grouped" *ngIf="item.type === 'event' && item.isGrouped">
@@ -57,12 +53,8 @@
                   *ngFor="let event of item.groupedEvents; trackBy: trackByGroupedEventId"
                   [event]="event"
                   [mobile]="true"
-                  [plannerEligible]="plannerEnabled && (event.plannerRewardAvailable === true || hasProjectableRewardSummary(event.id))"
-                  [planned]="plannerEnabled && plannedEventIds.has(event.id)"
                   [rewardSummary]="plannerRewardSummaries.get(event.id) || null"
                   (openDetails)="openEventDetails($event)"
-                  (addToPlanner)="addEventToPlanner($event)"
-                  (removeFromPlanner)="removeEventFromPlanner($event)"
                 ></app-timeline-event-card>
               </div>
             </div>
