@@ -80,6 +80,13 @@ const PLANNER_CURRENCY_ITEM_IDS: Readonly<Record<string, number>> = {
   gold_crystal: 150,
 };
 const PREPARED_PLANNER_ITEM_IDS = new Set([41, 43, 44, 59, 110, 111, 115, 141, 149, 150, 164, 165, 178, 197, 205, 214, 255]);
+const VARIABLE_REWARD_NOT_COUNTED = '__not_counted__';
+const VISIBLE_REWARD_CURRENCIES = new Set<PlannerCurrency>([
+  'free_jewels',
+  'paid_jewels',
+  'uma_ticket',
+  'support_ticket',
+]);
 
 function matchesJewelCurrency(currency: string): boolean {
   return currency === 'free_jewels' || currency === 'paid_jewels';
@@ -145,6 +152,13 @@ interface PlannerVariableRewardOptionView {
   amountLabel: string;
   amounts: Partial<Record<PlannerCurrency, number>>;
 }
+
+const VARIABLE_REWARD_NOT_COUNTED_OPTION: PlannerVariableRewardOptionView = {
+  id: VARIABLE_REWARD_NOT_COUNTED,
+  label: 'Result not counted',
+  amountLabel: '0 projected',
+  amounts: {},
+};
 
 interface PlannerRewardGroupView {
   id: string;
@@ -496,42 +510,15 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const activeGroups = this.rewardGroups.filter(group => this.isRewardGroupActive(group));
     const ledgerBenefits = activeGroups.flatMap(group => group.benefits)
       .filter(benefit => benefit.plannerEffect === 'ledger');
-    const activeBenefits = activeGroups
-      .flatMap(group => group.eventBenefits)
-      .filter(benefit => benefit.kind !== 'free_pulls');
-    const activeFreePullBenefits = this.rewardGroups
-      .filter(group => this.isRewardGroupBannerPlanned(group))
-      .flatMap(group => group.eventBenefits)
-      .filter(benefit => benefit.kind === 'free_pulls');
     const benefitTotal = (kinds: readonly string[]) => ledgerBenefits.reduce((total, benefit) =>
       kinds.includes(benefit.kind) && Number.isFinite(benefit.amount)
         ? total + Math.max(0, Number(benefit.amount))
         : total, 0);
     const carats = benefitTotal(['carats']);
     const tickets = benefitTotal(['uma_ticket', 'support_ticket']);
-    const rainbowCrystals = benefitTotal(['rainbow_crystal']);
-    const goldCrystals = benefitTotal(['gold_crystal']);
-    const freePulls = activeFreePullBenefits.reduce((total, benefit) =>
-      benefit.kind === 'free_pulls' && Number.isFinite(benefit.amount)
-        ? total + Math.max(0, Number(benefit.amount))
-        : total, 0)
-      + this.freePullCampaignViews.reduce((total, campaign) =>
-        this.isFreePullCampaignReady(campaign) ? total + campaign.totalPulls : total, 0);
-    const selectors = activeBenefits.reduce((total, benefit) =>
-      benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector'
-        ? total + Math.max(1, Number(benefit.amount) || 1)
-        : total, 0);
-    const unknownRewards = activeGroups.flatMap(group => group.rewards)
-      .filter(reward => !this.hasProjectableReward(reward) && this.isRewardActive(reward))
-      .length;
     const parts: string[] = [];
     if (carats > 0) parts.push(`${INTEGER_FORMATTER.format(carats)} Carats`);
     if (tickets > 0) parts.push(`${INTEGER_FORMATTER.format(tickets)} ${tickets === 1 ? 'ticket' : 'tickets'}`);
-    if (rainbowCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(rainbowCrystals)} rainbow LB`);
-    if (goldCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(goldCrystals)} gold LB`);
-    if (freePulls > 0) parts.push(`${INTEGER_FORMATTER.format(freePulls)} free pulls`);
-    if (selectors > 0) parts.push(`${INTEGER_FORMATTER.format(selectors)} ${selectors === 1 ? 'selector' : 'selectors'}`);
-    if (unknownRewards > 0) parts.push(`${INTEGER_FORMATTER.format(unknownRewards)} unknown`);
     return parts.join(' · ');
   }
 
@@ -546,7 +533,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const selectableRewards = group.rewards.filter(reward => this.hasProjectableReward(reward));
     const hasTrackedInformationalBenefit = group.eventBenefits.some(benefit =>
       benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector');
-    const variableActive = Boolean(group.eventId && this.plan.variableRewardSelections?.[group.eventId]);
+    const variableActive = group.variableOptions.length > 0
+      && this.selectedVariableRewardOption(group).id !== VARIABLE_REWARD_NOT_COUNTED;
     const unknownRewardActive = group.rewards.some(reward =>
       !this.hasProjectableReward(reward) && this.isRewardActive(reward));
     if (selectableRewards.length === 0 && !hasTrackedInformationalBenefit) {
@@ -561,7 +549,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   isRewardGroupSelectable(group: PlannerRewardGroupView): boolean {
     const hasLedgerReward = group.rewards.some(reward => this.hasProjectableReward(reward))
-      || group.competitiveVariants.some(variant => isAutomaticCompetitiveVariant(variant));
+      || group.competitiveVariants.some(variant => isAutomaticCompetitiveVariant(variant))
+      || group.variableOptions.length > 0;
     const hasSelector = group.eventBenefits.some(benefit =>
       benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector');
     return hasLedgerReward || hasSelector;
@@ -625,35 +614,101 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   isRewardGroupLinkedToPlan(group: PlannerRewardGroupView): boolean {
-    return Boolean(group.eventId && this.plan.variableRewardSelections?.[group.eventId])
+    return (group.variableOptions.length > 0
+      && this.selectedVariableRewardOption(group).id !== VARIABLE_REWARD_NOT_COUNTED)
       || group.eventBenefits.some(benefit =>
       benefit.kind === 'free_pulls' && Number(benefit.amount) > 0)
       && this.isRewardGroupBannerPlanned(group);
   }
 
+  selectedVariableRewardOption(group: PlannerRewardGroupView): PlannerVariableRewardOptionView {
+    return this.resolveVariableRewardOption(
+      group.eventId,
+      group.variableOptions,
+      group.competitiveVariants[0]?.competition,
+    );
+  }
+
   selectedVariableRewardOptionId(group: PlannerRewardGroupView): string {
-    return group.eventId ? this.plan.variableRewardSelections?.[group.eventId]?.optionId ?? '' : '';
+    return this.selectedVariableRewardOption(group).id;
+  }
+
+  isVariableRewardNotCounted(group: PlannerRewardGroupView): boolean {
+    return this.selectedVariableRewardOption(group).id === VARIABLE_REWARD_NOT_COUNTED;
+  }
+
+  cycleVariableRewardSelection(group: PlannerRewardGroupView, direction: 1 | -1): void {
+    const options = [VARIABLE_REWARD_NOT_COUNTED_OPTION, ...group.variableOptions];
+    const selected = this.selectedVariableRewardOption(group);
+    let current = options.findIndex(option => option.id === selected.id);
+    if (current < 0) {
+      current = options.findIndex(option => this.sameVariableRewardAmounts(option.amounts, selected.amounts));
+    }
+    const next = (Math.max(0, current) + direction + options.length) % options.length;
+    this.setVariableRewardSelection(group, options[next].id);
   }
 
   setVariableRewardSelection(group: PlannerRewardGroupView, optionId: string): void {
     if (!group.eventId) return;
     const selections = { ...(this.plan.variableRewardSelections ?? {}) };
-    const option = group.variableOptions.find(item => item.id === optionId);
-    if (!option) {
-      delete selections[group.eventId];
-    } else {
-      const event = this.allEvents.find(item => item.id === group.eventId);
-      selections[group.eventId] = {
-        optionId: option.id,
-        label: `${group.title}: ${option.label}`,
-        availableAt: this.optionalDateKey(event?.estimatedEndDate) ?? group.availableAt,
-        amounts: { ...option.amounts },
-      };
+    const option = optionId === VARIABLE_REWARD_NOT_COUNTED
+      ? VARIABLE_REWARD_NOT_COUNTED_OPTION
+      : group.variableOptions.find(item => item.id === optionId);
+    if (!option) return;
+
+    const event = this.allEvents.find(item => item.id === group.eventId);
+    selections[group.eventId] = {
+      optionId: option.id,
+      label: `${group.title}: ${option.label}`,
+      availableAt: this.optionalDateKey(event?.estimatedEndDate) ?? group.availableAt,
+      amounts: { ...option.amounts },
+    };
+    if (option.id !== VARIABLE_REWARD_NOT_COUNTED) {
       this.plan.disabledEventIds = (this.plan.disabledEventIds ?? [])
         .filter(eventId => eventId !== group.eventId);
     }
     this.plan.variableRewardSelections = selections;
     this.save();
+  }
+
+  private resolveVariableRewardOption(
+    eventId: string | undefined,
+    options: readonly PlannerVariableRewardOptionView[],
+    competition?: string,
+  ): PlannerVariableRewardOptionView {
+    if (!eventId) return VARIABLE_REWARD_NOT_COUNTED_OPTION;
+    const stored = this.plan.variableRewardSelections?.[eventId];
+    if (stored) {
+      if (stored.optionId === VARIABLE_REWARD_NOT_COUNTED) return VARIABLE_REWARD_NOT_COUNTED_OPTION;
+      const matchingOption = options.find(option => option.id === stored.optionId)
+        ?? options.find(option => this.sameVariableRewardAmounts(option.amounts, stored.amounts));
+      if (matchingOption) return matchingOption;
+      const separator = stored.label.indexOf(': ');
+      return {
+        id: stored.optionId,
+        label: separator >= 0 ? stored.label.slice(separator + 2) : stored.label,
+        amountLabel: this.variableAmountLabel(stored.amounts),
+        amounts: { ...stored.amounts },
+      };
+    }
+
+    const eventType = competition ?? this.allEvents.find(event => event.id === eventId)?.type;
+    const assumptionGroup = PLANNER_COMPETITION_ASSUMPTION_GROUPS.find(group => group.eventType === eventType);
+    const selectedValue = assumptionGroup && this.plan.scenarioSelections[assumptionGroup.id];
+    const selectedAssumption = assumptionGroup?.options.find(option => option.value === selectedValue);
+    if (!assumptionGroup || !selectedAssumption) return VARIABLE_REWARD_NOT_COUNTED_OPTION;
+    const stableId = this.competitionAssumptionRewardOptionId(assumptionGroup.id, selectedAssumption.value);
+    return options.find(option => option.id === stableId)
+      ?? options.find(option => this.sameVariableRewardAmounts(option.amounts, selectedAssumption.amounts))
+      ?? VARIABLE_REWARD_NOT_COUNTED_OPTION;
+  }
+
+  private sameVariableRewardAmounts(
+    left: Partial<Record<PlannerCurrency, number>>,
+    right: Partial<Record<PlannerCurrency, number>>,
+  ): boolean {
+    return [...VISIBLE_REWARD_CURRENCIES].every(currency =>
+      Math.max(0, Number(left[currency]) || 0) === Math.max(0, Number(right[currency]) || 0));
   }
 
   freePullCampaignScheduleLabel(campaign: PlannerFreePullCampaignView): string {
@@ -988,6 +1043,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const rewardIds = new Set(this.plan.enabledRewardIds);
     const disabledRewardIds = new Set(this.plan.disabledRewardIds ?? []);
     const eventIds = new Set(this.plan.enabledRewardEventIds ?? []);
+    const disabledEventIds = new Set(this.plan.disabledEventIds ?? []);
     const affectedEventIds = new Set(groups
       .map(group => group.eventId)
       .filter((eventId): eventId is string => Boolean(eventId)));
@@ -1005,16 +1061,19 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       }
       if (group.eventId) {
         enabled ? eventIds.add(group.eventId) : eventIds.delete(group.eventId);
+        if (group.variableOptions.length > 0) {
+          enabled ? disabledEventIds.delete(group.eventId) : disabledEventIds.add(group.eventId);
+        }
       }
     }
 
     this.plan.enabledRewardIds = [...rewardIds];
     this.plan.disabledRewardIds = [...disabledRewardIds];
     this.plan.enabledRewardEventIds = [...eventIds];
-    if (enabled && affectedEventIds.size > 0) {
-      this.plan.disabledEventIds = (this.plan.disabledEventIds ?? [])
-        .filter(eventId => !affectedEventIds.has(eventId));
+    if (enabled) {
+      for (const eventId of affectedEventIds) disabledEventIds.delete(eventId);
     }
+    this.plan.disabledEventIds = [...disabledEventIds];
     this.syncEnabledRewardEventIds();
     this.save();
   }
@@ -1411,6 +1470,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           applicableRewards,
           applicableBenefits,
           variableOptions,
+          applicableVariants,
         );
         const source = this.rewardGroupSource(applicableRewards, applicableBenefits);
         const groupedResourceCount = group.rewards.length
@@ -1550,28 +1610,35 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     rewards: readonly PlannerRewardEntry[],
     eventBenefits: readonly PlannerEventBenefit[],
     variableOptions: readonly PlannerVariableRewardOptionView[],
+    competitiveVariants: readonly PlannerCompetitiveRewardVariant[],
   ): PlannerRewardBenefitView[] {
-    const benefits: PlannerRewardBenefitView[] = eventBenefits.map(benefit => ({
-      id: benefit.id,
-      kind: benefit.kind,
-      label: benefit.label,
-      amount: benefit.amount,
-      text: this.eventBenefitText(benefit),
-      icon: this.rewardBenefitIcon(benefit.kind),
-      iconPath: this.rewardBenefitItemIcon(benefit.kind, benefit.item_id),
-      plannerEffect: benefit.planner_effect,
-    }));
+    const benefits: PlannerRewardBenefitView[] = eventBenefits
+      .filter(benefit => benefit.kind === 'free_pulls')
+      .map(benefit => ({
+        id: benefit.id,
+        kind: benefit.kind,
+        label: benefit.label,
+        amount: benefit.amount,
+        text: this.eventBenefitText(benefit),
+        icon: this.rewardBenefitIcon(benefit.kind),
+        iconPath: this.rewardBenefitItemIcon(benefit.kind, benefit.item_id),
+        plannerEffect: benefit.planner_effect,
+      }));
     const totals = new Map<string, number>();
     const addCurrency = (currency: PlannerCurrency, amount: number) => {
-      if (amount <= 0) return;
+      if (amount <= 0 || !VISIBLE_REWARD_CURRENCIES.has(currency)) return;
       const kind = this.rewardKindForCurrency(currency);
       totals.set(kind, (totals.get(kind) ?? 0) + amount);
     };
     for (const bundle of plannerRewardBundles(rewards)) {
       for (const [currency, amount] of bundle.totals) addCurrency(currency, amount);
     }
-    const selection = eventId ? this.plan.variableRewardSelections?.[eventId] : undefined;
-    if (selection) {
+    const selection = this.resolveVariableRewardOption(
+      eventId,
+      variableOptions,
+      competitiveVariants[0]?.competition,
+    );
+    if (selection.id !== VARIABLE_REWARD_NOT_COUNTED) {
       for (const [currency, amount] of Object.entries(selection.amounts) as [PlannerCurrency, number][]) {
         addCurrency(currency, Number(amount));
       }
@@ -1588,7 +1655,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         plannerEffect: 'ledger',
       });
     }
-    if (variableOptions.length > 0 && !selection) {
+    if (variableOptions.length > 0 && selection.id === VARIABLE_REWARD_NOT_COUNTED) {
       benefits.push({
         id: 'competitive-outcomes',
         kind: 'competitive_outcomes',
@@ -1616,8 +1683,19 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private buildVariableRewardOptions(
     variants: readonly PlannerCompetitiveRewardVariant[],
   ): PlannerVariableRewardOptionView[] {
+    const competition = variants[0]?.competition;
+    const assumptionGroup = PLANNER_COMPETITION_ASSUMPTION_GROUPS.find(group => group.eventType === competition);
+    if (assumptionGroup) {
+      return assumptionGroup.options.map(option => ({
+        id: this.competitionAssumptionRewardOptionId(assumptionGroup.id, option.value),
+        label: option.label,
+        amountLabel: this.variableAmountLabel(option.amounts),
+        amounts: { ...option.amounts },
+      }));
+    }
+
     const projectable = variants.filter(variant => isProjectableCompetitiveVariant(variant));
-    if (variants[0]?.competition === 'champions_meeting') {
+    if (competition === 'champions_meeting') {
       return classicChampionsFinalOutcomes().map(outcome => {
         const amounts: Partial<Record<PlannerCurrency, number>> = {};
         for (const item of outcome.items) {
@@ -1682,9 +1760,11 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (key === 'carats') return 'free_jewels';
     if (key === 'uma-ticket') return 'uma_ticket';
     if (key === 'support-ticket') return 'support_ticket';
-    if (key === 'rainbow-crystal') return 'rainbow_crystal';
-    if (key === 'gold-crystal') return 'gold_crystal';
     return undefined;
+  }
+
+  private competitionAssumptionRewardOptionId(groupId: string, optionValue: string): string {
+    return `assumption:${groupId}:${optionValue}`;
   }
 
   private variableAmountLabel(amounts: Partial<Record<PlannerCurrency, number>>): string {
@@ -1693,9 +1773,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (carats > 0) parts.push(`${INTEGER_FORMATTER.format(carats)} Carats`);
     if (amounts.uma_ticket) parts.push(`${INTEGER_FORMATTER.format(amounts.uma_ticket)} Uma tix`);
     if (amounts.support_ticket) parts.push(`${INTEGER_FORMATTER.format(amounts.support_ticket)} support tix`);
-    if (amounts.rainbow_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.rainbow_crystal)} rainbow LB`);
-    if (amounts.gold_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.gold_crystal)} gold LB`);
-    return parts.join(' · ') || 'Other rewards only';
+    return parts.join(' · ') || 'No Carats or tickets';
   }
 
   private rewardKindForCurrency(currency: PlannerCurrency): string {

@@ -381,8 +381,7 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
     }
 
     hasProjectableRewardSummary(eventId: string): boolean {
-        const summary = this.plannerRewardSummaries.get(eventId);
-        return Boolean(summary && summary.mode !== 'placement');
+        return this.plannerRewardSummaries.has(eventId);
     }
 
     removeEventFromPlanner(event: TimelineEvent): void {
