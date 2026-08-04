@@ -10,6 +10,8 @@ describe('timeline event image fallbacks', () => {
       .toBe('assets/timeline-images/en/events/campaign/887.webp');
     expect(resolveBundledTimelineEventImagePath('legend_race', 1021))
       .toBe('assets/timeline-images/jp/events/legend-race/1021.webp');
+    expect(resolveBundledTimelineEventImagePath('champions_meeting', 936))
+      .toBe('assets/timeline-images/en/events/champions-meeting/936.webp');
   });
 
   it('extracts the final numeric master id without guessing absent artwork', () => {

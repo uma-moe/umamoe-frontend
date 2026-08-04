@@ -998,6 +998,21 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       const effectiveLatestValue = canUseNextMonthStart ? m.next_month_start! : lastFanCount;
       // fan_count: expose the true latest fan count (includes last-day delta when available)
       const fanCountForDisplay = effectiveLatestValue;
+      // Current-month averages must end at the latest completed snapshot. The final
+      // snapshot is live/in-progress and is reported separately as Today.
+      let averageLatestIndex = effectiveLatestIndex;
+      let averageLatestValue = effectiveLatestValue;
+      if (this.isCurrentMonth && !canUseNextMonthStart) {
+        averageLatestIndex = -1;
+        averageLatestValue = 0;
+        for (let i = lastIndex - 1; i >= 0; i--) {
+          if (absFans[i] > 0) {
+            averageLatestIndex = i;
+            averageLatestValue = absFans[i];
+            break;
+          }
+        }
+      }
       // The latest delta is the in-progress gain for the current day.
       let dailyGain = 0;
       let priorInDaily = 0;
@@ -1055,23 +1070,26 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       if (effectiveLatestValue > 0 && firstFanCount > 0) {
         monthlyGain = effectiveLatestValue - firstFanCount;
       }
-      // Calculate Daily Avg (Month) - denominator includes the month-end tallying point when available.
+      // Calculate Daily Avg (Month) through the latest completed day.
       let dailyAvg = 0;
-      if (monthlyGain > 0 && effectiveLatestIndex > firstIndex) {
-        const daySpan = effectiveLatestIndex - firstIndex;
-        dailyAvg = monthlyGain / daySpan;
+      const completedMonthlyGain = averageLatestValue - firstFanCount;
+      if (completedMonthlyGain > 0 && averageLatestIndex > firstIndex) {
+        const daySpan = averageLatestIndex - firstIndex;
+        dailyAvg = completedMonthlyGain / daySpan;
       }
-      // Calculate 7 Day Avg - seed nonZeroValues with the synthetic fallback point when needed.
+      // Calculate 7 Day Avg through the latest completed day. For completed months,
+      // seed nonZeroValues with the synthetic fallback point when needed.
       let sevenDayAvg = 0;
       let weeklyGain = 0;
       let priorInWeekly = 0;
-      if (isActive && lastIndex >= 0) {
+      if (isActive && averageLatestIndex >= 0) {
         const nonZeroValues: { index: number; value: number; isPrior: boolean }[] = [];
         // Prepend the effective latest point (may be the synthetic fallback day)
         if (canUseNextMonthStart) {
           nonZeroValues.push({ index: daysInMonth, value: m.next_month_start!, isPrior: false });
         }
-        for (let i = lastIndex; i >= 0 && nonZeroValues.length < 8; i--) {
+        const latestStoredIndex = Math.min(lastIndex, averageLatestIndex);
+        for (let i = latestStoredIndex; i >= 0 && nonZeroValues.length < 8; i--) {
           if (absFans[i] > 0) {
             nonZeroValues.push({ index: i, value: absFans[i], isPrior: isPriorCircle[i] || false });
           }
@@ -1099,10 +1117,10 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
               }
             }
           }
-        } else if (firstIndex >= 0 && effectiveLatestIndex > firstIndex) {
-          const days = effectiveLatestIndex - firstIndex;
-          sevenDayAvg = (effectiveLatestValue - firstFanCount) / days;
-          weeklyGain = effectiveLatestValue - firstFanCount;
+        } else if (firstIndex >= 0 && averageLatestIndex > firstIndex) {
+          const days = averageLatestIndex - firstIndex;
+          sevenDayAvg = (averageLatestValue - firstFanCount) / days;
+          weeklyGain = averageLatestValue - firstFanCount;
           if (lastPriorIndex >= 0) priorInWeekly = priorCircleGain;
         }
       }

@@ -119,7 +119,47 @@ describe('buildTimelineRewardSummaries', () => {
         ]) }),
       ]),
     }));
-  });  it('keeps exact Legend Race first-clear rewards as separate opponent outcomes', () => {
+  });
+
+  it('adds standard Champions Meeting rewards when a repeated timeline event has no planner variant', () => {
+    const summaries = buildTimelineRewardSummaries({ rewards: [] }, [{
+      id: 'champions-meeting-16',
+      type: 'champions_meeting',
+    }]);
+
+    expect(summaries.get('champions-meeting-16')).toEqual(jasmine.objectContaining({
+      mode: 'placement',
+      previewLabel: 'Finals',
+      variableOutcomeCount: 12,
+      label: 'Rewards vary by result',
+    }));
+  });
+
+  it('adds standard Legend Race first-clear rewards from timeline participants when planner variants are absent', () => {
+    const summaries = buildTimelineRewardSummaries({ rewards: [] }, [{
+      id: 'legend-race-13',
+      type: 'legend_race',
+      pickupCardIds: [105101, 102801],
+      relatedCharacters: ['Nishino Flower (Original)', 'Hishi Akebono (Original)'],
+    }]);
+
+    expect(summaries.get('legend-race-13')).toEqual(jasmine.objectContaining({
+      mode: 'per_opponent',
+      previewLabel: 'All clears',
+      variableOutcomeCount: 2,
+      previewItems: [
+        jasmine.objectContaining({ key: 'carats', countLabel: '300' }),
+        jasmine.objectContaining({ key: 'character-pieces', countLabel: '20' }),
+        jasmine.objectContaining({ key: 'money', countLabel: '20,000' }),
+      ],
+    }));
+    expect(summaries.get('legend-race-13')?.variableOutcomes.map(outcome => outcome.label)).toEqual([
+      'First clear vs Nishino Flower (Original)',
+      'First clear vs Hishi Akebono (Original)',
+    ]);
+  });
+
+  it('keeps exact Legend Race first-clear rewards as separate opponent outcomes', () => {
     const summaries = buildTimelineRewardSummaries({
       rewards: [],
       competitive_variants: [{

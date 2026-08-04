@@ -236,6 +236,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     plannedEventIds = new Set<string>();
     plannerEventCount = 0;
     plannerRewardSummaries = new Map<string, TimelineRewardSummary>();
+    private timelineRewardResource: PlannerRewardResource = { rewards: [] };
     timelineEvents: TimelineEvent[] = [];
     timelineAnniversaries: TimelineAnniversary[] = [];
     timelineCalculation: TimelineCalculation | null = null;
@@ -659,6 +660,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             this.timelineService.calculation$
         ]).pipe(auditTime(0)).subscribe(([events, anniversaries, calculation]) => {
             this.timelineEvents = events;
+            this.updateTimelineRewardSummaries(this.timelineRewardResource);
             this.filteredEventCount = events.length;
             this.timelineAnniversaries = anniversaries;
             this.timelineCalculation = calculation;
@@ -2224,7 +2226,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     private updateTimelineRewardSummaries(rewards: PlannerRewardResource): void {
-        this.plannerRewardSummaries = buildTimelineRewardSummaries(rewards);
+        this.timelineRewardResource = rewards;
+        this.plannerRewardSummaries = buildTimelineRewardSummaries(rewards, this.timelineEvents);
         this.cdr.markForCheck();
     }
 
