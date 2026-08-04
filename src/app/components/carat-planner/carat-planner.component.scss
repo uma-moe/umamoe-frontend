@@ -3980,3 +3980,452 @@ select.cp-control,
 
   .cp-setup-panel--rewards .cp-reward-art { width: 92px; }
 }
+/* Purpose-built mobile planner layout. */
+@media (max-width: 768px) {
+  .cp {
+    gap: 6px;
+    padding-bottom: 28px;
+  }
+
+  .cp-workbench {
+    border-top-color: var(--border-primary);
+    border-bottom-color: var(--border-primary);
+  }
+
+  .cp-workbench .cp-manager {
+    min-height: 0;
+    padding: 10px 12px 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 40px;
+    align-items: end;
+    gap: 8px;
+  }
+
+  .cp-workbench .cp-plan-identity {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .cp-workbench .cp-actions {
+    min-width: 40px;
+    align-self: end;
+    justify-content: center;
+  }
+
+  .cp-workbench .cp-actions .cp-action--icon,
+  .cp-workbench .cp-plan-more > summary {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .cp-workbench .cp-manager .cp-control {
+    height: 40px;
+    background: var(--surface-2);
+  }
+
+  .cp-plan-picker-menu {
+    width: min(100%, 340px);
+  }
+
+  .cp-picker--primary {
+    padding: 10px 12px 12px;
+  }
+
+  .cp-picker--primary .cp-control {
+    height: 42px;
+  }
+
+  .cp-event-viewport {
+    position: fixed;
+    z-index: 140;
+    top: auto;
+    right: 8px;
+    bottom: 10px;
+    left: 8px;
+    width: auto;
+    height: min(520px, calc(100dvh - var(--navbar-height) - 82px));
+    border-radius: 10px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  }
+
+  .cp-event-viewport button {
+    min-height: 66px;
+    height: auto;
+    grid-template-columns: 96px minmax(0, 1fr) 28px;
+    gap: 9px;
+  }
+
+  .cp-event-art {
+    width: 96px;
+    height: 32px;
+  }
+
+  .cp-event-action-label {
+    display: none;
+  }
+
+  .cp-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-left: 0;
+    background: color-mix(in srgb, var(--surface-1) 88%, var(--surface-2));
+  }
+
+  .cp-overview .cp-stat {
+    min-height: 50px;
+    padding: 7px 12px;
+    gap: 8px;
+    border-left: 0;
+    border-top: 0;
+  }
+
+  .cp-overview .cp-stat--status {
+    grid-column: 1 / -1;
+    min-height: 48px;
+    background: color-mix(in srgb, var(--surface-2) 86%, transparent);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .cp-overview .cp-stat:nth-child(3),
+  .cp-overview .cp-stat:nth-child(5) {
+    border-left: 1px solid var(--border-subtle);
+  }
+
+  .cp-overview .cp-stat:nth-child(5) {
+    grid-column: auto;
+  }
+
+  .cp-overview .cp-stat:nth-child(4),
+  .cp-overview .cp-stat:nth-child(5) {
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .cp-overview .cp-stat strong {
+    font-size: 0.88rem;
+  }
+
+  .cp-setup {
+    margin-top: 2px;
+    border-top-color: var(--border-primary);
+    border-bottom-color: var(--border-primary);
+  }
+
+  .cp-assumptions-bar {
+    min-height: 58px;
+    padding: 9px 12px;
+    grid-template-columns: minmax(0, 1fr) 18px;
+    gap: 7px;
+  }
+
+  .cp-assumptions-title {
+    min-width: 0;
+  }
+
+  .cp-assumptions-summary {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding-left: 26px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .cp-assumptions-summary::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cp-assumptions-bar > .cp-disclosure-icon {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .cp-setup-tabs {
+    position: sticky;
+    z-index: 4;
+    top: calc(var(--navbar-height) + 53px);
+    background: var(--surface-1);
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.18);
+  }
+
+  .cp-setup-panel {
+    padding-inline: 10px;
+  }
+
+  .cp-setup-panel--rewards {
+    padding: 0 10px 10px;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-toolbar {
+    padding: 10px 0;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-viewport {
+    max-height: min(520px, 62vh);
+    padding-right: 0;
+    overflow-x: hidden;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row {
+    min-height: 62px;
+    padding: 7px 4px;
+    grid-template-columns: 104px minmax(0, 1fr) auto;
+    grid-template-rows: minmax(20px, auto) minmax(22px, auto);
+    align-items: center;
+    gap: 3px 8px;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-art {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    width: 104px;
+    align-self: center;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-copy,
+  .cp-setup-panel--rewards .cp-reward-benefits {
+    grid-column: 2;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-copy {
+    grid-row: 1;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-benefits {
+    grid-row: 2;
+    gap: 4px 7px;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-actions {
+    grid-column: 3;
+    grid-row: 1 / -1;
+    width: auto;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    align-self: stretch;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    border-top: 0;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-actions > button,
+  .cp-setup-panel--rewards .cp-reward-actions > a,
+  .cp-setup-panel--rewards .cp-reward-actions--past .cp-reward-past {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-actions--past .cp-reward-past {
+    font-size: 0;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-actions--past .cp-reward-past mat-icon {
+    margin: 0;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward {
+    grid-template-rows: minmax(20px, auto) minmax(22px, auto) auto;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward .cp-reward-art {
+    grid-row: 1 / 3;
+    align-self: start;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward .cp-reward-actions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: 100%;
+    height: auto;
+    margin-top: 3px;
+    padding-top: 7px;
+    flex-direction: row;
+    justify-content: flex-end;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward .cp-variable-reward {
+    flex: 1 1 auto;
+  }
+
+  .cp-targets {
+    padding: 0 10px 14px;
+  }
+
+  .cp-target-heading {
+    margin: 7px 2px 8px;
+  }
+
+  .cp-target-list {
+    gap: 9px;
+    border: 0;
+    background: transparent;
+  }
+
+  .cp-target {
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    background: var(--surface-1);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+    overflow: visible;
+  }
+
+  .cp-target + .cp-target {
+    border-top: 1px solid var(--border-primary);
+  }
+
+  .cp-target-main {
+    min-height: 66px;
+    padding: 9px 10px;
+    gap: 10px;
+  }
+
+  .cp-target-image {
+    width: 112px;
+    height: 44px;
+    border: 0;
+  }
+
+  .cp-target-title > strong {
+    line-height: 1.25;
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .cp-target-controls {
+    padding: 9px 10px 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 40px 40px;
+    align-items: end;
+    gap: 8px;
+    background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  }
+
+  .cp-target-controls > .cp-pull-count,
+  .cp-target-controls > .cp-pull-count:last-of-type {
+    grid-column: 1;
+    grid-row: 1;
+    width: auto;
+    min-width: 0;
+    flex: none;
+  }
+
+  .cp-target-controls .cp-control {
+    height: 40px;
+  }
+
+  .cp-target-controls .cp-payment-menu {
+    grid-column: 2;
+    grid-row: 1;
+    width: 40px;
+    min-width: 40px;
+    align-self: end;
+  }
+
+  .cp-target-controls .cp-payment-menu > summary,
+  .cp-target-controls .cp-target-remove {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .cp-target-controls .cp-target-remove {
+    grid-column: 3;
+    grid-row: 1;
+    min-width: 40px;
+    align-self: end;
+  }
+
+  .cp-target-controls .cp-crystal-plan--quick {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    margin-top: 1px;
+    padding-top: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .cp-target-controls .cp-crystal-plan--quick legend {
+    margin-bottom: 2px;
+  }
+
+  .cp-target-controls .cp-crystal-plan--quick label {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .cp-target-controls .cp-crystal-plan--quick .cp-control {
+    width: 100%;
+    height: 38px;
+  }
+
+  .cp-payment-popover {
+    position: fixed;
+    z-index: 160;
+    top: auto;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+    max-height: calc(100dvh - var(--navbar-height) - 28px);
+    overflow-y: auto;
+    border-radius: 10px;
+  }
+
+  .cp-pickup-details {
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+  }
+
+  .cp-pickup-details > summary {
+    min-height: 46px;
+    padding: 6px 10px;
+    background: color-mix(in srgb, var(--surface-1) 72%, var(--surface-2));
+  }
+}
+
+@media (max-width: 420px) {
+  .cp-workbench .cp-manager {
+    padding-inline: 10px;
+  }
+
+  .cp-picker--primary {
+    padding-inline: 10px;
+  }
+
+  .cp-assumptions-bar {
+    padding-inline: 10px;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row {
+    grid-template-columns: 88px minmax(0, 1fr) auto;
+    gap-inline: 7px;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-art {
+    width: 88px;
+  }
+
+  .cp-targets {
+    padding-inline: 8px;
+  }
+
+  .cp-target-image {
+    width: 104px;
+  }
+
+  .cp-target-main,
+  .cp-target-controls {
+    padding-inline: 9px;
+  }
+}

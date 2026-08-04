@@ -359,6 +359,7 @@
               </ng-container>
               <div *ngIf="item.group as group" class="cp-reward-cell" [class.has-source]="group.sourceUrl">
                 <div class="cp-reward-row" [class.is-active]="isRewardGroupActive(group)"
+                  [class.has-variable-reward]="group.variableOptions.length > 0"
                   [class.is-excluded]="!isRewardGroupActive(group)" [class.is-automatic]="isAutomaticFreePullGroup(group)" [class.is-past]="showPastRewards">
                   <ng-container *ngTemplateOutlet="rewardTile; context: { $implicit: group }"></ng-container>
                   <div class="cp-reward-actions" *ngIf="!showPastRewards; else pastRewardState">
