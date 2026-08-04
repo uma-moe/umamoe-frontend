@@ -1007,10 +1007,18 @@ app-mobile-timeline {
 }
 
 @media (max-width: 768px) {
+  .timeline-page {
+    padding-top: 53px;
+  }
+
   .timeline-page-header {
-    position: sticky;
+    position: fixed;
     z-index: 90;
     top: var(--navbar-height);
+    right: 0;
+    left: 0;
+    width: 100%;
+    box-sizing: border-box;
     padding: 6px 0;
     background: color-mix(in srgb, var(--surface-overlay) 94%, transparent);
     border-bottom: 1px solid var(--border-primary);
@@ -1036,8 +1044,8 @@ app-mobile-timeline {
   }
 
   .planner-tab-page {
-    width: auto;
-    margin: 0.75rem 10px 1.5rem;
+    width: 100%;
+    margin: 0;
   }
 }
 

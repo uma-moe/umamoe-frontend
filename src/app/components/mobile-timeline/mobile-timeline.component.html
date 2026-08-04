@@ -118,7 +118,8 @@
 
   <nav class="mobile-bottom-toolbar" [class.is-footer-visible]="footerVisible" aria-label="Timeline actions">
     <button type="button" (click)="scrollToToday()"><mat-icon>today</mat-icon><span>Today</span></button>
-    <button type="button" (click)="toggleFilterPanel()"><mat-icon>search</mat-icon><span>Search</span></button>
-    <button type="button" (click)="toggleFilterPanel()" [attr.aria-expanded]="isFilterPanelExpanded"><mat-icon>tune</mat-icon><span>Filters</span></button>
+    <button type="button" (click)="toggleFilterPanel()" [attr.aria-expanded]="isFilterPanelExpanded">
+      <mat-icon>manage_search</mat-icon><span>Search &amp; filters</span>
+    </button>
   </nav>
 </div>
