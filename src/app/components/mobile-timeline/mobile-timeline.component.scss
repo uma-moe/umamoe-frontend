@@ -170,7 +170,7 @@
   display: grid;
   height: calc(50px + env(safe-area-inset-bottom));
   padding: 0 8px env(safe-area-inset-bottom);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   background: var(--surface-overlay);
   border-top: 1px solid var(--border-primary);
   transition: transform 140ms ease, visibility 140ms ease;

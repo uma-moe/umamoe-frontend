@@ -2,17 +2,28 @@
   <section class="cp-workbench" aria-label="Planner controls and projection">
   <header class="cp-manager">
     <div class="cp-plan-identity">
-      <label class="cp-field cp-plan-select">
-        <span>Saved plan</span>
-        <span class="cp-control cp-control--icon">
-          <mat-icon aria-hidden="true">bookmark</mat-icon>
-          <select [ngModel]="plan.id" (ngModelChange)="selectPlan($event)" aria-label="Saved plan">
-            <option *ngFor="let item of collection.plans; trackBy: trackById" [value]="item.id">
-              {{ item.name }}
-            </option>
-          </select>
-        </span>
-      </label>
+      <div class="cp-field cp-plan-select">
+        <span>Selected plan</span>
+        <details #planPicker class="cp-plan-picker cp-popover" (toggle)="onPopoverToggle($event)">
+          <summary class="cp-control cp-control--icon" aria-label="Selected plan" aria-haspopup="menu">
+            <mat-icon aria-hidden="true">bookmark</mat-icon>
+            <span class="cp-plan-picker-name">{{ plan.name }}</span>
+            <mat-icon class="cp-plan-picker-chevron" aria-hidden="true">expand_more</mat-icon>
+          </summary>
+          <div class="cp-plan-picker-menu" role="menu" aria-label="Select a plan">
+            <button *ngFor="let item of collection.plans; trackBy: trackById" type="button" role="menuitemradio"
+              [class.is-active]="item.id === plan.id" [attr.aria-checked]="item.id === plan.id"
+              (click)="planPicker.open = false; selectPlan(item.id)">
+              <mat-icon aria-hidden="true">{{ item.id === plan.id ? 'check' : 'bookmark_border' }}</mat-icon>
+              <span>{{ item.name }}</span>
+            </button>
+            <button class="cp-plan-picker-create" type="button" role="menuitem"
+              (click)="planPicker.open = false; createPlan()">
+              <mat-icon aria-hidden="true">add</mat-icon><span>Add plan</span>
+            </button>
+          </div>
+        </details>
+      </div>
 
       <label class="cp-field cp-name-field">
         <span>Plan name</span>
@@ -21,9 +32,7 @@
     </div>
 
     <div class="cp-actions" role="group" aria-label="Plan actions">
-      <button class="cp-action cp-action--primary" type="button" (click)="createPlan()">
-        <mat-icon>add</mat-icon><span>New plan</span>
-      </button>
+
       <details #planActionsMenu class="cp-plan-more cp-popover" (toggle)="onPopoverToggle($event)">
         <summary class="cp-action cp-action--icon" aria-label="More plan actions" title="More plan actions">
           <mat-icon aria-hidden="true">more_horiz</mat-icon>
