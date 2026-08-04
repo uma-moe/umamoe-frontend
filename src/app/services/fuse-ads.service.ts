@@ -164,7 +164,6 @@ const FUSE_ENABLED_STORAGE_KEY = 'umamoe-fuse-enabled-v1';
 const FUSE_ENABLED_QUERY_KEYS = ['fuse', 'fuse_enabled', 'ads_enabled'];
 const FUSE_API_RETRY_MS = 100;
 const DEFAULT_FUSE_BLOCKING_TIMEOUT_MS = 1200;
-const PAGE_INIT_DEBOUNCE_MS = 30;
 const PRIVACY_CONTROLS_RETRY_MS = 250;
 const PRIVACY_CONTROLS_MAX_RETRIES = 32;
 const RETAINED_AD_CREATIVE_TTL_MS = 15000;
@@ -216,9 +215,6 @@ export class FuseAdsService {
   private pendingFuseCalls: PendingFuseCall[] = [];
   private fuseCallFlushTimer: number | null = null;
   private fuseCallFlushRetries = 0;
-  private pageInitTimer: number | null = null;
-  private pendingPageInitFuseIds = new Set<string>();
-  private pendingPageInitReasons: string[] = [];
   private privacyControlsTimer: number | null = null;
   private privacyControlsRetries = 0;
   private fuseApiBlocked = false;
@@ -259,8 +255,6 @@ export class FuseAdsService {
     if (this.fuseCallFlushTimer !== null && isPlatformBrowser(this.platformId)) {
       this.window.clearTimeout(this.fuseCallFlushTimer);
     }
-    this.clearPendingPageInit();
-
     const pendingBeforeReset = this.pendingFuseCalls.length;
     this.fuseCallFlushTimer = null;
     this.fuseCallFlushRetries = 0;
@@ -276,7 +270,6 @@ export class FuseAdsService {
 
     if (!preloadFuseIds.length) {
       this.clearRetainedCreatives('page has no preloadable slots');
-      return;
     }
 
     if (!this.pageInitAllowed) {
@@ -366,7 +359,7 @@ export class FuseAdsService {
       return;
     }
 
-    if (!this.canUseFuse || blockingFuseIds.length === 0) {
+    if (!this.canUseFuse) {
       this.debugWarn('pageInit skipped', {
         reason,
         requestedFuseIds: fuseIds,
@@ -377,7 +370,7 @@ export class FuseAdsService {
       return;
     }
 
-    this.schedulePageInit(blockingFuseIds, reason);
+    this.queuePageInit(blockingFuseIds, reason);
   }
 
   registerZone(zoneElementId: string, fuseId: string): void {
@@ -391,20 +384,28 @@ export class FuseAdsService {
       return;
     }
 
+    if (!this.isZoneElementConnected(zoneElementId)) {
+      this.debugWarn('registerZone skipped: zone element is not connected to the DOM', {
+        zoneElementId,
+        fuseId,
+      });
+      return;
+    }
+
     this.debug('registerZone queued', { zoneElementId, fuseId });
     this.registeredZones.set(zoneElementId, fuseId);
     this.enqueueFuseCall(fusetag => {
-      this.debug('registerZone executing', { zoneElementId, fuseId });
-      fusetag.registerZone?.(zoneElementId);
-      if (!this.pageInitAllowed) {
-        this.debug('pageInit suppressed for initial page load zone registration', {
+      if (!this.isZoneElementConnected(zoneElementId)) {
+        this.registeredZones.delete(zoneElementId);
+        this.debugWarn('registerZone cancelled: zone element left the DOM before execution', {
           zoneElementId,
           fuseId,
         });
         return;
       }
 
-      this.schedulePageInit([fuseId], `zone registered:${zoneElementId}`);
+      this.debug('registerZone executing', { zoneElementId, fuseId });
+      fusetag.registerZone?.(zoneElementId);
     }, `registerZone:${zoneElementId}:${fuseId}`);
   }
 
@@ -421,24 +422,30 @@ export class FuseAdsService {
       return;
     }
 
+    if (!this.isZoneElementConnected(zoneElementId)) {
+      this.debugWarn('registerPersistentZone skipped: zone element is not connected to the DOM', {
+        zoneElementId,
+        fuseId,
+      });
+      return;
+    }
+
     this.debug('registerPersistentZone queued', { zoneElementId, fuseId });
     this.persistentZones.set(zoneElementId, fuseId);
     this.registeredZones.set(zoneElementId, fuseId);
     this.enqueueFuseCall(fusetag => {
-      this.debug('registerPersistentZone executing', { zoneElementId, fuseId });
-      fusetag.registerZone?.(zoneElementId);
-      if (!this.pageInitAllowed) {
-        this.debug('persistent pageInit suppressed for initial page load', {
+      if (!this.isZoneElementConnected(zoneElementId)) {
+        this.persistentZones.delete(zoneElementId);
+        this.registeredZones.delete(zoneElementId);
+        this.debugWarn('registerPersistentZone cancelled: zone element left the DOM before execution', {
           zoneElementId,
           fuseId,
         });
         return;
       }
 
-      fusetag.pageInit?.({
-        blockingFuseIds: [fuseId],
-        blockingTimeout: this.fuseBlockingTimeoutMs,
-      });
+      this.debug('registerPersistentZone executing', { zoneElementId, fuseId });
+      fusetag.registerZone?.(zoneElementId);
     }, `persistentZone:${zoneElementId}:${fuseId}`, true);
   }
 
@@ -1017,11 +1024,15 @@ export class FuseAdsService {
         currentBreakpoint: this.getFuseCurrentBreakpoint(fusetag),
         registeredZones: this.getRegisteredZonesSummary(),
       });
-      fusetag.pageInit?.({
-        blockingFuseIds,
-        blockingTimeout: this.fuseBlockingTimeoutMs,
-      });
-    }, `pageInit:${blockingFuseIds.join(',')}`);
+      if (blockingFuseIds.length) {
+        fusetag.pageInit?.({
+          blockingFuseIds,
+          blockingTimeout: this.fuseBlockingTimeoutMs,
+        });
+      } else {
+        fusetag.pageInit?.();
+      }
+    }, `pageInit:${blockingFuseIds.join(',') || 'page'}`);
   }
 
   private getFuseCurrentBreakpoint(fusetag: FuseTag): unknown {
@@ -1043,49 +1054,9 @@ export class FuseAdsService {
     }));
   }
 
-  private schedulePageInit(blockingFuseIds: string[], reason: string): void {
-    for (const fuseId of blockingFuseIds) {
-      this.pendingPageInitFuseIds.add(fuseId);
-    }
-
-    this.pendingPageInitReasons.push(reason);
-
-    if (!isPlatformBrowser(this.platformId)) {
-      this.flushScheduledPageInit();
-      return;
-    }
-
-    if (this.pageInitTimer !== null) {
-      return;
-    }
-
-    this.pageInitTimer = this.window.setTimeout(() => {
-      this.pageInitTimer = null;
-      this.flushScheduledPageInit();
-    }, PAGE_INIT_DEBOUNCE_MS);
-  }
-
-  private flushScheduledPageInit(): void {
-    const blockingFuseIds = Array.from(this.pendingPageInitFuseIds);
-    const reasons = [...this.pendingPageInitReasons];
-    this.pendingPageInitFuseIds.clear();
-    this.pendingPageInitReasons = [];
-
-    if (!blockingFuseIds.length) {
-      return;
-    }
-
-    this.queuePageInit(blockingFuseIds, reasons.join(', '));
-  }
-
-  private clearPendingPageInit(): void {
-    if (this.pageInitTimer !== null && isPlatformBrowser(this.platformId)) {
-      this.window.clearTimeout(this.pageInitTimer);
-    }
-
-    this.pageInitTimer = null;
-    this.pendingPageInitFuseIds.clear();
-    this.pendingPageInitReasons = [];
+  private isZoneElementConnected(zoneElementId: string): boolean {
+    const element = this.document.getElementById(zoneElementId);
+    return Boolean(element?.isConnected);
   }
 
   private setRuntimeState(state: FuseRuntimeState): void {

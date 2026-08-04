@@ -433,21 +433,20 @@ select.cp-control,
 .cp-scenario-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(280px, 1fr));
-  gap: 8px;
+  gap: 6px 18px;
 }
 
 .cp-scenario {
   width: auto;
   min-width: 0;
   margin: 0;
-  padding: 8px 9px;
+  padding: 2px 0;
   display: grid;
   grid-template-columns: minmax(120px, 0.8fr) minmax(190px, 1.2fr);
   align-items: center;
   gap: 9px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  background: var(--surface-1);
+  border: 0;
+  background: transparent;
 
   legend {
     margin: 0 0 5px;
@@ -837,7 +836,7 @@ select.cp-control,
   min-height: 50px;
   padding: 5px 6px;
   display: grid;
-  grid-template-columns: 24px minmax(210px, 0.75fr) minmax(440px, 1.5fr) auto;
+  grid-template-columns: 24px minmax(210px, 0.75fr) 28px minmax(440px, 1.5fr);
   align-items: center;
   gap: 8px;
   border: 1px solid var(--border-subtle);
@@ -1027,32 +1026,27 @@ select.cp-control,
   }
 }
 
-.cp-reward-cell.has-source .cp-reward-state {
-  padding-bottom: 20px;
-}
-
 .cp-reward-source {
-  position: static;
-  min-height: 25px;
-  padding: 0 9px;
+  min-height: 28px;
+  padding: 0 7px;
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 3px;
-  color: var(--accent-primary);
-  border-top: 1px solid var(--border-subtle);
-  border-radius: 0;
-  font-size: 0.58rem;
-  font-weight: 620;
+  justify-content: center;
+  gap: 4px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xs);
+  font-size: 0.61rem;
+  font-weight: 660;
   line-height: 1;
   text-decoration: none;
   white-space: nowrap;
 
-  mat-icon { @include icon-size(12px); }
-  &:hover { color: var(--text-primary); text-decoration: underline; }
+  mat-icon { @include icon-size(14px); }
+  &:hover { color: var(--accent-primary); background: var(--surface-2); border-color: var(--border-secondary); text-decoration: none; }
   &:focus-visible { outline: 2px solid rgba(var(--accent-primary-rgb), 0.48); outline-offset: 1px; }
 }
-
 .cp-reward-art {
   grid-column: 1;
   grid-row: 1 / -1;
@@ -1186,7 +1180,7 @@ select.cp-control,
 .cp-free-pull-campaign {
   min-height: 46px;
   padding: 3px 5px;
-  grid-template-columns: 140px minmax(190px, 0.7fr) minmax(390px, 1.4fr) auto;
+  grid-template-columns: 140px minmax(190px, 0.7fr) 28px minmax(390px, 1.4fr);
   gap: 7px;
 }
 
@@ -1290,31 +1284,79 @@ select.cp-control,
 .cp-reward-actions > button {
   min-width: 66px;
   height: 28px;
-  order: 1;
+  order: 2;
 }
 
-.cp-reward-actions > .cp-reward-include-toggle { order: 2; }
+.cp-reward-actions > .cp-reward-source { order: 1; }
+.cp-reward-actions > .cp-reward-include-toggle { order: 3; }
 
 .cp-variable-reward {
-  min-width: 150px;
-  max-width: 290px;
+  min-width: 220px;
+  max-width: 320px;
+  height: 30px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 28px;
+  overflow: hidden;
   order: 0;
+  color: var(--text-secondary);
+  background: var(--surface-0);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xs);
 
-  select {
-    width: 100%;
-    min-height: 30px;
-    padding: 3px 24px 3px 7px;
-    font-size: 0.61rem;
+  > button {
+    min-width: 0;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    color: var(--text-muted);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+
+    mat-icon { @include icon-size(15px); }
+    &:hover { color: var(--text-primary); background: var(--surface-2); }
+    &:focus-visible { position: relative; z-index: 1; outline: 2px solid rgba(var(--accent-primary-rgb), 0.48); outline-offset: -2px; }
+  }
+
+  > .cp-variable-reward-current {
+    padding: 2px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0;
+    border-inline: 1px solid var(--border-primary);
+
+    strong {
+      max-width: 100%;
+      overflow: hidden;
+      color: var(--text-primary);
+      font-size: 0.61rem;
+      font-weight: 680;
+      line-height: 1.15;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    small {
+      max-width: 100%;
+      overflow: hidden;
+      color: var(--text-muted);
+      font-size: 0.51rem;
+      line-height: 1.1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &.is-muted strong { color: var(--text-muted); }
   }
 }
-
 .cp-reward-actions > button.is-added {
   color: var(--accent-success);
 }
 
 .cp-reward-past {
-  grid-column: 3;
-  grid-row: 1 / -1;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1324,9 +1366,6 @@ select.cp-control,
 
   mat-icon { @include icon-size(14px); }
 }
-
-.cp-reward-cell.has-source .cp-reward-actions,
-.cp-reward-cell.has-source .cp-reward-past { padding-bottom: 0; }
 
 .cp-reward-contribution {
   color: var(--accent-success);
@@ -1373,32 +1412,6 @@ select.cp-control,
   z-index: 5;
   width: min(560px, 52%);
 
-}
-
-.cp-banner-filters {
-  margin-top: 5px;
-  display: flex;
-  gap: 4px;
-
-  button {
-    min-height: 25px;
-    padding: 0 9px;
-    color: var(--text-muted);
-    border: 1px solid var(--border-subtle);
-    border-radius: 999px;
-    background: transparent;
-    cursor: pointer;
-    font: inherit;
-    font-size: 0.62rem;
-    font-weight: 650;
-
-    &:hover { color: var(--text-primary); border-color: var(--border-secondary); }
-    &.is-active {
-      color: var(--accent-primary);
-      border-color: rgba(var(--accent-primary-rgb), 0.42);
-      background: rgba(var(--accent-primary-rgb), 0.1);
-    }
-  }
 }
 
 .cp-event-viewport {
@@ -2453,9 +2466,9 @@ select.cp-control,
   .cp-reward-toolbar { flex-wrap: wrap; }
   .cp-reward-query { flex: 1 1 480px; }
   .cp-reward-search { flex: 1 1 320px; }
-  .cp-free-pull-campaign { grid-template-columns: 126px minmax(180px, 0.75fr) minmax(320px, 1.25fr) auto; }
+  .cp-free-pull-campaign { grid-template-columns: 126px minmax(180px, 0.75fr) 28px minmax(320px, 1.25fr); }
   .cp-free-pull-campaign-art { width: 126px; }
-  .cp-free-pull-campaign-past { grid-column: 3; }
+  .cp-free-pull-campaign-past { grid-column: 4; }
 
   .cp-target-image { width: 96px; height: 48px; }
   .cp-target-main { gap: 8px; }
@@ -2627,7 +2640,7 @@ select.cp-control,
   .cp-reward-actions { gap: 3px; }
   .cp-reward-actions > button { min-width: 30px; width: 30px; padding: 0; }
   .cp-reward-actions > button > span { display: none; }
-  .cp-reward-source { right: 3px; bottom: 1px; width: 32px; padding: 0; justify-content: center; }
+  .cp-reward-source { width: 32px; min-width: 32px; padding: 0; justify-content: center; }
   .cp-reward-source > span { display: none; }
   .cp-goal-rollup-header { align-items: flex-start; }
   .cp-all-goals-status { min-width: 104px; }
@@ -2649,7 +2662,6 @@ select.cp-control,
   .cp-rarity-context-header dl > div { align-items: flex-end; flex-direction: column; gap: 0; }
   .cp-rarity-legend { column-gap: 9px; }
 }
-
 @media (max-width: 360px) {
   .cp-setup-tab { flex-basis: 154px; }
   .cp-target-controls .cp-field { flex-basis: 128px; }
@@ -2819,21 +2831,18 @@ select.cp-control,
 }
 
 .cp-setup-panel--rewards .cp-reward-source {
-  position: static;
   width: auto;
-  min-height: 25px;
+  min-height: 28px;
   padding: 0 7px;
-  justify-content: flex-start;
-  transform: none;
   color: var(--text-muted);
+  border-color: transparent;
 
-  &:hover { color: var(--accent-primary); text-decoration: none; }
+  &:hover { color: var(--accent-primary); border-color: var(--border-primary); }
 }
-
 .cp-setup-panel--rewards .cp-free-pull-campaign {
   min-height: 51px;
   padding: 5px 7px;
-  grid-template-columns: 156px minmax(220px, 1fr) auto 28px;
+  grid-template-columns: 156px minmax(220px, 1fr) 28px auto;
   gap: 10px;
 
   &:hover { background: var(--surface-2); }
@@ -2935,6 +2944,25 @@ select.cp-control,
     padding: 0;
   }
   .cp-setup-panel--rewards .cp-reward-actions > button:not(.cp-reward-include-toggle) > span { display: none; }
+
+  .cp-setup-panel--rewards .cp-reward-actions {
+    grid-column: 2 / -1;
+    grid-row: 3;
+    width: 100%;
+    margin-top: 4px;
+    justify-content: flex-end;
+  }
+  .cp-setup-panel--rewards .cp-variable-reward {
+    min-width: 0;
+    max-width: none;
+    flex: 1 1 180px;
+  }
+  .cp-setup-panel--rewards .cp-reward-source {
+    width: 30px;
+    min-width: 30px;
+    padding: 0;
+  }
+  .cp-setup-panel--rewards .cp-reward-source > span { display: none; }
 
   .cp-setup-panel--rewards .cp-free-pull-campaign {
     grid-template-columns: 112px minmax(0, 1fr) 28px;

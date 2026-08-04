@@ -16,6 +16,7 @@ import { ScrollingModule, CdkVirtualScrollViewport } from '@angular/cdk/scrollin
 import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { TimelineService } from '../../services/timeline.service';
 import { TimelineCalculation, TimelineEvent, EventType, TimelineAnniversary } from '../../models/timeline.model';
+import { PlannerRewardResource } from '../../models/carat-planner.model';
 import { MobileTimelineComponent } from '../../components/mobile-timeline/mobile-timeline.component';
 import { TimelineAvatar, TimelineAvatarService } from '../../services/timeline-avatar.service';
 import { TimelinePredictionInsight, TimelinePredictionService } from '../../services/timeline-prediction.service';
@@ -223,6 +224,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private scrollSubscription?: Subscription;
     private tabSubscription?: Subscription;
     private plannerSubscription?: Subscription;
+    private plannerResourceSubscription?: Subscription;
     activeTab: 'timeline' | 'carat-planner' = 'timeline';
     readonly caratPlannerAvailable = isCaratPlannerAvailable();
 
@@ -623,6 +625,10 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             this.plannerEventCount = plan?.targets.filter(target => !disabledEventIds.has(target.eventId)).length ?? 0;
             this.cdr.markForCheck();
         });
+        this.plannerResourceSubscription = this.plannerResources.state$.subscribe(state => {
+            if (!state.ready || this.destroyed) return;
+            this.updateTimelineRewardSummaries(this.plannerResources.currentBundle.rewards);
+        });
         this.loadTimelineRewardSummaries();
         this.tabSubscription = this.route.queryParamMap.subscribe(params => {
             const nextTab = this.caratPlannerAvailable && params.get('tab') === 'carat-planner'
@@ -723,6 +729,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         }
         this.tabSubscription?.unsubscribe();
         this.plannerSubscription?.unsubscribe();
+        this.plannerResourceSubscription?.unsubscribe();
         // Clean up drag event listeners
         document.removeEventListener('mousemove', this.boundMouseMove);
         document.removeEventListener('mouseup', this.boundMouseUp);
@@ -2210,11 +2217,15 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private loadTimelineRewardSummaries(): void {
         void this.plannerResources.loadRewards().then(rewards => {
             if (this.destroyed) return;
-            this.plannerRewardSummaries = buildTimelineRewardSummaries(rewards);
-            this.cdr.markForCheck();
+            this.updateTimelineRewardSummaries(rewards);
         }).catch(() => {
             // Reward summaries are progressive enhancement; the public timeline remains usable without them.
         });
+    }
+
+    private updateTimelineRewardSummaries(rewards: PlannerRewardResource): void {
+        this.plannerRewardSummaries = buildTimelineRewardSummaries(rewards);
+        this.cdr.markForCheck();
     }
 
     get activeFilterCount(): number {
@@ -2281,8 +2292,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             || this.hasProjectableRewardSummary(event.id);
     }
     private hasProjectableRewardSummary(eventId: string): boolean {
-        const summary = this.plannerRewardSummaries.get(eventId);
-        return Boolean(summary && summary.mode !== 'placement');
+        return this.plannerRewardSummaries.has(eventId);
     }
     eventTypeToLabel(type: EventType | undefined): string {
         switch (type) {

@@ -87,4 +87,98 @@ describe('CaratPlannerComponent reward coverage', () => {
     }));
     expect(component.plan.enabledRewardIds).toEqual(['team-missions']);
   });
-});
+
+  it('inherits CM and LoH income assumptions and preserves an explicit result selection', () => {
+    localStorage.removeItem(CaratPlannerPersistenceService.STORAGE_KEY);
+    const realPersistence = new CaratPlannerPersistenceService('browser' as never);
+    const persistence = {
+      savePlan: (plan: CaratPlan) => realPersistence.savePlan(plan),
+    };
+    const component = new CaratPlannerComponent(
+      new CaratPlannerCalculationService(),
+      new CaratPullProbabilityService(),
+      persistence as never,
+      {} as never,
+      new TimelineAvatarService(),
+      { markForCheck: () => undefined } as unknown as ChangeDetectorRef,
+    );
+    component.plan = realPersistence.activePlan;
+    component.plan.projectionStartDate = '2030-01-01';
+    component.plan.scenarioSelections = {
+      ...component.plan.scenarioSelections,
+      champions_meeting_result: 'champion',
+      league_of_heroes_rank: 'gold_4',
+    };
+    component.events = [
+      {
+        id: 'champions-meeting-811',
+        title: 'Champions Meeting: Test Cup',
+        type: 'champions_meeting',
+        globalReleaseDate: '2031-01-01',
+      },
+      {
+        id: 'league-of-heroes-100',
+        title: 'League of Heroes',
+        type: 'league_of_heroes',
+        globalReleaseDate: '2031-02-01',
+      },
+    ];
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: {
+        rewards: [],
+        competitive_variants: [
+          {
+            id: 'cm-resource-outcome',
+            competition: 'champions_meeting',
+            event_id: 'champions-meeting-811',
+            master_event_id: 811,
+            label: 'Final result',
+            source_items: [],
+          },
+          {
+            id: 'loh-resource-outcome',
+            competition: 'league_of_heroes',
+            event_id: 'league-of-heroes-100',
+            master_event_id: 100,
+            label: 'Final rank',
+            source_items: [],
+          },
+        ],
+      },
+    };
+
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    const championsMeeting = component.displayedRewardGroups.find(group =>
+      group.eventId === 'champions-meeting-811');
+    const leagueOfHeroes = component.displayedRewardGroups.find(group =>
+      group.eventId === 'league-of-heroes-100');
+    expect(championsMeeting).toBeDefined();
+    expect(leagueOfHeroes).toBeDefined();
+    expect(championsMeeting?.imagePath)
+      .toBe('assets/timeline-images/en/events/champions-meeting/811.webp');
+    expect(component.selectedVariableRewardOption(championsMeeting!).label).toBe('Champion');
+    expect(component.selectedVariableRewardOption(championsMeeting!).amountLabel)
+      .toBe('3,300 Carats · 5 Uma tix · 5 support tix');
+    expect(component.selectedVariableRewardOption(leagueOfHeroes!).label).toBe('Gold 4');
+    expect(component.selectedVariableRewardOption(leagueOfHeroes!).amountLabel)
+      .toBe('1,300 Carats · 2 Uma tix · 2 support tix');
+    expect(championsMeeting?.benefits.map(benefit => benefit.kind))
+      .toEqual(jasmine.arrayContaining(['carats', 'uma_ticket', 'support_ticket']));
+
+    const explicit = championsMeeting!.variableOptions.find(option => option.label === 'Group B 2nd')!;
+    component.setVariableRewardSelection(championsMeeting!, explicit.id);
+    const stored = component.plan.variableRewardSelections?.['champions-meeting-811'];
+    expect(stored?.optionId).toBe(explicit.id);
+
+    component.toggleRewardGroupSelection(championsMeeting!);
+    expect(component.plan.disabledEventIds).toContain('champions-meeting-811');
+    expect(component.plan.variableRewardSelections?.['champions-meeting-811']).toEqual(stored);
+
+    component.toggleRewardGroupSelection(championsMeeting!);
+    expect(component.plan.disabledEventIds).not.toContain('champions-meeting-811');
+    expect(component.selectedVariableRewardOption(championsMeeting!).label).toBe('Group B 2nd');
+    expect(component.plan.variableRewardSelections?.['champions-meeting-811']).toEqual(stored);
+  });});

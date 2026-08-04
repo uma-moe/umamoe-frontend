@@ -56,14 +56,6 @@
           <mat-icon>close</mat-icon>
         </button>
       </span>
-
-      <div class="cp-banner-filters" role="group" aria-label="Banner type">
-        <button type="button" [class.is-active]="bannerSearchFilter === 'all'" [attr.aria-pressed]="bannerSearchFilter === 'all'" (click)="setBannerSearchFilter('all')">All</button>
-        <button type="button" [class.is-active]="bannerSearchFilter === 'character'" [attr.aria-pressed]="bannerSearchFilter === 'character'" (click)="setBannerSearchFilter('character')">Uma</button>
-        <button type="button" [class.is-active]="bannerSearchFilter === 'support'" [attr.aria-pressed]="bannerSearchFilter === 'support'" (click)="setBannerSearchFilter('support')">Support</button>
-        <button type="button" [class.is-active]="bannerSearchFilter === 'rerun'" [attr.aria-pressed]="bannerSearchFilter === 'rerun'" (click)="setBannerSearchFilter('rerun')">Reruns</button>
-      </div>
-
       <div id="cp-banner-options" *ngIf="showEventPicker" class="cp-event-viewport" role="listbox" tabindex="-1">
         <button class="cp-event-option" type="button" role="option" *ngFor="let event of filteredEvents; let optionIndex = index; trackBy: trackById"
           [id]="'cp-banner-option-' + optionIndex" [class.is-active]="optionIndex === eventPickerActiveIndex"
@@ -298,6 +290,13 @@
               <span>Eligible banners only<ng-container *ngIf="campaign.stockDestination"> &middot; JP daily-use split is an estimate; the switch-day pull was flexible.</ng-container></span>
             </span>
 
+            <a *ngIf="campaign.sourceUrl" class="cp-free-pull-campaign-source" [href]="campaign.sourceUrl"
+              target="_blank" rel="noopener noreferrer"
+              [attr.aria-label]="'Open news post for ' + campaign.label + ' in a new tab'"
+              title="News post (opens in a new tab)">
+              <mat-icon aria-hidden="true">open_in_new</mat-icon>
+            </a>
+
             <span *ngIf="campaign.isPast; else freePullPlan" class="cp-free-pull-campaign-past">
               <mat-icon aria-hidden="true">history</mat-icon> Past campaign
             </span>
@@ -320,13 +319,6 @@
                 </button>
               </span>
             </ng-template>
-
-            <a *ngIf="campaign.sourceUrl" class="cp-free-pull-campaign-source" [href]="campaign.sourceUrl"
-              target="_blank" rel="noopener noreferrer"
-              [attr.aria-label]="'Open news post for ' + campaign.label + ' in a new tab'"
-              title="News post (opens in a new tab)">
-              <mat-icon aria-hidden="true">open_in_new</mat-icon>
-            </a>
           </div>
         </ng-template>
 
@@ -360,15 +352,33 @@
                 <div class="cp-reward-row" [class.is-active]="isRewardGroupActive(group)"
                   [class.is-excluded]="!isRewardGroupActive(group)" [class.is-automatic]="isAutomaticFreePullGroup(group)" [class.is-past]="showPastRewards">
                   <ng-container *ngTemplateOutlet="rewardTile; context: { $implicit: group }"></ng-container>
-                  <span class="cp-reward-actions" *ngIf="!showPastRewards; else pastRewardState">
-                    <label class="cp-variable-reward" *ngIf="group.variableOptions.length">
-                      <span class="sr-only">Expected result for {{ group.title }}</span>
-                      <select class="cp-control" [ngModel]="selectedVariableRewardOptionId(group)"
-                        (ngModelChange)="setVariableRewardSelection(group, $event)">
-                        <option value="">Result not counted</option>
-                        <option *ngFor="let option of group.variableOptions" [value]="option.id">{{ option.label }} · {{ option.amountLabel }}</option>
-                      </select>
-                    </label>
+                  <div class="cp-reward-actions" *ngIf="!showPastRewards; else pastRewardState">
+                    <div class="cp-variable-reward" *ngIf="group.variableOptions.length"
+                      role="group" [attr.aria-label]="'Expected result for ' + group.title">
+                      <button type="button" (click)="cycleVariableRewardSelection(group, -1)"
+                        [attr.aria-label]="'Previous expected result for ' + group.title">
+                        <mat-icon aria-hidden="true">chevron_left</mat-icon>
+                      </button>
+                      <button type="button" class="cp-variable-reward-current"
+                        [class.is-muted]="isVariableRewardNotCounted(group)"
+                        (click)="cycleVariableRewardSelection(group, 1)"
+                        [attr.aria-label]="'Current expected result for ' + group.title + ': ' + selectedVariableRewardOption(group).label + '. Choose next result.'">
+                        <ng-container *ngIf="selectedVariableRewardOption(group) as selected">
+                          <strong>{{ selected.label }}</strong>
+                          <small>{{ selected.amountLabel }}</small>
+                        </ng-container>
+                      </button>
+                      <button type="button" (click)="cycleVariableRewardSelection(group, 1)"
+                        [attr.aria-label]="'Next expected result for ' + group.title">
+                        <mat-icon aria-hidden="true">chevron_right</mat-icon>
+                      </button>
+                    </div>
+                    <a *ngIf="group.sourceUrl" class="cp-reward-source" [href]="group.sourceUrl" target="_blank"
+                      rel="noopener noreferrer"
+                      [attr.aria-label]="'Open ' + (group.sourceLabel || 'news post') + ' for ' + group.title + ' in a new tab'"
+                      [attr.title]="(group.sourceLabel || 'News post') + ' (opens in a new tab)'">
+                      <span>{{ group.sourceLabel || 'News post' }}</span><mat-icon aria-hidden="true">open_in_new</mat-icon>
+                    </a>
                     <button *ngIf="isRewardGroupBannerActionable(group)" type="button"
                       [class.is-added]="isRewardGroupBannerPlanned(group)"
                       [attr.aria-pressed]="isRewardGroupBannerPlanned(group)"
@@ -386,17 +396,19 @@
                       (click)="toggleRewardGroupSelection(group)">
                       <mat-icon aria-hidden="true">{{ isRewardGroupActive(group) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
                     </button>
-                  </span>
+                  </div>
                   <ng-template #pastRewardState>
-                    <span class="cp-reward-past"><mat-icon aria-hidden="true">history</mat-icon> Past</span>
+                    <div class="cp-reward-actions cp-reward-actions--past">
+                      <a *ngIf="group.sourceUrl" class="cp-reward-source" [href]="group.sourceUrl" target="_blank"
+                        rel="noopener noreferrer"
+                        [attr.aria-label]="'Open ' + (group.sourceLabel || 'news post') + ' for ' + group.title + ' in a new tab'"
+                        [attr.title]="(group.sourceLabel || 'News post') + ' (opens in a new tab)'">
+                        <span>{{ group.sourceLabel || 'News post' }}</span><mat-icon aria-hidden="true">open_in_new</mat-icon>
+                      </a>
+                      <span class="cp-reward-past"><mat-icon aria-hidden="true">history</mat-icon> Past</span>
+                    </div>
                   </ng-template>
                 </div>
-                <a *ngIf="group.sourceUrl" class="cp-reward-source" [href]="group.sourceUrl" target="_blank"
-                  rel="noopener noreferrer"
-                  [attr.aria-label]="'Open ' + (group.sourceLabel || 'source') + ' for ' + group.title + ' in a new tab'"
-                  [attr.title]="(group.sourceLabel || 'Source') + ' (opens in a new tab)'">
-                  <span>{{ group.sourceLabel || 'Source' }}</span><mat-icon aria-hidden="true">open_in_new</mat-icon>
-                </a>
               </div>
             </ng-container>
           </div>
