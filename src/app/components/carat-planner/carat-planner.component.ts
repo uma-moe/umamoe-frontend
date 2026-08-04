@@ -220,7 +220,6 @@ interface PlannerOddsView {
 type PlannerSetupPanel = 'resources' | 'income' | 'rewards';
 type RewardSelectionFilter = 'all' | 'included';
 type FreePullCampaignChoice = 'schedule' | 'stock';
-type BannerSearchFilter = 'all' | 'character' | 'support' | 'rerun';
 
 @Component({
   selector: 'app-carat-planner',
@@ -288,7 +287,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   upcomingRewardGroupCount = 0;
   pastRewardGroupCount = 0;
   eventSearch = '';
-  bannerSearchFilter: BannerSearchFilter = 'all';
   rewardSearch = '';
   rewardSelectionFilter: RewardSelectionFilter = 'all';
   showPastRewards = false;
@@ -921,14 +919,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   searchEvents(value: string): void {
     this.eventSearch = value;
-    this.showEventPicker = true;
-    this.filterEvents();
-    this.eventPickerActiveIndex = this.nextSelectableEventIndex(-1, 1);
-  }
-
-  setBannerSearchFilter(filter: BannerSearchFilter): void {
-    if (this.bannerSearchFilter === filter) return;
-    this.bannerSearchFilter = filter;
     this.showEventPicker = true;
     this.filterEvents();
     this.eventPickerActiveIndex = this.nextSelectableEventIndex(-1, 1);
@@ -2517,11 +2507,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.filteredEvents = this.allEvents
       .filter(event => {
         const kind = this.bannerKind(event.type);
-        if (kind !== 'character' && kind !== 'support') return false;
-        if (this.bannerSearchFilter === 'character') return kind === 'character';
-        if (this.bannerSearchFilter === 'support') return kind === 'support';
-        if (this.bannerSearchFilter === 'rerun') return this.isRerunBanner(event);
-        return true;
+        return kind === 'character' || kind === 'support';
       })
       .filter(event => !query || this.eventMatchesPickerSearch(event, query))
       .sort((a, b) => {

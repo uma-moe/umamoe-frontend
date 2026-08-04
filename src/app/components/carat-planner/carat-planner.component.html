@@ -56,14 +56,6 @@
           <mat-icon>close</mat-icon>
         </button>
       </span>
-
-      <div class="cp-banner-filters" role="group" aria-label="Banner type">
-        <button type="button" [class.is-active]="bannerSearchFilter === 'all'" [attr.aria-pressed]="bannerSearchFilter === 'all'" (click)="setBannerSearchFilter('all')">All</button>
-        <button type="button" [class.is-active]="bannerSearchFilter === 'character'" [attr.aria-pressed]="bannerSearchFilter === 'character'" (click)="setBannerSearchFilter('character')">Uma</button>
-        <button type="button" [class.is-active]="bannerSearchFilter === 'support'" [attr.aria-pressed]="bannerSearchFilter === 'support'" (click)="setBannerSearchFilter('support')">Support</button>
-        <button type="button" [class.is-active]="bannerSearchFilter === 'rerun'" [attr.aria-pressed]="bannerSearchFilter === 'rerun'" (click)="setBannerSearchFilter('rerun')">Reruns</button>
-      </div>
-
       <div id="cp-banner-options" *ngIf="showEventPicker" class="cp-event-viewport" role="listbox" tabindex="-1">
         <button class="cp-event-option" type="button" role="option" *ngFor="let event of filteredEvents; let optionIndex = index; trackBy: trackById"
           [id]="'cp-banner-option-' + optionIndex" [class.is-active]="optionIndex === eventPickerActiveIndex"

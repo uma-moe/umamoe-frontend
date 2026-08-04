@@ -433,21 +433,20 @@ select.cp-control,
 .cp-scenario-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(280px, 1fr));
-  gap: 8px;
+  gap: 6px 18px;
 }
 
 .cp-scenario {
   width: auto;
   min-width: 0;
   margin: 0;
-  padding: 8px 9px;
+  padding: 2px 0;
   display: grid;
   grid-template-columns: minmax(120px, 0.8fr) minmax(190px, 1.2fr);
   align-items: center;
   gap: 9px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  background: var(--surface-1);
+  border: 0;
+  background: transparent;
 
   legend {
     margin: 0 0 5px;
@@ -1413,32 +1412,6 @@ select.cp-control,
   z-index: 5;
   width: min(560px, 52%);
 
-}
-
-.cp-banner-filters {
-  margin-top: 5px;
-  display: flex;
-  gap: 4px;
-
-  button {
-    min-height: 25px;
-    padding: 0 9px;
-    color: var(--text-muted);
-    border: 1px solid var(--border-subtle);
-    border-radius: 999px;
-    background: transparent;
-    cursor: pointer;
-    font: inherit;
-    font-size: 0.62rem;
-    font-weight: 650;
-
-    &:hover { color: var(--text-primary); border-color: var(--border-secondary); }
-    &.is-active {
-      color: var(--accent-primary);
-      border-color: rgba(var(--accent-primary-rgb), 0.42);
-      background: rgba(var(--accent-primary-rgb), 0.1);
-    }
-  }
 }
 
 .cp-event-viewport {

@@ -207,11 +207,10 @@ describe('CaratPlannerComponent banner ordering', () => {
     component.searchEvents('Tachyon');
     expect(component.filteredEvents.map(event => event.id)).toEqual(['tachyon-support']);
 
-    component.searchEvents('');
-    component.setBannerSearchFilter('rerun');
+    component.searchEvents('rerun');
     expect(component.filteredEvents.map(event => event.id)).toEqual(['rerun-support']);
 
-    component.setBannerSearchFilter('support');
+    component.searchEvents('support');
     expect(component.filteredEvents.map(event => event.id)).toEqual(['tachyon-support', 'rerun-support']);
   });
 
