@@ -101,6 +101,13 @@ interface MutableSelectorReward {
   amount: number;
 }
 
+export interface TimelineRewardFallbackEvent {
+  id: string;
+  type: string;
+  pickupCardIds?: number[];
+  relatedCharacters?: string[];
+}
+
 const INTEGER_FORMATTER = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const ITEM_ICON_ROOT = 'assets/images/item';
 const REWARD_ITEM_IDS = {
@@ -142,6 +149,7 @@ function rewardItem(
 
 export function buildTimelineRewardSummaries(
   resource: Pick<PlannerRewardResource, 'rewards' | 'event_benefits' | 'free_pull_campaigns' | 'competitive_variants'>,
+  timelineEvents: readonly TimelineRewardFallbackEvent[] = [],
 ): Map<string, TimelineRewardSummary> {
   const totals = new Map<string, MutableRewardSummary>();
   const summaryFor = (eventId: string): MutableRewardSummary => {
@@ -241,6 +249,8 @@ export function buildTimelineRewardSummaries(
     }
   }
 
+  addStandardCompetitiveFallbacks(totals, summaryFor, timelineEvents);
+
   const summaries = new Map<string, TimelineRewardSummary>();
   for (const [eventId, total] of totals) {
     if (total.competition === 'champions_meeting') {
@@ -322,6 +332,51 @@ export function buildTimelineRewardSummaries(
     }
   }
   return summaries;
+}
+
+function addStandardCompetitiveFallbacks(
+  totals: Map<string, MutableRewardSummary>,
+  summaryFor: (eventId: string) => MutableRewardSummary,
+  timelineEvents: readonly TimelineRewardFallbackEvent[],
+): void {
+  for (const event of timelineEvents) {
+    if (!event.id) continue;
+    if (event.type === 'champions_meeting') {
+      const summary = summaryFor(event.id);
+      summary.competition ??= 'champions_meeting';
+      if (!summary.variableOutcomeIds.size) {
+        summary.variableOutcomeIds.add(`standard-champions-meeting:${event.id}`);
+      }
+      continue;
+    }
+    if (event.type !== 'legend_race') continue;
+
+    const summary = totals.get(event.id);
+    if (summary?.competition === 'legend_race' && summary.variableOutcomeIds.size) continue;
+    const participantIds = (event.pickupCardIds ?? [])
+      .map(Number)
+      .filter(participantId => Number.isSafeInteger(participantId) && participantId > 0);
+    if (!participantIds.length) continue;
+
+    const legendSummary = summaryFor(event.id);
+    legendSummary.competition ??= 'legend_race';
+    participantIds.forEach((participantId, index) => {
+      const variantId = `standard-legend-race:${event.id}:${participantId}`;
+      const sourceItems = [
+        { item_category: 102, item_id: participantId, amount: 10 },
+        { item_category: 90, item_id: REWARD_ITEM_IDS.carats, amount: 150 },
+        { item_category: 91, item_id: REWARD_ITEM_IDS.money, amount: 10000 },
+      ];
+      const participantName = event.relatedCharacters?.[index]?.trim() || `Character ${participantId}`;
+      legendSummary.variableOutcomeIds.add(variantId);
+      legendSummary.variableOutcomes.push({
+        key: variantId,
+        label: `First clear vs ${participantName}`,
+        items: competitiveOutcomeItems(sourceItems),
+      });
+      addCompetitiveTotals(legendSummary.competitiveTotals, sourceItems);
+    });
+  }
 }
 function competitivePresentation(total: MutableRewardSummary): Pick<
   TimelineRewardSummary,
