@@ -4159,11 +4159,11 @@ select.cp-control,
   }
 
   .cp-setup-tabs {
-    position: sticky;
-    z-index: 4;
-    top: calc(var(--navbar-height) + 53px);
+    position: static;
+    z-index: auto;
+    top: auto;
     background: var(--surface-1);
-    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.18);
+    box-shadow: none;
   }
 
   .cp-setup-panel {
