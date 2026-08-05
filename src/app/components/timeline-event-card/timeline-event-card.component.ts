@@ -20,6 +20,7 @@ export interface TimelineCompactCardView {
   visibleAvatars: TimelineAvatar[];
   hiddenAvatarCount: number;
   hasMedia: boolean;
+  canPlan: boolean;
 }
 
 const GACHA_TYPE_LABELS: Record<string, string> = {
@@ -223,14 +224,20 @@ export class TimelineEventCardComponent implements OnChanges {
   @Input({ required: true }) event!: TimelineEvent;
   @Input() mobile = false;
   @Input() rewardSummary: TimelineRewardSummary | null = null;
+  @Input() plannerEligible = false;
+  @Input() planned = false;
   @Output() openDetails = new EventEmitter<TimelineEvent>();
+  @Output() addToPlanner = new EventEmitter<TimelineEvent>();
+  @Output() removeFromPlanner = new EventEmitter<TimelineEvent>();
 
   view: TimelineCompactCardView | null = null;
+  planQueued = false;
 
   constructor(private readonly avatarService: TimelineAvatarService) {}
 
   ngOnChanges(): void {
     if (!this.event) return;
+    this.planQueued = this.planned;
     const avatars = [
       ...this.avatarService.getCharacterAvatars(this.event),
       ...this.avatarService.getSupportAvatars(this.event)
@@ -259,12 +266,25 @@ export class TimelineEventCardComponent implements OnChanges {
       avatars,
       visibleAvatars: avatars.slice(0, visibleAvatarCount),
       hiddenAvatarCount: Math.max(0, avatars.length - visibleAvatarCount),
-      hasMedia: Boolean(this.event.imagePath)
+      hasMedia: Boolean(this.event.imagePath),
+      canPlan: this.plannerEligible
+        && [EventType.CHARACTER_BANNER, EventType.SUPPORT_CARD_BANNER].includes(this.event.type)
+        && Boolean(this.event.plannerDataAvailable || this.event.gachaId || this.event.gachaIds?.length)
     };
   }
 
   activate(): void {
     this.openDetails.emit(this.event);
+  }
+
+  plan(event: MouseEvent): void {
+    event.stopPropagation();
+    this.planQueued = !this.planQueued;
+    if (this.planQueued) {
+      this.addToPlanner.emit(this.event);
+    } else {
+      this.removeFromPlanner.emit(this.event);
+    }
   }
 
   onImageError(event: Event): void {
