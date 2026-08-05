@@ -363,18 +363,29 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Ensure remote directories exist
+      - name: Ensure remote shell directory exists
         shell: bash
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
           REMOTE_SHELL_DIR: ${{ env.BETA_REMOTE_SHELL_DIR }}
+        run: |
+          set -euo pipefail
+          ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "mkdir -p '$REMOTE_SHELL_DIR'"
+
+      - name: Ensure remote asset directories are writable
+        if: needs.build.outputs.should_deploy_assets == 'true'
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
           REMOTE_ASSETS_DIR: ${{ env.BETA_REMOTE_ASSETS_DIR }}
         run: |
           set -euo pipefail
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "set -e;
-             mkdir -p '$REMOTE_SHELL_DIR' '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
+             mkdir -p '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
              if ! test -w '$REMOTE_ASSETS_DIR/data' || ! test -w '$REMOTE_ASSETS_DIR/images'; then
                docker run --rm -v '$REMOTE_ASSETS_DIR/data:/target/data' -v '$REMOTE_ASSETS_DIR/images:/target/images' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target/data /target/images;
              fi;
@@ -677,18 +688,29 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Ensure remote directories exist
+      - name: Ensure remote shell directory exists
         shell: bash
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
           REMOTE_SHELL_DIR: ${{ env.PROD_REMOTE_SHELL_DIR }}
+        run: |
+          set -euo pipefail
+          ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "mkdir -p '$REMOTE_SHELL_DIR'"
+
+      - name: Ensure remote asset directories are writable
+        if: needs.build.outputs.should_deploy_assets == 'true'
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
           REMOTE_ASSETS_DIR: ${{ env.PROD_REMOTE_ASSETS_DIR }}
         run: |
           set -euo pipefail
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "set -e;
-             mkdir -p '$REMOTE_SHELL_DIR' '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
+             mkdir -p '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
              if ! test -w '$REMOTE_ASSETS_DIR/data' || ! test -w '$REMOTE_ASSETS_DIR/images'; then
                docker run --rm -v '$REMOTE_ASSETS_DIR/data:/target/data' -v '$REMOTE_ASSETS_DIR/images:/target/images' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target/data /target/images;
              fi;
