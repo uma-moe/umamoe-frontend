@@ -328,6 +328,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     prepareTimelineTour(): void {
         this.setFallbackTimelineTourTargets();
         if (!this.isMobile) {
+            this.filterPanelOpen = true;
             this.scrollToToday('auto');
             this.cdr.detectChanges();
         }

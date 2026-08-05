@@ -88,6 +88,15 @@ export const UPDATE_LOG: UpdateEntry[] = [
       },
       {
         category: 'improvement',
+        label: 'Guided Tours',
+        icon: 'explore',
+        color: '#7e57c2',
+        items: [
+          { text: 'New optional tours explain the redesigned Timeline, current Database workflow, and Carat Planner where available. Restart them anytime from the help button' },
+        ]
+      },
+      {
+        category: 'improvement',
         label: 'Circles',
         icon: 'groups',
         color: '#42a5f5',
