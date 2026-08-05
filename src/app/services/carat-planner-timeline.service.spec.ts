@@ -19,7 +19,7 @@ describe('CaratPlannerTimelineService', () => {
     service.setEventActive(event, true);
     expect(setEventActive).not.toHaveBeenCalled();
 
-    tick();
+    tick(16);
     expect(setEventActive).toHaveBeenCalledOnceWith(event, true);
   }));
 
@@ -31,7 +31,7 @@ describe('CaratPlannerTimelineService', () => {
 
     service.setEventActive(event, true);
     service.setEventActive(event, false);
-    tick();
+    tick(16);
 
     expect(setEventActive).toHaveBeenCalledOnceWith(event, false);
   }));

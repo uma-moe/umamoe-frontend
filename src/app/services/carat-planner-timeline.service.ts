@@ -9,6 +9,7 @@ export class CaratPlannerTimelineService {
   private readonly rewardOperation = new Map<string, number>();
   private readonly pendingOperations = new Map<string, { event: CaratPlannerTimelineEvent; active: boolean }>();
   private flushTimer: ReturnType<typeof setTimeout> | undefined;
+  private flushFrame: number | undefined;
 
   constructor(
     private readonly persistence: CaratPlannerPersistenceService,
@@ -22,13 +23,22 @@ export class CaratPlannerTimelineService {
     // to the next task so the pressed state can paint without waiting for a
     // planner collection clone, localStorage write, or protected-data load.
     this.pendingOperations.set(event.id, { event, active });
-    if (this.flushTimer !== undefined) return;
-    this.flushTimer = setTimeout(() => {
-      this.flushTimer = undefined;
-      const operations = [...this.pendingOperations.values()];
-      this.pendingOperations.clear();
-      operations.forEach(operation => this.commitEventActive(operation.event, operation.active));
-    }, 0);
+    if (this.flushFrame !== undefined || this.flushTimer !== undefined) return;
+    if (typeof requestAnimationFrame === 'function') {
+      this.flushFrame = requestAnimationFrame(() => {
+        this.flushFrame = undefined;
+        this.flushTimer = setTimeout(() => this.flushPendingOperations(), 0);
+      });
+      return;
+    }
+    this.flushTimer = setTimeout(() => this.flushPendingOperations(), 16);
+  }
+
+  private flushPendingOperations(): void {
+    this.flushTimer = undefined;
+    const operations = [...this.pendingOperations.values()];
+    this.pendingOperations.clear();
+    operations.forEach(operation => this.commitEventActive(operation.event, operation.active));
   }
 
   private commitEventActive(event: CaratPlannerTimelineEvent, active: boolean): void {
