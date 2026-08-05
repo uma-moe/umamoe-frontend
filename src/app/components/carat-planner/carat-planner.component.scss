@@ -4450,6 +4450,18 @@ select.cp-control,
 .cp-lb-controls { display: contents; }
 .cp-pull-input--mobile { display: none; }
 
+.cp-crystal-plan-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.59rem;
+
+  strong { color: var(--text-secondary); font-size: 0.64rem; }
+  small { color: var(--text-muted); font-size: 0.57rem; }
+}
+
 .cp-pull-stepper {
   width: 100%;
   height: 34px;
@@ -4541,40 +4553,43 @@ select.cp-control,
     width: auto;
     min-width: 0;
     margin: 0;
-    padding: 3px 7px 6px;
-    display: block;
-    background: color-mix(in srgb, var(--surface-1) 86%, var(--surface-2));
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-sm);
-  }
-
-  .cp-target-controls--primary .cp-crystal-plan--quick legend {
-    margin: 0 0 2px 1px;
-    padding: 0 4px;
-    line-height: 1.1;
+    padding: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
   }
 
   .cp-target-controls--primary .cp-lb-controls {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
   }
 
-  .cp-target-controls--primary .cp-crystal-plan--quick label {
+  .cp-target-controls--primary .cp-lb-control {
     min-width: 0;
-    display: flex;
+    height: 34px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 24px 27px 24px;
     align-items: center;
-    gap: 5px;
+    gap: 0;
+    overflow: hidden;
+    background: var(--surface-1);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
   }
 
-  .cp-target-controls--primary .cp-lb-kind { flex: 1 1 auto; }
+  .cp-target-controls--primary .cp-lb-kind {
+    height: 100%;
+    padding: 0 6px;
+    box-sizing: border-box;
+    border-right: 1px solid var(--border-subtle);
+  }
+
   .cp-target-controls--primary .cp-lb-kind img { width: 18px; height: 18px; }
-
-  .cp-target-controls--primary .cp-copy-stepper {
-    height: 28px;
-    flex: 0 0 auto;
-    grid-template-columns: 24px 27px 24px;
-  }
+  .cp-target-controls--primary .cp-lb-stepper { display: contents; }
 
   .cp-target-controls--primary .cp-payment-menu,
   .cp-target-controls--primary .cp-target-remove { align-self: center; }
@@ -4650,7 +4665,7 @@ select.cp-control,
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 5px 10px;
 
-    legend { margin: 0; line-height: 1.2; }
+    .cp-crystal-plan-heading { margin: 0; line-height: 1.2; }
     label {
       min-width: 0;
       padding: 0;
@@ -4864,8 +4879,8 @@ select.cp-control,
   .cp-target-controls .cp-crystal-plan--quick {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 
-    legend { align-items: baseline; flex-direction: row; }
-    legend small,
+    .cp-crystal-plan-heading { align-items: baseline; flex-direction: row; }
+    .cp-crystal-plan-heading small,
     .cp-lb-kind small { display: none; }
   }
 
