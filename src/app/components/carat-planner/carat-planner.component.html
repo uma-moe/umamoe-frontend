@@ -52,7 +52,6 @@
 
   <div class="cp-workbench-main">
     <div class="cp-picker cp-picker--primary">
-      <label class="cp-field" for="cp-banner-search">Add a character or support banner</label>
       <span class="cp-control cp-control--icon cp-control--action">
         <mat-icon>search</mat-icon>
         <input id="cp-banner-search" [ngModel]="eventSearch" (focus)="showEventPicker = true"
@@ -471,9 +470,9 @@
             </span>
             <span class="cp-target-crystals" *ngIf="projectionByTarget.get(target.id) as targetProjection"
               [attr.aria-label]="'At pull date: ' + targetProjection.balanceBefore.rainbowCrystals + ' rainbow and ' + targetProjection.balanceBefore.goldCrystals + ' gold limit break crystals'">
-              <span><img src="assets/images/item/item_icon_00149.webp" width="16" height="16" alt="">{{ targetProjection.balanceBefore.rainbowCrystals }}</span>
-              <span><img src="assets/images/item/item_icon_00150.webp" width="16" height="16" alt="">{{ targetProjection.balanceBefore.goldCrystals }}</span>
-              <small>at pull</small>
+              <small>At pull</small>
+              <span title="Rainbow LB crystals available at pull"><img src="assets/images/item/item_icon_00149.webp" width="16" height="16" alt=""><strong>{{ targetProjection.balanceBefore.rainbowCrystals }}</strong></span>
+              <span title="Gold LB crystals available at pull"><img src="assets/images/item/item_icon_00150.webp" width="16" height="16" alt=""><strong>{{ targetProjection.balanceBefore.goldCrystals }}</strong></span>
             </span>
           </div>
         </div>
