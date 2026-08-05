@@ -121,6 +121,29 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.totalShortfallCarats).toBe(900);
   });
 
+  it('adjusts planned pulls in small and large steps within planner limits', () => {
+    const component = createComponent();
+    const target = {
+      id: 'stepper', eventId: 'stepper', title: 'Stepper', bannerKind: 'support',
+      bannerStart: '2031-01-01', bannerEnd: '2031-01-10', pullTiming: 'end',
+      plannedPulls: 200, desiredCopies: 1, useTickets: true, allowPaidJewels: false,
+    } as PlannerTarget;
+    const save = spyOn(component, 'save');
+
+    component.adjustTargetPulls(target, 100);
+    component.adjustTargetPulls(target, 10);
+    expect(target.plannedPulls).toBe(310);
+
+    target.plannedPulls = 5;
+    component.adjustTargetPulls(target, -10);
+    expect(target.plannedPulls).toBe(0);
+
+    target.plannedPulls = 4990;
+    component.adjustTargetPulls(target, 100);
+    expect(target.plannedPulls).toBe(5000);
+    expect(save).toHaveBeenCalledTimes(4);
+  });
+
   it('ranks exact and title-prefix matches before other textual matches', () => {
     const component = createComponent();
     component.events = [
