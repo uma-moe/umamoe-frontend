@@ -62,6 +62,13 @@ html.light-theme {
   box-sizing: border-box;
 }
 
+// Keep native page panning available when a swipe starts on an interactive
+// control. Some mobile browsers and component directives otherwise claim the
+// gesture for the control, leaving neither a click nor a scroll.
+:where(button, a[href], [role='button'], .mat-mdc-button-base) {
+  touch-action: pan-x pan-y pinch-zoom !important;
+}
+
 :root {
   // ===== BACKGROUND TOKENS =====
   --bg-primary: #0a0a0a;
