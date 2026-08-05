@@ -93,6 +93,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   includeMaxFollowers = false;
   splitSparksMode = false;
   sparkShowPerRun = false;
+  sparkShowOccurrences = false;
   showP2Sparks = false;
   defaultParentFocus: 'main' | 'left' | 'right' | null = null;
   whiteFactorOptions: Factor[] = [];
