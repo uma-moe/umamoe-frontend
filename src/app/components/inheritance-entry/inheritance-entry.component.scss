@@ -669,6 +669,55 @@
   }
 }
 
+// ─── Total Stars / Lineage Occurrences Toggle ────────────────
+.spark-count-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 193, 7, 0.35);
+  background: rgba(255, 193, 7, 0.08);
+  color: #ffd54f;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  text-transform: uppercase;
+
+  .count-icon { @include icon-scale(14px); }
+  .count-symbol {
+    width: 14px;
+    font-size: 16px;
+    line-height: 12px;
+    text-align: center;
+  }
+  .count-label { line-height: 1; }
+
+  &:hover {
+    background: rgba(255, 193, 7, 0.15);
+    border-color: rgba(255, 193, 7, 0.55);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(255, 193, 7, 0.16);
+  }
+
+  &.occurrences {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.18), rgba(255, 152, 0, 0.14));
+    border-color: rgba(255, 193, 7, 0.68);
+    color: #ffe082;
+    box-shadow: 0 0 0 1px rgba(255, 193, 7, 0.12), 0 2px 8px rgba(255, 152, 0, 0.14);
+  }
+}
+
+.spark-occurrence-symbol {
+  color: #ffd54f;
+  font-size: 1.05em;
+  font-weight: 800;
+  line-height: 1;
+}
+
 // ─── P2 Sparks Toggle ───────────────────────────
 .spark-p2-toggle {
   display: inline-flex;
@@ -1722,6 +1771,14 @@
     .mode-icon { @include icon-scale(12px, true); }
   }
 
+  .spark-count-toggle {
+    padding: 4px 8px;
+    font-size: 10px;
+    gap: 4px;
+    .count-icon { @include icon-scale(12px, true); }
+    .count-symbol { width: 12px; font-size: 14px; }
+  }
+
   .spark-p2-toggle {
     padding: 4px 6px 4px 8px;
     font-size: 10px;
@@ -1826,6 +1883,14 @@
     font-size: 9px;
     gap: 3px;
     .mode-icon { @include icon-scale(11px, true); }
+  }
+
+  .spark-count-toggle {
+    padding: 3px 7px;
+    font-size: 9px;
+    gap: 3px;
+    .count-icon { @include icon-scale(11px, true); }
+    .count-symbol { width: 11px; font-size: 13px; }
   }
 
   .spark-p2-toggle {

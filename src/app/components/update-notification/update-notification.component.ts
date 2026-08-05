@@ -34,8 +34,8 @@ export const UPDATE_LOG: UpdateEntry[] = [
         icon: 'auto_awesome',
         color: '#64b5f6',
         items: [
-          { text: 'Inheritance results have a compact new layout that makes main and great-parent contributions easier to compare', link: '/database' },
-          { text: 'Collapse common, scenario, and race spark groups or hide unwanted sparks; your choices are remembered' },
+          { text: 'Repeated sparks are grouped together and can show either total stars or the number of lineage occurrences', link: '/database' },
+          { text: 'Collapse common, scenario, and race spark groups or hide unwanted sparks. Your choices are remembered' },
           { text: 'Split and combined views now show consistent inheritance chances and corrected scenario badges' },
         ]
       },

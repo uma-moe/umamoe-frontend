@@ -135,6 +135,8 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
 
     @Input() sparkShowPerRun = false;
     @Output() sparkShowPerRunChange = new EventEmitter<boolean>();
+    @Input() sparkShowOccurrences = false;
+    @Output() sparkShowOccurrencesChange = new EventEmitter<boolean>();
     @Input() showP2Sparks = false;
     @Output() showP2SparksChange = new EventEmitter<boolean>();
 
@@ -1653,6 +1655,18 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         event.stopPropagation();
         this.sparkShowPerRun = !this.sparkShowPerRun;
         this.sparkShowPerRunChange.emit(this.sparkShowPerRun);
+    }
+
+    toggleSparkCountMode(event: Event): void {
+        event.stopPropagation();
+        this.sparkShowOccurrences = !this.sparkShowOccurrences;
+        this.sparkShowOccurrencesChange.emit(this.sparkShowOccurrences);
+    }
+
+    combinedSparkDisplayAmount(sparkInfo: CombinedSparkInfo): number {
+        return this.sparkShowOccurrences
+            ? sparkInfo.p1Sources.length + sparkInfo.p2Sources.length
+            : sparkInfo.level;
     }
 
     toggleShowP2Sparks(event: Event): void {

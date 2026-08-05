@@ -327,6 +327,14 @@
           <mat-icon class="mode-icon">{{ sparkShowPerRun ? 'loop' : 'casino' }}</mat-icon>
           <span class="mode-label">{{ sparkShowPerRun ? 'Per Run' : 'Per Inh.' }}</span>
         </button>
+        <button *ngIf="sparkViewMode === 'merged' && !selectedParent"
+          class="spark-count-toggle" [class.occurrences]="sparkShowOccurrences"
+          (click)="toggleSparkCountMode($event)"
+          [matTooltip]="sparkShowOccurrences ? 'Showing how many times each spark occurs in the lineage' : 'Showing total spark stars across the lineage'">
+          <mat-icon *ngIf="!sparkShowOccurrences" class="count-icon">star</mat-icon>
+          <span *ngIf="sparkShowOccurrences" class="count-symbol">×</span>
+          <span class="count-label">{{ sparkShowOccurrences ? 'Occurrences' : 'Stars' }}</span>
+        </button>
         <button *ngIf="hasP2Sparks" class="spark-p2-toggle" [class.active]="showP2Sparks" (click)="toggleShowP2Sparks($event)"
           [matTooltip]="showP2Sparks ? 'Hide P2 legacy sparks' : 'Combine P2 legacy sparks with P1'">
           <mat-icon class="p2-icon">{{ showP2Sparks ? 'group' : 'group_off' }}</mat-icon>
@@ -351,8 +359,9 @@
                   (click)="hideSpark(sparkInfo, $event)"
                   (keydown.enter)="hideSpark(sparkInfo, $event)"
                   (keydown.space)="hideSpark(sparkInfo, $event)">
-              <span class="spark-level">{{ sparkInfo.level }}</span>
-              <mat-icon class="spark-star">star</mat-icon>
+              <span class="spark-level">{{ combinedSparkDisplayAmount(sparkInfo) }}</span>
+              <mat-icon *ngIf="!sparkShowOccurrences" class="spark-star">star</mat-icon>
+              <span *ngIf="sparkShowOccurrences" class="spark-occurrence-symbol">×</span>
               <span class="spark-name">{{ sparkInfo.name }}</span>
               <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
               <mat-icon *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-icon">person</mat-icon>
@@ -381,8 +390,9 @@
                   (click)="hideSpark(sparkInfo, $event)"
                   (keydown.enter)="hideSpark(sparkInfo, $event)"
                   (keydown.space)="hideSpark(sparkInfo, $event)">
-              <span class="spark-level">{{ sparkInfo.level }}</span>
-              <mat-icon class="spark-star">star</mat-icon>
+              <span class="spark-level">{{ combinedSparkDisplayAmount(sparkInfo) }}</span>
+              <mat-icon *ngIf="!sparkShowOccurrences" class="spark-star">star</mat-icon>
+              <span *ngIf="sparkShowOccurrences" class="spark-occurrence-symbol">×</span>
               <span class="spark-name">{{ sparkInfo.name }}</span>
               <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
               <mat-icon *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-icon">person</mat-icon>
@@ -411,8 +421,9 @@
                   (click)="hideSpark(sparkInfo, $event)"
                   (keydown.enter)="hideSpark(sparkInfo, $event)"
                   (keydown.space)="hideSpark(sparkInfo, $event)">
-              <span class="spark-level">{{ sparkInfo.level }}</span>
-              <mat-icon class="spark-star">star</mat-icon>
+              <span class="spark-level">{{ combinedSparkDisplayAmount(sparkInfo) }}</span>
+              <mat-icon *ngIf="!sparkShowOccurrences" class="spark-star">star</mat-icon>
+              <span *ngIf="sparkShowOccurrences" class="spark-occurrence-symbol">×</span>
               <span class="spark-name">{{ sparkInfo.name }}</span>
               <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ combinedSparkDisplayChance(sparkInfo) }}</span>
               <mat-icon *ngIf="getLevelFromMainParent(sparkInfo)" class="parent-icon">person</mat-icon>
@@ -683,8 +694,9 @@
                   [class.from-main-parent]="!!entry.combined && !!getLevelFromMainParent(entry.spark)"
                   [class.matched-filter]="isWhiteSparkEntryMatched(entry)"
                   [class.revealed-hidden-spark]="isSparkHidden(entry.spark)">
-                  <span class="spark-level">{{ entry.spark.level }}</span>
-                  <mat-icon class="spark-star">star</mat-icon>
+                  <span class="spark-level">{{ entry.combined ? combinedSparkDisplayAmount(entry.combined) : entry.spark.level }}</span>
+                  <mat-icon *ngIf="!entry.combined || !sparkShowOccurrences" class="spark-star">star</mat-icon>
+                  <span *ngIf="entry.combined && sparkShowOccurrences" class="spark-occurrence-symbol">×</span>
                   <span class="spark-name">{{ entry.spark.name }}</span>
                   <span *ngIf="hasDisplayAffinity()" class="spark-pct">{{ whiteSparkDisplayChance(entry) }}</span>
                   <mat-icon *ngIf="entry.combined && getLevelFromMainParent(entry.spark)" class="parent-icon">person</mat-icon>
