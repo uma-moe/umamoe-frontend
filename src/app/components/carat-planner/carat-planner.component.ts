@@ -249,6 +249,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private activePlanResourceKey: string | null = null;
   private planResourceRequest = 0;
   private destroyed = false;
+  private deferredRewardSaveFrame: number | undefined;
+  private deferredRewardSaveTimer: ReturnType<typeof setTimeout> | undefined;
+  private deferredRewardSavePending = false;
   private readonly expandedPickupTargetIds = new Set<string>();
   private readonly pickupGoalCopyMemory = new Map<string, number>();
 
@@ -662,7 +665,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (current < 0) {
       current = options.findIndex(option => this.sameVariableRewardAmounts(option.amounts, selected.amounts));
     }
-    const next = (Math.max(0, current) + direction + options.length) % options.length;
+    const next = Math.max(0, Math.min(options.length - 1, Math.max(0, current) + direction));
+    if (next === current) return;
     this.setVariableRewardSelection(group, options[next].id);
   }
 
@@ -682,7 +686,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       amounts: { ...option.amounts },
     };
     this.plan.variableRewardSelections = selections;
-    this.updateRewardGroups([group], option.id !== VARIABLE_REWARD_NOT_COUNTED);
+    this.updateRewardGroups([group], option.id !== VARIABLE_REWARD_NOT_COUNTED, true);
   }
 
   private resolveVariableRewardOption(
@@ -908,10 +912,19 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    const flushDeferredRewardSave = this.deferredRewardSavePending;
+    if (this.deferredRewardSaveFrame !== undefined && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.deferredRewardSaveFrame);
+    }
+    if (this.deferredRewardSaveTimer !== undefined) clearTimeout(this.deferredRewardSaveTimer);
+    this.deferredRewardSaveFrame = undefined;
+    this.deferredRewardSaveTimer = undefined;
+    this.deferredRewardSavePending = false;
     this.destroyed = true;
     this.planResourceRequest++;
     this.destroy$.next();
     this.destroy$.complete();
+    if (flushDeferredRewardSave && this.plan) this.persistence.savePlan(this.plan);
   }
 
   selectPlan(planId: string): void {
@@ -1048,7 +1061,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.save();
   }
 
-  private updateRewardGroups(groups: readonly PlannerRewardGroupView[], enabled: boolean): void {
+  private updateRewardGroups(groups: readonly PlannerRewardGroupView[], enabled: boolean, deferSave = false): void {
     const rewardIds = new Set(this.plan.enabledRewardIds);
     const disabledRewardIds = new Set(this.plan.disabledRewardIds ?? []);
     const eventIds = new Set(this.plan.enabledRewardEventIds ?? []);
@@ -1084,7 +1097,27 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     }
     this.plan.disabledEventIds = [...disabledEventIds];
     this.syncEnabledRewardEventIds();
-    this.save();
+    deferSave ? this.scheduleRewardSaveAfterPaint() : this.save();
+  }
+
+  private scheduleRewardSaveAfterPaint(): void {
+    this.cdr.markForCheck();
+    if (!this.elementRef || typeof requestAnimationFrame !== 'function') {
+      this.save();
+      return;
+    }
+
+    this.deferredRewardSavePending = true;
+    if (this.deferredRewardSaveFrame !== undefined || this.deferredRewardSaveTimer !== undefined) return;
+    this.deferredRewardSaveFrame = requestAnimationFrame(() => {
+      this.deferredRewardSaveFrame = undefined;
+      this.deferredRewardSaveTimer = setTimeout(() => {
+        this.deferredRewardSaveTimer = undefined;
+        if (!this.deferredRewardSavePending || this.destroyed) return;
+        this.deferredRewardSavePending = false;
+        this.save();
+      }, 0);
+    });
   }
 
   rewardDetailsTooltip(reward: PlannerRewardEntry): string {

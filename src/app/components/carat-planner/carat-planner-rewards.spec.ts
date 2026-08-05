@@ -181,4 +181,41 @@ describe('CaratPlannerComponent reward coverage', () => {
     expect(component.plan.disabledEventIds).not.toContain('champions-meeting-811');
     expect(component.selectedVariableRewardOption(championsMeeting!).label).toBe('Group B 2nd');
     expect(component.plan.variableRewardSelections?.['champions-meeting-811']).toEqual(stored);
-  });});
+  });
+
+  it('steps variable rewards in order without wrapping past not counted', () => {
+    localStorage.removeItem(CaratPlannerPersistenceService.STORAGE_KEY);
+    const persistence = new CaratPlannerPersistenceService('browser' as never);
+    const component = new CaratPlannerComponent(
+      new CaratPlannerCalculationService(),
+      new CaratPullProbabilityService(),
+      persistence,
+      {} as never,
+      new TimelineAvatarService(),
+      { markForCheck: () => undefined } as unknown as ChangeDetectorRef,
+    );
+    component.plan = persistence.activePlan;
+    const group = {
+      id: 'legend-race-result',
+      eventId: 'legend-race-1',
+      title: 'Legend Race',
+      availableAt: '2030-01-01',
+      rewards: [],
+      competitiveVariants: [],
+      variableOptions: [
+        { id: 'one-win', label: '1 opponent cleared', amountLabel: '150 Carats', amounts: { free_jewels: 150 } },
+        { id: 'two-wins', label: '2 opponents cleared', amountLabel: '300 Carats', amounts: { free_jewels: 300 } },
+      ],
+    };
+    component.setVariableRewardSelection(group as never, 'two-wins');
+    expect(component.selectedVariableRewardOption(group as never).id).toBe('two-wins');
+    component.cycleVariableRewardSelection(group as never, -1);
+    expect(component.selectedVariableRewardOption(group as never).id).toBe('one-win');
+    component.cycleVariableRewardSelection(group as never, -1);
+    expect(component.isVariableRewardNotCounted(group as never)).toBeTrue();
+    component.cycleVariableRewardSelection(group as never, -1);
+    expect(component.isVariableRewardNotCounted(group as never)).toBeTrue();
+    component.cycleVariableRewardSelection(group as never, 1);
+    expect(component.selectedVariableRewardOption(group as never).id).toBe('one-win');
+  });
+});

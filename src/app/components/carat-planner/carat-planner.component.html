@@ -376,8 +376,8 @@
                       </button>
                       <button type="button" class="cp-variable-reward-current"
                         [class.is-muted]="isVariableRewardNotCounted(group)"
-                        (click)="cycleVariableRewardSelection(group, 1)"
-                        [attr.aria-label]="'Current expected result for ' + group.title + ': ' + selectedVariableRewardOption(group).label + '. Choose next result.'">
+                        (click)="cycleVariableRewardSelection(group, -1)"
+                        [attr.aria-label]="'Current expected result for ' + group.title + ': ' + selectedVariableRewardOption(group).label + '. Choose the previous result.'">
                         <ng-container *ngIf="selectedVariableRewardOption(group) as selected">
                           <strong>{{ selected.label }}</strong>
                           <small>{{ selected.amountLabel }}</small>

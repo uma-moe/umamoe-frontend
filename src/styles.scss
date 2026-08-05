@@ -1896,7 +1896,13 @@ a {
 }
 
 app-root {
-  overflow-x: hidden;
+  // `hidden` creates a scroll container on the other axis too, which prevents
+  // nested sticky page controls from following the document scroll.
+  overflow-x: clip;
+}
+
+@media (max-width: 480px) {
+  :root { --navbar-height: 52px; }
 }
 
 // Routed component hosts are inserted dynamically, so keep the app-shell
