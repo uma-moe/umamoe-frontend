@@ -491,10 +491,11 @@
             </span>
             <input class="cp-control cp-pull-input--mobile" type="number" min="0" max="5000" step="10" [(ngModel)]="target.plannedPulls" (ngModelChange)="save()" aria-label="Planned pulls">
           </div>
-          <fieldset class="cp-crystal-plan cp-crystal-plan--quick" *ngIf="target.bannerKind === 'support'">
-            <legend><strong>LB crystals</strong><small>Replace extra copies after the first</small></legend>
+          <div class="cp-crystal-plan cp-crystal-plan--quick" *ngIf="target.bannerKind === 'support'"
+            role="group" aria-label="LB crystals to use on this banner">
+            <span class="cp-crystal-plan-heading"><strong>LB crystals</strong><small>Replace extra copies after the first</small></span>
             <div class="cp-lb-controls">
-            <label>
+            <label class="cp-lb-control">
               <span class="cp-lb-kind">
                 <img src="assets/images/item/item_icon_00149.webp" width="20" height="20" alt="">
                 <span><strong>Rainbow</strong><small>SSR cards</small></span>
@@ -505,7 +506,7 @@
                 <button type="button" (click)="adjustTargetLbCrystals(target, 'rainbow', 1)" [disabled]="(target.rainbowCrystalsPlanned ?? 0) >= 20" aria-label="Use one more Rainbow LB crystal"><mat-icon>add</mat-icon></button>
               </span>
             </label>
-            <label>
+            <label class="cp-lb-control">
               <span class="cp-lb-kind">
                 <img src="assets/images/item/item_icon_00150.webp" width="20" height="20" alt="">
                 <span><strong>Gold</strong><small>SR cards</small></span>
@@ -517,7 +518,7 @@
               </span>
             </label>
             </div>
-          </fieldset>
+          </div>
           <details class="cp-payment-menu cp-popover" (toggle)="onPopoverToggle($event)">
             <summary aria-label="Target options" title="Target options"><mat-icon aria-hidden="true">tune</mat-icon></summary>
             <div class="cp-payment-popover">
