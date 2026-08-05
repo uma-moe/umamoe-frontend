@@ -638,7 +638,7 @@ h3 {
 }
 
 .timeline-event-card.is-mobile.no-pickups {
-  height: 193px;
+  height: 173px;
 }
 
 .timeline-event-card.is-mobile.no-media {
@@ -650,16 +650,22 @@ h3 {
 }
 
 .timeline-event-card.is-mobile.no-pickups .card-body {
-  height: 120px;
-  grid-template-rows: 16px minmax(21px, auto) 17px minmax(48px, 1fr);
+  height: 100px;
+  grid-template-rows: 15px minmax(18px, auto) 17px minmax(32px, 1fr);
 }
 
 .timeline-event-card.is-mobile.no-pickups .card-footer {
-  height: 48px;
+  height: 32px;
+  padding-top: 0;
+  align-items: center;
 }
 
 .is-mobile .card-metadata {
   font-size: 9px;
+}
+
+.is-mobile .card-schedule {
+  margin-top: 0;
 }
 
 .is-mobile .card-plan-action {
@@ -704,12 +710,19 @@ h3 {
 
 .timeline-event-card.is-mobile.has-race-pickups.no-pickups,
 .timeline-event-card.is-mobile.has-race-pickups {
-  height: 217px;
+  height: 199px;
 }
 
-.timeline-event-card.is-mobile.has-race-pickups.no-pickups .card-body {
-  height: 146px;
-  grid-template-rows: 16px minmax(21px, auto) 19px 72px;
+.timeline-event-card.is-mobile.has-race-pickups.no-pickups:not([data-event-type='legend_race']) .card-body {
+  height: 126px;
+  grid-template-rows: 15px minmax(18px, auto) 17px 62px;
+}
+
+.timeline-event-card.is-mobile.has-race-pickups.no-pickups:not([data-event-type='legend_race']) .card-footer {
+  height: 62px;
+  padding-top: 0;
+  grid-template-rows: 34px 28px;
+  gap: 0;
 }
 
 .timeline-event-card.is-mobile.no-media.has-race-pickups {

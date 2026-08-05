@@ -47,7 +47,7 @@ import {
   plannerRewardBundles,
   plannerSourceItemTotals,
 } from '../../utils/planner-reward-currencies';
-import { classicChampionsFinalOutcomes } from '../../utils/planner-reward-summary';
+import { classicChampionsFinalOutcomes, withTimelineRewardFallbacks } from '../../utils/planner-reward-summary';
 import {
   resolveBundledTimelineEventImagePath,
   timelineEventMasterId,
@@ -254,6 +254,17 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   @Input() set events(value: readonly CaratPlannerTimelineEvent[] | null | undefined) {
     this.allEvents = value ?? [];
+    if (this.plannerDataReady) {
+      const rewards = withTimelineRewardFallbacks(this.data.rewards, this.allEvents);
+      if (rewards !== this.data.rewards) {
+        this.data = { ...this.data, rewards };
+        if (this.plan) {
+          const rewardSelectionChanged = this.syncAutomaticRewardSelection();
+          const eventSelectionChanged = this.syncEnabledRewardEventIds();
+          if (rewardSelectionChanged || eventSelectionChanged) this.save();
+        }
+      }
+    }
     this.filterEvents();
     this.filterRewards();
     this.tryAddRequestedEvent();
@@ -877,7 +888,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private loadResources(): void {
     void this.resources.loadInitial().then(data => {
       if (this.destroyed) return;
-      this.data = data;
+      this.data = {
+        ...data,
+        rewards: withTimelineRewardFallbacks(data.rewards, this.allEvents),
+      };
       const rewardSelectionChanged = this.syncAutomaticRewardSelection();
       this.rebuildAssumptionViews();
       this.plannerDataReady = true;

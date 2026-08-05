@@ -135,6 +135,29 @@ describe('buildTimelineRewardSummaries', () => {
     }));
   });
 
+  it('adds the standard Carat total for a future story event only when sourced Carats are absent', () => {
+    const summaries = buildTimelineRewardSummaries({ rewards: [] }, [{
+      id: 'story-event-future',
+      type: 'story_event',
+      title: 'Future story',
+      estimatedEndDate: '2026-10-12T12:00:00Z',
+    }]);
+
+    expect(summaries.get('story-event-future')).toEqual(jasmine.objectContaining({
+      carats: 2010,
+      label: '2,010 Carats',
+      items: [jasmine.objectContaining({ kind: 'carats', countLabel: '2,010' })],
+    }));
+
+    const sourced = buildTimelineRewardSummaries({ rewards: [{
+      id: 'sourced-story-reward', event_id: 'story-event-future', label: 'Exact reward',
+      currency: 'free_jewels', amount: 1800, available_at: '2026-10-12',
+    }] }, [{
+      id: 'story-event-future', type: 'story_event', estimatedEndDate: '2026-10-12',
+    }]);
+    expect(sourced.get('story-event-future')?.carats).toBe(1800);
+  });
+
   it('adds standard Legend Race first-clear rewards from timeline participants when planner variants are absent', () => {
     const summaries = buildTimelineRewardSummaries({ rewards: [] }, [{
       id: 'legend-race-13',

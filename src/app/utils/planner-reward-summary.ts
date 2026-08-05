@@ -103,7 +103,12 @@ interface MutableSelectorReward {
 
 export interface TimelineRewardFallbackEvent {
   id: string;
-  type: string;
+  type?: string;
+  title?: string;
+  globalReleaseDate?: Date | string;
+  estimatedGlobalDate?: Date | string;
+  estimatedEndDate?: Date | string;
+  jpReleaseDate?: Date | string;
   pickupCardIds?: number[];
   relatedCharacters?: string[];
 }
@@ -124,6 +129,7 @@ const REWARD_ITEM_IDS = {
   support_selector: 165,
 } as const;
 const PREPARED_REWARD_ITEM_IDS = new Set([41, 43, 111, 141, 164, 165, 178, 197, 205, 214, 255]);
+const STANDARD_STORY_EVENT_CARATS = 2010;
 
 function itemIconPath(itemId: number): string {
   return `${ITEM_ICON_ROOT}/item_icon_${itemId.toString().padStart(5, '0')}.webp`;
@@ -147,10 +153,56 @@ function rewardItem(
   };
 }
 
+export function withTimelineRewardFallbacks(
+  resource: PlannerRewardResource,
+  timelineEvents: readonly TimelineRewardFallbackEvent[],
+): PlannerRewardResource {
+  const eventsWithCarats = new Set<string>();
+  for (const bundle of plannerRewardBundles(resource.rewards ?? [])) {
+    if (!bundle.eventId) continue;
+    const carats = (bundle.totals.get('free_jewels') ?? 0) + (bundle.totals.get('paid_jewels') ?? 0);
+    if (carats > 0) eventsWithCarats.add(bundle.eventId);
+  }
+
+  const fallbackRewards = timelineEvents.flatMap(event => {
+    if (!event.id || event.type !== 'story_event' || eventsWithCarats.has(event.id)) return [];
+    const availableAt = rewardDateKey(
+      event.estimatedEndDate ?? event.globalReleaseDate ?? event.estimatedGlobalDate ?? event.jpReleaseDate,
+    );
+    if (!availableAt) return [];
+    eventsWithCarats.add(event.id);
+    return [{
+      id: `standard-story-event:${event.id}`,
+      event_id: event.id,
+      label: `${event.title?.trim() || 'Story event'} rewards`,
+      currency: 'free_jewels' as const,
+      amount: STANDARD_STORY_EVENT_CARATS,
+      available_at: availableAt,
+      category: 'story_event',
+      default_enabled: true,
+      full_completion: true,
+      provenance: 'jp_fallback' as const,
+      assumption: 'Uses the standard 2,010-Carat story-event total when no event-specific Carat reward is available.',
+      confidence: 'historical_standard',
+    }];
+  });
+
+  return fallbackRewards.length
+    ? { ...resource, rewards: [...(resource.rewards ?? []), ...fallbackRewards] }
+    : resource;
+}
+
+function rewardDateKey(value: Date | string | undefined): string | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+}
+
 export function buildTimelineRewardSummaries(
   resource: Pick<PlannerRewardResource, 'rewards' | 'event_benefits' | 'free_pull_campaigns' | 'competitive_variants'>,
   timelineEvents: readonly TimelineRewardFallbackEvent[] = [],
 ): Map<string, TimelineRewardSummary> {
+  resource = withTimelineRewardFallbacks(resource as PlannerRewardResource, timelineEvents);
   const totals = new Map<string, MutableRewardSummary>();
   const summaryFor = (eventId: string): MutableRewardSummary => {
     const existing = totals.get(eventId);
