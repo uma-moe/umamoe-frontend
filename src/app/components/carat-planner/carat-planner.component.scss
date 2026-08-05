@@ -4667,14 +4667,9 @@ select.cp-control,
   .cp-goal-picker[open] { z-index: 180; }
 
   .cp-goal-picker-popover {
-    position: fixed;
     z-index: 180;
-    top: calc(var(--navbar-height) + 12px);
-    right: 10px;
-    bottom: auto;
-    left: 10px;
-    width: auto;
-    max-height: min(520px, calc(100dvh - var(--navbar-height) - 24px));
+    width: min(370px, calc(100vw - 20px));
+    max-height: min(320px, calc(100dvh - var(--navbar-height) - 24px));
     padding: 8px;
     border-radius: 10px;
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
@@ -4794,7 +4789,7 @@ select.cp-control,
     grid-row: 1;
   }
 
-  .cp-pickup-details-body { display: block; border-top: 0; overflow: hidden; }
+  .cp-pickup-details-body { display: block; border-top: 0; overflow: visible; }
   .cp-goal-editor { border-bottom: 0; }
 
   .cp-advanced-odds {
