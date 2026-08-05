@@ -342,6 +342,19 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.pickupGoalOddsAriaLabel({ ...goal, probability: undefined })).toBe(
       'Odds unavailable for Yaeno Muteki',
     );
+
+    const crystalGoal = {
+      ...goal,
+      copiesNeededFromPulls: 1,
+      crystalCopiesApplied: 1,
+      crystalKind: 'rainbow' as const,
+    };
+    expect(component.pickupGoalRequirementLabel(crystalGoal)).toBe(
+      '1 copy required + 1 Rainbow LB',
+    );
+    expect(component.pickupGoalOddsAriaLabel(crystalGoal)).toBe(
+      '44.2% chance of at least 1 copy of Yaeno Muteki; 1 rainbow LB crystal supplies the remaining limit breaks toward 2 total copies',
+    );
   });
 
   it('groups pull outcomes into semantic cold, expected, and lucky ranges', () => {

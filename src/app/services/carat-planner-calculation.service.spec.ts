@@ -78,6 +78,47 @@ describe('CaratPlannerCalculationService', () => {
     expect(odds.jointProbability).toBeCloseTo(1 - Math.pow(0.8, 2), 12);
   });
 
+  it('uses matching LB crystals for copies after the initial support-card copy', () => {
+    const ssrTarget = makeTarget({
+      bannerKind: 'support',
+      rainbowCrystalsPlanned: 4,
+      pickupGoals: [{ pickupId: 30031, desiredCopies: 5 }],
+    });
+    const ssrOdds = service.calculateTargetOdds(1, ssrTarget, makeGacha({
+      banner_kind: 'support',
+      spark_pulls: undefined,
+      pickups: [{ pickup_id: 30031, rate: 0.25, exchangeable: true }],
+    }));
+
+    expect(ssrOdds.goalOdds?.[0]).toEqual(jasmine.objectContaining({
+      requestedCopies: 5,
+      copiesNeededFromPulls: 1,
+      crystalCopiesApplied: 4,
+      crystalKind: 'rainbow',
+      randomCopiesNeeded: 1,
+    }));
+    expect(ssrOdds.probability).toBeCloseTo(0.25, 12);
+
+    const srTarget = makeTarget({
+      bannerKind: 'support',
+      goldCrystalsPlanned: 1,
+      pickupGoals: [{ pickupId: 20096, desiredCopies: 2 }],
+    });
+    const srOdds = service.calculateTargetOdds(1, srTarget, makeGacha({
+      banner_kind: 'support',
+      spark_pulls: undefined,
+      pickups: [{ pickup_id: 20096, rate: 0.2, exchangeable: true }],
+    }));
+
+    expect(srOdds.goalOdds?.[0]).toEqual(jasmine.objectContaining({
+      requestedCopies: 2,
+      copiesNeededFromPulls: 1,
+      crystalCopiesApplied: 1,
+      crystalKind: 'gold',
+    }));
+    expect(srOdds.probability).toBeCloseTo(0.2, 12);
+  });
+
   it('reports earned spark copies when the selected pickup rate is unavailable', () => {
     const target = makeTarget({
       pickupGoals: [{ pickupId: 99, desiredCopies: 1 }],
@@ -182,6 +223,10 @@ describe('CaratPlannerCalculationService', () => {
         plannedPulls: 0,
         rainbowCrystalsPlanned: 2,
         goldCrystalsPlanned: 1,
+        pickupGoals: [
+          { pickupId: 30031, desiredCopies: 3 },
+          { pickupId: 20096, desiredCopies: 2 },
+        ],
       })],
     });
     const data: CaratPlannerDataBundle = {
@@ -210,7 +255,14 @@ describe('CaratPlannerCalculationService', () => {
       }] },
     };
 
-    const projection = service.project(plan, data);
+    const projection = service.project(plan, data, [makeGacha({
+      banner_kind: 'support',
+      ticket_currency: 'support_ticket',
+      pickups: [
+        { pickup_id: 30031, rate: 0.0075, exchangeable: true },
+        { pickup_id: 20096, rate: 0.0225, exchangeable: true },
+      ],
+    })]);
     const target = projection.targets[0];
 
     expect(target.balanceBefore.rainbowCrystals).toBe(3);

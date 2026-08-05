@@ -119,6 +119,9 @@ interface PlannerPickupGoalView {
   placeholderImagePath?: string;
   rate: number;
   desiredCopies: number;
+  copiesNeededFromPulls?: number;
+  crystalCopiesApplied?: number;
+  crystalKind?: 'rainbow' | 'gold';
   probability?: number;
 }
 
@@ -1927,7 +1930,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const goals = this.pickupGoals(target);
     const goal = goals.find(item => item.pickupId === pickupId);
     if (!goal) return;
-    goal.desiredCopies = Math.max(1, Math.min(20, goal.desiredCopies + delta));
+    const maximum = target.bannerKind === 'support' ? 5 : 20;
+    goal.desiredCopies = Math.max(1, Math.min(maximum, goal.desiredCopies + delta));
     target.pickupGoals = goals;
     this.pickupGoalCopyMemory.set(this.pickupGoalMemoryKey(target.id, pickupId), goal.desiredCopies);
     this.syncLegacyPickupGoal(target);
@@ -1949,10 +1953,24 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     return goal.probability === undefined ? 'Unavailable' : this.formatProbability(goal.probability);
   }
 
+  pickupGoalRequirementLabel(goal: PlannerPickupGoalView): string {
+    const copiesNeeded = goal.copiesNeededFromPulls ?? goal.desiredCopies;
+    const copiesLabel = copiesNeeded === 1 ? 'copy' : 'copies';
+    const base = `${copiesNeeded} ${copiesLabel} required`;
+    const crystalCopies = goal.crystalCopiesApplied ?? 0;
+    if (!crystalCopies || !goal.crystalKind) return base;
+    return `${base} + ${crystalCopies} ${goal.crystalKind === 'rainbow' ? 'Rainbow LB' : 'Gold LB'}`;
+  }
+
   pickupGoalOddsAriaLabel(goal: PlannerPickupGoalView): string {
     if (goal.probability === undefined) return `Odds unavailable for ${goal.label}`;
-    const copies = goal.desiredCopies === 1 ? 'copy' : 'copies';
-    return `${this.formatProbability(goal.probability)} chance of at least ${goal.desiredCopies} ${copies} of ${goal.label}`;
+    const copiesNeeded = goal.copiesNeededFromPulls ?? goal.desiredCopies;
+    const copies = copiesNeeded === 1 ? 'copy' : 'copies';
+    const base = `${this.formatProbability(goal.probability)} chance of at least ${copiesNeeded} ${copies} of ${goal.label}`;
+    const crystalCopies = goal.crystalCopiesApplied ?? 0;
+    if (!crystalCopies || !goal.crystalKind) return base;
+    const crystalLabel = `${goal.crystalKind} LB ${crystalCopies === 1 ? 'crystal' : 'crystals'}`;
+    return `${base}; ${crystalCopies} ${crystalLabel} ${crystalCopies === 1 ? 'supplies' : 'supply'} the remaining limit breaks toward ${goal.desiredCopies} total copies`;
   }
 
   trackByOutcome(_: number, item: PlannerOutcomeSegment): string {
@@ -2255,6 +2273,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           placeholderImagePath: option.placeholderImagePath,
           rate: option.rate,
           desiredCopies: goal.desiredCopies,
+          copiesNeededFromPulls: goalOdds?.copiesNeededFromPulls,
+          crystalCopiesApplied: goalOdds?.crystalCopiesApplied,
+          crystalKind: goalOdds?.crystalKind,
           probability: goalOdds?.probability,
         } satisfies PlannerPickupGoalView;
       });
@@ -2293,12 +2314,17 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   private pickupGoals(target: PlannerTarget): PlannerPickupGoal[] {
+    const maximum = target.bannerKind === 'support' ? 5 : 20;
+    const normalize = (value: number) => Math.max(1, Math.min(maximum, Math.trunc(value) || 1));
     if (target.pickupGoals) {
-      return target.pickupGoals.map(goal => ({ ...goal }));
+      return target.pickupGoals.map(goal => ({
+        ...goal,
+        desiredCopies: normalize(goal.desiredCopies),
+      }));
     }
     return target.pickupId === undefined
       ? []
-      : [{ pickupId: target.pickupId, desiredCopies: target.desiredCopies }];
+      : [{ pickupId: target.pickupId, desiredCopies: normalize(target.desiredCopies) }];
   }
 
   private syncLegacyPickupGoal(target: PlannerTarget): void {
@@ -2410,9 +2436,14 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (!ratesAvailable) return 'Published rate unavailable';
     if (!result.odds.jointProbabilityExact) return 'Goal combination is too large to calculate exactly';
     const sparks = result.odds.sparkCopiesAvailable ?? 0;
-    return sparks > 0
-      ? `${sparks} shared exchange ${sparks === 1 ? 'copy' : 'copies'} included`
-      : 'Exact joint chance';
+    const crystals = (result.odds.goalOdds ?? []).reduce(
+      (total, goal) => total + goal.crystalCopiesApplied,
+      0,
+    );
+    const parts: string[] = [];
+    if (sparks > 0) parts.push(`${sparks} shared exchange ${sparks === 1 ? 'copy' : 'copies'}`);
+    if (crystals > 0) parts.push(`${crystals} LB ${crystals === 1 ? 'crystal' : 'crystals'}`);
+    return parts.length ? `${parts.join(' + ')} included` : 'Exact joint chance';
   }
 
   private outcomeSegments(result: CaratPullProbabilityResult): PlannerOutcomeSegment[] {
