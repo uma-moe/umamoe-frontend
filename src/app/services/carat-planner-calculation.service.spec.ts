@@ -175,6 +175,34 @@ describe('CaratPlannerCalculationService', () => {
     expect(target.balanceAfter).toEqual({ freeJewels: 300, paidJewels: 300, umaTickets: 0, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 });
   });
 
+  it('uses 20 available tickets before Carats for a 200-pull banner', () => {
+    const plan = makePlan({
+      balances: {
+        freeJewels: 27_000,
+        paidJewels: 0,
+        umaTickets: 20,
+        supportTickets: 0,
+        rainbowCrystals: 0,
+        goldCrystals: 0,
+      },
+      targets: [makeTarget({ plannedPulls: 200, useTickets: true })],
+    });
+
+    const projection = service.project(
+      plan,
+      { core: { jewel_cost_per_pull: 150 }, income: { rules: [] }, rewards: { rewards: [] } },
+      [makeGacha({ free_pulls: 0, ticket_currency: 'uma_ticket' })],
+    );
+    const target = projection.targets[0];
+
+    expect(target.balanceBefore.umaTickets).toBe(20);
+    expect(target.ticketPullsUsed).toBe(20);
+    expect(target.freeJewelPulls).toBe(180);
+    expect(target.fundedPulls).toBe(200);
+    expect(target.balanceAfter.umaTickets).toBe(0);
+    expect(target.balanceAfter.freeJewels).toBe(0);
+  });
+
   it('applies CM and LoH assumptions on matching event dates and lets explicit outcomes override them', () => {
     const plan = makePlan({
       scenarioSelections: {

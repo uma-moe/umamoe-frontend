@@ -2089,6 +2089,46 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     return `${freePulls} free pulls. ${confidence}. Source: ${provenance}.`;
   }
 
+
+  targetTicketBalanceAtPull(target: PlannerTarget, result: PlannerTargetProjection): number {
+    return this.targetTicketCurrency(target) === 'support_ticket'
+      ? result.balanceBefore.supportTickets
+      : result.balanceBefore.umaTickets;
+  }
+
+  targetTicketIconPath(target: PlannerTarget): string {
+    return this.targetTicketCurrency(target) === 'support_ticket'
+      ? 'assets/images/item/item_icon_00111.webp'
+      : 'assets/images/item/item_icon_00041.webp';
+  }
+
+  targetTicketUsageLabel(target: PlannerTarget, result: PlannerTargetProjection): string {
+    const available = this.targetTicketBalanceAtPull(target, result);
+    const remaining = Math.max(0, available - result.ticketPullsUsed);
+    const label = this.targetTicketCurrency(target) === 'support_ticket' ? 'support tickets' : 'Trainee tickets';
+    return result.ticketPullsUsed > 0
+      ? `${available} ${label} available at pull; ${result.ticketPullsUsed} used and ${remaining} remaining`
+      : `${available} ${label} available at pull; none used`;
+  }
+
+  targetResourcesAtPullAriaLabel(target: PlannerTarget, result: PlannerTargetProjection): string {
+    const parts: string[] = [];
+    if (this.targetTicketCurrency(target)) parts.push(this.targetTicketUsageLabel(target, result));
+    if (target.bannerKind === 'support') {
+      parts.push(`${result.balanceBefore.rainbowCrystals} rainbow LB crystals`);
+      parts.push(`${result.balanceBefore.goldCrystals} gold LB crystals`);
+    }
+    return `At pull date: ${parts.join(', ')}`;
+  }
+
+  private targetTicketCurrency(
+    target: PlannerTarget,
+  ): Extract<PlannerCurrency, 'uma_ticket' | 'support_ticket'> | undefined {
+    return this.gachaByTarget.get(target.id)?.ticket_currency
+      ?? (target.bannerKind === 'character'
+        ? 'uma_ticket'
+        : target.bannerKind === 'support' ? 'support_ticket' : undefined);
+  }
   fundingBreakdownTooltip(result: PlannerTargetProjection): string {
     const parts = [`${result.fundedPulls} of ${result.plannedPulls} planned pulls funded`];
     if (result.freePullsUsed > 0) parts.push(`${result.freePullsUsed} campaign free pulls`);

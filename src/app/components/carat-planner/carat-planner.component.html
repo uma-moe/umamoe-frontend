@@ -469,10 +469,16 @@
               </span>
             </span>
             <span class="cp-target-crystals" *ngIf="projectionByTarget.get(target.id) as targetProjection"
-              [attr.aria-label]="'At pull date: ' + targetProjection.balanceBefore.rainbowCrystals + ' rainbow and ' + targetProjection.balanceBefore.goldCrystals + ' gold limit break crystals'">
+              [attr.aria-label]="targetResourcesAtPullAriaLabel(target, targetProjection)">
               <small>At pull</small>
-              <span title="Rainbow LB crystals available at pull"><img src="assets/images/item/item_icon_00149.webp" width="16" height="16" alt=""><strong>{{ targetProjection.balanceBefore.rainbowCrystals }}</strong></span>
-              <span title="Gold LB crystals available at pull"><img src="assets/images/item/item_icon_00150.webp" width="16" height="16" alt=""><strong>{{ targetProjection.balanceBefore.goldCrystals }}</strong></span>
+              <span *ngIf="target.bannerKind === 'character' || target.bannerKind === 'support'"
+                [title]="targetTicketUsageLabel(target, targetProjection)">
+                <img [src]="targetTicketIconPath(target)" width="16" height="16" alt="">
+                <strong>{{ targetTicketBalanceAtPull(target, targetProjection) }}</strong>
+                <em *ngIf="targetProjection.ticketPullsUsed > 0">&rarr; {{ targetTicketBalanceAtPull(target, targetProjection) - targetProjection.ticketPullsUsed }}</em>
+              </span>
+              <span *ngIf="target.bannerKind === 'support'" title="Rainbow LB crystals available at pull"><img src="assets/images/item/item_icon_00149.webp" width="16" height="16" alt=""><strong>{{ targetProjection.balanceBefore.rainbowCrystals }}</strong></span>
+              <span *ngIf="target.bannerKind === 'support'" title="Gold LB crystals available at pull"><img src="assets/images/item/item_icon_00150.webp" width="16" height="16" alt=""><strong>{{ targetProjection.balanceBefore.goldCrystals }}</strong></span>
             </span>
           </div>
         </div>
