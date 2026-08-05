@@ -478,10 +478,22 @@
           </div>
         </div>
 
-        <div class="cp-target-controls cp-target-controls--primary">
-          <label class="cp-field cp-pull-count"><span>Pulls</span><input class="cp-control" type="number" min="0" max="5000" step="10" [(ngModel)]="target.plannedPulls" (ngModelChange)="save()"></label>
+        <div class="cp-target-controls cp-target-controls--primary"
+          [class.has-lb-controls]="target.bannerKind === 'support'">
+          <div class="cp-field cp-pull-count">
+            <span>Pulls</span>
+            <span class="cp-pull-stepper cp-pull-stepper--desktop" role="group" aria-label="Planned pulls">
+              <button type="button" (click)="adjustTargetPulls(target, 100)" [disabled]="target.plannedPulls >= 5000" aria-label="Add 100 pulls">+100</button>
+              <button type="button" (click)="adjustTargetPulls(target, 10)" [disabled]="target.plannedPulls >= 5000" aria-label="Add 10 pulls">+10</button>
+              <input class="cp-control" type="number" min="0" max="5000" step="10" [(ngModel)]="target.plannedPulls" (ngModelChange)="save()" aria-label="Planned pulls">
+              <button type="button" (click)="adjustTargetPulls(target, -10)" [disabled]="target.plannedPulls <= 0" aria-label="Remove 10 pulls">&minus;10</button>
+              <button type="button" (click)="adjustTargetPulls(target, -100)" [disabled]="target.plannedPulls <= 0" aria-label="Remove 100 pulls">&minus;100</button>
+            </span>
+            <input class="cp-control cp-pull-input--mobile" type="number" min="0" max="5000" step="10" [(ngModel)]="target.plannedPulls" (ngModelChange)="save()" aria-label="Planned pulls">
+          </div>
           <fieldset class="cp-crystal-plan cp-crystal-plan--quick" *ngIf="target.bannerKind === 'support'">
             <legend><strong>LB crystals</strong><small>Replace extra copies after the first</small></legend>
+            <div class="cp-lb-controls">
             <label>
               <span class="cp-lb-kind">
                 <img src="assets/images/item/item_icon_00149.webp" width="20" height="20" alt="">
@@ -504,6 +516,7 @@
                 <button type="button" (click)="adjustTargetLbCrystals(target, 'gold', 1)" [disabled]="(target.goldCrystalsPlanned ?? 0) >= 20" aria-label="Use one more Gold LB crystal"><mat-icon>add</mat-icon></button>
               </span>
             </label>
+            </div>
           </fieldset>
           <details class="cp-payment-menu cp-popover" (toggle)="onPopoverToggle($event)">
             <summary aria-label="Target options" title="Target options"><mat-icon aria-hidden="true">tune</mat-icon></summary>

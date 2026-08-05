@@ -1946,6 +1946,12 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.save();
   }
 
+  adjustTargetPulls(target: PlannerTarget, delta: -100 | -10 | 10 | 100): void {
+    const current = Math.max(0, Math.trunc(Number(target.plannedPulls) || 0));
+    target.plannedPulls = Math.max(0, Math.min(5000, current + delta));
+    this.save();
+  }
+
   formatProbability(value: number, digits = 1): string {
     if (!Number.isFinite(value)) return '\u2014';
     const percentage = value * 100;
