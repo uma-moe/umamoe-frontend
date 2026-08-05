@@ -7,6 +7,8 @@
   [class.no-pickups]="!card.avatars.length"
   [class.has-reward]="rewardSummary"
   [class.has-race-pickups]="card.raceLines.length"
+  [class.can-plan]="card.canPlan"
+  [class.is-planning]="planQueued"
   [attr.data-event-type]="event.type"
   [attr.data-event-id]="event.id"
 >
@@ -49,14 +51,14 @@
       <mat-icon aria-hidden="true">calendar_today</mat-icon>
       <time>{{ card.dateLabel }}</time>
       <span class="card-context" *ngIf="!card.raceLines.length && card.contextLabel">{{ card.contextLabel }}</span>
-      <span class="card-details-hint" *ngIf="card.avatars.length || card.raceLines.length || rewardSummary" aria-hidden="true">
+      <span class="card-details-hint" *ngIf="card.avatars.length || card.raceLines.length || rewardSummary || card.canPlan" aria-hidden="true">
         <span>Info</span>
         <mat-icon>chevron_right</mat-icon>
       </span>
     </div>
 
     <div class="card-footer">
-      <div class="card-empty-footer" *ngIf="!card.avatars.length && !card.raceLines.length && !rewardSummary" aria-hidden="true">
+      <div class="card-empty-footer" *ngIf="!card.avatars.length && !card.raceLines.length && !rewardSummary && !card.canPlan" aria-hidden="true">
         <span>Event details</span>
         <mat-icon>arrow_forward</mat-icon>
       </div>
@@ -125,6 +127,21 @@
           />
         </span>
         <span class="pickup-overflow" *ngIf="card.hiddenAvatarCount">+{{ card.hiddenAvatarCount }}</span>
+      </div>
+
+      <div class="card-actions" *ngIf="card.canPlan">
+        <button
+          type="button"
+          class="card-plan-action"
+          [class.is-added]="planQueued"
+          [attr.aria-pressed]="planQueued"
+          [attr.aria-label]="planQueued ? 'Remove ' + card.title + ' from Carat Planner' : 'Add ' + card.title + ' to Carat Planner'"
+          [title]="planQueued ? 'Remove from Carat Planner' : 'Add to Carat Planner'"
+          (click)="plan($event)"
+        >
+          <mat-icon aria-hidden="true">{{ planQueued ? 'check_circle' : 'add_chart' }}</mat-icon>
+          <span>{{ planQueued ? 'Added' : 'Plan' }}</span>
+        </button>
       </div>
 
     </div>

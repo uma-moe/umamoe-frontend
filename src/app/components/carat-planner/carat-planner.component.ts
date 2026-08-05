@@ -294,6 +294,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   rewardSelectionFilter: RewardSelectionFilter = 'all';
   showPastRewards = false;
   showEventPicker = false;
+  compactPlannerLayout = typeof window !== 'undefined' && window.innerWidth <= 768;
   eventPickerActiveIndex = 0;
   importError = '';
   activeSetupPanel: PlannerSetupPanel | null = null;
@@ -340,6 +341,11 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.plannerRoot()?.querySelectorAll<HTMLDetailsElement>('details.cp-popover[open]').forEach(details => {
       if (details !== opened) details.open = false;
     });
+  }
+
+  @HostListener('window:resize')
+  onPlannerViewportResize(): void {
+    this.compactPlannerLayout = window.innerWidth <= 768;
   }
 
   @HostListener('document:pointerdown', ['$event'])
@@ -664,12 +670,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       availableAt: this.optionalDateKey(event?.estimatedEndDate) ?? group.availableAt,
       amounts: { ...option.amounts },
     };
-    if (option.id !== VARIABLE_REWARD_NOT_COUNTED) {
-      this.plan.disabledEventIds = (this.plan.disabledEventIds ?? [])
-        .filter(eventId => eventId !== group.eventId);
-    }
     this.plan.variableRewardSelections = selections;
-    this.save();
+    this.updateRewardGroups([group], option.id !== VARIABLE_REWARD_NOT_COUNTED);
   }
 
   private resolveVariableRewardOption(

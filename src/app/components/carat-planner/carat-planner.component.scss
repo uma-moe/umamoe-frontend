@@ -4447,6 +4447,17 @@ select.cp-control,
   small { margin-left: 6px; color: var(--text-muted); font-size: 0.57rem; }
 }
 
+.cp-target-controls .cp-crystal-plan--quick {
+  min-width: 270px;
+  grid-template-columns: repeat(2, minmax(125px, 1fr));
+  gap: 4px 8px;
+
+  legend { margin: 0; }
+  label { min-width: 0; display: flex; align-items: center; gap: 5px; }
+  .cp-lb-kind { flex: 1 1 auto; }
+  .cp-copy-stepper { flex: 0 0 auto; }
+}
+
 .cp-pickup-summary-goal-copy {
   min-width: 0;
   display: flex;
@@ -4468,23 +4479,24 @@ select.cp-control,
 @media (max-width: 768px) {
   .cp-target-main {
     min-height: 0;
-    padding: 0;
+    padding: 7px 9px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
+    grid-template-columns: 142px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
   }
 
   .cp-target-image {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 512 / 125;
-    border-radius: 7px 7px 0 0;
+    width: 142px;
+    height: 55px;
+    aspect-ratio: auto;
+    border-radius: 5px;
     background: var(--surface-2);
 
     img { width: 100%; height: 100%; object-fit: contain; }
   }
 
-  .cp-target-title { padding: 9px 10px 10px; gap: 5px; }
+  .cp-target-title { padding: 0; gap: 4px; }
 
   .cp-target-controls .cp-crystal-plan--quick {
     padding-top: 7px;
@@ -4609,9 +4621,99 @@ select.cp-control,
   }
 
   .cp-goal-rollup { border-left: 0; }
+
+  .cp-setup-panel--rewards .cp-reward-row {
+    min-height: 54px;
+    padding: 6px 4px;
+    grid-template-columns: 96px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 3px 8px;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-art {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    width: 96px;
+    align-self: center;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-copy {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 1px;
+
+    strong { line-height: 1.2; }
+  }
+
+  .cp-setup-panel--rewards .cp-reward-benefits {
+    grid-column: 2;
+    grid-row: 2;
+    gap: 4px 7px;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-actions {
+    grid-column: 3;
+    grid-row: 1 / -1;
+    width: auto;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    align-self: stretch;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    border: 0;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward {
+    min-height: 70px;
+    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-rows: auto 32px;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward .cp-reward-art {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward .cp-reward-copy {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward .cp-reward-benefits {
+    display: none;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward .cp-reward-actions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    height: 32px;
+    margin: 0;
+    padding: 2px 0 0;
+    flex-direction: row;
+    justify-content: flex-end;
+    border: 0;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward .cp-variable-reward {
+    min-width: 0;
+    max-width: none;
+    height: 30px;
+    flex: 1 1 auto;
+  }
 }
 
 @media (max-width: 420px) {
+  .cp-target-main {
+    grid-template-columns: 126px minmax(0, 1fr);
+    padding-inline: 8px;
+  }
+
+  .cp-target-image { width: 126px; height: 49px; }
+
   .cp-target-controls .cp-crystal-plan--quick {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 
@@ -4626,4 +4728,14 @@ select.cp-control,
     grid-template-columns: minmax(105px, auto) minmax(0, 1fr) auto 15px;
     gap: 6px;
   }
+
+  .cp-setup-panel--rewards .cp-reward-row {
+    grid-template-columns: 88px minmax(0, 1fr) auto;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .cp-setup-panel--rewards .cp-reward-art { width: 88px; }
 }

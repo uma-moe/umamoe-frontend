@@ -34,6 +34,31 @@ describe('TimelineEventCardComponent', () => {
     expect(openDetails).toHaveBeenCalledOnceWith(event);
   });
 
+  it('offers planner actions only for eligible pull banners', () => {
+    const component = createComponent();
+    component.plannerEligible = true;
+    const event = setEvent(component, {
+      type: EventType.SUPPORT_CARD_BANNER,
+      gachaId: 123,
+      plannerDataAvailable: true
+    });
+    const addToPlanner = spyOn(component.addToPlanner, 'emit');
+    const removeFromPlanner = spyOn(component.removeFromPlanner, 'emit');
+    const mouseEvent = { stopPropagation: jasmine.createSpy('stopPropagation') } as unknown as MouseEvent;
+
+    expect(component.view?.canPlan).toBeTrue();
+    component.plan(mouseEvent);
+    expect(addToPlanner).toHaveBeenCalledOnceWith(event);
+    expect(component.planQueued).toBeTrue();
+
+    component.plan(mouseEvent);
+    expect(removeFromPlanner).toHaveBeenCalledOnceWith(event);
+    expect(component.planQueued).toBeFalse();
+
+    setEvent(component, { type: EventType.STORY_EVENT, plannerRewardAvailable: true });
+    expect(component.view?.canPlan).toBeFalse();
+  });
+
   it('marks cards without an image as having no media', () => {
     const component = createComponent();
 

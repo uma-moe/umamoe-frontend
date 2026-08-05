@@ -45,7 +45,11 @@
                 [event]="item.eventData"
                 [mobile]="true"
                 [rewardSummary]="plannerRewardSummaries.get(item.eventData.id) || null"
+                [plannerEligible]="plannerEnabled"
+                [planned]="plannedEventIds.has(item.eventData.id)"
                 (openDetails)="openEventDetails($event)"
+                (addToPlanner)="addEventToPlanner($event)"
+                (removeFromPlanner)="removeEventFromPlanner($event)"
               ></app-timeline-event-card>
 
               <div class="tl-grouped" *ngIf="item.type === 'event' && item.isGrouped">
@@ -54,7 +58,11 @@
                   [event]="event"
                   [mobile]="true"
                   [rewardSummary]="plannerRewardSummaries.get(event.id) || null"
+                  [plannerEligible]="plannerEnabled"
+                  [planned]="plannedEventIds.has(event.id)"
                   (openDetails)="openEventDetails($event)"
+                  (addToPlanner)="addEventToPlanner($event)"
+                  (removeFromPlanner)="removeEventFromPlanner($event)"
                 ></app-timeline-event-card>
               </div>
             </div>
