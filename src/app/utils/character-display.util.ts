@@ -32,7 +32,7 @@ export function getScenarioDisplayName(id: number | null): string {
   const names: Record<number, string> = {
     1: 'URA',
     2: 'Aoharu',
-    3: 'MANT',
+    3: 'GL',
     4: 'MANT',
     5: 'LArc',
     6: 'Grand Challenge',

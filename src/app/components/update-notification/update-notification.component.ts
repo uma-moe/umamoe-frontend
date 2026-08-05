@@ -67,7 +67,6 @@ export const UPDATE_LOG: UpdateEntry[] = [
         label: 'Carat Planner',
         icon: 'diamond',
         color: '#ec407a',
-        betaOnly: true,
         items: [
           { text: 'Create, rename, duplicate, import, export, and switch between saved plans', link: '/timeline?tab=carat-planner' },
           { text: 'Plan multiple rate-up goals with published probabilities, exchange copies, and Rainbow or Gold LB crystals' },
