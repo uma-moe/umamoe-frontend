@@ -1618,20 +1618,34 @@ select.cp-control,
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 4px;
   color: var(--text-secondary);
   font-size: 0.64rem;
   font-variant-numeric: tabular-nums;
 
+  > small {
+    margin-right: 2px;
+    color: var(--text-muted);
+    font-size: 0.54rem;
+    font-weight: 650;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+  }
+
   > span {
+    height: 20px;
+    padding: 1px 5px 1px 3px;
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    font-weight: 650;
+    background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
   }
 
-  img { width: 16px; height: 16px; object-fit: contain; }
-  small { color: var(--text-muted); font-size: 0.59rem; }
+  img { width: 15px; height: 15px; object-fit: contain; }
+  strong { color: var(--text-secondary); font-size: 0.61rem; font-weight: 750; }
 }
 
 .cp-target-controls {
@@ -3432,6 +3446,7 @@ select.cp-control,
 
 .cp-picker--primary {
   position: relative;
+  width: 100%;
   min-width: 0;
   padding: 8px 10px;
   display: flex;
@@ -4523,7 +4538,7 @@ select.cp-control,
     padding: 8px 10px;
     display: grid;
     grid-template-columns: minmax(270px, 290px) 32px 32px;
-    align-items: center;
+    align-items: end;
     gap: 8px;
     background: color-mix(in srgb, var(--surface-2) 58%, transparent);
     border-left: 1px solid var(--border-subtle);
@@ -4539,14 +4554,17 @@ select.cp-control,
     min-width: 0;
     margin: 0;
     display: grid;
+    grid-template-rows: 12px 34px;
     flex: none;
     gap: 3px;
   }
 
   .cp-target-controls--primary .cp-pull-count > span:first-child {
     color: var(--text-muted);
+    height: 12px;
     font-size: 0.59rem;
     font-weight: 650;
+    line-height: 12px;
   }
 
   .cp-target-controls--primary .cp-crystal-plan--quick {
@@ -4556,10 +4574,17 @@ select.cp-control,
     padding: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 12px 34px;
+    align-self: end;
     gap: 3px;
     background: transparent;
     border: 0;
     border-radius: 0;
+  }
+
+  .cp-target-controls--primary .cp-crystal-plan-heading {
+    height: 12px;
+    line-height: 12px;
   }
 
   .cp-target-controls--primary .cp-lb-controls {
@@ -4592,7 +4617,7 @@ select.cp-control,
   .cp-target-controls--primary .cp-lb-stepper { display: contents; }
 
   .cp-target-controls--primary .cp-payment-menu,
-  .cp-target-controls--primary .cp-target-remove { align-self: center; }
+  .cp-target-controls--primary .cp-target-remove { align-self: end; }
 }
 
 @media (min-width: 769px) and (max-width: 1050px) {
