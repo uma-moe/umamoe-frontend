@@ -1,6 +1,6 @@
-<section class="cp" *ngIf="plan">
+<section class="cp" *ngIf="plan" tourAnchor="carat-planner-page">
   <section class="cp-workbench" aria-label="Planner controls and projection">
-  <header class="cp-manager">
+  <header class="cp-manager" tourAnchor="carat-planner-plans">
     <div class="cp-plan-identity">
       <div class="cp-field cp-plan-select">
         <span>Selected plan</span>
@@ -51,7 +51,7 @@
   </header>
 
   <div class="cp-workbench-main">
-    <div class="cp-picker cp-picker--primary">
+    <div class="cp-picker cp-picker--primary" tourAnchor="carat-planner-search">
       <span class="cp-control cp-control--icon cp-control--action">
         <mat-icon>search</mat-icon>
         <input id="cp-banner-search" [ngModel]="eventSearch" (focus)="showEventPicker = true"
@@ -80,7 +80,7 @@
       </div>
     </div>
 
-    <div class="cp-overview" aria-label="Projection summary">
+    <div class="cp-overview" aria-label="Projection summary" tourAnchor="carat-planner-summary">
       <div class="cp-stat cp-stat--status" [class.is-short]="totalShortfallCarats > 0">
         <span class="cp-stat-icon"><mat-icon>{{ totalShortfallCarats > 0 ? 'warning_amber' : 'check_circle' }}</mat-icon></span>
         <div>
@@ -129,7 +129,7 @@
     <div><strong>Plan could not be imported</strong><span>{{ importError }}</span></div>
   </div>
 
-  <section class="cp-setup" aria-label="Plan assumptions" [class.is-open]="activeSetupPanel">
+  <section class="cp-setup" aria-label="Plan assumptions" [class.is-open]="activeSetupPanel" tourAnchor="carat-planner-assumptions">
     <button class="cp-assumptions-bar" type="button" [attr.aria-expanded]="!!activeSetupPanel"
       aria-controls="cp-setup-workspace" (click)="toggleAssumptions()">
       <span class="cp-assumptions-title"><mat-icon aria-hidden="true">tune</mat-icon><span><strong>Plan assumptions</strong><small>Balance, income and automatically counted rewards</small></span></span>
@@ -438,7 +438,7 @@
     </div>
   </section>
 
-  <section class="cp-targets" aria-labelledby="cp-targets-heading">
+  <section class="cp-targets" aria-labelledby="cp-targets-heading" tourAnchor="carat-planner-targets">
     <div class="cp-target-heading">
       <div class="cp-section-title">
         <div><h2 id="cp-targets-heading">Pull plan</h2><p>Earliest pull first. Open a row to change rate-up goals or inspect the odds.</p></div>

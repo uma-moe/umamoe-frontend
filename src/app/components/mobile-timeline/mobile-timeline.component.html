@@ -125,8 +125,8 @@
   </aside>
 
   <nav class="mobile-bottom-toolbar" [class.is-footer-visible]="footerVisible" aria-label="Timeline actions">
-    <button type="button" (click)="scrollToToday()"><mat-icon>today</mat-icon><span>Today</span></button>
-    <button type="button" (click)="toggleFilterPanel()" [attr.aria-expanded]="isFilterPanelExpanded">
+    <button type="button" (click)="scrollToToday()" tourAnchor="timeline-today-action"><mat-icon>today</mat-icon><span>Today</span></button>
+    <button type="button" (click)="toggleFilterPanel()" [attr.aria-expanded]="isFilterPanelExpanded" tourAnchor="timeline-filters">
       <mat-icon>manage_search</mat-icon><span>Search &amp; filters</span>
     </button>
   </nav>

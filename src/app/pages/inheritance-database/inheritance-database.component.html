@@ -52,8 +52,9 @@
       </span>
     </div>
 
-    <ng-template #focusAndHideControls>
-      <div class="header-focus-control" aria-label="Default inheritance spark focus">
+    <ng-template #focusAndHideControls let-tourEnabled="tourEnabled">
+      <div class="header-focus-control" aria-label="Default inheritance spark focus"
+        [tourAnchor]="tourEnabled ? 'database-focus-controls' : ''">
         <span class="header-focus-label">Default Focus</span>
         <div class="focus-options">
           <button
@@ -101,6 +102,7 @@
       <button
         type="button"
         class="hide-sparks-badge"
+        [tourAnchor]="tourEnabled ? 'database-hide-sparks' : ''"
         [class.active]="hiddenSparkFactorIds.length > 0"
         [class.inactive]="hiddenSparkFactorIds.length === 0"
         (click)="openHiddenSparksDialog()"
@@ -127,9 +129,10 @@
           </p>
         </div>
         <div class="header-spacer"></div>
-        <ng-container *ngTemplateOutlet="focusAndHideControls"></ng-container>
+        <ng-container *ngTemplateOutlet="focusAndHideControls; context: { tourEnabled: true }"></ng-container>
         <button
           class="split-sparks-badge"
+          tourAnchor="database-split-sparks"
           [class.active]="splitSparksMode"
           [class.inactive]="!splitSparksMode"
           (click)="splitSparksMode = !splitSparksMode"
@@ -150,6 +153,7 @@
         </button>
         <button
           class="list-mode-badge"
+          tourAnchor="database-list-mode"
           [class.active]="listMode === 'paginated'"
           [class.inactive]="listMode === 'infinite'"
           (click)="toggleListMode()"
@@ -177,7 +181,7 @@
           </button>
         </div>
         <div class="header-spacer-end"></div>
-        <div class="sort-select-wrapper">
+        <div class="sort-select-wrapper" tourAnchor="database-sort">
             <div class="input-label">Sort by</div>
             <mat-form-field appearance="outline" class="sort-select factor-select-field">
             <mat-select
@@ -225,7 +229,7 @@
         class="results-grid"
       >
         <ng-container *ngFor="let record of renderedRecords; let i = index; trackBy: trackByRecordId">
-          <div class="result-card-shell">
+          <div class="result-card-shell" [tourAnchor]="i === 0 ? 'database-result-card' : ''">
             <app-inheritance-entry
               [record]="record"
               [showDatabaseHeader]="true"
@@ -319,7 +323,7 @@
           </p>
         </div>
         <div class="header-spacer"></div>
-        <ng-container *ngTemplateOutlet="focusAndHideControls"></ng-container>
+        <ng-container *ngTemplateOutlet="focusAndHideControls; context: { tourEnabled: false }"></ng-container>
         <button
           class="split-sparks-badge"
           [class.active]="splitSparksMode"

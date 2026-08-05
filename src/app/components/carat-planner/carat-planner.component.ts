@@ -16,6 +16,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { Subject, takeUntil } from 'rxjs';
 import {
   CaratPlan,
@@ -235,6 +236,7 @@ type FreePullCampaignChoice = 'schedule' | 'stock';
     MatIconModule,
     MatProgressBarModule,
     MatTooltipModule,
+    TourAnchorMatMenuDirective,
   ],
   templateUrl: './carat-planner.component.html',
   styleUrl: './carat-planner.component.scss',

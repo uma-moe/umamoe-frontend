@@ -11,14 +11,15 @@ import {
   PageTourIntroDialogData,
   PageTourIntroDialogResult
 } from '../components/page-tour-intro-dialog/page-tour-intro-dialog.component';
+import { isCaratPlannerAvailable } from '../utils/carat-planner-availability';
 
-export type PageTourId = 'home' | 'database' | 'clubs' | 'rankings' | 'activity' | 'tierlist' | 'tools' | 'timeline';
+export type PageTourId = 'home' | 'database' | 'clubs' | 'rankings' | 'activity' | 'tierlist' | 'tools' | 'timeline' | 'carat-planner';
 type TourPromptAudience = 'new' | 'existing';
 
 interface PageTourDefinition {
   id: PageTourId;
   startStepId: string;
-  routeMatches: (path: string) => boolean;
+  routeMatches: (path: string, queryParams: URLSearchParams) => boolean;
 }
 
 @Injectable({
@@ -58,6 +59,7 @@ export class GettingStartedTourService {
   private initialized = false;
   private autoStartTimer: ReturnType<typeof setTimeout> | null = null;
   private introDialogRef: MatDialogRef<PageTourIntroDialogComponent, PageTourIntroDialogResult> | null = null;
+  private readonly caratPlannerAvailable = isCaratPlannerAvailable();
   private readonly pageTours: PageTourDefinition[] = [
     {
       id: 'home',
@@ -95,9 +97,17 @@ export class GettingStartedTourService {
       routeMatches: path => path === '/tools',
     },
     {
+      id: 'carat-planner',
+      startStepId: 'carat-planner-page',
+      routeMatches: (path, queryParams) => this.caratPlannerAvailable
+        && path === '/timeline'
+        && queryParams.get('tab') === 'carat-planner',
+    },
+    {
       id: 'timeline',
       startStepId: 'timeline-page',
-      routeMatches: path => path === '/timeline',
+      routeMatches: (path, queryParams) => path === '/timeline'
+        && (!this.caratPlannerAvailable || queryParams.get('tab') !== 'carat-planner'),
     },
   ];
   private readonly introCopy: Record<PageTourId, PageTourIntroDialogData> = {
@@ -107,7 +117,7 @@ export class GettingStartedTourService {
     },
     database: {
       title: 'Tour the Database?',
-      content: 'Walk through filters, veterans, factor rows, sliders, include/exclude Umas, support cards, and results.',
+      content: 'Walk through filters, veterans, factor rows, include/exclude tools, result display controls, sorting, and lineage cards.',
     },
     clubs: {
       title: 'Tour Clubs?',
@@ -131,7 +141,11 @@ export class GettingStartedTourService {
     },
     timeline: {
       title: 'Tour Timeline?',
-      content: 'Learn how search, event-type filters, event cards, the timeline track, and the today marker work.',
+      content: 'See the redesigned timeline views, date spacing, search, filters, event cards, and Carat Planner handoff.',
+    },
+    'carat-planner': {
+      title: 'Tour Carat Planner?',
+      content: 'Learn how plans, starting resources, projected income, rewards, banner targets, and pull odds work together.',
     },
   };
   private readonly pageStepIds: Record<PageTourId, string[]> = {
@@ -168,6 +182,12 @@ export class GettingStartedTourService {
       'filter-race-schedule',
       'tabs',
       'results',
+      'database-focus-controls',
+      'database-hide-sparks',
+      'database-split-sparks',
+      'database-list-mode',
+      'database-sort',
+      'database-result-card',
     ],
     clubs: [
       'clubs-page',
@@ -218,11 +238,24 @@ export class GettingStartedTourService {
     ],
     timeline: [
       'timeline-page',
+      'timeline-tabs',
       'timeline-search',
+      'timeline-view-switch',
+      'timeline-spacing',
+      'timeline-today-action',
+      'timeline-filters',
       'timeline-filter-types',
       'timeline-track',
       'timeline-event-card',
       'timeline-today',
+    ],
+    'carat-planner': [
+      'carat-planner-page',
+      'carat-planner-plans',
+      'carat-planner-search',
+      'carat-planner-summary',
+      'carat-planner-assumptions',
+      'carat-planner-targets',
     ],
   };
 
@@ -641,8 +674,68 @@ export class GettingStartedTourService {
       {
         stepId: 'results',
         anchorId: 'database-results',
-        title: 'Read the Results',
-        content: 'Results update from the active filters. Sort the list and use the display toggles above it. Record cards show wins, factors, affinity context, support cards, and actions.',
+        title: 'Results Workspace',
+        content: 'Results update from the active filters. The toolbar controls how every matching lineage is presented before you inspect individual cards.',
+        placement: { xPosition: 'after', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'database-focus-controls',
+        anchorId: 'database-focus-controls',
+        title: 'Focus the Lineage',
+        content: 'Keep All selected for the combined lineage, or focus every result on the main parent or either great parent. Portrait clicks can still override one card locally.',
+        placement: { xPosition: 'after', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'database-hide-sparks',
+        anchorId: 'database-hide-sparks',
+        title: 'Hide Distracting Sparks',
+        content: 'Choose common, scenario, or race sparks you do not want to see. Hidden choices are remembered and can be revealed or restored later.',
+        placement: { xPosition: 'before', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'database-split-sparks',
+        anchorId: 'database-split-sparks',
+        title: 'Combined or Split Sparks',
+        content: 'Combined view groups matching sparks across the lineage. Split view keeps each parent contribution separate when you need to inspect the exact source.',
+        placement: { xPosition: 'before', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'database-list-mode',
+        anchorId: 'database-list-mode',
+        title: 'Infinite Scroll or Pages',
+        content: 'Use infinite scrolling for browsing, or switch to pages when you want stable navigation through a larger result set.',
+        placement: { xPosition: 'before', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'database-sort',
+        anchorId: 'database-sort',
+        title: 'Sort What Matters',
+        content: 'Sort by affinity, wins, spark totals, score, recency, or trending activity. Preferred white-factor groups remain the first ranking layer when configured.',
+        placement: { xPosition: 'before', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'database-result-card',
+        anchorId: 'database-result-card',
+        title: 'Read a Lineage Card',
+        content: 'Cards combine trainer details, affinity, races, support cards, and sparks. Spark controls switch between per-inheritance or per-run chances and between total stars or lineage occurrences. You can also save the record or open it in Lineage Planner.',
         placement: { xPosition: 'after', yPosition: 'below' },
         isAsync: true,
         asyncStepTimeout: 5000,
@@ -1021,18 +1114,68 @@ export class GettingStartedTourService {
       {
         stepId: 'timeline-page',
         anchorId: 'timeline-page',
-        route: '/timeline',
-        title: 'Timeline',
-        content: 'Timeline tracks estimated global releases, banners, story events, campaigns, and other scheduled content.',
+        route: '/timeline?tab=timeline',
+        title: 'The Release Timeline',
+        content: 'The redesigned Timeline combines confirmed and predicted global banners, story events, campaigns, races, scenarios, and other scheduled content in one date-based view.',
         placement: { xPosition: 'after', yPosition: 'below' },
         isAsync: true,
+        asyncStepTimeout: 8000,
+      },
+      {
+        stepId: 'timeline-tabs',
+        anchorId: 'timeline-tabs',
+        title: 'Timeline and Carat Planner',
+        content: 'Use these tabs to move between release research and your saved pull plans. Eligible banner cards can be sent straight from the Timeline into Carat Planner.',
+        placement: { xPosition: 'before', yPosition: 'below' },
+        isAsync: true,
         asyncStepTimeout: 5000,
+        isOptional: true,
       },
       {
         stepId: 'timeline-search',
         anchorId: 'timeline-search',
         title: 'Search the Timeline',
-        content: 'Search for a character, support card, or event name. Search navigation appears when there are matching timeline entries.',
+        content: 'Search for characters, support cards, banners, or event names. Desktop arrow controls move between matches; mobile keeps search inside the filter sheet.',
+        placement: { xPosition: 'before', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'timeline-view-switch',
+        anchorId: 'timeline-view-switch',
+        title: 'Choose a Desktop View',
+        content: 'Horizontal view emphasizes the release sequence and supports dragging or scrolling. Vertical view groups the same dates into a more traditional feed.',
+        placement: { xPosition: 'before', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'timeline-spacing',
+        anchorId: 'timeline-spacing',
+        title: 'Compact or Calendar Gaps',
+        content: 'Compact gaps keep releases close together. Calendar gaps use elapsed time, making long quiet periods visibly wider in the horizontal view.',
+        placement: { xPosition: 'before', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'timeline-today-action',
+        anchorId: 'timeline-today-action',
+        title: 'Return to Today',
+        content: 'Jump back to the current date after exploring older or upcoming releases. The action is also pinned to the bottom toolbar on mobile.',
+        placement: { xPosition: 'before', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'timeline-filters',
+        anchorId: 'timeline-filters',
+        title: 'Open Search and Filters',
+        content: 'The active filter count appears here. Open the panel whenever you want to narrow the schedule without changing its dates.',
         placement: { xPosition: 'before', yPosition: 'below' },
         isAsync: true,
         asyncStepTimeout: 5000,
@@ -1042,7 +1185,7 @@ export class GettingStartedTourService {
         stepId: 'timeline-filter-types',
         anchorId: 'timeline-filter-types',
         title: 'Event Type Filters',
-        content: 'Toggle event families when you only want to see banners, support cards, story events, campaigns, Champions Meeting, Legend Races, or paid banners.',
+        content: 'Show only the families you care about, including character and support banners, paid banners, stories, campaigns, competitive events, races, and scenario releases.',
         placement: { xPosition: 'before', yPosition: 'below' },
         isAsync: true,
         asyncStepTimeout: 5000,
@@ -1051,8 +1194,8 @@ export class GettingStartedTourService {
       {
         stepId: 'timeline-track',
         anchorId: 'timeline-track',
-        title: 'Timeline Track',
-        content: 'Use the track to read the release schedule. On desktop you can drag or scroll horizontally; on mobile the same events appear as a vertical feed.',
+        title: 'Read the Schedule',
+        content: 'Dates group releases into lanes, with month and milestone markers providing context. Desktop can use a horizontal track or vertical groups; mobile virtualizes the same feed for smooth scrolling.',
         placement: { xPosition: 'after', yPosition: 'above' },
         isAsync: true,
         asyncStepTimeout: 5000,
@@ -1062,7 +1205,7 @@ export class GettingStartedTourService {
         stepId: 'timeline-event-card',
         anchorId: 'timeline-event-card',
         title: 'Event Cards',
-        content: 'Cards show the event family, predicted date, related characters or supports, and links or prediction details when available.',
+        content: 'Cards show dates, event type, pickups, rewards, free pulls, and prediction context. Open one for full details, or add eligible banners directly to Carat Planner.',
         placement: { xPosition: 'after', yPosition: 'below' },
         isAsync: true,
         asyncStepTimeout: 5000,
@@ -1072,7 +1215,67 @@ export class GettingStartedTourService {
         stepId: 'timeline-today',
         anchorId: 'timeline-today',
         title: 'Today Marker',
-        content: 'The today marker shows where the current date lands against the predicted schedule.',
+        content: 'This marker shows where the current date falls among confirmed and predicted releases, so upcoming content is easy to orient at a glance.',
+        placement: { xPosition: 'after', yPosition: 'above' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'carat-planner-page',
+        anchorId: 'carat-planner-page',
+        route: '/timeline?tab=carat-planner',
+        title: 'Plan Before You Pull',
+        content: 'Carat Planner projects your resources through future banners, combining saved balances, recurring income, scheduled rewards, free pulls, tickets, and LB crystals.',
+        placement: { xPosition: 'after', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 10000,
+      },
+      {
+        stepId: 'carat-planner-plans',
+        anchorId: 'carat-planner-plans',
+        title: 'Keep Multiple Plans',
+        content: 'Create and rename plans here. The menu also lets you switch, duplicate, import, export, or delete plans without mixing their balances and banner targets.',
+        placement: { xPosition: 'after', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'carat-planner-search',
+        anchorId: 'carat-planner-search',
+        title: 'Add Banner Targets',
+        content: 'Search characters, support cards, banner types, or reruns. Adding a banner creates a pull target with useful defaults that you can adjust below.',
+        placement: { xPosition: 'after', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'carat-planner-summary',
+        anchorId: 'carat-planner-summary',
+        title: 'Projection at a Glance',
+        content: 'The summary immediately shows whether the full plan is funded, plus projected Carats, tickets, LB crystals, and total planned pulls after every target.',
+        placement: { xPosition: 'after', yPosition: 'above' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'carat-planner-assumptions',
+        anchorId: 'carat-planner-assumptions',
+        title: 'Set Your Assumptions',
+        content: 'Enter starting resources, choose expected recurring income, and review automatically counted rewards and free-pull campaigns. These assumptions drive every projection.',
+        placement: { xPosition: 'after', yPosition: 'below' },
+        isAsync: true,
+        asyncStepTimeout: 5000,
+        isOptional: true,
+      },
+      {
+        stepId: 'carat-planner-targets',
+        anchorId: 'carat-planner-targets',
+        title: 'Build the Pull Plan',
+        content: 'Targets run in date order. Set pulls, timing, ticket use, LB crystals, featured pickup goals, and desired copies. Open a target to inspect funding and the published probability of meeting those goals.',
         placement: { xPosition: 'after', yPosition: 'above' },
         isAsync: true,
         asyncStepTimeout: 5000,
@@ -1136,7 +1339,9 @@ export class GettingStartedTourService {
 
   private getCurrentPageTour(): PageTourDefinition | null {
     const path = this.getPath();
-    return this.pageTours.find(tour => tour.routeMatches(path)) ?? null;
+    const query = this.router.url.split('?')[1]?.split('#')[0] ?? '';
+    const queryParams = new URLSearchParams(query);
+    return this.pageTours.find(tour => tour.routeMatches(path, queryParams)) ?? null;
   }
 
   private hasBlockingOverlay(): boolean {
@@ -1185,8 +1390,11 @@ export class GettingStartedTourService {
       return;
     }
 
-    if (pageTourId === 'timeline') {
+    if (pageTourId === 'timeline' || pageTourId === 'carat-planner') {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
+
+    if (pageTourId === 'timeline') {
       window.dispatchEvent(new CustomEvent('umamoe:prepare-timeline-tour'));
     }
   }

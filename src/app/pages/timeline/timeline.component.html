@@ -13,7 +13,7 @@
         </div>
       </div>
 
-      <nav class="timeline-tabs" aria-label="Timeline tools">
+      <nav class="timeline-tabs" aria-label="Timeline tools" tourAnchor="timeline-tabs">
         <a
           *ngIf="caratPlannerAvailable"
           class="timeline-tab"
@@ -115,7 +115,7 @@
 
       <span class="timeline-count">{{ getFilteredEventCount() }} / {{ getTotalEventCount() }}</span>
 
-      <div class="timeline-view-switch" role="group" aria-label="Timeline direction">
+      <div class="timeline-view-switch" role="group" aria-label="Timeline direction" tourAnchor="timeline-view-switch">
         <button
           type="button"
           aria-label="Use horizontal timeline"
@@ -143,6 +143,7 @@
       <button
         type="button"
         class="toolbar-button timeline-spacing-button"
+        tourAnchor="timeline-spacing"
         [attr.aria-label]="timelineSpacingMode === 'calendar' ? 'Use compact date gaps' : 'Space gaps by elapsed days'"
         [class.is-active]="timelineSpacingMode === 'calendar'"
         [disabled]="desktopTimelineDirection === 'vertical'"
@@ -154,7 +155,7 @@
         <span>{{ timelineSpacingMode === 'calendar' ? 'Calendar gaps' : 'Compact gaps' }}</span>
       </button>
 
-      <button type="button" class="toolbar-button" (click)="scrollToToday('smooth')">
+      <button type="button" class="toolbar-button" (click)="scrollToToday('smooth')" tourAnchor="timeline-today-action">
         <mat-icon>today</mat-icon>
         <span>Today</span>
       </button>
