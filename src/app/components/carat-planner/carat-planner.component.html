@@ -486,14 +486,22 @@
                 <img src="assets/images/item/item_icon_00149.webp" width="20" height="20" alt="">
                 <span><strong>Rainbow</strong><small>SSR cards</small></span>
               </span>
-              <input class="cp-control" type="number" min="0" max="20" step="1" [(ngModel)]="target.rainbowCrystalsPlanned" (ngModelChange)="save()" aria-label="Rainbow LB crystals to use on this banner">
+              <span class="cp-copy-stepper cp-lb-stepper" role="group" aria-label="Rainbow LB crystals to use on this banner">
+                <button type="button" (click)="adjustTargetLbCrystals(target, 'rainbow', -1)" [disabled]="!target.rainbowCrystalsPlanned" aria-label="Use one fewer Rainbow LB crystal"><mat-icon>remove</mat-icon></button>
+                <output>{{ target.rainbowCrystalsPlanned || 0 }}</output>
+                <button type="button" (click)="adjustTargetLbCrystals(target, 'rainbow', 1)" [disabled]="(target.rainbowCrystalsPlanned ?? 0) >= 20" aria-label="Use one more Rainbow LB crystal"><mat-icon>add</mat-icon></button>
+              </span>
             </label>
             <label>
               <span class="cp-lb-kind">
                 <img src="assets/images/item/item_icon_00150.webp" width="20" height="20" alt="">
                 <span><strong>Gold</strong><small>SR cards</small></span>
               </span>
-              <input class="cp-control" type="number" min="0" max="20" step="1" [(ngModel)]="target.goldCrystalsPlanned" (ngModelChange)="save()" aria-label="Gold LB crystals to use on this banner">
+              <span class="cp-copy-stepper cp-lb-stepper" role="group" aria-label="Gold LB crystals to use on this banner">
+                <button type="button" (click)="adjustTargetLbCrystals(target, 'gold', -1)" [disabled]="!target.goldCrystalsPlanned" aria-label="Use one fewer Gold LB crystal"><mat-icon>remove</mat-icon></button>
+                <output>{{ target.goldCrystalsPlanned || 0 }}</output>
+                <button type="button" (click)="adjustTargetLbCrystals(target, 'gold', 1)" [disabled]="(target.goldCrystalsPlanned ?? 0) >= 20" aria-label="Use one more Gold LB crystal"><mat-icon>add</mat-icon></button>
+              </span>
             </label>
           </fieldset>
           <details class="cp-payment-menu cp-popover" (toggle)="onPopoverToggle($event)">
@@ -554,6 +562,7 @@
                 <strong [attr.aria-label]="pickupGoalOddsAriaLabel(goal)">{{ pickupGoalOddsLabel(goal) }}</strong>
               </span>
               <span class="cp-pickup-summary-more" *ngIf="odds.goals.length > 3">{{ odds.goals.length - 3 }} more</span>
+              <span class="cp-pickup-summary-more cp-pickup-summary-more--mobile" *ngIf="odds.goals.length > 1">+{{ odds.goals.length - 1 }}</span>
             </span>
             <ng-template #noSelectedGoals><span class="cp-pickup-summary-empty">Choose featured pickups</span></ng-template>
 

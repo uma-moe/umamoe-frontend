@@ -1938,6 +1938,12 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.save();
   }
 
+  adjustTargetLbCrystals(target: PlannerTarget, kind: 'rainbow' | 'gold', delta: -1 | 1): void {
+    const property = kind === 'rainbow' ? 'rainbowCrystalsPlanned' : 'goldCrystalsPlanned';
+    target[property] = Math.max(0, Math.min(20, Math.trunc(target[property] ?? 0) + delta));
+    this.save();
+  }
+
   formatProbability(value: number, digits = 1): string {
     if (!Number.isFinite(value)) return '\u2014';
     const percentage = value * 100;
