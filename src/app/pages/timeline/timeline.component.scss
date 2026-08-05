@@ -1011,7 +1011,7 @@ app-mobile-timeline {
   .timeline-page-header {
     position: sticky;
     z-index: 90;
-    top: 0;
+    top: var(--navbar-height);
     width: 100%;
     box-sizing: border-box;
     padding: 6px 0;
