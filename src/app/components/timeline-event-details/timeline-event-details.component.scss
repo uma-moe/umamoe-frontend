@@ -173,11 +173,16 @@ mat-dialog-content {
 .rate-pickup-grid,
 .pickup-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
 }
 
+.pickup-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .rate-pickup-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 220px));
+  justify-content: start;
   max-height: 224px;
   padding-right: 2px;
   overflow-y: auto;
