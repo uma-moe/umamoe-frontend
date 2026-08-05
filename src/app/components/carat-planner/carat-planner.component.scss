@@ -4664,6 +4664,22 @@ select.cp-control,
   .cp-pull-stepper--desktop { display: none; }
   .cp-pull-input--mobile { display: block; width: 100%; }
 
+  .cp-goal-picker[open] { z-index: 180; }
+
+  .cp-goal-picker-popover {
+    position: fixed;
+    z-index: 180;
+    top: calc(var(--navbar-height) + 12px);
+    right: 10px;
+    bottom: auto;
+    left: 10px;
+    width: auto;
+    max-height: min(520px, calc(100dvh - var(--navbar-height) - 24px));
+    padding: 8px;
+    border-radius: 10px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  }
+
   .cp-target-main {
     min-height: 0;
     padding: 7px 9px;

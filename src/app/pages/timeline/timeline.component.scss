@@ -1007,16 +1007,11 @@ app-mobile-timeline {
 }
 
 @media (max-width: 768px) {
-  .timeline-page {
-    padding-top: 53px;
-  }
 
   .timeline-page-header {
-    position: fixed;
+    position: sticky;
     z-index: 90;
-    top: var(--navbar-height);
-    right: 0;
-    left: 0;
+    top: 0;
     width: 100%;
     box-sizing: border-box;
     padding: 6px 0;
