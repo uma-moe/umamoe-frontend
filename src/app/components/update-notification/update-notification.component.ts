@@ -25,8 +25,8 @@ export interface UpdateEntry {
 // Define your updates here - newest first
 export const UPDATE_LOG: UpdateEntry[] = [
   {
-    title: 'July Update - Inheritance, Races & Planning',
-    date: '2026-07-26',
+    title: 'August Update - Inheritance, Races & Planning',
+    date: '2026-08-05',
     categories: [
       {
         category: 'major',
@@ -48,6 +48,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
           { text: 'Filter common, scenario, and race whites by count or total stars for the full lineage or main parent', link: '/database' },
           { text: 'A new UQL guide explains scopes, exact three-way matching, every available property, operators, and ranking parameters', link: '/database' },
           { text: 'Training Scenario and special-spark filters now include clearer normal and upgraded choices' },
+          { text: 'Switching searches no longer leaves stale UQL filters active' },
         ]
       },
       {
@@ -69,8 +70,9 @@ export const UPDATE_LOG: UpdateEntry[] = [
         betaOnly: true,
         items: [
           { text: 'Create, rename, duplicate, import, export, and switch between saved plans', link: '/timeline?tab=carat-planner' },
-          { text: 'Search banners and plan multiple character or support-card goals with pull probabilities and exchange targets' },
-          { text: 'Project your balance using recurring income, custom income, and upcoming rewards' },
+          { text: 'Plan multiple rate-up goals with published probabilities, exchange copies, and Rainbow or Gold LB crystals' },
+          { text: 'Project your balance using recurring income, upcoming rewards, free pulls, and selectable event results' },
+          { text: 'A compact mobile layout makes plans, banner goals, rewards, and pull controls easier to use' },
         ]
       },
       {
@@ -80,8 +82,8 @@ export const UPDATE_LOG: UpdateEntry[] = [
         color: '#26a69a',
         items: [
           { text: 'Switch between horizontal and vertical timelines with compact gaps, Today, search, and event filters', link: '/timeline' },
-          { text: 'Redesigned event cards and details make rates, rewards, races, predictions, and sources easier to scan' },
-          { text: 'Improved full-screen and mobile layouts make better use of the available space' },
+          { text: 'Redesigned event details make rate-up odds, free pulls, rewards, races, predictions, and sources easier to scan' },
+          { text: 'Improved full-screen and mobile layouts use space better, with reliable touch scrolling from interactive controls' },
         ]
       },
       {
@@ -93,6 +95,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
           { text: 'Circle pages now show live rank, tier progress, monthly navigation, and clearer club information', link: '/circles' },
           { text: 'Member progression can be explored as a chart or calendar with daily contributor breakdowns' },
           { text: 'Search members, customize visible metrics, open profiles, and export circle data' },
+          { text: 'Progress averages no longer include an unfinished current day' },
         ]
       }
     ]
