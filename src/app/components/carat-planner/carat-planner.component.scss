@@ -4429,3 +4429,294 @@ select.cp-control,
     padding-inline: 9px;
   }
 }
+
+/* Compact target overview and limit-break planning. */
+.cp-lb-kind {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  > span {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+  }
+
+  strong { color: var(--text-secondary); font-size: 0.65rem; }
+  small { color: var(--text-muted); font-size: 0.57rem; }
+}
+
+.cp-crystal-plan legend {
+  strong { color: var(--text-secondary); font-size: 0.64rem; }
+  small { margin-left: 6px; color: var(--text-muted); font-size: 0.58rem; }
+}
+
+.cp-pickup-summary-goal-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+
+  > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small {
+    color: var(--text-muted);
+    font-size: 0.56rem;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.cp-advanced-odds {
+  display: contents;
+
+  > summary { display: none; }
+  &:not([open]) > :not(summary) { display: block; }
+}
+
+@media (max-width: 768px) {
+  .cp-target-main {
+    min-height: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .cp-target-image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 512 / 125;
+    border-radius: 7px 7px 0 0;
+    background: var(--surface-2);
+  }
+
+  .cp-target-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .cp-target-title {
+    padding: 9px 10px 10px;
+    gap: 5px;
+  }
+
+  .cp-target-controls .cp-crystal-plan--quick {
+    padding-top: 9px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px 8px;
+  }
+
+  .cp-target-controls .cp-crystal-plan--quick legend {
+    margin: 0 0 1px;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .cp-target-controls .cp-crystal-plan--quick legend small {
+    margin: 0;
+  }
+
+  .cp-target-controls .cp-crystal-plan--quick label {
+    min-width: 0;
+    padding: 6px 7px;
+    display: flex;
+    grid-template-columns: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 7px;
+    background: color-mix(in srgb, var(--surface-1) 74%, transparent);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+  }
+
+  .cp-target-controls .cp-crystal-plan--quick .cp-control {
+    width: 86px;
+    flex: 0 0 86px;
+  }
+
+  .cp-pickup-details > summary {
+    min-height: 0;
+    padding: 8px 10px;
+    grid-template-columns: minmax(0, 1fr) auto 18px;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 7px 10px;
+  }
+
+  .cp-target-funding {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .cp-target-funding small {
+    display: none;
+  }
+
+  .cp-pickup-summary-label {
+    display: none;
+  }
+
+  .cp-pickup-summary-chance {
+    min-width: 0;
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .cp-pickup-summary-chance small {
+    font-size: 0.56rem;
+  }
+
+  .cp-pickup-summary-chance strong {
+    font-size: 0.78rem;
+  }
+
+  .cp-pickup-summary-goals,
+  .cp-pickup-summary-empty {
+    grid-column: 1 / 3;
+    grid-row: 2;
+  }
+
+  .cp-pickup-summary-goals {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+    overflow: visible;
+  }
+
+  .cp-pickup-summary-goal {
+    width: 100%;
+    max-width: none;
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .cp-pickup-summary-art {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  .cp-pickup-summary-goal > .cp-pickup-summary-goal-copy {
+    max-width: none;
+    display: flex;
+  }
+
+  .cp-pickup-summary-goal > strong {
+    color: var(--accent-primary);
+    font-size: 0.72rem;
+  }
+
+  .cp-pickup-summary-more {
+    padding-left: 39px;
+  }
+
+  .cp-pickup-details > summary > .cp-disclosure-icon {
+    grid-column: 3;
+    grid-row: 1 / 3;
+  }
+
+  .cp-pickup-details-body {
+    display: block;
+    border-top: 0;
+    overflow: hidden;
+  }
+
+  .cp-goal-editor {
+    border-bottom: 0;
+  }
+
+  .cp-advanced-odds {
+    display: block;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .cp-advanced-odds > summary {
+    min-height: 46px;
+    padding: 7px 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 18px;
+    align-items: center;
+    gap: 9px;
+    color: var(--text-secondary);
+    background: color-mix(in srgb, var(--surface-1) 72%, var(--surface-2));
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .cp-advanced-odds > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .cp-advanced-odds > summary > span {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .cp-advanced-odds > summary > span strong {
+    color: var(--text-primary);
+    font-size: 0.69rem;
+  }
+
+  .cp-advanced-odds > summary > span small {
+    color: var(--text-muted);
+    font-size: 0.58rem;
+  }
+
+  .cp-advanced-odds > summary > strong {
+    color: var(--accent-primary);
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cp-advanced-odds > summary .cp-disclosure-icon {
+    transition: transform 150ms ease;
+  }
+
+  .cp-advanced-odds[open] > summary .cp-disclosure-icon {
+    transform: rotate(180deg);
+  }
+
+  .cp-advanced-odds:not([open]) > :not(summary) {
+    display: none;
+  }
+
+  .cp-goal-rollup {
+    border-left: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .cp-target-controls .cp-crystal-plan--quick {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cp-target-controls .cp-crystal-plan--quick legend {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .cp-target-controls .cp-crystal-plan--quick .cp-control {
+    width: 78px;
+    flex-basis: 78px;
+  }
+
+  .cp-pickup-summary-chance small {
+    display: block;
+  }
+}

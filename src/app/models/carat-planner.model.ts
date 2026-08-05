@@ -334,6 +334,11 @@ export interface PickupOddsResult {
 export interface PickupGoalOddsResult {
   pickupId: number;
   requestedCopies: number;
+  /** Copies that must come from the banner after applicable LB crystals are assigned. */
+  copiesNeededFromPulls: number;
+  /** LB crystals assigned to copies two through five of this support card. */
+  crystalCopiesApplied: number;
+  crystalKind?: 'rainbow' | 'gold';
   exchangeable: boolean;
   exchangeCopiesAvailable: number;
   randomCopiesNeeded: number;

@@ -1,4 +1,6 @@
 import { Injectable } from '@angular/core';
+import { getSupportCardById } from '../data/support-cards.data';
+import { Rarity } from '../models/support-card.model';
 import {
   CaratPlan,
   CaratPlanProjection,
@@ -269,24 +271,38 @@ export class CaratPlannerCalculationService {
     target: PlannerTarget,
     gacha?: PlannerGachaEntry,
     sparkPulls?: number,
+    lbCrystals?: Partial<Record<'rainbow' | 'gold', number>>,
   ): PickupOddsResult {
     const normalizedDraws = this.nonNegativeInt(draws);
     const goals = this.targetPickupGoals(target, gacha);
+    const remainingCrystals = {
+      rainbow: this.nonNegativeInt(lbCrystals?.rainbow ?? target.rainbowCrystalsPlanned),
+      gold: this.nonNegativeInt(lbCrystals?.gold ?? target.goldCrystalsPlanned),
+    };
     const threshold = this.nonNegativeInt(sparkPulls);
     const sparkCopiesAvailable = threshold > 0
       ? Math.floor(normalizedDraws / threshold)
       : 0;
     const goalOdds = goals.map(goal => {
       const pickup = gacha?.pickups?.find(item => item.pickup_id === goal.pickupId);
+      const crystalKind = this.lbCrystalKind(target, goal.pickupId);
+      const crystalCopiesApplied = crystalKind
+        ? Math.min(remainingCrystals[crystalKind], Math.min(4, goal.desiredCopies - 1))
+        : 0;
+      if (crystalKind) remainingCrystals[crystalKind] -= crystalCopiesApplied;
+      const copiesNeededFromPulls = Math.max(1, goal.desiredCopies - crystalCopiesApplied);
       const odds = this.calculateOdds(
         normalizedDraws,
-        goal.desiredCopies,
+        copiesNeededFromPulls,
         pickup?.rate,
         pickup?.exchangeable === false ? undefined : threshold,
       );
       return {
         pickupId: goal.pickupId,
         requestedCopies: goal.desiredCopies,
+        copiesNeededFromPulls,
+        crystalCopiesApplied,
+        crystalKind: crystalCopiesApplied > 0 ? crystalKind : undefined,
         exchangeable: pickup?.exchangeable !== false,
         exchangeCopiesAvailable: odds.exchangeCopies,
         randomCopiesNeeded: odds.randomCopiesNeeded,
@@ -305,7 +321,7 @@ export class CaratPlannerCalculationService {
         goalOdds.map(goal => ({
           pickupId: goal.pickupId,
           rate: goal.pickupRate!,
-          requestedCopies: goal.requestedCopies,
+          requestedCopies: goal.copiesNeededFromPulls,
           exchangeable: goal.exchangeable,
         })),
         threshold,
@@ -386,12 +402,22 @@ export class CaratPlannerCalculationService {
 
     const fundedPulls = plannedPulls - remainingPulls;
     const sparkPulls = gacha?.spark_pulls ?? data.core.default_spark_pulls;
-    const rainbowCrystalsUsed = target.bannerKind === 'support'
+    const rainbowCrystalBudget = target.bannerKind === 'support'
       ? Math.min(balances.rainbowCrystals, this.nonNegativeInt(target.rainbowCrystalsPlanned))
       : 0;
-    const goldCrystalsUsed = target.bannerKind === 'support'
+    const goldCrystalBudget = target.bannerKind === 'support'
       ? Math.min(balances.goldCrystals, this.nonNegativeInt(target.goldCrystalsPlanned))
       : 0;
+    const odds = this.calculateTargetOdds(fundedPulls, target, gacha, sparkPulls, {
+      rainbow: rainbowCrystalBudget,
+      gold: goldCrystalBudget,
+    });
+    const rainbowCrystalsUsed = odds.goalOdds?.reduce((total, goal) => (
+      total + (goal.crystalKind === 'rainbow' ? goal.crystalCopiesApplied : 0)
+    ), 0) ?? 0;
+    const goldCrystalsUsed = odds.goalOdds?.reduce((total, goal) => (
+      total + (goal.crystalKind === 'gold' ? goal.crystalCopiesApplied : 0)
+    ), 0) ?? 0;
     balances.rainbowCrystals -= rainbowCrystalsUsed;
     balances.goldCrystals -= goldCrystalsUsed;
 
@@ -414,7 +440,7 @@ export class CaratPlannerCalculationService {
       unfilledPulls: remainingPulls,
       jewelCost,
       shortfallJewels: remainingPulls * jewelCost,
-      odds: this.calculateTargetOdds(fundedPulls, target, gacha, sparkPulls),
+      odds,
     };
   }
 
@@ -648,22 +674,36 @@ export class CaratPlannerCalculationService {
     if (target.pickupGoals?.length) {
       return target.pickupGoals.map(goal => ({
         pickupId: this.nonNegativeInt(goal.pickupId),
-        desiredCopies: Math.max(1, this.nonNegativeInt(goal.desiredCopies)),
+        desiredCopies: this.targetDesiredCopies(target, goal.desiredCopies),
       }));
     }
     if (target.pickupId !== undefined) {
       return [{
         pickupId: this.nonNegativeInt(target.pickupId),
-        desiredCopies: Math.max(1, this.nonNegativeInt(target.desiredCopies)),
+        desiredCopies: this.targetDesiredCopies(target, target.desiredCopies),
       }];
     }
     if (gacha?.pickups?.length) {
       return [{
         pickupId: gacha.pickups[0].pickup_id,
-        desiredCopies: Math.max(1, this.nonNegativeInt(target.desiredCopies)),
+        desiredCopies: this.targetDesiredCopies(target, target.desiredCopies),
       }];
     }
     return [];
+  }
+
+  private targetDesiredCopies(target: PlannerTarget, value: number): number {
+    const maximum = target.bannerKind === 'support' ? 5 : 20;
+    return Math.min(maximum, Math.max(1, this.nonNegativeInt(value)));
+  }
+
+  private lbCrystalKind(target: PlannerTarget, pickupId: number): 'rainbow' | 'gold' | undefined {
+    if (target.bannerKind !== 'support') return undefined;
+    const rarity = getSupportCardById(String(pickupId))?.rarity;
+    if (rarity === Rarity.SR) return 'gold';
+    if (rarity === Rarity.R) return undefined;
+    // Future support cards often precede the bundled metadata; normal support pickups are SSR.
+    return 'rainbow';
   }
 
   private binomialTail(draws: number, successesNeeded: number, rate: number): number {
