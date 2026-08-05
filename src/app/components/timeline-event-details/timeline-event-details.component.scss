@@ -831,6 +831,16 @@ mat-dialog-content {
   line-height: 1.25;
 }
 
+
+.reward-outcome-summary {
+  min-height: 28px;
+  padding: 4px 2px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  border-top: 1px solid var(--border-subtle);
+}
 .reward-outcome-list {
   max-height: 150px;
   overflow-y: auto;

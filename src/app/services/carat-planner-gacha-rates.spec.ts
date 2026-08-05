@@ -77,6 +77,14 @@ describe('planner gacha rate policy', () => {
       rarity: 3,
       rate: STANDARD_PREDICTED_GACHA_RATES.topRarityRate,
     }));
+    expect(resolved.rarity_rates).toContain(jasmine.objectContaining({
+      rarity: 2,
+      rate: STANDARD_PREDICTED_GACHA_RATES.srRarityRate,
+    }));
+    expect(resolved.rarity_rates).toContain(jasmine.objectContaining({
+      rarity: 1,
+      rate: STANDARD_PREDICTED_GACHA_RATES.rRarityRate,
+    }));
     expect([resolved.rates_provenance, resolved.rates_confidence]).toEqual([
       'standard_inference', 'inferred_standard',
     ]);
@@ -86,7 +94,11 @@ describe('planner gacha rate policy', () => {
     const protectedInference = fallback({
       confidence: 'inferred_standard_rate',
       pickups: [{ pickup_id: 1001, rate: 0.0075, exchangeable: true }],
-      rarity_rates: [{ rarity: 3, rate: 0.03 }],
+      rarity_rates: [
+        { rarity: 3, rate: 0.03 },
+        { rarity: 2, rate: 0.18 },
+        { rarity: 1, rate: 0.79 },
+      ],
     });
 
     const resolved = resolve(protectedInference, [1001]);
@@ -95,6 +107,67 @@ describe('planner gacha rate policy', () => {
     expect([resolved.rates_provenance, resolved.rates_confidence]).toEqual([
       'standard_inference', 'inferred_standard',
     ]);
+  });
+
+  it('uses rarity-aware fallback rates for featured support cards', () => {
+    const source = fallback({
+      banner_kind: 'support',
+      confidence: 'inferred_standard_rate',
+      pickups: [
+        { pickup_id: 30052, rate: 0.0075, exchangeable: true },
+        { pickup_id: 30101, rate: 0.0075, exchangeable: true },
+      ],
+      rarity_rates: [
+        { rarity: 3, rate: 0.03 },
+        { rarity: 2, rate: 0.18 },
+        { rarity: 1, rate: 0.79 },
+      ],
+    });
+
+    const resolved = resolve(source, [30052, 30101, 20083, 10083]);
+    expect(resolved.pickups?.map(pickup => pickup.rate)).toEqual([
+      0.0075,
+      0.0075,
+      0.0225,
+      0.0375,
+    ]);
+    expect(resolved.pickups?.slice(2).every(pickup => pickup.exchangeable === false)).toBeTrue();
+  });
+
+  it('splits the standard lower-rarity pickup pools when several cards are featured', () => {
+    const source = fallback({ banner_kind: 'support' });
+    const resolved = resolve(source, [30001, 20001, 20002, 10001, 10002]);
+
+    expect(resolved.pickups?.map(pickup => pickup.rate)).toEqual([
+      0.0075,
+      0.015,
+      0.015,
+      0.025,
+      0.025,
+    ]);
+  });
+
+  it('uses exact published lower-rarity featured rates when available', () => {
+    const exact = fallback({
+      banner_kind: 'support',
+      provenance: 'global_master',
+      confidence: 'exact',
+      pickups: [{ pickup_id: 30052, rate: 0.0075, exchangeable: true }],
+      featured_pickups: [
+        { pickup_id: 30052, rate: 0.0075, exchangeable: true },
+        { pickup_id: 20083, rate: 0.02, exchangeable: false },
+        { pickup_id: 10083, rate: 0.04, exchangeable: false },
+      ],
+      rarity_rates: [
+        { rarity: 3, rate: 0.03 },
+        { rarity: 2, rate: 0.18 },
+        { rarity: 1, rate: 0.79 },
+      ],
+    });
+
+    const resolved = resolve(exact, [30052, 20083, 10083]);
+    expect(resolved.pickups?.map(pickup => pickup.rate)).toEqual([0.0075, 0.02, 0.04]);
+    expect(resolved.rates_confidence).toBeUndefined();
   });
 
   it('keeps two inferred pickups separate from the remaining top-rarity pool', () => {
