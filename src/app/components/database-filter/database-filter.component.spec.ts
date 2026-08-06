@@ -3,11 +3,10 @@ import { DatabaseFilterComponent } from './database-filter.component';
 
 describe('DatabaseFilterComponent', () => {
   const scenarioNames: Record<number, string> = {
-    0: 'URA Finals',
-    1: 'Unity Cup',
-    2: 'Trackblazer',
-    3: 'Trackblazer',
-    4: 'Grand Concert',
+    1: 'URA Finals',
+    2: 'Unity Cup',
+    3: 'Grand Concert',
+    4: 'Trackblazer',
     5: 'Grand Masters',
     6: 'Project L’Arc',
     7: 'U.A.F.',
@@ -169,19 +168,19 @@ describe('DatabaseFilterComponent', () => {
   });
 
   describe('UQL compilation', () => {
-    it('exposes every supported scenario while grouping API IDs 2 and 3', () => {
+    it('exposes every supported one-based scenario ID independently', () => {
       const component = createComponent();
 
-      expect(component.scenarioOptionIds).toEqual([0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
-      component.onScenarioSelectionChange([0, 2, 4]);
-      expect(component.filterState.scenario_id).toEqual([0, 2, 3, 4]);
+      expect(component.scenarioOptionIds).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+      component.onScenarioSelectionChange([1, 3, 4]);
+      expect(component.filterState.scenario_id).toEqual([1, 3, 4]);
     });
 
     it('compiles a scenario display name to its API ID', () => {
       const component = createComponent();
       component.uqlQuery = 'Scenario = URA Finals';
 
-      expect((component as any).getCompiledUqlQuery()).toBe('scenario_id = 0');
+      expect((component as any).getCompiledUqlQuery()).toBe('scenario_id = 1');
     });
 
     it('compiles a single parenthesized Main has clause before Main has any clauses', () => {

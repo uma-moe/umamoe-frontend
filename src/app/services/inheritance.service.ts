@@ -200,22 +200,9 @@ export class InheritanceService {
     }
     if (filters.scenarioIds?.length) {
       const scenarioIds = [...new Set(filters.scenarioIds)]
-        .filter(id => Number.isInteger(id) && id >= 0)
+        .filter(id => Number.isInteger(id) && id >= 1)
         .sort((a, b) => a - b);
-      if (scenarioIds.includes(0)) {
-        // The structured endpoint reserves zero as its empty/default value.
-        // UQL still exposes the actual indexed scenario_id, including URA (0).
-        const scenarioClause = scenarioIds.length === 1
-          ? 'scenario_id = 0'
-          : `scenario_id in (${scenarioIds.join(',')})`;
-        const existingExpression = effectiveUql
-          ?.trim()
-          .replace(/^\s*where\b\s*/i, '')
-          .replace(/;\s*$/, '');
-        effectiveUql = existingExpression
-          ? `where (${existingExpression}) and (${scenarioClause})`
-          : `where ${scenarioClause}`;
-      } else if (scenarioIds.length) {
+      if (scenarioIds.length) {
         params = params.set('scenario_id', scenarioIds.join(','));
       }
     }

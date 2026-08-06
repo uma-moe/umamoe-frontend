@@ -635,7 +635,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     'base', 'decay', 'weight', 'proc_weight', 'proc_kind', 'affinity'
   ]);
   selectedLimitBreak = 0; // Default to LB0+
-  readonly scenarioOptionIds = [0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+  readonly scenarioOptionIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
   includeMaxFollowers = false; // false = exclude max follower accounts (999), true = include (1000)
   expandedWhiteCategory: WhiteCategoryKey | null = null;
   expandedMainWhiteCategory: WhiteCategoryKey | null = null;
@@ -3350,8 +3350,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       case 'scenario': {
         const scenarioId = Number(chip.id.replace(/^scenario-/, ''));
         if (Number.isInteger(scenarioId)) {
-          const idsToRemove = new Set(this.getScenarioIdsForOption(scenarioId));
-          const remaining = (this.filterState.scenario_id ?? []).filter(id => !idsToRemove.has(id));
+          const remaining = (this.filterState.scenario_id ?? []).filter(id => id !== scenarioId);
           this.filterState.scenario_id = remaining.length ? remaining : undefined;
           this.onFilterChange();
         }
@@ -7006,7 +7005,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       const scenarioIds = scenarioMatch[2]
         ? this.parseUqlNumberList(scenarioMatch[2])
         : [parseInt(scenarioMatch[3], 10)];
-      const validScenarioIds = scenarioIds.filter(id => Number.isInteger(id) && id >= 0);
+      const validScenarioIds = scenarioIds.filter(id => Number.isInteger(id) && id >= 1);
       if (!validScenarioIds.length) return false;
       this.filterState.scenario_id = [...new Set(validScenarioIds)].sort((a, b) => a - b);
       return true;
@@ -8320,9 +8319,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
 
     const selectedIds = new Set(scenarioIds);
     this.selectedScenarioIdsSignature = signature;
-    this.selectedScenarioOptionIdsCache = this.scenarioOptionIds.filter(id =>
-      id === 2 ? selectedIds.has(2) || selectedIds.has(3) : selectedIds.has(id)
-    );
+    this.selectedScenarioOptionIdsCache = this.scenarioOptionIds.filter(id => selectedIds.has(id));
     return this.selectedScenarioOptionIdsCache;
   }
   getSelectedScenarioSummary(): string {
@@ -8335,13 +8332,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     const selected = new Set(
       (Array.isArray(optionIds) ? optionIds : [])
         .filter(id => this.scenarioOptionIds.includes(id))
-        .flatMap(id => this.getScenarioIdsForOption(id))
     );
     this.filterState.scenario_id = selected.size ? [...selected].sort((a, b) => a - b) : undefined;
     this.onFilterChange();
-  }
-  private getScenarioIdsForOption(scenarioId: number): number[] {
-    return scenarioId === 2 ? [2, 3] : [scenarioId];
   }
   // Star Sum Helpers
   getStarSumValue(type: 'blue' | 'pink' | 'green' | 'white'): number | undefined {
