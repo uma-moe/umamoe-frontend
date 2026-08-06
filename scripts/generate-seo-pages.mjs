@@ -63,34 +63,6 @@ function buildStructuredData(pagePath, page, canonicalUrl) {
   return graph;
 }
 
-function renderStaticShell(pagePath, page) {
-  const heading = page.heading || page.title.split('|', 1)[0].trim();
-  const links = [
-    ['/', 'Home'],
-    ['/database', 'Trainer & Parent Search'],
-    ['/tools/lineage-planner', 'Affinity Calculator'],
-    ['/timeline', 'Global Timeline'],
-    ['/tierlist', 'Support Card Tier List'],
-    ['/rankings', 'Trainer Rankings'],
-    ['/circles', 'Club Search'],
-    ['/tools', 'Tools'],
-  ]
-    .filter(([href]) => href !== pagePath)
-    .map(([href, label]) => `<a href="${href}">${escapeHtml(label)}</a>`)
-    .join('');
-
-  return [
-    '<main class="seo-static-shell">',
-    '  <header>',
-    '    <a class="seo-static-brand" href="/">uma.moe</a>',
-    `    <h1>${escapeHtml(heading)}</h1>`,
-    `    <p>${escapeHtml(page.description)}</p>`,
-    '  </header>',
-    `  <nav aria-label="Main pages">${links}</nav>`,
-    '</main>',
-  ].join('\n');
-}
-
 function renderPageHtml(pagePath, page) {
   const canonicalPath = pagePath === '/' ? '/' : pagePath;
   const canonicalUrl = `${siteUrl}${canonicalPath}`;
@@ -134,7 +106,6 @@ function renderPageHtml(pagePath, page) {
     `<meta name="twitter:title" content="${escapeHtml(page.title)}">`,
     `<meta name="twitter:description" content="${escapeHtml(page.description)}">`,
     `<meta name="twitter:image" content="${siteUrl}/assets/logo.webp">`,
-    '<style id="seo-static-style">.seo-static-shell{max-width:72rem;margin:5rem auto;padding:2rem;font:16px/1.6 system-ui,sans-serif;color:#eee}.seo-static-shell h1{font-size:2rem;line-height:1.2}.seo-static-shell p{max-width:52rem;color:#bbb}.seo-static-shell nav{display:flex;flex-wrap:wrap;gap:1rem;margin-top:2rem}.seo-static-shell a{color:#64b5f6}.seo-static-brand{font-weight:700;text-decoration:none}</style>',
   ];
 
   if (structuredData.length) {
@@ -145,7 +116,7 @@ function renderPageHtml(pagePath, page) {
   }
 
   html = addHeadTags(html, tags);
-  return html.replace('<app-root></app-root>', `<app-root>\n${renderStaticShell(pagePath, page)}\n</app-root>`);
+  return html;
 }
 
 for (const [pagePath, page] of Object.entries(pages)) {
