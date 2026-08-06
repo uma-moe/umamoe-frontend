@@ -777,58 +777,72 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         this.cdr.detectChanges();
     }
     toggleCharacterFilter(): void {
+        this.eventFilters.showCharacters = !this.eventFilters.showCharacters;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
     toggleSupportFilter(): void {
+        this.eventFilters.showSupports = !this.eventFilters.showSupports;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
     toggleStoryEventsFilter(): void {
+        this.eventFilters.showStoryEvents = !this.eventFilters.showStoryEvents;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
     toggleChampionsMeetingsFilter(): void {
+        this.eventFilters.showChampionsMeetings = !this.eventFilters.showChampionsMeetings;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
     toggleLegendRacesFilter(): void {
+        this.eventFilters.showLegendRaces = !this.eventFilters.showLegendRaces;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
     togglePaidBannersFilter(): void {
+        this.eventFilters.showPaidBanners = !this.eventFilters.showPaidBanners;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
     toggleCampaignsFilter(): void {
+        this.eventFilters.showCampaigns = !this.eventFilters.showCampaigns;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
     toggleLeagueOfHeroesFilter(): void {
+        this.eventFilters.showLeagueOfHeroes = !this.eventFilters.showLeagueOfHeroes;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
     toggleMastersChallengeFilter(): void {
+        this.eventFilters.showMastersChallenge = !this.eventFilters.showMastersChallenge;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
     toggleTrainerSkillsTestFilter(): void {
+        this.eventFilters.showTrainerSkillsTest = !this.eventFilters.showTrainerSkillsTest;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
     toggleFactorResearchFilter(): void {
+        this.eventFilters.showFactorResearch = !this.eventFilters.showFactorResearch;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
     toggleStrongestTeamFilter(): void {
+        this.eventFilters.showStrongestTeam = !this.eventFilters.showStrongestTeam;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
     toggleRacingCarnivalFilter(): void {
+        this.eventFilters.showRacingCarnival = !this.eventFilters.showRacingCarnival;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
     toggleScenarioReleasesFilter(): void {
+        this.eventFilters.showScenarioReleases = !this.eventFilters.showScenarioReleases;
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
