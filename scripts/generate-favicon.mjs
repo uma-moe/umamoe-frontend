@@ -28,4 +28,4 @@ icoHeader.writeUInt32LE(icoHeader.length, 18);
 
 await writeFile(icoFile, Buffer.concat([icoHeader, png256]));
 
-console.log('Generated black-mark favicon.ico.');
+console.log('Generated transparent-mark favicon.ico.');
