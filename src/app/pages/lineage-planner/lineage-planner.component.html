@@ -50,8 +50,9 @@
           <div class="fork-stem"></div>
           <div class="fork-bar">
             <div class="fork-line"></div>
-            <div class="fork-badge" *ngIf="affinityResult && (sharedAffinity || crossParentRaceAffinity)"
+            <div class="fork-badge" *ngIf="sharedFlowAffinity"
               [matTooltip]="getCrossParentAffinityTooltip()">
+              <span class="cb-lbl">Shared</span>
               <ng-container *ngIf="sharedAffinity">
                 <mat-icon>favorite</mat-icon>
                 <span class="cb-legacy">{{ sharedAffinity }}</span>
@@ -66,15 +67,15 @@
           </div>
           <div class="fork-drops">
             <div class="fork-drop">
-              <div class="drop-label" *ngIf="p1SideTotal"
-                [matTooltip]="'P1 total: aff(target,P1) + aff(P1,GP1) + aff(P1,GP2) + triples'">
-                {{ p1SideTotal }}
+              <div class="drop-label" *ngIf="p1FlowAffinity"
+                [matTooltip]="getSideFlowTooltip('p1')">
+                <span class="drop-label-prefix">P1</span>{{ p1FlowAffinity }}
               </div>
             </div>
             <div class="fork-drop">
-              <div class="drop-label" *ngIf="p2SideTotal"
-                [matTooltip]="'P2 total: aff(target,P2) + aff(P2,GP3) + aff(P2,GP4) + triples'">
-                {{ p2SideTotal }}
+              <div class="drop-label" *ngIf="p2FlowAffinity"
+                [matTooltip]="getSideFlowTooltip('p2')">
+                <span class="drop-label-prefix">P2</span>{{ p2FlowAffinity }}
               </div>
             </div>
           </div>
@@ -86,7 +87,7 @@
           <!-- Parent 1 subtree -->
           <div class="tree-col">
             <div class="branch-chip branch-chip--p" *ngIf="p1SideTotal"
-              [matTooltip]="'P1 total: aff(target,P1) + aff(P1,GP1) + aff(P1,GP2) + triples'">
+              [matTooltip]="getNodeAffinityTooltip(nodes.get('p1')!)">
               <mat-icon>favorite</mat-icon><span>{{ p1SideTotal }}</span>
             </div>
             <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer1[0] }"></ng-container>
@@ -95,22 +96,30 @@
               <div class="fork-stem"></div>
               <div class="fork-bar">
                 <div class="fork-line"></div>
-                <div class="fork-badge" *ngIf="p1PlayerTriple"
-                  [matTooltip]="'Sub-legacy line total: ' + p1PlayerTriple">
-                  <mat-icon>favorite</mat-icon>
-                  <span class="cb-breed">{{ p1PlayerTriple }}</span>
+                <div class="fork-badge" *ngIf="p1DirectFlowAffinity"
+                  [matTooltip]="getParentDirectFlowTooltip('p1')">
+                  <span class="cb-lbl">Direct</span>
+                  <ng-container *ngIf="p1DirectBaseAffinity">
+                    <mat-icon>favorite</mat-icon>
+                    <span class="cb-player">{{ p1DirectBaseAffinity }}</span>
+                  </ng-container>
+                  <span class="cb-sep" *ngIf="p1DirectBaseAffinity && crossParentRaceAffinity">+</span>
+                  <ng-container *ngIf="crossParentRaceAffinity">
+                    <mat-icon class="fork-race-icon">emoji_events</mat-icon>
+                    <span class="cb-race">{{ crossParentRaceAffinity }}</span>
+                  </ng-container>
                 </div>
                 <div class="fork-line"></div>
               </div>
               <div class="fork-drops">
                 <div class="fork-drop">
                   <div class="drop-label" *ngIf="getNodeContribution(nodes.get('p1-1')!) as v">
-                    {{ v }}
+                    <span class="drop-label-prefix">GP1</span>{{ v }}
                   </div>
                 </div>
                 <div class="fork-drop">
                   <div class="drop-label" *ngIf="getNodeContribution(nodes.get('p1-2')!) as v">
-                    {{ v }}
+                    <span class="drop-label-prefix">GP2</span>{{ v }}
                   </div>
                 </div>
               </div>
@@ -163,7 +172,7 @@
           <!-- Parent 2 subtree -->
           <div class="tree-col">
             <div class="branch-chip branch-chip--p" *ngIf="p2SideTotal"
-              [matTooltip]="'P2 total: aff(target,P2) + aff(P2,GP3) + aff(P2,GP4) + triples'">
+              [matTooltip]="getNodeAffinityTooltip(nodes.get('p2')!)">
               <mat-icon>favorite</mat-icon><span>{{ p2SideTotal }}</span>
             </div>
             <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer1[1] }"></ng-container>
@@ -172,22 +181,30 @@
               <div class="fork-stem"></div>
               <div class="fork-bar">
                 <div class="fork-line"></div>
-                <div class="fork-badge" *ngIf="p2PlayerTriple"
-                  [matTooltip]="'Sub-legacy line total: ' + p2PlayerTriple">
-                  <mat-icon>favorite</mat-icon>
-                  <span class="cb-breed">{{ p2PlayerTriple }}</span>
+                <div class="fork-badge" *ngIf="p2DirectFlowAffinity"
+                  [matTooltip]="getParentDirectFlowTooltip('p2')">
+                  <span class="cb-lbl">Direct</span>
+                  <ng-container *ngIf="p2DirectBaseAffinity">
+                    <mat-icon>favorite</mat-icon>
+                    <span class="cb-player">{{ p2DirectBaseAffinity }}</span>
+                  </ng-container>
+                  <span class="cb-sep" *ngIf="p2DirectBaseAffinity && crossParentRaceAffinity">+</span>
+                  <ng-container *ngIf="crossParentRaceAffinity">
+                    <mat-icon class="fork-race-icon">emoji_events</mat-icon>
+                    <span class="cb-race">{{ crossParentRaceAffinity }}</span>
+                  </ng-container>
                 </div>
                 <div class="fork-line"></div>
               </div>
               <div class="fork-drops">
                 <div class="fork-drop">
                   <div class="drop-label" *ngIf="getNodeContribution(nodes.get('p2-1')!) as v">
-                    {{ v }}
+                    <span class="drop-label-prefix">GP3</span>{{ v }}
                   </div>
                 </div>
                 <div class="fork-drop">
                   <div class="drop-label" *ngIf="getNodeContribution(nodes.get('p2-2')!) as v">
-                    {{ v }}
+                    <span class="drop-label-prefix">GP4</span>{{ v }}
                   </div>
                 </div>
               </div>

@@ -2566,6 +2566,9 @@ $col-parent: 2 * $col-gp + $gap-tree;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 2px 8px;
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
@@ -2577,6 +2580,14 @@ $col-parent: 2 * $col-gp + $gap-tree;
   white-space: nowrap;
   line-height: 1;
   z-index: 1;
+}
+
+.drop-label-prefix {
+  color: var(--text-muted);
+  font-family: var(--font-family);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
 .fork-drop:first-child .drop-label {

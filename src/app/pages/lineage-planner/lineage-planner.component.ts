@@ -1645,7 +1645,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     const parts: string[] = [];
     if (this.sharedAffinity) parts.push(`Base P1–P2: ${this.sharedAffinity}`);
     if (this.crossParentRaceAffinity) parts.push(`Shared G1 race affinity: ${this.crossParentRaceAffinity}`);
-    return parts.join(' + ');
+    return `Shared contribution: ${parts.join(' + ')} = ${this.sharedFlowAffinity}`;
   }
 
   getOptimalRaces(): OptimalRaceRecommendation[] {
@@ -1904,19 +1904,54 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     return this.affinityService.getTreeSideTotalAffinity(this.affinityResult, 'p2');
   }
 
+  get p1FlowAffinity(): number {
+    return this.affinityService.getTreeSideFlowAffinity(this.affinityResult, 'p1');
+  }
+
+  get p2FlowAffinity(): number {
+    return this.affinityService.getTreeSideFlowAffinity(this.affinityResult, 'p2');
+  }
+
+  get sharedFlowAffinity(): number {
+    return this.affinityService.getTreeSharedFlowAffinity(this.affinityResult);
+  }
+
   get sharedAffinity(): number {
     if (!this.affinityResult) return 0;
     return this.affinityResult.legacy;
   }
 
-  get p1PlayerTriple(): number {
-    if (!this.affinityResult) return 0;
-    return this.affinityResult.playerP1.tripleLeft + this.affinityResult.playerP1.tripleRight;
+  get p1DirectBaseAffinity(): number {
+    return this.affinityResult?.playerP1.pair ?? 0;
   }
 
-  get p2PlayerTriple(): number {
-    if (!this.affinityResult) return 0;
-    return this.affinityResult.playerP2.tripleLeft + this.affinityResult.playerP2.tripleRight;
+  get p2DirectBaseAffinity(): number {
+    return this.affinityResult?.playerP2.pair ?? 0;
+  }
+
+  get p1DirectFlowAffinity(): number {
+    return this.affinityService.getTreeParentDirectFlowAffinity(this.affinityResult, 'p1');
+  }
+
+  get p2DirectFlowAffinity(): number {
+    return this.affinityService.getTreeParentDirectFlowAffinity(this.affinityResult, 'p2');
+  }
+
+  getSideFlowTooltip(parentPos: 'p1' | 'p2'): string {
+    if (!this.affinityResult) return '';
+    const label = parentPos.toUpperCase();
+    const base = parentPos === 'p1' ? this.affinityResult.playerP1.total : this.affinityResult.playerP2.total;
+    const race = parentPos === 'p1' ? this.affinityResult.race.p1Grandparent : this.affinityResult.race.p2Grandparent;
+    const total = parentPos === 'p1' ? this.p1FlowAffinity : this.p2FlowAffinity;
+    return `${label} branch: Base ${base} + GP race ${race} = ${total}. Shared P1–P2 affinity is shown separately.`;
+  }
+
+  getParentDirectFlowTooltip(parentPos: 'p1' | 'p2'): string {
+    if (!this.affinityResult) return '';
+    const label = parentPos.toUpperCase();
+    const base = parentPos === 'p1' ? this.p1DirectBaseAffinity : this.p2DirectBaseAffinity;
+    const total = parentPos === 'p1' ? this.p1DirectFlowAffinity : this.p2DirectFlowAffinity;
+    return `${label} direct contribution: Target–${label} base ${base} + shared P1–P2 race ${this.crossParentRaceAffinity} = ${total}`;
   }
 
   getNodeContribution(node: LineageNode): number | null {

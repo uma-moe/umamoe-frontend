@@ -384,6 +384,33 @@ export class AffinityService {
       : result.playerP2.total + result.race.p2Node;
   }
 
+  /** Additive branch contribution to the target total, excluding shared P1-P2 affinity. */
+  getTreeSideFlowAffinity(
+    result: TreeAffinityWithRaceResult | null | undefined,
+    parentPos: 'p1' | 'p2',
+  ): number {
+    if (!result) return 0;
+    return parentPos === 'p1'
+      ? result.playerP1.total + result.race.p1Grandparent
+      : result.playerP2.total + result.race.p2Grandparent;
+  }
+
+  /** Affinity shared by the two parent branches and counted once in the target total. */
+  getTreeSharedFlowAffinity(result: TreeAffinityWithRaceResult | null | undefined): number {
+    if (!result) return 0;
+    return result.legacy + result.race.parentPair;
+  }
+
+  /** Non-grandparent portion needed to reconstruct a parent's spark affinity. */
+  getTreeParentDirectFlowAffinity(
+    result: TreeAffinityWithRaceResult | null | undefined,
+    parentPos: 'p1' | 'p2',
+  ): number {
+    if (!result) return 0;
+    const pair = parentPos === 'p1' ? result.playerP1.pair : result.playerP2.pair;
+    return pair + result.race.parentPair;
+  }
+
   getTreeBreedingBaseAffinity(
     result: TreeAffinityResult | null | undefined,
     parentPos: 'p1' | 'p2',
