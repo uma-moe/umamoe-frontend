@@ -28,7 +28,7 @@
   Cloudflare-CDN-Cache-Control: public, max-age=86400, must-revalidate
   CDN-Cache-Control: public, max-age=86400, must-revalidate
 
-/assets/favicon.svg
+/favicon.svg
   Cache-Control: public, max-age=86400, must-revalidate
   Cloudflare-CDN-Cache-Control: public, max-age=86400, must-revalidate
   CDN-Cache-Control: public, max-age=86400, must-revalidate
