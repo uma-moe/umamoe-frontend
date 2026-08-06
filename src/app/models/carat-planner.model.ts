@@ -151,6 +151,8 @@ export interface PlannerFreePullCampaign {
   /** Compatibility for early generated resources. */
   stockable?: boolean;
   default_allocations: PlannerFreePullCampaignAllocation[];
+  provenance?: PlannerDataProvenance;
+  confidence?: string;
   source_url?: string;
 }
 

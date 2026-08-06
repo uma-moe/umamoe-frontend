@@ -486,7 +486,30 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(option.label).toBe('Loves Only You');
     expect(option.imagePath).toBe('/assets/images/character_stand/chara_stand_113202.webp');
     expect(option.fallbackImagePath).toBe('/assets/images/character_stand/chara_stand_113201.webp');
-    expect(option.placeholderImagePath).toBe('assets/images/planner-placeholder-character.svg');
+    expect(option.placeholderImagePath)
+      .toBe('assets/images/character_stand/chara_stand_100101.webp');
+  });
+
+  it('uses bundled game artwork for missing support-card pickups', () => {
+    const component = createComponent();
+    component.events = [{
+      id: 'future-support',
+      title: 'Future support',
+      type: 'support_card_banner',
+      globalReleaseDate: '2031-01-01',
+      pickupCardIds: [39999],
+    }];
+    component.addEvent(component.filteredEvents[0]);
+    const target = component.plan.targets[0];
+    const option = (component as unknown as {
+      buildPickupOption: (
+        targetValue: typeof target,
+        pickup: { pickup_id: number; rate: number; label?: string },
+      ) => { placeholderImagePath: string };
+    }).buildPickupOption(target, { pickup_id: 39999, rate: 0.0075 });
+
+    expect(option.placeholderImagePath)
+      .toBe('assets/images/support_card/half/support_card_s_30031.webp');
   });
 
   it('builds compact scenario selectors with site-native club rank artwork', () => {
@@ -931,6 +954,38 @@ describe('CaratPlannerComponent banner ordering', () => {
     component.toggleRewardGroupAction(mixedGroup);
     expect(component.plan.enabledRewardEventIds).toContain('mixed-campaign');
     expect(component.plan.targets.map(target => target.eventId)).toContain('mixed-campaign');
+  });
+
+  it('links a mixed reward group to its Global news source before a JP source', () => {
+    const component = createComponent();
+    component.events = [{
+      id: 'anniversary',
+      title: 'Anniversary campaign',
+      type: 'character_banner',
+      globalReleaseDate: '2030-01-01',
+      estimatedEndDate: '2030-01-08',
+    }];
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: {
+        rewards: [{
+          id: 'global-reward', event_id: 'anniversary', label: 'Global reward', currency: 'free_jewels',
+          amount: 1500, available_at: '2030-01-01', provenance: 'global_news',
+          source_url: 'https://example.com/news/global-anniversary',
+        }],
+        event_benefits: [{
+          id: 'jp-pulls', event_id: 'anniversary', kind: 'free_pulls', label: 'JP pulls', amount: 80,
+          available_at: '2030-01-01', planner_effect: 'target_free_pulls', provenance: 'jp_news',
+          source_url: 'https://umapyoi.net/news/100?lang=jp',
+        }],
+      },
+    };
+
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    expect(component.displayedRewardGroups[0].sourceUrl).toBe('https://example.com/news/global-anniversary');
+    expect(component.displayedRewardGroups[0].sourceLabel).toBe('News post');
   });
 
   it('shows every reward in the scroll list and filters it down immediately', () => {
