@@ -1644,11 +1644,15 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     return `Base: ${this.affinityResult.relationTotal} + ${race}`;
   }
 
+  getTotalCompositionTooltip(): string {
+    return `Overall total: P1 contribution ${this.p1FlowAffinity} + shared contribution ${this.sharedFlowAffinity} + P2 contribution ${this.p2FlowAffinity} = ${this.affinityTotal ?? 0}. Each relationship is counted once here; individual spark affinity is shown on each character card.`;
+  }
+
   getCrossParentAffinityTooltip(): string {
     const parts: string[] = [];
     if (this.sharedAffinity) parts.push(`Base P1–P2: ${this.sharedAffinity}`);
     if (this.crossParentRaceAffinity) parts.push(`Shared G1 race affinity: ${this.crossParentRaceAffinity}`);
-    return `Shared contribution: ${parts.join(' + ')} = ${this.sharedFlowAffinity}`;
+    return `Shared contribution counted once in the overall total: ${parts.join(' + ')} = ${this.sharedFlowAffinity}. The race portion is also included in each parent's individual spark affinity.`;
   }
 
   getOptimalRaces(): OptimalRaceRecommendation[] {
@@ -1946,7 +1950,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     const base = parentPos === 'p1' ? this.affinityResult.playerP1.total : this.affinityResult.playerP2.total;
     const race = parentPos === 'p1' ? this.affinityResult.race.p1Grandparent : this.affinityResult.race.p2Grandparent;
     const total = parentPos === 'p1' ? this.p1FlowAffinity : this.p2FlowAffinity;
-    return `${label} branch: Base ${base} + GP race ${race} = ${total}. Shared P1–P2 affinity is shown separately.`;
+    return `${label} contribution to the overall total: Base ${base} + lineage race ${race} = ${total}. Shared P1–P2 affinity is added separately.`;
   }
 
   getParentDirectFlowTooltip(parentPos: 'p1' | 'p2'): string {
@@ -1954,7 +1958,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     const label = parentPos.toUpperCase();
     const base = parentPos === 'p1' ? this.p1DirectBaseAffinity : this.p2DirectBaseAffinity;
     const total = parentPos === 'p1' ? this.p1DirectFlowAffinity : this.p2DirectFlowAffinity;
-    return `${label} direct contribution: Target–${label} base ${base} + shared P1–P2 race ${this.crossParentRaceAffinity} = ${total}`;
+    return `${label} spark affinity direct part: Target–${label} base ${base} + shared P1–P2 race ${this.crossParentRaceAffinity} = ${total}`;
   }
 
   getNodeContribution(node: LineageNode): number | null {
@@ -1979,17 +1983,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     return total > 0 ? total : null;
   }
 
-  /** Breakdown tooltip for the base portion shown inside a node card. */
-  getBaseAffinityTooltip(node: LineageNode): string {
-    if (!this.isPlannerAffinityPosition(node.position)) return '';
-    const base = this.affinityService.getTreeNodeBaseAffinity(this.affinityResult, node.position) ?? 0;
-    const legacy = node.position === 'p1' || node.position === 'p2'
-      ? this.affinityResult?.legacy ?? 0
-      : 0;
-    return legacy ? `Base: ${base} + P1-P2: ${legacy}` : `Base affinity: ${base}`;
-  }
-
-  /** Breakdown tooltip for the combined affinity chip. */
+  /** Breakdown tooltip for the affinity used by this character's spark rolls. */
   getNodeAffinityTooltip(node: LineageNode): string {
     if (!this.isPlannerAffinityPosition(node.position)) return '';
     const base = this.affinityService.getTreeNodeBaseAffinity(this.affinityResult, node.position) ?? 0;
@@ -1997,10 +1991,11 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       ? this.affinityResult?.legacy ?? 0
       : 0;
     const race = this.getNodeRaceAffinity(node);
-    const parts = [`Base: ${base}`];
-    if (legacy) parts.push(`P1-P2: ${legacy}`);
-    if (race) parts.push(`Race: ${race}`);
-    return parts.join(' + ');
+    const total = this.getNodeAffinity(node);
+    const parts = [`Base ${base}`];
+    if (legacy) parts.push(`P1-P2 ${legacy}`);
+    if (race) parts.push(`Race ${race}`);
+    return `Spark affinity ${total}: ${parts.join(' + ')}`;
   }
 
   getNodeRaceAffinity(node: LineageNode): number {
