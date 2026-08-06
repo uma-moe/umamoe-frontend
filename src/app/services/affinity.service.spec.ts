@@ -59,6 +59,34 @@ describe('AffinityService race saddle groups', () => {
     expect(race.p1Node + race.p2Node - race.parentPair).toBe(race.total);
   });
 
+  it('keeps race affinity for spark chance when a self-cested node has zero base affinity', () => {
+    const result = {
+      p1Breeding: { left: 0, right: 0, total: 0 },
+      p2Breeding: { left: 0, right: 0, total: 0 },
+      playerP1: { pair: 0, tripleLeft: 0, tripleRight: 0, total: 0 },
+      playerP2: { pair: 0, tripleLeft: 0, tripleRight: 0, total: 0 },
+      legacy: 0,
+      relationTotal: 0,
+      total: 48,
+      race: {
+        parentPair: 0,
+        p1Left: 48,
+        p1Right: 0,
+        p2Left: 0,
+        p2Right: 0,
+        p1Grandparent: 48,
+        p2Grandparent: 0,
+        p1Node: 48,
+        p2Node: 0,
+        total: 48,
+      },
+    };
+
+    expect(service.getTreeNodeBaseAffinity(result, 'p1-1')).toBeNull();
+    expect(service.getTreeNodeTotalAffinity(result, 'p1-1')).toBe(48);
+    expect(service.getTreeNodeTotalAffinity(result, 'p1-2')).toBeNull();
+  });
+
   it('ranks races shared by both parents ahead of one-parent overlaps', () => {
     replaceRaceSaddleData({
       races: [
