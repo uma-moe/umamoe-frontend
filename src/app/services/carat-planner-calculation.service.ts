@@ -9,6 +9,7 @@ import {
   FREE_PULL_CAMPAIGN_EXCLUDED_SELECTION,
   PickupOddsResult,
   PlannerBalances,
+  PlannerCompetitiveRewardVariant,
   PlannerCurrency,
   PlannerGachaEntry,
   PlannerIncomeRule,
@@ -17,10 +18,12 @@ import {
   PlannerTarget,
   PlannerTargetProjection,
 } from '../models/carat-planner.model';
+import { plannerRewardBundles } from '../utils/planner-reward-currencies';
 import {
-  plannerRewardBundles,
-} from '../utils/planner-reward-currencies';
-import { PLANNER_COMPETITION_ASSUMPTION_GROUPS } from '../utils/carat-planner-competition-assumptions';
+  PLANNER_COMPETITION_ASSUMPTION_GROUPS,
+  PLANNER_DATA_DRIVEN_COMPETITION_ASSUMPTION_GROUPS,
+  resolveDataDrivenCompetitionAssumption,
+} from '../utils/carat-planner-competition-assumptions';
 import { CaratPullProbabilityService } from './carat-pull-probability.service';
 
 const DAY_MS = 86_400_000;
@@ -214,6 +217,37 @@ export class CaratPlannerCalculationService {
           if (amount <= 0) continue;
           ledger.push({
             id: `competition-assumption:${event.id}:${selectedOption.value}:${currency}`,
+            label: `${group.label}: ${selectedOption.label}`,
+            date,
+            currency,
+            amount,
+            source: 'rule',
+          });
+        }
+      }
+    }
+
+    for (const group of PLANNER_DATA_DRIVEN_COMPETITION_ASSUMPTION_GROUPS) {
+      const selectionValue = plan.scenarioSelections[group.id];
+      if (!selectionValue) continue;
+      const variantsByEvent = new Map<string, PlannerCompetitiveRewardVariant[]>();
+      for (const variant of data.rewards.competitive_variants ?? []) {
+        if (variant.competition !== group.eventType) continue;
+        const variants = variantsByEvent.get(variant.event_id) ?? [];
+        variants.push(variant);
+        variantsByEvent.set(variant.event_id, variants);
+      }
+      for (const [eventId, variants] of variantsByEvent) {
+        if (disabledEvents.has(eventId) || plan.variableRewardSelections?.[eventId]) continue;
+        const selectedOption = resolveDataDrivenCompetitionAssumption(group.id, selectionValue, variants);
+        if (!selectedOption) continue;
+        const date = this.competitiveVariantDate(eventId, variants, events);
+        if (!date || date < startDate || date > endDate) continue;
+        for (const [currency, rawAmount] of Object.entries(selectedOption.amounts) as [PlannerCurrency, number][]) {
+          const amount = this.nonNegativeInt(rawAmount);
+          if (amount <= 0) continue;
+          ledger.push({
+            id: `competition-assumption:${eventId}:${selectionValue}:${currency}`,
             label: `${group.label}: ${selectedOption.label}`,
             date,
             currency,
@@ -570,6 +604,28 @@ export class CaratPlannerCalculationService {
     events: readonly CaratPlannerTimelineEvent[],
   ): string {
     const event = events.find(item => item.id === eventId);
+    return this.toDateKey(event?.estimatedEndDate)
+      || this.toDateKey(event?.globalReleaseDate ?? event?.estimatedGlobalDate ?? event?.jpReleaseDate);
+  }
+
+  private competitiveVariantDate(
+    eventId: string,
+    variants: readonly PlannerCompetitiveRewardVariant[],
+    events: readonly CaratPlannerTimelineEvent[],
+  ): string {
+    const sourcedDate = variants
+      .map(variant => this.toDateKey(variant.available_at))
+      .filter(Boolean)
+      .sort()[0];
+    if (sourcedDate) return sourcedDate;
+
+    const masterIds = new Set(variants.map(variant => variant.master_event_id).filter(Number.isFinite));
+    const event = events.find(item => item.id === eventId)
+      ?? events.find(item => {
+        const trailingId = Number(item.id.match(/(\d+)$/)?.[1]);
+        return masterIds.has(trailingId)
+          || [...masterIds].some(masterId => item.imagePath?.endsWith(`/${masterId}.webp`));
+      });
     return this.toDateKey(event?.estimatedEndDate)
       || this.toDateKey(event?.globalReleaseDate ?? event?.estimatedGlobalDate ?? event?.jpReleaseDate);
   }

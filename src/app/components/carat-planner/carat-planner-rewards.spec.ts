@@ -183,6 +183,92 @@ describe('CaratPlannerComponent reward coverage', () => {
     expect(component.plan.variableRewardSelections?.['champions-meeting-811']).toEqual(stored);
   });
 
+  it('applies Strongest Team tiers and Legend Race clear counts to every matching reward group', () => {
+    localStorage.removeItem(CaratPlannerPersistenceService.STORAGE_KEY);
+    const persistence = new CaratPlannerPersistenceService('browser' as never);
+    const component = new CaratPlannerComponent(
+      new CaratPlannerCalculationService(),
+      new CaratPullProbabilityService(),
+      persistence,
+      {} as never,
+      new TimelineAvatarService(),
+      { markForCheck: () => undefined } as unknown as ChangeDetectorRef,
+    );
+    component.plan = persistence.activePlan;
+    component.plan.projectionStartDate = '2030-01-01';
+    component.events = [
+      { id: 'strongest-1', title: 'Strongest Team', type: 'strongest_team', globalReleaseDate: '2031-01-01' },
+      { id: 'legend-1', title: 'Legend Race', type: 'legend_race', globalReleaseDate: '2031-02-01' },
+    ];
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: {
+        rewards: [],
+        competitive_variants: [
+          {
+            id: 'strong-rank-1', competition: 'strongest_team', event_id: 'strongest-1', master_event_id: 1,
+            label: 'Team rank 1 (0-999 evaluation points)',
+            source_items: [{ item_category: 90, item_id: 43, amount: 100 }],
+          },
+          {
+            id: 'strong-rank-2', competition: 'strongest_team', event_id: 'strongest-1', master_event_id: 1,
+            label: 'Team rank 2 (1000-1999 evaluation points)',
+            source_items: [{ item_category: 90, item_id: 43, amount: 200 }],
+          },
+          {
+            id: 'strong-missions', competition: 'strongest_team', event_id: 'strongest-1', master_event_id: 1,
+            label: 'Event missions (full completion)',
+            source_items: [{ item_category: 40, item_id: 41, amount: 1 }],
+          },
+          ...[1, 2, 3].map(index => ({
+            id: `legend-${index}`,
+            competition: 'legend_race',
+            event_id: 'legend-1',
+            master_event_id: 2,
+            label: `First clear ${index}`,
+            source_items: [{ item_category: 90, item_id: 43, amount: 150, order_min: index }],
+          })),
+        ],
+      },
+    };
+    component.plan.variableRewardSelections = {
+      'strongest-1': {
+        optionId: 'old-override', label: 'Old override', availableAt: '2031-01-01', amounts: { free_jewels: 1 },
+      },
+    };
+
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    const strongestAssumption = component.scenarioGroupOptions.find(group =>
+      group.id === 'strongest_team_reward_tier')!;
+    const legendAssumption = component.scenarioGroupOptions.find(group =>
+      group.id === 'legend_race_clears')!;
+    expect(strongestAssumption.options.map(option => [option.value, option.label])).toEqual([
+      ['tier_1', 'Team rank 1 (0-999 evaluation points)'],
+      ['tier_2', 'Team rank 2 (1000-1999 evaluation points)'],
+      ['all', 'All milestones + event missions'],
+    ]);
+    expect(legendAssumption.options.map(option => option.value)).toEqual([
+      'opponents_1', 'opponents_2', 'opponents_3', 'all',
+    ]);
+
+    component.setScenario(strongestAssumption.id, 'tier_2');
+    component.setScenario(legendAssumption.id, 'all');
+    expect(component.plan.variableRewardSelections?.['strongest-1']).toBeUndefined();
+
+    const strongestRewards = component.rewardGroups.find(group => group.eventId === 'strongest-1')!;
+    const legendRewards = component.rewardGroups.find(group => group.eventId === 'legend-1')!;
+    expect(component.selectedVariableRewardOption(strongestRewards)).toEqual(jasmine.objectContaining({
+      label: 'Team rank 2 (1000-1999 evaluation points)',
+      amountLabel: '300 Carats',
+    }));
+    expect(component.selectedVariableRewardOption(legendRewards)).toEqual(jasmine.objectContaining({
+      label: '3 opponents cleared',
+      amountLabel: '450 Carats',
+    }));
+  });
+
   it('steps variable rewards in order without wrapping past not counted', () => {
     localStorage.removeItem(CaratPlannerPersistenceService.STORAGE_KEY);
     const persistence = new CaratPlannerPersistenceService('browser' as never);

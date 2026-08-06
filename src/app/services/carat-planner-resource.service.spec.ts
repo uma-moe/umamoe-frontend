@@ -54,3 +54,20 @@ describe('CaratPlannerResourceService banner detail failures', () => {
     subscription.unsubscribe();
   });
 });
+
+describe('CaratPlannerResourceService reward precedence', () => {
+  it('publishes the same Global-authoritative rewards to the timeline and planner bundle', async () => {
+    const service = new CaratPlannerResourceService({} as never, 'browser' as unknown as object);
+    spyOn<any>(service, 'loadArtifact').and.resolveTo({
+      rewards: [
+        { id: 'global', event_id: 'anniversary', label: 'Global reward', currency: 'free_jewels', amount: 1500, available_at: '2030-01-01', provenance: 'global_news' },
+        { id: 'jp', event_id: 'anniversary', label: 'JP reward', currency: 'free_jewels', amount: 3000, available_at: '2030-01-01', provenance: 'jp_news' },
+      ],
+    });
+
+    const rewards = await service.loadRewards();
+
+    expect(rewards.rewards.map(reward => reward.id)).toEqual(['global']);
+    expect(service.currentBundle.rewards).toBe(rewards);
+  });
+});

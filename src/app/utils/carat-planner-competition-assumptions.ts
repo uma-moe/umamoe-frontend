@@ -1,4 +1,17 @@
-import { PlannerCurrency } from '../models/carat-planner.model';
+import {
+  PlannerCompetitiveRewardVariant,
+  PlannerCurrency,
+} from '../models/carat-planner.model';
+import {
+  isProjectableCompetitiveVariant,
+  plannerSourceItemTotals,
+} from './planner-reward-currencies';
+
+export type PlannerCompetitionEventType =
+  | 'champions_meeting'
+  | 'league_of_heroes'
+  | 'strongest_team'
+  | 'legend_race';
 
 export interface PlannerCompetitionAssumptionOption {
   value: string;
@@ -9,10 +22,25 @@ export interface PlannerCompetitionAssumptionOption {
 export interface PlannerCompetitionAssumptionGroup {
   id: string;
   label: string;
-  eventType: 'champions_meeting' | 'league_of_heroes';
+  eventType: Extract<PlannerCompetitionEventType, 'champions_meeting' | 'league_of_heroes'>;
   icon: string;
   scheduleLabel: string;
   options: readonly PlannerCompetitionAssumptionOption[];
+}
+
+export interface PlannerDataDrivenCompetitionAssumptionGroup {
+  id: string;
+  label: string;
+  eventType: Extract<PlannerCompetitionEventType, 'strongest_team' | 'legend_race'>;
+  icon: string;
+  scheduleLabel: string;
+  selectionMode: 'reward_tier' | 'opponents_cleared';
+}
+
+export interface PlannerDataDrivenCompetitionRewardOption {
+  id: string;
+  label: string;
+  amounts: Partial<Record<PlannerCurrency, number>>;
 }
 
 function outcome(
@@ -77,8 +105,131 @@ export const PLANNER_COMPETITION_ASSUMPTION_GROUPS: readonly PlannerCompetitionA
   },
 ] as const;
 
+/**
+ * Global selectors whose projected amount must be derived from each event's
+ * generated competitive reward rows. Strongest Team milestone tables can
+ * change between events, and Legend Races do not always have the same number
+ * of opponents, so fixed totals would make later occurrences inaccurate.
+ */
+export const PLANNER_DATA_DRIVEN_COMPETITION_ASSUMPTION_GROUPS:
+readonly PlannerDataDrivenCompetitionAssumptionGroup[] = [
+  {
+    id: 'strongest_team_reward_tier',
+    label: 'Strongest Team',
+    eventType: 'strongest_team',
+    icon: 'group_work',
+    scheduleLabel: 'Each matching event',
+    selectionMode: 'reward_tier',
+  },
+  {
+    id: 'legend_race_clears',
+    label: 'Legend Races',
+    eventType: 'legend_race',
+    icon: 'sports_motorsports',
+    scheduleLabel: 'Each matching event',
+    selectionMode: 'opponents_cleared',
+  },
+] as const;
+
+export function buildDataDrivenCompetitionRewardOptions(
+  variants: readonly PlannerCompetitiveRewardVariant[],
+): PlannerDataDrivenCompetitionRewardOption[] {
+  const competition = variants[0]?.competition;
+  if (competition !== 'strongest_team' && competition !== 'legend_race') return [];
+
+  const projectable = variants.filter(variant => isProjectableCompetitiveVariant(variant));
+  const missionVariants = competition === 'strongest_team'
+    ? projectable.filter(variant => /event missions/i.test(variant.label))
+    : [];
+  const resultVariants = projectable
+    .filter(variant => !missionVariants.includes(variant))
+    .sort((left, right) => competitiveOutcomeOrder(left) - competitiveOutcomeOrder(right)
+      || left.label.localeCompare(right.label));
+  const totals: Partial<Record<PlannerCurrency, number>> = {};
+  const options = resultVariants.map((variant, index) => {
+    addVariantAmounts(totals, variant);
+    return {
+      id: variant.id,
+      label: competition === 'legend_race'
+        ? `${index + 1} ${index === 0 ? 'opponent' : 'opponents'} cleared`
+        : cleanCompetitiveOutcomeLabel(variant.label),
+      amounts: { ...totals },
+    };
+  });
+
+  if (missionVariants.length > 0) {
+    const amounts = { ...totals };
+    missionVariants.forEach(variant => addVariantAmounts(amounts, variant));
+    options.push({
+      id: missionVariants.map(variant => variant.id).join('+'),
+      label: 'All milestones + event missions',
+      amounts,
+    });
+  }
+  return options;
+}
+
+export function resolveDataDrivenCompetitionAssumption(
+  groupId: string,
+  selectionValue: string | undefined,
+  variants: readonly PlannerCompetitiveRewardVariant[],
+): PlannerDataDrivenCompetitionRewardOption | undefined {
+  if (!selectionValue) return undefined;
+  const group = PLANNER_DATA_DRIVEN_COMPETITION_ASSUMPTION_GROUPS.find(item => item.id === groupId);
+  if (!group || variants[0]?.competition !== group.eventType) return undefined;
+  const options = buildDataDrivenCompetitionRewardOptions(variants);
+  if (options.length === 0) return undefined;
+  if (selectionValue === 'all') return options[options.length - 1];
+
+  const selectedNumber = Number(selectionValue.match(/\d+/)?.[0]);
+  if (!Number.isInteger(selectedNumber) || selectedNumber < 1) return undefined;
+  const tierOptions = group.selectionMode === 'reward_tier'
+    && /all milestones/i.test(options[options.length - 1].label)
+    ? options.slice(0, -1)
+    : options;
+  if (tierOptions.length === 0) return undefined;
+  return tierOptions[Math.min(selectedNumber, tierOptions.length) - 1];
+}
+
+export function plannerDataDrivenCompetitionAssumptionGroup(
+  groupId: string,
+): PlannerDataDrivenCompetitionAssumptionGroup | undefined {
+  return PLANNER_DATA_DRIVEN_COMPETITION_ASSUMPTION_GROUPS.find(group => group.id === groupId);
+}
+
+export function plannerDataDrivenCompetitionAssumptionForEventType(
+  eventType: string | undefined,
+): PlannerDataDrivenCompetitionAssumptionGroup | undefined {
+  return PLANNER_DATA_DRIVEN_COMPETITION_ASSUMPTION_GROUPS.find(group => group.eventType === eventType);
+}
+
+function addVariantAmounts(
+  totals: Partial<Record<PlannerCurrency, number>>,
+  variant: PlannerCompetitiveRewardVariant,
+): void {
+  for (const [currency, amount] of plannerSourceItemTotals(variant.source_items)) {
+    totals[currency] = (totals[currency] ?? 0) + amount;
+  }
+}
+
+function competitiveOutcomeOrder(variant: PlannerCompetitiveRewardVariant): number {
+  const rangeStart = Number(variant.label.match(/\((\d+)(?:-|\s)/)?.[1]);
+  if (Number.isFinite(rangeStart)) return rangeStart;
+  const rank = Number(variant.label.match(/(?:Team rank|rank)\s+(\d+)/i)?.[1]);
+  if (Number.isFinite(rank)) return rank;
+  return Number(variant.source_items[0]?.order_min) || Number.MAX_SAFE_INTEGER;
+}
+
+function cleanCompetitiveOutcomeLabel(label: string): string {
+  return label
+    .replace(/^League rank type\s+\d+,\s*/i, '')
+    .replace(/\s*\((?:rate|reward set)[^)]+\)\s*$/i, '')
+    .trim();
+}
+
 export function plannerCompetitionAssumptionGroup(
   groupId: string,
-): PlannerCompetitionAssumptionGroup | undefined {
-  return PLANNER_COMPETITION_ASSUMPTION_GROUPS.find(group => group.id === groupId);
+): PlannerCompetitionAssumptionGroup | PlannerDataDrivenCompetitionAssumptionGroup | undefined {
+  return PLANNER_COMPETITION_ASSUMPTION_GROUPS.find(group => group.id === groupId)
+    ?? plannerDataDrivenCompetitionAssumptionGroup(groupId);
 }

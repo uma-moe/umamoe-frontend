@@ -2,6 +2,7 @@ import {
   CaratPlan,
   CaratPlannerDataBundle,
   FREE_PULL_CAMPAIGN_EXCLUDED_SELECTION,
+  PlannerCompetitiveRewardVariant,
   PlannerGachaEntry,
   PlannerTarget,
 } from '../models/carat-planner.model';
@@ -233,6 +234,44 @@ describe('CaratPlannerCalculationService', () => {
     expect(target.balanceBefore.supportTickets).toBe(2 + 2 + 2);
     expect(target.income.filter(entry => entry.id.includes('champions-meeting-2')).length).toBe(3);
     expect(target.income.some(entry => entry.id.startsWith('competition-assumption:champions-meeting-2'))).toBeFalse();
+  });
+
+  it('projects global Strongest Team tiers and Legend Race clear counts across every occurrence', () => {
+    const plan = makePlan({
+      scenarioSelections: {
+        strongest_team_reward_tier: 'tier_2',
+        legend_race_clears: 'opponents_3',
+      },
+      targets: [makeTarget({ bannerEnd: '2026-02-01', customPullDate: '2026-02-01' })],
+    });
+    const variants = [
+      ...strongestTeamVariants('strongest-1', '2026-01-05', 100, 200),
+      ...strongestTeamVariants('strongest-2', '2026-01-10', 50, 75),
+      ...strongestTeamVariants('strongest-3', '2026-01-12', 25, 30)
+        .filter(variant => !variant.id.endsWith('tier-2')),
+      ...legendRaceVariants('legend-1', '2026-01-15', 3, 150),
+      ...legendRaceVariants('legend-2', '2026-01-20', 2, 150),
+    ];
+    const data: CaratPlannerDataBundle = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards: [], competitive_variants: variants },
+    };
+
+    const projection = service.project(plan, data);
+    const target = projection.targets[0];
+
+    // Strongest Team tier 2 is cumulative (300 + 125), and an event with
+    // fewer tiers stops at its highest tier without including its missions.
+    // The requested third Legend clear safely becomes "all" for two opponents.
+    expect(target.balanceBefore.freeJewels).toBe(300 + 125 + 25 + 450 + 300);
+    expect(target.balanceBefore.umaTickets).toBe(0);
+    expect(target.income.filter(entry => entry.id.startsWith('competition-assumption:')).length).toBe(5);
+
+    plan.scenarioSelections['strongest_team_reward_tier'] = 'all';
+    const allMilestones = service.project(plan, data).targets[0];
+    expect(allMilestones.balanceBefore.freeJewels).toBe(target.balanceBefore.freeJewels);
+    expect(allMilestones.balanceBefore.umaTickets).toBe(3);
   });
 
   it('projects LB-crystal rewards and support-banner crystal budgets', () => {
@@ -672,6 +711,53 @@ describe('CaratPlannerCalculationService', () => {
     expect(afterData.targets.every((target, index) => target !== afterBalance.targets[index])).toBeTrue();
   });
 });
+
+function strongestTeamVariants(
+  eventId: string,
+  availableAt: string,
+  firstTier: number,
+  secondTier: number,
+): PlannerCompetitiveRewardVariant[] {
+  return [
+    {
+      id: `${eventId}-tier-1`, competition: 'strongest_team', event_id: eventId, master_event_id: 1,
+      label: 'Team rank 1 (0-999 evaluation points)', available_at: availableAt,
+      source_items: [{ item_category: 90, item_id: 43, amount: firstTier }],
+    },
+    {
+      id: `${eventId}-tier-2`, competition: 'strongest_team', event_id: eventId, master_event_id: 1,
+      label: 'Team rank 2 (1000-1999 evaluation points)', available_at: availableAt,
+      source_items: [{ item_category: 90, item_id: 43, amount: secondTier }],
+    },
+    {
+      id: `${eventId}-missions`, competition: 'strongest_team', event_id: eventId, master_event_id: 1,
+      label: 'Event missions (full completion)', available_at: availableAt,
+      source_items: [{ item_category: 40, item_id: 41, amount: 1 }],
+    },
+  ];
+}
+
+function legendRaceVariants(
+  eventId: string,
+  availableAt: string,
+  opponents: number,
+  caratsPerOpponent: number,
+): PlannerCompetitiveRewardVariant[] {
+  return Array.from({ length: opponents }, (_, index) => ({
+    id: `${eventId}-opponent-${index + 1}`,
+    competition: 'legend_race',
+    event_id: eventId,
+    master_event_id: 1,
+    label: `First clear ${index + 1}`,
+    available_at: availableAt,
+    source_items: [{
+      item_category: 90,
+      item_id: 43,
+      amount: caratsPerOpponent,
+      order_min: index + 1,
+    }],
+  }));
+}
 
 function makePlan(overrides: Partial<CaratPlan> = {}): CaratPlan {
   return {

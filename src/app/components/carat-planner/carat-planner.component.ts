@@ -54,8 +54,13 @@ import {
   timelineEventMasterId,
 } from '../../utils/timeline-event-image';
 import {
+  buildDataDrivenCompetitionRewardOptions,
   PLANNER_COMPETITION_ASSUMPTION_GROUPS,
+  PLANNER_DATA_DRIVEN_COMPETITION_ASSUMPTION_GROUPS,
   plannerCompetitionAssumptionGroup,
+  plannerDataDrivenCompetitionAssumptionForEventType,
+  plannerDataDrivenCompetitionAssumptionGroup,
+  resolveDataDrivenCompetitionAssumption,
 } from '../../utils/carat-planner-competition-assumptions';
 import { CaratPlannerCalculationService } from '../../services/carat-planner-calculation.service';
 import { CaratPlannerPersistenceService } from '../../services/carat-planner-persistence.service';
@@ -82,6 +87,8 @@ const PLANNER_CURRENCY_ITEM_IDS: Readonly<Record<string, number>> = {
 };
 const PREPARED_PLANNER_ITEM_IDS = new Set([41, 43, 44, 59, 110, 111, 115, 141, 149, 150, 164, 165, 178, 197, 205, 214, 255]);
 const VARIABLE_REWARD_NOT_COUNTED = '__not_counted__';
+const PLANNER_CHARACTER_PLACEHOLDER = 'assets/images/character_stand/chara_stand_100101.webp';
+const PLANNER_SUPPORT_PLACEHOLDER = 'assets/images/support_card/half/support_card_s_30031.webp';
 const VISIBLE_REWARD_CURRENCIES = new Set<PlannerCurrency>([
   'free_jewels',
   'paid_jewels',
@@ -713,6 +720,18 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     }
 
     const eventType = competition ?? this.allEvents.find(event => event.id === eventId)?.type;
+    const dataDrivenGroup = plannerDataDrivenCompetitionAssumptionForEventType(eventType);
+    if (dataDrivenGroup) {
+      const selected = resolveDataDrivenCompetitionAssumption(
+        dataDrivenGroup.id,
+        this.plan.scenarioSelections[dataDrivenGroup.id],
+        this.data.rewards.competitive_variants?.filter(variant => variant.event_id === eventId) ?? [],
+      );
+      if (!selected) return VARIABLE_REWARD_NOT_COUNTED_OPTION;
+      return options.find(option => option.id === selected.id)
+        ?? options.find(option => this.sameVariableRewardAmounts(option.amounts, selected.amounts))
+        ?? VARIABLE_REWARD_NOT_COUNTED_OPTION;
+    }
     const assumptionGroup = PLANNER_COMPETITION_ASSUMPTION_GROUPS.find(group => group.eventType === eventType);
     const selectedValue = assumptionGroup && this.plan.scenarioSelections[assumptionGroup.id];
     const selectedAssumption = assumptionGroup?.options.find(option => option.value === selectedValue);
@@ -1152,6 +1171,15 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       values.add(rule.id);
     }
     this.plan.enabledIncomeRuleIds = [...values];
+    const dataDrivenGroup = plannerDataDrivenCompetitionAssumptionGroup(group);
+    if (dataDrivenGroup) {
+      const affectedEventIds = new Set((this.data.rewards.competitive_variants ?? [])
+        .filter(variant => variant.competition === dataDrivenGroup.eventType)
+        .map(variant => variant.event_id));
+      const selections = { ...(this.plan.variableRewardSelections ?? {}) };
+      affectedEventIds.forEach(eventId => delete selections[eventId]);
+      this.plan.variableRewardSelections = selections;
+    }
     this.save();
   }
 
@@ -1236,9 +1264,79 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         amountLabel: this.competitionAssumptionAmountLabel(option.amounts),
       })),
     }));
-    this.scenarioGroupOptions = [...resourceGroups, ...competitionGroups];
+    this.scenarioGroupOptions = [
+      ...resourceGroups,
+      ...competitionGroups,
+      ...this.dataDrivenCompetitionScenarioGroups(),
+    ];
     this.displayedRules = this.data.income.rules.filter(rule => !rule.scenario_group);
     this.filterRewards();
+  }
+
+  private dataDrivenCompetitionScenarioGroups(): PlannerScenarioGroupView[] {
+    return PLANNER_DATA_DRIVEN_COMPETITION_ASSUMPTION_GROUPS.flatMap(group => {
+      const variantsByEvent = new Map<string, PlannerCompetitiveRewardVariant[]>();
+      for (const variant of this.data.rewards.competitive_variants ?? []) {
+        if (variant.competition !== group.eventType) continue;
+        const variants = variantsByEvent.get(variant.event_id) ?? [];
+        variants.push(variant);
+        variantsByEvent.set(variant.event_id, variants);
+      }
+      const eventVariants = [...variantsByEvent.values()]
+        .filter(variants => buildDataDrivenCompetitionRewardOptions(variants).length > 0);
+      if (eventVariants.length === 0) return [];
+
+      if (group.selectionMode === 'opponents_cleared') {
+        const options: PlannerScenarioOptionView[] = [1, 2, 3].map(count => ({
+          value: `opponents_${count}`,
+          label: `${count} ${count === 1 ? 'opponent' : 'opponents'} cleared`,
+          amountLabel: this.dataDrivenScenarioAmountLabel(group.id, `opponents_${count}`, eventVariants),
+        }));
+        options.push({
+          value: 'all',
+          label: 'All opponents cleared',
+          amountLabel: this.dataDrivenScenarioAmountLabel(group.id, 'all', eventVariants),
+        });
+        return [{
+          id: group.id,
+          label: group.label,
+          scheduleLabel: group.scheduleLabel,
+          options,
+        }];
+      }
+
+      const representative = eventVariants
+        .map(variants => buildDataDrivenCompetitionRewardOptions(variants))
+        .sort((left, right) => right.length - left.length)[0];
+      const options = representative.map((option, index) => {
+        const value = /all milestones/i.test(option.label) ? 'all' : `tier_${index + 1}`;
+        return {
+          value,
+          label: option.label,
+          amountLabel: this.dataDrivenScenarioAmountLabel(group.id, value, eventVariants),
+        };
+      });
+      return options.length === 0 ? [] : [{
+        id: group.id,
+        label: group.label,
+        scheduleLabel: group.scheduleLabel,
+        options,
+      }];
+    });
+  }
+
+  private dataDrivenScenarioAmountLabel(
+    groupId: string,
+    selectionValue: string,
+    eventVariants: readonly (readonly PlannerCompetitiveRewardVariant[])[],
+  ): string {
+    const labels = new Set(eventVariants
+      .map(variants => resolveDataDrivenCompetitionAssumption(groupId, selectionValue, variants))
+      .filter((option): option is NonNullable<typeof option> => Boolean(option))
+      .map(option => this.competitionAssumptionAmountLabel(option.amounts))
+      .filter(Boolean));
+    if (labels.size === 1) return [...labels][0];
+    return labels.size > 1 ? 'Varies by event' : '';
   }
 
   searchRewards(value: string): void {
@@ -1637,7 +1735,19 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       ...eventBenefits.filter(benefit => benefit.kind === 'free_pulls'),
       ...rewards,
       ...eventBenefits,
-    ];
+    ].map((candidate, index) => ({ candidate, index }))
+      .sort((left, right) => {
+        const priority = (provenance: string | undefined): number => {
+          if (provenance === 'global_news') return 0;
+          if (provenance?.startsWith('global_')) return 1;
+          if (provenance === 'jp_news') return 2;
+          if (provenance?.startsWith('jp_')) return 3;
+          return 4;
+        };
+        return priority(left.candidate.provenance) - priority(right.candidate.provenance)
+          || left.index - right.index;
+      })
+      .map(({ candidate }) => candidate);
     for (const candidate of candidates) {
       const url = candidate.source_url?.trim();
       if (!url || !/^https?:\/\//i.test(url)) continue;
@@ -1735,6 +1845,14 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         label: option.label,
         amountLabel: this.variableAmountLabel(option.amounts),
         amounts: { ...option.amounts },
+      }));
+    }
+
+    const dataDrivenOptions = buildDataDrivenCompetitionRewardOptions(variants);
+    if (dataDrivenOptions.length > 0) {
+      return dataDrivenOptions.map(option => ({
+        ...option,
+        amountLabel: this.variableAmountLabel(option.amounts),
       }));
     }
 
@@ -2494,8 +2612,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       ? `${resolvedName} — ${supportTitle}`
       : resolvedName;
     const placeholderImagePath = target.bannerKind === 'support'
-      ? 'assets/images/planner-placeholder-support.svg'
-      : 'assets/images/planner-placeholder-character.svg';
+      ? PLANNER_SUPPORT_PLACEHOLDER
+      : PLANNER_CHARACTER_PLACEHOLDER;
     return {
       ...pickup,
       label,
