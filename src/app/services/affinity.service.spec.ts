@@ -119,6 +119,13 @@ describe('AffinityService race saddle groups', () => {
     expect(p2Flow).toBe(37);
     expect(p1Flow + sharedFlow + p2Flow).toBe(result.total);
 
+    // Shared base affinity belongs to each direct parent's spark source, but
+    // remains separate from the additive branch totals above.
+    expect(service.getTreeParentSourceBaseAffinity(result, 'p1')).toBe(85);
+    expect(service.getTreeParentSourceAffinity(result, 'p1')).toBe(223);
+    expect(service.getTreeParentSourceBaseAffinity(result, 'p2')).toBe(44);
+    expect(service.getTreeParentSourceAffinity(result, 'p2')).toBe(95);
+
     expect(service.getTreeParentDirectFlowAffinity(result, 'p1')).toBe(66);
     expect(
       service.getTreeNodeTotalAffinity(result, 'p1-1')!
@@ -132,6 +139,38 @@ describe('AffinityService race saddle groups', () => {
       + service.getTreeParentDirectFlowAffinity(result, 'p2')
       + service.getTreeNodeTotalAffinity(result, 'p2-2')!,
     ).toBe(service.getTreeSideTotalAffinity(result, 'p2'));
+  });
+
+  it('adds the P1-P2 affinity to both direct-parent spark sources', () => {
+    const result = {
+      p1Breeding: { left: 0, right: 0, total: 0 },
+      p2Breeding: { left: 0, right: 0, total: 0 },
+      playerP1: { pair: 0, tripleLeft: 0, tripleRight: 0, total: 83 },
+      playerP2: { pair: 0, tripleLeft: 0, tripleRight: 0, total: 110 },
+      legacy: 29,
+      relationTotal: 222,
+      total: 630,
+      race: {
+        parentPair: 0,
+        p1Left: 204,
+        p1Right: 0,
+        p2Left: 204,
+        p2Right: 0,
+        p1Grandparent: 204,
+        p2Grandparent: 204,
+        p1Node: 204,
+        p2Node: 204,
+        total: 408,
+      },
+    };
+
+    expect(service.getTreeSideTotalAffinity(result, 'p1')).toBe(287);
+    expect(service.getTreeParentSourceAffinity(result, 'p1')).toBe(316);
+    expect(service.getTreeSideTotalAffinity(result, 'p2')).toBe(314);
+    expect(service.getTreeParentSourceAffinity(result, 'p2')).toBe(343);
+    const pinkOneStar = { factorId: 'test', name: 'Aptitude', type: 1, level: 1 };
+    expect(service.sparkProcChance(pinkOneStar, 316)).toBe(4.16);
+    expect(service.sparkProcChance(pinkOneStar, 343)).toBe(4.43);
   });
 
   it('ranks races shared by both parents ahead of one-parent overlaps', () => {

@@ -86,9 +86,9 @@
 
           <!-- Parent 1 subtree -->
           <div class="tree-col">
-            <div class="branch-chip branch-chip--p" *ngIf="p1SideTotal"
+            <div class="branch-chip branch-chip--p" *ngIf="p1SourceAffinity"
               [matTooltip]="getNodeAffinityTooltip(nodes.get('p1')!)">
-              <mat-icon>favorite</mat-icon><span>{{ p1SideTotal }}</span>
+              <mat-icon>favorite</mat-icon><span>{{ p1SourceAffinity }}</span>
             </div>
             <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer1[0] }"></ng-container>
 
@@ -171,9 +171,9 @@
 
           <!-- Parent 2 subtree -->
           <div class="tree-col">
-            <div class="branch-chip branch-chip--p" *ngIf="p2SideTotal"
+            <div class="branch-chip branch-chip--p" *ngIf="p2SourceAffinity"
               [matTooltip]="getNodeAffinityTooltip(nodes.get('p2')!)">
-              <mat-icon>favorite</mat-icon><span>{{ p2SideTotal }}</span>
+              <mat-icon>favorite</mat-icon><span>{{ p2SourceAffinity }}</span>
             </div>
             <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer1[1] }"></ng-container>
 
@@ -603,7 +603,7 @@
         <div class="n-toolbar" *ngIf="node.layer > 0" (click)="$event.stopPropagation()">
           <ng-container *ngIf="affinityResult">
             <div class="n-stat n-stat--aff"
-              matTooltip="Base affinity">
+              [matTooltip]="getBaseAffinityTooltip(node)">
               <mat-icon>favorite</mat-icon>
               <span class="n-stat-num">{{ getBaseContribution(node) ?? 0 }}</span>
               <span class="n-stat-lbl">affinity</span>
