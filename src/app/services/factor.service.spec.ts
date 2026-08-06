@@ -25,7 +25,7 @@ describe('FactorService scenario artwork', () => {
     };
   }
 
-  it('maps the original scenario factors to their zero-based scenario IDs', () => {
+  it('maps the original scenario factors to their one-based database scenario IDs', () => {
     const ura = scenarioSpark('300010');
     const unity = scenarioSpark('300020');
     const trackblazer = scenarioSpark('300030');
@@ -49,16 +49,16 @@ describe('FactorService scenario artwork', () => {
   });
 
   it('resolves API scenario IDs without inferring them from white factors', () => {
-    expect(service.getScenarioLogoUrl(0)).toBe('/assets/images/scenario/ura_finals_logo.png');
-    expect(service.getScenarioName(0)).toBe('URA Finals');
-    expect(service.getScenarioLogoUrl(1)).toBe('/assets/images/scenario/scenario_logo_002.png');
-    expect(service.getScenarioName(1)).toBe('Unity Cup');
-    expect(service.getScenarioLogoUrl(2)).toBe('/assets/images/scenario/scenario_logo_004.png');
-    expect(service.getScenarioName(2)).toBe('Trackblazer');
-    expect(service.getScenarioLogoUrl(3)).toBe('/assets/images/scenario/scenario_logo_004.png');
-    expect(service.getScenarioName(3)).toBe('Trackblazer');
-    expect(service.getScenarioLogoUrl(4)).toBe('/assets/images/scenario/grand_concert_logo.png');
-    expect(service.getScenarioName(4)).toBe('Grand Concert');
+    expect(service.getScenarioLogoUrl(1)).toBe('/assets/images/scenario/ura_finals_logo.png');
+    expect(service.getScenarioName(1)).toBe('URA Finals');
+    expect(service.getScenarioLogoUrl(2)).toBe('/assets/images/scenario/scenario_logo_002.png');
+    expect(service.getScenarioName(2)).toBe('Unity Cup');
+    expect(service.getScenarioLogoUrl(3)).toBe('/assets/images/scenario/grand_concert_logo.png');
+    expect(service.getScenarioName(3)).toBe('Grand Concert');
+    expect(service.getScenarioLogoUrl(4)).toBe('/assets/images/scenario/scenario_logo_004.png');
+    expect(service.getScenarioName(4)).toBe('Trackblazer');
+    expect(service.getScenarioLogoUrl(5)).toBe('/assets/images/scenario/scenario_logo_005.png');
+    expect(service.getScenarioName(5)).toBe('Grand Masters');
   });
 
   it('resolves the newer Global dirt race factors even before the saddle mapping catches up', () => {

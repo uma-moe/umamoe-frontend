@@ -28,11 +28,10 @@ export class FactorService {
   private factorsMap = new Map<string, Factor>();
   private readonly raceThumbnailByName = new Map<string, number>();
   private readonly scenarioNames: Record<number, string> = {
-    0: 'URA Finals',
-    1: 'Unity Cup',
-    2: 'Trackblazer',
-    3: 'Trackblazer',
-    4: 'Grand Concert',
+    1: 'URA Finals',
+    2: 'Unity Cup',
+    3: 'Grand Concert',
+    4: 'Trackblazer',
     5: 'Grand Masters',
     6: 'Project L’Arc',
     7: 'U.A.F.',
@@ -44,11 +43,10 @@ export class FactorService {
     13: 'Beyond Dreams',
   };
   private readonly scenarioLogoUrls: Record<number, string> = {
-    0: '/assets/images/scenario/ura_finals_logo.png',
-    1: '/assets/images/scenario/scenario_logo_002.png',
-    2: '/assets/images/scenario/scenario_logo_004.png',
-    3: '/assets/images/scenario/scenario_logo_004.png',
-    4: '/assets/images/scenario/grand_concert_logo.png',
+    1: '/assets/images/scenario/ura_finals_logo.png',
+    2: '/assets/images/scenario/scenario_logo_002.png',
+    3: '/assets/images/scenario/grand_concert_logo.png',
+    4: '/assets/images/scenario/scenario_logo_004.png',
     5: '/assets/images/scenario/scenario_logo_005.png',
     6: '/assets/images/scenario/scenario_logo_006.png',
     7: '/assets/images/scenario/scenario_logo_007.png',
@@ -170,12 +168,12 @@ export class FactorService {
 
   private getScenarioId(spark: SparkInfo): number | null {
     const factorId = Number(spark.factorId);
-    if (factorId === 300010) return 0;
 
     const originalScenarioIds: Record<number, number> = {
-      300020: 1,
-      300030: 3,
-      300040: 4,
+      300010: 1,
+      300020: 2,
+      300030: 4,
+      300040: 3,
       300050: 5,
       300060: 6,
     };

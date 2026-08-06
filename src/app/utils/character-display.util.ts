@@ -34,8 +34,8 @@ export function getScenarioDisplayName(id: number | null): string {
     2: 'Aoharu',
     3: 'GL',
     4: 'MANT',
-    5: 'LArc',
-    6: 'Grand Challenge',
+    5: 'Grand Masters',
+    6: 'LArc',
     7: 'U.A.F.',
   };
   return names[id] || `Scenario ${id}`;
