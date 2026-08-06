@@ -263,9 +263,9 @@ export class AffinityService {
       case 'target':
         return result.relationTotal + race.total;
       case 'p1':
-        return result.playerP1.total + race.p1Node;
+        return result.playerP1.total + result.legacy + race.p1Node;
       case 'p2':
-        return result.playerP2.total + race.p2Node;
+        return result.playerP2.total + result.legacy + race.p2Node;
       case 'p1-1':
         return result.playerP1.tripleLeft + race.p1Left;
       case 'p1-2':
@@ -374,6 +374,32 @@ export class AffinityService {
     return (base ?? 0) + race;
   }
 
+  /**
+   * Base affinity used by a spark inherited from a direct parent.
+   *
+   * The P1-P2 relation boosts sparks from either direct parent, even though it
+   * is counted only once when reconstructing the full tree affinity total.
+   */
+  getTreeParentSourceBaseAffinity(
+    result: TreeAffinityResult | null | undefined,
+    parentPos: 'p1' | 'p2',
+  ): number | null {
+    const base = this.getTreeNodeBaseAffinity(result, parentPos);
+    if (base === null || !result) return null;
+    return base + result.legacy;
+  }
+
+  /** Affinity used to calculate proc odds for a spark from a direct parent. */
+  getTreeParentSourceAffinity(
+    result: TreeAffinityWithRaceResult | null | undefined,
+    parentPos: 'p1' | 'p2',
+  ): number {
+    if (!result) return 0;
+    return (this.getTreeParentSourceBaseAffinity(result, parentPos) ?? 0)
+      + this.getTreeNodeRaceAffinity(result, parentPos);
+  }
+
+  /** Additive parent-side total, excluding shared P1-P2 base affinity. */
   getTreeSideTotalAffinity(
     result: TreeAffinityWithRaceResult | null | undefined,
     parentPos: 'p1' | 'p2',
@@ -465,7 +491,7 @@ export class AffinityService {
 
     switch (source) {
       case 'main':
-        return result.playerP2.total + result.race.p2Node + result.legacy;
+        return this.getTreeParentSourceAffinity(result, 'p2');
       case 'left':
         return result.playerP2.tripleLeft
           + result.race.p2Left

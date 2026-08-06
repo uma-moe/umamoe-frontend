@@ -212,8 +212,8 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       return { pos, name: label, charName: this.getCharacterName(node), icon: this.getCharacterIcon(node), affinity, layer };
     };
     const rows = [
-      build('p1', 'P1', this.p1SideTotal, 1),
-      build('p2', 'P2', this.p2SideTotal, 1),
+      build('p1', 'P1', this.p1SourceAffinity, 1),
+      build('p2', 'P2', this.p2SourceAffinity, 1),
       build('p1-1', 'GP1-1', this.getNodeAffinity(this.nodes.get('p1-1')!), 2),
       build('p1-2', 'GP1-2', this.getNodeAffinity(this.nodes.get('p1-2')!), 2),
       build('p2-1', 'GP2-1', this.getNodeAffinity(this.nodes.get('p2-1')!), 2),
@@ -1579,6 +1579,9 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
 
   getNodeAffinity(node: LineageNode): number {
     if (this.isPlannerAffinityPosition(node.position)) {
+      if (node.position === 'p1' || node.position === 'p2') {
+        return this.affinityService.getTreeParentSourceAffinity(this.affinityResult, node.position);
+      }
       return this.affinityService.getTreeNodeTotalAffinity(this.affinityResult, node.position) ?? (node.affinity ?? 0);
     }
     return node.affinity ?? 0;
@@ -1900,12 +1903,12 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     return Math.max(...(this.affinityBreakdown.map(x => x.value)), 1);
   }
 
-  get p1SideTotal(): number {
-    return this.affinityService.getTreeSideTotalAffinity(this.affinityResult, 'p1');
+  get p1SourceAffinity(): number {
+    return this.affinityService.getTreeParentSourceAffinity(this.affinityResult, 'p1');
   }
 
-  get p2SideTotal(): number {
-    return this.affinityService.getTreeSideTotalAffinity(this.affinityResult, 'p2');
+  get p2SourceAffinity(): number {
+    return this.affinityService.getTreeParentSourceAffinity(this.affinityResult, 'p2');
   }
 
   get p1FlowAffinity(): number {
@@ -1965,9 +1968,11 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   getBaseContribution(node: LineageNode): number | null {
-    return this.isPlannerAffinityPosition(node.position)
-      ? this.affinityService.getTreeNodeBaseAffinity(this.affinityResult, node.position)
-      : null;
+    if (!this.isPlannerAffinityPosition(node.position)) return null;
+    if (node.position === 'p1' || node.position === 'p2') {
+      return this.affinityService.getTreeParentSourceBaseAffinity(this.affinityResult, node.position);
+    }
+    return this.affinityService.getTreeNodeBaseAffinity(this.affinityResult, node.position);
   }
 
   /** Combined display total: base affinity + race overlap (used in node chip). */
@@ -1980,12 +1985,17 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
 
   /** Breakdown tooltip for the affinity used by this character's spark rolls. */
   getNodeAffinityTooltip(node: LineageNode): string {
-    const base = this.getBaseContribution(node) ?? 0;
+    if (!this.isPlannerAffinityPosition(node.position)) return '';
+    const base = this.affinityService.getTreeNodeBaseAffinity(this.affinityResult, node.position) ?? 0;
+    const legacy = node.position === 'p1' || node.position === 'p2'
+      ? this.affinityResult?.legacy ?? 0
+      : 0;
     const race = this.getNodeRaceAffinity(node);
     const total = this.getNodeAffinity(node);
-    if (base && race) return `Spark affinity ${total}: Base ${base} + Race ${race}`;
-    if (race) return `Spark affinity ${total}: Race affinity from shared wins ${race}`;
-    return `Spark affinity ${total}: Base affinity ${base}`;
+    const parts = [`Base ${base}`];
+    if (legacy) parts.push(`P1-P2 ${legacy}`);
+    if (race) parts.push(`Race ${race}`);
+    return `Spark affinity ${total}: ${parts.join(' + ')}`;
   }
 
   getNodeRaceAffinity(node: LineageNode): number {

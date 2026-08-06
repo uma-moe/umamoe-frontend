@@ -1371,7 +1371,10 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
 
     getMainBaseAffinity(): number | null {
         if (!this.targetCharaId || !this.getMainCharaId()) return null;
-        return this.affinityService.getTreeNodeBaseAffinity(this.getTreeAffinity(false), 'p1');
+        return this.affinityService.getTreeParentSourceBaseAffinity(
+            this.getTreeAffinity(this.hasP2Context()),
+            'p1',
+        );
     }
 
     /**
@@ -1428,14 +1431,20 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
     getMainTotalAffinity(): number | null {
         const base = this.getMainBaseAffinity();
         if (base === null) return null;
-        return this.affinityService.getTreeNodeTotalAffinity(this.getTreeAffinity(this.hasP2Context()), 'p1');
+        return this.affinityService.getTreeParentSourceAffinity(
+            this.getTreeAffinity(this.hasP2Context()),
+            'p1',
+        );
     }
 
     getMainAffinityTooltip(): string {
-        const base = this.getMainBaseAffinity();
-        const race = this.getTreeAffinity(this.hasP2Context())?.race.p1Node ?? 0;
+        const result = this.getTreeAffinity(this.hasP2Context());
+        const base = this.affinityService.getTreeNodeBaseAffinity(result, 'p1');
+        const legacy = result?.legacy ?? 0;
+        const race = result?.race.p1Node ?? 0;
         const parts: string[] = [];
         if (base !== null) parts.push(`Base: ${base}`);
+        if (legacy) parts.push(`P1-P2: ${legacy}`);
         if (race) parts.push(`Race: ${race}`);
         return parts.join(' + ');
     }
@@ -1502,7 +1511,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
 
     getP2BaseAffinity(): number {
         if (!this.targetCharaId || !this.affinityService.isReady || !this.p2CharaId) return 0;
-        return this.affinityService.getTreeNodeBaseAffinity(this.getTreeAffinity(true), 'p2') ?? 0;
+        return this.affinityService.getTreeParentSourceBaseAffinity(this.getTreeAffinity(true), 'p2') ?? 0;
     }
 
     /**

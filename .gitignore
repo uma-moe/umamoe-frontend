@@ -59,6 +59,8 @@ scripts/*
 !scripts/compress-images.js
 !scripts/sync-planner-item-icons.mjs
 !scripts/verify-google-analytics-build.js
+!scripts/generate-seo-pages.mjs
+!scripts/generate-favicon.mjs
 
 .github/copilot-instructions.md
 !src/assets/
@@ -81,6 +83,7 @@ scripts/*
 !/src/assets/images/race-thumbnails/
 /src/assets/images/race-thumbnails/*
 !/src/assets/images/race-thumbnails/thum_race_rt_*.webp
+!/src/assets/favicon.svg
 *.tmp
 
 # WebP conversion cache

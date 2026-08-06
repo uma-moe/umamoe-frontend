@@ -19,6 +19,7 @@ import { GoogleAnalyticsService } from './services/google-analytics.service';
 import { FuseAdsService } from './services/fuse-ads.service';
 import { AppVersionService } from './services/app-version.service';
 import { GettingStartedTourService } from './services/getting-started-tour.service';
+import { SeoService } from './services/seo.service';
 import { environment } from '../environments/environment';
 import { BehaviorSubject, Observable, combineLatest, filter, map, of, switchMap, take, timer } from 'rxjs';
 
@@ -79,6 +80,7 @@ export class AppComponent implements OnInit {
     private fuseAdsService: FuseAdsService,
     private appVersionService: AppVersionService,
     private gettingStartedTourService: GettingStartedTourService,
+    private seoService: SeoService,
     private router: Router,
     public tourService: TourService,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -101,6 +103,7 @@ export class AppComponent implements OnInit {
     }
   }
   ngOnInit(): void {
+    this.seoService.initialize();
     let browserParams: URLSearchParams | null = null;
     let turnstileDebugApplied = false;
     if (isPlatformBrowser(this.platformId)) {

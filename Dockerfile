@@ -14,7 +14,7 @@ COPY angular.json ./
 COPY tsconfig*.json ./
 COPY src ./src
 COPY timeline-image-sync ./timeline-image-sync
-COPY scripts/precompute-tierlist.js scripts/tierlist-calculation-engine.js scripts/compress-images.js ./scripts/
+COPY scripts/precompute-tierlist.js scripts/tierlist-calculation-engine.js scripts/compress-images.js scripts/generate-favicon.mjs scripts/generate-seo-pages.mjs ./scripts/
 
 ARG BUILD_SCRIPT=build:prod
 ARG FRONTEND_CONFIG_FINGERPRINT=local
