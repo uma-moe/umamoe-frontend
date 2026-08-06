@@ -87,6 +87,53 @@ describe('AffinityService race saddle groups', () => {
     expect(service.getTreeNodeTotalAffinity(result, 'p1-2')).toBeNull();
   });
 
+  it('returns additive flow values without double-counting shared parent race affinity', () => {
+    const result = {
+      p1Breeding: { left: 0, right: 0, total: 0 },
+      p2Breeding: { left: 0, right: 0, total: 0 },
+      playerP1: { pair: 24, tripleLeft: 22, tripleRight: 23, total: 69 },
+      playerP2: { pair: 20, tripleLeft: 8, tripleRight: 0, total: 28 },
+      legacy: 16,
+      relationTotal: 113,
+      total: 260,
+      race: {
+        parentPair: 42,
+        p1Left: 48,
+        p1Right: 48,
+        p2Left: 6,
+        p2Right: 3,
+        p1Grandparent: 96,
+        p2Grandparent: 9,
+        p1Node: 138,
+        p2Node: 51,
+        total: 147,
+      },
+    };
+
+    const p1Flow = service.getTreeSideFlowAffinity(result, 'p1');
+    const p2Flow = service.getTreeSideFlowAffinity(result, 'p2');
+    const sharedFlow = service.getTreeSharedFlowAffinity(result);
+
+    expect(p1Flow).toBe(165);
+    expect(sharedFlow).toBe(58);
+    expect(p2Flow).toBe(37);
+    expect(p1Flow + sharedFlow + p2Flow).toBe(result.total);
+
+    expect(service.getTreeParentDirectFlowAffinity(result, 'p1')).toBe(66);
+    expect(
+      service.getTreeNodeTotalAffinity(result, 'p1-1')!
+      + service.getTreeParentDirectFlowAffinity(result, 'p1')
+      + service.getTreeNodeTotalAffinity(result, 'p1-2')!,
+    ).toBe(service.getTreeSideTotalAffinity(result, 'p1'));
+
+    expect(service.getTreeParentDirectFlowAffinity(result, 'p2')).toBe(62);
+    expect(
+      service.getTreeNodeTotalAffinity(result, 'p2-1')!
+      + service.getTreeParentDirectFlowAffinity(result, 'p2')
+      + service.getTreeNodeTotalAffinity(result, 'p2-2')!,
+    ).toBe(service.getTreeSideTotalAffinity(result, 'p2'));
+  });
+
   it('ranks races shared by both parents ahead of one-parent overlaps', () => {
     replaceRaceSaddleData({
       races: [

@@ -113,9 +113,17 @@ export interface RaceResultsDialogData {
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+    }
+
     .race-results-dialog {
-      width: min(1320px, 98vw);
+      width: 100%;
+      max-width: 100%;
       max-height: min(900px, 94vh);
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
       background: #1a1a1a;
