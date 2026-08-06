@@ -399,6 +399,56 @@ $col-parent: 2 * $col-gp + $gap-tree;
 }
 .n-toolbar-race { width: 26px; height: 26px; }
 
+.n-affinity-composition {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  border: 1px solid rgba(var(--accent-primary-rgb), 0.16);
+  border-radius: var(--radius-sm);
+  background: rgba(var(--accent-primary-rgb), 0.045);
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.n-composition-label {
+  margin-right: 3px;
+  color: var(--text-muted);
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.n-composition-term {
+  padding: 3px 6px;
+  border-radius: var(--radius-xs);
+  background: rgba(var(--accent-primary-rgb), 0.1);
+  color: var(--accent-primary);
+  font-family: var(--font-mono);
+  font-weight: 700;
+
+  &.n-composition-term--shared {
+    background: rgba(129, 199, 132, 0.1);
+    color: #81c784;
+  }
+}
+
+.n-composition-op {
+  color: var(--text-disabled);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.n-composition-total {
+  color: #e91e63;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+}
+
 .n-stats {
   display: flex;
   gap: 8px;
@@ -424,6 +474,10 @@ $col-parent: 2 * $col-gp + $gap-tree;
   mat-icon { @include icon-scale(13px); }
 
   &.n-stat--aff     { color: #e91e63; }
+  &.n-stat--spark-aff {
+    background: rgba(206, 147, 216, 0.1);
+    color: #ce93d8;
+  }
   &.n-stat--race-aff {
     color: #ffca28;
   }
@@ -436,6 +490,36 @@ $col-parent: 2 * $col-gp + $gap-tree;
   &.n-stat--gp-overlap {
     color: #81c784;
   }
+}
+
+.n-affinity-breakdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
+.n-breakdown-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+
+  mat-icon { @include icon-scale(11px); }
+
+  &.n-breakdown-part--base {
+    color: #e91e63;
+  }
+
+  &.n-breakdown-part--race {
+    color: #ffca28;
+  }
+}
+
+.n-breakdown-op {
+  color: var(--text-disabled);
 }
 
 .n-stat-num {
@@ -1816,6 +1900,14 @@ $col-parent: 2 * $col-gp + $gap-tree;
   .branch-chip--p  { left: -($p-indent + 8px); }
   .branch-chip--gp { left: -($gp-indent + 8px); font-size: 0.7rem; padding: 3px 8px; mat-icon { @include icon-scale(11px); } }
 
+  .branch-chip-label {
+    font-family: var(--font-family);
+    font-size: 0.55rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
   // ─── BRANCH DRAWING STRATEGY ────────────────────────────────
   // For each tier, every child column draws:
   //   ::before → vertical trunk segment on the left (continuous
@@ -2030,6 +2122,22 @@ $col-parent: 2 * $col-gp + $gap-tree;
     mat-icon { @include icon-scale(11px); }
   }
   .n-toolbar .n-stat-num { font-size: 0.65rem; }
+  .n-toolbar .n-affinity-breakdown {
+    gap: 2px;
+    font-size: 0.54rem;
+  }
+
+  .n-affinity-composition {
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 6px 8px;
+    font-size: 0.62rem;
+  }
+
+  .n-composition-label {
+    flex-basis: 100%;
+    margin-bottom: 1px;
+  }
 
   // Sparks visible on parent + GP at full readability
   .n-ggp .n-sparks { display: none; }
@@ -2615,6 +2723,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
 .cb-player { color: #e91e63; font-weight: 700; font-family: var(--font-mono); }
 .cb-legacy { color: #81c784; font-weight: 700; font-family: var(--font-mono); }
 .cb-race   { color: #ffca28; font-weight: 700; font-family: var(--font-mono); }
+.cb-total  { color: #e91e63; font-weight: 800; font-family: var(--font-mono); }
 .cb-breed  { color: #64b5f6; font-weight: 700; font-family: var(--font-mono); }
 .cb-sep    { color: var(--text-disabled); }
 .cb-lbl    { font-size: 0.6rem; font-weight: 400; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.03em; }

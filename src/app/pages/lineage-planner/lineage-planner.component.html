@@ -52,7 +52,7 @@
             <div class="fork-line"></div>
             <div class="fork-badge" *ngIf="sharedFlowAffinity"
               [matTooltip]="getCrossParentAffinityTooltip()">
-              <span class="cb-lbl">Shared</span>
+              <span class="cb-lbl">Shared contribution</span>
               <ng-container *ngIf="sharedAffinity">
                 <mat-icon>favorite</mat-icon>
                 <span class="cb-legacy">{{ sharedAffinity }}</span>
@@ -62,6 +62,8 @@
                 <mat-icon class="fork-race-icon">emoji_events</mat-icon>
                 <span class="cb-race">{{ crossParentRaceAffinity }}</span>
               </ng-container>
+              <span class="cb-sep">=</span>
+              <span class="cb-total">{{ sharedFlowAffinity }}</span>
             </div>
             <div class="fork-line"></div>
           </div>
@@ -69,13 +71,13 @@
             <div class="fork-drop">
               <div class="drop-label" *ngIf="p1FlowAffinity"
                 [matTooltip]="getSideFlowTooltip('p1')">
-                <span class="drop-label-prefix">P1</span>{{ p1FlowAffinity }}
+                <span class="drop-label-prefix">P1 contribution</span>{{ p1FlowAffinity }}
               </div>
             </div>
             <div class="fork-drop">
               <div class="drop-label" *ngIf="p2FlowAffinity"
                 [matTooltip]="getSideFlowTooltip('p2')">
-                <span class="drop-label-prefix">P2</span>{{ p2FlowAffinity }}
+                <span class="drop-label-prefix">P2 contribution</span>{{ p2FlowAffinity }}
               </div>
             </div>
           </div>
@@ -88,7 +90,7 @@
           <div class="tree-col">
             <div class="branch-chip branch-chip--p" *ngIf="p1SideTotal"
               [matTooltip]="getNodeAffinityTooltip(nodes.get('p1')!)">
-              <mat-icon>favorite</mat-icon><span>{{ p1SideTotal }}</span>
+              <mat-icon>auto_awesome</mat-icon><span class="branch-chip-label">Spark</span><span>{{ p1SideTotal }}</span>
             </div>
             <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer1[0] }"></ng-container>
 
@@ -98,7 +100,7 @@
                 <div class="fork-line"></div>
                 <div class="fork-badge" *ngIf="p1DirectFlowAffinity"
                   [matTooltip]="getParentDirectFlowTooltip('p1')">
-                  <span class="cb-lbl">Direct</span>
+                  <span class="cb-lbl">Spark direct</span>
                   <ng-container *ngIf="p1DirectBaseAffinity">
                     <mat-icon>favorite</mat-icon>
                     <span class="cb-player">{{ p1DirectBaseAffinity }}</span>
@@ -129,7 +131,7 @@
               <!-- GP 1 subtree -->
               <div class="tree-col">
                 <div class="branch-chip branch-chip--gp" *ngIf="getNodeContribution(nodes.get('p1-1')!) as v">
-                  <mat-icon>favorite</mat-icon><span>{{ v }}</span>
+                  <mat-icon>auto_awesome</mat-icon><span class="branch-chip-label">Spark</span><span>{{ v }}</span>
                 </div>
                 <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer2[0] }"></ng-container>
                 <button class="ggp-mobile-toggle" (click)="toggleMobileGGPs('p1-1', $event)" [class.expanded]="isMobileGGPExpanded('p1-1')">
@@ -149,7 +151,7 @@
               <!-- GP 2 subtree -->
               <div class="tree-col">
                 <div class="branch-chip branch-chip--gp" *ngIf="getNodeContribution(nodes.get('p1-2')!) as v">
-                  <mat-icon>favorite</mat-icon><span>{{ v }}</span>
+                  <mat-icon>auto_awesome</mat-icon><span class="branch-chip-label">Spark</span><span>{{ v }}</span>
                 </div>
                 <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer2[1] }"></ng-container>
                 <button class="ggp-mobile-toggle" (click)="toggleMobileGGPs('p1-2', $event)" [class.expanded]="isMobileGGPExpanded('p1-2')">
@@ -173,7 +175,7 @@
           <div class="tree-col">
             <div class="branch-chip branch-chip--p" *ngIf="p2SideTotal"
               [matTooltip]="getNodeAffinityTooltip(nodes.get('p2')!)">
-              <mat-icon>favorite</mat-icon><span>{{ p2SideTotal }}</span>
+              <mat-icon>auto_awesome</mat-icon><span class="branch-chip-label">Spark</span><span>{{ p2SideTotal }}</span>
             </div>
             <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer1[1] }"></ng-container>
 
@@ -183,7 +185,7 @@
                 <div class="fork-line"></div>
                 <div class="fork-badge" *ngIf="p2DirectFlowAffinity"
                   [matTooltip]="getParentDirectFlowTooltip('p2')">
-                  <span class="cb-lbl">Direct</span>
+                  <span class="cb-lbl">Spark direct</span>
                   <ng-container *ngIf="p2DirectBaseAffinity">
                     <mat-icon>favorite</mat-icon>
                     <span class="cb-player">{{ p2DirectBaseAffinity }}</span>
@@ -214,7 +216,7 @@
               <!-- GP 3 subtree -->
               <div class="tree-col">
                 <div class="branch-chip branch-chip--gp" *ngIf="getNodeContribution(nodes.get('p2-1')!) as v">
-                  <mat-icon>favorite</mat-icon><span>{{ v }}</span>
+                  <mat-icon>auto_awesome</mat-icon><span class="branch-chip-label">Spark</span><span>{{ v }}</span>
                 </div>
                 <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer2[2] }"></ng-container>
                 <button class="ggp-mobile-toggle" (click)="toggleMobileGGPs('p2-1', $event)" [class.expanded]="isMobileGGPExpanded('p2-1')">
@@ -234,7 +236,7 @@
               <!-- GP 4 subtree -->
               <div class="tree-col">
                 <div class="branch-chip branch-chip--gp" *ngIf="getNodeContribution(nodes.get('p2-2')!) as v">
-                  <mat-icon>favorite</mat-icon><span>{{ v }}</span>
+                  <mat-icon>auto_awesome</mat-icon><span class="branch-chip-label">Spark</span><span>{{ v }}</span>
                 </div>
                 <ng-container *ngTemplateOutlet="nodeCard; context: { $implicit: layer2[3] }"></ng-container>
                 <button class="ggp-mobile-toggle" (click)="toggleMobileGGPs('p2-2', $event)" [class.expanded]="isMobileGGPExpanded('p2-2')">
@@ -540,20 +542,36 @@
           </div>
         </div>
 
+        <div class="n-affinity-composition"
+          *ngIf="node.layer === 0 && affinityResult && affinityTotal != null"
+          [matTooltip]="getTotalCompositionTooltip()">
+          <span class="n-composition-label">Total composition</span>
+          <span class="n-composition-term n-composition-term--p1">P1 {{ p1FlowAffinity }}</span>
+          <span class="n-composition-op">+</span>
+          <span class="n-composition-term n-composition-term--shared">Shared {{ sharedFlowAffinity }}</span>
+          <span class="n-composition-op">+</span>
+          <span class="n-composition-term n-composition-term--p2">P2 {{ p2FlowAffinity }}</span>
+          <span class="n-composition-op">=</span>
+          <strong class="n-composition-total">{{ affinityTotal }}</strong>
+        </div>
+
         <!-- Mobile toolbar: affinity stats in one row -->
         <div class="n-toolbar" *ngIf="node.layer > 0" (click)="$event.stopPropagation()">
           <ng-container *ngIf="affinityResult">
-            <div class="n-stat n-stat--aff"
-              matTooltip="Base affinity">
-              <mat-icon>favorite</mat-icon>
-              <span class="n-stat-num">{{ getBaseContribution(node) ?? 0 }}</span>
-              <span class="n-stat-lbl">affinity</span>
+            <div class="n-stat n-stat--spark-aff"
+              [matTooltip]="getNodeAffinityTooltip(node)">
+              <mat-icon>auto_awesome</mat-icon>
+              <span class="n-stat-num">{{ getNodeAffinity(node) }}</span>
+              <span class="n-stat-lbl">Spark affinity</span>
             </div>
-            <div class="n-stat n-stat--race-aff"
-              matTooltip="Race affinity from shared wins">
-              <mat-icon>emoji_events</mat-icon>
-              <span class="n-stat-num">{{ getNodeRaceAffinity(node) }}</span>
-              <span class="n-stat-lbl">Race Affinity</span>
+            <div class="n-affinity-breakdown" aria-label="Spark affinity breakdown">
+              <span class="n-breakdown-part n-breakdown-part--base">
+                <mat-icon>favorite</mat-icon>{{ getBaseContribution(node) ?? 0 }} base
+              </span>
+              <span class="n-breakdown-op">+</span>
+              <span class="n-breakdown-part n-breakdown-part--race">
+                <mat-icon>emoji_events</mat-icon>{{ getNodeRaceAffinity(node) }} race
+              </span>
             </div>
           </ng-container>
           <button class="n-icon-btn n-toolbar-race" *ngIf="getWinCount(node) > 0 || node.layer <= 2"
@@ -564,17 +582,20 @@
 
         <div class="n-stats" *ngIf="node.layer > 0">
           <ng-container *ngIf="affinityResult">
-            <div class="n-stat n-stat--aff"
-              matTooltip="Base affinity">
-              <mat-icon>favorite</mat-icon>
-              <span class="n-stat-num">{{ getBaseContribution(node) ?? 0 }}</span>
-              <span class="n-stat-lbl">affinity</span>
+            <div class="n-stat n-stat--spark-aff"
+              [matTooltip]="getNodeAffinityTooltip(node)">
+              <mat-icon>auto_awesome</mat-icon>
+              <span class="n-stat-num">{{ getNodeAffinity(node) }}</span>
+              <span class="n-stat-lbl">Spark affinity</span>
             </div>
-            <div class="n-stat n-stat--race-aff"
-              matTooltip="Race affinity from shared wins">
-              <mat-icon>emoji_events</mat-icon>
-              <span class="n-stat-num">{{ getNodeRaceAffinity(node) }}</span>
-              <span class="n-stat-lbl">Race Affinity</span>
+            <div class="n-affinity-breakdown" aria-label="Spark affinity breakdown">
+              <span class="n-breakdown-part n-breakdown-part--base">
+                <mat-icon>favorite</mat-icon>{{ getBaseContribution(node) ?? 0 }} base
+              </span>
+              <span class="n-breakdown-op">+</span>
+              <span class="n-breakdown-part n-breakdown-part--race">
+                <mat-icon>emoji_events</mat-icon>{{ getNodeRaceAffinity(node) }} race
+              </span>
             </div>
           </ng-container>
           <button class="n-icon-btn" *ngIf="getWinCount(node) > 0 || node.layer <= 2"
