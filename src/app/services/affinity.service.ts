@@ -369,8 +369,9 @@ export class AffinityService {
     slotPosition: PlannerSlotPosition,
   ): number | null {
     const base = this.getTreeNodeBaseAffinity(result, slotPosition);
-    if (base === null) return null;
-    return base + this.getTreeNodeRaceAffinity(result, slotPosition);
+    const race = this.getTreeNodeRaceAffinity(result, slotPosition);
+    if (base === null && race === 0) return null;
+    return (base ?? 0) + race;
   }
 
   getTreeSideTotalAffinity(
