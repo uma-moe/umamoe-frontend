@@ -4,8 +4,8 @@
   <div class="page-header">
     <div class="header-content">
       <div class="header-text">
-        <h1>Lineage Planner</h1>
-        <p>Optimize your inheritance tree and find the best parent pairings.</p>
+        <h1>Uma Musume Affinity Calculator &amp; Lineage Planner</h1>
+        <p>Calculate compatibility, compare parents, and optimize inheritance and spark odds.</p>
       </div>
       <div class="header-actions">
         <button *ngIf="getOptimalRaces().length" mat-stroked-button class="optimal-races-btn"
@@ -492,6 +492,65 @@
     [index]="2"
     viewport="mobile"
   ></app-ad-in-content>
+
+  <section class="search-guide" aria-labelledby="affinity-guide-title">
+    <div class="search-guide__intro">
+      <p class="search-guide__eyebrow">Affinity &amp; inheritance guide</p>
+      <h2 id="affinity-guide-title">Uma Musume affinity calculator</h2>
+      <p>
+        Affinity, also called compatibility, affects the chance that factors activate during
+        inheritance. Build a complete family tree above to compare your trainee with both parents,
+        grandparents, and great-grandparents. The planner combines character compatibility, shared
+        race affinity, and spark data in one place.
+      </p>
+    </div>
+
+    <div class="search-guide__grid">
+      <article>
+        <h3>How to calculate compatibility</h3>
+        <p>
+          Select the target Uma first, then add two parents and their ancestors. The calculated
+          affinity updates as you fill the lineage. Add each character's race wins and sparks for a
+          more complete inheritance plan.
+        </p>
+      </article>
+      <article>
+        <h3>How to improve affinity</h3>
+        <p>
+          Start with compatible parents, then look for useful G1 wins shared across the family tree.
+          The <strong>Optimal Races</strong> action identifies race overlap for the lineage you have
+          selected.
+        </p>
+      </article>
+      <article>
+        <h3>What the planner shows</h3>
+        <p>
+          Review total and per-branch affinity, race contributions, base and per-run spark proc odds,
+          combined spark chances, and potential white-spark inheritance before starting a training run.
+        </p>
+      </article>
+    </div>
+
+    <div class="search-guide__faq">
+      <h2>Uma Musume affinity FAQ</h2>
+      <details>
+        <summary>What is affinity in Uma Musume?</summary>
+        <p>Affinity is the compatibility score between a trainee and her inheritance characters. Higher affinity improves the chance that inherited factors activate.</p>
+      </details>
+      <details>
+        <summary>How is Uma Musume compatibility calculated?</summary>
+        <p>Select the trainee and her lineage. The calculator combines character compatibility with applicable shared-race bonuses throughout the family tree.</p>
+      </details>
+      <details>
+        <summary>How can I improve affinity?</summary>
+        <p>Choose compatible inheritance characters and plan overlapping race wins across the family tree. The Optimal Races action identifies useful shared G1 wins for the selected lineage.</p>
+      </details>
+      <details>
+        <summary>How can I find a parent with the sparks I need?</summary>
+        <p>Use the <a routerLink="/database">Uma Musume trainer and parent database</a> to filter inheritance records by character, support card, factors, sparks, race wins, and affinity.</p>
+      </details>
+    </div>
+  </section>
 </div>
 
 <!-- ===== NODE CARD TEMPLATE ===== -->

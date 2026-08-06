@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://uma.moe/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://uma.moe/database</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://uma.moe/tools/lineage-planner</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://uma.moe/tools</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://uma.moe/tools/statistics</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
+  <url><loc>https://uma.moe/timeline</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://uma.moe/tierlist</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://uma.moe/rankings</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
+  <url><loc>https://uma.moe/circles</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
+  <url><loc>https://uma.moe/activity</loc><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://uma.moe/privacy-policy</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
+</urlset>

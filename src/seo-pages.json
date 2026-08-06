@@ -1,0 +1,178 @@
+{
+  "/": {
+    "title": "Uma Musume Database, Trainer Search & Tools | uma.moe",
+    "description": "Search Uma Musume trainers and inheritance parents, calculate affinity, compare support cards, and plan for the Global version of Umamusume: Pretty Derby.",
+    "priority": 1,
+    "changeFrequency": "daily",
+    "schema": [
+      {
+        "@type": "WebSite",
+        "@id": "https://uma.moe/#website",
+        "name": "uma.moe",
+        "alternateName": ["Uma Moe", "Uma Musume Database"],
+        "url": "https://uma.moe/",
+        "description": "Uma Musume trainer search, inheritance database, affinity calculator, rankings, timeline, and planning tools for the Global version."
+      }
+    ]
+  },
+  "/database": {
+    "title": "Uma Musume Trainer Search & Parent Database | uma.moe",
+    "description": "Search Uma Musume trainer IDs, inheritance parents, sparks, factors, support cards, and affinity in our Global friend and legacy database.",
+    "priority": 1,
+    "changeFrequency": "daily",
+    "schema": [
+      {
+        "@type": "WebApplication",
+        "name": "Uma Musume Trainer Search & Parent Database",
+        "url": "https://uma.moe/database",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Web",
+        "isAccessibleForFree": true,
+        "description": "Search Global Uma Musume trainer IDs and filter inheritance parents by character, sparks, factors, support cards, race wins, and affinity."
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Can I search by Uma Musume Trainer ID?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Use the Trainer ID filter to find the matching submitted records in the Global database."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I search for specific sparks or factors?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Filter blue stat factors, red aptitude factors, green unique skills, and white skill, race, or scenario sparks, including required star levels."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I compare parent affinity?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Sort or filter database results by affinity, then open a record in the lineage planner to calculate the full family tree and shared race bonuses."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "/tools/lineage-planner": {
+    "title": "Uma Musume Affinity Calculator & Lineage Planner | uma.moe",
+    "description": "Calculate Uma Musume affinity and compatibility, compare parents, add shared G1 wins, estimate spark inheritance odds, and plan a complete lineage tree.",
+    "priority": 1,
+    "changeFrequency": "weekly",
+    "schema": [
+      {
+        "@type": "WebApplication",
+        "name": "Uma Musume Affinity Calculator & Lineage Planner",
+        "url": "https://uma.moe/tools/lineage-planner",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Web",
+        "isAccessibleForFree": true,
+        "description": "An interactive Uma Musume compatibility calculator for planning parents, grandparents, race affinity, sparks, and inheritance odds."
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is affinity in Uma Musume?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Affinity, also called compatibility, is the relationship score between a trainee and her inheritance characters. Higher affinity improves the chance that inherited factors activate."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is Uma Musume compatibility calculated?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Select the trainee and her lineage. The calculator combines character compatibility with applicable shared-race bonuses throughout the family tree."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How can I improve affinity?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Choose compatible inheritance characters and plan overlapping race wins across the family tree. The Optimal Races action identifies useful shared G1 wins for the selected lineage."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "/tools": {
+    "title": "Uma Musume Calculators & Planning Tools | uma.moe",
+    "description": "Free Uma Musume calculators and tools for affinity, inheritance lineages, Team Stadium statistics, carat planning, and Global release tracking.",
+    "priority": 0.8,
+    "changeFrequency": "weekly"
+  },
+  "/tools/statistics": {
+    "title": "Uma Musume Team Stadium Statistics | uma.moe",
+    "description": "Explore Uma Musume Team Stadium usage, support card performance, character trends, and score statistics for the Global version.",
+    "priority": 0.7,
+    "changeFrequency": "daily"
+  },
+  "/timeline": {
+    "title": "Uma Musume Global Timeline & Carat Planner | uma.moe",
+    "description": "Track the estimated Uma Musume Global release timeline and plan carats, tickets, pulls, banners, characters, support cards, and events.",
+    "priority": 0.8,
+    "changeFrequency": "daily"
+  },
+  "/tierlist": {
+    "title": "Uma Musume Support Card Tier List | uma.moe",
+    "description": "Compare Uma Musume support cards with a data-driven Global tier list, limit-break controls, type rankings, and performance details.",
+    "priority": 0.8,
+    "changeFrequency": "weekly"
+  },
+  "/rankings": {
+    "title": "Uma Musume Global Trainer Rankings | uma.moe",
+    "description": "Search and compare Uma Musume Global trainer rankings, monthly fan totals, all-time performance, and recent fan gains.",
+    "priority": 0.7,
+    "changeFrequency": "daily"
+  },
+  "/circles": {
+    "title": "Uma Musume Club Leaderboard & Search | uma.moe",
+    "description": "Search Uma Musume Global clubs and compare leaderboard rank, total fans, daily gains, members, and recruitment policies.",
+    "priority": 0.7,
+    "changeFrequency": "daily"
+  },
+  "/activity": {
+    "title": "Uma Musume Club Activity Reports | uma.moe",
+    "description": "Review activity patterns and evidence-based reports for top Uma Musume Global clubs and trainers.",
+    "priority": 0.5,
+    "changeFrequency": "daily"
+  },
+  "/privacy-policy": {
+    "title": "Privacy Policy | uma.moe",
+    "description": "Read the uma.moe privacy policy and learn how the Uma Musume resource hub handles accounts, analytics, cookies, and personal data.",
+    "priority": 0.2,
+    "changeFrequency": "yearly"
+  },
+  "/login": {
+    "title": "Sign in | uma.moe",
+    "description": "Sign in to uma.moe.",
+    "index": false
+  },
+  "/signin": {
+    "title": "Signing in | uma.moe",
+    "description": "Complete sign-in to uma.moe.",
+    "index": false
+  },
+  "/settings": {
+    "title": "Account Settings | uma.moe",
+    "description": "Manage your uma.moe account settings.",
+    "index": false
+  },
+  "/wip": {
+    "title": "Coming Soon | uma.moe",
+    "description": "This uma.moe tool is under development.",
+    "index": false
+  }
+}
