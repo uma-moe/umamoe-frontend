@@ -29,35 +29,6 @@
         "operatingSystem": "Web",
         "isAccessibleForFree": true,
         "description": "Search Global Uma Musume trainer IDs and filter inheritance parents by character, sparks, factors, support cards, race wins, and affinity."
-      },
-      {
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "Can I search by Uma Musume Trainer ID?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Yes. Use the Trainer ID filter to find the matching submitted records in the Global database."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Can I search for specific sparks or factors?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Yes. Filter blue stat factors, red aptitude factors, green unique skills, and white skill, race, or scenario sparks, including required star levels."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "How do I compare parent affinity?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Sort or filter database results by affinity, then open a record in the lineage planner to calculate the full family tree and shared race bonuses."
-            }
-          }
-        ]
       }
     ]
   },
@@ -75,35 +46,6 @@
         "operatingSystem": "Web",
         "isAccessibleForFree": true,
         "description": "An interactive Uma Musume compatibility calculator for planning parents, grandparents, race affinity, sparks, and inheritance odds."
-      },
-      {
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "What is affinity in Uma Musume?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Affinity, also called compatibility, is the relationship score between a trainee and her inheritance characters. Higher affinity improves the chance that inherited factors activate."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "How is Uma Musume compatibility calculated?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Select the trainee and her lineage. The calculator combines character compatibility with applicable shared-race bonuses throughout the family tree."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "How can I improve affinity?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Choose compatible inheritance characters and plan overlapping race wins across the family tree. The Optimal Races action identifies useful shared G1 wins for the selected lineage."
-            }
-          }
-        ]
       }
     ]
   },
