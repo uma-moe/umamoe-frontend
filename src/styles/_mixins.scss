@@ -1253,3 +1253,84 @@ $spark-palette: (
 
   span { font-size: 16px; font-weight: 500; }
 }
+
+// ===== SEASONAL LIGHT ROPE =====
+// Shared by the navigation and the Christmas update dialog. Keeping the
+// structure here prevents the two component styles from drifting apart.
+@mixin christmas-light-rope($top, $shadow-blur: 12px, $shadow-spread: 1px, $clip-x: false) {
+  .christmas-lights {
+    position: absolute;
+    top: $top;
+    left: 0;
+    width: 100%;
+    height: 100px;
+    pointer-events: none;
+    z-index: 1001;
+    @if $clip-x { overflow-x: hidden; }
+  }
+
+  .lightrope {
+    text-align: center;
+    white-space: nowrap;
+    overflow: visible;
+    position: absolute;
+    z-index: 1;
+    margin: -15px 0 0;
+    padding: 0;
+    pointer-events: none;
+    width: 100%;
+
+    li {
+      position: relative;
+      list-style: none;
+      margin: 0 15px;
+      padding: 0;
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #00f7a5;
+      box-shadow: 0 4.66667px $shadow-blur $shadow-spread #00f7a5;
+
+      $colors: (
+        '2n+1': (#00ffff, rgba(0, 255, 255, 0.5)),
+        '4n+2': (#f70094, #f70094),
+        '3n+1': (#ff3333, rgba(255, 51, 51, 0.5)),
+        '5n+2': (#ffd700, rgba(255, 215, 0, 0.5)),
+        '7n+3': (#9c27b0, rgba(156, 39, 176, 0.5)),
+      );
+
+      @each $selector, $pair in $colors {
+        &:nth-child(#{$selector}) {
+          background: nth($pair, 1);
+          box-shadow: 0 4.66667px $shadow-blur $shadow-spread nth($pair, 2);
+        }
+      }
+
+      &::before {
+        content: '';
+        position: absolute;
+        background: #222;
+        width: 10px;
+        height: 9.33333px;
+        border-radius: 3px;
+        top: -4.66667px;
+        left: 1px;
+      }
+
+      &::after {
+        content: '';
+        top: -14px;
+        left: 9px;
+        position: absolute;
+        width: 52px;
+        height: 18.66667px;
+        border-bottom: solid #222 2px;
+        border-radius: 50%;
+      }
+
+      &:last-child::after { content: none; }
+      &:first-child { margin-left: -40px; }
+    }
+  }
+}

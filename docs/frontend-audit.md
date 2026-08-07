@@ -1,9 +1,10 @@
 # Frontend performance and maintainability audit
 
-Audit branch: `codex/frontend-audit`  
-Baseline: local `beta` commit `bc0e661`  
-Worktree: `C:\tmp\umamoe-frontend-audit`  
-Deterministic environment: Angular `audit` configuration, same-origin data fallbacks, API fixtures, and analytics/advertising/Turnstile disabled  
+Audit branch: `codex/frontend-audit`
+Original audit baseline: local `beta` commit `bc0e661`
+Synchronized base: `origin/main` commit `eff843b` (2026-08-07)
+Worktree: `C:\tmp\umamoe-frontend-audit`
+Deterministic environment: Angular `audit` configuration, same-origin data fallbacks, API fixtures, and analytics/advertising/Turnstile disabled
 Production comparison targets: [uma.moe](https://uma.moe/) and [beta.uma.moe](https://beta.uma.moe/)
 
 ## Outcome
@@ -18,17 +19,17 @@ Bundle values below are raw emitted JavaScript/CSS and locally calculated Brotli
 
 | Measurement | Baseline | Final | Change | Gate |
 | --- | ---: | ---: | ---: | ---: |
-| Initial bundle raw | 1,320,053 B | 891,649 B | -32.5% | <= 1,000,000 B |
-| Initial bundle Brotli | 272,216 B | 199,963 B | -26.5% | <= 200,000 B |
+| Initial bundle raw | 1,320,053 B | 889,092 B | -32.6% | <= 1,000,000 B |
+| Initial bundle Brotli | 272,216 B | 199,741 B | -26.6% | <= 200,000 B |
 | Initial files | 28 | 20 | -28.6% | <= 20 |
-| Global CSS | 252,032 B | 165,495 B | -34.3% | <= 175,000 B |
-| Home route | 35,365 B | 17,202 B | -51.4% | <= 25,000 B |
-| Database route | 1,574,957 B | 1,120,225 B | -28.9% | <= 1,150,000 B |
-| Timeline route | 986,966 B | 720,151 B | -27.0% | <= 750,000 B |
+| Global CSS | 252,032 B | 165,599 B | -34.3% | <= 175,000 B |
+| Home route | 35,365 B | 17,186 B | -51.4% | <= 25,000 B |
+| Database route | 1,574,957 B | 1,121,277 B | -28.8% | <= 1,150,000 B |
+| Timeline route | 986,966 B | 722,864 B | -26.8% | <= 750,000 B |
 | Statistics route | 2,648,752 B | 585,418 B | -77.9% | <= 1,500,000 B |
-| Lineage planner route | 2,760,690 B | 954,969 B | -65.4% | <= 1,500,000 B |
+| Lineage planner route | 2,760,690 B | 962,984 B | -65.1% | <= 1,500,000 B |
 
-Every configured route budget passes. Other measured closures also improved: circles 196,073 B, circle details 527,555 B, rankings 200,374 B, activity 399,053 B, tierlist 371,130 B, profile 547,084 B, and veterans 691,190 B.
+Every configured route budget passes. The carat-planner closure is 509,587 B, down from the post-sync 523,007 B regression and below its 520,000 B gate. Other measured closures also improved: circles 196,073 B, circle details 527,555 B, rankings 200,374 B, activity 399,053 B, tierlist 371,010 B, profile 552,121 B, and veterans 691,744 B.
 
 The local Material Icons font is one 128,352 B WOFF2 request and uses `font-display: swap`. It is recorded as an initial static asset rather than executable/style bundle bytes. The Google Fonts stylesheet, DNS connection, and cross-origin font request were removed.
 
@@ -50,11 +51,14 @@ Machine-readable evidence is generated at `reports/frontend-audit/bundle-report.
 
 - The application shell and new presentation components use `OnPush`.
 - Ad/viewport observers are disconnected on destruction; existing chart observers now respond to DOM theme changes without eagerly coupling route chunks to the theme service.
+- Navigation badges, status pings, seasonal lights, and the snow toggle no longer run decorative infinite animations while the application is idle. The carat loading indicator is transform-only and becomes static under reduced-motion preferences.
+- The tierlist no longer attaches a document-wide mousemove listener. Hover coordinates are captured only when a card interaction starts.
+- Normal navigation/home branding uses the tracked favicon. The optional seasonal-logo fallback is terminal and cannot repeatedly reassign the same missing URL from an image error event.
 - Broad Material light/dark color output was reduced to component surfaces that need global theming. Feature-only legacy/global blocks were disabled or moved to lazy assets.
 - Sass division deprecations in the lineage planner were replaced with `math.div`.
 - Offscreen route sections and charts have viewport deferral; LCP/home media retain explicit dimensions and below-fold images retain lazy loading/fallback behavior.
 - The carat planner's obsolete selector families were removed after static template/component analysis and deterministic desktop/mobile rendering. Its source SCSS fell from 124,955 to 116,570 bytes and Sass-compressed output from 110,825 to 102,647 bytes.
-- The planner's already-namespaced `.cp*` rules now use `ViewEncapsulation.None`, avoiding redundant Angular scope attributes. Stable base rules and later responsive refinements compile as ordered 58,865-byte and 43,782-byte style layers, both below the 75 KB component-style gate. The planner lazy chunk fell from 267.00 KB to 259.20 KB raw (47.99 KB to 47.30 KB estimated transfer).
+- The planner's already-namespaced `.cp*` rules now use `ViewEncapsulation.None`, avoiding redundant Angular scope attributes. Stable base rules and later responsive refinements compile as ordered 58,865-byte and 43,782-byte style layers, both below the 75 KB component-style gate. Removing its Material progress-bar dependency reduced the planner component lazy chunk from 267.00 KB to 251.38 KB raw; the complete route closure is 509.59 KB raw / 85.91 KB Brotli.
 
 ## Duplication result
 
@@ -62,16 +66,16 @@ Configured jscpd thresholds pass:
 
 | Format | Baseline | Final | Gate |
 | --- | ---: | ---: | ---: |
-| Overall | 3.02% / 143 blocks | 1.863% / 58 blocks | <= 2% |
-| Markup | 6.22% | 3.783% | <= 4% |
-| TypeScript | 2.28% | 1.285% | <= 1.75% |
-| SCSS | 2.60% | 1.977% | <= 2% |
+| Overall | 3.02% / 143 blocks | 1.776% / 57 blocks | <= 2% |
+| Markup | 6.22% | 3.816% | <= 4% |
+| TypeScript | 2.28% | 1.266% | <= 1.75% |
+| SCSS | 2.60% | 1.647% | <= 2% |
 
 Intentional generation-specific lineage markup, branded home/tools presentation, and typed ranking-mode rows are documented in `docs/frontend-audit-clone-allowlist.md`. The report is written to `reports/jscpd/jscpd-report.json`.
 
 ## Compatibility characterization
 
-The final unit suite contains 194 passing tests. Characterization covers UQL behavior already present in the repository, planner calculations and reward presentation, timeline ordering/avatar fallback, resource fallback hydration, free-pull allocation, LB crystals, statistics services, and existing serialization behavior.
+The final unit suite contains 210 passing tests after synchronization with current `main`. Characterization covers UQL behavior already present in the repository, planner calculations and reward presentation, timeline ordering/avatar fallback, resource fallback hydration, free-pull allocation, LB crystals, statistics services, and existing serialization behavior.
 
 Two compatibility defects exposed during the refactor were fixed in shared services:
 
@@ -130,9 +134,9 @@ Generated reports are ignored by Git and uploaded by `.github/workflows/frontend
 
 ## Final verification performed
 
-- `npm run build:prod` - pass; image compression pass
+- `npx ng build --configuration production` - pass
 - `npm run build:profile` - pass
-- `npm test -- --watch=false --browsers=ChromeHeadless --progress=false` - 194 pass
+- `npm test -- --watch=false --browsers=ChromeHeadless --progress=false` - 210 pass
 - `node scripts/frontend-audit/check-bundles.mjs` after audit build - pass
 - `npm run audit:duplicates` - pass
 - `npm run audit:routes` - 280 original route cases plus 10 planner-query cases pass (290 total)

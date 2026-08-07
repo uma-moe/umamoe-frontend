@@ -108,6 +108,14 @@ export class NavigationComponent {
   }
   onLogoError(event: Event) {
     const target = event.target as HTMLImageElement;
-    target.src = 'assets/logo.webp';
+    // The seasonal image is optional. Fall back once to the tracked favicon;
+    // never assign a failing URL repeatedly from its own error event.
+    if (target.dataset['fallbackApplied'] === 'true') {
+      target.hidden = true;
+      target.removeAttribute('src');
+      return;
+    }
+    target.dataset['fallbackApplied'] = 'true';
+    target.src = '/favicon.svg';
   }
 }

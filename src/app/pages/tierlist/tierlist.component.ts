@@ -265,13 +265,6 @@ export class TierlistComponent implements OnInit, OnDestroy {
     
     return this.upcomingCards.filter(card => card.type === currentType.type);
   }
-  @HostListener('document:mousemove', ['$event'])
-  onMouseMove(event: MouseEvent): void {
-    this.hoverMenuPosition = {
-      x: event.clientX,
-      y: event.clientY
-    };
-  }
   @HostListener('document:mouseleave', ['$event'])
   onMouseLeave(): void {
     this.hideHoverMenu();

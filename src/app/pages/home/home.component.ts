@@ -81,10 +81,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.accounts7d = stats.freshness.accounts_7d;
     this.umasTracked = stats.freshness.umas_tracked;
   }
-  onLogoError(event: Event) {
-    const target = event.target as HTMLImageElement;
-    target.src = 'assets/logo.webp';
-  }
   private checkForMilestonePopup() {
     setTimeout(() => void this.showMilestonePopupIfNeeded(), 800);
   }

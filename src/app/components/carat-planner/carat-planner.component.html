@@ -109,7 +109,7 @@
   </section>
 
   <div class="cp-status cp-status--loading" *ngIf="resourceState.loading" role="status" aria-live="polite">
-    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    <div class="cp-loading-track" aria-hidden="true"></div>
     <div><mat-icon>sync</mat-icon><span>Loading rates, rewards, and income data&hellip;</span></div>
   </div>
 

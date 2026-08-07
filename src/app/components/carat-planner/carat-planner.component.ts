@@ -15,7 +15,6 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { Subject, takeUntil } from 'rxjs';
@@ -244,7 +243,6 @@ type FreePullCampaignChoice = 'schedule' | 'stock';
     MatButtonModule,
     MatCheckboxModule,
     MatIconModule,
-    MatProgressBarModule,
     MatTooltipModule,
     TourAnchorMatMenuDirective,
   ],

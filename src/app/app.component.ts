@@ -8,7 +8,6 @@ import { AdLayoutComponent } from './components/ads/ad-layout.component';
 import { ThemeService } from './services/theme.service';
 import { AuthService } from './services/auth.service';
 import { TurnstileDebugState, TurnstileService } from './services/turnstile.service';
-import { SeoService } from './services/seo.service';
 import { environment } from '../environments/environment';
 import { BehaviorSubject, Observable, combineLatest, map, of, switchMap, take, timer } from 'rxjs';
 
@@ -57,7 +56,6 @@ export class AppComponent implements OnInit {
     private authService: AuthService,
     private injector: Injector,
     private turnstileService: TurnstileService,
-    private seoService: SeoService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.turnstileRecovery$ = combineLatest([
@@ -79,7 +77,7 @@ export class AppComponent implements OnInit {
     }
   }
   ngOnInit(): void {
-    this.seoService.initialize();
+    void this.initializeSeo();
     let browserParams: URLSearchParams | null = null;
     let turnstileDebugApplied = false;
     if (isPlatformBrowser(this.platformId)) {
@@ -106,6 +104,13 @@ export class AppComponent implements OnInit {
     if (isPlatformBrowser(this.platformId)) {
       setTimeout(() => void this.initializeUpdateNotification(), 1000);
     }
+  }
+
+  private async initializeSeo(): Promise<void> {
+    try {
+      const { SeoService } = await import('./services/seo.service');
+      this.injector.get(SeoService).initialize();
+    } catch {}
   }
 
   private initializeDeferredShellFeatures(): void {

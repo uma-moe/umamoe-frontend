@@ -203,7 +203,7 @@ select.cp-control,
 
   > mat-icon { @include icon-size(20px); flex: 0 0 auto; }
 
-  > div:not(.mat-mdc-progress-bar) {
+  > div:not(.cp-loading-track) {
     min-width: 0;
     flex: 1;
     display: flex;
@@ -223,9 +223,22 @@ select.cp-control,
   color: var(--accent-primary);
   overflow: hidden;
 
-  > mat-progress-bar {
+  > .cp-loading-track {
     position: absolute;
     inset: 0 0 auto;
+    height: 3px;
+    overflow: hidden;
+    background: rgba(var(--accent-primary-rgb), 0.16);
+
+    &::after {
+      content: '';
+      display: block;
+      width: 42%;
+      height: 100%;
+      background: var(--accent-primary);
+      transform: translateX(-110%);
+      animation: cp-loading-slide 1.1s ease-in-out infinite;
+    }
   }
 
   > div {
@@ -235,6 +248,18 @@ select.cp-control,
   }
 
   mat-icon { @include icon-size(18px); }
+}
+
+@keyframes cp-loading-slide {
+  to { transform: translateX(350%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-loading-track::after {
+    width: 100%;
+    transform: none;
+    animation: none;
+  }
 }
 
 .cp-status--error {
