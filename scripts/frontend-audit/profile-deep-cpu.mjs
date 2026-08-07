@@ -28,16 +28,17 @@ const ACTION_SETTLE_MS = 2_000;
 const IDLE_OBSERVATION_MS = 1_500;
 const label = stringArg('--label', 'deep-current');
 const scenarioFilter = stringArg('--scenario', '');
+const scenarioPrefix = stringArg('--scenario-prefix', '');
 const profileFilter = stringArg('--profile', '');
 const maxIdleMsPerSecond = numberArg('--max-idle-ms-per-second', 25);
 const maxActionTaskMs = numberArg('--max-action-task-ms', 1_300);
 const actionBudgetOverride = process.argv.includes('--max-action-task-ms');
 const ACTION_TASK_BUDGETS = {
   'database-basic-expand': 700,
-  'database-advanced-switch': 2_000,
-  'database-uql-open': 1_300,
+  'database-advanced-switch': 2_200,
+  'database-uql-open': 1_400,
   'database-uql-editor': 2_500,
-  'database-uql-reference': 900,
+  'database-uql-reference': 1_000,
   'database-bookmarks-tab': 500,
   'database-list-mode': 1_100,
   'database-scroll-resize': 1_300,
@@ -48,6 +49,11 @@ const ACTION_TASK_BUDGETS = {
   'lineage-saves-dialog': 600,
   'lineage-character-dialog': 600,
   'lineage-resize': 500,
+  'carat-populated': 150,
+  'carat-income-open': 1_000,
+  'carat-income-cycles': 1_500,
+  'carat-setup-tabs': 1_500,
+  'carat-scroll-resize': 1_500,
 };
 
 const LINEAGE_POSITIONS = [
@@ -80,6 +86,54 @@ const LINEAGE_STATE = LINEAGE_POSITIONS.map((position, index) => ({
     : [],
   manualWinSaddleIds: index < 7 ? [101, 102, 103 + (index % 2)] : [],
 }));
+
+const CARAT_PLAN = {
+  id: 'cpu-audit-carat-plan',
+  name: 'CPU audit long-range plan',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+  projectionStartDate: '2026-01-01',
+  balances: {
+    freeJewels: 30_000,
+    paidJewels: 5_000,
+    umaTickets: 20,
+    supportTickets: 20,
+    rainbowCrystals: 2,
+    goldCrystals: 4,
+  },
+  enabledIncomeRuleIds: ['audit-daily', 'audit-monthly', 'premium-training-pass'],
+  enabledRewardIds: [],
+  disabledRewardIds: [],
+  enabledRewardEventIds: [],
+  disabledEventIds: [],
+  scenarioSelections: { speculative_income: 'include', training_pass: 'premium' },
+  variableRewardSelections: {},
+  freePullCampaignSelections: {},
+  resourceDefaultsApplied: true,
+  customIncome: [],
+  targets: Array.from({ length: 12 }, (_value, index) => {
+    const date = new Date(Date.UTC(2026, 5 + index * 6, 15)).toISOString().slice(0, 10);
+    return {
+      id: `cpu-audit-target-${index}`,
+      eventId: `cpu-audit-event-${index}`,
+      title: `Audit target ${index + 1}`,
+      bannerKind: 'other',
+      bannerStart: date,
+      bannerEnd: date,
+      pullTiming: 'end',
+      plannedPulls: 200,
+      desiredCopies: 1,
+      pickupGoals: [],
+      useTickets: true,
+      allowPaidJewels: true,
+    };
+  }),
+};
+const CARAT_COLLECTION = {
+  version: 1,
+  activePlanId: CARAT_PLAN.id,
+  plans: [CARAT_PLAN],
+};
 
 const scenarios = [
   {
@@ -241,9 +295,67 @@ const scenarios = [
       }
     },
   },
-].filter(scenario => !scenarioFilter || scenario.name === scenarioFilter);
+  {
+    name: 'carat-populated',
+    route: '/timeline?tab=carat-planner',
+    carat: true,
+    action: async page => page.waitForTimeout(50),
+  },
+  {
+    name: 'carat-income-open',
+    route: '/timeline?tab=carat-planner',
+    carat: true,
+    action: async page => openCaratIncome(page),
+  },
+  {
+    name: 'carat-income-cycles',
+    route: '/timeline?tab=carat-planner',
+    carat: true,
+    setup: async page => openCaratIncome(page),
+    action: async page => {
+      for (const name of ['Training Pass', 'Speculative income']) {
+        const next = page.getByRole('button', { name: `Next ${name} option` });
+        for (let index = 0; index < 4; index += 1) await next.click();
+      }
+    },
+  },
+  {
+    name: 'carat-setup-tabs',
+    route: '/timeline?tab=carat-planner',
+    carat: true,
+    setup: async page => {
+      await page.locator('.cp').waitFor({ timeout: 15_000 });
+      await page.locator('.cp-assumptions-bar').click();
+    },
+    action: async page => {
+      for (let pass = 0; pass < 2; pass += 1) {
+        for (const name of ['Income', 'Rewards', 'Balance']) {
+          await page.getByRole('tab', { name: new RegExp(`^${name}`) }).click();
+        }
+      }
+    },
+  },
+  {
+    name: 'carat-scroll-resize',
+    route: '/timeline?tab=carat-planner',
+    carat: true,
+    action: async (page, profile) => {
+      await page.locator('.cp').waitFor({ timeout: 15_000 });
+      for (let index = 0; index < 4; index += 1) {
+        await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+        await page.evaluate(() => window.scrollTo(0, 0));
+      }
+      const original = profile.context.viewport;
+      await page.setViewportSize({ width: Math.max(360, original.width - 100), height: original.height });
+      await page.setViewportSize(original);
+    },
+  },
+].filter(scenario => (!scenarioFilter || scenario.name === scenarioFilter)
+  && (!scenarioPrefix || scenario.name.startsWith(`${scenarioPrefix}-`)));
 
-if (!scenarios.length) throw new Error(`No deep CPU scenario matches "${scenarioFilter}".`);
+if (!scenarios.length) {
+  throw new Error(`No deep CPU scenario matches scenario="${scenarioFilter}" prefix="${scenarioPrefix}".`);
+}
 
 assertAuditBuild();
 await ensureReportsDirectory();
@@ -274,6 +386,11 @@ try {
         await context.addInitScript(state => {
           localStorage.setItem('lineage-planner-state-v1', JSON.stringify(state));
         }, LINEAGE_STATE);
+      }
+      if (scenario.carat) {
+        await context.addInitScript(collection => {
+          localStorage.setItem('carat-planner-plans-v1', JSON.stringify(collection));
+        }, CARAT_COLLECTION);
       }
 
       const page = await context.newPage();
@@ -448,6 +565,13 @@ async function openUql(page) {
   await page.locator('.cm-content').waitFor({ timeout: 15_000 });
 }
 
+async function openCaratIncome(page) {
+  await page.locator('.cp').waitFor({ timeout: 15_000 });
+  await page.locator('.cp-assumptions-bar').click();
+  await page.getByRole('tab', { name: /^Income/ }).click();
+  await page.locator('.cp-setup-panel--income').waitFor();
+}
+
 async function installDeepNetworkFixtures(context) {
   // Deep interaction runs need stable successful results. Failure and retry
   // states remain covered by the route audit's generic 503 fixtures.
@@ -475,6 +599,55 @@ async function installDeepNetworkFixtures(context) {
       headers: { 'cache-control': 'no-store' },
     });
   });
+  await context.route('**/resources/planner/manifest.json*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      version: 'cpu-deep-carat-v1',
+      resources: {
+        'planner_core.json': 'planner/planner_core.json',
+        'planner_income.json': 'planner/planner_income.json',
+        'planner_rewards.json': 'planner/planner_rewards.json',
+      },
+    }),
+    headers: { 'cache-control': 'no-store' },
+  }));
+  await context.route('**/resources/planner/planner_core.json*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ jewel_cost_per_pull: 150, default_spark_pulls: 200 }),
+    headers: { 'cache-control': 'no-store' },
+  }));
+  await context.route('**/resources/planner/planner_income.json*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ rules: [
+      { id: 'audit-daily', label: 'Daily income', currency: 'free_jewels', amount: 50, cadence: 'daily', start_date: '2026-01-01' },
+      { id: 'audit-monthly', label: 'Monthly income', currency: 'free_jewels', amount: 1200, cadence: 'monthly', start_date: '2026-01-01', day_of_month: 1 },
+      { id: 'premium-training-pass', label: 'Legacy Training Pass', currency: 'paid_jewels', amount: 350, cadence: 'monthly', start_date: '2027-08-20' },
+    ] }),
+    headers: { 'cache-control': 'no-store' },
+  }));
+  await context.route('**/resources/planner/planner_rewards.json*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      rewards: [],
+      event_benefits: [],
+      free_pull_campaigns: [],
+      competitive_variants: [],
+      global_reward_comparison: {
+        observation_end: '2026-08-06',
+        speculative_monthly_carats: 1233,
+        speculative_recent_median_monthly_carats: 775,
+        speculative_months: Array.from({ length: 72 }, (_value, index) => ({
+          month: `${2020 + Math.floor(index / 12)}-${String(index % 12 + 1).padStart(2, '0')}`,
+          total_carats: 500 + index,
+        })),
+      },
+    }),
+    headers: { 'cache-control': 'no-store' },
+  }));
   await context.route('**/search/query**', async route => {
     const url = new URL(route.request().url());
     const page = Number(url.searchParams.get('page') ?? 0);

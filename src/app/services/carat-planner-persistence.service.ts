@@ -21,7 +21,7 @@ import {
   SPECULATIVE_INCOME_INCLUDED_OPTION,
   SPECULATIVE_INCOME_NONE_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
-} from '../utils/carat-planner-income-assumptions';
+} from '../utils/carat-planner-income-defaults';
 import {
   hasProjectableSourceItems,
   isAutomaticCompetitiveVariant,

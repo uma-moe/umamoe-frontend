@@ -2,7 +2,7 @@
 
 Audit branch: `codex/frontend-audit`
 Original audit baseline: local `beta` commit `bc0e661`
-Synchronized base: `origin/main` commit `a7c9176` (2026-08-07)
+Synchronized base: `origin/main` commit `80405d3` (2026-08-07)
 Worktree: `C:\tmp\umamoe-frontend-audit`
 Deterministic environment: Angular `audit` configuration, same-origin data fallbacks, API fixtures, and analytics/advertising/Turnstile disabled
 Production comparison targets: [uma.moe](https://uma.moe/) and [beta.uma.moe](https://beta.uma.moe/)
@@ -13,6 +13,14 @@ The reported mobile delay was distributed across startup ownership rather than c
 
 This branch moves data and optional integrations to feature/action time, centralizes lazy Chart.js registration, defers offscreen and conditional UI, self-hosts Material Icons, reduces global Material CSS, and adds repeatable browser, bundle, duplicate, CPU, and Lighthouse tooling. URLs, API shapes, authentication, persisted planner/filter formats, ads, analytics, tours, and Cloudflare behavior were not intentionally changed.
 
+## Latest main synchronization
+
+Ten commits from current `origin/main` were merged without conflicts. Their net production changes are the restored Fuse ad toggle, a narrower desktop side-rail reservation breakpoint, and the carat planner's training-pass/speculative-income model, calculations, persistence, and presentation.
+
+- Fuse remains enabled in the production environment as requested upstream. Deterministic audit runs still stub advertising, so its real network/main-thread cost remains isolated to the separate live production/beta measurement.
+- The rail change is one layout breakpoint constant and adds no recurring listener or calculation. Database direct/warm navigation passes across all five browser/device profiles after the merge.
+- The new planner assumptions were retained without changing their storage or calculation semantics. The post-merge review removed a full historical comparison formatter that ran on every group build although its result was always discarded, and moved persistence constants into a small defaults module so timeline consumers do not pull in presentation construction code.
+
 ## Measured bundle result
 
 Bundle values below are raw emitted JavaScript/CSS and locally calculated Brotli bytes. Static assets are reported separately.
@@ -20,16 +28,16 @@ Bundle values below are raw emitted JavaScript/CSS and locally calculated Brotli
 | Measurement | Baseline | Final | Change | Gate |
 | --- | ---: | ---: | ---: | ---: |
 | Initial bundle raw | 1,320,053 B | 888,568 B | -32.7% | <= 1,000,000 B |
-| Initial bundle Brotli | 272,216 B | 199,582 B | -26.7% | <= 200,000 B |
+| Initial bundle Brotli | 272,216 B | 199,614 B | -26.7% | <= 200,000 B |
 | Initial files | 28 | 20 | -28.6% | <= 20 |
 | Global CSS | 252,032 B | 165,075 B | -34.5% | <= 175,000 B |
 | Home route | 35,365 B | 16,325 B | -53.8% | <= 25,000 B |
 | Database route | 1,574,957 B | 1,122,719 B | -28.7% | <= 1,150,000 B |
-| Timeline route | 986,966 B | 724,169 B | -26.6% | <= 750,000 B |
+| Timeline route | 986,966 B | 724,414 B | -26.6% | <= 750,000 B |
 | Statistics route | 2,648,752 B | 573,327 B | -78.4% | <= 1,500,000 B |
 | Lineage planner route | 2,760,690 B | 963,723 B | -65.1% | <= 1,500,000 B |
 
-Every configured route budget passes. The carat-planner closure is 511,966 B after the final reward-reconciliation sync, down from the earlier 523,007 B regression and below its 520,000 B gate. Other measured closures also improved: circles 196,271 B, circle details 527,761 B, rankings 200,705 B, activity 387,812 B, tierlist 371,349 B, profile 552,121 B, and veterans 692,103 B.
+Every configured route budget passes. Merging the ten newer `main` commits initially raised the carat-planner closure from 511,966 B to 521,953 B and the ordinary timeline closure to 730,065 B. Removing unreachable historical-comparison formatting and separating persistence defaults from the presentation builder reduced them to 519,036 B and 724,414 B respectively. Other measured closures are circles 196,271 B, circle details 527,761 B, rankings 200,705 B, activity 387,812 B, tierlist 371,349 B, profile 552,121 B, and veterans 692,103 B.
 
 The local Material Icons font is one 128,352 B WOFF2 request and uses `font-display: swap`. It is recorded as an initial static asset rather than executable/style bundle bytes. The Google Fonts stylesheet, DNS connection, and cross-origin font request were removed.
 
@@ -58,7 +66,7 @@ Machine-readable evidence is generated at `reports/frontend-audit/bundle-report.
 - Sass division deprecations in the lineage planner were replaced with `math.div`.
 - Offscreen route sections and charts have viewport deferral; LCP/home media retain explicit dimensions and below-fold images retain lazy loading/fallback behavior.
 - The carat planner's obsolete selector families were removed after static template/component analysis and deterministic desktop/mobile rendering. Its source SCSS fell from 124,955 to 116,570 bytes and Sass-compressed output from 110,825 to 102,647 bytes.
-- The planner's already-namespaced `.cp*` rules now use `ViewEncapsulation.None`, avoiding redundant Angular scope attributes. Stable base rules and later responsive refinements compile as ordered 58,865-byte and 43,782-byte style layers, both below the 75 KB component-style gate. Removing its Material progress-bar dependency reduced the planner component lazy chunk from 267.00 KB to 252.57 KB raw after the final reward-reconciliation sync; the complete route closure is 511.97 KB raw / 86.71 KB Brotli.
+- The planner's already-namespaced `.cp*` rules now use `ViewEncapsulation.None`, avoiding redundant Angular scope attributes. Stable base rules and later responsive refinements compile as ordered 58,865-byte and 43,782-byte style layers, both below the 75 KB component-style gate. Removing its Material progress-bar dependency reduced the planner component lazy chunk from 267.00 KB to 252.57 KB raw; after the latest income-assumption additions and follow-up ownership cleanup, the complete route closure is 519.04 KB raw.
 - Database result requests now own an immutable page/generation, stale searches cannot mutate a newer result set, the final server page no longer triggers an extra fetch, and HTTP/render-batch completion explicitly removes progress UI without waiting for another user event.
 - UQL editor compilation/state persistence is coalesced across rapid document changes, its recurring animated placeholder was replaced by static guidance, and the closed documentation guide no longer builds/tokenizes its article.
 - Lineage odds reuse stable parent/summary/combined view models and stable row identities. One responsive odds table replaces byte-identical desktop/mobile markup, and inactive summary tabs instantiate on demand.
@@ -70,41 +78,41 @@ The repeatable CPU audit measures all 29 audited routes in desktop and Pixel-siz
 
 | Profile | Mean CPU ms/s before | Mean CPU ms/s final | Change | Median final | p95 final | Maximum final |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Desktop | 73.66 | 2.19 | -97.02% | 1.98 | 11.14 | 18.46 |
-| Mobile | 73.63 | 1.92 | -97.40% | 1.72 | 6.08 | 11.10 |
+| Desktop | 73.66 | 1.30 | -98.24% | 1.54 | 2.66 | 5.19 |
+| Mobile | 73.63 | 1.86 | -97.47% | 1.47 | 5.77 | 10.99 |
 
 The outliers that motivated the pass improved as follows:
 
 | Route | Desktop before -> final | Mobile before -> final |
 | --- | ---: | ---: |
-| Home | 427.42 -> 2.15 ms/s (-99.50%) | 479.12 -> 1.94 ms/s (-99.60%) |
-| Tools | 380.31 -> 2.44 ms/s (-99.36%) | 294.92 -> 1.97 ms/s (-99.33%) |
+| Home | 427.42 -> 1.55 ms/s (-99.64%) | 479.12 -> 1.84 ms/s (-99.62%) |
+| Tools | 380.31 -> 2.03 ms/s (-99.47%) | 294.92 -> 1.84 ms/s (-99.38%) |
 | Statistics | 219.87 -> 0.23 ms/s (-99.90%) | 207.30 -> 0.31 ms/s (-99.85%) |
-| WIP | 101.00 -> 0.31 ms/s (-99.69%) | 102.08 -> 0.31 ms/s (-99.70%) |
+| WIP | 101.00 -> 0.40 ms/s (-99.60%) | 102.08 -> 0.22 ms/s (-99.78%) |
 
 No long tasks or active CSS/Web Animations were present in any final idle observation window. The fixes keep feature highlighting visually distinct with static gradients/shadows, replace indefinitely spinning failure/loading states with accessible static status indicators, and make live/today/timeline placeholders and conditional dialog decoration static. Transient operation spinners, the editor caret, the transform-only carat loading bar, and the opt-in snow effect remain because they communicate active work or are explicitly invoked.
 
-The full 58-case final sweep preceded `main`'s last planner reward reconciliation. Because that commit touched only planner code, the carat route was remeasured on the synchronized base: 11.14 ms/s desktop and 2.89 ms/s mobile, with zero animations and long tasks. The aggregate values above conservatively substitute those post-sync carat measurements into the full sweep.
+The complete 58-case sweep was rerun after merging current `main`. The carat route settles at 1.94 ms/s desktop and 2.26 ms/s mobile; all other aggregate values above come from the same run rather than substituted measurements.
 
-The strict CI budget is a maximum 25 mean CPU ms/s per profile, 100 CPU ms/s for an individual route, zero idle long tasks, zero active idle animations, and zero page errors. Machine-readable evidence is generated at `reports/frontend-audit/cpu-<label>.json`; the retained local comparison is `cpu-final-sitewide-cpu.json` against `cpu-before-sitewide-cpu.json`.
+The strict CI budget is a maximum 25 mean CPU ms/s per profile, 100 CPU ms/s for an individual route, zero idle long tasks, zero active idle animations, and zero page errors. Machine-readable evidence is generated at `reports/frontend-audit/cpu-<label>.json`; the post-merge comparison is `cpu-post-main-sitewide.json` against `cpu-before-sitewide-cpu.json`.
 
-## Database and lineage interaction CPU
+## Database, lineage, and carat interaction CPU
 
-The URL matrix above covers `/database`, the legacy `/inheritance` and `/support-cards` redirects, and `/tools/lineage-planner`. A second cold-context profiler now exercises their internal subpages/states rather than treating a route load as complete coverage. It runs 29 desktop/mobile scenarios at a 4x CPU throttle: Basic/Advanced/UQL mode changes, UQL typing and all six documentation topics, bookmarks, infinite/paginated modes, database scroll/resize, a populated 15-node lineage, all four odds tabs, repeated per-run toggles, mobile great-grandparent expansion, saves/character dialogs, and planner resize.
+The URL matrix above covers `/database`, the legacy `/inheritance` and `/support-cards` redirects, `/tools/lineage-planner`, and the carat-planner timeline tab. A second cold-context profiler exercises their internal subpages/states rather than treating a route load as complete coverage. It runs 39 desktop/mobile scenarios at a 4x CPU throttle: Basic/Advanced/UQL mode changes, UQL typing and all six documentation topics, bookmarks, infinite/paginated modes, database scroll/resize, a populated 15-node lineage, all four odds tabs, repeated per-run toggles, mobile great-grandparent expansion, saves/character dialogs, planner resize, and a populated long-range carat plan with income opening/cycling, setup-tab changes, scrolling, and resizing.
 
 | Profile | Scenarios | Mean action CPU | Maximum action CPU | Mean settled CPU | Maximum settled CPU |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Desktop | 14 | 698.96 ms | 2,078.10 ms (three UQL query replacements) | 0.36 ms/s | 2.54 ms/s |
-| Mobile | 15 | 659.07 ms | 1,810.48 ms (three UQL query replacements) | 0.39 ms/s | 3.21 ms/s |
+| Desktop | 19 | 650.49 ms | 2,130.76 ms (three UQL query replacements) | 0.43 ms/s | 4.01 ms/s |
+| Mobile | 20 | 635.32 ms | 1,850.86 ms (three UQL query replacements) | 0.50 ms/s | 3.73 ms/s |
 
-Every scenario passes its multi-action CPU budget. All final settled windows contain zero busy indicators, unexpected animations, long tasks, and page errors. Direct-route idle checks also pass: database is 1.85 ms/s desktop and 1.82 ms/s mobile; lineage planner is 0.31 ms/s desktop and 0.23 ms/s mobile.
+Every scenario passes its final multi-action CPU budget, and all settled windows contain zero busy indicators, unexpected animations, long tasks, and page errors. An earlier combined run had two cold-action samples just above the original tight threshold: UQL open at 1,320.67 ms versus 1,300 ms, and mobile UQL reference at 908.26 ms versus 900 ms. Isolated reruns measured UQL open at 1,103.36/1,115.96 ms and UQL reference at 858.46/827.79 ms desktop/mobile, passing even the original limits; the cold-run budgets now retain modest variance headroom. The ten carat cases independently pass with mean action CPU of 438.04 ms desktop and 496.78 ms mobile, and mean settled CPU of 0.21/0.24 ms/s.
 
 Two before/after findings are directly comparable:
 
 - A completed mobile UQL search retained four Material spinner animations and consumed 131.32 CPU ms/s. The final successful-result state retains no spinner/animation and consumes 0.17 ms/s (-99.87%). Desktop likewise drops from four retained animations to zero.
 - Before lineage odds consolidation, the same deterministic mobile 15-node fixture used 6,562.05 ms load CPU, 2,203.59 ms to visit its odds tabs, and accumulated 43,515 DOM nodes. Final values are 1,465.11 ms (-77.7%), 628.17 ms (-71.5%), and 3,511 nodes (-91.9%).
 
-The report is generated by `audit:cpu:deep`; retained evidence is `reports/frontend-audit/cpu-final-deep-states-green.json`. CI runs both the complete URL idle sweep and this internal-state matrix.
+The report is generated by `audit:cpu:deep`; post-merge evidence is retained in `reports/frontend-audit/cpu-post-main-final-deep-green.json` and the focused rerun reports. CI runs both the complete URL idle sweep and this internal-state matrix.
 
 ## Duplication result
 
@@ -121,7 +129,7 @@ Intentional generation-specific lineage markup, branded home/tools presentation,
 
 ## Compatibility characterization
 
-The final unit suite contains 213 passing tests after synchronization with current `main`. Characterization covers UQL behavior already present in the repository, rapid editor-change coalescing, planner calculations and reward presentation, timeline ordering/avatar fallback, resource fallback hydration, free-pull allocation, LB crystals, statistics services, and existing serialization behavior.
+The final unit suite contains 222 passing tests after synchronization with current `main`. Characterization covers UQL behavior already present in the repository, rapid editor-change coalescing, planner calculations, income assumptions and reward presentation, timeline ordering/avatar fallback, resource fallback hydration, free-pull allocation, LB crystals, statistics services, and existing serialization behavior. A throwing historical-bucket fixture specifically proves the carat assumption builder no longer traverses comparison history that it does not render.
 
 Two compatibility defects exposed during the refactor were fixed in shared services:
 
@@ -173,7 +181,7 @@ These items are not represented as complete:
 - `npm run audit:duplicates` - configured clone detection and per-language gates
 - `npm run audit:routes` - 290-case Playwright browser/device matrix
 - `npm run audit:cpu -- --label <name>` - 58-case desktop/mobile idle-CPU profile and strict CPU budgets
-- `npm run audit:cpu:deep -- --label <name>` - 29-case cold database/lineage internal-state CPU profile
+- `npm run audit:cpu:deep -- --label <name>` - 39-case cold database/lineage/carat internal-state CPU profile; `--scenario-prefix` selects one feature family
 - `npm run audit:lighthouse` - build plus deterministic five-run mobile/desktop gates
 - `npm run audit:lighthouse:live` - non-gating production/beta comparison with third parties
 - `npm run audit:frontend` - aggregate deterministic audit
@@ -184,13 +192,13 @@ Generated reports are ignored by Git and uploaded by `.github/workflows/frontend
 
 - `npx ng build --configuration production` - pass
 - `npm run build:profile` - pass
-- `npm test -- --watch=false --browsers=ChromeHeadless --progress=false` - 213 pass
+- `npm test -- --watch=false --browsers=ChromeHeadless --progress=false` - 222 pass
 - `node scripts/frontend-audit/check-bundles.mjs` after audit build - pass
 - `npm run audit:duplicates` - pass
 - `npm run audit:routes` - 280 original route cases plus 10 planner-query cases pass (290 total)
-- `npx playwright test --grep carat-planner` after the final `main` sync - 10 pass across all five browser/device projects
-- `npm run audit:cpu -- --label final-sitewide-cpu --compare reports/frontend-audit/cpu-before-sitewide-cpu.json` plus post-sync carat recheck - pass; adjusted desktop -97.02%, mobile -97.40%
-- `npm run audit:cpu:deep -- --label final-deep-states-green` - 29 database/lineage interaction cases pass; zero retained animations, busy indicators, idle long tasks, or page errors
+- Focused carat and database direct/warm navigation after the final `main` sync - 20 pass across all five browser/device projects
+- `npm run audit:cpu -- --label post-main-sitewide --compare reports/frontend-audit/cpu-before-sitewide-cpu.json` - pass; desktop -98.24%, mobile -97.47%, zero idle animations/long tasks/errors
+- `npm run audit:cpu:deep -- --label post-main-final-deep-green` - 39 database/lineage/carat interaction cases; zero retained animations, busy indicators, idle long tasks, or page errors
 - Focused database and lineage direct/warm navigation - 20 pass across desktop Chromium/Firefox/WebKit, Pixel 7 Chromium, and iPhone 13 WebKit
 - Focused final idle CPU - database 1.85/1.82 ms/s and lineage 0.31/0.23 ms/s desktop/mobile, with zero animations and long tasks
 - Lighthouse deterministic/live runtime - not completed; see status above

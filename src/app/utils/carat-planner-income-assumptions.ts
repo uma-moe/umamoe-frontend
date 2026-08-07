@@ -4,12 +4,21 @@ import {
   PlannerGlobalRewardComparison,
   PlannerIncomeRule,
 } from '../models/carat-planner.model';
+import {
+  SPECULATIVE_INCOME_INCLUDED_OPTION,
+  SPECULATIVE_INCOME_MEDIAN_OPTION,
+  SPECULATIVE_INCOME_NONE_OPTION,
+  SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
+  TRAINING_PASS_SCENARIO_GROUP_ID,
+} from './carat-planner-income-defaults';
 
-export const TRAINING_PASS_SCENARIO_GROUP_ID = 'training_pass';
-export const SPECULATIVE_INCOME_SCENARIO_GROUP_ID = 'speculative_income';
-export const SPECULATIVE_INCOME_INCLUDED_OPTION = 'include';
-export const SPECULATIVE_INCOME_MEDIAN_OPTION = 'median';
-export const SPECULATIVE_INCOME_NONE_OPTION = 'none';
+export {
+  SPECULATIVE_INCOME_INCLUDED_OPTION,
+  SPECULATIVE_INCOME_MEDIAN_OPTION,
+  SPECULATIVE_INCOME_NONE_OPTION,
+  SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
+  TRAINING_PASS_SCENARIO_GROUP_ID,
+} from './carat-planner-income-defaults';
 export const TRAINING_PASS_SOURCE_URL = 'https://umapyoi.net/news/1788?lang=jp';
 
 const TRAINING_PASS_TIMELINE_EVENT_ID = 'campaign-632';
@@ -69,7 +78,6 @@ export function plannerIncomeAssumptionGroups(
   const speculativeMedianCarats = Math.max(0, Math.round(
     Number(comparison?.speculative_recent_median_monthly_carats) || 0,
   ));
-  const comparisonLabel = speculativeComparisonLabel(comparison);
   const speculativeHelp = speculativeHelpText(comparison);
   return [
     {
@@ -86,7 +94,7 @@ export function plannerIncomeAssumptionGroups(
       icon: 'auto_graph',
       scheduleLabel: comparison
         ? 'Rolling six completed months; recalculates automatically'
-        : comparisonLabel,
+        : 'Awaiting EN/JP and official social comparison data',
       helpText: speculativeHelp,
       options: [
         {
@@ -123,82 +131,8 @@ function speculativeHelpText(
   ].join('\n');
 }
 
-function speculativeComparisonLabel(
-  comparison: PlannerGlobalRewardComparison | undefined,
-): string {
-  if (!comparison) return 'Awaiting EN/JP and official social comparison data';
-  const months = comparison.speculative_months ?? [];
-  const sourceSummary = `${comparison.matched_news?.length ?? 0} matched news use EN−JP delta; ${comparison.en_only_news?.length ?? 0} EN-only; ${comparison.social_reward_posts} deduped X/Twitter; ${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed`;
-  if (comparison.speculative_method === 'mean_last_6_complete_calendar_months'
-    && months.length > 0) {
-    const range = formatMonthRange(
-      comparison.speculative_window_start ?? months[0].month,
-      comparison.speculative_window_end ?? months[months.length - 1].month,
-    );
-    const values = months.map(month => formatNumber(month.total_carats)).join(', ');
-    const median = Math.max(0, Math.round(
-      Number(comparison.speculative_recent_median_monthly_carats) || 0,
-    ));
-    return `6-month expected mean ${range} [${values}] = ${formatNumber(comparison.speculative_monthly_carats)}/month; conservative median = ${formatNumber(median)}/month. Sources: ${sourceSummary}`;
-  }
-  if (comparison.speculative_method === 'mean_last_12_complete_calendar_months'
-    && months.length > 0) {
-    const range = formatMonthRange(
-      comparison.speculative_window_start ?? months[0].month,
-      comparison.speculative_window_end ?? months[months.length - 1].month,
-    );
-    const values = months.map(month => formatNumber(month.total_carats)).join(', ');
-    const recentMedian = Math.max(0, Math.round(
-      Number(comparison.speculative_recent_median_monthly_carats) || 0,
-    ));
-    const recentMedianRange = formatMonthRange(
-      comparison.speculative_recent_median_window_start ?? months[Math.max(0, months.length - 6)].month,
-      comparison.speculative_recent_median_window_end ?? months[months.length - 1].month,
-    );
-    return `12-month expected mean ${range} [${values}] = ${formatNumber(comparison.speculative_monthly_carats)}/month; conservative 6-month median ${recentMedianRange} = ${formatNumber(recentMedian)}/month. Sources: ${sourceSummary}`;
-  }
-  if (comparison.speculative_method === 'median_last_6_complete_calendar_months'
-    && months.length > 0) {
-    const range = formatMonthRange(
-      comparison.speculative_window_start ?? months[0].month,
-      comparison.speculative_window_end ?? months[months.length - 1].month,
-    );
-    const values = months.map(month => formatNumber(month.total_carats)).join(', ');
-    const longRunMean = Math.max(0, Math.round(
-      Number(comparison.speculative_mean_monthly_carats) || 0,
-    ));
-    return `6-month median ${range} [${values}] = ${formatNumber(comparison.speculative_monthly_carats)}/month; long-run mean ${formatNumber(longRunMean)}/month. Sources: ${sourceSummary}`;
-  }
-  return `Observed ${comparison.matched_news?.length ?? 0} matched news: EN ${formatNumber(comparison.matched_news_global_carats)} vs JP ${formatNumber(comparison.matched_news_jp_carats)} (${formatSigned(comparison.matched_news_extra_carats)}); ${comparison.en_only_news?.length ?? 0} EN-only +${formatNumber(comparison.en_only_news_carats)}; ${comparison.social_reward_posts} deduped X/Twitter +${formatNumber(comparison.social_carats)} (${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed) over ${comparison.observed_months.toFixed(1)} months`;
-}
-
-function formatMonthRange(start: string, end: string): string {
-  const startDate = new Date(`${start}-01T00:00:00Z`);
-  const endDate = new Date(`${end}-01T00:00:00Z`);
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-    return `${start}–${end}`;
-  }
-  const startMonth = startDate.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
-  const endMonth = endDate.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
-  const startYear = startDate.getUTCFullYear();
-  const endYear = endDate.getUTCFullYear();
-  return startYear === endYear
-    ? `${startMonth}–${endMonth} ${endYear}`
-    : `${startMonth} ${startYear}–${endMonth} ${endYear}`;
-}
-
 function formatNumber(value: number): string {
   return Math.round(Number(value) || 0).toLocaleString('en-US');
-}
-
-function formatCount(value: number, label: string): string {
-  const rounded = Math.max(0, Math.round(Number(value) || 0));
-  return `${rounded.toLocaleString('en-US')} ${label}${rounded === 1 ? '' : 's'}`;
-}
-
-function formatSigned(value: number): string {
-  const rounded = Math.round(Number(value) || 0);
-  return `${rounded >= 0 ? '+' : '-'}${Math.abs(rounded).toLocaleString('en-US')}`;
 }
 
 export function resolveTrainingPassStartDate(

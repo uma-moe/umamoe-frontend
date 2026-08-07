@@ -5,6 +5,18 @@ import {
 } from './carat-planner-income-assumptions';
 
 describe('plannerIncomeAssumptionGroups', () => {
+  it('does not traverse historical buckets that are not rendered', () => {
+    const comparison = {
+      speculative_monthly_carats: 1233,
+      speculative_recent_median_monthly_carats: 775,
+    } as PlannerGlobalRewardComparison;
+    Object.defineProperty(comparison, 'speculative_months', {
+      get: () => { throw new Error('historical buckets should stay cold'); },
+    });
+
+    expect(() => plannerIncomeAssumptionGroups([], comparison)).not.toThrow();
+  });
+
   it('shows the audited Global uplift buckets and derived monthly rate', () => {
     const comparison: PlannerGlobalRewardComparison = {
       news_match_method: 'same_announce_id',
