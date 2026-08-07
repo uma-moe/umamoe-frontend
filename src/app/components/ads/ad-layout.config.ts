@@ -157,9 +157,6 @@ export function getAdRouteConfig(url: string): AdRouteConfig {
     return sideRailPage('database', 'database', {
       anchorSelectors: ['.inheritance-database .content-container', '.inheritance-database .header-content'],
       inContent: getMobileRailSlots('database', 'database', 8),
-      // Database results must not reflow when a rail loads or collapses. Use an
-      // existing gutter when one fits; otherwise omit the rail.
-      reserveLeftRail: false,
       sideRailAnchorMaxWidth: 2048,
     });
   }
