@@ -2,8 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Cache-Control" content="no-cache">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="app-build-version" content="local">
+  <script id="app-shell-version-guard">
+    (function () {
+      var versionParam = '__uma_version';
+      var currentVersion = document.querySelector('meta[name="app-build-version"]')?.content?.trim();
+      if (!currentVersion || currentVersion === 'local') return;
+
+      fetch('/version.json?t=' + Date.now(), {
+        cache: 'no-store',
+        credentials: 'same-origin',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+      })
+        .then(function (response) { return response.ok ? response.json() : null; })
+        .then(function (manifest) {
+          var deployedVersion = manifest?.version?.trim();
+          if (!deployedVersion || deployedVersion === currentVersion) return;
+
+          var url = new URL(window.location.href);
+          if (url.searchParams.get(versionParam) === deployedVersion) return;
+          url.searchParams.set(versionParam, deployedVersion);
+          window.location.replace(url.href);
+        })
+        .catch(function () { /* Best-effort recovery; normal bootstrap continues. */ });
+    })();
+  </script>
   <title>Uma Musume Database, Trainer Search &amp; Tools | uma.moe</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">

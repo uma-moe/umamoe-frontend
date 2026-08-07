@@ -38,7 +38,7 @@ RUN set -eu; \
 		"$APP_BUILD_COMMIT" \
 		"$APP_BUILD_ENVIRONMENT" \
 		"$build_time" > version.json; \
-	sed -i "s|<meta name=\"app-build-version\" content=\"[^\"]*\">|<meta name=\"app-build-version\" content=\"$APP_BUILD_VERSION\">|" index.html
+	find . -type f -name '*.html' -exec sed -i "s|<meta name=\"app-build-version\" content=\"[^\"]*\">|<meta name=\"app-build-version\" content=\"$APP_BUILD_VERSION\">|" {} \;
 
 FROM scratch AS shell
 
