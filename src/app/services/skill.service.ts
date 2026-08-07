@@ -18,8 +18,16 @@ export class SkillService {
     public skills$ = this.skillsSubject.asObservable();
     constructor(private characterService: CharacterService, private resourceData: ResourceDataService) {
         void import('../data/skills.data')
-            .then(({ SKILLS, replaceSkillsData }) => {
-                this.resourceData.watchResource<Skill[]>('skills', SKILLS)
+            .then(async ({ initializeSkillsFallback, replaceSkillsData }) => {
+                let fallback: unknown = [];
+                try {
+                    fallback = await this.resourceData.loadStaticJson<unknown>('/assets/data/skills.json');
+                } catch (error) {
+                    console.warn('Unable to load the static skill fallback.', error);
+                }
+
+                const bundledSkills = initializeSkillsFallback(fallback);
+                this.resourceData.watchResource<Skill[]>('skills', bundledSkills)
                     .subscribe(skills => this.skillsSubject.next([...replaceSkillsData(skills)]));
             })
             .catch(error => console.warn('Unable to initialize skill master data.', error));

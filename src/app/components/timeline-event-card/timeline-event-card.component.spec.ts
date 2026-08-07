@@ -1,8 +1,21 @@
 import { EventType, TimelineEvent } from '../../models/timeline.model';
 import { TimelineAvatarService } from '../../services/timeline-avatar.service';
 import { TimelineEventCardComponent } from './timeline-event-card.component';
+import characterData from '../../../data/character.json';
+import characterNames from '../../../data/character_names.json';
+import supportCardsData from '../../../data/support-cards-db.json';
+import { replaceCharacterMasterData } from '../../data/character.data';
+import { replaceSupportCardsData } from '../../data/support-cards.data';
 
 describe('TimelineEventCardComponent', () => {
+  beforeAll(() => {
+    replaceCharacterMasterData(characterData, characterNames);
+    replaceSupportCardsData(supportCardsData);
+  });
+  afterAll(() => {
+    replaceCharacterMasterData([], {});
+    replaceSupportCardsData([]);
+  });
   function createComponent(): TimelineEventCardComponent {
     return new TimelineEventCardComponent(new TimelineAvatarService());
   }

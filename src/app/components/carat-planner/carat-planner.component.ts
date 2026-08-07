@@ -9,6 +9,7 @@ import {
   OnDestroy,
   OnInit,
   Optional,
+  ViewEncapsulation,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -248,8 +249,12 @@ type FreePullCampaignChoice = 'schedule' | 'stock';
     TourAnchorMatMenuDirective,
   ],
   templateUrl: './carat-planner.component.html',
-  styleUrl: './carat-planner.component.scss',
+  styleUrls: [
+    './carat-planner-base.scss',
+    './carat-planner-refinements.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  encapsulation: ViewEncapsulation.None,
 })
 export class CaratPlannerComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
@@ -548,9 +553,28 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         : total, 0);
     const carats = benefitTotal(['carats']);
     const tickets = benefitTotal(['uma_ticket', 'support_ticket']);
+    const selectedCampaignPulls = this.buildFreePullCampaignViews().reduce((total, campaign) => {
+      const selection = this.plan.freePullCampaignSelections?.[campaign.id];
+      return selection && selection !== '__excluded__' ? total + campaign.totalPulls : total;
+    }, 0);
+    const linkedGroupPulls = this.rewardGroups.reduce((total, group) => {
+      if (!this.isRewardGroupLinkedToPlan(group)) return total;
+      return total + group.eventBenefits.reduce((sum, benefit) =>
+        benefit.kind === 'free_pulls' ? sum + Math.max(0, Number(benefit.amount) || 0) : sum, 0);
+    }, 0);
+    const selectors = activeGroups.reduce((total, group) => total + group.eventBenefits.reduce((sum, benefit) =>
+      benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector'
+        ? sum + Math.max(1, Number(benefit.amount) || 1)
+        : sum, 0), 0);
+    const unknown = activeGroups.reduce((total, group) => total
+      + group.rewards.filter(reward => !Number.isFinite(reward.amount)).length, 0);
     const parts: string[] = [];
     if (carats > 0) parts.push(`${INTEGER_FORMATTER.format(carats)} Carats`);
     if (tickets > 0) parts.push(`${INTEGER_FORMATTER.format(tickets)} ${tickets === 1 ? 'ticket' : 'tickets'}`);
+    const freePulls = selectedCampaignPulls + linkedGroupPulls;
+    if (freePulls > 0) parts.push(`${INTEGER_FORMATTER.format(freePulls)} free pulls`);
+    if (selectors > 0) parts.push(`${INTEGER_FORMATTER.format(selectors)} ${selectors === 1 ? 'selector' : 'selectors'}`);
+    if (unknown > 0) parts.push(`${INTEGER_FORMATTER.format(unknown)} unknown`);
     return parts.join(' · ');
   }
 
@@ -1772,7 +1796,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     competitiveVariants: readonly PlannerCompetitiveRewardVariant[],
   ): PlannerRewardBenefitView[] {
     const benefits: PlannerRewardBenefitView[] = eventBenefits
-      .filter(benefit => benefit.kind === 'free_pulls')
+      .filter(benefit => benefit.kind === 'free_pulls'
+        || benefit.kind === 'trainee_selector'
+        || benefit.kind === 'support_selector')
       .map(benefit => ({
         id: benefit.id,
         kind: benefit.kind,

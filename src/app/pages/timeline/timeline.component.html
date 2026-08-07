@@ -83,7 +83,11 @@
   ></app-mobile-timeline>
 
   <section class="planner-tab-page" *ngIf="caratPlannerAvailable && activeTab === 'carat-planner'">
-    <app-carat-planner [events]="timelineEvents" [requestedEventId]="requestedPlannerEventId"></app-carat-planner>
+    @defer (when activeTab === 'carat-planner') {
+      <app-carat-planner [events]="timelineEvents" [requestedEventId]="requestedPlannerEventId"></app-carat-planner>
+    } @placeholder {
+      <div class="planner-loading" aria-live="polite">Loading planner…</div>
+    }
   </section>
 
   <section *ngIf="activeTab === 'timeline' && !isMobile" class="desktop-timeline" tourAnchor="timeline-page">

@@ -30,7 +30,6 @@ import {
 import { environment } from '../../../environments/environment';
 import { DatabaseFilterComponent, UnifiedSearchParams } from '../../components/database-filter/database-filter.component';
 import { InheritanceEntryComponent } from '../../components/inheritance-entry/inheritance-entry.component';
-import { HiddenSparksDialogComponent } from '../../components/hidden-sparks-dialog/hidden-sparks-dialog.component';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
 import type { SuccessionChara } from '../../models/profile.model';
@@ -378,7 +377,8 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     this.ngZone.runOutsideAngular(() => this.initScrollListener());
   }
 
-  openHiddenSparksDialog(): void {
+  async openHiddenSparksDialog(): Promise<void> {
+    const { HiddenSparksDialogComponent } = await import('../../components/hidden-sparks-dialog/hidden-sparks-dialog.component');
     this.dialog.open(HiddenSparksDialogComponent, {
       data: {
         factors: this.whiteFactorOptions,

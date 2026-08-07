@@ -17,9 +17,7 @@ import { TourAnchorMatMenuDirective, TourService } from 'ngx-ui-tour-md-menu';
 import { Subject } from 'rxjs';
 import { debounceTime, takeUntil, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
-import { CharacterSelectDialogComponent } from '../character-select-dialog/character-select-dialog.component';
-import { SupportCardSelectDialogComponent } from '../support-card-select-dialog/support-card-select-dialog.component';
-import { VeteranPickerDialogComponent, VeteranPickerDialogData } from '../veteran-picker-dialog/veteran-picker-dialog.component';
+import type { VeteranPickerDialogData } from '../veteran-picker-dialog/veteran-picker-dialog.component';
 import { AuthService } from '../../services/auth.service';
 import { ProfileService } from '../../services/profile.service';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
@@ -2283,7 +2281,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (imageName.startsWith('assets/')) return preferRasterAsset(imageName);
     return preferRasterAsset(`assets/images/character_stand/${imageName}`);
   }
-  selectNode(node: TreeNode) {
+  async selectNode(node: TreeNode): Promise<void> {
+    const { CharacterSelectDialogComponent } = await import('../character-select-dialog/character-select-dialog.component');
     const dialogRef = this.dialog.open(CharacterSelectDialogComponent, {
       width: '90%',
       maxWidth: '600px',
@@ -2420,7 +2419,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
   // --- Parent Include/Exclude Character Selection ---
-  addIncludeParent() {
+  async addIncludeParent(): Promise<void> {
+    const { CharacterSelectDialogComponent } = await import('../character-select-dialog/character-select-dialog.component');
     const dialogRef = this.dialog.open(CharacterSelectDialogComponent, {
       width: '90%',
       maxWidth: '600px',
@@ -2452,7 +2452,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.includeParentCharacters.splice(index, 1);
     this.updateTreeFilters();
   }
-  addExcludeParent() {
+  async addExcludeParent(): Promise<void> {
+    const { CharacterSelectDialogComponent } = await import('../character-select-dialog/character-select-dialog.component');
     const dialogRef = this.dialog.open(CharacterSelectDialogComponent, {
       width: '90%',
       maxWidth: '600px',
@@ -2482,7 +2483,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.excludeParentCharacters.splice(index, 1);
     this.updateTreeFilters();
   }
-  addIncludeMainParent() {
+  async addIncludeMainParent(): Promise<void> {
+    const { CharacterSelectDialogComponent } = await import('../character-select-dialog/character-select-dialog.component');
     const dialogRef = this.dialog.open(CharacterSelectDialogComponent, {
       width: '90%',
       maxWidth: '600px',
@@ -2515,7 +2517,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.includeMainParentCharacters.splice(index, 1);
     this.updateTreeFilters();
   }
-  addExcludeMainParent() {
+  async addExcludeMainParent(): Promise<void> {
+    const { CharacterSelectDialogComponent } = await import('../character-select-dialog/character-select-dialog.component');
     const dialogRef = this.dialog.open(CharacterSelectDialogComponent, {
       width: '90%',
       maxWidth: '600px',
@@ -7953,7 +7956,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     this.searchUsername = '';
     this.onFilterChange();
   }
-  selectSupportCard() {
+  async selectSupportCard(): Promise<void> {
+    const { SupportCardSelectDialogComponent } = await import('../support-card-select-dialog/support-card-select-dialog.component');
     const dialogRef = this.dialog.open(SupportCardSelectDialogComponent, {
       width: '700px',
       maxWidth: '90vw',
@@ -7990,7 +7994,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
       this.openVeteranDialog();
     }
   }
-  private openVeteranDialog(afterSelected?: (veteran: VeteranMember | undefined) => void, options: { suppressFilterChange?: boolean } = {}) {
+  private async openVeteranDialog(afterSelected?: (veteran: VeteranMember | undefined) => void, options: { suppressFilterChange?: boolean } = {}): Promise<void> {
+    const { VeteranPickerDialogComponent } = await import('../veteran-picker-dialog/veteran-picker-dialog.component');
     const targetCharaId = this.treeData.characterId
       ? Math.floor(this.treeData.characterId / 100)
       : null;

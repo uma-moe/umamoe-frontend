@@ -289,6 +289,7 @@ export class FuseAdsService {
     }
 
     this.started = true;
+    this.ensureAdvertisingStylesheet();
     this.attachLocalConsentListener();
     this.syncProviderStickyFooterFlag();
     this.debug('init', {
@@ -344,6 +345,17 @@ export class FuseAdsService {
     }
 
     this.startFuseRuntimeIfAllowed();
+  }
+
+  private ensureAdvertisingStylesheet(): void {
+    const id = 'umamoe-advertising-styles';
+    if (this.document.getElementById(id)) return;
+
+    const link = this.document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = '/assets/styles/advertising.css';
+    this.document.head.appendChild(link);
   }
 
   pageInit(fuseIds: string[], reason = 'requested'): void {

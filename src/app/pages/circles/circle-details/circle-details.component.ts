@@ -14,8 +14,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { Chart, ChartConfiguration, registerables } from 'chart.js';
-import 'chartjs-adapter-date-fns';
+import type { Chart, ChartConfiguration } from 'chart.js';
 import { CircleService } from '../../../services/circle.service';
 import { Circle, CircleMember, CircleHistoryPoint, CircleMemberMonthlyData } from '../../../models/circle.model';
 import { DiscordLinkPipe } from '../../../pipes/discord-link.pipe';
@@ -24,7 +23,7 @@ import { AnimatedNumberComponent } from '../../../components/animated-number/ani
 import { LocaleNumberPipe } from '../../../pipes/locale-number.pipe';
 import { AnalyticsEventParams, GoogleAnalyticsService } from '../../../services/google-analytics.service';
 import { AdInContentComponent } from '../../../components/ads/ad-in-content.component';
-Chart.register(...registerables);
+import { loadChartRuntime } from '../../../services/chart-runtime';
 export type CalculationType = 'today_gain' | 'monthly_gain' | 'weekly_gain' | 'daily_gain' | 'avg_daily_gain' | 'daily_avg' | 'projected_monthly' | 'total_fans';
 export type ExportFormat = 'csv' | 'json' | 'xlsx';
 export interface ChartLegendItem {
@@ -1247,7 +1246,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     // Recalculate zoom after data reload renders
     setTimeout(() => this.updateCalendarZoom(), 100);
   }
-  initChart(): void {
+  async initChart(): Promise<void> {
     if (!this.chartCanvas) {
       console.error('Chart canvas not available');
       return;
@@ -1265,6 +1264,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       console.error('Could not get canvas context');
       return;
     }
+    const { Chart } = await loadChartRuntime();
     const config: ChartConfiguration = {
       type: 'line',
       data: {
@@ -1344,7 +1344,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     ctx.canvas.removeEventListener('touchend', this._touchEndHandler);
     ctx.canvas.addEventListener('touchend', this._touchEndHandler, { passive: true });
   }
-  initMemberChart(): void {
+  async initMemberChart(): Promise<void> {
     if (!this.memberChartCanvas) {
       console.error('Member chart canvas not available');
       return;
@@ -1362,6 +1362,7 @@ export class CircleDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       console.error('Could not get member chart canvas context');
       return;
     }
+    const { Chart } = await loadChartRuntime();
     const activeRawMemberData = this.filteredRawMemberData;
     // Determine how many days to show
     // We need to find the max index with data again, or store it.

@@ -1,8 +1,4 @@
-// Character master data
-// This file contains all character information bundled with the application
-// Data is imported at build time, so it doesn't appear in network requests
-import characterData from '../../data/character.json';
-import characterNamesData from '../../data/character_names.json';
+// Character fallback data is initialized from same-origin JSON by MasterDataService.
 import { Character } from '../models/character.model';
 // Character name entries from character_names.json
 export interface CharacterNameEntry {
@@ -29,8 +25,8 @@ export interface RawCharacterData {
   isReleased_jp?: boolean | null;
 }
 
-let rawCharacterData: RawCharacterData[] = normalizeCharacterData(characterData);
-let characterNames: CharacterNameMap = normalizeCharacterNames(characterNamesData);
+let rawCharacterData: RawCharacterData[] = [];
+let characterNames: CharacterNameMap = {};
 
 function normalizeCharacterData(data: unknown): RawCharacterData[] {
   if (Array.isArray(data)) {

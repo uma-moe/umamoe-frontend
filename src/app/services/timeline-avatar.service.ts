@@ -249,7 +249,12 @@ export class TimelineAvatarService {
     const masterVariant = characterNameEntry?.skins?.[skinCode];
     const variantName = identity.variantName
       ?? (masterVariant && !/^original$/i.test(masterVariant) ? masterVariant : undefined);
-    const displayNameWithVariant = variantName ? `${baseName} [${variantName}]` : baseName;
+    // Timeline payloads are public API data. Preserve their spelling and variant
+    // punctuation when it is available; synthesize a stable label only for
+    // master-data fallbacks.
+    const displayNameWithVariant = displayName?.trim() && identity.variantName
+      ? publicName
+      : variantName ? `${baseName} [${variantName}]` : baseName;
     const fallbackCharacter = getAllCharacters().find(character =>
       character.id !== id
       && Math.floor(character.id / 100) === Math.floor(id / 100)

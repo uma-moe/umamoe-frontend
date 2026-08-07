@@ -325,8 +325,8 @@
   }
 }
 
-.tour-start-btn.mat-mdc-icon-button,
-.color-mode-toggle.mat-mdc-icon-button {
+.tour-start-btn,
+.color-mode-toggle {
   flex: 0 0 var(--nav-action-size);
   width: var(--nav-action-size);
   height: var(--nav-action-size);
@@ -356,7 +356,7 @@
   }
 }
 
-.tour-start-btn.mat-mdc-icon-button {
+.tour-start-btn {
   color: var(--accent-primary);
 
   &:hover {

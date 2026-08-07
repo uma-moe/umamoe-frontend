@@ -1909,3 +1909,9 @@ mat-icon { @include icon-size(16px); }
   0%, 100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
   50%      { box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.18); }
 }
+.result-card-placeholder {
+  min-height: 320px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}

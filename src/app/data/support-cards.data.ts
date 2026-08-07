@@ -1,7 +1,4 @@
-// Support card master data
-// This file contains all support card information bundled with the application
-// Data is imported at build time, so it doesn't appear in network requests
-import supportCardsData from '../../data/support-cards-db.json';
+// Support-card fallback data is initialized from same-origin JSON by MasterDataService.
 import { SupportCardShort, SupportCardType } from '../models/support-card.model';
 // Raw card data interface to match JSON structure
 export interface RawSupportCardData {
@@ -112,7 +109,7 @@ function buildSupportCards(rawData: RawSupportCardData[]): SupportCardShort[] {
     });
 }
 
-let rawSupportCardsData: RawSupportCardData[] = normalizeSupportCardData(supportCardsData);
+let rawSupportCardsData: RawSupportCardData[] = [];
 // Transform raw JSON data to SupportCardShort format
 export const SUPPORT_CARDS: SupportCardShort[] = buildSupportCards(rawSupportCardsData);
 

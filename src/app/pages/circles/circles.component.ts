@@ -1,15 +1,12 @@
 import { Component, OnInit, OnDestroy, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import type { PageEvent } from '@angular/material/paginator';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
 import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil, tap } from 'rxjs';
@@ -18,26 +15,24 @@ import { Circle, CircleSearchFilters } from '../../models/circle.model';
 import { DiscordLinkPipe } from '../../pipes/discord-link.pipe';
 import { AnimatedNumberComponent } from '../../components/animated-number/animated-number.component';
 import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
+import { SimplePaginatorComponent } from '../../components/simple-paginator/simple-paginator.component';
 @Component({
   selector: 'app-circles',
   standalone: true,
   imports: [
     CommonModule,
     RouterModule,
-    MatPaginatorModule,
     MatInputModule,
     MatFormFieldModule,
     MatIconModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    MatSelectModule,
-    MatChipsModule,
-    MatSlideToggleModule,
     FormsModule,
     TourAnchorMatMenuDirective,
     DiscordLinkPipe,
     AnimatedNumberComponent,
-    AdInContentComponent
+    AdInContentComponent,
+    SimplePaginatorComponent
   ],
   templateUrl: './circles.component.html',
   styleUrl: './circles.component.scss'

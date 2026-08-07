@@ -11,13 +11,14 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
-import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import type { Chart, ChartConfiguration } from 'chart.js';
 import { combineLatest, Subject, takeUntil } from 'rxjs';
 import { ShameService } from '../../services/shame.service';
 import { AppVersionService } from '../../services/app-version.service';
 import { CompactNumberPipe } from '../../pipes/compact-number.pipe';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
+import { loadChartRuntime } from '../../services/chart-runtime';
 import {
   DailyPoint,
   EvidenceReason,
@@ -32,8 +33,6 @@ import {
   TopSession,
   ViewerReport
 } from '../../models/shame.model';
-
-Chart.register(...registerables);
 
 interface CareerBucketView {
   label: string;
@@ -1455,7 +1454,7 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  private renderDailyChart(): void {
+  private async renderDailyChart(): Promise<void> {
     if (!this.dailyChartCanvas || !this.dailyActivityRows.length) {
       this.destroyDailyChart();
       return;
@@ -1463,6 +1462,7 @@ export class ShameComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const context = this.dailyChartCanvas.nativeElement.getContext('2d');
     if (!context) return;
+    const { Chart } = await loadChartRuntime();
 
     this.destroyDailyChart();
 

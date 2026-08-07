@@ -7,8 +7,9 @@ describe('FactorService scenario artwork', () => {
 
   beforeEach(() => {
     const masterData = {
-      init: () => undefined,
+      initSupplementalResources: () => undefined,
       factors$: of([]),
+      factorsPending$: of(false),
       skills$: of([]),
       raceSaddleData$: of({ races: [] }),
     } as unknown as MasterDataService;

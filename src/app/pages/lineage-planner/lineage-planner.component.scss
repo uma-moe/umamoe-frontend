@@ -1,4 +1,5 @@
 @use '../../../styles/mixins' as *;
+@use 'sass:math';
 
 $node-target: 480px;
 $node-parent: 480px;
@@ -1922,7 +1923,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
     flex-direction: column;
     gap: $p-gap;
     padding-left: $p-indent;
-    margin-top: $p-gap / 2;
+    margin-top: math.div($p-gap, 2);
 
     > .tree-col {
       position: relative;
@@ -1932,9 +1933,9 @@ $col-parent: 2 * $col-gp + $gap-tree;
       &::before {
         content: '';
         position: absolute;
-        left: -($p-indent / 2);
+        left: -(math.div($p-indent, 2));
         top: -($p-gap - 6px);
-        bottom: -($p-gap / 2);
+        bottom: -(math.div($p-gap, 2));
         width: $branch-thickness;
         background: $branch-color;
         transform: translateX(-50%);
@@ -1945,9 +1946,9 @@ $col-parent: 2 * $col-gp + $gap-tree;
       &::after {
         content: '';
         position: absolute;
-        left: -($p-indent / 2);
+        left: -(math.div($p-indent, 2));
         top: $elbow-y;
-        width: $p-indent / 2 + 2px;
+        width: math.div($p-indent, 2) + 2px;
         height: $branch-thickness;
         background: $branch-color;
         border-radius: 1px;
@@ -1966,7 +1967,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
     flex-direction: column;
     gap: $gp-gap;
     padding-left: $gp-indent;
-    margin-top: $gp-gap / 2;
+    margin-top: math.div($gp-gap, 2);
 
     > .tree-col {
       position: relative;
@@ -1976,9 +1977,9 @@ $col-parent: 2 * $col-gp + $gap-tree;
       &::before {
         content: '';
         position: absolute;
-        left: -($gp-indent / 2);
+        left: -(math.div($gp-indent, 2));
         top: -($gp-gap - 6px);
-        bottom: -($gp-gap / 2);
+        bottom: -(math.div($gp-gap, 2));
         width: $branch-thickness;
         background: $branch-color-soft;
         transform: translateX(-50%);
@@ -1989,9 +1990,9 @@ $col-parent: 2 * $col-gp + $gap-tree;
       &::after {
         content: '';
         position: absolute;
-        left: -($gp-indent / 2);
+        left: -(math.div($gp-indent, 2));
         top: $elbow-y;
-        width: $gp-indent / 2 + 2px;
+        width: math.div($gp-indent, 2) + 2px;
         height: $branch-thickness;
         background: $branch-color-soft;
         border-radius: 1px;
@@ -2012,7 +2013,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
     flex-direction: column !important;
     gap: $ggp-gap;
     padding-left: $ggp-indent;
-    margin-top: $ggp-gap / 2;
+    margin-top: math.div($ggp-gap, 2);
   }
 
   .ggp-row > .node {
@@ -2022,9 +2023,9 @@ $col-parent: 2 * $col-gp + $gap-tree;
     &::before {
       content: '';
       position: absolute;
-      left: -($ggp-indent / 2);
+        left: -(math.div($ggp-indent, 2));
       top: -($ggp-gap - 4px);
-      bottom: -($ggp-gap / 2);
+        bottom: -(math.div($ggp-gap, 2));
       width: $branch-thickness;
       background: $branch-color-soft2;
       transform: translateX(-50%);
@@ -2035,9 +2036,9 @@ $col-parent: 2 * $col-gp + $gap-tree;
     &::after {
       content: '';
       position: absolute;
-      left: -($ggp-indent / 2);
+        left: -(math.div($ggp-indent, 2));
       top: 22px;
-      width: $ggp-indent / 2 + 2px;
+        width: math.div($ggp-indent, 2) + 2px;
       height: $branch-thickness;
       background: $branch-color-soft2;
       border-radius: 1px;

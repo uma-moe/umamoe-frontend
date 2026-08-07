@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
-import { ThemeService } from '../../services/theme.service';
 @Component({
   selector: 'app-christmas-update-popup',
   standalone: true,
@@ -14,7 +13,6 @@ import { ThemeService } from '../../services/theme.service';
 export class ChristmasUpdatePopupComponent {
   private readonly STORAGE_KEY = 'christmas_update_2025_seen';
   constructor(
-    private themeService: ThemeService,
     private dialogRef: MatDialogRef<ChristmasUpdatePopupComponent>
   ) {}
   close(): void {
@@ -25,6 +23,8 @@ export class ChristmasUpdatePopupComponent {
     this.dialogRef.close();
   }
   disableTheme(): void {
-    this.themeService.setChristmasTheme(false);
+    localStorage.setItem('christmas-theme', 'false');
+    document.body.classList.remove('christmas-theme');
+    document.dispatchEvent(new CustomEvent('umamoe:christmas-theme', { detail: false }));
   }
 }

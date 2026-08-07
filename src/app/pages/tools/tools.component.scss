@@ -1,5 +1,7 @@
 @use '../../../styles/mixins' as *;
 
+/* jscpd:ignore-start -- intentional branded landing-page counterpart; see audit allowlist */
+
 .tools {
   flex: 1 1 auto;
   background: var(--bg-primary);
@@ -337,3 +339,4 @@
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
 
 }
+/* jscpd:ignore-end */

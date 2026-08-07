@@ -1,0 +1,79 @@
+/* Loaded only when the advertising/CMP runtime starts. */
+:where(#qc-cmp2-container, .qc-cmp2-container) {
+  --cmp-panel: #1a1a1a;
+  --cmp-panel-soft: #202124;
+  --cmp-border: rgba(255, 255, 255, 0.12);
+  --cmp-text: var(--text-primary, #fff);
+  --cmp-copy: rgba(255, 255, 255, 0.74);
+  --cmp-primary: var(--accent-primary, #64b5f6);
+}
+
+html.light-theme :where(#qc-cmp2-container, .qc-cmp2-container) {
+  --cmp-panel: #fff;
+  --cmp-panel-soft: #f2f8ff;
+  --cmp-border: rgba(17, 24, 39, 0.16);
+  --cmp-text: #111827;
+  --cmp-copy: #374151;
+  --cmp-primary: #2563eb;
+}
+
+:where(#qc-cmp2-container) {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 8px !important;
+  background: rgba(0, 0, 0, 0.58) !important;
+}
+
+:where(#qc-cmp2-container:empty, #qc-cmp2-container:not(:has(#qc-cmp2-ui))) {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+:where(#qc-cmp2-ui) {
+  width: min(680px, calc(100vw - 16px)) !important;
+  max-width: 680px !important;
+  max-height: calc(100vh - 16px) !important;
+  overflow: hidden auto !important;
+  color: var(--cmp-text) !important;
+  border: 1px solid var(--cmp-border) !important;
+  border-radius: 12px !important;
+  background: var(--cmp-panel) !important;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.35) !important;
+}
+
+:where(#qc-cmp2-ui, #qc-cmp2-ui *) {
+  box-sizing: border-box !important;
+  font-family: var(--font-family, system-ui, sans-serif) !important;
+}
+
+:where(#qc-cmp2-ui p, #qc-cmp2-ui li, #qc-cmp2-ui label) {
+  color: var(--cmp-copy) !important;
+}
+
+:where(#qc-cmp2-ui h1, #qc-cmp2-ui h2, #qc-cmp2-ui h3, #qc-cmp2-ui strong) {
+  color: var(--cmp-text) !important;
+}
+
+:where(#qc-cmp2-ui button) {
+  min-height: 40px !important;
+  border: 1px solid var(--cmp-border) !important;
+  border-radius: 8px !important;
+  color: var(--cmp-text) !important;
+  background: var(--cmp-panel-soft) !important;
+}
+
+:where(#qc-cmp2-ui button[mode='primary'], #qc-cmp2-ui .qc-cmp2-button[mode='primary']) {
+  color: #fff !important;
+  border-color: transparent !important;
+  background: var(--cmp-primary) !important;
+}
+
+@media (max-width: 640px) {
+  :where(#qc-cmp2-ui) {
+    border-radius: 8px !important;
+  }
+}

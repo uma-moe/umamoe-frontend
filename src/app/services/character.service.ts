@@ -9,7 +9,7 @@ import { ResourceLoadError } from './resource-data.service';
 })
 export class CharacterService {
   constructor(private masterData: MasterDataService) {
-    this.masterData.init();
+    this.masterData.initCharacterSupportResources();
   }
 
   get characters$(): Observable<Character[]> {

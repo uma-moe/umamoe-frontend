@@ -1,7 +1,16 @@
 import { EventType, TimelineEvent } from '../models/timeline.model';
 import { TimelineAvatarService } from './timeline-avatar.service';
+import characterData from '../../data/character.json';
+import characterNames from '../../data/character_names.json';
+import supportCardsData from '../../data/support-cards-db.json';
+import { replaceCharacterMasterData } from '../data/character.data';
+import { replaceSupportCardsData } from '../data/support-cards.data';
 
 describe('TimelineAvatarService', () => {
+  beforeEach(() => {
+    replaceCharacterMasterData([], {});
+    replaceSupportCardsData([]);
+  });
   function createCharacterBanner(
     pickupCardIds: number[],
     relatedCharacters: string[] = [],
@@ -91,6 +100,8 @@ describe('TimelineAvatarService', () => {
   });
 
   it('hydrates future pickup IDs from bundled character and support masters', () => {
+    replaceCharacterMasterData(characterData, characterNames);
+    replaceSupportCardsData(supportCardsData);
     const service = new TimelineAvatarService();
 
     const character = service.getPickupAvatarByKind('character', 113202);

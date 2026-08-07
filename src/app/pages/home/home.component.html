@@ -5,7 +5,7 @@
       <div class="hero-branding">
         <div class="hero-logo-img-wrapper">
           <img
-            [src]="(isChristmas$ | async) ? 'assets/crimmas.webp' : 'assets/logo.webp'"
+            src="assets/logo.webp"
             alt="Site Logo"
             class="hero-logo-img"
             (error)="onLogoError($event)"
@@ -75,11 +75,15 @@
     </div>
   </section>
 
-  <app-ad-in-content
-    surface="home"
-    label="home"
-    viewport="mobile"
-  ></app-ad-in-content>
+  @defer (on viewport) {
+    <app-ad-in-content
+      surface="home"
+      label="home"
+      viewport="mobile"
+    ></app-ad-in-content>
+  } @placeholder {
+    <div class="ad-space-reservation" aria-hidden="true"></div>
+  }
 
   <!-- Stats Grid -->
   <section class="stats" tourAnchor="home-stats">

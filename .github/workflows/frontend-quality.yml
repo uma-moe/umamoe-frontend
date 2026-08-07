@@ -1,0 +1,77 @@
+name: Frontend quality
+
+on:
+  pull_request:
+  push:
+    branches: [main, beta]
+
+permissions:
+  contents: read
+
+jobs:
+  static-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run audit:bundle
+      - run: npm run audit:duplicates
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-static-audit
+          path: reports/
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Resolve Chromium executable
+        run: echo "CHROME_BIN=$(node -e \"process.stdout.write(require('playwright').chromium.executablePath())\")" >> "$GITHUB_ENV"
+      - run: npm test -- --watch=false --browsers=ChromeHeadless
+
+  route-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run audit:routes
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-route-audit
+          path: reports/playwright/
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Resolve Chromium executable
+        run: echo "CHROME_PATH=$(node -e \"process.stdout.write(require('playwright').chromium.executablePath())\")" >> "$GITHUB_ENV"
+      - run: npm run audit:lighthouse
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-lighthouse-audit
+          path: reports/lighthouse/

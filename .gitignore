@@ -61,6 +61,8 @@ scripts/*
 !scripts/verify-google-analytics-build.js
 !scripts/generate-seo-pages.mjs
 !scripts/generate-favicon.mjs
+!scripts/frontend-audit/
+!scripts/frontend-audit/**
 
 .github/copilot-instructions.md
 !src/assets/
@@ -84,8 +86,17 @@ scripts/*
 /src/assets/images/race-thumbnails/*
 !/src/assets/images/race-thumbnails/thum_race_rt_*.webp
 !/src/favicon.svg
+!/src/assets/styles/
+!/src/assets/styles/advertising.css
 *.tmp
 
 # WebP conversion cache
 .webp-cache/
 /docs
+!/docs/
+/docs/*
+!/docs/frontend-audit.md
+/reports
+/playwright-report
+/test-results
+/.lighthouseci

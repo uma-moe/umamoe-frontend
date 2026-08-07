@@ -1,9 +1,14 @@
 import { getSkillName } from '../pages/profile/profile-helpers';
-import { getAllSkills, getSkillBySkillId, replaceSkillsData } from './skills.data';
+import skillsData from '../../data/skills.json';
+import { getAllSkills, getSkillBySkillId, initializeSkillsFallback, replaceSkillsData } from './skills.data';
 
 describe('skill master data', () => {
+  beforeEach(() => {
+    initializeSkillsFallback(skillsData);
+  });
+
   afterEach(() => {
-    replaceSkillsData([]);
+    initializeSkillsFallback([]);
   });
 
   it('keeps bundled skills when an incremental resource is empty', () => {

@@ -136,6 +136,21 @@ export class ResourceDataService {
     return subject.asObservable();
   }
 
+  /**
+   * Load a same-origin JSON fallback through the same worker-aware parser used
+   * for versioned resources. Normal HTTP caching keeps repeat visits cheap.
+   */
+  async loadStaticJson<T>(url: string): Promise<T> {
+    const response = await fetch(url, {
+      cache: 'force-cache',
+      credentials: 'same-origin',
+    });
+    if (!response.ok) {
+      throw new ResourceHttpError(`${response.status} ${response.statusText || 'HTTP error'}`, url);
+    }
+    return this.parseJsonResponse<T>(response, url);
+  }
+
   resourcePending(resourceName: string): Observable<boolean> {
     return this.getResourcePendingSubject(resourceName).asObservable();
   }

@@ -69,7 +69,7 @@ export class SupportCardService {
   private searchResults$ = new BehaviorSubject<SearchResult<SupportCardRecord> | null>(null);
 
   constructor(private http: HttpClient, private masterData: MasterDataService) {
-    this.masterData.init();
+    this.masterData.initCharacterSupportResources();
   }
 
   private get supportCards$(): Observable<SupportCardShort[]> {

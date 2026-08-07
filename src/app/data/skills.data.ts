@@ -1,7 +1,5 @@
-// Skills master data
-// This file contains all skill information bundled with the application
-// Data is imported at build time, so it doesn't appear in network requests
-import skillsData from '../../data/skills.json';
+// Skill normalization and lookup state. The fallback catalog is loaded from a
+// same-origin JSON asset by SkillService so data does not become JavaScript.
 import { Skill } from '../models/skill.model';
 
 type SkillRecord = Partial<Skill> & Record<string, unknown>;
@@ -105,7 +103,7 @@ function normalizeSkillsData(data: unknown): Skill[] {
     .filter(skill => Number.isFinite(skill.skill_id) && skill.skill_id > 0);
 }
 
-const BUNDLED_SKILLS: Skill[] = normalizeSkillsData(skillsData);
+let BUNDLED_SKILLS: Skill[] = [];
 export const SKILLS: Skill[] = [...BUNDLED_SKILLS];
 
 // Pre-built lookup maps for O(1) access
@@ -122,6 +120,12 @@ function rebuildSkillMaps(): void {
 }
 
 rebuildSkillMaps();
+
+/** Initialize the immutable fallback before applying incremental resources. */
+export function initializeSkillsFallback(data: unknown): Skill[] {
+  BUNDLED_SKILLS = normalizeSkillsData(data);
+  return replaceSkillsData([]);
+}
 
 export function replaceSkillsData(data: unknown): Skill[] {
   const mergedById = new Map<number, Skill>();

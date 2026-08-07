@@ -6,8 +6,21 @@ import { CaratPlannerPersistenceService } from '../../services/carat-planner-per
 import { CaratPullProbabilityService } from '../../services/carat-pull-probability.service';
 import { TimelineAvatarService } from '../../services/timeline-avatar.service';
 import { CaratPlannerComponent } from './carat-planner.component';
+import characterData from '../../../data/character.json';
+import characterNames from '../../../data/character_names.json';
+import supportCardsData from '../../../data/support-cards-db.json';
+import { replaceCharacterMasterData } from '../../data/character.data';
+import { replaceSupportCardsData } from '../../data/support-cards.data';
 
 describe('CaratPlannerComponent banner ordering', () => {
+  beforeAll(() => {
+    replaceCharacterMasterData(characterData, characterNames);
+    replaceSupportCardsData(supportCardsData);
+  });
+  afterAll(() => {
+    replaceCharacterMasterData([], {});
+    replaceSupportCardsData([]);
+  });
   const createComponent = () => {
     localStorage.removeItem(CaratPlannerPersistenceService.STORAGE_KEY);
     const realPersistence = new CaratPlannerPersistenceService('browser' as never);

@@ -1,18 +1,13 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, Injector } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { ThemeService } from '../../services/theme.service';
 import { AuthService } from '../../services/auth.service';
 import { StatusService, OverallStatus, EndpointStatus } from '../../services/status.service';
-import { GettingStartedTourService } from '../../services/getting-started-tour.service';
 import { LinkedAccount } from '../../models/auth.model';
-import { getCharacterById } from '../../data/character.data';
 @Component({
   selector: 'app-navigation',
   standalone: true,
@@ -20,10 +15,7 @@ import { getCharacterById } from '../../data/character.data';
     CommonModule,
     RouterModule,
     MatToolbarModule,
-    MatButtonModule,
     MatIconModule,
-    MatMenuModule,
-    MatTooltipModule,
     TourAnchorMatMenuDirective
   ],
   templateUrl: './navigation.component.html',
@@ -39,6 +31,7 @@ export class NavigationComponent {
   userMenuOpen = false;
   statusTooltipOpen = false;
   linkedAccounts: LinkedAccount[] = [];
+  private linkedAccountImages = new Map<string, string>();
   accountsLoaded = false;
 
   constructor(
@@ -46,7 +39,7 @@ export class NavigationComponent {
     private themeService: ThemeService,
     public authService: AuthService,
     private statusService: StatusService,
-    private gettingStartedTourService: GettingStartedTourService
+    private injector: Injector,
   ) {}
 
   toggleUserMenu(event: Event) {
@@ -57,6 +50,7 @@ export class NavigationComponent {
         next: (accounts) => {
           this.linkedAccounts = accounts.filter(a => a.verification_status === 'verified');
           this.accountsLoaded = true;
+          void this.resolveLinkedAccountImages(this.linkedAccounts);
         },
         error: () => { this.accountsLoaded = true; }
       });
@@ -64,9 +58,7 @@ export class NavigationComponent {
   }
 
   getUmaImage(account: LinkedAccount): string | null {
-    if (!account.representative_uma_id) return null;
-    const char = getCharacterById(account.representative_uma_id);
-    return char ? `assets/images/character_stand/${char.image}` : null;
+    return this.linkedAccountImages.get(account.account_id) ?? null;
   }
 
   @HostListener('document:click')
@@ -92,15 +84,27 @@ export class NavigationComponent {
       default: return 'Checking...';
     }
   }
-  toggleTheme() {
-    this.themeService.toggleChristmasTheme();
-  }
   toggleColorMode() {
     this.themeService.toggleColorMode();
   }
   startGettingStartedTour(event: Event) {
     event.stopPropagation();
-    this.gettingStartedTourService.startForCurrentPage();
+    void import('../../services/getting-started-tour.service')
+      .then(({ GettingStartedTourService }) => {
+        this.injector.get(GettingStartedTourService).startForCurrentPage();
+      })
+      .catch(() => undefined);
+  }
+
+  private async resolveLinkedAccountImages(accounts: LinkedAccount[]): Promise<void> {
+    const { getCharacterById } = await import('../../data/character.data');
+    for (const account of accounts) {
+      if (!account.representative_uma_id) continue;
+      const character = getCharacterById(account.representative_uma_id);
+      if (character) {
+        this.linkedAccountImages.set(account.account_id, `assets/images/character_stand/${character.image}`);
+      }
+    }
   }
   onLogoError(event: Event) {
     const target = event.target as HTMLImageElement;

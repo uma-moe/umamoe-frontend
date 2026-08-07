@@ -758,6 +758,13 @@ export class CaratPlannerCalculationService {
     const rarity = getSupportCardById(String(pickupId))?.rarity;
     if (rarity === Rarity.SR) return 'gold';
     if (rarity === Rarity.R) return undefined;
+    // Support IDs retain their rarity prefix even when a newly announced card
+    // has not reached the same-origin fallback dataset yet.
+    if (rarity === undefined) {
+      const rarityPrefix = Math.trunc(pickupId / 10_000);
+      if (rarityPrefix === 2) return 'gold';
+      if (rarityPrefix === 1) return undefined;
+    }
     // Future support cards often precede the bundled metadata; normal support pickups are SSR.
     return 'rainbow';
   }

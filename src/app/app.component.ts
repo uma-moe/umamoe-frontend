@@ -1,27 +1,16 @@
-import { Component, OnInit, Inject, Injector, PLATFORM_ID, HostListener } from '@angular/core';
-import { NavigationStart, Router, RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, Inject, Injector, PLATFORM_ID, HostListener } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatDialogModule } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
 import { NavigationComponent } from './components/navigation/navigation.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { SnowComponent } from './components/snow/snow.component';
 import { AdLayoutComponent } from './components/ads/ad-layout.component';
-import { TourService, TourStepTemplateComponent } from 'ngx-ui-tour-md-menu';
 import { ThemeService } from './services/theme.service';
-import { UpdateNotificationService } from './services/update-notification.service';
-import { RateLimitService } from './services/rate-limit.service';
 import { AuthService } from './services/auth.service';
 import { TurnstileDebugState, TurnstileService } from './services/turnstile.service';
-import { GoogleAnalyticsService } from './services/google-analytics.service';
-import { FuseAdsService } from './services/fuse-ads.service';
-import { AppVersionService } from './services/app-version.service';
-import { GettingStartedTourService } from './services/getting-started-tour.service';
 import { SeoService } from './services/seo.service';
 import { environment } from '../environments/environment';
-import { BehaviorSubject, Observable, combineLatest, filter, map, of, switchMap, take, timer } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest, map, of, switchMap, take, timer } from 'rxjs';
 
 interface TurnstileRecoveryView {
   debug: TurnstileDebugState;
@@ -51,38 +40,24 @@ interface TurnstileRecoveryNotice {
     NavigationComponent,
     FooterComponent,
     SnowComponent,
-    MatButtonModule,
-    MatCardModule,
-    MatDialogModule,
-    MatIconModule,
     AdLayoutComponent,
-    TourStepTemplateComponent,
   ],
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements OnInit {
-  title = 'uma-gacha-hub';
   isChristmas$ = this.themeService.isChristmas$;
   turnstileRecovery$: Observable<TurnstileRecoveryView>;
   interactiveVerificationPending = false;
   private readonly interactiveNoticeSubject = new BehaviorSubject<TurnstileRecoveryNotice | null>(null);
-  private masterDataInitPromise: Promise<void> | null = null;
 
   constructor(
     private themeService: ThemeService,
-    private updateNotificationService: UpdateNotificationService,
-    private rateLimitService: RateLimitService,
     private authService: AuthService,
     private injector: Injector,
     private turnstileService: TurnstileService,
-    private googleAnalyticsService: GoogleAnalyticsService,
-    private fuseAdsService: FuseAdsService,
-    private appVersionService: AppVersionService,
-    private gettingStartedTourService: GettingStartedTourService,
     private seoService: SeoService,
-    private router: Router,
-    public tourService: TourService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.turnstileRecovery$ = combineLatest([
@@ -99,7 +74,8 @@ export class AppComponent implements OnInit {
   handleKeyboardEvent(event: KeyboardEvent): void {
     if (!environment.production && event.ctrlKey && event.shiftKey && event.key === 'L') {
       event.preventDefault();
-      this.rateLimitService.showRateLimitPopup(60); // Show with 60 second countdown
+      void import('./services/rate-limit.service')
+        .then(({ RateLimitService }) => this.injector.get(RateLimitService).showRateLimitPopup(60));
     }
   }
   ngOnInit(): void {
@@ -111,11 +87,7 @@ export class AppComponent implements OnInit {
       turnstileDebugApplied = this.applyTurnstileDebugParam(browserParams);
     }
 
-    this.initializeMasterDataForRoute();
-    this.fuseAdsService.init();
-    this.googleAnalyticsService.init();
-    this.appVersionService.init();
-    this.gettingStartedTourService.init();
+    this.initializeDeferredShellFeatures();
 
     // Handle OAuth token from any URL (backend redirects to /?token=...)
     if (isPlatformBrowser(this.platformId)) {
@@ -132,42 +104,37 @@ export class AppComponent implements OnInit {
 
     // Check for update notification
     if (isPlatformBrowser(this.platformId)) {
-      // Small delay to let the app settle before showing popup
-      setTimeout(() => {
-        this.updateNotificationService.checkAndShowUpdate();
-      }, 1000);
+      setTimeout(() => void this.initializeUpdateNotification(), 1000);
     }
   }
 
-  private initializeMasterDataForRoute(): void {
-    if (!isPlatformBrowser(this.platformId) || !this.isTimelinePath(window.location.pathname)) {
-      void this.initMasterData();
-      return;
-    }
+  private initializeDeferredShellFeatures(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
 
-    this.router.events.pipe(
-      filter((event): event is NavigationStart => event instanceof NavigationStart),
-      filter(event => !this.isTimelinePath(event.url.split(/[?#]/, 1)[0])),
-      take(1),
-    ).subscribe(() => void this.initMasterData());
+    const initialize = () => {
+      void import('./services/google-analytics.service')
+        .then(({ GoogleAnalyticsService }) => this.injector.get(GoogleAnalyticsService).init())
+        .catch(() => undefined);
+      void import('./services/app-version.service')
+        .then(({ AppVersionService }) => this.injector.get(AppVersionService).init())
+        .catch(() => undefined);
+      void import('./services/getting-started-tour.service')
+        .then(({ GettingStartedTourService }) => this.injector.get(GettingStartedTourService).init())
+        .catch(() => undefined);
+    };
+
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(initialize, { timeout: 2500 });
+    } else {
+      setTimeout(initialize, 0);
+    }
   }
 
-  private initMasterData(): Promise<void> {
-    if (!this.masterDataInitPromise) {
-      this.masterDataInitPromise = import('./services/master-data.service')
-        .then(({ MasterDataService }) => {
-          this.injector.get(MasterDataService).init();
-        })
-        .catch(error => {
-          this.masterDataInitPromise = null;
-          console.warn('Unable to initialize master data.', error);
-        });
-    }
-    return this.masterDataInitPromise;
-  }
-
-  private isTimelinePath(path: string): boolean {
-    return path === '/timeline' || path === '/timeline/';
+  private async initializeUpdateNotification(): Promise<void> {
+    try {
+      const { UpdateNotificationService } = await import('./services/update-notification.service');
+      this.injector.get(UpdateNotificationService).checkAndShowUpdate();
+    } catch {}
   }
 
   retryTurnstileInteractive(event?: Event): void {

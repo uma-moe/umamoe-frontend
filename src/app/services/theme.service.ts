@@ -1,7 +1,6 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { BehaviorSubject, map } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
-import { environment } from '../../environments/environment';
 
 export type ColorMode = 'dark' | 'light';
 
@@ -19,11 +18,14 @@ export class ThemeService {
     map(mode => mode === 'light')
   );
 
-  // Set to true to enable the Christmas theme (e.g. during December)
-  private readonly CHRISTMAS_THEME_ENABLED = false;
-
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {
     this.initTheme();
+    if (isPlatformBrowser(this.platformId)) {
+      document.addEventListener('umamoe:christmas-theme', (event: Event) => {
+        const enabled = (event as CustomEvent<boolean>).detail;
+        this.setChristmasTheme(Boolean(enabled));
+      });
+    }
   }
 
   private initTheme() {
@@ -45,9 +47,7 @@ export class ThemeService {
 
     try {
       localStorage.setItem(this.COLOR_MODE_STORAGE_KEY, mode);
-    } catch (error) {
-      console.warn('Failed to save color mode:', error);
-    }
+    } catch {}
   }
 
   private initColorMode() {
@@ -60,8 +60,7 @@ export class ThemeService {
     try {
       const stored = localStorage.getItem(this.COLOR_MODE_STORAGE_KEY);
       return stored === 'light' || stored === 'dark' ? stored : 'dark';
-    } catch (error) {
-      console.warn('Failed to read color mode:', error);
+    } catch {
       return 'dark';
     }
   }
@@ -77,28 +76,7 @@ export class ThemeService {
   }
 
   private initChristmasTheme() {
-    // Hard override: if Christmas theme is disabled, force it off
-    if (!this.CHRISTMAS_THEME_ENABLED) {
-      this.setChristmasTheme(false);
-      return;
-    }
-    // Check environment flag first
-    const envChristmas = (environment as any).christmasTheme;
-    
-    // Check local storage preference
-    const stored = localStorage.getItem('christmas-theme');
-    
-    let shouldEnable = false;
-    if (stored !== null) {
-      shouldEnable = stored === 'true';
-    } else {
-      // Default to environment setting if no user preference
-      shouldEnable = !!envChristmas;
-    }
-    this.setChristmasTheme(shouldEnable);
-  }
-  toggleChristmasTheme() {
-    this.setChristmasTheme(!this.isChristmasSubject.value);
+    this.setChristmasTheme(false);
   }
   setChristmasTheme(enable: boolean) {
     this.isChristmasSubject.next(enable);

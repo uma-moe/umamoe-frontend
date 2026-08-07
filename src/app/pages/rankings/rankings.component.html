@@ -6,12 +6,16 @@
     </div>
   </div>
 
-  <app-ad-in-content
-    surface="rankings"
-    label="rankings"
-    [contentTopBridge]="true"
-    viewport="mobile"
-  ></app-ad-in-content>
+  @defer (on viewport) {
+    <app-ad-in-content
+      surface="rankings"
+      label="rankings"
+      [contentTopBridge]="true"
+      viewport="mobile"
+    ></app-ad-in-content>
+  } @placeholder {
+    <div class="ad-space-reservation" aria-hidden="true"></div>
+  }
 
   <div class="content-container">
     <!-- Tabs -->
@@ -88,6 +92,8 @@
       <p>Loading rankings...</p>
     </div>
 
+    <!-- jscpd:ignore-start -->
+    <!-- Clone allowlist: mode-specific leaderboard schemas; see docs/frontend-audit-clone-allowlist.md. -->
     <!-- ==================== MONTHLY ==================== -->
     <div class="leaderboard" *ngIf="!loading && activeTab === 'monthly' && monthlyRankings.length > 0" tourAnchor="rankings-results">
       <ng-container *ngFor="let entry of monthlyRankings; let i = index">
@@ -131,12 +137,16 @@
         </div>
 
         <ng-container *ngIf="getRankingInterscrollerIndex(i) as adIndex">
-          <app-ad-in-content
-            surface="rankings"
-            label="rankings"
-            [index]="adIndex"
-            viewport="mobile"
-          ></app-ad-in-content>
+          @defer (on viewport) {
+            <app-ad-in-content
+              surface="rankings"
+              label="rankings"
+              [index]="adIndex"
+              viewport="mobile"
+            ></app-ad-in-content>
+          } @placeholder {
+            <div class="ad-space-reservation" aria-hidden="true"></div>
+          }
         </ng-container>
       </ng-container>
     </div>
@@ -191,12 +201,16 @@
         </div>
 
         <ng-container *ngIf="getRankingInterscrollerIndex(i) as adIndex">
-          <app-ad-in-content
-            surface="rankings"
-            label="rankings"
-            [index]="adIndex"
-            viewport="mobile"
-          ></app-ad-in-content>
+          @defer (on viewport) {
+            <app-ad-in-content
+              surface="rankings"
+              label="rankings"
+              [index]="adIndex"
+              viewport="mobile"
+            ></app-ad-in-content>
+          } @placeholder {
+            <div class="ad-space-reservation" aria-hidden="true"></div>
+          }
         </ng-container>
       </ng-container>
     </div>
@@ -241,16 +255,21 @@
         </div>
 
         <ng-container *ngIf="getRankingInterscrollerIndex(i) as adIndex">
-          <app-ad-in-content
-            surface="rankings"
-            label="rankings"
-            [index]="adIndex"
-            viewport="mobile"
-          ></app-ad-in-content>
+          @defer (on viewport) {
+            <app-ad-in-content
+              surface="rankings"
+              label="rankings"
+              [index]="adIndex"
+              viewport="mobile"
+            ></app-ad-in-content>
+          } @placeholder {
+            <div class="ad-space-reservation" aria-hidden="true"></div>
+          }
         </ng-container>
       </ng-container>
     </div>
 
+    <!-- jscpd:ignore-end -->
     <!-- No results -->
     <div class="no-results" *ngIf="!loading && !hasResults">
       <mat-icon>search_off</mat-icon>
@@ -259,13 +278,12 @@
     </div>
 
     <!-- Pagination -->
-    <mat-paginator tourAnchor="rankings-pagination"
-                   [length]="totalRankings"
-                   [pageSize]="pageSize"
-                   [pageSizeOptions]="[50, 100]"
-                   [pageIndex]="page"
-                   (page)="onPageChange($event)"
-                   aria-label="Select page of rankings">
-    </mat-paginator>
+    <app-simple-paginator tourAnchor="rankings-pagination"
+                          [length]="totalRankings"
+                          [pageSize]="pageSize"
+                          [pageSizeOptions]="[50, 100]"
+                          [pageIndex]="page"
+                          (page)="onPageChange($event)">
+    </app-simple-paginator>
   </div>
 </div>

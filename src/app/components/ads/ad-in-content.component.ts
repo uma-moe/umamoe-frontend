@@ -33,11 +33,15 @@ const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = PUBLIFT_XL_MIN_WIDTH - 1;
       *ngIf="shouldRenderAd"
       aria-label="Sponsored content"
     >
-      <app-ad-slot
-        [config]="config"
-        [forceFallback]="fallbackPreviewEnabled"
-        (collapsedChange)="slotCollapsed = $event"
-      ></app-ad-slot>
+      @defer (when shouldRenderAd) {
+        <app-ad-slot
+          [config]="config"
+          [forceFallback]="fallbackPreviewEnabled"
+          (collapsedChange)="slotCollapsed = $event"
+        ></app-ad-slot>
+      } @placeholder {
+        <div class="ad-in-content__reservation" [style.min-height.px]="reservedHeight"></div>
+      }
     </section>
   `,
   styles: [`
@@ -76,6 +80,11 @@ const CONTENT_TOP_BRIDGE_DEFAULT_MAX_WIDTH = PUBLIFT_XL_MIN_WIDTH - 1;
       height: 0;
       margin: 0;
       overflow: hidden;
+    }
+
+    .ad-in-content__reservation {
+      width: 100%;
+      max-width: 970px;
     }
 
     :host.ad-in-content-host--mobile {
@@ -188,6 +197,13 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
     return this.config.kind === 'interscroller';
   }
 
+  get reservedHeight(): number {
+    const heights = (this.config.sizes ?? [])
+      .map(size => Number(/x(\d+)$/i.exec(size)?.[1] ?? 0))
+      .filter(height => Number.isFinite(height) && height > 0);
+    return heights.length ? Math.min(...heights) : 90;
+  }
+
   get inlineAdLayoutActive(): boolean {
     return this.fallbackPreviewEnabled || (this.adRuntimeAvailable && !this.supportFallbackAllowed);
   }
@@ -219,6 +235,7 @@ export class AdInContentComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.fuseAdsService.init();
     this.adStateSub = combineLatest([
       this.fuseAdsService.supportFallbackAllowed$,
       this.fuseAdsService.runtimeState$,

@@ -1,15 +1,13 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { Component, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, Inject, Injector, PLATFORM_ID } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppVersionService } from '../../services/app-version.service';
-import { FuseAdsService } from '../../services/fuse-ads.service';
 
 @Component({
   selector: 'app-footer',
   standalone: true,
-  imports: [RouterModule, MatIconModule, MatTooltipModule],
+  imports: [RouterModule, MatIconModule],
   templateUrl: './footer.component.html',
   styleUrls: ['./footer.component.scss'],
 })
@@ -23,7 +21,7 @@ export class FooterComponent {
 
   constructor(
     private appVersionService: AppVersionService,
-    private fuseAdsService: FuseAdsService,
+    private injector: Injector,
     @Inject(DOCUMENT) private document: Document,
     @Inject(PLATFORM_ID) private platformId: Object,
   ) {}
@@ -68,7 +66,8 @@ export class FooterComponent {
   }
 
   openPrivacyChoices(): void {
-    this.fuseAdsService.openPrivacyControls();
+    void import('../../services/fuse-ads.service')
+      .then(({ FuseAdsService }) => this.injector.get(FuseAdsService).openPrivacyControls());
   }
 
 }

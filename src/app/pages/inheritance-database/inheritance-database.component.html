@@ -229,7 +229,8 @@
         class="results-grid"
       >
         <ng-container *ngFor="let record of renderedRecords; let i = index; trackBy: trackByRecordId">
-          <div class="result-card-shell" [tourAnchor]="i === 0 ? 'database-result-card' : ''">
+            <div class="result-card-shell" [tourAnchor]="i === 0 ? 'database-result-card' : ''">
+              @defer (on viewport) {
             <app-inheritance-entry
               [record]="record"
               [showDatabaseHeader]="true"
@@ -251,6 +252,9 @@
               [isBookmarked]="bookmarkService.isBookmarked(record.account_id ?? '')"
               (recordActionComplete)="onEntryRecordActionComplete($event)">
             </app-inheritance-entry>
+            } @placeholder {
+              <div class="result-card-placeholder" aria-hidden="true"></div>
+            }
           </div>
 
           <app-ad-in-content
@@ -428,6 +432,7 @@
       <div *ngIf="authService.isLoggedIn() && !bookmarksLoading && pagedBookmarks.length" class="results-grid">
         <ng-container *ngFor="let record of pagedBookmarks; let i = index; trackBy: trackByRecordId">
           <div>
+            @defer (on viewport) {
             <app-inheritance-entry
               [record]="record"
               [showDatabaseHeader]="true"
@@ -449,6 +454,9 @@
               [isBookmarked]="true"
               (recordActionComplete)="onEntryRecordActionComplete($event)">
             </app-inheritance-entry>
+            } @placeholder {
+              <div class="result-card-placeholder" aria-hidden="true"></div>
+            }
           </div>
 
           <app-ad-in-content

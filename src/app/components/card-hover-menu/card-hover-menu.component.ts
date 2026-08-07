@@ -1,11 +1,11 @@
 import { Component, Input, ViewChild, ElementRef, OnChanges, SimpleChanges, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
-import { Chart, ChartConfiguration, ChartType, registerables } from 'chart.js';
+import type { Chart, ChartConfiguration, ChartType } from 'chart.js';
 import { PrecomputedCardData } from '../../models/precomputed-tierlist.model';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { trigger, transition, style, animate, state } from '@angular/animations';
-Chart.register(...registerables);
+import { loadChartRuntime } from '../../services/chart-runtime';
 @Component({
   selector: 'app-card-hover-menu',
   standalone: true,
@@ -128,10 +128,11 @@ export class CardHoverMenuComponent implements OnChanges {
       this.chart = null;
     }
   }
-  private initializeChart(): void {
+  private async initializeChart(): Promise<void> {
     if (!this.chartCanvas?.nativeElement || !this.card) return;
     const ctx = this.chartCanvas.nativeElement.getContext('2d');
     if (!ctx) return;
+    const { Chart } = await loadChartRuntime();
     if (this.chart) {
       this.chart.destroy();
     }

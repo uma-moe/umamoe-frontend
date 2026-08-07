@@ -28,7 +28,7 @@ export class StatisticsService {
     this.loadAvailableDatasets();
     this.loadCharacterNameMapping();
     this.loadSupportCardNameMapping();
-    this.masterData.init();
+    this.masterData.initCharacterSupportResources();
     this.masterData.characters$.subscribe(() => this.loadCharacterNameMapping());
     this.masterData.supportCards$.subscribe(() => this.loadSupportCardNameMapping());
   }

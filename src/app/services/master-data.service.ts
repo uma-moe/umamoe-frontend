@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs';
-import factorsData from '../../data/factors.json';
 import {
   CharacterNameMap,
   RawCharacterData,
@@ -36,7 +35,7 @@ export class MasterDataService {
   private supportCardsSubject = new BehaviorSubject<SupportCardShort[]>(getAllSupportCards());
   readonly supportCards$ = this.supportCardsSubject.asObservable();
 
-  private factorsSubject = new BehaviorSubject<Factor[]>(this.normalizeArray<Factor>(factorsData));
+  private factorsSubject = new BehaviorSubject<Factor[]>([]);
   readonly factors$ = this.factorsSubject.asObservable();
 
   private raceSaddleDataSubject = new BehaviorSubject(getRaceSaddleData());
@@ -85,17 +84,7 @@ export class MasterDataService {
     }
 
     this.characterSupportInitialized = true;
-    combineLatest([
-      this.resourceData.watchResource<RawCharacterData[]>('character', getRawCharacterData()),
-      this.resourceData.watchResource<CharacterNameMap>('character_names', getCharacterNameEntries())
-    ]).subscribe(([characters, names]) => {
-      this.charactersSubject.next([...replaceCharacterMasterData(characters, names)]);
-    });
-
-    this.resourceData.watchResource<RawSupportCardData[]>('support-cards-db', getRawSupportCardsData())
-      .subscribe(cards => {
-        this.supportCardsSubject.next([...replaceSupportCardsData(cards)]);
-      });
+    void this.loadCharacterSupportResources();
   }
 
   initSupplementalResources(): void {
@@ -104,15 +93,52 @@ export class MasterDataService {
     }
 
     this.supplementalResourcesInitialized = true;
-    this.resourceData.watchResource<Factor[]>('factors', this.factorsSubject.value)
-      .subscribe(factors => {
-        this.factorsSubject.next(this.normalizeArray<Factor>(factors));
-      });
+    void this.loadSupplementalResources();
+  }
 
+  private async loadCharacterSupportResources(): Promise<void> {
+    const [characters, names, supportCards] = await Promise.all([
+      this.loadStaticFallback<RawCharacterData[]>('/assets/data/character.json', getRawCharacterData()),
+      this.loadStaticFallback<CharacterNameMap>('/assets/data/character_names.json', getCharacterNameEntries()),
+      this.loadStaticFallback<RawSupportCardData[]>('/assets/data/support-cards-db.json', getRawSupportCardsData()),
+    ]);
+
+    this.charactersSubject.next([...replaceCharacterMasterData(characters, names)]);
+    this.supportCardsSubject.next([...replaceSupportCardsData(supportCards)]);
+
+    combineLatest([
+      this.resourceData.watchResource<RawCharacterData[]>('character', characters),
+      this.resourceData.watchResource<CharacterNameMap>('character_names', names),
+    ]).subscribe(([nextCharacters, nextNames]) => {
+      this.charactersSubject.next([...replaceCharacterMasterData(nextCharacters, nextNames)]);
+    });
+
+    this.resourceData.watchResource<RawSupportCardData[]>('support-cards-db', supportCards)
+      .subscribe(cards => this.supportCardsSubject.next([...replaceSupportCardsData(cards)]));
+  }
+
+  private async loadSupplementalResources(): Promise<void> {
+    const [factors, raceSaddleData] = await Promise.all([
+      this.loadStaticFallback<Factor[]>('/assets/data/factors.json', this.factorsSubject.value),
+      this.loadStaticFallback('/assets/data/race_to_saddle_mapping.json', getRaceSaddleData()),
+    ]);
+
+    this.factorsSubject.next(this.normalizeArray<Factor>(factors));
+    this.raceSaddleDataSubject.next(replaceRaceSaddleData(raceSaddleData));
+
+    this.resourceData.watchResource<Factor[]>('factors', this.factorsSubject.value)
+      .subscribe(nextFactors => this.factorsSubject.next(this.normalizeArray<Factor>(nextFactors)));
     this.resourceData.watchResource('race_to_saddle_mapping', getRaceSaddleData())
-      .subscribe(data => {
-        this.raceSaddleDataSubject.next(replaceRaceSaddleData(data));
-      });
+      .subscribe(data => this.raceSaddleDataSubject.next(replaceRaceSaddleData(data)));
+  }
+
+  private async loadStaticFallback<T>(url: string, emptyFallback: T): Promise<T> {
+    try {
+      return await this.resourceData.loadStaticJson<T>(url);
+    } catch (error) {
+      console.warn(`Unable to load static master-data fallback ${url}.`, error);
+      return emptyFallback;
+    }
   }
 
   /**

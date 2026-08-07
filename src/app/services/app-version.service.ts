@@ -1,7 +1,5 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { Inject, Injectable, NgZone, PLATFORM_ID } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { VersionUpdateSnackbarComponent } from '../components/version-update-snackbar/version-update-snackbar.component';
+import { Inject, Injectable, Injector, NgZone, PLATFORM_ID } from '@angular/core';
 
 interface AppVersionManifest {
   version?: string;
@@ -22,7 +20,7 @@ export class AppVersionService {
   private initialized = false;
 
   constructor(
-    private snackBar: MatSnackBar,
+    private injector: Injector,
     private ngZone: NgZone,
     @Inject(DOCUMENT) private document: Document,
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -111,7 +109,7 @@ export class AppVersionService {
     try {
       const deployedVersion = await this.fetchDeployedVersion();
       if (deployedVersion && deployedVersion !== this.currentVersion) {
-        this.showReloadPrompt(deployedVersion);
+        void this.showReloadPrompt(deployedVersion);
       }
     } catch {
       // Version checks are best-effort; the app should keep running offline.
@@ -141,14 +139,19 @@ export class AppVersionService {
     return manifest.version?.trim() || null;
   }
 
-  private showReloadPrompt(deployedVersion: string): void {
+  private async showReloadPrompt(deployedVersion: string): Promise<void> {
     if (this.promptOpen) {
       return;
     }
 
+    const [{ MatSnackBar }, { VersionUpdateSnackbarComponent }] = await Promise.all([
+      import('@angular/material/snack-bar'),
+      import('../components/version-update-snackbar/version-update-snackbar.component'),
+    ]);
+
     this.ngZone.run(() => {
       this.promptOpen = true;
-      const snackBarRef = this.snackBar.openFromComponent(VersionUpdateSnackbarComponent, {
+      const snackBarRef = this.injector.get(MatSnackBar).openFromComponent(VersionUpdateSnackbarComponent, {
         duration: 0,
         horizontalPosition: 'center',
         verticalPosition: 'bottom',

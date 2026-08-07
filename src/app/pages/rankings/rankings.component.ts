@@ -1,14 +1,13 @@
 import { Component, OnInit, OnDestroy, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import type { PageEvent } from '@angular/material/paginator';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { MatTabsModule } from '@angular/material/tabs';
 import { FormsModule } from '@angular/forms';
 import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { Subject, takeUntil } from 'rxjs';
@@ -17,6 +16,7 @@ import { UserFanRankingMonthly, UserFanRankingAlltime, UserFanRankingGains } fro
 import { CompactNumberPipe } from '../../pipes/compact-number.pipe';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
+import { SimplePaginatorComponent } from '../../components/simple-paginator/simple-paginator.component';
 type RankingTab = 'monthly' | 'alltime' | 'gains';
 @Component({
   selector: 'app-rankings',
@@ -24,19 +24,18 @@ type RankingTab = 'monthly' | 'alltime' | 'gains';
   imports: [
     CommonModule,
     RouterModule,
-    MatPaginatorModule,
     MatInputModule,
     MatFormFieldModule,
     MatIconModule,
     MatButtonModule,
     MatProgressSpinnerModule,
     MatSelectModule,
-    MatTabsModule,
     FormsModule,
     TourAnchorMatMenuDirective,
     CompactNumberPipe,
     LocaleNumberPipe,
-    AdInContentComponent
+    AdInContentComponent,
+    SimplePaginatorComponent
   ],
   templateUrl: './rankings.component.html',
   styleUrl: './rankings.component.scss'

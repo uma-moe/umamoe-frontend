@@ -1,0 +1,19 @@
+{
+  "path": ["src/app"],
+  "format": ["typescript", "markup", "scss"],
+  "minLines": 8,
+  "minTokens": 70,
+  "maxLines": 1000,
+  "maxSize": "250kb",
+  "threshold": 100,
+  "reporters": ["console", "json"],
+  "output": "reports/jscpd",
+  "absolute": false,
+  "gitignore": true,
+  "ignore": [
+    "**/*.spec.ts",
+    "**/*.generated.ts",
+    "**/data/**",
+    "**/models/**"
+  ]
+}

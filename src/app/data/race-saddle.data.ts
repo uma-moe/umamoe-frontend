@@ -1,5 +1,3 @@
-import raceToSaddleData from '../../data/race_to_saddle_mapping.json';
-
 export interface RaceSaddleMapping {
   races: any[];
   [key: string]: any;
@@ -13,7 +11,7 @@ function normalizeRaceSaddleData(data: unknown): RaceSaddleMapping {
   };
 }
 
-export const RACE_SADDLE_DATA: RaceSaddleMapping = normalizeRaceSaddleData(raceToSaddleData);
+export const RACE_SADDLE_DATA: RaceSaddleMapping = normalizeRaceSaddleData({});
 
 export function replaceRaceSaddleData(data: unknown): RaceSaddleMapping {
   const next = normalizeRaceSaddleData(data);

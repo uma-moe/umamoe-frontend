@@ -6,9 +6,8 @@ export class DomainMigrationService {
   private readonly STORAGE_KEY = 'domain_migration_popup_shown';
   constructor() {}
   shouldShowPopup(): boolean {
-    // Check if the popup has already been shown
     const hasShown = localStorage.getItem(this.STORAGE_KEY);
-    return false;
+    return hasShown !== 'true';
   }
   markPopupAsShown(): void {
     localStorage.setItem(this.STORAGE_KEY, 'true');

@@ -1,10 +1,8 @@
 import { Component, Input, OnInit, OnDestroy, ViewChild, ElementRef, OnChanges, SimpleChanges, inject, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Chart, ChartConfiguration, ChartType, registerables } from 'chart.js';
+import type { Chart, ChartConfiguration, ChartType } from 'chart.js';
 import { ColorsService } from '../../services/colors.service';
-import { ThemeService } from '../../services/theme.service';
-import { Subscription } from 'rxjs';
-Chart.register(...registerables);
+import { loadChartRuntime } from '../../services/chart-runtime';
 export interface ChartDataPoint {
   label: string;
   value: number;
@@ -137,9 +135,8 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
   @Input() multiSeries: { [seriesName: string]: ChartDataPoint[] } | any[] = {};
   private chart: Chart | null = null;
   private colorsService = inject(ColorsService);
-  private themeService = inject(ThemeService);
   private cdr = inject(ChangeDetectorRef);
-  private themeSubscription?: Subscription;
+  private themeObserver?: MutationObserver;
   private imageCache = new Map<string, HTMLImageElement>();
   private resizeListener?: () => void;
   private lastDataHash: string = '';
@@ -201,12 +198,15 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     // Compute initial display state
     this.computeDisplayState();
     this.scheduleChartUpdate(false, true);
-    this.themeSubscription = this.themeService.colorMode$.subscribe(() => {
-      this.cdr.markForCheck();
-      if (this.chart) {
-        this.scheduleChartUpdate(false, true);
-      }
-    });
+    if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+      this.themeObserver = new MutationObserver(() => {
+        this.cdr.markForCheck();
+        if (this.chart) {
+          this.scheduleChartUpdate(false, true);
+        }
+      });
+      this.themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    }
   }
   private computeDisplayState(): void {
     // Compute showImageList
@@ -365,7 +365,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
       clearTimeout(this.chartUpdateTimer);
       this.chartUpdateTimer = null;
     }
-    this.themeSubscription?.unsubscribe();
+    this.themeObserver?.disconnect();
     // Clear image cache to prevent memory leaks
     this.imageCache.clear();
   }
@@ -511,7 +511,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     // For non-array data, do a simple comparison
     return JSON.stringify(previousData) !== JSON.stringify(currentData);
   }
-  private initializeChart(): void {
+  private async initializeChart(): Promise<void> {
     if (!this.hasRenderableData) {
       return;
     }
@@ -531,6 +531,7 @@ export class StatisticsChartComponent implements OnInit, OnDestroy, OnChanges {
     if (!ctx) {
       return;
     }
+    const { Chart } = await loadChartRuntime();
     const chartConfig = this.getChartConfiguration();
     // Register center text plugin for doughnut charts
     if (this.config.type === 'doughnut' && this.config.centerText !== undefined) {

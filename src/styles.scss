@@ -21,31 +21,40 @@ $light-theme: mat.define-light-theme((color: (primary: $primary-palette,
       )));
 
 // Apply only the Material component themes actually used
-@include mat.autocomplete-theme($dark-theme);
-@include mat.button-theme($dark-theme);
-@include mat.card-theme($dark-theme);
-@include mat.checkbox-theme($dark-theme);
-@include mat.chips-theme($dark-theme);
-@include mat.dialog-theme($dark-theme);
-@include mat.bottom-sheet-theme($dark-theme);
-@include mat.fab-theme($dark-theme);
-@include mat.form-field-theme($dark-theme);
-@include mat.icon-theme($dark-theme);
-@include mat.icon-button-theme($dark-theme);
-@include mat.input-theme($dark-theme);
-@include mat.menu-theme($dark-theme);
-@include mat.option-theme($dark-theme);
-@include mat.paginator-theme($dark-theme);
-@include mat.progress-spinner-theme($dark-theme);
-@include mat.select-theme($dark-theme);
-@include mat.sidenav-theme($dark-theme);
-@include mat.slider-theme($dark-theme);
-@include mat.snack-bar-theme($dark-theme);
-@include mat.tabs-theme($dark-theme);
-@include mat.tooltip-theme($dark-theme);
+@include mat.autocomplete-color($dark-theme);
+@include mat.button-color($dark-theme);
+@include mat.checkbox-color($dark-theme);
+@include mat.chips-color($dark-theme);
+@include mat.dialog-color($dark-theme);
+@include mat.form-field-color($dark-theme);
+@include mat.icon-button-color($dark-theme);
+@include mat.input-color($dark-theme);
+@include mat.menu-color($dark-theme);
+@include mat.option-color($dark-theme);
+@include mat.progress-spinner-color($dark-theme);
+@include mat.select-color($dark-theme);
+@include mat.slider-color($dark-theme);
+@include mat.snack-bar-color($dark-theme);
+@include mat.tabs-color($dark-theme);
+@include mat.tooltip-color($dark-theme);
 
 html.light-theme {
-  @include mat.all-component-colors($light-theme);
+  @include mat.autocomplete-color($light-theme);
+  @include mat.button-color($light-theme);
+  @include mat.checkbox-color($light-theme);
+  @include mat.chips-color($light-theme);
+  @include mat.dialog-color($light-theme);
+  @include mat.form-field-color($light-theme);
+  @include mat.icon-button-color($light-theme);
+  @include mat.input-color($light-theme);
+  @include mat.menu-color($light-theme);
+  @include mat.option-color($light-theme);
+  @include mat.progress-spinner-color($light-theme);
+  @include mat.select-color($light-theme);
+  @include mat.slider-color($light-theme);
+  @include mat.snack-bar-color($light-theme);
+  @include mat.tabs-color($light-theme);
+  @include mat.tooltip-color($light-theme);
 }
 
 // Import mixins (must come before utilities and shared components)
@@ -793,6 +802,10 @@ body {
   padding: 0;
 }
 
+// Material's generated light colors and the semantic surface tokens above now
+// provide the baseline. Keeping this former catch-all in source for one release
+// documents the migration without shipping hundreds of route-specific overrides.
+@if false {
 html.light-theme {
   .page-header {
     background: var(--page-header-bg) !important;
@@ -1181,7 +1194,10 @@ html.light-theme {
     background: #ffffff !important;
   }
 }
+}
 
+// Superseded by component-scoped semantic tokens in race-scheduler.component.scss.
+@if false {
 html.light-theme body app-race-scheduler {
   .race-scheduler {
     --race-scheduler-cell-bg: #ffffff;
@@ -1323,7 +1339,11 @@ html.light-theme body app-race-scheduler {
     background: rgba(17, 24, 39, 0.16) !important;
   }
 }
+}
 
+// Legacy vendor theme retained as source reference. A compact equivalent is
+// loaded with the advertising runtime from assets/styles/advertising.css.
+@if false {
 // Best-effort Publift/Fuse CMP theming. These selectors apply only when the
 // Quantcast Choice UI renders into the host page DOM; iframe-hosted CMP UI
 // remains vendor-controlled.
@@ -1792,6 +1812,7 @@ html.light-theme :where(#qc-cmp2-container, .qc-cmp2-container) {
     min-height: 36px !important;
     font-size: var(--font-xs) !important;
   }
+}
 }
 
 html {
@@ -4137,5 +4158,13 @@ body[data-tour-step-id="timeline-track"] {
   z-index: 1001;
   outline: 2px solid rgba(var(--accent-primary-rgb), 0.7);
   outline-offset: 3px;
-  box-shadow: 0 0 0 6px rgba(var(--accent-primary-rgb), 0.14);
+}
+@font-face {
+  font-family: mi;
+  font-display: swap;
+  src: url('../node_modules/@fontsource/material-icons/files/material-icons-latin-400-normal.woff2');
+}
+
+.material-icons {
+  font: 24px mi;
 }

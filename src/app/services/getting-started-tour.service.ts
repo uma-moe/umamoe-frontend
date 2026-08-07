@@ -1,5 +1,5 @@
-import { Inject, Injectable, NgZone, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { ApplicationRef, ComponentRef, createComponent, EnvironmentInjector, Inject, Injectable, NgZone, PLATFORM_ID } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, take } from 'rxjs/operators';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
@@ -12,6 +12,7 @@ import {
   PageTourIntroDialogResult
 } from '../components/page-tour-intro-dialog/page-tour-intro-dialog.component';
 import { isCaratPlannerAvailable } from '../utils/carat-planner-availability';
+import { TourOverlayComponent } from '../components/tour-overlay/tour-overlay.component';
 
 export type PageTourId = 'home' | 'database' | 'clubs' | 'rankings' | 'activity' | 'tierlist' | 'tools' | 'timeline' | 'carat-planner';
 type TourPromptAudience = 'new' | 'existing';
@@ -57,6 +58,7 @@ export class GettingStartedTourService {
     'filter-limit-break',
   ]);
   private initialized = false;
+  private tourOverlayRef: ComponentRef<TourOverlayComponent> | null = null;
   private autoStartTimer: ReturnType<typeof setTimeout> | null = null;
   private introDialogRef: MatDialogRef<PageTourIntroDialogComponent, PageTourIntroDialogResult> | null = null;
   private readonly caratPlannerAvailable = isCaratPlannerAvailable();
@@ -265,6 +267,9 @@ export class GettingStartedTourService {
     private domainStorage: DomainStorageService,
     private dialog: MatDialog,
     private zone: NgZone,
+    private appRef: ApplicationRef,
+    private environmentInjector: EnvironmentInjector,
+    @Inject(DOCUMENT) private document: Document,
     @Inject(PLATFORM_ID) private platformId: Object,
   ) {}
 
@@ -274,6 +279,7 @@ export class GettingStartedTourService {
     }
 
     this.initialized = true;
+    this.ensureTourOverlay();
     this.configureTour();
     this.tourService.stepShow$.subscribe(({ step }) => {
       this.setCurrentTourStep(step.stepId);
@@ -289,6 +295,19 @@ export class GettingStartedTourService {
       .subscribe(() => this.scheduleCurrentPagePrompt());
 
     this.scheduleCurrentPagePrompt();
+  }
+
+  private ensureTourOverlay(): void {
+    if (this.tourOverlayRef || !isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const componentRef = createComponent(TourOverlayComponent, {
+      environmentInjector: this.environmentInjector,
+    });
+    this.appRef.attachView(componentRef.hostView);
+    this.document.body.appendChild(componentRef.location.nativeElement);
+    this.tourOverlayRef = componentRef;
   }
 
   start(): void {

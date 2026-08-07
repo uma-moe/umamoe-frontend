@@ -1,11 +1,9 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, Input, OnChanges, SimpleChanges, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Chart, ChartConfiguration, ChartType, registerables, ScatterDataPoint, Plugin } from 'chart.js';
+import type { Chart, ChartConfiguration, ChartType, ScatterDataPoint, Plugin } from 'chart.js';
 import { TIER_PERCENTILES } from '../../models/tierlist-calculation.model';
 import { PrecomputedCardData } from '../../models/precomputed-tierlist.model';
-import { ThemeService } from '../../services/theme.service';
-import { Subscription } from 'rxjs';
-Chart.register(...registerables);
+import { loadChartRuntime } from '../../services/chart-runtime';
 // Custom plugin for rendering card images
 const cardImagePlugin: Plugin = {
   id: 'cardImages',
@@ -116,7 +114,7 @@ export class TierlistScatterChartComponent implements OnInit, OnDestroy, OnChang
   @Output() cardClick = new EventEmitter<{ card: PrecomputedCardData, event: MouseEvent }>();
   private chart: Chart | null = null;
   private resizeObserver: ResizeObserver | null = null;
-  private themeSubscription?: Subscription;
+  private themeObserver?: MutationObserver;
   showImages = true;
   private dynamicImageSize = 60; // Default size
   tierColors: { [key: string]: string } = {
@@ -127,8 +125,6 @@ export class TierlistScatterChartComponent implements OnInit, OnDestroy, OnChang
     'C': '--tier-color-c',
     'D': '--tier-color-d'
   };
-  constructor(private themeService: ThemeService) {}
-
   ngOnInit(): void {
     // Wait for DOM to be ready for better mobile initialization
     setTimeout(() => {
@@ -136,18 +132,21 @@ export class TierlistScatterChartComponent implements OnInit, OnDestroy, OnChang
       this.initializeChart();
       this.setupResizeListener();
     }, 50);
-    this.themeSubscription = this.themeService.colorMode$.subscribe(() => {
-      if (!this.chart) return;
-      this.chart.destroy();
-      this.chart = null;
-      setTimeout(() => this.initializeChart(), 0);
-    });
+    if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+      this.themeObserver = new MutationObserver(() => {
+        if (!this.chart) return;
+        this.chart.destroy();
+        this.chart = null;
+        setTimeout(() => this.initializeChart(), 0);
+      });
+      this.themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    }
   }
   ngOnDestroy(): void {
     if (this.chart) {
       this.chart.destroy();
     }
-    this.themeSubscription?.unsubscribe();
+    this.themeObserver?.disconnect();
     // Remove all listeners
     window.removeEventListener('resize', this.onResize.bind(this));
     window.removeEventListener('orientationchange', this.onResize.bind(this));
@@ -160,9 +159,10 @@ export class TierlistScatterChartComponent implements OnInit, OnDestroy, OnChang
       this.updateChart();
     }
   }
-  private initializeChart(): void {
+  private async initializeChart(): Promise<void> {
     const ctx = this.chartCanvas.nativeElement.getContext('2d');
     if (!ctx) return;
+    const { Chart } = await loadChartRuntime();
     const isMobile = window.innerWidth <= 768;
     const containerWidth = this.chartCanvas.nativeElement.parentElement?.clientWidth || 800;
     const axisColor = this.getThemeColor('--chart-axis-color', 'rgba(255, 255, 255, 0.7)');

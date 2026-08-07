@@ -2,6 +2,17 @@
 
 .race-scheduler { width: 100%; }
 
+:host-context(html.light-theme) .race-scheduler {
+  --race-scheduler-cell-bg: #ffffff;
+  --race-scheduler-cell-hover-bg: #f2f8ff;
+  --race-scheduler-cell-border: rgba(17, 24, 39, 0.16);
+  --race-scheduler-cell-border-strong: rgba(37, 99, 235, 0.26);
+  --race-scheduler-add-bg: #ffffff;
+  --race-scheduler-add-hover-bg: rgba(var(--accent-primary-rgb), 0.1);
+  --race-scheduler-add-border: rgba(37, 99, 235, 0.3);
+  --race-scheduler-add-color: #1d4ed8;
+}
+
 @media (prefers-reduced-motion: reduce), (update: slow) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

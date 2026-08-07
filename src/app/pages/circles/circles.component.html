@@ -6,13 +6,17 @@
     </div>
   </div>
 
-  <app-ad-in-content
-    surface="leaderboard"
-    label="leaderboard"
-    [contentTopBridge]="true"
-    viewport="mobile"
-    [mobileMaxWidth]="900"
-  ></app-ad-in-content>
+  @defer (on viewport) {
+    <app-ad-in-content
+      surface="leaderboard"
+      label="leaderboard"
+      [contentTopBridge]="true"
+      viewport="mobile"
+      [mobileMaxWidth]="900"
+    ></app-ad-in-content>
+  } @placeholder {
+    <div class="ad-space-reservation" aria-hidden="true"></div>
+  }
 
   <div class="content-container">
     <div class="filters-container" tourAnchor="clubs-filters">
@@ -40,12 +44,12 @@
         </div>
 
         <div class="filter-dropdowns" tourAnchor="clubs-playstyle">
-          <mat-form-field appearance="outline" class="factor-autocomplete-field factor-select-field policy-select" subscriptSizing="dynamic">
-            <mat-icon matPrefix>sports_esports</mat-icon>
-            <mat-select [(value)]="policyFilter" (selectionChange)="onPolicyFilterChange()" placeholder="Playstyle" panelClass="factor-autocomplete-panel">
-              <mat-option *ngFor="let opt of policyOptions" [value]="opt.value">{{opt.label}}</mat-option>
-            </mat-select>
-          </mat-form-field>
+          <label class="policy-select-native">
+            <mat-icon>sports_esports</mat-icon>
+            <select [(ngModel)]="policyFilter" (ngModelChange)="onPolicyFilterChange()" aria-label="Playstyle">
+              <option *ngFor="let opt of policyOptions" [ngValue]="opt.value">{{opt.label}}</option>
+            </select>
+          </label>
         </div>
 
         <button class="clear-filters-btn" *ngIf="hasActiveFilters" (click)="clearAllFilters()">
@@ -154,14 +158,18 @@
       </div>
 
       <ng-container *ngIf="getLeaderboardInterscrollerIndex(i) as adIndex">
-        <app-ad-in-content
-          class="leaderboard-incontent-ad"
-          surface="leaderboard"
-          label="leaderboard"
-          [index]="1"
-          viewport="mobile"
-          [mobileMaxWidth]="900"
-        ></app-ad-in-content>
+        @defer (on viewport) {
+          <app-ad-in-content
+            class="leaderboard-incontent-ad"
+            surface="leaderboard"
+            label="leaderboard"
+            [index]="1"
+            viewport="mobile"
+            [mobileMaxWidth]="900"
+          ></app-ad-in-content>
+        } @placeholder {
+          <div class="ad-space-reservation" aria-hidden="true"></div>
+        }
       </ng-container>
       </ng-container>
     </div>
@@ -172,13 +180,12 @@
       <button class="clear-filters-btn inline" (click)="clearAllFilters()">Clear all filters</button>
     </div>
 
-    <mat-paginator tourAnchor="clubs-paginator"
-                   [length]="totalCircles"
-                   [pageSize]="filters.pageSize"
-                   [pageSizeOptions]="[20, 50, 100]"
-                   [pageIndex]="filters.page"
-                   (page)="onPageChange($event)"
-                   aria-label="Select page of clubs">
-    </mat-paginator>
+    <app-simple-paginator tourAnchor="clubs-paginator"
+                          [length]="totalCircles"
+                          [pageSize]="filters.pageSize ?? 100"
+                          [pageSizeOptions]="[20, 50, 100]"
+                          [pageIndex]="filters.page ?? 0"
+                          (page)="onPageChange($event)">
+    </app-simple-paginator>
   </div>
 </div>

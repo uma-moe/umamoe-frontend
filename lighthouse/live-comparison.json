@@ -1,0 +1,24 @@
+{
+  "ci": {
+    "collect": {
+      "url": [
+        "https://uma.moe/",
+        "https://beta.uma.moe/",
+        "https://uma.moe/database",
+        "https://beta.uma.moe/database",
+        "https://uma.moe/timeline",
+        "https://beta.uma.moe/timeline",
+        "https://uma.moe/tools/statistics",
+        "https://beta.uma.moe/tools/statistics",
+        "https://uma.moe/tools/lineage-planner",
+        "https://beta.uma.moe/tools/lineage-planner"
+      ],
+      "numberOfRuns": 5,
+      "settings": {
+        "chromeFlags": "--headless --no-sandbox --disable-dev-shm-usage",
+        "maxWaitForLoad": 60000
+      }
+    },
+    "upload": { "target": "filesystem", "outputDir": "reports/lighthouse/live-comparison" }
+  }
+}

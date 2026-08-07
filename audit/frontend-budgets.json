@@ -1,0 +1,23 @@
+{
+  "initial": {
+    "rawBytes": 1000000,
+    "transferredBytes": 200000,
+    "files": 20,
+    "globalCssBytes": 175000
+  },
+  "routes": {
+    "home": { "entryPoint": "src/app/pages/home/home.component.ts", "maxBytes": 25000 },
+    "database": { "entryPoint": "src/app/pages/inheritance-database/inheritance-database.component.ts", "maxBytes": 1150000 },
+    "circles": { "entryPoint": "src/app/pages/circles/circles.component.ts", "maxBytes": 213350 },
+    "circle-details": { "entryPoint": "src/app/pages/circles/circle-details/circle-details.component.ts", "maxBytes": 553860 },
+    "rankings": { "entryPoint": "src/app/pages/rankings/rankings.component.ts", "maxBytes": 213350 },
+    "activity": { "entryPoint": "src/app/pages/shame/shame.component.ts", "maxBytes": 457980 },
+    "timeline": { "entryPoint": "src/app/pages/timeline/timeline.component.ts", "maxBytes": 750000 },
+    "carat-planner": { "entryPoint": "src/app/components/carat-planner/carat-planner.component.ts", "maxBytes": 520000 },
+    "tierlist": { "entryPoint": "src/app/pages/tierlist/tierlist.component.ts", "maxBytes": 420495 },
+    "statistics": { "entryPoint": "src/app/pages/statistics/statistics.component.ts", "maxBytes": 1500000 },
+    "lineage-planner": { "entryPoint": "src/app/pages/lineage-planner/lineage-planner.component.ts", "maxBytes": 1500000 },
+    "profile": { "entryPoint": "src/app/pages/profile/profile.component.ts", "maxBytes": 1953300 },
+    "veterans": { "entryPoint": "src/app/pages/profile/veterans/veterans.component.ts", "maxBytes": 2120410 }
+  }
+}

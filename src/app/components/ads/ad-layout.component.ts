@@ -90,6 +90,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.fuseAdsService.init();
     this.resetProviderStickyFooterDismissal();
     this.attachProviderStickyFooterDismissHandler();
     this.observeProviderStickyFooterPresence();

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import {
   HttpInterceptor,
   HttpRequest,
@@ -8,12 +8,11 @@ import {
 } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { RateLimitService } from '../services/rate-limit.service';
 import { environment } from '../../environments/environment';
 
 @Injectable()
 export class RateLimitInterceptor implements HttpInterceptor {
-  constructor(private rateLimitService: RateLimitService) {}
+  constructor(private injector: Injector) {}
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     return next.handle(req).pipe(
@@ -26,7 +25,8 @@ export class RateLimitInterceptor implements HttpInterceptor {
           console.warn('Rate limited (429):', req.url, `Retry after ${retryAfter}s`);
           
           // Show the rate limit popup
-          this.rateLimitService.showRateLimitPopup(retryAfter);
+          void import('../services/rate-limit.service')
+            .then(({ RateLimitService }) => this.injector.get(RateLimitService).showRateLimitPopup(retryAfter));
         }
         
         return throwError(() => error);

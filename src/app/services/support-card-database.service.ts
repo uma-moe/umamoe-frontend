@@ -25,7 +25,7 @@ export class SupportCardDatabaseService {
     }
 
     this.loaded = true;
-    this.masterData.init();
+    this.masterData.initCharacterSupportResources();
     this.masterData.supportCards$.pipe(
       map(cards => [...cards].sort((a, b) => {
         const dateCompare = new Date(b.release_date).getTime() - new Date(a.release_date).getTime();
@@ -191,6 +191,6 @@ export class SupportCardDatabaseService {
    * Refresh the support cards data
    */
   refreshData(): void {
-    this.masterData.init();
+    this.masterData.initCharacterSupportResources();
   }
 }

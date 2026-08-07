@@ -1,16 +1,12 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, Injector, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { MatDialog } from '@angular/material/dialog';
 import { Subject, takeUntil } from 'rxjs';
 import { StatsService, StatsResponse } from '../../services/stats.service';
 import { DomainMigrationService } from '../../services/domain-migration.service';
-import { DomainMigrationPopupComponent } from '../../components/domain-migration-popup/domain-migration-popup.component';
 import { MilestoneService } from '../../services/milestone.service';
-import { MilestonePopupComponent } from '../../components/milestone-popup/milestone-popup.component';
 import { Meta, Title } from '@angular/platform-browser';
-import { ThemeService } from '../../services/theme.service';
 import { LocaleNumberPipe } from '../../pipes/locale-number.pipe';
 import { AdInContentComponent } from '../../components/ads/ad-in-content.component';
 import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
@@ -32,7 +28,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   stats: StatsResponse | null = null;
   loading = true;
-  isChristmas$ = this.themeService.isChristmas$;
   tasksToday = 0;
   accountsUpdatedToday = 0;
   accounts7d = 0;
@@ -41,9 +36,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     private statsService: StatsService, 
     private meta: Meta, 
     private title: Title,
-    private dialog: MatDialog,
+    private injector: Injector,
     private domainMigrationService: DomainMigrationService,
-    private themeService: ThemeService,
     private milestoneService: MilestoneService
   ) {
     this.title.setTitle('uma.moe Umamusume Database & Tools');
@@ -92,9 +86,16 @@ export class HomeComponent implements OnInit, OnDestroy {
     target.src = 'assets/logo.webp';
   }
   private checkForMilestonePopup() {
-    setTimeout(() => {
+    setTimeout(() => void this.showMilestonePopupIfNeeded(), 800);
+  }
+
+  private async showMilestonePopupIfNeeded(): Promise<void> {
       if (this.milestoneService.shouldShowPopup()) {
-        const dialogRef = this.dialog.open(MilestonePopupComponent, {
+        const [{ MatDialog }, { MilestonePopupComponent }] = await Promise.all([
+          import('@angular/material/dialog'),
+          import('../../components/milestone-popup/milestone-popup.component'),
+        ]);
+        const dialogRef = this.injector.get(MatDialog).open(MilestonePopupComponent, {
           width: '90vw',
           maxWidth: '520px',
           disableClose: false,
@@ -105,14 +106,19 @@ export class HomeComponent implements OnInit, OnDestroy {
           this.milestoneService.markPopupAsShown();
         });
       }
-    }, 800);
   }
 
   private checkForDomainMigrationPopup() {
-    // Small delay to ensure the component is fully rendered
-    setTimeout(() => {
+    setTimeout(() => void this.showDomainMigrationPopupIfNeeded(), 500);
+  }
+
+  private async showDomainMigrationPopupIfNeeded(): Promise<void> {
       if (this.domainMigrationService.shouldShowPopup()) {
-        const dialogRef = this.dialog.open(DomainMigrationPopupComponent, {
+        const [{ MatDialog }, { DomainMigrationPopupComponent }] = await Promise.all([
+          import('@angular/material/dialog'),
+          import('../../components/domain-migration-popup/domain-migration-popup.component'),
+        ]);
+        const dialogRef = this.injector.get(MatDialog).open(DomainMigrationPopupComponent, {
           width: '90vw',
           maxWidth: '520px',
           disableClose: false,
@@ -123,6 +129,5 @@ export class HomeComponent implements OnInit, OnDestroy {
           this.domainMigrationService.markPopupAsShown();
         });
       }
-    }, 500);
   }
 }

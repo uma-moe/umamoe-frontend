@@ -56,31 +56,26 @@
       </a>
 
       <button
-        mat-icon-button
         type="button"
         class="tour-start-btn"
         (click)="startGettingStartedTour($event)"
         aria-label="Start guided tour"
-        matTooltip="Start guided tour"
+        title="Start guided tour"
         tourAnchor="nav-tour">
         <mat-icon>help_outline</mat-icon>
       </button>
 
       <button
-        mat-icon-button
         type="button"
         class="color-mode-toggle"
         [class.active]="isLightMode$ | async"
         (click)="toggleColorMode()"
         [attr.aria-label]="(isLightMode$ | async) ? 'Switch to dark mode' : 'Switch to light mode'"
         [attr.aria-pressed]="(isLightMode$ | async) ? 'true' : 'false'"
-        [matTooltip]="(isLightMode$ | async) ? 'Switch to dark mode' : 'Switch to light mode'">
+        [attr.title]="(isLightMode$ | async) ? 'Switch to dark mode' : 'Switch to light mode'">
         <mat-icon>{{ (isLightMode$ | async) ? 'dark_mode' : 'light_mode' }}</mat-icon>
       </button>
 
-      <!-- <button mat-icon-button (click)="toggleTheme()" class="theme-toggle" [matTooltip]="(isChristmas$ | async) ? 'Disable Christmas Theme' : 'Enable Christmas Theme'">
-        <mat-icon [class.active-snowflake]="isChristmas$ | async">ac_unit</mat-icon>
-      </button> -->
     </div>
 
     <div class="nav-status" *ngIf="(status$ | async) as status">
@@ -166,31 +161,4 @@
     </div>
   </div>
 
-  <!-- Tierlist Menu -->
-  <mat-menu #tierlistMenu="matMenu" class="nav-dropdown-menu">
-    <button mat-menu-item routerLink="/tierlist/ura">
-      <mat-icon>emoji_events</mat-icon>
-      <span>URA Scenario</span>
-    </button>
-    <button mat-menu-item routerLink="/tierlist/aoharu" disabled>
-      <mat-icon>school</mat-icon>
-      <span>Aoharu (WIP)</span>
-    </button>
-    <button mat-menu-item routerLink="/tierlist/climax" disabled>
-      <mat-icon>local_fire_department</mat-icon>
-      <span>Climax (WIP)</span>
-    </button>
-  </mat-menu>
-
-  <!-- Simulator Menu -->
-  <mat-menu #simulatorMenu="matMenu" class="nav-dropdown-menu">
-    <button mat-menu-item routerLink="/simulator/stamina" disabled>
-      <mat-icon>battery_charging_full</mat-icon>
-      <span>Stamina Calculator (WIP)</span>
-    </button>
-    <button mat-menu-item routerLink="/simulator/race" disabled>
-      <mat-icon>sports_score</mat-icon>
-      <span>Race Simulator (WIP)</span>
-    </button>
-  </mat-menu>
 </nav>
