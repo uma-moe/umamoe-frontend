@@ -95,6 +95,22 @@ function speculativeComparisonLabel(
   if (!comparison) return 'Awaiting EN/JP and official social comparison data';
   const months = comparison.speculative_months ?? [];
   const sourceSummary = `${comparison.matched_news?.length ?? 0} matched news use EN−JP delta; ${comparison.en_only_news?.length ?? 0} EN-only; ${comparison.social_reward_posts} deduped X/Twitter; ${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed`;
+  if (comparison.speculative_method === 'mean_last_12_complete_calendar_months'
+    && months.length > 0) {
+    const range = formatMonthRange(
+      comparison.speculative_window_start ?? months[0].month,
+      comparison.speculative_window_end ?? months[months.length - 1].month,
+    );
+    const values = months.map(month => formatNumber(month.total_carats)).join(', ');
+    const recentMedian = Math.max(0, Math.round(
+      Number(comparison.speculative_recent_median_monthly_carats) || 0,
+    ));
+    const recentMedianRange = formatMonthRange(
+      comparison.speculative_recent_median_window_start ?? months[Math.max(0, months.length - 6)].month,
+      comparison.speculative_recent_median_window_end ?? months[months.length - 1].month,
+    );
+    return `12-month expected mean ${range} [${values}] = ${formatNumber(comparison.speculative_monthly_carats)}/month; conservative 6-month median ${recentMedianRange} = ${formatNumber(recentMedian)}/month. Sources: ${sourceSummary}`;
+  }
   if (comparison.speculative_method === 'median_last_6_complete_calendar_months'
     && months.length > 0) {
     const range = formatMonthRange(

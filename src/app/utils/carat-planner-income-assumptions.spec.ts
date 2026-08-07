@@ -8,7 +8,7 @@ describe('plannerIncomeAssumptionGroups', () => {
   it('shows the audited Global uplift buckets and derived monthly rate', () => {
     const comparison: PlannerGlobalRewardComparison = {
       news_match_method: 'same_announce_id',
-      speculative_method: 'median_last_6_complete_calendar_months',
+      speculative_method: 'mean_last_12_complete_calendar_months',
       archive_as_of: '2026-08-07',
       observation_start: '2025-06-26',
       observation_end: '2026-08-06',
@@ -24,15 +24,20 @@ describe('plannerIncomeAssumptionGroups', () => {
       social_news_duplicate_carats_removed: 1500,
       speculative_observed_carats: 36_450,
       speculative_mean_monthly_carats: 2726,
-      speculative_monthly_carats: 775,
-      speculative_window_start: '2026-02',
+      speculative_recent_median_monthly_carats: 775,
+      speculative_recent_median_window_start: '2026-02',
+      speculative_recent_median_window_end: '2026-07',
+      speculative_monthly_carats: 1517,
+      speculative_window_start: '2025-08',
       speculative_window_end: '2026-07',
-      speculative_months: [2100, 600, 2700, 450, 600, 950]
+      speculative_months: [300, 1800, 300, 4500, 3000, 900, 2100, 600, 2700, 450, 600, 950]
         .map((total_carats, index) => ({
-          month: `2026-${String(index + 2).padStart(2, '0')}`,
+          month: index < 5
+            ? `2025-${String(index + 8).padStart(2, '0')}`
+            : `2026-${String(index - 4).padStart(2, '0')}`,
           matched_news_extra_carats: 0,
-          en_only_news_carats: index === 5 ? 350 : 0,
-          social_carats: total_carats - (index === 5 ? 350 : 0),
+          en_only_news_carats: index === 11 ? 350 : 0,
+          social_carats: total_carats - (index === 11 ? 350 : 0),
           total_carats,
         })),
       matched_news: [{
@@ -58,8 +63,8 @@ describe('plannerIncomeAssumptionGroups', () => {
       .find(candidate => candidate.id === SPECULATIVE_INCOME_SCENARIO_GROUP_ID);
 
     expect(group?.scheduleLabel).toBe(
-      '6-month median Feb–Jul 2026 [2,100, 600, 2,700, 450, 600, 950] = 775/month; long-run mean 2,726/month. Sources: 4 matched news use EN−JP delta; 7 EN-only; 26 deduped X/Twitter; 1 overlapping item / 1,500 Carats removed',
+      '12-month expected mean Aug 2025–Jul 2026 [300, 1,800, 300, 4,500, 3,000, 900, 2,100, 600, 2,700, 450, 600, 950] = 1,517/month; conservative 6-month median Feb–Jul 2026 = 775/month. Sources: 4 matched news use EN−JP delta; 7 EN-only; 26 deduped X/Twitter; 1 overlapping item / 1,500 Carats removed',
     );
-    expect(group?.options[0].amountLabel).toBe('+775 Carats / month');
+    expect(group?.options[0].amountLabel).toBe('+1,517 Carats / month');
   });
 });
