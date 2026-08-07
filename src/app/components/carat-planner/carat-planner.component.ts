@@ -151,6 +151,7 @@ interface PlannerScenarioGroupView {
   id: string;
   label: string;
   scheduleLabel: string;
+  helpText?: string;
   sourceUrl?: string;
   options: PlannerScenarioOptionView[];
 }

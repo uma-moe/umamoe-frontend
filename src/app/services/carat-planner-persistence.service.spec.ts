@@ -9,6 +9,12 @@ describe('CaratPlannerPersistenceService', () => {
     localStorage.removeItem(CaratPlannerPersistenceService.STORAGE_KEY);
   });
 
+  it('enables the rolling speculative estimate on new plans by default', () => {
+    const service = createService();
+
+    expect(service.activePlan.scenarioSelections['speculative_income']).toBe('include');
+  });
+
   it('sanitizes imported balances, dates, optional IDs, collections, and numeric limits', () => {
     const service = createService();
     service.importJson(JSON.stringify({

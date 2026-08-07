@@ -107,7 +107,7 @@ export interface PlannerRewardResource {
 
 export interface PlannerGlobalRewardComparison {
   news_match_method: 'same_announce_id' | string;
-  speculative_method?: 'mean_last_12_complete_calendar_months' | 'median_last_6_complete_calendar_months' | string;
+  speculative_method?: 'mean_last_6_complete_calendar_months' | 'mean_last_12_complete_calendar_months' | 'median_last_6_complete_calendar_months' | string;
   archive_as_of?: string;
   observation_start: string;
   observation_end: string;

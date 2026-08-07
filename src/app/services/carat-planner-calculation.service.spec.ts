@@ -308,6 +308,20 @@ describe('CaratPlannerCalculationService', () => {
     expect(sumCurrency(ledger, 'free_jewels')).toBe(4200);
   });
 
+  it('uses the conservative median when that speculative option is selected', () => {
+    const plan = makePlan({ scenarioSelections: { speculative_income: 'median' } });
+    const data = emptyData();
+    data.rewards.global_reward_comparison = globalComparison({
+      observation_end: '2026-01-01',
+      speculative_monthly_carats: 1200,
+      speculative_recent_median_monthly_carats: 775,
+    });
+
+    const ledger = service.buildLedger(plan, data, '2026-02-01');
+
+    expect(sumCurrency(ledger, 'free_jewels')).toBe(775);
+  });
+
   it('reconciles speculative income on pull dates between monthly checkpoints', () => {
     const plan = makePlan({
       scenarioSelections: { speculative_income: 'include' },

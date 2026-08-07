@@ -18,6 +18,10 @@ import {
   PlannerVariableRewardSelection,
 } from '../models/carat-planner.model';
 import {
+  SPECULATIVE_INCOME_INCLUDED_OPTION,
+  SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
+} from '../utils/carat-planner-income-assumptions';
+import {
   hasProjectableSourceItems,
   isAutomaticCompetitiveVariant,
 } from '../utils/planner-reward-currencies';
@@ -292,7 +296,9 @@ export class CaratPlannerPersistenceService {
       disabledRewardIds: [],
       enabledRewardEventIds: [],
       disabledEventIds: [],
-      scenarioSelections: {},
+      scenarioSelections: {
+        [SPECULATIVE_INCOME_SCENARIO_GROUP_ID]: SPECULATIVE_INCOME_INCLUDED_OPTION,
+      },
       variableRewardSelections: {},
       freePullCampaignSelections: {},
       resourceDefaultsApplied: false,

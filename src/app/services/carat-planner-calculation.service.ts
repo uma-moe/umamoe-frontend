@@ -28,6 +28,7 @@ import {
 import {
   isLegacyTrainingPassIncomeRule,
   SPECULATIVE_INCOME_INCLUDED_OPTION,
+  SPECULATIVE_INCOME_MEDIAN_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
   TRAINING_PASS_SCENARIO_GROUP_ID,
   trainingPassIncomeRules,
@@ -289,11 +290,14 @@ export class CaratPlannerCalculationService {
       ledger.push(...this.expandRule(rule, startDate, endDate));
     }
 
-    if (plan.scenarioSelections[SPECULATIVE_INCOME_SCENARIO_GROUP_ID]
-      === SPECULATIVE_INCOME_INCLUDED_OPTION) {
+    const speculativeSelection =
+      plan.scenarioSelections[SPECULATIVE_INCOME_SCENARIO_GROUP_ID];
+    if (speculativeSelection === SPECULATIVE_INCOME_INCLUDED_OPTION
+      || speculativeSelection === SPECULATIVE_INCOME_MEDIAN_OPTION) {
       ledger.push(...this.speculativeIncomeEntries(
         plan,
         data.rewards.global_reward_comparison,
+        speculativeSelection,
         startDate,
         endDate,
       ));
@@ -573,13 +577,18 @@ export class CaratPlannerCalculationService {
   private speculativeIncomeEntries(
     plan: CaratPlan,
     comparison: PlannerGlobalRewardComparison | undefined,
+    selection: string,
     rangeStart: string,
     rangeEnd: string,
   ): PlannerLedgerEntry[] {
     const start = this.toUtcDate(rangeStart);
     const end = this.toUtcDate(rangeEnd);
     const observationEnd = this.toUtcDate(comparison?.observation_end);
-    const monthlyCarats = this.nonNegativeInt(comparison?.speculative_monthly_carats);
+    const monthlyCarats = this.nonNegativeInt(
+      selection === SPECULATIVE_INCOME_MEDIAN_OPTION
+        ? comparison?.speculative_recent_median_monthly_carats
+        : comparison?.speculative_monthly_carats,
+    );
     if (!start || !end || !observationEnd || monthlyCarats <= 0) return [];
     const anchor = observationEnd > start ? observationEnd : start;
     if (end <= anchor) return [];
