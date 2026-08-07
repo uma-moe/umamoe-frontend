@@ -2,7 +2,7 @@
 
 Audit branch: `codex/frontend-audit`
 Original audit baseline: local `beta` commit `bc0e661`
-Synchronized base: `origin/main` commit `eff843b` (2026-08-07)
+Synchronized base: `origin/main` commit `a7c9176` (2026-08-07)
 Worktree: `C:\tmp\umamoe-frontend-audit`
 Deterministic environment: Angular `audit` configuration, same-origin data fallbacks, API fixtures, and analytics/advertising/Turnstile disabled
 Production comparison targets: [uma.moe](https://uma.moe/) and [beta.uma.moe](https://beta.uma.moe/)
@@ -20,16 +20,16 @@ Bundle values below are raw emitted JavaScript/CSS and locally calculated Brotli
 | Measurement | Baseline | Final | Change | Gate |
 | --- | ---: | ---: | ---: | ---: |
 | Initial bundle raw | 1,320,053 B | 888,568 B | -32.7% | <= 1,000,000 B |
-| Initial bundle Brotli | 272,216 B | 199,582 B | -26.7% | <= 200,000 B |
+| Initial bundle Brotli | 272,216 B | 199,572 B | -26.7% | <= 200,000 B |
 | Initial files | 28 | 20 | -28.6% | <= 20 |
 | Global CSS | 252,032 B | 165,075 B | -34.5% | <= 175,000 B |
 | Home route | 35,365 B | 16,325 B | -53.8% | <= 25,000 B |
 | Database route | 1,574,957 B | 1,121,641 B | -28.8% | <= 1,150,000 B |
-| Timeline route | 986,966 B | 723,006 B | -26.7% | <= 750,000 B |
+| Timeline route | 986,966 B | 724,169 B | -26.6% | <= 750,000 B |
 | Statistics route | 2,648,752 B | 573,319 B | -78.4% | <= 1,500,000 B |
 | Lineage planner route | 2,760,690 B | 963,376 B | -65.1% | <= 1,500,000 B |
 
-Every configured route budget passes. The carat-planner closure is 509,587 B, down from the post-sync 523,007 B regression and below its 520,000 B gate. Other measured closures also improved: circles 196,271 B, circle details 527,753 B, rankings 200,705 B, activity 387,812 B, tierlist 371,341 B, profile 552,121 B, and veterans 692,103 B.
+Every configured route budget passes. The carat-planner closure is 511,966 B after the final reward-reconciliation sync, down from the earlier 523,007 B regression and below its 520,000 B gate. Other measured closures also improved: circles 196,271 B, circle details 527,753 B, rankings 200,705 B, activity 387,812 B, tierlist 371,341 B, profile 552,121 B, and veterans 692,103 B.
 
 The local Material Icons font is one 128,352 B WOFF2 request and uses `font-display: swap`. It is recorded as an initial static asset rather than executable/style bundle bytes. The Google Fonts stylesheet, DNS connection, and cross-origin font request were removed.
 
@@ -58,7 +58,7 @@ Machine-readable evidence is generated at `reports/frontend-audit/bundle-report.
 - Sass division deprecations in the lineage planner were replaced with `math.div`.
 - Offscreen route sections and charts have viewport deferral; LCP/home media retain explicit dimensions and below-fold images retain lazy loading/fallback behavior.
 - The carat planner's obsolete selector families were removed after static template/component analysis and deterministic desktop/mobile rendering. Its source SCSS fell from 124,955 to 116,570 bytes and Sass-compressed output from 110,825 to 102,647 bytes.
-- The planner's already-namespaced `.cp*` rules now use `ViewEncapsulation.None`, avoiding redundant Angular scope attributes. Stable base rules and later responsive refinements compile as ordered 58,865-byte and 43,782-byte style layers, both below the 75 KB component-style gate. Removing its Material progress-bar dependency reduced the planner component lazy chunk from 267.00 KB to 251.38 KB raw; the complete route closure is 509.59 KB raw / 85.91 KB Brotli.
+- The planner's already-namespaced `.cp*` rules now use `ViewEncapsulation.None`, avoiding redundant Angular scope attributes. Stable base rules and later responsive refinements compile as ordered 58,865-byte and 43,782-byte style layers, both below the 75 KB component-style gate. Removing its Material progress-bar dependency reduced the planner component lazy chunk from 267.00 KB to 252.57 KB raw after the final reward-reconciliation sync; the complete route closure is 511.97 KB raw / 86.71 KB Brotli.
 
 ## Site-wide idle CPU result
 
@@ -66,8 +66,8 @@ The repeatable CPU audit measures all 29 audited routes in desktop and Pixel-siz
 
 | Profile | Mean CPU ms/s before | Mean CPU ms/s final | Change | Median final | p95 final | Maximum final |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Desktop | 73.66 | 1.90 | -97.41% | 1.98 | 2.75 | 18.46 |
-| Mobile | 73.63 | 1.88 | -97.44% | 1.72 | 6.08 | 11.10 |
+| Desktop | 73.66 | 2.19 | -97.02% | 1.98 | 11.14 | 18.46 |
+| Mobile | 73.63 | 1.92 | -97.40% | 1.72 | 6.08 | 11.10 |
 
 The outliers that motivated the pass improved as follows:
 
@@ -80,6 +80,8 @@ The outliers that motivated the pass improved as follows:
 
 No long tasks or active CSS/Web Animations were present in any final idle observation window. The fixes keep feature highlighting visually distinct with static gradients/shadows, replace indefinitely spinning failure/loading states with accessible static status indicators, and make live/today/timeline placeholders and conditional dialog decoration static. Transient operation spinners, the editor caret, the transform-only carat loading bar, and the opt-in snow effect remain because they communicate active work or are explicitly invoked.
 
+The full 58-case final sweep preceded `main`'s last planner reward reconciliation. Because that commit touched only planner code, the carat route was remeasured on the synchronized base: 11.14 ms/s desktop and 2.89 ms/s mobile, with zero animations and long tasks. The aggregate values above conservatively substitute those post-sync carat measurements into the full sweep.
+
 The strict CI budget is a maximum 25 mean CPU ms/s per profile, 100 CPU ms/s for an individual route, zero idle long tasks, zero active idle animations, and zero page errors. Machine-readable evidence is generated at `reports/frontend-audit/cpu-<label>.json`; the retained local comparison is `cpu-final-sitewide-cpu.json` against `cpu-before-sitewide-cpu.json`.
 
 ## Duplication result
@@ -88,16 +90,16 @@ Configured jscpd thresholds pass:
 
 | Format | Baseline | Final | Gate |
 | --- | ---: | ---: | ---: |
-| Overall | 3.02% / 143 blocks | 1.778% / 57 blocks | <= 2% |
+| Overall | 3.02% / 143 blocks | 1.774% / 57 blocks | <= 2% |
 | Markup | 6.22% | 3.816% | <= 4% |
-| TypeScript | 2.28% | 1.268% | <= 1.75% |
+| TypeScript | 2.28% | 1.263% | <= 1.75% |
 | SCSS | 2.60% | 1.650% | <= 2% |
 
 Intentional generation-specific lineage markup, branded home/tools presentation, and typed ranking-mode rows are documented in `docs/frontend-audit-clone-allowlist.md`. The report is written to `reports/jscpd/jscpd-report.json`.
 
 ## Compatibility characterization
 
-The final unit suite contains 210 passing tests after synchronization with current `main`. Characterization covers UQL behavior already present in the repository, planner calculations and reward presentation, timeline ordering/avatar fallback, resource fallback hydration, free-pull allocation, LB crystals, statistics services, and existing serialization behavior.
+The final unit suite contains 212 passing tests after synchronization with current `main`. Characterization covers UQL behavior already present in the repository, planner calculations and reward presentation, timeline ordering/avatar fallback, resource fallback hydration, free-pull allocation, LB crystals, statistics services, and existing serialization behavior.
 
 Two compatibility defects exposed during the refactor were fixed in shared services:
 
@@ -159,9 +161,10 @@ Generated reports are ignored by Git and uploaded by `.github/workflows/frontend
 
 - `npx ng build --configuration production` - pass
 - `npm run build:profile` - pass
-- `npm test -- --watch=false --browsers=ChromeHeadless --progress=false` - 210 pass
+- `npm test -- --watch=false --browsers=ChromeHeadless --progress=false` - 212 pass
 - `node scripts/frontend-audit/check-bundles.mjs` after audit build - pass
 - `npm run audit:duplicates` - pass
 - `npm run audit:routes` - 280 original route cases plus 10 planner-query cases pass (290 total)
-- `npm run audit:cpu -- --label final-sitewide-cpu --compare reports/frontend-audit/cpu-before-sitewide-cpu.json` - pass; desktop -97.41%, mobile -97.44%
+- `npx playwright test --grep carat-planner` after the final `main` sync - 10 pass across all five browser/device projects
+- `npm run audit:cpu -- --label final-sitewide-cpu --compare reports/frontend-audit/cpu-before-sitewide-cpu.json` plus post-sync carat recheck - pass; adjusted desktop -97.02%, mobile -97.40%
 - Lighthouse deterministic/live runtime - not completed; see status above

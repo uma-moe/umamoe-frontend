@@ -840,13 +840,13 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.upcomingRewardGroupCount).toBe(3);
     expect(component.pastRewardGroupCount).toBe(2);
     expect(component.displayedRewardGroups.map(group => group.id)).toEqual([
-      'reward:current', 'reward:future-soon', 'reward:future-late',
+      'reward:2030-01-01:current', 'reward:2031-01-01:future-soon', 'reward:2031-02-01:future-late',
     ]);
 
     component.setPastRewardsVisible(true);
 
     expect(component.displayedRewardGroups.map(group => group.id)).toEqual([
-      'reward:past-new', 'reward:past-old',
+      'reward:2029-12-31:past-new', 'reward:2028-01-01:past-old',
     ]);
     expect(component.displayedRewardGroups.every(group => component.isPastRewardGroup(group))).toBeTrue();
   });
@@ -862,12 +862,14 @@ describe('CaratPlannerComponent banner ordering', () => {
       ] },
     };
     (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
-    expect(component.displayedRewardGroups.map(group => group.id)).toEqual(['reward:first', 'reward:second']);
+    expect(component.displayedRewardGroups.map(group => group.id)).toEqual([
+      'reward:2030-06-01:first', 'reward:2031-06-01:second',
+    ]);
 
     component.plan.projectionStartDate = '2031-01-01';
     component.projectionStartChanged();
 
-    expect(component.displayedRewardGroups.map(group => group.id)).toEqual(['reward:second']);
+    expect(component.displayedRewardGroups.map(group => group.id)).toEqual(['reward:2031-06-01:second']);
     expect(component.pastRewardGroupCount).toBe(1);
   });
 
@@ -1020,13 +1022,13 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.visibleRewardGroups.length).toBe(10);
 
     component.searchRewards('Reward 7');
-    expect(component.visibleRewardGroups.map(group => group.id)).toEqual(['reward:reward-7']);
+    expect(component.visibleRewardGroups.map(group => group.id)).toEqual(['reward:2030-01-08:reward-7']);
 
     component.searchRewards('');
     expect(component.visibleRewardGroups.length).toBe(10);
 
     component.setRewardSelectionFilter('included');
-    expect(component.visibleRewardGroups.map(group => group.id)).toEqual(['reward:reward-2']);
+    expect(component.visibleRewardGroups.map(group => group.id)).toEqual(['reward:2030-01-03:reward-2']);
   });
 
   it('shows exact and predicted campaign free pulls in the funding summary', () => {
