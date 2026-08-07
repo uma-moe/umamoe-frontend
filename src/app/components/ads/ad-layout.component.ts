@@ -34,7 +34,10 @@ const SIDE_RAIL_WIDE_WIDTH = 160;
 const SIDE_RAIL_EDGE_GAP = 16;
 const SIDE_RAIL_CONTENT_GAP = 16;
 const SINGLE_SIDE_RAIL_MAX_WIDTH = 1535;
-const LEFT_RAIL_RESERVE_MAX_WIDTH = 9999;
+// Wide desktop layouts already provide enough gutter space for a rail. Keeping
+// the reservation below this breakpoint prevents a late-loading rail from
+// expanding and shifting full-width page content.
+const LEFT_RAIL_RESERVE_MAX_WIDTH = 1919;
 const CONTENT_TOP_MAX_WIDTH = PUBLIFT_XL_MIN_WIDTH - 1;
 const SIDE_RAIL_MAX_HEIGHT = 600;
 const SIDE_RAIL_MIN_HEIGHT = 420;
