@@ -67,6 +67,7 @@ import {
 import {
   isLegacyTrainingPassIncomeRule,
   plannerIncomeAssumptionGroups,
+  SPECULATIVE_INCOME_NONE_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
   TRAINING_PASS_SCENARIO_GROUP_ID,
 } from '../../utils/carat-planner-income-assumptions';
@@ -515,7 +516,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (!this.plan) return 0;
     const enabledRuleIds = new Set(this.plan.enabledIncomeRuleIds);
     const recurringSources = this.displayedRules.filter(rule => enabledRuleIds.has(rule.id)).length;
-    const selectedScenarios = Object.values(this.plan.scenarioSelections).filter(Boolean).length;
+    const selectedScenarios = Object.values(this.plan.scenarioSelections)
+      .filter(value => value && value !== SPECULATIVE_INCOME_NONE_OPTION).length;
     const customSources = this.plan.customIncome.filter(item => Number(item.amount) > 0).length;
     return recurringSources + selectedScenarios + customSources;
   }
@@ -1176,6 +1178,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   setScenario(group: string, option: string): void {
     if (option) {
       this.plan.scenarioSelections[group] = option;
+    } else if (group === SPECULATIVE_INCOME_SCENARIO_GROUP_ID) {
+      this.plan.scenarioSelections[group] = SPECULATIVE_INCOME_NONE_OPTION;
     } else {
       delete this.plan.scenarioSelections[group];
     }

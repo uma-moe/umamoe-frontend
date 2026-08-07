@@ -63,12 +63,15 @@ describe('plannerIncomeAssumptionGroups', () => {
     expect(group?.scheduleLabel).toBe(
       'Rolling six completed months; recalculates automatically',
     );
-    expect(group?.helpText).toContain(
-      'Their total, 7,400, divided by 6, gives the rolling mean of 1,233 Carats/month; the median is 775.',
-    );
-    expect(group?.helpText).toContain(
-      'Same-ID EN/JP news contributes only EN minus JP',
-    );
+    expect(group?.helpText).toBe([
+      'Estimates extra Global-only Carats not already counted as confirmed income.',
+      '',
+      'Rolling mean: average of the last 6 completed months; best for long-term planning.',
+      'Conservative median: reduces the effect of unusually generous months.',
+      'None: confirmed income only.',
+      '',
+      'Updates automatically. Duplicate EN/JP and X/news rewards are removed.',
+    ].join('\n'));
     expect(group?.options).toEqual([
       { value: 'include', label: 'Rolling mean', amountLabel: '+1,233 Carats / month' },
       { value: 'median', label: 'Conservative median', amountLabel: '+775 Carats / month' },

@@ -598,7 +598,9 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(speculativeIncome?.scheduleLabel).toBe(
       'Rolling six completed months; recalculates automatically',
     );
-    expect(speculativeIncome?.helpText).toContain('the rolling mean of 1,233 Carats/month');
+    expect(speculativeIncome?.helpText).toContain(
+      'Rolling mean: average of the last 6 completed months; best for long-term planning.\n',
+    );
     expect(component.scenarioGroupIcon('team_trials_class')).toBe('stadium');
     expect(component.scenarioGroupIcon('training_pass')).toBe('fact_check');
     expect(component.scenarioGroupIcon('speculative_income')).toBe('auto_graph');
@@ -615,6 +617,11 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.selectedScenarioOption(component.scenarioGroupOptions[1])).toBeNull();
     component.cycleScenario(component.scenarioGroupOptions[2], 1);
     expect(component.plan.scenarioSelections['champions_meeting_result']).toBe('champion');
+
+    component.plan.scenarioSelections['speculative_income'] = 'include';
+    component.cycleScenario(speculativeIncome!, -1);
+    expect(component.plan.scenarioSelections['speculative_income']).toBe('none');
+    expect(component.selectedScenarioOption(speculativeIncome!)).toBeNull();
   });
 
   it('summarizes only active assumptions and rewards', () => {

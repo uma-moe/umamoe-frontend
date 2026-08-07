@@ -9,6 +9,7 @@ export const TRAINING_PASS_SCENARIO_GROUP_ID = 'training_pass';
 export const SPECULATIVE_INCOME_SCENARIO_GROUP_ID = 'speculative_income';
 export const SPECULATIVE_INCOME_INCLUDED_OPTION = 'include';
 export const SPECULATIVE_INCOME_MEDIAN_OPTION = 'median';
+export const SPECULATIVE_INCOME_NONE_OPTION = 'none';
 export const TRAINING_PASS_SOURCE_URL = 'https://umapyoi.net/news/1788?lang=jp';
 
 const TRAINING_PASS_TIMELINE_EVENT_ID = 'campaign-632';
@@ -111,15 +112,15 @@ function speculativeHelpText(
   comparison: PlannerGlobalRewardComparison | undefined,
 ): string | undefined {
   if (!comparison) return undefined;
-  const months = comparison.speculative_months ?? [];
-  if (months.length === 0) return speculativeComparisonLabel(comparison);
-  const range = formatMonthRange(
-    comparison.speculative_window_start ?? months[0].month,
-    comparison.speculative_window_end ?? months[months.length - 1].month,
-  );
-  const values = months.map(month => formatNumber(month.total_carats));
-  const total = months.reduce((sum, month) => sum + Number(month.total_carats || 0), 0);
-  return `This estimates additional Global-only Carats that are not already confirmed in the planner. For ${range}, the completed-month inputs are ${values.join(', ')} Carats. Their total, ${formatNumber(total)}, divided by ${months.length}, gives the rolling mean of ${formatNumber(comparison.speculative_monthly_carats)} Carats/month; the median is ${formatNumber(comparison.speculative_recent_median_monthly_carats ?? 0)}. The rolling mean counts every Carat, including spike months, and is intended for expected long-term totals. The median reduces the influence of spike months and is the conservative option. Same-ID EN/JP news contributes only EN minus JP, EN-only news contributes its full reward, and official X/Twitter gifts are deduplicated against EN news. Deduplication removed ${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} worth ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats. Zero-reward months are included, the incomplete current month is excluded, and the value recalculates automatically from the stored news and social archives. Confirmed rewards and this forecast do not overlap.`;
+  return [
+    'Estimates extra Global-only Carats not already counted as confirmed income.',
+    '',
+    'Rolling mean: average of the last 6 completed months; best for long-term planning.',
+    'Conservative median: reduces the effect of unusually generous months.',
+    'None: confirmed income only.',
+    '',
+    'Updates automatically. Duplicate EN/JP and X/news rewards are removed.',
+  ].join('\n');
 }
 
 function speculativeComparisonLabel(

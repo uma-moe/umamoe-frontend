@@ -19,6 +19,7 @@ import {
 } from '../models/carat-planner.model';
 import {
   SPECULATIVE_INCOME_INCLUDED_OPTION,
+  SPECULATIVE_INCOME_NONE_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
 } from '../utils/carat-planner-income-assumptions';
 import {
@@ -381,7 +382,7 @@ export class CaratPlannerPersistenceService {
       disabledRewardIds: this.stringArray(record['disabledRewardIds'], 5000),
       enabledRewardEventIds: this.stringArray(record['enabledRewardEventIds'], 5000),
       disabledEventIds: this.stringArray(record['disabledEventIds'], 5000),
-      scenarioSelections: this.stringRecord(record['scenarioSelections']),
+      scenarioSelections: this.sanitizeScenarioSelections(record['scenarioSelections']),
       variableRewardSelections: this.sanitizeVariableRewardSelections(record['variableRewardSelections']),
       freePullCampaignSelections: this.stringRecord(record['freePullCampaignSelections']),
       resourceDefaultsApplied: record['resourceDefaultsApplied'] === true,
@@ -591,6 +592,17 @@ export class CaratPlannerPersistenceService {
       .filter((entry): entry is [string, string] => typeof entry[1] === 'string')
       .slice(0, 100)
       .map(([key, item]) => [key.slice(0, 100), item.slice(0, 100)]));
+  }
+
+  private sanitizeScenarioSelections(value: unknown): Record<string, string> {
+    const selections = this.stringRecord(value);
+    if (!(SPECULATIVE_INCOME_SCENARIO_GROUP_ID in selections)) {
+      selections[SPECULATIVE_INCOME_SCENARIO_GROUP_ID] = SPECULATIVE_INCOME_INCLUDED_OPTION;
+    }
+    if (selections[SPECULATIVE_INCOME_SCENARIO_GROUP_ID] === '') {
+      selections[SPECULATIVE_INCOME_SCENARIO_GROUP_ID] = SPECULATIVE_INCOME_NONE_OPTION;
+    }
+    return selections;
   }
 
   private currency(value: unknown): PlannerCurrency {

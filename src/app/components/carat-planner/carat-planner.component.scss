@@ -540,7 +540,7 @@ select.cp-control,
 ::ng-deep .cp-methodology-tooltip .mdc-tooltip__surface {
   max-width: min(460px, calc(100vw - 32px));
   line-height: 1.45;
-  white-space: normal;
+  white-space: pre-line;
 }
 
 .cp-scenario-stepper {
