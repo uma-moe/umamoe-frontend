@@ -541,7 +541,19 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.scenarioGroupOptions[3].options[4]).toEqual({
       value: 'gold_4', label: 'Gold 4', amountLabel: '+1,300 + 4 tix / event',
     });
+    const trainingPass = component.scenarioGroupOptions.find(group => group.id === 'training_pass');
+    const speculativeIncome = component.scenarioGroupOptions.find(group => group.id === 'speculative_income');
+    expect(trainingPass?.options).toEqual([
+      { value: 'free', label: 'Free', amountLabel: '+500 + 4 tix / month' },
+      { value: 'premium', label: 'Premium', amountLabel: '+2,200 + 8 tix + 1 rainbow / month' },
+    ]);
+    expect(trainingPass?.sourceUrl).toBe('https://umapyoi.net/news/1788?lang=jp');
+    expect(speculativeIncome?.options).toEqual([
+      { value: 'include', label: 'Include', amountLabel: 'Varies with confirmed income' },
+    ]);
     expect(component.scenarioGroupIcon('team_trials_class')).toBe('stadium');
+    expect(component.scenarioGroupIcon('training_pass')).toBe('fact_check');
+    expect(component.scenarioGroupIcon('speculative_income')).toBe('auto_graph');
     expect(component.scenarioOptionIconPath('club_rank', 'rank_11'))
       .toBe('assets/images/icon/circle_rank/utx_ico_circle_rank_11.webp');
 

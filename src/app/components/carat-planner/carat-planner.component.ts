@@ -64,6 +64,12 @@ import {
   plannerDataDrivenCompetitionAssumptionGroup,
   resolveDataDrivenCompetitionAssumption,
 } from '../../utils/carat-planner-competition-assumptions';
+import {
+  isLegacyTrainingPassIncomeRule,
+  plannerIncomeAssumptionGroups,
+  SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
+  TRAINING_PASS_SCENARIO_GROUP_ID,
+} from '../../utils/carat-planner-income-assumptions';
 import { CaratPlannerCalculationService } from '../../services/carat-planner-calculation.service';
 import { CaratPlannerPersistenceService } from '../../services/carat-planner-persistence.service';
 import { CaratPlannerResourceService, CaratPlannerResourceState } from '../../services/carat-planner-resource.service';
@@ -145,6 +151,7 @@ interface PlannerScenarioGroupView {
   id: string;
   label: string;
   scheduleLabel: string;
+  sourceUrl?: string;
   options: PlannerScenarioOptionView[];
 }
 
@@ -517,7 +524,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const enabledRuleIds = new Set(this.plan.enabledIncomeRuleIds);
     const totals = new Map<PlannerIncomeRule['cadence'], number>();
     for (const rule of this.data.income.rules) {
-      if (!enabledRuleIds.has(rule.id) || !matchesJewelCurrency(rule.currency) || !this.matchesSelectedScenario(rule)) continue;
+      if (isLegacyTrainingPassIncomeRule(rule)
+        || !enabledRuleIds.has(rule.id)
+        || !matchesJewelCurrency(rule.currency)
+        || !this.matchesSelectedScenario(rule)) continue;
       totals.set(rule.cadence, (totals.get(rule.cadence) ?? 0) + Math.max(0, Number(rule.amount) || 0));
     }
     for (const item of this.plan.customIncome) {
@@ -1193,6 +1203,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   scenarioGroupIcon(groupId: string): string {
+    if (groupId === TRAINING_PASS_SCENARIO_GROUP_ID) return 'fact_check';
+    if (groupId === SPECULATIVE_INCOME_SCENARIO_GROUP_ID) return 'auto_graph';
     if (groupId === 'team_trials_class') return 'stadium';
     if (groupId === 'club_rank') return 'groups';
     const competition = plannerCompetitionAssumptionGroup(groupId);
@@ -1270,8 +1282,17 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       ...resourceGroups,
       ...competitionGroups,
       ...this.dataDrivenCompetitionScenarioGroups(),
+      ...plannerIncomeAssumptionGroups(this.allEvents).map(group => ({
+        ...group,
+        options: group.options.map(option => ({
+          value: option.value,
+          label: option.label,
+          amountLabel: option.amountLabel,
+        })),
+      })),
     ];
-    this.displayedRules = this.data.income.rules.filter(rule => !rule.scenario_group);
+    this.displayedRules = this.data.income.rules.filter(rule =>
+      !rule.scenario_group && !isLegacyTrainingPassIncomeRule(rule));
     this.filterRewards();
   }
 

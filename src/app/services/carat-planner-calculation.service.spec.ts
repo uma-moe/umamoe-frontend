@@ -236,6 +236,91 @@ describe('CaratPlannerCalculationService', () => {
     expect(target.income.some(entry => entry.id.startsWith('competition-assumption:champions-meeting-2'))).toBeFalse();
   });
 
+  it('projects the full free and premium Training Pass tracks from the linked Global timeline date', () => {
+    const events = [{
+      id: 'campaign-632',
+      title: 'Held "3rd Anniversary Campaign Vol.2"',
+      type: 'campaign',
+      jpReleaseDate: '2024-02-24T03:00:00Z',
+      globalReleaseDate: '2027-08-24T22:00:00Z',
+    }];
+    const plan = makePlan({
+      projectionStartDate: '2027-08-01',
+      scenarioSelections: { training_pass: 'free' },
+    });
+    const data: CaratPlannerDataBundle = {
+      ...emptyData(),
+      income: { rules: [{
+        id: 'premium-training-pass',
+        label: 'Legacy Training Pass purchase grant',
+        currency: 'paid_jewels',
+        amount: 350,
+        cadence: 'monthly',
+        start_date: '2027-08-01',
+      }] },
+    };
+    plan.enabledIncomeRuleIds = ['premium-training-pass'];
+
+    const freeLedger = service.buildLedger(plan, data, '2027-09-24', events);
+    expect(sumCurrency(freeLedger, 'free_jewels')).toBe(1_000);
+    expect(sumCurrency(freeLedger, 'paid_jewels')).toBe(0);
+    expect(sumCurrency(freeLedger, 'uma_ticket')).toBe(4);
+    expect(sumCurrency(freeLedger, 'support_ticket')).toBe(4);
+    expect(freeLedger.every(entry => entry.date === '2027-08-24' || entry.date === '2027-09-24')).toBeTrue();
+
+    plan.scenarioSelections = { training_pass: 'premium' };
+    const premiumLedger = service.buildLedger(plan, data, '2027-09-24', events);
+    expect(sumCurrency(premiumLedger, 'free_jewels')).toBe(3_700);
+    expect(sumCurrency(premiumLedger, 'paid_jewels')).toBe(700);
+    expect(sumCurrency(premiumLedger, 'uma_ticket')).toBe(8);
+    expect(sumCurrency(premiumLedger, 'support_ticket')).toBe(8);
+    expect(sumCurrency(premiumLedger, 'rainbow_crystal')).toBe(2);
+  });
+
+  it('adds speculative Carats dynamically to the 14,600 monthly average after confirmed income', () => {
+    const plan = makePlan({
+      scenarioSelections: { speculative_income: 'include' },
+      enabledIncomeRuleIds: ['january-income', 'february-income'],
+    });
+    const data: CaratPlannerDataBundle = {
+      ...emptyData(),
+      income: { rules: [
+        {
+          id: 'january-income', label: 'January confirmed income', currency: 'free_jewels',
+          amount: 10_000, cadence: 'once', start_date: '2026-01-15',
+        },
+        {
+          id: 'february-income', label: 'February confirmed income', currency: 'free_jewels',
+          amount: 20_000, cadence: 'once', start_date: '2026-02-15',
+        },
+      ] },
+    };
+
+    const ledger = service.buildLedger(plan, data, '2026-04-01');
+    const speculative = ledger.filter(entry => entry.id.startsWith('speculative-income:'));
+
+    expect(speculative.map(entry => [entry.date, entry.amount])).toEqual([
+      ['2026-02-01', 4_600],
+      ['2026-04-01', 9_200],
+    ]);
+    expect(sumCurrency(ledger, 'free_jewels')).toBe(43_800);
+  });
+
+  it('reconciles speculative income on pull dates between monthly checkpoints', () => {
+    const plan = makePlan({
+      scenarioSelections: { speculative_income: 'include' },
+      targets: [
+        makeTarget({ id: 'mid-month', bannerEnd: '2026-01-15' }),
+        makeTarget({ id: 'one-month', bannerEnd: '2026-02-01' }),
+      ],
+    });
+
+    const projection = service.project(plan, emptyData());
+
+    expect(projection.targets[0].balanceBefore.freeJewels).toBe(6_594);
+    expect(projection.targets[1].balanceBefore.freeJewels).toBe(14_600);
+  });
+
   it('projects global Strongest Team tiers and Legend Race clear counts across every occurrence', () => {
     const plan = makePlan({
       scenarioSelections: {
@@ -822,4 +907,13 @@ function emptyData(): CaratPlannerDataBundle {
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function sumCurrency(
+  ledger: ReturnType<CaratPlannerCalculationService['buildLedger']>,
+  currency: ReturnType<CaratPlannerCalculationService['buildLedger']>[number]['currency'],
+): number {
+  return ledger
+    .filter(entry => entry.currency === currency)
+    .reduce((total, entry) => total + entry.amount, 0);
 }

@@ -494,7 +494,20 @@ select.cp-control,
   > mat-icon { @include icon-size(17px); flex: 0 0 auto; color: var(--text-muted); }
   > span { min-width: 0; display: grid; gap: 1px; }
   strong { overflow: hidden; color: var(--text-primary); font-size: 0.69rem; text-overflow: ellipsis; white-space: nowrap; }
-  small { color: var(--text-muted); font-size: 0.58rem; }
+  small { display: flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 0.58rem; }
+  small > span { min-width: 0; }
+  small a {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    color: var(--accent-secondary);
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+
+    mat-icon { @include icon-size(10px); }
+    &:hover { text-decoration: underline; }
+  }
 }
 
 .cp-scenario-stepper {
