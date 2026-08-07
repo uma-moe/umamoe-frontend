@@ -522,7 +522,34 @@ describe('CaratPlannerComponent banner ordering', () => {
         { id: 'rank-11', label: 'Club rank SS', currency: 'free_jewels', amount: 4500, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_11' },
         { id: 'rank-2', label: 'Club rank D+', currency: 'free_jewels', amount: 225, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_2' },
       ] },
-      rewards: { rewards: [] },
+      rewards: {
+        rewards: [],
+        global_reward_comparison: {
+          news_match_method: 'same_announce_id',
+          observation_start: '2025-06-26',
+          observation_end: '2026-08-06',
+          observation_days: 407,
+          observed_months: 13.372,
+          matched_news_global_carats: 10_200,
+          matched_news_jp_carats: 10_200,
+          matched_news_extra_carats: 0,
+          en_only_news_carats: 2850,
+          social_carats: 33_600,
+          social_reward_posts: 26,
+          social_news_duplicate_reward_items_removed: 1,
+          social_news_duplicate_carats_removed: 1500,
+          speculative_observed_carats: 36_450,
+          speculative_monthly_carats: 2726,
+          matched_news: Array.from({ length: 4 }, (_, index) => ({
+            announce_id: 800 + index, title: 'Matched', global_carats: 1,
+            jp_carats: 1, extra_carats: 0, global_url: '',
+          })),
+          en_only_news: Array.from({ length: 7 }, (_, index) => ({
+            announce_id: 100_000 + index, title: 'EN-only', global_carats: 1,
+            jp_carats: 0, extra_carats: 1, global_url: '',
+          })),
+        },
+      },
     };
 
     (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
@@ -549,8 +576,11 @@ describe('CaratPlannerComponent banner ordering', () => {
     ]);
     expect(trainingPass?.sourceUrl).toBe('https://umapyoi.net/news/1788?lang=jp');
     expect(speculativeIncome?.options).toEqual([
-      { value: 'include', label: 'Include', amountLabel: 'Varies with confirmed income' },
+      { value: 'include', label: 'Include', amountLabel: '+2,726 Carats / month' },
     ]);
+    expect(speculativeIncome?.scheduleLabel).toBe(
+      'Observed 4 matched news: EN 10,200 vs JP 10,200 (+0); 7 EN-only +2,850; 26 deduped X/Twitter +33,600 (1 overlapping item / 1,500 Carats removed) over 13.4 months',
+    );
     expect(component.scenarioGroupIcon('team_trials_class')).toBe('stadium');
     expect(component.scenarioGroupIcon('training_pass')).toBe('fact_check');
     expect(component.scenarioGroupIcon('speculative_income')).toBe('auto_graph');

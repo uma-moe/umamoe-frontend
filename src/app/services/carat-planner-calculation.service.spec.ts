@@ -4,6 +4,7 @@ import {
   FREE_PULL_CAMPAIGN_EXCLUDED_SELECTION,
   PlannerCompetitiveRewardVariant,
   PlannerGachaEntry,
+  PlannerGlobalRewardComparison,
   PlannerTarget,
 } from '../models/carat-planner.model';
 import { CaratPlannerCalculationService } from './carat-planner-calculation.service';
@@ -277,33 +278,34 @@ describe('CaratPlannerCalculationService', () => {
     expect(sumCurrency(premiumLedger, 'rainbow_crystal')).toBe(2);
   });
 
-  it('adds speculative Carats dynamically to the 14,600 monthly average after confirmed income', () => {
+  it('starts observed speculative uplift after the latest confirmed Global reward', () => {
     const plan = makePlan({
       scenarioSelections: { speculative_income: 'include' },
-      enabledIncomeRuleIds: ['january-income', 'february-income'],
+      enabledRewardIds: ['observed-social-gift'],
     });
     const data: CaratPlannerDataBundle = {
       ...emptyData(),
-      income: { rules: [
-        {
-          id: 'january-income', label: 'January confirmed income', currency: 'free_jewels',
-          amount: 10_000, cadence: 'once', start_date: '2026-01-15',
-        },
-        {
-          id: 'february-income', label: 'February confirmed income', currency: 'free_jewels',
-          amount: 20_000, cadence: 'once', start_date: '2026-02-15',
-        },
-      ] },
+      rewards: {
+        rewards: [{
+          id: 'observed-social-gift', label: 'Observed social gift', currency: 'free_jewels',
+          amount: 600, available_at: '2026-01-15', provenance: 'global_social',
+        }],
+        global_reward_comparison: globalComparison({
+          observation_end: '2026-01-15',
+          speculative_monthly_carats: 1200,
+        }),
+      },
     };
 
-    const ledger = service.buildLedger(plan, data, '2026-04-01');
+    const ledger = service.buildLedger(plan, data, '2026-04-15');
     const speculative = ledger.filter(entry => entry.id.startsWith('speculative-income:'));
 
     expect(speculative.map(entry => [entry.date, entry.amount])).toEqual([
-      ['2026-02-01', 4_600],
-      ['2026-04-01', 9_200],
+      ['2026-02-15', 1200],
+      ['2026-03-15', 1200],
+      ['2026-04-15', 1200],
     ]);
-    expect(sumCurrency(ledger, 'free_jewels')).toBe(43_800);
+    expect(sumCurrency(ledger, 'free_jewels')).toBe(4200);
   });
 
   it('reconciles speculative income on pull dates between monthly checkpoints', () => {
@@ -315,10 +317,15 @@ describe('CaratPlannerCalculationService', () => {
       ],
     });
 
-    const projection = service.project(plan, emptyData());
+    const data = emptyData();
+    data.rewards.global_reward_comparison = globalComparison({
+      observation_end: '2026-01-01',
+      speculative_monthly_carats: 1460,
+    });
+    const projection = service.project(plan, data);
 
-    expect(projection.targets[0].balanceBefore.freeJewels).toBe(6_594);
-    expect(projection.targets[1].balanceBefore.freeJewels).toBe(14_600);
+    expect(projection.targets[0].balanceBefore.freeJewels).toBe(659);
+    expect(projection.targets[1].balanceBefore.freeJewels).toBe(1460);
   });
 
   it('projects global Strongest Team tiers and Legend Race clear counts across every occurrence', () => {
@@ -902,6 +909,31 @@ function emptyData(): CaratPlannerDataBundle {
     core: { jewel_cost_per_pull: 150, default_spark_pulls: 200 },
     income: { rules: [] },
     rewards: { rewards: [] },
+  };
+}
+
+function globalComparison(
+  overrides: Partial<PlannerGlobalRewardComparison> = {},
+): PlannerGlobalRewardComparison {
+  return {
+    news_match_method: 'same_announce_id',
+    observation_start: '2025-06-26',
+    observation_end: '2026-01-01',
+    observation_days: 190,
+    observed_months: 6.24,
+    matched_news_global_carats: 0,
+    matched_news_jp_carats: 0,
+    matched_news_extra_carats: 0,
+    en_only_news_carats: 0,
+    social_carats: 0,
+    social_reward_posts: 0,
+    social_news_duplicate_reward_items_removed: 0,
+    social_news_duplicate_carats_removed: 0,
+    speculative_observed_carats: 0,
+    speculative_monthly_carats: 0,
+    matched_news: [],
+    en_only_news: [],
+    ...overrides,
   };
 }
 

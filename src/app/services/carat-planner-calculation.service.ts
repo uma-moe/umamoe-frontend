@@ -12,6 +12,7 @@ import {
   PlannerCompetitiveRewardVariant,
   PlannerCurrency,
   PlannerGachaEntry,
+  PlannerGlobalRewardComparison,
   PlannerIncomeRule,
   PlannerLedgerEntry,
   PlannerPickupGoal,
@@ -28,7 +29,6 @@ import {
   isLegacyTrainingPassIncomeRule,
   SPECULATIVE_INCOME_INCLUDED_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
-  SPECULATIVE_MONTHLY_CARAT_TARGET,
   TRAINING_PASS_SCENARIO_GROUP_ID,
   trainingPassIncomeRules,
 } from '../utils/carat-planner-income-assumptions';
@@ -291,7 +291,12 @@ export class CaratPlannerCalculationService {
 
     if (plan.scenarioSelections[SPECULATIVE_INCOME_SCENARIO_GROUP_ID]
       === SPECULATIVE_INCOME_INCLUDED_OPTION) {
-      ledger.push(...this.speculativeIncomeEntries(plan, ledger, startDate, endDate));
+      ledger.push(...this.speculativeIncomeEntries(
+        plan,
+        data.rewards.global_reward_comparison,
+        startDate,
+        endDate,
+      ));
     }
 
     return ledger.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
@@ -567,17 +572,22 @@ export class CaratPlannerCalculationService {
 
   private speculativeIncomeEntries(
     plan: CaratPlan,
-    nonSpeculativeLedger: readonly PlannerLedgerEntry[],
+    comparison: PlannerGlobalRewardComparison | undefined,
     rangeStart: string,
     rangeEnd: string,
   ): PlannerLedgerEntry[] {
     const start = this.toUtcDate(rangeStart);
     const end = this.toUtcDate(rangeEnd);
-    if (!start || !end || end <= start) return [];
+    const observationEnd = this.toUtcDate(comparison?.observation_end);
+    const monthlyCarats = this.nonNegativeInt(comparison?.speculative_monthly_carats);
+    if (!start || !end || !observationEnd || monthlyCarats <= 0) return [];
+    const anchor = observationEnd > start ? observationEnd : start;
+    if (end <= anchor) return [];
+    const anchorKey = this.dateKey(anchor);
 
     const checkpoints = new Set<string>([rangeEnd]);
     for (let month = 1; month < 2400; month++) {
-      const checkpoint = this.calendarMonthFrom(start, month);
+      const checkpoint = this.calendarMonthFrom(anchor, month);
       if (checkpoint > end) break;
       checkpoints.add(this.dateKey(checkpoint));
     }
@@ -585,33 +595,23 @@ export class CaratPlannerCalculationService {
     for (const target of plan.targets) {
       if (disabledEvents.has(target.eventId) || this.isTargetBeforeProjectionStart(plan, target)) continue;
       const pullDate = this.resolvePullDate(target);
-      if (pullDate >= rangeStart && pullDate <= rangeEnd) checkpoints.add(pullDate);
+      if (pullDate > anchorKey && pullDate <= rangeEnd) checkpoints.add(pullDate);
     }
 
-    const confirmedCarats = nonSpeculativeLedger
-      .filter(entry => entry.currency === 'free_jewels' && entry.amount !== 0)
-      .sort((left, right) => left.date.localeCompare(right.date) || left.id.localeCompare(right.id));
     const entries: PlannerLedgerEntry[] = [];
-    let confirmedIndex = 0;
-    let confirmedTotal = 0;
     let speculativeTotal = 0;
 
     for (const checkpoint of [...checkpoints].sort()) {
-      while (confirmedIndex < confirmedCarats.length
-        && confirmedCarats[confirmedIndex].date <= checkpoint) {
-        confirmedTotal += confirmedCarats[confirmedIndex].amount;
-        confirmedIndex++;
-      }
       const checkpointDate = this.toUtcDate(checkpoint);
-      if (!checkpointDate) continue;
+      if (!checkpointDate || checkpointDate <= anchor) continue;
       const targetTotal = Math.round(
-        SPECULATIVE_MONTHLY_CARAT_TARGET * this.elapsedCalendarMonths(start, checkpointDate),
+        monthlyCarats * this.elapsedCalendarMonths(anchor, checkpointDate),
       );
-      const amount = Math.max(0, targetTotal - confirmedTotal - speculativeTotal);
+      const amount = Math.max(0, targetTotal - speculativeTotal);
       if (amount === 0) continue;
       entries.push({
         id: `speculative-income:${checkpoint}`,
-        label: 'Speculative income adjustment',
+        label: 'Speculative Global reward uplift',
         date: checkpoint,
         currency: 'free_jewels',
         amount,

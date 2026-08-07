@@ -15,6 +15,7 @@ export type PlannerDataProvenance =
   | 'jp_master'
   | 'jp_master_snapshot'
   | 'global_news'
+  | 'global_social'
   | 'jp_news'
   | 'jp_fallback'
   | 'configured';
@@ -98,9 +99,40 @@ export interface PlannerSourceItem {
 export interface PlannerRewardResource {
   version?: number | string;
   rewards: PlannerRewardEntry[];
+  global_reward_comparison?: PlannerGlobalRewardComparison;
   event_benefits?: PlannerEventBenefit[];
   free_pull_campaigns?: PlannerFreePullCampaign[];
   competitive_variants?: PlannerCompetitiveRewardVariant[];
+}
+
+export interface PlannerGlobalRewardComparison {
+  news_match_method: 'same_announce_id' | string;
+  observation_start: string;
+  observation_end: string;
+  observation_days: number;
+  observed_months: number;
+  matched_news_global_carats: number;
+  matched_news_jp_carats: number;
+  matched_news_extra_carats: number;
+  en_only_news_carats: number;
+  social_carats: number;
+  social_reward_posts: number;
+  social_news_duplicate_reward_items_removed: number;
+  social_news_duplicate_carats_removed: number;
+  speculative_observed_carats: number;
+  speculative_monthly_carats: number;
+  matched_news?: PlannerGlobalNewsComparison[];
+  en_only_news?: PlannerGlobalNewsComparison[];
+}
+
+export interface PlannerGlobalNewsComparison {
+  announce_id: number;
+  title: string;
+  global_carats: number;
+  jp_carats: number;
+  extra_carats: number;
+  global_url: string;
+  jp_url?: string;
 }
 
 export interface PlannerCompetitiveRewardVariant {

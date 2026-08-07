@@ -1,13 +1,13 @@
 import {
   CaratPlannerTimelineEvent,
   PlannerCurrency,
+  PlannerGlobalRewardComparison,
   PlannerIncomeRule,
 } from '../models/carat-planner.model';
 
 export const TRAINING_PASS_SCENARIO_GROUP_ID = 'training_pass';
 export const SPECULATIVE_INCOME_SCENARIO_GROUP_ID = 'speculative_income';
 export const SPECULATIVE_INCOME_INCLUDED_OPTION = 'include';
-export const SPECULATIVE_MONTHLY_CARAT_TARGET = 14_600;
 export const TRAINING_PASS_SOURCE_URL = 'https://umapyoi.net/news/1788?lang=jp';
 
 const TRAINING_PASS_TIMELINE_EVENT_ID = 'campaign-632';
@@ -57,8 +57,15 @@ export const TRAINING_PASS_OPTIONS: readonly PlannerIncomeAssumptionOption[] = [
 
 export function plannerIncomeAssumptionGroups(
   events: readonly CaratPlannerTimelineEvent[],
+  comparison?: PlannerGlobalRewardComparison,
 ): readonly PlannerIncomeAssumptionGroup[] {
   const trainingPassStart = resolveTrainingPassStartDate(events);
+  const speculativeMonthlyCarats = Math.max(0, Math.round(
+    Number(comparison?.speculative_monthly_carats) || 0,
+  ));
+  const comparisonLabel = comparison
+    ? `Observed ${comparison.matched_news?.length ?? 0} matched news: EN ${formatNumber(comparison.matched_news_global_carats)} vs JP ${formatNumber(comparison.matched_news_jp_carats)} (${formatSigned(comparison.matched_news_extra_carats)}); ${comparison.en_only_news?.length ?? 0} EN-only +${formatNumber(comparison.en_only_news_carats)}; ${comparison.social_reward_posts} deduped X/Twitter +${formatNumber(comparison.social_carats)} (${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed) over ${comparison.observed_months.toFixed(1)} months`
+    : 'Awaiting EN/JP and official social comparison data';
   return [
     {
       id: TRAINING_PASS_SCENARIO_GROUP_ID,
@@ -72,14 +79,30 @@ export function plannerIncomeAssumptionGroups(
       id: SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
       label: 'Speculative income',
       icon: 'auto_graph',
-      scheduleLabel: `Dynamic top-up toward ${SPECULATIVE_MONTHLY_CARAT_TARGET.toLocaleString('en-US')} Carats/month`,
+      scheduleLabel: comparisonLabel,
       options: [{
         value: SPECULATIVE_INCOME_INCLUDED_OPTION,
         label: 'Include',
-        amountLabel: 'Varies with confirmed income',
+        amountLabel: speculativeMonthlyCarats > 0
+          ? `+${formatNumber(speculativeMonthlyCarats)} Carats / month`
+          : 'No observed uplift available',
       }],
     },
   ];
+}
+
+function formatNumber(value: number): string {
+  return Math.round(Number(value) || 0).toLocaleString('en-US');
+}
+
+function formatCount(value: number, label: string): string {
+  const rounded = Math.max(0, Math.round(Number(value) || 0));
+  return `${rounded.toLocaleString('en-US')} ${label}${rounded === 1 ? '' : 's'}`;
+}
+
+function formatSigned(value: number): string {
+  const rounded = Math.round(Number(value) || 0);
+  return `${rounded >= 0 ? '+' : '-'}${Math.abs(rounded).toLocaleString('en-US')}`;
 }
 
 export function resolveTrainingPassStartDate(

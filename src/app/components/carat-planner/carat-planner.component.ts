@@ -1282,7 +1282,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       ...resourceGroups,
       ...competitionGroups,
       ...this.dataDrivenCompetitionScenarioGroups(),
-      ...plannerIncomeAssumptionGroups(this.allEvents).map(group => ({
+      ...plannerIncomeAssumptionGroups(
+        this.allEvents,
+        this.data.rewards.global_reward_comparison,
+      ).map(group => ({
         ...group,
         options: group.options.map(option => ({
           value: option.value,
