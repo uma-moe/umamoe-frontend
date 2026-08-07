@@ -186,11 +186,11 @@
       <div class="cp-setup-panel cp-setup-panel--income" *ngSwitchCase="'income'">
         <section class="cp-income-assumptions" *ngIf="scenarioGroupOptions.length" aria-labelledby="cp-income-assumptions-heading">
           <header>
-            <div><strong id="cp-income-assumptions-heading">Performance assumptions</strong><span>Use the arrows to choose the result you normally expect.</span></div>
+            <div><strong id="cp-income-assumptions-heading">Income assumptions</strong><span>Choose expected results and optional estimated income.</span></div>
           </header>
           <div class="cp-scenario-list">
             <article class="cp-scenario" *ngFor="let group of scenarioGroupOptions">
-              <span class="cp-scenario-copy"><mat-icon aria-hidden="true">{{ scenarioGroupIcon(group.id) }}</mat-icon><span><strong>{{ group.label }}</strong><small>{{ group.scheduleLabel }}</small></span></span>
+              <span class="cp-scenario-copy"><mat-icon aria-hidden="true">{{ scenarioGroupIcon(group.id) }}</mat-icon><span><span class="cp-scenario-heading"><strong>{{ group.label }}</strong><button *ngIf="group.helpText" class="cp-scenario-help" type="button" [matTooltip]="group.helpText" matTooltipClass="cp-methodology-tooltip" matTooltipPosition="above" [attr.aria-label]="'How ' + group.label + ' is calculated'">?</button></span><small><span>{{ group.scheduleLabel }}</span><a *ngIf="group.sourceUrl" [href]="group.sourceUrl" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Open source for ' + group.label + ' in a new tab'">Source<mat-icon aria-hidden="true">open_in_new</mat-icon></a></small></span></span>
               <div class="cp-scenario-stepper" role="group" [attr.aria-label]="group.label">
                 <button type="button" (click)="cycleScenario(group, -1)" [attr.aria-label]="'Previous ' + group.label + ' option'"><mat-icon>chevron_left</mat-icon></button>
                 <button type="button" class="cp-scenario-current" (click)="cycleScenario(group, 1)" [attr.aria-label]="'Change ' + group.label">

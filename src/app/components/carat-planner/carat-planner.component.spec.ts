@@ -535,7 +535,50 @@ describe('CaratPlannerComponent banner ordering', () => {
         { id: 'rank-11', label: 'Club rank SS', currency: 'free_jewels', amount: 4500, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_11' },
         { id: 'rank-2', label: 'Club rank D+', currency: 'free_jewels', amount: 225, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_2' },
       ] },
-      rewards: { rewards: [] },
+      rewards: {
+        rewards: [],
+        global_reward_comparison: {
+          news_match_method: 'same_announce_id',
+          speculative_method: 'mean_last_6_complete_calendar_months',
+          archive_as_of: '2026-08-07',
+          observation_start: '2025-06-26',
+          observation_end: '2026-08-06',
+          observation_days: 407,
+          observed_months: 13.372,
+          matched_news_global_carats: 10_200,
+          matched_news_jp_carats: 10_200,
+          matched_news_extra_carats: 0,
+          en_only_news_carats: 2850,
+          social_carats: 33_600,
+          social_reward_posts: 26,
+          social_news_duplicate_reward_items_removed: 1,
+          social_news_duplicate_carats_removed: 1500,
+          speculative_observed_carats: 36_450,
+          speculative_mean_monthly_carats: 2726,
+          speculative_recent_median_monthly_carats: 775,
+          speculative_recent_median_window_start: '2026-02',
+          speculative_recent_median_window_end: '2026-07',
+          speculative_monthly_carats: 1233,
+          speculative_window_start: '2026-02',
+          speculative_window_end: '2026-07',
+          speculative_months: [2100, 600, 2700, 450, 600, 950]
+            .map((total_carats, index) => ({
+              month: `2026-${String(index + 2).padStart(2, '0')}`,
+              matched_news_extra_carats: 0,
+              en_only_news_carats: index === 5 ? 350 : 0,
+              social_carats: total_carats - (index === 5 ? 350 : 0),
+              total_carats,
+            })),
+          matched_news: Array.from({ length: 4 }, (_, index) => ({
+            announce_id: 800 + index, title: 'Matched', global_carats: 1,
+            jp_carats: 1, extra_carats: 0, global_url: '',
+          })),
+          en_only_news: Array.from({ length: 7 }, (_, index) => ({
+            announce_id: 100_000 + index, title: 'EN-only', global_carats: 1,
+            jp_carats: 0, extra_carats: 1, global_url: '',
+          })),
+        },
+      },
     };
 
     (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
@@ -554,7 +597,26 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.scenarioGroupOptions[3].options[4]).toEqual({
       value: 'gold_4', label: 'Gold 4', amountLabel: '+1,300 + 4 tix / event',
     });
+    const trainingPass = component.scenarioGroupOptions.find(group => group.id === 'training_pass');
+    const speculativeIncome = component.scenarioGroupOptions.find(group => group.id === 'speculative_income');
+    expect(trainingPass?.options).toEqual([
+      { value: 'free', label: 'Free', amountLabel: '+500 + 4 tix / month' },
+      { value: 'premium', label: 'Premium', amountLabel: '+2,200 + 8 tix + 1 rainbow / month' },
+    ]);
+    expect(trainingPass?.sourceUrl).toBe('https://umapyoi.net/news/1788?lang=jp');
+    expect(speculativeIncome?.options).toEqual([
+      { value: 'include', label: 'Rolling mean', amountLabel: '+1,233 Carats / month' },
+      { value: 'median', label: 'Conservative median', amountLabel: '+775 Carats / month' },
+    ]);
+    expect(speculativeIncome?.scheduleLabel).toBe(
+      'Rolling six completed months; recalculates automatically',
+    );
+    expect(speculativeIncome?.helpText).toContain(
+      'Rolling mean: average of the last 6 completed months; best for long-term planning.\n',
+    );
     expect(component.scenarioGroupIcon('team_trials_class')).toBe('stadium');
+    expect(component.scenarioGroupIcon('training_pass')).toBe('fact_check');
+    expect(component.scenarioGroupIcon('speculative_income')).toBe('auto_graph');
     expect(component.scenarioOptionIconPath('club_rank', 'rank_11'))
       .toBe('assets/images/icon/circle_rank/utx_ico_circle_rank_11.webp');
 
@@ -568,6 +630,11 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.selectedScenarioOption(component.scenarioGroupOptions[1])).toBeNull();
     component.cycleScenario(component.scenarioGroupOptions[2], 1);
     expect(component.plan.scenarioSelections['champions_meeting_result']).toBe('champion');
+
+    component.plan.scenarioSelections['speculative_income'] = 'include';
+    component.cycleScenario(speculativeIncome!, -1);
+    expect(component.plan.scenarioSelections['speculative_income']).toBe('none');
+    expect(component.selectedScenarioOption(speculativeIncome!)).toBeNull();
   });
 
   it('summarizes only active assumptions and rewards', () => {

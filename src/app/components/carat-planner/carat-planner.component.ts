@@ -64,6 +64,13 @@ import {
   plannerDataDrivenCompetitionAssumptionGroup,
   resolveDataDrivenCompetitionAssumption,
 } from '../../utils/carat-planner-competition-assumptions';
+import {
+  isLegacyTrainingPassIncomeRule,
+  plannerIncomeAssumptionGroups,
+  SPECULATIVE_INCOME_NONE_OPTION,
+  SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
+  TRAINING_PASS_SCENARIO_GROUP_ID,
+} from '../../utils/carat-planner-income-assumptions';
 import { CaratPlannerCalculationService } from '../../services/carat-planner-calculation.service';
 import { CaratPlannerPersistenceService } from '../../services/carat-planner-persistence.service';
 import { CaratPlannerResourceService, CaratPlannerResourceState } from '../../services/carat-planner-resource.service';
@@ -145,6 +152,8 @@ interface PlannerScenarioGroupView {
   id: string;
   label: string;
   scheduleLabel: string;
+  helpText?: string;
+  sourceUrl?: string;
   options: PlannerScenarioOptionView[];
 }
 
@@ -510,7 +519,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (!this.plan) return 0;
     const enabledRuleIds = new Set(this.plan.enabledIncomeRuleIds);
     const recurringSources = this.displayedRules.filter(rule => enabledRuleIds.has(rule.id)).length;
-    const selectedScenarios = Object.values(this.plan.scenarioSelections).filter(Boolean).length;
+    const selectedScenarios = Object.values(this.plan.scenarioSelections)
+      .filter(value => value && value !== SPECULATIVE_INCOME_NONE_OPTION).length;
     const customSources = this.plan.customIncome.filter(item => Number(item.amount) > 0).length;
     return recurringSources + selectedScenarios + customSources;
   }
@@ -520,7 +530,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const enabledRuleIds = new Set(this.plan.enabledIncomeRuleIds);
     const totals = new Map<PlannerIncomeRule['cadence'], number>();
     for (const rule of this.data.income.rules) {
-      if (!enabledRuleIds.has(rule.id) || !matchesJewelCurrency(rule.currency) || !this.matchesSelectedScenario(rule)) continue;
+      if (isLegacyTrainingPassIncomeRule(rule)
+        || !enabledRuleIds.has(rule.id)
+        || !matchesJewelCurrency(rule.currency)
+        || !this.matchesSelectedScenario(rule)) continue;
       totals.set(rule.cadence, (totals.get(rule.cadence) ?? 0) + Math.max(0, Number(rule.amount) || 0));
     }
     for (const item of this.plan.customIncome) {
@@ -1187,6 +1200,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   setScenario(group: string, option: string): void {
     if (option) {
       this.plan.scenarioSelections[group] = option;
+    } else if (group === SPECULATIVE_INCOME_SCENARIO_GROUP_ID) {
+      this.plan.scenarioSelections[group] = SPECULATIVE_INCOME_NONE_OPTION;
     } else {
       delete this.plan.scenarioSelections[group];
     }
@@ -1215,6 +1230,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   scenarioGroupIcon(groupId: string): string {
+    if (groupId === TRAINING_PASS_SCENARIO_GROUP_ID) return 'fact_check';
+    if (groupId === SPECULATIVE_INCOME_SCENARIO_GROUP_ID) return 'auto_graph';
     if (groupId === 'team_trials_class') return 'stadium';
     if (groupId === 'club_rank') return 'groups';
     const competition = plannerCompetitionAssumptionGroup(groupId);
@@ -1292,8 +1309,20 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       ...resourceGroups,
       ...competitionGroups,
       ...this.dataDrivenCompetitionScenarioGroups(),
+      ...plannerIncomeAssumptionGroups(
+        this.allEvents,
+        this.data.rewards.global_reward_comparison,
+      ).map(group => ({
+        ...group,
+        options: group.options.map(option => ({
+          value: option.value,
+          label: option.label,
+          amountLabel: option.amountLabel,
+        })),
+      })),
     ];
-    this.displayedRules = this.data.income.rules.filter(rule => !rule.scenario_group);
+    this.displayedRules = this.data.income.rules.filter(rule =>
+      !rule.scenario_group && !isLegacyTrainingPassIncomeRule(rule));
     this.filterRewards();
   }
 

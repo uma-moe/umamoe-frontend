@@ -4,6 +4,7 @@ import {
   FREE_PULL_CAMPAIGN_EXCLUDED_SELECTION,
   PlannerCompetitiveRewardVariant,
   PlannerGachaEntry,
+  PlannerGlobalRewardComparison,
   PlannerTarget,
 } from '../models/carat-planner.model';
 import { CaratPlannerCalculationService } from './carat-planner-calculation.service';
@@ -234,6 +235,111 @@ describe('CaratPlannerCalculationService', () => {
     expect(target.balanceBefore.supportTickets).toBe(2 + 2 + 2);
     expect(target.income.filter(entry => entry.id.includes('champions-meeting-2')).length).toBe(3);
     expect(target.income.some(entry => entry.id.startsWith('competition-assumption:champions-meeting-2'))).toBeFalse();
+  });
+
+  it('projects the full free and premium Training Pass tracks from the linked Global timeline date', () => {
+    const events = [{
+      id: 'campaign-632',
+      title: 'Held "3rd Anniversary Campaign Vol.2"',
+      type: 'campaign',
+      jpReleaseDate: '2024-02-24T03:00:00Z',
+      globalReleaseDate: '2027-08-24T22:00:00Z',
+    }];
+    const plan = makePlan({
+      projectionStartDate: '2027-08-01',
+      scenarioSelections: { training_pass: 'free' },
+    });
+    const data: CaratPlannerDataBundle = {
+      ...emptyData(),
+      income: { rules: [{
+        id: 'premium-training-pass',
+        label: 'Legacy Training Pass purchase grant',
+        currency: 'paid_jewels',
+        amount: 350,
+        cadence: 'monthly',
+        start_date: '2027-08-01',
+      }] },
+    };
+    plan.enabledIncomeRuleIds = ['premium-training-pass'];
+
+    const freeLedger = service.buildLedger(plan, data, '2027-09-24', events);
+    expect(sumCurrency(freeLedger, 'free_jewels')).toBe(1_000);
+    expect(sumCurrency(freeLedger, 'paid_jewels')).toBe(0);
+    expect(sumCurrency(freeLedger, 'uma_ticket')).toBe(4);
+    expect(sumCurrency(freeLedger, 'support_ticket')).toBe(4);
+    expect(freeLedger.every(entry => entry.date === '2027-08-24' || entry.date === '2027-09-24')).toBeTrue();
+
+    plan.scenarioSelections = { training_pass: 'premium' };
+    const premiumLedger = service.buildLedger(plan, data, '2027-09-24', events);
+    expect(sumCurrency(premiumLedger, 'free_jewels')).toBe(3_700);
+    expect(sumCurrency(premiumLedger, 'paid_jewels')).toBe(700);
+    expect(sumCurrency(premiumLedger, 'uma_ticket')).toBe(8);
+    expect(sumCurrency(premiumLedger, 'support_ticket')).toBe(8);
+    expect(sumCurrency(premiumLedger, 'rainbow_crystal')).toBe(2);
+  });
+
+  it('starts observed speculative uplift after the latest confirmed Global reward', () => {
+    const plan = makePlan({
+      scenarioSelections: { speculative_income: 'include' },
+      enabledRewardIds: ['observed-social-gift'],
+    });
+    const data: CaratPlannerDataBundle = {
+      ...emptyData(),
+      rewards: {
+        rewards: [{
+          id: 'observed-social-gift', label: 'Observed social gift', currency: 'free_jewels',
+          amount: 600, available_at: '2026-01-15', provenance: 'global_social',
+        }],
+        global_reward_comparison: globalComparison({
+          observation_end: '2026-01-15',
+          speculative_monthly_carats: 1200,
+        }),
+      },
+    };
+
+    const ledger = service.buildLedger(plan, data, '2026-04-15');
+    const speculative = ledger.filter(entry => entry.id.startsWith('speculative-income:'));
+
+    expect(speculative.map(entry => [entry.date, entry.amount])).toEqual([
+      ['2026-02-15', 1200],
+      ['2026-03-15', 1200],
+      ['2026-04-15', 1200],
+    ]);
+    expect(sumCurrency(ledger, 'free_jewels')).toBe(4200);
+  });
+
+  it('uses the conservative median when that speculative option is selected', () => {
+    const plan = makePlan({ scenarioSelections: { speculative_income: 'median' } });
+    const data = emptyData();
+    data.rewards.global_reward_comparison = globalComparison({
+      observation_end: '2026-01-01',
+      speculative_monthly_carats: 1200,
+      speculative_recent_median_monthly_carats: 775,
+    });
+
+    const ledger = service.buildLedger(plan, data, '2026-02-01');
+
+    expect(sumCurrency(ledger, 'free_jewels')).toBe(775);
+  });
+
+  it('reconciles speculative income on pull dates between monthly checkpoints', () => {
+    const plan = makePlan({
+      scenarioSelections: { speculative_income: 'include' },
+      targets: [
+        makeTarget({ id: 'mid-month', bannerEnd: '2026-01-15' }),
+        makeTarget({ id: 'one-month', bannerEnd: '2026-02-01' }),
+      ],
+    });
+
+    const data = emptyData();
+    data.rewards.global_reward_comparison = globalComparison({
+      observation_end: '2026-01-01',
+      speculative_monthly_carats: 1460,
+    });
+    const projection = service.project(plan, data);
+
+    expect(projection.targets[0].balanceBefore.freeJewels).toBe(659);
+    expect(projection.targets[1].balanceBefore.freeJewels).toBe(1460);
   });
 
   it('projects global Strongest Team tiers and Legend Race clear counts across every occurrence', () => {
@@ -820,6 +926,40 @@ function emptyData(): CaratPlannerDataBundle {
   };
 }
 
+function globalComparison(
+  overrides: Partial<PlannerGlobalRewardComparison> = {},
+): PlannerGlobalRewardComparison {
+  return {
+    news_match_method: 'same_announce_id',
+    observation_start: '2025-06-26',
+    observation_end: '2026-01-01',
+    observation_days: 190,
+    observed_months: 6.24,
+    matched_news_global_carats: 0,
+    matched_news_jp_carats: 0,
+    matched_news_extra_carats: 0,
+    en_only_news_carats: 0,
+    social_carats: 0,
+    social_reward_posts: 0,
+    social_news_duplicate_reward_items_removed: 0,
+    social_news_duplicate_carats_removed: 0,
+    speculative_observed_carats: 0,
+    speculative_monthly_carats: 0,
+    matched_news: [],
+    en_only_news: [],
+    ...overrides,
+  };
+}
+
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function sumCurrency(
+  ledger: ReturnType<CaratPlannerCalculationService['buildLedger']>,
+  currency: ReturnType<CaratPlannerCalculationService['buildLedger']>[number]['currency'],
+): number {
+  return ledger
+    .filter(entry => entry.currency === currency)
+    .reduce((total, entry) => total + entry.amount, 0);
 }

@@ -9,6 +9,49 @@ describe('CaratPlannerPersistenceService', () => {
     localStorage.removeItem(CaratPlannerPersistenceService.STORAGE_KEY);
   });
 
+  it('enables the rolling speculative estimate on new plans by default', () => {
+    const service = createService();
+
+    expect(service.activePlan.scenarioSelections['speculative_income']).toBe('include');
+  });
+
+  it('migrates existing plans without a speculative selection to the rolling mean', () => {
+    localStorage.setItem(CaratPlannerPersistenceService.STORAGE_KEY, JSON.stringify({
+      version: 1,
+      activePlanId: 'existing-plan',
+      plans: [{
+        id: 'existing-plan',
+        name: 'Existing plan',
+        projectionStartDate: '2026-08-01',
+        scenarioSelections: { league: 'high' },
+      }],
+    }));
+
+    const service = createService();
+
+    expect(service.activePlan.scenarioSelections).toEqual({
+      league: 'high',
+      speculative_income: 'include',
+    });
+  });
+
+  it('preserves an explicit speculative-income opt-out', () => {
+    localStorage.setItem(CaratPlannerPersistenceService.STORAGE_KEY, JSON.stringify({
+      version: 1,
+      activePlanId: 'opted-out-plan',
+      plans: [{
+        id: 'opted-out-plan',
+        name: 'Opted out',
+        projectionStartDate: '2026-08-01',
+        scenarioSelections: { speculative_income: 'none' },
+      }],
+    }));
+
+    const service = createService();
+
+    expect(service.activePlan.scenarioSelections['speculative_income']).toBe('none');
+  });
+
   it('sanitizes imported balances, dates, optional IDs, collections, and numeric limits', () => {
     const service = createService();
     service.importJson(JSON.stringify({
@@ -83,7 +126,10 @@ describe('CaratPlannerPersistenceService', () => {
     expect(plan.enabledRewardIds).toEqual(['gift']);
     expect(plan.enabledRewardEventIds).toEqual(['campaign-1']);
     expect(plan.disabledEventIds).toEqual(['campaign-2']);
-    expect(plan.scenarioSelections).toEqual({ league: 'high' });
+    expect(plan.scenarioSelections).toEqual({
+      league: 'high',
+      speculative_income: 'include',
+    });
     expect(plan.freePullCampaignSelections).toEqual({ anniversary: 'later-banner' });
     expect(plan.resourceDefaultsApplied).toBeFalse();
 

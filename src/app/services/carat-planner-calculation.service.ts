@@ -12,6 +12,7 @@ import {
   PlannerCompetitiveRewardVariant,
   PlannerCurrency,
   PlannerGachaEntry,
+  PlannerGlobalRewardComparison,
   PlannerIncomeRule,
   PlannerLedgerEntry,
   PlannerPickupGoal,
@@ -24,6 +25,14 @@ import {
   PLANNER_DATA_DRIVEN_COMPETITION_ASSUMPTION_GROUPS,
   resolveDataDrivenCompetitionAssumption,
 } from '../utils/carat-planner-competition-assumptions';
+import {
+  isLegacyTrainingPassIncomeRule,
+  SPECULATIVE_INCOME_INCLUDED_OPTION,
+  SPECULATIVE_INCOME_MEDIAN_OPTION,
+  SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
+  TRAINING_PASS_SCENARIO_GROUP_ID,
+  trainingPassIncomeRules,
+} from '../utils/carat-planner-income-assumptions';
 import { CaratPullProbabilityService } from './carat-pull-probability.service';
 
 const DAY_MS = 86_400_000;
@@ -157,7 +166,9 @@ export class CaratPlannerCalculationService {
     const ledger: PlannerLedgerEntry[] = [];
 
     for (const rule of data.income.rules ?? []) {
-      if (!enabledRules.has(rule.id) || !this.isSelectedScenario(rule, plan.scenarioSelections)) {
+      if (isLegacyTrainingPassIncomeRule(rule)
+        || !enabledRules.has(rule.id)
+        || !this.isSelectedScenario(rule, plan.scenarioSelections)) {
         continue;
       }
       ledger.push(...this.expandRule(rule, startDate, endDate));
@@ -270,6 +281,26 @@ export class CaratPlannerCalculationService {
         every: custom.every,
       };
       ledger.push(...this.expandRule(rule, startDate, endDate).map(entry => ({ ...entry, source: 'custom' as const })));
+    }
+
+    for (const rule of trainingPassIncomeRules(
+      plan.scenarioSelections[TRAINING_PASS_SCENARIO_GROUP_ID],
+      events,
+    )) {
+      ledger.push(...this.expandRule(rule, startDate, endDate));
+    }
+
+    const speculativeSelection =
+      plan.scenarioSelections[SPECULATIVE_INCOME_SCENARIO_GROUP_ID];
+    if (speculativeSelection === SPECULATIVE_INCOME_INCLUDED_OPTION
+      || speculativeSelection === SPECULATIVE_INCOME_MEDIAN_OPTION) {
+      ledger.push(...this.speculativeIncomeEntries(
+        plan,
+        data.rewards.global_reward_comparison,
+        speculativeSelection,
+        startDate,
+        endDate,
+      ));
     }
 
     return ledger.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
@@ -541,6 +572,88 @@ export class CaratPlannerCalculationService {
       occurrence++;
     }
     return entries;
+  }
+
+  private speculativeIncomeEntries(
+    plan: CaratPlan,
+    comparison: PlannerGlobalRewardComparison | undefined,
+    selection: string,
+    rangeStart: string,
+    rangeEnd: string,
+  ): PlannerLedgerEntry[] {
+    const start = this.toUtcDate(rangeStart);
+    const end = this.toUtcDate(rangeEnd);
+    const observationEnd = this.toUtcDate(comparison?.observation_end);
+    const monthlyCarats = this.nonNegativeInt(
+      selection === SPECULATIVE_INCOME_MEDIAN_OPTION
+        ? comparison?.speculative_recent_median_monthly_carats
+        : comparison?.speculative_monthly_carats,
+    );
+    if (!start || !end || !observationEnd || monthlyCarats <= 0) return [];
+    const anchor = observationEnd > start ? observationEnd : start;
+    if (end <= anchor) return [];
+    const anchorKey = this.dateKey(anchor);
+
+    const checkpoints = new Set<string>([rangeEnd]);
+    for (let month = 1; month < 2400; month++) {
+      const checkpoint = this.calendarMonthFrom(anchor, month);
+      if (checkpoint > end) break;
+      checkpoints.add(this.dateKey(checkpoint));
+    }
+    const disabledEvents = new Set(plan.disabledEventIds ?? []);
+    for (const target of plan.targets) {
+      if (disabledEvents.has(target.eventId) || this.isTargetBeforeProjectionStart(plan, target)) continue;
+      const pullDate = this.resolvePullDate(target);
+      if (pullDate > anchorKey && pullDate <= rangeEnd) checkpoints.add(pullDate);
+    }
+
+    const entries: PlannerLedgerEntry[] = [];
+    let speculativeTotal = 0;
+
+    for (const checkpoint of [...checkpoints].sort()) {
+      const checkpointDate = this.toUtcDate(checkpoint);
+      if (!checkpointDate || checkpointDate <= anchor) continue;
+      const targetTotal = Math.round(
+        monthlyCarats * this.elapsedCalendarMonths(anchor, checkpointDate),
+      );
+      const amount = Math.max(0, targetTotal - speculativeTotal);
+      if (amount === 0) continue;
+      entries.push({
+        id: `speculative-income:${checkpoint}`,
+        label: 'Speculative Global reward uplift',
+        date: checkpoint,
+        currency: 'free_jewels',
+        amount,
+        source: 'rule',
+      });
+      speculativeTotal += amount;
+    }
+    return entries;
+  }
+
+  private elapsedCalendarMonths(start: Date, end: Date): number {
+    if (end <= start) return 0;
+    let wholeMonths = (end.getUTCFullYear() - start.getUTCFullYear()) * 12
+      + end.getUTCMonth() - start.getUTCMonth();
+    let anchor = this.calendarMonthFrom(start, wholeMonths);
+    if (anchor > end) {
+      wholeMonths--;
+      anchor = this.calendarMonthFrom(start, wholeMonths);
+    }
+    const next = this.calendarMonthFrom(start, wholeMonths + 1);
+    const fraction = Math.max(0, Math.min(1, (end.getTime() - anchor.getTime())
+      / Math.max(DAY_MS, next.getTime() - anchor.getTime())));
+    return Math.max(0, wholeMonths + fraction);
+  }
+
+  private calendarMonthFrom(anchor: Date, offset: number): Date {
+    const first = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + offset, 1));
+    const daysInMonth = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(
+      first.getUTCFullYear(),
+      first.getUTCMonth(),
+      Math.min(anchor.getUTCDate(), daysInMonth),
+    ));
   }
 
   private isSelectedScenario(rule: PlannerIncomeRule, selections: Record<string, string>): boolean {
