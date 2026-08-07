@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnDestroy, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -86,7 +86,7 @@ export interface UqlSuggestion {
   templateUrl: './uql-filter.component.html',
   styleUrl: './uql-filter.component.scss'
 })
-export class UqlFilterComponent implements AfterViewInit, OnDestroy {
+export class UqlFilterComponent implements OnDestroy {
   private readonly maxEditorCompletionOptions = 80;
   @ViewChild('queryInput') queryInput?: ElementRef<HTMLTextAreaElement>;
   @ViewChild('highlightLayer') highlightLayer?: ElementRef<HTMLElement>;
@@ -117,7 +117,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       this._query = normalized.query;
       queueMicrotask(() => this.queryChange.emit(this._query));
     }
-    this.refreshDocSnippets();
+    if (this.guideOpen) this.refreshDocSnippets();
   }
   get suggestions(): UqlSuggestion[] {
     return this._suggestions;
@@ -127,10 +127,17 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   @Output() insertSnippet = new EventEmitter<string>();
   visibleSuggestions: UqlSuggestion[] = [];
   protected activeReferenceTopic: UqlReferenceTopic = 'fields';
+  protected guideOpen = false;
   atomicCaretStyle: Record<string, string> | null = null;
 
   protected setReferenceTopic(topic: UqlReferenceTopic): void {
     this.activeReferenceTopic = topic;
+  }
+
+  protected setGuideOpen(event: Event): void {
+    const open = event.target instanceof HTMLDetailsElement && event.target.open;
+    if (open && !this.guideOpen) this.refreshDocSnippets();
+    this.guideOpen = open;
   }
   protected readonly simplePredicateDocSnippets = [
     this.createDocSnippet('Speed >= 3 and Wins >= 30'),
@@ -157,18 +164,11 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   activeSuggestionIndex = 0;
   editorScrollTop = 0;
   suggestionMenuStyle: Record<string, string> = { left: '56px', top: '38px' };
-  animatedPlaceholder = '';
+  readonly animatedPlaceholder = 'Speed >= 3';
   private suggestionMenuOpen = false;
   private suggestionMenuExplicit = false;
   private blurTimer: ReturnType<typeof setTimeout> | null = null;
-  private placeholderTimer: ReturnType<typeof setTimeout> | null = null;
   private editorFocused = false;
-  private placeholderStepIndex = 0;
-  private placeholderCharIndex = 0;
-  private placeholderDeleting = false;
-  private placeholderPauseTicks = 0;
-  private placeholderTargetRewind = 0;
-  private readonly animatePlaceholder = this.shouldAnimatePlaceholder();
   private knownFactorValueCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownCharacterValueCandidates: UqlKnownSuggestionCandidate[] = [];
   private knownLegacyValueCandidates: UqlKnownSuggestionCandidate[] = [];
@@ -182,29 +182,6 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   private activeTokenizeText: string | null = null;
   private activeValueMatchContextCache = new Map<number, { context: UqlValueContext | null; allowAnyFactorContext: boolean; inFactorArrayList: boolean }>();
   private knownFieldNames = new Set<string>();
-  private readonly placeholderSteps = [
-    { text: 'Speed >= 3', rewindTo: 6 },
-    { text: 'Speed >= 3 and Wins >= 30', rewindTo: 16 },
-    { text: 'Speed >= 3 and Wins >= 30 and White count >= 12', rewindTo: 0 },
-    { text: 'Main Speed >= 3', rewindTo: 5 },
-    { text: 'Main Speed >= 3 and Main has Right-Handed ○', rewindTo: 21 },
-    { text: 'Main Speed >= 3 and Main has Right-Handed ○ and GP Speed >= 3', rewindTo: 0 },
-    { text: 'GP Speed >= 3', rewindTo: 3 },
-    { text: 'GP has any (Right-Handed ○, Left-Handed ○)', rewindTo: 7 },
-    { text: 'GP has any (Right-Handed ○, Left-Handed ○) and Blue stars >= 9', rewindTo: 0 },
-    { text: 'Main character in (Special Week, Silence Suzuka)', rewindTo: 15 },
-    { text: "Main character in (Special Week, Silence Suzuka) and Trainer name ilike '%name%'", rewindTo: 0 },
-    { text: '(Great parent Speed >= 3 or GP1 Turf >= 2) and Wins >= 30', rewindTo: 28 },
-    { text: '(Great parent Speed >= 3 or GP1 Turf >= 2) and Wins >= 30 and not Trainer name ilike \'%test%\'', rewindTo: 0 }
-  ];
-
-  constructor() {
-    if (!this.animatePlaceholder) {
-      this.animatedPlaceholder = 'Speed >= 3';
-    }
-    this.refreshDocSnippets();
-  }
-
   // ---- Bridge into the embedded CodeMirror editor ----
   readonly tokenizeForEditor = (text: string): UqlHighlightSegment[] => {
     if (this.tokenizeCache?.text === text) return this.tokenizeCache.segments;
@@ -234,12 +211,7 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     this.queryChange.emit(value);
   }
 
-  ngAfterViewInit(): void {
-    this.startPlaceholderAnimation();
-  }
-
   ngOnDestroy(): void {
-    this.stopPlaceholderAnimation();
     this.clearBlurTimer();
   }
 
@@ -300,96 +272,6 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
 
   private formatInlineCompletionText(text: string): string {
     return text.replace(/\s+$/g, '');
-  }
-
-  private startPlaceholderAnimation(): void {
-    if (!this.animatePlaceholder) {
-      this.animatedPlaceholder = 'Speed >= 3';
-      return;
-    }
-    if (this.placeholderTimer || this.editorFocused || this.query) return;
-    if (!this.animatedPlaceholder && this.placeholderCharIndex === 0) {
-      this.placeholderStepIndex = this.placeholderStepIndex % this.placeholderSteps.length;
-      this.placeholderCharIndex = 0;
-      this.placeholderDeleting = false;
-      this.placeholderPauseTicks = 2;
-      this.placeholderTargetRewind = 0;
-    }
-    this.schedulePlaceholderTick(this.randomDelay(120, 260));
-  }
-
-  private stopPlaceholderAnimation(): void {
-    if (this.placeholderTimer) {
-      clearTimeout(this.placeholderTimer);
-      this.placeholderTimer = null;
-    }
-    this.animatedPlaceholder = '';
-  }
-
-  private schedulePlaceholderTick(delay: number): void {
-    this.placeholderTimer = setTimeout(() => this.tickPlaceholderAnimation(), delay);
-  }
-
-  private tickPlaceholderAnimation(): void {
-    this.placeholderTimer = null;
-    if (this.editorFocused || this.query) {
-      this.animatedPlaceholder = '';
-      return;
-    }
-
-    const step = this.placeholderSteps[this.placeholderStepIndex];
-    if (this.placeholderPauseTicks > 0) {
-      this.placeholderPauseTicks--;
-    } else if (this.placeholderDeleting) {
-      this.placeholderCharIndex = Math.max(this.placeholderTargetRewind, this.placeholderCharIndex - 1);
-      if (this.placeholderCharIndex === this.placeholderTargetRewind) {
-        this.placeholderDeleting = false;
-        this.placeholderStepIndex = (this.placeholderStepIndex + 1) % this.placeholderSteps.length;
-        const nextStep = this.placeholderSteps[this.placeholderStepIndex];
-        this.placeholderCharIndex = Math.min(this.placeholderCharIndex, nextStep.text.length);
-        this.placeholderPauseTicks = this.placeholderCharIndex === 0 ? this.randomInt(1, 3) : this.randomInt(2, 6);
-      }
-    } else {
-      this.placeholderCharIndex = Math.min(step.text.length, this.placeholderCharIndex + 1);
-      if (this.placeholderCharIndex === step.text.length) {
-        this.placeholderDeleting = true;
-        this.placeholderTargetRewind = this.getPlaceholderRewindTarget(step.rewindTo, step.text.length);
-        this.placeholderPauseTicks = this.randomInt(7, 15);
-      }
-    }
-
-    this.animatedPlaceholder = this.placeholderSteps[this.placeholderStepIndex].text.slice(0, this.placeholderCharIndex);
-    const nextDelay = this.placeholderPauseTicks > 0
-      ? this.randomDelay(90, 180)
-      : this.placeholderDeleting
-        ? this.randomDelay(18, 46)
-        : this.randomDelay(34, 92);
-    this.schedulePlaceholderTick(nextDelay);
-  }
-
-  private shouldAnimatePlaceholder(): boolean {
-    if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
-    const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
-    const hardwareConcurrency = navigator.hardwareConcurrency;
-    return !(typeof deviceMemory === 'number' && deviceMemory <= 4)
-      && !(typeof hardwareConcurrency === 'number' && hardwareConcurrency <= 4);
-  }
-
-  private getPlaceholderRewindTarget(preferredRewind: number, textLength: number): number {
-    if (preferredRewind > 0) return Math.min(preferredRewind, Math.max(0, textLength - 1));
-    if (Math.random() < 0.65 && textLength > 18) {
-      return this.randomInt(Math.floor(textLength * 0.18), Math.floor(textLength * 0.58));
-    }
-    return 0;
-  }
-
-  private randomDelay(min: number, max: number): number {
-    return this.randomInt(min, max);
-  }
-
-  private randomInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
   private stripFixedWhere(value: string): string {
@@ -497,11 +379,6 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
     const nextValue = normalized.query;
     this._query = nextValue;
     this.queryChange.emit(nextValue);
-    if (nextValue) {
-      this.stopPlaceholderAnimation();
-    } else if (!this.editorFocused) {
-      this.startPlaceholderAnimation();
-    }
     if (this.suggestionMenuOpen) {
       this.updateVisibleSuggestions();
     } else {
@@ -543,7 +420,6 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
   onEditorFocus(): void {
     this.editorFocused = true;
     this.clearBlurTimer();
-    this.stopPlaceholderAnimation();
     queueMicrotask(() => this.updateAtomicCaret());
   }
 
@@ -630,7 +506,6 @@ export class UqlFilterComponent implements AfterViewInit, OnDestroy {
       this.visibleSuggestions = [];
       this.suggestionMenuOpen = false;
       this.suggestionMenuExplicit = false;
-      this.startPlaceholderAnimation();
     }, 120);
   }
 

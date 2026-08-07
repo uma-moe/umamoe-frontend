@@ -1,12 +1,25 @@
 import { chromium } from '@playwright/test';
-import { createReadStream, existsSync, promises as fs } from 'node:fs';
-import { createServer } from 'node:http';
-import { extname, join, normalize, resolve } from 'node:path';
+import { promises as fs } from 'node:fs';
+import { join, resolve } from 'node:path';
+import {
+  CPU_PROFILES as profiles,
+  HOST,
+  REPORTS,
+  ROOT,
+  assertAuditBuild,
+  delta,
+  ensureReportsDirectory,
+  installCpuInstrumentation,
+  installNetworkFixtures,
+  metricsMap,
+  readRuntimeWindow,
+  resetRuntimeWindow,
+  round,
+  safeName,
+  startStaticServer,
+  summarizeAnimations,
+} from './cpu-audit-harness.mjs';
 
-const ROOT = resolve(import.meta.dirname, '../..');
-const DIST = join(ROOT, 'dist/browser');
-const REPORTS = join(ROOT, 'reports/frontend-audit');
-const HOST = '127.0.0.1';
 const PORT = 4327;
 const ORIGIN = `http://${HOST}:${PORT}`;
 const observationMs = numberArg('--observe-ms', 2_000);
@@ -22,30 +35,9 @@ const inventoryRoutes = [...routeInventory.matchAll(/\bpath:\s*'([^']+)'/g)].map
 const routes = routeFilter ? inventoryRoutes.filter(route => route === routeFilter) : inventoryRoutes;
 if (!routes.length) throw new Error('No audited routes found in tests/frontend-audit/routes.ts.');
 
-const profiles = [
-  {
-    name: 'desktop',
-    context: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
-  },
-  {
-    name: 'mobile',
-    context: {
-      viewport: { width: 412, height: 915 },
-      screen: { width: 412, height: 915 },
-      deviceScaleFactor: 2.625,
-      isMobile: true,
-      hasTouch: true,
-      userAgent: 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/151 Mobile Safari/537.36',
-    },
-  },
-];
-
-if (!existsSync(join(DIST, 'index.html')) || !existsSync(join(ROOT, 'dist/stats.json'))) {
-  throw new Error('Missing deterministic audit build. Run npm run build:audit before audit:cpu.');
-}
-
-await fs.mkdir(REPORTS, { recursive: true });
-const server = await startStaticServer();
+assertAuditBuild();
+await ensureReportsDirectory();
+const server = await startStaticServer(PORT);
 const browser = await chromium.launch({ headless: true });
 const results = [];
 
@@ -57,20 +49,7 @@ try {
       reducedMotion: 'no-preference',
     });
     await installNetworkFixtures(context);
-    await context.addInitScript(() => {
-      const state = { callbacks: 0, longTasks: [] };
-      Object.defineProperty(window, '__cpuAudit', { value: state, configurable: false });
-      const nativeRequestAnimationFrame = window.requestAnimationFrame.bind(window);
-      window.requestAnimationFrame = callback => nativeRequestAnimationFrame(timestamp => {
-        state.callbacks += 1;
-        callback(timestamp);
-      });
-      try {
-        new PerformanceObserver(list => {
-          for (const entry of list.getEntries()) state.longTasks.push(entry.duration);
-        }).observe({ type: 'longtask', buffered: true });
-      } catch {}
-    });
+    await installCpuInstrumentation(context);
 
     for (let index = 0; index < routes.length; index += 1) {
       const route = routes[index];
@@ -85,33 +64,11 @@ try {
         await page.goto(`${ORIGIN}${route}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
         await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined);
         await page.waitForTimeout(settleMs);
-        await page.evaluate(() => {
-          window.__cpuAudit.callbacks = 0;
-          window.__cpuAudit.longTasks.length = 0;
-        });
+        await resetRuntimeWindow(page);
         const before = metricsMap(await cdp.send('Performance.getMetrics'));
         await page.waitForTimeout(observationMs);
         const after = metricsMap(await cdp.send('Performance.getMetrics'));
-        const runtime = await page.evaluate(() => {
-          const animations = document.getAnimations({ subtree: true })
-            .filter(animation => animation.playState === 'running')
-            .map(animation => {
-              const target = animation.effect?.target;
-              if (!(target instanceof Element)) return { name: 'unknown', target: 'unknown' };
-              return {
-                name: getComputedStyle(target).animationName || 'web-animation',
-                target: `${target.tagName.toLowerCase()}${target.id ? `#${target.id}` : ''}${
-                  [...target.classList].slice(0, 3).map(value => `.${value}`).join('')
-                }`,
-              };
-            });
-          return {
-            animations,
-            rafCallbacks: window.__cpuAudit.callbacks,
-            longTasks: [...window.__cpuAudit.longTasks],
-            path: `${location.pathname}${location.search}`,
-          };
-        });
+        const runtime = await readRuntimeWindow(page);
 
         const taskMs = delta(after, before, 'TaskDuration') * 1_000;
         const scriptMs = delta(after, before, 'ScriptDuration') * 1_000;
@@ -149,7 +106,6 @@ try {
   await browser.close();
   await new Promise(resolveClose => server.close(resolveClose));
 }
-
 const report = {
   generatedAt: new Date().toISOString(),
   label,
@@ -212,22 +168,6 @@ function stringArg(name, fallback) {
   return index >= 0 ? (process.argv[index + 1] ?? fallback) : fallback;
 }
 
-function safeName(value) {
-  return value.toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
-}
-
-function metricsMap(response) {
-  return new Map(response.metrics.map(metric => [metric.name, metric.value]));
-}
-
-function delta(after, before, key) {
-  return (after.get(key) ?? 0) - (before.get(key) ?? 0);
-}
-
-function round(value) {
-  return Math.round(value * 100) / 100;
-}
-
 function percentile(values, fraction) {
   if (!values.length) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -247,17 +187,6 @@ function summarizeProfile(allResults, profile) {
     routesWithAnimations: matching.filter(result => result.animationCount > 0).length,
     totalLongTasks: matching.reduce((sum, result) => sum + result.longTaskCount, 0),
   };
-}
-
-function summarizeAnimations(animations) {
-  const counts = new Map();
-  for (const animation of animations) {
-    const key = `${animation.name} @ ${animation.target}`;
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .map(([animation, count]) => ({ animation, count }))
-    .sort((a, b) => b.count - a.count || a.animation.localeCompare(b.animation));
 }
 
 function compareReports(baseline, current) {
@@ -295,49 +224,4 @@ function compareReports(baseline, current) {
     }),
     routes: rows.sort((a, b) => a.change - b.change),
   };
-}
-
-async function installNetworkFixtures(context) {
-  await context.route('**/*', async route => {
-    const url = new URL(route.request().url());
-    if (url.hostname !== HOST) return route.abort('blockedbyclient');
-    if (url.pathname === '/resources/manifest.json') {
-      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"version":"cpu-audit-v1","resources":{}}' });
-    }
-    if (url.pathname.startsWith('/api/')) {
-      return route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"cpu_audit_fixture"}' });
-    }
-    return route.continue();
-  });
-}
-
-function startStaticServer() {
-  const mimeTypes = new Map([
-    ['.css', 'text/css'], ['.html', 'text/html'], ['.ico', 'image/x-icon'],
-    ['.js', 'text/javascript'], ['.json', 'application/json'], ['.svg', 'image/svg+xml'],
-    ['.webp', 'image/webp'], ['.woff2', 'font/woff2'],
-  ]);
-  const server = createServer(async (request, response) => {
-    const pathname = decodeURIComponent(new URL(request.url, ORIGIN).pathname);
-    const requested = normalize(pathname).replace(/^([/\\])+/, '');
-    let filePath = join(DIST, requested || 'index.html');
-    let stat = await fs.stat(filePath).catch(() => null);
-    if (!stat?.isFile() && !extname(pathname)) {
-      filePath = join(DIST, 'index.html');
-      stat = await fs.stat(filePath).catch(() => null);
-    }
-    if (!stat?.isFile() || !resolve(filePath).startsWith(resolve(DIST))) {
-      response.writeHead(404).end('Not found');
-      return;
-    }
-    response.writeHead(200, {
-      'content-type': mimeTypes.get(extname(filePath)) ?? 'application/octet-stream',
-      'cache-control': 'no-store',
-    });
-    createReadStream(filePath).pipe(response);
-  });
-  return new Promise((resolveStart, reject) => {
-    server.once('error', reject);
-    server.listen(PORT, HOST, () => resolveStart(server));
-  });
 }

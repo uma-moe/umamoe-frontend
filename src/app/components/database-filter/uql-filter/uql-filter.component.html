@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <details class="uql-wiki-panel">
+    <details class="uql-wiki-panel" (toggle)="setGuideOpen($event)">
       <summary>
         <span class="uql-wiki-summary-main">
           <mat-icon>menu_book</mat-icon>
@@ -21,7 +21,7 @@
         <mat-icon class="uql-wiki-chevron">expand_more</mat-icon>
       </summary>
 
-      <article class="uql-doc-article">
+      <article class="uql-doc-article" *ngIf="guideOpen">
         <ng-template #uqlDocSnippetTemplate let-snippet let-hidden="hidden">
           <pre class="uql-doc-snippet" [attr.aria-hidden]="hidden ? 'true' : null"><ng-container *ngFor="let segment of snippet.segments"><span
             class="uql-token"

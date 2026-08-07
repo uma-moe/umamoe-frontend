@@ -1,4 +1,5 @@
 import { ElementRef } from '@angular/core';
+import { fakeAsync, tick } from '@angular/core/testing';
 import { DatabaseFilterComponent } from './database-filter.component';
 
 describe('DatabaseFilterComponent', () => {
@@ -168,6 +169,22 @@ describe('DatabaseFilterComponent', () => {
   });
 
   describe('UQL compilation', () => {
+    it('coalesces rapid editor updates into one compilation', fakeAsync(() => {
+      const component = createComponent();
+      const compile = spyOn(component, 'onUqlChange');
+
+      component.onUqlEditorQueryChange('Speed');
+      component.onUqlEditorQueryChange('Speed >=');
+      component.onUqlEditorQueryChange('Speed >= 3');
+
+      tick(249);
+      expect(compile).not.toHaveBeenCalled();
+      tick(1);
+
+      expect(component.uqlQuery).toBe('Speed >= 3');
+      expect(compile).toHaveBeenCalledTimes(1);
+    }));
+
     it('exposes every supported one-based scenario ID independently', () => {
       const component = createComponent();
 

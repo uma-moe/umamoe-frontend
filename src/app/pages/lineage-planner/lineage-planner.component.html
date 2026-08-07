@@ -272,10 +272,10 @@
       </div>
 
       <ng-container *ngIf="oddsParents.length > 0; else oddsPlaceholder">
-      <mat-tab-group [(selectedIndex)]="oddsTab" class="odds-tabs" animationDuration="150ms">
+      <mat-tab-group [(selectedIndex)]="oddsTab" class="odds-tabs" animationDuration="150ms" [preserveContent]="false">
         <mat-tab label="Base Odds">
-          <div class="odds-scroll odds-scroll-desktop">
-            <table class="odds-table-desktop">
+          <div class="odds-scroll">
+            <table class="odds-table-responsive">
               <thead>
                 <tr>
                   <th class="ot-label"></th>
@@ -305,7 +305,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let p of oddsParents" [class.ot-row--p]="p.layer === 1" [class.ot-row--gp]="p.layer === 2">
+                <tr *ngFor="let p of oddsParents; trackBy: trackOddsParent" [class.ot-row--p]="p.layer === 1" [class.ot-row--gp]="p.layer === 2">
                   <td class="ot-label">
                     <img class="ot-avatar" [src]="p.icon" (error)="handleImageError($event)" loading="lazy" />
                     <div class="ot-label-text">
@@ -323,57 +323,10 @@
             </table>
           </div>
 
-          <div class="odds-scroll odds-scroll-mobile">
-            <table class="odds-table-mobile">
-              <thead>
-                <tr>
-                  <th class="ot-label"></th>
-                  <ng-container *ngFor="let g of oddsColorGroups">
-                    <th [attr.colspan]="g.cols * 3" [class]="'ot-color ' + g.cssClass">{{ g.label }}</th>
-                  </ng-container>
-                </tr>
-                <tr>
-                  <th class="ot-label ot-star"></th>
-                  <ng-container *ngFor="let _ of baseChanceMatrix">
-                    <th class="ot-star">1?</th>
-                    <th class="ot-star">2?</th>
-                    <th class="ot-star">3?</th>
-                  </ng-container>
-                </tr>
-                <tr>
-                  <td class="ot-label"></td>
-                  <ng-container *ngFor="let m of baseChanceMatrix">
-                    <td class="ot-sublabel" colspan="3">{{ m.label }}</td>
-                  </ng-container>
-                </tr>
-                <tr class="odds-head-base">
-                  <td class="ot-label">Base</td>
-                  <ng-container *ngFor="let m of baseChanceMatrix">
-                    <td *ngFor="let c of m.chances" class="ot-base">{{ c }}%</td>
-                  </ng-container>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let p of oddsParents" [class.ot-row--p]="p.layer === 1" [class.ot-row--gp]="p.layer === 2">
-                  <td class="ot-label">
-                    <img class="ot-avatar" [src]="p.icon" (error)="handleImageError($event)" loading="lazy" />
-                    <div class="ot-label-text">
-                      <span class="ot-name">{{ p.charName }}</span>
-                      <span class="ot-aff"><mat-icon>favorite</mat-icon>{{ p.affinity }}</span>
-                    </div>
-                  </td>
-                  <ng-container *ngFor="let m of baseChanceMatrix; let ci = index">
-                    <td *ngFor="let c of m.chances" [class]="'ot-val ot-c' + ci">
-                      {{ formatSparkPct(clampedChance(c, p.affinity)) }}
-                    </td>
-                  </ng-container>
-                </tr>
-              </tbody>
-            </table>
-          </div>
         </mat-tab>
 
         <mat-tab label="Per Source">
+          <ng-template matTabContent>
           <div class="summary-list" *ngIf="sparkSummary.length; else noSparks">
             <div class="summary-row summary-header">
               <span class="sum-rank">#</span>
@@ -383,7 +336,7 @@
               <span class="sum-src">Source</span>
               <span class="sum-chance-col">{{ sparkShowPerRun ? 'Per Run' : 'Per Inh.' }}</span>
             </div>
-            <div class="summary-row" *ngFor="let e of sparkSummary; let i = index"
+            <div class="summary-row" *ngFor="let e of sparkSummary; let i = index; trackBy: trackSparkSummary"
               [class]="sparkTypeClass(e.spark)">
               <span class="sum-rank">{{ i + 1 }}</span>
               <span class="sum-spark">
@@ -408,9 +361,11 @@
           <ng-template #noSparks>
             <div class="summary-empty">No sparks available. Add characters with factors to see spark summary.</div>
           </ng-template>
+          </ng-template>
         </mat-tab>
 
         <mat-tab label="Combined">
+          <ng-template matTabContent>
           <div class="summary-list" *ngIf="sparkCombined.length; else noCombined">
             <div class="summary-row summary-header combined-header">
               <span class="sum-spark">Spark</span>
@@ -420,7 +375,7 @@
               <span class="sum-proc-col">Proc Chance</span>
               <span class="sum-expected">Exp. Procs</span>
             </div>
-            <div class="summary-row combined-row" *ngFor="let g of sparkCombined"
+            <div class="summary-row combined-row" *ngFor="let g of sparkCombined; trackBy: trackSparkCombined"
               [class]="typeClass(g.type)">
               <span class="sum-spark">
                 <span class="sum-name">{{ g.name }}</span>
@@ -429,7 +384,7 @@
               <span class="sum-type">{{ sparkTypeLabelByType(g.type) }}</span>
               <span class="sum-base">{{ baseChanceForType(g.type, g.sources[0].star) }}%</span>
               <span class="sum-sources">
-                <span class="comb-source" *ngFor="let s of g.sources"
+                <span class="comb-source" *ngFor="let s of g.sources; trackBy: trackSparkCombinedSource"
                   [matTooltip]="s.charName + ' (' + s.node + ') ' + s.star + '★  ' + (sparkShowPerRun ? s.perRun : s.perInh) + '%'">
                   <img class="sum-avatar" [src]="s.icon" (error)="handleImageError($event)" loading="lazy" />
                   <span class="comb-star">{{ s.star }}</span>
@@ -447,9 +402,11 @@
           <ng-template #noCombined>
             <div class="summary-empty">No sparks available.</div>
           </ng-template>
+          </ng-template>
         </mat-tab>
 
         <mat-tab label="Skill Sparks">
+          <ng-template matTabContent>
           <div class="summary-list" *ngIf="targetInheritance.length; else noWhite">
             <div class="inh-table-note">Chance of developing spark when skill is learned during training</div>
             <div class="inh-table-head">
@@ -459,7 +416,7 @@
               <span class="inh-t-tier inh-t-upgraded">If Upgraded</span>
               <span class="inh-t-tier inh-t-gold">If Gold</span>
             </div>
-            <div class="inh-table-row" *ngFor="let inh of targetInheritance">
+            <div class="inh-table-row" *ngFor="let inh of targetInheritance; trackBy: trackTargetInheritance">
               <span class="inh-t-name">
                 <img class="inh-t-icon" *ngIf="inh.icon" [src]="inh.icon" (error)="handleImageError($event)" loading="lazy" />
                 {{ inh.name }}
@@ -472,6 +429,7 @@
           </div>
           <ng-template #noWhite>
             <div class="summary-empty">No white sparks in lineage.</div>
+          </ng-template>
           </ng-template>
         </mat-tab>
       </mat-tab-group>

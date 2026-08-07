@@ -27,6 +27,7 @@
     "audit:duplicates": "node scripts/frontend-audit/check-duplicates.mjs",
     "audit:routes": "playwright test",
     "audit:cpu": "node scripts/frontend-audit/profile-cpu.mjs",
+    "audit:cpu:deep": "node scripts/frontend-audit/profile-deep-cpu.mjs",
     "audit:lighthouse": "npm run build:audit && node scripts/frontend-audit/run-lighthouse.mjs",
     "audit:lighthouse:live": "node scripts/frontend-audit/run-lighthouse.mjs --live",
     "audit:frontend": "node scripts/frontend-audit/run-frontend-audit.mjs"

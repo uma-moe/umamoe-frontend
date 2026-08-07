@@ -69,11 +69,12 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run build:audit
       - run: npm run audit:cpu -- --label ci
+      - run: npm run audit:cpu:deep -- --label ci-deep
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: frontend-cpu-audit
-          path: reports/frontend-audit/cpu-ci.json
+          path: reports/frontend-audit/cpu-ci*.json
 
   lighthouse:
     runs-on: ubuntu-latest

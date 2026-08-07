@@ -108,7 +108,7 @@
           [validationIssue]="uqlValidationIssue"
           [snippets]="uqlStarterSnippets"
           [suggestions]="uqlSuggestions"
-          (queryChange)="uqlQuery = $event; onUqlChange()"
+          (queryChange)="onUqlEditorQueryChange($event)"
           (clear)="clearUql()"
           (insertSnippet)="insertUqlSnippet($event)">
         </app-uql-filter-deferred>

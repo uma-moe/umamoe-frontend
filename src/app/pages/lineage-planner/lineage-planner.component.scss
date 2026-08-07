@@ -1220,11 +1220,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
   @include custom-scrollbar(4px);
 }
 
-.odds-scroll-mobile {
-  display: none;
-}
-
-.odds-table-desktop {
+.odds-table-responsive {
   --ot-label-width: 208px;
   width: 100%;
   min-width: 100%;
@@ -1765,8 +1761,12 @@ $col-parent: 2 * $col-gp + $gap-tree;
   letter-spacing: 0.05em;
 }
 
+// Mobile-only elements default to hidden; the mobile block enables them.
+.ggp-mobile-toggle { display: none; }
+.branch-chip { display: none; }
+
 @include mobile {
-  // ─── COMPACT MOBILE LINEAGE LAYOUT ─────────────────────────────
+// ─── COMPACT MOBILE LINEAGE LAYOUT ─────────────────────────────
   // Fully vertical stack. Cards always use full viewport width.
   // The tree branching is drawn as left-side trunks + horizontal
   // elbows with the affinity chip sitting on the elbow.
@@ -2179,16 +2179,11 @@ $col-parent: 2 * $col-gp + $gap-tree;
   }
 
   // On mobile: transposed layout — characters as columns, spark types as rows
-  .odds-scroll-desktop {
-    display: none;
-  }
-
-  .odds-scroll-mobile {
-    display: block;
+  .odds-scroll {
     width: 100%;
   }
 
-  .odds-table-mobile {
+  .odds-table-responsive {
     --ot-mobile-header-height: 44px;
     --ot-mobile-row-height: 44px;
     --ot-mobile-group-row-height: var(--ot-mobile-row-height);
@@ -2593,9 +2588,6 @@ $col-parent: 2 * $col-gp + $gap-tree;
   .ggp-row.ggp-collapsed { display: none !important; }
 }
 
-// Hide mobile-only elements on desktop
-.ggp-mobile-toggle { display: none; }
-.branch-chip { display: none; }
 // ---- TREE FORK CONNECTORS ----
 // Each fork sits inside a tree-col, spanning full width via align-self: stretch.
 // Padding on bar/drops ensures drops land on child column centers.

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, HostListener, ViewChild, AfterViewInit, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ViewChild, AfterViewInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -64,6 +64,7 @@ import { Factor, FactorService } from '../../services/factor.service';
 export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
   private searchSubscription?: Subscription;
+  private searchGeneration = 0;
   private scrollListener!: () => void;
   private scrollThrottled = false;
   environment = environment;
@@ -279,6 +280,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     private meta: Meta,
     private title: Title,
     private ngZone: NgZone,
+    private cdr: ChangeDetectorRef,
     public authService: AuthService,
     public bookmarkService: BookmarkService,
     private affinityService: AffinityService,
@@ -571,12 +573,14 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       return;
     }
     this.applyAutomaticSortForFilters();
+    const requestedPage = this.currentPage;
     // If loading more (pagination), prevent duplicates
-    if (this.currentPage > 0 && (this.loading || this.loadingMore)) {
+    if (requestedPage > 0 && (this.loading || this.loadingMore)) {
       return;
     }
     // If new search (page 0), cancel previous
-    if (this.currentPage === 0) {
+    if (requestedPage === 0) {
+      this.searchGeneration++;
       if (this.searchSubscription) {
         this.searchSubscription.unsubscribe();
       }
@@ -586,6 +590,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     } else {
       this.loadingMore = true;
     }
+    const requestGeneration = this.searchGeneration;
     let searchFilters: InheritanceSearchFilters = {};
     if (this.currentAdvancedFilters) {
       const af = this.currentAdvancedFilters;
@@ -656,7 +661,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
         p2WinSaddle: af.p2_win_saddle,
         uql: af.uql,
         
-        page: this.currentPage,
+        page: requestedPage,
         pageSize: this.pageSize,
         sortBy: this.mapSortByToBackend(this.currentSortBy),
         sortOrder: 'desc'
@@ -666,7 +671,7 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       searchFilters = {
       trainerId: this.trainerIdFilter || undefined, // Add trainer ID filter from URL
       umaId: this.currentFilters?.selectedCharacterId || undefined,
-      page: this.currentPage,
+      page: requestedPage,
       pageSize: this.pageSize,
       sortBy: this.mapSortByToBackend(this.currentSortBy),
       sortOrder: 'desc', // All V2 API sorts are descending
@@ -779,38 +784,45 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
     this.searchSubscription = this.inheritanceService.searchInheritance(searchFilters, searchFilters.page, searchFilters.pageSize)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (result) => {
+        next: (result) => this.ngZone.run(() => {
+          if (requestGeneration !== this.searchGeneration) return;
           this.totalRecords = result.total || 0;
           this._totalPages = result.totalPages || Math.max(1, Math.ceil(this.totalRecords / this.pageSize));
-          if (this.currentPage === 0) {
+          if (requestedPage === 0) {
             this.replaceRecords(result.items || []);
           } else {
             this.appendRecords(result.items || []);
           }
-          // Check if there are more records to load
-          this.hasMoreRecords = (result.items?.length || 0) >= this.pageSize;
+          // Prefer the server's page count so a full final page does not
+          // trigger an unnecessary request for the page after the end.
+          this.hasMoreRecords = result.totalPages > 0
+            ? requestedPage + 1 < result.totalPages
+            : (result.items?.length || 0) >= this.pageSize;
           if (!environment.production) {
           }
           this.updateVoteStates();
           this.loading = false;
           this.loadingMore = false;
-        },
-        error: (error) => {
+          this.cdr.detectChanges();
+        }),
+        error: (error) => this.ngZone.run(() => {
+          if (requestGeneration !== this.searchGeneration) return;
           console.error('V2 Search error:', error);
           
           // Revert page number on error so user can retry
-          if (this.currentPage > 0) {
+          if (requestedPage > 0 && this.currentPage === requestedPage) {
             this.currentPage--;
           }
           
           this.loading = false;
           this.loadingMore = false;
+          this.cdr.detectChanges();
           
           // Don't show generic error for rate limiting (handled by interceptor popup)
           if (error.status !== 429) {
             this.snackBar.open(this.withBuild('Error loading records'), 'Close', { duration: 3000 });
           }
-        }
+        })
       });
   }
   loadMoreRecords() {
@@ -892,6 +904,10 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
       } else if (nextCount >= this.allRecords.length) {
         this.maybeLoadMoreRecordsForViewport();
       }
+      // This batched render may run after the originating HTTP turn has
+      // settled. Refresh only this component subtree so progress indicators
+      // cannot remain animated until the next user input.
+      this.cdr.detectChanges();
     });
   }
 

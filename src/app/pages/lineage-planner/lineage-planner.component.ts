@@ -54,6 +54,41 @@ interface LineagePlannerShareState {
   n: LineagePlannerShareNode[];
 }
 
+interface OddsParentRow {
+  pos: string;
+  name: string;
+  charName: string;
+  icon: string;
+  affinity: number;
+  layer: number;
+}
+
+interface SparkSummaryRow {
+  spark: SparkInfo;
+  node: string;
+  charName: string;
+  icon: string;
+  affinity: number;
+  perInh: number;
+  perRun: number;
+}
+
+interface SparkCombinedSource {
+  node: string;
+  charName: string;
+  icon: string;
+  star: number;
+  perInh: number;
+  perRun: number;
+}
+
+interface SparkCombinedRow {
+  name: string;
+  type: number;
+  sources: SparkCombinedSource[];
+  metrics: SparkDisplayMetrics;
+}
+
 @Component({
   selector: 'app-lineage-planner',
   standalone: true,
@@ -151,9 +186,23 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   ];
 
   oddsTab = 0;
+  private oddsParentsCacheResult: TreeAffinityWithRaceResult | null | undefined;
+  private oddsParentsCache: OddsParentRow[] = [];
+  private sparkSummaryCacheResult: TreeAffinityWithRaceResult | null | undefined;
+  private sparkSummaryCachePerRun = false;
+  private sparkSummaryCache: SparkSummaryRow[] = [];
+  private sparkCombinedCacheSource: SparkSummaryRow[] | null = null;
+  private sparkCombinedCache: SparkCombinedRow[] = [];
 
-  get sparkSummary(): { spark: SparkInfo; node: string; charName: string; icon: string; affinity: number; perInh: number; perRun: number }[] {
-    const entries: { spark: SparkInfo; node: string; charName: string; icon: string; affinity: number; perInh: number; perRun: number }[] = [];
+  get sparkSummary(): SparkSummaryRow[] {
+    if (
+      this.sparkSummaryCacheResult === this.affinityResult
+      && this.sparkSummaryCachePerRun === this.sparkShowPerRun
+    ) {
+      return this.sparkSummaryCache;
+    }
+
+    const entries: SparkSummaryRow[] = [];
     for (const p of this.oddsParents) {
       const node = this.nodes.get(p.pos)!;
       if (!node.resolvedSparks?.length) continue;
@@ -175,17 +224,25 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
     } else {
       entries.sort((a, b) => b.perInh - a.perInh);
     }
-    return entries;
+    this.sparkSummaryCacheResult = this.affinityResult;
+    this.sparkSummaryCachePerRun = this.sparkShowPerRun;
+    this.sparkSummaryCache = entries;
+    return this.sparkSummaryCache;
   }
 
-  get sparkCombined(): { name: string; type: number; sources: { node: string; charName: string; icon: string; star: number; perInh: number; perRun: number }[]; metrics: SparkDisplayMetrics }[] {
+  get sparkCombined(): SparkCombinedRow[] {
+    const summary = this.sparkSummary;
+    if (this.sparkCombinedCacheSource === summary) {
+      return this.sparkCombinedCache;
+    }
+
     const map = new Map<string, {
       name: string;
       type: number;
       sparkSources: { spark: SparkInfo; affinity: number }[];
-      displaySources: { node: string; charName: string; icon: string; star: number; perInh: number; perRun: number }[];
+      displaySources: SparkCombinedSource[];
     }>();
-    for (const e of this.sparkSummary) {
+    for (const e of summary) {
       const key = e.spark.name;
       let group = map.get(key);
       if (!group) {
@@ -201,12 +258,20 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       return { name: g.name, type: g.type, sources: g.displaySources, metrics };
     });
     result.sort((a, b) => b.metrics.expectedProcs - a.metrics.expectedProcs);
-    return result;
+    this.sparkCombinedCacheSource = summary;
+    this.sparkCombinedCache = result;
+    return this.sparkCombinedCache;
   }
 
-  get oddsParents(): { pos: string; name: string; charName: string; icon: string; affinity: number; layer: number }[] {
-    if (!this.affinityResult) return [];
-    const r = this.affinityResult;
+  get oddsParents(): OddsParentRow[] {
+    if (this.oddsParentsCacheResult === this.affinityResult) {
+      return this.oddsParentsCache;
+    }
+    this.oddsParentsCacheResult = this.affinityResult;
+    if (!this.affinityResult) {
+      this.oddsParentsCache = [];
+      return this.oddsParentsCache;
+    }
     const build = (pos: string, label: string, affinity: number, layer: number) => {
       const node = this.nodes.get(pos)!;
       return { pos, name: label, charName: this.getCharacterName(node), icon: this.getCharacterIcon(node), affinity, layer };
@@ -219,7 +284,28 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
       build('p2-1', 'GP2-1', this.getNodeAffinity(this.nodes.get('p2-1')!), 2),
       build('p2-2', 'GP2-2', this.getNodeAffinity(this.nodes.get('p2-2')!), 2),
     ];
-    return rows.filter(r => this.hasContent(this.nodes.get(r.pos)!));
+    this.oddsParentsCache = rows.filter(row => this.hasContent(this.nodes.get(row.pos)!));
+    return this.oddsParentsCache;
+  }
+
+  trackOddsParent(_index: number, row: OddsParentRow): string {
+    return row.pos;
+  }
+
+  trackSparkSummary(index: number, row: SparkSummaryRow): string {
+    return `${row.node}:${row.spark.factorId}:${index}`;
+  }
+
+  trackSparkCombined(_index: number, row: SparkCombinedRow): string {
+    return row.name;
+  }
+
+  trackSparkCombinedSource(index: number, row: SparkCombinedSource): string {
+    return `${row.node}:${row.star}:${index}`;
+  }
+
+  trackTargetInheritance(_index: number, row: { factorId: string }): string {
+    return row.factorId;
   }
 
   constructor(
@@ -286,6 +372,13 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
         if (!this.queryParamsLoaded) {
           this.queryParamsLoaded = true;
           this.loadFromQueryParams();
+        }
+        // The resource stream emits its null fallback before the versioned
+        // affinity data arrives. Recalculate again on the ready emission so a
+        // slower parse/network cannot permanently leave a populated tree with
+        // no odds panel.
+        if (this.affinityService.isReady) {
+          this.affinityRecalc$.next();
         }
       });
 
@@ -355,6 +448,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
         label: pos.label,
       });
     }
+    this.affinityResult = null;
     this.affinityTotal = null;
     this.affinityPlayerBonus = null;
   }
@@ -1499,6 +1593,8 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
 
   onNodeSparksChange(node: LineageNode, sparks: SparkInfo[]): void {
     node.resolvedSparks = sparks;
+    this.sparkSummaryCacheResult = undefined;
+    this.sparkCombinedCacheSource = null;
     this.affinityRecalc$.next();
     this.cdr.markForCheck();
   }
@@ -1506,6 +1602,8 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   removeSpark(node: LineageNode, index: number, event: Event): void {
     event.stopPropagation();
     node.resolvedSparks = node.resolvedSparks.filter((_, i) => i !== index);
+    this.sparkSummaryCacheResult = undefined;
+    this.sparkCombinedCacheSource = null;
     this.affinityRecalc$.next();
     this.cdr.markForCheck();
   }

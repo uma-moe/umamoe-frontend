@@ -444,6 +444,8 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   filterPresetNameDraft = '';
   filterPresetMessage = '';
   private filterPresetMessageTimeout: ReturnType<typeof setTimeout> | null = null;
+  private static readonly UQL_EDITOR_DEBOUNCE_MS = 250;
+  private uqlEditorChangeTimer: ReturnType<typeof setTimeout> | null = null;
   uqlQuery = '';
   compiledUqlQuery = '';
   uqlValidationState: UqlValidationState = 'empty';
@@ -992,6 +994,10 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.wrappingDetectFrame !== null) cancelAnimationFrame(this.wrappingDetectFrame);
     if (this.floatingBtnFrame !== null) cancelAnimationFrame(this.floatingBtnFrame);
     if (this.filterPresetMessageTimeout !== null) clearTimeout(this.filterPresetMessageTimeout);
+    if (this.uqlEditorChangeTimer !== null) {
+      this.cancelPendingUqlEditorChange();
+      this.persistCurrentFilterState();
+    }
     this.teardownScrollListener();
     this.destroy$.next();
     this.destroy$.complete();
@@ -3486,6 +3492,9 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
   setFilterMode(mode: FilterMode): void {
     const previousMode = this.filterMode;
+    if (previousMode === 'uql' && mode !== 'uql') {
+      this.flushPendingUqlEditorChange();
+    }
     const shouldUseSavedState = !this.skipSavedStateRestoreOnNextModeSwitch;
     if (shouldUseSavedState) {
       this.persistCurrentFilterState();
@@ -3667,6 +3676,30 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
         this.persistCurrentFilterState();
       }
     }
+  }
+
+  onUqlEditorQueryChange(query: string): void {
+    this.uqlQuery = query;
+    if (this.uqlEditorChangeTimer !== null) {
+      clearTimeout(this.uqlEditorChangeTimer);
+    }
+    this.uqlEditorChangeTimer = setTimeout(() => {
+      this.uqlEditorChangeTimer = null;
+      this.onUqlChange();
+      this.cdr.markForCheck();
+    }, DatabaseFilterComponent.UQL_EDITOR_DEBOUNCE_MS);
+  }
+
+  private flushPendingUqlEditorChange(): void {
+    if (this.uqlEditorChangeTimer === null) return;
+    this.cancelPendingUqlEditorChange();
+    this.onUqlChange();
+  }
+
+  private cancelPendingUqlEditorChange(): void {
+    if (this.uqlEditorChangeTimer === null) return;
+    clearTimeout(this.uqlEditorChangeTimer);
+    this.uqlEditorChangeTimer = null;
   }
 
   private syncUqlFilterState(): void {
@@ -3882,6 +3915,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   clearUql(): void {
+    this.cancelPendingUqlEditorChange();
     // The mode selector retains both representations so switching modes is
     // non-destructive. A deliberate clear is the exception: it resets both
     // representations, otherwise a saved structured filter can immediately
@@ -3910,6 +3944,7 @@ export class DatabaseFilterComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
   insertUqlSnippet(insertText: string): void {
+    this.cancelPendingUqlEditorChange();
     const expression = this.stripLeadingWhere(insertText);
     const currentQuery = this.uqlQuery.trim().replace(/;\s*$/, '');
     if (!currentQuery || /^where$/i.test(currentQuery)) {
