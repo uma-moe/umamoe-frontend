@@ -45,6 +45,8 @@ import {
   hasProjectableSourceItems,
   isAutomaticCompetitiveVariant,
   isProjectableCompetitiveVariant,
+  plannerCurrencyForSourceItem,
+  plannerRewardBundleId,
   plannerRewardBundles,
   plannerSourceItemTotals,
 } from '../../utils/planner-reward-currencies';
@@ -1309,7 +1311,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         .map(variants => buildDataDrivenCompetitionRewardOptions(variants))
         .sort((left, right) => right.length - left.length)[0];
       const options = representative.map((option, index) => {
-        const value = /all milestones/i.test(option.label) ? 'all' : `tier_${index + 1}`;
+        const value = option.selectionValue
+          ?? (/all (?:milestones|rewards)/i.test(option.label) ? 'all' : `tier_${index + 1}`);
         return {
           value,
           label: option.label,
@@ -1537,7 +1540,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     }>();
 
     for (const reward of this.data.rewards.rewards ?? []) {
-      const id = reward.event_id ? `event:${reward.event_id}` : `reward:${reward.id}`;
+      const id = reward.event_id
+        ? `event:${reward.event_id}`
+        : `reward:${reward.available_at}:${plannerRewardBundleId(reward)}`;
       const group = grouped.get(id) ?? {
         eventId: reward.event_id,
         rewards: [],
@@ -1820,7 +1825,19 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         plannerEffect: 'informational',
       });
     }
-    if (benefits.length === 0 && rewards.some(reward => !Number.isFinite(reward.amount))) {
+    const hasUnmappedItems = rewards.some(reward => reward.source_items?.some(item =>
+      !plannerCurrencyForSourceItem(item)));
+    if (hasUnmappedItems) {
+      benefits.push({
+        id: 'additional-item-rewards',
+        kind: 'other',
+        label: 'Additional item rewards',
+        amount: null,
+        text: 'Additional item rewards',
+        icon: 'redeem',
+        plannerEffect: 'informational',
+      });
+    } else if (benefits.length === 0 && rewards.some(reward => !Number.isFinite(reward.amount))) {
       benefits.push({
         id: 'reward-details',
         kind: 'other',

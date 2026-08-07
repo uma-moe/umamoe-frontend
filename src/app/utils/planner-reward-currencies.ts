@@ -32,6 +32,15 @@ export function plannerSourceItemAmount(
   return Number.isFinite(item.amount) ? Math.max(0, Math.trunc(item.amount)) : 0;
 }
 
+export function plannerRewardBundleId(
+  reward: Pick<PlannerRewardEntry, 'id'>,
+): string {
+  return reward.id.replace(
+    /-(?:free_jewels|paid_jewels|uma_ticket|support_ticket|rainbow_crystal|gold_crystal|items)$/,
+    '',
+  );
+}
+
 /**
  * Collapses the generator's sibling rows for one structured reward bundle.
  * Older artifacts copied the same source_items array onto every currency row,
@@ -42,10 +51,7 @@ export function plannerRewardBundles(
 ): PlannerRewardBundle[] {
   const grouped = new Map<string, PlannerRewardEntry[]>();
   for (const reward of rewards) {
-    const baseId = reward.id.replace(
-      /-(?:free_jewels|paid_jewels|uma_ticket|support_ticket|rainbow_crystal|gold_crystal|items)$/,
-      '',
-    );
+    const baseId = plannerRewardBundleId(reward);
     const key = `${reward.event_id ?? ''}|${reward.available_at}|${baseId}`;
     const rows = grouped.get(key) ?? [];
     rows.push(reward);
@@ -82,10 +88,7 @@ export function plannerRewardBundles(
     }
 
     return {
-      id: rows[0].id.replace(
-        /-(?:free_jewels|paid_jewels|uma_ticket|support_ticket|rainbow_crystal|gold_crystal|items)$/,
-        '',
-      ),
+      id: plannerRewardBundleId(rows[0]),
       eventId: rows[0]?.event_id,
       label: rows[0]?.label ?? 'Event rewards',
       availableAt: rows[0]?.available_at ?? '',

@@ -10,7 +10,14 @@ export type PlannerBannerKind = 'character' | 'support' | 'paid' | 'other';
 
 export type PlannerIncomeCadence = 'once' | 'daily' | 'weekly' | 'monthly' | 'interval';
 
-export type PlannerDataProvenance = 'global_master' | 'jp_master' | 'global_news' | 'jp_news' | 'jp_fallback' | 'configured';
+export type PlannerDataProvenance =
+  | 'global_master'
+  | 'jp_master'
+  | 'jp_master_snapshot'
+  | 'global_news'
+  | 'jp_news'
+  | 'jp_fallback'
+  | 'configured';
 
 export type PlannerRateProvenance = PlannerDataProvenance | 'standard_inference';
 

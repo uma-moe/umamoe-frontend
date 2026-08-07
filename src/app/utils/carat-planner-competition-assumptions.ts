@@ -41,6 +41,7 @@ export interface PlannerDataDrivenCompetitionRewardOption {
   id: string;
   label: string;
   amounts: Partial<Record<PlannerCurrency, number>>;
+  selectionValue?: string;
 }
 
 function outcome(
@@ -148,23 +149,37 @@ export function buildDataDrivenCompetitionRewardOptions(
   const totals: Partial<Record<PlannerCurrency, number>> = {};
   const options = resultVariants.map((variant, index) => {
     addVariantAmounts(totals, variant);
+    const evaluationPoints = competition === 'strongest_team'
+      ? evaluationPointThreshold(variant.label)
+      : undefined;
     return {
       id: variant.id,
       label: competition === 'legend_race'
         ? `${index + 1} ${index === 0 ? 'opponent' : 'opponents'} cleared`
-        : cleanCompetitiveOutcomeLabel(variant.label),
+        : evaluationPoints !== undefined
+          ? `${evaluationPoints.toLocaleString('en-US')}+ evaluation points`
+          : cleanCompetitiveOutcomeLabel(variant.label),
       amounts: { ...totals },
+      selectionValue: competition === 'strongest_team'
+        ? evaluationPoints !== undefined
+          ? `points_${evaluationPoints}`
+          : `tier_${index + 1}`
+        : undefined,
     };
   });
 
-  if (missionVariants.length > 0) {
+  if (competition === 'strongest_team') {
     const amounts = { ...totals };
     missionVariants.forEach(variant => addVariantAmounts(amounts, variant));
-    options.push({
-      id: missionVariants.map(variant => variant.id).join('+'),
-      label: 'All milestones + event missions',
-      amounts,
-    });
+    return [
+      {
+        id: [...resultVariants, ...missionVariants].map(variant => variant.id).join('+'),
+        label: 'All rewards',
+        amounts,
+        selectionValue: 'all',
+      },
+      ...options.reverse(),
+    ];
   }
   return options;
 }
@@ -179,13 +194,32 @@ export function resolveDataDrivenCompetitionAssumption(
   if (!group || variants[0]?.competition !== group.eventType) return undefined;
   const options = buildDataDrivenCompetitionRewardOptions(variants);
   if (options.length === 0) return undefined;
-  if (selectionValue === 'all') return options[options.length - 1];
+  if (selectionValue === 'all') {
+    return options.find(option => option.selectionValue === 'all') ?? options[options.length - 1];
+  }
+
+  if (group.selectionMode === 'reward_tier') {
+    const exact = options.find(option => option.selectionValue === selectionValue);
+    if (exact) return exact;
+
+    const selectedPoints = Number(selectionValue.match(/^points_(\d+)$/)?.[1]);
+    if (Number.isInteger(selectedPoints) && selectedPoints >= 0) {
+      return options
+        .filter(option => option.selectionValue !== 'all')
+        .map(option => ({ option, threshold: dataDrivenOptionThreshold(option) }))
+        .filter((entry): entry is { option: PlannerDataDrivenCompetitionRewardOption; threshold: number } =>
+          entry.threshold !== undefined && entry.threshold <= selectedPoints)
+        .sort((left, right) => right.threshold - left.threshold)[0]?.option;
+    }
+  }
 
   const selectedNumber = Number(selectionValue.match(/\d+/)?.[0]);
   if (!Number.isInteger(selectedNumber) || selectedNumber < 1) return undefined;
   const tierOptions = group.selectionMode === 'reward_tier'
-    && /all milestones/i.test(options[options.length - 1].label)
-    ? options.slice(0, -1)
+    ? options
+      .filter(option => option.selectionValue !== 'all')
+      .sort((left, right) => (dataDrivenOptionThreshold(left) ?? Number.MAX_SAFE_INTEGER)
+        - (dataDrivenOptionThreshold(right) ?? Number.MAX_SAFE_INTEGER))
     : options;
   if (tierOptions.length === 0) return undefined;
   return tierOptions[Math.min(selectedNumber, tierOptions.length) - 1];
@@ -213,11 +247,27 @@ function addVariantAmounts(
 }
 
 function competitiveOutcomeOrder(variant: PlannerCompetitiveRewardVariant): number {
-  const rangeStart = Number(variant.label.match(/\((\d+)(?:-|\s)/)?.[1]);
-  if (Number.isFinite(rangeStart)) return rangeStart;
+  const rangeStart = evaluationPointThreshold(variant.label);
+  if (rangeStart !== undefined) return rangeStart;
   const rank = Number(variant.label.match(/(?:Team rank|rank)\s+(\d+)/i)?.[1]);
   if (Number.isFinite(rank)) return rank;
   return Number(variant.source_items[0]?.order_min) || Number.MAX_SAFE_INTEGER;
+}
+
+function evaluationPointThreshold(label: string): number | undefined {
+  const raw = label.match(/\(([\d,]+)(?:-|\s)/)?.[1]
+    ?? label.match(/^([\d,]+)\+\s+evaluation points$/i)?.[1];
+  if (!raw) return undefined;
+  const value = Number(raw.replace(/,/g, ''));
+  return Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+function dataDrivenOptionThreshold(
+  option: PlannerDataDrivenCompetitionRewardOption,
+): number | undefined {
+  const fromValue = Number(option.selectionValue?.match(/^points_(\d+)$/)?.[1]);
+  if (Number.isFinite(fromValue)) return fromValue;
+  return evaluationPointThreshold(option.label);
 }
 
 function cleanCompetitiveOutcomeLabel(label: string): string {

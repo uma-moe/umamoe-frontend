@@ -45,4 +45,45 @@ describe('applyGlobalRewardPrecedence', () => {
 
     expect(applyGlobalRewardPrecedence(resource)).toBe(resource);
   });
+
+  it('keeps distinct anniversary gifts while replacing matching mission and login components', () => {
+    const resource: PlannerRewardResource = {
+      rewards: [
+        {
+          id: 'mission-campaign-218-free_jewels', event_id: 'campaign-218',
+          label: 'Limited-time mission rewards', currency: 'free_jewels', amount: 500,
+          available_at: '2030-01-31', provenance: 'global_master',
+        },
+        {
+          id: 'login-bonus-30042-free_jewels', label: 'Limited login bonus',
+          currency: 'free_jewels', amount: 3000, available_at: '2030-01-31', provenance: 'global_master',
+        },
+        {
+          id: 'jp-master-mission-218-free_jewels', event_id: 'campaign-218',
+          label: 'Anniversary missions', currency: 'free_jewels', amount: 500,
+          available_at: '2030-01-31', provenance: 'jp_master_snapshot',
+        },
+        {
+          id: 'news-902-login-bonus', event_id: 'campaign-218', label: 'Anniversary login bonus',
+          currency: 'free_jewels', amount: 3000, available_at: '2030-01-10', provenance: 'jp_news',
+        },
+        {
+          id: 'news-902-section-2-jewels-3000-0', event_id: 'campaign-218',
+          label: 'Gift contents', currency: 'free_jewels', amount: 3000,
+          available_at: '2030-01-31', provenance: 'jp_news', evidence: 'Gift contents: 3,000 Jewels',
+        },
+        {
+          id: 'news-902-section-4-jewels-3000-0', event_id: 'campaign-218',
+          label: '30 days after the gift is sent', currency: 'free_jewels', amount: 3000,
+          available_at: '2030-01-31', provenance: 'jp_news', evidence: 'Claim within 30 days after the gift is sent.',
+        },
+      ],
+    };
+
+    expect(applyGlobalRewardPrecedence(resource).rewards.map(reward => reward.id)).toEqual([
+      'mission-campaign-218-free_jewels',
+      'login-bonus-30042-free_jewels',
+      'news-902-section-2-jewels-3000-0',
+    ]);
+  });
 });

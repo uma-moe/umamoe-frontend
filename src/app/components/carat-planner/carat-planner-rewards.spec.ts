@@ -88,6 +88,60 @@ describe('CaratPlannerComponent reward coverage', () => {
     expect(component.plan.enabledRewardIds).toEqual(['team-missions']);
   });
 
+  it('groups structured login-bonus currencies and item details into one reward card', () => {
+    localStorage.removeItem(CaratPlannerPersistenceService.STORAGE_KEY);
+    const persistence = new CaratPlannerPersistenceService('browser' as never);
+    const component = new CaratPlannerComponent(
+      new CaratPlannerCalculationService(),
+      new CaratPullProbabilityService(),
+      persistence,
+      {} as never,
+      new TimelineAvatarService(),
+      { markForCheck: () => undefined } as unknown as ChangeDetectorRef,
+    );
+    component.plan = persistence.activePlan;
+    component.plan.projectionStartDate = '2030-01-01';
+    const sourceItems = [
+      { item_category: 90, item_id: 43, amount: 3000 },
+      { item_category: 99, item_id: 1234, amount: 1 },
+    ];
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: {
+        rewards: [
+          {
+            id: 'login-bonus-42-free_jewels',
+            label: 'Limited login bonus',
+            currency: 'free_jewels',
+            amount: 3000,
+            available_at: '2031-01-01',
+            source_items: sourceItems,
+          },
+          {
+            id: 'login-bonus-42-items',
+            label: 'Limited login bonus item details',
+            currency: 'free_jewels',
+            amount: null,
+            available_at: '2031-01-01',
+            source_items: sourceItems,
+          },
+        ],
+      },
+    };
+
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    expect(component.displayedRewardGroups.length).toBe(1);
+    expect(component.displayedRewardGroups[0]).toEqual(jasmine.objectContaining({
+      title: 'Limited login bonus',
+    }));
+    expect(component.displayedRewardGroups[0].benefits.map(benefit => [benefit.kind, benefit.amount])).toEqual([
+      ['carats', 3000],
+      ['other', null],
+    ]);
+  });
+
   it('inherits CM and LoH income assumptions and preserves an explicit result selection', () => {
     localStorage.removeItem(CaratPlannerPersistenceService.STORAGE_KEY);
     const realPersistence = new CaratPlannerPersistenceService('browser' as never);
@@ -245,22 +299,22 @@ describe('CaratPlannerComponent reward coverage', () => {
     const legendAssumption = component.scenarioGroupOptions.find(group =>
       group.id === 'legend_race_clears')!;
     expect(strongestAssumption.options.map(option => [option.value, option.label])).toEqual([
-      ['tier_1', 'Team rank 1 (0-999 evaluation points)'],
-      ['tier_2', 'Team rank 2 (1000-1999 evaluation points)'],
-      ['all', 'All milestones + event missions'],
+      ['all', 'All rewards'],
+      ['points_1000', '1,000+ evaluation points'],
+      ['points_0', '0+ evaluation points'],
     ]);
     expect(legendAssumption.options.map(option => option.value)).toEqual([
       'opponents_1', 'opponents_2', 'opponents_3', 'all',
     ]);
 
-    component.setScenario(strongestAssumption.id, 'tier_2');
+    component.setScenario(strongestAssumption.id, 'points_1000');
     component.setScenario(legendAssumption.id, 'all');
     expect(component.plan.variableRewardSelections?.['strongest-1']).toBeUndefined();
 
     const strongestRewards = component.rewardGroups.find(group => group.eventId === 'strongest-1')!;
     const legendRewards = component.rewardGroups.find(group => group.eventId === 'legend-1')!;
     expect(component.selectedVariableRewardOption(strongestRewards)).toEqual(jasmine.objectContaining({
-      label: 'Team rank 2 (1000-1999 evaluation points)',
+      label: '1,000+ evaluation points',
       amountLabel: '300 Carats',
     }));
     expect(component.selectedVariableRewardOption(legendRewards)).toEqual(jasmine.objectContaining({
