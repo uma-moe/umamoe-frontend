@@ -57,6 +57,24 @@ jobs:
           name: frontend-route-audit
           path: reports/playwright/
 
+  idle-cpu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build:audit
+      - run: npm run audit:cpu -- --label ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-cpu-audit
+          path: reports/frontend-audit/cpu-ci.json
+
   lighthouse:
     runs-on: ubuntu-latest
     steps:

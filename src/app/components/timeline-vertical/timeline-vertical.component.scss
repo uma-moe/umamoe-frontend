@@ -167,7 +167,6 @@
 
   &.marker-today .marker-dot {
     background: #ff9800;
-    animation: pulse 2s infinite;
 
     .today-icon { color: white; }
   }
@@ -229,7 +228,6 @@
   background: rgba(255, 152, 0, 0.2);
   border: 2px solid #ff9800;
   border-radius: 20px;
-  animation: pulse 2s infinite;
 
   .today-icon { color: var(--color-orange); }
 
@@ -362,15 +360,6 @@
   overflow: hidden;
 
   img { width: 100%; height: auto; display: block; object-fit: contain; }
-}
-
-// Animations
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 1; }
-
-  50% { transform: scale(1.05); opacity: 0.8; }
-
-  100% { transform: scale(1); opacity: 1; }
 }
 
 // Responsive adjustments for very small screens

@@ -65,8 +65,8 @@
         <span *ngIf="lastRefreshedAt">Updated {{ lastRefreshedAt | date:'medium' }}</span>
       </div>
 
-      <div class="loading-container" *ngIf="loading">
-        <mat-spinner></mat-spinner>
+      <div class="loading-container" *ngIf="loading" role="status" aria-live="polite">
+        <mat-icon class="loading-icon" aria-hidden="true">hourglass_top</mat-icon>
         <p>Loading suspicion scores...</p>
       </div>
 
@@ -175,8 +175,8 @@
         Back to activity reports
       </a>
 
-      <div class="loading-container" *ngIf="detailLoading">
-        <mat-spinner></mat-spinner>
+      <div class="loading-container" *ngIf="detailLoading" role="status" aria-live="polite">
+        <mat-icon class="loading-icon" aria-hidden="true">hourglass_top</mat-icon>
         <p>Loading viewer report...</p>
       </div>
 

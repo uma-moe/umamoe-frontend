@@ -1,5 +1,10 @@
 @use '../../../styles/mixins' as *;
 
+.loading-container .loading-icon {
+  @include icon-size(40px);
+  color: var(--accent-primary);
+}
+
 .shame-page {
   flex: 1 1 auto;
   background: var(--bg-secondary);

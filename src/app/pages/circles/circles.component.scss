@@ -140,7 +140,6 @@
     background: var(--accent-error);
     flex-shrink: 0;
     box-shadow: 0 0 6px rgba(var(--accent-error-rgb), 0.7);
-    animation: pulse-dot 2s ease-in-out infinite;
   }
 
   .live-label {
@@ -176,11 +175,6 @@
       mat-icon { animation: spin 1s linear infinite; }
     }
   }
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
 }
 
 // spin animation is now in shared utilities.scss

@@ -96,8 +96,8 @@
   ></app-ad-in-content>
 
   <!-- Loading Indicator -->
-  <div class="loading" *ngIf="globalLoading">
-    <mat-spinner></mat-spinner>
+  <div class="loading" *ngIf="globalLoading" role="status" aria-live="polite">
+    <mat-icon class="loading-icon" aria-hidden="true">hourglass_top</mat-icon>
     <p>Loading statistics data...</p>
   </div>
 
@@ -515,7 +515,7 @@
                 (filteredCharacters$ | async)?.length === 0 && !globalStats
               "
             >
-              <mat-spinner diameter="40"></mat-spinner>
+              <mat-icon class="loading-icon" aria-hidden="true">hourglass_top</mat-icon>
               <span>Loading Umas...</span>
             </div>
 

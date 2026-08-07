@@ -12,7 +12,6 @@ import { MatBottomSheetModule, MatBottomSheet } from '@angular/material/bottom-s
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
@@ -77,7 +76,6 @@ interface SupportCardCombinationAggregate {
     MatExpansionModule,
     MatGridListModule,
     MatTooltipModule,
-    MatProgressSpinnerModule,
     MatChipsModule,
     MatCheckboxModule,
     ReactiveFormsModule,

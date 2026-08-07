@@ -45,12 +45,9 @@
   width: 150px;
   height: 150px;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-  animation: gentle-pulse 4s ease-in-out infinite;
   border-radius: 50%;
   object-fit: contain;
 }
-
-// gentle-pulse animation is now in shared utilities.scss
 
 .hero-title {
   @include gradient-text(45deg, #64b5f6, #81c784, #ffb74d);
@@ -108,7 +105,7 @@
 
   // New feature highlighting
   &.new-feature {
-    animation: pulse-glow 3s ease-in-out infinite;
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
     
     &::before {
       content: '';
@@ -124,14 +121,13 @@
       -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
-      animation: border-glow 3s ease-in-out infinite;
       pointer-events: none;
     }
   }
 
   // Updated feature highlighting
   &.updated-feature {
-    animation: updated-pulse-glow 3s ease-in-out infinite;
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
     
     &::before {
       content: '';
@@ -147,7 +143,6 @@
       -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
-      animation: updated-border-glow 3s ease-in-out infinite;
       pointer-events: none;
     }
   }
@@ -201,7 +196,6 @@
   padding: 0.15rem 0.4rem;
   border-radius: var(--radius-sm);
   margin-left: 0.5rem;
-  animation: badge-pulse-orange 2s ease-in-out infinite;
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
 }
 
@@ -216,30 +210,7 @@
   margin-left: 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  animation: badge-pulse-blue 2s ease-in-out infinite;
   box-shadow: 0 2px 8px rgba(33, 150, 243, 0.4);
-}
-
-// Component-specific highlight animations (unique to home page)
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3); }
-  50% { box-shadow: 0 8px 20px rgba(255, 107, 53, 0.5); }
-}
-
-@keyframes border-glow {
-  0%, 100% { background-position: 0% 50%; opacity: 0.8; }
-  50% { background-position: 100% 50%; opacity: 1; }
-}
-
-@keyframes updated-pulse-glow {
-  0%, 100% { box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3); }
-  50% { box-shadow: 0 8px 20px rgba(33, 150, 243, 0.5); }
-}
-
-@keyframes updated-border-glow {
-  0%, 100% { background-position: 0% 50%; opacity: 0.8; }
-  50% { background-position: 100% 50%; opacity: 1; }
 }
 
 @include mobile {

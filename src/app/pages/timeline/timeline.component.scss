@@ -899,12 +899,6 @@
   background-size: 220% 100%;
   border: 1px solid var(--border-subtle);
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-  animation: vertical-card-loading 1.4s ease-in-out infinite;
-}
-
-@keyframes vertical-card-loading {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
 }
 
 .timeline-resource-error {

@@ -66,12 +66,6 @@ import { RouterModule, ActivatedRoute } from '@angular/router';
       right: 0;
       height: 4px;
       background: linear-gradient(90deg, #ff9800, #2196f3, #4caf50, #e91e63);
-      background-size: 400% 400%;
-      animation: gradientShift 3s ease-in-out infinite;
-    }
-    @keyframes gradientShift {
-      0%, 100% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
     }
     .wip-icon {
       margin-bottom: 1.5rem;

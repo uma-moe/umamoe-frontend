@@ -141,17 +141,7 @@ import { MatIconModule } from '@angular/material/icon';
       background-clip: text;
       -webkit-text-fill-color: transparent;
       filter: drop-shadow(0 2px 12px rgba(255, 215, 0, 0.3));
-      animation: number-shimmer 3s ease-in-out infinite;
       font-variant-numeric: tabular-nums;
-    }
-
-    @keyframes number-shimmer {
-      0%, 100% {
-        filter: drop-shadow(0 2px 12px rgba(255, 215, 0, 0.3));
-      }
-      50% {
-        filter: drop-shadow(0 4px 20px rgba(255, 215, 0, 0.5));
-      }
     }
 
     h2 {

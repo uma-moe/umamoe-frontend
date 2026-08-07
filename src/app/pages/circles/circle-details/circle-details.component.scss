@@ -1,9 +1,5 @@
 @use '../../../../styles/mixins' as *;
 
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
 // @keyframes spin is in global utilities.scss
 
 .circle-details-page { flex: 1 1 auto; background: var(--bg-secondary); padding-bottom: 2rem; }
@@ -113,7 +109,6 @@
   background: var(--accent-error);
   flex-shrink: 0;
   box-shadow: 0 0 5px rgba(var(--accent-error-rgb), 0.7);
-  animation: pulse-dot 2s ease-in-out infinite;
 }
 
 .live-label {

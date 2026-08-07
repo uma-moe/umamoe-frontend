@@ -203,7 +203,6 @@ app-class-filter { display: block; transition: all 0.3s ease; }
   height: 4rem;
   color: var(--accent-primary);
   filter: drop-shadow(0 4px 8px rgba(100, 181, 246, 0.3));
-  animation: gentle-pulse 4s ease-in-out infinite;
 
   @media (max-width: 768px) { font-size: 3rem; width: 3rem; height: 3rem; }
 }
@@ -872,9 +871,7 @@ app-class-filter { display: block; transition: all 0.3s ease; }
 
 .character-loading { min-height: 200px; }
 
-.mat-mdc-progress-spinner {
-  --mdc-circular-progress-active-indicator-color: var(--accent-primary);
-}
+.loading-icon { @include icon-size(40px); color: var(--accent-primary); }
 
 .loading span,
 .character-loading span { font-size: 1rem; font-weight: 500; }
@@ -963,27 +960,6 @@ app-class-filter { display: block; transition: all 0.3s ease; }
 
 ::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #42a5f5, #1976d2); }
 
-// Animations
-@keyframes gentle-pulse {
-
-  0%,
-  100% { transform: scale(1); filter: drop-shadow(0 4px 8px rgba(100, 181, 246, 0.3)); }
-
-  50% { transform: translateY(-0.5rem) scale(1.05); filter: drop-shadow(0 6px 12px rgba(100, 181, 246, 0.4)); }
-}
-
-@keyframes fade-in-up {
-  0% { opacity: 0; transform: translateY(20px); }
-
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200px 0; }
-
-  100% { background-position: calc(200px + 100%) 0; }
-}
-
 // Utility classes
 .interactive-element { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 
@@ -991,7 +967,7 @@ app-class-filter { display: block; transition: all 0.3s ease; }
 
 .interactive-element:active { transform: translateY(0); }
 
-.shimmer-loading { background: linear-gradient(90deg, rgba(var(--on-surface-rgb), 0.05) 0%, rgba(var(--on-surface-rgb), 0.1) 50%, rgba(var(--on-surface-rgb), 0.05) 100%); background-size: 200px 100%; animation: shimmer 2s infinite linear; }
+.shimmer-loading { background: rgba(var(--on-surface-rgb), 0.07); }
 
 // Accessibility
 @media (prefers-reduced-motion: reduce) {

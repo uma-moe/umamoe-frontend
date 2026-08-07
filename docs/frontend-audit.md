@@ -11,7 +11,7 @@ Production comparison targets: [uma.moe](https://uma.moe/) and [beta.uma.moe](ht
 
 The reported mobile delay was distributed across startup ownership rather than caused by one request. The root shell eagerly initialized game data and conditional integrations, a 1.72 MB skills fallback was compiled as JavaScript, the full Material color surface was global, and chart/export/editor dependencies leaked into large route closures.
 
-This branch moves data and optional integrations to feature/action time, centralizes lazy Chart.js registration, defers offscreen and conditional UI, self-hosts Material Icons, reduces global Material CSS, and adds repeatable browser, bundle, duplicate, and Lighthouse tooling. URLs, API shapes, authentication, persisted planner/filter formats, ads, analytics, tours, and Cloudflare behavior were not intentionally changed.
+This branch moves data and optional integrations to feature/action time, centralizes lazy Chart.js registration, defers offscreen and conditional UI, self-hosts Material Icons, reduces global Material CSS, and adds repeatable browser, bundle, duplicate, CPU, and Lighthouse tooling. URLs, API shapes, authentication, persisted planner/filter formats, ads, analytics, tours, and Cloudflare behavior were not intentionally changed.
 
 ## Measured bundle result
 
@@ -19,17 +19,17 @@ Bundle values below are raw emitted JavaScript/CSS and locally calculated Brotli
 
 | Measurement | Baseline | Final | Change | Gate |
 | --- | ---: | ---: | ---: | ---: |
-| Initial bundle raw | 1,320,053 B | 889,092 B | -32.6% | <= 1,000,000 B |
-| Initial bundle Brotli | 272,216 B | 199,741 B | -26.6% | <= 200,000 B |
+| Initial bundle raw | 1,320,053 B | 888,568 B | -32.7% | <= 1,000,000 B |
+| Initial bundle Brotli | 272,216 B | 199,582 B | -26.7% | <= 200,000 B |
 | Initial files | 28 | 20 | -28.6% | <= 20 |
-| Global CSS | 252,032 B | 165,599 B | -34.3% | <= 175,000 B |
-| Home route | 35,365 B | 17,186 B | -51.4% | <= 25,000 B |
-| Database route | 1,574,957 B | 1,121,277 B | -28.8% | <= 1,150,000 B |
-| Timeline route | 986,966 B | 722,864 B | -26.8% | <= 750,000 B |
-| Statistics route | 2,648,752 B | 585,418 B | -77.9% | <= 1,500,000 B |
-| Lineage planner route | 2,760,690 B | 962,984 B | -65.1% | <= 1,500,000 B |
+| Global CSS | 252,032 B | 165,075 B | -34.5% | <= 175,000 B |
+| Home route | 35,365 B | 16,325 B | -53.8% | <= 25,000 B |
+| Database route | 1,574,957 B | 1,121,641 B | -28.8% | <= 1,150,000 B |
+| Timeline route | 986,966 B | 723,006 B | -26.7% | <= 750,000 B |
+| Statistics route | 2,648,752 B | 573,319 B | -78.4% | <= 1,500,000 B |
+| Lineage planner route | 2,760,690 B | 963,376 B | -65.1% | <= 1,500,000 B |
 
-Every configured route budget passes. The carat-planner closure is 509,587 B, down from the post-sync 523,007 B regression and below its 520,000 B gate. Other measured closures also improved: circles 196,073 B, circle details 527,555 B, rankings 200,374 B, activity 399,053 B, tierlist 371,010 B, profile 552,121 B, and veterans 691,744 B.
+Every configured route budget passes. The carat-planner closure is 509,587 B, down from the post-sync 523,007 B regression and below its 520,000 B gate. Other measured closures also improved: circles 196,271 B, circle details 527,753 B, rankings 200,705 B, activity 387,812 B, tierlist 371,341 B, profile 552,121 B, and veterans 692,103 B.
 
 The local Material Icons font is one 128,352 B WOFF2 request and uses `font-display: swap`. It is recorded as an initial static asset rather than executable/style bundle bytes. The Google Fonts stylesheet, DNS connection, and cross-origin font request were removed.
 
@@ -60,16 +60,38 @@ Machine-readable evidence is generated at `reports/frontend-audit/bundle-report.
 - The carat planner's obsolete selector families were removed after static template/component analysis and deterministic desktop/mobile rendering. Its source SCSS fell from 124,955 to 116,570 bytes and Sass-compressed output from 110,825 to 102,647 bytes.
 - The planner's already-namespaced `.cp*` rules now use `ViewEncapsulation.None`, avoiding redundant Angular scope attributes. Stable base rules and later responsive refinements compile as ordered 58,865-byte and 43,782-byte style layers, both below the 75 KB component-style gate. Removing its Material progress-bar dependency reduced the planner component lazy chunk from 267.00 KB to 251.38 KB raw; the complete route closure is 509.59 KB raw / 85.91 KB Brotli.
 
+## Site-wide idle CPU result
+
+The repeatable CPU audit measures all 29 audited routes in desktop and Pixel-sized mobile Chromium contexts. Each route runs with third parties blocked, deterministic API/resource fixtures, a 4x CPU throttle, a 1.5-second post-render settle, and a two-second idle observation. CDP task/script duration, long tasks, animation-frame callbacks, active animation ownership, errors, and DOM size are recorded. Redirects and wildcard behavior remain individual route cases, matching the route matrix.
+
+| Profile | Mean CPU ms/s before | Mean CPU ms/s final | Change | Median final | p95 final | Maximum final |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Desktop | 73.66 | 1.90 | -97.41% | 1.98 | 2.75 | 18.46 |
+| Mobile | 73.63 | 1.88 | -97.44% | 1.72 | 6.08 | 11.10 |
+
+The outliers that motivated the pass improved as follows:
+
+| Route | Desktop before -> final | Mobile before -> final |
+| --- | ---: | ---: |
+| Home | 427.42 -> 2.15 ms/s (-99.50%) | 479.12 -> 1.94 ms/s (-99.60%) |
+| Tools | 380.31 -> 2.44 ms/s (-99.36%) | 294.92 -> 1.97 ms/s (-99.33%) |
+| Statistics | 219.87 -> 0.23 ms/s (-99.90%) | 207.30 -> 0.31 ms/s (-99.85%) |
+| WIP | 101.00 -> 0.31 ms/s (-99.69%) | 102.08 -> 0.31 ms/s (-99.70%) |
+
+No long tasks or active CSS/Web Animations were present in any final idle observation window. The fixes keep feature highlighting visually distinct with static gradients/shadows, replace indefinitely spinning failure/loading states with accessible static status indicators, and make live/today/timeline placeholders and conditional dialog decoration static. Transient operation spinners, the editor caret, the transform-only carat loading bar, and the opt-in snow effect remain because they communicate active work or are explicitly invoked.
+
+The strict CI budget is a maximum 25 mean CPU ms/s per profile, 100 CPU ms/s for an individual route, zero idle long tasks, zero active idle animations, and zero page errors. Machine-readable evidence is generated at `reports/frontend-audit/cpu-<label>.json`; the retained local comparison is `cpu-final-sitewide-cpu.json` against `cpu-before-sitewide-cpu.json`.
+
 ## Duplication result
 
 Configured jscpd thresholds pass:
 
 | Format | Baseline | Final | Gate |
 | --- | ---: | ---: | ---: |
-| Overall | 3.02% / 143 blocks | 1.776% / 57 blocks | <= 2% |
+| Overall | 3.02% / 143 blocks | 1.778% / 57 blocks | <= 2% |
 | Markup | 6.22% | 3.816% | <= 4% |
-| TypeScript | 2.28% | 1.266% | <= 1.75% |
-| SCSS | 2.60% | 1.647% | <= 2% |
+| TypeScript | 2.28% | 1.268% | <= 1.75% |
+| SCSS | 2.60% | 1.650% | <= 2% |
 
 Intentional generation-specific lineage markup, branded home/tools presentation, and typed ranking-mode rows are documented in `docs/frontend-audit-clone-allowlist.md`. The report is written to `reports/jscpd/jscpd-report.json`.
 
@@ -126,6 +148,7 @@ These items are not represented as complete:
 - `npm run audit:bundle:report` - same measurement without a failing exit code
 - `npm run audit:duplicates` - configured clone detection and per-language gates
 - `npm run audit:routes` - 290-case Playwright browser/device matrix
+- `npm run audit:cpu -- --label <name>` - 58-case desktop/mobile idle-CPU profile and strict CPU budgets
 - `npm run audit:lighthouse` - build plus deterministic five-run mobile/desktop gates
 - `npm run audit:lighthouse:live` - non-gating production/beta comparison with third parties
 - `npm run audit:frontend` - aggregate deterministic audit
@@ -140,4 +163,5 @@ Generated reports are ignored by Git and uploaded by `.github/workflows/frontend
 - `node scripts/frontend-audit/check-bundles.mjs` after audit build - pass
 - `npm run audit:duplicates` - pass
 - `npm run audit:routes` - 280 original route cases plus 10 planner-query cases pass (290 total)
+- `npm run audit:cpu -- --label final-sitewide-cpu --compare reports/frontend-audit/cpu-before-sitewide-cpu.json` - pass; desktop -97.41%, mobile -97.44%
 - Lighthouse deterministic/live runtime - not completed; see status above

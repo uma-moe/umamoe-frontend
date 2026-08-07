@@ -78,15 +78,6 @@ import { MatIconModule } from '@angular/material/icon';
       height: 2.5rem;
       color: #64b5f6;
       filter: drop-shadow(0 3px 12px rgba(100, 181, 246, 0.4));
-      animation: icon-glow 3s ease-in-out infinite;
-    }
-    @keyframes icon-glow {
-      0%, 100% { 
-        filter: drop-shadow(0 3px 12px rgba(100, 181, 246, 0.4));
-      }
-      50% { 
-        filter: drop-shadow(0 4px 16px rgba(100, 181, 246, 0.6));
-      }
     }
     h2 {
       margin: 0;
@@ -160,35 +151,11 @@ import { MatIconModule } from '@angular/material/icon';
       box-shadow: 
         0 4px 16px rgba(25, 118, 210, 0.3),
         0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-      animation: gentle-glow 3s ease-in-out infinite;
-    }
-    @keyframes gentle-glow {
-      0%, 100% { 
-        box-shadow: 
-          0 4px 16px rgba(25, 118, 210, 0.3),
-          0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-      }
-      50% { 
-        box-shadow: 
-          0 6px 20px rgba(25, 118, 210, 0.4),
-          0 0 0 1px rgba(255, 255, 255, 0.2) inset;
-      }
     }
     .arrow-icon {
       font-size: 1.5rem;
       color: #64b5f6;
-      animation: pulse-arrow 2s ease-in-out infinite;
       filter: drop-shadow(0 2px 4px rgba(100, 181, 246, 0.3));
-    }
-    @keyframes pulse-arrow {
-      0%, 100% { 
-        transform: scale(1);
-        opacity: 0.8;
-      }
-      50% { 
-        transform: scale(1.1);
-        opacity: 1;
-      }
     }
     .migration-message {
       font-size: 1rem;
