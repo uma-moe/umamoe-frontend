@@ -63,9 +63,7 @@ export function plannerIncomeAssumptionGroups(
   const speculativeMonthlyCarats = Math.max(0, Math.round(
     Number(comparison?.speculative_monthly_carats) || 0,
   ));
-  const comparisonLabel = comparison
-    ? `Observed ${comparison.matched_news?.length ?? 0} matched news: EN ${formatNumber(comparison.matched_news_global_carats)} vs JP ${formatNumber(comparison.matched_news_jp_carats)} (${formatSigned(comparison.matched_news_extra_carats)}); ${comparison.en_only_news?.length ?? 0} EN-only +${formatNumber(comparison.en_only_news_carats)}; ${comparison.social_reward_posts} deduped X/Twitter +${formatNumber(comparison.social_carats)} (${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed) over ${comparison.observed_months.toFixed(1)} months`
-    : 'Awaiting EN/JP and official social comparison data';
+  const comparisonLabel = speculativeComparisonLabel(comparison);
   return [
     {
       id: TRAINING_PASS_SCENARIO_GROUP_ID,
@@ -89,6 +87,42 @@ export function plannerIncomeAssumptionGroups(
       }],
     },
   ];
+}
+
+function speculativeComparisonLabel(
+  comparison: PlannerGlobalRewardComparison | undefined,
+): string {
+  if (!comparison) return 'Awaiting EN/JP and official social comparison data';
+  const months = comparison.speculative_months ?? [];
+  const sourceSummary = `${comparison.matched_news?.length ?? 0} matched news use EN−JP delta; ${comparison.en_only_news?.length ?? 0} EN-only; ${comparison.social_reward_posts} deduped X/Twitter; ${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed`;
+  if (comparison.speculative_method === 'median_last_6_complete_calendar_months'
+    && months.length > 0) {
+    const range = formatMonthRange(
+      comparison.speculative_window_start ?? months[0].month,
+      comparison.speculative_window_end ?? months[months.length - 1].month,
+    );
+    const values = months.map(month => formatNumber(month.total_carats)).join(', ');
+    const longRunMean = Math.max(0, Math.round(
+      Number(comparison.speculative_mean_monthly_carats) || 0,
+    ));
+    return `6-month median ${range} [${values}] = ${formatNumber(comparison.speculative_monthly_carats)}/month; long-run mean ${formatNumber(longRunMean)}/month. Sources: ${sourceSummary}`;
+  }
+  return `Observed ${comparison.matched_news?.length ?? 0} matched news: EN ${formatNumber(comparison.matched_news_global_carats)} vs JP ${formatNumber(comparison.matched_news_jp_carats)} (${formatSigned(comparison.matched_news_extra_carats)}); ${comparison.en_only_news?.length ?? 0} EN-only +${formatNumber(comparison.en_only_news_carats)}; ${comparison.social_reward_posts} deduped X/Twitter +${formatNumber(comparison.social_carats)} (${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed) over ${comparison.observed_months.toFixed(1)} months`;
+}
+
+function formatMonthRange(start: string, end: string): string {
+  const startDate = new Date(`${start}-01T00:00:00Z`);
+  const endDate = new Date(`${end}-01T00:00:00Z`);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return `${start}–${end}`;
+  }
+  const startMonth = startDate.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+  const endMonth = endDate.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+  const startYear = startDate.getUTCFullYear();
+  const endYear = endDate.getUTCFullYear();
+  return startYear === endYear
+    ? `${startMonth}–${endMonth} ${endYear}`
+    : `${startMonth} ${startYear}–${endMonth} ${endYear}`;
 }
 
 function formatNumber(value: number): string {

@@ -8,6 +8,8 @@ describe('plannerIncomeAssumptionGroups', () => {
   it('shows the audited Global uplift buckets and derived monthly rate', () => {
     const comparison: PlannerGlobalRewardComparison = {
       news_match_method: 'same_announce_id',
+      speculative_method: 'median_last_6_complete_calendar_months',
+      archive_as_of: '2026-08-07',
       observation_start: '2025-06-26',
       observation_end: '2026-08-06',
       observation_days: 407,
@@ -21,7 +23,18 @@ describe('plannerIncomeAssumptionGroups', () => {
       social_news_duplicate_reward_items_removed: 1,
       social_news_duplicate_carats_removed: 1500,
       speculative_observed_carats: 36_450,
-      speculative_monthly_carats: 2726,
+      speculative_mean_monthly_carats: 2726,
+      speculative_monthly_carats: 775,
+      speculative_window_start: '2026-02',
+      speculative_window_end: '2026-07',
+      speculative_months: [2100, 600, 2700, 450, 600, 950]
+        .map((total_carats, index) => ({
+          month: `2026-${String(index + 2).padStart(2, '0')}`,
+          matched_news_extra_carats: 0,
+          en_only_news_carats: index === 5 ? 350 : 0,
+          social_carats: total_carats - (index === 5 ? 350 : 0),
+          total_carats,
+        })),
       matched_news: [{
         announce_id: 902,
         title: 'Matched',
@@ -45,8 +58,8 @@ describe('plannerIncomeAssumptionGroups', () => {
       .find(candidate => candidate.id === SPECULATIVE_INCOME_SCENARIO_GROUP_ID);
 
     expect(group?.scheduleLabel).toBe(
-      'Observed 4 matched news: EN 10,200 vs JP 10,200 (+0); 7 EN-only +2,850; 26 deduped X/Twitter +33,600 (1 overlapping item / 1,500 Carats removed) over 13.4 months',
+      '6-month median Feb–Jul 2026 [2,100, 600, 2,700, 450, 600, 950] = 775/month; long-run mean 2,726/month. Sources: 4 matched news use EN−JP delta; 7 EN-only; 26 deduped X/Twitter; 1 overlapping item / 1,500 Carats removed',
     );
-    expect(group?.options[0].amountLabel).toBe('+2,726 Carats / month');
+    expect(group?.options[0].amountLabel).toBe('+775 Carats / month');
   });
 });

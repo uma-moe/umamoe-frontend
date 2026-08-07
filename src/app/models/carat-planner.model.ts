@@ -107,6 +107,8 @@ export interface PlannerRewardResource {
 
 export interface PlannerGlobalRewardComparison {
   news_match_method: 'same_announce_id' | string;
+  speculative_method?: 'median_last_6_complete_calendar_months' | string;
+  archive_as_of?: string;
   observation_start: string;
   observation_end: string;
   observation_days: number;
@@ -120,9 +122,21 @@ export interface PlannerGlobalRewardComparison {
   social_news_duplicate_reward_items_removed: number;
   social_news_duplicate_carats_removed: number;
   speculative_observed_carats: number;
+  speculative_mean_monthly_carats?: number;
   speculative_monthly_carats: number;
+  speculative_window_start?: string;
+  speculative_window_end?: string;
+  speculative_months?: PlannerGlobalRewardMonth[];
   matched_news?: PlannerGlobalNewsComparison[];
   en_only_news?: PlannerGlobalNewsComparison[];
+}
+
+export interface PlannerGlobalRewardMonth {
+  month: string;
+  matched_news_extra_carats: number;
+  en_only_news_carats: number;
+  social_carats: number;
+  total_carats: number;
 }
 
 export interface PlannerGlobalNewsComparison {
