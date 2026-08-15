@@ -463,9 +463,9 @@
             <span class="cp-target-date">
               <mat-icon>date_range</mat-icon>
               <span class="cp-target-date-text">
-                {{ target.bannerStart + 'T00:00:00Z' | date:'mediumDate':'UTC' }}
+                {{ targetBannerStart(target) + 'T00:00:00Z' | date:'mediumDate':'UTC' }}
                 <span aria-hidden="true">&ndash;</span>
-                {{ target.bannerEnd + 'T00:00:00Z' | date:'mediumDate':'UTC' }}
+                {{ targetBannerEnd(target) + 'T00:00:00Z' | date:'mediumDate':'UTC' }}
               </span>
             </span>
             <span class="cp-target-crystals" *ngIf="projectionByTarget.get(target.id) as targetProjection"

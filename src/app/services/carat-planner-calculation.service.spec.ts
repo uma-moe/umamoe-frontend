@@ -278,6 +278,25 @@ describe('CaratPlannerCalculationService', () => {
     expect(sumCurrency(premiumLedger, 'rainbow_crystal')).toBe(2);
   });
 
+  it('projects only the selected active-play random income estimate', () => {
+    const plan = makePlan({
+      projectionStartDate: '2026-08-15',
+      scenarioSelections: { random_gameplay_income: 'medium' },
+    });
+
+    const ledger = service.buildLedger(plan, emptyData(), '2026-09-05');
+
+    expect(ledger.map(entry => [entry.date, entry.amount, entry.label])).toEqual([
+      ['2026-08-15', 90, 'Random gameplay income (Medium commitment)'],
+      ['2026-08-22', 90, 'Random gameplay income (Medium commitment)'],
+      ['2026-08-29', 90, 'Random gameplay income (Medium commitment)'],
+      ['2026-09-05', 90, 'Random gameplay income (Medium commitment)'],
+    ]);
+
+    plan.scenarioSelections = {};
+    expect(service.buildLedger(plan, emptyData(), '2026-09-05')).toEqual([]);
+  });
+
   it('starts observed speculative uplift after the latest confirmed Global reward', () => {
     const plan = makePlan({
       scenarioSelections: { speculative_income: 'include' },

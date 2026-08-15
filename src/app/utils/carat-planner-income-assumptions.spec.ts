@@ -1,6 +1,8 @@
 import { PlannerGlobalRewardComparison } from '../models/carat-planner.model';
 import {
   plannerIncomeAssumptionGroups,
+  RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
+  randomGameplayIncomeRules,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
 } from './carat-planner-income-assumptions';
 
@@ -76,5 +78,27 @@ describe('plannerIncomeAssumptionGroups', () => {
       { value: 'include', label: 'Rolling mean', amountLabel: '+1,233 Carats / month' },
       { value: 'median', label: 'Conservative median', amountLabel: '+775 Carats / month' },
     ]);
+  });
+
+  it('offers transparent activity-based random gameplay estimates', () => {
+    const group = plannerIncomeAssumptionGroups([])
+      .find(candidate => candidate.id === RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID);
+
+    expect(group?.scheduleLabel).toBe('Weekly estimate; requires active play');
+    expect(group?.options).toEqual([
+      { value: 'low', label: 'Low commitment', amountLabel: '+20 Carats / week', amounts: { free_jewels: 20 } },
+      { value: 'medium', label: 'Medium commitment', amountLabel: '+90 Carats / week', amounts: { free_jewels: 90 } },
+      { value: 'high', label: 'High commitment', amountLabel: '+250 Carats / week', amounts: { free_jewels: 250 } },
+    ]);
+    expect(group?.helpText).toContain('Independent Training still requires collecting and restarting each run.');
+    expect(randomGameplayIncomeRules('medium', '2026-08-15')).toEqual([
+      jasmine.objectContaining({
+        id: 'random-gameplay-income-medium',
+        amount: 90,
+        cadence: 'weekly',
+        start_date: '2026-08-15',
+      }),
+    ]);
+    expect(randomGameplayIncomeRules(undefined, '2026-08-15')).toEqual([]);
   });
 });

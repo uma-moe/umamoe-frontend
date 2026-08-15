@@ -315,8 +315,10 @@ export interface PlannerTarget {
   title: string;
   bannerKind: PlannerBannerKind;
   imagePath?: string;
-  bannerStart: string;
-  bannerEnd: string;
+  /** Runtime schedule resolved from planner/timeline resources. Never persisted. */
+  bannerStart?: string;
+  /** Runtime schedule resolved from planner/timeline resources. Never persisted. */
+  bannerEnd?: string;
   pullTiming: PlannerPullTiming;
   customPullDate?: string;
   plannedPulls: number;

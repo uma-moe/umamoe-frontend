@@ -69,6 +69,7 @@ import {
   MONTHLY_SHOP_HELP_TEXT,
   MONTHLY_SHOP_SCENARIO_GROUP_ID,
   plannerIncomeAssumptionGroups,
+  RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
   SPECULATIVE_INCOME_NONE_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
   TRAINING_PASS_SCENARIO_GROUP_ID,
@@ -279,6 +280,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   @Input() set events(value: readonly CaratPlannerTimelineEvent[] | null | undefined) {
     this.allEvents = value ?? [];
+    this.syncTargetSchedulesFromResources();
     if (this.plannerDataReady) {
       const rewards = withTimelineRewardFallbacks(this.data.rewards, this.allEvents);
       if (rewards !== this.data.rewards) {
@@ -349,6 +351,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.persistence.collection$.pipe(takeUntil(this.destroy$)).subscribe(collection => {
       this.collection = collection;
       this.plan = this.persistence.activePlan;
+      this.syncTargetSchedulesFromResources();
       this.filterEvents();
       this.filterRewards();
       this.tryAddRequestedEvent();
@@ -454,6 +457,14 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const event = this.allEvents.find(item => item.id === target.eventId);
     if (event) return this.rewardEventDisplayTitle(event);
     return this.cleanRewardLabel(target.title).replace(/\s*\+\s*\d+\s*more\b/gi, '').trim();
+  }
+
+  targetBannerStart(target: PlannerTarget): string {
+    return this.resolveTargetSchedule(target).start;
+  }
+
+  targetBannerEnd(target: PlannerTarget): string {
+    return this.resolveTargetSchedule(target).end;
   }
 
   get activeTargets(): PlannerTarget[] {
@@ -1213,6 +1224,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (groupId === TRAINING_PASS_SCENARIO_GROUP_ID) return 'fact_check';
     if (groupId === MONTHLY_SHOP_SCENARIO_GROUP_ID) return 'storefront';
     if (groupId === SPECULATIVE_INCOME_SCENARIO_GROUP_ID) return 'auto_graph';
+    if (groupId === RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID) return 'casino';
     if (groupId === 'team_trials_class') return 'stadium';
     if (groupId === 'club_rank') return 'groups';
     const competition = plannerCompetitionAssumptionGroup(groupId);
@@ -2519,7 +2531,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         eventId: target.eventId,
         gachaId: target.gachaId,
         gachaIds: [...(target.gachaIds ?? [])].sort((left, right) => left - right),
-        bannerStart: target.bannerStart,
       }))
       .sort((left, right) => left.eventId.localeCompare(right.eventId));
     return JSON.stringify({ planId: this.plan.id, targets });
@@ -2527,6 +2538,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   private recalculate(): void {
     if (!this.plan) return;
+    this.syncTargetSchedulesFromResources();
     const gachas = this.resources.loadedGachas;
     this.gachaByTarget.clear();
     this.pickupOptionsByTarget.clear();
@@ -2921,6 +2933,34 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (type?.includes('support')) return 'support';
     if (type?.includes('paid')) return 'paid';
     return 'other';
+  }
+
+  private syncTargetSchedulesFromResources(): void {
+    if (!this.plan) return;
+    for (const target of this.plan.targets) {
+      const schedule = this.resolveTargetSchedule(target);
+      if (schedule.start) target.bannerStart = schedule.start;
+      else delete target.bannerStart;
+      if (schedule.end) target.bannerEnd = schedule.end;
+      else delete target.bannerEnd;
+    }
+  }
+
+  private resolveTargetSchedule(target: PlannerTarget): { start: string; end: string } {
+    const event = this.allEvents.find(item => item.id === target.eventId);
+    const ids = new Set([target.gachaId, ...(target.gachaIds ?? [])]);
+    const gachas = this.resources.loadedGachas ?? [];
+    const gacha = gachas.find(item => item.event_id === target.eventId)
+      ?? gachas.find(item => ids.has(item.gacha_id));
+    const resourceStart = this.optionalDateKey(
+      event?.globalReleaseDate ?? event?.estimatedGlobalDate ?? event?.jpReleaseDate,
+    ) ?? this.optionalDateKey(gacha?.start_date);
+    const start = resourceStart ?? this.optionalDateKey(target.bannerStart) ?? '';
+    const resourceEnd = this.optionalDateKey(event?.estimatedEndDate)
+      ?? this.optionalDateKey(gacha?.end_date)
+      ?? (resourceStart ? start : null);
+    const end = resourceEnd ?? this.optionalDateKey(target.bannerEnd) ?? start;
+    return { start, end };
   }
 
   private dateKey(value?: Date | string): string {

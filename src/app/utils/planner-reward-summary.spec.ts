@@ -1,4 +1,4 @@
-import { buildTimelineRewardSummaries } from './planner-reward-summary';
+import { buildTimelineRewardSummaries, withTimelineRewardFallbacks } from './planner-reward-summary';
 
 describe('buildTimelineRewardSummaries', () => {
   it('shows every quantified reward for a timeline event without overflow shorthand', () => {
@@ -156,6 +156,46 @@ describe('buildTimelineRewardSummaries', () => {
       id: 'story-event-future', type: 'story_event', estimatedEndDate: '2026-10-12',
     }]);
     expect(sourced.get('story-event-future')?.carats).toBe(1800);
+  });
+
+  it('adds projected 50-day and seasonal gifts while preferring exact sourced rewards', () => {
+    const resource = withTimelineRewardFallbacks({
+      rewards: [{
+        id: 'exact-valentine', label: "Valentine's Day gift", currency: 'free_jewels', amount: 600,
+        available_at: '2027-02-14', provenance: 'global_news',
+      }],
+    }, [{
+      id: 'future-horizon', type: 'campaign', globalReleaseDate: '2027-07-10',
+    }]);
+
+    const projected = resource.rewards.filter(reward => reward.id.startsWith('expected-'));
+    expect(projected.filter(reward => reward.id.startsWith('expected-50-day-login-'))
+      .filter(reward => reward.available_at >= '2026-08-15' && reward.available_at <= '2027-07-10'))
+      .toHaveSize(6);
+    expect(projected.some(reward => reward.id === 'expected-valentines-gift-2027')).toBeFalse();
+    expect(projected).toContain(jasmine.objectContaining({
+      id: 'expected-white-day-gift-2027', amount: 500, available_at: '2027-03-14',
+    }));
+
+    const secondPass = withTimelineRewardFallbacks(resource, [{
+      id: 'future-horizon', type: 'campaign', globalReleaseDate: '2027-07-10',
+    }]);
+    expect(secondPass.rewards).toHaveSize(resource.rewards.length);
+  });
+
+  it('adds 900 login and 1,000 seasonal Carats through the July 2027 planning horizon', () => {
+    const resource = withTimelineRewardFallbacks({ rewards: [] }, [{
+      id: 'future-horizon', type: 'campaign', globalReleaseDate: '2027-07-10',
+    }]);
+    const projected = resource.rewards.filter(reward =>
+      reward.available_at >= '2026-08-15' && reward.available_at <= '2027-07-10');
+
+    expect(projected
+      .filter(reward => reward.category === 'login_milestone')
+      .reduce((sum, reward) => sum + Number(reward.amount), 0)).toBe(900);
+    expect(projected
+      .filter(reward => reward.category === 'seasonal_gift')
+      .reduce((sum, reward) => sum + Number(reward.amount), 0)).toBe(1_000);
   });
 
   it('adds standard Legend Race first-clear rewards from timeline participants when planner variants are absent', () => {

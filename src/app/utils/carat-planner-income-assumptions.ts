@@ -8,6 +8,7 @@ import {
 export const TRAINING_PASS_SCENARIO_GROUP_ID = 'training_pass';
 export const MONTHLY_SHOP_SCENARIO_GROUP_ID = 'monthly_shop_tickets';
 export const SPECULATIVE_INCOME_SCENARIO_GROUP_ID = 'speculative_income';
+export const RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID = 'random_gameplay_income';
 export const SPECULATIVE_INCOME_INCLUDED_OPTION = 'include';
 export const SPECULATIVE_INCOME_MEDIAN_OPTION = 'median';
 export const SPECULATIVE_INCOME_NONE_OPTION = 'none';
@@ -17,6 +18,17 @@ export const MONTHLY_SHOP_HELP_TEXT = [
   '',
   'Includes 1 Uma + 1 support ticket from the Friend Point Exchange and 2 of each from the Clover Exchange every month.',
   'Excludes Cleat exchanges and limited event shops. Requires enough exchange currency.',
+].join('\n');
+export const RANDOM_GAMEPLAY_INCOME_HELP_TEXT = [
+  'Estimated random Carats from Team Trials win boxes and Career race rewards.',
+  '',
+  'Low: about 1 Team Trials attempt/day and 3 Careers/week.',
+  'Medium: about 5 Team Trials attempts/day and 2 Careers/day.',
+  'High: natural RP plus about 6 Career or Independent Training runs/day.',
+  '',
+  'Career estimates use the Global master rate: 5 Carats at 5% per eligible race win. Team Trials uses a conservative normal-play estimate below published boosted-campaign samples.',
+  '',
+  'Independent Training still requires collecting and restarting each run. Temporary drop boosts, Carat refills, and rare jackpots are excluded.',
 ].join('\n');
 
 const TRAINING_PASS_TIMELINE_EVENT_ID = 'campaign-632';
@@ -65,6 +77,27 @@ export const TRAINING_PASS_OPTIONS: readonly PlannerIncomeAssumptionOption[] = [
   },
 ] as const;
 
+export const RANDOM_GAMEPLAY_INCOME_OPTIONS: readonly PlannerIncomeAssumptionOption[] = [
+  {
+    value: 'low',
+    label: 'Low commitment',
+    amountLabel: '+20 Carats / week',
+    amounts: { free_jewels: 20 },
+  },
+  {
+    value: 'medium',
+    label: 'Medium commitment',
+    amountLabel: '+90 Carats / week',
+    amounts: { free_jewels: 90 },
+  },
+  {
+    value: 'high',
+    label: 'High commitment',
+    amountLabel: '+250 Carats / week',
+    amounts: { free_jewels: 250 },
+  },
+] as const;
+
 export function plannerIncomeAssumptionGroups(
   events: readonly CaratPlannerTimelineEvent[],
   comparison?: PlannerGlobalRewardComparison,
@@ -79,6 +112,14 @@ export function plannerIncomeAssumptionGroups(
   const comparisonLabel = speculativeComparisonLabel(comparison);
   const speculativeHelp = speculativeHelpText(comparison);
   return [
+    {
+      id: RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
+      label: 'Random gameplay income',
+      icon: 'casino',
+      scheduleLabel: 'Weekly estimate; requires active play',
+      helpText: RANDOM_GAMEPLAY_INCOME_HELP_TEXT,
+      options: RANDOM_GAMEPLAY_INCOME_OPTIONS,
+    },
     {
       id: TRAINING_PASS_SCENARIO_GROUP_ID,
       label: 'Training Pass',
@@ -247,6 +288,28 @@ export function trainingPassIncomeRules(
       day_of_month: Number(startDate.slice(8, 10)),
       provenance: 'jp_news' as const,
     }));
+}
+
+export function randomGameplayIncomeRules(
+  selection: string | undefined,
+  startDate: string,
+): PlannerIncomeRule[] {
+  const option = RANDOM_GAMEPLAY_INCOME_OPTIONS.find(item => item.value === selection);
+  const amount = Number(option?.amounts?.free_jewels) || 0;
+  const normalizedStart = dateKey(startDate);
+  if (!option || amount <= 0 || !normalizedStart) return [];
+
+  return [{
+    id: `random-gameplay-income-${option.value}`,
+    label: `Random gameplay income (${option.label})`,
+    description: 'Estimated Team Trials win-box and Career race Carats for the selected activity level.',
+    category: 'estimated_gameplay',
+    currency: 'free_jewels',
+    amount,
+    cadence: 'weekly',
+    start_date: normalizedStart,
+    provenance: 'configured',
+  }];
 }
 
 export function isLegacyTrainingPassIncomeRule(rule: Pick<PlannerIncomeRule, 'id'>): boolean {

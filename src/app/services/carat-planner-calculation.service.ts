@@ -27,6 +27,8 @@ import {
 } from '../utils/carat-planner-competition-assumptions';
 import {
   isLegacyTrainingPassIncomeRule,
+  RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
+  randomGameplayIncomeRules,
   SPECULATIVE_INCOME_INCLUDED_OPTION,
   SPECULATIVE_INCOME_MEDIAN_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
@@ -286,6 +288,13 @@ export class CaratPlannerCalculationService {
     for (const rule of trainingPassIncomeRules(
       plan.scenarioSelections[TRAINING_PASS_SCENARIO_GROUP_ID],
       events,
+    )) {
+      ledger.push(...this.expandRule(rule, startDate, endDate));
+    }
+
+    for (const rule of randomGameplayIncomeRules(
+      plan.scenarioSelections[RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID],
+      startDate,
     )) {
       ledger.push(...this.expandRule(rule, startDate, endDate));
     }

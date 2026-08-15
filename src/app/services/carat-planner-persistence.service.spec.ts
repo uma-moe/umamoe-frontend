@@ -195,11 +195,44 @@ describe('CaratPlannerPersistenceService', () => {
     const stored = JSON.parse(localStorage.getItem(CaratPlannerPersistenceService.STORAGE_KEY) ?? '{}');
     const storedPlan = stored.plans.find((plan: { id: string }) => plan.id === 'saved-plan');
     expect(storedPlan.balances).toEqual({ freeJewels: 1234, paidJewels: 0, umaTickets: 2, supportTickets: 3, rainbowCrystals: 0, goldCrystals: 0 });
+    expect(storedPlan.targets[0].bannerStart).toBeUndefined();
+    expect(storedPlan.targets[0].bannerEnd).toBeUndefined();
 
     const restored = createService().activePlan;
     expect(restored.id).toBe('saved-plan');
     expect(restored.balances).toEqual({ freeJewels: 1234, paidJewels: 0, umaTickets: 2, supportTickets: 3, rainbowCrystals: 0, goldCrystals: 0 });
     expect(restored.targets[0].bannerKind).toBe('support');
+    expect(restored.targets[0].bannerStart).toBeUndefined();
+    expect(restored.targets[0].bannerEnd).toBeUndefined();
+  });
+
+  it('purges legacy banner dates from existing local storage', () => {
+    localStorage.setItem(CaratPlannerPersistenceService.STORAGE_KEY, JSON.stringify({
+      version: 1,
+      activePlanId: 'legacy-plan',
+      plans: [{
+        id: 'legacy-plan',
+        name: 'Legacy plan',
+        projectionStartDate: '2026-01-01',
+        targets: [{
+          id: 'target',
+          eventId: 'banner',
+          title: 'Banner',
+          bannerKind: 'support',
+          bannerStart: '2026-09-01',
+          bannerEnd: '2026-09-06',
+          pullTiming: 'end',
+          plannedPulls: 200,
+          desiredCopies: 1,
+        }],
+      }],
+    }));
+
+    createService();
+
+    const stored = JSON.parse(localStorage.getItem(CaratPlannerPersistenceService.STORAGE_KEY) ?? '{}');
+    expect(stored.plans[0].targets[0].bannerStart).toBeUndefined();
+    expect(stored.plans[0].targets[0].bannerEnd).toBeUndefined();
   });
 
   it('soft-removes targets and restores their settings without creating duplicates', () => {

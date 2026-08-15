@@ -260,6 +260,36 @@ describe('CaratPlannerComponent banner ordering', () => {
     ]);
   });
 
+  it('replaces a saved banner schedule with the current timeline resource dates', () => {
+    const component = createComponent();
+    component.plan.targets = [{
+      id: 'target',
+      eventId: 'updated-banner',
+      title: 'Updated banner',
+      bannerKind: 'support',
+      bannerStart: '2031-09-01',
+      bannerEnd: '2031-09-06',
+      pullTiming: 'end',
+      plannedPulls: 200,
+      desiredCopies: 1,
+      useTickets: true,
+      allowPaidJewels: false,
+    }];
+
+    component.events = [{
+      id: 'updated-banner',
+      title: 'Updated banner',
+      type: 'support_banner',
+      globalReleaseDate: '2031-08-12',
+      estimatedEndDate: '2031-08-19',
+    }];
+
+    expect(component.plan.targets[0].bannerStart).toBe('2031-08-12');
+    expect(component.plan.targets[0].bannerEnd).toBe('2031-08-19');
+    expect(component.targetBannerStart(component.plan.targets[0])).toBe('2031-08-12');
+    expect(component.targetBannerEnd(component.plan.targets[0])).toBe('2031-08-19');
+  });
+
   it('adds every positive reward for a reward-bearing timeline event without creating a pull target', () => {
     const component = createComponent();
     component.plan.enabledRewardIds = [];

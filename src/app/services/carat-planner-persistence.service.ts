@@ -230,11 +230,11 @@ export class CaratPlannerPersistenceService {
 
   exportPlan(planId = this.collectionSubject.value.activePlanId): string {
     const plan = this.collectionSubject.value.plans.find(item => item.id === planId) ?? this.activePlan;
-    return JSON.stringify({ version: 1, plan }, null, 2);
+    return JSON.stringify({ version: 1, plan: this.withoutResourceDates(plan) }, null, 2);
   }
 
   exportAll(): string {
-    return JSON.stringify(this.collectionSubject.value, null, 2);
+    return JSON.stringify(this.withoutResourceDatesCollection(this.collectionSubject.value), null, 2);
   }
 
   importJson(json: string): CaratPlanCollection {
@@ -323,11 +323,20 @@ export class CaratPlannerPersistenceService {
           : [];
         if (plans.length > 0) {
           const requestedActiveId = this.cleanText(record?.['activePlanId'], 100);
-          return {
+          const collection: CaratPlanCollection = {
             version: 1,
             activePlanId: plans.some(plan => plan.id === requestedActiveId) ? requestedActiveId : plans[0].id,
             plans,
           };
+          try {
+            localStorage.setItem(
+              CaratPlannerPersistenceService.STORAGE_KEY,
+              JSON.stringify(this.withoutResourceDatesCollection(collection)),
+            );
+          } catch (error) {
+            console.warn('Unable to purge legacy carat planner resource dates.', error);
+          }
+          return collection;
         }
       }
     } catch (error) {
@@ -356,7 +365,10 @@ export class CaratPlannerPersistenceService {
     this.collectionSubject.next(this.clone(next));
     if (this.isBrowser) {
       try {
-        localStorage.setItem(CaratPlannerPersistenceService.STORAGE_KEY, JSON.stringify(next));
+        localStorage.setItem(
+          CaratPlannerPersistenceService.STORAGE_KEY,
+          JSON.stringify(this.withoutResourceDatesCollection(next)),
+        );
       } catch (error) {
         console.warn('Unable to save carat planner state.', error);
       }
@@ -455,7 +467,8 @@ export class CaratPlannerPersistenceService {
     const eventId = this.cleanText(record?.['eventId'], 160);
     const title = this.cleanText(record?.['title'], 200);
     const bannerStart = this.validDateKey(record?.['bannerStart']);
-    if (!record || !eventId || !title || !bannerStart) {
+    const bannerEnd = this.validDateKey(record?.['bannerEnd']);
+    if (!record || !eventId || !title) {
       return null;
     }
     const legacyDesiredCopies = Math.min(20, Math.max(1, this.nonNegativeInt(record['desiredCopies']) || 1));
@@ -476,8 +489,8 @@ export class CaratPlannerPersistenceService {
       title,
       bannerKind: this.bannerKind(record['bannerKind']),
       imagePath: this.cleanText(record['imagePath'], 500) || undefined,
-      bannerStart,
-      bannerEnd: this.validDateKey(record['bannerEnd']) || bannerStart,
+      ...(bannerStart ? { bannerStart } : {}),
+      ...(bannerEnd || bannerStart ? { bannerEnd: bannerEnd || bannerStart } : {}),
       pullTiming: this.pullTiming(record['pullTiming']),
       customPullDate: this.validDateKey(record['customPullDate']) || undefined,
       plannedPulls: Math.min(5000, this.nonNegativeInt(record['plannedPulls'])),
@@ -489,6 +502,22 @@ export class CaratPlannerPersistenceService {
       allowPaidJewels: record['allowPaidJewels'] === true,
       ...(rainbowCrystalsPlanned > 0 ? { rainbowCrystalsPlanned } : {}),
       ...(goldCrystalsPlanned > 0 ? { goldCrystalsPlanned } : {}),
+    };
+  }
+
+  private withoutResourceDates(plan: CaratPlan): CaratPlan {
+    const copy = this.clone(plan);
+    for (const target of copy.targets) {
+      delete target.bannerStart;
+      delete target.bannerEnd;
+    }
+    return copy;
+  }
+
+  private withoutResourceDatesCollection(collection: CaratPlanCollection): CaratPlanCollection {
+    return {
+      ...collection,
+      plans: collection.plans.map(plan => this.withoutResourceDates(plan)),
     };
   }
 

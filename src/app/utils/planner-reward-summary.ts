@@ -1,4 +1,4 @@
-import { PlannerRewardResource } from '../models/carat-planner.model';
+import { PlannerRewardEntry, PlannerRewardResource } from '../models/carat-planner.model';
 import { plannerRewardBundles } from './planner-reward-currencies';
 
 export interface TimelineRewardSummary {
@@ -130,6 +130,10 @@ const REWARD_ITEM_IDS = {
 } as const;
 const PREPARED_REWARD_ITEM_IDS = new Set([41, 43, 111, 141, 164, 165, 178, 197, 205, 214, 255]);
 const STANDARD_STORY_EVENT_CARATS = 2010;
+const GLOBAL_LAUNCH_DATE = '2025-06-26';
+const FIFTY_DAY_LOGIN_CARATS = 150;
+const SEASONAL_GIFT_CARATS = 500;
+const DAY_MS = 86_400_000;
 
 function itemIconPath(itemId: number): string {
   return `${ITEM_ICON_ROOT}/item_icon_${itemId.toString().padStart(5, '0')}.webp`;
@@ -187,9 +191,113 @@ export function withTimelineRewardFallbacks(
     }];
   });
 
-  return fallbackRewards.length
-    ? { ...resource, rewards: [...(resource.rewards ?? []), ...fallbackRewards] }
+  const recurringRewards = expectedRecurringRewards(
+    [...(resource.rewards ?? []), ...fallbackRewards],
+    timelineEvents,
+  );
+
+  return fallbackRewards.length || recurringRewards.length
+    ? { ...resource, rewards: [...(resource.rewards ?? []), ...fallbackRewards, ...recurringRewards] }
     : resource;
+}
+
+function expectedRecurringRewards(
+  existingRewards: readonly PlannerRewardEntry[],
+  timelineEvents: readonly TimelineRewardFallbackEvent[],
+): PlannerRewardEntry[] {
+  const horizon = timelineEvents
+    .flatMap(event => [
+      event.estimatedEndDate,
+      event.globalReleaseDate,
+      event.estimatedGlobalDate,
+      event.jpReleaseDate,
+    ])
+    .map(rewardDateKey)
+    .filter((date): date is string => Boolean(date))
+    .sort()
+    .at(-1);
+  if (!horizon || horizon < GLOBAL_LAUNCH_DATE) return [];
+
+  const candidates: PlannerRewardEntry[] = [];
+  const launch = new Date(`${GLOBAL_LAUNCH_DATE}T00:00:00Z`);
+  for (let milestone = 50; milestone <= 100_000; milestone += 50) {
+    const date = new Date(launch.getTime() + (milestone - 1) * DAY_MS).toISOString().slice(0, 10);
+    if (date > horizon) break;
+    candidates.push({
+      id: `expected-50-day-login-${milestone}`,
+      label: `50-day login milestone (Day ${milestone})`,
+      currency: 'free_jewels',
+      amount: FIFTY_DAY_LOGIN_CARATS,
+      available_at: date,
+      category: 'login_milestone',
+      default_enabled: true,
+      provenance: 'configured',
+      assumption: 'Estimated for a day-one Global account that logs in daily; missed login days move the reward date.',
+      confidence: 'estimated_schedule',
+    });
+  }
+
+  const firstYear = Number(GLOBAL_LAUNCH_DATE.slice(0, 4));
+  const lastYear = Number(horizon.slice(0, 4));
+  for (let year = firstYear; year <= lastYear; year++) {
+    candidates.push({
+      id: `expected-valentines-gift-${year}`,
+      label: `Expected Valentine's Day gift`,
+      currency: 'free_jewels',
+      amount: SEASONAL_GIFT_CARATS,
+      available_at: `${year}-02-14`,
+      category: 'seasonal_gift',
+      default_enabled: true,
+      provenance: 'jp_fallback',
+      assumption: 'JP-parity estimate; replaced by an exact Global reward when one is available.',
+      confidence: 'historical_standard',
+      source_url: 'https://umamusume.jp/steam-news/detail?id=3036',
+    }, {
+      id: `expected-white-day-gift-${year}`,
+      label: 'Expected White Day gift',
+      currency: 'free_jewels',
+      amount: SEASONAL_GIFT_CARATS,
+      available_at: `${year}-03-14`,
+      category: 'seasonal_gift',
+      default_enabled: true,
+      provenance: 'jp_fallback',
+      assumption: 'JP-parity estimate; replaced by an exact Global reward when one is available.',
+      confidence: 'historical_standard',
+      source_url: 'https://umamusume.jp/steam-news/detail?id=3116',
+    });
+  }
+
+  return candidates.filter(candidate =>
+    candidate.available_at >= GLOBAL_LAUNCH_DATE
+    && candidate.available_at <= horizon
+    && !existingRewards.some(existing => equivalentRecurringReward(existing, candidate)));
+}
+
+function equivalentRecurringReward(
+  existing: PlannerRewardEntry,
+  candidate: PlannerRewardEntry,
+): boolean {
+  if (existing.id === candidate.id) return true;
+  if (existing.currency !== 'free_jewels' || Number(existing.amount) <= 0) return false;
+  const existingDate = rewardDateKey(existing.available_at);
+  const candidateDate = rewardDateKey(candidate.available_at);
+  if (!existingDate || !candidateDate) return false;
+  const dayDifference = Math.abs(
+    new Date(`${existingDate}T00:00:00Z`).getTime()
+      - new Date(`${candidateDate}T00:00:00Z`).getTime(),
+  ) / DAY_MS;
+  if (dayDifference > 1) return false;
+
+  const searchable = [existing.label, existing.category, existing.assumption, existing.evidence]
+    .filter(Boolean)
+    .join(' ');
+  if (candidate.category === 'login_milestone') {
+    return /(?:50.?day|total login|cumulative login|累計ログイン)/i.test(searchable);
+  }
+  if (candidate.id.includes('valentines')) {
+    return /valentine|バレンタイン/i.test(searchable);
+  }
+  return /white\s*day|ホワイトデー/i.test(searchable);
 }
 
 function rewardDateKey(value: Date | string | undefined): string | null {
