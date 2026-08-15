@@ -701,6 +701,35 @@ describe('CaratPlannerCalculationService', () => {
     ]);
   });
 
+  it('counts Monthly Shop tickets only when its assumption is selected', () => {
+    const rules = [
+      { id: 'shop-friend-uma', label: 'Friend tickets', currency: 'uma_ticket' as const, amount: 1, cadence: 'monthly' as const, start_date: '2026-01-06', day_of_month: 1, scenario_group: 'monthly_shop_tickets', scenario_option: 'include' },
+      { id: 'shop-friend-support', label: 'Friend tickets', currency: 'support_ticket' as const, amount: 1, cadence: 'monthly' as const, start_date: '2026-01-06', day_of_month: 1, scenario_group: 'monthly_shop_tickets', scenario_option: 'include' },
+      { id: 'shop-clover-uma', label: 'Clover tickets', currency: 'uma_ticket' as const, amount: 2, cadence: 'monthly' as const, start_date: '2025-06-26', day_of_month: 1, scenario_group: 'monthly_shop_tickets', scenario_option: 'include' },
+      { id: 'shop-clover-support', label: 'Clover tickets', currency: 'support_ticket' as const, amount: 2, cadence: 'monthly' as const, start_date: '2025-06-26', day_of_month: 1, scenario_group: 'monthly_shop_tickets', scenario_option: 'include' },
+    ];
+    const data: CaratPlannerDataBundle = {
+      core: {},
+      income: { rules },
+      rewards: { rewards: [] },
+    };
+    const enabledIncomeRuleIds = rules.map(rule => rule.id);
+    const excluded = makePlan({ enabledIncomeRuleIds });
+    const included = makePlan({
+      enabledIncomeRuleIds,
+      scenarioSelections: { monthly_shop_tickets: 'include' },
+    });
+
+    expect(service.buildLedger(excluded, data, '2026-02-28')).toEqual([]);
+    const ledger = service.buildLedger(included, data, '2026-02-28');
+    expect(ledger
+      .filter(entry => entry.currency === 'uma_ticket')
+      .reduce((total, entry) => total + entry.amount, 0)).toBe(5);
+    expect(ledger
+      .filter(entry => entry.currency === 'support_ticket')
+      .reduce((total, entry) => total + entry.amount, 0)).toBe(5);
+  });
+
   it('excludes inactive event targets and rewards without deleting their saved configuration', () => {
     const target = makeTarget({ eventId: 'banner-1', plannedPulls: 50 });
     const plan = makePlan({

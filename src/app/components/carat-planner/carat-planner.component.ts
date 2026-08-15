@@ -66,6 +66,8 @@ import {
 } from '../../utils/carat-planner-competition-assumptions';
 import {
   isLegacyTrainingPassIncomeRule,
+  MONTHLY_SHOP_HELP_TEXT,
+  MONTHLY_SHOP_SCENARIO_GROUP_ID,
   plannerIncomeAssumptionGroups,
   SPECULATIVE_INCOME_NONE_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
@@ -1209,6 +1211,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   scenarioGroupIcon(groupId: string): string {
     if (groupId === TRAINING_PASS_SCENARIO_GROUP_ID) return 'fact_check';
+    if (groupId === MONTHLY_SHOP_SCENARIO_GROUP_ID) return 'storefront';
     if (groupId === SPECULATIVE_INCOME_SCENARIO_GROUP_ID) return 'auto_graph';
     if (groupId === 'team_trials_class') return 'stadium';
     if (groupId === 'club_rank') return 'groups';
@@ -1263,8 +1266,15 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     }
     const resourceGroups = [...groups].map(([id, options]) => ({
       id,
-      label: id === 'team_trials_class' ? 'Team Trials class' : id === 'club_rank' ? 'Club rank' : this.humanize(id),
+      label: id === 'team_trials_class'
+        ? 'Team Trials class'
+        : id === 'club_rank'
+          ? 'Club rank'
+          : id === MONTHLY_SHOP_SCENARIO_GROUP_ID
+            ? 'Monthly shop tickets'
+            : this.humanize(id),
       scheduleLabel: this.scenarioScheduleLabel(id),
+      helpText: id === MONTHLY_SHOP_SCENARIO_GROUP_ID ? MONTHLY_SHOP_HELP_TEXT : undefined,
       options: [...options]
         .sort((left, right) => this.scenarioOptionNumber(left) - this.scenarioOptionNumber(right))
         .map(value => ({
@@ -2059,11 +2069,22 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private scenarioOptionAmountLabel(groupId: string, value: string): string {
     const rules = this.data.income.rules.filter(rule =>
       rule.scenario_group === groupId
-      && rule.scenario_option === value
-      && matchesJewelCurrency(rule.currency));
-    const amount = rules.reduce((total, rule) => total + Math.max(0, Number(rule.amount) || 0), 0);
+      && rule.scenario_option === value);
+    if (groupId === MONTHLY_SHOP_SCENARIO_GROUP_ID) {
+      const umaTickets = rules
+        .filter(rule => rule.currency === 'uma_ticket')
+        .reduce((total, rule) => total + Math.max(0, Number(rule.amount) || 0), 0);
+      const supportTickets = rules
+        .filter(rule => rule.currency === 'support_ticket')
+        .reduce((total, rule) => total + Math.max(0, Number(rule.amount) || 0), 0);
+      return umaTickets > 0 || supportTickets > 0
+        ? `+${INTEGER_FORMATTER.format(umaTickets)} Uma + ${INTEGER_FORMATTER.format(supportTickets)} support / mo`
+        : '';
+    }
+    const jewelRules = rules.filter(rule => matchesJewelCurrency(rule.currency));
+    const amount = jewelRules.reduce((total, rule) => total + Math.max(0, Number(rule.amount) || 0), 0);
     if (amount <= 0) return '';
-    const cadence = rules[0]?.cadence;
+    const cadence = jewelRules[0]?.cadence;
     const suffix = cadence === 'daily' ? '/day'
       : cadence === 'weekly' ? '/wk'
         : cadence === 'monthly' ? '/mo'
@@ -2073,6 +2094,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   private scenarioScheduleLabel(groupId: string): string {
+    if (groupId === MONTHLY_SHOP_SCENARIO_GROUP_ID) {
+      return 'Monthly; requires Friend Points and Clovers';
+    }
     const rule = this.data.income.rules.find(item => item.scenario_group === groupId);
     if (!rule) return 'Optional income';
     if (rule.cadence === 'weekly') return 'Weekly payout';

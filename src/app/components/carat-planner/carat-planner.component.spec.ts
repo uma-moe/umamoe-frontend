@@ -624,6 +624,39 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.selectedScenarioOption(speculativeIncome!)).toBeNull();
   });
 
+  it('shows the master-backed Monthly Shop ticket toggle transparently', () => {
+    const component = createComponent();
+    component.data = {
+      core: {},
+      income: { rules: [
+        { id: 'shop-friend-uma', label: 'Friend Point Exchange tickets', currency: 'uma_ticket', amount: 1, cadence: 'monthly', start_date: '2026-01-06', day_of_month: 1, scenario_group: 'monthly_shop_tickets', scenario_option: 'include' },
+        { id: 'shop-friend-support', label: 'Friend Point Exchange tickets', currency: 'support_ticket', amount: 1, cadence: 'monthly', start_date: '2026-01-06', day_of_month: 1, scenario_group: 'monthly_shop_tickets', scenario_option: 'include' },
+        { id: 'shop-clover-uma', label: 'Clover Exchange tickets', currency: 'uma_ticket', amount: 2, cadence: 'monthly', start_date: '2025-06-26', day_of_month: 1, scenario_group: 'monthly_shop_tickets', scenario_option: 'include' },
+        { id: 'shop-clover-support', label: 'Clover Exchange tickets', currency: 'support_ticket', amount: 2, cadence: 'monthly', start_date: '2025-06-26', day_of_month: 1, scenario_group: 'monthly_shop_tickets', scenario_option: 'include' },
+      ] },
+      rewards: { rewards: [] },
+    };
+
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    const monthlyShop = component.scenarioGroupOptions
+      .find(group => group.id === 'monthly_shop_tickets');
+    expect(monthlyShop).toEqual(jasmine.objectContaining({
+      label: 'Monthly shop tickets',
+      scheduleLabel: 'Monthly; requires Friend Points and Clovers',
+      options: [{ value: 'include', label: 'Include', amountLabel: '+3 Uma + 3 support / mo' }],
+    }));
+    expect(monthlyShop?.helpText).toContain('Excludes Cleat exchanges and limited event shops.');
+    expect(component.scenarioGroupIcon('monthly_shop_tickets')).toBe('storefront');
+    expect(component.plan.scenarioSelections['monthly_shop_tickets']).toBeUndefined();
+
+    component.cycleScenario(monthlyShop!, 1);
+    expect(component.plan.scenarioSelections['monthly_shop_tickets']).toBe('include');
+    expect(component.plan.enabledIncomeRuleIds).toEqual(jasmine.arrayWithExactContents([
+      'shop-friend-uma', 'shop-friend-support', 'shop-clover-uma', 'shop-clover-support',
+    ]));
+  });
+
   it('summarizes only active assumptions and rewards', () => {
     const component = createComponent();
     component.data = {

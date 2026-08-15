@@ -6,11 +6,18 @@ import {
 } from '../models/carat-planner.model';
 
 export const TRAINING_PASS_SCENARIO_GROUP_ID = 'training_pass';
+export const MONTHLY_SHOP_SCENARIO_GROUP_ID = 'monthly_shop_tickets';
 export const SPECULATIVE_INCOME_SCENARIO_GROUP_ID = 'speculative_income';
 export const SPECULATIVE_INCOME_INCLUDED_OPTION = 'include';
 export const SPECULATIVE_INCOME_MEDIAN_OPTION = 'median';
 export const SPECULATIVE_INCOME_NONE_OPTION = 'none';
 export const TRAINING_PASS_SOURCE_URL = 'https://umapyoi.net/news/1788?lang=jp';
+export const MONTHLY_SHOP_HELP_TEXT = [
+  'Counts recurring tickets confirmed in the Global master shop data.',
+  '',
+  'Includes 1 Uma + 1 support ticket from the Friend Point Exchange and 2 of each from the Clover Exchange every month.',
+  'Excludes Cleat exchanges and limited event shops. Requires enough exchange currency.',
+].join('\n');
 
 const TRAINING_PASS_TIMELINE_EVENT_ID = 'campaign-632';
 const TRAINING_PASS_JP_RELEASE_DATE = '2024-02-24';
