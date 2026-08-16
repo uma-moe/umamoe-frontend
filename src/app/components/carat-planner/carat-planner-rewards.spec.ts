@@ -130,6 +130,7 @@ describe('CaratPlannerComponent reward coverage', () => {
       },
     };
 
+    (component as unknown as { syncAutomaticRewardSelection(): boolean }).syncAutomaticRewardSelection();
     (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
 
     expect(component.displayedRewardGroups.length).toBe(1);
@@ -140,6 +141,66 @@ describe('CaratPlannerComponent reward coverage', () => {
       ['carats', 3000],
       ['other', null],
     ]);
+    expect(component.plan.enabledRewardIds).toEqual(['login-bonus-42-free_jewels']);
+    expect(component.isRewardGroupActive(component.displayedRewardGroups[0])).toBeTrue();
+  });
+
+  it('shows exact Story-event components and the finite Bingo rule in the reward breakdown', () => {
+    localStorage.removeItem(CaratPlannerPersistenceService.STORAGE_KEY);
+    const persistence = new CaratPlannerPersistenceService('browser' as never);
+    const component = new CaratPlannerComponent(
+      new CaratPlannerCalculationService(),
+      new CaratPullProbabilityService(),
+      persistence,
+      {} as never,
+      new TimelineAvatarService(),
+      { markForCheck: () => undefined } as unknown as ChangeDetectorRef,
+    );
+    component.plan = persistence.activePlan;
+    component.plan.projectionStartDate = '2030-01-01';
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: {
+        rewards: [
+          { id: 'jp-story-1-points-free_jewels', label: 'Story event point rewards', event_id: 'story-1', currency: 'free_jewels', amount: 2250, available_at: '2031-01-01', provenance: 'jp_master' },
+          { id: 'jp-story-1-points-uma_ticket', label: 'Story event point rewards', event_id: 'story-1', currency: 'uma_ticket', amount: 2, available_at: '2031-01-01', provenance: 'jp_master' },
+          { id: 'jp-story-1-bingo-free_jewels', label: 'Bingo rewards (finite sheets)', event_id: 'story-1', currency: 'free_jewels', amount: 300, available_at: '2031-01-01', provenance: 'jp_master' },
+        ],
+      },
+    };
+
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+    const tooltip = component.displayedRewardGroups[0].breakdownTooltip;
+    expect(tooltip).toContain('Story event point rewards: 2,250 Carats · 2 Uma tickets');
+    expect(tooltip).toContain('Bingo rewards (finite sheets): 300 Carats');
+    expect(tooltip).toContain('JP master projection');
+    expect(tooltip).toContain('Repeatable sheets have no fixed maximum');
+  });
+
+  it('keeps opt-in master rewards off by default and allows an explicit inclusion', () => {
+    localStorage.removeItem(CaratPlannerPersistenceService.STORAGE_KEY);
+    const persistence = new CaratPlannerPersistenceService('browser' as never);
+    const component = new CaratPlannerComponent(
+      new CaratPlannerCalculationService(),
+      new CaratPullProbabilityService(),
+      persistence,
+      {} as never,
+      new TimelineAvatarService(),
+      { markForCheck: () => undefined } as unknown as ChangeDetectorRef,
+    );
+    component.plan = persistence.activePlan;
+    const standard = { id: 'standard', label: 'Standard reward', currency: 'free_jewels' as const, amount: 300, available_at: '2030-01-02', default_enabled: true };
+    const difficult = { id: 'difficult', label: 'Masters Challenge', currency: 'free_jewels' as const, amount: 2700, available_at: '2030-01-03', default_enabled: false };
+    component.data = { core: {}, income: { rules: [] }, rewards: { rewards: [standard, difficult] } };
+    const sync = (component as unknown as { syncAutomaticRewardSelection(): boolean }).syncAutomaticRewardSelection.bind(component);
+
+    expect(sync()).toBeTrue();
+    expect(component.plan.enabledRewardIds).toEqual(['standard']);
+
+    component.toggleReward(difficult, true);
+    expect(sync()).toBeFalse();
+    expect(component.plan.enabledRewardIds.sort()).toEqual(['difficult', 'standard']);
   });
 
   it('inherits CM and LoH income assumptions and preserves an explicit result selection', () => {

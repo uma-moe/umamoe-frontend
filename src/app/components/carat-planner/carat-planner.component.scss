@@ -1166,6 +1166,26 @@ select.cp-control,
   &[data-kind='carats'] mat-icon { color: var(--accent-secondary); }
 }
 
+.cp-reward-help {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  flex: 0 0 16px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--border-primary);
+  border-radius: 50%;
+  color: var(--accent-secondary);
+  background: rgba(var(--accent-primary-rgb), 0.08);
+  font-size: 0.61rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: help;
+
+  &:hover { border-color: rgba(var(--accent-primary-rgb), 0.55); background: rgba(var(--accent-primary-rgb), 0.16); }
+  &:focus-visible { outline: 2px solid rgba(var(--accent-primary-rgb), 0.55); outline-offset: 1px; }
+}
+
 .cp-reward-more {
   color: var(--text-muted);
   font-size: 0.62rem;

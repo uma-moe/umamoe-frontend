@@ -339,13 +339,16 @@
               <strong>{{ group.title }}</strong>
               <time *ngIf="group.availableAt">{{ group.availableAt + 'T00:00:00Z' | date:'mediumDate':'UTC' }}</time>
             </span>
-            <span class="cp-reward-benefits" [attr.title]="group.benefits.length ? group.benefits[0].text : null">
+            <span class="cp-reward-benefits">
               <span class="cp-reward-benefit" *ngFor="let benefit of group.benefits; trackBy: trackByRewardBenefit"
                 [attr.data-kind]="benefit.kind">
                 <img *ngIf="benefit.iconPath" [src]="benefit.iconPath" width="22" height="22" loading="lazy" alt="" aria-hidden="true">
                 <mat-icon *ngIf="!benefit.iconPath" aria-hidden="true">{{ benefit.icon }}</mat-icon>
                 <span>{{ benefit.text }}</span>
               </span>
+              <button *ngIf="group.breakdownTooltip" class="cp-reward-help" type="button"
+                [matTooltip]="group.breakdownTooltip" matTooltipClass="cp-methodology-tooltip"
+                matTooltipPosition="above" [attr.aria-label]="'Show reward breakdown for ' + group.title">?</button>
             </span>
         </ng-template>
 

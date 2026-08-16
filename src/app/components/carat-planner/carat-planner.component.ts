@@ -200,6 +200,7 @@ interface PlannerRewardGroupView {
   benefits: readonly PlannerRewardBenefitView[];
   visibleBenefits: readonly PlannerRewardBenefitView[];
   hiddenBenefitCount: number;
+  breakdownTooltip: string;
   searchText: string;
   isPast: boolean;
 }
@@ -1670,6 +1671,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           variableOptions,
           applicableVariants,
         );
+        const breakdownTooltip = this.buildRewardBreakdownTooltip(applicableRewards);
         const source = this.rewardGroupSource(applicableRewards, applicableBenefits);
         const groupedResourceCount = group.rewards.length
           + group.eventBenefits.length
@@ -1701,6 +1703,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           benefits,
           visibleBenefits: benefits,
           hiddenBenefitCount: 0,
+          breakdownTooltip,
           searchText: [
             title,
             group.eventId,
@@ -1776,6 +1779,41 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       .replace(/["'\u201c\u201d\u2018\u2019]+([!?]+)["'\u201c\u201d\u2018\u2019]*$/u, '$1')
       .replace(/["'\u201c\u201d\u2018\u2019]+$/u, '')
       .trim();
+  }
+
+  private buildRewardBreakdownTooltip(rewards: readonly PlannerRewardEntry[]): string {
+    const lines = plannerRewardBundles(rewards)
+      .map(bundle => {
+        const carats = (bundle.totals.get('free_jewels') ?? 0) + (bundle.totals.get('paid_jewels') ?? 0);
+        const amounts = [
+          carats > 0 ? `${INTEGER_FORMATTER.format(carats)} Carats` : '',
+          this.rewardBreakdownAmount(bundle.totals.get('uma_ticket'), 'Uma ticket'),
+          this.rewardBreakdownAmount(bundle.totals.get('support_ticket'), 'Support ticket'),
+          this.rewardBreakdownAmount(bundle.totals.get('rainbow_crystal'), 'Rainbow shard'),
+          this.rewardBreakdownAmount(bundle.totals.get('gold_crystal'), 'Gold shard'),
+        ].filter(Boolean);
+        return amounts.length > 0
+          ? `${this.cleanRewardLabel(bundle.label).replace(/ item details$/i, '')}: ${amounts.join(' · ')}`
+          : '';
+      })
+      .filter(Boolean);
+    const uniqueLines = [...new Set(lines)];
+    if (uniqueLines.length === 0) return '';
+
+    const notes: string[] = [];
+    if (rewards.some(reward => reward.provenance?.startsWith('jp_master'))) {
+      notes.push('JP master projection; Global master rewards replace it when available.');
+    }
+    if (rewards.some(reward => /bingo rewards/i.test(reward.label))) {
+      notes.push('Finite Bingo sheets are included. Repeatable sheets have no fixed maximum and are excluded.');
+    }
+    return ['Reward breakdown', ...uniqueLines, ...notes].join('\n');
+  }
+
+  private rewardBreakdownAmount(amount: number | undefined, singular: string): string {
+    if (!Number.isFinite(amount) || Number(amount) <= 0) return '';
+    const value = Math.trunc(Number(amount));
+    return `${INTEGER_FORMATTER.format(value)} ${singular}${value === 1 ? '' : 's'}`;
   }
 
   private isRewardDateUsable(value: string, projectionStart: string): boolean {
@@ -2408,7 +2446,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const disabledRewardIds = new Set(this.plan.disabledRewardIds ?? []);
     const nextEnabledRewardIds = [
       ...this.data.rewards.rewards
-        .filter(reward => this.hasProjectableReward(reward))
+        .filter(reward => this.hasProjectableReward(reward)
+          && (reward.default_enabled !== false || this.plan.enabledRewardIds.includes(reward.id)))
         .map(reward => reward.id),
       ...(this.data.rewards.competitive_variants ?? [])
         .filter(variant => isAutomaticCompetitiveVariant(variant))
@@ -2518,6 +2557,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   private hasProjectableReward(reward: PlannerRewardEntry): boolean {
+    // Structured bundles copy every source item onto a qualitative companion
+    // row for inspection. Currency siblings carry the actual ledger values.
+    if (/-items$/i.test(reward.id) || / item details$/i.test(reward.label)) return false;
     if (Number.isFinite(reward.amount) && Number(reward.amount) > 0) return true;
     return hasProjectableSourceItems(reward.source_items);
   }
