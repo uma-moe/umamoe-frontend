@@ -13,6 +13,8 @@ describe('CaratPlannerPersistenceService', () => {
     const service = createService();
 
     expect(service.activePlan.scenarioSelections['speculative_income']).toBe('include');
+    expect(service.activePlan.scenarioSelections['temporary_story_rewards']).toBe('include');
+    expect(service.activePlan.scenarioSelections['racing_carnival_mission']).toBe('include');
   });
 
   it('migrates existing plans without a speculative selection to the rolling mean', () => {
@@ -32,6 +34,8 @@ describe('CaratPlannerPersistenceService', () => {
     expect(service.activePlan.scenarioSelections).toEqual({
       league: 'high',
       speculative_income: 'include',
+      temporary_story_rewards: 'include',
+      racing_carnival_mission: 'include',
     });
   });
 
@@ -43,13 +47,19 @@ describe('CaratPlannerPersistenceService', () => {
         id: 'opted-out-plan',
         name: 'Opted out',
         projectionStartDate: '2026-08-01',
-        scenarioSelections: { speculative_income: 'none' },
+        scenarioSelections: {
+          speculative_income: 'none',
+          temporary_story_rewards: 'none',
+          racing_carnival_mission: 'none',
+        },
       }],
     }));
 
     const service = createService();
 
     expect(service.activePlan.scenarioSelections['speculative_income']).toBe('none');
+    expect(service.activePlan.scenarioSelections['temporary_story_rewards']).toBe('none');
+    expect(service.activePlan.scenarioSelections['racing_carnival_mission']).toBe('none');
   });
 
   it('sanitizes imported balances, dates, optional IDs, collections, and numeric limits', () => {
@@ -129,6 +139,8 @@ describe('CaratPlannerPersistenceService', () => {
     expect(plan.scenarioSelections).toEqual({
       league: 'high',
       speculative_income: 'include',
+      temporary_story_rewards: 'include',
+      racing_carnival_mission: 'include',
     });
     expect(plan.freePullCampaignSelections).toEqual({ anniversary: 'later-banner' });
     expect(plan.resourceDefaultsApplied).toBeFalse();

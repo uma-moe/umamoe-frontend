@@ -65,14 +65,17 @@ import {
   resolveDataDrivenCompetitionAssumption,
 } from '../../utils/carat-planner-competition-assumptions';
 import {
+  CONDITIONAL_REWARDS_NONE_OPTION,
   isLegacyTrainingPassIncomeRule,
   MONTHLY_SHOP_HELP_TEXT,
   MONTHLY_SHOP_SCENARIO_GROUP_ID,
   plannerIncomeAssumptionGroups,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
+  RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID,
   SPECULATIVE_INCOME_NONE_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
   TRAINING_PASS_SCENARIO_GROUP_ID,
+  TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID,
 } from '../../utils/carat-planner-income-assumptions';
 import { CaratPlannerCalculationService } from '../../services/carat-planner-calculation.service';
 import { CaratPlannerPersistenceService } from '../../services/carat-planner-persistence.service';
@@ -1192,8 +1195,12 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   setScenario(group: string, option: string): void {
     if (option) {
       this.plan.scenarioSelections[group] = option;
-    } else if (group === SPECULATIVE_INCOME_SCENARIO_GROUP_ID) {
-      this.plan.scenarioSelections[group] = SPECULATIVE_INCOME_NONE_OPTION;
+    } else if (group === SPECULATIVE_INCOME_SCENARIO_GROUP_ID
+      || group === TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID
+      || group === RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID) {
+      this.plan.scenarioSelections[group] = group === SPECULATIVE_INCOME_SCENARIO_GROUP_ID
+        ? SPECULATIVE_INCOME_NONE_OPTION
+        : CONDITIONAL_REWARDS_NONE_OPTION;
     } else {
       delete this.plan.scenarioSelections[group];
     }
@@ -1226,6 +1233,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (groupId === MONTHLY_SHOP_SCENARIO_GROUP_ID) return 'storefront';
     if (groupId === SPECULATIVE_INCOME_SCENARIO_GROUP_ID) return 'auto_graph';
     if (groupId === RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID) return 'casino';
+    if (groupId === TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID) return 'menu_book';
+    if (groupId === RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID) return 'flag';
     if (groupId === 'team_trials_class') return 'stadium';
     if (groupId === 'club_rank') return 'groups';
     const competition = plannerCompetitionAssumptionGroup(groupId);

@@ -9,6 +9,10 @@ export const TRAINING_PASS_SCENARIO_GROUP_ID = 'training_pass';
 export const MONTHLY_SHOP_SCENARIO_GROUP_ID = 'monthly_shop_tickets';
 export const SPECULATIVE_INCOME_SCENARIO_GROUP_ID = 'speculative_income';
 export const RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID = 'random_gameplay_income';
+export const TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID = 'temporary_story_rewards';
+export const RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID = 'racing_carnival_mission';
+export const CONDITIONAL_REWARDS_INCLUDED_OPTION = 'include';
+export const CONDITIONAL_REWARDS_NONE_OPTION = 'none';
 export const SPECULATIVE_INCOME_INCLUDED_OPTION = 'include';
 export const SPECULATIVE_INCOME_MEDIAN_OPTION = 'median';
 export const SPECULATIVE_INCOME_NONE_OPTION = 'none';
@@ -112,6 +116,30 @@ export function plannerIncomeAssumptionGroups(
   const comparisonLabel = speculativeComparisonLabel(comparison);
   const speculativeHelp = speculativeHelpText(comparison);
   return [
+    {
+      id: TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID,
+      label: 'Temporary trainee stories',
+      icon: 'menu_book',
+      scheduleLabel: 'Each new trainee story unlock',
+      helpText: 'Counts 20 Carats for each of chapters 1–4 when you read them during the temporary unlock. No trainee ownership is required; previously claimed chapters are not paid twice.',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Read all four chapters',
+        amountLabel: '+80 Carats / trainee',
+      }],
+    },
+    {
+      id: RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID,
+      label: 'Racing Carnival mission',
+      icon: 'flag',
+      scheduleLabel: 'Each Racing Carnival',
+      helpText: 'Counts the optional 100-Carat mission for obtaining a Carnival Bonus skill and completing a Career.',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Complete bonus-skill mission',
+        amountLabel: '+100 Carats / event',
+      }],
+    },
     {
       id: RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
       label: 'Random gameplay income',

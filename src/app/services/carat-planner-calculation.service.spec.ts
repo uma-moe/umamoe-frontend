@@ -749,6 +749,44 @@ describe('CaratPlannerCalculationService', () => {
       .reduce((total, entry) => total + entry.amount, 0)).toBe(5);
   });
 
+  it('counts player-dependent dated rewards only when their assumptions are selected', () => {
+    const rewards = [{
+      id: 'temporary-story',
+      label: 'Temporary trainee stories',
+      currency: 'free_jewels' as const,
+      amount: 80,
+      available_at: '2026-01-02',
+      assumption: 'temporary_character_story_read',
+    }, {
+      id: 'carnival-mission',
+      label: 'Racing Carnival mission',
+      currency: 'free_jewels' as const,
+      amount: 100,
+      available_at: '2026-01-03',
+      assumption: 'racing_carnival_bonus_skill_mission',
+    }];
+    const data: CaratPlannerDataBundle = {
+      ...emptyData(),
+      rewards: { rewards },
+    };
+    const enabledRewardIds = rewards.map(reward => reward.id);
+
+    expect(service.buildLedger(
+      makePlan({ enabledRewardIds }),
+      data,
+      '2026-01-03',
+    )).toEqual([]);
+
+    const included = service.buildLedger(makePlan({
+      enabledRewardIds,
+      scenarioSelections: {
+        temporary_story_rewards: 'include',
+        racing_carnival_mission: 'include',
+      },
+    }), data, '2026-01-03');
+    expect(included.map(entry => entry.amount)).toEqual([80, 100]);
+  });
+
   it('excludes inactive event targets and rewards without deleting their saved configuration', () => {
     const target = makeTarget({ eventId: 'banner-1', plannedPulls: 50 });
     const plan = makePlan({

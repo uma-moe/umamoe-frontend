@@ -26,13 +26,16 @@ import {
   resolveDataDrivenCompetitionAssumption,
 } from '../utils/carat-planner-competition-assumptions';
 import {
+  CONDITIONAL_REWARDS_INCLUDED_OPTION,
   isLegacyTrainingPassIncomeRule,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
+  RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
   SPECULATIVE_INCOME_INCLUDED_OPTION,
   SPECULATIVE_INCOME_MEDIAN_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
   TRAINING_PASS_SCENARIO_GROUP_ID,
+  TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID,
   trainingPassIncomeRules,
 } from '../utils/carat-planner-income-assumptions';
 import { CaratPullProbabilityService } from './carat-pull-probability.service';
@@ -178,6 +181,7 @@ export class CaratPlannerCalculationService {
 
     const activeRewards = (data.rewards.rewards ?? []).filter(reward =>
       enabledRewards.has(reward.id)
+      && this.isConditionalRewardEnabled(reward, plan.scenarioSelections)
       && !(reward.event_id ? disabledEvents.has(reward.event_id) : false));
     for (const bundle of plannerRewardBundles(activeRewards)) {
       const date = this.toDateKey(bundle.availableAt);
@@ -670,6 +674,18 @@ export class CaratPlannerCalculationService {
       return true;
     }
     return selections[rule.scenario_group] === rule.scenario_option;
+  }
+
+  private isConditionalRewardEnabled(
+    reward: { assumption?: string },
+    selections: Record<string, string>,
+  ): boolean {
+    const group = reward.assumption === 'temporary_character_story_read'
+      ? TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID
+      : reward.assumption === 'racing_carnival_bonus_skill_mission'
+        ? RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID
+        : undefined;
+    return !group || selections[group] === CONDITIONAL_REWARDS_INCLUDED_OPTION;
   }
 
   private findGacha(target: PlannerTarget, gachas: readonly PlannerGachaEntry[]): PlannerGachaEntry | undefined {
