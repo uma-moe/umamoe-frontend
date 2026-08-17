@@ -101,6 +101,8 @@ const PLANNER_CURRENCY_ITEM_IDS: Readonly<Record<string, number>> = {
   carats: 43,
   uma_ticket: 41,
   support_ticket: 111,
+  rainbow_full_crystal: 144,
+  gold_full_crystal: 145,
   rainbow_crystal: 149,
   gold_crystal: 150,
 };
@@ -113,6 +115,10 @@ const VISIBLE_REWARD_CURRENCIES = new Set<PlannerCurrency>([
   'paid_jewels',
   'uma_ticket',
   'support_ticket',
+  'rainbow_crystal',
+  'gold_crystal',
+  'rainbow_full_crystal',
+  'gold_full_crystal',
 ]);
 
 function matchesJewelCurrency(currency: string): boolean {
@@ -1898,6 +1904,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           this.rewardBreakdownAmount(bundle.totals.get('support_ticket'), 'Support ticket'),
           this.rewardBreakdownAmount(bundle.totals.get('rainbow_crystal'), 'Rainbow shard'),
           this.rewardBreakdownAmount(bundle.totals.get('gold_crystal'), 'Gold shard'),
+          this.rewardBreakdownAmount(bundle.totals.get('rainbow_full_crystal'), 'Rainbow Uncap Crystal'),
+          this.rewardBreakdownAmount(bundle.totals.get('gold_full_crystal'), 'Gold Uncap Crystal'),
         ].filter(Boolean);
         return amounts.length > 0
           ? `${this.cleanRewardLabel(bundle.label).replace(/ item details$/i, '')}: ${amounts.join(' · ')}`
@@ -2135,6 +2143,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (key === 'carats') return 'free_jewels';
     if (key === 'uma-ticket') return 'uma_ticket';
     if (key === 'support-ticket') return 'support_ticket';
+    if (key === 'rainbow-crystal') return 'rainbow_crystal';
+    if (key === 'gold-crystal') return 'gold_crystal';
+    if (key === 'rainbow-full-crystal') return 'rainbow_full_crystal';
+    if (key === 'gold-full-crystal') return 'gold_full_crystal';
     return undefined;
   }
 
@@ -2148,7 +2160,11 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (carats > 0) parts.push(`${INTEGER_FORMATTER.format(carats)} Carats`);
     if (amounts.uma_ticket) parts.push(`${INTEGER_FORMATTER.format(amounts.uma_ticket)} Uma tix`);
     if (amounts.support_ticket) parts.push(`${INTEGER_FORMATTER.format(amounts.support_ticket)} support tix`);
-    return parts.join(' · ') || 'No Carats or tickets';
+    if (amounts.rainbow_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.rainbow_crystal)} rainbow shards`);
+    if (amounts.gold_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.gold_crystal)} gold shards`);
+    if (amounts.rainbow_full_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.rainbow_full_crystal)} Rainbow Uncap Crystals`);
+    if (amounts.gold_full_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.gold_full_crystal)} Gold Uncap Crystals`);
+    return parts.join(' · ') || 'No projected resources';
   }
 
   private rewardKindForCurrency(currency: PlannerCurrency): string {
@@ -2177,6 +2193,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (kind === 'support_ticket') return amount === 1 ? 'Support ticket' : 'Support tickets';
     if (kind === 'rainbow_crystal') return amount === 1 ? 'Rainbow Crystal Shard' : 'Rainbow Crystal Shards';
     if (kind === 'gold_crystal') return amount === 1 ? 'Gold Crystal Shard' : 'Gold Crystal Shards';
+    if (kind === 'rainbow_full_crystal') return amount === 1 ? 'Rainbow Uncap Crystal' : 'Rainbow Uncap Crystals';
+    if (kind === 'gold_full_crystal') return amount === 1 ? 'Gold Uncap Crystal' : 'Gold Uncap Crystals';
     return amount === 1 ? 'reward' : 'rewards';
   }
 
@@ -2186,7 +2204,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (kind === 'support_selector' || kind === 'support_ticket') return 'style';
     if (kind === 'uma_ticket') return 'confirmation_number';
     if (kind === 'carats') return 'diamond';
-    if (kind === 'rainbow_crystal' || kind === 'gold_crystal') return 'auto_awesome';
+    if (kind === 'rainbow_crystal' || kind === 'gold_crystal'
+      || kind === 'rainbow_full_crystal' || kind === 'gold_full_crystal') return 'auto_awesome';
     return 'redeem';
   }
 
@@ -2200,9 +2219,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (kind === 'free_pulls') return 0;
     if (kind === 'trainee_selector' || kind === 'support_selector') return 1;
     if (kind === 'uma_ticket' || kind === 'support_ticket') return 2;
-    if (kind === 'rainbow_crystal' || kind === 'gold_crystal') return 3;
-    if (kind === 'carats') return 4;
-    return 5;
+    if (kind === 'rainbow_full_crystal' || kind === 'gold_full_crystal') return 3;
+    if (kind === 'rainbow_crystal' || kind === 'gold_crystal') return 4;
+    if (kind === 'carats') return 5;
+    return 6;
   }
 
   private humanize(value: string): string {
@@ -2458,16 +2478,24 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       : `${available} ${label} available at pull; none used`;
   }
 
-  craftedCrystalCount(shards: number | null | undefined): number {
-    return Math.floor(Math.max(0, Number(shards) || 0) / 20);
+  craftedCrystalCount(
+    shards: number | null | undefined,
+    fullCrystals: number | null | undefined = 0,
+  ): number {
+    return Math.max(0, Math.trunc(Number(fullCrystals) || 0))
+      + Math.floor(Math.max(0, Number(shards) || 0) / 20);
+  }
+
+  crystalShardCount(shards: number | null | undefined): number {
+    return Math.max(0, Math.trunc(Number(shards) || 0));
   }
 
   targetResourcesAtPullAriaLabel(target: PlannerTarget, result: PlannerTargetProjection): string {
     const parts: string[] = [];
     if (this.targetTicketCurrency(target)) parts.push(this.targetTicketUsageLabel(target, result));
     if (target.bannerKind === 'support') {
-      parts.push(`${this.craftedCrystalCount(result.balanceBefore.rainbowCrystals)} rainbow Uncap Crystals`);
-      parts.push(`${this.craftedCrystalCount(result.balanceBefore.goldCrystals)} gold Uncap Crystals`);
+      parts.push(`${this.craftedCrystalCount(result.balanceBefore.rainbowCrystals, result.balanceBefore.rainbowFullCrystals)} rainbow Uncap Crystals and ${this.crystalShardCount(result.balanceBefore.rainbowCrystals)} rainbow shards`);
+      parts.push(`${this.craftedCrystalCount(result.balanceBefore.goldCrystals, result.balanceBefore.goldFullCrystals)} gold Uncap Crystals and ${this.crystalShardCount(result.balanceBefore.goldCrystals)} gold shards`);
     }
     return `At pull date: ${parts.join(', ')}`;
   }

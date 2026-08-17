@@ -3573,6 +3573,11 @@ select.cp-control,
   font-size: 0.9rem;
 }
 
+.cp-overview .cp-stat--crystals strong {
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
 .cp-overview .cp-stat span:not(.cp-stat-icon) {
   font-size: 0.59rem;
   letter-spacing: 0.035em;

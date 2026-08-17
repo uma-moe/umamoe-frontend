@@ -51,6 +51,35 @@ describe('buildTimelineRewardSummaries', () => {
     ]);
   });
 
+  it('keeps complete Uncap Crystal items distinct from crystal shards', () => {
+    const summaries = buildTimelineRewardSummaries({
+      rewards: [{
+        id: 'crystal-gift-items',
+        event_id: 'crystal-gift',
+        label: 'Uncap Crystal gift',
+        currency: 'free_jewels',
+        amount: null,
+        available_at: '2026-11-11',
+        source_items: [
+          { item_category: 164, item_id: 144, amount: 1 },
+          { item_category: 164, item_id: 145, amount: 2 },
+          { item_category: 164, item_id: 149, amount: 3 },
+          { item_category: 164, item_id: 150, amount: 4 },
+        ],
+      }],
+    });
+
+    expect(summaries.get('crystal-gift')?.label).toBe(
+      '3 rainbow shards \u00b7 4 gold shards \u00b7 1 Rainbow Uncap Crystal \u00b7 2 Gold Uncap Crystals',
+    );
+    expect(summaries.get('crystal-gift')?.items.map(item => [item.kind, item.iconPath])).toEqual([
+      ['rainbow_crystal', 'assets/images/item/item_icon_00149.webp'],
+      ['gold_crystal', 'assets/images/item/item_icon_00150.webp'],
+      ['rainbow_full_crystal', 'assets/images/item/item_icon_00144.webp'],
+      ['gold_full_crystal', 'assets/images/item/item_icon_00145.webp'],
+    ]);
+  });
+
   it('uses campaign allocations once instead of double-counting managed free-pull benefits', () => {
     const summaries = buildTimelineRewardSummaries({
       rewards: [],

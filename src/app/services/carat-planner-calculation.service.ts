@@ -483,13 +483,19 @@ export class CaratPlannerCalculationService {
     const sparkPulls = gacha?.spark_pulls ?? data.core.default_spark_pulls;
     const rainbowCrystalBudget = target.bannerKind === 'support'
       ? Math.min(
-        Math.floor(balances.rainbowCrystals / CRYSTAL_SHARDS_PER_UNCAP),
+        this.availableUncapCrystals(
+          balances.rainbowFullCrystals,
+          balances.rainbowCrystals,
+        ),
         this.nonNegativeInt(target.rainbowCrystalsPlanned),
       )
       : 0;
     const goldCrystalBudget = target.bannerKind === 'support'
       ? Math.min(
-        Math.floor(balances.goldCrystals / CRYSTAL_SHARDS_PER_UNCAP),
+        this.availableUncapCrystals(
+          balances.goldFullCrystals,
+          balances.goldCrystals,
+        ),
         this.nonNegativeInt(target.goldCrystalsPlanned),
       )
       : 0;
@@ -503,8 +509,8 @@ export class CaratPlannerCalculationService {
     const goldCrystalsUsed = odds.goalOdds?.reduce((total, goal) => (
       total + (goal.crystalKind === 'gold' ? goal.crystalCopiesApplied : 0)
     ), 0) ?? 0;
-    balances.rainbowCrystals -= rainbowCrystalsUsed * CRYSTAL_SHARDS_PER_UNCAP;
-    balances.goldCrystals -= goldCrystalsUsed * CRYSTAL_SHARDS_PER_UNCAP;
+    this.consumeUncapCrystals(balances, 'rainbow', rainbowCrystalsUsed);
+    this.consumeUncapCrystals(balances, 'gold', goldCrystalsUsed);
 
     return {
       targetId: target.id,
@@ -958,11 +964,11 @@ export class CaratPlannerCalculationService {
 
   private addCurrency(balances: PlannerBalances, currency: PlannerCurrency, amount: number): void {
     const key = this.balanceKey(currency);
-    balances[key] = Math.max(0, balances[key] + Math.trunc(amount));
+    balances[key] = Math.max(0, (balances[key] ?? 0) + Math.trunc(amount));
   }
 
   private getCurrency(balances: PlannerBalances, currency: PlannerCurrency): number {
-    return balances[this.balanceKey(currency)];
+    return balances[this.balanceKey(currency)] ?? 0;
   }
 
   private balanceKey(currency: PlannerCurrency): keyof PlannerBalances {
@@ -972,8 +978,35 @@ export class CaratPlannerCalculationService {
       case 'support_ticket': return 'supportTickets';
       case 'rainbow_crystal': return 'rainbowCrystals';
       case 'gold_crystal': return 'goldCrystals';
+      case 'rainbow_full_crystal': return 'rainbowFullCrystals';
+      case 'gold_full_crystal': return 'goldFullCrystals';
       default: return 'freeJewels';
     }
+  }
+
+  private availableUncapCrystals(
+    fullCrystals: number | undefined,
+    shards: number | undefined,
+  ): number {
+    return this.nonNegativeInt(fullCrystals)
+      + Math.floor(this.nonNegativeInt(shards) / CRYSTAL_SHARDS_PER_UNCAP);
+  }
+
+  private consumeUncapCrystals(
+    balances: PlannerBalances,
+    kind: 'rainbow' | 'gold',
+    amount: number,
+  ): void {
+    const fullKey = kind === 'rainbow' ? 'rainbowFullCrystals' : 'goldFullCrystals';
+    const shardKey = kind === 'rainbow' ? 'rainbowCrystals' : 'goldCrystals';
+    const requested = this.nonNegativeInt(amount);
+    const fullUsed = Math.min(requested, this.nonNegativeInt(balances[fullKey]));
+    balances[fullKey] = this.nonNegativeInt(balances[fullKey]) - fullUsed;
+    balances[shardKey] = Math.max(
+      0,
+      this.nonNegativeInt(balances[shardKey])
+        - (requested - fullUsed) * CRYSTAL_SHARDS_PER_UNCAP,
+    );
   }
 
   private copyBalances(value: PlannerBalances): PlannerBalances {
@@ -984,6 +1017,8 @@ export class CaratPlannerCalculationService {
       supportTickets: this.nonNegativeInt(value.supportTickets),
       rainbowCrystals: this.nonNegativeInt(value.rainbowCrystals),
       goldCrystals: this.nonNegativeInt(value.goldCrystals),
+      rainbowFullCrystals: this.nonNegativeInt(value.rainbowFullCrystals),
+      goldFullCrystals: this.nonNegativeInt(value.goldFullCrystals),
     };
   }
 

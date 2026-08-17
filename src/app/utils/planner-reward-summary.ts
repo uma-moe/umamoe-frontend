@@ -7,6 +7,8 @@ export interface TimelineRewardSummary {
   tickets: number;
   rainbowCrystals: number;
   goldCrystals: number;
+  rainbowFullCrystals: number;
+  goldFullCrystals: number;
   freePulls: number;
   selectors: number;
   label: string;
@@ -54,6 +56,8 @@ export type TimelineRewardItemKind =
   | 'support_ticket'
   | 'rainbow_crystal'
   | 'gold_crystal'
+  | 'rainbow_full_crystal'
+  | 'gold_full_crystal'
   | 'free_pulls'
   | 'trainee_selector'
   | 'support_selector';
@@ -73,6 +77,8 @@ interface MutableRewardSummary {
   supportTickets: number;
   rainbowCrystals: number;
   goldCrystals: number;
+  rainbowFullCrystals: number;
+  goldFullCrystals: number;
   freePulls: number;
   selectorItems: Map<string, MutableSelectorReward>;
   variableOutcomeIds: Set<string>;
@@ -123,6 +129,8 @@ const REWARD_ITEM_IDS = {
   money: 59,
   support_points: 110,
   goddess_statues: 115,
+  rainbow_full_crystal: 144,
+  gold_full_crystal: 145,
   rainbow_crystal: 149,
   gold_crystal: 150,
   trainee_selector: 164,
@@ -321,6 +329,8 @@ export function buildTimelineRewardSummaries(
       supportTickets: 0,
       rainbowCrystals: 0,
       goldCrystals: 0,
+      rainbowFullCrystals: 0,
+      goldFullCrystals: 0,
       freePulls: 0,
       selectorItems: new Map(),
       variableOutcomeIds: new Set(),
@@ -343,6 +353,8 @@ export function buildTimelineRewardSummaries(
       else if (currency === 'support_ticket') summary.supportTickets += amount;
       else if (currency === 'rainbow_crystal') summary.rainbowCrystals += amount;
       else if (currency === 'gold_crystal') summary.goldCrystals += amount;
+      else if (currency === 'rainbow_full_crystal') summary.rainbowFullCrystals += amount;
+      else if (currency === 'gold_full_crystal') summary.goldFullCrystals += amount;
     }
   }
 
@@ -372,6 +384,8 @@ export function buildTimelineRewardSummaries(
       else if (item.item_category === 40 && item.item_id === 111) summary.variableRewardLabels.add('Support tickets');
       else if (item.item_category === 164 && item.item_id === 149) summary.variableRewardLabels.add('Rainbow Crystal Shards');
       else if (item.item_category === 164 && item.item_id === 150) summary.variableRewardLabels.add('Gold Crystal Shards');
+      else if (item.item_category === 164 && item.item_id === 144) summary.variableRewardLabels.add('Rainbow Uncap Crystals');
+      else if (item.item_category === 164 && item.item_id === 145) summary.variableRewardLabels.add('Gold Uncap Crystals');
     }
   }
   const managedCampaignIds = new Set((resource.free_pull_campaigns ?? []).map(campaign => campaign.id));
@@ -425,6 +439,8 @@ export function buildTimelineRewardSummaries(
     if (tickets > 0) parts.push(`${INTEGER_FORMATTER.format(tickets)} ${tickets === 1 ? 'ticket' : 'tickets'}`);
     if (total.rainbowCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(total.rainbowCrystals)} rainbow ${total.rainbowCrystals === 1 ? 'shard' : 'shards'}`);
     if (total.goldCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(total.goldCrystals)} gold ${total.goldCrystals === 1 ? 'shard' : 'shards'}`);
+    if (total.rainbowFullCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(total.rainbowFullCrystals)} Rainbow Uncap ${total.rainbowFullCrystals === 1 ? 'Crystal' : 'Crystals'}`);
+    if (total.goldFullCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(total.goldFullCrystals)} Gold Uncap ${total.goldFullCrystals === 1 ? 'Crystal' : 'Crystals'}`);
     if (total.freePulls > 0) parts.push(`${INTEGER_FORMATTER.format(total.freePulls)} free pulls`);
     if (selectors > 0) parts.push(`${INTEGER_FORMATTER.format(selectors)} ${selectors === 1 ? 'selector' : 'selectors'}`);
     const variableOutcomeCount = total.variableOutcomes.length;
@@ -466,6 +482,22 @@ export function buildTimelineRewardSummaries(
         REWARD_ITEM_IDS.gold_crystal,
       ));
     }
+    if (total.rainbowFullCrystals > 0) {
+      items.push(rewardItem(
+        'rainbow_full_crystal',
+        total.rainbowFullCrystals,
+        total.rainbowFullCrystals === 1 ? 'Rainbow Uncap Crystal' : 'Rainbow Uncap Crystals',
+        REWARD_ITEM_IDS.rainbow_full_crystal,
+      ));
+    }
+    if (total.goldFullCrystals > 0) {
+      items.push(rewardItem(
+        'gold_full_crystal',
+        total.goldFullCrystals,
+        total.goldFullCrystals === 1 ? 'Gold Uncap Crystal' : 'Gold Uncap Crystals',
+        REWARD_ITEM_IDS.gold_full_crystal,
+      ));
+    }
     if (total.freePulls > 0) {
       // The event card swaps this to the support ticket asset for support banners.
       items.push(rewardItem('free_pulls', total.freePulls, 'free pulls', REWARD_ITEM_IDS.uma_ticket, ' pulls'));
@@ -489,6 +521,8 @@ export function buildTimelineRewardSummaries(
         tickets,
         rainbowCrystals: total.rainbowCrystals,
         goldCrystals: total.goldCrystals,
+        rainbowFullCrystals: total.rainbowFullCrystals,
+        goldFullCrystals: total.goldFullCrystals,
         freePulls: total.freePulls,
         selectors,
         label,
@@ -765,6 +799,12 @@ function competitiveItemDescriptor(
   }
   if (category === 40 && itemId === 111) {
     return { key: 'support-ticket', label: 'Support ticket', icon: 'confirmation_number', iconPath: itemIconPath(REWARD_ITEM_IDS.support_ticket) };
+  }
+  if (category === 164 && itemId === 144) {
+    return { key: 'rainbow-full-crystal', label: 'Rainbow Uncap Crystal', icon: 'auto_awesome', iconPath: itemIconPath(REWARD_ITEM_IDS.rainbow_full_crystal) };
+  }
+  if (category === 164 && itemId === 145) {
+    return { key: 'gold-full-crystal', label: 'Gold Uncap Crystal', icon: 'auto_awesome', iconPath: itemIconPath(REWARD_ITEM_IDS.gold_full_crystal) };
   }
   if (category === 164 && itemId === 149) {
     return { key: 'rainbow-crystal', label: 'Rainbow Crystal Shard', icon: 'auto_awesome', iconPath: itemIconPath(REWARD_ITEM_IDS.rainbow_crystal) };

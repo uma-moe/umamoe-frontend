@@ -47,13 +47,17 @@ describe('CaratPlannerComponent banner ordering', () => {
     ]);
   });
 
-  it('shows only complete Uncap Crystals in crafted-crystal balances', () => {
+  it('shows complete Uncap Crystals separately from leftover shards', () => {
     const component = createComponent();
 
     expect(component.craftedCrystalCount(undefined)).toBe(0);
     expect(component.craftedCrystalCount(19)).toBe(0);
     expect(component.craftedCrystalCount(20)).toBe(1);
     expect(component.craftedCrystalCount(41)).toBe(2);
+    expect(component.craftedCrystalCount(19, 2)).toBe(2);
+    expect(component.craftedCrystalCount(21, 2)).toBe(3);
+    expect(component.crystalShardCount(19)).toBe(19);
+    expect(component.crystalShardCount(21)).toBe(21);
   });
 
   it('includes quantified rewards by default and remembers explicit exclusions', () => {

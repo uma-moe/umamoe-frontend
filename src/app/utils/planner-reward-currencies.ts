@@ -19,6 +19,8 @@ export function plannerCurrencyForSourceItem(
   if (item.item_category === 90 && item.item_id === 43) return 'free_jewels';
   if (item.item_category === 40 && item.item_id === 41) return 'uma_ticket';
   if (item.item_category === 40 && item.item_id === 111) return 'support_ticket';
+  if (item.item_category === 164 && item.item_id === 144) return 'rainbow_full_crystal';
+  if (item.item_category === 164 && item.item_id === 145) return 'gold_full_crystal';
   if (item.item_category === 164 && item.item_id === 149) return 'rainbow_crystal';
   if (item.item_category === 164 && item.item_id === 150) return 'gold_crystal';
   return undefined;
@@ -36,7 +38,7 @@ export function plannerRewardBundleId(
   reward: Pick<PlannerRewardEntry, 'id'>,
 ): string {
   return reward.id.replace(
-    /-(?:free_jewels|paid_jewels|uma_ticket|support_ticket|rainbow_crystal|gold_crystal|items)$/,
+    /-(?:free_jewels|paid_jewels|uma_ticket|support_ticket|rainbow_crystal|gold_crystal|rainbow_full_crystal|gold_full_crystal|items)$/,
     '',
   );
 }

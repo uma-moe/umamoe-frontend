@@ -294,6 +294,8 @@ export class CaratPlannerPersistenceService {
         supportTickets: 0,
         rainbowCrystals: 0,
         goldCrystals: 0,
+        rainbowFullCrystals: 0,
+        goldFullCrystals: 0,
       },
       enabledIncomeRuleIds: [],
       enabledRewardIds: [],
@@ -421,6 +423,8 @@ export class CaratPlannerPersistenceService {
       supportTickets: this.nonNegativeInt(record?.['supportTickets']),
       rainbowCrystals: this.nonNegativeInt(record?.['rainbowCrystals']),
       goldCrystals: this.nonNegativeInt(record?.['goldCrystals']),
+      rainbowFullCrystals: this.nonNegativeInt(record?.['rainbowFullCrystals']),
+      goldFullCrystals: this.nonNegativeInt(record?.['goldFullCrystals']),
     };
   }
 
@@ -458,6 +462,7 @@ export class CaratPlannerPersistenceService {
       const amounts: Partial<Record<PlannerCurrency, number>> = {};
       for (const currency of [
         'free_jewels', 'paid_jewels', 'uma_ticket', 'support_ticket', 'rainbow_crystal', 'gold_crystal',
+        'rainbow_full_crystal', 'gold_full_crystal',
       ] as const) {
         const amount = Math.min(10_000_000, this.nonNegativeInt(amountsRecord[currency]));
         if (amount > 0) amounts[currency] = amount;
@@ -651,6 +656,8 @@ export class CaratPlannerPersistenceService {
       || value === 'support_ticket'
       || value === 'rainbow_crystal'
       || value === 'gold_crystal'
+      || value === 'rainbow_full_crystal'
+      || value === 'gold_full_crystal'
       ? value
       : 'free_jewels';
   }

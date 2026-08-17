@@ -4,7 +4,9 @@ export type PlannerCurrency =
   | 'uma_ticket'
   | 'support_ticket'
   | 'rainbow_crystal'
-  | 'gold_crystal';
+  | 'gold_crystal'
+  | 'rainbow_full_crystal'
+  | 'gold_full_crystal';
 
 export type PlannerBannerKind = 'character' | 'support' | 'paid' | 'other';
 
@@ -34,6 +36,10 @@ export interface PlannerBalances {
   rainbowCrystals: number;
   /** Gold Crystal Shards. Twenty can be exchanged for one Gold Uncap Crystal. */
   goldCrystals: number;
+  /** Complete Rainbow Uncap Crystals, distinct from Rainbow Crystal Shards. */
+  rainbowFullCrystals?: number;
+  /** Complete Gold Uncap Crystals, distinct from Gold Crystal Shards. */
+  goldFullCrystals?: number;
 }
 
 export interface PlannerCoreResource {
@@ -424,9 +430,9 @@ export interface PlannerTargetProjection {
   ticketPullsUsed: number;
   freeJewelPulls: number;
   paidJewelPulls: number;
-  /** Full Rainbow Uncap Crystals used; each consumes 20 projected shards. */
+  /** Full Rainbow Uncap Crystals used, drawn from complete crystals before craftable shards. */
   rainbowCrystalsUsed: number;
-  /** Full Gold Uncap Crystals used; each consumes 20 projected shards. */
+  /** Full Gold Uncap Crystals used, drawn from complete crystals before craftable shards. */
   goldCrystalsUsed: number;
   unfilledPulls: number;
   jewelCost: number;

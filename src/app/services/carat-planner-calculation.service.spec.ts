@@ -167,14 +167,14 @@ describe('CaratPlannerCalculationService', () => {
     const target = projection.targets[0];
 
     expect(target.income.length).toBe(4);
-    expect(target.balanceBefore).toEqual({ freeJewels: 600, paidJewels: 300, umaTickets: 3, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 });
+    expect(target.balanceBefore).toEqual({ freeJewels: 600, paidJewels: 300, umaTickets: 3, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0, rainbowFullCrystals: 0, goldFullCrystals: 0 });
     expect(target.freePullsUsed).toBe(10);
     expect(target.ticketPullsUsed).toBe(3);
     expect(target.freeJewelPulls).toBe(2);
     expect(target.paidJewelPulls).toBe(0);
     expect(target.fundedPulls).toBe(15);
     expect(target.unfilledPulls).toBe(0);
-    expect(target.balanceAfter).toEqual({ freeJewels: 300, paidJewels: 300, umaTickets: 0, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 });
+    expect(target.balanceAfter).toEqual({ freeJewels: 300, paidJewels: 300, umaTickets: 0, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0, rainbowFullCrystals: 0, goldFullCrystals: 0 });
   });
 
   it('uses 20 available tickets before Carats for a 200-pull banner', () => {
@@ -463,6 +463,57 @@ describe('CaratPlannerCalculationService', () => {
     expect(target.goldCrystalsUsed).toBe(1);
     expect(target.balanceAfter.rainbowCrystals).toBe(0);
     expect(target.balanceAfter.goldCrystals).toBe(20);
+  });
+
+  it('counts complete Uncap Crystals separately and spends them before craftable shards', () => {
+    const plan = makePlan({
+      balances: {
+        freeJewels: 0,
+        paidJewels: 0,
+        umaTickets: 0,
+        supportTickets: 0,
+        rainbowCrystals: 19,
+        goldCrystals: 0,
+        rainbowFullCrystals: 1,
+        goldFullCrystals: 0,
+      },
+      enabledRewardIds: ['full-crystal', 'crystal-shard'],
+      targets: [makeTarget({
+        bannerKind: 'support',
+        plannedPulls: 0,
+        rainbowCrystalsPlanned: 3,
+        pickupGoals: [{ pickupId: 30031, desiredCopies: 4 }],
+      })],
+    });
+    const data: CaratPlannerDataBundle = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards: [{
+        id: 'full-crystal',
+        label: 'Rainbow Uncap Crystal gift',
+        currency: 'rainbow_full_crystal',
+        amount: 1,
+        available_at: '2026-01-02',
+      }, {
+        id: 'crystal-shard',
+        label: 'Rainbow Crystal Shard gift',
+        currency: 'rainbow_crystal',
+        amount: 1,
+        available_at: '2026-01-02',
+      }] },
+    };
+
+    const target = service.project(plan, data, [makeGacha({
+      banner_kind: 'support',
+      ticket_currency: 'support_ticket',
+      pickups: [{ pickup_id: 30031, rate: 0.0075, exchangeable: true }],
+    })]).targets[0];
+
+    expect(target.balanceBefore.rainbowFullCrystals).toBe(2);
+    expect(target.balanceBefore.rainbowCrystals).toBe(20);
+    expect(target.rainbowCrystalsUsed).toBe(3);
+    expect(target.balanceAfter.rainbowFullCrystals).toBe(0);
+    expect(target.balanceAfter.rainbowCrystals).toBe(0);
   });
 
   it('projects mission source totals and the competitive outcome selected by the user', () => {
@@ -958,7 +1009,16 @@ function makePlan(overrides: Partial<CaratPlan> = {}): CaratPlan {
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     projectionStartDate: '2026-01-01',
-    balances: { freeJewels: 0, paidJewels: 0, umaTickets: 0, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0 },
+    balances: {
+      freeJewels: 0,
+      paidJewels: 0,
+      umaTickets: 0,
+      supportTickets: 0,
+      rainbowCrystals: 0,
+      goldCrystals: 0,
+      rainbowFullCrystals: 0,
+      goldFullCrystals: 0,
+    },
     enabledIncomeRuleIds: [],
     enabledRewardIds: [],
     enabledRewardEventIds: [],

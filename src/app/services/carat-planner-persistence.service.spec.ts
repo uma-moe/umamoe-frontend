@@ -79,6 +79,8 @@ describe('CaratPlannerPersistenceService', () => {
           supportTickets: 3.8,
           rainbowCrystals: 2.9,
           goldCrystals: -4,
+          rainbowFullCrystals: 1.9,
+          goldFullCrystals: -2,
         },
         enabledIncomeRuleIds: ['daily', 'daily', 42],
         enabledRewardIds: ['gift', 'gift'],
@@ -131,7 +133,7 @@ describe('CaratPlannerPersistenceService', () => {
     expect(plan.name).toBe('x'.repeat(80));
     expect(plan.projectionStartDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(plan.projectionStartDate).not.toBe('2026-02-31');
-    expect(plan.balances).toEqual({ freeJewels: 0, paidJewels: 42, umaTickets: 0, supportTickets: 3, rainbowCrystals: 2, goldCrystals: 0 });
+    expect(plan.balances).toEqual({ freeJewels: 0, paidJewels: 42, umaTickets: 0, supportTickets: 3, rainbowCrystals: 2, goldCrystals: 0, rainbowFullCrystals: 1, goldFullCrystals: 0 });
     expect(plan.enabledIncomeRuleIds).toEqual(['daily']);
     expect(plan.enabledRewardIds).toEqual(['gift']);
     expect(plan.enabledRewardEventIds).toEqual(['campaign-1']);
@@ -188,7 +190,7 @@ describe('CaratPlannerPersistenceService', () => {
         id: 'saved-plan',
         name: 'Saved plan',
         projectionStartDate: '2026-01-01',
-        balances: { freeJewels: 1234.9, paidJewels: -1, umaTickets: 2, supportTickets: 3 },
+        balances: { freeJewels: 1234.9, paidJewels: -1, umaTickets: 2, supportTickets: 3, rainbowFullCrystals: 2, goldFullCrystals: 1 },
         customIncome: [],
         targets: [{
           id: 'target',
@@ -206,13 +208,13 @@ describe('CaratPlannerPersistenceService', () => {
 
     const stored = JSON.parse(localStorage.getItem(CaratPlannerPersistenceService.STORAGE_KEY) ?? '{}');
     const storedPlan = stored.plans.find((plan: { id: string }) => plan.id === 'saved-plan');
-    expect(storedPlan.balances).toEqual({ freeJewels: 1234, paidJewels: 0, umaTickets: 2, supportTickets: 3, rainbowCrystals: 0, goldCrystals: 0 });
+    expect(storedPlan.balances).toEqual({ freeJewels: 1234, paidJewels: 0, umaTickets: 2, supportTickets: 3, rainbowCrystals: 0, goldCrystals: 0, rainbowFullCrystals: 2, goldFullCrystals: 1 });
     expect(storedPlan.targets[0].bannerStart).toBeUndefined();
     expect(storedPlan.targets[0].bannerEnd).toBeUndefined();
 
     const restored = createService().activePlan;
     expect(restored.id).toBe('saved-plan');
-    expect(restored.balances).toEqual({ freeJewels: 1234, paidJewels: 0, umaTickets: 2, supportTickets: 3, rainbowCrystals: 0, goldCrystals: 0 });
+    expect(restored.balances).toEqual({ freeJewels: 1234, paidJewels: 0, umaTickets: 2, supportTickets: 3, rainbowCrystals: 0, goldCrystals: 0, rainbowFullCrystals: 2, goldFullCrystals: 1 });
     expect(restored.targets[0].bannerKind).toBe('support');
     expect(restored.targets[0].bannerStart).toBeUndefined();
     expect(restored.targets[0].bannerEnd).toBeUndefined();
