@@ -360,9 +360,10 @@
                 <ng-container *ngTemplateOutlet="freePullCampaignTile; context: { $implicit: campaign }"></ng-container>
               </ng-container>
               <div *ngIf="item.group as group" class="cp-reward-cell" [class.has-source]="group.sourceUrl">
-                <div class="cp-reward-row" [class.is-active]="isRewardGroupActive(group)"
+                <ng-container *ngIf="{ active: isRewardGroupActive(group) } as rewardState">
+                  <div class="cp-reward-row" [class.is-active]="rewardState.active"
                   [class.has-variable-reward]="group.variableOptions.length > 0"
-                  [class.is-excluded]="!isRewardGroupActive(group)" [class.is-automatic]="isAutomaticFreePullGroup(group)" [class.is-past]="showPastRewards">
+                  [class.is-excluded]="!rewardState.active" [class.is-automatic]="isAutomaticFreePullGroup(group)" [class.is-past]="showPastRewards">
                   <ng-container *ngTemplateOutlet="rewardTile; context: { $implicit: group }"></ng-container>
                   <div class="cp-reward-actions" *ngIf="!showPastRewards; else pastRewardState">
                     <a *ngIf="group.sourceUrl" class="cp-reward-source" [href]="group.sourceUrl" target="_blank"
@@ -392,22 +393,26 @@
                       </button>
                     </div>
 
-                    <button *ngIf="isRewardGroupBannerActionable(group)" type="button"
-                      [class.is-added]="isRewardGroupBannerPlanned(group)"
-                      [attr.aria-pressed]="isRewardGroupBannerPlanned(group)"
-                      [attr.aria-label]="(isRewardGroupBannerPlanned(group) ? 'Remove ' : 'Add ') + group.title + ' banner ' + (isRewardGroupBannerPlanned(group) ? 'from' : 'to') + ' the plan'"
-                      (click)="toggleRewardGroupBanner(group)">
-                      <mat-icon aria-hidden="true">{{ isRewardGroupBannerPlanned(group) ? 'check_circle' : 'add_chart' }}</mat-icon>
-                      <span>{{ isRewardGroupBannerPlanned(group) ? 'Added' : 'Plan' }}</span>
-                    </button>
+                    <ng-container *ngIf="isRewardGroupBannerActionable(group)">
+                      <ng-container *ngIf="{ planned: isRewardGroupBannerPlanned(group) } as bannerState">
+                        <button type="button"
+                          [class.is-added]="bannerState.planned"
+                          [attr.aria-pressed]="bannerState.planned"
+                          [attr.aria-label]="(bannerState.planned ? 'Remove ' : 'Add ') + group.title + ' banner ' + (bannerState.planned ? 'from' : 'to') + ' the plan'"
+                          (click)="toggleRewardGroupBanner(group)">
+                          <mat-icon aria-hidden="true">{{ bannerState.planned ? 'check_circle' : 'add_chart' }}</mat-icon>
+                          <span>{{ bannerState.planned ? 'Added' : 'Plan' }}</span>
+                        </button>
+                      </ng-container>
+                    </ng-container>
                     <button *ngIf="isRewardGroupSelectable(group) && !group.variableOptions.length" type="button"
                       class="cp-reward-include-toggle"
-                      [class.is-added]="isRewardGroupActive(group)"
-                      [attr.aria-pressed]="isRewardGroupActive(group)"
-                      [attr.aria-label]="(isRewardGroupActive(group) ? 'Exclude ' : 'Include ') + group.title + ' rewards'"
-                      [matTooltip]="isRewardGroupActive(group) ? 'Included in projection — click to exclude' : 'Excluded — click to include'"
+                      [class.is-added]="rewardState.active"
+                      [attr.aria-pressed]="rewardState.active"
+                      [attr.aria-label]="(rewardState.active ? 'Exclude ' : 'Include ') + group.title + ' rewards'"
+                      [matTooltip]="rewardState.active ? 'Included in projection — click to exclude' : 'Excluded — click to include'"
                       (click)="toggleRewardGroupSelection(group)">
-                      <mat-icon aria-hidden="true">{{ isRewardGroupActive(group) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+                      <mat-icon aria-hidden="true">{{ rewardState.active ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
                     </button>
                   </div>
                   <ng-template #pastRewardState>
@@ -421,7 +426,8 @@
                       <span class="cp-reward-past"><mat-icon aria-hidden="true">history</mat-icon> Past</span>
                     </div>
                   </ng-template>
-                </div>
+                  </div>
+                </ng-container>
               </div>
             </ng-container>
           </div>

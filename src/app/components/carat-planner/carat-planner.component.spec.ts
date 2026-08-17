@@ -723,6 +723,42 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.enabledRewardTotalLabel).toBe('300 Carats · 1 unknown');
   });
 
+  it('summarizes generated income assumptions with the selected proposal', () => {
+    const component = createComponent();
+    component.events = [{
+      id: 'campaign-632',
+      title: 'Training Pass launch',
+      type: 'campaign',
+      globalReleaseDate: '2031-08-20',
+    }];
+    component.data = {
+      core: {},
+      income: { rules: [
+        { id: 'daily', label: 'Daily missions', currency: 'free_jewels', amount: 75, cadence: 'daily', start_date: '2030-01-01' },
+        { id: 'login', label: 'Login cycle', currency: 'free_jewels', amount: 150, cadence: 'weekly', start_date: '2030-01-01' },
+        { id: 'club', label: 'Club rank', currency: 'free_jewels', amount: 225, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_d_plus' },
+      ] },
+      rewards: {
+        rewards: [],
+        global_reward_comparison: {
+          speculative_monthly_carats: 1233,
+          speculative_recent_median_monthly_carats: 775,
+        } as never,
+      },
+    };
+    component.plan.enabledIncomeRuleIds = ['daily', 'login', 'club'];
+    component.plan.scenarioSelections = {
+      club_rank: 'rank_d_plus',
+      random_gameplay_income: 'high',
+      training_pass: 'free',
+      speculative_income: 'include',
+    };
+
+    expect(component.enabledIncomeTotalLabel).toBe(
+      '+75 / day · +400 / week · +1,958 / month',
+    );
+  });
+
   it('groups event rewards with compact benefits in display priority order', () => {
     const component = createComponent();
     component.events = [{
@@ -1153,6 +1189,37 @@ describe('CaratPlannerComponent banner ordering', () => {
 
     component.setRewardSelectionFilter('included');
     expect(component.visibleRewardGroups.map(group => group.id)).toEqual(['reward:reward-2']);
+  });
+
+  it('reuses the reward catalogue view while searching and filtering', () => {
+    const component = createComponent();
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards: Array.from({ length: 100 }, (_, index) => ({
+        id: `reward-${index}`,
+        label: `Reward ${index}`,
+        currency: 'free_jewels' as const,
+        amount: 100,
+        available_at: `2030-02-${String(index % 28 + 1).padStart(2, '0')}`,
+      })) },
+    };
+    const buildGroups = spyOn(
+      component as unknown as { buildRewardGroups(): unknown },
+      'buildRewardGroups',
+    ).and.callThrough();
+
+    (component as unknown as { rebuildAssumptionViews(): void }).rebuildAssumptionViews();
+    component.searchRewards('Reward 7');
+    component.searchRewards('');
+    component.setRewardSelectionFilter('included');
+    component.setRewardSelectionFilter('all');
+
+    expect(buildGroups).toHaveBeenCalledTimes(1);
+
+    component.plan.projectionStartDate = '2030-02-15';
+    component.projectionStartChanged();
+    expect(buildGroups).toHaveBeenCalledTimes(2);
   });
 
   it('shows exact and predicted campaign free pulls in the funding summary', () => {

@@ -1034,6 +1034,8 @@ select.cp-control,
 .cp-reward-cell {
   position: relative;
   min-width: 0;
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 51px;
 }
 
 .cp-reward-row {
