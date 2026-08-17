@@ -13,7 +13,7 @@ export const environment = {
     alwaysShowFallbacks: false,
     debugLogging: false,
     scriptUrl: 'https://cdn.fuseplatform.net/publift/tags/2/4302/fuse.js',
-    blockingTimeoutMs: 1200,
+    blockingTimeoutMs: 2000,
     slots: {
       sticky_footer: 'sticky_footer',
       mobile_header: '',

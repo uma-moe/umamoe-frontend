@@ -78,6 +78,11 @@ interface PendingFuseCall {
   callback: (fusetag: FuseTag) => void;
 }
 
+interface RegisteredFuseZone {
+  element: HTMLElement;
+  fuseId: string;
+}
+
 interface RetainedAdCreative {
   container: HTMLElement;
   overlay: HTMLElement | null;
@@ -163,7 +168,7 @@ const FORCE_AD_CONSENT_QUERY_KEYS = ['force_ad_consent', 'ad_consent', 'ads_cons
 const FUSE_ENABLED_STORAGE_KEY = 'umamoe-fuse-enabled-v1';
 const FUSE_ENABLED_QUERY_KEYS = ['fuse', 'fuse_enabled', 'ads_enabled'];
 const FUSE_API_RETRY_MS = 100;
-const DEFAULT_FUSE_BLOCKING_TIMEOUT_MS = 1200;
+const DEFAULT_FUSE_BLOCKING_TIMEOUT_MS = 2000;
 const PRIVACY_CONTROLS_RETRY_MS = 250;
 const PRIVACY_CONTROLS_MAX_RETRIES = 32;
 const RETAINED_AD_CREATIVE_TTL_MS = 15000;
@@ -210,8 +215,8 @@ export class FuseAdsService {
     ...DENIED_AD_CONSENT,
     source: 'disabled',
   };
-  private registeredZones = new Map<string, string>();
-  private persistentZones = new Map<string, string>();
+  private registeredZones = new Map<string, RegisteredFuseZone>();
+  private persistentZones = new Map<string, RegisteredFuseZone>();
   private pendingFuseCalls: PendingFuseCall[] = [];
   private fuseCallFlushTimer: number | null = null;
   private fuseCallFlushRetries = 0;
@@ -384,7 +389,8 @@ export class FuseAdsService {
       return;
     }
 
-    if (!this.isZoneElementConnected(zoneElementId)) {
+    const zoneElement = this.getConnectedZoneElement(zoneElementId);
+    if (!zoneElement) {
       this.debugWarn('registerZone skipped: zone element is not connected to the DOM', {
         zoneElementId,
         fuseId,
@@ -392,11 +398,23 @@ export class FuseAdsService {
       return;
     }
 
+    const existingRegistration = this.registeredZones.get(zoneElementId);
+    if (existingRegistration?.element === zoneElement && existingRegistration.fuseId === fuseId) {
+      this.debug('registerZone skipped: zone already registered for this page view', {
+        zoneElementId,
+        fuseId,
+      });
+      return;
+    }
+
     this.debug('registerZone queued', { zoneElementId, fuseId });
-    this.registeredZones.set(zoneElementId, fuseId);
+    const registration = { element: zoneElement, fuseId };
+    this.registeredZones.set(zoneElementId, registration);
     this.enqueueFuseCall(fusetag => {
-      if (!this.isZoneElementConnected(zoneElementId)) {
-        this.registeredZones.delete(zoneElementId);
+      if (!this.isCurrentZoneElement(zoneElementId, zoneElement)) {
+        if (this.registeredZones.get(zoneElementId) === registration) {
+          this.registeredZones.delete(zoneElementId);
+        }
         this.debugWarn('registerZone cancelled: zone element left the DOM before execution', {
           zoneElementId,
           fuseId,
@@ -422,7 +440,8 @@ export class FuseAdsService {
       return;
     }
 
-    if (!this.isZoneElementConnected(zoneElementId)) {
+    const zoneElement = this.getConnectedZoneElement(zoneElementId);
+    if (!zoneElement) {
       this.debugWarn('registerPersistentZone skipped: zone element is not connected to the DOM', {
         zoneElementId,
         fuseId,
@@ -430,13 +449,27 @@ export class FuseAdsService {
       return;
     }
 
+    const existingRegistration = this.persistentZones.get(zoneElementId);
+    if (existingRegistration?.element === zoneElement && existingRegistration.fuseId === fuseId) {
+      this.debug('registerPersistentZone skipped: zone already registered', {
+        zoneElementId,
+        fuseId,
+      });
+      return;
+    }
+
     this.debug('registerPersistentZone queued', { zoneElementId, fuseId });
-    this.persistentZones.set(zoneElementId, fuseId);
-    this.registeredZones.set(zoneElementId, fuseId);
+    const registration = { element: zoneElement, fuseId };
+    this.persistentZones.set(zoneElementId, registration);
+    this.registeredZones.set(zoneElementId, registration);
     this.enqueueFuseCall(fusetag => {
-      if (!this.isZoneElementConnected(zoneElementId)) {
-        this.persistentZones.delete(zoneElementId);
-        this.registeredZones.delete(zoneElementId);
+      if (!this.isCurrentZoneElement(zoneElementId, zoneElement)) {
+        if (this.persistentZones.get(zoneElementId) === registration) {
+          this.persistentZones.delete(zoneElementId);
+        }
+        if (this.registeredZones.get(zoneElementId) === registration) {
+          this.registeredZones.delete(zoneElementId);
+        }
         this.debugWarn('registerPersistentZone cancelled: zone element left the DOM before execution', {
           zoneElementId,
           fuseId,
@@ -709,13 +742,56 @@ export class FuseAdsService {
   private ensureFuseScript(): void {
     this.syncProviderStickyFooterFlag();
 
-    if (this.document.getElementById('publift-fuse-js')) {
-      this.debug('Fuse script already present');
-      this.setRuntimeState({
-        ...this.runtimeStateSubject.value,
-        scriptLoaded: true,
-      });
-      this.schedulePendingFuseCallFlush('script already present');
+    const existingScript = this.document.getElementById('publift-fuse-js') as HTMLScriptElement | null;
+    if (existingScript) {
+      let scriptSettled = false;
+      const markScriptLoaded = () => {
+        if (scriptSettled) {
+          return;
+        }
+
+        scriptSettled = true;
+        existingScript.removeEventListener('load', markScriptLoaded);
+        existingScript.removeEventListener('error', markScriptFailed);
+        this.fuseCallFlushRetries = 0;
+        this.fuseApiBlocked = false;
+        this.debug('Existing Fuse script loaded', { src: existingScript.src });
+        this.setRuntimeState({
+          ...this.runtimeStateSubject.value,
+          scriptLoaded: true,
+        });
+        this.schedulePendingFuseCallFlush('existing script loaded');
+      };
+      const markScriptFailed = () => {
+        if (scriptSettled) {
+          return;
+        }
+
+        scriptSettled = true;
+        existingScript.removeEventListener('load', markScriptLoaded);
+        existingScript.removeEventListener('error', markScriptFailed);
+        this.setSupportFallbackAllowed(true, 'Fuse script failed to load');
+        this.setRuntimeState({
+          ...this.runtimeStateSubject.value,
+          scriptLoaded: false,
+          cmpStatus: 'error',
+        });
+        this.debugError('Existing Fuse script failed to load', { src: existingScript.src });
+      };
+
+      existingScript.addEventListener('load', markScriptLoaded);
+      existingScript.addEventListener('error', markScriptFailed);
+
+      if (this.isFuseApiReady(this.ensureFuseQueue())) {
+        markScriptLoaded();
+      } else {
+        this.debug('Fuse script already present; waiting for it to load', { src: existingScript.src });
+        this.setRuntimeState({
+          ...this.runtimeStateSubject.value,
+          scriptLoaded: false,
+        });
+        this.schedulePendingFuseCallFlush('waiting for existing script');
+      }
       return;
     }
 
@@ -1048,15 +1124,19 @@ export class FuseAdsService {
   }
 
   private getRegisteredZonesSummary(): Array<{ zoneElementId: string; fuseId: string }> {
-    return Array.from(this.registeredZones.entries()).map(([zoneElementId, fuseId]) => ({
+    return Array.from(this.registeredZones.entries()).map(([zoneElementId, registration]) => ({
       zoneElementId,
-      fuseId,
+      fuseId: registration.fuseId,
     }));
   }
 
-  private isZoneElementConnected(zoneElementId: string): boolean {
+  private getConnectedZoneElement(zoneElementId: string): HTMLElement | null {
     const element = this.document.getElementById(zoneElementId);
-    return Boolean(element?.isConnected);
+    return element?.isConnected ? element : null;
+  }
+
+  private isCurrentZoneElement(zoneElementId: string, element: HTMLElement): boolean {
+    return element.isConnected && this.document.getElementById(zoneElementId) === element;
   }
 
   private setRuntimeState(state: FuseRuntimeState): void {

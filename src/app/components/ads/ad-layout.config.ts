@@ -283,8 +283,38 @@ function resolveFuseId(placement: string): string {
 }
 
 function resolveInterscrollerFuseId(placement: string): string {
-  const firstPlacement = placement.replace(/_interscroller_\d+$/, '_interscroller_1');
-  return resolveFuseId(firstPlacement) || resolveFuseId(placement);
+  const placementMatch = placement.match(/^(.*_interscroller_)(\d+)$/);
+  if (!placementMatch) {
+    return resolveFuseId(placement);
+  }
+
+  const [, placementPrefix, requestedIndexText] = placementMatch;
+  const slots = environment.fuse.slots as Record<string, string>;
+  const availableFuseIds = Object.entries(slots)
+    .flatMap(([slotPlacement, fuseId]) => {
+      if (!slotPlacement.startsWith(placementPrefix)) {
+        return [];
+      }
+
+      const slotIndexText = slotPlacement.slice(placementPrefix.length);
+      if (!/^\d+$/.test(slotIndexText) || !fuseId.trim()) {
+        return [];
+      }
+
+      return [{
+        index: Number.parseInt(slotIndexText, 10),
+        fuseId: fuseId.trim(),
+      }];
+    })
+    .sort((left, right) => left.index - right.index)
+    .map(slot => slot.fuseId);
+
+  if (!availableFuseIds.length) {
+    return '';
+  }
+
+  const requestedIndex = Math.max(1, Number.parseInt(requestedIndexText, 10));
+  return availableFuseIds[(requestedIndex - 1) % availableFuseIds.length];
 }
 
 function normalizePath(url: string): string {

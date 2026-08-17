@@ -80,8 +80,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   private providerStickyFooterDismissHandler?: (event: Event) => void;
   private providerStickyFooterObserver: MutationObserver | null = null;
   private providerStickyFooterMeasureFrame: number | null = null;
-  private initialSyncedUrl = '';
-  private hasHandledRouterNavigation = false;
+  private initialNavigationPending = false;
 
   constructor(
     private router: Router,
@@ -114,16 +113,14 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
       this.scheduleSideRailLayout(true);
     });
-    this.initialSyncedUrl = this.router.url;
-    this.syncConfig(this.initialSyncedUrl, false);
+    this.initialNavigationPending = !this.router.navigated;
+    this.syncConfig(this.router.url, false);
     this.routerSub = this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe(event => {
-        const eventUrl = event.urlAfterRedirects;
-        const isInitialNavigationEcho = !this.hasHandledRouterNavigation
-          && this.urlsMatch(eventUrl, this.initialSyncedUrl);
-        this.hasHandledRouterNavigation = true;
-        this.syncConfig(eventUrl, !isInitialNavigationEcho);
+        const allowPageInit = !this.initialNavigationPending;
+        this.initialNavigationPending = false;
+        this.syncConfig(event.urlAfterRedirects, allowPageInit);
       });
   }
 
@@ -191,14 +188,6 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
   private updateFallbackPreviewState(): void {
     this.fallbackPreviewEnabled = isAdFallbackPreviewEnabled(this.document);
-  }
-
-  private urlsMatch(left: string, right: string): boolean {
-    return this.stripUrlFragment(left) === this.stripUrlFragment(right);
-  }
-
-  private stripUrlFragment(url: string): string {
-    return (url || '/').split('#')[0];
   }
 
   get adLayoutActive(): boolean {
@@ -921,7 +910,19 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
   }
 
   private canPreserveSideRailsForRoute(config: AdRouteConfig): boolean {
-    if (!isPlatformBrowser(this.platformId) || !config.sideRails) {
+    const currentSideRails = this.config.sideRails;
+    const nextSideRails = config.sideRails;
+    if (!isPlatformBrowser(this.platformId) || !currentSideRails || !nextSideRails) {
+      return false;
+    }
+
+    const railIdentitiesMatch = (
+      currentSideRails.left.placement === nextSideRails.left.placement
+      && currentSideRails.left.fuseId === nextSideRails.left.fuseId
+      && currentSideRails.right.placement === nextSideRails.right.placement
+      && currentSideRails.right.fuseId === nextSideRails.right.fuseId
+    );
+    if (!railIdentitiesMatch) {
       return false;
     }
 
