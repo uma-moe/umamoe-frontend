@@ -13,6 +13,7 @@ export type PlannerIncomeCadence = 'once' | 'daily' | 'weekly' | 'monthly' | 'in
 export type PlannerDataProvenance =
   | 'global_master'
   | 'jp_master'
+  | 'jp_master_catalog'
   | 'jp_master_snapshot'
   | 'global_news'
   | 'global_social'
