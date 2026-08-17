@@ -47,6 +47,15 @@ describe('CaratPlannerComponent banner ordering', () => {
     ]);
   });
 
+  it('shows only complete Uncap Crystals in crafted-crystal balances', () => {
+    const component = createComponent();
+
+    expect(component.craftedCrystalCount(undefined)).toBe(0);
+    expect(component.craftedCrystalCount(19)).toBe(0);
+    expect(component.craftedCrystalCount(20)).toBe(1);
+    expect(component.craftedCrystalCount(41)).toBe(2);
+  });
+
   it('includes quantified rewards by default and remembers explicit exclusions', () => {
     const component = createComponent();
     const first = { id: 'first', label: 'First reward', currency: 'free_jewels' as const, amount: 300, available_at: '2030-01-02' };

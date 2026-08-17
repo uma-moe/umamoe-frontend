@@ -96,9 +96,9 @@
         <span class="cp-stat-icon"><mat-icon>confirmation_number</mat-icon></span>
         <div><strong>{{ ((projection?.finalBalances?.umaTickets || 0) + (projection?.finalBalances?.supportTickets || 0)) | number }}</strong><span>Tickets left</span></div>
       </div>
-      <div class="cp-stat cp-stat--crystals">
-        <span class="cp-stat-icon"><mat-icon>auto_awesome</mat-icon></span>
-        <div><strong>{{ projection?.finalBalances?.rainbowCrystals || 0 }} / {{ projection?.finalBalances?.goldCrystals || 0 }}</strong><span>Rainbow / gold shards</span></div>
+      <div class="cp-stat cp-stat--crystals" title="Rainbow / Gold crafted Uncap Crystals remaining; leftover shards stay banked">
+        <span class="cp-stat-icon" aria-hidden="true"><img src="assets/images/item/item_icon_00144.webp" alt=""><img src="assets/images/item/item_icon_00145.webp" alt=""></span>
+        <div><strong>{{ craftedCrystalCount(projection?.finalBalances?.rainbowCrystals) }} / {{ craftedCrystalCount(projection?.finalBalances?.goldCrystals) }}</strong><span>Crafted Uncap Crystals</span></div>
       </div>
       <div class="cp-stat">
         <span class="cp-stat-icon"><mat-icon>flag</mat-icon></span>
@@ -480,8 +480,8 @@
                 <strong>{{ targetTicketBalanceAtPull(target, targetProjection) }}</strong>
                 <em *ngIf="targetProjection.ticketPullsUsed > 0">&rarr; {{ targetTicketBalanceAtPull(target, targetProjection) - targetProjection.ticketPullsUsed }}</em>
               </span>
-              <span *ngIf="target.bannerKind === 'support'" title="Rainbow Crystal Shards available at pull"><img src="assets/images/item/item_icon_00149.webp" width="16" height="16" alt=""><strong>{{ targetProjection.balanceBefore.rainbowCrystals }}</strong></span>
-              <span *ngIf="target.bannerKind === 'support'" title="Gold Crystal Shards available at pull"><img src="assets/images/item/item_icon_00150.webp" width="16" height="16" alt=""><strong>{{ targetProjection.balanceBefore.goldCrystals }}</strong></span>
+              <span *ngIf="target.bannerKind === 'support'" title="Rainbow Uncap Crystals available at pull"><img src="assets/images/item/item_icon_00144.webp" width="18" height="18" alt=""><strong>{{ craftedCrystalCount(targetProjection.balanceBefore.rainbowCrystals) }}</strong></span>
+              <span *ngIf="target.bannerKind === 'support'" title="Gold Uncap Crystals available at pull"><img src="assets/images/item/item_icon_00145.webp" width="18" height="18" alt=""><strong>{{ craftedCrystalCount(targetProjection.balanceBefore.goldCrystals) }}</strong></span>
             </span>
           </div>
         </div>

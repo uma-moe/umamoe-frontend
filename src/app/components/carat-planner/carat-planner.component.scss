@@ -3553,6 +3553,20 @@ select.cp-control,
   @include icon-size(17px);
 }
 
+.cp-overview .cp-stat--crystals .cp-stat-icon {
+  width: 31px;
+}
+
+.cp-overview .cp-stat--crystals .cp-stat-icon img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.cp-overview .cp-stat--crystals .cp-stat-icon img + img {
+  margin: 8px 0 0 -9px;
+}
+
 .cp-overview .cp-stat strong {
   font-size: 0.9rem;
 }

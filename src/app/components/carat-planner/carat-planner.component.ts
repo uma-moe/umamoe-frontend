@@ -2360,12 +2360,16 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       : `${available} ${label} available at pull; none used`;
   }
 
+  craftedCrystalCount(shards: number | null | undefined): number {
+    return Math.floor(Math.max(0, Number(shards) || 0) / 20);
+  }
+
   targetResourcesAtPullAriaLabel(target: PlannerTarget, result: PlannerTargetProjection): string {
     const parts: string[] = [];
     if (this.targetTicketCurrency(target)) parts.push(this.targetTicketUsageLabel(target, result));
     if (target.bannerKind === 'support') {
-      parts.push(`${result.balanceBefore.rainbowCrystals} rainbow crystal shards`);
-      parts.push(`${result.balanceBefore.goldCrystals} gold crystal shards`);
+      parts.push(`${this.craftedCrystalCount(result.balanceBefore.rainbowCrystals)} rainbow Uncap Crystals`);
+      parts.push(`${this.craftedCrystalCount(result.balanceBefore.goldCrystals)} gold Uncap Crystals`);
     }
     return `At pull date: ${parts.join(', ')}`;
   }
