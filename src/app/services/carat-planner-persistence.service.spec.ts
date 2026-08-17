@@ -417,7 +417,7 @@ describe('CaratPlannerPersistenceService', () => {
     expect(service.isEventActive(event.id)).toBeTrue();
   });
 
-  it('activates reward events that only contain LB crystals in their item breakdown', () => {
+  it('activates reward events that only contain Crystal Shards in their item breakdown', () => {
     const service = createService();
     const event = {
       id: 'crystal-campaign',
@@ -428,7 +428,7 @@ describe('CaratPlannerPersistenceService', () => {
     };
     const rewards = [{
       id: 'crystal-details',
-      label: 'LB crystal rewards',
+      label: 'Crystal Shard rewards',
       event_id: event.id,
       currency: 'free_jewels' as const,
       amount: null,

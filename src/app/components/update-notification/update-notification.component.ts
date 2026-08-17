@@ -69,7 +69,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
         color: '#ec407a',
         items: [
           { text: 'Create, rename, duplicate, import, export, and switch between saved plans', link: '/timeline?tab=carat-planner' },
-          { text: 'Plan multiple rate-up goals with published probabilities, exchange copies, and Rainbow or Gold LB crystals' },
+          { text: 'Plan multiple rate-up goals with published probabilities, exchange copies, and Rainbow or Gold Uncap Crystals' },
           { text: 'Project your balance using recurring income, upcoming rewards, free pulls, and selectable event results' },
           { text: 'A compact mobile layout makes plans, banner goals, rewards, and pull controls easier to use' },
         ]

@@ -1700,7 +1700,7 @@ select.cp-control,
   }
 
   > span {
-    height: 20px;
+    height: 23px;
     padding: 1px 5px 1px 3px;
     box-sizing: border-box;
     display: inline-flex;
@@ -1712,7 +1712,7 @@ select.cp-control,
     white-space: nowrap;
   }
 
-  img { width: 15px; height: 15px; object-fit: contain; }
+  img { width: 18px; height: 18px; object-fit: contain; }
   strong { color: var(--text-secondary); font-size: 0.61rem; font-weight: 750; }
   em { color: var(--text-muted); font-size: 0.54rem; font-style: normal; }
 }
@@ -4526,6 +4526,12 @@ select.cp-control,
   small { color: var(--text-muted); font-size: 0.55rem; }
 }
 
+.cp-uncap-icon {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+}
+
 .cp-crystal-plan legend {
   strong { color: var(--text-secondary); font-size: 0.64rem; }
   small { margin-left: 6px; color: var(--text-muted); font-size: 0.57rem; }
@@ -4682,7 +4688,8 @@ select.cp-control,
     border-right: 1px solid var(--border-subtle);
   }
 
-  .cp-target-controls--primary .cp-lb-kind img { width: 18px; height: 18px; }
+  .cp-target-controls--primary .cp-lb-kind img,
+  .cp-target-controls--primary .cp-uncap-icon { width: 24px; height: 24px; flex-basis: 24px; }
   .cp-target-controls--primary .cp-lb-stepper { display: contents; }
 
   .cp-target-controls--primary .cp-payment-menu,

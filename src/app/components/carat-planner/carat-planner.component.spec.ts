@@ -403,10 +403,10 @@ describe('CaratPlannerComponent banner ordering', () => {
       crystalKind: 'rainbow' as const,
     };
     expect(component.pickupGoalRequirementLabel(crystalGoal)).toBe(
-      '1 copy required + 1 Rainbow LB',
+      '1 copy required + 1 Rainbow Uncap',
     );
     expect(component.pickupGoalOddsAriaLabel(crystalGoal)).toBe(
-      '44.2% chance of at least 1 copy of Yaeno Muteki; 1 rainbow LB crystal supplies the remaining limit breaks toward 2 total copies',
+      '44.2% chance of at least 1 copy of Yaeno Muteki; 1 rainbow Uncap Crystal supplies the remaining limit breaks toward 2 total copies',
     );
   });
 
@@ -618,7 +618,7 @@ describe('CaratPlannerComponent banner ordering', () => {
     const speculativeIncome = component.scenarioGroupOptions.find(group => group.id === 'speculative_income');
     expect(trainingPass?.options).toEqual([
       { value: 'free', label: 'Free', amountLabel: '+500 + 4 tix / month' },
-      { value: 'premium', label: 'Premium', amountLabel: '+2,200 + 8 tix + 1 rainbow / month' },
+      { value: 'premium', label: 'Premium', amountLabel: '+2,200 + 8 tix + 1 rainbow shard / month' },
     ]);
     expect(trainingPass?.sourceUrl).toBe('https://umapyoi.net/news/1788?lang=jp');
     expect(speculativeIncome?.options).toEqual([

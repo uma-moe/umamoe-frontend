@@ -98,7 +98,7 @@
       </div>
       <div class="cp-stat cp-stat--crystals">
         <span class="cp-stat-icon"><mat-icon>auto_awesome</mat-icon></span>
-        <div><strong>{{ projection?.finalBalances?.rainbowCrystals || 0 }} / {{ projection?.finalBalances?.goldCrystals || 0 }}</strong><span>Rainbow / gold LB</span></div>
+        <div><strong>{{ projection?.finalBalances?.rainbowCrystals || 0 }} / {{ projection?.finalBalances?.goldCrystals || 0 }}</strong><span>Rainbow / gold shards</span></div>
       </div>
       <div class="cp-stat">
         <span class="cp-stat-icon"><mat-icon>flag</mat-icon></span>
@@ -177,7 +177,7 @@
           <label class="cp-field"><span>Support</span><span class="cp-control cp-control--icon"><mat-icon>style</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.supportTickets" (ngModelChange)="save()"></span></label>
         </fieldset>
         <fieldset class="cp-resource-group">
-          <legend>LB crystals</legend>
+          <legend>Crystal shards</legend>
           <label class="cp-field"><span>Rainbow</span><span class="cp-control cp-control--icon"><img src="assets/images/item/item_icon_00149.webp" width="20" height="20" alt=""><input type="number" min="0" step="1" [(ngModel)]="plan.balances.rainbowCrystals" (ngModelChange)="save()"></span></label>
           <label class="cp-field"><span>Gold</span><span class="cp-control cp-control--icon"><img src="assets/images/item/item_icon_00150.webp" width="20" height="20" alt=""><input type="number" min="0" step="1" [(ngModel)]="plan.balances.goldCrystals" (ngModelChange)="save()"></span></label>
         </fieldset>
@@ -236,7 +236,7 @@
             <div class="cp-custom" *ngFor="let item of plan.customIncome; trackBy: trackById">
               <label class="cp-field cp-custom-name"><span>Income name</span><input class="cp-control" [(ngModel)]="item.label" (blur)="save()"></label>
               <label class="cp-field"><span>Amount</span><input class="cp-control" type="number" min="0" [(ngModel)]="item.amount" (ngModelChange)="save()"></label>
-              <label class="cp-field"><span>Resource</span><select class="cp-control" [(ngModel)]="item.currency" (ngModelChange)="save()"><option value="free_jewels">Carats</option><option value="uma_ticket">Uma ticket</option><option value="support_ticket">Support ticket</option><option value="rainbow_crystal">Rainbow LB crystal</option><option value="gold_crystal">Gold LB crystal</option></select></label>
+              <label class="cp-field"><span>Resource</span><select class="cp-control" [(ngModel)]="item.currency" (ngModelChange)="save()"><option value="free_jewels">Carats</option><option value="uma_ticket">Uma ticket</option><option value="support_ticket">Support ticket</option><option value="rainbow_crystal">Rainbow Crystal Shard</option><option value="gold_crystal">Gold Crystal Shard</option></select></label>
               <label class="cp-field"><span>Frequency</span><select class="cp-control" [(ngModel)]="item.cadence" (ngModelChange)="save()"><option value="once">Once</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label>
               <label class="cp-field"><span>Starts</span><input class="cp-control" type="date" [(ngModel)]="item.startDate" (ngModelChange)="save()"></label>
               <button class="cp-action cp-action--icon cp-danger" type="button" matTooltip="Remove income"
@@ -480,8 +480,8 @@
                 <strong>{{ targetTicketBalanceAtPull(target, targetProjection) }}</strong>
                 <em *ngIf="targetProjection.ticketPullsUsed > 0">&rarr; {{ targetTicketBalanceAtPull(target, targetProjection) - targetProjection.ticketPullsUsed }}</em>
               </span>
-              <span *ngIf="target.bannerKind === 'support'" title="Rainbow LB crystals available at pull"><img src="assets/images/item/item_icon_00149.webp" width="16" height="16" alt=""><strong>{{ targetProjection.balanceBefore.rainbowCrystals }}</strong></span>
-              <span *ngIf="target.bannerKind === 'support'" title="Gold LB crystals available at pull"><img src="assets/images/item/item_icon_00150.webp" width="16" height="16" alt=""><strong>{{ targetProjection.balanceBefore.goldCrystals }}</strong></span>
+              <span *ngIf="target.bannerKind === 'support'" title="Rainbow Crystal Shards available at pull"><img src="assets/images/item/item_icon_00149.webp" width="16" height="16" alt=""><strong>{{ targetProjection.balanceBefore.rainbowCrystals }}</strong></span>
+              <span *ngIf="target.bannerKind === 'support'" title="Gold Crystal Shards available at pull"><img src="assets/images/item/item_icon_00150.webp" width="16" height="16" alt=""><strong>{{ targetProjection.balanceBefore.goldCrystals }}</strong></span>
             </span>
           </div>
         </div>
@@ -500,29 +500,29 @@
             <input class="cp-control cp-pull-input--mobile" type="number" min="0" max="5000" step="10" [(ngModel)]="target.plannedPulls" (ngModelChange)="save()" aria-label="Planned pulls">
           </div>
           <div class="cp-crystal-plan cp-crystal-plan--quick" *ngIf="target.bannerKind === 'support'"
-            role="group" aria-label="LB crystals to use on this banner">
-            <span class="cp-crystal-plan-heading"><strong>LB crystals</strong><small>Replace extra copies after the first</small></span>
+            role="group" aria-label="Uncap Crystals to use on this banner">
+            <span class="cp-crystal-plan-heading"><strong>Uncap crystals</strong><small>Replace extra copies after the first</small></span>
             <div class="cp-lb-controls">
             <label class="cp-lb-control">
               <span class="cp-lb-kind">
-                <img src="assets/images/item/item_icon_00149.webp" width="20" height="20" alt="">
+                <img class="cp-uncap-icon" src="assets/images/item/item_icon_00144.webp" width="24" height="24" alt="">
                 <span><strong>Rainbow</strong><small>SSR cards</small></span>
               </span>
-              <span class="cp-copy-stepper cp-lb-stepper" role="group" aria-label="Rainbow LB crystals to use on this banner">
-                <button type="button" (click)="adjustTargetLbCrystals(target, 'rainbow', -1)" [disabled]="!target.rainbowCrystalsPlanned" aria-label="Use one fewer Rainbow LB crystal"><mat-icon>remove</mat-icon></button>
+              <span class="cp-copy-stepper cp-lb-stepper" role="group" aria-label="Rainbow Uncap Crystals to use on this banner">
+                <button type="button" (click)="adjustTargetLbCrystals(target, 'rainbow', -1)" [disabled]="!target.rainbowCrystalsPlanned" aria-label="Use one fewer Rainbow Uncap Crystal"><mat-icon>remove</mat-icon></button>
                 <output>{{ target.rainbowCrystalsPlanned || 0 }}</output>
-                <button type="button" (click)="adjustTargetLbCrystals(target, 'rainbow', 1)" [disabled]="(target.rainbowCrystalsPlanned ?? 0) >= 20" aria-label="Use one more Rainbow LB crystal"><mat-icon>add</mat-icon></button>
+                <button type="button" (click)="adjustTargetLbCrystals(target, 'rainbow', 1)" [disabled]="(target.rainbowCrystalsPlanned ?? 0) >= 20" aria-label="Use one more Rainbow Uncap Crystal"><mat-icon>add</mat-icon></button>
               </span>
             </label>
             <label class="cp-lb-control">
               <span class="cp-lb-kind">
-                <img src="assets/images/item/item_icon_00150.webp" width="20" height="20" alt="">
+                <img class="cp-uncap-icon" src="assets/images/item/item_icon_00145.webp" width="24" height="24" alt="">
                 <span><strong>Gold</strong><small>SR cards</small></span>
               </span>
-              <span class="cp-copy-stepper cp-lb-stepper" role="group" aria-label="Gold LB crystals to use on this banner">
-                <button type="button" (click)="adjustTargetLbCrystals(target, 'gold', -1)" [disabled]="!target.goldCrystalsPlanned" aria-label="Use one fewer Gold LB crystal"><mat-icon>remove</mat-icon></button>
+              <span class="cp-copy-stepper cp-lb-stepper" role="group" aria-label="Gold Uncap Crystals to use on this banner">
+                <button type="button" (click)="adjustTargetLbCrystals(target, 'gold', -1)" [disabled]="!target.goldCrystalsPlanned" aria-label="Use one fewer Gold Uncap Crystal"><mat-icon>remove</mat-icon></button>
                 <output>{{ target.goldCrystalsPlanned || 0 }}</output>
-                <button type="button" (click)="adjustTargetLbCrystals(target, 'gold', 1)" [disabled]="(target.goldCrystalsPlanned ?? 0) >= 20" aria-label="Use one more Gold LB crystal"><mat-icon>add</mat-icon></button>
+                <button type="button" (click)="adjustTargetLbCrystals(target, 'gold', 1)" [disabled]="(target.goldCrystalsPlanned ?? 0) >= 20" aria-label="Use one more Gold Uncap Crystal"><mat-icon>add</mat-icon></button>
               </span>
             </label>
             </div>
@@ -773,7 +773,7 @@
     </div>
 
     <p class="cp-disclaimer" *ngIf="activeTargets.length">
-      <mat-icon>info_outline</mat-icon>Each pickup uses its published rate. LB crystals replace copies after the first; available exchange copies are shared across selected goals after the pulls.
+      <mat-icon>info_outline</mat-icon>Each pickup uses its published rate. Uncap Crystals replace copies after the first; available exchange copies are shared across selected goals after the pulls.
     </p>
   </section>
 </section>

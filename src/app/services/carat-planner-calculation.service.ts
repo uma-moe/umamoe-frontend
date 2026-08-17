@@ -41,6 +41,7 @@ import {
 import { CaratPullProbabilityService } from './carat-pull-probability.service';
 
 const DAY_MS = 86_400_000;
+const CRYSTAL_SHARDS_PER_UNCAP = 20;
 
 interface ProjectionCacheEntry {
   baseKey: string;
@@ -481,10 +482,16 @@ export class CaratPlannerCalculationService {
     const fundedPulls = plannedPulls - remainingPulls;
     const sparkPulls = gacha?.spark_pulls ?? data.core.default_spark_pulls;
     const rainbowCrystalBudget = target.bannerKind === 'support'
-      ? Math.min(balances.rainbowCrystals, this.nonNegativeInt(target.rainbowCrystalsPlanned))
+      ? Math.min(
+        Math.floor(balances.rainbowCrystals / CRYSTAL_SHARDS_PER_UNCAP),
+        this.nonNegativeInt(target.rainbowCrystalsPlanned),
+      )
       : 0;
     const goldCrystalBudget = target.bannerKind === 'support'
-      ? Math.min(balances.goldCrystals, this.nonNegativeInt(target.goldCrystalsPlanned))
+      ? Math.min(
+        Math.floor(balances.goldCrystals / CRYSTAL_SHARDS_PER_UNCAP),
+        this.nonNegativeInt(target.goldCrystalsPlanned),
+      )
       : 0;
     const odds = this.calculateTargetOdds(fundedPulls, target, gacha, sparkPulls, {
       rainbow: rainbowCrystalBudget,
@@ -496,8 +503,8 @@ export class CaratPlannerCalculationService {
     const goldCrystalsUsed = odds.goalOdds?.reduce((total, goal) => (
       total + (goal.crystalKind === 'gold' ? goal.crystalCopiesApplied : 0)
     ), 0) ?? 0;
-    balances.rainbowCrystals -= rainbowCrystalsUsed;
-    balances.goldCrystals -= goldCrystalsUsed;
+    balances.rainbowCrystals -= rainbowCrystalsUsed * CRYSTAL_SHARDS_PER_UNCAP;
+    balances.goldCrystals -= goldCrystalsUsed * CRYSTAL_SHARDS_PER_UNCAP;
 
     return {
       targetId: target.id,

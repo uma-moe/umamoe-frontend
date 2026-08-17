@@ -70,7 +70,7 @@ export const TRAINING_PASS_OPTIONS: readonly PlannerIncomeAssumptionOption[] = [
   {
     value: 'premium',
     label: 'Premium',
-    amountLabel: '+2,200 + 8 tix + 1 rainbow / month',
+    amountLabel: '+2,200 + 8 tix + 1 rainbow shard / month',
     amounts: {
       free_jewels: 1_850,
       paid_jewels: 350,

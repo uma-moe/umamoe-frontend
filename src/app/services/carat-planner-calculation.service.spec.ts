@@ -80,7 +80,7 @@ describe('CaratPlannerCalculationService', () => {
     expect(odds.jointProbability).toBeCloseTo(1 - Math.pow(0.8, 2), 12);
   });
 
-  it('uses matching LB crystals for copies after the initial support-card copy', () => {
+  it('uses matching Uncap Crystals for copies after the initial support-card copy', () => {
     const ssrTarget = makeTarget({
       bannerKind: 'support',
       rainbowCrystalsPlanned: 4,
@@ -399,15 +399,15 @@ describe('CaratPlannerCalculationService', () => {
     expect(allMilestones.balanceBefore.umaTickets).toBe(3);
   });
 
-  it('projects LB-crystal rewards and support-banner crystal budgets', () => {
+  it('converts 20 projected crystal shards into one support-card uncap crystal', () => {
     const plan = makePlan({
       balances: {
         freeJewels: 0,
         paidJewels: 0,
         umaTickets: 0,
         supportTickets: 0,
-        rainbowCrystals: 1,
-        goldCrystals: 2,
+        rainbowCrystals: 18,
+        goldCrystals: 39,
       },
       enabledRewardIds: ['anniversary-free_jewels', 'anniversary-items'],
       targets: [makeTarget({
@@ -426,7 +426,7 @@ describe('CaratPlannerCalculationService', () => {
       income: { rules: [] },
       rewards: { rewards: [{
         id: 'anniversary-free_jewels',
-        label: 'LB crystals',
+        label: 'Crystal Shards',
         currency: 'free_jewels',
         amount: 500,
         available_at: '2026-01-02',
@@ -436,7 +436,7 @@ describe('CaratPlannerCalculationService', () => {
         ],
       }, {
         id: 'anniversary-items',
-        label: 'LB crystals',
+        label: 'Crystal Shards',
         currency: 'free_jewels',
         amount: null,
         available_at: '2026-01-02',
@@ -457,12 +457,12 @@ describe('CaratPlannerCalculationService', () => {
     })]);
     const target = projection.targets[0];
 
-    expect(target.balanceBefore.rainbowCrystals).toBe(3);
-    expect(target.balanceBefore.goldCrystals).toBe(3);
-    expect(target.rainbowCrystalsUsed).toBe(2);
+    expect(target.balanceBefore.rainbowCrystals).toBe(20);
+    expect(target.balanceBefore.goldCrystals).toBe(40);
+    expect(target.rainbowCrystalsUsed).toBe(1);
     expect(target.goldCrystalsUsed).toBe(1);
-    expect(target.balanceAfter.rainbowCrystals).toBe(1);
-    expect(target.balanceAfter.goldCrystals).toBe(2);
+    expect(target.balanceAfter.rainbowCrystals).toBe(0);
+    expect(target.balanceAfter.goldCrystals).toBe(20);
   });
 
   it('projects mission source totals and the competitive outcome selected by the user', () => {

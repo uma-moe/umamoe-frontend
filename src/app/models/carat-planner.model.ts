@@ -30,7 +30,9 @@ export interface PlannerBalances {
   paidJewels: number;
   umaTickets: number;
   supportTickets: number;
+  /** Rainbow Crystal Shards. Twenty can be exchanged for one Rainbow Uncap Crystal. */
   rainbowCrystals: number;
+  /** Gold Crystal Shards. Twenty can be exchanged for one Gold Uncap Crystal. */
   goldCrystals: number;
 }
 
@@ -331,9 +333,9 @@ export interface PlannerTarget {
   useTickets: boolean;
   ticketLimit?: number;
   allowPaidJewels: boolean;
-  /** Rainbow LB crystals the player is willing to spend after pulling this support banner. */
+  /** Full Rainbow Uncap Crystals the player is willing to create from shards and spend after pulling. */
   rainbowCrystalsPlanned?: number;
-  /** Gold LB crystals the player is willing to spend after pulling this support banner. */
+  /** Full Gold Uncap Crystals the player is willing to create from shards and spend after pulling. */
   goldCrystalsPlanned?: number;
 }
 
@@ -395,9 +397,9 @@ export interface PickupOddsResult {
 export interface PickupGoalOddsResult {
   pickupId: number;
   requestedCopies: number;
-  /** Copies that must come from the banner after applicable LB crystals are assigned. */
+  /** Copies that must come from the banner after applicable Uncap Crystals are assigned. */
   copiesNeededFromPulls: number;
-  /** LB crystals assigned to copies two through five of this support card. */
+  /** Full Uncap Crystals assigned to copies two through five of this support card. */
   crystalCopiesApplied: number;
   crystalKind?: 'rainbow' | 'gold';
   exchangeable: boolean;
@@ -422,7 +424,9 @@ export interface PlannerTargetProjection {
   ticketPullsUsed: number;
   freeJewelPulls: number;
   paidJewelPulls: number;
+  /** Full Rainbow Uncap Crystals used; each consumes 20 projected shards. */
   rainbowCrystalsUsed: number;
+  /** Full Gold Uncap Crystals used; each consumes 20 projected shards. */
   goldCrystalsUsed: number;
   unfilledPulls: number;
   jewelCost: number;

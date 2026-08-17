@@ -128,7 +128,7 @@ const REWARD_ITEM_IDS = {
   trainee_selector: 164,
   support_selector: 165,
 } as const;
-const PREPARED_REWARD_ITEM_IDS = new Set([41, 43, 111, 141, 164, 165, 178, 197, 205, 214, 255]);
+const PREPARED_REWARD_ITEM_IDS = new Set([41, 43, 111, 141, 144, 145, 164, 165, 178, 197, 205, 214, 255]);
 const STANDARD_STORY_EVENT_CARATS = 2010;
 const GLOBAL_LAUNCH_DATE = '2025-06-26';
 const FIFTY_DAY_LOGIN_CARATS = 150;
@@ -370,8 +370,8 @@ export function buildTimelineRewardSummaries(
       if (item.item_category === 90 && item.item_id === 43) summary.variableRewardLabels.add('Carats');
       else if (item.item_category === 40 && item.item_id === 41) summary.variableRewardLabels.add('Trainee tickets');
       else if (item.item_category === 40 && item.item_id === 111) summary.variableRewardLabels.add('Support tickets');
-      else if (item.item_category === 164 && item.item_id === 149) summary.variableRewardLabels.add('Rainbow crystals');
-      else if (item.item_category === 164 && item.item_id === 150) summary.variableRewardLabels.add('Gold crystals');
+      else if (item.item_category === 164 && item.item_id === 149) summary.variableRewardLabels.add('Rainbow Crystal Shards');
+      else if (item.item_category === 164 && item.item_id === 150) summary.variableRewardLabels.add('Gold Crystal Shards');
     }
   }
   const managedCampaignIds = new Set((resource.free_pull_campaigns ?? []).map(campaign => campaign.id));
@@ -423,8 +423,8 @@ export function buildTimelineRewardSummaries(
     const parts: string[] = [];
     if (total.carats > 0) parts.push(`${INTEGER_FORMATTER.format(total.carats)} Carats`);
     if (tickets > 0) parts.push(`${INTEGER_FORMATTER.format(tickets)} ${tickets === 1 ? 'ticket' : 'tickets'}`);
-    if (total.rainbowCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(total.rainbowCrystals)} rainbow LB`);
-    if (total.goldCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(total.goldCrystals)} gold LB`);
+    if (total.rainbowCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(total.rainbowCrystals)} rainbow ${total.rainbowCrystals === 1 ? 'shard' : 'shards'}`);
+    if (total.goldCrystals > 0) parts.push(`${INTEGER_FORMATTER.format(total.goldCrystals)} gold ${total.goldCrystals === 1 ? 'shard' : 'shards'}`);
     if (total.freePulls > 0) parts.push(`${INTEGER_FORMATTER.format(total.freePulls)} free pulls`);
     if (selectors > 0) parts.push(`${INTEGER_FORMATTER.format(selectors)} ${selectors === 1 ? 'selector' : 'selectors'}`);
     const variableOutcomeCount = total.variableOutcomes.length;
@@ -451,10 +451,20 @@ export function buildTimelineRewardSummaries(
       ));
     }
     if (total.rainbowCrystals > 0) {
-      items.push(rewardItem('rainbow_crystal', total.rainbowCrystals, 'rainbow LB crystals', REWARD_ITEM_IDS.rainbow_crystal));
+      items.push(rewardItem(
+        'rainbow_crystal',
+        total.rainbowCrystals,
+        total.rainbowCrystals === 1 ? 'Rainbow Crystal Shard' : 'Rainbow Crystal Shards',
+        REWARD_ITEM_IDS.rainbow_crystal,
+      ));
     }
     if (total.goldCrystals > 0) {
-      items.push(rewardItem('gold_crystal', total.goldCrystals, 'gold LB crystals', REWARD_ITEM_IDS.gold_crystal));
+      items.push(rewardItem(
+        'gold_crystal',
+        total.goldCrystals,
+        total.goldCrystals === 1 ? 'Gold Crystal Shard' : 'Gold Crystal Shards',
+        REWARD_ITEM_IDS.gold_crystal,
+      ));
     }
     if (total.freePulls > 0) {
       // The event card swaps this to the support ticket asset for support banners.
@@ -757,10 +767,10 @@ function competitiveItemDescriptor(
     return { key: 'support-ticket', label: 'Support ticket', icon: 'confirmation_number', iconPath: itemIconPath(REWARD_ITEM_IDS.support_ticket) };
   }
   if (category === 164 && itemId === 149) {
-    return { key: 'rainbow-crystal', label: 'Rainbow crystal', icon: 'auto_awesome', iconPath: itemIconPath(REWARD_ITEM_IDS.rainbow_crystal) };
+    return { key: 'rainbow-crystal', label: 'Rainbow Crystal Shard', icon: 'auto_awesome', iconPath: itemIconPath(REWARD_ITEM_IDS.rainbow_crystal) };
   }
   if (category === 164 && itemId === 150) {
-    return { key: 'gold-crystal', label: 'Gold crystal', icon: 'auto_awesome', iconPath: itemIconPath(REWARD_ITEM_IDS.gold_crystal) };
+    return { key: 'gold-crystal', label: 'Gold Crystal Shard', icon: 'auto_awesome', iconPath: itemIconPath(REWARD_ITEM_IDS.gold_crystal) };
   }
   if (category === 102) return { key: 'character-pieces', label: 'Character pieces', icon: 'person' };
   if (category === 91 && itemId === 59) {

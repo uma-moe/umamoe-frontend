@@ -81,10 +81,11 @@
         <div class="reward-outcome-summary" [attr.aria-label]="rewardSummary?.previewLabel">
           <span
             class="reward-outcome-item"
+            [class.is-crystal-shard]="item.key === 'rainbow-crystal' || item.key === 'gold-crystal'"
             *ngFor="let item of rewardSummary?.previewItems; trackBy: trackRewardOutcomeItem"
             [attr.title]="item.label"
           >
-            <img *ngIf="item.iconPath; else materialPreviewIcon" [src]="item.iconPath" alt="" width="16" height="16" loading="lazy" decoding="async" />
+            <img *ngIf="item.iconPath; else materialPreviewIcon" [src]="item.iconPath" alt="" width="22" height="22" loading="lazy" decoding="async" />
             <ng-template #materialPreviewIcon><mat-icon aria-hidden="true">{{ item.icon }}</mat-icon></ng-template>
             <b>{{ item.countLabel }}</b>
           </span>
@@ -97,10 +98,11 @@
         <div
           *ngFor="let reward of displayedRewards; trackBy: trackReward"
           [class.is-free-pulls]="reward.kind === 'free_pulls'"
+          [class.is-crystal-shard]="reward.kind === 'rainbow_crystal' || reward.kind === 'gold_crystal'"
           [attr.aria-label]="reward.label"
           [attr.title]="reward.label"
         >
-          <img [src]="rewardIconPath(reward)" alt="" width="22" height="22" (error)="onImageError($event)" />
+          <img [src]="rewardIconPath(reward)" alt="" width="30" height="30" (error)="onImageError($event)" />
           <strong>{{ reward.kind === 'free_pulls' ? (reward.amount + '×') : reward.countLabel }}</strong>
         </div>
       </div>

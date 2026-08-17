@@ -100,7 +100,7 @@ const PLANNER_CURRENCY_ITEM_IDS: Readonly<Record<string, number>> = {
   rainbow_crystal: 149,
   gold_crystal: 150,
 };
-const PREPARED_PLANNER_ITEM_IDS = new Set([41, 43, 44, 59, 110, 111, 115, 141, 149, 150, 164, 165, 178, 197, 205, 214, 255]);
+const PREPARED_PLANNER_ITEM_IDS = new Set([41, 43, 44, 59, 110, 111, 115, 141, 144, 145, 149, 150, 164, 165, 178, 197, 205, 214, 255]);
 const VARIABLE_REWARD_NOT_COUNTED = '__not_counted__';
 const PLANNER_CHARACTER_PLACEHOLDER = 'assets/images/character_stand/chara_stand_100101.webp';
 const PLANNER_SUPPORT_PLACEHOLDER = 'assets/images/support_card/half/support_card_s_30031.webp';
@@ -2077,8 +2077,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (kind === 'carats') return 'Carats';
     if (kind === 'uma_ticket') return amount === 1 ? 'Uma ticket' : 'Uma tickets';
     if (kind === 'support_ticket') return amount === 1 ? 'Support ticket' : 'Support tickets';
-    if (kind === 'rainbow_crystal') return amount === 1 ? 'Rainbow LB crystal' : 'Rainbow LB crystals';
-    if (kind === 'gold_crystal') return amount === 1 ? 'Gold LB crystal' : 'Gold LB crystals';
+    if (kind === 'rainbow_crystal') return amount === 1 ? 'Rainbow Crystal Shard' : 'Rainbow Crystal Shards';
+    if (kind === 'gold_crystal') return amount === 1 ? 'Gold Crystal Shard' : 'Gold Crystal Shards';
     return amount === 1 ? 'reward' : 'rewards';
   }
 
@@ -2269,7 +2269,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const base = `${copiesNeeded} ${copiesLabel} required`;
     const crystalCopies = goal.crystalCopiesApplied ?? 0;
     if (!crystalCopies || !goal.crystalKind) return base;
-    return `${base} + ${crystalCopies} ${goal.crystalKind === 'rainbow' ? 'Rainbow LB' : 'Gold LB'}`;
+    return `${base} + ${crystalCopies} ${goal.crystalKind === 'rainbow' ? 'Rainbow Uncap' : 'Gold Uncap'}`;
   }
 
   pickupGoalOddsAriaLabel(goal: PlannerPickupGoalView): string {
@@ -2279,7 +2279,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const base = `${this.formatProbability(goal.probability)} chance of at least ${copiesNeeded} ${copies} of ${goal.label}`;
     const crystalCopies = goal.crystalCopiesApplied ?? 0;
     if (!crystalCopies || !goal.crystalKind) return base;
-    const crystalLabel = `${goal.crystalKind} LB ${crystalCopies === 1 ? 'crystal' : 'crystals'}`;
+    const crystalLabel = `${goal.crystalKind} Uncap ${crystalCopies === 1 ? 'Crystal' : 'Crystals'}`;
     return `${base}; ${crystalCopies} ${crystalLabel} ${crystalCopies === 1 ? 'supplies' : 'supply'} the remaining limit breaks toward ${goal.desiredCopies} total copies`;
   }
 
@@ -2364,8 +2364,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const parts: string[] = [];
     if (this.targetTicketCurrency(target)) parts.push(this.targetTicketUsageLabel(target, result));
     if (target.bannerKind === 'support') {
-      parts.push(`${result.balanceBefore.rainbowCrystals} rainbow LB crystals`);
-      parts.push(`${result.balanceBefore.goldCrystals} gold LB crystals`);
+      parts.push(`${result.balanceBefore.rainbowCrystals} rainbow crystal shards`);
+      parts.push(`${result.balanceBefore.goldCrystals} gold crystal shards`);
     }
     return `At pull date: ${parts.join(', ')}`;
   }
@@ -2796,7 +2796,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     );
     const parts: string[] = [];
     if (sparks > 0) parts.push(`${sparks} shared exchange ${sparks === 1 ? 'copy' : 'copies'}`);
-    if (crystals > 0) parts.push(`${crystals} LB ${crystals === 1 ? 'crystal' : 'crystals'}`);
+    if (crystals > 0) parts.push(`${crystals} Uncap ${crystals === 1 ? 'Crystal' : 'Crystals'}`);
     return parts.length ? `${parts.join(' + ')} included` : 'Exact joint chance';
   }
 

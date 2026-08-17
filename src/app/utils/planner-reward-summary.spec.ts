@@ -24,6 +24,33 @@ describe('buildTimelineRewardSummaries', () => {
     ]);
   });
 
+  it('identifies master item 149 and 150 rewards as crystal shards', () => {
+    const summaries = buildTimelineRewardSummaries({
+      rewards: [{
+        id: 'story-event-items',
+        event_id: 'story-event',
+        label: 'Story event rewards',
+        currency: 'free_jewels',
+        amount: null,
+        available_at: '2026-07-13',
+        source_items: [
+          { item_category: 164, item_id: 149, amount: 3 },
+          { item_category: 164, item_id: 150, amount: 3 },
+        ],
+      }],
+    });
+
+    expect(summaries.get('story-event')?.label).toBe('3 rainbow shards \u00b7 3 gold shards');
+    expect(summaries.get('story-event')?.items.map(item => item.label)).toEqual([
+      '3 Rainbow Crystal Shards',
+      '3 Gold Crystal Shards',
+    ]);
+    expect(summaries.get('story-event')?.items.map(item => item.iconPath)).toEqual([
+      'assets/images/item/item_icon_00149.webp',
+      'assets/images/item/item_icon_00150.webp',
+    ]);
+  });
+
   it('uses campaign allocations once instead of double-counting managed free-pull benefits', () => {
     const summaries = buildTimelineRewardSummaries({
       rewards: [],
@@ -70,7 +97,7 @@ describe('buildTimelineRewardSummaries', () => {
       carats: 0,
       variable: true,
       variableOutcomeCount: 1,
-      variableRewardLabels: ['Carats', 'Trainee tickets', 'Rainbow crystals', 'Gold crystals'],
+      variableRewardLabels: ['Carats', 'Trainee tickets', 'Rainbow Crystal Shards', 'Gold Crystal Shards'],
       label: 'Rewards vary by result',
       mode: 'cumulative',
       previewLabel: 'Cumulative',

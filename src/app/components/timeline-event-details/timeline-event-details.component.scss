@@ -354,16 +354,16 @@ mat-dialog-content {
 .reward-list > div {
   display: inline-flex;
   min-width: 0;
-  min-height: 24px;
+  min-height: 32px;
   padding: 1px 0;
   align-items: center;
   gap: 5px;
 }
 
 .reward-list img {
-  width: 22px;
-  height: 22px;
-  flex: 0 0 22px;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
   object-fit: contain;
 }
 
@@ -810,11 +810,19 @@ mat-dialog-content {
 
 .rate-pickup-grid em {
   color: var(--accent-primary);
-  font-size: 10px;
+  font-size: 11px;
   font-style: normal;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   line-height: 12px;
+}
+
+.reward-list > .is-crystal-shard strong::after,
+.reward-outcome-item.is-crystal-shard b::after {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 600;
+  content: ' shards';
 }
 
 .reward-outcomes {
@@ -916,9 +924,9 @@ mat-dialog-content {
 
 .reward-outcome-item img {
   display: block;
-  width: 14px;
-  height: 14px;
-  flex: 0 0 14px;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
   object-fit: contain;
 }
 

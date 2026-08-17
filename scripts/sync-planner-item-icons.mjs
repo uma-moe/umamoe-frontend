@@ -3,7 +3,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
-const ITEM_IDS = [41, 43, 111, 141, 164, 165, 178, 197, 205, 214, 255];
+const DEFAULT_ITEM_IDS = [41, 43, 44, 59, 110, 111, 115, 141, 144, 145, 149, 150, 164, 165, 178, 197, 205, 214, 255];
+const requestedItemIds = process.argv.slice(2)
+  .map(value => Number(value))
+  .filter(value => Number.isInteger(value) && value > 0);
+const ITEM_IDS = requestedItemIds.length > 0 ? [...new Set(requestedItemIds)] : DEFAULT_ITEM_IDS;
 const API_URL = 'https://wiki.biligame.com/umamusume/api.php';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT_DIR = path.join(ROOT, 'src', 'assets', 'images', 'item');
