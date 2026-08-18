@@ -47,6 +47,32 @@ describe('CaratPlannerComponent banner ordering', () => {
     ]);
   });
 
+  it('renders large banner catalogues in responsive batches without limiting search', () => {
+    const component = createComponent();
+    component.events = Array.from({ length: 95 }, (_, index) => ({
+      id: `banner-${index}`,
+      title: `Banner ${index}`,
+      type: index % 2 === 0 ? 'character_banner' : 'support_banner',
+      globalReleaseDate: `2031-01-${String((index % 28) + 1).padStart(2, '0')}`,
+    }));
+
+    expect(component.filteredEvents.length).toBe(95);
+    expect(component.visiblePickerEvents.length).toBe(40);
+    expect(component.remainingPickerEventCount).toBe(55);
+
+    component.showMorePickerEvents();
+    expect(component.visiblePickerEvents.length).toBe(80);
+
+    component.onEventViewportScroll({
+      currentTarget: { scrollHeight: 1_000, scrollTop: 760, clientHeight: 100 },
+    } as unknown as Event);
+    expect(component.visiblePickerEvents.length).toBe(95);
+
+    component.searchEvents('Banner 94');
+    expect(component.filteredEvents.map(event => event.id)).toEqual(['banner-94']);
+    expect(component.visiblePickerEvents.length).toBe(1);
+  });
+
   it('combines full and crafted Uncap Crystals while retaining next-crystal progress', () => {
     const component = createComponent();
 
@@ -1259,6 +1285,45 @@ describe('CaratPlannerComponent banner ordering', () => {
 
     component.setRewardSelectionFilter('included');
     expect(component.visibleRewardGroups.map(group => group.id)).toEqual(['reward:reward-2']);
+  });
+
+  it('renders large reward catalogues in batches and loads ahead while scrolling', () => {
+    const component = createComponent();
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards: Array.from({ length: 95 }, (_, index) => ({
+        id: `reward-${index}`,
+        label: `Reward ${index}`,
+        currency: 'free_jewels' as const,
+        amount: 100,
+        available_at: `2030-03-${String(index % 28 + 1).padStart(2, '0')}`,
+      })) },
+    };
+    (component as unknown as { rebuildAssumptionViews(): void }).rebuildAssumptionViews();
+
+    expect(component.displayedRewardItems.length).toBe(95);
+    expect(component.visibleRewardItems.length).toBe(40);
+    expect(component.remainingRewardItemCount).toBe(55);
+
+    component.onRewardViewportScroll({
+      currentTarget: { scrollHeight: 1000, scrollTop: 100, clientHeight: 400 },
+    } as unknown as Event);
+    expect(component.visibleRewardItems.length).toBe(40);
+
+    component.onRewardViewportScroll({
+      currentTarget: { scrollHeight: 1000, scrollTop: 400, clientHeight: 400 },
+    } as unknown as Event);
+    expect(component.visibleRewardItems.length).toBe(80);
+
+    component.showMoreRewardItems();
+    expect(component.visibleRewardItems.length).toBe(95);
+    expect(component.hasMoreRewardItems).toBeFalse();
+
+    component.searchRewards('Reward 94');
+    expect(component.visibleRewardGroups.map(group => group.rewards[0]?.id)).toEqual(['reward-94']);
+    component.searchRewards('');
+    expect(component.visibleRewardItems.length).toBe(40);
   });
 
   it('reuses the reward catalogue view while searching and filtering', () => {

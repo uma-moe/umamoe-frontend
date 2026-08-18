@@ -124,6 +124,10 @@ const PLANNER_CURRENCY_ITEM_IDS: Readonly<Record<string, number>> = {
 };
 const PREPARED_PLANNER_ITEM_IDS = new Set([41, 43, 44, 59, 110, 111, 115, 141, 144, 145, 149, 150, 164, 165, 178, 197, 205, 214, 255]);
 const VARIABLE_REWARD_NOT_COUNTED = '__not_counted__';
+const EVENT_RENDER_BATCH_SIZE = 40;
+const EVENT_RENDER_LOAD_AHEAD_PX = 180;
+const REWARD_RENDER_BATCH_SIZE = 40;
+const REWARD_RENDER_LOAD_AHEAD_PX = 240;
 const PLANNER_CHARACTER_PLACEHOLDER = 'assets/images/character_stand/chara_stand_100101.webp';
 const PLANNER_SUPPORT_PLACEHOLDER = 'assets/images/support_card/half/support_card_s_30031.webp';
 const VISIBLE_REWARD_CURRENCIES = new Set<PlannerCurrency>([
@@ -310,6 +314,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private eventById = new Map<string, CaratPlannerTimelineEvent>();
   private eventByGachaId = new Map<number, CaratPlannerTimelineEvent>();
   private eventByTypeAndMasterId = new Map<string, CaratPlannerTimelineEvent>();
+  private cachedFilteredEventsSource: readonly CaratPlannerTimelineEvent[] | null = null;
+  private cachedEventFilterKey = '';
   private cachedRewardResources: CaratPlannerDataBundle['rewards'] | null = null;
   private cachedRewardEvents: readonly CaratPlannerTimelineEvent[] | null = null;
   private cachedRewardViewKey = '';
@@ -322,6 +328,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private disabledEventIdsLookup = new Set<string>();
   private enabledRewardEventIdsSource: readonly string[] | null = null;
   private enabledRewardEventIdsLookup = new Set<string>();
+  private targetEventIdsSource: readonly PlannerTarget[] | null = null;
+  private targetEventIdsLookup = new Set<string>();
+  private normalizedEventSearchValues = new WeakMap<CaratPlannerTimelineEvent, readonly string[]>();
   private pendingRequestedEventId: string | null = null;
   private handledRequestedEventId: string | null = null;
   private plannerDataReady = false;
@@ -331,13 +340,20 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private deferredRewardSaveFrame: number | undefined;
   private deferredRewardSaveTimer: ReturnType<typeof setTimeout> | undefined;
   private deferredRewardSavePending = false;
+  private deferredInteractionSaveTimer: ReturnType<typeof setTimeout> | undefined;
+  private deferredInteractionSavePlan: CaratPlan | null = null;
   private readonly expandedPickupTargetIds = new Set<string>();
   private readonly pickupGoalCopyMemory = new Map<string, number>();
   private readonly expandedScenarioSectionIds = new Set<string>();
   private readonly scenarioSectionSelectionMemory = new Map<string, Record<string, string>>();
+  private renderedPickerEvents: CaratPlannerTimelineEvent[] = [];
+  private eventRenderLimit = EVENT_RENDER_BATCH_SIZE;
+  private renderedRewardItems: PlannerRewardListItem[] = [];
+  private rewardRenderLimit = REWARD_RENDER_BATCH_SIZE;
 
   @Input() set events(value: readonly CaratPlannerTimelineEvent[] | null | undefined) {
     this.allEvents = value ?? [];
+    this.cachedFilteredEventsSource = null;
     this.cachedRewardEvents = null;
     this.rebuildEventIndexes();
     this.syncTargetSchedulesFromResources();
@@ -491,6 +507,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       this.showEventPicker = true;
       const direction = event.key === 'ArrowDown' ? 1 : -1;
       this.eventPickerActiveIndex = this.nextSelectableEventIndex(this.eventPickerActiveIndex, direction);
+      this.ensurePickerEventRendered(this.eventPickerActiveIndex);
       return;
     }
     if (event.key === 'Enter') {
@@ -505,9 +522,38 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   isEventAdded(eventId: string): boolean {
-    if ((this.plan.disabledEventIds ?? []).includes(eventId)) return false;
-    return this.plan.targets.some(target => target.eventId === eventId)
-      || (this.plan.enabledRewardEventIds ?? []).includes(eventId);
+    if (this.disabledEventIds().has(eventId)) return false;
+    return this.targetEventIds().has(eventId) || this.enabledRewardEventIds().has(eventId);
+  }
+
+  get visiblePickerEvents(): readonly CaratPlannerTimelineEvent[] {
+    return this.renderedPickerEvents;
+  }
+
+  get remainingPickerEventCount(): number {
+    return Math.max(0, this.filteredEvents.length - this.renderedPickerEvents.length);
+  }
+
+  get hasMorePickerEvents(): boolean {
+    return this.remainingPickerEventCount > 0;
+  }
+
+  onEventViewportScroll(event: Event): void {
+    if (!this.hasMorePickerEvents) return;
+    const viewport = event.currentTarget as HTMLElement | null;
+    if (!viewport) return;
+    const remaining = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    if (remaining <= EVENT_RENDER_LOAD_AHEAD_PX) this.showMorePickerEvents();
+  }
+
+  showMorePickerEvents(): void {
+    if (!this.hasMorePickerEvents) return;
+    this.eventRenderLimit = Math.min(
+      this.filteredEvents.length,
+      Math.max(this.eventRenderLimit, this.renderedPickerEvents.length) + EVENT_RENDER_BATCH_SIZE,
+    );
+    this.syncRenderedPickerEvents();
+    this.cdr.markForCheck();
   }
 
   eventDisplayTitle(event: CaratPlannerTimelineEvent): string {
@@ -515,7 +561,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   targetDisplayTitle(target: PlannerTarget): string {
-    const event = this.allEvents.find(item => item.id === target.eventId);
+    const event = this.eventById.get(target.eventId);
     if (event) return this.rewardEventDisplayTitle(event);
     return this.cleanRewardLabel(target.title).replace(/\s*\+\s*\d+\s*more\b/gi, '').trim();
   }
@@ -583,7 +629,15 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   get visibleRewardItems(): PlannerRewardListItem[] {
-    return this.displayedRewardItems;
+    return this.renderedRewardItems;
+  }
+
+  get remainingRewardItemCount(): number {
+    return Math.max(0, this.displayedRewardItems.length - this.renderedRewardItems.length);
+  }
+
+  get hasMoreRewardItems(): boolean {
+    return this.remainingRewardItemCount > 0;
   }
 
   get activeIncomeAssumptionCount(): number {
@@ -705,6 +759,15 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     return this.enabledRewardEventIdsLookup;
   }
 
+  private targetEventIds(): ReadonlySet<string> {
+    const source = this.plan?.targets ?? [];
+    if (this.targetEventIdsSource !== source) {
+      this.targetEventIdsSource = source;
+      this.targetEventIdsLookup = new Set(source.map(target => target.eventId));
+    }
+    return this.targetEventIdsLookup;
+  }
+
   isRewardGroupActive(group: PlannerRewardGroupView): boolean {
     if (group.isPast) return false;
     if (group.eventId && this.disabledEventIds().has(group.eventId)) return false;
@@ -783,8 +846,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       this.toggleRewardGroup(group, enable);
     }
     if (!this.isRewardGroupBannerActionable(group) || !group.eventId) return;
-    const event = this.allEvents.find(item => item.id === group.eventId);
+    const event = this.eventById.get(group.eventId);
     if (!event) return;
+    this.flushDeferredInteractionSave();
     this.persistence.setEventActive(
       event,
       enable,
@@ -844,7 +908,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       : group.variableOptions.find(item => item.id === optionId);
     if (!option) return;
 
-    const event = this.allEvents.find(item => item.id === group.eventId);
+    const event = this.eventById.get(group.eventId);
     selections[group.eventId] = {
       optionId: option.id,
       label: `${group.title}: ${option.label}`,
@@ -876,7 +940,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       };
     }
 
-    const eventType = competition ?? this.allEvents.find(event => event.id === eventId)?.type;
+    const eventType = competition ?? this.eventById.get(eventId)?.type;
     const dataDrivenGroup = plannerDataDrivenCompetitionAssumptionForEventType(eventType);
     if (dataDrivenGroup) {
       const selected = resolveDataDrivenCompetitionAssumption(
@@ -970,6 +1034,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   selectFreePullCampaign(campaign: PlannerFreePullCampaignView, choice: FreePullCampaignChoice): void {
+    this.flushDeferredInteractionSave();
     const selectedAndReady = this.isFreePullCampaignChoiceSelected(campaign, choice)
       && this.isFreePullCampaignChoiceReady(campaign, choice);
     if (selectedAndReady) {
@@ -1032,8 +1097,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   toggleRewardGroupBanner(group: PlannerRewardGroupView): void {
     if (!this.isRewardGroupBannerActionable(group) || !group.eventId) return;
-    const event = this.allEvents.find(item => item.id === group.eventId);
+    const event = this.eventById.get(group.eventId);
     if (!event) return;
+    this.flushDeferredInteractionSave();
     this.persistence.setEventActive(
       event,
       !this.isRewardGroupBannerPlanned(group),
@@ -1091,6 +1157,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     const flushDeferredRewardSave = this.deferredRewardSavePending;
+    const deferredInteractionPlan = this.takeDeferredInteractionSave();
     if (this.deferredRewardSaveFrame !== undefined && typeof cancelAnimationFrame === 'function') {
       cancelAnimationFrame(this.deferredRewardSaveFrame);
     }
@@ -1102,29 +1169,55 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.planResourceRequest++;
     this.destroy$.next();
     this.destroy$.complete();
+    if (deferredInteractionPlan && deferredInteractionPlan !== this.plan) {
+      this.persistence.savePlan(deferredInteractionPlan);
+    }
     if (flushDeferredRewardSave && this.plan) this.persistence.savePlan(this.plan);
+    else if (deferredInteractionPlan === this.plan) this.persistence.savePlan(deferredInteractionPlan);
   }
 
   selectPlan(planId: string): void {
+    this.flushDeferredInteractionSave();
     this.persistence.setActive(planId);
   }
 
   createPlan(): void {
+    this.flushDeferredInteractionSave();
     this.persistence.createPlan('New plan');
   }
 
   duplicatePlan(): void {
+    this.flushDeferredInteractionSave();
     this.persistence.duplicatePlan(this.plan.id);
   }
 
   deletePlan(): void {
     if (this.collection.plans.length > 1 && confirm(`Delete "${this.plan.name}"?`)) {
+      this.flushDeferredInteractionSave();
       this.persistence.deletePlan(this.plan.id);
     }
   }
 
   save(): void {
+    const deferredPlan = this.takeDeferredInteractionSave();
+    if (deferredPlan && deferredPlan !== this.plan) this.persistence.savePlan(deferredPlan);
     this.persistence.savePlan(this.plan);
+  }
+
+  saveAfterInteraction(): void {
+    this.cdr.markForCheck();
+    if (!this.elementRef) {
+      this.save();
+      return;
+    }
+    this.deferredInteractionSavePlan = this.plan;
+    if (this.deferredInteractionSaveTimer !== undefined) clearTimeout(this.deferredInteractionSaveTimer);
+    this.deferredInteractionSaveTimer = setTimeout(() => {
+      this.deferredInteractionSaveTimer = undefined;
+      const plan = this.deferredInteractionSavePlan;
+      this.deferredInteractionSavePlan = null;
+      if (plan && !this.destroyed) this.persistence.savePlan(plan);
+    }, 75);
   }
 
   searchEvents(value: string): void {
@@ -1136,21 +1229,23 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   addEvent(event: CaratPlannerTimelineEvent): void {
     if (event.plannerRewardAvailable && !this.plannerDataReady) return;
+    this.showEventPicker = false;
+    this.eventSearch = '';
+    this.cdr.markForCheck();
+    this.flushDeferredInteractionSave();
     this.persistence.setEventActive(
       event,
       true,
       this.plannerDataReady ? this.data.rewards.rewards : [],
       this.plannerDataReady ? this.data.rewards.competitive_variants ?? [] : [],
     );
-    this.showEventPicker = false;
-    this.eventSearch = '';
   }
 
   removeTarget(targetId: string): void {
     const target = this.plan.targets.find(item => item.id === targetId);
     if (!target) return;
     this.expandedPickupTargetIds.delete(targetId);
-    const event = this.allEvents.find(item => item.id === target.eventId) ?? {
+    const event = this.eventById.get(target.eventId) ?? {
       id: target.eventId,
       title: target.title,
       type: `${target.bannerKind}_banner`,
@@ -1163,6 +1258,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         ?? (target.pickupId === undefined ? [] : [target.pickupId]),
       plannerRewardAvailable: (this.plan.enabledRewardEventIds ?? []).includes(target.eventId),
     };
+    this.flushDeferredInteractionSave();
     this.persistence.setEventActive(event, false);
   }
 
@@ -1296,6 +1392,19 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         this.save();
       }, 0);
     });
+  }
+
+  private takeDeferredInteractionSave(): CaratPlan | null {
+    if (this.deferredInteractionSaveTimer !== undefined) clearTimeout(this.deferredInteractionSaveTimer);
+    this.deferredInteractionSaveTimer = undefined;
+    const plan = this.deferredInteractionSavePlan;
+    this.deferredInteractionSavePlan = null;
+    return plan;
+  }
+
+  private flushDeferredInteractionSave(): void {
+    const plan = this.takeDeferredInteractionSave();
+    if (plan) this.persistence.savePlan(plan);
   }
 
   rewardDetailsTooltip(reward: PlannerRewardEntry): string {
@@ -1685,31 +1794,50 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   searchRewards(value: string): void {
     this.rewardSearch = value;
-    this.filterRewards();
+    this.filterRewards(true);
   }
 
   setRewardSelectionFilter(filter: RewardSelectionFilter): void {
     if (this.rewardSelectionFilter === filter) return;
     this.rewardSelectionFilter = filter;
-    this.filterRewards();
+    this.filterRewards(true);
   }
 
   setPastRewardsVisible(visible: boolean): void {
     if (this.showPastRewards === visible) return;
     this.showPastRewards = visible;
-    this.filterRewards();
+    this.filterRewards(true);
+  }
+
+  onRewardViewportScroll(event: Event): void {
+    if (!this.hasMoreRewardItems) return;
+    const viewport = event.currentTarget as HTMLElement | null;
+    if (!viewport) return;
+    const remaining = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    if (remaining <= REWARD_RENDER_LOAD_AHEAD_PX) this.showMoreRewardItems();
+  }
+
+  showMoreRewardItems(): void {
+    if (!this.hasMoreRewardItems) return;
+    this.rewardRenderLimit = Math.min(
+      this.displayedRewardItems.length,
+      Math.max(this.rewardRenderLimit, this.renderedRewardItems.length) + REWARD_RENDER_BATCH_SIZE,
+    );
+    this.syncRenderedRewardItems();
+    this.cdr.markForCheck();
   }
 
   isPastRewardGroup(group: PlannerRewardGroupView): boolean {
     return group.isPast;
   }
 
-  private filterRewards(): void {
+  private filterRewards(resetRenderWindow = false): void {
     const query = this.rewardSearch.trim().toLowerCase();
     const viewKey = this.rewardViewKey();
-    if (this.cachedRewardResources !== this.data.rewards
+    const catalogueChanged = this.cachedRewardResources !== this.data.rewards
       || this.cachedRewardEvents !== this.allEvents
-      || this.cachedRewardViewKey !== viewKey) {
+      || this.cachedRewardViewKey !== viewKey;
+    if (catalogueChanged) {
       this.rewardGroupSelectableCache = new WeakMap<PlannerRewardGroupView, boolean>();
       this.freePullBenefitCache = new WeakMap<PlannerRewardGroupView, boolean>();
       this.freePullCampaignViews = this.buildFreePullCampaignViews();
@@ -1756,7 +1884,14 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       })),
     ].sort((left, right) => this.compareRewardListItems(left, right, direction));
     this.displayedRewards = this.displayedRewardGroups.flatMap(group => [...group.rewards]);
+    if (catalogueChanged || resetRenderWindow) this.rewardRenderLimit = REWARD_RENDER_BATCH_SIZE;
+    this.syncRenderedRewardItems();
     this.cdr.markForCheck();
+  }
+
+  private syncRenderedRewardItems(): void {
+    const limit = Math.min(this.rewardRenderLimit, this.displayedRewardItems.length);
+    this.renderedRewardItems = this.displayedRewardItems.slice(0, limit);
   }
 
   private rewardViewKey(): string {
@@ -2744,6 +2879,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   exportPlan(): void {
+    this.flushDeferredInteractionSave();
     const blob = new Blob([this.persistence.exportPlan()], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -2758,6 +2894,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const file = input.files?.[0];
     if (!file) return;
     try {
+      this.flushDeferredInteractionSave();
       this.persistence.importJson(await file.text());
       this.importError = '';
     } catch (error) {
@@ -2860,7 +2997,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       .filter(target => !(this.plan.disabledEventIds ?? []).includes(target.eventId))
       .filter(target => target.bannerKind === 'character' || target.bannerKind === 'support')
       .map(target => {
-        const event = this.allEvents.find(item => item.id === target.eventId);
+        const event = this.eventById.get(target.eventId);
         const selectedPickupIds = this.pickupGoals(target).map(goal => goal.pickupId);
         if (event) {
           return event.pickupCardIds?.length || selectedPickupIds.length === 0
@@ -3027,7 +3164,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   private buildPickupOptions(target: PlannerTarget, gacha?: PlannerGachaEntry): PlannerPickupOptionView[] {
     const protectedPickups = gacha?.pickups ?? [];
-    const event = this.allEvents.find(item => item.id === target.eventId);
+    const event = this.eventById.get(target.eventId);
     const publicFallbacks = protectedPickups.length === 0
       ? (event?.pickupCardIds ?? []).map(pickupId => ({ pickup_id: pickupId, rate: Number.NaN }))
       : [];
@@ -3049,7 +3186,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   private buildPickupOption(target: PlannerTarget, pickup: PlannerPickupRate): PlannerPickupOptionView {
-    const event = this.allEvents.find(item => item.id === target.eventId);
+    const event = this.eventById.get(target.eventId);
     const pickupIndex = event?.pickupCardIds?.indexOf(pickup.pickup_id) ?? -1;
     const relatedName = pickupIndex >= 0
       ? target.bannerKind === 'support'
@@ -3220,21 +3357,38 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   private filterEvents(): void {
     const query = this.eventSearch.trim();
+    const searchKey = this.normalizeSearchValue(query);
+    const searchTokens = query
+      .split(/[^a-z0-9]+/i)
+      .map(value => this.normalizeSearchValue(value))
+      .filter(Boolean);
+    const matchRanks = new Map<string, number>();
     const referenceDate = [new Date().toISOString().slice(0, 10), this.plan?.projectionStartDate ?? '']
       .sort()
       .at(-1) ?? new Date().toISOString().slice(0, 10);
+    const filterKey = `${query}\u0000${referenceDate}`;
+    if (this.cachedFilteredEventsSource === this.allEvents && this.cachedEventFilterKey === filterKey) return;
+    this.cachedFilteredEventsSource = this.allEvents;
+    this.cachedEventFilterKey = filterKey;
     this.filteredEvents = this.allEvents
       .filter(event => {
         const kind = this.bannerKind(event.type);
         return kind === 'character' || kind === 'support';
       })
-      .filter(event => !query || this.eventMatchesPickerSearch(event, query))
+      .filter(event => {
+        if (!searchKey) return true;
+        const values = this.normalizedEventPickerSearchValues(event);
+        const matches = values.some(value => value.includes(searchKey))
+          || searchTokens.every(token => values.some(value => value.includes(token)));
+        if (matches) matchRanks.set(event.id, this.eventPickerMatchRank(event, searchKey));
+        return matches;
+      })
       .sort((a, b) => {
         const aTitle = a.title.toLowerCase();
         const bTitle = b.title.toLowerCase();
-        if (query) {
-          const aMatchRank = this.eventPickerMatchRank(a, query);
-          const bMatchRank = this.eventPickerMatchRank(b, query);
+        if (searchKey) {
+          const aMatchRank = matchRanks.get(a.id) ?? 4;
+          const bMatchRank = matchRanks.get(b.id) ?? 4;
           if (aMatchRank !== bMatchRank) return aMatchRank - bMatchRank;
         }
 
@@ -3246,27 +3400,38 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         const dateOrder = aUpcoming ? aDate.localeCompare(bDate) : bDate.localeCompare(aDate);
         return dateOrder || aTitle.localeCompare(bTitle);
       });
+    this.eventRenderLimit = EVENT_RENDER_BATCH_SIZE;
+    this.syncRenderedPickerEvents();
     this.cdr?.markForCheck();
   }
 
-  private eventMatchesPickerSearch(event: CaratPlannerTimelineEvent, query: string): boolean {
-    const searchKey = this.normalizeSearchValue(query);
-    if (!searchKey) return true;
-    const values = this.eventPickerSearchValues(event).map(value => this.normalizeSearchValue(value));
-    const tokens = query
-      .split(/[^a-z0-9]+/i)
-      .map(value => this.normalizeSearchValue(value))
-      .filter(Boolean);
-    return values.some(value => value.includes(searchKey))
-      || tokens.every(token => values.some(value => value.includes(token)));
+  private syncRenderedPickerEvents(): void {
+    const limit = Math.min(this.eventRenderLimit, this.filteredEvents.length);
+    this.renderedPickerEvents = this.filteredEvents.slice(0, limit);
   }
 
-  private eventPickerMatchRank(event: CaratPlannerTimelineEvent, query: string): number {
-    const searchKey = this.normalizeSearchValue(query);
-    const title = this.normalizeSearchValue(event.title);
-    const participantValues = this.eventPickerSearchValues(event)
-      .slice(1)
-      .map(value => this.normalizeSearchValue(value));
+  private ensurePickerEventRendered(index: number): void {
+    if (index < this.renderedPickerEvents.length) return;
+    this.eventRenderLimit = Math.min(
+      this.filteredEvents.length,
+      Math.ceil((index + 1) / EVENT_RENDER_BATCH_SIZE) * EVENT_RENDER_BATCH_SIZE,
+    );
+    this.syncRenderedPickerEvents();
+    this.cdr.markForCheck();
+  }
+
+  private normalizedEventPickerSearchValues(event: CaratPlannerTimelineEvent): readonly string[] {
+    const cached = this.normalizedEventSearchValues.get(event);
+    if (cached) return cached;
+    const values = this.eventPickerSearchValues(event).map(value => this.normalizeSearchValue(value));
+    this.normalizedEventSearchValues.set(event, values);
+    return values;
+  }
+
+  private eventPickerMatchRank(event: CaratPlannerTimelineEvent, searchKey: string): number {
+    const values = this.normalizedEventPickerSearchValues(event);
+    const title = values[0] ?? '';
+    const participantValues = values.slice(1);
     if (title === searchKey) return 0;
     if (participantValues.some(value => value === searchKey)) return 1;
     if (title.startsWith(searchKey)) return 2;
@@ -3306,7 +3471,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private tryAddRequestedEvent(): void {
     const eventId = this.pendingRequestedEventId;
     if (!eventId || !this.plan || eventId === this.handledRequestedEventId) return;
-    const event = this.allEvents.find(item => item.id === eventId);
+    const event = this.eventById.get(eventId);
     if (!event) return;
     if (event.plannerRewardAvailable && !this.plannerDataReady) return;
     this.handledRequestedEventId = eventId;
@@ -3324,6 +3489,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.eventById = new Map();
     this.eventByGachaId = new Map();
     this.eventByTypeAndMasterId = new Map();
+    this.normalizedEventSearchValues = new WeakMap();
     for (const event of this.allEvents) {
       if (!this.eventById.has(event.id)) this.eventById.set(event.id, event);
       const gachaIds = [event.gachaId, ...(event.gachaIds ?? [])]
@@ -3355,7 +3521,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   private resolveTargetSchedule(target: PlannerTarget): { start: string; end: string } {
-    const event = this.allEvents.find(item => item.id === target.eventId);
+    const event = this.eventById.get(target.eventId);
     const ids = new Set([target.gachaId, ...(target.gachaIds ?? [])]);
     const gachas = this.resources.loadedGachas ?? [];
     const gacha = gachas.find(item => item.event_id === target.eventId)

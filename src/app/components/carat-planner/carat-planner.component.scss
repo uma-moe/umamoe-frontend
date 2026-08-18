@@ -940,6 +940,29 @@ select.cp-control,
   @include scrollbar-thin;
 }
 
+.cp-reward-load-more {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 5px;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  background: var(--surface-1);
+  cursor: pointer;
+  font: inherit;
+
+  mat-icon { @include icon-size(17px); color: var(--accent-secondary); }
+  span { font-size: 0.66rem; font-weight: 700; }
+  small { color: var(--text-muted); font-size: 0.58rem; font-variant-numeric: tabular-nums; }
+  &:hover { color: var(--text-primary); border-color: var(--border-secondary); background: var(--surface-2); }
+  &:focus-visible { outline: 2px solid rgba(var(--accent-primary-rgb), 0.5); outline-offset: 1px; }
+}
+
 .cp-free-pull-campaigns {
   margin: 0 0 9px;
 }

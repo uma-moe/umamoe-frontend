@@ -64,8 +64,9 @@
           <mat-icon>close</mat-icon>
         </button>
       </span>
-      <div id="cp-banner-options" *ngIf="showEventPicker" class="cp-event-viewport" role="listbox" tabindex="-1">
-        <button class="cp-event-option" type="button" role="option" *ngFor="let event of filteredEvents; let optionIndex = index; trackBy: trackById"
+      <div id="cp-banner-options" *ngIf="showEventPicker" class="cp-event-viewport" role="listbox" tabindex="-1"
+        (scroll)="onEventViewportScroll($event)">
+        <button class="cp-event-option" type="button" role="option" *ngFor="let event of visiblePickerEvents; let optionIndex = index; trackBy: trackById"
           [id]="'cp-banner-option-' + optionIndex" [class.is-active]="optionIndex === eventPickerActiveIndex"
           [attr.aria-selected]="optionIndex === eventPickerActiveIndex" [disabled]="isEventAdded(event.id)"
           (mouseenter)="eventPickerActiveIndex = optionIndex" (click)="addEvent(event)">
@@ -173,23 +174,23 @@
         <label class="cp-field"><span>Start date</span><input class="cp-control" type="date" [(ngModel)]="plan.projectionStartDate" (ngModelChange)="projectionStartChanged()"></label>
         <fieldset class="cp-resource-group">
           <legend>Carats</legend>
-          <label class="cp-field"><span>Free</span><span class="cp-control cp-control--icon"><mat-icon>diamond</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.freeJewels" (ngModelChange)="save()"></span></label>
-          <label class="cp-field"><span>Paid</span><span class="cp-control cp-control--icon"><mat-icon>paid</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.paidJewels" (ngModelChange)="save()"></span></label>
+          <label class="cp-field"><span>Free</span><span class="cp-control cp-control--icon"><mat-icon>diamond</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.freeJewels" (ngModelChange)="saveAfterInteraction()"></span></label>
+          <label class="cp-field"><span>Paid</span><span class="cp-control cp-control--icon"><mat-icon>paid</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.paidJewels" (ngModelChange)="saveAfterInteraction()"></span></label>
         </fieldset>
         <fieldset class="cp-resource-group">
           <legend>Tickets</legend>
-          <label class="cp-field"><span>Uma</span><span class="cp-control cp-control--icon"><mat-icon>confirmation_number</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.umaTickets" (ngModelChange)="save()"></span></label>
-          <label class="cp-field"><span>Support</span><span class="cp-control cp-control--icon"><mat-icon>style</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.supportTickets" (ngModelChange)="save()"></span></label>
+          <label class="cp-field"><span>Uma</span><span class="cp-control cp-control--icon"><mat-icon>confirmation_number</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.umaTickets" (ngModelChange)="saveAfterInteraction()"></span></label>
+          <label class="cp-field"><span>Support</span><span class="cp-control cp-control--icon"><mat-icon>style</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.supportTickets" (ngModelChange)="saveAfterInteraction()"></span></label>
         </fieldset>
         <fieldset class="cp-resource-group">
           <legend>Uncap Crystals</legend>
-          <label class="cp-field"><span>Rainbow</span><span class="cp-control cp-control--icon"><img src="assets/images/item/item_icon_00144.webp" width="20" height="20" alt=""><input type="number" min="0" step="1" [(ngModel)]="plan.balances.rainbowFullCrystals" (ngModelChange)="save()"></span></label>
-          <label class="cp-field"><span>Gold</span><span class="cp-control cp-control--icon"><img src="assets/images/item/item_icon_00145.webp" width="20" height="20" alt=""><input type="number" min="0" step="1" [(ngModel)]="plan.balances.goldFullCrystals" (ngModelChange)="save()"></span></label>
+          <label class="cp-field"><span>Rainbow</span><span class="cp-control cp-control--icon"><img src="assets/images/item/item_icon_00144.webp" width="20" height="20" alt=""><input type="number" min="0" step="1" [(ngModel)]="plan.balances.rainbowFullCrystals" (ngModelChange)="saveAfterInteraction()"></span></label>
+          <label class="cp-field"><span>Gold</span><span class="cp-control cp-control--icon"><img src="assets/images/item/item_icon_00145.webp" width="20" height="20" alt=""><input type="number" min="0" step="1" [(ngModel)]="plan.balances.goldFullCrystals" (ngModelChange)="saveAfterInteraction()"></span></label>
         </fieldset>
         <fieldset class="cp-resource-group">
           <legend>Crystal shards</legend>
-          <label class="cp-field"><span>Rainbow</span><span class="cp-control cp-control--icon"><img src="assets/images/item/item_icon_00149.webp" width="20" height="20" alt=""><input type="number" min="0" step="1" [(ngModel)]="plan.balances.rainbowCrystals" (ngModelChange)="save()"></span></label>
-          <label class="cp-field"><span>Gold</span><span class="cp-control cp-control--icon"><img src="assets/images/item/item_icon_00150.webp" width="20" height="20" alt=""><input type="number" min="0" step="1" [(ngModel)]="plan.balances.goldCrystals" (ngModelChange)="save()"></span></label>
+          <label class="cp-field"><span>Rainbow</span><span class="cp-control cp-control--icon"><img src="assets/images/item/item_icon_00149.webp" width="20" height="20" alt=""><input type="number" min="0" step="1" [(ngModel)]="plan.balances.rainbowCrystals" (ngModelChange)="saveAfterInteraction()"></span></label>
+          <label class="cp-field"><span>Gold</span><span class="cp-control cp-control--icon"><img src="assets/images/item/item_icon_00150.webp" width="20" height="20" alt=""><input type="number" min="0" step="1" [(ngModel)]="plan.balances.goldCrystals" (ngModelChange)="saveAfterInteraction()"></span></label>
         </fieldset>
       </div>
 
@@ -287,10 +288,10 @@
           <div class="cp-custom-list" *ngIf="plan.customIncome.length">
             <div class="cp-custom" *ngFor="let item of plan.customIncome; trackBy: trackById">
               <label class="cp-field cp-custom-name"><span>Income name</span><input class="cp-control" [(ngModel)]="item.label" (blur)="save()"></label>
-              <label class="cp-field"><span>Amount</span><input class="cp-control" type="number" min="0" [(ngModel)]="item.amount" (ngModelChange)="save()"></label>
-              <label class="cp-field"><span>Resource</span><select class="cp-control" [(ngModel)]="item.currency" (ngModelChange)="save()"><option value="free_jewels">Carats</option><option value="uma_ticket">Uma ticket</option><option value="support_ticket">Support ticket</option><option value="rainbow_crystal">Rainbow Crystal Shard</option><option value="gold_crystal">Gold Crystal Shard</option><option value="rainbow_full_crystal">Rainbow Uncap Crystal</option><option value="gold_full_crystal">Gold Uncap Crystal</option></select></label>
-              <label class="cp-field"><span>Frequency</span><select class="cp-control" [(ngModel)]="item.cadence" (ngModelChange)="save()"><option value="once">Once</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label>
-              <label class="cp-field"><span>Starts</span><input class="cp-control" type="date" [(ngModel)]="item.startDate" (ngModelChange)="save()"></label>
+              <label class="cp-field"><span>Amount</span><input class="cp-control" type="number" min="0" [(ngModel)]="item.amount" (ngModelChange)="saveAfterInteraction()"></label>
+              <label class="cp-field"><span>Resource</span><select class="cp-control" [(ngModel)]="item.currency" (ngModelChange)="saveAfterInteraction()"><option value="free_jewels">Carats</option><option value="uma_ticket">Uma ticket</option><option value="support_ticket">Support ticket</option><option value="rainbow_crystal">Rainbow Crystal Shard</option><option value="gold_crystal">Gold Crystal Shard</option><option value="rainbow_full_crystal">Rainbow Uncap Crystal</option><option value="gold_full_crystal">Gold Uncap Crystal</option></select></label>
+              <label class="cp-field"><span>Frequency</span><select class="cp-control" [(ngModel)]="item.cadence" (ngModelChange)="saveAfterInteraction()"><option value="once">Once</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label>
+              <label class="cp-field"><span>Starts</span><input class="cp-control" type="date" [(ngModel)]="item.startDate" (ngModelChange)="saveAfterInteraction()"></label>
               <button class="cp-action cp-action--icon cp-danger" type="button" matTooltip="Remove income"
                 [attr.aria-label]="'Remove custom income ' + item.label" (click)="removeCustomIncome(item.id)">
                 <mat-icon>close</mat-icon>
@@ -404,7 +405,7 @@
             </span>
         </ng-template>
 
-        <div class="cp-reward-viewport"
+        <div class="cp-reward-viewport" (scroll)="onRewardViewportScroll($event)"
           [attr.aria-label]="showPastRewards ? 'Past event rewards, newest first' : 'Current and upcoming event rewards, earliest first'">
           <div class="cp-reward-grid">
             <ng-container *ngFor="let item of visibleRewardItems; trackBy: trackById">
@@ -483,6 +484,12 @@
               </div>
             </ng-container>
           </div>
+          <button *ngIf="hasMoreRewardItems" class="cp-reward-load-more" type="button"
+            (click)="showMoreRewardItems()">
+            <mat-icon aria-hidden="true">expand_more</mat-icon>
+            <span>Load more rewards</span>
+            <small>{{ visibleRewardItems.length | number }} of {{ displayedRewardItems.length | number }}</small>
+          </button>
         </div>
         <p class="cp-reward-empty" *ngIf="!visibleRewardItems.length">
           <ng-container *ngIf="rewardSelectionFilter === 'included' && !rewardSearch; else rewardSearchEmpty">
@@ -551,11 +558,11 @@
             <span class="cp-pull-stepper cp-pull-stepper--desktop" role="group" aria-label="Planned pulls">
               <button type="button" (click)="adjustTargetPulls(target, 100)" [disabled]="target.plannedPulls >= 5000" aria-label="Add 100 pulls">+100</button>
               <button type="button" (click)="adjustTargetPulls(target, 10)" [disabled]="target.plannedPulls >= 5000" aria-label="Add 10 pulls">+10</button>
-              <input class="cp-control" type="number" min="0" max="5000" step="10" [(ngModel)]="target.plannedPulls" (ngModelChange)="save()" aria-label="Planned pulls">
+              <input class="cp-control" type="number" min="0" max="5000" step="10" [(ngModel)]="target.plannedPulls" (ngModelChange)="saveAfterInteraction()" aria-label="Planned pulls">
               <button type="button" (click)="adjustTargetPulls(target, -10)" [disabled]="target.plannedPulls <= 0" aria-label="Remove 10 pulls">&minus;10</button>
               <button type="button" (click)="adjustTargetPulls(target, -100)" [disabled]="target.plannedPulls <= 0" aria-label="Remove 100 pulls">&minus;100</button>
             </span>
-            <input class="cp-control cp-pull-input--mobile" type="number" min="0" max="5000" step="10" [(ngModel)]="target.plannedPulls" (ngModelChange)="save()" aria-label="Planned pulls">
+            <input class="cp-control cp-pull-input--mobile" type="number" min="0" max="5000" step="10" [(ngModel)]="target.plannedPulls" (ngModelChange)="saveAfterInteraction()" aria-label="Planned pulls">
           </div>
           <div class="cp-crystal-plan cp-crystal-plan--quick" *ngIf="target.bannerKind === 'support'"
             role="group" aria-label="Uncap Crystals to use on this banner">
@@ -590,11 +597,11 @@
             <div class="cp-payment-popover">
               <strong>Target options</strong>
               <span>The recommended defaults use tickets first and pull at banner end.</span>
-              <label class="cp-field"><span>Pull on</span><select class="cp-control" [(ngModel)]="target.pullTiming" (ngModelChange)="save()"><option value="start">Banner start</option><option value="end">Banner end</option><option value="custom">Custom date</option></select></label>
-              <label class="cp-field" *ngIf="target.pullTiming === 'custom'"><span>Pull date</span><input class="cp-control" type="date" [(ngModel)]="target.customPullDate" (ngModelChange)="save()"></label>
+              <label class="cp-field"><span>Pull on</span><select class="cp-control" [(ngModel)]="target.pullTiming" (ngModelChange)="saveAfterInteraction()"><option value="start">Banner start</option><option value="end">Banner end</option><option value="custom">Custom date</option></select></label>
+              <label class="cp-field" *ngIf="target.pullTiming === 'custom'"><span>Pull date</span><input class="cp-control" type="date" [(ngModel)]="target.customPullDate" (ngModelChange)="saveAfterInteraction()"></label>
               <div class="cp-target-options">
-                <mat-checkbox [(ngModel)]="target.useTickets" (ngModelChange)="save()">Use tickets first</mat-checkbox>
-                <mat-checkbox [(ngModel)]="target.allowPaidJewels" (ngModelChange)="save()">Allow paid Carats</mat-checkbox>
+                <mat-checkbox [(ngModel)]="target.useTickets" (ngModelChange)="saveAfterInteraction()">Use tickets first</mat-checkbox>
+                <mat-checkbox [(ngModel)]="target.allowPaidJewels" (ngModelChange)="saveAfterInteraction()">Allow paid Carats</mat-checkbox>
               </div>
             </div>
           </details>
