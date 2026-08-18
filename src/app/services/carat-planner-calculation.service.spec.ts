@@ -209,6 +209,7 @@ describe('CaratPlannerCalculationService', () => {
     const plan = makePlan({
       scenarioSelections: {
         champions_meeting_result: 'group_b_second',
+        champions_meeting_round_income: 'competitive',
         league_of_heroes_rank: 'gold_4',
       },
       variableRewardSelections: {
@@ -230,13 +231,16 @@ describe('CaratPlannerCalculationService', () => {
     const projection = service.project(plan, { core: {}, income: { rules: [] }, rewards: { rewards: [] } }, [], events);
     const target = projection.targets[0];
 
-    expect(target.balanceBefore.freeJewels).toBe(1250 + 900 + 1300);
+    expect(target.balanceBefore.freeJewels).toBe(900 + 640 + 900 + 640 + 1300);
     expect(target.balanceBefore.umaTickets).toBe(2 + 2 + 2);
     expect(target.balanceBefore.supportTickets).toBe(2 + 2 + 2);
     expect(target.balanceBefore.rainbowCrystals).toBe(1);
     expect(target.balanceBefore.goldCrystals).toBe(2);
-    expect(target.income.filter(entry => entry.id.includes('champions-meeting-2')).length).toBe(3);
-    expect(target.income.some(entry => entry.id.startsWith('competition-assumption:champions-meeting-2'))).toBeFalse();
+    expect(target.income.filter(entry => entry.id.includes('champions-meeting-2')).length).toBe(4);
+    expect(target.income.some(entry =>
+      entry.id.startsWith('competition-assumption:champions-meeting-2:group_b_second'))).toBeFalse();
+    expect(target.income.some(entry =>
+      entry.id === 'competition-assumption:champions-meeting-2:competitive:free_jewels')).toBeTrue();
   });
 
   it('projects the full free and premium Training Pass tracks from the linked Global timeline date', () => {

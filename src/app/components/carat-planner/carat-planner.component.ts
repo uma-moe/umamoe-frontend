@@ -182,6 +182,7 @@ interface PlannerScenarioOptionView {
   value: string;
   label: string;
   amountLabel: string;
+  icon?: string;
 }
 
 interface PlannerScenarioGroupView {
@@ -953,7 +954,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         ?? options.find(option => this.sameVariableRewardAmounts(option.amounts, selected.amounts))
         ?? VARIABLE_REWARD_NOT_COUNTED_OPTION;
     }
-    const assumptionGroup = PLANNER_COMPETITION_ASSUMPTION_GROUPS.find(group => group.eventType === eventType);
+    const assumptionGroup = PLANNER_COMPETITION_ASSUMPTION_GROUPS.find(group =>
+      group.eventType === eventType && !group.additionalIncome);
     const selectedValue = assumptionGroup && this.plan.scenarioSelections[assumptionGroup.id];
     const selectedAssumption = assumptionGroup?.options.find(option => option.value === selectedValue);
     if (!assumptionGroup || !selectedAssumption) return VARIABLE_REWARD_NOT_COUNTED_OPTION;
@@ -1619,10 +1621,14 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const competitionGroups = PLANNER_COMPETITION_ASSUMPTION_GROUPS.map(group => ({
       id: group.id,
       label: group.label,
+      icon: group.icon,
       scheduleLabel: group.scheduleLabel,
+      helpText: group.helpText,
+      sourceUrl: group.sourceUrl,
       options: group.options.map(option => ({
         value: option.value,
         label: option.label,
+        icon: option.icon,
         amountLabel: this.competitionAssumptionAmountLabel(option.amounts),
       })),
     }));
@@ -1689,6 +1695,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       [MONTHLY_SHOP_SCENARIO_GROUP_ID, 'account'],
       [TRAINING_PASS_SCENARIO_GROUP_ID, 'account'],
       ['champions_meeting_result', 'competitive'],
+      ['champions_meeting_round_income', 'competitive'],
       ['league_of_heroes_rank', 'competitive'],
       ['strongest_team_reward_tier', 'competitive'],
       ['legend_race_clears', 'competitive'],
@@ -2390,7 +2397,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     variants: readonly PlannerCompetitiveRewardVariant[],
   ): PlannerVariableRewardOptionView[] {
     const competition = variants[0]?.competition;
-    const assumptionGroup = PLANNER_COMPETITION_ASSUMPTION_GROUPS.find(group => group.eventType === competition);
+    const assumptionGroup = PLANNER_COMPETITION_ASSUMPTION_GROUPS.find(group =>
+      group.eventType === competition && !group.additionalIncome);
     if (assumptionGroup) {
       return assumptionGroup.options.map(option => ({
         id: this.competitionAssumptionRewardOptionId(assumptionGroup.id, option.value),

@@ -16,6 +16,7 @@ export type PlannerCompetitionEventType =
 export interface PlannerCompetitionAssumptionOption {
   value: string;
   label: string;
+  icon?: string;
   amounts: Readonly<Partial<Record<PlannerCurrency, number>>>;
 }
 
@@ -25,6 +26,9 @@ export interface PlannerCompetitionAssumptionGroup {
   eventType: Extract<PlannerCompetitionEventType, 'champions_meeting' | 'league_of_heroes'>;
   icon: string;
   scheduleLabel: string;
+  helpText?: string;
+  sourceUrl?: string;
+  additionalIncome?: boolean;
   options: readonly PlannerCompetitionAssumptionOption[];
 }
 
@@ -67,9 +71,10 @@ function outcome(
 }
 
 /**
- * Performance assumptions from Henry Handsome Derby's 5.5 calculator.
- * Ticket totals in that sheet are the combined trainee + support tickets,
- * so each even total is split equally between the two banner-specific pools.
+ * Final placements and qualifying-round income are separate so selecting a
+ * participation profile cannot silently change the chosen final result.
+ * Ticket totals are combined trainee + support tickets and are split equally
+ * between the two banner-specific pools.
  */
 export const PLANNER_COMPETITION_ASSUMPTION_GROUPS: readonly PlannerCompetitionAssumptionGroup[] = [
   {
@@ -77,17 +82,53 @@ export const PLANNER_COMPETITION_ASSUMPTION_GROUPS: readonly PlannerCompetitionA
     label: "Champion's Meeting",
     eventType: 'champions_meeting',
     icon: 'emoji_events',
-    scheduleLabel: 'Each matching event',
+    scheduleLabel: 'Final placement reward only',
     options: [
-      outcome('champion', 'Champion', 3300, 10),
-      outcome('second', 'Second', 2400, 8),
-      outcome('third', 'Third', 1600, 6),
-      outcome('group_b_first', 'Group B 1st', 1800, 6),
-      outcome('group_b_second', 'Group B 2nd', 1250, 4),
-      outcome('group_b_third', 'Group B 3rd', 1000, 2),
-      outcome('open_first', 'Open League 1st', 1500, 6),
-      outcome('open_second', 'Open League 2nd', 1250, 4),
-      outcome('open_third', 'Open League 3rd', 1000, 2),
+      outcome('champion', 'Champion', 2500, 10),
+      outcome('second', 'Second', 1800, 8),
+      outcome('third', 'Third', 1200, 6),
+      outcome('group_b_first', 'Group B 1st', 1200, 6),
+      outcome('group_b_second', 'Group B 2nd', 900, 4),
+      outcome('group_b_third', 'Group B 3rd', 700, 2),
+      outcome('open_first', 'Open League 1st', 1000, 6),
+      outcome('open_second', 'Open League 2nd', 850, 4),
+      outcome('open_third', 'Open League 3rd', 700, 2),
+    ],
+  },
+  {
+    id: 'champions_meeting_round_income',
+    label: 'CM qualifying rounds',
+    eventType: 'champions_meeting',
+    icon: 'sports_score',
+    scheduleLabel: 'Round 1 + Round 2 of each event',
+    helpText: [
+      'Estimated Graded League Carats from the two qualifying rounds. Final placement rewards are counted separately.',
+      '',
+      'Low investment: 6 entries per round, averaging 1–2 wins; Round 2 uses Group B payouts (105 + 150 = 255).',
+      'Competitive: all 8 entries per round, averaging 3 wins; Round 2 uses Group A payouts (240 + 400 = 640).',
+      'Meta highroller: all 8 entries per round, averaging 4–5 wins; Round 2 uses Group A payouts (360 + 900 = 1,260).',
+    ].join('\n'),
+    sourceUrl: 'https://game8.jp/umamusume/390471',
+    additionalIncome: true,
+    options: [
+      {
+        value: 'low_investment',
+        label: 'Low investment',
+        icon: 'savings',
+        amounts: { free_jewels: 255 },
+      },
+      {
+        value: 'competitive',
+        label: 'Competitive',
+        icon: 'emoji_events',
+        amounts: { free_jewels: 640 },
+      },
+      {
+        value: 'meta_highroller',
+        label: 'Meta highroller',
+        icon: 'diamond',
+        amounts: { free_jewels: 1260 },
+      },
     ],
   },
   {

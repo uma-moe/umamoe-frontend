@@ -223,7 +223,10 @@
                   [indeterminate]="scenarioSectionState(section) === 'some'"
                   [aria-label]="scenarioSectionToggleLabel(section) + ' for ' + section.label"
                   (change)="toggleScenarioSection(section)">
-                  <span>{{ scenarioSectionState(section) === 'all' ? 'All on' : scenarioSectionState(section) === 'some' ? 'Mixed' : 'All off' }}</span>
+                  <span class="cp-checkbox-state-label">
+                    <mat-icon aria-hidden="true">{{ scenarioSectionState(section) === 'all' ? 'check' : scenarioSectionState(section) === 'some' ? 'remove' : 'close' }}</mat-icon>
+                    <span>{{ scenarioSectionState(section) === 'all' ? 'All on' : scenarioSectionState(section) === 'some' ? 'Mixed' : 'All off' }}</span>
+                  </span>
                 </mat-checkbox>
               </header>
               <div class="cp-scenario-list" [id]="'cp-assumption-section-options-' + section.id"
@@ -236,16 +239,18 @@
                     [aria-label]="(selectedScenarioOption(group) ? 'Exclude ' : 'Include ') + group.label"
                     (change)="toggleBinaryScenario(group)">
                     <ng-container *ngIf="selectedScenarioOption(group) as selected; else binaryNotIncluded">
-                      <span class="cp-scenario-binary-copy"><strong>{{ selected.label }}</strong><small *ngIf="selected.amountLabel">{{ selected.amountLabel }}</small></span>
+                      <span class="cp-scenario-binary-copy"><mat-icon class="cp-checkbox-state-icon" aria-hidden="true">check</mat-icon><span><strong>{{ selected.label }}</strong><small *ngIf="selected.amountLabel">{{ selected.amountLabel }}</small></span></span>
                     </ng-container>
-                    <ng-template #binaryNotIncluded><span class="cp-scenario-binary-copy is-muted"><strong>Not included</strong><small>Tap to include</small></span></ng-template>
+                    <ng-template #binaryNotIncluded><span class="cp-scenario-binary-copy is-muted"><mat-icon class="cp-checkbox-state-icon" aria-hidden="true">close</mat-icon><span><strong>Not included</strong><small>Tap to include</small></span></span></ng-template>
                   </mat-checkbox>
                   <ng-template #scenarioStepper>
-                    <div class="cp-scenario-stepper" role="group" [attr.aria-label]="group.label">
+                    <div class="cp-scenario-stepper" role="group" [class.is-active]="!!selectedScenarioOption(group)"
+                      [attr.aria-label]="group.label">
                       <button type="button" (click)="cycleScenario(group, -1)" [attr.aria-label]="'Previous ' + group.label + ' option'"><mat-icon>chevron_left</mat-icon></button>
                       <button type="button" class="cp-scenario-current" (click)="cycleScenario(group, 1)" [attr.aria-label]="'Change ' + group.label">
                         <ng-container *ngIf="selectedScenarioOption(group) as selected; else scenarioNotIncluded">
                           <img *ngIf="scenarioOptionIconPath(group.id, selected.value) as iconPath" [src]="iconPath" width="24" height="28" alt="">
+                          <mat-icon *ngIf="!scenarioOptionIconPath(group.id, selected.value) && selected.icon" class="cp-scenario-option-icon" aria-hidden="true">{{ selected.icon }}</mat-icon>
                           <span><strong>{{ selected.label }}</strong><small *ngIf="selected.amountLabel">{{ selected.amountLabel }}</small></span>
                         </ng-container>
                         <ng-template #scenarioNotIncluded><span class="is-muted"><strong>Not included</strong><small>0 projected</small></span></ng-template>

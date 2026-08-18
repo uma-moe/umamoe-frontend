@@ -228,7 +228,7 @@ export class CaratPlannerCalculationService {
       for (const event of events) {
         if (event.type !== group.eventType
           || disabledEvents.has(event.id)
-          || plan.variableRewardSelections?.[event.id]) continue;
+          || (!group.additionalIncome && plan.variableRewardSelections?.[event.id])) continue;
         const date = this.competitiveEventDate(event.id, events);
         if (!date || date < startDate || date > endDate) continue;
         for (const [currency, rawAmount] of Object.entries(selectedOption.amounts) as [PlannerCurrency, number][]) {

@@ -648,9 +648,19 @@ describe('CaratPlannerComponent banner ordering', () => {
       { value: 'rank_11', label: 'SS', amountLabel: '+4,500/mo' },
     ]);
     expect(component.scenarioGroupOptions[2].options[0]).toEqual({
-      value: 'champion', label: 'Champion', amountLabel: '+3,300 + 10 tix / event',
+      value: 'champion', label: 'Champion', amountLabel: '+2,500 + 10 tix / event',
     });
-    expect(component.scenarioGroupOptions[3].options[4]).toEqual({
+    const cmRounds = component.scenarioGroupOptions.find(group =>
+      group.id === 'champions_meeting_round_income');
+    expect(cmRounds?.options).toEqual([
+      { value: 'low_investment', label: 'Low investment', icon: 'savings', amountLabel: '+255 / event' },
+      { value: 'competitive', label: 'Competitive', icon: 'emoji_events', amountLabel: '+640 / event' },
+      { value: 'meta_highroller', label: 'Meta highroller', icon: 'diamond', amountLabel: '+1,260 / event' },
+    ]);
+    expect(cmRounds?.helpText).toContain('Final placement rewards are counted separately.');
+    const leagueOfHeroes = component.scenarioGroupOptions.find(group =>
+      group.id === 'league_of_heroes_rank');
+    expect(leagueOfHeroes?.options[4]).toEqual({
       value: 'gold_4', label: 'Gold 4', amountLabel: '+1,300 + 4 tix + 1R/2G shards / event',
     });
     const trainingPass = component.scenarioGroupOptions.find(group => group.id === 'training_pass');

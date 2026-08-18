@@ -276,7 +276,7 @@ describe('CaratPlannerComponent reward coverage', () => {
       .toBe('assets/timeline-images/en/events/champions-meeting/811.webp');
     expect(component.selectedVariableRewardOption(championsMeeting!).label).toBe('Champion');
     expect(component.selectedVariableRewardOption(championsMeeting!).amountLabel)
-      .toBe('3,300 Carats · 5 Uma tix · 5 support tix');
+      .toBe('2,500 Carats · 5 Uma tix · 5 support tix');
     expect(component.selectedVariableRewardOption(leagueOfHeroes!).label).toBe('Gold 4');
     expect(component.selectedVariableRewardOption(leagueOfHeroes!).amountLabel)
       .toBe('1,300 Carats · 2 Uma tix · 2 support tix · 1 rainbow shard · 2 gold shards');
