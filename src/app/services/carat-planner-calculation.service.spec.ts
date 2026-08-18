@@ -233,6 +233,8 @@ describe('CaratPlannerCalculationService', () => {
     expect(target.balanceBefore.freeJewels).toBe(1250 + 900 + 1300);
     expect(target.balanceBefore.umaTickets).toBe(2 + 2 + 2);
     expect(target.balanceBefore.supportTickets).toBe(2 + 2 + 2);
+    expect(target.balanceBefore.rainbowCrystals).toBe(1);
+    expect(target.balanceBefore.goldCrystals).toBe(2);
     expect(target.income.filter(entry => entry.id.includes('champions-meeting-2')).length).toBe(3);
     expect(target.income.some(entry => entry.id.startsWith('competition-assumption:champions-meeting-2'))).toBeFalse();
   });
@@ -815,6 +817,13 @@ describe('CaratPlannerCalculationService', () => {
       amount: 100,
       available_at: '2026-01-03',
       assumption: 'racing_carnival_bonus_skill_mission',
+    }, {
+      id: 'masters-challenge',
+      label: 'Masters Challenge first-clear rewards',
+      currency: 'rainbow_crystal' as const,
+      amount: 3,
+      available_at: '2026-01-03',
+      assumption: 'all_first_clears_high_difficulty',
     }];
     const data: CaratPlannerDataBundle = {
       ...emptyData(),
@@ -833,9 +842,10 @@ describe('CaratPlannerCalculationService', () => {
       scenarioSelections: {
         temporary_story_rewards: 'include',
         racing_carnival_mission: 'include',
+        masters_challenge_rewards: 'include',
       },
     }), data, '2026-01-03');
-    expect(included.map(entry => entry.amount)).toEqual([80, 100]);
+    expect(included.map(entry => entry.amount)).toEqual([80, 100, 3]);
   });
 
   it('excludes inactive event targets and rewards without deleting their saved configuration', () => {

@@ -16,6 +16,7 @@ import {
   PlannerIncomeRule,
   PlannerLedgerEntry,
   PlannerPickupGoal,
+  PlannerRewardEntry,
   PlannerTarget,
   PlannerTargetProjection,
 } from '../models/carat-planner.model';
@@ -27,15 +28,14 @@ import {
 } from '../utils/carat-planner-competition-assumptions';
 import {
   CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  conditionalRewardScenarioGroup,
   isLegacyTrainingPassIncomeRule,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
-  RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
   SPECULATIVE_INCOME_INCLUDED_OPTION,
   SPECULATIVE_INCOME_MEDIAN_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
   TRAINING_PASS_SCENARIO_GROUP_ID,
-  TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID,
   trainingPassIncomeRules,
 } from '../utils/carat-planner-income-assumptions';
 import { CaratPullProbabilityService } from './carat-pull-probability.service';
@@ -690,14 +690,10 @@ export class CaratPlannerCalculationService {
   }
 
   private isConditionalRewardEnabled(
-    reward: { assumption?: string },
+    reward: Pick<PlannerRewardEntry, 'assumption' | 'label'>,
     selections: Record<string, string>,
   ): boolean {
-    const group = reward.assumption === 'temporary_character_story_read'
-      ? TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID
-      : reward.assumption === 'racing_carnival_bonus_skill_mission'
-        ? RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID
-        : undefined;
+    const group = conditionalRewardScenarioGroup(reward);
     return !group || selections[group] === CONDITIONAL_REWARDS_INCLUDED_OPTION;
   }
 

@@ -1,5 +1,7 @@
 import { PlannerGlobalRewardComparison } from '../models/carat-planner.model';
 import {
+  conditionalRewardScenarioGroup,
+  MASTERS_CHALLENGE_SCENARIO_GROUP_ID,
   plannerIncomeAssumptionGroups,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
@@ -78,6 +80,33 @@ describe('plannerIncomeAssumptionGroups', () => {
       { value: 'include', label: 'Rolling mean', amountLabel: '+1,233 Carats / month' },
       { value: 'median', label: 'Conservative median', amountLabel: '+775 Carats / month' },
     ]);
+  });
+
+  it('exposes every player-dependent dated reward family as an explicit toggle', () => {
+    const cases = [
+      ['Story event rewards', 'jp_reward_parity_full_completion', 'story_event_rewards'],
+      ["Agnes Tachyon's Factor Research box rewards", 'all_reward_boxes', 'factor_research_rewards'],
+      ['Trainer Skills Test score rewards', 'full_score_completion', 'trainer_skills_test_rewards'],
+      ['Racing Carnival shop exchanges', 'all_limited_shop_exchanges', 'racing_carnival_rewards'],
+      ['Training scenario evaluation rewards', 'jp_reward_parity_scenario_evaluation_thresholds', 'scenario_evaluation_rewards'],
+      ['Main Story episode rewards', 'all_story_episodes_viewed', 'main_story_rewards'],
+      ['Limited login bonus', 'all_login_days', 'limited_login_rewards'],
+      ['5th Anniversary 記念ミッション 第2弾', 'jp_reward_parity', 'limited_mission_rewards'],
+      ['Masters Challenge first-clear rewards', 'all_first_clears_high_difficulty', MASTERS_CHALLENGE_SCENARIO_GROUP_ID],
+    ] as const;
+
+    for (const [label, assumption, expectedGroup] of cases) {
+      expect(conditionalRewardScenarioGroup({ label, assumption })).toBe(expectedGroup);
+    }
+    expect(conditionalRewardScenarioGroup({
+      label: 'Broadcast celebration gift',
+      assumption: 'jp_reward_parity',
+    })).toBeUndefined();
+
+    const groups = plannerIncomeAssumptionGroups([]);
+    for (const [, , expectedGroup] of cases) {
+      expect(groups.some(group => group.id === expectedGroup)).toBeTrue();
+    }
   });
 
   it('offers transparent activity-based random gameplay estimates', () => {

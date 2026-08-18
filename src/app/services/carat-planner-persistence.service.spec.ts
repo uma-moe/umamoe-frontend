@@ -1,4 +1,5 @@
 import { CaratPlannerPersistenceService } from './carat-planner-persistence.service';
+import { CONDITIONAL_REWARD_DEFAULT_SELECTIONS } from '../utils/carat-planner-income-assumptions';
 
 describe('CaratPlannerPersistenceService', () => {
   beforeEach(() => {
@@ -15,6 +16,10 @@ describe('CaratPlannerPersistenceService', () => {
     expect(service.activePlan.scenarioSelections['speculative_income']).toBe('include');
     expect(service.activePlan.scenarioSelections['temporary_story_rewards']).toBe('include');
     expect(service.activePlan.scenarioSelections['racing_carnival_mission']).toBe('include');
+    expect(service.activePlan.scenarioSelections['masters_challenge_rewards']).toBe('none');
+    expect(service.activePlan.scenarioSelections['story_event_rewards']).toBe('include');
+    expect(service.activePlan.scenarioSelections['factor_research_rewards']).toBe('include');
+    expect(service.activePlan.scenarioSelections['trainer_skills_test_rewards']).toBe('include');
   });
 
   it('migrates existing plans without a speculative selection to the rolling mean', () => {
@@ -34,8 +39,7 @@ describe('CaratPlannerPersistenceService', () => {
     expect(service.activePlan.scenarioSelections).toEqual({
       league: 'high',
       speculative_income: 'include',
-      temporary_story_rewards: 'include',
-      racing_carnival_mission: 'include',
+      ...CONDITIONAL_REWARD_DEFAULT_SELECTIONS,
     });
   });
 
@@ -60,6 +64,7 @@ describe('CaratPlannerPersistenceService', () => {
     expect(service.activePlan.scenarioSelections['speculative_income']).toBe('none');
     expect(service.activePlan.scenarioSelections['temporary_story_rewards']).toBe('none');
     expect(service.activePlan.scenarioSelections['racing_carnival_mission']).toBe('none');
+    expect(service.activePlan.scenarioSelections['masters_challenge_rewards']).toBe('none');
   });
 
   it('sanitizes imported balances, dates, optional IDs, collections, and numeric limits', () => {
@@ -141,8 +146,7 @@ describe('CaratPlannerPersistenceService', () => {
     expect(plan.scenarioSelections).toEqual({
       league: 'high',
       speculative_income: 'include',
-      temporary_story_rewards: 'include',
-      racing_carnival_mission: 'include',
+      ...CONDITIONAL_REWARD_DEFAULT_SELECTIONS,
     });
     expect(plan.freePullCampaignSelections).toEqual({ anniversary: 'later-banner' });
     expect(plan.resourceDefaultsApplied).toBeFalse();

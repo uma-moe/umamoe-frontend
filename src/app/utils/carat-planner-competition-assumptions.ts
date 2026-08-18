@@ -49,6 +49,8 @@ function outcome(
   label: string,
   carats: number,
   totalTickets: number,
+  rainbowShards = 0,
+  goldShards = 0,
 ): PlannerCompetitionAssumptionOption {
   const ticketsPerBanner = Math.floor(totalTickets / 2);
   return {
@@ -58,6 +60,8 @@ function outcome(
       free_jewels: carats,
       uma_ticket: ticketsPerBanner,
       support_ticket: ticketsPerBanner,
+      ...(rainbowShards > 0 ? { rainbow_crystal: rainbowShards } : {}),
+      ...(goldShards > 0 ? { gold_crystal: goldShards } : {}),
     },
   };
 }
@@ -93,13 +97,13 @@ export const PLANNER_COMPETITION_ASSUMPTION_GROUPS: readonly PlannerCompetitionA
     icon: 'military_tech',
     scheduleLabel: 'Each matching event',
     options: [
-      outcome('platinum_4', 'Platinum 4', 3300, 4),
-      outcome('platinum_3', 'Platinum 3', 2800, 4),
-      outcome('platinum_2', 'Platinum 2', 2300, 4),
-      outcome('platinum_1', 'Platinum 1', 1800, 4),
-      outcome('gold_4', 'Gold 4', 1300, 4),
-      outcome('gold_3', 'Gold 3', 1000, 2),
-      outcome('gold_2', 'Gold 2', 700, 2),
+      outcome('platinum_4', 'Platinum 4', 3300, 4, 2, 2),
+      outcome('platinum_3', 'Platinum 3', 2800, 4, 2, 2),
+      outcome('platinum_2', 'Platinum 2', 2300, 4, 2, 2),
+      outcome('platinum_1', 'Platinum 1', 1800, 4, 2, 2),
+      outcome('gold_4', 'Gold 4', 1300, 4, 1, 2),
+      outcome('gold_3', 'Gold 3', 1000, 2, 0, 2),
+      outcome('gold_2', 'Gold 2', 700, 2, 0, 1),
       outcome('gold_1', 'Gold 1', 550, 0),
       outcome('silver_4', 'Silver 4', 400, 0),
     ],
@@ -139,8 +143,8 @@ export function buildDataDrivenCompetitionRewardOptions(
   if (competition !== 'strongest_team' && competition !== 'legend_race') return [];
 
   const projectable = variants.filter(variant => isProjectableCompetitiveVariant(variant));
-  const missionVariants = competition === 'strongest_team'
-    ? projectable.filter(variant => /event missions/i.test(variant.label))
+  const missionVariants = competition === 'strongest_team' || competition === 'legend_race'
+    ? projectable.filter(variant => /event(?: participation)? missions/i.test(variant.label))
     : [];
   const resultVariants = projectable
     .filter(variant => !missionVariants.includes(variant))
@@ -179,6 +183,19 @@ export function buildDataDrivenCompetitionRewardOptions(
         selectionValue: 'all',
       },
       ...options.reverse(),
+    ];
+  }
+  if (competition === 'legend_race' && missionVariants.length > 0) {
+    const amounts = { ...totals };
+    missionVariants.forEach(variant => addVariantAmounts(amounts, variant));
+    return [
+      ...options,
+      {
+        id: [...resultVariants, ...missionVariants].map(variant => variant.id).join('+'),
+        label: 'All opponents + event missions',
+        amounts,
+        selectionValue: 'all',
+      },
     ];
   }
   return options;

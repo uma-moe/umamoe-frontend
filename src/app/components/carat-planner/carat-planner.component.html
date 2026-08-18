@@ -96,9 +96,15 @@
         <span class="cp-stat-icon"><mat-icon>confirmation_number</mat-icon></span>
         <div><strong>{{ ((projection?.finalBalances?.umaTickets || 0) + (projection?.finalBalances?.supportTickets || 0)) | number }}</strong><span>Tickets left</span></div>
       </div>
-      <div class="cp-stat cp-stat--crystals" title="Rainbow / Gold: usable Uncap Crystals and the raw shard balance. Complete crystals count as one; every 20 matching shards can craft one more.">
+      <div class="cp-stat cp-stat--crystals" title="Completed Uncap Crystals plus progress toward the next one. Every 20/20 shards crafts one more crystal.">
         <span class="cp-stat-icon" aria-hidden="true"><img src="assets/images/item/item_icon_00144.webp" alt=""><img src="assets/images/item/item_icon_00145.webp" alt=""></span>
-        <div><strong>R {{ craftedCrystalCount(projection?.finalBalances?.rainbowCrystals, projection?.finalBalances?.rainbowFullCrystals) }} / {{ crystalShardCount(projection?.finalBalances?.rainbowCrystals) }}s · G {{ craftedCrystalCount(projection?.finalBalances?.goldCrystals, projection?.finalBalances?.goldFullCrystals) }} / {{ crystalShardCount(projection?.finalBalances?.goldCrystals) }}s</strong><span>Usable crystals / shards</span></div>
+        <div class="cp-crystal-stat-copy">
+          <strong class="cp-crystal-values">
+            <span><b>Rainbow</b> {{ craftedCrystalCount(projection?.finalBalances?.rainbowCrystals, projection?.finalBalances?.rainbowFullCrystals) }} <small>+ {{ crystalShardRemainder(projection?.finalBalances?.rainbowCrystals) }}/20</small></span>
+            <span><b>Gold</b> {{ craftedCrystalCount(projection?.finalBalances?.goldCrystals, projection?.finalBalances?.goldFullCrystals) }} <small>+ {{ crystalShardRemainder(projection?.finalBalances?.goldCrystals) }}/20</small></span>
+          </strong>
+          <span>Complete crystals + next</span>
+        </div>
       </div>
       <div class="cp-stat">
         <span class="cp-stat-icon"><mat-icon>flag</mat-icon></span>
@@ -195,7 +201,7 @@
           </header>
           <div class="cp-scenario-list">
             <article class="cp-scenario" *ngFor="let group of scenarioGroupOptions">
-              <span class="cp-scenario-copy"><mat-icon aria-hidden="true">{{ scenarioGroupIcon(group.id) }}</mat-icon><span><span class="cp-scenario-heading"><strong>{{ group.label }}</strong><button *ngIf="group.helpText" class="cp-scenario-help" type="button" [matTooltip]="group.helpText" matTooltipClass="cp-methodology-tooltip" matTooltipPosition="above" [attr.aria-label]="'How ' + group.label + ' is calculated'">?</button></span><small><span>{{ group.scheduleLabel }}</span><a *ngIf="group.sourceUrl" [href]="group.sourceUrl" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Open source for ' + group.label + ' in a new tab'">Source<mat-icon aria-hidden="true">open_in_new</mat-icon></a></small></span></span>
+              <span class="cp-scenario-copy"><mat-icon aria-hidden="true">{{ group.icon || scenarioGroupIcon(group.id) }}</mat-icon><span><span class="cp-scenario-heading"><strong>{{ group.label }}</strong><button *ngIf="group.helpText" class="cp-scenario-help" type="button" [matTooltip]="group.helpText" matTooltipClass="cp-methodology-tooltip" matTooltipPosition="above" [attr.aria-label]="'How ' + group.label + ' is calculated'">?</button></span><small><span>{{ group.scheduleLabel }}</span><a *ngIf="group.sourceUrl" [href]="group.sourceUrl" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Open source for ' + group.label + ' in a new tab'">Source<mat-icon aria-hidden="true">open_in_new</mat-icon></a></small></span></span>
               <div class="cp-scenario-stepper" role="group" [attr.aria-label]="group.label">
                 <button type="button" (click)="cycleScenario(group, -1)" [attr.aria-label]="'Previous ' + group.label + ' option'"><mat-icon>chevron_left</mat-icon></button>
                 <button type="button" class="cp-scenario-current" (click)="cycleScenario(group, 1)" [attr.aria-label]="'Change ' + group.label">
@@ -491,8 +497,8 @@
                 <strong>{{ targetTicketBalanceAtPull(target, targetProjection) }}</strong>
                 <em *ngIf="targetProjection.ticketPullsUsed > 0">&rarr; {{ targetTicketBalanceAtPull(target, targetProjection) - targetProjection.ticketPullsUsed }}</em>
               </span>
-              <span *ngIf="target.bannerKind === 'support'" title="Rainbow Uncap Crystals and raw shards available at pull"><img src="assets/images/item/item_icon_00144.webp" width="18" height="18" alt=""><strong>{{ craftedCrystalCount(targetProjection.balanceBefore.rainbowCrystals, targetProjection.balanceBefore.rainbowFullCrystals) }} crystals · {{ crystalShardCount(targetProjection.balanceBefore.rainbowCrystals) }} shards</strong></span>
-              <span *ngIf="target.bannerKind === 'support'" title="Gold Uncap Crystals and raw shards available at pull"><img src="assets/images/item/item_icon_00145.webp" width="18" height="18" alt=""><strong>{{ craftedCrystalCount(targetProjection.balanceBefore.goldCrystals, targetProjection.balanceBefore.goldFullCrystals) }} crystals · {{ crystalShardCount(targetProjection.balanceBefore.goldCrystals) }} shards</strong></span>
+              <span *ngIf="target.bannerKind === 'support'" title="Rainbow Uncap Crystals plus progress toward the next crystal"><img src="assets/images/item/item_icon_00144.webp" width="18" height="18" alt=""><strong>{{ craftedCrystalCount(targetProjection.balanceBefore.rainbowCrystals, targetProjection.balanceBefore.rainbowFullCrystals) }} + {{ crystalShardRemainder(targetProjection.balanceBefore.rainbowCrystals) }}/20</strong></span>
+              <span *ngIf="target.bannerKind === 'support'" title="Gold Uncap Crystals plus progress toward the next crystal"><img src="assets/images/item/item_icon_00145.webp" width="18" height="18" alt=""><strong>{{ craftedCrystalCount(targetProjection.balanceBefore.goldCrystals, targetProjection.balanceBefore.goldFullCrystals) }} + {{ crystalShardRemainder(targetProjection.balanceBefore.goldCrystals) }}/20</strong></span>
             </span>
           </div>
         </div>

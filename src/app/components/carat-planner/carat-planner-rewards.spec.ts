@@ -279,7 +279,7 @@ describe('CaratPlannerComponent reward coverage', () => {
       .toBe('3,300 Carats · 5 Uma tix · 5 support tix');
     expect(component.selectedVariableRewardOption(leagueOfHeroes!).label).toBe('Gold 4');
     expect(component.selectedVariableRewardOption(leagueOfHeroes!).amountLabel)
-      .toBe('1,300 Carats · 2 Uma tix · 2 support tix');
+      .toBe('1,300 Carats · 2 Uma tix · 2 support tix · 1 rainbow shard · 2 gold shards');
     expect(championsMeeting?.benefits.map(benefit => benefit.kind))
       .toEqual(jasmine.arrayContaining(['carats', 'uma_ticket', 'support_ticket']));
 
@@ -344,6 +344,14 @@ describe('CaratPlannerComponent reward coverage', () => {
             label: `First clear ${index}`,
             source_items: [{ item_category: 90, item_id: 43, amount: 150, order_min: index }],
           })),
+          {
+            id: 'legend-missions', competition: 'legend_race', event_id: 'legend-1', master_event_id: 2,
+            label: 'Event participation missions (full completion)',
+            source_items: [
+              { item_category: 164, item_id: 149, amount: 1 },
+              { item_category: 164, item_id: 150, amount: 2 },
+            ],
+          },
         ],
       },
     };
@@ -367,6 +375,8 @@ describe('CaratPlannerComponent reward coverage', () => {
     expect(legendAssumption.options.map(option => option.value)).toEqual([
       'opponents_1', 'opponents_2', 'opponents_3', 'all',
     ]);
+    expect(legendAssumption.options[legendAssumption.options.length - 1]?.label)
+      .toBe('All opponents + event missions');
 
     component.setScenario(strongestAssumption.id, 'points_1000');
     component.setScenario(legendAssumption.id, 'all');
@@ -379,8 +389,8 @@ describe('CaratPlannerComponent reward coverage', () => {
       amountLabel: '300 Carats',
     }));
     expect(component.selectedVariableRewardOption(legendRewards)).toEqual(jasmine.objectContaining({
-      label: '3 opponents cleared',
-      amountLabel: '450 Carats',
+      label: 'All opponents + event missions',
+      amountLabel: '450 Carats · 1 rainbow shard · 2 gold shards',
     }));
   });
 

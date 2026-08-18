@@ -3,6 +3,7 @@ import {
   PlannerCurrency,
   PlannerGlobalRewardComparison,
   PlannerIncomeRule,
+  PlannerRewardEntry,
 } from '../models/carat-planner.model';
 
 export const TRAINING_PASS_SCENARIO_GROUP_ID = 'training_pass';
@@ -11,6 +12,15 @@ export const SPECULATIVE_INCOME_SCENARIO_GROUP_ID = 'speculative_income';
 export const RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID = 'random_gameplay_income';
 export const TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID = 'temporary_story_rewards';
 export const RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID = 'racing_carnival_mission';
+export const MASTERS_CHALLENGE_SCENARIO_GROUP_ID = 'masters_challenge_rewards';
+export const STORY_EVENT_REWARDS_SCENARIO_GROUP_ID = 'story_event_rewards';
+export const FACTOR_RESEARCH_REWARDS_SCENARIO_GROUP_ID = 'factor_research_rewards';
+export const TRAINER_SKILLS_TEST_REWARDS_SCENARIO_GROUP_ID = 'trainer_skills_test_rewards';
+export const RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID = 'racing_carnival_rewards';
+export const SCENARIO_EVALUATION_REWARDS_SCENARIO_GROUP_ID = 'scenario_evaluation_rewards';
+export const MAIN_STORY_REWARDS_SCENARIO_GROUP_ID = 'main_story_rewards';
+export const LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID = 'limited_login_rewards';
+export const LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID = 'limited_mission_rewards';
 export const CONDITIONAL_REWARDS_INCLUDED_OPTION = 'include';
 export const CONDITIONAL_REWARDS_NONE_OPTION = 'none';
 export const SPECULATIVE_INCOME_INCLUDED_OPTION = 'include';
@@ -34,6 +44,71 @@ export const RANDOM_GAMEPLAY_INCOME_HELP_TEXT = [
   '',
   'Independent Training still requires collecting and restarting each run. Temporary drop boosts, Carat refills, and rare jackpots are excluded.',
 ].join('\n');
+
+export const CONDITIONAL_REWARD_DEFAULT_SELECTIONS: Readonly<Record<string, string>> = {
+  [TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [STORY_EVENT_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [FACTOR_RESEARCH_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [TRAINER_SKILLS_TEST_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [SCENARIO_EVALUATION_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [MAIN_STORY_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [MASTERS_CHALLENGE_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_NONE_OPTION,
+};
+
+export const CONDITIONAL_REWARD_SCENARIO_GROUP_IDS = new Set(
+  Object.keys(CONDITIONAL_REWARD_DEFAULT_SELECTIONS),
+);
+
+/** Maps rewards that require player action to the visible planner toggle that controls them. */
+export function conditionalRewardScenarioGroup(
+  reward: Pick<PlannerRewardEntry, 'assumption' | 'label'>,
+): string | undefined {
+  const assumption = reward.assumption ?? '';
+  const label = reward.label ?? '';
+  if (assumption === 'temporary_character_story_read') {
+    return TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID;
+  }
+  if (assumption === 'racing_carnival_bonus_skill_mission') {
+    return RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID;
+  }
+  if (assumption === 'all_first_clears_high_difficulty') {
+    return MASTERS_CHALLENGE_SCENARIO_GROUP_ID;
+  }
+  if (assumption === 'full_completion' || assumption === 'jp_reward_parity_full_completion') {
+    return STORY_EVENT_REWARDS_SCENARIO_GROUP_ID;
+  }
+  if (assumption === 'all_reward_boxes') {
+    return FACTOR_RESEARCH_REWARDS_SCENARIO_GROUP_ID;
+  }
+  if (assumption === 'scenario_evaluation_thresholds'
+    || assumption === 'jp_reward_parity_scenario_evaluation_thresholds') {
+    return SCENARIO_EVALUATION_REWARDS_SCENARIO_GROUP_ID;
+  }
+  if (assumption === 'all_story_episodes_viewed') {
+    return MAIN_STORY_REWARDS_SCENARIO_GROUP_ID;
+  }
+  if (assumption === 'all_login_days' || assumption === 'all_login_days_global') {
+    return LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID;
+  }
+  if (assumption === 'jp_reward_parity' && /(?:mission|ミッション)/i.test(label)) {
+    return LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID;
+  }
+  if (assumption === 'all_first_clears') {
+    return RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID;
+  }
+  if (assumption === 'all_limited_shop_exchanges'
+    || assumption === 'full_exchange'
+    || assumption === 'jp_reward_parity_full_exchange'
+    || assumption === 'full_score_completion') {
+    if (/racing carnival/i.test(label)) return RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID;
+    if (/trainer skills test/i.test(label)) return TRAINER_SKILLS_TEST_REWARDS_SCENARIO_GROUP_ID;
+  }
+  return undefined;
+}
 
 const TRAINING_PASS_TIMELINE_EVENT_ID = 'campaign-632';
 const TRAINING_PASS_JP_RELEASE_DATE = '2024-02-24';
@@ -117,6 +192,30 @@ export function plannerIncomeAssumptionGroups(
   const speculativeHelp = speculativeHelpText(comparison);
   return [
     {
+      id: MASTERS_CHALLENGE_SCENARIO_GROUP_ID,
+      label: 'Masters Challenges',
+      icon: 'military_tech',
+      scheduleLabel: 'Each matching event',
+      helpText: 'Counts every high-difficulty first-clear reward from the JP master tables. Leave this off if you do not expect to clear every race.',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Clear every challenge',
+        amountLabel: 'Varies by event',
+      }],
+    },
+    {
+      id: STORY_EVENT_REWARDS_SCENARIO_GROUP_ID,
+      label: 'Story event rewards',
+      icon: 'auto_stories',
+      scheduleLabel: 'Each Story Event',
+      helpText: 'Counts the event, shop, mission, and finite bingo rewards represented by the JP reward tables. Turn this off if you do not expect to complete Story Events.',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Complete all rewards',
+        amountLabel: 'Varies by event',
+      }],
+    },
+    {
       id: TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID,
       label: 'Temporary trainee stories',
       icon: 'menu_book',
@@ -129,15 +228,99 @@ export function plannerIncomeAssumptionGroups(
       }],
     },
     {
+      id: MAIN_STORY_REWARDS_SCENARIO_GROUP_ID,
+      label: 'Main Story chapters',
+      icon: 'library_books',
+      scheduleLabel: 'Each projected chapter release',
+      helpText: 'Counts chapter-viewing rewards from the Main Story. Direct gifts tied to a release remain separate.',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Read all chapters',
+        amountLabel: 'Varies by release',
+      }],
+    },
+    {
+      id: LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID,
+      label: 'Limited login bonuses',
+      icon: 'event_available',
+      scheduleLabel: 'Each limited login campaign',
+      helpText: 'Counts every day of limited login-bonus campaigns. One-time gifts that do not require repeated logins remain automatic.',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Claim every login day',
+        amountLabel: 'Varies by campaign',
+      }],
+    },
+    {
+      id: LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID,
+      label: 'Limited mission campaigns',
+      icon: 'task_alt',
+      scheduleLabel: 'Anniversary, scenario, and G1 missions',
+      helpText: 'Counts mission rewards that require completion. Direct celebration gifts and broadcasts gifts remain automatic.',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Complete all missions',
+        amountLabel: 'Varies by campaign',
+      }],
+    },
+    {
+      id: FACTOR_RESEARCH_REWARDS_SCENARIO_GROUP_ID,
+      label: 'Factor Research boxes',
+      icon: 'science',
+      scheduleLabel: 'Each Factor Research event',
+      helpText: 'Counts every reward box in Agnes Tachyon\'s Factor Research.',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Claim every box',
+        amountLabel: 'Varies by event',
+      }],
+    },
+    {
+      id: TRAINER_SKILLS_TEST_REWARDS_SCENARIO_GROUP_ID,
+      label: 'Trainer Skills Tests',
+      icon: 'quiz',
+      scheduleLabel: 'Each Trainer Skills Test',
+      helpText: 'Counts score milestones and the limited shop/exchange rewards. Requires enough event currency and score completion.',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Complete score + shop',
+        amountLabel: 'Varies by event',
+      }],
+    },
+    {
+      id: RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID,
+      label: 'Racing Carnival rewards',
+      icon: 'emoji_events',
+      scheduleLabel: 'Each Racing Carnival',
+      helpText: 'Counts first-clear and limited shop/exchange rewards. The bonus-skill Career mission is controlled separately.',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Clear races + shop',
+        amountLabel: 'Varies by event',
+      }],
+    },
+    {
       id: RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID,
       label: 'Racing Carnival mission',
       icon: 'flag',
       scheduleLabel: 'Each Racing Carnival',
-      helpText: 'Counts the optional 100-Carat mission for obtaining a Carnival Bonus skill and completing a Career.',
+      helpText: 'Counts the optional event missions: 100 Carats plus 1 Rainbow and 1 Gold crystal shard per Racing Carnival.',
       options: [{
         value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
-        label: 'Complete bonus-skill mission',
-        amountLabel: '+100 Carats / event',
+        label: 'Complete all event missions',
+        amountLabel: '+100 Carats + 1/1 shards / event',
+      }],
+    },
+    {
+      id: SCENARIO_EVALUATION_REWARDS_SCENARIO_GROUP_ID,
+      label: 'Scenario evaluation rewards',
+      icon: 'workspace_premium',
+      scheduleLabel: 'Each new training scenario',
+      helpText: 'Counts all evaluation-score threshold rewards for new training scenarios.',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Clear every threshold',
+        amountLabel: 'Varies by scenario',
       }],
     },
     {

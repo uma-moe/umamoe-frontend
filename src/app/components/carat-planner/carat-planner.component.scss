@@ -3574,8 +3574,44 @@ select.cp-control,
 }
 
 .cp-overview .cp-stat--crystals strong {
-  font-size: 0.78rem;
-  white-space: nowrap;
+  font-size: 0.71rem;
+}
+
+.cp-crystal-stat-copy {
+  gap: 2px;
+}
+
+.cp-crystal-values {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: visible !important;
+  line-height: 1.12 !important;
+
+  > span {
+    display: grid;
+    grid-template-columns: 49px 18px minmax(0, 1fr);
+    align-items: baseline;
+    gap: 3px;
+    color: var(--text-primary) !important;
+    font-size: 0.71rem !important;
+    font-weight: 750 !important;
+    letter-spacing: normal !important;
+    text-transform: none !important;
+  }
+
+  b {
+    color: var(--text-secondary);
+    font-size: 0.62rem;
+    font-weight: 650;
+  }
+
+  small {
+    color: var(--text-muted);
+    font-size: 0.58rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
 }
 
 .cp-overview .cp-stat span:not(.cp-stat-icon) {

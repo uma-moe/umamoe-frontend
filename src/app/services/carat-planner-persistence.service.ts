@@ -18,12 +18,10 @@ import {
   PlannerVariableRewardSelection,
 } from '../models/carat-planner.model';
 import {
-  CONDITIONAL_REWARDS_INCLUDED_OPTION,
-  RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID,
+  CONDITIONAL_REWARD_DEFAULT_SELECTIONS,
   SPECULATIVE_INCOME_INCLUDED_OPTION,
   SPECULATIVE_INCOME_NONE_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
-  TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID,
 } from '../utils/carat-planner-income-assumptions';
 import {
   hasProjectableSourceItems,
@@ -304,8 +302,7 @@ export class CaratPlannerPersistenceService {
       disabledEventIds: [],
       scenarioSelections: {
         [SPECULATIVE_INCOME_SCENARIO_GROUP_ID]: SPECULATIVE_INCOME_INCLUDED_OPTION,
-        [TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
-        [RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        ...CONDITIONAL_REWARD_DEFAULT_SELECTIONS,
       },
       variableRewardSelections: {},
       freePullCampaignSelections: {},
@@ -638,11 +635,8 @@ export class CaratPlannerPersistenceService {
     if (!(SPECULATIVE_INCOME_SCENARIO_GROUP_ID in selections)) {
       selections[SPECULATIVE_INCOME_SCENARIO_GROUP_ID] = SPECULATIVE_INCOME_INCLUDED_OPTION;
     }
-    if (!(TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID in selections)) {
-      selections[TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID] = CONDITIONAL_REWARDS_INCLUDED_OPTION;
-    }
-    if (!(RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID in selections)) {
-      selections[RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID] = CONDITIONAL_REWARDS_INCLUDED_OPTION;
+    for (const [groupId, defaultSelection] of Object.entries(CONDITIONAL_REWARD_DEFAULT_SELECTIONS)) {
+      if (!(groupId in selections)) selections[groupId] = defaultSelection;
     }
     if (selections[SPECULATIVE_INCOME_SCENARIO_GROUP_ID] === '') {
       selections[SPECULATIVE_INCOME_SCENARIO_GROUP_ID] = SPECULATIVE_INCOME_NONE_OPTION;

@@ -56,8 +56,8 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.craftedCrystalCount(41)).toBe(2);
     expect(component.craftedCrystalCount(19, 2)).toBe(2);
     expect(component.craftedCrystalCount(21, 2)).toBe(3);
-    expect(component.crystalShardCount(19)).toBe(19);
-    expect(component.crystalShardCount(21)).toBe(21);
+    expect(component.crystalShardRemainder(19)).toBe(19);
+    expect(component.crystalShardRemainder(21)).toBe(1);
   });
 
   it('includes quantified rewards by default and remembers explicit exclusions', () => {
@@ -625,10 +625,12 @@ describe('CaratPlannerComponent banner ordering', () => {
       value: 'champion', label: 'Champion', amountLabel: '+3,300 + 10 tix / event',
     });
     expect(component.scenarioGroupOptions[3].options[4]).toEqual({
-      value: 'gold_4', label: 'Gold 4', amountLabel: '+1,300 + 4 tix / event',
+      value: 'gold_4', label: 'Gold 4', amountLabel: '+1,300 + 4 tix + 1R/2G shards / event',
     });
     const trainingPass = component.scenarioGroupOptions.find(group => group.id === 'training_pass');
     const speculativeIncome = component.scenarioGroupOptions.find(group => group.id === 'speculative_income');
+    const mastersChallenges = component.scenarioGroupOptions.find(group => group.id === 'masters_challenge_rewards');
+    const storyEvents = component.scenarioGroupOptions.find(group => group.id === 'story_event_rewards');
     expect(trainingPass?.options).toEqual([
       { value: 'free', label: 'Free', amountLabel: '+500 + 4 tix / month' },
       { value: 'premium', label: 'Premium', amountLabel: '+2,200 + 8 tix + 1 rainbow shard / month' },
@@ -638,6 +640,14 @@ describe('CaratPlannerComponent banner ordering', () => {
       { value: 'include', label: 'Rolling mean', amountLabel: '+1,233 Carats / month' },
       { value: 'median', label: 'Conservative median', amountLabel: '+775 Carats / month' },
     ]);
+    expect(mastersChallenges).toEqual(jasmine.objectContaining({
+      label: 'Masters Challenges',
+      options: [{ value: 'include', label: 'Clear every challenge', amountLabel: 'Varies by event' }],
+    }));
+    expect(storyEvents).toEqual(jasmine.objectContaining({
+      label: 'Story event rewards',
+      options: [{ value: 'include', label: 'Complete all rewards', amountLabel: 'Varies by event' }],
+    }));
     expect(speculativeIncome?.scheduleLabel).toBe(
       'Rolling six completed months; recalculates automatically',
     );

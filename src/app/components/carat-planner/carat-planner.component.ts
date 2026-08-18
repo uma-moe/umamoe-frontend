@@ -65,8 +65,12 @@ import {
   resolveDataDrivenCompetitionAssumption,
 } from '../../utils/carat-planner-competition-assumptions';
 import {
+  CONDITIONAL_REWARD_SCENARIO_GROUP_IDS,
+  CONDITIONAL_REWARDS_INCLUDED_OPTION,
   CONDITIONAL_REWARDS_NONE_OPTION,
+  conditionalRewardScenarioGroup,
   isLegacyTrainingPassIncomeRule,
+  MASTERS_CHALLENGE_SCENARIO_GROUP_ID,
   MONTHLY_SHOP_HELP_TEXT,
   MONTHLY_SHOP_SCENARIO_GROUP_ID,
   plannerIncomeAssumptionGroups,
@@ -167,6 +171,7 @@ interface PlannerScenarioOptionView {
 interface PlannerScenarioGroupView {
   id: string;
   label: string;
+  icon?: string;
   scheduleLabel: string;
   helpText?: string;
   sourceUrl?: string;
@@ -288,6 +293,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private cachedRewardViewKey = '';
   private rewardGroupSelectableCache = new WeakMap<PlannerRewardGroupView, boolean>();
   private freePullBenefitCache = new WeakMap<PlannerRewardGroupView, boolean>();
+  private conditionalRewardGroupCache = new WeakMap<PlannerRewardEntry, string | null>();
   private enabledRewardIdsSource: readonly string[] | null = null;
   private enabledRewardIdsLookup = new Set<string>();
   private disabledEventIdsSource: readonly string[] | null = null;
@@ -633,7 +639,14 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   isRewardActive(reward: PlannerRewardEntry): boolean {
+    let conditionalGroup = this.conditionalRewardGroupCache.get(reward);
+    if (conditionalGroup === undefined) {
+      conditionalGroup = conditionalRewardScenarioGroup(reward) ?? null;
+      this.conditionalRewardGroupCache.set(reward, conditionalGroup);
+    }
     return this.enabledRewardIds().has(reward.id)
+      && (!conditionalGroup
+        || this.plan.scenarioSelections[conditionalGroup] === CONDITIONAL_REWARDS_INCLUDED_OPTION)
       && (!reward.event_id || !this.disabledEventIds().has(reward.event_id));
   }
 
@@ -1280,8 +1293,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (option) {
       this.plan.scenarioSelections[group] = option;
     } else if (group === SPECULATIVE_INCOME_SCENARIO_GROUP_ID
-      || group === TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID
-      || group === RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID) {
+      || CONDITIONAL_REWARD_SCENARIO_GROUP_IDS.has(group)) {
       this.plan.scenarioSelections[group] = group === SPECULATIVE_INCOME_SCENARIO_GROUP_ID
         ? SPECULATIVE_INCOME_NONE_OPTION
         : CONDITIONAL_REWARDS_NONE_OPTION;
@@ -1319,6 +1331,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (groupId === RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID) return 'casino';
     if (groupId === TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID) return 'menu_book';
     if (groupId === RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID) return 'flag';
+    if (groupId === MASTERS_CHALLENGE_SCENARIO_GROUP_ID) return 'military_tech';
     if (groupId === 'team_trials_class') return 'stadium';
     if (groupId === 'club_rank') return 'groups';
     const competition = plannerCompetitionAssumptionGroup(groupId);
@@ -1434,6 +1447,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       if (eventVariants.length === 0) return [];
 
       if (group.selectionMode === 'opponents_cleared') {
+        const includesEventMissions = eventVariants.some(variants => variants.some(variant =>
+          /event(?: participation)? missions/i.test(variant.label)));
         const options: PlannerScenarioOptionView[] = [1, 2, 3].map(count => ({
           value: `opponents_${count}`,
           label: `${count} ${count === 1 ? 'opponent' : 'opponents'} cleared`,
@@ -1441,7 +1456,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         }));
         options.push({
           value: 'all',
-          label: 'All opponents cleared',
+          label: includesEventMissions ? 'All opponents + event missions' : 'All opponents cleared',
           amountLabel: this.dataDrivenScenarioAmountLabel(group.id, 'all', eventVariants),
         });
         return [{
@@ -2090,7 +2105,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     }
     if (projectable.length === 0) return [];
 
-    const missionVariants = projectable.filter(variant => /event missions/i.test(variant.label));
+    const missionVariants = projectable.filter(variant => /event(?: participation)? missions/i.test(variant.label));
     const resultVariants = projectable
       .filter(variant => !missionVariants.includes(variant))
       .sort((left, right) => this.competitiveOutcomeOrder(left) - this.competitiveOutcomeOrder(right)
@@ -2160,8 +2175,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (carats > 0) parts.push(`${INTEGER_FORMATTER.format(carats)} Carats`);
     if (amounts.uma_ticket) parts.push(`${INTEGER_FORMATTER.format(amounts.uma_ticket)} Uma tix`);
     if (amounts.support_ticket) parts.push(`${INTEGER_FORMATTER.format(amounts.support_ticket)} support tix`);
-    if (amounts.rainbow_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.rainbow_crystal)} rainbow shards`);
-    if (amounts.gold_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.gold_crystal)} gold shards`);
+    if (amounts.rainbow_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.rainbow_crystal)} rainbow ${amounts.rainbow_crystal === 1 ? 'shard' : 'shards'}`);
+    if (amounts.gold_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.gold_crystal)} gold ${amounts.gold_crystal === 1 ? 'shard' : 'shards'}`);
     if (amounts.rainbow_full_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.rainbow_full_crystal)} Rainbow Uncap Crystals`);
     if (amounts.gold_full_crystal) parts.push(`${INTEGER_FORMATTER.format(amounts.gold_full_crystal)} Gold Uncap Crystals`);
     return parts.join(' · ') || 'No projected resources';
@@ -2289,6 +2304,11 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const tickets = (amounts.uma_ticket ?? 0) + (amounts.support_ticket ?? 0);
     const parts = carats > 0 ? [`+${INTEGER_FORMATTER.format(carats)}`] : [];
     if (tickets > 0) parts.push(`${INTEGER_FORMATTER.format(tickets)} tix`);
+    const rainbowShards = Math.max(0, Math.trunc(amounts.rainbow_crystal ?? 0));
+    const goldShards = Math.max(0, Math.trunc(amounts.gold_crystal ?? 0));
+    if (rainbowShards > 0 || goldShards > 0) {
+      parts.push(`${INTEGER_FORMATTER.format(rainbowShards)}R/${INTEGER_FORMATTER.format(goldShards)}G shards`);
+    }
     return `${parts.join(' + ')} / event`;
   }
 
@@ -2486,16 +2506,16 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       + Math.floor(Math.max(0, Number(shards) || 0) / 20);
   }
 
-  crystalShardCount(shards: number | null | undefined): number {
-    return Math.max(0, Math.trunc(Number(shards) || 0));
+  crystalShardRemainder(shards: number | null | undefined): number {
+    return Math.max(0, Math.trunc(Number(shards) || 0)) % 20;
   }
 
   targetResourcesAtPullAriaLabel(target: PlannerTarget, result: PlannerTargetProjection): string {
     const parts: string[] = [];
     if (this.targetTicketCurrency(target)) parts.push(this.targetTicketUsageLabel(target, result));
     if (target.bannerKind === 'support') {
-      parts.push(`${this.craftedCrystalCount(result.balanceBefore.rainbowCrystals, result.balanceBefore.rainbowFullCrystals)} rainbow Uncap Crystals and ${this.crystalShardCount(result.balanceBefore.rainbowCrystals)} rainbow shards`);
-      parts.push(`${this.craftedCrystalCount(result.balanceBefore.goldCrystals, result.balanceBefore.goldFullCrystals)} gold Uncap Crystals and ${this.crystalShardCount(result.balanceBefore.goldCrystals)} gold shards`);
+      parts.push(`${this.craftedCrystalCount(result.balanceBefore.rainbowCrystals, result.balanceBefore.rainbowFullCrystals)} rainbow Uncap Crystals and ${this.crystalShardRemainder(result.balanceBefore.rainbowCrystals)} leftover rainbow shards`);
+      parts.push(`${this.craftedCrystalCount(result.balanceBefore.goldCrystals, result.balanceBefore.goldFullCrystals)} gold Uncap Crystals and ${this.crystalShardRemainder(result.balanceBefore.goldCrystals)} leftover gold shards`);
     }
     return `At pull date: ${parts.join(', ')}`;
   }
