@@ -215,31 +215,30 @@
                   <em>{{ scenarioSectionEnabledCount(section) }}/{{ section.groups.length }} on</em>
                   <mat-icon class="cp-scenario-section-chevron" aria-hidden="true">{{ isScenarioSectionExpanded(section) ? 'expand_less' : 'expand_more' }}</mat-icon>
                 </button>
-                <button class="cp-scenario-section-toggle" type="button"
+                <mat-checkbox class="cp-scenario-section-toggle"
                   [class.is-active]="scenarioSectionState(section) === 'all'"
                   [class.is-mixed]="scenarioSectionState(section) === 'some'"
-                  [attr.aria-pressed]="scenarioSectionState(section) === 'all'"
-                  [attr.aria-label]="scenarioSectionToggleLabel(section) + ' for ' + section.label"
-                  (click)="toggleScenarioSection(section)">
-                  <mat-icon aria-hidden="true">{{ scenarioSectionState(section) === 'all' ? 'toggle_on' : scenarioSectionState(section) === 'some' ? 'indeterminate_check_box' : 'toggle_off' }}</mat-icon>
+                  [checked]="scenarioSectionState(section) === 'all'"
+                  [indeterminate]="scenarioSectionState(section) === 'some'"
+                  [aria-label]="scenarioSectionToggleLabel(section) + ' for ' + section.label"
+                  (change)="toggleScenarioSection(section)">
                   <span>{{ scenarioSectionState(section) === 'all' ? 'All on' : scenarioSectionState(section) === 'some' ? 'Mixed' : 'All off' }}</span>
-                </button>
+                </mat-checkbox>
               </header>
               <div class="cp-scenario-list" [id]="'cp-assumption-section-options-' + section.id"
                 *ngIf="isScenarioSectionExpanded(section)">
                 <article class="cp-scenario" *ngFor="let group of section.groups">
                   <span class="cp-scenario-copy"><mat-icon aria-hidden="true">{{ group.icon || scenarioGroupIcon(group.id) }}</mat-icon><span><span class="cp-scenario-heading"><strong>{{ group.label }}</strong><button *ngIf="group.helpText" #scenarioHelp="matTooltip" class="cp-scenario-help" type="button" [matTooltip]="group.helpText" matTooltipClass="cp-methodology-tooltip" matTooltipPosition="above" [matTooltipTouchGestures]="'on'" [attr.aria-label]="'How ' + group.label + ' is calculated'" (click)="$event.stopPropagation(); scenarioHelp.toggle()">?</button></span><small><span>{{ group.scheduleLabel }}</span><a *ngIf="group.sourceUrl" [href]="group.sourceUrl" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Open source for ' + group.label + ' in a new tab'">Source<mat-icon aria-hidden="true">open_in_new</mat-icon></a></small></span></span>
-                  <button *ngIf="isBinaryScenarioGroup(group); else scenarioStepper" class="cp-scenario-binary" type="button"
+                  <mat-checkbox *ngIf="isBinaryScenarioGroup(group); else scenarioStepper" class="cp-scenario-binary"
                     [class.is-active]="!!selectedScenarioOption(group)"
-                    [attr.aria-pressed]="!!selectedScenarioOption(group)"
-                    [attr.aria-label]="(selectedScenarioOption(group) ? 'Exclude ' : 'Include ') + group.label"
-                    (click)="toggleBinaryScenario(group)">
-                    <mat-icon aria-hidden="true">{{ selectedScenarioOption(group) ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                    [checked]="!!selectedScenarioOption(group)"
+                    [aria-label]="(selectedScenarioOption(group) ? 'Exclude ' : 'Include ') + group.label"
+                    (change)="toggleBinaryScenario(group)">
                     <ng-container *ngIf="selectedScenarioOption(group) as selected; else binaryNotIncluded">
-                      <span><strong>{{ selected.label }}</strong><small *ngIf="selected.amountLabel">{{ selected.amountLabel }}</small></span>
+                      <span class="cp-scenario-binary-copy"><strong>{{ selected.label }}</strong><small *ngIf="selected.amountLabel">{{ selected.amountLabel }}</small></span>
                     </ng-container>
-                    <ng-template #binaryNotIncluded><span class="is-muted"><strong>Not included</strong><small>Tap to include</small></span></ng-template>
-                  </button>
+                    <ng-template #binaryNotIncluded><span class="cp-scenario-binary-copy is-muted"><strong>Not included</strong><small>Tap to include</small></span></ng-template>
+                  </mat-checkbox>
                   <ng-template #scenarioStepper>
                     <div class="cp-scenario-stepper" role="group" [attr.aria-label]="group.label">
                       <button type="button" (click)="cycleScenario(group, -1)" [attr.aria-label]="'Previous ' + group.label + ' option'"><mat-icon>chevron_left</mat-icon></button>

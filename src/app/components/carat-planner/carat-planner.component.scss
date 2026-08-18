@@ -482,24 +482,18 @@ select.cp-control,
 }
 
 .cp-scenario-section-toggle {
-  min-width: 78px;
-  padding: 4px 9px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  min-width: 88px;
+  padding: 0 8px;
+  display: flex;
+  align-items: stretch;
   color: var(--text-muted);
-  border: 0;
   border-left: 1px solid var(--border-subtle);
   background: transparent;
-  cursor: pointer;
 
-  mat-icon { @include icon-size(20px); }
   span { font-size: 0.61rem; font-weight: 750; white-space: nowrap; }
   &.is-active { color: var(--accent-success); background: rgba(var(--accent-success-rgb), 0.07); }
   &.is-mixed { color: var(--accent-secondary); }
   &:hover { background: var(--surface-2); }
-  &:focus-visible { position: relative; z-index: 1; outline: 2px solid rgba(var(--accent-primary-rgb), 0.5); outline-offset: -2px; }
 }
 
 .cp-scenario-list {
@@ -1114,20 +1108,13 @@ select.cp-control,
 .cp-scenario-binary {
   min-width: 0;
   min-height: 36px;
-  padding: 3px 9px;
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  align-items: center;
-  gap: 7px;
+  display: block;
   color: var(--text-muted);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-sm);
   background: var(--surface-2);
   text-align: left;
-  cursor: pointer;
 
-  > mat-icon { @include icon-size(22px); }
-  > span { min-width: 0; display: grid; gap: 1px; }
   strong { overflow: hidden; font-size: 0.67rem; text-overflow: ellipsis; white-space: nowrap; }
   small { color: var(--text-muted); font-size: 0.57rem; font-weight: 650; white-space: nowrap; }
   &.is-active {
@@ -1140,7 +1127,12 @@ select.cp-control,
   }
   .is-muted strong, .is-muted small { color: var(--text-muted); }
   &:hover { border-color: var(--border-secondary); background: var(--surface-3); }
-  &:focus-visible { outline: 2px solid rgba(var(--accent-primary-rgb), 0.5); outline-offset: 1px; }
+}
+
+.cp-scenario-binary-copy {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
 }
 
 .cp-reward-row {
@@ -2632,6 +2624,41 @@ select.cp-control,
     font-size: 0.76rem;
   }
 
+  .cp-scenario-section-toggle .mdc-form-field {
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+  }
+
+  .cp-scenario-section-toggle .mdc-label {
+    color: inherit;
+  }
+
+  .cp-scenario-binary .mdc-form-field,
+  .cp-scenario-binary .mdc-label {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .cp-scenario-binary .mdc-form-field {
+    min-height: 34px;
+    padding: 1px 8px 1px 2px;
+    box-sizing: border-box;
+  }
+
+  .cp-scenario-binary .mdc-label {
+    color: inherit;
+  }
+
+  .cp-scenario-section-toggle.is-active,
+  .cp-scenario-binary.is-active {
+    --mdc-checkbox-selected-checkmark-color: var(--surface-1);
+    --mdc-checkbox-selected-focus-icon-color: var(--accent-success);
+    --mdc-checkbox-selected-hover-icon-color: var(--accent-success);
+    --mdc-checkbox-selected-icon-color: var(--accent-success);
+    --mdc-checkbox-selected-pressed-icon-color: var(--accent-success);
+  }
+
   .cp-reward-row .mdc-form-field,
   .cp-reward-row .mdc-label {
     width: 100%;
@@ -3760,7 +3787,6 @@ select.cp-control,
     min-width: 48px;
 
     span { display: none; }
-    mat-icon { @include icon-size(23px); }
   }
 
   .cp-scenario {

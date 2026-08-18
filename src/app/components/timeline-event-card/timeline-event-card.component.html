@@ -79,7 +79,6 @@
           <span class="card-reward-context">{{ reward.previewLabel }}</span>
           <span
             class="card-reward-item is-variable"
-            [class.is-crystal-shard]="item.key === 'rainbow-crystal' || item.key === 'gold-crystal'"
             *ngFor="let item of reward.previewItems"
             [attr.title]="item.countLabel + ' ' + item.label"
           >
@@ -92,7 +91,6 @@
           <span
             class="card-reward-item"
             [class.is-free-pulls]="item.kind === 'free_pulls'"
-            [class.is-crystal-shard]="item.kind === 'rainbow_crystal' || item.kind === 'gold_crystal'"
             *ngFor="let item of reward.items; trackBy: trackReward"
             [attr.title]="item.label"
           >
