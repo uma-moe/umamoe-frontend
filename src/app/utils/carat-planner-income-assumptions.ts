@@ -23,6 +23,8 @@ export const LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID = 'limited_login_rewards';
 export const LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID = 'limited_mission_rewards';
 export const CONDITIONAL_REWARDS_INCLUDED_OPTION = 'include';
 export const CONDITIONAL_REWARDS_NONE_OPTION = 'none';
+export const TRAINER_SKILLS_TEST_SCORE_ONLY_OPTION = 'score_only';
+export const RACING_CARNIVAL_CLEARS_ONLY_OPTION = 'clears_only';
 export const SPECULATIVE_INCOME_INCLUDED_OPTION = 'include';
 export const SPECULATIVE_INCOME_MEDIAN_OPTION = 'median';
 export const SPECULATIVE_INCOME_NONE_OPTION = 'none';
@@ -108,6 +110,26 @@ export function conditionalRewardScenarioGroup(
     if (/trainer skills test/i.test(label)) return TRAINER_SKILLS_TEST_REWARDS_SCENARIO_GROUP_ID;
   }
   return undefined;
+}
+
+/** Resolves progressive completion options without treating every conditional reward as all-or-nothing. */
+export function conditionalRewardScenarioSelectionMatches(
+  reward: Pick<PlannerRewardEntry, 'assumption' | 'label'>,
+  selection: string | undefined,
+): boolean {
+  const group = conditionalRewardScenarioGroup(reward);
+  if (!group) return true;
+  if (selection === CONDITIONAL_REWARDS_INCLUDED_OPTION) return true;
+
+  if (group === TRAINER_SKILLS_TEST_REWARDS_SCENARIO_GROUP_ID) {
+    return selection === TRAINER_SKILLS_TEST_SCORE_ONLY_OPTION
+      && reward.assumption === 'full_score_completion';
+  }
+  if (group === RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID) {
+    return selection === RACING_CARNIVAL_CLEARS_ONLY_OPTION
+      && reward.assumption === 'all_first_clears';
+  }
+  return false;
 }
 
 const TRAINING_PASS_TIMELINE_EVENT_ID = 'campaign-632';
@@ -281,11 +303,18 @@ export function plannerIncomeAssumptionGroups(
       icon: 'quiz',
       scheduleLabel: 'Each Trainer Skills Test',
       helpText: 'Counts score milestones and the limited shop/exchange rewards. Requires enough event currency and score completion.',
-      options: [{
-        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
-        label: 'Complete score + shop',
-        amountLabel: 'Varies by event',
-      }],
+      options: [
+        {
+          value: TRAINER_SKILLS_TEST_SCORE_ONLY_OPTION,
+          label: 'Score rewards only',
+          amountLabel: 'Excludes the event shop',
+        },
+        {
+          value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+          label: 'Score + shop',
+          amountLabel: 'All available rewards',
+        },
+      ],
     },
     {
       id: RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID,
@@ -293,11 +322,18 @@ export function plannerIncomeAssumptionGroups(
       icon: 'emoji_events',
       scheduleLabel: 'Each Racing Carnival',
       helpText: 'Counts first-clear and limited shop/exchange rewards. The bonus-skill Career mission is controlled separately.',
-      options: [{
-        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
-        label: 'Clear races + shop',
-        amountLabel: 'Varies by event',
-      }],
+      options: [
+        {
+          value: RACING_CARNIVAL_CLEARS_ONLY_OPTION,
+          label: 'First clears only',
+          amountLabel: 'Excludes the event shop',
+        },
+        {
+          value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+          label: 'Clears + shop',
+          amountLabel: 'All available rewards',
+        },
+      ],
     },
     {
       id: RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID,

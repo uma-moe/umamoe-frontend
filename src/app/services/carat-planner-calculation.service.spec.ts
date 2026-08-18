@@ -848,6 +848,64 @@ describe('CaratPlannerCalculationService', () => {
     expect(included.map(entry => entry.amount)).toEqual([80, 100, 3]);
   });
 
+  it('counts only the earned portion of progressive event assumptions', () => {
+    const rewards = [{
+      id: 'skills-score',
+      label: 'Trainer Skills Test score rewards',
+      currency: 'free_jewels' as const,
+      amount: 1_500,
+      available_at: '2026-01-02',
+      assumption: 'full_score_completion',
+    }, {
+      id: 'skills-shop',
+      label: 'Trainer Skills Test shop exchanges',
+      currency: 'free_jewels' as const,
+      amount: 500,
+      available_at: '2026-01-02',
+      assumption: 'full_exchange',
+    }, {
+      id: 'carnival-clears',
+      label: 'Racing Carnival first-clear rewards',
+      currency: 'free_jewels' as const,
+      amount: 300,
+      available_at: '2026-01-03',
+      assumption: 'all_first_clears',
+    }, {
+      id: 'carnival-shop',
+      label: 'Racing Carnival shop exchanges',
+      currency: 'free_jewels' as const,
+      amount: 200,
+      available_at: '2026-01-03',
+      assumption: 'all_limited_shop_exchanges',
+    }];
+    const data: CaratPlannerDataBundle = {
+      ...emptyData(),
+      rewards: { rewards },
+    };
+    const enabledRewardIds = rewards.map(reward => reward.id);
+
+    const partial = service.buildLedger(makePlan({
+      enabledRewardIds,
+      scenarioSelections: {
+        trainer_skills_test_rewards: 'score_only',
+        racing_carnival_rewards: 'clears_only',
+      },
+    }), data, '2026-01-03');
+    expect(partial.map(entry => entry.id)).toEqual([
+      'reward:skills-score:free_jewels',
+      'reward:carnival-clears:free_jewels',
+    ]);
+
+    const complete = service.buildLedger(makePlan({
+      enabledRewardIds,
+      scenarioSelections: {
+        trainer_skills_test_rewards: 'include',
+        racing_carnival_rewards: 'include',
+      },
+    }), data, '2026-01-03');
+    expect(complete.reduce((total, entry) => total + entry.amount, 0)).toBe(2_500);
+  });
+
   it('excludes inactive event targets and rewards without deleting their saved configuration', () => {
     const target = makeTarget({ eventId: 'banner-1', plannedPulls: 50 });
     const plan = makePlan({

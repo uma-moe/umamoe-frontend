@@ -47,7 +47,7 @@ describe('CaratPlannerComponent banner ordering', () => {
     ]);
   });
 
-  it('shows complete Uncap Crystals separately from leftover shards', () => {
+  it('combines full and crafted Uncap Crystals while retaining next-crystal progress', () => {
     const component = createComponent();
 
     expect(component.craftedCrystalCount(undefined)).toBe(0);
@@ -675,6 +675,56 @@ describe('CaratPlannerComponent banner ordering', () => {
     component.cycleScenario(speculativeIncome!, -1);
     expect(component.plan.scenarioSelections['speculative_income']).toBe('none');
     expect(component.selectedScenarioOption(speculativeIncome!)).toBeNull();
+  });
+
+  it('groups assumptions and toggles a whole section with conservative defaults', () => {
+    const component = createComponent();
+    component.data = {
+      core: {},
+      income: { rules: [
+        { id: 'class-2', label: 'Team Trials Class 2', currency: 'free_jewels', amount: 35, cadence: 'weekly', start_date: '2030-01-01', scenario_group: 'team_trials_class', scenario_option: 'class_2' },
+        { id: 'class-6', label: 'Team Trials Class 6', currency: 'free_jewels', amount: 375, cadence: 'weekly', start_date: '2030-01-01', scenario_group: 'team_trials_class', scenario_option: 'class_6' },
+        { id: 'rank-2', label: 'Club rank D+', currency: 'free_jewels', amount: 225, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_2' },
+        { id: 'rank-11', label: 'Club rank SS', currency: 'free_jewels', amount: 4500, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_11' },
+      ] },
+      rewards: { rewards: [] },
+    };
+    component.plan.scenarioSelections = {};
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    expect(component.scenarioSections.map(section => section.label)).toEqual([
+      'Account & recurring',
+      'Competitive & challenge events',
+      'Event completion',
+      'Stories & login bonuses',
+      'Estimated income',
+    ]);
+    const account = component.scenarioSections[0];
+    expect(account.groups.map(group => group.id)).toEqual([
+      'team_trials_class',
+      'club_rank',
+      'training_pass',
+    ]);
+    expect(component.scenarioSectionState(account)).toBe('none');
+
+    component.toggleScenarioSection(account);
+    expect(component.scenarioSectionState(account)).toBe('all');
+    expect(component.plan.scenarioSelections).toEqual(jasmine.objectContaining({
+      team_trials_class: 'class_2',
+      club_rank: 'rank_2',
+      training_pass: 'free',
+    }));
+
+    component.toggleScenarioSection(account);
+    expect(component.scenarioSectionState(account)).toBe('none');
+    expect(component.plan.scenarioSelections['team_trials_class']).toBeUndefined();
+    expect(component.plan.scenarioSelections['club_rank']).toBeUndefined();
+    expect(component.plan.scenarioSelections['training_pass']).toBeUndefined();
+
+    component.toggleScenarioSection(account);
+    expect(component.plan.scenarioSelections['team_trials_class']).toBe('class_2');
+    expect(component.plan.scenarioSelections['club_rank']).toBe('rank_2');
+    expect(component.plan.scenarioSelections['training_pass']).toBe('free');
   });
 
   it('shows the master-backed Monthly Shop ticket toggle transparently', () => {

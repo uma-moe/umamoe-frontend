@@ -69,18 +69,27 @@ import {
   CONDITIONAL_REWARDS_INCLUDED_OPTION,
   CONDITIONAL_REWARDS_NONE_OPTION,
   conditionalRewardScenarioGroup,
+  conditionalRewardScenarioSelectionMatches,
+  FACTOR_RESEARCH_REWARDS_SCENARIO_GROUP_ID,
   isLegacyTrainingPassIncomeRule,
+  LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID,
+  LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID,
+  MAIN_STORY_REWARDS_SCENARIO_GROUP_ID,
   MASTERS_CHALLENGE_SCENARIO_GROUP_ID,
   MONTHLY_SHOP_HELP_TEXT,
   MONTHLY_SHOP_SCENARIO_GROUP_ID,
   plannerIncomeAssumptionGroups,
+  RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
+  SCENARIO_EVALUATION_REWARDS_SCENARIO_GROUP_ID,
   SPECULATIVE_INCOME_INCLUDED_OPTION,
   SPECULATIVE_INCOME_MEDIAN_OPTION,
   RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID,
   SPECULATIVE_INCOME_NONE_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
+  STORY_EVENT_REWARDS_SCENARIO_GROUP_ID,
+  TRAINER_SKILLS_TEST_REWARDS_SCENARIO_GROUP_ID,
   trainingPassIncomeRules,
   TRAINING_PASS_SCENARIO_GROUP_ID,
   TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID,
@@ -177,6 +186,16 @@ interface PlannerScenarioGroupView {
   sourceUrl?: string;
   options: PlannerScenarioOptionView[];
 }
+
+interface PlannerScenarioSectionView {
+  id: string;
+  label: string;
+  description: string;
+  icon: string;
+  groups: PlannerScenarioGroupView[];
+}
+
+type PlannerScenarioSectionState = 'all' | 'some' | 'none';
 
 interface PlannerRewardBenefitView {
   id: string;
@@ -311,6 +330,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private deferredRewardSavePending = false;
   private readonly expandedPickupTargetIds = new Set<string>();
   private readonly pickupGoalCopyMemory = new Map<string, number>();
+  private readonly expandedScenarioSectionIds = new Set<string>();
+  private readonly scenarioSectionSelectionMemory = new Map<string, Record<string, string>>();
 
   @Input() set events(value: readonly CaratPlannerTimelineEvent[] | null | undefined) {
     this.allEvents = value ?? [];
@@ -354,6 +375,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   oddsByTarget = new Map<string, PlannerOddsView>();
   filteredEvents: CaratPlannerTimelineEvent[] = [];
   scenarioGroupOptions: PlannerScenarioGroupView[] = [];
+  scenarioSections: PlannerScenarioSectionView[] = [];
   displayedRules: PlannerIncomeRule[] = [];
   rewardGroups: PlannerRewardGroupView[] = [];
   displayedRewardGroups: PlannerRewardGroupView[] = [];
@@ -646,7 +668,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     }
     return this.enabledRewardIds().has(reward.id)
       && (!conditionalGroup
-        || this.plan.scenarioSelections[conditionalGroup] === CONDITIONAL_REWARDS_INCLUDED_OPTION)
+        || conditionalRewardScenarioSelectionMatches(
+          reward,
+          this.plan.scenarioSelections[conditionalGroup],
+        ))
       && (!reward.event_id || !this.disabledEventIds().has(reward.event_id));
   }
 
@@ -1290,6 +1315,11 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   setScenario(group: string, option: string): void {
+    this.applyScenarioSelection(group, option);
+    this.save();
+  }
+
+  private applyScenarioSelection(group: string, option: string): void {
     if (option) {
       this.plan.scenarioSelections[group] = option;
     } else if (group === SPECULATIVE_INCOME_SCENARIO_GROUP_ID
@@ -1314,7 +1344,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       affectedEventIds.forEach(eventId => delete selections[eventId]);
       this.plan.variableRewardSelections = selections;
     }
-    this.save();
   }
 
   cycleScenario(group: PlannerScenarioGroupView, direction: 1 | -1): void {
@@ -1322,6 +1351,78 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const current = Math.max(0, values.indexOf(this.plan.scenarioSelections[group.id] ?? ''));
     const next = (current + direction + values.length) % values.length;
     this.setScenario(group.id, values[next]);
+  }
+
+  isBinaryScenarioGroup(group: PlannerScenarioGroupView): boolean {
+    return group.options.length === 1;
+  }
+
+  toggleBinaryScenario(group: PlannerScenarioGroupView): void {
+    this.setScenario(
+      group.id,
+      this.selectedScenarioOption(group) ? '' : group.options[0]?.value ?? '',
+    );
+  }
+
+  isScenarioSectionExpanded(section: PlannerScenarioSectionView): boolean {
+    return this.expandedScenarioSectionIds.has(section.id);
+  }
+
+  toggleScenarioSectionExpanded(section: PlannerScenarioSectionView): void {
+    if (this.expandedScenarioSectionIds.has(section.id)) {
+      this.expandedScenarioSectionIds.delete(section.id);
+    } else {
+      this.expandedScenarioSectionIds.add(section.id);
+    }
+  }
+
+  scenarioSectionEnabledCount(section: PlannerScenarioSectionView): number {
+    return section.groups.filter(group => this.selectedScenarioOption(group)).length;
+  }
+
+  scenarioSectionState(section: PlannerScenarioSectionView): PlannerScenarioSectionState {
+    const enabled = this.scenarioSectionEnabledCount(section);
+    if (enabled === 0) return 'none';
+    return enabled === section.groups.length ? 'all' : 'some';
+  }
+
+  scenarioSectionToggleLabel(section: PlannerScenarioSectionView): string {
+    return this.scenarioSectionState(section) === 'all' ? 'Turn all off' : 'Turn all on';
+  }
+
+  toggleScenarioSection(section: PlannerScenarioSectionView): void {
+    const turnOff = this.scenarioSectionState(section) === 'all';
+    if (turnOff) {
+      const remembered = section.groups.reduce<Record<string, string>>((values, group) => {
+        const selection = this.plan.scenarioSelections[group.id];
+        if (selection) values[group.id] = selection;
+        return values;
+      }, {});
+      this.scenarioSectionSelectionMemory.set(section.id, remembered);
+      section.groups.forEach(group => this.applyScenarioSelection(group.id, ''));
+    } else {
+      const remembered = this.scenarioSectionSelectionMemory.get(section.id) ?? {};
+      section.groups
+        .filter(group => !this.selectedScenarioOption(group))
+        .forEach(group => this.applyScenarioSelection(
+          group.id,
+          this.scenarioSectionOptionToEnable(group, remembered[group.id]),
+        ));
+    }
+    this.save();
+  }
+
+  private scenarioSectionOptionToEnable(
+    group: PlannerScenarioGroupView,
+    remembered: string | undefined,
+  ): string {
+    if (remembered && group.options.some(option => option.value === remembered)) return remembered;
+    if (group.id === 'champions_meeting_result'
+      || group.id === 'league_of_heroes_rank'
+      || group.id === 'strongest_team_reward_tier') {
+      return group.options[group.options.length - 1]?.value ?? '';
+    }
+    return group.options[0]?.value ?? '';
   }
 
   scenarioGroupIcon(groupId: string): string {
@@ -1428,9 +1529,85 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         })),
       })),
     ];
+    this.scenarioSections = this.buildScenarioSections(this.scenarioGroupOptions);
     this.displayedRules = this.data.income.rules.filter(rule =>
       !rule.scenario_group && !isLegacyTrainingPassIncomeRule(rule));
     this.filterRewards();
+  }
+
+  private buildScenarioSections(
+    groups: readonly PlannerScenarioGroupView[],
+  ): PlannerScenarioSectionView[] {
+    const definitions: readonly Omit<PlannerScenarioSectionView, 'groups'>[] = [
+      {
+        id: 'account',
+        label: 'Account & recurring',
+        description: 'Account payouts, shops, and the Training Pass',
+        icon: 'account_balance_wallet',
+      },
+      {
+        id: 'competitive',
+        label: 'Competitive & challenge events',
+        description: 'Choose the results you expect to achieve',
+        icon: 'emoji_events',
+      },
+      {
+        id: 'event_completion',
+        label: 'Event completion',
+        description: 'Story Events, event shops, missions, and score rewards',
+        icon: 'event_available',
+      },
+      {
+        id: 'stories_login',
+        label: 'Stories & login bonuses',
+        description: 'Rewards that require reading or logging in',
+        icon: 'menu_book',
+      },
+      {
+        id: 'estimates',
+        label: 'Estimated income',
+        description: 'Optional projections that are not fixed dated rewards',
+        icon: 'auto_graph',
+      },
+    ];
+    const sectionByGroup = new Map<string, string>([
+      ['team_trials_class', 'account'],
+      ['club_rank', 'account'],
+      [MONTHLY_SHOP_SCENARIO_GROUP_ID, 'account'],
+      [TRAINING_PASS_SCENARIO_GROUP_ID, 'account'],
+      ['champions_meeting_result', 'competitive'],
+      ['league_of_heroes_rank', 'competitive'],
+      ['strongest_team_reward_tier', 'competitive'],
+      ['legend_race_clears', 'competitive'],
+      [MASTERS_CHALLENGE_SCENARIO_GROUP_ID, 'competitive'],
+      [STORY_EVENT_REWARDS_SCENARIO_GROUP_ID, 'event_completion'],
+      [FACTOR_RESEARCH_REWARDS_SCENARIO_GROUP_ID, 'event_completion'],
+      [TRAINER_SKILLS_TEST_REWARDS_SCENARIO_GROUP_ID, 'event_completion'],
+      [RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID, 'event_completion'],
+      [RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID, 'event_completion'],
+      [SCENARIO_EVALUATION_REWARDS_SCENARIO_GROUP_ID, 'event_completion'],
+      [LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID, 'event_completion'],
+      [TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID, 'stories_login'],
+      [MAIN_STORY_REWARDS_SCENARIO_GROUP_ID, 'stories_login'],
+      [LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID, 'stories_login'],
+      [RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID, 'estimates'],
+      [SPECULATIVE_INCOME_SCENARIO_GROUP_ID, 'estimates'],
+    ]);
+    const sections = definitions.map(definition => ({
+      ...definition,
+      groups: groups.filter(group => sectionByGroup.get(group.id) === definition.id),
+    })).filter(section => section.groups.length > 0);
+    const unmatched = groups.filter(group => !sectionByGroup.has(group.id));
+    if (unmatched.length > 0) {
+      sections.push({
+        id: 'other',
+        label: 'Other assumptions',
+        description: 'Additional income and reward settings',
+        icon: 'tune',
+        groups: unmatched,
+      });
+    }
+    return sections;
   }
 
   private dataDrivenCompetitionScenarioGroups(): PlannerScenarioGroupView[] {
@@ -2514,8 +2691,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const parts: string[] = [];
     if (this.targetTicketCurrency(target)) parts.push(this.targetTicketUsageLabel(target, result));
     if (target.bannerKind === 'support') {
-      parts.push(`${this.craftedCrystalCount(result.balanceBefore.rainbowCrystals, result.balanceBefore.rainbowFullCrystals)} rainbow Uncap Crystals and ${this.crystalShardRemainder(result.balanceBefore.rainbowCrystals)} leftover rainbow shards`);
-      parts.push(`${this.craftedCrystalCount(result.balanceBefore.goldCrystals, result.balanceBefore.goldFullCrystals)} gold Uncap Crystals and ${this.crystalShardRemainder(result.balanceBefore.goldCrystals)} leftover gold shards`);
+      parts.push(`${this.craftedCrystalCount(result.balanceBefore.rainbowCrystals, result.balanceBefore.rainbowFullCrystals)} rainbow Uncap Crystals`);
+      parts.push(`${this.craftedCrystalCount(result.balanceBefore.goldCrystals, result.balanceBefore.goldFullCrystals)} gold Uncap Crystals`);
     }
     return `At pull date: ${parts.join(', ')}`;
   }

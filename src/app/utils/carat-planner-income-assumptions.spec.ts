@@ -1,11 +1,14 @@
 import { PlannerGlobalRewardComparison } from '../models/carat-planner.model';
 import {
   conditionalRewardScenarioGroup,
+  conditionalRewardScenarioSelectionMatches,
   MASTERS_CHALLENGE_SCENARIO_GROUP_ID,
   plannerIncomeAssumptionGroups,
+  RACING_CARNIVAL_CLEARS_ONLY_OPTION,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
+  TRAINER_SKILLS_TEST_SCORE_ONLY_OPTION,
 } from './carat-planner-income-assumptions';
 
 describe('plannerIncomeAssumptionGroups', () => {
@@ -107,6 +110,44 @@ describe('plannerIncomeAssumptionGroups', () => {
     for (const [, , expectedGroup] of cases) {
       expect(groups.some(group => group.id === expectedGroup)).toBeTrue();
     }
+  });
+
+  it('supports truthful partial completion for reward families with separate sources', () => {
+    const skillsScore = {
+      label: 'Trainer Skills Test score rewards',
+      assumption: 'full_score_completion',
+    };
+    const skillsShop = {
+      label: 'Trainer Skills Test shop exchanges',
+      assumption: 'full_exchange',
+    };
+    const carnivalClears = {
+      label: 'Racing Carnival first-clear rewards',
+      assumption: 'all_first_clears',
+    };
+    const carnivalShop = {
+      label: 'Racing Carnival shop exchanges',
+      assumption: 'all_limited_shop_exchanges',
+    };
+
+    expect(conditionalRewardScenarioSelectionMatches(
+      skillsScore,
+      TRAINER_SKILLS_TEST_SCORE_ONLY_OPTION,
+    )).toBeTrue();
+    expect(conditionalRewardScenarioSelectionMatches(
+      skillsShop,
+      TRAINER_SKILLS_TEST_SCORE_ONLY_OPTION,
+    )).toBeFalse();
+    expect(conditionalRewardScenarioSelectionMatches(
+      carnivalClears,
+      RACING_CARNIVAL_CLEARS_ONLY_OPTION,
+    )).toBeTrue();
+    expect(conditionalRewardScenarioSelectionMatches(
+      carnivalShop,
+      RACING_CARNIVAL_CLEARS_ONLY_OPTION,
+    )).toBeFalse();
+    expect(conditionalRewardScenarioSelectionMatches(skillsShop, 'include')).toBeTrue();
+    expect(conditionalRewardScenarioSelectionMatches(carnivalShop, 'none')).toBeFalse();
   });
 
   it('offers transparent activity-based random gameplay estimates', () => {

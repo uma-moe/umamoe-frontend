@@ -27,8 +27,8 @@ import {
   resolveDataDrivenCompetitionAssumption,
 } from '../utils/carat-planner-competition-assumptions';
 import {
-  CONDITIONAL_REWARDS_INCLUDED_OPTION,
   conditionalRewardScenarioGroup,
+  conditionalRewardScenarioSelectionMatches,
   isLegacyTrainingPassIncomeRule,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
@@ -694,7 +694,7 @@ export class CaratPlannerCalculationService {
     selections: Record<string, string>,
   ): boolean {
     const group = conditionalRewardScenarioGroup(reward);
-    return !group || selections[group] === CONDITIONAL_REWARDS_INCLUDED_OPTION;
+    return !group || conditionalRewardScenarioSelectionMatches(reward, selections[group]);
   }
 
   private findGacha(target: PlannerTarget, gachas: readonly PlannerGachaEntry[]): PlannerGachaEntry | undefined {

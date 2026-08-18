@@ -100,10 +100,9 @@
         <span class="cp-stat-icon" aria-hidden="true"><img src="assets/images/item/item_icon_00144.webp" alt=""><img src="assets/images/item/item_icon_00145.webp" alt=""></span>
         <div class="cp-crystal-stat-copy">
           <strong class="cp-crystal-values">
-            <span><b>Rainbow</b> {{ craftedCrystalCount(projection?.finalBalances?.rainbowCrystals, projection?.finalBalances?.rainbowFullCrystals) }} <small>+ {{ crystalShardRemainder(projection?.finalBalances?.rainbowCrystals) }}/20</small></span>
-            <span><b>Gold</b> {{ craftedCrystalCount(projection?.finalBalances?.goldCrystals, projection?.finalBalances?.goldFullCrystals) }} <small>+ {{ crystalShardRemainder(projection?.finalBalances?.goldCrystals) }}/20</small></span>
+            <span><b>SSR</b> {{ craftedCrystalCount(projection?.finalBalances?.rainbowCrystals, projection?.finalBalances?.rainbowFullCrystals) }} <small>({{ crystalShardRemainder(projection?.finalBalances?.rainbowCrystals) }}/20)</small></span>
+            <span><b>SR</b> {{ craftedCrystalCount(projection?.finalBalances?.goldCrystals, projection?.finalBalances?.goldFullCrystals) }} <small>({{ crystalShardRemainder(projection?.finalBalances?.goldCrystals) }}/20)</small></span>
           </strong>
-          <span>Complete crystals + next</span>
         </div>
       </div>
       <div class="cp-stat">
@@ -195,25 +194,68 @@
       </div>
 
       <div class="cp-setup-panel cp-setup-panel--income" *ngSwitchCase="'income'">
-        <section class="cp-income-assumptions" *ngIf="scenarioGroupOptions.length" aria-labelledby="cp-income-assumptions-heading">
+        <section class="cp-income-assumptions" *ngIf="scenarioSections.length" aria-labelledby="cp-income-assumptions-heading">
           <header>
             <div><strong id="cp-income-assumptions-heading">Income assumptions</strong><span>Choose expected results and optional estimated income.</span></div>
           </header>
-          <div class="cp-scenario-list">
-            <article class="cp-scenario" *ngFor="let group of scenarioGroupOptions">
-              <span class="cp-scenario-copy"><mat-icon aria-hidden="true">{{ group.icon || scenarioGroupIcon(group.id) }}</mat-icon><span><span class="cp-scenario-heading"><strong>{{ group.label }}</strong><button *ngIf="group.helpText" class="cp-scenario-help" type="button" [matTooltip]="group.helpText" matTooltipClass="cp-methodology-tooltip" matTooltipPosition="above" [attr.aria-label]="'How ' + group.label + ' is calculated'">?</button></span><small><span>{{ group.scheduleLabel }}</span><a *ngIf="group.sourceUrl" [href]="group.sourceUrl" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Open source for ' + group.label + ' in a new tab'">Source<mat-icon aria-hidden="true">open_in_new</mat-icon></a></small></span></span>
-              <div class="cp-scenario-stepper" role="group" [attr.aria-label]="group.label">
-                <button type="button" (click)="cycleScenario(group, -1)" [attr.aria-label]="'Previous ' + group.label + ' option'"><mat-icon>chevron_left</mat-icon></button>
-                <button type="button" class="cp-scenario-current" (click)="cycleScenario(group, 1)" [attr.aria-label]="'Change ' + group.label">
-                  <ng-container *ngIf="selectedScenarioOption(group) as selected; else scenarioNotIncluded">
-                    <img *ngIf="scenarioOptionIconPath(group.id, selected.value) as iconPath" [src]="iconPath" width="24" height="28" alt="">
-                    <span><strong>{{ selected.label }}</strong><small *ngIf="selected.amountLabel">{{ selected.amountLabel }}</small></span>
-                  </ng-container>
-                  <ng-template #scenarioNotIncluded><span class="is-muted"><strong>Not included</strong><small>0 projected</small></span></ng-template>
+          <div class="cp-scenario-sections">
+            <section class="cp-scenario-section" *ngFor="let section of scenarioSections"
+              [class.is-expanded]="isScenarioSectionExpanded(section)"
+              [attr.aria-labelledby]="'cp-assumption-section-' + section.id">
+              <header>
+                <button class="cp-scenario-section-disclosure" type="button"
+                  [attr.aria-expanded]="isScenarioSectionExpanded(section)"
+                  [attr.aria-controls]="'cp-assumption-section-options-' + section.id"
+                  (click)="toggleScenarioSectionExpanded(section)">
+                  <mat-icon aria-hidden="true">{{ section.icon }}</mat-icon>
+                  <span>
+                    <strong [id]="'cp-assumption-section-' + section.id">{{ section.label }}</strong>
+                    <small>{{ section.description }}</small>
+                  </span>
+                  <em>{{ scenarioSectionEnabledCount(section) }}/{{ section.groups.length }} on</em>
+                  <mat-icon class="cp-scenario-section-chevron" aria-hidden="true">{{ isScenarioSectionExpanded(section) ? 'expand_less' : 'expand_more' }}</mat-icon>
                 </button>
-                <button type="button" (click)="cycleScenario(group, 1)" [attr.aria-label]="'Next ' + group.label + ' option'"><mat-icon>chevron_right</mat-icon></button>
+                <button class="cp-scenario-section-toggle" type="button"
+                  [class.is-active]="scenarioSectionState(section) === 'all'"
+                  [class.is-mixed]="scenarioSectionState(section) === 'some'"
+                  [attr.aria-pressed]="scenarioSectionState(section) === 'all'"
+                  [attr.aria-label]="scenarioSectionToggleLabel(section) + ' for ' + section.label"
+                  (click)="toggleScenarioSection(section)">
+                  <mat-icon aria-hidden="true">{{ scenarioSectionState(section) === 'all' ? 'toggle_on' : scenarioSectionState(section) === 'some' ? 'indeterminate_check_box' : 'toggle_off' }}</mat-icon>
+                  <span>{{ scenarioSectionState(section) === 'all' ? 'All on' : scenarioSectionState(section) === 'some' ? 'Mixed' : 'All off' }}</span>
+                </button>
+              </header>
+              <div class="cp-scenario-list" [id]="'cp-assumption-section-options-' + section.id"
+                *ngIf="isScenarioSectionExpanded(section)">
+                <article class="cp-scenario" *ngFor="let group of section.groups">
+                  <span class="cp-scenario-copy"><mat-icon aria-hidden="true">{{ group.icon || scenarioGroupIcon(group.id) }}</mat-icon><span><span class="cp-scenario-heading"><strong>{{ group.label }}</strong><button *ngIf="group.helpText" #scenarioHelp="matTooltip" class="cp-scenario-help" type="button" [matTooltip]="group.helpText" matTooltipClass="cp-methodology-tooltip" matTooltipPosition="above" [matTooltipTouchGestures]="'on'" [attr.aria-label]="'How ' + group.label + ' is calculated'" (click)="$event.stopPropagation(); scenarioHelp.toggle()">?</button></span><small><span>{{ group.scheduleLabel }}</span><a *ngIf="group.sourceUrl" [href]="group.sourceUrl" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Open source for ' + group.label + ' in a new tab'">Source<mat-icon aria-hidden="true">open_in_new</mat-icon></a></small></span></span>
+                  <button *ngIf="isBinaryScenarioGroup(group); else scenarioStepper" class="cp-scenario-binary" type="button"
+                    [class.is-active]="!!selectedScenarioOption(group)"
+                    [attr.aria-pressed]="!!selectedScenarioOption(group)"
+                    [attr.aria-label]="(selectedScenarioOption(group) ? 'Exclude ' : 'Include ') + group.label"
+                    (click)="toggleBinaryScenario(group)">
+                    <mat-icon aria-hidden="true">{{ selectedScenarioOption(group) ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                    <ng-container *ngIf="selectedScenarioOption(group) as selected; else binaryNotIncluded">
+                      <span><strong>{{ selected.label }}</strong><small *ngIf="selected.amountLabel">{{ selected.amountLabel }}</small></span>
+                    </ng-container>
+                    <ng-template #binaryNotIncluded><span class="is-muted"><strong>Not included</strong><small>Tap to include</small></span></ng-template>
+                  </button>
+                  <ng-template #scenarioStepper>
+                    <div class="cp-scenario-stepper" role="group" [attr.aria-label]="group.label">
+                      <button type="button" (click)="cycleScenario(group, -1)" [attr.aria-label]="'Previous ' + group.label + ' option'"><mat-icon>chevron_left</mat-icon></button>
+                      <button type="button" class="cp-scenario-current" (click)="cycleScenario(group, 1)" [attr.aria-label]="'Change ' + group.label">
+                        <ng-container *ngIf="selectedScenarioOption(group) as selected; else scenarioNotIncluded">
+                          <img *ngIf="scenarioOptionIconPath(group.id, selected.value) as iconPath" [src]="iconPath" width="24" height="28" alt="">
+                          <span><strong>{{ selected.label }}</strong><small *ngIf="selected.amountLabel">{{ selected.amountLabel }}</small></span>
+                        </ng-container>
+                        <ng-template #scenarioNotIncluded><span class="is-muted"><strong>Not included</strong><small>0 projected</small></span></ng-template>
+                      </button>
+                      <button type="button" (click)="cycleScenario(group, 1)" [attr.aria-label]="'Next ' + group.label + ' option'"><mat-icon>chevron_right</mat-icon></button>
+                    </div>
+                  </ng-template>
+                </article>
               </div>
-            </article>
+            </section>
           </div>
         </section>
 
@@ -497,8 +539,8 @@
                 <strong>{{ targetTicketBalanceAtPull(target, targetProjection) }}</strong>
                 <em *ngIf="targetProjection.ticketPullsUsed > 0">&rarr; {{ targetTicketBalanceAtPull(target, targetProjection) - targetProjection.ticketPullsUsed }}</em>
               </span>
-              <span *ngIf="target.bannerKind === 'support'" title="Rainbow Uncap Crystals plus progress toward the next crystal"><img src="assets/images/item/item_icon_00144.webp" width="18" height="18" alt=""><strong>{{ craftedCrystalCount(targetProjection.balanceBefore.rainbowCrystals, targetProjection.balanceBefore.rainbowFullCrystals) }} + {{ crystalShardRemainder(targetProjection.balanceBefore.rainbowCrystals) }}/20</strong></span>
-              <span *ngIf="target.bannerKind === 'support'" title="Gold Uncap Crystals plus progress toward the next crystal"><img src="assets/images/item/item_icon_00145.webp" width="18" height="18" alt=""><strong>{{ craftedCrystalCount(targetProjection.balanceBefore.goldCrystals, targetProjection.balanceBefore.goldFullCrystals) }} + {{ crystalShardRemainder(targetProjection.balanceBefore.goldCrystals) }}/20</strong></span>
+              <span *ngIf="target.bannerKind === 'support'" title="Rainbow Uncap Crystals available at pull"><img src="assets/images/item/item_icon_00144.webp" width="18" height="18" alt=""><strong>{{ craftedCrystalCount(targetProjection.balanceBefore.rainbowCrystals, targetProjection.balanceBefore.rainbowFullCrystals) }}</strong></span>
+              <span *ngIf="target.bannerKind === 'support'" title="Gold Uncap Crystals available at pull"><img src="assets/images/item/item_icon_00145.webp" width="18" height="18" alt=""><strong>{{ craftedCrystalCount(targetProjection.balanceBefore.goldCrystals, targetProjection.balanceBefore.goldFullCrystals) }}</strong></span>
             </span>
           </div>
         </div>
