@@ -16,6 +16,155 @@
   Cloudflare-CDN-Cache-Control: no-store
   CDN-Cache-Control: no-store
 
+# Generated route shells and extensionless SPA entry URLs must follow the
+# same policy as index.html. Hashed assets are overridden below.
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/database
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/inheritance
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/support-cards
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/circles
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/circles/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/rankings
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/activity
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/activity/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/shame
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/shame/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/timeline
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/tierlist
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/tools
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/tools/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/wip
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/privacy-policy
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/login
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/signin
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/settings
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
+/profile/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
+  Cloudflare-CDN-Cache-Control: no-store
+  CDN-Cache-Control: no-store
+
 /version.json
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache

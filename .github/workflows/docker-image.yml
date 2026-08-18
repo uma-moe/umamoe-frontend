@@ -261,6 +261,12 @@ jobs:
             echo "::error title=BETA app shell version mismatch::index.html does not contain the expected app-build-version meta tag."
             exit 1
           fi
+          while IFS= read -r html_file; do
+            if ! grep -Fq "name=\"app-build-version\" content=\"$expected_app_version\"" "$html_file"; then
+              echo "::error title=BETA route shell version mismatch::$html_file does not contain the expected app-build-version meta tag."
+              exit 1
+            fi
+          done < <(find "$shell_root" -type f -name '*.html' -print)
 
       - name: Build assets artifact
         if: steps.assets_plan.outputs.should_build == 'true'
@@ -405,13 +411,19 @@ jobs:
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+          REMOTE_SHELL_DIR: ${{ env.BETA_REMOTE_SHELL_DIR }}
         run: |
-          rsync -az --delete \
+          set -euo pipefail
+          rsync -az --delete-after --delay-updates \
+            --filter='protect *.js' \
+            --filter='protect *.css' \
             --exclude 'assets/' \
             --exclude 'statistics/' \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
             "${{ runner.temp }}/shell-site/" \
-            "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_SHELL_DIR }}/"
+            "$DEPLOY_USER@$DEPLOY_HOST:$REMOTE_SHELL_DIR/"
+          ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "find '$REMOTE_SHELL_DIR' -maxdepth 1 -type f \( -name '*.js' -o -name '*.css' \) -mtime +7 -delete"
 
       - name: Deploy beta assets bundle
         if: needs.build.outputs.should_deploy_assets == 'true'
@@ -630,6 +642,12 @@ jobs:
             echo "::error title=PROD app shell version mismatch::index.html does not contain the expected app-build-version meta tag."
             exit 1
           fi
+          while IFS= read -r html_file; do
+            if ! grep -Fq "name=\"app-build-version\" content=\"$expected_app_version\"" "$html_file"; then
+              echo "::error title=PROD route shell version mismatch::$html_file does not contain the expected app-build-version meta tag."
+              exit 1
+            fi
+          done < <(find "$shell_root" -type f -name '*.html' -print)
 
       - name: Download assets artifact
         if: needs.build.outputs.should_deploy_assets == 'true'
@@ -730,13 +748,19 @@ jobs:
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+          REMOTE_SHELL_DIR: ${{ env.PROD_REMOTE_SHELL_DIR }}
         run: |
-          rsync -az --delete \
+          set -euo pipefail
+          rsync -az --delete-after --delay-updates \
+            --filter='protect *.js' \
+            --filter='protect *.css' \
             --exclude 'assets/' \
             --exclude 'statistics/' \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
             "${{ runner.temp }}/production-shell-export/var/www/html/umamoe/" \
-            "$DEPLOY_USER@$DEPLOY_HOST:${{ env.PROD_REMOTE_SHELL_DIR }}/"
+            "$DEPLOY_USER@$DEPLOY_HOST:$REMOTE_SHELL_DIR/"
+          ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "find '$REMOTE_SHELL_DIR' -maxdepth 1 -type f \( -name '*.js' -o -name '*.css' \) -mtime +7 -delete"
 
       - name: Deploy production assets bundle
         if: needs.build.outputs.should_deploy_assets == 'true'
