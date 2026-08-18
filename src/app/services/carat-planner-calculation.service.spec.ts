@@ -773,7 +773,7 @@ describe('CaratPlannerCalculationService', () => {
     ]);
   });
 
-  it('counts Monthly Shop tickets only when its assumption is selected', () => {
+  it('supports Friend Points only or all Monthly Shop ticket exchanges', () => {
     const rules = [
       { id: 'shop-friend-uma', label: 'Friend tickets', currency: 'uma_ticket' as const, amount: 1, cadence: 'monthly' as const, start_date: '2026-01-06', day_of_month: 1, scenario_group: 'monthly_shop_tickets', scenario_option: 'include' },
       { id: 'shop-friend-support', label: 'Friend tickets', currency: 'support_ticket' as const, amount: 1, cadence: 'monthly' as const, start_date: '2026-01-06', day_of_month: 1, scenario_group: 'monthly_shop_tickets', scenario_option: 'include' },
@@ -787,12 +787,23 @@ describe('CaratPlannerCalculationService', () => {
     };
     const enabledIncomeRuleIds = rules.map(rule => rule.id);
     const excluded = makePlan({ enabledIncomeRuleIds });
+    const friendPointsOnly = makePlan({
+      enabledIncomeRuleIds,
+      scenarioSelections: { monthly_shop_tickets: 'friend_points' },
+    });
     const included = makePlan({
       enabledIncomeRuleIds,
       scenarioSelections: { monthly_shop_tickets: 'include' },
     });
 
     expect(service.buildLedger(excluded, data, '2026-02-28')).toEqual([]);
+    const friendLedger = service.buildLedger(friendPointsOnly, data, '2026-02-28');
+    expect(friendLedger
+      .filter(entry => entry.currency === 'uma_ticket')
+      .reduce((total, entry) => total + entry.amount, 0)).toBe(1);
+    expect(friendLedger
+      .filter(entry => entry.currency === 'support_ticket')
+      .reduce((total, entry) => total + entry.amount, 0)).toBe(1);
     const ledger = service.buildLedger(included, data, '2026-02-28');
     expect(ledger
       .filter(entry => entry.currency === 'uma_ticket')

@@ -29,6 +29,7 @@ import {
 import {
   conditionalRewardScenarioGroup,
   conditionalRewardScenarioSelectionMatches,
+  incomeRuleScenarioSelectionMatches,
   isLegacyTrainingPassIncomeRule,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
@@ -683,10 +684,7 @@ export class CaratPlannerCalculationService {
   }
 
   private isSelectedScenario(rule: PlannerIncomeRule, selections: Record<string, string>): boolean {
-    if (!rule.scenario_group) {
-      return true;
-    }
-    return selections[rule.scenario_group] === rule.scenario_option;
+    return incomeRuleScenarioSelectionMatches(rule, selections);
   }
 
   private isConditionalRewardEnabled(

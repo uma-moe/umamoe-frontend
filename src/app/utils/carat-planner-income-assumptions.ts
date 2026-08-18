@@ -8,6 +8,8 @@ import {
 
 export const TRAINING_PASS_SCENARIO_GROUP_ID = 'training_pass';
 export const MONTHLY_SHOP_SCENARIO_GROUP_ID = 'monthly_shop_tickets';
+export const MONTHLY_SHOP_FRIEND_POINTS_OPTION = 'friend_points';
+export const MONTHLY_SHOP_ALL_OPTION = 'include';
 export const SPECULATIVE_INCOME_SCENARIO_GROUP_ID = 'speculative_income';
 export const RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID = 'random_gameplay_income';
 export const TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID = 'temporary_story_rewards';
@@ -32,9 +34,26 @@ export const TRAINING_PASS_SOURCE_URL = 'https://umapyoi.net/news/1788?lang=jp';
 export const MONTHLY_SHOP_HELP_TEXT = [
   'Counts recurring tickets confirmed in the Global master shop data.',
   '',
-  'Includes 1 Uma + 1 support ticket from the Friend Point Exchange and 2 of each from the Clover Exchange every month.',
-  'Excludes Cleat exchanges and limited event shops. Requires enough exchange currency.',
+  'Friend Points only: 1 Uma + 1 support ticket each month.',
+  'Friend Points + Clovers: adds 2 of each ticket, costing 800 Clovers per month.',
+  '',
+  'Excludes Cleat exchanges and limited event shops.',
 ].join('\n');
+
+export function incomeRuleScenarioSelectionMatches(
+  rule: Pick<PlannerIncomeRule, 'id' | 'label' | 'scenario_group' | 'scenario_option'>,
+  selections: Readonly<Record<string, string>>,
+): boolean {
+  if (!rule.scenario_group) return true;
+  const selected = selections[rule.scenario_group];
+  if (rule.scenario_group !== MONTHLY_SHOP_SCENARIO_GROUP_ID) {
+    return selected === rule.scenario_option;
+  }
+  if (selected === MONTHLY_SHOP_ALL_OPTION) return true;
+  if (selected !== MONTHLY_SHOP_FRIEND_POINTS_OPTION) return false;
+  return rule.scenario_option === MONTHLY_SHOP_FRIEND_POINTS_OPTION
+    || /friend/i.test(`${rule.id} ${rule.label}`);
+}
 export const RANDOM_GAMEPLAY_INCOME_HELP_TEXT = [
   'Estimated random Carats from Team Trials win boxes and Career race rewards.',
   '',

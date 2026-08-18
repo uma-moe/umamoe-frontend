@@ -71,12 +71,15 @@ import {
   conditionalRewardScenarioGroup,
   conditionalRewardScenarioSelectionMatches,
   FACTOR_RESEARCH_REWARDS_SCENARIO_GROUP_ID,
+  incomeRuleScenarioSelectionMatches,
   isLegacyTrainingPassIncomeRule,
   LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID,
   LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID,
   MAIN_STORY_REWARDS_SCENARIO_GROUP_ID,
   MASTERS_CHALLENGE_SCENARIO_GROUP_ID,
   MONTHLY_SHOP_HELP_TEXT,
+  MONTHLY_SHOP_ALL_OPTION,
+  MONTHLY_SHOP_FRIEND_POINTS_OPTION,
   MONTHLY_SHOP_SCENARIO_GROUP_ID,
   plannerIncomeAssumptionGroups,
   RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID,
@@ -1495,8 +1498,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
             : this.humanize(id),
       scheduleLabel: this.scenarioScheduleLabel(id),
       helpText: id === MONTHLY_SHOP_SCENARIO_GROUP_ID ? MONTHLY_SHOP_HELP_TEXT : undefined,
-      options: [...options]
-        .sort((left, right) => this.scenarioOptionNumber(left) - this.scenarioOptionNumber(right))
+      options: (id === MONTHLY_SHOP_SCENARIO_GROUP_ID
+        ? [MONTHLY_SHOP_FRIEND_POINTS_OPTION, MONTHLY_SHOP_ALL_OPTION]
+        : [...options].sort((left, right) => this.scenarioOptionNumber(left) - this.scenarioOptionNumber(right)))
         .map(value => ({
           value,
           label: this.scenarioOptionLabel(id, value),
@@ -2423,6 +2427,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   private scenarioOptionLabel(groupId: string, value: string): string {
     const number = this.scenarioOptionNumber(value);
+    if (groupId === MONTHLY_SHOP_SCENARIO_GROUP_ID) {
+      if (value === MONTHLY_SHOP_FRIEND_POINTS_OPTION) return 'Friend Points only';
+      if (value === MONTHLY_SHOP_ALL_OPTION) return 'Friend Points + Clovers';
+    }
     if (groupId === 'team_trials_class' && number > 0) return `Class ${number}`;
     if (groupId === 'club_rank' && number > 0) {
       return ['D', 'D+', 'C', 'C+', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS'][number - 1]
@@ -2438,7 +2446,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private scenarioOptionAmountLabel(groupId: string, value: string): string {
     const rules = this.data.income.rules.filter(rule =>
       rule.scenario_group === groupId
-      && rule.scenario_option === value);
+      && incomeRuleScenarioSelectionMatches(rule, { [groupId]: value }));
     if (groupId === MONTHLY_SHOP_SCENARIO_GROUP_ID) {
       const umaTickets = rules
         .filter(rule => rule.currency === 'uma_ticket')
@@ -2464,7 +2472,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   private scenarioScheduleLabel(groupId: string): string {
     if (groupId === MONTHLY_SHOP_SCENARIO_GROUP_ID) {
-      return 'Monthly; requires Friend Points and Clovers';
+      return 'Monthly; choose which exchange currencies to spend';
     }
     const rule = this.data.income.rules.find(item => item.scenario_group === groupId);
     if (!rule) return 'Optional income';
@@ -2844,8 +2852,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   private matchesSelectedScenario(rule: PlannerIncomeRule): boolean {
-    return !rule.scenario_group
-      || this.plan.scenarioSelections[rule.scenario_group] === rule.scenario_option;
+    return incomeRuleScenarioSelectionMatches(rule, this.plan.scenarioSelections);
   }
 
   private async loadTargetGachas(): Promise<void> {

@@ -746,18 +746,24 @@ describe('CaratPlannerComponent banner ordering', () => {
       .find(group => group.id === 'monthly_shop_tickets');
     expect(monthlyShop).toEqual(jasmine.objectContaining({
       label: 'Monthly shop tickets',
-      scheduleLabel: 'Monthly; requires Friend Points and Clovers',
-      options: [{ value: 'include', label: 'Include', amountLabel: '+3 Uma + 3 support / mo' }],
+      scheduleLabel: 'Monthly; choose which exchange currencies to spend',
+      options: [
+        { value: 'friend_points', label: 'Friend Points only', amountLabel: '+1 Uma + 1 support / mo' },
+        { value: 'include', label: 'Friend Points + Clovers', amountLabel: '+3 Uma + 3 support / mo' },
+      ],
     }));
-    expect(monthlyShop?.helpText).toContain('Excludes Cleat exchanges and limited event shops.');
+    expect(monthlyShop?.helpText).toContain('costing 800 Clovers per month');
     expect(component.scenarioGroupIcon('monthly_shop_tickets')).toBe('storefront');
     expect(component.plan.scenarioSelections['monthly_shop_tickets']).toBeUndefined();
 
     component.cycleScenario(monthlyShop!, 1);
-    expect(component.plan.scenarioSelections['monthly_shop_tickets']).toBe('include');
+    expect(component.plan.scenarioSelections['monthly_shop_tickets']).toBe('friend_points');
     expect(component.plan.enabledIncomeRuleIds).toEqual(jasmine.arrayWithExactContents([
       'shop-friend-uma', 'shop-friend-support', 'shop-clover-uma', 'shop-clover-support',
     ]));
+
+    component.cycleScenario(monthlyShop!, 1);
+    expect(component.plan.scenarioSelections['monthly_shop_tickets']).toBe('include');
   });
 
   it('summarizes only active assumptions and rewards', () => {
