@@ -913,6 +913,66 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.displayedRewardGroups.map(item => item.id)).toEqual(['event:anniversary']);
   });
 
+  it('uses timeline names when reward event ids differ in case and punctuation', () => {
+    const component = createComponent();
+    component.events = [
+      {
+        id: 'champions-meeting-16',
+        title: 'Virgo Cup',
+        type: 'champions_meeting',
+        globalReleaseDate: '2030-08-01',
+      },
+      {
+        id: 'news-event-trainer-skills-test-2022-09-19',
+        title: 'Trainer Skills Test',
+        type: 'trainer_skills_test',
+        globalReleaseDate: '2030-08-02',
+      },
+      {
+        id: 'campaign-194',
+        title: 'Fall G1 Celebration Missions, Part 1: Sprinters Stakes',
+        type: 'campaign',
+        globalReleaseDate: '2030-08-03',
+      },
+    ];
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards: [
+        { id: 'virgo-carats', event_id: 'champions_Meeting-16', label: 'Champions Meeting rewards', currency: 'free_jewels', amount: 100, available_at: '2030-08-01' },
+        { id: 'virgo-ticket', event_id: 'champions_Meeting-16', label: 'Champions Meeting rewards', currency: 'uma_ticket', amount: 1, available_at: '2030-08-01' },
+        { id: 'skills-carats', event_id: 'news-Event-Trainer-Skills-Test-2022-09-19', label: 'Trainer Skills Test score rewards', currency: 'free_jewels', amount: 800, available_at: '2030-08-02' },
+        { id: 'skills-ticket', event_id: 'news-Event-Trainer-Skills-Test-2022-09-19', label: 'Trainer Skills Test exchange rewards', currency: 'support_ticket', amount: 3, available_at: '2030-08-02' },
+        { id: 'campaign-carats', event_id: 'campaign-194', label: 'Limited-time mission rewards', currency: 'free_jewels', amount: 150, available_at: '2030-08-03' },
+        { id: 'campaign-items', event_id: 'campaign-194', label: 'Limited-time mission rewards item details', currency: 'free_jewels', amount: null, available_at: '2030-08-03' },
+      ] },
+    };
+
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    expect(component.displayedRewardGroups.map(group => group.title)).toEqual([
+      'Virgo Cup',
+      'Trainer Skills Test',
+      'Fall G1 Celebration Missions, Part 1: Sprinters Stakes',
+    ]);
+  });
+
+  it('shows a readable generic title when a grouped reward has no timeline event', () => {
+    const component = createComponent();
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards: [
+        { id: 'campaign-carats', event_id: 'campaign-999', label: 'Limited-time mission rewards', currency: 'free_jewels', amount: 150, available_at: '2030-08-01' },
+        { id: 'campaign-items', event_id: 'campaign-999', label: 'Limited-time mission rewards item details', currency: 'free_jewels', amount: null, available_at: '2030-08-01' },
+      ] },
+    };
+
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    expect(component.displayedRewardGroups[0].title).toBe('Campaign rewards');
+  });
+
   it('shows end-dated event rewards as an availability window from event start to event end', () => {
     const component = createComponent();
     component.plan.projectionStartDate = '2026-08-17';

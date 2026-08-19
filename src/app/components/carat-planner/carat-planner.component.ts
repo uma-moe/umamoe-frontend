@@ -315,6 +315,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
   private allEvents: readonly CaratPlannerTimelineEvent[] = [];
   private eventById = new Map<string, CaratPlannerTimelineEvent>();
+  private eventByNormalizedId = new Map<string, CaratPlannerTimelineEvent>();
   private eventByGachaId = new Map<number, CaratPlannerTimelineEvent>();
   private eventByTypeAndMasterId = new Map<string, CaratPlannerTimelineEvent>();
   private cachedFilteredEventsSource: readonly CaratPlannerTimelineEvent[] | null = null;
@@ -564,7 +565,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   targetDisplayTitle(target: PlannerTarget): string {
-    const event = this.eventById.get(target.eventId);
+    const event = this.eventForId(target.eventId);
     if (event) return this.rewardEventDisplayTitle(event);
     return this.cleanRewardLabel(target.title).replace(/\s*\+\s*\d+\s*more\b/gi, '').trim();
   }
@@ -820,7 +821,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   isRewardGroupBannerActionable(group: PlannerRewardGroupView): boolean {
     if (!this.hasFreePullBenefit(group) || !group.eventId) return false;
-    const event = this.eventById.get(group.eventId);
+    const event = this.eventForId(group.eventId);
     return Boolean(event && (event.type?.includes('character') || event.type?.includes('support')));
   }
 
@@ -849,7 +850,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       this.toggleRewardGroup(group, enable);
     }
     if (!this.isRewardGroupBannerActionable(group) || !group.eventId) return;
-    const event = this.eventById.get(group.eventId);
+    const event = this.eventForId(group.eventId);
     if (!event) return;
     this.flushDeferredInteractionSave();
     this.persistence.setEventActive(
@@ -911,7 +912,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       : group.variableOptions.find(item => item.id === optionId);
     if (!option) return;
 
-    const event = this.eventById.get(group.eventId);
+    const event = this.eventForId(group.eventId);
     selections[group.eventId] = {
       optionId: option.id,
       label: `${group.title}: ${option.label}`,
@@ -943,7 +944,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       };
     }
 
-    const eventType = competition ?? this.eventById.get(eventId)?.type;
+    const eventType = competition ?? this.eventForId(eventId)?.type;
     const dataDrivenGroup = plannerDataDrivenCompetitionAssumptionForEventType(eventType);
     if (dataDrivenGroup) {
       const selected = resolveDataDrivenCompetitionAssumption(
@@ -1101,7 +1102,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   toggleRewardGroupBanner(group: PlannerRewardGroupView): void {
     if (!this.isRewardGroupBannerActionable(group) || !group.eventId) return;
-    const event = this.eventById.get(group.eventId);
+    const event = this.eventForId(group.eventId);
     if (!event) return;
     this.flushDeferredInteractionSave();
     this.persistence.setEventActive(
@@ -1249,7 +1250,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const target = this.plan.targets.find(item => item.id === targetId);
     if (!target) return;
     this.expandedPickupTargetIds.delete(targetId);
-    const event = this.eventById.get(target.eventId) ?? {
+    const event = this.eventForId(target.eventId) ?? {
       id: target.eventId,
       title: target.title,
       type: `${target.bannerKind}_banner`,
@@ -2012,7 +2013,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private findCampaignEvent(
     allocation: Pick<PlannerFreePullCampaignAllocation, 'event_id' | 'gacha_id'>,
   ): CaratPlannerTimelineEvent | undefined {
-    return this.eventById.get(allocation.event_id)
+    return this.eventForId(allocation.event_id)
       ?? (allocation.gacha_id === undefined ? undefined : this.eventByGachaId.get(allocation.gacha_id));
   }
 
@@ -2141,7 +2142,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           + group.competitiveVariants.length;
         const title = this.cleanRewardLabel((event ? this.rewardEventDisplayTitle(event) : undefined)
           ?? (group.eventId && groupedResourceCount > 1
-            ? this.humanize(group.eventId).replace(/^./, character => character.toLowerCase())
+            ? this.fallbackRewardEventTitle(group.eventId)
             : undefined)
           ?? group.rewards[0]?.label
           ?? group.eventBenefits[0]?.label
@@ -2190,7 +2191,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     competitiveVariants: readonly PlannerCompetitiveRewardVariant[],
   ): CaratPlannerTimelineEvent | undefined {
     if (eventId) {
-      const exact = this.eventById.get(eventId);
+      const exact = this.eventForId(eventId);
       if (exact) return exact;
     }
 
@@ -2233,6 +2234,17 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const names = [...new Set(preferredNames.map(name => name.trim()).filter(Boolean))];
     if (names.length > 0) return names.join(', ');
     return title.replace(/\s*\+\s*\d+\s*more\b/gi, '').trim();
+  }
+
+  private fallbackRewardEventTitle(eventId: string): string {
+    const normalized = this.normalizeEventId(eventId)
+      .replace(/^news-(?:event-)?/, '')
+      .replace(/^event-/, '')
+      .replace(/-\d{4}-\d{2}-\d{2}$/, '')
+      .replace(/-\d+$/, '');
+    if (!normalized) return 'Event rewards';
+    if (normalized === 'campaign') return 'Campaign rewards';
+    return this.humanize(normalized.replace(/-/g, '_'));
   }
 
   private cleanRewardLabel(value: string): string {
@@ -3016,7 +3028,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       .filter(target => !(this.plan.disabledEventIds ?? []).includes(target.eventId))
       .filter(target => target.bannerKind === 'character' || target.bannerKind === 'support')
       .map(target => {
-        const event = this.eventById.get(target.eventId);
+        const event = this.eventForId(target.eventId);
         const selectedPickupIds = this.pickupGoals(target).map(goal => goal.pickupId);
         if (event) {
           return event.pickupCardIds?.length || selectedPickupIds.length === 0
@@ -3183,7 +3195,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   private buildPickupOptions(target: PlannerTarget, gacha?: PlannerGachaEntry): PlannerPickupOptionView[] {
     const protectedPickups = gacha?.pickups ?? [];
-    const event = this.eventById.get(target.eventId);
+    const event = this.eventForId(target.eventId);
     const publicFallbacks = protectedPickups.length === 0
       ? (event?.pickupCardIds ?? []).map(pickupId => ({ pickup_id: pickupId, rate: Number.NaN }))
       : [];
@@ -3205,7 +3217,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   private buildPickupOption(target: PlannerTarget, pickup: PlannerPickupRate): PlannerPickupOptionView {
-    const event = this.eventById.get(target.eventId);
+    const event = this.eventForId(target.eventId);
     const pickupIndex = event?.pickupCardIds?.indexOf(pickup.pickup_id) ?? -1;
     const relatedName = pickupIndex >= 0
       ? target.bannerKind === 'support'
@@ -3490,7 +3502,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private tryAddRequestedEvent(): void {
     const eventId = this.pendingRequestedEventId;
     if (!eventId || !this.plan || eventId === this.handledRequestedEventId) return;
-    const event = this.eventById.get(eventId);
+    const event = this.eventForId(eventId);
     if (!event) return;
     if (event.plannerRewardAvailable && !this.plannerDataReady) return;
     this.handledRequestedEventId = eventId;
@@ -3504,13 +3516,28 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     return 'other';
   }
 
+  private normalizeEventId(eventId: string): string {
+    return eventId.trim().replace(/_/g, '-').replace(/-+/g, '-').toLowerCase();
+  }
+
+  private eventForId(eventId: string | undefined): CaratPlannerTimelineEvent | undefined {
+    if (!eventId) return undefined;
+    return this.eventById.get(eventId)
+      ?? this.eventByNormalizedId.get(this.normalizeEventId(eventId));
+  }
+
   private rebuildEventIndexes(): void {
     this.eventById = new Map();
+    this.eventByNormalizedId = new Map();
     this.eventByGachaId = new Map();
     this.eventByTypeAndMasterId = new Map();
     this.normalizedEventSearchValues = new WeakMap();
     for (const event of this.allEvents) {
       if (!this.eventById.has(event.id)) this.eventById.set(event.id, event);
+      const normalizedId = this.normalizeEventId(event.id);
+      if (normalizedId && !this.eventByNormalizedId.has(normalizedId)) {
+        this.eventByNormalizedId.set(normalizedId, event);
+      }
       const gachaIds = [event.gachaId, ...(event.gachaIds ?? [])]
         .filter((id): id is number => Number.isFinite(id));
       for (const gachaId of gachaIds) {
@@ -3540,7 +3567,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   private resolveTargetSchedule(target: PlannerTarget): { start: string; end: string } {
-    const event = this.eventById.get(target.eventId);
+    const event = this.eventForId(target.eventId);
     const ids = new Set([target.gachaId, ...(target.gachaIds ?? [])]);
     const gachas = this.resources.loadedGachas ?? [];
     const gacha = gachas.find(item => item.event_id === target.eventId)
