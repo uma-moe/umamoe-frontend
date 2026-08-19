@@ -34,7 +34,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
         icon: 'redeem',
         color: '#ec407a',
         items: [
-          { text: 'Upcoming event rewards are counted automatically; uncheck only rewards you do not expect to collect', link: '/timeline?tab=carat-planner' },
+          { text: 'Upcoming event rewards are counted automatically. Uncheck only rewards you do not expect to collect', link: '/timeline?tab=carat-planner' },
           { text: 'Choose expected competition results and include conditional event, mission, shop, and story rewards in each plan' },
           { text: 'Event availability windows, free-pull campaigns, tickets, Carats, and item rewards are grouped into a clearer schedule' },
         ]
@@ -168,9 +168,9 @@ export const UPDATE_LOG: UpdateEntry[] = [
         items: [
           { text: 'optional white in (February S., priority = 0)', link: '/database' },
           { text: 'lineage white in (Ramp Up, priority = 2)' },
-          { text: '0 is highest priority; higher numbers tie-break later' },
-          { text: 'Arithmetic: (Stamina + Power + Wit) >= 7; Wins % 2 = 0' },
-          { text: 'Dirt = 0 means missing Dirt; == now works' },
+          { text: '0 is highest priority. Higher numbers tie-break later' },
+          { text: 'Arithmetic: (Stamina + Power + Wit) >= 7. Wins % 2 = 0' },
+          { text: 'Dirt = 0 means missing Dirt. == now works' },
           { text: 'Owned legacy: owned legacy = [] + affinity >= 150' },
         ]
       },
@@ -182,7 +182,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
         items: [
           { text: 'Remembers search, filters, tab/account, and sort', link: '/tools/lineage-planner' },
           { text: 'Spark, factor, scope, and star settings persist' },
-          { text: 'Refresh clears memory; other pickers open fresh' },
+          { text: 'Refresh clears memory. Other pickers open fresh' },
         ]
       },
       {
@@ -191,8 +191,8 @@ export const UPDATE_LOG: UpdateEntry[] = [
         icon: 'add_circle',
         color: '#64b5f6',
         items: [
-          { text: 'View/copy stats shown; trainer ID copy count updates', link: '/database' },
-          { text: 'Trending sort added; default only without filters' },
+          { text: 'View/copy stats shown. Trainer ID copy count updates', link: '/database' },
+          { text: 'Trending sort added. It is the default only without filters' },
           { text: 'Spark-filtered searches still default to affinity' },
         ]
       },
@@ -207,7 +207,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
           { text: 'optional_white(...) links restore as readable UQL' },
           { text: 'Shared URLs keep selected legacy context safely' },
           { text: 'Manual, partner, and bookmark picks share safer' },
-          { text: 'Invalid UQL highlights errors; names handle punctuation' },
+          { text: 'Invalid UQL highlights errors. Names handle punctuation' },
           { text: 'Owned legacy is faster and avoids hidden white filters' },
           { text: 'Manual Unknown legacy and UQL sync fixes' },
           { text: 'Bookmark refresh and GP spark highlights fixed' },

@@ -280,6 +280,21 @@ interface PlannerRewardListItem {
   campaign?: PlannerFreePullCampaignView;
 }
 
+interface PlannerAnniversaryMarker {
+  id: string;
+  kind: 'anniversary';
+  date: string;
+  label: string;
+}
+
+interface PlannerPullPlanItem {
+  id: string;
+  kind: 'target' | 'anniversary';
+  date: string;
+  label?: string;
+  target?: PlannerTarget;
+}
+
 interface PlannerOddsView {
   goals: readonly PlannerPickupGoalView[];
   combined: CaratPullProbabilityResult;
@@ -318,6 +333,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private eventByNormalizedId = new Map<string, CaratPlannerTimelineEvent>();
   private eventByGachaId = new Map<number, CaratPlannerTimelineEvent>();
   private eventByTypeAndMasterId = new Map<string, CaratPlannerTimelineEvent>();
+  private anniversaryMarkers: readonly PlannerAnniversaryMarker[] = [];
   private cachedFilteredEventsSource: readonly CaratPlannerTimelineEvent[] | null = null;
   private cachedEventFilterKey = '';
   private cachedRewardResources: CaratPlannerDataBundle['rewards'] | null = null;
@@ -357,6 +373,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   @Input() set events(value: readonly CaratPlannerTimelineEvent[] | null | undefined) {
     this.allEvents = value ?? [];
+    this.rebuildAnniversaryMarkers();
     this.cachedFilteredEventsSource = null;
     this.cachedRewardEvents = null;
     this.rebuildEventIndexes();
@@ -590,6 +607,69 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           .localeCompare(this.calculations.resolvePullDate(right));
         return (leftPast ? -dateOrder : dateOrder) || left.id.localeCompare(right.id);
       });
+  }
+
+  get globalPullTimingValue(): '' | 'start' | 'end' {
+    const timings = new Set(this.activeTargets.map(target => target.pullTiming));
+    if (timings.size !== 1) return '';
+    const timing = timings.values().next().value;
+    return timing === 'start' || timing === 'end' ? timing : '';
+  }
+
+  get globalPaidCaratsValue(): '' | 'allow' | 'free-only' {
+    const values = new Set(this.activeTargets.map(target => target.allowPaidJewels));
+    if (values.size !== 1) return '';
+    return values.values().next().value ? 'allow' : 'free-only';
+  }
+
+  get pullPlanItems(): PlannerPullPlanItem[] {
+    const targets = this.activeTargets;
+    const upcomingTargets = targets.filter(target => !this.isTargetBeforePlan(target));
+    const pastTargets = targets.filter(target => this.isTargetBeforePlan(target));
+    const startDate = this.optionalDateKey(this.plan?.projectionStartDate);
+    const finalPullDate = upcomingTargets
+      .map(target => this.calculations.resolvePullDate(target))
+      .sort()
+      .at(-1);
+
+    const upcomingItems: PlannerPullPlanItem[] = upcomingTargets.map(target => ({
+      id: `target:${target.id}`,
+      kind: 'target',
+      date: this.calculations.resolvePullDate(target),
+      target,
+    }));
+    if (finalPullDate) {
+      upcomingItems.push(...this.anniversaryMarkers
+        .filter(marker => (!startDate || marker.date >= startDate) && marker.date <= finalPullDate));
+    }
+    upcomingItems.sort((left, right) => left.date.localeCompare(right.date)
+      || (left.kind === right.kind ? left.id.localeCompare(right.id) : left.kind === 'anniversary' ? -1 : 1));
+
+    return [
+      ...upcomingItems,
+      ...pastTargets.map(target => ({
+        id: `target:${target.id}`,
+        kind: 'target' as const,
+        date: this.calculations.resolvePullDate(target),
+        target,
+      })),
+    ];
+  }
+
+  applyGlobalPullTiming(value: string): void {
+    if (value !== 'start' && value !== 'end') return;
+    for (const target of this.activeTargets) {
+      target.pullTiming = value;
+      target.customPullDate = undefined;
+    }
+    this.saveAfterInteraction();
+  }
+
+  applyGlobalPaidCarats(value: string): void {
+    if (value !== 'allow' && value !== 'free-only') return;
+    const allowPaidJewels = value === 'allow';
+    for (const target of this.activeTargets) target.allowPaidJewels = allowPaidJewels;
+    this.saveAfterInteraction();
   }
 
   get plannedPullTotal(): number {
@@ -2940,6 +3020,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     return item.id;
   }
 
+  trackByPullPlanItem(_: number, item: PlannerPullPlanItem): string {
+    return item.id;
+  }
+
   trackByRewardBenefit(_: number, benefit: PlannerRewardBenefitView): string {
     return benefit.id;
   }
@@ -3593,6 +3677,51 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (!value) return null;
     const date = value instanceof Date ? value : new Date(value);
     return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+  }
+
+  private rebuildAnniversaryMarkers(): void {
+    const earliestByAnniversary = new Map<number, PlannerAnniversaryMarker>();
+    for (const event of this.allEvents) {
+      const anniversary = this.anniversaryNumber(event.title);
+      if (anniversary === null) continue;
+      const date = this.optionalDateKey(
+        event.globalReleaseDate ?? event.estimatedGlobalDate ?? event.jpReleaseDate,
+      );
+      if (!date) continue;
+      const existing = earliestByAnniversary.get(anniversary);
+      if (existing && existing.date <= date) continue;
+      earliestByAnniversary.set(anniversary, {
+        id: `anniversary:${anniversary}`,
+        kind: 'anniversary',
+        date,
+        label: this.anniversaryLabel(anniversary),
+      });
+    }
+    this.anniversaryMarkers = [...earliestByAnniversary.values()]
+      .sort((left, right) => left.date.localeCompare(right.date));
+  }
+
+  private anniversaryNumber(title: string): number | null {
+    if (/\bhalf[-\s]+anniversary\b/i.test(title)) return 0.5;
+    const match = title.match(/\b(\d+(?:\.\d+)?)\s*(?:st|nd|rd|th)?(?:\s*-?\s*year)?\s+anniversary\b/i);
+    if (!match) return null;
+    const value = Number(match[1]);
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+
+  private anniversaryLabel(value: number): string {
+    if (!Number.isInteger(value)) return `${value}-Year Anniversary`;
+    const remainder = value % 100;
+    const suffix = remainder >= 11 && remainder <= 13
+      ? 'th'
+      : value % 10 === 1
+        ? 'st'
+        : value % 10 === 2
+          ? 'nd'
+          : value % 10 === 3
+            ? 'rd'
+            : 'th';
+    return `${value}${suffix} Anniversary`;
   }
 
   private id(prefix: string): string {

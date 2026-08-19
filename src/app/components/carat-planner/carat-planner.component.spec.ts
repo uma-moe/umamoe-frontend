@@ -137,6 +137,73 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.plannedPullTotal).toBe(150);
   });
 
+  it('applies pull timing and paid Carat settings to every active banner', () => {
+    const component = createComponent();
+    const target = (id: string, pullTiming: 'start' | 'end', allowPaidJewels: boolean): PlannerTarget => ({
+      id,
+      eventId: id,
+      title: id,
+      bannerKind: 'character',
+      bannerStart: '2031-01-01',
+      bannerEnd: '2031-01-10',
+      pullTiming,
+      customPullDate: '2031-01-05',
+      plannedPulls: 200,
+      desiredCopies: 1,
+      useTickets: true,
+      allowPaidJewels,
+    });
+    component.plan.targets = [target('first', 'start', false), target('second', 'end', true)];
+    const save = spyOn(component, 'saveAfterInteraction');
+
+    expect(component.globalPullTimingValue).toBe('');
+    expect(component.globalPaidCaratsValue).toBe('');
+
+    component.applyGlobalPullTiming('end');
+    component.applyGlobalPaidCarats('free-only');
+
+    expect(component.plan.targets.every(item => item.pullTiming === 'end')).toBeTrue();
+    expect(component.plan.targets.every(item => item.customPullDate === undefined)).toBeTrue();
+    expect(component.plan.targets.every(item => !item.allowPaidJewels)).toBeTrue();
+    expect(component.globalPullTimingValue).toBe('end');
+    expect(component.globalPaidCaratsValue).toBe('free-only');
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
+  it('interleaves the earliest campaign date for each anniversary with planned pulls', () => {
+    const component = createComponent();
+    const target = (id: string, pullDate: string): PlannerTarget => ({
+      id,
+      eventId: id,
+      title: id,
+      bannerKind: 'character',
+      bannerStart: pullDate,
+      bannerEnd: pullDate,
+      pullTiming: 'end',
+      plannedPulls: 200,
+      desiredCopies: 1,
+      useTickets: true,
+      allowPaidJewels: false,
+    });
+    component.events = [
+      { id: 'anniv-old', title: '1st Anniversary Campaign Vol. 1', type: 'campaign', globalReleaseDate: '2029-02-01' },
+      { id: 'anniv-late', title: '2nd Anniversary Campaign Vol. 2', type: 'campaign', globalReleaseDate: '2031-02-10' },
+      { id: 'anniv-first', title: '2nd Anniversary Campaign Vol. 1', type: 'campaign', globalReleaseDate: '2031-02-01' },
+      { id: 'ordinary', title: 'Ordinary campaign', type: 'campaign', globalReleaseDate: '2031-02-05' },
+    ];
+    component.plan.targets = [target('before', '2031-01-15'), target('after', '2031-03-01')];
+
+    expect(component.pullPlanItems.map(item => item.id)).toEqual([
+      'target:before',
+      'anniversary:2',
+      'target:after',
+    ]);
+    expect(component.pullPlanItems[1]).toEqual(jasmine.objectContaining({
+      date: '2031-02-01',
+      label: '2nd Anniversary',
+    }));
+  });
+
   it('summarizes shortfalls only for targets inside the active projection', () => {
     const component = createComponent();
     const target = (id: string, pullDate: string): PlannerTarget => ({

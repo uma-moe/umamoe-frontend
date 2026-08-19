@@ -216,36 +216,30 @@
                   <em>{{ scenarioSectionEnabledCount(section) }}/{{ section.groups.length }} on</em>
                   <mat-icon class="cp-scenario-section-chevron" aria-hidden="true">{{ isScenarioSectionExpanded(section) ? 'expand_less' : 'expand_more' }}</mat-icon>
                 </button>
-                <button class="cp-scenario-section-toggle" type="button" role="checkbox"
+                <mat-checkbox class="cp-scenario-section-toggle"
                   [class.is-active]="scenarioSectionState(section) === 'all'"
                   [class.is-mixed]="scenarioSectionState(section) === 'some'"
-                  [attr.aria-checked]="scenarioSectionState(section) === 'some' ? 'mixed' : scenarioSectionState(section) === 'all'"
+                  [checked]="scenarioSectionState(section) === 'all'"
+                  [indeterminate]="scenarioSectionState(section) === 'some'"
                   [attr.aria-label]="scenarioSectionToggleLabel(section) + ' for ' + section.label"
-                  (click)="toggleScenarioSection(section)">
-                  <span class="cp-checkbox-visual" aria-hidden="true">
-                    <mat-icon *ngIf="scenarioSectionState(section) !== 'none'">{{ scenarioSectionState(section) === 'all' ? 'check' : 'remove' }}</mat-icon>
-                  </span>
+                  (change)="toggleScenarioSection(section)">
                   <span>{{ scenarioSectionState(section) === 'all' ? 'Clear all' : 'Select all' }}</span>
-                </button>
+                </mat-checkbox>
               </header>
               <div class="cp-scenario-list" [id]="'cp-assumption-section-options-' + section.id"
                 *ngIf="isScenarioSectionExpanded(section)">
                 <article class="cp-scenario" *ngFor="let group of section.groups">
                   <span class="cp-scenario-copy"><mat-icon aria-hidden="true">{{ group.icon || scenarioGroupIcon(group.id) }}</mat-icon><span><span class="cp-scenario-heading"><strong>{{ group.label }}</strong><button *ngIf="group.helpText" #scenarioHelp="matTooltip" class="cp-scenario-help" type="button" [matTooltip]="group.helpText" matTooltipClass="cp-methodology-tooltip" matTooltipPosition="above" [matTooltipTouchGestures]="'on'" [attr.aria-label]="'How ' + group.label + ' is calculated'" (click)="$event.stopPropagation(); scenarioHelp.toggle()">?</button></span><small><span>{{ group.scheduleLabel }}</span><a *ngIf="group.sourceUrl" [href]="group.sourceUrl" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Open source for ' + group.label + ' in a new tab'">Source<mat-icon aria-hidden="true">open_in_new</mat-icon></a></small></span></span>
-                  <button *ngIf="isBinaryScenarioGroup(group); else scenarioStepper" class="cp-scenario-binary"
-                    type="button" role="checkbox"
+                  <mat-checkbox *ngIf="isBinaryScenarioGroup(group); else scenarioStepper" class="cp-scenario-binary"
                     [class.is-active]="!!selectedScenarioOption(group)"
-                    [attr.aria-checked]="!!selectedScenarioOption(group)"
+                    [checked]="!!selectedScenarioOption(group)"
                     [attr.aria-label]="(selectedScenarioOption(group) ? 'Exclude ' : 'Include ') + group.label"
-                    (click)="toggleBinaryScenario(group)">
-                    <span class="cp-checkbox-visual" aria-hidden="true">
-                      <mat-icon *ngIf="selectedScenarioOption(group)">check</mat-icon>
-                    </span>
+                    (change)="toggleBinaryScenario(group)">
                     <ng-container *ngIf="selectedScenarioOption(group) as selected; else binaryNotIncluded">
                       <span class="cp-scenario-binary-copy"><strong>{{ selected.label }}</strong><small *ngIf="selected.amountLabel">{{ selected.amountLabel }}</small></span>
                     </ng-container>
                     <ng-template #binaryNotIncluded><span class="cp-scenario-binary-copy is-muted"><strong>{{ group.options[0].label }}</strong><small>Select to include</small></span></ng-template>
-                  </button>
+                  </mat-checkbox>
                   <ng-template #scenarioStepper>
                     <div class="cp-scenario-stepper" role="group" [class.is-active]="!!selectedScenarioOption(group)"
                       [attr.aria-label]="group.label">
@@ -526,7 +520,14 @@
       <div class="cp-section-title">
         <div><h2 id="cp-targets-heading">Pull plan</h2><p>Earliest pull first. Open a row to change rate-up goals or inspect the odds.</p></div>
       </div>
-      <span class="cp-target-count">{{ activeTargets.length }} {{ activeTargets.length === 1 ? 'target' : 'targets' }}</span>
+      <div class="cp-target-heading-actions">
+        <div class="cp-target-bulk" *ngIf="activeTargets.length" role="group" aria-label="Apply settings to every planned banner">
+          <span class="cp-target-bulk-title"><mat-icon aria-hidden="true">tune</mat-icon><strong>All banners</strong></span>
+          <label><span>Pull on</span><select class="cp-control" [ngModel]="globalPullTimingValue" (ngModelChange)="applyGlobalPullTiming($event)"><option value="">Individual</option><option value="start">Banner start</option><option value="end">Banner end</option></select></label>
+          <label><span>Paid Carats</span><select class="cp-control" [ngModel]="globalPaidCaratsValue" (ngModelChange)="applyGlobalPaidCarats($event)"><option value="">Mixed</option><option value="free-only">Do not use</option><option value="allow">Allowed</option></select></label>
+        </div>
+        <span class="cp-target-count">{{ activeTargets.length }} {{ activeTargets.length === 1 ? 'target' : 'targets' }}</span>
+      </div>
     </div>
 
     <div class="cp-empty" *ngIf="activeTargets.length === 0">
@@ -535,7 +536,15 @@
     </div>
 
     <div class="cp-target-list" *ngIf="activeTargets.length">
-      <article class="cp-target" *ngFor="let target of activeTargets; trackBy: trackById"
+      <ng-container *ngFor="let item of pullPlanItems; trackBy: trackByPullPlanItem">
+        <div class="cp-anniversary-marker" *ngIf="item.kind === 'anniversary'" role="separator"
+          [attr.aria-label]="item.label + ' on ' + item.date">
+          <span></span>
+          <strong><mat-icon aria-hidden="true">celebration</mat-icon>{{ item.label }}</strong>
+          <time [attr.datetime]="item.date">{{ item.date + 'T00:00:00Z' | date:'mediumDate':'UTC' }}</time>
+          <span></span>
+        </div>
+      <article class="cp-target" *ngIf="item.target as target"
         [class.is-past-target]="isTargetBeforePlan(target)">
         <div class="cp-target-main">
           <div class="cp-target-image" *ngIf="target.imagePath">
@@ -850,6 +859,7 @@
           </div>
         </details>
       </article>
+      </ng-container>
     </div>
 
     <p class="cp-disclaimer" *ngIf="activeTargets.length">
