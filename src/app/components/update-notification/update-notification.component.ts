@@ -4,7 +4,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 // Increment this number whenever you want to show the update notification again
-export const CURRENT_UPDATE_VERSION = 12;
+export const CURRENT_UPDATE_VERSION = 13;
 export interface ChangeItem {
     text: string;
     link?: string; // Internal route link
@@ -34,8 +34,8 @@ export const UPDATE_LOG: UpdateEntry[] = [
         icon: 'cloud_done',
         color: '#42a5f5',
         items: [
-          { text: 'Signed-in plans and settings now sync across devices. Local saves remain available when account sync is offline', link: '/timeline?tab=carat-planner' },
-          { text: 'Create a short share link from any plan. Opening it adds a separate copy without exposing your account or changing your plan' },
+          { text: 'Signed-in plans and settings now sync across devices and use short plan links for sharing', link: '/timeline?tab=carat-planner' },
+          { text: 'Signed-out users can share a compact self-contained link. Opening either type adds a separate copy without changing the original plan' },
         ]
       },
       {

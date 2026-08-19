@@ -234,6 +234,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     requestedPlannerEventId: string | null = null;
     sharedPlannerId: string | null = null;
+    compactSharedPlanner: string | null = null;
     plannedEventIds = new Set<string>();
     plannerEventCount = 0;
     plannerRewardSummaries = new Map<string, TimelineRewardSummary>();
@@ -633,7 +634,10 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             this.updateTimelineRewardSummaries(this.plannerResources.currentBundle.rewards);
         });
         this.loadTimelineRewardSummaries();
-        this.tabSubscription = this.route.queryParamMap.subscribe(params => {
+        this.tabSubscription = combineLatest([
+            this.route.queryParamMap,
+            this.route.fragment,
+        ]).subscribe(([params, fragment]) => {
             const nextTab = this.caratPlannerAvailable && params.get('tab') === 'carat-planner'
                 ? 'carat-planner'
                 : 'timeline';
@@ -644,6 +648,9 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             this.activeTab = nextTab;
             this.requestedPlannerEventId = this.caratPlannerAvailable ? params.get('banner') : null;
             this.sharedPlannerId = this.caratPlannerAvailable ? params.get('share') : null;
+            this.compactSharedPlanner = this.caratPlannerAvailable && !this.sharedPlannerId
+                ? (fragment?.startsWith('p=') ? fragment.slice(2) : params.get('p'))
+                : null;
             if (changed && nextTab === 'timeline' && !this.isMobile) {
                 window.setTimeout(() => {
                     if (this.destroyed || this.activeTab !== 'timeline' || this.isMobile) return;

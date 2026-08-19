@@ -103,6 +103,10 @@ import {
   TRAINING_PASS_SCENARIO_GROUP_ID,
   TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID,
 } from '../../utils/carat-planner-income-assumptions';
+import {
+  decodeCompactPlannerShare,
+  encodeCompactPlannerShare,
+} from '../../utils/carat-planner-share-codec';
 import { CaratPlannerCalculationService } from '../../services/carat-planner-calculation.service';
 import {
   CaratPlannerCloudService,
@@ -453,6 +457,11 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.tryImportSharedPlan();
   }
 
+  @Input() set compactSharedPlan(value: string | null | undefined) {
+    this.pendingCompactSharedPlan = value?.trim() || null;
+    void this.tryImportCompactPlan();
+  }
+
   collection!: CaratPlanCollection;
   plan!: CaratPlan;
   data = EMPTY_DATA;
@@ -497,6 +506,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   importedSharedPlanName = '';
   private pendingSharedPlanId: string | null = null;
   private handledSharedPlanId: string | null = null;
+  private pendingCompactSharedPlan: string | null = null;
+  private handledCompactSharedPlan: string | null = null;
 
   constructor(
     private readonly calculations: CaratPlannerCalculationService,
@@ -526,6 +537,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     });
     this.tryImportSharedPlan();
+    void this.tryImportCompactPlan();
     this.resources.state$.pipe(takeUntil(this.destroy$)).subscribe(state => {
       this.resourceState = state;
       this.cdr.markForCheck();
@@ -1362,9 +1374,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   sharePlan(): void {
     this.flushDeferredInteractionSave();
     if (!this.cloud || !this.cloudStatus.loggedIn) {
-      this.shareUrl = '';
-      this.shareMessage = 'Log in to create an account-backed share link.';
-      this.cdr.markForCheck();
+      void this.createCompactShare();
       return;
     }
     this.shareMessage = 'Creating share link...';
@@ -1383,10 +1393,31 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
       error: () => {
-        this.shareMessage = 'Share link could not be created. Your plan is still saved locally.';
-        this.cdr.markForCheck();
+        void this.createCompactShare();
       },
     });
+  }
+
+  private async createCompactShare(): Promise<void> {
+    this.shareMessage = 'Creating compact share link...';
+    this.shareUrl = '';
+    this.cdr.markForCheck();
+    try {
+      const payload = await encodeCompactPlannerShare(this.persistence.compactPlan(this.plan));
+      if (this.destroyed) return;
+      this.shareUrl = this.plannerCompactShareUrl(payload);
+      this.shareMessage = 'Self-contained plan link ready. Opening it adds a separate copy.';
+      const copied = await this.copyShareUrl(false);
+      if (copied) {
+        this.shareMessage = 'Self-contained plan link copied. Opening it adds a separate copy.';
+      }
+    } catch (error) {
+      if (this.destroyed) return;
+      this.shareMessage = error instanceof Error
+        ? error.message
+        : 'Compact share link could not be created.';
+    }
+    this.cdr.markForCheck();
   }
 
   async copyShareUrl(updateMessage = true): Promise<boolean> {
@@ -3937,7 +3968,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private tryImportSharedPlan(): void {
     const shareId = this.pendingSharedPlanId;
     if (!this.cloud || !shareId || shareId === this.handledSharedPlanId) return;
-    if (!/^[a-zA-Z0-9]{8,12}$/.test(shareId)) {
+    if (!/^(?:[a-fA-F0-9]{16}|[a-zA-Z0-9]{8,12})$/.test(shareId)) {
       this.handledSharedPlanId = shareId;
       this.shareMessage = 'This shared plan link is invalid.';
       return;
@@ -3962,10 +3993,37 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     });
   }
 
+  private async tryImportCompactPlan(): Promise<void> {
+    const payload = this.pendingCompactSharedPlan;
+    if (!payload || payload === this.handledCompactSharedPlan) return;
+    this.handledCompactSharedPlan = payload;
+    this.shareMessage = 'Opening compact shared plan...';
+    try {
+      const decoded = await decodeCompactPlannerShare(payload);
+      if (this.destroyed) return;
+      const imported = this.persistence.importSharedPlan(decoded.plan, `b64${decoded.fingerprint}`);
+      this.importedSharedPlanName = imported.name;
+      this.shareMessage = `Opened ${imported.name} as a separate copy.`;
+    } catch (error) {
+      if (this.destroyed) return;
+      this.shareMessage = error instanceof Error
+        ? error.message
+        : 'Compact shared plan could not be opened.';
+    }
+    this.cdr.markForCheck();
+  }
+
   private plannerShareUrl(shareId: string): string {
     const url = new URL('/timeline', window.location.origin);
     url.searchParams.set('tab', 'carat-planner');
     url.searchParams.set('share', shareId);
+    return url.toString();
+  }
+
+  private plannerCompactShareUrl(payload: string): string {
+    const url = new URL('/timeline', window.location.origin);
+    url.searchParams.set('tab', 'carat-planner');
+    url.hash = `p=${payload}`;
     return url.toString();
   }
 
