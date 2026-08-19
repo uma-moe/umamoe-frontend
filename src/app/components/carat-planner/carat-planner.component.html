@@ -266,7 +266,7 @@
                     <ng-template #binaryNotIncluded><span class="cp-scenario-binary-copy is-muted"><strong>{{ group.options[0].label }}</strong><small>Select to include</small></span></ng-template>
                   </mat-checkbox>
                   <ng-template #scenarioDropdown>
-                    <mat-select class="cp-scenario-dropdown" panelClass="cp-scenario-dropdown-panel"
+                    <mat-select class="cp-scenario-dropdown" panelClass="factor-autocomplete-panel cp-planner-select-panel cp-scenario-dropdown-panel"
                       [class.is-active]="!!selectedScenarioOption(group)"
                       placeholder="Choose an option"
                       [ngModel]="selectedScenarioOption(group)?.value || ''"
@@ -326,8 +326,8 @@
             <div class="cp-custom" *ngFor="let item of plan.customIncome; trackBy: trackById">
               <label class="cp-field cp-custom-name"><span>Income name</span><input class="cp-control" [(ngModel)]="item.label" (blur)="save()"></label>
               <label class="cp-field"><span>Amount</span><input class="cp-control" type="number" min="0" [(ngModel)]="item.amount" (ngModelChange)="saveAfterInteraction()"></label>
-              <label class="cp-field"><span>Resource</span><select class="cp-control" [(ngModel)]="item.currency" (ngModelChange)="saveAfterInteraction()"><option value="free_jewels">Carats</option><option value="uma_ticket">Uma ticket</option><option value="support_ticket">Support ticket</option><option value="rainbow_crystal">Rainbow Crystal Shard</option><option value="gold_crystal">Gold Crystal Shard</option><option value="rainbow_full_crystal">Rainbow Uncap Crystal</option><option value="gold_full_crystal">Gold Uncap Crystal</option></select></label>
-              <label class="cp-field"><span>Frequency</span><select class="cp-control" [(ngModel)]="item.cadence" (ngModelChange)="saveAfterInteraction()"><option value="once">Once</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label>
+              <label class="cp-field"><span>Resource</span><mat-select class="cp-control cp-mat-select" panelClass="factor-autocomplete-panel cp-planner-select-panel" [(ngModel)]="item.currency" (ngModelChange)="saveAfterInteraction()"><mat-option value="free_jewels">Carats</mat-option><mat-option value="uma_ticket">Uma ticket</mat-option><mat-option value="support_ticket">Support ticket</mat-option><mat-option value="rainbow_crystal">Rainbow Crystal Shard</mat-option><mat-option value="gold_crystal">Gold Crystal Shard</mat-option><mat-option value="rainbow_full_crystal">Rainbow Uncap Crystal</mat-option><mat-option value="gold_full_crystal">Gold Uncap Crystal</mat-option></mat-select></label>
+              <label class="cp-field"><span>Frequency</span><mat-select class="cp-control cp-mat-select" panelClass="factor-autocomplete-panel cp-planner-select-panel" [(ngModel)]="item.cadence" (ngModelChange)="saveAfterInteraction()"><mat-option value="once">Once</mat-option><mat-option value="daily">Daily</mat-option><mat-option value="weekly">Weekly</mat-option><mat-option value="monthly">Monthly</mat-option></mat-select></label>
               <label class="cp-field"><span>Starts</span><input class="cp-control" type="date" [(ngModel)]="item.startDate" (ngModelChange)="saveAfterInteraction()"></label>
               <button class="cp-action cp-action--icon cp-danger" type="button" matTooltip="Remove income"
                 [attr.aria-label]="'Remove custom income ' + item.label" (click)="removeCustomIncome(item.id)">
@@ -558,8 +558,8 @@
       <div class="cp-target-heading-actions">
         <div class="cp-target-bulk" *ngIf="activeTargets.length" role="group" aria-label="Apply settings to every planned banner">
           <span class="cp-target-bulk-title"><mat-icon aria-hidden="true">tune</mat-icon><strong>All banners</strong></span>
-          <label><span>Pull on</span><select class="cp-control" [ngModel]="globalPullTimingValue" (ngModelChange)="applyGlobalPullTiming($event)"><option value="">Individual</option><option value="start">Banner start</option><option value="end">Banner end</option></select></label>
-          <label><span>Paid Carats</span><select class="cp-control" [ngModel]="globalPaidCaratsValue" (ngModelChange)="applyGlobalPaidCarats($event)"><option value="">Mixed</option><option value="free-only">Do not use</option><option value="allow">Allowed</option></select></label>
+          <label><span>Pull on</span><mat-select class="cp-control cp-mat-select" panelClass="factor-autocomplete-panel cp-planner-select-panel" [ngModel]="globalPullTimingValue" (ngModelChange)="applyGlobalPullTiming($event)"><mat-option value="">Individual</mat-option><mat-option value="start">Banner start</mat-option><mat-option value="end">Banner end</mat-option></mat-select></label>
+          <label><span>Paid Carats</span><mat-select class="cp-control cp-mat-select" panelClass="factor-autocomplete-panel cp-planner-select-panel" [ngModel]="globalPaidCaratsValue" (ngModelChange)="applyGlobalPaidCarats($event)"><mat-option value="">Mixed</mat-option><mat-option value="free-only">Do not use</mat-option><mat-option value="allow">Allowed</mat-option></mat-select></label>
         </div>
         <span class="cp-target-count">{{ activeTargets.length }} {{ activeTargets.length === 1 ? 'target' : 'targets' }}</span>
       </div>
@@ -574,9 +574,8 @@
       <ng-container *ngFor="let item of pullPlanItems; trackBy: trackByPullPlanItem">
         <div class="cp-anniversary-marker" *ngIf="item.kind === 'anniversary'" role="separator"
           [attr.aria-label]="item.label + ' on ' + item.date">
-          <span class="cp-anniversary-marker-icon"><mat-icon aria-hidden="true">hotel_class</mat-icon></span>
-          <span class="cp-anniversary-marker-copy"><strong>{{ item.label }}</strong><small>Latest anniversary before this pull</small></span>
-          <time [attr.datetime]="item.date">{{ item.date + 'T00:00:00Z' | date:'mediumDate':'UTC' }}</time>
+          <span class="cp-anniversary-marker-line" aria-hidden="true"></span>
+          <span class="cp-anniversary-marker-label"><mat-icon aria-hidden="true">cake</mat-icon><strong>{{ item.label }}</strong></span>
           <span class="cp-anniversary-marker-line" aria-hidden="true"></span>
         </div>
       <article class="cp-target" *ngIf="item.target as target"
@@ -656,7 +655,7 @@
             <div class="cp-payment-popover">
               <strong>Target options</strong>
               <span>The recommended defaults use tickets first and pull at banner end.</span>
-              <label class="cp-field"><span>Pull on</span><select class="cp-control" [(ngModel)]="target.pullTiming" (ngModelChange)="saveAfterInteraction()"><option value="start">Banner start</option><option value="end">Banner end</option><option value="custom">Custom date</option></select></label>
+              <label class="cp-field"><span>Pull on</span><mat-select class="cp-control cp-mat-select" panelClass="factor-autocomplete-panel cp-planner-select-panel" [(ngModel)]="target.pullTiming" (ngModelChange)="saveAfterInteraction()"><mat-option value="start">Banner start</mat-option><mat-option value="end">Banner end</mat-option><mat-option value="custom">Custom date</mat-option></mat-select></label>
               <label class="cp-field" *ngIf="target.pullTiming === 'custom'"><span>Pull date</span><input class="cp-control" type="date" [(ngModel)]="target.customPullDate" (ngModelChange)="saveAfterInteraction()"></label>
               <div class="cp-target-options">
                 <mat-checkbox [(ngModel)]="target.useTickets" (ngModelChange)="saveAfterInteraction()">Use tickets first</mat-checkbox>

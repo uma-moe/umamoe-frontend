@@ -93,6 +93,37 @@
 select.cp-control,
 .cp-control select { cursor: pointer; }
 
+.cp-mat-select.mat-mdc-select {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  cursor: pointer;
+
+  &:focus-within {
+    border-color: var(--accent-primary);
+    background: var(--surface-3);
+    box-shadow: 0 0 0 2px rgba(var(--accent-primary-rgb), 0.13);
+  }
+}
+
+:host ::ng-deep .cp-mat-select .mat-mdc-select-trigger {
+  width: 100%;
+  height: 100%;
+  padding: 0 9px;
+  box-sizing: border-box;
+}
+
+:host ::ng-deep .cp-mat-select .mat-mdc-select-value,
+:host ::ng-deep .cp-mat-select .mat-mdc-select-value-text {
+  min-width: 0;
+  color: var(--text-primary);
+  font: inherit;
+}
+
+:host ::ng-deep .cp-mat-select .mat-mdc-select-arrow {
+  color: var(--text-muted);
+}
+
 .cp-control--icon {
   padding: 0 9px;
   display: flex;
@@ -5498,67 +5529,39 @@ select.cp-control,
       padding-inline: 7px 24px;
       font-size: 0.64rem;
     }
+
+    .cp-mat-select { padding: 0; }
   }
+}
+
+:host ::ng-deep .cp-target-bulk .cp-mat-select .mat-mdc-select-trigger {
+  padding: 0 7px;
 }
 
 /* Milestones interleaved with the chronological pull ledger. */
 .cp-anniversary-marker {
-  min-height: 42px;
-  padding: 6px 13px;
+  min-height: 28px;
+  padding: 2px 12px;
   display: grid;
-  grid-template-columns: 28px auto auto minmax(24px, 1fr);
+  grid-template-columns: minmax(24px, 1fr) auto minmax(24px, 1fr);
   align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
-  background: linear-gradient(90deg, rgba(var(--accent-warning-rgb), 0.07), transparent 45%);
+  gap: 9px;
+  color: var(--text-secondary);
+  background: transparent;
 
-  .cp-anniversary-marker-icon {
-    width: 26px;
-    height: 26px;
-    display: grid;
-    place-items: center;
-    color: var(--accent-warning);
-    border: 1px solid rgba(var(--accent-warning-rgb), 0.34);
-    border-radius: 50%;
-    background: rgba(var(--accent-warning-rgb), 0.1);
-
-    mat-icon { @include icon-size(15px); }
-  }
-
-  .cp-anniversary-marker-copy {
-    min-width: 0;
-    display: grid;
-    gap: 1px;
-
-    strong {
-      overflow: hidden;
-      color: var(--text-primary);
-      font-size: 0.68rem;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    small {
-      color: var(--text-muted);
-      font-size: 0.54rem;
-      white-space: nowrap;
-    }
-  }
-
-  time {
-    padding: 3px 6px;
-    color: var(--accent-warning);
-    border: 1px solid rgba(var(--accent-warning-rgb), 0.22);
-    border-radius: 999px;
-    background: rgba(var(--accent-warning-rgb), 0.065);
-    font-size: 0.58rem;
-    font-variant-numeric: tabular-nums;
+  .cp-anniversary-marker-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     white-space: nowrap;
+
+    mat-icon { @include icon-size(14px); color: rgba(255, 255, 255, 0.88); }
+    strong { font-size: 0.64rem; font-weight: 650; }
   }
 
   .cp-anniversary-marker-line {
     height: 1px;
-    background: linear-gradient(90deg, rgba(var(--accent-warning-rgb), 0.38), transparent);
+    background: rgba(255, 255, 255, 0.28);
   }
 }
 
@@ -5598,10 +5601,8 @@ select.cp-control,
   .cp-target-bulk { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cp-anniversary-marker {
     padding-inline: 8px;
-    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: 6px;
   }
-  .cp-anniversary-marker-line { display: none; }
-  .cp-anniversary-marker-copy small { white-space: normal; }
 }
 
 .cp-income-presets {
