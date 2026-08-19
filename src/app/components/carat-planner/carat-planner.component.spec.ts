@@ -830,6 +830,56 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.plan.scenarioSelections['training_pass']).toBe('free');
   });
 
+  it('applies four editable income presets across account, event, competition, and estimate groups', () => {
+    const component = createComponent();
+    component.data = {
+      core: {},
+      income: { rules: [
+        { id: 'class-2', label: 'Team Trials Class 2', currency: 'free_jewels', amount: 35, cadence: 'weekly', start_date: '2030-01-01', scenario_group: 'team_trials_class', scenario_option: 'class_2' },
+        { id: 'class-6', label: 'Team Trials Class 6', currency: 'free_jewels', amount: 375, cadence: 'weekly', start_date: '2030-01-01', scenario_group: 'team_trials_class', scenario_option: 'class_6' },
+        { id: 'rank-2', label: 'Club rank D+', currency: 'free_jewels', amount: 225, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_2' },
+        { id: 'rank-11', label: 'Club rank SS', currency: 'free_jewels', amount: 4500, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_11' },
+        { id: 'shop', label: 'Monthly shop', currency: 'uma_ticket', amount: 3, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'monthly_shop_tickets', scenario_option: 'include' },
+      ] },
+      rewards: { rewards: [] },
+    };
+    component.plan.scenarioSelections = {};
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+    const save = spyOn(component, 'save');
+
+    component.applyIncomePreset('conservative');
+    expect(component.plan.scenarioSelections).toEqual(jasmine.objectContaining({
+      team_trials_class: 'class_2',
+      club_rank: 'rank_2',
+      champions_meeting_result: 'open_third',
+      league_of_heroes_rank: 'silver_4',
+      story_event_rewards: 'include',
+      factor_research_rewards: 'none',
+      speculative_income: 'none',
+    }));
+    expect(component.plan.scenarioSelections['monthly_shop_tickets']).toBeUndefined();
+    expect(component.plan.scenarioSelections['random_gameplay_income']).toBeUndefined();
+    expect(component.activeIncomePresetId).toBe('conservative');
+
+    component.applyIncomePreset('completionist');
+    expect(component.plan.scenarioSelections).toEqual(jasmine.objectContaining({
+      team_trials_class: 'class_6',
+      club_rank: 'rank_11',
+      monthly_shop_tickets: 'include',
+      training_pass: 'free',
+      champions_meeting_result: 'champion',
+      league_of_heroes_rank: 'platinum_4',
+      masters_challenge_rewards: 'include',
+      random_gameplay_income: 'high',
+      speculative_income: 'include',
+    }));
+    expect(component.activeIncomePresetId).toBe('completionist');
+    expect(save).toHaveBeenCalledTimes(2);
+
+    component.setScenario('random_gameplay_income', 'medium');
+    expect(component.activeIncomePresetId).toBeNull();
+  });
+
   it('shows the master-backed Monthly Shop ticket toggle transparently', () => {
     const component = createComponent();
     component.data = {

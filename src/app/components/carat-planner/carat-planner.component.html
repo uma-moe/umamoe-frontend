@@ -199,6 +199,16 @@
           <header>
             <div><strong id="cp-income-assumptions-heading">Income assumptions</strong><span>Choose expected results and optional estimated income.</span></div>
           </header>
+          <div class="cp-income-presets" role="group" aria-label="Income assumption presets">
+            <span class="cp-income-preset-heading"><mat-icon aria-hidden="true">tune</mat-icon><span><strong>Quick presets</strong><small>Apply a starting point, then adjust anything below</small></span></span>
+            <button type="button" *ngFor="let preset of incomePresets; trackBy: trackById"
+              [class.is-active]="activeIncomePresetId === preset.id"
+              [attr.aria-pressed]="activeIncomePresetId === preset.id"
+              (click)="applyIncomePreset(preset.id)">
+              <mat-icon aria-hidden="true">{{ preset.icon }}</mat-icon>
+              <span><strong>{{ preset.label }}</strong><small>{{ preset.description }}</small></span>
+            </button>
+          </div>
           <div class="cp-scenario-sections">
             <section class="cp-scenario-section" *ngFor="let section of scenarioSections"
               [class.is-expanded]="isScenarioSectionExpanded(section)"

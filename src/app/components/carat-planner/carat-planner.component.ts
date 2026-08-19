@@ -308,6 +308,41 @@ interface PlannerOddsView {
 type PlannerSetupPanel = 'resources' | 'income' | 'rewards';
 type RewardSelectionFilter = 'all' | 'included';
 type FreePullCampaignChoice = 'schedule' | 'stock';
+type PlannerIncomePresetId = 'conservative' | 'casual' | 'active' | 'completionist';
+
+interface PlannerIncomePresetView {
+  id: PlannerIncomePresetId;
+  label: string;
+  description: string;
+  icon: string;
+}
+
+const PLANNER_INCOME_PRESETS: readonly PlannerIncomePresetView[] = [
+  {
+    id: 'conservative',
+    label: 'Conservative',
+    description: 'Low ranks, partial rewards, no estimates',
+    icon: 'shield',
+  },
+  {
+    id: 'casual',
+    label: 'Casual',
+    description: 'Regular logins and lighter event play',
+    icon: 'self_improvement',
+  },
+  {
+    id: 'active',
+    label: 'Active',
+    description: 'Full ordinary events and medium results',
+    icon: 'local_fire_department',
+  },
+  {
+    id: 'completionist',
+    label: 'Completionist',
+    description: 'Highest results and every optional reward',
+    icon: 'workspace_premium',
+  },
+] as const;
 
 @Component({
   selector: 'app-carat-planner',
@@ -434,6 +469,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   eventPickerActiveIndex = 0;
   importError = '';
   activeSetupPanel: PlannerSetupPanel | null = null;
+  readonly incomePresets = PLANNER_INCOME_PRESETS;
+  activeIncomePresetId: PlannerIncomePresetId | null = null;
 
   constructor(
     private readonly calculations: CaratPlannerCalculationService,
@@ -1512,7 +1549,18 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   setScenario(group: string, option: string): void {
+    this.activeIncomePresetId = null;
     this.applyScenarioSelection(group, option);
+    this.save();
+  }
+
+  applyIncomePreset(presetId: PlannerIncomePresetId): void {
+    const presetIndex = PLANNER_INCOME_PRESETS.findIndex(preset => preset.id === presetId);
+    if (presetIndex < 0) return;
+    for (const group of this.scenarioGroupOptions) {
+      this.applyScenarioSelection(group.id, this.incomePresetSelection(group, presetIndex));
+    }
+    this.activeIncomePresetId = presetId;
     this.save();
   }
 
@@ -1588,6 +1636,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   toggleScenarioSection(section: PlannerScenarioSectionView): void {
+    this.activeIncomePresetId = null;
     const turnOff = this.scenarioSectionState(section) === 'all';
     if (turnOff) {
       const remembered = section.groups.reduce<Record<string, string>>((values, group) => {
@@ -1620,6 +1669,49 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       return group.options[group.options.length - 1]?.value ?? '';
     }
     return group.options[0]?.value ?? '';
+  }
+
+  private incomePresetSelection(group: PlannerScenarioGroupView, presetIndex: number): string {
+    const preferences: Readonly<Record<string, readonly string[]>> = {
+      team_trials_class: ['class_2', 'class_3', 'class_5', 'class_6'],
+      club_rank: ['rank_2', 'rank_4', 'rank_7', 'rank_11'],
+      [MONTHLY_SHOP_SCENARIO_GROUP_ID]: ['', MONTHLY_SHOP_FRIEND_POINTS_OPTION, MONTHLY_SHOP_ALL_OPTION, MONTHLY_SHOP_ALL_OPTION],
+      [TRAINING_PASS_SCENARIO_GROUP_ID]: ['', 'free', 'free', 'free'],
+      champions_meeting_result: ['open_third', 'open_first', 'group_b_second', 'champion'],
+      champions_meeting_round_income: ['', 'low_investment', 'competitive', 'meta_highroller'],
+      league_of_heroes_rank: ['silver_4', 'gold_2', 'gold_4', 'platinum_4'],
+      strongest_team_reward_tier: ['@lowest', '@middle', '@highest', '@highest'],
+      legend_race_clears: ['opponents_1', 'opponents_2', 'all', 'all'],
+      [MASTERS_CHALLENGE_SCENARIO_GROUP_ID]: ['', '', '', CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [STORY_EVENT_REWARDS_SCENARIO_GROUP_ID]: [CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [FACTOR_RESEARCH_REWARDS_SCENARIO_GROUP_ID]: ['', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [TRAINER_SKILLS_TEST_REWARDS_SCENARIO_GROUP_ID]: ['score_only', 'score_only', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID]: ['clears_only', 'clears_only', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID]: ['', '', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [SCENARIO_EVALUATION_REWARDS_SCENARIO_GROUP_ID]: ['', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID]: ['', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID]: ['', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [MAIN_STORY_REWARDS_SCENARIO_GROUP_ID]: [CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID]: [CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID]: ['', 'low', 'medium', 'high'],
+      [SPECULATIVE_INCOME_SCENARIO_GROUP_ID]: [SPECULATIVE_INCOME_NONE_OPTION, SPECULATIVE_INCOME_MEDIAN_OPTION, SPECULATIVE_INCOME_INCLUDED_OPTION, SPECULATIVE_INCOME_INCLUDED_OPTION],
+    };
+    const preferred = preferences[group.id]?.[presetIndex] ?? (presetIndex === 0 ? '' : group.options[0]?.value ?? '');
+    if (!preferred) return '';
+    if (preferred === SPECULATIVE_INCOME_NONE_OPTION || preferred === CONDITIONAL_REWARDS_NONE_OPTION) {
+      return preferred;
+    }
+    if (preferred === '@lowest') return group.options.at(-1)?.value ?? '';
+    if (preferred === '@middle') return group.options[Math.floor((group.options.length - 1) / 2)]?.value ?? '';
+    if (preferred === '@highest') {
+      return group.options.find(option => option.value === 'all')?.value
+        ?? group.options[0]?.value
+        ?? '';
+    }
+    if (group.options.some(option => option.value === preferred)) return preferred;
+    if (presetIndex === 0) return group.options.at(-1)?.value ?? '';
+    if (presetIndex === 3) return group.options[0]?.value ?? '';
+    return group.options[Math.floor((group.options.length - 1) * (presetIndex / 3))]?.value ?? '';
   }
 
   scenarioGroupIcon(groupId: string): string {

@@ -5487,3 +5487,72 @@ select.cp-control,
   .cp-anniversary-marker { gap: 6px; padding-inline: 6px; }
   .cp-anniversary-marker time { display: none; }
 }
+
+.cp-income-presets {
+  margin: 0 9px 7px;
+  padding: 5px;
+  display: grid;
+  grid-template-columns: minmax(150px, 0.72fr) repeat(4, minmax(120px, 1fr));
+  gap: 5px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+
+  .cp-income-preset-heading {
+    min-width: 0;
+    padding: 3px 7px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--text-secondary);
+
+    > mat-icon { @include icon-size(17px); color: var(--accent-primary); }
+    > span { min-width: 0; display: grid; gap: 1px; }
+    strong { font-size: 0.67rem; }
+    small { overflow: hidden; color: var(--text-muted); font-size: 0.55rem; text-overflow: ellipsis; white-space: nowrap; }
+  }
+
+  button {
+    appearance: none;
+    min-width: 0;
+    min-height: 38px;
+    padding: 4px 7px;
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    > mat-icon { @include icon-size(16px); color: var(--text-muted); }
+    > span { min-width: 0; display: grid; gap: 1px; }
+    strong { overflow: hidden; font-size: 0.64rem; text-overflow: ellipsis; white-space: nowrap; }
+    small { overflow: hidden; color: var(--text-muted); font-size: 0.53rem; text-overflow: ellipsis; white-space: nowrap; }
+    &:hover { border-color: var(--border-secondary); background: var(--surface-3); }
+    &:focus-visible { outline: 2px solid rgba(var(--accent-primary-rgb), 0.5); outline-offset: 1px; }
+    &.is-active {
+      color: var(--text-primary);
+      border-color: rgba(var(--accent-primary-rgb), 0.55);
+      background: rgba(var(--accent-primary-rgb), 0.1);
+      box-shadow: inset 0 0 0 1px rgba(var(--accent-primary-rgb), 0.08);
+
+      > mat-icon { color: var(--accent-primary); }
+      small { color: var(--text-secondary); }
+    }
+  }
+}
+
+@media (max-width: 980px) {
+  .cp-income-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cp-income-preset-heading { grid-column: 1 / -1; }
+}
+
+@media (max-width: 520px) {
+  .cp-income-presets { margin-inline: 0; }
+  .cp-income-presets button small { white-space: normal; }
+}
