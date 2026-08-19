@@ -4,7 +4,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 // Increment this number whenever you want to show the update notification again
-export const CURRENT_UPDATE_VERSION = 11;
+export const CURRENT_UPDATE_VERSION = 12;
 export interface ChangeItem {
     text: string;
     link?: string; // Internal route link
@@ -25,39 +25,37 @@ export interface UpdateEntry {
 // Define your updates here - newest first
 export const UPDATE_LOG: UpdateEntry[] = [
   {
-    title: 'Carat Planner - Rewards & Assumptions',
+    title: 'Carat Planner: Sync, Sharing, and Rewards',
     date: '2026-08-19',
     categories: [
       {
         category: 'major',
+        label: 'Plans Across Devices',
+        icon: 'cloud_done',
+        color: '#42a5f5',
+        items: [
+          { text: 'Signed-in plans and settings now sync across devices. Local saves remain available when account sync is offline', link: '/timeline?tab=carat-planner' },
+          { text: 'Create a short share link from any plan. Opening it adds a separate copy without exposing your account or changing your plan' },
+        ]
+      },
+      {
+        category: 'improvement',
         label: 'Reward Planning',
         icon: 'redeem',
         color: '#ec407a',
         items: [
-          { text: 'Upcoming event rewards are counted automatically. Uncheck only rewards you do not expect to collect', link: '/timeline?tab=carat-planner' },
-          { text: 'Choose expected competition results and include conditional event, mission, shop, and story rewards in each plan' },
-          { text: 'Event availability windows, free-pull campaigns, tickets, Carats, and item rewards are grouped into a clearer schedule' },
+          { text: 'Upcoming rewards are counted automatically. Turn off only the rewards you do not expect to collect' },
+          { text: 'Event rewards, free pulls, tickets, Carats, and availability windows are grouped into a clearer schedule' },
         ]
       },
       {
         category: 'improvement',
-        label: 'Income Assumptions',
+        label: 'Faster Setup',
         icon: 'tune',
         color: '#7e57c2',
         items: [
-          { text: 'New controls cover monthly shop exchanges, Training Pass, recurring event completion, and speculative future income' },
-          { text: "Champion's Meeting round-income profiles support conservative, competitive, and high-investment planning" },
-          { text: 'Assumption sections can be reviewed and changed without losing the planner context' },
-        ]
-      },
-      {
-        category: 'improvement',
-        label: 'Planner Polish',
-        icon: 'devices',
-        color: '#42a5f5',
-        items: [
-          { text: 'Reward controls, balance summaries, crystal progress, and compact layouts are easier to use on desktop and mobile' },
-          { text: 'Reward rows now use readable timeline event names instead of internal campaign identifiers' },
+          { text: 'Quick presets, grouped toggles, and clearer result choices make income assumptions easier to configure' },
+          { text: 'Global banner settings and anniversary markers make long-term pull plans easier to review' },
         ]
       },
       {
@@ -66,8 +64,8 @@ export const UPDATE_LOG: UpdateEntry[] = [
         icon: 'verified',
         color: '#4caf50',
         items: [
-          { text: 'Reward bundles are reconciled across Global, JP, news, mission, and fallback sources to avoid duplicate income' },
-          { text: 'Crystal shards, completed Uncap Crystals, crafted balances, and event end dates are now projected separately and consistently' },
+          { text: 'Global, JP, news, mission, and fallback rewards are reconciled to avoid duplicate income' },
+          { text: 'Crystal shards, completed Uncap Crystals, crafted balances, and reward dates are projected separately' },
         ]
       }
     ]
@@ -583,7 +581,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
         <mat-icon class="header-icon">auto_awesome</mat-icon>
         <span class="header-title">{{ updates[0].title || fallbackTitle }}</span>
         <span class="header-date" *ngIf="updates[0]?.date">{{ formatDate(updates[0].date!) }}</span>
-        <button class="close-btn" (click)="dismiss()">
+        <button class="close-btn" type="button" aria-label="Close update" (click)="dismiss()">
           <mat-icon>close</mat-icon>
         </button>
       </div>
@@ -609,7 +607,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
                 {{ cat.category === 'bugfix' ? 'check_circle' : cat.category === 'major' ? 'star' : cat.category === 'improvement' ? 'upgrade' : 'add_circle' }}
               </mat-icon>
               <span>{{ item.text }}</span>
-              <a *ngIf="item.link" [href]="item.link" (click)="dismiss()" class="item-link">
+              <a *ngIf="item.link" [href]="item.link" (click)="dismiss()" class="item-link" aria-label="Open this update">
                 <mat-icon>arrow_outward</mat-icon>
               </a>
             </div>
@@ -617,9 +615,13 @@ export const UPDATE_LOG: UpdateEntry[] = [
         </div>
       </div>
       <div class="dialog-footer">
-        <button class="dismiss-btn" (click)="dismiss()">
-          Dismiss
+        <button class="dismiss-btn" type="button" (click)="dismiss()">
+          Got it
         </button>
+        <a class="open-planner-btn" href="/timeline?tab=carat-planner" (click)="dismiss()">
+          <span>Open Carat Planner</span>
+          <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+        </a>
       </div>
     </div>
   `,
@@ -657,6 +659,8 @@ export const UPDATE_LOG: UpdateEntry[] = [
         font-weight: 600;
         color: #fff;
         flex: 1;
+        min-width: 0;
+        line-height: 1.25;
       }
       .header-date {
         font-size: 11px;
@@ -664,6 +668,11 @@ export const UPDATE_LOG: UpdateEntry[] = [
         background: rgba(255, 255, 255, 0.06);
         padding: 3px 8px;
         border-radius: 4px;
+      }
+      @media (max-width: 480px) {
+        .header-date {
+          display: none;
+        }
       }
       .close-btn {
         display: flex;
@@ -848,21 +857,54 @@ export const UPDATE_LOG: UpdateEntry[] = [
       padding: 12px 16px;
       border-top: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
-      justify-content: center;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
       flex-shrink: 0;
       .dismiss-btn {
         height: 32px;
-        padding: 0 28px;
-        border-radius: 16px;
-        border: none;
-        background: rgba(100, 181, 246, 0.15);
-        color: #64b5f6;
+        padding: 0 18px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: transparent;
+        color: rgba(255, 255, 255, 0.72);
         font-size: 13px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.15s;
         &:hover {
-          background: rgba(100, 181, 246, 0.25);
+          background: rgba(255, 255, 255, 0.08);
+          color: #fff;
+        }
+      }
+      .open-planner-btn {
+        height: 32px;
+        padding: 0 14px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        background: #42a5f5;
+        color: #101820;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: background 0.15s, transform 0.15s;
+        mat-icon {
+          width: 16px;
+          height: 16px;
+          font-size: 16px;
+        }
+        &:hover {
+          background: #64b5f6;
+          transform: translateY(-1px);
+        }
+      }
+      @media (max-width: 480px) {
+        .dismiss-btn,
+        .open-planner-btn {
+          flex: 1;
         }
       }
     }
