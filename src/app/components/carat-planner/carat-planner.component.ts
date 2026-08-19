@@ -1370,7 +1370,17 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   deletePlan(): void {
     if (this.collection.plans.length > 1 && confirm(`Delete "${this.plan.name}"?`)) {
       this.flushDeferredInteractionSave();
-      this.persistence.deletePlan(this.plan.id);
+      const deletedPlanId = this.plan.id;
+      this.persistence.deletePlan(deletedPlanId);
+      if (this.cloudStatus.loggedIn) {
+        this.cloud?.deleteShare(deletedPlanId).subscribe({
+          error: () => {
+            if (this.destroyed) return;
+            this.shareMessage = 'Plan deleted, but its shared link could not be removed from the server.';
+            this.cdr.markForCheck();
+          },
+        });
+      }
     }
   }
 

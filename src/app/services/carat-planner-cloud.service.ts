@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, Observable, Subscription } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { CaratPlan, CaratPlanCollection } from '../models/carat-planner.model';
@@ -35,6 +35,7 @@ interface PlannerCloudMeta {
   userId: string;
   revision: number;
   updatedAt: string | null;
+  verifiedHash?: string | null;
 }
 
 const CLOUD_META_KEY = 'carat-planner-cloud-meta-v1';
@@ -54,6 +55,8 @@ export class CaratPlannerCloudService {
   private activeUserId: string | null = null;
   private revision = 0;
   private remoteUpdatedAt: string | null = null;
+  private verifiedHash: string | null = null;
+  private hasVerifiedState = false;
   private pendingCollection: CaratPlanCollection | null = null;
   private saving = false;
   private applyingRemote = false;
@@ -92,11 +95,19 @@ export class CaratPlannerCloudService {
     );
   }
 
+  deleteShare(planId: string): Observable<void> {
+    return this.http.delete<void>(
+      `${environment.apiUrl}/api/carat-planner/shares/${encodeURIComponent(planId)}`,
+    );
+  }
+
   private connect(user: User | null): void {
     this.stopCollectionSync();
     this.activeUserId = user?.id ?? null;
     this.revision = 0;
     this.remoteUpdatedAt = null;
+    this.verifiedHash = null;
+    this.hasVerifiedState = false;
     this.pendingCollection = null;
     this.saving = false;
 
@@ -108,21 +119,25 @@ export class CaratPlannerCloudService {
     const userId = user.id;
     const localAtConnect = this.persistence.compactSnapshot();
     this.setStatus('loading', true, 'Loading account plans');
-    this.http.get<PlannerCloudStateResponse>(`${environment.apiUrl}/api/carat-planner/state`)
-      .subscribe({
-        next: response => {
-          if (this.activeUserId !== userId) return;
-          this.applyInitialState(userId, response, localAtConnect);
-        },
-        error: () => {
-          if (this.activeUserId !== userId) return;
-          this.setStatus('offline', true, 'Saved locally. Account sync will retry');
-          this.saveTimer = setTimeout(() => {
-            this.saveTimer = undefined;
-            if (this.activeUserId === userId) this.connect(user);
-          }, RETRY_DELAY_MS);
-        },
-      });
+    void this.loadInitialState(user, localAtConnect);
+  }
+
+  private async loadInitialState(user: User, localAtConnect: CaratPlanCollection): Promise<void> {
+    const userId = user.id;
+    try {
+      const response = await firstValueFrom(
+        this.http.get<PlannerCloudStateResponse>(`${environment.apiUrl}/api/carat-planner/state`),
+      );
+      if (this.activeUserId !== userId) return;
+      this.applyInitialState(userId, response, localAtConnect);
+    } catch {
+      if (this.activeUserId !== userId) return;
+      this.setStatus('offline', true, 'Saved locally. Account sync will retry');
+      this.saveTimer = setTimeout(() => {
+        this.saveTimer = undefined;
+        if (this.activeUserId === userId) this.connect(user);
+      }, RETRY_DELAY_MS);
+    }
   }
 
   private applyInitialState(
@@ -134,6 +149,12 @@ export class CaratPlannerCloudService {
     this.remoteUpdatedAt = response.updated_at;
     const local = this.persistence.compactSnapshot();
     const meta = this.loadMeta();
+    const knownAccount = meta?.userId === userId;
+    const previouslyVerifiedHash = knownAccount ? meta.verifiedHash : undefined;
+
+    this.verifiedHash = response.collection ? plannerCollectionHash(response.collection) : null;
+    this.hasVerifiedState = true;
+    this.storeMeta(userId);
 
     if (!response.collection) {
       this.attachCollectionSync();
@@ -141,23 +162,18 @@ export class CaratPlannerCloudService {
       return;
     }
 
-    const merged = mergeInitialPlannerCollections(
+    const merged = reconcileInitialPlannerCollections(
       localAtConnect,
       local,
       response.collection,
       response.updated_at,
-      meta?.userId === userId,
+      knownAccount,
+      previouslyVerifiedHash,
     );
     const differsFromLocal = !sameCollection(merged, local);
-    const differsFromRemote = !sameCollection(merged, response.collection);
     if (differsFromLocal) this.applyRemoteCollection(merged);
-    this.storeMeta(userId);
     this.attachCollectionSync();
-    if (differsFromRemote) {
-      this.queueSave(merged, 0);
-    } else {
-      this.setStatus('synced', true, 'Saved to your account');
-    }
+    this.queueSave(this.persistence.compactSnapshot(), 0);
   }
 
   private attachCollectionSync(): void {
@@ -181,8 +197,21 @@ export class CaratPlannerCloudService {
   }
 
   private queueSave(collection: CaratPlanCollection, delay = SAVE_DEBOUNCE_MS): void {
+    if (!this.activeUserId) return;
+    if (this.hasVerifiedState && plannerCollectionHash(collection) === this.verifiedHash) {
+      if (this.saving) {
+        this.pendingCollection = collection;
+      } else {
+        this.pendingCollection = null;
+        if (this.saveTimer !== undefined) clearTimeout(this.saveTimer);
+        this.saveTimer = undefined;
+        this.setStatus('synced', true, 'Saved to your account');
+      }
+      return;
+    }
+
     this.pendingCollection = collection;
-    if (!this.activeUserId || this.saving) return;
+    if (this.saving) return;
     if (this.saveTimer !== undefined) clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(() => {
       this.saveTimer = undefined;
@@ -194,6 +223,11 @@ export class CaratPlannerCloudService {
     const userId = this.activeUserId;
     const collection = this.pendingCollection;
     if (!userId || !collection || this.saving) return;
+    if (this.hasVerifiedState && plannerCollectionHash(collection) === this.verifiedHash) {
+      this.pendingCollection = null;
+      this.setStatus('synced', true, 'Saved to your account');
+      return;
+    }
     this.pendingCollection = null;
     this.saving = true;
     this.setStatus('saving', true, 'Saving to your account');
@@ -207,9 +241,12 @@ export class CaratPlannerCloudService {
         this.saving = false;
         this.revision = response.revision;
         this.remoteUpdatedAt = response.updated_at;
+        this.verifiedHash = response.collection
+          ? plannerCollectionHash(response.collection)
+          : plannerCollectionHash(collection);
+        this.hasVerifiedState = true;
         this.storeMeta(userId);
-        this.setStatus('synced', true, 'Saved to your account');
-        if (this.pendingCollection) this.queueSave(this.pendingCollection, 0);
+        this.queueSave(this.persistence.compactSnapshot(), 0);
       },
       error: (error: HttpErrorResponse) => {
         if (this.activeUserId !== userId) return;
@@ -228,13 +265,15 @@ export class CaratPlannerCloudService {
   private resolveConflict(remote: PlannerCloudStateResponse): void {
     this.revision = Math.max(0, Number(remote.revision) || 0);
     this.remoteUpdatedAt = remote.updated_at;
+    this.verifiedHash = remote.collection ? plannerCollectionHash(remote.collection) : null;
+    this.hasVerifiedState = true;
+    if (this.activeUserId) this.storeMeta(this.activeUserId);
     const local = this.persistence.compactSnapshot();
     const merged = remote.collection
       ? mergePlannerCollections(local, remote.collection, remote.updated_at, false)
       : local;
     if (!sameCollection(local, merged)) this.applyRemoteCollection(merged);
-    this.pendingCollection = merged;
-    this.queueSave(merged, 0);
+    this.queueSave(this.persistence.compactSnapshot(), 0);
   }
 
   private applyRemoteCollection(collection: CaratPlanCollection): void {
@@ -260,6 +299,9 @@ export class CaratPlannerCloudService {
           userId: parsed.userId,
           revision: Math.max(0, Number(parsed.revision)),
           updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : null,
+          ...(Object.prototype.hasOwnProperty.call(parsed, 'verifiedHash')
+            ? { verifiedHash: typeof parsed.verifiedHash === 'string' ? parsed.verifiedHash : null }
+            : {}),
         }
         : null;
     } catch {
@@ -273,6 +315,7 @@ export class CaratPlannerCloudService {
         userId,
         revision: this.revision,
         updatedAt: this.remoteUpdatedAt,
+        verifiedHash: this.verifiedHash,
       } satisfies PlannerCloudMeta));
     } catch {}
   }
@@ -331,6 +374,67 @@ export function mergeInitialPlannerCollections(
     remoteUpdatedAt,
     meaningfulAnonymousData,
   );
+}
+
+export function reconcileInitialPlannerCollections(
+  localAtConnect: CaratPlanCollection,
+  currentLocal: CaratPlanCollection,
+  remote: CaratPlanCollection,
+  remoteUpdatedAt: string | null,
+  knownAccount: boolean,
+  previouslyVerifiedHash: string | null | undefined,
+): CaratPlanCollection {
+  if (knownAccount && previouslyVerifiedHash !== undefined) {
+    const localChanged = plannerCollectionHash(currentLocal) !== previouslyVerifiedHash;
+    const remoteChanged = plannerCollectionHash(remote) !== previouslyVerifiedHash;
+
+    // One-sided changes are authoritative. In particular, returning currentLocal here
+    // lets a locally removed plan be removed from the server instead of resurrected.
+    if (!localChanged) return remote;
+    if (!remoteChanged) return currentLocal;
+  }
+
+  return mergeInitialPlannerCollections(
+    localAtConnect,
+    currentLocal,
+    remote,
+    remoteUpdatedAt,
+    knownAccount,
+  );
+}
+
+export function plannerCollectionHash(collection: CaratPlanCollection): string {
+  const canonical = canonicalJson(collection);
+  let first = 0xdeadbeef;
+  let second = 0x41c6ce57;
+
+  for (let index = 0; index < canonical.length; index++) {
+    const code = canonical.charCodeAt(index);
+    first = Math.imul(first ^ code, 2_654_435_761);
+    second = Math.imul(second ^ code, 1_597_334_677);
+  }
+
+  first = Math.imul(first ^ (first >>> 16), 2_246_822_507)
+    ^ Math.imul(second ^ (second >>> 13), 3_266_489_909);
+  second = Math.imul(second ^ (second >>> 16), 2_246_822_507)
+    ^ Math.imul(first ^ (first >>> 13), 3_266_489_909);
+
+  return `v1-${canonical.length.toString(36)}-${(second >>> 0).toString(16).padStart(8, '0')}${(first >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value) ?? 'null';
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(item => canonicalJson(item === undefined ? null : item)).join(',')}]`;
+  }
+
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record)
+    .filter(key => key !== 'updatedAt' && record[key] !== undefined)
+    .sort();
+  return `{${keys.map(key => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(',')}}`;
 }
 
 function hasMeaningfulPlannerData(collection: CaratPlanCollection): boolean {
