@@ -1365,6 +1365,34 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.displayedRewardGroups.every(group => component.isPastRewardGroup(group))).toBeTrue();
   });
 
+  it('uses today as the upcoming boundary when a plan started in the past', () => {
+    const component = createComponent();
+    const dateAtOffset = (days: number): string => {
+      const date = new Date();
+      date.setUTCHours(0, 0, 0, 0);
+      date.setUTCDate(date.getUTCDate() + days);
+      return date.toISOString().slice(0, 10);
+    };
+    component.plan.projectionStartDate = dateAtOffset(-2);
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards: [
+        { id: 'already-earned', label: 'Already earned', currency: 'free_jewels', amount: 100, available_at: dateAtOffset(-1) },
+        { id: 'available-today', label: 'Available today', currency: 'free_jewels', amount: 100, available_at: dateAtOffset(0) },
+        { id: 'available-later', label: 'Available later', currency: 'free_jewels', amount: 100, available_at: dateAtOffset(1) },
+      ] },
+    };
+
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    expect(component.displayedRewardGroups.map(group => group.rewards[0]?.id)).toEqual([
+      'available-today', 'available-later',
+    ]);
+    component.setPastRewardsVisible(true);
+    expect(component.displayedRewardGroups.map(group => group.rewards[0]?.id)).toContain('already-earned');
+  });
+
   it('reclassifies rewards when the projection start date changes', () => {
     const component = createComponent();
     component.data = {
@@ -1376,12 +1404,12 @@ describe('CaratPlannerComponent banner ordering', () => {
       ] },
     };
     (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
-    expect(component.displayedRewardGroups.map(group => group.id)).toEqual(['reward:first', 'reward:second']);
+    expect(component.displayedRewardGroups.map(group => group.rewards[0]?.id)).toEqual(['first', 'second']);
 
-    component.plan.projectionStartDate = '2031-01-01';
-    component.projectionStartChanged();
+    component.projectionStartChanged('2031-01-01');
 
-    expect(component.displayedRewardGroups.map(group => group.id)).toEqual(['reward:second']);
+    expect(component.plan.projectionStartDate).toBe('2031-01-01');
+    expect(component.displayedRewardGroups.map(group => group.rewards[0]?.id)).toEqual(['second']);
     expect(component.pastRewardGroupCount).toBe(1);
   });
 

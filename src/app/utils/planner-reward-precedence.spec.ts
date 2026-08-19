@@ -36,14 +36,32 @@ describe('applyGlobalRewardPrecedence', () => {
     expect(resource.rewards.map(reward => reward.id)).toContain('jp-carats');
   });
 
-  it('keeps unrelated and unlinked JP rewards when no Global equivalent exists', () => {
+  it('removes unlinked JP news gifts that have no Global timeline date', () => {
     const resource: PlannerRewardResource = {
       rewards: [
         { id: 'unlinked', label: 'Unlinked JP gift', currency: 'free_jewels', amount: 500, available_at: '2030-01-01', provenance: 'jp_news' },
       ],
     };
 
-    expect(applyGlobalRewardPrecedence(resource)).toBe(resource);
+    expect(applyGlobalRewardPrecedence(resource).rewards).toEqual([]);
+  });
+
+  it('removes JP broadcast gifts even when a timeline event was matched', () => {
+    const resource: PlannerRewardResource = {
+      rewards: [
+        {
+          id: 'news-3377-section-2-jewels-300-0', event_id: 'campaign-3377',
+          label: '■「ぱかライブTV」放送記念プレゼント！', currency: 'free_jewels', amount: 300,
+          available_at: '2030-01-01', provenance: 'jp_news',
+        },
+        {
+          id: 'linked-login', event_id: 'campaign-3378', label: 'Anniversary login bonus',
+          currency: 'free_jewels', amount: 1500, available_at: '2030-02-01', provenance: 'jp_news',
+        },
+      ],
+    };
+
+    expect(applyGlobalRewardPrecedence(resource).rewards.map(reward => reward.id)).toEqual(['linked-login']);
   });
 
   it('keeps distinct anniversary gifts while replacing matching mission and login components', () => {

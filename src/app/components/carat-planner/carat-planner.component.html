@@ -186,7 +186,8 @@
     <div id="cp-setup-workspace" class="cp-setup-workspace" *ngIf="activeSetupPanel"
       [ngSwitch]="activeSetupPanel" role="region" [attr.aria-label]="activeSetupPanel + ' settings'">
       <div class="cp-setup-panel cp-setup-panel--resources" *ngSwitchCase="'resources'">
-        <label class="cp-field"><span>Start date</span><input class="cp-control" type="date" [(ngModel)]="plan.projectionStartDate" (ngModelChange)="projectionStartChanged()"></label>
+        <label class="cp-field"><span>Start date</span><input class="cp-control" type="date"
+          [ngModel]="plan.projectionStartDate" (ngModelChange)="projectionStartChanged($event)"></label>
         <fieldset class="cp-resource-group">
           <legend>Carats</legend>
           <label class="cp-field"><span>Free</span><span class="cp-control cp-control--icon"><mat-icon>diamond</mat-icon><input type="number" min="0" step="1" [(ngModel)]="plan.balances.freeJewels" (ngModelChange)="saveAfterInteraction()"></span></label>
@@ -458,7 +459,7 @@
               </ng-container>
               <div *ngIf="item.group as group" class="cp-reward-cell" [class.has-source]="group.sourceUrl">
                 <ng-container *ngIf="{ active: isRewardGroupActive(group) } as rewardState">
-                  <div class="cp-reward-row" [class.is-active]="rewardState.active"
+                  <div class="cp-reward-row" [class.is-active]="rewardState.active" [class.has-image]="!!group.imagePath"
                   [class.has-variable-reward]="group.variableOptions.length > 0"
                   [class.is-excluded]="!rewardState.active" [class.is-automatic]="isAutomaticFreePullGroup(group)" [class.is-past]="showPastRewards">
                   <ng-container *ngTemplateOutlet="rewardTile; context: { $implicit: group }"></ng-container>

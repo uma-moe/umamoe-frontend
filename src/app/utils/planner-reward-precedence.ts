@@ -17,6 +17,15 @@ function isJp(entry: ProvenancedPlannerEntry): boolean {
   return entry.provenance?.startsWith('jp_') === true;
 }
 
+function isProjectableDatedReward(reward: PlannerRewardEntry): boolean {
+  if (reward.provenance !== 'jp_news') return true;
+  // A raw JP publish date is not a Global reward date. Broadcast gifts also
+  // remain speculative even when a similarly named timeline row was matched.
+  const text = `${reward.label} ${reward.evidence ?? ''}`;
+  if (/ぱかライブ|paka\s*live/i.test(text)) return false;
+  return Boolean(reward.event_id) || Number.isFinite(reward.gacha_id);
+}
+
 function rewardScope(reward: PlannerRewardEntry): string | null {
   if (reward.event_id) return `event:${reward.event_id}`;
   if (Number.isFinite(reward.gacha_id)) return `gacha:${reward.gacha_id}`;
@@ -118,8 +127,9 @@ export function applyGlobalRewardPrecedence(resource: PlannerRewardResource): Pl
   const eventBenefits = resource.event_benefits ?? [];
   const freePullCampaigns = resource.free_pull_campaigns ?? [];
 
-  const redundantGiftIds = redundantJpGiftDisclaimerIds(rewards);
-  const deduplicatedRewards = rewards.filter(reward => !redundantGiftIds.has(reward.id));
+  const projectableRewards = rewards.filter(isProjectableDatedReward);
+  const redundantGiftIds = redundantJpGiftDisclaimerIds(projectableRewards);
+  const deduplicatedRewards = projectableRewards.filter(reward => !redundantGiftIds.has(reward.id));
 
   const globalRewardSlots = new Set(
     deduplicatedRewards

@@ -5702,3 +5702,145 @@ select.cp-control,
   .cp-income-presets { margin-inline: 0; }
   .cp-income-preset-copy small { white-space: normal; }
 }
+
+/* Final mobile gutters and compact planner controls. */
+@media (max-width: 768px) {
+  .cp {
+    padding-inline: 0;
+  }
+
+  .cp-workbench .cp-manager {
+    padding: 7px 6px 8px;
+    align-items: stretch;
+  }
+
+  .cp-workbench .cp-actions {
+    width: 40px;
+    min-width: 40px;
+    align-self: stretch;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 6px;
+    overflow: visible;
+  }
+
+  .cp-workbench .cp-actions .cp-sync-state {
+    width: 40px;
+    max-width: 40px;
+    height: 30px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .cp-workbench .cp-actions .cp-sync-state > span {
+    display: none;
+  }
+
+  .cp-picker--primary,
+  .cp-assumptions-bar {
+    padding-inline: 6px;
+  }
+
+  .cp-setup-tabs {
+    overflow: hidden;
+  }
+
+  .cp-setup-tab {
+    min-height: 40px;
+    padding: 0 5px;
+    display: flex;
+    flex: 1 1 0;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    text-align: center;
+  }
+
+  .cp-setup-tab > span {
+    flex: 0 1 auto;
+  }
+
+  .cp-setup-tab > span small {
+    display: none;
+  }
+
+  .cp-setup-tab::after {
+    right: 0;
+    left: 0;
+  }
+
+  .cp-setup-workspace,
+  .cp-setup-panel,
+  .cp-setup-panel--income,
+  .cp-setup-panel--rewards {
+    padding-inline: 0;
+  }
+
+  .cp-setup-panel--resources {
+    padding-inline: 6px;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-toolbar {
+    padding-inline: 6px;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row {
+    min-height: 54px;
+    padding: 6px 4px;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: 3px 6px;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-art {
+    width: 28px;
+    border: 0;
+    background: transparent;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-image {
+    grid-template-columns: 96px minmax(0, 1fr) auto;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-image .cp-reward-art {
+    width: 96px;
+    border: 1px solid var(--border-subtle);
+    background: var(--surface-0);
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward.has-image {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+
+  .cp-targets {
+    padding-inline: 4px;
+  }
+
+  .cp-target-main,
+  .cp-target-controls {
+    padding-inline: 6px;
+  }
+}
+
+@media (max-width: 420px) {
+  .cp-workbench .cp-manager,
+  .cp-picker--primary,
+  .cp-assumptions-bar {
+    padding-inline: 5px;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-image {
+    grid-template-columns: 84px minmax(0, 1fr) auto;
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-variable-reward.has-image {
+    grid-template-columns: 84px minmax(0, 1fr);
+  }
+
+  .cp-setup-panel--rewards .cp-reward-row.has-image .cp-reward-art {
+    width: 84px;
+  }
+}
