@@ -68,12 +68,12 @@ describe('plannerIncomeAssumptionGroups', () => {
       .find(candidate => candidate.id === SPECULATIVE_INCOME_SCENARIO_GROUP_ID);
 
     expect(group?.scheduleLabel).toBe(
-      'Rolling six completed months; recalculates automatically',
+      'Rolling average of the last six completed months',
     );
     expect(group?.helpText).toBe([
       'Estimates extra Global-only Carats not already counted as confirmed income.',
       '',
-      'Rolling mean: average of the last 6 completed months; best for long-term planning.',
+      'Rolling mean averages the last 6 completed months and works best for long-term planning.',
       'Conservative median: reduces the effect of unusually generous months.',
       'None: confirmed income only.',
       '',
@@ -154,7 +154,7 @@ describe('plannerIncomeAssumptionGroups', () => {
     const group = plannerIncomeAssumptionGroups([])
       .find(candidate => candidate.id === RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID);
 
-    expect(group?.scheduleLabel).toBe('Weekly estimate; requires active play');
+    expect(group?.scheduleLabel).toBe('Weekly estimate based on active play');
     expect(group?.options).toEqual([
       { value: 'low', label: 'Low commitment', amountLabel: '+20 Carats / week', amounts: { free_jewels: 20 } },
       { value: 'medium', label: 'Medium commitment', amountLabel: '+90 Carats / week', amounts: { free_jewels: 90 } },

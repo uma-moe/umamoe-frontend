@@ -782,7 +782,7 @@ describe('CaratPlannerComponent banner ordering', () => {
       .find(group => group.id === 'monthly_shop_tickets');
     expect(monthlyShop).toEqual(jasmine.objectContaining({
       label: 'Monthly shop tickets',
-      scheduleLabel: 'Monthly; choose which exchange currencies to spend',
+      scheduleLabel: 'Monthly, choose which exchange currencies to spend',
       options: [
         { value: 'friend_points', label: 'Friend Points only', amountLabel: '+1 Uma + 1 support / mo' },
         { value: 'include', label: 'Friend Points + Clovers', amountLabel: '+3 Uma + 3 support / mo' },

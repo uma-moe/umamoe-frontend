@@ -2638,7 +2638,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   private scenarioScheduleLabel(groupId: string): string {
     if (groupId === MONTHLY_SHOP_SCENARIO_GROUP_ID) {
-      return 'Monthly; choose which exchange currencies to spend';
+      return 'Monthly, choose which exchange currencies to spend';
     }
     const rule = this.data.income.rules.find(item => item.scenario_group === groupId);
     if (!rule) return 'Optional income';

@@ -261,7 +261,7 @@ export function plannerIncomeAssumptionGroups(
       label: 'Temporary trainee stories',
       icon: 'menu_book',
       scheduleLabel: 'Each new trainee story unlock',
-      helpText: 'Counts 20 Carats for each of chapters 1–4 when you read them during the temporary unlock. No trainee ownership is required; previously claimed chapters are not paid twice.',
+      helpText: 'Counts 20 Carats for each of chapters 1–4 when you read them during the temporary unlock. No trainee ownership is required. Previously claimed chapters are not paid twice.',
       options: [{
         value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
         label: 'Read all four chapters',
@@ -382,7 +382,7 @@ export function plannerIncomeAssumptionGroups(
       id: RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
       label: 'Random gameplay income',
       icon: 'casino',
-      scheduleLabel: 'Weekly estimate; requires active play',
+      scheduleLabel: 'Weekly estimate based on active play',
       helpText: RANDOM_GAMEPLAY_INCOME_HELP_TEXT,
       options: RANDOM_GAMEPLAY_INCOME_OPTIONS,
     },
@@ -399,7 +399,7 @@ export function plannerIncomeAssumptionGroups(
       label: 'Speculative income',
       icon: 'auto_graph',
       scheduleLabel: comparison
-        ? 'Rolling six completed months; recalculates automatically'
+        ? 'Rolling average of the last six completed months'
         : comparisonLabel,
       helpText: speculativeHelp,
       options: [
@@ -429,7 +429,7 @@ function speculativeHelpText(
   return [
     'Estimates extra Global-only Carats not already counted as confirmed income.',
     '',
-    'Rolling mean: average of the last 6 completed months; best for long-term planning.',
+    'Rolling mean averages the last 6 completed months and works best for long-term planning.',
     'Conservative median: reduces the effect of unusually generous months.',
     'None: confirmed income only.',
     '',
@@ -442,7 +442,7 @@ function speculativeComparisonLabel(
 ): string {
   if (!comparison) return 'Awaiting EN/JP and official social comparison data';
   const months = comparison.speculative_months ?? [];
-  const sourceSummary = `${comparison.matched_news?.length ?? 0} matched news use EN−JP delta; ${comparison.en_only_news?.length ?? 0} EN-only; ${comparison.social_reward_posts} deduped X/Twitter; ${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed`;
+  const sourceSummary = `${comparison.matched_news?.length ?? 0} matched news use EN−JP delta · ${comparison.en_only_news?.length ?? 0} EN-only · ${comparison.social_reward_posts} deduped X/Twitter · ${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed`;
   if (comparison.speculative_method === 'mean_last_6_complete_calendar_months'
     && months.length > 0) {
     const range = formatMonthRange(
@@ -453,7 +453,7 @@ function speculativeComparisonLabel(
     const median = Math.max(0, Math.round(
       Number(comparison.speculative_recent_median_monthly_carats) || 0,
     ));
-    return `6-month expected mean ${range} [${values}] = ${formatNumber(comparison.speculative_monthly_carats)}/month; conservative median = ${formatNumber(median)}/month. Sources: ${sourceSummary}`;
+    return `6-month expected mean ${range} [${values}] = ${formatNumber(comparison.speculative_monthly_carats)}/month. Conservative median = ${formatNumber(median)}/month. Sources: ${sourceSummary}`;
   }
   if (comparison.speculative_method === 'mean_last_12_complete_calendar_months'
     && months.length > 0) {
@@ -469,7 +469,7 @@ function speculativeComparisonLabel(
       comparison.speculative_recent_median_window_start ?? months[Math.max(0, months.length - 6)].month,
       comparison.speculative_recent_median_window_end ?? months[months.length - 1].month,
     );
-    return `12-month expected mean ${range} [${values}] = ${formatNumber(comparison.speculative_monthly_carats)}/month; conservative 6-month median ${recentMedianRange} = ${formatNumber(recentMedian)}/month. Sources: ${sourceSummary}`;
+    return `12-month expected mean ${range} [${values}] = ${formatNumber(comparison.speculative_monthly_carats)}/month. Conservative 6-month median ${recentMedianRange} = ${formatNumber(recentMedian)}/month. Sources: ${sourceSummary}`;
   }
   if (comparison.speculative_method === 'median_last_6_complete_calendar_months'
     && months.length > 0) {
@@ -481,9 +481,9 @@ function speculativeComparisonLabel(
     const longRunMean = Math.max(0, Math.round(
       Number(comparison.speculative_mean_monthly_carats) || 0,
     ));
-    return `6-month median ${range} [${values}] = ${formatNumber(comparison.speculative_monthly_carats)}/month; long-run mean ${formatNumber(longRunMean)}/month. Sources: ${sourceSummary}`;
+    return `6-month median ${range} [${values}] = ${formatNumber(comparison.speculative_monthly_carats)}/month. Long-run mean ${formatNumber(longRunMean)}/month. Sources: ${sourceSummary}`;
   }
-  return `Observed ${comparison.matched_news?.length ?? 0} matched news: EN ${formatNumber(comparison.matched_news_global_carats)} vs JP ${formatNumber(comparison.matched_news_jp_carats)} (${formatSigned(comparison.matched_news_extra_carats)}); ${comparison.en_only_news?.length ?? 0} EN-only +${formatNumber(comparison.en_only_news_carats)}; ${comparison.social_reward_posts} deduped X/Twitter +${formatNumber(comparison.social_carats)} (${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed) over ${comparison.observed_months.toFixed(1)} months`;
+  return `Observed ${comparison.matched_news?.length ?? 0} matched news: EN ${formatNumber(comparison.matched_news_global_carats)} vs JP ${formatNumber(comparison.matched_news_jp_carats)} (${formatSigned(comparison.matched_news_extra_carats)}). ${comparison.en_only_news?.length ?? 0} EN-only +${formatNumber(comparison.en_only_news_carats)}. ${comparison.social_reward_posts} deduped X/Twitter +${formatNumber(comparison.social_carats)} (${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed) over ${comparison.observed_months.toFixed(1)} months`;
 }
 
 function formatMonthRange(start: string, end: string): string {
