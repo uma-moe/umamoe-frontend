@@ -93,13 +93,15 @@ describe('CaratPlannerComponent banner ordering', () => {
     component.data = { core: {}, income: { rules: [] }, rewards: { rewards: [first, second] } };
     const sync = (component as unknown as { syncAutomaticRewardSelection(): boolean }).syncAutomaticRewardSelection.bind(component);
 
-    expect(sync()).toBeTrue();
-    expect(component.plan.enabledRewardIds).toEqual(['first', 'second']);
+    expect(sync()).toBeFalse();
+    expect(component.plan.enabledRewardIds).toEqual([]);
+    expect(component.isRewardActive(first)).toBeTrue();
 
     component.toggleReward(first, false);
     expect(component.plan.disabledRewardIds).toEqual(['first']);
     expect(sync()).toBeFalse();
-    expect(component.plan.enabledRewardIds).toEqual(['second']);
+    expect(component.plan.enabledRewardIds).toEqual([]);
+    expect(component.isRewardActive(first)).toBeFalse();
   });
 
   it('orders pull targets from the plan boundary and excludes historical pulls from the total', () => {
@@ -421,7 +423,7 @@ describe('CaratPlannerComponent banner ordering', () => {
     });
 
     expect(component.plan.targets).toEqual([]);
-    expect(component.plan.enabledRewardIds).toEqual(['jewels', 'ticket']);
+    expect(component.plan.enabledRewardIds).toEqual([]);
     expect(component.plan.enabledRewardEventIds).toEqual(['campaign-1']);
   });
 
@@ -447,7 +449,7 @@ describe('CaratPlannerComponent banner ordering', () => {
     });
 
     expect(component.plan.targets.map(target => target.eventId)).toEqual(['banner-reward']);
-    expect(component.plan.enabledRewardIds).toEqual(['banner-jewels']);
+    expect(component.plan.enabledRewardIds).toEqual([]);
     expect(component.plan.enabledRewardEventIds).toEqual(['banner-reward']);
   });
 
@@ -1320,7 +1322,8 @@ describe('CaratPlannerComponent banner ordering', () => {
         ],
       },
     };
-    component.plan.enabledRewardIds = ['first'];
+    component.plan.enabledRewardIds = [];
+    component.plan.disabledRewardIds = ['second'];
     component.plan.enabledRewardEventIds = ['bundle'];
     (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
     const group = component.displayedRewardGroups[0];
@@ -1329,8 +1332,8 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.rewardGroupActionLabel(group)).toBe('Add bundle rewards');
 
     component.toggleRewardGroupAction(group);
-    expect(component.plan.enabledRewardIds).toContain('first');
-    expect(component.plan.enabledRewardIds).toContain('second');
+    expect(component.plan.enabledRewardIds).toEqual([]);
+    expect(component.plan.disabledRewardIds).toEqual([]);
     expect(component.isRewardGroupActive(group)).toBeTrue();
   });
 
@@ -1696,7 +1699,7 @@ describe('CaratPlannerComponent banner ordering', () => {
     component.setDisplayedRewardsEnabled(false);
 
     expect(component.plan.enabledRewardIds).toEqual(['hidden']);
-    expect(component.plan.enabledRewardEventIds).toEqual(['event-b', 'not-loaded']);
+    expect(component.plan.enabledRewardEventIds).toEqual(['not-loaded']);
     expect(save).toHaveBeenCalledTimes(1);
   });
 
@@ -1879,7 +1882,7 @@ describe('CaratPlannerComponent active-plan resources', () => {
 
     expect(component.plan.resourceDefaultsApplied).toBeTrue();
     expect(component.plan.enabledIncomeRuleIds).toEqual(['daily-income']);
-    expect(component.plan.enabledRewardIds).toEqual(['launch-reward']);
+    expect(component.plan.enabledRewardIds).toEqual([]);
     expect(loadGachasForEvents.calls.mostRecent().args[0][0].id).toBe('banner-a');
 
     activePlan = clone(plans[1]);

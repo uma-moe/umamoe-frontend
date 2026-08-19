@@ -33,7 +33,8 @@
 
     <div class="cp-actions" role="group" aria-label="Plan actions">
       <span class="cp-sync-state" [class.is-synced]="cloudStatus.kind === 'synced'"
-        [class.is-offline]="cloudStatus.kind === 'offline'" [title]="cloudStatus.label">
+        [class.is-offline]="cloudStatus.kind === 'offline'" [class.is-reverted]="cloudStatus.kind === 'reverted'"
+        [title]="cloudStatus.label">
         <mat-icon aria-hidden="true">{{ cloudStatusIcon() }}</mat-icon>
         <span>{{ cloudStatus.label }}</span>
       </span>
@@ -128,6 +129,11 @@
     </div>
   </div>
   </section>
+
+  <div class="cp-status cp-status--error" *ngIf="cloudStatus.kind === 'reverted'" role="alert">
+    <mat-icon>restore</mat-icon>
+    <span>{{ cloudStatus.label }}</span>
+  </div>
 
   <div class="cp-status cp-status--loading" *ngIf="resourceState.loading" role="status" aria-live="polite">
     <mat-progress-bar mode="indeterminate"></mat-progress-bar>

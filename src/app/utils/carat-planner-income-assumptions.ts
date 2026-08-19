@@ -115,7 +115,9 @@ export function conditionalRewardScenarioGroup(
   if (assumption === 'all_story_episodes_viewed') {
     return MAIN_STORY_REWARDS_SCENARIO_GROUP_ID;
   }
-  if (assumption === 'all_login_days' || assumption === 'all_login_days_global') {
+  if (assumption === 'all_login_days'
+    || assumption === 'all_login_days_global'
+    || assumption === 'all_login_days_jp_parity') {
     return LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID;
   }
   if (assumption === 'jp_reward_parity' && /(?:mission|ミッション)/i.test(label)) {
@@ -156,6 +158,28 @@ export function conditionalRewardScenarioSelectionMatches(
       && reward.assumption === 'all_first_clears';
   }
   return false;
+}
+
+/** Resolves a reward from its group selection plus sparse per-reward overrides. */
+export function plannerRewardSelectionEnabled(
+  reward: Pick<PlannerRewardEntry, 'id' | 'assumption' | 'label' | 'default_enabled'>,
+  scenarioSelections: Readonly<Record<string, string>>,
+  explicitlyEnabled = false,
+  explicitlyDisabled = false,
+): boolean {
+  if (explicitlyDisabled) return false;
+  const group = conditionalRewardScenarioGroup(reward);
+  if (group) {
+    return conditionalRewardScenarioSelectionMatches(reward, scenarioSelections[group]);
+  }
+  return reward.default_enabled !== false || explicitlyEnabled;
+}
+
+/** Only default-off rewards without a controlling group need an enabled id override. */
+export function plannerRewardNeedsEnabledOverride(
+  reward: Pick<PlannerRewardEntry, 'assumption' | 'label' | 'default_enabled'>,
+): boolean {
+  return reward.default_enabled === false && !conditionalRewardScenarioGroup(reward);
 }
 
 export function selectedConditionalRewardAmount(

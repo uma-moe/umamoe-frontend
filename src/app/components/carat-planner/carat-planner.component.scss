@@ -3720,6 +3720,11 @@ select.cp-control,
   }
 
   &.is-offline { color: var(--text-muted); }
+
+  &.is-reverted {
+    border-color: rgba(var(--accent-error-rgb), 0.35);
+    color: var(--accent-error);
+  }
 }
 
 .cp-share-notice {

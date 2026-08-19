@@ -6,10 +6,17 @@ import { environment } from '../../environments/environment';
 import { CaratPlan, CaratPlanCollection } from '../models/carat-planner.model';
 import { User } from '../models/auth.model';
 import { CONDITIONAL_REWARD_DEFAULT_SELECTIONS } from '../utils/carat-planner-income-assumptions';
+import {
+  compactPlannerCollectionForCloud,
+  compactPlannerPlanForCloudShare,
+  expandPlannerCollectionFromCloud,
+  expandPlannerPlanFromCloudShare,
+  isCompactPlannerCollectionForCloud,
+} from '../utils/carat-planner-cloud-codec';
 import { AuthService } from './auth.service';
 import { CaratPlannerPersistenceService } from './carat-planner-persistence.service';
 
-export type PlannerCloudStatusKind = 'local' | 'loading' | 'saving' | 'synced' | 'offline';
+export type PlannerCloudStatusKind = 'local' | 'loading' | 'saving' | 'synced' | 'offline' | 'reverted';
 
 export interface PlannerCloudStatus {
   kind: PlannerCloudStatusKind;
@@ -21,6 +28,13 @@ export interface PlannerCloudStateResponse {
   revision: number;
   collection: CaratPlanCollection | null;
   updated_at: string | null;
+  needs_compaction?: boolean;
+}
+
+interface PlannerCloudWireStateResponse {
+  revision: number;
+  collection: unknown | null;
+  updated_at: string | null;
 }
 
 export interface PlannerShareResponse {
@@ -29,6 +43,10 @@ export interface PlannerShareResponse {
   plan_name: string;
   plan: CaratPlan;
   updated_at: string;
+}
+
+interface PlannerShareWireResponse extends Omit<PlannerShareResponse, 'plan'> {
+  plan: unknown;
 }
 
 interface PlannerCloudMeta {
@@ -83,16 +101,16 @@ export class CaratPlannerCloudService {
   }
 
   createShare(plan: CaratPlan): Observable<PlannerShareResponse> {
-    return this.http.post<PlannerShareResponse>(
+    return this.http.post<PlannerShareWireResponse>(
       `${environment.apiUrl}/api/carat-planner/shares`,
-      { plan: this.persistence.compactPlan(plan) },
-    );
+      { plan: compactPlannerPlanForCloudShare(this.persistence.compactPlan(plan)) },
+    ).pipe(map(decodePlannerShareResponse));
   }
 
   getSharedPlan(shareId: string): Observable<PlannerShareResponse> {
-    return this.http.get<PlannerShareResponse>(
+    return this.http.get<PlannerShareWireResponse>(
       `${environment.apiUrl}/api/carat-planner/shared/${encodeURIComponent(shareId)}`,
-    );
+    ).pipe(map(decodePlannerShareResponse));
   }
 
   deleteShare(planId: string): Observable<void> {
@@ -126,7 +144,8 @@ export class CaratPlannerCloudService {
     const userId = user.id;
     try {
       const response = await firstValueFrom(
-        this.http.get<PlannerCloudStateResponse>(`${environment.apiUrl}/api/carat-planner/state`),
+        this.http.get<PlannerCloudWireStateResponse>(`${environment.apiUrl}/api/carat-planner/state`)
+          .pipe(map(decodePlannerCloudStateResponse)),
       );
       if (this.activeUserId !== userId) return;
       this.applyInitialState(userId, response, localAtConnect);
@@ -150,7 +169,6 @@ export class CaratPlannerCloudService {
     const local = this.persistence.compactSnapshot();
     const meta = this.loadMeta();
     const knownAccount = meta?.userId === userId;
-    const previouslyVerifiedHash = knownAccount ? meta.verifiedHash : undefined;
 
     this.verifiedHash = response.collection ? plannerCollectionHash(response.collection) : null;
     this.hasVerifiedState = true;
@@ -168,11 +186,26 @@ export class CaratPlannerCloudService {
       response.collection,
       response.updated_at,
       knownAccount,
-      previouslyVerifiedHash,
     );
+    const localAtConnectHash = plannerCollectionHash(localAtConnect);
+    const currentLocalHash = plannerCollectionHash(local);
+    const remoteHash = plannerCollectionHash(response.collection);
+    const revertedInFlightChanges = knownAccount
+      && localAtConnectHash !== remoteHash
+      && currentLocalHash !== localAtConnectHash
+      && currentLocalHash !== remoteHash;
     const differsFromLocal = !sameCollection(merged, local);
     if (differsFromLocal) this.applyRemoteCollection(merged);
     this.attachCollectionSync();
+    if (revertedInFlightChanges) {
+      this.setStatus(
+        'reverted',
+        true,
+        'Changes were reverted because this device copy was out of date. Your account plans are now current.',
+      );
+      return;
+    }
+    if (response.needs_compaction) this.verifiedHash = null;
     this.queueSave(this.persistence.compactSnapshot(), 0);
   }
 
@@ -232,10 +265,10 @@ export class CaratPlannerCloudService {
     this.saving = true;
     this.setStatus('saving', true, 'Saving to your account');
 
-    this.http.put<PlannerCloudStateResponse>(
+    this.http.put<PlannerCloudWireStateResponse>(
       `${environment.apiUrl}/api/carat-planner/state`,
-      { base_revision: this.revision, collection },
-    ).subscribe({
+      { base_revision: this.revision, collection: compactPlannerCollectionForCloud(collection) },
+    ).pipe(map(decodePlannerCloudStateResponse)).subscribe({
       next: response => {
         if (this.activeUserId !== userId) return;
         this.saving = false;
@@ -251,9 +284,11 @@ export class CaratPlannerCloudService {
       error: (error: HttpErrorResponse) => {
         if (this.activeUserId !== userId) return;
         this.saving = false;
-        if (error.status === 409 && isPlannerCloudStateResponse(error.error)) {
-          this.resolveConflict(error.error);
-          return;
+        if (error.status === 409) {
+          try {
+            this.resolveConflict(decodePlannerCloudStateResponse(error.error));
+            return;
+          } catch {}
         }
         this.pendingCollection = this.persistence.compactSnapshot();
         this.setStatus('offline', true, 'Saved locally. Account sync will retry');
@@ -269,11 +304,21 @@ export class CaratPlannerCloudService {
     this.hasVerifiedState = true;
     if (this.activeUserId) this.storeMeta(this.activeUserId);
     const local = this.persistence.compactSnapshot();
-    const merged = remote.collection
-      ? mergePlannerCollections(local, remote.collection, remote.updated_at, false)
-      : local;
-    if (!sameCollection(local, merged)) this.applyRemoteCollection(merged);
-    this.queueSave(this.persistence.compactSnapshot(), 0);
+    if (!remote.collection) {
+      this.queueSave(local, 0);
+      return;
+    }
+    if (plannerCollectionHash(local) === plannerCollectionHash(remote.collection)) {
+      this.setStatus('synced', true, 'Saved to your account');
+      return;
+    }
+
+    this.applyRemoteCollection(remote.collection);
+    this.setStatus(
+      'reverted',
+      true,
+      'Changes were reverted because your account changed elsewhere. Your local plans are now current.',
+    );
   }
 
   private applyRemoteCollection(collection: CaratPlanCollection): void {
@@ -382,16 +427,14 @@ export function reconcileInitialPlannerCollections(
   remote: CaratPlanCollection,
   remoteUpdatedAt: string | null,
   knownAccount: boolean,
-  previouslyVerifiedHash: string | null | undefined,
 ): CaratPlanCollection {
-  if (knownAccount && previouslyVerifiedHash !== undefined) {
-    const localChanged = plannerCollectionHash(currentLocal) !== previouslyVerifiedHash;
-    const remoteChanged = plannerCollectionHash(remote) !== previouslyVerifiedHash;
-
-    // One-sided changes are authoritative. In particular, returning currentLocal here
-    // lets a locally removed plan be removed from the server instead of resurrected.
-    if (!localChanged) return remote;
-    if (!remoteChanged) return currentLocal;
+  if (knownAccount) {
+    // The local collection is rendered immediately while this request is in flight.
+    // Edits made during the request are safe only when the cache was the exact server
+    // state at request start. A stale cache must never be merged back over newer data.
+    return plannerCollectionHash(localAtConnect) === plannerCollectionHash(remote)
+      ? currentLocal
+      : remote;
   }
 
   return mergeInitialPlannerCollections(
@@ -464,9 +507,30 @@ function dateTime(value: string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function isPlannerCloudStateResponse(value: unknown): value is PlannerCloudStateResponse {
+function isPlannerCloudWireStateResponse(value: unknown): value is PlannerCloudWireStateResponse {
   if (!value || typeof value !== 'object') return false;
-  const record = value as Partial<PlannerCloudStateResponse>;
+  const record = value as Partial<PlannerCloudWireStateResponse>;
   return Number.isFinite(Number(record.revision))
     && (record.collection === null || typeof record.collection === 'object');
+}
+
+function decodePlannerCloudStateResponse(value: unknown): PlannerCloudStateResponse {
+  if (!isPlannerCloudWireStateResponse(value)) throw new Error('Invalid planner cloud response.');
+  const collection = value.collection === null
+    ? null
+    : expandPlannerCollectionFromCloud(value.collection);
+  if (value.collection !== null && !collection) throw new Error('Invalid planner cloud collection.');
+  return {
+    revision: Math.max(0, Number(value.revision) || 0),
+    collection,
+    updated_at: typeof value.updated_at === 'string' ? value.updated_at : null,
+    needs_compaction: value.collection !== null
+      && !isCompactPlannerCollectionForCloud(value.collection),
+  };
+}
+
+function decodePlannerShareResponse(value: PlannerShareWireResponse): PlannerShareResponse {
+  const plan = expandPlannerPlanFromCloudShare(value.plan);
+  if (!plan) throw new Error('Invalid shared planner data.');
+  return { ...value, plan };
 }

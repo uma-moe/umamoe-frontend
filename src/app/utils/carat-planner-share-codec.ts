@@ -5,10 +5,19 @@ import {
   PlannerIncomeCadence,
   PlannerPullTiming,
 } from '../models/carat-planner.model';
+import {
+  CONDITIONAL_REWARD_DEFAULT_SELECTIONS,
+  SPECULATIVE_INCOME_INCLUDED_OPTION,
+  SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
+} from './carat-planner-income-assumptions';
 
 const SHARE_FORMAT_VERSION = 2;
 const MAX_PLAN_BYTES = 262_144;
 const MAX_SHARE_PAYLOAD_CHARS = 32_000;
+const DEFAULT_SCENARIO_SELECTIONS: Readonly<Record<string, string>> = {
+  [SPECULATIVE_INCOME_SCENARIO_GROUP_ID]: SPECULATIVE_INCOME_INCLUDED_OPTION,
+  ...CONDITIONAL_REWARD_DEFAULT_SELECTIONS,
+};
 
 const CURRENCIES = [
   'free_jewels',
@@ -95,7 +104,7 @@ export class PlannerShareTooLargeError extends Error {
 }
 
 export async function encodeCompactPlannerShare(plan: CaratPlan): Promise<string> {
-  const source = new TextEncoder().encode(JSON.stringify(compactPlan(plan)));
+  const source = new TextEncoder().encode(JSON.stringify(compactPlannerPlanData(plan)));
   if (source.byteLength > MAX_PLAN_BYTES) throw new PlannerShareTooLargeError();
 
   let codec = 'j';
@@ -154,15 +163,23 @@ export async function decodeCompactPlannerShare(payload: string): Promise<Decode
   }
   const plan = isLegacyShareEnvelope(parsed)
     ? parsed.p
-    : isCompactPlannerShare(parsed)
-      ? expandPlan(parsed)
-      : null;
+    : expandCompactPlannerPlanData(parsed);
   if (!plan) throw new Error('This compact plan link contains no usable plan.');
 
   return {
     plan,
     fingerprint: await fingerprint(value),
   };
+}
+
+/** Synchronous compact plan representation used by short links and cloud storage. */
+export function compactPlannerPlanData(plan: CaratPlan): unknown {
+  return compactPlan(plan);
+}
+
+/** Expands the current tuple representation while rejecting unrelated JSON. */
+export function expandCompactPlannerPlanData(value: unknown): CaratPlan | null {
+  return isCompactPlannerShare(value) ? expandPlan(value) : null;
 }
 
 function compactPlan(plan: CaratPlan): CompactPlannerShare {
@@ -185,7 +202,9 @@ function compactPlan(plan: CaratPlan): CompactPlannerShare {
     plan.disabledRewardIds ?? [],
     plan.enabledRewardEventIds,
     plan.disabledEventIds ?? [],
-    Object.entries(plan.scenarioSelections),
+    Object.entries(plan.scenarioSelections).filter(([groupId, optionId]) => (
+      DEFAULT_SCENARIO_SELECTIONS[groupId] !== optionId
+    )),
     Object.entries(plan.variableRewardSelections ?? {}).map(([eventId, selection]) => [
       eventId,
       selection.optionId,
@@ -253,7 +272,10 @@ function expandPlan(value: CompactPlannerShare): CaratPlan {
     disabledRewardIds: stringArray(value[6]),
     enabledRewardEventIds: stringArray(value[7]),
     disabledEventIds: stringArray(value[8]),
-    scenarioSelections: Object.fromEntries(pairArray(value[9])),
+    scenarioSelections: {
+      ...DEFAULT_SCENARIO_SELECTIONS,
+      ...Object.fromEntries(pairArray(value[9])),
+    },
     variableRewardSelections: Object.fromEntries(value[10].map(item => [item[0], {
       optionId: item[1],
       label: item[2],
@@ -264,7 +286,7 @@ function expandPlan(value: CompactPlannerShare): CaratPlan {
       ])),
     }])),
     freePullCampaignSelections: Object.fromEntries(pairArray(value[11])),
-    resourceDefaultsApplied: value[12] === 1,
+    ...(value[12] === -1 ? {} : { resourceDefaultsApplied: value[12] === 1 }),
     customIncome: value[13].map((item, index) => ({
       id: `shared-income-${index + 1}`,
       label: item[0],

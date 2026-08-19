@@ -407,7 +407,7 @@ describe('CaratPlannerPersistenceService', () => {
     expect(service.isEventActive(event.id)).toBeFalse();
 
     service.setEventActive(event, true, rewards);
-    expect(service.activePlan.enabledRewardIds).toEqual(['jewels']);
+    expect(service.activePlan.enabledRewardIds).toEqual([]);
     expect(service.isEventActive(event.id)).toBeTrue();
   });
 
@@ -428,7 +428,7 @@ describe('CaratPlannerPersistenceService', () => {
     service.setEventActive(event, false);
     service.setEventActive(event, true, rewards);
 
-    expect(service.activePlan.enabledRewardIds).toEqual(['ticket-only']);
+    expect(service.activePlan.enabledRewardIds).toEqual([]);
     expect(service.activePlan.enabledRewardEventIds).toEqual(['ticket-campaign']);
     expect(service.isEventActive(event.id)).toBeTrue();
   });
@@ -454,7 +454,7 @@ describe('CaratPlannerPersistenceService', () => {
 
     service.setEventActive(event, true, rewards);
 
-    expect(service.activePlan.enabledRewardIds).toEqual(['selector-details']);
+    expect(service.activePlan.enabledRewardIds).toEqual([]);
     expect(service.activePlan.enabledRewardEventIds).toEqual(['selector-campaign']);
     expect(service.isEventActive(event.id)).toBeTrue();
   });
@@ -480,7 +480,7 @@ describe('CaratPlannerPersistenceService', () => {
 
     service.setEventActive(event, true, rewards);
 
-    expect(service.activePlan.enabledRewardIds).toEqual(['crystal-details']);
+    expect(service.activePlan.enabledRewardIds).toEqual([]);
     expect(service.activePlan.enabledRewardEventIds).toEqual(['crystal-campaign']);
   });
 

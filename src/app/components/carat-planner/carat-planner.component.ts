@@ -87,6 +87,8 @@ import {
   MONTHLY_SHOP_FRIEND_POINTS_OPTION,
   MONTHLY_SHOP_SCENARIO_GROUP_ID,
   plannerIncomeAssumptionGroups,
+  plannerRewardNeedsEnabledOverride,
+  plannerRewardSelectionEnabled,
   RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
@@ -391,9 +393,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private cachedRewardViewKey = '';
   private rewardGroupSelectableCache = new WeakMap<PlannerRewardGroupView, boolean>();
   private freePullBenefitCache = new WeakMap<PlannerRewardGroupView, boolean>();
-  private conditionalRewardGroupCache = new WeakMap<PlannerRewardEntry, string | null>();
   private enabledRewardIdsSource: readonly string[] | null = null;
   private enabledRewardIdsLookup = new Set<string>();
+  private disabledRewardIdsSource: readonly string[] | null = null;
+  private disabledRewardIdsLookup = new Set<string>();
   private disabledEventIdsSource: readonly string[] | null = null;
   private disabledEventIdsLookup = new Set<string>();
   private enabledRewardEventIdsSource: readonly string[] | null = null;
@@ -412,6 +415,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private deferredRewardSavePending = false;
   private deferredInteractionSaveTimer: ReturnType<typeof setTimeout> | undefined;
   private deferredInteractionSavePlan: CaratPlan | null = null;
+  private cloudStartTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly expandedPickupTargetIds = new Set<string>();
   private readonly pickupGoalCopyMemory = new Map<string, number>();
   private readonly expandedScenarioSectionIds = new Set<string>();
@@ -521,7 +525,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.cloud?.start();
     this.cloud?.status$.pipe(takeUntil(this.destroy$)).subscribe(status => {
       this.cloudStatus = status;
       this.cdr.markForCheck();
@@ -543,6 +546,12 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     });
     this.loadResources();
+    // Render the synchronous localStorage snapshot before starting account I/O.
+    // This keeps the planner immediately usable while the server copy is checked.
+    this.cloudStartTimer = setTimeout(() => {
+      this.cloudStartTimer = undefined;
+      if (!this.destroyed) this.cloud?.start();
+    }, 0);
   }
 
   retryResources(): void {
@@ -890,17 +899,12 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   isRewardActive(reward: PlannerRewardEntry): boolean {
-    let conditionalGroup = this.conditionalRewardGroupCache.get(reward);
-    if (conditionalGroup === undefined) {
-      conditionalGroup = conditionalRewardScenarioGroup(reward) ?? null;
-      this.conditionalRewardGroupCache.set(reward, conditionalGroup);
-    }
-    return this.enabledRewardIds().has(reward.id)
-      && (!conditionalGroup
-        || conditionalRewardScenarioSelectionMatches(
-          reward,
-          this.plan.scenarioSelections[conditionalGroup],
-        ))
+    return plannerRewardSelectionEnabled(
+      reward,
+      this.plan.scenarioSelections,
+      this.enabledRewardIds().has(reward.id),
+      this.disabledRewardIds().has(reward.id),
+    )
       && (!reward.event_id || !this.disabledEventIds().has(reward.event_id));
   }
 
@@ -911,6 +915,15 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       this.enabledRewardIdsLookup = new Set(source);
     }
     return this.enabledRewardIdsLookup;
+  }
+
+  private disabledRewardIds(): ReadonlySet<string> {
+    const source = this.plan?.disabledRewardIds ?? [];
+    if (this.disabledRewardIdsSource !== source) {
+      this.disabledRewardIdsSource = source;
+      this.disabledRewardIdsLookup = new Set(source);
+    }
+    return this.disabledRewardIdsLookup;
   }
 
   private disabledEventIds(): ReadonlySet<string> {
@@ -1338,9 +1351,11 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       cancelAnimationFrame(this.deferredRewardSaveFrame);
     }
     if (this.deferredRewardSaveTimer !== undefined) clearTimeout(this.deferredRewardSaveTimer);
+    if (this.cloudStartTimer !== undefined) clearTimeout(this.cloudStartTimer);
     this.deferredRewardSaveFrame = undefined;
     this.deferredRewardSaveTimer = undefined;
     this.deferredRewardSavePending = false;
+    this.cloudStartTimer = undefined;
     this.destroyed = true;
     this.planResourceRequest++;
     this.destroy$.next();
@@ -1453,6 +1468,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       case 'saving': return 'cloud_sync';
       case 'synced': return 'cloud_done';
       case 'offline': return 'cloud_off';
+      case 'reverted': return 'report_problem';
       default: return 'save';
     }
   }
@@ -1550,7 +1566,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   toggleReward(reward: PlannerRewardEntry, enabled: boolean): void {
     const values = new Set(this.plan.enabledRewardIds);
     const disabled = new Set(this.plan.disabledRewardIds ?? []);
-    enabled ? values.add(reward.id) : values.delete(reward.id);
+    if (enabled && plannerRewardNeedsEnabledOverride(reward)) values.add(reward.id);
+    else values.delete(reward.id);
     enabled ? disabled.delete(reward.id) : disabled.add(reward.id);
     this.plan.enabledRewardIds = [...values];
     this.plan.disabledRewardIds = [...disabled];
@@ -1576,7 +1593,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const eventIdsToEnable = new Set<string>();
     for (const reward of this.displayedRewards) {
       if (enabled) {
-        values.add(reward.id);
+        if (plannerRewardNeedsEnabledOverride(reward)) values.add(reward.id);
+        else values.delete(reward.id);
         disabled.delete(reward.id);
         if (reward.event_id) eventIdsToEnable.add(reward.event_id);
       } else {
@@ -1606,19 +1624,24 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     for (const group of groups) {
       for (const reward of group.rewards) {
         if (!this.hasProjectableReward(reward)) continue;
-        enabled ? rewardIds.add(reward.id) : rewardIds.delete(reward.id);
-        enabled ? disabledRewardIds.delete(reward.id) : disabledRewardIds.add(reward.id);
+        if (enabled && plannerRewardNeedsEnabledOverride(reward)) rewardIds.add(reward.id);
+        else rewardIds.delete(reward.id);
+        // A whole event is represented by one disabled event id. Per-reward ids
+        // remain only for genuine individual exceptions.
+        if (group.eventId) disabledRewardIds.delete(reward.id);
+        else enabled ? disabledRewardIds.delete(reward.id) : disabledRewardIds.add(reward.id);
       }
       for (const variant of group.competitiveVariants) {
         if (!isAutomaticCompetitiveVariant(variant)) continue;
-        enabled ? rewardIds.add(variant.id) : rewardIds.delete(variant.id);
-        enabled ? disabledRewardIds.delete(variant.id) : disabledRewardIds.add(variant.id);
+        rewardIds.delete(variant.id);
+        disabledRewardIds.delete(variant.id);
       }
       if (group.eventId) {
-        enabled ? eventIds.add(group.eventId) : eventIds.delete(group.eventId);
-        if (group.variableOptions.length > 0) {
-          enabled ? disabledEventIds.delete(group.eventId) : disabledEventIds.add(group.eventId);
-        }
+        const hasSelector = group.eventBenefits.some(benefit =>
+          benefit.kind === 'trainee_selector' || benefit.kind === 'support_selector');
+        if (hasSelector && enabled) eventIds.add(group.eventId);
+        else eventIds.delete(group.eventId);
+        enabled ? disabledEventIds.delete(group.eventId) : disabledEventIds.add(group.eventId);
       }
     }
 
@@ -1688,7 +1711,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   setScenario(group: string, option: string): void {
     this.activeIncomePresetId = null;
     this.applyScenarioSelection(group, option);
-    if (CONDITIONAL_REWARD_SCENARIO_GROUP_IDS.has(group)) this.filterRewards(true);
+    if (CONDITIONAL_REWARD_SCENARIO_GROUP_IDS.has(group)) {
+      this.syncAutomaticRewardSelection();
+      this.filterRewards(true);
+    }
     this.save();
   }
 
@@ -1699,6 +1725,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       this.applyScenarioSelection(group.id, this.incomePresetSelection(group, presetIndex));
     }
     this.activeIncomePresetId = presetId;
+    this.syncAutomaticRewardSelection();
     this.filterRewards(true);
     this.save();
   }
@@ -1794,6 +1821,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           this.scenarioSectionOptionToEnable(group, remembered[group.id]),
         ));
     }
+    this.syncAutomaticRewardSelection();
     this.save();
   }
 
@@ -3305,28 +3333,46 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   private syncAutomaticRewardSelection(): boolean {
     if (!this.plan) return false;
-    const disabledRewardIds = new Set(this.plan.disabledRewardIds ?? []);
-    const nextEnabledRewardIds = [
-      ...this.data.rewards.rewards
-        .filter(reward => this.hasProjectableReward(reward)
-          && (reward.default_enabled !== false || this.plan.enabledRewardIds.includes(reward.id)))
-        .map(reward => reward.id),
-      ...(this.data.rewards.competitive_variants ?? [])
-        .filter(variant => isAutomaticCompetitiveVariant(variant))
-        .map(variant => variant.id),
-    ]
-      .filter(rewardId => !disabledRewardIds.has(rewardId))
+    if ((this.data.rewards.rewards ?? []).length === 0) return false;
+    const rewardById = new Map(this.data.rewards.rewards.map(reward => [reward.id, reward]));
+    const enabledRewardIds = new Set(this.plan.enabledRewardIds);
+    const disabledEventIds = new Set(this.plan.disabledEventIds ?? []);
+    const nextDisabledRewardIds = (this.plan.disabledRewardIds ?? [])
+      .filter(rewardId => {
+        const reward = rewardById.get(rewardId);
+        return Boolean(reward
+          && !(reward.event_id && disabledEventIds.has(reward.event_id))
+          && plannerRewardSelectionEnabled(
+            reward,
+            this.plan.scenarioSelections,
+            enabledRewardIds.has(rewardId),
+          ));
+      })
       .sort();
-    const current = [...this.plan.enabledRewardIds].sort();
-    const changed = current.length !== nextEnabledRewardIds.length
-      || current.some((rewardId, index) => rewardId !== nextEnabledRewardIds[index]);
-    if (changed) this.plan.enabledRewardIds = nextEnabledRewardIds;
+    const disabledRewardIds = new Set(nextDisabledRewardIds);
+    const nextEnabledRewardIds = this.plan.enabledRewardIds
+      .filter(rewardId => {
+        const reward = rewardById.get(rewardId);
+        return Boolean(reward
+          && plannerRewardNeedsEnabledOverride(reward)
+          && !disabledRewardIds.has(rewardId));
+      })
+      .sort();
+    const currentEnabled = [...this.plan.enabledRewardIds].sort();
+    const currentDisabled = [...(this.plan.disabledRewardIds ?? [])].sort();
+    const changed = currentEnabled.length !== nextEnabledRewardIds.length
+      || currentEnabled.some((rewardId, index) => rewardId !== nextEnabledRewardIds[index])
+      || currentDisabled.length !== nextDisabledRewardIds.length
+      || currentDisabled.some((rewardId, index) => rewardId !== nextDisabledRewardIds[index]);
+    if (changed) {
+      this.plan.enabledRewardIds = nextEnabledRewardIds;
+      this.plan.disabledRewardIds = nextDisabledRewardIds;
+    }
     return changed;
   }
 
   private syncEnabledRewardEventIds(): boolean {
     if (!this.plan) return false;
-    const enabledRewardIds = new Set(this.plan.enabledRewardIds);
     const disabledEventIds = new Set(this.plan.disabledEventIds ?? []);
     const loadedRewardEventIds = new Set(this.data.rewards.rewards
       .map(reward => reward.event_id)
@@ -3346,20 +3392,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const nextEventIds = new Set((this.plan.enabledRewardEventIds ?? [])
       .filter(eventId => !disabledEventIds.has(eventId)
         && (!loadedRewardEventIds.has(eventId) || selectorBenefitEventIds.has(eventId))));
-    this.data.rewards.rewards
-      .filter(reward =>
-        Boolean(reward.event_id)
-        && this.hasProjectableReward(reward)
-        && enabledRewardIds.has(reward.id)
-        && !disabledEventIds.has(reward.event_id!)
-      )
-      .forEach(reward => nextEventIds.add(reward.event_id!));
-    (this.data.rewards.competitive_variants ?? [])
-      .filter(variant =>
-        isAutomaticCompetitiveVariant(variant)
-        && enabledRewardIds.has(variant.id)
-        && !disabledEventIds.has(variant.event_id))
-      .forEach(variant => nextEventIds.add(variant.event_id));
     const next = [...nextEventIds].sort();
     const current = [...(this.plan.enabledRewardEventIds ?? [])].sort();
     if (current.length === next.length && current.every((eventId, index) => eventId === next[index])) {

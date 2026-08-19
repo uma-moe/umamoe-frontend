@@ -85,7 +85,7 @@ describe('CaratPlannerComponent reward coverage', () => {
       id: 'legend-clear',
       amountLabel: '150 Carats',
     }));
-    expect(component.plan.enabledRewardIds).toEqual(['team-missions']);
+    expect(component.plan.enabledRewardIds).toEqual([]);
   });
 
   it('groups structured login-bonus currencies and item details into one reward card', () => {
@@ -141,7 +141,7 @@ describe('CaratPlannerComponent reward coverage', () => {
       ['carats', 3000],
       ['other', null],
     ]);
-    expect(component.plan.enabledRewardIds).toEqual(['login-bonus-42-free_jewels']);
+    expect(component.plan.enabledRewardIds).toEqual([]);
     expect(component.isRewardGroupActive(component.displayedRewardGroups[0])).toBeTrue();
   });
 
@@ -195,12 +195,12 @@ describe('CaratPlannerComponent reward coverage', () => {
     component.data = { core: {}, income: { rules: [] }, rewards: { rewards: [standard, difficult] } };
     const sync = (component as unknown as { syncAutomaticRewardSelection(): boolean }).syncAutomaticRewardSelection.bind(component);
 
-    expect(sync()).toBeTrue();
-    expect(component.plan.enabledRewardIds).toEqual(['standard']);
+    expect(sync()).toBeFalse();
+    expect(component.plan.enabledRewardIds).toEqual([]);
 
     component.toggleReward(difficult, true);
     expect(sync()).toBeFalse();
-    expect(component.plan.enabledRewardIds.sort()).toEqual(['difficult', 'standard']);
+    expect(component.plan.enabledRewardIds).toEqual(['difficult']);
   });
 
   it('inherits CM and LoH income assumptions and preserves an explicit result selection', () => {

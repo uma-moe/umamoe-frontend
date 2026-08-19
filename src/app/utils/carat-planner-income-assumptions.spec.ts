@@ -5,6 +5,8 @@ import {
   MASTERS_CHALLENGE_SCENARIO_GROUP_ID,
   MASTERS_CHALLENGE_ONE_CLEAR_OPTION,
   plannerIncomeAssumptionGroups,
+  plannerRewardNeedsEnabledOverride,
+  plannerRewardSelectionEnabled,
   RACING_CARNIVAL_CLEARS_ONLY_OPTION,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
@@ -96,6 +98,7 @@ describe('plannerIncomeAssumptionGroups', () => {
       ['Training scenario evaluation rewards', 'jp_reward_parity_scenario_evaluation_thresholds', 'scenario_evaluation_rewards'],
       ['Main Story episode rewards', 'all_story_episodes_viewed', 'main_story_rewards'],
       ['Limited login bonus', 'all_login_days', 'limited_login_rewards'],
+      ['Limited login bonus (projected JP parity)', 'all_login_days_jp_parity', 'limited_login_rewards'],
       ['5th Anniversary 記念ミッション 第2弾', 'jp_reward_parity', 'limited_mission_rewards'],
       ['Masters Challenge first-clear rewards', 'all_first_clears_high_difficulty', MASTERS_CHALLENGE_SCENARIO_GROUP_ID],
     ] as const;
@@ -112,6 +115,24 @@ describe('plannerIncomeAssumptionGroups', () => {
     for (const [, , expectedGroup] of cases) {
       expect(groups.some(group => group.id === expectedGroup)).toBeTrue();
     }
+  });
+
+  it('derives normal rewards from defaults and stores only sparse overrides', () => {
+    const automatic = { id: 'automatic', label: 'Gift', default_enabled: true };
+    const optional = { id: 'optional', label: 'Optional gift', default_enabled: false };
+    const login = {
+      id: 'login',
+      label: 'Limited login bonus (projected JP parity)',
+      assumption: 'all_login_days_jp_parity',
+      default_enabled: true,
+    };
+
+    expect(plannerRewardSelectionEnabled(automatic, {})).toBeTrue();
+    expect(plannerRewardSelectionEnabled(automatic, {}, false, true)).toBeFalse();
+    expect(plannerRewardNeedsEnabledOverride(optional)).toBeTrue();
+    expect(plannerRewardSelectionEnabled(optional, {}, true)).toBeTrue();
+    expect(plannerRewardSelectionEnabled(login, { limited_login_rewards: 'none' })).toBeFalse();
+    expect(plannerRewardNeedsEnabledOverride(login)).toBeFalse();
   });
 
   it('supports truthful partial completion for reward families with separate sources', () => {

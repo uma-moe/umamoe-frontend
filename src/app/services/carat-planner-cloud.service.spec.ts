@@ -1,9 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { fakeAsync, tick } from '@angular/core/testing';
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, of, Subject } from 'rxjs';
 import { CaratPlan, CaratPlanCollection } from '../models/carat-planner.model';
 import { User } from '../models/auth.model';
 import { CONDITIONAL_REWARD_DEFAULT_SELECTIONS } from '../utils/carat-planner-income-assumptions';
+import {
+  compactPlannerCollectionForCloud,
+  expandPlannerCollectionFromCloud,
+} from '../utils/carat-planner-cloud-codec';
 import { AuthService } from './auth.service';
 import {
   CaratPlannerCloudService,
@@ -99,7 +103,6 @@ describe('CaratPlannerCloudService merge', () => {
       previouslyVerified,
       '2026-08-18T12:00:00.000Z',
       true,
-      plannerCollectionHash(previouslyVerified),
     );
 
     expect(reconciled.plans.map(item => item.id)).toEqual(['retained-plan']);
@@ -121,10 +124,40 @@ describe('CaratPlannerCloudService merge', () => {
       remoteAfterDeletion,
       '2026-08-19T12:00:00.000Z',
       true,
-      plannerCollectionHash(previouslyVerified),
     );
 
     expect(reconciled.plans.map(item => item.id)).toEqual(['retained-plan']);
+  });
+
+  it('keeps edits made during loading when the startup cache matches the server', () => {
+    const cached = collection(plan('same-plan', 'Cached', '2026-08-18T10:00:00.000Z'));
+    const edited = collection(plan('same-plan', 'Edited while loading', '2026-08-19T10:00:00.000Z'));
+
+    const reconciled = reconcileInitialPlannerCollections(
+      cached,
+      edited,
+      cached,
+      '2026-08-18T12:00:00.000Z',
+      true,
+    );
+
+    expect(reconciled).toBe(edited);
+  });
+
+  it('rejects edits made over a stale startup cache', () => {
+    const cached = collection(plan('same-plan', 'Stale cache', '2026-08-17T10:00:00.000Z'));
+    const edited = collection(plan('same-plan', 'Edited while loading', '2026-08-19T10:00:00.000Z'));
+    const remote = collection(plan('same-plan', 'Newer account copy', '2026-08-18T10:00:00.000Z'));
+
+    const reconciled = reconcileInitialPlannerCollections(
+      cached,
+      edited,
+      remote,
+      '2026-08-18T12:00:00.000Z',
+      true,
+    );
+
+    expect(reconciled).toBe(remote);
   });
 
   it('does not change the content hash for timestamp-only updates or object key order', () => {
@@ -151,6 +184,24 @@ describe('CaratPlannerCloudService merge', () => {
 describe('CaratPlannerCloudService sync', () => {
   afterEach(() => localStorage.removeItem(CLOUD_META_KEY));
 
+  it('rewrites an existing full JSON row into the compact wire format', fakeAsync(() => {
+    const serverCollection = collection(plan('same-plan', 'Same', '2026-08-18T10:00:00.000Z'));
+    storeVerifiedMeta(serverCollection);
+    const setup = createCloudService(serverCollection, serverCollection);
+    setup.http.get.and.returnValue(of({
+      revision: 1,
+      collection: serverCollection,
+      updated_at: '2026-08-18T12:00:00.000Z',
+    }) as any);
+
+    setup.service.start();
+    tick();
+
+    expect(setup.http.put).toHaveBeenCalledTimes(1);
+    const body = setup.http.put.calls.mostRecent().args[1] as { collection: unknown };
+    expect(expandPlannerCollectionFromCloud(body.collection)).toEqual(serverCollection);
+  }));
+
   it('does not PUT timestamp-only state changes after loading the verified server state', fakeAsync(() => {
     const serverCollection = collection(plan('same-plan', 'Same', '2026-08-18T10:00:00.000Z'));
     const localCollection = collection({
@@ -166,7 +217,7 @@ describe('CaratPlannerCloudService sync', () => {
     expect(http.put).not.toHaveBeenCalled();
   }));
 
-  it('PUTs the collection without a locally deleted plan when the server matches the verified hash', fakeAsync(() => {
+  it('restores the server collection when the startup cache is already different', fakeAsync(() => {
     const retained = plan('retained-plan', 'Retained', '2026-08-18T10:00:00.000Z');
     const deleted = plan('deleted-plan', 'Deleted', '2026-08-18T11:00:00.000Z');
     const serverCollection: CaratPlanCollection = {
@@ -176,33 +227,72 @@ describe('CaratPlannerCloudService sync', () => {
     };
     const localCollection = collection(retained);
     storeVerifiedMeta(serverCollection);
-    const { service, http } = createCloudService(localCollection, serverCollection);
+    const { service, http, collectionSubject } = createCloudService(localCollection, serverCollection);
 
     service.start();
     tick();
 
-    expect(http.put).toHaveBeenCalledTimes(1);
-    expect(http.put.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({
-      collection: localCollection,
-    }));
+    expect(collectionSubject.value).toEqual(serverCollection);
+    expect(http.put).not.toHaveBeenCalled();
+  }));
+
+  it('saves edits made while an identical server collection is loading', fakeAsync(() => {
+    const cached = collection(plan('same-plan', 'Cached', '2026-08-18T10:00:00.000Z'));
+    const edited = collection(plan('same-plan', 'Edited while loading', '2026-08-19T10:00:00.000Z'));
+    storeVerifiedMeta(cached);
+    const setup = createCloudService(cached, cached, true);
+
+    setup.service.start();
+    setup.collectionSubject.next(edited);
+    setup.responseSubject.next(cloudResponse(cached));
+    setup.responseSubject.complete();
+    tick();
+
+    expect(setup.collectionSubject.value).toEqual(edited);
+    expect(setup.http.put).toHaveBeenCalledTimes(1);
+    const body = setup.http.put.calls.mostRecent().args[1] as { collection: unknown };
+    expect(expandPlannerCollectionFromCloud(body.collection)).toEqual(edited);
+  }));
+
+  it('restores the server collection and reports reverted edits when the startup cache is stale', fakeAsync(() => {
+    const cached = collection(plan('same-plan', 'Stale cache', '2026-08-17T10:00:00.000Z'));
+    const edited = collection(plan('same-plan', 'Edited while loading', '2026-08-19T10:00:00.000Z'));
+    const remote = collection(plan('same-plan', 'Newer account copy', '2026-08-18T10:00:00.000Z'));
+    storeVerifiedMeta(cached);
+    const setup = createCloudService(cached, remote, true);
+    const statuses: string[] = [];
+    setup.service.status$.subscribe(status => statuses.push(`${status.kind}:${status.label}`));
+
+    setup.service.start();
+    setup.collectionSubject.next(edited);
+    setup.responseSubject.next(cloudResponse(remote));
+    setup.responseSubject.complete();
+    tick();
+
+    expect(setup.collectionSubject.value).toEqual(remote);
+    expect(setup.http.put).not.toHaveBeenCalled();
+    expect(statuses.at(-1)).toContain('reverted:Changes were reverted because this device copy was out of date');
   }));
 });
 
 function createCloudService(
   localCollection: CaratPlanCollection,
   serverCollection: CaratPlanCollection,
-): { service: CaratPlannerCloudService; http: jasmine.SpyObj<HttpClient> } {
+  delayed = false,
+): {
+  service: CaratPlannerCloudService;
+  http: jasmine.SpyObj<HttpClient>;
+  collectionSubject: BehaviorSubject<CaratPlanCollection>;
+  responseSubject: Subject<ReturnType<typeof cloudResponse>>;
+} {
   const http = jasmine.createSpyObj<HttpClient>('HttpClient', ['get', 'put', 'delete']);
-  http.get.and.returnValue(of({
-    revision: 1,
-    collection: serverCollection,
-    updated_at: '2026-08-18T12:00:00.000Z',
-  }));
-  http.put.and.returnValue(of({
+  const responseSubject = new Subject<ReturnType<typeof cloudResponse>>();
+  http.get.and.returnValue(delayed ? responseSubject : of(cloudResponse(serverCollection)));
+  http.put.and.callFake(((_url: string, body: { collection: unknown }) => of({
     revision: 2,
-    collection: localCollection,
+    collection: body.collection,
     updated_at: '2026-08-19T12:00:00.000Z',
-  }) as any);
+  })) as any);
 
   const collectionSubject = new BehaviorSubject(localCollection);
   const persistence = {
@@ -224,6 +314,16 @@ function createCloudService(
   return {
     service: new CaratPlannerCloudService(http, auth, persistence),
     http,
+    collectionSubject,
+    responseSubject,
+  };
+}
+
+function cloudResponse(value: CaratPlanCollection) {
+  return {
+    revision: 1,
+    collection: compactPlannerCollectionForCloud(value),
+    updated_at: '2026-08-18T12:00:00.000Z',
   };
 }
 
@@ -259,8 +359,16 @@ function plan(id: string, name: string, updatedAt: string): CaratPlan {
     },
     enabledIncomeRuleIds: [],
     enabledRewardIds: [],
+    disabledRewardIds: [],
     enabledRewardEventIds: [],
-    scenarioSelections: {},
+    disabledEventIds: [],
+    scenarioSelections: {
+      speculative_income: 'include',
+      ...CONDITIONAL_REWARD_DEFAULT_SELECTIONS,
+    },
+    variableRewardSelections: {},
+    freePullCampaignSelections: {},
+    resourceDefaultsApplied: false,
     customIncome: [],
     targets: [],
   };

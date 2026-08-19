@@ -353,6 +353,7 @@ export interface CaratPlan {
   projectionStartDate: string;
   balances: PlannerBalances;
   enabledIncomeRuleIds: string[];
+  /** Sparse explicit opt-ins for default-off rewards that have no scenario/group control. */
   enabledRewardIds: string[];
   /** Fixed or deterministic-variant reward ids explicitly excluded by the user. */
   disabledRewardIds?: string[];

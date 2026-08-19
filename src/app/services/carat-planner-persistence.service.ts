@@ -19,6 +19,7 @@ import {
 } from '../models/carat-planner.model';
 import {
   CONDITIONAL_REWARD_DEFAULT_SELECTIONS,
+  plannerRewardNeedsEnabledOverride,
   SPECULATIVE_INCOME_INCLUDED_OPTION,
   SPECULATIVE_INCOME_NONE_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
@@ -158,16 +159,17 @@ export class CaratPlannerPersistenceService {
           variant.event_id === event.id && isAutomaticCompetitiveVariant(variant));
         const enabledRewardIds = new Set(plan.enabledRewardIds);
         const disabledRewardIds = new Set(plan.disabledRewardIds ?? []);
-        const selectableIds = [
-          ...eventRewards.map(reward => reward.id),
-          ...eventVariants.map(variant => variant.id),
-        ];
-        if (!selectableIds.some(id => enabledRewardIds.has(id))) {
-          selectableIds
-            .filter(id => !disabledRewardIds.has(id))
-            .forEach(id => enabledRewardIds.add(id));
+        for (const reward of eventRewards) {
+          disabledRewardIds.delete(reward.id);
+          if (plannerRewardNeedsEnabledOverride(reward)) enabledRewardIds.add(reward.id);
+          else enabledRewardIds.delete(reward.id);
+        }
+        for (const variant of eventVariants) {
+          enabledRewardIds.delete(variant.id);
+          disabledRewardIds.delete(variant.id);
         }
         plan.enabledRewardIds = [...enabledRewardIds];
+        plan.disabledRewardIds = [...disabledRewardIds];
         enabledRewardEventIds.add(event.id);
       }
       plan.enabledRewardEventIds = [...enabledRewardEventIds];

@@ -16,7 +16,6 @@ import {
   PlannerIncomeRule,
   PlannerLedgerEntry,
   PlannerPickupGoal,
-  PlannerRewardEntry,
   PlannerTarget,
   PlannerTargetProjection,
 } from '../models/carat-planner.model';
@@ -29,9 +28,9 @@ import {
 } from '../utils/carat-planner-competition-assumptions';
 import {
   conditionalRewardScenarioGroup,
-  conditionalRewardScenarioSelectionMatches,
   incomeRuleScenarioSelectionMatches,
   isLegacyTrainingPassIncomeRule,
+  plannerRewardSelectionEnabled,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
   selectedConditionalRewardAmount,
@@ -171,6 +170,7 @@ export class CaratPlannerCalculationService {
 
     const enabledRules = new Set(plan.enabledIncomeRuleIds);
     const enabledRewards = new Set(plan.enabledRewardIds);
+    const disabledRewards = new Set(plan.disabledRewardIds ?? []);
     const disabledEvents = new Set(plan.disabledEventIds ?? []);
     const ledger: PlannerLedgerEntry[] = [];
 
@@ -185,8 +185,12 @@ export class CaratPlannerCalculationService {
 
     const activeRewards = (data.rewards.rewards ?? [])
       .filter(reward =>
-        enabledRewards.has(reward.id)
-        && this.isConditionalRewardEnabled(reward, plan.scenarioSelections)
+        plannerRewardSelectionEnabled(
+          reward,
+          plan.scenarioSelections,
+          enabledRewards.has(reward.id),
+          disabledRewards.has(reward.id),
+        )
         && !(reward.event_id ? disabledEvents.has(reward.event_id) : false))
       .map(reward => {
         const group = conditionalRewardScenarioGroup(reward);
@@ -701,14 +705,6 @@ export class CaratPlannerCalculationService {
 
   private isSelectedScenario(rule: PlannerIncomeRule, selections: Record<string, string>): boolean {
     return incomeRuleScenarioSelectionMatches(rule, selections);
-  }
-
-  private isConditionalRewardEnabled(
-    reward: Pick<PlannerRewardEntry, 'assumption' | 'label'>,
-    selections: Record<string, string>,
-  ): boolean {
-    const group = conditionalRewardScenarioGroup(reward);
-    return !group || conditionalRewardScenarioSelectionMatches(reward, selections[group]);
   }
 
   private findGacha(target: PlannerTarget, gachas: readonly PlannerGachaEntry[]): PlannerGachaEntry | undefined {
