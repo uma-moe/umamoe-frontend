@@ -50,6 +50,7 @@ import {
   plannerRewardBundles,
   plannerSourceItemTotals,
 } from '../../utils/planner-reward-currencies';
+import { plannerRewardAvailabilityWindow } from '../../utils/planner-reward-availability';
 import { classicChampionsFinalOutcomes, withTimelineRewardFallbacks } from '../../utils/planner-reward-summary';
 import {
   resolveBundledTimelineEventImagePath,
@@ -235,6 +236,7 @@ interface PlannerRewardGroupView {
   eventId?: string;
   title: string;
   availableAt: string;
+  availableUntil?: string;
   imagePath?: string;
   sourceUrl?: string;
   sourceLabel?: string;
@@ -2104,9 +2106,16 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           .sort();
         const eventDate = this.optionalDateKey(event?.globalReleaseDate ?? event?.estimatedGlobalDate ?? event?.jpReleaseDate);
         if (dates.length === 0 && eventDate) dates.push(eventDate);
+        const availabilityWindow = plannerRewardAvailabilityWindow(
+          group.eventId,
+          group.rewards.map(reward => reward.available_at),
+          this.allEvents,
+        );
         const projectionStart = this.optionalDateKey(this.plan?.projectionStartDate);
         const usableDates = projectionStart ? dates.filter(date => date >= projectionStart) : dates;
-        const isPast = Boolean(projectionStart && dates.length > 0 && usableDates.length === 0);
+        const isPast = availabilityWindow
+          ? Boolean(projectionStart && availabilityWindow.endsAt < projectionStart)
+          : Boolean(projectionStart && dates.length > 0 && usableDates.length === 0);
         const applicableRewards = isPast || !projectionStart
           ? group.rewards
           : group.rewards.filter(reward => this.isRewardDateUsable(reward.available_at, projectionStart));
@@ -2145,7 +2154,9 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           id,
           eventId: group.eventId,
           title,
-          availableAt: isPast ? dates[dates.length - 1] : usableDates[0] ?? dates[0] ?? '',
+          availableAt: availabilityWindow?.startsAt
+            ?? (isPast ? dates[dates.length - 1] : usableDates[0] ?? dates[0] ?? ''),
+          availableUntil: availabilityWindow?.endsAt,
           imagePath: event?.imagePath
             ?? resolveBundledTimelineEventImagePath(firstVariant?.competition, firstVariant?.master_event_id),
           sourceUrl: source?.url,

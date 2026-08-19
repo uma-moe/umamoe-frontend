@@ -177,6 +177,48 @@ describe('CaratPlannerCalculationService', () => {
     expect(target.balanceAfter).toEqual({ freeJewels: 300, paidJewels: 300, umaTickets: 0, supportTickets: 0, rainbowCrystals: 0, goldCrystals: 0, rainbowFullCrystals: 0, goldFullCrystals: 0 });
   });
 
+  it('counts end-dated event rewards from the event start while preserving exact dated gifts', () => {
+    const plan = makePlan({
+      projectionStartDate: '2026-08-17',
+      enabledRewardIds: ['skills-test-reward', 'dated-gift'],
+    });
+    const data: CaratPlannerDataBundle = {
+      ...emptyData(),
+      rewards: { rewards: [
+        {
+          id: 'skills-test-reward',
+          event_id: 'trainer-skills-test',
+          label: 'Trainer Skills Test rewards',
+          currency: 'free_jewels',
+          amount: 1250,
+          available_at: '2026-08-22T22:00:00Z',
+        },
+        {
+          id: 'dated-gift',
+          event_id: 'trainer-skills-test',
+          label: 'Exact dated gift',
+          currency: 'free_jewels',
+          amount: 150,
+          available_at: '2026-08-19T12:00:00Z',
+        },
+      ] },
+    };
+    const events = [{
+      id: 'trainer-skills-test',
+      title: 'Trainer Skills Test',
+      type: 'trainer_skills_test',
+      globalReleaseDate: '2026-08-12T22:00:00Z',
+      estimatedEndDate: '2026-08-22T22:00:00Z',
+    }];
+
+    const ledger = service.buildLedger(plan, data, '2026-08-20', events);
+
+    expect(ledger.map(entry => [entry.id, entry.date, entry.amount])).toEqual([
+      ['reward:skills-test-reward:free_jewels', '2026-08-17', 1250],
+      ['reward:dated-gift:free_jewels', '2026-08-19', 150],
+    ]);
+  });
+
   it('uses 20 available tickets before Carats for a 200-pull banner', () => {
     const plan = makePlan({
       balances: {

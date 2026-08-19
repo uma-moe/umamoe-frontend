@@ -21,6 +21,7 @@ import {
   PlannerTargetProjection,
 } from '../models/carat-planner.model';
 import { plannerRewardBundles } from '../utils/planner-reward-currencies';
+import { plannerRewardAvailabilityWindow } from '../utils/planner-reward-availability';
 import {
   PLANNER_COMPETITION_ASSUMPTION_GROUPS,
   PLANNER_DATA_DRIVEN_COMPETITION_ASSUMPTION_GROUPS,
@@ -186,7 +187,14 @@ export class CaratPlannerCalculationService {
       && this.isConditionalRewardEnabled(reward, plan.scenarioSelections)
       && !(reward.event_id ? disabledEvents.has(reward.event_id) : false));
     for (const bundle of plannerRewardBundles(activeRewards)) {
-      const date = this.toDateKey(bundle.availableAt);
+      const window = plannerRewardAvailabilityWindow(
+        bundle.eventId,
+        [bundle.availableAt],
+        events,
+      );
+      const date = window
+        ? (window.startsAt < startDate && window.endsAt >= startDate ? startDate : window.startsAt)
+        : this.toDateKey(bundle.availableAt);
       if (!date || date < startDate || date > endDate) {
         continue;
       }

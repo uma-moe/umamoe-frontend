@@ -395,7 +395,14 @@
             </span>
             <span class="cp-reward-copy">
               <strong>{{ group.title }}</strong>
-              <time *ngIf="group.availableAt">{{ group.availableAt + 'T00:00:00Z' | date:'mediumDate':'UTC' }}</time>
+              <time *ngIf="group.availableAt"
+                [attr.title]="group.availableUntil ? 'Available throughout the event; counted from the start date' : 'Counted on this date'">
+                <ng-container *ngIf="group.availableUntil && group.availableUntil !== group.availableAt; else singleRewardDate">
+                  {{ group.availableAt + 'T00:00:00Z' | date:'MMM d':'UTC' }}
+                  &ndash; {{ group.availableUntil + 'T00:00:00Z' | date:'mediumDate':'UTC' }}
+                </ng-container>
+                <ng-template #singleRewardDate>{{ group.availableAt + 'T00:00:00Z' | date:'mediumDate':'UTC' }}</ng-template>
+              </time>
             </span>
             <span class="cp-reward-benefits">
               <span class="cp-reward-benefit" *ngFor="let benefit of group.benefits; trackBy: trackByRewardBenefit"

@@ -913,6 +913,39 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.displayedRewardGroups.map(item => item.id)).toEqual(['event:anniversary']);
   });
 
+  it('shows end-dated event rewards as an availability window from event start to event end', () => {
+    const component = createComponent();
+    component.plan.projectionStartDate = '2026-08-17';
+    component.events = [{
+      id: 'trainer-skills-test',
+      title: 'Trainer Skills Test',
+      type: 'trainer_skills_test',
+      globalReleaseDate: '2026-08-12T22:00:00Z',
+      estimatedEndDate: '2026-08-22T22:00:00Z',
+    }];
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards: [{
+        id: 'skills-test-reward',
+        event_id: 'trainer-skills-test',
+        label: 'Trainer Skills Test rewards',
+        currency: 'free_jewels',
+        amount: 1250,
+        available_at: '2026-08-22T22:00:00Z',
+      }] },
+    };
+
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    expect(component.displayedRewardGroups.length).toBe(1);
+    expect(component.displayedRewardGroups[0]).toEqual(jasmine.objectContaining({
+      availableAt: '2026-08-12',
+      availableUntil: '2026-08-22',
+      isPast: false,
+    }));
+  });
+
   it('does not infer shared campaign totals from a news source alone', () => {
     const component = createComponent();
     component.events = [
