@@ -1504,7 +1504,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   scenarioSectionToggleLabel(section: PlannerScenarioSectionView): string {
-    return this.scenarioSectionState(section) === 'all' ? 'Turn all off' : 'Turn all on';
+    return this.scenarioSectionState(section) === 'all' ? 'Clear all' : 'Select all';
   }
 
   toggleScenarioSection(section: PlannerScenarioSectionView): void {

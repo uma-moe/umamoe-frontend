@@ -4,7 +4,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 // Increment this number whenever you want to show the update notification again
-export const CURRENT_UPDATE_VERSION = 10;
+export const CURRENT_UPDATE_VERSION = 11;
 export interface ChangeItem {
     text: string;
     link?: string; // Internal route link
@@ -24,6 +24,54 @@ export interface UpdateEntry {
 }
 // Define your updates here - newest first
 export const UPDATE_LOG: UpdateEntry[] = [
+  {
+    title: 'Carat Planner - Rewards & Assumptions',
+    date: '2026-08-19',
+    categories: [
+      {
+        category: 'major',
+        label: 'Reward Planning',
+        icon: 'redeem',
+        color: '#ec407a',
+        items: [
+          { text: 'Upcoming event rewards are counted automatically; uncheck only rewards you do not expect to collect', link: '/timeline?tab=carat-planner' },
+          { text: 'Choose expected competition results and include conditional event, mission, shop, and story rewards in each plan' },
+          { text: 'Event availability windows, free-pull campaigns, tickets, Carats, and item rewards are grouped into a clearer schedule' },
+        ]
+      },
+      {
+        category: 'improvement',
+        label: 'Income Assumptions',
+        icon: 'tune',
+        color: '#7e57c2',
+        items: [
+          { text: 'New controls cover monthly shop exchanges, Training Pass, recurring event completion, and speculative future income' },
+          { text: "Champion's Meeting round-income profiles support conservative, competitive, and high-investment planning" },
+          { text: 'Assumption sections can be reviewed and changed without losing the planner context' },
+        ]
+      },
+      {
+        category: 'improvement',
+        label: 'Planner Polish',
+        icon: 'devices',
+        color: '#42a5f5',
+        items: [
+          { text: 'Reward controls, balance summaries, crystal progress, and compact layouts are easier to use on desktop and mobile' },
+          { text: 'Reward rows now use readable timeline event names instead of internal campaign identifiers' },
+        ]
+      },
+      {
+        category: 'bugfix',
+        label: 'Projection Accuracy',
+        icon: 'verified',
+        color: '#4caf50',
+        items: [
+          { text: 'Reward bundles are reconciled across Global, JP, news, mission, and fallback sources to avoid duplicate income' },
+          { text: 'Crystal shards, completed Uncap Crystals, crafted balances, and event end dates are now projected separately and consistently' },
+        ]
+      }
+    ]
+  },
   {
     title: 'August Update - Inheritance, Races & Planning',
     date: '2026-08-05',

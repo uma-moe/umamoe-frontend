@@ -482,18 +482,58 @@ select.cp-control,
 }
 
 .cp-scenario-section-toggle {
-  min-width: 88px;
-  padding: 0 8px;
-  display: flex;
-  align-items: stretch;
+  appearance: none;
+  min-width: 102px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   color: var(--text-muted);
+  border: 0;
   border-left: 1px solid var(--border-subtle);
   background: transparent;
+  font: inherit;
+  cursor: pointer;
 
-  span { font-size: 0.61rem; font-weight: 750; white-space: nowrap; }
-  &.is-active { color: var(--accent-success); background: rgba(var(--accent-success-rgb), 0.07); }
-  &.is-mixed { color: var(--accent-secondary); }
+  > span:last-child { font-size: 0.61rem; font-weight: 750; white-space: nowrap; }
+  &.is-active {
+    color: var(--accent-success);
+    background: rgba(var(--accent-success-rgb), 0.07);
+
+    .cp-checkbox-visual {
+      color: var(--surface-1);
+      border-color: var(--accent-success);
+      background: var(--accent-success);
+    }
+  }
+  &.is-mixed {
+    color: var(--accent-secondary);
+
+    .cp-checkbox-visual {
+      color: var(--surface-1);
+      border-color: var(--accent-secondary);
+      background: var(--accent-secondary);
+    }
+  }
   &:hover { background: var(--surface-2); }
+  &:focus-visible { position: relative; z-index: 1; outline: 2px solid rgba(var(--accent-primary-rgb), 0.5); outline-offset: -2px; }
+}
+
+.cp-checkbox-visual {
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 18px;
+  color: transparent;
+  border: 1px solid var(--text-muted);
+  border-radius: 2px;
+  background: transparent;
+
+  mat-icon { @include icon-size(14px); }
 }
 
 .cp-scenario-list {
@@ -1141,15 +1181,23 @@ select.cp-control,
 }
 
 .cp-scenario-binary {
+  appearance: none;
+  width: 100%;
   min-width: 0;
   min-height: 36px;
-  display: block;
+  padding: 4px 10px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
   color: var(--text-muted);
   border: 1px solid var(--border-secondary);
   border-radius: var(--radius-sm);
   box-shadow: inset 0 0 0 1px rgba(var(--accent-primary-rgb), 0.04);
   background: var(--surface-2);
+  font: inherit;
   text-align: left;
+  cursor: pointer;
 
   strong { overflow: hidden; font-size: 0.67rem; text-overflow: ellipsis; white-space: nowrap; }
   small { color: var(--text-muted); font-size: 0.57rem; font-weight: 650; white-space: nowrap; }
@@ -1161,36 +1209,22 @@ select.cp-control,
 
     strong { color: var(--text-primary); }
     small { color: var(--accent-secondary); }
+    .cp-checkbox-visual {
+      color: var(--surface-1);
+      border-color: var(--accent-success);
+      background: var(--accent-success);
+    }
   }
-  .is-muted strong, .is-muted small { color: var(--text-muted); }
+  .is-muted strong { color: var(--text-secondary); }
+  .is-muted small { color: var(--text-muted); }
   &:hover { border-color: var(--border-secondary); background: var(--surface-3); }
+  &:focus-visible { outline: 2px solid rgba(var(--accent-primary-rgb), 0.5); outline-offset: 1px; }
 }
 
 .cp-scenario-binary-copy {
   min-width: 0;
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
-  align-items: center;
-  gap: 6px;
-
-  > span { min-width: 0; display: grid; gap: 1px; }
-}
-
-.cp-checkbox-state-icon {
-  @include icon-size(16px);
-  color: var(--accent-success);
-}
-
-.cp-scenario-binary-copy.is-muted .cp-checkbox-state-icon {
-  color: var(--text-muted);
-}
-
-.cp-checkbox-state-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-
-  mat-icon { @include icon-size(14px); }
+  gap: 1px;
 }
 
 .cp-reward-row {
@@ -2682,41 +2716,6 @@ select.cp-control,
     font-size: 0.76rem;
   }
 
-  .cp-scenario-section-toggle .mdc-form-field {
-    width: 100%;
-    height: 100%;
-    justify-content: center;
-  }
-
-  .cp-scenario-section-toggle .mdc-label {
-    color: inherit;
-  }
-
-  .cp-scenario-binary .mdc-form-field,
-  .cp-scenario-binary .mdc-label {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .cp-scenario-binary .mdc-form-field {
-    min-height: 34px;
-    padding: 1px 8px 1px 2px;
-    box-sizing: border-box;
-  }
-
-  .cp-scenario-binary .mdc-label {
-    color: inherit;
-  }
-
-  .cp-scenario-section-toggle.is-active,
-  .cp-scenario-binary.is-active {
-    --mdc-checkbox-selected-checkmark-color: var(--surface-1);
-    --mdc-checkbox-selected-focus-icon-color: var(--accent-success);
-    --mdc-checkbox-selected-hover-icon-color: var(--accent-success);
-    --mdc-checkbox-selected-icon-color: var(--accent-success);
-    --mdc-checkbox-selected-pressed-icon-color: var(--accent-success);
-  }
-
   .cp-reward-row .mdc-form-field,
   .cp-reward-row .mdc-label {
     width: 100%;
@@ -3817,7 +3816,7 @@ select.cp-control,
   }
 
   .cp-scenario-section-toggle {
-    min-width: 70px;
+    min-width: 92px;
     padding-inline: 7px;
   }
 
@@ -3844,8 +3843,7 @@ select.cp-control,
   .cp-scenario-section-toggle {
     min-width: 48px;
 
-    span { display: none; }
-    .cp-checkbox-state-label { display: inline-flex; }
+    > span:last-child { display: none; }
   }
 
   .cp-scenario {
