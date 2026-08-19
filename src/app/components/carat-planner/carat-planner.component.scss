@@ -694,9 +694,9 @@ select.cp-control,
     align-items: center;
     gap: 6px;
   }
-  mat-select-trigger > span { min-width: 0; display: grid; gap: 1px; }
-  strong { overflow: hidden; color: var(--text-primary); font-size: 0.67rem; text-overflow: ellipsis; white-space: nowrap; }
-  small { overflow: hidden; color: var(--accent-secondary); font-size: 0.57rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+  mat-select-trigger > span { min-width: 0; display: grid; gap: 0; }
+  strong { overflow: hidden; color: var(--text-primary); font-size: 0.67rem; line-height: 1.05; text-overflow: ellipsis; white-space: nowrap; }
+  small { overflow: hidden; color: var(--accent-secondary); font-size: 0.57rem; font-weight: 700; line-height: 1.05; text-overflow: ellipsis; white-space: nowrap; }
   .is-muted strong, .is-muted small { color: var(--text-muted); }
 }
 
