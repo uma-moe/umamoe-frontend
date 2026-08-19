@@ -3480,6 +3480,17 @@ div.mat-mdc-autocomplete-panel.factor-autocomplete-panel .mat-mdc-option,
   }
 }
 
+// An empty planner assumption is a normal choice, not an error state.
+.factor-autocomplete-panel.mat-mdc-select-panel .mat-mdc-option.cp-planner-none-option,
+.factor-autocomplete-panel.mat-mdc-select-panel .mat-mdc-option.cp-planner-none-option.mat-mdc-option-active,
+.factor-autocomplete-panel.mat-mdc-select-panel .mat-mdc-option.cp-planner-none-option.mdc-list-item--selected {
+  background: transparent !important;
+}
+
+.factor-autocomplete-panel.mat-mdc-select-panel .mat-mdc-option.cp-planner-none-option:hover {
+  background: var(--factor-panel-option-hover-bg) !important;
+}
+
 // ===== GLOBAL: SPARK EDITOR OVERLAY =====
 .se-overlay-panel {
   .se-results {

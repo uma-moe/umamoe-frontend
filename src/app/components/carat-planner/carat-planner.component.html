@@ -278,9 +278,9 @@
                           <mat-icon *ngIf="!scenarioOptionIconPath(group.id, selected.value) && selected.icon" class="cp-scenario-option-icon" aria-hidden="true">{{ selected.icon }}</mat-icon>
                           <span><strong>{{ selected.label }}</strong><small *ngIf="selected.amountLabel">{{ selected.amountLabel }}</small></span>
                         </ng-container>
-                        <ng-template #scenarioNotIncluded><span class="is-muted"><strong>Choose an option</strong><small>Select to include</small></span></ng-template>
+                        <ng-template #scenarioNotIncluded><span class="is-muted"><strong>Not included</strong><small>No projected income</small></span></ng-template>
                       </mat-select-trigger>
-                      <mat-option value=""><span class="cp-scenario-option is-muted"><mat-icon aria-hidden="true">block</mat-icon><span>Not included</span></span></mat-option>
+                      <mat-option class="cp-planner-none-option" value=""><span class="cp-scenario-option cp-scenario-option--none"><strong>Not included</strong><small>No projected income</small></span></mat-option>
                       <mat-option *ngFor="let option of group.options" [value]="option.value">
                         <span class="cp-scenario-option">
                           <img *ngIf="scenarioOptionIconPath(group.id, option.value) as iconPath" [src]="iconPath" width="24" height="28" alt="">

@@ -764,6 +764,11 @@ select.cp-control,
   }
 
   &.is-muted { color: var(--text-muted); }
+
+  &.cp-scenario-option--none {
+    strong,
+    small { color: var(--text-muted); }
+  }
 }
 
 .cp-income-rules,
@@ -3877,12 +3882,22 @@ select.cp-control,
   .cp-scenario-list { padding: 7px; grid-template-columns: minmax(0, 1fr); }
 
   .cp-scenario-help {
-    width: 28px;
-    height: 28px;
-    margin-block: -6px;
-    font-size: 0.7rem;
+    position: relative;
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    border-color: var(--border-subtle);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.56rem;
     cursor: pointer;
     touch-action: manipulation;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -6px;
+    }
   }
 }
 
