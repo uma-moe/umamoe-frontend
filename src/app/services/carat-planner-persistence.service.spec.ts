@@ -224,6 +224,42 @@ describe('CaratPlannerPersistenceService', () => {
     expect(restored.targets[0].bannerEnd).toBeUndefined();
   });
 
+  it('replaces the local collection with sanitized cloud data', () => {
+    const service = createService();
+
+    const replaced = service.replaceCollection({
+      version: 1,
+      activePlanId: 'cloud-plan',
+      plans: [{
+        id: 'cloud-plan',
+        name: 'Cloud plan',
+        projectionStartDate: '2026-08-01',
+      }],
+    });
+
+    expect(replaced.activePlanId).toBe('cloud-plan');
+    expect(service.activePlan.name).toBe('Cloud plan');
+    expect(JSON.parse(localStorage.getItem(CaratPlannerPersistenceService.STORAGE_KEY)!).activePlanId)
+      .toBe('cloud-plan');
+  });
+
+  it('imports the same shared snapshot only once', () => {
+    const service = createService();
+    const shared = {
+      id: 'owner-plan',
+      name: 'Public plan',
+      projectionStartDate: '2026-08-01',
+    };
+
+    const first = service.importSharedPlan(shared, 'AbCd123456');
+    const second = service.importSharedPlan(shared, 'AbCd123456');
+
+    expect(first.id).toBe('shared-AbCd123456');
+    expect(first.name).toBe('Public plan (shared)');
+    expect(second.id).toBe(first.id);
+    expect(service.snapshot.plans.filter(plan => plan.id === first.id).length).toBe(1);
+  });
+
   it('purges legacy banner dates from existing local storage', () => {
     localStorage.setItem(CaratPlannerPersistenceService.STORAGE_KEY, JSON.stringify({
       version: 1,

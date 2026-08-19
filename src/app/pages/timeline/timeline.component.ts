@@ -233,6 +233,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         return this.caratPlannerAvailable && this.activeTab === 'carat-planner';
     }
     requestedPlannerEventId: string | null = null;
+    sharedPlannerId: string | null = null;
     plannedEventIds = new Set<string>();
     plannerEventCount = 0;
     plannerRewardSummaries = new Map<string, TimelineRewardSummary>();
@@ -642,6 +643,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             }
             this.activeTab = nextTab;
             this.requestedPlannerEventId = this.caratPlannerAvailable ? params.get('banner') : null;
+            this.sharedPlannerId = this.caratPlannerAvailable ? params.get('share') : null;
             if (changed && nextTab === 'timeline' && !this.isMobile) {
                 window.setTimeout(() => {
                     if (this.destroyed || this.activeTab !== 'timeline' || this.isMobile) return;

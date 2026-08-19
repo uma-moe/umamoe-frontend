@@ -83,7 +83,11 @@
   ></app-mobile-timeline>
 
   <section class="planner-tab-page" *ngIf="caratPlannerAvailable && activeTab === 'carat-planner'">
-    <app-carat-planner [events]="timelineEvents" [requestedEventId]="requestedPlannerEventId"></app-carat-planner>
+    <app-carat-planner
+      [events]="timelineEvents"
+      [requestedEventId]="requestedPlannerEventId"
+      [sharedPlanId]="sharedPlannerId"
+    ></app-carat-planner>
   </section>
 
   <section *ngIf="activeTab === 'timeline' && !isMobile" class="desktop-timeline" tourAnchor="timeline-page">

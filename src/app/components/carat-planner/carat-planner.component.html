@@ -32,12 +32,18 @@
     </div>
 
     <div class="cp-actions" role="group" aria-label="Plan actions">
+      <span class="cp-sync-state" [class.is-synced]="cloudStatus.kind === 'synced'"
+        [class.is-offline]="cloudStatus.kind === 'offline'" [title]="cloudStatus.label">
+        <mat-icon aria-hidden="true">{{ cloudStatusIcon() }}</mat-icon>
+        <span>{{ cloudStatus.label }}</span>
+      </span>
 
       <details #planActionsMenu class="cp-plan-more cp-popover" (toggle)="onPopoverToggle($event)">
         <summary class="cp-action cp-action--icon" aria-label="More plan actions" title="More plan actions">
           <mat-icon aria-hidden="true">more_horiz</mat-icon>
         </summary>
         <div class="cp-plan-menu">
+          <button type="button" (click)="planActionsMenu.open = false; sharePlan()"><mat-icon>share</mat-icon><span>Share plan</span></button>
           <button type="button" (click)="planActionsMenu.open = false; duplicatePlan()"><mat-icon>content_copy</mat-icon><span>Duplicate plan</span></button>
           <button type="button" (click)="planActionsMenu.open = false; exportPlan()"><mat-icon>download</mat-icon><span>Export plan</span></button>
           <input #importFile class="cp-file-input" type="file" accept="application/json" (change)="importPlan($event)">
@@ -49,6 +55,15 @@
       </details>
     </div>
   </header>
+
+  <div class="cp-share-notice" *ngIf="shareMessage" role="status">
+    <mat-icon aria-hidden="true">{{ shareUrl ? 'link' : importedSharedPlanName ? 'library_add_check' : 'info' }}</mat-icon>
+    <span>{{ shareMessage }}</span>
+    <a *ngIf="shareUrl" [href]="shareUrl" target="_blank" rel="noopener noreferrer">Open link</a>
+    <button *ngIf="shareUrl" type="button" (click)="copyShareUrl()">
+      <mat-icon aria-hidden="true">content_copy</mat-icon><span>Copy link</span>
+    </button>
+  </div>
 
   <div class="cp-workbench-main">
     <div class="cp-picker cp-picker--primary" tourAnchor="carat-planner-search">

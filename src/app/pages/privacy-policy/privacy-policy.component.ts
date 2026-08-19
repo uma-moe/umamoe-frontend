@@ -17,7 +17,7 @@ import { FuseAdsService } from '../../services/fuse-ads.service';
   styleUrl: './privacy-policy.component.scss'
 })
 export class PrivacyPolicyComponent {
-  lastUpdated = new Date('2026-06-24');
+  lastUpdated = new Date('2026-08-19');
   
   constructor(
     private meta: Meta,

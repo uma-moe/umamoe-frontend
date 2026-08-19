@@ -238,6 +238,63 @@ export class CaratPlannerPersistenceService {
     return JSON.stringify(this.withoutResourceDatesCollection(this.collectionSubject.value), null, 2);
   }
 
+  compactSnapshot(): CaratPlanCollection {
+    return this.clone(this.withoutResourceDatesCollection(this.collectionSubject.value));
+  }
+
+  compactPlan(plan: CaratPlan): CaratPlan {
+    return this.clone(this.withoutResourceDates(plan));
+  }
+
+  replaceCollection(value: unknown): CaratPlanCollection {
+    const record = this.asRecord(value);
+    const plans = Array.isArray(record?.['plans'])
+      ? record!['plans']
+        .map(item => this.sanitizePlan(item))
+        .filter((item): item is CaratPlan => !!item)
+        .slice(0, 50)
+      : [];
+    if (plans.length === 0) {
+      throw new Error('Synced planner data contains no usable plans.');
+    }
+    const requestedActiveId = this.cleanText(record?.['activePlanId'], 100);
+    this.commit({
+      version: 1,
+      activePlanId: plans.some(plan => plan.id === requestedActiveId) ? requestedActiveId : plans[0].id,
+      plans,
+    });
+    return this.snapshot;
+  }
+
+  importSharedPlan(value: unknown, shareId: string): CaratPlan {
+    const cleanShareId = this.cleanText(shareId, 20).replace(/[^a-zA-Z0-9]/g, '');
+    if (!cleanShareId) {
+      throw new Error('Shared plan link is invalid.');
+    }
+    const sharedPlanId = `shared-${cleanShareId}`;
+    const collection = this.snapshot;
+    const existing = collection.plans.find(plan => plan.id === sharedPlanId);
+    if (existing) {
+      collection.activePlanId = existing.id;
+      this.commit(collection);
+      return this.activePlan;
+    }
+
+    const imported = this.sanitizePlan(value);
+    if (!imported) {
+      throw new Error('Shared plan contains no usable planner data.');
+    }
+    const now = new Date().toISOString();
+    imported.id = sharedPlanId;
+    imported.name = this.uniqueName(`${imported.name} (shared)`.slice(0, 80), collection.plans);
+    imported.createdAt = now;
+    imported.updatedAt = now;
+    collection.plans.push(imported);
+    collection.activePlanId = imported.id;
+    this.commit(collection);
+    return this.activePlan;
+  }
+
   importJson(json: string): CaratPlanCollection {
     if (json.length > 2_000_000) {
       throw new Error('Planner import is too large.');

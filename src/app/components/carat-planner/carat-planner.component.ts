@@ -104,6 +104,10 @@ import {
   TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID,
 } from '../../utils/carat-planner-income-assumptions';
 import { CaratPlannerCalculationService } from '../../services/carat-planner-calculation.service';
+import {
+  CaratPlannerCloudService,
+  PlannerCloudStatus,
+} from '../../services/carat-planner-cloud.service';
 import { CaratPlannerPersistenceService } from '../../services/carat-planner-persistence.service';
 import { CaratPlannerResourceService, CaratPlannerResourceState } from '../../services/carat-planner-resource.service';
 import {
@@ -444,6 +448,11 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     }
   }
 
+  @Input() set sharedPlanId(value: string | null | undefined) {
+    this.pendingSharedPlanId = value?.trim() || null;
+    this.tryImportSharedPlan();
+  }
+
   collection!: CaratPlanCollection;
   plan!: CaratPlan;
   data = EMPTY_DATA;
@@ -478,6 +487,16 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   activeSetupPanel: PlannerSetupPanel | null = null;
   readonly incomePresets = PLANNER_INCOME_PRESETS;
   activeIncomePresetId: PlannerIncomePresetId | null = null;
+  cloudStatus: PlannerCloudStatus = {
+    kind: 'local',
+    loggedIn: false,
+    label: 'Saved on this device',
+  };
+  shareMessage = '';
+  shareUrl = '';
+  importedSharedPlanName = '';
+  private pendingSharedPlanId: string | null = null;
+  private handledSharedPlanId: string | null = null;
 
   constructor(
     private readonly calculations: CaratPlannerCalculationService,
@@ -487,9 +506,15 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     private readonly avatars: TimelineAvatarService,
     private readonly cdr: ChangeDetectorRef,
     @Optional() private readonly elementRef: ElementRef<HTMLElement> | null = null,
+    @Optional() private readonly cloud: CaratPlannerCloudService | null = null,
   ) {}
 
   ngOnInit(): void {
+    this.cloud?.start();
+    this.cloud?.status$.pipe(takeUntil(this.destroy$)).subscribe(status => {
+      this.cloudStatus = status;
+      this.cdr.markForCheck();
+    });
     this.persistence.collection$.pipe(takeUntil(this.destroy$)).subscribe(collection => {
       this.collection = collection;
       this.plan = this.persistence.activePlan;
@@ -500,6 +525,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       if (!this.syncActivePlanResources()) this.recalculate();
       this.cdr.markForCheck();
     });
+    this.tryImportSharedPlan();
     this.resources.state$.pipe(takeUntil(this.destroy$)).subscribe(state => {
       this.resourceState = state;
       this.cdr.markForCheck();
@@ -1330,6 +1356,60 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (this.collection.plans.length > 1 && confirm(`Delete "${this.plan.name}"?`)) {
       this.flushDeferredInteractionSave();
       this.persistence.deletePlan(this.plan.id);
+    }
+  }
+
+  sharePlan(): void {
+    this.flushDeferredInteractionSave();
+    if (!this.cloud || !this.cloudStatus.loggedIn) {
+      this.shareUrl = '';
+      this.shareMessage = 'Log in to create an account-backed share link.';
+      this.cdr.markForCheck();
+      return;
+    }
+    this.shareMessage = 'Creating share link...';
+    this.shareUrl = '';
+    this.cdr.markForCheck();
+    this.cloud.createShare(this.plan).pipe(takeUntil(this.destroy$)).subscribe({
+      next: shared => {
+        this.shareUrl = this.plannerShareUrl(shared.share_id);
+        this.shareMessage = 'Share link ready. Re-sharing updates this snapshot. Opening it adds a separate copy.';
+        void this.copyShareUrl(false).then(copied => {
+          if (copied) {
+            this.shareMessage = 'Share link copied. Re-sharing updates this snapshot. Opening it adds a separate copy.';
+          }
+          this.cdr.markForCheck();
+        });
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.shareMessage = 'Share link could not be created. Your plan is still saved locally.';
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  async copyShareUrl(updateMessage = true): Promise<boolean> {
+    if (!this.shareUrl) return false;
+    try {
+      await navigator.clipboard.writeText(this.shareUrl);
+      if (updateMessage) this.shareMessage = 'Share link copied.';
+      return true;
+    } catch {
+      if (updateMessage) this.shareMessage = 'Copy the share link below.';
+      return false;
+    } finally {
+      this.cdr.markForCheck();
+    }
+  }
+
+  cloudStatusIcon(): string {
+    switch (this.cloudStatus.kind) {
+      case 'loading': return 'cloud_download';
+      case 'saving': return 'cloud_sync';
+      case 'synced': return 'cloud_done';
+      case 'offline': return 'cloud_off';
+      default: return 'save';
     }
   }
 
@@ -3852,6 +3932,41 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
             ? 'rd'
             : 'th';
     return `${value}${suffix} Anniversary`;
+  }
+
+  private tryImportSharedPlan(): void {
+    const shareId = this.pendingSharedPlanId;
+    if (!this.cloud || !shareId || shareId === this.handledSharedPlanId) return;
+    if (!/^[a-zA-Z0-9]{8,12}$/.test(shareId)) {
+      this.handledSharedPlanId = shareId;
+      this.shareMessage = 'This shared plan link is invalid.';
+      return;
+    }
+    this.handledSharedPlanId = shareId;
+    this.shareMessage = 'Loading shared plan...';
+    this.cloud.getSharedPlan(shareId).pipe(takeUntil(this.destroy$)).subscribe({
+      next: shared => {
+        try {
+          const imported = this.persistence.importSharedPlan(shared.plan, shareId);
+          this.importedSharedPlanName = imported.name;
+          this.shareMessage = `Opened ${imported.name} as a separate copy.`;
+        } catch (error) {
+          this.shareMessage = error instanceof Error ? error.message : 'Shared plan could not be opened.';
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.shareMessage = 'Shared plan was not found or is no longer available.';
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private plannerShareUrl(shareId: string): string {
+    const url = new URL('/timeline', window.location.origin);
+    url.searchParams.set('tab', 'carat-planner');
+    url.searchParams.set('share', shareId);
+    return url.toString();
   }
 
   private id(prefix: string): string {
