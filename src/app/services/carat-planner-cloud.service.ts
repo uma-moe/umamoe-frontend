@@ -197,15 +197,18 @@ export class CaratPlannerCloudService {
     const differsFromLocal = !sameCollection(merged, local);
     if (differsFromLocal) this.applyRemoteCollection(merged);
     this.attachCollectionSync();
+    if (response.needs_compaction) this.verifiedHash = null;
     if (revertedInFlightChanges) {
       this.setStatus(
         'reverted',
         true,
         'Changes were reverted because this device copy was out of date. Your account plans are now current.',
       );
+      if (response.needs_compaction) {
+        this.queueSave(this.persistence.compactSnapshot(), 0);
+      }
       return;
     }
-    if (response.needs_compaction) this.verifiedHash = null;
     this.queueSave(this.persistence.compactSnapshot(), 0);
   }
 

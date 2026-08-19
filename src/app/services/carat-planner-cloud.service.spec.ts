@@ -7,6 +7,7 @@ import { CONDITIONAL_REWARD_DEFAULT_SELECTIONS } from '../utils/carat-planner-in
 import {
   compactPlannerCollectionForCloud,
   expandPlannerCollectionFromCloud,
+  isCompactPlannerCollectionForCloud,
 } from '../utils/carat-planner-cloud-codec';
 import { AuthService } from './auth.service';
 import {
@@ -200,6 +201,27 @@ describe('CaratPlannerCloudService sync', () => {
     expect(setup.http.put).toHaveBeenCalledTimes(1);
     const body = setup.http.put.calls.mostRecent().args[1] as { collection: unknown };
     expect(expandPlannerCollectionFromCloud(body.collection)).toEqual(serverCollection);
+  }));
+
+  it('rewrites a full JSON row even when a stale local cache must be reverted', fakeAsync(() => {
+    const staleLocal = collection(plan('same-plan', 'Stale local', '2026-08-17T10:00:00.000Z'));
+    const remote = collection(plan('same-plan', 'Current account plan', '2026-08-18T10:00:00.000Z'));
+    storeVerifiedMeta(staleLocal);
+    const setup = createCloudService(staleLocal, remote);
+    setup.http.get.and.returnValue(of({
+      revision: 1,
+      collection: remote,
+      updated_at: '2026-08-18T12:00:00.000Z',
+    }) as any);
+
+    setup.service.start();
+    tick();
+
+    expect(setup.collectionSubject.value).toEqual(remote);
+    expect(setup.http.put).toHaveBeenCalledTimes(1);
+    const body = setup.http.put.calls.mostRecent().args[1] as { collection: unknown };
+    expect(isCompactPlannerCollectionForCloud(body.collection)).toBeTrue();
+    expect(expandPlannerCollectionFromCloud(body.collection)).toEqual(remote);
   }));
 
   it('does not PUT timestamp-only state changes after loading the verified server state', fakeAsync(() => {
