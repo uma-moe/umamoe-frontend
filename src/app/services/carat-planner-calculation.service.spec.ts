@@ -903,6 +903,12 @@ describe('CaratPlannerCalculationService', () => {
       },
     }), data, '2026-01-03');
     expect(included.map(entry => entry.amount)).toEqual([80, 100, 3]);
+
+    const oneMastersClear = service.buildLedger(makePlan({
+      enabledRewardIds,
+      scenarioSelections: { masters_challenge_rewards: 'clear_1' },
+    }), data, '2026-01-03');
+    expect(oneMastersClear.map(entry => entry.amount)).toEqual([1]);
   });
 
   it('counts only the earned portion of progressive event assumptions', () => {

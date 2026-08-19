@@ -8,7 +8,7 @@ export interface ConfirmDialogData {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  /** Visual variant — 'danger' uses red accent. */
+  /** Visual variant - 'danger' uses red accent. */
   variant?: 'default' | 'danger';
 }
 

@@ -1398,7 +1398,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         );
     }
 
-    /** Not used — kept for safety. */
+    /** Not used - kept for safety. */
     getGpCrossBreeding(): number | null { return null; }
 
     getMainBreedingTooltip(): string {
@@ -1526,7 +1526,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
      *        - 'left'  : aff3(target, p2, gp2Left)
      *        - 'right' : aff3(target, p2, gp2Right)
      *   2. Legacy/breeding affinity between the record's P1 main horse and
-     *      the corresponding P2 node (works even without a target — this is
+     *      the corresponding P2 node (works even without a target - this is
      *      the "P2 legacy" contribution the user is browsing for):
      *        - 'main'  : aff2(p1Main, p2)
      *        - 'left'  : aff2(p1Main, gp2Left)
@@ -1956,7 +1956,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
             return `${this.formatNumber(metrics.procChancePct, this.twoDecimalFormatOptions)}%`;
         }
 
-        // Show expected procs when ≥1, proc chance otherwise — same logic as the planner.
+        // Show expected procs when ≥1, proc chance otherwise - same logic as the planner.
         // Always use 2 decimals with locale-aware formatting.
         return metrics.expectedProcs >= 1
             ? `${this.formatNumber(metrics.expectedProcs, this.twoDecimalFormatOptions)}x`

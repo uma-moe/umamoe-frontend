@@ -15,6 +15,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatRadioModule } from '@angular/material/radio';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TourAnchorMatMenuDirective } from 'ngx-ui-tour-md-menu';
 import { Subject, takeUntil } from 'rxjs';
@@ -78,6 +80,8 @@ import {
   LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID,
   MAIN_STORY_REWARDS_SCENARIO_GROUP_ID,
   MASTERS_CHALLENGE_SCENARIO_GROUP_ID,
+  MASTERS_CHALLENGE_ONE_CLEAR_OPTION,
+  MASTERS_CHALLENGE_THREE_CLEARS_OPTION,
   MONTHLY_SHOP_HELP_TEXT,
   MONTHLY_SHOP_ALL_OPTION,
   MONTHLY_SHOP_FRIEND_POINTS_OPTION,
@@ -87,6 +91,7 @@ import {
   randomGameplayIncomeRules,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
   SCENARIO_EVALUATION_REWARDS_SCENARIO_GROUP_ID,
+  selectedConditionalRewardAmount,
   SPECULATIVE_INCOME_INCLUDED_OPTION,
   SPECULATIVE_INCOME_MEDIAN_OPTION,
   RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID,
@@ -321,19 +326,19 @@ const PLANNER_INCOME_PRESETS: readonly PlannerIncomePresetView[] = [
   {
     id: 'conservative',
     label: 'Conservative',
-    description: 'Low ranks, partial rewards, no estimates',
+    description: 'Low results, partial event clears, no estimates',
     icon: 'shield',
   },
   {
     id: 'casual',
     label: 'Casual',
-    description: 'Regular logins and lighter event play',
+    description: 'Regular play without grind-heavy completion',
     icon: 'self_improvement',
   },
   {
     id: 'active',
     label: 'Active',
-    description: 'Full ordinary events and medium results',
+    description: 'Most event rewards and competitive results',
     icon: 'local_fire_department',
   },
   {
@@ -354,6 +359,8 @@ const PLANNER_INCOME_PRESETS: readonly PlannerIncomePresetView[] = [
     MatCheckboxModule,
     MatIconModule,
     MatProgressBarModule,
+    MatRadioModule,
+    MatSelectModule,
     MatTooltipModule,
     TourAnchorMatMenuDirective,
   ],
@@ -661,26 +668,32 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   get pullPlanItems(): PlannerPullPlanItem[] {
     const targets = this.activeTargets;
-    const upcomingTargets = targets.filter(target => !this.isTargetBeforePlan(target));
+    const upcomingTargets = targets
+      .filter(target => !this.isTargetBeforePlan(target))
+      .sort((left, right) => this.calculations.resolvePullDate(left).localeCompare(this.calculations.resolvePullDate(right))
+        || left.id.localeCompare(right.id));
     const pastTargets = targets.filter(target => this.isTargetBeforePlan(target));
     const startDate = this.optionalDateKey(this.plan?.projectionStartDate);
-    const finalPullDate = upcomingTargets
-      .map(target => this.calculations.resolvePullDate(target))
-      .sort()
-      .at(-1);
 
-    const upcomingItems: PlannerPullPlanItem[] = upcomingTargets.map(target => ({
-      id: `target:${target.id}`,
-      kind: 'target',
-      date: this.calculations.resolvePullDate(target),
-      target,
-    }));
-    if (finalPullDate) {
-      upcomingItems.push(...this.anniversaryMarkers
-        .filter(marker => (!startDate || marker.date >= startDate) && marker.date <= finalPullDate));
+    const upcomingItems: PlannerPullPlanItem[] = [];
+    let previousPullDate: string | null = null;
+    for (const target of upcomingTargets) {
+      const pullDate = this.calculations.resolvePullDate(target);
+      const precedingMarker = this.anniversaryMarkers
+        .filter(marker =>
+          (!startDate || marker.date >= startDate)
+          && (!previousPullDate || marker.date > previousPullDate)
+          && marker.date <= pullDate)
+        .at(-1);
+      if (precedingMarker) upcomingItems.push(precedingMarker);
+      upcomingItems.push({
+        id: `target:${target.id}`,
+        kind: 'target',
+        date: pullDate,
+        target,
+      });
+      previousPullDate = pullDate;
     }
-    upcomingItems.sort((left, right) => left.date.localeCompare(right.date)
-      || (left.kind === right.kind ? left.id.localeCompare(right.id) : left.kind === 'anniversary' ? -1 : 1));
 
     return [
       ...upcomingItems,
@@ -1551,6 +1564,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   setScenario(group: string, option: string): void {
     this.activeIncomePresetId = null;
     this.applyScenarioSelection(group, option);
+    if (CONDITIONAL_REWARD_SCENARIO_GROUP_IDS.has(group)) this.filterRewards(true);
     this.save();
   }
 
@@ -1561,6 +1575,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       this.applyScenarioSelection(group.id, this.incomePresetSelection(group, presetIndex));
     }
     this.activeIncomePresetId = presetId;
+    this.filterRewards(true);
     this.save();
   }
 
@@ -1663,6 +1678,16 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     remembered: string | undefined,
   ): string {
     if (remembered && group.options.some(option => option.value === remembered)) return remembered;
+    if (group.id === 'team_trials_class') {
+      return group.options.find(option => option.value === 'class_3')?.value
+        ?? group.options[0]?.value
+        ?? '';
+    }
+    if (group.id === 'club_rank') {
+      return group.options.find(option => option.value === 'rank_3')?.value
+        ?? group.options[0]?.value
+        ?? '';
+    }
     if (group.id === 'champions_meeting_result'
       || group.id === 'league_of_heroes_rank'
       || group.id === 'strongest_team_reward_tier') {
@@ -1673,26 +1698,26 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   private incomePresetSelection(group: PlannerScenarioGroupView, presetIndex: number): string {
     const preferences: Readonly<Record<string, readonly string[]>> = {
-      team_trials_class: ['class_2', 'class_3', 'class_5', 'class_6'],
-      club_rank: ['rank_2', 'rank_4', 'rank_7', 'rank_11'],
-      [MONTHLY_SHOP_SCENARIO_GROUP_ID]: ['', MONTHLY_SHOP_FRIEND_POINTS_OPTION, MONTHLY_SHOP_ALL_OPTION, MONTHLY_SHOP_ALL_OPTION],
+      team_trials_class: ['class_3', 'class_4', 'class_5', 'class_6'],
+      club_rank: ['rank_3', 'rank_5', 'rank_7', 'rank_11'],
+      [MONTHLY_SHOP_SCENARIO_GROUP_ID]: ['', MONTHLY_SHOP_FRIEND_POINTS_OPTION, MONTHLY_SHOP_FRIEND_POINTS_OPTION, MONTHLY_SHOP_ALL_OPTION],
       [TRAINING_PASS_SCENARIO_GROUP_ID]: ['', 'free', 'free', 'free'],
       champions_meeting_result: ['open_third', 'open_first', 'group_b_second', 'champion'],
       champions_meeting_round_income: ['', 'low_investment', 'competitive', 'meta_highroller'],
-      league_of_heroes_rank: ['silver_4', 'gold_2', 'gold_4', 'platinum_4'],
+      league_of_heroes_rank: ['silver_4', 'silver_4', 'gold_4', 'platinum_4'],
       strongest_team_reward_tier: ['@lowest', '@middle', '@highest', '@highest'],
       legend_race_clears: ['opponents_1', 'opponents_2', 'all', 'all'],
-      [MASTERS_CHALLENGE_SCENARIO_GROUP_ID]: ['', '', '', CONDITIONAL_REWARDS_INCLUDED_OPTION],
-      [STORY_EVENT_REWARDS_SCENARIO_GROUP_ID]: [CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
-      [FACTOR_RESEARCH_REWARDS_SCENARIO_GROUP_ID]: ['', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [MASTERS_CHALLENGE_SCENARIO_GROUP_ID]: ['', MASTERS_CHALLENGE_ONE_CLEAR_OPTION, MASTERS_CHALLENGE_THREE_CLEARS_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [STORY_EVENT_REWARDS_SCENARIO_GROUP_ID]: ['', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [FACTOR_RESEARCH_REWARDS_SCENARIO_GROUP_ID]: ['', '', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
       [TRAINER_SKILLS_TEST_REWARDS_SCENARIO_GROUP_ID]: ['score_only', 'score_only', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
       [RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID]: ['clears_only', 'clears_only', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
       [RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID]: ['', '', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
-      [SCENARIO_EVALUATION_REWARDS_SCENARIO_GROUP_ID]: ['', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
-      [LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID]: ['', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [SCENARIO_EVALUATION_REWARDS_SCENARIO_GROUP_ID]: ['', '', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID]: ['', '', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
       [TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID]: ['', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
-      [MAIN_STORY_REWARDS_SCENARIO_GROUP_ID]: [CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
-      [LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID]: [CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [MAIN_STORY_REWARDS_SCENARIO_GROUP_ID]: ['', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
+      [LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID]: ['', CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION, CONDITIONAL_REWARDS_INCLUDED_OPTION],
       [RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID]: ['', 'low', 'medium', 'high'],
       [SPECULATIVE_INCOME_SCENARIO_GROUP_ID]: [SPECULATIVE_INCOME_NONE_OPTION, SPECULATIVE_INCOME_MEDIAN_OPTION, SPECULATIVE_INCOME_INCLUDED_OPTION, SPECULATIVE_INCOME_INCLUDED_OPTION],
     };
@@ -2428,7 +2453,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   private buildRewardBreakdownTooltip(rewards: readonly PlannerRewardEntry[]): string {
-    const lines = plannerRewardBundles(rewards)
+    const lines = plannerRewardBundles(this.rewardRowsForSelectedAssumptions(rewards))
       .map(bundle => {
         const carats = (bundle.totals.get('free_jewels') ?? 0) + (bundle.totals.get('paid_jewels') ?? 0);
         const amounts = [
@@ -2462,6 +2487,19 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (!Number.isFinite(amount) || Number(amount) <= 0) return '';
     const value = Math.trunc(Number(amount));
     return `${INTEGER_FORMATTER.format(value)} ${singular}${value === 1 ? '' : 's'}`;
+  }
+
+  private rewardRowsForSelectedAssumptions(
+    rewards: readonly PlannerRewardEntry[],
+  ): PlannerRewardEntry[] {
+    return rewards.map(reward => {
+      const group = conditionalRewardScenarioGroup(reward);
+      if (!group) return reward;
+      const selection = this.plan.scenarioSelections[group];
+      if (!conditionalRewardScenarioSelectionMatches(reward, selection)) return reward;
+      const amount = selectedConditionalRewardAmount(reward, selection);
+      return amount === reward.amount ? reward : { ...reward, amount };
+    });
   }
 
   private isRewardDateUsable(value: string, projectionStart: string): boolean {
@@ -2526,7 +2564,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       const kind = this.rewardKindForCurrency(currency);
       totals.set(kind, (totals.get(kind) ?? 0) + amount);
     };
-    for (const bundle of plannerRewardBundles(rewards)) {
+    for (const bundle of plannerRewardBundles(this.rewardRowsForSelectedAssumptions(rewards))) {
       for (const [currency, amount] of bundle.totals) addCurrency(currency, amount);
     }
     const selection = this.resolveVariableRewardOption(
@@ -3420,7 +3458,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const label = supportTitle
       && !this.isGenericPickupLabel(supportTitle)
       && supportTitle.toLowerCase() !== resolvedName.toLowerCase()
-      ? `${resolvedName} — ${supportTitle}`
+      ? `${resolvedName} - ${supportTitle}`
       : resolvedName;
     const placeholderImagePath = target.bannerKind === 'support'
       ? PLANNER_SUPPORT_PLACEHOLDER

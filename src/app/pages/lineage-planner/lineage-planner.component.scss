@@ -144,7 +144,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
 .planner-scroll {
   flex: 1;
   overflow: auto;
-  // Vertical padding only — horizontal padding is moved to .planner-content
+  // Vertical padding only - horizontal padding is moved to .planner-content
   // so that padding-right is preserved when content overflows horizontally.
   padding: 0.875rem 0 2rem;
   @include custom-scrollbar;
@@ -2050,7 +2050,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
     }
   }
 
-  // ─── NODE SIZING — fill column width at every tier ───────────
+  // ─── NODE SIZING - fill column width at every tier ───────────
   .node {
     align-self: stretch;
     position: relative;
@@ -2177,7 +2177,7 @@ $col-parent: 2 * $col-gp + $gap-tree;
     border-radius: var(--radius-md) !important;
   }
 
-  // On mobile: transposed layout — characters as columns, spark types as rows
+  // On mobile: transposed layout - characters as columns, spark types as rows
   .odds-scroll-desktop {
     display: none;
   }

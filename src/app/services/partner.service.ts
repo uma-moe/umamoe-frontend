@@ -169,7 +169,7 @@ export class PartnerService implements OnDestroy {
     return new Observable<PartnerLookupEvent>(subscriber => {
       const sub = this.createLookup(partnerId, label).subscribe({
         next: created => {
-          // Backend already had cached data — no streaming needed.
+          // Backend already had cached data - no streaming needed.
           if (created.task_id == null) {
             const inh = this.inheritanceFromLookupResult(created.result);
             if (!isLoggedIn && inh) { this.saveAnon(inh, label); }
@@ -257,11 +257,11 @@ export class PartnerService implements OnDestroy {
       )
       .subscribe({
         next: () => {
-          // Clear the local cache — backend is now the source of truth.
+          // Clear the local cache - backend is now the source of truth.
           try { localStorage.removeItem(ANON_STORAGE_KEY); } catch { /* noop */ }
         },
         error: () => {
-          // Migration failed (e.g. offline) — leave localStorage intact so
+          // Migration failed (e.g. offline) - leave localStorage intact so
           // we can retry on the next login.
         },
       });
@@ -298,7 +298,7 @@ export class PartnerService implements OnDestroy {
     try {
       localStorage.setItem(ANON_STORAGE_KEY, JSON.stringify(next));
     } catch {
-      // Quota exceeded or storage disabled — silently ignore; the lookup
+      // Quota exceeded or storage disabled - silently ignore; the lookup
       // result is still emitted to the caller.
     }
   }

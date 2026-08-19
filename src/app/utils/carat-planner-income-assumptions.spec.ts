@@ -3,11 +3,13 @@ import {
   conditionalRewardScenarioGroup,
   conditionalRewardScenarioSelectionMatches,
   MASTERS_CHALLENGE_SCENARIO_GROUP_ID,
+  MASTERS_CHALLENGE_ONE_CLEAR_OPTION,
   plannerIncomeAssumptionGroups,
   RACING_CARNIVAL_CLEARS_ONLY_OPTION,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
+  selectedConditionalRewardAmount,
   TRAINER_SKILLS_TEST_SCORE_ONLY_OPTION,
 } from './carat-planner-income-assumptions';
 
@@ -148,6 +150,31 @@ describe('plannerIncomeAssumptionGroups', () => {
     )).toBeFalse();
     expect(conditionalRewardScenarioSelectionMatches(skillsShop, 'include')).toBeTrue();
     expect(conditionalRewardScenarioSelectionMatches(carnivalShop, 'none')).toBeFalse();
+  });
+
+  it('scales Masters Challenge rewards to the selected number of cleared races', () => {
+    const reward = (currency: 'free_jewels' | 'rainbow_crystal', amount: number) => ({
+      label: 'Masters Challenge first-clear rewards',
+      assumption: 'all_first_clears_high_difficulty',
+      currency,
+      amount,
+      source_items: [],
+    });
+
+    expect(conditionalRewardScenarioSelectionMatches(
+      reward('free_jewels', 4500),
+      MASTERS_CHALLENGE_ONE_CLEAR_OPTION,
+    )).toBeTrue();
+    expect(selectedConditionalRewardAmount(
+      reward('free_jewels', 4500),
+      MASTERS_CHALLENGE_ONE_CLEAR_OPTION,
+    )).toBe(900);
+    expect(selectedConditionalRewardAmount(
+      reward('rainbow_crystal', 5),
+      MASTERS_CHALLENGE_ONE_CLEAR_OPTION,
+    )).toBe(1);
+    expect(selectedConditionalRewardAmount(reward('free_jewels', 2700), 'clear_3')).toBe(2700);
+    expect(selectedConditionalRewardAmount(reward('free_jewels', 4500), 'none')).toBe(0);
   });
 
   it('offers transparent activity-based random gameplay estimates', () => {

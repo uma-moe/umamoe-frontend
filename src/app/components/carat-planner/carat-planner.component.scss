@@ -622,18 +622,21 @@ select.cp-control,
   white-space: pre-line;
 }
 
-.cp-scenario-stepper {
+.cp-scenario-dropdown.mat-mdc-select {
+  width: 100%;
+  height: 36px;
   min-width: 0;
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 30px;
+  box-sizing: border-box;
+  color: var(--text-secondary);
   border: 1px solid var(--border-secondary);
   border-radius: var(--radius-sm);
   box-shadow: inset 0 0 0 1px rgba(var(--accent-primary-rgb), 0.04);
-  overflow: hidden;
+  background: var(--surface-2);
 
   &.is-active {
     border-color: rgba(var(--accent-success-rgb), 0.5);
     box-shadow: inset 0 0 0 1px rgba(var(--accent-success-rgb), 0.08);
+    background: rgba(var(--accent-primary-rgb), 0.07);
   }
 
   &:focus-within {
@@ -641,39 +644,34 @@ select.cp-control,
     box-shadow: 0 0 0 1px rgba(var(--accent-primary-rgb), 0.16);
   }
 
-  > button {
+  img { width: 24px; height: 28px; flex: 0 0 auto; object-fit: contain; }
+  .cp-scenario-option-icon { @include icon-size(20px); flex: 0 0 auto; color: var(--accent-secondary); }
+}
+
+:host ::ng-deep .cp-scenario-dropdown .mat-mdc-select-trigger {
+  height: 34px;
+  padding: 3px 9px;
+  box-sizing: border-box;
+}
+
+:host ::ng-deep .cp-scenario-dropdown .mat-mdc-select-value {
+  min-width: 0;
+
+  mat-select-trigger {
     min-width: 0;
-    min-height: 34px;
-    padding: 0;
-    display: grid;
-    place-items: center;
-    color: var(--text-secondary);
-    border: 0;
-    background: var(--surface-2);
-    cursor: pointer;
-
-    mat-icon { @include icon-size(17px); }
-    &:hover { color: var(--text-primary); background: var(--surface-3); }
-    &:focus-visible { position: relative; z-index: 1; outline: 2px solid rgba(var(--accent-primary-rgb), 0.5); outline-offset: -2px; }
-  }
-
-  .cp-scenario-current {
-    padding: 3px 7px;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
     gap: 6px;
-    text-align: left;
-    border-inline: 1px solid var(--border-secondary);
-    background: rgba(var(--accent-primary-rgb), 0.07);
-
-    img { width: 24px; height: 28px; flex: 0 0 auto; object-fit: contain; }
-    .cp-scenario-option-icon { @include icon-size(20px); flex: 0 0 auto; color: var(--accent-secondary); }
-    > span { min-width: 0; display: grid; gap: 1px; }
-    strong { overflow: hidden; color: var(--text-primary); font-size: 0.67rem; text-overflow: ellipsis; white-space: nowrap; }
-    small { color: var(--accent-secondary); font-size: 0.57rem; font-weight: 700; white-space: nowrap; }
-    .is-muted strong, .is-muted small { color: var(--text-muted); }
   }
+  mat-select-trigger > span { min-width: 0; display: grid; gap: 1px; }
+  strong { overflow: hidden; color: var(--text-primary); font-size: 0.67rem; text-overflow: ellipsis; white-space: nowrap; }
+  small { overflow: hidden; color: var(--accent-secondary); font-size: 0.57rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+  .is-muted strong, .is-muted small { color: var(--text-muted); }
+}
+
+:host ::ng-deep .cp-scenario-dropdown-panel .mat-mdc-option {
+  min-height: 42px;
+  padding-inline: 10px;
 }
 
 .cp-scenario-choice {
@@ -5325,8 +5323,13 @@ select.cp-control,
 }
 
 .cp-scenario-binary.mat-mdc-checkbox {
+  --mdc-checkbox-state-layer-size: 28px;
+  height: 36px;
+  min-height: 36px;
   padding: 0;
   display: block;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .cp-scenario-section-toggle.mat-mdc-checkbox {
@@ -5336,8 +5339,10 @@ select.cp-control,
 
 :host ::ng-deep .cp-scenario-binary .mdc-form-field {
   width: 100%;
+  height: 34px;
   min-height: 34px;
   padding: 2px 9px;
+  box-sizing: border-box;
 }
 
 :host ::ng-deep .cp-scenario-binary .mdc-label {
@@ -5420,34 +5425,63 @@ select.cp-control,
 
 /* Milestones interleaved with the chronological pull ledger. */
 .cp-anniversary-marker {
-  min-height: 32px;
-  padding: 3px 10px;
-  display: flex;
+  min-height: 42px;
+  padding: 6px 13px;
+  display: grid;
+  grid-template-columns: 28px auto auto minmax(24px, 1fr);
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   color: var(--text-muted);
-  background: linear-gradient(90deg, transparent, rgba(var(--accent-warning-rgb), 0.055), transparent);
+  background: linear-gradient(90deg, rgba(var(--accent-warning-rgb), 0.07), transparent 45%);
 
-  > span {
-    height: 1px;
-    min-width: 18px;
-    flex: 1 1 auto;
-    background: linear-gradient(90deg, transparent, rgba(var(--accent-warning-rgb), 0.48));
+  .cp-anniversary-marker-icon {
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    color: var(--accent-warning);
+    border: 1px solid rgba(var(--accent-warning-rgb), 0.34);
+    border-radius: 50%;
+    background: rgba(var(--accent-warning-rgb), 0.1);
 
-    &:last-child { background: linear-gradient(90deg, rgba(var(--accent-warning-rgb), 0.48), transparent); }
+    mat-icon { @include icon-size(15px); }
   }
 
-  strong {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
+  .cp-anniversary-marker-copy {
+    min-width: 0;
+    display: grid;
+    gap: 1px;
+
+    strong {
+      overflow: hidden;
+      color: var(--text-primary);
+      font-size: 0.68rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    small {
+      color: var(--text-muted);
+      font-size: 0.54rem;
+      white-space: nowrap;
+    }
+  }
+
+  time {
+    padding: 3px 6px;
     color: var(--accent-warning);
-    font-size: 0.68rem;
+    border: 1px solid rgba(var(--accent-warning-rgb), 0.22);
+    border-radius: 999px;
+    background: rgba(var(--accent-warning-rgb), 0.065);
+    font-size: 0.58rem;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
 
-  mat-icon { @include icon-size(16px); }
-  time { font-size: 0.61rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cp-anniversary-marker-line {
+    height: 1px;
+    background: linear-gradient(90deg, rgba(var(--accent-warning-rgb), 0.38), transparent);
+  }
 }
 
 @media (max-width: 980px) {
@@ -5484,8 +5518,12 @@ select.cp-control,
   .cp-setup-panel--resources > .cp-field:first-child { grid-column: auto; }
   .cp-target-bulk-title { grid-column: 1 / -1; }
   .cp-target-bulk { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .cp-anniversary-marker { gap: 6px; padding-inline: 6px; }
-  .cp-anniversary-marker time { display: none; }
+  .cp-anniversary-marker {
+    padding-inline: 8px;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+  }
+  .cp-anniversary-marker-line { display: none; }
+  .cp-anniversary-marker-copy small { white-space: normal; }
 }
 
 .cp-income-presets {
@@ -5512,27 +5550,16 @@ select.cp-control,
     small { overflow: hidden; color: var(--text-muted); font-size: 0.55rem; text-overflow: ellipsis; white-space: nowrap; }
   }
 
-  button {
-    appearance: none;
+  .cp-income-preset.mat-mdc-radio-button {
+    --mdc-radio-state-layer-size: 28px;
     min-width: 0;
     min-height: 38px;
-    padding: 4px 7px;
-    display: grid;
-    grid-template-columns: 18px minmax(0, 1fr);
-    align-items: center;
-    gap: 6px;
     color: var(--text-secondary);
     border: 1px solid var(--border-primary);
     border-radius: var(--radius-sm);
     background: var(--surface-2);
-    font: inherit;
-    text-align: left;
     cursor: pointer;
 
-    > mat-icon { @include icon-size(16px); color: var(--text-muted); }
-    > span { min-width: 0; display: grid; gap: 1px; }
-    strong { overflow: hidden; font-size: 0.64rem; text-overflow: ellipsis; white-space: nowrap; }
-    small { overflow: hidden; color: var(--text-muted); font-size: 0.53rem; text-overflow: ellipsis; white-space: nowrap; }
     &:hover { border-color: var(--border-secondary); background: var(--surface-3); }
     &:focus-visible { outline: 2px solid rgba(var(--accent-primary-rgb), 0.5); outline-offset: 1px; }
     &.is-active {
@@ -5541,10 +5568,35 @@ select.cp-control,
       background: rgba(var(--accent-primary-rgb), 0.1);
       box-shadow: inset 0 0 0 1px rgba(var(--accent-primary-rgb), 0.08);
 
-      > mat-icon { color: var(--accent-primary); }
-      small { color: var(--text-secondary); }
+      .cp-income-preset-copy > mat-icon { color: var(--accent-primary); }
+      .cp-income-preset-copy small { color: var(--text-secondary); }
     }
   }
+
+  .cp-income-preset-copy {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 17px minmax(0, 1fr);
+    align-items: center;
+    gap: 5px;
+
+    > mat-icon { @include icon-size(15px); color: var(--text-muted); }
+    > span { min-width: 0; display: grid; gap: 1px; }
+    strong { overflow: hidden; font-size: 0.64rem; text-overflow: ellipsis; white-space: nowrap; }
+    small { overflow: hidden; color: var(--text-muted); font-size: 0.53rem; text-overflow: ellipsis; white-space: nowrap; }
+  }
+}
+
+:host ::ng-deep .cp-income-preset .mdc-form-field {
+  width: 100%;
+  min-height: 36px;
+  padding: 3px 7px 3px 2px;
+}
+
+:host ::ng-deep .cp-income-preset .mdc-label {
+  min-width: 0;
+  padding-left: 2px;
+  flex: 1 1 auto;
 }
 
 @media (max-width: 980px) {
@@ -5554,5 +5606,5 @@ select.cp-control,
 
 @media (max-width: 520px) {
   .cp-income-presets { margin-inline: 0; }
-  .cp-income-presets button small { white-space: normal; }
+  .cp-income-preset-copy small { white-space: normal; }
 }

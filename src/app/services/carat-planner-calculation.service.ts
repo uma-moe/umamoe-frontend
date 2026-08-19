@@ -34,6 +34,7 @@ import {
   isLegacyTrainingPassIncomeRule,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
+  selectedConditionalRewardAmount,
   SPECULATIVE_INCOME_INCLUDED_OPTION,
   SPECULATIVE_INCOME_MEDIAN_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
@@ -182,10 +183,17 @@ export class CaratPlannerCalculationService {
       ledger.push(...this.expandRule(rule, startDate, endDate));
     }
 
-    const activeRewards = (data.rewards.rewards ?? []).filter(reward =>
-      enabledRewards.has(reward.id)
-      && this.isConditionalRewardEnabled(reward, plan.scenarioSelections)
-      && !(reward.event_id ? disabledEvents.has(reward.event_id) : false));
+    const activeRewards = (data.rewards.rewards ?? [])
+      .filter(reward =>
+        enabledRewards.has(reward.id)
+        && this.isConditionalRewardEnabled(reward, plan.scenarioSelections)
+        && !(reward.event_id ? disabledEvents.has(reward.event_id) : false))
+      .map(reward => {
+        const group = conditionalRewardScenarioGroup(reward);
+        if (!group) return reward;
+        const amount = selectedConditionalRewardAmount(reward, plan.scenarioSelections[group]);
+        return amount === reward.amount ? reward : { ...reward, amount };
+      });
     for (const bundle of plannerRewardBundles(activeRewards)) {
       const window = plannerRewardAvailabilityWindow(
         bundle.eventId,

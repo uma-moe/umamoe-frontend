@@ -378,7 +378,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
 
     const cards = this.route.snapshot.queryParamMap.get('cards');
     if (!cards) {
-      // No query params — try restoring last saved state
+      // No query params - try restoring last saved state
       this.loadFromLocalStorage();
       return;
     }
@@ -1065,7 +1065,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   private async handleSaveAction(name: string): Promise<void> {
     const payload = this.buildPayload();
     if (payload.length === 0) {
-      this.snackBar.open('Nothing to save — tree is empty.', 'OK', { duration: 3000 });
+      this.snackBar.open('Nothing to save - tree is empty.', 'OK', { duration: 3000 });
       return;
     }
     const saves = this.readSaves();
@@ -1150,7 +1150,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   async exportToClipboard(): Promise<void> {
     const data = this.buildExportString();
     if (!data) {
-      this.snackBar.open('Nothing to export — tree is empty.', 'OK', { duration: 3000 });
+      this.snackBar.open('Nothing to export - tree is empty.', 'OK', { duration: 3000 });
       return;
     }
     try {
@@ -1172,7 +1172,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   exportToFile(): void {
     const data = this.buildExportString();
     if (!data) {
-      this.snackBar.open('Nothing to export — tree is empty.', 'OK', { duration: 3000 });
+      this.snackBar.open('Nothing to export - tree is empty.', 'OK', { duration: 3000 });
       return;
     }
     const blob = new Blob([data], { type: 'application/json' });
@@ -1220,7 +1220,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
   private applyImportString(raw: string, source: 'clipboard' | 'file'): void {
     const payload = this.parseImportString(raw);
     if (!payload) {
-      this.snackBar.open(this.withBuild('Invalid tree data — could not parse.'), 'OK', { duration: 4000 });
+      this.snackBar.open(this.withBuild('Invalid tree data - could not parse.'), 'OK', { duration: 4000 });
       return;
     }
     this.applyPayload(payload);
@@ -1420,7 +1420,7 @@ export class LineagePlannerComponent implements OnInit, OnDestroy, AfterViewInit
 
   /**
    * Returns the base chara_ids that should be excluded from the picker for
-   * a given position — i.e. characters already used in slots that must
+   * a given position - i.e. characters already used in slots that must
    * differ (same parent can't also be a grandparent, siblings can't share
    * a character, target can't equal its parents, etc.).
    */

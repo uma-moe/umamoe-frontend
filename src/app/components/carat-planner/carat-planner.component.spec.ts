@@ -170,7 +170,7 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(save).toHaveBeenCalledTimes(2);
   });
 
-  it('interleaves the earliest campaign date for each anniversary with planned pulls', () => {
+  it('shows only the nearest anniversary in each gap between planned pulls', () => {
     const component = createComponent();
     const target = (id: string, pullDate: string): PlannerTarget => ({
       id,
@@ -189,18 +189,19 @@ describe('CaratPlannerComponent banner ordering', () => {
       { id: 'anniv-old', title: '1st Anniversary Campaign Vol. 1', type: 'campaign', globalReleaseDate: '2029-02-01' },
       { id: 'anniv-late', title: '2nd Anniversary Campaign Vol. 2', type: 'campaign', globalReleaseDate: '2031-02-10' },
       { id: 'anniv-first', title: '2nd Anniversary Campaign Vol. 1', type: 'campaign', globalReleaseDate: '2031-02-01' },
+      { id: 'anniv-nearest', title: '2.5-Year Anniversary Campaign', type: 'campaign', globalReleaseDate: '2031-02-20' },
       { id: 'ordinary', title: 'Ordinary campaign', type: 'campaign', globalReleaseDate: '2031-02-05' },
     ];
     component.plan.targets = [target('before', '2031-01-15'), target('after', '2031-03-01')];
 
     expect(component.pullPlanItems.map(item => item.id)).toEqual([
       'target:before',
-      'anniversary:2',
+      'anniversary:2.5',
       'target:after',
     ]);
     expect(component.pullPlanItems[1]).toEqual(jasmine.objectContaining({
-      date: '2031-02-01',
-      label: '2nd Anniversary',
+      date: '2031-02-20',
+      label: '2.5-Year Anniversary',
     }));
   });
 
@@ -597,7 +598,7 @@ describe('CaratPlannerComponent banner ordering', () => {
       ) => { label: string; imagePath?: string };
     }).buildPickupOption(target, { pickup_id: 30031, rate: 0.0075, label: 'Support Card 30031' });
 
-    expect(option.label).toBe('Mejiro McQueen — Heirs to the Throne');
+    expect(option.label).toBe('Mejiro McQueen - Heirs to the Throne');
     expect(option.imagePath).toBe('/assets/images/support_card/half/support_card_s_30031.webp');
   });
 
@@ -745,7 +746,12 @@ describe('CaratPlannerComponent banner ordering', () => {
     ]);
     expect(mastersChallenges).toEqual(jasmine.objectContaining({
       label: 'Masters Challenges',
-      options: [{ value: 'include', label: 'Clear every challenge', amountLabel: 'Varies by event' }],
+      options: [
+        { value: 'clear_1', label: 'Clear 1 race', amountLabel: '+900 + 1R/1G shards / event' },
+        { value: 'clear_2', label: 'Clear 2 races', amountLabel: '+1,800 + 2R/2G shards / event' },
+        { value: 'clear_3', label: 'Clear 3 races', amountLabel: '+2,700 + 3R/3G shards / event' },
+        { value: 'include', label: 'Clear every race', amountLabel: 'Up to +4,500 + 5R/5G shards / event' },
+      ],
     }));
     expect(storyEvents).toEqual(jasmine.objectContaining({
       label: 'Story event rewards',
@@ -786,8 +792,10 @@ describe('CaratPlannerComponent banner ordering', () => {
       core: {},
       income: { rules: [
         { id: 'class-2', label: 'Team Trials Class 2', currency: 'free_jewels', amount: 35, cadence: 'weekly', start_date: '2030-01-01', scenario_group: 'team_trials_class', scenario_option: 'class_2' },
+        { id: 'class-3', label: 'Team Trials Class 3', currency: 'free_jewels', amount: 100, cadence: 'weekly', start_date: '2030-01-01', scenario_group: 'team_trials_class', scenario_option: 'class_3' },
         { id: 'class-6', label: 'Team Trials Class 6', currency: 'free_jewels', amount: 375, cadence: 'weekly', start_date: '2030-01-01', scenario_group: 'team_trials_class', scenario_option: 'class_6' },
         { id: 'rank-2', label: 'Club rank D+', currency: 'free_jewels', amount: 225, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_2' },
+        { id: 'rank-3', label: 'Club rank C', currency: 'free_jewels', amount: 750, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_3' },
         { id: 'rank-11', label: 'Club rank SS', currency: 'free_jewels', amount: 4500, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_11' },
       ] },
       rewards: { rewards: [] },
@@ -813,8 +821,8 @@ describe('CaratPlannerComponent banner ordering', () => {
     component.toggleScenarioSection(account);
     expect(component.scenarioSectionState(account)).toBe('all');
     expect(component.plan.scenarioSelections).toEqual(jasmine.objectContaining({
-      team_trials_class: 'class_2',
-      club_rank: 'rank_2',
+      team_trials_class: 'class_3',
+      club_rank: 'rank_3',
       training_pass: 'free',
     }));
 
@@ -825,8 +833,8 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.plan.scenarioSelections['training_pass']).toBeUndefined();
 
     component.toggleScenarioSection(account);
-    expect(component.plan.scenarioSelections['team_trials_class']).toBe('class_2');
-    expect(component.plan.scenarioSelections['club_rank']).toBe('rank_2');
+    expect(component.plan.scenarioSelections['team_trials_class']).toBe('class_3');
+    expect(component.plan.scenarioSelections['club_rank']).toBe('rank_3');
     expect(component.plan.scenarioSelections['training_pass']).toBe('free');
   });
 
@@ -836,10 +844,17 @@ describe('CaratPlannerComponent banner ordering', () => {
       core: {},
       income: { rules: [
         { id: 'class-2', label: 'Team Trials Class 2', currency: 'free_jewels', amount: 35, cadence: 'weekly', start_date: '2030-01-01', scenario_group: 'team_trials_class', scenario_option: 'class_2' },
+        { id: 'class-3', label: 'Team Trials Class 3', currency: 'free_jewels', amount: 100, cadence: 'weekly', start_date: '2030-01-01', scenario_group: 'team_trials_class', scenario_option: 'class_3' },
+        { id: 'class-4', label: 'Team Trials Class 4', currency: 'free_jewels', amount: 150, cadence: 'weekly', start_date: '2030-01-01', scenario_group: 'team_trials_class', scenario_option: 'class_4' },
+        { id: 'class-5', label: 'Team Trials Class 5', currency: 'free_jewels', amount: 225, cadence: 'weekly', start_date: '2030-01-01', scenario_group: 'team_trials_class', scenario_option: 'class_5' },
         { id: 'class-6', label: 'Team Trials Class 6', currency: 'free_jewels', amount: 375, cadence: 'weekly', start_date: '2030-01-01', scenario_group: 'team_trials_class', scenario_option: 'class_6' },
         { id: 'rank-2', label: 'Club rank D+', currency: 'free_jewels', amount: 225, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_2' },
+        { id: 'rank-3', label: 'Club rank C', currency: 'free_jewels', amount: 750, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_3' },
+        { id: 'rank-5', label: 'Club rank B', currency: 'free_jewels', amount: 1500, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_5' },
+        { id: 'rank-7', label: 'Club rank A', currency: 'free_jewels', amount: 2250, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_7' },
         { id: 'rank-11', label: 'Club rank SS', currency: 'free_jewels', amount: 4500, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'club_rank', scenario_option: 'rank_11' },
-        { id: 'shop', label: 'Monthly shop', currency: 'uma_ticket', amount: 3, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'monthly_shop_tickets', scenario_option: 'include' },
+        { id: 'shop-friend', label: 'Friend Point Exchange tickets', currency: 'uma_ticket', amount: 1, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'monthly_shop_tickets', scenario_option: 'friend_points' },
+        { id: 'shop', label: 'Clover Exchange tickets', currency: 'uma_ticket', amount: 2, cadence: 'monthly', start_date: '2030-01-01', scenario_group: 'monthly_shop_tickets', scenario_option: 'include' },
       ] },
       rewards: { rewards: [] },
     };
@@ -849,17 +864,38 @@ describe('CaratPlannerComponent banner ordering', () => {
 
     component.applyIncomePreset('conservative');
     expect(component.plan.scenarioSelections).toEqual(jasmine.objectContaining({
-      team_trials_class: 'class_2',
-      club_rank: 'rank_2',
+      team_trials_class: 'class_3',
+      club_rank: 'rank_3',
       champions_meeting_result: 'open_third',
       league_of_heroes_rank: 'silver_4',
-      story_event_rewards: 'include',
+      story_event_rewards: 'none',
       factor_research_rewards: 'none',
       speculative_income: 'none',
     }));
     expect(component.plan.scenarioSelections['monthly_shop_tickets']).toBeUndefined();
     expect(component.plan.scenarioSelections['random_gameplay_income']).toBeUndefined();
     expect(component.activeIncomePresetId).toBe('conservative');
+
+    component.applyIncomePreset('casual');
+    expect(component.plan.scenarioSelections).toEqual(jasmine.objectContaining({
+      team_trials_class: 'class_4',
+      club_rank: 'rank_5',
+      monthly_shop_tickets: 'friend_points',
+      masters_challenge_rewards: 'clear_1',
+      story_event_rewards: 'include',
+      factor_research_rewards: 'none',
+      speculative_income: 'median',
+    }));
+
+    component.applyIncomePreset('active');
+    expect(component.plan.scenarioSelections).toEqual(jasmine.objectContaining({
+      team_trials_class: 'class_5',
+      club_rank: 'rank_7',
+      monthly_shop_tickets: 'friend_points',
+      masters_challenge_rewards: 'clear_3',
+      factor_research_rewards: 'include',
+      speculative_income: 'include',
+    }));
 
     component.applyIncomePreset('completionist');
     expect(component.plan.scenarioSelections).toEqual(jasmine.objectContaining({
@@ -874,7 +910,7 @@ describe('CaratPlannerComponent banner ordering', () => {
       speculative_income: 'include',
     }));
     expect(component.activeIncomePresetId).toBe('completionist');
-    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenCalledTimes(4);
 
     component.setScenario('random_gameplay_income', 'medium');
     expect(component.activeIncomePresetId).toBeNull();

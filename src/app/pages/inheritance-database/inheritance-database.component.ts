@@ -111,9 +111,9 @@ export class InheritanceDatabaseComponent implements OnInit, OnDestroy, AfterVie
   bookmarkPageSize = 12;
   /**
    * Bookmark filter:
-   * - 'all'       — show every bookmark
-   * - 'unchanged' — record still matches what was originally saved
-   * - 'modified'  — source record changed since the user bookmarked it (is_stale)
+   * - 'all'       - show every bookmark
+   * - 'unchanged' - record still matches what was originally saved
+   * - 'modified'  - source record changed since the user bookmarked it (is_stale)
    */
   bookmarkStaleFilter: 'all' | 'unchanged' | 'modified' = 'all';
   bookmarkBulkBusy = false;

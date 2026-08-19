@@ -660,7 +660,7 @@
     box-shadow: 0 2px 6px rgba(100, 181, 246, 0.2);
   }
 
-  // "Per Run" state — emphasized (it doubles values, so user should clearly see it)
+  // "Per Run" state - emphasized (it doubles values, so user should clearly see it)
   &.per-run {
     background: linear-gradient(135deg, rgba(100, 181, 246, 0.2), rgba(33, 150, 243, 0.18));
     border-color: rgba(100, 181, 246, 0.7);
@@ -837,7 +837,7 @@
   }
 }
 
-// Lineage frame — wraps main + bracket + grandparents into a vertical family tree
+// Lineage frame - wraps main + bracket + grandparents into a vertical family tree
 .lineage-frame {
   position: relative;
   display: flex;
@@ -944,7 +944,7 @@
 .parent-character-img { width: 60px; height: 60px; }
 
 // ─── Visual hierarchy: main parent vs grandparents ─────────
-// Main: stronger neutral border (NOT colored — colored = selected). Just visual weight.
+// Main: stronger neutral border (NOT colored - colored = selected). Just visual weight.
 .portrait-main .character-image {
   border-width: 3px;
   border-color: var(--border-strong);
@@ -955,7 +955,7 @@
   border-color: var(--border-secondary);
 }
 
-// Role labels — hidden on desktop, shown on mobile
+// Role labels - hidden on desktop, shown on mobile
 .node-role-label { display: none; }
 
 // Mobile-only inheritance arrow icon (hidden by default)
@@ -1706,7 +1706,7 @@
   .main-character-img { width: 68px; height: 68px; }
   .parent-character-img { width: 50px; height: 50px; }
 
-  // Role labels — tight under affinity badge
+  // Role labels - tight under affinity badge
   .node-role-label {
     display: block;
     font-size: 0.55rem;

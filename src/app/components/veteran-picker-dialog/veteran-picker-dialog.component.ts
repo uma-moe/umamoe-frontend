@@ -991,7 +991,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Use a previously saved partner — directly close the dialog with the result. */
+  /** Use a previously saved partner - directly close the dialog with the result. */
   selectSavedPartner(partner: PartnerInheritance): void {
     this.select(this.partnerToVeteran(partner));
   }
@@ -1857,7 +1857,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     if (this.targetCharaId) {
       return this.affinityService.getAff3(this.targetCharaId, parentChara, charaId);
     }
-    // No target chara — show pair affinity between parent and this GP.
+    // No target chara - show pair affinity between parent and this GP.
     return this.affinityService.getAff2(parentChara, charaId);
   }
 

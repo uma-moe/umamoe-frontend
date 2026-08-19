@@ -59,7 +59,7 @@ export type TreeSavesDialogResult =
               <span>Save</span>
             </button>
           </div>
-          <p class="hint" *ngIf="!data.hasCurrent">Tree is empty — nothing to save yet.</p>
+          <p class="hint" *ngIf="!data.hasCurrent">Tree is empty - nothing to save yet.</p>
           <p class="hint" *ngIf="willOverwrite()">A save with this name already exists. It will be overwritten.</p>
         </div>
 

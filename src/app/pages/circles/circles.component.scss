@@ -593,7 +593,7 @@ mat-paginator {
   .circle-card {
     padding: 0.45rem 0.55rem;
 
-    // Override desktop rank-1/2/3 font-size boosts — keep color, normalize size
+    // Override desktop rank-1/2/3 font-size boosts - keep color, normalize size
     &.rank-1 .rank-section .rank-number,
     &.rank-2 .rank-section .rank-number,
     &.rank-3 .rank-section .rank-number { font-size: 0.9rem; }

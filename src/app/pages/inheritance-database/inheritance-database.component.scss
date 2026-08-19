@@ -1886,7 +1886,7 @@ mat-icon { @include icon-size(16px); }
       cursor: not-allowed;
     }
 
-    // Destructive button — neutral until armed, then visibly dangerous.
+    // Destructive button - neutral until armed, then visibly dangerous.
     &.bm-action--danger {
       &:hover:not(:disabled) {
         border-color: rgba(244, 67, 54, 0.45);

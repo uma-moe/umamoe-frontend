@@ -15,6 +15,9 @@ export const RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID = 'random_gameplay_income'
 export const TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID = 'temporary_story_rewards';
 export const RACING_CARNIVAL_MISSION_SCENARIO_GROUP_ID = 'racing_carnival_mission';
 export const MASTERS_CHALLENGE_SCENARIO_GROUP_ID = 'masters_challenge_rewards';
+export const MASTERS_CHALLENGE_ONE_CLEAR_OPTION = 'clear_1';
+export const MASTERS_CHALLENGE_TWO_CLEARS_OPTION = 'clear_2';
+export const MASTERS_CHALLENGE_THREE_CLEARS_OPTION = 'clear_3';
 export const STORY_EVENT_REWARDS_SCENARIO_GROUP_ID = 'story_event_rewards';
 export const FACTOR_RESEARCH_REWARDS_SCENARIO_GROUP_ID = 'factor_research_rewards';
 export const TRAINER_SKILLS_TEST_REWARDS_SCENARIO_GROUP_ID = 'trainer_skills_test_rewards';
@@ -140,6 +143,10 @@ export function conditionalRewardScenarioSelectionMatches(
   if (!group) return true;
   if (selection === CONDITIONAL_REWARDS_INCLUDED_OPTION) return true;
 
+  if (group === MASTERS_CHALLENGE_SCENARIO_GROUP_ID) {
+    return mastersChallengeClearLimit(selection) !== null;
+  }
+
   if (group === TRAINER_SKILLS_TEST_REWARDS_SCENARIO_GROUP_ID) {
     return selection === TRAINER_SKILLS_TEST_SCORE_ONLY_OPTION
       && reward.assumption === 'full_score_completion';
@@ -149,6 +156,46 @@ export function conditionalRewardScenarioSelectionMatches(
       && reward.assumption === 'all_first_clears';
   }
   return false;
+}
+
+export function selectedConditionalRewardAmount(
+  reward: Pick<PlannerRewardEntry, 'amount' | 'assumption' | 'currency' | 'label' | 'source_items'>,
+  selection: string | undefined,
+): number {
+  const amount = Math.max(0, Math.trunc(Number(reward.amount) || 0));
+  if (conditionalRewardScenarioGroup(reward) !== MASTERS_CHALLENGE_SCENARIO_GROUP_ID
+    || selection === CONDITIONAL_REWARDS_INCLUDED_OPTION) {
+    return amount;
+  }
+  const clearLimit = mastersChallengeClearLimit(selection);
+  if (clearLimit === null) return 0;
+  const totalClears = mastersChallengeTotalClears(reward, amount);
+  if (totalClears <= 0) return amount;
+  return Math.trunc(amount * Math.min(clearLimit, totalClears) / totalClears);
+}
+
+function mastersChallengeClearLimit(selection: string | undefined): number | null {
+  if (selection === MASTERS_CHALLENGE_ONE_CLEAR_OPTION) return 1;
+  if (selection === MASTERS_CHALLENGE_TWO_CLEARS_OPTION) return 2;
+  if (selection === MASTERS_CHALLENGE_THREE_CLEARS_OPTION) return 3;
+  return null;
+}
+
+function mastersChallengeTotalClears(
+  reward: Pick<PlannerRewardEntry, 'currency' | 'source_items'>,
+  amount: number,
+): number {
+  if (reward.currency === 'rainbow_crystal' || reward.currency === 'gold_crystal') return amount;
+  if ((reward.currency === 'free_jewels' || reward.currency === 'paid_jewels')
+    && amount > 0 && amount % 900 === 0) {
+    return amount / 900;
+  }
+  for (const item of reward.source_items ?? []) {
+    const itemAmount = Math.max(0, Math.trunc(Number(item.amount) || 0));
+    if (item.item_category === 164 && (item.item_id === 149 || item.item_id === 150)) return itemAmount;
+    if (item.item_category === 90 && item.item_id === 43 && itemAmount % 900 === 0) return itemAmount / 900;
+  }
+  return 0;
 }
 
 const TRAINING_PASS_TIMELINE_EVENT_ID = 'campaign-632';
@@ -237,12 +284,29 @@ export function plannerIncomeAssumptionGroups(
       label: 'Masters Challenges',
       icon: 'military_tech',
       scheduleLabel: 'Each matching event',
-      helpText: 'Counts every high-difficulty first-clear reward from the JP master tables. Leave this off if you do not expect to clear every race.',
-      options: [{
-        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
-        label: 'Clear every challenge',
-        amountLabel: 'Varies by event',
-      }],
+      helpText: 'Counts first-clear rewards from the JP master tables. Each cleared race gives 900 Carats plus 1 Rainbow and 1 Gold crystal shard. The first set has 3 races and later sets have 5, so a selected clear count is capped at the races available in that event.',
+      options: [
+        {
+          value: MASTERS_CHALLENGE_ONE_CLEAR_OPTION,
+          label: 'Clear 1 race',
+          amountLabel: '+900 + 1R/1G shards / event',
+        },
+        {
+          value: MASTERS_CHALLENGE_TWO_CLEARS_OPTION,
+          label: 'Clear 2 races',
+          amountLabel: '+1,800 + 2R/2G shards / event',
+        },
+        {
+          value: MASTERS_CHALLENGE_THREE_CLEARS_OPTION,
+          label: 'Clear 3 races',
+          amountLabel: '+2,700 + 3R/3G shards / event',
+        },
+        {
+          value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+          label: 'Clear every race',
+          amountLabel: 'Up to +4,500 + 5R/5G shards / event',
+        },
+      ],
     },
     {
       id: STORY_EVENT_REWARDS_SCENARIO_GROUP_ID,
