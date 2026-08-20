@@ -2014,10 +2014,30 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         })),
       })),
     ];
+    const repairedPreset = this.reconcileUneditedIncomePreset();
     this.scenarioSections = this.buildScenarioSections(this.scenarioGroupOptions);
     this.displayedRules = this.data.income.rules.filter(rule =>
       !rule.scenario_group && !isLegacyTrainingPassIncomeRule(rule));
     this.filterRewards();
+    if (repairedPreset) this.persistence.savePlan(this.plan);
+  }
+
+  private reconcileUneditedIncomePreset(): boolean {
+    if (!this.plan.incomePresetId || this.plan.incomePresetEdited) return false;
+    const presetIndex = PLANNER_INCOME_PRESETS.findIndex(
+      preset => preset.id === this.plan.incomePresetId,
+    );
+    if (presetIndex < 0) return false;
+
+    let changed = false;
+    for (const group of this.scenarioGroupOptions) {
+      const expected = this.incomePresetSelection(group, presetIndex);
+      const current = this.plan.scenarioSelections[group.id] ?? '';
+      if (current === expected) continue;
+      this.applyScenarioSelection(group.id, expected);
+      changed = true;
+    }
+    return changed;
   }
 
   private buildScenarioSections(

@@ -1205,8 +1205,8 @@ select.cp-control,
   text-align: left;
   cursor: pointer;
 
-  strong { overflow: hidden; font-size: 0.67rem; text-overflow: ellipsis; white-space: nowrap; }
-  small { color: var(--text-muted); font-size: 0.57rem; font-weight: 650; white-space: nowrap; }
+  strong { overflow: hidden; font-size: 0.67rem; line-height: 1.05; text-overflow: ellipsis; white-space: nowrap; }
+  small { color: var(--text-muted); font-size: 0.57rem; font-weight: 650; line-height: 1.05; white-space: nowrap; }
   &.is-active {
     color: var(--accent-success);
     border-color: rgba(var(--accent-success-rgb), 0.5);
@@ -1225,7 +1225,7 @@ select.cp-control,
 .cp-scenario-binary-copy {
   min-width: 0;
   display: grid;
-  gap: 1px;
+  gap: 0;
 }
 
 .cp-reward-row {

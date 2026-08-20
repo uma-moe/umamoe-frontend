@@ -930,6 +930,26 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.incomePresetEdited).toBeTrue();
   });
 
+  it('repairs missing values for an unedited saved preset without overriding edited presets', () => {
+    const completionist = createComponent();
+    completionist.plan.incomePresetId = 'completionist';
+    completionist.plan.incomePresetEdited = false;
+    delete completionist.plan.scenarioSelections['random_gameplay_income'];
+
+    (completionist as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    expect(completionist.plan.scenarioSelections['random_gameplay_income']).toBe('high');
+
+    const edited = createComponent();
+    edited.plan.incomePresetId = 'completionist';
+    edited.plan.incomePresetEdited = true;
+    delete edited.plan.scenarioSelections['random_gameplay_income'];
+
+    (edited as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    expect(edited.plan.scenarioSelections['random_gameplay_income']).toBeUndefined();
+  });
+
   it('shows the master-backed Monthly Shop ticket toggle transparently', () => {
     const component = createComponent();
     component.data = {
