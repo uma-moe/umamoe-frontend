@@ -4,7 +4,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 // Increment this number whenever you want to show the update notification again
-export const CURRENT_UPDATE_VERSION = 15;
+export const CURRENT_UPDATE_VERSION = 16;
 export interface ChangeItem {
     text: string;
     link?: string; // Internal route link
@@ -25,17 +25,18 @@ export interface UpdateEntry {
 // Define your updates here - newest first
 export const UPDATE_LOG: UpdateEntry[] = [
   {
-    title: 'Carat Planner: Sync, Sharing, and Rewards',
-    date: '2026-08-19',
+    title: 'Carat Planner Accuracy and Sync',
+    date: '2026-08-20',
     categories: [
       {
         category: 'major',
-        label: 'Plans Across Devices',
-        icon: 'cloud_done',
-        color: '#42a5f5',
+        label: 'More Accurate Planning',
+        icon: 'verified',
+        color: '#4caf50',
         items: [
-          { text: 'Signed-in plans and settings now sync across devices and use short plan links for sharing', link: '/timeline?tab=carat-planner' },
-          { text: 'Signed-out users can share a compact self-contained link. Opening either type adds a separate copy without changing the original plan' },
+          { text: 'Completionist now selects the highest results and every optional dated reward', link: '/timeline?tab=carat-planner' },
+          { text: 'Older maxed plans are migrated to Completionist and restore missing Champion\'s Meeting qualifying-round income' },
+          { text: 'Reward totals now respect the selected plan start date, reward availability, and exact event settings' },
         ]
       },
       {
@@ -45,28 +46,32 @@ export const UPDATE_LOG: UpdateEntry[] = [
         color: '#ec407a',
         items: [
           { text: 'Upcoming rewards are counted automatically. Turn off only the rewards you do not expect to collect' },
-          { text: 'Event rewards, free pulls, tickets, Carats, and availability windows are grouped into a clearer schedule' },
-          { text: 'Cumulative login milestones plus Valentine\'s Day, White Day, and Christmas gifts now have separate planning toggles' },
+          { text: 'Story Events, missions, challenges, stories, free pulls, tickets, and Uncap Crystals use sourced dated rewards' },
+          { text: 'Cumulative login milestones, Valentine\'s Day, White Day, and Christmas gifts have separate planning toggles' },
+          { text: 'Global, JP, news, mission, and fallback rewards are reconciled to prevent duplicate income' },
         ]
       },
       {
         category: 'improvement',
-        label: 'Faster Setup',
-        icon: 'tune',
-        color: '#7e57c2',
+        label: 'Plan Sync and Sharing',
+        icon: 'cloud_done',
+        color: '#42a5f5',
         items: [
-          { text: 'Quick presets, grouped toggles, and clearer result choices make income assumptions easier to configure' },
-          { text: 'Global banner settings and anniversary markers make long-term pull plans easier to review' },
+          { text: 'Signed-in plans load immediately from this device, then sync compact changes across devices' },
+          { text: 'Server updates are bundled and sent only when the plan actually changes' },
+          { text: 'Signed-in plans use short share links. Signed-out plans use compressed self-contained links' },
         ]
       },
       {
-        category: 'bugfix',
-        label: 'Projection Accuracy',
-        icon: 'verified',
-        color: '#4caf50',
+        category: 'improvement',
+        label: 'Faster Setup and Mobile',
+        icon: 'tune',
+        color: '#7e57c2',
         items: [
-          { text: 'Global, JP, news, mission, and fallback rewards are reconciled to avoid duplicate income' },
-          { text: 'Crystal shards, completed Uncap Crystals, crafted balances, and reward dates are projected separately' },
+          { text: 'Quick presets, grouped controls, and clearer result choices make assumptions easier to configure' },
+          { text: 'Manual changes are visibly tracked as edits to the selected preset' },
+          { text: 'Mobile spacing, reward rows, help buttons, dropdowns, and plan controls use screen space more efficiently' },
+          { text: 'Global banner settings and simple anniversary markers make long-term pull plans easier to review' },
         ]
       }
     ]
