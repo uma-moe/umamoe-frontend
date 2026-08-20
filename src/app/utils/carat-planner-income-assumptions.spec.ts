@@ -2,6 +2,7 @@ import { PlannerGlobalRewardComparison } from '../models/carat-planner.model';
 import {
   conditionalRewardScenarioGroup,
   conditionalRewardScenarioSelectionMatches,
+  LOGIN_MILESTONE_REWARDS_SCENARIO_GROUP_ID,
   MASTERS_CHALLENGE_SCENARIO_GROUP_ID,
   MASTERS_CHALLENGE_ONE_CLEAR_OPTION,
   plannerIncomeAssumptionGroups,
@@ -10,6 +11,7 @@ import {
   RACING_CARNIVAL_CLEARS_ONLY_OPTION,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
+  SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
   selectedConditionalRewardAmount,
   TRAINER_SKILLS_TEST_SCORE_ONLY_OPTION,
@@ -107,6 +109,18 @@ describe('plannerIncomeAssumptionGroups', () => {
       expect(conditionalRewardScenarioGroup({ label, assumption })).toBe(expectedGroup);
     }
     expect(conditionalRewardScenarioGroup({
+      label: '50-day login milestone (Day 500)',
+      category: 'login_milestone',
+    })).toBe(LOGIN_MILESTONE_REWARDS_SCENARIO_GROUP_ID);
+    expect(conditionalRewardScenarioGroup({
+      label: 'Expected Christmas gift',
+      category: 'seasonal_gift',
+    })).toBe(SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID);
+    expect(conditionalRewardScenarioGroup({
+      label: "Valentine's Day gift",
+      assumption: 'official_global_carat_gift',
+    })).toBe(SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID);
+    expect(conditionalRewardScenarioGroup({
       label: 'Broadcast celebration gift',
       assumption: 'jp_reward_parity',
     })).toBeUndefined();
@@ -115,6 +129,8 @@ describe('plannerIncomeAssumptionGroups', () => {
     for (const [, , expectedGroup] of cases) {
       expect(groups.some(group => group.id === expectedGroup)).toBeTrue();
     }
+    expect(groups.some(group => group.id === LOGIN_MILESTONE_REWARDS_SCENARIO_GROUP_ID)).toBeTrue();
+    expect(groups.some(group => group.id === SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID)).toBeTrue();
   });
 
   it('derives normal rewards from defaults and stores only sparse overrides', () => {
@@ -126,12 +142,27 @@ describe('plannerIncomeAssumptionGroups', () => {
       assumption: 'all_login_days_jp_parity',
       default_enabled: true,
     };
+    const milestone = {
+      id: 'milestone',
+      label: '50-day login milestone (Day 500)',
+      category: 'login_milestone',
+      default_enabled: true,
+    };
+    const christmas = {
+      id: 'christmas',
+      label: 'Expected Christmas gift',
+      category: 'seasonal_gift',
+      default_enabled: true,
+    };
 
     expect(plannerRewardSelectionEnabled(automatic, {})).toBeTrue();
     expect(plannerRewardSelectionEnabled(automatic, {}, false, true)).toBeFalse();
     expect(plannerRewardNeedsEnabledOverride(optional)).toBeTrue();
     expect(plannerRewardSelectionEnabled(optional, {}, true)).toBeTrue();
     expect(plannerRewardSelectionEnabled(login, { limited_login_rewards: 'none' })).toBeFalse();
+    expect(plannerRewardSelectionEnabled(milestone, { login_milestone_rewards: 'none' })).toBeFalse();
+    expect(plannerRewardSelectionEnabled(christmas, { seasonal_gift_rewards: 'none' })).toBeFalse();
+    expect(plannerRewardSelectionEnabled(christmas, { seasonal_gift_rewards: 'include' })).toBeTrue();
     expect(plannerRewardNeedsEnabledOverride(login)).toBeFalse();
   });
 

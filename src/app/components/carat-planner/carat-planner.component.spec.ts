@@ -870,9 +870,11 @@ describe('CaratPlannerComponent banner ordering', () => {
       club_rank: 'rank_3',
       champions_meeting_result: 'open_third',
       league_of_heroes_rank: 'silver_4',
-      story_event_rewards: 'none',
-      factor_research_rewards: 'none',
-      speculative_income: 'none',
+        story_event_rewards: 'none',
+        factor_research_rewards: 'none',
+        login_milestone_rewards: 'none',
+        seasonal_gift_rewards: 'none',
+        speculative_income: 'none',
     }));
     expect(component.plan.scenarioSelections['monthly_shop_tickets']).toBeUndefined();
     expect(component.plan.scenarioSelections['random_gameplay_income']).toBeUndefined();
@@ -883,9 +885,11 @@ describe('CaratPlannerComponent banner ordering', () => {
       team_trials_class: 'class_4',
       club_rank: 'rank_5',
       monthly_shop_tickets: 'friend_points',
-      masters_challenge_rewards: 'clear_1',
-      story_event_rewards: 'include',
-      factor_research_rewards: 'none',
+        masters_challenge_rewards: 'clear_1',
+        story_event_rewards: 'include',
+        login_milestone_rewards: 'include',
+        seasonal_gift_rewards: 'include',
+        factor_research_rewards: 'none',
       speculative_income: 'median',
     }));
 

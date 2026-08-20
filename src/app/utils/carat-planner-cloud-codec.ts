@@ -48,6 +48,7 @@ const TOKENS = [
   'medium', 'high', 'free', 'paid', 'premium', '__default_schedule__', '__excluded__',
   'rank_1', 'rank_2', 'rank_3', 'rank_4', 'rank_5', 'rank_6', 'rank_7', 'rank_8',
   'rank_9', 'rank_10', 'rank_11',
+  'login_milestone_rewards', 'seasonal_gift_rewards',
 ] as const;
 const TOKEN_TO_CODE = new Map<string, number>(TOKENS.map((value, index) => [value, index]));
 const DEFAULT_SCENARIO_SELECTIONS: Readonly<Record<string, string>> = {

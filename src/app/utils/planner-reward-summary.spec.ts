@@ -232,6 +232,9 @@ describe('buildTimelineRewardSummaries', () => {
     expect(projected).toContain(jasmine.objectContaining({
       id: 'expected-white-day-gift-2027', amount: 500, available_at: '2027-03-14',
     }));
+    expect(projected).toContain(jasmine.objectContaining({
+      id: 'expected-christmas-gift-2026', amount: 500, available_at: '2026-12-11',
+    }));
 
     const secondPass = withTimelineRewardFallbacks(resource, [{
       id: 'future-horizon', type: 'campaign', globalReleaseDate: '2027-07-10',
@@ -239,7 +242,7 @@ describe('buildTimelineRewardSummaries', () => {
     expect(secondPass.rewards).toHaveSize(resource.rewards.length);
   });
 
-  it('adds 900 login and 1,000 seasonal Carats through the July 2027 planning horizon', () => {
+  it('adds 900 login and 1,500 seasonal Carats through the July 2027 planning horizon', () => {
     const resource = withTimelineRewardFallbacks({ rewards: [] }, [{
       id: 'future-horizon', type: 'campaign', globalReleaseDate: '2027-07-10',
     }]);
@@ -251,7 +254,19 @@ describe('buildTimelineRewardSummaries', () => {
       .reduce((sum, reward) => sum + Number(reward.amount), 0)).toBe(900);
     expect(projected
       .filter(reward => reward.category === 'seasonal_gift')
-      .reduce((sum, reward) => sum + Number(reward.amount), 0)).toBe(1_000);
+      .reduce((sum, reward) => sum + Number(reward.amount), 0)).toBe(1_500);
+  });
+
+  it('uses the master-backed 1,500-Carat reward at each 1,000-day login milestone', () => {
+    const resource = withTimelineRewardFallbacks({ rewards: [] }, [{
+      id: 'future-horizon', type: 'campaign', globalReleaseDate: '2028-04-01',
+    }]);
+
+    expect(resource.rewards).toContain(jasmine.objectContaining({
+      id: 'expected-50-day-login-1000',
+      amount: 1_500,
+      category: 'login_milestone',
+    }));
   });
 
   it('adds standard Legend Race first-clear rewards from timeline participants when planner variants are absent', () => {

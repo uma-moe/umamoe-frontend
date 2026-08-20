@@ -25,6 +25,8 @@ export const RACING_CARNIVAL_REWARDS_SCENARIO_GROUP_ID = 'racing_carnival_reward
 export const SCENARIO_EVALUATION_REWARDS_SCENARIO_GROUP_ID = 'scenario_evaluation_rewards';
 export const MAIN_STORY_REWARDS_SCENARIO_GROUP_ID = 'main_story_rewards';
 export const LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID = 'limited_login_rewards';
+export const LOGIN_MILESTONE_REWARDS_SCENARIO_GROUP_ID = 'login_milestone_rewards';
+export const SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID = 'seasonal_gift_rewards';
 export const LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID = 'limited_mission_rewards';
 export const CONDITIONAL_REWARDS_INCLUDED_OPTION = 'include';
 export const CONDITIONAL_REWARDS_NONE_OPTION = 'none';
@@ -79,6 +81,8 @@ export const CONDITIONAL_REWARD_DEFAULT_SELECTIONS: Readonly<Record<string, stri
   [SCENARIO_EVALUATION_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
   [MAIN_STORY_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
   [LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [LOGIN_MILESTONE_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
   [LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
   [MASTERS_CHALLENGE_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_NONE_OPTION,
 };
@@ -89,10 +93,18 @@ export const CONDITIONAL_REWARD_SCENARIO_GROUP_IDS = new Set(
 
 /** Maps rewards that require player action to the visible planner toggle that controls them. */
 export function conditionalRewardScenarioGroup(
-  reward: Pick<PlannerRewardEntry, 'assumption' | 'label'>,
+  reward: Pick<PlannerRewardEntry, 'assumption' | 'category' | 'evidence' | 'label'>,
 ): string | undefined {
   const assumption = reward.assumption ?? '';
   const label = reward.label ?? '';
+  const searchable = `${label} ${assumption} ${reward.evidence ?? ''}`;
+  if (reward.category === 'login_milestone') {
+    return LOGIN_MILESTONE_REWARDS_SCENARIO_GROUP_ID;
+  }
+  if (reward.category === 'seasonal_gift'
+    || /(?:valentine|white\s*day|christmas|xmas|バレンタイン|ホワイトデー|クリスマス)/i.test(searchable)) {
+    return SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID;
+  }
   if (assumption === 'temporary_character_story_read') {
     return TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID;
   }
@@ -138,7 +150,7 @@ export function conditionalRewardScenarioGroup(
 
 /** Resolves progressive completion options without treating every conditional reward as all-or-nothing. */
 export function conditionalRewardScenarioSelectionMatches(
-  reward: Pick<PlannerRewardEntry, 'assumption' | 'label'>,
+  reward: Pick<PlannerRewardEntry, 'assumption' | 'category' | 'evidence' | 'label'>,
   selection: string | undefined,
 ): boolean {
   const group = conditionalRewardScenarioGroup(reward);
@@ -162,7 +174,7 @@ export function conditionalRewardScenarioSelectionMatches(
 
 /** Resolves a reward from its group selection plus sparse per-reward overrides. */
 export function plannerRewardSelectionEnabled(
-  reward: Pick<PlannerRewardEntry, 'id' | 'assumption' | 'label' | 'default_enabled'>,
+  reward: Pick<PlannerRewardEntry, 'id' | 'assumption' | 'category' | 'evidence' | 'label' | 'default_enabled'>,
   scenarioSelections: Readonly<Record<string, string>>,
   explicitlyEnabled = false,
   explicitlyDisabled = false,
@@ -177,13 +189,13 @@ export function plannerRewardSelectionEnabled(
 
 /** Only default-off rewards without a controlling group need an enabled id override. */
 export function plannerRewardNeedsEnabledOverride(
-  reward: Pick<PlannerRewardEntry, 'assumption' | 'label' | 'default_enabled'>,
+  reward: Pick<PlannerRewardEntry, 'assumption' | 'category' | 'evidence' | 'label' | 'default_enabled'>,
 ): boolean {
   return reward.default_enabled === false && !conditionalRewardScenarioGroup(reward);
 }
 
 export function selectedConditionalRewardAmount(
-  reward: Pick<PlannerRewardEntry, 'amount' | 'assumption' | 'currency' | 'label' | 'source_items'>,
+  reward: Pick<PlannerRewardEntry, 'amount' | 'assumption' | 'category' | 'currency' | 'evidence' | 'label' | 'source_items'>,
   selection: string | undefined,
 ): number {
   const amount = Math.max(0, Math.trunc(Number(reward.amount) || 0));
@@ -378,6 +390,30 @@ export function plannerIncomeAssumptionGroups(
         value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
         label: 'Claim every login day',
         amountLabel: 'Varies by campaign',
+      }],
+    },
+    {
+      id: LOGIN_MILESTONE_REWARDS_SCENARIO_GROUP_ID,
+      label: 'Cumulative login milestones',
+      icon: 'calendar_month',
+      scheduleLabel: 'Every 50 cumulative login days',
+      helpText: 'Counts the permanent missions that award 150 Carats every 50 cumulative login days. Every 1,000-day milestone awards 1,500 instead. Dates assume a launch-day Global account with no missed login days, so turn this off if the displayed day does not match your account.',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Include login milestones',
+        amountLabel: '+150 every 50 days',
+      }],
+    },
+    {
+      id: SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID,
+      label: 'Seasonal gifts',
+      icon: 'redeem',
+      scheduleLabel: 'Valentine\'s Day, White Day, and Christmas',
+      helpText: 'Counts 500-Carat seasonal gifts based on the recurring JP rewards. These are JP-parity estimates until an exact Global reward is published, at which point the sourced reward replaces the estimate.',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Include seasonal gifts',
+        amountLabel: '+500 per expected gift',
       }],
     },
     {

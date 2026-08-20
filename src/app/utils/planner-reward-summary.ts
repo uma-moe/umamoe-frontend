@@ -139,7 +139,6 @@ const REWARD_ITEM_IDS = {
 const PREPARED_REWARD_ITEM_IDS = new Set([41, 43, 111, 141, 144, 145, 164, 165, 178, 197, 205, 214, 255]);
 const STANDARD_STORY_EVENT_CARATS = 2010;
 const GLOBAL_LAUNCH_DATE = '2025-06-26';
-const FIFTY_DAY_LOGIN_CARATS = 150;
 const SEASONAL_GIFT_CARATS = 500;
 const DAY_MS = 86_400_000;
 
@@ -235,7 +234,7 @@ function expectedRecurringRewards(
       id: `expected-50-day-login-${milestone}`,
       label: `50-day login milestone (Day ${milestone})`,
       currency: 'free_jewels',
-      amount: FIFTY_DAY_LOGIN_CARATS,
+      amount: loginMilestoneCarats(milestone),
       available_at: date,
       category: 'login_milestone',
       default_enabled: true,
@@ -259,7 +258,7 @@ function expectedRecurringRewards(
       provenance: 'jp_fallback',
       assumption: 'JP-parity estimate; replaced by an exact Global reward when one is available.',
       confidence: 'historical_standard',
-      source_url: 'https://umamusume.jp/steam-news/detail?id=3036',
+      source_url: 'https://umamusume.jp/news/detail?id=3048',
     }, {
       id: `expected-white-day-gift-${year}`,
       label: 'Expected White Day gift',
@@ -271,7 +270,19 @@ function expectedRecurringRewards(
       provenance: 'jp_fallback',
       assumption: 'JP-parity estimate; replaced by an exact Global reward when one is available.',
       confidence: 'historical_standard',
-      source_url: 'https://umamusume.jp/steam-news/detail?id=3116',
+      source_url: 'https://umamusume.jp/news/detail?id=3117',
+    }, {
+      id: `expected-christmas-gift-${year}`,
+      label: 'Expected Christmas gift',
+      currency: 'free_jewels',
+      amount: SEASONAL_GIFT_CARATS,
+      available_at: `${year}-12-11`,
+      category: 'seasonal_gift',
+      default_enabled: true,
+      provenance: 'jp_fallback',
+      assumption: 'JP-parity estimate; replaced by an exact Global reward when one is available.',
+      confidence: 'historical_standard',
+      source_url: 'https://umamusume.jp/news/detail?id=2945',
     });
   }
 
@@ -305,7 +316,14 @@ function equivalentRecurringReward(
   if (candidate.id.includes('valentines')) {
     return /valentine|バレンタイン/i.test(searchable);
   }
-  return /white\s*day|ホワイトデー/i.test(searchable);
+  if (candidate.id.includes('white-day')) {
+    return /white\s*day|ホワイトデー/i.test(searchable);
+  }
+  return /christmas|xmas|クリスマス/i.test(searchable);
+}
+
+function loginMilestoneCarats(day: number): number {
+  return day % 1_000 === 0 ? 1_500 : 150;
 }
 
 function rewardDateKey(value: Date | string | undefined): string | null {
