@@ -22,7 +22,9 @@ import {
 } from '../models/carat-planner.model';
 import {
   CONDITIONAL_REWARD_DEFAULT_SELECTIONS,
+  INDIVIDUAL_SEASONAL_GIFT_REWARD_GROUP_IDS,
   plannerRewardNeedsEnabledOverride,
+  SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID,
   SPECULATIVE_INCOME_INCLUDED_OPTION,
   SPECULATIVE_INCOME_NONE_OPTION,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
@@ -716,6 +718,13 @@ export class CaratPlannerPersistenceService {
 
   private sanitizeScenarioSelections(value: unknown): Record<string, string> {
     const selections = this.stringRecord(value);
+    const legacySeasonalSelection = selections[SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID];
+    if (legacySeasonalSelection) {
+      for (const groupId of INDIVIDUAL_SEASONAL_GIFT_REWARD_GROUP_IDS) {
+        if (!(groupId in selections)) selections[groupId] = legacySeasonalSelection;
+      }
+      delete selections[SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID];
+    }
     if (!(SPECULATIVE_INCOME_SCENARIO_GROUP_ID in selections)) {
       selections[SPECULATIVE_INCOME_SCENARIO_GROUP_ID] = SPECULATIVE_INCOME_INCLUDED_OPTION;
     }

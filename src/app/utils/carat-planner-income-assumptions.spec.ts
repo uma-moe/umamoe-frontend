@@ -1,5 +1,6 @@
 import { PlannerGlobalRewardComparison } from '../models/carat-planner.model';
 import {
+  CHRISTMAS_GIFT_REWARDS_SCENARIO_GROUP_ID,
   conditionalRewardScenarioGroup,
   conditionalRewardScenarioSelectionMatches,
   LOGIN_MILESTONE_REWARDS_SCENARIO_GROUP_ID,
@@ -11,10 +12,11 @@ import {
   RACING_CARNIVAL_CLEARS_ONLY_OPTION,
   RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID,
   randomGameplayIncomeRules,
-  SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID,
   SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
   selectedConditionalRewardAmount,
   TRAINER_SKILLS_TEST_SCORE_ONLY_OPTION,
+  VALENTINES_GIFT_REWARDS_SCENARIO_GROUP_ID,
+  WHITE_DAY_GIFT_REWARDS_SCENARIO_GROUP_ID,
 } from './carat-planner-income-assumptions';
 
 describe('plannerIncomeAssumptionGroups', () => {
@@ -115,11 +117,15 @@ describe('plannerIncomeAssumptionGroups', () => {
     expect(conditionalRewardScenarioGroup({
       label: 'Expected Christmas gift',
       category: 'seasonal_gift',
-    })).toBe(SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID);
+    })).toBe(CHRISTMAS_GIFT_REWARDS_SCENARIO_GROUP_ID);
     expect(conditionalRewardScenarioGroup({
       label: "Valentine's Day gift",
       assumption: 'official_global_carat_gift',
-    })).toBe(SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID);
+    })).toBe(VALENTINES_GIFT_REWARDS_SCENARIO_GROUP_ID);
+    expect(conditionalRewardScenarioGroup({
+      label: 'Expected White Day gift',
+      category: 'seasonal_gift',
+    })).toBe(WHITE_DAY_GIFT_REWARDS_SCENARIO_GROUP_ID);
     expect(conditionalRewardScenarioGroup({
       label: 'Broadcast celebration gift',
       assumption: 'jp_reward_parity',
@@ -130,7 +136,9 @@ describe('plannerIncomeAssumptionGroups', () => {
       expect(groups.some(group => group.id === expectedGroup)).toBeTrue();
     }
     expect(groups.some(group => group.id === LOGIN_MILESTONE_REWARDS_SCENARIO_GROUP_ID)).toBeTrue();
-    expect(groups.some(group => group.id === SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID)).toBeTrue();
+    expect(groups.some(group => group.id === VALENTINES_GIFT_REWARDS_SCENARIO_GROUP_ID)).toBeTrue();
+    expect(groups.some(group => group.id === WHITE_DAY_GIFT_REWARDS_SCENARIO_GROUP_ID)).toBeTrue();
+    expect(groups.some(group => group.id === CHRISTMAS_GIFT_REWARDS_SCENARIO_GROUP_ID)).toBeTrue();
   });
 
   it('derives normal rewards from defaults and stores only sparse overrides', () => {
@@ -148,12 +156,15 @@ describe('plannerIncomeAssumptionGroups', () => {
       category: 'login_milestone',
       default_enabled: true,
     };
-    const christmas = {
-      id: 'christmas',
-      label: 'Expected Christmas gift',
+    const seasonal = (id: string, label: string) => ({
+      id,
+      label,
       category: 'seasonal_gift',
       default_enabled: true,
-    };
+    });
+    const valentines = seasonal('valentines', "Expected Valentine's Day gift");
+    const whiteDay = seasonal('white-day', 'Expected White Day gift');
+    const christmas = seasonal('christmas', 'Expected Christmas gift');
 
     expect(plannerRewardSelectionEnabled(automatic, {})).toBeTrue();
     expect(plannerRewardSelectionEnabled(automatic, {}, false, true)).toBeFalse();
@@ -161,8 +172,10 @@ describe('plannerIncomeAssumptionGroups', () => {
     expect(plannerRewardSelectionEnabled(optional, {}, true)).toBeTrue();
     expect(plannerRewardSelectionEnabled(login, { limited_login_rewards: 'none' })).toBeFalse();
     expect(plannerRewardSelectionEnabled(milestone, { login_milestone_rewards: 'none' })).toBeFalse();
-    expect(plannerRewardSelectionEnabled(christmas, { seasonal_gift_rewards: 'none' })).toBeFalse();
-    expect(plannerRewardSelectionEnabled(christmas, { seasonal_gift_rewards: 'include' })).toBeTrue();
+    expect(plannerRewardSelectionEnabled(valentines, { valentines_gift_rewards: 'none' })).toBeFalse();
+    expect(plannerRewardSelectionEnabled(whiteDay, { white_day_gift_rewards: 'none' })).toBeFalse();
+    expect(plannerRewardSelectionEnabled(christmas, { christmas_gift_rewards: 'none' })).toBeFalse();
+    expect(plannerRewardSelectionEnabled(christmas, { christmas_gift_rewards: 'include' })).toBeTrue();
     expect(plannerRewardNeedsEnabledOverride(login)).toBeFalse();
   });
 

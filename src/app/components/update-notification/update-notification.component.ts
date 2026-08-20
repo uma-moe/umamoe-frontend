@@ -4,7 +4,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 // Increment this number whenever you want to show the update notification again
-export const CURRENT_UPDATE_VERSION = 14;
+export const CURRENT_UPDATE_VERSION = 15;
 export interface ChangeItem {
     text: string;
     link?: string; // Internal route link
@@ -46,7 +46,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
         items: [
           { text: 'Upcoming rewards are counted automatically. Turn off only the rewards you do not expect to collect' },
           { text: 'Event rewards, free pulls, tickets, Carats, and availability windows are grouped into a clearer schedule' },
-          { text: 'Cumulative login milestones and JP-parity seasonal gifts now have separate planning toggles' },
+          { text: 'Cumulative login milestones plus Valentine\'s Day, White Day, and Christmas gifts now have separate planning toggles' },
         ]
       },
       {

@@ -873,7 +873,9 @@ describe('CaratPlannerComponent banner ordering', () => {
         story_event_rewards: 'none',
         factor_research_rewards: 'none',
         login_milestone_rewards: 'none',
-        seasonal_gift_rewards: 'none',
+        valentines_gift_rewards: 'none',
+        white_day_gift_rewards: 'none',
+        christmas_gift_rewards: 'none',
         speculative_income: 'none',
     }));
     expect(component.plan.scenarioSelections['monthly_shop_tickets']).toBeUndefined();
@@ -888,7 +890,9 @@ describe('CaratPlannerComponent banner ordering', () => {
         masters_challenge_rewards: 'clear_1',
         story_event_rewards: 'include',
         login_milestone_rewards: 'include',
-        seasonal_gift_rewards: 'include',
+        valentines_gift_rewards: 'include',
+        white_day_gift_rewards: 'include',
+        christmas_gift_rewards: 'include',
         factor_research_rewards: 'none',
       speculative_income: 'median',
     }));

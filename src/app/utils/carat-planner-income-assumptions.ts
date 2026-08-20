@@ -26,7 +26,16 @@ export const SCENARIO_EVALUATION_REWARDS_SCENARIO_GROUP_ID = 'scenario_evaluatio
 export const MAIN_STORY_REWARDS_SCENARIO_GROUP_ID = 'main_story_rewards';
 export const LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID = 'limited_login_rewards';
 export const LOGIN_MILESTONE_REWARDS_SCENARIO_GROUP_ID = 'login_milestone_rewards';
+/** Legacy combined selection retained only for saved-plan migration. */
 export const SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID = 'seasonal_gift_rewards';
+export const VALENTINES_GIFT_REWARDS_SCENARIO_GROUP_ID = 'valentines_gift_rewards';
+export const WHITE_DAY_GIFT_REWARDS_SCENARIO_GROUP_ID = 'white_day_gift_rewards';
+export const CHRISTMAS_GIFT_REWARDS_SCENARIO_GROUP_ID = 'christmas_gift_rewards';
+export const INDIVIDUAL_SEASONAL_GIFT_REWARD_GROUP_IDS = [
+  VALENTINES_GIFT_REWARDS_SCENARIO_GROUP_ID,
+  WHITE_DAY_GIFT_REWARDS_SCENARIO_GROUP_ID,
+  CHRISTMAS_GIFT_REWARDS_SCENARIO_GROUP_ID,
+] as const;
 export const LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID = 'limited_mission_rewards';
 export const CONDITIONAL_REWARDS_INCLUDED_OPTION = 'include';
 export const CONDITIONAL_REWARDS_NONE_OPTION = 'none';
@@ -82,7 +91,9 @@ export const CONDITIONAL_REWARD_DEFAULT_SELECTIONS: Readonly<Record<string, stri
   [MAIN_STORY_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
   [LIMITED_LOGIN_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
   [LOGIN_MILESTONE_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
-  [SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [VALENTINES_GIFT_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [WHITE_DAY_GIFT_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+  [CHRISTMAS_GIFT_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
   [LIMITED_MISSION_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
   [MASTERS_CHALLENGE_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_NONE_OPTION,
 };
@@ -101,10 +112,9 @@ export function conditionalRewardScenarioGroup(
   if (reward.category === 'login_milestone') {
     return LOGIN_MILESTONE_REWARDS_SCENARIO_GROUP_ID;
   }
-  if (reward.category === 'seasonal_gift'
-    || /(?:valentine|white\s*day|christmas|xmas|バレンタイン|ホワイトデー|クリスマス)/i.test(searchable)) {
-    return SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID;
-  }
+  if (/valentine|バレンタイン/i.test(searchable)) return VALENTINES_GIFT_REWARDS_SCENARIO_GROUP_ID;
+  if (/white\s*day|ホワイトデー/i.test(searchable)) return WHITE_DAY_GIFT_REWARDS_SCENARIO_GROUP_ID;
+  if (/christmas|xmas|クリスマス/i.test(searchable)) return CHRISTMAS_GIFT_REWARDS_SCENARIO_GROUP_ID;
   if (assumption === 'temporary_character_story_read') {
     return TEMPORARY_STORY_REWARDS_SCENARIO_GROUP_ID;
   }
@@ -405,15 +415,42 @@ export function plannerIncomeAssumptionGroups(
       }],
     },
     {
-      id: SEASONAL_GIFT_REWARDS_SCENARIO_GROUP_ID,
-      label: 'Seasonal gifts',
-      icon: 'redeem',
-      scheduleLabel: 'Valentine\'s Day, White Day, and Christmas',
-      helpText: 'Counts 500-Carat seasonal gifts based on the recurring JP rewards. These are JP-parity estimates until an exact Global reward is published, at which point the sourced reward replaces the estimate.',
+      id: VALENTINES_GIFT_REWARDS_SCENARIO_GROUP_ID,
+      label: 'Valentine\'s Day gift',
+      icon: 'favorite',
+      scheduleLabel: 'Expected each February 14',
+      helpText: 'Counts the recurring 500-Carat Valentine\'s Day gift from JP. This is a JP-parity estimate until an exact Global reward is published, at which point the sourced reward replaces it.',
+      sourceUrl: 'https://umamusume.jp/news/detail?id=3048',
       options: [{
         value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
-        label: 'Include seasonal gifts',
-        amountLabel: '+500 per expected gift',
+        label: 'Include Valentine\'s gift',
+        amountLabel: '+500 Carats / year',
+      }],
+    },
+    {
+      id: WHITE_DAY_GIFT_REWARDS_SCENARIO_GROUP_ID,
+      label: 'White Day gift',
+      icon: 'redeem',
+      scheduleLabel: 'Expected each March 14',
+      helpText: 'Counts the recurring 500-Carat White Day gift from JP. This is a JP-parity estimate until an exact Global reward is published, at which point the sourced reward replaces it.',
+      sourceUrl: 'https://umamusume.jp/news/detail?id=3117',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Include White Day gift',
+        amountLabel: '+500 Carats / year',
+      }],
+    },
+    {
+      id: CHRISTMAS_GIFT_REWARDS_SCENARIO_GROUP_ID,
+      label: 'Christmas gift',
+      icon: 'featured_seasonal_and_gifts',
+      scheduleLabel: 'Expected each December',
+      helpText: 'Counts the recurring 500-Carat Christmas gift from JP. This is a JP-parity estimate until an exact Global reward is published, at which point the sourced reward replaces it.',
+      sourceUrl: 'https://umamusume.jp/news/detail?id=2945',
+      options: [{
+        value: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+        label: 'Include Christmas gift',
+        amountLabel: '+500 Carats / year',
       }],
     },
     {

@@ -67,6 +67,26 @@ describe('CaratPlannerPersistenceService', () => {
     expect(service.activePlan.scenarioSelections['masters_challenge_rewards']).toBe('none');
   });
 
+  it('migrates the combined seasonal-gift switch to each individual gift', () => {
+    localStorage.setItem(CaratPlannerPersistenceService.STORAGE_KEY, JSON.stringify({
+      version: 1,
+      activePlanId: 'seasonal-plan',
+      plans: [{
+        id: 'seasonal-plan',
+        name: 'Seasonal plan',
+        projectionStartDate: '2026-08-01',
+        scenarioSelections: { seasonal_gift_rewards: 'none' },
+      }],
+    }));
+
+    const selections = createService().activePlan.scenarioSelections;
+
+    expect(selections['seasonal_gift_rewards']).toBeUndefined();
+    expect(selections['valentines_gift_rewards']).toBe('none');
+    expect(selections['white_day_gift_rewards']).toBe('none');
+    expect(selections['christmas_gift_rewards']).toBe('none');
+  });
+
   it('sanitizes imported balances, dates, optional IDs, collections, and numeric limits', () => {
     const service = createService();
     service.importJson(JSON.stringify({
