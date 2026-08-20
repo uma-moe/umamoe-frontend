@@ -1558,6 +1558,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   toggleRule(rule: PlannerIncomeRule, enabled: boolean): void {
+    this.markIncomePresetEdited();
     const values = new Set(this.plan.enabledIncomeRuleIds);
     enabled ? values.add(rule.id) : values.delete(rule.id);
     this.plan.enabledIncomeRuleIds = [...values];
@@ -1565,6 +1566,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   toggleReward(reward: PlannerRewardEntry, enabled: boolean): void {
+    this.markIncomePresetEdited();
     const values = new Set(this.plan.enabledRewardIds);
     const disabled = new Set(this.plan.disabledRewardIds ?? []);
     if (enabled && plannerRewardNeedsEnabledOverride(reward)) values.add(reward.id);
@@ -1584,6 +1586,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   setDisplayedRewardsEnabled(enabled: boolean): void {
+    this.markIncomePresetEdited();
     if (this.displayedRewardGroups.length > 0) {
       this.updateRewardGroups(this.displayedRewardGroups, enabled);
       return;
@@ -1614,6 +1617,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   private updateRewardGroups(groups: readonly PlannerRewardGroupView[], enabled: boolean, deferSave = false): void {
+    this.markIncomePresetEdited();
     const rewardIds = new Set(this.plan.enabledRewardIds);
     const disabledRewardIds = new Set(this.plan.disabledRewardIds ?? []);
     const eventIds = new Set(this.plan.enabledRewardEventIds ?? []);
@@ -1729,6 +1733,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.plan.incomePresetEdited = false;
     this.activeIncomePresetId = presetId;
     this.incomePresetEdited = false;
+    this.applyPresetRewardOverrides(presetId);
     this.syncAutomaticRewardSelection();
     this.filterRewards(true);
     this.save();
@@ -2014,12 +2019,38 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         })),
       })),
     ];
+    const inferredPreset = this.inferLegacyCompletionistPreset();
     const repairedPreset = this.reconcileUneditedIncomePreset();
     this.scenarioSections = this.buildScenarioSections(this.scenarioGroupOptions);
     this.displayedRules = this.data.income.rules.filter(rule =>
       !rule.scenario_group && !isLegacyTrainingPassIncomeRule(rule));
     this.filterRewards();
-    if (repairedPreset) this.persistence.savePlan(this.plan);
+    if (inferredPreset || repairedPreset) this.persistence.savePlan(this.plan);
+  }
+
+  private inferLegacyCompletionistPreset(): boolean {
+    if (this.plan.incomePresetId) return false;
+    const selections = this.plan.scenarioSelections;
+    const anchors: Readonly<Record<string, string>> = {
+      team_trials_class: 'class_6',
+      club_rank: 'rank_11',
+      champions_meeting_result: 'champion',
+      league_of_heroes_rank: 'platinum_4',
+      strongest_team_reward_tier: 'all',
+      legend_race_clears: 'all',
+      [MASTERS_CHALLENGE_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+      [STORY_EVENT_REWARDS_SCENARIO_GROUP_ID]: CONDITIONAL_REWARDS_INCLUDED_OPTION,
+      [RANDOM_GAMEPLAY_INCOME_SCENARIO_GROUP_ID]: 'high',
+      [SPECULATIVE_INCOME_SCENARIO_GROUP_ID]: SPECULATIVE_INCOME_INCLUDED_OPTION,
+    };
+    if (!Object.entries(anchors).every(([groupId, optionId]) => selections[groupId] === optionId)) {
+      return false;
+    }
+    this.plan.incomePresetId = 'completionist';
+    this.plan.incomePresetEdited = false;
+    this.activeIncomePresetId = 'completionist';
+    this.incomePresetEdited = false;
+    return true;
   }
 
   private reconcileUneditedIncomePreset(): boolean {
@@ -2037,7 +2068,36 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       this.applyScenarioSelection(group.id, expected);
       changed = true;
     }
+    if (this.applyPresetRewardOverrides(this.plan.incomePresetId)) changed = true;
     return changed;
+  }
+
+  private applyPresetRewardOverrides(presetId: PlannerIncomePresetId): boolean {
+    const expectedEnabled = presetId === 'completionist'
+      ? this.data.rewards.rewards
+        .filter(reward => this.hasProjectableReward(reward) && plannerRewardNeedsEnabledOverride(reward))
+        .map(reward => reward.id)
+        .sort()
+      : [];
+    const currentEnabled = [...this.plan.enabledRewardIds].sort();
+    const rewardEventIds = new Set(this.data.rewards.rewards
+      .map(reward => reward.event_id)
+      .filter((eventId): eventId is string => Boolean(eventId)));
+    const targetEventIds = new Set(this.plan.targets.map(target => target.eventId));
+    const nextDisabledEventIds = (this.plan.disabledEventIds ?? [])
+      .filter(eventId => targetEventIds.has(eventId) || !rewardEventIds.has(eventId));
+    const currentDisabledEventIds = [...(this.plan.disabledEventIds ?? [])].sort();
+    const sortedDisabledEventIds = [...nextDisabledEventIds].sort();
+    const changed = currentEnabled.length !== expectedEnabled.length
+      || currentEnabled.some((rewardId, index) => rewardId !== expectedEnabled[index])
+      || (this.plan.disabledRewardIds ?? []).length > 0
+      || currentDisabledEventIds.length !== sortedDisabledEventIds.length
+      || currentDisabledEventIds.some((eventId, index) => eventId !== sortedDisabledEventIds[index]);
+    if (!changed) return false;
+    this.plan.enabledRewardIds = expectedEnabled;
+    this.plan.disabledRewardIds = [];
+    this.plan.disabledEventIds = nextDisabledEventIds;
+    return true;
   }
 
   private buildScenarioSections(

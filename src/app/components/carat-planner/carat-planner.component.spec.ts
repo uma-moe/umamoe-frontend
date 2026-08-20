@@ -950,6 +950,80 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(edited.plan.scenarioSelections['random_gameplay_income']).toBeUndefined();
   });
 
+  it('migrates legacy maxed plans and makes Completionist include every optional dated reward', () => {
+    const component = createComponent();
+    const optionalReward = {
+      id: 'optional-gift',
+      label: 'Optional dated gift',
+      currency: 'free_jewels' as const,
+      amount: 3_000,
+      available_at: '2030-02-01',
+      default_enabled: false,
+    };
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards: [optionalReward] },
+    };
+    component.plan.scenarioSelections = {
+      team_trials_class: 'class_6',
+      club_rank: 'rank_11',
+      champions_meeting_result: 'champion',
+      league_of_heroes_rank: 'platinum_4',
+      strongest_team_reward_tier: 'all',
+      legend_race_clears: 'all',
+      masters_challenge_rewards: 'include',
+      story_event_rewards: 'include',
+      random_gameplay_income: 'high',
+      speculative_income: 'include',
+    };
+    delete component.plan.incomePresetId;
+    delete component.plan.incomePresetEdited;
+
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    expect<string | undefined>(component.plan.incomePresetId).toBe('completionist');
+    expect<boolean | undefined>(component.plan.incomePresetEdited).toBeFalse();
+    expect(component.plan.scenarioSelections['champions_meeting_round_income']).toBe('meta_highroller');
+    expect(component.plan.enabledRewardIds).toEqual(['optional-gift']);
+  });
+
+  it('resets sparse reward exclusions when Completionist is explicitly reapplied', () => {
+    const component = createComponent();
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards: [{
+        id: 'optional-gift',
+        label: 'Optional dated gift',
+        currency: 'free_jewels',
+        amount: 3_000,
+        available_at: '2030-02-01',
+        event_id: 'reward-event',
+        default_enabled: false,
+      }] },
+    };
+    component.plan.disabledRewardIds = ['optional-gift'];
+    component.plan.disabledEventIds = ['reward-event', 'target-event'];
+    component.plan.targets = [{
+      id: 'target',
+      eventId: 'target-event',
+      title: 'Target',
+      bannerKind: 'support',
+      plannedPulls: 200,
+      desiredCopies: 1,
+      pullTiming: 'end',
+      useTickets: true,
+      allowPaidJewels: false,
+    }];
+
+    component.applyIncomePreset('completionist');
+
+    expect(component.plan.enabledRewardIds).toEqual(['optional-gift']);
+    expect(component.plan.disabledRewardIds).toEqual([]);
+    expect(component.plan.disabledEventIds).toEqual(['target-event']);
+  });
+
   it('shows the master-backed Monthly Shop ticket toggle transparently', () => {
     const component = createComponent();
     component.data = {
