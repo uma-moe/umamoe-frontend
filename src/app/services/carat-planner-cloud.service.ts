@@ -76,6 +76,9 @@ export class CaratPlannerCloudService {
   private verifiedHash: string | null = null;
   private hasVerifiedState = false;
   private pendingCollection: CaratPlanCollection | null = null;
+  private pendingHash: string | null = null;
+  private pendingDueAt = 0;
+  private inFlightHash: string | null = null;
   private saving = false;
   private applyingRemote = false;
   private started = false;
@@ -127,6 +130,9 @@ export class CaratPlannerCloudService {
     this.verifiedHash = null;
     this.hasVerifiedState = false;
     this.pendingCollection = null;
+    this.pendingHash = null;
+    this.pendingDueAt = 0;
+    this.inFlightHash = null;
     this.saving = false;
 
     if (!user) {
@@ -234,38 +240,69 @@ export class CaratPlannerCloudService {
 
   private queueSave(collection: CaratPlanCollection, delay = SAVE_DEBOUNCE_MS): void {
     if (!this.activeUserId) return;
-    if (this.hasVerifiedState && plannerCollectionHash(collection) === this.verifiedHash) {
-      if (this.saving) {
-        this.pendingCollection = collection;
-      } else {
-        this.pendingCollection = null;
-        if (this.saveTimer !== undefined) clearTimeout(this.saveTimer);
-        this.saveTimer = undefined;
-        this.setStatus('synced', true, 'Saved to your account');
+    const hash = plannerCollectionHash(collection);
+
+    if (this.saving) {
+      if (hash === this.inFlightHash) {
+        this.clearPendingSave();
+        return;
       }
+      this.setPendingSave(collection, hash, delay);
       return;
     }
 
+    if (this.hasVerifiedState && hash === this.verifiedHash) {
+      this.clearPendingSave();
+      this.setStatus('synced', true, 'Saved to your account');
+      return;
+    }
+
+    this.setPendingSave(collection, hash, delay);
+    this.schedulePendingSave();
+  }
+
+  private setPendingSave(collection: CaratPlanCollection, hash: string, delay: number): void {
+    const changed = hash !== this.pendingHash;
     this.pendingCollection = collection;
-    if (this.saving) return;
+    this.pendingHash = hash;
+    if (changed || this.pendingDueAt === 0) {
+      this.pendingDueAt = Date.now() + Math.max(0, delay);
+    }
+  }
+
+  private schedulePendingSave(): void {
+    if (this.saving || !this.pendingCollection || !this.pendingHash || !this.activeUserId) return;
     if (this.saveTimer !== undefined) clearTimeout(this.saveTimer);
+    const delay = Math.max(0, this.pendingDueAt - Date.now());
     this.saveTimer = setTimeout(() => {
       this.saveTimer = undefined;
       this.flushSave();
     }, delay);
   }
 
+  private clearPendingSave(): void {
+    this.pendingCollection = null;
+    this.pendingHash = null;
+    this.pendingDueAt = 0;
+    if (this.saveTimer !== undefined) clearTimeout(this.saveTimer);
+    this.saveTimer = undefined;
+  }
+
   private flushSave(): void {
     const userId = this.activeUserId;
     const collection = this.pendingCollection;
-    if (!userId || !collection || this.saving) return;
-    if (this.hasVerifiedState && plannerCollectionHash(collection) === this.verifiedHash) {
-      this.pendingCollection = null;
+    const submittedHash = this.pendingHash;
+    if (!userId || !collection || !submittedHash || this.saving) return;
+    if (this.hasVerifiedState && submittedHash === this.verifiedHash) {
+      this.clearPendingSave();
       this.setStatus('synced', true, 'Saved to your account');
       return;
     }
     this.pendingCollection = null;
+    this.pendingHash = null;
+    this.pendingDueAt = 0;
     this.saving = true;
+    this.inFlightHash = submittedHash;
     this.setStatus('saving', true, 'Saving to your account');
 
     this.http.put<PlannerCloudWireStateResponse>(
@@ -275,32 +312,42 @@ export class CaratPlannerCloudService {
       next: response => {
         if (this.activeUserId !== userId) return;
         this.saving = false;
+        this.inFlightHash = null;
         this.revision = response.revision;
         this.remoteUpdatedAt = response.updated_at;
-        this.verifiedHash = response.collection
-          ? plannerCollectionHash(response.collection)
-          : plannerCollectionHash(collection);
+        // A successful PUT confirms the exact semantic state submitted. Do not
+        // schedule another PUT merely because the compact response rehydrates
+        // resource-derived fields differently.
+        this.verifiedHash = submittedHash;
         this.hasVerifiedState = true;
         this.storeMeta(userId);
-        this.queueSave(this.persistence.compactSnapshot(), 0);
+        if (this.pendingCollection && this.pendingHash !== this.verifiedHash) {
+          this.schedulePendingSave();
+        } else {
+          this.clearPendingSave();
+          this.setStatus('synced', true, 'Saved to your account');
+        }
       },
       error: (error: HttpErrorResponse) => {
         if (this.activeUserId !== userId) return;
         this.saving = false;
+        this.inFlightHash = null;
         if (error.status === 409) {
           try {
             this.resolveConflict(decodePlannerCloudStateResponse(error.error));
             return;
           } catch {}
         }
-        this.pendingCollection = this.persistence.compactSnapshot();
+        const latest = this.persistence.compactSnapshot();
+        this.clearPendingSave();
         this.setStatus('offline', true, 'Saved locally. Account sync will retry');
-        this.queueSave(this.pendingCollection, RETRY_DELAY_MS);
+        this.queueSave(latest, RETRY_DELAY_MS);
       },
     });
   }
 
   private resolveConflict(remote: PlannerCloudStateResponse): void {
+    this.clearPendingSave();
     this.revision = Math.max(0, Number(remote.revision) || 0);
     this.remoteUpdatedAt = remote.updated_at;
     this.verifiedHash = remote.collection ? plannerCollectionHash(remote.collection) : null;
@@ -473,7 +520,11 @@ function plannerCollectionSemanticState(collection: CaratPlanCollection): unknow
     ...collection,
     plans: collection.plans.map(plan => ({
       ...plan,
+      enabledIncomeRuleIds: sortedUniqueStrings(plan.enabledIncomeRuleIds),
+      enabledRewardIds: sortedUniqueStrings(plan.enabledRewardIds),
+      disabledRewardIds: sortedUniqueStrings(plan.disabledRewardIds ?? []),
       enabledRewardEventIds: [],
+      disabledEventIds: sortedUniqueStrings(plan.disabledEventIds ?? []),
       resourceDefaultsApplied: undefined,
       variableRewardSelections: Object.fromEntries(
         Object.entries(plan.variableRewardSelections ?? {}).map(([eventId, selection]) => [eventId, {
@@ -491,9 +542,20 @@ function plannerCollectionSemanticState(collection: CaratPlanCollection): unknow
         desiredCopies: _desiredCopies,
         pickupId: _pickupId,
         ...target
-      }) => target),
+      }) => ({
+        ...target,
+        gachaIds: sortedUniqueNumbers(target.gachaIds ?? []),
+      })),
     })),
   };
+}
+
+function sortedUniqueStrings(values: readonly string[]): string[] {
+  return [...new Set(values)].sort();
+}
+
+function sortedUniqueNumbers(values: readonly number[]): number[] {
+  return [...new Set(values)].sort((left, right) => left - right);
 }
 
 function canonicalJson(value: unknown): string {

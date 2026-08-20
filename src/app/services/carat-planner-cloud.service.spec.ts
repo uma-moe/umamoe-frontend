@@ -184,6 +184,7 @@ describe('CaratPlannerCloudService merge', () => {
   it('ignores resource-derived presentation and local row ids in the sync hash', () => {
     const originalPlan = plan('same-plan', 'Same', '2026-08-18T10:00:00.000Z');
     originalPlan.enabledRewardEventIds = ['selector-event'];
+    originalPlan.disabledEventIds = ['z-event', 'support-1', 'a-event'];
     originalPlan.customIncome = [{
       id: 'local-income-id',
       label: 'Bonus',
@@ -196,6 +197,7 @@ describe('CaratPlannerCloudService merge', () => {
       id: 'local-target-id',
       eventId: 'support-1',
       gachaId: 30123,
+      gachaIds: [30124, 30123, 30124],
       title: 'Resource title',
       bannerKind: 'support',
       imagePath: 'assets/banner.webp',
@@ -212,6 +214,7 @@ describe('CaratPlannerCloudService merge', () => {
     const restoredPlan = {
       ...originalPlan,
       enabledRewardEventIds: [],
+      disabledEventIds: ['a-event', 'z-event', 'support-1'],
       resourceDefaultsApplied: true,
       customIncome: [{ ...originalPlan.customIncome[0], id: 'cloud-income-id' }],
       targets: [{
@@ -221,6 +224,7 @@ describe('CaratPlannerCloudService merge', () => {
         imagePath: undefined,
         bannerStart: undefined,
         bannerEnd: undefined,
+        gachaIds: [30123, 30124],
       }],
     };
 
@@ -285,6 +289,73 @@ describe('CaratPlannerCloudService sync', () => {
     tick();
 
     expect(http.put).not.toHaveBeenCalled();
+  }));
+
+  it('debounces hundreds of plan emissions into one PUT and stays idle after success', fakeAsync(() => {
+    const serverCollection = collection(plan('same-plan', 'Same', '2026-08-18T10:00:00.000Z'));
+    storeVerifiedMeta(serverCollection);
+    const setup = createCloudService(serverCollection, serverCollection);
+
+    setup.service.start();
+    tick();
+    setup.http.put.calls.reset();
+
+    for (let index = 0; index < 500; index++) {
+      const edited = structuredClone(serverCollection);
+      edited.plans[0].name = `Edit ${index}`;
+      setup.collectionSubject.next(edited);
+    }
+
+    tick(699);
+    expect(setup.http.put).not.toHaveBeenCalled();
+    tick(1);
+    expect(setup.http.put).toHaveBeenCalledTimes(1);
+    tick(60_000);
+    expect(setup.http.put).toHaveBeenCalledTimes(1);
+  }));
+
+  it('keeps one trailing update while a PUT is in flight', fakeAsync(() => {
+    const serverCollection = collection(plan('same-plan', 'Same', '2026-08-18T10:00:00.000Z'));
+    storeVerifiedMeta(serverCollection);
+    const setup = createCloudService(serverCollection, serverCollection);
+    const firstResponse = new Subject<any>();
+    setup.http.put.and.returnValue(firstResponse);
+
+    setup.service.start();
+    tick();
+    setup.http.put.calls.reset();
+
+    const firstEdit = structuredClone(serverCollection);
+    firstEdit.plans[0].name = 'First edit';
+    setup.collectionSubject.next(firstEdit);
+    tick(700);
+    expect(setup.http.put).toHaveBeenCalledTimes(1);
+
+    for (let index = 0; index < 500; index++) {
+      const edited = structuredClone(serverCollection);
+      edited.plans[0].name = `Later edit ${index}`;
+      setup.collectionSubject.next(edited);
+    }
+
+    const firstBody = setup.http.put.calls.mostRecent().args[1] as { collection: unknown };
+    setup.http.put.and.callFake(((_url: string, body: { collection: unknown }) => of({
+      revision: 3,
+      collection: body.collection,
+      updated_at: '2026-08-19T12:01:00.000Z',
+    })) as any);
+    firstResponse.next({
+      revision: 2,
+      collection: firstBody.collection,
+      updated_at: '2026-08-19T12:00:00.000Z',
+    });
+    firstResponse.complete();
+
+    tick(699);
+    expect(setup.http.put).toHaveBeenCalledTimes(1);
+    tick(1);
+    expect(setup.http.put).toHaveBeenCalledTimes(2);
+    tick(60_000);
+    expect(setup.http.put).toHaveBeenCalledTimes(2);
   }));
 
   it('restores the server collection when the startup cache is already different', fakeAsync(() => {
