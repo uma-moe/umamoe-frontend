@@ -777,7 +777,7 @@ describe('CaratPlannerCalculationService', () => {
 
   it('expands recurring, scenario, reward, and custom income deterministically', () => {
     const plan = makePlan({
-      enabledIncomeRuleIds: ['daily', 'scenario-low', 'scenario-high'],
+      enabledIncomeRuleIds: ['daily'],
       enabledRewardIds: ['gift', 'unknown-gift'],
       scenarioSelections: { league: 'high' },
       customIncome: [{

@@ -4,6 +4,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import {
   CaratPlan,
   CaratPlanCollection,
+  CaratPlannerDataBundle,
   CaratPlannerTimelineEvent,
   PlannerBannerKind,
   PlannerBalances,
@@ -28,6 +29,7 @@ import {
   hasProjectableSourceItems,
   isAutomaticCompetitiveVariant,
 } from '../utils/planner-reward-currencies';
+import { compactPlannerCollectionResourceState } from '../utils/carat-planner-resource-state';
 
 @Injectable({ providedIn: 'root' })
 export class CaratPlannerPersistenceService {
@@ -246,6 +248,17 @@ export class CaratPlannerPersistenceService {
 
   compactPlan(plan: CaratPlan): CaratPlan {
     return this.clone(this.withoutResourceDates(plan));
+  }
+
+  compactResourceState(
+    data: CaratPlannerDataBundle,
+    events: readonly CaratPlannerTimelineEvent[] = [],
+  ): boolean {
+    const current = this.snapshot;
+    const compacted = compactPlannerCollectionResourceState(current, data, events);
+    if (JSON.stringify(compacted) === JSON.stringify(current)) return false;
+    this.commit(compacted);
+    return true;
   }
 
   replaceCollection(value: unknown): CaratPlanCollection {

@@ -436,11 +436,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       const rewards = withTimelineRewardFallbacks(this.data.rewards, this.allEvents);
       if (rewards !== this.data.rewards) {
         this.data = { ...this.data, rewards };
-        if (this.plan) {
-          const rewardSelectionChanged = this.syncAutomaticRewardSelection();
-          const eventSelectionChanged = this.syncEnabledRewardEventIds();
-          if (rewardSelectionChanged || eventSelectionChanged) this.save();
-        }
+        this.persistence.compactResourceState(this.data, this.allEvents);
       }
     }
     this.filterEvents();
@@ -532,6 +528,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.persistence.collection$.pipe(takeUntil(this.destroy$)).subscribe(collection => {
       this.collection = collection;
       this.plan = this.persistence.activePlan;
+      if (this.plannerDataReady && this.persistence.compactResourceState(this.data, this.allEvents)) return;
       this.syncTargetSchedulesFromResources();
       this.filterEvents();
       this.filterRewards();
@@ -840,7 +837,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       totals.set(rule.cadence, (totals.get(rule.cadence) ?? 0) + Math.max(0, Number(rule.amount) || 0));
     };
     for (const rule of this.data.income.rules) {
-      if (isLegacyTrainingPassIncomeRule(rule) || !enabledRuleIds.has(rule.id)) continue;
+      if (isLegacyTrainingPassIncomeRule(rule)
+        || (!rule.scenario_group && !enabledRuleIds.has(rule.id))) continue;
       addRule(rule);
     }
     for (const rule of trainingPassIncomeRules(
@@ -1329,13 +1327,11 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         ...data,
         rewards: withTimelineRewardFallbacks(data.rewards, this.allEvents),
       };
-      const rewardSelectionChanged = this.syncAutomaticRewardSelection();
       this.rebuildAssumptionViews();
       this.plannerDataReady = true;
       this.activePlanResourceKey = null;
-      this.syncActivePlanResources(true);
-      if (this.plan && (rewardSelectionChanged || this.syncEnabledRewardEventIds())) {
-        this.save();
+      if (!this.persistence.compactResourceState(this.data, this.allEvents)) {
+        this.syncActivePlanResources(true);
       }
       this.tryAddRequestedEvent();
       this.cdr.markForCheck();
@@ -1741,11 +1737,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     } else {
       delete this.plan.scenarioSelections[group];
     }
-    const values = new Set(this.plan.enabledIncomeRuleIds);
-    for (const rule of this.data.income.rules.filter(item => item.scenario_group === group)) {
-      values.add(rule.id);
-    }
-    this.plan.enabledIncomeRuleIds = [...values];
     const dataDrivenGroup = plannerDataDrivenCompetitionAssumptionGroup(group);
     if (dataDrivenGroup) {
       const affectedEventIds = new Set((this.data.rewards.competitive_variants ?? [])

@@ -176,7 +176,7 @@ export class CaratPlannerCalculationService {
 
     for (const rule of data.income.rules ?? []) {
       if (isLegacyTrainingPassIncomeRule(rule)
-        || !enabledRules.has(rule.id)
+        || (!rule.scenario_group && !enabledRules.has(rule.id))
         || !this.isSelectedScenario(rule, plan.scenarioSelections)) {
         continue;
       }

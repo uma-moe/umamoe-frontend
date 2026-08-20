@@ -949,9 +949,7 @@ describe('CaratPlannerComponent banner ordering', () => {
 
     component.cycleScenario(monthlyShop!, 1);
     expect(component.plan.scenarioSelections['monthly_shop_tickets']).toBe('friend_points');
-    expect(component.plan.enabledIncomeRuleIds).toEqual(jasmine.arrayWithExactContents([
-      'shop-friend-uma', 'shop-friend-support', 'shop-clover-uma', 'shop-clover-support',
-    ]));
+    expect(component.plan.enabledIncomeRuleIds).toEqual([]);
 
     component.cycleScenario(monthlyShop!, 1);
     expect(component.plan.scenarioSelections['monthly_shop_tickets']).toBe('include');
@@ -1820,6 +1818,7 @@ describe('CaratPlannerComponent active-plan resources', () => {
       collection$: collectionSubject.asObservable(),
       get activePlan(): CaratPlan { return clone(activePlan); },
       savePlan,
+      compactResourceState: () => false,
     };
     const data: CaratPlannerDataBundle = {
       core: {},
