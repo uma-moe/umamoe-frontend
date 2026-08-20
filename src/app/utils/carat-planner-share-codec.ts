@@ -3,6 +3,7 @@ import {
   PlannerBannerKind,
   PlannerCurrency,
   PlannerIncomeCadence,
+  PLANNER_INCOME_PRESET_IDS,
   PlannerPullTiming,
 } from '../models/carat-planner.model';
 import {
@@ -90,6 +91,7 @@ type CompactPlannerShare = [
   resourceDefaultsApplied: -1 | 0 | 1,
   customIncome: CompactCustomIncome[],
   targets: CompactTarget[],
+  presetState?: number,
 ];
 
 export interface DecodedPlannerShare {
@@ -183,7 +185,7 @@ export function expandCompactPlannerPlanData(value: unknown): CaratPlan | null {
 }
 
 function compactPlan(plan: CaratPlan): CompactPlannerShare {
-  return [
+  const values: CompactPlannerShare = [
     SHARE_FORMAT_VERSION,
     plan.name,
     plan.projectionStartDate,
@@ -246,6 +248,9 @@ function compactPlan(plan: CaratPlan): CompactPlannerShare {
       target.goldCrystalsPlanned ?? 0,
     ]),
   ];
+  const presetState = compactPresetState(plan);
+  if (presetState > 0) values.push(presetState);
+  return values;
 }
 
 function expandPlan(value: CompactPlannerShare): CaratPlan {
@@ -287,6 +292,7 @@ function expandPlan(value: CompactPlannerShare): CaratPlan {
     }])),
     freePullCampaignSelections: Object.fromEntries(pairArray(value[11])),
     ...(value[12] === -1 ? {} : { resourceDefaultsApplied: value[12] === 1 }),
+    ...expandPresetState(value[15]),
     customIncome: value[13].map((item, index) => ({
       id: `shared-income-${index + 1}`,
       label: item[0],
@@ -325,6 +331,17 @@ function codeOf<T extends string>(values: readonly T[], value: T): number {
   return index >= 0 ? index : 0;
 }
 
+function compactPresetState(plan: CaratPlan): number {
+  const index = plan.incomePresetId ? PLANNER_INCOME_PRESET_IDS.indexOf(plan.incomePresetId) : -1;
+  return index < 0 ? 0 : (index + 1) | (plan.incomePresetEdited ? 1 << 3 : 0);
+}
+
+function expandPresetState(value: unknown): Pick<CaratPlan, 'incomePresetId' | 'incomePresetEdited'> {
+  const state = nonNegativeInt(value);
+  const presetId = PLANNER_INCOME_PRESET_IDS[(state & 7) - 1];
+  return presetId ? { incomePresetId: presetId, incomePresetEdited: (state & (1 << 3)) !== 0 } : {};
+}
+
 function valueOf<T extends string>(values: readonly T[], code: number, fallback: T): T {
   return Number.isInteger(code) && values[code] !== undefined ? values[code] : fallback;
 }
@@ -332,6 +349,11 @@ function valueOf<T extends string>(values: readonly T[], code: number, fallback:
 function numberAt(values: number[], index: number): number {
   const value = values[index];
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function nonNegativeInt(value: unknown): number {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.trunc(number)) : 0;
 }
 
 function stringArray(value: unknown): string[] {

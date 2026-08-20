@@ -228,7 +228,7 @@
               [value]="preset.id"
               [class.is-active]="activeIncomePresetId === preset.id"
               [attr.aria-label]="preset.label + ': ' + preset.description">
-              <span class="cp-income-preset-copy"><mat-icon aria-hidden="true">{{ preset.icon }}</mat-icon><span><strong>{{ preset.label }}</strong><small>{{ preset.description }}</small></span></span>
+              <span class="cp-income-preset-copy"><mat-icon aria-hidden="true">{{ preset.icon }}</mat-icon><span><strong>{{ preset.label }}</strong><small>{{ preset.description }}<span *ngIf="activeIncomePresetId === preset.id && incomePresetEdited"> (edited)</span></small></span></span>
             </mat-radio-button>
           </mat-radio-group>
           <div class="cp-scenario-sections">

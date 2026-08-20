@@ -37,6 +37,7 @@ import {
   PlannerFreePullCampaignAllocation,
   PlannerGachaEntry,
   PlannerIncomeRule,
+  PlannerIncomePresetId,
   PlannerPickupGoal,
   PlannerPickupRate,
   PlannerRewardEntry,
@@ -323,8 +324,6 @@ interface PlannerOddsView {
 type PlannerSetupPanel = 'resources' | 'income' | 'rewards';
 type RewardSelectionFilter = 'all' | 'included';
 type FreePullCampaignChoice = 'schedule' | 'stock';
-type PlannerIncomePresetId = 'conservative' | 'casual' | 'active' | 'completionist';
-
 interface PlannerIncomePresetView {
   id: PlannerIncomePresetId;
   label: string;
@@ -496,6 +495,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   activeSetupPanel: PlannerSetupPanel | null = null;
   readonly incomePresets = PLANNER_INCOME_PRESETS;
   activeIncomePresetId: PlannerIncomePresetId | null = null;
+  incomePresetEdited = false;
   cloudStatus: PlannerCloudStatus = {
     kind: 'local',
     loggedIn: false,
@@ -528,6 +528,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.persistence.collection$.pipe(takeUntil(this.destroy$)).subscribe(collection => {
       this.collection = collection;
       this.plan = this.persistence.activePlan;
+      this.syncIncomePresetState();
       if (this.plannerDataReady && this.persistence.compactResourceState(this.data, this.allEvents)) return;
       this.syncTargetSchedulesFromResources();
       this.filterEvents();
@@ -1705,7 +1706,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   setScenario(group: string, option: string): void {
-    this.activeIncomePresetId = null;
+    this.markIncomePresetEdited();
     this.applyScenarioSelection(group, option);
     if (CONDITIONAL_REWARD_SCENARIO_GROUP_IDS.has(group)) {
       this.syncAutomaticRewardSelection();
@@ -1720,7 +1721,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     for (const group of this.scenarioGroupOptions) {
       this.applyScenarioSelection(group.id, this.incomePresetSelection(group, presetIndex));
     }
+    this.plan.incomePresetId = presetId;
+    this.plan.incomePresetEdited = false;
     this.activeIncomePresetId = presetId;
+    this.incomePresetEdited = false;
     this.syncAutomaticRewardSelection();
     this.filterRewards(true);
     this.save();
@@ -1793,7 +1797,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   toggleScenarioSection(section: PlannerScenarioSectionView): void {
-    this.activeIncomePresetId = null;
+    this.markIncomePresetEdited();
     const turnOff = this.scenarioSectionState(section) === 'all';
     if (turnOff) {
       const remembered = section.groups.reduce<Record<string, string>>((values, group) => {
@@ -1814,6 +1818,17 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     }
     this.syncAutomaticRewardSelection();
     this.save();
+  }
+
+  private syncIncomePresetState(): void {
+    this.activeIncomePresetId = this.plan.incomePresetId ?? null;
+    this.incomePresetEdited = Boolean(this.plan.incomePresetId && this.plan.incomePresetEdited);
+  }
+
+  private markIncomePresetEdited(): void {
+    this.activeIncomePresetId = this.plan.incomePresetId ?? null;
+    this.incomePresetEdited = Boolean(this.plan.incomePresetId);
+    if (this.plan.incomePresetId) this.plan.incomePresetEdited = true;
   }
 
   private scenarioSectionOptionToEnable(
@@ -3931,6 +3946,17 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private syncTargetSchedulesFromResources(): void {
     if (!this.plan) return;
     for (const target of this.plan.targets) {
+      const event = this.eventForId(target.eventId);
+      if (event) {
+        target.title = event.title;
+        const bannerKind = this.bannerKind(event.type);
+        if (bannerKind === 'character' || bannerKind === 'support') target.bannerKind = bannerKind;
+        if (event.imagePath) target.imagePath = event.imagePath;
+        else delete target.imagePath;
+        if (event.gachaId !== undefined) target.gachaId = event.gachaId;
+        if (event.gachaIds?.length) target.gachaIds = [...event.gachaIds];
+        else delete target.gachaIds;
+      }
       const schedule = this.resolveTargetSchedule(target);
       if (schedule.start) target.bannerStart = schedule.start;
       else delete target.bannerStart;

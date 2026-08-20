@@ -88,8 +88,8 @@ function compactPlan(
         && !explicitlyDisabledRewards.has(rewardId));
     })),
     disabledRewardIds,
-    enabledRewardEventIds: uniqueSorted(plan.enabledRewardEventIds.filter(eventId => (
-      selectorEventIds.has(eventId)
+    enabledRewardEventIds: uniqueSorted([...selectorEventIds].filter(eventId => (
+      !disabledEvents.has(eventId)
     ))),
     disabledEventIds: uniqueSorted((plan.disabledEventIds ?? []).filter(eventId => (
       !timelineReady || knownEventIds.has(eventId) || targetEventIds.has(eventId)

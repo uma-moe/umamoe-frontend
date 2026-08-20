@@ -12,6 +12,8 @@ import {
   PlannerCustomIncome,
   PlannerCompetitiveRewardVariant,
   PlannerIncomeCadence,
+  PLANNER_INCOME_PRESET_IDS,
+  PlannerIncomePresetId,
   PlannerPickupGoal,
   PlannerPullTiming,
   PlannerRewardEntry,
@@ -458,6 +460,7 @@ export class CaratPlannerPersistenceService {
     }
     const now = new Date().toISOString();
     const id = this.cleanText(record['id'], 100) || this.id('plan');
+    const incomePresetId = this.incomePresetId(record['incomePresetId']);
     return {
       id,
       name: this.cleanText(record['name'], 80) || 'Untitled plan',
@@ -474,6 +477,10 @@ export class CaratPlannerPersistenceService {
       variableRewardSelections: this.sanitizeVariableRewardSelections(record['variableRewardSelections']),
       freePullCampaignSelections: this.stringRecord(record['freePullCampaignSelections']),
       resourceDefaultsApplied: record['resourceDefaultsApplied'] === true,
+      ...(incomePresetId ? {
+        incomePresetId,
+        incomePresetEdited: record['incomePresetEdited'] === true,
+      } : {}),
       customIncome: Array.isArray(record['customIncome'])
         ? record['customIncome'].map(item => this.sanitizeCustomIncome(item)).filter((item): item is PlannerCustomIncome => !!item).slice(0, 200)
         : [],
@@ -582,6 +589,11 @@ export class CaratPlannerPersistenceService {
       ...(rainbowCrystalsPlanned > 0 ? { rainbowCrystalsPlanned } : {}),
       ...(goldCrystalsPlanned > 0 ? { goldCrystalsPlanned } : {}),
     };
+  }
+
+  private incomePresetId(value: unknown): PlannerIncomePresetId | undefined {
+    const id = this.cleanText(value, 30) as PlannerIncomePresetId;
+    return PLANNER_INCOME_PRESET_IDS.includes(id) ? id : undefined;
   }
 
   private withoutResourceDates(plan: CaratPlan): CaratPlan {

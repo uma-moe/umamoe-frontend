@@ -450,7 +450,7 @@ export function reconcileInitialPlannerCollections(
 }
 
 export function plannerCollectionHash(collection: CaratPlanCollection): string {
-  const canonical = canonicalJson(collection);
+  const canonical = canonicalJson(plannerCollectionSemanticState(collection));
   let first = 0xdeadbeef;
   let second = 0x41c6ce57;
 
@@ -466,6 +466,34 @@ export function plannerCollectionHash(collection: CaratPlanCollection): string {
     ^ Math.imul(first ^ (first >>> 13), 3_266_489_909);
 
   return `v1-${canonical.length.toString(36)}-${(second >>> 0).toString(16).padStart(8, '0')}${(first >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+function plannerCollectionSemanticState(collection: CaratPlanCollection): unknown {
+  return {
+    ...collection,
+    plans: collection.plans.map(plan => ({
+      ...plan,
+      enabledRewardEventIds: [],
+      resourceDefaultsApplied: undefined,
+      variableRewardSelections: Object.fromEntries(
+        Object.entries(plan.variableRewardSelections ?? {}).map(([eventId, selection]) => [eventId, {
+          ...selection,
+          label: undefined,
+        }]),
+      ),
+      customIncome: plan.customIncome.map(({ id: _id, ...income }) => income),
+      targets: plan.targets.map(({
+        id: _id,
+        title: _title,
+        imagePath: _imagePath,
+        bannerStart: _bannerStart,
+        bannerEnd: _bannerEnd,
+        desiredCopies: _desiredCopies,
+        pickupId: _pickupId,
+        ...target
+      }) => target),
+    })),
+  };
 }
 
 function canonicalJson(value: unknown): string {

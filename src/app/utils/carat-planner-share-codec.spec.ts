@@ -21,6 +21,8 @@ describe('Carat Planner compact share codec', () => {
       free_jewels: 1_500,
       rainbow_crystal: 2,
     });
+    expect(restored.incomePresetId).toBe('active');
+    expect(restored.incomePresetEdited).toBeTrue();
     expect(decoded.fingerprint).toMatch(/^[a-f0-9]{8,16}$/);
   });
 
@@ -96,6 +98,8 @@ function plan(): CaratPlan {
     },
     freePullCampaignSelections: { 'campaign-1': 'support-123' },
     resourceDefaultsApplied: true,
+    incomePresetId: 'active',
+    incomePresetEdited: true,
     customIncome: [{
       id: 'income-1',
       label: 'Tournament bonus',

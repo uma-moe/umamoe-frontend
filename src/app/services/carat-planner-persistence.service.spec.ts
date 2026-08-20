@@ -94,6 +94,8 @@ describe('CaratPlannerPersistenceService', () => {
         scenarioSelections: { league: 'high', ignored: 4 },
         freePullCampaignSelections: { anniversary: 'later-banner', ignored: 4 },
         resourceDefaultsApplied: 'yes',
+        incomePresetId: 'active',
+        incomePresetEdited: true,
         customIncome: [
           {
             id: ' custom ',
@@ -150,6 +152,8 @@ describe('CaratPlannerPersistenceService', () => {
     });
     expect(plan.freePullCampaignSelections).toEqual({ anniversary: 'later-banner' });
     expect(plan.resourceDefaultsApplied).toBeFalse();
+    expect(plan.incomePresetId).toBe('active');
+    expect(plan.incomePresetEdited).toBeTrue();
 
     expect(plan.customIncome.length).toBe(1);
     expect(plan.customIncome[0]).toEqual({

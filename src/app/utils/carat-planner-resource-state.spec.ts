@@ -99,7 +99,7 @@ describe('compactPlannerCollectionResourceState', () => {
     expect(compacted.plans[0].disabledEventIds).toEqual(['excluded-event', 'target-event']);
     expect(compacted.plans[1].enabledIncomeRuleIds).toEqual([]);
     expect(compacted.plans[1].enabledRewardIds).toEqual([]);
-    expect(compacted.plans[1].enabledRewardEventIds).toEqual([]);
+    expect(compacted.plans[1].enabledRewardEventIds).toEqual(['selector-event']);
   });
 });
 

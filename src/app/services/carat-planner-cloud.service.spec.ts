@@ -180,6 +180,54 @@ describe('CaratPlannerCloudService merge', () => {
 
     expect(plannerCollectionHash(timestampOnly)).toBe(plannerCollectionHash(original));
   });
+
+  it('ignores resource-derived presentation and local row ids in the sync hash', () => {
+    const originalPlan = plan('same-plan', 'Same', '2026-08-18T10:00:00.000Z');
+    originalPlan.enabledRewardEventIds = ['selector-event'];
+    originalPlan.customIncome = [{
+      id: 'local-income-id',
+      label: 'Bonus',
+      currency: 'free_jewels',
+      amount: 100,
+      cadence: 'once',
+      startDate: '2026-08-20',
+    }];
+    originalPlan.targets = [{
+      id: 'local-target-id',
+      eventId: 'support-1',
+      gachaId: 30123,
+      title: 'Resource title',
+      bannerKind: 'support',
+      imagePath: 'assets/banner.webp',
+      bannerStart: '2026-08-20',
+      bannerEnd: '2026-08-30',
+      pullTiming: 'end',
+      plannedPulls: 200,
+      desiredCopies: 1,
+      pickupId: 30123,
+      pickupGoals: [{ pickupId: 30123, desiredCopies: 1 }],
+      useTickets: true,
+      allowPaidJewels: false,
+    }];
+    const restoredPlan = {
+      ...originalPlan,
+      enabledRewardEventIds: [],
+      resourceDefaultsApplied: true,
+      customIncome: [{ ...originalPlan.customIncome[0], id: 'cloud-income-id' }],
+      targets: [{
+        ...originalPlan.targets[0],
+        id: 'cloud-target-id',
+        title: 'support-1',
+        imagePath: undefined,
+        bannerStart: undefined,
+        bannerEnd: undefined,
+      }],
+    };
+
+    expect(plannerCollectionHash(collection(restoredPlan))).toBe(
+      plannerCollectionHash(collection(originalPlan)),
+    );
+  });
 });
 
 describe('CaratPlannerCloudService sync', () => {
@@ -390,7 +438,7 @@ function plan(id: string, name: string, updatedAt: string): CaratPlan {
     },
     variableRewardSelections: {},
     freePullCampaignSelections: {},
-    resourceDefaultsApplied: false,
+    resourceDefaultsApplied: true,
     customIncome: [],
     targets: [],
   };

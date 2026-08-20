@@ -12,6 +12,9 @@ export type PlannerBannerKind = 'character' | 'support' | 'paid' | 'other';
 
 export type PlannerIncomeCadence = 'once' | 'daily' | 'weekly' | 'monthly' | 'interval';
 
+export const PLANNER_INCOME_PRESET_IDS = ['conservative', 'casual', 'active', 'completionist'] as const;
+export type PlannerIncomePresetId = typeof PLANNER_INCOME_PRESET_IDS[number];
+
 export type PlannerDataProvenance =
   | 'global_master'
   | 'jp_master'
@@ -365,6 +368,10 @@ export interface CaratPlan {
   /** Optional campaign -> destination event override. Missing means use the published default schedule. */
   freePullCampaignSelections?: Record<string, string>;
   resourceDefaultsApplied?: boolean;
+  /** Last quick preset applied to this plan, retained when its assumptions are customized. */
+  incomePresetId?: PlannerIncomePresetId;
+  /** True when an assumption has been changed after applying incomePresetId. */
+  incomePresetEdited?: boolean;
   customIncome: PlannerCustomIncome[];
   targets: PlannerTarget[];
 }

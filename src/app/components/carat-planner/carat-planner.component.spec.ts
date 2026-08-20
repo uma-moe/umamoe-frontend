@@ -912,10 +912,14 @@ describe('CaratPlannerComponent banner ordering', () => {
       speculative_income: 'include',
     }));
     expect(component.activeIncomePresetId).toBe('completionist');
+    expect(component.plan.incomePresetId).toBe('completionist');
+    expect(component.incomePresetEdited).toBeFalse();
     expect(save).toHaveBeenCalledTimes(4);
 
     component.setScenario('random_gameplay_income', 'medium');
-    expect(component.activeIncomePresetId).toBeNull();
+    expect(component.activeIncomePresetId).toBe('completionist');
+    expect(component.plan.incomePresetEdited).toBeTrue();
+    expect(component.incomePresetEdited).toBeTrue();
   });
 
   it('shows the master-backed Monthly Shop ticket toggle transparently', () => {
