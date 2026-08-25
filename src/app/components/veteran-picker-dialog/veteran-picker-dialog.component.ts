@@ -152,6 +152,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   savedPhase: 'idle' | 'queued' | 'waiting' | 'processing' | 'done' | 'error' | 'timeout' = 'idle';
   savedError: string | null = null;
   savedHistory: PartnerInheritance[] = [];
+  lookupResult: PartnerInheritance | null = null;
 
   manualEntries: StoredManualEntry[] = [];
   manualFormVisible = false;
@@ -754,6 +755,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     this.savedError = null;
     this.savedPhase = 'queued';
     this.savedVeterans = [];
+    this.lookupResult = null;
     this.cdr.markForCheck();
 
     this.partnerService.lookup(id)
@@ -779,9 +781,21 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
         break;
       case 'completed':
         this.savedLoading = false;
-        this.savedPhase = 'idle';
-        // Refresh the saved-history list so the new entry shows up.
-        this.loadSavedHistory();
+        if (!evt.inheritance) {
+          this.savedPhase = 'error';
+          this.savedError = this.withBuild('Lookup completed without inheritance data. Please try again.');
+        } else {
+          this.savedPhase = 'idle';
+          if (evt.willPersist) {
+            // Authenticated results are persisted and should be reloaded with
+            // their canonical saved-row metadata.
+            this.loadSavedHistory();
+          } else {
+            // Anonymous/direct results exist only for this dialog session.
+            this.lookupResult = evt.inheritance;
+            this._invalidateFiltered();
+          }
+        }
         break;
       case 'failed':
         this.savedLoading = false;
@@ -947,8 +961,8 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     return parents;
   }
 
-  partnerToRowData(p: PartnerInheritance): VpdRowData {
-    const cached = this._partnerRowCache.get(p);
+  partnerToRowData(p: PartnerInheritance, showActions = this.authService.isLoggedIn()): VpdRowData {
+    const cached = showActions ? this._partnerRowCache.get(p) : undefined;
     if (cached) return cached;
     const data: VpdRowData = {
       imageUrl: `assets/images/character_stand/chara_stand_${p.main_parent_id}.webp`,
@@ -963,9 +977,9 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
         pink: this.getPartnerMainSparkSum(p, 'pink'),
         green: this.getPartnerMainSparkSum(p, 'green'),
       },
-      showActions: true,
+      showActions,
     };
-    this._partnerRowCache.set(p, data);
+    if (showActions) this._partnerRowCache.set(p, data);
     return data;
   }
 
@@ -984,7 +998,9 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
           this.cdr.markForCheck();
         });
     } else {
-      this.savedHistory = this.partnerService.readAnonSaved();
+      // Anonymous lookups are displayed from the live SSE result only. They
+      // are intentionally not loaded into saved history.
+      this.savedHistory = [];
       this.savedHistoryLoading = false;
       this._invalidateFiltered();
       this.cdr.markForCheck();
@@ -1004,8 +1020,9 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$), catchError(() => of(null)))
         .subscribe(() => this.loadSavedHistory());
     } else {
-      this.partnerService.deleteAnonSaved(partner.account_id);
-      this.loadSavedHistory();
+      this.lookupResult = null;
+      this._invalidateFiltered();
+      this.cdr.markForCheck();
     }
   }
 

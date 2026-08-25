@@ -314,11 +314,25 @@
       </div>
 
       <!-- Idle / no history -->
-      <div class="vpd-state" *ngIf="!savedHistoryLoading && savedPhase === 'idle' && savedHistory.length === 0">
+      <div class="vpd-state" *ngIf="!savedHistoryLoading && savedPhase === 'idle' && savedHistory.length === 0 && !lookupResult">
         <mat-icon>group_search</mat-icon>
-        <span>No saved partners yet</span>
+        <span>{{ isLoggedIn() ? 'No saved partners yet' : 'No lookup result yet' }}</span>
         <p>Enter a Trainer ID above to fetch someone's inheritance data.</p>
       </div>
+
+      <!-- Anonymous results are shown directly and never added to history. -->
+      <ng-container *ngIf="!savedHistoryLoading && savedPhase === 'idle' && lookupResult as result">
+        <div class="vpd-saved-history-header">
+          <mat-icon>travel_explore</mat-icon>
+          <span>Lookup result</span>
+        </div>
+        <div class="vpd-list">
+          <app-vpd-row
+            [data]="partnerToRowData(result, false)"
+            (rowClick)="selectSavedPartner(result)">
+          </app-vpd-row>
+        </div>
+      </ng-container>
 
       <!-- Saved partners list -->
       <ng-container *ngIf="!savedHistoryLoading && savedPhase === 'idle' && savedHistory.length > 0">

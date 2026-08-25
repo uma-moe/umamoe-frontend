@@ -77,12 +77,11 @@ export interface PartnerLookupCreateResponse {
 export type PartnerLookupEvent =
   | { kind: 'pending'; taskId: number }
   | { kind: 'processing'; taskId: number }
-  | { kind: 'completed'; taskId: number; inheritance: PartnerInheritance | null }
+  | { kind: 'completed'; taskId: number; inheritance: PartnerInheritance | null; willPersist?: boolean }
   | { kind: 'failed'; taskId: number; error?: string }
   | { kind: 'timeout'; taskId: number };
 
 const ANON_STORAGE_KEY = 'partner-lookups:anon';
-const ANON_MAX_ENTRIES = 25;
 
 @Injectable({ providedIn: 'root' })
 export class PartnerService implements OnDestroy {
@@ -161,52 +160,30 @@ export class PartnerService implements OnDestroy {
     });
   }
 
-  /** End-to-end helper: create the task and stream the result. Persists the
-   *  result locally on success for anonymous users so the saved tab can show
-   *  history without backend storage. */
+  /** End-to-end helper: create the task and stream the result. Anonymous
+   *  results are emitted to the caller only and are not persisted. */
   lookup(partnerId: string, label?: string): Observable<PartnerLookupEvent> {
-    const isLoggedIn = this.auth.isLoggedIn();
     return new Observable<PartnerLookupEvent>(subscriber => {
       const sub = this.createLookup(partnerId, label).subscribe({
         next: created => {
-          // Backend already had cached data - no streaming needed.
+          // Backend served the result directly - no streaming needed.
           if (created.task_id == null) {
             const inh = this.inheritanceFromLookupResult(created.result);
-            if (!isLoggedIn && inh) { this.saveAnon(inh, label); }
-            subscriber.next({ kind: 'completed', taskId: 0, inheritance: inh });
+            subscriber.next({
+              kind: 'completed',
+              taskId: 0,
+              inheritance: inh,
+              willPersist: created.will_persist,
+            });
             subscriber.complete();
             return;
           }
-          let awaitingAnonymousResult = false;
           const inner = this.streamLookup(created.task_id).subscribe({
-            next: evt => {
-              if (evt.kind === 'completed' && !evt.inheritance && !isLoggedIn) {
-                awaitingAnonymousResult = true;
-                const followup = this.createLookup(partnerId, label).subscribe({
-                  next: refreshed => {
-                    const inh = this.inheritanceFromLookupResult(refreshed.result);
-                    if (inh) {
-                      this.saveAnon(inh, label);
-                    }
-                    subscriber.next({ kind: 'completed', taskId: evt.taskId, inheritance: inh });
-                    subscriber.complete();
-                  },
-                  error: err => subscriber.error(err),
-                });
-                subscriber.add(followup);
-                return;
-              }
-              if (evt.kind === 'completed' && evt.inheritance && !isLoggedIn) {
-                this.saveAnon(evt.inheritance, label);
-              }
-              subscriber.next(evt);
-            },
+            next: evt => subscriber.next(evt.kind === 'completed'
+              ? { ...evt, willPersist: created.will_persist }
+              : evt),
             error: err => subscriber.error(err),
-            complete: () => {
-              if (!awaitingAnonymousResult) {
-                subscriber.complete();
-              }
-            },
+            complete: () => subscriber.complete(),
           });
           subscriber.add(inner);
         },
@@ -283,24 +260,6 @@ export class PartnerService implements OnDestroy {
   deleteAnonSaved(accountId: string): void {
     const next = this.readAnonSaved().filter(p => p.account_id !== accountId);
     localStorage.setItem(ANON_STORAGE_KEY, JSON.stringify(next));
-  }
-
-  private saveAnon(inh: PartnerInheritance, label?: string): void {
-    const list = this.readAnonSaved();
-    const stamped: PartnerInheritance = {
-      ...inh,
-      label: label?.trim() || inh.label || null,
-      updated_at: new Date().toISOString(),
-    };
-    // Upsert by account_id; newest first; cap to ANON_MAX_ENTRIES.
-    const filtered = list.filter(p => p.account_id !== stamped.account_id);
-    const next = [stamped, ...filtered].slice(0, ANON_MAX_ENTRIES);
-    try {
-      localStorage.setItem(ANON_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // Quota exceeded or storage disabled - silently ignore; the lookup
-      // result is still emitted to the caller.
-    }
   }
 
   private async streamLookupWithFetch(
