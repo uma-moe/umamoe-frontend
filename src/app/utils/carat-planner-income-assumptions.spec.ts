@@ -23,7 +23,7 @@ describe('plannerIncomeAssumptionGroups', () => {
   it('shows the audited Global uplift buckets and derived monthly rate', () => {
     const comparison: PlannerGlobalRewardComparison = {
       news_match_method: 'same_announce_id',
-      speculative_method: 'mean_last_6_complete_calendar_months',
+      speculative_method: 'mean_last_6_complete_calendar_months_global_only_gifts',
       archive_as_of: '2026-08-07',
       observation_start: '2025-06-26',
       observation_end: '2026-08-06',
@@ -76,20 +76,38 @@ describe('plannerIncomeAssumptionGroups', () => {
       .find(candidate => candidate.id === SPECULATIVE_INCOME_SCENARIO_GROUP_ID);
 
     expect(group?.scheduleLabel).toBe(
-      'Rolling average of the last six completed months',
+      'Rolling average of Global-only gifts from the last six completed months',
     );
     expect(group?.helpText).toBe([
-      'Estimates extra Global-only Carats not already counted as confirmed income.',
+      'Estimates only extra Carats that Cygames gave to Global without a JP counterpart.',
+      '',
+      'Matched EN/JP rewards, login bonuses, and recurring JP campaigns are excluded in full.',
+      'Only Global-only gifts, compensation, and deduplicated official Global social giveaways are included.',
       '',
       'Rolling mean averages the last 6 completed months and works best for long-term planning.',
       'Conservative median: reduces the effect of unusually generous months.',
       'None: confirmed income only.',
       '',
-      'Updates automatically. Duplicate EN/JP and X/news rewards are removed.',
+      'Updates automatically. Duplicate X/news rewards are removed.',
     ].join('\n'));
     expect(group?.options).toEqual([
       { value: 'include', label: 'Rolling mean', amountLabel: '+1,233 Carats / month' },
       { value: 'median', label: 'Conservative median', amountLabel: '+775 Carats / month' },
+    ]);
+  });
+
+  it('refuses the inflated legacy EN-minus-JP speculative calculation', () => {
+    const group = plannerIncomeAssumptionGroups([], {
+      speculative_method: 'mean_last_6_complete_calendar_months',
+      speculative_monthly_carats: 999_999,
+      speculative_recent_median_monthly_carats: 999_999,
+    } as PlannerGlobalRewardComparison)
+      .find(candidate => candidate.id === SPECULATIVE_INCOME_SCENARIO_GROUP_ID);
+
+    expect(group?.scheduleLabel).toBe('Awaiting Global-only gift comparison data');
+    expect(group?.options.map(option => option.amountLabel)).toEqual([
+      'No observed uplift available',
+      'No observed uplift available',
     ]);
   });
 

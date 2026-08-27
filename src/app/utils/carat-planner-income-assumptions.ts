@@ -316,14 +316,21 @@ export function plannerIncomeAssumptionGroups(
   comparison?: PlannerGlobalRewardComparison,
 ): readonly PlannerIncomeAssumptionGroup[] {
   const trainingPassStart = resolveTrainingPassStartDate(events);
+  // Do not keep projecting the old EN-minus-JP calculation while a browser
+  // still has the previous resource cached. Only the explicitly versioned
+  // Global-only gift method is safe to use as speculative income.
+  const globalOnlyComparison = comparison?.speculative_method
+    === 'mean_last_6_complete_calendar_months_global_only_gifts'
+    ? comparison
+    : undefined;
   const speculativeMonthlyCarats = Math.max(0, Math.round(
-    Number(comparison?.speculative_monthly_carats) || 0,
+    Number(globalOnlyComparison?.speculative_monthly_carats) || 0,
   ));
   const speculativeMedianCarats = Math.max(0, Math.round(
-    Number(comparison?.speculative_recent_median_monthly_carats) || 0,
+    Number(globalOnlyComparison?.speculative_recent_median_monthly_carats) || 0,
   ));
-  const comparisonLabel = speculativeComparisonLabel(comparison);
-  const speculativeHelp = speculativeHelpText(comparison);
+  const comparisonLabel = speculativeComparisonLabel(globalOnlyComparison);
+  const speculativeHelp = speculativeHelpText(globalOnlyComparison);
   return [
     {
       id: MASTERS_CHALLENGE_SCENARIO_GROUP_ID,
@@ -559,8 +566,8 @@ export function plannerIncomeAssumptionGroups(
       id: SPECULATIVE_INCOME_SCENARIO_GROUP_ID,
       label: 'Speculative income',
       icon: 'auto_graph',
-      scheduleLabel: comparison
-        ? 'Rolling average of the last six completed months'
+      scheduleLabel: globalOnlyComparison
+        ? 'Rolling average of Global-only gifts from the last six completed months'
         : comparisonLabel,
       helpText: speculativeHelp,
       options: [
@@ -588,23 +595,26 @@ function speculativeHelpText(
 ): string | undefined {
   if (!comparison) return undefined;
   return [
-    'Estimates extra Global-only Carats not already counted as confirmed income.',
+    'Estimates only extra Carats that Cygames gave to Global without a JP counterpart.',
+    '',
+    'Matched EN/JP rewards, login bonuses, and recurring JP campaigns are excluded in full.',
+    'Only Global-only gifts, compensation, and deduplicated official Global social giveaways are included.',
     '',
     'Rolling mean averages the last 6 completed months and works best for long-term planning.',
     'Conservative median: reduces the effect of unusually generous months.',
     'None: confirmed income only.',
     '',
-    'Updates automatically. Duplicate EN/JP and X/news rewards are removed.',
+    'Updates automatically. Duplicate X/news rewards are removed.',
   ].join('\n');
 }
 
 function speculativeComparisonLabel(
   comparison: PlannerGlobalRewardComparison | undefined,
 ): string {
-  if (!comparison) return 'Awaiting EN/JP and official social comparison data';
+  if (!comparison) return 'Awaiting Global-only gift comparison data';
   const months = comparison.speculative_months ?? [];
-  const sourceSummary = `${comparison.matched_news?.length ?? 0} matched news use EN−JP delta · ${comparison.en_only_news?.length ?? 0} EN-only · ${comparison.social_reward_posts} deduped X/Twitter · ${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed`;
-  if (comparison.speculative_method === 'mean_last_6_complete_calendar_months'
+  const sourceSummary = `${comparison.matched_news?.length ?? 0} matched EN/JP posts excluded · ${comparison.en_only_news?.length ?? 0} Global-only gift posts · ${comparison.social_reward_posts} deduped X/Twitter · ${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed`;
+  if (comparison.speculative_method === 'mean_last_6_complete_calendar_months_global_only_gifts'
     && months.length > 0) {
     const range = formatMonthRange(
       comparison.speculative_window_start ?? months[0].month,
@@ -644,7 +654,7 @@ function speculativeComparisonLabel(
     ));
     return `6-month median ${range} [${values}] = ${formatNumber(comparison.speculative_monthly_carats)}/month. Long-run mean ${formatNumber(longRunMean)}/month. Sources: ${sourceSummary}`;
   }
-  return `Observed ${comparison.matched_news?.length ?? 0} matched news: EN ${formatNumber(comparison.matched_news_global_carats)} vs JP ${formatNumber(comparison.matched_news_jp_carats)} (${formatSigned(comparison.matched_news_extra_carats)}). ${comparison.en_only_news?.length ?? 0} EN-only +${formatNumber(comparison.en_only_news_carats)}. ${comparison.social_reward_posts} deduped X/Twitter +${formatNumber(comparison.social_carats)} (${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed) over ${comparison.observed_months.toFixed(1)} months`;
+  return `Observed ${comparison.matched_news?.length ?? 0} matched EN/JP posts (excluded in full). ${comparison.en_only_news?.length ?? 0} Global-only gift posts +${formatNumber(comparison.en_only_news_carats)}. ${comparison.social_reward_posts} deduped X/Twitter +${formatNumber(comparison.social_carats)} (${formatCount(comparison.social_news_duplicate_reward_items_removed, 'overlapping item')} / ${formatNumber(comparison.social_news_duplicate_carats_removed)} Carats removed) over ${comparison.observed_months.toFixed(1)} months`;
 }
 
 function formatMonthRange(start: string, end: string): string {
@@ -669,11 +679,6 @@ function formatNumber(value: number): string {
 function formatCount(value: number, label: string): string {
   const rounded = Math.max(0, Math.round(Number(value) || 0));
   return `${rounded.toLocaleString('en-US')} ${label}${rounded === 1 ? '' : 's'}`;
-}
-
-function formatSigned(value: number): string {
-  const rounded = Math.round(Number(value) || 0);
-  return `${rounded >= 0 ? '+' : '-'}${Math.abs(rounded).toLocaleString('en-US')}`;
 }
 
 export function resolveTrainingPassStartDate(
