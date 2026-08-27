@@ -4,12 +4,16 @@
   </div>
 
   <div class="version-update__copy">
-    <div class="version-update__title">Update available</div>
-    <div class="version-update__versions" [title]="data.currentVersion + ' -> ' + data.deployedVersion">
-      <span>{{ currentVersion }}</span>
-      <mat-icon>arrow_forward</mat-icon>
-      <span>{{ deployedVersion }}</span>
-    </div>
+    <div class="version-update__title">{{ isRewardUpdate ? 'Reward data updated' : 'Update available' }}</div>
+    @if (isRewardUpdate) {
+      <div class="version-update__versions">Reload to use the latest planner rewards</div>
+    } @else {
+      <div class="version-update__versions" [title]="data.currentVersion + ' -> ' + data.deployedVersion">
+        <span>{{ currentVersion }}</span>
+        <mat-icon>arrow_forward</mat-icon>
+        <span>{{ deployedVersion }}</span>
+      </div>
+    }
   </div>
 
   <div class="version-update__actions">

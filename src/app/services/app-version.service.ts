@@ -15,11 +15,13 @@ export class AppVersionService {
   private readonly versionUrl = '/version.json';
   private readonly reloadVersionParam = '__uma_version';
   private readonly minimumCheckIntervalMs = 60000;
+  private readonly periodicCheckIntervalMs = 5 * 60000;
   private readonly currentVersion = this.readCurrentVersion();
   private lastCheckedAt = 0;
   private checking = false;
   private promptOpen = false;
   private initialized = false;
+  private readonly rewardUpdateChecks = new Set<() => Promise<boolean>>();
 
   constructor(
     private snackBar: MatSnackBar,
@@ -41,6 +43,7 @@ export class AppVersionService {
       this.document.addEventListener('visibilitychange', this.handleVisibilityChange);
       this.window.addEventListener('focus', this.handleWindowFocus);
       this.window.addEventListener('online', this.handleWindowFocus);
+      this.window.setInterval(this.handleWindowFocus, this.periodicCheckIntervalMs);
     });
   }
 
@@ -62,6 +65,10 @@ export class AppVersionService {
       return normalizedMessage;
     }
     return `${normalizedMessage} | ${this.getSupportBuildTag()}`;
+  }
+
+  registerRewardUpdateCheck(check: () => Promise<boolean>): void {
+    this.rewardUpdateChecks.add(check);
   }
 
   formatVersion(version: string): string {
@@ -109,9 +116,14 @@ export class AppVersionService {
     this.lastCheckedAt = now;
 
     try {
-      const deployedVersion = await this.fetchDeployedVersion();
+      const [deployedVersion, rewardsUpdated] = await Promise.all([
+        this.fetchDeployedVersion().catch(() => null),
+        this.checkForRewardUpdate(),
+      ]);
       if (deployedVersion && deployedVersion !== this.currentVersion) {
-        this.showReloadPrompt(deployedVersion);
+        this.showReloadPrompt(deployedVersion, 'application');
+      } else if (rewardsUpdated) {
+        this.showReloadPrompt(this.currentVersion, 'rewards');
       }
     } catch {
       // Version checks are best-effort; the app should keep running offline.
@@ -141,7 +153,14 @@ export class AppVersionService {
     return manifest.version?.trim() || null;
   }
 
-  private showReloadPrompt(deployedVersion: string): void {
+  private async checkForRewardUpdate(): Promise<boolean> {
+    const results = await Promise.all(
+      [...this.rewardUpdateChecks].map(check => check().catch(() => false)),
+    );
+    return results.some(Boolean);
+  }
+
+  private showReloadPrompt(deployedVersion: string, updateType: 'application' | 'rewards'): void {
     if (this.promptOpen) {
       return;
     }
@@ -156,6 +175,7 @@ export class AppVersionService {
         data: {
           currentVersion: this.currentVersion,
           deployedVersion,
+          updateType,
         },
       });
 

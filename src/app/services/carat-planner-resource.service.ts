@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { Inject, Injectable, Optional, PLATFORM_ID } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
@@ -14,6 +14,7 @@ import {
 import { TurnstileService } from './turnstile.service';
 import { resolvePlannerGachaRates } from './carat-planner-gacha-rates';
 import { applyGlobalRewardPrecedence } from '../utils/planner-reward-precedence';
+import { AppVersionService } from './app-version.service';
 
 type PlannerManifestEntry = string | {
   path?: string;
@@ -24,6 +25,7 @@ type PlannerManifestEntry = string | {
   name?: string;
   sha256?: string;
   current_sha256?: string;
+  etag?: string;
 };
 
 interface PlannerManifest {
@@ -76,8 +78,10 @@ export class CaratPlannerResourceService {
   constructor(
     private readonly turnstileService: TurnstileService,
     @Inject(PLATFORM_ID) platformId: object,
+    @Optional() appVersionService?: AppVersionService,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
+    appVersionService?.registerRewardUpdateCheck(() => this.checkForRewardUpdate());
   }
 
   get currentBundle(): CaratPlannerDataBundle {
@@ -94,6 +98,18 @@ export class CaratPlannerResourceService {
     }
     this.turnstileService.prime();
     void this.loadManifest().catch(() => undefined);
+  }
+
+  async checkForRewardUpdate(): Promise<boolean> {
+    if (!this.isBrowser || !this.manifest) {
+      return false;
+    }
+
+    const currentManifest = this.manifest;
+    const url = `${this.resourceBaseUrl}/planner/manifest.json`;
+    const deployedManifest = await this.refreshManifest(url);
+    return this.artifactFingerprint('planner_rewards.json', currentManifest)
+      !== this.artifactFingerprint('planner_rewards.json', deployedManifest);
   }
 
   loadInitial(): Promise<CaratPlannerDataBundle> {
@@ -294,6 +310,29 @@ export class CaratPlannerResourceService {
   }
 
   private resolveArtifactPath(logicalName: string, manifest: PlannerManifest): string | null {
+    return this.findArtifactEntry(logicalName, manifest)?.path ?? null;
+  }
+
+  private artifactFingerprint(logicalName: string, manifest: PlannerManifest): string | null {
+    const artifact = this.findArtifactEntry(logicalName, manifest);
+    if (!artifact) {
+      return null;
+    }
+    if (typeof artifact.entry === 'object') {
+      const fingerprint = artifact.entry.current_sha256
+        ?? artifact.entry.sha256
+        ?? artifact.entry.etag;
+      if (fingerprint) {
+        return fingerprint;
+      }
+    }
+    return artifact.path;
+  }
+
+  private findArtifactEntry(
+    logicalName: string,
+    manifest: PlannerManifest,
+  ): { entry: PlannerManifestEntry; path: string } | null {
     const base = logicalName.replace(/\.json(?:\.gz)?$/, '');
     const candidates = new Set([logicalName, `${base}.json`, `${base}.json.gz`, base]);
     for (const container of [manifest.files, manifest.artifacts, manifest.resources]) {
@@ -305,14 +344,15 @@ export class CaratPlannerResourceService {
           const path = this.entryPath(entry);
           const name = typeof entry === 'object' ? entry.name : undefined;
           if (path && [...candidates].some(candidate => path.endsWith(candidate) || name === candidate)) {
-            return path;
+            return { entry, path };
           }
         }
       } else {
         for (const candidate of candidates) {
-          const path = this.entryPath(container[candidate]);
+          const entry = container[candidate];
+          const path = this.entryPath(entry);
           if (path) {
-            return path;
+            return { entry, path };
           }
         }
       }

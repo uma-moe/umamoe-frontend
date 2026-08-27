@@ -70,4 +70,40 @@ describe('CaratPlannerResourceService reward precedence', () => {
     expect(rewards.rewards.map(reward => reward.id)).toEqual(['global']);
     expect(service.currentBundle.rewards).toBe(rewards);
   });
+
+  it('detects a changed rewards artifact even when the app build is unchanged', async () => {
+    const service = new CaratPlannerResourceService({} as never, 'browser' as unknown as object);
+    (service as any).manifest = {
+      version: 'resource-v1',
+      artifacts: [{ name: 'planner_rewards.json', path: '/old/planner_rewards.json.gz', sha256: 'old-rewards' }],
+    };
+    spyOn<any>(service, 'refreshManifest').and.resolveTo({
+      version: 'resource-v2',
+      artifacts: [{ name: 'planner_rewards.json', path: '/new/planner_rewards.json.gz', sha256: 'new-rewards' }],
+    });
+
+    await expectAsync(service.checkForRewardUpdate()).toBeResolvedTo(true);
+  });
+
+  it('ignores unrelated resource deployments when the rewards fingerprint is unchanged', async () => {
+    const service = new CaratPlannerResourceService({} as never, 'browser' as unknown as object);
+    (service as any).manifest = {
+      version: 'resource-v1',
+      artifacts: [{ name: 'planner_rewards.json', path: '/old/planner_rewards.json.gz', sha256: 'same-rewards' }],
+    };
+    spyOn<any>(service, 'refreshManifest').and.resolveTo({
+      version: 'resource-v2',
+      artifacts: [{ name: 'planner_rewards.json', path: '/new/planner_rewards.json.gz', sha256: 'same-rewards' }],
+    });
+
+    await expectAsync(service.checkForRewardUpdate()).toBeResolvedTo(false);
+  });
+
+  it('does not fetch planner resources before the planner has been opened', async () => {
+    const service = new CaratPlannerResourceService({} as never, 'browser' as unknown as object);
+    const refreshManifest = spyOn<any>(service, 'refreshManifest');
+
+    await expectAsync(service.checkForRewardUpdate()).toBeResolvedTo(false);
+    expect(refreshManifest).not.toHaveBeenCalled();
+  });
 });
