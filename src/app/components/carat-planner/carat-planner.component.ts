@@ -2885,12 +2885,16 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       }
     }
     for (const [kind, amount] of totals) {
+      const loginBreakdown = kind === 'carats'
+        ? this.loginRewardBreakdownText(rewards, amount)
+        : undefined;
       benefits.push({
         id: `currency:${kind}`,
         kind,
         label: this.rewardCurrencyLabel(kind, amount),
         amount,
-        text: `${INTEGER_FORMATTER.format(amount)} ${this.rewardCurrencyLabel(kind, amount)}`,
+        text: loginBreakdown
+          ?? `${INTEGER_FORMATTER.format(amount)} ${this.rewardCurrencyLabel(kind, amount)}`,
         icon: this.rewardBenefitIcon(kind),
         iconPath: this.rewardBenefitItemIcon(kind),
         plannerEffect: 'ledger',
@@ -2931,6 +2935,29 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       });
     }
     return benefits.sort((left, right) => this.rewardBenefitOrder(left.kind) - this.rewardBenefitOrder(right.kind));
+  }
+
+  private loginRewardBreakdownText(
+    rewards: readonly PlannerRewardEntry[],
+    total: number,
+  ): string | undefined {
+    for (const reward of rewards) {
+      if (!matchesJewelCurrency(reward.currency) || Number(reward.amount) !== total) continue;
+      const match = reward.evidence?.match(/^(\d+) days × ([\d,]+) Carats = ([\d,]+) Carats(?:;|$)/i);
+      if (!match) continue;
+      const days = Number(match[1].replace(/,/g, ''));
+      const daily = Number(match[2].replace(/,/g, ''));
+      const statedTotal = Number(match[3].replace(/,/g, ''));
+      if (!Number.isSafeInteger(days)
+        || !Number.isSafeInteger(daily)
+        || !Number.isSafeInteger(statedTotal)
+        || days <= 0
+        || daily <= 0
+        || statedTotal !== total
+        || days * daily !== total) continue;
+      return `${INTEGER_FORMATTER.format(days)} days × ${INTEGER_FORMATTER.format(daily)} Carats = ${INTEGER_FORMATTER.format(total)} Carats`;
+    }
+    return undefined;
   }
 
   private buildVariableRewardOptions(

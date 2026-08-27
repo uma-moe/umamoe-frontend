@@ -1271,44 +1271,35 @@ describe('CaratPlannerComponent banner ordering', () => {
     }));
   });
 
-  it('shows exact news login periods as separate start-to-end reward windows', () => {
+  it('shows a bundled news login reward from the first through final claim date', () => {
     const component = createComponent();
     component.plan.projectionStartDate = '2030-08-27';
     component.data = {
       core: {},
       income: { rules: [] },
-      rewards: { rewards: [
-        {
-          id: 'global-news-994-login-bonus-period-01',
-          label: 'A special Umayuru Celebration has begun!',
-          currency: 'free_jewels',
-          amount: 150,
-          available_at: '2030-08-26T22:00:00Z',
-          available_until: '2030-09-02T14:59:00Z',
-          provenance: 'global_news',
-        },
-        {
-          id: 'global-news-994-login-bonus-period-02',
-          label: 'A special Umayuru Celebration has begun!',
-          currency: 'free_jewels',
-          amount: 150,
-          available_at: '2030-08-30T15:00:00Z',
-          available_until: '2030-09-06T14:59:00Z',
-          provenance: 'global_news',
-        },
-      ] },
+      rewards: { rewards: [{
+        id: 'global-news-994-login-bonus',
+        label: 'A special Umayuru Celebration has begun!',
+        currency: 'free_jewels',
+        amount: 3300,
+        available_at: '2030-08-26T22:00:00Z',
+        available_until: '2030-12-30T14:59:00Z',
+        provenance: 'global_news',
+        evidence: '22 days × 150 Carats = 3300 Carats; 22 listed availability periods',
+      }] },
     };
 
     (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
 
-    expect(component.displayedRewardGroups.map(group => ({
-      availableAt: group.availableAt,
-      availableUntil: group.availableUntil,
-      amount: group.rewards[0]?.amount,
-    }))).toEqual([
-      { availableAt: '2030-08-26', availableUntil: '2030-09-02', amount: 150 },
-      { availableAt: '2030-08-30', availableUntil: '2030-09-06', amount: 150 },
-    ]);
+    expect(component.displayedRewardGroups.length).toBe(1);
+    expect(component.displayedRewardGroups[0]).toEqual(jasmine.objectContaining({
+      availableAt: '2030-08-26',
+      availableUntil: '2030-12-30',
+    }));
+    expect(component.displayedRewardGroups[0].benefits).toContain(jasmine.objectContaining({
+      amount: 3300,
+      text: '22 days × 150 Carats = 3,300 Carats',
+    }));
   });
 
   it('does not infer shared campaign totals from a news source alone', () => {
