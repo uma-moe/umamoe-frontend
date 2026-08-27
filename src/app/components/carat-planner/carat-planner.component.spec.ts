@@ -1,6 +1,12 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { CaratPlan, CaratPlanCollection, CaratPlannerDataBundle, PlannerTarget } from '../../models/carat-planner.model';
+import {
+  CaratPlan,
+  CaratPlanCollection,
+  CaratPlannerDataBundle,
+  PlannerRewardEntry,
+  PlannerTarget,
+} from '../../models/carat-planner.model';
 import { CaratPlannerCalculationService } from '../../services/carat-planner-calculation.service';
 import { CaratPlannerPersistenceService } from '../../services/carat-planner-persistence.service';
 import { CaratPullProbabilityService } from '../../services/carat-pull-probability.service';
@@ -1715,6 +1721,39 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.visibleRewardGroups.map(group => group.rewards[0]?.id)).toEqual(['reward-94']);
     component.searchRewards('');
     expect(component.visibleRewardItems.length).toBe(40);
+  });
+
+  it('renders official Global news rewards beyond the first batch and finds them by post ID', () => {
+    const component = createComponent();
+    const rewards: PlannerRewardEntry[] = Array.from({ length: 55 }, (_, index) => ({
+      id: `reward-${index}`,
+      label: `Reward ${index}`,
+      currency: 'free_jewels',
+      amount: 100,
+      available_at: new Date(Date.UTC(2030, 0, index + 1)).toISOString().slice(0, 10),
+    }));
+    rewards[49] = {
+      ...rewards[49],
+      id: 'global-news-994-login-bonus',
+      label: 'A special Umayuru Celebration has begun!',
+      provenance: 'global_news',
+      source_url: 'https://umapyoi.net/news/en/994',
+    };
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: { rewards },
+    };
+
+    (component as unknown as { rebuildAssumptionViews(): void }).rebuildAssumptionViews();
+
+    expect(component.visibleRewardGroups.some(group =>
+      group.rewards.some(reward => reward.id === 'global-news-994-login-bonus'))).toBeTrue();
+    expect(component.visibleRewardItems.length).toBe(50);
+
+    component.searchRewards('994');
+    expect(component.visibleRewardGroups.map(group => group.rewards[0]?.id))
+      .toEqual(['global-news-994-login-bonus']);
   });
 
   it('reuses the reward catalogue view while searching and filtering', () => {

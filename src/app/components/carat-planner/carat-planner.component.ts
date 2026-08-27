@@ -2356,9 +2356,21 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       })),
     ].sort((left, right) => this.compareRewardListItems(left, right, direction));
     this.displayedRewards = this.displayedRewardGroups.flatMap(group => [...group.rewards]);
-    if (catalogueChanged || resetRenderWindow) this.rewardRenderLimit = REWARD_RENDER_BATCH_SIZE;
+    if (catalogueChanged || resetRenderWindow) {
+      this.rewardRenderLimit = this.initialRewardRenderLimit();
+    }
     this.syncRenderedRewardItems();
     this.cdr.markForCheck();
+  }
+
+  private initialRewardRenderLimit(): number {
+    let lastOfficialGlobalNewsIndex = -1;
+    this.displayedRewardItems.forEach((item, index) => {
+      if (item.group?.rewards.some(reward => reward.provenance === 'global_news')) {
+        lastOfficialGlobalNewsIndex = index;
+      }
+    });
+    return Math.max(REWARD_RENDER_BATCH_SIZE, lastOfficialGlobalNewsIndex + 1);
   }
 
   private syncRenderedRewardItems(): void {
@@ -2642,7 +2654,14 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           searchText: [
             title,
             group.eventId,
-            ...group.rewards.flatMap(reward => [reward.label, reward.currency]),
+            ...group.rewards.flatMap(reward => [
+              reward.id,
+              reward.label,
+              reward.currency,
+              reward.source_url,
+              reward.assumption,
+              reward.evidence,
+            ]),
             ...group.eventBenefits.flatMap(benefit => [benefit.label, benefit.kind]),
             ...group.competitiveVariants.flatMap(variant => [variant.label, variant.competition]),
             ...benefits.map(benefit => benefit.text),
