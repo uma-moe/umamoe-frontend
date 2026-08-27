@@ -71,7 +71,7 @@ describe('CaratPlannerResourceService reward precedence', () => {
     expect(service.currentBundle.rewards).toBe(rewards);
   });
 
-  it('detects a changed rewards artifact even when the app build is unchanged', async () => {
+  it('hot-loads and publishes a changed rewards artifact when the app build is unchanged', async () => {
     const service = new CaratPlannerResourceService({} as never, 'browser' as unknown as object);
     (service as any).manifest = {
       version: 'resource-v1',
@@ -81,8 +81,26 @@ describe('CaratPlannerResourceService reward precedence', () => {
       version: 'resource-v2',
       artifacts: [{ name: 'planner_rewards.json', path: '/new/planner_rewards.json.gz', sha256: 'new-rewards' }],
     });
+    const loadArtifact = spyOn<any>(service, 'loadArtifact').and.resolveTo({
+      rewards: [{
+        id: 'new-login-reward',
+        label: 'New login reward',
+        currency: 'free_jewels',
+        amount: 3300,
+        available_at: '2030-01-01',
+        provenance: 'global_news',
+      }],
+    });
+    let publishedRewardId: string | undefined;
+    const subscription = service.rewardUpdates$.subscribe(rewards => {
+      publishedRewardId = rewards.rewards[0]?.id;
+    });
 
-    await expectAsync(service.checkForRewardUpdate()).toBeResolvedTo(true);
+    await expectAsync(service.refreshRewardsIfUpdated()).toBeResolvedTo(true);
+    expect(loadArtifact).toHaveBeenCalledWith('planner_rewards.json');
+    expect(service.currentBundle.rewards.rewards[0]?.id).toBe('new-login-reward');
+    expect(publishedRewardId).toBe('new-login-reward');
+    subscription.unsubscribe();
   });
 
   it('ignores unrelated resource deployments when the rewards fingerprint is unchanged', async () => {
@@ -96,14 +114,14 @@ describe('CaratPlannerResourceService reward precedence', () => {
       artifacts: [{ name: 'planner_rewards.json', path: '/new/planner_rewards.json.gz', sha256: 'same-rewards' }],
     });
 
-    await expectAsync(service.checkForRewardUpdate()).toBeResolvedTo(false);
+    await expectAsync(service.refreshRewardsIfUpdated()).toBeResolvedTo(false);
   });
 
   it('does not fetch planner resources before the planner has been opened', async () => {
     const service = new CaratPlannerResourceService({} as never, 'browser' as unknown as object);
     const refreshManifest = spyOn<any>(service, 'refreshManifest');
 
-    await expectAsync(service.checkForRewardUpdate()).toBeResolvedTo(false);
+    await expectAsync(service.refreshRewardsIfUpdated()).toBeResolvedTo(false);
     expect(refreshManifest).not.toHaveBeenCalled();
   });
 });

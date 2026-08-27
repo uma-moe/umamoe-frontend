@@ -225,6 +225,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     private tabSubscription?: Subscription;
     private plannerSubscription?: Subscription;
     private plannerResourceSubscription?: Subscription;
+    private plannerRewardUpdateSubscription?: Subscription;
     activeTab: 'timeline' | 'carat-planner' = 'timeline';
     readonly caratPlannerAvailable = isCaratPlannerAvailable();
 
@@ -633,6 +634,10 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
             if (!state.ready || this.destroyed) return;
             this.updateTimelineRewardSummaries(this.plannerResources.currentBundle.rewards);
         });
+        this.plannerRewardUpdateSubscription = this.plannerResources.rewardUpdates$.subscribe(rewards => {
+            if (this.destroyed) return;
+            this.updateTimelineRewardSummaries(rewards);
+        });
         this.loadTimelineRewardSummaries();
         this.tabSubscription = combineLatest([
             this.route.queryParamMap,
@@ -742,6 +747,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.tabSubscription?.unsubscribe();
         this.plannerSubscription?.unsubscribe();
         this.plannerResourceSubscription?.unsubscribe();
+        this.plannerRewardUpdateSubscription?.unsubscribe();
         // Clean up drag event listeners
         document.removeEventListener('mousemove', this.boundMouseMove);
         document.removeEventListener('mouseup', this.boundMouseUp);

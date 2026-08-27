@@ -1,6 +1,6 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Inject, Injectable, Optional, PLATFORM_ID } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   CaratPlannerDataBundle,
@@ -58,6 +58,7 @@ export class CaratPlannerResourceService {
   private manifestPromise: Promise<PlannerManifest> | null = null;
   private initialPromise: Promise<CaratPlannerDataBundle> | null = null;
   private rewardsPromise: Promise<PlannerRewardResource> | null = null;
+  private rewardRefreshPromise: Promise<boolean> | null = null;
   private bundle: CaratPlannerDataBundle = EMPTY_BUNDLE;
   private readonly shardPromises = new Map<string, Promise<PlannerGachaEntry[]>>();
   private readonly gachaById = new Map<number, PlannerGachaEntry>();
@@ -72,8 +73,10 @@ export class CaratPlannerResourceService {
     usingCache: false,
     error: null,
   });
+  private readonly rewardUpdatesSubject = new Subject<PlannerRewardResource>();
 
   readonly state$ = this.stateSubject.asObservable();
+  readonly rewardUpdates$ = this.rewardUpdatesSubject.asObservable();
 
   constructor(
     private readonly turnstileService: TurnstileService,
@@ -81,7 +84,7 @@ export class CaratPlannerResourceService {
     @Optional() appVersionService?: AppVersionService,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
-    appVersionService?.registerRewardUpdateCheck(() => this.checkForRewardUpdate());
+    appVersionService?.registerBackgroundRefresh(() => this.refreshRewardsIfUpdated());
   }
 
   get currentBundle(): CaratPlannerDataBundle {
@@ -100,16 +103,48 @@ export class CaratPlannerResourceService {
     void this.loadManifest().catch(() => undefined);
   }
 
-  async checkForRewardUpdate(): Promise<boolean> {
-    if (!this.isBrowser || !this.manifest) {
+  refreshRewardsIfUpdated(): Promise<boolean> {
+    if (!this.isBrowser || !this.manifest || this.stateSubject.value.loading) {
+      return Promise.resolve(false);
+    }
+    if (this.rewardRefreshPromise) {
+      return this.rewardRefreshPromise;
+    }
+
+    this.rewardRefreshPromise = this.refreshRewardsIfUpdatedInner()
+      .finally(() => {
+        this.rewardRefreshPromise = null;
+      });
+    return this.rewardRefreshPromise;
+  }
+
+  private async refreshRewardsIfUpdatedInner(): Promise<boolean> {
+    const currentManifest = this.manifest;
+    if (!currentManifest) {
+      return false;
+    }
+    const url = `${this.resourceBaseUrl}/planner/manifest.json`;
+    const deployedManifest = await this.refreshManifest(url);
+    if (this.artifactFingerprint('planner_rewards.json', currentManifest)
+      === this.artifactFingerprint('planner_rewards.json', deployedManifest)) {
       return false;
     }
 
-    const currentManifest = this.manifest;
-    const url = `${this.resourceBaseUrl}/planner/manifest.json`;
-    const deployedManifest = await this.refreshManifest(url);
-    return this.artifactFingerprint('planner_rewards.json', currentManifest)
-      !== this.artifactFingerprint('planner_rewards.json', deployedManifest);
+    const currentRewardsPromise = this.rewardsPromise;
+    this.manifest = deployedManifest;
+    this.rewardsPromise = null;
+    try {
+      const rewards = await this.loadRewards();
+      if (this.stateSubject.value.ready) {
+        this.initialPromise = Promise.resolve(this.bundle);
+      }
+      this.rewardUpdatesSubject.next(rewards);
+      return true;
+    } catch (error) {
+      this.manifest = currentManifest;
+      this.rewardsPromise = currentRewardsPromise;
+      throw error;
+    }
   }
 
   loadInitial(): Promise<CaratPlannerDataBundle> {

@@ -547,6 +547,21 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       this.resourceState = state;
       this.cdr.markForCheck();
     });
+    this.resources.rewardUpdates$.pipe(takeUntil(this.destroy$)).subscribe(rewards => {
+      if (!this.plannerDataReady || this.destroyed) return;
+      this.data = {
+        ...this.data,
+        rewards: withTimelineRewardFallbacks(rewards, this.allEvents),
+      };
+      this.activePlanResourceKey = null;
+      this.rebuildAssumptionViews();
+      if (!this.persistence.compactResourceState(this.data, this.allEvents)
+        && !this.syncActivePlanResources(true)) {
+        this.recalculate();
+      }
+      this.tryAddRequestedEvent();
+      this.cdr.markForCheck();
+    });
     this.loadResources();
     // Render the synchronous localStorage snapshot before starting account I/O.
     // This keeps the planner immediately usable while the server copy is checked.

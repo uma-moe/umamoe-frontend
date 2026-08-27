@@ -1,5 +1,5 @@
 import { ChangeDetectorRef } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { CaratPlan, CaratPlanCollection, CaratPlannerDataBundle, PlannerTarget } from '../../models/carat-planner.model';
 import { CaratPlannerCalculationService } from '../../services/carat-planner-calculation.service';
 import { CaratPlannerPersistenceService } from '../../services/carat-planner-persistence.service';
@@ -1951,9 +1951,11 @@ describe('CaratPlannerComponent active-plan resources', () => {
       },
     };
     const stateSubject = new BehaviorSubject({ loading: false, ready: false, usingCache: false, error: null });
+    const rewardUpdatesSubject = new Subject<CaratPlannerDataBundle['rewards']>();
     const loadGachasForEvents = jasmine.createSpy('loadGachasForEvents').and.resolveTo([]);
     const resources = {
       state$: stateSubject.asObservable(),
+      rewardUpdates$: rewardUpdatesSubject.asObservable(),
       loadInitial: jasmine.createSpy('loadInitial').and.resolveTo(data),
       loadGachasForEvents,
       loadedGachas: [],
@@ -1989,6 +1991,18 @@ describe('CaratPlannerComponent active-plan resources', () => {
     expect(component.plan.enabledIncomeRuleIds).toEqual(['daily-income']);
     expect(component.plan.enabledRewardIds).toEqual([]);
     expect(loadGachasForEvents.calls.mostRecent().args[0][0].id).toBe('banner-a');
+
+    rewardUpdatesSubject.next({
+      rewards: [{
+        id: 'hot-loaded-reward',
+        label: 'Hot-loaded reward',
+        currency: 'free_jewels',
+        amount: 3300,
+        available_at: '2030-12-23',
+        default_enabled: true,
+      }],
+    });
+    expect(component.data.rewards.rewards[0]?.id).toBe('hot-loaded-reward');
 
     activePlan = clone(plans[1]);
     collectionSubject.next({ version: 1, activePlanId: activePlan.id, plans: clone(plans) });

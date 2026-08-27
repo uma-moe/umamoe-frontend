@@ -7,7 +7,6 @@ import { AppVersionService } from '../../services/app-version.service';
 export interface VersionUpdateSnackbarData {
   currentVersion: string;
   deployedVersion: string;
-  updateType?: 'application' | 'rewards';
 }
 
 @Component({
@@ -30,10 +29,6 @@ export class VersionUpdateSnackbarComponent {
 
   get deployedVersion(): string {
     return this.appVersionService.formatVersion(this.data.deployedVersion);
-  }
-
-  get isRewardUpdate(): boolean {
-    return this.data.updateType === 'rewards';
   }
 
   reload(): void {
