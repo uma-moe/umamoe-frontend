@@ -1687,6 +1687,29 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.displayedRewardGroups[0].sourceLabel).toBe('News post');
   });
 
+  it('identifies master-data provenance when no public source URL exists', () => {
+    const component = createComponent();
+    component.data = {
+      core: {},
+      income: { rules: [] },
+      rewards: {
+        rewards: [{
+          id: 'global-master-login-bonus-30052-free_jewels',
+          label: 'Limited login bonus',
+          currency: 'free_jewels',
+          amount: 150,
+          available_at: '2030-01-01',
+          provenance: 'global_master',
+        }],
+      },
+    };
+
+    (component as unknown as { rebuildAssumptionViews: () => void }).rebuildAssumptionViews();
+
+    expect(component.displayedRewardGroups[0].sourceUrl).toBeUndefined();
+    expect(component.displayedRewardGroups[0].sourceLabel).toBe('Global game data');
+  });
+
   it('shows every reward in the scroll list and filters it down immediately', () => {
     const component = createComponent();
     component.data = {

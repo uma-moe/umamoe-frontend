@@ -2619,7 +2619,11 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           applicableVariants,
         );
         const breakdownTooltip = this.buildRewardBreakdownTooltip(applicableRewards);
-        const source = this.rewardGroupSource(applicableRewards, applicableBenefits);
+        const source = this.rewardGroupSource(
+          applicableRewards,
+          applicableBenefits,
+          applicableVariants,
+        );
         const groupedResourceCount = group.rewards.length
           + group.eventBenefits.length
           + group.competitiveVariants.length;
@@ -2817,11 +2821,13 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private rewardGroupSource(
     rewards: readonly PlannerRewardEntry[],
     eventBenefits: readonly PlannerEventBenefit[],
-  ): { url: string; label: string } | undefined {
+    competitiveVariants: readonly PlannerCompetitiveRewardVariant[],
+  ): { url?: string; label: string } | undefined {
     const candidates = [
       ...eventBenefits.filter(benefit => benefit.kind === 'free_pulls'),
       ...rewards,
       ...eventBenefits,
+      ...competitiveVariants,
     ].map((candidate, index) => ({ candidate, index }))
       .sort((left, right) => {
         const priority = (provenance: string | undefined): number => {
@@ -2843,7 +2849,26 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         || url.toLowerCase().includes('/news/');
       return { url, label: isNews ? 'News post' : 'Source' };
     }
+    for (const candidate of candidates) {
+      const label = this.rewardProvenanceLabel(candidate.provenance);
+      if (label) return { label };
+    }
     return undefined;
+  }
+
+  private rewardProvenanceLabel(provenance: string | undefined): string | undefined {
+    switch (provenance) {
+      case 'global_master': return 'Global game data';
+      case 'global_news': return 'Official Global news';
+      case 'global_social': return 'Official Global social';
+      case 'jp_master':
+      case 'jp_master_catalog':
+      case 'jp_master_snapshot': return 'JP game data';
+      case 'jp_news':
+      case 'jp_fallback': return 'JP news archive';
+      case 'configured': return 'Planner configuration';
+      default: return undefined;
+    }
   }
 
   private buildRewardBenefitViews(

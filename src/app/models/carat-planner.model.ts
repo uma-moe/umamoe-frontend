@@ -176,6 +176,7 @@ export interface PlannerCompetitiveRewardVariant {
   provenance?: PlannerDataProvenance;
   confidence?: string;
   default_enabled?: boolean;
+  source_url?: string;
 }
 
 export type PlannerEventBenefitKind = 'free_pulls' | 'trainee_selector' | 'support_selector' | string;

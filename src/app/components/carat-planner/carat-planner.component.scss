@@ -1285,6 +1285,10 @@ select.cp-control,
   &:hover { color: var(--accent-primary); background: var(--surface-2); border-color: var(--border-secondary); text-decoration: none; }
   &:focus-visible { outline: 2px solid rgba(var(--accent-primary-rgb), 0.48); outline-offset: 1px; }
 }
+.cp-reward-source--plain {
+  cursor: help;
+  &:hover { color: var(--text-muted); background: transparent; border-color: var(--border-primary); }
+}
 .cp-reward-art {
   grid-column: 1;
   grid-row: 1 / -1;

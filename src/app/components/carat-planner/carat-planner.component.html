@@ -463,7 +463,7 @@
               <ng-container *ngIf="item.campaign as campaign">
                 <ng-container *ngTemplateOutlet="freePullCampaignTile; context: { $implicit: campaign }"></ng-container>
               </ng-container>
-              <div *ngIf="item.group as group" class="cp-reward-cell" [class.has-source]="group.sourceUrl">
+              <div *ngIf="item.group as group" class="cp-reward-cell" [class.has-source]="group.sourceLabel">
                 <ng-container *ngIf="{ active: isRewardGroupActive(group) } as rewardState">
                   <div class="cp-reward-row" [class.is-active]="rewardState.active" [class.has-image]="!!group.imagePath"
                   [class.has-variable-reward]="group.variableOptions.length > 0"
@@ -476,6 +476,10 @@
                       [attr.title]="(group.sourceLabel || 'News post') + ' (opens in a new tab)'">
                       <span>{{ group.sourceLabel || 'News post' }}</span><mat-icon aria-hidden="true">open_in_new</mat-icon>
                     </a>
+                    <span *ngIf="!group.sourceUrl && group.sourceLabel" class="cp-reward-source cp-reward-source--plain"
+                      [attr.title]="group.sourceLabel + ' is the source for this reward'">
+                      <span>{{ group.sourceLabel }}</span><mat-icon aria-hidden="true">database</mat-icon>
+                    </span>
                     <div class="cp-variable-reward" *ngIf="group.variableOptions.length"
                       role="group" [attr.aria-label]="'Expected result for ' + group.title">
                       <button type="button" (click)="cycleVariableRewardSelection(group, -1)"
@@ -527,6 +531,10 @@
                         [attr.title]="(group.sourceLabel || 'News post') + ' (opens in a new tab)'">
                         <span>{{ group.sourceLabel || 'News post' }}</span><mat-icon aria-hidden="true">open_in_new</mat-icon>
                       </a>
+                      <span *ngIf="!group.sourceUrl && group.sourceLabel" class="cp-reward-source cp-reward-source--plain"
+                        [attr.title]="group.sourceLabel + ' is the source for this reward'">
+                        <span>{{ group.sourceLabel }}</span><mat-icon aria-hidden="true">database</mat-icon>
+                      </span>
                       <span class="cp-reward-past"><mat-icon aria-hidden="true">history</mat-icon> Past</span>
                     </div>
                   </ng-template>
