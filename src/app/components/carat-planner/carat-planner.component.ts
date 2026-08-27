@@ -2591,6 +2591,7 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           group.eventId,
           group.rewards.map(reward => reward.available_at),
           this.allEvents,
+          group.rewards.map(reward => reward.available_until),
         );
         const projectionStart = this.optionalDateKey(this.plan?.projectionStartDate);
         const periodCutoff = this.rewardPeriodCutoff(projectionStart);
@@ -2600,7 +2601,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
           : Boolean(dates.length > 0 && dates.every(date => date < periodCutoff));
         const applicableRewards = isPast || !projectionStart
           ? group.rewards
-          : group.rewards.filter(reward => this.isRewardDateUsable(reward.available_at, projectionStart));
+          : group.rewards.filter(reward =>
+            this.isRewardWindowUsable(reward.available_at, reward.available_until, projectionStart));
         const applicableBenefits = isPast || !projectionStart
           ? group.eventBenefits
           : group.eventBenefits.filter(benefit => this.isRewardDateUsable(benefit.available_at, projectionStart));
@@ -2801,6 +2803,15 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private isRewardDateUsable(value: string, projectionStart: string): boolean {
     const date = this.optionalDateKey(value);
     return !date || date >= projectionStart;
+  }
+
+  private isRewardWindowUsable(
+    availableAt: string,
+    availableUntil: string | undefined,
+    projectionStart: string,
+  ): boolean {
+    const end = this.optionalDateKey(availableUntil);
+    return end ? end >= projectionStart : this.isRewardDateUsable(availableAt, projectionStart);
   }
 
   private rewardGroupSource(

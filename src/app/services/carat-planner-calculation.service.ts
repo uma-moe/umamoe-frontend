@@ -203,6 +203,7 @@ export class CaratPlannerCalculationService {
         bundle.eventId,
         [bundle.availableAt],
         events,
+        [bundle.availableUntil],
       );
       const date = window
         ? (window.startsAt < startDate && window.endsAt >= startDate ? startDate : window.startsAt)

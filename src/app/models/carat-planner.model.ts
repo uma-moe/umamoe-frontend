@@ -86,6 +86,7 @@ export interface PlannerRewardEntry {
   currency: PlannerCurrency;
   amount?: number | null;
   available_at: string;
+  available_until?: string;
   category?: string;
   default_enabled?: boolean;
   full_completion?: boolean;

@@ -14,7 +14,22 @@ export function plannerRewardAvailabilityWindow(
   eventId: string | undefined,
   availableAts: readonly (Date | string | undefined)[],
   events: readonly CaratPlannerTimelineEvent[],
+  availableUntils: readonly (Date | string | undefined)[] = [],
 ): PlannerRewardAvailabilityWindow | undefined {
+  const directStarts = availableAts
+    .map(plannerRewardDateKey)
+    .filter((date): date is string => Boolean(date))
+    .sort();
+  const directEnds = availableUntils
+    .map(plannerRewardDateKey)
+    .filter((date): date is string => Boolean(date))
+    .sort();
+  const directStart = directStarts[0];
+  const directEnd = directEnds.at(-1);
+  if (directStart && directEnd && directEnd >= directStart) {
+    return { startsAt: directStart, endsAt: directEnd };
+  }
+
   if (!eventId) return undefined;
   const event = events.find(candidate => candidate.id === eventId);
   if (!event) return undefined;
@@ -25,10 +40,7 @@ export function plannerRewardAvailabilityWindow(
   const endsAt = plannerRewardDateKey(event.estimatedEndDate);
   if (!startsAt || !endsAt || endsAt <= startsAt) return undefined;
 
-  const sourcedDates = availableAts
-    .map(plannerRewardDateKey)
-    .filter((date): date is string => Boolean(date));
-  if (!sourcedDates.includes(endsAt)) return undefined;
+  if (!directStarts.includes(endsAt)) return undefined;
 
   return { startsAt, endsAt };
 }

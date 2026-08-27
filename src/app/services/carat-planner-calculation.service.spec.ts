@@ -219,6 +219,41 @@ describe('CaratPlannerCalculationService', () => {
     ]);
   });
 
+  it('counts each listed login-bonus period separately while its claim window is open', () => {
+    const plan = makePlan({
+      projectionStartDate: '2026-08-27',
+      enabledRewardIds: ['umayuru-period-01', 'umayuru-period-02'],
+    });
+    const data: CaratPlannerDataBundle = {
+      ...emptyData(),
+      rewards: { rewards: [
+        {
+          id: 'umayuru-period-01',
+          label: 'Umayuru Login Bonus',
+          currency: 'free_jewels',
+          amount: 150,
+          available_at: '2026-08-26T22:00:00Z',
+          available_until: '2026-09-02T14:59:00Z',
+        },
+        {
+          id: 'umayuru-period-02',
+          label: 'Umayuru Login Bonus',
+          currency: 'free_jewels',
+          amount: 150,
+          available_at: '2026-08-30T15:00:00Z',
+          available_until: '2026-09-06T14:59:00Z',
+        },
+      ] },
+    };
+
+    const ledger = service.buildLedger(plan, data, '2026-09-01');
+
+    expect(ledger.map(entry => [entry.id, entry.date, entry.amount])).toEqual([
+      ['reward:umayuru-period-01:free_jewels', '2026-08-27', 150],
+      ['reward:umayuru-period-02:free_jewels', '2026-08-30', 150],
+    ]);
+  });
+
   it('uses 20 available tickets before Carats for a 200-pull banner', () => {
     const plan = makePlan({
       balances: {

@@ -10,6 +10,7 @@ export interface PlannerRewardBundle {
   eventId?: string;
   label: string;
   availableAt: string;
+  availableUntil?: string;
   totals: Map<PlannerCurrency, number>;
 }
 
@@ -54,7 +55,7 @@ export function plannerRewardBundles(
   const grouped = new Map<string, PlannerRewardEntry[]>();
   for (const reward of rewards) {
     const baseId = plannerRewardBundleId(reward);
-    const key = `${reward.event_id ?? ''}|${reward.available_at}|${baseId}`;
+    const key = `${reward.event_id ?? ''}|${reward.available_at}|${reward.available_until ?? ''}|${baseId}`;
     const rows = grouped.get(key) ?? [];
     rows.push(reward);
     grouped.set(key, rows);
@@ -94,6 +95,7 @@ export function plannerRewardBundles(
       eventId: rows[0]?.event_id,
       label: rows[0]?.label ?? 'Event rewards',
       availableAt: rows[0]?.available_at ?? '',
+      availableUntil: rows[0]?.available_until,
       totals,
     };
   });
