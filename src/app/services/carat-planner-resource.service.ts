@@ -52,6 +52,7 @@ const EMPTY_BUNDLE: CaratPlannerDataBundle = {
 @Injectable({ providedIn: 'root' })
 export class CaratPlannerResourceService {
   private static readonly CACHE_NAME = 'umamoe-carat-planner-v2';
+  private static readonly CACHE_RECOVERY_RETRY_MS = 30000;
   private static jsonParseWorkerUrl: string | null = null;
   private readonly isBrowser: boolean;
   private manifest: PlannerManifest | null = null;
@@ -59,6 +60,7 @@ export class CaratPlannerResourceService {
   private initialPromise: Promise<CaratPlannerDataBundle> | null = null;
   private rewardsPromise: Promise<PlannerRewardResource> | null = null;
   private rewardRefreshPromise: Promise<boolean> | null = null;
+  private cacheRecoveryTimer: number | null = null;
   private bundle: CaratPlannerDataBundle = EMPTY_BUNDLE;
   private readonly shardPromises = new Map<string, Promise<PlannerGachaEntry[]>>();
   private readonly gachaById = new Map<number, PlannerGachaEntry>();
@@ -156,6 +158,9 @@ export class CaratPlannerResourceService {
       .then(bundle => {
         this.bundle = bundle;
         this.stateSubject.next({ ...this.stateSubject.value, loading: false, ready: true, error: null });
+        if (this.stateSubject.value.usingCache) {
+          this.scheduleCacheRecoveryRefresh();
+        }
         return bundle;
       })
       .catch(error => {
@@ -312,11 +317,15 @@ export class CaratPlannerResourceService {
       }
       const manifest = await response.clone().json() as PlannerManifest;
       await this.putCache(url, response);
+      this.markNetworkResourcesCurrent();
       return manifest;
     } catch (error) {
       const cachedFallback = await this.matchCache(url);
       if (cachedFallback) {
         this.stateSubject.next({ ...this.stateSubject.value, usingCache: true });
+        if (this.stateSubject.value.ready) {
+          this.scheduleCacheRecoveryRefresh();
+        }
         return cachedFallback.json() as Promise<PlannerManifest>;
       }
       throw error;
@@ -610,6 +619,32 @@ self.onmessage = async event => {
       await caches.open(CaratPlannerResourceService.CACHE_NAME).then(cache => cache.put(url, response));
     } catch (error) {
       console.warn('Unable to cache planner resource.', error);
+    }
+  }
+
+  private scheduleCacheRecoveryRefresh(): void {
+    if (!this.isBrowser || this.cacheRecoveryTimer !== null) {
+      return;
+    }
+    this.cacheRecoveryTimer = window.setTimeout(() => {
+      this.cacheRecoveryTimer = null;
+      void this.refreshRewardsIfUpdated()
+        .catch(() => false)
+        .finally(() => {
+          if (this.stateSubject.value.usingCache) {
+            this.scheduleCacheRecoveryRefresh();
+          }
+        });
+    }, CaratPlannerResourceService.CACHE_RECOVERY_RETRY_MS);
+  }
+
+  private markNetworkResourcesCurrent(): void {
+    if (this.cacheRecoveryTimer !== null) {
+      window.clearTimeout(this.cacheRecoveryTimer);
+      this.cacheRecoveryTimer = null;
+    }
+    if (this.stateSubject.value.usingCache) {
+      this.stateSubject.next({ ...this.stateSubject.value, usingCache: false });
     }
   }
 

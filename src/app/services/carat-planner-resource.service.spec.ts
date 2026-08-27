@@ -1,3 +1,4 @@
+import { fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { CaratPlannerDataBundle } from '../models/carat-planner.model';
 import { CaratPlannerResourceService, CaratPlannerResourceState } from './carat-planner-resource.service';
 
@@ -124,4 +125,23 @@ describe('CaratPlannerResourceService reward precedence', () => {
     await expectAsync(service.refreshRewardsIfUpdated()).toBeResolvedTo(false);
     expect(refreshManifest).not.toHaveBeenCalled();
   });
+
+  it('retries a cached planner manifest without requiring a reload', fakeAsync(() => {
+    const service = new CaratPlannerResourceService({} as never, 'browser' as unknown as object);
+    (service as any).manifest = {
+      version: 'cached-resource',
+      artifacts: [{ name: 'planner_rewards.json', path: '/cached/planner_rewards.json.gz' }],
+    };
+    (service as any).stateSubject.next({ loading: false, ready: true, usingCache: true, error: null });
+    const refresh = spyOn(service, 'refreshRewardsIfUpdated').and.callFake(() => {
+      (service as any).stateSubject.next({ loading: false, ready: true, usingCache: false, error: null });
+      return Promise.resolve(false);
+    });
+
+    (service as any).scheduleCacheRecoveryRefresh();
+    tick(30000);
+    flushMicrotasks();
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+  }));
 });

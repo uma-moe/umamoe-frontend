@@ -15,7 +15,7 @@ export class AppVersionService {
   private readonly versionUrl = '/version.json';
   private readonly reloadVersionParam = '__uma_version';
   private readonly minimumCheckIntervalMs = 60000;
-  private readonly periodicCheckIntervalMs = 5 * 60000;
+  private readonly periodicCheckIntervalMs = 60000;
   private readonly currentVersion = this.readCurrentVersion();
   private lastCheckedAt = 0;
   private checking = false;
