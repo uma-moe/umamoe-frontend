@@ -147,6 +147,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
   savedLoaded = false;
   savedHistoryLoading = false;
   private savedHistoryLoaded = false;
+  private savedHistoryReloadPending = false;
 
   /** Phase of the SSE-driven lookup. */
   savedPhase: 'idle' | 'queued' | 'waiting' | 'processing' | 'done' | 'error' | 'timeout' = 'idle';
@@ -789,7 +790,7 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
           if (evt.willPersist) {
             // Authenticated results are persisted and should be reloaded with
             // their canonical saved-row metadata.
-            this.loadSavedHistory();
+            this.loadSavedHistory(true);
           } else {
             // Anonymous/direct results exist only for this dialog session.
             this.lookupResult = evt.inheritance;
@@ -983,19 +984,33 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
     return data;
   }
 
-  loadSavedHistory(): void {
-    if (this.savedHistoryLoading) return;
+  loadSavedHistory(forceRefresh = false): void {
+    if (this.savedHistoryLoading) {
+      // Completion can race the initial history request. Remember the refresh
+      // so the newly persisted row is fetched after the in-flight request.
+      if (forceRefresh) this.savedHistoryReloadPending = true;
+      return;
+    }
     this.savedHistoryLoading = true;
     this.cdr.markForCheck();
 
     if (this.authService.isLoggedIn()) {
       this.partnerService.listSaved()
-        .pipe(takeUntil(this.destroy$), catchError(() => of([] as PartnerInheritance[])))
-        .subscribe(list => {
-          this.savedHistoryLoading = false;
-          this.savedHistory = list;
-          this._invalidateFiltered();
-          this.cdr.markForCheck();
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: list => {
+            this.savedHistory = list;
+            this.finishSavedHistoryLoad();
+          },
+          error: err => {
+            this.savedPhase = 'error';
+            this.savedError = this.withBuild(
+              (err?.error?.error as string)
+                || err?.message
+                || 'Could not load saved partner history',
+            );
+            this.finishSavedHistoryLoad();
+          },
         });
     } else {
       // Anonymous lookups are displayed from the live SSE result only. They
@@ -1005,6 +1020,19 @@ export class VeteranPickerDialogComponent implements OnInit, OnDestroy {
       this._invalidateFiltered();
       this.cdr.markForCheck();
     }
+  }
+
+  private finishSavedHistoryLoad(): void {
+    this.savedHistoryLoading = false;
+    this._invalidateFiltered();
+
+    if (this.savedHistoryReloadPending) {
+      this.savedHistoryReloadPending = false;
+      this.loadSavedHistory();
+      return;
+    }
+
+    this.cdr.markForCheck();
   }
 
   /** Use a previously saved partner - directly close the dialog with the result. */

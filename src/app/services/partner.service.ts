@@ -114,7 +114,14 @@ export class PartnerService implements OnDestroy {
   createLookup(partnerId: string, label?: string): Observable<PartnerLookupCreateResponse> {
     return this.http.post<PartnerLookupCreateResponse>(
       `${environment.apiUrl}/api/v4/partner/lookup`,
-      { partner_id: partnerId.trim(), label: label?.trim() || null },
+      {
+        partner_id: partnerId.trim(),
+        label: label?.trim() || null,
+        // A browser with an auth token expects this lookup to survive reload.
+        // Make the backend reject an expired session instead of silently
+        // running the anonymous, non-persistent path.
+        require_persistence: !!this.auth.getToken(),
+      },
     );
   }
 
