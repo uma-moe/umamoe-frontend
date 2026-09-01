@@ -25,6 +25,7 @@ const PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR = [
   '.publift-widget-sticky_footer-button',
   '.publift-widget-scrolling_sticky_footer-button',
 ].join(',');
+const PROVIDER_STICKY_FOOTER_MAX_HEIGHT = 90;
 const PROVIDER_STICKY_FOOTER_DESKTOP_CLOSE_MIN_WIDTH = 720;
 const DEFAULT_SIDE_RAIL_MIN_WIDTH = PUBLIFT_XL_MIN_WIDTH;
 const DEFAULT_SIDE_RAIL_ANCHOR_SELECTORS = [
@@ -433,7 +434,10 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     }
 
     const creativeRect = creative.getBoundingClientRect();
-    this.setProviderStickyFooterHeight(Math.ceil(creativeRect.height));
+    this.setProviderStickyFooterHeight(Math.min(
+      PROVIDER_STICKY_FOOTER_MAX_HEIGHT,
+      Math.ceil(creativeRect.height),
+    ));
 
     if (!button || viewportWidth < PROVIDER_STICKY_FOOTER_DESKTOP_CLOSE_MIN_WIDTH) {
       this.clearProviderStickyFooterCloseOffset();

@@ -1569,15 +1569,19 @@ html {
   --ad-bottom-popup-offset: 0px;
   --ad-bottom-floating-control-offset: 0px;
   --ad-bottom-filter-panel-offset: 0px;
+  --ad-provider-sticky-footer-max-height: 90px;
   --ad-provider-sticky-footer-height: 90px;
   --ad-sticky-footer-z-index: 900;
   --ad-sticky-footer-close-z-index: 901;
 }
 
 html.ad-bottom-popup-visible {
-  --ad-bottom-popup-offset: var(--ad-provider-sticky-footer-height, 90px);
-  --ad-bottom-floating-control-offset: var(--ad-provider-sticky-footer-height, 90px);
-  --ad-bottom-filter-panel-offset: var(--ad-provider-sticky-footer-height, 90px);
+  --ad-bottom-popup-offset: min(
+    var(--ad-provider-sticky-footer-height, 90px),
+    var(--ad-provider-sticky-footer-max-height, 90px)
+  );
+  --ad-bottom-floating-control-offset: var(--ad-bottom-popup-offset);
+  --ad-bottom-filter-panel-offset: var(--ad-bottom-popup-offset);
 }
 
 html.ad-bottom-popup-visible .bottom-filter-panel {
@@ -1620,8 +1624,12 @@ app-ad-slot :where(
   .publift-widget-scrolling_sticky_footer-container,
   .publift-widget-scrolling_sticky_footer
 ) {
-  height: var(--ad-provider-sticky-footer-height, 90px) !important;
+  height: min(
+    var(--ad-provider-sticky-footer-height, 90px),
+    var(--ad-provider-sticky-footer-max-height, 90px)
+  ) !important;
   min-height: 0 !important;
+  max-height: var(--ad-provider-sticky-footer-max-height, 90px) !important;
 }
 
 :where(
