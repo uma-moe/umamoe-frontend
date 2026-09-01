@@ -1371,6 +1371,8 @@ html.light-theme :where(#qc-cmp2-container, .qc-cmp2-container, #qc-cmp2-ui) {
 }
 
 :where(
+  #qc-cmp2-ui div,
+  #qc-cmp2-ui span,
   #qc-cmp2-ui p,
   #qc-cmp2-ui p span,
   #qc-cmp2-ui li,
