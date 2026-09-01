@@ -12,6 +12,8 @@ type TurnstileProofMode = 'background' | 'interactive';
 type TurnstileSupportSimulationMode = 'none' | 'failed' | 'stalled' | 'background_failed' | 'background_stalled';
 type TurnstileSupportSimulationScope = 'all' | 'background';
 
+const TRUSTED_CRAWLER_PROOF_SOURCE = 'trusted_crawler';
+
 interface TurnstileRenderOptions {
   sitekey: string;
   action?: string;
@@ -311,14 +313,15 @@ export class TurnstileService {
     source = 'turnstile',
   ): void {
     const normalizedSource = (source || 'turnstile').trim().toLowerCase();
-    if (this.supportSimulationMode !== 'none' && normalizedSource !== 'turnstile') {
+    const fullProof = this.isFullBrowserProofSource(normalizedSource);
+    if (this.supportSimulationMode !== 'none' && !fullProof) {
       return;
     }
 
     const normalizedToken = token.trim();
     const normalizedAction = this.normalizeAction(action);
 
-    if (normalizedSource !== 'turnstile') {
+    if (!fullProof) {
       if (normalizedToken && Number.isFinite(ttlSeconds) && ttlSeconds > 0) {
         const existingProof = this.cachedBrowserProof;
         if (!this.hasUsableBrowserProof(existingProof, normalizedAction)) {
@@ -361,7 +364,9 @@ export class TurnstileService {
       ready: true,
       action: normalizedAction,
       source: normalizedSource,
-      message: 'Turnstile browser proof is ready.',
+      message: normalizedSource === TRUSTED_CRAWLER_PROOF_SOURCE
+        ? 'Trusted crawler browser proof is ready.'
+        : 'Turnstile browser proof is ready.',
     });
   }
 
@@ -386,14 +391,18 @@ export class TurnstileService {
     action: string,
     includeWarmup = false,
   ): proof is CachedBrowserProofToken {
-    const refreshSkewMs = proof?.source === 'turnstile'
+    const refreshSkewMs = proof && this.isFullBrowserProofSource(proof.source)
       ? environment.turnstile.proofRefreshSkewMs
       : 0;
 
     return !!proof
       && proof.action === action
-      && (proof.source === 'turnstile' || includeWarmup)
+      && (this.isFullBrowserProofSource(proof.source) || includeWarmup)
       && Date.now() < proof.expiresAt - refreshSkewMs;
+  }
+
+  private isFullBrowserProofSource(source: string): boolean {
+    return source === 'turnstile' || source === TRUSTED_CRAWLER_PROOF_SOURCE;
   }
 
   private getSimulatedSupportProof(action: string, mode: TurnstileProofMode): Promise<string> {
