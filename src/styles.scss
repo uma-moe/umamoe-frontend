@@ -1326,6 +1326,110 @@ html.light-theme body app-race-scheduler {
 
 // Keep the Publift/Fuse CMP's layout and appearance vendor-controlled.
 // Its internal DOM varies by privacy regime, so overriding it can hide consent UI.
+// Only theme colors here; do not override CMP layout, visibility, or stacking.
+:where(#qc-cmp2-container, .qc-cmp2-container, #qc-cmp2-ui) {
+  color-scheme: dark;
+  --cmp-primary-on-accent: #0a0a0a;
+}
+
+html.light-theme :where(#qc-cmp2-container, .qc-cmp2-container, #qc-cmp2-ui) {
+  color-scheme: light;
+  --cmp-primary-on-accent: #ffffff;
+}
+
+:where(#qc-cmp2-ui) {
+  background-color: var(--surface-overlay) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+:where(
+  #qc-cmp2-ui .qc-cmp2-header,
+  #qc-cmp2-ui .qc-cmp2-main,
+  #qc-cmp2-ui .qc-cmp2-summary-section,
+  #qc-cmp2-ui .qc-cmp2-footer,
+  #qc-cmp2-ui .qc-cmp2-scrollable-section
+) {
+  background-color: var(--surface-overlay) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+:where(
+  #qc-cmp2-ui .qc-cmp2-list,
+  #qc-cmp2-ui .qc-cmp2-list-item,
+  #qc-cmp2-ui .qc-cmp2-consent-info,
+  #qc-cmp2-ui .qc-cmp2-purpose-info,
+  #qc-cmp2-ui .qc-cmp2-vendor-info,
+  #qc-cmp2-ui .qc-cmp2-publisher-logo,
+  #qc-cmp2-ui .qc-cmp2-tabs,
+  #qc-cmp2-ui .qc-cmp2-tab
+) {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+:where(
+  #qc-cmp2-ui p,
+  #qc-cmp2-ui p span,
+  #qc-cmp2-ui li,
+  #qc-cmp2-ui li span,
+  #qc-cmp2-ui td,
+  #qc-cmp2-ui td span,
+  #qc-cmp2-ui label,
+  #qc-cmp2-ui label span,
+  #qc-cmp2-ui .qc-cmp2-summary-info,
+  #qc-cmp2-ui .qc-cmp2-purpose-info,
+  #qc-cmp2-ui .qc-cmp2-vendor-info
+) {
+  color: var(--text-secondary) !important;
+}
+
+:where(
+  #qc-cmp2-ui h1,
+  #qc-cmp2-ui h1 *,
+  #qc-cmp2-ui h2,
+  #qc-cmp2-ui h2 *,
+  #qc-cmp2-ui h3,
+  #qc-cmp2-ui h3 *,
+  #qc-cmp2-ui h4,
+  #qc-cmp2-ui h4 *,
+  #qc-cmp2-ui strong,
+  #qc-cmp2-ui .privacy-logo-text,
+  #qc-cmp2-ui .span-heading
+) {
+  color: var(--text-primary) !important;
+}
+
+:where(#qc-cmp2-ui a, #qc-cmp2-ui a *, #qc-cmp2-ui button[mode='link'], #qc-cmp2-ui button[mode='link'] *) {
+  color: var(--accent-primary) !important;
+}
+
+:where(#qc-cmp2-ui .qc-cmp2-button, #qc-cmp2-ui button[mode]:not([mode='link'])) {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+:where(#qc-cmp2-ui .qc-cmp2-button *, #qc-cmp2-ui button[mode]:not([mode='link']) *) {
+  color: inherit !important;
+}
+
+:where(
+  #qc-cmp2-ui .qc-cmp2-button[mode='primary'],
+  #qc-cmp2-ui .qc-cmp2-button[mode='accept'],
+  #qc-cmp2-ui button[mode='primary'],
+  #qc-cmp2-ui button[mode='accept']
+) {
+  background-color: var(--accent-primary) !important;
+  border-color: var(--accent-primary) !important;
+  color: var(--cmp-primary-on-accent) !important;
+}
+
+:where(#qc-cmp2-ui .qc-cmp2-list-item:hover, #qc-cmp2-ui .qc-cmp2-tab:hover) {
+  background-color: var(--surface-hover) !important;
+}
 
 html {
   background-color: var(--document-bg) !important;
