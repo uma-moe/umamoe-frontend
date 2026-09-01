@@ -16,8 +16,14 @@ const PROVIDER_STICKY_FOOTER_SELECTOR = [
   '.publift-widget-sticky_footer-container',
   '.publift-widget-sticky_footer-container-background',
   '[class*="publift-widget-sticky_footer"]',
+  '.publift-widget-scrolling_sticky_footer-container',
+  '.publift-widget-scrolling_sticky_footer-container-background',
+  '[class*="publift-widget-scrolling_sticky_footer"]',
 ].join(',');
-const PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR = '.publift-widget-sticky_footer-button';
+const PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR = [
+  '.publift-widget-sticky_footer-button',
+  '.publift-widget-scrolling_sticky_footer-button',
+].join(',');
 const PROVIDER_STICKY_FOOTER_DESKTOP_CLOSE_MIN_WIDTH = 720;
 const DEFAULT_SIDE_RAIL_MIN_WIDTH = PUBLIFT_XL_MIN_WIDTH;
 const DEFAULT_SIDE_RAIL_ANCHOR_SELECTORS = [
@@ -409,7 +415,9 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const button = this.document.querySelector<HTMLElement>(PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR);
+    const button = Array.from(
+      this.document.querySelectorAll<HTMLElement>(PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR),
+    ).find(element => this.isVisibleProviderStickyFooterElement(element)) ?? null;
     const shell = this.findVisibleProviderStickyFooterShell(button);
     const creative = shell ? this.findVisibleProviderStickyFooterCreative(shell) : null;
 

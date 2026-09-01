@@ -1607,17 +1607,26 @@ app-ad-slot :where(
 :where(
   .publift-widget-sticky_footer-container,
   .publift-widget-sticky_footer-container-background,
-  [class*="publift-widget-sticky_footer"]
+  [class*="publift-widget-sticky_footer"],
+  .publift-widget-scrolling_sticky_footer-container,
+  .publift-widget-scrolling_sticky_footer-container-background,
+  [class*="publift-widget-scrolling_sticky_footer"]
 ) {
   z-index: var(--ad-sticky-footer-z-index) !important;
 }
 
-:where(.publift-widget-sticky_footer-container-background) {
+:where(
+  .publift-widget-sticky_footer-container-background,
+  .publift-widget-scrolling_sticky_footer-container-background
+) {
   background: transparent !important;
   box-shadow: none !important;
 }
 
-:where(.publift-widget-sticky_footer-button) {
+:where(
+  .publift-widget-sticky_footer-button,
+  .publift-widget-scrolling_sticky_footer-button
+) {
   position: absolute !important;
   display: flex !important;
   align-items: center !important;
@@ -1642,12 +1651,18 @@ app-ad-slot :where(
 }
 
 @media (max-width: 720px) {
-  :where(.publift-widget-sticky_footer-button) {
+  :where(
+    .publift-widget-sticky_footer-button,
+    .publift-widget-scrolling_sticky_footer-button
+  ) {
     right: max(4px, env(safe-area-inset-right)) !important;
   }
 }
 
-:where(.publift-widget-sticky_footer-button)::before {
+:where(
+  .publift-widget-sticky_footer-button,
+  .publift-widget-scrolling_sticky_footer-button
+)::before {
   content: 'x';
   color: var(--text-primary);
   font-family: Arial, Helvetica, sans-serif;
@@ -1656,11 +1671,17 @@ app-ad-slot :where(
   line-height: 1;
 }
 
-:where(.publift-widget-sticky_footer-button > *) {
+:where(
+  .publift-widget-sticky_footer-button,
+  .publift-widget-scrolling_sticky_footer-button
+) > * {
   display: none !important;
 }
 
-:where(.publift-widget-sticky_footer-button:hover) {
+:where(
+  .publift-widget-sticky_footer-button,
+  .publift-widget-scrolling_sticky_footer-button
+):hover {
   border-color: var(--ad-close-hover-border) !important;
   background: var(--ad-close-hover-bg) !important;
   color: var(--text-primary) !important;
@@ -1669,7 +1690,10 @@ app-ad-slot :where(
 html.ad-provider-sticky-footer-dismissed :where(
   .publift-widget-sticky_footer-container,
   .publift-widget-sticky_footer-container-background,
-  [class*="publift-widget-sticky_footer"]
+  [class*="publift-widget-sticky_footer"],
+  .publift-widget-scrolling_sticky_footer-container,
+  .publift-widget-scrolling_sticky_footer-container-background,
+  [class*="publift-widget-scrolling_sticky_footer"]
 ) {
   display: none !important;
   pointer-events: none !important;
