@@ -12,6 +12,7 @@ const AD_LEFT_RAIL_RESERVED_CLASS = 'ad-left-rail-reserved';
 const AD_BOTTOM_POPUP_VISIBLE_CLASS = 'ad-bottom-popup-visible';
 const AD_PROVIDER_STICKY_FOOTER_DISMISSED_CLASS = 'ad-provider-sticky-footer-dismissed';
 const AD_PROVIDER_STICKY_FOOTER_CLOSE_OFFSET_VAR = '--ad-provider-sticky-footer-close-inline-offset';
+const AD_PROVIDER_STICKY_FOOTER_HEIGHT_VAR = '--ad-provider-sticky-footer-height';
 const PROVIDER_STICKY_FOOTER_SELECTOR = [
   '.publift-widget-sticky_footer-container',
   '.publift-widget-sticky_footer-container-background',
@@ -137,6 +138,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     this.disconnectProviderStickyFooterObserver();
     this.cancelProviderStickyFooterMeasurement();
     this.clearProviderStickyFooterCloseOffset();
+    this.clearProviderStickyFooterHeight();
     this.cancelSideRailLayout();
     this.updateAdShellReservation(false);
     this.updateBottomPopupRootState(false);
@@ -345,6 +347,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     if (this.providerStickyFooterClosed || this.supportFallbackAllowed || this.fallbackPreviewEnabled) {
       this.providerStickyFooterPresent = false;
       this.clearProviderStickyFooterCloseOffset();
+      this.clearProviderStickyFooterHeight();
       return previous !== this.providerStickyFooterPresent;
     }
 
@@ -355,6 +358,7 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
 
     if (!this.providerStickyFooterPresent) {
       this.clearProviderStickyFooterCloseOffset();
+      this.clearProviderStickyFooterHeight();
     }
 
     return previous !== this.providerStickyFooterPresent;
@@ -409,26 +413,35 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
     }
 
     const view = this.document.defaultView;
-    const viewportWidth = this.document.documentElement.clientWidth || view?.innerWidth || 0;
-    if (!view || viewportWidth < PROVIDER_STICKY_FOOTER_DESKTOP_CLOSE_MIN_WIDTH) {
+    if (!view) {
       this.clearProviderStickyFooterCloseOffset();
+      this.clearProviderStickyFooterHeight();
       return;
     }
 
+    const viewportWidth = this.document.documentElement.clientWidth || view.innerWidth || 0;
     const button = Array.from(
       this.document.querySelectorAll<HTMLElement>(PROVIDER_STICKY_FOOTER_BUTTON_SELECTOR),
     ).find(element => this.isVisibleProviderStickyFooterElement(element)) ?? null;
     const shell = this.findVisibleProviderStickyFooterShell(button);
     const creative = shell ? this.findVisibleProviderStickyFooterCreative(shell) : null;
 
-    if (!button || !shell || !creative || this.providerStickyFooterClosed) {
+    if (!shell || !creative || this.providerStickyFooterClosed) {
+      this.clearProviderStickyFooterCloseOffset();
+      this.clearProviderStickyFooterHeight();
+      return;
+    }
+
+    const creativeRect = creative.getBoundingClientRect();
+    this.setProviderStickyFooterHeight(Math.ceil(creativeRect.height));
+
+    if (!button || viewportWidth < PROVIDER_STICKY_FOOTER_DESKTOP_CLOSE_MIN_WIDTH) {
       this.clearProviderStickyFooterCloseOffset();
       return;
     }
 
     const containingBlock = button.offsetParent instanceof HTMLElement ? button.offsetParent : shell;
     const containerRect = containingBlock.getBoundingClientRect();
-    const creativeRect = creative.getBoundingClientRect();
     const rightGap = containerRect.right - creativeRect.right;
 
     if (!Number.isFinite(rightGap) || rightGap < -1) {
@@ -497,6 +510,26 @@ export class AdLayoutComponent implements OnInit, OnDestroy {
       if (target.style.getPropertyValue(AD_PROVIDER_STICKY_FOOTER_CLOSE_OFFSET_VAR)) {
         target.style.removeProperty(AD_PROVIDER_STICKY_FOOTER_CLOSE_OFFSET_VAR);
       }
+    }
+  }
+
+  private setProviderStickyFooterHeight(height: number): void {
+    if (!Number.isFinite(height) || height <= 0) {
+      this.clearProviderStickyFooterHeight();
+      return;
+    }
+
+    const value = `${height}px`;
+    const root = this.document.documentElement;
+    if (root.style.getPropertyValue(AD_PROVIDER_STICKY_FOOTER_HEIGHT_VAR) !== value) {
+      root.style.setProperty(AD_PROVIDER_STICKY_FOOTER_HEIGHT_VAR, value);
+    }
+  }
+
+  private clearProviderStickyFooterHeight(): void {
+    const root = this.document.documentElement;
+    if (root.style.getPropertyValue(AD_PROVIDER_STICKY_FOOTER_HEIGHT_VAR)) {
+      root.style.removeProperty(AD_PROVIDER_STICKY_FOOTER_HEIGHT_VAR);
     }
   }
 

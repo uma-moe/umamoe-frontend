@@ -1569,14 +1569,15 @@ html {
   --ad-bottom-popup-offset: 0px;
   --ad-bottom-floating-control-offset: 0px;
   --ad-bottom-filter-panel-offset: 0px;
+  --ad-provider-sticky-footer-height: 90px;
   --ad-sticky-footer-z-index: 900;
   --ad-sticky-footer-close-z-index: 901;
 }
 
 html.ad-bottom-popup-visible {
-  --ad-bottom-popup-offset: 108px;
-  --ad-bottom-floating-control-offset: 108px;
-  --ad-bottom-filter-panel-offset: 108px;
+  --ad-bottom-popup-offset: var(--ad-provider-sticky-footer-height, 90px);
+  --ad-bottom-floating-control-offset: var(--ad-provider-sticky-footer-height, 90px);
+  --ad-bottom-filter-panel-offset: var(--ad-provider-sticky-footer-height, 90px);
 }
 
 html.ad-bottom-popup-visible .bottom-filter-panel {
@@ -1613,6 +1614,14 @@ app-ad-slot :where(
   [class*="publift-widget-scrolling_sticky_footer"]
 ) {
   z-index: var(--ad-sticky-footer-z-index) !important;
+}
+
+:where(
+  .publift-widget-scrolling_sticky_footer-container,
+  .publift-widget-scrolling_sticky_footer
+) {
+  height: var(--ad-provider-sticky-footer-height, 90px) !important;
+  min-height: 0 !important;
 }
 
 :where(
