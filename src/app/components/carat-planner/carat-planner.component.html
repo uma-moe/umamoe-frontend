@@ -93,7 +93,7 @@
           <span class="cp-event-copy"><strong>{{ eventDisplayTitle(event) }}</strong><time>{{ event.globalReleaseDate || event.estimatedGlobalDate || event.jpReleaseDate | date:'mediumDate':'UTC' }}</time></span>
           <span class="cp-event-action"><mat-icon>{{ isEventAdded(event.id) ? 'check' : 'add' }}</mat-icon><span class="cp-event-action-label">{{ isEventAdded(event.id) ? 'Added' : 'Add' }}</span></span>
         </button>
-        <p class="cp-event-empty" *ngIf="!filteredEvents.length">No banners match this search and type.</p>
+        <p class="cp-event-empty" *ngIf="!filteredEvents.length" role="status" aria-live="polite">{{ eventPickerEmptyMessage }}</p>
       </div>
     </div>
 

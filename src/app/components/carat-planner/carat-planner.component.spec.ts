@@ -379,6 +379,23 @@ describe('CaratPlannerComponent banner ordering', () => {
     ]);
   });
 
+  it('distinguishes an unavailable banner catalogue from an empty search result', () => {
+    const component = createComponent();
+
+    component.events = [];
+    expect(component.eventPickerEmptyMessage).toBe('Waiting for banner data\u2026');
+
+    component.events = [{
+      id: 'banner',
+      title: 'Special Week',
+      type: 'character_banner',
+      globalReleaseDate: '2031-01-01',
+    }];
+    component.searchEvents('no match');
+
+    expect(component.eventPickerEmptyMessage).toBe('No banners match this search and type.');
+  });
+
   it('uses the banner start when its end date is missing or invalid', () => {
     const component = createComponent();
 

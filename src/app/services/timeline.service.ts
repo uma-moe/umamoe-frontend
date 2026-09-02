@@ -134,7 +134,7 @@ export class TimelineService {
     this.resourceData.watchResource<BannerTimelineResource | null>(
       TIMELINE_RESOURCE_NAME,
       null,
-      { useWarmupProof: true }
+      { useWarmupProof: true, revalidateCached: true }
     ).pipe(
       debounceTime(0)
     ).subscribe(resource => {

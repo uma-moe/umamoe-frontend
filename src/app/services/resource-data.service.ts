@@ -54,6 +54,7 @@ interface BrowserProofFetchResult {
 
 export interface ResourceLoadOptions {
   useWarmupProof?: boolean;
+  revalidateCached?: boolean;
 }
 
 export interface ResourceLoadError {
@@ -196,6 +197,7 @@ export class ResourceDataService {
       const meta = this.readCacheMeta(resourceName);
       if (
         emittedCached &&
+        !options.revalidateCached &&
         this.isCacheFresh(meta, version, resource, manifestGeneratedAt)
       ) {
         this.clearResourceRetry(resourceName);
@@ -316,13 +318,14 @@ export class ResourceDataService {
   }
 
   private mergeResourceLoadOptions(resourceName: string, options: ResourceLoadOptions): void {
-    if (!options.useWarmupProof) {
+    if (!options.useWarmupProof && !options.revalidateCached) {
       return;
     }
 
     this.resourceLoadOptions.set(resourceName, {
       ...this.resourceLoadOptions.get(resourceName),
-      useWarmupProof: true,
+      ...(options.useWarmupProof ? { useWarmupProof: true } : {}),
+      ...(options.revalidateCached ? { revalidateCached: true } : {}),
     });
   }
 

@@ -663,6 +663,12 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     return Math.max(0, this.filteredEvents.length - this.renderedPickerEvents.length);
   }
 
+  get eventPickerEmptyMessage(): string {
+    return this.allEvents.length === 0
+      ? 'Waiting for banner data\u2026'
+      : 'No banners match this search and type.';
+  }
+
   get hasMorePickerEvents(): boolean {
     return this.remainingPickerEventCount > 0;
   }
