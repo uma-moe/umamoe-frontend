@@ -4496,19 +4496,6 @@ select.cp-control,
     height: 42px;
   }
 
-  .cp-picker--primary .cp-event-viewport {
-    position: fixed;
-    z-index: 140;
-    top: auto;
-    right: 8px;
-    bottom: 10px;
-    left: 8px;
-    width: auto;
-    height: min(520px, calc(100dvh - var(--navbar-height) - 82px));
-    border-radius: 10px;
-    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
-  }
-
   .cp-event-viewport button {
     min-height: 66px;
     height: auto;

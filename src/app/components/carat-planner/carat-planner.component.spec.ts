@@ -352,6 +352,33 @@ describe('CaratPlannerComponent banner ordering', () => {
     expect(component.filteredEvents.map(event => event.id)).toEqual(['tachyon-support', 'rerun-support']);
   });
 
+  it('searches pickup names resolved from banner card IDs', () => {
+    const component = createComponent();
+    component.events = [
+      {
+        id: 'teio-character',
+        title: 'Featured trainee scout',
+        type: 'character_banner',
+        globalReleaseDate: '2031-01-01',
+        pickupCardIds: [100302],
+      },
+      {
+        id: 'teio-support',
+        title: 'Featured support scout',
+        type: 'support_card_banner',
+        globalReleaseDate: '2031-02-01',
+        pickupCardIds: [30003],
+      },
+    ];
+
+    component.searchEvents('tei');
+
+    expect(component.filteredEvents.map(event => event.id)).toEqual([
+      'teio-character',
+      'teio-support',
+    ]);
+  });
+
   it('uses the banner start when its end date is missing or invalid', () => {
     const component = createComponent();
 

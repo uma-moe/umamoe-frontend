@@ -4049,11 +4049,20 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   private eventPickerSearchValues(event: CaratPlannerTimelineEvent): string[] {
     const kind = this.bannerKind(event.type);
+    const pickupSearchValues = kind === 'character' || kind === 'support'
+      ? (event.pickupCardIds ?? []).flatMap(pickupId => {
+          const avatar = this.avatars.getPickupAvatarByKind(kind, pickupId);
+          return avatar
+            ? [avatar.name, avatar.displayName, avatar.subLabel, ...(avatar.searchTerms ?? [])]
+            : [];
+        })
+      : [];
     return [
       event.title,
       ...(event.relatedCharacters ?? []),
       ...(event.relatedSupportCards ?? []),
       ...(event.relatedSupportCardNames ?? []),
+      ...pickupSearchValues,
       ...(event.tags ?? []),
       event.type ?? '',
       event.gachaTypeName ?? '',
