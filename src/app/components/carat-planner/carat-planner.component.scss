@@ -4496,7 +4496,7 @@ select.cp-control,
     height: 42px;
   }
 
-  .cp-event-viewport {
+  .cp-picker--primary .cp-event-viewport {
     position: fixed;
     z-index: 140;
     top: auto;
