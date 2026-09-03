@@ -398,6 +398,18 @@
   gap: 2px 12px;
 }
 
+.filter-toggle-all {
+  grid-column: 1 / -1;
+  justify-self: end;
+  padding: 3px 6px;
+  color: var(--accent-primary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+
 .filter-options label {
   --filter-accent-rgb: var(--accent-primary-rgb);
   display: flex;

@@ -79,4 +79,16 @@ describe('MobileTimelineComponent filters', () => {
     expect(component.eventFilters.showScenarioReleases).toBeFalse();
     expect(generateTimelineItems).toHaveBeenCalledTimes(12);
   });
+
+  it('toggles every event type off and back on', () => {
+    const component = createComponent();
+    const generateTimelineItems = spyOn<any>(component, 'generateTimelineItems');
+
+    component.toggleAllEventTypes();
+    expect(component.hasVisibleEventTypes).toBeFalse();
+
+    component.toggleAllEventTypes();
+    expect(component.hasVisibleEventTypes).toBeTrue();
+    expect(generateTimelineItems).toHaveBeenCalledTimes(2);
+  });
 });

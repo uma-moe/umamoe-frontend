@@ -185,6 +185,9 @@
         <button type="button" (click)="toggleFilterPanel()" aria-label="Close filters"><mat-icon>close</mat-icon></button>
       </div>
       <div class="filter-options">
+        <button type="button" class="filter-toggle-all" (click)="toggleAllEventTypes()">
+          {{ hasVisibleEventTypes ? 'Unselect all' : 'Select all' }}
+        </button>
         <label data-filter-type="character"><input type="checkbox" [checked]="eventFilters.showCharacters" (change)="toggleCharacterFilter()" /><mat-icon>person</mat-icon><span>Characters</span></label>
         <label data-filter-type="support"><input type="checkbox" [checked]="eventFilters.showSupports" (change)="toggleSupportFilter()" /><mat-icon>style</mat-icon><span>Support cards</span></label>
         <label data-filter-type="paid"><input type="checkbox" [checked]="eventFilters.showPaidBanners" (change)="togglePaidBannersFilter()" /><mat-icon>payments</mat-icon><span>Paid banners</span></label>

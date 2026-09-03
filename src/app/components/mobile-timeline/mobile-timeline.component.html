@@ -107,6 +107,9 @@
       />
     </label>
     <div class="mobile-filter-options" tourAnchor="timeline-filter-types">
+      <button type="button" class="filter-toggle-all" (click)="toggleAllEventTypes()">
+        {{ hasVisibleEventTypes ? 'Unselect all' : 'Select all' }}
+      </button>
       <label><input type="checkbox" [checked]="eventFilters.showCharacters" (change)="toggleCharacterFilter()" />Characters</label>
       <label><input type="checkbox" [checked]="eventFilters.showSupports" (change)="toggleSupportFilter()" />Support cards</label>
       <label><input type="checkbox" [checked]="eventFilters.showPaidBanners" (change)="togglePaidBannersFilter()" />Paid banners</label>
