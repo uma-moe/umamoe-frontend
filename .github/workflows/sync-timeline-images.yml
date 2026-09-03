@@ -25,11 +25,9 @@ jobs:
           - branch: beta
             timeline_url: https://beta.uma.moe/resources/current/banner_timeline.json.gz
             site_origin: https://beta.uma.moe
-            deploy: false
           - branch: main
             timeline_url: https://uma.moe/resources/current/banner_timeline.json.gz
             site_origin: https://uma.moe
-            deploy: true
     steps:
       - name: Check out frontend
         uses: actions/checkout@v4
@@ -93,9 +91,9 @@ jobs:
           git push origin "HEAD:${{ matrix.branch }}"
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy updated production artwork
-        if: steps.commit.outputs.changed == 'true' && matrix.deploy
+      - name: Deploy updated artwork
+        if: steps.commit.outputs.changed == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run docker-image.yml --ref main --field deploy_assets=true
+        run: gh workflow run docker-image.yml --ref "${{ matrix.branch }}" --field deploy_assets=true
