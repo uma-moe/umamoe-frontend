@@ -18,7 +18,7 @@ describe('TimelineAvatarService', () => {
     };
   }
 
-  it('builds character portraits and links only from public timeline fields', () => {
+  it('builds character portraits only from public timeline fields', () => {
     const service = new TimelineAvatarService();
     const event = createCharacterBanner(
       [100702, 101303],
@@ -35,10 +35,6 @@ describe('TimelineAvatarService', () => {
     expect(avatars.map(avatar => avatar.imageUrl)).toEqual([
       '/assets/images/character_stand/chara_stand_100702.webp',
       '/assets/images/character_stand/chara_stand_101303.webp',
-    ]);
-    expect(avatars.map(avatar => avatar.gametoraUrl)).toEqual([
-      'https://gametora.com/umamusume/characters/100702-gold-ship',
-      'https://gametora.com/umamusume/characters/101303-mejiro-mcqueen',
     ]);
   });
 
@@ -64,7 +60,6 @@ describe('TimelineAvatarService', () => {
     const avatars = service.getCharacterAvatars(event);
 
     expect(avatars.map(avatar => avatar.displayName)).toEqual(['Character 100702', 'Character 101303']);
-    expect(avatars[0].gametoraUrl).toBe('https://gametora.com/umamusume/characters/100702-character-100702');
   });
 
   it('classifies support IDs and builds support assets without master data', () => {
@@ -86,7 +81,6 @@ describe('TimelineAvatarService', () => {
       '/assets/images/support_card/half/support_card_s_30001.webp',
       '/assets/images/support_card/half/support_card_s_30002.webp',
     ]);
-    expect(avatars[0].gametoraUrl).toBe('https://gametora.com/umamusume/supports/30001-fine-motion');
     expect(service.getCharacterAvatars(event)).toEqual([]);
   });
 
@@ -103,15 +97,20 @@ describe('TimelineAvatarService', () => {
     expect(support?.subLabel).toContain('Wisdom Support');
   });
 
-  it('uses GameTora artwork for pickup IDs newer than the bundled masters', () => {
+  it('uses the official webview banner for pickup IDs newer than the bundled masters', () => {
     const service = new TimelineAvatarService();
-    const character = service.getPickupAvatarByKind('character', 199901, 'Future Uma');
-    const support = service.getPickupAvatarByKind('support', 39999, 'Future Support');
+    const characterEvent = createCharacterBanner([199901], ['Future Uma']);
+    characterEvent.imagePath = '/assets/timeline-images/gacha/character/39998.webp';
+    const supportEvent: TimelineEvent = {
+      ...createCharacterBanner([39999], ['Future Support']),
+      type: EventType.SUPPORT_CARD_BANNER,
+      imagePath: '/assets/timeline-images/gacha/support/39999.webp',
+    };
 
-    expect(character?.imageUrl)
-      .toBe('https://gametora.com/images/umamusume/characters/thumb/chara_stand_1999_199901.png');
-    expect(support?.imageUrl)
-      .toBe('https://media.gametora.com/umamusume/supports/full/small/39999.png');
+    expect(service.getCharacterAvatars(characterEvent)[0].imageUrl)
+      .toBe('/assets/timeline-images/gacha/character/39998.webp');
+    expect(service.getSupportAvatars(supportEvent)[0].imageUrl)
+      .toBe('/assets/timeline-images/gacha/support/39999.webp');
   });
 
   it('uses public related names for timeline search', () => {

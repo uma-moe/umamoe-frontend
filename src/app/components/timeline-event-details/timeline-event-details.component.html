@@ -39,7 +39,7 @@
       <div class="rate-pickup-grid" *ngIf="pickupRates.length">
         <a
           *ngFor="let pickup of pickupRates; trackBy: trackPickupRate"
-          [href]="pickup.avatar.gametoraUrl"
+          [attr.href]="event.umapyoiURL || null"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -153,7 +153,7 @@
     <section class="detail-section pickup-section character-pickups" *ngIf="characterAvatars.length && !hasBannerRates">
       <div class="section-heading"><div><mat-icon aria-hidden="true">person</mat-icon><h3>Characters</h3></div></div>
       <div class="pickup-grid">
-        <a *ngFor="let avatar of characterAvatars; trackBy: trackAvatar" [href]="avatar.gametoraUrl" target="_blank" rel="noopener noreferrer">
+        <a *ngFor="let avatar of characterAvatars; trackBy: trackAvatar" [attr.href]="event.umapyoiURL || null" target="_blank" rel="noopener noreferrer">
           <img [src]="avatar.imageUrl" [alt]="avatar.displayName" width="48" height="50" loading="lazy" decoding="async" (error)="onImageError($event)" />
           <span><strong>{{ avatar.displayName }}</strong><small>{{ avatar.subLabel }}</small></span>
         </a>
@@ -163,7 +163,7 @@
     <section class="detail-section pickup-section support-pickups" *ngIf="supportAvatars.length && !hasBannerRates">
       <div class="section-heading"><div><mat-icon aria-hidden="true">style</mat-icon><h3>Support cards</h3></div></div>
       <div class="pickup-grid">
-        <a *ngFor="let avatar of supportAvatars; trackBy: trackAvatar" [href]="avatar.gametoraUrl" target="_blank" rel="noopener noreferrer">
+        <a *ngFor="let avatar of supportAvatars; trackBy: trackAvatar" [attr.href]="event.umapyoiURL || null" target="_blank" rel="noopener noreferrer">
           <img [src]="avatar.imageUrl" [alt]="avatar.displayName" width="48" height="48" loading="lazy" decoding="async" (error)="onImageError($event)" />
           <span><strong>{{ avatar.displayName }}</strong><small>{{ avatar.subLabel }}</small></span>
         </a>

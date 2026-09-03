@@ -14,7 +14,6 @@ export interface TimelineAvatar {
   searchTerms?: string[];
   imageUrl: string;
   fallbackImageUrl?: string;
-  gametoraUrl: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -66,18 +65,19 @@ export class TimelineAvatarService {
 
   getPickupAvatar(event: TimelineEvent, pickupId: number, displayName?: string): TimelineAvatar | null {
     return event.type === EventType.SUPPORT_CARD_BANNER || this.isSupportCardId(pickupId)
-      ? this.resolveSupportAvatar(pickupId, displayName)
-      : this.resolveCharacterAvatar(pickupId, displayName);
+      ? this.resolveSupportAvatar(pickupId, displayName, event.imagePath)
+      : this.resolveCharacterAvatar(pickupId, displayName, event.imagePath);
   }
 
   getPickupAvatarByKind(
     kind: 'character' | 'support',
     pickupId: number,
     displayName?: string,
+    officialImageUrl?: string,
   ): TimelineAvatar | null {
     return kind === 'support'
-      ? this.resolveSupportAvatar(pickupId, displayName)
-      : this.resolveCharacterAvatar(pickupId, displayName);
+      ? this.resolveSupportAvatar(pickupId, displayName, officialImageUrl)
+      : this.resolveCharacterAvatar(pickupId, displayName, officialImageUrl);
   }
 
   eventMatchesSearch(event: TimelineEvent | undefined, query: string): boolean {
@@ -128,7 +128,7 @@ export class TimelineAvatarService {
     const usedKeys = new Set<string>();
 
     for (let index = 0; index < ids.length; index++) {
-      const avatar = this.resolveCharacterAvatar(ids[index], names[index]);
+      const avatar = this.resolveCharacterAvatar(ids[index], names[index], event.imagePath);
       if (avatar && !usedKeys.has(avatar.key)) {
         avatars.push(avatar);
         usedKeys.add(avatar.key);
@@ -187,7 +187,7 @@ export class TimelineAvatarService {
     const usedKeys = new Set<string>();
 
     for (let index = 0; index < ids.length; index++) {
-      const avatar = this.resolveSupportAvatar(ids[index], names[index]);
+      const avatar = this.resolveSupportAvatar(ids[index], names[index], event.imagePath);
       if (avatar && !usedKeys.has(avatar.key)) {
         avatars.push(avatar);
         usedKeys.add(avatar.key);
@@ -235,7 +235,11 @@ export class TimelineAvatarService {
     return normalized.startsWith('/') ? normalized : `/${normalized}`;
   }
 
-  private resolveCharacterAvatar(cardId?: number, displayName?: string): TimelineAvatar | null {
+  private resolveCharacterAvatar(
+    cardId?: number,
+    displayName?: string,
+    officialImageUrl?: string,
+  ): TimelineAvatar | null {
     if (typeof cardId !== 'number') {
       return null;
     }
@@ -269,15 +273,18 @@ export class TimelineAvatarService {
       searchTerms: variantName ? [variantName, `${baseName} ${variantName}`] : [],
       imageUrl: characterCard
         ? `/assets/images/character_stand/chara_stand_${id}.webp`
-        : `https://gametora.com/images/umamusume/characters/thumb/chara_stand_${Math.floor(id / 100)}_${id}.png`,
+        : officialImageUrl ?? `/assets/images/character_stand/chara_stand_${id}.webp`,
       fallbackImageUrl: fallbackCharacter
         ? `/assets/images/character_stand/chara_stand_${fallbackCharacter.id}.webp`
         : undefined,
-      gametoraUrl: this.characterGametoraUrl(id, baseName)
     };
   }
 
-  private resolveSupportAvatar(cardId?: number, displayName?: string): TimelineAvatar | null {
+  private resolveSupportAvatar(
+    cardId?: number,
+    displayName?: string,
+    officialImageUrl?: string,
+  ): TimelineAvatar | null {
     if (typeof cardId !== 'number') {
       return null;
     }
@@ -297,8 +304,7 @@ export class TimelineAvatarService {
       searchTerms: ['support', ...(supportType ? [supportType] : [])],
       imageUrl: supportCard
         ? `/assets/images/support_card/half/support_card_s_${cardIdValue}.webp`
-        : `https://media.gametora.com/umamusume/supports/full/small/${cardIdValue}.png`,
-      gametoraUrl: `https://gametora.com/umamusume/supports/${cardIdValue}-${this.toGametoraSlug(name)}`
+        : officialImageUrl ?? `/assets/images/support_card/half/support_card_s_${cardIdValue}.webp`,
     };
   }
 
@@ -400,18 +406,4 @@ export class TimelineAvatarService {
       .filter(token => token.length > 0);
   }
 
-  private toGametoraSlug(value: string): string {
-    return value
-      .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/['.]/g, '')
-      .replace(/&/g, ' and ')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-  }
-
-  private characterGametoraUrl(id: number, name: string): string {
-    return `https://gametora.com/umamusume/characters/${id}-${this.toGametoraSlug(name)}`;
-  }
 }
