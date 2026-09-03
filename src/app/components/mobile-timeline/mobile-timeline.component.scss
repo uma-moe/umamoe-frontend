@@ -252,7 +252,13 @@
   font-size: 12px;
 }
 
-.sheet-heading button {
+.sheet-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sheet-heading .filter-close {
   display: grid;
   width: 30px;
   height: 30px;
@@ -261,6 +267,18 @@
   color: var(--text-secondary);
   background: transparent;
   border: 0;
+}
+
+.sheet-heading .filter-toggle-all {
+  width: auto;
+  height: 28px;
+  padding: 0 8px;
+  color: var(--accent-primary);
+  background: var(--surface-1);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 11px;
 }
 
 .sheet-heading mat-icon {
@@ -309,17 +327,6 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 3px 10px;
-}
-
-.filter-toggle-all {
-  grid-column: 1 / -1;
-  justify-self: end;
-  padding: 3px 0;
-  color: var(--accent-primary);
-  background: transparent;
-  border: 0;
-  font: inherit;
-  font-size: 11px;
 }
 
 .mobile-filter-options label {

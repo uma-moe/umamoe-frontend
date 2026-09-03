@@ -94,7 +94,12 @@
   <aside class="mobile-filter-sheet" [class.is-open]="isFilterPanelExpanded" [attr.aria-hidden]="!isFilterPanelExpanded">
     <div class="sheet-heading">
       <strong>Search & filters</strong>
-      <button type="button" (click)="toggleFilterPanel()" aria-label="Close filters"><mat-icon>close</mat-icon></button>
+      <div class="sheet-actions">
+        <button type="button" class="filter-toggle-all" (click)="toggleAllEventTypes()">
+          {{ hasVisibleEventTypes ? 'Unselect all' : 'Select all' }}
+        </button>
+        <button type="button" class="filter-close" (click)="toggleFilterPanel()" aria-label="Close filters"><mat-icon>close</mat-icon></button>
+      </div>
     </div>
     <label class="mobile-search" tourAnchor="timeline-search">
       <mat-icon>search</mat-icon>
@@ -107,9 +112,6 @@
       />
     </label>
     <div class="mobile-filter-options" tourAnchor="timeline-filter-types">
-      <button type="button" class="filter-toggle-all" (click)="toggleAllEventTypes()">
-        {{ hasVisibleEventTypes ? 'Unselect all' : 'Select all' }}
-      </button>
       <label><input type="checkbox" [checked]="eventFilters.showCharacters" (change)="toggleCharacterFilter()" />Characters</label>
       <label><input type="checkbox" [checked]="eventFilters.showSupports" (change)="toggleSupportFilter()" />Support cards</label>
       <label><input type="checkbox" [checked]="eventFilters.showPaidBanners" (change)="togglePaidBannersFilter()" />Paid banners</label>

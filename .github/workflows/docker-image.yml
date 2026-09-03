@@ -67,6 +67,15 @@ jobs:
               - 'src/assets/**'
               - 'src/data/**'
 
+      - name: Use current app with beta timeline artwork
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_NAME" == "beta" ]]; then
+            git checkout origin/main -- .
+          fi
+          git checkout origin/beta -- src/assets/timeline-images
+
       - name: Choose deployment plan
         id: plan
         shell: bash
