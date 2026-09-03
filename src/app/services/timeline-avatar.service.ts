@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { EventType, TimelineEvent } from '../models/timeline.model';
-import { getAllCharacters, getCharacterNameEntry } from '../data/character.data';
+import { getAllCharacters, getCharacterById, getCharacterNameEntry } from '../data/character.data';
 import { getSupportCardById } from '../data/support-cards.data';
 import { Rarity, SupportCardType } from '../models/support-card.model';
 
@@ -242,6 +242,7 @@ export class TimelineAvatarService {
 
     const id = Math.trunc(cardId);
     const characterNameEntry = getCharacterNameEntry(Math.floor(id / 100));
+    const characterCard = getCharacterById(id);
     const publicName = this.cleanPublicName(displayName, characterNameEntry?.name ?? `Character ${id}`);
     const identity = this.parseCharacterName(publicName);
     const baseName = characterNameEntry?.name ?? identity.baseName;
@@ -266,7 +267,9 @@ export class TimelineAvatarService {
       subLabel: variantName ? `${variantName} variant` : 'Character',
       variantName,
       searchTerms: variantName ? [variantName, `${baseName} ${variantName}`] : [],
-      imageUrl: `/assets/images/character_stand/chara_stand_${id}.webp`,
+      imageUrl: characterCard
+        ? `/assets/images/character_stand/chara_stand_${id}.webp`
+        : `https://gametora.com/images/umamusume/characters/thumb/chara_stand_${Math.floor(id / 100)}_${id}.png`,
       fallbackImageUrl: fallbackCharacter
         ? `/assets/images/character_stand/chara_stand_${fallbackCharacter.id}.webp`
         : undefined,
@@ -292,7 +295,9 @@ export class TimelineAvatarService {
       displayName: name,
       subLabel: [rarity, supportType ? `${supportType} Support` : 'Support card'].filter(Boolean).join(' · '),
       searchTerms: ['support', ...(supportType ? [supportType] : [])],
-      imageUrl: `/assets/images/support_card/half/support_card_s_${cardIdValue}.webp`,
+      imageUrl: supportCard
+        ? `/assets/images/support_card/half/support_card_s_${cardIdValue}.webp`
+        : `https://media.gametora.com/umamusume/supports/full/small/${cardIdValue}.png`,
       gametoraUrl: `https://gametora.com/umamusume/supports/${cardIdValue}-${this.toGametoraSlug(name)}`
     };
   }

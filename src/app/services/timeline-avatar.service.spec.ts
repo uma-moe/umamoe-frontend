@@ -103,6 +103,17 @@ describe('TimelineAvatarService', () => {
     expect(support?.subLabel).toContain('Wisdom Support');
   });
 
+  it('uses GameTora artwork for pickup IDs newer than the bundled masters', () => {
+    const service = new TimelineAvatarService();
+    const character = service.getPickupAvatarByKind('character', 199901, 'Future Uma');
+    const support = service.getPickupAvatarByKind('support', 39999, 'Future Support');
+
+    expect(character?.imageUrl)
+      .toBe('https://gametora.com/images/umamusume/characters/thumb/chara_stand_1999_199901.png');
+    expect(support?.imageUrl)
+      .toBe('https://media.gametora.com/umamusume/supports/full/small/39999.png');
+  });
+
   it('uses public related names for timeline search', () => {
     const service = new TimelineAvatarService();
     const event = createCharacterBanner([100702], ['Gold Ship']);

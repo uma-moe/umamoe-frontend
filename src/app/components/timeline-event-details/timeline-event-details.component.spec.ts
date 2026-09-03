@@ -82,6 +82,42 @@ describe('timelineRaceEventFacts', () => {
 });
 
 describe('TimelineEventDetailsComponent planner action', () => {
+  it('keeps resolved event names when planner rates use generic pickup labels', async () => {
+    const event = raceEvent(EventType.SUPPORT_CARD_BANNER, 'Banner');
+    event.gachaId = 30429;
+    event.plannerDataAvailable = true;
+    event.pickupCardIds = [20098, 30296];
+    event.relatedSupportCards = ['Hishi Amazon', 'Aston Machan'];
+    const component = new TimelineEventDetailsComponent(
+      { event },
+      { close: () => undefined } as never,
+      new TimelineAvatarService(),
+      new TimelinePredictionService(),
+      { isEventActive: () => false } as never,
+      {} as never,
+      {
+        loadGachasForEvents: () => Promise.resolve([{
+          featured_pickups: [
+            { pickup_id: 20098, label: 'Support Card 20098', rate: 0.0225 },
+            { pickup_id: 30296, label: 'Support Card 30296', rate: 0.0075 },
+          ],
+        }]),
+      } as never,
+      { markForCheck: () => undefined } as never,
+    );
+
+    component.ngOnInit();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(component.pickupRates.map(pickup => pickup.avatar.displayName))
+      .toEqual(['Aston Machan', 'Hishi Amazon']);
+    expect(component.pickupRates.map(pickup => pickup.avatar.imageUrl)).toEqual([
+      'https://media.gametora.com/umamusume/supports/full/small/30296.png',
+      'https://media.gametora.com/umamusume/supports/full/small/20098.png',
+    ]);
+  });
+
   it('toggles planner membership in place without closing the dialog', () => {
     const event = raceEvent(EventType.CHARACTER_BANNER, 'Banner');
     event.gachaId = 30100;
