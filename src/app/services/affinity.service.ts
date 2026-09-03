@@ -493,13 +493,9 @@ export class AffinityService {
       case 'main':
         return this.getTreeParentSourceAffinity(result, 'p2');
       case 'left':
-        return result.playerP2.tripleLeft
-          + result.race.p2Left
-          + (slots.p1 && slots.gp2Left ? this.getAff2(slots.p1, slots.gp2Left) : 0);
+        return this.getTreeNodeTotalAffinity(result, 'p2-1') ?? 0;
       case 'right':
-        return result.playerP2.tripleRight
-          + result.race.p2Right
-          + (slots.p1 && slots.gp2Right ? this.getAff2(slots.p1, slots.gp2Right) : 0);
+        return this.getTreeNodeTotalAffinity(result, 'p2-2') ?? 0;
     }
   }
 
@@ -787,9 +783,9 @@ export class AffinityService {
   /**
    * Smart combined display metric for multiple spark sources.
    *
-   * – If the expected number of procs (E = Σ p·instances) is ≥ 1.0, returns
-   *   a "multiple" result so the UI can show "1.60x" instead of a capped %.
-   * – Otherwise returns thek true "at-least-one" probability as a percentage,
+   * – If at least one proc is guaranteed, returns a "multiple" result so the
+   *   UI can show the expected proc count, e.g. "1.60x".
+   * – Otherwise returns the true "at-least-one" probability as a percentage,
    *   e.g. "4.90%".
    */
   getSparkMetrics(
@@ -816,8 +812,8 @@ export class AffinityService {
       expectedProcs,
       procDisplay: `${procChancePct.toFixed(2)}%`,
       expectedDisplay: `${expectedProcs.toFixed(2)}x`,
-      type: expectedYield >= 1.0 ? 'multiple' : 'probability',
-      rawValue: expectedYield >= 1.0 ? expectedProcs : procChancePct,
+      type: probabilityOfNone === 0 ? 'multiple' : 'probability',
+      rawValue: probabilityOfNone === 0 ? expectedProcs : procChancePct,
     };
   }
 

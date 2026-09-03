@@ -173,6 +173,63 @@ describe('AffinityService race saddle groups', () => {
     expect(service.sparkProcChance(pinkOneStar, 343)).toBe(4.43);
   });
 
+  it('uses the same P2 source affinities as the lineage tree', () => {
+    const result = {
+      p1Breeding: { left: 0, right: 0, total: 0 },
+      p2Breeding: { left: 0, right: 0, total: 0 },
+      playerP1: { pair: 0, tripleLeft: 0, tripleRight: 0, total: 0 },
+      playerP2: { pair: 20, tripleLeft: 8, tripleRight: 0, total: 28 },
+      legacy: 16,
+      relationTotal: 44,
+      total: 56,
+      race: {
+        parentPair: 3,
+        p1Left: 0,
+        p1Right: 0,
+        p2Left: 6,
+        p2Right: 3,
+        p1Grandparent: 0,
+        p2Grandparent: 9,
+        p1Node: 3,
+        p2Node: 12,
+        total: 12,
+      },
+    };
+    spyOn(service, 'calculateTreeWithRace').and.returnValue(result);
+    const slots = {
+      target: 1001,
+      p1: 1002,
+      p2: 1003,
+      gp1Left: null,
+      gp1Right: null,
+      gp2Left: 1004,
+      gp2Right: 1005,
+    };
+
+    expect(service.calculateP2SourceAffinity(slots, {}, 'main')).toBe(56);
+    expect(service.calculateP2SourceAffinity(slots, {}, 'left')).toBe(14);
+    expect(service.calculateP2SourceAffinity(slots, {}, 'right')).toBe(3);
+  });
+
+  it('uses a multiplier only when at least one proc is guaranteed', () => {
+    const spark = { factorId: 'test', name: 'Unique', type: 5, level: 1 };
+    const notGuaranteed = service.getSparkMetrics([
+      { spark, affinity: 900 },
+      { spark, affinity: 900 },
+    ], false);
+    const guaranteed = service.getSparkMetrics([
+      { spark, affinity: 1900 },
+      { spark, affinity: 0 },
+    ], false);
+
+    expect(notGuaranteed.procChancePct).toBe(75);
+    expect(notGuaranteed.expectedProcs).toBe(1);
+    expect(notGuaranteed.type).toBe('probability');
+    expect(guaranteed.procChancePct).toBe(100);
+    expect(guaranteed.expectedProcs).toBe(1.05);
+    expect(guaranteed.type).toBe('multiple');
+  });
+
   it('ranks races shared by both parents ahead of one-parent overlaps', () => {
     replaceRaceSaddleData({
       races: [

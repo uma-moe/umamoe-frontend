@@ -1514,40 +1514,14 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         return this.affinityService.getTreeParentSourceBaseAffinity(this.getTreeAffinity(true), 'p2') ?? 0;
     }
 
-    /**
-     * Per-source affinity for P2 spark proc chance calculation.
-     *
-     * In the database UI the user is browsing potential P1 candidates with a
-     * fixed P2 legacy (the selected veteran). The affinity that boosts a P2
-     * spark when actually breeding this combination is the sum of:
-     *   1. Target-side affinity vs the P2 node (only available if a target
-     *      character is selected in the filter):
-     *        - 'main'  : aff2(target,p2) + aff3(target,p2,gp2L) + aff3(target,p2,gp2R)
-     *        - 'left'  : aff3(target, p2, gp2Left)
-     *        - 'right' : aff3(target, p2, gp2Right)
-     *   2. Legacy/breeding affinity between the record's P1 main horse and
-     *      the corresponding P2 node (works even without a target - this is
-     *      the "P2 legacy" contribution the user is browsing for):
-     *        - 'main'  : aff2(p1Main, p2)
-     *        - 'left'  : aff2(p1Main, gp2Left)
-     *        - 'right' : aff2(p1Main, gp2Right)
-     */
+    /** Per-source P2 affinity, shared with the lineage planner calculation. */
     getP2AffinityForSource(source: 'main' | 'left' | 'right'): number {
         if (!this.affinityService.isReady) return 0;
-        const affinity = this.affinityService.calculateP2SourceAffinity(
+        return this.affinityService.calculateP2SourceAffinity(
             this.buildTreeSlots(true),
             this.buildPlannerRaceWins(true),
             source,
         );
-
-        // 4. Fallback: if we couldn't compute anything direct (missing IDs),
-        //    use the server-side relation total so P2 sparks at least reflect
-        //    the same affinity boost the spark would actually receive in-game.
-        if (affinity === 0 && this.record.affinity_score) {
-            return this.getRecordTotalAffinity() ?? this.record.affinity_score;
-        }
-
-        return affinity;
     }
 
     getLegacyAffinity(): number {
@@ -1625,7 +1599,7 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
             [{ spark, affinity }],
             this.sparkShowPerRun,
         );
-        const value = this.formatSparkMetrics(metrics, spark.type);
+        const value = this.formatSparkMetrics(metrics);
         this.sparkMetricDisplayCache.set(cacheKey, value);
         return value;
     }
@@ -1945,22 +1919,15 @@ export class InheritanceEntryComponent implements OnInit, OnChanges {
         const cached = this.sparkMetricDisplayCache.get(cacheKey);
         if (cached) return cached;
         const m = this.affinityService.getSparkMetrics(sources, this.sparkShowPerRun);
-        const value = this.formatSparkMetrics(m, sparkInfo.type);
+        const value = this.formatSparkMetrics(m);
         this.sparkMetricDisplayCache.set(cacheKey, value);
         return value;
     }
 
-    private formatSparkMetrics(metrics: SparkDisplayMetrics, sparkType: number): string {
-        const isWhiteSpark = sparkType >= 2 && sparkType <= 4;
-        if (isWhiteSpark) {
-            return `${this.formatNumber(metrics.procChancePct, this.twoDecimalFormatOptions)}%`;
-        }
-
-        // Show expected procs when ≥1, proc chance otherwise - same logic as the planner.
-        // Always use 2 decimals with locale-aware formatting.
-        return metrics.expectedProcs >= 1
-            ? `${this.formatNumber(metrics.expectedProcs, this.twoDecimalFormatOptions)}x`
-            : `${this.formatNumber(metrics.procChancePct, this.twoDecimalFormatOptions)}%`;
+    private formatSparkMetrics(metrics: SparkDisplayMetrics): string {
+        const value = metrics.type === 'multiple' ? metrics.expectedProcs : metrics.procChancePct;
+        const suffix = metrics.type === 'multiple' ? 'x' : '%';
+        return `${this.formatNumber(value, this.twoDecimalFormatOptions)}${suffix}`;
     }
 
     private formatNumber(value: number, options: Intl.NumberFormatOptions): string {
