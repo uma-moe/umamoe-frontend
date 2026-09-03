@@ -25,16 +25,19 @@ jobs:
           - branch: beta
             timeline_url: https://beta.uma.moe/resources/current/banner_timeline.json.gz
             site_origin: https://beta.uma.moe
-            deploy: false
           - branch: main
             timeline_url: https://uma.moe/resources/current/banner_timeline.json.gz
             site_origin: https://uma.moe
-            deploy: true
     steps:
       - name: Check out frontend
         uses: actions/checkout@v4
         with:
           ref: ${{ matrix.branch }}
+          fetch-depth: 0
+
+      - name: Keep beta deployment logic current
+        if: matrix.branch == 'beta'
+        run: git checkout origin/main -- .github/workflows/docker-image.yml
 
       - name: Check out resources
         uses: actions/checkout@v4
@@ -74,14 +77,14 @@ jobs:
         shell: bash
         run: |
           changes="${RUNNER_TEMP}/timeline-image-changes.txt"
-          if [[ ! -s "${changes}" ]]; then
-            echo "Timeline images are already current."
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [[ -s "${changes}" ]]; then
+            while IFS= read -r path; do
+              [[ -n "${path}" ]] && git add -f -- "${path}"
+            done < "${changes}"
           fi
-          while IFS= read -r path; do
-            [[ -n "${path}" ]] && git add -f -- "${path}"
-          done < "${changes}"
+          if [[ "${{ matrix.branch }}" == "beta" ]]; then
+            git add -- .github/workflows/docker-image.yml
+          fi
           if git diff --cached --quiet; then
             echo "Timeline images are already current."
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -93,9 +96,9 @@ jobs:
           git push origin "HEAD:${{ matrix.branch }}"
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy updated production artwork
-        if: steps.commit.outputs.changed == 'true' && matrix.deploy
+      - name: Deploy updated artwork
+        if: steps.commit.outputs.changed == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run docker-image.yml --ref main --field deploy_assets=true
+        run: gh workflow run docker-image.yml --ref "${{ matrix.branch }}" --field deploy_assets=true

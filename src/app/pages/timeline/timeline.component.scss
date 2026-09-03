@@ -300,7 +300,7 @@
   @include btn-icon(38px);
 }
 
-.filter-popover-heading button {
+.filter-popover-heading .filter-close {
   @include btn-icon(28px);
   background: transparent;
   border-color: transparent;
@@ -392,22 +392,24 @@
   font-size: 12px;
 }
 
+.filter-popover-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filter-popover-heading .filter-toggle-all {
+  @include btn-ghost(0 8px);
+  height: 28px;
+  color: var(--accent-primary);
+  background: var(--surface-1);
+  font-size: 11px;
+}
+
 .filter-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2px 12px;
-}
-
-.filter-toggle-all {
-  grid-column: 1 / -1;
-  justify-self: end;
-  padding: 3px 6px;
-  color: var(--accent-primary);
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  font: inherit;
-  font-size: 11px;
 }
 
 .filter-options label {
