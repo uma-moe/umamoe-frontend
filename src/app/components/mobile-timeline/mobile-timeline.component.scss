@@ -311,6 +311,17 @@
   gap: 3px 10px;
 }
 
+.filter-toggle-all {
+  grid-column: 1 / -1;
+  justify-self: end;
+  padding: 3px 0;
+  color: var(--accent-primary);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 11px;
+}
+
 .mobile-filter-options label {
   display: flex;
   min-width: 0;

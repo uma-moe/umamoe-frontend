@@ -1702,6 +1702,29 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.eventFilters.showScenarioReleases = !this.eventFilters.showScenarioReleases;
         this.refreshTimelineFilters();
     }
+    get hasVisibleEventTypes(): boolean {
+        return Object.values(this.eventFilters).some(value => value === true);
+    }
+    toggleAllEventTypes(): void {
+        const visible = !this.hasVisibleEventTypes;
+        Object.assign(this.eventFilters, {
+            showCharacters: visible,
+            showSupports: visible,
+            showStoryEvents: visible,
+            showChampionsMeetings: visible,
+            showLegendRaces: visible,
+            showPaidBanners: visible,
+            showCampaigns: visible,
+            showLeagueOfHeroes: visible,
+            showMastersChallenge: visible,
+            showTrainerSkillsTest: visible,
+            showFactorResearch: visible,
+            showStrongestTeam: visible,
+            showRacingCarnival: visible,
+            showScenarioReleases: visible
+        });
+        this.refreshTimelineFilters();
+    }
     private refreshTimelineFilters(): void {
         this.generateTimelineItems();
         this.updateSearchResults();

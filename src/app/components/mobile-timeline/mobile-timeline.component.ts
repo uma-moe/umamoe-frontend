@@ -846,6 +846,30 @@ export class MobileTimelineComponent implements OnInit, AfterViewInit, OnDestroy
         this.generateTimelineItems();
         this.cdr.detectChanges();
     }
+    get hasVisibleEventTypes(): boolean {
+        return Object.values(this.eventFilters).some(value => value === true);
+    }
+    toggleAllEventTypes(): void {
+        const visible = !this.hasVisibleEventTypes;
+        Object.assign(this.eventFilters, {
+            showCharacters: visible,
+            showSupports: visible,
+            showStoryEvents: visible,
+            showChampionsMeetings: visible,
+            showLegendRaces: visible,
+            showPaidBanners: visible,
+            showCampaigns: visible,
+            showLeagueOfHeroes: visible,
+            showMastersChallenge: visible,
+            showTrainerSkillsTest: visible,
+            showFactorResearch: visible,
+            showStrongestTeam: visible,
+            showRacingCarnival: visible,
+            showScenarioReleases: visible
+        });
+        this.generateTimelineItems();
+        this.cdr.detectChanges();
+    }
     getFilteredEventCount(): number {
         return this.timelineEvents.filter(event => this.shouldShowEvent(event)).length;
     }
