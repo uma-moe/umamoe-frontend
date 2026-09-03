@@ -421,7 +421,9 @@ export class TimelineEventDetailsComponent implements OnInit {
     if (orderedRates.length) {
       const loaded: TimelinePickupRateView[] = [];
       for (const rate of orderedRates) {
-        const avatar = this.avatarService.getPickupAvatar(this.event, rate.pickup_id, rate.label);
+        const kind = this.event.type === EventType.SUPPORT_CARD_BANNER ? 'support' : 'character';
+        const avatar = avatars.find(candidate => candidate.key.startsWith(`${kind}-${rate.pickup_id}-`))
+          ?? this.avatarService.getPickupAvatar(this.event, rate.pickup_id, rate.label);
         if (!avatar) continue;
         loaded.push({
           avatar,
