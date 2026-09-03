@@ -85,6 +85,7 @@ describe('TimelineEventDetailsComponent planner action', () => {
   it('keeps resolved event names when planner rates use generic pickup labels', async () => {
     const event = raceEvent(EventType.SUPPORT_CARD_BANNER, 'Banner');
     event.gachaId = 30429;
+    event.imagePath = '/assets/timeline-images/gacha/support/30429.webp';
     event.plannerDataAvailable = true;
     event.pickupCardIds = [20098, 30296];
     event.relatedSupportCards = ['Hishi Amazon', 'Aston Machan'];
@@ -113,8 +114,8 @@ describe('TimelineEventDetailsComponent planner action', () => {
     expect(component.pickupRates.map(pickup => pickup.avatar.displayName))
       .toEqual(['Aston Machan', 'Hishi Amazon']);
     expect(component.pickupRates.map(pickup => pickup.avatar.imageUrl)).toEqual([
-      'https://media.gametora.com/umamusume/supports/full/small/30296.png',
-      'https://media.gametora.com/umamusume/supports/full/small/20098.png',
+      event.imagePath,
+      event.imagePath,
     ]);
   });
 
