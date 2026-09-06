@@ -442,7 +442,6 @@ export class CaratPlannerPersistenceService {
         : sanitizedPlans[0].id,
       plans: sanitizedPlans,
     };
-    this.collectionSubject.next(this.clone(next));
     if (this.isBrowser) {
       try {
         localStorage.setItem(
@@ -453,6 +452,9 @@ export class CaratPlannerPersistenceService {
         console.warn('Unable to save carat planner state.', error);
       }
     }
+    // Subscribers can synchronously save resource migrations. Persist first so
+    // an outer commit cannot overwrite the newer snapshot after they return.
+    this.collectionSubject.next(this.clone(next));
   }
 
   private sanitizePlan(value: unknown): CaratPlan | null {

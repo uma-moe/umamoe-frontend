@@ -47,7 +47,6 @@ export function compactPlannerCollectionResourceState(
       rewardById,
       selectorEventIds,
       knownEventIds,
-      events.length > 0,
     )),
   };
 }
@@ -58,12 +57,12 @@ function compactPlan(
   rewardById: ReadonlyMap<string, CaratPlannerDataBundle['rewards']['rewards'][number]>,
   selectorEventIds: ReadonlySet<string>,
   knownEventIds: ReadonlySet<string>,
-  timelineReady: boolean,
 ): CaratPlan {
   const disabledEvents = new Set(plan.disabledEventIds ?? []);
   const explicitlyDisabledRewards = new Set(plan.disabledRewardIds ?? []);
   const disabledRewardIds = uniqueSorted([...explicitlyDisabledRewards].filter(rewardId => {
     const reward = rewardById.get(rewardId);
+    if (!reward) return true;
     return Boolean(reward
       && !(reward.event_id && disabledEvents.has(reward.event_id))
       && plannerRewardSelectionEnabled(
@@ -73,27 +72,30 @@ function compactPlan(
         false,
       ));
   }));
-  const targetEventIds = new Set(plan.targets.map(target => target.eventId));
 
   return {
     ...plan,
     enabledIncomeRuleIds: uniqueSorted(plan.enabledIncomeRuleIds.filter(ruleId => {
       const rule = incomeRuleById.get(ruleId);
-      return Boolean(rule && !rule.scenario_group);
+      return !rule || !rule.scenario_group;
     })),
     enabledRewardIds: uniqueSorted(plan.enabledRewardIds.filter(rewardId => {
       const reward = rewardById.get(rewardId);
+      if (!reward) return true;
       return Boolean(reward
         && plannerRewardNeedsEnabledOverride(reward)
         && !explicitlyDisabledRewards.has(rewardId));
     })),
     disabledRewardIds,
-    enabledRewardEventIds: uniqueSorted([...selectorEventIds].filter(eventId => (
+    enabledRewardEventIds: uniqueSorted([
+      ...(plan.enabledRewardEventIds ?? []).filter(eventId => !knownEventIds.has(eventId)),
+      ...selectorEventIds,
+    ].filter(eventId => (
       !disabledEvents.has(eventId)
     ))),
-    disabledEventIds: uniqueSorted((plan.disabledEventIds ?? []).filter(eventId => (
-      !timelineReady || knownEventIds.has(eventId) || targetEventIds.has(eventId)
-    ))),
+    // An absent resource may be temporarily unavailable or belong to a newer
+    // deployment. Absence is not permission to discard the user's opt-out.
+    disabledEventIds: uniqueSorted(plan.disabledEventIds ?? []),
   };
 }
 

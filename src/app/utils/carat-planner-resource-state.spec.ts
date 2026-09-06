@@ -92,14 +92,30 @@ describe('compactPlannerCollectionResourceState', () => {
       type: 'support',
     }]);
 
-    expect(compacted.plans[0].enabledIncomeRuleIds).toEqual(['daily']);
-    expect(compacted.plans[0].enabledRewardIds).toEqual([]);
-    expect(compacted.plans[0].disabledRewardIds).toEqual([]);
+    expect(compacted.plans[0].enabledIncomeRuleIds).toEqual(['daily', 'missing']);
+    expect(compacted.plans[0].enabledRewardIds).toEqual(['missing']);
+    expect(compacted.plans[0].disabledRewardIds).toEqual(['missing']);
     expect(compacted.plans[0].enabledRewardEventIds).toEqual(['selector-event']);
-    expect(compacted.plans[0].disabledEventIds).toEqual(['excluded-event', 'target-event']);
+    expect(compacted.plans[0].disabledEventIds).toEqual(['excluded-event', 'missing', 'target-event']);
     expect(compacted.plans[1].enabledIncomeRuleIds).toEqual([]);
     expect(compacted.plans[1].enabledRewardIds).toEqual([]);
     expect(compacted.plans[1].enabledRewardEventIds).toEqual(['selector-event']);
+  });
+
+  it('preserves choices through empty resources and repeated refreshes', () => {
+    const saved = plan('saved');
+    saved.enabledIncomeRuleIds = ['manual-income'];
+    saved.enabledRewardIds = ['manual-reward'];
+    saved.disabledRewardIds = ['excluded-reward'];
+    saved.enabledRewardEventIds = ['manual-event'];
+    saved.disabledEventIds = ['excluded-event'];
+    saved.targets[0].plannedPulls = 0;
+    saved.targets[0].rainbowCrystalsPlanned = 2;
+    const collection: CaratPlanCollection = { version: 1, activePlanId: saved.id, plans: [saved] };
+    const empty: CaratPlannerDataBundle = { core: {}, income: { rules: [] }, rewards: { rewards: [] } };
+    const first = compactPlannerCollectionResourceState(collection, empty);
+    expect(first).toEqual(collection);
+    expect(compactPlannerCollectionResourceState(first, empty)).toEqual(collection);
   });
 });
 

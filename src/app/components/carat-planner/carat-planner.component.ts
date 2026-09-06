@@ -416,8 +416,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   private deferredRewardSaveFrame: number | undefined;
   private deferredRewardSaveTimer: ReturnType<typeof setTimeout> | undefined;
   private deferredRewardSavePending = false;
-  private deferredInteractionSaveTimer: ReturnType<typeof setTimeout> | undefined;
-  private deferredInteractionSavePlan: CaratPlan | null = null;
   private cloudStartTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly expandedPickupTargetIds = new Set<string>();
   private readonly pickupGoalCopyMemory = new Map<string, number>();
@@ -1057,7 +1055,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (!this.isRewardGroupBannerActionable(group) || !group.eventId) return;
     const event = this.eventForId(group.eventId);
     if (!event) return;
-    this.flushDeferredInteractionSave();
     this.persistence.setEventActive(
       event,
       enable,
@@ -1244,7 +1241,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   selectFreePullCampaign(campaign: PlannerFreePullCampaignView, choice: FreePullCampaignChoice): void {
-    this.flushDeferredInteractionSave();
     const selectedAndReady = this.isFreePullCampaignChoiceSelected(campaign, choice)
       && this.isFreePullCampaignChoiceReady(campaign, choice);
     if (selectedAndReady) {
@@ -1309,7 +1305,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     if (!this.isRewardGroupBannerActionable(group) || !group.eventId) return;
     const event = this.eventForId(group.eventId);
     if (!event) return;
-    this.flushDeferredInteractionSave();
     this.persistence.setEventActive(
       event,
       !this.isRewardGroupBannerPlanned(group),
@@ -1368,7 +1363,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     const flushDeferredRewardSave = this.deferredRewardSavePending;
-    const deferredInteractionPlan = this.takeDeferredInteractionSave();
     if (this.deferredRewardSaveFrame !== undefined && typeof cancelAnimationFrame === 'function') {
       cancelAnimationFrame(this.deferredRewardSaveFrame);
     }
@@ -1382,31 +1376,23 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.planResourceRequest++;
     this.destroy$.next();
     this.destroy$.complete();
-    if (deferredInteractionPlan && deferredInteractionPlan !== this.plan) {
-      this.persistence.savePlan(deferredInteractionPlan);
-    }
     if (flushDeferredRewardSave && this.plan) this.persistence.savePlan(this.plan);
-    else if (deferredInteractionPlan === this.plan) this.persistence.savePlan(deferredInteractionPlan);
   }
 
   selectPlan(planId: string): void {
-    this.flushDeferredInteractionSave();
     this.persistence.setActive(planId);
   }
 
   createPlan(): void {
-    this.flushDeferredInteractionSave();
     this.persistence.createPlan('New plan');
   }
 
   duplicatePlan(): void {
-    this.flushDeferredInteractionSave();
     this.persistence.duplicatePlan(this.plan.id);
   }
 
   deletePlan(): void {
     if (this.collection.plans.length > 1 && confirm(`Delete "${this.plan.name}"?`)) {
-      this.flushDeferredInteractionSave();
       const deletedPlanId = this.plan.id;
       this.persistence.deletePlan(deletedPlanId);
       if (this.cloudStatus.loggedIn) {
@@ -1422,7 +1408,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   sharePlan(): void {
-    this.flushDeferredInteractionSave();
     if (!this.cloud || !this.cloudStatus.loggedIn) {
       void this.createCompactShare();
       return;
@@ -1496,25 +1481,12 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   save(): void {
-    const deferredPlan = this.takeDeferredInteractionSave();
-    if (deferredPlan && deferredPlan !== this.plan) this.persistence.savePlan(deferredPlan);
     this.persistence.savePlan(this.plan);
   }
 
   saveAfterInteraction(): void {
     this.cdr.markForCheck();
-    if (!this.elementRef) {
-      this.save();
-      return;
-    }
-    this.deferredInteractionSavePlan = this.plan;
-    if (this.deferredInteractionSaveTimer !== undefined) clearTimeout(this.deferredInteractionSaveTimer);
-    this.deferredInteractionSaveTimer = setTimeout(() => {
-      this.deferredInteractionSaveTimer = undefined;
-      const plan = this.deferredInteractionSavePlan;
-      this.deferredInteractionSavePlan = null;
-      if (plan && !this.destroyed) this.persistence.savePlan(plan);
-    }, 75);
+    this.save();
   }
 
   searchEvents(value: string): void {
@@ -1529,7 +1501,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     this.showEventPicker = false;
     this.eventSearch = '';
     this.cdr.markForCheck();
-    this.flushDeferredInteractionSave();
     this.persistence.setEventActive(
       event,
       true,
@@ -1555,7 +1526,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         ?? (target.pickupId === undefined ? [] : [target.pickupId]),
       plannerRewardAvailable: (this.plan.enabledRewardEventIds ?? []).includes(target.eventId),
     };
-    this.flushDeferredInteractionSave();
     this.persistence.setEventActive(event, false);
   }
 
@@ -1700,19 +1670,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
         this.save();
       }, 0);
     });
-  }
-
-  private takeDeferredInteractionSave(): CaratPlan | null {
-    if (this.deferredInteractionSaveTimer !== undefined) clearTimeout(this.deferredInteractionSaveTimer);
-    this.deferredInteractionSaveTimer = undefined;
-    const plan = this.deferredInteractionSavePlan;
-    this.deferredInteractionSavePlan = null;
-    return plan;
-  }
-
-  private flushDeferredInteractionSave(): void {
-    const plan = this.takeDeferredInteractionSave();
-    if (plan) this.persistence.savePlan(plan);
   }
 
   rewardDetailsTooltip(reward: PlannerRewardEntry): string {
@@ -3485,7 +3442,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   exportPlan(): void {
-    this.flushDeferredInteractionSave();
     const blob = new Blob([this.persistence.exportPlan()], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -3500,7 +3456,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     const file = input.files?.[0];
     if (!file) return;
     try {
-      this.flushDeferredInteractionSave();
       this.persistence.importJson(await file.text());
       this.importError = '';
     } catch (error) {
@@ -3516,7 +3471,8 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
   }
 
   trackByPullPlanItem(_: number, item: PlannerPullPlanItem): string {
-    return item.id;
+    // Cloud restores rebuild target IDs by position; keep inputs attached to their banner.
+    return JSON.stringify([this.plan.id, item.kind, item.target?.eventId ?? item.id]);
   }
 
   trackByRewardBenefit(_: number, benefit: PlannerRewardBenefitView): string {

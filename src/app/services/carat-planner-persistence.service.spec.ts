@@ -2,6 +2,26 @@ import { CaratPlannerPersistenceService } from './carat-planner-persistence.serv
 import { CONDITIONAL_REWARD_DEFAULT_SELECTIONS } from '../utils/carat-planner-income-assumptions';
 
 describe('CaratPlannerPersistenceService', () => {
+  it('reloads the newest save when a resource migration saves inside a subscriber', () => {
+    const service = createService();
+    let migrate = false;
+    const subscription = service.collection$.subscribe(() => {
+      if (!migrate) return;
+      migrate = false;
+      const latest = service.activePlan;
+      latest.targets[0].plannedPulls = 0;
+      latest.targets[0].rainbowCrystalsPlanned = 2;
+      service.savePlan(latest);
+    });
+    migrate = true;
+    service.setEventActive({ id: 'banner', title: 'Banner', type: 'support_banner' }, true);
+    subscription.unsubscribe();
+    expect(service.activePlan.targets[0].plannedPulls).toBe(0);
+    const reloaded = createService().activePlan.targets[0];
+    expect(reloaded.plannedPulls).toBe(0);
+    expect(reloaded.rainbowCrystalsPlanned).toBe(2);
+  });
+
   beforeEach(() => {
     localStorage.removeItem(CaratPlannerPersistenceService.STORAGE_KEY);
   });

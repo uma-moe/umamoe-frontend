@@ -1,4 +1,4 @@
-import { ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, ElementRef } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import {
   CaratPlan,
@@ -12,9 +12,13 @@ import { CaratPlannerPersistenceService } from '../../services/carat-planner-per
 import { CaratPullProbabilityService } from '../../services/carat-pull-probability.service';
 import { TimelineAvatarService } from '../../services/timeline-avatar.service';
 import { CaratPlannerComponent } from './carat-planner.component';
+import {
+  compactPlannerCollectionForCloud,
+  expandPlannerCollectionFromCloud,
+} from '../../utils/carat-planner-cloud-codec';
 
 describe('CaratPlannerComponent banner ordering', () => {
-  const createComponent = () => {
+  const createComponent = (elementRef: ElementRef<HTMLElement> | null = null) => {
     localStorage.removeItem(CaratPlannerPersistenceService.STORAGE_KEY);
     const realPersistence = new CaratPlannerPersistenceService('browser' as never);
     let component: CaratPlannerComponent;
@@ -33,11 +37,72 @@ describe('CaratPlannerComponent banner ordering', () => {
       { loadGachasForEvents: () => new Promise<never>(() => undefined) } as never,
       new TimelineAvatarService(),
       { markForCheck: () => undefined } as unknown as ChangeDetectorRef,
+      elementRef,
     );
     component.plan = realPersistence.activePlan;
     component.plan.projectionStartDate = '2030-01-01';
     return component;
   };
+
+  it('keeps banner row identities and pull amounts through reordered cloud restores and removal', () => {
+    const component = createComponent();
+    component.plan.targets = [0, 200, 400].map((plannedPulls, index) => ({
+      id: `target-${index}`,
+      eventId: `banner-${index}`,
+      title: `Banner ${index}`,
+      bannerKind: 'support',
+      pullTiming: 'end',
+      plannedPulls,
+      desiredCopies: 1,
+      useTickets: true,
+      allowPaidJewels: false,
+      rainbowCrystalsPlanned: index,
+    }));
+    const rowKeys = () => new Map(component.pullPlanItems
+      .filter(item => item.target)
+      .map(item => [item.target!.eventId, component.trackByPullPlanItem(0, item)]));
+    const originalKeys = rowKeys();
+    const restore = () => {
+      component.plan = expandPlannerCollectionFromCloud(compactPlannerCollectionForCloud({
+        version: 1,
+        activePlanId: component.plan.id,
+        plans: [component.plan],
+      }))!.plans[0];
+      for (const [eventId, key] of rowKeys()) expect(key).toBe(originalKeys.get(eventId)!);
+      for (const target of component.plan.targets) {
+        const index = Number(target.eventId.slice(-1));
+        expect(target.plannedPulls).toBe(index * 200);
+        expect(target.rainbowCrystalsPlanned ?? 0).toBe(index);
+      }
+    };
+    restore();
+    component.plan.targets.reverse();
+    restore();
+    component.plan.targets.splice(1, 1);
+    restore();
+    restore();
+    component.plan.id = 'another-plan';
+    for (const [eventId, key] of rowKeys()) expect(key).not.toBe(originalKeys.get(eventId)!);
+  });
+
+  it('persists edits immediately before refreshed resources reorder banner schedules', () => {
+    const component = createComponent(new ElementRef(document.createElement('div')));
+    const banner = { id: 'banner', title: 'Banner', type: 'support_banner', globalReleaseDate: '2031-01-01' };
+    component.addEvent(banner);
+    component.plan.targets[0].plannedPulls = 0;
+    component.plan.targets[0].rainbowCrystalsPlanned = 2;
+    component.saveAfterInteraction();
+    const reloaded = new CaratPlannerPersistenceService('browser' as never).activePlan;
+    expect(reloaded.targets[0].plannedPulls).toBe(0);
+    expect(reloaded.targets[0].rainbowCrystalsPlanned).toBe(2);
+
+    component.events = [];
+    component.events = [{ ...banner, globalReleaseDate: '2032-02-01' }];
+    expect(component.plan.targets[0].bannerStart).toBe('2032-02-01');
+    expect(component.plan.targets[0].plannedPulls).toBe(0);
+    expect(component.plan.targets[0].rainbowCrystalsPlanned).toBe(2);
+    component.ngOnDestroy();
+  });
 
   it('shows future banners ascending before past banners newest first', () => {
     const component = createComponent();
