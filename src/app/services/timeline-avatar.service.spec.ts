@@ -1,5 +1,6 @@
 import { EventType, TimelineEvent } from '../models/timeline.model';
 import { TimelineAvatarService } from './timeline-avatar.service';
+import { getAllCharacters, replaceCharacterMasterData } from '../data/character.data';
 
 describe('TimelineAvatarService', () => {
   function createCharacterBanner(
@@ -18,7 +19,7 @@ describe('TimelineAvatarService', () => {
     };
   }
 
-  it('builds character portraits only from public timeline fields', () => {
+  it('builds character portraits from pickup IDs and normalizes variant names', () => {
     const service = new TimelineAvatarService();
     const event = createCharacterBanner(
       [100702, 101303],
@@ -28,8 +29,8 @@ describe('TimelineAvatarService', () => {
     const avatars = service.getCharacterAvatars(event);
 
     expect(avatars.map(avatar => avatar.displayName)).toEqual([
-      'Gold Ship (Summer)',
-      'Mejiro McQueen (Summer)',
+      'Gold Ship [Summer]',
+      'Mejiro McQueen [Summer]',
     ]);
     expect(avatars.map(avatar => avatar.variantName)).toEqual(['Summer', 'Summer']);
     expect(avatars.map(avatar => avatar.imageUrl)).toEqual([
@@ -53,16 +54,16 @@ describe('TimelineAvatarService', () => {
     expect(service.getEventDisplayTitle(event)).toBe('Special Week + 3 more');
   });
 
-  it('uses friendly deterministic fallbacks when public names are absent or unknown', () => {
+  it('uses master names when public names are absent or unknown', () => {
     const service = new TimelineAvatarService();
     const event = createCharacterBanner([100702, 101303], ['Unknown_100702']);
 
     const avatars = service.getCharacterAvatars(event);
 
-    expect(avatars.map(avatar => avatar.displayName)).toEqual(['Character 100702', 'Character 101303']);
+    expect(avatars.map(avatar => avatar.displayName)).toEqual(['Gold Ship [Summer]', 'Mejiro McQueen [Summer]']);
   });
 
-  it('classifies support IDs and builds support assets without master data', () => {
+  it('classifies support IDs and fills missing names from master data', () => {
     const service = new TimelineAvatarService();
     const event: TimelineEvent = {
       id: 'support-banner-test',
@@ -76,7 +77,7 @@ describe('TimelineAvatarService', () => {
 
     const avatars = service.getSupportAvatars(event);
 
-    expect(avatars.map(avatar => avatar.displayName)).toEqual(['Fine Motion', 'Support 30002']);
+    expect(avatars.map(avatar => avatar.displayName)).toEqual(['Fine Motion', 'Silence Suzuka']);
     expect(avatars.map(avatar => avatar.imageUrl)).toEqual([
       '/assets/images/support_card/half/support_card_s_30001.webp',
       '/assets/images/support_card/half/support_card_s_30002.webp',
@@ -97,7 +98,7 @@ describe('TimelineAvatarService', () => {
     expect(support?.subLabel).toContain('Wisdom Support');
   });
 
-  it('uses the official webview banner for pickup IDs newer than the bundled masters', () => {
+  it('derives pickup portraits automatically even for IDs absent from the masters', () => {
     const service = new TimelineAvatarService();
     const characterEvent = createCharacterBanner([199901], ['Future Uma']);
     characterEvent.imagePath = '/assets/timeline-images/gacha/character/39998.webp';
@@ -108,17 +109,39 @@ describe('TimelineAvatarService', () => {
     };
 
     expect(service.getCharacterAvatars(characterEvent)[0].imageUrl)
-      .toBe('/assets/timeline-images/gacha/character/39998.webp');
+      .toBe('/assets/images/character_stand/chara_stand_199901.webp');
     expect(service.getSupportAvatars(supportEvent)[0].imageUrl)
-      .toBe('/assets/timeline-images/gacha/support/39999.webp');
+      .toBe('/assets/images/support_card/half/support_card_s_39999.webp');
+    expect(service.getPickupAvatar(characterEvent, 199901)?.imageUrl)
+      .toBe('/assets/images/character_stand/chara_stand_199901.webp');
+    expect(service.getPickupAvatar(supportEvent, 39999)?.imageUrl)
+      .toBe('/assets/images/support_card/half/support_card_s_39999.webp');
   });
 
-  it('uses public related names for timeline search', () => {
+  it('keeps Nakayama Festa portraits when loaded master data omits the pickup', () => {
+    const characters = [...getAllCharacters()];
+    try {
+      replaceCharacterMasterData([]);
+      const service = new TimelineAvatarService();
+      const event = createCharacterBanner([104901], ['Nakayama Festa']);
+      event.imagePath = '/assets/timeline-images/gacha/character/30128.webp';
+
+      expect(service.getCharacterAvatars(event)[0].imageUrl)
+        .toBe('/assets/images/character_stand/chara_stand_104901.webp');
+      expect(service.getPickupAvatarByKind('character', 104901)?.imageUrl)
+        .toBe('/assets/images/character_stand/chara_stand_104901.webp');
+    } finally {
+      replaceCharacterMasterData(characters);
+    }
+  });
+
+  it('uses public related names and master variants for timeline search', () => {
     const service = new TimelineAvatarService();
     const event = createCharacterBanner([100702], ['Gold Ship']);
 
     expect(service.eventMatchesSearch(event, 'gold ship')).toBeTrue();
-    expect(service.eventMatchesSearch(event, 'summer')).toBeFalse();
+    expect(service.eventMatchesSearch(event, 'summer')).toBeTrue();
+    expect(service.eventMatchesSearch(event, 'christmas')).toBeFalse();
   });
 
   it('keeps every Legend Race participant exposed by the public timeline', () => {
@@ -156,13 +179,13 @@ describe('TimelineAvatarService', () => {
       jpReleaseDate: new Date('2021-03-16T03:00:00Z'),
       isConfirmed: true,
       pickupCardIds: [101401, 100101, 101701],
-      relatedCharacters: ['Grass Wonder', 'Special Week', 'Symboli Rudolf']
+      relatedCharacters: ['El Condor Pasa', 'Special Week', 'Symboli Rudolf']
     };
 
     const avatars = service.getCharacterAvatars(event);
 
     expect(avatars.map(avatar => avatar.displayName)).toEqual([
-      'Grass Wonder',
+      'El Condor Pasa',
       'Special Week',
       'Symboli Rudolf'
     ]);

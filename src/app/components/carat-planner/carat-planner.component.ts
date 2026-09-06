@@ -3820,7 +3820,6 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
       target.bannerKind === 'support' ? 'support' : 'character',
       pickup.pickup_id,
       displayNameHint,
-      target.imagePath,
     );
     const resolvedName = avatar?.displayName
       ?? displayNameHint

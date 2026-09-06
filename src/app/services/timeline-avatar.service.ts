@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { EventType, TimelineEvent } from '../models/timeline.model';
-import { getAllCharacters, getCharacterById, getCharacterNameEntry } from '../data/character.data';
+import { getAllCharacters, getCharacterNameEntry } from '../data/character.data';
 import { getSupportCardById } from '../data/support-cards.data';
 import { Rarity, SupportCardType } from '../models/support-card.model';
 
@@ -65,19 +65,18 @@ export class TimelineAvatarService {
 
   getPickupAvatar(event: TimelineEvent, pickupId: number, displayName?: string): TimelineAvatar | null {
     return event.type === EventType.SUPPORT_CARD_BANNER || this.isSupportCardId(pickupId)
-      ? this.resolveSupportAvatar(pickupId, displayName, event.imagePath)
-      : this.resolveCharacterAvatar(pickupId, displayName, event.imagePath);
+      ? this.resolveSupportAvatar(pickupId, displayName)
+      : this.resolveCharacterAvatar(pickupId, displayName);
   }
 
   getPickupAvatarByKind(
     kind: 'character' | 'support',
     pickupId: number,
     displayName?: string,
-    officialImageUrl?: string,
   ): TimelineAvatar | null {
     return kind === 'support'
-      ? this.resolveSupportAvatar(pickupId, displayName, officialImageUrl)
-      : this.resolveCharacterAvatar(pickupId, displayName, officialImageUrl);
+      ? this.resolveSupportAvatar(pickupId, displayName)
+      : this.resolveCharacterAvatar(pickupId, displayName);
   }
 
   eventMatchesSearch(event: TimelineEvent | undefined, query: string): boolean {
@@ -128,7 +127,7 @@ export class TimelineAvatarService {
     const usedKeys = new Set<string>();
 
     for (let index = 0; index < ids.length; index++) {
-      const avatar = this.resolveCharacterAvatar(ids[index], names[index], event.imagePath);
+      const avatar = this.resolveCharacterAvatar(ids[index], names[index]);
       if (avatar && !usedKeys.has(avatar.key)) {
         avatars.push(avatar);
         usedKeys.add(avatar.key);
@@ -187,7 +186,7 @@ export class TimelineAvatarService {
     const usedKeys = new Set<string>();
 
     for (let index = 0; index < ids.length; index++) {
-      const avatar = this.resolveSupportAvatar(ids[index], names[index], event.imagePath);
+      const avatar = this.resolveSupportAvatar(ids[index], names[index]);
       if (avatar && !usedKeys.has(avatar.key)) {
         avatars.push(avatar);
         usedKeys.add(avatar.key);
@@ -238,7 +237,6 @@ export class TimelineAvatarService {
   private resolveCharacterAvatar(
     cardId?: number,
     displayName?: string,
-    officialImageUrl?: string,
   ): TimelineAvatar | null {
     if (typeof cardId !== 'number') {
       return null;
@@ -246,7 +244,6 @@ export class TimelineAvatarService {
 
     const id = Math.trunc(cardId);
     const characterNameEntry = getCharacterNameEntry(Math.floor(id / 100));
-    const characterCard = getCharacterById(id);
     const publicName = this.cleanPublicName(displayName, characterNameEntry?.name ?? `Character ${id}`);
     const identity = this.parseCharacterName(publicName);
     const baseName = characterNameEntry?.name ?? identity.baseName;
@@ -271,9 +268,7 @@ export class TimelineAvatarService {
       subLabel: variantName ? `${variantName} variant` : 'Character',
       variantName,
       searchTerms: variantName ? [variantName, `${baseName} ${variantName}`] : [],
-      imageUrl: characterCard
-        ? `/assets/images/character_stand/chara_stand_${id}.webp`
-        : officialImageUrl ?? `/assets/images/character_stand/chara_stand_${id}.webp`,
+      imageUrl: `/assets/images/character_stand/chara_stand_${id}.webp`,
       fallbackImageUrl: fallbackCharacter
         ? `/assets/images/character_stand/chara_stand_${fallbackCharacter.id}.webp`
         : undefined,
@@ -283,7 +278,6 @@ export class TimelineAvatarService {
   private resolveSupportAvatar(
     cardId?: number,
     displayName?: string,
-    officialImageUrl?: string,
   ): TimelineAvatar | null {
     if (typeof cardId !== 'number') {
       return null;
@@ -302,9 +296,7 @@ export class TimelineAvatarService {
       displayName: name,
       subLabel: [rarity, supportType ? `${supportType} Support` : 'Support card'].filter(Boolean).join(' · '),
       searchTerms: ['support', ...(supportType ? [supportType] : [])],
-      imageUrl: supportCard
-        ? `/assets/images/support_card/half/support_card_s_${cardIdValue}.webp`
-        : officialImageUrl ?? `/assets/images/support_card/half/support_card_s_${cardIdValue}.webp`,
+      imageUrl: `/assets/images/support_card/half/support_card_s_${cardIdValue}.webp`,
     };
   }
 
