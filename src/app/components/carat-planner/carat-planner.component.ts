@@ -3470,10 +3470,10 @@ export class CaratPlannerComponent implements OnInit, OnDestroy {
     return item.id;
   }
 
-  trackByPullPlanItem(_: number, item: PlannerPullPlanItem): string {
+  readonly trackByPullPlanItem = (_: number, item: PlannerPullPlanItem): string => {
     // Cloud restores rebuild target IDs by position; keep inputs attached to their banner.
     return JSON.stringify([this.plan.id, item.kind, item.target?.eventId ?? item.id]);
-  }
+  };
 
   trackByRewardBenefit(_: number, benefit: PlannerRewardBenefitView): string {
     return benefit.id;

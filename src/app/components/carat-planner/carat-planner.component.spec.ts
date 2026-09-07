@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, ElementRef } from '@angular/core';
+import { ChangeDetectorRef, DefaultIterableDiffer, ElementRef } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import {
   CaratPlan,
@@ -58,9 +58,15 @@ describe('CaratPlannerComponent banner ordering', () => {
       allowPaidJewels: false,
       rainbowCrystalsPlanned: index,
     }));
-    const rowKeys = () => new Map(component.pullPlanItems
-      .filter(item => item.target)
-      .map(item => [item.target!.eventId, component.trackByPullPlanItem(0, item)]));
+    const differ = new DefaultIterableDiffer<CaratPlannerComponent['pullPlanItems'][number]>(component.trackByPullPlanItem);
+    const rowKeys = () => {
+      differ.diff(component.pullPlanItems);
+      const keys = new Map<string, string>();
+      differ.forEachItem(record => {
+        if (record.item.target) keys.set(record.item.target.eventId, record.trackById);
+      });
+      return keys;
+    };
     const originalKeys = rowKeys();
     const restore = () => {
       component.plan = expandPlannerCollectionFromCloud(compactPlannerCollectionForCloud({
