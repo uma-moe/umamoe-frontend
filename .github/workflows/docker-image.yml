@@ -404,13 +404,12 @@ jobs:
           set -euo pipefail
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "set -e;
-             mkdir -p '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
-             if ! test -w '$REMOTE_ASSETS_DIR/data' || ! test -w '$REMOTE_ASSETS_DIR/images'; then
-               docker run --rm -v '$REMOTE_ASSETS_DIR/data:/target/data' -v '$REMOTE_ASSETS_DIR/images:/target/images' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target/data /target/images;
-             fi;
+             mkdir -p '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images' '$REMOTE_ASSETS_DIR/timeline-images';
+             # Writable parents can still contain files owned by another user.
+             docker run --rm -v '$REMOTE_ASSETS_DIR/data:/target/data' -v '$REMOTE_ASSETS_DIR/images:/target/images' -v '$REMOTE_ASSETS_DIR/timeline-images:/target/timeline-images' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target/data /target/images /target/timeline-images;
              # Statistics may be a protected mount managed outside this deploy.
-             chmod -R u+rwX '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
-             for writable_dir in '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images'; do
+             chmod -R u+rwX '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images' '$REMOTE_ASSETS_DIR/timeline-images';
+             for writable_dir in '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images' '$REMOTE_ASSETS_DIR/timeline-images'; do
                write_test=\"\$writable_dir/.rsync-write-test\";
                if ! touch \"\$write_test\" 2>/dev/null; then
                  echo \"Remote asset directory is not writable by the deploy user: \$writable_dir\" >&2;
@@ -735,13 +734,12 @@ jobs:
           set -euo pipefail
           ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "set -e;
-             mkdir -p '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
-             if ! test -w '$REMOTE_ASSETS_DIR/data' || ! test -w '$REMOTE_ASSETS_DIR/images'; then
-               docker run --rm -v '$REMOTE_ASSETS_DIR/data:/target/data' -v '$REMOTE_ASSETS_DIR/images:/target/images' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target/data /target/images;
-             fi;
+             mkdir -p '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images' '$REMOTE_ASSETS_DIR/timeline-images';
+             # Writable parents can still contain files owned by another user.
+             docker run --rm -v '$REMOTE_ASSETS_DIR/data:/target/data' -v '$REMOTE_ASSETS_DIR/images:/target/images' -v '$REMOTE_ASSETS_DIR/timeline-images:/target/timeline-images' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target/data /target/images /target/timeline-images;
              # Statistics may be a protected mount managed outside this deploy.
-             chmod -R u+rwX '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images';
-             for writable_dir in '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images'; do
+             chmod -R u+rwX '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images' '$REMOTE_ASSETS_DIR/timeline-images';
+             for writable_dir in '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images' '$REMOTE_ASSETS_DIR/timeline-images'; do
                write_test=\"\$writable_dir/.rsync-write-test\";
                if ! touch \"\$write_test\" 2>/dev/null; then
                  echo \"Remote asset directory is not writable by the deploy user: \$writable_dir\" >&2;

@@ -34,6 +34,29 @@ try {
     }
   }
   console.log('Asset deployment decision: all 8 cases passed.');
+  const permissionSteps = [...workflow.matchAll(/- name: Ensure remote asset directories are writable[\s\S]*?run: \|\r?\n([\s\S]*?)(?=\r?\n      - name:)/g)];
+  assert.equal(permissionSteps.length, 2);
+  for (const [, body] of permissionSteps) {
+    // Simulate writable parents containing foreign-owned files: chmod must
+    // fail until the existing Docker ownership repair has run.
+    const mocks = `
+      repaired=false
+      ssh() { eval "\u0024{@: -1}"; }
+      mkdir() { :; }
+      test() { if [[ \u00241 == -w ]]; then return 0; fi; builtin test "\u0024@"; }
+      docker() { repaired=true; printf '%s\\n' "\u0024@"; }
+      chmod() { [[ \u0024repaired == true ]]; }
+      touch() { :; }
+      rm() { :; }
+    `;
+    const result = execFileSync(bash, ['--noprofile', '--norc', '-eu', '-c', mocks + body.replace(/^          /gm, '').replace(/\r/g, '')], {
+      env: { ...process.env, DEPLOY_PORT: '22', DEPLOY_USER: 'deploy', DEPLOY_HOST: 'test', REMOTE_ASSETS_DIR: '/assets' },
+      encoding: 'utf8',
+    });
+    assert.ok(result.includes('/assets/timeline-images:/target/timeline-images'));
+    assert.ok(!result.includes('statistics'));
+  }
+  console.log('Asset permissions: both deployments repair foreign-owned descendants.');
 } finally {
   fs.rmSync(directory, { recursive: true, force: true });
 }
