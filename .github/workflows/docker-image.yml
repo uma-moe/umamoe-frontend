@@ -45,6 +45,7 @@ jobs:
       build_script: ${{ steps.plan.outputs.build_script }}
       deploy_target: ${{ steps.plan.outputs.deploy_target }}
       should_deploy_assets: ${{ steps.assets_plan.outputs.should_build }}
+      timeline_artwork_commit: ${{ steps.timeline_artwork.outputs.commit }}
 
     steps:
       - name: Checkout
@@ -58,6 +59,7 @@ jobs:
         with:
           filters: |
             assets:
+              - '.github/workflows/docker-image.yml'
               - 'Dockerfile'
               - '.dockerignore'
               - 'angular.json'
@@ -68,6 +70,7 @@ jobs:
               - 'src/data/**'
 
       - name: Use current app with beta timeline artwork
+        id: timeline_artwork
         if: github.event_name != 'pull_request'
         shell: bash
         run: |
@@ -75,6 +78,10 @@ jobs:
             git checkout origin/main -- .
           fi
           git checkout origin/beta -- src/assets/timeline-images
+          echo "commit=$(git rev-parse origin/beta)" >> "$GITHUB_OUTPUT"
+          if ! git diff --quiet HEAD -- src/assets/timeline-images; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Choose deployment plan
         id: plan
@@ -163,6 +170,9 @@ jobs:
         run: |
           should_build=false
           if [[ "${{ steps.asset_changes.outputs.assets }}" == "true" ]]; then
+            should_build=true
+          fi
+          if [[ "${{ steps.timeline_artwork.outputs.changed }}" == "true" ]]; then
             should_build=true
           fi
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.deploy_assets || 'false' }}" == "true" ]]; then
@@ -460,6 +470,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Use the artwork shipped in the assets artifact
+        shell: bash
+        env:
+          TIMELINE_ARTWORK_COMMIT: ${{ needs.build.outputs.timeline_artwork_commit }}
+        run: git checkout "$TIMELINE_ARTWORK_COMMIT" -- src/assets/timeline-images
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
