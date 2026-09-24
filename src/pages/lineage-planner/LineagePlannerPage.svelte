@@ -454,6 +454,8 @@
     .parent-connections{height:42px}.shared-flow{top:8px}
   }
   @container lineage-planner (1040px < width <= 1252px) or (width <= 620px){.grandparents{grid-template-columns:1fr;padding:28px 0 0 10px;gap:6px}.gp-branch+.gp-branch{margin-top:28px}.grandparents::before,.grandparents::after{display:none}.gp-branch::before{left:-10px;top:-28px;bottom:-6px;height:auto}.gp-branch:last-child::before{bottom:auto;height:14px}.gp-branch::after{content:'';position:absolute;left:-10px;top:-14px;width:10px;border-top:1px solid var(--flow-line)}.gp-flow{left:0;top:-25px;transform:none}.gp-flow>span{display:none}.greats{padding-left:0;border-left:0}}
+  /* Stacked branches need no shared rows. Spanning subgrids crash Firefox when the second branch mounts. */
+  @container lineage-planner (max-width:620px){.gp-branch{grid-template-rows:auto;grid-row:auto}.grandparents{grid-template-rows:auto}}
   @media(max-width:767px){.target-row{gap:6px}.planner-guide{padding:4px 2px 8px}.great-toggle{min-height:44px}.inheritance-trigger{min-height:44px}.inheritance-header{min-height:44px;padding-right:48px}}
   @media(max-width:767px){
     .grandparents::before,.grandparents::after,.gp-branch::before,.gp-branch::after{display:none}
