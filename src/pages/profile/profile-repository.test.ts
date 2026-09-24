@@ -63,7 +63,7 @@ it('successful Veteran ingest invalidates cached profiles and details without ca
   const request=vi.spyOn(appHttp,'request').mockResolvedValue({trainer:{name:'Before upload'},id:1});
   await profileRepository.load('first');await profileRepository.veteran('v1');
   await profileRepository.ingestVeterans('first',[{trained_chara_id:1}]);
-  expect(request).toHaveBeenNthCalledWith(3, '/ingest/veteran/append?account_id=first', { method: 'POST', body: [{ trained_chara_id: 1 }] });
+  expect(request).toHaveBeenNthCalledWith(3, '/ingest/veteran?account_id=first', { method: 'POST', body: [{ trained_chara_id: 1 }] });
   request.mockResolvedValue({trainer:{name:'After upload'},id:1});
   expect((await profileRepository.load('first')).trainer.name).toBe('After upload');
   await profileRepository.veteran('v1');

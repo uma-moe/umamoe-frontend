@@ -35,7 +35,7 @@ test('guest imports persist, reject a bad batch, and are available in both Datab
   expect(dropBox.height).toBeLessThanOrEqual(200);
   await page.locator('.collection-controls input[type=file]').setInputFiles(upload({ veterans: [imported] }));
   await expect(page.locator('.veteran-card')).toHaveCount(1);
-  await expect(page.locator('.feedback')).toContainText('Sign in to add them to your account');
+  await expect(page.locator('.feedback')).toContainText('Sign in to sync them to your account');
   await page.locator('.collection-controls input[type=file]').setInputFiles([upload([{ ...imported, trained_chara_id: 90002 }]), upload([{ card_id: 0 }], 'broken.json')]);
   await expect(page.getByRole('alert')).toContainText('broken.json'); await expect(page.locator('.veteran-card')).toHaveCount(1);
   await page.reload(); await expect(page.locator('.veteran-card')).toHaveCount(1);
@@ -43,7 +43,7 @@ test('guest imports persist, reject a bad batch, and are available in both Datab
   const dialog = await picker(page); await expect(dialog.locator('.parent-row')).toHaveCount(1);
   await expect(dialog.getByRole('tab', { name: /Veterans/ }).locator('small')).toHaveText('1');
   await dialog.getByRole('tab', { name: /Manual/ }).click();
-  const transfer = await page.evaluateHandle(data => { const transfer = new DataTransfer(); transfer.items.add(new File([JSON.stringify([data])], 'drop.json', { type: 'application/json' })); return transfer; }, { ...imported, trained_chara_id: 90002, card_id: 101301 });
+  const transfer = await page.evaluateHandle(data => { const transfer = new DataTransfer(); transfer.items.add(new File([JSON.stringify(data)], 'drop.json', { type: 'application/json' })); return transfer; }, [imported, { ...imported, trained_chara_id: 90002, card_id: 101301 }]);
   await dialog.locator('.picker-body').dispatchEvent('dragenter', { dataTransfer: transfer });
   await expect(dialog.locator('.drop-overlay')).toContainText('Drop here to upload');
   await dialog.locator('.picker-body').dispatchEvent('drop', { dataTransfer: transfer });
@@ -102,17 +102,17 @@ test('empty picker shares the Veterans upload panel and keeps export and sign-in
   await expect(dialog.getByRole('tab', { name:/Veterans/ }).locator('small')).toHaveText('1');
 });
 
-test('account imports append, recover after failure, and stay bound to the selected account during a switch', async ({ page }) => {
+test('account imports remove missing veterans, recover after failure, and stay bound to the selected account during a switch', async ({ page }) => {
   await resources(page); await accounts(page); await page.addInitScript(() => localStorage.setItem('auth_token', 'owner-token'));
   const collections: Record<string, unknown[]> = { [first]: [veteran], [second]: [] }, posts: string[] = [];
   for (const id of [first, second]) await page.route(`**/api/v4/user/profile/${id}`, route => route.fulfill({ json: { ...profile, veterans: collections[id] } }));
   let fail = true, release!: () => void;
   const pending = new Promise<void>(resolve => release = resolve);
-  await page.route('**/ingest/veteran/append?*', async route => {
+  await page.route('**/ingest/veteran?*', async route => {
     const id = new URL(route.request().url()).searchParams.get('account_id')!; posts.push(id);
     if (fail) return route.fulfill({ status: 500, json: { error: 'Offline' } });
-    await pending; collections[id] = [...collections[id]!, ...route.request().postDataJSON()];
-    return route.fulfill({ json: { inserted: 1, updated: 0, deleted: 0, total: collections[id]!.length } });
+    await pending; collections[id] = route.request().postDataJSON();
+    return route.fulfill({ json: { inserted: 1, updated: 0, deleted: 1, total: collections[id]!.length } });
   });
   await page.goto('/veterans'); await expect(page.getByRole('radio', { name: 'First account', exact: true })).toHaveAttribute('aria-checked', 'true');
   await page.locator('input[type=file]').setInputFiles(upload([imported]));
@@ -123,18 +123,19 @@ test('account imports append, recover after failure, and stay bound to the selec
     await page.getByRole('button', { name: 'Retry upload' }).click(); await expect.poll(() => posts.length).toBe(2);
     await page.getByRole('radio', { name: 'Second account', exact: true }).click(); await expect(page.locator('.veteran-card')).toHaveCount(0);
   } finally { release(); }
-  await expect(page.locator('.feedback')).toContainText('added to First account');
-  await expect(page.locator('.veteran-card')).toHaveCount(0); expect(posts).toEqual([first, first]); expect(collections[first]).toHaveLength(2);
+  await expect(page.locator('.feedback')).toContainText('synced to First account');
+  await expect(page.locator('.veteran-card')).toHaveCount(0); expect(posts).toEqual([first, first]);
+  expect(collections[first]).toEqual([expect.objectContaining({ trained_chara_id: imported.trained_chara_id })]);
   const dialog = await picker(page); await expect(dialog.getByRole('radio', { name: 'Second account', exact: true })).toHaveAttribute('aria-checked', 'true');
   await expect(dialog.locator('.parent-row')).toHaveCount(0);
-  await dialog.getByRole('radio', { name: 'First account', exact: true }).click(); await expect(dialog.locator('.parent-row')).toHaveCount(2);
+  await dialog.getByRole('radio', { name: 'First account', exact: true }).click(); await expect(dialog.locator('.parent-row')).toHaveCount(1);
   await expect(dialog.getByRole('radio', { name: 'Unverified' })).toHaveCount(0);
 });
 
-test('signing in keeps guest veterans and lets the user attach them to a chosen connected account', async ({ page,isMobile }) => {
+test('signing in keeps guest veterans and lets the user sync them to a chosen connected account', async ({ page,isMobile }) => {
   await resources(page); await accounts(page); let secondRecords: unknown[] = [veteran], postedTo = '', fail = true;
   await page.route(`**/api/v4/user/profile/${second}`, route => route.fulfill({ json: { ...profile, veterans: secondRecords } }));
-  await page.route('**/ingest/veteran/append?*', route => { postedTo = new URL(route.request().url()).searchParams.get('account_id')!; if(fail) return route.fulfill({status:500,json:{error:'Offline'}}); secondRecords = [...secondRecords, ...route.request().postDataJSON()]; return route.fulfill({ json: { inserted: 1, updated: 0, deleted: 0, total: secondRecords.length } }); });
+  await page.route('**/ingest/veteran?*', route => { postedTo = new URL(route.request().url()).searchParams.get('account_id')!; if(fail) return route.fulfill({status:500,json:{error:'Offline'}}); secondRecords = route.request().postDataJSON(); return route.fulfill({ json: { inserted: 1, updated: 0, deleted: 1, total: secondRecords.length } }); });
   await page.route('**/api/auth/login/google?*', route => route.fulfill({ json: { url: new URL('/signin?token=owner-token', page.url()).href } }));
   await page.goto('/veterans'); await page.locator('input[type=file]').setInputFiles(upload([imported]));
   await expect(page.locator('.veteran-card')).toHaveCount(1);
@@ -142,26 +143,26 @@ test('signing in keeps guest veterans and lets the user attach them to a chosen 
   await page.getByRole('button', { name: 'Sign in with Google', exact: true }).click();
   await expect(page).toHaveURL(url => url.pathname === '/veterans');
   expect(await page.evaluate(() => sessionStorage.getItem('auth_return_to'))).toBeNull();
-  await expect(page.getByRole('region', { name: 'Add device veterans to your account', exact: true })).toContainText('1 veteran on this device');
+  await expect(page.getByRole('region', { name: 'Sync device veterans to your account', exact: true })).toContainText('1 veteran on this device');
   expect(postedTo).toBe('');
   const dialog=await picker(page);
   if(isMobile) await page.setViewportSize({width:375,height:667});
   await dialog.getByRole('radio',{name:'This device',exact:true}).click();
-  const transfer=dialog.getByRole('region',{name:'Add device veterans to your account',exact:true});
+  const transfer=dialog.getByRole('region',{name:'Sync device veterans to your account',exact:true});
   await transfer.getByRole('combobox',{name:'Destination account',exact:true}).click();
   await transfer.getByRole('option',{name:'Second account',exact:true}).click();
   expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
   await dialog.screenshot({path:test.info().outputPath('device-to-account.png'),scale:'css'});
-  await transfer.getByRole('button',{name:'Add veterans',exact:true}).click();
+  await transfer.getByRole('button',{name:'Sync veterans',exact:true}).click();
   await expect(dialog.getByRole('alert')).toContainText('Saved on this device');
   await expect(dialog.getByRole('radio',{name:'This device',exact:true})).toBeChecked();
   await expect(dialog.locator('.parent-row')).toHaveCount(1);
   expect(secondRecords).toEqual([veteran]);fail=false;
-  await transfer.getByRole('button',{name:'Add veterans',exact:true}).click();
-  await expect(dialog.locator('.feedback')).toContainText('added to Second account'); expect(postedTo).toBe(second);
+  await transfer.getByRole('button',{name:'Sync veterans',exact:true}).click();
+  await expect(dialog.locator('.feedback')).toContainText('synced to Second account'); expect(postedTo).toBe(second);
   await expect(dialog.getByRole('radio',{name:'Second account',exact:true})).toBeChecked();
-  await expect(dialog.locator('.parent-row')).toHaveCount(2);
-  expect(secondRecords).toContainEqual(veteran);
+  await expect(dialog.locator('.parent-row')).toHaveCount(1);
+  expect(secondRecords).toEqual([expect.objectContaining({ trained_chara_id: imported.trained_chara_id })]);
   await dialog.getByRole('radio',{name:'This device',exact:true}).click();await expect(dialog.locator('.parent-row')).toHaveCount(1);
   await page.goto('/veterans');
   await expect(page.locator('.veteran-card')).toHaveCount(1);
