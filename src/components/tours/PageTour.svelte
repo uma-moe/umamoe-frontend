@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, tick, untrack } from 'svelte';
+  import { isElementVisible } from '@/lib/element-visibility';
   import { router } from '@/routes/router';
   import Dialog from '@/components/Dialog.svelte';
   import Button from '@/components/Button.svelte';
@@ -44,7 +45,7 @@
     sizing?.disconnect();
   }
   function target(current: TourStep): HTMLElement | undefined {
-    const matches = [...document.querySelectorAll<HTMLElement>(current.selector)].filter(node => node.checkVisibility());
+    const matches = [...document.querySelectorAll<HTMLElement>(current.selector)].filter(node => isElementVisible(node));
     // Repeated timeline cards: inspect the one already in the viewport before scrolling to a fallback.
     if (current.stepId === 'timeline-event-card') return matches.find(node => {
       const r = node.getBoundingClientRect(); return r.right > 0 && r.left < innerWidth && r.bottom > 0 && r.top < innerHeight;
@@ -130,7 +131,7 @@
     const node = event.target as HTMLElement;
     if (event.key === 'Tab') {
       const selector = 'button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),[tabindex="0"]';
-      const controls = [...(anchor?.matches(selector) ? [anchor] : []), ...(anchor?.querySelectorAll<HTMLElement>(selector) ?? []), ...(callout?.querySelectorAll<HTMLElement>(selector) ?? [])].filter(node => node.checkVisibility());
+      const controls = [...(anchor?.matches(selector) ? [anchor] : []), ...(anchor?.querySelectorAll<HTMLElement>(selector) ?? []), ...(callout?.querySelectorAll<HTMLElement>(selector) ?? [])].filter(node => isElementVisible(node));
       if (!controls.length) return;
       event.preventDefault();
       const at = controls.indexOf(document.activeElement as HTMLElement);

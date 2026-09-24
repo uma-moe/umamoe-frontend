@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { isElementVisible } from '@/lib/element-visibility';
   import { fuseEnabled } from '@/services/ads/fuse-ads';
 
   const containers = '.publift-widget-sticky_footer-container, .publift-widget-scrolling_sticky_footer-container';
@@ -47,10 +48,10 @@
           observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden', 'style'] });
         }
         const creatives = [...container.querySelectorAll('iframe')];
-        const visible = creatives.filter(frame => frame.clientWidth > 1 && frame.clientHeight > 1 && frame.checkVisibility({ visibilityProperty: true }));
+        const visible = creatives.filter(frame => frame.clientWidth > 1 && frame.clientHeight > 1 && isElementVisible(frame, { visibilityProperty: true }));
         // A retained creative that is hidden/collapsed is a close, not a replacement during refresh.
         if (shown.has(container) && (container.classList.contains('closed') ||
-          !visible.length && creatives.some(frame => shown.has(frame)) && container.checkVisibility({ visibilityProperty: true }))) {
+          !visible.length && creatives.some(frame => shown.has(frame)) && isElementVisible(container, { visibilityProperty: true }))) {
           dismiss();
           return;
         }
