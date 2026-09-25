@@ -54,6 +54,27 @@ export function resolveTrainingPassStartDate(events: readonly TimelineRecord[]):
   return dateKey((exact ?? anniversaryPartTwo ?? sameReleaseCampaign)?.date) || TRAINING_PASS_FALLBACK_GLOBAL_DATE;
 }
 
+export function dailyCaratPackPurchaseRule(rule: PlannerIncomeRule, projectionStartDate: string): PlannerIncomeRule | undefined {
+  if (!/^daily-jewel-pack(?:-\d+)?$/.test(rule.id)
+    || rule.currency !== 'free_jewels' || rule.cadence !== 'daily') return undefined;
+  const startDate = dateKey(projectionStartDate);
+  const availableFrom = dateKey(rule.start_date);
+  if (!startDate || !availableFrom) return undefined;
+
+  // ponytail: assumes purchase at projection start; add a purchase date if renewal timing needs precision.
+  return {
+    ...rule,
+    id: `${rule.id}-purchase`,
+    label: 'Daily Carats Pack purchase',
+    description: '500 paid Carats at projection start, then on renewal every 30 days.',
+    currency: 'paid_jewels',
+    amount: 500,
+    cadence: 'interval',
+    every: 30,
+    start_date: availableFrom > startDate ? availableFrom : startDate,
+  };
+}
+
 export function trainingPassIncomeRules(selection: string | undefined, events: readonly TimelineRecord[]): PlannerIncomeRule[] {
   const option = TRAINING_PASS_OPTIONS.find((item) => item.value === selection);
   if (!option?.amounts) return [];

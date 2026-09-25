@@ -1,5 +1,5 @@
 import type { CaratPlan, PlannerCurrency, PlannerGlobalRewardComparison, PlannerIncomeRule, PlannerCompetitiveRewardVariant } from '@/lib/timeline/carat-planner';
-import { incomeRuleScenarioSelectionMatches, isLegacyTrainingPassIncomeRule, randomGameplayIncomeRules, resolveTrainingPassStartDate, trainingPassIncomeRules, RANDOM_GAMEPLAY_INCOME_OPTIONS, TRAINING_PASS_OPTIONS } from '@/lib/timeline/planner-income-assumptions';
+import { dailyCaratPackPurchaseRule, incomeRuleScenarioSelectionMatches, isLegacyTrainingPassIncomeRule, randomGameplayIncomeRules, resolveTrainingPassStartDate, trainingPassIncomeRules, RANDOM_GAMEPLAY_INCOME_OPTIONS, TRAINING_PASS_OPTIONS } from '@/lib/timeline/planner-income-assumptions';
 import { buildDataDrivenCompetitionOptions, COMPETITION_GROUPS, resolveDataDrivenCompetitionOption } from '@/lib/timeline/planner-competition-assumptions';
 import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
 import type { IconName } from '@/components/icon-types';
@@ -11,6 +11,8 @@ export interface PlannerIncomeSection { id: string; label: string; description: 
 const integer = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
 export function incomeRuleScheduleLabel(rule: PlannerIncomeRule): string {
+  const purchase = dailyCaratPackPurchaseRule(rule, rule.start_date);
+  if (purchase) return `Every day · +${purchase.amount} paid at projection start, then every ${purchase.every} days`;
   switch (rule.cadence) {
     case 'daily': return 'Every day';
     case 'weekly': return Number.isInteger(rule.weekday) && rule.weekday! >= 0 && rule.weekday! < 7 ? `Every ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][rule.weekday!]}` : 'Every week';
@@ -117,11 +119,16 @@ export function activeIncomeAssumptionCount(plan: CaratPlan, rules: readonly Pla
 export function enabledIncomeTotalLabel(plan: CaratPlan, rules: readonly PlannerIncomeRule[], events: readonly TimelineRecord[], comparison?: PlannerGlobalRewardComparison): string {
   const totals = new Map<string, number>();
   const add = (currency: string, cadence: string, amount: number) => { if (currency === 'free_jewels' || currency === 'paid_jewels') totals.set(cadence, (totals.get(cadence) ?? 0) + Math.max(0, Number(amount) || 0)); };
-  for (const rule of rules) if (!isLegacyTrainingPassIncomeRule(rule) && (rule.scenario_group || plan.enabledIncomeRuleIds.includes(rule.id)) && incomeRuleScenarioSelectionMatches(rule, plan.scenarioSelections)) add(rule.currency, rule.cadence, rule.amount);
+  for (const rule of rules) {
+    if (isLegacyTrainingPassIncomeRule(rule) || (!rule.scenario_group && !plan.enabledIncomeRuleIds.includes(rule.id)) || !incomeRuleScenarioSelectionMatches(rule, plan.scenarioSelections)) continue;
+    add(rule.currency, rule.cadence, rule.amount);
+    const purchase = dailyCaratPackPurchaseRule(rule, plan.projectionStartDate);
+    if (purchase) add(purchase.currency, 'paid-pack', purchase.amount);
+  }
   for (const rule of [...trainingPassIncomeRules(plan.scenarioSelections.training_pass, events), ...randomGameplayIncomeRules(plan.scenarioSelections.random_gameplay_income, plan.projectionStartDate)]) add(rule.currency, rule.cadence, rule.amount);
   add('free_jewels','monthly', plan.scenarioSelections.speculative_income === 'include' ? comparison?.speculative_monthly_carats ?? 0 : plan.scenarioSelections.speculative_income === 'median' ? comparison?.speculative_recent_median_monthly_carats ?? 0 : 0);
   for (const item of plan.customIncome) add(item.currency, item.cadence, item.amount);
-  return [['daily','/ day'],['weekly','/ week'],['monthly','/ month'],['interval','/ interval'],['once','one-time']].flatMap(([cadence,label]) => (totals.get(cadence!) ?? 0) > 0 ? [`+${integer.format(totals.get(cadence!)!)} ${label}`] : []).join(' · ');
+  return [['daily','/ day'],['weekly','/ week'],['monthly','/ month'],['interval','/ interval'],['once','one-time'],['paid-pack','paid / 30 days']].flatMap(([cadence,label]) => (totals.get(cadence!) ?? 0) > 0 ? [`+${integer.format(totals.get(cadence!)!)} ${label}`] : []).join(' · ');
 }
 
 const MONTHLY_SHOP_HELP_TEXT = [

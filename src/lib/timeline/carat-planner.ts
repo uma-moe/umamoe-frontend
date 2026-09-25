@@ -13,6 +13,7 @@ import {
 } from './planner-reward-assumptions';
 import {
   randomGameplayIncomeRules,
+  dailyCaratPackPurchaseRule,
   incomeRuleScenarioSelectionMatches,
   isLegacyTrainingPassIncomeRule,
   speculativeIncomeEntries,
@@ -352,6 +353,8 @@ export function buildPlannerLedger(plan: CaratPlan, bundle: PlannerDataBundle | 
   for (const rule of bundle?.income.rules ?? []) {
     if (isLegacyTrainingPassIncomeRule(rule) || (!rule.scenario_group && !plan.enabledIncomeRuleIds.includes(rule.id)) || !incomeRuleScenarioSelectionMatches(rule, plan.scenarioSelections)) continue;
     entries.push(...expandIncomeRule(rule, start, through));
+    const purchase = dailyCaratPackPurchaseRule(rule, dayKey(start));
+    if (purchase) entries.push(...expandIncomeRule(purchase, start, through));
   }
   const activeRewards = (bundle?.rewards.rewards ?? []).flatMap(reward => {
     if (reward.event_id && plan.disabledEventIds.includes(reward.event_id)) return [];

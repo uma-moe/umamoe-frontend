@@ -1,7 +1,25 @@
 import { expect, it } from 'vitest';
-import { activeIncomeAssumptionCount, buildPlannerIncomeGroups, buildPlannerIncomeSections, enabledIncomeTotalLabel } from './planner-income-view';
+import { activeIncomeAssumptionCount, buildPlannerIncomeGroups, buildPlannerIncomeSections, enabledIncomeTotalLabel, incomeRuleScheduleLabel } from './planner-income-view';
 import { plannerIncomeData } from '../../../tests/e2e/fixtures/planner-income-data';
-import { createPlan, loadPlanCollection, projectPlan } from '@/lib/timeline/carat-planner';
+import { createPlan, loadPlanCollection, projectPlan, type PlannerIncomeRule } from '@/lib/timeline/carat-planner';
+
+it('includes the paid purchase grant in the daily pack toggle and income summary', () => {
+  const plan = createPlan();
+  plan.projectionStartDate = '2026-01-01';
+  plan.scenarioSelections = {};
+  plan.enabledIncomeRuleIds = ['daily-jewel-pack-16'];
+  const rule: PlannerIncomeRule = {
+    id: 'daily-jewel-pack-16', label: 'Daily Jewel Pack (continuous)',
+    currency: 'free_jewels', amount: 50, cadence: 'daily', start_date: '2017-01-01',
+  };
+
+  expect(activeIncomeAssumptionCount(plan, [rule])).toBe(1);
+  expect(enabledIncomeTotalLabel(plan, [rule], [])).toBe('+50 / day · +500 paid / 30 days');
+  expect(incomeRuleScheduleLabel(rule)).toBe('Every day · +500 paid at projection start, then every 30 days');
+
+  plan.enabledIncomeRuleIds = [];
+  expect(enabledIncomeTotalLabel(plan, [rule], [])).toBe('');
+});
 
 it('matches the populated Angular income grouping, per-event amounts, monthly shop choices and totals', () => {
   const groups = buildPlannerIncomeGroups(plannerIncomeData.income.rules, plannerIncomeData.rewards.competitive_variants!, [], plannerIncomeData.rewards.global_reward_comparison);
