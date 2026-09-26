@@ -2,6 +2,7 @@
   import FeatureLink from '@/components/FeatureLink.svelte';
   import LandingPage from '@/layouts/LandingPage.svelte';
   const tools = [
+    { href: '/tools/master-data', icon: 'database' as const, accent: 'primary', title: 'Master Data', description: 'Explore game tables, inspect schemas, and run local SQL queries', updated: true },
     { href: '/tools/statistics', icon: 'chart' as const, accent: 'primary', title: 'Team Stadium Statistics', description: 'Interactive charts and data analysis' },
     { href: '/timeline?tab=carat-planner', icon: 'paid' as const, accent: 'secondary', title: 'Carat Planner', description: 'Project income, tickets, pulls, and banner goals', updated: true },
     { href: '/tools/lineage-planner', icon: 'lineage' as const, accent: 'success', title: 'Lineage Planner', description: 'Plan your full inheritance tree' },

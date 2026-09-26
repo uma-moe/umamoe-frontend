@@ -3,7 +3,7 @@ import type { NavigationItem, NavigationSubItem } from '@/components/navigation-
 import type { PageWidth } from '@/layouts/breakpoints';
 import featureManifest from '../../contracts/features.json';
 
-export type RouteGroup = 'main' | 'community' | 'tools' | 'system';
+export type RouteGroup = 'main' | 'community' | 'competitive' | 'research' | 'tools' | 'system';
 
 export interface AppRouteDefinition {
   id: string;
@@ -60,7 +60,7 @@ function routesByIds(ids: readonly string[]): AppRouteDefinition[] {
 }
 
 // The logo remains the Home affordance; tool pages stay under their section.
-const mainRouteIds = ['database', 'veterans', 'clubs', 'rankings', 'activity', 'tierlist', 'tools', 'timeline'] as const;
+const mainRouteIds = ['database', 'veterans', 'clubs', 'rankings', 'activity', 'tierlist', 'competitive', 'tools', 'research', 'timeline'] as const;
 
 export function navigationForPath(pathname: string, search = ''): { main: NavigationItem[]; mobileMore: NavigationItem[] } {
   const plannerActive = pathname === '/timeline' && new URLSearchParams(search).get('tab') === 'carat-planner';

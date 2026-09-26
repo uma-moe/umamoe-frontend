@@ -49,7 +49,7 @@ export function raceReplayBounds(frames: RaceFrame[], explicitDistance?: number)
     startTime,
     endTime,
     duration: endTime - startTime,
-    distanceMax: Math.max(1, finite(explicitDistance ?? 0), observedDistance),
+    distanceMax: Math.max(1, finite(explicitDistance ?? 0) > 0 ? explicitDistance! : observedDistance),
     laneMax: Math.max(1, laneMax)
   };
 }
@@ -81,4 +81,32 @@ export function raceFrameAtTime(frames: RaceFrame[], requestedTime: number): Int
 
 export function replayProgress(time: number, bounds: ReplayBounds): number {
   return bounds.duration > 0 ? clamp((time - bounds.startTime) / bounds.duration, 0, 1) : 0;
+}
+
+// Keep the leader at 90% of the window and fit the captured lateral spread.
+export function replayViewport(leader: number, distance: number, windowMeters: number, laneMax: number) {
+  const width = clamp(finite(windowMeters, 80), 20, 400);
+  const max = Math.max(width, Math.min(leader, distance) + width * .1);
+  return { min: Math.max(0, max - width), max, laneMax: Math.max(500, Math.ceil(finite(laneMax) * 1.2 / 500) * 500) };
+}
+
+// First leader crossing, interpolated from the captured runners rather than a
+// constant-speed estimate. Course features and the time scrubber share this axis.
+export function raceTimeAtDistance(frames:RaceFrame[],distance:number):number|undefined {
+  if(!frames.length)return undefined;
+  const leading=(index:number)=>Math.max(...frames[index]!.horses.map(h=>finite(h.distance)));
+  if(distance<=leading(0))return frames[0]!.time;
+  let low=0,high=frames.length-1;
+  if(distance>leading(high))return undefined;
+  while(low+1<high){const middle=Math.floor((low+high)/2);if(leading(middle)<distance)low=middle;else high=middle;}
+  const left=frames[low]!,right=frames[high]!;
+  let fraction=1;
+  right.horses.forEach((horse,i)=>{
+    const start=left.horses[i]?.distance;
+    if(start!==undefined&&horse.distance>=distance&&horse.distance>start)fraction=Math.min(fraction,clamp((distance-start)/(horse.distance-start),0,1));
+  });
+  return left.time+(right.time-left.time)*fraction;
+}
+export function replayLaneMetres(position:number,width:number):number {
+  return finite(position)/9999*width;
 }

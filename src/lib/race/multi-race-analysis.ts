@@ -101,7 +101,7 @@ function activatedSkillEvents(capture: ParsedRaceCapture, runnerIndex: number): 
 }
 
 export function multiRaceGroupKey(capture: ParsedRaceCapture): string {
-  return [capture.courseId ?? 'unknown', capture.laneDistanceMax ?? 'distance', capture.track.condition ?? 'condition', capture.track.weather ?? 'weather', capture.track.season ?? 'season'].join(':');
+  return [capture.courseId ?? 'unknown', capture.raceDistance ?? 'distance', capture.track.condition ?? 'condition', capture.track.weather ?? 'weather', capture.track.season ?? 'season'].join(':');
 }
 
 export function groupMultiRaceCaptures(captures: ParsedRaceCapture[]): { key: string; captures: ParsedRaceCapture[] }[] {
@@ -149,7 +149,7 @@ export function analyzeMultiRace(captures: ParsedRaceCapture[]): MultiRaceAnalys
         startHp,
         finishHp,
         lastSpurtStartDistance: runner.result?.lastSpurtStartDistance ?? 0,
-        raceDistance: capture.laneDistanceMax ?? Math.max(0, ...capture.frames.at(-1)?.horses.map((horse) => horse.distance) ?? [0])
+        raceDistance: capture.raceDistance ?? Math.max(0, ...capture.frames.at(-1)?.horses.map((horse) => horse.distance) ?? [0])
       };
       entries.push(entry);
       raceEntries.push(entry);

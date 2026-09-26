@@ -1,0 +1,72 @@
+[
+  {
+    "id": "affinity",
+    "title": "SingleModeUtils.CalcRelationPoint",
+    "filename": "affinity.md",
+    "date": "2026-02-16",
+    "description": "How the game shows triangle/circle/double circle affinity."
+  },
+  {
+    "id": "events",
+    "title": "Race events",
+    "filename": "events.md",
+    "date": "2026-02-19",
+    "description": "Race event parameters"
+  },
+  {
+    "id": "sparks",
+    "title": "Individual inheritance theory",
+    "filename": "sparks.md",
+    "date": "2026-02-20",
+    "description": "Spark proc chances and stuff"
+  },
+  {
+    "id": "shop-refresh",
+    "title": "MANT shop refresh data",
+    "filename": "shop-refresh.md",
+    "date": "2026-03-25",
+    "description": "Spawn rates and average amounts for each scheduled refresh turn."
+  },
+  {
+    "id": "spark_generation",
+    "title": "Spark generation rates",
+    "filename": "spark-generation.md",
+    "date": "2026-03-28",
+    "description": "Observed spark generation data vs community expected rates."
+  },
+  {
+    "id": "spot-struggle",
+    "title": "Spot struggle duration and exit conditions",
+    "filename": "spot-struggle.md",
+    "date": "2026-05-14",
+    "description": "Replay evidence for aptitude-scaled spot struggle duration and a possible distance-based exit condition."
+  },
+  {
+    "id": "dueling",
+    "title": "Dueling mechanics",
+    "filename": "dueling.md",
+    "date": "2026-06-18",
+    "description": "Replay evidence for dueling entry and exit conditions."
+  },
+  {
+    "id": "plus-sparks",
+    "title": "Spirit + spark generation",
+    "filename": "plus-sparks.md",
+    "date": "2026-07-08",
+    "description": "Post-patch selected-result evidence for Racing Spirit and Ignited Spirit + sparks."
+  },
+  {
+    "id": "light-hello",
+    "title": "Light Hello proc rates and specialty priority",
+    "filename": "light-hello.md",
+    "date": "2026-08-21",
+    "description": "Observed Light Hello post-training event rates and a revised Specialty Priority placement model."
+  },
+  {
+    "id": "new-age-umamusume-data",
+    "title": "A new age for Umamusume data",
+    "filename": "new-age-umamusume-data.md",
+    "date": "2026-09-13",
+    "description": "Introducing detailed race resimulation, SimData analysis, and the Lobby Builder."
+  }
+]

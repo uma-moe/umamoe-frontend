@@ -5,6 +5,17 @@
   interface Props { items: TabItem[]; value?: string; label?: string; variant?: 'segmented' | 'underline' | 'pills'; id?: string; controls?: string; onchange?: (value: string) => void; }
   const generatedId = $props.id();
   let { items, value = $bindable(''), label = 'Sections', variant = 'segmented', id = generatedId, controls, onchange }: Props = $props();
+  let root=$state<HTMLElement>();
+  $effect(()=>{
+    value;items;
+    if(!root)return;
+    const active=root.querySelector<HTMLElement>('[aria-selected="true"],[aria-current="page"]');
+    if(!active)return;
+    const left=active.getBoundingClientRect().left-root.getBoundingClientRect().left+root.scrollLeft;
+    const right=left+active.offsetWidth;
+    if(left<root.scrollLeft)root.scrollLeft=left;
+    else if(right>root.scrollLeft+root.clientWidth)root.scrollLeft=right-root.clientWidth;
+  });
   const navigation = $derived(items.some(item => item.href));
   function select(id: string) { value = id; onchange?.(id); }
   function navigate(event: KeyboardEvent, index: number) {
@@ -24,7 +35,7 @@
   {#if item.description !== undefined}<span class="tab-copy"><strong>{item.label}</strong><small id={id + '-' + item.id + '-description'}>{item.description}</small></span>{:else}<span class="tab-label">{item.label}</span>{/if}
   {#if item.badge}<small>{item.badge}</small>{/if}
 {/snippet}
-<svelte:element this={navigation ? 'nav' : 'div'} {id} class="tabs" class:navigation={navigation || variant === 'pills'} class:underline={variant === 'underline'} class:detailed={items.some(item => item.description !== undefined)} role={navigation ? undefined : 'tablist'} aria-label={label}>
+<svelte:element bind:this={root} this={navigation ? 'nav' : 'div'} {id} class="tabs" class:navigation={navigation || variant === 'pills'} class:underline={variant === 'underline'} class:detailed={items.some(item => item.description !== undefined)} role={navigation ? undefined : 'tablist'} aria-label={label}>
   {#each items as item, index}
     {#if item.href}
       <a class="tab" class:active={value === item.id} href={item.href} data-scroll-to-top={item.scrollToTop === false ? 'false' : undefined} aria-current={value === item.id ? 'page' : undefined} onpointerenter={item.onintent} onfocus={item.onintent}>{@render content(item)}</a>

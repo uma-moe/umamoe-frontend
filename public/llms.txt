@@ -17,11 +17,22 @@
 - [Rankings](https://uma.moe/rankings): Global trainer fan rankings.
 - [Activity](https://uma.moe/activity): Top 100 club activity reports.
 
+### Competitive
+
+- [Competitive](https://uma.moe/competitive): Race analysis and competitive racing data.
+- [Race Analysis](https://uma.moe/competitive/race-analysis): Upload one or multiple races for replay and analysis.
+- [CM Data](https://uma.moe/competitive/cm-data): Champions Meeting captured races and simulation data.
+
 ### Tools
 
 - [Tools](https://uma.moe/tools): Advanced tools and statistics.
 - [Statistics](https://uma.moe/tools/statistics): Team Stadium statistics.
 - [Lineage Planner](https://uma.moe/tools/lineage-planner): Optimize inheritance trees and parent pairings.
+- [Master Data](https://uma.moe/tools/master-data): Browse game tables and run SQLite queries locally.
+
+### Research
+
+- [Research](https://uma.moe/research): Hakuraku research notes on racing and game mechanics.
 
 ### System
 

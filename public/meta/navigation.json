@@ -63,6 +63,33 @@
       ]
     },
     {
+      "id": "competitive",
+      "title": "Competitive",
+      "items": [
+        {
+          "id": "competitive",
+          "title": "Competitive",
+          "description": "Race analysis and competitive racing data.",
+          "path": "/competitive",
+          "adSurface": null
+        },
+        {
+          "id": "race-analysis",
+          "title": "Race Analysis",
+          "description": "Upload one or multiple races for replay and analysis.",
+          "path": "/competitive/race-analysis",
+          "adSurface": null
+        },
+        {
+          "id": "cm-data",
+          "title": "CM Data",
+          "description": "Champions Meeting captured races and simulation data.",
+          "path": "/competitive/cm-data",
+          "adSurface": null
+        }
+      ]
+    },
+    {
       "id": "tools",
       "title": "Tools",
       "items": [
@@ -86,6 +113,26 @@
           "description": "Optimize inheritance trees and parent pairings.",
           "path": "/tools/lineage-planner",
           "adSurface": "lineage_planner"
+        },
+        {
+          "id": "master-data",
+          "title": "Master Data",
+          "description": "Browse game tables and run SQLite queries locally.",
+          "path": "/tools/master-data",
+          "adSurface": null
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "title": "Research",
+      "items": [
+        {
+          "id": "research",
+          "title": "Research",
+          "description": "Hakuraku research notes on racing and game mechanics.",
+          "path": "/research",
+          "adSurface": null
         }
       ]
     },

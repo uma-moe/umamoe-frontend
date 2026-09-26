@@ -68,6 +68,36 @@
       "position": 11,
       "name": "Privacy",
       "url": "https://uma.moe/privacy-policy"
+    },
+    {
+      "@type": "ListItem",
+      "position": 12,
+      "name": "Competitive",
+      "url": "https://uma.moe/competitive"
+    },
+    {
+      "@type": "ListItem",
+      "position": 13,
+      "name": "Race Analysis",
+      "url": "https://uma.moe/competitive/race-analysis"
+    },
+    {
+      "@type": "ListItem",
+      "position": 14,
+      "name": "CM Data",
+      "url": "https://uma.moe/competitive/cm-data"
+    },
+    {
+      "@type": "ListItem",
+      "position": 15,
+      "name": "Master Data",
+      "url": "https://uma.moe/tools/master-data"
+    },
+    {
+      "@type": "ListItem",
+      "position": 16,
+      "name": "Research",
+      "url": "https://uma.moe/research"
     }
   ]
 }

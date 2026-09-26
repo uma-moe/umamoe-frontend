@@ -1,9 +1,9 @@
 <script module lang="ts">
   import * as echarts from 'echarts/core';
-  import { BarChart, LineChart, PieChart } from 'echarts/charts';
+  import { BarChart, LineChart, PieChart, ScatterChart } from 'echarts/charts';
   import { AriaComponent, AxisPointerComponent, DataZoomComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent } from 'echarts/components';
   import { SVGRenderer } from 'echarts/renderers';
-  echarts.use([LineChart, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent, MarkLineComponent, MarkAreaComponent, AxisPointerComponent, AriaComponent, SVGRenderer]);
+  echarts.use([LineChart, BarChart, PieChart, ScatterChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent, MarkLineComponent, MarkAreaComponent, AxisPointerComponent, AriaComponent, SVGRenderer]);
 </script>
 
 <script lang="ts">

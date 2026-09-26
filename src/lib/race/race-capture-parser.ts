@@ -48,7 +48,11 @@ export interface ParsedRaceCapture {
   source: 'horseact' | 'api';
   fileName: string;
   courseId?: number;
+  raceInstanceId?: number;
+  /** Lateral lane width from the capture; never the race length. */
   laneDistanceMax?: number;
+  /** Race length resolved from course metadata, in metres. */
+  raceDistance?: number;
   raceType?: string;
   randomSeed?: number;
   horseActVersion?: string;
@@ -88,13 +92,22 @@ function text(source: Record<string, unknown>, ...keys: string[]): string | unde
 }
 
 function normalizeInput(input: Record<string, unknown>): Record<string, unknown> {
-  const data = record(input.data);
+  const replay = record(input.replay), race = record(input.race);
+  if (Array.isArray(replay.raceHorseDataArray)) return normalizeInput({data:{
+    ...race, race_horse_data_array:replay.raceHorseDataArray, race_scenario:replay.raceScenario,
+    race_course_set:{id:race.courseId,lane_distance_max:race.laneDistanceMax},
+    horseACT_version:replay.horseACTVersion
+  }});
+  const data = Object.keys(record(input.data)).length ? record(input.data) : input;
   const horses = first(data, 'race_horse_data_array', 'raceHorseDataArray');
   if (!Array.isArray(horses)) return input;
   const room = record(first(data, 'room_info', 'roomInfo'));
   return {
     ...data,
     horseACT_version: first(data, 'horseACT_version') ?? first(input, 'horseACT_version'),
+    race_course_set: first(data, 'race_course_set', 'raceCourseSet') ?? first(room, 'race_course_set', 'raceCourseSet'),
+    course_id: first(data, 'course_id', 'courseId') ?? first(room, 'course_id', 'courseId'),
+    race_instance_id: first(data, 'race_instance_id', 'raceInstanceId', 'RaceInstanceId') ?? first(room, 'race_instance_id', 'raceInstanceId', 'RaceInstanceId'),
     race_scenario: first(data, 'race_scenario', 'raceScenario') ?? first(room, 'race_scenario', 'raceScenario'),
     race_type: first(data, 'race_type', 'raceType') ?? first(room, 'race_type', 'raceType'),
     ground_condition: first(data, 'ground_condition', 'groundCondition') ?? first(room, 'ground_condition', 'groundCondition'),
@@ -412,8 +425,9 @@ export function parseRaceCapture(value: unknown, fileName = 'capture.json'): Par
   return {
     source,
     fileName,
-    courseId: numeric(course, 'id', 'Id', '<Id>k__BackingField'),
-    laneDistanceMax: numeric(course, 'lane_distance_max', 'laneDistanceMax', 'LaneDistanceMax', '<LaneDistanceMax>k__BackingField') ?? numeric(input, 'lane_distance_max', 'laneDistanceMax', 'LaneDistanceMax'),
+    courseId: numeric(course, 'id', 'Id', '<Id>k__BackingField') ?? numeric(input, 'course_id', 'courseId', 'CourseId', '<CourseId>k__BackingField'),
+    raceInstanceId: numeric(input, 'race_instance_id', 'raceInstanceId', 'RaceInstanceId', '<RaceInstanceId>k__BackingField') ?? (Number(fileName.match(/^(\d{6,9})_/)?.[1]) || undefined),
+    laneDistanceMax: numeric(course, 'lane_distance_max', 'laneDistanceMax', 'LaneDistanceMax', '<LaneDistanceMax>k__BackingField') ?? numeric(input, 'lane_distance_max', 'laneDistanceMax', 'LaneDistanceMax', '<LaneDistanceMax>k__BackingField'),
     raceType: text(input, 'race_type', 'raceType', 'RaceType', '<RaceType>k__BackingField'),
     randomSeed: numeric(input, 'random_seed', 'randomSeed', 'RandomSeed', '<RandomSeed>k__BackingField'),
     horseActVersion: text(input, 'horseACT_version'),

@@ -40,7 +40,7 @@ export default defineConfig(async ({ mode }) => {
     }), svelte(), ...(mode === 'demo' ? [await demoData()] : [])],
     optimizeDeps: {
       noDiscovery: true,
-      include: ['exceljs'],
+      include: ['exceljs', 'sql.js'],
       exclude: ['svelte', 'svelte/store', 'sv-router']
     },
     define: {
@@ -76,7 +76,7 @@ export default defineConfig(async ({ mode }) => {
         '/api': 'http://127.0.0.1:3001',
         '/search': 'http://127.0.0.1:3002',
         '/ingest': 'http://127.0.0.1:3003',
-        '/resources': 'http://127.0.0.1:3004',
+        '/resources': { target: variables.VITE_RESOURCE_PROXY_TARGET ?? 'http://127.0.0.1:3004', changeOrigin: true },
         '/assets/data': { target: 'https://uma.moe', changeOrigin: true }
       }
     },

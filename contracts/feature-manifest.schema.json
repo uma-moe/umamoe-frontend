@@ -17,7 +17,7 @@
           "title": { "type": "string" },
           "description": { "type": "string" },
           "path": { "type": "string", "pattern": "^/" },
-          "group": { "enum": ["main", "community", "tools", "system"] },
+          "group": { "enum": ["main", "community", "competitive", "tools", "research", "system"] },
           "icon": { "type": "string" },
           "status": { "enum": ["available", "foundation", "migration", "planned"] },
           "dataOwnership": { "enum": ["public", "local", "private", "mixed"] },

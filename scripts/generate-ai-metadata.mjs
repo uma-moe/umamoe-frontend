@@ -8,8 +8,8 @@ const metaDir = path.join(publicDir, 'meta');
 await mkdir(metaDir, { recursive: true });
 
 const publicFeatures = manifest.features.filter((feature) => feature.indexable);
-const groupOrder = ['main', 'community', 'tools', 'system'];
-const groupTitles = { main: 'Main', community: 'Community', tools: 'Tools', system: 'System' };
+const groupOrder = ['main', 'community', 'competitive', 'tools', 'research', 'system'];
+const groupTitles = { main: 'Main', community: 'Community', competitive: 'Competitive', tools: 'Tools', research: 'Research', system: 'System' };
 const navigationGroups = groupOrder
   .map((group) => ({
     id: group,

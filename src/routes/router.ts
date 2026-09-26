@@ -28,6 +28,12 @@ function preloadPageData({ pathname }: { pathname: string }): void {
 
 // Public URLs stay stable; each page owns its lazy-loaded implementation.
 const pageModules = {
+  '/competitive': () => import('@/pages/competitive/CompetitivePage.svelte'),
+  '/competitive/race-analysis': () => import('@/pages/race-analysis/RaceAnalysisPage.svelte'),
+  '/competitive/cm-data': () => import('@/pages/competitive/CmDataPage.svelte'),
+  '/tools/master-data': () => import('@/pages/tools/MasterDataPage.svelte'),
+  '/research': () => import('@/pages/research-notes/ResearchPage.svelte'),
+  '/research/:noteId': () => import('@/pages/research-notes/ResearchPage.svelte'),
   '/database': () => import('@/pages/database/DatabasePage.svelte'),
   '/circles': () => import('@/pages/clubs/ClubsPage.svelte'),
   '/circles/:id/:exportFormat': () => import('@/pages/clubs/ClubDetailsPage.svelte'),
