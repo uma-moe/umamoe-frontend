@@ -110,9 +110,15 @@ const productRoutes = {
   '*': LegacyRedirectPage
 } as const;
 
-// The gallery is available by direct URL only and stays out of the initial bundle.
+// The gallery is available by direct URL only and stays out of the initial
+// bundle; the simulator debug view sits beside the product page the same way.
+// None of these are in the feature manifest, so none appear in navigation.
 export const router = createRouter({
   ...productRoutes,
   '/ui': { meta: { loadPage: () => import('@/pages/ui/UiLabPage.svelte') }, '/': DeferredPage },
-  '/ui-lab': { meta: { loadPage: () => import('@/pages/ui/UiLabPage.svelte') }, '/': DeferredPage }
+  '/ui-lab': { meta: { loadPage: () => import('@/pages/ui/UiLabPage.svelte') }, '/': DeferredPage },
+  '/simulator': { meta: { loadPage: () => import('@/pages/simulator/SimulatorPage.svelte') }, '/': DeferredPage },
+  '/simulator/race': { meta: { loadPage: () => import('@/pages/simulator/RaceSimPage.svelte') }, '/': DeferredPage },
+  '/simulator/build': { meta: { loadPage: () => import('@/pages/simulator/BuildPage.svelte') }, '/': DeferredPage },
+  '/simulator/debug': { meta: { loadPage: () => import('@/pages/simulator/SimulatorDebugPage.svelte') }, '/': DeferredPage }
 });
