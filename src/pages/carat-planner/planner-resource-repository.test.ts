@@ -5,9 +5,31 @@ const http = vi.hoisted(() => vi.fn());
 vi.mock('../../services/http/app-http', () => ({ appHttp: { request: http } }));
 vi.mock('../../lib/catalog/support-card-catalog', () => ({ loadSupportCardRarities: async () => new Map() }));
 import { plannerResourceRepository as repository, plannerUsingCache } from './planner-resource-repository';
+import { buildPlannerLedger, createPlan, loadPlanCollection, type PlannerIncomeRule } from '@/lib/timeline/carat-planner';
+import { activeIncomeAssumptionCount, enabledIncomeTotalLabel } from './planner-income-view';
 const saved = new Map<string, Response>();
 beforeEach(() => { repository.invalidate(); http.mockReset(); saved.clear(); vi.stubGlobal('caches', { open: async (name: string) => { expect(name).toBe('umamoe-carat-planner-v2'); return { match: async (url: string) => saved.get(url)?.clone(), put: async (url: string, response: Response) => { saved.set(url, response); } }; } }); });
 afterEach(() => { repository.invalidate(); vi.unstubAllGlobals(); vi.useRealTimers(); });
+it('merges duplicate daily pack records and preserves either saved selection without double income', async () => {
+  const rule: PlannerIncomeRule = { id: 'daily-jewel-pack', label: 'Daily Jewel Pack (continuous)', currency: 'free_jewels', amount: 50, cadence: 'daily', start_date: '2017-01-01', end_date: '2030-01-10' };
+  const rules = [rule, { ...rule, id: 'daily-jewel-pack-16' }];
+  http.mockImplementation(async url => Response.json(url.includes('manifest') ? { files: {
+    'planner_core.json': 'planner_core.json', 'planner_income.json': 'planner_income.json', 'planner_rewards.json': 'planner_rewards.json',
+  } } : url.includes('planner_income.json') ? { rules } : {}));
+  const data = await repository.initial();
+  expect(data.income.rules.filter(item => item.label === rule.label)).toEqual([rule]);
+  for (const ids of [[], ['daily-jewel-pack'], ['daily-jewel-pack-16'], rules.map(item => item.id)]) {
+    const saved = { ...createPlan(), projectionStartDate: '2026-01-01', scenarioSelections: {}, enabledIncomeRuleIds: ids };
+    const plan = loadPlanCollection({ getItem: () => JSON.stringify({ version: 1, activePlanId: saved.id, plans: [saved] }) }).plans[0]!;
+    plan.scenarioSelections = {};
+    expect(plan.enabledIncomeRuleIds).toEqual(ids.length ? ['daily-jewel-pack'] : []);
+    expect(activeIncomeAssumptionCount(plan, data.income.rules)).toBe(ids.length ? 1 : 0);
+    expect(enabledIncomeTotalLabel(plan, data.income.rules, [])).toBe(ids.length ? '+50 / day · +500 paid / 30 days' : '');
+    const ledger = buildPlannerLedger(plan, data, '2026-01-31');
+    expect(ledger.filter(item => item.currency === 'free_jewels').reduce((sum, item) => sum + item.amount, 0)).toBe(ids.length ? 31 * 50 : 0);
+    expect(ledger.filter(item => item.currency === 'paid_jewels').map(item => [item.date, item.amount])).toEqual(ids.length ? [['2026-01-01', 500], ['2026-01-31', 500]] : []);
+  }
+});
 it('adds missing Cleat scout tickets without duplicating published shop rules', async () => {
   http.mockImplementation(async url => Response.json(url.includes('manifest') ? { files: {
     'planner_core.json': 'planner_core.json', 'planner_income.json': 'planner_income.json', 'planner_rewards.json': 'planner_rewards.json',

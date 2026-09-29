@@ -1,15 +1,15 @@
 import { expect, it } from 'vitest';
 import { buildPlannerLedger, createPlan, loadPlanCollection, sanitizePlan, savePlanCollection } from './carat-planner';
-import { MONTHLY_SHOP_EXCHANGES, withMonthlyShopIncomeRules } from './planner-income-assumptions';
+import { MONTHLY_SHOP_EXCHANGES, normalizePlannerIncomeRules } from './planner-income-assumptions';
 import { compactPlannerCollectionForCloud, expandPlannerCollectionFromCloud } from './planner-cloud-codec';
 import { compactPlannerPlanData, expandCompactPlannerPlanData } from './planner-share-codec';
 import { plannerIncomeData } from '../../../tests/e2e/fixtures/planner-income-data';
 
 it('counts all 32 independent shop combinations once per month and preserves legacy totals', () => {
-  const rules = withMonthlyShopIncomeRules(plannerIncomeData.income.rules.filter(rule => rule.scenario_group === 'monthly_shop_tickets'));
+  const rules = normalizePlannerIncomeRules(plannerIncomeData.income.rules.filter(rule => rule.scenario_group === 'monthly_shop_tickets'));
   const data = { core: {}, income: { rules }, rewards: { rewards: [] } };
   expect(rules).toHaveLength(10);
-  expect(withMonthlyShopIncomeRules(rules)).toEqual(rules);
+  expect(normalizePlannerIncomeRules(rules)).toEqual(rules);
   const plan = createPlan();
   plan.projectionStartDate = '2026-02-01';
   for (let mask = 0; mask < 32; mask++) {

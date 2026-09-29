@@ -27,8 +27,12 @@ export function monthlyShopExchange(rule: Pick<PlannerIncomeRule, 'id' | 'label'
       && shop.pattern.test(`${rule.id} ${rule.label} ${rule.scenario_option ?? ''}`)));
 }
 
-export function withMonthlyShopIncomeRules(rules: readonly PlannerIncomeRule[]): PlannerIncomeRule[] {
+// Legacy and shop-specific IDs describe the same renewable pack.
+export function canonicalIncomeRuleId(id: string): string { return id.replace(/^daily-jewel-pack-\d+$/, 'daily-jewel-pack'); }
+
+export function normalizePlannerIncomeRules(rules: readonly PlannerIncomeRule[]): PlannerIncomeRule[] {
   const normalized = rules.map(rule => {
+    rule = { ...rule, id: canonicalIncomeRuleId(rule.id) };
     const shop = monthlyShopExchange(rule);
     return shop ? { ...rule, scenario_group: shop.id, scenario_option: 'include' } : rule;
   });
@@ -46,7 +50,7 @@ export function withMonthlyShopIncomeRules(rules: readonly PlannerIncomeRule[]):
       });
     }
   }
-  return normalized;
+  return [...new Map(normalized.map(rule => [rule.id, rule])).values()];
 }
 
 export function incomeRuleScenarioSelectionMatches(rule: Pick<PlannerIncomeRule, 'id' | 'label' | 'scenario_group' | 'scenario_option'>, selections: Readonly<Record<string, string>>): boolean {
@@ -96,7 +100,7 @@ export function resolveTrainingPassStartDate(events: readonly TimelineRecord[]):
 }
 
 export function dailyCaratPackPurchaseRule(rule: PlannerIncomeRule, projectionStartDate: string): PlannerIncomeRule | undefined {
-  if (!/^daily-jewel-pack(?:-\d+)?$/.test(rule.id)
+  if (canonicalIncomeRuleId(rule.id) !== 'daily-jewel-pack'
     || rule.currency !== 'free_jewels' || rule.cadence !== 'daily') return undefined;
   const startDate = dateKey(projectionStartDate);
   const availableFrom = dateKey(rule.start_date);

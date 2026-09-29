@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { activeIncomeAssumptionCount, buildPlannerIncomeGroups, buildPlannerIncomeSections, enabledIncomeTotalLabel, incomeRuleScheduleLabel } from './planner-income-view';
 import { plannerIncomeData } from '../../../tests/e2e/fixtures/planner-income-data';
 import { createPlan, loadPlanCollection, projectPlan, type PlannerIncomeRule } from '@/lib/timeline/carat-planner';
-import { withMonthlyShopIncomeRules } from '@/lib/timeline/planner-income-assumptions';
+import { normalizePlannerIncomeRules } from '@/lib/timeline/planner-income-assumptions';
 
 it('includes the paid purchase grant in the daily pack toggle and income summary', () => {
   const plan = createPlan();
@@ -23,7 +23,7 @@ it('includes the paid purchase grant in the daily pack toggle and income summary
 });
 
 it('matches the populated Angular income grouping, per-event amounts, monthly shop choices and totals', () => {
-  const groups = buildPlannerIncomeGroups(withMonthlyShopIncomeRules(plannerIncomeData.income.rules), plannerIncomeData.rewards.competitive_variants!, [], plannerIncomeData.rewards.global_reward_comparison);
+  const groups = buildPlannerIncomeGroups(normalizePlannerIncomeRules(plannerIncomeData.income.rules), plannerIncomeData.rewards.competitive_variants!, [], plannerIncomeData.rewards.global_reward_comparison);
   expect(buildPlannerIncomeSections(groups).map(section => [section.id,section.groups.length])).toEqual([['account',8],['competitive',6],['event_completion',7],['stories_login',7],['estimates',2]]);
   expect(groups.find(group => group.id === 'legend_race_clears')!.options.map(option => option.amountLabel)).toEqual(Array(4).fill('Varies by event'));
   const shops = groups.filter(group => group.id.startsWith('monthly_shop_'));

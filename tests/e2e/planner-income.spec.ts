@@ -3,6 +3,33 @@ import { mockPlannerIncome } from './fixtures/planner-income';
 import { mockTimeline } from './fixtures/api';
 import { plannerControlsPlan, plannerControlsTimeline } from './fixtures/planner-controls';
 
+test('Daily Jewel Pack appears once and retains its saved selection after reload', async ({ page }) => {
+  await mockTimeline(page);
+  const pack = { label: 'Daily Jewel Pack (continuous)', currency: 'free_jewels', amount: 50, cadence: 'daily', start_date: '2017-01-01', end_date: '2030-01-10' };
+  await page.route('**/resources/test/planner_income.json*', route => route.fulfill({ json: { rules: ['daily-jewel-pack', 'daily-jewel-pack-16'].map(id => ({ ...pack, id })) } }));
+  const plan = plannerControlsPlan(); plan.targets = []; plan.enabledIncomeRuleIds = ['daily-jewel-pack-16'];
+  await page.addInitScript(plan => {
+    if (!localStorage.getItem('carat-planner-plans-v1')) localStorage.setItem('carat-planner-plans-v1', JSON.stringify({ version: 1, activePlanId: plan.id, plans: [plan] }));
+  }, plan);
+  const openIncome = async () => {
+    await page.getByRole('button', { name: /Plan assumptions/ }).click();
+    await page.getByRole('tablist', { name: 'Planner assumptions' }).getByRole('tab', { name: 'Income', exact: true }).click();
+  };
+  await page.goto('/timeline?tab=carat-planner');
+  await openIncome();
+  const toggle = page.getByRole('button', { name: /Daily Jewel Pack/ });
+  await expect(toggle).toHaveCount(1);
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await page.reload();
+  await openIncome();
+  await expect(toggle).toHaveCount(1);
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await toggle.click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0].enabledIncomeRuleIds)).toEqual(['daily-jewel-pack']);
+});
+
 test('Monthly shops are independently tickable and survive reload', async ({ page }) => {
   await mockPlannerIncome(page);
   const openIncome = async () => {
