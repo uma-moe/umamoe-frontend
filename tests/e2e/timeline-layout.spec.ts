@@ -34,8 +34,9 @@ test('Timeline keeps compact artwork cards and Carat Planner preserves banner al
   for (const width of isMobile ? [390,320] : [1536,1301,1024,768]) {
     await page.setViewportSize({width,height:900});
     await expect(image).toHaveCSS('object-fit','contain');
-    const boxes = await target.locator('.target-title > img,.target-title > div,.target-controls').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().toJSON()));
-    expect(boxes[0].right).toBeLessThanOrEqual(boxes[1].left);
+    const boxes = await target.locator('.target-title > img,.banner-identity,.target-controls').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().toJSON()));
+    if (isMobile) expect(boxes[0].top).toBeGreaterThanOrEqual(boxes[1].bottom);
+    else expect(boxes[0].right).toBeLessThanOrEqual(boxes[1].left);
     expect(boxes[1].right).toBeLessThanOrEqual(width);
     const header = (await target.locator('.target-title').boundingBox())!;
     expect(boxes[2].x >= header.x + header.width - 1 || boxes[2].y >= header.y + header.height - 1).toBe(true);

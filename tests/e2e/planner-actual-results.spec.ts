@@ -71,6 +71,10 @@ test('actual results preserve the plan and carry savings forward through edits a
     await page.setViewportSize({ width, height: 900 });
     const supportButton = (await edit.boundingBox())!;
     const characterButton = (await next.getByRole('button', { name: 'Actual results for Next banner', exact: true }).boundingBox())!;
+    const heading = (await row.locator('.banner-identity').boundingBox())!;
+    const actions = (await row.locator('.banner-actions').boundingBox())!;
+    expect(actions.x).toBeGreaterThanOrEqual(heading.x + heading.width);
+    expect(Math.abs(actions.y + actions.height / 2 - heading.y - heading.height / 2)).toBeLessThan(1);
     expect(Math.abs(supportButton.x - characterButton.x)).toBeLessThan(1);
     expect(await row.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     expect(await next.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
