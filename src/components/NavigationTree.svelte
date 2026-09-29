@@ -73,7 +73,6 @@
             aria-label={`${openItems[item.id] ? 'Collapse' : 'Open'} ${item.label} subsections`}
             aria-expanded={openItems[item.id] ?? false}
             aria-controls={`${navigationId}-subsections-${item.id}`}
-            title={`${item.label} subsections`}
             onkeydown={handleKeydown}
             onclick={() => toggle(item)}>
             <Icon name={item.icon} size={19}/>
@@ -81,12 +80,13 @@
             <span class="disclosure-chevron"><Icon name="chevron" size={15}/></span>
           </button>
         {:else}
-          <a class="navigation-link" href={item.href} data-preload="hover" title={item.label} aria-current={item.current ? 'page' : undefined} onclick={handleNavigate} onkeydown={handleKeydown}>
+          <a class="navigation-link" href={item.href} data-preload="hover" aria-label={item.label} aria-current={item.current ? 'page' : undefined} onclick={handleNavigate} onkeydown={handleKeydown}>
             <Icon name={item.icon} size={19}/><span class="navigation-label">{item.label}</span>
             {#if item.meta}<small>{item.meta}</small>{/if}
           </a>
         {/if}
       </div>
+      <span class="navigation-tip" aria-hidden="true">{item.label}</span>
 
       {#if item.children?.length && openItems[item.id]}
         <div class="navigation-subsections" id={`${navigationId}-subsections-${item.id}`}>
@@ -118,6 +118,7 @@
   .navigation-disclosure { width:100%; border:0; background:transparent; cursor:pointer; text-align:left; }
   .disclosure-chevron { display: grid; transition: transform 140ms ease; transform: rotate(-90deg); }
   .open > .navigation-parent .disclosure-chevron { transform: rotate(0); }
+  .navigation-tip { display: none; }
   .navigation-subsections { display:grid; gap:1px; margin:0 0 2px 18px; padding:0 0 0 14px; border-left:1px solid var(--border-subtle); }
   .navigation-subsections a { min-height:28px; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:6px; padding:3px 8px; border-radius:var(--radius-sm); font-size:12px; line-height:1.25; }
   .navigation-subsections a:hover, .navigation-subsections a:focus-visible { background: var(--surface-2); color: var(--color-text); }
@@ -138,6 +139,10 @@
     .navigation-tree:not(.sheet) .navigation-subsections a { min-height: 34px; grid-template-columns: minmax(0, 1fr) auto; padding-inline: 10px; font-size: var(--font-xs); }
     .navigation-tree:not(.sheet) .subsection-parent { display: grid !important; min-height: 38px; border-bottom: 1px solid var(--border-subtle); border-radius: 0; color: var(--color-text); font-weight: 750; }
     .navigation-tree:not(.sheet) .subsection-parent small { font-size: 9px; font-weight: 500; }
+    .navigation-tree:not(.sheet) .navigation-tip { position: absolute; z-index: var(--z-overlay); top: 50%; left: calc(100% + 9px); display: block; width: max-content; max-width: 220px; padding: 5px 9px; border: 1px solid var(--border-primary); border-radius: var(--radius-sm); background: var(--bg-secondary); box-shadow: var(--shadow-md); color: var(--color-text); font-size: var(--font-xs); white-space: nowrap; opacity: 0; pointer-events: none; transform: translateY(-50%); transition: opacity var(--duration-fast); }
+    @media (hover: hover) { .navigation-tree:not(.sheet) .navigation-parent:hover + .navigation-tip { opacity: 1; } }
+    .navigation-tree:not(.sheet) .navigation-parent:has(.navigation-link:focus-visible) + .navigation-tip { opacity: 1; }
+    .navigation-tree:not(.sheet) .open > .navigation-parent + .navigation-tip { opacity: 0; }
   }
 
   .sheet { gap:2px; }
