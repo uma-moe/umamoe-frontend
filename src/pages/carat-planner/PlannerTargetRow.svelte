@@ -116,6 +116,7 @@
         </InspectPopover>
       </div>
       {#if projection}<div class="at-pull" aria-label={`At pull date: ${caratLabel}${paidOnly ? '' : '; ' + ticketLabel}`}><small>At pull</small><span class="carat-balance" title={caratLabel}><img src={itemIconPath(43)} width="18" height="18" alt="Carats"/><b>{caratsBefore.toLocaleString()}</b><em>→ {caratsAfter.toLocaleString()}</em></span>{#if !paidOnly}<span title={ticketLabel}><img src={itemIconPath(ticketKind === 'support' ? 111 : 41)} width="18" height="18" alt=""/><b>{ticketCount}</b>{#if projection.ticketPulls}<em>→ {ticketCount - projection.ticketPulls}</em>{/if}</span>{#if cardKind === 'support' && !stepUp}{#each ['rainbow', 'gold'] as kind}<span title={`${kind === 'rainbow' ? 'Rainbow' : 'Gold'} Uncap Crystals available at pull`}><img src={itemIconPath(kind === 'rainbow' ? 144 : 145)} width="18" height="18" alt=""/><b>{kind === 'rainbow' ? availableCrystals(projection.balanceBefore.rainbowFullCrystals, projection.balanceBefore.rainbowCrystals) : availableCrystals(projection.balanceBefore.goldFullCrystals, projection.balanceBefore.goldCrystals)}</b></span>{/each}{/if}{/if}</div>{/if}
+      {#if target.notes}<span class="note-preview" title={target.notes}>{target.notes}</span>{/if}
     </div>
   </div>
   <div class="target-controls">
@@ -160,6 +161,7 @@
   .target-title{min-width:0;min-height:66px;display:grid;grid-template-columns:148px minmax(0,1fr);align-items:center;gap:11px;padding:7px 10px}
   .banner-media>img{display:block;width:148px;height:48px;object-fit:contain;border:1px solid var(--border-subtle);border-radius:3px;background:var(--surface-2)}
   .target-info{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 11px}
+  .note-preview{grid-column:1/-1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);font-size:12px}
   .banner-identity{min-width:0;display:grid;gap:4px}.banner-identity>strong{font-size:.84rem;line-height:1.25;overflow-wrap:anywhere}
   .banner-identity>strong.paid{display:flex;align-items:center;gap:5px;color:var(--color-gold)}.paid>span{display:flex;flex:none}
   .notes-editor{display:grid;gap:10px}.notes-editor>label{font-size:14px;font-weight:600;padding-right:32px}.notes-editor>footer{display:flex;align-items:center;justify-content:space-between;gap:8px}.notes-editor small{font-size:11px;color:var(--text-secondary)}
@@ -200,6 +202,7 @@
     .target{grid-template-columns:minmax(0,1fr);margin-bottom:8px;border:1px solid var(--border-primary);border-radius:var(--radius-md)}
     .target-title{grid-template-columns:104px minmax(0,1fr);min-height:0;padding:10px;gap:4px 8px}.banner-media{grid-column:1;grid-row:1/3}.banner-media>img{width:104px;height:32px;border:0;border-radius:5px}
     .target-info{display:contents}.banner-identity{grid-column:2;grid-row:1}.banner-actions{grid-column:2;grid-row:2}.at-pull{grid-column:1/-1;grid-row:3;margin-top:4px}
+    .note-preview{grid-row:4}
     .target-controls{grid-template-columns:minmax(0,1fr) auto;border-left:0;padding:6px 10px;gap:6px}
     .pull-count{justify-self:stretch}.pull-count:not(.step-progress){grid-template-columns:auto 80px;justify-content:start;align-items:center;gap:8px}.pull-heading>span{font-size:11px}.stepper{display:block}.stepper :global(.ui-button){display:none}.stepper :global(.field){--control-height:var(--touch-target)}
 

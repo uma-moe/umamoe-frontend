@@ -2,15 +2,17 @@ import { readFile } from 'node:fs/promises';
 import { expect, test } from './fixtures/test';
 import { mockPlannerControls } from './fixtures/planner-controls';
 
-test('Banner notes save while typing and survive closing, reload, JSON export/import, and clearing', async ({ page }) => {
+test('Banner notes save while typing and survive closing, reload, JSON export/import, and clearing', async ({ page, isMobile }, info) => {
   await mockPlannerControls(page);
   await page.goto('/timeline?tab=carat-planner');
   const row = page.locator('[data-target-id="first"]');
   const summary = row.getByRole('button', { name: 'Edit notes for First banner', exact: true });
   const input = row.getByRole('textbox', { name: 'Notes for First banner', exact: true });
   const save = row.getByRole('button', { name: 'Save notes for First banner', exact: true });
+  const preview = row.locator('.note-preview');
   const notes = 'LB3, +1 "selector"\nUsable LB2; 日本語 🎠 ';
   await expect(summary).toHaveText('Notes');
+  await expect(preview).toHaveCount(0);
   const rowHeight = (await row.boundingBox())!.height;
   await summary.click();
   await expect(input).toBeFocused();
@@ -22,12 +24,23 @@ test('Banner notes save while typing and survive closing, reload, JSON export/im
   await expect(input).not.toBeVisible();
   await expect(save).not.toBeVisible();
   await expect(summary).toBeFocused();
+  await expect(preview).toBeVisible();
+  await expect(preview).toHaveText(notes + 'future');
   await summary.press('Enter');
   await expect(input).toHaveValue(notes + 'future');
   await summary.click();
   await expect(input).not.toBeVisible();
   await page.reload();
   await expect(summary.locator('.notes-trigger')).toHaveAttribute('title', notes + 'future');
+  await expect(preview).toHaveText(notes + 'future');
+  const viewport = page.viewportSize()!;
+  for (const width of isMobile ? [390, 320] : [1536, 1301]) {
+    await page.setViewportSize({ width, height: viewport.height });
+    await expect(preview).toHaveCSS('text-overflow', 'ellipsis');
+    expect(await row.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+    await row.screenshot({ path: info.outputPath(`note-preview-${width}.png`), scale: 'css' });
+  }
+  await page.setViewportSize(viewport);
   await summary.click();
   await expect(input).toHaveValue(notes + 'future');
   await expect(input).toHaveAttribute('maxlength', '2000');
@@ -44,6 +57,7 @@ test('Banner notes save while typing and survive closing, reload, JSON export/im
   if (!await input.isVisible()) await summary.click();
   await expect(input).toHaveValue(notes + 'future');
   await input.fill('');
+  await expect(preview).toHaveCount(0);
   await page.reload();
   await expect(summary).toHaveText('Notes');
   await summary.click();
