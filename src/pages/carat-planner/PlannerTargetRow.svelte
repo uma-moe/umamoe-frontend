@@ -87,7 +87,7 @@
         <summary aria-label={`Edit notes for ${target.title}`}><Icon name="chevron" size={14}/><span title={target.notes ?? ''}>{target.notes || 'Add notes'}</span></summary>
         <div class="notes-heading">
           <label for={`notes-${target.id}`}>Notes</label>
-          <Button variant="secondary" size="sm" icon="close" ariaLabel={`Close notes for ${target.title}`} onclick={() => { notesDetails.open = false; notesDetails.querySelector('summary')?.focus(); }}>Close</Button>
+          <Button variant="secondary" size="sm" icon="save" ariaLabel={`Save notes for ${target.title}`} onclick={() => { notesDetails.open = false; notesDetails.querySelector('summary')?.focus(); }}>Save</Button>
         </div>
         <textarea id={`notes-${target.id}`} aria-label={`Notes for ${target.title}`} rows="2" maxlength="2000"
           placeholder="e.g. LB3, +1 selector; usable at LB2" value={target.notes ?? ''}

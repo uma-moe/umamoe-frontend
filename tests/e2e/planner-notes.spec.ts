@@ -8,16 +8,16 @@ test('Banner notes save while typing and survive closing, reload, JSON export/im
   const row = page.locator('[data-target-id="first"]');
   const summary = row.locator('summary[aria-label="Edit notes for First banner"]');
   const input = row.getByRole('textbox', { name: 'Notes for First banner', exact: true });
-  const close = row.getByRole('button', { name: 'Close notes for First banner', exact: true });
+  const save = row.getByRole('button', { name: 'Save notes for First banner', exact: true });
   const notes = 'LB3, +1 "selector"\nUsable LB2; 日本語 🎠 ';
   await expect(summary).toHaveText('Add notes');
   await summary.click();
   await input.fill(notes);
   await input.pressSequentially('future');
   await expect(input).toHaveValue(notes + 'future');
-  await close.click();
+  await save.click();
   await expect(input).not.toBeVisible();
-  await expect(close).not.toBeVisible();
+  await expect(save).not.toBeVisible();
   await expect(summary).toBeFocused();
   await summary.press('Enter');
   await expect(input).toHaveValue(notes + 'future');
@@ -45,7 +45,7 @@ test('Banner notes save while typing and survive closing, reload, JSON export/im
   await expect(summary).toHaveText('Add notes');
   await summary.click();
   await expect(input).toHaveValue('');
-  await close.click();
+  await save.click();
   await expect(input).not.toBeVisible();
   await expect(summary).toHaveText('Add notes');
 });
