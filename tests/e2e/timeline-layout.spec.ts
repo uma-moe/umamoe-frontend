@@ -36,12 +36,12 @@ test('Timeline keeps compact artwork cards and Carat Planner preserves banner al
     await expect(image).toHaveCSS('object-fit','contain');
     const boxes = await target.locator('.banner-media > img,.banner-identity,.target-controls').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().toJSON()));
     const actions = (await target.locator('.banner-actions').boundingBox())!;
-    expect(actions.y).toBeGreaterThanOrEqual(boxes[0].bottom);
-    expect(actions.x).toBeCloseTo(boxes[0].x, 0);
-    expect(actions.width).toBeCloseTo(boxes[0].width, 0);
+    if (isMobile) expect(actions.y).toBeGreaterThanOrEqual(boxes[1].bottom);
+    else expect(actions.x).toBeGreaterThanOrEqual(boxes[1].right);
     expect(boxes[0].right).toBeLessThanOrEqual(boxes[1].left);
     expect(boxes[1].right).toBeLessThanOrEqual(width);
     const header = (await target.locator('.target-title').boundingBox())!;
+    expect(header.x + header.width - actions.x - actions.width).toBeCloseTo(10, 0);
     expect(boxes[2].x >= header.x + header.width - 1 || boxes[2].y >= header.y + header.height - 1).toBe(true);
     expect(await target.evaluate(node=>node.scrollWidth <= node.clientWidth)).toBe(true);
     await target.screenshot({path:info.outputPath(`planner-banner-${width}.png`),scale:'css'});

@@ -21,7 +21,6 @@ test('actual results preserve the plan and carry savings forward through edits a
   await expect(next.locator('.funding')).toContainText('200 funded');
   const supportAction = (await edit.boundingBox())!;
   const characterAction = (await next.getByRole('button', { name: 'Actual results for Mejiro McQueen Pickup', exact: true }).boundingBox())!;
-  expect(Math.abs(supportAction.x - characterAction.x)).toBeLessThan(1);
   expect(supportAction.width).toBe(characterAction.width);
   await expect(edit).toHaveText('Results');
   const before = Number((await next.locator('.carat-balance b').textContent())!.replaceAll(',', ''));
@@ -105,7 +104,14 @@ test('actual results preserve the plan and carry savings forward through edits a
       const crystals = (await row.locator('.crystal-plan').boundingBox())!;
       if (width >= 1200) expect(crystals.x).toBeGreaterThanOrEqual(pulls.x + pulls.width);
     }
-    expect(Math.abs(supportButton.x - characterButton.x)).toBeLessThan(1);
+    for (const [banner, button] of [[row, supportButton], [next, characterButton]] as const) {
+      const header = (await banner.locator('.target-title').boundingBox())!;
+      const identity = (await banner.locator('.banner-identity').boundingBox())!;
+      const editors = (await banner.locator('.banner-actions').boundingBox())!;
+      expect(header.x + header.width - button.x - button.width).toBeCloseTo(10, 0);
+      if (isMobile) expect(editors.y).toBeGreaterThanOrEqual(identity.y + identity.height);
+      else expect(editors.x).toBeGreaterThanOrEqual(identity.x + identity.width);
+    }
     expect(await row.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     expect(await next.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     await page.locator('.target-list').screenshot({ path: info.outputPath(`banner-actions-${width}.png`), scale: 'css' });

@@ -81,8 +81,11 @@
   <div class="target-title" class:has-image={Boolean(target.imagePath)}>
     <div class="banner-media">
       {#if target.imagePath}<img src={target.imagePath} width="512" height="125" loading="lazy" alt=""/>{/if}
+    </div>
+    <div class="target-info">
+      <div class="banner-identity"><strong class:paid={paidOnly}>{#if paidOnly}<span aria-label="Paid banner" title="Paid banner"><Icon name="paid" size={17}/></span>{/if}{target.title}</strong><small class="date"><Icon name="calendar" size={13}/>{dateLabel(target.bannerStart)} – {dateLabel(target.bannerEnd ?? target.bannerStart)}</small></div>
       <div class="banner-actions" role="group" aria-label={`Notes and results for ${target.title}`}>
-        <InspectPopover label={`Edit notes for ${target.title}`} align="start" onopenchange={open => { if (open) document.getElementById(`notes-${target.id}`)?.focus({ preventScroll: true }); }}>
+        <InspectPopover label={`Edit notes for ${target.title}`} align="end" onopenchange={open => { if (open) document.getElementById(`notes-${target.id}`)?.focus({ preventScroll: true }); }}>
           {#snippet trigger()}<span bind:this={notesTrigger} class="action-trigger notes-trigger" class:recorded={Boolean(target.notes)} title={target.notes || 'Add notes'}><Icon name="edit" size={16}/><span>Notes</span>{#if target.notes}<i aria-label="Has notes"></i>{/if}</span>{/snippet}
           <div class="notes-editor">
             <label for={`notes-${target.id}`}>Banner notes</label>
@@ -90,7 +93,7 @@
             <footer><small>Saved automatically</small><Button variant="secondary" size="sm" icon="save" ariaLabel={`Save notes for ${target.title}`} onclick={() => { document.getElementById(`notes-${target.id}`)?.closest<HTMLElement>('[popover]')?.hidePopover(); notesTrigger.closest('button')?.focus(); }}>Save</Button></footer>
           </div>
         </InspectPopover>
-        <InspectPopover label={`Actual results for ${target.title}`} align="start" onopenchange={open => { if (open) document.getElementById(`actual-pulls-${target.id}`)?.focus({ preventScroll: true }); }}>
+        <InspectPopover label={`Actual results for ${target.title}`} align="end" onopenchange={open => { if (open) document.getElementById(`actual-pulls-${target.id}`)?.focus({ preventScroll: true }); }}>
           {#snippet trigger()}<span class="action-trigger results-trigger" class:recorded={target.actualPulls !== undefined || Boolean(target.actualCopies)}><Icon name={target.actualPulls !== undefined || target.actualCopies ? 'check' : 'clipboard'} size={16}/><span>Results</span></span>{/snippet}
           <div class="results-editor">
             <header><strong>Actual results</strong><small>Your original plan stays unchanged.</small></header>
@@ -112,9 +115,6 @@
           </div>
         </InspectPopover>
       </div>
-    </div>
-    <div class="target-info">
-      <div class="banner-identity"><strong class:paid={paidOnly}>{#if paidOnly}<span aria-label="Paid banner" title="Paid banner"><Icon name="paid" size={17}/></span>{/if}{target.title}</strong><small class="date"><Icon name="calendar" size={13}/>{dateLabel(target.bannerStart)} – {dateLabel(target.bannerEnd ?? target.bannerStart)}</small></div>
       {#if projection}<div class="at-pull" aria-label={`At pull date: ${caratLabel}${paidOnly ? '' : '; ' + ticketLabel}`}><small>At pull</small><span class="carat-balance" title={caratLabel}><img src={itemIconPath(43)} width="18" height="18" alt="Carats"/><b>{caratsBefore.toLocaleString()}</b><em>→ {caratsAfter.toLocaleString()}</em></span>{#if !paidOnly}<span title={ticketLabel}><img src={itemIconPath(ticketKind === 'support' ? 111 : 41)} width="18" height="18" alt=""/><b>{ticketCount}</b>{#if projection.ticketPulls}<em>→ {ticketCount - projection.ticketPulls}</em>{/if}</span>{#if cardKind === 'support' && !stepUp}{#each ['rainbow', 'gold'] as kind}<span title={`${kind === 'rainbow' ? 'Rainbow' : 'Gold'} Uncap Crystals available at pull`}><img src={itemIconPath(kind === 'rainbow' ? 144 : 145)} width="18" height="18" alt=""/><b>{kind === 'rainbow' ? availableCrystals(projection.balanceBefore.rainbowFullCrystals, projection.balanceBefore.rainbowCrystals) : availableCrystals(projection.balanceBefore.goldFullCrystals, projection.balanceBefore.goldCrystals)}</b></span>{/each}{/if}{/if}</div>{/if}
     </div>
   </div>
@@ -144,10 +144,9 @@
   .target.past{color:var(--text-secondary)}
   .pull-heading>span{font-size:10px;color:var(--text-secondary)}
   .target-actions{grid-column:3;display:flex;align-items:center;justify-content:flex-end;gap:4px}
-  .banner-media{min-width:0;display:grid;gap:4px}
-  .banner-actions{display:grid;grid-template-columns:1fr 1fr;gap:4px;--inspect-popover-width:360px;--inspect-popover-padding:14px}
-  .banner-actions :global(.inspect),.banner-actions :global(.trigger){width:100%}
-  .action-trigger{width:100%;height:26px;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid var(--factor-field-border);border-radius:var(--radius-sm);background:var(--factor-field-bg);color:var(--text-primary);font-size:11px;font-weight:600}
+  .banner-media{min-width:0}
+  .banner-actions{display:flex;align-self:start;justify-self:end;gap:4px;--inspect-popover-width:360px;--inspect-popover-padding:14px}
+  .action-trigger{height:26px;padding:0 8px;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid var(--factor-field-border);border-radius:var(--radius-sm);background:var(--factor-field-bg);color:var(--text-primary);font-size:11px;font-weight:600}
   .action-trigger :global(svg){width:12px;height:12px}
   .notes-trigger{position:relative}.notes-trigger i{position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--accent-primary)}
   .results-trigger{border-color:color-mix(in srgb,var(--accent-primary) 55%,var(--factor-field-border));background:var(--color-accent-soft);color:var(--accent-primary)}
@@ -160,7 +159,7 @@
   .results-editor p{margin:0;padding-top:10px;border-top:1px solid var(--border-subtle)}
   .target-title{min-width:0;min-height:66px;display:grid;grid-template-columns:148px minmax(0,1fr);align-items:center;gap:11px;padding:7px 10px}
   .banner-media>img{display:block;width:148px;height:48px;object-fit:contain;border:1px solid var(--border-subtle);border-radius:3px;background:var(--surface-2)}
-  .target-info{min-width:0;display:grid;gap:4px}
+  .target-info{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 11px}
   .banner-identity{min-width:0;display:grid;gap:4px}.banner-identity>strong{font-size:.84rem;line-height:1.25;overflow-wrap:anywhere}
   .banner-identity>strong.paid{display:flex;align-items:center;gap:5px;color:var(--color-gold)}.paid>span{display:flex;flex:none}
   .notes-editor{display:grid;gap:10px}.notes-editor>label{font-size:14px;font-weight:600;padding-right:32px}.notes-editor>footer{display:flex;align-items:center;justify-content:space-between;gap:8px}.notes-editor small{font-size:11px;color:var(--text-secondary)}
@@ -168,7 +167,7 @@
   .notes-editor>textarea:focus{border-color:var(--factor-field-focus-border);outline:0;box-shadow:var(--focus-ring)}
   .date{display:flex;align-items:center;flex-wrap:wrap;gap:3px 5px;color:var(--text-secondary);font-size:10px}
   .date :global(svg){color:var(--accent-primary);flex:none}
-  .at-pull{display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:10px}
+  .at-pull{grid-column:1/-1;display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:10px}
   .at-pull>small{text-transform:uppercase;color:var(--text-secondary);font-weight:700;font-size:9px}
   .at-pull>span{display:inline-flex;align-items:center;gap:3px;padding:1px 3px;border-radius:var(--radius-sm);background:var(--surface-2)}
   .at-pull img{object-fit:contain}.at-pull em{font-style:normal;color:var(--text-secondary)}
@@ -199,8 +198,8 @@
   @media(max-width:767px){
     .results-editor :global(.field){--control-height:var(--touch-target)}.results-editor header{min-height:30px;padding-right:36px}
     .target{grid-template-columns:minmax(0,1fr);margin-bottom:8px;border:1px solid var(--border-primary);border-radius:var(--radius-md)}
-    .target-title{grid-template-columns:104px minmax(0,1fr);min-height:0;padding:10px;gap:8px}.banner-media{grid-column:1;grid-row:1}.banner-media>img{width:104px;height:32px;border:0;border-radius:5px}
-    .target-info{display:contents}.banner-identity{grid-column:2;grid-row:1}.at-pull{grid-column:1/-1;grid-row:2}
+    .target-title{grid-template-columns:104px minmax(0,1fr);min-height:0;padding:10px;gap:4px 8px}.banner-media{grid-column:1;grid-row:1/3}.banner-media>img{width:104px;height:32px;border:0;border-radius:5px}
+    .target-info{display:contents}.banner-identity{grid-column:2;grid-row:1}.banner-actions{grid-column:2;grid-row:2}.at-pull{grid-column:1/-1;grid-row:3;margin-top:4px}
     .target-controls{grid-template-columns:minmax(0,1fr) auto;border-left:0;padding:6px 10px;gap:6px}
     .pull-count{justify-self:stretch}.pull-count:not(.step-progress){grid-template-columns:auto 80px;justify-content:start;align-items:center;gap:8px}.pull-heading>span{font-size:11px}.stepper{display:block}.stepper :global(.ui-button){display:none}.stepper :global(.field){--control-height:var(--touch-target)}
 
