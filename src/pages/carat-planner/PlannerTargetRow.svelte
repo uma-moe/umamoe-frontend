@@ -150,7 +150,7 @@
   .action-trigger{height:26px;padding:0 8px;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid var(--factor-field-border);border-radius:var(--radius-sm);background:var(--factor-field-bg);color:var(--text-primary);font-size:11px;font-weight:600}
   .action-trigger :global(svg){width:12px;height:12px}
   .notes-trigger{position:relative}.notes-trigger i{position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--accent-primary)}
-  .results-trigger{border-color:color-mix(in srgb,var(--accent-primary) 55%,var(--factor-field-border));background:var(--color-accent-soft);color:var(--accent-primary)}
+  .results-trigger.recorded{border-color:color-mix(in srgb,var(--accent-primary) 55%,var(--factor-field-border));background:var(--color-accent-soft);color:var(--accent-primary)}
   .action-trigger:hover{border-color:var(--accent-primary)}.notes-trigger.recorded{color:var(--accent-primary)}
   .results-editor{display:grid;gap:10px;font-size:12px}.results-editor header{display:grid;gap:4px;padding-right:30px}.results-editor header>strong{font-size:14px}.results-editor small,.results-editor p{color:var(--text-secondary);font-size:11px;line-height:1.4}
   .result-entry{display:grid;grid-template-columns:minmax(0,1fr) 80px;align-items:center;gap:10px}.result-entry.step-up{grid-template-columns:minmax(0,1fr)}.result-label,.result-name>span:last-child{display:grid;gap:3px;min-width:0}.result-entry strong{font-size:12px;overflow-wrap:anywhere}
@@ -208,6 +208,7 @@
 
     .step-progress{width:auto;grid-template-columns:minmax(0,1fr);gap:4px}.step-progress :global(.field){--control-height:var(--touch-target)}
     .action-trigger{height:var(--touch-target);font-size:11px}.action-trigger :global(svg){display:none}
+    .results-trigger.recorded :global(svg){display:block}
     .banner-actions :global(.popover:popover-open){left:8px!important;top:auto!important;bottom:max(8px,env(safe-area-inset-bottom));width:calc(100vw - 16px);max-height:calc(100dvh - 16px);border-radius:var(--radius-lg);box-shadow:0 -8px 32px #0005}
     .banner-actions :global(.popover::backdrop){background:#0006}
     .target-controls :global(input),.banner-actions :global(input),.notes-editor>textarea{font-size:16px}.notes-editor>footer :global(.ui-button){min-height:var(--touch-target)}

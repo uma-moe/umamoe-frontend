@@ -23,6 +23,10 @@ test('actual results preserve the plan and carry savings forward through edits a
   const characterAction = (await next.getByRole('button', { name: 'Actual results for Mejiro McQueen Pickup', exact: true }).boundingBox())!;
   expect(supportAction.width).toBe(characterAction.width);
   await expect(edit).toHaveText('Results');
+  const resultsButton = edit.locator('.results-trigger');
+  const neutralBackground = await row.locator('.notes-trigger').evaluate(node => getComputedStyle(node).backgroundColor);
+  await expect(resultsButton).not.toHaveClass(/recorded/);
+  await expect(resultsButton).toHaveCSS('background-color', neutralBackground);
   const before = Number((await next.locator('.carat-balance b').textContent())!.replaceAll(',', ''));
   const after = Number((await next.locator('.carat-balance em').textContent())!.replace(/[^0-9]/g, ''));
   const rowHeight = (await row.boundingBox())!.height;
@@ -31,9 +35,24 @@ test('actual results preserve the plan and carry savings forward through edits a
   expect((await row.boundingBox())!.height).toBeCloseTo(rowHeight, 0);
   const pulls = row.getByRole('spinbutton', { name: 'Actual pulls done', exact: true });
   const copies = row.getByRole('spinbutton', { name: 'Actual copies of Kitasan Black', exact: true });
+  const otherCopies = row.getByRole('spinbutton', { name: 'Actual copies of Special Week', exact: true });
   await expect(pulls).toHaveValue('');
   await expect(pulls).toBeFocused();
   await pulls.fill('50');
+  await expect(row.locator('.goal-chance > strong')).toHaveText('Copies not recorded');
+  await expect(resultsButton).toHaveClass(/recorded/);
+  await expect(resultsButton).not.toHaveCSS('background-color', neutralBackground);
+  await expect(resultsButton.locator('svg')).toBeVisible();
+  await expect(resultsButton.locator('path')).toHaveAttribute('d', 'm4 12 5 5L20 6');
+  await copies.fill('4');
+  await expect(row.locator('.goal-chance > strong')).toHaveText('1/2 recorded');
+  await expect(row.locator('.goal-previews')).not.toContainText('%');
+  await otherCopies.fill('2');
+  await expect(row.locator('.goal-chance > strong')).toHaveText('All goals met');
+  await copies.fill('1');
+  await expect(row.locator('.goal-chance > strong')).toHaveText('All goals met'); // Two planned Uncap Crystals cover the remaining copies.
+  await copies.fill('0');
+  await expect(row.locator('.goal-chance > strong')).toHaveText('1/2 goals met');
   await copies.fill('4');
   await expect(row.locator('.funding')).toContainText('50 actual / 200 planned');
   await expect(row.locator('.result-delta')).toHaveText('150 pulls saved');
@@ -45,9 +64,20 @@ test('actual results preserve the plan and carry savings forward through edits a
   await expect(editor).not.toBeVisible();
   await expect(edit).toBeFocused();
   await expect(row.locator('.goal-previews')).toContainText('3 planned · 4 actual');
+  await row.getByLabel('Pickup goals for Kitasan Black Support', { exact: true }).click();
+  await expect(row.locator('.selected-goal[data-pickup-id="30028"] .individual-chance')).toHaveText('Met');
+  const comparison = row.locator('.advanced-odds');
+  await expect(comparison).not.toHaveAttribute('open');
+  await expect(comparison.locator('summary').first()).toContainText('Odds comparison');
+  await comparison.locator('summary').first().click();
+  await expect(comparison.locator('.all-goals')).toContainText('Chance of all goals');
+  await expect(comparison.locator('.all-goals > strong')).toContainText('%');
+  await row.screenshot({ path: info.outputPath('recorded-goals-expanded.png'), scale: 'css' });
+  await row.getByLabel('Pickup goals for Kitasan Black Support', { exact: true }).click();
   await page.locator('.target-list').screenshot({ path: info.outputPath('actual-results.png'), scale: 'css' });
   await page.reload();
   await expect(row.locator('.funding')).toContainText('50 actual / 200 planned');
+  await expect(row.locator('.goal-chance > strong')).toHaveText('All goals met');
   await edit.click();
   await expect(pulls).toHaveValue('50');
   await expect(copies).toHaveValue('4');
@@ -75,7 +105,11 @@ test('actual results preserve the plan and carry savings forward through edits a
   await expect(row.locator('.result-delta')).toHaveText('50 pulls over plan');
   await pulls.fill('');
   await expect(next.locator('.carat-balance b')).toHaveText(before.toLocaleString('en-US'));
+  await expect(row.locator('.goal-chance > strong')).toHaveText('All goals met');
+  await otherCopies.fill('');
   await copies.fill('0');
+  await expect(row.locator('.goal-chance > strong')).toHaveText('1/2 recorded');
+  await expect(resultsButton).toHaveClass(/recorded/);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0].targets[0].actualCopies['30028'])).toBe(0);
   await copies.fill('');
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0].targets[0].actualCopies ?? null)).toBeNull();
@@ -83,6 +117,9 @@ test('actual results preserve the plan and carry savings forward through edits a
   await expect(editor).not.toBeVisible();
   await expect(edit).toHaveText('Results');
   await expect(row.locator('.goal-previews')).not.toContainText('4 actual');
+  await expect(row.locator('.goal-chance')).toContainText('%');
+  await expect(resultsButton).not.toHaveClass(/recorded/);
+  await expect(resultsButton).toHaveCSS('background-color', neutralBackground);
   for (const width of isMobile ? [430, 390, 360, 320] : [1536, 1301, 1200, 1024, 768]) {
     await page.setViewportSize({ width, height: 900 });
     const supportButton = (await edit.boundingBox())!;
