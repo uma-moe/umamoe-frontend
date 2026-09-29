@@ -3,27 +3,27 @@ import { mockPlannerGoals } from './fixtures/planner-goals';
 
 test('actual results preserve the plan and carry savings forward through edits and reloads', async ({ page, isMobile }, info) => {
   await mockPlannerGoals(page);
-  await page.goto('/timeline?tab=carat-planner');
-  await expect(page.locator('[data-target-id="support-goals"]')).toBeVisible();
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     const collection = JSON.parse(localStorage.getItem('carat-planner-plans-v1')!);
     const plan = collection.plans[0];
-    plan.targets.push({ ...plan.targets[0], id: 'next-banner', eventId: 'next-banner', title: 'Next banner', bannerKind: 'character', gachaId: undefined, gachaIds: undefined, pickupId: 101301, pickupGoals: [{ pickupId: 101301, desiredCopies: 1 }], pullTiming: 'custom', customPullDate: '2026-10-01' });
+    if (plan.targets.some((target: { id: string }) => target.id === 'next-banner')) return;
+    plan.targets.push({ ...plan.targets[0], id: 'next-banner', eventId: 'detail-banner', title: 'Mejiro McQueen Pickup', bannerKind: 'character', gachaId: 9001, gachaIds: undefined, pickupId: 101301, pickupGoals: [{ pickupId: 101301, desiredCopies: 1 }], pullTiming: 'custom', customPullDate: '2026-10-01' });
     localStorage.setItem('carat-planner-plans-v1', JSON.stringify(collection));
   });
-  await page.reload();
+  await page.goto('/timeline?tab=carat-planner');
   const row = page.locator('[data-target-id="support-goals"]');
   const next = page.locator('[data-target-id="next-banner"]');
   const edit = row.getByRole('button', { name: 'Actual results for Kitasan Black Support', exact: true });
   const editor = row.getByRole('dialog', { name: 'Actual results for Kitasan Black Support', exact: true });
+  await expect(row.locator('.goal-chance')).toContainText('%');
   await expect(next.locator('.funding')).toContainText('200 funded');
   const supportAction = (await edit.boundingBox())!;
-  const characterAction = (await next.getByRole('button', { name: 'Actual results for Next banner', exact: true }).boundingBox())!;
+  const characterAction = (await next.getByRole('button', { name: 'Actual results for Mejiro McQueen Pickup', exact: true }).boundingBox())!;
   expect(Math.abs(supportAction.x - characterAction.x)).toBeLessThan(1);
   expect(supportAction.width).toBe(characterAction.width);
   await expect(edit).toHaveText('Results');
-  const before = Number((await next.locator('.carat-balance b').innerText()).replaceAll(',', ''));
-  const after = Number((await next.locator('.carat-balance em').innerText()).replace(/[^0-9]/g, ''));
+  const before = Number((await next.locator('.carat-balance b').textContent())!.replaceAll(',', ''));
+  const after = Number((await next.locator('.carat-balance em').textContent())!.replace(/[^0-9]/g, ''));
   const rowHeight = (await row.boundingBox())!.height;
   await edit.click();
   await expect(editor).toBeVisible();
@@ -44,13 +44,28 @@ test('actual results preserve the plan and carry savings forward through edits a
   await expect(editor).not.toBeVisible();
   await expect(edit).toBeFocused();
   await expect(row.locator('.goal-previews')).toContainText('3 planned · 4 actual');
-  await page.locator('.target-list').screenshot({ path: info.outputPath('actual-results.png') });
+  await page.locator('.target-list').screenshot({ path: info.outputPath('actual-results.png'), scale: 'css' });
   await page.reload();
   await expect(row.locator('.funding')).toContainText('50 actual / 200 planned');
   await edit.click();
   await expect(pulls).toHaveValue('50');
   await expect(copies).toHaveValue('4');
   await row.scrollIntoViewIfNeeded();
+  if (isMobile) {
+    const panel = (await editor.boundingBox())!;
+    expect(panel.x).toBe(8);
+    expect(panel.width).toBe(page.viewportSize()!.width - 16);
+    expect(panel.y + panel.height).toBeCloseTo(page.viewportSize()!.height - 8, 0);
+    await page.screenshot({ path: info.outputPath('results-sheet.png'), scale: 'css' });
+    const viewport = page.viewportSize()!;
+    await page.setViewportSize({ width: viewport.width, height: 430 });
+    await expect(pulls).toBeInViewport();
+    await expect(copies).toBeInViewport();
+    const resized = (await editor.boundingBox())!;
+    expect(resized.y).toBeGreaterThanOrEqual(8);
+    expect(resized.y + resized.height).toBeCloseTo(422, 0);
+    await page.setViewportSize(viewport);
+  }
   await editor.screenshot({ path: info.outputPath('results-editor.png') });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await pulls.fill('0');
@@ -67,16 +82,22 @@ test('actual results preserve the plan and carry savings forward through edits a
   await expect(editor).not.toBeVisible();
   await expect(edit).toHaveText('Results');
   await expect(row.locator('.goal-previews')).not.toContainText('4 actual');
-  for (const width of isMobile ? [390, 320] : [1536, 1301, 1200, 1024, 768]) {
+  for (const width of isMobile ? [430, 390, 360, 320] : [1536, 1301, 1200, 1024, 768]) {
     await page.setViewportSize({ width, height: 900 });
     const supportButton = (await edit.boundingBox())!;
-    const characterButton = (await next.getByRole('button', { name: 'Actual results for Next banner', exact: true }).boundingBox())!;
-    const heading = (await row.locator('.banner-identity').boundingBox())!;
-    const actions = (await row.locator('.banner-actions').boundingBox())!;
-    expect(actions.x).toBeGreaterThanOrEqual(heading.x + heading.width);
-    expect(Math.abs(actions.y + actions.height / 2 - heading.y - heading.height / 2)).toBeLessThan(1);
+    const characterButton = (await next.getByRole('button', { name: 'Actual results for Mejiro McQueen Pickup', exact: true }).boundingBox())!;
+    const controls = (await row.locator('.target-controls').boundingBox())!;
+    const actions = (await row.locator('.row-actions').boundingBox())!;
+    expect(controls.x + controls.width - actions.x - actions.width).toBeCloseTo(10, 0);
+    if (isMobile) {
+      await expect(row.locator('.notes-trigger > span')).toBeVisible();
+      expect(supportButton.height).toBeGreaterThanOrEqual(44);
+      const crystals = (await row.locator('.crystal-plan').boundingBox())!;
+      expect(actions.y).toBeGreaterThanOrEqual(crystals.y + crystals.height);
+    }
     expect(Math.abs(supportButton.x - characterButton.x)).toBeLessThan(1);
     expect(await row.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     expect(await next.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+    await page.locator('.target-list').screenshot({ path: info.outputPath(`banner-actions-${width}.png`), scale: 'css' });
   }
 });

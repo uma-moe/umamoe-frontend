@@ -81,40 +81,7 @@
   <div class="target-title" class:has-image={Boolean(target.imagePath)}>
     {#if target.imagePath}<img src={target.imagePath} width="512" height="125" loading="lazy" alt=""/>{/if}
     <div class="target-info">
-      <div class="target-heading">
-        <div class="banner-identity"><strong class:paid={paidOnly}>{#if paidOnly}<span aria-label="Paid banner" title="Paid banner"><Icon name="paid" size={17}/></span>{/if}{target.title}</strong><small class="date"><Icon name="calendar" size={13}/>{dateLabel(target.bannerStart)} – {dateLabel(target.bannerEnd ?? target.bannerStart)}</small></div>
-        <div class="banner-actions" role="group" aria-label={`Notes and results for ${target.title}`}>
-          <InspectPopover label={`Edit notes for ${target.title}`} align="start" onopenchange={open => { if (open) document.getElementById(`notes-${target.id}`)?.focus({ preventScroll: true }); }}>
-            {#snippet trigger()}<span bind:this={notesTrigger} class="action-trigger notes-trigger" class:recorded={Boolean(target.notes)} title={target.notes || 'Add notes'}><Icon name="edit" size={16}/><span>Notes</span>{#if target.notes}<i aria-label="Has notes"></i>{/if}</span>{/snippet}
-            <div class="notes-editor">
-              <label for={`notes-${target.id}`}>Banner notes</label>
-              <textarea id={`notes-${target.id}`} aria-label={`Notes for ${target.title}`} rows="4" maxlength="2000" placeholder="e.g. LB3, +1 selector; usable at LB2" value={target.notes ?? ''} oninput={event => onupdate(value => value.notes = event.currentTarget.value || undefined)}></textarea>
-              <footer><small>Saved automatically</small><Button variant="secondary" size="sm" icon="save" ariaLabel={`Save notes for ${target.title}`} onclick={() => { document.getElementById(`notes-${target.id}`)?.closest<HTMLElement>('[popover]')?.hidePopover(); notesTrigger.closest('button')?.focus(); }}>Save</Button></footer>
-            </div>
-          </InspectPopover>
-          <InspectPopover label={`Actual results for ${target.title}`} align="start" onopenchange={open => { if (open) document.getElementById(`actual-pulls-${target.id}`)?.focus({ preventScroll: true }); }}>
-            {#snippet trigger()}<span class="action-trigger results-trigger" class:recorded={target.actualPulls !== undefined || Boolean(target.actualCopies)}><Icon name={target.actualPulls !== undefined || target.actualCopies ? 'check' : 'clipboard'} size={16}/><span>Results</span></span>{/snippet}
-            <div class="results-editor">
-              <header><strong>Actual results</strong><small>Your original plan stays unchanged.</small></header>
-              <div class="result-entry" class:step-up={Boolean(stepUp)}>
-                <span class="result-label"><strong>Pulls done</strong><small>{target.plannedPulls} planned · include free pulls &amp; tickets</small></span>
-                {#if stepUp}<SelectField id={`actual-pulls-${target.id}`} label="Actual step-up progress" hideLabel options={[{ value: '', label: 'Not recorded' }, ...stepOptions]} value={String(target.actualPulls ?? '')} onchange={setActualPulls}/>
-                {:else}<TextField id={`actual-pulls-${target.id}`} label="Actual pulls done" hideLabel type="number" min={0} max={maxPulls} step={paidOnly ? 10 : 1} placeholder="—" value={String(target.actualPulls ?? '')} oninput={event => setActualPulls((event.currentTarget as HTMLInputElement).value)}/>{/if}
-              </div>
-              {#if actualGoals.length}<div class="result-copies"><strong>Copies received <small>Optional</small></strong>
-                {#each actualGoals as goal (goal.key)}
-                  <div class="result-entry">
-                    <span class="result-name"><span class="result-art">{#if goal.image}<img src={goal.image} width="30" height="30" loading="lazy" alt="" onerror={event => (event.currentTarget as HTMLImageElement).hidden = true}/>{/if}<Icon name={cardKind === 'support' ? 'grid' : 'user'} size={20}/></span><span><strong>{goal.name}</strong><small>{goal.desiredCopies} planned copies</small></span></span>
-                    <TextField id={`actual-copies-${target.id}-${goal.key}`} label={`Actual copies of ${goal.name}`} hideLabel type="number" min={0} max={5000} step={1} placeholder="—" value={String(target.actualCopies?.[goal.key] ?? '')} oninput={event => setActualCopies(goal.key, (event.currentTarget as HTMLInputElement).value)}/>
-                  </div>
-                {/each}
-                <small>Include exchanges, exclude Uncap Crystals.</small>
-              </div>{/if}
-              <p>Saved automatically. Clear pulls to use your planned budget.</p>
-            </div>
-          </InspectPopover>
-        </div>
-      </div>
+      <div class="banner-identity"><strong class:paid={paidOnly}>{#if paidOnly}<span aria-label="Paid banner" title="Paid banner"><Icon name="paid" size={17}/></span>{/if}{target.title}</strong><small class="date"><Icon name="calendar" size={13}/>{dateLabel(target.bannerStart)} – {dateLabel(target.bannerEnd ?? target.bannerStart)}</small></div>
       {#if projection}<div class="at-pull" aria-label={`At pull date: ${caratLabel}${paidOnly ? '' : '; ' + ticketLabel}`}><small>At pull</small><span class="carat-balance" title={caratLabel}><img src={itemIconPath(43)} width="18" height="18" alt="Carats"/><b>{caratsBefore.toLocaleString()}</b><em>→ {caratsAfter.toLocaleString()}</em></span>{#if !paidOnly}<span title={ticketLabel}><img src={itemIconPath(ticketKind === 'support' ? 111 : 41)} width="18" height="18" alt=""/><b>{ticketCount}</b>{#if projection.ticketPulls}<em>→ {ticketCount - projection.ticketPulls}</em>{/if}</span>{#if cardKind === 'support' && !stepUp}{#each ['rainbow', 'gold'] as kind}<span title={`${kind === 'rainbow' ? 'Rainbow' : 'Gold'} Uncap Crystals available at pull`}><img src={itemIconPath(kind === 'rainbow' ? 144 : 145)} width="18" height="18" alt=""/><b>{kind === 'rainbow' ? availableCrystals(projection.balanceBefore.rainbowFullCrystals, projection.balanceBefore.rainbowCrystals) : availableCrystals(projection.balanceBefore.goldFullCrystals, projection.balanceBefore.goldCrystals)}</b></span>{/each}{/if}{/if}</div>{/if}
     </div>
   </div>
@@ -127,9 +94,42 @@
       {:else}<div class="stepper" role="group" aria-label="Planned pulls"><Button variant="secondary" size="sm" ariaLabel="Add 100 pulls" disabled={target.plannedPulls >= maxPulls} onclick={() => setPulls(target.plannedPulls + 100)}>+100</Button><Button variant="secondary" size="sm" ariaLabel="Add 10 pulls" disabled={target.plannedPulls >= maxPulls} onclick={() => setPulls(target.plannedPulls + 10)}>+10</Button><TextField id={`pulls-${target.id}`} label="Planned pulls" hideLabel type="number" min={0} max={maxPulls} step={10} value={String(target.plannedPulls)} oninput={event => setPulls(Number((event.currentTarget as HTMLInputElement).value))}/><Button variant="secondary" size="sm" ariaLabel="Remove 10 pulls" disabled={target.plannedPulls <= 0} onclick={() => setPulls(target.plannedPulls - 10)}>−10</Button><Button variant="secondary" size="sm" ariaLabel="Remove 100 pulls" disabled={target.plannedPulls <= 0} onclick={() => setPulls(target.plannedPulls - 100)}>−100</Button></div>{/if}
     </div>
     {#if cardKind === 'support' && !stepUp}<div class="crystal-plan" role="group" aria-label="Uncap Crystals to use on this banner"><span title="Replace extra copies after the first"><strong>Uncap crystals</strong></span><div class="crystal-controls">{#each ['rainbow', 'gold'] as kind}{@const name = kind === 'rainbow' ? 'Rainbow' : 'Gold'}{@const key = kind === 'rainbow' ? 'rainbowCrystalsPlanned' : 'goldCrystalsPlanned'}<div class="crystal-control"><span><img src={itemIconPath(kind === 'rainbow' ? 144 : 145)} width="24" height="24" alt=""/><span><strong>{name}</strong><small>{kind === 'rainbow' ? 'SSR' : 'SR'} cards</small></span></span><div class="crystal-stepper" role="group" aria-label={`${name} Uncap Crystals to use on this banner`}><Button variant="ghost" size="sm" icon="minus" ariaLabel={`Use one fewer ${name} Uncap Crystal`} disabled={!target[key]} onclick={() => onupdate(value => value[key] = Math.max(0, (value[key] ?? 0) - 1))}/><output aria-label={`${name} Uncap Crystals planned`}>{target[key] ?? 0}</output><Button variant="ghost" size="sm" icon="add" ariaLabel={`Use one more ${name} Uncap Crystal`} disabled={(target[key] ?? 0) >= 20} onclick={() => onupdate(value => value[key] = Math.min(20, (value[key] ?? 0) + 1))}/></div></div>{/each}</div></div>{/if}
-    <div class="target-actions" role="group" aria-label={`Actions for ${target.title}`}>
-      <InspectPopover label="Target options" align="end">{#snippet trigger()}<span class="options-trigger"><Icon name="tune" size={16}/></span>{/snippet}<div class="target-options"><strong>Target options</strong><small>{paidOnly ? 'This banner uses paid Carats only.' : 'The recommended defaults use tickets first and pull at banner end.'}</small><SelectField id={`timing-${target.id}`} label="Pull on" options={[{value:'start',label:'Banner start'},{value:'end',label:'Banner end'},{value:'custom',label:'Custom date'}]} value={target.pullTiming} onchange={(value)=>onupdate((item)=>item.pullTiming=value as PlannerTarget['pullTiming'])}/>{#if target.pullTiming === 'custom'}<TextField id={`pull-date-${target.id}`} label="Pull date" type="date" value={target.customPullDate ?? ''} oninput={event => onupdate(value => value.customPullDate = (event.currentTarget as HTMLInputElement).value)}/>{/if}{#if !paidOnly}<Checkbox id={`tickets-${target.id}`} label="Use tickets first" checked={target.useTickets} onchange={(checked)=>onupdate((value)=>value.useTickets=checked)}/><Checkbox id={`paid-${target.id}`} label="Allow paid Carats" checked={target.allowPaidJewels} onchange={(checked)=>onupdate((value)=>value.allowPaidJewels=checked)}/>{#if target.useTickets}<TextField id={`ticket-limit-${target.id}`} label="Ticket limit" type="number" min={0} placeholder="No limit" value={String(target.ticketLimit??'')} oninput={(event)=>onupdate((value)=>value.ticketLimit=(event.currentTarget as HTMLInputElement).value===''?undefined:Math.max(0,Number((event.currentTarget as HTMLInputElement).value)||0))}/>{/if}{/if}</div></InspectPopover>
-      <Button variant="secondary" size="sm" icon="trash" ariaLabel={`Remove ${target.title}`} onclick={onremove}/>
+    <div class="row-actions">
+      <div class="banner-actions" role="group" aria-label={`Notes and results for ${target.title}`}>
+        <InspectPopover label={`Edit notes for ${target.title}`} align="end" onopenchange={open => { if (open) document.getElementById(`notes-${target.id}`)?.focus({ preventScroll: true }); }}>
+          {#snippet trigger()}<span bind:this={notesTrigger} class="action-trigger notes-trigger" class:recorded={Boolean(target.notes)} title={target.notes || 'Add notes'}><Icon name="edit" size={16}/><span>Notes</span>{#if target.notes}<i aria-label="Has notes"></i>{/if}</span>{/snippet}
+          <div class="notes-editor">
+            <label for={`notes-${target.id}`}>Banner notes</label>
+            <textarea id={`notes-${target.id}`} aria-label={`Notes for ${target.title}`} rows="4" maxlength="2000" placeholder="e.g. LB3, +1 selector; usable at LB2" value={target.notes ?? ''} oninput={event => onupdate(value => value.notes = event.currentTarget.value || undefined)}></textarea>
+            <footer><small>Saved automatically</small><Button variant="secondary" size="sm" icon="save" ariaLabel={`Save notes for ${target.title}`} onclick={() => { document.getElementById(`notes-${target.id}`)?.closest<HTMLElement>('[popover]')?.hidePopover(); notesTrigger.closest('button')?.focus(); }}>Save</Button></footer>
+          </div>
+        </InspectPopover>
+        <InspectPopover label={`Actual results for ${target.title}`} align="end" onopenchange={open => { if (open) document.getElementById(`actual-pulls-${target.id}`)?.focus({ preventScroll: true }); }}>
+          {#snippet trigger()}<span class="action-trigger results-trigger" class:recorded={target.actualPulls !== undefined || Boolean(target.actualCopies)}><Icon name={target.actualPulls !== undefined || target.actualCopies ? 'check' : 'clipboard'} size={16}/><span>Results</span></span>{/snippet}
+          <div class="results-editor">
+            <header><strong>Actual results</strong><small>Your original plan stays unchanged.</small></header>
+            <div class="result-entry" class:step-up={Boolean(stepUp)}>
+              <span class="result-label"><strong>Pulls done</strong><small>{target.plannedPulls} planned · include free pulls &amp; tickets</small></span>
+              {#if stepUp}<SelectField id={`actual-pulls-${target.id}`} label="Actual step-up progress" hideLabel options={[{ value: '', label: 'Not recorded' }, ...stepOptions]} value={String(target.actualPulls ?? '')} onchange={setActualPulls}/>
+              {:else}<TextField id={`actual-pulls-${target.id}`} label="Actual pulls done" hideLabel type="number" min={0} max={maxPulls} step={paidOnly ? 10 : 1} placeholder="—" value={String(target.actualPulls ?? '')} oninput={event => setActualPulls((event.currentTarget as HTMLInputElement).value)}/>{/if}
+            </div>
+            {#if actualGoals.length}<div class="result-copies"><strong>Copies received <small>Optional</small></strong>
+              {#each actualGoals as goal (goal.key)}
+                <div class="result-entry">
+                  <span class="result-name"><span class="result-art">{#if goal.image}<img src={goal.image} width="30" height="30" loading="lazy" alt="" onerror={event => (event.currentTarget as HTMLImageElement).hidden = true}/>{/if}<Icon name={cardKind === 'support' ? 'grid' : 'user'} size={20}/></span><span><strong>{goal.name}</strong><small>{goal.desiredCopies} planned copies</small></span></span>
+                  <TextField id={`actual-copies-${target.id}-${goal.key}`} label={`Actual copies of ${goal.name}`} hideLabel type="number" min={0} max={5000} step={1} placeholder="—" value={String(target.actualCopies?.[goal.key] ?? '')} oninput={event => setActualCopies(goal.key, (event.currentTarget as HTMLInputElement).value)}/>
+                </div>
+              {/each}
+              <small>Include exchanges, exclude Uncap Crystals.</small>
+            </div>{/if}
+            <p>Saved automatically. Clear pulls to use your planned budget.</p>
+          </div>
+        </InspectPopover>
+      </div>
+      <div class="target-actions" role="group" aria-label={`Actions for ${target.title}`}>
+        <InspectPopover label="Target options" align="end">{#snippet trigger()}<span class="options-trigger"><Icon name="tune" size={16}/></span>{/snippet}<div class="target-options"><strong>Target options</strong><small>{paidOnly ? 'This banner uses paid Carats only.' : 'The recommended defaults use tickets first and pull at banner end.'}</small><SelectField id={`timing-${target.id}`} label="Pull on" options={[{value:'start',label:'Banner start'},{value:'end',label:'Banner end'},{value:'custom',label:'Custom date'}]} value={target.pullTiming} onchange={(value)=>onupdate((item)=>item.pullTiming=value as PlannerTarget['pullTiming'])}/>{#if target.pullTiming === 'custom'}<TextField id={`pull-date-${target.id}`} label="Pull date" type="date" value={target.customPullDate ?? ''} oninput={event => onupdate(value => value.customPullDate = (event.currentTarget as HTMLInputElement).value)}/>{/if}{#if !paidOnly}<Checkbox id={`tickets-${target.id}`} label="Use tickets first" checked={target.useTickets} onchange={(checked)=>onupdate((value)=>value.useTickets=checked)}/><Checkbox id={`paid-${target.id}`} label="Allow paid Carats" checked={target.allowPaidJewels} onchange={(checked)=>onupdate((value)=>value.allowPaidJewels=checked)}/>{#if target.useTickets}<TextField id={`ticket-limit-${target.id}`} label="Ticket limit" type="number" min={0} placeholder="No limit" value={String(target.ticketLimit??'')} oninput={(event)=>onupdate((value)=>value.ticketLimit=(event.currentTarget as HTMLInputElement).value===''?undefined:Math.max(0,Number((event.currentTarget as HTMLInputElement).value)||0))}/>{/if}{/if}</div></InspectPopover>
+        <Button variant="secondary" size="sm" icon="trash" ariaLabel={`Remove ${target.title}`} onclick={onremove}/>
+      </div>
     </div>
   </div>
   {#if past}<div class="past-note" role="note"><Icon name="timeline" size={16}/><span><strong>Before plan start</strong><small>Kept for editing, but excluded from this projection.</small></span></div>{/if}
@@ -143,7 +143,8 @@
   .step-progress{min-width:0;width:320px;max-width:100%}
   .target.past{color:var(--text-secondary)}
   .pull-heading>span{font-size:10px;color:var(--text-secondary)}
-  .target-actions{grid-column:3;display:flex;align-items:center;justify-content:flex-end;gap:4px}
+  .row-actions{grid-column:3;display:flex;align-items:center;justify-self:end;gap:8px;padding-left:10px;border-left:1px solid var(--border-subtle)}
+  .target-actions{display:flex;align-items:center;gap:4px}
   .banner-actions{display:flex;align-items:center;gap:4px;--inspect-popover-width:360px;--inspect-popover-padding:14px}
   .action-trigger{height:36px;display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--factor-field-border);border-radius:var(--radius-sm);background:var(--factor-field-bg);color:var(--text-primary);font-size:12px;font-weight:600}
   .notes-trigger{position:relative;width:72px}.notes-trigger i{position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--accent-primary)}
@@ -159,7 +160,6 @@
   .target-title.has-image{grid-template-columns:148px minmax(0,1fr)}
   .target-title>img{display:block;width:148px;height:48px;object-fit:contain;border:1px solid var(--border-subtle);border-radius:3px;background:var(--surface-2)}
   .target-info{min-width:0;display:grid;gap:4px}
-  .target-heading{display:grid;grid-template-columns:minmax(0,220px) auto;align-items:center;justify-content:start;gap:10px}
   .banner-identity{min-width:0;display:grid;gap:4px}.banner-identity>strong{font-size:.84rem;line-height:1.25;overflow-wrap:anywhere}
   .banner-identity>strong.paid{display:flex;align-items:center;gap:5px;color:var(--color-gold)}.paid>span{display:flex;flex:none}
   .notes-editor{display:grid;gap:10px}.notes-editor>label{font-size:14px;font-weight:600;padding-right:32px}.notes-editor>footer{display:flex;align-items:center;justify-content:space-between;gap:8px}.notes-editor small{font-size:11px;color:var(--text-secondary)}
@@ -194,21 +194,24 @@
     .target-title.has-image{grid-template-columns:128px minmax(0,1fr)}.target-title>img{width:128px}
     .target-controls{border-left:0;border-top:1px solid var(--border-subtle)}
   }
-  @container planner-targets (max-width:900px){.target-controls{grid-template-columns:minmax(0,1fr) auto}.target-actions{grid-column:2;grid-row:1}.crystal-plan{grid-column:1/-1;grid-row:2;justify-self:end}.pull-count{justify-self:start}}
+  @container planner-targets (max-width:1000px){.target-controls{grid-template-columns:minmax(0,1fr) auto}.row-actions{grid-column:2;grid-row:1}.crystal-plan{grid-column:1/-1;grid-row:2;justify-self:start}.pull-count{justify-self:start}}
   @media(max-width:767px){
     .results-editor :global(.field){--control-height:var(--touch-target)}.results-editor header{min-height:30px;padding-right:36px}
-    .target{grid-template-columns:minmax(0,1fr);margin-bottom:8px;border:1px solid var(--border-primary);border-radius:var(--radius-md)}
-    .target-title{grid-template-columns:minmax(0,1fr) auto;padding:7px 6px;gap:8px}.target-title.has-image{grid-template-columns:96px minmax(0,1fr) auto}.target-title>img{grid-column:1;grid-row:2;width:96px;height:32px;border:0;border-radius:5px}
-    .target-info,.target-heading{display:contents}.banner-identity{grid-column:1;grid-row:1}.has-image .banner-identity{grid-column:1/3}.banner-actions{grid-column:-2;grid-row:1}.at-pull{grid-column:1/-1;grid-row:2}.has-image .at-pull{grid-column:2/-1}
-    .target-controls{grid-template-columns:minmax(0,1fr) auto;border-left:0;padding:6px;gap:6px}
-    .pull-count{justify-self:stretch}.stepper{display:block}.stepper :global(.ui-button){display:none}.stepper :global(.field){--control-height:var(--touch-target)}
+    .target{grid-template-columns:minmax(0,1fr);margin-bottom:8px;border:1px solid var(--border-primary);border-radius:var(--radius-md);--touch-target:44px}
+    .target-title{grid-template-columns:minmax(0,1fr);min-height:0;padding:10px;gap:8px}.target-title.has-image{grid-template-columns:96px minmax(0,1fr)}.target-title>img{grid-column:1;grid-row:1;width:96px;height:32px;border:0;border-radius:5px}
+    .target-info{display:contents}.banner-identity{grid-column:1;grid-row:1}.has-image .banner-identity{grid-column:2}.at-pull{grid-column:1/-1;grid-row:2}
+    .target-controls{grid-template-columns:minmax(0,1fr);border-left:0;padding:8px 10px;gap:10px}
+    .pull-count{justify-self:stretch}.pull-count:not(.step-progress){grid-template-columns:minmax(0,1fr) 112px;align-items:center}.pull-heading>span{font-size:12px}.stepper{display:block}.stepper :global(.ui-button){display:none}.stepper :global(.field){--control-height:var(--touch-target)}
 
     .step-progress{width:auto}.step-progress :global(.field){--control-height:var(--touch-target)}
-    .target-actions{grid-column:2;grid-row:1}.action-trigger{height:var(--touch-target)}.notes-trigger{width:var(--touch-target)}.notes-trigger>span{display:none}.results-trigger{width:76px}
+    .row-actions{grid-column:1;grid-row:auto;justify-self:stretch;justify-content:space-between;border-left:0;border-top:1px solid var(--border-subtle);padding:8px 0 0}
+    .banner-actions{display:grid;grid-template-columns:1fr 1fr;flex:1;gap:6px}.banner-actions :global(.inspect),.banner-actions :global(.trigger){width:100%}.action-trigger{width:100%;height:var(--touch-target)}
+    .banner-actions :global(.popover:popover-open){left:8px!important;top:auto!important;bottom:max(8px,env(safe-area-inset-bottom));width:calc(100vw - 16px);max-height:calc(100dvh - 16px);border-radius:var(--radius-lg);box-shadow:0 -8px 32px #0005}
+    .banner-actions :global(.popover::backdrop){background:#0006}
+    .target-controls :global(input),.notes-editor>textarea{font-size:16px}.notes-editor>footer :global(.ui-button){min-height:var(--touch-target)}
     .options-trigger,.target-actions>:global(.ui-button){width:var(--touch-target);height:var(--touch-target)}
     .crystal-stepper :global(.ui-button){min-width:var(--touch-target);min-height:var(--touch-target)}
-    .crystal-plan{grid-column:1/-1;grid-row:2;justify-self:stretch}.crystal-controls{flex-wrap:wrap}.crystal-control{flex:1;justify-content:space-between}
+    .crystal-plan{grid-column:1/-1;grid-row:2;justify-self:stretch}.crystal-controls{display:grid;grid-template-columns:1fr 1fr}.crystal-control{display:grid;gap:4px}.crystal-stepper{justify-content:space-between}
     .past-note{padding:8px 6px}.past-note span{display:grid;gap:3px}
   }
-  @media(max-width:360px){.target-controls{grid-template-columns:minmax(0,1fr)}.target-actions{grid-column:1;grid-row:2;justify-self:end}.crystal-plan{grid-row:3}}
 </style>
