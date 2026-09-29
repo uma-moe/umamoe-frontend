@@ -28,13 +28,17 @@ test('Timeline keeps compact artwork cards and Carat Planner preserves banner al
   await card.getByRole('button',{name:'Add Featured banner to Carat Planner',exact:true}).click();
   await page.goto('/timeline?tab=carat-planner');
   const target = page.locator('.target').filter({has:page.getByText('Featured banner',{exact:true})});
-  const image = target.locator('.target-title > img');
+  const image = target.locator('.banner-media > img');
   await expect(image).toBeVisible();
   await expect.poll(() => image.evaluate((node:HTMLImageElement) => node.complete && node.naturalWidth > 0)).toBe(true);
   for (const width of isMobile ? [390,320] : [1536,1301,1024,768]) {
     await page.setViewportSize({width,height:900});
     await expect(image).toHaveCSS('object-fit','contain');
-    const boxes = await target.locator('.target-title > img,.banner-identity,.target-controls').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().toJSON()));
+    const boxes = await target.locator('.banner-media > img,.banner-identity,.target-controls').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().toJSON()));
+    const actions = (await target.locator('.banner-actions').boundingBox())!;
+    expect(actions.y).toBeGreaterThanOrEqual(boxes[0].bottom);
+    expect(actions.x).toBeCloseTo(boxes[0].x, 0);
+    expect(actions.width).toBeCloseTo(boxes[0].width, 0);
     expect(boxes[0].right).toBeLessThanOrEqual(boxes[1].left);
     expect(boxes[1].right).toBeLessThanOrEqual(width);
     const header = (await target.locator('.target-title').boundingBox())!;
