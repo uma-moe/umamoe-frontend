@@ -55,7 +55,7 @@
   }
 </script>
 
-<section {id} class="factor-editor tone-{tone}" aria-label={label}>
+<section {id} class="factor-editor tone-{tone}" class:priority-mode={priorityMode} aria-label={label}>
   <header class="editor-header">
     <span class="tone-mark" aria-hidden="true"></span>
     <span class="heading-copy"><strong>{label}</strong>{#if priorityMode}<small>{priorityDetail}</small>{:else}<small>{requirements.length ? `${requirements.length} requirement${requirements.length === 1 ? '' : 's'}` : 'No requirements'}</small>{/if}</span>
@@ -106,7 +106,10 @@
   .requirements { min-width:0; display:grid; gap:6px; padding:0; }
   .add-row { width:100%; min-height:34px; display:flex; align-items:center; justify-content:center; gap:7px; padding:3px 10px; border:0; border-radius:6px; background:var(--factor-field-bg); color:var(--factor-field-text); cursor:pointer; font:inherit; transition:background-color var(--duration-fast),color var(--duration-fast); }.add-row span { width:22px; height:22px; display:grid; place-items:center; border-radius:50%; background:color-mix(in srgb,var(--factor-accent) 13%,transparent); color:var(--factor-accent); }.add-row strong { font-size:10px; font-weight:700; }.add-row:hover { background:color-mix(in srgb,var(--factor-accent) 7%,transparent); color:var(--text-primary); }.add-row:focus-visible { outline:0; box-shadow:var(--focus-ring); }
   .requirement { min-width:0; display:grid; grid-template-columns:62px 60px minmax(0,1fr) 28px; align-items:center; gap:4px 5px; padding:7px; border:1px solid var(--factor-row-border); border-radius:var(--radius-sm); background:var(--factor-row-bg); }
-  .requirement.with-priority { grid-template-columns:minmax(0,1fr) 72px 28px; border-style:dashed; border-color:var(--factor-optional-border); background:var(--factor-optional-bg); }
+  .requirement.with-priority { grid-template-columns:minmax(0,1fr) 60px 28px; gap:4px; padding:0; border:0; background:transparent; }
+  .priority-mode .requirements { gap:4px; padding:0; }
+  .priority-mode :global(.white-factor-browser) { margin:0; }
+  .with-priority :global(input[role="combobox"]) { min-height:40px; font-size:14px; }
   .relation { width:100%; height:38px;display:flex;align-items:center;justify-content:center;align-self:end }.match-label{color:var(--text-muted);font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}.relation :global(.segments){width:100%;height:38px;display:grid;grid-template-columns:1fr 1fr;box-sizing:border-box;padding:3px;border:1px solid var(--border-primary);border-radius:6px;background:var(--factor-field-bg)}.relation :global(.segments button){min-width:0;min-height:0;padding:0 3px;border:0;border-radius:3px;background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit;font-size:9px;font-weight:800;line-height:1}.relation :global(.segments button.selected){background:color-mix(in srgb,var(--factor-accent) 17%,transparent);color:var(--factor-accent)}
   .factor-range { min-width:0; grid-column:1 / -1; padding-inline:2px; }
   .factor-metric :global(.segments button) { color:var(--factor-field-text); }
@@ -114,7 +117,7 @@
   .requirement :global(.select-control), .requirement :global(input[role="combobox"]) { height:38px; }
   .requirement > :global(.icon-button) { width:28px; min-width:28px; height:32px; min-height:32px; padding:0; border:0; border-radius:6px; background:rgb(255 60 60 / .1); color:var(--accent-error); }
   .requirement > :global(.icon-button:hover) { background:rgb(255 60 60 / .2); }
-  .priority-control { height:38px; display:inline-flex; align-items:center; justify-content:center; gap:2px; padding:0 5px 0 7px; border:1px solid rgb(var(--on-surface-rgb) / .1); border-radius:8px; background:var(--factor-field-bg); box-sizing:border-box; transition:border-color var(--duration-fast),background var(--duration-fast); }
+  .priority-control { align-self:stretch; display:inline-flex; align-items:center; justify-content:center; gap:1px; padding:0 3px; border:1px solid rgb(var(--on-surface-rgb) / .1); border-radius:8px; background:var(--factor-field-bg); box-sizing:border-box; transition:border-color var(--duration-fast),background var(--duration-fast); }
   .priority-control:hover,.priority-control:focus-within { border-color:var(--db-control-focus-border); background:var(--db-control-focus-bg); }
   .priority-control > span:first-child { color:rgb(100 181 246 / .86); font-size:12px; font-weight:800; line-height:1; }
   .priority-control input { width:24px; height:32px; padding:0; border:0; outline:0; appearance:textfield; background:transparent; color:rgb(var(--on-surface-rgb) / .96); font-family:inherit; font-size:14px; font-weight:800; line-height:32px; text-align:center; }
@@ -122,12 +125,10 @@
   @media (max-width:620px) {
     .heading-copy small{display:none}.add-row{min-height:var(--touch-target)}
     .requirement { grid-template-columns:64px 60px minmax(0,1fr) 28px; gap:4px; padding:6px; }
-    .requirement.with-priority { grid-template-columns:minmax(0,1fr) 66px 28px; }
     .relation, .relation :global(.segments) { height:var(--touch-target); }
     .relation :global(.segments) { padding:0; }
     .requirement :global(.select-control), .requirement :global(input[role="combobox"]) { height:var(--touch-target); }
     .factor-range{grid-column:1/-1}
-    .priority-control { padding:0 5px; }
     .requirements { gap:4px;padding:4px; }
   }
 </style>
