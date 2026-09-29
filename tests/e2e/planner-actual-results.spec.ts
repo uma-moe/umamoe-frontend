@@ -87,7 +87,7 @@ test('actual results preserve the plan and carry savings forward through edits a
     const supportButton = (await edit.boundingBox())!;
     const characterButton = (await next.getByRole('button', { name: 'Actual results for Mejiro McQueen Pickup', exact: true }).boundingBox())!;
     const controls = (await row.locator('.target-controls').boundingBox())!;
-    const actions = (await row.locator('.row-actions').boundingBox())!;
+    const actions = (await row.locator(isMobile ? '.row-actions' : '.target-actions').boundingBox())!;
     expect(controls.x + controls.width - actions.x - actions.width).toBeCloseTo(10, 0);
     if (isMobile) {
       await expect(row.locator('.notes-trigger > span')).toBeVisible();
@@ -100,6 +100,15 @@ test('actual results preserve the plan and carry savings forward through edits a
       for (const counter of counters) expect(counter.width).toBeLessThanOrEqual(70);
       const crystals = (await row.locator('.crystal-plan').boundingBox())!;
       expect(actions.y).toBeGreaterThanOrEqual(crystals.y + crystals.height);
+    } else {
+      const planned = (await row.getByRole('spinbutton', { name: 'Planned pulls', exact: true }).boundingBox())!;
+      const nextPlanned = (await next.getByRole('spinbutton', { name: 'Planned pulls', exact: true }).boundingBox())!;
+      expect(planned.x).toBeCloseTo(nextPlanned.x, 0);
+      expect(planned.height).toBe(32);
+      const pulls = (await row.locator('.pull-count').boundingBox())!;
+      const editors = (await row.locator('.banner-actions').boundingBox())!;
+      expect(editors.x - pulls.x - pulls.width).toBeCloseTo(12, 0);
+      expect(editors.y).toBeCloseTo(planned.y, 0);
     }
     expect(Math.abs(supportButton.x - characterButton.x)).toBeLessThan(1);
     expect(await row.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
