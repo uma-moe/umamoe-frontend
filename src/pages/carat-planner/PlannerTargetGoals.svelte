@@ -102,7 +102,8 @@
     <small class="goals-label">Goals</small>
     <span class="goal-previews">
       {#each goals.slice(0, 3) as goal (goal.pickupId)}
-        <span class="goal-preview">{@render art(goal.option, 30)}<span><span>{goal.option.name}</span><small>{requirement(goal)}</small></span><b aria-label={oddsLabel(goal.option.name, goal.odds)}>{percent(goal.odds?.probability)}</b></span>
+        {@const actualCopies = target.actualCopies?.[stepUp ? 'chosen' : String(goal.pickupId)]}
+        <span class="goal-preview">{@render art(goal.option, 30)}<span><span>{goal.option.name}</span><small>{#if actualCopies !== undefined}{goal.desiredCopies} planned · <strong class="actual-copies">{actualCopies} actual</strong>{:else}{requirement(goal)}{/if}</small></span><b aria-label={oddsLabel(goal.option.name, goal.odds)}>{percent(goal.odds?.probability)}</b></span>
       {/each}
       {#if !goals.length}<small>Choose featured pickups</small>{/if}
       {#if goals.length > 3}<small class="more-desktop">+{goals.length - 3} more</small>{/if}
@@ -191,6 +192,7 @@
   .goal-previews{min-width:0;display:flex;align-items:center;gap:8px}.goal-preview{min-width:0;display:flex;align-items:center;gap:5px}.goal-preview>span:nth-child(2){min-width:0;display:grid}.goal-preview>span:nth-child(2)>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.goal-preview small{font-size:9px}.goal-preview>b{color:var(--accent-primary);font-size:11px}.more-mobile{display:none}.more-desktop{white-space:nowrap}
   .pickup-art{flex:none;display:grid;place-items:center;overflow:hidden;border-radius:var(--radius-sm);background:var(--surface-2)}.pickup-art img,.pickup-art :global(svg){grid-area:1/1}.pickup-art img{object-fit:contain;z-index:1;width:100%;height:100%;min-width:0;min-height:0}.pickup-art img:not([hidden])~:global(svg){display:none}
   .goal-chance{display:grid;text-align:right;white-space:nowrap;color:var(--accent-primary)}.reward-contribution{color:var(--accent-secondary)}
+  .actual-copies{color:var(--text-primary)}
   .goal-workspace{min-width:0;display:grid;grid-template-columns:minmax(270px,.58fr) minmax(0,1.42fr);border-top:1px solid var(--border-subtle)}
   .goal-editor{min-width:0;padding:10px;--inspect-popover-width:370px;--inspect-popover-padding:10px}.goal-editor>header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.goal-editor>header>span,.pickup-picker header{min-width:0;display:grid;gap:3px}.goal-editor :global(.inspect){flex:none}
   .picker-trigger{display:flex;align-items:center;gap:5px;min-height:32px;padding:3px 7px;border:1px solid var(--factor-field-border);border-radius:var(--radius-sm);background:var(--factor-field-bg);font-size:10px}.picker-trigger :global(svg){color:var(--accent-primary)}

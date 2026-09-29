@@ -96,39 +96,38 @@
     </div>
   </div>
   <div class="target-controls">
-    {#if stepUp}<div class="step-progress"><SelectField id={`step-${target.id}`} label="Step-up progress" options={stepOptions} value={String(target.plannedPulls)} onchange={value => setPulls(Number(value))}/></div>{:else}<div class="pull-count"><span>Planned pulls</span><div class="stepper" role="group" aria-label="Planned pulls"><Button variant="secondary" size="sm" ariaLabel="Add 100 pulls" disabled={target.plannedPulls >= maxPulls} onclick={() => setPulls(target.plannedPulls + 100)}>+100</Button><Button variant="secondary" size="sm" ariaLabel="Add 10 pulls" disabled={target.plannedPulls >= maxPulls} onclick={() => setPulls(target.plannedPulls + 10)}>+10</Button><TextField id={`pulls-${target.id}`} label="Planned pulls" hideLabel type="number" min={0} max={maxPulls} step={10} value={String(target.plannedPulls)} oninput={event => setPulls(Number((event.currentTarget as HTMLInputElement).value))}/><Button variant="secondary" size="sm" ariaLabel="Remove 10 pulls" disabled={target.plannedPulls <= 0} onclick={() => setPulls(target.plannedPulls - 10)}>−10</Button><Button variant="secondary" size="sm" ariaLabel="Remove 100 pulls" disabled={target.plannedPulls <= 0} onclick={() => setPulls(target.plannedPulls - 100)}>−100</Button></div></div>{/if}
+    <div class="pull-count" class:step-progress={Boolean(stepUp)}>
+      <div class="pull-heading">
+        <span>Planned pulls</span>
+        <InspectPopover label={`Actual results for ${target.title}`} align="end" onopenchange={open => { if (open) document.getElementById(`actual-pulls-${target.id}`)?.focus({ preventScroll: true }); }}>
+          {#snippet trigger()}<span class="results-trigger"><Icon name="edit" size={12}/>{#if target.actualPulls !== undefined}<span class="result-total">{target.actualPulls} actual</span><span class="result-delta" class:saved={savedPulls > 0} class:over={savedPulls < 0}>{savedPulls > 0 ? `${savedPulls} saved` : savedPulls < 0 ? `${-savedPulls} over` : 'As planned'}</span>{:else}{target.actualCopies ? 'Edit results' : 'Record results'}{/if}</span>{/snippet}
+          <div class="results-editor">
+            <header><strong>Actual results</strong><small>Your original plan stays unchanged.</small></header>
+            <div class="result-entry" class:step-up={Boolean(stepUp)}>
+              <span class="result-label"><strong>Pulls done</strong><small>{target.plannedPulls} planned · include free pulls &amp; tickets</small></span>
+              {#if stepUp}<SelectField id={`actual-pulls-${target.id}`} label="Actual step-up progress" hideLabel options={[{ value: '', label: 'Not recorded' }, ...stepOptions]} value={String(target.actualPulls ?? '')} onchange={setActualPulls}/>
+              {:else}<TextField id={`actual-pulls-${target.id}`} label="Actual pulls done" hideLabel type="number" min={0} max={maxPulls} step={paidOnly ? 10 : 1} placeholder="—" value={String(target.actualPulls ?? '')} oninput={event => setActualPulls((event.currentTarget as HTMLInputElement).value)}/>{/if}
+            </div>
+            {#if actualGoals.length}<div class="result-copies"><strong>Copies received <small>Optional</small></strong>
+              {#each actualGoals as goal (goal.key)}
+                <div class="result-entry">
+                  <span class="result-name"><span class="result-art">{#if goal.image}<img src={goal.image} width="30" height="30" loading="lazy" alt="" onerror={event => (event.currentTarget as HTMLImageElement).hidden = true}/>{/if}<Icon name={cardKind === 'support' ? 'grid' : 'user'} size={20}/></span><span><strong>{goal.name}</strong><small>{goal.desiredCopies} planned copies</small></span></span>
+                  <TextField id={`actual-copies-${target.id}-${goal.key}`} label={`Actual copies of ${goal.name}`} hideLabel type="number" min={0} max={5000} step={1} placeholder="—" value={String(target.actualCopies?.[goal.key] ?? '')} oninput={event => setActualCopies(goal.key, (event.currentTarget as HTMLInputElement).value)}/>
+                </div>
+              {/each}
+              <small>Include exchanges, exclude Uncap Crystals.</small>
+            </div>{/if}
+            <p>Saved automatically. Clear pulls to use your planned budget.</p>
+          </div>
+        </InspectPopover>
+      </div>
+      {#if stepUp}<SelectField id={`step-${target.id}`} label="Step-up progress" hideLabel options={stepOptions} value={String(target.plannedPulls)} onchange={value => setPulls(Number(value))}/>
+      {:else}<div class="stepper" role="group" aria-label="Planned pulls"><Button variant="secondary" size="sm" ariaLabel="Add 100 pulls" disabled={target.plannedPulls >= maxPulls} onclick={() => setPulls(target.plannedPulls + 100)}>+100</Button><Button variant="secondary" size="sm" ariaLabel="Add 10 pulls" disabled={target.plannedPulls >= maxPulls} onclick={() => setPulls(target.plannedPulls + 10)}>+10</Button><TextField id={`pulls-${target.id}`} label="Planned pulls" hideLabel type="number" min={0} max={maxPulls} step={10} value={String(target.plannedPulls)} oninput={event => setPulls(Number((event.currentTarget as HTMLInputElement).value))}/><Button variant="secondary" size="sm" ariaLabel="Remove 10 pulls" disabled={target.plannedPulls <= 0} onclick={() => setPulls(target.plannedPulls - 10)}>−10</Button><Button variant="secondary" size="sm" ariaLabel="Remove 100 pulls" disabled={target.plannedPulls <= 0} onclick={() => setPulls(target.plannedPulls - 100)}>−100</Button></div>{/if}
+    </div>
     {#if cardKind === 'support' && !stepUp}<div class="crystal-plan" role="group" aria-label="Uncap Crystals to use on this banner"><span><strong>Uncap crystals</strong><small>Replace extra copies after the first</small></span><div class="crystal-controls">{#each ['rainbow', 'gold'] as kind}{@const name = kind === 'rainbow' ? 'Rainbow' : 'Gold'}{@const key = kind === 'rainbow' ? 'rainbowCrystalsPlanned' : 'goldCrystalsPlanned'}<div class="crystal-control"><span><img src={itemIconPath(kind === 'rainbow' ? 144 : 145)} width="24" height="24" alt=""/><span><strong>{name}</strong><small>{kind === 'rainbow' ? 'SSR' : 'SR'} cards</small></span></span><div class="crystal-stepper" role="group" aria-label={`${name} Uncap Crystals to use on this banner`}><Button variant="ghost" size="sm" icon="minus" ariaLabel={`Use one fewer ${name} Uncap Crystal`} disabled={!target[key]} onclick={() => onupdate(value => value[key] = Math.max(0, (value[key] ?? 0) - 1))}/><output aria-label={`${name} Uncap Crystals planned`}>{target[key] ?? 0}</output><Button variant="ghost" size="sm" icon="add" ariaLabel={`Use one more ${name} Uncap Crystal`} disabled={(target[key] ?? 0) >= 20} onclick={() => onupdate(value => value[key] = Math.min(20, (value[key] ?? 0) + 1))}/></div></div>{/each}</div></div>{/if}
     <InspectPopover label="Target options" align="end">{#snippet trigger()}<span class="options-trigger"><Icon name="tune" size={16}/></span>{/snippet}<div class="target-options"><strong>Target options</strong><small>{paidOnly ? 'This banner uses paid Carats only.' : 'The recommended defaults use tickets first and pull at banner end.'}</small><SelectField id={`timing-${target.id}`} label="Pull on" options={[{value:'start',label:'Banner start'},{value:'end',label:'Banner end'},{value:'custom',label:'Custom date'}]} value={target.pullTiming} onchange={(value)=>onupdate((item)=>item.pullTiming=value as PlannerTarget['pullTiming'])}/>{#if target.pullTiming === 'custom'}<TextField id={`pull-date-${target.id}`} label="Pull date" type="date" value={target.customPullDate ?? ''} oninput={event => onupdate(value => value.customPullDate = (event.currentTarget as HTMLInputElement).value)}/>{/if}{#if !paidOnly}<Checkbox id={`tickets-${target.id}`} label="Use tickets first" checked={target.useTickets} onchange={(checked)=>onupdate((value)=>value.useTickets=checked)}/><Checkbox id={`paid-${target.id}`} label="Allow paid Carats" checked={target.allowPaidJewels} onchange={(checked)=>onupdate((value)=>value.allowPaidJewels=checked)}/>{#if target.useTickets}<TextField id={`ticket-limit-${target.id}`} label="Ticket limit" type="number" min={0} placeholder="No limit" value={String(target.ticketLimit??'')} oninput={(event)=>onupdate((value)=>value.ticketLimit=(event.currentTarget as HTMLInputElement).value===''?undefined:Math.max(0,Number((event.currentTarget as HTMLInputElement).value)||0))}/>{/if}{/if}</div></InspectPopover>
     <Button variant="secondary" size="sm" icon="trash" ariaLabel={`Remove ${target.title}`} onclick={onremove}/>
   </div>
-  <details class="actual-results">
-    <summary class:recorded={target.actualPulls !== undefined}>
-      <Icon name="edit" size={14}/><strong>{target.actualPulls !== undefined || target.actualCopies ? 'Actual results' : 'Record results'}</strong>
-      {#if target.actualPulls !== undefined}<span class="result-total">{target.actualPulls} actual / {target.plannedPulls} planned</span><span class="result-delta" class:saved={savedPulls > 0} class:over={savedPulls < 0} role="status">{savedPulls > 0 ? `${savedPulls} pulls saved` : savedPulls < 0 ? `${-savedPulls} pulls over plan` : 'As planned'}</span>{/if}
-      <Icon name="chevron" size={14}/>
-    </summary>
-    <div class="results-editor">
-      <table class:step-up={Boolean(stepUp)} aria-label={`Planned and actual results for ${target.title}`}>
-        <thead><tr><th scope="col">Result</th><th scope="col">Planned</th><th scope="col">Actual</th></tr></thead>
-        <tbody>
-          <tr>
-            <th scope="row"><span class="result-name"><span class="result-art"><Icon name="ticket" size={20}/></span><span><strong>Total pulls</strong><small>Includes free pulls &amp; tickets</small></span></span></th>
-            <td class="result-plan">{target.plannedPulls}</td>
-            <td>{#if stepUp}<SelectField id={`actual-pulls-${target.id}`} label="Actual step-up progress" hideLabel options={[{ value: '', label: '—' }, ...stepOptions]} value={String(target.actualPulls ?? '')} onchange={setActualPulls}/>
-              {:else}<TextField id={`actual-pulls-${target.id}`} label="Actual pulls done" hideLabel type="number" min={0} max={maxPulls} step={paidOnly ? 10 : 1} placeholder="—" value={String(target.actualPulls ?? '')} oninput={event => setActualPulls((event.currentTarget as HTMLInputElement).value)}/>{/if}</td>
-          </tr>
-          {#each actualGoals as goal (goal.key)}
-            <tr>
-              <th scope="row"><span class="result-name"><span class="result-art">{#if goal.image}<img src={goal.image} width="30" height="30" loading="lazy" alt="" onerror={event => (event.currentTarget as HTMLImageElement).hidden = true}/>{/if}<Icon name={cardKind === 'support' ? 'grid' : 'user'} size={20}/></span><span><strong>{goal.name}</strong><small>Copies</small></span></span></th>
-              <td class="result-plan" aria-label={`${goal.desiredCopies} planned copies`}>{goal.desiredCopies}</td>
-              <td><TextField id={`actual-copies-${target.id}-${goal.key}`} label={`Actual copies of ${goal.name}`} hideLabel type="number" min={0} max={5000} step={1} placeholder="—" value={String(target.actualCopies?.[goal.key] ?? '')} oninput={event => setActualCopies(goal.key, (event.currentTarget as HTMLInputElement).value)}/></td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-      <small class="results-hint">Blank keeps your plan. Pulls update future balances; copies include exchanges, not crystals.</small>
-    </div>
-  </details>
   {#if past}<div class="past-note" role="note"><Icon name="timeline" size={16}/><span><strong>Before plan start</strong><small>Kept for editing, but excluded from this projection.</small></span></div>{/if}
   {#if paidOnly && !past && !maxPulls}<div class="past-note" role="status"><Icon name="warning" size={16}/><span>Paid banner costs are unavailable. Funding and odds will appear when its data loads.</span></div>
   {:else if !past && projection}<PlannerTargetGoals {target} {projection} {resources} {events} {catalog} {pickupCopyMemory} {onupdate}/>{/if}
@@ -137,25 +136,19 @@
 <style>
   .target{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;border-bottom:1px solid var(--border-subtle);background:var(--surface-1);content-visibility:auto;contain-intrinsic-block-size:auto 150px}
   .target:has(:global([aria-expanded=true])){content-visibility:visible;position:relative;z-index:2}
-  .step-progress{min-width:0;width:320px;max-width:100%}.step-progress :global(.field>label){font-size:10px}
+  .step-progress{min-width:0;width:320px;max-width:100%}
   .target.past{color:var(--text-secondary)}
-  .actual-results{grid-column:1/-1;min-width:0;border-top:1px solid var(--border-subtle);font-size:11px}
-  .actual-results>summary{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;min-height:36px;padding:6px 10px;cursor:pointer;list-style:none}
-  .actual-results>summary::-webkit-details-marker{display:none}.actual-results>summary:focus-visible{outline:2px solid var(--accent-primary);outline-offset:-2px}
-  .actual-results>summary>:global(svg){color:var(--text-secondary);flex:none}.actual-results[open]>summary>:global(svg:last-child){transform:rotate(180deg)}
-  .result-total{color:var(--text-secondary);font-variant-numeric:tabular-nums}
-  .result-delta{padding:3px 7px;border-radius:var(--radius-sm);font-weight:600;background:var(--surface-2)}
+  .pull-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;--inspect-popover-width:360px;--inspect-popover-padding:14px}
+  .pull-heading>span{font-size:10px;color:var(--text-secondary)}.pull-heading>:global(.inspect){margin-left:auto}
+  .results-trigger{display:flex;align-items:center;gap:5px;min-height:28px;color:var(--text-secondary);font-size:11px}.results-trigger:hover{color:var(--accent-primary)}
+  .result-total{color:var(--text-primary);font-variant-numeric:tabular-nums}.result-delta{padding:2px 5px;border-radius:var(--radius-sm);font-weight:600;background:var(--surface-2)}
   .result-delta.saved{color:var(--color-success);background:color-mix(in srgb,var(--color-success) 12%,transparent)}.result-delta.over{color:var(--accent-warning);background:color-mix(in srgb,var(--accent-warning) 12%,transparent)}
-  .results-editor{max-width:560px;padding:0 10px 10px}
-  .results-editor table{width:100%;table-layout:fixed;border-collapse:collapse}.results-editor thead th{padding:2px 4px 5px;color:var(--text-secondary);font-size:10px;font-weight:500;text-align:left}
-  .results-editor th:nth-child(2){width:64px;text-align:center}.results-editor th:last-child{width:90px}
-  .results-editor td,.results-editor tbody th{padding:5px 4px;border-top:1px solid var(--border-subtle);font-weight:400;text-align:left}
-  .results-editor .result-plan{text-align:center;color:var(--text-secondary);font-size:13px;font-variant-numeric:tabular-nums}
-  .result-name{display:flex;align-items:center;gap:7px;min-width:0}.result-name>span:last-child{display:grid;gap:2px;min-width:0}.result-name strong{font-size:11px;overflow-wrap:anywhere}.result-name small{color:var(--text-secondary);font-size:9px}
+  .results-editor{display:grid;gap:14px;font-size:12px}.results-editor header{display:grid;gap:4px;padding-right:30px}.results-editor header>strong{font-size:14px}.results-editor small,.results-editor p{color:var(--text-secondary);font-size:11px;line-height:1.4}
+  .result-entry{display:grid;grid-template-columns:minmax(0,1fr) 80px;align-items:center;gap:10px}.result-entry.step-up{grid-template-columns:minmax(0,1fr)}.result-label,.result-name>span:last-child{display:grid;gap:3px;min-width:0}.result-entry strong{font-size:12px;overflow-wrap:anywhere}
+  .result-copies{display:grid;gap:10px;border-top:1px solid var(--border-subtle);padding-top:12px}.result-copies>strong{display:flex;justify-content:space-between}.result-copies>strong>small{font-weight:400}
+  .result-entry .result-name{display:flex;align-items:center;gap:8px;min-width:0}
   .result-art{display:grid;place-items:center;flex:none;width:30px;height:30px;color:var(--text-secondary)}.result-art img,.result-art :global(svg){grid-area:1/1}.result-art img{object-fit:contain;z-index:1}.result-art img:not([hidden])~:global(svg){display:none}
-  .results-editor :global(.field){--control-height:34px}.results-hint{display:block;margin:5px 4px 0;color:var(--text-secondary);font-size:10px}
-  .results-editor table.step-up th:last-child{width:50%}
-  .results-editor table.step-up :global(.field:has(input)){max-width:90px}
+  .results-editor p{margin:0;padding-top:10px;border-top:1px solid var(--border-subtle)}
   .target-title{min-width:0;min-height:66px;display:grid;align-items:center;gap:11px;padding:7px 10px}
   .target-title.has-image{grid-template-columns:148px minmax(0,1fr)}
   .target-title>img{display:block;width:148px;height:48px;object-fit:contain;border:1px solid var(--border-subtle);border-radius:3px;background:var(--surface-2)}
@@ -182,7 +175,7 @@
   .at-pull img{object-fit:contain}.at-pull em{font-style:normal;color:var(--text-secondary)}
   .target-controls{display:flex;align-items:end;gap:8px;padding:8px 10px;border-left:1px solid var(--border-subtle);background:color-mix(in srgb,var(--surface-2) 58%,transparent)}
   .pull-count{min-width:0;display:grid;gap:4px}
-  .pull-count>span,.target-options>small{color:var(--text-secondary);font-size:10px}
+  .target-options>small{color:var(--text-secondary);font-size:10px}
   .stepper{display:grid;grid-template-columns:48px 42px minmax(80px,92px) 42px 48px;gap:3px;align-items:stretch}
   .stepper :global(.ui-button){min-width:0;min-height:var(--control-height);padding-inline:4px}
 
@@ -205,8 +198,7 @@
     .target-controls,.target-controls:has(.crystal-plan){max-width:none;justify-content:flex-end;flex-wrap:wrap;border-left:0;border-top:1px solid var(--border-subtle)}
   }
   @media(max-width:767px){
-    .actual-results>summary{display:grid;grid-template-columns:14px minmax(0,1fr) auto 14px;min-height:var(--touch-target);padding:6px}.actual-results>summary>:global(svg:last-child){grid-column:4;grid-row:1}.result-delta{grid-column:3;grid-row:1}.result-total{grid-column:2/-1;grid-row:2}.actual-results>summary.recorded{row-gap:3px}
-    .results-editor{padding:0 4px 8px}.results-editor :global(.field){--control-height:var(--touch-target)}.results-editor th:nth-child(2){width:50px}.results-editor th:last-child{width:82px}
+    .results-editor :global(.field){--control-height:var(--touch-target)}.results-editor header{min-height:30px;padding-right:36px}
     .target{grid-template-columns:minmax(0,1fr);margin-bottom:8px;border:1px solid var(--border-primary);border-radius:var(--radius-md)}
     .target-title{padding:7px 6px;gap:8px}.target-title.has-image{grid-template-columns:142px minmax(0,1fr)}.target-title>img{width:142px;height:55px;border:0;border-radius:5px}
     .target-controls,.target-controls:has(.crystal-plan){max-width:none;border-left:0;padding:6px;gap:6px}

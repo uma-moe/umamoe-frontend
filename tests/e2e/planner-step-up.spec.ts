@@ -55,12 +55,12 @@ test('Step-ups share banner goal controls, budget paid steps and survive reload'
   await expect(target.getByRole('button', { name: 'Decrease desired copies of Chosen card', exact: true })).toBeDisabled();
   const controls = await Promise.all([progress.boundingBox(), target.getByRole('button', { name: `Remove ${event.title}`, exact: true }).boundingBox()]);
   expect(Math.abs(controls[0]!.height - controls[1]!.height)).toBeLessThanOrEqual(2);
-  await target.locator('.actual-results > summary').click();
+  await target.getByRole('button', { name: `Actual results for ${event.title}`, exact: true }).click();
   await target.getByRole('combobox', { name: 'Actual step-up progress', exact: true }).click();
   await target.getByRole('option', { name: 'Step 1 · 10 pulls · 500 paid Carats', exact: true }).click();
-  await expect(target.locator('.result-delta')).toHaveText('10 pulls saved');
+  await expect(target.locator('.result-delta')).toHaveText('10 saved');
   await expect(progress).toContainText('Step 2 · 20 pulls');
-  await target.locator('.actual-results').screenshot({ path: info.outputPath('actual-step-up.png') });
+  await target.getByRole('dialog', { name: `Actual results for ${event.title}`, exact: true }).screenshot({ path: info.outputPath('actual-step-up.png') });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
