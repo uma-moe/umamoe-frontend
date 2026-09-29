@@ -1,14 +1,14 @@
 import { expect, test } from './fixtures/test';
 import { mockPlannerGoals } from './fixtures/planner-goals';
 
-test('actual results preserve the plan and carry savings forward through edits and reloads', async ({ page }, info) => {
+test('actual results preserve the plan and carry savings forward through edits and reloads', async ({ page, isMobile }, info) => {
   await mockPlannerGoals(page);
   await page.goto('/timeline?tab=carat-planner');
   await expect(page.locator('[data-target-id="support-goals"]')).toBeVisible();
   await page.evaluate(() => {
     const collection = JSON.parse(localStorage.getItem('carat-planner-plans-v1')!);
     const plan = collection.plans[0];
-    plan.targets.push({ ...plan.targets[0], id: 'next-banner', eventId: 'next-banner', title: 'Next banner', pullTiming: 'custom', customPullDate: '2026-10-01' });
+    plan.targets.push({ ...plan.targets[0], id: 'next-banner', eventId: 'next-banner', title: 'Next banner', bannerKind: 'character', gachaId: undefined, gachaIds: undefined, pickupId: 101301, pickupGoals: [{ pickupId: 101301, desiredCopies: 1 }], pullTiming: 'custom', customPullDate: '2026-10-01' });
     localStorage.setItem('carat-planner-plans-v1', JSON.stringify(collection));
   });
   await page.reload();
@@ -17,6 +17,11 @@ test('actual results preserve the plan and carry savings forward through edits a
   const edit = row.getByRole('button', { name: 'Actual results for Kitasan Black Support', exact: true });
   const editor = row.getByRole('dialog', { name: 'Actual results for Kitasan Black Support', exact: true });
   await expect(next.locator('.funding')).toContainText('200 funded');
+  const supportAction = (await edit.boundingBox())!;
+  const characterAction = (await next.getByRole('button', { name: 'Actual results for Next banner', exact: true }).boundingBox())!;
+  expect(Math.abs(supportAction.x - characterAction.x)).toBeLessThan(1);
+  expect(supportAction.width).toBe(characterAction.width);
+  await expect(edit).toHaveText('Results');
   const before = Number((await next.locator('.carat-balance b').innerText()).replaceAll(',', ''));
   const after = Number((await next.locator('.carat-balance em').innerText()).replace(/[^0-9]/g, ''));
   const rowHeight = (await row.boundingBox())!.height;
@@ -29,8 +34,8 @@ test('actual results preserve the plan and carry savings forward through edits a
   await expect(pulls).toBeFocused();
   await pulls.fill('50');
   await copies.fill('4');
-  await expect(edit).toContainText('50 actual');
-  await expect(edit).toContainText('150 saved');
+  await expect(row.locator('.funding')).toContainText('50 actual / 200 planned');
+  await expect(row.locator('.result-delta')).toHaveText('150 pulls saved');
   await expect(row.getByRole('spinbutton', { name: 'Planned pulls', exact: true })).toHaveValue('200');
   await expect(next.locator('.carat-balance b')).toHaveText((before + 22_500).toLocaleString('en-US'));
   await expect(next.locator('.carat-balance em')).toHaveText(`→ ${(after + 22_500).toLocaleString('en-US')}`);
@@ -39,9 +44,9 @@ test('actual results preserve the plan and carry savings forward through edits a
   await expect(editor).not.toBeVisible();
   await expect(edit).toBeFocused();
   await expect(row.locator('.goal-previews')).toContainText('3 planned · 4 actual');
-  await row.screenshot({ path: info.outputPath('actual-results.png') });
+  await page.locator('.target-list').screenshot({ path: info.outputPath('actual-results.png') });
   await page.reload();
-  await expect(edit).toContainText('50 actual');
+  await expect(row.locator('.funding')).toContainText('50 actual / 200 planned');
   await edit.click();
   await expect(pulls).toHaveValue('50');
   await expect(copies).toHaveValue('4');
@@ -51,7 +56,7 @@ test('actual results preserve the plan and carry savings forward through edits a
   await pulls.fill('0');
   await expect(next.locator('.carat-balance b')).toHaveText((before + 30_000).toLocaleString('en-US'));
   await pulls.fill('250');
-  await expect(edit).toContainText('50 over');
+  await expect(row.locator('.result-delta')).toHaveText('50 pulls over plan');
   await pulls.fill('');
   await expect(next.locator('.carat-balance b')).toHaveText(before.toLocaleString('en-US'));
   await copies.fill('0');
@@ -60,6 +65,14 @@ test('actual results preserve the plan and carry savings forward through edits a
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0].targets[0].actualCopies ?? null)).toBeNull();
   await editor.getByRole('button', { name: 'Close Actual results for Kitasan Black Support', exact: true }).click();
   await expect(editor).not.toBeVisible();
-  await expect(edit).toContainText('Record results');
+  await expect(edit).toHaveText('Results');
   await expect(row.locator('.goal-previews')).not.toContainText('4 actual');
+  for (const width of isMobile ? [390, 320] : [1536, 1301, 1200, 1024, 768]) {
+    await page.setViewportSize({ width, height: 900 });
+    const supportButton = (await edit.boundingBox())!;
+    const characterButton = (await next.getByRole('button', { name: 'Actual results for Next banner', exact: true }).boundingBox())!;
+    expect(Math.abs(supportButton.x - characterButton.x)).toBeLessThan(1);
+    expect(await row.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+    expect(await next.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+  }
 });

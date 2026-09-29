@@ -47,6 +47,7 @@
   ].filter(Boolean).map((part, index, parts) => index === parts.length - 1 ? `${part} included` : part).join(' + ') || 'Exact joint chance');
   const fundingLabel = $derived(paidOnly ? `Paid Carats only · ${projection.shortfallJewels ? `Requires ${projection.shortfallJewels.toLocaleString()} paid Carats` : 'Paid cost covered'}` : [projection.shortfallJewels ? `${projection.shortfallJewels.toLocaleString()} Carats short` : '', `${projection.ticketPulls + projection.freeJewelPulls + projection.paidJewelPulls} from resources`, projection.freePullsUsed ? `${projection.freePullsUsed} free` : ''].filter(Boolean).join(' · '));
   const topRarity = $derived(cardKind === 'support' ? 'SSR' : '3★');
+  const savedPulls = $derived(projection.plannedPulls - (projection.actualPulls ?? projection.plannedPulls));
 
   function percent(value?: number, digits = 1): string { return value === undefined || !Number.isFinite(value) ? 'Unavailable' : `${(value * 100).toFixed(value > 0 && value < .001 ? 2 : digits)}%`; }
   function copies(value: number): string { return value.toFixed(value >= 10 ? 1 : 2).replace(/\.?0+$/, ''); }
@@ -97,7 +98,7 @@
   <summary class="pickup-summary" aria-label={`Pickup goals for ${target.title}`}>
     <span class="funding" class:short={projection.shortfallJewels > 0}>
       <Icon name={projection.shortfallJewels > 0 ? 'warning' : 'check'} size={16}/>
-      <span><strong>{#if paidOnly}{projection.actualPulls ?? projection.plannedPulls} {projection.actualPulls === undefined ? 'planned' : 'actual'} pulls{:else}{projection.fundedPulls}{#if projection.shortfallJewels} / {projection.actualPulls ?? projection.plannedPulls}{/if} funded{/if}</strong><small>{fundingLabel}{#if !paidOnly && projection.rewardCaratsGained > 0}<span class="reward-contribution"> · +{projection.rewardCaratsGained.toLocaleString()} from rewards</span>{/if}</small></span>
+      <span><strong>{#if projection.actualPulls !== undefined}{projection.actualPulls} actual / {projection.plannedPulls} planned{:else if paidOnly}{projection.plannedPulls} planned pulls{:else}{projection.fundedPulls}{#if projection.shortfallJewels} / {projection.plannedPulls}{/if} funded{/if}</strong><small>{#if projection.actualPulls !== undefined}<span class="result-delta" class:saved={savedPulls > 0} class:over={savedPulls < 0}>{savedPulls > 0 ? `${savedPulls} pulls saved` : savedPulls < 0 ? `${-savedPulls} pulls over plan` : 'As planned'}</span> · {/if}{fundingLabel}{#if !paidOnly && projection.rewardCaratsGained > 0}<span class="reward-contribution"> · +{projection.rewardCaratsGained.toLocaleString()} from rewards</span>{/if}</small></span>
     </span>
     <small class="goals-label">Goals</small>
     <span class="goal-previews">
@@ -193,6 +194,7 @@
   .pickup-art{flex:none;display:grid;place-items:center;overflow:hidden;border-radius:var(--radius-sm);background:var(--surface-2)}.pickup-art img,.pickup-art :global(svg){grid-area:1/1}.pickup-art img{object-fit:contain;z-index:1;width:100%;height:100%;min-width:0;min-height:0}.pickup-art img:not([hidden])~:global(svg){display:none}
   .goal-chance{display:grid;text-align:right;white-space:nowrap;color:var(--accent-primary)}.reward-contribution{color:var(--accent-secondary)}
   .actual-copies{color:var(--text-primary)}
+  .result-delta.saved{color:var(--color-success)}.result-delta.over{color:var(--accent-warning)}
   .goal-workspace{min-width:0;display:grid;grid-template-columns:minmax(270px,.58fr) minmax(0,1.42fr);border-top:1px solid var(--border-subtle)}
   .goal-editor{min-width:0;padding:10px;--inspect-popover-width:370px;--inspect-popover-padding:10px}.goal-editor>header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.goal-editor>header>span,.pickup-picker header{min-width:0;display:grid;gap:3px}.goal-editor :global(.inspect){flex:none}
   .picker-trigger{display:flex;align-items:center;gap:5px;min-height:32px;padding:3px 7px;border:1px solid var(--factor-field-border);border-radius:var(--radius-sm);background:var(--factor-field-bg);font-size:10px}.picker-trigger :global(svg){color:var(--accent-primary)}
