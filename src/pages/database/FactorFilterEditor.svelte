@@ -25,7 +25,8 @@
   let { id, label, category, tone = 'blue', requirements = $bindable([]), maxStars = 9, priorityMode = false, addLabelOverride }: Props = $props();
   const searchable = $derived(category === 'unique' || category === 'skills-races');
   const actualMaxStars = $derived(maxStars);
-  const maxOccurrences = $derived(maxStars === 3 ? 1 : 3);
+  const supportsOccurrences = $derived(maxStars > 3);
+  const maxOccurrences = 3;
   const options = $derived([
     ...(category === 'skills-races' ? [] : [{ value: '0', label: 'Any' }]),
     ...factorOptions(category).map((factor) => ({ value: String(factor.id), label: factor.text, image: category === 'skills-races' ? factorImage(Number(factor.id)) : undefined }))
@@ -65,13 +66,13 @@
       <WhiteFactorTypePicker id={`${id}-browser`} browseLabel={label.toLocaleLowerCase().includes('lineage') ? 'Find lineage white factors' : id.includes('main') ? 'Find main-parent white factors' : 'Find white factors'} selectedFactorIds={requirements.map((requirement) => requirement.factorId)} onadd={addSelectedFactors}/>
     {/if}
     {#each requirements as requirement, index}
-      <div class="requirement" class:with-priority={priorityMode}>
+      <div class="requirement" class:with-priority={priorityMode} class:stars-only={!priorityMode && !supportsOccurrences}>
         {#if !priorityMode}
           <div class="relation" aria-label={index === 0 ? 'First requirement' : 'Combine with previous requirement'}>
             {#if index === 0}<span class="match-label">Match</span>
             {:else}<SegmentedControl label="Requirement operator" options={[{value:'and',label:'AND'},{value:'or',label:'OR'}]} value={requirement.operator ?? 'and'} onchange={(operator) => update(index, { operator: operator as 'and' | 'or' })}/>{/if}
           </div>
-          <div class="relation factor-metric"><SegmentedControl label="Factor range metric" options={[{value:'stars',label:'Total stars',icon:'star'},{value:'occurrences',label:'Parent occurrences',icon:'close'}]} value={requirement.metric ?? 'stars'} onchange={(metric) => update(index, { metric: metric as 'stars' | 'occurrences' })}/></div>
+          {#if supportsOccurrences}<div class="relation factor-metric"><SegmentedControl label="Factor range metric" options={[{value:'stars',label:'Total stars',icon:'star'},{value:'occurrences',label:'Parent occurrences',icon:'close'}]} value={requirement.metric ?? 'stars'} onchange={(metric) => update(index, { metric: metric as 'stars' | 'occurrences' })}/></div>{/if}
         {/if}
         {#if searchable}
           <Combobox id={`${id}-factor-${index}`} label="Factor" hideLabel emptyValue={category === 'unique' ? '0' : undefined} placeholder={category === 'unique' ? 'Search Green Factor' : 'Search White Factor'} {options} value={String(requirement.factorId)} onchange={(value) => update(index, { factorId: Number(value) })}/>
@@ -87,7 +88,7 @@
         {/if}
         <IconButton icon="trash" label={`Remove ${options.find((option) => Number(option.value) === requirement.factorId)?.label ?? 'factor'}`} onclick={() => remove(index)}/>
         {#if !priorityMode}
-          {@const occurrences = requirement.metric === 'occurrences'}
+          {@const occurrences = supportsOccurrences && requirement.metric === 'occurrences'}
           <div class="factor-range"><Slider id={id + (occurrences ? '-occurrences-' : '-stars-') + index} label={occurrences ? 'Occurrence range' : 'Star range'} hideLabel min={occurrences ? 0 : 1} max={occurrences ? maxOccurrences : actualMaxStars} step={1} range value={occurrences ? requirement.minimumOccurrences ?? 0 : requirement.minimumStars} endValue={occurrences ? requirement.maximumOccurrences ?? maxOccurrences : requirement.maximumStars ?? actualMaxStars} {tone} showOutput={false} showTicks showTickLabels tickLabels={Array.from({ length: occurrences ? maxOccurrences + 1 : actualMaxStars }, (_, value) => occurrences ? value + '×' : (value + 1) + '★')} onchange={(minimum, maximum) => update(index, occurrences ? { minimumOccurrences: minimum === 0 && maximum === maxOccurrences ? undefined : minimum, maximumOccurrences: minimum === 0 && maximum === maxOccurrences ? undefined : maximum } : { minimumStars: minimum, maximumStars: maximum })}/></div>
         {/if}
       </div>
@@ -107,6 +108,7 @@
   .add-row { width:100%; min-height:34px; display:flex; align-items:center; justify-content:center; gap:7px; padding:3px 10px; border:0; border-radius:6px; background:var(--factor-field-bg); color:var(--factor-field-text); cursor:pointer; font:inherit; transition:background-color var(--duration-fast),color var(--duration-fast); }.add-row span { width:22px; height:22px; display:grid; place-items:center; border-radius:50%; background:color-mix(in srgb,var(--factor-accent) 13%,transparent); color:var(--factor-accent); }.add-row strong { font-size:10px; font-weight:700; }.add-row:hover { background:color-mix(in srgb,var(--factor-accent) 7%,transparent); color:var(--text-primary); }.add-row:focus-visible { outline:0; box-shadow:var(--focus-ring); }
   .requirement { min-width:0; display:grid; grid-template-columns:62px 60px minmax(0,1fr) 28px; align-items:center; gap:4px 5px; padding:7px; border:1px solid var(--factor-row-border); border-radius:var(--radius-sm); background:var(--factor-row-bg); }
   .requirement.with-priority { grid-template-columns:minmax(0,1fr) 60px 28px; gap:4px; padding:0; border:0; background:transparent; }
+  .requirement.stars-only { grid-template-columns:62px minmax(0,1fr) 28px; }
   .priority-mode .requirements { gap:4px; padding:0; }
   .priority-mode :global(.white-factor-browser) { margin:0; }
   .with-priority :global(input[role="combobox"]) { min-height:40px; font-size:14px; }

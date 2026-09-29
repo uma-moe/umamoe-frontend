@@ -149,11 +149,11 @@ function restoreFactors(value: unknown, maximumCap = 9): FactorRequirement[] {
     const maximumStars = Math.max(minimumStars, Math.min(maximumCap, finiteNumber(entry[2]) ?? maximumCap));
     const requirement: FactorRequirement = { factorId, minimumStars, maximumStars };
     if (entry[3] === 1) requirement.operator = 'or';
-    const countCap = maximumCap === 3 ? 1 : 3;
+    if (maximumCap === 3) return [requirement];
     const minimumOccurrences = finiteNumber(entry[4]);
     const maximumOccurrences = finiteNumber(entry[5]);
-    if (minimumOccurrences !== undefined) requirement.minimumOccurrences = Math.max(0, Math.min(countCap, Math.trunc(minimumOccurrences)));
-    if (maximumOccurrences !== undefined) requirement.maximumOccurrences = Math.max(requirement.minimumOccurrences ?? 0, Math.min(countCap, Math.trunc(maximumOccurrences)));
+    if (minimumOccurrences !== undefined) requirement.minimumOccurrences = Math.max(0, Math.min(3, Math.trunc(minimumOccurrences)));
+    if (maximumOccurrences !== undefined) requirement.maximumOccurrences = Math.max(requirement.minimumOccurrences ?? 0, Math.min(3, Math.trunc(maximumOccurrences)));
     if (entry[6] === 1) requirement.metric = 'occurrences';
     return [requirement];
   });

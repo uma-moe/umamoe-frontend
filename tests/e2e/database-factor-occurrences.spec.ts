@@ -4,7 +4,7 @@ import { mockDatabase, mockAffinity } from './fixtures/api';
 test('factor toggles retain both ranges and main-parent AND/OR after reload', async ({ page }) => {
   await mockDatabase(page);
   await mockAffinity(page);
-  const state = { fm: 'advanced', w: [[201600, 1, 9]], mb: [[10, 1, 3]] };
+  const state = { fm: 'advanced', w: [[201600, 1, 9]], mb: [[10, 1, 3, 0, 0, 0, 1]], mp: [[0, 1, 3]], mg: [[0, 1, 3]], mw: [[201600, 1, 3]] };
   await page.goto('/database?filters=' + encodeURIComponent(Buffer.from(JSON.stringify(state)).toString('base64')));
   const openFilters = async () => {
     await page.getByRole('button', { name: 'Filters', exact: true }).click();
@@ -27,10 +27,12 @@ test('factor toggles retain both ranges and main-parent AND/OR after reload', as
   await main.getByRole('button', { name: 'Add Blue Factor (Stats)', exact: true }).click();
   await main.getByRole('radio', { name: 'OR', exact: true }).click();
   const first = main.locator('.requirement').first();
-  await first.getByRole('radio', { name: 'Parent occurrences', exact: true }).click();
-  await expect(first.locator('input[type="range"]').last()).toHaveAttribute('max', '1');
-  await setSliderValue(first.locator('input[type="range"]').first(), 1);
-  await first.getByRole('radio', { name: 'Total stars', exact: true }).click();
+  for (const id of ['main-blue', 'main-pink', 'main-green', 'main-white']) {
+    const editor = page.locator('#' + id);
+    await expect(editor.getByRole('radiogroup', { name: 'Factor range metric', exact: true })).toHaveCount(0);
+    await expect(editor.locator('input[type="range"]').first()).toHaveAttribute('min', '1');
+    await expect(editor.locator('input[type="range"]').last()).toHaveAttribute('max', '3');
+  }
   await setSliderValue(first.locator('input[type="range"]').first(), 2);
   await setSliderValue(first.locator('input[type="range"]').last(), 2);
   await expect(first.locator('input[type="range"]').first()).toHaveValue('2');
@@ -44,12 +46,12 @@ test('factor toggles retain both ranges and main-parent AND/OR after reload', as
         const { x, y, width, height } = child.getBoundingClientRect();
         return { x, y, width, height };
       }));
-      expect(boxes).toHaveLength(5);
-      for (let index = 1; index < 4; index++) {
+      expect(boxes).toHaveLength(await row.evaluate(element => element.classList.contains('stars-only')) ? 4 : 5);
+      for (let index = 1; index < boxes.length - 1; index++) {
         expect(boxes[index]!.x).toBeGreaterThanOrEqual(boxes[index - 1]!.x + boxes[index - 1]!.width);
         expect(Math.abs(boxes[index]!.y + boxes[index]!.height / 2 - boxes[0]!.y - boxes[0]!.height / 2)).toBeLessThan(1);
       }
-      expect(boxes[4]!.y).toBeGreaterThanOrEqual(boxes[0]!.y + boxes[0]!.height);
+      expect(boxes.at(-1)!.y).toBeGreaterThanOrEqual(boxes[0]!.y + boxes[0]!.height);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
@@ -57,7 +59,12 @@ test('factor toggles retain both ranges and main-parent AND/OR after reload', as
     const saved = JSON.parse(localStorage.getItem('database-filter-state-v2')!);
     return JSON.parse(atob(saved.formState)).w[0].slice(1);
   })).toEqual([7, 9, null, 3, 3, 1]);
+  await expect.poll(() => page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem('database-filter-state-v2')!);
+    return JSON.parse(atob(saved.formState)).mb;
+  })).toEqual([[10, 2, 2], [0, 1, 3, 1]]);
   await white.screenshot({ path: test.info().outputPath('factor-occurrences.png') });
+  await main.screenshot({ path: test.info().outputPath('main-parent-stars.png') });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(page.viewportSize()!.width);
   // A shared URL intentionally takes precedence over saved preferences.
   await page.evaluate(() => history.replaceState(null, '', '/database'));
@@ -68,8 +75,7 @@ test('factor toggles retain both ranges and main-parent AND/OR after reload', as
   await expect(main.getByRole('radio', { name: 'OR', exact: true })).toBeChecked();
   await expect(first.locator('input[type="range"]').first()).toHaveValue('2');
   await expect(first.locator('input[type="range"]').last()).toHaveValue('2');
-  await first.getByRole('radio', { name: 'Parent occurrences', exact: true }).click();
-  await expect(first.locator('input[type="range"]').first()).toHaveValue('1');
+  await expect(main.getByRole('radiogroup', { name: 'Factor range metric', exact: true })).toHaveCount(0);
   await page.getByRole('radio', { name: 'UQL', exact: true }).click();
   await replaceQuery(page.getByRole('textbox', { name: 'UQL query', exact: true }), 'Groundwork > 6 and Groundwork = 3x');
   await expect(page.locator('.uql-status')).toContainText('Valid');

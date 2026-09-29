@@ -86,6 +86,16 @@ describe('Angular-compatible database preferences', () => {
     expect(filtersFromCompactState(compact, 'basic').blue[1]?.operator).toBe('or');
   });
 
+  it('drops obsolete main-parent occurrence settings while preserving stars and joins', () => {
+    const compact = { mb: [[10, 2, 3, 1, 0, 0, 1]], mp: [[20, 1, 2, 0, 1, 1, 1]], mg: [[0, 3, 3, 1, 0, 1, 1]], mw: [[201600, 1, 3, 0, 0, 0, 1]] };
+    const filters = filtersFromCompactState(compact, 'advanced');
+    expect(filters.mainBlue).toEqual([{ factorId: 10, minimumStars: 2, maximumStars: 3, operator: 'or' }]);
+    expect(filters.mainPink).toEqual([{ factorId: 20, minimumStars: 1, maximumStars: 2 }]);
+    expect(filters.mainGreen).toEqual([{ factorId: 0, minimumStars: 3, maximumStars: 3, operator: 'or' }]);
+    expect(filters.mainWhite).toEqual([{ factorId: 201600, minimumStars: 1, maximumStars: 3 }]);
+    expect(compactStateFromFilters(filters, compact)).toMatchObject({ mb: [[10, 2, 3, 1]], mp: [[20, 1, 2]], mg: [[0, 3, 3, 1]], mw: [[201600, 1, 3]] });
+  });
+
   it('retains Angular P2 context in URLs and presets, but not silent preferences', () => {
     const filters = emptyInheritanceFilters(); filters.p2MainCharaId = 1013; filters.p2WinSaddle = [100, 101];
     const storage = memoryStorage();
