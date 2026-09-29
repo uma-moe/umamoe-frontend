@@ -91,7 +91,13 @@ test('actual results preserve the plan and carry savings forward through edits a
     expect(controls.x + controls.width - actions.x - actions.width).toBeCloseTo(10, 0);
     if (isMobile) {
       await expect(row.locator('.notes-trigger > span')).toBeVisible();
-      expect(supportButton.height).toBeGreaterThanOrEqual(44);
+      expect(supportButton.height).toBe(32);
+      const planned = (await row.getByRole('spinbutton', { name: 'Planned pulls', exact: true }).boundingBox())!;
+      expect(planned.width).toBe(80);
+      expect(planned.height).toBe(32);
+      const counters = await row.locator('.crystal-stepper').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON()));
+      expect(counters[0].y).toBe(counters[1].y);
+      for (const counter of counters) expect(counter.width).toBeLessThanOrEqual(70);
       const crystals = (await row.locator('.crystal-plan').boundingBox())!;
       expect(actions.y).toBeGreaterThanOrEqual(crystals.y + crystals.height);
     }
