@@ -155,13 +155,14 @@ test('Timeline wheel preserves tall stacks, trackpad scrolling and browser zoom'
   await lane.locator('.event-card').first().hover();
   const before = await board.evaluate(node => ({ left: node.scrollLeft, top: node.scrollTop }));
   await page.mouse.wheel(0, 180);
-  await expect.poll(() => board.evaluate(node => node.scrollTop)).toBeGreaterThan(before.top);
-  expect(await board.evaluate(node => node.scrollLeft)).toBe(before.left);
+  await expect.poll(() => board.evaluate(node => node.scrollLeft)).toBeGreaterThan(before.left);
+  expect(await board.evaluate(node => node.scrollTop)).toBe(before.top);
+  const horizontal = await board.evaluate(node => node.scrollLeft);
   await page.keyboard.down('Shift');
   await page.mouse.wheel(0, 180);
   await page.keyboard.up('Shift');
-  await expect.poll(() => board.evaluate(node => node.scrollLeft)).toBeGreaterThan(before.left);
-  const horizontal = await board.evaluate(node => node.scrollLeft);
+  await expect.poll(() => board.evaluate(node => node.scrollTop)).toBeGreaterThan(before.top);
+  expect(await board.evaluate(node => node.scrollLeft)).toBe(horizontal);
   await board.hover({ position: { x: 80, y: 12 } });
   await page.mouse.wheel(160, 0);
   await expect.poll(() => board.evaluate(node => node.scrollLeft)).toBeGreaterThan(horizontal);

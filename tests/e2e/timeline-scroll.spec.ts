@@ -100,16 +100,20 @@ test('vertical dragging keeps the visible date stable when a buffered row change
   await page.mouse.down();
   await page.mouse.move(box.x + box.width - 35, box.y + box.height - 140, { steps: 4 });
   await settle(page);
-  const anchor = await board.evaluate(node => {
+  const anchor = await board.evaluate(async node => {
     const top = node.getBoundingClientRect().top + 56;
     const rows = Array.from(node.querySelectorAll<HTMLElement>('.vertical-date'));
     const visible = rows.find(row => row.getBoundingClientRect().bottom > top)!;
     const earlier = rows.find(row => row.getBoundingClientRect().bottom < top)!;
-    const result = { key: visible.dataset.laneKey!, y: visible.getBoundingClientRect().top };
+    const result = { key: visible.dataset.laneKey!, y: visible.getBoundingClientRect().top, jumps: [] as number[] };
     earlier.style.minHeight = `${earlier.getBoundingClientRect().height + 150}px`;
+    for (let i = 0; i < 12; i++) {
+      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+      result.jumps.push(Math.abs(visible.getBoundingClientRect().top - result.y));
+    }
     return result;
   });
-  await settle(page);
+  expect(Math.max(...anchor.jumps), 'Height changes must be corrected before the next paint').toBeLessThan(3);
   const row = board.locator(`[data-lane-key="${anchor.key}"]`);
   expect(Math.abs((await row.boundingBox())!.y - anchor.y)).toBeLessThan(3);
   await page.mouse.move(box.x + box.width - 35, box.y + box.height - 160);
@@ -117,4 +121,32 @@ test('vertical dragging keeps the visible date stable when a buffered row change
   expect(Math.abs((await row.boundingBox())!.y - anchor.y + 20)).toBeLessThan(3);
   await page.mouse.up();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('vertical dragging does not flash displaced rows between animation frames', async ({ page }) => {
+  await page.setViewportSize({ width: 1914, height: 940 });
+  await largeTimeline(page);
+  const jumps = await page.locator('.timeline-board.desktop').evaluate(async node => {
+    const rect = node.getBoundingClientRect();
+    const x = rect.right - 35;
+    let y = rect.bottom - 100;
+    node.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: x, clientY: y }));
+    const positions = () => new Map([...node.querySelectorAll<HTMLElement>('.vertical-date')]
+      .filter(row => row.getBoundingClientRect().bottom > rect.top + 56 && row.getBoundingClientRect().top < rect.bottom)
+      .map(row => [row.dataset.laneKey!, row.getBoundingClientRect().top]));
+    const jumps: number[] = [];
+    for (const delta of [...Array(100).fill(24), ...Array(200).fill(-24)]) {
+      const before = positions();
+      y -= delta;
+      window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+      for (const [key, top] of positions()) {
+        if (before.has(key)) jumps.push(Math.abs(top - before.get(key)! + delta));
+      }
+    }
+    window.dispatchEvent(new MouseEvent('mouseup'));
+    return jumps;
+  });
+  expect(jumps.length).toBeGreaterThan(100);
+  expect(Math.max(...jumps), 'Unrequested movement of a visible date during dragging').toBeLessThan(3);
 });
