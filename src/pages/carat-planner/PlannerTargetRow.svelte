@@ -38,8 +38,11 @@
   const stepUp = $derived(gacha?.step_up);
   const pickupOptions = $derived(plannerPickupOptions(target, gacha, events, catalog));
   const actualGoals = $derived(stepUp
-    ? [{ key: 'chosen', name: 'Chosen card', desiredCopies: target.desiredCopies }]
-    : plannerPickupGoals(target).map(goal => ({ key: String(goal.pickupId), name: pickupOptions.find(option => option.pickupId === goal.pickupId)?.name ?? `Pickup ${goal.pickupId}`, desiredCopies: goal.desiredCopies })));
+    ? [{ key: 'chosen', name: 'Chosen card', image: '', desiredCopies: target.desiredCopies }]
+    : plannerPickupGoals(target).map(goal => {
+      const option = pickupOptions.find(option => option.pickupId === goal.pickupId);
+      return { key: String(goal.pickupId), name: option?.name ?? `Pickup ${goal.pickupId}`, image: option?.image ?? '', desiredCopies: goal.desiredCopies };
+    }));
   const savedPulls = $derived(target.plannedPulls - (target.actualPulls ?? target.plannedPulls));
   const stepOptions = $derived.by(() => {
     let pulls = 0, cost = 0;
@@ -99,16 +102,32 @@
     <Button variant="secondary" size="sm" icon="trash" ariaLabel={`Remove ${target.title}`} onclick={onremove}/>
   </div>
   <details class="actual-results">
-    <summary><strong>Actual results <small>(optional)</small></strong>{#if target.actualPulls !== undefined}<span role="status">{target.actualPulls} actual / {target.plannedPulls} planned · {savedPulls > 0 ? `${savedPulls} pulls saved` : savedPulls < 0 ? `${-savedPulls} pulls over plan` : 'As planned'}</span>{/if}</summary>
-    <p>Finished pulling? Enter your final total, including free pulls and tickets. Future balances use this instead of the plan. Leave blank to keep the planned budget.</p>
-    <div class="actual-fields">
-      {#if stepUp}<SelectField id={`actual-pulls-${target.id}`} label="Actual step-up progress" options={[{ value: '', label: 'Not recorded' }, ...stepOptions]} value={String(target.actualPulls ?? '')} onchange={setActualPulls}/>
-      {:else}<TextField id={`actual-pulls-${target.id}`} label="Actual pulls done" type="number" min={0} max={maxPulls} step={paidOnly ? 10 : 1} placeholder="Not recorded" value={String(target.actualPulls ?? '')} oninput={event => setActualPulls((event.currentTarget as HTMLInputElement).value)}/>{/if}
-      {#each actualGoals as goal (goal.key)}
-        <TextField id={`actual-copies-${target.id}-${goal.key}`} label={`Actual copies of ${goal.name}`} help={`${goal.desiredCopies} planned copies`} type="number" min={0} max={5000} step={1} placeholder="Not recorded" value={String(target.actualCopies?.[goal.key] ?? '')} oninput={event => setActualCopies(goal.key, (event.currentTarget as HTMLInputElement).value)}/>
-      {/each}
+    <summary class:recorded={target.actualPulls !== undefined}>
+      <Icon name="edit" size={14}/><strong>{target.actualPulls !== undefined || target.actualCopies ? 'Actual results' : 'Record results'}</strong>
+      {#if target.actualPulls !== undefined}<span class="result-total">{target.actualPulls} actual / {target.plannedPulls} planned</span><span class="result-delta" class:saved={savedPulls > 0} class:over={savedPulls < 0} role="status">{savedPulls > 0 ? `${savedPulls} pulls saved` : savedPulls < 0 ? `${-savedPulls} pulls over plan` : 'As planned'}</span>{/if}
+      <Icon name="chevron" size={14}/>
+    </summary>
+    <div class="results-editor">
+      <table class:step-up={Boolean(stepUp)} aria-label={`Planned and actual results for ${target.title}`}>
+        <thead><tr><th scope="col">Result</th><th scope="col">Planned</th><th scope="col">Actual</th></tr></thead>
+        <tbody>
+          <tr>
+            <th scope="row"><span class="result-name"><span class="result-art"><Icon name="ticket" size={20}/></span><span><strong>Total pulls</strong><small>Includes free pulls &amp; tickets</small></span></span></th>
+            <td class="result-plan">{target.plannedPulls}</td>
+            <td>{#if stepUp}<SelectField id={`actual-pulls-${target.id}`} label="Actual step-up progress" hideLabel options={[{ value: '', label: '—' }, ...stepOptions]} value={String(target.actualPulls ?? '')} onchange={setActualPulls}/>
+              {:else}<TextField id={`actual-pulls-${target.id}`} label="Actual pulls done" hideLabel type="number" min={0} max={maxPulls} step={paidOnly ? 10 : 1} placeholder="—" value={String(target.actualPulls ?? '')} oninput={event => setActualPulls((event.currentTarget as HTMLInputElement).value)}/>{/if}</td>
+          </tr>
+          {#each actualGoals as goal (goal.key)}
+            <tr>
+              <th scope="row"><span class="result-name"><span class="result-art">{#if goal.image}<img src={goal.image} width="30" height="30" loading="lazy" alt="" onerror={event => (event.currentTarget as HTMLImageElement).hidden = true}/>{/if}<Icon name={cardKind === 'support' ? 'grid' : 'user'} size={20}/></span><span><strong>{goal.name}</strong><small>Copies</small></span></span></th>
+              <td class="result-plan" aria-label={`${goal.desiredCopies} planned copies`}>{goal.desiredCopies}</td>
+              <td><TextField id={`actual-copies-${target.id}-${goal.key}`} label={`Actual copies of ${goal.name}`} hideLabel type="number" min={0} max={5000} step={1} placeholder="—" value={String(target.actualCopies?.[goal.key] ?? '')} oninput={event => setActualCopies(goal.key, (event.currentTarget as HTMLInputElement).value)}/></td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+      <small class="results-hint">Blank keeps your plan. Pulls update future balances; copies include exchanges, not crystals.</small>
     </div>
-    <p>Copy results are optional; include exchanges, exclude Uncap Crystals. Spending uses this banner’s ticket and paid Carat settings.</p>
   </details>
   {#if past}<div class="past-note" role="note"><Icon name="timeline" size={16}/><span><strong>Before plan start</strong><small>Kept for editing, but excluded from this projection.</small></span></div>{/if}
   {#if paidOnly && !past && !maxPulls}<div class="past-note" role="status"><Icon name="warning" size={16}/><span>Paid banner costs are unavailable. Funding and odds will appear when its data loads.</span></div>
@@ -120,11 +139,23 @@
   .target:has(:global([aria-expanded=true])){content-visibility:visible;position:relative;z-index:2}
   .step-progress{min-width:0;width:320px;max-width:100%}.step-progress :global(.field>label){font-size:10px}
   .target.past{color:var(--text-secondary)}
-  .actual-results{grid-column:1/-1;min-width:0;padding:8px 10px;border-top:1px solid var(--border-subtle);font-size:12px}
-  .actual-results summary{cursor:pointer}.actual-results summary>span{display:inline-block;margin-left:12px;color:var(--accent-primary)}
-  .actual-results summary:focus-visible{outline:2px solid var(--accent-primary);outline-offset:2px}
-  .actual-results small,.actual-results p{color:var(--text-secondary)}.actual-results p{margin:8px 0}
-  .actual-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;align-items:start}
+  .actual-results{grid-column:1/-1;min-width:0;border-top:1px solid var(--border-subtle);font-size:11px}
+  .actual-results>summary{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;min-height:36px;padding:6px 10px;cursor:pointer;list-style:none}
+  .actual-results>summary::-webkit-details-marker{display:none}.actual-results>summary:focus-visible{outline:2px solid var(--accent-primary);outline-offset:-2px}
+  .actual-results>summary>:global(svg){color:var(--text-secondary);flex:none}.actual-results[open]>summary>:global(svg:last-child){transform:rotate(180deg)}
+  .result-total{color:var(--text-secondary);font-variant-numeric:tabular-nums}
+  .result-delta{padding:3px 7px;border-radius:var(--radius-sm);font-weight:600;background:var(--surface-2)}
+  .result-delta.saved{color:var(--color-success);background:color-mix(in srgb,var(--color-success) 12%,transparent)}.result-delta.over{color:var(--accent-warning);background:color-mix(in srgb,var(--accent-warning) 12%,transparent)}
+  .results-editor{max-width:560px;padding:0 10px 10px}
+  .results-editor table{width:100%;table-layout:fixed;border-collapse:collapse}.results-editor thead th{padding:2px 4px 5px;color:var(--text-secondary);font-size:10px;font-weight:500;text-align:left}
+  .results-editor th:nth-child(2){width:64px;text-align:center}.results-editor th:last-child{width:90px}
+  .results-editor td,.results-editor tbody th{padding:5px 4px;border-top:1px solid var(--border-subtle);font-weight:400;text-align:left}
+  .results-editor .result-plan{text-align:center;color:var(--text-secondary);font-size:13px;font-variant-numeric:tabular-nums}
+  .result-name{display:flex;align-items:center;gap:7px;min-width:0}.result-name>span:last-child{display:grid;gap:2px;min-width:0}.result-name strong{font-size:11px;overflow-wrap:anywhere}.result-name small{color:var(--text-secondary);font-size:9px}
+  .result-art{display:grid;place-items:center;flex:none;width:30px;height:30px;color:var(--text-secondary)}.result-art img,.result-art :global(svg){grid-area:1/1}.result-art img{object-fit:contain;z-index:1}.result-art img:not([hidden])~:global(svg){display:none}
+  .results-editor :global(.field){--control-height:34px}.results-hint{display:block;margin:5px 4px 0;color:var(--text-secondary);font-size:10px}
+  .results-editor table.step-up th:last-child{width:50%}
+  .results-editor table.step-up :global(.field:has(input)){max-width:90px}
   .target-title{min-width:0;min-height:66px;display:grid;align-items:center;gap:11px;padding:7px 10px}
   .target-title.has-image{grid-template-columns:148px minmax(0,1fr)}
   .target-title>img{display:block;width:148px;height:48px;object-fit:contain;border:1px solid var(--border-subtle);border-radius:3px;background:var(--surface-2)}
@@ -174,6 +205,8 @@
     .target-controls,.target-controls:has(.crystal-plan){max-width:none;justify-content:flex-end;flex-wrap:wrap;border-left:0;border-top:1px solid var(--border-subtle)}
   }
   @media(max-width:767px){
+    .actual-results>summary{display:grid;grid-template-columns:14px minmax(0,1fr) auto 14px;min-height:var(--touch-target);padding:6px}.actual-results>summary>:global(svg:last-child){grid-column:4;grid-row:1}.result-delta{grid-column:3;grid-row:1}.result-total{grid-column:2/-1;grid-row:2}.actual-results>summary.recorded{row-gap:3px}
+    .results-editor{padding:0 4px 8px}.results-editor :global(.field){--control-height:var(--touch-target)}.results-editor th:nth-child(2){width:50px}.results-editor th:last-child{width:82px}
     .target{grid-template-columns:minmax(0,1fr);margin-bottom:8px;border:1px solid var(--border-primary);border-radius:var(--radius-md)}
     .target-title{padding:7px 6px;gap:8px}.target-title.has-image{grid-template-columns:142px minmax(0,1fr)}.target-title>img{width:142px;height:55px;border:0;border-radius:5px}
     .target-controls,.target-controls:has(.crystal-plan){max-width:none;border-left:0;padding:6px;gap:6px}

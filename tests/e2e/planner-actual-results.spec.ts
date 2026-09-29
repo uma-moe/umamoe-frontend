@@ -23,11 +23,12 @@ test('actual results preserve the plan and carry savings forward through edits a
   await expect(pulls).toHaveValue('');
   await pulls.fill('50');
   await copies.fill('4');
-  await expect(row.locator('.actual-results summary')).toContainText('50 actual / 200 planned · 150 pulls saved');
+  await expect(row.locator('.result-total')).toHaveText('50 actual / 200 planned');
+  await expect(row.locator('.result-delta')).toHaveText('150 pulls saved');
   await expect(row.getByRole('spinbutton', { name: 'Planned pulls', exact: true })).toHaveValue('200');
   await expect(next.locator('.carat-balance b')).toHaveText((before + 22_500).toLocaleString('en-US'));
   await expect(next.locator('.carat-balance em')).toHaveText(`→ ${(after + 22_500).toLocaleString('en-US')}`);
-  await expect(row.locator('.actual-results')).toContainText('3 planned copies');
+  await expect(row.getByRole('cell', { name: '3 planned copies', exact: true })).toHaveText('3');
   await page.reload();
   await row.locator('.actual-results summary').click();
   await expect(pulls).toHaveValue('50');
