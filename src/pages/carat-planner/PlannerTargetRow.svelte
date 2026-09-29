@@ -29,6 +29,7 @@
     onremove: () => void;
   }
   let { target, past = false, projection, resources, events, catalog, pickupCopyMemory, onupdate, onremove }: Props = $props();
+  let notesDetails: HTMLDetailsElement;
 
   const gacha = $derived(findGacha(target, resources));
   const paidOnly = $derived(isPaidBanner(target, gacha));
@@ -79,9 +80,12 @@
     {#if target.imagePath}<img src={target.imagePath} width="512" height="125" loading="lazy" alt=""/>{/if}
     <div><strong class:paid={paidOnly}>{#if paidOnly}<span aria-label="Paid banner" title="Paid banner"><Icon name="paid" size={17}/></span>{/if}{target.title}</strong><small class="date"><Icon name="calendar" size={13}/>{dateLabel(target.bannerStart)} – {dateLabel(target.bannerEnd ?? target.bannerStart)}</small>
       {#if projection}<div class="at-pull" aria-label={`At pull date: ${caratLabel}${paidOnly ? '' : '; ' + ticketLabel}`}><small>At pull</small><span class="carat-balance" title={caratLabel}><img src={itemIconPath(43)} width="18" height="18" alt="Carats"/><b>{caratsBefore.toLocaleString()}</b><em>→ {caratsAfter.toLocaleString()}</em></span>{#if !paidOnly}<span title={ticketLabel}><img src={itemIconPath(ticketKind === 'support' ? 111 : 41)} width="18" height="18" alt=""/><b>{ticketCount}</b>{#if projection.ticketPulls}<em>→ {ticketCount - projection.ticketPulls}</em>{/if}</span>{#if cardKind === 'support' && !stepUp}{#each ['rainbow', 'gold'] as kind}<span title={`${kind === 'rainbow' ? 'Rainbow' : 'Gold'} Uncap Crystals available at pull`}><img src={itemIconPath(kind === 'rainbow' ? 144 : 145)} width="18" height="18" alt=""/><b>{kind === 'rainbow' ? availableCrystals(projection.balanceBefore.rainbowFullCrystals, projection.balanceBefore.rainbowCrystals) : availableCrystals(projection.balanceBefore.goldFullCrystals, projection.balanceBefore.goldCrystals)}</b></span>{/each}{/if}{/if}</div>{/if}
-      <details class="target-notes">
-        <summary aria-label={`Edit notes for ${target.title}`}><Icon name="edit" size={14}/><span title={target.notes ?? ''}>{target.notes || 'Add notes'}</span></summary>
-        <label for={`notes-${target.id}`}>Notes</label>
+      <details class="target-notes" bind:this={notesDetails}>
+        <summary aria-label={`Edit notes for ${target.title}`}><Icon name="chevron" size={14}/><span title={target.notes ?? ''}>{target.notes || 'Add notes'}</span></summary>
+        <div class="notes-heading">
+          <label for={`notes-${target.id}`}>Notes</label>
+          <Button variant="secondary" size="sm" icon="close" ariaLabel={`Close notes for ${target.title}`} onclick={() => { notesDetails.open = false; notesDetails.querySelector('summary')?.focus(); }}>Close</Button>
+        </div>
         <textarea id={`notes-${target.id}`} aria-label={`Notes for ${target.title}`} rows="2" maxlength="2000"
           placeholder="e.g. LB3, +1 selector; usable at LB2" value={target.notes ?? ''}
           oninput={event => onupdate(value => value.notes = event.currentTarget.value || undefined)}></textarea>
@@ -132,8 +136,11 @@
   .target-notes>summary::-webkit-details-marker{display:none}
   .target-notes>summary:hover{color:var(--accent-primary)}
   .target-notes>summary:focus-visible{outline:2px solid var(--accent-primary);outline-offset:2px}
+  .target-notes>summary :global(svg){flex:none}
+  .target-notes[open]>summary :global(svg){transform:rotate(180deg)}
   .target-notes>summary>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .target-notes>label{display:block;margin-block:4px;font-size:12px;color:var(--text-secondary)}
+  .notes-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-block:4px}
+  .notes-heading>label{font-size:12px;color:var(--text-secondary)}
   .target-notes>textarea{display:block;box-sizing:border-box;width:100%;min-height:64px;padding:8px 10px;resize:vertical;border:1px solid var(--factor-field-border);border-radius:var(--radius-sm);background:var(--factor-field-bg);color:var(--factor-field-text);font:inherit;font-size:14px}
   .target-notes>textarea:focus{border-color:var(--factor-field-focus-border);outline:0;box-shadow:var(--focus-ring)}
   .date{display:flex;align-items:center;flex-wrap:wrap;gap:3px 5px;color:var(--text-secondary);font-size:10px}

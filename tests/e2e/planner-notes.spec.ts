@@ -2,18 +2,27 @@ import { readFile } from 'node:fs/promises';
 import { expect, test } from './fixtures/test';
 import { mockPlannerControls } from './fixtures/planner-controls';
 
-test('Banner notes save while typing and survive reload, JSON export/import, and clearing', async ({ page }) => {
+test('Banner notes save while typing and survive closing, reload, JSON export/import, and clearing', async ({ page }) => {
   await mockPlannerControls(page);
   await page.goto('/timeline?tab=carat-planner');
   const row = page.locator('[data-target-id="first"]');
   const summary = row.locator('summary[aria-label="Edit notes for First banner"]');
   const input = row.getByRole('textbox', { name: 'Notes for First banner', exact: true });
+  const close = row.getByRole('button', { name: 'Close notes for First banner', exact: true });
   const notes = 'LB3, +1 "selector"\nUsable LB2; 日本語 🎠 ';
   await expect(summary).toHaveText('Add notes');
   await summary.click();
   await input.fill(notes);
   await input.pressSequentially('future');
   await expect(input).toHaveValue(notes + 'future');
+  await close.click();
+  await expect(input).not.toBeVisible();
+  await expect(close).not.toBeVisible();
+  await expect(summary).toBeFocused();
+  await summary.press('Enter');
+  await expect(input).toHaveValue(notes + 'future');
+  await summary.click();
+  await expect(input).not.toBeVisible();
   await page.reload();
   await expect(summary).toContainText('LB3, +1 "selector"');
   await summary.click();
@@ -36,4 +45,7 @@ test('Banner notes save while typing and survive reload, JSON export/import, and
   await expect(summary).toHaveText('Add notes');
   await summary.click();
   await expect(input).toHaveValue('');
+  await close.click();
+  await expect(input).not.toBeVisible();
+  await expect(summary).toHaveText('Add notes');
 });
