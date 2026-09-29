@@ -9,7 +9,7 @@
   import { activePlan, availableCrystals, buildPlannerLedger, clonePlanCollection, createPlan, enabledPlannerTargets, findPlannerEvent, importPlanCollection, importSharedPlan, withoutPlannerResourceDates, plannerTargetEvents, resolvePlannerPullDate, sanitizePlan, synchronizePlannerTargets, projectPlan, setTimelineEvent, type CaratPlan, type CaratPlanCollection, type PlannerDataBundle, type PlannerTarget } from '@/lib/timeline/carat-planner';
   import { compactPlannerCollectionResourceState } from '@/lib/timeline/planner-resource-state';
   import { reconcileIncomePreset } from '@/lib/timeline/planner-income-presets';
-  import { activeIncomeAssumptionCount, buildPlannerIncomeGroups, enabledIncomeTotalLabel } from './planner-income-view';
+  import { activeIncomeAssumptionCount, buildPlannerIncomeGroups, summarizePlannerIncome } from './planner-income-view';
   import { buildPlannerRewardGroups, plannerRewardSummary } from '@/lib/timeline/planner-reward-groups';
   import { buildPlannerCampaigns } from '@/lib/timeline/planner-campaigns';
   import { filterPlannerBanners, plannerPullPlanItems } from '@/lib/timeline/planner-presentation';
@@ -100,10 +100,17 @@
   const rewardCampaigns = $derived(buildPlannerCampaigns(effectiveRewards.free_pull_campaigns ?? [], events, plan.projectionStartDate));
   const rewardSummary = $derived(plannerRewardSummary(plan, rewardGroups, rewardCampaigns));
   const incomeCount = $derived(activeIncomeAssumptionCount(plan, resources.income.rules));
-  const incomeTotal = $derived(enabledIncomeTotalLabel(plan, resources.income.rules, events, resources.rewards.global_reward_comparison));
+  const incomeProjection = $derived.by(() => {
+    const dates = JSON.parse(ledgerKey).at(-1) as string[];
+    const through = dates.at(-1) ?? new Date(new Date(plan.projectionStartDate + 'T00:00:00Z').getTime() + 29 * 86_400_000).toISOString().slice(0, 10);
+    const bundle = { core: coreResource, income: incomeResource, rewards: effectiveRewards, timelineEvents: events };
+    const entries = dates.length ? ledger : untrack(() => buildPlannerLedger(plan, bundle, through, []));
+    return { ...summarizePlannerIncome(entries), through, preview: !dates.length };
+  });
+  const incomePeriod = $derived(incomeProjection.preview ? '30-day preview' : 'Through ' + new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(incomeProjection.through + 'T00:00:00Z')));
   const setupTabs: TabItem[] = $derived([
     { id:'resources',label:'Balance',icon:'paid',description:new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}).format(new Date(plan.projectionStartDate+'T00:00:00Z'))+' · '+plan.balances.freeJewels.toLocaleString('en-US')+' Carats' },
-    { id:'income',label:'Income',icon:'chart',description:incomeCount+' sources'+(incomeTotal?' · '+incomeTotal:'') },
+    { id:'income',label:'Income',icon:'chart',description:resourcesLoading ? 'Loading income…' : incomePeriod + ' · ' + incomeProjection.totalLabel },
     { id:'rewards',label:'Rewards',icon:'gift',description:rewardSummary.count+' counted automatically'+(rewardSummary.totalLabel?' · '+rewardSummary.totalLabel:'') },
   ]);
   const rewardViewKey = $derived(JSON.stringify([plan.projectionStartDate, plan.scenarioSelections, plan.variableRewardSelections]));
@@ -357,7 +364,7 @@
       <span class="assumption-title"><Icon name="tune"/><span><strong>Plan assumptions</strong><small>Balance, income and automatically counted rewards</small></span></span>
       <span class="assumption-summary" aria-hidden="true">
         <span><strong>{plan.balances.freeJewels.toLocaleString('en-US')}</strong> starting Carats</span>
-        <span><strong>{incomeCount}</strong> income sources</span>
+        <span><strong>{incomeCount}</strong> income settings</span>
         <span><strong>{rewardSummary.count}</strong> rewards counted</span>
       </span>
       <Icon name="chevron"/>
@@ -368,7 +375,7 @@
         {#if setup === 'resources'}
           <PlannerBalancePanel {plan} oncommit={commit}/>
         {:else if setup === 'income'}
-          <PlannerIncomePanel {plan} groups={incomeGroups} rules={resources.income.rules} rewards={effectiveRewards.rewards} competitiveVariants={resources.rewards.competitive_variants ?? []} {events} comparison={resources.rewards.global_reward_comparison} bind:expandedSections={expandedIncomeSections} selectionMemory={incomeSelectionMemory} oncommit={commit}/>
+          <PlannerIncomePanel {plan} income={incomeProjection} loading={resourcesLoading} groups={incomeGroups} rules={resources.income.rules} rewards={effectiveRewards.rewards} competitiveVariants={resources.rewards.competitive_variants ?? []} bind:expandedSections={expandedIncomeSections} selectionMemory={incomeSelectionMemory} oncommit={commit}/>
         {:else}
           <PlannerRewardsPanel {plan} groups={rewardGroups} campaignViews={rewardCampaigns} resources={effectiveRewards} bind:search={rewardSearch} bind:showPast={showPastRewards} oncommit={commit}/>
         {/if}

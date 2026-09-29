@@ -1,4 +1,4 @@
-import type { CaratPlan, PlannerCurrency, PlannerGlobalRewardComparison, PlannerIncomeRule, PlannerCompetitiveRewardVariant } from '@/lib/timeline/carat-planner';
+import type { CaratPlan, PlannerCurrency, PlannerGlobalRewardComparison, PlannerIncomeRule, PlannerCompetitiveRewardVariant, PlannerLedgerEntry } from '@/lib/timeline/carat-planner';
 import { dailyCaratPackPurchaseRule, incomeRuleScenarioSelectionMatches, isLegacyTrainingPassIncomeRule, randomGameplayIncomeRules, resolveTrainingPassStartDate, trainingPassIncomeRules, RANDOM_GAMEPLAY_INCOME_OPTIONS, TRAINING_PASS_OPTIONS } from '@/lib/timeline/planner-income-assumptions';
 import { buildDataDrivenCompetitionOptions, COMPETITION_GROUPS, resolveDataDrivenCompetitionOption } from '@/lib/timeline/planner-competition-assumptions';
 import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
@@ -118,7 +118,45 @@ function competitionAmountLabel(amounts: Readonly<Partial<Record<PlannerCurrency
 export function activeIncomeAssumptionCount(plan: CaratPlan, rules: readonly PlannerIncomeRule[]): number {
   return rules.filter(rule => !rule.scenario_group && !isLegacyTrainingPassIncomeRule(rule) && plan.enabledIncomeRuleIds.includes(rule.id)).length
     + Object.values(plan.scenarioSelections).filter(value => value && value !== 'none').length
-    + plan.customIncome.filter(item => Number(item.amount) > 0).length;
+    + plan.customIncome.filter(item => Number(item.amount) !== 0).length;
+}
+
+const incomeCurrencies: { currency: PlannerCurrency; label: string; itemId: number }[] = [
+  { currency: 'free_jewels', label: 'Free Carats', itemId: 43 },
+  { currency: 'paid_jewels', label: 'Paid Carats', itemId: 43 },
+  { currency: 'uma_ticket', label: 'Uma tickets', itemId: 41 },
+  { currency: 'support_ticket', label: 'Support tickets', itemId: 111 },
+  { currency: 'rainbow_crystal', label: 'Rainbow shards', itemId: 149 },
+  { currency: 'gold_crystal', label: 'Gold shards', itemId: 150 },
+  { currency: 'rainbow_full_crystal', label: 'Rainbow Uncap Crystals', itemId: 144 },
+  { currency: 'gold_full_crystal', label: 'Gold Uncap Crystals', itemId: 145 },
+];
+const signedIncome = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0, signDisplay: 'exceptZero' });
+
+export function summarizePlannerIncome(ledger: readonly PlannerLedgerEntry[]) {
+  type Amounts = Partial<Record<PlannerCurrency, number>>;
+  const totals: Amounts = {};
+  const sources = new Map<string, { label: string; amounts: Amounts }>();
+  for (const entry of ledger) {
+    totals[entry.currency] = (totals[entry.currency] ?? 0) + entry.amount;
+    const key = `${entry.source}:${entry.label}`;
+    const source = sources.get(key) ?? { label: entry.label, amounts: {} };
+    source.amounts[entry.currency] = (source.amounts[entry.currency] ?? 0) + entry.amount;
+    sources.set(key, source);
+  }
+  const resources = (amounts: Amounts) => incomeCurrencies.filter(item => amounts[item.currency] !== undefined)
+    .map(item => ({ ...item, amount: amounts[item.currency]!, formatted: signedIncome.format(amounts[item.currency]!) }));
+  const combined = [
+    ['Carats', (totals.free_jewels ?? 0) + (totals.paid_jewels ?? 0)],
+    ['tickets', (totals.uma_ticket ?? 0) + (totals.support_ticket ?? 0)],
+    ['shards', (totals.rainbow_crystal ?? 0) + (totals.gold_crystal ?? 0)],
+    ['Uncap Crystals', (totals.rainbow_full_crystal ?? 0) + (totals.gold_full_crystal ?? 0)],
+  ] as const;
+  return {
+    resources: resources(totals),
+    totalLabel: combined.filter(([, amount]) => amount !== 0).map(([label, amount]) => `${signedIncome.format(amount)} ${label}`).join(' · ') || '0 projected income',
+    sources: [...sources.values()].map(source => ({ label: source.label, amountLabel: resources(source.amounts).map(item => `${item.formatted} ${item.label}`).join(' · ') })),
+  };
 }
 
 export function enabledIncomeTotalLabel(plan: CaratPlan, rules: readonly PlannerIncomeRule[], events: readonly TimelineRecord[], comparison?: PlannerGlobalRewardComparison): string {

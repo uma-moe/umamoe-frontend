@@ -1,8 +1,38 @@
 import { expect, it } from 'vitest';
-import { activeIncomeAssumptionCount, buildPlannerIncomeGroups, buildPlannerIncomeSections, enabledIncomeTotalLabel, incomeRuleScheduleLabel } from './planner-income-view';
+import { activeIncomeAssumptionCount, buildPlannerIncomeGroups, buildPlannerIncomeSections, enabledIncomeTotalLabel, incomeRuleScheduleLabel, summarizePlannerIncome } from './planner-income-view';
 import { plannerIncomeData } from '../../../tests/e2e/fixtures/planner-income-data';
-import { buildPlannerLedger, createPlan, loadPlanCollection, projectPlan, type PlannerIncomeRule } from '@/lib/timeline/carat-planner';
+import { buildPlannerLedger, createPlan, loadPlanCollection, projectPlan, type PlannerIncomeRule, type PlannerDataBundle } from '@/lib/timeline/carat-planner';
+import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
 import { normalizePlannerIncomeRules } from '@/lib/timeline/planner-income-assumptions';
+
+it('summarizes scheduled income across currencies, competitive rewards and deductions within the projection dates', () => {
+  const plan = createPlan();
+  plan.projectionStartDate = '2026-09-01';
+  plan.enabledIncomeRuleIds = ['daily', 'alternating', 'future'];
+  plan.scenarioSelections = { champions_meeting_result: 'group_b_second', champions_meeting_round_income: 'competitive' };
+  plan.customIncome = [{ id: 'adjustment', label: 'Adjustment', currency: 'paid_jewels', amount: -100, cadence: 'once', startDate: '2026-09-08' }];
+  const data: PlannerDataBundle = { core: {}, income: { rules: [
+    { id: 'daily', label: 'Daily login', currency: 'free_jewels', amount: 75, cadence: 'daily', start_date: '2026-09-01' },
+    { id: 'alternating', label: 'Fortnightly tickets', currency: 'uma_ticket', amount: 2, cadence: 'weekly', every: 2, start_date: '2026-09-01' },
+    { id: 'future', label: 'Future income', currency: 'free_jewels', amount: 9999, cadence: 'once', start_date: '2026-10-01' },
+  ] }, rewards: { rewards: [{ id: 'gift', label: 'Event gift', currency: 'free_jewels', amount: 1000, default_enabled: true, available_at: '2026-09-20', source_items: [
+    { item_category: 40, item_id: 111, amount: 3 }, { item_category: 164, item_id: 149, amount: 2 }, { item_category: 164, item_id: 150, amount: 1 },
+    { item_category: 164, item_id: 144, amount: 1 }, { item_category: 164, item_id: 145, amount: 2 },
+  ] }] }, timelineEvents: [{ id: 'cm', eventType: 'champions_meeting', date: new Date('2026-09-20T00:00:00Z') } as TimelineRecord] };
+  const summary = summarizePlannerIncome(buildPlannerLedger(plan, data, '2026-09-30'));
+  expect(Object.fromEntries(summary.resources.map(item => [item.currency, item.amount]))).toEqual({
+    free_jewels: 2250 + 1000 + 1540, paid_jewels: -100, uma_ticket: 8, support_ticket: 5,
+    rainbow_crystal: 2, gold_crystal: 1, rainbow_full_crystal: 1, gold_full_crystal: 2,
+  });
+  expect(summary.totalLabel).toBe('+4,690 Carats · +13 tickets · +3 shards · +3 Uncap Crystals');
+  expect(summary.sources.find(source => source.label === 'Daily login')?.amountLabel).toBe('+2,250 Free Carats');
+  expect(summary.sources.find(source => source.label === 'Adjustment')?.amountLabel).toBe('-100 Paid Carats');
+  expect(summary.sources.some(source => source.label === 'Future income')).toBe(false);
+  plan.disabledEventIds = ['cm'];
+  plan.disabledRewardIds = ['gift'];
+  expect(summarizePlannerIncome(buildPlannerLedger(plan, data, '2026-09-10')).totalLabel).toBe('+650 Carats · +2 tickets');
+  expect(summarizePlannerIncome([])).toEqual({ resources: [], sources: [], totalLabel: '0 projected income' });
+});
 
 it('offers half classes with alternating repeat rewards and exact weekly averages', () => {
   const base: PlannerIncomeRule[] = [35, 75, 150, 225, 375].map((amount, index) => ({
