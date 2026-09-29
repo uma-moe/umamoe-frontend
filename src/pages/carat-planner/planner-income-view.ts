@@ -10,6 +10,8 @@ export interface PlannerIncomeOption { value: string; label: string; amountLabel
 export interface PlannerIncomeGroup { id: string; label: string; icon: IconName; scheduleLabel: string; helpText?: string; sourceUrl?: string; options: readonly PlannerIncomeOption[]; }
 export interface PlannerIncomeSection { id: string; label: string; description: string; icon: IconName; groups: PlannerIncomeGroup[]; }
 const integer = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+const incomeNumber = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 });
+const cadenceAmount = (rule: PlannerIncomeRule) => Math.max(0, Number(rule.amount) || 0) / (rule.cadence === 'weekly' ? Math.max(1, Math.trunc(Number(rule.every) || 1)) : 1);
 
 export function incomeRuleScheduleLabel(rule: PlannerIncomeRule): string {
   const purchase = dailyCaratPackPurchaseRule(rule, rule.start_date);
@@ -32,7 +34,7 @@ export function buildPlannerIncomeGroups(rules: readonly PlannerIncomeRule[], va
     const options = resourceGroups.get(id) ?? new Set();
     options.add(shop ? 'include' : rule.scenario_option); resourceGroups.set(id, options);
   }
-  const number = (value: string) => Number(value.match(/\d+/)?.[0]) || Number.MAX_SAFE_INTEGER;
+  const number = (value: string) => Number(value.match(/\d+(?:\.\d+)?/)?.[0]) || Number.MAX_SAFE_INTEGER;
   const humanize = (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, value => value.toUpperCase());
   const groups: PlannerIncomeGroup[] = [...resourceGroups].map(([id, options]) => {
     const shop = MONTHLY_SHOP_EXCHANGES.find(shop => shop.id === id);
@@ -41,7 +43,7 @@ export function buildPlannerIncomeGroups(rules: readonly PlannerIncomeRule[], va
       id, label: id === 'team_trials_class' ? 'Team Trials class' : id === 'club_rank' ? 'Club rank' : shop ? `Monthly shop: ${shop.label}` : humanize(id),
       icon: id === 'club_rank' ? 'users' : id === 'team_trials_class' ? 'race' : shop ? 'database' : 'tune',
       scheduleLabel: shop ? 'Monthly, requires exchange currency' : ({ weekly: 'Weekly payout', monthly: 'Monthly payout', daily: 'Daily payout' } as Record<string, string>)[rule.cadence] ?? incomeRuleScheduleLabel(rule),
-      helpText: shop ? `Counts ${shop.tickets} Uma + ${shop.tickets} support scout tickets each month, costing ${shop.cost} per month. Requires enough exchange currency. Excludes SR+ Make Debut tickets and limited event shops.` : undefined,
+      helpText: shop ? `Counts ${shop.tickets} Uma + ${shop.tickets} support scout tickets each month, costing ${shop.cost} per month. Requires enough exchange currency. Excludes SR+ Make Debut tickets and limited event shops.` : id === 'team_trials_class' ? 'Whole classes count weekly retention rewards. Half classes alternate repeat promotion and demotion payouts on the weekly schedule; displayed amounts are weekly averages. For example, Class 5.5 alternates 300 and 225 Carats (262.5 per week). First-time promotion bonuses are excluded. Bouncing is possible from Class 3 upward.' : undefined,
       options: [...options].sort((a,b) => number(a)-number(b)).map(value => ({
         value,
         label: id === 'team_trials_class' ? `Class ${number(value)}` : id === 'club_rank' ? ['D','D+','C','C+','B','B+','A','A+','S','S+','SS'][number(value)-1] ?? humanize(value) : humanize(value),
@@ -96,11 +98,11 @@ export function buildPlannerIncomeSections(groups: readonly PlannerIncomeGroup[]
 
 function scenarioAmountLabel(rules: readonly PlannerIncomeRule[], group: string, value: string): string {
   const selected = rules.filter(rule => (monthlyShopExchange(rule)?.id ?? rule.scenario_group) === group && incomeRuleScenarioSelectionMatches(rule, { [group]: value }));
-  const total = (currency: PlannerCurrency) => selected.filter(rule => rule.currency === currency).reduce((sum,rule) => sum + Math.max(0, Number(rule.amount) || 0), 0);
+  const total = (currency: PlannerCurrency) => selected.filter(rule => rule.currency === currency).reduce((sum,rule) => sum + cadenceAmount(rule), 0);
   if (MONTHLY_SHOP_EXCHANGES.some(shop => shop.id === group)) return total('uma_ticket') || total('support_ticket') ? `+${integer.format(total('uma_ticket'))} Uma + ${integer.format(total('support_ticket'))} support / mo` : '';
   const jewels = selected.filter(rule => rule.currency === 'free_jewels' || rule.currency === 'paid_jewels');
   const amount = total('free_jewels') + total('paid_jewels');
-  return amount > 0 ? `+${integer.format(amount)}${({ daily: '/day', weekly: '/wk', monthly: '/mo', interval: '/period' } as Record<string,string>)[jewels[0]!.cadence] ?? ''}` : '';
+  return amount > 0 ? `+${incomeNumber.format(amount)}${({ daily: '/day', weekly: '/wk', monthly: '/mo', interval: '/period' } as Record<string,string>)[jewels[0]!.cadence] ?? ''}${group === 'team_trials_class' && value.endsWith('.5') ? ' avg' : ''}` : '';
 }
 
 function competitionAmountLabel(amounts: Readonly<Partial<Record<PlannerCurrency,number>>>): string {
@@ -124,14 +126,14 @@ export function enabledIncomeTotalLabel(plan: CaratPlan, rules: readonly Planner
   const add = (currency: string, cadence: string, amount: number) => { if (currency === 'free_jewels' || currency === 'paid_jewels') totals.set(cadence, (totals.get(cadence) ?? 0) + Math.max(0, Number(amount) || 0)); };
   for (const rule of rules) {
     if (isLegacyTrainingPassIncomeRule(rule) || (!rule.scenario_group && !plan.enabledIncomeRuleIds.includes(rule.id)) || !incomeRuleScenarioSelectionMatches(rule, plan.scenarioSelections)) continue;
-    add(rule.currency, rule.cadence, rule.amount);
+    add(rule.currency, rule.cadence, cadenceAmount(rule));
     const purchase = dailyCaratPackPurchaseRule(rule, plan.projectionStartDate);
     if (purchase) add(purchase.currency, 'paid-pack', purchase.amount);
   }
   for (const rule of [...trainingPassIncomeRules(plan.scenarioSelections.training_pass, events), ...randomGameplayIncomeRules(plan.scenarioSelections.random_gameplay_income, plan.projectionStartDate)]) add(rule.currency, rule.cadence, rule.amount);
   add('free_jewels','monthly', plan.scenarioSelections.speculative_income === 'include' ? comparison?.speculative_monthly_carats ?? 0 : plan.scenarioSelections.speculative_income === 'median' ? comparison?.speculative_recent_median_monthly_carats ?? 0 : 0);
   for (const item of plan.customIncome) add(item.currency, item.cadence, item.amount);
-  return [['daily','/ day'],['weekly','/ week'],['monthly','/ month'],['interval','/ interval'],['once','one-time'],['paid-pack','paid / 30 days']].flatMap(([cadence,label]) => (totals.get(cadence!) ?? 0) > 0 ? [`+${integer.format(totals.get(cadence!)!)} ${label}`] : []).join(' · ');
+  return [['daily','/ day'],['weekly','/ week'],['monthly','/ month'],['interval','/ interval'],['once','one-time'],['paid-pack','paid / 30 days']].flatMap(([cadence,label]) => (totals.get(cadence!) ?? 0) > 0 ? [`+${incomeNumber.format(totals.get(cadence!)!)} ${label}`] : []).join(' · ');
 }
 
 const RANDOM_GAMEPLAY_INCOME_HELP_TEXT = [

@@ -1,8 +1,36 @@
 import { expect, it } from 'vitest';
 import { activeIncomeAssumptionCount, buildPlannerIncomeGroups, buildPlannerIncomeSections, enabledIncomeTotalLabel, incomeRuleScheduleLabel } from './planner-income-view';
 import { plannerIncomeData } from '../../../tests/e2e/fixtures/planner-income-data';
-import { createPlan, loadPlanCollection, projectPlan, type PlannerIncomeRule } from '@/lib/timeline/carat-planner';
+import { buildPlannerLedger, createPlan, loadPlanCollection, projectPlan, type PlannerIncomeRule } from '@/lib/timeline/carat-planner';
 import { normalizePlannerIncomeRules } from '@/lib/timeline/planner-income-assumptions';
+
+it('offers half classes with alternating repeat rewards and exact weekly averages', () => {
+  const base: PlannerIncomeRule[] = [35, 75, 150, 225, 375].map((amount, index) => ({
+    id: `trials-${index + 2}`, label: 'Team Trials', currency: 'free_jewels', amount, cadence: 'weekly',
+    start_date: '2026-01-01', scenario_group: 'team_trials_class', scenario_option: `class_${index + 2}`,
+  }));
+  const rules = normalizePlannerIncomeRules(base);
+  expect(normalizePlannerIncomeRules(rules)).toEqual(rules);
+  const group = buildPlannerIncomeGroups(rules, [], []).find(group => group.id === 'team_trials_class')!;
+  expect(group.options.map(option => option.label)).toEqual(['Class 2', 'Class 3', 'Class 3.5', 'Class 4', 'Class 4.5', 'Class 5', 'Class 5.5', 'Class 6']);
+  const plan = createPlan(); plan.projectionStartDate = '2026-01-01';
+  const data = { core: {}, income: { rules }, rewards: { rewards: [] } };
+  for (const [rank, promotion, demotion] of [[3.5, 150, 75], [4.5, 225, 150], [5.5, 300, 225]]) {
+    plan.scenarioSelections = { team_trials_class: `class_${rank}` };
+    const average = (promotion! + demotion!) / 2;
+    expect(group.options.find(option => option.value === `class_${rank}`)?.amountLabel).toBe(`+${average}/wk avg`);
+    expect(enabledIncomeTotalLabel(plan, rules, [])).toBe(`+${average} / week`);
+    expect(buildPlannerLedger(plan, data, '2026-01-28').map(entry => [entry.date, entry.amount])).toEqual([
+      ['2026-01-01', promotion], ['2026-01-08', demotion], ['2026-01-15', promotion], ['2026-01-22', demotion],
+    ]);
+  }
+  plan.projectionStartDate = '2026-01-08';
+  expect(buildPlannerLedger(plan, data, '2026-01-28').map(entry => entry.amount)).toEqual([225, 300, 225]);
+  for (const [index, rule] of base.entries()) {
+    plan.scenarioSelections = { team_trials_class: `class_${index + 2}` };
+    expect(buildPlannerLedger(plan, data, '2026-01-28').map(entry => entry.amount)).toEqual([rule.amount, rule.amount, rule.amount]);
+  }
+});
 
 it('includes the paid purchase grant in the daily pack toggle and income summary', () => {
   const plan = createPlan();

@@ -3,6 +3,28 @@ import { mockPlannerIncome } from './fixtures/planner-income';
 import { mockTimeline } from './fixtures/api';
 import { plannerControlsPlan, plannerControlsTimeline } from './fixtures/planner-controls';
 
+test('Team Trials half classes show average rewards and survive reload', async ({ page }) => {
+  await mockPlannerIncome(page);
+  const openIncome = async () => {
+    await page.getByRole('button', { name: /Plan assumptions/ }).click();
+    await page.getByRole('tablist', { name: 'Planner assumptions' }).getByRole('tab', { name: 'Income', exact: true }).click();
+    await page.getByRole('button', { name: /^Account & recurring/ }).click();
+  };
+  await page.goto('/timeline?tab=carat-planner');
+  await openIncome();
+  const trials = page.getByRole('combobox', { name: 'Team Trials class', exact: true });
+  await trials.click();
+  await expect(page.getByRole('option', { name: /^Class [345]\.5/ })).toHaveCount(3);
+  await page.getByRole('option', { name: /^Class 5\.5/ }).click();
+  await expect(trials).toContainText('Class 5.5');
+  await expect(trials).toContainText('+262.5/wk avg');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0].scenarioSelections.team_trials_class)).toBe('class_5.5');
+  await page.reload();
+  await openIncome();
+  await expect(trials).toContainText('Class 5.5');
+  await expect(trials).toContainText('+262.5/wk avg');
+});
+
 test('Daily Jewel Pack appears once and retains its saved selection after reload', async ({ page }) => {
   await mockTimeline(page);
   const pack = { label: 'Daily Jewel Pack (continuous)', currency: 'free_jewels', amount: 50, cadence: 'daily', start_date: '2017-01-01', end_date: '2030-01-10' };

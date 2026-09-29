@@ -50,6 +50,22 @@ export function normalizePlannerIncomeRules(rules: readonly PlannerIncomeRule[])
       });
     }
   }
+  // Global master team_stadium_class_reward types 2/4: repeat promotion/demotion.
+  // ponytail: fixed payouts until the income artifact publishes these outcomes.
+  for (const [lower, promotion, demotion] of [[3, 150, 75], [4, 225, 150], [5, 300, 225]] as const) {
+    const base = normalized.find(rule => rule.scenario_group === 'team_trials_class' && rule.scenario_option === `class_${lower}` && rule.currency === 'free_jewels' && rule.cadence === 'weekly');
+    const option = `class_${lower}.5`;
+    if (!base || !normalized.some(rule => rule.scenario_group === 'team_trials_class' && rule.scenario_option === `class_${lower + 1}`)
+      || normalized.some(rule => rule.scenario_group === 'team_trials_class' && rule.scenario_option === option)) continue;
+    const start = utcDay(base.start_date);
+    if (start === undefined) continue;
+    for (const [index, amount] of [promotion, demotion].entries()) normalized.push({
+      ...base, id: `team-trials-${option}-${index}`, label: `Team Trials Class ${lower}.5 (${index ? 'demotion' : 'promotion'})`,
+      amount, every: 2, start_date: plannerDayKey(start + index * 7),
+      scenario_option: option, default_enabled: false, provenance: 'configured',
+      description: `Alternates repeat promotion to Class ${lower + 1} and demotion to Class ${lower}; excludes first-time promotion bonuses.`,
+    });
+  }
   return [...new Map(normalized.map(rule => [rule.id, rule])).values()];
 }
 
