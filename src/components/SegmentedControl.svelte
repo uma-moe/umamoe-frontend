@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from './Icon.svelte';
   import type { IconName } from './icon-types';
-  export interface Segment { value: string; label: string; disabled?: boolean; icon?: IconName; }
+  export interface Segment { value: string; label: string; disabled?: boolean; icon?: IconName; /** Game icon standing in for the label. */ image?: string; /** Accessible name when `label` is an abbreviation or an icon stands in for text. */ title?: string; }
   interface Props { label: string; options: Segment[]; value?: string; onchange?: (value: string) => void; }
   let { label, options, value = $bindable(''), onchange }: Props = $props();
   function select(next: string) { value = next; onchange?.(next); }
@@ -27,13 +27,13 @@
       tabindex={option.value === tabStop ? 0 : -1}
       onkeydown={(event) => navigate(event, option.value)}
       aria-checked={value === option.value}
-      aria-label={option.icon ? option.label : undefined}
-      title={option.icon ? option.label : undefined}
+      aria-label={option.title ?? (option.icon || option.image ? option.label : undefined)}
+      title={option.title ?? (option.icon || option.image ? option.label : undefined)}
       class:selected={value === option.value}
-      class:icon-only={option.icon !== undefined}
+      class:icon-only={option.icon !== undefined || option.image !== undefined}
       disabled={option.disabled}
       onclick={() => select(option.value)}
-    >{#if option.icon}<Icon name={option.icon} size={18}/>{:else}{option.label}{/if}</button>
+    >{#if option.image}<img src={option.image} alt="" loading="lazy"/>{:else if option.icon}<Icon name={option.icon} size={18}/>{:else}{option.label}{/if}</button>
   {/each}
 </div>
 
@@ -44,4 +44,5 @@
   button.selected { background: rgb(var(--accent-primary-rgb) / .12); border-color: rgb(var(--accent-primary-rgb) / .3); color: var(--color-accent); }
   button:disabled { opacity: .42; cursor: not-allowed; }
   button.icon-only { display:grid; place-items:center; padding:0; }
+  button img { width:28px; height:28px; object-fit:contain; }
 </style>

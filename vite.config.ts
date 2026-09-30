@@ -87,11 +87,21 @@ export default defineConfig(async ({ mode, command }) => {
         allow: [rootDirectory]
       },
       proxy: {
+        // The simulator only listens on the deployment's private subnet, so a
+        // local backend cannot reach it. Route sim calls through beta's backend,
+        // which already has that access, until a local simulator is running.
+        // Must precede '/api' so the longer prefix wins.
+        '/api/sim': { target: 'https://beta.uma.moe', changeOrigin: true },
         '/api': 'http://127.0.0.1:3001',
         '/search': 'http://127.0.0.1:3002',
         '/ingest': 'http://127.0.0.1:3003',
-        '/resources': 'http://127.0.0.1:3004',
-        '/assets/data': { target: 'https://uma.moe', changeOrigin: true }
+        // Beta publishes the resources every surface reads. Point this at
+        // http://127.0.0.1:3004 to run against a local resources service.
+        '/resources': { target: 'https://beta.uma.moe', changeOrigin: true },
+        '/assets/data': { target: 'https://uma.moe', changeOrigin: true },
+        // Skill art lives in the separately deployed /assets bundle, so it has no
+        // local copy to serve. Dev-only; production loads it from its own origin.
+        '/assets/images/skills': { target: 'https://uma.moe', changeOrigin: true }
       }
     },
     test: {

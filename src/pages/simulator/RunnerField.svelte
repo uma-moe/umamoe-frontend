@@ -1,5 +1,5 @@
 <script module lang="ts">
-  import { MAX_FIELD_RUNNERS, type MonteCarloRunnerInput } from './race-sim-request';
+  import { MAX_FIELD_RUNNERS, type MonteCarloRunnerInput, type MonteCarloSkillInput } from './race-sim-request';
   import { createTrainee, type Trainee } from './trainee';
 
   /**
@@ -14,18 +14,20 @@
     id: number;
     name: string;
     trainee: Trainee;
+    /** Skills the simulator should consider for this runner; empty sends none. */
+    skills: Array<MonteCarloSkillInput>;
   }
 
   /** The trainee fills one slot, so the field editor may add at most 17 opponents. */
   export const MAX_OPPONENTS = MAX_FIELD_RUNNERS - 1;
 
   export function createOpponent(id: number, name = `Opponent ${id}`): Opponent {
-    return { id, name, trainee: createTrainee() };
+    return { id, name, trainee: createTrainee(), skills: [] };
   }
 
   /** Opponents already carry everything `buildFieldRunners` reads from a runner row. */
   export function opponentToRunnerInput(opponent: Opponent): MonteCarloRunnerInput {
-    return { trainee: opponent.trainee };
+    return { trainee: opponent.trainee, skills: opponent.skills };
   }
 </script>
 
@@ -37,6 +39,7 @@
   import TextField from '@/components/TextField.svelte';
   import { APTITUDE_GRADES } from './stamina-request';
   import { RUNNING_STYLES } from './trainee';
+  import RunnerSkills from './RunnerSkills.svelte';
 
   interface Props {
     runners?: Array<Opponent>;
@@ -142,6 +145,8 @@
         options={STYLE_OPTIONS}
         bind:value={runner.trainee.runningStyle}
       />
+
+      <RunnerSkills idPrefix="{uid}-{runner.id}" bind:skills={runner.skills} />
     </fieldset>
   {/each}
 
