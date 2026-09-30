@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
-import { mockAdvertising, mockResources } from './fixtures/api';
+import { mockAdvertising, mockDatabase, mockResources } from './fixtures/api';
 
 test.beforeEach(async ({ context }) => {
   await mockAdvertising(context);
@@ -79,6 +79,48 @@ test('app runtime errors are visible while unrelated third-party errors are igno
   await expect(error.locator('pre')).not.toContainText('secret');
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('umamoe:app-error', { detail: new Error('Secondary failure') })));
   await expect(error.locator('pre')).not.toContainText('Secondary failure');
+});
+
+test('cancelled database searches do not show the fatal fallback when a fetch observer leaks the rejection', async ({ page }) => {
+  await mockDatabase(page);
+  await page.goto('/database');
+  await expect(page.getByText('Parity Trainer').first()).toBeVisible();
+  const errors: Error[] = [];
+  page.on('pageerror', error => errors.push(error));
+  await page.evaluate(() => {
+    const originalFetch = window.fetch;
+    window.fetch = (...args) => {
+      const request = originalFetch(...args);
+      // Reproduce an injected fetch observer that leaves a rejected child promise.
+      if (String(args[0]).includes('/search/query?')) void request.then(() => {});
+      return request;
+    };
+  });
+  let pending = false;
+  await page.route('**/search/query?*', route => {
+    if (new URL(route.request().url()).searchParams.get('sort_by') !== 'win_count') return route.fallback();
+    pending = true; // Leave this search in flight until the next selection aborts it.
+  });
+  const sort = page.locator('#database-sort');
+  await sort.click();
+  await page.getByRole('option', { name: 'G1 Wins', exact: true }).click();
+  await expect.poll(() => pending).toBe(true);
+  await sort.click();
+  await page.getByRole('option', { name: 'Newest First', exact: true }).click();
+  await expect.poll(() => errors.some(error => error.name === 'AbortError')).toBe(true);
+  await expect(page.locator('#app-error')).toBeHidden();
+  await expect(page.getByText('Parity Trainer').first()).toBeVisible();
+  await expect(sort).toContainText('Newest First');
+  await expect(page.getByRole('alert').filter({ hasText: 'Inheritance search unavailable' })).toHaveCount(0);
+
+  // A real app rejection must still offer recovery after the cancellation.
+  await page.evaluate(() => {
+    const error = new TypeError('Unexpected application failure');
+    error.stack = error.toString() + '\n    at ' + location.origin + '/app/DatabasePage-test.js:2:1';
+    void Promise.reject(error);
+  });
+  await expect(page.locator('#app-error')).toBeVisible();
+  await expect(page.locator('#app-error-details')).toContainText('TypeError: Unexpected application failure');
 });
 
 test('production Svelte errors report the actual bound property and stack', async ({ page }) => {

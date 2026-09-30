@@ -55,6 +55,8 @@
           else if (isAppSource(event.filename) || isAppSource(event.error && event.error.stack)) show(event.error || event.message, event);
         }, true);
         window.addEventListener('unhandledrejection', function (event) {
+          // Superseded requests are expected cancellations, including rejections leaked by fetch observers.
+          if (event.reason && event.reason.name === 'AbortError') return;
           if (isAppSource(event.reason && event.reason.stack)) show(event.reason);
         });
       }());
