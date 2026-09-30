@@ -51,7 +51,7 @@ test('status details, build notification, and changelog work on desktop and mobi
   await expect(updates.getByRole('heading', { name: 'Usability update', exact: true })).toBeVisible();
   await expect(updates).toContainText('Add banner notes and record actual pulls and copies. Both save and sync with your plan.');
   await expect(updates.locator('.release-summary')).toHaveCount(0);
-  await expect(updates.locator('.latest-release .highlight h3')).toHaveText(['Pull plans & actual results', 'Income & ticket planning', 'Spark filters', 'Parent picker', 'Timeline', 'Layout & wording']);
+  await expect(updates.locator('.latest-release .highlight h3')).toHaveText(['Pull plans & actual results', 'Income & ticket planning', 'Spark filters', 'Parent picker', 'Timeline', 'Layout improvements']);
   await expect(updates.locator('img')).toHaveCount(0);
   for (const theme of ['dark', 'light']) {
     await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);

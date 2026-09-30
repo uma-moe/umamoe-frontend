@@ -43,7 +43,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
         category: 'improvement', label: 'Spark filters', icon: 'search',
         items: [
           { text: 'Filter lineage sparks by stars or occurrences; combine main-parent requirements with AND/OR.', link: '/database' },
-          { text: 'Smaller controls, ranges remembered after reload, and UQL occurrence searches like Groundwork = 3x.' }
+          { text: 'Ranges are remembered after reload. UQL supports occurrence searches like Groundwork = 3x.' }
         ]
       },
       {
@@ -57,10 +57,9 @@ export const UPDATE_LOG: UpdateEntry[] = [
         ]
       },
       {
-        category: 'bugfix', label: 'Layout & wording', icon: 'check',
+        category: 'bugfix', label: 'Layout improvements', icon: 'check',
         items: [
-          { text: 'Better pull-plan layouts, compact mobile Notes/Results buttons and vertically centered dialogs.' },
-          { text: 'Updated navigation badges and consistent “Carats” wording.' }
+          { text: 'Better pull-plan layouts, compact mobile Notes/Results buttons and vertically centered dialogs.' }
         ]
       }
     ]
