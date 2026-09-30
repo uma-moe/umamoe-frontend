@@ -80,7 +80,7 @@ test('Income summary includes every resource and dated reward through the last p
   await expect(summary.locator('[data-currency="free_jewels"] dd')).toHaveText('+3,800');
 });
 
-test('Daily Jewel Pack appears once and retains its saved selection after reload', async ({ page }) => {
+test('Daily Carat Pack appears once and retains its saved selection after reload', async ({ page }) => {
   await mockTimeline(page);
   const pack = { label: 'Daily Jewel Pack (continuous)', currency: 'free_jewels', amount: 50, cadence: 'daily', start_date: '2017-01-01', end_date: '2030-01-10' };
   await page.route('**/resources/test/planner_income.json*', route => route.fulfill({ json: { rules: ['daily-jewel-pack', 'daily-jewel-pack-16'].map(id => ({ ...pack, id })) } }));
@@ -94,7 +94,7 @@ test('Daily Jewel Pack appears once and retains its saved selection after reload
   };
   await page.goto('/timeline?tab=carat-planner');
   await openIncome();
-  const toggle = page.getByRole('button', { name: /Daily Jewel Pack/ });
+  const toggle = page.getByRole('button', { name: /Daily Carat Pack/ });
   await expect(toggle).toHaveCount(1);
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   await toggle.click();

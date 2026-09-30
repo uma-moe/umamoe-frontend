@@ -3,7 +3,7 @@
   import LandingPage from '@/layouts/LandingPage.svelte';
   const tools = [
     { href: '/tools/statistics', icon: 'chart' as const, accent: 'primary', title: 'Team Stadium Statistics', description: 'Interactive charts and data analysis' },
-    { href: '/timeline?tab=carat-planner', icon: 'paid' as const, accent: 'secondary', title: 'Carat Planner', description: 'Project income, tickets, pulls, and banner goals', updated: true },
+    { href: '/timeline?tab=carat-planner', icon: 'paid' as const, accent: 'secondary', title: 'Carat Planner', description: 'Project income, tickets, pulls, and banner goals' },
     { href: '/tools/lineage-planner', icon: 'lineage' as const, accent: 'success', title: 'Lineage Planner', description: 'Plan your full inheritance tree' },
     { icon: 'battery' as const, accent: 'warning', title: 'Stamina Calculator', description: 'Calculate optimal stamina for races' },
     { icon: 'gauge' as const, accent: 'pink', title: 'Race Simulator', description: 'Simulate race outcomes and performance' }

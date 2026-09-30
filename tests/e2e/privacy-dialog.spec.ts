@@ -57,7 +57,7 @@ for (const timing of ['before', 'after', 'automatically'] as const) {
     if (timing === 'before') await expect(updates.getByRole('heading', { name: 'Previous updates', exact: true })).toBeVisible();
     await updates.getByRole('button', { name: 'Got it', exact: true }).click();
     await expect(page.locator('dialog[open]')).toHaveCount(0);
-    expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('17');
+    expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('18');
     if (timing === 'before') await expect(page.getByRole('button', { name: 'What’s new', exact: true })).toBeFocused();
     await page.getByRole('link', { name: 'Privacy', exact: true }).click();
     await expect(page).toHaveURL(/\/privacy-policy$/);

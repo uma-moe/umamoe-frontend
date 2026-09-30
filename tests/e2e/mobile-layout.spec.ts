@@ -20,7 +20,7 @@ async function prepareMouse(page: Page) {
   await mockAdvertising(page.context()); await mockResources(page.context());
   await page.addInitScript(() => {
     localStorage.setItem('page-introduction-audience-v1', 'existing');
-    localStorage.setItem('lastSeenUpdateVersion', '17');
+    localStorage.setItem('lastSeenUpdateVersion', '18');
   });
 }
 

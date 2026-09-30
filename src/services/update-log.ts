@@ -21,6 +21,58 @@ export interface UpdateEntry {
 // Define your updates here - newest first
 export const UPDATE_LOG: UpdateEntry[] = [
   {
+    title: 'Usability update',
+    date: '2026-09-30',
+    categories: [
+      {
+        category: 'major', label: 'Pull plans & actual results', icon: 'diamond',
+        items: [
+          { text: 'Save notes for each banner, with a preview below its details.', link: '/timeline?tab=carat-planner' },
+          { text: 'Record actual pulls and copies, compare them with your plan, and carry savings or extra spending into future balances.' },
+          { text: 'See goals met and copies still needed, including planned Uncap Crystals. Odds remain available for comparison.' },
+          { text: 'Notes and results save automatically and travel with saved, synced, shared and exported plans. Clear actual pulls to return to your planned budget.' }
+        ]
+      },
+      {
+        category: 'improvement', label: 'Income & ticket planning', icon: 'paid',
+        items: [
+          { text: 'Choose monthly ticket exchanges separately: Friend Points, Clovers, and Silver, Gold or Rainbow Cleats. Each shows its tickets and exchange cost.', link: '/timeline?tab=carat-planner' },
+          { text: 'See projected Carats, tickets, shards and Uncap Crystals through your last planned pull, or a 30-day preview before adding banners.' },
+          { text: 'Team Trials Classes 3.5, 4.5 and 5.5 model alternating promotion and demotion rewards, with weekly averages.' },
+          { text: 'Duplicate Daily Carat Pack entries now count only once, preserving your saved selection.' }
+        ]
+      },
+      {
+        category: 'improvement', label: 'Spark filters', icon: 'search',
+        items: [
+          { text: 'Set separate star and parent-occurrence ranges for the full lineage. Switching between them keeps both limits, including after reload.', link: '/database' },
+          { text: 'Main-parent filters use star ranges and combine requirements with AND/OR. UQL also supports lineage occurrence counts, such as Groundwork = 3x.' },
+          { text: 'More compact filter rows, preferred and lineage white-factor controls, and smaller star/occurrence icons.' }
+        ]
+      },
+      {
+        category: 'improvement', label: 'Parent picker', icon: 'lineage',
+        items: [{ text: 'Find bookmarked and saved partner parents by trainer username as well as Uma name.', link: '/tools/lineage-planner' }]
+      },
+      {
+        category: 'improvement', label: 'Timeline', icon: 'timeline',
+        items: [
+          { text: 'Smoother scrolling and date navigation, with fewer jumps as vertical Timeline rows and artwork load.', link: '/timeline' },
+          { text: 'Consistent mouse-wheel and drag scrolling over cards and pickups. Hold Shift to scroll vertically in the horizontal view.' }
+        ]
+      },
+      {
+        category: 'bugfix', label: 'Layout & wording', icon: 'check',
+        items: [
+          { text: 'Tighter pull-plan breakpoints and compact mobile Notes/Results buttons beside banner details.' },
+          { text: 'Dialogs now center vertically by default, including the notes and results editors.' },
+          { text: 'Updated navigation badges highlight the changed sections on desktop and mobile.' },
+          { text: 'Remaining “jewels” labels now say “Carats.”' }
+        ]
+      }
+    ]
+  },
+  {
     title: 'uma.moe 2.0',
     version: '2.0',
     date: '2026-09-18',

@@ -48,8 +48,11 @@ test('status details, build notification, and changelog work on desktop and mobi
   await details.getByRole('button', { name: 'Close Service status' }).click();
   await page.getByRole('button', { name: 'What’s new', exact: true }).click();
   const updates = page.getByRole('dialog', { name: 'What’s new', exact: true });
-  await expect(updates.getByRole('heading', { name: 'uma.moe 2.0', exact: true })).toBeVisible();
-  await expect(updates).toContainText('Rebuilt in Svelte');
+  await expect(updates.getByRole('heading', { name: 'Usability update', exact: true })).toBeVisible();
+  await expect(updates).toContainText('Save notes for each banner, with a preview below its details.');
+  await expect(updates.locator('.release-summary')).toHaveCount(0);
+  await expect(updates.locator('.latest-release .highlight h3')).toHaveText(['Pull plans & actual results', 'Income & ticket planning', 'Spark filters', 'Parent picker', 'Timeline', 'Layout & wording']);
+  await expect(updates.locator('img')).toHaveCount(0);
   for (const theme of ['dark', 'light']) {
     await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
     await updates.screenshot({ path: test.info().outputPath(`whats-new-${theme}.png`) });
@@ -65,16 +68,16 @@ test('status details, build notification, and changelog work on desktop and mobi
   await expect(updates.getByRole('heading', { name: 'More Accurate Planning', exact: true })).not.toBeVisible();
   await expect(updates.locator('details[open]')).toHaveCount(1);
   await updates.getByRole('button', { name: 'Latest release', exact: true }).click();
-  await expect(updates.getByRole('heading', { name: 'uma.moe 2.0', exact: true })).toBeVisible();
+  await expect(updates.getByRole('heading', { name: 'Usability update', exact: true })).toBeVisible();
   await updates.getByRole('button', { name: 'Got it', exact: true }).click();
   await expect(page.getByText('Carat Planner Accuracy and Sync', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'What’s new', exact: true }).click();
   await expect(updates).toBeVisible();
   const currentUrl = page.url();
-  await updates.getByRole('button', { name: 'Explore 2.0', exact: true }).click();
+  await updates.getByRole('button', { name: 'Got it', exact: true }).click();
   await expect(updates).toBeHidden();
   await expect(page).toHaveURL(currentUrl);
-  expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('17');
+  expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('18');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(page.viewportSize()!.width);
 });
 
@@ -90,14 +93,14 @@ test('route changes refresh canonical, social, and structured metadata without p
   await expect(page.locator('#page-structured-data')).toHaveCount(0);
 });
 
-test('uma.moe 2.0 is announced once to returning visitors and stays available from the footer', async ({ page }) => {
+test('Usability update is announced once to returning visitors and stays available from the footer', async ({ page }) => {
   await page.goto('/tools');
-  await page.evaluate(() => localStorage.setItem('lastSeenUpdateVersion', '16'));
+  await page.evaluate(() => localStorage.setItem('lastSeenUpdateVersion', '17'));
   await page.reload();
   const updates = page.getByRole('dialog', { name: 'What’s new', exact: true });
-  await expect(updates.getByRole('heading', { name: 'uma.moe 2.0', exact: true })).toBeVisible();
+  await expect(updates.getByRole('heading', { name: 'Usability update', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
-  expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('17');
+  expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('18');
   await page.reload();
   await page.waitForTimeout(1800); // The automatic announcement checks after 1.5 seconds.
   await expect(updates).not.toBeVisible();

@@ -12,6 +12,9 @@ type ManifestEntry = string | { name?: string; path?: string; current_path?: str
 interface PlannerManifest { files?: Record<string, ManifestEntry> | ManifestEntry[]; artifacts?: Record<string, ManifestEntry> | ManifestEntry[]; resources?: Record<string, ManifestEntry> | ManifestEntry[]; }
 
 const cache = new QueryCache();
+function caratText(value: string | undefined): string | undefined {
+  return value?.replace(/\bjewels\b/gi, 'Carats').replace(/\bjewel\b/gi, 'Carat');
+}
 const normalizedRewards = new WeakMap<PlannerRewardResource, PlannerRewardResource>();
 const manifestPath = '/resources/planner/manifest.json';
 const gachaById = new Map<number, PlannerGachaEntry>();
@@ -186,7 +189,7 @@ export const plannerResourceRepository = {
     if (cached) return cached;
     const normalized = applyGlobalRewardPrecedence({
       ...rewards,
-      rewards: Array.isArray(rewards?.rewards) ? rewards.rewards : [],
+      rewards: Array.isArray(rewards?.rewards) ? rewards.rewards.map(reward => ({ ...reward, label: caratText(reward.label) ?? reward.label, evidence: caratText(reward.evidence) })) : [],
       event_benefits: Array.isArray(rewards?.event_benefits) ? rewards.event_benefits : [],
       free_pull_campaigns: Array.isArray(rewards?.free_pull_campaigns) ? rewards.free_pull_campaigns : [],
       competitive_variants: Array.isArray(rewards?.competitive_variants) ? rewards.competitive_variants : []
@@ -204,7 +207,7 @@ export const plannerResourceRepository = {
     ]);
     return {
       core: core ?? {},
-      income: { ...income, rules: normalizePlannerIncomeRules(Array.isArray(income?.rules) ? income.rules : []) },
+      income: { ...income, rules: normalizePlannerIncomeRules(Array.isArray(income?.rules) ? income.rules : []).map(rule => ({ ...rule, label: caratText(rule.label) ?? rule.label, description: caratText(rule.description) })) },
       rewards,
       supportCardRarities,
     };

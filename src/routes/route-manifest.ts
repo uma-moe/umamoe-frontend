@@ -5,6 +5,10 @@ import featureManifest from '../../contracts/features.json';
 
 export type RouteGroup = 'main' | 'community' | 'tools' | 'system';
 
+export const updatedNavigationHrefs = new Set([
+  '/database', '/timeline', '/timeline?tab=carat-planner', '/tools', '/tools/lineage-planner'
+]);
+
 export interface AppRouteDefinition {
   id: string;
   path: string;
@@ -48,6 +52,7 @@ function directItem(definition: AppRouteDefinition, pathname: string): Navigatio
     label: definition.title,
     href: definition.path,
     icon: definition.icon,
+    badge: updatedNavigationHrefs.has(definition.path) ? 'Updated' : undefined,
     current: pathMatches(definition.path, pathname)
   };
 }
@@ -64,7 +69,8 @@ const mainRouteIds = ['database', 'veterans', 'clubs', 'rankings', 'activity', '
 
 export function navigationForPath(pathname: string, search = ''): { main: NavigationItem[]; mobileMore: NavigationItem[] } {
   const plannerActive = pathname === '/timeline' && new URLSearchParams(search).get('tab') === 'carat-planner';
-  const planner: NavigationSubItem = { id: 'carat-planner', label: 'Carat Planner', href: '/timeline?tab=carat-planner', current: plannerActive };
+  const plannerHref = '/timeline?tab=carat-planner';
+  const planner: NavigationSubItem = { id: 'carat-planner', label: 'Carat Planner', href: plannerHref, current: plannerActive, badge: updatedNavigationHrefs.has(plannerHref) ? 'Updated' : undefined };
   const main = routesByIds(mainRouteIds).map((route) => {
     const item = directItem(route, pathname);
     const children: NavigationSubItem[] = appRoutes

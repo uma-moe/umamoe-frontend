@@ -11,13 +11,13 @@ const saved = new Map<string, Response>();
 beforeEach(() => { repository.invalidate(); http.mockReset(); saved.clear(); vi.stubGlobal('caches', { open: async (name: string) => { expect(name).toBe('umamoe-carat-planner-v2'); return { match: async (url: string) => saved.get(url)?.clone(), put: async (url: string, response: Response) => { saved.set(url, response); } }; } }); });
 afterEach(() => { repository.invalidate(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 it('merges duplicate daily pack records and preserves either saved selection without double income', async () => {
-  const rule: PlannerIncomeRule = { id: 'daily-jewel-pack', label: 'Daily Jewel Pack (continuous)', currency: 'free_jewels', amount: 50, cadence: 'daily', start_date: '2017-01-01', end_date: '2030-01-10' };
+  const rule: PlannerIncomeRule = { id: 'daily-jewel-pack', label: 'Daily Jewel Pack (continuous)', description: 'Receive 50 jewels daily.', currency: 'free_jewels', amount: 50, cadence: 'daily', start_date: '2017-01-01', end_date: '2030-01-10' };
   const rules = [rule, { ...rule, id: 'daily-jewel-pack-16' }];
   http.mockImplementation(async url => Response.json(url.includes('manifest') ? { files: {
     'planner_core.json': 'planner_core.json', 'planner_income.json': 'planner_income.json', 'planner_rewards.json': 'planner_rewards.json',
   } } : url.includes('planner_income.json') ? { rules } : {}));
   const data = await repository.initial();
-  expect(data.income.rules.filter(item => item.label === rule.label)).toEqual([rule]);
+  expect(data.income.rules.filter(item => item.id === rule.id)).toEqual([{ ...rule, label: 'Daily Carat Pack (continuous)', description: 'Receive 50 Carats daily.' }]);
   for (const ids of [[], ['daily-jewel-pack'], ['daily-jewel-pack-16'], rules.map(item => item.id)]) {
     const saved = { ...createPlan(), projectionStartDate: '2026-01-01', scenarioSelections: {}, enabledIncomeRuleIds: ids };
     const plan = loadPlanCollection({ getItem: () => JSON.stringify({ version: 1, activePlanId: saved.id, plans: [saved] }) }).plans[0]!;

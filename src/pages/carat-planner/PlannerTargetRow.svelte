@@ -3,6 +3,7 @@
 </script>
 
 <script lang="ts">
+  import { tick } from 'svelte';
   import { isPaidBanner, paidBannerSteps, plannerCardKind } from '@/lib/timeline/planner-paid-banners';
   import { itemIconPath } from '@/lib/catalog/item-icons';
   import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
@@ -16,6 +17,7 @@
   import SelectField from '@/components/SelectField.svelte';
   import TextField from '@/components/TextField.svelte';
   import InspectPopover from '@/components/InspectPopover.svelte';
+  import Dialog from '@/components/Dialog.svelte';
 
   interface Props {
     target: PlannerTarget;
@@ -29,7 +31,15 @@
     onremove: () => void;
   }
   let { target, past = false, projection, resources, events, catalog, pickupCopyMemory, onupdate, onremove }: Props = $props();
-  let notesTrigger: HTMLSpanElement;
+  let notesOpen = $state(false);
+  let resultsOpen = $state(false);
+
+  async function openEditor(kind: 'notes' | 'results', trigger: HTMLButtonElement) {
+    trigger.focus({ preventScroll: true });
+    if (kind === 'notes') notesOpen = true; else resultsOpen = true;
+    await tick();
+    document.getElementById(`${kind === 'notes' ? 'notes' : 'actual-pulls'}-${target.id}`)?.focus({ preventScroll: true });
+  }
 
   const gacha = $derived(findGacha(target, resources));
   const paidOnly = $derived(isPaidBanner(target, gacha));
@@ -85,18 +95,16 @@
     <div class="target-info">
       <div class="banner-identity"><strong class:paid={paidOnly}>{#if paidOnly}<span aria-label="Paid banner" title="Paid banner"><Icon name="paid" size={17}/></span>{/if}{target.title}</strong><small class="date"><Icon name="calendar" size={13}/>{dateLabel(target.bannerStart)} – {dateLabel(target.bannerEnd ?? target.bannerStart)}</small></div>
       <div class="banner-actions" role="group" aria-label={`Notes and results for ${target.title}`}>
-        <InspectPopover label={`Edit notes for ${target.title}`} align="end" onopenchange={open => { if (open) document.getElementById(`notes-${target.id}`)?.focus({ preventScroll: true }); }}>
-          {#snippet trigger()}<span bind:this={notesTrigger} class="action-trigger notes-trigger" class:recorded={Boolean(target.notes)} title={target.notes || 'Add notes'}><Icon name="edit" size={16}/><span>Notes</span>{#if target.notes}<i aria-label="Has notes"></i>{/if}</span>{/snippet}
+        <button type="button" class="action-trigger notes-trigger" class:recorded={Boolean(target.notes)} title={target.notes || 'Add notes'} aria-label={`Edit notes for ${target.title}`} aria-haspopup="dialog" aria-expanded={notesOpen} onclick={event => openEditor('notes', event.currentTarget)}><Icon name="edit" size={16}/><span>Notes</span>{#if target.notes}<i aria-label="Has notes"></i>{/if}</button>
+        <Dialog bind:open={notesOpen} title="Banner notes" maxWidth="420px" maxHeight="calc(100dvh - 16px)" mobileInset="16px">
           <div class="notes-editor">
-            <label for={`notes-${target.id}`}>Banner notes</label>
             <textarea id={`notes-${target.id}`} aria-label={`Notes for ${target.title}`} rows="4" maxlength="2000" placeholder="e.g. LB3, +1 selector; usable at LB2" value={target.notes ?? ''} oninput={event => onupdate(value => value.notes = event.currentTarget.value || undefined)}></textarea>
-            <footer><small>Saved automatically</small><Button variant="secondary" size="sm" icon="save" ariaLabel={`Save notes for ${target.title}`} onclick={() => { document.getElementById(`notes-${target.id}`)?.closest<HTMLElement>('[popover]')?.hidePopover(); notesTrigger.closest('button')?.focus(); }}>Save</Button></footer>
+            <footer><small>Saved automatically</small><Button variant="secondary" size="sm" icon="save" ariaLabel={`Save notes for ${target.title}`} onclick={() => notesOpen = false}>Save</Button></footer>
           </div>
-        </InspectPopover>
-        <InspectPopover label={`Actual results for ${target.title}`} align="end" onopenchange={open => { if (open) document.getElementById(`actual-pulls-${target.id}`)?.focus({ preventScroll: true }); }}>
-          {#snippet trigger()}<span class="action-trigger results-trigger" class:recorded={target.actualPulls !== undefined || Boolean(target.actualCopies)}><Icon name={target.actualPulls !== undefined || target.actualCopies ? 'check' : 'clipboard'} size={16}/><span>Results</span></span>{/snippet}
+        </Dialog>
+        <button type="button" class="action-trigger results-trigger" class:recorded={target.actualPulls !== undefined || Boolean(target.actualCopies)} title="Actual results" aria-label={`Actual results for ${target.title}`} aria-haspopup="dialog" aria-expanded={resultsOpen} onclick={event => openEditor('results', event.currentTarget)}><Icon name={target.actualPulls !== undefined || target.actualCopies ? 'check' : 'clipboard'} size={16}/><span>Results</span></button>
+        <Dialog bind:open={resultsOpen} title="Actual results" description="Your original plan stays unchanged." maxWidth="420px" maxHeight="calc(100dvh - 16px)" mobileInset="16px">
           <div class="results-editor">
-            <header><strong>Actual results</strong><small>Your original plan stays unchanged.</small></header>
             <div class="result-entry" class:step-up={Boolean(stepUp)}>
               <span class="result-label"><strong>Pulls done</strong><small>{target.plannedPulls} planned · include free pulls &amp; tickets</small></span>
               {#if stepUp}<SelectField id={`actual-pulls-${target.id}`} label="Actual step-up progress" hideLabel options={[{ value: '', label: 'Not recorded' }, ...stepOptions]} value={String(target.actualPulls ?? '')} onchange={setActualPulls}/>
@@ -113,7 +121,7 @@
             </div>{/if}
             <p>Saved automatically. Clear pulls to use your planned budget.</p>
           </div>
-        </InspectPopover>
+        </Dialog>
       </div>
       {#if projection}<div class="at-pull" aria-label={`At pull date: ${caratLabel}${paidOnly ? '' : '; ' + ticketLabel}`}><small>At pull</small><span class="carat-balance" title={caratLabel}><img src={itemIconPath(43)} width="18" height="18" alt="Carats"/><b>{caratsBefore.toLocaleString()}</b><em>→ {caratsAfter.toLocaleString()}</em></span>{#if !paidOnly}<span title={ticketLabel}><img src={itemIconPath(ticketKind === 'support' ? 111 : 41)} width="18" height="18" alt=""/><b>{ticketCount}</b>{#if projection.ticketPulls}<em>→ {ticketCount - projection.ticketPulls}</em>{/if}</span>{#if cardKind === 'support' && !stepUp}{#each ['rainbow', 'gold'] as kind}<span title={`${kind === 'rainbow' ? 'Rainbow' : 'Gold'} Uncap Crystals available at pull`}><img src={itemIconPath(kind === 'rainbow' ? 144 : 145)} width="18" height="18" alt=""/><b>{kind === 'rainbow' ? availableCrystals(projection.balanceBefore.rainbowFullCrystals, projection.balanceBefore.rainbowCrystals) : availableCrystals(projection.balanceBefore.goldFullCrystals, projection.balanceBefore.goldCrystals)}</b></span>{/each}{/if}{/if}</div>{/if}
       {#if target.notes}<span class="note-preview" title={target.notes}>{target.notes}</span>{/if}
@@ -146,13 +154,13 @@
   .pull-heading>span{font-size:10px;color:var(--text-secondary)}
   .target-actions{grid-column:3;display:flex;align-items:center;justify-content:flex-end;gap:4px}
   .banner-media{min-width:0}
-  .banner-actions{display:flex;align-self:start;justify-self:end;gap:4px;--inspect-popover-width:360px;--inspect-popover-padding:14px}
-  .action-trigger{height:26px;padding:0 8px;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid var(--factor-field-border);border-radius:var(--radius-sm);background:var(--factor-field-bg);color:var(--text-primary);font-size:11px;font-weight:600}
+  .banner-actions{display:flex;align-self:start;justify-self:end;gap:4px}
+  .action-trigger{height:26px;padding:0 8px;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid var(--factor-field-border);border-radius:var(--radius-sm);background:var(--factor-field-bg);color:var(--text-primary);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer}
   .action-trigger :global(svg){width:12px;height:12px}
   .notes-trigger{position:relative}.notes-trigger i{position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--accent-primary)}
   .results-trigger.recorded{border-color:color-mix(in srgb,var(--accent-primary) 55%,var(--factor-field-border));background:var(--color-accent-soft);color:var(--accent-primary)}
   .action-trigger:hover{border-color:var(--accent-primary)}.notes-trigger.recorded{color:var(--accent-primary)}
-  .results-editor{display:grid;gap:10px;font-size:12px}.results-editor header{display:grid;gap:4px;padding-right:30px}.results-editor header>strong{font-size:14px}.results-editor small,.results-editor p{color:var(--text-secondary);font-size:11px;line-height:1.4}
+  .results-editor{display:grid;gap:10px;font-size:12px}.results-editor small,.results-editor p{color:var(--text-secondary);font-size:11px;line-height:1.4}
   .result-entry{display:grid;grid-template-columns:minmax(0,1fr) 80px;align-items:center;gap:10px}.result-entry.step-up{grid-template-columns:minmax(0,1fr)}.result-label,.result-name>span:last-child{display:grid;gap:3px;min-width:0}.result-entry strong{font-size:12px;overflow-wrap:anywhere}
   .result-copies{display:grid;gap:10px;border-top:1px solid var(--border-subtle);padding-top:12px}.result-copies>strong{display:flex;justify-content:space-between}.result-copies>strong>small{font-weight:400}
   .result-entry .result-name{display:flex;align-items:center;gap:8px;min-width:0}
@@ -164,7 +172,7 @@
   .note-preview{grid-column:1/-1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);font-size:12px}
   .banner-identity{min-width:0;display:grid;gap:4px}.banner-identity>strong{font-size:.84rem;line-height:1.25;overflow-wrap:anywhere}
   .banner-identity>strong.paid{display:flex;align-items:center;gap:5px;color:var(--color-gold)}.paid>span{display:flex;flex:none}
-  .notes-editor{display:grid;gap:10px}.notes-editor>label{font-size:14px;font-weight:600;padding-right:32px}.notes-editor>footer{display:flex;align-items:center;justify-content:space-between;gap:8px}.notes-editor small{font-size:11px;color:var(--text-secondary)}
+  .notes-editor{display:grid;gap:10px}.notes-editor>footer{display:flex;align-items:center;justify-content:space-between;gap:8px}.notes-editor small{font-size:11px;color:var(--text-secondary)}
   .notes-editor>textarea{display:block;box-sizing:border-box;width:100%;min-height:100px;padding:8px 10px;resize:vertical;border:1px solid var(--factor-field-border);border-radius:var(--radius-sm);background:var(--factor-field-bg);color:var(--factor-field-text);font:inherit;font-size:14px}
   .notes-editor>textarea:focus{border-color:var(--factor-field-focus-border);outline:0;box-shadow:var(--focus-ring)}
   .date{display:flex;align-items:center;flex-wrap:wrap;gap:3px 5px;color:var(--text-secondary);font-size:10px}
@@ -196,21 +204,20 @@
     .target-title{grid-template-columns:128px minmax(0,1fr)}.banner-media>img{width:128px}
     .target-controls{border-left:0;border-top:1px solid var(--border-subtle)}
   }
-  @container planner-targets (max-width:900px){.target-controls{grid-template-columns:minmax(0,1fr) auto}.target-actions{grid-column:2;grid-row:1}.crystal-plan{grid-column:1/-1;grid-row:2;justify-self:end}.pull-count{justify-self:start}}
+  @container planner-targets (max-width:720px){.target-controls{grid-template-columns:minmax(0,1fr) auto}.target-actions{grid-column:2;grid-row:1}.crystal-plan{grid-column:1/-1;grid-row:2;justify-self:start}.pull-count{justify-self:start}}
   @media(max-width:767px){
-    .results-editor :global(.field){--control-height:var(--touch-target)}.results-editor header{min-height:30px;padding-right:36px}
+    .results-editor :global(.field){--control-height:var(--touch-target)}
     .target{grid-template-columns:minmax(0,1fr);margin-bottom:8px;border:1px solid var(--border-primary);border-radius:var(--radius-md)}
-    .target-title{grid-template-columns:104px minmax(0,1fr);min-height:0;padding:10px;gap:4px 8px}.banner-media{grid-column:1;grid-row:1/3}.banner-media>img{width:104px;height:32px;border:0;border-radius:5px}
-    .target-info{display:contents}.banner-identity{grid-column:2;grid-row:1}.banner-actions{grid-column:2;grid-row:2}.at-pull{grid-column:1/-1;grid-row:3;margin-top:4px}
-    .note-preview{grid-row:4}
+    .target-title{grid-template-columns:80px minmax(0,1fr) auto;min-height:0;padding:10px;gap:6px}.banner-media{grid-column:1;grid-row:1}.banner-media>img{width:80px;height:32px;border:0;border-radius:5px}
+    .target-info{display:contents}.banner-identity{grid-column:2;grid-row:1}.banner-actions{grid-column:3;grid-row:1}.at-pull{grid-column:1/-1;grid-row:2;margin-top:2px}
+    .note-preview{grid-row:3}
+    .date{display:block}.date :global(svg){display:inline-block;vertical-align:middle;margin-right:4px}
     .target-controls{grid-template-columns:minmax(0,1fr) auto;border-left:0;padding:6px 10px;gap:6px}
     .pull-count{justify-self:stretch}.pull-count:not(.step-progress){grid-template-columns:auto 80px;justify-content:start;align-items:center;gap:8px}.pull-heading>span{font-size:11px}.stepper{display:block}.stepper :global(.ui-button){display:none}.stepper :global(.field){--control-height:var(--touch-target)}
 
     .step-progress{width:auto;grid-template-columns:minmax(0,1fr);gap:4px}.step-progress :global(.field){--control-height:var(--touch-target)}
-    .action-trigger{height:var(--touch-target);font-size:11px}.action-trigger :global(svg){display:none}
-    .results-trigger.recorded :global(svg){display:block}
-    .banner-actions :global(.popover:popover-open){left:8px!important;top:auto!important;bottom:max(8px,env(safe-area-inset-bottom));width:calc(100vw - 16px);max-height:calc(100dvh - 16px);border-radius:var(--radius-lg);box-shadow:0 -8px 32px #0005}
-    .banner-actions :global(.popover::backdrop){background:#0006}
+    .action-trigger{width:var(--touch-target);height:var(--touch-target);padding:0}.action-trigger :global(svg){width:16px;height:16px}.action-trigger>span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
     .target-controls :global(input),.banner-actions :global(input),.notes-editor>textarea{font-size:16px}.notes-editor>footer :global(.ui-button){min-height:var(--touch-target)}
     .target-actions{grid-column:2;grid-row:1}
     .options-trigger,.target-actions>:global(.ui-button){width:var(--touch-target);height:var(--touch-target)}

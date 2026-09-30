@@ -14,7 +14,7 @@ test('actual results preserve the plan and carry savings forward through edits a
   const row = page.locator('[data-target-id="support-goals"]');
   const next = page.locator('[data-target-id="next-banner"]');
   const edit = row.getByRole('button', { name: 'Actual results for Kitasan Black Support', exact: true });
-  const editor = row.getByRole('dialog', { name: 'Actual results for Kitasan Black Support', exact: true });
+  const editor = row.getByRole('dialog', { name: 'Actual results', exact: true });
   await expect(row.locator('.target-controls .banner-actions')).toHaveCount(0);
   await expect(row.locator('.target-title').getByRole('button', { name: 'Actual results for Kitasan Black Support', exact: true })).toBeVisible();
   await expect(row.locator('.goal-chance')).toContainText('%');
@@ -23,7 +23,7 @@ test('actual results preserve the plan and carry savings forward through edits a
   const characterAction = (await next.getByRole('button', { name: 'Actual results for Mejiro McQueen Pickup', exact: true }).boundingBox())!;
   expect(supportAction.width).toBe(characterAction.width);
   await expect(edit).toHaveText('Results');
-  const resultsButton = edit.locator('.results-trigger');
+  const resultsButton = edit;
   const neutralBackground = await row.locator('.notes-trigger').evaluate(node => getComputedStyle(node).backgroundColor);
   await expect(resultsButton).not.toHaveClass(/recorded/);
   await expect(resultsButton).toHaveCSS('background-color', neutralBackground);
@@ -33,6 +33,8 @@ test('actual results preserve the plan and carry savings forward through edits a
   await edit.click();
   await expect(editor).toBeVisible();
   expect((await row.boundingBox())!.height).toBeCloseTo(rowHeight, 0);
+  const centered = (await editor.boundingBox())!;
+  expect(centered.y + centered.height / 2).toBeCloseTo(page.viewportSize()!.height / 2, 0);
   const pulls = row.getByRole('spinbutton', { name: 'Actual pulls done', exact: true });
   const copies = row.getByRole('spinbutton', { name: 'Actual copies of Kitasan Black', exact: true });
   const otherCopies = row.getByRole('spinbutton', { name: 'Actual copies of Special Week', exact: true });
@@ -86,15 +88,15 @@ test('actual results preserve the plan and carry savings forward through edits a
     const panel = (await editor.boundingBox())!;
     expect(panel.x).toBe(8);
     expect(panel.width).toBe(page.viewportSize()!.width - 16);
-    expect(panel.y + panel.height).toBeCloseTo(page.viewportSize()!.height - 8, 0);
-    await page.screenshot({ path: info.outputPath('results-sheet.png'), scale: 'css' });
+    expect(panel.y + panel.height / 2).toBeCloseTo(page.viewportSize()!.height / 2, 0);
+    await page.screenshot({ path: info.outputPath('results-centered.png'), scale: 'css' });
     const viewport = page.viewportSize()!;
     await page.setViewportSize({ width: viewport.width, height: 430 });
     await expect(pulls).toBeInViewport();
     await expect(copies).toBeInViewport();
     const resized = (await editor.boundingBox())!;
     expect(resized.y).toBeGreaterThanOrEqual(8);
-    expect(resized.y + resized.height).toBeCloseTo(422, 0);
+    expect(resized.y + resized.height / 2).toBeCloseTo(215, 0);
     await page.setViewportSize(viewport);
   }
   await editor.screenshot({ path: info.outputPath('results-editor.png') });
@@ -113,14 +115,14 @@ test('actual results preserve the plan and carry savings forward through edits a
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0].targets[0].actualCopies['30028'])).toBe(0);
   await copies.fill('');
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0].targets[0].actualCopies ?? null)).toBeNull();
-  await editor.getByRole('button', { name: 'Close Actual results for Kitasan Black Support', exact: true }).click();
+  await editor.getByRole('button', { name: 'Close dialog', exact: true }).click();
   await expect(editor).not.toBeVisible();
   await expect(edit).toHaveText('Results');
   await expect(row.locator('.goal-previews')).not.toContainText('4 actual');
   await expect(row.locator('.goal-chance')).toContainText('%');
   await expect(resultsButton).not.toHaveClass(/recorded/);
   await expect(resultsButton).toHaveCSS('background-color', neutralBackground);
-  for (const width of isMobile ? [430, 390, 360, 320] : [1536, 1301, 1200, 1024, 768]) {
+  for (const width of isMobile ? [430, 390, 360, 320] : [1536, 1301, 1200, 1024, 900, 860, 800, 768]) {
     await page.setViewportSize({ width, height: 900 });
     const supportButton = (await edit.boundingBox())!;
     const characterButton = (await next.getByRole('button', { name: 'Actual results for Mejiro McQueen Pickup', exact: true }).boundingBox())!;
@@ -128,7 +130,8 @@ test('actual results preserve the plan and carry savings forward through edits a
     const actions = (await row.locator('.target-actions').boundingBox())!;
     expect(controls.x + controls.width - actions.x - actions.width).toBeCloseTo(10, 0);
     if (isMobile) {
-      await expect(row.locator('.notes-trigger > span')).toBeVisible();
+      await expect(row.locator('.notes-trigger svg')).toBeVisible();
+      expect(supportButton.width).toBe(32);
       expect(supportButton.height).toBe(32);
       const planned = (await row.getByRole('spinbutton', { name: 'Planned pulls', exact: true }).boundingBox())!;
       expect(planned.width).toBe(80);
@@ -139,15 +142,18 @@ test('actual results preserve the plan and carry savings forward through edits a
     } else {
       const pulls = (await row.locator('.pull-count').boundingBox())!;
       const crystals = (await row.locator('.crystal-plan').boundingBox())!;
-      if (width >= 1200) expect(crystals.x).toBeGreaterThanOrEqual(pulls.x + pulls.width);
+      if ((await row.boundingBox())!.width > 720) {
+        expect(crystals.x).toBeGreaterThanOrEqual(pulls.x + pulls.width);
+        expect(crystals.y + crystals.height).toBeCloseTo(pulls.y + pulls.height, 0);
+      }
     }
     for (const [banner, button] of [[row, supportButton], [next, characterButton]] as const) {
       const header = (await banner.locator('.target-title').boundingBox())!;
       const identity = (await banner.locator('.banner-identity').boundingBox())!;
       const editors = (await banner.locator('.banner-actions').boundingBox())!;
       expect(header.x + header.width - button.x - button.width).toBeCloseTo(10, 0);
-      if (isMobile) expect(editors.y).toBeGreaterThanOrEqual(identity.y + identity.height);
-      else expect(editors.x).toBeGreaterThanOrEqual(identity.x + identity.width);
+      expect(editors.x).toBeGreaterThanOrEqual(identity.x + identity.width);
+      if (isMobile) expect(editors.y).toBeCloseTo(identity.y, 0);
     }
     expect(await row.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     expect(await next.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);

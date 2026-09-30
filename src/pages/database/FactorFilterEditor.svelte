@@ -115,6 +115,7 @@
   .relation { width:100%; height:38px;display:flex;align-items:center;justify-content:center;align-self:end }.match-label{color:var(--text-muted);font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}.relation :global(.segments){width:100%;height:38px;display:grid;grid-template-columns:1fr 1fr;box-sizing:border-box;padding:3px;border:1px solid var(--border-primary);border-radius:6px;background:var(--factor-field-bg)}.relation :global(.segments button){min-width:0;min-height:0;padding:0 3px;border:0;border-radius:3px;background:transparent;color:var(--text-muted);cursor:pointer;font-family:inherit;font-size:9px;font-weight:800;line-height:1}.relation :global(.segments button.selected){background:color-mix(in srgb,var(--factor-accent) 17%,transparent);color:var(--factor-accent)}
   .factor-range { min-width:0; grid-column:1 / -1; padding-inline:2px; }
   .factor-metric :global(.segments button) { color:var(--factor-field-text); }
+  .factor-metric :global(svg) { width:14px; height:14px; }
   .factor-metric :global(.segments button.selected) { background:color-mix(in srgb,var(--factor-accent) 24%,transparent); color:var(--factor-accent); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--factor-accent) 35%,transparent); }
   .requirement :global(.select-control), .requirement :global(input[role="combobox"]) { height:38px; }
   .requirement > :global(.icon-button) { width:28px; min-width:28px; height:32px; min-height:32px; padding:0; border:0; border-radius:6px; background:rgb(255 60 60 / .1); color:var(--accent-error); }

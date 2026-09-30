@@ -8,7 +8,7 @@ test.beforeEach(async ({ context }) => {
   await mockResources(context);
   await context.addInitScript(() => {
     localStorage.setItem('page-introduction-audience-v1', 'existing');
-    localStorage.setItem('lastSeenUpdateVersion', '17');
+    localStorage.setItem('lastSeenUpdateVersion', '18');
     localStorage.setItem('lineage-planner-saves-v1', '{"Keep me":[]}');
   });
 });

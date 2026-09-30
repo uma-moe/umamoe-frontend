@@ -28,10 +28,10 @@ test('Banner notes save while typing and survive closing, reload, JSON export/im
   await expect(preview).toHaveText(notes + 'future');
   await summary.press('Enter');
   await expect(input).toHaveValue(notes + 'future');
-  await summary.click();
+  await input.press('Escape');
   await expect(input).not.toBeVisible();
   await page.reload();
-  await expect(summary.locator('.notes-trigger')).toHaveAttribute('title', notes + 'future');
+  await expect(summary).toHaveAttribute('title', notes + 'future');
   await expect(preview).toHaveText(notes + 'future');
   const viewport = page.viewportSize()!;
   for (const width of isMobile ? [390, 320] : [1536, 1301]) {
@@ -46,6 +46,10 @@ test('Banner notes save while typing and survive closing, reload, JSON export/im
   await expect(input).toHaveAttribute('maxlength', '2000');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(page.viewportSize()!.width);
 
+  const editor = row.getByRole('dialog', { name: 'Banner notes', exact: true });
+  const box = (await editor.boundingBox())!;
+  expect(box.y + box.height / 2).toBeCloseTo(viewport.height / 2, 0);
+  await input.press('Escape');
   await page.getByRole('button', { name: 'More plan actions', exact: true }).click();
   const downloading = page.waitForEvent('download');
   await page.getByRole('menuitem', { name: 'Export plan', exact: true }).click();
@@ -64,5 +68,5 @@ test('Banner notes save while typing and survive closing, reload, JSON export/im
   await expect(input).toHaveValue('');
   await save.click();
   await expect(input).not.toBeVisible();
-  await expect(summary.locator('.notes-trigger')).toHaveAttribute('title', 'Add notes');
+  await expect(summary).toHaveAttribute('title', 'Add notes');
 });
