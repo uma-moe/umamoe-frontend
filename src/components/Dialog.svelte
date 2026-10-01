@@ -4,9 +4,9 @@
   import { privacyUiOpen } from '@/services/ads/privacy-ui';
   import DialogPanel from './DialogPanel.svelte';
   import type { IconName } from './icon-types';
-  interface Props { id?: string; open?: boolean; title: string; description?: string; icon?: IconName; image?: string; children: Snippet; headerIdentity?: Snippet<[string | undefined, string | undefined]>; headerActions?: Snippet; eyebrow?: Snippet; actions?: Snippet; mobileActionsStack?: boolean; maxWidth?: string; maxHeight?: string; mobileMaxHeight?: string; mobileInset?: string; height?: string; stretchContent?: boolean; contentPadding?: string; mobileContentPadding?: string; onclose?: () => void; }
+  interface Props { id?: string; open?: boolean; title: string; description?: string; icon?: IconName; image?: string; children: Snippet; headerIdentity?: Snippet<[string | undefined, string | undefined]>; headerActions?: Snippet; eyebrow?: Snippet; actions?: Snippet; mobileActionsStack?: boolean; mobileFill?: boolean; maxWidth?: string; maxHeight?: string; mobileMaxHeight?: string; mobileInset?: string; height?: string; stretchContent?: boolean; contentPadding?: string; mobileContentPadding?: string; onclose?: () => void; }
   const instanceId = $props.id();
-  let { id = instanceId, open = $bindable(false), title, description, icon, image, children, headerIdentity, headerActions, eyebrow, actions, mobileActionsStack = false, maxWidth = '540px', maxHeight = '80dvh', mobileMaxHeight, mobileInset = '8px', height, stretchContent = true, contentPadding, mobileContentPadding, onclose }: Props = $props();
+  let { id = instanceId, open = $bindable(false), title, description, icon, image, children, headerIdentity, headerActions, eyebrow, actions, mobileActionsStack = false, mobileFill = false, maxWidth = '540px', maxHeight = '80dvh', mobileMaxHeight, mobileInset = '8px', height, stretchContent = true, contentPadding, mobileContentPadding, onclose }: Props = $props();
   let element: HTMLDialogElement;
   let returnFocus: HTMLElement | undefined;
   let backdropPointerDown = false;
@@ -26,7 +26,8 @@
     if (!$privacyUiOpen && returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
   }
   function close() { closeElement(); open = false; onclose?.(); }
-  onDestroy(() => { closeElement(); restoreFocus(); });
+  // Unmounting removes the close listener before WebKit finishes restoring focus.
+  onDestroy(() => { closeElement(); requestAnimationFrame(restoreFocus); });
   $effect(() => {
     if (!element?.isConnected) return;
     if (open && !$privacyUiOpen && !element.open) {
@@ -41,6 +42,7 @@
 <dialog style:--dialog-max-width={maxWidth} style:--dialog-max-height={maxHeight} style:--dialog-mobile-max-height={mobileMaxHeight ?? maxHeight} style:--dialog-mobile-inset={mobileInset} style:--dialog-height={height ?? 'fit-content'} style:--dialog-content-padding={contentPadding} style:--dialog-mobile-content-padding={mobileContentPadding}
   bind:this={element}
   class:mobile-actions-stack={mobileActionsStack}
+  class:mobile-fill={mobileFill}
   class:fixed-height={Boolean(height) && stretchContent}
   aria-labelledby="{id}-title"
   aria-describedby={description ? `${id}-description` : undefined}
@@ -60,6 +62,8 @@
   dialog::backdrop { background:rgb(0 0 0 / .68); }
   @media (max-width: 767px) {
     dialog { --dialog-height-limit:var(--dialog-mobile-max-height,var(--dialog-max-height)); width:calc(100% - var(--dialog-mobile-inset)); }
+    dialog.mobile-fill { height:var(--dialog-height-limit); }
+    dialog.mobile-fill > :global(.dialog-panel) { height:100%; }
     dialog.mobile-actions-stack > :global(.dialog-panel > footer) { align-items:stretch; flex-direction:column; }
     dialog.mobile-actions-stack > :global(.dialog-panel > footer .ui-button) { width:100%; }
   }

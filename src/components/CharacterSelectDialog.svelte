@@ -27,7 +27,7 @@
 
 <div class="character-dialog character-dialog--{mode}">
   {#snippet confirmActions()}<Button icon="check" disabled={!selected.length} onclick={() => onselect(selected)}>Add {selected.length} Character{selected.length === 1 ? '' : 's'}</Button>{/snippet}
-  <Dialog {id} bind:open {title} icon={mode === 'include' ? 'add' : mode === 'exclude' ? 'minus' : 'user'} maxWidth="600px" mobileMaxHeight="calc(100dvh - 48px)" mobileInset="16px" contentPadding="12px" mobileContentPadding="8px" actions={multiple ? confirmActions : undefined}>
+  <Dialog mobileFill {id} bind:open {title} icon={mode === 'include' ? 'add' : mode === 'exclude' ? 'minus' : 'user'} maxWidth="600px" mobileMaxHeight="calc(100dvh - 48px)" mobileInset="16px" contentPadding="12px" mobileContentPadding="8px" actions={multiple ? confirmActions : undefined}>
     {#snippet headerActions()}
       {#if multiple && selected.length}<span class="selected-count">{selected.length} selected</span>{/if}
       <CharacterSortMenu bind:value={sort} hasAffinity={options.some(option => option.affinity !== undefined)}/>
