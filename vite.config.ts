@@ -47,6 +47,7 @@ export default defineConfig(async ({ mode, command }) => {
       project: 'umamoe-frontend',
       authToken: process.env.SENTRY_AUTH_TOKEN,
       telemetry: false,
+      errorHandler: error => { throw error; },
       release: { name: process.env.APP_BUILD_VERSION, inject: false },
       sourcemaps: { filesToDeleteAfterUpload: ['./dist/**/*.map'] },
     })] : [])],

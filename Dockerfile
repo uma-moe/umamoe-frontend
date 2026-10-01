@@ -10,6 +10,9 @@ RUN npm ci --include=dev \
 
 FROM deps AS build
 
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY index.html ./
 COPY vite.config.ts svelte.config.js vitest.setup.ts ./
 COPY tsconfig*.json ./

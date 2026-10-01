@@ -26,6 +26,7 @@ permissions:
   contents: read
 
 env:
+  DOCKER_BUILD_RECORD_UPLOAD: 'false'
   PLATFORM: 'linux/amd64'
   CACHE_SCOPE: 'spa-artifacts'
   DEPLOY_USER: 'github'
