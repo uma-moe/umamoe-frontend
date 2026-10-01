@@ -55,7 +55,7 @@
       {#if !selected}<span class="compact-copy"><strong>Select card</strong><small>Borrow support</small></span>{/if}
     </button>
     {#if selected}<div class="card-actions"><Button variant="secondary" size="sm" ariaLabel="Change support card" onclick={show}>Change</Button>{#if onclear}<Button variant="secondary" icon="trash" ariaLabel="Clear support" size="sm" onclick={onclear}/>{/if}</div>{/if}
-    <Dialog id={`${id}-dialog`} title="Select Support Card" icon="cards" bind:open maxWidth="900px" mobileMaxHeight="calc(100dvh - 32px)" contentPadding="12px" mobileContentPadding="8px">
+    <Dialog mobileFill id={`${id}-dialog`} title="Select Support Card" icon="cards" bind:open maxWidth="900px" mobileMaxHeight="calc(100dvh - 32px)" contentPadding="12px" mobileContentPadding="8px">
       {#if open}<div class="dialog-browser">{@render browser()}</div>{/if}
     </Dialog>
   {:else}

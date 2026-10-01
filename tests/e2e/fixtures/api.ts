@@ -5,6 +5,8 @@ import type { Page, BrowserContext } from '@playwright/test';
 // Keep third-party ads/CMP out of deterministic workflow tests, including popups.
 // The production loader and reserved ad geometry still run against this API stub.
 export async function mockAdvertising(target: Page | BrowserContext): Promise<void> {
+  // Browser regression failures must never reach the real monitoring project.
+  await target.route('https://*.ingest.*.sentry.io/**', route => route.fulfill({ json: {} }));
   await target.route('https://cdn.fuseplatform.net/**/fuse.js', (route) => route.fulfill({ contentType: 'application/javascript', body: 'window.fusetag = { que: [], registerZone() {}, pageInit() {} };' }));
 }
 

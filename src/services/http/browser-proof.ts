@@ -89,15 +89,13 @@ async function challengeToken(visible = false): Promise<string> {
   // Requests also originate inside native modal pickers. Keep the challenge in
   // the active top layer, where it can receive keyboard and pointer input.
   ([...document.querySelectorAll('dialog[open]')].at(-1) ?? document.body).append(container);
+  let widgetId = '';
   return new Promise<string>((resolve, reject) => {
     let settled = false;
-    let widgetId = '';
     const finish = (token?: string, error?: Error) => {
       if (settled) return;
       settled = true;
       window.clearTimeout(timeout);
-      if (widgetId) turnstile.remove(widgetId);
-      container.remove();
       if (token) resolve(token); else reject(error ?? new Error('Turnstile challenge failed.'));
     };
     const timeout = window.setTimeout(() => finish(undefined, new Error('Turnstile challenge timed out.')), visible ? 180_000 : 45_000);
@@ -122,6 +120,10 @@ async function challengeToken(visible = false): Promise<string> {
       });
       turnstile.execute(widgetId);
     } catch (error) { finish(undefined, error instanceof Error ? error : new Error('Browser verification failed.')); }
+  }).finally(() => {
+    // Turnstile can reset after invoking a callback. Let its handler finish first.
+    if (widgetId) turnstile.remove(widgetId);
+    container.remove();
   }).catch(error => {
     // Give the visitor one visible attempt before failing all waiting requests.
     if (visible) throw error;

@@ -138,3 +138,33 @@ it('stops after the visible fallback times out until the visitor retries', async
   expect(port!.refresh()).toBe(task);
   expect(fetcher).not.toHaveBeenCalled();
 });
+
+it('lets Turnstile finish its timeout/reset handler before removing the widget', async () => {
+  let options!: Parameters<NonNullable<Window['turnstile']>['render']>[1];
+  let container!: HTMLElement;
+  const resets = vi.fn();
+  window.turnstile = {
+    render: vi.fn((node, value) => { container = node; options = value; return 'widget'; }),
+    execute: vi.fn(), remove: vi.fn()
+  };
+  const { browserProofPort: port } = await import('./browser-proof');
+  const task = port!.refresh();
+  const failure = expect(task).rejects.toThrow('timed out');
+  await vi.waitFor(() => expect(window.turnstile!.render).toHaveBeenCalledOnce());
+  const timeout = () => {
+    options['timeout-callback']();
+    // Cloudflare resets in the same message handler, after calling our callback.
+    expect(container.isConnected).toBe(true);
+    expect(window.turnstile!.remove).not.toHaveBeenCalled();
+    resets();
+  };
+  timeout();
+  await vi.waitFor(() => expect(window.turnstile!.render).toHaveBeenCalledTimes(2));
+  expect(window.turnstile.remove).toHaveBeenCalledOnce();
+  vi.mocked(window.turnstile.remove).mockClear();
+  timeout();
+  await failure;
+  expect(resets).toHaveBeenCalledTimes(2);
+  expect(window.turnstile.remove).toHaveBeenCalledOnce();
+  expect(container.isConnected).toBe(false);
+});

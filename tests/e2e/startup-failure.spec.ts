@@ -7,6 +7,7 @@ test.beforeEach(async ({ context }) => {
   await mockAdvertising(context);
   await mockResources(context);
   await context.addInitScript(() => {
+    if (!/^https?:$/.test(location.protocol)) return;
     localStorage.setItem('page-introduction-audience-v1', 'existing');
     localStorage.setItem('lastSeenUpdateVersion', '18');
     localStorage.setItem('lineage-planner-saves-v1', '{"Keep me":[]}');
@@ -60,6 +61,20 @@ test('app runtime errors are visible while unrelated third-party errors are igno
   })));
   await expect(page.locator('#app-error')).toBeHidden();
   await page.evaluate(() => {
+    for (const stack of [
+      'Error: Provider failure\n    at callback (https://third-party.invalid/ad.js:1:2)\n    at sentryWrapped (' + location.origin + '/app/sentry-sdk-test.js:3:4)',
+      'callback@https://third-party.invalid/ad.js:1:2\nsentryWrapped@' + location.origin + '/app/sentry-sdk-test.js:3:4',
+      'Error: Extension failure\n    at callback (chrome-extension://example/content.js:1:2)\n    at sentryWrapped (' + location.origin + '/app/sentry-sdk-test.js:3:4)',
+      'callback@blob:' + location.origin + '/example:1:2\nsentryWrapped@' + location.origin + '/app/sentry-sdk-test.js:3:4',
+    ]) {
+      const error = new Error('Provider failure'); error.stack = stack;
+      window.dispatchEvent(new ErrorEvent('error', { error, filename: 'https://third-party.invalid/ad.js' }));
+      window.dispatchEvent(new ErrorEvent('error', { error }));
+      window.dispatchEvent(new PromiseRejectionEvent('unhandledrejection', { reason: error, promise: Promise.resolve() }));
+    }
+  });
+  await expect(page.locator('#app-error')).toBeHidden();
+  await page.evaluate(() => {
     const error = new TypeError('Failed: ' + location.origin + '/app/file.js?token=private#secret');
     error.stack = error.toString() + '\n    at failedControl (' + location.origin + '/app/filter.js?token=stack-private#stack-secret:27:9)';
     window.dispatchEvent(new ErrorEvent('error', {
@@ -79,6 +94,88 @@ test('app runtime errors are visible while unrelated third-party errors are igno
   await expect(error.locator('pre')).not.toContainText('secret');
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('umamoe:app-error', { detail: new Error('Secondary failure') })));
   await expect(error.locator('pre')).not.toContainText('Secondary failure');
+});
+
+test('recovery survives its DOM being removed', async ({ page }) => {
+  await page.goto('/tools');
+  await expect(page.getByRole('heading', { name: 'Tools & Calculators', exact: true })).toBeVisible();
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.evaluate(() => {
+    document.getElementById('app-error')!.remove();
+    window.dispatchEvent(new CustomEvent('umamoe:app-error', { detail: new Error('Application render failure') }));
+  });
+  await expect(page.locator('#app-error')).toBeVisible();
+  await expect(page.locator('#app-error-details')).toContainText('Application render failure');
+  expect(errors).toEqual([]);
+});
+
+test('optional page warming stops when the document head has been removed', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.requestIdleCallback = callback => {
+      document.documentElement.dataset.warmupPending = 'true';
+      window.addEventListener('fixture:idle', () => callback({ didTimeout: false, timeRemaining: () => 50 }), { once: true });
+      return 1;
+    };
+  });
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/tools');
+  await expect(page.getByRole('heading', { name: 'Tools & Calculators', exact: true })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-warmup-pending', 'true');
+  await page.evaluate(() => {
+    const head = document.head;
+    head.remove();
+    window.dispatchEvent(new Event('fixture:idle'));
+    document.documentElement.prepend(head);
+  });
+  await expect(page.locator('#app-error')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test('Sentry records and tags a wrapped provider error without showing the fatal screen', async ({ page }) => {
+  const events: { tags?: Record<string, unknown>; exception?: { values?: { value?: string }[] } }[] = [];
+  await page.route('https://*.ingest.*.sentry.io/**', async route => {
+    const lines = route.request().postData()?.split('\n') ?? [];
+    for (let i = 1; i < lines.length - 1; i += 2) {
+      if (JSON.parse(lines[i]!).type === 'event') events.push(JSON.parse(lines[i + 1]!));
+    }
+    await route.fulfill({ json: {} });
+  });
+  await page.goto('/tools');
+  await expect(page.getByRole('heading', { name: 'Tools & Calculators', exact: true })).toBeVisible();
+  await page.waitForFunction(() => '__sentry_original__' in EventTarget.prototype.addEventListener);
+  await page.route('https://provider.invalid/widget.js', route => route.fulfill({
+    contentType: 'application/javascript',
+    body: 'window.addEventListener("fixture:provider", function () { setTimeout(function () { throw new Error("Synthetic provider failure"); }, 0); });'
+  }));
+  await page.addScriptTag({ url: 'https://provider.invalid/widget.js' });
+  await page.evaluate(() => window.dispatchEvent(new Event('fixture:provider')));
+  await expect.poll(() => events.map(event => ({ tags: event.tags, errors: event.exception?.values?.map(value => value.value) })), { timeout: 10_000 }).toContainEqual({ tags: expect.objectContaining({ third_party_code: true, 'error.source': 'third-party', 'error.script_host': 'provider.invalid' }), errors: ['Synthetic provider failure'] });
+  await expect(page.locator('#app-error')).toBeHidden();
+});
+
+test('failed requests and route modules include actionable monitoring context', async ({ page }) => {
+  const events: { tags?: Record<string, unknown>; contexts?: Record<string, Record<string, unknown>>; request?: { headers?: Record<string, string> } }[] = [];
+  await page.route('https://*.ingest.*.sentry.io/**', async route => {
+    const lines = route.request().postData()?.split('\n') ?? [];
+    for (let i = 1; i < lines.length - 1; i += 2) if (JSON.parse(lines[i]!).type === 'event') events.push(JSON.parse(lines[i + 1]!));
+    await route.fulfill({ json: {} });
+  });
+  await page.route(/\/PrivacyPage-[\w-]+\.js$/, route => route.abort('failed'));
+  await page.goto('/tools');
+  await expect(page.getByRole('heading', { name: 'Tools & Calculators', exact: true })).toBeVisible();
+  await page.waitForFunction(() => '__sentry_original__' in window.fetch);
+  await page.getByRole('link', { name: 'Privacy', exact: true }).click();
+  await expect.poll(() => events.map(event => event.tags)).toContainEqual(expect.objectContaining({ 'error.kind': 'module-load', 'error.source': 'application' }));
+  await page.route('**/api/synthetic-failure?*', route => route.abort('failed'));
+  await page.evaluate(() => { void fetch('/api/synthetic-failure?token=private#secret'); });
+  await expect.poll(() => events.map(event => event.tags)).toContainEqual(expect.objectContaining({ 'error.kind': 'network', 'network.target': 'api', 'app.phase': 'mounted' }));
+  const network = events.find(event => event.tags?.['error.kind'] === 'network')!;
+  expect(network.contexts?.failed_request?.url).toMatch(/\/api\/synthetic-failure$/);
+  expect(JSON.stringify(network.contexts?.failed_request)).not.toMatch(/private|secret/);
+  expect(Object.keys(network.request?.headers ?? {})).toEqual(['User-Agent']);
+  expect(network.request?.headers?.['User-Agent']).toBe(await page.evaluate(() => navigator.userAgent));
 });
 
 test('cancelled database searches do not show the fatal fallback when a fetch observer leaks the rejection', async ({ page }) => {
@@ -107,7 +204,8 @@ test('cancelled database searches do not show the fatal fallback when a fetch ob
   await expect.poll(() => pending).toBe(true);
   await sort.click();
   await page.getByRole('option', { name: 'Newest First', exact: true }).click();
-  await expect.poll(() => errors.some(error => error.name === 'AbortError')).toBe(true);
+  // WebKit labels this event "Unhandled Promise Rejection" and puts the name in its message.
+  await expect.poll(() => errors.some(error => error.name === 'AbortError' || error.message.startsWith('AbortError:'))).toBe(true);
   await expect(page.locator('#app-error')).toBeHidden();
   await expect(page.getByText('Parity Trainer').first()).toBeVisible();
   await expect(sort).toContainText('Newest First');

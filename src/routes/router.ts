@@ -69,11 +69,13 @@ function warmPageModules(): void {
   pages.unshift(pageModules['/tools/lineage-planner']);
   function next(): void {
     const run = () => {
+      if (!document.head) return;
       if (document.hidden) { document.addEventListener('visibilitychange', next, { once: true }); return; }
       // An idle CPU can still have critical data or page code in flight.
       if (pendingPageRequests) { void whenPageRequestsIdle().then(next); return; }
       const load = pages.shift();
-      if (load) void load().catch(() => {}).finally(next);
+      // Vite's CSS preloader can throw before returning the import promise.
+      if (load) void Promise.resolve().then(async () => { await load(); }).catch(() => {}).finally(next);
     };
     if (!pages.length) return;
     if ('requestIdleCallback' in window) window.requestIdleCallback(run);

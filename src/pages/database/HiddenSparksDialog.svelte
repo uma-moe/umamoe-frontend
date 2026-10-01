@@ -16,7 +16,7 @@
 </script>
 
 <div class="hidden-sparks-dialog">
-  <Dialog id="hidden-sparks" bind:open title="Hide Sparks" icon="eye-off" description="Choose white factors that should be hidden from every inheritance result." maxWidth="760px" maxHeight="90dvh" mobileInset="8vw" contentPadding="16px 18px" mobileContentPadding="16px 11px">
+  <Dialog mobileFill id="hidden-sparks" bind:open title="Hide Sparks" icon="eye-off" description="Choose white factors that should be hidden from every inheritance result." maxWidth="760px" maxHeight="90dvh" mobileInset="8vw" contentPadding="16px 18px" mobileContentPadding="16px 11px">
     {#snippet headerActions()}<span class="hidden-count">{draftIds.length} hidden</span>{/snippet}
     <div class="hidden-sparks-content">
       <WhiteFactorTypePicker id="hidden-sparks-browser" mode="hide" selectedFactorIds={draftIds} onadd={addFactors} onremove={removeFactor}/>
@@ -57,5 +57,5 @@
   .hidden-list{display:flex;align-items:center;flex-wrap:wrap;gap:5px}.hidden-chip{min-width:0;max-width:100%;display:inline-flex;align-items:center;gap:5px;padding:3px 5px 3px 3px;border:1px solid var(--dialog-border);border-radius:7px;background:var(--dialog-muted-bg);color:var(--text-secondary);cursor:pointer;font:inherit;font-size:.64rem}.hidden-chip img{width:22px;height:22px;object-fit:contain}.hidden-chip span{min-width:0;overflow-wrap:anywhere}.hidden-chip :global(svg){flex:none;color:var(--text-muted)}.hidden-chip:hover{border-color:rgb(255 183 77/.36);background:rgb(255 183 77/.06)}
   .empty-selection{min-height:40px;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--text-muted);font-size:.66rem}
   @media(max-width:560px){.hidden-sparks-dialog :global(.dialog-panel .heading p){display:none}}
-  @media (max-width:767px) {.hidden-chip,.clear-button{min-height:var(--touch-target);min-width:var(--touch-target)}}
+  @media (max-width:767px) {.hidden-sparks-dialog :global(.dialog-panel > .content){max-height:none}.hidden-chip,.clear-button{min-height:var(--touch-target);min-width:var(--touch-target)}}
 </style>

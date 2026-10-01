@@ -29,7 +29,11 @@
       // Keep this independent of the app bundle and compatible with older parsers.
       (function () {
         var panel = document.getElementById('app-error');
+        var output = document.getElementById('app-error-details');
         function show(error, event) {
+          // Keep recovery available if an external script replaced the page DOM.
+          if (!panel.isConnected) (document.body || document.documentElement).appendChild(panel);
+          if (!panel.contains(output)) panel.appendChild(output);
           // Keep the original failure when later errors cascade from it.
           if (!panel.hidden) return;
           var message = error && error.message ? error.message : String(error || 'Unknown error');
@@ -39,25 +43,34 @@
           details += '\nBrowser: ' + navigator.userAgent + '\nBuild: ' + (version ? version.content : 'unknown');
           if (error && error.stack) details += '\n\nStack trace:\n' + error.stack;
           // Do not include query strings (which may contain sign-in tokens) in reports.
-          document.getElementById('app-error-details').textContent = details.replace(/(https?:\/\/[^\s?#)]+)[?#]([^\s)]*)/g, function (_, url, suffix) {
+          output.textContent = details.replace(/(https?:\/\/[^\s?#)]+)[?#]([^\s)]*)/g, function (_, url, suffix) {
             var position = suffix.match(/:\d+:\d+$/);
             return url + (position ? position[0] : '');
           });
           panel.hidden = false; panel.focus();
         }
         function isAppSource(source) {
-          return typeof source === 'string' && (source.indexOf(location.origin + '/app/') !== -1 || source.indexOf(location.origin + '/src/') !== -1 || source.indexOf(location.origin + '/node_modules/') !== -1);
+          return typeof source === 'string' && (source.indexOf(location.origin + '/app/') === 0 || source.indexOf(location.origin + '/src/') === 0 || source.indexOf(location.origin + '/node_modules/') === 0);
+        }
+        function stackSource(error) {
+          // The throwing frame owns the error; a later Sentry wrapper does not.
+          var lines = error && typeof error.stack === 'string' ? error.stack.split('\n') : [];
+          for (var i = 0; i < lines.length; i++) {
+            var frame = lines[i].match(/^(?:\s*at\s+.*?|[^@]*@)([a-z][a-z0-9+.-]*:(?:\/\/)?[^\s)]+)/i);
+            if (frame) return frame[1];
+          }
+          return '';
         }
         window.addEventListener('umamoe:app-error', function (event) { show(event.detail); });
         window.addEventListener('error', function (event) {
           var script = event.target;
           if (script && script.tagName === 'SCRIPT' && script.type === 'module' && isAppSource(script.src)) show('An application file could not be downloaded. Check your connection and reload.', { filename: script.src });
-          else if (isAppSource(event.filename) || isAppSource(event.error && event.error.stack)) show(event.error || event.message, event);
+          else if (isAppSource(stackSource(event.error) || event.filename)) show(event.error || event.message, event);
         }, true);
         window.addEventListener('unhandledrejection', function (event) {
           // Superseded requests are expected cancellations, including rejections leaked by fetch observers.
           if (event.reason && event.reason.name === 'AbortError') return;
-          if (isAppSource(event.reason && event.reason.stack)) show(event.reason);
+          if (isAppSource(stackSource(event.reason))) show(event.reason);
         });
       }());
     </script>
