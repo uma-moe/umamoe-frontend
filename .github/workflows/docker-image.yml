@@ -190,6 +190,8 @@ jobs:
             APP_BUILD_VERSION=${{ steps.app_version.outputs.version }}
             APP_BUILD_COMMIT=${{ github.sha }}
             APP_BUILD_ENVIRONMENT=beta
+          secrets: |
+            sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN }}
           outputs: type=local,dest=${{ runner.temp }}/shell-export
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
@@ -284,7 +286,6 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
 
       - name: Upload shell artifact
-        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: shell-site
@@ -547,6 +548,8 @@ jobs:
             APP_BUILD_VERSION=${{ steps.production_app_version.outputs.version }}
             APP_BUILD_COMMIT=${{ github.sha }}
             APP_BUILD_ENVIRONMENT=production
+          secrets: |
+            sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN }}
           outputs: type=local,dest=${{ runner.temp }}/production-shell-export
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}

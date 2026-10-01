@@ -1,4 +1,5 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 import legacy from '@vitejs/plugin-legacy';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
@@ -9,10 +10,14 @@ import { fuseAllowed, insertFuseScript } from './src/services/ads/fuse-bootstrap
 
 const rootDirectory = fileURLToPath(new URL('.', import.meta.url));
 
-export default defineConfig(async ({ mode }) => {
+export default defineConfig(async ({ mode, command }) => {
   // Keep the existing CI-injected public provider IDs during the framework migration.
   const environment = mode === 'production' ? production : beta;
   const variables = loadEnv(mode, rootDirectory, 'VITE_');
+  const uploadSourceMaps = Boolean(process.env.SENTRY_AUTH_TOKEN) && ['production', 'beta'].includes(mode);
+  if (command === 'build' && ['production', 'beta'].includes(mode) && !uploadSourceMaps) {
+    console.warn('SENTRY_AUTH_TOKEN is unset: source-map upload is disabled for this build.');
+  }
   return {
     root: rootDirectory,
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
@@ -37,7 +42,14 @@ export default defineConfig(async ({ mode }) => {
       modernTargets: ['Chrome >= 109', 'Edge >= 109', 'Firefox >= 115', 'Safari >= 16.4', 'iOS >= 16.4'],
       modernPolyfills: true,
       renderLegacyChunks: false
-    }), svelte(), ...(mode === 'demo' ? [await demoData()] : [])],
+    }), svelte(), ...(mode === 'demo' ? [await demoData()] : []), ...(uploadSourceMaps ? [sentryVitePlugin({
+      org: 'lars-hefer-it-webportale',
+      project: 'umamoe-frontend',
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      telemetry: false,
+      release: { name: process.env.APP_BUILD_VERSION, inject: false },
+      sourcemaps: { filesToDeleteAfterUpload: ['./dist/**/*.map'] },
+    })] : [])],
     optimizeDeps: {
       noDiscovery: true,
       include: ['exceljs'],
@@ -62,7 +74,7 @@ export default defineConfig(async ({ mode }) => {
       // Compiled code belongs to the shell artifact; /assets is deployed separately.
       assetsDir: 'app',
       manifest: true,
-      sourcemap: mode !== 'production'
+      sourcemap: uploadSourceMaps ? 'hidden' : !['production', 'beta'].includes(mode)
     },
     server: {
       host: '127.0.0.1',
