@@ -10,6 +10,9 @@ RUN npm ci --include=dev \
 
 FROM deps AS build
 
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY index.html ./
 COPY vite.config.ts svelte.config.js vitest.setup.ts ./
 COPY tsconfig*.json ./
@@ -22,7 +25,11 @@ COPY tests/fixtures ./tests/fixtures
 
 ARG BUILD_SCRIPT=build:prod
 ARG FRONTEND_CONFIG_FINGERPRINT=local
-RUN printf '%s' "${FRONTEND_CONFIG_FINGERPRINT}" > /tmp/frontend-config-fingerprint && npm run ${BUILD_SCRIPT}
+ARG APP_BUILD_VERSION=local
+RUN --mount=type=secret,id=sentry_auth_token --mount=type=secret,id=sentry_org \
+    printf '%s' "${FRONTEND_CONFIG_FINGERPRINT}" > /tmp/frontend-config-fingerprint && \
+    SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token 2>/dev/null || true)" \
+    SENTRY_ORG="$(cat /run/secrets/sentry_org 2>/dev/null || true)" npm run ${BUILD_SCRIPT}
 
 FROM alpine:3.20 AS shell-files
 

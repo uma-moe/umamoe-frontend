@@ -6,6 +6,9 @@
 coverage/
 dist/
 node_modules/
+.sentryclirc
+.env.sentry-build-plugin
+.env.local
 .tmp/
 Storage/
 AlternativeServices/

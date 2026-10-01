@@ -26,6 +26,7 @@ permissions:
   contents: read
 
 env:
+  DOCKER_BUILD_RECORD_UPLOAD: 'false'
   PLATFORM: 'linux/amd64'
   CACHE_SCOPE: 'spa-artifacts'
   DEPLOY_USER: 'github'
@@ -50,7 +51,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
 
       - name: Check deployment decisions and asset permissions
         run: node scripts/test-deploy-assets.cjs
@@ -190,6 +191,9 @@ jobs:
             APP_BUILD_VERSION=${{ steps.app_version.outputs.version }}
             APP_BUILD_COMMIT=${{ github.sha }}
             APP_BUILD_ENVIRONMENT=beta
+          secrets: |
+            sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN }}
+            sentry_org=${{ secrets.SENTRY_ORG }}
           outputs: type=local,dest=${{ runner.temp }}/shell-export
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
@@ -197,10 +201,16 @@ jobs:
       - name: Verify shell artifact frontend config
         shell: bash
         env:
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           BETA_TURNSTILE_SITE_KEY: ${{ secrets.BETA_TURNSTILE_SITE_KEY }}
           GOOGLE_ANALYTICS_MEASUREMENT: ${{ secrets.GOOGLE_ANALYTICS_MEASUREMENT || vars.GOOGLE_ANALYTICS_MEASUREMENT }}
         run: |
           set -euo pipefail
+
+          if [[ -n "$SENTRY_ORG" ]] && grep -RFq -- "$SENTRY_ORG" "${{ runner.temp }}/shell-export"; then
+            echo "::error::The shell artifact contains a private monitoring identifier."
+            exit 1
+          fi
 
           expected_hash="$(printf '%s' "$BETA_TURNSTILE_SITE_KEY" | sha256sum | awk '{print $1}')"
           found_expected=false
@@ -284,7 +294,6 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
 
       - name: Upload shell artifact
-        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: shell-site
@@ -547,6 +556,9 @@ jobs:
             APP_BUILD_VERSION=${{ steps.production_app_version.outputs.version }}
             APP_BUILD_COMMIT=${{ github.sha }}
             APP_BUILD_ENVIRONMENT=production
+          secrets: |
+            sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN }}
+            sentry_org=${{ secrets.SENTRY_ORG }}
           outputs: type=local,dest=${{ runner.temp }}/production-shell-export
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
@@ -554,10 +566,16 @@ jobs:
       - name: Verify production API target
         shell: bash
         env:
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           PROD_TURNSTILE_SITE_KEY: ${{ secrets.PROD_TURNSTILE_SITE_KEY }}
           GOOGLE_ANALYTICS_MEASUREMENT: ${{ secrets.GOOGLE_ANALYTICS_MEASUREMENT || vars.GOOGLE_ANALYTICS_MEASUREMENT }}
         run: |
           set -euo pipefail
+
+          if [[ -n "$SENTRY_ORG" ]] && grep -RFq -- "$SENTRY_ORG" "${{ runner.temp }}/production-shell-export"; then
+            echo "::error::The shell artifact contains a private monitoring identifier."
+            exit 1
+          fi
 
           if grep -R "https://beta.uma.moe" "${{ runner.temp }}/production-shell-export/var/www/html/umamoe"; then
             echo "::error title=Production artifact points to beta::The production shell bundle contains beta.uma.moe URLs."
