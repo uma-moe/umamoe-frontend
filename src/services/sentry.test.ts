@@ -23,12 +23,37 @@ it('keeps local monitoring off and captures startup and Svelte boundary errors w
   await initialized;
   expect(Sentry.captureException).toHaveBeenCalledWith(startupError);
   expect(Sentry.init).toHaveBeenCalledWith(expect.objectContaining({ release: '2.1.400' }));
+  const integrations = vi.mocked(Sentry.init).mock.calls[0]![0]!.integrations;
+  if (!Array.isArray(integrations)) throw new Error('Expected configured integrations');
+  const filter = integrations.find(integration => integration.name === 'ThirdPartyErrorsFilter')!;
+  const applicationFrame = { filename: 'https://uma.moe/app/page.js', lineno: 1, module_metadata: { '_sentryBundlerPluginAppKey:umamoe-frontend': true } };
+  const vendorFrame = { filename: 'https://provider.invalid/widget.js', lineno: 1 };
+  for (const [frames, tagged] of [
+    [[{ ...applicationFrame, function: 'sentryWrapped' }, vendorFrame], true],
+    [[applicationFrame, vendorFrame], undefined],
+    [[applicationFrame], undefined],
+  ] as const) {
+    const event: Sentry.ErrorEvent = { type: undefined, exception: { values: [{ stacktrace: { frames: [...frames] } }] } };
+    const processed = await filter.processEvent!(event, {}, Sentry.getClient()!);
+    expect(processed?.tags?.third_party_code).toBe(tagged);
+  }
   const error = new Error('Svelte boundary failure');
   window.dispatchEvent(new CustomEvent('umamoe:app-error', { detail: error }));
   expect(Sentry.captureException).toHaveBeenCalledWith(error);
   const handler = listener.mock.calls.find(([type]) => type === 'umamoe:app-error')![1];
   window.removeEventListener('umamoe:app-error', handler);
   listener.mockRestore();
+});
+
+it('keeps verification failures and errors with no usable stack in the critical error stream', async () => {
+  for (const exception of [
+    { values: [{ type: 'TurnstileError', stacktrace: { frames: [{ filename: 'https://challenges.cloudflare.com/turnstile/v0/api.js', lineno: 1 }] } }] },
+    { values: [{ type: 'TypeError', value: 'Network failure' }] },
+  ]) {
+    const event = await sentryOptions.beforeSend!({ type: undefined, exception, tags: { third_party_code: true } }, {});
+    expect(event).not.toBeNull();
+    expect(event?.tags?.third_party_code).toBeUndefined();
+  }
 });
 
 it('removes sign-in and shared-plan URL data, and ignores expected request cancellations', async () => {

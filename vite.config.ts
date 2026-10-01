@@ -42,15 +42,16 @@ export default defineConfig(async ({ mode, command }) => {
       modernTargets: ['Chrome >= 109', 'Edge >= 109', 'Firefox >= 115', 'Safari >= 16.4', 'iOS >= 16.4'],
       modernPolyfills: true,
       renderLegacyChunks: false
-    }), svelte(), ...(mode === 'demo' ? [await demoData()] : []), ...(uploadSourceMaps ? [sentryVitePlugin({
+    }), svelte(), ...(mode === 'demo' ? [await demoData()] : []), sentryVitePlugin({
       org: process.env.SENTRY_ORG,
       project: 'umamoe-frontend',
       authToken: process.env.SENTRY_AUTH_TOKEN,
       telemetry: false,
+      applicationKey: 'umamoe-frontend',
       errorHandler: error => { throw error; },
-      release: { name: process.env.APP_BUILD_VERSION, inject: false },
-      sourcemaps: { filesToDeleteAfterUpload: ['./dist/**/*.map'] },
-    })] : [])],
+      release: { name: process.env.APP_BUILD_VERSION, inject: false, create: uploadSourceMaps, finalize: uploadSourceMaps },
+      sourcemaps: { disable: !uploadSourceMaps, filesToDeleteAfterUpload: ['./dist/**/*.map'] },
+    })],
     optimizeDeps: {
       noDiscovery: true,
       include: ['exceljs'],

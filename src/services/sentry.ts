@@ -17,6 +17,12 @@ export const sentryOptions: Sentry.BrowserOptions = {
   },
   beforeSend(event, hint) {
     if (hint.originalException instanceof DOMException && hint.originalException.name === 'AbortError') return null;
+    // Missing stacks cannot establish ownership. Verification is a critical dependency.
+    const frames = event.exception?.values?.flatMap(value => value.stacktrace?.frames ?? []) ?? [];
+    if (!frames.some(frame => frame.filename && (frame.lineno != null || frame.colno != null)) ||
+      event.exception?.values?.some(value => value.type === 'TurnstileError')) {
+      if (event.tags) delete event.tags.third_party_code;
+    }
     // Sign-in tokens and shared plans can be carried in URL queries and fragments.
     if (event.request?.url) event.request.url = stripUrlDetails(event.request.url);
     for (const breadcrumb of event.breadcrumbs ?? []) {
@@ -48,7 +54,7 @@ export async function initializeSentry(): Promise<void> {
   window.addEventListener('unhandledrejection', onRejection);
   window.addEventListener('umamoe:app-error', onBoundary);
   try {
-    const { init, captureException, browserTracingIntegration, breadcrumbsIntegration, consoleIntegration } = await import('./sentry-sdk');
+    const { init, captureException, browserTracingIntegration, breadcrumbsIntegration, consoleIntegration, thirdPartyErrorFilterIntegration } = await import('./sentry-sdk');
     init({
       ...sentryOptions,
       release: buildVersion(),
@@ -56,6 +62,11 @@ export async function initializeSentry(): Promise<void> {
         browserTracingIntegration(),
         breadcrumbsIntegration({ dom: false, history: false }),
         consoleIntegration({ levels: [] }),
+        thirdPartyErrorFilterIntegration({
+          filterKeys: ['umamoe-frontend'],
+          behaviour: 'apply-tag-if-exclusively-contains-third-party-frames',
+          ignoreSentryInternalFrames: true,
+        }),
       ],
     });
     capture = error => { captureException(error); };

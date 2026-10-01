@@ -28,7 +28,7 @@
   function close() { closeElement(); open = false; onclose?.(); }
   onDestroy(() => { closeElement(); restoreFocus(); });
   $effect(() => {
-    if (!element) return;
+    if (!element?.isConnected) return;
     if (open && !$privacyUiOpen && !element.open) {
       mounted = true;
       returnFocus ??= document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
