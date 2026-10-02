@@ -22,7 +22,7 @@
   }
   function buttons() { return [...panel.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]')]; }
   function focusItem(last = false) { const enabled = buttons(); (last ? enabled.at(-1) : enabled.find(button => button.getAttribute('aria-checked') === 'true') ?? enabled[0])?.focus({ preventScroll:true }); }
-  function close() { panel.hidePopover(); control.focus({ preventScroll: true }); }
+  function close() { if (panel.matches(':popover-open')) panel.hidePopover(); control.focus({ preventScroll: true }); }
   function select(id: string) { close(); onselect?.(id); }
   function toggle(event: ToggleEvent) {
     open = event.newState === 'open';

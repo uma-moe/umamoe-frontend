@@ -57,7 +57,7 @@ async function mockFooter(page: Page) {
       window.fusetag = {
         pageInit() { window.adPages++; window.injectFooter(); },
         registerZone(id) { document.getElementById(id).textContent = 'Route advertisement'; },
-        destroyZone(id) { window.adDestroyed.push(id); if (id.includes('scrolling_sticky_footer')) clearInterval(refresh); }
+        destroyZone(id) { window.adDestroyed.push(id); if (id.includes('scrolling_sticky_footer')) { clearInterval(refresh); document.querySelector('.' + name + '-container')?.remove(); } }
       };
     `
   }));
@@ -104,7 +104,7 @@ test('timeline ads, consent and tours work without checkVisibility on older Safa
 
   await footer.locator('.fuse-slot').evaluate(element => element.style.visibility = 'hidden');
   await expect(footer).toBeHidden();
-  expect(await page.evaluate(() => (window as any).adDestroyed)).toContain('fuse-injected-scrolling_sticky_footer-1');
+  expect(await page.evaluate(() => (window as any).adDestroyed)).not.toContain('fuse-injected-scrolling_sticky_footer-1');
   await expect(page.locator('#app-error')).toBeHidden();
 });
 
@@ -201,7 +201,7 @@ test('footer follows creative refreshes, survives navigation, and stays closed u
   await close.press('Enter');
   await expect(footer).toBeHidden();
   await page.evaluate(() => window.dispatchEvent(new Event('scroll')));
-  expect(await page.evaluate(() => (window as any).adDestroyed)).toContain('fuse-injected-scrolling_sticky_footer-1');
+  expect(await page.evaluate(() => (window as any).adDestroyed)).not.toContain('fuse-injected-scrolling_sticky_footer-1');
   const refreshes = await page.evaluate(() => (window as any).footerRefreshes);
   await page.goBack();
   await expect(page).toHaveURL(/\/database/);
@@ -279,7 +279,7 @@ for (const mode of ['widget', 'hidden', 'collapsed']) {
     await page.evaluate(mode => { (window as any).footerCloseMode = mode; }, mode);
     await footer.frameLocator('iframe').getByRole('button', { name: 'Close creative' }).click();
     await expect(footer).toBeHidden();
-    expect(await page.evaluate(() => (window as any).adDestroyed)).toContain('fuse-injected-scrolling_sticky_footer-1');
+    expect(await page.evaluate(() => (window as any).adDestroyed)).not.toContain('fuse-injected-scrolling_sticky_footer-1');
     const refreshes = await page.evaluate(() => (window as any).footerRefreshes);
     await page.locator('.veterans-action').click();
     await expect(page).toHaveURL(/\/veterans/);

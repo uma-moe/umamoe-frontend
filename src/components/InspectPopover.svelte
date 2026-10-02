@@ -23,11 +23,11 @@
     top = position.top;
   }
   $effect(positionPanel);
-  function close() { panel.hidePopover(); control.focus(); }
+  function close() { if (panel.matches(':popover-open')) panel.hidePopover(); control.focus(); }
   function hover(show: boolean) {
     if (!openOnHover || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
     if (show && !panel.matches(':popover-open')) { hoverOpened = true; panel.showPopover(); }
-    else if (!show && !panel.contains(document.activeElement) && document.activeElement !== control) panel.hidePopover();
+    else if (!show && panel.matches(':popover-open') && !panel.contains(document.activeElement) && document.activeElement !== control) panel.hidePopover();
   }
   function activate(event: MouseEvent) {
     // The first click pins a hover preview instead of immediately toggling it closed.

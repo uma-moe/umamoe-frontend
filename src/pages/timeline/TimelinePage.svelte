@@ -36,7 +36,7 @@
     if (open) filterTrigger = document.querySelector<HTMLElement>('[data-timeline-control="filters"] button') ?? undefined;
     filtersOpen = open;
     if (!open) {
-      filterPanel?.hidePopover();
+      if (filterPanel?.matches(':popover-open')) filterPanel.hidePopover();
       requestAnimationFrame(() => { if (!filtersOpen && filterTrigger?.isConnected && !document.querySelector('dialog[open]')) filterTrigger.focus({ preventScroll: true }); });
     }
   }

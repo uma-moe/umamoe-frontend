@@ -53,7 +53,7 @@
     { id: 'logout', label: 'Sign out', icon: 'arrow-right', separator: true }
   ]);
 
-  function closeNavigation(): void { mobileMenu?.hidePopover(); }
+  function closeNavigation(): void { if (mobileMenu?.matches(':popover-open')) mobileMenu.hidePopover(); }
 
   function startGuidedTour(): void {
     tourRequest++;

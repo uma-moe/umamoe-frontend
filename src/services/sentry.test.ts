@@ -52,6 +52,9 @@ it('adds provider labels without guessing ownership from a URL embedded in an er
     ['cdn.fuseplatform.net', 'publift'], ['imasdk.googleapis.com', 'google-ads'],
     ['cdn.doubleverify.com', 'doubleverify'], ['id5-sync.com', 'id5'],
     ['cmp.inmobi.com', 'inmobi'], ['www.google-analytics.com', 'google-analytics'],
+    ['ajs-assets.ftstatic.com', 'flashtalking'], ['fw.adsafeprotected.com', 'ias'],
+    ['resources.infolinks.com', 'infolinks'], ['rumcdn.geoedge.be', 'geoedge'],
+    ['api.btloader.com', 'ad-recovery'], ['hb-api.omnitagjs.com', 'prebid'],
   ]) {
     const result = await sentryOptions.beforeSend!({ type: undefined, tags: { third_party_code: true }, exception: { values: [{ stacktrace: { frames: [{ filename: `https://${host}/synthetic.js?private=1`, lineno: 1 }] } }] } }, {});
     expect(result?.tags).toMatchObject({ 'error.provider': vendor, 'error.source': 'third-party' });
@@ -73,13 +76,26 @@ it('correlates failed requests by error identity and records safe request and ca
   expect(result?.contexts?.failed_request).toMatchObject({ url: location.origin + '/search/query', duration_ms: 15, method: 'GET', online: true });
   expect(result?.contexts?.browser_capabilities).toHaveProperty('array_to_sorted');
   const vendor = await sentryOptions.beforeSend!({ type: undefined }, { originalException: second });
-  expect(vendor?.tags).toMatchObject({ 'error.provider': 'publift', 'network.target': 'external', 'error.source': 'unknown' });
+  expect(vendor?.tags).toMatchObject({ 'error.provider': 'publift', 'network.target': 'external', 'error.source': 'third-party', third_party_code: true });
   expect(JSON.stringify(vendor?.contexts?.failed_request)).not.toMatch(/secret|password|user:/);
   const unrelated = await sentryOptions.beforeSend!({ type: undefined }, { originalException: new TypeError('Load failed') });
   expect(unrelated?.contexts?.failed_request).toBeUndefined();
   const module = await sentryOptions.beforeSend!({ type: undefined, tags: { third_party_code: true, 'error.kind': 'module-load' } }, {});
   expect(module?.tags).toMatchObject({ 'error.kind': 'module-load', 'error.source': 'application' });
   expect(module?.tags?.third_party_code).toBeUndefined();
+});
+
+it('classifies provider-only callbacks without excluding application frames or verification failures', async () => {
+  const vendor = { filename: 'https://ajs-assets.ftstatic.com/synthetic.js', lineno: 1 };
+  const application = { filename: location.origin + '/app/synthetic.js', lineno: 1 };
+  const wrapper = { ...application, function: 'sentryWrapped' };
+  for (const [frames, source] of [[[wrapper, vendor], 'third-party'], [[application, vendor], 'mixed']] as const) {
+    const result = await sentryOptions.beforeSend!({ type: undefined, exception: { values: [{ stacktrace: { frames: [...frames] } }] } }, {});
+    expect(result?.tags?.['error.source']).toBe(source);
+    expect(Boolean(result?.tags?.third_party_code)).toBe(source === 'third-party');
+  }
+  const spoofed = await sentryOptions.beforeSend!({ type: undefined, exception: { values: [{ stacktrace: { frames: [{ filename: 'https://ftstatic.com.invalid/synthetic.js', lineno: 1 }] } }] } }, {});
+  expect(spoofed?.tags?.['error.provider']).toBeUndefined();
 });
 
 it('keeps verification failures and errors with no usable stack in the critical error stream', async () => {

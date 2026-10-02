@@ -1,6 +1,26 @@
 import { test, expect } from './fixtures/test';
 import { mockStatistics, mockTimeline } from './fixtures/api';
 
+test('resizing skips closed navigation popovers and closes an open menu once', async ({ page }) => {
+  await page.addInitScript(() => {
+    const hide = HTMLElement.prototype.hidePopover;
+    HTMLElement.prototype.hidePopover = function () {
+      if (!this.matches(':popover-open')) throw new DOMException('Popover already closed', 'InvalidStateError');
+      return hide.call(this);
+    };
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/tools');
+  const trigger = page.getByRole('button', { name: 'Open navigation', exact: true });
+  await expect(trigger).toBeVisible();
+  await page.evaluate(() => { for (let i = 0; i < 3; i++) window.dispatchEvent(new Event('resize')); });
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await page.evaluate(() => { for (let i = 0; i < 3; i++) window.dispatchEvent(new Event('resize')); });
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#app-error')).toBeHidden();
+});
+
 test('Tools and Timeline subsections navigate and track the active page in both sidebar sizes', async ({ page, isMobile }, testInfo) => {
   test.skip(isMobile, 'Mobile navigation is exercised below.');
   await mockStatistics(page); await mockTimeline(page, false);

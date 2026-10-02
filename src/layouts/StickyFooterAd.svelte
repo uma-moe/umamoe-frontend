@@ -8,7 +8,6 @@
 
   onMount(() => {
     if (!fuseEnabled()) return;
-    const destroyed = new WeakSet<HTMLElement>();
     const observed = new WeakSet<HTMLElement>();
     const shown = new WeakSet<Element>();
     const frames = new Set<HTMLIFrameElement>();
@@ -25,20 +24,16 @@
       document.documentElement.classList.add('footer-ad-dismissed');
       sync();
     };
-    const destroy = (container: Element) => {
-      // Let Publift stop rotation/refresh and restore any page offsets before destroying the zone.
+    const closeProvider = (container: Element) => {
+      // Publift's close action stops refresh. Destroying the zone removes DOM
+      // still referenced by its scrolling widget's retained event handlers.
       if (!container.classList.contains('closed')) container.querySelector<HTMLElement>(providerButton)?.click();
-      container.querySelectorAll<HTMLElement>('[data-fuse][id]').forEach(zone => {
-        if (destroyed.has(zone) || !window.fusetag?.destroyZone) return;
-        destroyed.add(zone);
-        window.fusetag.destroyZone(zone.id);
-      });
     };
     const sync = () => {
       let footerHeight = 0;
       document.querySelectorAll<HTMLElement>(containers).forEach(container => {
         if (dismissed()) {
-          destroy(container);
+          closeProvider(container);
           // Publift retains scroll handlers referencing this wrapper; keep its hidden DOM intact.
           return;
         }
