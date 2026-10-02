@@ -84,9 +84,15 @@ export const sentryOptions: Sentry.BrowserOptions = {
       const url = safeUrl(frame.filename ?? '');
       if (!url) return false;
       const parsed = new URL(url);
+      // Production wrappers are minified; source maps are applied after beforeSend.
+      if (/\/node_modules\/@sentry\//.test(parsed.pathname) || /^\/app\/sentry-sdk-[\w-]+\.js$/.test(parsed.pathname)) return false;
       return parsed.origin === location.origin && /^\/(app|src|node_modules)\//.test(parsed.pathname);
     });
-    if (vendor && vendor !== 'turnstile' && (hasStack || request) && !hasApplicationFrame && event.tags?.['error.kind'] !== 'module-load') {
+    const providerOnly = vendor && vendor !== 'turnstile' && !hasApplicationFrame &&
+      event.tags?.['error.kind'] !== 'module-load' && !event.exception?.values?.some(value => value.type === 'TurnstileError') &&
+      (!request || new URL(String(request.url)).origin !== location.origin);
+    if (hasApplicationFrame && event.tags) delete event.tags.third_party_code;
+    if (providerOnly) {
       event.tags = { ...event.tags, third_party_code: true };
     }
     const externalScript = [...frames].reverse().map(frame => safeUrl(frame.filename ?? '')).find(url => {
@@ -103,6 +109,7 @@ export const sentryOptions: Sentry.BrowserOptions = {
       'network.online': request?.online ?? state.online,
       'page.lifecycle': request?.lifecycle ?? state.lifecycle,
       'error.stack': hasStack ? 'available' : 'missing',
+      ...(providerOnly ? { 'error.actionability': 'provider' } : {}),
       ...(vendor ? { 'error.provider': vendor } : {}),
       ...(externalScript ? { 'error.script_host': new URL(externalScript).hostname } : {}),
     };

@@ -107,6 +107,9 @@ it('correlates failed requests by error identity and records safe request and ca
   const vendor = await sentryOptions.beforeSend!({ type: undefined }, { originalException: second });
   expect(vendor?.tags).toMatchObject({ 'error.provider': 'publift', 'network.target': 'external', 'error.source': 'third-party', third_party_code: true });
   expect(JSON.stringify(vendor?.contexts?.failed_request)).not.toMatch(/secret|password|user:/);
+  const apiWithVendorFrame = await sentryOptions.beforeSend!({ type: undefined, exception: { values: [{ stacktrace: { frames: [{ filename: 'https://cdn.fuseplatform.net/synthetic.js', lineno: 1 }] } }] } }, { originalException: first });
+  expect(apiWithVendorFrame?.tags?.['network.target']).toBe('api');
+  expect(apiWithVendorFrame?.tags?.['error.actionability']).toBeUndefined();
   const unrelated = await sentryOptions.beforeSend!({ type: undefined }, { originalException: new TypeError('Load failed') });
   expect(unrelated?.contexts?.failed_request).toBeUndefined();
   const module = await sentryOptions.beforeSend!({ type: undefined, tags: { third_party_code: true, 'error.kind': 'module-load' } }, {});
@@ -125,6 +128,20 @@ it('classifies provider-only callbacks without excluding application frames or v
   }
   const spoofed = await sentryOptions.beforeSend!({ type: undefined, exception: { values: [{ stacktrace: { frames: [{ filename: 'https://ftstatic.com.invalid/synthetic.js', lineno: 1 }] } }] } }, {});
   expect(spoofed?.tags?.['error.provider']).toBeUndefined();
+  // These are the minified fetch/XHR wrappers seen in the production incidents.
+  for (const filename of [location.origin + '/app/sentry-sdk-test.js', '../node_modules/@sentry/core/build/esm/instrument/fetch.js']) {
+    const event = await sentryOptions.beforeSend!({ type: undefined, exception: { values: [{ stacktrace: { frames: [{ filename, function: 'n', lineno: 1 }, vendor] } }] } }, {});
+    expect(event?.tags).toMatchObject({ 'error.source': 'third-party', 'error.actionability': 'provider', 'error.provider': 'flashtalking' });
+    const mixed = await sentryOptions.beforeSend!({ type: undefined, tags: { third_party_code: true }, exception: { values: [{ stacktrace: { frames: [application, { filename, lineno: 1 }, vendor] } }] } }, {});
+    expect(mixed?.tags?.['error.source']).toBe('mixed');
+    expect(mixed?.tags?.['error.actionability']).toBeUndefined();
+    expect(mixed?.tags?.third_party_code).toBeUndefined();
+  }
+  const critical = await sentryOptions.beforeSend!({ type: undefined, exception: { values: [{ type: 'TurnstileError', stacktrace: { frames: [wrapper, vendor] } }] } }, {});
+  expect(critical).not.toBeNull();
+  expect(critical?.tags?.['error.actionability']).toBeUndefined();
+  const missingLines = await sentryOptions.beforeSend!({ type: undefined, exception: { values: [{ stacktrace: { frames: [{ filename: 'https://staticjs.adsafeprotected.com/fw.js' }] } }] } }, {});
+  expect(missingLines?.tags).toMatchObject({ 'error.stack': 'missing', 'error.source': 'third-party', 'error.actionability': 'provider', 'error.provider': 'ias' });
 });
 
 it('keeps verification failures and errors with no usable stack in the critical error stream', async () => {

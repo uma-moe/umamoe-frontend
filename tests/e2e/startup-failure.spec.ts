@@ -10,6 +10,7 @@ test.beforeEach(async ({ context }) => {
     if (!/^https?:$/.test(location.protocol)) return;
     localStorage.setItem('page-introduction-audience-v1', 'existing');
     localStorage.setItem('lastSeenUpdateVersion', '18');
+    localStorage.setItem('uma-browser-proof-v1', JSON.stringify({ token: 'fixture-proof', expiresAt: Date.now() + 86_400_000 }));
     localStorage.setItem('lineage-planner-saves-v1', '{"Keep me":[]}');
   });
 });
@@ -133,7 +134,7 @@ test('optional page warming stops when the document head has been removed', asyn
   expect(errors).toEqual([]);
 });
 
-test('Sentry records and tags a wrapped provider error without showing the fatal screen', async ({ page }) => {
+test('Sentry records and tags wrapped provider errors without showing the fatal screen', async ({ page }) => {
   const events: { tags?: Record<string, unknown>; exception?: { values?: { value?: string }[] } }[] = [];
   await page.route('https://*.ingest.*.sentry.io/**', async route => {
     const lines = route.request().postData()?.split('\n') ?? [];
@@ -152,6 +153,13 @@ test('Sentry records and tags a wrapped provider error without showing the fatal
   await page.addScriptTag({ url: 'https://provider.invalid/widget.js' });
   await page.evaluate(() => window.dispatchEvent(new Event('fixture:provider')));
   await expect.poll(() => events.map(event => ({ tags: event.tags, errors: event.exception?.values?.map(value => value.value) })), { timeout: 10_000 }).toContainEqual({ tags: expect.objectContaining({ third_party_code: true, 'error.source': 'third-party', 'error.script_host': 'provider.invalid' }), errors: ['Synthetic provider failure'] });
+  await page.route('https://ajs-assets.ftstatic.com/ftUtils.js', route => route.fulfill({
+    contentType: 'application/javascript',
+    body: 'window.addEventListener("fixture:creative", function () { setTimeout(function () { throw new TypeError("Synthetic creative failure"); }, 0); });'
+  }));
+  await page.addScriptTag({ url: 'https://ajs-assets.ftstatic.com/ftUtils.js' });
+  await page.evaluate(() => window.dispatchEvent(new Event('fixture:creative')));
+  await expect.poll(() => events.map(event => ({ tags: event.tags, errors: event.exception?.values?.map(value => value.value) })), { timeout: 10_000 }).toContainEqual({ tags: expect.objectContaining({ 'error.source': 'third-party', 'error.provider': 'flashtalking', 'error.actionability': 'provider' }), errors: ['Synthetic creative failure'] });
   await expect(page.locator('#app-error')).toBeHidden();
 });
 

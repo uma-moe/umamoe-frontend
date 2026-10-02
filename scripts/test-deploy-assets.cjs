@@ -56,6 +56,27 @@ try {
     assert.ok(!result.includes('statistics'));
   }
   console.log('Asset permissions: both deployments repair foreign-owned descendants.');
+  const shellSteps = [...workflow.matchAll(/- name: Deploy (?:beta|production) shell bundle[\s\S]*?run: \|\r?\n([\s\S]*?)(?=\r?\n      - name:)/g)];
+  assert.equal(shellSteps.length, 2);
+  for (const [index, [, body]] of shellSteps.entries()) {
+    const options = [...body.matchAll(/--(delete|delay-updates|exclude|filter)(?: '([^']+)')?/g)].flatMap(([, option, value]) => value ? ['--' + option, value] : ['--' + option]);
+    assert.ok(options.includes('--delay-updates'));
+    assert.ok(options.includes('P /app/***'));
+    if (process.platform === 'win32') continue; // Real rsync fixtures run on the Linux CI runner.
+    const source = path.join(directory, `source-${index}`), target = path.join(directory, `target-${index}`);
+    for (const root of [source, target]) fs.mkdirSync(path.join(root, 'app'), { recursive: true });
+    fs.writeFileSync(path.join(source, 'index.html'), 'new shell');
+    fs.writeFileSync(path.join(source, 'app/new.js'), 'new code');
+    fs.writeFileSync(path.join(source, 'app/new.css'), 'new styles');
+    fs.writeFileSync(path.join(target, 'app/old.js'), 'old code');
+    fs.writeFileSync(path.join(target, 'app/old.css'), 'old styles');
+    fs.writeFileSync(path.join(target, 'obsolete.html'), 'obsolete');
+    execFileSync('rsync', ['-a', ...options, source + '/', target + '/']);
+    assert.equal(fs.readFileSync(path.join(target, 'index.html'), 'utf8'), 'new shell');
+    for (const file of ['new.js', 'new.css', 'old.js', 'old.css']) assert.ok(fs.existsSync(path.join(target, 'app', file)), `Missing ${file}`);
+    assert.ok(!fs.existsSync(path.join(target, 'obsolete.html')));
+  }
+  console.log('Shell deployment: both environments protect older chunks and stage updates.');
 } finally {
   fs.rmSync(directory, { recursive: true, force: true });
 }
