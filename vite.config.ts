@@ -6,7 +6,6 @@ import { defineConfig, loadEnv } from 'vite';
 import { demoData } from './scripts/demo-data';
 import { environment as production } from './src/config/environment.prod';
 import { environment as beta } from './src/config/environment.beta';
-import { fuseAllowed, insertFuseScript } from './src/services/ads/fuse-bootstrap';
 
 const rootDirectory = fileURLToPath(new URL('.', import.meta.url));
 
@@ -22,12 +21,6 @@ export default defineConfig(async ({ mode, command }) => {
     root: rootDirectory,
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     plugins: [{
-      name: 'fuse-head-loader',
-      transformIndexHtml: (html: string) => html.replace('<!-- fuse-bootstrap -->',
-        mode === 'production' || mode === 'beta'
-          ? `<script>if((${fuseAllowed.toString()})(true))(${insertFuseScript.toString()})(${JSON.stringify(environment.fuse.scriptUrl)});</script>`
-          : '')
-    }, {
       name: 'svelte-runtime-error-details',
       enforce: 'pre',
       transform(code, id) {

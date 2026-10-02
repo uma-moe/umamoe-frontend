@@ -22,7 +22,8 @@ export async function setSliderValue(slider: Locator, value: number): Promise<vo
   }, value);
 }
 
-export const test = base.extend<{ runtimeErrors: void; allowPageLoadFailure: boolean; interactionAudit: void }>({
+export const test = base.extend<{ runtimeErrors: void; allowPageLoadFailure: boolean; interactionAudit: void; cachedBrowserProof: boolean }>({
+  cachedBrowserProof: [true, { option: true }],
   allowPageLoadFailure: [false, { option: true }],
   interactionAudit: [async ({ context }, use, info) => {
     if (process.env.PERF_AUDIT) await auditInteractions(context, info, use);
@@ -69,19 +70,20 @@ export const test = base.extend<{ runtimeErrors: void; allowPageLoadFailure: boo
       }
     }
   },
-  runtimeErrors: [async ({ context, allowPageLoadFailure }, use) => {
+  runtimeErrors: [async ({ context, allowPageLoadFailure, cachedBrowserProof }, use) => {
     await mockAdvertising(context);
     await context.route('https://status.uma.moe/api/v1/endpoints/statuses', route => route.fulfill({ json: [{ name: 'API', group: 'uma.moe', results: [{ success: true }] }] }));
     // Page-specific resource/failure routes override this populated catalog baseline.
     await mockResources(context);
     // Workflows use a returning visitor; onboarding tests explicitly select the new audience.
-    await context.addInitScript(() => {
+    await context.addInitScript(useCachedProof => {
       if (!/^https?:$/.test(location.protocol)) return;
       try {
         if (!localStorage.getItem('page-introduction-audience-v1')) localStorage.setItem('page-introduction-audience-v1', 'existing');
         if (!localStorage.getItem('lastSeenUpdateVersion')) localStorage.setItem('lastSeenUpdateVersion', '18');
+        if (useCachedProof) localStorage.setItem('uma-browser-proof-v1', JSON.stringify({ token: 'fixture-proof', expiresAt: Date.now() + 86_400_000 }));
       } catch { /* Sandboxed third-party frames do not share our visitor state. */ }
-    });
+    }, cachedBrowserProof);
     const errors: string[] = [];
     context.on('page', (page) => {
       page.on('pageerror', (error) => errors.push(`${page.url()}: ${error.message}`));

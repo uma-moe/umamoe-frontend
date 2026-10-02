@@ -7,6 +7,7 @@ import type { Page, BrowserContext } from '@playwright/test';
 export async function mockAdvertising(target: Page | BrowserContext): Promise<void> {
   // Browser regression failures must never reach the real monitoring project.
   await target.route('https://*.ingest.*.sentry.io/**', route => route.fulfill({ json: {} }));
+  await target.route('https://www.googletagmanager.com/gtag/js*', route => route.fulfill({ contentType: 'application/javascript', body: '' }));
   await target.route('https://cdn.fuseplatform.net/**/fuse.js', (route) => route.fulfill({ contentType: 'application/javascript', body: 'window.fusetag = { que: [], registerZone() {}, pageInit() {} };' }));
 }
 

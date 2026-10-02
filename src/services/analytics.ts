@@ -1,6 +1,9 @@
 import { runtimeConfig } from './runtime-config';
 import { fuseEnabled, loadFuse } from './ads/fuse-ads';
 import { buildVersion } from './site-services';
+import { afterPageReady } from '@/routes/after-page-paint';
+import { sanitizeAnalyticsUrl } from './analytics-url';
+export { sanitizeAnalyticsUrl } from './analytics-url';
 
 type ConsentValue = 'granted' | 'denied';
 type Consent = Record<'ad_storage' | 'ad_user_data' | 'ad_personalization' | 'analytics_storage', ConsentValue>;
@@ -18,12 +21,6 @@ let lastPage = '';
 let engagement: ReturnType<typeof setTimeout> | undefined;
 const runtime = () => window as AnalyticsWindow;
 
-export function sanitizeAnalyticsUrl(value: string): string {
-  const url = new URL(value, location.origin);
-  // Query and fragment payloads include UQL, trainer searches and shared plans.
-  // Only the route shape belongs in analytics; user IDs/names stay in the app.
-  return url.pathname.replace(/\/(profile|activity|shame|clubs|circles)\/[^/]+/g, '/$1/:id');
-}
 export function trackEvent(name: string, params: Record<string, unknown> = {}): void {
   if (!started) return;
   const event = name.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_').slice(0, 40);
@@ -59,7 +56,7 @@ function updateConsent(next: Consent): void {
 }
 export function startAnalytics(): () => void {
   // Fuse also owns the regional Privacy Choices UI on pages without ad slots.
-  void loadFuse();
+  const fuse = loadFuse();
   if (started || !runtimeConfig.providersEnabled || !runtimeConfig.measurementId.trim()) return () => {};
   started = true;
   const win = runtime();
@@ -69,17 +66,18 @@ export function startAnalytics(): () => void {
   win.gtag('set', 'ads_data_redaction', true);
   win.gtag('js', new Date());
   win.gtag('config', runtimeConfig.measurementId, { send_page_view: false, page_location: new URL(sanitizeAnalyticsUrl(location.href), location.origin).href, page_referrer: '', page_title: sanitizeAnalyticsUrl(location.href) });
-  if (!document.getElementById('google-analytics-gtag')) {
-    const script = document.createElement('script');
-    script.id = 'google-analytics-gtag'; script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(runtimeConfig.measurementId)}`;
-    script.nonce = document.querySelector<HTMLScriptElement>('script[nonce]')?.nonce ?? '';
-    document.head.append(script);
-  }
   let listenerId: number | undefined;
   let tcfAttached = false;
   let optedOut = false;
   let stopped = false;
+  void afterPageReady().then(() => {
+    if (stopped || document.getElementById('google-analytics-gtag')) return;
+    const script = document.createElement('script');
+    script.id = 'google-analytics-gtag'; script.async = true; script.fetchPriority = 'low';
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(runtimeConfig.measurementId)}`;
+    script.nonce = document.querySelector<HTMLScriptElement>('script[nonce]')?.nonce ?? '';
+    document.head.append(script);
+  });
   const localConsent = () => {
     if (fuseEnabled()) return;
     let analytics = false;
@@ -105,6 +103,7 @@ export function startAnalytics(): () => void {
     }); } catch { /* CMP unavailable: retain denied consent. */ }
   };
   attach();
+  void fuse.then(() => { if (!stopped) attach(); });
   // CMP loads asynchronously; retry briefly, then revisit on tab focus/privacy changes.
   let attempts = 0;
   const timer = setInterval(() => { attach(); if (++attempts >= 20) clearInterval(timer); }, 250);

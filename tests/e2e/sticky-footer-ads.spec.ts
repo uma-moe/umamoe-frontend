@@ -112,6 +112,7 @@ test('database scroll shortcut stays above the footer ad as it resizes and close
   await mockFooter(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/database');
+  await expect(page.getByRole('button', { name: 'Close footer ad', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await page.locator('[data-filter-group="inheritance"] .group-title').click();
   const shortcut = page.locator('.floating-scroll-btn');

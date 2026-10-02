@@ -3,8 +3,10 @@ const mocks = vi.hoisted(() => ({ fuse: vi.fn(() => false) }));
 vi.mock('./runtime-config', () => ({ runtimeConfig: { providersEnabled: true, measurementId: 'G-TEST' } }));
 vi.mock('./ads/fuse-ads', () => ({ fuseEnabled: mocks.fuse, loadFuse: vi.fn(async () => {}) }));
 import { sanitizeAnalyticsUrl, startAnalytics, trackEvent, trackPageView } from './analytics';
+import { withPageRequest } from './http/page-request';
+import { loadFuse } from './ads/fuse-ads';
 let stop: (() => void) | undefined;
-afterEach(() => { stop?.(); vi.unstubAllGlobals(); vi.useRealTimers(); localStorage.clear(); document.head.innerHTML = ''; delete (window as any).__tcfapi; delete (window as any).__uspapi; });
+afterEach(() => { stop?.(); vi.unstubAllGlobals(); vi.useRealTimers(); localStorage.clear(); document.head.innerHTML = ''; delete (window as any).__tcfapi; delete (window as any).__uspapi; mocks.fuse.mockReturnValue(false); });
 it('retains stored consent, strips tokens and account identifiers, and avoids duplicate page views', () => {
   vi.useFakeTimers(); history.replaceState(null, '', '/profile/12345?token=secret#private');
   localStorage.setItem('cookie-consent', JSON.stringify({ analytics: false, advertising: false }));
@@ -12,6 +14,7 @@ it('retains stored consent, strips tokens and account identifiers, and avoids du
   stop = startAnalytics();
   expect(gtag).toHaveBeenCalledWith('consent', 'default', expect.objectContaining({ analytics_storage: 'denied' }));
   expect(sanitizeAnalyticsUrl(location.href)).toBe('/profile/:id');
+  expect(sanitizeAnalyticsUrl('/veterans/12345?token=secret')).toBe('/veterans/:id');
   trackPageView('/profile/99999?token=another');
   expect(gtag.mock.calls.filter(call => call[1] === 'page_view')).toHaveLength(1);
   trackEvent('filter_applied', { trainer_name: 'private', token: 'secret', result_count: 3 });
@@ -19,6 +22,24 @@ it('retains stored consent, strips tokens and account identifiers, and avoids du
   expect(JSON.stringify(gtag.mock.calls)).not.toMatch(/secret|12345|99999|private/);
   localStorage.setItem('cookie-consent', JSON.stringify({ analytics: true, advertising: false })); window.dispatchEvent(new Event('storage'));
   expect(gtag).toHaveBeenLastCalledWith('consent', 'update', expect.objectContaining({ analytics_storage: 'granted', ad_storage: 'denied' }));
+});
+
+it('defers analytics until page data paints and attaches consent when the deferred CMP arrives', async () => {
+  vi.useFakeTimers(); mocks.fuse.mockReturnValue(true);
+  let releaseData!: () => void, releaseFuse!: () => void;
+  const data = withPageRequest(() => new Promise<void>(resolve => releaseData = resolve));
+  const fuse = new Promise<boolean>(resolve => releaseFuse = () => resolve(true));
+  vi.mocked(loadFuse).mockReturnValue(fuse);
+  stop = startAnalytics();
+  await vi.advanceTimersByTimeAsync(6000);
+  expect(document.getElementById('google-analytics-gtag')).toBeNull();
+  const tcf = vi.fn(); (window as any).__tcfapi = tcf;
+  releaseData(); await data;
+  await vi.advanceTimersByTimeAsync(50);
+  expect(document.getElementById('google-analytics-gtag')).not.toBeNull();
+  releaseFuse(); await fuse; await Promise.resolve();
+  expect(tcf).toHaveBeenCalledWith('addEventListener', 2, expect.any(Function));
+  vi.mocked(loadFuse).mockResolvedValue(false);
 });
 it('updates CMP purpose consent and keeps a sale opt-out when CMP updates again', () => {
   vi.useFakeTimers(); mocks.fuse.mockReturnValue(true);

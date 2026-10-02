@@ -12,7 +12,7 @@ function zone(id: string) {
   const element = document.createElement('div'); element.id = id; document.body.append(element); return element;
 }
 
-it('runs the early head loader once while honoring provider mode and stored opt-outs', () => {
+it('loads one provider script while honoring provider mode and stored opt-outs', () => {
   expect(fuseAllowed(false)).toBe(false);
   localStorage.setItem('cookie-consent', JSON.stringify({ advertising: false }));
   expect(fuseAllowed(true)).toBe(false);
@@ -21,18 +21,19 @@ it('runs the early head loader once while honoring provider mode and stored opt-
   history.replaceState(null, '', '/database'); expect(fuseAllowed(true)).toBe(false);
   localStorage.setItem('umamoe-fuse-enabled-v1', '0'); expect(fuseAllowed(true)).toBe(false);
   localStorage.clear(); expect(fuseAllowed(true)).toBe(true);
-  // Vite emits these self-contained functions before the SPA module script.
-  new Function(`if((${fuseAllowed.toString()})(true))(${insertFuseScript.toString()})(${JSON.stringify(fuseScriptUrl)});`)();
   const script = insertFuseScript(fuseScriptUrl);
+  expect(insertFuseScript(fuseScriptUrl)).toBe(script);
   expect(document.querySelectorAll('#publift-fuse-js')).toHaveLength(1);
   expect(document.head.firstElementChild).toBe(script);
   expect(script.async).toBe(true);
+  expect(script.fetchPriority).toBe('low');
   history.replaceState(null, '', '/ui'); expect(fuseAllowed(true)).toBe(false);
 });
 
 it('does not repeatedly retry blocked ad scripts', async () => {
   const { loadFuse } = await import('./fuse-ads');
   const task = loadFuse();
+  await vi.advanceTimersByTimeAsync(50);
   const script = document.getElementById('publift-fuse-js')!;
   script.dispatchEvent(new Event('error'));
   expect(await task).toBe(false);
@@ -54,7 +55,7 @@ it('settles stalled loads without retrying and registers mounted zones if the pr
   const { loadFuse, registerFuseZone } = await import('./fuse-ads');
   zone('late-zone'); registerFuseZone('late-zone', 'late-slot');
   const task = loadFuse();
-  await vi.advanceTimersByTimeAsync(15_000);
+  await vi.advanceTimersByTimeAsync(15_050);
   expect(await task).toBe(false);
   expect(await loadFuse()).toBe(false);
   expect(document.querySelectorAll('#publift-fuse-js')).toHaveLength(1);
@@ -68,12 +69,35 @@ it('settles stalled loads without retrying and registers mounted zones if the pr
   expect(await loadFuse()).toBe(true);
 });
 
-it('recognizes an error from the head loader before the app subscribes', async () => {
+it('recognizes an existing script error without restarting the provider', async () => {
   const script = insertFuseScript(fuseScriptUrl);
   script.dispatchEvent(new Event('error'));
   const { loadFuse } = await import('./fuse-ads');
-  expect(await loadFuse()).toBe(false);
+  const task = loadFuse();
+  await vi.advanceTimersByTimeAsync(50);
+  expect(await task).toBe(false);
   expect(vi.getTimerCount()).toBe(0);
+});
+
+it('keeps ads behind critical page requests and paint, and rechecks consent before loading', async () => {
+  const { withPageRequest } = await import('@/services/http/page-request');
+  let release!: () => void;
+  const data = withPageRequest(() => new Promise<void>(resolve => release = resolve));
+  const { loadFuse } = await import('./fuse-ads');
+  const task = loadFuse();
+  expect(loadFuse()).toBe(task);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(document.getElementById('publift-fuse-js')).toBeNull();
+  localStorage.setItem('cookie-consent', JSON.stringify({ advertising: false }));
+  release(); await data;
+  await vi.advanceTimersByTimeAsync(50);
+  expect(await task).toBe(false);
+  expect(document.getElementById('publift-fuse-js')).toBeNull();
+  localStorage.removeItem('cookie-consent');
+  const resumed = loadFuse();
+  await vi.advanceTimersByTimeAsync(50);
+  document.getElementById('publift-fuse-js')!.dispatchEvent(new Event('error'));
+  expect(await resumed).toBe(false);
 });
 
 it('initializes once per document, destroys removed route slots, and preserves provider widgets on navigation and resize', async () => {

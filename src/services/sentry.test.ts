@@ -1,15 +1,19 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import * as Sentry from '@sentry/svelte';
-import { initializeSentry } from './sentry';
+import { initializeSentry, withVerificationTiming } from './sentry';
 import { sentryOptions } from './sentry-options';
+import { withPageRequest } from './http/page-request';
 
 vi.mock('@sentry/svelte', async importOriginal => ({
   ...await importOriginal<typeof Sentry>(),
   init: vi.fn(),
   captureException: vi.fn(),
+  browserTracingIntegration: vi.fn((await importOriginal<typeof Sentry>()).browserTracingIntegration),
+  startInactiveSpan: vi.fn(() => ({ setStatus: vi.fn(), end: vi.fn() })),
+  reportPageLoaded: vi.fn(),
 }));
 
-afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); document.head.innerHTML = ''; delete document.documentElement.dataset.appPhase; });
+afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); vi.useRealTimers(); document.head.innerHTML = ''; delete document.documentElement.dataset.appPhase; });
 
 it('keeps local monitoring off and captures startup and Svelte boundary errors with the deployed version', async () => {
   vi.stubEnv('MODE', 'development');
@@ -45,6 +49,27 @@ it('keeps local monitoring off and captures startup and Svelte boundary errors w
   expect(Sentry.captureException).toHaveBeenCalledWith(error, { tags: { 'error.kind': 'module-load' } });
   for (const [type, handler] of listener.mock.calls) window.removeEventListener(type, handler);
   listener.mockRestore();
+});
+
+it('measures verification separately and ends the named pageload after critical data paints', async () => {
+  vi.useFakeTimers(); vi.stubEnv('MODE', 'beta');
+  history.replaceState(null, '', '/circles/123?token=private');
+  let release!: () => void;
+  const data = withPageRequest(() => withVerificationTiming('challenge', () => new Promise<void>(resolve => release = resolve)));
+  await initializeSentry();
+  const options = vi.mocked(Sentry.browserTracingIntegration).mock.calls.at(-1)![0]!;
+  expect(options.enableReportPageLoaded).toBe(true);
+  expect(options.beforeStartSpan!({ name: 'Pageload', op: 'pageload' }).name).toBe('/circles/:id');
+  await vi.advanceTimersByTimeAsync(6000);
+  expect(Sentry.reportPageLoaded).not.toHaveBeenCalled();
+  release(); await data;
+  expect(Sentry.startInactiveSpan).toHaveBeenCalledWith(expect.objectContaining({ op: 'browser.verification.challenge', attributes: { 'url.path': '/circles/:id' } }));
+  expect(vi.mocked(Sentry.startInactiveSpan).mock.results.at(-1)!.value.setStatus).toHaveBeenCalledWith({ code: 1 });
+  await vi.advanceTimersByTimeAsync(50);
+  expect(Sentry.reportPageLoaded).toHaveBeenCalledOnce();
+  await expect(withVerificationTiming('exchange', async () => { throw new Error('private failure'); })).rejects.toThrow('private failure');
+  expect(vi.mocked(Sentry.startInactiveSpan).mock.results.at(-1)!.value.setStatus).toHaveBeenCalledWith({ code: 2 });
+  expect(JSON.stringify(vi.mocked(Sentry.startInactiveSpan).mock.calls)).not.toContain('private');
 });
 
 it('adds provider labels without guessing ownership from a URL embedded in an error', async () => {

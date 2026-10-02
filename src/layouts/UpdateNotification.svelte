@@ -6,6 +6,7 @@
   import type { IconName } from '@/components/icon-types';
   import { UPDATE_LOG, type ChangeCategory } from '@/services/update-log';
   import { CURRENT_UPDATE_VERSION } from '@/services/site-services';
+  import { afterPageReady } from '@/routes/after-page-paint';
   let { request = 0 }: { request?: number } = $props();
   let open = $state(false);
   let history = $state(false);
@@ -21,14 +22,19 @@
     try { localStorage.setItem('lastSeenUpdateVersion', String(CURRENT_UPDATE_VERSION)); } catch { /* Reading remains available without storage. */ }
   }
   onMount(() => {
-    const timer = setInterval(() => {
-      try {
-        if (Number(localStorage.getItem('lastSeenUpdateVersion') ?? 0) >= CURRENT_UPDATE_VERSION) { clearInterval(timer); return; }
-      } catch { clearInterval(timer); return; }
-      if (document.hidden || document.querySelector('dialog[open], [data-tour-overlay]')) return;
-      open = true; clearInterval(timer);
-    }, 1500);
-    return () => clearInterval(timer);
+    let stopped = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    void afterPageReady().then(() => {
+      if (stopped) return;
+      timer = setInterval(() => {
+        try {
+          if (Number(localStorage.getItem('lastSeenUpdateVersion') ?? 0) >= CURRENT_UPDATE_VERSION) { clearInterval(timer); return; }
+        } catch { clearInterval(timer); return; }
+        if (document.hidden || document.querySelector('dialog[open], [data-tour-overlay]')) return;
+        open = true; clearInterval(timer);
+      }, 1500);
+    });
+    return () => { stopped = true; clearInterval(timer); };
   });
 </script>
 {#snippet releaseSections(categories: ChangeCategory[])}

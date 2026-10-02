@@ -1,6 +1,5 @@
 export const fuseScriptUrl = 'https://cdn.fuseplatform.net/publift/tags/2/4302/fuse.js';
 
-// These two functions also run inline in the document head; keep them self-contained.
 export function fuseAllowed(providersEnabled: boolean): boolean {
   if (!providersEnabled || typeof window === 'undefined' || /^\/ui(?:-lab)?\/?$/.test(location.pathname)) return false;
   try {
@@ -20,6 +19,7 @@ export function insertFuseScript(url: string): HTMLScriptElement {
   const script = document.createElement('script');
   script.id = 'publift-fuse-js';
   script.async = true;
+  script.fetchPriority = 'low';
   script.src = url;
   script.dataset.state = 'loading';
   script.addEventListener('load', () => { script.dataset.state = 'loaded'; }, { once: true });
