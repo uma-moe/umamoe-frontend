@@ -1,6 +1,7 @@
 import { get, writable } from 'svelte/store';
 import { loadPlanCollection, savePlanCollection, type CaratPlanCollection } from '@/lib/timeline/carat-planner';
 import { plannerCollectionHash } from '@/lib/timeline/planner-cloud-state';
+import { canonicalIncomeRuleId } from '@/lib/timeline/planner-income-assumptions';
 import { authUser } from '@/services/auth/auth-state';
 import { PlannerCloudSync } from './planner-cloud-sync';
 
@@ -14,6 +15,10 @@ export const plannerCloudSync = new PlannerCloudSync(
 );
 
 export function savePlannerCollection(collection: CaratPlanCollection, notifyCloud = true): void {
+  // Account restores must migrate IDs in the visible state as well as on disk.
+  collection = { ...collection, plans: collection.plans.map(plan => ({
+    ...plan, enabledIncomeRuleIds: [...new Set(plan.enabledIncomeRuleIds.map(canonicalIncomeRuleId))],
+  })) };
   // Resource-derived labels/defaults are not edits and must not clear a conflict.
   const changed = notifyCloud && plannerCollectionHash(collection) !== plannerCollectionHash(get(plannerCollection));
   try {
