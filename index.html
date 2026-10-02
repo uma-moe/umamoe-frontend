@@ -48,15 +48,18 @@
           });
           panel.hidden = false; panel.focus();
         }
+        function isSentrySource(source) {
+          return typeof source === 'string' && (source.indexOf(location.origin + '/app/sentry-sdk-') === 0 || source.indexOf(location.origin + '/node_modules/@sentry/') === 0);
+        }
         function isAppSource(source) {
-          return typeof source === 'string' && (source.indexOf(location.origin + '/app/') === 0 || source.indexOf(location.origin + '/src/') === 0 || source.indexOf(location.origin + '/node_modules/') === 0);
+          return typeof source === 'string' && !isSentrySource(source) && (source.indexOf(location.origin + '/app/') === 0 || source.indexOf(location.origin + '/src/') === 0 || source.indexOf(location.origin + '/node_modules/') === 0);
         }
         function stackSource(error) {
-          // The throwing frame owns the error; a later Sentry wrapper does not.
+          // Fetch errors can start in Sentry's native-call wrapper; use the actual caller.
           var lines = error && typeof error.stack === 'string' ? error.stack.split('\n') : [];
           for (var i = 0; i < lines.length; i++) {
             var frame = lines[i].match(/^(?:\s*at\s+.*?|[^@]*@)([a-z][a-z0-9+.-]*:(?:\/\/)?[^\s)]+)/i);
-            if (frame) return frame[1];
+            if (frame && !isSentrySource(frame[1])) return frame[1];
           }
           return '';
         }
