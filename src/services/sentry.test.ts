@@ -16,6 +16,7 @@ vi.mock('@sentry/svelte', async importOriginal => ({
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); vi.useRealTimers(); document.head.innerHTML = ''; delete document.documentElement.dataset.appPhase; });
 
 it('keeps local monitoring off and captures startup and Svelte boundary errors with the deployed version', async () => {
+  vi.useFakeTimers();
   vi.stubEnv('MODE', 'development');
   await initializeSentry();
   expect(Sentry.init).not.toHaveBeenCalled();
@@ -26,6 +27,9 @@ it('keeps local monitoring off and captures startup and Svelte boundary errors w
   const startupError = new Error('Startup failure');
   window.dispatchEvent(new ErrorEvent('error', { error: startupError }));
   await initialized;
+  // Complete this initialization's paint callback before teardown clears its spies.
+  await vi.advanceTimersByTimeAsync(50);
+  expect(Sentry.reportPageLoaded).toHaveBeenCalledOnce();
   expect(Sentry.captureException).toHaveBeenCalledWith(startupError);
   expect(Sentry.init).toHaveBeenCalledWith(expect.objectContaining({ release: '2.1.400' }));
   const integrations = vi.mocked(Sentry.init).mock.calls[0]![0]!.integrations;
