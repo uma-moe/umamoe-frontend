@@ -66,7 +66,15 @@ export function normalizePlannerIncomeRules(rules: readonly PlannerIncomeRule[])
       description: `Alternates repeat promotion to Class ${lower + 1} and demotion to Class ${lower}; excludes first-time promotion bonuses.`,
     });
   }
-  return [...new Map(normalized.map(rule => [rule.id, rule])).values()];
+  const unique = new Map<string, PlannerIncomeRule>();
+  for (const rule of normalized) {
+    const previous = unique.get(rule.id);
+    // An expired shop variant must not replace the continuing daily pack.
+    if (rule.id === 'daily-jewel-pack' && previous
+      && (utcDay(previous.end_date) ?? Infinity) > (utcDay(rule.end_date) ?? Infinity)) continue;
+    unique.set(rule.id, rule);
+  }
+  return [...unique.values()];
 }
 
 export function incomeRuleScenarioSelectionMatches(rule: Pick<PlannerIncomeRule, 'id' | 'label' | 'scenario_group' | 'scenario_option'>, selections: Readonly<Record<string, string>>): boolean {

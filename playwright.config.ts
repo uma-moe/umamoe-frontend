@@ -13,6 +13,7 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1536, height: 960 }, launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } } },
+    { name: 'firefox', testMatch: /planner-carat-balance\.spec\.ts/, use: { ...devices['Desktop Firefox'], viewport: { width: 1536, height: 960 } } },
     { name: 'mobile-chromium', testIgnore: /ui-lab\.spec\.ts/, use: { ...devices['Pixel 5'], viewport: { width: 390, height: 844 }, launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } } },
     { name: 'mobile-webkit', testIgnore: /ui-lab\.spec\.ts/, use: { ...devices['iPhone 13'], viewport: { width: 390, height: 844 } } },
     { name: 'mobile-firefox', testMatch: /lineage-(startup|responsive)\.spec\.ts/, use: { ...devices['Desktop Firefox'], viewport: { width: 390, height: 844 }, hasTouch: true } }
