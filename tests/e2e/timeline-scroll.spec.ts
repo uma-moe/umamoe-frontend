@@ -6,8 +6,9 @@ const settle = (page: Page) => page.evaluate(async () => {
   for (let i = 0; i < 12; i++) await new Promise(requestAnimationFrame);
 });
 
-async function largeTimeline(page: Page) {
-  await mockTimeline(page);
+async function largeTimeline(page: Page, now = new Date('2026-08-29T12:00:00Z')) {
+  await mockTimeline(page, false);
+  await page.clock.setFixedTime(now);
   const events = Array.from({ length: 700 }, (_, day) => Array.from({ length: day % 7 === 0 ? 9 : 1 }, (_, event) => ({
     id: `scroll-${day}-${event}`, title: `Release ${day}-${event}`, type: 'story_event', is_confirmed: true,
     global_release_date: new Date(Date.UTC(2025, 5, 26 + day, 22)).toISOString(),
@@ -90,6 +91,31 @@ test('Today reaches the correct date repeatedly across unmeasured rows of differ
     expect(Math.abs((await today.boundingBox())!.y - (await board.boundingBox())!.y - 56)).toBeLessThan(3);
     expect(await board.locator('.event-card').count()).toBeLessThan(150);
   }
+});
+
+test('refresh restores today in the saved vertical view and one click reaches it from the previous year', async ({ page }) => {
+  await largeTimeline(page, new Date('2026-10-02T12:00:00Z'));
+  const board = page.locator('.timeline-board.desktop');
+  const today = board.locator('.vertical-date.is-today');
+  await board.evaluate(node => node.scrollTo({ top: 0, behavior: 'instant' }));
+  await settle(page);
+  await expect(board.locator('time[datetime^="2025"]').first()).toBeInViewport();
+
+  await page.reload();
+  await expect(page.getByRole('radio', { name: 'Vertical', exact: true })).toBeChecked();
+  await expect(today).toBeInViewport();
+  await expect(today.locator(':scope > header time')).toHaveAttribute('datetime', '2026-10-02');
+  await settle(page);
+  expect(Math.abs((await today.boundingBox())!.y - (await board.boundingBox())!.y - 56)).toBeLessThan(3);
+
+  await board.evaluate(node => node.scrollTo({ top: 0, behavior: 'instant' }));
+  await settle(page);
+  await expect(today).toHaveCount(0);
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(today).toBeInViewport();
+  await expect(today.locator(':scope > header time')).toHaveAttribute('datetime', '2026-10-02');
+  await settle(page);
+  expect(Math.abs((await today.boundingBox())!.y - (await board.boundingBox())!.y - 56)).toBeLessThan(3);
 });
 
 test('vertical dragging keeps the visible date stable when a buffered row changes height', async ({ page }) => {

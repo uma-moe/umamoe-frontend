@@ -356,7 +356,7 @@
       requirements.forEach((requirement, index) => {
         if (!Number.isFinite(requirement.factorId) || requirement.factorId < 0 || requirement.factorId === 0 && tone === 'white') return;
         const starRange = requirement.maximumStars && requirement.maximumStars !== requirement.minimumStars ? `${requirement.minimumStars}–${requirement.maximumStars}★` : `${requirement.minimumStars}★`;
-        const range = `${starRange}${requirement.minimumOccurrences !== undefined || requirement.maximumOccurrences !== undefined ? ` · ${requirement.minimumOccurrences ?? 0}–${requirement.maximumOccurrences ?? (key.startsWith('main') ? 1 : 3)}×` : ''}`;
+        const range = requirement.metric === 'occurrences' ? `${requirement.minimumOccurrences ?? 0}–${requirement.maximumOccurrences ?? 3}×` : starRange;
         add(`${String(key)}-${requirement.factorId}-${index}`, `${prefix}: ${requirement.factorId === 0 ? 'Any' : factorLabels.get(String(requirement.factorId)) ?? requirement.factorId} ${range}`, tone, () => { (filters[key] as FactorRequirement[]) = requirements.filter((_, itemIndex) => itemIndex !== index); });
       });
     }
