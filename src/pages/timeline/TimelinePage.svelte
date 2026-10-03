@@ -11,6 +11,7 @@
   import Spinner from '@/components/Spinner.svelte';
   import Tabs from '@/components/Tabs.svelte';
   import TextField from '@/components/TextField.svelte';
+  import Dialog from '@/components/Dialog.svelte';
   import { afterPagePaint } from '@/routes/after-page-paint';
   import { withPageRequest } from '@/services/http/page-request';
   import { filterOptions, filterIcons, TIMELINE_PREFERENCES_KEY, type FilterType, type TimelineStatus } from './timeline-controls';
@@ -25,6 +26,10 @@
   let status = $state<TimelineStatus>({ filtered: 0, total: 0, searchPosition: '', plannerEventCount: 0, loading: true, rewardsLoading: false });
   let mobile = $state(typeof matchMedia !== 'undefined' && matchMedia('(max-width: 1149px)').matches);
   let filtersOpen = $state(false);
+  let dateOpen = $state(false);
+  let selectedDate = $state(new Date().toISOString().slice(0, 10));
+  const selectedDay = $derived(new Date(selectedDate + 'T00:00:00Z'));
+  const validDate = $derived(/^\d{4}-\d{2}-\d{2}$/.test(selectedDate) && Number.isFinite(selectedDay.getTime()) && selectedDay.toISOString().slice(0, 10) === selectedDate);
   let filterPanel = $state<HTMLElement>();
   let filterTrigger: HTMLElement | undefined;
   let footerVisible = $state(false);
@@ -44,6 +49,8 @@
   function changeSpacing() { if (content) void content.changeSpacing(); else compactGaps = !compactGaps; }
   function toggleType(type: FilterType) { visibleTypes = visibleTypes.includes(type) ? visibleTypes.filter(item => item !== type) : [...visibleTypes, type]; }
   function scrollToToday() { content?.scrollToToday(); }
+  function openDate(event: MouseEvent) { (event.currentTarget as HTMLElement).focus({ preventScroll: true }); dateOpen = true; }
+  function jumpDate() { if (validDate) { dateOpen = false; content?.scrollToDate(selectedDay); } }
   function jumpSearch(offset: number) { content?.jumpSearch(offset); }
   function preloadPlanner() {
     void import('@/pages/carat-planner/CaratPlanner.svelte').catch(() => {});
@@ -96,13 +103,15 @@
           <SegmentedControl label="Timeline direction" options={[{ value: 'horizontal', label: 'Horizontal' }, { value: 'vertical', label: 'Vertical' }]} value={view} onchange={changeView}/>
           <div data-timeline-control="spacing"><ToggleButton icon="timeline" label="Compact gaps" pressed={compactGaps} disabled={view === 'vertical'} onclick={changeSpacing}/></div>
           <div data-timeline-control="today"><Button variant="secondary" icon="calendar" onclick={scrollToToday}>Today</Button></div>
+          <Button variant="secondary" icon="calendar" disabled={status.loading || !status.filtered} onclick={openDate}>Go to date</Button>
           <div data-timeline-control="filters"><Button variant="secondary" icon="filter" ariaExpanded={filtersOpen} onclick={() => setFilters(!filtersOpen)}>Filters{#if activeFilterCount} ({activeFilterCount}){/if}</Button></div>
         </div>
       </section></div>
     {:else}
       <nav class="mobile-bottom-toolbar" class:is-footer-visible={footerVisible && !status.loading && !filtersOpen && !search.trim() && !activeFilterCount} inert={footerVisible && !status.loading && !filtersOpen && !search.trim() && !activeFilterCount} aria-label="Timeline actions">
         <div data-timeline-control="today"><Button variant="secondary" icon="calendar" onclick={scrollToToday}>Today</Button></div>
-        <div data-timeline-control="filters"><Button variant="secondary" icon="search" ariaExpanded={filtersOpen} onclick={() => setFilters(!filtersOpen)}>Search &amp; filters{#if activeFilterCount} ({activeFilterCount}){/if}</Button></div>
+        <Button variant="secondary" disabled={status.loading || !status.filtered} onclick={openDate}>Go to date</Button>
+        <div data-timeline-control="filters"><Button variant="secondary" ariaExpanded={filtersOpen} onclick={() => setFilters(!filtersOpen)}>Search &amp; filters{#if activeFilterCount} ({activeFilterCount}){/if}</Button></div>
       </nav>
     {/if}
     {#if mobile && filtersOpen}<button type="button" class="filter-backdrop" aria-label="Close timeline filters" onclick={() => setFilters(false)}></button>{/if}
@@ -121,6 +130,14 @@
     <Banner title="Timeline could not be loaded" tone="danger"><Button variant="secondary" onclick={() => location.reload()}>Reload page</Button></Banner>
   {/await}
 </AppPage>
+{#if dateOpen}
+  <Dialog open title="Go to date" description="Jump to the nearest event on the timeline." maxWidth="360px" onclose={() => dateOpen = false}>
+    <form onsubmit={event => { event.preventDefault(); jumpDate(); }}>
+      <TextField id="timeline-jump-date" label="Date" type="date" bind:value={selectedDate}/>
+      <div class="date-actions"><Button variant="secondary" onclick={() => dateOpen = false}>Cancel</Button><Button type="submit" disabled={!validDate}>Go</Button></div>
+    </form>
+  </Dialog>
+{/if}
 
 <style>
 
@@ -131,7 +148,8 @@
   .search{min-width:0;display:flex;flex:1;align-items:center;gap:6px;position:relative}.search :global(.field){flex:1}.search>span{position:absolute;right:9px;color:var(--text-muted);font-size:11px;white-space:nowrap;pointer-events:none}.search:has(>span) :global(input){padding-right:85px}.search-navigation{display:flex;gap:4px}.timeline-count{margin-right:auto;color:var(--text-muted);font-size:11px;white-space:nowrap}
   .view{display:flex;align-items:center;gap:10px;flex:none}.view [data-timeline-control="spacing"]{padding-inline:4px}.view :global(.ui-button){white-space:nowrap}
   .filter-popover{position:fixed;z-index:100;inset:210px 16px auto auto;margin:0;width:min(400px,calc(100vw - 24px));padding:10px;border:1px solid var(--border-primary);border-radius:var(--radius-md);background:var(--surface-overlay);color:var(--text-primary);box-shadow:0 10px 28px rgb(0 0 0/.22);max-height:calc(100dvh - 230px);overflow:auto}.filter-popover header{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:38px;color:var(--text-secondary);font-size:12px}.filter-popover header>div{display:flex;align-items:center;gap:4px}.filter-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px}.filter-option{min-width:0}.filter-option :global(.checkbox){min-height:32px;grid-template-columns:18px minmax(0,1fr);gap:7px}.filter-option :global(.box){width:18px;height:18px}.filter-option :global(strong){font-size:11px}.filter-option :global(strong.with-icon){gap:5px}.filter-option :global(.copy svg){color:var(--color-accent)}
-  .mobile-bottom-toolbar{position:fixed;z-index:75;inset:auto 0 0;height:var(--timeline-toolbar-height);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:var(--surface-overlay);border-top:1px solid var(--border-primary)}.mobile-bottom-toolbar :global(.ui-button){width:100%;min-height:44px}.filter-backdrop{position:fixed;z-index:78;inset:0;border:0;background:rgb(0 0 0/.42)}.mobile-filter-sheet{inset:auto 0 var(--timeline-toolbar-height);width:100%;max-height:min(66dvh,560px);border-radius:0;border-inline:0;padding:10px 12px 14px}.mobile-filter-sheet .search{margin:6px 0 10px}.mobile-filter-sheet .search :global(input){height:44px;font-size:12px}.mobile-filter-sheet .filter-options{gap:3px 10px}.mobile-filter-sheet .filter-options :global(.checkbox){min-height:44px}
+  .mobile-bottom-toolbar{position:fixed;z-index:75;inset:auto 0 0;height:var(--timeline-toolbar-height);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:var(--surface-overlay);border-top:1px solid var(--border-primary)}.mobile-bottom-toolbar :global(.ui-button){width:100%;min-height:44px}.filter-backdrop{position:fixed;z-index:78;inset:0;border:0;background:rgb(0 0 0/.42)}.mobile-filter-sheet{inset:auto 0 var(--timeline-toolbar-height);width:100%;max-height:min(66dvh,560px);border-radius:0;border-inline:0;padding:10px 12px 14px}.mobile-filter-sheet .search{margin:6px 0 10px}.mobile-filter-sheet .search :global(input){height:44px;font-size:12px}.mobile-filter-sheet .filter-options{gap:3px 10px}.mobile-filter-sheet .filter-options :global(.checkbox){min-height:44px}
+  .date-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
   @media(max-width:1280px){.timeline-count{display:none}.toolbar{flex-wrap:wrap;gap:8px}.view{margin-left:auto;gap:8px}.search{flex-basis:240px}}
   .mobile-bottom-toolbar{transition:transform 140ms,visibility 140ms}.mobile-bottom-toolbar.is-footer-visible{visibility:hidden;pointer-events:none;transform:translateY(100%)}
   @media(prefers-reduced-motion:reduce){.mobile-bottom-toolbar{transition:none}}

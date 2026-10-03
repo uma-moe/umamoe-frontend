@@ -118,6 +118,19 @@ test('refresh restores today in the saved vertical view and one click reaches it
   expect(Math.abs((await today.boundingBox())!.y - (await board.boundingBox())!.y - 56)).toBeLessThan(3);
 });
 
+test('Today aligns the destination in one click when the page is scaled', async ({ page }) => {
+  await page.addInitScript(() => document.addEventListener('DOMContentLoaded', () => document.documentElement.style.zoom = '1.25'));
+  await largeTimeline(page);
+  const board = page.locator('.timeline-board.desktop');
+  const today = board.locator('.vertical-date.is-today');
+  await board.evaluate(node => node.scrollTo({ top: 0, behavior: 'instant' }));
+  await settle(page);
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(today).toBeInViewport();
+  await settle(page);
+  expect(Math.abs((await today.boundingBox())!.y - (await board.boundingBox())!.y - 56 * 1.25)).toBeLessThan(3);
+});
+
 test('vertical dragging keeps the visible date stable when a buffered row changes height', async ({ page }) => {
   await largeTimeline(page);
   const board = page.locator('.timeline-board.desktop');

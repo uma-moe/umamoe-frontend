@@ -64,7 +64,8 @@
   const lastLane = $derived.by(() => { const index = lanes.findIndex(lane => lane.position > scrollLeft + 2 * viewportWidth); return index < 0 ? lanes.length : index; });
   const visibleLanes = $derived($virtualScrolling ? lanes.slice(firstLane, lastLane) : lanes);
   const todayPosition = $derived(timelinePosition(lanes, now));
-  const todayLane = $derived(lanes.reduce<TimelineLane | undefined>((best, lane) => !best || Math.abs(lane.date.getTime() - now.getTime()) < Math.abs(best.date.getTime() - now.getTime()) ? lane : best, undefined));
+  const nearestLane = (date: Date) => lanes.reduce<TimelineLane | undefined>((best, lane) => !best || Math.abs(lane.date.getTime() - date.getTime()) < Math.abs(best.date.getTime() - date.getTime()) ? lane : best, undefined);
+  const todayLane = $derived(nearestLane(now));
   const showToday = $derived(Boolean(lanes.length && now >= lanes[0]!.date && now <= lanes.at(-1)!.date));
   const trackHeight = $derived(Math.max(360, measuredLaneHeight, ...lanes.map(lane => {
     const count = lane.events.length;
@@ -201,15 +202,33 @@
       const index = months.groups.findIndex(month => month.key === key.slice(0, 7));
       const month = months.groups[index];
       if (!month) return;
-      // Render the destination before scrolling, then measure and align it without a moving smooth-scroll target.
-      scrollTop = monthOffsets[index]! + monthLaneOffsets[index]![month.lanes.findIndex(lane => lane.key === key)]!;
-      await tick();
-      board.scrollTo({ top: scrollTop, behavior: 'instant' });
-      applyMeasurements(Object.fromEntries([...board.querySelectorAll<HTMLElement>('[data-lane-key]')].map(node => [`d:${viewportWidth}:${node.dataset.laneKey}`, Math.ceil(node.getBoundingClientRect().height)])));
-      const target = board.querySelector<HTMLElement>(`[data-lane-key="${key}"]`);
-      if (target) board.scrollBy({ top: target.getBoundingClientRect().top - board.getBoundingClientRect().top - 56, behavior: 'instant' });
+      const laneIndex = month.lanes.findIndex(lane => lane.key === key);
+      const destination = () => monthOffsets[index]! + monthLaneOffsets[index]![laneIndex]!;
+      // Mount and measure the destination in CSS pixels before moving the browser's scroll position.
+      flushSync(() => scrollTop = destination());
+      const heights = Object.fromEntries([...board.querySelectorAll<HTMLElement>('[data-lane-key]')].map(node => [`d:${viewportWidth}:${node.dataset.laneKey}`, node.offsetHeight]));
+      flushSync(() => { measured = { ...measured, ...heights }; scrollTop = destination(); });
+      board.scrollTop = scrollTop;
     }
     updateViewport();
+  }
+  export async function scrollToDate(date: Date) {
+    if (!Number.isFinite(date.getTime()) || !active) return;
+    if (!mobile) {
+      const lane = lanes.find(lane => lane.key === timelineDateKey(date)) ?? nearestLane(date);
+      if (lane) await scrollToLane(lane.key, false);
+    } else if (feed) {
+      cancelAnimationFrame(momentum);
+      const row = rows.filter(row => !row.marker).reduce<typeof rows[number] | undefined>((best, row) => !best || Math.abs(row.date.getTime() - date.getTime()) < Math.abs(best.date.getTime() - date.getTime()) ? row : best, undefined);
+      if (!row) return;
+      const index = rows.indexOf(row);
+      const destination = () => Math.max(0, feedTop + offsets[index]! + (offsets[index + 1]! - offsets[index]!) / 2 - innerHeight / 2);
+      flushSync(() => pageY = destination());
+      const heights = Object.fromEntries([...feed.querySelectorAll<HTMLElement>('.feed-row')].map((node, index) => [visibleRows[index]!.key, node.offsetHeight]));
+      flushSync(() => { measured = { ...measured, ...heights }; pageY = destination(); });
+      window.scrollTo({ top: pageY, behavior: 'instant' });
+      updateViewport();
+    }
   }
   export function anchorDate(): Date {
     return lanes.reduce<TimelineLane | undefined>((best, lane) => !best || Math.abs(lane.position + LANE_WIDTH/2 - scrollLeft - viewportWidth / 2) < Math.abs(best.position + LANE_WIDTH/2 - scrollLeft - viewportWidth / 2) ? lane : best, undefined)?.date ?? now;
