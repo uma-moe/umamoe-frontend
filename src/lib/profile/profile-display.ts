@@ -33,7 +33,8 @@ export function buildProfileDailyFans(members: ClubMemberSnapshot[], year: numbe
   const totals = new Map<number, number>();
   for (const member of [...members].filter(member => member.year === year).sort((a, b) => a.month - b.month)) {
     const days = new Date(Date.UTC(year, member.month, 0)).getUTCDate();
-    effectiveMemberFans(member, days).slice(0, days + 1).forEach((value, index) => {
+    // Profile history tracks lifetime fans, including gains after a club departure.
+    effectiveMemberFans(member, days, true).slice(0, days + 1).forEach((value, index) => {
       // Zero means no snapshot; negative values carry this trainer's prior-circle total.
       if (Number.isFinite(value) && value !== 0) totals.set(Date.UTC(year, member.month - 1, index + 1), Math.abs(value));
     });

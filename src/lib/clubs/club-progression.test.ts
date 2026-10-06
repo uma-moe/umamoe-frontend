@@ -4,7 +4,7 @@ import { buildClubCalendar, buildMemberProgression, formatClubGain, type ClubCha
 import { clubProgressionFixture, clubProgressionCases } from '../../../tests/e2e/fixtures/club-progression';
 import reference from '../../../tests/e2e/fixtures/club-progression-reference.json';
 
-it('matches all values, gap/prior markers and calendar cells in 96 live Angular captures', () => {
+it('matches 96 recorded charts and calendars with departed-member month-end gains corrected', () => {
   const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
   for (const item of reference.cases) {
     const fixture = clubProgressionFixture(item.name as typeof clubProgressionCases[number]);
