@@ -57,7 +57,7 @@
 </script>
 
 <div class="spark-filter-dialog" bind:this={root}>
-  <Dialog open title={editing ? 'Edit spark filter' : 'Add spark filter'} icon="filter" maxWidth="480px" maxHeight="min(560px,90dvh)" mobileInset="24px" contentPadding="16px" mobileContentPadding="12px" {onclose}>
+  <Dialog mobileFill open title={editing ? 'Edit spark filter' : 'Add spark filter'} icon="filter" maxWidth="480px" maxHeight="min(560px,90dvh)" mobileInset="24px" contentPadding="16px" mobileContentPadding="12px" {onclose}>
     <div class="filter-steps">
       <p class="step-label">{step} / 2 · {step === 1 ? 'Choose a spark' : 'Set requirement'}</p>
       {#if step === 1}

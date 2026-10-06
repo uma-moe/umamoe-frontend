@@ -28,19 +28,23 @@ test('Timeline keeps compact artwork cards and Carat Planner preserves banner al
   await card.getByRole('button',{name:'Add Featured banner to Carat Planner',exact:true}).click();
   await page.goto('/timeline?tab=carat-planner');
   const target = page.locator('.target').filter({has:page.getByText('Featured banner',{exact:true})});
-  const image = target.locator('.target-title > img');
+  const image = target.locator('.banner-media > img');
   await expect(image).toBeVisible();
   await expect.poll(() => image.evaluate((node:HTMLImageElement) => node.complete && node.naturalWidth > 0)).toBe(true);
   for (const width of isMobile ? [390,320] : [1536,1301,1024,768]) {
     await page.setViewportSize({width,height:900});
     await expect(image).toHaveCSS('object-fit','contain');
-    const boxes = await target.locator('.target-title > img,.target-title > div,.target-controls').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().toJSON()));
+    const boxes = await target.locator('.banner-media > img,.banner-identity,.target-controls').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().toJSON()));
+    const actions = (await target.locator('.banner-actions').boundingBox())!;
+    if (isMobile) expect(actions.y).toBeGreaterThanOrEqual(boxes[1].bottom);
+    else expect(actions.x).toBeGreaterThanOrEqual(boxes[1].right);
     expect(boxes[0].right).toBeLessThanOrEqual(boxes[1].left);
     expect(boxes[1].right).toBeLessThanOrEqual(width);
     const header = (await target.locator('.target-title').boundingBox())!;
+    expect(header.x + header.width - actions.x - actions.width).toBeCloseTo(10, 0);
     expect(boxes[2].x >= header.x + header.width - 1 || boxes[2].y >= header.y + header.height - 1).toBe(true);
     expect(await target.evaluate(node=>node.scrollWidth <= node.clientWidth)).toBe(true);
-    await target.screenshot({path:info.outputPath(`planner-banner-${width}.png`)});
+    await target.screenshot({path:info.outputPath(`planner-banner-${width}.png`),scale:'css'});
   }
 });
 
@@ -155,13 +159,14 @@ test('Timeline wheel preserves tall stacks, trackpad scrolling and browser zoom'
   await lane.locator('.event-card').first().hover();
   const before = await board.evaluate(node => ({ left: node.scrollLeft, top: node.scrollTop }));
   await page.mouse.wheel(0, 180);
-  await expect.poll(() => board.evaluate(node => node.scrollTop)).toBeGreaterThan(before.top);
-  expect(await board.evaluate(node => node.scrollLeft)).toBe(before.left);
+  await expect.poll(() => board.evaluate(node => node.scrollLeft)).toBeGreaterThan(before.left);
+  expect(await board.evaluate(node => node.scrollTop)).toBe(before.top);
+  const horizontal = await board.evaluate(node => node.scrollLeft);
   await page.keyboard.down('Shift');
   await page.mouse.wheel(0, 180);
   await page.keyboard.up('Shift');
-  await expect.poll(() => board.evaluate(node => node.scrollLeft)).toBeGreaterThan(before.left);
-  const horizontal = await board.evaluate(node => node.scrollLeft);
+  await expect.poll(() => board.evaluate(node => node.scrollTop)).toBeGreaterThan(before.top);
+  expect(await board.evaluate(node => node.scrollLeft)).toBe(horizontal);
   await board.hover({ position: { x: 80, y: 12 } });
   await page.mouse.wheel(160, 0);
   await expect.poll(() => board.evaluate(node => node.scrollLeft)).toBeGreaterThan(horizontal);

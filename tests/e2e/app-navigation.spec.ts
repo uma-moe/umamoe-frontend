@@ -8,7 +8,16 @@ test('Tools and Timeline subsections navigate and track the active page in both 
     await page.setViewportSize({ width, height: 1080 });
     await page.goto('/tools');
     const nav = page.getByRole('navigation', { name: 'Main navigation', exact: true });
+    await expect(nav.getByRole('link', { name: 'Database', exact: true })).toHaveAccessibleDescription('Updated');
+    await expect(nav.getByRole('link', { name: 'Veterans', exact: true })).not.toHaveAccessibleDescription('Updated');
     const tools = nav.getByRole('button', { name: /(?:Open|Collapse) Tools subsections/ });
+    await expect(tools).toHaveAccessibleDescription('Updated');
+    const indicator = tools.locator('.navigation-badge');
+    if (width === 1920) await expect(indicator).toBeVisible();
+    else {
+      await expect(indicator).toBeHidden();
+      expect(await tools.evaluate(node => getComputedStyle(node, '::after').width)).toBe('6px');
+    }
     const wasOpen = width === 1920;
     await expect(tools).toHaveAttribute('aria-expanded', String(wasOpen));
     if (width === 1920) await tools.locator('.navigation-label').click();
@@ -22,6 +31,8 @@ test('Tools and Timeline subsections navigate and track the active page in both 
       if (await button.getAttribute('aria-expanded') !== 'true') await button.click();
     };
     await expand('Tools');
+    await expect(nav.getByRole('link', { name: 'Carat Planner', exact: true })).toHaveAccessibleDescription('Updated');
+    await expect(nav.getByRole('link', { name: 'Lineage Planner', exact: true })).toHaveAccessibleDescription('Updated');
     await nav.getByRole('link', { name: 'Statistics', exact: true }).click();
     await expect(page.locator('[data-route-id="statistics"]')).toBeVisible();
     await expand('Tools');
@@ -62,7 +73,10 @@ test('Mobile header stays visible and its menu supports subsections, dismissal a
     const nav = page.getByRole('navigation', { name: 'Mobile navigation', exact: true });
     await expect(nav).toBeVisible();
     await expect(nav.locator('.navigation-link')).toHaveCount(8);
+    await expect(nav.getByRole('link', { name: 'Database', exact: true }).locator('.navigation-badge')).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Carat Planner', exact: true }).locator('.navigation-badge')).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Lineage Planner', exact: true })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Lineage Planner', exact: true }).locator('.navigation-badge')).toBeVisible();
     const menuBox = (await page.locator('#app-mobile-navigation').boundingBox())!, headerBox = (await header.boundingBox())!;
     expect(menuBox.y).toBeCloseTo(headerBox.y + headerBox.height, 0);
     await page.screenshot({ path: testInfo.outputPath(`navigation-mobile-${width}.png`) });

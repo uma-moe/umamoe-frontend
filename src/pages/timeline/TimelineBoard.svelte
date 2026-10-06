@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick, untrack, type Snippet } from 'svelte';
+  import { flushSync, onMount, tick, untrack, type Snippet } from 'svelte';
   import Icon from '@/components/Icon.svelte';
   import { virtualScrolling } from '@/stores/virtual-scrolling';
   import { virtualScroll, revealVirtualItem, type VirtualRange } from '@/lib/virtual-scroll';
@@ -25,7 +25,7 @@
   let imagesReady = $state(false);
   let initialToday = false;
   let savedHorizontal = 0, savedVertical = 0;
-  let drag: { x: number; y: number; left: number; top: number; lastX: number; lastY: number; time: number; vx: number; vy: number } | undefined;
+  let drag: { x: number; y: number; lastX: number; lastY: number; time: number; vx: number; vy: number } | undefined;
   let suppressClick = false;
   let dragging = $state(false);
   let momentum = 0, frame = 0;
@@ -39,13 +39,13 @@
   }));
   function verticalWindow(monthIndex: number) {
     const offsets = monthLaneOffsets[monthIndex]!;
-    if (!$virtualScrolling) return { first: 0, last: offsets.length - 1, before: 0, after: 0 };
+    if (!$virtualScrolling) return { first: 0, last: offsets.length - 1 };
     const top = scrollTop - monthOffsets[monthIndex]! - 56;
     const start = offsets.findIndex(offset => offset > Math.max(0, top - viewportHeight));
     const first = start < 0 ? Math.max(0, offsets.length - 2) : Math.max(0, start - 1);
     const end = offsets.findIndex(offset => offset > top + 2 * viewportHeight);
     const last = end < 0 ? offsets.length - 1 : end;
-    return { first, last, before: offsets[first]!, after: offsets.at(-1)! - offsets[last]! };
+    return { first, last };
   }
   const monthOffsets = $derived.by(() => {
     const result = [0];
@@ -76,9 +76,9 @@
     for (const row of rows) result.push(result.at(-1)! + (measured[row.key] ?? ((row.marker ? row.marker.image ? 164 : 98 : 49 + row.events.reduce((sum, event) => sum + (event.image ? 195 : 111), 0) + Math.max(0, row.events.length - 1) * 7) + (row.adIndex ? 86 : 0))));
     return result;
   });
-  function indexAt(offset: number): number {
-    let low = 0, high = Math.max(0, rows.length - 1);
-    while (low < high) { const mid = Math.floor((low + high) / 2); if (offsets[mid + 1]! < offset) low = mid + 1; else high = mid; }
+  function indexAt(offset: number, positions = offsets): number {
+    let low = 0, high = Math.max(0, positions.length - 2);
+    while (low < high) { const mid = Math.floor((low + high) / 2); if (positions[mid + 1]! <= offset) low = mid + 1; else high = mid; }
     return low;
   }
   // Prepare the neighboring screen before it enters view; older rows stay unmounted.
@@ -134,6 +134,23 @@
     updateViewport();
   }
   function scheduleViewport() { if (active && !frame) frame = requestAnimationFrame(() => { frame = 0; updateViewport(); }); }
+  function applyMeasurements(heights: Record<string, number>) {
+    if (!board || mobile || view !== 'vertical' || !months.groups.length) {
+      measured = { ...measured, ...heights }; return;
+    }
+    const top = board.scrollTop;
+    const atEnd = top >= board.scrollHeight - board.clientHeight - 1;
+    const month = indexAt(top + 56, monthOffsets);
+    const lane = indexAt(top - monthOffsets[month]!, monthLaneOffsets[month]);
+    const before = monthOffsets[month]! + monthLaneOffsets[month]![lane]!;
+    // Change spacers and the visible window together, preserving the row below the sticky header.
+    flushSync(() => {
+      measured = { ...measured, ...heights };
+      scrollTop = Math.max(0, top + monthOffsets[month]! + monthLaneOffsets[month]![lane]! - before);
+    });
+    board.scrollTo({ top: atEnd ? board.scrollHeight : scrollTop, behavior: 'instant' });
+    updateViewport();
+  }
   function measureRow(node: HTMLElement, key: string) {
     const observer = new ResizeObserver(([entry]) => {
       if (!active || !entry) return;
@@ -143,7 +160,7 @@
       // All rows resize together when changing direction. Recalculate offsets once.
       if (!measurementFrame) measurementFrame = requestAnimationFrame(() => {
         measurementFrame = 0;
-        if (active) measured = { ...measured, ...pendingHeights };
+        if (active) applyMeasurements(pendingHeights);
         pendingHeights = {};
       });
     });
@@ -174,6 +191,7 @@
     updateViewport();
   }
   export async function scrollToLane(key: string, smooth = true) {
+    cancelAnimationFrame(momentum);
     const lane = lanes.find(item => item.key === key);
     if (!lane || !board) return;
     if (view === 'horizontal') board.scrollTo({ left: Math.max(0, lane.position + LANE_WIDTH / 2 - viewportWidth / 2), behavior: smooth ? behavior() : 'instant' });
@@ -183,16 +201,13 @@
       const index = months.groups.findIndex(month => month.key === key.slice(0, 7));
       const month = months.groups[index];
       if (!month) return;
-      // Mount the destination month before aligning its date, without rendering the full history.
-      board.scrollTo({ top: monthOffsets[index]! + monthLaneOffsets[index]![month.lanes.findIndex(lane => lane.key === key)]!, behavior: 'instant' });
-      updateViewport();
+      // Render the destination before scrolling, then measure and align it without a moving smooth-scroll target.
+      scrollTop = monthOffsets[index]! + monthLaneOffsets[index]![month.lanes.findIndex(lane => lane.key === key)]!;
       await tick();
-      // Cache mounted heights before a jump can unmount the preceding month.
-      // Otherwise its estimated spacer moves the target after it has been aligned.
-      measured = { ...measured, ...Object.fromEntries([...board.querySelectorAll<HTMLElement>('[data-lane-key]')].map(node => [`d:${viewportWidth}:${node.dataset.laneKey}`, Math.ceil(node.getBoundingClientRect().height)])) };
-      await tick();
+      board.scrollTo({ top: scrollTop, behavior: 'instant' });
+      applyMeasurements(Object.fromEntries([...board.querySelectorAll<HTMLElement>('[data-lane-key]')].map(node => [`d:${viewportWidth}:${node.dataset.laneKey}`, Math.ceil(node.getBoundingClientRect().height)])));
       const target = board.querySelector<HTMLElement>(`[data-lane-key="${key}"]`);
-      if (target) board.scrollBy({ top: target.getBoundingClientRect().top - board.getBoundingClientRect().top - 56, behavior: smooth ? behavior() : 'instant' });
+      if (target) board.scrollBy({ top: target.getBoundingClientRect().top - board.getBoundingClientRect().top - 56, behavior: 'instant' });
     }
     updateViewport();
   }
@@ -218,38 +233,41 @@
     updateViewport();
   }
   function wheel(event: WheelEvent) {
-    if (!active || !board || view !== 'horizontal' || event.ctrlKey || event.metaKey || event.defaultPrevented) return;
+    if (!active || !board || event.ctrlKey || event.metaKey || event.defaultPrevented) return;
     cancelAnimationFrame(momentum);
-    // Keep native trackpad scrolling and vertical scrolling over tall event stacks.
-    if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
-    const overLane = event.target instanceof Element && event.target.closest('.date-lane') && !event.target.closest('.lane-header');
-    if (overLane && !event.shiftKey && (event.deltaY < 0 ? board.scrollTop > 0 : board.scrollTop < board.scrollHeight - board.clientHeight - 1)) return;
-    const unit = event.deltaMode === 1 ? 18 : event.deltaMode === 2 ? board.clientWidth : 1;
-    const next = Math.max(0, Math.min(board.scrollWidth - board.clientWidth, board.scrollLeft + event.deltaY * unit));
-    if (next === board.scrollLeft) return;
+    if (view !== 'horizontal') return;
+    const mode = event.deltaMode;
+    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    if (!delta) return;
+    const unit = mode === 1 ? 18 : mode === 2 ? (event.shiftKey ? board.clientHeight : board.clientWidth) : 1;
+    // The axis stays consistent over cards and at the ends. Shift accesses tall event stacks.
     event.preventDefault();
-    board.scrollLeft = next;
+    board.scrollBy({ [event.shiftKey ? 'top' : 'left']: delta * unit, behavior: 'instant' });
   }
   function beginDrag(event: MouseEvent) {
     cancelAnimationFrame(momentum);
     suppressClick = false;
-    if (event.button || !active || !board || (event.target as HTMLElement).closest('button:not(.open-action),a,input,select,textarea')) return;
-    drag = { x: event.pageX, y: event.pageY, left: board.scrollLeft, top: board.scrollTop, lastX: event.pageX, lastY: event.pageY, time: performance.now(), vx: 0, vy: 0 };
+    if (event.button || !active || !board || (event.target as HTMLElement).closest('button:not(.open-action),a:not(.pickups > a),input,select,textarea')) return;
+    const rect = board.getBoundingClientRect();
+    if (event.clientX >= rect.left + board.clientLeft + board.clientWidth || event.clientY >= rect.top + board.clientTop + board.clientHeight) return;
+    drag = { x: event.clientX, y: event.clientY, lastX: event.clientX, lastY: event.clientY, time: performance.now(), vx: 0, vy: 0 };
   }
   function moveDrag(event: MouseEvent) {
     if (!drag || !board) return;
-    if (!dragging && Math.hypot(event.pageX - drag.x, event.pageY - drag.y) < 12) return;
+    if (!dragging && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 12) return;
     dragging = true; suppressClick = true; event.preventDefault();
     const elapsed = performance.now() - drag.time;
-    if (elapsed > 0) { drag.vx = (event.pageX - drag.lastX) / elapsed * 16; drag.vy = (event.pageY - drag.lastY) / elapsed * 16; }
-    drag.lastX = event.pageX; drag.lastY = event.pageY; drag.time = performance.now();
-    board.scrollLeft = drag.left - (event.pageX - drag.x);
-    board.scrollTop = drag.top - (event.pageY - drag.y); scheduleViewport();
+    if (elapsed > 0) { drag.vx = (event.clientX - drag.lastX) / elapsed * 16; drag.vy = (event.clientY - drag.lastY) / elapsed * 16; }
+    // Incremental movement preserves virtual-row corrections made during the drag.
+    board.scrollLeft -= event.clientX - drag.lastX;
+    board.scrollTop -= event.clientY - drag.lastY;
+    drag.lastX = event.clientX; drag.lastY = event.clientY; drag.time = performance.now();
+    scheduleViewport();
   }
   function endDrag() {
     let vx = drag?.vx ?? 0, vy = drag?.vy ?? 0;
     const coast = () => { if (!board || Math.hypot(vx, vy) <= .5) return; board.scrollLeft -= vx; board.scrollTop -= vy; vx *= .92; vy *= .92; updateViewport(); momentum = requestAnimationFrame(coast); };
-    if (dragging && !matchMedia('(prefers-reduced-motion: reduce)').matches) coast();
+    if (dragging && drag && performance.now() - drag.time < 100 && !matchMedia('(prefers-reduced-motion: reduce)').matches) coast();
     dragging = false; drag = undefined;
   }
   function captureClick(event: MouseEvent) {
@@ -321,7 +339,7 @@
   </section>
 {:else}
   <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions (The scrollable date track is keyboard-focusable; mouse dragging supplements native keyboard scrolling.) -->
-  <section bind:this={board} class="timeline-board desktop" style:--timeline-card-width={`${LANE_WIDTH}px`} class:horizontal={view === 'horizontal'} class:vertical={view === 'vertical'} class:dragging tabindex="0" aria-label={view === 'vertical' ? 'Vertical event timeline' : 'Horizontal event timeline. Scroll or drag to move through dates.'} onmousedown={beginDrag} onclickcapture={captureClick} onwheel={wheel} onscroll={scheduleViewport}>
+  <section bind:this={board} class="timeline-board desktop" style:--timeline-card-width={`${LANE_WIDTH}px`} class:horizontal={view === 'horizontal'} class:vertical={view === 'vertical'} class:dragging tabindex="0" aria-label={view === 'vertical' ? 'Vertical event timeline' : 'Horizontal event timeline. Scroll or drag to move through dates. Shift + scroll to move up and down.'} title={view === 'horizontal' ? 'Scroll through dates. Shift + scroll to move up and down.' : undefined} onmousedown={beginDrag} ondragstart={event => event.preventDefault()} onclickcapture={captureClick} onwheel={wheel} onscroll={scheduleViewport}>
     {#if view === 'horizontal'}
       <div class="timeline-track" style:width={`${width}px`} style:min-height={`${trackHeight}px`}>
         {#each months.spans as month (month.key)}<div class="month-span" style:left={`${month.position}px`} style:width={`${month.width}px`} aria-hidden="true"></div>{/each}
@@ -345,15 +363,15 @@
         <div aria-hidden="true" style:height={`${monthOffsets[firstMonth] ?? 0}px`}></div>
         {#each months.groups.slice(firstMonth, lastMonth) as month, index (month.key)}
           {@const window = verticalWindow(firstMonth + index)}
-          <section class="vertical-month" data-month-key={month.key}><header class="month-header"><h2>{month.label}</h2>{#if month.count}<span>{month.count} {month.count === 1 ? 'event' : 'events'}</span>{/if}</header>
-            <div aria-hidden="true" style:height={`${window.before}px`}></div>
-            {#each month.lanes.slice(window.first, window.last) as lane (lane.key)}
-              <section use:measureRow={`d:${viewportWidth}:${lane.key}`} class="vertical-date" class:is-today={lane.key === timelineDateKey(now)} data-lane-key={lane.key}>
+          {@const offsets = monthLaneOffsets[firstMonth + index]!}
+          <!-- Position rows from the same offsets as scrolling: mounting an unmeasured row must not push its neighbors. -->
+          <section class="vertical-month" data-month-key={month.key} style:height={`${68 + offsets.at(-1)!}px`}><header class="month-header"><h2>{month.label}</h2>{#if month.count}<span>{month.count} {month.count === 1 ? 'event' : 'events'}</span>{/if}</header>
+            {#each month.lanes.slice(window.first, window.last) as lane, laneIndex (lane.key)}
+              <section use:measureRow={`d:${viewportWidth}:${lane.key}`} style:top={`${56 + offsets[window.first + laneIndex]!}px`} class="vertical-date" class:is-today={lane.key === timelineDateKey(now)} data-lane-key={lane.key}>
                 <header><time datetime={lane.key} title={lane.label}><strong>{lane.date.getUTCDate()}</strong><span>{weekdayFormatter.format(lane.date)}</span></time>{#if lane.events.length}<span>{lane.events.length} {lane.events.length === 1 ? 'event' : 'events'}</span>{/if}</header>
                 <div class="vertical-events">{#each lane.markers as marker}{@render markerView(marker)}{/each}{#each lane.events as event (event.id)}{@render card(event, imagesReady)}{/each}</div>
               </section>
             {/each}
-            <div aria-hidden="true" style:height={`${window.after}px`}></div>
           </section>
         {/each}
         <div aria-hidden="true" style:height={`${Math.max(0, monthOffsets.at(-1)! - (monthOffsets[lastMonth] ?? 0))}px`}></div>
@@ -367,7 +385,7 @@
   .month-span{position:absolute;inset-block:0;pointer-events:none;border-left:1px solid rgb(var(--accent-primary-rgb)/.15);background:transparent}.month-span:nth-child(even){background:rgb(var(--accent-primary-rgb)/.025)}.timeline-rail{position:absolute;top:52px;left:0;right:0;height:1px;background:var(--border-secondary)}
   .date-lane{position:absolute;z-index:2;top:0;display:flex;flex-direction:column;padding-bottom:16px;isolation:isolate}.lane-header{height:72px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 12px 16px}.lane-header::before{position:absolute;content:'';top:54px;left:50%;height:18px;width:1px;background:var(--border-secondary)}.lane-header::after{position:absolute;content:'';top:49px;left:calc(50% - 3px);width:7px;height:7px;border:2px solid var(--accent-primary);border-radius:50%;background:var(--color-canvas)}.lane-header time{color:var(--text-primary);font-size:13px;line-height:18px;font-weight:650;white-space:nowrap}.lane-meta{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:11px;line-height:14px}.lane-gap{font-size:10px}.lane-meta span+span::before{content:'·';margin-right:8px}.lane-events{display:grid;gap:10px;order:2}
   .lane-marker{margin:3px 0 8px;overflow:hidden;border:1px solid var(--border-subtle);border-radius:4px;background:var(--surface-1);order:1}.lane-marker.is-anniversary{margin-top:7px;order:4}.marker-banner{display:block;width:100%;height:auto;aspect-ratio:512/125;object-fit:contain;background:var(--bg-primary);border-bottom:1px solid var(--border-subtle)}.marker-label{display:flex;min-height:28px;padding:4px 7px;align-items:center;gap:5px;color:var(--text-secondary);font-size:10px;font-weight:650}.marker-label :global(svg){color:var(--accent-primary)}.horizontal .timeline-today-marker{position:absolute;top:52px;bottom:0;width:1px;pointer-events:none;background:var(--timeline-today-color,var(--accent-error))}.horizontal .timeline-today-marker>span{position:absolute;top:-10px;left:8px;padding:2px 5px;border:1px solid currentColor;border-radius:4px;background:var(--surface-overlay);color:var(--timeline-today-color,var(--accent-error));font-size:9px;font-weight:700}
-  .vertical{overflow-x:hidden;scroll-padding-top:56px;scrollbar-gutter:stable}.vertical-timeline{width:100%;margin-inline:auto;padding:0 24px 28px}.vertical-month{padding-bottom:12px}.month-header{position:sticky;z-index:12;top:0;display:flex;align-items:center;justify-content:space-between;min-height:56px;gap:16px;background:var(--bg-primary);border-bottom:1px solid var(--border-primary)}.month-header h2{margin:0;color:var(--text-primary);font-size:18px;font-weight:700}.month-header>span{color:var(--text-secondary);font-size:12px}.vertical-date{position:relative;display:grid;grid-template-columns:88px minmax(0,1fr);padding:16px 0;gap:24px;}.vertical-date::after{position:absolute;content:'';inset-block:0;left:98px;width:1px;background:var(--border-primary)}.vertical-date::before{position:absolute;z-index:1;content:'';top:30px;left:94px;width:9px;height:9px;border:2px solid var(--accent-primary);border-radius:50%;background:var(--bg-primary)}.vertical-date.is-today::before{border-color:var(--timeline-today-color,var(--accent-error))}.vertical-date>header{display:flex;min-width:0;flex-direction:column;gap:4px;align-self:start;text-align:right}.vertical-date time{display:flex;align-items:baseline;justify-content:flex-end;gap:6px;color:var(--text-primary)}.vertical-date time strong{font-size:26px;line-height:32px;font-weight:700;font-variant-numeric:tabular-nums}.vertical-date time span{font-size:12px}.vertical-date>header>span{font-size:11px;color:var(--text-secondary)}.vertical-events{display:grid;min-width:0;grid-template-columns:repeat(auto-fill,minmax(0,min(100%,var(--timeline-card-width))));align-items:start;gap:12px}.vertical-events .lane-marker{margin:0;order:initial}.vertical-events .marker-label{min-height:44px;font-size:13px;padding:8px 12px}
+  .vertical{overflow-x:hidden;scroll-padding-top:56px;scrollbar-gutter:stable}.vertical-timeline{width:100%;margin-inline:auto;padding:0 24px 28px}.vertical-month{position:relative;padding-bottom:12px}.month-header{position:sticky;z-index:12;top:0;display:flex;align-items:center;justify-content:space-between;min-height:56px;gap:16px;background:var(--bg-primary);border-bottom:1px solid var(--border-primary)}.month-header h2{margin:0;color:var(--text-primary);font-size:18px;font-weight:700}.month-header>span{color:var(--text-secondary);font-size:12px}.vertical-date{position:absolute;inset-inline:0;display:grid;grid-template-columns:88px minmax(0,1fr);padding:16px 0;gap:24px;}.vertical-date::after{position:absolute;content:'';inset-block:0;left:98px;width:1px;background:var(--border-primary)}.vertical-date::before{position:absolute;z-index:1;content:'';top:30px;left:94px;width:9px;height:9px;border:2px solid var(--accent-primary);border-radius:50%;background:var(--bg-primary)}.vertical-date.is-today::before{border-color:var(--timeline-today-color,var(--accent-error))}.vertical-date>header{display:flex;min-width:0;flex-direction:column;gap:4px;align-self:start;text-align:right}.vertical-date time{display:flex;align-items:baseline;justify-content:flex-end;gap:6px;color:var(--text-primary)}.vertical-date time strong{font-size:26px;line-height:32px;font-weight:700;font-variant-numeric:tabular-nums}.vertical-date time span{font-size:12px}.vertical-date>header>span{font-size:11px;color:var(--text-secondary)}.vertical-events{display:grid;min-width:0;grid-template-columns:repeat(auto-fill,minmax(0,min(100%,var(--timeline-card-width))));align-items:start;gap:12px}.vertical-events .lane-marker{margin:0;order:initial}.vertical-events .marker-label{min-height:44px;font-size:13px;padding:8px 12px}
   .mobile-feed{position:relative;width:100%;padding:12px 10px 24px 28px;background:var(--color-canvas)}.spine{position:absolute;inset-block:0;left:15px;width:1px;background:var(--border-secondary)}.feed-row{position:relative}.feed-item{position:relative;padding-bottom:10px;min-width:0}.dot{position:absolute;top:14px;left:-17px;width:8px;height:8px;border:2px solid var(--accent-primary);border-radius:50%;background:var(--surface-overlay)}.feed-item[data-event-type='support_card_banner'] .dot,.feed-item[data-event-type='champions_meeting'] .dot{border-color:var(--accent-purple)}.feed-item[data-event-type='paid_banner'] .dot,.feed-item[data-event-type='story_event'] .dot{border-color:var(--accent-warning)}.feed-item[data-event-type='campaign'] .dot{border-color:var(--accent-secondary)}.feed-date{position:sticky;z-index:8;top:0;display:flex;align-items:center;gap:6px;height:30px;margin:0 -2px 6px;padding:0 3px;border-bottom:1px solid var(--border-primary);background:var(--bg-secondary);font-size:11px;font-variant-numeric:tabular-nums}.feed-date time{font-weight:680}.feed-date>span{color:var(--text-muted)}.feed-date small{margin-left:auto;color:var(--text-muted);font-size:9px}.feed-events{display:grid;gap:7px}.mobile-feed .lane-marker{margin:0;min-height:52px;border-color:var(--border-primary);border-radius:5px}.mobile-feed .marker-label{min-height:50px;padding:8px 10px;gap:8px;font-size:12px}.feed-ad{--page-gutter-current:2px;--ad-inline-mobile-height:50px;--ad-leaderboard-height:50px;margin:2px 0 14px}.feed-ad :global(.ad-region){width:100%;margin-inline:0}
   @media(max-width:360px){.mobile-feed{padding-right:8px}}
 </style>

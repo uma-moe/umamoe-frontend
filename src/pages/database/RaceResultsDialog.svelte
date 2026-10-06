@@ -37,7 +37,7 @@
 </script>
 
 <div class="race-history-dialog">
-<Dialog bind:open title="Race History" maxWidth="1180px" mobileSheet contentPadding="8px 16px">
+<Dialog bind:open title="Race History" maxWidth="1180px" contentPadding="8px 16px">
   {#snippet headerIdentity(titleId)}
     <div class="character"><Artwork src={charImage} alt={charName || `Character ${charId}`} shape="circle" size="sm"/><span><h2 id={titleId}>Race History</h2><small>{charName} &middot; {entries.length} recorded race{entries.length === 1 ? '' : 's'}</small></span></div>
   {/snippet}

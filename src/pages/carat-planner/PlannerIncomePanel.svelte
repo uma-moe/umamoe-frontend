@@ -1,9 +1,9 @@
 <script lang="ts">
-  import type { CaratPlan, PlannerCompetitiveRewardVariant, PlannerCurrency, PlannerGlobalRewardComparison, PlannerIncomeCadence, PlannerIncomeRule, PlannerRewardEntry } from '@/lib/timeline/carat-planner';
+  import type { CaratPlan, PlannerCompetitiveRewardVariant, PlannerCurrency, PlannerIncomeCadence, PlannerIncomeRule, PlannerRewardEntry } from '@/lib/timeline/carat-planner';
   import { applyIncomePreset, applyScenarioSelection, PLANNER_INCOME_PRESETS, scenarioSelectionToEnable } from '@/lib/timeline/planner-income-presets';
   import { isLegacyTrainingPassIncomeRule } from '@/lib/timeline/planner-income-assumptions';
-  import { buildPlannerIncomeSections, enabledIncomeTotalLabel, incomeRuleScheduleLabel, type PlannerIncomeGroup, type PlannerIncomeSection } from './planner-income-view';
-  import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
+  import { buildPlannerIncomeSections, incomeRuleScheduleLabel, type PlannerIncomeGroup, type PlannerIncomeSection, type summarizePlannerIncome } from './planner-income-view';
+  import { itemIconPath } from '@/lib/catalog/item-icons';
   import type { IconName } from '@/components/icon-types';
   import Button from '@/components/Button.svelte';
   import Checkbox from '@/components/Checkbox.svelte';
@@ -14,14 +14,16 @@
 
   interface Props {
     plan: CaratPlan; groups: PlannerIncomeGroup[]; rules: PlannerIncomeRule[]; rewards: PlannerRewardEntry[];
-    competitiveVariants: PlannerCompetitiveRewardVariant[]; events: TimelineRecord[]; comparison?: PlannerGlobalRewardComparison;
+    competitiveVariants: PlannerCompetitiveRewardVariant[];
+    income: ReturnType<typeof summarizePlannerIncome> & { through: string; preview: boolean }; loading: boolean;
     expandedSections: Set<string>; selectionMemory: Map<string, Record<string, string>>;
     oncommit: (mutator: (plan: CaratPlan) => void) => void;
   }
-  let { plan, groups, rules, rewards, competitiveVariants, events, comparison, expandedSections = $bindable(), selectionMemory, oncommit }: Props = $props();
+  let { plan, income, loading, groups, rules, rewards, competitiveVariants, expandedSections = $bindable(), selectionMemory, oncommit }: Props = $props();
   const sections = $derived(buildPlannerIncomeSections(groups));
   const recurringRules = $derived(rules.filter(rule => !rule.scenario_group && !isLegacyTrainingPassIncomeRule(rule)));
-  const incomeTotal = $derived(enabledIncomeTotalLabel(plan, rules, events, comparison));
+  const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  const period = $derived(`${dateFormatter.format(new Date(plan.projectionStartDate + 'T00:00:00Z'))} – ${dateFormatter.format(new Date(income.through + 'T00:00:00Z'))}`);
   const presetIcons: Record<string, IconName> = { conservative: 'shield', casual: 'user', active: 'activity', completionist: 'star' };
   function markEdited(value: CaratPlan): void { if (value.incomePresetId) value.incomePresetEdited = true; }
   function selectedOption(group: PlannerIncomeGroup) { return group.options.find(option => option.value === plan.scenarioSelections[group.id]); }
@@ -58,6 +60,20 @@
 </script>
 
 <div class="income-panel">
+  <section class="income-overview" aria-label="Projected income" aria-busy={loading}>
+    <header class="panel-heading"><div><strong>Projected income</strong><span>{period} · {income.preview ? '30-day preview' : 'Through your last planned pull'}</span></div></header>
+    <p>Includes selected income, estimates, custom entries and dated rewards in this period. Excludes your starting balance and pull spending.</p>
+    {#if loading}<p>Loading income…</p>
+    {:else}
+      {#if income.resources.length}<dl class="income-resources">{#each income.resources as item (item.currency)}
+        <div data-currency={item.currency}><img src={itemIconPath(item.itemId)} width="24" height="24" alt=""/><dt>{item.label}</dt><dd class:deduction={item.amount < 0}>{item.formatted}</dd></div>
+      {/each}</dl>{:else}<p class="income-empty">No income is scheduled in this period. Selected sources count when their payouts fall within these dates.</p>{/if}
+      {#if income.sources.length}<details class="income-breakdown">
+        <summary><span>Included sources <small>{income.sources.length}</small></span><Icon name="chevron" size={16}/></summary>
+        <ul>{#each income.sources as source}<li><strong>{source.label}</strong><span>{source.amountLabel}</span></li>{/each}</ul>
+      </details>{/if}
+    {/if}
+  </section>
   <section aria-labelledby="income-assumptions-heading">
     <header class="panel-heading"><div><strong id="income-assumptions-heading">Income assumptions</strong><span>Choose expected results and optional estimated income.</span></div></header>
     <div class="presets" role="radiogroup" aria-label="Income assumption presets">
@@ -112,7 +128,7 @@
   </section>
   {#if recurringRules.length}
     <section aria-labelledby="income-rules-heading">
-      <header class="panel-heading"><div><strong id="income-rules-heading">Recurring income</strong><span>Choose the sources that apply to you.</span></div>{#if incomeTotal}<span class="income-total">{incomeTotal}</span>{/if}</header>
+      <header class="panel-heading"><div><strong id="income-rules-heading">Recurring income</strong><span>Choose the sources that apply to you.</span></div></header>
       <div class="rule-list">{#each recurringRules as rule (rule.id)}<button type="button" class:active={plan.enabledIncomeRuleIds.includes(rule.id)} aria-pressed={plan.enabledIncomeRuleIds.includes(rule.id)} onclick={() => toggleRule(rule)}><Icon name="refresh" size={18}/><span><strong>{rule.label}</strong><small>{incomeRuleScheduleLabel(rule)}</small></span><b>+{rule.amount.toLocaleString('en-US')}</b><Icon name={plan.enabledIncomeRuleIds.includes(rule.id) ? 'check' : 'add'} size={17}/></button>{/each}</div>
     </section>
   {/if}
@@ -131,7 +147,12 @@
 
 <style>
   .income-panel{grid-column:1/-1;display:grid;gap:12px;min-width:0;--control-height:36px;--select-label-size:11px;--select-description-size:9px}
-  .panel-heading{min-height:36px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}.panel-heading>div{display:flex;align-items:baseline;gap:8px}.panel-heading strong{font-size:12px}.panel-heading span{color:var(--text-secondary);font-size:10px}.panel-heading .income-total{color:var(--accent-secondary);font-size:10px;text-align:right}
+  .panel-heading{min-height:36px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}.panel-heading>div{display:flex;align-items:baseline;gap:8px}.panel-heading strong{font-size:12px}.panel-heading span{color:var(--text-secondary);font-size:10px}
+  .income-overview{min-width:0;border:1px solid var(--border-subtle);border-radius:var(--radius-sm);background:var(--surface-1);padding:10px 12px}.income-overview .panel-heading{min-height:0;margin-bottom:5px}.income-overview .panel-heading>div{flex-wrap:wrap}.income-overview p{margin:0;color:var(--text-secondary);font-size:11px;line-height:1.5}.income-overview .income-empty{margin-top:10px}
+  .income-resources{display:flex;flex-wrap:wrap;gap:10px 24px;margin:12px 0}.income-resources>div{display:grid;grid-template-columns:24px auto;align-items:center;gap:2px 7px}.income-resources img{grid-row:1/3;object-fit:contain}.income-resources dt{font-size:10px;color:var(--text-secondary)}.income-resources dd{margin:0;font-size:14px;font-weight:700;color:var(--accent-secondary);font-variant-numeric:tabular-nums}.income-resources dd.deduction{color:var(--accent-warning)}
+  .income-breakdown{border-top:1px solid var(--border-subtle)}.income-breakdown summary{min-height:32px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;font-size:11px;list-style:none}.income-breakdown summary::-webkit-details-marker{display:none}.income-breakdown summary small{margin-left:5px;color:var(--text-secondary)}.income-breakdown[open] summary :global(svg){transform:rotate(180deg)}.income-breakdown summary:focus-visible{outline:2px solid var(--accent-primary);outline-offset:2px}.income-breakdown ul{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto}.income-breakdown li{display:flex;justify-content:space-between;gap:6px 16px;padding:6px 0;border-top:1px solid var(--border-subtle);font-size:11px}.income-breakdown li strong{font-weight:500}.income-breakdown li span{color:var(--text-secondary);text-align:right}
+  .income-breakdown li strong,.income-breakdown li span{min-width:0;overflow-wrap:anywhere}
+  @media(max-width:600px){.income-resources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.income-breakdown li{display:grid;gap:3px}.income-breakdown li span{text-align:left}}
   .presets{display:grid;grid-template-columns:minmax(150px,.72fr) repeat(4,minmax(120px,1fr));gap:5px;padding:5px;margin-bottom:8px;border:1px solid var(--border-subtle);border-radius:var(--radius-sm);background:var(--surface-1)}
   .preset-heading{display:grid;grid-template-columns:17px minmax(0,1fr);gap:7px;align-items:center;padding:0 5px}.preset-heading strong{font-size:11px}.preset-heading small{font-size:9px}.preset{min-height:38px;display:grid;grid-template-columns:14px 15px minmax(0,1fr);align-items:center;gap:6px;padding:5px 7px;border:1px solid var(--border-primary);background:var(--surface-2);border-radius:var(--radius-sm);cursor:pointer}.preset input{width:14px;height:14px;margin:0;accent-color:var(--accent-primary)}.preset.active{border-color:var(--accent-primary);background:var(--color-accent-soft)}.preset strong{font-size:10px}.preset small{font-size:9px}.preset span,.preset-heading span{min-width:0;display:grid;gap:2px}.preset small,.preset-heading small{color:var(--text-secondary);line-height:1.2}.preset:hover{background:var(--surface-2)}.preset:focus-within{outline:2px solid var(--accent-primary);outline-offset:1px}
   .scenario-sections{display:grid;gap:6px}.income-section{border:1px solid var(--border-subtle);border-radius:var(--radius-sm);background:var(--surface-1)}.income-section>header{display:grid;grid-template-columns:minmax(0,1fr) auto;min-height:44px;align-items:stretch}

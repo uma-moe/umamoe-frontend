@@ -39,13 +39,17 @@ test('mobile shell exposes all destinations from the header', async ({ page }) =
   await expect(page.locator('[data-shell-bottom]')).toHaveCount(0);
   await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
   const navigation = page.getByRole('navigation', { name: 'Mobile navigation', exact: true });
-  await expect(navigation.locator('.navigation-link')).toHaveText(['Database', 'Veterans', 'Clubs', 'Rankings', 'Activity', 'Tierlist', 'Tools', 'Timeline']);
+  await expect(navigation.locator('.navigation-link')).toHaveText(['Database Updated', 'Veterans', 'Clubs', 'Rankings', 'Activity', 'Tierlist', 'ToolsUpdated', 'TimelineUpdated']);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test('1536px shell centers the Tools landing page beside the compact sidebar', async ({ page }) => {
   await page.setViewportSize({ width: 1536, height: 864 });
   await page.goto('/tools');
+  await expect(page.locator('main .updated-feature')).toHaveText([
+    'Carat PlannerUpdatedProject income, tickets, pulls, and banner goals',
+    'Lineage PlannerUpdatedPlan your full inheritance tree'
+  ]);
 
   const rail = page.locator('[data-shell-rail]');
   const box = await rail.boundingBox();
@@ -78,6 +82,11 @@ test('expanded shell keeps the original navbar destinations and wide layout', as
 test('Home keeps the Angular landing background full-width inside the new shell', async ({ page }) => {
   await page.setViewportSize({ width: 1536, height: 864 });
   await page.goto('/');
+  await expect(page.locator('main .updated-feature')).toHaveText([
+    'DatabaseUpdatedBrowse the Database',
+    'TimelineUpdatedEstimated Release Schedule',
+    'Tools & AnalyticsUpdatedAdvanced tools and statistics'
+  ]);
 
   const geometry = await page.evaluate(() => {
     const frame = document.querySelector<HTMLElement>('[data-route-id="home"]');

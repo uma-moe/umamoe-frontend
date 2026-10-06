@@ -70,8 +70,8 @@ test('polyfilled account menus retain layout, keyboard focus and light dismissal
   await expect(trigger).toBeFocused();
   await trigger.click();
   await expect(menu).toBeVisible();
-  // The account menu covers the heading's center on phones; click its exposed edge.
-  await page.getByRole('heading', { name: 'Tools & Calculators', exact: true }).click({ position: { x: 4, y: 4 } });
+  // The mobile menu covers the heading's centre; its left edge remains outside.
+  await page.getByRole('heading', { name: 'Tools & Calculators', exact: true }).click({ position: { x: 1, y: 1 } });
   await expect(menu).toBeHidden();
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('#app-error')).toBeHidden();

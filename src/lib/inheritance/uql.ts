@@ -19,7 +19,7 @@ const fields = new Set([
   'trainer_id', 'trainer_name', 'name', 'blue_sparks', 'pink_sparks', 'green_sparks', 'white_sparks', 'main_white_factors', 'main_white_sparks',
   'left_white_factors', 'left_white_sparks', 'right_white_factors', 'right_white_sparks', 'main_win_saddles', 'left_win_saddles', 'right_win_saddles', 'race_results'
 ]);
-const functions = new Set(['contains', 'has', 'overlaps', 'any', 'has_all', 'contains_all', 'all', 'support_card', 'has_support_card', 'spark_sum', 'optional_white', 'optional_main_white', 'optional_any_white', 'lineage_white']);
+const functions = new Set(['any_spark', 'contains', 'has', 'overlaps', 'any', 'has_all', 'contains_all', 'all', 'support_card', 'has_support_card', 'spark_sum', 'optional_white', 'optional_main_white', 'optional_any_white', 'lineage_white']);
 const keywords = new Set(['where', 'and', 'or', 'not', 'in', 'between', 'like', 'ilike', 'mod', 'true', 'false', 'null']);
 const functionParameters = new Set([
   'id', 'card_id', 'support_card_id', 'lb', 'limitbreak', 'limit_break', 'limit_break_count', 'exp', 'experience',

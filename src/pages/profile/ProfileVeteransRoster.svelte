@@ -519,7 +519,7 @@
 
 {#if !compact && !desktopFilters.current}
 <div class="filter-drawer">
-  <Dialog id="veteran-filters" bind:open={filterDrawerOpen} title={drawerView === 'filters' ? 'Filter veterans' : 'Sort veterans'} maxWidth="600px" maxHeight="calc(100dvh - 24px)" height="calc(100dvh - 24px)" contentPadding="0" mobileContentPadding="0" mobileSheet>
+  <Dialog id="veteran-filters" bind:open={filterDrawerOpen} title={drawerView === 'filters' ? 'Filter veterans' : 'Sort veterans'} maxWidth="600px" maxHeight="calc(100dvh - 24px)" height="calc(100dvh - 24px)" contentPadding="0" mobileContentPadding="0">
     {#if filterDrawerOpen}
       {#if drawerView === 'filters'}
         {#if activeCount}<div class="drawer-selected">{@render activeChips()}</div>{/if}

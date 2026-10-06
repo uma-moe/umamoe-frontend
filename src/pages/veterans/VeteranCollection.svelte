@@ -75,15 +75,15 @@
     {#if !compact || ($authUser && !accounts.length)}<div class="collection-notice">
       {#if !$authUser}{@render signInNotice()}
       {:else if $workspaces.length === 1}<span>Import now, then link and verify a trainer account to share your veterans.</span><Button href="/settings" variant="secondary" size="sm" icon="connect" onclick={onnavigate}>Open Settings</Button>
-      {:else if accountId}<span>Uploads are added to this account. Existing veterans are kept.</span>
-      {:else}<span>Saved on this device. Select an account above to add your veterans to it.</span>{/if}
+      {:else if accountId}<span>Each upload syncs this account to the selected files: adds new veterans, updates matches, and removes missing ones.</span>
+      {:else}<span>Each upload replaces this device collection. Select an account above to sync it.</span>{/if}
     </div>{/if}
     {#if $authUser && localCount && $workspaces.length > 1}
-      <section class="device-transfer" aria-label="Add device veterans to your account">
+      <section class="device-transfer" aria-label="Sync device veterans to your account">
         <Icon name="connect" size={22}/>
-        <div><strong>{localCount} veteran{localCount === 1 ? '' : 's'} on this device</strong><p>Your existing veterans and device copy are kept.</p></div>
+        <div><strong>{localCount} veteran{localCount === 1 ? '' : 's'} on this device</strong><p>Replaces the account collection. Your device copy is kept.</p></div>
         {#if !accountId && accounts.length > 1}<div class="transfer-target"><SelectFieldSlim id={`${id}-transfer`} label="Destination account" hideLabel options={accounts.map(account => ({value:account.accountId!,label:account.label}))} value={destination?.accountId ?? ''} onchange={value => transferAccountId=value}/></div>{/if}
-        <Button size="sm" icon="upload" disabled={!destination || accountsBusy || $veteranImportBusy || !!storageError} onclick={() => sync(true, destination?.accountId)}>{$veteranImportBusy ? 'Adding…' : !accountId && accounts.length > 1 ? 'Add veterans' : `Add to ${destination?.label ?? 'account'}`}</Button>
+        <Button size="sm" icon="upload" disabled={!destination || accountsBusy || $veteranImportBusy || !!storageError} onclick={() => sync(true, destination?.accountId)}>{$veteranImportBusy ? 'Syncing…' : !accountId && accounts.length > 1 ? 'Sync veterans' : `Sync to ${destination?.label ?? 'account'}`}</Button>
       </section>
     {/if}
     {#if storageError || accountsError}<div class="feedback error" role="alert"><span>{storageError || accountsError}</span><Button variant="secondary" size="sm" onclick={() => storageError ? loadDrafts(scope) : loadAccounts()}>Retry</Button></div>{/if}
@@ -92,7 +92,7 @@
   </div>
   {#if children}{@render children(dropZone, chooseFile)}{/if}
   {#if compact && !$authUser}<div class="signin-footer">{@render signInNotice()}</div>{/if}
-  {#if dragging > 0}<div class="drop-overlay" aria-live="polite"><Icon name="upload" size={32}/><strong>{$veteranImportBusy ? 'An upload is in progress' : 'Drop here to upload'}</strong><span>{accountId ? `Add to ${$activeWorkspace.label}` : 'Save on this device'}</span></div>{/if}
+  {#if dragging > 0}<div class="drop-overlay" aria-live="polite"><Icon name="upload" size={32}/><strong>{$veteranImportBusy ? 'An upload is in progress' : 'Drop here to upload'}</strong><span>{accountId ? `Sync to ${$activeWorkspace.label}` : 'Save on this device'}</span></div>{/if}
 </section>
 
 {#snippet dropZone()}<div class="collection-drop" class:empty-upload={compact && empty} class:picker-upload={compact && empty}>
@@ -101,7 +101,7 @@
   {#if compact && empty}{@render exportHelp()}{/if}
 </div>{/snippet}
 {#snippet exportHelp()}<div class="export-help"><div><strong>Need a veteran export?</strong><p>Get your collection with umadump.</p></div><Button href="https://werseter.github.io/umadump/" target="_blank" size="sm" icon="download">Get umadump</Button></div>{/snippet}
-{#snippet signInNotice()}<span>Stored on this device. Sign in to add to your account.</span><Button href="/login?returnTo=/veterans" variant="secondary" size="sm" icon="user" onclick={onnavigate}>Sign in</Button>{/snippet}
+{#snippet signInNotice()}<span>Each upload replaces this device collection. Sign in to sync it to your account.</span><Button href="/login?returnTo=/veterans" variant="secondary" size="sm" icon="user" onclick={onnavigate}>Sign in</Button>{/snippet}
 
 <style>
   .veteran-collection { position:relative; min-width:0; display:flex; flex-direction:column; gap:16px; }

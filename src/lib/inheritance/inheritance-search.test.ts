@@ -10,12 +10,13 @@ describe('inheritance search contract', () => {
     filters.white = [{ factorId: 0, minimumStars: 1 }];
     let query = inheritanceSearchQuery(filters, 0, 12);
     expect(query.get('green_sparks')).toBe('2,3');
-    expect(query.get('main_parent_green_sparks')).toBe('2,3');
+    expect(query.get('main_parent_green_sparks')).toBeNull();
+    expect(query.get('uql')).toBe('(main_green_factors in (2, 3))');
     expect(query.has('white_sparks')).toBe(false);
     expect(activeInheritanceFilterCount(filters)).toBe(2);
     filters.green.push({ factorId: 100010, minimumStars: 1, maximumStars: 1, operator: 'or' }, { factorId: 0, minimumStars: 3, maximumStars: 3 });
     query = inheritanceSearchQuery(filters, 0, 12);
-    expect(query.get('uql')).toBe('overlaps(green_sparks, (2,3,1000101)) and overlaps(green_sparks, (3))');
+    expect(query.get('uql')).toBe('overlaps(green_sparks, (2,3,1000101)) and overlaps(green_sparks, (3)) and (main_green_factors in (2, 3))');
   });
   it('keeps UQL requests independent of structured controls while retaining target and legacy context', () => {
     const filters = emptyInheritanceFilters();

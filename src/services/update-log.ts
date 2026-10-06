@@ -21,6 +21,50 @@ export interface UpdateEntry {
 // Define your updates here - newest first
 export const UPDATE_LOG: UpdateEntry[] = [
   {
+    title: 'Usability update',
+    date: '2026-09-30',
+    categories: [
+      {
+        category: 'major', label: 'Pull plans & actual results', icon: 'diamond',
+        items: [
+          { text: 'Add banner notes and record actual pulls and copies. Both save and sync with your plan.', link: '/timeline?tab=carat-planner' },
+          { text: 'Track goals and Uncap Crystals, compare results with your plan, and carry savings or extra spending forward.' }
+        ]
+      },
+      {
+        category: 'improvement', label: 'Income & ticket planning', icon: 'paid',
+        items: [
+          { text: 'Toggle monthly ticket shops individually, with exchange costs shown.', link: '/timeline?tab=carat-planner' },
+          { text: 'See all projected resources through your last pull, or a 30-day preview for an empty plan.' },
+          { text: 'Team Trials half classes now show weekly averages. Duplicate Daily Carat Packs count only once.' }
+        ]
+      },
+      {
+        category: 'improvement', label: 'Spark filters', icon: 'search',
+        items: [
+          { text: 'Filter lineage sparks by stars or occurrences; combine main-parent requirements with AND/OR.', link: '/database' },
+          { text: 'Ranges are remembered after reload. UQL supports occurrence searches like Groundwork = 3x.' }
+        ]
+      },
+      {
+        category: 'improvement', label: 'Parent picker', icon: 'lineage',
+        items: [{ text: 'Search bookmarked and partner parents by trainer username or Uma name.', link: '/tools/lineage-planner' }]
+      },
+      {
+        category: 'improvement', label: 'Timeline', icon: 'timeline',
+        items: [
+          { text: 'Smoother scrolling, dragging and date navigation in both Timeline views.', link: '/timeline' }
+        ]
+      },
+      {
+        category: 'bugfix', label: 'Layout improvements', icon: 'check',
+        items: [
+          { text: 'Better pull-plan layouts, compact mobile Notes/Results buttons and vertically centered dialogs.' }
+        ]
+      }
+    ]
+  },
+  {
     title: 'uma.moe 2.0',
     version: '2.0',
     date: '2026-09-18',

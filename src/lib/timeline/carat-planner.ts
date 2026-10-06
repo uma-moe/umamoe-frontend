@@ -13,6 +13,8 @@ import {
 } from './planner-reward-assumptions';
 import {
   randomGameplayIncomeRules,
+  dailyCaratPackPurchaseRule,
+  canonicalIncomeRuleId,
   incomeRuleScenarioSelectionMatches,
   isLegacyTrainingPassIncomeRule,
   speculativeIncomeEntries,
@@ -45,13 +47,13 @@ export interface PlannerDataBundle { core: PlannerCoreResource; income: PlannerI
 export interface PlannerCustomIncome { id: string; label: string; currency: PlannerCurrency; amount: number; cadence: PlannerIncomeCadence; startDate: string; endDate?: string; every?: number; }
 export interface PlannerBalances { freeJewels: number; paidJewels: number; umaTickets: number; supportTickets: number; rainbowCrystals: number; goldCrystals: number; rainbowFullCrystals: number; goldFullCrystals: number; }
 export interface PlannerPickupGoal { pickupId: number; desiredCopies: number; }
-export interface PlannerTarget { id: string; eventId: string; gachaId?: number; gachaIds?: number[]; title: string; bannerKind: 'character' | 'support' | 'paid' | 'other'; imagePath?: string; bannerStart?: string; bannerEnd?: string; pullTiming: 'start' | 'end' | 'custom'; customPullDate?: string; plannedPulls: number; desiredCopies: number; pickupId?: number; pickupGoals?: PlannerPickupGoal[]; useTickets: boolean; ticketLimit?: number; allowPaidJewels: boolean; rainbowCrystalsPlanned?: number; goldCrystalsPlanned?: number; }
+export interface PlannerTarget { id: string; eventId: string; notes?: string; gachaId?: number; gachaIds?: number[]; title: string; bannerKind: 'character' | 'support' | 'paid' | 'other'; imagePath?: string; bannerStart?: string; bannerEnd?: string; pullTiming: 'start' | 'end' | 'custom'; customPullDate?: string; plannedPulls: number; actualPulls?: number; actualCopies?: Record<string, number>; desiredCopies: number; pickupId?: number; pickupGoals?: PlannerPickupGoal[]; useTickets: boolean; ticketLimit?: number; allowPaidJewels: boolean; rainbowCrystalsPlanned?: number; goldCrystalsPlanned?: number; }
 export interface PlannerVariableRewardSelection { optionId: string; label: string; availableAt: string; amounts: Partial<Record<PlannerCurrency, number>>; }
 export interface CaratPlan { id: string; name: string; createdAt: string; updatedAt: string; projectionStartDate: string; balances: PlannerBalances; enabledIncomeRuleIds: string[]; enabledRewardIds: string[]; disabledRewardIds: string[]; enabledRewardEventIds: string[]; disabledEventIds: string[]; scenarioSelections: Record<string, string>; variableRewardSelections: Record<string, PlannerVariableRewardSelection>; freePullCampaignSelections: Record<string, string>; resourceDefaultsApplied: boolean; incomePresetId?: 'conservative' | 'casual' | 'active' | 'completionist'; incomePresetEdited?: boolean; customIncome: PlannerCustomIncome[]; targets: PlannerTarget[]; [key: string]: unknown; }
 export interface CaratPlanCollection { version: 1; activePlanId: string; plans: CaratPlan[]; }
 export interface PlannerGoalProjection { pickupId: number; desiredCopies: number; copiesNeededFromPulls: number; crystalCopiesApplied: number; crystalKind?: 'rainbow' | 'gold'; pickupRate?: number; probability?: number; }
 export interface PlannerLedgerEntry { id: string; label: string; date: string; currency: PlannerCurrency; amount: number; source: 'rule' | 'custom' | 'reward'; }
-export interface TargetProjection { income: PlannerLedgerEntry[]; targetId: string; pullDate: string; balanceBefore: PlannerBalances; fundedPulls: number; plannedPulls: number; shortfallJewels: number; freePullsUsed: number; freeJewelPulls: number; paidJewelPulls: number; ticketPulls: number; freeJewelsAfter: number; paidJewelsAfter: number; ticketsAfter: number; rewardCaratsGained: number; sparkCopies: number; rainbowCrystalsUsed: number; goldCrystalsUsed: number; pickupProbability?: number; pickupGoals: PlannerGoalProjection[]; ratesAvailable: boolean; jointProbabilityExact: boolean; }
+export interface TargetProjection { income: PlannerLedgerEntry[]; targetId: string; pullDate: string; balanceBefore: PlannerBalances; fundedPulls: number; plannedPulls: number; actualPulls?: number; shortfallJewels: number; freePullsUsed: number; freeJewelPulls: number; paidJewelPulls: number; ticketPulls: number; freeJewelsAfter: number; paidJewelsAfter: number; ticketsAfter: number; rewardCaratsGained: number; sparkCopies: number; rainbowCrystalsUsed: number; goldCrystalsUsed: number; pickupProbability?: number; pickupGoals: PlannerGoalProjection[]; ratesAvailable: boolean; jointProbabilityExact: boolean; }
 export interface PlanProjection { unallocatedIncome: PlannerLedgerEntry[]; targets: TargetProjection[]; balances: PlannerBalances; totalShortfallJewels: number; requiredPaidJewels: number; plannedPulls: number; }
 
 /** Planner records are JSON-compatible by contract. This also safely unwraps
@@ -65,6 +67,20 @@ const integer = (value: unknown): number => { const numeric = Number(value); ret
 const number = (value: unknown, max = 10_000_000): number => Math.min(max, Math.max(0, integer(value)));
 const text = (value: unknown, fallback: string, max = 100): string => typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : fallback;
 function balances(value: unknown): PlannerBalances { const item = value && typeof value === 'object' ? value as Record<string, unknown> : {}; return { freeJewels: number(item.freeJewels, Infinity), paidJewels: number(item.paidJewels, Infinity), umaTickets: number(item.umaTickets, Infinity), supportTickets: number(item.supportTickets, Infinity), rainbowCrystals: number(item.rainbowCrystals, Infinity), goldCrystals: number(item.goldCrystals, Infinity), rainbowFullCrystals: number(item.rainbowFullCrystals, Infinity), goldFullCrystals: number(item.goldFullCrystals, Infinity) }; }
+/** A missing result differs from an explicitly recorded zero. */
+export function recordedPlannerCount(value: unknown): number | undefined {
+  if ((typeof value !== 'number' && typeof value !== 'string') || String(value).trim() === '' || !Number.isFinite(Number(value)) || Number(value) < 0) return undefined;
+  return number(value, 5000);
+}
+function recordedCopies(value: unknown): Record<string, number> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  // "chosen" records the unnamed selected card on step-up banners.
+  const entries = Object.entries(value).slice(0, 20).flatMap(([pickupId, raw]) => {
+    const count = recordedPlannerCount(raw);
+    return (pickupId === 'chosen' || /^[1-9]\d*$/.test(pickupId) && Number.isSafeInteger(Number(pickupId))) && count !== undefined ? [[pickupId, count] as const] : [];
+  });
+  return entries.length ? Object.fromEntries(entries) : undefined;
+}
 function target(value: unknown): PlannerTarget | null {
   if (!value || typeof value !== 'object') return null;
   const item = value as Record<string, unknown>;
@@ -85,15 +101,16 @@ function target(value: unknown): PlannerTarget | null {
   });
   const pickupId = pickupGoals[0]?.pickupId ?? (item.pickupId === undefined ? undefined : number(item.pickupId, Number.MAX_SAFE_INTEGER) || undefined);
   const desiredCopies = pickupGoals[0]?.desiredCopies ?? legacyDesiredCopies;
+  const notes = typeof item.notes === 'string' ? item.notes.slice(0, 2000) : '';
   return {
-    id: text(item.id, id('target')), eventId,
+    id: text(item.id, id('target')), eventId, ...(notes ? { notes } : {}),
     gachaId: item.gachaId === undefined ? undefined : number(item.gachaId, Number.MAX_SAFE_INTEGER),
     gachaIds: numberArray(item.gachaIds), title, bannerKind: kind,
     imagePath: text(item.imagePath, '', 500) || undefined,
     bannerStart: validPlannerDateKey(item.bannerStart) || undefined,
     bannerEnd: validPlannerDateKey(item.bannerEnd) || undefined,
     pullTiming: timing, customPullDate: validPlannerDateKey(item.customPullDate) || undefined,
-    plannedPulls: number(item.plannedPulls, 5000), desiredCopies, pickupId,
+    plannedPulls: number(item.plannedPulls, 5000), actualPulls: recordedPlannerCount(item.actualPulls), actualCopies: recordedCopies(item.actualCopies), desiredCopies, pickupId,
     pickupGoals: Array.isArray(item.pickupGoals) ? pickupGoals : pickupId ? [{ pickupId, desiredCopies }] : [],
     useTickets: item.useTickets !== false,
     ticketLimit: item.ticketLimit === undefined ? undefined : number(item.ticketLimit, 5000),
@@ -103,7 +120,7 @@ function target(value: unknown): PlannerTarget | null {
   };
 }
 export function createPlan(name = 'My plan'): CaratPlan { const now = new Date().toISOString(); return { id: id('plan'), name, createdAt: now, updatedAt: now, projectionStartDate: now.slice(0, 10), balances: balances({}), enabledIncomeRuleIds: [], enabledRewardIds: [], disabledRewardIds: [], enabledRewardEventIds: [], disabledEventIds: [], scenarioSelections: { speculative_income: 'include', ...CONDITIONAL_REWARD_DEFAULT_SELECTIONS }, variableRewardSelections: {}, freePullCampaignSelections: {}, resourceDefaultsApplied: false, customIncome: [], targets: [] }; }
-export function sanitizePlan(value: unknown): CaratPlan | null { if (!value || typeof value !== 'object') return null; const item = value as Record<string, unknown>; const now = new Date().toISOString(); return { ...item, id: text(item.id, id('plan')), name: text(item.name, 'Untitled plan', 80), createdAt: text(item.createdAt, now), updatedAt: text(item.updatedAt, now), projectionStartDate: validPlannerDateKey(item.projectionStartDate) || now.slice(0, 10), balances: balances(item.balances), enabledIncomeRuleIds: stringArray(item.enabledIncomeRuleIds), enabledRewardIds: stringArray(item.enabledRewardIds), disabledRewardIds: stringArray(item.disabledRewardIds), enabledRewardEventIds: stringArray(item.enabledRewardEventIds), disabledEventIds: stringArray(item.disabledEventIds), scenarioSelections: sanitizeScenarioSelections(item.scenarioSelections), variableRewardSelections: sanitizeVariableSelections(item.variableRewardSelections), freePullCampaignSelections: recordString(item.freePullCampaignSelections), resourceDefaultsApplied: item.resourceDefaultsApplied === true, incomePresetId: ['conservative','casual','active','completionist'].includes(String(item.incomePresetId)) ? item.incomePresetId as CaratPlan['incomePresetId'] : undefined, incomePresetEdited: item.incomePresetEdited === true, customIncome: (Array.isArray(item.customIncome) ? item.customIncome : []).map(customIncome).filter((entry): entry is PlannerCustomIncome => Boolean(entry)).slice(0, 200), targets: (Array.isArray(item.targets) ? item.targets : []).map(target).filter((entry): entry is PlannerTarget => Boolean(entry)).slice(0, 200) } as CaratPlan; }
+export function sanitizePlan(value: unknown): CaratPlan | null { if (!value || typeof value !== 'object') return null; const item = value as Record<string, unknown>; const now = new Date().toISOString(); return { ...item, id: text(item.id, id('plan')), name: text(item.name, 'Untitled plan', 80), createdAt: text(item.createdAt, now), updatedAt: text(item.updatedAt, now), projectionStartDate: validPlannerDateKey(item.projectionStartDate) || now.slice(0, 10), balances: balances(item.balances), enabledIncomeRuleIds: [...new Set(stringArray(item.enabledIncomeRuleIds).map(canonicalIncomeRuleId))], enabledRewardIds: stringArray(item.enabledRewardIds), disabledRewardIds: stringArray(item.disabledRewardIds), enabledRewardEventIds: stringArray(item.enabledRewardEventIds), disabledEventIds: stringArray(item.disabledEventIds), scenarioSelections: sanitizeScenarioSelections(item.scenarioSelections), variableRewardSelections: sanitizeVariableSelections(item.variableRewardSelections), freePullCampaignSelections: recordString(item.freePullCampaignSelections), resourceDefaultsApplied: item.resourceDefaultsApplied === true, incomePresetId: ['conservative','casual','active','completionist'].includes(String(item.incomePresetId)) ? item.incomePresetId as CaratPlan['incomePresetId'] : undefined, incomePresetEdited: item.incomePresetEdited === true, customIncome: (Array.isArray(item.customIncome) ? item.customIncome : []).map(customIncome).filter((entry): entry is PlannerCustomIncome => Boolean(entry)).slice(0, 200), targets: (Array.isArray(item.targets) ? item.targets : []).map(target).filter((entry): entry is PlannerTarget => Boolean(entry)).slice(0, 200) } as CaratPlan; }
 function customIncome(value: unknown): PlannerCustomIncome | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const item = value as Record<string, unknown>;
@@ -118,6 +135,12 @@ function stringArray(value: unknown): string[] { return Array.isArray(value) ? [
 function numberArray(value: unknown): number[] { return Array.isArray(value) ? [...new Set(value.map(Number).filter((item) => Number.isFinite(item) && item >= 0).map(Math.trunc))] : []; }
 function sanitizeScenarioSelections(value: unknown): Record<string, string> {
   const selections = recordString(value);
+  const legacyShop = selections.monthly_shop_tickets;
+  if (legacyShop === 'include' || legacyShop === 'friend_points') {
+    selections.monthly_shop_friend_points ??= 'include';
+    if (legacyShop === 'include') selections.monthly_shop_clovers ??= 'include';
+  }
+  delete selections.monthly_shop_tickets;
   const legacy = selections.seasonal_gift_rewards;
   if (legacy) {
     for (const group of ['valentines_gift_rewards', 'white_day_gift_rewards', 'christmas_gift_rewards']) {
@@ -352,6 +375,8 @@ export function buildPlannerLedger(plan: CaratPlan, bundle: PlannerDataBundle | 
   for (const rule of bundle?.income.rules ?? []) {
     if (isLegacyTrainingPassIncomeRule(rule) || (!rule.scenario_group && !plan.enabledIncomeRuleIds.includes(rule.id)) || !incomeRuleScenarioSelectionMatches(rule, plan.scenarioSelections)) continue;
     entries.push(...expandIncomeRule(rule, start, through));
+    const purchase = dailyCaratPackPurchaseRule(rule, dayKey(start));
+    if (purchase) entries.push(...expandIncomeRule(purchase, start, through));
   }
   const activeRewards = (bundle?.rewards.rewards ?? []).flatMap(reward => {
     if (reward.event_id && plan.disabledEventIds.includes(reward.event_id)) return [];
@@ -452,9 +477,11 @@ export function projectPlan(plan: CaratPlan, costOrBundle: number | PlannerDataB
     const cardKind = plannerCardKind(target, gacha);
     const planned = paidOnly ? Math.min(Math.floor(number(target.plannedPulls, 5000) / 10) * 10, steps.reduce((sum, step) => sum + step.pulls, 0)) : number(target.plannedPulls, 5000);
     plannedPulls += planned;
+    const actualPulls = recordedPlannerCount(target.actualPulls);
+    const spendingPulls = actualPulls === undefined ? planned : paidOnly ? Math.min(Math.floor(actualPulls / 10) * 10, steps.reduce((sum, step) => sum + step.pulls, 0)) : actualPulls;
     const freePullsAvailable = campaignPulls.has(target.id) ? campaignPulls.get(target.id)! : number(gacha?.free_pulls, 5000);
-    const freePullsUsed = paidOnly ? 0 : Math.min(planned, freePullsAvailable);
-    let remaining = planned - freePullsUsed;
+    const freePullsUsed = paidOnly ? 0 : Math.min(spendingPulls, freePullsAvailable);
+    let remaining = spendingPulls - freePullsUsed;
     const ticketCurrency = gacha?.ticket_currency ?? (target.bannerKind === 'support' ? 'support_ticket' : target.bannerKind === 'character' ? 'uma_ticket' : undefined);
     const ticketKey = ticketCurrency ? balanceKey(ticketCurrency) : undefined;
     const availableTickets = !paidOnly && target.useTickets && ticketKey ? Math.min(current[ticketKey], target.ticketLimit ?? Number.MAX_SAFE_INTEGER, remaining) : 0;
@@ -468,7 +495,7 @@ export function projectPlan(plan: CaratPlan, costOrBundle: number | PlannerDataB
     let paidCost = 0;
     if (paidOnly) {
       for (const step of steps) {
-        if (paidJewelPulls + step.pulls > planned) break;
+        if (paidJewelPulls + step.pulls > spendingPulls) break;
         paidJewelPulls += step.pulls;
         paidCost += step.cost;
       }
@@ -479,7 +506,7 @@ export function projectPlan(plan: CaratPlan, costOrBundle: number | PlannerDataB
       current.paidJewels -= paidJewelPulls * jewelCost;
     }
     remaining -= paidJewelPulls;
-    const fundedPulls = planned - remaining;
+    const fundedPulls = spendingPulls - remaining;
     const sparkPulls = number(gacha?.spark_pulls ?? (paidOnly ? 0 : bundle?.core.default_spark_pulls ?? 200));
     const goals = stepUp ? [{ pickupId: 0, desiredCopies: Math.max(1, number(target.desiredCopies, cardKind === 'support' ? 5 : 20)) }] : plannerPickupGoals({ ...target, bannerKind: cardKind }, target.pickupId ?? gacha?.pickups?.[0]?.pickup_id);
     let rainbowCrystalsUsed = 0;
@@ -513,7 +540,7 @@ export function projectPlan(plan: CaratPlan, costOrBundle: number | PlannerDataB
     const shortfallJewels = paidOnly ? Math.max(0, paidCost - balanceBefore.paidJewels) : remaining * jewelCost;
     totalShortfallJewels += shortfallJewels;
     if (paidOnly) requiredPaidJewels += shortfallJewels;
-    targets.push({ income, targetId: target.id, pullDate: new Date(targetDay * dayMs).toISOString().slice(0,10), balanceBefore, fundedPulls, plannedPulls: planned, shortfallJewels, freePullsUsed, freeJewelPulls, paidJewelPulls, ticketPulls: availableTickets, freeJewelsAfter: current.freeJewels, paidJewelsAfter: current.paidJewels, ticketsAfter: ticketKey ? current[ticketKey] : 0, rewardCaratsGained, sparkCopies: sparkPulls > 0 ? Math.floor(fundedPulls / sparkPulls) : 0, rainbowCrystalsUsed, goldCrystalsUsed, pickupProbability, pickupGoals, ratesAvailable, jointProbabilityExact: goalProbability?.jointProbabilityExact ?? false });
+    targets.push({ income, targetId: target.id, pullDate: new Date(targetDay * dayMs).toISOString().slice(0,10), balanceBefore, fundedPulls, plannedPulls: planned, ...(actualPulls === undefined ? {} : { actualPulls: spendingPulls }), shortfallJewels, freePullsUsed, freeJewelPulls, paidJewelPulls, ticketPulls: availableTickets, freeJewelsAfter: current.freeJewels, paidJewelsAfter: current.paidJewels, ticketsAfter: ticketKey ? current[ticketKey] : 0, rewardCaratsGained, sparkCopies: sparkPulls > 0 ? Math.floor(fundedPulls / sparkPulls) : 0, rainbowCrystalsUsed, goldCrystalsUsed, pickupProbability, pickupGoals, ratesAvailable, jointProbabilityExact: goalProbability?.jointProbabilityExact ?? false });
   }
   return { targets, balances: current, totalShortfallJewels, requiredPaidJewels, plannedPulls, unallocatedIncome: ledger.slice(ledgerIndex) };
 }

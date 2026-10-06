@@ -29,7 +29,7 @@
 
 <SourcePage routeId="privacy" title="Privacy Policy" width="normal">
   <div class="privacy-page">
-    <PageHeading title="Privacy Policy" description="Last updated: August 19, 2026"/>
+    <PageHeading title="Privacy Policy" description="Last updated: October 1, 2026"/>
     <div class="policy-content">
       {#if privacyNotice}<Banner title="Privacy controls" tone="info" dismissible><p>{privacyNotice}</p></Banner>{/if}
       <nav class="quick-nav" aria-label="Privacy policy sections"><strong>Jump to</strong><div>{#each links as link}<button type="button" onclick={() => scrollToSection(link[0]!)}>{link[1]}</button>{/each}</div></nav>
@@ -47,6 +47,7 @@
           <li><strong>Self-Contained Plan Links:</strong> When you share while signed out, a compressed copy of the plan is placed in the URL instead of being stored on our server. Anyone with the full link can open that copy.</li>
         </ul>
         <h3>Information Collected Automatically</h3><ul><li><strong>Technical Data:</strong> IP address (for security and rate limiting), browser type, device information.</li><li><strong>Usage Data:</strong> Pages visited, basic navigation patterns - used solely for maintaining the Service.</li><li><strong>Security Logs:</strong> Access logs for abuse prevention, retained for a limited period.</li></ul>
+        <h3>Error Monitoring</h3><p>We use Sentry to diagnose application errors and performance problems. Reports include error messages, stack traces, browser details, application versions, and sampled page and request timings. The browser integration is configured to omit account identifiers, cookies, request headers and bodies, and URL query values. We also remove URL fragments from reported request URLs. Session replay is not enabled. See <a href="https://sentry.io/privacy/" target="_blank" rel="noopener">Sentry's privacy policy</a> for information about the provider.</p>
         <h3>What We Don't Collect</h3><ul><li>We do not use fingerprinting.</li><li>We do not collect detailed behavioral profiles.</li><li>We do not collect precise location data.</li></ul>
       </section>
 

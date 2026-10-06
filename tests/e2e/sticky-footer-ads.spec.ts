@@ -63,6 +63,51 @@ async function mockFooter(page: Page) {
   }));
 }
 
+test('timeline ads, consent and tours work without checkVisibility on older Safari', async ({ page }) => {
+  await page.addInitScript(() => { Reflect.deleteProperty(Element.prototype, 'checkVisibility'); });
+  await page.setViewportSize({ width: 414, height: 736 });
+  await mockFooter(page);
+  await mockTimeline(page, false);
+  await page.goto('/timeline');
+  const footer = page.locator('.uma-footer-ad');
+  await expect(page.getByRole('button', { name: 'Close footer ad', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => typeof Element.prototype.checkVisibility)).toBe('undefined');
+  await expect(page.locator('#app-error')).toBeHidden();
+
+  const help = page.getByRole('button', { name: 'Start guided tour', exact: true });
+  await help.click();
+  await expect(page.locator('.tour')).toBeVisible();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.tour')).toHaveCount(0);
+  await expect(help).toBeFocused();
+
+  await page.getByRole('button', { name: 'What’s new', exact: true }).click();
+  const updates = page.getByRole('dialog', { name: 'What’s new', exact: true });
+  await expect(updates).toBeVisible();
+  await page.evaluate(() => {
+    const container = document.createElement('div');
+    container.id = 'qc-cmp2-container';
+    container.innerHTML = '<div id="qc-cmp2-ui" style="position:fixed;inset:0">Privacy choices</div>';
+    document.body.append(container);
+  });
+  await expect(updates).toBeHidden();
+  const consent = page.locator('#qc-cmp2-container');
+  await consent.evaluate(element => element.style.visibility = 'hidden');
+  await expect(updates).toBeVisible();
+  await consent.evaluate(element => element.style.visibility = 'visible');
+  await expect(updates).toBeHidden();
+  await consent.evaluate(element => element.style.display = 'none');
+  await expect(updates).toBeVisible();
+  await consent.evaluate(element => element.remove());
+  await updates.getByRole('button', { name: 'Got it', exact: true }).click();
+
+  await footer.locator('.fuse-slot').evaluate(element => element.style.visibility = 'hidden');
+  await expect(footer).toBeHidden();
+  expect(await page.evaluate(() => (window as any).adDestroyed)).toContain('fuse-injected-scrolling_sticky_footer-1');
+  await expect(page.locator('#app-error')).toBeHidden();
+});
+
 test('database scroll shortcut stays above the footer ad as it resizes and closes', async ({ page }) => {
   await mockFooter(page);
   await page.setViewportSize({ width: 390, height: 844 });

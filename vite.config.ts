@@ -1,4 +1,5 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 import legacy from '@vitejs/plugin-legacy';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
@@ -9,10 +10,14 @@ import { fuseAllowed, insertFuseScript } from './src/services/ads/fuse-bootstrap
 
 const rootDirectory = fileURLToPath(new URL('.', import.meta.url));
 
-export default defineConfig(async ({ mode }) => {
+export default defineConfig(async ({ mode, command }) => {
   // Keep the existing CI-injected public provider IDs during the framework migration.
   const environment = mode === 'production' ? production : beta;
   const variables = loadEnv(mode, rootDirectory, 'VITE_');
+  const uploadSourceMaps = Boolean(process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG) && ['production', 'beta'].includes(mode);
+  if (command === 'build' && ['production', 'beta'].includes(mode) && !uploadSourceMaps) {
+    console.warn('Sentry build credentials are unset: source-map upload is disabled for this build.');
+  }
   return {
     root: rootDirectory,
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
@@ -37,7 +42,16 @@ export default defineConfig(async ({ mode }) => {
       modernTargets: ['Chrome >= 109', 'Edge >= 109', 'Firefox >= 115', 'Safari >= 16.4', 'iOS >= 16.4'],
       modernPolyfills: true,
       renderLegacyChunks: false
-    }), svelte(), ...(mode === 'demo' ? [await demoData()] : [])],
+    }), svelte(), ...(mode === 'demo' ? [await demoData()] : []), sentryVitePlugin({
+      org: process.env.SENTRY_ORG,
+      project: 'umamoe-frontend',
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      telemetry: false,
+      applicationKey: 'umamoe-frontend',
+      errorHandler: error => { throw error; },
+      release: { name: process.env.APP_BUILD_VERSION, inject: false, create: uploadSourceMaps, finalize: uploadSourceMaps },
+      sourcemaps: { disable: !uploadSourceMaps, filesToDeleteAfterUpload: ['./dist/**/*.map'] },
+    })],
     optimizeDeps: {
       noDiscovery: true,
       include: ['exceljs', 'sql.js'],
@@ -62,7 +76,7 @@ export default defineConfig(async ({ mode }) => {
       // Compiled code belongs to the shell artifact; /assets is deployed separately.
       assetsDir: 'app',
       manifest: true,
-      sourcemap: mode !== 'production'
+      sourcemap: uploadSourceMaps ? 'hidden' : !['production', 'beta'].includes(mode)
     },
     server: {
       host: '127.0.0.1',
@@ -73,11 +87,19 @@ export default defineConfig(async ({ mode }) => {
         allow: [rootDirectory]
       },
       proxy: {
+        // The simulator only listens on the deployment's private subnet, so a
+        // local backend cannot reach it. Route sim calls through beta's backend,
+        // which already has that access, until a local simulator is running.
+        // Must precede '/api' so the longer prefix wins.
+        '/api/sim': { target: 'https://beta.uma.moe', changeOrigin: true },
         '/api': 'http://127.0.0.1:3001',
         '/search': 'http://127.0.0.1:3002',
         '/ingest': 'http://127.0.0.1:3003',
         '/resources': { target: variables.VITE_RESOURCE_PROXY_TARGET ?? 'http://127.0.0.1:3004', changeOrigin: true },
-        '/assets/data': { target: 'https://uma.moe', changeOrigin: true }
+        '/assets/data': { target: 'https://uma.moe', changeOrigin: true },
+        // Skill art lives in the separately deployed /assets bundle, so it has no
+        // local copy to serve. Dev-only; production loads it from its own origin.
+        '/assets/images/skills': { target: 'https://uma.moe', changeOrigin: true }
       }
     },
     test: {

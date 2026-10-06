@@ -149,6 +149,12 @@ function restoreFactors(value: unknown, maximumCap = 9): FactorRequirement[] {
     const maximumStars = Math.max(minimumStars, Math.min(maximumCap, finiteNumber(entry[2]) ?? maximumCap));
     const requirement: FactorRequirement = { factorId, minimumStars, maximumStars };
     if (entry[3] === 1) requirement.operator = 'or';
+    if (maximumCap === 3) return [requirement];
+    const minimumOccurrences = finiteNumber(entry[4]);
+    const maximumOccurrences = finiteNumber(entry[5]);
+    if (minimumOccurrences !== undefined) requirement.minimumOccurrences = Math.max(0, Math.min(3, Math.trunc(minimumOccurrences)));
+    if (maximumOccurrences !== undefined) requirement.maximumOccurrences = Math.max(requirement.minimumOccurrences ?? 0, Math.min(3, Math.trunc(maximumOccurrences)));
+    if (entry[6] === 1) requirement.metric = 'occurrences';
     return [requirement];
   });
 }
@@ -172,7 +178,10 @@ function compactFactors(requirements: FactorRequirement[]): (number | null)[][] 
         Math.max(1, Math.trunc(requirement.minimumStars || 1)),
         Math.max(requirement.minimumStars || 1, Math.trunc(requirement.maximumStars ?? 9))
       ];
-      if (requirement.operator === 'or') compact.push(1);
+      if (requirement.operator === 'or') compact[3] = 1;
+      if (requirement.minimumOccurrences !== undefined) compact[4] = requirement.minimumOccurrences;
+      if (requirement.maximumOccurrences !== undefined) compact[5] = requirement.maximumOccurrences;
+      if (requirement.metric === 'occurrences') compact[6] = 1;
       return compact;
     });
   return result.length ? result : undefined;

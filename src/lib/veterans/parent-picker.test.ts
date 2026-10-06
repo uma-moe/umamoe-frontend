@@ -7,6 +7,22 @@ import { normalizeVeteranRecord } from './veteran-normalizer';
 import { parsePlannerTransfer } from '@/lib/lineage/planner';
 
 const entry: ManualParent = { id:'legacy-id',label:'Parent',mainCardId:100101,ownSparkIds:[101],p1CardId:100201,p1SparkIds:[103],p2CardId:100301,p2SparkIds:[202],mainWinSaddleIds:[16],p1WinSaddleIds:[15],createdAt:'2026-01-01' };
+it.each(['bookmark','partner'] as const)('searches %s usernames while preserving Uma search, sorting and spark filters',share_source=>{
+  const parents=['ZBorrower','ABorrower',undefined,''].map((trainerName,index)=>({
+    ...manualParent({...entry,id:String(index),mainCardId:100601,ownSparkIds:index===0?[103]:[101]}),
+    share_source,trainerName
+  }));
+  const matches=(query:string,factors:ParentFactorFilter[]=[])=>filterParents(parents,{query,sort:'name',factors},()=> 'Oguri Cap',()=>0);
+  expect(matches('  zBoRr  ')).toEqual([parents[0]]);
+  expect(matches('aborrower')).toEqual([parents[1]]);
+  expect(matches('borrower')).toEqual(parents.slice(0,2));
+  expect(matches('OGURI')).toEqual(parents);
+  expect(matches('missing')).toEqual([]);
+  expect(matches('undefined')).toEqual([]);
+  expect(matches('   ')).toEqual(parents);
+  expect(matches('borrower',[{factorId:10,scope:'own',minLevel:3}])).toEqual([parents[0]]);
+  expect(matches('borrower',[{factorId:20,scope:'own',minLevel:3}])).toEqual([]);
+});
 it('matches alternatives within each color while requiring every color group',()=>{
   const parents=[
     manualParent({...entry,id:'speed-mile',ownSparkIds:[103,3202],p1SparkIds:[],p2SparkIds:[]}),

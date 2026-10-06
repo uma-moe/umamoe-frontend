@@ -23,6 +23,15 @@ test('dense lineage stays compact and editable across layout breakpoints', async
   });
   await page.goto('/tools/lineage-planner');
   const tree = page.locator('.tree-canvas');
+  async function revealTree() {
+    for (const branch of await tree.locator('.parent-branch').all()) {
+      await branch.scrollIntoViewIfNeeded();
+      await branch.locator('.grandparents').scrollIntoViewIfNeeded();
+      await expect(branch.locator('.gp-branch')).toHaveCount(2);
+    }
+  }
+  await expect(tree).toBeVisible();
+  await revealTree();
   await expect(tree.locator('.spark')).toHaveCount(72);
   const ancestors = tree.getByRole('button', { name: 'Great-Grandparents', exact: true });
   await expect(ancestors).toHaveCount(4);
@@ -73,7 +82,8 @@ test('dense lineage stays compact and editable across layout breakpoints', async
         if (!button) { issues.push('Spark removal is outside chip'); break; }
         const box = spark.getBoundingClientRect(), action = button.getBoundingClientRect();
         const touch=matchMedia('(pointer:coarse)').matches;
-        if (box.height > (touch ? 26 : 22)) { issues.push('Spark row too tall'); break; }
+        // Shared SparkItem removal buttons are 24px on both mouse and touch devices.
+        if (box.height > 26) { issues.push('Spark row too tall'); break; }
         if (action.width < (touch ? 24 : 20) || action.height < (touch ? 24 : 20) || action.right > box.right || action.left < box.left) { issues.push('Spark removal hit area'); break; }
       }
       return issues;
@@ -113,5 +123,7 @@ test('dense lineage stays compact and editable across layout breakpoints', async
   await page.locator('.gp-branch').first().scrollIntoViewIfNeeded();
   await page.screenshot({ path: test.info().outputPath('dense-lineage-light-390.png'), scale: 'css' });
   await page.reload();
+  await expect(tree).toBeVisible();
+  await revealTree();
   await expect(page.locator('.spark')).toHaveCount(72);
 });

@@ -7,6 +7,9 @@
 
 # ===== NODE.JS =====
 /node_modules
+.sentryclirc
+.env.sentry-build-plugin
+.env.local
 npm-debug.log
 yarn-error.log
 

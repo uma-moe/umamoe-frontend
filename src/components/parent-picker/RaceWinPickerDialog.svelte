@@ -29,7 +29,7 @@
   onMount(() => { draft = [...winSaddleIds]; void load(); });
 </script>
 
-<Dialog bind:open title="Select Race Wins" description={charName} maxWidth="1100px" maxHeight="85dvh" mobileInset="16px">
+<Dialog mobileFill bind:open title="Select Race Wins" description={charName} maxWidth="1100px" maxHeight="85dvh" mobileInset="16px">
   <TextField id={`${id}-search`} label="Search races" bind:value={query} type="search"/>
   {#if loading}<p>Loading races…</p>{:else if error}<Banner tone="danger" title="Race data unavailable"><p>{error}</p><Button onclick={load}>Retry</Button></Banner>{:else}
     <div class="race-calendar"><RaceSchedule years={choices} selectable {selectedKeys} onselect={(race, slotId) => {

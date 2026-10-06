@@ -7,7 +7,6 @@ import { normalizeVeteranImport } from '@/lib/veterans/veteran-normalizer';
 import { veteranPayload } from '@/lib/veterans/veteran-profile';
 import type { VeteranRecord } from '@/lib/veterans/generated/veteran-record';
 import { profileRepository } from '@/pages/profile/profile-repository';
-import { HttpError } from '@/services/http/http-client';
 import { deviceParent, type SelectableParent } from '@/lib/veterans/parent-picker';
 
 export const veteranDrafts = writable<Record<string, VeteranRecord[]>>({});
@@ -43,7 +42,6 @@ async function sync(accountId: string, request: ReturnType<typeof session>): Pro
   request.check();
   try { await profileRepository.ingestVeterans(accountId, records.map(veteranPayload)); }
   catch (error) {
-    if (error instanceof HttpError && error.status === 404) throw new Error('Saved on this device. Account uploads need the new append service; try again once it is available.');
     throw new Error(`Saved on this device; account upload failed. ${error instanceof Error ? error.message : 'Please try again.'}`);
   }
   request.check();
@@ -51,7 +49,7 @@ async function sync(accountId: string, request: ReturnType<typeof session>): Pro
   const refreshed = await profileRepository.load(accountId, true);
   request.check();
   const uploadedIds = new Set(refreshed.veterans?.map(veteran => veteran.trained_chara_id));
-  if (records.some(record => !uploadedIds.has(record.trainedCharaId))) throw new Error('Upload accepted, but the account collection has not refreshed yet. Your device copy is kept; retry in a moment.');
+  if (uploadedIds.size !== records.length || records.some(record => !uploadedIds.has(record.trainedCharaId))) throw new Error('Upload accepted, but the account collection has not refreshed yet. Your device copy is kept; retry in a moment.');
   await veteranRepository.replace(request.scope, [], 'uploaded-to-account');
   await loadVeteranDrafts(request.scope);
   veteranLibraryRevision.update(value => value + 1);
@@ -78,13 +76,13 @@ export async function importVeteranFiles(files: FileList | File[], accountId = '
       catch (error) { throw new Error(`${file.name}: ${error instanceof Error ? error.message : 'Invalid veteran export.'}`); }
     }
     request.check();
-    const result = await veteranRepository.import(request.scope, records);
+    const total = await veteranRepository.replace(request.scope, records, 'json-upload');
     await loadVeteranDrafts(request.scope);
     if (accountId) {
       const count = await sync(accountId, request);
-      return `${count} veteran${count === 1 ? '' : 's'} added to ${get(workspaces).find(w => w.accountId === accountId)?.label ?? accountId}.`;
+      return `${count} veteran${count === 1 ? '' : 's'} synced to ${get(workspaces).find(w => w.accountId === accountId)?.label ?? accountId}.`;
     }
-    return `${result.total} veteran${result.total === 1 ? '' : 's'} saved on this device. ${request.userId ? 'Select a linked account to add them to your collection.' : 'Sign in to add them to your account.'}`;
+    return `${total} veteran${total === 1 ? '' : 's'} saved on this device. ${request.userId ? 'Select a linked account to sync your collection.' : 'Sign in to sync them to your account.'}`;
   });
 }
 export async function syncVeteranDrafts(accountId: string, includeLocal = false): Promise<void> {
@@ -94,9 +92,9 @@ export async function syncVeteranDrafts(accountId: string, includeLocal = false)
     if (includeLocal) {
       const local = await veteranRepository.query('local');
       request.check();
-      if (local.length) { await veteranRepository.import(request.scope, local); await loadVeteranDrafts(request.scope); }
+      if (local.length) { await veteranRepository.replace(request.scope, local, 'device-upload'); await loadVeteranDrafts(request.scope); }
     }
     const count = await sync(accountId, request);
-    return `${count} veteran${count === 1 ? '' : 's'} added to ${get(workspaces).find(w => w.accountId === accountId)?.label ?? accountId}. Your device copy is kept.`;
+    return `${count} veteran${count === 1 ? '' : 's'} synced to ${get(workspaces).find(w => w.accountId === accountId)?.label ?? accountId}.${includeLocal ? ' Your device copy is kept.' : ''}`;
   });
 }

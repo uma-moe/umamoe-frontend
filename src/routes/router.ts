@@ -75,11 +75,13 @@ function warmPageModules(): void {
   pages.unshift(pageModules['/tools/lineage-planner']);
   function next(): void {
     const run = () => {
+      if (!document.head) return;
       if (document.hidden) { document.addEventListener('visibilitychange', next, { once: true }); return; }
       // An idle CPU can still have critical data or page code in flight.
       if (pendingPageRequests) { void whenPageRequestsIdle().then(next); return; }
       const load = pages.shift();
-      if (load) void load().catch(() => {}).finally(next);
+      // Vite's CSS preloader can throw before returning the import promise.
+      if (load) void Promise.resolve().then(async () => { await load(); }).catch(() => {}).finally(next);
     };
     if (!pages.length) return;
     if ('requestIdleCallback' in window) window.requestIdleCallback(run);
@@ -114,9 +116,15 @@ const productRoutes = {
   '*': LegacyRedirectPage
 } as const;
 
-// The gallery is available by direct URL only and stays out of the initial bundle.
+// The gallery is available by direct URL only and stays out of the initial
+// bundle; the simulator debug view sits beside the product page the same way.
+// None of these are in the feature manifest, so none appear in navigation.
 export const router = createRouter({
   ...productRoutes,
   '/ui': { meta: { loadPage: () => import('@/pages/ui/UiLabPage.svelte') }, '/': DeferredPage },
-  '/ui-lab': { meta: { loadPage: () => import('@/pages/ui/UiLabPage.svelte') }, '/': DeferredPage }
+  '/ui-lab': { meta: { loadPage: () => import('@/pages/ui/UiLabPage.svelte') }, '/': DeferredPage },
+  '/simulator': { meta: { loadPage: () => import('@/pages/simulator/SimulatorPage.svelte') }, '/': DeferredPage },
+  '/simulator/race': { meta: { loadPage: () => import('@/pages/simulator/RaceSimPage.svelte') }, '/': DeferredPage },
+  '/simulator/build': { meta: { loadPage: () => import('@/pages/simulator/BuildPage.svelte') }, '/': DeferredPage },
+  '/simulator/debug': { meta: { loadPage: () => import('@/pages/simulator/SimulatorDebugPage.svelte') }, '/': DeferredPage }
 });

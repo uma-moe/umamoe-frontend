@@ -150,9 +150,18 @@ test('Veteran dialog keeps page typography, usable scrolling, and all four tabs'
     await expect(child.locator('.dialog-panel > header')).toHaveCSS('background-color',theme==='dark'?'rgb(22, 22, 22)':'rgb(255, 255, 255)');
   }
   const childSearch=child.getByRole('searchbox',{name:'Search characters'});
+  const childHeight = (await child.boundingBox())!.height;
   await childSearch.fill('no matching character');
   await expect(child.getByText('No characters match “no matching character”.')).toBeVisible();
-  expect((await child.locator('.dialog-panel').boundingBox())!.height).toBeLessThan(300);
+  if (originalViewport.width <= 767) {
+    expect((await child.boundingBox())!.height).toBeCloseTo(childHeight, 0);
+    await page.setViewportSize({ width: originalViewport.width, height: 450 });
+    await expect(child.getByRole('button', { name: 'Close dialog', exact: true })).toBeInViewport();
+    expect((await child.boundingBox())!.height).toBeLessThanOrEqual(450);
+    await page.setViewportSize(originalViewport);
+    expect((await child.boundingBox())!.height).toBeCloseTo(childHeight, 0);
+  }
+  else expect((await child.locator('.dialog-panel').boundingBox())!.height).toBeLessThan(300);
   const panel = (await child.locator('.dialog-panel').boundingBox())!;
   const modal = (await child.boundingBox())!;
   expect(modal.height).toBeCloseTo(panel.height, 0);
@@ -179,6 +188,10 @@ test('Support picker shows readable cards and resets its search and filters on r
   expect(card.width).toBeGreaterThanOrEqual(Math.min(grid.width, 250) - 1);
   expect(card.x + card.width).toBeLessThanOrEqual(grid.x + grid.width + 1);
   const search = dialog.getByRole('searchbox', { name: 'Search support cards' });
+  const initialHeight = (await dialog.boundingBox())!.height;
+  await search.fill('no matching support');
+  await expect(dialog.getByText('No support cards match these filters.')).toBeVisible();
+  if (isMobile) expect((await dialog.boundingBox())!.height).toBeCloseTo(initialHeight, 0);
   await search.fill('Kitasan Black');
   await dialog.getByRole('combobox', { name: 'Rarity', exact: true }).click();
   await dialog.getByRole('option', { name: 'SSR', exact: true }).click();

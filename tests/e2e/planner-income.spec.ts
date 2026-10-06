@@ -3,6 +3,142 @@ import { mockPlannerIncome } from './fixtures/planner-income';
 import { mockTimeline } from './fixtures/api';
 import { plannerControlsPlan, plannerControlsTimeline } from './fixtures/planner-controls';
 
+test('Team Trials half classes show average rewards and survive reload', async ({ page }) => {
+  await mockPlannerIncome(page);
+  const openIncome = async () => {
+    await page.getByRole('button', { name: /Plan assumptions/ }).click();
+    await page.getByRole('tablist', { name: 'Planner assumptions' }).getByRole('tab', { name: 'Income', exact: true }).click();
+    await page.getByRole('button', { name: /^Account & recurring/ }).click();
+  };
+  await page.goto('/timeline?tab=carat-planner');
+  await openIncome();
+  const trials = page.getByRole('combobox', { name: 'Team Trials class', exact: true });
+  await trials.click();
+  await expect(page.getByRole('option', { name: /^Class [345]\.5/ })).toHaveCount(3);
+  await page.getByRole('option', { name: /^Class 5\.5/ }).click();
+  await expect(trials).toContainText('Class 5.5');
+  await expect(trials).toContainText('+262.5/wk avg');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0].scenarioSelections.team_trials_class)).toBe('class_5.5');
+  await page.reload();
+  await openIncome();
+  await expect(trials).toContainText('Class 5.5');
+  await expect(trials).toContainText('+262.5/wk avg');
+});
+
+test('Income summary includes every resource and dated reward through the last pull, with a 30-day preview for an empty plan', async ({ page, isMobile }, info) => {
+  await mockPlannerIncome(page);
+  await page.route('**/resources/test/banner_timeline.json*', route => route.fulfill({ json: plannerControlsTimeline }));
+  await page.route('**/resources/test/planner_rewards.json*', route => route.fulfill({ json: { rewards: [{
+    id: 'summary-gift', label: 'September event gift', currency: 'free_jewels', amount: 300, available_at: '2026-09-20', default_enabled: true,
+    source_items: [{ item_category: 40, item_id: 111, amount: 2 }, { item_category: 164, item_id: 149, amount: 3 }, { item_category: 164, item_id: 150, amount: 1 }, { item_category: 164, item_id: 144, amount: 1 }, { item_category: 164, item_id: 145, amount: 2 }],
+  }] } }));
+  const target = { ...plannerControlsPlan().targets.find(item => item.id === 'first')!, pullTiming: 'custom', customPullDate: '2026-09-30' };
+  await page.addInitScript(target => {
+    const collection = JSON.parse(localStorage.getItem('carat-planner-plans-v1')!);
+    const plan = collection.plans[0];
+    if (plan.customIncome.length) return;
+    plan.targets = [target];
+    plan.customIncome = [
+      { id: 'paid', label: 'Paid grant', currency: 'paid_jewels', amount: 500, cadence: 'once', startDate: '2026-09-01' },
+      { id: 'deduction', label: 'Adjustment', currency: 'free_jewels', amount: -50, cadence: 'once', startDate: '2026-09-03' },
+      { id: 'later', label: 'Outside period', currency: 'free_jewels', amount: 99999, cadence: 'once', startDate: '2026-10-01' },
+    ];
+    localStorage.setItem('carat-planner-plans-v1', JSON.stringify(collection));
+  }, target);
+  await page.goto('/timeline?tab=carat-planner');
+  await page.getByRole('button', { name: /Plan assumptions/ }).click();
+  const incomeTab = page.getByRole('tab', { name: 'Income', exact: true });
+  await incomeTab.click();
+  const summary = page.getByRole('region', { name: 'Projected income', exact: true });
+  await expect(summary).toContainText('Sep 1, 2026 – Sep 30, 2026');
+  await summary.locator('summary').click();
+  await expect(incomeTab).toHaveAccessibleDescription('Through Sep 30, 2026 · +7,300 Carats · +4 tickets · +4 shards · +3 Uncap Crystals');
+  for (const [currency, amount] of Object.entries({ free_jewels: '+6,800', paid_jewels: '+500', uma_ticket: '+1', support_ticket: '+3', rainbow_crystal: '+3', gold_crystal: '+1', rainbow_full_crystal: '+1', gold_full_crystal: '+2' })) {
+    await expect(summary.locator(`[data-currency="${currency}"] dd`)).toHaveText(amount);
+  }
+  await expect(summary).toContainText('September event gift');
+  await expect(summary).toContainText('50-day login milestone (Day 450)');
+  await expect(summary).toContainText('-50 Free Carats');
+  await expect(summary).not.toContainText('Outside period');
+  for (const width of isMobile ? [390, 320] : [1536, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+    await summary.screenshot({ path: info.outputPath(`income-summary-${width}.png`), scale: 'css' });
+  }
+  await page.locator('.income-panel').getByRole('button', { name: /Daily login/ }).click();
+  await expect(summary.locator('[data-currency="free_jewels"] dd')).toHaveText('+3,800');
+  const row = page.locator('[data-target-id="first"]');
+  await row.getByRole('button', { name: 'Target options', exact: true }).click();
+  await row.getByLabel('Pull date', { exact: true }).fill('2026-09-10');
+  await expect(summary).toContainText('Sep 1, 2026 – Sep 10, 2026');
+  await expect(summary).not.toContainText('September event gift');
+  await expect(summary.locator('[data-currency="free_jewels"] dd')).toHaveText('+2,350');
+  await page.keyboard.press('Escape');
+  await row.getByRole('button', { name: 'Remove First banner', exact: true }).click();
+  await expect(summary).toContainText('30-day preview');
+  await expect(summary).toContainText('Sep 1, 2026 – Sep 30, 2026');
+  await expect(summary.locator('[data-currency="free_jewels"] dd')).toHaveText('+3,800');
+});
+
+test('Daily Carat Pack appears once and retains its saved selection after reload', async ({ page }) => {
+  await mockTimeline(page);
+  const pack = { label: 'Daily Jewel Pack (continuous)', currency: 'free_jewels', amount: 50, cadence: 'daily', start_date: '2017-01-01', end_date: '2030-01-10' };
+  await page.route('**/resources/test/planner_income.json*', route => route.fulfill({ json: { rules: ['daily-jewel-pack', 'daily-jewel-pack-16'].map(id => ({ ...pack, id })) } }));
+  const plan = plannerControlsPlan(); plan.targets = []; plan.enabledIncomeRuleIds = ['daily-jewel-pack-16'];
+  await page.addInitScript(plan => {
+    if (!localStorage.getItem('carat-planner-plans-v1')) localStorage.setItem('carat-planner-plans-v1', JSON.stringify({ version: 1, activePlanId: plan.id, plans: [plan] }));
+  }, plan);
+  const openIncome = async () => {
+    await page.getByRole('button', { name: /Plan assumptions/ }).click();
+    await page.getByRole('tablist', { name: 'Planner assumptions' }).getByRole('tab', { name: 'Income', exact: true }).click();
+  };
+  await page.goto('/timeline?tab=carat-planner');
+  await openIncome();
+  const toggle = page.getByRole('button', { name: /Daily Carat Pack/ });
+  await expect(toggle).toHaveCount(1);
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await page.reload();
+  await openIncome();
+  await expect(toggle).toHaveCount(1);
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await toggle.click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0].enabledIncomeRuleIds)).toEqual(['daily-jewel-pack']);
+});
+
+test('Monthly shops are independently tickable and survive reload', async ({ page }) => {
+  await mockPlannerIncome(page);
+  const openIncome = async () => {
+    await page.getByRole('button', { name: /Plan assumptions/ }).click();
+    await page.getByRole('tablist', { name: 'Planner assumptions' }).getByRole('tab', { name: 'Income', exact: true }).click();
+    await page.getByRole('button', { name: /^Account & recurring/ }).click();
+  };
+  await page.goto('/timeline?tab=carat-planner');
+  await openIncome();
+  const friends = page.getByRole('checkbox', { name: /^(Include|Exclude) Monthly shop: Friend Points$/ });
+  const clovers = page.getByRole('checkbox', { name: /^(Include|Exclude) Monthly shop: Clovers$/ });
+  const silver = page.getByRole('checkbox', { name: /^(Include|Exclude) Monthly shop: Silver Cleats/ });
+  const gold = page.getByRole('checkbox', { name: /^(Include|Exclude) Monthly shop: Gold Cleats/ });
+  const rainbow = page.getByRole('checkbox', { name: /^(Include|Exclude) Monthly shop: Rainbow Cleats/ });
+  await expect(friends).toBeChecked();
+  for (const shop of [clovers, silver, gold, rainbow]) await expect(shop).not.toBeChecked();
+  await friends.uncheck();
+  for (const shop of [clovers, silver, gold, rainbow]) await shop.check();
+  await gold.uncheck();
+  await expect.poll(() => page.evaluate(() => {
+    const selections = JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0].scenarioSelections;
+    return Object.entries(selections).filter(([id]) => id.startsWith('monthly_shop_')).sort();
+  })).toEqual([
+    ['monthly_shop_clovers', 'include'], ['monthly_shop_rainbow_cleats', 'include'], ['monthly_shop_silver_cleats', 'include'],
+  ]);
+  await page.reload();
+  await openIncome();
+  for (const shop of [clovers, silver, rainbow]) await expect(shop).toBeChecked();
+  for (const shop of [friends, gold]) await expect(shop).not.toBeChecked();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(page.viewportSize()!.width);
+});
+
 test('Planner keeps dated deductions when editing and reopening income, and updates funded pulls in order', async ({ page }) => {
   await mockTimeline(page);
   await page.route('**/resources/test/banner_timeline.json*', route => route.fulfill({ json: plannerControlsTimeline }));
@@ -58,13 +194,14 @@ test('Planner income matches Angular sections, preset outcomes, grouped selectio
   await expect(trials).toContainText('Class 5');
   const club = page.getByRole('combobox', { name: 'Club rank', exact: true });
   await expect.poll(() => club.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  await account.getByRole('checkbox', { name: 'Select all for Account & recurring', exact: true }).click();
   await account.getByRole('checkbox', { name: 'Clear all for Account & recurring', exact: true }).click();
   await expect(trials).toContainText('Not included');
   await account.getByRole('checkbox', { name: 'Select all for Account & recurring', exact: true }).click();
   await expect(trials).toContainText('Class 5'); await expect(club).toContainText('A');
   await trials.click(); await trials.press('Home'); await trials.press('Enter');
-  await expect(account.getByRole('checkbox')).toHaveJSProperty('indeterminate', true);
-  await account.getByRole('checkbox').click(); await expect(trials).toContainText('Class 5');
+  await expect(account.getByRole('checkbox', { name: /all for Account & recurring/ })).toHaveJSProperty('indeterminate', true);
+  await account.getByRole('checkbox', { name: /all for Account & recurring/ }).click(); await expect(trials).toContainText('Class 5');
   for (const [preset,rank] of [['Conservative','Class 3'],['Casual','Class 4'],['Active','Class 5'],['Completionist','Class 6']]) {
     const radio = page.getByRole('radio', { name: new RegExp('^' + preset + ':') });
     await radio.check(); await expect(radio).toBeChecked(); await expect(trials).toContainText(rank!);
@@ -73,18 +210,18 @@ test('Planner income matches Angular sections, preset outcomes, grouped selectio
   }
   await trials.click(); await trials.press('Home'); await trials.press('ArrowDown'); await trials.press('Enter');
   await expect(trials).toContainText('Class 1'); await expect(panel.getByText(/Highest results.*\(edited\)/)).toBeVisible();
-  const help = page.getByRole('button', { name: 'How Monthly shop tickets is calculated', exact: true });
+  const help = page.getByRole('button', { name: 'How Monthly shop: Clovers is calculated', exact: true });
   await help.click();
-  await expect(page.getByRole('dialog', { name: 'How Monthly shop tickets is calculated', exact: true })).toContainText('800 Clovers per month');
+  await expect(page.getByRole('dialog', { name: 'How Monthly shop: Clovers is calculated', exact: true })).toContainText('800 Clovers per month');
   await page.keyboard.press('Escape'); await expect(help).toBeFocused();
   for (const button of await panel.locator('.disclosure').all()) if (await button.getAttribute('aria-expanded') === 'false') await button.click();
-  await expect(panel.locator('.scenario')).toHaveCount(26);
+  await expect(panel.locator('.scenario')).toHaveCount(30);
   const legend = page.getByRole('combobox', { name: 'Legend Races', exact: true });
   await expect(legend).toContainText('Varies by event');
   const story = page.getByRole('checkbox', { name: /^(Include|Exclude) Story event rewards$/ });
   await story.uncheck(); await expect(story).not.toBeChecked();
   await page.getByRole('tablist', { name: 'Planner assumptions' }).getByRole('tab', { name: 'Balance', exact: true }).click();
-  await incomeTab.click(); await expect(panel.locator('.scenario')).toHaveCount(26);
+  await incomeTab.click(); await expect(panel.locator('.scenario')).toHaveCount(30);
   await panel.getByRole('button', { name: 'Add income', exact: true }).click();
   await panel.getByRole('textbox', { name: 'Income name', exact: true }).fill('Monthly test income');
   await panel.getByRole('spinbutton', { name: 'Amount', exact: true }).fill('500');

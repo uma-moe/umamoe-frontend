@@ -6,7 +6,7 @@
   let { language, oninsert }: { language: UqlEditorLanguage; oninsert: (text: string) => void } = $props();
   let activeReferenceTopic = $state<'fields' | 'scopes' | 'operators' | 'values' | 'directives' | 'scoring'>('fields');
   let open = $state(false);
-  const simplePredicateDocSnippets = ['Speed >= 3 and Wins >= 30', 'White count >= 12', 'target = Special Week', 'Characters in (Special Week, Silence Suzuka)', 'Support card = Kitasan Black [SSR] (Speed) and limitbreak >= 4'];
+  const simplePredicateDocSnippets = ['Groundwork > 6 and Groundwork = 3x', 'Main Speed = 1x or Main Stamina = 1x', 'Speed >= 3 and Wins >= 30', 'White count >= 12', 'target = Special Week', 'Characters in (Special Week, Silence Suzuka)', 'Support card = Kitasan Black [SSR] (Speed) and limitbreak >= 4'];
   const threeWayMatchDocSnippets = ['Main has all (Groundwork, Ignited Spirit WIT) and GP1 has all (Groundwork, Ignited Spirit WIT) and GP2 has all (Groundwork, Ignited Spirit WIT)'];
   const scoringParameterDocSnippets = ['optional white in (Groundwork, Ignited Spirit WIT, priority = 0, type_weight = 150, level_weight = 2)', 'lineage white in (Groundwork, Ignited Spirit WIT, priority = 1, stack_weight = 1200, base = 115, decay = 50)'];
 </script>
@@ -43,6 +43,7 @@
             <div><span>Value</span><code>3</code></div>
           </div>
           <p>Without a scope, named factors are totaled across the visible lineage. Prefix a field with <span class="uql-doc-inline-code">Main</span>, <span class="uql-doc-inline-code">GP1</span>, <span class="uql-doc-inline-code">GP2</span>, or <span class="uql-doc-inline-code">GP</span> when position matters. Join predicates with <span class="uql-doc-inline-code">and</span> or <span class="uql-doc-inline-code">or</span>.</p>
+          <p>Add <code>x</code> to count parents carrying a factor: <code>Groundwork = 3x</code>. Stars and occurrences can be combined. Main counts 0–1; the full lineage counts 0–3.</p>
           <p class="uql-doc-example-intro">Click an example to add it to the query:</p>
           <div class="uql-doc-example-row">
             {#each simplePredicateDocSnippets as snippet}<button

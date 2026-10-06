@@ -154,7 +154,7 @@ export function filterParents(parents: SelectableParent[], state: Pick<ParentPic
     return scopedParentFactors(parent, parent.share_source === 'manual' ? 'own' : 'any')
       .filter((factor) => state.sort === 'total' ? factor.tone !== 'white' : factor.tone === state.sort).reduce((sum, factor) => sum + factor.level, 0);
   };
-  return parents.filter((parent) => (!query || name(parent).toLocaleLowerCase().includes(query)) && factorGroups.every(group =>
+  return parents.filter((parent) => (!query || name(parent).toLocaleLowerCase().includes(query) || parent.trainerName?.toLocaleLowerCase().includes(query)) && factorGroups.every(group =>
     state.factorOperators?.[group.tone] === 'or'
       ? group.entries.some(({filter}) => parentFactorMatches(parent, filter))
       : group.entries.every(({filter}) => parentFactorMatches(parent, filter))))

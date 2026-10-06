@@ -1,4 +1,5 @@
 import { validateInheritanceUql, type UqlValidation } from './uql';
+import { occurrenceComparison, factorPresence } from './factor-occurrences';
 
 export type InheritanceFilterMode = 'basic' | 'advanced' | 'uql';
 export type InheritanceSort = 'trending' | 'win_count' | 'white_count' | 'affinity_score' | 'parent_rank' | 'last_updated' | 'follower_num' | 'blue_stars_sum' | 'pink_stars_sum' | 'green_stars_sum' | 'white_stars_sum';
@@ -7,6 +8,9 @@ export interface FactorRequirement {
   factorId: number;
   minimumStars: number;
   maximumStars?: number;
+  minimumOccurrences?: number;
+  maximumOccurrences?: number;
+  metric?: 'stars' | 'occurrences';
   priority?: number;
   operator?: 'and' | 'or';
 }
@@ -195,7 +199,34 @@ export function encodedFactorLevels(requirement: FactorRequirement, maximumCap =
   return Array.from({ length: maximum - minimum + 1 }, (_, index) => Number(`${id}${minimum + index}`));
 }
 
+function factorPredicate(field: string, requirement: FactorRequirement, maximumCap: number): string {
+  const hasCount = requirement.minimumOccurrences !== undefined || requirement.maximumOccurrences !== undefined;
+  if (!hasCount) return factorPresence(field, encodedFactorLevels(requirement, maximumCap));
+  if (requirement.factorId === 0) {
+    const minimum = requirement.minimumOccurrences ?? 0;
+    const maximum = requirement.maximumOccurrences ?? (maximumCap === 3 ? 1 : 3);
+    if (maximumCap === 3) return minimum <= 1 && maximum >= 1 ? factorPresence(field, encodedFactorLevels(requirement, 3)) : '(1 = 0)';
+    return `any_spark(${field}, ${requirement.minimumStars}, ${requirement.maximumStars ?? 9}, ${minimum}, ${maximum})`;
+  }
+  const clauses: string[] = [];
+  if (requirement.minimumStars > 1 || (requirement.maximumStars ?? maximumCap) < maximumCap) clauses.push(factorPresence(field, encodedFactorLevels(requirement, maximumCap)));
+  if (requirement.minimumOccurrences !== undefined) clauses.push(occurrenceComparison(requirement.factorId, [field], '>=', requirement.minimumOccurrences));
+  if (requirement.maximumOccurrences !== undefined) clauses.push(occurrenceComparison(requirement.factorId, [field], '<=', requirement.maximumOccurrences));
+  return `(${clauses.join(' and ')})`;
+}
+
 function appendFactorGroups(query: URLSearchParams, name: string, requirements: FactorRequirement[], maximumCap = 9): string | undefined {
+  const field = name.replace(/^main_parent_(blue|pink|green|white)_sparks$/, 'main_$1_factors');
+  const valid = requirements.filter(item => encodedFactorLevels(item, maximumCap).length && !(item.factorId === 0 && name.includes('white')));
+  if (valid.some(item => item.minimumOccurrences !== undefined || item.maximumOccurrences !== undefined) || (field !== name && !name.includes('white') && (valid.length > 1 || valid.some(item => item.factorId === 0)))) {
+    const groups: string[][] = [];
+    for (const item of valid) {
+      const clause = factorPredicate(field, item, maximumCap);
+      if (item.operator === 'or' && groups.length) groups[groups.length - 1]!.push(clause);
+      else groups.push([clause]);
+    }
+    return groups.map(group => `(${group.join(' or ')})`).join(' and ');
+  }
   const groups: number[][] = [];
   let hasAlternatives = false;
   for (const requirement of requirements) {
@@ -258,11 +289,11 @@ export function inheritanceSearchQuery(filters: InheritanceSearchFilters, page: 
     appendFactorGroups(query, 'pink_sparks', filters.pink),
     appendFactorGroups(query, 'green_sparks', filters.green),
     appendFactorGroups(query, 'white_sparks', filters.white),
-    appendFactorGroups(query, 'main_parent_white_sparks', filters.mainWhite, 3)
+    appendFactorGroups(query, 'main_parent_white_sparks', filters.mainWhite, 3),
+    appendFactorGroups(query, 'main_parent_blue_sparks', filters.mainBlue, 3),
+    appendFactorGroups(query, 'main_parent_pink_sparks', filters.mainPink, 3),
+    appendFactorGroups(query, 'main_parent_green_sparks', filters.mainGreen, 3)
   ].filter((predicate) => predicate !== undefined);
-  appendList(query, 'main_parent_blue_sparks', filters.mainBlue.flatMap((item) => encodedFactorLevels(item, 3)));
-  appendList(query, 'main_parent_pink_sparks', filters.mainPink.flatMap((item) => encodedFactorLevels(item, 3)));
-  appendList(query, 'main_parent_green_sparks', filters.mainGreen.flatMap((item) => encodedFactorLevels(item, 3)));
   const optionalWhite = priorityValues(filters.optionalWhite.length ? filters.optionalWhite : filters.optionalWhiteIds.map((factorId) => ({ factorId, minimumStars: 1 })));
   const optionalMainWhite = priorityValues(filters.optionalMainWhite);
   const lineageWhite = priorityValues(filters.lineageWhite.length ? filters.lineageWhite : filters.lineageWhiteIds.map((factorId) => ({ factorId, minimumStars: 1 })));

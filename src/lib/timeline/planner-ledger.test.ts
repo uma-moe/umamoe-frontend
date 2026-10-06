@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { expect, it } from 'vitest';
 import { plannerLedgerCases } from '../../../tests/e2e/fixtures/planner-ledger-data';
 import reference from './planner-ledger.reference.json';
-import { activePlan, buildPlannerLedger, createPlan, loadPlanCollection, projectPlan, sanitizePlan, savePlanCollection, type PlannerLedgerEntry } from './carat-planner';
+import { activePlan, buildPlannerLedger, createPlan, loadPlanCollection, projectPlan, sanitizePlan, savePlanCollection, type PlannerDataBundle, type PlannerLedgerEntry } from './carat-planner';
 import { compactPlannerCollectionForCloud, expandPlannerCollectionFromCloud } from './planner-cloud-codec';
 import { decodeCompactPlannerShare, encodeCompactPlannerShare } from './planner-share-codec';
 
@@ -25,6 +25,53 @@ it('matches the complete ordered ledger and each pull balance captured from Angu
       targets: projection.targets.map(target => ({ id: target.targetId, date: target.pullDate, balanceBefore: target.balanceBefore, fundedPulls: target.fundedPulls, rewardCaratsGained: target.rewardCaratsGained, income: ledgerSummary(target.income) }))
     } }, item.name).toEqual(reference[item.name as keyof typeof reference]);
   }
+});
+
+it('credits daily pack purchases immediately and every 30 days alongside the daily free Carats', () => {
+  const plan = createPlan();
+  plan.projectionStartDate = '2026-01-31';
+  plan.enabledIncomeRuleIds = ['daily-jewel-pack-16'];
+  plan.targets = [{ id: 'target', eventId: 'target', title: 'Target', bannerKind: 'character', bannerEnd: '2026-03-02', pullTiming: 'end', plannedPulls: 0, desiredCopies: 1, useTickets: false, allowPaidJewels: false }];
+  const data: PlannerDataBundle = {
+    core: {}, rewards: { rewards: [] },
+    income: { rules: [{
+      id: 'daily-jewel-pack-16', label: 'Daily Jewel Pack (continuous)',
+      currency: 'free_jewels', amount: 50, cadence: 'daily',
+      start_date: '2017-01-01T12:00:00+00:00', end_date: '2026-03-31',
+    }] },
+  };
+  const purchases = (through: string) => buildPlannerLedger(plan, data, through).filter(entry => entry.currency === 'paid_jewels');
+
+  expect(purchases('2026-01-31')).toMatchObject([{ date: '2026-01-31', amount: 500 }]);
+  expect(purchases('2026-03-01')).toHaveLength(1);
+  const target = projectPlan(plan, data).targets[0]!;
+  expect(target.balanceBefore).toMatchObject({ freeJewels: 31 * 50, paidJewels: 1_000 });
+  expect(target.income.filter(entry => entry.currency === 'paid_jewels').map(entry => entry.date))
+    .toEqual(['2026-01-31', '2026-03-02']);
+  // The next renewal is April 1, after this pack rule ends.
+  expect(purchases('2026-04-02')).toHaveLength(2);
+
+  plan.enabledIncomeRuleIds = [];
+  expect(buildPlannerLedger(plan, data, '2026-04-02')).toEqual([]);
+});
+
+it('waits for daily pack availability before starting purchases and renewals', () => {
+  const plan = createPlan();
+  plan.projectionStartDate = '2026-01-01';
+  plan.enabledIncomeRuleIds = ['daily-jewel-pack'];
+  const data: PlannerDataBundle = {
+    core: {}, rewards: { rewards: [] },
+    income: { rules: [{
+      id: 'daily-jewel-pack', label: 'Daily Jewel Pack (continuous)',
+      currency: 'free_jewels', amount: 50, cadence: 'daily', start_date: '2026-01-15',
+    }] },
+  };
+
+  expect(buildPlannerLedger(plan, data, '2026-01-14')).toEqual([]);
+  const ledger = buildPlannerLedger(plan, data, '2026-02-14');
+  expect(ledger.filter(entry => entry.currency === 'paid_jewels').map(entry => entry.date))
+    .toEqual(['2026-01-15', '2026-02-14']);
+  expect(ledger.filter(entry => entry.currency === 'free_jewels').reduce((sum, entry) => sum + entry.amount, 0)).toBe(31 * 50);
 });
 
 it('validates custom income dates and preserves signed amounts through storage and both share codecs', async () => {

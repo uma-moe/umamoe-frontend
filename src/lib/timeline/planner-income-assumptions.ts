@@ -13,12 +13,73 @@ export const SPECULATIVE_INCOME_SCENARIO_GROUP_ID = 'speculative_income';
 
 export function isLegacyTrainingPassIncomeRule(rule: Pick<PlannerIncomeRule, 'id'>): boolean { return rule.id === 'premium-training-pass'; }
 
+export const MONTHLY_SHOP_EXCHANGES = [
+  { id: 'monthly_shop_friend_points', label: 'Friend Points', pattern: /friend/i, cost: '40,000 Friend Points', tickets: 1 },
+  { id: 'monthly_shop_clovers', label: 'Clovers', pattern: /clover/i, cost: '800 Clovers', tickets: 2 },
+  { id: 'monthly_shop_silver_cleats', label: 'Silver Cleats / Horseshoes', pattern: /silver/i, cost: '200 Silver Cleats', tickets: 2 },
+  { id: 'monthly_shop_gold_cleats', label: 'Gold Cleats / Horseshoes', pattern: /gold/i, cost: '40 Gold Cleats', tickets: 2 },
+  { id: 'monthly_shop_rainbow_cleats', label: 'Rainbow Cleats / Horseshoes', pattern: /rainbow/i, cost: '8 Rainbow Cleats', tickets: 2 },
+] as const;
+
+export function monthlyShopExchange(rule: Pick<PlannerIncomeRule, 'id' | 'label' | 'scenario_group' | 'scenario_option'>) {
+  return MONTHLY_SHOP_EXCHANGES.find(shop => shop.id === rule.scenario_group
+    || (rule.scenario_group === 'monthly_shop_tickets'
+      && shop.pattern.test(`${rule.id} ${rule.label} ${rule.scenario_option ?? ''}`)));
+}
+
+// Legacy and shop-specific IDs describe the same renewable pack.
+export function canonicalIncomeRuleId(id: string): string { return id.replace(/^daily-jewel-pack-\d+$/, 'daily-jewel-pack'); }
+
+export function normalizePlannerIncomeRules(rules: readonly PlannerIncomeRule[]): PlannerIncomeRule[] {
+  const normalized = rules.map(rule => {
+    rule = { ...rule, id: canonicalIncomeRuleId(rule.id) };
+    const shop = monthlyShopExchange(rule);
+    return shop ? { ...rule, scenario_group: shop.id, scenario_option: 'include' } : rule;
+  });
+  // Global master item_exchange 70202/3, 71202/3, 72202/3: two of each scout
+  // ticket per month. ponytail: fixed stock fallback; remove once the generated
+  // income artifact includes all Cleat exchanges.
+  for (const shop of MONTHLY_SHOP_EXCHANGES.slice(2)) {
+    for (const currency of ['uma_ticket', 'support_ticket'] as const) {
+      if (normalized.some(rule => rule.scenario_group === shop.id && rule.currency === currency)) continue;
+      normalized.push({
+        id: `${shop.id}-${currency}`, label: `${shop.label} tickets`,
+        currency, amount: shop.tickets, cadence: 'monthly', day_of_month: 1,
+        start_date: '2025-06-26T00:00:00Z', default_enabled: false, category: 'shop',
+        scenario_group: shop.id, scenario_option: 'include', provenance: 'global_master',
+      });
+    }
+  }
+  // Global master team_stadium_class_reward types 2/4: repeat promotion/demotion.
+  // ponytail: fixed payouts until the income artifact publishes these outcomes.
+  for (const [lower, promotion, demotion] of [[3, 150, 75], [4, 225, 150], [5, 300, 225]] as const) {
+    const base = normalized.find(rule => rule.scenario_group === 'team_trials_class' && rule.scenario_option === `class_${lower}` && rule.currency === 'free_jewels' && rule.cadence === 'weekly');
+    const option = `class_${lower}.5`;
+    if (!base || !normalized.some(rule => rule.scenario_group === 'team_trials_class' && rule.scenario_option === `class_${lower + 1}`)
+      || normalized.some(rule => rule.scenario_group === 'team_trials_class' && rule.scenario_option === option)) continue;
+    const start = utcDay(base.start_date);
+    if (start === undefined) continue;
+    for (const [index, amount] of [promotion, demotion].entries()) normalized.push({
+      ...base, id: `team-trials-${option}-${index}`, label: `Team Trials Class ${lower}.5 (${index ? 'demotion' : 'promotion'})`,
+      amount, every: 2, start_date: plannerDayKey(start + index * 7),
+      scenario_option: option, default_enabled: false, provenance: 'configured',
+      description: `Alternates repeat promotion to Class ${lower + 1} and demotion to Class ${lower}; excludes first-time promotion bonuses.`,
+    });
+  }
+  return [...new Map(normalized.map(rule => [rule.id, rule])).values()];
+}
+
 export function incomeRuleScenarioSelectionMatches(rule: Pick<PlannerIncomeRule, 'id' | 'label' | 'scenario_group' | 'scenario_option'>, selections: Readonly<Record<string, string>>): boolean {
   if (!rule.scenario_group) return true;
-  const selected = selections[rule.scenario_group];
-  if (rule.scenario_group !== 'monthly_shop_tickets') return selected === rule.scenario_option;
-  if (selected === 'include') return true;
-  return selected === 'friend_points' && (rule.scenario_option === 'friend_points' || /friend/i.test(`${rule.id} ${rule.label}`));
+  const shop = monthlyShopExchange(rule);
+  if (shop) {
+    const selected = selections[shop.id];
+    if (selected !== undefined) return selected === 'include';
+    const legacy = selections.monthly_shop_tickets;
+    return (shop.id === 'monthly_shop_friend_points' && (legacy === 'friend_points' || legacy === 'include'))
+      || (shop.id === 'monthly_shop_clovers' && legacy === 'include');
+  }
+  return selections[rule.scenario_group] === rule.scenario_option;
 }
 
 export interface PlannerIncomeAssumptionOption {
@@ -52,6 +113,27 @@ export function resolveTrainingPassStartDate(events: readonly TimelineRecord[]):
     && /(?:vol(?:ume)?\.?|part|phase)\s*2/i.test(event.title));
   const sameReleaseCampaign = events.find((event) => dateKey(event.jpReleaseDate) === TRAINING_PASS_JP_DATE && event.eventType === 'campaign');
   return dateKey((exact ?? anniversaryPartTwo ?? sameReleaseCampaign)?.date) || TRAINING_PASS_FALLBACK_GLOBAL_DATE;
+}
+
+export function dailyCaratPackPurchaseRule(rule: PlannerIncomeRule, projectionStartDate: string): PlannerIncomeRule | undefined {
+  if (canonicalIncomeRuleId(rule.id) !== 'daily-jewel-pack'
+    || rule.currency !== 'free_jewels' || rule.cadence !== 'daily') return undefined;
+  const startDate = dateKey(projectionStartDate);
+  const availableFrom = dateKey(rule.start_date);
+  if (!startDate || !availableFrom) return undefined;
+
+  // ponytail: assumes purchase at projection start; add a purchase date if renewal timing needs precision.
+  return {
+    ...rule,
+    id: `${rule.id}-purchase`,
+    label: 'Daily Carats Pack purchase',
+    description: '500 paid Carats at projection start, then on renewal every 30 days.',
+    currency: 'paid_jewels',
+    amount: 500,
+    cadence: 'interval',
+    every: 30,
+    start_date: availableFrom > startDate ? availableFrom : startDate,
+  };
 }
 
 export function trainingPassIncomeRules(selection: string | undefined, events: readonly TimelineRecord[]): PlannerIncomeRule[] {

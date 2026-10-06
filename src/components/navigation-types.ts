@@ -8,13 +8,8 @@ export interface NavigationSubItem {
   current?: boolean;
 }
 
-export interface NavigationItem {
-  id: string;
-  label: string;
-  href: string;
+export interface NavigationItem extends NavigationSubItem {
   icon: IconName;
-  meta?: string;
-  current?: boolean;
   expanded?: boolean;
   children?: NavigationSubItem[];
 }

@@ -48,7 +48,7 @@ type CompactAmount = [currency: number, amount: number];
 type CompactVariableReward = [eventId: string, optionId: CompactToken, availableAt: number | string, amounts: CompactAmount[]];
 type CompactCustomIncome = [label: string, currency: number, amount: number, cadence: number, startDate: number | string, endDate: number | string | null, every: number];
 type CompactGoal = 0 | [pickupId: number, desiredCopies: number] | Array<[pickupId: number, desiredCopies: number]>;
-type CompactTarget = [eventId: string, gachaId: number, bannerKind: number, pullsFromDefault: number, goals: CompactGoal, flags: number, ...optional: Array<number | number[]>];
+type CompactTarget = [eventId: string, gachaId: number, bannerKind: number, pullsFromDefault: number, goals: CompactGoal, flags: number, ...optional: Array<number | number[] | string | Record<string, number>>];
 type CompactCloudPlanV3 = [
   id: string, name: string, createdAt: number | string, updatedAt: number | string,
   projectionStartDate: number | string, balances: number[], enabledIncomeRuleIds: CompactToken[],
@@ -118,12 +118,18 @@ function compactTarget(target: PlannerTarget, disabled: boolean): CompactTarget 
   if (target.ticketLimit !== undefined) flags |= 1 << 7;
   if (target.rainbowCrystalsPlanned) flags |= 1 << 8;
   if (target.goldCrystalsPlanned) flags |= 1 << 9;
+  if (target.notes) flags |= 1 << 10;
+  if (target.actualPulls !== undefined) flags |= 1 << 11;
+  if (target.actualCopies && Object.keys(target.actualCopies).length) flags |= 1 << 12;
   const values: CompactTarget = [target.eventId,target.gachaId ?? 0,codeOf(BANNER_KINDS,target.bannerKind),target.plannedPulls - 200,compactGoals(target.pickupGoals ?? []),flags];
   if (flags & (1 << 5)) values.push(target.gachaIds ?? []);
   if (flags & (1 << 6)) values.push(dayCode(target.customPullDate!));
   if (flags & (1 << 7)) values.push(target.ticketLimit ?? 0);
   if (flags & (1 << 8)) values.push(target.rainbowCrystalsPlanned ?? 0);
   if (flags & (1 << 9)) values.push(target.goldCrystalsPlanned ?? 0);
+  if (flags & (1 << 10)) values.push(target.notes ?? '');
+  if (flags & (1 << 11)) values.push(target.actualPulls ?? 0);
+  if (flags & (1 << 12)) values.push(target.actualCopies ?? {});
   return values;
 }
 
@@ -165,6 +171,9 @@ function expandTarget(value: CompactTarget, planId: string, index: number): { ta
   const ticketLimit = flags & (1 << 7) ? nonNegativeInt(value[optional++]) : undefined;
   const rainbowCrystalsPlanned = flags & (1 << 8) ? nonNegativeInt(value[optional++]) : 0;
   const goldCrystalsPlanned = flags & (1 << 9) ? nonNegativeInt(value[optional++]) : 0;
+  const notes = flags & (1 << 10) ? stringValue(value[optional++]) : '';
+  const actualPulls = flags & (1 << 11) ? nonNegativeInt(value[optional++]) : undefined;
+  const actualCopies = flags & (1 << 12) ? value[optional++] as Record<string, number> : undefined;
   const pickupGoals = expandGoals(value[4]);
   const firstGoal = pickupGoals[0];
   const timing = flags & 3;
@@ -173,6 +182,7 @@ function expandTarget(value: CompactTarget, planId: string, index: number): { ta
     target: {
       id:`cloud-target-${planId}-${index+1}`,eventId,...(value[1] > 0 ? {gachaId:nonNegativeInt(value[1])} : {}),...(gachaIds.length ? {gachaIds} : {}),title:eventId,
       bannerKind:valueOf(BANNER_KINDS,value[2],'other'),pullTiming:timing === 1 ? 'start' : timing === 2 ? 'custom' : 'end',...(customPullDate ? {customPullDate} : {}),plannedPulls:Math.max(0,Math.trunc(Number(value[3])||0)+200),
+      ...(notes ? {notes} : {}), ...(actualPulls === undefined ? {} : { actualPulls }), ...(actualCopies ? { actualCopies } : {}),
       desiredCopies:firstGoal?.desiredCopies ?? 1,...(firstGoal ? {pickupId:firstGoal.pickupId} : {}),pickupGoals,useTickets:(flags & (1 << 2)) === 0,...(ticketLimit === undefined ? {} : {ticketLimit}),allowPaidJewels:(flags & (1 << 3)) !== 0,...(rainbowCrystalsPlanned > 0 ? {rainbowCrystalsPlanned} : {}),...(goldCrystalsPlanned > 0 ? {goldCrystalsPlanned} : {}),
     },
     disabled:(flags & (1 << 4)) !== 0,

@@ -25,6 +25,20 @@ function installConsent(removeOnClose = false) {
 }
 const requestUpdates = (page: Page) => page.evaluate(() => window.dispatchEvent(new Event('uma:show-updates')));
 
+test('a privacy change does not reopen a dialog removed from the document', async ({ page }) => {
+  await page.goto('/tools');
+  await requestUpdates(page);
+  const updates = page.getByRole('dialog', { name: 'What’s new', exact: true });
+  await expect(updates).toBeVisible();
+  await page.evaluate(installConsent, false);
+  await expect(updates).toBeHidden();
+  await page.locator('dialog').filter({ has: page.locator('.release-content') }).evaluate(node => node.remove());
+  await page.getByRole('button', { name: 'Save privacy choices', exact: true }).click();
+  await expect(page.locator('#qc-cmp2-ui')).toBeHidden();
+  await expect(page.locator('#app-error')).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Tools & Calculators', exact: true })).toBeVisible();
+});
+
 for (const timing of ['before', 'after', 'automatically'] as const) {
   test(`privacy controls remain usable when the update dialog opens ${timing}`, async ({ page }) => {
     if (timing === 'automatically') {
@@ -57,7 +71,7 @@ for (const timing of ['before', 'after', 'automatically'] as const) {
     if (timing === 'before') await expect(updates.getByRole('heading', { name: 'Previous updates', exact: true })).toBeVisible();
     await updates.getByRole('button', { name: 'Got it', exact: true }).click();
     await expect(page.locator('dialog[open]')).toHaveCount(0);
-    expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('17');
+    expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('18');
     if (timing === 'before') await expect(page.getByRole('button', { name: 'What’s new', exact: true })).toBeFocused();
     await page.getByRole('link', { name: 'Privacy', exact: true }).click();
     await expect(page).toHaveURL(/\/privacy-policy$/);

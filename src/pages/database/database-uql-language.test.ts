@@ -27,6 +27,9 @@ describe('Angular UQL editor language', () => {
     }
   });
   it('preserves token source positions, quoted values and factor chip metadata', () => {
+    expect(language.tokenizeForEditor('Groundwork = 3x').some(segment => segment.kind === 'number' && segment.text === '3x')).toBe(true);
+    const countQuery = 'Groundwork = 3x ';
+    expect(language.completeForEditor(countQuery, countQuery.length)?.options.some(option => option.label.toLowerCase() === 'and')).toBe(true);
     const text = "Main Straightaway Adept >= 2 and trainer_name = 'Speed >= 3'";
     const segments = language.tokenizeForEditor(text);
     expect(segments.map(segment => segment.text).join('')).toBe(text);

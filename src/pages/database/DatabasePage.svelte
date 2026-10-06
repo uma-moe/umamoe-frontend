@@ -355,7 +355,8 @@
       const requirements = filters[key] as FactorRequirement[];
       requirements.forEach((requirement, index) => {
         if (!Number.isFinite(requirement.factorId) || requirement.factorId < 0 || requirement.factorId === 0 && tone === 'white') return;
-        const range = requirement.maximumStars && requirement.maximumStars !== requirement.minimumStars ? `${requirement.minimumStars}–${requirement.maximumStars}★` : `${requirement.minimumStars}★`;
+        const starRange = requirement.maximumStars && requirement.maximumStars !== requirement.minimumStars ? `${requirement.minimumStars}–${requirement.maximumStars}★` : `${requirement.minimumStars}★`;
+        const range = `${starRange}${requirement.minimumOccurrences !== undefined || requirement.maximumOccurrences !== undefined ? ` · ${requirement.minimumOccurrences ?? 0}–${requirement.maximumOccurrences ?? (key.startsWith('main') ? 1 : 3)}×` : ''}`;
         add(`${String(key)}-${requirement.factorId}-${index}`, `${prefix}: ${requirement.factorId === 0 ? 'Any' : factorLabels.get(String(requirement.factorId)) ?? requirement.factorId} ${range}`, tone, () => { (filters[key] as FactorRequirement[]) = requirements.filter((_, itemIndex) => itemIndex !== index); });
       });
     }
@@ -891,10 +892,10 @@
 
               {#if filterMode === 'advanced'}
                 <DatabaseFilterGroup id="main" bind:open={tourPanels.main} title="Main Parent Factors" variant="factor">
-                  <FactorFilterEditor id="main-blue" label="Blue Factors (Stats)" category="stats" tone="blue" maxStars={3} thresholdMode singleFactor addLabelOverride="Add Blue Factor (Stats)" bind:requirements={filters.mainBlue}/>
-                  <FactorFilterEditor id="main-pink" label="Pink Factors (Aptitude)" category="aptitude" tone="pink" maxStars={3} thresholdMode singleFactor addLabelOverride="Add Pink Factor (Aptitude)" bind:requirements={filters.mainPink}/>
-                  <FactorFilterEditor id="main-green" label="Green Factors (Unique)" category="unique" tone="green" maxStars={3} thresholdMode singleFactor addLabelOverride="Add Green Factor (Unique)" bind:requirements={filters.mainGreen}/>
-                  <FactorFilterEditor id="main-white" label="White Factors - Required (Skills/Races)" category="skills-races" tone="white" maxStars={3} thresholdMode addLabelOverride="Add White Factor (Skills/Races)" bind:requirements={filters.mainWhite}/>
+                  <FactorFilterEditor id="main-blue" label="Blue Factors (Stats)" category="stats" tone="blue" maxStars={3} addLabelOverride="Add Blue Factor (Stats)" bind:requirements={filters.mainBlue}/>
+                  <FactorFilterEditor id="main-pink" label="Pink Factors (Aptitude)" category="aptitude" tone="pink" maxStars={3} addLabelOverride="Add Pink Factor (Aptitude)" bind:requirements={filters.mainPink}/>
+                  <FactorFilterEditor id="main-green" label="Green Factors (Unique)" category="unique" tone="green" maxStars={3} addLabelOverride="Add Green Factor (Unique)" bind:requirements={filters.mainGreen}/>
+                  <FactorFilterEditor id="main-white" label="White Factors - Required (Skills/Races)" category="skills-races" tone="white" maxStars={3} addLabelOverride="Add White Factor (Skills/Races)" bind:requirements={filters.mainWhite}/>
                   <FactorFilterEditor id="optional-main-white" label="Preferred White Factors" category="skills-races" tone="white" maxStars={3} priorityMode bind:requirements={filters.optionalMainWhite}/>
                   <DatabaseWhiteCategoryFilter heading="Main Parent White Categories" values={mainWhiteCategories} onchange={(category,metric,value)=>setWhiteCategory('main',category,metric,value)}/>
                 </DatabaseFilterGroup>

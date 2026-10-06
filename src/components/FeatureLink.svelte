@@ -1,8 +1,10 @@
 <script lang="ts">
   import Icon from './Icon.svelte';
   import type { IconName } from './icon-types';
-  interface Props { title: string; description: string; icon: IconName; href?: string; accent?: string; updated?: boolean; }
-  let { title, description, icon, href, accent = 'primary', updated = false }: Props = $props();
+  import { updatedNavigationHrefs } from '@/routes/route-manifest';
+  interface Props { title: string; description: string; icon: IconName; href?: string; accent?: string; }
+  let { title, description, icon, href, accent = 'primary' }: Props = $props();
+  const updated = $derived(Boolean(href && updatedNavigationHrefs.has(href)));
 </script>
 
 <svelte:element this={href ? 'a' : 'div'} {href} class="quick-link" class:disabled={!href} class:updated-feature={updated} aria-disabled={href ? undefined : true} style:--feature-accent={`var(--${accent === 'pink' || accent === 'purple' ? 'color' : 'accent'}-${accent})`}>

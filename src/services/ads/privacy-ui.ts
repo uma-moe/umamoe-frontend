@@ -1,4 +1,5 @@
 import { readable } from 'svelte/store';
+import { isElementVisible } from '@/lib/element-visibility';
 
 // Quantcast's consent UI lives outside our native dialogs. A modal would make
 // its controls inert while its focus trap keeps taking focus from the modal.
@@ -7,7 +8,7 @@ export const privacyUiOpen = readable(false, set => {
   let ui: HTMLElement | null;
   const update = () => {
     ui = document.getElementById('qc-cmp2-ui');
-    set(Boolean(ui && !ui.closest('dialog') && ui.checkVisibility({ visibilityProperty: true })));
+    set(Boolean(ui && !ui.closest('dialog') && isElementVisible(ui, { visibilityProperty: true })));
   };
   const observer = new MutationObserver(records => {
     // App rendering and ad refreshes must not repeatedly force consent layout checks.

@@ -1,3 +1,4 @@
+import { occurrenceComparison } from './factor-occurrences';
 import { isUqlQuoteStart, replaceOutsideUqlStrings } from './uql-text';
 // Query compilation extracted from the live Angular Database filter.
 // No component state, fetching, or persistence: callers supply the shared catalogs.
@@ -69,6 +70,7 @@ interface UqlSkillListItem {
   factor: UqlNamedFactor | null;
   operator?: string;
   level?: number;
+  occurrences?: boolean;
 }
 
 export class UqlCompiler {
@@ -135,7 +137,7 @@ export class UqlCompiler {
       scoringFunctionValueCompiled,
     );
     const factorSumCompiled = this.compileFriendlyFactorSumComparisons(
-      arrayOperatorCompiled,
+      this.compileFriendlyOccurrenceComparisons(arrayOperatorCompiled),
     );
     const scalarArithmeticCompiled =
       this.compileFriendlyScalarArithmeticFactorAliases(factorSumCompiled);
@@ -431,6 +433,7 @@ export class UqlCompiler {
       'does not have',
       'in',
       'not in',
+      'not',
       'contains',
       'has',
       'overlaps',
@@ -658,7 +661,7 @@ export class UqlCompiler {
   private resolveScopedSparkComparisonAlias(
     aliasText: string,
   ): { field: FriendlyScopedSparkField; prefix: string } | null {
-    const match = aliasText.match(/^(\s*(?:(?:where|and|or)\s+)?)(.*?)\s*$/i);
+    const match = aliasText.match(/^(\s*(?:(?:where|and|or|not)\s+)*)(.*?)\s*$/i);
     const prefix = match?.[1] ?? '';
     const alias = match?.[2] ?? aliasText.trim();
     const field = this.scopedSparkComparisonAliasLookup.get(
@@ -1078,6 +1081,20 @@ export class UqlCompiler {
     });
   }
 
+  private compileFriendlyOccurrenceComparisons(query: string): string {
+    if (!/\d\s*[x×]/i.test(query)) return query;
+    return replaceOutsideUqlStrings(query, segment => this.compileFriendlyFunctionValues(segment).replace(
+      /(^|[\s(,])([A-Za-z][^<>=!;()]*?)\s*(==|=|!=|<>|<=|>=|<|>)\s*(\d+)\s*[x×](?![\w.])/gi,
+      (match, leading: string, alias: string, operator: string, count: string) => {
+        const scoped = this.resolveScopedSparkComparisonAlias(alias);
+        const parts = alias.match(/^(\s*(?:(?:where|and|or|not)\s+)*)(.*?)\s*$/i);
+        const factor = this.resolveFactorUqlValue(parts?.[2] ?? alias) as UqlNamedFactor | null;
+        if (!scoped && !factor) return match;
+        return leading + (scoped?.prefix ?? parts?.[1] ?? '') + occurrenceComparison(scoped?.field.factorId ?? factor!.factorId, scoped?.field.fields.map(field => field.field) ?? [factor!.field], operator, Number(count));
+      }
+    ));
+  }
+
   private compileFriendlyLoadedFactorComparisons(query: string): string {
     return replaceOutsideUqlStrings(query, (segment) => {
       const comparisonPattern =
@@ -1091,11 +1108,12 @@ export class UqlCompiler {
           operator: string,
           value: string,
         ) => {
+          const parts = aliasText.match(/^(\s*(?:(?:where|and|or|not)\s+)*)(.*?)\s*$/i);
           const factor = this.resolveFactorUqlValue(
-            aliasText,
+            parts?.[2] ?? aliasText,
           ) as UqlNamedFactor | null;
           if (!factor) return match;
-          return `${leadingText}${this.buildSparkComparison(factor, operator, parseInt(value, 10))}`;
+          return `${leadingText}${parts?.[1] ?? ''}${this.buildSparkComparison(factor, operator, parseInt(value, 10))}`;
         },
       );
     });
@@ -1697,6 +1715,11 @@ export class UqlCompiler {
   ): string[] {
     const factor = item.factor;
     if (!factor) return [];
+    if (item.occurrences) {
+      const fields = templateFields.flatMap(field => this.getContextualSkillFields(field, factor.valueContext));
+      const clause = occurrenceComparison(factor.factorId, fields, item.operator!, item.level!);
+      return [negated ? 'not (' + clause + ')' : clause];
+    }
     return templateFields.flatMap((templateField) => {
       const targetFields = this.getContextualSkillFields(
         templateField,
@@ -1752,6 +1775,10 @@ export class UqlCompiler {
     negated: boolean,
   ): string {
     const factor = item.factor!;
+    if (item.occurrences) {
+      const clause = occurrenceComparison(factor.factorId, [fieldName], item.operator!, item.level!);
+      return negated ? 'not (' + clause + ')' : clause;
+    }
     const normalizedOperator = item.operator
       ? this.normalizeUqlComparisonOperator(item.operator)
       : undefined;
@@ -2420,6 +2447,9 @@ export class UqlCompiler {
       return null;
 
     const normalizedFunction = functionName.toLowerCase();
+    if (normalizedFunction === 'overlaps' && resolved.some(item => item.occurrences)) {
+      return '(' + resolved.map(item => item.factor ? this.buildSkillPresenceClause(fieldText.trim(), item, false) : 'contains(' + fieldText.trim() + ', ' + item.value + ')').join(' or ') + ')';
+    }
     if (normalizedFunction === 'overlaps') {
       const ids = resolved.flatMap((item) =>
         item.factor
@@ -2562,7 +2592,7 @@ export class UqlCompiler {
   ): UqlSkillListItem {
     const trimmedValue = this.stripOuterParens(rawValue.trim());
     const comparisonMatch = trimmedValue.match(
-      /^(.*?)(?:\s*(>=|<=|!=|<>|==|=|>|<)\s*(\d+))\s*$/,
+      /^(.*?)(?:\s*(>=|<=|!=|<>|==|=|>|<)\s*(\d+)\s*([x×])?)\s*$/,
     );
     const value = comparisonMatch ? comparisonMatch[1]!.trim() : trimmedValue;
     const operator = comparisonMatch?.[2]
@@ -2579,6 +2609,7 @@ export class UqlCompiler {
       ) as UqlNamedFactor | null,
       operator,
       level,
+      occurrences: !!comparisonMatch?.[4],
     };
   }
 
@@ -2634,7 +2665,7 @@ export class UqlCompiler {
         continue;
       const comparisonMatch = listText
         .slice(boundary)
-        .match(/^\s*(?:>=|<=|!=|<>|==|=|>|<)\s*\d+/);
+        .match(/^\s*(?:>=|<=|!=|<>|==|=|>|<)\s*\d+(?:\s*[x×](?![\w.]))?/);
       const comparisonEnd = comparisonMatch
         ? boundary + comparisonMatch[0].length
         : end;

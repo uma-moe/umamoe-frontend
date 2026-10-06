@@ -7,7 +7,7 @@ interface TurnstileApi {
     sitekey: string;
     action: string;
     theme: 'auto';
-    appearance: 'interaction-only';
+    appearance: 'interaction-only' | 'always';
     execution: 'execute';
     retry: 'never';
     'refresh-expired': 'never';
@@ -79,7 +79,7 @@ function loadTurnstile(): Promise<TurnstileApi> {
   return scriptTask;
 }
 
-async function challengeToken(): Promise<string> {
+async function challengeToken(visible = false): Promise<string> {
   if (devToken) return devToken;
   const turnstile = await loadTurnstile();
   const container = document.createElement('div');
@@ -89,24 +89,22 @@ async function challengeToken(): Promise<string> {
   // Requests also originate inside native modal pickers. Keep the challenge in
   // the active top layer, where it can receive keyboard and pointer input.
   ([...document.querySelectorAll('dialog[open]')].at(-1) ?? document.body).append(container);
+  let widgetId = '';
   return new Promise<string>((resolve, reject) => {
     let settled = false;
-    let widgetId = '';
     const finish = (token?: string, error?: Error) => {
       if (settled) return;
       settled = true;
       window.clearTimeout(timeout);
-      if (widgetId) turnstile.remove(widgetId);
-      container.remove();
       if (token) resolve(token); else reject(error ?? new Error('Turnstile challenge failed.'));
     };
-    const timeout = window.setTimeout(() => finish(undefined, new Error('Turnstile challenge timed out.')), 45_000);
+    const timeout = window.setTimeout(() => finish(undefined, new Error('Turnstile challenge timed out.')), visible ? 180_000 : 45_000);
     try {
       widgetId = turnstile.render(container, {
         sitekey: siteKey,
         action,
         theme: 'auto',
-        appearance: 'interaction-only',
+        appearance: visible ? 'always' : 'interaction-only',
         execution: 'execute',
         retry: 'never',
         'refresh-expired': 'never',
@@ -122,11 +120,19 @@ async function challengeToken(): Promise<string> {
       });
       turnstile.execute(widgetId);
     } catch (error) { finish(undefined, error instanceof Error ? error : new Error('Browser verification failed.')); }
+  }).finally(() => {
+    // Turnstile can reset after invoking a callback. Let its handler finish first.
+    if (widgetId) turnstile.remove(widgetId);
+    container.remove();
+  }).catch(error => {
+    // Give the visitor one visible attempt before failing all waiting requests.
+    if (visible) throw error;
+    return challengeToken(true);
   });
 }
 
-async function exchange(): Promise<string> {
-  const challenge = await challengeToken();
+async function exchange(visible = false): Promise<string> {
+  const challenge = await challengeToken(visible);
   const response = await fetch(exchangePath, { method: 'POST', credentials: 'omit', signal: AbortSignal.timeout(15_000), headers: { [challengeHeader]: challenge, accept: 'application/json, text/plain, */*' } });
   const token = response.headers.get(proofHeader)?.trim() ?? '';
   const ttl = Number(response.headers.get(ttlHeader) ?? 0);
@@ -148,7 +154,7 @@ const port: BrowserProofPort = {
     // Keep failures shared too, so parallel API calls cannot restart a blocked challenge.
     if (!refreshTask || retryAfterFailure && get(browserVerification).error) {
       browserVerification.set({ pending: true, error: '' });
-      refreshTask = exchange().then(token => { refreshTask = undefined; browserVerification.set({ pending: false, error: '' }); return token; }, error => {
+      refreshTask = exchange(retryAfterFailure).then(token => { refreshTask = undefined; browserVerification.set({ pending: false, error: '' }); return token; }, error => {
         browserVerification.set({ pending: false, error: error instanceof Error ? error.message : 'Browser verification failed.' });
         throw error;
       });

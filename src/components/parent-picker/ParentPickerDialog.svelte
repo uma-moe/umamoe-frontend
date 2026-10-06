@@ -156,7 +156,7 @@
   <VeteranCollection compact showAccountSwitch={false} empty={emptyCollection} onnavigate={() => open=false} onimport={() => { pickerState.tab='veterans'; }}>{#snippet children(dropZone, chooseFile)}<div class="picker-layout">
     <Tabs items={tabs} bind:value={pickerState.tab} label="Veteran picker sections" variant="underline"/>
     <div class="filterbar">
-      <div class="parent-search"><TextField id={id+'-search'} label="Search parents" hideLabel placeholder="Search veterans…" prefixIcon="search" bind:value={pickerState.query}/>{#if pickerState.query}<IconButton icon="close" label="Clear parent search" onclick={()=>pickerState.query=''}/>{/if}</div>
+      <div class="parent-search"><TextField id={id+'-search'} label="Search parents" hideLabel placeholder={pickerState.tab==='bookmarks'||pickerState.tab==='saved'?'Search Uma or username…':'Search veterans…'} prefixIcon="search" bind:value={pickerState.query}/>{#if pickerState.query}<IconButton icon="close" label="Clear parent search" onclick={()=>pickerState.query=''}/>{/if}</div>
       <span class="result-count" role="status">{filtered.length} {filtered.length===1?'result':'results'}</span>
       <div class="parent-sort"><SelectFieldSlim id={id+'-sort'} label="Sort parents" hideLabel options={sortOptions} bind:value={pickerState.sort}/></div>
       <div class="parent-actions">{#if pickerState.tab==='veterans'}<IconButton icon="upload" label="Upload veteran JSON" onclick={chooseFile}/>{/if}

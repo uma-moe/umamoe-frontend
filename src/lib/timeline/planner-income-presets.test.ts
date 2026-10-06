@@ -63,7 +63,8 @@ describe('Angular planner income presets', () => {
       { id: 'median', label: 'Median', currency: 'free_jewels' as const, amount: 80, cadence: 'monthly' as const, start_date: '2026-01-01', scenario_group: 'speculative_income', scenario_option: 'median' }
     ];
     applyIncomePreset(plan, rules, 'casual');
-    expect(plan.scenarioSelections).toMatchObject({ monthly_shop_tickets: 'friend_points', speculative_income: 'median' });
+    expect(plan.scenarioSelections).toMatchObject({ monthly_shop_friend_points: 'include', speculative_income: 'median' });
+    expect(plan.scenarioSelections.monthly_shop_clovers).toBeUndefined();
     expect(plan.enabledIncomeRuleIds).toEqual(['published-default']);
   });
 

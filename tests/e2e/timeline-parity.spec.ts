@@ -188,7 +188,7 @@ test('Carat Planner accepts the compatible banner query and remains contained on
   const account = page.getByRole('button', { name: /^Account & recurring/ });
   await expect(account).toHaveAttribute('aria-expanded', 'false');
   await account.click();
-  await expect(page.getByRole('combobox', { name: 'Monthly shop tickets', exact: true })).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: /^(Include|Exclude) Monthly shop: Friend Points$/ })).toBeVisible();
   await page.getByRole('tab', { name: 'Rewards', exact: true }).click();
   await expect(page.getByText('Launch gift', { exact: true })).toBeVisible();
   await expect(page.getByText('10 free-pull campaign', { exact: true })).toBeVisible();

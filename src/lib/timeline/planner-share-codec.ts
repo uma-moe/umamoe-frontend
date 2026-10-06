@@ -19,7 +19,7 @@ const PRESETS = ['conservative','casual','active','completionist'] as const;
 type CompactAmount = [number, number];
 type CompactVariableReward = [string, string, string, string, CompactAmount[]];
 type CompactCustomIncome = [string, number, number, number, string, string | null, number | null];
-type CompactTarget = [string, number | null, number[], string, number, string | null, number, string | null, number, number, number | null, Array<[number, number]>, 0 | 1, number | null, 0 | 1, number, number];
+type CompactTarget = [string, number | null, number[], string, number, string | null, number, string | null, number, number, number | null, Array<[number, number]>, 0 | 1, number | null, 0 | 1, number, number, string?, (number | null)?, Record<string, number>?];
 type CompactPlan = [2, string, string, number[], string[], string[], string[], string[], string[], Array<[string,string]>, CompactVariableReward[], Array<[string,string]>, -1|0|1, CompactCustomIncome[], CompactTarget[], number?];
 
 export interface DecodedPlannerShare { plan: unknown; fingerprint: string; }
@@ -78,7 +78,7 @@ function compactPlan(plan: CaratPlan): CompactPlan {
     Object.entries(plan.freePullCampaignSelections),
     plan.resourceDefaultsApplied === undefined ? -1 : plan.resourceDefaultsApplied ? 1 : 0,
     plan.customIncome.map((item) => [item.label,codeOf(CURRENCIES,item.currency),item.amount,codeOf(CADENCES,item.cadence),item.startDate,item.endDate ?? null,item.every ?? null]),
-    plan.targets.map((target) => [target.eventId,target.gachaId ?? null,target.gachaIds ?? [],target.title,codeOf(BANNER_KINDS,target.bannerKind),target.imagePath ?? null,codeOf(PULL_TIMINGS,target.pullTiming),target.customPullDate ?? null,target.plannedPulls,target.desiredCopies,target.pickupId ?? null,(target.pickupGoals ?? []).map((goal) => [goal.pickupId,goal.desiredCopies]),target.useTickets ? 1 : 0,target.ticketLimit ?? null,target.allowPaidJewels ? 1 : 0,target.rainbowCrystalsPlanned ?? 0,target.goldCrystalsPlanned ?? 0]),
+    plan.targets.map((target) => [target.eventId,target.gachaId ?? null,target.gachaIds ?? [],target.title,codeOf(BANNER_KINDS,target.bannerKind),target.imagePath ?? null,codeOf(PULL_TIMINGS,target.pullTiming),target.customPullDate ?? null,target.plannedPulls,target.desiredCopies,target.pickupId ?? null,(target.pickupGoals ?? []).map((goal) => [goal.pickupId,goal.desiredCopies]),target.useTickets ? 1 : 0,target.ticketLimit ?? null,target.allowPaidJewels ? 1 : 0,target.rainbowCrystalsPlanned ?? 0,target.goldCrystalsPlanned ?? 0,target.notes || '',target.actualPulls ?? null,target.actualCopies ?? {}]),
   ];
   const preset = compactPreset(plan);
   if (preset) value.push(preset);
@@ -99,7 +99,7 @@ function expandPlan(raw: unknown): CaratPlan | null {
     variableRewardSelections:Object.fromEntries(value[10].map((item) => [item[0],{ optionId:item[1],label:item[2],availableAt:item[3],amounts:Object.fromEntries(item[4].map(([currency,amount]) => [valueOf(CURRENCIES,currency,'free_jewels'),amount])) }])),
     freePullCampaignSelections:Object.fromEntries(pairArray(value[11])),resourceDefaultsApplied:value[12] === 1,...preset,
     customIncome:value[13].map((item,index) => ({ id:`shared-income-${index+1}`,label:item[0],currency:valueOf(CURRENCIES,item[1],'free_jewels'),amount:item[2],cadence:valueOf(CADENCES,item[3],'once'),startDate:item[4],...(item[5] ? {endDate:item[5]} : {}),...(item[6] !== null ? {every:item[6]} : {}) })),
-    targets:value[14].map((target,index) => ({ id:`shared-target-${index+1}`,eventId:target[0],...(target[1] !== null ? {gachaId:target[1]} : {}),...(target[2].length ? {gachaIds:target[2]} : {}),title:target[3],bannerKind:valueOf(BANNER_KINDS,target[4],'other'),...(target[5] ? {imagePath:target[5]} : {}),pullTiming:valueOf(PULL_TIMINGS,target[6],'end'),...(target[7] ? {customPullDate:target[7]} : {}),plannedPulls:target[8],desiredCopies:target[9],...(target[10] !== null ? {pickupId:target[10]} : {}),pickupGoals:target[11].map(([pickupId,desiredCopies]) => ({pickupId,desiredCopies})),useTickets:target[12] === 1,...(target[13] !== null ? {ticketLimit:target[13]} : {}),allowPaidJewels:target[14] === 1,...(target[15] ? {rainbowCrystalsPlanned:target[15]} : {}),...(target[16] ? {goldCrystalsPlanned:target[16]} : {}) })),
+    targets:value[14].map((target,index) => ({ id:`shared-target-${index+1}`,eventId:target[0],...(target[1] !== null ? {gachaId:target[1]} : {}),...(target[2].length ? {gachaIds:target[2]} : {}),title:target[3],bannerKind:valueOf(BANNER_KINDS,target[4],'other'),...(target[5] ? {imagePath:target[5]} : {}),pullTiming:valueOf(PULL_TIMINGS,target[6],'end'),...(target[7] ? {customPullDate:target[7]} : {}),plannedPulls:target[8],...(typeof target[17] === 'string' && target[17] ? {notes:target[17]} : {}),...(target[18] == null ? {} : {actualPulls:target[18]}),...(target[19] && Object.keys(target[19]).length ? {actualCopies:target[19]} : {}),desiredCopies:target[9],...(target[10] !== null ? {pickupId:target[10]} : {}),pickupGoals:target[11].map(([pickupId,desiredCopies]) => ({pickupId,desiredCopies})),useTickets:target[12] === 1,...(target[13] !== null ? {ticketLimit:target[13]} : {}),allowPaidJewels:target[14] === 1,...(target[15] ? {rainbowCrystalsPlanned:target[15]} : {}),...(target[16] ? {goldCrystalsPlanned:target[16]} : {}) })),
   };
 }
 

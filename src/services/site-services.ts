@@ -4,7 +4,7 @@ import { runtimeConfig } from './runtime-config';
 export interface EndpointStatus { name: string; group: string; healthy: boolean; }
 export const serviceStatus = writable<{ state: 'loading' | 'operational' | 'degraded' | 'down'; endpoints: EndpointStatus[] }>({ state: 'loading', endpoints: [] });
 export const availableVersion = writable('');
-export const CURRENT_UPDATE_VERSION = 17;
+export const CURRENT_UPDATE_VERSION = 18;
 export const buildVersion = () => document.querySelector<HTMLMetaElement>('meta[name="app-build-version"]')?.content.trim() || 'local';
 export function reloadUpdatedVersion(version: string): void {
   const url = new URL(location.href);

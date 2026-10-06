@@ -2,6 +2,7 @@ import type { CaratPlan, PlannerCompetitiveRewardVariant, PlannerIncomeRule } fr
 import type { PlannerRewardEntry } from './carat-planner';
 import { CONDITIONAL_REWARD_DEFAULT_SELECTIONS, plannerRewardNeedsEnabledOverride } from './planner-reward-assumptions';
 import { plannerRewardIsProjectable } from './planner-reward-currencies';
+import { monthlyShopExchange } from './planner-income-assumptions';
 
 export type PlannerIncomePresetId = 'conservative' | 'casual' | 'active' | 'completionist';
 
@@ -15,7 +16,11 @@ export const PLANNER_INCOME_PRESETS = [
 const preferences: Readonly<Record<string, readonly string[]>> = {
   team_trials_class: ['class_3', 'class_4', 'class_5', 'class_6'],
   club_rank: ['rank_3', 'rank_5', 'rank_7', 'rank_11'],
-  monthly_shop_tickets: ['', 'friend_points', 'friend_points', 'include'],
+  monthly_shop_friend_points: ['', 'include', 'include', 'include'],
+  monthly_shop_clovers: ['', '', '', 'include'],
+  monthly_shop_silver_cleats: ['', '', '', ''],
+  monthly_shop_gold_cleats: ['', '', '', ''],
+  monthly_shop_rainbow_cleats: ['', '', '', ''],
   training_pass: ['', 'free', 'free', 'free'],
   champions_meeting_result: ['open_third', 'open_first', 'group_b_second', 'champion'],
   champions_meeting_round_income: ['', 'low_investment', 'competitive', 'meta_highroller'],
@@ -54,9 +59,12 @@ export function applyIncomePreset(
   const groups = new Map<string, string[]>();
   for (const rule of rules) {
     if (!rule.scenario_group || !rule.scenario_option) continue;
-    const options = groups.get(rule.scenario_group) ?? [];
-    if (!options.includes(rule.scenario_option)) options.push(rule.scenario_option);
-    groups.set(rule.scenario_group, options);
+    const shop = monthlyShopExchange(rule);
+    const group = shop?.id ?? rule.scenario_group;
+    const option = shop ? 'include' : rule.scenario_option;
+    const options = groups.get(group) ?? [];
+    if (!options.includes(option)) options.push(option);
+    groups.set(group, options);
   }
   for (const [group, options] of Object.entries(additionalGroups)) groups.set(group, [...options]);
   for (const [group, options] of groups) {

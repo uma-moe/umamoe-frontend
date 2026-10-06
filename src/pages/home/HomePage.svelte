@@ -6,8 +6,8 @@
     { href: '/circles', icon: 'community' as const, accent: 'secondary', title: 'Clubs', description: 'Club Database and Fan Progression' },
     { href: '/rankings', icon: 'rankings' as const, accent: 'warning', title: 'Rankings', description: 'Global Trainer Fan Rankings' },
     { href: '/tierlist', icon: 'tierlist' as const, accent: 'warning', title: 'Tierlists', description: 'Support Card Tierlist' },
-    { href: '/timeline', icon: 'timeline' as const, accent: 'pink', title: 'Timeline', description: 'Estimated Release Schedule', updated: true },
-    { href: '/tools', icon: 'tools' as const, accent: 'purple', title: 'Tools & Analytics', description: 'Advanced tools and statistics', updated: true }
+    { href: '/timeline', icon: 'timeline' as const, accent: 'pink', title: 'Timeline', description: 'Estimated Release Schedule' },
+    { href: '/tools', icon: 'tools' as const, accent: 'purple', title: 'Tools & Analytics', description: 'Advanced tools and statistics' }
   ];
 
 </script>

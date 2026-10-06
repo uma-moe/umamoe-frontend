@@ -401,7 +401,7 @@
 
       <ContentAd routeId="statistics"/>
       <footer><Icon name="info" size={15}/><p>Community data, anonymized and aggregated. Usage describes popularity; it does not measure race results.</p></footer>
-      <Dialog bind:open={filtersOpen} title="Statistics filters" icon="tune" mobileSheet maxWidth="540px">
+      <Dialog bind:open={filtersOpen} title="Statistics filters" icon="tune" maxWidth="540px">
         <StatisticsFilterControls {allScenarios} {allClasses} {allDistances} bind:selectedScenarios bind:selectedClasses bind:selectedDistances {selectedSamples}/>
         {#snippet actions()}<Button variant="ghost" size="sm" icon="refresh" disabled={!filtersChanged} onclick={resetFilters}>Reset filters</Button><Button size="sm" onclick={() => filtersOpen = false}>Show results</Button>{/snippet}
       </Dialog>

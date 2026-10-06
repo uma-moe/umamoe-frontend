@@ -85,8 +85,8 @@ export const profileRepository = {
     return request.finally(() => { if (visibilityWrites.get(accountId) === request) visibilityWrites.delete(accountId); });
   },
   async ingestVeterans(accountId: string, payload: unknown[]): Promise<VeteranIngestResult> {
-    // Deploy the append route with this UI. The legacy endpoint deletes records absent from its payload.
-    const result = await appHttp.request<VeteranIngestResult>(`/ingest/veteran/append?account_id=${encodeURIComponent(accountId)}`, { method: 'POST', body: payload });
+    // Each upload is the complete collection: insert new, update matching, delete missing.
+    const result = await appHttp.request<VeteranIngestResult>(`/ingest/veteran?account_id=${encodeURIComponent(accountId)}`, { method: 'POST', body: payload });
     sessionCache().invalidate(`profile:${accountId}`); cache.invalidate('veteran:');
     return result;
   }

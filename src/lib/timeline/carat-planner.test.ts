@@ -3,6 +3,26 @@ import { CARAT_PLANNER_STORAGE_KEY, activePlan, createPlan, importPlanCollection
 import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
 
 describe('Carat Planner compatibility', () => {
+  it('combines shared selector-ticket sparks with Uncap Crystals for the reported support banners', () => {
+    for (const scenario of [
+      { pulls: 400, ids: [30264], copies: [5], crystals: 1, probability: .8019747439846 },
+      { pulls: 600, ids: [30256, 30257], copies: [5, 4], crystals: 2, probability: .9721885652622 }
+    ]) {
+      const plan = createPlan(); plan.projectionStartDate = '2028-01-01';
+      plan.balances.freeJewels = scenario.pulls * 150;
+      plan.balances.rainbowFullCrystals = scenario.crystals;
+      plan.targets = [{ id: 'spark', eventId: 'spark', title: 'Support banner', bannerKind: 'support', bannerEnd: '2028-02-01', pullTiming: 'end', plannedPulls: scenario.pulls, desiredCopies: 5, useTickets: false, allowPaidJewels: false, rainbowCrystalsPlanned: scenario.crystals,
+        pickupGoals: scenario.ids.map((pickupId, index) => ({ pickupId, desiredCopies: scenario.copies[index]! })) }];
+      const result = projectPlan(plan, { core: {}, income: { rules: [] }, rewards: { rewards: [] }, gachas: [{
+        event_id: 'spark', gacha_id: 30363, banner_kind: 'support', start_date: '2028-01-01', end_date: '2028-02-01', spark_pulls: 200,
+        pickups: scenario.ids.map(pickup_id => ({ pickup_id, rate: .0075, exchangeable: true }))
+      }] }).targets[0]!;
+
+      expect(result).toMatchObject({ fundedPulls: scenario.pulls, sparkCopies: scenario.pulls / 200, rainbowCrystalsUsed: scenario.crystals, jointProbabilityExact: true });
+      expect(result.pickupProbability).toBeCloseTo(scenario.probability, 12);
+    }
+  });
+
   it('reopens shared copies without overwriting edits and gives new copies independent names and dates', () => {
     const original = createPlan('Plan'); original.createdAt = original.updatedAt = '2020-01-01T00:00:00Z';
     original.targets = [{ id: 'kept-target', eventId: 'event', title: 'Banner', bannerKind: 'character', pullTiming: 'end', plannedPulls: 200, desiredCopies: 1, useTickets: true, allowPaidJewels: false }];

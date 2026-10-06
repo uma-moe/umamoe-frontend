@@ -79,7 +79,7 @@ export const test = base.extend<{ runtimeErrors: void; allowPageLoadFailure: boo
       if (!/^https?:$/.test(location.protocol)) return;
       try {
         if (!localStorage.getItem('page-introduction-audience-v1')) localStorage.setItem('page-introduction-audience-v1', 'existing');
-        if (!localStorage.getItem('lastSeenUpdateVersion')) localStorage.setItem('lastSeenUpdateVersion', '17');
+        if (!localStorage.getItem('lastSeenUpdateVersion')) localStorage.setItem('lastSeenUpdateVersion', '18');
       } catch { /* Sandboxed third-party frames do not share our visitor state. */ }
     });
     const errors: string[] = [];

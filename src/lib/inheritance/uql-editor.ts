@@ -161,6 +161,7 @@ export class UqlEditorLanguage {
   ]);
 
   private readonly highlightFunctions = new Set([
+    'any_spark',
     'contains',
     'overlaps',
     'has_all',
@@ -352,6 +353,7 @@ export class UqlEditorLanguage {
       if (/[0-9]/.test(c)) {
         let j = i + 1;
         while (j < len && /[0-9.]/.test(text.charAt(j))) j++;
+        if (/^[x×](?![\w.])/i.test(text.slice(j))) j++;
         push('number', text.slice(i, j), i);
         i = j;
         continue;
@@ -983,7 +985,7 @@ export class UqlEditorLanguage {
   }
 
   private isTypingBooleanContinuation(prefix: string): boolean {
-    const match = prefix.match(/(?:\d|'|"|\))\s+([A-Za-z]*)$/);
+    const match = prefix.match(/(?:\d[x×]?|'|"|\))\s+([A-Za-z]*)$/i);
     if (!match) return false;
     const token = match[1]!.toLowerCase();
     if (token === 'and' || token === 'or') return false;
@@ -1108,7 +1110,7 @@ export class UqlEditorLanguage {
       )
     )
       return false;
-    return /(?:\d|'|"|\)|\])$/.test(trimmedPrefix);
+    return /(?:\d[x×]?|'|"|\)|\])$/i.test(trimmedPrefix);
   }
 
   private isAfterKnownValue(prefix: string): boolean {

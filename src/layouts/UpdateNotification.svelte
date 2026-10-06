@@ -80,7 +80,7 @@
       </div>
     {/if}
   </div>
-  {#snippet actions()}<div class="release-actions"><Button size="sm" variant="ghost" icon={history ? 'arrow-left' : undefined} onclick={() => history = !history}>{history ? 'Latest release' : 'Previous updates'}</Button><span class="footer-spacer"></span><Button size="sm" variant="secondary" onclick={close}>Got it</Button>{#if !history}<Button size="sm" onclick={close}>Explore 2.0</Button>{/if}</div>{/snippet}
+  {#snippet actions()}<div class="release-actions"><Button size="sm" variant="ghost" icon={history ? 'arrow-left' : undefined} onclick={() => history = !history}>{history ? 'Latest release' : 'Previous updates'}</Button><span class="footer-spacer"></span><Button size="sm" variant="secondary" onclick={close}>Got it</Button>{#if !history}<Button size="sm" onclick={close}>Explore update</Button>{/if}</div>{/snippet}
 </Dialog>{/if}
 <style>
   .release-content { min-width:0; }

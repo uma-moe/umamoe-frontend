@@ -67,7 +67,7 @@ test('persistent resources render before the manifest, survive navigation, and r
   await context.route('**/app/**', async route => route.fulfill({response:await route.fetch({maxRetries:2})}));
   await mockAdvertising(context);
   await mockResources(context);
-  await context.addInitScript(() => { localStorage.setItem('page-introduction-audience-v1', 'existing'); localStorage.setItem('lastSeenUpdateVersion', '17'); });
+  await context.addInitScript(() => { localStorage.setItem('page-introduction-audience-v1', 'existing'); localStorage.setItem('lastSeenUpdateVersion', '18'); });
   const page=await context.newPage(),errors:string[]=[];
   await throttleAuditPage(page);
   page.on('pageerror',error=>errors.push(error.message));

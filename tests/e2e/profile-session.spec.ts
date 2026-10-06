@@ -122,7 +122,7 @@ test('a Veteran upload remains bound to the account selected before the file was
   await twoAccounts(page); await mockVeteranProfile(page);
   const uploaded: string[] = [];
   await page.route(`**/api/v4/user/profile/${accountId}`, route => route.fulfill({ json: { ...profile, veterans: uploaded.length ? [{ trained_chara_id: 991, card_id: 100101 }] : [] } }));
-  await page.route('**/ingest/veteran/append?*', route => { uploaded.push(new URL(route.request().url()).searchParams.get('account_id')!); return route.fulfill({ json: { inserted: 1, updated: 0, deleted: 0, total: 1 } }); });
+  await page.route('**/ingest/veteran?*', route => { uploaded.push(new URL(route.request().url()).searchParams.get('account_id')!); return route.fulfill({ json: { inserted: 1, updated: 0, deleted: 0, total: 1 } }); });
   await page.goto(`/veterans/${accountId}`);
 
   await expect(page.locator('.collection-controls input[type=file]')).toBeAttached();
@@ -143,7 +143,7 @@ test('a Veteran upload remains bound to the account selected before the file was
   expect(uploaded).toEqual([accountId]);
   await page.waitForLoadState('networkidle');
   await expect(page.getByRole('heading', { name: 'Other Trainer', exact: true })).toBeVisible();
-  await expect(page.locator('.feedback')).toContainText('added to');
+  await expect(page.locator('.feedback')).toContainText('synced to');
 });
 
 test('unknown visibility cannot be overwritten with guessed defaults and can be retried',async({page})=>{

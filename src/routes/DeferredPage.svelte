@@ -8,7 +8,10 @@
 
   const loader = $derived(router.route.meta.loadPage!);
   // Query changes keep the existing page and its local state mounted.
-  const page = $derived(withPageRequest(() => Promise.all([loader(), afterPagePaint()]).then(([module]) => module)));
+  const page = $derived(withPageRequest(() => Promise.all([loader(), afterPagePaint()]).then(([module]) => module)).catch(error => {
+    window.dispatchEvent(new CustomEvent('umamoe:module-error', { detail: error }));
+    throw error;
+  }));
   const definition = $derived(routeDefinitionForPath(router.route.pathname));
   const titles: Record<string, string> = {
     clubs: 'Club Leaderboard', rankings: 'Trainer Rankings', activity: 'Top 100 Club Activity Reports',
