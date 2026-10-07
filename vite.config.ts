@@ -4,6 +4,7 @@ import legacy from '@vitejs/plugin-legacy';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 import { demoData } from './scripts/demo-data';
+import { seoPagesPlugin } from './scripts/seo-pages';
 import { environment as production } from './src/config/environment.prod';
 import { environment as beta } from './src/config/environment.beta';
 
@@ -35,7 +36,7 @@ export default defineConfig(async ({ mode, command }) => {
       modernTargets: ['Chrome >= 109', 'Edge >= 109', 'Firefox >= 115', 'Safari >= 16.4', 'iOS >= 16.4'],
       modernPolyfills: true,
       renderLegacyChunks: false
-    }), svelte(), ...(mode === 'demo' ? [await demoData()] : []), sentryVitePlugin({
+    }), svelte(), seoPagesPlugin(), ...(mode === 'demo' ? [await demoData()] : []), sentryVitePlugin({
       org: process.env.SENTRY_ORG,
       project: 'umamoe-frontend',
       authToken: process.env.SENTRY_AUTH_TOKEN,

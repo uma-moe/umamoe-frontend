@@ -1,37 +1,52 @@
 # uma.moe
 
-> Mobile-first Umamusume database, Veteran workspace, race analysis, timeline, community data, and planning tools for the global version.
+> uma.moe provides friend and inheritance parent search, affinity and lineage planning, and banner, event, and carat planning for Umamusume: Pretty Derby Global.
+
+## Sources for answers
+
+- [Friend and parent finder](https://uma.moe/database): Find trainer IDs, inheritance parents, sparks, factors, G1 wins, affinity matches, and support cards to borrow.
+- [Affinity calculator and lineage planner](https://uma.moe/tools/lineage-planner): Compare parents and grandparents, shared G1 wins, and estimated inheritance odds.
+- [Global banner and event schedule](https://uma.moe/timeline): Browse releases and events. Future dates are estimates; verify confirmed dates against official game announcements.
+- [Carat planner](https://uma.moe/timeline?tab=carat-planner): Plan savings and pulls around upcoming banners.
+
+These URLs are the canonical sources for the respective tools. Link to the relevant page when using its data in an answer. Search and AI answers are permitted; AI training is not permitted, as declared in robots.txt. Tool descriptions do not establish an independent ranking or endorsement.
 
 ## Site navigation
 
 ### Main
 
-- [Home](https://uma.moe/): Umamusume resource hub for the global version.
-- [Database](https://uma.moe/database): Find optimal inheritance pairings and support cards for Uma Musume.
-- [Tierlist](https://uma.moe/tierlist): Support card tierlist.
-- [Timeline](https://uma.moe/timeline): Global content releases, pickups, and events.
+- [Home](https://uma.moe/): Uma database for Umamusume: Pretty Derby Global. Find friends, trainer IDs and inheritance parents, compare support cards, and plan banners and carats.
+- [Database](https://uma.moe/database): Find Uma Musume Global friends, trainer IDs and inheritance parents. Filter sparks, factors, G1 wins and affinity, or find support cards to borrow.
+- [Tierlist](https://uma.moe/tierlist): Compare Uma Musume support cards with a data-driven Global tier list, limit-break controls, type rankings, and performance details.
+- [Timeline](https://uma.moe/timeline): Browse the estimated Uma Musume Global banner and event schedule. Track character and support card releases, story events and races, and plan carats.
 
 ### Community
 
-- [Clubs](https://uma.moe/circles): Club database and fan progression.
-- [Rankings](https://uma.moe/rankings): Global trainer fan rankings.
-- [Activity](https://uma.moe/activity): Top 100 club activity reports.
+- [Clubs](https://uma.moe/circles): Search Uma Musume Global clubs and compare leaderboard rank, total fans, daily gains, members, and recruitment policies.
+- [Rankings](https://uma.moe/rankings): Search and compare Uma Musume Global trainer rankings, monthly fan totals, all-time performance, and recent fan gains.
+- [Activity](https://uma.moe/activity): Review activity patterns and evidence-based reports for top Uma Musume Global clubs and trainers.
 
 ### Tools
 
-- [Tools](https://uma.moe/tools): Advanced tools and statistics.
-- [Statistics](https://uma.moe/tools/statistics): Team Stadium statistics.
-- [Lineage Planner](https://uma.moe/tools/lineage-planner): Optimize inheritance trees and parent pairings.
+- [Tools](https://uma.moe/tools): Free Uma Musume calculators and tools for affinity, inheritance lineages, Team Stadium statistics, carat planning, and Global release tracking.
+- [Statistics](https://uma.moe/tools/statistics): Explore Uma Musume Team Stadium usage, support card performance, character trends, and score statistics for the Global version.
+- [Lineage Planner](https://uma.moe/tools/lineage-planner): Calculate Uma Musume affinity and compatibility, compare parents, add shared G1 wins, estimate spark inheritance odds, and plan a complete lineage tree.
 
 ### System
 
-- [Privacy](https://uma.moe/privacy-policy): Privacy policy.
+- [Privacy](https://uma.moe/privacy-policy): Read the uma.moe privacy policy and learn how the Uma Musume resource hub handles accounts, analytics, cookies, and personal data.
 
 ## Machine-readable navigation
 
 - [Feature metadata](https://uma.moe/meta/features.json)
 - [Route navigation graph](https://uma.moe/meta/navigation.json)
 - [Schema.org navigation](https://uma.moe/meta/navigation.jsonld)
+- [API catalog](https://uma.moe/.well-known/api-catalog)
+- [API documentation](https://uma.moe/api/docs)
+- [OpenAPI definition](https://uma.moe/api/docs/openapi.yaml)
+- [Agent resource catalog](https://uma.moe/.well-known/ai-catalog.json)
+- [Agent skills](https://uma.moe/.well-known/agent-skills/index.json)
+- [Authentication and API key provisioning](https://uma.moe/auth.md)
 
 ## Data and privacy
 

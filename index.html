@@ -4,17 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0a0a0a" />
-    <meta name="description" content="A fast, mobile-first Umamusume resource hub for the global version." />
+    <meta name="description" content="Uma database for Umamusume: Pretty Derby Global. Find friends, trainer IDs and inheritance parents, compare support cards, and plan banners and carats." />
     <meta name="app-build-version" content="local" />
     <link rel="icon" href="/logo.webp" type="image/webp" />
     <link rel="manifest" href="/site.webmanifest" />
-    <title>uma.moe - Umamusume database and tools</title>
+    <link rel="api-catalog" href="/.well-known/api-catalog" />
+    <link rel="ai-catalog" href="/.well-known/ai-catalog.json" />
+    <link rel="service-doc" href="/api/docs" />
+    <title>Uma Database, Friend Search &amp; Tools | uma.moe</title>
     <script type="application/ld+json">
       {"@context":"https://schema.org","@type":"WebSite","name":"uma.moe","url":"https://uma.moe/","description":"Mobile-first Umamusume database, Veteran workspace, race analysis, timeline, and planning tools for the global version."}
     </script>
   </head>
   <body>
-    <section id="app-error" hidden role="alert" tabindex="-1" aria-labelledby="app-error-title" style="position:fixed;z-index:2147483647;top:16px;left:16px;right:16px;max-width:600px;max-height:90vh;overflow:auto;margin:auto;padding:24px;border:1px solid #bd7777;border-radius:8px;background:#181818;color:#f5f5f5;font:16px/1.5 system-ui,sans-serif;box-shadow:0 8px 40px #0008">
+    <template id="app-error-template"><section id="app-error" data-nosnippet hidden role="alert" tabindex="-1" aria-labelledby="app-error-title" style="position:fixed;z-index:2147483647;top:16px;left:16px;right:16px;max-width:600px;max-height:90vh;overflow:auto;margin:auto;padding:24px;border:1px solid #bd7777;border-radius:8px;background:#181818;color:#f5f5f5;font:16px/1.5 system-ui,sans-serif;box-shadow:0 8px 40px #0008">
       <h1 id="app-error-title" style="font-size:22px;margin:0 0 12px">uma.moe ran into a problem</h1>
       <p>The page could not start or continue. A browser feature may be unavailable, or a site file may have failed to load.</p>
       <p>Reload to try again. Reloading will not clear your saved plans. If this keeps happening, report it with the details below.</p>
@@ -22,14 +25,18 @@
       <button type="button" onclick="location.reload()" style="min-height:44px;padding:8px 16px;font:inherit;cursor:pointer">Reload page</button>
       <a href="https://discord.uma.moe/" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-left:16px;padding:8px 0;color:#90caf9">Report on Discord</a>
       <details style="margin-top:16px"><summary>Details for reporting</summary><pre id="app-error-details" style="white-space:pre-wrap;overflow-wrap:break-word;font-size:12px"></pre></details>
-    </section>
-    <noscript><p>uma.moe needs JavaScript. Enable JavaScript in your browser and reload this page.</p></noscript>
+    </section></template>
+    <noscript><div data-nosnippet>Enable JavaScript to use the interactive search and planning tools.</div></noscript>
     <script>
       // Keep this independent of the app bundle and compatible with older parsers.
       (function () {
-        var panel = document.getElementById('app-error');
-        var output = document.getElementById('app-error-details');
+        var template = document.getElementById('app-error-template');
+        var panel, output;
         function show(error, event) {
+          if (!panel) {
+            panel = template.content.firstElementChild.cloneNode(true);
+            output = panel.querySelector('#app-error-details');
+          }
           // Keep recovery available if an external script replaced the page DOM.
           if (!panel.isConnected) (document.body || document.documentElement).appendChild(panel);
           if (!panel.contains(output)) panel.appendChild(output);
@@ -76,7 +83,7 @@
         });
       }());
     </script>
-    <script nomodule>document.getElementById('app-error').hidden = false; document.getElementById('app-error-details').textContent = 'This browser does not support JavaScript modules.\nBrowser: ' + navigator.userAgent;</script>
+    <script nomodule>var event = document.createEvent('Event'); event.initEvent('umamoe:app-error', false, false); event.detail = 'This browser does not support JavaScript modules.'; window.dispatchEvent(event);</script>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

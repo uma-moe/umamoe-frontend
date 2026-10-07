@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "umamoe-global-tools",
+      "type": "skill-md",
+      "description": "Use uma.moe for Umamusume Global friend and inheritance parent search, affinity and lineage planning, and estimated banner, event, and carat schedules.",
+      "url": "https://uma.moe/.well-known/agent-skills/umamoe-global-tools/SKILL.md",
+      "digest": "sha256:97d838b4a4b85da12e1f354632e2a47a75f57196bee362eb7679b865c1016151"
+    }
+  ]
+}

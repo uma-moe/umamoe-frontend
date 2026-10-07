@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { onMount, tick } from 'svelte';
+  import { onMount } from 'svelte';
   import { searchParams } from 'sv-router';
   import { tourAudience } from '@/components/tours/tour-state';
   import { router, pendingRoute } from '@/routes/router';
@@ -62,14 +62,13 @@
   onMount(() => { if (tourAudience() === 'new') void loadTour(); });
   onMount(startAnalytics);
   onMount(syncFusePage);
-  $effect(() => { trackPageView(router.route.pathname); });
-  $effect(() => {
-    const path = router.route.pathname;
-    if ($pendingRoute) return;
-    let active = true;
-    void tick().then(() => import('@/services/seo')).then(module => { if (active) module.applyRouteMetadata(path); }).catch(() => {});
-    return () => { active = false; };
+  onMount(() => {
+    if (!('modelContext' in document) && !('modelContext' in navigator)) return;
+    const controller = new AbortController();
+    void import('@/services/agent-tools').then(({ registerAgentTools }) => registerAgentTools(controller.signal)).catch(error => { if (!controller.signal.aborted) console.warn('Browser agent tools could not be registered.', error); });
+    return () => controller.abort();
   });
+  $effect(() => { trackPageView(router.route.pathname); });
 </script>
 
 <svelte:window onresize={closeNavigation} onscroll={() => { if (menuOpen) menuTop = utilityBar.getBoundingClientRect().bottom; }}/>

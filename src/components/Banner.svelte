@@ -10,7 +10,7 @@
 {#if visible}
   <aside class="banner banner--{tone}" aria-live={tone === 'danger' ? 'assertive' : 'polite'}>
     <Icon name={tone === 'success' ? 'check' : tone === 'warning' || tone === 'danger' ? 'warning' : 'info'} size={19} />
-    <div class="banner-content">
+    <div class="banner-content" data-nosnippet={tone === 'danger' || tone === 'warning' ? '' : undefined}>
       <strong>{title}</strong>
       {#if children}<div>{@render children()}</div>{/if}
       {#if tone === 'danger' && reportable}

@@ -52,14 +52,14 @@
 {/snippet}
 {#if open}<Dialog {open} title="What’s new" maxWidth="580px" maxHeight="85dvh" mobileInset="16px" contentPadding="0" mobileContentPadding="0" onclose={close}>
   {#snippet headerIdentity(titleId)}
-    <div class="release-header" class:latest-header={!history}>
+    <div class="release-header" data-nosnippet class:latest-header={!history}>
       <span class="header-star"><Icon name={history ? 'timeline' : 'star'} size={20}/></span>
       <span id={titleId} class="sr-only">What’s new</span>
       <h2>{history ? 'Previous updates' : latest.title}</h2>
       {#if history}<span class="history-count">{updates.length - 1} releases</span>{:else if latest.date}<time datetime={latest.date}>{releaseDate(latest.date)}</time>{/if}
     </div>
   {/snippet}
-  <div class="release-content">
+  <div class="release-content" data-nosnippet>
     {#if history}
       <div class="release-history">
         {#each updates.slice(1) as update, index}

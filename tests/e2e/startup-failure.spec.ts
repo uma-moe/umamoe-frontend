@@ -107,7 +107,7 @@ test('recovery survives its DOM being removed', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.evaluate(() => {
-    document.getElementById('app-error')!.remove();
+    document.getElementById('app-error-template')!.remove();
     window.dispatchEvent(new CustomEvent('umamoe:app-error', { detail: new Error('Application render failure') }));
   });
   await expect(page.locator('#app-error')).toBeVisible();

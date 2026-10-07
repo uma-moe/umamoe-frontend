@@ -3,7 +3,6 @@ import { writable } from 'svelte/store';
 import type { Component } from 'svelte';
 import DeferredPage from './DeferredPage.svelte';
 import TimelinePage from '@/pages/timeline/TimelinePage.svelte';
-import HomePage from '@/pages/home/HomePage.svelte';
 import LegacyRedirectPage from './LegacyRedirectPage.svelte';
 import { pendingPageRequests, whenPageRequestsIdle } from '@/services/http/page-request';
 
@@ -28,6 +27,7 @@ function preloadPageData({ pathname }: { pathname: string }): void {
 
 // Public URLs stay stable; each page owns its lazy-loaded implementation.
 const pageModules = {
+  '/': () => import('@/pages/home/HomePage.svelte'),
   '/database': () => import('@/pages/database/DatabasePage.svelte'),
   '/circles': () => import('@/pages/clubs/ClubsPage.svelte'),
   '/circles/:id/:exportFormat': () => import('@/pages/clubs/ClubDetailsPage.svelte'),
@@ -105,7 +105,6 @@ const productRoutes = {
     }
   },
   ...pageRoutes,
-  '/': HomePage,
   '/timeline': TimelineRoute,
   '*': LegacyRedirectPage
 } as const;

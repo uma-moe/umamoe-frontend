@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PageGuide from '@/components/PageGuide.svelte';
+  import seoPages from '@/config/seo-pages.json';
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
   import { inheritanceFactors } from '@/lib/inheritance/inheritance-factors';
   import type { InheritanceRecord } from '@/lib/inheritance/inheritance-search';
@@ -822,9 +824,9 @@
   <section class="quick-section search-quick">{#if !compactFilters.current}<h3>Search users</h3>{/if}<div class="field-grid"><TextField id="trainer-id" label="Trainer ID" placeholder="123 456 789" value={filters.trainerId ?? ''} oninput={(event) => setScalar('trainerId', (event.currentTarget as HTMLInputElement).value)}/><TextField id="trainer-name" label="Username" type="search" placeholder="Trainer Name" value={filters.trainerName ?? ''} oninput={(event) => setScalar('trainerName', (event.currentTarget as HTMLInputElement).value)}/></div></section>
 {/snippet}
 
-<svelte:head><title>Database · uma.moe</title><meta name="description" content="Search the uma.moe inheritance database and browse characters, support cards, skills, and factors."/></svelte:head>
+<svelte:head><title>{seoPages['/database'].title}</title></svelte:head>
 <SourcePage routeId="database" title="Database" width="wide">
-  <div class="inheritance-database"><PageHeading eyebrow="Inheritance" title="Database" description="Find optimal inheritance pairings and support cards for Uma Musume." flush>{#snippet actions()}<Button variant="secondary" size="sm" icon="add" onclick={() => submitOpen = true}>Add Trainer ID</Button>{/snippet}</PageHeading><div class="content-container" bind:this={filterStart} use:trackScrollShortcut>
+  <div class="inheritance-database"><PageHeading eyebrow="Uma Friend Finder" title="Database" description={seoPages['/database'].description} flush>{#snippet actions()}<Button variant="secondary" size="sm" icon="add" onclick={() => submitOpen = true}>Add Trainer ID</Button>{/snippet}</PageHeading><div class="content-container" bind:this={filterStart} use:trackScrollShortcut>
     <FilterShell title="Filters" activeCount={activeCount} modes={['Basic', 'Advanced', 'UQL']} mode={filterMode} onmodechange={setFilterMode} bind:expanded={filterExpanded} onclear={clearFilters}>
       {#snippet tools()}<FilterPresetMenu bind:draft={presetDraft} message={presetMessage} presets={presetViews} onsave={savePreset} onload={loadPreset} ondelete={deletePreset} onexport={() => void exportPresets()} onimport={importPresets}/>{/snippet}
       {#if filterMode === 'uql'}
@@ -996,6 +998,7 @@
     {#snippet actions()}<Button variant="secondary" size="sm" disabled={submissionBusy} onclick={() => submitOpen = false}>Cancel</Button><Button variant="secondary" size="sm" icon="add" loading={submissionBusy} disabled={trainerDigits.length !== 12} onclick={() => void submitTrainer()}>Add trainer</Button>{/snippet}
   </Dialog>
   <ToastRegion {toasts} ondismiss={(id) => toasts = toasts.filter((toast) => toast.id !== id)}/>
+  <PageGuide path="/database"/>
 </SourcePage>
 {#if scrollShortcut}
   <button type="button" class="floating-scroll-btn" class:results-mode={scrollShortcut === 'results'} onclick={useScrollShortcut}>

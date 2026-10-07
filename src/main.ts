@@ -19,3 +19,4 @@ if (!target) throw new Error('The application mount point is missing.');
 
 mount(App, { target });
 document.documentElement.dataset.appPhase = 'mounted';
+document.getElementById('seo-content')?.remove();

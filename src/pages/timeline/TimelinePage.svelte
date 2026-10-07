@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageGuide from '@/components/PageGuide.svelte';
   import { onMount } from 'svelte';
   import { searchParams } from 'sv-router';
   import AppPage from '@/layouts/AppPage.svelte';
@@ -90,7 +91,6 @@
 </script>
 
 <svelte:window onkeydown={(event) => { if (event.key === 'Escape' && filtersOpen && !document.querySelector('dialog[open]')) { event.preventDefault(); setFilters(false); } }}/>
-<svelte:head><title>{tab === 'carat-planner' ? 'Carat Planner' : 'Timeline'} · uma.moe</title><meta name="description" content="Current and predicted Uma Musume content releases, banners, races, and events."/></svelte:head>
 <AppPage routeId="timeline" title={tab === 'carat-planner' ? 'Carat Planner' : 'Timeline'} description={tab === 'carat-planner' ? 'Plan Carats, tickets, sparks, and banner targets.' : 'Global content releases, pickups, and events.'} metadata={tab === 'timeline' && status.total ? status.filtered + ' / ' + status.total + ' events' : undefined} tone="brand" width="wide" flush fullBleed={tab === 'timeline'} adsEnabled={tab !== 'timeline'} fill={!mobile && tab === 'timeline'} mobileHeading="actions-only">
   {#snippet actions()}<div class="timeline-tabs">{#if tab === 'timeline' && status.rewardsLoading && !status.loading}<Spinner label="Loading event rewards" size={18}/>{/if}<Tabs label="Timeline tools" items={[{ id: 'timeline', label: 'Timeline', href: '/timeline?tab=timeline', scrollToTop: false }, { id: 'carat-planner', label: 'Carat Planner', href: '/timeline?tab=carat-planner', scrollToTop: false, onintent: preloadPlanner, badge: status.plannerEventCount ? String(status.plannerEventCount) : undefined }]} value={tab}/></div>{/snippet}
   {#if tab === 'timeline'}
@@ -130,6 +130,7 @@
     <Banner title="Timeline could not be loaded" tone="danger"><Button variant="secondary" onclick={() => location.reload()}>Reload page</Button></Banner>
   {/await}
 </AppPage>
+<PageGuide path="/timeline"/>
 {#if dateOpen}
   <Dialog open title="Go to date" description="Jump to the nearest event on the timeline." maxWidth="360px" onclose={() => dateOpen = false}>
     <form onsubmit={event => { event.preventDefault(); jumpDate(); }}>

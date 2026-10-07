@@ -1,0 +1,33 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://uma.moe/.well-known/api-catalog",
+      "item": [
+        {
+          "href": "https://uma.moe/api/"
+        }
+      ]
+    },
+    {
+      "anchor": "https://uma.moe/api/",
+      "service-desc": [
+        {
+          "href": "https://uma.moe/api/docs/openapi.yaml",
+          "type": "text/yaml"
+        }
+      ],
+      "service-doc": [
+        {
+          "href": "https://uma.moe/api/docs",
+          "type": "text/html"
+        }
+      ],
+      "describedby": [
+        {
+          "href": "https://uma.moe/auth.md",
+          "type": "text/markdown"
+        }
+      ]
+    }
+  ]
+}

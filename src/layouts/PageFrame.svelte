@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { tick, type Snippet } from 'svelte';
   import type { PageWidth } from './breakpoints';
+  import { router } from '@/routes/router';
 
   interface Props {
     children: Snippet;
@@ -38,6 +39,14 @@
 
   const resolvedContentId = $derived(contentId ?? `${routeId}-content`);
   const hasAdRails = $derived(Boolean(adsEnabled && leftAd && rightAd));
+  $effect(() => {
+    const path = router.route.pathname;
+    pageTitle;
+    let active = true;
+    // Lazy pages can write their head tags after the router has finished loading.
+    void tick().then(() => import('@/services/seo')).then(module => { if (active) module.applyRouteMetadata(path); }).catch(() => {});
+    return () => { active = false; };
+  });
 </script>
 
 <div class="page-boundary" class:fill data-page-frame>

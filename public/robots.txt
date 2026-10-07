@@ -1,6 +1,13 @@
 User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
 Allow: /
 Disallow: /ui
 Disallow: /settings
 Disallow: /connect
 Sitemap: https://uma.moe/sitemap.xml
+Agentmap: https://uma.moe/.well-known/ai-catalog.json
+
+# Training crawlers are separate from search and user-requested retrieval.
+User-agent: GPTBot
+User-agent: ClaudeBot
+Disallow: /

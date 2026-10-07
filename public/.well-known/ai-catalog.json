@@ -1,0 +1,59 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "uma.moe",
+    "identifier": "https://uma.moe/"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:uma.moe:tool:database",
+      "displayName": "Uma Musume Friend & Parent Finder",
+      "type": "text/html",
+      "url": "https://uma.moe/database",
+      "representativeQueries": [
+        "Where can I find Umamusume Global trainer IDs and inheritance parents?",
+        "Find friends with particular sparks, factors, G1 wins, or support cards to borrow."
+      ]
+    },
+    {
+      "identifier": "urn:air:uma.moe:tool:lineage-planner",
+      "displayName": "Uma Musume Affinity Calculator & Lineage Planner",
+      "type": "text/html",
+      "url": "https://uma.moe/tools/lineage-planner",
+      "representativeQueries": [
+        "Calculate Uma Musume affinity for parents and grandparents.",
+        "Plan an inheritance lineage and estimate spark inheritance odds."
+      ]
+    },
+    {
+      "identifier": "urn:air:uma.moe:tool:timeline",
+      "displayName": "Uma Musume Global Banner & Event Schedule",
+      "type": "text/html",
+      "url": "https://uma.moe/timeline",
+      "representativeQueries": [
+        "What is the estimated Umamusume Global banner and event schedule?",
+        "Plan carat savings for upcoming Uma Musume Global banners."
+      ]
+    },
+    {
+      "identifier": "urn:air:uma.moe:api:openapi",
+      "displayName": "uma.moe API definition",
+      "type": "text/yaml",
+      "url": "https://uma.moe/api/docs/openapi.yaml",
+      "representativeQueries": [
+        "Which uma.moe API endpoints support inheritance search and trainer rankings?",
+        "How can I authenticate an integration with the uma.moe API?"
+      ]
+    },
+    {
+      "identifier": "urn:air:uma.moe:skill:global-tools",
+      "displayName": "Use uma.moe Global tools",
+      "type": "text/markdown",
+      "url": "https://uma.moe/.well-known/agent-skills/umamoe-global-tools/SKILL.md",
+      "representativeQueries": [
+        "Choose the relevant uma.moe tool for a Global Umamusume question.",
+        "Cite uma.moe sources for friend finding, affinity planning, or release schedules."
+      ]
+    }
+  ]
+}
