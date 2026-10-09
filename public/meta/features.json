@@ -170,7 +170,7 @@
     {
       "id": "competitive",
       "title": "Competitive",
-      "description": "Race analysis and competitive racing data.",
+      "description": "Explore Uma Musume Global race replays, Champions Meeting data, and competitive racing tools.",
       "path": "/competitive",
       "group": "competitive",
       "icon": "trophy",
@@ -185,7 +185,7 @@
     {
       "id": "race-analysis",
       "title": "Race Analysis",
-      "description": "Upload one or multiple races for replay and analysis.",
+      "description": "Upload Uma Musume races to inspect runner speed, HP, positioning, skill activations, and race mechanics in an interactive replay.",
       "path": "/competitive/race-analysis",
       "group": "competitive",
       "icon": "race",
@@ -200,7 +200,7 @@
     {
       "id": "cm-data",
       "title": "CM Data",
-      "description": "Champions Meeting captured races and simulation data.",
+      "description": "Compare captured Uma Musume Global Champions Meeting races, runner builds, skills, and simulation results.",
       "path": "/competitive/cm-data",
       "group": "competitive",
       "icon": "chart",
@@ -215,7 +215,7 @@
     {
       "id": "master-data",
       "title": "Master Data",
-      "description": "Browse game tables and run SQLite queries locally.",
+      "description": "Browse Uma Musume game tables and run SQLite queries locally to investigate characters, skills, races, and other game data.",
       "path": "/tools/master-data",
       "group": "tools",
       "icon": "database",
@@ -230,7 +230,7 @@
     {
       "id": "research",
       "title": "Research",
-      "description": "Hakuraku research notes on racing and game mechanics.",
+      "description": "Read Hakuraku research notes on Uma Musume racing, skills, simulation, and game mechanics.",
       "path": "/research",
       "group": "research",
       "icon": "book",

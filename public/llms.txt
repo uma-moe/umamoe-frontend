@@ -28,20 +28,20 @@ These URLs are the canonical sources for the respective tools. Link to the relev
 
 ### Competitive
 
-- [Competitive](https://uma.moe/competitive): Race analysis and competitive racing data.
-- [Race Analysis](https://uma.moe/competitive/race-analysis): Upload one or multiple races for replay and analysis.
-- [CM Data](https://uma.moe/competitive/cm-data): Champions Meeting captured races and simulation data.
+- [Competitive](https://uma.moe/competitive): Explore Uma Musume Global race replays, Champions Meeting data, and competitive racing tools.
+- [Race Analysis](https://uma.moe/competitive/race-analysis): Upload Uma Musume races to inspect runner speed, HP, positioning, skill activations, and race mechanics in an interactive replay.
+- [CM Data](https://uma.moe/competitive/cm-data): Compare captured Uma Musume Global Champions Meeting races, runner builds, skills, and simulation results.
 
 ### Tools
 
 - [Tools](https://uma.moe/tools): Free Uma Musume calculators and tools for affinity, inheritance lineages, Team Stadium statistics, carat planning, and Global release tracking.
 - [Statistics](https://uma.moe/tools/statistics): Explore Uma Musume Team Stadium usage, support card performance, character trends, and score statistics for the Global version.
 - [Lineage Planner](https://uma.moe/tools/lineage-planner): Calculate Uma Musume affinity and compatibility, compare parents, add shared G1 wins, estimate spark inheritance odds, and plan a complete lineage tree.
-- [Master Data](https://uma.moe/tools/master-data): Browse game tables and run SQLite queries locally.
+- [Master Data](https://uma.moe/tools/master-data): Browse Uma Musume game tables and run SQLite queries locally to investigate characters, skills, races, and other game data.
 
 ### Research
 
-- [Research](https://uma.moe/research): Hakuraku research notes on racing and game mechanics.
+- [Research](https://uma.moe/research): Read Hakuraku research notes on Uma Musume racing, skills, simulation, and game mechanics.
 
 ### System
 
