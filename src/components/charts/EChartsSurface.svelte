@@ -1,9 +1,9 @@
 <script module lang="ts">
   import * as echarts from 'echarts/core';
-  import { BarChart, LineChart, PieChart, ScatterChart } from 'echarts/charts';
-  import { AriaComponent, AxisPointerComponent, DataZoomComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent } from 'echarts/components';
+  import { BarChart, CustomChart, LineChart, PieChart, ScatterChart } from 'echarts/charts';
+  import { AriaComponent, AxisPointerComponent, DataZoomComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent, VisualMapComponent } from 'echarts/components';
   import { SVGRenderer } from 'echarts/renderers';
-  echarts.use([LineChart, BarChart, PieChart, ScatterChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent, MarkLineComponent, MarkAreaComponent, AxisPointerComponent, AriaComponent, SVGRenderer]);
+  echarts.use([LineChart, BarChart, PieChart, ScatterChart, CustomChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent, MarkLineComponent, MarkAreaComponent, AxisPointerComponent, AriaComponent, VisualMapComponent, SVGRenderer]);
 </script>
 
 <script lang="ts">
@@ -11,8 +11,8 @@
   import type { EChartsCoreOption, EChartsType } from 'echarts/core';
   import type { TooltipComponentOption } from 'echarts/components';
 
-  interface Props { option: EChartsCoreOption; label: string; description?: string; height?: number; dismissTouchTooltip?: boolean; zoomable?: boolean; }
-  let { option, label, description, height = 280, dismissTouchTooltip = false, zoomable = false }: Props = $props();
+  interface Props { option: EChartsCoreOption; label: string; description?: string; height?: number; dismissTouchTooltip?: boolean; zoomable?: boolean; onaxisclick?: (value: number) => void; onplotclick?: (x:number,y:number)=>void; onzoom?: (start:number,end:number)=>void; }
+  let { option, label, description, height = 280, dismissTouchTooltip = false, zoomable = false, onaxisclick, onplotclick, onzoom }: Props = $props();
   let host: HTMLDivElement;
   let chart = $state.raw<EChartsType>();
   const surfaceId = $props.id();
@@ -27,11 +27,22 @@
   };
   const chartOption = $derived.by(() => {
     const tooltip = option.tooltip as TooltipComponentOption | undefined;
-    return tooltip ? { ...option, tooltip: { ...tooltip, className: [tooltipClass, tooltip.className].filter(Boolean).join(' '), appendToBody: true, confine: false, position: tooltip.position ?? viewportPosition } } : option;
+    // Tooltips must stay in the chart's top layer when it is expanded or fullscreen.
+    return tooltip ? { ...option, tooltip: { ...tooltip, className: [tooltipClass, tooltip.className].filter(Boolean).join(' '), appendToBody: false, appendTo: (container: HTMLElement) => container.closest('dialog, :fullscreen') ?? document.body, confine: false, position: tooltip.position ?? viewportPosition } } : option;
   });
 
   onMount(() => {
     chart = echarts.init(host, undefined, { renderer: 'svg' });
+    chart.getZr().on('click', (event) => {
+      if ((!onaxisclick&&!onplotclick) || !chart) return;
+      const grids = Array.isArray(option.grid) ? option.grid : [option.grid];
+      const gridIndex = grids.findIndex((_, index) => chart!.containPixel({ gridIndex: index }, [event.offsetX, event.offsetY]));
+      if (gridIndex < 0) return;
+      const value = (chart.convertFromPixel({ gridIndex }, [event.offsetX, event.offsetY]) as number[])[0];
+      if (typeof value === 'number' && Number.isFinite(value)) onaxisclick?.(value);
+      onplotclick?.(event.offsetX,event.offsetY);
+    });
+    chart.on('datazoom',()=>{const zoom=(chart!.getOption().dataZoom as {start:number;end:number}[])[0];if(zoom)onzoom?.(zoom.start,zoom.end);});
     const observer = new ResizeObserver(() => chart?.resize());
     observer.observe(host);
     let dismissTimer: ReturnType<typeof setTimeout>;

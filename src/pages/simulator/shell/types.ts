@@ -1,19 +1,18 @@
 import type { Snippet } from 'svelte';
 import type { IconName } from '@/components/icon-types';
-import type { SimulatorPanelId } from '../simulator-layout.svelte';
 
 /** The three surfaces the simulator shell hosts. */
 export type SimulatorMode = 'stamina' | 'race' | 'build';
 
-/** One setup panel, rendered as a tab in the shell's sidebar. */
+/** A setup dialog opened from the simulator toolbar. */
 export interface SimulatorPanel {
-  id: SimulatorPanelId;
-  /** Full name, used by the rail tooltip and the tab's accessible name. */
+  id: 'modifiers' | 'field' | 'search';
+  /** Dialog title and toolbar label. */
   label: string;
-  /** Short name, shown on the tab itself. */
+  /** Short display label. */
   shortLabel: string;
   icon: IconName;
-  /** A dot on the tab, for a panel holding settings that are not visible on the page. */
+  /** Indicates configured modifiers or constraints. */
   badge?: boolean;
   content: Snippet;
 }

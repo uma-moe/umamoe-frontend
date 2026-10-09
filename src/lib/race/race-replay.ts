@@ -27,8 +27,8 @@ function interpolateHorse(left: RaceHorseFrame, right: RaceHorseFrame, alpha: nu
     lanePosition: mix(left.lanePosition, right.lanePosition),
     speed: mix(left.speed, right.speed),
     hp: mix(left.hp, right.hp),
-    temptationMode: alpha < .5 ? left.temptationMode : right.temptationMode,
-    blockFrontHorseIndex: alpha < .5 ? left.blockFrontHorseIndex : right.blockFrontHorseIndex
+    temptationMode: left.temptationMode,
+    blockFrontHorseIndex: left.blockFrontHorseIndex
   };
 }
 
@@ -83,18 +83,19 @@ export function replayProgress(time: number, bounds: ReplayBounds): number {
   return bounds.duration > 0 ? clamp((time - bounds.startTime) / bounds.duration, 0, 1) : 0;
 }
 
-// Keep the leader at 90% of the window and fit the captured lateral spread.
+// Leave a little course ahead without expanding the lead-in with wider view windows.
 export function replayViewport(leader: number, distance: number, windowMeters: number, laneMax: number) {
   const width = clamp(finite(windowMeters, 80), 20, 400);
-  const max = Math.max(width, Math.min(leader, distance) + width * .1);
-  return { min: Math.max(0, max - width), max, laneMax: Math.max(500, Math.ceil(finite(laneMax) * 1.2 / 500) * 500) };
+  const ahead = Math.min(16, width * .2);
+  const max = Math.max(width, Math.min(leader, Math.max(0, distance - ahead)) + ahead);
+  return { min: Math.max(0, max - width), max, laneMax: Math.max(500, finite(laneMax) * 1.2) };
 }
 
-// First leader crossing, interpolated from the captured runners rather than a
-// constant-speed estimate. Course features and the time scrubber share this axis.
-export function raceTimeAtDistance(frames:RaceFrame[],distance:number):number|undefined {
+// First crossing, interpolated from captured positions. Without a runner index,
+// use the leader so course features and the scrubber share the same time axis.
+export function raceTimeAtDistance(frames:RaceFrame[],distance:number,runnerIndex?:number):number|undefined {
   if(!frames.length)return undefined;
-  const leading=(index:number)=>Math.max(...frames[index]!.horses.map(h=>finite(h.distance)));
+  const leading=(index:number)=>runnerIndex===undefined?Math.max(...frames[index]!.horses.map(h=>finite(h.distance))):frames[index]!.horses[runnerIndex]?.distance??-Infinity;
   if(distance<=leading(0))return frames[0]!.time;
   let low=0,high=frames.length-1;
   if(distance>leading(high))return undefined;
@@ -102,6 +103,7 @@ export function raceTimeAtDistance(frames:RaceFrame[],distance:number):number|un
   const left=frames[low]!,right=frames[high]!;
   let fraction=1;
   right.horses.forEach((horse,i)=>{
+    if(runnerIndex!==undefined&&i!==runnerIndex)return;
     const start=left.horses[i]?.distance;
     if(start!==undefined&&horse.distance>=distance&&horse.distance>start)fraction=Math.min(fraction,clamp((distance-start)/(horse.distance-start),0,1));
   });

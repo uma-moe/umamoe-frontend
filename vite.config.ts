@@ -18,8 +18,12 @@ export default defineConfig(async ({ mode, command }) => {
   if (command === 'build' && ['production', 'beta'].includes(mode) && !uploadSourceMaps) {
     console.warn('Sentry build credentials are unset: source-map upload is disabled for this build.');
   }
+  // Keep the local simulator credential in the dev proxy, outside browser assets.
+  const simulatorApiKey = command === 'serve' && mode === 'development'
+    ? loadEnv(mode, rootDirectory, 'SIMULATOR_').SIMULATOR_API_KEY?.trim() : undefined;
   return {
     root: rootDirectory,
+    cacheDir: `${rootDirectory}node_modules/.vite-${mode}`,
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     plugins: [{
       name: 'fuse-head-loader',
@@ -42,7 +46,10 @@ export default defineConfig(async ({ mode, command }) => {
       modernTargets: ['Chrome >= 109', 'Edge >= 109', 'Firefox >= 115', 'Safari >= 16.4', 'iOS >= 16.4'],
       modernPolyfills: true,
       renderLegacyChunks: false
-    }), svelte(), ...(mode === 'demo' ? [await demoData()] : []), sentryVitePlugin({
+    }), svelte({
+      // Windows dev requests can lose virtual CSS metadata; keep each component's styles with its JS.
+      emitCss: !(command === 'serve' && process.platform === 'win32')
+    }), ...(mode === 'demo' ? [await demoData()] : []), sentryVitePlugin({
       org: process.env.SENTRY_ORG,
       project: 'umamoe-frontend',
       authToken: process.env.SENTRY_AUTH_TOKEN,
@@ -87,11 +94,10 @@ export default defineConfig(async ({ mode, command }) => {
         allow: [rootDirectory]
       },
       proxy: {
-        // The simulator only listens on the deployment's private subnet, so a
-        // local backend cannot reach it. Route sim calls through beta's backend,
-        // which already has that access, until a local simulator is running.
-        // Must precede '/api' so the longer prefix wins.
-        '/api/sim': { target: 'https://beta.uma.moe', changeOrigin: true },
+        '/api/sim': {
+          target: variables.VITE_SIM_PROXY_TARGET ?? 'http://127.0.0.1:3001', changeOrigin: true,
+          ...(simulatorApiKey ? { headers: { 'X-API-Key': simulatorApiKey } } : {})
+        },
         '/api': 'http://127.0.0.1:3001',
         '/search': 'http://127.0.0.1:3002',
         '/ingest': 'http://127.0.0.1:3003',

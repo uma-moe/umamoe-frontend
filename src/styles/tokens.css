@@ -229,6 +229,8 @@
   --page-content-wide: 1760px;
   --page-frame-normal: 1536px;
   --page-frame-wide: 2184px;
+  --page-content-xl: 2184px;
+  --page-frame-xl: 2560px;
   /* Backwards-compatible defaults resolve to the focused, normal page. */
   --page-content-max: var(--page-content-normal);
   --page-frame-max: var(--page-frame-normal);

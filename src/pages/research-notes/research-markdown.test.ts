@@ -12,3 +12,9 @@ it('preserves math, attachments and disclosures while removing unsafe authored H
   expect(blocks[1]?.title).toBe('Calculation');
   expect(blocks[1]?.html).toContain('class="katex"');
 });
+it('opens legacy tool links in uma.moe while keeping hosted replay evidence on Hakuraku',()=>{
+  const html=renderResearchMarkdown('[Events](/hakuraku/#/racedata)\n\n[Veterans](/hakuraku/#/veterans)\n\n[Evidence](https://hakuraku.moe/racedata?kv=example)');
+  expect(html).toContain('href="/competitive/race-analysis"');
+  expect(html).toContain('href="/veterans"');
+  expect(html).toContain('href="https://hakuraku.moe/racedata?kv=example"');
+});

@@ -4,7 +4,7 @@ import { resourceRepository } from '@/lib/catalog/resource-repository';
 
 export type Course = { raceTrackId:number; distance:number; surface:number; turn:number; laneMax?:number; corners:{start:number;length:number}[]; straights:{start:number;end:number}[]; slopes:{start:number;length:number;slope:number}[] };
 export type CourseShape = {distance:number;points:[number,number][]};
-export type CourseData = { courses:Record<string,Course>; names:Record<number,string> };
+export type CourseData = { courses:Record<string,Course>; names:Record<number,string>;baseViewDistance?:number };
 type CourseResource = Omit<Course,'raceTrackId'> & {course_id:number;race_track_id:number;lane_max?:number};
 type GeometryResource = {course_id:number;course_distance:number;position_x:number[];position_z:number[]};
 
@@ -13,7 +13,7 @@ const names:CourseData['names'] = {10001:'Sapporo',10002:'Hakodate',10003:'Niiga
 
 export function loadReplayCourses():Promise<CourseData> {
   return resourceRepository.load('simulator_courses',false,value=>{
-    const data=value as {courses:CourseResource[]};
+    const data=value as {courses:CourseResource[];race_parameters?:{around_horse?:{visible_distance_m?:number}}};
     if(!Array.isArray(data?.courses))throw new Error('Course metadata is invalid.');
     const courses:CourseData['courses']={};
     for(const course of data.courses){
@@ -21,7 +21,8 @@ export function loadReplayCourses():Promise<CourseData> {
         ||![course.corners,course.straights,course.slopes].every(Array.isArray))throw new Error('Course metadata is invalid.');
       courses[course.course_id]={...course,raceTrackId:course.race_track_id,laneMax:course.lane_max};
     }
-    return {courses,names};
+    const range=data.race_parameters?.around_horse?.visible_distance_m;
+    return {courses,names,baseViewDistance:typeof range==='number'&&Number.isFinite(range)&&range>0?range:undefined};
   });
 }
 
@@ -41,11 +42,10 @@ export function loadReplayGeometry():Promise<Record<string,CourseShape>> {
 }
 
 // Exact IDs only: tracks of the same length are not interchangeable.
-export async function resolveReplayCourses(captures:ParsedRaceCapture[]):Promise<void> {
-  const ids=[...new Set(captures.filter(c=>!c.courseId).map(c=>c.raceInstanceId)
-    .filter((id):id is number=>Number.isSafeInteger(id)&&id!>0&&id!<=0xffffffff))];
-  if(!ids.length)return;
+export async function resolveRaceCourseIds(instances:(number|undefined)[]):Promise<Map<number,number>> {
+  const ids=[...new Set(instances.filter((id):id is number=>Number.isSafeInteger(id)&&id!>0&&id!<=0xffffffff))];
   const known=new Map<number,number>();
+  if(!ids.length)return known;
   try {
     const data=await resourceRepository.load<{races:{race_instance_id:number;course_set_id:number}[]}>('room_match_races');
     for(const race of data.races??[])if(Number.isSafeInteger(race.race_instance_id)&&Number.isSafeInteger(race.course_set_id))known.set(race.race_instance_id,race.course_set_id);
@@ -59,13 +59,32 @@ export async function resolveReplayCourses(captures:ParsedRaceCapture[]):Promise
       for(const [id,course] of data.rows??[])if(missing.includes(id)&&Number.isSafeInteger(course)&&course>0)known.set(id,course);
     } catch { /* Keep the capture usable; an unresolved course can be selected manually. */ }
   }
+  return known;
+}
+
+export async function resolveReplayCourses(captures:ParsedRaceCapture[]):Promise<void> {
+  const known=await resolveRaceCourseIds(captures.filter(c=>!c.courseId).map(c=>c.raceInstanceId));
   for(const capture of captures)if(!capture.courseId&&capture.raceInstanceId)capture.courseId=known.get(capture.raceInstanceId);
 }
 
-export function courseSegments(course:Course|undefined) {
+export async function loadRaceCourse(raceInstanceId?:number):Promise<Course|undefined> {
+  if(!Number.isSafeInteger(raceInstanceId)||raceInstanceId!<=0||raceInstanceId!>0xffffffff)return;
+  const [data,ids]=await Promise.all([loadReplayCourses(),resolveRaceCourseIds([raceInstanceId])]);
+  const id=ids.get(raceInstanceId!);
+  return id===undefined?undefined:data.courses[id];
+}
+
+export function courseSegments(course:Course|undefined, includeGaps = false) {
   if(!course)return [];
   const lastStraight=Math.max(...course.straights.map(s=>s.start)),lastCorner=Math.max(...course.corners.map(s=>s.start));
-  return [...course.straights.map(s=>({start:s.start,end:s.end,label:s.start===lastStraight?'Final straight':'Straight',color:s.start===lastStraight?'#419168':'#64918c'})),...course.corners.map(s=>({start:s.start,end:s.start+s.length,label:s.start===lastCorner?'Final corner':'Corner',color:s.start===lastCorner?'#bb9148':'#7b7ea8'}))].sort((a,b)=>a.start-b.start);
+  const segments = [...course.straights.map(s=>({start:s.start,end:s.end,label:s.start===lastStraight?'Final straight':'Straight',color:s.start===lastStraight?'#419168':'#64918c'})),...course.corners.map(s=>({start:s.start,end:s.start+s.length,label:s.start===lastCorner?'Final corner':'Corner',color:s.start===lastCorner?'#bb9148':'#7b7ea8'}))].sort((a,b)=>a.start-b.start);
+  if(!includeGaps)return segments;
+  const boundaries=[...new Set([0,course.distance,...segments.flatMap(segment=>[segment.start,segment.end])])]
+    .filter(distance=>distance>=0&&distance<=course.distance).sort((a,b)=>a-b);
+  return boundaries.slice(0,-1).map((start,index)=>({
+    ...(segments.find(segment=>start>=segment.start&&start<segment.end)??{label:'Unspecified',color:'#737d8a'}),
+    start,end:boundaries[index+1]!
+  }));
 }
 export function courseLandmarks(course:Course|undefined) {
   if(!course)return [];

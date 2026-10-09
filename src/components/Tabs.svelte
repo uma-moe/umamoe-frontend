@@ -2,12 +2,13 @@
   import Icon from './Icon.svelte';
   import type { IconName } from './icon-types';
   export interface TabItem { id: string; label: string; badge?: string; icon?: IconName; description?: string; href?: string; scrollToTop?: boolean; onintent?: () => void; }
-  interface Props { items: TabItem[]; value?: string; label?: string; variant?: 'segmented' | 'underline' | 'pills'; id?: string; controls?: string; onchange?: (value: string) => void; }
+  interface Props { items: TabItem[]; value?: string; label?: string; variant?: 'segmented' | 'underline' | 'pills'; id?: string; controls?: string; compact?: boolean; onchange?: (value: string) => void; }
   const generatedId = $props.id();
-  let { items, value = $bindable(''), label = 'Sections', variant = 'segmented', id = generatedId, controls, onchange }: Props = $props();
+  let { items, value = $bindable(''), label = 'Sections', variant = 'segmented', id = generatedId, controls, compact = false, onchange }: Props = $props();
   let root=$state<HTMLElement>();
+  let rootWidth=$state(0);
   $effect(()=>{
-    value;items;
+    value;items;rootWidth;
     if(!root)return;
     const active=root.querySelector<HTMLElement>('[aria-selected="true"],[aria-current="page"]');
     if(!active)return;
@@ -35,7 +36,7 @@
   {#if item.description !== undefined}<span class="tab-copy"><strong>{item.label}</strong><small id={id + '-' + item.id + '-description'}>{item.description}</small></span>{:else}<span class="tab-label">{item.label}</span>{/if}
   {#if item.badge}<small>{item.badge}</small>{/if}
 {/snippet}
-<svelte:element bind:this={root} this={navigation ? 'nav' : 'div'} {id} class="tabs" class:navigation={navigation || variant === 'pills'} class:underline={variant === 'underline'} class:detailed={items.some(item => item.description !== undefined)} role={navigation ? undefined : 'tablist'} aria-label={label}>
+<svelte:element bind:clientWidth={rootWidth} bind:this={root} this={navigation ? 'nav' : 'div'} {id} class="tabs" class:compact class:navigation={navigation || variant === 'pills'} class:underline={variant === 'underline'} class:detailed={items.some(item => item.description !== undefined)} role={navigation ? undefined : 'tablist'} aria-label={label}>
   {#each items as item, index}
     {#if item.href}
       <a class="tab" class:active={value === item.id} href={item.href} data-scroll-to-top={item.scrollToTop === false ? 'false' : undefined} aria-current={value === item.id ? 'page' : undefined} onpointerenter={item.onintent} onfocus={item.onintent}>{@render content(item)}</a>
@@ -59,4 +60,6 @@
   .detailed{overflow:hidden}.detailed .tab{min-width:0;min-height:46px;justify-content:flex-start;gap:9px;padding:8px 12px;text-align:left}.tab-copy{display:grid;gap:2px;min-width:0}.tab-copy strong{font-size:12px}.tab-copy small{overflow:hidden;margin:0;font-size:10px;font-weight:400;text-overflow:ellipsis;white-space:nowrap}
   @media(max-width:760px){.detailed .tab{min-height:var(--touch-target);justify-content:center;padding:0 5px;gap:5px}.tab-copy small{display:none}.tab-copy strong{font-size:11px}}
   @media(max-width:767px){.tab,.navigation .tab,.detailed .tab{min-height:30px}.navigation .tab{min-width:0;padding-inline:10px;font-size:12px}.tab :global(svg){width:16px;height:16px}}
+  .compact{padding:2px;gap:2px;align-self:start;width:max-content}.compact .tab{flex:0 0 auto;min-width:0;min-height:28px;padding:0 10px;gap:5px;font-size:11px;font-weight:600}.compact .tab :global(svg){width:14px;height:14px}.compact small{margin-left:3px}.compact.underline{width:auto;padding:0}
+  @media(max-width:767px){.compact .tab{min-height:30px}}
 </style>

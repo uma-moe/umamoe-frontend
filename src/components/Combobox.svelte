@@ -103,6 +103,12 @@
     }
     activeIndex = next;
   }
+  function show() {
+    if (!editing && value === emptyValue) { query = ''; editing = true; }
+    activeIndex = filtered.findIndex(option => option.value === value && !option.disabled);
+    if (activeIndex < 0) activeIndex = filtered.findIndex(option => !option.disabled);
+    open = true;
+  }
   function handleInput() { editing = true; activeIndex = -1; open = true; }
   function clear() { query = ''; handleInput(); input.focus(); }
   function handleKeydown(event: KeyboardEvent) {
@@ -148,8 +154,8 @@
       aria-activedescendant={expanded && activeIndex >= 0 ? `${id}-option-${activeIndex}` : undefined}
       autocomplete="off"
       oninput={handleInput}
-      onclick={() => { if (!editing && value === emptyValue) query = ''; editing = true; open = true; }}
-      onfocus={() => { if (value === emptyValue) query = ''; editing = true; activeIndex = filtered.findIndex(option => !option.disabled); open = true; if (!action) input.select(); }}
+      onclick={show}
+      onfocus={() => { show(); if (!action) input.select(); }}
       onkeydown={handleKeydown}
     />
     {#if action && query}<button class="clear-query" type="button" aria-label={clearLabel} onclick={clear}><Icon name="close" size={16}/></button>{/if}

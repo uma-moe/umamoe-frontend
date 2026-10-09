@@ -1,5 +1,5 @@
 export type ShellLayoutMode = 'mobile' | 'compact' | 'expanded';
-export type PageWidth = 'normal' | 'wide';
+export type PageWidth = 'normal' | 'wide' | 'xl';
 
 export interface ScreenLayoutContract {
   id: ShellLayoutMode;
@@ -38,7 +38,8 @@ export const PAGE_LAYOUT = {
   frameMax: 1536,
   widths: {
     normal: { contentMax: 1080, frameMax: 1536 },
-    wide: { contentMax: 1760, frameMax: 2184 }
+    wide: { contentMax: 1760, frameMax: 2184 },
+    xl: { contentMax: 2184, frameMax: 2560 }
   },
   gutters: { mobile: 4, compact: 24, expanded: 32 },
   ads: {

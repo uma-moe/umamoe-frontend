@@ -1,15 +1,19 @@
 /**
  * The backend calls the simulator page makes.
  *
- * uma.moe's backend already proxies the simulator (it holds the upstream key,
- * checks the caller's grant and records usage), so the page sends the user's
- * `X-API-Key` here and never talks to the simulator directly.
+ * Requests use the shared browser-verification pipeline. Local development
+ * credentials are injected by Vite's proxy and never enter browser code.
  *
  * `request` is injected so calls can be asserted without a network.
  */
 
 import { appHttp } from '@/services/http/app-http';
 import { HttpError, type HttpRequestOptions } from '@/services/http/http-client';
+import type { SimulatorReplay } from './simulator-results';
+import { normalizeReportResponse, expandReportTraces, type SimulationReport, type BuildComparison } from './simulation-report';
+import type {DetailedReplay} from '@/lib/race/race-diagnostics';
+import {validateSimulatorResponse} from './simulator-response';
+const workerValidated=new WeakSet<object>();
 
 /** Monte Carlo response fields the debug view reads; the rest stays in `raw`. */
 export interface MonteCarloResult {
@@ -19,7 +23,24 @@ export interface MonteCarloResult {
   seeds: number[];
   finish_order: number[][];
   finish_times: number[][];
+  final_hp?: number[][];
+  last_spurt_decisions?: number[][];
+  hp_deficit?: number[][];
+  max_hp?: number[][];
+  spurt_calculation_times?: number[][][];
+  spurt_calculation_distances?: number[][][];
+  check_hp?: number[][][];
+  full_spurt_need_hp?: number[][][];
+  spurt_calculation_results?: number[][][];
+  report?: SimulationReport;
+  first_replay?: SimulatorReplay;
+  skill_procs?: SimulatorProcTrace[];
+  skills?: { source_input_index: number; skill_id: number; runs_triggered: number; trigger_probability: number; total_activations: number; mean_activation_distance_m: number | null }[];
 }
+
+/** Source, skill, alternative, tick, elapsed seconds, metres, duration, flags, effect offset/count. */
+export type SimulatorProc = [number,number,number,number,number,number,number,number,number,number];
+export interface SimulatorProcTrace { activations:SimulatorProc[]; effects:[number,number,number,number][]; }
 
 /** `/api/sim/stamina` result. Every field is present in a successful response. */
 export interface StaminaResult {
@@ -100,52 +121,98 @@ export interface SimulatorRun<T> {
 }
 
 export interface SimulatorRunRequest {
-  key: string;
   body: Record<string, unknown>;
+  signal?: AbortSignal;
 }
 
-export type SimulatorHttpRequest = (path: string, options?: HttpRequestOptions) => Promise<string>;
+export interface SimulatorBatchResult {
+  schema_version: number;
+  engine_builds: Record<string, string>;
+  results: { seed: number; finish_order?: number[]; error?: string }[];
+}
+
+export type SimulatorHttpRequest = (path: string, options?: HttpRequestOptions) => Promise<string | ArrayBuffer>;
+
+export async function decodeSimulatorBody(bytes:string|ArrayBuffer,signal?:AbortSignal,validation?:{path:string;body:Record<string,unknown>}):Promise<unknown> {
+  if(signal?.aborted)throw new DOMException('Cancelled','AbortError');
+  if(typeof Worker==='undefined') {
+    if(typeof bytes==='string')return normalizeReportResponse(JSON.parse(bytes));
+    return normalizeReportResponse((await import('@msgpack/msgpack')).decode(new Uint8Array(bytes)));
+  }
+  return new Promise((resolve,reject)=>{
+    const worker=new Worker(new URL('./simulation-report.worker.ts',import.meta.url),{type:'module'});
+    const cleanup=()=>{worker.terminate();signal?.removeEventListener('abort',abort);};
+    const abort=()=>{cleanup();reject(new DOMException('Cancelled','AbortError'));};
+    signal?.addEventListener('abort',abort,{once:true});
+    worker.onmessage=async e=>{
+      try {
+        const message=e.data;
+        worker.terminate();
+        if(message.error)throw new Error(message.error);
+        await expandReportTraces(message.value);
+        if(signal?.aborted)throw new DOMException('Cancelled','AbortError');
+        if(message.validated&&message.value&&typeof message.value==='object')workerValidated.add(message.value);
+        cleanup();resolve(message.value);
+      } catch(error){cleanup();reject(error);}
+    };
+    worker.onerror=()=>{cleanup();reject(new Error('Could not decode the simulation response.'));};
+    worker.postMessage({bytes,validation},typeof bytes==='string'?[]:[bytes]);
+  });
+}
 
 export function createSimulatorRepository(request: SimulatorHttpRequest) {
-  async function post<T>(path: string, { key, body }: SimulatorRunRequest): Promise<SimulatorRun<T>> {
-    let raw: string;
+  async function post<T>(path: string, { body, signal }: SimulatorRunRequest): Promise<SimulatorRun<T>> {
+    let bytes: string|ArrayBuffer;
+    const binary=body.output_format==='msgpack'||path.endsWith('/comparison');
     try {
-      raw = await request(path, {
+      bytes = await request(path, {
         method: 'POST',
-        headers: { 'x-api-key': key, accept: 'application/json' },
+        headers: { accept: binary?'application/msgpack':'application/json' },
+        browserProof: !import.meta.env.DEV,
         body,
-        responseType: 'text'
+        ...(signal ? { signal } : {}),
+        responseType: binary?'arrayBuffer':'text'
       });
     } catch (error) {
-      // The simulator's own framework rejections are plain text, and HttpError
-      // only reads a JSON body, so the reason would otherwise be lost behind
-      // the status line. Fold the real message in and keep the error type, so
-      // the pages can still branch on 401 and 403.
-      if (error instanceof HttpError && typeof error.body === 'string' && error.body.trim() !== '') {
+      // Keep framework rejection details and explain authentication at the shared boundary.
+      if (error instanceof HttpError && (error.status === 401 || error.status === 403)) {
+        error.message = import.meta.env.DEV || import.meta.env.MODE === 'development'
+          ? 'Local simulator authentication failed. Configure an authorized SIMULATOR_API_KEY in .env.development.local and restart the local server.'
+          : 'Simulator access could not be confirmed. Retry browser verification or sign in again.';
+      } else if (error instanceof HttpError && error.status === 404) {
+        error.message = 'The configured backend does not provide the simulator API. Check the local simulator proxy target.';
+      } else if (error instanceof HttpError && typeof error.body === 'string' && error.body.trim() !== '') {
         error.message = `${error.status} ${error.statusText}: ${error.body.trim()}`;
+      } else if (error instanceof HttpError && error.body && typeof error.body==='object' && 'error' in error.body && typeof error.body.error==='string') {
+        error.message=error.body.error;
       }
       throw error;
     }
 
     let result: T;
     try {
-      result = JSON.parse(raw) as T;
-    } catch {
+      result = await decodeSimulatorBody(bytes,signal,{path,body}) as T;
+    } catch(error) {
+      if(signal?.aborted)throw error;
       throw new Error(
-        'The simulator returned a non-JSON body. Keep output_format set to "json".'
+        'The simulator returned an incompatible response body.'
       );
     }
 
-    return { result, raw };
+    if(typeof result!=='object'||result===null||!workerValidated.has(result))validateSimulatorResponse(path,body,result);
+    return { result, raw:typeof bytes==='string'?bytes:'' };
   }
 
   return {
+    batch: (run: SimulatorRunRequest) => post<SimulatorBatchResult>('/api/sim/batch', run),
     monteCarlo: (run: SimulatorRunRequest) => post<MonteCarloResult>('/api/sim/monte-carlo', run),
+    comparison: (run: SimulatorRunRequest) => post<BuildComparison>('/api/sim/comparison',run),
+    detailedReplay: (run:SimulatorRunRequest)=>post<DetailedReplay>('/api/sim/replay/detailed',run),
     stamina: (run: SimulatorRunRequest) => post<StaminaResult>('/api/sim/stamina', run),
     optimize: (run: SimulatorRunRequest) => post<OptimizeResult>('/api/sim/optimize', run)
   };
 }
 
 export const simulatorRepository = createSimulatorRepository((path, options) =>
-  appHttp.request<string>(path, options)
+  appHttp.request<string|ArrayBuffer>(path, options)
 );

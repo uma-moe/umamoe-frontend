@@ -2,22 +2,16 @@
   import Banner from '@/components/Banner.svelte';
   import Button from '@/components/Button.svelte';
   import EmptyState from '@/components/EmptyState.svelte';
-  import TextField from '@/components/TextField.svelte';
   import PageFrame from '@/layouts/PageFrame.svelte';
   import { monteCarloBody } from './sample-race';
-  import { readApiKey, writeApiKey } from './simulator-key';
   import { simulatorRepository, type MonteCarloResult, type SimulatorRun } from './simulator-repository';
   import MonteCarloResultPanel from './MonteCarloResultPanel.svelte';
 
-  let apiKey = $state(readApiKey());
   let bodyText = $state(JSON.stringify(monteCarloBody, null, 2));
   let run = $state<SimulatorRun<MonteCarloResult> | null>(null);
   let error = $state('');
   let busy = $state(false);
 
-  $effect(() => {
-    writeApiKey(apiKey);
-  });
 
   function resetBody(): void {
     bodyText = JSON.stringify(monteCarloBody, null, 2);
@@ -28,10 +22,6 @@
     error = '';
     run = null;
 
-    if (!apiKey.trim()) {
-      error = 'Add your uma.moe API key before sending.';
-      return;
-    }
 
     let body: Record<string, unknown>;
     try {
@@ -43,7 +33,7 @@
 
     busy = true;
     try {
-      run = await simulatorRepository.monteCarlo({ key: apiKey.trim(), body });
+      run = await simulatorRepository.monteCarlo({ body });
     } catch (reason) {
       error = reason instanceof Error ? reason.message : 'The request failed.';
     } finally {
@@ -59,7 +49,7 @@
     <header class="intro">
       <div>
         <h1 id="simulator-debug-title">Simulator debug <span class="tag">internal</span></h1>
-        <p>Runs the private simulator through the uma.moe backend proxy. Requests carry your own API key, which stays in this browser.</p>
+        <p>Inspect requests and responses from the simulator.</p>
       </div>
     </header>
 
@@ -71,14 +61,6 @@
       <section class="panel" aria-labelledby="sim-request-title">
         <h2 id="sim-request-title">Request</h2>
 
-        <TextField
-          id="sim-api-key"
-          type="password"
-          label="uma.moe API key"
-          help="Create one in Settings → API keys. Stored in this browser only."
-          autocomplete="off"
-          bind:value={apiKey}
-        />
 
         <div class="field">
           <label for="sim-body">Monte Carlo body (JSON)</label>
@@ -87,7 +69,7 @@
         </div>
 
         <div class="actions">
-          <Button onclick={send} loading={busy} disabled={!apiKey.trim()}>Send</Button>
+          <Button onclick={send} loading={busy} >Send</Button>
           <Button variant="secondary" onclick={resetBody} disabled={busy}>Reset body</Button>
         </div>
       </section>

@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import InspectPopover from './InspectPopover.svelte';
+  import Icon from './Icon.svelte';
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
   export interface TableColumn { key: string; label: string; numeric?: boolean; priority?: 'primary' | 'secondary'; sortable?: boolean; sortValue?: (row:Record<string,string|number>)=>string|number; }
-  interface Props { caption: string; plain?: boolean; columns: TableColumn[]; rows: Record<string, string | number>[]; emptyMessage?: string; cell?: Snippet<[Record<string, string | number>, TableColumn]>; sortKey?:string; sortDirection?:'ascending'|'descending'; maxHeight?:number; compact?:boolean; onrowclick?:(row:Record<string,string|number>)=>void; expandedRow?:string|number; rowKey?:string; rowDetail?:Snippet<[Record<string,string|number>]>; }
-  let { caption, plain = false, columns, rows, emptyMessage = 'No results', cell, sortKey=$bindable(''), sortDirection=$bindable('ascending'), maxHeight, compact=false, onrowclick, expandedRow, rowKey='id', rowDetail }: Props = $props();
+  interface Props { caption: string; plain?: boolean; columns: TableColumn[]; rows: Record<string, string | number>[]; emptyMessage?: string; cell?: Snippet<[Record<string, string | number>, TableColumn]>; columnHeader?: Snippet<[TableColumn]>; columnHelp?:Record<string,string>; sortKey?:string; sortDirection?:'ascending'|'descending'; maxHeight?:number; fill?:boolean; compact?:boolean; onrowclick?:(row:Record<string,string|number>)=>void; expandedRow?:string|number; rowKey?:string; rowDetail?:Snippet<[Record<string,string|number>]>; }
+  let { caption, plain = false, columns, rows, emptyMessage = 'No results', cell, columnHeader, columnHelp, sortKey=$bindable(''), sortDirection=$bindable('ascending'), maxHeight, fill=false, compact=false, onrowclick, expandedRow, rowKey='id', rowDetail }: Props = $props();
   let virtualRange = $state<VirtualRange>({ start: 0, end: 0 });
   let container=$state<HTMLDivElement>();
   const ordered=$derived.by(()=>{
@@ -25,16 +27,16 @@
   function sort(column:TableColumn){
     sortDirection=sortKey===column.key?(sortDirection==='ascending'?'descending':'ascending'):(column.numeric?'descending':'ascending');
     sortKey=column.key;
-    if(maxHeight)container?.scrollTo({top:0});
+    if(maxHeight||fill)container?.scrollTo({top:0});
   }
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex (Scrollable tables must be reachable with the keyboard.) -->
-<div class="table-wrap" class:plain class:compact class:expandable={!!rowDetail} class:bounded={maxHeight} style:max-height={maxHeight?maxHeight+'px':undefined} bind:this={container} role="region" aria-label={caption+' scroll area'} tabindex={maxHeight?0:undefined}>
+<div class="table-wrap" class:plain class:compact class:expandable={!!rowDetail} class:bounded={maxHeight||fill} class:fill style:max-height={maxHeight?maxHeight+'px':undefined} bind:this={container} role="region" aria-label={caption+' scroll area'} tabindex={maxHeight||fill?0:undefined}>
   <table aria-rowcount={rows.length+1+(expandedIndex>=0?1:0)}>
     <caption class="sr-only">{caption}</caption>
-    <thead><tr>{#each columns as column}<th class:secondary={column.priority === 'secondary'} class:numeric={column.numeric} scope="col" aria-sort={column.sortable===false?undefined:sortKey===column.key?sortDirection:'none'}>{#if column.sortable===false}{column.label}{:else}<button class="sort" onclick={()=>sort(column)}>{column.label}<span aria-hidden="true">{sortKey===column.key?(sortDirection==='ascending'?'↑':'↓'):'↕'}</span></button>{/if}</th>{/each}</tr></thead>
-    <tbody use:virtualScroll={{ items: ordered, searchText: row => columns.map(column => row[column.key]).join(' '), estimate: compact?34:48, root:maxHeight?'closest':null, onrange: range => virtualRange = range }}>
+    <thead><tr>{#each columns as column}<th class:secondary={column.priority === 'secondary'} class:numeric={column.numeric} scope="col" aria-label={column.label} aria-sort={column.sortable===false?undefined:sortKey===column.key?sortDirection:'none'}>{#if column.sortable===false}{column.label}{:else}<button class="sort" onclick={()=>sort(column)}>{column.label}<span aria-hidden="true">{sortKey===column.key?(sortDirection==='ascending'?'↑':'↓'):'↕'}</span></button>{/if}{#if columnHelp?.[column.label]}<span class="column-help"><InspectPopover label={'About '+column.label} openOnHover align={column.numeric?'end':'start'}>{#snippet trigger()}<Icon name="info" size={12}/>{/snippet}<p>{columnHelp[column.label]}</p></InspectPopover></span>{/if}{@render columnHeader?.(column)}</th>{/each}</tr></thead>
+    <tbody use:virtualScroll={{ items: ordered, searchText: row => columns.map(column => row[column.key]).join(' '), estimate: compact?34:48, root:maxHeight||fill?'closest':null, onrange: range => virtualRange = range }}>
       {#each ordered.slice(virtualRange.start, virtualRange.end) as row, index (virtualRange.start + index)}
         <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions (The cell action button supplies the same keyboard interaction while preserving table semantics.) -->
         <tr class:interactive={!!onrowclick} onclick={onrowclick?event=>clickRow(event,row):undefined} data-virtual-index={virtualRange.start + index} aria-rowindex={virtualRange.start+index+2+(expandedIndex>=0&&expandedIndex<virtualRange.start+index?1:0)}>{#each columns as column}<td class:secondary={column.priority === 'secondary'} class:numeric={column.numeric} data-label={column.label}>{#if cell}{@render cell(row, column)}{:else}{row[column.key]}{/if}</td>{/each}</tr>
@@ -47,8 +49,9 @@
 
 <style>
   .expandable{container-type:inline-size}
+  .column-help{display:inline-flex;vertical-align:middle;margin-left:3px;--inspect-popover-width:310px;text-transform:none;letter-spacing:0;color:var(--text-secondary)}.column-help :global(.trigger){display:grid;place-items:center;min-width:20px;min-height:24px}.column-help p{margin:0;font-size:11px;font-weight:400;line-height:1.6;white-space:normal}
   .table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
-  .bounded{overflow:auto;scrollbar-gutter:stable;overscroll-behavior:contain}
+  .bounded{overflow:auto;scrollbar-gutter:stable;overscroll-behavior:contain;padding-inline-end:8px;scrollbar-width:thin;scrollbar-color:var(--border-secondary) transparent}.fill{flex:1;min-height:0}.bounded::-webkit-scrollbar{width:7px;height:7px}.bounded::-webkit-scrollbar-thumb{background:var(--border-secondary);border-radius:5px;min-height:28px}
   .compact th,.compact td{padding:4px 8px;line-height:1.3}.compact .sort{min-height:26px}.detail-row>td{padding:0;white-space:normal}.row-detail{position:sticky;left:0;width:100cqw;max-width:100%;}
   .plain { border:0; border-radius:0; }
   .plain table { background:transparent; }
@@ -56,7 +59,7 @@
   th, td { min-height: 44px; padding: 10px var(--space-3); border-bottom: 1px solid var(--color-border); text-align: left; white-space: nowrap; }
   th { position: sticky; top: 0; z-index:2; background: var(--color-surface-2); color: var(--color-text-muted); font-size: var(--font-xs); letter-spacing: .025em; text-transform: uppercase; }
   .sort{display:inline-flex;align-items:center;gap:8px;min-height:28px;padding:0;border:0;background:none;color:inherit;font:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer}.sort span{opacity:.5}th[aria-sort=ascending],th[aria-sort=descending]{color:var(--color-accent)}.sort:hover{color:var(--color-text)}.sort:focus-visible{outline:2px solid var(--color-accent);outline-offset:4px}
-  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:last-child td, tbody tr:has(+ :global(tr[aria-hidden="true"]:last-child)) td { border-bottom: 0; }
   tbody tr:hover { background: color-mix(in srgb, var(--color-surface-2) 60%, transparent); }
   tr.interactive{cursor:pointer}
   .numeric { text-align: right; font-variant-numeric: tabular-nums; }

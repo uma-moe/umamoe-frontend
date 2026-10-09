@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Spinner from '@/components/Spinner.svelte';
   import AppPage from '@/layouts/AppPage.svelte';
   import { router } from './router';
   import { routeDefinitionForPath } from './route-manifest';
@@ -24,7 +25,7 @@
 {#key loader}
   {#await page}
     <AppPage routeId={definition?.id ?? 'page'} {title} description={definition?.description} width={definition?.width ?? 'normal'} adsActive={false}>
-      <div class="pending-content" aria-busy="true" aria-label={`${title} content`}></div>
+      <div class="pending-content" aria-busy="true" aria-label={`${title} content`}><Spinner centered label={'Loading '+title+'…'}/></div>
     </AppPage>
   {:then module}
     <module.default/>
@@ -34,5 +35,5 @@
 {/key}
 
 <style>
-  .pending-content { min-height: 55dvh; }
+  .pending-content { min-height:55dvh; display:grid; place-items:center; }
 </style>

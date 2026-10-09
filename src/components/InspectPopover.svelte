@@ -23,6 +23,12 @@
     top = position.top;
   }
   $effect(positionPanel);
+  $effect(() => {
+    if (!open) return;
+    const observer = new ResizeObserver(positionPanel);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  });
   function close() { panel.hidePopover(); control.focus(); }
   function hover(show: boolean) {
     if (!openOnHover || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;

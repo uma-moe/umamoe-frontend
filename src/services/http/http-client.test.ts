@@ -155,6 +155,17 @@ describe('typed HTTP middleware pipeline', () => {
     expect(new Headers(fetcher.mock.calls[1]?.[1]?.headers).get('x-browser-proof')).toBe('fresh-proof');
   });
 
+  it('verifies simulator requests even when the account is signed in', async () => {
+    const port=proofPort(),fetcher=vi.fn(async (_url:string|URL|Request,_init?:RequestInit)=>new Response('{"ok":true}'));
+    port.getCached=vi.fn(()=>undefined);
+    const client=createHttpClient({fetcher:fetcher as typeof fetch,getAuthToken:()=> 'account-jwt',browserProof:port});
+    await client.request('/api/sim/races/resimulate',{method:'POST',body:{capture:{}},browserProof:true});
+    const headers=new Headers(fetcher.mock.calls[0]![1]!.headers);
+    expect(headers.get('authorization')).toBe('Bearer account-jwt');
+    expect(headers.get('x-browser-proof')).toBe('fresh-proof');
+    expect(port.refresh).toHaveBeenCalledOnce();
+  });
+
   it('retries an idempotent transient response and reports terminal rate limits', async () => {
     const onRateLimit = vi.fn();
     const fetcher = vi.fn()

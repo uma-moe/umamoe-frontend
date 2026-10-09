@@ -27,7 +27,7 @@ export interface HttpRequestOptions extends Omit<RequestInit, 'body'> {
   body?: BodyInit | Record<string, unknown> | unknown[];
   query?: Record<string, string | number | boolean | undefined>;
   responseType?: 'json' | 'text' | 'blob' | 'arrayBuffer' | 'response';
-  /** Public protected assets need browser proof without receiving account auth. */
+  /** Force proof for public assets, or opt out for endpoints accepting JWT alone. */
   browserProof?: boolean;
 }
 
@@ -206,7 +206,7 @@ export function createHttpClient(options: HttpClientOptions = {}) {
     delete (init as HttpRequestOptions).responseType;
     delete (init as HttpRequestOptions).browserProof;
     const ownApi = isOwnApi(url, baseUrl);
-    const response = await pipeline({ url, init, ownApi, proofRequired: ownApi || requestOptions.browserProof === true });
+    const response = await pipeline({ url, init, ownApi, proofRequired: requestOptions.browserProof ?? ownApi });
     if (!response.ok) throw new HttpError(response.status, response.statusText, response.url || url, await responseBody(response, 'json', true), response);
     if (requestOptions.responseType === 'response') return response as T;
     return await responseBody(response, requestOptions.responseType) as T;

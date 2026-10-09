@@ -1,21 +1,8 @@
-/**
- * Setup every simulator surface shares.
- *
- * Stamina, Race sim and Build search all read the same course, conditions,
- * trainee and API key. One shared object is what makes the shell's sidebar mean
- * the same thing on all three routes: switching modes keeps the setup the reader
- * just built. Mode-specific run parameters — opponents, runs, purchases, effect
- * rows — stay with their page.
- *
- * The course is the primary selection and the track is derived from it, so the
- * two can never disagree.
- *
- * `$state` rather than a writable store so `bind:` works straight onto a leaf,
- * which is how `Combobox`, `SelectField`, `TextField` and `TraineeInput` all
- * take their value.
- */
+/** Course and race conditions shared by the simulator pages. */
 
 import {
+  SURFACE_NAMES,
+  TURN_NAMES,
   coursesForTrack,
   describeCourse,
   loadCourseCatalog,
@@ -23,8 +10,11 @@ import {
   tracksWithCourses,
   type CourseCatalogEntry
 } from '@/lib/catalog/course-catalog';
-import { readApiKey, writeApiKey } from './simulator-key';
-import { createTrainee } from './trainee';
+import { importSimulatorUmas, simulatorRoster } from './simulator-roster.svelte';
+import type { SimulatorUma } from './simulator-uma';
+import { resourceRepository } from '@/lib/catalog/resource-repository';
+import type { Trainee } from './trainee';
+import { EXAMPLE_RACE_SETTINGS } from './simulator-example';
 
 export interface ConditionOption {
   value: string;
@@ -84,15 +74,57 @@ export const WEATHER_OPTIONS: Array<ImageConditionOption> = [
 
 /** Race conditions the simulator takes as `setup`; strings because every field binds a string. */
 export const simulatorSession = $state({
-  apiKey: readApiKey(),
   /** The simulator's `course_id`. The track is derived from it, never stored. */
-  courseId: '',
-  ground: '1',
-  season: '1',
-  weather: '1',
-  startTime: '2',
-  trainee: createTrainee()
+  courseId: String(EXAMPLE_RACE_SETTINGS.courseId),
+  umaId: '',
+  seed: String(Math.floor(Math.random() * 2 ** 31)),
+  importNotice: 'Example CM20 field · 3 teams · 9 trained builds with skills. Edit any Uma to compare your own build.',
+  sourceCourseId: String(EXAMPLE_RACE_SETTINGS.courseId),
+  raceInstanceId: EXAMPLE_RACE_SETTINGS.raceInstanceId,
+  ground: EXAMPLE_RACE_SETTINGS.ground,
+  season: EXAMPLE_RACE_SETTINGS.season,
+  weather: EXAMPLE_RACE_SETTINGS.weather,
+  startTime: EXAMPLE_RACE_SETTINGS.startTime,
+  get trainee(): Trainee { return (simulatorRoster.umas.find(uma => uma.id === simulatorSession.umaId) ?? simulatorRoster.umas[0]!).trainee; },
+  set trainee(value: Trainee) { (simulatorRoster.umas.find(uma => uma.id === simulatorSession.umaId) ?? simulatorRoster.umas[0]!).trainee = value; }
 });
+
+/** Reuse the exact CM course ID; a failed lookup requires a manual selection. */
+export async function openSimulatorField(umas: SimulatorUma[], options: { replace?: boolean; raceInstanceId?: number; startTimeType?: number; seed?: string } = {}): Promise<void> {
+  let importedCourse: string | undefined;
+  if (options.raceInstanceId) {
+    const { resolveRaceCourseIds } = await import('@/pages/race-analysis/replay-course');
+    const ids = await resolveRaceCourseIds([options.raceInstanceId]);
+    await ensureSimulatorCatalog();
+    const id = ids.get(options.raceInstanceId);
+    importedCourse = id && simulatorCatalog.courses.has(id) ? String(id) : '';
+  } else if (umas.some(uma => uma.source === 'CM Data')) importedCourse = '';
+  // Validate capacity before changing the current course or conditions.
+  importSimulatorUmas(umas, options.replace);
+  if (importedCourse !== undefined) {
+    simulatorSession.courseId = importedCourse;
+    simulatorSession.sourceCourseId = importedCourse;
+    simulatorSession.raceInstanceId = options.raceInstanceId ?? 0;
+    simulatorSession.importNotice = importedCourse
+      ? 'CM builds imported. Review the race conditions before running.'
+      : 'CM builds imported. Select their course and review the race conditions before running.';
+    const course = selectedCourse();
+    if (course) for (const uma of umas) {
+      if (!uma.capturedAptitudes) continue;
+      uma.trainee.distanceAptitudes[course.distance_type - 1] = uma.capturedAptitudes[0];
+      uma.trainee.groundAptitudes[course.surface - 1] = uma.capturedAptitudes[1];
+    }
+  }
+  if (options.startTimeType) simulatorSession.startTime = String(options.startTimeType);
+  if (options.seed) simulatorSession.seed = options.seed;
+  simulatorSession.umaId = umas[0]?.id ?? '';
+  const { router } = await import('@/routes/router');
+  await router.navigate('/simulator/race');
+}
+
+export function selectedRaceInstanceId(): number {
+  return simulatorSession.courseId === simulatorSession.sourceCourseId ? simulatorSession.raceInstanceId : 0;
+}
 
 export interface SimulatorCatalogState {
   courses: Map<number, CourseCatalogEntry>;
@@ -110,6 +142,7 @@ export const simulatorCatalog = $state<SimulatorCatalogState>({
 });
 
 let catalogLoad: Promise<void> | undefined;
+resourceRepository.onUpdate(name => { if (name === 'simulator_courses') { catalogLoad = undefined; void ensureSimulatorCatalog(); } });
 
 /** Loads the course master data once per session, for every surface. */
 export function ensureSimulatorCatalog(): Promise<void> {
@@ -189,8 +222,9 @@ export function courseOptions(): Array<{ value: string; label: string; keywords:
   const siblings = coursesForTrack(simulatorCatalog.courses, trackId);
   return siblings.map((course) => ({
     value: String(course.course_id),
-    label: describeCourse(course, siblings),
-    keywords: `course ${course.course_id}`
+    label: [`${SURFACE_NAMES[course.surface] ?? 'Unknown'} ${course.distance.toLocaleString('en-US')} m`,
+      `(${TURN_NAMES[course.turn] ?? 'Unknown'}${siblings.some(other => other.course_id !== course.course_id && other.distance === course.distance && other.surface === course.surface) ? ', layout '+course.course : ''})`].join(' '),
+    keywords: `course ${course.course_id} ${describeCourse(course, siblings)}`
   }));
 }
 
@@ -211,9 +245,4 @@ export function optionLabel(
   value: string
 ): string {
   return options.find((option) => option.value === value)?.label ?? '';
-}
-
-/** Persists the API key. Called from the Access panel, the only place it can change. */
-export function rememberApiKey(): void {
-  writeApiKey(simulatorSession.apiKey);
 }

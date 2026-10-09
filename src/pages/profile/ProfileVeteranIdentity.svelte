@@ -1,5 +1,6 @@
 <script lang="ts">
   import RankBadge from '@/components/RankBadge.svelte';
+  import Icon from '@/components/Icon.svelte';
   import type { VeteranUiRecord } from '@/components/veteran-ui-types';
 
   let { summary, rarity, score, heading = 'h3', titleId, descriptionId }: {
@@ -9,7 +10,7 @@
 </script>
 
 <div class="veteran-identity">
-  <div class="portrait">{#if summary.image}<img src={summary.image} alt="" loading="lazy"/>{/if}</div>
+  <div class="portrait">{#if summary.image}<img src={summary.image} alt="" loading="lazy"/>{:else}<span class="portrait-placeholder"><Icon name="user" size={32}/></span>{/if}</div>
   <div class="identity">
     <svelte:element this={heading} id={titleId}>{summary.name}</svelte:element>
     <div class="identity-details" id={descriptionId}>
@@ -25,6 +26,7 @@
   .veteran-identity { display:grid; grid-template-columns:56px minmax(0,1fr) auto; align-items:center; gap:12px; width:100%; min-width:0; text-align:left; color:var(--color-text); }
   .portrait { height:60px; overflow:hidden; }
   .portrait img { width:100%; height:100%; object-fit:contain; object-position:center bottom; }
+  .portrait-placeholder { display:grid;place-items:center;width:100%;height:100%;color:var(--text-secondary);background:var(--surface-3);border-radius:var(--radius-md); }
   .identity { min-width:0; display:grid; gap:7px; }
   .identity-details { min-width:0; display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; }
   .identity :is(h2,h3) { margin:0; font-size:16px; font-weight:650; line-height:1.2; letter-spacing:-.02em; overflow-wrap:anywhere; }

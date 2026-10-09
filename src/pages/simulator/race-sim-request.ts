@@ -4,13 +4,13 @@
  * Pure: no Svelte and no network. `buildFieldRunners` is shared with the
  * optimize request so every surface normalizes runners the same way:
  * `source_input_index` is the array index and `frame_order` is unique 1..N.
- * `output_format` is always `json` because the app decodes JSON only.
+ * The caller selects JSON or MessagePack transport.
  */
 
 import { buildRaceSetup, type RaceSetup, type RaceSetupInput, type TraineeStats } from './stamina-request';
 import { traineeUma, type Trainee } from './trainee';
 
-export type MonteCarloOutputMode = 'procs' | 'skills' | 'results';
+export type MonteCarloOutputMode = 'procs' | 'skills' | 'results' | 'report';
 
 /** At most 18 runners per field; a race needs at least 2. */
 export const MIN_FIELD_RUNNERS = 2;
@@ -35,6 +35,7 @@ export interface MonteCarloRunnerInput {
   frameOrder?: number;
   /** 0 = unteamed. */
   teamId?: number;
+  fanCount?: number;
   hasViewerId?: boolean;
   singleModeWinCount?: number;
   skills?: Array<MonteCarloSkillInput>;
@@ -56,6 +57,8 @@ export interface FieldRunner {
   frame_order: number;
   has_viewer_id: boolean;
   team_id: number;
+  team_member_id?: number;
+  fan_count?: number;
   single_mode_win_count: number;
   skills: Array<MonteCarloSkill>;
 }
@@ -105,6 +108,8 @@ export function buildFieldRunners(runners: Array<MonteCarloRunnerInput>): Array<
     frame_order: orders[index] ?? index + 1,
     has_viewer_id: runner.hasViewerId ?? false,
     team_id: clampInt(runner.teamId ?? 0, 0, 255, 0),
+    ...(runner.teamId ? { team_member_id: index + 1 } : {}),
+    ...(runner.fanCount !== undefined ? { fan_count: clampInt(runner.fanCount, 0, Number.MAX_SAFE_INTEGER, 0) } : {}),
     single_mode_win_count: clampInt(runner.singleModeWinCount ?? 0, 0, Number.MAX_SAFE_INTEGER, 0),
     skills: buildSkills(runner.skills ?? [])
   }));

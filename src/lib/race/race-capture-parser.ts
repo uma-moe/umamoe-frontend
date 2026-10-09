@@ -1,4 +1,5 @@
 import * as pako from 'pako';
+import { validateDetailedReplay,type DetailedReplay } from './race-diagnostics';
 
 export interface RaceHorseFrame {
   distance: number;
@@ -18,9 +19,10 @@ export interface RaceHorseResult {
   finishOrder: number;
   finishTime: number;
   finishDiffTime: number;
-  startDelayTime: number;
-  lastSpurtStartDistance: number;
+  startDelayTime?: number;
+  lastSpurtStartDistance?: number;
   runningStyle: number;
+  gutsOrder?:number; wizOrder?:number; defeatReason?:number; finishTimeRaw?:number;
 }
 
 export interface RaceEvent {
@@ -46,6 +48,8 @@ export interface RaceRunner {
 
 export interface ParsedRaceCapture {
   source: 'horseact' | 'api';
+  original?:Record<string,unknown>;
+  detailed?:DetailedReplay;
   fileName: string;
   courseId?: number;
   raceInstanceId?: number;
@@ -185,12 +189,14 @@ function horseFrame(view: DataView, offset: number): RaceHorseFrame {
 function horseResult(view: DataView, offset: number): RaceHorseResult {
   ensure(view, offset, 31);
   return {
-    finishOrder: view.getInt32(offset, true),
+    finishOrder: view.getInt32(offset, true)+1,
     finishTime: view.getFloat32(offset + 4, true),
     finishDiffTime: view.getFloat32(offset + 8, true),
     startDelayTime: view.getFloat32(offset + 12, true),
     lastSpurtStartDistance: view.getFloat32(offset + 18, true),
-    runningStyle: view.getUint8(offset + 22)
+    runningStyle: view.getUint8(offset + 22),
+    gutsOrder:view.getUint8(offset+16)+1,wizOrder:view.getUint8(offset+17)+1,
+    defeatReason:view.getInt32(offset+23,true),finishTimeRaw:view.getFloat32(offset+27,true)
   };
 }
 
@@ -409,13 +415,21 @@ function decodeScenario(base64: string): DecodedRace {
 }
 
 export function parseRaceCapture(value: unknown, fileName = 'capture.json'): ParsedRaceCapture {
-  const input = normalizeInput(record(value));
+  const envelope=record(value);
+  if(envelope.capture&&envelope.resimulation){
+    const original=parseRaceCapture(envelope.capture,fileName),courseId=numeric(envelope,'courseId');
+    return applyResimulation({...original,courseId:Number.isSafeInteger(courseId)&&courseId!>0?courseId:original.courseId},envelope.resimulation);
+  }
+  const input = normalizeInput(envelope);
   if (Array.isArray(first(input, 'race_start_params_array')) && Array.isArray(first(input, 'race_result_array'))) throw new Error('Team Trial captures belong in Multi-Race analysis.');
   const apiHorses = first(input, 'race_horse_data_array', 'raceHorseDataArray');
   const actMembers = first(input, '<RaceHorse>k__BackingField', 'raceHorse');
   const source = Array.isArray(apiHorses) ? 'api' : Array.isArray(actMembers) ? 'horseact' : undefined;
   if (!source) throw new Error('This file does not contain a supported race_horse_data_array or HorseACT raceHorse payload.');
-  const rawRunners = source === 'api' ? array(apiHorses) : array(actMembers).map((member) => first(record(member), '_responseHorseData', 'responseHorseData')).filter(Boolean);
+  const rawRunners = source === 'api' ? [...array(apiHorses)] : array(actMembers).map((member) => first(record(member), '_responseHorseData', 'responseHorseData')).filter(Boolean);
+  const gates=rawRunners.map(r=>numeric(record(r),'frame_order','frameOrder'));
+  if(gates.every(g=>g!==undefined&&Number.isInteger(g)&&g>=1&&g<=rawRunners.length)&&new Set(gates).size===rawRunners.length)
+    rawRunners.sort((a,b)=>numeric(record(a),'frame_order','frameOrder')!-numeric(record(b),'frame_order','frameOrder')!);
   const scenario = source === 'api' ? text(input, 'race_scenario', 'raceScenario') : text(input, '<SimDataBase64>k__BackingField', 'simDataBase64');
   if (!scenario) throw new Error('The capture does not include a compressed race scenario.');
   const decoded = decodeScenario(scenario);
@@ -424,6 +438,7 @@ export function parseRaceCapture(value: unknown, fileName = 'capture.json'): Par
   const runners = rawRunners.map((runner, index) => normalizeRunner(runner, index, players, decoded.results[index]));
   return {
     source,
+    original:envelope,
     fileName,
     courseId: numeric(course, 'id', 'Id', '<Id>k__BackingField') ?? numeric(input, 'course_id', 'courseId', 'CourseId', '<CourseId>k__BackingField'),
     raceInstanceId: numeric(input, 'race_instance_id', 'raceInstanceId', 'RaceInstanceId', '<RaceInstanceId>k__BackingField') ?? (Number(fileName.match(/^(\d{6,9})_/)?.[1]) || undefined),
@@ -440,6 +455,16 @@ export function parseRaceCapture(value: unknown, fileName = 'capture.json'): Par
     frames: decoded.frames,
     events: decoded.events
   };
+}
+
+export function applyResimulation(capture:ParsedRaceCapture,value:unknown):ParsedRaceCapture {
+  const detailed=validateDetailedReplay(value,capture.runners.length),decoded=decodeScenario(detailed.replay.data);
+  if(decoded.results.length!==capture.runners.length||decoded.frames.length<2||decoded.frames.some((f,i)=>!Number.isFinite(f.time)||(i>0&&f.time<=decoded.frames[i-1]!.time)||f.horses.length!==capture.runners.length))throw Error('Simulator replay does not match the loaded race.');
+  if(decoded.frames.some(f=>f.horses.some(h=>!Number.isFinite(h.distance)||h.distance<0)))throw Error('Invalid simulator positions.');
+  if(new Set(decoded.results.map(r=>r.finishOrder)).size!==capture.runners.length||decoded.results.some(r=>r.finishOrder<1||r.finishOrder>capture.runners.length||!Object.values(r).every(Number.isFinite)))throw Error('Invalid simulator finish results.');
+  if(decoded.events.some(e=>!Number.isFinite(e.frameTime)||(e.type===3&&(!Number.isInteger(e.params[0])||e.params[0]!<0||e.params[0]!>=capture.runners.length||!Number.isInteger(e.params[1])))))throw Error('Invalid simulator event.');
+  return {...capture,detailed,randomSeed:detailed.seed,frames:decoded.frames,events:decoded.events,
+    runners:capture.runners.map((r,i)=>({...r,result:decoded.results[i]}))};
 }
 
 export async function readRaceCaptureFile(file: File): Promise<ParsedRaceCapture> {

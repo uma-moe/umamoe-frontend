@@ -37,7 +37,7 @@
   }: Props = $props();
 
   const resolvedContentId = $derived(contentId ?? `${routeId}-content`);
-  const hasAdRails = $derived(Boolean(adsEnabled && leftAd && rightAd));
+  const hasAdRails = $derived(Boolean(adsEnabled && rightAd));
 </script>
 
 <div class="page-boundary" class:fill data-page-frame>
@@ -49,7 +49,8 @@
     data-feature-id={featureId}
     data-page-layout="ad-aware"
     data-page-width={width}
-    class:page-grid--wide={width === 'wide'}
+    class:page-grid--wide={width === 'wide' || width === 'xl'}
+    class:page-grid--xl={width === 'xl'}
     class:page-grid--full-bleed={fullBleed}
   >
     <section class="page-content" id={resolvedContentId} data-page-content>
@@ -57,8 +58,8 @@
       {#if header}<header data-page-header>{@render header()}</header>{/if}
       <div class="page-body" data-page-body>{@render children()}</div>
     </section>
-    {#if hasAdRails && leftAd && rightAd}
-      <div class="ad-rail ad-rail--left" data-ad-position="left-rail">{@render leftAd()}</div>
+    {#if hasAdRails && rightAd}
+      {#if leftAd}<div class="ad-rail ad-rail--left" data-ad-position="left-rail">{@render leftAd()}</div>{/if}
       <div class="ad-rail ad-rail--right" data-ad-position="right-rail">{@render rightAd()}</div>
     {/if}
   </article>
@@ -80,6 +81,7 @@
     padding-inline: var(--page-gutter-current);
   }
   .page-grid--wide { --page-content-current: var(--page-content-wide); --page-frame-current: var(--page-frame-wide); }
+  .page-grid--xl { --page-content-current: var(--page-content-xl); --page-frame-current: var(--page-frame-xl); }
   .page-grid--full-bleed { --page-content-current: 100%; --page-frame-current: 100%; padding-inline: 0; }
   .page-content { width: min(100%, var(--page-content-current)); min-width: 0; grid-area: content; justify-self: center; }
   .page-content > nav { margin-bottom: var(--space-3); }
@@ -128,5 +130,9 @@
     .page-grid.has-ad-rails:not(:has(.ad-rail--left > :global(.ad-region))) { grid-template-columns: minmax(0, 1fr) var(--ad-rail-width); grid-template-areas: 'content right-ad'; }
     .page-grid.has-ad-rails .ad-rail--left:has(> :global(.ad-region)),
     .page-grid.has-ad-rails .ad-rail--right { display: block; }
+  }
+
+  @media (min-width: 1700px) {
+    .page-grid.has-ad-rails:not(:has(.ad-rail--left)) { grid-template-columns: minmax(0, 1fr) var(--ad-rail-width); gap: var(--space-3); }
   }
 </style>

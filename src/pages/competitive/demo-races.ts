@@ -42,6 +42,19 @@ export function makeDemoRaces(count = 72, meeting = 'tokyo', simulated = false):
         return { distance: course.distance * progress, lanePosition: 400 + index * 520 + Math.sin(frameIndex / 13 + index) * 180, speed: progress >= 1 ? 0 : 100 * (course.distance / finishTimes[index]! + Math.sin(frameIndex / 9 + index) * .7), hp: Math.max(0, runner.stats.stamina * (1 - progress * (1.02 - index * .015))), temptationMode: 0, blockFrontHorseIndex: -1 };
       })
     }));
+    // Two clearly synthetic blocking examples, with smooth entry and exit.
+    for(const [start,end] of [[20,27],[50,56]]){
+      const order=frames[start!]!.horses.map((horse,index)=>({horse,index})).sort((a,b)=>a.horse.distance-b.horse.distance);
+      const behind=order[4]!.index,ahead=order[5]!.index;
+      for(let i=start!-3;i<=end!+3;i++){
+        const horse=frames[i]!.horses[behind]!,front=frames[i]!.horses[ahead]!;
+        const blend=Math.max(0,Math.min(1,(i-start!+3)/3,(end!+3-i)/3));
+        horse.distance+=(front.distance-1.2-horse.distance)*blend;
+        horse.lanePosition+=(front.lanePosition-horse.lanePosition)*blend;
+        horse.speed+=(front.speed-horse.speed)*blend;
+        if(i>=start!&&i<end!)horse.blockFrontHorseIndex=ahead;
+      }
+    }
     const events = runners.flatMap(runner => runner.skillIds.filter(() => random() > .15).map(skill => ({ frameTime: duration * (.15 + random() * .75), type: 3, params: [runner.index, skill] }))).sort((a, b) => a.frameTime - b.frameTime);
     return { source: 'api', fileName: `Demo race ${raceIndex + 1}`, courseId: course.course, raceDistance: course.distance, raceType: 'Champions Meeting', randomSeed: raceIndex + 1, track: { condition: 'Firm', weather: 'Sunny', season: 'Spring' }, runners, frames, events };
   });

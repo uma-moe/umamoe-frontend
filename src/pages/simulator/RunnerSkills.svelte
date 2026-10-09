@@ -4,6 +4,7 @@
   import SkillChip from '@/components/SkillChip.svelte';
   import {
     loadSkillCatalog,
+    skillPointTotal,
     skillImage,
     skillRarity,
     type SkillCatalogEntry
@@ -73,6 +74,7 @@
   <div class="head">
     <h3 id={headingId}>Skills</h3>
     <span class="count">{skills.length}</span>
+    <span class="sp" title="Base cost of learned skills including prerequisites, before hint discounts">{skillPointTotal(catalog, skills.map(skill => skill.skillId*10 + (skill.level ?? 1)))?.toLocaleString() ?? '—'} SP</span>
   </div>
 
   <div class="search" bind:this={searchAnchor}>
@@ -124,8 +126,9 @@
 </section>
 
 <style>
-  .skills { min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--card-surface-bg); }
-  .head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .skills { min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); padding: 0; border: 0; border-radius: var(--radius-md); background: transparent; }
+  .head { display: flex; align-items: center; gap: var(--space-2); }
+  .sp { margin-left: auto; font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
   .search { min-width: 0; --combobox-max-height: 200px; }
   h3 { margin: 0; color: var(--color-text); font-size: var(--font-sm); font-weight: 700; }
   .count { min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--color-surface-3); color: var(--color-text-muted); font-size: var(--font-xs); font-variant-numeric: tabular-nums; text-align: center; }

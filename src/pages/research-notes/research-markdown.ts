@@ -16,11 +16,12 @@ export function renderResearchMarkdown(markdown:string):string {
   for(const element of document.querySelectorAll('a,img')) {
     const attr=element.tagName==='A'?'href':'src';
     const original=element.getAttribute(attr)??'';
-    const value=original.replace(/^https:\/\/hakuraku\.moe(?=\/)/,'');
+    const value=original.replace(/^https:\/\/hakuraku\.moe(?=\/)/,'').replace(/^\/hakuraku\/+#(?=\/)/,'');
     if(value.startsWith('/attachments/'))element.setAttribute(attr,`/hakuraku/notes${value}`);
     else if(value.startsWith('/notes/'))element.setAttribute(attr,value.replace('/notes/','/research/'));
     else if(['/racedata','/multirace'].includes(value))element.setAttribute(attr,'/competitive/race-analysis');
     else if(['/simdata','/umalogs'].includes(value))element.setAttribute(attr,'/competitive/cm-data');
+    else if(value==='/veterans')element.setAttribute(attr,'/veterans');
     else if(value==='/masterdata')element.setAttribute(attr,'/tools/master-data');
     else if(value.startsWith('/')&&!value.startsWith('/hakuraku/'))element.setAttribute(attr,`https://hakuraku.moe${value}`);
   }

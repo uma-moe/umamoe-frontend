@@ -1,24 +1,35 @@
 <script lang="ts">
   import DataTable from '@/components/DataTable.svelte';
+  import InspectPopover from '@/components/InspectPopover.svelte';
+  import Icon from '@/components/Icon.svelte';
   import type { TeamRate } from './hakuraku-types';
   import { pct,number,styleNames } from './cm-data';
   let { rows, colors, onselect }: {rows:TeamRate[]; colors:Record<number,string>;onselect:(row:TeamRate)=>void}=$props();
   const entries=$derived(rows.map(row=>({key:row.key,name:row.key.split('-').map(id=>styleNames[Number(id)]??id).join(' / '),rate:row.team,lower:row.teamCI[0],upper:row.teamCI[1],owners:row.owners})));
 </script>
 <div class="composition-table">
-<DataTable plain compact caption="Team composition performance" maxHeight={470} sortKey="rate" sortDirection="descending" columns={[{key:'name',label:'Style composition'},{key:'rate',label:'Team win%',numeric:true},{key:'lower',label:'95% confidence interval',numeric:true},{key:'owners',label:'Players',numeric:true}]} rows={entries} emptyMessage="No compositions meet this player threshold.">
+<DataTable plain compact caption="Team composition performance" sortKey="rate" sortDirection="descending" columns={[{key:'name',label:'Style composition'},{key:'rate',label:'Team wins',numeric:true},{key:'lower',label:'Estimated win range',numeric:true},{key:'owners',label:'Players',numeric:true}]} rows={entries} emptyMessage="No compositions meet this player threshold.">
+  {#snippet columnHeader(column)}
+    {#if column.key==='rate'}<div class="rate-scale"><span class="comparison-key" title="When three teams are equally matched, each wins one race in three.">33.3% · one win in three</span></div>
+    {:else if column.key==='lower'}<InspectPopover label="About the estimated win range" align="end">
+      {#snippet trigger()}<Icon name="info" size={13}/>{/snippet}
+      <p class="range-help">Estimated win range shows uncertainty in the win rate; a narrower range means a more precise estimate. Calculated with 95% confidence intervals.</p>
+    </InspectPopover>{/if}
+  {/snippet}
   {#snippet cell(row,column)}
     {#if column.key==='name'}<button class="composition" onclick={()=>{const selected=rows.find(r=>r.key===row.key);if(selected)onselect(selected);}}>{#each String(row.key).split('-').map(Number) as id,index}{#if index}<span class="slash">/</span>{/if}<span><i style:background={colors[id]}></i>{styleNames[id]}</span>{/each}<span class="arrow">↗</span></button>
-    {:else if column.key==='rate'}<strong>{pct(Number(row.rate))}</strong>
-    {:else if column.key==='lower'}<span class="interval-cell"><span class="interval" role="img" aria-label={pct(Number(row.lower),2)+'–'+pct(Number(row.upper),2)+' confidence interval; neutral baseline 33.3%'}><i class="baseline"></i><i class="range" style:left={Number(row.lower)*100+'%'} style:width={(Number(row.upper)-Number(row.lower))*100+'%'}></i><i class="point" style:left={Number(row.rate)*100+'%'}></i></span><small>{pct(Number(row.lower))}–{pct(Number(row.upper))}</small></span>
+    {:else if column.key==='rate'}<span class="win-rate"><strong>{pct(Number(row.rate))}</strong><span class="rate-bar" role="img" aria-label={'Team win rate '+pct(Number(row.rate))+' on a 0 to 100% scale; neutral baseline 33.3%, or one win in three'}><i class="fill" style:width={Number(row.rate)*100+'%'}></i><i class="baseline" title="33.3%: one win in three when the three teams are equally matched."></i></span></span>
+    {:else if column.key==='lower'}<span class="ci" title="95% confidence interval for the simulated team win rate. A narrower range means a more precise estimate.">{pct(Number(row.lower))}–{pct(Number(row.upper))}</span>
     {:else}{number(Number(row.owners))}{/if}
   {/snippet}
 </DataTable>
-<p>Dashed marker: 33.3% neutral team win rate. Select a composition to inspect captured teams.</p>
+
 </div>
 <style>
-.composition-table{min-width:0}.composition-table :global(table){font-size:11px}.composition-table :global(th){font-size:9px}.composition-table :global(td){padding-block:7px}.composition{display:flex;gap:7px;align-items:center;width:100%;padding:0;border:0;background:none;color:var(--color-text);font:inherit;font-size:11px;text-align:left;cursor:pointer;min-height:26px}.composition>span:not(.slash):not(.arrow){display:flex;align-items:center;gap:5px;white-space:nowrap}.composition i{width:6px;height:6px;border-radius:50%;flex:none}.slash{color:var(--text-secondary);opacity:.5}.arrow{margin-left:auto;color:var(--text-secondary);padding-left:8px}.composition:hover{color:var(--accent-primary)}strong{font-size:17px;letter-spacing:-.03em;font-weight:550}.interval-cell{display:flex;align-items:center;gap:14px}.interval{position:relative;height:22px;display:block;min-width:100px;flex:1;background:linear-gradient(var(--border-subtle),var(--border-subtle)) center/100% 1px no-repeat}.interval i{position:absolute}.baseline{left:33.333%;height:100%;border-left:1px dashed var(--text-secondary);opacity:.5}.range{top:9px;height:4px;background:var(--accent-primary);min-width:1px}.point{top:8px;width:7px;height:7px;border-radius:50%;background:var(--accent-primary);transform:translateX(-50%)}small{font-size:10px;color:var(--text-secondary);min-width:78px}p{font-size:10px;color:var(--text-secondary);margin:14px 0 0;line-height:1.7}
-@media(max-width:600px){.composition-table :global(td){padding-inline:8px}.composition{font-size:10px}.interval-cell{gap:8px}.interval{min-width:75px}strong{font-size:15px}}
+.composition-table{min-width:0}.composition-table :global(table){font-size:12px;min-width:680px}.composition-table :global(th){font-size:10px}.composition-table :global(th:nth-child(1)){width:44%}.composition-table :global(th:nth-child(2)){width:30%}.composition-table :global(th:nth-child(3)){width:18%}.composition-table :global(th:nth-child(4)){width:8%}.composition-table :global(td){padding-block:5px}.composition{display:flex;gap:7px;align-items:center;width:100%;padding:0;border:0;background:none;color:var(--color-text);font:inherit;font-size:12px;text-align:left;cursor:pointer;min-height:26px}.composition>span:not(.slash):not(.arrow){display:flex;align-items:center;gap:5px;white-space:nowrap}.composition i{width:6px;height:6px;border-radius:50%;flex:none}.slash{color:var(--text-secondary);opacity:.5}.arrow{margin-left:auto;color:var(--text-secondary);padding-left:8px}.composition:hover{color:var(--accent-primary)}.win-rate{display:flex;align-items:center;gap:12px}.win-rate strong{width:48px;flex:none;font-size:14px;font-weight:650;font-variant-numeric:tabular-nums}.rate-bar{position:relative;display:block;flex:1;height:8px;background:color-mix(in srgb,var(--text-secondary) 12%,transparent);border-radius:2px;overflow:hidden}.rate-bar i{position:absolute;top:0;bottom:0}.fill{left:0;background:var(--accent-primary);opacity:.65}.baseline{left:33.333%;border-left:2px solid var(--text-primary)}.ci{font-size:11px;color:var(--text-secondary);white-space:nowrap;font-variant-numeric:tabular-nums}p{font-size:10px;color:var(--text-secondary);margin:8px 0 0;line-height:1.5}
+@media(max-width:600px){.composition-table :global(td){padding-inline:8px}.composition{font-size:10px}}
+.rate-scale{position:relative;height:18px;margin:0 0 2px 60px;text-transform:none;letter-spacing:0}.comparison-key{position:absolute;left:33.333%;top:1px;transform:translateX(-50%);display:grid;justify-items:center;gap:1px;font-size:10px;line-height:1.2;color:var(--text-primary);white-space:nowrap}.comparison-key::after{content:'';height:5px;border-left:2px solid var(--text-primary)}.range-help{margin:0;max-width:36ch;font-size:12px;line-height:1.6;text-transform:none;letter-spacing:normal;font-weight:400}.composition-table :global(th:nth-child(3) .inspect){margin-left:4px;vertical-align:middle}
+@container chart-frame (min-width:1000px){.rate-scale{position:absolute;top:4px;left:8px;right:8px;margin:0 0 0 60px}}
 </style>
 
 

@@ -1,4 +1,6 @@
 import { expect,it } from 'vitest';
+import { frontBlockingSpans,blockerAt } from '@/lib/race/race-diagnostics';
+import { raceFrameAtTime } from '@/lib/race/race-replay';
 import { makeDemoRaces } from './demo-races';
 import { analyzeMultiRace,groupMultiRaceCaptures } from '@/lib/race/multi-race-analysis';
 import { histogram,teamBuilds } from './analysis-view';
@@ -24,4 +26,19 @@ it('provides deterministic complete race fixtures with one winner per race and c
   expect(teams.reduce((sum,team)=>sum+team.wins,0)).toBe(24);
   expect(histogram([1,1,2,3],2).counts).toEqual([2,2]);
   expect(histogram([])).toEqual({labels:[],counts:[]});
+});
+it('includes inspectable synthetic blocking without changing recorded race data',()=>{
+  const race=makeDemoRaces(1)[0]!;
+  const spans=frontBlockingSpans(race);
+  expect(spans).toHaveLength(2);
+  for(const span of spans){
+    const frame=raceFrameAtTime(race.frames,span.startTime)!;
+    const horse=frame.horses[span.horseIndex]!,front=frame.horses[span.blockerHorseIndex]!;
+    expect(front.distance-horse.distance).toBeCloseTo(1.2);
+    expect(horse.lanePosition).toBe(front.lanePosition);
+    expect(blockerAt(race,span.horseIndex,span.startTime,horse.blockFrontHorseIndex)).toBe(span.blockerHorseIndex);
+    expect(raceFrameAtTime(race.frames,span.endTime)!.horses[span.horseIndex]!.blockFrontHorseIndex).toBe(-1);
+  }
+  expect(blockerAt(race,0,0,0)).toBe(-1);
+  expect(blockerAt(race,0,0,99)).toBe(-1);
 });

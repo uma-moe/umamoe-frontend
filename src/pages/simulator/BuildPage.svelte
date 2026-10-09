@@ -1,11 +1,9 @@
 <script lang="ts">
   import Banner from '@/components/Banner.svelte';
   import Button from '@/components/Button.svelte';
-  import EmptyState from '@/components/EmptyState.svelte';
   import SelectField from '@/components/SelectField.svelte';
   import TextField from '@/components/TextField.svelte';
   import SimulatorPageFrame from './shell/SimulatorPageFrame.svelte';
-  import { HttpError } from '@/services/http/http-client';
   import { describeCourse, trackName } from '@/lib/catalog/course-catalog';
   import { RACE_TYPE_OPTIONS, raceTypeLabel } from './simulator-race-types';
   import {
@@ -28,7 +26,7 @@
   import OptimizeResultPanel from './OptimizeResult.svelte';
   import RaceBar from './shell/RaceBar.svelte';
   import SimulatorShell from './shell/SimulatorShell.svelte';
-  import { RACE_INSTANCE_NONE, selectedCourse, simulatorCatalog, catalogErrorVisible, dismissCatalogError, simulatorSession } from './simulator-session.svelte';
+  import { selectedRaceInstanceId, selectedCourse, simulatorCatalog, catalogErrorVisible, dismissCatalogError, simulatorSession } from './simulator-session.svelte';
 
   const MODE_LABELS: Record<OptimizeMode, string> = {
     cm: 'Champions Meeting',
@@ -51,6 +49,7 @@
     result: OptimizeResult;
     raw: string;
     purchaseNames: Array<string>;
+    courseName: string;
   }
 
   let mode = $state('cm');
@@ -87,17 +86,13 @@
     return purchaseProblems(purchases);
   }
 
-  const canRun = $derived(Boolean(simulatorSession.apiKey.trim() && course));
+  const canRun = $derived(Boolean(course));
 
   async function send(): Promise<void> {
     if (busy) return;
     error = '';
     run = null;
 
-    if (!simulatorSession.apiKey.trim()) {
-      error = 'Add your uma.moe API key to run the search.';
-      return;
-    }
     const target = course;
     if (!target) {
       error = 'Pick a course first.';
@@ -123,7 +118,7 @@
         courseId: target.course_id,
         seed: toNumber(seed),
         setup: {
-          raceInstanceId: RACE_INSTANCE_NONE,
+          raceInstanceId: selectedRaceInstanceId(),
           raceType,
           season: Number(simulatorSession.season),
           weather: Number(simulatorSession.weather),
@@ -153,24 +148,16 @@
       });
 
       const response = await simulatorRepository.optimize({
-        key: simulatorSession.apiKey.trim(),
         body: { ...body }
       });
       run = {
+        courseName: trackName(target.race_track_id)+", "+describeCourse(target),
         result: response.result,
         raw: response.raw,
         purchaseNames: body.purchases.map((purchase) => purchase.name)
       };
     } catch (reason) {
-      if (reason instanceof HttpError && reason.status === 403) {
-        error =
-          'The simulator is not enabled for this account yet. Access is limited to granted API keys during the beta.';
-      } else if (reason instanceof HttpError && reason.status === 401) {
-        error =
-          'That API key was rejected. Create one in Settings, and make sure it is granted simulator access.';
-      } else {
-        error = reason instanceof Error ? reason.message : 'The request failed.';
-      }
+      error = reason instanceof Error ? reason.message : 'The request failed.';
     } finally {
       busy = false;
     }
@@ -290,7 +277,7 @@
 <SimulatorPageFrame
   routeId="simulator-build"
   title="Build search"
-  blurb="Search skill purchases against an SP budget and score the best builds on a real course. Runs on the private simulator through uma.moe. Currently in beta."
+  blurb="Compare skill purchases within an SP budget on your selected course."
 >
   {#if catalogErrorVisible()}
     <Banner
@@ -319,7 +306,7 @@
       content: searchPanel
     }]}
   >
-    <RaceBar note={raceTypeLabel(raceType)} />
+    <div class="calculator-grid"><RaceBar workspace note={raceTypeLabel(raceType)}/><div class="calculation-main">
 
     <div class="run-bar">
       <Button onclick={send} loading={busy} disabled={!canRun || finalistsTooHigh || purchaseIssues().length > 0}>Run search</Button>
@@ -331,30 +318,24 @@
         bind:value={seed}
       />
       <p class="hint">
-        One scenario: this race, the trainee from the sidebar and one baseline opponent so the
+        One scenario: this race, the selected Uma and one baseline opponent so the
         field has two runners.
       </p>
     </div>
 
     <section class="results surface" aria-labelledby="build-result-title">
-      <h2 id="build-result-title">Result</h2>
-      {#if run}
-        <OptimizeResultPanel result={run.result} raw={run.raw} purchaseNames={run.purchaseNames} />
-      {:else}
-        <EmptyState
-          icon="trophy"
-          title="No search yet"
-          description="Add purchases and set a budget in the sidebar, then run the search to rank the tested builds."
-        />
-      {/if}
-    </section>
+      <h2 id="build-result-title">Build search results</h2>{#if run}<p class="hint">{run.courseName}</p>{/if}
+      <OptimizeResultPanel result={run?.result} raw={run?.raw} purchaseNames={run?.purchaseNames} {busy}/>
+    </section></div></div>
   </SimulatorShell>
 </SimulatorPageFrame>
 
 <style>
-  .run-bar { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); }
-  .results { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); min-width: 0; }
-  .results h2 { margin: 0; font-size: var(--font-md); }
+  .calculator-grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:start;min-width:0}.calculation-main{display:grid;gap:12px;min-width:0}@media(max-width:1050px){.calculator-grid{grid-template-columns:260px minmax(0,1fr);gap:12px}}@media(max-width:767px){.calculator-grid{grid-template-columns:minmax(0,1fr)}}
+
+  .run-bar { display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:var(--radius-md);background:var(--surface-1); }.run-bar :global(.field){width:190px}.run-bar .hint{flex:1;min-width:200px}
+  .results { display:flex;flex-direction:column;gap:10px;padding:12px 16px;min-width:0;background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:var(--radius-md); }
+  .results h2 { margin:0;font-size:14px; }
   .hint { margin: 0; color: var(--color-text-muted); font-size: var(--font-xs); }
   .problem { color: var(--color-danger); }
 </style>

@@ -1,4 +1,5 @@
 import type { ParsedRaceCapture, RaceRunner } from './race-capture-parser';
+import { diagnosticHorse, lastSpurtResult, runnerHpResult, skillActiveDuration } from './race-diagnostics';
 
 export interface MultiRaceHorseEntry {
   raceId: string;
@@ -12,8 +13,8 @@ export interface MultiRaceHorseEntry {
   activatedSkillIds: number[];
   isPlayer: boolean;
   teamId: number;
-  startHp: number;
-  finishHp: number;
+  startHp?: number;
+  finishHp?: number;
   lastSpurtStartDistance: number;
   raceDistance: number;
 }
@@ -21,6 +22,7 @@ export interface MultiRaceHorseEntry {
 export interface MultiRaceCharacterStats {
   key: string;
   name: string;
+  cardId?: number;
   races: number;
   wins: number;
   top3: number;
@@ -46,23 +48,36 @@ export interface MultiRaceSkillStats {
   finishTotal: number;
   doubleProcRaces: number;
   activationDistances: number[];
+  durationTotal: number;
+  measuredEntries: number;
+  rollFailures: number;
+  passedUntriggered: number;
 }
 
 export interface MultiRaceHpStats {
   key: string;
   name: string;
+  cardId?: number;
   races: number;
   wins: number;
+  startHpEntries: number;
+  finishHpEntries: number;
+  finishHpPercentEntries: number;
+  finishHpPercentTotal: number;
   startHpTotal: number;
   finishHpTotal: number;
   survived: number;
   lastSpurtRaces: number;
   lastSpurtDistanceTotal: number;
+  spurtDelayEntries: number;
+  spurtDelayTotal: number;
+  spurtSpeedEntries: number;
+  spurtSpeedTotal: number;
 }
 
 export interface MultiRaceTeamStats {
   key: string;
-  members: { name: string; cardId?: number; strategy: number }[];
+  members: { key:string; name: string; cardId?: number; strategy: number }[];
   appearances: number;
   wins: number;
 }
@@ -85,7 +100,7 @@ function numeric(raw: Record<string, unknown>, ...keys: string[]): number | unde
   return undefined;
 }
 
-function runnerKey(runner: RaceRunner): string {
+export function raceRunnerKey(runner: RaceRunner): string {
   return String(runner.cardId ?? runner.charaId ?? runner.trainedCharaId ?? runner.name);
 }
 
@@ -130,10 +145,12 @@ export function analyzeMultiRace(captures: ParsedRaceCapture[]): MultiRaceAnalys
     for (const runner of capture.runners) {
       const finishOrder = runner.result?.finishOrder ?? capture.runners.length;
       const strategy = runner.result?.runningStyle ?? 0;
-      const key = runnerKey(runner);
+      const key = raceRunnerKey(runner);
       const activations = activatedSkillEvents(capture, runner.index);
-      const startHp = capture.frames[0]?.horses[runner.index]?.hp ?? 0;
-      const finishHp = capture.frames.at(-1)?.horses[runner.index]?.hp ?? 0;
+      const diagnostic = diagnosticHorse(capture, runner.index);
+      const {start:startHp,finish:finishHp,percent:finishHpPercent} = runnerHpResult(capture,runner.index);
+      const spurt = lastSpurtResult(capture,runner.index);
+      const spurtStart = spurt.start ?? 0;
       const entry: MultiRaceHorseEntry = {
         raceId: id,
         runnerIndex: runner.index,
@@ -148,13 +165,13 @@ export function analyzeMultiRace(captures: ParsedRaceCapture[]): MultiRaceAnalys
         teamId: numeric(runner.raw, 'team_id', 'teamId') ?? 0,
         startHp,
         finishHp,
-        lastSpurtStartDistance: runner.result?.lastSpurtStartDistance ?? 0,
+        lastSpurtStartDistance: spurtStart,
         raceDistance: capture.raceDistance ?? Math.max(0, ...capture.frames.at(-1)?.horses.map((horse) => horse.distance) ?? [0])
       };
       entries.push(entry);
       raceEntries.push(entry);
 
-      const character = characters.get(key) ?? { key, name: runner.name, races: 0, wins: 0, top3: 0, finishTotal: 0, playerRaces: 0 };
+      const character = characters.get(key) ?? { key, name: runner.name, cardId: runner.cardId, races: 0, wins: 0, top3: 0, finishTotal: 0, playerRaces: 0 };
       character.races += 1; character.wins += finishOrder === 1 ? 1 : 0; character.top3 += finishOrder <= 3 ? 1 : 0; character.finishTotal += finishOrder; character.playerRaces += runner.isPlayer ? 1 : 0;
       characters.set(key, character);
 
@@ -169,17 +186,26 @@ export function analyzeMultiRace(captures: ParsedRaceCapture[]): MultiRaceAnalys
       const activationCounts = new Map<number, number>();
       for (const activation of activations) activationCounts.set(activation.id, (activationCounts.get(activation.id) ?? 0) + 1);
       for (const skillId of new Set(runner.skillIds)) {
-        const skill = skills.get(skillId) ?? { skillId, learned: 0, activations: 0, activatedRunners: 0, wins: 0, finishTotal: 0, doubleProcRaces: 0, activationDistances: [] };
+        const skill = skills.get(skillId) ?? { skillId, learned: 0, activations: 0, activatedRunners: 0, wins: 0, finishTotal: 0, doubleProcRaces: 0, activationDistances: [], durationTotal: 0, measuredEntries: 0, rollFailures: 0, passedUntriggered: 0 };
         const countForRunner = activationCounts.get(skillId) ?? 0;
         skill.learned += 1; skill.activations += countForRunner; skill.activatedRunners += countForRunner > 0 ? 1 : 0; skill.wins += finishOrder === 1 ? 1 : 0; skill.finishTotal += finishOrder; skill.doubleProcRaces += countForRunner >= 2 ? 1 : 0;
         skill.activationDistances.push(...activations.filter((activation) => activation.id === skillId).map((activation) => activation.distance));
+        const duration=skillActiveDuration(diagnostic,skillId),decision=diagnostic?.skillActivationDecisions?.find(row=>row.skillId===skillId);
+        if(duration!==undefined){skill.durationTotal+=duration;skill.measuredEntries++;}
+        if(decision?.required&&decision.passed===false)skill.rollFailures++;
+        if(decision?.required&&decision.passed===true&&decision.activated===false)skill.passedUntriggered++;
         skills.set(skillId, skill);
       }
 
       if (runner.isPlayer) {
-        const personal = hp.get(key) ?? { key, name: runner.name, races: 0, wins: 0, startHpTotal: 0, finishHpTotal: 0, survived: 0, lastSpurtRaces: 0, lastSpurtDistanceTotal: 0 };
-        personal.races += 1; personal.wins += finishOrder === 1 ? 1 : 0; personal.startHpTotal += startHp; personal.finishHpTotal += finishHp; personal.survived += finishHp > 0 ? 1 : 0;
-        if ((runner.result?.lastSpurtStartDistance ?? 0) > 0) { personal.lastSpurtRaces += 1; personal.lastSpurtDistanceTotal += runner.result!.lastSpurtStartDistance; }
+        const personal = hp.get(key) ?? { key, name: runner.name, cardId:runner.cardId, races: 0, wins: 0, startHpEntries:0, finishHpEntries:0, finishHpPercentEntries:0, finishHpPercentTotal:0, startHpTotal: 0, finishHpTotal: 0, survived: 0, lastSpurtRaces: 0, lastSpurtDistanceTotal: 0, spurtDelayEntries:0, spurtDelayTotal:0, spurtSpeedEntries:0, spurtSpeedTotal:0 };
+        personal.races += 1; personal.wins += finishOrder === 1 ? 1 : 0;
+        if(startHp!==undefined){personal.startHpEntries++;personal.startHpTotal+=startHp;}
+        if(finishHp!==undefined){personal.finishHpEntries++;personal.finishHpTotal+=finishHp;personal.survived+=Number(finishHp>0);}
+        if(finishHpPercent!==undefined){personal.finishHpPercentEntries++;personal.finishHpPercentTotal+=finishHpPercent;}
+        if (spurtStart > 0) { personal.lastSpurtRaces += 1; personal.lastSpurtDistanceTotal += spurtStart; }
+        if(spurt.delay!==undefined){personal.spurtDelayEntries++;personal.spurtDelayTotal+=spurt.delay;}
+        if(spurt.speed!==undefined){personal.spurtSpeedEntries++;personal.spurtSpeedTotal+=spurt.speed;}
         hp.set(key, personal);
       }
     }
@@ -189,7 +215,7 @@ export function analyzeMultiRace(captures: ParsedRaceCapture[]): MultiRaceAnalys
     for (const members of teamGroups.values()) {
       const sorted = members.slice().sort((left, right) => left.charaKey.localeCompare(right.charaKey) || left.strategy - right.strategy);
       const key = sorted.map((entry) => `${entry.charaKey}.${entry.strategy}`).join('|');
-      const team = teams.get(key) ?? { key, members: sorted.map((entry) => ({ name: entry.name, cardId: entry.cardId, strategy: entry.strategy })), appearances: 0, wins: 0 };
+      const team = teams.get(key) ?? { key, members: sorted.map((entry) => ({ key:entry.charaKey, name: entry.name, cardId: entry.cardId, strategy: entry.strategy })), appearances: 0, wins: 0 };
       team.appearances += 1; team.wins += sorted.some((entry) => entry.finishOrder === 1) ? 1 : 0;
       teams.set(key, team);
     }

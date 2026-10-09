@@ -4,7 +4,7 @@ import {gunzipSync} from 'node:zlib';
 import {resourceRepository} from '@/lib/catalog/resource-repository';
 import type {ParsedRaceCapture} from '@/lib/race/race-capture-parser';
 import {appHttp} from '@/services/http/app-http';
-import {loadReplayCourses,loadReplayGeometry,resolveReplayCourses,courseLandmarks} from './replay-course';
+import {loadReplayCourses,loadReplayGeometry,loadRaceCourse,resolveReplayCourses,courseLandmarks,courseSegments} from './replay-course';
 import {replayTrack,trackPointAtDistance} from './replay-track';
 
 const fixture=JSON.parse(gunzipSync(readFileSync('tests/e2e/fixtures/replay-courses.json.gz')).toString());
@@ -49,4 +49,28 @@ it('uses resource distances and grades for upcoming section, slope and phase mar
   expect(landmarks.find(m=>m.label==='Late race')?.distance).toBe(800);
   expect(landmarks.at(-1)?.label).toBe('Finish');
   expect(courseLandmarks(undefined)).toEqual([]);
+});
+it('loads a meeting course by its exact race instance and leaves unknown courses unavailable',async()=>{
+  const fetch=vi.fn(async(url:string)=>Response.json(url.endsWith('manifest.json')?{version:'test'}:url.includes('simulator_courses')?fixture.simulator_courses:{races:[{race_instance_id:800023,course_set_id:10506}]}));
+  vi.stubGlobal('fetch',fetch);
+  const query=vi.spyOn(appHttp,'request').mockResolvedValue({rows:[]});
+  expect(await loadRaceCourse()).toBeUndefined();
+  expect(await loadRaceCourse(-1)).toBeUndefined();
+  expect(fetch).not.toHaveBeenCalled();
+  expect(await loadRaceCourse(800023)).toMatchObject({raceTrackId:10005,distance:2500,turn:1});
+  expect(query).not.toHaveBeenCalled();
+  expect(await loadRaceCourse(800024)).toBeUndefined();
+  expect(query.mock.calls[0]?.[1]?.query?.sql).toContain('WHERE ri.id IN (800024)');
+});
+
+it('fills unrecorded section ranges without assuming a straight or changing replay segments',()=>{
+  const course={raceTrackId:10005,distance:1200,surface:1,turn:1,corners:[{start:100,length:300}],straights:[{start:600,end:1000}],slopes:[]};
+  expect(courseSegments(course)).toHaveLength(2);
+  expect(courseSegments(course,true).map(({start,end,label})=>({start,end,label}))).toEqual([
+    {start:0,end:100,label:'Unspecified'},{start:100,end:400,label:'Final corner'},
+    {start:400,end:600,label:'Unspecified'},{start:600,end:1000,label:'Final straight'},
+    {start:1000,end:1200,label:'Unspecified'}
+  ]);
+  expect(courseSegments({...course,corners:[],straights:[]},true)).toEqual([{start:0,end:1200,label:'Unspecified',color:'#737d8a'}]);
+  expect(courseSegments(undefined,true)).toEqual([]);
 });

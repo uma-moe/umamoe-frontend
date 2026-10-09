@@ -8,18 +8,26 @@ const frames: RaceFrame[] = [
 ];
 
 describe('race replay domain', () => {
-  it('keeps Hakuraku’s moving camera and fits the captured lane spread', () => {
-    expect(replayViewport(0, 2400, 80, 640)).toEqual({ min:0, max:80, laneMax:1000 });
-    expect(replayViewport(1000, 2400, 80, 8500)).toEqual({ min:928, max:1008, laneMax:10500 });
+  it('follows the leader with room ahead and fits the captured lane spread', () => {
+    expect(replayViewport(0, 2400, 80, 640)).toEqual({ min:0, max:80, laneMax:768 });
+    expect(replayViewport(1000, 2400, 80, 8500)).toEqual({ min:936, max:1016, laneMax:10200 });
     expect(replayViewport(900, 2200, 80, 220).laneMax).toBe(500);
     expect(replayViewport(0, 2400, 80, 0).laneMax).toBe(500);
     expect(replayLaneMetres(4999.5,18)).toBe(9);
-    expect(replayViewport(2500, 2400, 80, 640)).toEqual({ min:2328, max:2408, laneMax:1000 });
+    expect(replayViewport(1000,2400,400,640).max).toBe(1016);
+    expect(replayViewport(2390,2400,80,640).max).toBe(2400);
+    expect(replayViewport(2500, 2400, 80, 640)).toEqual({ min:2320, max:2400, laneMax:768 });
+  });
+  it('adjusts the lane range continuously across the old rounding boundary', () => {
+    const limits=[830,831,832,833,834,835].map(lane=>replayViewport(1000,2400,80,lane).laneMax);
+    for(let i=1;i<limits.length;i++)expect(limits[i]!-limits[i-1]!).toBeCloseTo(1.2);
   });
   it('interpolates numeric horse state between sparse capture frames', () => {
     const frame = raceFrameAtTime(frames, 3);
     expect(frame).toMatchObject({ time: 3, sourceIndex: 0 });
-    expect(frame?.horses[0]).toMatchObject({ distance: 30, lanePosition: 200, speed: 1400, hp: 800, temptationMode: 1 });
+    expect(frame?.horses[0]).toMatchObject({ distance: 30, lanePosition: 200, speed: 1400, hp: 800, temptationMode: 0, blockFrontHorseIndex:-1 });
+    expect(raceFrameAtTime(frames,3.99)?.horses[0]?.blockFrontHorseIndex).toBe(-1);
+    expect(raceFrameAtTime(frames,4)?.horses[0]?.blockFrontHorseIndex).toBe(2);
   });
 
   it('clamps playback outside the available timeline', () => {
@@ -41,5 +49,10 @@ it('aligns course landmarks to captured time, including changes of leader',()=>{
   expect(raceTimeAtDistance(crossing,30)).toBeCloseTo(2+2*25/45);
   expect(raceTimeAtDistance(crossing,0)).toBe(2);
   expect(raceTimeAtDistance(crossing,51)).toBeUndefined();
+  // A runner's section changes when that runner crosses, even after losing the lead.
+  expect(raceTimeAtDistance(crossing,15,0)).toBe(3);
+  expect(raceTimeAtDistance(crossing,15,1)).toBeCloseTo(2+2*10/45);
+  expect(raceTimeAtDistance(crossing,30,0)).toBeUndefined();
+  expect(raceTimeAtDistance(crossing,0,2)).toBeUndefined();
   expect(raceTimeAtDistance([],30)).toBeUndefined();
 });

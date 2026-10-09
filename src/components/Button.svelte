@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import Icon from './Icon.svelte';
+  import Spinner from './Spinner.svelte';
   import type { IconName } from './icon-types';
   interface Props {
     children?: Snippet;
@@ -25,12 +26,12 @@
 
 {#if href}
   <a class="ui-button ui-button--{variant} ui-button--{size}" {href} {target} rel={rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined)} aria-disabled={disabled || loading} aria-busy={loading} aria-label={ariaLabel} aria-current={ariaCurrent} tabindex={disabled || loading ? -1 : undefined} onclick={(event) => { if (disabled || loading) event.preventDefault(); else onclick?.(event); }}>
-    {#if loading}<span class="button-spinner" aria-hidden="true"></span>{:else if icon}<Icon name={icon} size={18} />{/if}
+    {#if loading}<span class="button-spinner" aria-hidden="true"><Spinner size={16}/></span>{:else if icon}<Icon name={icon} size={18} />{/if}
     {#if children}<span>{@render children()}</span>{/if}
   </a>
 {:else}
   <button class="ui-button ui-button--{variant} ui-button--{size}" {type} disabled={disabled || loading} aria-busy={loading} aria-label={ariaLabel} aria-pressed={ariaPressed} aria-expanded={ariaExpanded} aria-controls={ariaControls} {onclick}>
-    {#if loading}<span class="button-spinner" aria-hidden="true"></span>{:else if icon}<Icon name={icon} size={18} />{/if}
+    {#if loading}<span class="button-spinner" aria-hidden="true"><Spinner size={16}/></span>{:else if icon}<Icon name={icon} size={18} />{/if}
     {#if children}<span>{@render children()}</span>{/if}
   </button>
 {/if}
@@ -46,7 +47,6 @@
   .ui-button--ghost { color: var(--color-text-muted); background: transparent; }
   .ui-button--danger { color: var(--color-danger); background: var(--color-danger-soft); border-color: color-mix(in srgb, var(--color-danger) 38%, transparent); }
   .ui-button--sm { min-height: 36px; padding-inline: var(--space-3); font-size: var(--font-sm); }
-  .button-spinner { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; }
+  .button-spinner { display:flex; flex:none; }
   @media (max-width:767px) { .ui-button { min-height:32px; padding:4px 8px; gap:5px; font-size:12px; } .ui-button--sm { min-height:28px; padding:3px 6px; font-size:11px; } .ui-button :global(svg) { width:14px; height:14px; } }
-  @keyframes spin { to { transform: rotate(360deg); } }
 </style>

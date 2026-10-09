@@ -1,5 +1,6 @@
 <script lang="ts">
   import IconButton from './IconButton.svelte';
+  import Icon from './Icon.svelte';
   type SkillRarity = 'normal' | 'gold' | 'special' | 'unique-inherited' | 'unique-main';
 
   interface Props {
@@ -8,22 +9,24 @@
     level?: string | number;
     rarity?: SkillRarity;
     compact?: boolean;
+    iconOnly?: boolean;
     variant?: 'chip' | 'row';
     onremove?: () => void;
   }
 
-  let { name, icon, level, rarity = 'normal', compact = false, variant = 'chip', onremove }: Props = $props();
+  let { name, icon, level, rarity = 'normal', compact = false, iconOnly = false, variant = 'chip', onremove }: Props = $props();
   let iconFailed = $state(false);
 </script>
 
-<span class="skill-chip rarity-{rarity}" class:compact class:row={variant === 'row'} class:with-icon={Boolean(icon && !iconFailed)} class:removable={Boolean(onremove)} title={level === undefined ? name : `${name} ${level}`}>
+<span class="skill-chip rarity-{rarity}" class:compact class:icon-only={iconOnly} class:row={variant === 'row'} class:with-icon={Boolean(icon && !iconFailed)} class:removable={Boolean(onremove)} title={level === undefined ? name : `${name} ${level}`}>
   {#if icon && !iconFailed}
     <img src={icon} alt="" loading="lazy" decoding="async" onerror={() => iconFailed = true}/>
-  {/if}
-  <span class="skill-body"><span class="skill-name">{name}</span>{#if level !== undefined}<span class="skill-level">{level}</span>{/if}{#if onremove}<IconButton icon="close" size="sm" label={`Remove ${name}`} onclick={onremove}/>{/if}</span>
+  {:else if iconOnly}<Icon name="activity" size={20}/>{/if}
+  {#if !iconOnly}<span class="skill-body"><span class="skill-name">{name}</span>{#if level !== undefined}<span class="skill-level">{level}</span>{/if}{#if onremove}<IconButton icon="close" size="sm" label={`Remove ${name}`} onclick={onremove}/>{/if}</span>{/if}
 </span>
 
 <style>
+  .skill-chip.icon-only { width:24px; height:24px; display:grid; place-items:center; }
   .skill-chip {
     --skill-border: rgb(255 255 255 / .10);
     --skill-bg: rgb(255 255 255 / .055);
@@ -58,6 +61,7 @@
   :global([data-theme='light']) .skill-chip { --skill-border: rgb(17 24 39 / .16); --skill-bg: rgb(17 24 39 / .045); --skill-text: rgb(17 24 39 / .78); }
   :global([data-theme='light']) .skill-body { box-shadow: inset 0 1px 0 rgb(255 255 255 / .6); }
   :global([data-theme='light']) .rarity-gold { --skill-border: rgb(180 83 9 / .36); --skill-bg: rgb(245 158 11 / .13); --skill-text: #92400e; }
+  :global([data-theme='light']) .rarity-unique-inherited { --skill-border: rgb(126 34 206 / .32); --skill-bg: linear-gradient(135deg, rgb(126 87 194 / .10), rgb(171 71 188 / .08)); --skill-text: #6b21a8; }
   :global([data-theme='light']) .rarity-unique-main { --skill-border: transparent; --skill-bg: linear-gradient(#fffaf0, #fffaf0); --skill-text: #713f12; }
   :global([data-theme='light']) .rarity-special { --skill-border: rgb(37 99 235 / .34); --skill-bg: rgb(37 99 235 / .10); --skill-text: #1d4ed8; }
 </style>
