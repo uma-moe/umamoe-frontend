@@ -4,6 +4,14 @@
 # ===== COMPILED OUTPUT =====
 /dist
 /.tmp
+/.tmp-*/
+/.codex-worktrees/
+/.codex-remote-attachments/
+/.codex-sheet-audit/
+/deployed/
+/deployed-current/
+/patch-notes/
+/.angular-storage.json
 
 # ===== NODE.JS =====
 /node_modules
