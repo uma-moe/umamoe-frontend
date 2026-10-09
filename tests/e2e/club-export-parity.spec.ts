@@ -7,7 +7,7 @@ import reference from './fixtures/club-exports-reference.json' with { type: 'jso
 
 test.use({ locale: 'en-US', timezoneId: 'UTC' });
 
-for (const name of clubExportCases) test(`Club exports match Angular file contents: ${name}`, async ({ page }, testInfo) => {
+for (const name of clubExportCases) test(`Club exports match corrected reference file contents: ${name}`, async ({ page }, testInfo) => {
   const fixture = clubExportFixture(name), expected = reference.cases[name];
   await page.clock.setFixedTime('2026-09-06T12:00:00Z'); await mockCommunity(page);
   await page.route('**/api/v4/circles?*', route => route.fulfill({ json: fixture.response }));

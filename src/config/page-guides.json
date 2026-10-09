@@ -1,0 +1,62 @@
+{
+  "/": [
+    {
+      "heading": "Find Uma friends and inheritance parents",
+      "text": "Use the Uma database to find trainers sharing inheritance parents and support cards for Umamusume: Pretty Derby Global. Filter by character, sparks, factors and race wins, then copy a trainer ID to look up that trainer in the game.",
+      "href": "/database",
+      "label": "Search the Uma friend database"
+    },
+    {
+      "heading": "Compare parents before your next career",
+      "text": "Choose the character you want to train and compare inheritance compatibility. The lineage planner lets you explore parents, grandparents, shared G1 wins and spark inheritance odds before you commit to a pairing.",
+      "href": "/tools/lineage-planner",
+      "label": "Open the affinity calculator and lineage planner"
+    },
+    {
+      "heading": "Plan your Global banners and events",
+      "text": "Follow the estimated Uma Musume Global banner and event schedule for characters, support cards, story events and race events. Use the carat planner to budget carats and tickets for upcoming banners, and compare support cards in the tier list.",
+      "href": "/timeline",
+      "label": "Browse the Global banner and event schedule"
+    }
+  ],
+  "/database": [
+    {
+      "heading": "How to find an Uma friend",
+      "text": "Search by Trainer ID or username if you already know the trainer. To find a new friend, filter inheritance records by the character, sparks or support card you need. Copy the trainer ID from a result and use the friend search in Umamusume: Pretty Derby Global to find and follow that trainer."
+    },
+    {
+      "heading": "How to use the Uma Musume parent finder",
+      "text": "Choose your target character and narrow the inheritance database by blue, pink, green and white factors. Advanced filters let you refine parents, grandparents and race wins. Compare compatibility for your chosen pairing, then use the lineage planner to work on the rest of the tree.",
+      "href": "/tools/lineage-planner",
+      "label": "Calculate affinity and plan your lineage"
+    },
+    {
+      "heading": "Find support cards to borrow",
+      "text": "Select a support card and minimum limit break to find trainers sharing it. If you are deciding which card to use, compare the Global support card tier list before searching. Availability can change when a trainer updates their shared card or inheritance team.",
+      "href": "/tierlist",
+      "label": "Compare the support card tier list"
+    },
+    {
+      "heading": "Share your Trainer ID",
+      "text": "Use Add Trainer ID to submit your trainer to the database and help other players find your shared inheritance team. Bookmark useful search results so you can return to them later."
+    }
+  ],
+  "/timeline": [
+    {
+      "heading": "Global banner schedule",
+      "text": "Search upcoming Uma Musume character and support card banners, then use the date picker or Today button to navigate the timeline. Filters separate character banners, support cards and paid banners. Future Global release dates are estimates and may change; check official game announcements before spending carats.",
+      "href": "/tierlist",
+      "label": "Compare Global support cards before choosing a banner"
+    },
+    {
+      "heading": "Global event schedule",
+      "text": "Use the event filters to find story events, campaigns, Champions Meeting and Legend Races alongside banner releases. Switch between horizontal and vertical views to compare releases and see what overlaps. The timeline also includes training scenarios and other event types; estimated dates are planning guidance."
+    },
+    {
+      "heading": "Plan carats and tickets for upcoming banners",
+      "text": "Open the Carat Planner tab to add banner targets and compare planned pulls with projected carats and tickets. Include your starting balances and income assumptions, then check your plan as the Global schedule changes.",
+      "href": "/timeline?tab=carat-planner",
+      "label": "Plan carats for your next banner"
+    }
+  ]
+}

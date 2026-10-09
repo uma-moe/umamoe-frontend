@@ -1,9 +1,14 @@
 import { expect, test, setSliderValue, replaceQuery } from './fixtures/test';
 import { mockDatabase, mockAffinity } from './fixtures/api';
 
-test('factor toggles retain both ranges and main-parent AND/OR after reload', async ({ page }) => {
+test('factor toggles apply only the selected range and retain their values after reload', async ({ page }) => {
   await mockDatabase(page);
   await mockAffinity(page);
+  const requests: URLSearchParams[] = [];
+  page.on('request', request => {
+    const url = new URL(request.url());
+    if (url.pathname.endsWith('/search/query')) requests.push(url.searchParams);
+  });
   const state = { fm: 'advanced', w: [[201600, 1, 9]], mb: [[10, 1, 3, 0, 0, 0, 1]], mp: [[0, 1, 3]], mg: [[0, 1, 3]], mw: [[201600, 1, 3]] };
   await page.goto('/database?filters=' + encodeURIComponent(Buffer.from(JSON.stringify(state)).toString('base64')));
   const openFilters = async () => {
@@ -19,8 +24,17 @@ test('factor toggles retain both ranges and main-parent AND/OR after reload', as
   await setSliderValue(white.locator('input[type="range"]').first(), 7);
   await white.getByRole('radio', { name: 'Parent occurrences', exact: true }).click();
   await setSliderValue(white.locator('input[type="range"]').first(), 3);
+  const chips = page.locator('.active-filter-chips button').filter({ hasText: /^White:/ });
+  await expect(chips).toContainText('3–3×');
+  await expect(chips).not.toContainText('★');
+  await expect.poll(() => requests.at(-1)?.get('uql')).toContain('main_white_factors');
+  expect(requests.at(-1)!.get('uql')).not.toContain('2016007, 2016008, 2016009');
   await white.getByRole('radio', { name: 'Total stars', exact: true }).click();
   await expect(white.locator('input[type="range"]').first()).toHaveValue('7');
+  await expect(chips).toContainText('7–9★');
+  await expect(chips).not.toContainText('×');
+  await expect.poll(() => requests.at(-1)?.get('white_sparks')).toBe('2016007,2016008,2016009');
+  expect(requests.at(-1)!.get('uql')).not.toContain('white_factors');
   await white.getByRole('radio', { name: 'Parent occurrences', exact: true }).click();
   await expect(white.locator('input[type="range"]').first()).toHaveValue('3');
   const main = page.locator('#main-blue');
@@ -72,10 +86,21 @@ test('factor toggles retain both ranges and main-parent AND/OR after reload', as
   await openFilters();
   await expect(white.getByRole('radio', { name: 'Parent occurrences', exact: true })).toBeChecked();
   await expect(white.locator('input[type="range"]').first()).toHaveValue('3');
+  await expect(chips).not.toContainText('★');
   await expect(main.getByRole('radio', { name: 'OR', exact: true })).toBeChecked();
   await expect(first.locator('input[type="range"]').first()).toHaveValue('2');
   await expect(first.locator('input[type="range"]').last()).toHaveValue('2');
   await expect(main.getByRole('radiogroup', { name: 'Factor range metric', exact: true })).toHaveCount(0);
+  await white.getByRole('button', { name: 'Add White Factor', exact: true }).click();
+  const second = white.locator('.requirement').nth(1);
+  await second.getByRole('combobox').fill('Groundwork');
+  await page.getByRole('option', { name: 'Groundwork', exact: true }).click();
+  await setSliderValue(second.locator('input[type="range"]').first(), 7);
+  await expect(chips).toHaveCount(2);
+  await expect(chips.nth(0)).toContainText('3–3×');
+  await expect(chips.nth(1)).toContainText('7–9★');
+  await expect.poll(() => requests.at(-1)?.get('uql')).toContain('2016007, 2016008, 2016009');
+  expect(requests.at(-1)!.get('uql')).toContain('main_white_factors');
   await page.getByRole('radio', { name: 'UQL', exact: true }).click();
   await replaceQuery(page.getByRole('textbox', { name: 'UQL query', exact: true }), 'Groundwork > 6 and Groundwork = 3x');
   await expect(page.locator('.uql-status')).toContainText('Valid');

@@ -1,0 +1,11 @@
+; Publish after the discovery documents and HTTP headers are deployed.
+; Enable DNSSEC at the DNS provider and publish its generated DS at the registrar.
+; ARD catalog locator: https://github.com/ards-project/ard-spec
+_catalog._agents.uma.moe. 3600 IN TXT "url=https://uma.moe/.well-known/ai-catalog.json"
+
+; Experimental DNS-AID organization index (draft-mozleywilliams-dnsop-dnsaid-02).
+; key65400 is a PRIVATE-USE prototype mapping for the well-known path, NOT
+; an assigned standard parameter. Consumers need to agree on that mapping.
+; Replace it with the registered parameter when the draft is standardized.
+; This advertises an HTTPS catalog, not an MCP or A2A server.
+_index._agents.uma.moe. 3600 IN SVCB 1 uma.moe. alpn="h2" port=443 key65400="/.well-known/ai-catalog.json"

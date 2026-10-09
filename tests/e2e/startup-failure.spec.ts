@@ -10,6 +10,7 @@ test.beforeEach(async ({ context }) => {
     if (!/^https?:$/.test(location.protocol)) return;
     localStorage.setItem('page-introduction-audience-v1', 'existing');
     localStorage.setItem('lastSeenUpdateVersion', '18');
+    localStorage.setItem('uma-browser-proof-v1', JSON.stringify({ token: 'fixture-proof', expiresAt: Date.now() + 86_400_000 }));
     localStorage.setItem('lineage-planner-saves-v1', '{"Keep me":[]}');
   });
 });
@@ -64,11 +65,15 @@ test('app runtime errors are visible while unrelated third-party errors are igno
     for (const stack of [
       'Error: Provider failure\n    at callback (https://third-party.invalid/ad.js:1:2)\n    at sentryWrapped (' + location.origin + '/app/sentry-sdk-test.js:3:4)',
       'callback@https://third-party.invalid/ad.js:1:2\nsentryWrapped@' + location.origin + '/app/sentry-sdk-test.js:3:4',
+      'apply@' + location.origin + '/app/sentry-sdk-test.js:17:10452\n@[native code]\ni@https://cdn.fuseplatform.net/prebid/fixture.js:12:35110',
+      'TypeError: Failed to fetch\n    at apply (' + location.origin + '/app/sentry-sdk-test.js:17:10452)\n    at callback (https://cdn.fuseplatform.net/prebid/fixture.js:12:35110)',
+      'apply@' + location.origin + '/app/sentry-sdk-test.js:17:10452\n@[native code]',
       'Error: Extension failure\n    at callback (chrome-extension://example/content.js:1:2)\n    at sentryWrapped (' + location.origin + '/app/sentry-sdk-test.js:3:4)',
       'callback@blob:' + location.origin + '/example:1:2\nsentryWrapped@' + location.origin + '/app/sentry-sdk-test.js:3:4',
     ]) {
       const error = new Error('Provider failure'); error.stack = stack;
       window.dispatchEvent(new ErrorEvent('error', { error, filename: 'https://third-party.invalid/ad.js' }));
+      window.dispatchEvent(new ErrorEvent('error', { error, filename: location.origin + '/app/sentry-sdk-test.js' }));
       window.dispatchEvent(new ErrorEvent('error', { error }));
       window.dispatchEvent(new PromiseRejectionEvent('unhandledrejection', { reason: error, promise: Promise.resolve() }));
     }
@@ -76,7 +81,7 @@ test('app runtime errors are visible while unrelated third-party errors are igno
   await expect(page.locator('#app-error')).toBeHidden();
   await page.evaluate(() => {
     const error = new TypeError('Failed: ' + location.origin + '/app/file.js?token=private#secret');
-    error.stack = error.toString() + '\n    at failedControl (' + location.origin + '/app/filter.js?token=stack-private#stack-secret:27:9)';
+    error.stack = error.toString() + '\n    at apply (' + location.origin + '/app/sentry-sdk-test.js:17:10452)\n    at failedControl (' + location.origin + '/app/filter.js?token=stack-private#stack-secret:27:9)';
     window.dispatchEvent(new ErrorEvent('error', {
       filename: location.origin + '/app/index-test.js?token=source-private#source-secret', lineno: 12, colno: 34, error
     }));
@@ -102,7 +107,7 @@ test('recovery survives its DOM being removed', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.evaluate(() => {
-    document.getElementById('app-error')!.remove();
+    document.getElementById('app-error-template')!.remove();
     window.dispatchEvent(new CustomEvent('umamoe:app-error', { detail: new Error('Application render failure') }));
   });
   await expect(page.locator('#app-error')).toBeVisible();
@@ -133,8 +138,8 @@ test('optional page warming stops when the document head has been removed', asyn
   expect(errors).toEqual([]);
 });
 
-test('Sentry records and tags a wrapped provider error without showing the fatal screen', async ({ page }) => {
-  const events: { tags?: Record<string, unknown>; exception?: { values?: { value?: string }[] } }[] = [];
+test('Sentry records and tags wrapped provider errors without showing the fatal screen', async ({ page }) => {
+  const events: { tags?: Record<string, unknown>; exception?: { values?: { value?: string }[] }; contexts?: { failed_request?: { url?: string } } }[] = [];
   await page.route('https://*.ingest.*.sentry.io/**', async route => {
     const lines = route.request().postData()?.split('\n') ?? [];
     for (let i = 1; i < lines.length - 1; i += 2) {
@@ -152,6 +157,22 @@ test('Sentry records and tags a wrapped provider error without showing the fatal
   await page.addScriptTag({ url: 'https://provider.invalid/widget.js' });
   await page.evaluate(() => window.dispatchEvent(new Event('fixture:provider')));
   await expect.poll(() => events.map(event => ({ tags: event.tags, errors: event.exception?.values?.map(value => value.value) })), { timeout: 10_000 }).toContainEqual({ tags: expect.objectContaining({ third_party_code: true, 'error.source': 'third-party', 'error.script_host': 'provider.invalid' }), errors: ['Synthetic provider failure'] });
+  await page.route('https://ajs-assets.ftstatic.com/ftUtils.js', route => route.fulfill({
+    contentType: 'application/javascript',
+    body: 'window.addEventListener("fixture:creative", function () { setTimeout(function () { throw new TypeError("Synthetic creative failure"); }, 0); });'
+  }));
+  await page.addScriptTag({ url: 'https://ajs-assets.ftstatic.com/ftUtils.js' });
+  await page.evaluate(() => window.dispatchEvent(new Event('fixture:creative')));
+  await expect.poll(() => events.map(event => ({ tags: event.tags, errors: event.exception?.values?.map(value => value.value) })), { timeout: 10_000 }).toContainEqual({ tags: expect.objectContaining({ 'error.source': 'third-party', 'error.provider': 'flashtalking', 'error.actionability': 'provider' }), errors: ['Synthetic creative failure'] });
+  // Real failed fetches put Sentry's apply wrapper first on iPhone, as in the report.
+  await page.route('https://id5-sync.com/api/config/prebid', route => route.abort('failed'));
+  await page.route('https://cdn.fuseplatform.net/prebid/fixture.js', route => route.fulfill({
+    contentType: 'application/javascript',
+    body: 'window.addEventListener("fixture:id5", function () { void fetch("https://id5-sync.com/api/config/prebid", { method: "POST" }); });'
+  }));
+  await page.addScriptTag({ url: 'https://cdn.fuseplatform.net/prebid/fixture.js' });
+  await page.evaluate(() => window.dispatchEvent(new Event('fixture:id5')));
+  await expect.poll(() => events.map(event => ({ tags: event.tags, url: event.contexts?.failed_request?.url })), { timeout: 10_000 }).toContainEqual({ tags: expect.objectContaining({ 'error.source': 'third-party', 'error.actionability': 'provider', 'error.kind': 'network' }), url: 'https://id5-sync.com/api/config/prebid' });
   await expect(page.locator('#app-error')).toBeHidden();
 });
 

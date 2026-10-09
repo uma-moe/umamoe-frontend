@@ -64,6 +64,25 @@ it('rejects malformed stored proofs and supports browsers with storage disabled'
   expect(port!.getCached()).toBeUndefined();
 });
 
+it('reuses proof when storage is readable but writes fail, and never restores a rejected proof', async () => {
+  vi.useFakeTimers();
+  const { browserProofPort: port } = await import('./browser-proof');
+  port!.capture('old-proof', 60);
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('Full', 'QuotaExceededError'); });
+  vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('blocked'); });
+  port!.capture('memory-proof', 60);
+  expect(port!.getCached()).toBe('memory-proof');
+  port!.prime();
+  expect(document.getElementById('cf-turnstile-api')).toBeNull();
+  port!.invalidate('old-proof');
+  expect(port!.getCached()).toBe('memory-proof');
+  port!.invalidate('memory-proof');
+  expect(port!.getCached()).toBeUndefined();
+  port!.capture('replacement', 60);
+  await vi.advanceTimersByTimeAsync(55_000);
+  expect(port!.getCached()).toBeUndefined();
+});
+
 it.each(['error-callback', 'expired-callback', 'timeout-callback', 'unsupported-callback'] as const)('tries one visible fallback after %s and recovers through explicit verification', async callbackName => {
   let options!: Parameters<NonNullable<Window['turnstile']>['render']>[1];
   window.turnstile = {

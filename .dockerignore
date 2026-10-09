@@ -26,6 +26,8 @@ docker-compose*.yml
 README.md
 *.md
 !public/notes/**/*.md
+!public/auth.md
+!public/.well-known/agent-skills/*/SKILL.md
 *.ipynb
 *.tmp
 *.temp

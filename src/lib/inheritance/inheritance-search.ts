@@ -191,7 +191,14 @@ function appendList(query: URLSearchParams, name: string, values: number[]): voi
   if (values.length) query.set(name, [...new Set(values)].join(','));
 }
 
+export function activeFactorRequirement(requirement: FactorRequirement): FactorRequirement {
+  return requirement.metric === 'occurrences'
+    ? { ...requirement, minimumStars: 1, maximumStars: undefined, minimumOccurrences: requirement.minimumOccurrences ?? 0, maximumOccurrences: requirement.maximumOccurrences ?? 3 }
+    : { ...requirement, minimumOccurrences: undefined, maximumOccurrences: undefined };
+}
+
 export function encodedFactorLevels(requirement: FactorRequirement, maximumCap = 9): number[] {
+  requirement = activeFactorRequirement(requirement);
   const id = Math.trunc(requirement.factorId);
   if (!Number.isFinite(id) || id < 0) return [];
   const minimum = Math.max(1, Math.min(maximumCap, Math.trunc(requirement.minimumStars || 1)));
@@ -209,13 +216,13 @@ function factorPredicate(field: string, requirement: FactorRequirement, maximumC
     return `any_spark(${field}, ${requirement.minimumStars}, ${requirement.maximumStars ?? 9}, ${minimum}, ${maximum})`;
   }
   const clauses: string[] = [];
-  if (requirement.minimumStars > 1 || (requirement.maximumStars ?? maximumCap) < maximumCap) clauses.push(factorPresence(field, encodedFactorLevels(requirement, maximumCap)));
   if (requirement.minimumOccurrences !== undefined) clauses.push(occurrenceComparison(requirement.factorId, [field], '>=', requirement.minimumOccurrences));
   if (requirement.maximumOccurrences !== undefined) clauses.push(occurrenceComparison(requirement.factorId, [field], '<=', requirement.maximumOccurrences));
   return `(${clauses.join(' and ')})`;
 }
 
 function appendFactorGroups(query: URLSearchParams, name: string, requirements: FactorRequirement[], maximumCap = 9): string | undefined {
+  requirements = requirements.map(activeFactorRequirement);
   const field = name.replace(/^main_parent_(blue|pink|green|white)_sparks$/, 'main_$1_factors');
   const valid = requirements.filter(item => encodedFactorLevels(item, maximumCap).length && !(item.factorId === 0 && name.includes('white')));
   if (valid.some(item => item.minimumOccurrences !== undefined || item.maximumOccurrences !== undefined) || (field !== name && !name.includes('white') && (valid.length > 1 || valid.some(item => item.factorId === 0)))) {

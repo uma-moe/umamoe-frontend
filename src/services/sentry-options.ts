@@ -21,6 +21,12 @@ function provider(value: string): string | undefined {
     ['google-analytics', ['google-analytics.com', 'analytics.google.com', 'googletagmanager.com']],
     ['google-ads', ['doubleclick.net', 'googlesyndication.com', 'googletagservices.com', 'imasdk.googleapis.com']],
     ['doubleverify', ['doubleverify.com']],
+    ['flashtalking', ['ftstatic.com', 'flashtalking.com']],
+    ['ias', ['adsafeprotected.com']],
+    ['infolinks', ['infolinks.com']],
+    ['geoedge', ['geoedge.be', 'geoedge.com']],
+    ['ad-recovery', ['btloader.com']],
+    ['prebid', ['omnitagjs.com']],
     ['id5', ['id5-sync.com']],
     ['inmobi', ['inmobi.com', 'quantcast.com']],
     ['turnstile', ['challenges.cloudflare.com']],
@@ -71,6 +77,24 @@ export const sentryOptions: Sentry.BrowserOptions = {
     }
     const request = hint.originalException && typeof hint.originalException === 'object' ? failedRequests.get(hint.originalException) : undefined;
     const vendor = [...frames].reverse().map(frame => provider(frame.filename ?? '')).find(Boolean) ?? (request ? provider(String(request.url)) : undefined);
+    // Provider callbacks can include our bundled Sentry wrapper. That wrapper
+    // does not make an otherwise external stack application code.
+    const hasApplicationFrame = frames.some(frame => {
+      if (frame.function === 'sentryWrapped') return false;
+      const url = safeUrl(frame.filename ?? '');
+      if (!url) return false;
+      const parsed = new URL(url);
+      // Production wrappers are minified; source maps are applied after beforeSend.
+      if (/\/node_modules\/@sentry\//.test(parsed.pathname) || /^\/app\/sentry-sdk-[\w-]+\.js$/.test(parsed.pathname)) return false;
+      return parsed.origin === location.origin && /^\/(app|src|node_modules)\//.test(parsed.pathname);
+    });
+    const providerOnly = vendor && vendor !== 'turnstile' && !hasApplicationFrame &&
+      event.tags?.['error.kind'] !== 'module-load' && !event.exception?.values?.some(value => value.type === 'TurnstileError') &&
+      (!request || new URL(String(request.url)).origin !== location.origin);
+    if (hasApplicationFrame && event.tags) delete event.tags.third_party_code;
+    if (providerOnly) {
+      event.tags = { ...event.tags, third_party_code: true };
+    }
     const externalScript = [...frames].reverse().map(frame => safeUrl(frame.filename ?? '')).find(url => {
       if (!url) return false;
       const parsed = new URL(url);
@@ -85,6 +109,7 @@ export const sentryOptions: Sentry.BrowserOptions = {
       'network.online': request?.online ?? state.online,
       'page.lifecycle': request?.lifecycle ?? state.lifecycle,
       'error.stack': hasStack ? 'available' : 'missing',
+      ...(providerOnly ? { 'error.actionability': 'provider' } : {}),
       ...(vendor ? { 'error.provider': vendor } : {}),
       ...(externalScript ? { 'error.script_host': new URL(externalScript).hostname } : {}),
     };

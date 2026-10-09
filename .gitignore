@@ -70,6 +70,9 @@ scripts/*
 !scripts/demo-data.ts
 !scripts/demo-clubs.ts
 !scripts/demo-clubs.test.ts
+!scripts/seo-pages.ts
+!scripts/seo-pages.test.ts
+!scripts/check-seo.mjs
 
 .github/copilot-instructions.md
 !src/assets/

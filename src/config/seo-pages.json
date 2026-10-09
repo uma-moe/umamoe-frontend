@@ -1,7 +1,8 @@
 {
   "/": {
-    "title": "Uma Musume Database, Trainer Search & Tools | uma.moe",
-    "description": "Search Uma Musume trainers and inheritance parents, calculate affinity, compare support cards, and plan for the Global version of Umamusume: Pretty Derby.",
+    "title": "Uma Database, Friend Search & Tools | uma.moe",
+    "description": "Uma database for Umamusume: Pretty Derby Global. Find friends, trainer IDs and inheritance parents, compare support cards, and plan banners and carats.",
+    "heading": "Uma Database & Umamusume Tools",
     "priority": 1,
     "changeFrequency": "daily",
     "schema": [
@@ -9,21 +10,25 @@
         "@type": "WebSite",
         "@id": "https://uma.moe/#website",
         "name": "uma.moe",
-        "alternateName": ["Uma Moe", "Uma Musume Database"],
+        "alternateName": [
+          "Uma Moe",
+          "Uma Musume Database"
+        ],
         "url": "https://uma.moe/",
         "description": "Uma Musume trainer search, inheritance database, affinity calculator, rankings, timeline, and planning tools for the Global version."
       }
     ]
   },
   "/database": {
-    "title": "Uma Musume Trainer Search & Parent Database | uma.moe",
-    "description": "Search Uma Musume trainer IDs, inheritance parents, sparks, factors, support cards, and affinity in our Global friend and legacy database.",
+    "title": "Uma Musume Friend & Parent Finder | uma.moe",
+    "description": "Find Uma Musume Global friends, trainer IDs and inheritance parents. Filter sparks, factors, G1 wins and affinity, or find support cards to borrow.",
+    "heading": "Uma Musume Friend & Parent Finder",
     "priority": 1,
     "changeFrequency": "daily",
     "schema": [
       {
         "@type": "WebApplication",
-        "name": "Uma Musume Trainer Search & Parent Database",
+        "name": "Uma Musume Friend & Parent Finder",
         "url": "https://uma.moe/database",
         "applicationCategory": "GameApplication",
         "operatingSystem": "Web",
@@ -62,8 +67,9 @@
     "changeFrequency": "daily"
   },
   "/timeline": {
-    "title": "Uma Musume Global Timeline & Carat Planner | uma.moe",
-    "description": "Track the estimated Uma Musume Global release timeline and plan carats, tickets, pulls, banners, characters, support cards, and events.",
+    "title": "Uma Musume Global Banner & Event Schedule | uma.moe",
+    "description": "Browse the estimated Uma Musume Global banner and event schedule. Track character and support card releases, story events and races, and plan carats.",
+    "heading": "Uma Musume Global Banner & Event Schedule",
     "priority": 0.8,
     "changeFrequency": "daily"
   },
@@ -115,6 +121,26 @@
   "/wip": {
     "title": "Coming Soon | uma.moe",
     "description": "This uma.moe tool is under development.",
+    "index": false
+  },
+  "/veterans": {
+    "title": "Veteran Workspace | uma.moe",
+    "description": "Manage your Umamusume veteran collections and inheritance records.",
+    "index": false
+  },
+  "/profile": {
+    "title": "Trainer Profile | uma.moe",
+    "description": "View an Umamusume trainer profile.",
+    "index": false
+  },
+  "/ui": {
+    "title": "UI Lab | uma.moe",
+    "description": "Internal component gallery.",
+    "index": false
+  },
+  "/ui-lab": {
+    "title": "UI Lab | uma.moe",
+    "description": "Internal component gallery.",
     "index": false
   }
 }

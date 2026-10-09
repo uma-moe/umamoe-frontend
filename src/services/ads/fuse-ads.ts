@@ -1,5 +1,6 @@
 import { runtimeConfig } from '@/services/runtime-config';
 import { fuseAllowed, fuseScriptUrl, insertFuseScript } from './fuse-bootstrap';
+import { afterPageReady } from '@/routes/after-page-paint';
 
 interface FuseTag {
   que?: Array<() => void>;
@@ -36,23 +37,26 @@ export function loadFuse(): Promise<boolean> {
   if (!fuseEnabled()) return Promise.resolve(false);
   if (apiReady()) return Promise.resolve(true);
   if (startTask) return startTask;
-  const script = insertFuseScript(fuseScriptUrl);
-  startTask = new Promise<boolean>(resolve => {
-    if (script.dataset.state === 'error') { resolve(false); return; }
-    const finish = (loaded: boolean) => {
-      window.clearTimeout(timeout);
-      script.removeEventListener('load', ready);
-      script.removeEventListener('error', failed);
-      resolve(loaded);
-    };
-    // The provider queue can still register mounted zones after a slow CMP finishes.
-    const ready = () => { if (apiReady()) { finish(true); scheduleZones(); } };
-    const failed = () => finish(false);
-    const timeout = window.setTimeout(() => finish(false), 15_000);
-    window.fusetag?.que?.push(ready);
-    script.addEventListener('load', ready, { once: true });
-    script.addEventListener('error', failed, { once: true });
-    ready();
+  startTask = afterPageReady().then(() => {
+    if (!fuseEnabled()) { startTask = undefined; return false; }
+    const script = insertFuseScript(fuseScriptUrl);
+    return new Promise<boolean>(resolve => {
+      if (script.dataset.state === 'error') { resolve(false); return; }
+      const finish = (loaded: boolean) => {
+        window.clearTimeout(timeout);
+        script.removeEventListener('load', ready);
+        script.removeEventListener('error', failed);
+        resolve(loaded);
+      };
+      // The provider queue can still register mounted zones after a slow CMP finishes.
+      const ready = () => { if (apiReady()) { finish(true); scheduleZones(); } };
+      const failed = () => finish(false);
+      const timeout = window.setTimeout(() => finish(false), 15_000);
+      window.fusetag?.que?.push(ready);
+      script.addEventListener('load', ready, { once: true });
+      script.addEventListener('error', failed, { once: true });
+      ready();
+    });
   });
   return startTask;
 }

@@ -6,6 +6,7 @@
   import type { IconName } from '@/components/icon-types';
   import { UPDATE_LOG, type ChangeCategory } from '@/services/update-log';
   import { CURRENT_UPDATE_VERSION } from '@/services/site-services';
+  import { afterPageReady } from '@/routes/after-page-paint';
   let { request = 0 }: { request?: number } = $props();
   let open = $state(false);
   let history = $state(false);
@@ -21,14 +22,19 @@
     try { localStorage.setItem('lastSeenUpdateVersion', String(CURRENT_UPDATE_VERSION)); } catch { /* Reading remains available without storage. */ }
   }
   onMount(() => {
-    const timer = setInterval(() => {
-      try {
-        if (Number(localStorage.getItem('lastSeenUpdateVersion') ?? 0) >= CURRENT_UPDATE_VERSION) { clearInterval(timer); return; }
-      } catch { clearInterval(timer); return; }
-      if (document.hidden || document.querySelector('dialog[open], [data-tour-overlay]')) return;
-      open = true; clearInterval(timer);
-    }, 1500);
-    return () => clearInterval(timer);
+    let stopped = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    void afterPageReady().then(() => {
+      if (stopped) return;
+      timer = setInterval(() => {
+        try {
+          if (Number(localStorage.getItem('lastSeenUpdateVersion') ?? 0) >= CURRENT_UPDATE_VERSION) { clearInterval(timer); return; }
+        } catch { clearInterval(timer); return; }
+        if (document.hidden || document.querySelector('dialog[open], [data-tour-overlay]')) return;
+        open = true; clearInterval(timer);
+      }, 1500);
+    });
+    return () => { stopped = true; clearInterval(timer); };
   });
 </script>
 {#snippet releaseSections(categories: ChangeCategory[])}
@@ -46,14 +52,14 @@
 {/snippet}
 {#if open}<Dialog {open} title="What’s new" maxWidth="580px" maxHeight="85dvh" mobileInset="16px" contentPadding="0" mobileContentPadding="0" onclose={close}>
   {#snippet headerIdentity(titleId)}
-    <div class="release-header" class:latest-header={!history}>
+    <div class="release-header" data-nosnippet class:latest-header={!history}>
       <span class="header-star"><Icon name={history ? 'timeline' : 'star'} size={20}/></span>
       <span id={titleId} class="sr-only">What’s new</span>
       <h2>{history ? 'Previous updates' : latest.title}</h2>
       {#if history}<span class="history-count">{updates.length - 1} releases</span>{:else if latest.date}<time datetime={latest.date}>{releaseDate(latest.date)}</time>{/if}
     </div>
   {/snippet}
-  <div class="release-content">
+  <div class="release-content" data-nosnippet>
     {#if history}
       <div class="release-history">
         {#each updates.slice(1) as update, index}

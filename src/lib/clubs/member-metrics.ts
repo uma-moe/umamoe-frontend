@@ -37,7 +37,9 @@ export function clubSnapshotsForPeriod(snapshots: ClubMemberSnapshot[], year: nu
 export function latestClubSnapshotIndex(snapshots: ClubMemberSnapshot[]): number {
   return Math.max(0, ...snapshots.map(member => member.daily_fans.findLastIndex(value => value !== 0)));
 }
-export function legacyMonthTally(member: ClubMemberSnapshot, days: number): number | undefined {
+export function legacyMonthTally(member: ClubMemberSnapshot, days: number, includeDeparted = false): number | undefined {
+  // Lifetime totals recorded after departure cannot complete this club's month.
+  if (!includeDeparted && !((member.daily_fans[days - 1] ?? 0) > 0)) return undefined;
   return Math.abs(member.daily_fans[days] ?? 0) > 0 || !(member.next_month_start! > 0) ? undefined : member.next_month_start;
 }
 
@@ -117,10 +119,10 @@ export function clubProgression(snapshots: ClubMemberSnapshot[], year: number, m
   });
 }
 
-export function effectiveMemberFans(member: ClubMemberSnapshot, daysInMonth: number): number[] {
+export function effectiveMemberFans(member: ClubMemberSnapshot, daysInMonth: number, includeDeparted = false): number[] {
   if (Math.abs(member.daily_fans[daysInMonth] ?? 0) > 0) return member.daily_fans.slice(0, daysInMonth + 1);
   const values = [...member.daily_fans];
-  const tally = legacyMonthTally(member, daysInMonth);
+  const tally = legacyMonthTally(member, daysInMonth, includeDeparted);
   if (tally !== undefined) {
     while (values.length <= daysInMonth) values.push(0);
     values[daysInMonth] = tally;

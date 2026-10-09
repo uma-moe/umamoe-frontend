@@ -139,6 +139,7 @@
     timelineBoard?.scrollToLane(dateLanes[currentSearchIndex]!.key);
   }
   export function scrollToToday(): void { void timelineBoard?.scrollToToday(); }
+  export function scrollToDate(date: Date): void { void timelineBoard?.scrollToDate(date); }
   async function load(refresh = false): Promise<void> {
     loading = true;
     error = '';

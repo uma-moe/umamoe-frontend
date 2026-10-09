@@ -1,4 +1,16 @@
 import { buildVersion } from './site-services';
+import { afterPageReady } from '@/routes/after-page-paint';
+import { sanitizeAnalyticsUrl } from './analytics-url';
+
+type VerificationPhase = 'challenge' | 'exchange';
+let recordVerification = (_phase: VerificationPhase, _start: number, _end: number, _path: string, _success: boolean): void => {};
+
+export async function withVerificationTiming<T>(phase: VerificationPhase, operation: () => Promise<T>): Promise<T> {
+  const start = Date.now() / 1000, path = sanitizeAnalyticsUrl(location.href);
+  let success = false;
+  try { const result = await operation(); success = true; return result; }
+  finally { recordVerification(phase, start, Date.now() / 1000, path, success); }
+}
 
 export async function initializeSentry(): Promise<void> {
   if (!['production', 'beta'].includes(import.meta.env.MODE) && import.meta.env.VITE_SENTRY_ENABLED !== 'true') return;
@@ -15,12 +27,15 @@ export async function initializeSentry(): Promise<void> {
   window.addEventListener('umamoe:app-error', onBoundary);
   window.addEventListener('umamoe:module-error', onModuleError);
   try {
-    const { init, captureException, browserTracingIntegration, breadcrumbsIntegration, consoleIntegration, thirdPartyErrorFilterIntegration, sentryOptions, addBreadcrumb } = await import('./sentry-sdk');
+    const { init, captureException, browserTracingIntegration, breadcrumbsIntegration, consoleIntegration, thirdPartyErrorFilterIntegration, sentryOptions, addBreadcrumb, startInactiveSpan, reportPageLoaded } = await import('./sentry-sdk');
     init({
       ...sentryOptions,
       release: buildVersion(),
       integrations: [
-        browserTracingIntegration(),
+        browserTracingIntegration({
+          enableReportPageLoaded: true,
+          beforeStartSpan: options => ({ ...options, name: sanitizeAnalyticsUrl(location.href) }),
+        }),
         breadcrumbsIntegration({ dom: false, history: false }),
         consoleIntegration({ levels: [] }),
         thirdPartyErrorFilterIntegration({
@@ -30,6 +45,12 @@ export async function initializeSentry(): Promise<void> {
         }),
       ],
     });
+    recordVerification = (phase, startTime, end, path, success) => {
+      const span = startInactiveSpan({ name: `Browser verification ${phase}`, op: `browser.verification.${phase}`, startTime, attributes: { 'url.path': path } });
+      span.setStatus({ code: success ? 1 : 2 });
+      span.end(end);
+    };
+    void afterPageReady().then(() => reportPageLoaded());
     capture = (error, moduleLoad = false) => {
       if (moduleLoad) captureException(error, { tags: { 'error.kind': 'module-load' } });
       else captureException(error);

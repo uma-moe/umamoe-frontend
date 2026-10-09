@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from './fixtures/test';
 import { mockCommunity } from './fixtures/api';
 import { clubProgressionFixture } from './fixtures/club-progression';
@@ -12,6 +13,36 @@ async function openClub(page: Page, fixture = clubProgressionFixture('current'))
   await panel.scrollIntoViewIfNeeded(); await expect(panel.locator('.chart-host svg')).toBeVisible();
   return panel;
 }
+
+test('Departed members do not create false calendar gains or a final club progression spike', async ({ page }, testInfo) => {
+  const fixture = clubProgressionFixture('current');
+  fixture.response.members = [
+    { ...fixture.response.members[0]!, viewer_id: 570323472295, trainer_name: 'LinhYeuAnh', daily_fans: [1216184214, 1216184214, ...Array(30).fill(0)], next_month_start: 1731597408 },
+    { ...fixture.response.members[1]!, daily_fans: Array.from({ length: 31 }, (_, i) => 1000 + i * 100) }
+  ];
+  const panel = await openClub(page, fixture);
+  await panel.getByRole('button', { name: 'Show member calendar' }).click();
+  await expect(panel.locator('[data-day="2"] .day-delta-badge')).toHaveText('+100');
+  await panel.getByRole('button', { name: 'Day 2 contributors', exact: true }).click();
+  const contributors = page.getByRole('dialog', { name: 'Day 2 contributors', exact: true });
+  await expect(contributors.locator('.popover-name')).toHaveText(['Gold "Ship", Jr.']);
+  await expect(contributors.locator('.popover-value')).toHaveText(['+100']);
+  await contributors.getByRole('button', { name: 'Close Day 2 contributors', exact: true }).click();
+
+  await page.getByText('Export', { exact: true }).click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('menuitem', { name: 'JSON', exact: true }).click();
+  const path = testInfo.outputPath('departed-member.json');
+  await (await download).saveAs(path);
+  const data = JSON.parse(await readFile(path, 'utf8'));
+  expect(data.history).toHaveLength(30);
+  expect(data.history.at(-1).fan_count).toBe(3000);
+  expect(data.history.at(-1).fan_count - data.history.at(-2).fan_count).toBe(100);
+  const departed = data.members.find((member: { trainer_id: string }) => member.trainer_id === '570323472295');
+  expect(departed.monthly_gain).toBe(0);
+  expect(departed.daily_fans[30]).toBe(0);
+  expect(departed.daily_delta[29]).toBeNull();
+});
 
 test('Member charts keep source order, hide/isolate/restore, keyboard access, search and month-local modes', async ({ page }, testInfo) => {
   const panel = await openClub(page), legend = panel.locator('.chart-legend'), buttons = legend.getByRole('button');

@@ -421,7 +421,9 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
         run: |
-          rsync -az --delete \
+          # ponytail: retain immutable chunks for open tabs; add age-based cleanup if disk usage grows.
+          rsync -az --delete --delay-updates \
+            --filter 'P /app/***' \
             --exclude 'assets/' \
             --exclude 'statistics/' \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
@@ -751,7 +753,9 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
         run: |
-          rsync -az --delete \
+          # ponytail: retain immutable chunks for open tabs; add age-based cleanup if disk usage grows.
+          rsync -az --delete --delay-updates \
+            --filter 'P /app/***' \
             --exclude 'assets/' \
             --exclude 'statistics/' \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \

@@ -1,6 +1,7 @@
 import type { BrowserProofPort } from './http-client';
 import { get, writable } from 'svelte/store';
 import { runtimeConfig } from '@/services/runtime-config';
+import { withVerificationTiming } from '@/services/sentry';
 
 interface TurnstileApi {
   render(container: HTMLElement, options: {
@@ -34,11 +35,13 @@ const enabled = typeof window !== 'undefined' && runtimeConfig.providersEnabled 
 export const browserVerification = writable({ pending: false, error: '' });
 
 let cached: { token: string; expiresAt: number } | undefined;
+let memoryOnly = false;
 let refreshTask: Promise<string> | undefined;
 let scriptTask: Promise<TurnstileApi> | undefined;
 const proofStorageKey = 'uma-browser-proof-v1';
 
 function readProof() {
+  if (memoryOnly) return cached;
   try {
     const raw = localStorage.getItem(proofStorageKey);
     const value = raw ? JSON.parse(raw) : undefined;
@@ -51,7 +54,8 @@ function readProof() {
 function saveProof(token: string, ttlSeconds: number) {
   cached = { token, expiresAt: Date.now() + ttlSeconds * 1000 };
   // Persist only our reusable server proof, never the single-use Turnstile token.
-  try { localStorage.setItem(proofStorageKey, JSON.stringify(cached)); } catch { /* Memory fallback. */ }
+  try { localStorage.setItem(proofStorageKey, JSON.stringify(cached)); memoryOnly = false; }
+  catch { memoryOnly = true; }
 }
 
 function loadTurnstile(): Promise<TurnstileApi> {
@@ -132,13 +136,15 @@ async function challengeToken(visible = false): Promise<string> {
 }
 
 async function exchange(visible = false): Promise<string> {
-  const challenge = await challengeToken(visible);
-  const response = await fetch(exchangePath, { method: 'POST', credentials: 'omit', signal: AbortSignal.timeout(15_000), headers: { [challengeHeader]: challenge, accept: 'application/json, text/plain, */*' } });
-  const token = response.headers.get(proofHeader)?.trim() ?? '';
-  const ttl = Number(response.headers.get(ttlHeader) ?? 0);
-  if (!response.ok || !token || !Number.isFinite(ttl) || ttl <= 0) throw new Error(`Browser proof exchange failed (${response.status}).`);
-  saveProof(token, ttl);
-  return token;
+  const challenge = await withVerificationTiming('challenge', () => challengeToken(visible));
+  return withVerificationTiming('exchange', async () => {
+    const response = await fetch(exchangePath, { method: 'POST', credentials: 'omit', signal: AbortSignal.timeout(15_000), headers: { [challengeHeader]: challenge, accept: 'application/json, text/plain, */*' } });
+    const token = response.headers.get(proofHeader)?.trim() ?? '';
+    const ttl = Number(response.headers.get(ttlHeader) ?? 0);
+    if (!response.ok || !token || !Number.isFinite(ttl) || ttl <= 0) throw new Error(`Browser proof exchange failed (${response.status}).`);
+    saveProof(token, ttl);
+    return token;
+  });
 }
 
 const port: BrowserProofPort = {
@@ -168,7 +174,8 @@ const port: BrowserProofPort = {
     readProof();
     if (!token || cached?.token === token) {
       cached = undefined;
-      try { localStorage.removeItem(proofStorageKey); } catch { /* Memory fallback. */ }
+      try { localStorage.removeItem(proofStorageKey); memoryOnly = false; }
+      catch { memoryOnly = true; }
     }
   }
 };

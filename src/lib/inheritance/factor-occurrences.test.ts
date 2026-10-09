@@ -41,7 +41,7 @@ it('accepts x/× in named, scoped, negated, and list predicates', () => {
   for (const invalid of ['Groundwork = 1.5x', 'Groundwork = 3xyz']) expect(validateInheritanceUql(invalid).state).toBe('invalid');
 });
 
-it('preserves both ranges and main-parent joins in saved filters, requests, and bookmarks', () => {
+it('retains both ranges but applies only the selected metric to requests and bookmarks', () => {
   const filters = emptyInheritanceFilters();
   filters.white = [{ factorId: 201600, minimumStars: 7, maximumStars: 9, minimumOccurrences: 3, maximumOccurrences: 3, metric: 'occurrences' }];
   filters.mainBlue = [{ factorId: 0, minimumStars: 2, maximumStars: 2 }, { factorId: 20, minimumStars: 3, maximumStars: 3, operator: 'or' }];
@@ -51,7 +51,8 @@ it('preserves both ranges and main-parent joins in saved filters, requests, and 
   const query = inheritanceSearchQuery(restored, 0, 12);
   expect(query.has('white_sparks')).toBe(false);
   expect(query.has('main_parent_blue_sparks')).toBe(false);
-  expect(query.get('uql')).toContain('2016007, 2016008, 2016009');
+  expect(query.get('uql')).not.toContain('2016007, 2016008, 2016009');
+  expect(query.get('uql')).toContain('main_white_factors');
   expect(query.get('uql')).toContain('main_blue_factors in (2) or main_blue_factors in (203)');
   expect(validateInheritanceUql(query.get('uql')!).state).toBe('valid');
   const record = normalizeInheritanceRecord({ account_id: 'a', trainer_name: 'Trainer', inheritance: {
@@ -60,19 +61,37 @@ it('preserves both ranges and main-parent joins in saved filters, requests, and 
   } })!;
   expect(bookmarkMatchesFilters(record, restored, true)).toBe(true);
   expect(bookmarkMatchesFilters({ ...record, rightWhite: [] }, restored, true)).toBe(false);
-  expect(bookmarkMatchesFilters({ ...record, whiteSparks: [2016006] }, restored, true)).toBe(false);
+  expect(bookmarkMatchesFilters({ ...record, whiteSparks: [2016006] }, restored, true)).toBe(true);
   expect(bookmarkMatchesFilters({ ...record, mainBlue: 103 }, restored, true)).toBe(false);
+
+  restored.white[0]!.metric = 'stars';
+  expect(inheritanceSearchQuery(restored, 0, 12).get('white_sparks')).toBe('2016007,2016008,2016009');
+  expect(inheritanceSearchQuery(restored, 0, 12).get('uql')).not.toContain('white_factors');
+  expect(bookmarkMatchesFilters({ ...record, rightWhite: [] }, restored, true)).toBe(true);
+  expect(bookmarkMatchesFilters({ ...record, whiteSparks: [2016006] }, restored, true)).toBe(false);
+
+  restored.white.push({ ...filters.white[0]! });
+  expect(inheritanceSearchQuery(restored, 0, 12).get('uql')).toContain('2016007, 2016008, 2016009');
+  expect(bookmarkMatchesFilters(record, restored, true)).toBe(true);
+  expect(bookmarkMatchesFilters({ ...record, rightWhite: [] }, restored, true)).toBe(false);
+  expect(bookmarkMatchesFilters({ ...record, whiteSparks: [2016006] }, restored, true)).toBe(false);
+
   restored.white = [];
-  restored.mainWhite = [{ factorId: 201600, minimumStars: 1, maximumStars: 3, minimumOccurrences: 0, maximumOccurrences: 0 }];
+  restored.mainWhite = [{ factorId: 201600, minimumStars: 1, maximumStars: 3, minimumOccurrences: 0, maximumOccurrences: 0, metric: 'occurrences' }];
   expect(bookmarkMatchesFilters({ ...record, mainWhite: [] }, restored, true)).toBe(true);
   expect(bookmarkMatchesFilters(record, restored, true)).toBe(false);
   restored.mainBlue.push({ factorId: 20, minimumStars: 3, maximumStars: 3, operator: 'and' });
   expect(bookmarkMatchesFilters({ ...record, mainWhite: [] }, restored, true)).toBe(false);
   restored.mainBlue = [];
   restored.mainWhite = [];
-  restored.blue = [{ factorId: 0, minimumStars: 3, maximumStars: 3, minimumOccurrences: 3, maximumOccurrences: 3 }];
-  expect(inheritanceSearchQuery(restored, 0, 12).get('uql')).toBe('(any_spark(blue_sparks, 3, 3, 3, 3))');
+  restored.blue = [{ factorId: 0, minimumStars: 3, maximumStars: 3, minimumOccurrences: 3, maximumOccurrences: 3, metric: 'occurrences' }];
+  expect(inheritanceSearchQuery(restored, 0, 12).get('uql')).toBe('(any_spark(blue_sparks, 1, 9, 3, 3))');
   expect(validateInheritanceUql(inheritanceSearchQuery(restored, 0, 12).get('uql')!).state).toBe('valid');
   expect(bookmarkMatchesFilters({ ...record, blueSparks: [103, 206], mainBlue: 103, leftBlue: 202, rightBlue: 202 }, restored, true)).toBe(false);
   expect(bookmarkMatchesFilters({ ...record, blueSparks: [103], mainBlue: 101, leftBlue: 101, rightBlue: 101 }, restored, true)).toBe(true);
+
+  restored.blue = [];
+  restored.white = [{ factorId: 201600, minimumStars: 9, maximumStars: 9, metric: 'occurrences' }];
+  expect(validateInheritanceUql(inheritanceSearchQuery(restored, 0, 12).get('uql')!).state).toBe('valid');
+  expect(bookmarkMatchesFilters({ ...record, whiteSparks: [], mainWhite: [], leftWhite: [], rightWhite: [] }, restored, true)).toBe(true);
 });

@@ -200,7 +200,7 @@
       "includePrior": true,
       "mode": "cumulative",
       "progression": "3c6a7d65caf7331124b140a479006bad974f761c65dbf667d56dd3592fca211f",
-      "calendar": "7ccd254511360ccc5123c9ec1201e3ca21a4764353d9e53e80628e9f3e00b861"
+      "calendar": "8122d507fd04aac5995108ba9e85f743c83306bc8c5eed0119d31076708bdbd5"
     },
     {
       "name": "legacy",
@@ -208,7 +208,7 @@
       "includePrior": true,
       "mode": "delta",
       "progression": "4a964778a9370ee7aa84d03a64cc4d3df165ae109b0691bec3c1415e3f3bfac9",
-      "calendar": "7ccd254511360ccc5123c9ec1201e3ca21a4764353d9e53e80628e9f3e00b861"
+      "calendar": "8122d507fd04aac5995108ba9e85f743c83306bc8c5eed0119d31076708bdbd5"
     },
     {
       "name": "legacy",
@@ -216,7 +216,7 @@
       "includePrior": false,
       "mode": "cumulative",
       "progression": "3c6a7d65caf7331124b140a479006bad974f761c65dbf667d56dd3592fca211f",
-      "calendar": "7ccd254511360ccc5123c9ec1201e3ca21a4764353d9e53e80628e9f3e00b861"
+      "calendar": "8122d507fd04aac5995108ba9e85f743c83306bc8c5eed0119d31076708bdbd5"
     },
     {
       "name": "legacy",
@@ -224,7 +224,7 @@
       "includePrior": false,
       "mode": "delta",
       "progression": "4a964778a9370ee7aa84d03a64cc4d3df165ae109b0691bec3c1415e3f3bfac9",
-      "calendar": "7ccd254511360ccc5123c9ec1201e3ca21a4764353d9e53e80628e9f3e00b861"
+      "calendar": "8122d507fd04aac5995108ba9e85f743c83306bc8c5eed0119d31076708bdbd5"
     },
     {
       "name": "legacy",
@@ -296,7 +296,7 @@
       "includePrior": true,
       "mode": "cumulative",
       "progression": "34a71626561068cab704c8b2c213ff7047303b41782b6ea3afa9f08299e36212",
-      "calendar": "5b2b616543289b2783c32d86f9ba40d478e1a1fbd5e63bf26811fefbe1285e17"
+      "calendar": "5fbc38d4fa8c0facc93d5d01e0f1c408931fdefe58763e9f1a656d35dbb76911"
     },
     {
       "name": "embedded",
@@ -304,7 +304,7 @@
       "includePrior": true,
       "mode": "delta",
       "progression": "6137c96d8c71ecd58187da897d87ca12baaaab0bb9479ac92c9a35b756538f7d",
-      "calendar": "5b2b616543289b2783c32d86f9ba40d478e1a1fbd5e63bf26811fefbe1285e17"
+      "calendar": "5fbc38d4fa8c0facc93d5d01e0f1c408931fdefe58763e9f1a656d35dbb76911"
     },
     {
       "name": "embedded",
@@ -312,7 +312,7 @@
       "includePrior": false,
       "mode": "cumulative",
       "progression": "34a71626561068cab704c8b2c213ff7047303b41782b6ea3afa9f08299e36212",
-      "calendar": "5b2b616543289b2783c32d86f9ba40d478e1a1fbd5e63bf26811fefbe1285e17"
+      "calendar": "5fbc38d4fa8c0facc93d5d01e0f1c408931fdefe58763e9f1a656d35dbb76911"
     },
     {
       "name": "embedded",
@@ -320,7 +320,7 @@
       "includePrior": false,
       "mode": "delta",
       "progression": "6137c96d8c71ecd58187da897d87ca12baaaab0bb9479ac92c9a35b756538f7d",
-      "calendar": "5b2b616543289b2783c32d86f9ba40d478e1a1fbd5e63bf26811fefbe1285e17"
+      "calendar": "5fbc38d4fa8c0facc93d5d01e0f1c408931fdefe58763e9f1a656d35dbb76911"
     },
     {
       "name": "embedded",
@@ -487,32 +487,32 @@
       "search": "",
       "includePrior": true,
       "mode": "cumulative",
-      "progression": "ff9c72a720e4891139bc633b309860b66901ff8649c4acc3d4e9d2c80ac968f7",
-      "calendar": "2a94c9b68e7f12d626d10ab4744d2e3c530539801c47adbdd069be024f71aff1"
+      "progression": "013b7d5a6a06fcfd52bc8101471a518f003b617370660b5a8eb9a61d0e9ccc9c",
+      "calendar": "b71e8d8fb15b2d9015f50c2b7d3daa1a44edc451ea5db5fa399a841f2418659c"
     },
     {
       "name": "mixed-tally",
       "search": "",
       "includePrior": true,
       "mode": "delta",
-      "progression": "03d58ba8b93fe83346a562d8fa5fb9f9318d809c97f64204615dcc22fea3bfc9",
-      "calendar": "2a94c9b68e7f12d626d10ab4744d2e3c530539801c47adbdd069be024f71aff1"
+      "progression": "4bf0052c132e465ca164199dda6beae89b1b71a5647f2e6db91b846f9f548015",
+      "calendar": "b71e8d8fb15b2d9015f50c2b7d3daa1a44edc451ea5db5fa399a841f2418659c"
     },
     {
       "name": "mixed-tally",
       "search": "",
       "includePrior": false,
       "mode": "cumulative",
-      "progression": "82910843663ddafec1ed7538289033ae1eaae6b4fa33638886389bfcc0f6a658",
-      "calendar": "2a94c9b68e7f12d626d10ab4744d2e3c530539801c47adbdd069be024f71aff1"
+      "progression": "1ca0c3632c21a749f801e0cc6a86df31dbb298927c177196f7d1c6a93fddf822",
+      "calendar": "b71e8d8fb15b2d9015f50c2b7d3daa1a44edc451ea5db5fa399a841f2418659c"
     },
     {
       "name": "mixed-tally",
       "search": "",
       "includePrior": false,
       "mode": "delta",
-      "progression": "7e00bdd3c8762f7892e5f8879544e884925c5f70c0c9ea6eedecff62afd41ecd",
-      "calendar": "2a94c9b68e7f12d626d10ab4744d2e3c530539801c47adbdd069be024f71aff1"
+      "progression": "3c6b709d92ff5e0535c60ee7735b34daefdf2f9e662564ed7c207dfb3ed4849b",
+      "calendar": "b71e8d8fb15b2d9015f50c2b7d3daa1a44edc451ea5db5fa399a841f2418659c"
     },
     {
       "name": "mixed-tally",
@@ -551,32 +551,32 @@
       "search": "7001",
       "includePrior": true,
       "mode": "cumulative",
-      "progression": "85cc241ec99327c5a4725ae23d5da68eae1f141968fc2e106567ff85d3dc4c85",
-      "calendar": "76d00529c7681c503379409f7e9d897d97f12162b73102c52e25405ed6b9ea03"
+      "progression": "b0f73b2ae777b24b15ece3bae31beec1e3196ef22598edea1e2e9d8f57b31dce",
+      "calendar": "afd8e14157a8b64019ef37bb862560019200d194d9930ab1fd676341107192bc"
     },
     {
       "name": "mixed-tally",
       "search": "7001",
       "includePrior": true,
       "mode": "delta",
-      "progression": "5f2ee40ec0752d1950d81f7da9a8927740f1a8abff5c25cb3106d6d130bbc6a4",
-      "calendar": "76d00529c7681c503379409f7e9d897d97f12162b73102c52e25405ed6b9ea03"
+      "progression": "32b7b7d1dee834f312f15a1fbf827e638ec3bab7ee07473cf3910fccdfcb5f58",
+      "calendar": "afd8e14157a8b64019ef37bb862560019200d194d9930ab1fd676341107192bc"
     },
     {
       "name": "mixed-tally",
       "search": "7001",
       "includePrior": false,
       "mode": "cumulative",
-      "progression": "85cc241ec99327c5a4725ae23d5da68eae1f141968fc2e106567ff85d3dc4c85",
-      "calendar": "76d00529c7681c503379409f7e9d897d97f12162b73102c52e25405ed6b9ea03"
+      "progression": "b0f73b2ae777b24b15ece3bae31beec1e3196ef22598edea1e2e9d8f57b31dce",
+      "calendar": "afd8e14157a8b64019ef37bb862560019200d194d9930ab1fd676341107192bc"
     },
     {
       "name": "mixed-tally",
       "search": "7001",
       "includePrior": false,
       "mode": "delta",
-      "progression": "5f2ee40ec0752d1950d81f7da9a8927740f1a8abff5c25cb3106d6d130bbc6a4",
-      "calendar": "76d00529c7681c503379409f7e9d897d97f12162b73102c52e25405ed6b9ea03"
+      "progression": "32b7b7d1dee834f312f15a1fbf827e638ec3bab7ee07473cf3910fccdfcb5f58",
+      "calendar": "afd8e14157a8b64019ef37bb862560019200d194d9930ab1fd676341107192bc"
     },
     {
       "name": "all-missing",
@@ -770,5 +770,8 @@
       "progression": "bd9902e91547ffd2f6cdc598391f3018e226969f48dd6a00dd4e6464aac65333",
       "calendar": "78c565492a633ef085b90ad436a572a66246f4cb78169e118cc7bf000adda182"
     }
-  ]
+  ],
+  "corrections": {
+    "departedMemberMonthEndGains": "2026-10-06"
+  }
 }

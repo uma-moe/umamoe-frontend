@@ -1,5 +1,5 @@
 import { decodeFactor } from '@/lib/catalog/factor-catalog';
-import { excludedMainParentIds, type FactorRequirement, type InheritanceRecord, type InheritanceSearchFilters } from '@/lib/inheritance/inheritance-search';
+import { activeFactorRequirement, excludedMainParentIds, type FactorRequirement, type InheritanceRecord, type InheritanceSearchFilters } from '@/lib/inheritance/inheritance-search';
 
 export type BookmarkStatusFilter = 'all' | 'unchanged' | 'modified';
 
@@ -36,7 +36,7 @@ function factorMatches(encoded: number, requirement: FactorRequirement): boolean
 function matchesRequirements(values: Array<number | undefined>, requirements: FactorRequirement[], slots: Array<Array<number | undefined>> = [values]): boolean {
   const factors = values.filter((value): value is number => Number.isFinite(value));
   const groups: FactorRequirement[][] = [];
-  for (const requirement of requirements.filter((entry) => Number.isFinite(entry.factorId) && entry.factorId >= 0)) {
+  for (const requirement of requirements.map(activeFactorRequirement).filter((entry) => Number.isFinite(entry.factorId) && entry.factorId >= 0)) {
     if (requirement.operator === 'or' && groups.length) groups[groups.length - 1]!.push(requirement);
     else groups.push([requirement]);
   }
@@ -45,9 +45,7 @@ function matchesRequirements(values: Array<number | undefined>, requirements: Fa
     const ids = requirement.factorId === 0 ? factors.filter(value => Math.abs(value) >= 10).map(value => decodeFactor(Math.abs(value)).id) : [requirement.factorId];
     return ids.some(factorId => {
       const count = slots.filter(slot => slot.some(value => value !== undefined && decodeFactor(Math.abs(value)).id === factorId)).length;
-      const constrainedStars = requirement.minimumStars > 1 || (requirement.maximumStars ?? (slots.length === 1 ? 3 : 9)) < (slots.length === 1 ? 3 : 9);
-      return count >= (requirement.minimumOccurrences ?? 0) && count <= (requirement.maximumOccurrences ?? slots.length)
-        && (!constrainedStars || factors.some(value => factorMatches(value, { ...requirement, factorId })));
+      return count >= (requirement.minimumOccurrences ?? 0) && count <= (requirement.maximumOccurrences ?? slots.length);
     });
   }));
 }

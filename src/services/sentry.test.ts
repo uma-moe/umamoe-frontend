@@ -1,17 +1,22 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import * as Sentry from '@sentry/svelte';
-import { initializeSentry } from './sentry';
+import { initializeSentry, withVerificationTiming } from './sentry';
 import { sentryOptions } from './sentry-options';
+import { withPageRequest } from './http/page-request';
 
 vi.mock('@sentry/svelte', async importOriginal => ({
   ...await importOriginal<typeof Sentry>(),
   init: vi.fn(),
   captureException: vi.fn(),
+  browserTracingIntegration: vi.fn((await importOriginal<typeof Sentry>()).browserTracingIntegration),
+  startInactiveSpan: vi.fn(() => ({ setStatus: vi.fn(), end: vi.fn() })),
+  reportPageLoaded: vi.fn(),
 }));
 
-afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); document.head.innerHTML = ''; delete document.documentElement.dataset.appPhase; });
+afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); vi.useRealTimers(); document.head.innerHTML = ''; delete document.documentElement.dataset.appPhase; });
 
 it('keeps local monitoring off and captures startup and Svelte boundary errors with the deployed version', async () => {
+  vi.useFakeTimers();
   vi.stubEnv('MODE', 'development');
   await initializeSentry();
   expect(Sentry.init).not.toHaveBeenCalled();
@@ -22,6 +27,9 @@ it('keeps local monitoring off and captures startup and Svelte boundary errors w
   const startupError = new Error('Startup failure');
   window.dispatchEvent(new ErrorEvent('error', { error: startupError }));
   await initialized;
+  // Complete this initialization's paint callback before teardown clears its spies.
+  await vi.advanceTimersByTimeAsync(50);
+  expect(Sentry.reportPageLoaded).toHaveBeenCalledOnce();
   expect(Sentry.captureException).toHaveBeenCalledWith(startupError);
   expect(Sentry.init).toHaveBeenCalledWith(expect.objectContaining({ release: '2.1.400' }));
   const integrations = vi.mocked(Sentry.init).mock.calls[0]![0]!.integrations;
@@ -47,11 +55,35 @@ it('keeps local monitoring off and captures startup and Svelte boundary errors w
   listener.mockRestore();
 });
 
+it('measures verification separately and ends the named pageload after critical data paints', async () => {
+  vi.useFakeTimers(); vi.stubEnv('MODE', 'beta');
+  history.replaceState(null, '', '/circles/123?token=private');
+  let release!: () => void;
+  const data = withPageRequest(() => withVerificationTiming('challenge', () => new Promise<void>(resolve => release = resolve)));
+  await initializeSentry();
+  const options = vi.mocked(Sentry.browserTracingIntegration).mock.calls.at(-1)![0]!;
+  expect(options.enableReportPageLoaded).toBe(true);
+  expect(options.beforeStartSpan!({ name: 'Pageload', op: 'pageload' }).name).toBe('/circles/:id');
+  await vi.advanceTimersByTimeAsync(6000);
+  expect(Sentry.reportPageLoaded).not.toHaveBeenCalled();
+  release(); await data;
+  expect(Sentry.startInactiveSpan).toHaveBeenCalledWith(expect.objectContaining({ op: 'browser.verification.challenge', attributes: { 'url.path': '/circles/:id' } }));
+  expect(vi.mocked(Sentry.startInactiveSpan).mock.results.at(-1)!.value.setStatus).toHaveBeenCalledWith({ code: 1 });
+  await vi.advanceTimersByTimeAsync(50);
+  expect(Sentry.reportPageLoaded).toHaveBeenCalledOnce();
+  await expect(withVerificationTiming('exchange', async () => { throw new Error('private failure'); })).rejects.toThrow('private failure');
+  expect(vi.mocked(Sentry.startInactiveSpan).mock.results.at(-1)!.value.setStatus).toHaveBeenCalledWith({ code: 2 });
+  expect(JSON.stringify(vi.mocked(Sentry.startInactiveSpan).mock.calls)).not.toContain('private');
+});
+
 it('adds provider labels without guessing ownership from a URL embedded in an error', async () => {
   for (const [host, vendor] of [
     ['cdn.fuseplatform.net', 'publift'], ['imasdk.googleapis.com', 'google-ads'],
     ['cdn.doubleverify.com', 'doubleverify'], ['id5-sync.com', 'id5'],
     ['cmp.inmobi.com', 'inmobi'], ['www.google-analytics.com', 'google-analytics'],
+    ['ajs-assets.ftstatic.com', 'flashtalking'], ['fw.adsafeprotected.com', 'ias'],
+    ['resources.infolinks.com', 'infolinks'], ['rumcdn.geoedge.be', 'geoedge'],
+    ['api.btloader.com', 'ad-recovery'], ['hb-api.omnitagjs.com', 'prebid'],
   ]) {
     const result = await sentryOptions.beforeSend!({ type: undefined, tags: { third_party_code: true }, exception: { values: [{ stacktrace: { frames: [{ filename: `https://${host}/synthetic.js?private=1`, lineno: 1 }] } }] } }, {});
     expect(result?.tags).toMatchObject({ 'error.provider': vendor, 'error.source': 'third-party' });
@@ -73,13 +105,43 @@ it('correlates failed requests by error identity and records safe request and ca
   expect(result?.contexts?.failed_request).toMatchObject({ url: location.origin + '/search/query', duration_ms: 15, method: 'GET', online: true });
   expect(result?.contexts?.browser_capabilities).toHaveProperty('array_to_sorted');
   const vendor = await sentryOptions.beforeSend!({ type: undefined }, { originalException: second });
-  expect(vendor?.tags).toMatchObject({ 'error.provider': 'publift', 'network.target': 'external', 'error.source': 'unknown' });
+  expect(vendor?.tags).toMatchObject({ 'error.provider': 'publift', 'network.target': 'external', 'error.source': 'third-party', third_party_code: true });
   expect(JSON.stringify(vendor?.contexts?.failed_request)).not.toMatch(/secret|password|user:/);
+  const apiWithVendorFrame = await sentryOptions.beforeSend!({ type: undefined, exception: { values: [{ stacktrace: { frames: [{ filename: 'https://cdn.fuseplatform.net/synthetic.js', lineno: 1 }] } }] } }, { originalException: first });
+  expect(apiWithVendorFrame?.tags?.['network.target']).toBe('api');
+  expect(apiWithVendorFrame?.tags?.['error.actionability']).toBeUndefined();
   const unrelated = await sentryOptions.beforeSend!({ type: undefined }, { originalException: new TypeError('Load failed') });
   expect(unrelated?.contexts?.failed_request).toBeUndefined();
   const module = await sentryOptions.beforeSend!({ type: undefined, tags: { third_party_code: true, 'error.kind': 'module-load' } }, {});
   expect(module?.tags).toMatchObject({ 'error.kind': 'module-load', 'error.source': 'application' });
   expect(module?.tags?.third_party_code).toBeUndefined();
+});
+
+it('classifies provider-only callbacks without excluding application frames or verification failures', async () => {
+  const vendor = { filename: 'https://ajs-assets.ftstatic.com/synthetic.js', lineno: 1 };
+  const application = { filename: location.origin + '/app/synthetic.js', lineno: 1 };
+  const wrapper = { ...application, function: 'sentryWrapped' };
+  for (const [frames, source] of [[[wrapper, vendor], 'third-party'], [[application, vendor], 'mixed']] as const) {
+    const result = await sentryOptions.beforeSend!({ type: undefined, exception: { values: [{ stacktrace: { frames: [...frames] } }] } }, {});
+    expect(result?.tags?.['error.source']).toBe(source);
+    expect(Boolean(result?.tags?.third_party_code)).toBe(source === 'third-party');
+  }
+  const spoofed = await sentryOptions.beforeSend!({ type: undefined, exception: { values: [{ stacktrace: { frames: [{ filename: 'https://ftstatic.com.invalid/synthetic.js', lineno: 1 }] } }] } }, {});
+  expect(spoofed?.tags?.['error.provider']).toBeUndefined();
+  // These are the minified fetch/XHR wrappers seen in the production incidents.
+  for (const filename of [location.origin + '/app/sentry-sdk-test.js', '../node_modules/@sentry/core/build/esm/instrument/fetch.js']) {
+    const event = await sentryOptions.beforeSend!({ type: undefined, exception: { values: [{ stacktrace: { frames: [{ filename, function: 'n', lineno: 1 }, vendor] } }] } }, {});
+    expect(event?.tags).toMatchObject({ 'error.source': 'third-party', 'error.actionability': 'provider', 'error.provider': 'flashtalking' });
+    const mixed = await sentryOptions.beforeSend!({ type: undefined, tags: { third_party_code: true }, exception: { values: [{ stacktrace: { frames: [application, { filename, lineno: 1 }, vendor] } }] } }, {});
+    expect(mixed?.tags?.['error.source']).toBe('mixed');
+    expect(mixed?.tags?.['error.actionability']).toBeUndefined();
+    expect(mixed?.tags?.third_party_code).toBeUndefined();
+  }
+  const critical = await sentryOptions.beforeSend!({ type: undefined, exception: { values: [{ type: 'TurnstileError', stacktrace: { frames: [wrapper, vendor] } }] } }, {});
+  expect(critical).not.toBeNull();
+  expect(critical?.tags?.['error.actionability']).toBeUndefined();
+  const missingLines = await sentryOptions.beforeSend!({ type: undefined, exception: { values: [{ stacktrace: { frames: [{ filename: 'https://staticjs.adsafeprotected.com/fw.js' }] } }] } }, {});
+  expect(missingLines?.tags).toMatchObject({ 'error.stack': 'missing', 'error.source': 'third-party', 'error.actionability': 'provider', 'error.provider': 'ias' });
 });
 
 it('keeps verification failures and errors with no usable stack in the critical error stream', async () => {

@@ -5,7 +5,7 @@
     {
       "id": "home",
       "title": "Home",
-      "description": "Umamusume resource hub for the global version.",
+      "description": "Uma database for Umamusume: Pretty Derby Global. Find friends, trainer IDs and inheritance parents, compare support cards, and plan banners and carats.",
       "path": "/",
       "group": "main",
       "icon": "home",
@@ -20,7 +20,7 @@
     {
       "id": "database",
       "title": "Database",
-      "description": "Find optimal inheritance pairings and support cards for Uma Musume.",
+      "description": "Find Uma Musume Global friends, trainer IDs and inheritance parents. Filter sparks, factors, G1 wins and affinity, or find support cards to borrow.",
       "path": "/database",
       "group": "main",
       "icon": "database",
@@ -35,7 +35,7 @@
     {
       "id": "clubs",
       "title": "Clubs",
-      "description": "Club database and fan progression.",
+      "description": "Search Uma Musume Global clubs and compare leaderboard rank, total fans, daily gains, members, and recruitment policies.",
       "path": "/circles",
       "group": "community",
       "icon": "community",
@@ -50,7 +50,7 @@
     {
       "id": "rankings",
       "title": "Rankings",
-      "description": "Global trainer fan rankings.",
+      "description": "Search and compare Uma Musume Global trainer rankings, monthly fan totals, all-time performance, and recent fan gains.",
       "path": "/rankings",
       "group": "community",
       "icon": "rankings",
@@ -65,7 +65,7 @@
     {
       "id": "activity",
       "title": "Activity",
-      "description": "Top 100 club activity reports.",
+      "description": "Review activity patterns and evidence-based reports for top Uma Musume Global clubs and trainers.",
       "path": "/activity",
       "group": "community",
       "icon": "activity",
@@ -80,7 +80,7 @@
     {
       "id": "tierlist",
       "title": "Tierlist",
-      "description": "Support card tierlist.",
+      "description": "Compare Uma Musume support cards with a data-driven Global tier list, limit-break controls, type rankings, and performance details.",
       "path": "/tierlist",
       "group": "main",
       "icon": "tierlist",
@@ -95,7 +95,7 @@
     {
       "id": "tools",
       "title": "Tools",
-      "description": "Advanced tools and statistics.",
+      "description": "Free Uma Musume calculators and tools for affinity, inheritance lineages, Team Stadium statistics, carat planning, and Global release tracking.",
       "path": "/tools",
       "group": "tools",
       "icon": "tools",
@@ -110,7 +110,7 @@
     {
       "id": "statistics",
       "title": "Statistics",
-      "description": "Team Stadium statistics.",
+      "description": "Explore Uma Musume Team Stadium usage, support card performance, character trends, and score statistics for the Global version.",
       "path": "/tools/statistics",
       "group": "tools",
       "icon": "chart",
@@ -125,7 +125,7 @@
     {
       "id": "lineage-planner",
       "title": "Lineage Planner",
-      "description": "Optimize inheritance trees and parent pairings.",
+      "description": "Calculate Uma Musume affinity and compatibility, compare parents, add shared G1 wins, estimate spark inheritance odds, and plan a complete lineage tree.",
       "path": "/tools/lineage-planner",
       "group": "tools",
       "icon": "lineage",
@@ -140,7 +140,7 @@
     {
       "id": "timeline",
       "title": "Timeline",
-      "description": "Global content releases, pickups, and events.",
+      "description": "Browse the estimated Uma Musume Global banner and event schedule. Track character and support card releases, story events and races, and plan carats.",
       "path": "/timeline",
       "group": "main",
       "icon": "timeline",
@@ -155,7 +155,7 @@
     {
       "id": "privacy",
       "title": "Privacy",
-      "description": "Privacy policy.",
+      "description": "Read the uma.moe privacy policy and learn how the Uma Musume resource hub handles accounts, analytics, cookies, and personal data.",
       "path": "/privacy-policy",
       "group": "system",
       "icon": "info",

@@ -3,7 +3,7 @@ import { get } from 'svelte/store';
 const request = vi.hoisted(() => vi.fn());
 vi.mock('@/services/http/app-http', () => ({ appHttp: { request } }));
 beforeEach(() => { vi.resetModules(); request.mockReset(); localStorage.setItem('auth_token', 'first'); });
-afterEach(() => localStorage.clear());
+afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
 
 it('starts account discovery alongside session verification without showing an unverified user', async () => {
   let verify!: (value: unknown) => void;
@@ -33,4 +33,21 @@ it('shares account reads and refreshes them after writes, explicit refresh, or a
   localStorage.setItem('auth_token', 'second');
   await repo.linkedAccounts();
   expect(request).toHaveBeenCalledTimes(9);
+});
+
+it('finishes startup and keeps sign-in and logout usable when storage access is denied', async () => {
+  const blocked = vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => { throw new DOMException('Storage blocked', 'SecurityError'); });
+  const { initializeAuth, completeLogin, authReady } = await import('./auth-state');
+  const { getAuthToken, clearAuthToken } = await import('./auth-token');
+  await initializeAuth();
+  expect(get(authReady)).toBe(true);
+  expect(request).not.toHaveBeenCalled();
+  request.mockImplementation(path => Promise.resolve(path.endsWith('/me') ? { id: 'owner', display_name: 'Owner' } : []));
+  await completeLogin(' temporary-token ');
+  expect(getAuthToken()).toBe('temporary-token');
+  clearAuthToken();
+  expect(getAuthToken()).toBeUndefined();
+  blocked.mockRestore();
+  // A failed storage removal must not resurrect a previous persisted session.
+  expect(getAuthToken()).toBeUndefined();
 });
