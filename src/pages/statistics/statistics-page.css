@@ -1,0 +1,689 @@
+.statistics-content {
+  min-width: 0;
+  container: statistics / inline-size;
+}
+.dataset-select {
+  width: 290px;
+  flex: none;
+}
+.dataset-select > small {
+  display: block;
+  margin-top: 4px;
+  text-align: right;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.dataset-summary {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 1fr;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--card-surface-bg);
+  margin-bottom: 10px;
+  padding: 8px 14px;
+}
+.dataset-summary > div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 1px 10px;
+  padding-inline: 18px;
+}
+.dataset-summary > div:first-child {
+  padding-left: 0;
+}
+.dataset-summary > div + div {
+  border-left: 1px solid var(--border-subtle);
+}
+.dataset-summary strong {
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+.dataset-summary .sample-summary strong {
+  color: var(--accent-primary);
+  font-size: 24px;
+}
+.dataset-summary strong small {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.dataset-summary span {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.dataset-summary .summary-label {
+  grid-column: 1/-1;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+.workspace-navigation {
+  position: sticky;
+  top: var(--utility-height);
+  z-index: 10;
+  background: var(--document-bg);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 14px;
+}
+.workspace-navigation :global(.tabs) {
+  flex: 0 1 auto;
+}
+.scope-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  flex: 1 1 300px;
+  justify-content: flex-end;
+}
+.scope-controls {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.scope-copy {
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.scope-controls > :global(button) {
+  flex: none;
+}
+.content-area {
+  padding-top: 6px;
+  scroll-margin-top: 64px;
+  min-height: 540px;
+}
+.content-area:focus {
+  outline: none;
+}
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.section-heading h2,
+.character-heading h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+.section-heading p {
+  max-width: 70ch;
+  margin: 3px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.context-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: right;
+  flex: none;
+}
+.overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.3fr) minmax(0, 0.85fr);
+  grid-auto-rows: 1fr;
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 12px;
+}
+.overview-grid > :global(.ranking),
+.overview-grid > :global(.deck-matrix),
+.distance-breakdown {
+  height: 100%;
+  min-width: 0;
+}
+.overview-grid :global(.ranking > .chart-frame),
+.overview-grid :global(.deck-matrix > .chart-frame),
+.distance-breakdown > :global(.chart-frame) {
+  height: 100%;
+  box-sizing: border-box;
+}
+.overview-grid :global(.ranking > .chart-frame > figcaption),
+.overview-grid :global(.deck-matrix > .chart-frame > figcaption),
+.distance-breakdown :global(.chart-frame > figcaption),
+.profile-heading {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.training-profile {
+  display: flex;
+  flex-direction: column;
+}
+.training-profile :global(.statistics-chart),
+.training-profile :global(.lazy-surface),
+.training-profile :global(.lazy-surface > figure) {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.training-profile :global(.statistics-chart > .chart-frame) {
+  flex: 1;
+}
+.training-profile :global(.chart-host) {
+  height: auto;
+  min-height: 260px;
+  flex: 1;
+}
+.stack {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.training-profile {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--card-surface-bg);
+}
+.profile-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.profile-heading h3 {
+  margin: 0;
+  font-size: 13px;
+}
+.profile-heading :global(button) {
+  font-size: 11px;
+  min-height: 32px;
+  padding: 0 9px;
+  font-weight: 600;
+}
+.panel-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.training-profile :global(.statistics-chart .chart-frame) {
+  padding: 10px 0 0;
+  border: 0;
+  background: transparent;
+}
+.training-profile :global(.statistics-chart figcaption) {
+  padding-bottom: 0;
+  border: 0;
+}
+.training-profile :global(.stats > div) {
+  min-height: 38px;
+}
+.training-profile :global(.stats dd) {
+  font-size: 15px;
+}
+.training-profile :global(.stats dt) {
+  font-size: 9px;
+}
+.distance-breakdown {
+  min-width: 0;
+}
+.distance-breakdown :global(.chart-frame) {
+  padding: 12px;
+  border-radius: var(--radius-md);
+}
+.distance-breakdown :global(figcaption) {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.distance-breakdown :global(h3) {
+  font-size: 13px;
+}
+.distance-breakdown :global(.plot) {
+  min-height: 0;
+}
+.distance-rows {
+  display: grid;
+}
+.distance-row {
+  padding: 5px 0;
+}
+.distance-row + .distance-row {
+  border-top: 1px solid var(--border-subtle);
+}
+.distance-metric {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 5px 8px;
+}
+.distance-metric > strong {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+}
+.distance-metric > strong i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--distance-color);
+}
+.distance-metric > span {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.distance-metric :global(.metric) {
+  grid-column: 1/-1;
+}
+.distance-metric :global(.fill) {
+  background: var(--distance-color);
+}
+.distance-leader {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  border: 0;
+  border-radius: 3px;
+  padding: 4px 0 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.distance-leader:hover {
+  color: var(--accent-primary);
+  background: var(--color-accent-soft);
+}
+.distance-leader img {
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+.distance-leader span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.distance-leader strong {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 500;
+}
+.fine-print {
+  margin: 6px 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.class-mix {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--card-surface-bg);
+}
+.mix-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+}
+.mix-heading span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.mix-track {
+  height: 6px;
+  display: flex;
+  gap: 2px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--surface-2);
+  margin: 8px 0;
+}
+.mix-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.mix-legend > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.mix-legend i {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+}
+.mix-legend strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.distance-focus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 8px;
+}
+.distance-focus > span {
+  color: var(--text-muted);
+  font-size: 10px;
+  flex: none;
+}
+.distance-focus :global(.segments) {
+  padding: 2px;
+}
+.distance-focus :global(.segments button) {
+  min-height: 28px;
+  padding-inline: 12px;
+  font-size: 11px;
+}
+.two-columns > :global(.statistics-chart),
+.two-columns > :global(.ranking) {
+  display: flex;
+  flex-direction: column;
+}
+.two-columns > :global(.statistics-chart) :global(.chart-frame),
+.two-columns > :global(.ranking) :global(.chart-frame) {
+  flex: 1;
+}
+.two-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-block: 12px;
+}
+.support-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.type-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.type-filters :global(button) {
+  min-height: 32px;
+  padding-inline: 10px;
+  font-size: 11px;
+}
+.type-metrics {
+  display: grid;
+  gap: 10px;
+  padding: 8px 2px;
+}
+.type-metrics > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+.type-metrics > p {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.stack :global(.chart-frame) {
+  padding: 12px;
+}
+.stack > :global(.ranking) {
+  height: auto;
+}
+.explanation {
+  display: flex;
+  gap: 8px;
+  align-items: start;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+}
+.explanation > :global(svg) {
+  flex: none;
+  color: var(--accent-primary);
+}
+.explanation p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.distribution-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+.stat-overview {
+  max-width: 100%;
+  margin: 12px 0;
+}
+.stat-overview :global(.stats > div) {
+  min-height: 48px;
+}
+.stat-overview :global(dd) {
+  font-size: 18px;
+}
+.stat-overview :global(dt) {
+  font-size: 10px;
+}
+.section-gap {
+  margin-top: 12px;
+}
+.subheading {
+  font-size: 16px;
+  margin: 18px 0 0;
+}
+.character-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 12px;
+}
+.character-heading > img {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  object-fit: cover;
+}
+.character-heading h2 {
+  margin-top: 4px;
+  font-size: 23px;
+}
+.character-heading p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.loading {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+footer {
+  display: flex;
+  align-items: start;
+  justify-content: center;
+  gap: 7px;
+  padding: 16px 0;
+  color: var(--text-muted);
+}
+footer > :global(svg) {
+  flex: none;
+  margin-top: 1px;
+}
+footer p {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.6;
+}
+@container statistics (max-width:950px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .scope-bar {
+    justify-content: space-between;
+  }
+  .content-area {
+    scroll-margin-top: 114px;
+  }
+}
+@container statistics (max-width:700px) {
+  .overview-grid,
+  .support-grid,
+  .two-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .overview-grid {
+    grid-auto-rows: auto;
+  }
+  .dataset-summary > div {
+    padding-inline: 10px;
+  }
+  .dataset-summary > div > span:last-child {
+    grid-column: 1/-1;
+  }
+  .context-label {
+    display: none;
+  }
+  .distance-focus {
+    display: block;
+  }
+  .distance-focus > span {
+    display: none;
+  }
+  .distance-focus :global(.segments) {
+    width: 100%;
+  }
+  .distance-focus :global(.segments button) {
+    flex: 1;
+    padding-inline: 10px;
+  }
+  .training-profile {
+    padding-inline: 10px;
+  }
+}
+@media (max-width: 600px) {
+  .dataset-select {
+    width: 100%;
+  }
+  .dataset-select > small {
+    display: none;
+  }
+  .dataset-select :global(.field) {
+    gap: 3px;
+  }
+  .dataset-summary {
+    padding: 8px 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 6px;
+  }
+  .dataset-summary > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-inline: 8px;
+  }
+  .dataset-summary strong,
+  .dataset-summary .sample-summary strong {
+    font-size: 20px;
+  }
+  .dataset-summary strong small {
+    font-size: 11px;
+  }
+  .dataset-summary span {
+    font-size: 9px;
+  }
+  .dataset-summary .summary-label {
+    font-size: 9px;
+  }
+  .scope-bar {
+    padding: 4px 0;
+    gap: 4px;
+    justify-content: space-between;
+  }
+  .scope-controls {
+    gap: 8px;
+  }
+  .scope-copy {
+    font-size: 10px;
+    max-height: 42px;
+    overflow: auto;
+  }
+  .scope-bar > :global(button) {
+    font-size: 10px;
+    flex: none;
+    padding-inline: 6px;
+  }
+  .content-area {
+    padding-top: 6px;
+    scroll-margin-top: 114px;
+  }
+  .section-heading {
+    margin-bottom: 10px;
+  }
+  .section-heading h2 {
+    font-size: 18px;
+  }
+  .section-heading p {
+    font-size: 11px;
+  }
+  .distribution-controls {
+    gap: 6px;
+  }
+  .distribution-controls > :global(.segments):first-child {
+    width: 100%;
+  }
+  .distribution-controls :global(.segments button) {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 9px;
+    font-size: 12px;
+  }
+  .stat-overview :global(.stats > div) {
+    min-height: 48px;
+  }
+  .stat-overview :global(dd) {
+    font-size: 17px;
+  }
+  .stat-overview :global(dt) {
+    font-size: 8px;
+  }
+  .workspace-navigation {
+    gap: 0;
+  }
+}

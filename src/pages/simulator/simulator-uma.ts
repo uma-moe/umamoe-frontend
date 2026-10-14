@@ -3,8 +3,8 @@ import type { Build, Summary } from '@/pages/competitive/hakuraku-types';
 import type { RaceRunner } from '@/lib/race/race-capture-parser';
 import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
 import { aptitudeGrade } from '@/lib/profile/profile-display';
-import { createTrainee, RUNNING_STYLES, traineeStats, type Trainee } from './trainee';
-import type { MonteCarloSkillInput } from './race-sim-request';
+import { createTrainee, RUNNING_STYLES, traineeStats, type Trainee } from './setup/trainee';
+import type { MonteCarloSkillInput } from './requests/race-sim-request';
 
 export interface SimulatorUma {
   id: string;

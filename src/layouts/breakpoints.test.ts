@@ -4,7 +4,6 @@ import path from 'node:path';
 import { PAGE_LAYOUT, REVIEW_VIEWPORTS, SCREEN_BREAKPOINTS, shellLayoutForWidth } from './breakpoints';
 import adRegionSource from './AdRegion.svelte?raw';
 import pageFrameSource from './PageFrame.svelte?raw';
-import responsiveLayoutSource from './ResponsiveLayout.svelte?raw';
 
 const tokenSource = readFileSync(path.join(process.cwd(), 'src', 'styles', 'tokens.css'), 'utf8');
 
@@ -27,9 +26,9 @@ describe('screen layout contract', () => {
     ]);
   });
 
-  it('keeps responsive layout container thresholds aligned with the screen contract', () => {
-    expect(responsiveLayoutSource).toContain(`min-width: ${SCREEN_BREAKPOINTS.compact}px`);
-    expect(responsiveLayoutSource).toContain(`min-width: ${SCREEN_BREAKPOINTS.expanded}px`);
+  it('keeps page frame container thresholds aligned with the screen contract', () => {
+    expect(pageFrameSource).toContain(`min-width: ${SCREEN_BREAKPOINTS.compact}px`);
+    expect(pageFrameSource).toContain(`min-width: ${SCREEN_BREAKPOINTS.expanded}px`);
   });
 
   it('locks page gutters and partner ad geometry into the layout component', () => {

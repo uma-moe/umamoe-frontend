@@ -122,8 +122,13 @@ export const router = createRouter({
   ...productRoutes,
   '/ui': { meta: { loadPage: () => import('@/pages/ui/UiLabPage.svelte') }, '/': DeferredPage },
   '/ui-lab': { meta: { loadPage: () => import('@/pages/ui/UiLabPage.svelte') }, '/': DeferredPage },
-  '/simulator': { meta: { loadPage: () => import('@/pages/simulator/SimulatorPage.svelte') }, '/': DeferredPage },
-  '/simulator/race': { meta: { loadPage: () => import('@/pages/simulator/RaceSimPage.svelte') }, '/': DeferredPage },
-  '/simulator/build': { meta: { loadPage: () => import('@/pages/simulator/BuildPage.svelte') }, '/': DeferredPage },
+  // The simulator tabs share one layout, so the heading and tabs stay while the tab below changes. Each tab's code
+  // loads before the switch; the layout warms all three, so switching shows the next tab at once.
+  '/simulator': {
+    layout: () => import('@/pages/simulator/shell/SimulatorLayout.svelte'),
+    '/': () => import('@/pages/simulator/SimulatorPage.svelte'),
+    '/race': () => import('@/pages/simulator/RaceSimPage.svelte'),
+    '/build': () => import('@/pages/simulator/BuildPage.svelte')
+  },
   '/simulator/debug': { meta: { loadPage: () => import('@/pages/simulator/SimulatorDebugPage.svelte') }, '/': DeferredPage }
 });

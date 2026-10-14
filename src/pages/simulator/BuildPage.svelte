@@ -1,32 +1,46 @@
 <script lang="ts">
-  import Banner from '@/components/Banner.svelte';
-  import Button from '@/components/Button.svelte';
-  import SelectField from '@/components/SelectField.svelte';
-  import TextField from '@/components/TextField.svelte';
-  import SimulatorPageFrame from './shell/SimulatorPageFrame.svelte';
-  import { describeCourse, trackName } from '@/lib/catalog/course-catalog';
-  import { RACE_TYPE_OPTIONS, raceTypeLabel } from './simulator-race-types';
+  import { onMount } from 'svelte';
+  import Banner from '@/components/feedback/Banner.svelte';
+  import Button from '@/components/controls/Button.svelte';
+  import SelectField from '@/components/controls/SelectField.svelte';
+  import TextField from '@/components/controls/TextField.svelte';
+  import SkillChip from '@/components/game/SkillChip.svelte';
+  import {
+    loadSkillCatalog,
+    skillImage,
+    skillRarity,
+    type SkillCatalogEntry
+  } from '@/lib/catalog/skill-catalog';
   import {
     buildOptimizeRequest,
     MAX_CANDIDATES,
     MAX_FINALISTS,
     OPTIMIZE_MODES,
-    type OptimizeMode,
-    type OptimizeScenarioInput
-  } from './optimize-request';
+    type OptimizeMode
+  } from './requests/optimize-request';
   import { simulatorRepository, type OptimizeResult } from './simulator-repository';
-  import { createTrainee } from './trainee';
-  import PurchasesEditor, {
-    MAX_PURCHASES,
-    createPurchase,
-    purchaseProblems,
-    toOptimizePurchases,
-    type PurchaseRow
-  } from './PurchasesEditor.svelte';
-  import OptimizeResultPanel from './OptimizeResult.svelte';
+  import { buildRaces, fieldWhere } from './setup/build-races';
+  import RunnerInput from './setup/RunnerInput.svelte';
+  import SkillOffers from './setup/SkillOffers.svelte';
+  import BuildCodeDialog from './setup/BuildCodeDialog.svelte';
+  import TrackPool from './setup/TrackPool.svelte';
+  import { poolProblem, teamTrialsPool, type TeamTrialsMode } from './setup/track-pool';
+  import { BUILD_CODE_VERSION, buildCodeRunner, type BuildCode } from './setup/build-code';
+  import { buildSearch, saveBuildSearch } from './setup/build-search.svelte';
+  import { offerPurchases, type PricedOffer } from './setup/skill-offers';
+  import BuildResult from './reports/outcomes/BuildResult.svelte';
+  import CourseButtons from './shell/CourseButtons.svelte';
   import RaceBar from './shell/RaceBar.svelte';
+  import SimSection from './shell/SimSection.svelte';
   import SimulatorShell from './shell/SimulatorShell.svelte';
-  import { selectedRaceInstanceId, selectedCourse, simulatorCatalog, catalogErrorVisible, dismissCatalogError, simulatorSession } from './simulator-session.svelte';
+  import {
+    selectedRaceInstanceId,
+    selectedCourse,
+    simulatorCatalog,
+    catalogErrorVisible,
+    dismissCatalogError,
+    simulatorSession
+  } from './simulator-session.svelte';
 
   const MODE_LABELS: Record<OptimizeMode, string> = {
     cm: 'Champions Meeting',
@@ -36,306 +50,630 @@
     tt_long: 'Team Trials · Long',
     tt_dirt: 'Team Trials · Dirt'
   };
-  const MODE_OPTIONS = OPTIMIZE_MODES.map((candidate) => ({
-    value: candidate,
-    label: MODE_LABELS[candidate]
-  }));
-
-  /** Team Trials scores against the opposite team, so the setup carries race type 14. */
+  const MODE_OPTIONS = OPTIMIZE_MODES.map((mode) => ({ value: mode, label: MODE_LABELS[mode] }));
+  /** Team Trials races carry race type 14. */
   const TEAM_TRIALS_RACE_TYPE = 14;
 
-  /** A finished search plus the purchase names of the request that produced it. */
-  interface BuildRun {
+  let catalog = $state.raw(new Map<number, SkillCatalogEntry>());
+  let run = $state<{
     result: OptimizeResult;
     raw: string;
-    purchaseNames: Array<string>;
-    courseName: string;
-  }
-
-  let mode = $state('cm');
-  let seed = $state(String(Math.floor(Math.random() * 2 ** 31)));
-  let selfEvaluate = $state('1');
-  let opponentEvaluate = $state('1');
-  let supportCardBonus = $state('0');
-  let winsBefore = $state('0');
-  let spBudget = $state('1200');
-  let maxCandidates = $state('32');
-  let finalists = $state('3');
-  let purchases = $state<Array<PurchaseRow>>([createPurchase({ name: 'Build A' })]);
-
-  let run = $state<BuildRun | null>(null);
+    offers: PricedOffer[];
+    budget: number;
+    key: string;
+    where: string;
+  } | null>(null);
   let error = $state('');
   let busy = $state(false);
+  let resultPanel = $state<HTMLElement>();
+  let codeOpen = $state(false);
 
-  const course = $derived(selectedCourse());
-  const isTeamTrials = $derived(mode !== 'cm');
-  const raceType = $derived(isTeamTrials ? TEAM_TRIALS_RACE_TYPE : 0);
-  const maxCandidatesValue = $derived(clampInt(toNumber(maxCandidates, 1), 1, MAX_CANDIDATES));
-  const finalistsValue = $derived(clampInt(toNumber(finalists, 1), 1, MAX_FINALISTS));
-  const finalistsTooHigh = $derived(finalistsValue > maxCandidatesValue);
-  const finalistsMax = $derived(Math.min(MAX_FINALISTS, maxCandidatesValue));
+  // Keep the setup in this browser as it changes.
+  $effect(saveBuildSearch);
 
-  /**
-   * Reasons the search cannot run, read straight from the current rows.
-   *
-   * A plain function rather than a `$derived`: this is only read while
-   * rendering, and a derived here tripped Svelte's derived-inert failure as
-   * soon as a sibling field changed, taking the whole page down.
-   */
-  function purchaseIssues(): Array<string> {
-    return purchaseProblems(purchases);
+  onMount(() => {
+    let active = true;
+    void loadSkillCatalog()
+      .then((value) => {
+        if (active) catalog = value;
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  });
+
+  const teamTrials = $derived(buildSearch.mode !== 'cm');
+  /** Team Trials draws its course per race; these are the courses she races, one per race. */
+  const pool = $derived(
+    teamTrials
+      ? teamTrialsPool(
+          simulatorCatalog.courses,
+          buildSearch.mode as TeamTrialsMode,
+          buildSearch.tracks[buildSearch.mode as TeamTrialsMode]
+        )
+      : []
+  );
+  /** The course she races on; in Team Trials the first of the pool stands for the distance. */
+  const course = $derived(teamTrials ? pool[0] : selectedCourse());
+  const owned = $derived(buildSearch.uma.skills.map((skill) => skill.skillId));
+  const offers = $derived(
+    offerPurchases(buildSearch.offers, owned, catalog, buildSearch.fastLearner)
+  );
+  const number = (value: string | number | null | undefined, fallback = 0) => {
+    const parsed = Number(value);
+    return value === '' || value == null || !Number.isFinite(parsed) ? fallback : parsed;
+  };
+  const candidates = $derived(
+    Math.min(MAX_CANDIDATES, Math.max(1, Math.round(number(buildSearch.candidates, 256))))
+  );
+  const finalists = $derived(
+    Math.min(MAX_FINALISTS, candidates, Math.max(1, Math.round(number(buildSearch.finalists, 5))))
+  );
+  const invalidSeed = $derived(
+    !/^-?\d+$/.test(String(buildSearch.seed)) || Math.abs(Number(buildSearch.seed)) > 2147483647
+  );
+  // Why the search cannot run yet, said next to its button.
+  const blocked = $derived(
+    teamTrials && poolProblem(pool)
+      ? poolProblem(pool)
+      : !course
+        ? 'Pick a track and course first.'
+        : !offers.purchases.length
+          ? 'Add the skills she can buy first.'
+          : invalidSeed
+            ? 'Fix the seed first.'
+            : ''
+  );
+  // Everything the search depends on, so the result can say when it no longer matches.
+  const inputKey = $derived(
+    JSON.stringify([
+      course?.course_id,
+      pool.map((entry) => entry.course_id),
+      selectedRaceInstanceId(),
+      simulatorSession.ground,
+      simulatorSession.weather,
+      simulatorSession.season,
+      simulatorSession.startTime,
+      buildSearch
+    ])
+  );
+  const current = $derived(!!run && run.key === inputKey);
+  const summary = $derived(
+    busy
+      ? 'Searching builds…'
+      : error
+        ? 'Couldn’t search'
+        : !run
+          ? 'Not searched yet'
+          : !current
+            ? 'Setup changed'
+            : run.result.report.finalists[0]
+              ? bestSummary(run.result.report.finalists[0], run.result.objective === 'field_place')
+              : 'No build came back'
+  );
+
+  /** The best build in a line: what it gains her (time, or runners beaten in real fields) and what it costs. */
+  function bestSummary(
+    best: OptimizeResult['report']['finalists'][number],
+    field: boolean
+  ): string {
+    const gain = best.validation_gain ?? best.gain;
+    const cost = best.sp_cost.toLocaleString() + ' SP';
+    return gain && best.build.purchases.length && gain.mean > 0
+      ? (field
+          ? 'Beats ' + gain.mean.toFixed(2) + ' more runners a race · '
+          : 'Saves ' + gain.mean.toFixed(2) + ' s a race · ') + cost
+      : best.build.purchases.length
+        ? 'Best build: ' + cost
+        : 'Buying nothing scores best';
   }
 
-  const canRun = $derived(Boolean(course));
+  /** The server's message in the page's words, for the errors a reader can fix here. */
+  function explain(message: string): string {
+    const skill = /skill (\d+)/.exec(message)?.[1];
+    const name = skill ? (catalog.get(Number(skill))?.name ?? 'Skill ' + skill) : 'A skill';
+    if (/fan_count/.test(message))
+      return name + ' grows with her fans. Enter her fans under Skills to buy and search again.';
+    // What an older simulator service says to a search that races her alone over a pool of tracks.
+    if (
+      /runner count must be 2|1\.\.=4 scenarios|needs score_context|unknown field `hp_changes`/.test(
+        message
+      )
+    )
+      return 'The simulator service is an older build: it can’t race her alone or over a pool of tracks. Rebuild and restart it, then search again.';
+    return message;
+  }
+
+  /** The setup as a build code. */
+  function currentCode(): BuildCode {
+    return {
+      version: BUILD_CODE_VERSION,
+      ...(course ? { courseId: course.course_id } : {}),
+      racedef: {
+        ground: Number(simulatorSession.ground),
+        weather: Number(simulatorSession.weather),
+        season: Number(simulatorSession.season),
+        time: Number(simulatorSession.startTime)
+      },
+      seed: number(buildSearch.seed),
+      mode: buildSearch.mode,
+      ...(teamTrials && pool.length ? { tracks: pool.map((entry) => entry.course_id) } : {}),
+      uma1: buildCodeRunner($state.snapshot(buildSearch.uma), course, {
+        sp: number(buildSearch.budget),
+        fastLearner: buildSearch.fastLearner
+      }),
+      chartSkills: buildSearch.offers.map((offer) => String(offer.skillId)),
+      hintLevels: Object.fromEntries(
+        buildSearch.offers
+          .filter((offer) => offer.hint > 0)
+          .map((offer) => [String(offer.skillId), offer.hint])
+      )
+    };
+  }
 
   async function send(): Promise<void> {
-    if (busy) return;
+    if (busy || blocked || !course) return;
     error = '';
-    run = null;
-
-    const target = course;
-    if (!target) {
-      error = 'Pick a course first.';
-      return;
-    }
-    // The optimizer rejects a package with no skills and duplicate names, so
-    // refuse here rather than spend a request learning it.
-    const issues = purchaseIssues();
-    if (issues.length > 0) {
-      error = issues.join(' ');
-      return;
-    }
-    if (finalistsTooHigh) {
-      error = `Finalists (${finalistsValue}) cannot exceed the candidate count (${maxCandidatesValue}).`;
-      return;
-    }
-
     busy = true;
+    const key = inputKey,
+      priced = offers.priced,
+      budget = number(buildSearch.budget);
+    const races = buildRaces({
+      her: $state.snapshot(buildSearch.uma),
+      seed: number(buildSearch.seed),
+      course: $state.snapshot(course),
+      pool: teamTrials ? pool : undefined,
+      setup: {
+        raceInstanceId: selectedRaceInstanceId(),
+        raceType: teamTrials ? TEAM_TRIALS_RACE_TYPE : 0,
+        season: Number(simulatorSession.season),
+        weather: Number(simulatorSession.weather),
+        ground: Number(simulatorSession.ground),
+        startTimeType: Number(simulatorSession.startTime)
+      }
+    });
+    if (!races) {
+      error = 'Pick a course first.';
+      busy = false;
+      return;
+    }
     try {
-      const scenario: OptimizeScenarioInput = {
-        name: `${trackName(target.race_track_id)} · ${describeCourse(target)}`,
-        weight: 1,
-        courseId: target.course_id,
-        seed: toNumber(seed),
-        setup: {
-          raceInstanceId: selectedRaceInstanceId(),
-          raceType,
-          season: Number(simulatorSession.season),
-          weather: Number(simulatorSession.weather),
-          ground: Number(simulatorSession.ground),
-          startTimeType: Number(simulatorSession.startTime)
-        },
-        runners: [{ trainee: simulatorSession.trainee }, { trainee: createTrainee() }],
-        scoreContext: isTeamTrials
-          ? {
-              selfEvaluate: toNumber(selfEvaluate),
-              opponentEvaluate: toNumber(opponentEvaluate),
-              supportCardBonus: toNumber(supportCardBonus),
-              winsBefore: toNumber(winsBefore)
-            }
-          : undefined
-      };
-
       const body = buildOptimizeRequest({
-        mode: optimizeMode(mode),
+        mode: buildSearch.mode,
         targetSourceInputIndex: 0,
-        spBudget: toNumber(spBudget),
-        purchases: toOptimizePurchases(purchases),
-        scenarios: [scenario],
-        seed: toNumber(seed),
-        maxCandidates: maxCandidatesValue,
-        finalists: finalistsValue
+        spBudget: budget,
+        purchases: offers.purchases,
+        scenarios: races.scenarios,
+        seed: number(buildSearch.seed),
+        maxCandidates: candidates,
+        finalists,
+        debuffs: {
+          count: Number(buildSearch.debuffs.count),
+          percent: Number(buildSearch.debuffs.percent)
+        }
       });
-
-      const response = await simulatorRepository.optimize({
-        body: { ...body }
-      });
+      const response = await simulatorRepository.optimize({ body: { ...body } });
       run = {
-        courseName: trackName(target.race_track_id)+", "+describeCourse(target),
         result: response.result,
         raw: response.raw,
-        purchaseNames: body.purchases.map((purchase) => purchase.name)
+        offers: priced,
+        budget,
+        key,
+        where: response.result.fields
+          ? fieldWhere(response.result.fields, course, simulatorCatalog.courses)
+          : races.where
       };
     } catch (reason) {
-      error = reason instanceof Error ? reason.message : 'The request failed.';
+      error = explain(reason instanceof Error ? reason.message : 'The request failed.');
     } finally {
       busy = false;
     }
   }
-
-  /** Keeps the bound select narrow at the request boundary. */
-  function optimizeMode(value: string): OptimizeMode {
-    return OPTIMIZE_MODES.find((candidate) => candidate === value) ?? 'cm';
-  }
-
-  /**
-   * Reads a numeric field. Svelte binds a number input to a real number, to
-   * null when it is cleared, and a select still hands back a string, so accept
-   * all three and default anything unusable.
-   */
-  function toNumber(value: string | number | null | undefined, fallback = 0): number {
-    if (value === null || value === undefined || value === '') return fallback;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  }
-
-  function clampInt(value: number, min: number, max: number): number {
-    if (!Number.isFinite(value)) return min;
-    return Math.min(max, Math.max(min, Math.round(value)));
-  }
 </script>
 
-  {#snippet searchPanel()}
-    <div class="stack">
-      <SelectField
-        id="build-mode"
-        label="Mode"
-        options={MODE_OPTIONS}
-        bind:value={mode}
-        help="Team Trials modes add career and team bonuses to the score."
-      />
-      <p class="hint">Setup race type follows the mode: {raceTypeLabel(raceType)}.</p>
+{#if catalogErrorVisible()}
+  <Banner
+    title="Race data unavailable"
+    tone="danger"
+    reportable={false}
+    dismissible
+    ondismiss={dismissCatalogError}
+  >
+    {simulatorCatalog.error}
+  </Banner>
+{/if}
 
-      {#if isTeamTrials}
-        <div class="grid">
-          <TextField
-            id="build-self-evaluate"
-            type="number"
-            step={0.1}
-            label="Self evaluate"
-            help="Your team's evaluation score."
-            bind:value={selfEvaluate}
-          />
-          <TextField
-            id="build-opponent-evaluate"
-            type="number"
-            step={0.1}
-            label="Opponent evaluate"
-            help="The opposing team's evaluation score."
-            bind:value={opponentEvaluate}
-          />
-          <TextField
-            id="build-support-bonus"
-            type="number"
-            step={0.1}
-            label="Support card bonus"
-            help="Bonus applied to the score."
-            bind:value={supportCardBonus}
-          />
-          <TextField
-            id="build-wins-before"
-            type="number"
-            min={0}
-            label="Wins before"
-            help="Wins already banked this round."
-            bind:value={winsBefore}
+<SimulatorShell
+  mode="build"
+  showUma={false}
+>
+  <div class="build-search">
+    <div
+      class="build-form"
+      role="group"
+      aria-label="Build search input"
+    >
+      <RunnerInput
+        bind:uma={buildSearch.uma}
+        {course}
+        idPrefix="build"
+        note="Her stats at the end of the career"
+        oncode={() => (codeOpen = true)}
+      >
+        <div class="owned">
+          <span class="owned-label">Owns</span>
+          {#if buildSearch.uma.skills.length}
+            <ul>
+              {#each buildSearch.uma.skills as learned (learned.skillId)}
+                {@const skill = catalog.get(learned.skillId)}
+                <li>
+                  <SkillChip
+                    name={skill?.name ?? 'Skill ' + learned.skillId}
+                    icon={skillImage(skill?.icon)}
+                    rarity={skillRarity(skill, Boolean(skill?.inherited))}
+                    compact
+                  />
+                </li>
+              {/each}
+            </ul>
+          {:else}
+            <small>No skills yet; add the ones she has with Full build &amp; skills.</small>
+          {/if}
+        </div>
+      </RunnerInput>
+      <SimSection
+        number={2}
+        title="Goal"
+        note="What the build is for and where she races"
+      >
+        {#snippet actions()}{#if !teamTrials}<CourseButtons />{/if}{/snippet}
+        <div class="goal-mode">
+          <SelectField
+            id="build-mode"
+            label="Optimize for"
+            options={MODE_OPTIONS}
+            bind:value={buildSearch.mode}
           />
         </div>
-      {/if}
-
-      <TextField
-        id="build-sp-budget"
-        type="number"
-        min={0}
-        label="SP budget"
-        help="Total skill points a build may spend."
-        bind:value={spBudget}
+        <p class="goal-note">
+          {#if teamTrials}
+            She races with a fixed pack of eight runners without skills: one front runner, three
+            pace chasers, three late surgers and one end closer, all with her stats. Every build
+            meets the same pack, so each skill is judged by the time she actually runs.
+          {:else}
+            She races in real CM fields recorded in game, in place of a runner of her style, and
+            each skill is judged by how many runners she beats, weighed with what recorded CM races
+            say about it. On a course no recorded CM ran, the closest CM's runners are rebuilt for
+            it. A simulator without CM data races her with a fixed pack instead.
+          {/if}
+        </p>
+        {#if teamTrials}
+          <TrackPool
+            mode={buildSearch.mode as TeamTrialsMode}
+            catalog={simulatorCatalog.courses}
+            bind:picked={
+              () => buildSearch.tracks[buildSearch.mode as TeamTrialsMode],
+              (value) => (buildSearch.tracks[buildSearch.mode as TeamTrialsMode] = value)
+            }
+          />
+          <RaceBar
+            bare
+            conditionsOnly
+          />
+        {:else}
+          <RaceBar bare />
+        {/if}
+        <div class="goal-fields">
+          <div class="seed">
+            <TextField
+              id="build-seed"
+              label="Seed"
+              type="number"
+              error={invalidSeed ? 'Enter a whole number.' : undefined}
+              bind:value={buildSearch.seed}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              icon="refresh"
+              ariaLabel="Random seed"
+              onclick={() => (buildSearch.seed = String(Math.floor(Math.random() * 2 ** 31)))}
+            />
+          </div>
+          <TextField
+            id="build-candidates"
+            label="Builds to try"
+            type="number"
+            min={1}
+            max={MAX_CANDIDATES}
+            bind:value={buildSearch.candidates}
+          />
+          <TextField
+            id="build-finalists"
+            label="Builds to check again"
+            type="number"
+            min={1}
+            max={MAX_FINALISTS}
+            bind:value={buildSearch.finalists}
+          />
+          <TextField
+            id="build-debuffs"
+            label="HP debuffs taken"
+            type="number"
+            min={0}
+            max={256}
+            bind:value={buildSearch.debuffs.count}
+          />
+          <TextField
+            id="build-debuff-percent"
+            label="% HP each"
+            type="number"
+            min={0.1}
+            max={100}
+            step={0.5}
+            bind:value={buildSearch.debuffs.percent}
+          />
+        </div>
+      </SimSection>
+      <SkillOffers
+        number={3}
+        {catalog}
+        {owned}
       />
-
-      <div class="grid">
-        <TextField
-          id="build-candidates"
-          type="number"
-          min={1}
-          max={MAX_CANDIDATES}
-          label="Max candidates"
-          help={`1–${MAX_CANDIDATES}; the search stops here.`}
-          bind:value={maxCandidates}
-        />
-        <TextField
-          id="build-finalists"
-          type="number"
-          min={1}
-          max={finalistsMax}
-          label="Finalists"
-          error={finalistsTooHigh ? 'Finalists cannot exceed the candidate count.' : undefined}
-          help={`1–${MAX_FINALISTS}, at most the candidate count.`}
-          bind:value={finalists}
-        />
+    </div>
+    <aside
+      class="build-side"
+      aria-label="Build search result"
+      bind:this={resultPanel}
+    >
+      <h2 class="sr-only">Build search result</h2>
+      <div class="search">
+        <Button
+          icon="tune"
+          loading={busy}
+          disabled={!!blocked}
+          onclick={send}
+        >
+          Find the best build
+        </Button>
+        {#if blocked}<p class="blocked">{blocked}</p>{/if}
       </div>
-
-      <PurchasesEditor bind:purchases disabled={busy} />
-
-      {#if purchaseIssues().length > 0}
-        <p class="hint problem" role="status">{purchaseIssues().join(' ')}</p>
-      {/if}
-
-      <p class="hint">Up to {MAX_PURCHASES} purchases per search.</p>
-    </div>
-  {/snippet}
-
-<SimulatorPageFrame
-  routeId="simulator-build"
-  title="Build search"
-  blurb="Compare skill purchases within an SP budget on your selected course."
->
-  {#if catalogErrorVisible()}
-    <Banner
-      title="Race data unavailable"
-      tone="danger"
-      reportable={false}
-      dismissible
-      ondismiss={dismissCatalogError}
-    >{simulatorCatalog.error}</Banner>
-  {/if}
-  {#if error}
-    <!-- Keyed so a new failure gets a fresh Banner: the old one is still
-         mounted with `visible` stuck false after being dismissed. -->
-    {#key error}
-      <Banner title="Could not run the search" tone="danger" reportable={false} dismissible>{error}</Banner>
-    {/key}
-  {/if}
-
-  <SimulatorShell
-    mode="build"
-    panels={[{
-      id: 'search',
-      label: 'Search',
-      shortLabel: 'Search',
-      icon: 'search',
-      content: searchPanel
-    }]}
-  >
-    <div class="calculator-grid"><RaceBar workspace note={raceTypeLabel(raceType)}/><div class="calculation-main">
-
-    <div class="run-bar">
-      <Button onclick={send} loading={busy} disabled={!canRun || finalistsTooHigh || purchaseIssues().length > 0}>Run search</Button>
-      <TextField
-        id="build-seed"
-        type="number"
-        label="Seed"
-        help="Seeds the search and the scenario; the same seed replays the same search."
-        bind:value={seed}
+      <BuildResult
+        result={run?.result}
+        raw={run?.raw}
+        offers={run?.offers}
+        budget={run?.budget}
+        where={run?.where}
+        {busy}
+        {error}
+        stale={!!run && !current}
+        onretry={blocked ? undefined : send}
       />
-      <p class="hint">
-        One scenario: this race, the selected Uma and one baseline opponent so the
-        field has two runners.
-      </p>
+    </aside>
+    <!-- Narrow screens: the search button and its answer stay in reach while the form scrolls. -->
+    <div class="search-bar">
+      <button
+        type="button"
+        class="summary"
+        onclick={() => resultPanel?.scrollIntoView({ block: 'start', behavior: 'smooth' })}
+      >
+        {blocked || summary}
+        <small>See result</small>
+      </button>
+      <Button
+        icon="tune"
+        loading={busy}
+        disabled={!!blocked}
+        onclick={send}
+      >
+        Find the best build
+      </Button>
     </div>
+  </div>
+</SimulatorShell>
 
-    <section class="results surface" aria-labelledby="build-result-title">
-      <h2 id="build-result-title">Build search results</h2>{#if run}<p class="hint">{run.courseName}</p>{/if}
-      <OptimizeResultPanel result={run?.result} raw={run?.raw} purchaseNames={run?.purchaseNames} {busy}/>
-    </section></div></div>
-  </SimulatorShell>
-</SimulatorPageFrame>
+<BuildCodeDialog
+  bind:open={codeOpen}
+  target="build"
+  current={currentCode}
+  onimport={({ umas, offers, goal }) => {
+    buildSearch.uma = umas[0]!;
+    buildSearch.offers = offers;
+    if (goal.sp !== undefined) buildSearch.budget = String(goal.sp);
+    if (goal.fastLearner !== undefined) buildSearch.fastLearner = goal.fastLearner;
+    if (goal.mode) buildSearch.mode = goal.mode;
+    if (goal.tracks && goal.mode && goal.mode !== 'cm') buildSearch.tracks[goal.mode] = goal.tracks;
+    if (goal.seed !== undefined) buildSearch.seed = String(goal.seed);
+  }}
+/>
 
 <style>
-  .calculator-grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:start;min-width:0}.calculation-main{display:grid;gap:12px;min-width:0}@media(max-width:1050px){.calculator-grid{grid-template-columns:260px minmax(0,1fr);gap:12px}}@media(max-width:767px){.calculator-grid{grid-template-columns:minmax(0,1fr)}}
-
-  .run-bar { display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:var(--radius-md);background:var(--surface-1); }.run-bar :global(.field){width:190px}.run-bar .hint{flex:1;min-width:200px}
-  .results { display:flex;flex-direction:column;gap:10px;padding:12px 16px;min-width:0;background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:var(--radius-md); }
-  .results h2 { margin:0;font-size:14px; }
-  .hint { margin: 0; color: var(--color-text-muted); font-size: var(--font-xs); }
-  .problem { color: var(--color-danger); }
+  /* The form, then the result under it at full width; a bar keeps the answer in reach while the form scrolls. */
+  .build-search {
+    --setup-control-height: 36px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+    gap: 16px;
+    align-items: start;
+    min-width: 0;
+  }
+  .build-form {
+    min-width: 0;
+    padding: 12px 18px;
+    container: build-form sim-form / inline-size;
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+  }
+  .build-side {
+    position: sticky;
+    top: calc(var(--app-header-height, 64px) + 12px);
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    scroll-margin-top: calc(var(--app-header-height, 64px) + 12px);
+  }
+  .search {
+    display: grid;
+    gap: 6px;
+  }
+  .search :global(.ui-button) {
+    width: 100%;
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .blocked {
+    margin: 0;
+    font-size: 12px;
+    color: var(--accent-warning);
+    text-align: center;
+  }
+  .search-bar {
+    display: none;
+  }
+  /* The skills she owns, under her stats. */
+  .owned {
+    display: flex;
+    align-items: baseline;
+    gap: 8px 12px;
+    min-width: 0;
+  }
+  .owned-label {
+    flex: none;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .owned ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .owned small {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .goal-mode {
+    --control-height: var(--setup-control-height);
+    display: grid;
+    max-width: 420px;
+  }
+  .goal-mode :global(.field) {
+    gap: 4px;
+  }
+  .goal-mode :global(label) {
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .goal-mode :global(.select-control) {
+    font-size: 13px;
+  }
+  .goal-note {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .goal-fields {
+    --control-height: var(--setup-control-height);
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px 12px;
+    align-items: start;
+  }
+  .goal-fields :global(.field) {
+    gap: 4px;
+  }
+  .goal-fields :global(label) {
+    font-size: 12px;
+  }
+  .goal-fields :global(input),
+  .goal-fields :global(.select-control) {
+    font-size: 13px;
+  }
+  .seed {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 36px;
+    gap: 6px;
+    align-items: start;
+  }
+  .seed > :global(.ui-button) {
+    width: 36px;
+    height: var(--setup-control-height);
+    margin-top: 18px;
+    padding: 0;
+  }
+  @container build-form (max-width: 700px) {
+    .goal-fields {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .seed {
+      grid-column: 1 / -1;
+    }
+  }
+  @media all {
+    .build-search {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .build-side {
+      position: static;
+    }
+  }
+  /* Narrow: the search button floats at the bottom of the screen while the form and result scroll past. */
+  @media (max-width: 1180px) {
+    .search {
+      display: none;
+    }
+    .search-bar {
+      position: sticky;
+      bottom: 12px;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 8px 8px 14px;
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      background: var(--surface-1);
+      box-shadow: 0 6px 24px rgb(0 0 0 / 0.28);
+    }
+    .summary {
+      display: grid;
+      flex: 1;
+      min-width: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--text-primary);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 650;
+      text-align: left;
+      cursor: pointer;
+    }
+    .summary small {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--text-secondary);
+    }
+    .search-bar :global(.ui-button) {
+      min-height: 44px;
+    }
+  }
+  @media (max-width: 767px) {
+    .build-search {
+      --setup-control-height: 44px;
+    }
+    .build-form {
+      padding: 14px;
+    }
+    .seed {
+      grid-template-columns: minmax(0, 1fr) 44px;
+    }
+    .seed > :global(.ui-button) {
+      width: 44px;
+    }
+  }
 </style>

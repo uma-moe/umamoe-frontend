@@ -1,5 +1,5 @@
 import { resourceRepository } from './resource-repository';
-import type { RaceBadgeData, RaceGrade, RaceScheduleYear } from '@/components/race-types';
+import type { RaceBadgeData, RaceGrade, RaceScheduleYear } from '@/components/game/race-types';
 
 export type RaceYear = 'junior' | 'classic' | 'senior';
 

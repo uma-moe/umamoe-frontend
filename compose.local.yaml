@@ -1,0 +1,236 @@
+name: umamoe-dev-stack
+
+services:
+  resources:
+    build:
+      context: ../umamoe-resources
+    environment:
+      API_PROTECTION_BYPASS: "true"
+      DEBUG_MODE: "false"
+      RESOURCES_INTERNAL_HOST: 0.0.0.0
+      RESOURCES_INTERNAL_PORT: "3204"
+      MASTER_REFRESH_INTERVAL_SECONDS: "300"
+    ports:
+      - "127.0.0.1:${LOCAL_RESOURCES_PORT:-3304}:3000"
+    volumes:
+      - resources-data:/data
+    healthcheck:
+      start_period: 300s
+      retries: 20
+
+  simulator:
+    build:
+      context: ../umamoe-simulators-v2
+      dockerfile: deploy/Dockerfile
+      target: runtime
+    environment:
+      UMAMOE_V3_BIND: 0.0.0.0:3009
+      UMAMOE_V3_RESOURCES_URL: http://resources:3204
+      UMAMOE_V3_CACHE: /data
+      UMAMOE_V3_WORKERS: "${LOCAL_SIMULATOR_WORKERS:-4}"
+      RAYON_NUM_THREADS: "${LOCAL_SIMULATOR_WORKERS:-4}"
+      # CM Build searches race real CM fields with this model (umamoe-cm-train); without the file, a fixed pack.
+      UMAMOE_V3_CM_MODEL: "${LOCAL_CM_MODEL:-/cm/cm-model.json.gz}"
+    cpus: "${LOCAL_SIMULATOR_CPUS:-4}"
+    ports:
+      - "127.0.0.1:${LOCAL_SIMULATOR_PORT:-3309}:3009"
+    volumes:
+      - simulator-cache:/data
+      - ../umamoe-simulators-v2/cm_data:/cm:ro
+    depends_on:
+      resources:
+        condition: service_healthy
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 60s
+
+  postgres:
+    profiles: [app]
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: umamoe
+      POSTGRES_DB: umamoe
+      POSTGRES_PASSWORD: "${LOCAL_POSTGRES_PASSWORD:-local-stack-only}"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - type: bind
+        source: "${LOCAL_DATABASE_DUMP:-./.tmp/local-stack/database.sql}"
+        target: /docker-entrypoint-initdb.d/00-database.sql
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      # TCP is available only after the entrypoint's initial SQL import finishes.
+      test: [CMD-SHELL, "pg_isready -h 127.0.0.1 -U umamoe -d umamoe"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+
+  redis:
+    profiles: [app]
+    image: redis:7-alpine
+    command: [redis-server, --appendonly, "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    profiles: [app]
+    build:
+      context: ../umamoe-backend
+    environment:
+      DATABASE_URL: "postgresql://umamoe:${LOCAL_POSTGRES_PASSWORD:-local-stack-only}@postgres:5432/umamoe"
+      HOST: 0.0.0.0
+      PORT: "3001"
+      DEBUG_MODE: "true"
+      SKIP_MIGRATIONS: "${LOCAL_SKIP_MIGRATIONS:-false}"
+      IGNORE_MIGRATION_VERSION_MISMATCH: "true"
+      DISABLE_DB_MAINTENANCE_TASKS: "true"
+      DISABLE_BOOKMARK_HASH_BACKFILL: "true"
+      JWT_SECRET: "${LOCAL_JWT_SECRET:-local-stack-jwt-for-development-only}"
+      BROWSER_PROOF_SECRET: "${LOCAL_BROWSER_PROOF_SECRET:-local-stack-proof-for-development-only}"
+      BROWSER_PROOF_COOKIE_SECURE: "false"
+      BROWSER_PROOF_INTERNAL_HOST: 0.0.0.0
+      BROWSER_PROOF_INTERNAL_PORT: "3201"
+      API_PROTECTION_BYPASS: "true"
+      TURNSTILE_BYPASS: "true"
+      REDIS_URL: redis://redis:6379/0
+      SEARCH_SERVICE_URL: http://search:3202
+      SIMULATOR_URL: http://simulator:3009
+      SIMULATOR_ALLOWED_KEYS_FILE: /run/secrets/simulator_key
+      FRONTEND_URL: "http://127.0.0.1:${LOCAL_FRONTEND_PORT:-5275}"
+      ALLOWED_ORIGINS: "http://127.0.0.1:${LOCAL_FRONTEND_PORT:-5275},http://localhost:${LOCAL_FRONTEND_PORT:-5275}"
+    secrets: [simulator_key]
+    ports:
+      - "127.0.0.1:${LOCAL_BACKEND_PORT:-3301}:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      simulator:
+        condition: service_healthy
+    healthcheck:
+      start_period: 300s
+      retries: 20
+
+  simulator-access:
+    profiles: [app]
+    image: postgres:17-bookworm
+    environment:
+      PGHOST: postgres
+      PGUSER: umamoe
+      PGDATABASE: umamoe
+      PGPASSWORD: "${LOCAL_POSTGRES_PASSWORD:-local-stack-only}"
+    secrets: [simulator_key]
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        export SIMULATOR_API_KEY="$$(cat /run/secrets/simulator_key)"
+        psql --no-psqlrc --set ON_ERROR_STOP=1 <<'SQL'
+        \getenv simulator_key SIMULATOR_API_KEY
+        BEGIN;
+        CREATE EXTENSION IF NOT EXISTS pgcrypto;
+        INSERT INTO users (id, display_name)
+          VALUES ('00000000-0000-4000-8000-000000000001', 'Local simulator')
+          ON CONFLICT (id) DO NOTHING;
+        INSERT INTO api_keys (user_id, name, key_hash, key_prefix)
+          SELECT id, 'Local simulator', encode(digest(:'simulator_key', 'sha256'), 'hex'), left(:'simulator_key', 14)
+          FROM users WHERE id = '00000000-0000-4000-8000-000000000001'
+          ON CONFLICT (key_hash) DO UPDATE SET revoked = false;
+        COMMIT;
+        SQL
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  search:
+    profiles: [app]
+    build:
+      context: ../umamoe_db
+    environment:
+      DATABASE_URL: "postgresql://umamoe:${LOCAL_POSTGRES_PASSWORD:-local-stack-only}@postgres:5432/umamoe"
+      RESOURCE_BASE_URL: http://resources:3204/resources
+      SEARCH_PORT: "3002"
+      SEARCH_INTERNAL_PORT: "3202"
+      AUTH_INTERNAL_BASE_URL: http://backend:3201
+      REDIS_URL: redis://redis:6379/0
+      API_PROTECTION_BYPASS: "true"
+      INCLUDE_STALE_TRAINERS: "true"
+    ports:
+      - "127.0.0.1:${LOCAL_SEARCH_PORT:-3302}:3002"
+    depends_on:
+      resources:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+
+  ingest:
+    profiles: [app]
+    build:
+      context: ../umamoe-ingest
+    environment:
+      DATABASE_URL: "postgresql://umamoe:${LOCAL_POSTGRES_PASSWORD:-local-stack-only}@postgres:5432/umamoe"
+      HOST: 0.0.0.0
+      PORT: "3003"
+      AUTH_BACKEND_INTERNAL_BASE: http://backend:3201
+    ports:
+      - "127.0.0.1:${LOCAL_INGEST_PORT:-3303}:3003"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  frontend:
+    profiles: [app]
+    build:
+      context: .
+      target: deps
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:3001
+      VITE_SIM_PROXY_TARGET: http://backend:3001
+      VITE_SEARCH_PROXY_TARGET: http://search:3002
+      VITE_INGEST_PROXY_TARGET: http://ingest:3003
+      VITE_RESOURCE_PROXY_TARGET: http://resources:3000
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        export SIMULATOR_API_KEY="$$(cat /run/secrets/simulator_key)"
+        exec npm run dev -- --host 0.0.0.0 --port 5173
+    secrets: [simulator_key]
+    ports:
+      - "127.0.0.1:${LOCAL_FRONTEND_PORT:-5275}:5173"
+    volumes:
+      - .:/app:ro
+      # shortcut: refresh this volume after lockfile changes; use a dev image if that becomes frequent.
+      - frontend-dependencies:/app/node_modules
+    depends_on:
+      simulator-access:
+        condition: service_completed_successfully
+      search:
+        condition: service_healthy
+      ingest:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:5173/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 20
+
+secrets:
+  simulator_key:
+    file: ./.tmp/local-stack/simulator.key
+
+volumes:
+  resources-data:
+  simulator-cache:
+  postgres-data:
+  redis-data:
+  frontend-dependencies:

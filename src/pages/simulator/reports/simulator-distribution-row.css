@@ -1,0 +1,315 @@
+/* Full row */
+.row {
+  display: grid;
+  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+  gap: 6px 20px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--border-subtle);
+  min-width: 0;
+}
+.row:first-child {
+  border-top: 0;
+  padding-top: 2px;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 5px;
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+.heading :global(strong) {
+  font-weight: 650;
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(var(--tiles), minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+}
+.tile {
+  display: grid;
+  gap: 1px;
+  padding: 5px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-2, transparent);
+  text-align: center;
+  min-width: 0;
+}
+.tile dt {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tile dd {
+  display: grid;
+  margin: 0;
+  line-height: 1.15;
+}
+.tile strong {
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tile small {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tile.ahead strong,
+.num.ahead {
+  color: color-mix(in srgb, var(--runner) 80%, var(--text-primary));
+}
+.tile.main {
+  border-color: color-mix(in srgb, var(--accent-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
+}
+.chart {
+  min-width: 0;
+}
+/* Histogram */
+.plot {
+  position: relative;
+  border-bottom: 1px solid var(--border-subtle);
+  min-width: 0;
+}
+.plot > i {
+  position: absolute;
+  pointer-events: none;
+}
+.grid {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-subtle);
+  opacity: 0.6;
+}
+.grid.zero {
+  background: var(--text-secondary);
+  opacity: 0.7;
+}
+.bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+}
+.bin {
+  flex: 1 1 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+}
+.bin i {
+  display: block;
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  background: var(--runner);
+  opacity: 0.72;
+}
+.bin.strong i {
+  opacity: 1;
+}
+.bin.muted i {
+  background: var(--text-secondary);
+  opacity: 0.42;
+}
+.bin:hover i {
+  opacity: 1;
+  box-shadow: 0 0 0 1px var(--text-primary);
+}
+.marker {
+  top: -2px;
+  bottom: 0;
+  width: 0;
+  border-left: 2px dashed var(--text-primary);
+  transform: translateX(-1px);
+  opacity: 0.85;
+}
+.axis {
+  position: relative;
+  height: 15px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.axis span {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.axis span.start {
+  transform: none;
+}
+.axis span.end {
+  transform: translateX(-100%);
+}
+.sides {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+.sides > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sides .ahead {
+  color: color-mix(in srgb, var(--runner) 75%, var(--text-secondary));
+}
+.marker-key i {
+  display: inline-block;
+  width: 0;
+  height: 10px;
+  border-left: 2px dashed var(--text-primary);
+}
+/* Compact line */
+.line {
+  display: grid;
+  grid-template-columns: minmax(110px, 170px) repeat(var(--stats), 58px) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-height: 30px;
+  border-top: 1px solid var(--border-subtle);
+  padding-inline: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.line.head {
+  min-height: 22px;
+  border-top: 0;
+  align-items: end;
+  padding-bottom: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.line.foot {
+  min-height: 0;
+  border-top: 0;
+}
+.num {
+  text-align: right;
+  white-space: nowrap;
+}
+.line:not(.head) .num:nth-child(2) {
+  font-weight: 600;
+}
+.who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.who:disabled {
+  cursor: default;
+}
+.who span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--runner);
+}
+.line .plot {
+  border-bottom: 0;
+}
+.num .label {
+  display: none;
+}
+.line.stacked {
+  grid-template-columns: minmax(110px, 170px) repeat(var(--stats), 76px) minmax(0, 1fr);
+}
+@media (max-width: 860px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .tile {
+    padding: 4px 2px;
+  }
+  .tile strong {
+    font-size: 12px;
+  }
+  .tile small {
+    font-size: 9px;
+  }
+  .tile dt {
+    font-size: 8px;
+    letter-spacing: 0.02em;
+  }
+  .sides .marker-key {
+    display: none;
+  }
+  .line {
+    grid-template-columns: minmax(0, 92px) repeat(var(--stats), 46px) minmax(0, 1fr);
+    gap: 6px;
+    font-size: 11px;
+  }
+  .who :global(.face) {
+    display: none;
+  }
+  /* Several figures do not fit beside a histogram on a phone: name, then the figures with their labels, then the histogram. */
+  .line.stacked {
+    grid-template-columns: repeat(var(--stats), minmax(0, 1fr));
+    gap: 2px 6px;
+    padding-block: 5px;
+  }
+  .line.stacked > .who,
+  .line.stacked > .plot,
+  .line.stacked > .axis {
+    grid-column: 1/-1;
+  }
+  .line.stacked .num {
+    display: grid;
+    text-align: left;
+  }
+  .line.stacked .num .label {
+    display: block;
+    font-size: 9px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+  .line.head.stacked {
+    display: none;
+  }
+  .line.foot.stacked > span {
+    display: none;
+  }
+}

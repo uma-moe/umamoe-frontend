@@ -13,7 +13,7 @@ import {
 import { importSimulatorUmas, simulatorRoster } from './simulator-roster.svelte';
 import type { SimulatorUma } from './simulator-uma';
 import { resourceRepository } from '@/lib/catalog/resource-repository';
-import type { Trainee } from './trainee';
+import type { Trainee } from './setup/trainee';
 import { EXAMPLE_RACE_SETTINGS } from './simulator-example';
 
 export interface ConditionOption {

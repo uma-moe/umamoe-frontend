@@ -92,9 +92,9 @@ export default defineConfig(async ({ mode, command }) => {
           target: variables.VITE_SIM_PROXY_TARGET ?? 'http://127.0.0.1:3001', changeOrigin: true,
           ...(simulatorApiKey ? { headers: { 'X-API-Key': simulatorApiKey } } : {})
         },
-        '/api': 'http://127.0.0.1:3001',
-        '/search': 'http://127.0.0.1:3002',
-        '/ingest': 'http://127.0.0.1:3003',
+        '/api': variables.VITE_API_PROXY_TARGET ?? 'http://127.0.0.1:3001',
+        '/search': variables.VITE_SEARCH_PROXY_TARGET ?? 'http://127.0.0.1:3002',
+        '/ingest': variables.VITE_INGEST_PROXY_TARGET ?? 'http://127.0.0.1:3003',
         '/resources': { target: variables.VITE_RESOURCE_PROXY_TARGET ?? 'http://127.0.0.1:3004', changeOrigin: true },
         '/assets/data': { target: 'https://uma.moe', changeOrigin: true },
         // Skill art lives in the separately deployed /assets bundle, so it has no

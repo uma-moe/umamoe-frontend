@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uma.moe/contracts/build-code.schema.json",
+  "title": "BuildCode",
+  "description": "The JSON inside a simulator build code. A build code is this JSON, gzipped, then base64 encoded (standard alphabet; URL-encoding is undone first). The shape mirrors the umalator's page state, so its field names, enums and value ranges match it; the fields marked as uma.moe additions are what Build search needs beyond that. Unknown fields are kept and ignored.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["uma1"],
+  "properties": {
+    "version": {
+      "description": "uma.moe addition. The build code version; 1 for this schema. Absent in umalator state.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "courseId": {
+      "description": "The simulator course_id, such as 10611 for Tokyo dirt 1,600 m.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "racedef": { "$ref": "#/$defs/race" },
+    "seed": {
+      "description": "Search seed, a signed 32-bit integer.",
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "mode": {
+      "description": "uma.moe addition. What Build search optimizes for: a Champions Meeting race or a Team Trials distance.",
+      "enum": ["cm", "tt_sprint", "tt_mile", "tt_medium", "tt_long", "tt_dirt"]
+    },
+    "opponents": {
+      "description": "uma.moe addition, no longer read. Who Build search raced her against before it raced her alone: the leading teams of a CM (cm), eight copies of her (mirror), or the race sim field (field). Kept so older codes still validate.",
+      "enum": ["cm", "mirror", "field"]
+    },
+    "cmSnapshot": {
+      "description": "uma.moe addition, no longer read. The CM Data dataset whose leading teams she raced, for opponents cm. Kept so older codes still validate.",
+      "type": "string"
+    },
+    "tracks": {
+      "description": "uma.moe addition. For the tt_* modes: the courses Team Trials draws from, as simulator course_ids. Build search races one of them per race, as the game draws a course per match. Absent means every JRA course of the distance (turf of that distance type, or dirt).",
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "type": "integer", "minimum": 1 }
+    },
+    "scoring": {
+      "description": "uma.moe addition, no longer read. Team Trials scoring from before Build search scored builds on the time they save; kept so older codes still validate.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "selfEvaluate": { "description": "Your team evaluation.", "type": "number", "minimum": 0 },
+        "opponentEvaluate": { "description": "The opposing team's evaluation.", "type": "number", "minimum": 0 },
+        "supportCardBonus": { "description": "Support card bonus, as the Team Trials screen shows it.", "type": "number", "minimum": 0 },
+        "winsBefore": { "description": "Wins so far.", "type": "integer", "minimum": 0 }
+      }
+    },
+    "uma1": {
+      "description": "The runner: at the end of a career for Build search, or the first runner elsewhere.",
+      "$ref": "#/$defs/runner"
+    },
+    "uma2": {
+      "description": "A second runner; the race simulator adds it to the field when it differs from uma1.",
+      "$ref": "#/$defs/runner"
+    },
+    "chartSkills": {
+      "description": "The skills on offer: what uma1 can buy with her skill points. Skill ids as strings.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/skillId" }
+    },
+    "hintLevels": {
+      "description": "Hint level per skill id, 0 to 5. Each level takes 10, 20, 30, 35 or 40% off that skill's cost. Missing skills have no hint.",
+      "type": "object",
+      "propertyNames": { "pattern": "^[1-9][0-9]*$" },
+      "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 5 }
+    }
+  },
+  "$defs": {
+    "skillId": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+    "grade": { "enum": ["S", "A", "B", "C", "D", "E", "F", "G"] },
+    "race": {
+      "description": "Race conditions, as the game numbers them.",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "ground": { "description": "1 good (firm), 2 yielding, 3 soft, 4 heavy.", "enum": [1, 2, 3, 4] },
+        "weather": { "description": "1 sunny, 2 cloudy, 3 rainy, 4 snowy.", "enum": [1, 2, 3, 4] },
+        "season": { "description": "1 spring, 2 summer, 3 autumn, 4 winter, 5 cherry blossom (raced as spring).", "enum": [1, 2, 3, 4, 5] },
+        "time": { "description": "0 none, 1 morning, 2 midday, 3 evening, 4 night.", "enum": [0, 1, 2, 3, 4] },
+        "grade": { "description": "Race grade, such as 100 for G1. Not used by the simulator.", "type": "integer" }
+      }
+    },
+    "runner": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["speed", "stamina", "power", "guts", "wisdom"],
+      "properties": {
+        "outfitId": { "description": "The trainee's card id, as a string, such as \"102602\".", "type": "string", "pattern": "^[0-9]*$" },
+        "starCount": { "description": "Star rarity, 1 to 5.", "type": "integer", "minimum": 1, "maximum": 5 },
+        "speed": { "type": "integer", "minimum": 1, "maximum": 3000 },
+        "stamina": { "type": "integer", "minimum": 1, "maximum": 3000 },
+        "power": { "type": "integer", "minimum": 1, "maximum": 3000 },
+        "guts": { "type": "integer", "minimum": 1, "maximum": 3000 },
+        "wisdom": { "type": "integer", "minimum": 1, "maximum": 3000 },
+        "strategy": { "description": "Running style: Nige front, Senkou pace, Sasi late, Oikomi end, Oonige runaway.", "enum": ["Nige", "Senkou", "Sasi", "Oikomi", "Oonige"] },
+        "distanceAptitude": { "description": "Her distance aptitude on courseId; wins over the matching aptitudes entry.", "$ref": "#/$defs/grade" },
+        "surfaceAptitude": { "description": "Her surface aptitude on courseId; wins over the matching aptitudes entry.", "$ref": "#/$defs/grade" },
+        "strategyAptitude": { "description": "Her aptitude for her strategy; wins over the matching aptitudes entry.", "$ref": "#/$defs/grade" },
+        "aptitudes": {
+          "description": "All ten aptitudes: short, mile, medium, long; nige, senkou, sasi, oikomi; turf, dirt.",
+          "type": "array",
+          "minItems": 10,
+          "maxItems": 10,
+          "items": { "$ref": "#/$defs/grade" }
+        },
+        "skills": { "description": "The skills she has, her unique included.", "type": "array", "items": { "$ref": "#/$defs/skillId" } },
+        "uniqueLv": { "description": "Her unique skill's level.", "type": "integer", "minimum": 1, "maximum": 6 },
+        "mood": { "description": "-2 awful, -1 bad, 0 normal, 1 good, 2 great.", "enum": [-2, -1, 0, 1, 2] },
+        "popularity": { "description": "Gate popularity. Not used by the simulator.", "type": "integer", "minimum": 1 },
+        "sp": { "description": "uma.moe addition. Skill points left to spend: Build search's budget.", "type": "integer", "minimum": 0 },
+        "fans": { "description": "uma.moe addition. Her fan count; skills that grow with fans need it.", "type": "integer", "minimum": 0 },
+        "fastLearner": { "description": "uma.moe addition. Fast Learner: another 10% off every skill.", "type": "boolean" }
+      }
+    }
+  }
+}

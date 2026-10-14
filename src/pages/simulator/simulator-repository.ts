@@ -10,7 +10,7 @@
 import { appHttp } from '@/services/http/app-http';
 import { HttpError, type HttpRequestOptions } from '@/services/http/http-client';
 import type { SimulatorReplay } from './simulator-results';
-import { normalizeReportResponse, expandReportTraces, type SimulationReport, type BuildComparison } from './simulation-report';
+import { normalizeReportResponse, expandReportTraces, type SimulationReport, type BuildComparison } from './reports/simulation-report';
 import type {DetailedReplay} from '@/lib/race/race-diagnostics';
 import {validateSimulatorResponse} from './simulator-response';
 const workerValidated=new WeakSet<object>();
@@ -32,6 +32,9 @@ export interface MonteCarloResult {
   check_hp?: number[][][];
   full_spurt_need_hp?: number[][][];
   spurt_calculation_results?: number[][][];
+  /** Recovery minus drain each runner received, as a share of her maximum HP: over the race, and before her first spurt check. */
+  hp_effect_rate?: number[][];
+  hp_effect_rate_before_first_spurt?: (number | null)[][];
   report?: SimulationReport;
   first_replay?: SimulatorReplay;
   skill_procs?: SimulatorProcTrace[];
@@ -67,6 +70,38 @@ export interface StaminaResult {
   check_hp: number[];
   full_spurt_need_hp: number[];
   spurt_calculation_results: number[];
+  /** Every sampled race, when several were asked for; the fields above are then its median race. */
+  distribution?: StaminaDistribution;
+}
+
+/** Sampled HP races side by side, one entry per race in seed order. */
+export interface StaminaDistribution {
+  seeds: number[];
+  /** From the first spurt check; null when she never reached one. */
+  check_hp: Array<number | null>;
+  full_spurt_need_hp: Array<number | null>;
+  check_distance_m: Array<number | null>;
+  first_spurt_result: Array<number | null>;
+  last_spurt_decision: number[];
+  remaining_hp: number[];
+  hp_deficit: number[];
+  exhausted_distance_m: Array<number | null>;
+  finish_time_seconds: number[];
+  recovered_hp: number[];
+  debuff_hp_loss: number[];
+  wasted_recovery_hp: number[];
+  /** HP used running, recovered and lost to debuffs by the first spurt check. */
+  consumed_before_check_hp: Array<number | null>;
+  recovered_before_check_hp: Array<number | null>;
+  debuff_before_check_hp: Array<number | null>;
+  /** Scheduled HP changes as a share of maximum HP: by the first check, and all of them. */
+  effect_rate_before_check: number[];
+  effect_rate: number[];
+  rushed: boolean[];
+  /** HP across the course: percentiles of the races at evenly spaced distances. */
+  hp_band: { distance_m: number[]; p10: number[]; p50: number[]; p90: number[] };
+  /** Index of the median race, whose fields the result carries. */
+  median: number;
 }
 
 /** One estimated metric from the optimize report or a validation pass. */
@@ -86,12 +121,68 @@ export interface OptimizeScenarioResult {
   skill_activations: OptimizeEstimate;
 }
 
+/** How a build did over every race: overall fitness and each scenario's metrics. */
+export interface OptimizeEvaluation {
+  fitness: OptimizeEstimate;
+  scenarios: Array<OptimizeScenarioResult>;
+}
+
+/** One step of the order the tree search bought a build in. */
+export interface OptimizeLineStep {
+  /** Indices into the request's purchases: a skill and the prerequisites it pulled in. */
+  purchases: Array<number>;
+  /** Fitness this step added; seconds saved when the objective is finish time. */
+  gain: number;
+}
+
 /** A finalist's build, search estimate and optional validation estimate. */
 export interface OptimizeFinalist {
   build: { purchases: Array<number>; stats: Array<number> };
   sp_cost: number;
-  search: { fitness: OptimizeEstimate; scenarios: Array<OptimizeScenarioResult> };
-  validation: { fitness: OptimizeEstimate; scenarios: Array<OptimizeScenarioResult> } | null;
+  search: OptimizeEvaluation;
+  validation: OptimizeEvaluation | null;
+  /** Fitness over her build as it is, seed by seed on the search seeds; seconds saved per race. Tree search only. */
+  gain?: OptimizeEstimate;
+  /** The same on the fresh validation seeds. */
+  validation_gain?: OptimizeEstimate;
+  /** The order the tree bought it in. */
+  line?: Array<OptimizeLineStep>;
+  /** What each purchase adds to the best build on its own (what builds on it left out). Most first. */
+  contributions?: Array<OptimizeContribution>;
+}
+
+export interface OptimizeContribution {
+  /** Index into the request's purchases, as a one-item list. */
+  purchases: Array<number>;
+  gain: OptimizeEstimate;
+}
+
+/** One purchase, screened: what it saves bought alone, and as the last one in with everything else on offer. */
+export interface OptimizeImpact {
+  purchase: number;
+  alone: OptimizeEstimate;
+  together?: OptimizeEstimate;
+  /** What real CM races say it adds, in the same unit, before any race of the search. */
+  evidence?: { mean: number; error: number };
+}
+
+export interface OptimizeScreenStats {
+  builds: number;
+  combinations: number;
+  /** Her time saved with everything on offer, SP aside. */
+  full: OptimizeEstimate;
+  full_cost: number;
+}
+
+/** How far the tree search went. */
+export interface OptimizeTreeStats {
+  depth: number;
+  nodes: number;
+  expanded: number;
+  /** Branches dropped because even their best case could not catch the leader. */
+  cut: number;
+  /** Builds reached again in another buying order. */
+  transpositions: number;
 }
 
 export interface OptimizeReport {
@@ -104,12 +195,34 @@ export interface OptimizeReport {
   search_seeds: Array<number>;
   validation_seeds: Array<number>;
   finalists: Array<OptimizeFinalist>;
+  /** Her build as it is, on the search seeds. */
+  baseline?: OptimizeEvaluation;
+  tree?: OptimizeTreeStats;
+  /** Every purchase's screened impact. Screen search only. */
+  impacts?: Array<OptimizeImpact>;
+  screen?: OptimizeScreenStats;
+}
+
+/** Where a search's real CM fields came from, and how well the model behind its evidence picks CM winners. */
+export interface OptimizeFields {
+  /** The CM course the fields were taken from. */
+  course_id: number;
+  fields: number;
+  held_out_races: number;
+  winner_accuracy: number;
+  winner_accuracy_without_skills: number;
 }
 
 /** `/api/sim/optimize` result. */
 export interface OptimizeResult {
   schema_version: number;
   mode: string;
+  /**
+   * What gains measure: seconds she saves (`finish_time`, and older services that do not say), or how many more
+   * runners she beats in real CM fields (`field_place`).
+   */
+  objective?: 'finish_time' | 'field_place';
+  fields?: OptimizeFields;
   runs_per_variation_per_scenario: number;
   validation_runs_per_finalist_per_scenario: number;
   report: OptimizeReport;
@@ -140,7 +253,7 @@ export async function decodeSimulatorBody(bytes:string|ArrayBuffer,signal?:Abort
     return normalizeReportResponse((await import('@msgpack/msgpack')).decode(new Uint8Array(bytes)));
   }
   return new Promise((resolve,reject)=>{
-    const worker=new Worker(new URL('./simulation-report.worker.ts',import.meta.url),{type:'module'});
+    const worker=new Worker(new URL('./reports/simulation-report.worker.ts',import.meta.url),{type:'module'});
     const cleanup=()=>{worker.terminate();signal?.removeEventListener('abort',abort);};
     const abort=()=>{cleanup();reject(new DOMException('Cancelled','AbortError'));};
     signal?.addEventListener('abort',abort,{once:true});
