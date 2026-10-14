@@ -1,7 +1,7 @@
 import type { OptimalRaceRecommendation } from '@/lib/catalog/race-catalog';
-import type { VeteranUiRecord } from '@/components/veteran-ui-types';
+import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
 import type { LineageBranch, LineageNodeData } from '@/components/lineage-types';
-import type { RaceScheduleYear } from '@/components/race-types';
+import type { RaceScheduleYear } from '@/components/game/race-types';
 import oguriCapImage from './fixtures/oguri-cap.webp';
 import mejiroMcQueenImage from './fixtures/mejiro-mcqueen.webp';
 import kitasanBlackImage from './fixtures/kitasan-black.webp';

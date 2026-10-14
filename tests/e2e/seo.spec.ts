@@ -92,7 +92,15 @@ test.describe('static crawler content', () => {
   });
 });
 
-test('friend-search content and metadata survive app startup and navigation', async ({ page, context }) => {
+test('crawler copy stays hidden from visitors while the app loads', async ({ page }) => {
+  // Hold the app bundle back so the page stays in its pre-mount state.
+  await page.route('**/app/**', route => route.abort());
+  await page.goto('/database');
+  await expect(page.locator('#seo-content')).toHaveCount(1);
+  await expect(page.locator('#seo-content')).toBeHidden();
+});
+
+test('metadata survives app startup and navigation without showing crawler copy', async ({ page, context }) => {
   await mockAdvertising(context);
   await mockResources(context);
   await mockAffinity(page);
@@ -105,9 +113,10 @@ test('friend-search content and metadata survive app startup and navigation', as
   await expect(page.locator('[data-app-shell]')).toBeVisible();
   await expect(page.locator('#seo-content')).toHaveCount(0);
   await expect(page).toHaveTitle(pages['/'].title);
-  await page.getByRole('link', { name: 'Search the Uma friend database', exact: true }).click();
+  await page.locator('.quick-link[href="/database"]').click();
   await expect(page).toHaveURL(/\/database$/);
-  await expect(page.getByRole('heading', { name: 'How to find an Uma friend', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Database', exact: true, level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'How to find an Uma friend', exact: true })).toHaveCount(0);
   await expect(page).toHaveTitle(pages['/database'].title);
   await expect(page.locator('meta[name="description"]')).toHaveCount(1);
   await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', pages['/database'].description);
@@ -138,7 +147,7 @@ test('lazy public pages keep one consistent set of metadata', async ({ page, con
   }
 });
 
-test('schedule guidance and metadata stay available after loading the timeline', async ({ page, context }) => {
+test('timeline metadata stays available without showing crawler copy', async ({ page, context }) => {
   await mockAdvertising(context);
   await mockResources(context);
   await context.addInitScript(() => {
@@ -146,8 +155,8 @@ test('schedule guidance and metadata stay available after loading the timeline',
     localStorage.setItem('lastSeenUpdateVersion', '18');
   });
   await page.goto('/timeline');
-  await expect(page.getByRole('heading', { name: 'Global event schedule', exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Plan carats for your next banner', exact: true })).toHaveAttribute('href', '/timeline?tab=carat-planner');
+  await expect(page.locator('[data-app-shell]')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Global event schedule', exact: true })).toHaveCount(0);
   await page.getByRole('link', { name: 'Carat Planner', exact: true }).first().click();
   await expect(page).toHaveTitle(pages['/timeline'].title);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://uma.moe/timeline');

@@ -2,6 +2,7 @@ import { expect, test, setSliderValue } from './fixtures/test';
 import { mockDatabase, mockAffinity } from './fixtures/api';
 
 test('Database filters split on small screens, share collapse styling, and retain selections', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await mockDatabase(page);
   await mockAffinity(page);
   await page.setViewportSize({ width: 390, height: 844 });

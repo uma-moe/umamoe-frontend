@@ -5,9 +5,9 @@ import { simulatorReplayCapture, simulatorResults, simulatorTeamResults, simulat
 import { createExampleRace } from './simulator-example';
 import { raceSignalSpreads,racePositionClouds,trajectoryPreviewSamples,compactRaceTrajectory,raceFieldSpread,raceDistanceSpread,meanRaceCapture,meanTrajectorySignal,trajectoryAtTime,trajectorySeries } from '@/lib/race/race-ensemble';
 import { hpCalculation } from './hp-calculation';
-import { veteranTeamCount, veteranTeams, pairingSeeds, benchmarkFields, pairingFrameOrders } from './veteran-pairings';
-import { cmPreset } from './cm-presets';
-import { buildMonteCarloRequest } from './race-sim-request';
+import { veteranTeamCount, veteranTeams, pairingSeeds, benchmarkFields, pairingFrameOrders } from './setup/veteran-pairings';
+import { cmPreset } from './courses/cm-presets';
+import { buildMonteCarloRequest } from './requests/race-sim-request';
 import { createSimulatorRepository, type StaminaResult } from './simulator-repository';
 import type { ProfileVeteran } from '@/pages/profile/profile-repository';
 import type { Build, Summary } from '@/pages/competitive/hakuraku-types';

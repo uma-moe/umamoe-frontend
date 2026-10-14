@@ -1,0 +1,2 @@
+/local.sh text eol=lf
+/tests/local-stack.sh text eol=lf

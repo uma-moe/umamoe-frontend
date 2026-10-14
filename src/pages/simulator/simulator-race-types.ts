@@ -5,7 +5,7 @@
  * this is only how they read in a picker or a summary line.
  */
 
-import { RACE_TYPES, type RaceType } from './stamina-request';
+import { RACE_TYPES, type RaceType } from './requests/stamina-request';
 
 export const RACE_TYPE_LABELS: Record<RaceType, string> = {
   0: 'Champions Meeting',

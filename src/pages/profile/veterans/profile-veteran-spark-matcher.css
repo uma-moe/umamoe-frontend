@@ -1,0 +1,254 @@
+.spark-matcher,
+.requirements {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.spark-matcher {
+  gap: 12px;
+}
+.requirement {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px 10px;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+}
+.rule-heading {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px 26px;
+  align-items: center;
+  gap: 4px;
+}
+.rule-name {
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.spark-star {
+  flex: none;
+  color: var(--spark-white-text);
+  font-size: 13px;
+}
+.spark-star.blue {
+  color: var(--accent-primary);
+}
+.spark-star.pink {
+  color: var(--color-pink);
+}
+.spark-star.green {
+  color: var(--accent-secondary);
+}
+.rule-menu {
+  --inspect-popover-width: 280px;
+  --inspect-popover-padding: 12px;
+  min-width: 0;
+}
+.rule-menu :global(.inspect) {
+  width: 100%;
+  min-width: 0;
+}
+.rule-menu :global(.trigger) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 28px;
+  border-radius: 4px;
+  text-align: left;
+}
+.rule-menu :global(.trigger:hover) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rule-scope {
+  --control-height: 28px;
+  min-width: 0;
+}
+.rule-scope :global(.select-control) {
+  padding: 0 8px;
+  gap: 4px;
+  font-size: 11px;
+}
+.rule-scope :global(.select-panel) {
+  left: auto;
+  right: 0;
+  width: max(100%, 170px);
+}
+.rule-scope :global(.select-panel button) {
+  font-size: 12px;
+}
+.rule-join {
+  justify-self: center;
+}
+.rule-join :global(.segments) {
+  padding: 2px;
+}
+.rule-join :global(.segments button) {
+  min-height: 24px;
+  padding: 0 8px;
+  font-size: 10px;
+}
+.advanced-spark {
+  display: grid;
+  gap: 10px;
+}
+.advanced-spark h4 {
+  margin: 0 32px 4px 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 24px;
+}
+.option-field {
+  --control-height: 34px;
+  min-width: 0;
+}
+.option-field :global(.select-control) {
+  font-size: 12px;
+}
+.option-field :global(label) {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+.combine-stars {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  color: var(--color-text);
+  font-size: 11px;
+  cursor: pointer;
+}
+.combine-stars input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent-primary);
+}
+.option-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+}
+.option-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.option-actions button:hover {
+  background: var(--surface-3);
+  color: var(--color-text);
+}
+.rule-remove :global(.icon-button) {
+  width: 26px;
+  height: 28px;
+}
+.rule-remove :global(svg) {
+  width: 14px;
+  height: 14px;
+}
+.rule-remove :global(.icon-button:hover) {
+  color: var(--accent-error);
+}
+.factor-range {
+  min-width: 0;
+  padding: 0 7px 0 5px;
+}
+.factor-range :global(.slider-wrap),
+.factor-range :global(.thumb) {
+  height: 28px;
+}
+.factor-range :global(.visual-knob) {
+  width: 12px;
+  height: 12px;
+  box-shadow: none;
+}
+.factor-range :global(.track) {
+  height: 3px;
+}
+.factor-range :global(.labels) {
+  font-size: 10px;
+}
+.factor-range :global(.labels span.active) {
+  font-weight: 500;
+}
+.spark-browser > header :global(.icon-button) {
+  width: 26px;
+  height: 28px;
+  min-height: 28px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+.spark-browser {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+.spark-browser > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+}
+@media (max-width: 767px) {
+  .rule-heading {
+    grid-template-columns: minmax(0, 1fr) 132px 32px;
+  }
+  .rule-remove :global(.icon-button) {
+    width: 32px;
+    height: var(--touch-target);
+  }
+  .rule-menu :global(.trigger),
+  .rule-scope :global(.select-control),
+  .option-field :global(.select-control),
+  .combine-stars,
+  .option-actions button {
+    min-height: var(--touch-target);
+  }
+  .rule-join :global(.segments button) {
+    min-height: 28px;
+  }
+  .spark-browser > header :global(.icon-button) {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+  .advanced-spark h4 {
+    margin-right: 36px;
+    min-height: 24px;
+  }
+  .factor-range :global(.slider-wrap),
+  .factor-range :global(.thumb) {
+    height: var(--touch-target);
+  }
+  .factor-range :global(.visual-knob) {
+    width: 18px;
+    height: 18px;
+  }
+}

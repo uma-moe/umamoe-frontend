@@ -1,4 +1,8 @@
-.club-chart-tooltip { max-height: calc(100dvh - 16px); }
+.club-chart-tooltip {
+  max-height: calc(100dvh - 16px);
+}
 @media (max-width: 1023px), (max-height: 600px) {
-  .club-chart-tooltip { max-height: min(232px, 45dvh); }
+  .club-chart-tooltip {
+    max-height: min(232px, 45dvh);
+  }
 }

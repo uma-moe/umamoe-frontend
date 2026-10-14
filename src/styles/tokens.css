@@ -15,20 +15,20 @@
   --navbar-bg: rgb(18 18 18 / 0.95);
   --document-bg: var(--color-canvas);
   --tab-bar-bg: var(--component-bg);
-  --tab-bar-border: rgb(255 255 255 / .08);
-  --tab-btn-color: rgb(255 255 255 / .45);
-  --tab-btn-hover-bg: rgb(255 255 255 / .05);
+  --tab-bar-border: rgb(255 255 255 / 0.08);
+  --tab-btn-color: rgb(255 255 255 / 0.45);
+  --tab-btn-hover-bg: rgb(255 255 255 / 0.05);
   --card-surface-bg: var(--component-bg);
   --card-surface-border: var(--border-primary);
   --card-surface-shadow: none;
   --card-surface-hover-bg: var(--surface-3);
   --card-surface-hover-border: var(--border-secondary);
-  --card-surface-hover-shadow: 0 4px 12px rgb(0 0 0 / .2);
+  --card-surface-hover-shadow: 0 4px 12px rgb(0 0 0 / 0.2);
 
   --text-primary: #ffffff;
-  --text-secondary: rgb(255 255 255 / 0.70);
-  --text-muted: rgb(255 255 255 / 0.50);
-  --text-disabled: rgb(255 255 255 / 0.30);
+  --text-secondary: rgb(255 255 255 / 0.7);
+  --text-muted: rgb(255 255 255 / 0.5);
+  --text-disabled: rgb(255 255 255 / 0.3);
 
   --button-primary-text: #07121d;
   --accent-primary: #64b5f6;
@@ -38,8 +38,8 @@
   --accent-success: #81c784;
   --accent-success-rgb: 129 199 132;
   --accent-warning: #ffb74d;
-  --clear-filter-border: rgb(255 255 255 / .08);
-  --clear-filter-color: rgb(255 255 255 / .4);
+  --clear-filter-border: rgb(255 255 255 / 0.08);
+  --clear-filter-color: rgb(255 255 255 / 0.4);
   --accent-warning-rgb: 255 183 77;
   --accent-error: #e57373;
   --timeline-today-color: #ff8a65;
@@ -72,42 +72,70 @@
   --accent-green-strong: #4caf50;
 
   /* Stable game semantics ported from the Angular vocabulary. */
-  --rank-g: #c6c7c6; --rank-f: #ad97fc; --rank-e: #d675ef; --rank-d: #63baf7;
-  --rank-c: #81d968; --rank-b: #ff7da5; --rank-a: #fa8836; --rank-s: #e7b618;
-  --rank-ss: #ef5350; --rank-ultra: #de0cf7;
-  --aptitude-s: #e7b618; --aptitude-a: #fa8836; --aptitude-b: #ff7da5;
-  --aptitude-c: #81d968; --aptitude-d: #63baf7; --aptitude-e: #d675ef; --aptitude-f: #ad97fc; --aptitude-g: #c6c7c6;
+  --rank-g: #c6c7c6;
+  --rank-f: #ad97fc;
+  --rank-e: #d675ef;
+  --rank-d: #63baf7;
+  --rank-c: #81d968;
+  --rank-b: #ff7da5;
+  --rank-a: #fa8836;
+  --rank-s: #e7b618;
+  --rank-ss: #ef5350;
+  --rank-ultra: #de0cf7;
+  --aptitude-s: #e7b618;
+  --aptitude-a: #fa8836;
+  --aptitude-b: #ff7da5;
+  --aptitude-c: #81d968;
+  --aptitude-d: #63baf7;
+  --aptitude-e: #d675ef;
+  --aptitude-f: #ad97fc;
+  --aptitude-g: #c6c7c6;
   --shared-card-soft-bg: var(--card-surface-bg);
-  --shared-card-soft-border: rgb(255 255 255 / .04);
+  --shared-card-soft-border: rgb(255 255 255 / 0.04);
   --color-gold: #ffd700;
-  --stat-speed: #64b5f6; --stat-stamina: #ef9a9a; --stat-power: #ffcc80; --stat-guts: #ce93d8; --stat-wit: #81c784;
-  --distance-sprint: #ff9800; --distance-mile: #4caf50; --distance-medium: #2196f3; --distance-long: #9c27b0; --distance-dirt: #795548;
-  --grade-g1: #7fb3ef; --grade-g1-base: 54 132 227;
-  --grade-g2: #f48fab; --grade-g2-base: 244 85 129;
-  --grade-g3: #6fcf85; --grade-g3-base: 57 187 84;
-  --race-g1: var(--grade-g1); --race-g2: var(--grade-g2); --race-g3: var(--grade-g3);
-  --lineage-main: #ffb74d; --lineage-parent: #64b5f6; --lineage-grandparent: #ce93d8;
+  --stat-speed: #64b5f6;
+  --stat-stamina: #ef9a9a;
+  --stat-power: #ffcc80;
+  --stat-guts: #ce93d8;
+  --stat-wit: #81c784;
+  --distance-sprint: #ff9800;
+  --distance-mile: #4caf50;
+  --distance-medium: #2196f3;
+  --distance-long: #9c27b0;
+  --distance-dirt: #795548;
+  --grade-g1: #7fb3ef;
+  --grade-g1-base: 54 132 227;
+  --grade-g2: #f48fab;
+  --grade-g2-base: 244 85 129;
+  --grade-g3: #6fcf85;
+  --grade-g3-base: 57 187 84;
+  --race-g1: var(--grade-g1);
+  --race-g2: var(--grade-g2);
+  --race-g3: var(--grade-g3);
+  --lineage-main: #ffb74d;
+  --lineage-parent: #64b5f6;
+  --lineage-grandparent: #ce93d8;
 
   --border-subtle: rgb(255 255 255 / 0.06);
   --border-primary: rgb(255 255 255 / 0.12);
-  --border-secondary: rgb(255 255 255 / 0.20);
-  --border-strong: rgb(255 255 255 / 0.30);
+  --border-secondary: rgb(255 255 255 / 0.2);
+  --border-strong: rgb(255 255 255 / 0.3);
 
   /* Port of the custom Angular factor/select/autocomplete field language. */
   --factor-field-bg: #141414;
-  --factor-field-border: rgb(255 255 255 / 0.10);
+  --factor-field-border: rgb(255 255 255 / 0.1);
   --factor-field-focus-bg: var(--factor-field-bg);
-  --factor-field-focus-border: rgb(var(--accent-primary-rgb) / 0.40);
+  --factor-field-focus-border: rgb(var(--accent-primary-rgb) / 0.4);
   --factor-field-text: var(--text-primary);
   --factor-field-placeholder: rgb(255 255 255 / 0.55);
-  --factor-field-arrow: rgb(255 255 255 / 0.40);
+  --factor-field-arrow: rgb(255 255 255 / 0.4);
   --factor-panel-bg: #1e1e1e;
-  --factor-panel-border: rgb(255 255 255 / 0.10);
+  --factor-panel-border: rgb(255 255 255 / 0.1);
   --factor-option-text: rgb(255 255 255 / 0.85);
   --factor-option-separator: rgb(255 255 255 / 0.05);
   --factor-option-hover: rgb(255 255 255 / 0.05);
   --factor-option-selected-bg: rgb(var(--accent-primary-rgb) / 0.08);
-  --factor-option-selected-text: rgb(var(--accent-primary-rgb) / 0.90);
+  --factor-option-selected-text: rgb(var(--accent-primary-rgb) / 0.9);
 
   /* Angular component semantics retained during the parity migration. */
   --filter-mode-active-bg: rgb(33 150 243 / 0.35);
@@ -174,10 +202,10 @@
   --gradient-brand: linear-gradient(45deg, #64b5f6, #81c784, #ffb74d);
   --gradient-heading: var(--gradient-brand);
   --gradient-logo: linear-gradient(135deg, #64b5f6, #81c784 62%, #ffb74d);
-  --gradient-page-header: linear-gradient(135deg, rgb(100 181 246 / 0.10), rgb(129 199 132 / 0.10));
+  --gradient-page-header: linear-gradient(135deg, rgb(100 181 246 / 0.1), rgb(129 199 132 / 0.1));
 
-  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   --font-xs: 0.6875rem;
   --font-sm: 0.8125rem;
   --font-md: 0.875rem;
@@ -210,10 +238,10 @@
   --radius-xl: 16px;
   --radius-pill: 999px;
 
-  --shadow-sm: 0 2px 4px rgb(0 0 0 / 0.30);
-  --shadow-md: 0 4px 8px rgb(0 0 0 / 0.30);
-  --shadow-lg: 0 10px 15px rgb(0 0 0 / 0.30);
-  --shadow-dropdown: 0 8px 24px rgb(0 0 0 / 0.50);
+  --shadow-sm: 0 2px 4px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 8px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px rgb(0 0 0 / 0.3);
+  --shadow-dropdown: 0 8px 24px rgb(0 0 0 / 0.5);
   --focus-ring: 0 0 0 2px rgb(var(--accent-primary-rgb) / 0.22);
 
   --duration-fast: 150ms;
@@ -268,16 +296,19 @@
   --navbar-bg: rgb(255 255 255 / 0.96);
   --document-bg: var(--color-canvas);
   --tab-bar-bg: #ffffff;
-  --tab-bar-border: rgb(17 24 39 / .14);
+  --tab-bar-border: rgb(17 24 39 / 0.14);
   --tab-btn-color: #4b5563;
-  --tab-btn-hover-bg: rgb(var(--accent-primary-rgb) / .08);
+  --tab-btn-hover-bg: rgb(var(--accent-primary-rgb) / 0.08);
   --card-surface-bg: var(--component-bg);
-  --card-surface-border: rgb(17 24 39 / .12);
-  --card-surface-shadow: 0 12px 30px rgb(15 23 42 / .075);
+  --card-surface-border: rgb(17 24 39 / 0.12);
+  --card-surface-shadow: 0 12px 30px rgb(15 23 42 / 0.075);
   --card-surface-hover-bg: #ffffff;
-  --card-surface-hover-border: rgb(var(--accent-primary-rgb) / .32);
+  --card-surface-hover-border: rgb(var(--accent-primary-rgb) / 0.32);
   --card-surface-hover-shadow: var(--shadow-md);
-  --hero-light-bg: radial-gradient(circle at 12% 18%,rgb(var(--accent-primary-rgb) / .08),transparent 34%),radial-gradient(circle at 86% 14%,rgb(var(--accent-secondary-rgb) / .055),transparent 30%),linear-gradient(180deg,#ffffff,#f4f7fb);
+  --hero-light-bg:
+    radial-gradient(circle at 12% 18%, rgb(var(--accent-primary-rgb) / 0.08), transparent 34%),
+    radial-gradient(circle at 86% 14%, rgb(var(--accent-secondary-rgb) / 0.055), transparent 30%),
+    linear-gradient(180deg, #ffffff, #f4f7fb);
   --gradient-heading: linear-gradient(45deg, #1d4ed8, #0f766e);
 
   --text-primary: #111827;
@@ -292,7 +323,7 @@
   --accent-success: #15803d;
   --accent-success-rgb: 21 128 61;
   --accent-warning: #b45309;
-  --clear-filter-border: rgb(17 24 39 / .14);
+  --clear-filter-border: rgb(17 24 39 / 0.14);
   --clear-filter-color: #6b7280;
   --accent-warning-rgb: 180 83 9;
   --accent-error: #b91c1c;
@@ -315,21 +346,34 @@
   --entry-affinity-gp-color: #7b1fa2;
   --entry-breeding-color: #9a5600;
   --entry-card-bg: #ffffff;
-  --entry-card-border: rgb(17 24 39 / .16);
-  --entry-stats-bg: rgb(17 24 39 / .065);
-  --entry-stats-border: rgb(17 24 39 / .1);
+  --entry-card-border: rgb(17 24 39 / 0.16);
+  --entry-stats-bg: rgb(17 24 39 / 0.065);
+  --entry-stats-border: rgb(17 24 39 / 0.1);
   --spark-white-text: #4b5563;
   --spark-source-main: #a34f3f;
   --spark-source-right: #7b2b88;
   --accent-green-strong: #15803d;
-  --rank-g: #5f6368; --rank-f: #7254d6; --rank-e: #a23dba; --rank-d: #1976c9;
-  --rank-c: #2e7d32; --rank-b: #c52f67; --rank-a: #c75b12; --rank-s: #9a7000;
-  --rank-ss: #c62828; --rank-ultra: #9c13ad;
+  --rank-g: #5f6368;
+  --rank-f: #7254d6;
+  --rank-e: #a23dba;
+  --rank-d: #1976c9;
+  --rank-c: #2e7d32;
+  --rank-b: #c52f67;
+  --rank-a: #c75b12;
+  --rank-s: #9a7000;
+  --rank-ss: #c62828;
+  --rank-ultra: #9c13ad;
   --shared-card-soft-bg: var(--card-surface-bg);
-  --shared-card-soft-border: rgb(17 24 39 / .12);
+  --shared-card-soft-border: rgb(17 24 39 / 0.12);
   --color-gold: #b77900;
-  --stat-speed: #1769aa; --stat-stamina: #b42335; --stat-power: #a65d00; --stat-guts: #7b2b88; --stat-wit: #287a31;
-  --lineage-main: #a65d00; --lineage-parent: #1769aa; --lineage-grandparent: #7b2b88;
+  --stat-speed: #1769aa;
+  --stat-stamina: #b42335;
+  --stat-power: #a65d00;
+  --stat-guts: #7b2b88;
+  --stat-wit: #287a31;
+  --lineage-main: #a65d00;
+  --lineage-parent: #1769aa;
+  --lineage-grandparent: #7b2b88;
 
   --border-subtle: rgb(17 24 39 / 0.13);
   --border-primary: rgb(17 24 39 / 0.16);
@@ -390,17 +434,17 @@
   --color-text-subtle: var(--text-muted);
   --color-accent: var(--accent-primary);
   --color-accent-strong: #1d4ed8;
-  --color-accent-soft: rgb(var(--accent-primary-rgb) / 0.10);
+  --color-accent-soft: rgb(var(--accent-primary-rgb) / 0.1);
   --color-secondary: var(--accent-secondary);
-  --color-secondary-soft: rgb(15 118 110 / 0.10);
+  --color-secondary-soft: rgb(15 118 110 / 0.1);
   --color-warning: var(--accent-warning);
-  --color-warning-soft: rgb(180 83 9 / 0.10);
+  --color-warning-soft: rgb(180 83 9 / 0.1);
   --color-danger: var(--accent-error);
   --color-danger-soft: rgb(185 28 28 / 0.09);
   --color-info: var(--accent-primary);
   --color-success: #15803d;
   --shadow-sm: 0 2px 4px rgb(17 24 39 / 0.08);
-  --shadow-md: 0 4px 8px rgb(17 24 39 / 0.10);
+  --shadow-md: 0 4px 8px rgb(17 24 39 / 0.1);
   --shadow-lg: 0 10px 15px rgb(17 24 39 / 0.12);
   --shadow-dropdown: 0 8px 24px rgb(17 24 39 / 0.16);
 }
@@ -409,13 +453,13 @@
   :root {
     --control-height: 32px;
     --touch-target: 32px;
-    --font-sm: .75rem;
-    --font-md: .8125rem;
-    --font-lg: .875rem;
+    --font-sm: 0.75rem;
+    --font-md: 0.8125rem;
+    --font-lg: 0.875rem;
     --font-xl: 1.25rem;
     --font-display: clamp(1.5rem, 5vw, 2rem);
-    --space-3: .625rem;
-    --space-4: .75rem;
+    --space-3: 0.625rem;
+    --space-4: 0.75rem;
     --space-5: 1rem;
     --space-6: 1.125rem;
     --space-8: 1.5rem;
@@ -423,4 +467,9 @@
     --space-12: 2rem;
   }
 }
-@media (prefers-reduced-motion: reduce) { :root { --duration-fast: 0ms; --duration-normal: 0ms; } }
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+  }
+}

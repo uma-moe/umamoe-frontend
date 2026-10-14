@@ -1,0 +1,343 @@
+.tierlist-page {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 20% 50%, rgb(100 181 246/0.1), transparent 50%),
+    radial-gradient(circle at 80% 20%, rgb(129 199 132/0.1), transparent 50%),
+    radial-gradient(circle at 40% 80%, rgb(255 183 77/0.1), transparent 50%), var(--bg-primary);
+}
+.lb-control {
+  width: 210px;
+}
+.legacy-banner {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 20px;
+  border-bottom: 1px solid rgb(255 152 0/0.15);
+  background: rgb(255 152 0/0.08);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.legacy-banner :global(svg) {
+  color: var(--accent-warning);
+}
+.tier-content {
+  display: grid;
+  gap: 14px;
+  padding: 24px clamp(4px, 3vw, 32px);
+}
+.type-tabs :global(.tabs) {
+  width: 100%;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+.type-tabs :global(button) {
+  min-width: 0;
+  flex: 1;
+}
+.loading {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+}
+.chart {
+  padding: 16px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-md);
+}
+.card-chart {
+  position: relative;
+  height: 680px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-secondary);
+}
+.grid-line {
+  position: absolute;
+  top: 20px;
+  bottom: 40px;
+  width: 1px;
+  background: var(--border-subtle);
+}
+.chart-card {
+  position: absolute;
+  z-index: 2;
+  bottom: calc(55px + var(--stack) * 69px);
+  left: var(--x);
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid var(--tier);
+  border-radius: 6px;
+  background: var(--surface-2);
+  cursor: pointer;
+  transform: translateX(-50%);
+  box-shadow: 0 2px 6px rgb(0 0 0/0.32);
+}
+.chart-card:hover {
+  z-index: 4;
+  transform: translateX(-50%) scale(1.08);
+}
+.chart-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.grid-line span {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  transform: translateX(-50%);
+  color: var(--text-secondary);
+  font: normal 10px var(--font-sans);
+}
+.chart-axis {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  bottom: 0;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+}
+.tierlist {
+  display: grid;
+  gap: 24px;
+  padding: 10px 24px 24px;
+}
+.tierlist article {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--bg-tertiary);
+}
+.tierlist article > header {
+  min-height: 118px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  border-right: 1px solid var(--border-subtle);
+  background: var(--tier);
+  color: #0b1018;
+  text-shadow: 0 1px 0 rgb(255 255 255/0.3);
+}
+.tierlist article > header strong {
+  font-size: 2rem;
+}
+.tierlist article > header span {
+  color: #0b1018;
+  font-size: 10px;
+}
+.tierlist article > header small {
+  color: rgb(11 16 24/0.72);
+  font-size: 8px;
+  font-weight: 700;
+}
+.tierlist article > div {
+  background: rgb(var(--on-surface-rgb) / 0.1);
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 16px;
+  padding: 24px;
+}
+.tierlist button {
+  width: 100px;
+  height: 100px;
+  position: relative;
+  min-width: 0;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.tierlist button:hover,
+.tierlist button.selected {
+  border-color: var(--color-accent);
+}
+.tierlist button img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.tierlist button > span {
+  position: absolute;
+  inset: auto 0 0;
+  min-width: 0;
+  display: grid;
+  padding: 6px;
+  background: linear-gradient(transparent, #000 20%);
+  color: #fff;
+}
+.card-lb {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  background: #111;
+  border-radius: 4px;
+  padding: 2px 4px;
+  color: white;
+  font-size: 9px;
+}
+.tierlist button small {
+  color: #ff4560;
+}
+.tierlist button strong,
+.tierlist button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tierlist button strong {
+  font-size: 10px;
+}
+.tierlist button small {
+  color: #ff1744;
+  font-size: 11px;
+}
+.tier-info {
+  max-width: 900px;
+  margin: 26px auto 0;
+  padding: 20px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+.tier-info h2 {
+  margin: 0 0 12px;
+}
+.tier-info p {
+  margin: 4px 0;
+  color: var(--text-secondary);
+}
+.tier-info h3 {
+  margin: 18px 0 10px;
+  font-size: 0.9rem;
+}
+.tier-info > div {
+  display: grid;
+  gap: 4px;
+}
+.tier-info > div span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+}
+.tier-info i {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--tier);
+}
+.tier-info > div small {
+  color: var(--text-muted);
+  font-size: 0.62rem;
+}
+@media (max-width: 650px) {
+  .lb-control {
+    width: 45%;
+    min-width: 140px;
+  }
+  .legacy-banner {
+    justify-content: flex-start;
+    padding-inline: 6px;
+  }
+  .tier-content {
+    padding: 14px 4px;
+  }
+  .chart {
+    padding: 6px;
+  }
+  .chart-card {
+    bottom: calc(55px + var(--stack) * 44px);
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+  .grid-line span {
+    font-size: 8px;
+  }
+  .type-tabs :global(button) {
+    min-width: 90px;
+    flex: 0 0 auto;
+  }
+  .tierlist article {
+    grid-template-columns: 1fr;
+  }
+  .tierlist article > header {
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .tierlist article > header strong {
+    font-size: 1.4rem;
+  }
+  .tierlist button {
+    width: 60px;
+    height: 60px;
+  }
+  .tierlist {
+    gap: 16px;
+    padding: 10px 24px 24px;
+  }
+  .tierlist article > div {
+    gap: 12px;
+    padding: 16px;
+  }
+  .tierlist button img {
+    height: 100%;
+  }
+  .tierlist button > span {
+    padding: 3px;
+  }
+  .tierlist button strong {
+    font-size: 8px;
+  }
+  .tierlist button small {
+    font-size: 10px;
+  }
+}
+.card-preview {
+  position: fixed;
+  z-index: var(--z-overlay);
+  width: 352px;
+  max-height: calc(100dvh - 8px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-dropdown);
+  pointer-events: none;
+}
+.tierlist-page,
+.tier-content,
+.type-tabs {
+  min-width: 0;
+  max-width: 100%;
+}
+.type-tabs {
+  overflow-x: auto;
+}

@@ -1,4 +1,4 @@
-import {validateReport,type BuildComparison} from './simulation-report';
+import {validateReport,type BuildComparison} from './reports/simulation-report';
 import {validateDetailedReplay} from '@/lib/race/race-diagnostics';
 
 export function validateSimulatorResponse(path:string,body:Record<string,unknown>,result:unknown) {

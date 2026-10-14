@@ -8,7 +8,7 @@ it('shares cache/live factors with pickers and UQL, rejecting a malformed refres
   const catalog = await import('./factor-catalog');
   const { UqlCompiler } = await import('@/lib/inheritance/uql-compiler');
   const { validateInheritanceUql } = await import('@/lib/inheritance/uql');
-  const { createDatabaseUqlLanguage } = await import('@/pages/database/database-uql-language');
+  const { createDatabaseUqlLanguage } = await import('@/pages/database/uql/database-uql-language');
   const bundled = catalog.factorOptions();
   expect(validateInheritanceUql('Main has Live Recovery').state).toBe('invalid');
   const cached = [...bundled, { id:'990001', text:'Cached Recovery', type:3 }];
