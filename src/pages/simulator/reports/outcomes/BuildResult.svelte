@@ -43,6 +43,8 @@
 
   /** The first optimizer that races her alone and screens every skill. */
   const SCREEN_SCHEMA = 5;
+  /** Optimize responses from schema 7 leave out skills that can never fire for her. */
+  const INERT_SCHEMA = 7;
   /** How sure a skill must be to cost time before the search leaves SP unspent on it (the server's rule). */
   const SURE = 3;
 
@@ -95,24 +97,68 @@
         gain: { ...step.gain }
       }))
       .filter((step) => step.offers.length);
-    for (const step of steps) {
-      for (const offer of step.offers) {
-        if (offer.needs !== 'offered' || !offer.upgrades) continue;
-        const lower = steps.find(
-          (other) =>
-            other !== step && other.offers.some((item) => item.skillId === offer.upgrades!.skill_id)
-        );
-        if (!lower) continue;
-        step.base.push(...lower.offers, ...lower.base);
-        step.gain = {
-          ...step.gain,
-          mean: step.gain.mean + lower.gain.mean,
-          standard_error: Math.hypot(step.gain.standard_error, lower.gain.standard_error)
-        };
-        lower.offers = [];
+    // Down each chain (a gold on its ◎ on its ○) until every skill she builds on is in the row of what replaces it.
+    let merged: boolean;
+    do {
+      merged = false;
+      for (const step of steps) {
+        for (const offer of [...step.offers, ...step.base]) {
+          const on = offer.buildsOn;
+          if (!on || on.owned) continue;
+          const lower = steps.find(
+            (other) =>
+              other !== step && other.offers.some((item) => item.skillId === on.skill.skill_id)
+          );
+          if (!lower) continue;
+          step.base.push(...lower.offers, ...lower.base);
+          step.gain = {
+            ...step.gain,
+            mean: step.gain.mean + lower.gain.mean,
+            standard_error: Math.hypot(step.gain.standard_error, lower.gain.standard_error)
+          };
+          lower.offers = [];
+          lower.base = [];
+          merged = true;
+        }
       }
-    }
+    } while (merged);
     return steps.filter((step) => step.offers.length);
+  });
+  /** What rules a skill out, in words: it needs another track, distance, running style and so on. */
+  const RULED_OUT: Record<string, string> = {
+    track: 'another racecourse',
+    distance: 'another distance',
+    ground: 'another surface',
+    going: 'other going',
+    season: 'another season',
+    weather: 'other weather',
+    direction: 'the other direction',
+    'race grade': 'another race grade',
+    'running style': 'another running style',
+    slope: 'a slope this course lacks',
+    corners: 'corners this course lacks'
+  };
+  /** Skills on offer that can never fire for her here, left out of the search, grouped by what rules them out. */
+  const inert = $derived(
+    (outdated ? [] : (result?.inert ?? []))
+      .map((item) => ({
+        ...item,
+        offer: offers[item.purchase],
+        reason: item.why.map((why) => RULED_OUT[why] ?? why).join(' and ')
+      }))
+      .filter((item) => !!item.offer)
+  );
+  /** A simulator older than schema 7 never rules out skills that cannot fire for her, so it may buy them. */
+  const unfiltered = $derived(!!result && !outdated && result.schema_version < INERT_SCHEMA);
+  const inertSet = $derived(new Set(inert.map((item) => item.purchase)));
+  const inertGroups = $derived.by(() => {
+    const groups = new Map<string, string[]>();
+    for (const item of inert) {
+      groups.set(item.reason, [...(groups.get(item.reason) ?? []), item.offer!.skill.name]);
+    }
+    return [...groups].map(
+      ([reason, names]) => names.join(', ') + (names.length === 1 ? ' needs ' : ' need ') + reason
+    );
   });
   /** Every skill on offer as screened, the most useful first. */
   const impacts = $derived(
@@ -124,19 +170,22 @@
           (b.together ?? b.alone).mean - (a.together ?? a.alone).mean || a.purchase - b.purchase
       )
   );
+  /** What buying an offer costs on top of the best build: its price and every skill down its chain not bought yet. */
+  function chainCost(index: number): number {
+    const offer = offers[index]!;
+    const on = offer.buildsOn;
+    const lower =
+      on && !on.owned ? offers.findIndex((other) => other.skillId === on.skill.skill_id) : -1;
+    return offer.cost + (lower >= 0 && !bought.has(lower) ? chainCost(lower) : 0);
+  }
   /** SP the best build leaves, and the skills it could still afford: the search only skips one that surely costs. */
   const leftover = $derived.by(() => {
     if (!best || budget === undefined) return undefined;
     const left = budget - best.sp_cost;
     const affordable = offers
       .map((offer, index) => {
-        if (bought.has(index)) return undefined;
-        const lower =
-          offer.needs === 'offered'
-            ? offers.findIndex((other) => other.skillId === offer.upgrades?.skill_id)
-            : -1;
-        const cost = offer.cost + (lower >= 0 && !bought.has(lower) ? offers[lower]!.cost : 0);
-        return cost <= left ? index : undefined;
+        if (bought.has(index) || inertSet.has(index)) return undefined;
+        return chainCost(index) <= left ? index : undefined;
       })
       .filter((index): index is number => index !== undefined);
     const screened = new Map(impacts.map((impact) => [impact.purchase, impact]));
@@ -154,6 +203,19 @@
   const saves = $derived(!!best?.build.purchases.length);
   /** The impacts carry what real CM races say about each skill. */
   const evidence = $derived(impacts.some((impact) => !!impact.evidence));
+  /** A value raced on fewer than every search seed stopped once more races could not change the pick. */
+  const short = (estimate: OptimizeEstimate) =>
+    estimate.samples < (result?.report.search_seeds.length ?? 0);
+  const anyShort = $derived(
+    impacts.some((impact) => short(impact.alone) || (!!impact.together && short(impact.together)))
+  );
+  /** How sure a raced value is, on hover. */
+  const spread = (estimate: OptimizeEstimate) =>
+    '± ' +
+    estimate.standard_error.toFixed(2) +
+    ' over ' +
+    estimate.samples.toLocaleString() +
+    (estimate.samples === 1 ? ' race' : ' races');
   const screen = $derived(outdated ? undefined : result?.report.screen);
   /** How much racing it took, in one line. */
   const tally = $derived.by(() => {
@@ -265,6 +327,14 @@
                       leftover.left.toLocaleString() +
                       ' SP left.'}
             </p>{/if}
+          {#if inert.length}<p class="detail">
+              Left out because they can never fire for her here: {inertGroups.join('; ')}.
+            </p>{/if}
+          {#if unfiltered}<p class="detail">
+              The simulator answering is an older build that can buy skills which never fire for her
+              here (another running style, distance or track). Rebuild and restart it to rule those
+              out.
+            </p>{/if}
         {:else}
           <p class="detail">
             {leftover?.slower.length
@@ -355,7 +425,7 @@
       </section>
     {/if}
 
-    {#if impacts.length}
+    {#if impacts.length || inert.length}
       <section
         class="impacts"
         aria-label="Every skill on offer"
@@ -365,6 +435,7 @@
           {field ? 'Runners each one beats more of' : 'Seconds each saves her'}: bought alone, and
           as the last one in with everything else on offer.
           {#if evidence}CM is what recorded CM races say it adds, before any race here.{/if}
+          {#if anyShort}Grey values stopped racing early, once more races could not change the pick.{/if}
           {#if screen}With everything ({screen.full_cost.toLocaleString()} SP) {field
               ? 'she beats ' +
                 Math.abs(screen.full.mean).toFixed(2) +
@@ -418,13 +489,17 @@
               </span>
               <span
                 role="cell"
+                class:short={short(impact.alone)}
                 class:loss={surelyWorse(impact.alone)}
+                title={spread(impact.alone)}
               >
                 {signed(impact.alone.mean)}
               </span>
               <span
                 role="cell"
+                class:short={!!impact.together && short(impact.together)}
                 class:loss={!!impact.together && surelyWorse(impact.together)}
+                title={impact.together ? spread(impact.together) : undefined}
               >
                 {impact.together ? signed(impact.together.mean) : '—'}
               </span>
@@ -437,6 +512,32 @@
                 >
                   {impact.evidence ? signed(impact.evidence.mean) : '—'}
                 </span>{/if}
+            </div>
+          {/each}
+          {#each inert as item (item.purchase)}
+            <div
+              class="impact-row inert"
+              class:evidence
+              role="row"
+            >
+              <span
+                class="skill"
+                role="cell"
+              >
+                <img
+                  src={skillImage(item.offer!.skill.icon)}
+                  alt=""
+                  width="18"
+                  height="18"
+                />
+                <span>{item.offer!.skill.name}</span>
+              </span>
+              <span
+                role="cell"
+                class="never"
+              >
+                Never fires here: needs {item.reason}
+              </span>
             </div>
           {/each}
         </div>
@@ -619,6 +720,16 @@
   .impact-row .cm {
     color: var(--text-secondary);
   }
+  /* A skill that cannot fire here: its reason spans the number columns. */
+  .impact-row.inert {
+    color: var(--text-secondary);
+  }
+  .impact-row .never {
+    grid-column: 2 / -1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .impact-row.head {
     border-top: 0;
     font-size: 11px;
@@ -647,6 +758,10 @@
   }
   .impact-row.bought .skill span {
     font-weight: 650;
+  }
+  /* Raced only until more races could not change the pick. */
+  .impact-row .short {
+    color: var(--text-secondary);
   }
   .impact-row .loss {
     color: var(--accent-error);

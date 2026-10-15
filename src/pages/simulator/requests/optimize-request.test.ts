@@ -25,23 +25,30 @@ function scenario(overrides: Partial<OptimizeScenarioInput> = {}): OptimizeScena
 }
 
 describe('optimize request', () => {
-  it('validates purchase prerequisites against the purchases array', () => {
+  it('validates prerequisites against the purchases array and keeps replaced skill IDs', () => {
     const body = buildOptimizeRequest({
       mode: 'cm',
       targetSourceInputIndex: 0,
       spBudget: 1200,
       purchases: [
-        { name: 'A', cost: 100, skills: [200012], requires: [1, 9, -1, 0], replaces: [2, 2] },
-        { name: 'B', cost: 0, skills: [] }
+        {
+          name: 'A',
+          cost: 100,
+          skills: [200011],
+          requires: [1, 9, -1, 0],
+          replaces: [200012, 200012, -4, 1.5]
+        },
+        { name: 'B', cost: 0, skills: [200012], replaces: [] }
       ],
       scenarios: [scenario()],
       seed: 5
     });
 
-    const first = body.purchases[0];
+    const [first, second] = body.purchases;
     expect(first?.requires).toEqual([1, 0]);
-    expect(first?.replaces).toBeUndefined();
-    expect(Object.hasOwn(first ?? {}, 'replaces')).toBe(false);
+    // An upgrade removes the skill it upgrades by its skill ID, not by its place in the purchases.
+    expect(first?.replaces).toEqual([200012]);
+    expect(Object.hasOwn(second ?? {}, 'replaces')).toBe(false);
   });
 
   it('clamps the budget and candidate counts', () => {

@@ -68,7 +68,8 @@ const cards = {
   }
 };
 
-export const EXAMPLE_RACE_SETTINGS = {courseId:10506,raceInstanceId:800023,ground:'1',weather:'2',season:'4',startTime:'1'};
+// CM20 ran at midday on yielding ground (the game client's `Daytime` and `Soft`), as every captured race of it shows.
+export const EXAMPLE_RACE_SETTINGS = {courseId:10506,raceInstanceId:800023,ground:'2',weather:'2',season:'4',startTime:'2'};
 
 export function createExampleRace() {
   return {

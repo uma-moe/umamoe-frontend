@@ -107,7 +107,7 @@
       startTime: example.startTime,
       umaId: example.umas[0]!.id,
       importNotice:
-        'Example field: three captured CM20 teams · Nakayama 2,500 m · Good ground, Cloudy, Winter, Great mood. Edit any build to compare changes.'
+        'Example field: three captured CM20 teams · Nakayama 2,500 m · Yielding ground, Cloudy, Winter, Great mood. Edit any build to compare changes.'
     });
     raceType = '0';
     run = null;

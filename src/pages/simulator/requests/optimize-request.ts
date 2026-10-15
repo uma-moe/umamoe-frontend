@@ -2,9 +2,10 @@
  * Builds the `/api/sim/optimize` body.
  *
  * Pure: no Svelte and no network. Purchase prerequisites (`requires`,
- * `excludes`, `replaces`) are indices into this request's `purchases` array,
- * so every index is validated against that array and dropped when out of
- * range. `sp_budget`, candidate counts and skill ids are clamped, too.
+ * `excludes`) are indices into this request's `purchases` array, so every
+ * index is validated against that array and dropped when out of range;
+ * `replaces` lists the skill IDs an upgrade removes. `sp_budget`, candidate
+ * counts and skill ids are clamped, too.
  */
 
 import { buildRaceSetup, type RaceSetup, type RaceSetupInput } from './stamina-request';
@@ -38,6 +39,7 @@ export interface OptimizePurchaseInput {
   /** Indices into this request's `purchases`. */
   requires?: Array<number>;
   excludes?: Array<number>;
+  /** Skill IDs the purchase removes, as an upgrade removes the skill it upgrades. */
   replaces?: Array<number>;
 }
 
@@ -193,7 +195,7 @@ function buildPurchases(purchases: Array<OptimizePurchaseInput>): Array<Optimize
     if (requires.length > 0) built.requires = requires;
     const excludes = validPurchaseIndices(purchase.excludes, count);
     if (excludes.length > 0) built.excludes = excludes;
-    const replaces = validPurchaseIndices(purchase.replaces, count);
+    const replaces = validSkillIds(purchase.replaces);
     if (replaces.length > 0) built.replaces = replaces;
 
     return built;
@@ -229,6 +231,15 @@ function buildScenarios(
 
     return built;
   });
+}
+
+/** Keeps unique positive skill IDs; drops the rest. */
+function validSkillIds(ids: Array<number> | undefined): Array<number> {
+  const valid: Array<number> = [];
+  for (const id of ids ?? []) {
+    if (Number.isInteger(id) && id > 0 && id <= 0xffffffff && !valid.includes(id)) valid.push(id);
+  }
+  return valid;
 }
 
 /** Keeps in-range, unique indices; drops the rest. */
