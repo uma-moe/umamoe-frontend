@@ -2,7 +2,7 @@ import { loadFactorCatalog } from './factor-catalog';
 import { loadCharacterCatalog, loadCharacterNames } from './character-catalog';
 import { loadSupportCardCatalog } from './support-card-catalog';
 import { loadRaceQueryValues } from './race-catalog';
-import type { UqlQueryCatalog } from '@/lib/inheritance/uql-compiler';
+import type { UqlQueryCatalog } from '@/lib/inheritance/uql/uql-compiler';
 
 /** Reuse the shared resource promises; loaded only when entering/restoring UQL. */
 export async function loadUqlQueryCatalog(): Promise<UqlQueryCatalog> {

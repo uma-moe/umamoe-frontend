@@ -5,7 +5,7 @@
   import Spinner from '@/components/feedback/Spinner.svelte';
   import PageHeading from '@/layouts/PageHeading.svelte';
   import SourcePage from '@/layouts/SourcePage.svelte';
-  import ContentAd from '@/layouts/ContentAd.svelte';
+  import ContentAd from '@/layouts/ads/ContentAd.svelte';
   import LinkedAccountsSettings from './LinkedAccountsSettings.svelte';
   import ConnectedLoginsSettings from './ConnectedLoginsSettings.svelte';
   import ApiKeySettings from './ApiKeySettings.svelte';

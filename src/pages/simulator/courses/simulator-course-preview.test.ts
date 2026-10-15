@@ -2,8 +2,8 @@ import {expect,it} from 'vitest';
 import {readFileSync} from 'node:fs';
 import {gunzipSync} from 'node:zlib';
 import {coursePreviewTrack} from './simulator-course-preview';
-import {replayTrack,trackSection} from '@/pages/race-analysis/replay-track';
-import type {CourseShape} from '@/pages/race-analysis/replay-course';
+import {replayTrack,trackSection} from '@/pages/competitive/race-analysis/replay/replay-track';
+import type {CourseShape} from '@/pages/competitive/race-analysis/replay/replay-course';
 
 it('separates repeated Nakayama sections downwards without changing distances or replay geometry',()=>{
   const fixture=JSON.parse(gunzipSync(readFileSync('tests/e2e/fixtures/replay-courses.json.gz')).toString());

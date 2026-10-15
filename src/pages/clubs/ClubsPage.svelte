@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ContentAd from '@/layouts/ContentAd.svelte';
+  import ContentAd from '@/layouts/ads/ContentAd.svelte';
   import { onMount } from 'svelte';
   import AppPage from '@/layouts/AppPage.svelte';
   import Button from '@/components/controls/Button.svelte';

@@ -1,6 +1,6 @@
 <script lang="ts">
   import LazyContent from '@/components/LazyContent.svelte';
-  import ContentAd from '@/layouts/ContentAd.svelte';
+  import ContentAd from '@/layouts/ads/ContentAd.svelte';
   import PageHeading from '@/layouts/PageHeading.svelte';
   import SourcePage from '@/layouts/SourcePage.svelte';
   import Banner from '@/components/feedback/Banner.svelte';

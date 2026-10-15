@@ -6,8 +6,8 @@
     loadReplayCourses,
     courseSegments,
     type CourseData
-  } from '@/pages/race-analysis/replay-course';
-  import { courseTerrain } from '@/pages/race-analysis/replay-timeline';
+  } from '@/pages/competitive/race-analysis/replay/replay-course';
+  import { courseTerrain } from '@/pages/competitive/race-analysis/replay/replay-timeline';
   import SimulatorCoursePreview from './SimulatorCoursePreview.svelte';
 
   let {

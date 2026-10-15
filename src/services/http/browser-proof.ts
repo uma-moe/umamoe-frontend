@@ -1,7 +1,7 @@
 import type { BrowserProofPort } from './http-client';
 import { get, writable } from 'svelte/store';
 import { runtimeConfig } from '@/services/runtime-config';
-import { withVerificationTiming } from '@/services/sentry';
+import { withVerificationTiming } from '@/services/sentry/sentry';
 
 interface TurnstileApi {
   render(container: HTMLElement, options: {

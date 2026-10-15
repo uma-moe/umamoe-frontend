@@ -7,19 +7,19 @@ import {
   type UqlFactorValueContext,
   buildScopedSparkFields,
   scopedUqlFactors,
-} from '@/lib/inheritance/uql-fields';
+} from '@/lib/inheritance/uql/uql-fields';
 import { factorOptions, factorImage } from '@/lib/catalog/factor-catalog';
 import { characterImagePath } from '@/lib/catalog/character-catalog';
 import type {
   UqlSuggestion,
   UqlValueContext,
   UqlFieldType,
-} from '@/components/query-editor-types';
-import { UqlEditorLanguage } from '@/lib/inheritance/uql-editor';
+} from '@/components/editor/query-editor-types';
+import { UqlEditorLanguage } from '@/lib/inheritance/uql/uql-editor';
 import type { CatalogEntry } from '../catalog-repository';
 import type { RaceQueryValue } from '@/lib/catalog/race-catalog';
-import type { UqlCharacter } from '@/lib/inheritance/uql-compiler';
-import { uqlLegacyDisplay, uqlLegacyName } from '@/lib/inheritance/uql-context';
+import type { UqlCharacter } from '@/lib/inheritance/uql/uql-compiler';
+import { uqlLegacyDisplay, uqlLegacyName } from '@/lib/inheritance/uql/uql-context';
 import type { SelectableParent } from '@/lib/veterans/parent-picker';
 
 function getUqlValueContextForField(fieldText: string): UqlValueContext | null {

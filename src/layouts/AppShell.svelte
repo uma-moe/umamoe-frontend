@@ -19,8 +19,8 @@
   import Spinner from '@/components/feedback/Spinner.svelte';
   import ServiceNotices from './ServiceNotices.svelte';
   import FindLoadedResults from './FindLoadedResults.svelte';
-  import StickyFooterAd from './StickyFooterAd.svelte';
-  import { startAnalytics, trackPageView } from '@/services/analytics';
+  import StickyFooterAd from './ads/StickyFooterAd.svelte';
+  import { startAnalytics, trackPageView } from '@/services/analytics/analytics';
   import { syncFusePage } from '@/services/ads/fuse-ads';
 
   interface Props {

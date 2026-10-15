@@ -1,4 +1,4 @@
-import type { CaratPlan, PlannerCustomIncome, PlannerDataBundle, PlannerIncomeRule, PlannerTarget } from '../../../src/lib/timeline/carat-planner';
+import type { CaratPlan, PlannerCustomIncome, PlannerDataBundle, PlannerIncomeRule, PlannerTarget } from '../../../src/lib/carat-planner/carat-planner';
 import type { TimelineRecord } from '../../../src/pages/timeline/timeline-repository';
 
 export function plannerLedgerCases(base: CaratPlan) {

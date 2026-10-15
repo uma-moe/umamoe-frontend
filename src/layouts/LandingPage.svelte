@@ -3,7 +3,7 @@
   import { loadSiteStatistics, type SiteStatistics } from '@/services/site-statistics';
   import SiteStatisticsStrip from '@/components/SiteStatistics.svelte';
   import SourcePage from './SourcePage.svelte';
-  import ContentAd from './ContentAd.svelte';
+  import ContentAd from './ads/ContentAd.svelte';
 
   let {
     routeId,

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ContentAd from '@/layouts/ContentAd.svelte';
+  import ContentAd from '@/layouts/ads/ContentAd.svelte';
   import { copyText } from '@/lib/clipboard';
   import { onMount, untrack } from 'svelte';
   import { watchFactorCatalog, factorOptions, factorMetadata } from '@/lib/catalog/factor-catalog';

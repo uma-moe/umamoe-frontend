@@ -1,5 +1,5 @@
 import type { IconName } from '@/components/icon-types';
-import type { NavigationItem, NavigationSubItem } from '@/components/navigation-types';
+import type { NavigationItem, NavigationSubItem } from '@/components/navigation/navigation-types';
 import type { PageWidth } from '@/layouts/breakpoints';
 import featureManifest from '../../contracts/features.json';
 

@@ -3,7 +3,7 @@ setupCatalogFixtures();
 import { expect, it } from 'vitest';
 import { occurrenceComparison } from './factor-occurrences';
 import { emptyInheritanceFilters, inheritanceSearchQuery, normalizeInheritanceRecord } from './inheritance-search';
-import { validateInheritanceUql } from './uql';
+import { validateInheritanceUql } from './uql/uql';
 import { compactStateFromFilters, filtersFromCompactState } from '@/pages/database/database-preferences';
 import { bookmarkMatchesFilters } from '@/pages/database/database-local-results';
 

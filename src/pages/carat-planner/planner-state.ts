@@ -1,9 +1,9 @@
 import { get, writable } from 'svelte/store';
-import { loadPlanCollection, savePlanCollection, type CaratPlanCollection } from '@/lib/timeline/carat-planner';
-import { plannerCollectionHash } from '@/lib/timeline/planner-cloud-state';
-import { canonicalIncomeRuleId } from '@/lib/timeline/planner-income-assumptions';
+import { loadPlanCollection, savePlanCollection, type CaratPlanCollection } from '@/lib/carat-planner/carat-planner';
+import { plannerCollectionHash } from '@/lib/carat-planner/planner-cloud-state';
+import { canonicalIncomeRuleId } from '@/lib/carat-planner/planner-income-assumptions';
 import { authUser } from '@/services/auth/auth-state';
-import { PlannerCloudSync } from './planner-cloud-sync';
+import { PlannerCloudSync } from './cloud/planner-cloud-sync';
 
 // The lazy-loaded planner owns its session, not either of its mounted views.
 // Keep queued saves and recoverable local edits when navigating away and back.

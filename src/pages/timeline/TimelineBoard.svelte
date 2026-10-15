@@ -4,7 +4,7 @@
   import { virtualScrolling } from '@/stores/virtual-scrolling';
   import { virtualScroll, revealVirtualItem, type VirtualRange } from '@/lib/virtual-scroll';
   import { registerFindSource } from '@/lib/find-loaded';
-  import AdRegion from '@/layouts/AdRegion.svelte';
+  import AdRegion from '@/layouts/ads/AdRegion.svelte';
   import {
     buildTimelineFeed,
     LANE_STEP,

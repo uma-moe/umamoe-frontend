@@ -18,7 +18,7 @@
     type SkillDetail,
     type SkillOverview
   } from './cm-exploration';
-  import { courseSegments, type Course } from '../../race-analysis/replay-course';
+  import { courseSegments, type Course } from '../race-analysis/replay/replay-course';
 
   let {
     overview,

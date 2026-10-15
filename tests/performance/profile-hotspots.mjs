@@ -4,7 +4,7 @@ import fs from 'node:fs';
 const server=await createServer({configLoader:'runner',mode:'beta',server:{middlewareMode:true},logLevel:'error'});
 try {
  const {withTimelineRewardFallbacks}=await server.ssrLoadModule('/src/lib/timeline/timeline-reward-summary.ts');
- const {applyGlobalRewardPrecedence}=await server.ssrLoadModule('/src/lib/timeline/planner-reward-precedence.ts');
+ const {applyGlobalRewardPrecedence}=await server.ssrLoadModule('/src/lib/carat-planner/rewards/planner-reward-precedence.ts');
  const {profileVeteranAffinity}=await server.ssrLoadModule('/src/lib/profile/profile-veteran-metrics.ts');
  const {VeteranAffinityEngine}=await server.ssrLoadModule('/src/lib/veterans/affinity-engine.ts');
  const events=Array.from({length:4000},(_,i)=>({id:`event-${i}`,eventType:'character_banner',date:new Date(Date.UTC(2026,7,1+Math.floor(i/5)))}));

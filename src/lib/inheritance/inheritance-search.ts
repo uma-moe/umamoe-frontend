@@ -1,4 +1,4 @@
-import { validateInheritanceUql, type UqlValidation } from './uql';
+import { validateInheritanceUql, type UqlValidation } from './uql/uql';
 import { occurrenceComparison, factorPresence } from './factor-occurrences';
 
 export type InheritanceFilterMode = 'basic' | 'advanced' | 'uql';

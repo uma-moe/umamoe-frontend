@@ -1,9 +1,9 @@
 import { expect, test } from './fixtures/test';
 import { mockTimeline } from './fixtures/api';
 import { plannerControlsPlan } from './fixtures/planner-controls';
-import { encodeCompactPlannerShare } from '../../src/lib/timeline/planner-share-codec';
-import { expandPlannerCollectionFromCloud } from '../../src/lib/timeline/planner-cloud-codec';
-import type { CaratPlanCollection, PlannerDataBundle } from '../../src/lib/timeline/carat-planner';
+import { encodeCompactPlannerShare } from '../../src/lib/carat-planner/planner-share-codec';
+import { expandPlannerCollectionFromCloud } from '../../src/lib/carat-planner/planner-cloud-codec';
+import type { CaratPlanCollection, PlannerDataBundle } from '../../src/lib/carat-planner/carat-planner';
 import { readFile } from 'node:fs/promises';
 
 test('Planner keeps unsaved edits usable, exports them, and retries storage after a quota failure', async ({ page }) => {

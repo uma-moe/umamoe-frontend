@@ -1,5 +1,5 @@
-import type {CourseShape} from '@/pages/race-analysis/replay-course';
-import {replayTrack,type TrackPoint} from '@/pages/race-analysis/replay-track';
+import type {CourseShape} from '@/pages/competitive/race-analysis/replay/replay-course';
+import {replayTrack,type TrackPoint} from '@/pages/competitive/race-analysis/replay/replay-track';
 
 /** Separate repeated passes in the setup diagram only; retain every race distance. */
 export function coursePreviewTrack(shape:CourseShape,separate=true):{points:TrackPoint[];repeated:boolean}{

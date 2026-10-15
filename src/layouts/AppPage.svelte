@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import AdRegion from './AdRegion.svelte';
+  import AdRegion from './ads/AdRegion.svelte';
   import PageFrame from './PageFrame.svelte';
   import PageHeading from './PageHeading.svelte';
   import type { PageWidth } from './breakpoints';

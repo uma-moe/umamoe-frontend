@@ -30,7 +30,7 @@
     wholeNumber
   } from '@/lib/activity/activity';
   import AppPage from '@/layouts/AppPage.svelte';
-  import ContentAd from '@/layouts/ContentAd.svelte';
+  import ContentAd from '@/layouts/ads/ContentAd.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Badge from '@/components/Badge.svelte';
   import Button from '@/components/controls/Button.svelte';

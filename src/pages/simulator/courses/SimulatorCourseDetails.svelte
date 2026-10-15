@@ -8,7 +8,7 @@
     loadReplayCourses,
     courseSegments,
     type Course
-  } from '@/pages/race-analysis/replay-course';
+  } from '@/pages/competitive/race-analysis/replay/replay-course';
   import { selectedCourse } from '../simulator-session.svelte';
   import { describeCourse, trackName } from '@/lib/catalog/course-catalog';
 

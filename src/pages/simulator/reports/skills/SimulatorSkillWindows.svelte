@@ -10,7 +10,10 @@
   } from '@/lib/catalog/skill-catalog';
   import { formatRaceTime } from '@/lib/race/race-display';
   import { theme } from '@/stores/theme';
-  import { courseSegments, type Course } from '@/pages/race-analysis/replay-course';
+  import {
+    courseSegments,
+    type Course
+  } from '@/pages/competitive/race-analysis/replay/replay-course';
   import SimulatorRunnerFace from '../SimulatorRunnerFace.svelte';
   import { skillDistributions } from './skill-distributions';
   import { simulatorSampleSummary } from '../../simulator-results';

@@ -6,8 +6,8 @@ afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); localStorage.clear(
 it('shares cache/live factors with pickers and UQL, rejecting a malformed refresh before persisting it', async () => {
   vi.resetModules(); vi.useFakeTimers();
   const catalog = await import('./factor-catalog');
-  const { UqlCompiler } = await import('@/lib/inheritance/uql-compiler');
-  const { validateInheritanceUql } = await import('@/lib/inheritance/uql');
+  const { UqlCompiler } = await import('@/lib/inheritance/uql/uql-compiler');
+  const { validateInheritanceUql } = await import('@/lib/inheritance/uql/uql');
   const { createDatabaseUqlLanguage } = await import('@/pages/database/uql/database-uql-language');
   const bundled = catalog.factorOptions();
   expect(validateInheritanceUql('Main has Live Recovery').state).toBe('invalid');

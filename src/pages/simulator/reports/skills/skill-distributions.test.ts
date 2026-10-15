@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import {skillDistributions,skillHistogram} from './skill-distributions';
-import {binomialProbabilities} from '@/lib/timeline/planner-pull-probability';
+import {binomialProbabilities} from '@/lib/carat-planner/planner-pull-probability';
 import type {MonteCarloResult,SimulatorProc} from '../../simulator-repository';
 import type {SimulationReport} from '../simulation-report';
 

@@ -15,7 +15,7 @@
     timelinePickup,
     type TimelinePickupCatalog
   } from '@/lib/timeline/timeline-pickups';
-  import type { PlannerGachaEntry } from '@/lib/timeline/carat-planner';
+  import type { PlannerGachaEntry } from '@/lib/carat-planner/carat-planner';
   import type {
     TimelineRewardItem,
     TimelineRewardSummary

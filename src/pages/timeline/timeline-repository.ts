@@ -5,7 +5,7 @@ import { timelineImage } from '@/lib/catalog/timeline-artwork';
 import { timelinePickups, type TimelinePickupCatalog } from '@/lib/timeline/timeline-pickups';
 import { parseResourceDate, toTimelineCalculation, toTimelinePrediction, type TimelinePrediction } from '@/lib/timeline/timeline-prediction-types';
 import { resourceRepository } from '@/lib/catalog/resource-repository';
-import type { TimelineEventData } from '@/components/timeline-types';
+import type { TimelineEventData } from '@/components/cards/timeline-types';
 import { compareTimelineEvents, type TimelineAnniversary } from '@/lib/timeline/timeline-layout';
 import { QueryCache } from '@/services/data/query-cache';
 

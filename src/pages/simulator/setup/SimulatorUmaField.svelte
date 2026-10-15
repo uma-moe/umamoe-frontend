@@ -21,7 +21,7 @@
   import RunnerLineupRow from '@/pages/competitive/runners/RunnerLineupRow.svelte';
   import { styleColors, stats } from '@/pages/competitive/analysis-view';
   import SimulatorUmaEditor from './SimulatorUmaEditor.svelte';
-  import SimulatorVeteranPicker from './SimulatorVeteranPicker.svelte';
+  import SimulatorVeteranPicker from './veterans/SimulatorVeteranPicker.svelte';
   import SimSection from '../shell/SimSection.svelte';
   import { simulatorUmaSummary, type SimulatorUma } from '../simulator-uma';
   import {

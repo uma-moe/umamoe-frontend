@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ContentAd from '@/layouts/ContentAd.svelte';
+  import ContentAd from '@/layouts/ads/ContentAd.svelte';
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
   import { copyText } from '@/lib/clipboard';
   import { onMount, untrack } from 'svelte';

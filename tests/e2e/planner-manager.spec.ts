@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures/test';
 import { mockPlannerControls, plannerControlsPlan } from './fixtures/planner-controls';
-import { decodeCompactPlannerShare } from '../../src/lib/timeline/planner-share-codec';
+import { decodeCompactPlannerShare } from '../../src/lib/carat-planner/planner-share-codec';
 
 test('Planner menus retain source actions, keyboard navigation, selected plans and delete confirmation', async ({ page }) => {
   await mockPlannerControls(page); await page.goto('/timeline?tab=carat-planner');

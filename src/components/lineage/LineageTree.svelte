@@ -1,6 +1,6 @@
 <script lang="ts">
   import LineageNode from './LineageNode.svelte';
-  import type { LineageBranch, LineageNodeData } from '../lineage-types';
+  import type { LineageBranch, LineageNodeData } from './lineage-types';
 
   interface Props {
     root: LineageNodeData;

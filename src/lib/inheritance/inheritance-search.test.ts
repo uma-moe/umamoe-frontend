@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { activeInheritanceFilterCount, emptyInheritanceFilters, inheritanceSearchQuery, normalizeInheritanceSearch } from './inheritance-search';
-import { validateInheritanceUql } from './uql';
+import { validateInheritanceUql } from './uql/uql';
 
 describe('inheritance search contract', () => {
   it('sends Any star levels without enumerating factor IDs, including mixed groups', () => {

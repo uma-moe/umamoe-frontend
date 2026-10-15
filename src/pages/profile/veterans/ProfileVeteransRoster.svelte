@@ -67,7 +67,7 @@
   import EmptyState from '@/components/feedback/EmptyState.svelte';
   import ProfileVeteranDialog from './ProfileVeteranDialog.svelte';
   import ProfileVeteranSparkMatcher from './ProfileVeteranSparkMatcher.svelte';
-  import type { LineageBranch, LineageNodeData } from '@/components/lineage-types';
+  import type { LineageBranch, LineageNodeData } from '@/components/lineage/lineage-types';
   import type { ProfileResponse, ProfileVeteran, SuccessionChara } from '../profile-repository';
   import { profileRepository } from '../profile-repository';
   import {
@@ -85,7 +85,7 @@
   import { VeteranAffinityEngine } from '@/lib/veterans/affinity-engine';
   import { veteranAffinityRepository } from '@/lib/veterans/affinity-repository';
   import { loadUqlQueryCatalog } from '@/lib/catalog/uql-catalog';
-  import { UqlCompiler, type UqlQueryCatalog } from '@/lib/inheritance/uql-compiler';
+  import { UqlCompiler, type UqlQueryCatalog } from '@/lib/inheritance/uql/uql-compiler';
   import { loadCatalog, type CatalogEntry } from '@/pages/database/catalog-repository';
 
   let virtualRange = $state<VirtualRange>({ start: 0, end: 0 });

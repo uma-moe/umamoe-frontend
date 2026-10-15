@@ -1,4 +1,4 @@
-import type { PlannerDataBundle, PlannerIncomeRule } from '../../../src/lib/timeline/carat-planner';
+import type { PlannerDataBundle, PlannerIncomeRule } from '../../../src/lib/carat-planner/carat-planner';
 
 const rule = (id: string, amount: number, extra: Partial<PlannerIncomeRule> = {}): PlannerIncomeRule => ({ id, label: id, currency: 'free_jewels', amount, cadence: 'monthly', start_date: '2026-01-01', ...extra });
 export const plannerIncomeData: PlannerDataBundle = {
