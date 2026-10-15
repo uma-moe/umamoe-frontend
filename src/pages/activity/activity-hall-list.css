@@ -1,0 +1,192 @@
+a {
+  text-decoration: none;
+}
+.list-meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+.activity-list {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--card-surface-border);
+  border-radius: var(--radius-md);
+  background: var(--card-surface-bg);
+}
+.activity-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 28px 66px minmax(220px, 1fr) minmax(280px, 360px) 44px;
+  grid-template-areas: 'rank score identity metrics action';
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+.activity-row:last-child {
+  border-bottom: 0;
+}
+.activity-row:hover,
+.activity-row:focus-within {
+  background: var(--card-surface-hover-bg);
+}
+.rank {
+  grid-area: rank;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.identity {
+  grid-area: identity;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.identity > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.identity > div a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--accent-primary);
+  font-size: 15px;
+  font-weight: 650;
+}
+.identity > div span {
+  color: var(--text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.identity p,
+.identity small {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.identity p a {
+  color: var(--accent-primary);
+}
+.activity-row dl {
+  grid-area: metrics;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  color: var(--text-primary);
+}
+.activity-row dl div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 12px;
+  border-left: 1px solid var(--border-subtle);
+}
+.activity-row dd {
+  order: -1;
+  margin: 0;
+  font-size: 15px;
+}
+.activity-row dt {
+  font-size: 11px;
+}
+.row-score {
+  grid-area: score;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  justify-content: start;
+  gap: 0 2px;
+}
+.row-score span {
+  grid-column: 1/-1;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.row-score strong {
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--score-color);
+}
+.row-score small {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.open {
+  grid-area: action;
+  min-width: 44px;
+  min-height: 44px;
+}
+.open :global(.ui-button) {
+  width: 44px;
+  padding: 0;
+}
+@media (max-width: 1100px) {
+  .activity-row {
+    grid-template-columns: 24px 60px minmax(0, 1fr) 44px;
+    grid-template-areas: 'rank score identity action' '. metrics metrics metrics';
+  }
+  .activity-row dl {
+    padding-top: 10px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .activity-row dl div:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+@media (max-width: 680px) {
+  .activity-row {
+    grid-template-columns: minmax(0, 1fr) 64px 44px;
+    grid-template-areas: 'identity score action' 'metrics metrics metrics';
+    align-items: start;
+    gap: 10px 6px;
+    padding: 12px;
+  }
+  .activity-row .rank {
+    display: none;
+  }
+  .identity {
+    grid-area: identity;
+  }
+  .row-score {
+    grid-area: score;
+    padding-top: 2px;
+  }
+  .open {
+    grid-area: action;
+  }
+  .activity-row dl {
+    grid-area: metrics;
+    padding-top: 10px;
+  }
+  .activity-row dl div {
+    padding-inline: 10px;
+  }
+  .activity-row dd {
+    font-size: 15px;
+  }
+  .identity > div a {
+    font-size: 15px;
+  }
+  .identity small {
+    font-size: 10px;
+    gap: 4px;
+  }
+  .list-meta {
+    gap: 8px;
+    font-size: 11px;
+    flex-wrap: wrap;
+  }
+}

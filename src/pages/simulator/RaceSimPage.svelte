@@ -9,10 +9,10 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import SimulatorShell from './shell/SimulatorShell.svelte';
-  import SimulatorUmaField from './setup/SimulatorUmaField.svelte';
-  import SimulatorVeteranSearch from './setup/veterans/SimulatorVeteranSearch.svelte';
-  import BuildCodeDialog from './setup/build/BuildCodeDialog.svelte';
-  import { BUILD_CODE_VERSION, buildCodeRunner } from './setup/build/build-code';
+  import SimulatorUmaField from './setup/runner/SimulatorUmaField.svelte';
+  import SimulatorVeteranSearch from './setup/veterans/team-search/SimulatorVeteranSearch.svelte';
+  import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
+  import { BUILD_CODE_VERSION, buildCodeRunner } from './setup/build/code/build-code';
   import RaceSimResult from './reports/RaceSimResult.svelte';
   import { RACE_TYPE_OPTIONS } from './simulator-race-types';
   import {

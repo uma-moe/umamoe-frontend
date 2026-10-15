@@ -5,7 +5,7 @@ import { simulatorReplayCapture, simulatorResults, simulatorTeamResults, simulat
 import { createExampleRace } from './simulator-example';
 import { raceSignalSpreads,racePositionClouds,trajectoryPreviewSamples,compactRaceTrajectory,raceFieldSpread,raceDistanceSpread,meanRaceCapture,meanTrajectorySignal,trajectoryAtTime,trajectorySeries } from '@/lib/race/race-ensemble';
 import { hpCalculation } from './hp-calculation';
-import { veteranTeamCount, veteranTeams, pairingSeeds, benchmarkFields, pairingFrameOrders } from './setup/veterans/veteran-pairings';
+import { veteranTeamCount, veteranTeams, pairingSeeds, benchmarkFields, pairingFrameOrders } from './setup/veterans/team-search/veteran-pairings';
 import { cmPreset } from './courses/cm-presets';
 import { buildMonteCarloRequest } from './requests/race-sim-request';
 import { createSimulatorRepository, type StaminaResult } from './simulator-repository';

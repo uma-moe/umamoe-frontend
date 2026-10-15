@@ -1,0 +1,133 @@
+/* The frame's chart height is for charts; this is text, so it takes only what it needs. */
+:global(.chart-frame .plot:has(> .build-result)) {
+  min-height: 0;
+}
+.build-result {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.answer {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+.answer p {
+  margin: 0;
+}
+.headline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+.headline.idle {
+  font-size: 17px;
+  font-weight: 650;
+}
+.bad .headline {
+  color: var(--accent-error);
+}
+.detail,
+.spend,
+.metric {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.spend strong,
+.metric strong {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.metric strong {
+  font-size: 18px;
+  color: var(--accent-success);
+}
+.metric small {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.answer :global(.ui-button) {
+  margin-top: 6px;
+}
+.buy {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.buy li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto 56px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+.buy .icons {
+  display: flex;
+  gap: 2px;
+}
+.buy img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+.buy small {
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.buy .gain {
+  color: var(--accent-success);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.buy .gain.loss {
+  color: var(--text-secondary);
+}
+.answer .stale-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--accent-warning);
+}
+.answer .stale-note :global(.ui-button) {
+  margin-top: 0;
+}
+.stale .spend,
+.stale .metric,
+.stale .buy {
+  opacity: 0.5;
+}
+.fine {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.via {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+pre {
+  max-height: 60dvh;
+  overflow: auto;
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

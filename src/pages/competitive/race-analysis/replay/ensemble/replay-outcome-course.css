@@ -1,0 +1,96 @@
+.course-outcomes {
+  min-width: 0;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+header :global(.runner-reference .art) {
+  width: 24px;
+  height: 28px;
+}
+header :global(.runner-name strong) {
+  font-size: 12px;
+}
+.readings {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+.readings strong {
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-left: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.course-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 16px;
+}
+footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 9px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.legend i {
+  display: inline-block;
+  background: var(--runner-color);
+  margin-left: 7px;
+}
+.legend .dot {
+  width: 6px;
+  height: 6px;
+  background: var(--text-primary);
+  border-radius: 50%;
+  margin-left: 0;
+}
+.outer-key {
+  width: 18px;
+  height: 8px;
+  opacity: 0.25;
+  border-radius: 2px;
+}
+.inner-key {
+  width: 18px;
+  height: 5px;
+  opacity: 0.8;
+  border-radius: 2px;
+}
+@container race-main (max-width:780px) {
+  .course-grid {
+    grid-template-columns: 1fr;
+  }
+  .readings {
+    margin-left: 0;
+    gap: 8px;
+  }
+}
+@media (max-width: 600px) {
+  .course-grid {
+    grid-template-columns: 1fr;
+  }
+  .readings {
+    margin-left: 0;
+    gap: 8px;
+  }
+}

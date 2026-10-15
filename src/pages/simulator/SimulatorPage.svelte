@@ -1,9 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Banner from '@/components/feedback/Banner.svelte';
-  import Button from '@/components/controls/Button.svelte';
-  import Icon from '@/components/Icon.svelte';
-  import SelectField from '@/components/controls/SelectField.svelte';
   import { loadSkillCatalog, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
   import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
   import {
@@ -11,27 +8,20 @@
     type Course
   } from '@/pages/competitive/race-analysis/replay/replay-course';
   import SimulatorShell from './shell/SimulatorShell.svelte';
-  import RaceBar from './shell/RaceBar.svelte';
-  import CourseButtons from './shell/CourseButtons.svelte';
-  import SimSection from './shell/SimSection.svelte';
-  import RunnerInput from './setup/RunnerInput.svelte';
-  import BuildCodeDialog from './setup/build/BuildCodeDialog.svelte';
-  import { BUILD_CODE_VERSION, buildCodeRunner } from './setup/build/build-code';
+  import RunnerInput from './setup/runner/RunnerInput.svelte';
+  import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
+  import { BUILD_CODE_VERSION, buildCodeRunner } from './setup/build/code/build-code';
+  import HpRaceSection from './setup/hp/HpRaceSection.svelte';
   import HpPlanInput from './setup/hp/HpPlanInput.svelte';
-  import StaminaResultPanel from './reports/outcomes/StaminaResult.svelte';
-  import { hpCalculator, saveHpCalculator } from './setup/hp/hp-calculator.svelte';
-  import { countSkills, planEvents, planStats, type PlanMarker } from './setup/hp/hp-plan';
-  import { hpSpread, hpVerdict } from './reports/outcomes/hp-needed';
+  import HpCalcBar from './setup/hp/HpCalcBar.svelte';
+  import { explainStaminaError, traineeGrades } from './setup/hp/hp-run';
+  import StaminaResultPanel from './reports/outcomes/hp/StaminaResult.svelte';
+  import { countHpSkills, hpCalculator, saveHpCalculator } from './setup/hp/hp-calculator.svelte';
+  import { planEvents, planStats, type PlanMarker } from './setup/hp/hp-plan';
+  import { hpSpread, hpVerdict } from './reports/outcomes/hp/hp-needed';
+  import { traineeMotivation, traineeRunningStyle, traineeStats } from './setup/trainee';
   import {
-    RUNNING_STYLES,
-    traineeMotivation,
-    traineeRunningStyle,
-    traineeStats
-  } from './setup/trainee';
-  import {
-    APTITUDE_GRADES,
     buildStaminaRequest,
-    type AptitudeGrade,
     type StaminaEffectInput,
     type StaminaForm
   } from './requests/stamina-request';
@@ -40,10 +30,8 @@
     type SimulatorRun,
     type StaminaResult
   } from './simulator-repository';
-  import { RACE_TYPE_OPTIONS } from './simulator-race-types';
   import type { SimulatorUma } from './simulator-uma';
   import {
-    GROUND_OPTIONS,
     catalogErrorVisible,
     dismissCatalogError,
     selectedRaceInstanceId,
@@ -52,10 +40,6 @@
     simulatorSession
   } from './simulator-session.svelte';
 
-  const SPURT_OPTIONS = [
-    { value: 'false', label: 'By HP left' },
-    { value: 'true', label: 'Always full' }
-  ];
   /**
    * Races sampled per calculation, on seeds from one fixed start so the same setup gives the same answer. Each race
    * rolls her pace, where her skills land, whether she gets rushed and her spurt's wit roll.
@@ -133,21 +117,6 @@
     busy || (live && !!run && run.key !== inputKey && failedKey !== inputKey)
   );
   const verdict = $derived(spread && run ? hpVerdict(spread, run.forced) : undefined);
-  // The answer in one line, for the bar that keeps it in reach while the form scrolls.
-  const summary = $derived(
-    !course
-      ? 'Pick a track and course first'
-      : error && !busy
-        ? 'Couldn’t calculate'
-        : !run
-          ? busy
-            ? 'Calculating…'
-            : 'Does her HP last a full last spurt?'
-          : verdict!.title +
-            (spread?.needed
-              ? ' · needs ≈ ' + Math.round(spread.needed.p50).toLocaleString() + ' stamina'
-              : '')
-  );
   let resultPanel = $state<HTMLElement>();
   let resultInView = $state(true);
   let codeOpen = $state(false);
@@ -184,38 +153,8 @@
     return { destroy: () => node.removeEventListener('keydown', listener) };
   }
 
-  /** The trainee editor holds grades as strings; the request wants the narrow union. */
-  function traineeGrades(values: Array<string>): Array<AptitudeGrade> {
-    return values.map((value) => APTITUDE_GRADES.find((grade) => grade === value) ?? 'A');
-  }
-
-  /** Counts her learned skills into the skill counts, for this course and her running style. */
   function count(uma: SimulatorUma) {
-    if (!uma.skills.length || !skills.size) return;
-    const style = RUNNING_STYLES.indexOf(
-      uma.trainee.runningStyle as (typeof RUNNING_STYLES)[number]
-    );
-    Object.assign(
-      hpCalculator.plan,
-      countSkills(uma.skills, skills, {
-        distance: course?.distance,
-        distanceType: course?.distance_type,
-        surface: course?.surface,
-        turn: course?.turn,
-        style: style === 4 ? 1 : style + 1
-      })
-    );
-    hpCalculator.counted = 'Counted from ' + uma.name + '’s ' + uma.skills.length + ' skills';
-  }
-
-  /**
-   * A simulator from before sampled races rejects the new fields: it names them, or, behind a proxy that keeps only the
-   * status, answers 422 (the request no longer fits its JSON shape). Say what to do about it.
-   */
-  function explain(message: string) {
-    return /unknown field `(samples|chance|start_spread_m)`|^422\b/.test(message)
-      ? 'The simulator running here is an older build that cannot sample races. Rebuild and restart it.'
-      : message;
+    countHpSkills(uma, skills, course);
   }
 
   async function send(): Promise<void> {
@@ -265,7 +204,7 @@
       error = '';
       failedKey = '';
     } catch (reason) {
-      error = explain(reason instanceof Error ? reason.message : 'The request failed.');
+      error = explainStaminaError(reason instanceof Error ? reason.message : 'The request failed.');
       failedKey = key;
     } finally {
       busy = false;
@@ -309,36 +248,7 @@
         onbuild={count}
         oncode={() => (codeOpen = true)}
       />
-      <SimSection
-        number={2}
-        title="Race"
-      >
-        {#snippet actions()}<CourseButtons />{/snippet}
-        <div class="race-row">
-          <RaceBar
-            bare
-            courseOnly
-          />
-          <SelectField
-            id="hp-ground"
-            label="Ground"
-            options={GROUND_OPTIONS}
-            bind:value={simulatorSession.ground}
-          />
-          <SelectField
-            id="hp-race-type"
-            label="Race format"
-            options={RACE_TYPE_OPTIONS}
-            bind:value={hpCalculator.raceType}
-          />
-          <SelectField
-            id="hp-spurt"
-            label="Last spurt"
-            options={SPURT_OPTIONS}
-            bind:value={hpCalculator.fullSpurt}
-          />
-        </div>
-      </SimSection>
+      <HpRaceSection />
       <HpPlanInput
         course={geometry}
         guts={stats.guts}
@@ -368,28 +278,17 @@
     </aside>
     <!-- The answer stays in reach while the form scrolls: until the result itself is in sight. -->
     {#if !resultInView}
-      <div
-        class="calc-bar {error && !busy ? 'bad' : (verdict?.tone ?? '')}"
-        role="status"
-      >
-        <span class="summary">
-          {#if verdict && !error}<Icon
-              name={verdict.tone === 'good' ? 'check' : 'warning'}
-              size={16}
-            />{/if}
-          {summary}
-          {#if pending && run}<small>Updating…</small>{/if}
-        </span>
-        <Button
-          icon={run ? undefined : 'battery'}
-          variant={run ? 'secondary' : 'primary'}
-          loading={busy && !run}
-          disabled={!canRun}
-          onclick={show}
-        >
-          {run ? 'See result' : 'Calculate HP'}
-        </Button>
-      </div>
+      <HpCalcBar
+        hasCourse={!!course}
+        hasRun={!!run}
+        {spread}
+        {verdict}
+        {error}
+        {busy}
+        {pending}
+        {canRun}
+        onshow={show}
+      />
     {/if}
   </div>
 </SimulatorShell>
@@ -450,36 +349,6 @@
     overflow-y: auto;
     scroll-margin-top: calc(var(--app-header-height, 64px) + 12px);
   }
-  /* Track, course, ground, race format and how she spurts: one row on the runner's five columns. */
-  .race-row {
-    --control-height: var(--setup-control-height);
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 8px 12px;
-    align-items: start;
-  }
-  .race-row :global(.field) {
-    gap: 4px;
-  }
-  .race-row :global(label) {
-    font-size: 12px;
-  }
-  .race-row :global(input),
-  .race-row :global(.select-control) {
-    font-size: 13px;
-  }
-  /* A phone: the track and course a row each, the rest two a row. */
-  @container sim-form (max-width: 560px) {
-    .race-row {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .race-row :global(.course-picker) {
-      grid-column: 1 / -1;
-    }
-  }
-  .calc-bar {
-    display: none;
-  }
   /* Narrower: the result under the form, and the answer floating at the bottom while it is out of sight. */
   @media all {
     .hp-calculator {
@@ -490,54 +359,10 @@
       max-height: none;
       overflow: visible;
     }
-    .calc-bar {
-      position: sticky;
-      bottom: 12px;
-      z-index: 5;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 8px 8px 8px 14px;
-      border: 1px solid var(--border-primary);
-      border-radius: var(--radius-lg);
-      background: var(--surface-1);
-      box-shadow: 0 6px 24px rgb(0 0 0 / 0.28);
-    }
-  }
-  .summary {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 2px 6px;
-    flex: 1;
-    min-width: 0;
-    font-size: 14px;
-    font-weight: 650;
-  }
-  .good .summary :global(svg) {
-    color: var(--accent-success);
-  }
-  .warn .summary :global(svg) {
-    color: var(--accent-warning);
-  }
-  .bad .summary {
-    color: var(--accent-error);
-  }
-  .summary small {
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--text-secondary);
-  }
-  .calc-bar :global(.ui-button) {
-    flex: none;
-    min-height: 40px;
   }
   @media (max-width: 767px) {
     .hp-calculator {
       --setup-control-height: 44px;
-    }
-    .calc-bar :global(.ui-button) {
-      min-height: 44px;
     }
   }
 </style>

@@ -1,0 +1,83 @@
+.filter-popover {
+  position: fixed;
+  z-index: 100;
+  inset: 210px 16px auto auto;
+  margin: 0;
+  width: min(400px, calc(100vw - 24px));
+  padding: 10px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--surface-overlay);
+  color: var(--text-primary);
+  box-shadow: 0 10px 28px rgb(0 0 0/0.22);
+  max-height: calc(100dvh - 230px);
+  overflow: auto;
+}
+.filter-popover header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 38px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.filter-popover header > div {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.filter-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 12px;
+}
+.filter-option {
+  min-width: 0;
+}
+.filter-option :global(.checkbox) {
+  min-height: 32px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 7px;
+}
+.filter-option :global(.box) {
+  width: 18px;
+  height: 18px;
+}
+.filter-option :global(strong) {
+  font-size: 11px;
+}
+.filter-option :global(strong.with-icon) {
+  gap: 5px;
+}
+.filter-option :global(.copy svg) {
+  color: var(--color-accent);
+}
+.filter-backdrop {
+  position: fixed;
+  z-index: 78;
+  inset: 0;
+  border: 0;
+  background: rgb(0 0 0/0.42);
+}
+.mobile-filter-sheet {
+  inset: auto 0 var(--timeline-toolbar-height);
+  width: 100%;
+  max-height: min(66dvh, 560px);
+  border-radius: 0;
+  border-inline: 0;
+  padding: 10px 12px 14px;
+}
+.mobile-filter-sheet .search {
+  margin: 6px 0 10px;
+}
+.mobile-filter-sheet .search :global(input) {
+  height: 44px;
+  font-size: 12px;
+}
+.mobile-filter-sheet .filter-options {
+  gap: 3px 10px;
+}
+.mobile-filter-sheet .filter-options :global(.checkbox) {
+  min-height: 44px;
+}

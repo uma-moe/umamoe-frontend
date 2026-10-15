@@ -1,0 +1,123 @@
+.toolbar {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: end;
+  margin-bottom: 16px;
+}
+.toolbar > :global(.field) {
+  flex: 1;
+  max-width: 290px;
+  min-width: 170px;
+}
+.toolbar p {
+  margin-left: auto;
+}
+.skill-list {
+  min-width: 0;
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+.caption {
+  font-size: 10px;
+  margin-top: 10px;
+}
+.skill-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 2px 0;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+.skill-select.active,
+.skill-select:hover {
+  color: var(--accent-primary);
+}
+.skill-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.skill-label small {
+  flex: none;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.chevron {
+  display: flex;
+  flex: none;
+  transform: rotate(-90deg);
+}
+.chevron.open {
+  transform: none;
+}
+.skill-list :global(tr:not(.detail-row) > td:first-child),
+.skill-list :global(th:first-child) {
+  position: sticky;
+  left: 0;
+  background: var(--surface-1);
+  z-index: 1;
+}
+.skill-list :global(th:first-child) {
+  z-index: 3;
+}
+.skill-list :global(tr.interactive:hover > td:first-child),
+.skill-list :global(tr.interactive:focus-within > td:first-child) {
+  background: var(--surface-2);
+}
+.skill-list :global(td) {
+  font-size: 11px;
+}
+.skill-list :global(th) {
+  font-size: 10px;
+  background: var(--surface-1);
+}
+.skill-list :global(.skill-chip) {
+  max-width: 230px;
+}
+.skill-list :global(.sort) {
+  gap: 5px;
+}
+.skill-list :global(th:last-child),
+.skill-list :global(tr:not(.detail-row) > td:last-child) {
+  width: 1%;
+  text-align: right;
+  padding-right: 0;
+}
+.skill-detail {
+  padding: 8px 12px;
+  background: var(--surface-1);
+  border-block: 1px solid var(--border-subtle);
+}
+@media (max-width: 600px) {
+  .skill-list {
+    padding: 14px 12px;
+  }
+  .toolbar p {
+    margin: 0;
+    width: 100%;
+  }
+  .toolbar > :global(.field) {
+    max-width: none;
+  }
+  .skill-list :global(.skill-chip) {
+    max-width: 170px;
+  }
+  .skill-detail {
+    padding: 8px;
+  }
+  .skill-list :global(.bounded) {
+    max-height: 520px !important;
+  }
+}

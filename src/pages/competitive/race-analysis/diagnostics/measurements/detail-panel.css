@@ -1,0 +1,11 @@
+.detail-panel {
+  min-width: 0;
+  padding: 6px 0;
+  background: transparent;
+  border-top: 1px solid var(--border-subtle);
+}
+@media (max-width: 550px) {
+  .detail-panel {
+    padding: 4px 6px;
+  }
+}

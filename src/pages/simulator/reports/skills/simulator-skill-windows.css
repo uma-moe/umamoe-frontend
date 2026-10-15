@@ -205,79 +205,6 @@
   font-size: 10px;
   color: var(--text-secondary);
 }
-.tip {
-  position: fixed;
-  inset: auto;
-  margin: 0;
-  width: 270px;
-  padding: 8px 10px;
-  border: 1px solid var(--border-primary, var(--border-subtle));
-  border-radius: var(--radius-md);
-  background: var(--surface-2, var(--surface-1));
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.35);
-  color: var(--text-primary);
-  font-size: 11px;
-  pointer-events: none;
-}
-.tip header {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-.tip header span {
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-.tip p {
-  margin: 0 0 6px;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-.tip p.moment {
-  color: var(--text-primary);
-}
-.tip p.moment b {
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-}
-.tip ul {
-  display: grid;
-  gap: 3px;
-  margin: 0 0 6px;
-  padding: 0;
-  list-style: none;
-}
-.tip li {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
-  align-items: center;
-  gap: 6px;
-  padding: 1px 4px;
-  font-variant-numeric: tabular-nums;
-}
-.tip li span {
-  position: relative;
-  white-space: nowrap;
-}
-.tip li i {
-  position: absolute;
-  inset-block: 0;
-  left: 0;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--skill) 24%, transparent);
-}
-.tip li b {
-  position: relative;
-  font-weight: 650;
-  text-align: right;
-}
-.tip small {
-  display: block;
-  font-size: 10px;
-  color: var(--text-secondary);
-}
 /* Phones scroll the timeline sideways under sticky labels; the key lives in the info popover there. */
 @media (max-width: 700px) {
   .label {
@@ -288,8 +215,5 @@
   }
   .head .key {
     visibility: hidden;
-  }
-  .tip {
-    width: 230px;
   }
 }

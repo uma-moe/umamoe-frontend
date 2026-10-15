@@ -1,0 +1,95 @@
+.race-page {
+  min-width: 0;
+}
+.loaded :global(.page-heading) {
+  padding-block: 20px 16px;
+}
+.loaded :global(.page-heading h1) {
+  font-size: 26px;
+  margin: 0;
+}
+.loaded :global(.app-page) {
+  padding-bottom: 24px;
+}
+.race-workspace {
+  grid-template-columns: minmax(0, 1fr);
+  --control-height: 32px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.file-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.analysis-workspace {
+  min-width: 0;
+}
+ul {
+  padding-left: 18px;
+  margin: 6px 0;
+}
+li {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .loaded :global(.page-heading) {
+    padding-block: 12px;
+  }
+  .loaded :global(.page-heading h1) {
+    font-size: 22px;
+  }
+  .race-workspace {
+    margin-inline: 12px;
+  }
+}
+
+.race-page :global(.ui-button.ui-button--sm:not(.ui-button--ghost)) {
+  min-height: 32px;
+  padding: 5px 10px;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  line-height: 1.2;
+}
+.race-page :global(.ui-button.ui-button--ghost) {
+  min-height: 28px;
+  font-weight: 500;
+}
+.race-page :global(.table-wrap .ui-button.ui-button--ghost),
+.race-page :global(.mode-periods .ui-button.ui-button--ghost),
+.race-page :global(.reference-periods .ui-button.ui-button--ghost) {
+  min-height: 22px;
+  padding: 1px 3px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent-primary);
+  line-height: 1.3;
+}
+.race-page :global(.ui-button svg) {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+.race-page :global(.field select) {
+  min-height: 32px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+.race-page :global(.ui-toggle) {
+  height: 32px;
+  min-height: 32px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+}
+.race-page :global(.segments.compact) {
+  height: 32px;
+  border-radius: 6px;
+}
+.race-page :global(.icon-button--sm) {
+  border-radius: 6px;
+}

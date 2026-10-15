@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { itemIconPath } from '@/lib/catalog/item-icons';
   import { onMount, tick } from 'svelte';
   import { get } from 'svelte/store';
   import {
@@ -12,7 +11,7 @@
     plannerSaveError,
     savePlannerCollection
   } from '@/pages/carat-planner/planner-state';
-  import TimelineBoard from './TimelineBoard.svelte';
+  import TimelineBoard from './board/TimelineBoard.svelte';
   import {
     buildTimelineLanes,
     timelineEndDate,
@@ -26,18 +25,16 @@
   import TimelineEventCard from '@/components/cards/TimelineEventCard.svelte';
   import type { TimelineEventData } from '@/components/cards/timeline-types';
   import { timelineRepository, type TimelineRecord } from './timeline-repository';
-  import Dialog from '@/components/overlays/Dialog.svelte';
   import { plannerResourceRepository } from '@/pages/carat-planner/planner-resource-repository';
-  import type { PlannerGachaEntry, PlannerRewardResource } from '@/lib/carat-planner/carat-planner';
+  import type { PlannerRewardResource } from '@/lib/carat-planner/carat-planner';
   import type { TimelineCalculation } from '@/lib/timeline/timeline-prediction-types';
-  import {
-    timelineDisplayTitle,
-    type TimelinePickupCatalog
-  } from '@/lib/timeline/timeline-pickups';
+  import type { TimelinePickupCatalog } from '@/lib/timeline/timeline-pickups';
   import { buildTimelineRewardSummaries } from '@/lib/timeline/timeline-reward-summary';
-  import { timelineCardContext, timelineCardRaceLines } from '@/lib/timeline/timeline-race-facts';
   import { searchKey } from '@/lib/timeline/timeline-search';
-  import { filterOptions, type FilterType, type TimelineStatus } from './timeline-controls';
+  import type { FilterType, TimelineStatus } from './timeline-controls';
+  import { filterTimelineEvents, plannedEventIds, timelineCardView } from './timeline-events';
+  import TimelineEventDialog from './details/TimelineEventDialog.svelte';
+  import TimelineLoading from './TimelineLoading.svelte';
 
   let {
     tab,
@@ -77,46 +74,13 @@
   let rewardsReady = false;
   const pendingRewardEvents = new Map<string, symbol>();
 
-  let detailEvent = $state<TimelineRecord>();
-  let detailGacha = $state<PlannerGachaEntry>();
-  let ratesLoading = $state(false);
-  let ratesError = $state('');
-
-  let detailRequest = 0;
+  let detailDialog = $state<TimelineEventDialog>();
 
   const rewardSummaries = $derived(buildTimelineRewardSummaries(rewardResource, events));
-  const plannedIds = $derived(
-    [
-      ...new Set([
-        ...activePlan(collection).targets.map((target) => target.eventId),
-        ...activePlan(collection).enabledRewardEventIds
-      ])
-    ].filter((id) => !activePlan(collection).disabledEventIds.includes(id))
-  );
+  const plannedIds = $derived(plannedEventIds(collection));
   const plannerEventCount = $derived(enabledPlannerTargets(activePlan(collection)).length);
   const searchTerm = $derived(searchKey(search));
-  const filtered = $derived(
-    events.filter((event) => {
-      const knownType = filterOptions.some((option) => option.type === event.eventType);
-      if (knownType && !visibleTypes.includes(event.eventType as FilterType)) return false;
-      return (
-        !searchTerm ||
-        [
-          event.title,
-          event.context ?? '',
-          event.typeLabel,
-          event.gachaLabel ?? '',
-          event.gachaTypeName ?? '',
-          ...event.tags,
-          ...(event.pickups ?? []).flatMap((pickup) => [
-            pickup.name,
-            pickup.subLabel ?? '',
-            ...(pickup.searchTerms ?? [])
-          ])
-        ].some((value) => searchKey(value).includes(searchTerm))
-      );
-    })
-  );
+  const filtered = $derived(filterTimelineEvents(events, visibleTypes, searchTerm));
   const endDate = $derived(timelineEndDate(events, mobile));
   const dateLanes = $derived(
     buildTimelineLanes(filtered, anniversaries, endDate, compactGaps, Boolean(search.trim()))
@@ -209,72 +173,8 @@
     }
   }
 
-  async function loadRates(refresh = false): Promise<void> {
-    const event = detailEvent;
-    const request = ++detailRequest;
-    ratesError = '';
-    detailGacha = undefined;
-    ratesLoading = Boolean(event?.canPlan);
-    if (!event?.canPlan) return;
-    try {
-      const core = await plannerResourceRepository.core(refresh);
-      const [gacha] = await plannerResourceRepository.gachasFor([event], core, refresh);
-      if (request === detailRequest) detailGacha = gacha;
-    } catch (reason) {
-      if (request === detailRequest)
-        ratesError = reason instanceof Error ? reason.message : 'Banner rates could not be loaded.';
-    } finally {
-      if (request === detailRequest) ratesLoading = false;
-    }
-  }
-
   function openDetails(event: TimelineEventData): void {
-    detailEvent = events.find((item) => item.id === event.id);
-    void loadRates();
-  }
-
-  function closeDetails(): void {
-    detailRequest++;
-    detailEvent = undefined;
-  }
-
-  function cardView(event: TimelineRecord): TimelineEventData {
-    const summary = rewardSummaries.get(event.id);
-    const pickups = event.pickups ?? [];
-    const visible = event.eventType === 'legend_race' ? pickups : pickups.slice(0, 2);
-    const title = timelineDisplayTitle(event);
-    return {
-      ...event,
-      title:
-        event.eventType === 'champions_meeting' && !/^champions meeting\b/i.test(title)
-          ? `Champions Meeting: ${title}`
-          : title,
-      context: timelineCardContext(event),
-      pickups: visible,
-      overflowPickups: pickups.length - visible.length,
-      raceLines:
-        event.eventType === 'legend_race' || !pickups.length ? timelineCardRaceLines(event) : [],
-      rewardLabel: summary?.label,
-      rewardContext: summary?.variable ? summary.previewLabel : undefined,
-      rewards: summary?.variable
-        ? summary.previewItems.map((item) => ({
-            id: item.key,
-            label: `${item.countLabel} ${item.label}`,
-            amount: item.countLabel,
-            icon: item.iconPath,
-            fallbackIcon: item.icon === 'person' ? 'user' : 'gift'
-          }))
-        : summary?.items.map((item) => ({
-            id: item.key,
-            label: item.label,
-            amount: item.kind === 'free_pulls' ? `${item.amount}×` : item.countLabel,
-            freePulls: item.kind === 'free_pulls',
-            icon:
-              item.kind === 'free_pulls' && event.eventType === 'support_card_banner'
-                ? itemIconPath(111)
-                : item.iconPath
-          }))
-    };
+    detailDialog?.open(events.find((item) => item.id === event.id));
   }
 
   export function jumpSearch(offset: number): void {
@@ -426,33 +326,7 @@
       </div>
     {/if}
     {#if loading}
-      <div
-        class="timeline-loading"
-        aria-busy="true"
-      >
-        <div class="loading-caption">
-          <Spinner
-            label="Loading Timeline data"
-            size={22}
-          />
-          <span>Loading timeline…</span>
-        </div>
-        <div
-          class="loading-preview"
-          aria-hidden="true"
-        >
-          {#each [0, 1, 2] as lane}
-            <div class="loading-lane">
-              <div class="skeleton-date"></div>
-              <div class="skeleton-card">
-                <div class="skeleton-media"></div>
-                <div class="skeleton-line"></div>
-                <div class="skeleton-line short"></div>
-              </div>
-            </div>
-          {/each}
-        </div>
-      </div>
+      <TimelineLoading />
     {:else if !filtered.length && !error && search.trim()}
       <EmptyState
         icon="timeline"
@@ -476,7 +350,7 @@
           {#snippet card(event: TimelineRecord, loadImages: boolean)}
             <div id={`timeline-event-${event.id}`}>
               <TimelineEventCard
-                event={cardView(event)}
+                event={timelineCardView(event, rewardSummaries.get(event.id))}
                 {mobile}
                 {loadImages}
                 planned={plannedIds.includes(event.id)}
@@ -503,49 +377,17 @@
     {/if}
   </section>
 {/if}
-{#if detailEvent}
-  {#key detailEvent.id}
-    {#await import('./TimelineEventDetails.svelte')}
-      <Dialog
-        open
-        title="Loading event details"
-        onclose={closeDetails}
-      >
-        <Spinner label="Loading event details" />
-      </Dialog>
-    {:then module}
-      <module.default
-        event={detailEvent}
-        {catalog}
-        {calculation}
-        rewardSummary={rewardSummaries.get(detailEvent.id)}
-        {rewardsLoading}
-        {rewardsError}
-        gacha={detailGacha}
-        {ratesLoading}
-        {ratesError}
-        planned={plannedIds.includes(detailEvent.id)}
-        onplan={plan}
-        onclose={closeDetails}
-        onretryrates={() => void loadRates(true)}
-        onretryrewards={() => void loadRewards(true)}
-      />
-    {:catch}
-      <Dialog
-        open
-        title="Event details could not be loaded"
-        onclose={closeDetails}
-      >
-        <Button
-          variant="secondary"
-          onclick={() => location.reload()}
-        >
-          Reload page
-        </Button>
-      </Dialog>
-    {/await}
-  {/key}
-{/if}
+<TimelineEventDialog
+  bind:this={detailDialog}
+  {catalog}
+  {calculation}
+  {rewardSummaries}
+  {rewardsLoading}
+  {rewardsError}
+  {plannedIds}
+  onplan={plan}
+  onretryrewards={() => void loadRewards(true)}
+/>
 
 <style>
   .timeline-content {
@@ -594,70 +436,6 @@
   }
   .timeline-error {
     padding: 20px var(--page-gutter-current);
-  }
-  .timeline-loading {
-    min-height: 320px;
-    padding: 24px var(--page-gutter-current);
-    overflow: hidden;
-  }
-  .loading-caption {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 24px;
-    color: var(--text-secondary);
-    font-size: 13px;
-  }
-  .loading-preview {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(240px, 285px));
-    gap: 16px;
-  }
-  .loading-lane {
-    display: grid;
-    gap: 18px;
-  }
-  .skeleton-date,
-  .skeleton-line {
-    background: var(--border-primary);
-  }
-  .skeleton-media {
-    background: var(--surface-2);
-  }
-  .skeleton-date {
-    height: 16px;
-    width: 45%;
-    margin: auto;
-    border-radius: 4px;
-  }
-  .skeleton-card {
-    height: 167px;
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    background: var(--surface-1);
-  }
-  .skeleton-media {
-    height: 56px;
-    border-bottom: 1px solid var(--border-subtle);
-  }
-  .skeleton-line {
-    height: 12px;
-    width: 75%;
-    margin: 16px 10px;
-    border-radius: 3px;
-  }
-  .skeleton-line.short {
-    width: 48%;
-  }
-  .mobile .loading-preview {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .mobile .loading-lane {
-    gap: 10px;
-  }
-  .mobile .skeleton-date {
-    margin-left: 0;
   }
   .loading {
     min-height: 320px;

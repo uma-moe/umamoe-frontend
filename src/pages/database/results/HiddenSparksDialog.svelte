@@ -4,7 +4,7 @@
   import Dialog from '@/components/overlays/Dialog.svelte';
   import Icon from '@/components/Icon.svelte';
   import { factorImage, factorMetadata } from '@/lib/catalog/factor-catalog';
-  import WhiteFactorTypePicker from '../filters/WhiteFactorTypePicker.svelte';
+  import WhiteFactorTypePicker from '../filters/factors/WhiteFactorTypePicker.svelte';
 
   interface Props {
     open?: boolean;

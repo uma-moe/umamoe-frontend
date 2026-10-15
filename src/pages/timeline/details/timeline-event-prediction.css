@@ -1,0 +1,108 @@
+.prediction > p {
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 4px 0;
+}
+.current-prediction {
+  min-height: 37px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 0 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.current-prediction > span {
+  display: grid;
+  gap: 2px;
+}
+.current-prediction small,
+.factor-label {
+  font-size: 8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.current-prediction strong {
+  font-size: 11px;
+}
+.current-prediction > b {
+  font-size: 12px;
+  color: var(--accent-secondary);
+}
+.prediction-factors > div {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 9px;
+  min-height: 31px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.factor-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.prediction-factors dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin: 0;
+}
+.prediction-factors dl > div {
+  display: inline-flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 3px;
+}
+.factor-label :global(svg) {
+  color: var(--accent-primary);
+}
+.prediction-factors dt {
+  font-size: 8px;
+  color: var(--text-muted);
+}
+.prediction-factors dd {
+  font-size: 9px;
+  font-weight: 650;
+  margin: 0;
+}
+.alternatives h4 {
+  font-size: 9px;
+  margin: 8px 0 4px;
+}
+.alternatives > div {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 76px 30px;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 4px 0;
+}
+.alternatives strong,
+.alternatives b {
+  font-size: 10px;
+}
+.alternatives b {
+  color: var(--accent-secondary);
+  text-align: right;
+}
+.alternatives > div + div {
+  border-top: 1px solid var(--border-subtle);
+}
+.alternatives small {
+  font-size: 8px;
+  color: var(--text-muted);
+}
+.fit-track {
+  height: 3px;
+  background: var(--surface-3);
+}
+.fit-track i {
+  height: 100%;
+  display: block;
+  background: var(--accent-secondary);
+}
+@media (max-width: 620px) {
+  .alternatives > div {
+    grid-template-columns: 48px minmax(0, 1fr) 52px 28px;
+  }
+}

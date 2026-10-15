@@ -1,0 +1,11 @@
+.lineup {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 11px;
+}
+.slash {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}

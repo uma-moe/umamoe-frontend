@@ -1,0 +1,90 @@
+.table-sidebar {
+  display: flex;
+  flex-direction: column;
+  padding-right: 20px;
+  border-right: 1px solid var(--border-subtle);
+  min-width: 0;
+}
+.table-sidebar > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 16px 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+.table-search {
+  padding: 8px 12px 14px;
+}
+.table-sidebar nav {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 0 6px;
+  max-height: 570px;
+  overflow: auto;
+}
+.table-sidebar nav button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  background: none;
+  padding: 10px 9px;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+  font: 11px var(--font-mono);
+}
+.table-sidebar nav button > span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.table-sidebar nav button small {
+  font-size: 9px;
+  opacity: 0.6;
+}
+.table-sidebar nav button.active {
+  background: color-mix(in srgb, var(--accent-primary) 9%, transparent);
+  color: var(--accent-primary);
+}
+.table-info {
+  display: flex;
+  gap: 8px;
+  padding: 18px 14px;
+  margin-top: auto;
+  color: var(--text-secondary);
+}
+.table-info p {
+  font-size: 10px;
+  line-height: 1.6;
+  margin: 0;
+}
+@media (max-width: 600px) {
+  .table-sidebar {
+    padding-right: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-primary);
+  }
+  .table-sidebar > header,
+  .table-info {
+    display: none;
+  }
+  .table-search {
+    padding: 12px;
+  }
+  .table-sidebar nav {
+    display: flex;
+    overflow: auto;
+    max-height: 150px;
+    padding: 0 10px 10px;
+  }
+  .table-sidebar nav button {
+    flex-shrink: 0;
+  }
+  .table-sidebar nav button > span {
+    max-width: 160px;
+  }
+}

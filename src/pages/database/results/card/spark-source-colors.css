@@ -1,0 +1,9 @@
+[data-owner='main'] {
+  --source-color: var(--spark-source-main);
+}
+[data-owner='left'] {
+  --source-color: var(--accent-primary);
+}
+[data-owner='right'] {
+  --source-color: var(--spark-source-right);
+}

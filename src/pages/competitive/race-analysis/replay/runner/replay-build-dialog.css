@@ -1,0 +1,50 @@
+.entry-metadata {
+  margin-top: 20px;
+}
+.entry-metadata h3 {
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+.entry-metadata dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  font-size: 11px;
+  margin: 0;
+}
+.entry-metadata dt {
+  color: var(--text-secondary);
+}
+.entry-metadata dd {
+  margin: 3px 0 0;
+}
+.race-build-card {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  min-width: 0;
+}
+.race-build-card :global(.entry-metadata) {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.race-build-card :global(.entry-metadata h3) {
+  font-size: 12px;
+  margin: 0 0 6px;
+}
+.race-build-card :global(.entry-metadata dl) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+.race-build-card :global(.entry-metadata dl > div) {
+  padding: 0;
+  border: 0;
+}
+.race-build-card :global(.entry-metadata dt) {
+  font-size: 10px;
+}
+.race-build-card :global(.entry-metadata dd) {
+  font-size: 12px;
+  margin: 3px 0 0;
+}

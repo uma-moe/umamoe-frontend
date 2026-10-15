@@ -1,0 +1,180 @@
+.lineage-saves-surface {
+  --dialog-surface-bg: var(--bg-tertiary);
+  --dialog-header-bg: var(--bg-tertiary);
+}
+:global(:root[data-theme='light']) .lineage-saves-surface {
+  --dialog-surface-bg: var(--bg-secondary);
+  --dialog-header-bg: var(--bg-secondary);
+}
+:global(:root[data-theme='light']) .save-item {
+  background: var(--bg-secondary);
+  border-color: var(--border-primary);
+}
+.saves-dialog {
+  display: grid;
+  gap: 18px;
+}
+.saves-dialog section {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+.saves-dialog h3 {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.saves-dialog h3 :global(svg),
+.transfer-content :global(svg) {
+  color: var(--accent-primary);
+}
+.save-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+}
+.save-row :global(input) {
+  height: 36px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+.save-row :global(.ui-button--primary) {
+  font-size: 13px;
+  font-weight: 600;
+}
+.save-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.save-list {
+  max-height: 240px;
+  display: grid;
+  gap: 4px;
+  overflow: auto;
+}
+.save-item {
+  min-width: 0;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--dialog-muted-bg);
+  padding-right: 6px;
+}
+.save-item :global(.ui-button) {
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-start;
+  padding: 8px 10px;
+  text-align: left;
+}
+.save-item :global(.ui-button > span) {
+  min-width: 0;
+  width: 100%;
+}
+.save-item :global(.icon-button:hover) {
+  color: var(--accent-error);
+  background: rgb(var(--accent-error-rgb) / 0.12);
+}
+.save-meta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.save-meta > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.save-meta strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+.save-meta small,
+.transfer-content small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.saves-empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--dialog-border);
+  border-radius: 8px;
+  background: var(--dialog-muted-bg);
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+.transfer-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.transfer-actions :global(.ui-button) {
+  min-width: 0;
+  padding: 10px 12px;
+  justify-content: flex-start;
+  text-align: left;
+}
+.transfer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.transfer-content strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.transfer-content :global(svg) {
+  height: 24px;
+  margin-bottom: 2px;
+}
+.confirmation-message {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+@media (max-width: 600px) {
+  .transfer-actions {
+    grid-template-columns: 1fr;
+  }
+}
+@media (min-width: 768px) {
+  .lineage-saves-surface :global(.dialog-panel > header) {
+    min-height: 53px;
+    padding: 12px 12px 12px 16px;
+  }
+  .lineage-saves-surface :global(.dialog-panel > header .icon-button) {
+    width: 28px;
+    height: 28px;
+  }
+}
+@media (max-width: 767px) {
+  .save-row :global(input),
+  .save-row :global(.ui-button) {
+    min-height: var(--touch-target);
+  }
+  .save-item :global(.icon-button) {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+}

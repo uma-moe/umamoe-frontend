@@ -1,0 +1,142 @@
+.metadata {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.metadata > span {
+  padding-left: 6px;
+  border-left: 1px solid var(--border-subtle);
+  color: var(--accent-secondary);
+}
+.metadata :global(svg) {
+  color: var(--accent-primary);
+}
+.event-details {
+  min-width: 0;
+  font-size: 12px;
+}
+.banner {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 512/125;
+  object-fit: contain;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  background: var(--surface-0);
+}
+.facts {
+  margin: 0;
+}
+.facts > div {
+  display: grid;
+  grid-template-columns: 17px 68px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 5px 1px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.facts dt {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.facts dd {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 7px;
+  margin: 0;
+  font-size: 11px;
+}
+.facts dd span {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.description {
+  line-height: 1.5;
+}
+.description.highlight {
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  background: var(--surface-1);
+}
+.description-scroll {
+  max-height: 132px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+.description-scroll :global(p) {
+  margin: 0 0 7px;
+}
+.description-scroll :global(h2),
+.description-scroll :global(h3) {
+  font-size: 12px;
+}
+.description-scroll :global(img) {
+  max-width: 100%;
+  height: auto;
+}
+.description-scroll :global(table) {
+  border-collapse: collapse;
+  max-width: 100%;
+}
+.description-scroll :global(th),
+.description-scroll :global(td) {
+  padding: 4px;
+  border: 1px solid var(--border-subtle);
+}
+.description-scroll :global(a),
+.full-article {
+  color: var(--accent-primary);
+}
+.full-article {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  min-height: 24px;
+}
+.actions {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+.actions > div {
+  margin-left: auto;
+}
+.actions nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+}
+.actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  font-size: 11px;
+  color: var(--accent-primary);
+}
+.planned :global(.ui-button) {
+  color: var(--accent-secondary);
+  border-color: color-mix(in srgb, var(--accent-secondary) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-secondary) 9%, transparent);
+}
+@media (max-width: 620px) {
+  .actions a,
+  .full-article {
+    min-height: var(--touch-target);
+  }
+}

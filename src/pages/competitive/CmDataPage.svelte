@@ -8,26 +8,20 @@
   import Icon from '@/components/Icon.svelte';
   import type { TabItem } from '@/components/navigation/Tabs.svelte';
   import CmOverview from './champions-meeting/CmOverview.svelte';
-  import CmStrategy from './champions-meeting/CmStrategy.svelte';
-  import CmUma from './champions-meeting/CmUma.svelte';
-  import CmArchetypes from './champions-meeting/CmArchetypes.svelte';
-  import CmSkills from './champions-meeting/CmSkills.svelte';
-  import LobbyBuilder from './champions-meeting/LobbyBuilder.svelte';
-  import type {
-    Summary,
-    Snapshot,
-    Performer,
-    Requirement,
-    Build,
-    TeamDetail
-  } from './hakuraku-types';
+  import CmIntroduction from './champions-meeting/CmIntroduction.svelte';
+  import CmDatasetSummary from './champions-meeting/CmDatasetSummary.svelte';
+  import CmStrategy from './champions-meeting/strategy/CmStrategy.svelte';
+  import CmUma from './champions-meeting/uma/CmUma.svelte';
+  import CmArchetypes from './champions-meeting/archetypes/CmArchetypes.svelte';
+  import CmSkills from './champions-meeting/skills/CmSkills.svelte';
+  import LobbyBuilder from './champions-meeting/lobby/LobbyBuilder.svelte';
+  import { CmLobbyState } from './champions-meeting/lobby/cm-lobby.svelte';
+  import type { Summary, Snapshot, Requirement } from './hakuraku-types';
   import {
     cmGet,
-    snapshotPath,
     loadCmSummary,
     styleColors,
     accessibleColors,
-    number,
     type Manifest
   } from './champions-meeting/cm-data';
   import { queryText } from './hakuraku-query';
@@ -64,26 +58,13 @@
   let scope = $state(params.get('style') ?? 'all'),
     selectedUma = $state(''),
     umaView = $state(legacyView === 'umas' ? 'field' : 'overview');
-  let lobby = $state<Performer[]>([]);
-  let pendingTeams = $state<string[]>([]);
-  let teamDraft = $state<{ key: string; build: Build }[]>([]),
-    pendingRunners = $state<string[]>([]),
-    teamError = $state('');
-
-  let customTeamId = 0;
+  const lobbyState = new CmLobbyState(() => data);
 
   let visited = $state<string[]>([]);
 
   $effect(() => {
     if (!visited.includes(tab)) visited = [...visited, tab];
   });
-
-  let draft = $state<{
-    mood: string;
-    seed: string;
-    gates: Record<string, string>;
-    edits: Record<string, Build>;
-  }>({ mood: '5', seed: '', gates: {}, edits: {} });
 
   const snapshot = $derived(snapshots.find((s) => s.snapshotId === snapshotId));
 
@@ -104,7 +85,7 @@
       id: 'lobby',
       label: 'Lobby Builder',
       icon: 'race',
-      badge: lobby.length ? lobby.length + '/3' : undefined
+      badge: lobbyState.lobby.length ? lobbyState.lobby.length + '/3' : undefined
     }
   ]);
 
@@ -133,13 +114,8 @@
     attempt;
     data = undefined;
     error = '';
-    lobby = [];
-    pendingTeams = [];
-    teamDraft = [];
-    pendingRunners = [];
-    teamError = '';
+    lobbyState.reset();
     visited = [];
-    draft = { mood: '5', seed: '', gates: {}, edits: {} };
     if (!id) return;
     const controller = new AbortController();
     loadCmSummary(id, controller.signal)
@@ -173,146 +149,8 @@
     }
   }
 
-  function removeTeam(team: Performer) {
-    lobby = lobby.filter((t) => t.id !== team.id);
-    draft.gates = Object.fromEntries(
-      Object.entries(draft.gates).filter(([key]) => !key.startsWith(team.id + ':'))
-    );
-    draft.edits = Object.fromEntries(
-      Object.entries(draft.edits).filter(([key]) => !key.startsWith(team.id + ':'))
-    );
-  }
-
-  function moveRunner(
-    sourceId: string,
-    sourceIndex: number,
-    targetId: string,
-    targetIndex: number
-  ) {
-    const source = lobby.find((team) => team.id === sourceId),
-      target = lobby.find((team) => team.id === targetId);
-    if (
-      !source ||
-      !target ||
-      source === target ||
-      !source.members[sourceIndex] ||
-      !target.members[targetIndex]
-    )
-      return;
-    const nextSourceId = source.custom ? source.id : 'custom:' + ++customTeamId,
-      nextTargetId = target.custom ? target.id : 'custom:' + ++customTeamId;
-    const sourceKey = source.id + ':' + sourceIndex,
-      targetKey = target.id + ':' + targetIndex;
-    const movedKey = (key: string) =>
-      key === sourceKey
-        ? nextTargetId + ':' + targetIndex
-        : key === targetKey
-          ? nextSourceId + ':' + sourceIndex
-          : key.startsWith(source.id + ':')
-            ? nextSourceId + key.slice(source.id.length)
-            : key.startsWith(target.id + ':')
-              ? nextTargetId + key.slice(target.id.length)
-              : key;
-    lobby = lobby.map((team) => {
-      if (team !== source && team !== target) return team;
-      const members = team.members.map((member, index) =>
-        team === source && index === sourceIndex
-          ? target.members[targetIndex]!
-          : team === target && index === targetIndex
-            ? source.members[sourceIndex]!
-            : member
-      );
-      return {
-        ...team,
-        id: team === source ? nextSourceId : nextTargetId,
-        members,
-        custom: true,
-        wins: 0,
-        n: 0,
-        ci: [0, 0],
-        memberWins: members.map(() => 0)
-      };
-    });
-    draft.gates = Object.fromEntries(
-      Object.entries(draft.gates).map(([key, value]) => [movedKey(key), value])
-    );
-    draft.edits = Object.fromEntries(
-      Object.entries(draft.edits).map(([key, value]) => [movedKey(key), value])
-    );
-  }
-
-  async function toggleTeam(team: Performer) {
-    if (lobby.some((t) => t.id === team.id)) {
-      removeTeam(team);
-      return;
-    }
-    if (!data || lobby.length + pendingTeams.length >= 3 || pendingTeams.includes(team.id)) return;
-    const snapshot = data.snapshotId;
-    pendingTeams = [...pendingTeams, team.id];
-    teamError = '';
-    try {
-      const detail = await cmGet<TeamDetail>(
-        snapshotPath(snapshot, 'teams/' + encodeURIComponent(team.id)),
-        new AbortController().signal,
-        snapshot
-      );
-      if (data?.snapshotId === snapshot && pendingTeams.includes(team.id) && lobby.length < 3)
-        lobby = [...lobby, detail.team];
-    } catch (error) {
-      if (data?.snapshotId === snapshot)
-        teamError = error instanceof Error ? error.message : 'Could not load the captured team.';
-    } finally {
-      if (data?.snapshotId === snapshot) pendingTeams = pendingTeams.filter((id) => id !== team.id);
-    }
-  }
-
-  async function toggleRunner(team: Performer, index: number) {
-    const key = team.id + ':' + index;
-    if (teamDraft.some((r) => r.key === key)) {
-      teamDraft = teamDraft.filter((r) => r.key !== key);
-      return;
-    }
-    if (teamDraft.length + pendingRunners.length >= 3 || pendingRunners.includes(key) || !data)
-      return;
-    const snapshot = data.snapshotId;
-    pendingRunners = [...pendingRunners, key];
-    teamError = '';
-    try {
-      const detail = await cmGet<TeamDetail>(
-        snapshotPath(snapshot, 'teams/' + encodeURIComponent(team.id)),
-        new AbortController().signal,
-        snapshot
-      );
-      const build = detail.team.members[index];
-      if (!build) throw new Error('This captured runner is unavailable.');
-      if (data?.snapshotId === snapshot && pendingRunners.includes(key))
-        teamDraft = [...teamDraft, { key, build }];
-    } catch (error) {
-      if (data?.snapshotId === snapshot)
-        teamError = error instanceof Error ? error.message : 'Could not load the captured build.';
-    } finally {
-      if (data?.snapshotId === snapshot) pendingRunners = pendingRunners.filter((r) => r !== key);
-    }
-  }
-
   function addCustomTeam() {
-    if (teamDraft.length !== 3 || lobby.length + pendingTeams.length >= 3 || pendingRunners.length)
-      return;
-    lobby = [
-      ...lobby,
-      {
-        id: 'custom:' + ++customTeamId,
-        owner: { id: 'custom', names: ['Custom team'] },
-        members: teamDraft.map((r) => r.build),
-        wins: 0,
-        n: 0,
-        ci: [0, 0],
-        memberWins: [0, 0, 0],
-        custom: true
-      }
-    ];
-    teamDraft = [];
-    tab = 'lobby';
+    if (lobbyState.addCustomTeam()) tab = 'lobby';
   }
 </script>
 
@@ -351,35 +189,7 @@
   {/snippet}
   <div class="cm-workspace">
     {#if snapshot}
-      <section
-        class="dataset"
-        aria-label="Dataset summary"
-      >
-        <div class="course">
-          <Icon
-            name="race"
-            size={22}
-          />
-          <div>
-            <h2>{snapshot.meta.course}</h2>
-            <p>{snapshot.meta.conditions}</p>
-          </div>
-        </div>
-        <dl class="dataset-stats">
-          <div>
-            <dt>Simulated races</dt>
-            <dd>{number(snapshot.meta.populationRaces)}</dd>
-          </div>
-          <div>
-            <dt>Evaluated teams</dt>
-            <dd>{number(snapshot.meta.evaluatedTeams)}</dd>
-          </div>
-          <div>
-            <dt>Players</dt>
-            <dd>{number(snapshot.meta.populationOwners)}</dd>
-          </div>
-        </dl>
-      </section>
+      <CmDatasetSummary {snapshot} />
     {/if}
     {#if manifestError || error}
       <div
@@ -452,52 +262,7 @@
             onteams={findTeams}
             onview={(value) => (tab = value)}
           />
-          <section class="introduction">
-            <div class="intro-heading">
-              <h2>Understand the meeting</h2>
-              <p>
-                Published simulations of captured Champions Meeting teams. Choose an analysis to
-                explore the field, then follow a composition or Uma to its captured builds.
-              </p>
-            </div>
-            <div class="reading-guide">
-              <section>
-                <h3>Reading the results</h3>
-                <p>
-                  These are simulated results, not the original race outcomes. Player appearances
-                  are weighted equally. Neutral win rates are <strong>11.1% per Uma</strong>
-                  and
-                  <strong>33.3% per team</strong>
-                  .
-                </p>
-                <p>
-                  Associated team win rate includes wins by an Uma’s teammates. Player counts can
-                  overlap; use the minimum-player filters and confidence intervals to judge sample
-                  size.
-                </p>
-                <a href="/research/new-age-umamusume-data">Read the dataset methodology →</a>
-              </section>
-              <section>
-                <h3>Explore the builds behind the numbers</h3>
-                <p>
-                  Choose a style representative or team composition to find matching captured teams.
-                  Add captured teams or combine individual Uma into your own team, then prepare a
-                  nine-runner room in Lobby Builder.
-                </p>
-                <p>
-                  Open a captured build, team or lobby in the simulator to review its setup and run
-                  races.
-                </p>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onclick={() => (tab = 'archetypes')}
-                >
-                  Browse captured teams →
-                </Button>
-              </section>
-            </div>
-          </section>
+          <CmIntroduction onbrowse={() => (tab = 'archetypes')} />
         {/if}
         {#if visited.includes('strategy')}
           <div hidden={tab !== 'strategy'}>
@@ -534,16 +299,16 @@
               {colors}
               {snapshot}
               bind:query
-              {lobby}
-              {teamDraft}
-              {pendingTeams}
-              {pendingRunners}
-              {teamError}
-              onrunner={toggleRunner}
+              lobby={lobbyState.lobby}
+              teamDraft={lobbyState.teamDraft}
+              pendingTeams={lobbyState.pendingTeams}
+              pendingRunners={lobbyState.pendingRunners}
+              teamError={lobbyState.teamError}
+              onrunner={lobbyState.toggleRunner}
               onbuildteam={addCustomTeam}
-              onremoverunner={(key) => (teamDraft = teamDraft.filter((r) => r.key !== key))}
-              onclearteam={() => (teamDraft = [])}
-              ontoggle={toggleTeam}
+              onremoverunner={lobbyState.removeRunner}
+              onclearteam={() => (lobbyState.teamDraft = [])}
+              ontoggle={lobbyState.toggleTeam}
               onlobby={() => (tab = 'lobby')}
             />
           </div>
@@ -554,17 +319,12 @@
               {data}
               {colors}
               {snapshot}
-              teams={lobby}
-              bind:draft
-              onmove={moveRunner}
+              teams={lobbyState.lobby}
+              bind:draft={lobbyState.draft}
+              onmove={lobbyState.moveRunner}
               onbrowse={() => (tab = 'archetypes')}
-              onremove={removeTeam}
-              onclear={() => {
-                lobby = [];
-                pendingTeams = [];
-                draft.gates = {};
-                draft.edits = {};
-              }}
+              onremove={lobbyState.removeTeam}
+              onclear={lobbyState.clear}
             />
           </div>
         {/if}
@@ -588,235 +348,5 @@
 </AppPage>
 
 <style>
-  .cm-workspace {
-    --cm-tint: var(--color-accent-soft);
-    --control-height: 32px;
-    min-width: 0;
-    color: var(--color-text);
-  }
-  .cm-workspace :global(.select-control) {
-    font-size: 12px;
-  }
-  .dataset-picker {
-    width: 330px;
-    max-width: 100%;
-  }
-  .dataset {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    padding: 14px 18px;
-    background: var(--surface-1);
-    border-radius: var(--radius-md);
-    margin-bottom: 12px;
-  }
-  .course {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    min-width: 0;
-  }
-  .course > :global(svg) {
-    color: var(--accent-primary);
-    flex: none;
-  }
-  .course h2 {
-    font-size: 14px;
-    margin: 0 0 4px;
-    line-height: 1.4;
-  }
-  .course p {
-    font-size: 11px;
-    margin: 0;
-    color: var(--text-secondary);
-  }
-  .dataset-stats {
-    display: flex;
-    gap: 24px;
-    margin: 0;
-    flex: none;
-  }
-  .dataset-stats > div {
-    padding-left: 24px;
-    border-left: 1px solid var(--border-subtle);
-  }
-  .dataset-stats dt {
-    font-size: 10px;
-    color: var(--text-secondary);
-  }
-  .dataset-stats dd {
-    font-size: 20px;
-    font-weight: 650;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.03em;
-    margin: 4px 0 0;
-  }
-  .navigation {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    justify-content: space-between;
-    margin-bottom: 14px;
-    min-width: 0;
-  }
-  .navigation > :global(.tabs) {
-    min-width: 0;
-  }
-  .display-settings {
-    position: relative;
-    flex: none;
-    font-size: 11px;
-  }
-  .display-settings summary {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    cursor: pointer;
-    list-style: none;
-    padding: 10px;
-    color: var(--text-secondary);
-  }
-  .display-settings summary::-webkit-details-marker {
-    display: none;
-  }
-  .display-settings > div {
-    position: absolute;
-    right: 0;
-    top: 100%;
-    width: 240px;
-    padding: 16px;
-    background: var(--surface-2);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
-    z-index: 10;
-  }
-  .display-settings p {
-    font-size: 11px;
-    color: var(--text-secondary);
-    line-height: 1.6;
-    margin: 10px 0 0;
-  }
-  .stack {
-    min-width: 0;
-  }
-  .stack :global(.chart-frame.surface:not(.compact)) {
-    padding: 16px;
-    gap: 12px;
-  }
-  .stack :global(.surface h3) {
-    font-size: 15px;
-  }
-  .stack :global(.surface:not(.compact) figcaption) {
-    padding-bottom: 10px;
-    gap: 10px;
-  }
-  .stack :global(.surface p) {
-    font-size: 11px;
-    margin-top: 4px;
-  }
-  .introduction {
-    margin-top: 18px;
-    padding: 18px 0 0;
-    border-top: 1px solid var(--border-subtle);
-  }
-  .intro-heading {
-    max-width: 900px;
-  }
-  .introduction h2 {
-    font-size: 20px;
-    margin: 0 0 8px;
-  }
-  .introduction h3 {
-    font-size: 15px;
-    margin: 0 0 12px;
-  }
-  .introduction p {
-    font-size: 13px;
-    line-height: 1.75;
-    color: var(--text-secondary);
-  }
-  .introduction a {
-    font-size: 12px;
-  }
-  .reading-guide {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 36px;
-    padding: 20px 0;
-  }
-  .data-footer {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding-top: 16px;
-    margin-top: 24px;
-    border-top: 1px solid var(--border-subtle);
-    font-size: 10px;
-    color: var(--text-secondary);
-  }
-  @media (max-width: 1100px) {
-    .dataset-stats {
-      gap: 14px;
-    }
-    .dataset-stats > div {
-      padding-left: 14px;
-    }
-    .dataset-stats dd {
-      font-size: 17px;
-    }
-    .navigation {
-      align-items: start;
-    }
-    .navigation > :global(.tabs) {
-      flex: 1;
-    }
-    .navigation :global(.tab) {
-      min-width: 0;
-      padding-inline: 10px;
-    }
-  }
-  @media (max-width: 767px) {
-    .cm-workspace {
-      padding-inline: 12px;
-    }
-    .dataset {
-      align-items: start;
-      flex-direction: column;
-      gap: 14px;
-      padding: 14px;
-    }
-    .dataset-stats {
-      width: 100%;
-      justify-content: space-between;
-      gap: 8px;
-    }
-    .dataset-stats > div {
-      padding-left: 12px;
-    }
-    .dataset-stats > div:first-child {
-      border: 0;
-      padding: 0;
-    }
-    .dataset-stats dd {
-      font-size: 17px;
-    }
-    .navigation {
-      gap: 4px;
-    }
-    .display-settings summary {
-      font-size: 0;
-      padding: 10px 6px;
-    }
-    .reading-guide {
-      grid-template-columns: 1fr;
-    }
-    .reading-guide {
-      gap: 24px;
-    }
-    .dataset-picker {
-      width: min(100%, 350px);
-    }
-  }
+  @import './cm-data-page.css';
 </style>

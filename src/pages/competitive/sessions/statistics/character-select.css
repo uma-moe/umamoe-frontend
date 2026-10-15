@@ -1,0 +1,14 @@
+.character-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+.character-select:hover {
+  color: var(--accent-primary);
+}

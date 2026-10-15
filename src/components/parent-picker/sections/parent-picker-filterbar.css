@@ -1,0 +1,74 @@
+.filterbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  flex: none;
+}
+.parent-search {
+  position: relative;
+  min-width: 0;
+  flex: 1;
+}
+.parent-search :global(input) {
+  padding-right: 34px;
+}
+.filterbar :global(input),
+.filterbar :global(.select-control) {
+  font-size: 12px;
+}
+.parent-search > :global(.icon-button) {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--control-height);
+  height: var(--control-height);
+  border: 0;
+  background: transparent;
+}
+.parent-sort {
+  flex: none;
+  width: 110px;
+}
+.parent-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 64px;
+}
+.parent-actions :global(.icon-button),
+.parent-actions :global(.ui-button) {
+  min-height: var(--control-height);
+  height: var(--control-height);
+}
+.parent-actions :global(.icon-button) {
+  width: var(--control-height);
+}
+.parent-actions :global(.ui-button) {
+  padding: 0 10px;
+  font-size: 12px;
+}
+.result-count {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .parent-search > :global(.icon-button) {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+  .parent-search :global(input) {
+    padding-right: 44px;
+  }
+}
+@media (max-width: 600px) {
+  .filterbar {
+    gap: 6px;
+    padding: 8px;
+  }
+  .result-count {
+    display: none;
+  }
+}

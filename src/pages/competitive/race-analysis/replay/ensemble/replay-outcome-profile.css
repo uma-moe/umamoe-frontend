@@ -1,0 +1,160 @@
+.profile {
+  min-width: 0;
+}
+.view-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+}
+h3 {
+  font-size: 11px;
+  margin: 0;
+}
+.view-heading > span {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.mean-dot {
+  fill: var(--text-primary);
+  stroke: var(--surface-1);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.profile-plot {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 6px;
+  margin-top: 20px;
+}
+.row-labels {
+  display: grid;
+  grid-template-rows: 90px 25px 25px 25px;
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+.row-labels span {
+  padding-top: 7px;
+}
+.row-labels span:first-child {
+  padding-top: 20px;
+}
+.row-labels small {
+  display: block;
+  font-size: 8px;
+  margin-top: 3px;
+}
+.distance-plot {
+  min-width: 0;
+}
+.distance-plot svg {
+  display: block;
+  width: 100%;
+  height: 174px;
+  overflow: hidden;
+}
+.distance-plot text {
+  fill: var(--text-primary);
+  font-size: 10px;
+}
+.grid {
+  stroke: var(--border-subtle);
+  vector-effect: non-scaling-stroke;
+}
+.sample-area {
+  fill: var(--runner-color);
+  opacity: 0.15;
+}
+.sample-bin {
+  fill: var(--runner-color);
+  opacity: 0.3;
+}
+.sample-bin:hover {
+  opacity: 0.8;
+}
+.sample-curve {
+  fill: none;
+  stroke: var(--runner-color);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.band-base {
+  fill: var(--surface-2);
+}
+.profile-range {
+  stroke: var(--runner-color);
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.profile-range.outer {
+  stroke-width: 8;
+  opacity: 0.25;
+}
+.profile-range.inner {
+  stroke-width: 5;
+  opacity: 0.8;
+}
+.mean-line {
+  stroke: var(--text-primary);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+.axis {
+  height: 18px;
+  position: relative;
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+.axis span {
+  position: absolute;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.axis span:first-child {
+  transform: none;
+}
+.axis span:last-child {
+  transform: translateX(-100%);
+}
+.course-overview {
+  height: 7px;
+  position: relative;
+  background: var(--surface-3);
+  margin: 11px 0 0 54px;
+  border-radius: 3px;
+}
+.course-overview span {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: var(--runner-color);
+  opacity: 0.35;
+  border-radius: 2px;
+}
+.course-overview i {
+  position: absolute;
+  top: -2px;
+  height: 11px;
+  width: 2px;
+  background: var(--runner-color);
+  transform: translateX(-50%);
+}
+.overview-labels {
+  display: flex;
+  justify-content: space-between;
+  margin: 5px 0 0 54px;
+  font-size: 8px;
+  color: var(--text-secondary);
+}
+@container race-main (max-width:780px) {
+  .profile-plot {
+    margin-top: 6px;
+  }
+}
+@media (max-width: 600px) {
+  .profile-plot {
+    margin-top: 6px;
+  }
+}

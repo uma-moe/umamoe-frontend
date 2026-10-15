@@ -1,0 +1,114 @@
+.cm-workspace {
+  --cm-tint: var(--color-accent-soft);
+  --control-height: 32px;
+  min-width: 0;
+  color: var(--color-text);
+}
+.cm-workspace :global(.select-control) {
+  font-size: 12px;
+}
+.dataset-picker {
+  width: 330px;
+  max-width: 100%;
+}
+.navigation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  min-width: 0;
+}
+.navigation > :global(.tabs) {
+  min-width: 0;
+}
+.display-settings {
+  position: relative;
+  flex: none;
+  font-size: 11px;
+}
+.display-settings summary {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+  padding: 10px;
+  color: var(--text-secondary);
+}
+.display-settings summary::-webkit-details-marker {
+  display: none;
+}
+.display-settings > div {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  width: 240px;
+  padding: 16px;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 10;
+}
+.display-settings p {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 10px 0 0;
+}
+.stack {
+  min-width: 0;
+}
+.stack :global(.chart-frame.surface:not(.compact)) {
+  padding: 16px;
+  gap: 12px;
+}
+.stack :global(.surface h3) {
+  font-size: 15px;
+}
+.stack :global(.surface:not(.compact) figcaption) {
+  padding-bottom: 10px;
+  gap: 10px;
+}
+.stack :global(.surface p) {
+  font-size: 11px;
+  margin-top: 4px;
+}
+.data-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  margin-top: 24px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+@media (max-width: 1100px) {
+  .navigation {
+    align-items: start;
+  }
+  .navigation > :global(.tabs) {
+    flex: 1;
+  }
+  .navigation :global(.tab) {
+    min-width: 0;
+    padding-inline: 10px;
+  }
+}
+@media (max-width: 767px) {
+  .cm-workspace {
+    padding-inline: 12px;
+  }
+  .navigation {
+    gap: 4px;
+  }
+  .display-settings summary {
+    font-size: 0;
+    padding: 10px 6px;
+  }
+  .dataset-picker {
+    width: min(100%, 350px);
+  }
+}

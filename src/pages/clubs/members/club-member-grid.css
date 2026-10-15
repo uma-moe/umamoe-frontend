@@ -1,0 +1,116 @@
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 12px;
+}
+.member-card {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--surface-1);
+}
+.member-card > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.member-rank {
+  flex: none;
+  font-size: 16px;
+  color: var(--placement-color, var(--accent-primary));
+  font-weight: 700;
+}
+.name-block {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.name-block a {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.name-block a :global(svg) {
+  flex: none;
+}
+.name-block .member-id {
+  min-height: 18px;
+  padding: 1px 4px;
+  line-height: 1.2;
+}
+.role-badge {
+  flex: none;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--surface-2);
+}
+.role-badge[data-role='leader'] {
+  color: var(--accent-warning);
+  background: rgb(255 167 38/0.1);
+}
+.role-badge[data-role='officer'] {
+  color: var(--accent-secondary);
+}
+.total-fans,
+.primary-metric {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+}
+.total-fans {
+  padding-top: 6px;
+  margin-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+  line-height: 1.35;
+}
+.total-fans > span,
+.primary-metric > span {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.total-fans strong {
+  margin-left: auto;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.primary-metric {
+  padding: 3px 0;
+  line-height: 1.35;
+}
+.primary-metric > span {
+  color: var(--accent-primary);
+}
+.primary-metric strong {
+  margin-left: auto;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  max-width: 100%;
+}
+@media (max-width: 767px) {
+  .members-grid {
+    gap: 8px;
+  }
+  .member-card {
+    padding: 10px;
+  }
+  .name-block a {
+    font-size: 12px;
+  }
+  .primary-metric strong {
+    font-size: 14px;
+  }
+}

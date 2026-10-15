@@ -1,0 +1,315 @@
+.character-panel {
+  width: 190px;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.lineage-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.lineage-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+.source-affinity {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 5px;
+  color: var(--source-color);
+  background: color-mix(in srgb, var(--source-color) 8%, transparent);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.lineage-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-disabled);
+  cursor: pointer;
+}
+.lineage-node:hover {
+  color: var(--text-secondary);
+}
+.lineage-node.selected {
+  border-color: var(--source-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--source-color) 18%, transparent);
+}
+.lineage-role {
+  display: none;
+  color: var(--text-disabled);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.lineage-main .lineage-role {
+  color: var(--accent-primary);
+  opacity: 0.9;
+}
+.lineage-main :global(.art) {
+  width: 80px;
+  height: 80px;
+  border-width: 3px;
+  border-color: var(--border-strong);
+}
+.lineage-grandparent :global(.art) {
+  width: 60px;
+  height: 60px;
+  border-color: var(--border-secondary);
+}
+.lineage-bracket {
+  width: min(160px, 92%);
+  height: 22px;
+  display: block;
+  margin: 4px 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.lineage-bracket path {
+  fill: none;
+  stroke: #5a6470;
+  stroke-linecap: square;
+  stroke-width: 2;
+}
+.grandparents {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  gap: 14px;
+}
+.support-card-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgb(var(--on-surface-rgb) / 0.06);
+  border-radius: var(--radius-md);
+  background: rgb(var(--on-surface-rgb) / 0.025);
+}
+.support-card-section :global(.art) {
+  width: 64px;
+  height: 64px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+}
+.support-role {
+  display: none;
+}
+.limit-break {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  font-size: 20px;
+}
+@container inheritance-card (max-width: 800px) {
+  .character-panel {
+    width: 100%;
+    flex-direction: row;
+    align-items: stretch;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid rgb(var(--on-surface-rgb) / 0.055);
+    border-radius: var(--radius-md);
+    background: rgb(var(--on-surface-rgb) / 0.018);
+  }
+  .lineage-frame {
+    min-width: 0;
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    position: relative;
+    padding-top: 14px;
+  }
+  .lineage-frame::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: calc(100% / 6);
+    left: calc(100% / 6);
+    height: 2px;
+    background: #5a6470;
+  }
+  .lineage-person {
+    position: relative;
+    grid-row: 1;
+    align-self: stretch;
+    display: grid;
+    grid-template-rows: 1fr auto auto;
+    justify-items: center;
+  }
+  .lineage-node {
+    align-self: start;
+  }
+  .lineage-role {
+    display: block;
+    grid-row: 3;
+  }
+  .lineage-person::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    width: 2px;
+    height: 12px;
+    background: #5a6470;
+    transform: translateX(-50%);
+  }
+  .lineage-main {
+    grid-column: 1;
+  }
+  .grandparents {
+    display: contents;
+  }
+  .lineage-grandparent:first-child {
+    grid-column: 2;
+  }
+  .lineage-grandparent:last-child {
+    grid-column: 3;
+  }
+  .lineage-bracket {
+    display: none;
+  }
+  .support-card-section {
+    width: auto;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin: 0 0 0 0.5rem;
+    padding: 0 0.5rem 0 0.75rem;
+    border-width: 0 0 0 1px;
+    border-radius: 0;
+    background: transparent;
+  }
+  .limit-break {
+    justify-content: center;
+    font-size: 18px;
+  }
+}
+@container inheritance-card (max-width: 480px) {
+  .lineage-main :global(.art) {
+    width: 58px;
+    height: 58px;
+  }
+  .lineage-grandparent :global(.art) {
+    width: 44px;
+    height: 44px;
+  }
+  .support-card-section {
+    gap: 0.2rem;
+    margin-left: 0.4rem;
+    padding: 0 0 0 0.45rem;
+  }
+  .limit-break {
+    font-size: 12px;
+  }
+}
+@media (max-width: 767px) {
+  .character-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 6px;
+    gap: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    background: rgb(var(--on-surface-rgb) / 0.035);
+  }
+  .character-panel:has(.support-card-section) {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+  }
+  .lineage-frame {
+    padding-top: 10px;
+  }
+  .lineage-frame::before {
+    top: 2px;
+    height: 1px;
+  }
+  .lineage-person {
+    grid-template-rows: 60px 24px auto;
+    gap: 2px;
+  }
+  .lineage-person::before {
+    top: -8px;
+    height: 16px;
+    width: 1px;
+  }
+  .lineage-node {
+    align-self: center;
+    padding: 1px;
+    border-width: 1px;
+  }
+  .lineage-main :global(.art) {
+    width: 40px;
+    height: 40px;
+    border-width: 2px;
+  }
+  .lineage-grandparent :global(.art) {
+    width: 40px;
+    height: 40px;
+  }
+  .lineage-person :global(.trigger) {
+    min-width: 24px;
+    min-height: 24px;
+  }
+  .source-affinity {
+    gap: 2px;
+    padding: 2px 4px;
+    font-size: 10px;
+  }
+  .source-affinity :global(svg) {
+    width: 10px;
+    height: 10px;
+  }
+  .lineage-role,
+  .support-role {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .support-role {
+    display: block;
+    grid-row: 3;
+    color: var(--text-disabled);
+  }
+  .support-card-section {
+    display: grid;
+    grid-template-rows: 60px 24px auto;
+    justify-items: center;
+    align-items: center;
+    margin: 0;
+    padding: 10px 0 0;
+    gap: 2px;
+  }
+  .support-card-section :global(.art) {
+    grid-row: 1;
+    width: 56px;
+    height: 56px;
+  }
+  .limit-break {
+    grid-row: 2;
+    font-size: 10px;
+    gap: 1px;
+  }
+}

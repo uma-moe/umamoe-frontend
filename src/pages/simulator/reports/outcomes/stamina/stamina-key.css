@@ -1,0 +1,33 @@
+.who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--runner-color);
+}
+.key {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px 12px;
+  flex-wrap: wrap;
+  margin: 4px 0 2px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.key i {
+  display: inline-block;
+  flex: none;
+}

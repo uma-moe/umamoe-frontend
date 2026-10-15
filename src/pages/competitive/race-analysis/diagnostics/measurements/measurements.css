@@ -1,0 +1,24 @@
+h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+h4 small {
+  margin-left: 5px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 400;
+}
+.section-heading > h4 {
+  margin-right: auto;
+}
+.rng-value {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.rng-value.positive {
+  color: var(--accent-secondary);
+}
+.rng-value.negative {
+  color: var(--accent-error);
+}

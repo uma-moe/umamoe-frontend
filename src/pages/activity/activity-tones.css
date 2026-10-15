@@ -1,0 +1,15 @@
+.tone-critical {
+  --score-color: var(--accent-error);
+}
+.tone-high {
+  --score-color: var(--accent-warning);
+}
+.tone-elevated {
+  --score-color: var(--accent-primary);
+}
+.tone-watch {
+  --score-color: var(--accent-purple);
+}
+.tone-low {
+  --score-color: var(--accent-green-strong);
+}

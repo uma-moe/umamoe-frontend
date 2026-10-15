@@ -1,0 +1,24 @@
+.runner-reference {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.runner-reference:hover {
+  color: var(--accent-primary);
+}
+.runner-reference :global(.art) {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  background: transparent;
+  flex: none;
+}

@@ -5,7 +5,7 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import RunnerSummary from '@/pages/competitive/runners/RunnerSummary.svelte';
-  import SimulatorUmaEditor from '../setup/SimulatorUmaEditor.svelte';
+  import SimulatorUmaEditor from '../setup/runner/SimulatorUmaEditor.svelte';
   import { simulatorUmaSummary } from '../simulator-uma';
   import { simulatorRoster, ensureSimulatorRoster } from '../simulator-roster.svelte';
   import {

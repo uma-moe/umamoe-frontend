@@ -1,0 +1,97 @@
+.vertical-timeline {
+  width: 100%;
+  margin-inline: auto;
+  padding: 0 24px 28px;
+}
+.vertical-month {
+  position: relative;
+  padding-bottom: 12px;
+}
+.month-header {
+  position: sticky;
+  z-index: 12;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 56px;
+  gap: 16px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-primary);
+}
+.month-header h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 700;
+}
+.month-header > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.vertical-date {
+  position: absolute;
+  inset-inline: 0;
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  padding: 16px 0;
+  gap: 24px;
+}
+.vertical-date::after {
+  position: absolute;
+  content: '';
+  inset-block: 0;
+  left: 98px;
+  width: 1px;
+  background: var(--border-primary);
+}
+.vertical-date::before {
+  position: absolute;
+  z-index: 1;
+  content: '';
+  top: 30px;
+  left: 94px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--accent-primary);
+  border-radius: 50%;
+  background: var(--bg-primary);
+}
+.vertical-date.is-today::before {
+  border-color: var(--timeline-today-color, var(--accent-error));
+}
+.vertical-date > header {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  align-self: start;
+  text-align: right;
+}
+.vertical-date time {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+  color: var(--text-primary);
+}
+.vertical-date time strong {
+  font-size: 26px;
+  line-height: 32px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.vertical-date time span {
+  font-size: 12px;
+}
+.vertical-date > header > span {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.vertical-events {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(auto-fill, minmax(0, min(100%, var(--timeline-card-width))));
+  align-items: start;
+  gap: 12px;
+}

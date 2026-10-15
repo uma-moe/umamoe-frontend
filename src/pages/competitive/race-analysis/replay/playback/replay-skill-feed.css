@@ -1,0 +1,81 @@
+.skill-feed {
+  display: grid;
+  grid-template-columns: var(--timeline-label-width) minmax(0, 1fr) var(--timeline-value-width);
+  align-items: center;
+  gap: var(--timeline-column-gap);
+  height: 32px;
+  margin-top: 4px;
+  min-width: 0;
+}
+.skill-feed > .timeline-label {
+  white-space: nowrap;
+}
+.skill-feed-scroll {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  height: 32px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.skill-feed-scroll::-webkit-scrollbar {
+  display: none;
+}
+.skill-trigger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: none;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.skill-trigger:hover {
+  color: var(--accent-primary);
+}
+.skill-trigger:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+}
+.activation-runner {
+  position: relative;
+  flex: none;
+  display: block;
+}
+.activation-runner b {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 0 2px;
+  border-radius: 2px;
+  background: var(--surface-1);
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.skill-trigger.inspected .activation-runner b {
+  color: var(--accent-primary);
+}
+.skill-trigger :global(.art) {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+}
+.no-triggers {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+@media (max-width: 700px) {
+  .skill-feed > .timeline-label {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: var(--surface-1);
+  }
+}
