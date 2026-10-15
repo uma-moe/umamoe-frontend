@@ -6,7 +6,7 @@
   import { inheritanceFactors } from '@/lib/inheritance/inheritance-factors';
   import type { InheritanceRecord } from '@/lib/inheritance/inheritance-search';
   import { scenarios } from '@/lib/catalog/scenario-catalog';
-  import ContentAd from '@/layouts/ContentAd.svelte';
+  import ContentAd from '@/layouts/ads/ContentAd.svelte';
   import PageHeading from '@/layouts/PageHeading.svelte';
   import { copyText } from '@/lib/clipboard';
   import { onMount, untrack } from 'svelte';
@@ -80,10 +80,10 @@
     type InheritanceSearchFilters,
     type InheritanceSearchResult
   } from '@/lib/inheritance/inheritance-search';
-  import { validateInheritanceUql, type UqlValidation } from '@/lib/inheritance/uql';
-  import { buildUqlSparkHighlight } from '@/lib/inheritance/uql-spark-highlight';
+  import { validateInheritanceUql, type UqlValidation } from '@/lib/inheritance/uql/uql';
+  import { buildUqlSparkHighlight } from '@/lib/inheritance/uql/uql-spark-highlight';
   import type { SparkOrder } from '@/lib/inheritance/inheritance-factors';
-  import { UqlCompiler, type UqlQueryCatalog } from '@/lib/inheritance/uql-compiler';
+  import { UqlCompiler, type UqlQueryCatalog } from '@/lib/inheritance/uql/uql-compiler';
   import {
     parseUqlContext,
     resolveUqlTarget,
@@ -91,7 +91,7 @@
     uqlLegacyHints,
     setUqlLegacy,
     type UqlContextIssue
-  } from '@/lib/inheritance/uql-context';
+  } from '@/lib/inheritance/uql/uql-context';
   import ParentPickerDialog from '@/components/parent-picker/ParentPickerDialog.svelte';
   import { deviceVeteranParents } from '@/pages/veterans/veteran-library';
   import { loadCatalog, type CatalogEntry } from './catalog-repository';

@@ -6,7 +6,7 @@
     activePlan,
     enabledPlannerTargets,
     setTimelineEvent
-  } from '@/lib/timeline/carat-planner';
+  } from '@/lib/carat-planner/carat-planner';
   import {
     plannerCollection,
     plannerSaveError,
@@ -18,17 +18,17 @@
     timelineEndDate,
     type TimelineAnniversary
   } from '@/lib/timeline/timeline-layout';
-  import AdRegion from '@/layouts/AdRegion.svelte';
+  import AdRegion from '@/layouts/ads/AdRegion.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import TimelineEventCard from '@/components/cards/TimelineEventCard.svelte';
-  import type { TimelineEventData } from '@/components/timeline-types';
+  import type { TimelineEventData } from '@/components/cards/timeline-types';
   import { timelineRepository, type TimelineRecord } from './timeline-repository';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import { plannerResourceRepository } from '@/pages/carat-planner/planner-resource-repository';
-  import type { PlannerGachaEntry, PlannerRewardResource } from '@/lib/timeline/carat-planner';
+  import type { PlannerGachaEntry, PlannerRewardResource } from '@/lib/carat-planner/carat-planner';
   import type { TimelineCalculation } from '@/lib/timeline/timeline-prediction-types';
   import {
     timelineDisplayTitle,

@@ -3,7 +3,7 @@
   import Dialog from '@/components/overlays/Dialog.svelte';
   import Icon from '@/components/Icon.svelte';
   import { formatRaceTime } from '@/lib/race/race-display';
-  import type { PlanMarker } from '../../setup/hp-plan';
+  import type { PlanMarker } from '../../setup/hp/hp-plan';
   import HpChart from './HpChart.svelte';
   import type { StaminaResult } from '../../simulator-repository';
   import {

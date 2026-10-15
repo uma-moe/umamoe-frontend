@@ -1,7 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { loadReplayGeometry, type CourseShape } from '@/pages/race-analysis/replay-course';
-  import { trackBasis, trackSection } from '@/pages/race-analysis/replay-track';
+  import {
+    loadReplayGeometry,
+    type CourseShape
+  } from '@/pages/competitive/race-analysis/replay/replay-course';
+  import { trackBasis, trackSection } from '@/pages/competitive/race-analysis/replay/replay-track';
   import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
   import { coursePreviewTrack } from './simulator-course-preview';
 

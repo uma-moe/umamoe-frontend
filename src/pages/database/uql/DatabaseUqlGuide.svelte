@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from '@/components/Icon.svelte';
-  import { isUqlChipSegment } from '@/components/query-editor-types';
-  import type { UqlEditorLanguage } from '@/lib/inheritance/uql-editor';
+  import { isUqlChipSegment } from '@/components/editor/query-editor-types';
+  import type { UqlEditorLanguage } from '@/lib/inheritance/uql/uql-editor';
   import './database-uql-guide.css';
 
   let { language, oninsert }: { language: UqlEditorLanguage; oninsert: (text: string) => void } =

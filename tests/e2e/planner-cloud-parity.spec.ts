@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures/test';
 import { mockPlannerControls, plannerControlsPlan } from './fixtures/planner-controls';
-import { compactPlannerCollectionForCloud, expandPlannerCollectionFromCloud } from '../../src/lib/timeline/planner-cloud-codec';
-import type { CaratPlanCollection } from '../../src/lib/timeline/carat-planner';
+import { compactPlannerCollectionForCloud, expandPlannerCollectionFromCloud } from '../../src/lib/carat-planner/planner-cloud-codec';
+import type { CaratPlanCollection } from '../../src/lib/carat-planner/carat-planner';
 
 function accountCollection(): CaratPlanCollection {
   const plan = plannerControlsPlan(); plan.targets = []; plan.disabledEventIds = [];

@@ -5,7 +5,7 @@ import { toTimelineCalculation, toTimelinePrediction } from './timeline-predicti
 import { timelineCardContext, timelineCardRaceLines, timelineRaceEventFacts } from './timeline-race-facts';
 import { buildTimelineRewardSummaries, withTimelineRewardFallbacks } from './timeline-reward-summary';
 import { timelinePickups } from './timeline-pickups';
-import type { PlannerRewardEntry } from './carat-planner';
+import type { PlannerRewardEntry } from '../carat-planner/carat-planner';
 
 function event(overrides: Partial<TimelineRecord> = {}): TimelineRecord {
   return { id: 'event', eventType: 'character_banner', title: 'Banner', typeLabel: 'Character scout', date: new Date('2026-09-10T00:00:00Z'), dateLabel: '', gachaIds: [], pickupCardIds: [], relatedCharacters: [], relatedSupportCards: [], relatedSupportCardNames: [], plannerRewardAvailable: false, tags: [], ...overrides };

@@ -1,4 +1,4 @@
-import { RECOVERY_PERCENT } from '../../setup/hp-plan';
+import { RECOVERY_PERCENT } from '../../setup/hp/hp-plan';
 import type { StaminaResult } from '../../simulator-repository';
 import { effectiveStamina, hpPerStamina, neededStamina } from './stamina-report';
 

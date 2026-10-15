@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import type { CaratPlan, PlannerTarget } from '../../../src/lib/timeline/carat-planner';
+import type { CaratPlan, PlannerTarget } from '../../../src/lib/carat-planner/carat-planner';
 import { mockTimeline } from './api.ts';
 
 const target = (id: string, title: string, start: string, end: string, extra: Partial<PlannerTarget> = {}): PlannerTarget => ({

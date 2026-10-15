@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { PAGE_LAYOUT, REVIEW_VIEWPORTS, SCREEN_BREAKPOINTS, shellLayoutForWidth } from './breakpoints';
-import adRegionSource from './AdRegion.svelte?raw';
+import adRegionSource from './ads/AdRegion.svelte?raw';
 import pageFrameSource from './PageFrame.svelte?raw';
 
 const tokenSource = readFileSync(path.join(process.cwd(), 'src', 'styles', 'tokens.css'), 'utf8');

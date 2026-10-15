@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest';
 import { get } from 'svelte/store';
 import { plannerCollection, savePlannerCollection } from './planner-state';
-import { buildPlannerLedger, type PlannerDataBundle } from '@/lib/timeline/carat-planner';
-import { compactPlannerCollectionResourceState } from '@/lib/timeline/planner-resource-state';
+import { buildPlannerLedger, type PlannerDataBundle } from '@/lib/carat-planner/carat-planner';
+import { compactPlannerCollectionResourceState } from '@/lib/carat-planner/planner-resource-state';
 
 it('migrates restored daily pack selections before resource cleanup can discard them', () => {
   const original = structuredClone(get(plannerCollection));

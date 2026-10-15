@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
   import IconButton from '../controls/IconButton.svelte';
-  import { QueryEditorView } from '../query-editor-view';
+  import { QueryEditorView } from './query-editor-view';
   import type {
     UqlCompletionResult,
     UqlHighlightSegment,
     UqlSuggestion,
     UqlValidationIssue,
     UqlValidationState
-  } from '../query-editor-types';
+  } from './query-editor-types';
   import './query-editor.css';
 
   let {

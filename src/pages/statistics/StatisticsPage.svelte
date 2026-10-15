@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ContentAd from '@/layouts/ContentAd.svelte';
+  import ContentAd from '@/layouts/ads/ContentAd.svelte';
   import { tick } from 'svelte';
   import type { EChartsCoreOption } from 'echarts/core';
   import { theme } from '@/stores/theme';

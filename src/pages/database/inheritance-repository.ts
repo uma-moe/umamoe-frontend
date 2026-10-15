@@ -1,5 +1,5 @@
 import { appHttp } from '@/services/http/app-http';
-import type { UqlValidation } from '@/lib/inheritance/uql';
+import type { UqlValidation } from '@/lib/inheritance/uql/uql';
 import { inheritanceSearchQuery, normalizeInheritanceSearch, type ApiInheritanceSearchResult, type InheritanceRecord, type InheritanceSearchFilters, type InheritanceSearchResult, type InheritanceFilterMode } from '@/lib/inheritance/inheritance-search';
 
 export interface BorrowInteractionContext {

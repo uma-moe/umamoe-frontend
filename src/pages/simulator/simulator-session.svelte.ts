@@ -93,7 +93,7 @@ export const simulatorSession = $state({
 export async function openSimulatorField(umas: SimulatorUma[], options: { replace?: boolean; raceInstanceId?: number; startTimeType?: number; seed?: string } = {}): Promise<void> {
   let importedCourse: string | undefined;
   if (options.raceInstanceId) {
-    const { resolveRaceCourseIds } = await import('@/pages/race-analysis/replay-course');
+    const { resolveRaceCourseIds } = await import('@/pages/competitive/race-analysis/replay/replay-course');
     const ids = await resolveRaceCourseIds([options.raceInstanceId]);
     await ensureSimulatorCatalog();
     const id = ids.get(options.raceInstanceId);

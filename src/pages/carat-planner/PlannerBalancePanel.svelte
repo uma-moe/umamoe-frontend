@@ -1,7 +1,7 @@
 <script lang="ts">
   import { itemIconPath } from '@/lib/catalog/item-icons';
-  import type { CaratPlan, PlannerBalances } from '@/lib/timeline/carat-planner';
-  import { validPlannerDateKey } from '@/lib/timeline/planner-calendar';
+  import type { CaratPlan, PlannerBalances } from '@/lib/carat-planner/carat-planner';
+  import { validPlannerDateKey } from '@/lib/carat-planner/planner-calendar';
   import TextField from '@/components/controls/TextField.svelte';
   import type { IconName } from '@/components/icon-types';
 

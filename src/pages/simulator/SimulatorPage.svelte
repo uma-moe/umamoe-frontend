@@ -6,18 +6,21 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import { loadSkillCatalog, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
   import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
-  import { loadReplayCourses, type Course } from '@/pages/race-analysis/replay-course';
+  import {
+    loadReplayCourses,
+    type Course
+  } from '@/pages/competitive/race-analysis/replay/replay-course';
   import SimulatorShell from './shell/SimulatorShell.svelte';
   import RaceBar from './shell/RaceBar.svelte';
   import CourseButtons from './shell/CourseButtons.svelte';
   import SimSection from './shell/SimSection.svelte';
   import RunnerInput from './setup/RunnerInput.svelte';
-  import BuildCodeDialog from './setup/BuildCodeDialog.svelte';
-  import { BUILD_CODE_VERSION, buildCodeRunner } from './setup/build-code';
-  import HpPlanInput from './setup/HpPlanInput.svelte';
+  import BuildCodeDialog from './setup/build/BuildCodeDialog.svelte';
+  import { BUILD_CODE_VERSION, buildCodeRunner } from './setup/build/build-code';
+  import HpPlanInput from './setup/hp/HpPlanInput.svelte';
   import StaminaResultPanel from './reports/outcomes/StaminaResult.svelte';
-  import { hpCalculator, saveHpCalculator } from './setup/hp-calculator.svelte';
-  import { countSkills, planEvents, planStats, type PlanMarker } from './setup/hp-plan';
+  import { hpCalculator, saveHpCalculator } from './setup/hp/hp-calculator.svelte';
+  import { countSkills, planEvents, planStats, type PlanMarker } from './setup/hp/hp-plan';
   import { hpSpread, hpVerdict } from './reports/outcomes/hp-needed';
   import {
     RUNNING_STYLES,

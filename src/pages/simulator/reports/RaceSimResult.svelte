@@ -224,7 +224,7 @@
             );
       if (request.signal.aborted) return;
       capture = simulatorReplayCapture(data, umas, course, track);
-      Replay = (await import('@/pages/race-analysis/RaceReplay.svelte')).default;
+      Replay = (await import('@/pages/competitive/race-analysis/replay/RaceReplay.svelte')).default;
     } catch (error) {
       if (!request.signal.aborted)
         sampleError = error instanceof Error ? error.message : 'Could not load the sample.';

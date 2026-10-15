@@ -2,7 +2,7 @@ import { setupCatalogFixtures } from '../../../tests/fixtures/catalog-setup';
 setupCatalogFixtures();
 import { describe, expect, it } from 'vitest';
 import { compileVeteranQuery, veteranQueryRow } from './profile-veteran-query';
-import { UqlCompiler } from '@/lib/inheritance/uql-compiler';
+import { UqlCompiler } from '@/lib/inheritance/uql/uql-compiler';
 import { profileVeteranAffinity } from './profile-veteran-metrics';
 import { VeteranAffinityEngine } from '@/lib/veterans/affinity-engine';
 import { loadUqlQueryCatalog } from '@/lib/catalog/uql-catalog';

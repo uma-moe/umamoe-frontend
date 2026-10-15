@@ -17,8 +17,8 @@
   import Icon from '@/components/Icon.svelte';
   import ProfileVeteranIdentity from '@/pages/profile/veterans/ProfileVeteranIdentity.svelte';
   import RunnerBuild from '../runners/RunnerBuild.svelte';
-  import ReplayDiagnostics from '@/pages/race-analysis/ReplayDiagnostics.svelte';
-  import LastSpurtResult from '@/pages/race-analysis/LastSpurtResult.svelte';
+  import ReplayDiagnostics from '@/pages/competitive/race-analysis/diagnostics/ReplayDiagnostics.svelte';
+  import LastSpurtResult from '@/pages/competitive/race-analysis/results/LastSpurtResult.svelte';
   import RunnerReference from '../runners/RunnerReference.svelte';
   import { identity, portrait } from '../analysis-view';
   import { theme } from '@/stores/theme';

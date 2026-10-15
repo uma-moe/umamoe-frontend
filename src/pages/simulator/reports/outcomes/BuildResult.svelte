@@ -9,7 +9,7 @@
     OptimizeFinalist,
     OptimizeResult
   } from '../../simulator-repository';
-  import type { PricedOffer } from '../../setup/skill-offers';
+  import type { PricedOffer } from '../../setup/build/skill-offers';
 
   /**
    * A build search, answer first: the skills to buy within the budget and what they gain her, then what each one adds

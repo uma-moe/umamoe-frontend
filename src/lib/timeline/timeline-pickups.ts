@@ -1,7 +1,7 @@
 import { characterImagePath, type CharacterNames } from '@/lib/catalog/character-catalog';
 import { supportCardImagePath, type SupportCardCatalogEntry } from '@/lib/catalog/support-card-catalog';
 import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
-import type { TimelinePickup } from '@/components/timeline-types';
+import type { TimelinePickup } from '@/components/cards/timeline-types';
 
 export interface TimelinePickupCatalog {
   characters: CharacterNames;

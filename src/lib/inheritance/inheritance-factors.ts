@@ -3,7 +3,7 @@ import { applyPlannerPayload, calculatePlannerAffinity, parsePlannerTransfer, pl
 import type { VeteranAffinityEngine } from '@/lib/veterans/affinity-engine';
 import type { VeteranRecord } from '@/lib/veterans/generated/veteran-record';
 import { encodedFactorLevels, type InheritanceRecord, type InheritanceSearchFilters } from './inheritance-search';
-import type { UqlSparkHighlight } from './uql-spark-highlight';
+import type { UqlSparkHighlight } from './uql/uql-spark-highlight';
 
 export type FactorOwner = 'main' | 'left' | 'right';
 export type SparkOrder = 'main' | 'stars' | 'occurrences' | 'alphabetical';

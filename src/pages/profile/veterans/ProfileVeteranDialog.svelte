@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ProfileVeteran } from '../profile-repository';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
-  import type { LineageBranch, LineageNodeData } from '@/components/lineage-types';
+  import type { LineageBranch, LineageNodeData } from '@/components/lineage/lineage-types';
   import type { SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
   import { loadRaceHistory, type RaceHistoryEntry } from '@/lib/catalog/race-catalog';
   import Dialog from '@/components/overlays/Dialog.svelte';

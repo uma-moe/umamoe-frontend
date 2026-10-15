@@ -34,7 +34,7 @@
     type SparkOrder
   } from '@/lib/inheritance/inheritance-factors';
   import { sparkMetrics } from '@/lib/inheritance/spark-probability';
-  import type { UqlSparkHighlight } from '@/lib/inheritance/uql-spark-highlight';
+  import type { UqlSparkHighlight } from '@/lib/inheritance/uql/uql-spark-highlight';
   import { scenarios } from '@/lib/catalog/scenario-catalog';
   import { supportCardImagePath } from '@/lib/catalog/support-card-catalog';
   import type { VeteranAffinityEngine } from '@/lib/veterans/affinity-engine';

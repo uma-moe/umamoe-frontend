@@ -29,7 +29,7 @@ function preloadPageData({ pathname }: { pathname: string }): void {
 const pageModules = {
   '/': () => import('@/pages/home/HomePage.svelte'),
   '/competitive': () => import('@/pages/competitive/CompetitivePage.svelte'),
-  '/competitive/race-analysis': () => import('@/pages/race-analysis/RaceAnalysisPage.svelte'),
+  '/competitive/race-analysis': () => import('@/pages/competitive/race-analysis/RaceAnalysisPage.svelte'),
   '/competitive/cm-data': () => import('@/pages/competitive/CmDataPage.svelte'),
   '/tools/master-data': () => import('@/pages/tools/MasterDataPage.svelte'),
   '/research': () => import('@/pages/research-notes/ResearchPage.svelte'),
@@ -51,7 +51,7 @@ const pageModules = {
   '/veterans': () => import('@/pages/veterans/VeteransBrowserPage.svelte'),
   '/veterans/:accountId': () => import('@/pages/veterans/ProfileVeteransPage.svelte'),
   '/profile/:accountId/veterans': () => import('./LegacyRedirectPage.svelte'),
-  '/profile/:accountId/cm': () => import('@/pages/cm-logs/CmLogsPage.svelte'),
+  '/profile/:accountId/cm': () => import('@/pages/profile/cm-logs/CmLogsPage.svelte'),
   '/profile/:accountId/achievements': () => import('@/pages/profile/ProfilePlaceholderPage.svelte'),
   '/profile/:accountId/titles': () => import('@/pages/profile/ProfilePlaceholderPage.svelte'),
   '/profile/:accountId': () => import('@/pages/profile/ProfilePage.svelte'),

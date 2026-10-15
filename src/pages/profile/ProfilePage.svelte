@@ -18,7 +18,7 @@
   import ProfileBorrow from './overview/ProfileBorrow.svelte';
   import ProfileTeamStadium from './overview/ProfileTeamStadium.svelte';
   import ProfileVeteransRoster from './veterans/ProfileVeteransRoster.svelte';
-  import ContentAd from '@/layouts/ContentAd.svelte';
+  import ContentAd from '@/layouts/ads/ContentAd.svelte';
   import { DEFAULT_PROFILE_SECTIONS, type ProfileSectionId } from './profile-layout';
 
   // A future preference editor can supply this order without changing the widgets.

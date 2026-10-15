@@ -12,7 +12,7 @@
   import Artwork from '@/components/game/Artwork.svelte';
   import type { ProfileVeteran } from '../profile-repository';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
-  import type { LineageBranch, LineageNodeData } from '@/components/lineage-types';
+  import type { LineageBranch, LineageNodeData } from '@/components/lineage/lineage-types';
   import type { RaceHistoryEntry } from '@/lib/catalog/race-catalog';
   import {
     encodedSkills,

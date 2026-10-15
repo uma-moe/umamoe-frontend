@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { PlanMarker } from '../../setup/hp-plan';
+  import type { PlanMarker } from '../../setup/hp/hp-plan';
   import type { StaminaDistribution } from '../../simulator-repository';
   import { RACE_PHASES } from './stamina-report';
 

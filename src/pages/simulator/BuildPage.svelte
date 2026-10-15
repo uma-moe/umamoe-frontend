@@ -19,15 +19,15 @@
     type OptimizeMode
   } from './requests/optimize-request';
   import { simulatorRepository, type OptimizeResult } from './simulator-repository';
-  import { buildRaces, fieldWhere } from './setup/build-races';
+  import { buildRaces, fieldWhere } from './setup/build/build-races';
   import RunnerInput from './setup/RunnerInput.svelte';
-  import SkillOffers from './setup/SkillOffers.svelte';
-  import BuildCodeDialog from './setup/BuildCodeDialog.svelte';
-  import TrackPool from './setup/TrackPool.svelte';
-  import { poolProblem, teamTrialsPool, type TeamTrialsMode } from './setup/track-pool';
-  import { BUILD_CODE_VERSION, buildCodeRunner, type BuildCode } from './setup/build-code';
-  import { buildSearch, saveBuildSearch } from './setup/build-search.svelte';
-  import { offerPurchases, type PricedOffer } from './setup/skill-offers';
+  import SkillOffers from './setup/build/SkillOffers.svelte';
+  import BuildCodeDialog from './setup/build/BuildCodeDialog.svelte';
+  import TrackPool from './setup/build/TrackPool.svelte';
+  import { poolProblem, teamTrialsPool, type TeamTrialsMode } from './setup/build/track-pool';
+  import { BUILD_CODE_VERSION, buildCodeRunner, type BuildCode } from './setup/build/build-code';
+  import { buildSearch, saveBuildSearch } from './setup/build/build-search.svelte';
+  import { offerPurchases, type PricedOffer } from './setup/build/skill-offers';
   import BuildResult from './reports/outcomes/BuildResult.svelte';
   import CourseButtons from './shell/CourseButtons.svelte';
   import RaceBar from './shell/RaceBar.svelte';

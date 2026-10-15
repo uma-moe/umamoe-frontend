@@ -17,7 +17,7 @@
   import Button from '@/components/controls/Button.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import TextField from '@/components/controls/TextField.svelte';
-  import { loadRaceCourse, type Course } from '../../race-analysis/replay-course';
+  import { loadRaceCourse, type Course } from '../race-analysis/replay/replay-course';
 
   let { snapshot, style = $bindable('all') }: { snapshot: Snapshot; style?: string } = $props();
 

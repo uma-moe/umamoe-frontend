@@ -1,9 +1,9 @@
 <script lang="ts">
   import CodeEditor from '@/components/editor/CodeEditor.svelte';
   import Icon from '@/components/Icon.svelte';
-  import type { UqlValidationIssue } from '@/components/query-editor-types';
-  import type { UqlValidation } from '@/lib/inheritance/uql';
-  import type { UqlQueryCatalog } from '@/lib/inheritance/uql-compiler';
+  import type { UqlValidationIssue } from '@/components/editor/query-editor-types';
+  import type { UqlValidation } from '@/lib/inheritance/uql/uql';
+  import type { UqlQueryCatalog } from '@/lib/inheritance/uql/uql-compiler';
   import type { SelectableParent } from '@/lib/veterans/parent-picker';
   import type { CatalogEntry } from '../catalog-repository';
   import { createDatabaseUqlLanguage } from './database-uql-language';

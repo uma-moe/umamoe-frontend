@@ -30,20 +30,23 @@
     type CaratPlanCollection,
     type PlannerDataBundle,
     type PlannerTarget
-  } from '@/lib/timeline/carat-planner';
-  import { compactPlannerCollectionResourceState } from '@/lib/timeline/planner-resource-state';
-  import { reconcileIncomePreset } from '@/lib/timeline/planner-income-presets';
+  } from '@/lib/carat-planner/carat-planner';
+  import { compactPlannerCollectionResourceState } from '@/lib/carat-planner/planner-resource-state';
+  import { reconcileIncomePreset } from '@/lib/carat-planner/planner-income-presets';
   import {
     activeIncomeAssumptionCount,
     buildPlannerIncomeGroups,
     summarizePlannerIncome
-  } from './planner-income-view';
+  } from './income/planner-income-view';
   import {
     buildPlannerRewardGroups,
     plannerRewardSummary
-  } from '@/lib/timeline/planner-reward-groups';
-  import { buildPlannerCampaigns } from '@/lib/timeline/planner-campaigns';
-  import { filterPlannerBanners, plannerPullPlanItems } from '@/lib/timeline/planner-presentation';
+  } from '@/lib/carat-planner/rewards/planner-reward-groups';
+  import { buildPlannerCampaigns } from '@/lib/carat-planner/planner-campaigns';
+  import {
+    filterPlannerBanners,
+    plannerPullPlanItems
+  } from '@/lib/carat-planner/planner-presentation';
   import {
     timelineDisplayTitle,
     type TimelinePickupCatalog
@@ -51,15 +54,15 @@
   import {
     decodeCompactPlannerShare,
     encodeCompactPlannerShare
-  } from '@/lib/timeline/planner-share-codec';
+  } from '@/lib/carat-planner/planner-share-codec';
   import { router } from '@/routes/router';
   import { plannerResourceRepository, plannerUsingCache } from './planner-resource-repository';
-  import { plannerCloudRepository } from './planner-cloud-repository';
+  import { plannerCloudRepository } from './cloud/planner-cloud-repository';
   import { plannerCloudSync, startPlannerCloudSync } from './planner-state';
-  import PlannerIncomePanel from './PlannerIncomePanel.svelte';
+  import PlannerIncomePanel from './income/PlannerIncomePanel.svelte';
   import PlannerBalancePanel from './PlannerBalancePanel.svelte';
-  import PlannerRewardsPanel from './PlannerRewardsPanel.svelte';
-  import PlannerTargetRow from './PlannerTargetRow.svelte';
+  import PlannerRewardsPanel from './rewards/PlannerRewardsPanel.svelte';
+  import PlannerTargetRow from './goals/PlannerTargetRow.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Combobox from '@/components/controls/Combobox.svelte';
   import Icon from '@/components/Icon.svelte';

@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from '../Icon.svelte';
   import { router } from '@/routes/router';
-  import type { NavigationItem, NavigationVariant } from '../navigation-types';
+  import type { NavigationItem, NavigationVariant } from './navigation-types';
 
   interface Props {
     items: NavigationItem[];

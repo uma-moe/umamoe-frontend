@@ -10,8 +10,8 @@
   import type { SimulatorUma } from '../simulator-uma';
   import SimSection from '../shell/SimSection.svelte';
   import SimulatorUmaEditor from './SimulatorUmaEditor.svelte';
-  import SimulatorVeteranPicker from './SimulatorVeteranPicker.svelte';
-  import { GREEN_BONUS, withBonus, type HpPlan } from './hp-plan';
+  import SimulatorVeteranPicker from './veterans/SimulatorVeteranPicker.svelte';
+  import { GREEN_BONUS, withBonus, type HpPlan } from './hp/hp-plan';
   import { RUNNING_STYLES } from './trainee';
 
   /**

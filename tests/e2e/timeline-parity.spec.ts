@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures/test';
 import { mockTimeline } from './fixtures/api';
 import { detailRewards, detailTimeline, mockTimelineDetails } from './fixtures/timeline-details';
-import { createPlan } from '../../src/lib/timeline/carat-planner';
+import { createPlan } from '../../src/lib/carat-planner/carat-planner';
 
 test('Timeline searches rerun tags and step-up or Pick 2 types without requiring matching titles', async ({ page, isMobile }) => {
   await mockTimeline(page);

@@ -13,7 +13,7 @@
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import { theme } from '@/stores/theme';
-  import { binomialProbabilities } from '@/lib/timeline/planner-pull-probability';
+  import { binomialProbabilities } from '@/lib/carat-planner/planner-pull-probability';
   import { skillDistributions, skillHistogram } from './skill-distributions';
   import { distributionChart } from '../distribution-chart';
   import type { MonteCarloResult } from '../../simulator-repository';

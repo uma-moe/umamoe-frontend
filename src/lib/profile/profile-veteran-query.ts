@@ -1,6 +1,6 @@
 import type { ProfileResponse, ProfileVeteran } from '@/pages/profile/profile-repository';
-import { validateInheritanceUql, type UqlValidation } from '@/lib/inheritance/uql';
-import type { UqlCompiler } from '@/lib/inheritance/uql-compiler';
+import { validateInheritanceUql, type UqlValidation } from '@/lib/inheritance/uql/uql';
+import type { UqlCompiler } from '@/lib/inheritance/uql/uql-compiler';
 import { resolveVeteranFactors, veteranFactorTotals } from './profile-veterans';
 import { veteranInheritanceRecord } from './profile-veteran-metrics';
 import { decodeFactor } from '@/lib/catalog/factor-catalog';

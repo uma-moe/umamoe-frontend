@@ -1,8 +1,8 @@
 import { test, expect } from './fixtures/test';
 import { mockPlannerControls, plannerControlsPlan, plannerControlsTimeline } from './fixtures/planner-controls';
 import { mockTimeline } from './fixtures/api';
-import { compactPlannerCollectionForCloud, expandPlannerCollectionFromCloud } from '../../src/lib/timeline/planner-cloud-codec';
-import { CONDITIONAL_REWARD_DEFAULT_SELECTIONS } from '../../src/lib/timeline/planner-reward-assumptions';
+import { compactPlannerCollectionForCloud, expandPlannerCollectionFromCloud } from '../../src/lib/carat-planner/planner-cloud-codec';
+import { CONDITIONAL_REWARD_DEFAULT_SELECTIONS } from '../../src/lib/carat-planner/rewards/planner-reward-assumptions';
 
 // Production publishes the continuing pack before an expired shop variant.
 const dailyPackRules = [{

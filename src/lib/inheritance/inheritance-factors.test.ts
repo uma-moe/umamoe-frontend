@@ -6,8 +6,8 @@ import { inheritanceAffinity, inheritanceFactors, inheritanceFactorMatched, type
 import { normalizeInheritanceSearch, emptyInheritanceFilters } from './inheritance-search';
 import { VeteranAffinityEngine } from '@/lib/veterans/affinity-engine';
 import type { VeteranRecord } from '@/lib/veterans/generated/veteran-record';
-import { validateInheritanceUql } from './uql';
-import { buildUqlSparkHighlight } from './uql-spark-highlight';
+import { validateInheritanceUql } from './uql/uql';
+import { buildUqlSparkHighlight } from './uql/uql-spark-highlight';
 
 describe('Angular factor encoding and owner display', () => {
   it('keeps main-parent sparks first even when grandparents have more stars or earlier names', () => {

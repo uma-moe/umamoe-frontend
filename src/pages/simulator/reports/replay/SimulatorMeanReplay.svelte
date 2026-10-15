@@ -1,7 +1,10 @@
 <script lang="ts">
   import { onMount, untrack, type Component, type Snippet } from 'svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
-  import { loadReplayCourses, type Course } from '@/pages/race-analysis/replay-course';
+  import {
+    loadReplayCourses,
+    type Course
+  } from '@/pages/competitive/race-analysis/replay/replay-course';
   import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
   import type { RaceTrajectory } from '@/lib/race/race-ensemble';
   import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
@@ -60,7 +63,7 @@
 
   onMount(() => {
     let alive = true;
-    void import('@/pages/race-analysis/RaceReplay.svelte').then((module) => {
+    void import('@/pages/competitive/race-analysis/replay/RaceReplay.svelte').then((module) => {
       if (alive) Replay = module.default as unknown as Component<ReplayProps, object, 'selected'>;
     });
     // Lane positions are stored relative to the track width; the replay reads them back with the same course metadata.

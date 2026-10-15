@@ -3,7 +3,7 @@
   import Icon from '../Icon.svelte';
   import RankBadge from '../game/RankBadge.svelte';
   import SparkItem from '../sparks/SparkItem.svelte';
-  import type { LineageNodeData } from '../lineage-types';
+  import type { LineageNodeData } from './lineage-types';
 
   interface Props {
     node: LineageNodeData;

@@ -1,0 +1,1960 @@
+import { isUqlQuoteStart } from './uql-text';
+// Cursor completion and tokenization ported from Angular's live UQL editor. No DOM or API ownership.
+import type {
+  UqlSuggestionKind,
+  UqlValueContext,
+  UqlScopeContext,
+  UqlFieldType,
+  UqlHighlightKind,
+  UqlHighlightSegment,
+  UqlSuggestion,
+  UqlCompletionResult,
+} from '@/components/editor/query-editor-types';
+
+interface UqlKnownSuggestionCandidate {
+  candidate: string;
+  lowerCandidate: string;
+  displayText?: string;
+  suggestion: UqlSuggestion;
+}
+
+export class UqlEditorLanguage {
+  constructor(private readonly _suggestions: UqlSuggestion[]) {
+    this.rebuildHighlightLookups();
+    this.rebuildFieldSuggestionPhraseIndex();
+    for (const suggestion of this._suggestions) this.getSuggestionSearchEntry(suggestion);
+  }
+  private get suggestions(): UqlSuggestion[] {
+    return this._suggestions;
+  }
+
+  private readonly maxEditorCompletionOptions = 80;
+
+  private knownFactorValueCandidates: UqlKnownSuggestionCandidate[] = [];
+
+  private knownCharacterValueCandidates: UqlKnownSuggestionCandidate[] = [];
+
+  private knownLegacyValueCandidates: UqlKnownSuggestionCandidate[] = [];
+
+  private knownSupportCardValueCandidates: UqlKnownSuggestionCandidate[] = [];
+
+  private knownRaceSaddleValueCandidates: UqlKnownSuggestionCandidate[] = [];
+
+  private knownRankValueCandidates: UqlKnownSuggestionCandidate[] = [];
+
+  private knownFactorFieldCandidates: UqlKnownSuggestionCandidate[] = [];
+
+  private knownFactorSparkValueCandidates = new Map<string, UqlKnownSuggestionCandidate>();
+
+  private knownSuggestionBuckets = new WeakMap<
+    UqlKnownSuggestionCandidate[],
+    Map<string, UqlKnownSuggestionCandidate[]>
+  >();
+
+  private tokenizeCache: { text: string; segments: UqlHighlightSegment[] } | null = null;
+
+  private activeTokenizeText: string | null = null;
+
+  private activeValueMatchContextCache = new Map<
+    number,
+    { context: UqlValueContext | null; allowAnyFactorContext: boolean; inFactorArrayList: boolean }
+  >();
+
+  private knownFieldNames = new Set<string>();
+
+  readonly tokenizeForEditor = (text: string): UqlHighlightSegment[] => {
+    if (this.tokenizeCache?.text === text) return this.tokenizeCache.segments;
+    const segments = this.tokenizeQuery(text);
+    this.tokenizeCache = { text, segments };
+    return segments;
+  };
+
+  readonly completeForEditor = (text: string, pos: number): UqlCompletionResult | null => {
+    const { suggestions } = this.getMatchingSuggestions(text, pos);
+    if (!suggestions.length) return null;
+    const range = this.getCompletionRangeForSuggestions(text, pos, suggestions);
+    const options = suggestions.slice(0, this.maxEditorCompletionOptions);
+    return { from: range.start, to: range.end, options };
+  };
+
+  normalizeEditableSparkIds(
+    query: string,
+    selectionStart = query.length,
+    selectionEnd = selectionStart,
+  ): { query: string; selectionStart: number; selectionEnd: number; changed: boolean } {
+    if (!query || this.knownFactorSparkValueCandidates.size === 0) {
+      return { query, selectionStart, selectionEnd, changed: false };
+    }
+    const replacements: Array<{ start: number; end: number; text: string }> = [];
+    let quoteCharacter: string | null = null;
+    let index = 0;
+    while (index < query.length) {
+      const character = query.charAt(index);
+      if (quoteCharacter) {
+        if (character === quoteCharacter) quoteCharacter = null;
+        index++;
+        continue;
+      }
+      if (isUqlQuoteStart(query, index)) {
+        quoteCharacter = character;
+        index++;
+        continue;
+      }
+      if (!/[0-9]/.test(character)) {
+        index++;
+        continue;
+      }
+      const match = this.getKnownNumericValueMatchAt(query, index);
+      const label = match?.suggestion.label;
+      if (!match || !label || label === match.text || match.text !== match.suggestion.backendValue) {
+        index++;
+        continue;
+      }
+      replacements.push({ start: index, end: index + match.text.length, text: label });
+      index += match.text.length;
+    }
+    if (replacements.length === 0) {
+      return { query, selectionStart, selectionEnd, changed: false };
+    }
+    let nextQuery = '';
+    let lastIndex = 0;
+    for (const replacement of replacements) {
+      nextQuery += query.slice(lastIndex, replacement.start);
+      nextQuery += replacement.text;
+      lastIndex = replacement.end;
+    }
+    nextQuery += query.slice(lastIndex);
+    const mapPosition = (position: number): number => {
+      let shift = 0;
+      for (const replacement of replacements) {
+        if (position <= replacement.start) break;
+        if (position < replacement.end) return replacement.start + shift + replacement.text.length;
+        shift += replacement.text.length - (replacement.end - replacement.start);
+      }
+      return position + shift;
+    };
+    return {
+      query: nextQuery,
+      selectionStart: mapPosition(selectionStart),
+      selectionEnd: mapPosition(selectionEnd),
+      changed: true,
+    };
+  }
+
+  private readonly highlightKeywords = new Set([
+    'where',
+    'and',
+    'or',
+    'not',
+    'in',
+    'between',
+    'like',
+    'ilike',
+    'mod',
+    'is',
+    'null',
+    'true',
+    'false',
+    'has',
+    'all',
+    'any',
+  ]);
+
+  private readonly highlightFunctions = new Set([
+    'any_spark',
+    'contains',
+    'overlaps',
+    'has_all',
+    'contains_all',
+    'optional_white',
+    'optional_main_white',
+    'optional_any_white',
+    'lineage_white',
+  ]);
+
+  private rebuildHighlightLookups(): void {
+    const valueCandidates: UqlKnownSuggestionCandidate[] = [];
+    const characterCandidates: UqlKnownSuggestionCandidate[] = [];
+    const legacyCandidates: UqlKnownSuggestionCandidate[] = [];
+    const supportCardCandidates: UqlKnownSuggestionCandidate[] = [];
+    const raceSaddleCandidates: UqlKnownSuggestionCandidate[] = [];
+    const rankCandidates: UqlKnownSuggestionCandidate[] = [];
+    const fieldCandidates: UqlKnownSuggestionCandidate[] = [];
+    const factorSparkValueCandidates = new Map<string, UqlKnownSuggestionCandidate>();
+    const fieldNames = new Set<string>();
+    for (const suggestion of this._suggestions) {
+      if (suggestion.kind === 'field') {
+        fieldNames.add(suggestion.insertText.toLowerCase().replace(/\./g, '_'));
+        fieldNames.add(suggestion.label.toLowerCase());
+        if (this.inferSuggestionValueContext(suggestion)) {
+          fieldCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
+        }
+      }
+      if (suggestion.kind === 'value' && !!suggestion.valueContext && suggestion.valueContext.endsWith('-factor')) {
+        valueCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
+        for (const candidate of this.createKnownSparkIdCandidates(suggestion)) {
+          if (!factorSparkValueCandidates.has(candidate.candidate)) {
+            factorSparkValueCandidates.set(candidate.candidate, candidate);
+          }
+        }
+      }
+      if (suggestion.kind === 'value' && suggestion.valueContext === 'character') {
+        characterCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
+      }
+      if (suggestion.kind === 'value' && suggestion.valueContext === 'legacy') {
+        legacyCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
+      }
+      if (suggestion.kind === 'value' && suggestion.valueContext === 'support-card') {
+        supportCardCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
+      }
+      if (suggestion.kind === 'value' && suggestion.valueContext === 'race-saddle') {
+        raceSaddleCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
+      }
+      if (suggestion.kind === 'value' && suggestion.valueContext === 'rank') {
+        rankCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
+      }
+    }
+    this.knownFactorValueCandidates = valueCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
+    this.knownCharacterValueCandidates = characterCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
+    this.knownLegacyValueCandidates = legacyCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
+    this.knownSupportCardValueCandidates = supportCardCandidates.sort(
+      (a, b) => b.candidate.length - a.candidate.length,
+    );
+    this.knownRaceSaddleValueCandidates = raceSaddleCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
+    this.knownRankValueCandidates = rankCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
+    this.knownFactorFieldCandidates = fieldCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
+    this.knownFactorSparkValueCandidates = factorSparkValueCandidates;
+    this.knownFieldNames = fieldNames;
+  }
+
+  private createKnownSuggestionCandidates(suggestion: UqlSuggestion): UqlKnownSuggestionCandidate[] {
+    const candidates: UqlKnownSuggestionCandidate[] = [];
+    const seenCandidates = new Set<string>();
+    const addCandidate = (candidate: string | undefined, displayText?: string) => {
+      if (!candidate || seenCandidates.has(candidate)) return;
+      seenCandidates.add(candidate);
+      candidates.push({ candidate, lowerCandidate: candidate.toLowerCase(), displayText, suggestion });
+    };
+    const displayText =
+      suggestion.valueContext === 'support-card' ||
+      suggestion.valueContext === 'race-saddle' ||
+      suggestion.valueContext === 'legacy'
+        ? suggestion.label
+        : undefined;
+    addCandidate(suggestion.label);
+    addCandidate(suggestion.insertText, displayText);
+    suggestion.matchPhrases?.forEach((phrase) => addCandidate(phrase, displayText));
+    addCandidate(suggestion.backendValue, displayText);
+    return candidates;
+  }
+
+  private createKnownSparkIdCandidates(suggestion: UqlSuggestion): UqlKnownSuggestionCandidate[] {
+    if (!suggestion.backendValue || !/^\d{2,}$/.test(suggestion.backendValue)) return [];
+    const baseId = suggestion.backendValue.slice(0, -1);
+    const candidates: UqlKnownSuggestionCandidate[] = [];
+    for (let level = 1; level <= 9; level++) {
+      const candidate = `${baseId}${level}`;
+      candidates.push({
+        candidate,
+        lowerCandidate: candidate,
+        suggestion,
+      });
+    }
+    return candidates;
+  }
+
+  private tokenizeQuery(text: string, sourceOffset = 0): UqlHighlightSegment[] {
+    if (!text) return [];
+    const previousTokenizeText = this.activeTokenizeText;
+    const previousValueMatchContextCache = this.activeValueMatchContextCache;
+    if (sourceOffset === 0) {
+      this.activeTokenizeText = text;
+      this.activeValueMatchContextCache = new Map();
+    }
+    const out: UqlHighlightSegment[] = [];
+    const len = text.length;
+    let i = 0;
+    let depth = 0;
+    const push = (kind: UqlHighlightKind, value: string, start: number, extra?: Partial<UqlHighlightSegment>) => {
+      if (!value) return;
+      out.push({
+        kind,
+        text: value,
+        sourceStart: sourceOffset + start,
+        sourceEnd: sourceOffset + start + value.length,
+        ...extra,
+      });
+    };
+    while (i < len) {
+      const c = text.charAt(i);
+      // whitespace / newlines preserved as text
+      if (/\s/.test(c)) {
+        let j = i;
+        while (j < len && /\s/.test(text.charAt(j))) j++;
+        push('text', text.slice(i, j), i);
+        i = j;
+        continue;
+      }
+      // strings
+      if (isUqlQuoteStart(text, i)) {
+        let j = i + 1;
+        while (j < len) {
+          if (text.charAt(j) === c) {
+            if (text.charAt(j + 1) === c) {
+              j += 2;
+              continue;
+            }
+            break;
+          }
+          j++;
+        }
+        const end = Math.min(len, j + 1);
+        push('string', text.slice(i, end), i);
+        i = end;
+        continue;
+      }
+      const keywordPhraseMatch = this.getKeywordPhraseMatchAt(text, i);
+      if (keywordPhraseMatch) {
+        push('keyword', keywordPhraseMatch, i);
+        i += keywordPhraseMatch.length;
+        continue;
+      }
+      const valueMatch = this.getKnownValueMatchAt(text, i);
+      if (valueMatch) {
+        push('identifier', valueMatch.text, i, {
+          atomic: true,
+          displayText: valueMatch.displayText,
+          imageUrl: valueMatch.suggestion.imageUrl,
+          title: valueMatch.suggestion.detail,
+          valueContext: valueMatch.suggestion.valueContext,
+          rarityClass: valueMatch.suggestion.rarityClass,
+          badgeText: valueMatch.suggestion.badgeText,
+          badgeClass: valueMatch.suggestion.badgeClass,
+        });
+        i += valueMatch.text.length;
+        continue;
+      }
+      const numericValueMatch = this.getKnownNumericValueMatchAt(text, i);
+      if (numericValueMatch) {
+        push('identifier', numericValueMatch.text, i, {
+          atomic: true,
+          displayText: numericValueMatch.displayText,
+          imageUrl: numericValueMatch.suggestion.imageUrl,
+          title: numericValueMatch.suggestion.detail,
+          valueContext: numericValueMatch.suggestion.valueContext,
+          rarityClass: numericValueMatch.suggestion.rarityClass,
+          badgeText: numericValueMatch.suggestion.badgeText,
+          badgeClass: numericValueMatch.suggestion.badgeClass,
+        });
+        i += numericValueMatch.text.length;
+        continue;
+      }
+      // numbers
+      if (/[0-9]/.test(c)) {
+        let j = i + 1;
+        while (j < len && /[0-9.]/.test(text.charAt(j))) j++;
+        if (/^[x×](?![\w.])/i.test(text.slice(j))) j++;
+        push('number', text.slice(i, j), i);
+        i = j;
+        continue;
+      }
+      // parens with depth
+      if (c === '(') {
+        push('paren', '(', i, { depth: depth % 6 });
+        depth++;
+        i++;
+        continue;
+      }
+      if (c === ')') {
+        depth = Math.max(0, depth - 1);
+        push('paren', ')', i, { depth: depth % 6 });
+        i++;
+        continue;
+      }
+      // operators
+      const twoChar = text.slice(i, i + 2);
+      if (twoChar === '>=' || twoChar === '<=' || twoChar === '!=' || twoChar === '<>') {
+        push('operator', twoChar, i);
+        i += 2;
+        continue;
+      }
+      if (c === '=' || c === '<' || c === '>' || c === '+' || c === '-' || c === '*' || c === '/' || c === '%') {
+        push('operator', c, i);
+        i++;
+        continue;
+      }
+      if (c === ',' || c === ';') {
+        push('punct', c, i);
+        i++;
+        continue;
+      }
+      const partialValueMatch = this.getPartialValueMatchAt(text, i);
+      if (partialValueMatch) {
+        push('identifier', partialValueMatch.text, i, {
+          displayText: partialValueMatch.displayText,
+          imageUrl: partialValueMatch.imageUrl,
+          title: partialValueMatch.title,
+          valueContext: partialValueMatch.valueContext,
+        });
+        i += partialValueMatch.text.length;
+        continue;
+      }
+      const fieldMatch = this.getKnownFieldMatchAt(text, i);
+      if (fieldMatch) {
+        push('field', fieldMatch.text, i, {
+          title: fieldMatch.suggestion.detail,
+          valueContext: this.inferSuggestionValueContext(fieldMatch.suggestion),
+          scopeContext: this.inferSuggestionScopeContext(fieldMatch.suggestion),
+        });
+        i += fieldMatch.text.length;
+        continue;
+      }
+      // identifiers (letters, digits, underscores, dots, accented; allow spaces only if followed by another identifier word)
+      if (/[A-Za-z_\u00C0-\uFFFF]/.test(c)) {
+        let j = i + 1;
+        while (j < len && /[A-Za-z0-9_.\u00C0-\uFFFF\u25A0-\u25FF\u2605\u2606\-]/.test(text.charAt(j))) j++;
+        const word = text.slice(i, j);
+        const lower = word.toLowerCase();
+        let kind: UqlHighlightKind = 'identifier';
+        if (this.highlightKeywords.has(lower)) kind = 'keyword';
+        else if (this.highlightFunctions.has(lower)) kind = 'function';
+        else if (this.isKnownField(lower)) kind = 'field';
+        push(kind, word, i);
+        i = j;
+        continue;
+      }
+      // fallback single char
+      push('text', c, i);
+      i++;
+    }
+    if (sourceOffset === 0) {
+      this.activeTokenizeText = previousTokenizeText;
+      this.activeValueMatchContextCache = previousValueMatchContextCache;
+    }
+    return out;
+  }
+
+  private getKeywordPhraseMatchAt(text: string, index: number): string | null {
+    if (index > 0 && /[A-Za-z0-9_\u00C0-\uFFFF]/.test(text.charAt(index - 1))) return null;
+    const phrases = ['does not have', 'has any', 'has all'];
+    const lowerText = text.toLowerCase();
+    for (const phrase of phrases) {
+      if (!lowerText.startsWith(phrase, index)) continue;
+      const end = index + phrase.length;
+      if (end < text.length && /[A-Za-z0-9_\u00C0-\uFFFF]/.test(text.charAt(end))) continue;
+      return text.slice(index, end);
+    }
+    return null;
+  }
+
+  private isKnownField(word: string): boolean {
+    const normalized = word.toLowerCase().replace(/\./g, '_');
+    return this.knownFieldNames.has(normalized) || this.knownFieldNames.has(word);
+  }
+
+  private getKnownValueMatchAt(
+    text: string,
+    index: number,
+  ): { text: string; displayText?: string; suggestion: UqlSuggestion } | null {
+    if (this.isBooleanOperatorAfterCompletePredicate(text, index)) return null;
+    const matchContext = this.getCachedValueMatchContext(text, index);
+    const context = matchContext.context;
+    if (context === 'character') {
+      return this.getKnownSuggestionMatchAt(text, index, this.knownCharacterValueCandidates, context);
+    }
+    if (context === 'legacy') {
+      return this.getKnownSuggestionMatchAt(text, index, this.knownLegacyValueCandidates, context);
+    }
+    if (context === 'support-card') {
+      return this.getKnownSuggestionMatchAt(text, index, this.knownSupportCardValueCandidates, context);
+    }
+    if (context === 'race-saddle') {
+      return this.getKnownSuggestionMatchAt(text, index, this.knownRaceSaddleValueCandidates, context);
+    }
+    if (context === 'rank') {
+      return this.getKnownSuggestionMatchAt(text, index, this.knownRankValueCandidates, context);
+    }
+    if (context?.endsWith('-factor')) {
+      if (this.isWhiteScoringParameterAt(text, index)) return null;
+      const match = this.getKnownSuggestionMatchAt(
+        text,
+        index,
+        this.knownFactorValueCandidates,
+        context,
+        matchContext.allowAnyFactorContext,
+      );
+      if (
+        /[0-9]/.test(text.charAt(index) || '') &&
+        !matchContext.allowAnyFactorContext &&
+        match &&
+        /[^0-9]/.test(match.text)
+      )
+        return match;
+      if (/[0-9]/.test(text.charAt(index) || '') && !matchContext.allowAnyFactorContext) return null;
+      return match;
+    }
+    return null;
+  }
+
+  private getKnownFieldMatchAt(text: string, index: number): { text: string; suggestion: UqlSuggestion } | null {
+    return this.getKnownSuggestionMatchAt(text, index, this.knownFactorFieldCandidates);
+  }
+
+  private getKnownNumericValueMatchAt(
+    text: string,
+    index: number,
+  ): { text: string; displayText?: string; suggestion: UqlSuggestion } | null {
+    if (!/[0-9]/.test(text.charAt(index) || '')) return null;
+    const matchContext = this.getCachedValueMatchContext(text, index);
+    if (matchContext.context?.endsWith('-factor') && this.isWhiteScoringParameterAt(text, index)) return null;
+    if (!matchContext.context?.endsWith('-factor') || !matchContext.inFactorArrayList) return null;
+    let end = index + 1;
+    while (end < text.length && /[0-9]/.test(text.charAt(end))) end++;
+    const candidateText = text.slice(index, end);
+    const candidate = this.knownFactorSparkValueCandidates.get(candidateText);
+    if (
+      !candidate ||
+      !this.matchesValueContext(
+        candidate.suggestion.valueContext,
+        matchContext.context,
+        matchContext.allowAnyFactorContext,
+      )
+    )
+      return null;
+    return { text: candidateText, displayText: candidate.displayText, suggestion: candidate.suggestion };
+  }
+
+  private getPartialValueMatchAt(
+    text: string,
+    index: number,
+  ): { text: string; displayText?: string; imageUrl?: string; title?: string; valueContext: UqlValueContext } | null {
+    if (index > 0 && /[A-Za-z0-9_\u00C0-\uFFFF]/.test(text.charAt(index - 1))) return null;
+    if (this.isBooleanOperatorAfterCompletePredicate(text, index)) return null;
+    const context = this.getValueContext(text.slice(0, index));
+    if (!context || context === 'number' || context === 'text') return null;
+    if (context.endsWith('-factor') && this.isWhiteScoringParameterAt(text, index)) return null;
+    const end = this.getCurrentValueEnd(text, index);
+    const valueText = text.slice(index, end).trimEnd();
+    if (!valueText || /^[,)]/.test(valueText)) return null;
+    if (/^(?:and|or)\b/i.test(valueText.trimStart())) return null;
+    if (context === 'legacy') {
+      return { text: valueText, valueContext: context, ...this.getPartialLegacyChipMetadata(valueText) };
+    }
+    return { text: valueText, valueContext: context };
+  }
+
+  private getPartialLegacyChipMetadata(valueText: string): { displayText: string; imageUrl?: string; title?: string } {
+    const displayText = valueText
+      .trim()
+      .replace(/^\[\s*/, '')
+      .replace(/\s*\]$/, '');
+    const normalizedDisplayText = this.normalizeSuggestionToken(displayText).replace(/\s+/g, ' ').trim();
+    const legacySuggestion = normalizedDisplayText
+      ? this.suggestions.find((suggestion) => {
+          if (suggestion.kind !== 'value' || suggestion.valueContext !== 'legacy') return false;
+          const values = [suggestion.label, ...(suggestion.matchPhrases || [])]
+            .map((value) => this.normalizeSuggestionToken(value).replace(/\s+/g, ' ').trim())
+            .filter(Boolean);
+          return values.some((value) => value === normalizedDisplayText);
+        })
+      : undefined;
+    const characterName = displayText
+      .replace(/\s+@[A-Za-z0-9_-]+\s*$/i, '')
+      .replace(/\s+#\S+\s*$/i, '')
+      .trim();
+    const normalizedName = this.normalizeSuggestionToken(characterName).replace(/\s+/g, ' ').trim();
+    const characterSuggestion = normalizedName
+      ? this.suggestions.find((suggestion) => {
+          if (suggestion.kind !== 'value' || suggestion.valueContext !== 'character') return false;
+          const values = [suggestion.label, suggestion.insertText, ...(suggestion.matchPhrases || [])]
+            .map((value) => this.normalizeSuggestionToken(value).replace(/\s+/g, ' ').trim())
+            .filter(Boolean);
+          return values.some(
+            (value) =>
+              value === normalizedName ||
+              value.startsWith(`${normalizedName} `) ||
+              normalizedName.startsWith(`${value} `),
+          );
+        })
+      : undefined;
+    const matchedSuggestion = legacySuggestion ?? characterSuggestion;
+    return {
+      displayText,
+      imageUrl: matchedSuggestion?.imageUrl,
+      title: matchedSuggestion?.detail,
+    };
+  }
+
+  private getKnownSuggestionMatchAt(
+    text: string,
+    index: number,
+    candidates: UqlKnownSuggestionCandidate[],
+    valueContext?: UqlValueContext,
+    allowAnyFactorContext = false,
+  ): { text: string; displayText?: string; suggestion: UqlSuggestion } | null {
+    if (index > 0 && /[A-Za-z0-9_\u00C0-\uFFFF]/.test(text.charAt(index - 1))) return null;
+    const lowerText = text.toLowerCase();
+    const bucket = this.getKnownSuggestionBucket(candidates, lowerText[index] || '');
+    for (const { candidate, lowerCandidate, displayText, suggestion } of bucket) {
+      if (valueContext && !this.matchesValueContext(suggestion.valueContext, valueContext, allowAnyFactorContext))
+        continue;
+      if (!candidate || !lowerText.startsWith(lowerCandidate, index)) continue;
+      const end = index + candidate.length;
+      if (end < text.length && /[A-Za-z0-9_\u00C0-\uFFFF]/.test(text.charAt(end))) continue;
+      return { text: text.slice(index, end), displayText, suggestion };
+    }
+    return null;
+  }
+
+  private getKnownSuggestionBucket(
+    candidates: UqlKnownSuggestionCandidate[],
+    firstChar: string,
+  ): UqlKnownSuggestionCandidate[] {
+    let buckets = this.knownSuggestionBuckets.get(candidates);
+    if (!buckets) {
+      buckets = new Map<string, UqlKnownSuggestionCandidate[]>();
+      for (const candidate of candidates) {
+        const key = candidate.lowerCandidate[0] || '';
+        const bucket = buckets.get(key);
+        if (bucket) bucket.push(candidate);
+        else buckets.set(key, [candidate]);
+      }
+      this.knownSuggestionBuckets.set(candidates, buckets);
+    }
+    return buckets.get(firstChar) || [];
+  }
+
+  private getCachedValueMatchContext(
+    text: string,
+    index: number,
+  ): { context: UqlValueContext | null; allowAnyFactorContext: boolean; inFactorArrayList: boolean } {
+    if (this.activeTokenizeText !== text) return this.getValueMatchContext(text.slice(0, index));
+    const cached = this.activeValueMatchContextCache.get(index);
+    if (cached) return cached;
+    const value = this.getValueMatchContext(text.slice(0, index));
+    this.activeValueMatchContextCache.set(index, value);
+    return value;
+  }
+
+  private isBooleanOperatorAfterCompletePredicate(text: string, index: number): boolean {
+    if (!/^(?:and|or)\b/i.test(text.slice(index))) return false;
+    const prefix = text.slice(0, index).trimEnd();
+    return this.isAfterCompleteLiteralPredicate(prefix) || this.isAfterKnownValue(prefix);
+  }
+
+  private inferSuggestionValueContext(suggestion: UqlSuggestion): UqlValueContext | undefined {
+    if (suggestion.valueContext) return suggestion.valueContext;
+    const haystack =
+      `${suggestion.label} ${suggestion.detail || ''} ${suggestion.searchText || ''} ${suggestion.insertText}`.toLowerCase();
+    if (/\bowned legacy\b|\blegacy member\b|\bowned uma\b/.test(haystack)) return 'legacy';
+    if (/\bblue[_\s-]?sparks?\b|\bblue factor/.test(haystack)) return 'blue-factor';
+    if (/\bpink[_\s-]?sparks?\b|\bpink factor/.test(haystack)) return 'pink-factor';
+    if (/\bgreen[_\s-]?sparks?\b|\bunique skills?\b|\bgreen factor/.test(haystack)) return 'green-factor';
+    if (/\bwhite[_\s-]?sparks?\b|\bwhite skills?\b|\bwhite factors?\b|\bwhite factor/.test(haystack))
+      return 'white-factor';
+    if (/\bsupport[_\s-]?cards?\b|\bsupport card id\b|\bcard id\b/.test(haystack)) return 'support-card';
+    if (/\bwin[_\s-]?saddles?\b|\brace results?\b|\brace wins?\b/.test(haystack)) return 'race-saddle';
+    if (/\bparent rank\b|\brank\b/.test(haystack)) return 'rank';
+    return undefined;
+  }
+
+  private inferSuggestionScopeContext(suggestion: UqlSuggestion): UqlScopeContext | undefined {
+    if (suggestion.scopeContext) return suggestion.scopeContext;
+    const haystack = `${suggestion.label} ${suggestion.insertText} ${suggestion.searchText || ''}`
+      .toLowerCase()
+      .replace(/[_-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (/^(?:main|parent|main parent)\b/.test(haystack)) return 'main';
+    if (/^(?:gp1|left|left parent|grandparent 1|grand parent 1|great parent 1)\b/.test(haystack)) return 'gp1';
+    if (/^(?:gp2|right|right parent|grandparent 2|grand parent 2|great parent 2)\b/.test(haystack)) return 'gp2';
+    if (
+      /^(?:gp|any gp|grandparent|grand parent|great parent|any grandparent|any grand parent|any great parent)\b/.test(
+        haystack,
+      )
+    )
+      return 'any-gp';
+    return undefined;
+  }
+
+  private getMatchingSuggestions(
+    query: string,
+    cursor: number,
+  ): { suggestions: UqlSuggestion[]; token: string; contextualSuggestions: UqlSuggestion[] } {
+    const contextualSuggestions = this.getContextualSuggestions(query, cursor);
+    const token = this.getCompletionRangeForSuggestions(query, cursor, contextualSuggestions).token.toLowerCase();
+    const normalizedToken = this.normalizeSuggestionToken(token);
+    const queryTerms = normalizedToken.match(/[a-z0-9\u00c0-\uffff]+/g) || [];
+    const rankedSuggestions = normalizedToken
+      ? contextualSuggestions
+          .map((suggestion) => ({ suggestion, rank: this.getSuggestionMatchRank(suggestion, normalizedToken, queryTerms) }))
+          .filter((entry): entry is { suggestion: UqlSuggestion; rank: number } => entry.rank !== null)
+      : contextualSuggestions.map((suggestion) => ({ suggestion, rank: 0 }));
+    const kindOrder: Record<string, number> = {
+      field: 0,
+      operator: 1,
+      function: 2,
+      value: 3,
+      snippet: 4,
+      keyword: 5,
+      punctuation: 6,
+    };
+    const suggestions = [...rankedSuggestions]
+      .sort((a, b) => {
+        if (a.rank !== b.rank) return a.rank - b.rank;
+        const pa = a.suggestion.priority ?? this.defaultSuggestionPriority(a.suggestion);
+        const pb = b.suggestion.priority ?? this.defaultSuggestionPriority(b.suggestion);
+        if (pa !== pb) return pa - pb;
+        const ka = kindOrder[a.suggestion.kind] ?? 9;
+        const kb = kindOrder[b.suggestion.kind] ?? 9;
+        if (ka !== kb) return ka - kb;
+        // prefer prefix matches over substring matches within a kind
+        if (normalizedToken) {
+          const la = this.getSuggestionSearchEntry(a.suggestion).normalizedLabel.startsWith(normalizedToken) ? 0 : 1;
+          const lb = this.getSuggestionSearchEntry(b.suggestion).normalizedLabel.startsWith(normalizedToken) ? 0 : 1;
+          if (la !== lb) return la - lb;
+        }
+        return a.suggestion.label.localeCompare(b.suggestion.label);
+      })
+      .map((entry) => entry.suggestion);
+    return { suggestions, token, contextualSuggestions };
+  }
+
+  private defaultSuggestionPriority(suggestion: UqlSuggestion): number {
+    if (suggestion.kind === 'operator' || suggestion.kind === 'punctuation') return 0;
+    if (suggestion.kind === 'keyword') return 10;
+    if (suggestion.kind === 'function') return 20;
+    if (suggestion.kind === 'field') return 40;
+    if (suggestion.kind === 'value') return suggestion.valueContext === 'character' ? 40 : 50;
+    if (suggestion.kind === 'snippet') return 80;
+    return 100;
+  }
+
+  private getContextualSuggestions(query: string, cursor: number): UqlSuggestion[] {
+    const prefix = query.slice(0, cursor);
+    const trimmedPrefix = prefix.trimEnd();
+    const scoringSuggestions = this.whiteScoringSuggestionsForPrefix(prefix);
+    if (scoringSuggestions.length) return scoringSuggestions;
+    const scopedSkillLevelSuggestions = this.scopedSkillLevelOperatorSuggestionsForPrefix(prefix);
+    if (scopedSkillLevelSuggestions.length) return scopedSkillLevelSuggestions;
+    const skillLevelSuggestions = this.skillLevelOperatorSuggestionsForPrefix(prefix);
+    if (skillLevelSuggestions.length) return skillLevelSuggestions;
+    const arrayValueSuggestions = this.arrayValueSuggestionsForPrefix(prefix);
+    if (arrayValueSuggestions.length) {
+      return arrayValueSuggestions;
+    }
+    const scopedSparkValueSuggestions = this.scopedSparkValueSuggestionsForPrefix(prefix);
+    if (scopedSparkValueSuggestions.length) {
+      return scopedSparkValueSuggestions;
+    }
+    const scopePrefixSuggestions = this.scopePrefixFieldSuggestionsForPrefix(prefix);
+    if (scopePrefixSuggestions.length) {
+      return scopePrefixSuggestions;
+    }
+    const fieldMatch = this.matchTrailingField(trimmedPrefix);
+    if (fieldMatch) {
+      return this.operatorSuggestionsForFieldType(fieldMatch.fieldType);
+    }
+    if (this.isAfterComparisonOperator(prefix)) {
+      const contextualValues = this.valueSuggestionsForPrefix(prefix);
+      return contextualValues.length ? contextualValues : [this.valueSuggestionForPrefix(prefix)];
+    }
+    const trailingOperatorFieldMatch = this.matchFieldBeforeTrailingOperator(trimmedPrefix);
+    if (trailingOperatorFieldMatch) {
+      return this.operatorSuggestionsForFieldType(trailingOperatorFieldMatch.fieldType);
+    }
+    const trailingOperatorPrefixFieldMatch = this.matchFieldBeforeTrailingOperatorPrefix(trimmedPrefix);
+    if (trailingOperatorPrefixFieldMatch) {
+      return this.operatorSuggestionsForFieldType(trailingOperatorPrefixFieldMatch.fieldType);
+    }
+    if (this.isAfterBooleanKeyword(trimmedPrefix)) {
+      return this.expressionStartSuggestions();
+    }
+    if (this.isTypingBooleanContinuation(prefix)) {
+      return this.continuationSuggestions(trimmedPrefix);
+    }
+    if (this.isAfterKnownValue(prefix) || this.isAfterCompleteLiteralPredicate(trimmedPrefix)) {
+      return this.continuationSuggestions(trimmedPrefix);
+    }
+    const contextualValueSuggestions = this.valueSuggestionsForPrefix(prefix);
+    if (contextualValueSuggestions.length) return contextualValueSuggestions;
+    return this.expressionStartSuggestions();
+  }
+
+  private arrayValueSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
+    const matchContext = this.getValueMatchContext(prefix);
+    const context = matchContext.context;
+    if (this.isWhiteScoringParameterPrefix(prefix)) return [];
+    if (!context?.endsWith('-factor') || !matchContext.inFactorArrayList) return [];
+    return this.suggestions.filter(
+      (suggestion) =>
+        suggestion.kind === 'value' &&
+        this.matchesValueContext(suggestion.valueContext, context, matchContext.allowAnyFactorContext),
+    );
+  }
+
+  private skillLevelOperatorSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
+    const { context, allowAnyFactorContext, inFactorArrayList } = this.getValueMatchContext(prefix);
+    if (!context?.endsWith('-factor') || !inFactorArrayList) return [];
+    const currentClause = this.getCurrentClausePrefix(prefix);
+    const listStart = Math.max(currentClause.lastIndexOf('('), currentClause.lastIndexOf(','));
+    let currentItem: string;
+    if (listStart >= 0) {
+      currentItem = currentClause.slice(listStart + 1);
+    } else {
+      const singleMatch = currentClause.match(
+        /\b(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s+(.*)$/i,
+      );
+      if (!singleMatch) return [];
+      currentItem = singleMatch[1]!;
+    }
+    // Only offer a star level once the skill name is finished (trailing space) and no comparison exists yet.
+    if (!/\s$/.test(currentItem) || /(?:>=|<=|<>|!=|=|>|<)/.test(currentItem)) return [];
+    const skillText = currentItem.trim();
+    if (!skillText || !this.isKnownFactorValue(skillText, context, allowAnyFactorContext)) return [];
+    return this.skillLevelOperatorSuggestions();
+  }
+
+  private scopedSkillLevelOperatorSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
+    if (!/\s$/.test(prefix)) return [];
+    const scopedValue = this.getScopedSparkValuePrefix(prefix);
+    if (!scopedValue) return [];
+    const valueText = scopedValue.valuePrefix.trim();
+    if (!valueText || /(?:>=|<=|<>|!=|=|>|<)/.test(valueText)) return [];
+    if (!this.isKnownAnyFactorValue(valueText)) return [];
+    return this.skillLevelOperatorSuggestions();
+  }
+
+  private isKnownFactorValue(value: string, context: UqlValueContext, allowAnyFactorContext: boolean): boolean {
+    const normalized = this.normalizeSuggestionToken(value);
+    if (!normalized) return false;
+    return this.suggestions.some(
+      (suggestion) =>
+        suggestion.kind === 'value' &&
+        this.matchesValueContext(suggestion.valueContext, context, allowAnyFactorContext) &&
+        (this.normalizeSuggestionToken(suggestion.label) === normalized ||
+          this.normalizeSuggestionToken(suggestion.insertText) === normalized),
+    );
+  }
+
+  private isKnownAnyFactorValue(value: string): boolean {
+    const normalized = this.normalizeSuggestionToken(value);
+    if (!normalized) return false;
+    return this.suggestions.some(
+      (suggestion) =>
+        suggestion.kind === 'value' &&
+        !!suggestion.valueContext?.endsWith('-factor') &&
+        (this.normalizeSuggestionToken(suggestion.label) === normalized ||
+          this.normalizeSuggestionToken(suggestion.insertText) === normalized),
+    );
+  }
+
+  private skillLevelOperatorSuggestions(): UqlSuggestion[] {
+    return [
+      {
+        label: '> stars',
+        insertText: '> ',
+        kind: 'operator',
+        detail: 'This skill above N stars - leave blank to match all star levels',
+      },
+      { label: '>= stars', insertText: '>= ', kind: 'operator', detail: 'This skill at N or more stars' },
+      { label: '= stars', insertText: '= ', kind: 'operator', detail: 'This skill at exactly N stars' },
+      { label: '<= stars', insertText: '<= ', kind: 'operator', detail: 'This skill at N or fewer stars' },
+      { label: '< stars', insertText: '< ', kind: 'operator', detail: 'This skill below N stars' },
+    ];
+  }
+
+  private whiteScoringSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
+    if (this.getWhiteScoringContext(this.getCurrentClausePrefix(prefix)) !== 'skill') return [];
+    return this.suggestions.filter(
+      (suggestion) => suggestion.kind === 'value' && suggestion.valueContext === 'white-factor',
+    );
+  }
+
+  private expressionStartSuggestions(): UqlSuggestion[] {
+    return this.suggestions.filter(
+      (suggestion) =>
+        suggestion.kind === 'field' ||
+        suggestion.kind === 'keyword' ||
+        suggestion.kind === 'function' ||
+        suggestion.kind === 'snippet',
+    );
+  }
+
+  private scopePrefixFieldSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
+    const scopeToken = this.getTrailingScopeToken(prefix);
+    if (!scopeToken) return [];
+    return this.suggestions.filter((suggestion) => {
+      if (suggestion.kind !== 'field') return false;
+      const scope = suggestion.scopeContext || this.inferSuggestionScopeContext(suggestion);
+      if (scopeToken === 'main') return scope === 'main';
+      if (scopeToken === 'gp1') return scope === 'gp1';
+      if (scopeToken === 'gp2') return scope === 'gp2';
+      return scope === 'gp1' || scope === 'gp2' || scope === 'any-gp';
+    });
+  }
+
+  private scopedSparkValueSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
+    const scopedValue = this.getScopedSparkValuePrefix(prefix);
+    if (!scopedValue) return [];
+    return this.suggestions
+      .filter((suggestion) => suggestion.kind === 'value' && !!suggestion.valueContext?.endsWith('-factor'))
+      .map((suggestion) => ({
+        ...suggestion,
+        priority: Math.min(suggestion.priority ?? this.defaultSuggestionPriority(suggestion), 6),
+        detail: `${this.getScopeLabel(scopedValue.scopeToken)} ${suggestion.detail || 'spark'}; compare stars with >=, =, <=`,
+      }));
+  }
+
+  private getScopedSparkValuePrefix(
+    prefix: string,
+  ): { scopeToken: 'main' | 'gp1' | 'gp2' | 'gp'; valuePrefix: string } | null {
+    const currentClause = this.getCurrentClausePrefix(prefix);
+    const scopeAliases: Array<{ token: 'main' | 'gp1' | 'gp2' | 'gp'; aliases: string[] }> = [
+      { token: 'main', aliases: ['main parent', 'main', 'parent'] },
+      { token: 'gp1', aliases: ['great parent 1', 'grand parent 1', 'grandparent 1', 'left parent', 'gp1', 'left'] },
+      { token: 'gp2', aliases: ['great parent 2', 'grand parent 2', 'grandparent 2', 'right parent', 'gp2', 'right'] },
+      {
+        token: 'gp',
+        aliases: [
+          'any great parent',
+          'great parent',
+          'any grand parent',
+          'any grandparent',
+          'grand parent',
+          'grandparent',
+          'any gp',
+          'gp',
+        ],
+      },
+    ];
+
+    for (const scope of scopeAliases) {
+      for (const alias of scope.aliases) {
+        const match = currentClause.match(
+          new RegExp(`^\\s*${this.escapeRegExp(alias).replace(/\\s+/g, '\\s+')}\\s+`, 'i'),
+        );
+        if (!match) continue;
+        const valuePrefix = currentClause.slice(match[0].length);
+        if (/[,();]|\b(?:where|and|or|not|has|contains|in|like|ilike)\b/i.test(valuePrefix)) return null;
+        return { scopeToken: scope.token, valuePrefix };
+      }
+    }
+
+    return null;
+  }
+
+  private getScopeLabel(scopeToken: 'main' | 'gp1' | 'gp2' | 'gp'): string {
+    switch (scopeToken) {
+      case 'main':
+        return 'Main';
+      case 'gp1':
+        return 'GP1';
+      case 'gp2':
+        return 'GP2';
+      case 'gp':
+        return 'Great parent';
+    }
+  }
+
+  private getTrailingScopeToken(prefix: string): 'main' | 'gp1' | 'gp2' | 'gp' | null {
+    const phrase = this.getCurrentClausePrefix(prefix).toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (['main', 'parent', 'main parent'].includes(phrase)) return 'main';
+    if (['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1', 'great parent 1'].includes(phrase))
+      return 'gp1';
+    if (['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2', 'great parent 2'].includes(phrase))
+      return 'gp2';
+    if (
+      [
+        'gp',
+        'any gp',
+        'grandparent',
+        'grand parent',
+        'great parent',
+        'any grandparent',
+        'any grand parent',
+        'any great parent',
+      ].includes(phrase)
+    )
+      return 'gp';
+    return null;
+  }
+
+  private isAfterBooleanKeyword(trimmedPrefix: string): boolean {
+    return /(?:^|\s|\()(?:(?:and)|(?:or)|(?:not))$/i.test(trimmedPrefix);
+  }
+
+  private isTypingBooleanContinuation(prefix: string): boolean {
+    const match = prefix.match(/(?:\d[x×]?|'|"|\))\s+([A-Za-z]*)$/i);
+    if (!match) return false;
+    const token = match[1]!.toLowerCase();
+    if (token === 'and' || token === 'or') return false;
+    return token === '' || 'and'.startsWith(token) || 'or'.startsWith(token);
+  }
+
+  private operatorSuggestionsForFieldType(fieldType?: UqlFieldType): UqlSuggestion[] {
+    if (fieldType === 'directive') {
+      return [{ label: '=', insertText: '= ', kind: 'operator', detail: 'Choose this editor context value' }];
+    }
+    if (fieldType === 'string') {
+      return [
+        {
+          label: 'ilike',
+          insertText: "ilike '%%'",
+          kind: 'operator',
+          detail: 'Fuzzy match (case-insensitive)',
+          cursorOffset: -2,
+        },
+        { label: 'like', insertText: "like ''", kind: 'operator', detail: 'SQL LIKE pattern', cursorOffset: -1 },
+        { label: '=', insertText: "= ''", kind: 'operator', detail: 'Exact match', cursorOffset: -1 },
+        { label: '!=', insertText: "!= ''", kind: 'operator', detail: 'Not equal', cursorOffset: -1 },
+        {
+          label: 'in (...)',
+          insertText: 'in ()',
+          kind: 'operator',
+          detail: 'Match any listed value',
+          cursorOffset: -1,
+        },
+        {
+          label: 'not ilike',
+          insertText: "not ilike '%%'",
+          kind: 'operator',
+          detail: 'Exclude fuzzy match',
+          cursorOffset: -2,
+        },
+      ];
+    }
+    if (fieldType === 'array') {
+      return [
+        { label: 'has one', insertText: 'has ', kind: 'operator', detail: 'One skill/factor is present' },
+        {
+          label: 'has any',
+          insertText: 'has any ()',
+          kind: 'operator',
+          detail: 'At least one listed skill/factor is present',
+          cursorOffset: -1,
+        },
+        {
+          label: 'has all',
+          insertText: 'has all ()',
+          kind: 'operator',
+          detail: 'Every listed skill/factor is present',
+          cursorOffset: -1,
+        },
+        { label: 'does not have', insertText: 'does not have ', kind: 'operator', detail: 'Exclude one skill/factor' },
+        { label: 'contains', insertText: 'contains ', kind: 'operator', detail: 'Alias for "has one"' },
+        {
+          label: 'contains any',
+          insertText: 'contains any ()',
+          kind: 'operator',
+          detail: 'Alias for "has any"',
+          cursorOffset: -1,
+        },
+        {
+          label: 'contains all',
+          insertText: 'contains all ()',
+          kind: 'operator',
+          detail: 'Alias for "has all"',
+          cursorOffset: -1,
+        },
+        {
+          label: 'in (...)',
+          insertText: 'in ()',
+          kind: 'operator',
+          detail: 'Match any listed skill/factor (like has any)',
+          cursorOffset: -1,
+        },
+        {
+          label: 'not in (...)',
+          insertText: 'not in ()',
+          kind: 'operator',
+          detail: 'Exclude every listed skill/factor',
+          cursorOffset: -1,
+        },
+      ];
+    }
+    return [
+      { label: '>=', insertText: '>= ', kind: 'operator', detail: 'At least' },
+      { label: '=', insertText: '= ', kind: 'operator', detail: 'Exactly' },
+      { label: '<=', insertText: '<= ', kind: 'operator', detail: 'At most' },
+      { label: '>', insertText: '> ', kind: 'operator', detail: 'Greater than' },
+      { label: '<', insertText: '< ', kind: 'operator', detail: 'Less than' },
+      { label: '+', insertText: '+ ', kind: 'operator', detail: 'Add another numeric expression' },
+      { label: '-', insertText: '- ', kind: 'operator', detail: 'Subtract another numeric expression' },
+      { label: '*', insertText: '* ', kind: 'operator', detail: 'Multiply by another numeric expression' },
+      { label: '/', insertText: '/ ', kind: 'operator', detail: 'Integer-divide by another numeric expression' },
+      { label: '%', insertText: '% ', kind: 'operator', detail: 'Modulo remainder' },
+      { label: 'mod', insertText: 'mod ', kind: 'operator', detail: 'Modulo remainder' },
+      { label: 'between', insertText: 'between ', kind: 'operator', detail: 'Range a between b' },
+      { label: 'in (...)', insertText: 'in ()', kind: 'operator', detail: 'Include values', cursorOffset: -1 },
+      { label: 'not in (...)', insertText: 'not in ()', kind: 'operator', detail: 'Exclude values', cursorOffset: -1 },
+    ];
+  }
+
+  private continuationSuggestions(trimmedPrefix: string): UqlSuggestion[] {
+    const out: UqlSuggestion[] = [
+      { label: 'and', insertText: 'and ', kind: 'keyword', detail: 'Require both sides' },
+      { label: 'or', insertText: 'or ', kind: 'keyword', detail: 'Match either side' },
+    ];
+    if (this.countUnclosedParens(trimmedPrefix) > 0) {
+      out.push({ label: ')', insertText: ')', kind: 'punctuation', detail: 'Close group' });
+    }
+    return out;
+  }
+
+  private isAfterCompleteLiteralPredicate(trimmedPrefix: string): boolean {
+    if (!trimmedPrefix) return false;
+    if (
+      /(?:\bwhere\b|\band\b|\bor\b|\bnot\b|\bin\b|\bbetween\b|\blike\b|\bilike\b|\bmod\b|[,(+\-*\/%]|=|!=|<>|<=|>=|<|>)$/i.test(
+        trimmedPrefix,
+      )
+    )
+      return false;
+    return /(?:\d[x×]?|'|"|\)|\])$/i.test(trimmedPrefix);
+  }
+
+  private isAfterKnownValue(prefix: string): boolean {
+    const matchContext = this.getValueMatchContext(prefix);
+    const context = matchContext.context;
+    if (!context) return false;
+    const range = this.getCurrentValueRange(prefix, prefix.length);
+    const value = range?.token.trim() || '';
+    if (!value) return false;
+    const normalizedValue = this.normalizeValueToken(value);
+    return this.suggestions.some((suggestion) => {
+      return (
+        suggestion.kind === 'value' &&
+        this.matchesValueContext(suggestion.valueContext, context, matchContext.allowAnyFactorContext) &&
+        [suggestion.insertText, suggestion.label, suggestion.backendValue]
+          .filter((value): value is string => typeof value === 'string' && value.length > 0)
+          .some((value) => this.normalizeValueToken(value) === normalizedValue)
+      );
+    });
+  }
+
+  private matchTrailingField(trimmedPrefix: string): { fieldType?: UqlFieldType } | null {
+    const lower = trimmedPrefix.toLowerCase();
+    const fields = this.fieldSuggestionPhraseIndex;
+    for (const entry of fields) {
+      for (const phrase of entry.phrases) {
+        if (phrase.length > lower.length) continue;
+        if (!lower.endsWith(phrase)) continue;
+        const boundaryIndex = lower.length - phrase.length - 1;
+        if (boundaryIndex < 0) return { fieldType: entry.fieldType };
+        const boundaryChar = lower.charCodeAt(boundaryIndex);
+        // space (32), tab (9), '(' (40)
+        if (boundaryChar === 32 || boundaryChar === 9 || boundaryChar === 40) {
+          return { fieldType: entry.fieldType };
+        }
+      }
+    }
+    return null;
+  }
+
+  private matchFieldBeforeTrailingOperator(trimmedPrefix: string): { fieldType?: UqlFieldType } | null {
+    const match = trimmedPrefix.match(
+      /^(.*?)(?:\s+)(?:not\s+in|in|has\s+all|has\s+any|does\s+not\s+have|has|between|ilike|like|!=|<>|<=|>=|=|<|>)\s*$/i,
+    );
+    if (!match) return null;
+    return this.matchTrailingField(match[1]!.trimEnd());
+  }
+
+  private matchFieldBeforeTrailingOperatorPrefix(trimmedPrefix: string): { fieldType?: UqlFieldType } | null {
+    const operators = [
+      'does not have',
+      'not in',
+      'contains all',
+      'contains any',
+      'has all',
+      'has any',
+      'between',
+      'ilike',
+      'like',
+      'contains',
+      'has',
+      'in',
+    ];
+    for (let index = trimmedPrefix.length - 1; index > 0; index--) {
+      if (!/\s/.test(trimmedPrefix.charAt(index))) continue;
+      const fieldText = trimmedPrefix.slice(0, index).trimEnd();
+      const operatorToken = trimmedPrefix
+        .slice(index + 1)
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (!fieldText || !operatorToken) continue;
+      if (!operators.some((operator) => operator.startsWith(operatorToken))) continue;
+      const fieldMatch = this.matchTrailingField(fieldText);
+      if (fieldMatch) return fieldMatch;
+    }
+    return null;
+  }
+
+  private fieldSuggestionPhraseIndex: Array<{ fieldType?: UqlFieldType; phrases: string[] }> = [];
+
+  private static readonly suggestionSearchCache = new WeakMap<
+    UqlSuggestion,
+    {
+      normalizedLabel: string;
+      normalizedInsertText: string;
+      searchTerms: string[];
+      haystack: string;
+    }
+  >();
+
+  private normalizeSuggestionToken(value: string | undefined | null): string {
+    if (!value) return '';
+    return value.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  private matchesQueryTerms(candidateTerms: string[], queryTerms: string[], preserveOrder: boolean): boolean {
+    if (queryTerms.length === 0) return true;
+    if (!preserveOrder) {
+      return queryTerms.every((queryTerm) => candidateTerms.some((candidate) => candidate.startsWith(queryTerm)));
+    }
+    let candidateIndex = 0;
+    for (const queryTerm of queryTerms) {
+      let found = false;
+      while (candidateIndex < candidateTerms.length) {
+        if (candidateTerms[candidateIndex]!.startsWith(queryTerm)) {
+          found = true;
+          candidateIndex++;
+          break;
+        }
+        candidateIndex++;
+      }
+      if (!found) return false;
+    }
+    return true;
+  }
+
+  private getSuggestionMatchRank(suggestion: UqlSuggestion, normalizedToken: string, queryTerms: string[]): number | null {
+    if (!normalizedToken) return 0;
+    const entry = this.getSuggestionSearchEntry(suggestion);
+    if (entry.normalizedLabel.startsWith(normalizedToken) || entry.normalizedInsertText.startsWith(normalizedToken))
+      return 0;
+    if (queryTerms.length === 0) return null;
+    if (normalizedToken.length >= 3 && entry.haystack.includes(normalizedToken)) return 1;
+    if (this.matchesQueryTerms(entry.searchTerms, queryTerms, true)) return 2;
+    if (this.matchesQueryTerms(entry.searchTerms, queryTerms, false)) return 3;
+    return null;
+  }
+
+  private getSuggestionSearchEntry(suggestion: UqlSuggestion) {
+    let entry = UqlEditorLanguage.suggestionSearchCache.get(suggestion);
+    if (!entry) {
+      const normalizedLabel = this.normalizeSuggestionToken(suggestion.label);
+      const normalizedInsertText = suggestion.insertText === suggestion.label ? normalizedLabel : this.normalizeSuggestionToken(suggestion.insertText);
+      const normalizedSearch = this.normalizeSuggestionToken(suggestion.searchText || '');
+      const normalizedDetail = this.normalizeSuggestionToken(suggestion.detail || '');
+      const normalizedBackend = this.normalizeSuggestionToken(suggestion.backendValue || '');
+      entry = {
+        normalizedLabel,
+        normalizedInsertText,
+        searchTerms: `${normalizedLabel} ${normalizedInsertText} ${normalizedSearch} ${normalizedDetail} ${normalizedBackend}`.match(/[a-z0-9\u00c0-\uffff]+/g) || [],
+        haystack: `${normalizedLabel} ${normalizedDetail} ${normalizedSearch} ${normalizedInsertText} ${normalizedBackend}`,
+      };
+      UqlEditorLanguage.suggestionSearchCache.set(suggestion, entry);
+    }
+    return entry;
+  }
+
+  private rebuildFieldSuggestionPhraseIndex(): void {
+    const seen = new Set<string>();
+    const index: Array<{ fieldType?: UqlFieldType; phrases: string[] }> = [];
+    for (const suggestion of this._suggestions) {
+      if (suggestion.kind !== 'field') continue;
+      const raw = [suggestion.insertText, suggestion.label, ...(suggestion.matchPhrases || [])];
+      const phrases: string[] = [];
+      for (const value of new Set(raw)) {
+        if (!value) continue;
+        const lower = value.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!lower || seen.has(`${suggestion.fieldType || ''}|${lower}`)) continue;
+        seen.add(`${suggestion.fieldType || ''}|${lower}`);
+        phrases.push(lower);
+      }
+      if (phrases.length) index.push({ fieldType: suggestion.fieldType, phrases });
+    }
+    this.fieldSuggestionPhraseIndex = index;
+  }
+
+  private countUnclosedParens(text: string): number {
+    let open = 0;
+    let quote: string | null = null;
+    for (let i = 0; i < text.length; i++) {
+      const c = text.charAt(i);
+      if (quote) {
+        if (c === quote) quote = null;
+        continue;
+      }
+      if (isUqlQuoteStart(text, i)) {
+        quote = c;
+        continue;
+      }
+      if (c === '(') open++;
+      else if (c === ')') open--;
+    }
+    return open;
+  }
+
+  private isAfterComparisonOperator(prefix: string): boolean {
+    return /(=|!=|<>|<=|>=|<|>|\bin\b\s*(?:\(\s*)?|\bnot\s+in\b\s*(?:\(\s*)?|\bhas\s+|\bhas\s+any\s*\(|\bhas\s+all\s*\(|\bdoes\s+not\s+have\s+)\s*$/i.test(
+      prefix,
+    );
+  }
+
+  private valueSuggestionForPrefix(prefix: string): UqlSuggestion {
+    const valueContext = this.getValueContext(prefix);
+    if (valueContext === 'legacy') {
+      return this.openLegacyPickerSuggestion();
+    }
+    const currentClause = this.getCurrentClausePrefix(prefix);
+    const fieldPrefix = currentClause
+      .replace(/(=|!=|<>|<=|>=|<|>|\bin\b\s*(?:\(\s*)?|\bnot\s+in\b\s*(?:\(\s*)?)\s*$/i, '')
+      .trimEnd()
+      .toLowerCase();
+    const matchedField = this.findFieldSuggestion(fieldPrefix);
+    if (matchedField?.detail?.toLowerCase().includes('max 3 stars')) {
+      return { label: '3', insertText: '3', kind: 'value', detail: 'Stars on this specific slot (1-3)' };
+    }
+    if (/(trainer name|trainer_name|name)$/i.test(fieldPrefix)) {
+      return { label: "'%name%'", insertText: "'%name%'", kind: 'value', detail: 'Text match value' };
+    }
+    if (/(support card|support_card|card)$/i.test(fieldPrefix)) {
+      return {
+        label: 'Support card name',
+        insertText: 'Support card name',
+        kind: 'value',
+        detail: 'Support card name',
+      };
+    }
+    if (/^(main|parent)$/i.test(fieldPrefix) || /(characters?|charas?|chara|umas?|parent|_id)$/i.test(fieldPrefix)) {
+      return { label: '1001', insertText: '1001', kind: 'value', detail: 'Character id' };
+    }
+    return { label: '0', insertText: '0', kind: 'value', detail: 'Any number' };
+  }
+
+  private valueSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
+    const { context, allowAnyFactorContext } = this.getValueMatchContext(prefix);
+    if (!context) return [];
+    const values = this.suggestions.filter(
+      (suggestion) =>
+        suggestion.kind === 'value' &&
+        this.matchesValueContext(suggestion.valueContext, context, allowAnyFactorContext),
+    );
+    return context === 'legacy' ? [this.openLegacyPickerSuggestion(), ...values] : values;
+  }
+
+  private openLegacyPickerSuggestion(): UqlSuggestion {
+    return {
+      label: 'Open legacy picker',
+      insertText: '[]',
+      kind: 'value',
+      detail: 'Pick a legacy from your account',
+      valueContext: 'legacy',
+    };
+  }
+
+  private getValueMatchContext(prefix: string): {
+    context: UqlValueContext | null;
+    allowAnyFactorContext: boolean;
+    inFactorArrayList: boolean;
+  } {
+    const context = this.getValueContext(prefix);
+    const inFactorArrayList = !!context?.endsWith('-factor') && this.isArrayFactorValuePrefix(prefix);
+    return {
+      context,
+      allowAnyFactorContext: inFactorArrayList && this.shouldAllowAnyFactorContext(prefix),
+      inFactorArrayList,
+    };
+  }
+
+  private shouldAllowAnyFactorContext(prefix: string): boolean {
+    const currentClause = this.getCurrentClausePrefix(prefix);
+    const friendlyArrayMatch = currentClause.match(
+      /([^()]+?)\s+(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s*(?:\([^)]*)?[^)]*$/i,
+    );
+    if (friendlyArrayMatch) {
+      return this.isScopedParentFactorPrefix(friendlyArrayMatch[1]!);
+    }
+    return /^(?:not\s+)?(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains|in|not\s+in)\s*(?:\([^)]*)?[^)]*$/i.test(
+      currentClause.trimStart(),
+    );
+  }
+
+  private matchesValueContext(
+    candidateContext: UqlValueContext | undefined,
+    expectedContext: UqlValueContext,
+    allowAnyFactorContext = false,
+  ): boolean {
+    if (candidateContext === expectedContext) return true;
+    return allowAnyFactorContext && !!candidateContext?.endsWith('-factor') && expectedContext.endsWith('-factor');
+  }
+
+  private isArrayFactorValuePrefix(prefix: string): boolean {
+    const currentClause = this.getCurrentClausePrefix(prefix);
+    const whiteScoringContext = this.getWhiteScoringContext(currentClause);
+    if (whiteScoringContext) return whiteScoringContext === 'skill';
+    return (
+      /(?:contains|overlaps|has_all|contains_all)\s*\(\s*[^,()]+\s*,\s*(?:\([^)]*)?[^)]*$/i.test(currentClause) ||
+      /[^()]+?\s+(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s*(?:\([^)]*)?[^)]*$/i.test(
+        currentClause,
+      ) ||
+      /\b(?:not\s+in|in)\s*\([^)]*$/i.test(currentClause)
+    );
+  }
+
+  private getValueContext(prefix: string): UqlValueContext | null {
+    const currentClause = this.getCurrentClausePrefix(prefix);
+    const whiteScoringContext = this.getWhiteScoringContext(currentClause);
+    if (whiteScoringContext === 'skill') return 'white-factor';
+    if (whiteScoringContext === 'param') return null;
+
+    const functionMatch = currentClause.match(
+      /(?:contains|overlaps|has_all|contains_all)\s*\(\s*([^,()]+)\s*,\s*(?:\([^)]*)?[^)]*$/i,
+    );
+    if (functionMatch) {
+      return this.valueContextForField(functionMatch[1]!);
+    }
+
+    const friendlyArrayMatch = currentClause.match(
+      /([^()]+?)\s+(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s*(?:\([^)]*)?[^)]*$/i,
+    );
+    if (friendlyArrayMatch) {
+      if (this.isScopedParentFactorPrefix(friendlyArrayMatch[1]!)) return 'white-factor';
+      return this.valueContextForField(friendlyArrayMatch[1]!);
+    }
+
+    if (
+      /^(?:not\s+)?(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains|in|not\s+in)\s*(?:\([^)]*)?[^)]*$/i.test(
+        currentClause.trimStart(),
+      )
+    ) {
+      return 'white-factor';
+    }
+
+    const comparisonPrefix = currentClause
+      .replace(/(?:=|!=|<>|<=|>=|<|>|\bin\b\s*\(?|\bnot\s+in\b\s*\(?)\s*[^()]*$/i, '')
+      .trimEnd();
+    if (comparisonPrefix !== currentClause.trimEnd()) {
+      const normalizedComparisonPrefix = comparisonPrefix
+        .toLowerCase()
+        .replace(/[_-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/^(?:not|where)\s+/, '');
+      if (normalizedComparisonPrefix === 'main' || normalizedComparisonPrefix === 'parent') return 'character';
+      return this.valueContextForField(comparisonPrefix);
+    }
+
+    return null;
+  }
+
+  private getWhiteScoringContext(prefix: string): 'skill' | 'param' | null {
+    const argsText = this.getOpenWhiteScoringArgs(prefix);
+    if (argsText === null) return null;
+    return this.hasWhiteScoringParameterStarted(argsText) ? 'param' : 'skill';
+  }
+
+  private getOpenWhiteScoringArgs(prefix: string): string | null {
+    const openParens: number[] = [];
+    let quoteCharacter: string | null = null;
+    for (let index = 0; index < prefix.length; index++) {
+      const character = prefix.charAt(index);
+      if (quoteCharacter) {
+        if (character === quoteCharacter) quoteCharacter = null;
+        continue;
+      }
+      if (isUqlQuoteStart(prefix, index)) {
+        quoteCharacter = character;
+        continue;
+      }
+      if (character === '(') {
+        openParens.push(index);
+      } else if (character === ')') {
+        openParens.pop();
+      }
+    }
+
+    for (let index = openParens.length - 1; index >= 0; index--) {
+      const openIndex = openParens[index]!;
+      if (this.isWhiteScoringCallOpen(prefix, openIndex)) {
+        return prefix.slice(openIndex + 1);
+      }
+    }
+    return null;
+  }
+
+  private isWhiteScoringCallOpen(text: string, openIndex: number): boolean {
+    const beforeOpen = text.slice(0, openIndex).trimEnd();
+    return /(?:^|[^A-Za-z0-9_])(?:optional_white|optional_main_white|optional_any_white|lineage_white|optional\s+white|optional\s+main\s+white|optional\s+any\s+white|lineage\s+white)\s*(?:in\s*)?$/i.test(
+      beforeOpen,
+    );
+  }
+
+  private hasWhiteScoringParameterStarted(argsText: string): boolean {
+    return /(?:^|,)\s*(?:priority|priority_group|prio_group|prio\s+group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|proc_kind|affinity)\s*(?:=|$)/i.test(
+      argsText,
+    );
+  }
+
+  private isWhiteScoringParameterPrefix(prefix: string): boolean {
+    const argsText = this.getOpenWhiteScoringArgs(this.getCurrentClausePrefix(prefix));
+    return argsText !== null && this.hasWhiteScoringParameterStarted(argsText);
+  }
+
+  private isWhiteScoringParameterAt(text: string, index: number): boolean {
+    const argsText = this.getOpenWhiteScoringArgs(text.slice(0, index));
+    if (argsText === null) return false;
+    if (this.hasWhiteScoringParameterStarted(argsText)) return true;
+    const currentArgumentPrefix = argsText.slice(argsText.lastIndexOf(',') + 1);
+    if (currentArgumentPrefix.trim().length > 0) return false;
+    return /^(?:priority|priority_group|prio_group|prio\s+group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|proc_kind|affinity)\s*=/i.test(
+      text.slice(index),
+    );
+  }
+
+  private getCurrentClausePrefix(prefix: string): string {
+    let quoteCharacter: string | null = null;
+    let clauseStart = 0;
+    for (let index = 0; index < prefix.length; index++) {
+      const character = prefix.charAt(index);
+      if (quoteCharacter) {
+        if (character === quoteCharacter) quoteCharacter = null;
+        continue;
+      }
+      if (isUqlQuoteStart(prefix, index)) {
+        quoteCharacter = character;
+        continue;
+      }
+      if (character === ';' || character === '\n') {
+        clauseStart = index + 1;
+        continue;
+      }
+      const booleanMatch = prefix.slice(index).match(/^(where|and|or)\b/i);
+      if (!booleanMatch) continue;
+      const before = index > 0 ? prefix.charAt(index - 1) : '';
+      const afterIndex = index + booleanMatch[0].length;
+      const after = prefix.charAt(afterIndex) || '';
+      if ((index === 0 || /[\s(]/.test(before)) && (!after || /\s/.test(after))) {
+        clauseStart = afterIndex;
+        while (clauseStart < prefix.length && /\s/.test(prefix.charAt(clauseStart))) clauseStart++;
+        index = clauseStart - 1;
+      }
+    }
+    return prefix.slice(clauseStart);
+  }
+
+  private isScopedParentFactorPrefix(fieldText: string): boolean {
+    const normalized = fieldText
+      .toLowerCase()
+      .replace(/[_-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^(?:not|where)\s+/, '');
+    return [
+      'main',
+      'parent',
+      'main parent',
+      'gp',
+      'any gp',
+      'grandparent',
+      'grand parent',
+      'great parent',
+      'any grandparent',
+      'any grand parent',
+      'any great parent',
+      'gp1',
+      'left',
+      'left parent',
+      'grandparent 1',
+      'grand parent 1',
+      'great parent 1',
+      'gp2',
+      'right',
+      'right parent',
+      'grandparent 2',
+      'grand parent 2',
+      'great parent 2',
+    ].includes(normalized);
+  }
+
+  private valueContextForField(fieldText: string): UqlValueContext | null {
+    const normalized = fieldText
+      .toLowerCase()
+      .replace(/[_-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^(?:not|where)\s+/, '');
+    const matchedField = this.findFieldSuggestion(normalized);
+    if (matchedField) {
+      const context = this.inferSuggestionValueContext(matchedField);
+      if (context) return context;
+    }
+    if (
+      this.endsWithAny(normalized, [
+        'target',
+        'characters',
+        'character',
+        'umas',
+        'uma',
+        'charas',
+        'chara',
+        'main character',
+        'main characters',
+        'main character runner',
+        'runner',
+        'runners',
+        'main uma',
+        'main umas',
+        'main chara',
+        'main charas',
+        'main chara id',
+        'parent character',
+        'parent uma',
+        'main parent character',
+        'grandparent 1',
+        'grand parent 1',
+        'great parent 1',
+        'gp1',
+        'left parent',
+        'left character',
+        'left characters',
+        'left uma',
+        'left umas',
+        'left chara',
+        'left charas',
+        'left chara id',
+        'gp1 character',
+        'gp1 characters',
+        'gp1 uma',
+        'gp1 umas',
+        'gp1 chara',
+        'gp1 charas',
+        'grandparent 2',
+        'grand parent 2',
+        'great parent 2',
+        'gp2',
+        'right parent',
+        'right character',
+        'right characters',
+        'right uma',
+        'right umas',
+        'right chara',
+        'right charas',
+        'right chara id',
+        'gp2 character',
+        'gp2 characters',
+        'gp2 uma',
+        'gp2 umas',
+        'gp2 chara',
+        'gp2 charas',
+        'gp character',
+        'gp characters',
+        'grandparent character',
+        'grandparent characters',
+        'great parent character',
+        'great parent characters',
+        'any gp character',
+        'any gp characters',
+        'any great parent character',
+        'any great parent characters',
+      ])
+    ) {
+      return 'character';
+    }
+    if (this.endsWithAny(normalized, ['legacy', 'owned legacy', 'owned uma', 'my legacy'])) {
+      return 'legacy';
+    }
+    if (this.endsWithAny(normalized, ['support card', 'support', 'card', 'support card id'])) {
+      return 'support-card';
+    }
+    if (
+      this.endsWithAny(normalized, [
+        'race results',
+        'race wins',
+        'main race wins',
+        'left race wins',
+        'right race wins',
+        'win saddles',
+        'main win saddles',
+        'left win saddles',
+        'right win saddles',
+      ])
+    ) {
+      return 'race-saddle';
+    }
+    if (this.endsWithAny(normalized, ['rank', 'parent rank'])) {
+      return 'rank';
+    }
+    if (
+      this.endsWithAny(normalized, [
+        'white sparks',
+        'white skills',
+        'white factors',
+        'main parent white skills',
+        'main parent skills',
+        'parent white skills',
+        'parent skills',
+        'main white factors',
+        'main white sparks',
+        'left white factors',
+        'left white sparks',
+        'right white factors',
+        'right white sparks',
+        'gp1 white factors',
+        'gp1 white sparks',
+        'gp2 white factors',
+        'gp2 white sparks',
+        'optional white',
+        'optional main white',
+        'lineage white',
+      ])
+    ) {
+      return 'white-factor';
+    }
+    if (
+      this.endsWithAny(normalized, [
+        'green sparks',
+        'unique skills',
+        'green factors',
+        'main green sparks',
+        'main green factors',
+        'main unique skills',
+        'left green sparks',
+        'left green factors',
+        'left unique skills',
+        'right green sparks',
+        'right green factors',
+        'right unique skills',
+        'gp1 green sparks',
+        'gp1 green factors',
+        'gp1 unique skills',
+        'gp2 green sparks',
+        'gp2 green factors',
+        'gp2 unique skills',
+      ])
+    ) {
+      return 'green-factor';
+    }
+    if (
+      this.endsWithAny(normalized, [
+        'blue sparks',
+        'blue factors',
+        'main blue sparks',
+        'main blue factors',
+        'left blue sparks',
+        'left blue factors',
+        'right blue sparks',
+        'right blue factors',
+        'gp1 blue sparks',
+        'gp1 blue factors',
+        'gp2 blue sparks',
+        'gp2 blue factors',
+      ])
+    ) {
+      return 'blue-factor';
+    }
+    if (
+      this.endsWithAny(normalized, [
+        'pink sparks',
+        'pink factors',
+        'main pink sparks',
+        'main pink factors',
+        'left pink sparks',
+        'left pink factors',
+        'right pink sparks',
+        'right pink factors',
+        'gp1 pink sparks',
+        'gp1 pink factors',
+        'gp2 pink sparks',
+        'gp2 pink factors',
+      ])
+    ) {
+      return 'pink-factor';
+    }
+    if (this.endsWithAny(normalized, ['trainer name', 'trainer', 'name'])) {
+      return 'text';
+    }
+    return null;
+  }
+
+  private findFieldSuggestion(fieldText: string): UqlSuggestion | null {
+    const normalized = fieldText.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
+    return (
+      this.suggestions.find((suggestion) => {
+        if (suggestion.kind !== 'field') return false;
+        return [suggestion.label, suggestion.insertText]
+          .filter(Boolean)
+          .some((value) => value.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim() === normalized);
+      }) || null
+    );
+  }
+
+  private getCompletionRangeForSuggestions(
+    query: string,
+    cursor: number,
+    suggestions: UqlSuggestion[],
+  ): { start: number; end: number; token: string } {
+    if (suggestions.some((suggestion) => suggestion.kind === 'value')) {
+      const scopedValueRange = this.getScopedSparkValueCompletionRange(query, cursor);
+      if (scopedValueRange) {
+        return { ...scopedValueRange, token: query.slice(scopedValueRange.start, cursor) };
+      }
+      const valueRange = this.getCurrentValueRange(query, cursor);
+      if (valueRange) {
+        return { ...valueRange, token: query.slice(valueRange.start, cursor) };
+      }
+      return this.getCurrentWordRange(query, cursor);
+    }
+    if (suggestions.some((suggestion) => suggestion.kind === 'field' || suggestion.kind === 'snippet')) {
+      return this.getFieldOrSnippetCompletionRange(query, cursor);
+    }
+    return this.getCurrentWordRange(query, cursor);
+  }
+
+  private getScopedSparkValueCompletionRange(
+    query: string,
+    cursor: number,
+  ): { start: number; end: number; token: string } | null {
+    const beforeCursor = query.slice(0, cursor);
+    const currentClause = this.getCurrentClausePrefix(beforeCursor);
+    const scopedValue = this.getScopedSparkValuePrefix(beforeCursor);
+    if (!scopedValue) return null;
+    const start = cursor - scopedValue.valuePrefix.length;
+    return {
+      start,
+      end: cursor,
+      token: query.slice(start, cursor),
+    };
+  }
+
+  private getFieldOrSnippetCompletionRange(
+    query: string,
+    cursor: number,
+  ): { start: number; end: number; token: string } {
+    const wordRange = this.getCurrentWordRange(query, cursor);
+    if (/^(?:and|or|not)$/i.test(wordRange.token)) {
+      return { start: cursor, end: cursor, token: '' };
+    }
+    const phraseRange = this.getCurrentPhraseRange(query, cursor);
+    if (/(?:=|!=|<>|<=|>=|<|>|\bhas\b|\bin\b|\blike\b|\bilike\b|\d|'|"|\))/.test(phraseRange.token)) {
+      return wordRange;
+    }
+    return phraseRange;
+  }
+
+  private getCurrentValueRange(query: string, cursor: number): { start: number; end: number; token: string } | null {
+    const beforeCursor = query.slice(0, cursor);
+    const delimiterPattern =
+      /=|!=|<>|<=|>=|<|>|\bin\b\s*\(?|\bnot\s+in\b\s*\(?|\bhas\s+any\s*\(|\bhas\s+all\s*\(|\bhas\s+|\bdoes\s+not\s+have\s+|,|\(/gi;
+    let start = -1;
+    let match: RegExpExecArray | null;
+    while ((match = delimiterPattern.exec(beforeCursor)) !== null) {
+      start = match.index + match[0].length;
+    }
+    if (start < 0) return null;
+    const valueStart = start + (query.slice(start).match(/^\s*/)?.[0].length ?? 0);
+    const end = this.getCurrentValueEnd(query, query.charAt(valueStart) === '[' ? valueStart : cursor);
+    const rawToken = query.slice(start, end);
+    const leadingWhitespace = rawToken.match(/^\s*/)?.[0].length ?? 0;
+    const trailingWhitespace = rawToken.match(/\s*$/)?.[0].length ?? 0;
+    const rangeStart = start + leadingWhitespace;
+    const knownValueMatch = this.getKnownValueMatchAt(query, rangeStart);
+    if (knownValueMatch) {
+      const knownValueEnd = rangeStart + knownValueMatch.text.length;
+      if (cursor <= knownValueEnd) {
+        return {
+          start: rangeStart,
+          end: knownValueEnd,
+          token: knownValueMatch.text,
+        };
+      }
+    }
+    const rangeEnd = Math.max(rangeStart, end - trailingWhitespace);
+    return {
+      start: rangeStart,
+      end: rangeEnd,
+      token: query.slice(rangeStart, rangeEnd),
+    };
+  }
+
+  private getCurrentValueEnd(query: string, cursor: number): number {
+    if (query.charAt(cursor) === '[') {
+      let quote: string | null = null;
+      let depth = 1;
+      for (let i = cursor + 1; i < query.length; i++) {
+        const char = query.charAt(i);
+        if (quote) {
+          if (char === quote) quote = null;
+          continue;
+        }
+        if (isUqlQuoteStart(query, i)) {
+          quote = char;
+          continue;
+        }
+        if (char === '[') depth++;
+        if (char === ']' && --depth === 0) return i + 1;
+      }
+    }
+    let quote: string | null = null;
+    for (let i = cursor; i < query.length; i++) {
+      const char = query.charAt(i);
+      if (quote) {
+        if (char === quote) quote = null;
+        continue;
+      }
+      if (isUqlQuoteStart(query, i)) {
+        quote = char;
+        continue;
+      }
+      if (char === ',' || char === ')' || char === ']' || char === ';' || char === '\n') return i;
+      if (/\s/.test(char)) {
+        const rest = query.slice(i);
+        if (/^\s+(?:and|or)\b/i.test(rest)) return i;
+      }
+    }
+    return query.length;
+  }
+
+  private endsWithAny(value: string, endings: string[]): boolean {
+    return endings.some((ending) => value.endsWith(ending));
+  }
+
+  private getCurrentWordRange(query: string, cursor: number): { start: number; end: number; token: string } {
+    const beforeCursor = query.slice(0, cursor);
+    const match = beforeCursor.match(/[A-Za-z0-9_-]*$/);
+    const token = match?.[0] || '';
+    return {
+      start: cursor - token.length,
+      end: cursor,
+      token,
+    };
+  }
+
+  private getCurrentPhraseRange(query: string, cursor: number): { start: number; end: number; token: string } {
+    const beforeCursor = query.slice(0, cursor);
+    const rawToken = this.getCurrentClausePrefix(beforeCursor);
+    const leadingWhitespace = rawToken.match(/^\s*/)?.[0].length ?? 0;
+    const start = cursor - rawToken.length + leadingWhitespace;
+    return {
+      start,
+      end: cursor,
+      token: query.slice(start, cursor),
+    };
+  }
+
+  private normalizeValueToken(value: string): string {
+    return value
+      .replace(/^['"]|['"]$/g, '')
+      .toLowerCase()
+      .replace(/[_-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+}

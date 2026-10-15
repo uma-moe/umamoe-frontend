@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from '../Icon.svelte';
   import type { IconName } from '../icon-types';
-  import type { TimelineEventData } from '../timeline-types';
+  import type { TimelineEventData } from './timeline-types';
 
   interface Props {
     event: TimelineEventData;

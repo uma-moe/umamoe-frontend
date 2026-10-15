@@ -10,7 +10,7 @@
     InheritanceFilterMode,
     InheritanceSearchFilters
   } from '@/lib/inheritance/inheritance-search';
-  import type { UqlValidation } from '@/lib/inheritance/uql';
+  import type { UqlValidation } from '@/lib/inheritance/uql/uql';
 
   interface Props {
     filters: InheritanceSearchFilters;

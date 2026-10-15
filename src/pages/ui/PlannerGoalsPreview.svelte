@@ -1,11 +1,11 @@
 <script lang="ts">
-  import PlannerTargetGoals from '@/pages/carat-planner/PlannerTargetGoals.svelte';
+  import PlannerTargetGoals from '@/pages/carat-planner/goals/PlannerTargetGoals.svelte';
   import {
     createPlan,
     projectPlan,
     type PlannerDataBundle,
     type PlannerTarget
-  } from '@/lib/timeline/carat-planner';
+  } from '@/lib/carat-planner/carat-planner';
   import type { TimelinePickupCatalog } from '@/lib/timeline/timeline-pickups';
 
   const resources: PlannerDataBundle = {

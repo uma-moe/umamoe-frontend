@@ -1,6 +1,6 @@
 import { cmGet, loadCmSummary, snapshotPath } from '@/pages/competitive/champions-meeting/cm-data';
 import type { Snapshot, TeamDetail, TeamSearchResponse } from '@/pages/competitive/hakuraku-types';
-import { resolveRaceCourseIds } from '@/pages/race-analysis/replay-course';
+import { resolveRaceCourseIds } from '@/pages/competitive/race-analysis/replay/replay-course';
 import { loadCourseCatalog } from '@/lib/catalog/course-catalog';
 import { raceConditions } from './cm-presets';
 import { simulatorUmaFromCm } from '../simulator-uma';

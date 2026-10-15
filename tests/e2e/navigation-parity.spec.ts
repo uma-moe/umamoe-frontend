@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures/test';
 import { mockTimeline } from './fixtures/api';
-import { createPlan } from '../../src/lib/timeline/carat-planner';
-import { encodeCompactPlannerShare } from '../../src/lib/timeline/planner-share-codec';
+import { createPlan } from '../../src/lib/carat-planner/carat-planner';
+import { encodeCompactPlannerShare } from '../../src/lib/carat-planner/planner-share-codec';
 
 // Exercise the installed router's real link handler, including same-route URLs.
 async function follow(page: Page, href: string) {
