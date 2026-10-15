@@ -13,7 +13,7 @@
   import ProfileVeteranCard from '../veterans/ProfileVeteranCard.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Tabs from '@/components/navigation/Tabs.svelte';
-  import ProfileVeteranDialog from '../veterans/ProfileVeteranDialog.svelte';
+  import ProfileVeteranDialog from '../veterans/details/ProfileVeteranDialog.svelte';
   import type { ProfileVeteran, StadiumMember } from '../profile-repository';
 
   let {

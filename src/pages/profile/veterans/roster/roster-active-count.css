@@ -1,0 +1,13 @@
+.active-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 19px;
+  min-height: 19px;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--color-accent-soft);
+  color: var(--accent-primary);
+  font-size: 10px;
+  font-weight: 600;
+}

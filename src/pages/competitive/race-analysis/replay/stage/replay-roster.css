@@ -1,0 +1,367 @@
+p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+.live-roster {
+  min-width: 0;
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+  padding: 16px 10px;
+}
+.live-roster > header {
+  padding: 0 4px 8px;
+}
+.live-roster h3 {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+.live-roster h3 span {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.live-roster p {
+  font-size: 11px;
+}
+.field-runner {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 4px;
+}
+.field-runner.chosen {
+  background: var(--color-accent-soft);
+}
+.field-runner.dimmed .runner-pick {
+  opacity: 0.5;
+}
+.hidden-runner .runner-pick {
+  opacity: 0.35;
+}
+.runner-pick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  padding: 10px 4px;
+  background: none;
+  text-align: left;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.field-place {
+  width: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: none;
+}
+.field-name {
+  flex: 1;
+  min-width: 0;
+}
+.field-name strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+}
+.field-name small,
+.field-gap small {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 10px;
+  margin-top: 4px;
+}
+.field-gap {
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 1150px) {
+  .field-name strong {
+    font-size: 11px;
+  }
+  .runner-pick {
+    gap: 5px;
+  }
+}
+@media (max-width: 950px) {
+  .live-roster {
+    border-left: 0;
+    border-top: 1px solid var(--border-subtle);
+    padding: 12px 0 0;
+  }
+  .field-runners {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 12px;
+  }
+}
+@media (max-width: 700px) {
+  .field-runners {
+    grid-template-columns: 1fr;
+  }
+  .runner-pick {
+    padding: 9px 5px;
+    gap: 10px;
+  }
+  .field-name strong {
+    font-size: 12px;
+  }
+  .field-name small {
+    font-size: 10px;
+  }
+}
+.field-runner.front-blocked .field-place {
+  color: var(--accent-error);
+  font-weight: 700;
+}
+.live-roster {
+  padding: 4px 0 4px 16px;
+  border-left: 1px solid var(--border-subtle);
+  border-radius: 0;
+}
+.live-roster > header {
+  padding-bottom: 6px;
+}
+.runner-pick {
+  padding-block: 6px;
+}
+.field-name small,
+.field-gap small {
+  margin-top: 2px;
+}
+@media (max-width: 700px) {
+  .runner-pick {
+    padding-block: 6px;
+  }
+}
+@media (min-width: 951px) and (max-height: 1100px) {
+  .field-runners {
+    max-height: 380px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+.live-roster :global(.icon-button) {
+  width: 26px;
+  min-width: 26px;
+  height: 28px;
+  min-height: 28px;
+}
+.live-roster {
+  grid-column: 2;
+  grid-row: 2;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  min-width: 0;
+}
+.field-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.live-roster .field-heading h3 {
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.field-order {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.live-roster > header p {
+  margin: 0;
+  padding: 3px 0;
+  font-size: 11px;
+  line-height: 14px;
+}
+.field-runners {
+  scrollbar-gutter: stable;
+}
+.field-runner {
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--factor-field-bg);
+  gap: 4px;
+}
+.field-runner:hover {
+  background: var(--surface-2);
+}
+.field-runner.chosen {
+  background: var(--color-accent-soft);
+}
+.runner-pick {
+  display: grid;
+  grid-template-columns: 24px 30px minmax(0, 1fr) 43px auto;
+  gap: 6px;
+  padding: 2px 6px;
+}
+.field-place {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  min-height: 28px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+.field-place.podium {
+  color: var(--accent-warning);
+}
+.field-name strong {
+  font-size: 13px;
+  line-height: 17px;
+}
+.field-name small,
+.field-gap small {
+  font-size: 10px;
+  line-height: 13px;
+  margin-top: 0;
+}
+.field-gap {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 17px;
+}
+.field-gap small {
+  font-weight: 400;
+}
+.field-hp {
+  display: grid;
+  gap: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  line-height: 17px;
+  white-space: nowrap;
+}
+.field-hp strong {
+  font-weight: 600;
+}
+.field-hp small {
+  font-size: 10px;
+  line-height: 13px;
+  color: var(--text-secondary);
+}
+.field-gap .finish-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  color: var(--accent-success);
+}
+.live-roster :global(.icon-button) {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  margin-right: 4px;
+  background: var(--factor-field-bg);
+  border-color: var(--factor-field-border);
+}
+@media (min-width: 951px) {
+  .live-roster {
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  .live-roster > header {
+    padding-bottom: 4px;
+  }
+  .field-runners {
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .field-runner {
+    flex: none;
+  }
+  .runner-pick :global(.art) {
+    width: 30px;
+    height: 30px;
+  }
+}
+@media (min-width: 951px) and (max-height: 1000px) {
+  .runner-pick {
+    padding: 1px 4px;
+    grid-template-columns: 22px 26px minmax(0, 1fr) 41px auto;
+    gap: 5px;
+  }
+  .runner-pick :global(.art) {
+    width: 26px;
+    height: 26px;
+  }
+  .field-name strong,
+  .field-gap,
+  .field-hp {
+    font-size: 12px;
+    line-height: 15px;
+  }
+  .field-name small,
+  .field-gap small,
+  .field-hp small {
+    font-size: 10px;
+    line-height: 11px;
+  }
+  .field-place {
+    width: 22px;
+    min-height: 26px;
+  }
+}
+@media (min-width: 951px) and (max-height: 850px) {
+  .runner-pick {
+    padding-block: 0;
+    min-height: 0;
+    grid-template-columns: 22px 24px minmax(0, 1fr) 41px auto;
+  }
+  .runner-pick :global(.art) {
+    width: 24px;
+    height: 24px;
+  }
+  .field-place {
+    min-height: 24px;
+  }
+  .field-runner :global(.icon-button) {
+    height: 24px;
+    min-height: 24px;
+  }
+}
+@media (max-width: 950px) {
+  .live-roster {
+    grid-column: auto;
+    grid-row: auto;
+    order: 3;
+  }
+  .field-runners {
+    gap: 4px;
+  }
+}
+.field-name .field-meta {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}

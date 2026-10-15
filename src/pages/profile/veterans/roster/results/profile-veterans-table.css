@@ -1,0 +1,213 @@
+.table-wrap {
+  position: relative;
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--card-surface-bg);
+}
+table {
+  width: 100%;
+  min-width: 1024px;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+.character-column {
+  width: 252px;
+}
+.stats-column {
+  width: 198px;
+}
+.affinity-column {
+  width: 96px;
+}
+.aptitude-column {
+  width: 284px;
+}
+.details-column {
+  width: 56px;
+}
+th,
+td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+  vertical-align: middle;
+}
+thead th {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--card-surface-bg);
+}
+thead th {
+  padding-block: 6px;
+}
+thead th :global(.ui-button) {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 32px;
+  padding: 0;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--card-surface-bg);
+  border-right: 1px solid var(--border-subtle);
+}
+tbody tr:hover > td,
+tbody tr:hover > th {
+  background: var(--surface-2);
+}
+tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.table-character {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+.table-character :global(.rarity) {
+  flex-basis: 100%;
+}
+.table-stats :global(.stats) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px 6px;
+  border: 0;
+  background: transparent;
+}
+.table-stats :global(.stats > div) {
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+}
+.table-stats :global(.stats img) {
+  width: 13px;
+  height: 13px;
+}
+.table-stats :global(.stats dd) {
+  font-size: 12px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+.table-stats :global(.stats > [data-stat='total']) {
+  grid-column: 1/-1;
+  background: transparent;
+}
+.table-stats :global([data-stat='total'] dt) {
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.table-stats :global([data-stat='sp'] dt) {
+  order: -1;
+  width: 13px;
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: 9px;
+  font-weight: 600;
+}
+.query-row td {
+  padding: 8px 12px;
+}
+button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+@media (max-width: 767px) {
+  .table-wrap {
+    overscroll-behavior-x: contain;
+  }
+  table {
+    zoom: 0.7;
+  }
+  .character-column {
+    width: 160px;
+  }
+  .stats-column {
+    width: 180px;
+  }
+  .aptitude-column {
+    width: 260px;
+  }
+  th,
+  td {
+    padding: 4px;
+  }
+  thead th,
+  thead th :global(.ui-button) {
+    font-size: 10px;
+  }
+  thead th :global(.ui-button) {
+    min-height: 36px;
+  }
+  thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+  }
+  .table-character {
+    min-height: 44px;
+  }
+  .table-character :global(.veteran-identity) {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: 6px;
+  }
+  .table-character :global(.portrait) {
+    height: 40px;
+  }
+  .table-character :global(.identity) {
+    gap: 3px;
+  }
+  .table-character :global(.identity h3) {
+    font-size: 11px;
+  }
+  .table-character :global(.identity-details) {
+    gap: 2px 4px;
+  }
+  .table-character :global(.scenario) {
+    padding: 1px 3px;
+    font-size: 8px;
+  }
+  .table-character :global(.race-style) {
+    font-size: 9px;
+  }
+  .table-character :global(.rarity) {
+    font-size: 7px;
+    letter-spacing: 0.5px;
+  }
+  .table-character :global(.rank--md) {
+    width: 28px;
+    height: 28px;
+  }
+  .table-character :global(.rank strong) {
+    font-size: 9px;
+  }
+  .table-stats :global(.stats dd) {
+    font-size: 10px;
+  }
+  .table-stats :global([data-stat='total'] dt) {
+    font-size: 9px;
+  }
+  .table-stats :global([data-stat='sp'] dt) {
+    width: auto;
+    overflow: visible;
+  }
+  .table-factors :global(.spark-filter) {
+    min-height: 34px;
+  }
+}

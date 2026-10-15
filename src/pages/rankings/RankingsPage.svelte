@@ -7,12 +7,13 @@
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
   import LeaderboardRow from '@/components/data/LeaderboardRow.svelte';
-  import SelectField from '@/components/controls/SelectField.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import Tabs from '@/components/navigation/Tabs.svelte';
-  import TextField from '@/components/controls/TextField.svelte';
   import { communityRepository } from '@/pages/clubs/community-repository';
   import type { PagedResult, RankingTab, TrainerRanking } from '@/pages/clubs/community-types';
+  import RankingsFilters from './RankingsFilters.svelte';
+  import RankingsPaginator from './RankingsPaginator.svelte';
+  import { pageSizeOptions, rankingYears } from './rankings-options';
 
   const today = new Date();
 
@@ -32,28 +33,7 @@
 
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
   let requestId = 0;
-  const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December'
-  ].map((label, index) => ({ value: String(index + 1), label }));
-  const years = Array.from({ length: today.getFullYear() - 2020 }, (_, index) => ({
-    value: String(2021 + index),
-    label: String(2021 + index)
-  }));
-  const pageSizeOptions = [20, 50, 100].map((value) => ({
-    value: String(value),
-    label: String(value)
-  }));
+  const years = rankingYears(today);
 
   async function load(refresh = false): Promise<void> {
     const request = ++requestId;
@@ -207,83 +187,18 @@
       onchange={selectTab}
     />
   </div>
-  <section class="filters">
-    <div class="search">
-      <TextField
-        id="ranking-search"
-        label="Search trainers or clubs"
-        hideLabel
-        type="search"
-        suffixIcon="search"
-        placeholder="Search by Trainer Name, Viewer ID, or Circle Name"
-        bind:value={search}
-        oninput={changeSearch}
-      />
-    </div>
-    <div class="period-filters">
-      {#if tab === 'monthly'}
-        <SelectField
-          id="ranking-month"
-          label="Month"
-          hideLabel
-          prefixIcon="calendar"
-          options={months}
-          bind:value={month}
-          onchange={changeFilter}
-        /><SelectField
-          id="ranking-year"
-          label="Year"
-          hideLabel
-          prefixIcon="calendar"
-          options={years}
-          bind:value={year}
-          onchange={changeFilter}
-        />
-      {:else if tab === 'alltime'}
-        <SelectField
-          id="ranking-alltime-sort"
-          label="Rank by"
-          hideLabel
-          prefixIcon="sort"
-          options={[
-            { value: 'avg_month', label: 'Avg/Month' },
-            { value: 'total_fans', label: 'Total Fans' },
-            { value: 'total_gain', label: 'Total Gain' },
-            { value: 'avg_day', label: 'Avg/Day' },
-            { value: 'avg_week', label: 'Avg/Week' }
-          ]}
-          bind:value={alltimeSort}
-          onchange={changeFilter}
-        />
-      {:else}
-        <SelectField
-          id="ranking-gains-sort"
-          label="Rank by"
-          hideLabel
-          prefixIcon="sort"
-          options={[
-            { value: 'gain_3d', label: '3-Day Gain' },
-            { value: 'gain_7d', label: '7-Day Gain' },
-            { value: 'gain_30d', label: '30-Day Gain' }
-          ]}
-          bind:value={gainsSort}
-          onchange={changeFilter}
-        />
-      {/if}
-    </div>
-    {#if search}
-      <button
-        class="clear-filters-btn"
-        type="button"
-        onclick={clearSearch}
-      >
-        <Icon
-          name="close"
-          size={14}
-        />Clear
-      </button>
-    {/if}
-  </section>
+  <RankingsFilters
+    {tab}
+    bind:search
+    bind:month
+    bind:year
+    bind:alltimeSort
+    bind:gainsSort
+    {years}
+    onsearch={changeSearch}
+    onfilterchange={changeFilter}
+    onclear={clearSearch}
+  />
   {#if loading}
     <div class="loading">
       <Spinner size={28} />
@@ -352,53 +267,17 @@
       {/each}
     </section>
   {/if}
-  <div class="mat-paginator">
-    <span>Items per page:</span>
-    <SelectField
-      id="ranking-page-size"
-      label="Items per page"
-      hideLabel
-      options={pageSizeOptions}
-      bind:value={pageSize}
-      onchange={changeFilter}
-    />
-    <strong>
-      {result?.total
-        ? `${(page - 1) * Number(pageSize) + 1}–${Math.min(page * Number(pageSize), result.total)} of ${result.total}`
-        : '0 of 0'}
-    </strong>
-    <button
-      type="button"
-      aria-label="Previous page"
-      disabled={page <= 1}
-      onclick={() => {
-        page -= 1;
-        writeQuery();
-        void load();
-      }}
-    >
-      <Icon
-        name="chevron"
-        size={17}
-      />
-    </button>
-    <button
-      class="next"
-      type="button"
-      aria-label="Next page"
-      disabled={page >= (result?.totalPages ?? 1)}
-      onclick={() => {
-        page += 1;
-        writeQuery();
-        void load();
-      }}
-    >
-      <Icon
-        name="chevron"
-        size={17}
-      />
-    </button>
-  </div>
+  <RankingsPaginator
+    {page}
+    bind:pageSize
+    {result}
+    onpage={(value) => {
+      page = value;
+      writeQuery();
+      void load();
+    }}
+    onpagesizechange={changeFilter}
+  />
 </AppPage>
 
 <style>
@@ -428,46 +307,6 @@
     color: var(--accent-warning);
     border-color: rgb(255 183 77/0.25);
   }
-  .filters {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 12px;
-  }
-  .search {
-    grid-column: 1/-1;
-  }
-  .period-filters {
-    display: flex;
-    gap: 8px;
-  }
-  .period-filters :global(.field) {
-    width: 160px;
-  }
-  .clear-filters-btn {
-    justify-self: start;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 5px 10px;
-    border: 1px solid var(--clear-filter-border);
-    border-radius: 6px;
-    background: transparent;
-    color: var(--clear-filter-color);
-    font: inherit;
-    font-size: 0.75rem;
-    cursor: pointer;
-  }
-  .clear-filters-btn:hover {
-    background: rgb(var(--accent-error-rgb) / 0.1);
-    border-color: rgb(var(--accent-error-rgb) / 0.3);
-    color: var(--accent-error);
-  }
-  @media (max-width: 768px) {
-    .clear-filters-btn {
-      min-height: var(--touch-target);
-    }
-  }
   .loading,
   .no-results {
     min-height: 220px;
@@ -491,78 +330,5 @@
   .leaderboard {
     display: grid;
     gap: 6px;
-  }
-  .mat-paginator {
-    min-height: 58px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 13px;
-    padding: 8px 12px;
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    font-size: var(--font-sm);
-  }
-  .mat-paginator :global(.field) {
-    width: 84px;
-  }
-  .mat-paginator strong {
-    min-width: 82px;
-    font-weight: 500;
-    text-align: center;
-  }
-  .mat-paginator > button {
-    width: 42px;
-    height: 42px;
-    display: grid;
-    place-items: center;
-    border: 0;
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: pointer;
-  }
-  .mat-paginator > button:first-of-type :global(svg) {
-    transform: rotate(90deg);
-  }
-  .mat-paginator > button.next :global(svg) {
-    transform: rotate(-90deg);
-  }
-  .mat-paginator > button:disabled {
-    opacity: 0.28;
-  }
-  @media (max-width: 768px) {
-    .filters {
-      grid-template-columns: minmax(0, 1fr);
-    }
-    .period-filters {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-    }
-    .period-filters :global(.field) {
-      width: 100%;
-    }
-    .mat-paginator {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 44px 44px;
-      gap: 4px;
-      padding: 8px 12px;
-    }
-    .mat-paginator > span {
-      grid-column: 1;
-      text-align: right;
-    }
-    .mat-paginator :global(.field) {
-      grid-column: 2/4;
-      justify-self: end;
-    }
-    .mat-paginator strong {
-      grid-column: 1;
-      text-align: right;
-      padding-right: 16px;
-    }
-    .mat-paginator > button {
-      width: var(--touch-target);
-      height: var(--touch-target);
-    }
   }
 </style>

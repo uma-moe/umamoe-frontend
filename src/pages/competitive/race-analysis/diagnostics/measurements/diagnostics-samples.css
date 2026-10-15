@@ -1,0 +1,112 @@
+.measurement-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+  gap: 12px;
+  align-items: stretch;
+}
+.detail-hint {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.muted {
+  color: var(--text-secondary);
+}
+.pace-samples :global(th:first-child) {
+  width: 100px;
+}
+.pace-samples :global(th),
+.pace-samples :global(td),
+.section-details :global(th),
+.section-details :global(td) {
+  height: 26px;
+  box-sizing: border-box;
+}
+.pace-samples :global(thead th),
+.section-details :global(thead th) {
+  height: 28px;
+}
+.section-details :global(th:first-child) {
+  width: 64px;
+}
+.section-details :global(th:nth-child(2)) {
+  width: 100px;
+}
+.section-details :global(th:nth-child(3)) {
+  width: 80px;
+}
+.sample-value {
+  display: inline-grid;
+  grid-template-columns: 72px 54px;
+  align-items: center;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.sample-value strong {
+  font-weight: 500;
+}
+.speed-meter {
+  display: block;
+  position: relative;
+  height: 5px;
+  background: color-mix(in srgb, var(--text-secondary) 8%, transparent);
+  border-radius: 2px;
+}
+.speed-meter > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #69b7ee;
+  border-radius: 2px;
+}
+.rng-meter.acceleration-meter > span {
+  background: #df8ca1;
+}
+.rng-cell {
+  display: inline-grid;
+  grid-template-columns: 72px 60px;
+  align-items: center;
+  gap: 8px;
+}
+.rng-meter {
+  position: relative;
+  height: 8px;
+  background: color-mix(in srgb, var(--text-secondary) 8%, transparent);
+  border-radius: 2px;
+}
+.rng-meter::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--text-secondary);
+  opacity: 0.6;
+}
+.rng-meter > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: #87ceab;
+  border-radius: 1px;
+}
+.rng-meter > span.negative {
+  background: #ed8d8d;
+}
+@media (max-width: 1250px) {
+  .measurement-details-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 550px) {
+  .detail-hint {
+    display: none;
+  }
+  .sample-value {
+    grid-template-columns: 40px 48px;
+    gap: 6px;
+  }
+  .pace-samples :global(th:first-child) {
+    width: 82px;
+  }
+}

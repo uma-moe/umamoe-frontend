@@ -1,0 +1,9 @@
+.affinity-breakdown {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.affinity-breakdown strong {
+  color: var(--accent-pink);
+}

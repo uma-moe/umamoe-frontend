@@ -1,0 +1,100 @@
+.setup {
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+}
+.assumption-bar {
+  width: 100%;
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.assumption-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.assumption-title > :global(svg) {
+  color: var(--accent-primary);
+}
+.assumption-title > span {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+.assumption-title strong {
+  font-size: 12px;
+}
+.assumption-title small {
+  overflow: hidden;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.assumption-bar small {
+  display: block;
+  color: var(--text-secondary);
+}
+.assumption-summary {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.assumption-summary > span {
+  padding-inline: 10px;
+}
+.assumption-summary > span + span {
+  border-left: 1px solid var(--border-subtle);
+}
+.setup.open .assumption-bar > :global(svg:last-child) {
+  transform: rotate(180deg);
+}
+.setup > :global(.tabs) {
+  border-top: 1px solid var(--border-subtle);
+}
+.setup-workspace {
+  container: planner-setup / inline-size;
+  min-width: 0;
+  padding: 12px;
+}
+@media (max-width: 680px) {
+  .assumption-bar {
+    grid-template-columns: 1fr auto;
+  }
+  .assumption-summary {
+    grid-column: 1/-1;
+    grid-row: 2;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .assumption-summary > span {
+    padding-inline: 6px;
+  }
+  .assumption-summary > span:first-child {
+    padding-left: 0;
+  }
+  .assumption-bar > :global(svg:last-child) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .assumption-title small {
+    display: none;
+  }
+  .setup-workspace {
+    padding-inline: 4px;
+  }
+}

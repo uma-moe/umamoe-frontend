@@ -1,0 +1,96 @@
+:global(.veteran-details) > section {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 180px;
+}
+.spark-section {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 8px;
+}
+.spark-section {
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+.spark-section {
+  container: spark-details / inline-size;
+  gap: 4px;
+  padding-top: 8px;
+}
+.spark-header h3 {
+  flex: none;
+}
+.spark-sources {
+  display: grid;
+  grid-template-columns: minmax(94px, 2fr) repeat(2, minmax(96px, 3fr));
+  align-items: end;
+  gap: 6px 8px;
+  min-width: 0;
+  padding-bottom: 4px;
+}
+.spark-sources :global(legend) {
+  margin-bottom: 2px;
+  font-size: 10px;
+}
+.own-sources :global(.options) {
+  display: flex;
+}
+.own-sources :global(label:first-child) {
+  min-width: 56px;
+  flex: 1;
+}
+.own-sources :global(label:last-child) {
+  min-width: 32px;
+  flex: 1;
+}
+@container spark-details (max-width:310px) {
+  .spark-sources {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .own-sources {
+    grid-column: 1/-1;
+  }
+}
+.source-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+.source-name span {
+  color: var(--color-text-subtle);
+}
+.spark-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  gap: 5px;
+  padding: 1px;
+}
+.spark-group {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.spark-group[data-tone='blue'],
+.spark-group[data-tone='pink'],
+.spark-group[data-tone='green'] {
+  display: contents;
+}
+.spark-group[data-tone='white'] {
+  flex-basis: 100%;
+}
+.spark-token {
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+}
+.spark-token :global(.name) {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}

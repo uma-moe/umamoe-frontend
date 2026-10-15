@@ -1,6 +1,8 @@
+import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+import type { SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
 import { createSimulatorUma, type SimulatorUma } from '../../simulator-uma';
-import { createHpPlan, STAT_KEYS, type HpPlan } from './hp-plan';
-import { createTrainee } from '../trainee';
+import { countSkills, createHpPlan, STAT_KEYS, type HpPlan } from './hp-plan';
+import { createTrainee, RUNNING_STYLES } from '../trainee';
 
 /**
  * The HP calculator's own runner, skill counts and race options, kept apart from the race field so nothing here
@@ -104,4 +106,25 @@ export function saveHpCalculator(): void {
   } catch {
     /* Storage can be full or disabled; the setup still works for this visit. */
   }
+}
+
+/** Counts her learned skills into the skill counts, for this course and her running style. */
+export function countHpSkills(
+  uma: SimulatorUma,
+  skills: Map<number, SkillCatalogEntry>,
+  course: CourseCatalogEntry | undefined
+): void {
+  if (!uma.skills.length || !skills.size) return;
+  const style = RUNNING_STYLES.indexOf(uma.trainee.runningStyle as (typeof RUNNING_STYLES)[number]);
+  Object.assign(
+    hpCalculator.plan,
+    countSkills(uma.skills, skills, {
+      distance: course?.distance,
+      distanceType: course?.distance_type,
+      surface: course?.surface,
+      turn: course?.turn,
+      style: style === 4 ? 1 : style + 1
+    })
+  );
+  hpCalculator.counted = 'Counted from ' + uma.name + '’s ' + uma.skills.length + ' skills';
 }

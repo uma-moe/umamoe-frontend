@@ -5,6 +5,7 @@ import {
   type InheritanceFilterMode,
   type InheritanceSearchFilters
 } from '@/lib/inheritance/inheritance-search';
+import type { SparkOrder } from '@/lib/inheritance/inheritance-factors';
 
 export const DATABASE_FILTER_STATE_KEY = 'database-filter-state-v2';
 export const DATABASE_FILTER_MODE_KEY = 'database-filter-mode-v1';
@@ -12,6 +13,13 @@ export const DATABASE_FILTER_PRESETS_KEY = 'database-filter-presets-v1';
 export const DATABASE_LIST_MODE_KEY = 'db-list-mode';
 export const DATABASE_HIDDEN_SPARKS_KEY = 'db-hidden-spark-factors';
 export const DATABASE_SPARK_ORDER_KEY = 'db-spark-order';
+
+export const SPARK_ORDER_OPTIONS: { value: SparkOrder; label: string }[] = [
+  { value: 'main', label: 'Main parent first' },
+  { value: 'stars', label: 'Most stars' },
+  { value: 'occurrences', label: 'Most occurrences' },
+  { value: 'alphabetical', label: 'Alphabetical' }
+];
 
 type PriorityFactorState = number | [number, number];
 
@@ -441,4 +449,21 @@ export function writeDatabasePresets(storage: Storage, presets: SavedDatabaseFil
 export function databasePresetFilterCount(preset: SavedDatabaseFilterPreset): number {
   try { return activeInheritanceFilterCount(filtersFromCompactState(decodeDatabaseFilterState(preset.state), preset.mode)); }
   catch { return 0; }
+}
+
+export function sparkOrderValue(value: string | null): SparkOrder {
+  return SPARK_ORDER_OPTIONS.find((option) => option.value === value)?.value ?? 'main';
+}
+
+export function readHiddenSparkFactorIds(storage: Storage): number[] {
+  try {
+    const storedHidden = JSON.parse(storage.getItem(DATABASE_HIDDEN_SPARKS_KEY) ?? '[]') as unknown;
+    return Array.isArray(storedHidden)
+      ? [...new Set(storedHidden.map(Number).filter((id) => Number.isFinite(id) && id > 0))].sort(
+          (left, right) => left - right
+        )
+      : [];
+  } catch {
+    return [];
+  }
 }

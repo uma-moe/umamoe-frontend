@@ -1,0 +1,182 @@
+.signin-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 8px 16px;
+  margin: 0;
+  border-bottom: 1px solid rgb(33 150 243/0.25);
+  background: rgb(33 150 243/0.1);
+  color: rgb(var(--on-surface-rgb) / 0.75);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.signin-notice :global(svg) {
+  flex: none;
+  color: var(--accent-blue-strong);
+}
+.partner-lookup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 8px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.partner-lookup h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 -2px;
+  color: var(--text-disabled);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.partner-lookup h3 :global(svg) {
+  width: 13px;
+  height: 13px;
+  color: var(--accent-primary);
+  opacity: 0.6;
+}
+.partner-lookup form {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.partner-lookup form:focus-within {
+  border-color: rgb(var(--accent-primary-rgb) / 0.45);
+  box-shadow: 0 0 0 3px rgb(var(--accent-primary-rgb) / 0.07);
+}
+.partner-input {
+  position: relative;
+  min-width: 0;
+  flex: 1;
+}
+.partner-input :global(input) {
+  height: 33px;
+  min-height: 33px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0 33px 0 34px;
+  font-family: Arial, sans-serif;
+  font-size: 0.83rem;
+  color: var(--text-primary);
+}
+.partner-input :global(input:focus) {
+  outline: 0;
+}
+.partner-input > :global(.icon-button) {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 33px;
+  height: 33px;
+  border: 0;
+  background: transparent;
+}
+.partner-input :global(.prefix-icon) {
+  left: 12px;
+  width: 15px;
+  height: 15px;
+}
+.partner-lookup form > :global(.ui-button) {
+  height: auto;
+  min-height: 33px;
+  padding: 0 16px;
+  border: 0;
+  border-left: 1px solid var(--border-primary);
+  border-radius: 0;
+  font-family: Arial, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  gap: 5px;
+  transform: none;
+}
+.partner-lookup form > :global(.ui-button:disabled) {
+  opacity: 0.35;
+}
+.partner-lookup form > :global(.ui-button svg) {
+  width: 14px;
+  height: 14px;
+}
+.partner-lookup form > :global(.ui-button:hover:not(:disabled):not([aria-disabled='true'])) {
+  transform: none;
+}
+.partner-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--text-disabled);
+}
+.partner-hints strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.partner-lookup .signin-notice {
+  border: 1px solid rgb(33 150 243/0.2);
+  border-radius: 6px;
+  padding: 7px 10px;
+  gap: 7px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+  background: rgb(33 150 243/0.08);
+}
+.partner-lookup .signin-notice span {
+  font-size: 0.73rem;
+  opacity: 0.8;
+}
+.partner-lookup .signin-notice :global(svg) {
+  width: 14px;
+  height: 14px;
+}
+
+:global([data-theme='light']) .partner-input {
+  background: white;
+}
+:global([data-theme='light']) .partner-lookup h3 {
+  color: var(--text-muted);
+}
+:global([data-theme='light']) .partner-lookup .signin-notice {
+  color: #1e3a8a;
+  border-color: rgb(var(--accent-primary-rgb) / 0.25);
+  background: rgb(var(--accent-primary-rgb) / 0.1);
+}
+:global([data-theme='light']) .signin-notice {
+  background: rgb(var(--accent-primary-rgb) / 0.1);
+  border-color: rgb(var(--accent-primary-rgb) / 0.25);
+  color: #1e3a8a;
+}
+
+@media (max-width: 600px) {
+  .partner-input :global(input),
+  .partner-input > :global(.icon-button),
+  .partner-lookup form > :global(.ui-button) {
+    height: var(--touch-target);
+    min-height: var(--touch-target);
+  }
+  .partner-input > :global(.icon-button) {
+    width: var(--touch-target);
+  }
+  .partner-input :global(input) {
+    padding-right: 44px;
+  }
+  .partner-lookup {
+    padding-inline: 4px;
+  }
+}
+@media (max-width: 600px) {
+  .signin-notice {
+    font-size: 0.7rem;
+    padding: 6px 10px;
+  }
+}

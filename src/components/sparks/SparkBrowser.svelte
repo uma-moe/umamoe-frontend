@@ -2,7 +2,7 @@
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
   import { factorImage, factorOptions, type FactorMetadata } from '@/lib/catalog/factor-catalog';
   import type { CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
-  import WhiteFactorTypePicker from '@/pages/database/filters/WhiteFactorTypePicker.svelte';
+  import WhiteFactorTypePicker from '@/pages/database/filters/factors/WhiteFactorTypePicker.svelte';
   import Button from '../controls/Button.svelte';
   import Icon from '../Icon.svelte';
   import TextField from '../controls/TextField.svelte';

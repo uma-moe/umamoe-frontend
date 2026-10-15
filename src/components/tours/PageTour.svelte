@@ -3,11 +3,8 @@
   import { isElementVisible } from '@/lib/element-visibility';
   import { router } from '@/routes/router';
   import Dialog from '@/components/overlays/Dialog.svelte';
-  import Button from '@/components/controls/Button.svelte';
-  import Icon from '@/components/Icon.svelte';
   import GuidedTourCallout from '@/components/overlays/GuidedTourCallout.svelte';
   import {
-    introCopy,
     pageStepIds,
     pageTourForUrl,
     tourSteps,
@@ -21,6 +18,8 @@
     tourStepId,
     interactiveTourSteps
   } from './tour-state';
+  import { calloutPosition, tourHole } from './tour-position';
+  import PageTourIntro from './PageTourIntro.svelte';
 
   let { startRequest = 0 }: { startRequest?: number } = $props();
 
@@ -89,32 +88,20 @@
 
   function position(): void {
     if (!shown || !anchor?.isConnected || !callout || !step) return;
-    const rect = anchor.getBoundingClientRect();
-    const left = Math.max(0, Math.min(innerWidth, rect.left - 8)),
-      top = Math.max(0, Math.min(innerHeight, rect.top - 8));
-    const right = Math.min(innerWidth, rect.right + 8),
-      bottom = Math.min(innerHeight, rect.bottom + 8);
-    layer.style.setProperty('--hole-left', left + 'px');
-    layer.style.setProperty('--hole-top', top + 'px');
-    layer.style.setProperty('--hole-right', Math.max(left, right) + 'px');
-    layer.style.setProperty('--hole-bottom', Math.max(top, bottom) + 'px');
-    const { width, height } = callout.getBoundingClientRect();
-    const center = step.stepId === 'timeline-page' || step.stepId === 'timeline-track';
-    const x = center
-      ? (innerWidth - width) / 2
-      : step.placement.xPosition === 'before'
-        ? right - width
-        : left;
-    let y = center
-      ? (innerHeight - height) / 2
-      : step.placement.yPosition === 'above'
-        ? top - height - 12
-        : bottom + 12;
-    if (!center && y + height > innerHeight - 8) y = top - height - 12;
-    if (!center && y < 8)
-      y = bottom + height + 12 <= innerHeight ? bottom + 12 : innerHeight - height - 8;
-    callout.style.left = Math.max(8, Math.min(innerWidth - width - 8, x)) + 'px';
-    callout.style.top = Math.max(8, Math.min(innerHeight - height - 8, y)) + 'px';
+    const hole = tourHole(anchor.getBoundingClientRect(), innerWidth, innerHeight);
+    layer.style.setProperty('--hole-left', hole.left + 'px');
+    layer.style.setProperty('--hole-top', hole.top + 'px');
+    layer.style.setProperty('--hole-right', Math.max(hole.left, hole.right) + 'px');
+    layer.style.setProperty('--hole-bottom', Math.max(hole.top, hole.bottom) + 'px');
+    const placed = calloutPosition(
+      hole,
+      callout.getBoundingClientRect(),
+      step,
+      innerWidth,
+      innerHeight
+    );
+    callout.style.left = placed.left + 'px';
+    callout.style.top = placed.top + 'px';
   }
 
   function schedulePosition(): void {
@@ -341,49 +328,15 @@
   {/if}
 </div>
 {#if intro}
-  <div class="tour-introduction">
-    <Dialog
-      title={introCopy[intro].title}
-      icon="compass"
-      open
-      maxWidth="390px"
-      mobileInset="32px"
-      onclose={closeIntro}
-    >
-      {#snippet eyebrow()}
-        <span class="eyebrow">Optional guided tour</span>
-      {/snippet}
-      <p class="intro-copy">{introCopy[intro].content}</p>
-      {#snippet actions()}
-        <div class="intro-actions">
-          <Button
-            variant="ghost"
-            onclick={closeIntro}
-          >
-            Skip
-          </Button>
-          <span>Available later from the ? button.</span>
-          <Button
-            onclick={() => {
-              const page = intro;
-              closeIntro();
-              if (page === pageTourForUrl(location.href)) void start();
-            }}
-          >
-            <span class="start-label">
-              Start
-              <span class="next">
-                <Icon
-                  name="chevron"
-                  size={18}
-                />
-              </span>
-            </span>
-          </Button>
-        </div>
-      {/snippet}
-    </Dialog>
-  </div>
+  <PageTourIntro
+    {intro}
+    onclose={closeIntro}
+    onstart={() => {
+      const page = intro;
+      closeIntro();
+      if (page === pageTourForUrl(location.href)) void start();
+    }}
+  />
 {/if}
 {#if problem}
   <Dialog
@@ -452,112 +405,9 @@
     width: min(410px, calc(100vw - 24px));
     pointer-events: auto;
   }
-  .eyebrow {
-    color: var(--text-muted);
-    font-size: 0.72rem;
-    font-weight: 700;
-    line-height: 1.2;
-    text-transform: uppercase;
-  }
-  .intro-copy {
-    margin: 0;
-    color: var(--text-primary);
-    font-size: 0.94rem;
-    line-height: 1.55;
-  }
-  .intro-actions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-  }
-  .intro-actions > span {
-    color: var(--text-muted);
-    font-size: 0.78rem;
-    line-height: 1.35;
-    text-align: center;
-  }
-  .start-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .next {
-    transform: rotate(-90deg);
-  }
-  .tour-introduction :global(.dialog-panel) {
-    gap: 16px;
-    padding: 18px;
-    font-family: var(--font-sans);
-    border-color: var(--border-primary);
-    border-radius: var(--radius-md);
-    background: var(--surface-overlay);
-    box-shadow: var(--shadow-dropdown);
-  }
-  .tour-introduction :global(.dialog-panel > header) {
-    min-height: 0;
-    gap: 12px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-  }
-  .tour-introduction :global(.dialog-panel .heading) {
-    gap: 3px;
-  }
-  .tour-introduction :global(.dialog-panel .header-icon) {
-    flex-basis: 34px;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: rgb(var(--accent-primary-rgb) / 0.1);
-  }
-  .tour-introduction :global(.dialog-panel h2) {
-    font-size: 1.08rem;
-    line-height: 1.25;
-    font-weight: 700;
-  }
-  .tour-introduction :global(.dialog-panel .content) {
-    flex: 0 1 auto;
-    padding: 0;
-    background: transparent;
-  }
-  .tour-introduction :global(.dialog-panel footer) {
-    min-height: 0;
-    padding: 14px 0 0;
-    border-color: var(--border-primary);
-    border-radius: 0;
-    background: transparent;
-  }
-  .tour-introduction :global(.dialog-panel footer .ui-button) {
-    font-size: 14px;
-    border-radius: var(--radius-sm);
-  }
-  .tour-introduction :global(.dialog-panel footer .ui-button--ghost) {
-    color: var(--text-primary);
-  }
   @media (max-width: 600px) {
     .callout {
       width: calc(100vw - 16px);
-    }
-  }
-  @media (max-width: 520px) {
-    .tour-introduction :global(.dialog-panel) {
-      padding: 16px;
-    }
-    .intro-actions {
-      grid-template-columns: 1fr auto;
-    }
-    .intro-actions > span {
-      grid-column: 1/-1;
-      grid-row: 1;
-      text-align: left;
-    }
-    .intro-actions :global(.ui-button:first-child) {
-      justify-self: start;
-    }
-    .intro-actions :global(.ui-button:last-child) {
-      justify-self: end;
     }
   }
 </style>

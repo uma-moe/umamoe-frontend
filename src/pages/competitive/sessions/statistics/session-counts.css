@@ -1,0 +1,25 @@
+.session-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin: 0;
+  font-size: 12px;
+}
+.session-counts > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.session-counts dt {
+  color: var(--text-secondary);
+}
+.session-counts dd {
+  margin: 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 760px) {
+  .session-counts {
+    gap: 6px 20px;
+  }
+}

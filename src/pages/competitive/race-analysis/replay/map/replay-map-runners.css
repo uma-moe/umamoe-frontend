@@ -1,0 +1,147 @@
+.position-overlay {
+  pointer-events: none;
+}
+.crowded :is(.runner-telemetry, .blocked-caption, .blocker-caption) {
+  visibility: hidden;
+}
+.crowded.selected :is(.runner-telemetry, .blocked-caption, .blocker-caption),
+.crowded:hover :is(.runner-telemetry, .blocked-caption, .blocker-caption),
+.crowded:focus-visible :is(.runner-telemetry, .blocked-caption, .blocker-caption) {
+  visibility: visible;
+}
+.leading .runner-portrait {
+  outline-color: var(--accent-warning);
+}
+.leading .runner-portrait b {
+  background: var(--accent-warning);
+}
+.leading .runner-location {
+  stroke: var(--accent-warning);
+  stroke-width: 2;
+}
+.leading .runner-leader {
+  stroke: var(--accent-warning);
+}
+.runner-telemetry {
+  fill: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--surface-1);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.overlay-unit {
+  font-size: 9px;
+  font-weight: 400;
+  fill: var(--text-secondary);
+}
+.map-runner {
+  cursor: pointer;
+  outline: none;
+}
+.runner-leader {
+  fill: color-mix(in srgb, var(--runner-color) 24%, var(--surface-1));
+  stroke: var(--runner-color);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.runner-hit {
+  fill: transparent;
+}
+.runner-location {
+  fill: var(--runner-color);
+  stroke: var(--surface-1);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+.selection-ring {
+  fill: none;
+  stroke: var(--text-primary);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+.runner-name {
+  display: none;
+  fill: var(--text-primary);
+  font-size: 10px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--surface-1);
+  stroke-width: 4px;
+  pointer-events: none;
+}
+.map-runner.selected .runner-name,
+.map-runner:hover .runner-name,
+.map-runner:focus-visible .runner-name {
+  display: block;
+}
+.blocked-runner .runner-portrait {
+  outline: 2px solid var(--accent-error);
+}
+.blocked-runner .runner-leader {
+  stroke: var(--accent-error);
+  opacity: 0.85;
+}
+.runner-portrait {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: calc(var(--portrait-size) - 4px);
+  height: calc(var(--portrait-size) - 4px);
+  margin: 2px;
+  border-radius: 50%;
+  background: var(--surface-1);
+  outline: 1px solid var(--runner-color);
+}
+.runner-portrait :global(.art) {
+  width: 100%;
+  height: 100%;
+}
+.runner-portrait b {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  background: var(--runner-color);
+  color: #10151e;
+  font-size: 10px;
+  line-height: 13px;
+  font-weight: 700;
+  min-width: 12px;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 0 3px;
+  border-radius: 3px;
+}
+.map-runner.selected .runner-leader,
+.map-runner:hover .runner-leader,
+.map-runner:focus-visible .runner-leader {
+  stroke: var(--text-primary);
+  stroke-width: 1.5;
+  opacity: 1;
+}
+.map-runner.selected .runner-portrait,
+.map-runner:hover .runner-portrait,
+.map-runner:focus-visible .runner-portrait {
+  outline: 2px solid var(--text-primary);
+}
+.dim {
+  opacity: 0.25;
+}
+.triggered .runner-portrait {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-warning) 45%, transparent);
+}
+.map-runner.blocker .runner-portrait {
+  outline: 2px solid var(--accent-error);
+}
+.blocker-caption,
+.blocked-caption {
+  fill: var(--accent-error);
+  font-size: 8px;
+  paint-order: stroke;
+  stroke: var(--surface-1);
+  stroke-width: 3px;
+  pointer-events: none;
+}

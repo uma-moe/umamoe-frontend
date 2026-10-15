@@ -1,0 +1,33 @@
+.loading {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.stat-overview {
+  max-width: 100%;
+  margin: 12px 0;
+}
+.stat-overview :global(.stats > div) {
+  min-height: 48px;
+}
+.stat-overview :global(dd) {
+  font-size: 18px;
+}
+.stat-overview :global(dt) {
+  font-size: 10px;
+}
+@media (max-width: 600px) {
+  .stat-overview :global(.stats > div) {
+    min-height: 48px;
+  }
+  .stat-overview :global(dd) {
+    font-size: 17px;
+  }
+  .stat-overview :global(dt) {
+    font-size: 8px;
+  }
+}

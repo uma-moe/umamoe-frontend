@@ -1,0 +1,87 @@
+.flags {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.flags span {
+  padding: 4px 7px;
+  border-radius: 10px;
+  background: var(--color-warning-soft);
+  color: var(--accent-warning);
+  font-size: 10px;
+}
+.flags .muted {
+  background: var(--surface-3);
+  color: var(--text-secondary);
+}
+.evidence-groups {
+  display: grid;
+  gap: 7px;
+}
+.evidence-groups > article {
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.evidence-groups > article > button {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 0;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+.evidence-groups button > span {
+  display: grid;
+  gap: 2px;
+}
+.evidence-groups button > span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+.evidence-groups button small {
+  color: var(--text-secondary);
+}
+.evidence-groups .expanded button :global(svg) {
+  transform: rotate(180deg);
+}
+.evidence-groups article > div {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+}
+.evidence-groups section {
+  padding: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
+.evidence-groups section header {
+  display: flex;
+  justify-content: space-between;
+}
+.evidence-groups section h4 {
+  margin: 0;
+}
+.evidence-groups section > span,
+.evidence-groups section > small {
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+.evidence-groups section p {
+  margin: 6px 0;
+}
+@media (max-width: 680px) {
+  .flags {
+    justify-content: flex-start;
+  }
+}

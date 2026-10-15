@@ -1,0 +1,17 @@
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.section-heading {
+  --inspect-popover-width: 760px;
+  margin-bottom: 2px;
+  min-height: 22px;
+}
+@media (max-width: 700px) {
+  .section-heading {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+}

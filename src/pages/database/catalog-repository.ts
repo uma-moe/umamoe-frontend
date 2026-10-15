@@ -55,3 +55,13 @@ export function loadCatalog(kind: CatalogKind): Promise<CatalogEntry[]> {
   void request.catch(() => cache.delete(kind));
   return request;
 }
+
+export function catalogCharacter(characters: CatalogEntry[], id: number): CatalogEntry | undefined {
+  const exact = characters.find((entry) => Number(entry.id) === id);
+  if (exact) return exact;
+  return characters.find(
+    (entry) =>
+      Math.floor(Number(entry.id) / 100) === id ||
+      Math.floor(Number(entry.id) / 100) === Math.floor(id / 100)
+  );
+}

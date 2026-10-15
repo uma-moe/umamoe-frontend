@@ -1,0 +1,119 @@
+.track {
+  min-width: 0;
+  padding-right: 16px;
+  border-right: 1px solid var(--border-subtle);
+}
+.view-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+}
+h3 {
+  font-size: 11px;
+  margin: 0;
+}
+.track-map {
+  display: block;
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--runner-color) 3%, var(--surface-1));
+  border-radius: 5px;
+}
+polyline {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.track-base {
+  stroke: var(--surface-3);
+  stroke-width: 17;
+}
+.track-section {
+  stroke-width: 13;
+  opacity: 0.4;
+}
+.track-rail {
+  stroke: var(--text-secondary);
+  stroke-dasharray: 2 4;
+  stroke-width: 1;
+  opacity: 0.5;
+}
+.ribbon {
+  stroke: var(--runner-color);
+}
+.ribbon.outer {
+  stroke-width: 22;
+  opacity: 0.25;
+}
+.ribbon.inner {
+  stroke-width: 13;
+  opacity: 0.75;
+}
+.mean-dot {
+  fill: var(--text-primary);
+  stroke: var(--surface-1);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.portrait-ring {
+  fill: var(--surface-1);
+  stroke: var(--runner-color);
+  stroke-width: 2;
+}
+.mean-link {
+  stroke: var(--text-primary);
+  opacity: 0.7;
+}
+.start {
+  fill: var(--accent-success);
+}
+.finish {
+  stroke: var(--text-primary);
+  stroke-width: 3;
+  stroke-dasharray: 3 2;
+}
+.boundary {
+  font-size: 10px;
+  fill: var(--text-secondary);
+}
+.map-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 9px;
+  color: var(--text-secondary);
+  padding-top: 5px;
+}
+.map-status {
+  height: 220px;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin: 0;
+}
+@container race-main (max-width:780px) {
+  .track {
+    padding-right: 0;
+    border: 0;
+  }
+  .track-map {
+    height: 190px;
+  }
+}
+@media (max-width: 600px) {
+  .track {
+    padding-right: 0;
+    border: 0;
+  }
+  .track-map {
+    height: 190px;
+  }
+  .map-caption {
+    font-size: 8px;
+  }
+}

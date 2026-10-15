@@ -1,0 +1,108 @@
+.timeline-track {
+  position: relative;
+  min-width: 100%;
+  height: 100%;
+  padding-bottom: 18px;
+}
+.month-span {
+  position: absolute;
+  inset-block: 0;
+  pointer-events: none;
+  border-left: 1px solid rgb(var(--accent-primary-rgb) / 0.15);
+  background: transparent;
+}
+.month-span:nth-child(even) {
+  background: rgb(var(--accent-primary-rgb) / 0.025);
+}
+.timeline-rail {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-secondary);
+}
+.date-lane {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 16px;
+  isolation: isolate;
+}
+.lane-header {
+  height: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px 16px;
+}
+.lane-header::before {
+  position: absolute;
+  content: '';
+  top: 54px;
+  left: 50%;
+  height: 18px;
+  width: 1px;
+  background: var(--border-secondary);
+}
+.lane-header::after {
+  position: absolute;
+  content: '';
+  top: 49px;
+  left: calc(50% - 3px);
+  width: 7px;
+  height: 7px;
+  border: 2px solid var(--accent-primary);
+  border-radius: 50%;
+  background: var(--color-canvas);
+}
+.lane-header time {
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.lane-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 14px;
+}
+.lane-gap {
+  font-size: 10px;
+}
+.lane-meta span + span::before {
+  content: '·';
+  margin-right: 8px;
+}
+.lane-events {
+  display: grid;
+  gap: 10px;
+  order: 2;
+}
+:global(.horizontal) .timeline-today-marker {
+  position: absolute;
+  top: 52px;
+  bottom: 0;
+  width: 1px;
+  pointer-events: none;
+  background: var(--timeline-today-color, var(--accent-error));
+}
+:global(.horizontal) .timeline-today-marker > span {
+  position: absolute;
+  top: -10px;
+  left: 8px;
+  padding: 2px 5px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: var(--surface-overlay);
+  color: var(--timeline-today-color, var(--accent-error));
+  font-size: 9px;
+  font-weight: 700;
+}

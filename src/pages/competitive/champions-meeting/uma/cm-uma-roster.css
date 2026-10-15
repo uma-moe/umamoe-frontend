@@ -1,0 +1,172 @@
+.row-head button {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+  cursor: pointer;
+  padding: 6px 0;
+  white-space: nowrap;
+}
+.row-head button:first-child {
+  text-align: left;
+}
+.row-head button:hover {
+  color: var(--accent-primary);
+}
+.roster {
+  min-width: 0;
+  position: relative;
+  min-height: 350px;
+}
+.roster > :global(.chart-frame) {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  min-height: 0;
+}
+.roster :global(.plot) {
+  min-height: 0;
+  overflow: visible;
+}
+.row-head {
+  display: grid;
+  grid-template-columns: 1fr 45px 45px;
+  gap: 8px;
+  font-size: 9px;
+  color: var(--text-secondary);
+  padding: 4px 0 8px;
+  text-align: right;
+}
+.breakdown-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-secondary) transparent;
+  overscroll-behavior: contain;
+}
+.breakdown-scroll::-webkit-scrollbar {
+  width: 7px;
+}
+.breakdown-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 5px;
+  min-height: 28px;
+}
+.uma-row {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--color-text);
+  padding: 8px 2px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+}
+.uma-row.active,
+.uma-row:hover {
+  background: var(--cm-tint);
+}
+.uma-row.active .name {
+  color: var(--accent-primary);
+}
+.uma-row :global(.art) {
+  width: 34px;
+  height: 42px;
+  border: 0;
+  background: transparent;
+}
+.name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 550;
+}
+.name small {
+  display: block;
+  font-weight: 400;
+  font-size: 9px;
+  margin-top: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.usage-track {
+  display: block;
+  width: 100%;
+  height: 3px;
+  background: var(--surface-2);
+  margin-top: 5px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.usage-track > i {
+  display: block;
+  height: 100%;
+}
+.name .player-count {
+  font-size: 9px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+.uma-row strong {
+  width: 38px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+.owners {
+  width: 38px;
+  text-align: right;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+@media (max-width: 1300px) {
+  .uma-row :global(.art) {
+    width: 28px;
+    height: 36px;
+  }
+  .uma-row {
+    gap: 6px;
+  }
+}
+@media (max-width: 900px) {
+  .roster {
+    position: static;
+    min-height: 0;
+    padding: 0;
+  }
+  .roster > :global(.chart-frame) {
+    position: static;
+    height: auto;
+  }
+  .breakdown-scroll {
+    flex: none;
+    max-height: min(480px, 65dvh);
+  }
+  .uma-row :global(.art) {
+    width: 36px;
+    height: 44px;
+  }
+  .uma-row {
+    font-size: 12px;
+    gap: 12px;
+  }
+  .uma-row strong,
+  .owners {
+    width: 55px;
+  }
+  .row-head {
+    grid-template-columns: 1fr 55px 55px;
+    gap: 12px;
+  }
+}

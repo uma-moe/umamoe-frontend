@@ -11,7 +11,7 @@
     InheritanceFilterMode,
     InheritanceSearchFilters
   } from '@/lib/inheritance/inheritance-search';
-  import FactorFilterEditor from './FactorFilterEditor.svelte';
+  import FactorFilterEditor from './factors/FactorFilterEditor.svelte';
   import DatabaseFilterGroup from './DatabaseFilterGroup.svelte';
   import DatabaseWhiteCategoryFilter, {
     type WhiteCategoryValues
