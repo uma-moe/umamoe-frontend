@@ -432,13 +432,13 @@ test('Build search prices the skills on offer by hint and answers with the skill
   const evaluation=(time:number)=>({fitness:estimate(-time),scenarios:[{name:'x',fitness:estimate(-time),win_rate:estimate(1),team_win_rate:estimate(0),finish_time_seconds:estimate(time),skill_activations:estimate(2)}]});
   const finalist=(purchases:number[],cost:number,gain:number,contributions:{purchases:number[];gain:ReturnType<typeof estimate>}[]=[])=>({build:{purchases,stats:[]},sp_cost:cost,search:evaluation(150-gain),validation:evaluation(150-gain),gain:estimate(gain,0.02),validation_gain:estimate(gain,0.03),contributions});
   type Sent={sp_budget:number;mode:string;purchases:{name:string;cost:number;requires?:number[];replaces?:number[]}[];scenarios:{input:{course_id:number;setup:{race_type:number};runners:unknown[]}}[]};
-  let sent:Sent|undefined,nothing=false,old=false,field=false;
+  let sent:Sent|undefined,nothing=false,old=false,field=false,inert=false;
   await page.route('**/api/sim/optimize',route=>{
     sent=route.request().postDataJSON();
     if(old)return route.fulfill({json:{schema_version:3,mode:'cm',runs_per_variation_per_scenario:10,validation_runs_per_finalist_per_scenario:10,report:{schema_version:1,backend:'cpu',candidates_evaluated:100,fully_evaluated_candidates:3,simulations:1030,exhaustive:false,search_seeds:[1],validation_seeds:[2],finalists:[{build:{purchases:[0],stats:[]},sp_cost:102,search:{fitness:estimate(0.5),scenarios:[]},validation:null}]}}});
-    const finalists=nothing?[finalist([],0,0)]:[finalist([0,1],272,0.42,[{purchases:[0],gain:estimate(0.21)},{purchases:[1],gain:estimate(0.12)}]),finalist([0],102,0.3)];
-    const impacts=field?[{purchase:0,alone:estimate(0.3),together:estimate(0.28),evidence:{mean:0.34,error:0.18}},{purchase:1,alone:estimate(0.14),together:estimate(0.12),evidence:{mean:0.05,error:0.05}}]:nothing?[{purchase:0,alone:estimate(-0.2,0.01),together:estimate(-0.21,0.01)},{purchase:1,alone:estimate(-0.1,0.01),together:estimate(-0.09,0.01)}]:[{purchase:0,alone:estimate(0.3),together:estimate(0.28)},{purchase:1,alone:estimate(0.14),together:estimate(0.12)}];
-    return route.fulfill({json:{schema_version:field?6:5,mode:'cm',...(field?{objective:'field_place',fields:{course_id:10506,fields:32,held_out_races:34834,winner_accuracy:0.375,winner_accuracy_without_skills:0.331}}:{}),runs_per_variation_per_scenario:256,validation_runs_per_finalist_per_scenario:64,report:{schema_version:5,backend:'cpu',candidates_evaluated:9,fully_evaluated_candidates:3,simulations:2304,exhaustive:false,search_seeds:[1,2],validation_seeds:Array.from({length:64},(_,i)=>1000+i),finalists,baseline:evaluation(150),impacts,screen:{builds:9,combinations:3,full:estimate(0.42),full_cost:272}}}});
+    const finalists=inert?[finalist([0],102,0.3,[{purchases:[0],gain:estimate(0.3)}])]:nothing?[finalist([],0,0)]:[finalist([0,1],272,0.42,[{purchases:[0],gain:estimate(0.21)},{purchases:[1],gain:estimate(0.12)}]),finalist([0],102,0.3)];
+    const impacts=inert?[{purchase:0,alone:estimate(0.3),together:estimate(0.3)}]:field?[{purchase:0,alone:estimate(0.3),together:estimate(0.28),evidence:{mean:0.34,error:0.18}},{purchase:1,alone:{...estimate(0.14),samples:1},together:estimate(0.12),evidence:{mean:0.05,error:0.05}}]:nothing?[{purchase:0,alone:estimate(-0.2,0.01),together:estimate(-0.21,0.01)},{purchase:1,alone:estimate(-0.1,0.01),together:estimate(-0.09,0.01)}]:[{purchase:0,alone:estimate(0.3),together:estimate(0.28)},{purchase:1,alone:estimate(0.14),together:estimate(0.12)}];
+    return route.fulfill({json:{schema_version:inert?7:field?6:5,mode:'cm',...(inert?{inert:[{purchase:1,why:['distance']}]}:{}),...(field?{objective:'field_place',fields:{course_id:10506,fields:32,held_out_races:34834,winner_accuracy:0.375,winner_accuracy_without_skills:0.331}}:{}),runs_per_variation_per_scenario:256,validation_runs_per_finalist_per_scenario:64,report:{schema_version:5,backend:'cpu',candidates_evaluated:9,fully_evaluated_candidates:3,simulations:2304,exhaustive:false,search_seeds:[1,2],validation_seeds:Array.from({length:64},(_,i)=>1000+i),finalists,baseline:evaluation(150),impacts,screen:{builds:9,combinations:3,full:estimate(0.42),full_cost:272}}}});
   });
   await page.goto('/simulator/build');
   // She races with the simulator's own fixed pack: there is no one to pick to race against.
@@ -474,7 +474,7 @@ test('Build search prices the skills on offer by hint and answers with the skill
   expect(sent?.sp_budget).toBe(1200);expect(sent?.mode).toBe('cm');expect((sent as unknown as {hp_changes:unknown}).hp_changes).toEqual([{count:2,hp_percent:-3,from:1/6,to:2/3}]);
   // Only her in the race, on a CM race type.
   expect(sent!.scenarios).toHaveLength(1);expect(sent!.scenarios[0]!.input.runners).toHaveLength(1);expect(sent!.scenarios[0]!.input.setup.race_type).toBe(0);
-  expect(sent?.purchases).toEqual([expect.objectContaining({name:'Corner Recovery ○',cost:102}),expect.objectContaining({name:'Swinging Maestro',requires:[0],replaces:[0]})]);
+  expect(sent?.purchases).toEqual([expect.objectContaining({name:'Corner Recovery ○',cost:102}),expect.objectContaining({name:'Swinging Maestro',requires:[0],replaces:[200352]})]);
   // When every skill she can afford surely makes her slower, she keeps the SP.
   nothing=true;await page.locator('#build-seed').fill('7');await find.click();
   await expect(result.getByRole('status')).toContainText('Buying nothing scores best');await expect(result).toContainText('Every skill she can afford makes her slower');
@@ -489,8 +489,19 @@ test('Build search prices the skills on offer by hint and answers with the skill
   old=false;nothing=false;field=true;await page.locator('#build-seed').fill('10');await find.click();
   await expect(result).toContainText('Beats 0.42 more of the 8 runners a race ± 0.03');await expect(result).toContainText('She raced 32 real CM fields from this CM');
   await expect(result.getByRole('region',{name:'Every skill on offer'}).getByRole('row').nth(1)).toContainText(/Corner Recovery.*\+0\.30.*\+0\.28.*\+0\.34/);
+  // A value raced only until more races could not change the pick is greyed, and says how sure it is.
+  await expect(result.getByRole('region',{name:'Every skill on offer'})).toContainText('Grey values stopped racing early, once more races could not change the pick.');
+  await expect(result.getByRole('region',{name:'Every skill on offer'}).getByRole('row').nth(2).getByRole('cell').nth(1)).toHaveAttribute('title','± 0.01 over 1 race');
   await expect(page.locator('.search-bar .summary')).toContainText('Beats 0.42 more runners a race');
+  // An older simulator cannot rule out skills that never fire for her, and the result says so.
+  await expect(result).toContainText('The simulator answering is an older build that can buy skills which never fire for her here');
   field=false;
+  // A skill that can never fire for her here (another distance, style, track or day) is left out, and says why.
+  inert=true;await page.locator('#build-seed').fill('11');await find.click();
+  await expect(result).toContainText('Left out because they can never fire for her here: Swinging Maestro needs another distance.');
+  await expect(result).not.toContainText('older build that can buy skills');
+  await expect(result.getByRole('region',{name:'Every skill on offer'}).getByRole('row').last()).toContainText(/Swinging Maestro\s*Never fires here: needs another distance/);
+  inert=false;
   // A change marks the result as out of date; the setup is kept in this browser.
   old=false;nothing=false;await find.click();await expect(result.getByRole('status')).toContainText('Buy 1 skill');
   await page.getByRole('checkbox',{name:/Fast Learner/}).check();await expect(result).toContainText('Setup changed since this search');

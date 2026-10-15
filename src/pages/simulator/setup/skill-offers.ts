@@ -3,7 +3,7 @@ import type { OptimizePurchaseInput } from '../requests/optimize-request';
 
 /**
  * Skills on offer at the end of a career, priced the way the game prices them: the base cost less the hint discount,
- * with gold and ◎ skills tied to the white or ○ skill they upgrade. These become the optimizer's purchases.
+ * with gold and ◎ skills tied to the skill they upgrade. These become the optimizer's purchases.
  */
 
 /** A skill she can buy, with the hint level she has for it (0 for none). */
@@ -37,19 +37,48 @@ export function baseCost(skill: SkillCatalogEntry): number | undefined {
 }
 
 /**
- * The white or ○ skill a gold or ◎ skill upgrades: the catalog pairs them by id, the upgrade ending in 1 and the
- * skill it upgrades in 2.
+ * A skill's rank in its group, from the catalog: a gold above a ◎ above a ○ or plain white; a × is below them all, as
+ * is a plain white beside a ○ or ◎ (Wallflower) or beside a plain white of a lower ID (Gatekept beside Focus).
+ * Undefined for uniques. The game's groups are the skill ID without its last digit.
+ */
+function groupRank(skill: SkillCatalogEntry, group: SkillCatalogEntry[]): number | undefined {
+  if (skill.rarity === 2) return 3;
+  if (skill.rarity !== 1) return undefined;
+  const name = skill.name.trimEnd();
+  if (name.endsWith('◎')) return 2;
+  if (name.endsWith('○')) return 1;
+  if (name.endsWith('×')) return -1;
+  const whites = group.filter((other) => other !== skill && other.rarity === 1);
+  if (whites.some((other) => /[○◎]$/.test(other.name.trimEnd()))) return -1;
+  if (
+    whites.some((other) => other.skill_id < skill.skill_id && !/[○◎×]$/.test(other.name.trimEnd()))
+  )
+    return -1;
+  return 1;
+}
+
+/**
+ * The skill a gold or ◎ skill is learned on: the next rank down of its group that is not a × (Swinging Maestro on
+ * Corner Recovery ○, See Ya Later! on Playtime's Over!, Blast Forward on Long Straightaways ◎), whichever ID it has.
  */
 export function upgradedSkill(
   skill: SkillCatalogEntry,
   catalog: Map<number, SkillCatalogEntry>
 ): SkillCatalogEntry | undefined {
-  if (skill.skill_id % 10 !== 1) return undefined;
-  const lower = catalog.get(skill.skill_id + 1);
-  if (!lower) return undefined;
-  const gold = skill.rarity === 2 && lower.rarity === 1;
-  const double = /◎\s*$/.test(skill.name) && /○\s*$/.test(lower.name);
-  return gold || double ? lower : undefined;
+  const first = Math.floor(skill.skill_id / 10) * 10;
+  const group = Array.from({ length: 10 }, (_, digit) => catalog.get(first + digit)).filter(
+    (other): other is SkillCatalogEntry => !!other
+  );
+  const rank = groupRank(skill, group);
+  if (rank === undefined) return undefined;
+  let lower: SkillCatalogEntry | undefined,
+    lowerRank = 0;
+  for (const other of group) {
+    const otherRank = other === skill ? undefined : groupRank(other, group);
+    if (otherRank === undefined || otherRank <= 0 || otherRank >= rank) continue;
+    if (otherRank > lowerRank) [lower, lowerRank] = [other, otherRank];
+  }
+  return lower;
 }
 
 /** One offer, priced, with what it needs. */
@@ -63,12 +92,18 @@ export interface PricedOffer extends SkillOffer {
   upgrades?: SkillCatalogEntry;
   /** How the skill it upgrades is covered. */
   needs?: 'owned' | 'offered' | 'bundled';
+  /** The ranks below it she neither owns nor has on offer, bought with it: Blast Forward without either straightaway. */
+  bundled?: SkillCatalogEntry[];
+  /** The skill down its group it builds on and replaces: one she owns, or one on offer it needs bought first. */
+  buildsOn?: { skill: SkillCatalogEntry; owned: boolean };
 }
 
 /**
- * Prices the offers and turns them into the optimizer's purchases. An upgrade needs the skill it upgrades: when she
- * owns it, the upgrade costs only its own price; when it is on offer, the upgrade requires and replaces that purchase;
- * otherwise the upgrade is bought together with it, at both prices. Offers without a known cost are left out.
+ * Prices the offers and turns them into the optimizer's purchases. An upgrade needs the skill it upgrades and, as in
+ * the game, replaces it: when she owns it, the upgrade costs only its own price and removes the owned skill; when it
+ * is on offer, the upgrade requires that purchase and removes its skill; otherwise the upgrade is bought together with
+ * it, at both prices, and so on down its group (a gold above a ◎ with the ◎ and the ○). `replaces` lists skill IDs.
+ * Offers without a known cost are left out.
  */
 export function offerPurchases(
   offers: SkillOffer[],
@@ -94,21 +129,27 @@ export function offerPurchases(
     const lower = upgradedSkill(offer.skill, catalog);
     if (!lower) continue;
     offer.upgrades = lower;
-    if (owned.includes(lower.skill_id)) offer.needs = 'owned';
-    else if (index.has(lower.skill_id)) offer.needs = 'offered';
-    else {
-      offer.needs = 'bundled';
-      const lowerBase = baseCost(lower);
-      offer.cost += lowerBase == null ? 0 : offerCost(lowerBase, 0, fastLearner);
+    // Down the group until a skill she owns or one on offer: every rank in between is bought with the upgrade.
+    let tier: SkillCatalogEntry | undefined = lower;
+    while (tier && !owned.includes(tier.skill_id) && !index.has(tier.skill_id)) {
+      (offer.bundled ??= []).push(tier);
+      const tierBase = baseCost(tier);
+      offer.cost += tierBase == null ? 0 : offerCost(tierBase, 0, fastLearner);
+      tier = upgradedSkill(tier, catalog);
     }
+    if (tier) offer.buildsOn = { skill: tier, owned: owned.includes(tier.skill_id) };
+    offer.needs = offer.bundled ? 'bundled' : offer.buildsOn!.owned ? 'owned' : 'offered';
   }
   const purchases = priced.map((offer): OptimizePurchaseInput => {
-    const lower = offer.needs === 'offered' ? index.get(offer.upgrades!.skill_id) : undefined;
+    const on = offer.buildsOn;
+    const lower = on && !on.owned ? index.get(on.skill.skill_id) : undefined;
+    const replaced = on?.skill.skill_id;
     return {
       name: offer.skill.name,
       cost: offer.cost,
       skills: [offer.skillId],
-      ...(lower !== undefined ? { requires: [lower], replaces: [lower] } : {})
+      ...(lower !== undefined ? { requires: [lower] } : {}),
+      ...(replaced !== undefined ? { replaces: [replaced] } : {})
     };
   });
   return { priced, missing, purchases };

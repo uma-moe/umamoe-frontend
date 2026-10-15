@@ -214,6 +214,14 @@ export interface OptimizeFields {
 }
 
 /** `/api/sim/optimize` result. */
+/** A skill on offer that can never fire for her here, and what rules it out. */
+export interface OptimizeInert {
+  /** Index into the request's purchases. */
+  purchase: number;
+  /** track, distance, ground, going, season, weather, direction, race grade, running style, slope or corners. */
+  why: string[];
+}
+
 export interface OptimizeResult {
   schema_version: number;
   mode: string;
@@ -223,6 +231,8 @@ export interface OptimizeResult {
    */
   objective?: 'finish_time' | 'field_place';
   fields?: OptimizeFields;
+  /** Skills on offer that can never fire for her in these races, left out of the search. */
+  inert?: Array<OptimizeInert>;
   runs_per_variation_per_scenario: number;
   validation_runs_per_finalist_per_scenario: number;
   report: OptimizeReport;

@@ -72,10 +72,12 @@
     skill.rarity >= 3 ? 'unique' : skill.rarity === 2 ? 'gold' : 'white';
   /** What an upgrade builds on, in words. */
   function needs(offer: PricedOffer) {
-    if (!offer.upgrades) return '';
-    if (offer.needs === 'owned') return 'upgrades her ' + offer.upgrades.name;
-    if (offer.needs === 'offered') return 'needs ' + offer.upgrades.name + ' first';
-    return 'includes ' + offer.upgrades.name;
+    const parts = [];
+    if (offer.bundled)
+      parts.push('includes ' + offer.bundled.map((skill) => skill.name).join(' and '));
+    if (offer.buildsOn?.owned) parts.push('upgrades her ' + offer.buildsOn.skill.name);
+    else if (offer.buildsOn) parts.push('needs ' + offer.buildsOn.skill.name + ' first');
+    return parts.join(', ');
   }
 </script>
 
