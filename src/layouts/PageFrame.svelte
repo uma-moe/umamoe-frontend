@@ -46,11 +46,14 @@
     let active = true;
     // Lazy pages can write their head tags after the router has finished loading.
     void tick()
-      .then(() => import('@/services/seo'))
+      .then(() => import('@/services/site/seo'))
       .then((module) => {
         if (active) module.applyRouteMetadata(path);
       })
-      .catch(() => {});
+      .catch((error: unknown) => {
+        if (active) console.warn('Page metadata could not be updated.', error);
+      });
+
     return () => {
       active = false;
     };

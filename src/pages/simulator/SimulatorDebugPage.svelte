@@ -20,16 +20,25 @@
     bodyText = JSON.stringify(monteCarloBody, null, 2);
   }
 
+  function isRequestBody(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
+
   async function send(): Promise<void> {
     if (busy) return;
     error = '';
     run = null;
 
-    let body: Record<string, unknown>;
+    let body: unknown;
     try {
-      body = JSON.parse(bodyText) as Record<string, unknown>;
+      body = JSON.parse(bodyText);
     } catch {
       error = 'The request body is not valid JSON.';
+      return;
+    }
+
+    if (!isRequestBody(body)) {
+      error = 'The request body must be a JSON object.';
       return;
     }
 

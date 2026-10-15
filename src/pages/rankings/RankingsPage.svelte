@@ -53,6 +53,7 @@
         },
         refresh
       );
+
       if (request === requestId) result = loaded;
     } catch (reason) {
       if (request === requestId)
@@ -92,6 +93,7 @@
     const url = new URL(location.href);
     const set = (key: string, value: string, defaultValue: string) =>
       value === defaultValue ? url.searchParams.delete(key) : url.searchParams.set(key, value);
+
     set('tab', tab, 'monthly');
     set('page', String(page - 1), '0');
     set('pageSize', pageSize, '100');
@@ -109,6 +111,7 @@
         tab === 'alltime' ? 'avg_month' : 'gain_30d'
       );
     }
+
     const target = `${url.pathname}${url.search}`;
     if (push) history.pushState(history.state, '', target);
     else history.replaceState(history.state, '', target);

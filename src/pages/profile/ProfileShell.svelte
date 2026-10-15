@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount, untrack, type Snippet } from 'svelte';
-  import { watchFactorCatalog } from '@/lib/catalog/factor-catalog';
+  import { watchFactors } from '@/lib/game-data/factors/factors';
   import {
     characterImagePath,
-    loadCharacterCatalog,
-    type CharacterCatalogEntry
-  } from '@/lib/catalog/character-catalog';
+    loadCharacters,
+    type CharacterData
+  } from '@/lib/game-data/characters';
   import { authRepository } from '@/services/auth/auth-repository';
   import { authReady, authUser } from '@/services/auth/auth-state';
   import { getAuthToken } from '@/services/auth/auth-token';
@@ -28,7 +28,7 @@
     type ProfileVisibility
   } from './profile-repository';
 
-  onMount(watchFactorCatalog);
+  onMount(watchFactors);
 
   interface ProfileShellContext {
     profile: ProfileResponse;
@@ -36,7 +36,7 @@
     visibility: ProfileVisibility;
     savingVisibility: boolean;
     visibilityReady: boolean;
-    characters: Map<number, CharacterCatalogEntry>;
+    characters: Map<number, CharacterData>;
     sectionVisible: (section: string) => boolean;
     toggleSection: (section: string) => void;
   }
@@ -65,7 +65,7 @@
   }
 
   let profile = $state.raw<ProfileResponse>();
-  let characters = $state<Map<number, CharacterCatalogEntry>>(new Map());
+  let characters = $state<Map<number, CharacterData>>(new Map());
   let loading = $state(true);
   let error = $state('');
   let hidden = $state(false);
@@ -134,11 +134,13 @@
       loading = false;
       return;
     }
+
     try {
       const [nextProfile, nextCharacters] = await Promise.all([
         profileRepository.load(request.accountId, true, true),
-        loadCharacterCatalog()
+        loadCharacters()
       ]);
+
       if (!isCurrent(request)) return;
       profile = nextProfile;
       characters = nextCharacters;
@@ -204,6 +206,7 @@
     const hiddenSections = visibility.hidden_sections.includes(section)
       ? visibility.hidden_sections.filter((item) => item !== section)
       : [...visibility.hidden_sections, section];
+
     void persistVisibility({ ...visibility, hidden_sections: hiddenSections });
   }
 
@@ -211,6 +214,7 @@
     const id = accountId,
       user = $authUser,
       ready = $authReady;
+
     untrack(() => {
       session = undefined;
       loading = true;
@@ -219,6 +223,7 @@
       profile = undefined;
       isOwner = false;
       visibility = { profile_hidden: false, hidden_sections: [] };
+
       visibilityReady = false;
       savingVisibility = false;
       visibilityError = '';
@@ -230,10 +235,12 @@
         confirmed: visibility,
         revision: 0
       };
+
       session = request;
       void loadProfile(request);
       void loadOwnership(request);
     });
+
     return () => {
       session = undefined;
     };

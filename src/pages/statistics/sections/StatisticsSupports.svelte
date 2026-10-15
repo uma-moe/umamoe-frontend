@@ -21,11 +21,13 @@
       )
     ].sort()
   );
+
   const filteredSupports = $derived(
     view.supportData.filter(
       (item) => supportType === 'all' || view.supportCatalog.get(item.id)?.tags[0] === supportType
     )
   );
+
   const supportTypeData = $derived(
     supportTypeDistribution(
       view.deckData,

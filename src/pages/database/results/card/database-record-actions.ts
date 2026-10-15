@@ -1,5 +1,5 @@
 import type { Toast } from '@/components/feedback/ToastRegion.svelte';
-import type { InheritanceRecord } from '@/lib/inheritance/inheritance-search';
+import type { InheritanceRecord } from '@/lib/inheritance/search/inheritance-search';
 import { copyText } from '@/lib/clipboard';
 import { trackBorrowCopy } from '../../borrow-interactions';
 import { inheritanceRepository } from '../../inheritance-repository';
@@ -58,6 +58,7 @@ export class DatabaseRecordActions {
     } catch {
       /* Preserve navigation when storage is unavailable. */
     }
+
     window.open('/tools/lineage-planner?from=db', '_blank', 'noopener');
   };
 
@@ -86,6 +87,7 @@ export class DatabaseRecordActions {
         item.id === record.id ? { ...item, borrowCopies: count } : item
       )
     };
+
     bookmarks.records = bookmarks.records.map((item) =>
       item.id === record.id ? { ...item, borrowCopies: count } : item
     );

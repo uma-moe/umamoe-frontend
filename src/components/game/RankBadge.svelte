@@ -14,13 +14,12 @@
 
   let failed = $state(false);
 
-  const rank = $derived(
-    label
-      ? getRankInfoFromLabel(label)
-      : score !== undefined
-        ? getRankInfoFromScore(score)
-        : getRankInfo(rarity ?? 1)
-  );
+  const rank = $derived.by(() => {
+    if (label) return getRankInfoFromLabel(label);
+    if (score !== undefined) return getRankInfoFromScore(score);
+    return getRankInfo(rarity ?? 1);
+  });
+
   const iconPath = $derived(
     icon ?? `/assets/images/icon/ranks/utx_txt_rank_${String(rank.iconIndex).padStart(2, '0')}.webp`
   );

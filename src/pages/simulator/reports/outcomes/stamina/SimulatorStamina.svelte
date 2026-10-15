@@ -41,6 +41,7 @@
       ])
     )
   );
+
   const rows = $derived(sources.map((source) => reports.get(source)!).filter(Boolean));
   const budgets = $derived(rows.filter((row) => row.phases && row.maxHp));
 
@@ -51,15 +52,18 @@
       .concat(sources.filter((source) => !selected.includes(source)))
       .slice(0, 18)
   );
+
   const curves = $derived(
     charted.flatMap((source) => {
       const data = hpByDistance(result, source, distance);
       return data ? [{ source, name: umas[source]!.name, x: data.x, bands: data.bands }] : [];
     })
   );
+
   const focus = $derived(
     inspected !== undefined && charted.includes(inspected) ? inspected : charted[0]
   );
+
   const chart = $derived(
     curves.length
       ? hpCourseChart(curves[0]!.x, curves, RACE_PHASES, $theme === 'dark', focus)

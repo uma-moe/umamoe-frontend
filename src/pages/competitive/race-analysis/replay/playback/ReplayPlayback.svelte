@@ -58,6 +58,7 @@
   const chartRunners = $derived(
     compare ? replay.capture.runners : replay.runner ? [replay.runner] : []
   );
+
   const selectedFinish = $derived(replay.finishTimes.get(replay.runner?.index ?? 0));
   const telemetryEnd = $derived(
     replay.ensemble

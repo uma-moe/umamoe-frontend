@@ -1,9 +1,5 @@
-import {
-  resolveEncodedSkill,
-  skillImage,
-  type SkillCatalogEntry
-} from '@/lib/catalog/skill-catalog';
-import { formatRaceTime } from '@/lib/race/race-display';
+import { resolveEncodedSkill, skillImage, type SkillData } from '@/lib/game-data/skills/skills';
+import { formatRaceTime } from '@/lib/race/replay/race-display';
 import {
   courseSegments,
   type Course
@@ -23,6 +19,7 @@ export const STEP = 0.5,
   HIGH = 0.6,
   SPOT = 0.2,
   FIXED = 3;
+
 /** Magma, a perceptually even heat ramp: dark purple for rare, through pink and orange, to cream for most races. Light mode runs it the other way so more is always more visible. */
 export const RAMP_DARK = [
   [44, 17, 72, 0.85],
@@ -31,6 +28,7 @@ export const RAMP_DARK = [
   [246, 138, 88, 1],
   [253, 231, 169, 1]
 ];
+
 export const RAMP_LIGHT = [
   [253, 231, 169, 1],
   [246, 138, 88, 1],
@@ -50,6 +48,7 @@ function color(share: number, ramp: number[][]) {
     index = Math.min(ramp.length - 2, Math.floor(t)),
     mix = t - index,
     [a, b] = [ramp[index]!, ramp[index + 1]!];
+
   return (
     'rgba(' +
     [0, 1, 2]
@@ -66,6 +65,7 @@ const smooth = (values: number[]) =>
   values.map((_, index) => {
     let sum = 0,
       weight = 0;
+
     for (let offset = -2; offset <= 2; offset++) {
       const value = values[index + offset];
       if (value === undefined) continue;
@@ -73,6 +73,7 @@ const smooth = (values: number[]) =>
       sum += value * w;
       weight += w;
     }
+
     return values[index]! > 0 || sum > 0 ? sum / weight : 0;
   });
 
@@ -84,11 +85,13 @@ export function windowSections(
 ) {
   const parts = courseSegments(course, true),
     seen = new Map<string, number>();
+
   return parts.map((part) => {
-    const label =
-      part.label === 'Unspecified' ? (part.start === 0 ? 'Start' : 'Between sections') : part.label;
+    let label = part.label;
+    if (label === 'Unspecified') label = part.start === 0 ? 'Start' : 'Between sections';
     const total = parts.filter((other) => other.label === part.label).length,
       count = (seen.get(label) ?? 0) + 1;
+
     seen.set(label, count);
     return {
       start: part.start,
@@ -98,6 +101,7 @@ export function windowSections(
     };
   });
 }
+
 export type WindowSection = ReturnType<typeof windowSections>[number];
 
 /** The replay clock's half-second grid between startTime and endTime. */
@@ -114,6 +118,7 @@ export function windowGrid(startTime: number, endTime: number) {
     at: (value: number) => Math.max(0, Math.min(100, ((value - startTime) / span) * 100))
   };
 }
+
 export type WindowGrid = ReturnType<typeof windowGrid>;
 
 /** Peaks of at least SPOT, one per hill: two peaks count as separate spots only if the strip dips below half the smaller one between them. */
@@ -125,14 +130,17 @@ function spots(share: number[], startTime: number) {
         : []
     )
     .sort((a, b) => share[b]! - share[a]!);
+
   const kept: number[] = [];
   for (const peak of peaks) {
     const sameHill = kept.some((other) => {
       const [from, to] = peak < other ? [peak, other] : [other, peak];
       return Math.min(...share.slice(from, to + 1)) >= share[peak]! / 2;
     });
+
     if (!sameHill) kept.push(peak);
   }
+
   return kept.map((index) => ({ time: startTime + index * STEP, share: share[index]! }));
 }
 
@@ -141,7 +149,7 @@ export function windowSkills(
   result: MonteCarloResult,
   runner: number,
   owned: number[],
-  catalog: Map<number, SkillCatalogEntry>,
+  skillLookup: Map<number, SkillData>,
   grid: WindowGrid,
   sections: WindowSection[],
   ramp: number[][]
@@ -151,19 +159,24 @@ export function windowSkills(
       (section, index) =>
         distance >= section.start && (distance < section.end || index === sections.length - 1)
     )?.name ?? 'The race';
+
   const { points, pointOf, pointAt } = grid;
   const table = skillDistributions(result, runner, owned).rows.filter(
     (row) => owned.includes(row.id) && row.triggered
   );
+
   return table.map((row) => {
-    const resolved = resolveEncodedSkill(catalog, row.id),
+    const resolved = resolveEncodedSkill(skillLookup, row.id),
       name = resolved.skill?.name ?? 'Skill ' + row.id;
+
     const passive = row.procs.every(({ proc }) => proc[6] < 0),
       starts = row.procs.map(({ proc }) => proc[4]).sort((a, b) => a - b);
+
     // A race counts once per grid point, even when the skill starts twice near it.
     const counts = new Int32Array(points),
       stamp = new Int32Array(points),
       reach = Math.round(REACH / STEP);
+
     for (const { run, proc } of row.procs) {
       const centre = pointOf(proc[4]);
       for (
@@ -176,14 +189,17 @@ export function windowSkills(
           counts[index]!++;
         }
     }
+
     const share = Array.from(counts, (count) => count / Math.max(1, result.runs));
     const summary = simulatorSampleSummary(starts)!,
       lasting = row.procs.map(({ proc }) => proc[6]).filter((value) => value > 0);
+
     const places = new Map<string, Set<number>>();
     for (const { run, proc } of row.procs) {
       const place = sectionAt(proc[5]);
       places.set(place, (places.get(place) ?? new Set()).add(run));
     }
+
     return {
       id: row.id,
       name,
@@ -207,6 +223,7 @@ export function windowSkills(
     };
   });
 }
+
 export type WindowSkill = ReturnType<typeof windowSkills>[number];
 
 export type WindowTip = {
@@ -226,6 +243,7 @@ export const timing = (skill: WindowSkill) =>
       clock(skill.summary.p10) +
       ' and ' +
       clock(skill.summary.p90);
+
 export const describe = (skill: WindowSkill) =>
   skill.name +
   ' fires in ' +

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { previews } from './catalog';
+  import { previews } from './component-previews';
 
   let { id, children }: { id: string; children: Snippet } = $props();
 

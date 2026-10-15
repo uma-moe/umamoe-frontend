@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from './Icon.svelte';
-  import type { SiteStatistics } from '@/services/site-statistics';
+  import type { SiteStatistics } from '@/services/site/site-statistics';
 
   let { stats }: { stats?: SiteStatistics } = $props();
 

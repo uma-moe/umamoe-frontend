@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/race-capture-parser';
+  import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import { analyzeMultiRace } from '@/lib/race/multi-race-analysis';
   import Button from '@/components/controls/Button.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
@@ -34,6 +34,7 @@
   const entries = $derived(
     captures.flatMap((c, race) => c.runners.map((runner) => ({ runner, race })))
   );
+
   const winners = $derived(entries.filter((e) => e.runner.result?.finishOrder === 1));
   const teams = $derived(teamBuilds(captures));
 

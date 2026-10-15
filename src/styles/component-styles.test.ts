@@ -13,6 +13,7 @@ it('keeps companion CSS scoped to its component and tracks edits to that stylesh
   const inline = source.replace("@import './circle-card.css';", readFileSync(stylesheet, 'utf8'));
   const processed = await preprocess(source, vitePreprocess(), { filename });
   const options = { filename, cssHash: () => 'svelte-style-contract' };
+
   const expected = compile(inline, options).css!.code;
   const actual = compile(processed.code, options).css!.code;
 

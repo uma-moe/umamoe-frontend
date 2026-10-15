@@ -8,15 +8,12 @@
   import SparkItem from '@/components/sparks/SparkItem.svelte';
   import {
     supportCardImagePath,
-    loadSupportCardCatalog,
-    type SupportCardCatalogEntry
-  } from '@/lib/catalog/support-card-catalog';
-  import { supportCardDisplay } from '@/lib/supports/support-card';
-  import {
-    loadCharacterCatalog,
-    type CharacterCatalogEntry
-  } from '@/lib/catalog/character-catalog';
-  import { watchFactorCatalog, decodeFactorEntry } from '@/lib/catalog/factor-catalog';
+    loadSupportCards,
+    type SupportCardData
+  } from '@/lib/game-data/support-cards/support-cards';
+  import { supportCardDisplay } from '@/lib/game-data/support-cards/support-card-details';
+  import { loadCharacters, type CharacterData } from '@/lib/game-data/characters';
+  import { watchFactors, decodeFactorEntry } from '@/lib/game-data/factors/factors';
   import { portrait } from '../analysis-view';
 
   let {
@@ -30,27 +27,32 @@
     ownFactors?: { id: number; level: number }[];
     label?: string;
   } = $props();
+
   const instanceId = $props.id();
 
   let selectedParent = $state(''),
     mobileTraining = $state(false);
-  let supports = $state.raw(new Map<string, SupportCardCatalogEntry>()),
-    characters = $state.raw(new Map<number, CharacterCatalogEntry>());
+
+  let supports = $state.raw(new Map<string, SupportCardData>()),
+    characters = $state.raw(new Map<number, CharacterData>());
 
   $effect(() => {
     selectedParent = String(parents[0]?.positionId ?? '');
   });
 
   onMount(() => {
-    void loadSupportCardCatalog()
+    void loadSupportCards()
       .then((rows) => (supports = new Map(rows.map((row) => [row.id, row]))))
       .catch(() => {});
-    void loadCharacterCatalog()
+
+    void loadCharacters()
       .then((rows) => (characters = rows))
       .catch(() => {});
-    const unwatch = watchFactorCatalog(),
+
+    const unwatch = watchFactors(),
       media = matchMedia('(max-width:767px)'),
       adapt = () => (mobileTraining = media.matches);
+
     adapt();
     media.addEventListener('change', adapt);
     return () => {

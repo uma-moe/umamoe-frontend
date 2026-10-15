@@ -10,9 +10,9 @@
 
   let { value, label, kind = 'base', compact = false }: Props = $props();
 
-  const displayLabel = $derived(
-    label ?? (kind === 'race' ? 'Race affinity' : kind === 'total' ? 'Total affinity' : 'Affinity')
-  );
+  const defaultLabels = { base: 'Affinity', race: 'Race affinity', total: 'Total affinity' };
+
+  const displayLabel = $derived(label ?? defaultLabels[kind]);
 </script>
 
 <span

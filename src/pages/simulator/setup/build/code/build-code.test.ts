@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import Ajv2020 from 'ajv/dist/2020';
 import { describe, expect, it } from 'vitest';
-import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import {
   buildCodeConditions,
   buildCodeGoal,
@@ -20,15 +20,18 @@ import {
 // skills on offer with hints. URL-encoded, as it was copied.
 const PLAIN =
   'H4sIAAAAAAAC%2F%2B1UTYvbMBD9LzrnIMmRnPiWLmUp3ZbCHksPIpkkpvFHbXmXEva%2Fd0aakbfnXhsweXqa73noro7DMs3w6aQao70xG9XPoRtvMKvGab1RywzfhvkzwKiaOC2wUVM4wgnOqrmryzQsPblu1CuEeIUp4RnCPPQJxrYD1VQbNA0noCT6DYN2wZD%2FsMRzGym5Mtp6bRU6xzA9YNiomi2eRgBK4Pw2XXVtH%2FBoNB7H4TUl1MZh%2FCViybXfYSntfBo6OjjymUKEy29M8bW9ACY4tRinP8JhjG1cqCj1gfIu0zn8xT6q1f0dfUA68BFTflcPSFAEunjm%2F4%2F4PfJ3SP8%2FMNjP9nZLLobaNchbrStPbe%2B1ttqQ1dK3vxZ4ekn9d8OA7VtqdlxuYWojdmLyCO3%2FEf7TCI%2FXMMXnEhDj6C0H1FubgRHGFEaSGi%2FMTpgdM1UlwEmFTpiawbYyAoQRGyeMk%2BxOsjuxqYWpCyP17Lgegz8BlkEtDJdhrBYgNtYK4OwIhBF3W9z3DCprBDDjhHGFqYThBo3XzHhfQL6i2BnIxOw2X%2BETkssgwHv3qeU97SAJ4Nr28QlegDZ7l83Se8S7ZWhW1rxj%2Fcr6lcUUJCfeM0PaND1vvGu2pW03ruybxMcbZwPauUBXII2FbWnzjS675xS0fTag%2FQtcI5AG2JZUkNmkg8wmJQisV4NaIiQ95LhJEQLtalBmlnQhcA1G2sjTSergbKQPZkkhDEkjbEAqEUiDckUpDEkrbEBqKVDckmJyDUkzOUVSTeoi6ybZZuVQXNYOsaye9Wn4MqTHaoYbHCM%2BoW9%2FAHwb3JouBwAA';
+
 const TOKYO_DIRT_MILE = {
   course_id: 10611,
   distance: 1600,
   distance_type: 2,
   surface: 2
-} as CourseCatalogEntry;
+} as RaceCourse;
+
 const schema = JSON.parse(
   readFileSync(path.join(process.cwd(), 'contracts', 'build-code.schema.json'), 'utf8')
 );
+
 const validate = new Ajv2020({ strict: false }).compile(schema);
 
 describe('build codes', () => {
@@ -53,12 +56,22 @@ describe('build codes', () => {
     await expect(decodeBuildCode('{"version":9,"uma1":{}}')).rejects.toThrow('newer version');
   });
 
+  it('treats a null second runner as absent and rejects non-object alternatives', async () => {
+    const code = await decodeBuildCode('{"uma1":{"outfitId":"100101"},"uma2":null}');
+    expect(code.uma2).toBeUndefined();
+    expect(buildCodeUma(code.uma1!).uma.cardId).toBe(100101);
+    await expect(decodeBuildCode('{"uma1":{},"uma2":"not a runner"}')).rejects.toThrow(
+      'second runner'
+    );
+  });
+
   it('turns a runner into the simulator’s build, with the course aptitudes', async () => {
     const code = await decodeBuildCode(PLAIN);
     const { uma, dropped } = buildCodeUma(
       { ...code.uma1!, fans: 254000 },
       { name: 'Mihono Bourbon', course: TOKYO_DIRT_MILE, knownSkill: (id) => id !== 900201 }
     );
+
     expect(uma).toMatchObject({ name: 'Mihono Bourbon', cardId: 102602, fanCount: 254000 });
     expect(uma.trainee).toMatchObject({
       speed: '1564',
@@ -72,17 +85,20 @@ describe('build codes', () => {
       styleAptitudes: ['A', 'E', 'G', 'G'],
       groundAptitudes: ['A', 'G']
     });
+
     // Her unique keeps its level; a skill the catalog does not know is left out and counted.
     expect(uma.skills).toEqual([
       { skillId: 110261, level: 4 },
       { skillId: 200362, level: 1 }
     ]);
+
     expect(dropped).toBe(1);
     expect(sameRunner(code.uma1, code.uma2)).toBe(true);
     const edited = buildCodeUma(
       { ...code.uma1!, distanceAptitude: 'S', strategy: 'Oonige' },
       { course: TOKYO_DIRT_MILE }
     ).uma;
+
     expect(edited.trainee.distanceAptitudes[1]).toBe('S');
     expect(edited.trainee.runningStyle).toBe('Oonige');
   });
@@ -95,6 +111,7 @@ describe('build codes', () => {
       season: '1',
       startTime: '3'
     });
+
     expect(buildCodeConditions({ season: 5, time: 1 }).season).toBe('1');
     const offers = buildCodeOffers(code, [200362, 900201]);
     expect(offers).toHaveLength(51);
@@ -102,6 +119,7 @@ describe('build codes', () => {
     expect(
       buildCodeOffers({ ...code, chartSkills: ['200362', '200352', '110261'] }, [200362])
     ).toEqual([{ skillId: 200352, hint: 5 }]);
+
     expect(buildCodeGoal(code)).toEqual({
       sp: undefined,
       fastLearner: undefined,
@@ -109,6 +127,7 @@ describe('build codes', () => {
       tracks: undefined,
       seed: undefined
     });
+
     expect(
       buildCodeGoal({
         ...code,
@@ -146,6 +165,7 @@ describe('build codes', () => {
       chartSkills: ['200352', '201601'],
       hintLevels: { '200352': 5 }
     };
+
     expect(validate(code), JSON.stringify(validate.errors)).toBe(true);
     const text = await encodeBuildCode(code);
     expect(looksLikeBuildCode(text)).toBe(true);
@@ -159,6 +179,7 @@ describe('build codes', () => {
       mood: 2,
       fans: 254000
     });
+
     // Reading the written runner gives the same build back.
     expect(buildCodeUma(read.uma1!, { course: TOKYO_DIRT_MILE }).uma.trainee).toEqual(uma.trainee);
   });

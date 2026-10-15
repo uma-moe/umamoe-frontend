@@ -2,8 +2,8 @@
   import Icon from '@/components/Icon.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import ToggleButton from '@/components/controls/ToggleButton.svelte';
-  import type { SparkOrder } from '@/lib/inheritance/inheritance-factors';
-  import type { InheritanceSearchFilters } from '@/lib/inheritance/inheritance-search';
+  import type { SparkOrder } from '@/lib/inheritance/sparks/inheritance-factors';
+  import type { InheritanceSearchFilters } from '@/lib/inheritance/search/inheritance-search';
   import { SPARK_ORDER_OPTIONS } from '../database-preferences';
 
   interface Props {

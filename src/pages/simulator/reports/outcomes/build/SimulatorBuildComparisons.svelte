@@ -15,6 +15,7 @@
     source
   }: { input: MonteCarloInput; result: MonteCarloResult; umas: SimulatorUma[]; source: number } =
     $props();
+
   let alternatives = $state<
       { source: number; uma: SimulatorUma; outcome?: ReturnType<typeof compareOutcomes> }[]
     >([]),
@@ -24,6 +25,7 @@
     open = $state(false),
     busy = $state(false),
     error = $state('');
+
   let request: AbortController | undefined;
   onDestroy(() => request?.abort());
   const rows = $derived(alternatives.filter((row) => row.source === source));
@@ -33,6 +35,7 @@
       ['distanceAptitudes', ['Sprint', 'Mile', 'Medium', 'Long']],
       ['styleAptitudes', ['Front runner', 'Pace chaser', 'Late surger', 'End closer']]
     ] as const;
+
     return grids
       .flatMap(([key, names]) =>
         uma.trainee[key].flatMap((grade, i) =>
@@ -43,6 +46,7 @@
       )
       .join(' · ');
   }
+
   function add() {
     editingSource = source;
     editing = structuredClone($state.snapshot(umas[source]!));
@@ -50,6 +54,7 @@
     editingIndex = -1;
     open = true;
   }
+
   function save(uma: SimulatorUma) {
     if (editingIndex < 0) alternatives = [...alternatives, { source: editingSource, uma }];
     else
@@ -57,12 +62,14 @@
         i === editingIndex ? { ...row, uma, outcome: undefined } : row
       );
   }
+
   async function run() {
     if (!rows.length || busy) return;
     busy = true;
     error = '';
     const snapshot = source,
       variants = [...rows];
+
     request?.abort();
     request = new AbortController();
     try {
@@ -78,9 +85,11 @@
         },
         signal: request.signal
       });
+
       const measured = response.result.alternatives.map(([, value]) =>
         compareOutcomes(result, value, snapshot)
       );
+
       alternatives = alternatives.map((row) => {
         const at = variants.indexOf(row);
         return at < 0 ? row : { ...row, outcome: measured[at] };

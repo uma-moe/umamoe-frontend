@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-  import { raceTimeAtDistance, type ReplayBounds } from '@/lib/race/race-replay';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import { raceTimeAtDistance, type ReplayBounds } from '@/lib/race/replay/race-replay';
   import type { Course, courseSegments } from '../replay-course';
   import { courseTerrain, slopeLabel, timedSection, type TimedSection } from '../replay-timeline';
 
@@ -51,18 +51,22 @@
       time: raceTimeAtDistance(frames, (bounds.distanceMax * 5) / 6)
     }
   ]);
+
   const terrain = $derived(course ? courseTerrain(course) : undefined);
   const slopes = $derived(
     terrain?.slopes.flatMap((section) =>
       timedSection(section, frames, bounds.distanceMax, endTime, percent)
     ) ?? []
   );
+
   const minHeight = $derived(
     Math.min(0, ...(terrain?.elevation.map((point) => point.height) ?? []))
   );
+
   const maxHeight = $derived(
     Math.max(0, ...(terrain?.elevation.map((point) => point.height) ?? []))
   );
+
   const elevation = $derived(
     terrain?.elevation.map((point) => ({
       distance: point.distance,
@@ -73,10 +77,12 @@
           : 36
     })) ?? []
   );
+
   const hillPaths = $derived(
     (course?.slopes ?? []).map((s) => {
       const a = elevation.find((p) => p.distance === s.start),
         b = elevation.find((p) => p.distance === Math.min(bounds.distanceMax, s.start + s.length));
+
       return { slope: s.slope, path: a && b ? 'M' + a.x + ' ' + a.y + ' L' + b.x + ' ' + b.y : '' };
     })
   );

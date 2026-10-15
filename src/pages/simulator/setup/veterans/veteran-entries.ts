@@ -1,10 +1,10 @@
 import { getAuthToken } from '@/services/auth/auth-token';
-import { loadCharacterCatalog } from '@/lib/catalog/character-catalog';
-import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+import { loadCharacters } from '@/lib/game-data/characters';
+import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import { getRankInfoFromScore } from '@/lib/rank';
-import { mergeVeterans } from '@/lib/veterans/veteran-profile';
+import { mergeVeterans } from '@/lib/veterans/records/veteran-profile';
 import { profileRepository, type ProfileVeteran } from '@/pages/profile/profile-repository';
-import { deviceVeteranParents } from '@/pages/veterans/veteran-library';
+import { deviceVeteranParents } from '@/pages/veterans/collection/veteran-library';
 import { simulatorUmaFromVeteran, type SimulatorUma } from '../../simulator-uma';
 import { RUNNING_STYLES } from '../trainee';
 
@@ -32,8 +32,9 @@ export async function loadVeteranEntries(
   const [local, remote, characters] = await Promise.all([
     deviceVeteranParents(),
     accountId ? profileRepository.load(accountId) : Promise.resolve(undefined),
-    loadCharacterCatalog()
+    loadCharacters()
   ]);
+
   if (token !== getAuthToken()) throw new Error('Your sign-in session changed. Open this again.');
   const veterans = mergeVeterans(
     remote?.veterans ?? [],
@@ -41,6 +42,7 @@ export async function loadVeteranEntries(
       (veteran) => (veteran.trainer_id ?? '') === accountId
     )
   );
+
   const entries: VeteranEntry[] = [];
   let missing = 0;
   for (const veteran of veterans) {
@@ -49,6 +51,7 @@ export async function loadVeteranEntries(
       missing++;
       continue;
     }
+
     const name = characters.get(veteran.card_id ?? 0)?.name ?? 'Veteran';
     entries.push({
       key: String(veteran.trained_chara_id ?? veteran.id),
@@ -59,6 +62,7 @@ export async function loadVeteranEntries(
       created: Date.parse(veteran.creation_time ?? '') || 0
     });
   }
+
   entries.sort((a, b) => b.created - a.created || (b.score ?? 0) - (a.score ?? 0));
   return { entries, missing };
 }
@@ -66,7 +70,7 @@ export async function loadVeteranEntries(
 const GRADES = 'SABCDEFG';
 
 /** Her aptitudes on this course for her running style: distance, surface and style. */
-export function courseAptitudes(uma: SimulatorUma, course?: CourseCatalogEntry): string[] {
+export function courseAptitudes(uma: SimulatorUma, course?: RaceCourse): string[] {
   const style = RUNNING_STYLES.indexOf(uma.trainee.runningStyle as (typeof RUNNING_STYLES)[number]);
   return [
     uma.trainee.distanceAptitudes[(course?.distance_type ?? 3) - 1] ?? 'A',
@@ -76,7 +80,7 @@ export function courseAptitudes(uma: SimulatorUma, course?: CourseCatalogEntry):
 }
 
 /** How far her course aptitudes fall below A: 0 when all three are A or better. */
-export function courseFit(uma: SimulatorUma, course?: CourseCatalogEntry): number {
+export function courseFit(uma: SimulatorUma, course?: RaceCourse): number {
   return courseAptitudes(uma, course).reduce(
     (sum, grade) => sum + Math.max(0, GRADES.indexOf(grade) - 1),
     0

@@ -23,6 +23,7 @@
     jump = false,
     onchange
   }: Props = $props();
+
   const inputId = $props.id();
 
   let jumpOpen = $state(false);
@@ -31,12 +32,6 @@
   let destination = $state<number | undefined>(page);
 
   const canJump = $derived(jump && pages > 7);
-
-  $effect(() => {
-    destination = page;
-    pages;
-    jumpOpen = false;
-  });
 
   const visiblePages = $derived.by(() => {
     if (pages <= 7) return Array.from({ length: Math.max(0, pages) }, (_, index) => index + 1);
@@ -77,6 +72,12 @@
     jumpOpen = false;
     jumpControl?.focus({ preventScroll: true });
   }
+
+  $effect(() => {
+    destination = page;
+    pages;
+    jumpOpen = false;
+  });
 </script>
 
 <nav

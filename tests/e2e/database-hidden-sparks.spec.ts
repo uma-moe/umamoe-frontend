@@ -6,34 +6,57 @@ const storageKey = 'db-hidden-spark-factors';
 const february = factors.find((factor) => factor.text === 'February S.')!;
 const factorId = Number(february.id);
 
-test('Hide Sparks stages type-picker changes, saves to the legacy key, and updates results without searching again', async ({ page, isMobile }) => {
+test('Hide Sparks stages type-picker changes, saves to the legacy key, and updates results without searching again', async ({
+  page,
+  isMobile
+}) => {
   await mockDatabase(page);
   const result = record();
   result.inheritance.white_sparks = result.inheritance.main_white_factors = [factorId * 10 + 2];
   result.inheritance.left_white_factors = result.inheritance.right_white_factors = [];
   let requests = 0;
-  await page.route('**/search/query?*', (route) => { requests++; return route.fulfill({ json: { items: [result], total: 1, page: 0, limit: 12, total_pages: 1 } }); });
+  await page.route('**/search/query?*', (route) => {
+    requests++;
+    return route.fulfill({
+      json: { items: [result], total: 1, page: 0, limit: 12, total_pages: 1 }
+    });
+  });
+
   await page.goto('/database');
   const cardFactor = page.locator('.inheritance-card').getByText('February S.', { exact: true });
   await expect(cardFactor).toHaveCount(1);
   const initialRequests = requests;
   const trigger = page.getByRole('button', { name: 'Choose sparks to hide', exact: true });
   await page.getByRole('button', { name: 'Display options', exact: true }).click();
-  await trigger.focus(); await trigger.press('Enter');
+  await trigger.focus();
+  await trigger.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Hide Sparks', exact: true });
   const search = dialog.getByRole('searchbox', { name: 'Search white factors', exact: true });
   const factor = dialog.locator('.factor-result').getByText('February S.', { exact: true });
   const choice = dialog.getByRole('button', { name: 'February S.', exact: true });
   await expect(search).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Race', exact: true }).locator('img')).toHaveAttribute('src', /\/race_banners\/thum_race_/);
-  await expect(dialog.getByRole('button', { name: 'Scenario', exact: true }).locator('img')).toHaveAttribute('src', /ura_finals_logo/);
-  await expect(dialog.getByRole('button', { name: 'Find white factors', exact: true })).toHaveCount(0);
+  await expect(
+    dialog.getByRole('button', { name: 'Race', exact: true }).locator('img')
+  ).toHaveAttribute('src', /\/race_banners\/thum_race_/);
+
+  await expect(
+    dialog.getByRole('button', { name: 'Scenario', exact: true }).locator('img')
+  ).toHaveAttribute('src', /ura_finals_logo/);
+
+  await expect(dialog.getByRole('button', { name: 'Find white factors', exact: true })).toHaveCount(
+    0
+  );
+
   await expect(dialog.getByRole('spinbutton')).toHaveCount(0);
   await expect(dialog.getByText('No sparks are hidden.', { exact: true })).toBeVisible();
-  await search.fill('February'); await factor.click();
+  await search.fill('February');
+  await factor.click();
   await expect(choice).toHaveAttribute('aria-pressed', 'true');
   await expect(choice.locator('img')).toHaveAttribute('src', /\/race_banners\/thum_race_/);
-  await expect(dialog.getByRole('button', { name: 'Show February S.', exact: true }).locator('img')).toHaveAttribute('src', /\/race_banners\/thum_race_/);
+  await expect(
+    dialog.getByRole('button', { name: 'Show February S.', exact: true }).locator('img')
+  ).toHaveAttribute('src', /\/race_banners\/thum_race_/);
+
   await expect(dialog.getByRole('button', { name: 'Save 1 hidden', exact: true })).toBeVisible();
   expect(await page.evaluate((key) => localStorage.getItem(key), storageKey)).toBeNull();
   await expect(cardFactor).toHaveCount(1);
@@ -44,7 +67,8 @@ test('Hide Sparks stages type-picker changes, saves to the legacy key, and updat
   await expect(dialog.getByText('No sparks are hidden.', { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: 'Race', exact: true }).click();
   await expect(choice).toBeVisible();
-  await choice.click(); await choice.click();
+  await choice.click();
+  await choice.click();
   await expect(choice).toHaveAttribute('aria-pressed', 'false');
   await choice.click();
   await dialog.getByRole('button', { name: 'Show February S.', exact: true }).click();
@@ -53,17 +77,26 @@ test('Hide Sparks stages type-picker changes, saves to the legacy key, and updat
   if (isMobile) {
     expect((await choice.boundingBox())!.height).toBeGreaterThanOrEqual(32);
     expect((await search.locator('..').boundingBox())!.height).toBeGreaterThanOrEqual(32);
-    expect((await dialog.getByRole('button', { name: 'Race', exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(32);
+    expect(
+      (await dialog.getByRole('button', { name: 'Race', exact: true }).boundingBox())!.height
+    ).toBeGreaterThanOrEqual(32);
+
     await page.setViewportSize({ width: 320, height: 740 });
   }
+
   expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await dialog.getByRole('button', { name: 'Save 1 hidden', exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), storageKey)).toEqual([factorId]);
+  expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), storageKey)).toEqual([
+    factorId
+  ]);
   await expect(cardFactor).toHaveCount(0);
   expect(requests).toBe(initialRequests);
-  await expect(page.getByRole('button', { name: 'Hide sparks, 1 currently hidden', exact: true })).toBeFocused();
+  await expect(
+    page.getByRole('button', { name: 'Hide sparks, 1 currently hidden', exact: true })
+  ).toBeFocused();
+
   await page.reload();
   await expect(page.locator('.inheritance-card')).toBeVisible();
   await expect(cardFactor).toHaveCount(0);
@@ -76,49 +109,98 @@ test('Hide Sparks stages type-picker changes, saves to the legacy key, and updat
   expect(await page.evaluate((key) => localStorage.getItem(key), storageKey)).toBe('[]');
 });
 
-test('Hide Sparks preserves legacy selections on Cancel, Escape, close and backdrop dismissal', async ({ page, isMobile }) => {
+test('Hide Sparks preserves legacy selections on Cancel, Escape, close and backdrop dismissal', async ({
+  page,
+  isMobile
+}) => {
   await mockDatabase(page);
   const stored = JSON.stringify([String(factorId), factorId, 0, -1, null, 'invalid', 99999999]);
-  await page.addInitScript(({ key, value }) => localStorage.setItem(key, value), { key: storageKey, value: stored });
+  await page.addInitScript(({ key, value }) => localStorage.setItem(key, value), {
+    key: storageKey,
+    value: stored
+  });
+
   await page.goto('/database');
   await page.getByRole('button', { name: 'Display options', exact: true }).click();
-  const trigger = page.getByRole('button', { name: 'Hide sparks, 2 currently hidden', exact: true });
+  const trigger = page.getByRole('button', {
+    name: 'Hide sparks, 2 currently hidden',
+    exact: true
+  });
+
   const dialog = page.getByRole('dialog', { name: 'Hide Sparks', exact: true });
   for (const dismissal of ['Cancel', 'Escape', 'close', 'backdrop']) {
-    await trigger.focus(); await trigger.press('Enter');
-    await expect(dialog.getByRole('button', { name: 'Show February S.', exact: true })).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Show Factor 99999999', exact: true })).toBeVisible();
+    await trigger.focus();
+    await trigger.press('Enter');
+    await expect(
+      dialog.getByRole('button', { name: 'Show February S.', exact: true })
+    ).toBeVisible();
+
+    await expect(
+      dialog.getByRole('button', { name: 'Show Factor 99999999', exact: true })
+    ).toBeVisible();
+
     await dialog.getByRole('button', { name: 'Clear all', exact: true }).click();
     await expect(dialog.getByRole('button', { name: 'Save 0 hidden', exact: true })).toBeVisible();
-    if (dismissal === 'Cancel') await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    if (dismissal === 'Cancel')
+      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
     else if (dismissal === 'Escape') await page.keyboard.press('Escape');
-    else if (dismissal === 'close') await dialog.getByRole('button', { name: 'Close dialog', exact: true }).click();
+    else if (dismissal === 'close')
+      await dialog.getByRole('button', { name: 'Close dialog', exact: true }).click();
     else await page.mouse.click(1, 1);
     await expect(dialog).toHaveCount(0);
     await expect(trigger).toBeFocused();
     expect(await page.evaluate((key) => localStorage.getItem(key), storageKey)).toBe(stored);
   }
+
   await trigger.press('Enter');
-  await dialog.getByRole('searchbox', { name: 'Search white factors', exact: true }).fill('not an actual factor');
-  await expect(dialog.getByText('No white factors match these types and search terms.', { exact: true })).toBeVisible();
+  await dialog
+    .getByRole('searchbox', { name: 'Search white factors', exact: true })
+    .fill('not an actual factor');
+
+  await expect(
+    dialog.getByText('No white factors match these types and search terms.', { exact: true })
+  ).toBeVisible();
+
   await dialog.getByRole('button', { name: 'Save 2 hidden', exact: true }).click();
-  expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), storageKey)).toEqual([factorId, 99999999]);
+  expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), storageKey)).toEqual([
+    factorId,
+    99999999
+  ]);
 });
 
-test('The shared white-factor browser still adds preferred factors to the selected priority group', async ({ page, isMobile }) => {
+test('The shared white-factor browser still adds preferred factors to the selected priority group', async ({
+  page,
+  isMobile
+}) => {
   await mockDatabase(page);
   await page.goto('/database');
   await page.getByRole('button', { name: /Filters/ }).click();
   await page.getByRole('radio', { name: 'Advanced', exact: true }).click();
-  if (isMobile) await page.getByRole('button', { name: 'Inheritance Factors', exact: true }).click();
-  const preferred = page.getByRole('region', { name: 'Preferred White Factors', exact: true }).first();
+  if (isMobile)
+    await page.getByRole('button', { name: 'Inheritance Factors', exact: true }).click();
+  const preferred = page
+    .getByRole('region', { name: 'Preferred White Factors', exact: true })
+    .first();
+
   await preferred.getByRole('button', { name: 'Find white factors', exact: true }).click();
-  await preferred.getByRole('searchbox', { name: 'Search white factors', exact: true }).fill('February');
-  await preferred.getByRole('spinbutton', { name: 'Priority group for newly added factors', exact: true }).fill('2');
+  await preferred
+    .getByRole('searchbox', { name: 'Search white factors', exact: true })
+    .fill('February');
+
+  await preferred
+    .getByRole('spinbutton', { name: 'Priority group for newly added factors', exact: true })
+    .fill('2');
+
   const choice = preferred.locator('.factor-result').getByText('February S.', { exact: true });
   await choice.click();
   await expect(preferred.getByRole('button', { name: 'February S.', exact: true })).toBeDisabled();
-  await expect(preferred.getByRole('spinbutton', { name: 'Priority group', exact: true })).toHaveValue('2');
-  await expect(preferred.getByRole('button', { name: 'Remove February S.', exact: true })).toBeVisible();
+  await expect(
+    preferred.getByRole('spinbutton', { name: 'Priority group', exact: true })
+  ).toHaveValue('2');
+
+  await expect(
+    preferred.getByRole('button', { name: 'Remove February S.', exact: true })
+  ).toBeVisible();
+
   expect(await page.evaluate((key) => localStorage.getItem(key), storageKey)).toBeNull();
 });

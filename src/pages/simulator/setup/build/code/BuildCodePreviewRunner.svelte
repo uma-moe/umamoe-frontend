@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { skillImage, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
-  import { runningStyleName } from '@/lib/race/race-display';
+  import { skillImage, type SkillData } from '@/lib/game-data/skills/skills';
+  import { runningStyleName } from '@/lib/race/replay/race-display';
   import SimulatorRunnerFace from '../../../reports/SimulatorRunnerFace.svelte';
   import type { SimulatorUma } from '../../../simulator-uma';
   import { RUNNING_STYLES } from '../../trainee';
 
   interface Props {
     uma: SimulatorUma;
-    skills: Map<number, SkillCatalogEntry>;
+    skills: Map<number, SkillData>;
   }
 
   let { uma, skills }: Props = $props();

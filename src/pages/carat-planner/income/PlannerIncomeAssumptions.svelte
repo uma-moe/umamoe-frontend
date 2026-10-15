@@ -10,7 +10,7 @@
     applyScenarioSelection,
     PLANNER_INCOME_PRESETS,
     scenarioSelectionToEnable
-  } from '@/lib/carat-planner/planner-income-presets';
+  } from '@/lib/carat-planner/income/planner-income-presets';
   import {
     buildPlannerIncomeSections,
     type PlannerIncomeGroup,
@@ -89,6 +89,7 @@
   function toggleSection(section: PlannerIncomeSection): void {
     const clear = section.groups.every((group) => selectedOption(group));
     const remembered = selectionMemory.get(section.id) ?? {};
+
     if (clear)
       selectionMemory.set(
         section.id,

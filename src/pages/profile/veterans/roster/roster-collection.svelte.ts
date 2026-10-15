@@ -1,11 +1,11 @@
-import type { CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
-import { loadG1SaddleGroups } from '@/lib/catalog/race-catalog';
-import { skillPointTotal, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
-import { encodedSkills, filterAndSortVeterans } from '@/lib/profile/profile-veterans';
-import { profileVeteranAffinity } from '@/lib/profile/profile-veteran-metrics';
-import { veteranQueryRow } from '@/lib/profile/profile-veteran-query';
-import { VeteranAffinityEngine } from '@/lib/veterans/affinity-engine';
-import { veteranAffinityRepository } from '@/lib/veterans/affinity-repository';
+import type { CharacterData } from '@/lib/game-data/characters';
+import { loadG1SaddleGroups } from '@/lib/game-data/racing/races';
+import { skillPointTotal, type SkillData } from '@/lib/game-data/skills/skills';
+import { encodedSkills, filterAndSortVeterans } from '@/lib/profile/veterans/profile-veterans';
+import { profileVeteranAffinity } from '@/lib/profile/veterans/profile-veteran-metrics';
+import { veteranQueryRow } from '@/lib/profile/veterans/profile-veteran-query';
+import { VeteranAffinityEngine } from '@/lib/veterans/affinity/affinity-engine';
+import { veteranAffinityRepository } from '@/lib/veterans/affinity/affinity-repository';
 import type { ProfileResponse, ProfileVeteran } from '../../profile-repository';
 import type { RosterCharacters } from './roster-characters.svelte';
 import type { RosterFilters } from './filters/roster-filters.svelte';
@@ -14,7 +14,7 @@ import type { RosterQuery } from './roster-query.svelte';
 
 interface CollectionSources {
   trainer: () => ProfileResponse['trainer'];
-  characters: () => Map<number, CharacterCatalogEntry>;
+  characters: () => Map<number, CharacterData>;
   filters: RosterFilters;
   query: RosterQuery;
   picks: RosterCharacters;
@@ -26,7 +26,7 @@ export class RosterCollection {
   #live = true;
 
   veterans = $state.raw<ProfileVeteran[]>([]);
-  skillCatalog = $state<Map<number, SkillCatalogEntry>>(new Map());
+  skillCatalog = $state<Map<number, SkillData>>(new Map());
   affinityEngine = $state<VeteranAffinityEngine>();
   raceGroups = $state<ReadonlyMap<number, number>>(new Map());
   metricError = $state('');
@@ -39,9 +39,11 @@ export class RosterCollection {
       ])
     )
   );
+
   spByVeteran = $derived(
     new Map(this.veterans.map((v) => [v, skillPointTotal(this.skillCatalog, encodedSkills(v))]))
   );
+
   spCeiling = $derived(
     Math.max(
       1000,
@@ -53,6 +55,7 @@ export class RosterCollection {
       ) * 500
     )
   );
+
   databaseRows = $derived(
     new Map(
       this.veterans.map((v) => [
@@ -67,6 +70,7 @@ export class RosterCollection {
       ])
     )
   );
+
   affinityCeiling = $derived(
     Math.max(
       100,
@@ -75,6 +79,7 @@ export class RosterCollection {
       ) * 10
     )
   );
+
   whiteCeiling = $derived(
     Math.max(10, ...[...this.databaseRows.values()].map((row) => Number(row.white_count ?? 0)))
   );
@@ -88,9 +93,11 @@ export class RosterCollection {
       this.#src.characters()
     )
   );
+
   filtered = $derived.by(() => {
     const filters = this.#src.filters,
       query = this.#src.query;
+
     const metricSort = isMetricSort(filters.sortField) ? filters.sortField : undefined;
     const result = this.propertyFiltered.filter(
       (v) =>
@@ -104,6 +111,7 @@ export class RosterCollection {
         (!filters.scenarioFilter || v.scenario_id === Number(filters.scenarioFilter)) &&
         (!filters.appliedUql || query.applied.matches(this.databaseRows.get(v)!))
     );
+
     const sort = query.applied.validation.sortBy;
     if (filters.appliedUql && sort)
       return result.sort(
@@ -115,6 +123,7 @@ export class RosterCollection {
       result.sort((a, b) => {
         const left = this.databaseRows.get(a)?.[metricSort],
           right = this.databaseRows.get(b)?.[metricSort];
+
         return left == null
           ? right == null
             ? 0
@@ -137,6 +146,7 @@ export class RosterCollection {
         veteranAffinityRepository.load(),
         loadG1SaddleGroups()
       ]);
+
       if (this.#live) {
         this.affinityEngine = new VeteranAffinityEngine(data);
         this.raceGroups = groups;

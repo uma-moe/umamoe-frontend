@@ -6,8 +6,8 @@ import {
   type PlannerTarget,
   type TargetProjection
 } from '@/lib/carat-planner/carat-planner';
-import { plannerPickupOptions } from '@/lib/carat-planner/planner-presentation';
-import type { TimelinePickupCatalog } from '@/lib/timeline/timeline-pickups';
+import { plannerPickupOptions } from '@/lib/carat-planner/presentation/planner-presentation';
+import type { TimelinePickupCatalog } from '@/lib/timeline/events/timeline-pickups';
 import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
 
 export function plannerGoalOptions(

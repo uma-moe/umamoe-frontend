@@ -10,13 +10,13 @@
     SupportCardPickerOption
   } from '@/components/pickers/picker-types';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
-  import { supportCardImagePath } from '@/lib/catalog/support-card-catalog';
+  import { supportCardImagePath } from '@/lib/game-data/support-cards/support-cards';
   import type {
     InheritanceFilterMode,
     InheritanceSearchFilters
-  } from '@/lib/inheritance/inheritance-search';
-  import type { SelectableParent } from '@/lib/veterans/parent-picker';
-  import type { CatalogEntry } from '../catalog-repository';
+  } from '@/lib/inheritance/search/inheritance-search';
+  import type { SelectableParent } from '@/lib/veterans/parents/parent-picker';
+  import type { GameDataEntry } from '@/lib/game-data/display-records';
   import DatabaseAffinityFilter from './DatabaseAffinityFilter.svelte';
   import DatabaseCharacterRules from './DatabaseCharacterRules.svelte';
   import DatabaseFilterGroup from './DatabaseFilterGroup.svelte';
@@ -33,7 +33,7 @@
     aceOptions: CharacterPickerOption[];
     charactersLoading: boolean;
     charactersError: string;
-    supports: CatalogEntry[];
+    supports: GameDataEntry[];
     supportOptions: SupportCardPickerOption[];
     supportsLoading: boolean;
     supportsError: string;
@@ -82,12 +82,15 @@
       filters.excludeMainParentIds.length +
       filters.excludeParentIds.length
   );
+
   const supportFilterCount = $derived(
     Number(Boolean(filters.supportCardId)) + Number(Boolean(filters.minLimitBreak))
   );
+
   const trainerFilterCount = $derived(
     Number(Boolean(filters.trainerId)) + Number(Boolean(filters.trainerName))
   );
+
   const selectedSupportOption = $derived.by<SupportCardPickerOption | undefined>(() => {
     const fullOption = supportOptions.find((entry) => Number(entry.id) === filters.supportCardId);
     if (fullOption) return fullOption;
@@ -126,12 +129,14 @@
       'allow-great': 'includeParentIds',
       'hide-great': 'excludeParentIds'
     } as const;
+
     const opposites = {
       'allow-main': 'excludeMainParentIds',
       'hide-main': 'mainParentIds',
       'allow-great': 'excludeParentIds',
       'hide-great': 'includeParentIds'
     } as const;
+
     const ids = selectedNumbers(values);
     const added = new Set(ids.filter((id) => !filters[keys[rule]].includes(id)).map(baseId));
     filters[keys[rule]] = ids;
@@ -142,27 +147,37 @@
       if (added.has(baseId(filters.parentLeftId))) filters.parentLeftId = undefined;
       if (added.has(baseId(filters.parentRightId))) filters.parentRightId = undefined;
     }
+
     onchange();
   }
 
   function supportType(
-    entry: CatalogEntry
+    entry: GameDataEntry
   ): 'Speed' | 'Stamina' | 'Power' | 'Guts' | 'Wit' | 'Friend' {
     const type = entry.tags[0];
-    return (
-      ['Speed', 'Stamina', 'Power', 'Guts', 'Wit', 'Friend'].includes(type ?? '') ? type : 'Friend'
-    ) as 'Speed' | 'Stamina' | 'Power' | 'Guts' | 'Wit' | 'Friend';
+    switch (type) {
+      case 'Speed':
+      case 'Stamina':
+      case 'Power':
+      case 'Guts':
+      case 'Wit':
+        return type;
+      default:
+        return 'Friend';
+    }
   }
 
-  function supportRarity(entry: CatalogEntry): 'R' | 'SR' | 'SSR' {
-    return entry.tags.includes('SSR') ? 'SSR' : entry.tags.includes('SR') ? 'SR' : 'R';
+  function supportRarity(entry: GameDataEntry): 'R' | 'SR' | 'SSR' {
+    if (entry.tags.includes('SSR')) return 'SSR';
+    if (entry.tags.includes('SR')) return 'SR';
+    return 'R';
   }
 
-  function setScalar(
-    key: 'minWinCount' | 'minWhiteCount' | 'minParentRank' | 'trainerId' | 'trainerName',
-    value: number | string | undefined
+  function setScalar<Key extends 'trainerId' | 'trainerName'>(
+    key: Key,
+    value: InheritanceSearchFilters[Key]
   ): void {
-    (filters as unknown as Record<string, unknown>)[key] = value;
+    filters[key] = value;
     onchange();
   }
 

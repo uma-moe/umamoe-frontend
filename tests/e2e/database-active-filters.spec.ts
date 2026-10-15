@@ -6,13 +6,28 @@ test.beforeEach(async ({ page }) => {
   await mockCharacterCatalog(page);
 });
 
-test('removing a filter chip preserves other requirements and clears support-card limit break with the card', async ({ page }) => {
+test('removing a filter chip preserves other requirements and clears support-card limit break with the card', async ({
+  page
+}) => {
   const requests: URLSearchParams[] = [];
-  page.on('request', request => {
-    if (request.url().includes('/search/query?')) requests.push(new URL(request.url()).searchParams);
+  page.on('request', (request) => {
+    if (request.url().includes('/search/query?'))
+      requests.push(new URL(request.url()).searchParams);
   });
-  const state = { fm: 'advanced', b: [[10, 3, 3], [20, 2, 2]], sc: '123', lb: 4 };
-  await page.goto('/database?filters=' + encodeURIComponent(Buffer.from(JSON.stringify(state)).toString('base64')));
+
+  const state = {
+    fm: 'advanced',
+    b: [
+      [10, 3, 3],
+      [20, 2, 2]
+    ],
+    sc: '123',
+    lb: 4
+  };
+
+  await page.goto(
+    '/database?filters=' + encodeURIComponent(Buffer.from(JSON.stringify(state)).toString('base64'))
+  );
   const chips = page.getByRole('region', { name: 'Active filters', exact: true });
   await chips.getByRole('button', { name: /Blue: .*3★/ }).click();
   await expect(chips.getByRole('button', { name: /^Blue:/ })).toHaveCount(1);
@@ -27,13 +42,20 @@ test('removing a filter chip preserves other requirements and clears support-car
   await expect(chips.getByRole('button', { name: /^Support:/ })).toHaveCount(0);
 });
 
-test('UQL shows one query chip and clearing it removes the query from the search', async ({ page }) => {
+test('UQL shows one query chip and clearing it removes the query from the search', async ({
+  page
+}) => {
   const requests: URLSearchParams[] = [];
-  page.on('request', request => {
-    if (request.url().includes('/search/query?')) requests.push(new URL(request.url()).searchParams);
+  page.on('request', (request) => {
+    if (request.url().includes('/search/query?'))
+      requests.push(new URL(request.url()).searchParams);
   });
+
   const state = { fm: 'uql', uql: 'speed >= 1000', mwc: 5 };
-  await page.goto('/database?filters=' + encodeURIComponent(Buffer.from(JSON.stringify(state)).toString('base64')));
+
+  await page.goto(
+    '/database?filters=' + encodeURIComponent(Buffer.from(JSON.stringify(state)).toString('base64'))
+  );
   const chips = page.locator('.active-filter-chips > button');
   await expect(chips).toHaveCount(1);
   await expect(chips).toHaveText('UQL: Active');

@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
-  import { loadSkillCatalog, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
+  import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import { buildOptimizeRequest, MAX_CANDIDATES, MAX_FINALISTS } from './requests/optimize-request';
   import { simulatorRepository, type OptimizeResult } from './simulator-repository';
   import { buildRaces, fieldWhere } from './setup/build/build-races';
@@ -26,16 +26,16 @@
   import {
     selectedRaceInstanceId,
     selectedCourse,
-    simulatorCatalog,
-    catalogErrorVisible,
-    dismissCatalogError,
+    simulatorCourseData,
+    courseDataErrorVisible,
+    dismissCourseDataError,
     simulatorSession
   } from './simulator-session.svelte';
 
   /** Team Trials races carry race type 14. */
   const TEAM_TRIALS_RACE_TYPE = 14;
 
-  let catalog = $state.raw(new Map<number, SkillCatalogEntry>());
+  let skillLookup = $state.raw(new Map<number, SkillData>());
   let run = $state<{
     result: OptimizeResult;
     raw: string;
@@ -44,6 +44,7 @@
     key: string;
     where: string;
   } | null>(null);
+
   let error = $state('');
   let busy = $state(false);
   let resultPanel = $state<HTMLElement>();
@@ -54,11 +55,15 @@
 
   onMount(() => {
     let active = true;
-    void loadSkillCatalog()
+    void loadSkills()
       .then((value) => {
-        if (active) catalog = value;
+        if (active) skillLookup = value;
       })
-      .catch(() => {});
+      .catch((reason: unknown) => {
+        if (active)
+          error = reason instanceof Error ? reason.message : 'Skill data could not be loaded.';
+      });
+
     return () => {
       active = false;
     };
@@ -69,21 +74,24 @@
   const pool = $derived(
     teamTrials
       ? teamTrialsPool(
-          simulatorCatalog.courses,
+          simulatorCourseData.courses,
           buildSearch.mode as TeamTrialsMode,
           buildSearch.tracks[buildSearch.mode as TeamTrialsMode]
         )
       : []
   );
+
   /** The course she races on; in Team Trials the first of the pool stands for the distance. */
   const course = $derived(teamTrials ? pool[0] : selectedCourse());
   const owned = $derived(buildSearch.uma.skills.map((skill) => skill.skillId));
   const offers = $derived(
-    offerPurchases(buildSearch.offers, owned, catalog, buildSearch.fastLearner)
+    offerPurchases(buildSearch.offers, owned, skillLookup, buildSearch.fastLearner)
   );
+
   const candidates = $derived(
     Math.min(MAX_CANDIDATES, Math.max(1, Math.round(formNumber(buildSearch.candidates, 256))))
   );
+
   const finalists = $derived(
     Math.min(
       MAX_FINALISTS,
@@ -91,21 +99,36 @@
       Math.max(1, Math.round(formNumber(buildSearch.finalists, 5)))
     )
   );
+
   const invalidSeed = $derived(
     !/^-?\d+$/.test(String(buildSearch.seed)) || Math.abs(Number(buildSearch.seed)) > 2147483647
   );
+
   // Why the search cannot run yet, said next to its button.
-  const blocked = $derived(
-    teamTrials && poolProblem(pool)
-      ? poolProblem(pool)
-      : !course
-        ? 'Pick a track and course first.'
-        : !offers.purchases.length
-          ? 'Add the skills she can buy first.'
-          : invalidSeed
-            ? 'Fix the seed first.'
-            : ''
-  );
+  const blocked = $derived.by(() => {
+    if (teamTrials && poolProblem(pool)) {
+      return poolProblem(pool);
+    }
+
+    if (!course) {
+      return 'Pick a track and course first.';
+    }
+
+    if (!offers.purchases.length) {
+      return 'Add the skills she can buy first.';
+    }
+
+    if (offers.lockedCost > formNumber(buildSearch.budget)) {
+      return 'The locked skills cost more than the SP available.';
+    }
+
+    if (invalidSeed) {
+      return 'Fix the seed first.';
+    }
+
+    return '';
+  });
+
   // Everything the search depends on, so the result can say when it no longer matches.
   const inputKey = $derived(
     JSON.stringify([
@@ -119,7 +142,8 @@
       buildSearch
     ])
   );
-  const current = $derived(!!run && run.key === inputKey);
+
+  const current = $derived(run !== null && run.key === inputKey);
   /** The setup as a build code. */
   function currentCode(): BuildCode {
     return {
@@ -154,6 +178,7 @@
     const key = inputKey,
       priced = offers.priced,
       budget = formNumber(buildSearch.budget);
+
     const races = buildRaces({
       her: $state.snapshot(buildSearch.uma),
       seed: formNumber(buildSearch.seed),
@@ -168,17 +193,20 @@
         startTimeType: Number(simulatorSession.startTime)
       }
     });
+
     if (!races) {
       error = 'Pick a course first.';
       busy = false;
       return;
     }
+
     try {
       const body = buildOptimizeRequest({
         mode: buildSearch.mode,
         targetSourceInputIndex: 0,
         spBudget: budget,
         purchases: offers.purchases,
+        locked: offers.locked,
         scenarios: races.scenarios,
         seed: formNumber(buildSearch.seed),
         maxCandidates: candidates,
@@ -188,6 +216,7 @@
           percent: Number(buildSearch.debuffs.percent)
         }
       });
+
       const response = await simulatorRepository.optimize({ body: { ...body } });
       run = {
         result: response.result,
@@ -196,13 +225,13 @@
         budget,
         key,
         where: response.result.fields
-          ? fieldWhere(response.result.fields, course, simulatorCatalog.courses)
+          ? fieldWhere(response.result.fields, course, simulatorCourseData.courses)
           : races.where
       };
     } catch (reason) {
       error = explainBuildError(
         reason instanceof Error ? reason.message : 'The request failed.',
-        catalog
+        skillLookup
       );
     } finally {
       busy = false;
@@ -210,15 +239,15 @@
   }
 </script>
 
-{#if catalogErrorVisible()}
+{#if courseDataErrorVisible()}
   <Banner
     title="Race data unavailable"
     tone="danger"
     reportable={false}
     dismissible
-    ondismiss={dismissCatalogError}
+    ondismiss={dismissCourseDataError}
   >
-    {simulatorCatalog.error}
+    {simulatorCourseData.error}
   </Banner>
 {/if}
 
@@ -239,7 +268,7 @@
         note="Her stats at the end of the career"
         oncode={() => (codeOpen = true)}
       >
-        <BuildOwnedSkills {catalog} />
+        <BuildOwnedSkills {skillLookup} />
       </RunnerInput>
       <BuildGoal
         {teamTrials}
@@ -247,7 +276,7 @@
       />
       <SkillOffers
         number={3}
-        {catalog}
+        {skillLookup}
         {owned}
       />
     </div>

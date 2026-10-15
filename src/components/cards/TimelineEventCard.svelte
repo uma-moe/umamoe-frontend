@@ -129,9 +129,11 @@
         <span class="metadata-item">
           {event.gachaLabel}
         </span>
-      {/if}{#if event.rerun}
+      {/if}
+      {#if event.rerun}
         <span class="metadata-item rerun">Rerun</span>
-      {/if}{#if event.predicted}
+      {/if}
+      {#if event.predicted}
         <span class="metadata-item predicted">Predicted</span>
       {/if}
     </div>
@@ -149,7 +151,8 @@
         <span class="context">
           {event.context}
         </span>
-      {/if}{#if hasDetails}
+      {/if}
+      {#if hasDetails}
         <span
           class="details-hint"
           aria-hidden="true"
@@ -243,7 +246,8 @@
                 onerror={hideImage}
               />
             </a>
-          {/each}{#if event.overflowPickups}
+          {/each}
+          {#if event.overflowPickups}
             <span class="pickup-overflow">
               +{event.overflowPickups}
             </span>

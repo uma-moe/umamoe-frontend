@@ -18,8 +18,18 @@
   const pairs = $derived(simulatorMatchups(result, umas.length));
   const teams = $derived(simulatorTeamResults(result, umas));
   const name = (source: number) => umas[source]!.name;
-  const percent = (value: number) =>
-    value >= 99.5 ? '100' : value < 0.5 ? '0' : Math.round(value).toString();
+  const percent = (value: number) => {
+    if (value >= 99.5) {
+      return '100';
+    }
+
+    if (value < 0.5) {
+      return '0';
+    }
+
+    return Math.round(value).toString();
+  };
+
   // Diverging around an even matchup: blue when the row runner usually finishes ahead, red when she usually finishes behind.
   const fill = (rate: number) =>
     'color-mix(in srgb, ' +

@@ -50,6 +50,7 @@
         )
       }))
   );
+
   const slopePaths = $derived(
     (course?.slopes ?? [])
       .filter((s) => s.start + s.length >= displayRange.min && s.start <= displayRange.max)
@@ -62,6 +63,7 @@
         )
       }))
   );
+
   const path = $derived(trackSection(roadPoints, displayRange.min, displayRange.max));
   const innerRail = $derived(trackSection(points, displayRange.min, displayRange.max));
   const outerRail = $derived(trackSection(outerPoints, displayRange.min, displayRange.max));

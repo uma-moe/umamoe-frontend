@@ -1,9 +1,9 @@
-import type { InheritanceFilterMode } from '@/lib/inheritance/inheritance-search';
+import type { InheritanceFilterMode } from '@/lib/inheritance/search/inheritance-search';
 import { validateInheritanceUql, type UqlValidation } from '@/lib/inheritance/uql/uql';
 import { buildUqlSparkHighlight } from '@/lib/inheritance/uql/uql-spark-highlight';
-import { UqlCompiler, type UqlQueryCatalog } from '@/lib/inheritance/uql/uql-compiler';
+import { UqlCompiler, type UqlQueryData } from '@/lib/inheritance/uql/uql-compiler';
 import { parseUqlContext } from '@/lib/inheritance/uql/uql-context';
-import type { SelectableParent } from '@/lib/veterans/parent-picker';
+import type { SelectableParent } from '@/lib/veterans/parents/parent-picker';
 import { legacyScope, loadLegacyParents } from '../database-legacy';
 import { resolveDatabaseUqlContext } from './database-uql-context';
 
@@ -14,15 +14,15 @@ export interface DatabaseUqlSource {
   userId: () => string | number | undefined;
   signedIn: () => boolean;
   authReady: () => boolean;
-  /** Runs after the query catalog or a legacy request settles so the search can resume. */
+  /** Runs after query data or a legacy request settles so the search can resume. */
   onsettled: () => void;
 }
 
 /** UQL query names, owned-legacy lookups, and the validation derived from the current query. */
 export class DatabaseUqlState {
-  catalog = $state.raw<UqlQueryCatalog | null>(null);
-  catalogLoading = $state(false);
-  catalogError = $state('');
+  queryData = $state.raw<UqlQueryData | null>(null);
+  queryDataLoading = $state(false);
+  queryDataError = $state('');
   parents = $state.raw<SelectableParent[]>([]);
   legacyLoading = $state(false);
   legacyError = $state('');
@@ -33,7 +33,7 @@ export class DatabaseUqlState {
   #dismissedPickerQuery = '';
   #source: DatabaseUqlSource;
 
-  compiler = $derived(this.catalog ? new UqlCompiler(this.catalog) : undefined);
+  compiler = $derived(this.queryData ? new UqlCompiler(this.queryData) : undefined);
   legacyParents = $derived.by(() => {
     const selectedParent = this.#source.selectedParent();
     return selectedParent &&
@@ -46,35 +46,41 @@ export class DatabaseUqlState {
         ]
       : this.parents;
   });
+
   query = $derived.by(() => parseUqlContext(this.#source.query() ?? ''));
   context = $derived.by(() => {
     const selectedParent = this.#source.selectedParent();
-    return resolveDatabaseUqlContext(this.query, this.catalog?.characters ?? [], {
+    return resolveDatabaseUqlContext(this.query, this.queryData?.characters ?? [], {
       parents: [...(selectedParent ? [selectedParent] : []), ...this.parents],
       pending: (value) =>
         this.legacyScope !== legacyScope(value, this.#source.userId()) || this.legacyLoading,
       error: this.legacyError
     });
   });
+
   validation = $derived.by<UqlValidation>(() => {
     const mode = this.#source.mode();
-    if (mode === 'uql' && !this.catalog)
+    if (mode === 'uql' && !this.queryData)
       return {
         state: 'incomplete',
-        message: this.catalogError || 'Loading query names…',
+        message: this.queryDataError || 'Loading query names…',
         compiled: '',
         explicitFollowerFilter: false
       };
+
     if (mode === 'uql' && this.context.issue)
       return { ...this.context.issue, compiled: '', explicitFollowerFilter: false };
+
     const validation = validateInheritanceUql(
       mode === 'uql' ? this.query.predicate : (this.#source.query() ?? ''),
       this.compiler
     );
+
     return validation.state === 'empty' && this.query.directives.length
       ? { ...validation, state: 'valid', message: 'Ready' }
       : validation;
   });
+
   highlight = $derived.by(() =>
     this.#source.mode() === 'uql' && this.validation.state === 'valid'
       ? buildUqlSparkHighlight(this.validation.compiled)
@@ -85,16 +91,17 @@ export class DatabaseUqlState {
     this.#source = source;
   }
 
-  loadCatalog = async (): Promise<void> => {
-    if (this.catalogLoading || this.catalog) return;
-    this.catalogLoading = true;
-    this.catalogError = '';
+  loadQueryData = async (): Promise<void> => {
+    if (this.queryDataLoading || this.queryData) return;
+    this.queryDataLoading = true;
+    this.queryDataError = '';
     try {
-      this.catalog = await (await import('@/lib/catalog/uql-catalog')).loadUqlQueryCatalog();
+      this.queryData = await (await import('@/lib/inheritance/uql/query-data')).loadUqlQueryData();
     } catch {
-      this.catalogError = 'UQL names could not be loaded. Your query is preserved; reload to retry.';
+      this.queryDataError =
+        'UQL names could not be loaded. Your query is preserved; reload to retry.';
     } finally {
-      this.catalogLoading = false;
+      this.queryDataLoading = false;
       this.#source.onsettled();
     }
   };
@@ -135,10 +142,12 @@ export class DatabaseUqlState {
     const placeholder = this.query.directives.some(
       (directive) => directive.kind === 'legacy' && !directive.value
     );
+
     if (placeholder && /\[\s*\]/.test(query ?? '') && this.#dismissedPickerQuery !== query) {
       this.#dismissedPickerQuery = query ?? '';
       this.pickerOpen = true;
     }
+
     if (!placeholder) this.#dismissedPickerQuery = '';
   }
 

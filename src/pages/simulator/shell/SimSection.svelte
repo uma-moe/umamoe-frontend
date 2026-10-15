@@ -16,6 +16,7 @@
     actions?: Snippet;
     children: Snippet;
   } = $props();
+
   const id = $props.id();
 </script>
 

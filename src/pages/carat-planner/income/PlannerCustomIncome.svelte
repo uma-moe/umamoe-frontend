@@ -24,6 +24,7 @@
     { value: 'rainbow_full_crystal', label: 'Rainbow Uncap Crystal' },
     { value: 'gold_full_crystal', label: 'Gold Uncap Crystal' }
   ];
+
   const cadenceOptions = [
     { value: 'once', label: 'Once' },
     { value: 'daily', label: 'Daily' },

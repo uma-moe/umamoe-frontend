@@ -50,7 +50,8 @@
         <a {href}>{name}</a>
       {:else}
         <strong>{name}</strong>
-      {/if}{#if group}
+      {/if}
+      {#if group}
         <span>
           {#if groupHref}
             <a
@@ -69,7 +70,8 @@
             />{group}
           {/if}
         </span>
-      {/if}{#if meta}
+      {/if}
+      {#if meta}
         <small>{meta}</small>
       {/if}
     </div>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
-  import { describeCourse, trackName } from '@/lib/catalog/course-catalog';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
+  import { describeCourse, trackName } from '@/lib/game-data/racing/courses';
   import {
     loadReplayCourses,
     courseSegments,
@@ -16,7 +16,7 @@
     showHeader = true,
     compact = false
   }: {
-    course?: CourseCatalogEntry;
+    course?: RaceCourse;
     showOutline?: boolean;
     showHeader?: boolean;
     compact?: boolean;
@@ -36,34 +36,39 @@
                   segment.start >= corner.start && segment.start < corner.start + corner.length
               ) + 1
             : 0;
+
+          let short = '—';
+          if (corner) short = 'C' + corner;
+          else if (segment.label === 'Final straight') short = 'Finish str.';
+          else if (segment.label === 'Straight') short = 'Straight →';
           return {
             ...segment,
             label: segment.label === 'Corner' ? 'Corner ' + corner : segment.label,
-            short: corner
-              ? 'C' + corner
-              : segment.label === 'Final straight'
-                ? 'Finish str.'
-                : segment.label === 'Straight'
-                  ? 'Straight →'
-                  : '—'
+            short
           };
         })
       : []
   );
+
   const bands = $derived(
     profile
       ? [
           {
             id: 'slopes',
             label: 'Slopes',
-            segments: courseTerrain(profile).slopes.map((slope) => ({
-              start: slope.start,
-              end: slope.end,
-              label: slope.slope
-                ? (slope.slope > 0 ? '↗ +' : '↘ ') + (slope.slope / 10000).toFixed(1) + '%'
-                : 'Flat',
-              color: slope.slope > 0 ? '#bd7581' : slope.slope < 0 ? '#719bdd' : '#737d8a'
-            }))
+            segments: courseTerrain(profile).slopes.map((slope) => {
+              let color = '#737d8a';
+              if (slope.slope > 0) color = '#bd7581';
+              else if (slope.slope < 0) color = '#719bdd';
+              return {
+                start: slope.start,
+                end: slope.end,
+                label: slope.slope
+                  ? (slope.slope > 0 ? '↗ +' : '↘ ') + (slope.slope / 10000).toFixed(1) + '%'
+                  : 'Flat',
+                color
+              };
+            })
           },
           { id: 'sections', label: 'Sections', segments: sections },
           {
@@ -104,6 +109,7 @@
         ]
       : []
   );
+
   const selected = $derived(
     bands
       .flatMap((band) =>
@@ -128,8 +134,10 @@
         if (active) data = value;
       })
       .catch((reason) => {
-        if (active) error = (reason as Error).message;
+        if (active)
+          error = reason instanceof Error ? reason.message : 'Could not load the course profile.';
       });
+
     return () => {
       active = false;
     };

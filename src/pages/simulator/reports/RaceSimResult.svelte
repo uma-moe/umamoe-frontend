@@ -17,10 +17,10 @@
   import type { MarginUnit } from './simulation-comparison';
   import { simulatorResults } from '../simulator-results';
   import type { MonteCarloResult } from '../simulator-repository';
-  import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import type { SimulatorUma } from '../simulator-uma';
   import type { MonteCarloInput } from '../requests/race-sim-request';
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import './simulation-report.css';
   let {
     result,
@@ -36,14 +36,16 @@
     input?: MonteCarloInput;
     raw?: string;
     umas: SimulatorUma[];
-    course?: CourseCatalogEntry;
+    course?: RaceCourse;
     track?: ParsedRaceCapture['track'];
     busy?: boolean;
     suspended?: boolean;
   } = $props();
+
   const metrics = $derived(result ? simulatorResults(result, umas.length) : []);
   let selected = $state<number[]>(untrack(() => metrics.slice(0, 2).map((r) => r.source))),
     inspected = $state(untrack(() => metrics[0]?.source ?? 0));
+
   let notice = $state('');
   const sample = new ReportSample(() => ({ result, input, umas, course, track }));
   onDestroy(() => sample.abort());
@@ -54,12 +56,15 @@
         selected = selected.filter((s) => s !== source);
         if (inspected === source) inspected = selected[0]!;
       }
+
       return;
     }
+
     if (selected.length === 4) {
       notice = 'Compare up to four runners. Deselect one to add another.';
       return;
     }
+
     selected = [...selected, source];
     inspected = source;
   }
@@ -70,9 +75,11 @@
     selected = [source, ...selected.filter((s) => s !== source)].slice(0, 4);
     inspected = source;
   }
+
   /** Picked compares up to four runners in depth; whole field puts every runner on the same charts. */
   let scope = $state<'picked' | 'field'>('picked'),
     highlight = $state<number>();
+
   /** Margins and gains always show lengths and seconds; this picks which one leads. */
   let marginUnit = $state<MarginUnit>('lengths');
   const reference = $derived(selected[0] ?? 0);
@@ -81,11 +88,13 @@
       ? [reference, ...metrics.map((row) => row.source).filter((source) => source !== reference)]
       : selected
   );
+
   let navHeight = $state(0);
   // Highlighting a runner in the whole-field views also follows her on the course graph.
   $effect(() => {
     if (highlight !== undefined) inspected = highlight;
   });
+
   // The report is keyed by run, so one store lives exactly as long as this batch.
   const impacts = untrack(() => (result ? new SkillImpactStore(result, input) : undefined));
 </script>

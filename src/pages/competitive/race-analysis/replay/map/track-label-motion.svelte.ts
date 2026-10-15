@@ -33,7 +33,9 @@ export class TrackLabelMotion {
     const { runners, labelSize, overlayHeight, width, height, following } = layout;
     const view = [width, height, layout.primary, following].join(':'),
       now = layout.time,
-      jumped = !Number.isFinite(this.#time) || Math.abs(now - this.#time) > 0.5 || view !== this.#view;
+      jumped =
+        !Number.isFinite(this.#time) || Math.abs(now - this.#time) > 0.5 || view !== this.#view;
+
     this.#time = now;
     this.#view = view;
     const current = untrack(() => this.#slots);
@@ -52,6 +54,7 @@ export class TrackLabelMotion {
       following,
       { width: labelSize, height: 0, offset: overlayHeight }
     );
+
     if (prefersReducedMotion.current)
       placed = placed.map((p) => (p.target ? { index: p.index, ...p.target } : p));
     // Finish a gradual regrouping even if the user pauses the replay midway.
@@ -60,6 +63,7 @@ export class TrackLabelMotion {
       const p = placed.find((l) => l.index === index);
       return p ? { dx: p.dx, dy: p.dy, target: p.target } : (current[index] ?? { dx: 0, dy: 0 });
     });
+
     if (
       jumped ||
       next.some(

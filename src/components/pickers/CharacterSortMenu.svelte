@@ -21,11 +21,17 @@
       disabled: !hasAffinity
     }
   ]);
-  const selectedLabel = $derived(
-    value === 'name' ? 'Name' : value === 'affinity' ? 'Affinity' : 'Default'
-  );
 
-  function select(next: CharacterSortValue): void {
+  const sortLabels: Record<CharacterSortValue, string> = {
+    default: 'Default',
+    name: 'Name',
+    affinity: 'Affinity'
+  };
+
+  const selectedLabel = $derived(sortLabels[value]);
+
+  function select(next: string): void {
+    if (next !== 'default' && next !== 'name' && next !== 'affinity') return;
     value = next;
     onchange?.(next);
   }
@@ -44,7 +50,7 @@
       disabled: option.disabled,
       checked: value === option.value
     }))}
-    onselect={(id) => select(id as CharacterSortValue)}
+    onselect={select}
   />
 </div>
 

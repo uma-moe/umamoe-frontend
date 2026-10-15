@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/race-capture-parser';
-  import { lastSpurtResult, raceMetricHelp } from '@/lib/race/race-diagnostics';
+  import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
+  import { lastSpurtResult, raceMetricHelp } from '@/lib/race/capture/race-diagnostics';
   import { raceRunnerKey } from '@/lib/race/multi-race-analysis';
-  import { hpRemainingColor } from '@/lib/race/race-display';
+  import { hpRemainingColor } from '@/lib/race/replay/race-display';
   import DataTable from '@/components/data/DataTable.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import Button from '@/components/controls/Button.svelte';
@@ -42,9 +42,11 @@
       ([value, runner]) => ({ value, label: runner.name, image: portrait(runner.cardId) })
     )
   );
+
   const filtered = $derived(
     entries.filter((e) => uma === 'all' || raceRunnerKey(e.runner) === uma)
   );
+
   const measured = $derived(filtered.filter((e) => e.horse));
   const selected = $derived(entries.find((e) => e.key === expanded));
   const outcomeRows = $derived(filtered.map((e) => outcomeRow(e, pending)));

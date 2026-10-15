@@ -3,7 +3,7 @@
   import Button from '@/components/controls/Button.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import Icon from '@/components/Icon.svelte';
-  import { factorImage, factorMetadata } from '@/lib/catalog/factor-catalog';
+  import { factorImage, factorMetadata } from '@/lib/game-data/factors/factors';
   import WhiteFactorTypePicker from '../filters/factors/WhiteFactorTypePicker.svelte';
 
   interface Props {

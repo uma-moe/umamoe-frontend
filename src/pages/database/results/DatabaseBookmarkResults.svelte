@@ -8,7 +8,7 @@
   import Pagination from '@/components/navigation/Pagination.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
-  import type { InheritanceRecord } from '@/lib/inheritance/inheritance-search';
+  import type { InheritanceRecord } from '@/lib/inheritance/search/inheritance-search';
   import { authUser } from '@/services/auth/auth-state';
   import type { DatabaseBookmarks } from './database-bookmarks.svelte';
 

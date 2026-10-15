@@ -25,6 +25,7 @@
       report.top_sessions?.length ? report.top_sessions : (report.top_online_streaks ?? [])
     )
   );
+
   const snapshots = $derived((report.short_career_snapshots ?? []).slice(0, 25));
 
   function toggleSnapshot(id: number): void {

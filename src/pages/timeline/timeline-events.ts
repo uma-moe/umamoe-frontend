@@ -1,10 +1,13 @@
-import { itemIconPath } from '@/lib/catalog/item-icons';
+import { itemIconPath } from '@/lib/game-assets/item-icons';
 import { activePlan, type CaratPlanCollection } from '@/lib/carat-planner/carat-planner';
 import type { TimelineEventData } from '@/components/cards/timeline-types';
-import { timelineDisplayTitle } from '@/lib/timeline/timeline-pickups';
-import { timelineCardContext, timelineCardRaceLines } from '@/lib/timeline/timeline-race-facts';
-import type { TimelineRewardSummary } from '@/lib/timeline/timeline-reward-summary';
-import { searchKey } from '@/lib/timeline/timeline-search';
+import { timelineDisplayTitle } from '@/lib/timeline/events/timeline-pickups';
+import {
+  timelineCardContext,
+  timelineCardRaceLines
+} from '@/lib/timeline/events/timeline-race-facts';
+import type { TimelineRewardSummary } from '@/lib/timeline/events/timeline-reward-summary';
+import { searchKey } from '@/lib/timeline/board/timeline-search';
 import { filterOptions, type FilterType } from './timeline-controls';
 import type { TimelineRecord } from './timeline-repository';
 

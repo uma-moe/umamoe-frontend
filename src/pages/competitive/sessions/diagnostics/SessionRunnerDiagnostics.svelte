@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { RaceRunner } from '@/lib/race/race-capture-parser';
-  import { frontBlockingSpans } from '@/lib/race/race-diagnostics';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
+  import { frontBlockingSpans } from '@/lib/race/capture/race-diagnostics';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
   import Button from '@/components/controls/Button.svelte';
   import RunnerBuild from '../../runners/RunnerBuild.svelte';

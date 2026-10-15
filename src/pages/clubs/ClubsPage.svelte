@@ -42,10 +42,12 @@
     { value: 'name', label: 'Name' },
     { value: 'members', label: 'Members' }
   ];
+
   const policyOptions = [
     { value: 'all', label: 'All Playstyles' },
     ...Object.entries(policyLabels).map(([value, label]) => ({ value, label }))
   ];
+
   const pageSizeOptions = [20, 50, 100].map((value) => ({
     value: String(value),
     label: String(value)
@@ -54,6 +56,7 @@
   const isTop100View = $derived(
     !committedSearch && page === 1 && pageSize === '100' && sortBy === 'rank'
   );
+
   const remoteQuery = $derived<ClubQuery>({
     page: page - 1,
     pageSize: Number(pageSize),
@@ -62,6 +65,7 @@
     sortBy,
     sortOrder
   });
+
   const visibleClubs = $derived(
     (result?.items ?? []).filter((club) => {
       if (
@@ -131,6 +135,7 @@
     const url = new URL(location.href);
     const set = (key: string, value: string, defaultValue: string) =>
       value === defaultValue ? url.searchParams.delete(key) : url.searchParams.set(key, value);
+
     set('name', searchKey === 'name' ? committedSearch : '', '');
     set('page', String(page - 1), '0');
     set('pageSize', pageSize, '100');

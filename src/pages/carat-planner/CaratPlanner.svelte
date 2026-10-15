@@ -2,7 +2,7 @@
   import {
     buildTimelineRewardSummaries,
     withTimelineRewardFallbacks
-  } from '@/lib/timeline/timeline-reward-summary';
+  } from '@/lib/timeline/events/timeline-reward-summary';
   import { onMount, untrack } from 'svelte';
   import { searchParams } from 'sv-router';
   import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
@@ -20,10 +20,10 @@
     type CaratPlan,
     type CaratPlanCollection
   } from '@/lib/carat-planner/carat-planner';
-  import { compactPlannerCollectionResourceState } from '@/lib/carat-planner/planner-resource-state';
-  import { reconcileIncomePreset } from '@/lib/carat-planner/planner-income-presets';
+  import { compactPlannerCollectionResourceState } from '@/lib/carat-planner/persistence/planner-resource-state';
+  import { reconcileIncomePreset } from '@/lib/carat-planner/income/planner-income-presets';
   import { buildPlannerIncomeGroups, summarizePlannerIncome } from './income/planner-income-view';
-  import type { TimelinePickupCatalog } from '@/lib/timeline/timeline-pickups';
+  import type { TimelinePickupCatalog } from '@/lib/timeline/events/timeline-pickups';
   import { plannerUsingCache } from './planner-resource-repository';
   import { PlannerResources } from './planner-resources.svelte';
   import { withCurrentPlan } from './planner-collection';
@@ -76,10 +76,12 @@
       resources.rewards.global_reward_comparison
     )
   );
+
   const rewardSummaries = $derived(buildTimelineRewardSummaries(rewardResource, events));
   const plan = $derived(
     synchronizePlannerTargets(activePlan(collection), events, resources.gachas)
   );
+
   // Pull counts, goals and current balances spend income; they do not rebuild it.
   const ledgerKey = $derived(
     JSON.stringify([
@@ -97,6 +99,7 @@
         .sort()
     ])
   );
+
   const incomeResource = $derived(resources.income);
   const coreResource = $derived(resources.core);
   const ledger = $derived.by(() => {
@@ -107,13 +110,16 @@
       rewards: effectiveRewards,
       timelineEvents: events
     };
+
     return untrack(() =>
       buildPlannerLedger(plan, bundle, dates.at(-1) ?? plan.projectionStartDate, dates)
     );
   });
+
   const projection = $derived(
     projectPlan(plan, { ...resources, rewards: effectiveRewards, timelineEvents: events }, ledger)
   );
+
   const projectionByTarget = $derived(
     new Map(projection.targets.map((item) => [item.targetId, item]))
   );
@@ -126,6 +132,7 @@
       events: targetEvents
     })
   );
+
   const activeTargets = $derived(enabledPlannerTargets(plan));
   const addedEventIds = $derived(
     new Set([
@@ -133,6 +140,7 @@
       ...plan.enabledRewardEventIds.filter((id) => !plan.disabledEventIds.includes(id))
     ])
   );
+
   const incomeProjection = $derived.by(() => {
     const dates = JSON.parse(ledgerKey).at(-1) as string[];
     const through =
@@ -140,15 +148,18 @@
       new Date(new Date(plan.projectionStartDate + 'T00:00:00Z').getTime() + 29 * 86_400_000)
         .toISOString()
         .slice(0, 10);
+
     const bundle = {
       core: coreResource,
       income: incomeResource,
       rewards: effectiveRewards,
       timelineEvents: events
     };
+
     const entries = dates.length
       ? ledger
       : untrack(() => buildPlannerLedger(plan, bundle, through, []));
+
     return { ...summarizePlannerIncome(entries), through, preview: !dates.length };
   });
 
@@ -160,6 +171,7 @@
           events
         )
       : next;
+
     onchange(collection);
   }
 
@@ -186,6 +198,7 @@
         effectiveRewards
       )
     );
+
     eventSearch = '';
   }
 
@@ -198,6 +211,7 @@
       eventType: `${target.bannerKind}_banner`,
       plannerRewardAvailable: plan.enabledRewardEventIds.includes(target.eventId)
     };
+
     publish(
       setTimelineEvent(
         withCurrentPlan(collection, plan),
@@ -218,6 +232,7 @@
         { ...resources, rewards: effectiveRewards },
         events
       );
+
       if (JSON.stringify(compacted) !== JSON.stringify(collection))
         untrack(() => publish(compacted));
     }
@@ -229,6 +244,7 @@
     const groups = Object.fromEntries(
       incomeGroups.map((group) => [group.id, group.options.map((option) => option.value)])
     );
+
     if (
       reconcileIncomePreset(
         activePlan(next),
@@ -264,6 +280,7 @@
       handledBanner = '';
       return;
     }
+
     const requested = searchParams.toURLSearchParams().get('banner')?.trim() ?? '';
     const event = findPlannerEvent(requested, events);
     if (event && (!event.plannerRewardAvailable || loader.ready))
@@ -284,6 +301,7 @@
     const unsubscribe = plannerCloudSync.subscribe((status) => {
       cloudStatus = status;
     });
+
     void loader.load();
     return () => {
       loader.destroy();

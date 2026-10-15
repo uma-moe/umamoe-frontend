@@ -10,8 +10,20 @@ export interface ScreenLayoutContract {
 }
 
 export const SCREEN_LAYOUTS: readonly ScreenLayoutContract[] = [
-  { id: 'mobile', label: 'Mobile', min: 0, max: 767, navigation: 'Utility header + bottom navigation' },
-  { id: 'compact', label: 'Compact', min: 768, max: 1799, navigation: '64px navigation rail; inline ads below 1700px, right ad rail above' },
+  {
+    id: 'mobile',
+    label: 'Mobile',
+    min: 0,
+    max: 767,
+    navigation: 'Utility header + bottom navigation'
+  },
+  {
+    id: 'compact',
+    label: 'Compact',
+    min: 768,
+    max: 1799,
+    navigation: '64px navigation rail; inline ads below 1700px, right ad rail above'
+  },
   { id: 'expanded', label: 'Expanded', min: 1800, navigation: '240px navigation rail' }
 ] as const;
 
@@ -31,6 +43,7 @@ export const ANALYTICS_VIEWPORTS = [
   { width: 1920, height: 1080 },
   { width: 2560, height: 1440 }
 ] as const;
+
 export const ANALYTICS_REVIEW_VIEWPORTS = ANALYTICS_VIEWPORTS.map((viewport) => viewport.width);
 
 export const PAGE_LAYOUT = {

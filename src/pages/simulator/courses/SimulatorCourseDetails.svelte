@@ -10,7 +10,7 @@
     type Course
   } from '@/pages/competitive/race-analysis/replay/replay-course';
   import { selectedCourse } from '../simulator-session.svelte';
-  import { describeCourse, trackName } from '@/lib/catalog/course-catalog';
+  import { describeCourse, trackName } from '@/lib/game-data/racing/courses';
 
   let { open = $bindable(false) }: { open?: boolean } = $props();
 
@@ -31,11 +31,13 @@
         if (active) course = data.courses[id];
       })
       .catch((reason) => {
-        if (active) error = (reason as Error).message;
+        if (active)
+          error = reason instanceof Error ? reason.message : 'Could not load course details.';
       })
       .finally(() => {
         if (active) loading = false;
       });
+
     return () => {
       active = false;
     };

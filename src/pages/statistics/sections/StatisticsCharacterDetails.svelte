@@ -69,15 +69,18 @@
       charScopes.flatMap((scope) => (scope.stat_averages ? [scope.stat_averages] : []))
     )
   );
+
   const charUsage = $derived(
     characterStats ? characterUsage(characterStats, filters) : { distances: [], classes: [] }
   );
+
   const charDistanceData = $derived(
     charUsage.distances.map((item) => ({
       ...item,
       name: distanceNames[statisticsDistanceId(item.id)] ?? title(item.id)
     }))
   );
+
   const charClassData = $derived(
     charUsage.classes.map((item) => ({
       name: `Class ${item.id}`,
@@ -85,12 +88,14 @@
       color: classColors[item.id]
     }))
   );
+
   const charSupportData = $derived(
     aggregateMetric(
       charScopes.map((scope) => scope.common_support_cards ?? scope.support_cards ?? {}),
       (id, item) => supportName(supportCatalog, id, item)
     ).map((item) => supportRow(supportCatalog, item))
   );
+
   const charDecks = $derived(
     aggregateMetric(
       charScopes.flatMap((scope) =>
@@ -99,6 +104,7 @@
       (id, item) => compositionLabel(item, id)
     )
   );
+
   const charSupportTypes = $derived(
     supportTypeDistribution(
       charSupportData.length ? [] : charDecks,
@@ -106,9 +112,11 @@
       (id) => supportCatalog.get(id)?.tags[0]?.toLowerCase() ?? 'other'
     )
   );
+
   const charMeans = $derived(
     meanStats(charScopes.flatMap((scope) => (scope.stat_averages ? [scope.stat_averages] : [])))
   );
+
   const charSamples = $derived(charDistanceData.reduce((sum, item) => sum + item.value, 0));
   const comparisonSeries = $derived(
     charSamples

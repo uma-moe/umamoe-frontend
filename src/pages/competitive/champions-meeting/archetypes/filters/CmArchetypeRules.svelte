@@ -41,13 +41,16 @@
       0
     )
   );
+
   const ruleMatcher = $derived(selectionMatcher(cards, ruleUma, ruleStyle));
   const ruleOptions = $derived(
     parsed.slots[Number(ruleTarget)]?.anyOf ?? [parsed.slots[Number(ruleTarget)] ?? {}]
   );
+
   const ruleHasBase = $derived(
     ruleTarget === 'exclude' || hasRequirement(parsed.slots[Number(ruleTarget)] ?? {})
   );
+
   const ruleRows = $derived(
     [0, 1, 2].map((index) => ({
       value: String(index),
@@ -61,6 +64,7 @@
           .join(' or ') || 'Any runner')
     }))
   );
+
   const ruleDuplicate = $derived(
     hasRequirement(ruleMatcher) &&
       (ruleTarget === 'exclude'
@@ -76,8 +80,10 @@
       const index = Number(ruleTarget),
         slot = slots[index] ?? {},
         choices = [...(slot.anyOf ?? (hasRequirement(slot) ? [slot] : [])), ruleMatcher];
+
       slots[index] = choices.length > 1 ? { anyOf: choices } : choices[0]!;
     }
+
     onapply(slots);
     ruleUma = '';
     ruleStyle = '';
@@ -90,6 +96,7 @@
       const choices = slots[index]!.anyOf!.filter((_, i) => i !== alternative);
       slots[index] = choices.length > 1 ? { anyOf: choices } : (choices[0] ?? {});
     }
+
     onapply(slots);
   }
 </script>

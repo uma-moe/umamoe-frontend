@@ -1,8 +1,8 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { factorOptions } from '@/lib/catalog/factor-catalog';
-  import type { CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
-  import type { FactorScope, VeteranFactorFilter } from '@/lib/profile/profile-veterans';
+  import { factorOptions } from '@/lib/game-data/factors/factors';
+  import type { CharacterData } from '@/lib/game-data/characters';
+  import type { FactorScope, VeteranFactorFilter } from '@/lib/profile/veterans/profile-veterans';
   import SparkBrowser from '@/components/sparks/SparkBrowser.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import Icon from '@/components/Icon.svelte';
@@ -19,7 +19,7 @@
   }: {
     filters?: VeteranFactorFilter[];
     category?: string;
-    characters: Map<number, CharacterCatalogEntry>;
+    characters: Map<number, CharacterData>;
     scopeLabels: Record<FactorScope, string>;
   } = $props();
 
@@ -58,6 +58,7 @@
         { factorId, minLevel: 1, scope: 'any', mode: 'total', operator: 'and' }
       ];
     }
+
     category = 'all';
     await tick();
     document.getElementById('factor-stars-' + index + '-start')?.focus({ preventScroll: true });
@@ -87,6 +88,7 @@
   function sumStars(index: number, combined: boolean) {
     const filter = filters[index]!,
       mode = combined ? 'total' : 'minimum';
+
     update(index, {
       mode,
       minLevel: Math.min(starCap(filter.scope, mode), filter.minLevel),
@@ -97,6 +99,7 @@
   function setRange(index: number, minLevel: number, maxLevel: number) {
     const filter = filters[index]!,
       mode = filter.mode === 'total' ? 'total' : minLevel === maxLevel ? 'exact' : 'minimum';
+
     update(index, {
       mode,
       minLevel,

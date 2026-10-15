@@ -3,15 +3,15 @@
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import { contentUrl, sanitizeContentHtml } from '@/lib/content-html';
-  import { buildTimelinePrediction } from '@/lib/timeline/timeline-prediction';
-  import type { TimelineCalculation } from '@/lib/timeline/timeline-prediction-types';
-  import { timelineRaceEventFacts } from '@/lib/timeline/timeline-race-facts';
+  import { buildTimelinePrediction } from '@/lib/timeline/prediction/timeline-prediction';
+  import type { TimelineCalculation } from '@/lib/timeline/prediction/timeline-prediction-types';
+  import { timelineRaceEventFacts } from '@/lib/timeline/events/timeline-race-facts';
   import {
     timelineDisplayTitle,
     type TimelinePickupCatalog
-  } from '@/lib/timeline/timeline-pickups';
+  } from '@/lib/timeline/events/timeline-pickups';
   import type { PlannerGachaEntry } from '@/lib/carat-planner/carat-planner';
-  import type { TimelineRewardSummary } from '@/lib/timeline/timeline-reward-summary';
+  import type { TimelineRewardSummary } from '@/lib/timeline/events/timeline-reward-summary';
   import type { TimelineRecord } from '../timeline-repository';
   import TimelineEventPrediction from './TimelineEventPrediction.svelte';
   import TimelineEventResources from './TimelineEventResources.svelte';
@@ -58,6 +58,7 @@
   const banner = $derived(
     ['character_banner', 'support_card_banner'].includes(event.eventType) && Boolean(event.canPlan)
   );
+
   const canPlan = $derived(
     Boolean(
       event.canPlan ||
@@ -65,6 +66,7 @@
       (rewardSummary && rewardSummary.mode !== 'placement')
     )
   );
+
   const highlight = $derived(
     [
       'champions_meeting',
@@ -74,6 +76,7 @@
       'trainer_skills_test'
     ].includes(event.eventType)
   );
+
   const dateLabel = $derived(
     event.date.toLocaleDateString(undefined, {
       month: 'short',
@@ -82,6 +85,7 @@
       timeZone: 'UTC'
     })
   );
+
   const endLabel = $derived(
     event.estimatedEndDate && event.estimatedEndDate > event.date
       ? event.estimatedEndDate.toLocaleDateString(undefined, {
@@ -92,6 +96,7 @@
         })
       : ''
   );
+
   const freePullSource = $derived(contentUrl(gacha?.free_pulls_source_url));
 </script>
 

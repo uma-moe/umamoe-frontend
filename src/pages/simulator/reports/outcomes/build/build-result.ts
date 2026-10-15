@@ -15,9 +15,11 @@ const SURE = 3;
 /** Seconds a build saves her a race: the fresh races' estimate when there is one. */
 export const gainOf = (finalist: OptimizeFinalist): OptimizeEstimate | undefined =>
   finalist.validation_gain ?? finalist.gain;
+
 /** `+0.42`, for columns that say their unit once. */
 export const signed = (value: number) =>
   (value < 0 ? '−' : '+') + (Math.abs(value) < 0.005 ? '0.00' : Math.abs(value).toFixed(2));
+
 /** `0.42 s`, signed when it costs time; in real fields `+0.42`, runners beaten. */
 export const amount = (value: number, field: boolean) =>
   field
@@ -25,6 +27,7 @@ export const amount = (value: number, field: boolean) =>
     : (value < 0 ? '−' : '') +
       (Math.abs(value) < 0.005 ? '0.00' : Math.abs(value).toFixed(2)) +
       ' s';
+
 /** Surely costs her: time with the pack, places in real fields. */
 export const surelyWorse = (estimate: OptimizeEstimate) =>
   estimate.mean + SURE * estimate.standard_error < 0;
@@ -37,6 +40,7 @@ export function difference(
 ) {
   const mine = new Set(finalist.build.purchases),
     top = new Set(best?.build.purchases ?? []);
+
   return {
     adds: [...mine].filter((index) => !top.has(index)).map((index) => offers[index]?.skill.name),
     drops: [...top].filter((index) => !mine.has(index)).map((index) => offers[index]?.skill.name)
@@ -50,11 +54,12 @@ export function difference(
 export function buildAdds(best: OptimizeFinalist | undefined, offers: PricedOffer[]) {
   const steps = (best?.contributions ?? [])
     .map((step) => ({
-      offers: step.purchases.map((index) => offers[index]).filter((offer) => !!offer),
+      offers: step.purchases.map((index) => offers[index]).filter((offer) => offer !== undefined),
       base: [] as PricedOffer[],
       gain: { ...step.gain }
     }))
     .filter((step) => step.offers.length);
+
   // Down each chain (a gold on its ◎ on its ○) until every skill she builds on is in the row of what replaces it.
   let merged: boolean;
   do {
@@ -67,6 +72,7 @@ export function buildAdds(best: OptimizeFinalist | undefined, offers: PricedOffe
           (other) =>
             other !== step && other.offers.some((item) => item.skillId === on.skill.skill_id)
         );
+
         if (!lower) continue;
         step.base.push(...lower.offers, ...lower.base);
         step.gain = {
@@ -74,12 +80,14 @@ export function buildAdds(best: OptimizeFinalist | undefined, offers: PricedOffe
           mean: step.gain.mean + lower.gain.mean,
           standard_error: Math.hypot(step.gain.standard_error, lower.gain.standard_error)
         };
+
         lower.offers = [];
         lower.base = [];
         merged = true;
       }
     }
   } while (merged);
+
   return steps.filter((step) => step.offers.length);
 }
 
@@ -97,15 +105,15 @@ const RULED_OUT: Record<string, string> = {
   slope: 'a slope this course lacks',
   corners: 'corners this course lacks'
 };
+
 /** Skills on offer that can never fire for her here, left out of the search. */
 export const inertOffers = (inert: OptimizeResult['inert'], offers: PricedOffer[]) =>
-  (inert ?? [])
-    .map((item) => ({
-      ...item,
-      offer: offers[item.purchase],
-      reason: item.why.map((why) => RULED_OUT[why] ?? why).join(' and ')
-    }))
-    .filter((item) => !!item.offer);
+  (inert ?? []).flatMap((item) => {
+    const offer = offers[item.purchase];
+    if (offer === undefined) return [];
+    return [{ ...item, offer, reason: item.why.map((why) => RULED_OUT[why] ?? why).join(' and ') }];
+  });
+
 export type InertOffer = ReturnType<typeof inertOffers>[number];
 /** The inert skills grouped by what rules them out. */
 export function inertGroups(inert: InertOffer[]) {
@@ -113,6 +121,7 @@ export function inertGroups(inert: InertOffer[]) {
   for (const item of inert) {
     groups.set(item.reason, [...(groups.get(item.reason) ?? []), item.offer!.skill.name]);
   }
+
   return [...groups].map(
     ([reason, names]) => names.join(', ') + (names.length === 1 ? ' needs ' : ' need ') + reason
   );
@@ -124,12 +133,16 @@ export const screenedImpacts = (
   offers: PricedOffer[]
 ) =>
   (impacts ?? [])
-    .map((impact) => ({ ...impact, offer: offers[impact.purchase] }))
-    .filter((impact) => !!impact.offer)
+    .flatMap((impact) => {
+      const offer = offers[impact.purchase];
+      if (offer === undefined) return [];
+      return [{ ...impact, offer }];
+    })
     .sort(
       (a, b) =>
         (b.together ?? b.alone).mean - (a.together ?? a.alone).mean || a.purchase - b.purchase
     );
+
 export type ScreenedImpact = ReturnType<typeof screenedImpacts>[number];
 
 /** What buying an offer costs on top of the best build: its price and every skill down its chain not bought yet. */
@@ -138,6 +151,7 @@ function chainCost(offers: PricedOffer[], bought: Set<number>, index: number): n
   const on = offer.buildsOn;
   const lower =
     on && !on.owned ? offers.findIndex((other) => other.skillId === on.skill.skill_id) : -1;
+
   return offer.cost + (lower >= 0 && !bought.has(lower) ? chainCost(offers, bought, lower) : 0);
 }
 
@@ -158,11 +172,13 @@ export function leftoverSp(
       return chainCost(offers, bought, index) <= left ? index : undefined;
     })
     .filter((index): index is number => index !== undefined);
+
   const screened = new Map(impacts.map((impact) => [impact.purchase, impact]));
   const slower = affordable.filter((index) => {
     const impact = screened.get(index);
-    return !!impact && surelyWorse(impact.together ?? impact.alone);
+    return impact !== undefined && surelyWorse(impact.together ?? impact.alone);
   });
+
   return {
     left,
     all: bought.size >= offers.length,

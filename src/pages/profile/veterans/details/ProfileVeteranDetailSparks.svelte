@@ -2,7 +2,10 @@
   import type { ProfileVeteran } from '../../profile-repository';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
   import type { LineageBranch, LineageNodeData } from '@/components/lineage/lineage-types';
-  import { resolveVeteranFactors, veteranFactorTotals } from '@/lib/profile/profile-veterans';
+  import {
+    resolveVeteranFactors,
+    veteranFactorTotals
+  } from '@/lib/profile/veterans/profile-veterans';
   import SparkItem from '@/components/sparks/SparkItem.svelte';
   import RadioGroup from '@/components/controls/RadioGroup.svelte';
 
@@ -34,6 +37,7 @@
       image: summary.image
     }
   ]);
+
   const branchSources = $derived(
     family.branches.map(({ parent, grandparents }) => ({
       id: parent.id,
@@ -56,16 +60,19 @@
       ]
     }))
   );
+
   const selectedSparkSource = $derived(
     [...ownSources, ...branchSources.flatMap((branch) => branch.options)].find(
       (option) => option.value === source
     )
   );
+
   const sourceNode = $derived(
     source === 'main'
       ? veteran
       : veteran.succession_chara_array?.find((node) => String(node.position_id) === source)
   );
+
   const sparks = $derived(
     source === 'family'
       ? veteranFactorTotals(veteran)
@@ -73,6 +80,7 @@
         ? resolveVeteranFactors(sourceNode)
         : []
   );
+
   const sortedSparks = $derived(
     sparks.toSorted(
       (a, b) =>
@@ -80,6 +88,7 @@
           ['blue', 'pink', 'green', 'white'].indexOf(b.tone) || a.name.localeCompare(b.name)
     )
   );
+
   const contributions = $derived(
     [
       veteran,

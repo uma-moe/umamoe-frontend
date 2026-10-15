@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import type { RaceRunner } from '@/lib/race/race-capture-parser';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import Artwork from '@/components/game/Artwork.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
   import { identity, stats } from '../analysis-view';

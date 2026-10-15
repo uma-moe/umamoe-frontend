@@ -3,7 +3,7 @@
   import SimulatorDistributionRow, {
     type DistributionTile
   } from '../SimulatorDistributionRow.svelte';
-  import { formatRaceTime } from '@/lib/race/race-display';
+  import { formatRaceTime } from '@/lib/race/replay/race-display';
   import { simulatorSampleSummary } from '../../simulator-results';
   import { runnerColor } from '../simulation-report';
   import { finishTimeAxis, histogramCounts, type HistogramAxis } from '../simulation-comparison';
@@ -33,21 +33,25 @@
       ])
     )
   );
+
   const timeSummaries = $derived(
     new Map([...times].map(([source, values]) => [source, simulatorSampleSummary(values)!]))
   );
+
   const timeScale = $derived(finishTimeAxis([...times.values()].flat()));
   const timeRows = $derived(
     compact
       ? [...sources].sort((a, b) => timeSummaries.get(a)!.median - timeSummaries.get(b)!.median)
       : sources
   );
+
   const bestTime = $derived(
     Math.min(...[...timeSummaries.values()].map((summary) => summary.median))
   );
 
   const behindBest = (value: number) =>
     value - bestTime < 0.005 ? 'fastest' : '+' + (value - bestTime).toFixed(2) + ' s';
+
   const clock = (value: number) => formatRaceTime(value, 2);
 
   function timeTiles(source: number): DistributionTile[] {
@@ -79,28 +83,23 @@
     ];
   }
 
-  const timeTick = (value: number) =>
-    formatRaceTime(
-      value,
-      timeScale.ticks.some((t) => Math.abs(t * 10 - Math.round(t * 10)) > 1e-6)
-        ? 2
-        : timeScale.ticks.some((t) => !Number.isInteger(t))
-          ? 1
-          : 0
-    );
+  const timeDigits = $derived.by(() => {
+    if (timeScale.ticks.some((tick) => Math.abs(tick * 10 - Math.round(tick * 10)) > 1e-6))
+      return 2;
+    if (timeScale.ticks.some((tick) => !Number.isInteger(tick))) return 1;
+    return 0;
+  });
+
+  const timeTick = (value: number) => formatRaceTime(value, timeDigits);
 
   function timeTitle(counts: number[], index: number) {
     const from = timeScale.min + index * timeScale.width,
       to = from + timeScale.width;
-    return (
-      (index === 0
-        ? clock(to) + ' or faster'
-        : index === timeScale.bins - 1
-          ? clock(from) + ' or slower'
-          : clock(from) + '–' + clock(to)) +
-      ': ' +
-      racesLabel(counts[index]!, result.runs)
-    );
+
+    let interval = clock(from) + '–' + clock(to);
+    if (index === 0) interval = clock(to) + ' or faster';
+    else if (index === timeScale.bins - 1) interval = clock(from) + ' or slower';
+    return interval + ': ' + racesLabel(counts[index]!, result.runs);
   }
 </script>
 

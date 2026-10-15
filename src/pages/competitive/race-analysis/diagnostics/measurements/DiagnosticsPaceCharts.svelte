@@ -26,9 +26,11 @@
       ? sectionRows.reduce((total, row) => total + row.rng, 0) / sectionRows.length
       : 0
   );
+
   const sectionChart = $derived(
     sectionChartOption(sectionRows, rngLimit(sectionRows), $theme === 'dark')
   );
+
   const paceChart = $derived(paceChartOption(sampleRows, $theme === 'dark'));
 
   function seekSection(value: number) {

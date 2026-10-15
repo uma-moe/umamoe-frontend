@@ -1,6 +1,6 @@
 <script lang="ts">
   import SelectField from '@/components/controls/SelectField.svelte';
-  import { veteranBaseStat } from '@/lib/profile/profile-veterans';
+  import { veteranBaseStat } from '@/lib/profile/veterans/profile-veterans';
   import { getRankInfoFromLabel } from '@/lib/rank';
   import { selectedCourse } from '../../simulator-session.svelte';
   import { APTITUDE_GRADES } from '../../requests/stamina-request';
@@ -16,15 +16,18 @@
     { key: 'guts', label: 'Guts', icon: 'guts' },
     { key: 'wisdom', label: 'Wit', icon: 'wit' }
   ] as const;
+
   const MOODS = ['Awful', 'Bad', 'Normal', 'Good', 'Great'].map((label, index) => ({
     value: String(index + 1),
     label,
     image: '/game-assets/textures/' + label.toLowerCase() + '.webp'
   }));
+
   const STYLES = RUNNING_STYLES.map((style, index) => ({
     value: style,
     label: ['Front Runner', 'Pace Chaser', 'Late Surger', 'End Closer', 'Runaway'][index]!
   }));
+
   const GRADES = APTITUDE_GRADES.map((grade) => ({
     value: grade,
     label: grade,
@@ -64,6 +67,7 @@
   const active = $derived.by<Aptitude[]>(() => {
     const course = selectedCourse(),
       style = RUNNING_STYLES.indexOf(trainee.runningStyle as (typeof RUNNING_STYLES)[number]);
+
     return [
       { ...groups[0]!.items[(course?.surface ?? 1) - 1]! },
       { ...groups[1]!.items[(course?.distance_type ?? 3) - 1]! },

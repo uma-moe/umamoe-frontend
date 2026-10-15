@@ -1,14 +1,18 @@
 import type { EChartsCoreOption } from 'echarts/core';
 import type { CustomSeriesRenderItem } from 'echarts';
-import type { ParsedRaceCapture, RaceEvent, RaceRunner } from '@/lib/race/race-capture-parser';
-import { raceTimeAtDistance } from '@/lib/race/race-replay';
-import { hpRemainingColor } from '@/lib/race/race-display';
-import { diagnosticHorse } from '@/lib/race/race-diagnostics';
+import type {
+  ParsedRaceCapture,
+  RaceEvent,
+  RaceRunner
+} from '@/lib/race/capture/race-capture-parser';
+import { raceTimeAtDistance } from '@/lib/race/replay/race-replay';
+import { hpRemainingColor } from '@/lib/race/replay/race-display';
+import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
 import {
   meanTrajectorySignal,
   trajectorySeries,
   type RaceTrajectory
-} from '@/lib/race/race-ensemble';
+} from '@/lib/race/replay/race-ensemble';
 
 export interface TelemetrySignal {
   value: string;
@@ -89,6 +93,7 @@ export function telemetryPhases(
         phase.end === 1
           ? telemetryEnd
           : (raceTimeAtDistance(capture.frames, distanceMax * phase.end) ?? telemetryEnd);
+
     return start === undefined
       ? []
       : [
@@ -146,7 +151,8 @@ export function telemetryBlocking(
     .map((span) => [
       {
         name:
-          'Blocked by ' + (runners.find((r) => r.index === span.blockerHorseIndex)?.name ?? 'runner'),
+          'Blocked by ' +
+          (runners.find((r) => r.index === span.blockerHorseIndex)?.name ?? 'runner'),
         xAxis: span.startTime,
         itemStyle: { color: '#f07777', opacity: 0.12 }
       },
@@ -166,6 +172,7 @@ function chartData(chart: TelemetryChart, r: RaceRunner, signal: string) {
   } else if (signal === 'target' || signal === 'acceleration') {
     const h = diagnosticHorse(capture, r.index),
       samples = h?.sampleTimes ?? capture.detailed?.annotations.sampleTimes ?? [];
+
     data = samples.map((t, i) => [
       t,
       (signal === 'target' ? h?.targetSpeeds : h?.accelerationRates)?.[i] ?? null
@@ -182,6 +189,7 @@ function chartData(chart: TelemetryChart, r: RaceRunner, signal: string) {
           : Math.max(...f.horses.map((h) => h.distance)) - (f.horses[r.index]?.distance ?? 0)
     ]);
   }
+
   if (ensemble || finish === undefined || finish > chart.endTime) return data;
   data = data.filter((point) => point[0]! < finish);
   // Hold the last racing sample at the line; later frames include deceleration.
@@ -197,6 +205,7 @@ const finishLine: CustomSeriesRenderItem = (params, api) => {
       height: number;
     },
     position = api.coord?.([api.value(0), 0]);
+
   if (!position || position[0]! < area.x || position[0]! > area.x + area.width) return;
   const x = Math.min(position[0]!, area.x + area.width - 8);
   return {
@@ -218,6 +227,7 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
   const { ensemble, runner, chartRunners, signals: chartSignals, dark } = chart;
   const multiple = chartSignals.length > 1,
     color = dark ? '#abb4c3' : '#566071';
+
   const hpColor = (value?: number) => hpRemainingColor(value, dark);
   return {
     animation: false,

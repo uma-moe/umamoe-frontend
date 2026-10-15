@@ -28,6 +28,7 @@
   const compositions = $derived(
     [...data.archetypes].sort((a, b) => b.teamPop - a.teamPop).slice(0, 6)
   );
+
   const represented = $derived(new Set(data.pairs.map((p) => p.card)).size);
 </script>
 

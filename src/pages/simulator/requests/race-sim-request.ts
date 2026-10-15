@@ -7,7 +7,12 @@
  * The caller selects JSON or MessagePack transport.
  */
 
-import { buildRaceSetup, type RaceSetup, type RaceSetupInput, type TraineeStats } from './stamina-request';
+import {
+  buildRaceSetup,
+  type RaceSetup,
+  type RaceSetupInput,
+  type TraineeStats
+} from './stamina-request';
 import { traineeUma, type Trainee } from '../setup/trainee';
 
 export type MonteCarloOutputMode = 'procs' | 'skills' | 'results' | 'report';
@@ -100,6 +105,7 @@ export function buildFieldRunners(
   if (runners.length < minimum) {
     throw new Error(`A race field needs at least ${minimum} runners.`);
   }
+
   const normalized = runners.slice(0, MAX_FIELD_RUNNERS);
   const orders = assignFrameOrders(
     normalized.map((runner) => runner.frameOrder),
@@ -113,7 +119,9 @@ export function buildFieldRunners(
     has_viewer_id: runner.hasViewerId ?? false,
     team_id: clampInt(runner.teamId ?? 0, 0, 255, 0),
     ...(runner.teamId ? { team_member_id: index + 1 } : {}),
-    ...(runner.fanCount !== undefined ? { fan_count: clampInt(runner.fanCount, 0, Number.MAX_SAFE_INTEGER, 0) } : {}),
+    ...(runner.fanCount !== undefined
+      ? { fan_count: clampInt(runner.fanCount, 0, Number.MAX_SAFE_INTEGER, 0) }
+      : {}),
     single_mode_win_count: clampInt(runner.singleModeWinCount ?? 0, 0, Number.MAX_SAFE_INTEGER, 0),
     skills: buildSkills(runner.skills ?? [])
   }));
@@ -131,7 +139,10 @@ export function buildMonteCarloRequest(form: MonteCarloForm): MonteCarloBody {
     output_format: 'json'
   };
 
-  const seeds = (form.seeds ?? []).filter((seed) => Number.isFinite(seed)).map((seed) => toInt32(seed));
+  const seeds = (form.seeds ?? [])
+    .filter((seed) => Number.isFinite(seed))
+    .map((seed) => toInt32(seed));
+
   if (seeds.length > 0) body.seeds = seeds;
   else body.runs = clampInt(form.runs ?? 1, 1, MAX_MONTE_CARLO_RUNS, 1);
 
@@ -145,7 +156,8 @@ function assignFrameOrders(requested: Array<number | undefined>, count: number):
 
   requested.forEach((candidate, index) => {
     if (index >= count || candidate === undefined) return;
-    if (!Number.isInteger(candidate) || candidate < 1 || candidate > count || used.has(candidate)) return;
+    if (!Number.isInteger(candidate) || candidate < 1 || candidate > count || used.has(candidate))
+      return;
     used.add(candidate);
     orders[index] = candidate;
   });
@@ -170,6 +182,7 @@ function buildSkills(skills: Array<MonteCarloSkillInput>): Array<MonteCarloSkill
       level: clampInt(skill.level ?? 1, 1, 6, 1)
     });
   }
+
   return built;
 }
 

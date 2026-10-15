@@ -4,7 +4,7 @@
     assignRaceWinSlots,
     loadRaceSaddleIndex,
     loadRaceSchedule
-  } from '@/lib/catalog/race-catalog';
+  } from '@/lib/game-data/racing/races';
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';

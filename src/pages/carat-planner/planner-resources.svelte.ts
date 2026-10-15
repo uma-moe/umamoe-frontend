@@ -8,6 +8,7 @@ export class PlannerResources {
     income: { rules: [] },
     rewards: { rewards: [] }
   });
+
   loading = $state(false);
   gachasLoading = $state(false);
   error = $state('');
@@ -37,12 +38,14 @@ export class PlannerResources {
     this.error = '';
     this.gachasLoading = true;
     this.bundle = { ...this.bundle, gachas: [] };
+
     try {
       const gachas = await plannerResourceRepository.gachasFor(
         this.#targetEvents(),
         this.bundle.core,
         this.#refreshGachas
       );
+
       if (!this.#destroyed && request === this.#gachaRequest && key === this.#targetKey()) {
         this.#refreshGachas = false;
         this.bundle = { ...this.bundle, gachas };

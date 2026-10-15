@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Banner from '@/components/feedback/Banner.svelte';
-  import { loadSkillCatalog, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
-  import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+  import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import {
     loadReplayCourses,
     type Course
@@ -32,11 +32,11 @@
   } from './simulator-repository';
   import type { SimulatorUma } from './simulator-uma';
   import {
-    catalogErrorVisible,
-    dismissCatalogError,
+    courseDataErrorVisible,
+    dismissCourseDataError,
     selectedRaceInstanceId,
     selectedCourse,
-    simulatorCatalog,
+    simulatorCourseData,
     simulatorSession
   } from './simulator-session.svelte';
 
@@ -46,13 +46,14 @@
    */
   const SEED = 1,
     SAMPLES = 100;
+
   /** How long typing may pause before the result follows. */
   const SETTLE_MS = 450;
 
   let run = $state<
     | (SimulatorRun<StaminaResult> & {
         forced: boolean;
-        course: CourseCatalogEntry;
+        course: RaceCourse;
         /** Stamina with green skills, and `base` without them. */
         runner: { stamina: number; base: number; style: string; motivation: number };
         effects: StaminaEffectInput[];
@@ -61,6 +62,7 @@
       })
     | null
   >(null);
+
   let error = $state('');
   let busy = $state(false);
   // After the first calculation the result follows every change; until then nothing is sent on its own.
@@ -68,7 +70,7 @@
   // Inputs whose calculation failed, so a failure is not retried until something changes.
   let failedKey = $state('');
   let courses = $state.raw<Record<string, Course>>({});
-  let skills = $state.raw(new Map<number, SkillCatalogEntry>());
+  let skills = $state.raw(new Map<number, SkillData>());
 
   // Keep the setup in this browser as it changes.
   $effect(saveHpCalculator);
@@ -79,12 +81,20 @@
       .then((value) => {
         if (active) courses = value.courses;
       })
-      .catch(() => {});
-    void loadSkillCatalog()
+      .catch((reason: unknown) => {
+        if (active)
+          error = reason instanceof Error ? reason.message : 'Course details could not be loaded.';
+      });
+
+    void loadSkills()
       .then((value) => {
         if (active) skills = value;
       })
-      .catch(() => {});
+      .catch((reason: unknown) => {
+        if (active)
+          error = reason instanceof Error ? reason.message : 'Skill data could not be loaded.';
+      });
+
     return () => {
       active = false;
     };
@@ -94,6 +104,7 @@
   const geometry = $derived(
     (course && courses[course.course_id]) ?? { distance: course?.distance ?? 2000 }
   );
+
   const trainee = $derived(hpCalculator.uma.trainee);
   const stats = $derived(planStats(traineeStats(trainee), hpCalculator.plan));
   // What the counts and situations become on this course; the course strip shows it before calculating too.
@@ -112,10 +123,12 @@
       hpCalculator.plan
     ])
   );
+
   // The result is on its way to the current inputs.
   const pending = $derived(
-    busy || (live && !!run && run.key !== inputKey && failedKey !== inputKey)
+    busy || (live && run !== null && run.key !== inputKey && failedKey !== inputKey)
   );
+
   const verdict = $derived(spread && run ? hpVerdict(spread, run.forced) : undefined);
   let resultPanel = $state<HTMLElement>();
   let resultInView = $state(true);
@@ -125,9 +138,10 @@
   $effect(() => {
     if (!resultPanel || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver(
-      ([entry]) => (resultInView = !!entry?.isIntersecting),
+      ([entry]) => (resultInView = Boolean(entry?.isIntersecting)),
       { rootMargin: '0px 0px -72px 0px' }
     );
+
     observer.observe(resultPanel);
     return () => observer.disconnect();
   });
@@ -149,6 +163,7 @@
         void send();
       }
     };
+
     node.addEventListener('keydown', listener);
     return { destroy: () => node.removeEventListener('keydown', listener) };
   }
@@ -164,6 +179,7 @@
     const key = inputKey,
       target = $state.snapshot(course),
       plan = events;
+
     try {
       const form: StaminaForm = {
         courseId: target.course_id,
@@ -186,6 +202,7 @@
         effects: plan.effects,
         states: plan.states
       };
+
       const response = await simulatorRepository.stamina({ body: buildStaminaRequest(form) });
       run = {
         ...response,
@@ -201,6 +218,7 @@
         markers: plan.markers,
         key
       };
+
       error = '';
       failedKey = '';
     } catch (reason) {
@@ -218,15 +236,15 @@
   }
 </script>
 
-{#if catalogErrorVisible()}
+{#if courseDataErrorVisible()}
   <Banner
     title="Race data unavailable"
     tone="danger"
     reportable={false}
     dismissible
-    ondismiss={dismissCatalogError}
+    ondismiss={dismissCourseDataError}
   >
-    {simulatorCatalog.error}
+    {simulatorCourseData.error}
   </Banner>
 {/if}
 

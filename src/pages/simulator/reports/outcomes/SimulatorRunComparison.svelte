@@ -10,7 +10,7 @@
   import RunComparisonTimes from './RunComparisonTimes.svelte';
   import type { MonteCarloResult } from '../../simulator-repository';
   import type { SimulatorUma } from '../../simulator-uma';
-  import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
 
   /** The overview section: the course timeline (lead) and who finishes ahead of the baseline. */
   let {
@@ -27,7 +27,7 @@
   }: {
     result: MonteCarloResult;
     umas: SimulatorUma[];
-    course?: CourseCatalogEntry;
+    course?: RaceCourse;
     sources: number[];
     reference: number;
     scope: 'picked' | 'field';
@@ -59,31 +59,42 @@
       ? 'in seconds as a finish-time difference (negative = earlier)'
       : 'in lengths (1 L = 2.5 m)'
   );
-  const finishDescription = $derived(
-    finishView === 'lengths'
-      ? 'Each runner against ' +
-          label(reference) +
-          ' over the same races, ' +
-          unitNote +
-          '. ' +
-          (compact
-            ? 'Ahead in is how often she finishes ahead; median is the typical margin.'
-            : 'The tiles give her worst and best race, the average and the typical (median) race, and how often she finishes ahead.') +
-          ' Each bar counts the races that ended with that margin: bars right of zero are races she finished ahead, in her colour, and bars left of zero are races ' +
-          label(reference) +
-          ' finished ahead, in grey. The dashed line marks the median. Hover a bar for its races.'
-      : finishView === 'time'
-        ? 'Each runner’s own finish times over every race, on one shared clock: left is faster. ' +
-          (compact
-            ? 'Median is the typical race; vs best is how far her median is behind the fastest median shown.'
-            : 'The tiles give her fastest and slowest race, the average, the typical (median) race and the spread: how many seconds the middle 80% of her races cover.') +
-          ' The dashed line marks the median. Hover a bar for its races.'
-        : 'How often each runner finishes in each position, 1st on the left. ' +
-          (compact
-            ? ''
-            : 'The tiles give her wins, top-three finishes, average and typical (median) position and her worst finish. ') +
-          'Wins are drawn strongest, the other top-three places in her colour and the rest in grey. Hover a bar for its races.'
-  );
+
+  const finishDescription = $derived.by(() => {
+    if (finishView === 'lengths') {
+      return (
+        'Each runner against ' +
+        label(reference) +
+        ' over the same races, ' +
+        unitNote +
+        '. ' +
+        (compact
+          ? 'Ahead in is how often she finishes ahead; median is the typical margin.'
+          : 'The tiles give her worst and best race, the average and the typical (median) race, and how often she finishes ahead.') +
+        ' Each bar counts the races that ended with that margin: bars right of zero are races she finished ahead, in her colour, and bars left of zero are races ' +
+        label(reference) +
+        ' finished ahead, in grey. The dashed line marks the median. Hover a bar for its races.'
+      );
+    }
+
+    if (finishView === 'time') {
+      return (
+        'Each runner’s own finish times over every race, on one shared clock: left is faster. ' +
+        (compact
+          ? 'Median is the typical race; vs best is how far her median is behind the fastest median shown.'
+          : 'The tiles give her fastest and slowest race, the average, the typical (median) race and the spread: how many seconds the middle 80% of her races cover.') +
+        ' The dashed line marks the median. Hover a bar for its races.'
+      );
+    }
+
+    return (
+      'How often each runner finishes in each position, 1st on the left. ' +
+      (compact
+        ? ''
+        : 'The tiles give her wins, top-three finishes, average and typical (median) position and her worst finish. ') +
+      'Wins are drawn strongest, the other top-three places in her colour and the rest in grey. Hover a bar for its races.'
+    );
+  });
 </script>
 
 <section

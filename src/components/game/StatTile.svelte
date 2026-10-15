@@ -9,6 +9,7 @@
     padding?: 'sm' | 'md';
     valueColor?: string;
   }
+
   let {
     label,
     value,

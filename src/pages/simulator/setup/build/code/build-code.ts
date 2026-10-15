@@ -1,4 +1,4 @@
-import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import { MAX_TRACKS, OPTIMIZE_MODES, type OptimizeMode } from '../../../requests/optimize-request';
 import { APTITUDE_GRADES } from '../../../requests/stamina-request';
 import { createSimulatorUma, type SimulatorUma } from '../../../simulator-uma';
@@ -103,6 +103,7 @@ export async function decodeBuildCode(text: string): Promise<BuildCode> {
         throw new Error(CUT);
       }
     }
+
     if (!/^[A-Za-z0-9+/=_-]+$/.test(base64) || !base64.startsWith('H4sI'))
       throw new Error('This isn’t a build code. It starts with H4sI.');
     try {
@@ -110,19 +111,25 @@ export async function decodeBuildCode(text: string): Promise<BuildCode> {
       const stream = new Response(
         Uint8Array.from(binary, (char) => char.charCodeAt(0))
       ).body!.pipeThrough(new DecompressionStream('gzip'));
+
       json = await new Response(stream).text();
     } catch {
       throw new Error(CUT);
     }
   }
+
   let parsed: unknown;
   try {
     parsed = JSON.parse(json);
   } catch {
     throw new Error(CUT);
   }
+
   const data = record(parsed);
   if (!data || !record(data.uma1)) throw new Error('This code has no runner in it.');
+  if (data.uma2 === null) delete data.uma2;
+  if (data.uma2 !== undefined && !record(data.uma2))
+    throw new Error('The second runner in this code is invalid.');
   if (Number(data.version) > BUILD_CODE_VERSION)
     throw new Error('This code is from a newer version. Reload the page and try again.');
   return data as BuildCode;
@@ -133,6 +140,7 @@ export async function encodeBuildCode(code: BuildCode): Promise<string> {
   const stream = new Response(JSON.stringify(code)).body!.pipeThrough(
     new CompressionStream('gzip')
   );
+
   const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
   let binary = '';
   for (let index = 0; index < bytes.length; index += 0x8000)
@@ -148,6 +156,7 @@ const STYLES: Record<string, (typeof RUNNING_STYLES)[number]> = {
   Oikomi: 'Oikomi',
   Oonige: 'Oonige'
 };
+
 const STRATEGIES = Object.fromEntries(Object.entries(STYLES).map(([code, style]) => [style, code]));
 const STYLE_APTITUDE: Record<string, number> = {
   Nige: 0,
@@ -159,17 +168,21 @@ const STYLE_APTITUDE: Record<string, number> = {
 
 const grade = (value: unknown) =>
   APTITUDE_GRADES.find((item) => item === String(value ?? '').toUpperCase());
+
 const stat = (value: unknown, fallback: string) =>
   Number.isFinite(Number(value)) && Number(value) > 0
     ? String(Math.min(3000, Math.round(Number(value))))
     : fallback;
+
 const count = (value: unknown) =>
   Number.isFinite(Number(value)) && Number(value) >= 0 ? Math.round(Number(value)) : undefined;
+
 /** A whole positive number, as skill and card ids are. */
 const id = (value: unknown) => {
   const number = Number(value);
   return Number.isInteger(number) && number > 0 ? number : undefined;
 };
+
 /** Character uniques are 1xxxxx; inherited ones (9xxxxx) and the rest are bought skills. */
 const isUnique = (skill: number) => skill >= 100000 && skill < 200000;
 
@@ -179,7 +192,7 @@ const isUnique = (skill: number) => skill >= 100000 && skill < 200000;
  */
 export function buildCodeUma(
   runner: BuildCodeRunner,
-  options: { name?: string; course?: CourseCatalogEntry; knownSkill?: (id: number) => boolean } = {}
+  options: { name?: string; course?: RaceCourse; knownSkill?: (id: number) => boolean } = {}
 ): { uma: SimulatorUma; dropped: number } {
   const defaults = createTrainee();
   const style = STYLES[runner.strategy ?? ''] ?? defaults.runningStyle;
@@ -196,16 +209,19 @@ export function buildCodeUma(
     styleAptitudes: [4, 5, 6, 7].map((index) => grid[index] ?? 'A'),
     groundAptitudes: [8, 9].map((index) => grid[index] ?? 'A')
   });
+
   const course = options.course;
   const distance = grade(runner.distanceAptitude),
     surface = grade(runner.surfaceAptitude),
     strategy = grade(runner.strategyAptitude);
+
   if (distance && course) trainee.distanceAptitudes[course.distance_type - 1] = distance;
   if (surface && course) trainee.groundAptitudes[course.surface - 1] = surface;
   if (strategy) trainee.styleAptitudes[STYLE_APTITUDE[style] ?? 0] = strategy;
   const ids = [...new Set((runner.skills ?? []).map(id))].filter(
     (skill): skill is number => skill !== undefined
   );
+
   const known = ids.filter((skill) => options.knownSkill?.(skill) ?? true);
   const uniqueLevel = Math.min(6, Math.max(1, Math.round(Number(runner.uniqueLv ?? 1))));
   return {
@@ -224,7 +240,7 @@ export function buildCodeUma(
 /** A code runner from a simulator runner: everything the code carries about her. */
 export function buildCodeRunner(
   uma: SimulatorUma,
-  course?: CourseCatalogEntry,
+  course?: RaceCourse,
   extra: Pick<BuildCodeRunner, 'sp' | 'fastLearner'> = {}
 ): BuildCodeRunner {
   const trainee = uma.trainee;
@@ -276,6 +292,7 @@ export function buildCodeConditions(race: BuildCodeRace = {}): {
 } {
   const pick = (value: unknown, allowed: number[]) =>
     allowed.includes(Number(value)) ? String(Number(value)) : undefined;
+
   return {
     ground: pick(race.ground, [1, 2, 3, 4]),
     weather: pick(race.weather, [1, 2, 3, 4]),
@@ -294,6 +311,7 @@ export function buildCodeOffers(
   knownSkill: (id: number) => boolean = () => true
 ): SkillOffer[] {
   const hints = record(code.hintLevels) ?? {};
+
   const offers: SkillOffer[] = [];
   for (const value of code.chartSkills ?? []) {
     const skill = id(value);
@@ -305,6 +323,7 @@ export function buildCodeOffers(
       hint: Number.isFinite(hint) ? Math.min(MAX_HINT, Math.max(0, hint)) : 0
     });
   }
+
   return offers;
 }
 
@@ -324,6 +343,7 @@ export function buildCodeGoal(code: BuildCode): {
         )
       ].slice(0, MAX_TRACKS)
     : undefined;
+
   return {
     sp: count(code.uma1?.sp),
     fastLearner: typeof code.uma1?.fastLearner === 'boolean' ? code.uma1.fastLearner : undefined,

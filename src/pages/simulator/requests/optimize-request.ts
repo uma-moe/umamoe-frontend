@@ -4,12 +4,16 @@
  * Pure: no Svelte and no network. Purchase prerequisites (`requires`,
  * `excludes`) are indices into this request's `purchases` array, so every
  * index is validated against that array and dropped when out of range;
- * `replaces` lists the skill IDs an upgrade removes. `sp_budget`, candidate
+ * `replaces` lists the skill IDs an upgrade removes, and `locked` the purchases every build buys. `sp_budget`, candidate
  * counts and skill ids are clamped, too.
  */
 
 import { buildRaceSetup, type RaceSetup, type RaceSetupInput } from './stamina-request';
-import { buildFieldRunners, type FieldRunner, type MonteCarloRunnerInput } from './race-sim-request';
+import {
+  buildFieldRunners,
+  type FieldRunner,
+  type MonteCarloRunnerInput
+} from './race-sim-request';
 
 export type OptimizeMode = 'cm' | 'tt_sprint' | 'tt_mile' | 'tt_medium' | 'tt_long' | 'tt_dirt';
 
@@ -103,6 +107,8 @@ export interface OptimizeBody {
   target_source_input_index: number;
   sp_budget: number;
   purchases: Array<OptimizePurchase>;
+  /** Indices into `purchases` every build buys, with what they require. */
+  locked?: Array<number>;
   scenarios: Array<OptimizeScenario>;
   seed: number;
   max_candidates?: number;
@@ -125,6 +131,8 @@ export interface OptimizeForm {
   targetSourceInputIndex: number;
   spBudget: number;
   purchases: Array<OptimizePurchaseInput>;
+  /** Indices into `purchases` every build must buy: the non-negotiables. */
+  locked?: Array<number>;
   scenarios: Array<OptimizeScenarioInput>;
   seed: number;
   /** 1 … 1024, omitted when missing. */
@@ -149,12 +157,17 @@ export function buildOptimizeRequest(form: OptimizeForm): OptimizeBody {
     seed: toInt32(form.seed)
   };
 
+  const locked = validPurchaseIndices(form.locked, form.purchases.length);
+  if (locked.length > 0) body.locked = locked;
+
   if (form.maxCandidates !== undefined) {
     body.max_candidates = clampInt(form.maxCandidates, 1, MAX_CANDIDATES, 1);
   }
+
   if (form.finalists !== undefined) {
     body.finalists = clampInt(form.finalists, 1, MAX_FINALISTS, 1);
   }
+
   const debuffs = form.debuffs;
   if (
     debuffs &&
@@ -173,6 +186,7 @@ export function buildOptimizeRequest(form: OptimizeForm): OptimizeBody {
       }
     ];
   }
+
   // The contract keeps the finalist count inside the candidate count.
   if (body.max_candidates !== undefined && body.finalists !== undefined) {
     body.finalists = Math.min(body.finalists, body.max_candidates);
@@ -239,6 +253,7 @@ function validSkillIds(ids: Array<number> | undefined): Array<number> {
   for (const id of ids ?? []) {
     if (Number.isInteger(id) && id > 0 && id <= 0xffffffff && !valid.includes(id)) valid.push(id);
   }
+
   return valid;
 }
 
@@ -250,6 +265,7 @@ function validPurchaseIndices(indices: Array<number> | undefined, count: number)
     if (!Number.isInteger(index) || index < 0 || index >= count) continue;
     if (!valid.includes(index)) valid.push(index);
   }
+
   return valid;
 }
 
@@ -267,6 +283,7 @@ function buildSkillIds(skills: Array<number>): Array<number> {
     if (!Number.isFinite(skillId) || skillId <= 0) continue;
     built.push(Math.round(skillId));
   }
+
   return built;
 }
 

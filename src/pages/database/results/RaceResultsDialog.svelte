@@ -11,7 +11,7 @@
     loadRaceHistory,
     raceHistorySchedule,
     type RaceHistoryEntry
-  } from '@/lib/catalog/race-catalog';
+  } from '@/lib/game-data/racing/races';
 
   interface Props {
     open?: boolean;
@@ -59,6 +59,7 @@
       .finally(() => {
         if (current) loading = false;
       });
+
     return () => {
       current = false;
     };
@@ -72,9 +73,11 @@
       turn: `${String(entry.month).padStart(2, '0')}_${String(entry.half).padStart(2, '0')}`,
       position: entry.position
     }));
+
     const url = URL.createObjectURL(
       new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     );
+
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = `race-history-${charName.replace(/[^a-z0-9]/gi, '_')}-${new Date().toISOString().slice(0, 10)}.json`;

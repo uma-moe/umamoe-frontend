@@ -16,7 +16,7 @@
     buildTimelineLanes,
     timelineEndDate,
     type TimelineAnniversary
-  } from '@/lib/timeline/timeline-layout';
+  } from '@/lib/timeline/board/timeline-layout';
   import AdRegion from '@/layouts/ads/AdRegion.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
@@ -27,10 +27,10 @@
   import { timelineRepository, type TimelineRecord } from './timeline-repository';
   import { plannerResourceRepository } from '@/pages/carat-planner/planner-resource-repository';
   import type { PlannerRewardResource } from '@/lib/carat-planner/carat-planner';
-  import type { TimelineCalculation } from '@/lib/timeline/timeline-prediction-types';
-  import type { TimelinePickupCatalog } from '@/lib/timeline/timeline-pickups';
-  import { buildTimelineRewardSummaries } from '@/lib/timeline/timeline-reward-summary';
-  import { searchKey } from '@/lib/timeline/timeline-search';
+  import type { TimelineCalculation } from '@/lib/timeline/prediction/timeline-prediction-types';
+  import type { TimelinePickupCatalog } from '@/lib/timeline/events/timeline-pickups';
+  import { buildTimelineRewardSummaries } from '@/lib/timeline/events/timeline-reward-summary';
+  import { searchKey } from '@/lib/timeline/board/timeline-search';
   import type { FilterType, TimelineStatus } from './timeline-controls';
   import { filterTimelineEvents, plannedEventIds, timelineCardView } from './timeline-events';
   import TimelineEventDialog from './details/TimelineEventDialog.svelte';
@@ -60,6 +60,7 @@
   let error = $state('');
   let plannerVisited = $state(false),
     timelineVisited = $state(false);
+
   let now = $state(new Date());
   let anniversaries = $state.raw<TimelineAnniversary[]>([]);
   let timelineBoard = $state<TimelineBoard>();
@@ -85,6 +86,7 @@
   const dateLanes = $derived(
     buildTimelineLanes(filtered, anniversaries, endDate, compactGaps, Boolean(search.trim()))
   );
+
   const searchPosition = $derived(
     search.trim() && filtered.length
       ? `${currentSearchIndex + 1} of ${dateLanes.length}`
@@ -94,9 +96,9 @@
   );
 
   export function changeView(value: string) {
-    const next = value as typeof view;
-    void timelineBoard?.changeView(next);
-    view = next;
+    if (value !== 'horizontal' && value !== 'vertical') return;
+    void timelineBoard?.changeView(value);
+    view = value;
   }
 
   export async function changeSpacing() {
@@ -119,6 +121,7 @@
       plannerRewardAvailable:
         record.plannerRewardAvailable || Boolean(summary && summary.mode !== 'placement')
     };
+
     const planId = collection.activePlanId;
     const key = `${planId}:${record.id}`;
     const operation = Symbol();
@@ -134,6 +137,7 @@
       pendingRewardEvents.delete(key);
       return;
     }
+
     void loadRewards()
       .then((resource) => {
         if (
@@ -215,11 +219,13 @@
     const todayTimer = setInterval(() => {
       if (!document.hidden) now = new Date();
     }, 300_000);
+
     const unsubscribe = plannerCollection.subscribe((next) => (collection = next));
     const stopRewards = plannerResourceRepository.watchRewards((rewards) => {
       rewardResource = rewards;
       rewardsReady = true;
     });
+
     void load();
     return () => {
       stopRewards();

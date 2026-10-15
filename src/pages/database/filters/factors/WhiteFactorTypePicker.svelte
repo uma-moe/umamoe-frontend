@@ -9,7 +9,7 @@
     matchWhiteFactors,
     type BrowseableFactor,
     type CategoryFamily
-  } from './white-factor-catalog';
+  } from './white-factor-categories';
 
   interface Props {
     id: string;
@@ -31,6 +31,7 @@
 
   let normalRange = $state<VirtualRange>({ start: 0, end: 0 }),
     upgradedRange = $state<VirtualRange>({ start: 0, end: 0 });
+
   let expanded = $state(false);
   let searchTerm = $state('');
   let priority = $state(0);
@@ -45,11 +46,13 @@
         !catalog.categories.some((entry) => entry.key === 'special')
     )
   );
+
   const hiding = $derived(mode === 'hide');
   const browsing = $derived(mode === 'browse');
   const hasCriteria = $derived(
     browsing || Boolean(searchTerm.trim()) || selectedCategoryKeys.length > 0
   );
+
   const matchingFactors = $derived(
     hasCriteria
       ? matchWhiteFactors(
@@ -60,11 +63,13 @@
         )
       : []
   );
+
   const normalMatches = $derived(
     selectedCategoryKeys.includes('special')
       ? matchingFactors.filter((factor) => factor.categoryKey !== 'special-upgraded')
       : matchingFactors
   );
+
   const upgradedMatches = $derived(
     selectedCategoryKeys.includes('special')
       ? matchingFactors.filter((factor) => factor.categoryKey === 'special-upgraded')

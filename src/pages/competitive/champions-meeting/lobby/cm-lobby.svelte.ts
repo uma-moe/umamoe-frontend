@@ -36,6 +36,7 @@ export class CmLobbyState {
     this.lobby = [];
     this.pendingTeams = [];
     this.draft.gates = {};
+
     this.draft.edits = {};
   };
 
@@ -52,6 +53,7 @@ export class CmLobbyState {
   moveRunner = (sourceId: string, sourceIndex: number, targetId: string, targetIndex: number) => {
     const source = this.lobby.find((team) => team.id === sourceId),
       target = this.lobby.find((team) => team.id === targetId);
+
     if (
       !source ||
       !target ||
@@ -62,8 +64,10 @@ export class CmLobbyState {
       return;
     const nextSourceId = source.custom ? source.id : 'custom:' + ++this.#customTeamId,
       nextTargetId = target.custom ? target.id : 'custom:' + ++this.#customTeamId;
+
     const sourceKey = source.id + ':' + sourceIndex,
       targetKey = target.id + ':' + targetIndex;
+
     const movedKey = (key: string) =>
       key === sourceKey
         ? nextTargetId + ':' + targetIndex
@@ -74,6 +78,7 @@ export class CmLobbyState {
             : key.startsWith(target.id + ':')
               ? nextTargetId + key.slice(target.id.length)
               : key;
+
     this.lobby = this.lobby.map((team) => {
       if (team !== source && team !== target) return team;
       const members = team.members.map((member, index) =>
@@ -83,6 +88,7 @@ export class CmLobbyState {
             ? source.members[sourceIndex]!
             : member
       );
+
       return {
         ...team,
         id: team === source ? nextSourceId : nextTargetId,
@@ -94,6 +100,7 @@ export class CmLobbyState {
         memberWins: members.map(() => 0)
       };
     });
+
     this.draft.gates = Object.fromEntries(
       Object.entries(this.draft.gates).map(([key, value]) => [movedKey(key), value])
     );
@@ -107,6 +114,7 @@ export class CmLobbyState {
       this.removeTeam(team);
       return;
     }
+
     const data = this.#data();
     if (
       !data ||
@@ -123,6 +131,7 @@ export class CmLobbyState {
         new AbortController().signal,
         snapshot
       );
+
       if (
         this.#data()?.snapshotId === snapshot &&
         this.pendingTeams.includes(team.id) &&
@@ -145,6 +154,7 @@ export class CmLobbyState {
       this.teamDraft = this.teamDraft.filter((r) => r.key !== key);
       return;
     }
+
     const data = this.#data();
     if (
       this.teamDraft.length + this.pendingRunners.length >= 3 ||
@@ -161,6 +171,7 @@ export class CmLobbyState {
         new AbortController().signal,
         snapshot
       );
+
       const build = detail.team.members[index];
       if (!build) throw new Error('This captured runner is unavailable.');
       if (this.#data()?.snapshotId === snapshot && this.pendingRunners.includes(key))
@@ -199,6 +210,7 @@ export class CmLobbyState {
         custom: true
       }
     ];
+
     this.teamDraft = [];
     return true;
   };

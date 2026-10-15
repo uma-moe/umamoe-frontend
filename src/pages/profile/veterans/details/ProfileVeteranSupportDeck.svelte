@@ -1,12 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
-    loadSupportCardCatalog,
+    loadSupportCards,
     supportCardImagePath,
-    type SupportCardCatalogEntry
-  } from '@/lib/catalog/support-card-catalog';
-  import { supportTypeName } from '@/lib/supports/support-card';
-  import { veteranSupportCards } from '@/lib/veterans/veteran-profile';
+    type SupportCardData
+  } from '@/lib/game-data/support-cards/support-cards';
+  import { supportTypeName } from '@/lib/game-data/support-cards/support-card-details';
+  import { veteranSupportCards } from '@/lib/veterans/records/veteran-profile';
   import LimitBreak from '@/components/game/LimitBreak.svelte';
   import Icon from '@/components/Icon.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
@@ -14,7 +14,7 @@
 
   let { veteran }: { veteran: ProfileVeteran } = $props();
 
-  let supportCatalog = $state<readonly SupportCardCatalogEntry[]>([]);
+  let supportCatalog = $state<readonly SupportCardData[]>([]);
   let supportError = $state('');
 
   const supportDeck = $derived(veteranSupportCards(veteran));
@@ -22,7 +22,7 @@
   onMount(() => {
     let active = true;
     if (supportDeck.length)
-      void loadSupportCardCatalog()
+      void loadSupportCards()
         .then((cards) => {
           if (active) supportCatalog = cards;
         })

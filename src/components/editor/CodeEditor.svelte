@@ -37,16 +37,22 @@
 
   let previousTokenizer: typeof tokenize;
 
+  function clear(): void {
+    onclear();
+    editor?.focus();
+  }
+
   onMount(() => {
-    const view = new QueryEditorView(
+    const view = new QueryEditorView({
       host,
       value,
-      (text) => tokenize(text),
-      (text, position) => complete(text, position),
-      (text) => (value = text),
-      id,
-      (suggestion) => oncomplete?.(suggestion)
-    );
+      tokenize: (text) => tokenize(text),
+      complete: (text, position) => complete(text, position),
+      onchange: (text) => (value = text),
+      inputId: id,
+      oncomplete: (suggestion) => oncomplete?.(suggestion)
+    });
+
     editor = view;
     view.update(value, issue);
     return () => view.destroy();
@@ -60,11 +66,6 @@
     previousTokenizer = tokenize;
     untrack(() => editor?.update(current, validation, languageChanged));
   });
-
-  function clear(): void {
-    onclear();
-    editor?.focus();
-  }
 </script>
 
 <div class="uql-cm-frame {validationState}">

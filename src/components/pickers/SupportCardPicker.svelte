@@ -6,7 +6,7 @@
   import Banner from '../feedback/Banner.svelte';
   import Button from '../controls/Button.svelte';
   import Spinner from '../feedback/Spinner.svelte';
-  import { matchesSupportSearch } from '@/lib/supports/support-card';
+  import { matchesSupportSearch } from '@/lib/game-data/support-cards/support-card-details';
   import type { SupportCardPickerOption } from './picker-types';
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
 
@@ -51,16 +51,19 @@
   let open = $state(false);
 
   const types: SelectOption[] = ['All', 'Speed', 'Stamina', 'Power', 'Guts', 'Wit', 'Friend'].map(
-    (value) => ({
-      value,
-      label: value === 'All' ? 'All types' : value === 'Wit' ? 'Wisdom' : value,
-      ...(value === 'Friend'
-        ? { icon: 'user' as const }
-        : value === 'All'
-          ? {}
-          : { image: `/assets/images/icon/stats/${value.toLowerCase()}.webp` })
-    })
+    (value) => {
+      if (value === 'All') return { value, label: 'All types' };
+
+      if (value === 'Friend') return { value, label: value, icon: 'user' };
+
+      return {
+        value,
+        label: value === 'Wit' ? 'Wisdom' : value,
+        image: `/assets/images/icon/stats/${value.toLowerCase()}.webp`
+      };
+    }
   );
+
   const rarities = ['All', 'R', 'SR', 'SSR'].map((value) => ({
     value,
     label: value === 'All' ? 'All rarities' : value,
@@ -79,6 +82,7 @@
       );
     })
   );
+
   const selected = $derived(
     options.find((option) => option.id === value) ??
       (selectedOption?.id === value ? selectedOption : undefined)
@@ -236,7 +240,8 @@
                 width="18"
                 height="18"
               />
-            {/if}{#if value === option.id}
+            {/if}
+            {#if value === option.id}
               <span
                 class="selection-check"
                 aria-label="Selected"

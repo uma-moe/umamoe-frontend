@@ -16,6 +16,7 @@
     { key: 'friend', label: 'Fri', color: 'var(--accent-warning)' },
     { key: 'group', label: 'Grp', color: 'var(--accent-secondary)' }
   ];
+
   const normalize = (type: string) =>
     ['wiz', 'wisdom', 'intelligence', 'int'].includes(type) ? 'wit' : type;
 
@@ -28,12 +29,14 @@
       )
     )
   );
+
   const columns = $derived<TableColumn[]>([
     ...(!activeTypes.length
       ? [{ key: 'name', label: 'Build' }]
       : activeTypes.map((type) => ({ key: type.key, label: type.label, numeric: true }))),
     { key: 'share', label: 'Share', numeric: true }
   ]);
+
   const rows = $derived(
     items.slice(0, 8).map((item) => ({
       ...Object.fromEntries(

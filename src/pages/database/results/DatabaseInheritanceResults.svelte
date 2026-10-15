@@ -11,11 +11,11 @@
   import type {
     InheritanceRecord,
     InheritanceSearchResult
-  } from '@/lib/inheritance/inheritance-search';
-  import { inheritanceFactors } from '@/lib/inheritance/inheritance-factors';
-  import { scenarios } from '@/lib/catalog/scenario-catalog';
-  import { DISCORD_SUPPORT_URL } from '@/services/site-links';
-  import { catalogCharacter, type CatalogEntry } from '../catalog-repository';
+  } from '@/lib/inheritance/search/inheritance-search';
+  import { inheritanceFactors } from '@/lib/inheritance/sparks/inheritance-factors';
+  import { scenarios } from '@/lib/game-data/scenarios';
+  import { DISCORD_SUPPORT_URL } from '@/services/site/site-links';
+  import { findCharacterEntry, type GameDataEntry } from '@/lib/game-data/display-records';
 
   interface Props {
     inheritance: InheritanceSearchResult;
@@ -25,11 +25,11 @@
     page: number;
     listMode: 'infinite' | 'paginated';
     canLoadMore: boolean;
-    characters: CatalogEntry[];
-    supports: CatalogEntry[];
+    characters: GameDataEntry[];
+    supports: GameDataEntry[];
     sortingNotice: boolean;
     pendingSearch: boolean;
-    uqlCatalogError: string;
+    uqlDataError: string;
     failedLegacy?: string;
     legacyError: string;
     affinityError: string;
@@ -54,7 +54,7 @@
     supports,
     sortingNotice,
     pendingSearch,
-    uqlCatalogError,
+    uqlDataError,
     failedLegacy,
     legacyError,
     affinityError,
@@ -71,8 +71,9 @@
 
   function findRecordText(record: InheritanceRecord): string {
     const names = [record.mainParentId, record.leftParentId, record.rightParentId].map(
-      (id) => catalogCharacter(characters, id)?.title
+      (id) => findCharacterEntry(characters, id)?.title
     );
+
     return [
       record.trainerName || 'Unknown Trainer',
       record.accountId,
@@ -107,12 +108,12 @@
       <span>Filters changed. Results will refresh when you return to Database.</span>
     </div>
   {/if}
-  {#if uqlCatalogError}
+  {#if uqlDataError}
     <Banner
       title="UQL unavailable"
       tone="danger"
     >
-      <p>{uqlCatalogError}</p>
+      <p>{uqlDataError}</p>
       <Button
         variant="secondary"
         size="sm"

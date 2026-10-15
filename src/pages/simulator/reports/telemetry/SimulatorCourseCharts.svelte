@@ -42,13 +42,16 @@
   // Gap to the baseline: paired crossing times at every report distance, computed off the main thread.
   let worker: Worker | undefined,
     generation = 0;
+
   let paired = $state.raw<ReportBand[][]>([]),
     pending = $state(false),
     error = $state('');
+
   onMount(() => {
     worker = new Worker(new URL('../simulation-report.worker.ts', import.meta.url), {
       type: 'module'
     });
+
     worker.postMessage({
       initialize: true,
       report: {
@@ -58,14 +61,17 @@
         samples: report.samples
       }
     });
+
     request();
   });
+
   onDestroy(() => worker?.terminate());
   const others = $derived(sources.filter((source) => source !== reference));
   function request() {
     if (!worker || !others.length) return;
     const id = ++generation,
       list = [reference, ...others];
+
     pending = true;
     error = '';
     worker.onmessage = (event) => {
@@ -74,23 +80,28 @@
       if (event.data.error) error = event.data.error;
       else paired = event.data.value;
     };
+
     worker.onerror = () => {
       if (id === generation) {
         pending = false;
         error = 'The gaps could not be worked out. Reload the results to retry.';
       }
     };
+
     worker.postMessage({ id, reference, sources: list });
   }
+
   $effect(() => {
     void reference;
     void others;
     request();
   });
+
   // Seconds ahead become lengths at the baseline's own speed at that point.
   const speeds = $derived(
     referenceSpeeds(result, reference, distance) ?? x.map(() => distance / 100)
   );
+
   const gapRows = $derived(
     others.flatMap((source, index) => {
       const bands = paired[index + 1];
@@ -112,8 +123,14 @@
       ];
     })
   );
-  const signed = (value: number, digits: number, suffix: string) =>
-    (value > 0 ? '+' : value < 0 ? '−' : '±') + Math.abs(value).toFixed(digits) + suffix;
+
+  const signed = (value: number, digits: number, suffix: string) => {
+    let sign = '±';
+    if (value > 0) sign = '+';
+    else if (value < 0) sign = '−';
+    return sign + Math.abs(value).toFixed(digits) + suffix;
+  };
+
   const gapChart = $derived(
     gapRows.length
       ? courseChart(x, gapRows, RACE_PHASES, dark, focus, {
@@ -151,6 +168,7 @@
       min: 0
     }
   };
+
   const moveRows = $derived(
     sources.flatMap((source) => {
       const runner = report.runners.find((row) => row.source_input_index === source);
@@ -165,6 +183,7 @@
         : [];
     })
   );
+
   const moveChart = $derived(
     moveRows.length
       ? courseChart(x, moveRows, RACE_PHASES, dark, focus, {

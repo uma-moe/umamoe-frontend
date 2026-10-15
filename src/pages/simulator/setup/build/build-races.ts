@@ -1,4 +1,4 @@
-import { describeCourse, trackName, type CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+import { describeCourse, trackName, type RaceCourse } from '@/lib/game-data/racing/courses';
 import type { OptimizeScenarioInput } from '../../requests/optimize-request';
 import type { OptimizeFields } from '../../simulator-repository';
 import type { RaceSetupInput } from '../../requests/stamina-request';
@@ -8,7 +8,7 @@ export interface BuildRaces {
   /** The race scenarios, each with her alone. */
   scenarios: OptimizeScenarioInput[];
   /** The course that stands for the races: the CM's, or the first of the Team Trials pool. */
-  course: CourseCatalogEntry;
+  course: RaceCourse;
   /** Where she raced, in words, for the result. */
   where: string;
 }
@@ -22,9 +22,9 @@ export function buildRaces(options: {
   her: SimulatorUma;
   seed: number;
   /** The CM's course. */
-  course?: CourseCatalogEntry;
+  course?: RaceCourse;
   /** Team Trials: the courses the game draws from, in place of `course`. */
-  pool?: ReadonlyArray<CourseCatalogEntry>;
+  pool?: ReadonlyArray<RaceCourse>;
   setup: RaceSetupInput;
 }): BuildRaces | undefined {
   const { her, seed, setup } = options;
@@ -32,7 +32,8 @@ export function buildRaces(options: {
   const course = pool?.[0] ?? options.course;
   if (!course) return undefined;
   const runner = { trainee: her.trainee, skills: her.skills, fanCount: her.fanCount };
-  const scenario = (course: CourseCatalogEntry, name: string, setup: RaceSetupInput) => ({
+
+  const scenario = (course: RaceCourse, name: string, setup: RaceSetupInput) => ({
     name,
     weight: 1,
     courseId: course.course_id,
@@ -40,6 +41,7 @@ export function buildRaces(options: {
     setup,
     runners: [runner]
   });
+
   if (!pool) {
     const name = trackName(course.race_track_id) + ' · ' + describeCourse(course);
     return {
@@ -74,13 +76,14 @@ export function buildRaces(options: {
  */
 export function fieldWhere(
   fields: OptimizeFields,
-  course: CourseCatalogEntry | undefined,
-  courses: ReadonlyMap<number, CourseCatalogEntry>
+  course: RaceCourse | undefined,
+  courses: ReadonlyMap<number, RaceCourse>
 ): string {
   const source = courses.get(fields.course_id);
   const name = source
     ? trackName(source.race_track_id) + ' · ' + describeCourse(source)
     : 'course ' + fields.course_id;
+
   return course?.course_id === fields.course_id
     ? 'She raced ' +
         fields.fields +

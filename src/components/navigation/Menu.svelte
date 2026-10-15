@@ -39,6 +39,7 @@
     items,
     onselect
   }: Props = $props();
+
   const id = $props.id();
 
   let control: HTMLButtonElement, panel: HTMLDivElement;
@@ -62,6 +63,7 @@
           : anchor.top - box.height - 6
       )
     );
+
     left = position.left;
     top = position.top;
   }
@@ -103,26 +105,35 @@
       close();
       return;
     }
+
     if (event.key === 'Tab') {
       close();
       return;
     }
-    const enabled = buttons(),
-      index = enabled.indexOf(document.activeElement as HTMLElement);
-    const next =
-      event.key === 'Home'
-        ? 0
-        : event.key === 'End'
-          ? enabled.length - 1
-          : event.key === 'ArrowDown'
-            ? (index + 1) % enabled.length
-            : event.key === 'ArrowUp'
-              ? (index - 1 + enabled.length) % enabled.length
-              : -1;
-    if (next >= 0) {
-      event.preventDefault();
-      enabled[next]?.focus();
+
+    const enabled = buttons();
+    if (!enabled.length) return;
+    const index = enabled.findIndex((item) => item === document.activeElement);
+    let next: number;
+    switch (event.key) {
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = enabled.length - 1;
+        break;
+      case 'ArrowDown':
+        next = (index + 1) % enabled.length;
+        break;
+      case 'ArrowUp':
+        next = (index - 1 + enabled.length) % enabled.length;
+        break;
+      default:
+        return;
     }
+
+    event.preventDefault();
+    enabled[next]?.focus();
   }
 </script>
 
@@ -158,7 +169,8 @@
           name={icon}
           size={17}
         />
-      {/if}{#if !iconOnly}
+      {/if}
+      {#if !iconOnly}
         <span>{label}</span>
         <Icon
           name="chevron"

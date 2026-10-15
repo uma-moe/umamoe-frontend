@@ -68,6 +68,7 @@ export function quantile(sorted: number[], q: number): number | undefined {
   const at = Math.min(1, Math.max(0, q)) * (sorted.length - 1),
     low = Math.floor(at),
     high = Math.ceil(at);
+
   return sorted[low]! + (sorted[high]! - sorted[low]!) * (at - low);
 }
 
@@ -81,6 +82,7 @@ function quantiles(values: Array<number | undefined>): HpQuantiles | undefined {
   const sorted = values
     .filter((value): value is number => value != null && Number.isFinite(value))
     .sort((a, b) => a - b);
+
   if (!sorted.length) return undefined;
   return { p10: quantile(sorted, 0.1)!, p50: quantile(sorted, 0.5)!, p90: quantile(sorted, 0.9)! };
 }
@@ -110,10 +112,12 @@ export function hpSpread(result: StaminaResult, runner: HpRunner, forced: boolea
   const races = hpRaces(result);
   const stamina = effectiveStamina(runner.stamina),
     perPoint = hpPerStamina(runner.style, runner.motivation);
+
   const out = races.filter((race) => race.exhaustedAt != null).length;
   const decided = (code: number) => races.filter((race) => race.decision === code).length;
   const full = forced ? races.length - out : decided(FULL_SPURT),
     reduced = forced ? 0 : decided(REDUCED_SPURT);
+
   return {
     races: races.length,
     full,
@@ -162,15 +166,22 @@ export interface HpVerdict {
  * "always full" setting, which makes every race spurt at full speed whatever her HP.
  */
 export function hpVerdict(spread: HpSpread, forced: boolean): HpVerdict {
-  const of = (count: number) =>
-    spread.races === 1
-      ? ''
-      : count === spread.races
-        ? ' in all ' + spread.races + ' races'
-        : ' in ' + count + ' of ' + spread.races + ' races';
+  const of = (count: number) => {
+    if (spread.races === 1) {
+      return '';
+    }
+
+    if (count === spread.races) {
+      return ' in all ' + spread.races + ' races';
+    }
+
+    return ' in ' + count + ' of ' + spread.races + ' races';
+  };
+
   const out = spread.out
     ? 'Her HP runs out' + of(spread.out) + '.'
     : 'Her HP lasts to the finish' + of(spread.races) + '.';
+
   if (forced)
     return spread.out
       ? {
@@ -179,6 +190,7 @@ export function hpVerdict(spread: HpSpread, forced: boolean): HpVerdict {
           detail: out
         }
       : { tone: 'good', title: 'Holds a full spurt to the finish', detail: out };
+
   const share = spread.full / spread.races;
   if (share >= 0.95)
     return {
@@ -186,12 +198,14 @@ export function hpVerdict(spread: HpSpread, forced: boolean): HpVerdict {
       title: 'Holds a full last spurt',
       detail: 'Full speed' + of(spread.full) + '. ' + out
     };
+
   if (!spread.full)
     return {
       tone: 'bad',
       title: 'No full last spurt',
       detail: (spread.reduced ? 'A slower or later spurt' + of(spread.reduced) + '. ' : '') + out
     };
+
   return {
     tone: share >= 0.5 ? 'warn' : 'bad',
     title: 'Full spurt in ' + Math.round(share * 100) + '% of races',
@@ -232,10 +246,12 @@ export function hpBill(result: StaminaResult): {
 } {
   const d = result.distribution,
     index = d?.median ?? 0;
+
   const end = result.exhausted_at ? -result.hp_deficit : result.remaining_hp;
   const check = result.check_hp[0],
     need = result.full_spurt_need_hp[0],
     at = result.spurt_calculation_distances[0];
+
   const lines = (from: HpBillLine, recovery: number, debuffs: number, to: number, label: string) =>
     [
       from,
@@ -244,15 +260,19 @@ export function hpBill(result: StaminaResult): {
       ...(debuffs > 0 ? [{ label: 'HP debuffs', hp: -debuffs }] : []),
       { label, hp: to, total: true }
     ] as HpBillLine[];
+
   const start = { label: 'Max HP', hp: result.max_hp, start: true };
+
   const finish = result.exhausted_at ? 'Short at the finish' : 'Left at the finish';
   const recovered = d?.recovered_before_check_hp[index],
     drained = d?.debuff_before_check_hp[index];
+
   if (check == null || at == null || recovered == null || drained == null)
     return {
       before: lines(start, result.recovered_hp, result.debuff_hp_loss, end, finish),
       after: []
     };
+
   return {
     before: lines(start, recovered, drained, check, 'At the spurt decision'),
     after: lines(

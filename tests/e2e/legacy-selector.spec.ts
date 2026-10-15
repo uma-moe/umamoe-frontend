@@ -1,192 +1,339 @@
 import { expect, test } from './fixtures/test';
 import { mockDatabase, mockAffinity, mockVeteranProfile, profile, veteran } from './fixtures/api';
 
-for (const source of ['device','account'] as const) test(`${source} veteran details choose a database legacy and ace affinities follow it`, async ({page}) => {
-  await mockDatabase(page); await mockAffinity(page); await mockVeteranProfile(page);
-  const chars=[1001,1011,1013,1067,1088];
-  await page.route('**/resources/test/affinity.json',route=>route.fulfill({json:{chars,aff2:Array(chars.length**2).fill(2),aff3:Array(chars.length**3).fill(3)}}));
-  const selected={...veteran,id:'b4608a48-729c-4ba4-a59f-5cf7937c0c21',trainer_id:'123456789012'};
-  await page.route('**/api/v4/user/profile/123456789012',route=>route.fulfill({json:{...profile,veterans:[selected]}}));
-  await page.route('**/api/v4/user/profile/veterans/'+selected.id,route=>route.fulfill({json:selected}));
-  await page.addInitScript(()=>localStorage.setItem('veteran-affinity-target','101301'));
-  await page.goto(source==='device'?'/veterans':'/profile/123456789012/veterans');
-  if(source==='device') await page.locator('.collection-controls input[type=file]').setInputFiles({name:'sample.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify([selected]))});
-  await expect(page.locator('.veteran-card').getByRole('link',{name:'Use as legacy',exact:true})).toBeVisible();
-  await page.getByRole('button',{name:'View Grass Wonder details',exact:true}).click();
-  const details=page.getByRole('dialog',{name:'Grass Wonder',exact:true});
-  const use=details.getByRole('link',{name:'Use as legacy',exact:true});
-  await expect(page.locator('.veteran-card').getByRole('link',{name:'Use as legacy',exact:true})).toHaveAttribute('href',(await use.getAttribute('href'))!);
-  await expect(use).toBeVisible();
-  if(source==='account') {
-    await page.keyboard.press('Escape');
-    await page.locator('.veteran-card').getByRole('link',{name:'Use as legacy',exact:true}).click();
-  } else await use.click();
-  await expect(page).toHaveURL(/\/database\?filters=/);
-  const state=()=>page.evaluate(()=>JSON.parse(atob(new URL(location.href).searchParams.get('filters')!)));
-  await expect.poll(async()=>(await state()).vet).toBe(source==='device'?'device-local-trained-991':selected.id);
-  await expect.poll(async()=>(await state()).t?.[0]).toBe(101301);
-  await page.getByRole('button',{name:/Filters/}).click();
-  await expect(page.locator('.affinity-tree h3')).toHaveText('Grass Wonder');
-  await page.getByRole('button',{name:'Change target character',exact:true}).click();
-  const ace=page.getByRole('dialog',{name:'Select Character',exact:true});
-  await expect(ace.locator('.affinity-badge').first()).toBeVisible();
-  const option=ace.getByRole('radio',{name:'Special Week',exact:true}).first();
-  const affinity=await option.locator('.affinity-badge').innerText();
-  expect(Number(affinity.trim())).toBeGreaterThan(0);
-  await option.click();
-  await expect(page.locator('.leading-affinity .affinity').first()).toContainText(affinity.trim());
-  await page.reload(); await page.getByRole('button',{name:/Filters/}).click();
-  await expect(page.locator('.affinity-tree h3')).toHaveText('Grass Wonder');
-  await page.getByRole('button',{name:'Clear selected legacy'}).click();
-  await page.getByRole('button',{name:'Change target character',exact:true}).click();
-  await expect(ace.locator('.affinity-badge')).toHaveCount(0);
-});
+for (const source of ['device', 'account'] as const)
+  test(`${source} veteran details choose a database legacy and ace affinities follow it`, async ({
+    page
+  }) => {
+    await mockDatabase(page);
+    await mockAffinity(page);
+    await mockVeteranProfile(page);
+    const chars = [1001, 1011, 1013, 1067, 1088];
+    await page.route('**/resources/test/affinity.json', (route) =>
+      route.fulfill({
+        json: {
+          chars,
+          aff2: Array(chars.length ** 2).fill(2),
+          aff3: Array(chars.length ** 3).fill(3)
+        }
+      })
+    );
 
-test('legacy selector keeps full-width results with compact chips and a two-step spark filter dialog', async({page,isMobile},info)=>{
+    const selected = {
+      ...veteran,
+      id: 'b4608a48-729c-4ba4-a59f-5cf7937c0c21',
+      trainer_id: '123456789012'
+    };
+
+    await page.route('**/api/v4/user/profile/123456789012', (route) =>
+      route.fulfill({ json: { ...profile, veterans: [selected] } })
+    );
+
+    await page.route('**/api/v4/user/profile/veterans/' + selected.id, (route) =>
+      route.fulfill({ json: selected })
+    );
+
+    await page.addInitScript(() => localStorage.setItem('veteran-affinity-target', '101301'));
+    await page.goto(source === 'device' ? '/veterans' : '/profile/123456789012/veterans');
+    if (source === 'device')
+      await page.locator('.collection-controls input[type=file]').setInputFiles({
+        name: 'sample.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify([selected]))
+      });
+    await expect(
+      page.locator('.veteran-card').getByRole('link', { name: 'Use as legacy', exact: true })
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: 'View Grass Wonder details', exact: true }).click();
+    const details = page.getByRole('dialog', { name: 'Grass Wonder', exact: true });
+    const use = details.getByRole('link', { name: 'Use as legacy', exact: true });
+    await expect(
+      page.locator('.veteran-card').getByRole('link', { name: 'Use as legacy', exact: true })
+    ).toHaveAttribute('href', (await use.getAttribute('href'))!);
+
+    await expect(use).toBeVisible();
+    if (source === 'account') {
+      await page.keyboard.press('Escape');
+      await page
+        .locator('.veteran-card')
+        .getByRole('link', { name: 'Use as legacy', exact: true })
+        .click();
+    } else await use.click();
+
+    await expect(page).toHaveURL(/\/database\?filters=/);
+    const state = () =>
+      page.evaluate(() => JSON.parse(atob(new URL(location.href).searchParams.get('filters')!)));
+
+    await expect
+      .poll(async () => (await state()).vet)
+      .toBe(source === 'device' ? 'device-local-trained-991' : selected.id);
+    await expect.poll(async () => (await state()).t?.[0]).toBe(101301);
+    await page.getByRole('button', { name: /Filters/ }).click();
+    await expect(page.locator('.affinity-tree h3')).toHaveText('Grass Wonder');
+    await page.getByRole('button', { name: 'Change target character', exact: true }).click();
+    const ace = page.getByRole('dialog', { name: 'Select Character', exact: true });
+    await expect(ace.locator('.affinity-badge').first()).toBeVisible();
+    const option = ace.getByRole('radio', { name: 'Special Week', exact: true }).first();
+    const affinity = await option.locator('.affinity-badge').innerText();
+    expect(Number(affinity.trim())).toBeGreaterThan(0);
+    await option.click();
+    await expect(page.locator('.leading-affinity .affinity').first()).toContainText(
+      affinity.trim()
+    );
+    await page.reload();
+    await page.getByRole('button', { name: /Filters/ }).click();
+    await expect(page.locator('.affinity-tree h3')).toHaveText('Grass Wonder');
+    await page.getByRole('button', { name: 'Clear selected legacy' }).click();
+    await page.getByRole('button', { name: 'Change target character', exact: true }).click();
+    await expect(ace.locator('.affinity-badge')).toHaveCount(0);
+  });
+
+test('legacy selector keeps full-width results with compact chips and a two-step spark filter dialog', async ({
+  page,
+  isMobile
+}, info) => {
   test.setTimeout(90000);
-  await mockDatabase(page); await mockAffinity(page);
+  await mockDatabase(page);
+  await mockAffinity(page);
   await page.goto('/veterans');
-  const sample={...veteran,factors:[103,1203,10010103,2000102,2000203,2000302,3000102,1000102],succession_chara_array:veteran.succession_chara_array.map(parent=>parent.position_id===10?{...parent,factor_id_array:[102]}:parent)};
-  await page.locator('.collection-controls input[type=file]').setInputFiles({name:'sample.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify([sample]))});
+  const sample = {
+    ...veteran,
+    factors: [103, 1203, 10010103, 2000102, 2000203, 2000302, 3000102, 1000102],
+    succession_chara_array: veteran.succession_chara_array.map((parent) =>
+      parent.position_id === 10 ? { ...parent, factor_id_array: [102] } : parent
+    )
+  };
+
+  await page.locator('.collection-controls input[type=file]').setInputFiles({
+    name: 'sample.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify([sample]))
+  });
+
   await expect(page.locator('.veteran-card')).toHaveCount(1);
-  await page.goto('/database'); await page.getByRole('button',{name:/Filters/}).click();
-  await page.getByRole('radio',{name:'Advanced',exact:true}).click();
-  await page.getByRole('button',{name:'Pick your legacy',exact:true}).click();
-  const dialog=page.getByRole('dialog',{name:'Select Parent',exact:true});
+  await page.goto('/database');
+  await page.getByRole('button', { name: /Filters/ }).click();
+  await page.getByRole('radio', { name: 'Advanced', exact: true }).click();
+  await page.getByRole('button', { name: 'Pick your legacy', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Select Parent', exact: true });
   await expect(dialog.locator('.parent-row')).toHaveCount(1);
-  const addFilter=page.getByRole('dialog',{name:'Add spark filter',exact:true});
-  const editFilter=page.getByRole('dialog',{name:'Edit spark filter',exact:true});
-  const addSpark=dialog.getByRole('button',{name:'Add Spark',exact:true});
+  const addFilter = page.getByRole('dialog', { name: 'Add spark filter', exact: true });
+  const editFilter = page.getByRole('dialog', { name: 'Edit spark filter', exact: true });
+  const addSpark = dialog.getByRole('button', { name: 'Add Spark', exact: true });
   async function startFilter() {
-    await addSpark.focus();await addSpark.press('Enter');
-    await expect(addFilter.getByRole('button',{name:'Blue stats',exact:true})).toBeFocused();
+    await addSpark.focus();
+    await addSpark.press('Enter');
+    await expect(addFilter.getByRole('button', { name: 'Blue stats', exact: true })).toBeFocused();
     await expect(addFilter.locator('.quick-stats img')).toHaveCount(5);
-    await addFilter.getByRole('button',{name:'Add Speed spark',exact:true}).click();
-    await expect(addFilter.getByRole('slider',{name:'Stars minimum',exact:true})).toBeFocused();
+    await addFilter.getByRole('button', { name: 'Add Speed spark', exact: true }).click();
+    await expect(
+      addFilter.getByRole('slider', { name: 'Stars minimum', exact: true })
+    ).toBeFocused();
   }
-  for (const width of isMobile?[320,390,768]:[600,850,851,1024,1440]) {
-    await page.setViewportSize({width,height:900});
-    if(width===1440) {
-      const bounds=(await dialog.boundingBox())!;
-      expect(bounds.width).toBeGreaterThan(1100);expect(bounds.height).toBeGreaterThan(800);
+
+  for (const width of isMobile ? [320, 390, 768] : [600, 850, 851, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    if (width === 1440) {
+      const bounds = (await dialog.boundingBox())!;
+      expect(bounds.width).toBeGreaterThan(1100);
+      expect(bounds.height).toBeGreaterThan(800);
     }
-    expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
-    expect(await dialog.locator('.parent-row').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
-    for(const size of await dialog.locator('.spark').evaluateAll(nodes=>nodes.map(el=>parseFloat(getComputedStyle(el).fontSize)))) expect(size).toBeGreaterThanOrEqual(10);
-    const rowBefore=(await dialog.locator('.parent-row').boundingBox())!;
-    const body=(await dialog.locator('.picker-body').boundingBox())!;
-    expect(rowBefore.width).toBeGreaterThan(body.width-28);
-    const tools=dialog.locator('.filterbar');
+
+    expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    expect(
+      await dialog.locator('.parent-row').evaluate((el) => el.scrollWidth <= el.clientWidth)
+    ).toBe(true);
+    for (const size of await dialog
+      .locator('.spark')
+      .evaluateAll((nodes) => nodes.map((el) => parseFloat(getComputedStyle(el).fontSize))))
+      expect(size).toBeGreaterThanOrEqual(10);
+    const rowBefore = (await dialog.locator('.parent-row').boundingBox())!;
+    const body = (await dialog.locator('.picker-body').boundingBox())!;
+    expect(rowBefore.width).toBeGreaterThan(body.width - 28);
+    const tools = dialog.locator('.filterbar');
     expect((await tools.boundingBox())!.height).toBeLessThanOrEqual(64);
-    const tabs=await dialog.getByRole('tab').evaluateAll(nodes=>nodes.map(el=>el.getBoundingClientRect().width));
-    expect(Math.max(...tabs)-Math.min(...tabs)).toBeLessThan(2);
+    const tabs = await dialog
+      .getByRole('tab')
+      .evaluateAll((nodes) => nodes.map((el) => el.getBoundingClientRect().width));
+
+    expect(Math.max(...tabs) - Math.min(...tabs)).toBeLessThan(2);
     await dialog.getByRole('tab').first().focus();
-    await expect.poll(async()=>{const fields=await dialog.locator('.filterbar input,.filterbar .select-control').evaluateAll(nodes=>nodes.map(el=>{const style=getComputedStyle(el);return [style.backgroundColor,style.borderColor,style.borderRadius,style.fontSize];}));return JSON.stringify(fields[0])===JSON.stringify(fields[1]);}).toBe(true);
+    await expect
+      .poll(async () => {
+        const fields = await dialog
+          .locator('.filterbar input,.filterbar .select-control')
+          .evaluateAll((nodes) =>
+            nodes.map((el) => {
+              const style = getComputedStyle(el);
+              return [style.backgroundColor, style.borderColor, style.borderRadius, style.fontSize];
+            })
+          );
+
+        return JSON.stringify(fields[0]) === JSON.stringify(fields[1]);
+      })
+      .toBe(true);
+
     await expect(dialog.locator('.active-filters input')).toHaveCount(0);
     await startFilter();
-    await expect(addFilter.getByRole('radio',{name:'Combined',exact:true})).toBeChecked();
-    await expect(addFilter.getByRole('slider',{name:'Stars maximum',exact:true})).toHaveAttribute('max','9');
-    expect(await addFilter.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
-    await addFilter.getByRole('radio',{name:'Own',exact:true}).click();
-    await expect(addFilter.getByRole('slider',{name:'Stars maximum',exact:true})).toHaveAttribute('max','3');
-    await addFilter.screenshot({path:info.outputPath(`spark-settings-${width}.png`)});
-    await addFilter.getByRole('button',{name:'Add filter',exact:true}).click();
+    await expect(addFilter.getByRole('radio', { name: 'Combined', exact: true })).toBeChecked();
+    await expect(
+      addFilter.getByRole('slider', { name: 'Stars maximum', exact: true })
+    ).toHaveAttribute('max', '9');
+
+    expect(await addFilter.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await addFilter.getByRole('radio', { name: 'Own', exact: true }).click();
+    await expect(
+      addFilter.getByRole('slider', { name: 'Stars maximum', exact: true })
+    ).toHaveAttribute('max', '3');
+
+    await addFilter.screenshot({ path: info.outputPath(`spark-settings-${width}.png`) });
+    await addFilter.getByRole('button', { name: 'Add filter', exact: true }).click();
     await expect(addSpark).toBeFocused();
-    const bounds=(await dialog.locator('.selected-factor').boundingBox())!;
-    expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(width);
+    const bounds = (await dialog.locator('.selected-factor').boundingBox())!;
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
     expect(bounds.height).toBeLessThanOrEqual(36);
     expect(bounds.height).toBe((await addSpark.boundingBox())!.height);
-    expect(bounds.y).toBeGreaterThanOrEqual((await tools.boundingBox())!.y+(await tools.boundingBox())!.height);
-    expect(await dialog.locator('.active-filters').evaluate(el=>Array.from(el.children).map(child=>child.classList[0]))).toEqual(['spark-filter-groups','spark-search','spark-display','clear-sparks']);
-    expect(await dialog.locator('.active-filters').evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
-    const band=(await dialog.locator('.active-filters').boundingBox())!;
-    expect(band.x).toBe(body.x);expect(band.width).toBe(body.width);
-    await expect(dialog.locator('.active-filters')).toHaveCSS('border-radius','0px');
+    expect(bounds.y).toBeGreaterThanOrEqual(
+      (await tools.boundingBox())!.y + (await tools.boundingBox())!.height
+    );
+    expect(
+      await dialog
+        .locator('.active-filters')
+        .evaluate((el) => Array.from(el.children).map((child) => child.classList[0]))
+    ).toEqual(['spark-filter-groups', 'spark-search', 'spark-display', 'clear-sparks']);
+    expect(
+      await dialog.locator('.active-filters').evaluate((el) => getComputedStyle(el).backgroundColor)
+    ).not.toBe('rgba(0, 0, 0, 0)');
+    const band = (await dialog.locator('.active-filters').boundingBox())!;
+    expect(band.x).toBe(body.x);
+    expect(band.width).toBe(body.width);
+    await expect(dialog.locator('.active-filters')).toHaveCSS('border-radius', '0px');
     expect((await dialog.locator('.parent-row').boundingBox())!.width).toBe(rowBefore.width);
-    await addSpark.focus();await addSpark.press('Enter');
-    await addFilter.getByRole('button',{name:'Unique',exact:true}).click();
-    await addFilter.getByRole('searchbox',{name:'Search unique sparks',exact:true}).fill('Special Week');
-    await expect(addFilter.getByRole('button',{name:'Add Shooting Star spark',exact:true}).locator('img')).toHaveAttribute('src','/assets/images/skills/utx_ico_skill_20013.webp');
-    const options=(await addFilter.locator('.unique-options').boundingBox())!;
-    expect(options.x).toBeGreaterThanOrEqual(0);expect(options.x+options.width).toBeLessThanOrEqual(width);
-    await page.keyboard.press('Escape');await expect(addFilter).not.toBeVisible();
-    await expect(dialog).toBeVisible();await expect(addSpark).toBeFocused();
+    await addSpark.focus();
+    await addSpark.press('Enter');
+    await addFilter.getByRole('button', { name: 'Unique', exact: true }).click();
+    await addFilter
+      .getByRole('searchbox', { name: 'Search unique sparks', exact: true })
+      .fill('Special Week');
+
+    await expect(
+      addFilter.getByRole('button', { name: 'Add Shooting Star spark', exact: true }).locator('img')
+    ).toHaveAttribute('src', '/assets/images/skills/utx_ico_skill_20013.webp');
+
+    const options = (await addFilter.locator('.unique-options').boundingBox())!;
+    expect(options.x).toBeGreaterThanOrEqual(0);
+    expect(options.x + options.width).toBeLessThanOrEqual(width);
+    await page.keyboard.press('Escape');
+    await expect(addFilter).not.toBeVisible();
+    await expect(dialog).toBeVisible();
+    await expect(addSpark).toBeFocused();
     await expect(dialog.locator('.selected-factor')).toHaveCount(1);
-    await dialog.screenshot({path:info.outputPath(`selector-${width}.png`)});
-    await dialog.getByRole('button',{name:'Clear all',exact:true}).click();
-    await dialog.getByRole('combobox',{name:'Sort parents',exact:true}).click();
-    await dialog.getByRole('option',{name:'Name',exact:true}).click();
-    await expect(dialog.getByRole('combobox',{name:'Sort parents',exact:true})).toContainText('Name');
+    await dialog.screenshot({ path: info.outputPath(`selector-${width}.png`) });
+    await dialog.getByRole('button', { name: 'Clear all', exact: true }).click();
+    await dialog.getByRole('combobox', { name: 'Sort parents', exact: true }).click();
+    await dialog.getByRole('option', { name: 'Name', exact: true }).click();
+    await expect(dialog.getByRole('combobox', { name: 'Sort parents', exact: true })).toContainText(
+      'Name'
+    );
   }
+
   await addSpark.click();
-  await addFilter.getByRole('button',{name:'Aptitude',exact:true}).click();
-  await expect(addFilter.locator('legend')).toHaveText(['Track','Distance','Running style']);
-  await addFilter.getByRole('button',{name:'Add Dirt spark',exact:true}).click();
+  await addFilter.getByRole('button', { name: 'Aptitude', exact: true }).click();
+  await expect(addFilter.locator('legend')).toHaveText(['Track', 'Distance', 'Running style']);
+  await addFilter.getByRole('button', { name: 'Add Dirt spark', exact: true }).click();
   await expect(addFilter.locator('.chosen-spark')).toContainText('Dirt');
-  await addFilter.getByRole('button',{name:'Back',exact:true}).click();
-  await expect(addFilter.getByRole('button',{name:'Aptitude',exact:true})).toBeFocused();
-  await addFilter.getByRole('button',{name:'Skill / race',exact:true}).click();
-  await addFilter.getByRole('button',{name:'Races',exact:true}).click();
-  await addFilter.getByRole('searchbox',{name:'Search skills and races',exact:true}).fill('February');
-  await addFilter.getByRole('button',{name:'February S.',exact:true}).click();
+  await addFilter.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(addFilter.getByRole('button', { name: 'Aptitude', exact: true })).toBeFocused();
+  await addFilter.getByRole('button', { name: 'Skill / race', exact: true }).click();
+  await addFilter.getByRole('button', { name: 'Races', exact: true }).click();
+  await addFilter
+    .getByRole('searchbox', { name: 'Search skills and races', exact: true })
+    .fill('February');
+
+  await addFilter.getByRole('button', { name: 'February S.', exact: true }).click();
   await expect(addFilter.locator('.chosen-spark')).toContainText('February S.');
-  await addFilter.getByRole('button',{name:'Cancel',exact:true}).click();
+  await addFilter.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(dialog.locator('.selected-factor')).toHaveCount(0);
   await startFilter();
-  await addFilter.getByRole('radio',{name:'Own',exact:true}).click();
-  await addFilter.getByRole('button',{name:'Add filter',exact:true}).click();
+  await addFilter.getByRole('radio', { name: 'Own', exact: true }).click();
+  await addFilter.getByRole('button', { name: 'Add filter', exact: true }).click();
   await startFilter();
-  await addFilter.getByRole('radio',{name:'P1',exact:true}).click();
-  await addFilter.getByRole('button',{name:'Add filter',exact:true}).click();
+  await addFilter.getByRole('radio', { name: 'P1', exact: true }).click();
+  await addFilter.getByRole('button', { name: 'Add filter', exact: true }).click();
   await expect(dialog.locator('.selected-factor')).toHaveCount(2);
   await expect(dialog.locator('.parent-row')).toHaveCount(1);
-  await dialog.getByRole('button',{name:'Speed · P1 1–3★',exact:true}).click();
-  await editFilter.getByRole('radio',{name:'P2',exact:true}).click();
-  await editFilter.getByRole('button',{name:'Save filter',exact:true}).click();
+  await dialog.getByRole('button', { name: 'Speed · P1 1–3★', exact: true }).click();
+  await editFilter.getByRole('radio', { name: 'P2', exact: true }).click();
+  await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
   await expect(dialog.locator('.parent-row')).toHaveCount(0);
-  await dialog.getByRole('button',{name:'Speed · P2 1–3★',exact:true}).click();
-  await editFilter.getByRole('radio',{name:'P1',exact:true}).click();
-  const stars=editFilter.getByRole('slider',{name:'Stars minimum',exact:true});
-  await stars.press('End');await expect(stars).toHaveValue('3');
-  await editFilter.getByRole('button',{name:'Save filter',exact:true}).click();await expect(dialog.locator('.parent-row')).toHaveCount(0);
-  await dialog.getByRole('button',{name:'Speed · P1 3★',exact:true}).click();
-  await stars.press('ArrowLeft');await expect(stars).toHaveValue('2');
-  await editFilter.getByRole('button',{name:'Save filter',exact:true}).click();await expect(dialog.locator('.parent-row')).toHaveCount(1);
-  await dialog.getByRole('button',{name:'Speed · Own 1–3★',exact:true}).click();
-  await editFilter.getByRole('radio',{name:'Combined',exact:true}).click();
-  await expect(stars).toHaveAttribute('max','9');
+  await dialog.getByRole('button', { name: 'Speed · P2 1–3★', exact: true }).click();
+  await editFilter.getByRole('radio', { name: 'P1', exact: true }).click();
+  const stars = editFilter.getByRole('slider', { name: 'Stars minimum', exact: true });
+  await stars.press('End');
+  await expect(stars).toHaveValue('3');
+  await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
+  await expect(dialog.locator('.parent-row')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Speed · P1 3★', exact: true }).click();
+  await stars.press('ArrowLeft');
+  await expect(stars).toHaveValue('2');
+  await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
+  await expect(dialog.locator('.parent-row')).toHaveCount(1);
+  await dialog.getByRole('button', { name: 'Speed · Own 1–3★', exact: true }).click();
+  await editFilter.getByRole('radio', { name: 'Combined', exact: true }).click();
+  await expect(stars).toHaveAttribute('max', '9');
   // Exercise the same draggable track used by the database filters.
-  await editFilter.getByRole('button',{name:'Adjust Stars on track'}).click({position:{x:(await editFilter.locator('.track-hit').boundingBox())!.width/2,y:17}});
+  await editFilter.getByRole('button', { name: 'Adjust Stars on track' }).click({
+    position: { x: (await editFilter.locator('.track-hit').boundingBox())!.width / 2, y: 17 }
+  });
+
   await expect(stars).toHaveValue('5');
-  await editFilter.getByRole('button',{name:'Save filter',exact:true}).click();await expect(dialog.locator('.parent-row')).toHaveCount(1);
-  await dialog.getByRole('button',{name:'Speed · Combined 5–9★',exact:true}).click();
-  await stars.press('ArrowRight');await expect(stars).toHaveValue('6');
-  await editFilter.getByRole('button',{name:'Save filter',exact:true}).click();await expect(dialog.locator('.parent-row')).toHaveCount(0);
-  await dialog.getByRole('button',{name:'Speed · Combined 6–9★',exact:true}).click();
-  await editFilter.getByRole('radio',{name:'Own',exact:true}).click();await expect(stars).toHaveValue('3');
-  await editFilter.getByRole('button',{name:'Cancel',exact:true}).click();
-  await expect(dialog.getByRole('button',{name:'Speed · Combined 6–9★',exact:true})).toBeVisible();
-  await dialog.getByRole('button',{name:'Speed · Combined 6–9★',exact:true}).click();
-  await editFilter.getByRole('radio',{name:'Own',exact:true}).click();
-  await editFilter.getByRole('button',{name:'Back',exact:true}).click();
-  await expect(editFilter.getByRole('button',{name:'Blue stats',exact:true})).toBeFocused();
-  await editFilter.getByRole('button',{name:'Add Speed spark',exact:true}).click();await expect(stars).toHaveValue('3');
-  await editFilter.getByRole('button',{name:'Save filter',exact:true}).click();await expect(dialog.locator('.parent-row')).toHaveCount(1);
-  await page.setViewportSize({width:390,height:520});
-  await expect(dialog.getByRole('button',{name:'Speed · P1 2–3★',exact:true})).toBeInViewport();
-  expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
-  while(await dialog.locator('.selected-factor').count()) await dialog.locator('.selected-factor .remove').first().click();
+  await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
+  await expect(dialog.locator('.parent-row')).toHaveCount(1);
+  await dialog.getByRole('button', { name: 'Speed · Combined 5–9★', exact: true }).click();
+  await stars.press('ArrowRight');
+  await expect(stars).toHaveValue('6');
+  await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
+  await expect(dialog.locator('.parent-row')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Speed · Combined 6–9★', exact: true }).click();
+  await editFilter.getByRole('radio', { name: 'Own', exact: true }).click();
+  await expect(stars).toHaveValue('3');
+  await editFilter.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(
+    dialog.getByRole('button', { name: 'Speed · Combined 6–9★', exact: true })
+  ).toBeVisible();
+
+  await dialog.getByRole('button', { name: 'Speed · Combined 6–9★', exact: true }).click();
+  await editFilter.getByRole('radio', { name: 'Own', exact: true }).click();
+  await editFilter.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(editFilter.getByRole('button', { name: 'Blue stats', exact: true })).toBeFocused();
+  await editFilter.getByRole('button', { name: 'Add Speed spark', exact: true }).click();
+  await expect(stars).toHaveValue('3');
+  await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
+  await expect(dialog.locator('.parent-row')).toHaveCount(1);
+  await page.setViewportSize({ width: 390, height: 520 });
+  await expect(
+    dialog.getByRole('button', { name: 'Speed · P1 2–3★', exact: true })
+  ).toBeInViewport();
+
+  expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  while (await dialog.locator('.selected-factor').count())
+    await dialog.locator('.selected-factor .remove').first().click();
   await expect(dialog.locator('.parent-row')).toHaveCount(1);
   await startFilter();
-  const upper=addFilter.getByRole('slider',{name:'Stars maximum',exact:true});
+  const upper = addFilter.getByRole('slider', { name: 'Stars maximum', exact: true });
   await upper.press('Home');
-  for(let i=1;i<4;i++) await upper.press('ArrowRight');
+  for (let i = 1; i < 4; i++) await upper.press('ArrowRight');
   await expect(upper).toHaveValue('4');
-  await addFilter.getByRole('button',{name:'Add filter',exact:true}).click();
+  await addFilter.getByRole('button', { name: 'Add filter', exact: true }).click();
   await expect(dialog.locator('.parent-row')).toHaveCount(0);
-  await dialog.getByRole('button',{name:'Speed · Combined 1–4★',exact:true}).click();
-  await editFilter.getByRole('slider',{name:'Stars maximum',exact:true}).press('ArrowRight');
-  await editFilter.getByRole('button',{name:'Save filter',exact:true}).click();
-  await expect(dialog.getByRole('button',{name:'Speed · Combined 1–5★',exact:true})).toBeVisible();
+  await dialog.getByRole('button', { name: 'Speed · Combined 1–4★', exact: true }).click();
+  await editFilter.getByRole('slider', { name: 'Stars maximum', exact: true }).press('ArrowRight');
+  await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
+  await expect(
+    dialog.getByRole('button', { name: 'Speed · Combined 1–5★', exact: true })
+  ).toBeVisible();
+
   await expect(dialog.locator('.parent-row')).toHaveCount(1);
 });

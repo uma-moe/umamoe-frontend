@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import type { RaceRunner } from '@/lib/race/race-capture-parser';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import RunnerBuild from './RunnerBuild.svelte';
 
   let {

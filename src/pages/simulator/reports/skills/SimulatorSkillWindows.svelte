@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
-  import { loadSkillCatalog, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
+  import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import { theme } from '@/stores/theme';
   import type { Course } from '@/pages/competitive/race-analysis/replay/replay-course';
   import SimulatorRunnerFace from '../SimulatorRunnerFace.svelte';
@@ -54,13 +54,27 @@
     onseek: (time: number) => void;
   } = $props();
 
-  let catalog = $state.raw(new Map<number, SkillCatalogEntry>());
+  let skillLookup = $state.raw(new Map<number, SkillData>());
+  let skillDataError = $state('');
   let tip = $state<WindowTip>();
 
   onMount(() => {
-    void loadSkillCatalog()
-      .then((value) => (catalog = value))
-      .catch(() => {});
+    let active = true;
+    void loadSkills()
+      .then((value) => {
+        if (active) skillLookup = value;
+      })
+      .catch((reason: unknown) => {
+        if (active)
+          skillDataError =
+            reason instanceof Error
+              ? reason.message
+              : 'Skill names could not be loaded. Observations remain available.';
+      });
+
+    return () => {
+      active = false;
+    };
   });
 
   const sections = $derived(windowSections(course, timeAt, startTime));
@@ -69,17 +83,19 @@
   const at = (value: number) => grid.at(value);
 
   const owned = $derived([...new Set(umas[runner]?.skills.map((skill) => skill.skillId) ?? [])]);
-  const skills = $derived(windowSkills(result, runner, owned, catalog, grid, sections, ramp));
+  const skills = $derived(windowSkills(result, runner, owned, skillLookup, grid, sections, ramp));
   const timed = $derived(
     skills
       .filter((skill) => !skill.passive)
       .sort((a, b) => a.summary.median - b.summary.median || a.id - b.id)
   );
+
   const always = $derived(skills.filter((skill) => skill.passive));
   const silent = $derived(owned.length - skills.length);
 
   const shareAt = (skill: WindowSkill, moment: number) =>
     moment < startTime || moment > endTime ? 0 : (skill.share[grid.pointOf(moment)] ?? 0);
+
   const live = (skill: WindowSkill) => shareAt(skill, time) >= 0.15;
 
   function point(event: PointerEvent, skill: WindowSkill) {
@@ -107,6 +123,9 @@
   class="skill-windows"
   aria-label="Skills over the race"
 >
+  {#if skillDataError}
+    <p role="alert">{skillDataError}</p>
+  {/if}
   <div class="line head">
     <div class="label">
       <span class="title">Skills</span>

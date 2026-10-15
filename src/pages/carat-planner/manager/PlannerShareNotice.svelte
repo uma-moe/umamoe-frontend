@@ -11,7 +11,7 @@
   import {
     decodeCompactPlannerShare,
     encodeCompactPlannerShare
-  } from '@/lib/carat-planner/planner-share-codec';
+  } from '@/lib/carat-planner/persistence/planner-share-codec';
   import { router } from '@/routes/router';
   import { plannerCloudRepository } from '../cloud/planner-cloud-repository';
   import { isPlannerShareId, plannerShareUrl, withCurrentPlan } from '../planner-collection';
@@ -69,6 +69,7 @@
         if (destroyed) return;
       }
     }
+
     try {
       shareNotice = 'Creating compact share link…';
       const payload = await encodeCompactPlannerShare(plan);
@@ -103,6 +104,7 @@
       shareNotice = 'This shared plan link is invalid.';
       return;
     }
+
     try {
       shareNotice = 'Loading shared plan…';
       const shared = await plannerCloudRepository.getSharedPlan(shareId);
@@ -125,17 +127,20 @@
       handledCloudShare = '';
       return;
     }
+
     const query = searchParams.toURLSearchParams();
     const shareId = query.get('share')?.trim() ?? '';
     const fragment = router.route.hash.replace(/^#/, '');
     const payload = shareId
       ? ''
       : (fragment.startsWith('p=') ? fragment.slice(2) : (query.get('p') ?? '')).trim();
+
     untrack(() => {
       if (payload !== handledCompactShare) {
         handledCompactShare = payload;
         if (payload) void importCompactShare(payload);
       }
+
       if (shareId !== handledCloudShare) {
         handledCloudShare = shareId;
         if (shareId) void importCloudShare(shareId);

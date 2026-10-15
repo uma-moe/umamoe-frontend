@@ -21,31 +21,43 @@
 
   let { label, options, value = $bindable(''), compact = false, onchange }: Props = $props();
 
-  function select(next: string) {
-    value = next;
-    onchange?.(next);
-  }
-
   const enabled = $derived(options.filter((option) => !option.disabled));
   const tabStop = $derived(
     enabled.find((option) => option.value === value)?.value ?? enabled[0]?.value
   );
 
+  function select(next: string) {
+    value = next;
+    onchange?.(next);
+  }
+
   function navigate(event: KeyboardEvent, current: string) {
     const index = enabled.findIndex((option) => option.value === current);
-    const next =
-      event.key === 'ArrowRight' || event.key === 'ArrowDown'
-        ? (index + 1) % enabled.length
-        : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
-          ? (index - 1 + enabled.length) % enabled.length
-          : event.key === 'Home'
-            ? 0
-            : event.key === 'End'
-              ? enabled.length - 1
-              : -1;
-    if (next < 0 || !enabled[next]) return;
+    if (!enabled.length) return;
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        next = (index + 1) % enabled.length;
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        next = (index - 1 + enabled.length) % enabled.length;
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = enabled.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    const option = enabled[next];
+    if (!option) return;
     event.preventDefault();
-    select(enabled[next]!.value);
+    select(option.value);
     (event.currentTarget as HTMLElement).parentElement
       ?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')
       [next]?.focus();

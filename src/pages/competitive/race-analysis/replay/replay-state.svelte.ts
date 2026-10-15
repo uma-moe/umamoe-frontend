@@ -1,18 +1,18 @@
-import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/race-capture-parser';
+import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
 import {
   raceFrameAtTime,
   raceReplayBounds,
   replayLaneMetres,
   raceTimeAtDistance
-} from '@/lib/race/race-replay';
+} from '@/lib/race/replay/race-replay';
 import {
   blockerAt,
   frontBlockingSpans,
   diagnosticHorse,
   detailedSample,
   runnerHpResult
-} from '@/lib/race/race-diagnostics';
-import type { RaceTrajectory } from '@/lib/race/race-ensemble';
+} from '@/lib/race/capture/race-diagnostics';
+import type { RaceTrajectory } from '@/lib/race/replay/race-ensemble';
 import type { Course } from './replay-course';
 
 interface ReplaySource {
@@ -48,19 +48,20 @@ export class ReplayState {
   bounds = $derived.by(() =>
     raceReplayBounds(this.capture.frames, this.#source.distance() ?? this.capture.raceDistance)
   );
+
   frame = $derived(raceFrameAtTime(this.capture.frames, this.time));
   runner = $derived(
     this.capture.runners.find((r) => r.index === Number(this.#source.selected())) ??
       this.capture.runners[0]
   );
+
   leader = $derived(Math.max(0, ...(this.frame?.horses.map((h) => h.distance) ?? [])));
-  laneWidth = $derived.by(() =>
-    this.capture.laneDistanceMax && this.capture.laneDistanceMax > 0
-      ? this.capture.laneDistanceMax > 3
-        ? this.capture.laneDistanceMax
-        : 11.25 * this.capture.laneDistanceMax
-      : (this.#source.course()?.laneMax ?? 11250) / 1000
-  );
+  laneWidth = $derived.by(() => {
+    const capturedWidth = this.capture.laneDistanceMax;
+    if (capturedWidth !== undefined && capturedWidth > 0)
+      return capturedWidth > 3 ? capturedWidth : 11.25 * capturedWidth;
+    return (this.#source.course()?.laneMax ?? 11250) / 1000;
+  });
 
   laneMetres = (value: number) => replayLaneMetres(value, this.laneWidth).toFixed(1);
 
@@ -69,6 +70,7 @@ export class ReplayState {
       (e) => e.type === 3 && this.time >= e.frameTime && this.time - e.frameTime < 2
     )
   );
+
   diagnostic = $derived(diagnosticHorse(this.capture, this.runner?.index ?? 0));
   blockingSpans = $derived(frontBlockingSpans(this.capture));
   blockingNow = $derived(
@@ -80,9 +82,11 @@ export class ReplayState {
           this.time,
           this.frame?.horses[r.index]?.blockFrontHorseIndex
         ) ?? -1;
+
       return blockerHorseIndex >= 0 ? [{ horseIndex: r.index, blockerHorseIndex }] : [];
     })
   );
+
   blocker = $derived(
     blockerAt(
       this.capture,
@@ -91,27 +95,23 @@ export class ReplayState {
       this.frame?.horses[this.runner?.index ?? 0]?.blockFrontHorseIndex
     ) ?? -1
   );
+
   activations = $derived(
     this.capture.events
       .filter((e) => e.type === 3 && e.params[0] === this.runner?.index)
       .sort((a, b) => a.frameTime - b.frameTime)
   );
+
   currentHorse = $derived(this.frame?.horses[this.runner?.index ?? 0]);
-  phase = $derived(
-    !this.frame
-      ? 'No telemetry'
-      : this.time >= this.bounds.endTime
-        ? 'Finished'
-        : this.leader >= this.bounds.distanceMax
-          ? 'Finishing'
-          : this.leader < this.bounds.distanceMax / 6
-            ? 'Early race'
-            : this.leader < (this.bounds.distanceMax * 2) / 3
-              ? 'Mid race'
-              : this.leader < (this.bounds.distanceMax * 5) / 6
-                ? 'Late race'
-                : 'Final leg'
-  );
+  phase = $derived.by(() => {
+    if (!this.frame) return 'No telemetry';
+    if (this.time >= this.bounds.endTime) return 'Finished';
+    if (this.leader >= this.bounds.distanceMax) return 'Finishing';
+    if (this.leader < this.bounds.distanceMax / 6) return 'Early race';
+    if (this.leader < (this.bounds.distanceMax * 2) / 3) return 'Mid race';
+    if (this.leader < (this.bounds.distanceMax * 5) / 6) return 'Late race';
+    return 'Final leg';
+  });
 
   #teamKeys = $derived([
     ...new Set(
@@ -137,6 +137,7 @@ export class ReplayState {
           r.result?.finishTimeRaw && r.result.finishTimeRaw > 0
             ? r.result.finishTimeRaw
             : r.result?.finishTime;
+
         return [
           r.index,
           recorded !== undefined && Number.isFinite(recorded) && recorded > 0
@@ -146,6 +147,7 @@ export class ReplayState {
       })
     )
   );
+
   finishOrder = $derived(
     [...this.capture.runners].sort(
       (a, b) =>
@@ -154,6 +156,7 @@ export class ReplayState {
         a.index - b.index
     )
   );
+
   finishRanks = $derived(
     new Map(
       this.finishOrder.map((r, i) => [
@@ -162,6 +165,7 @@ export class ReplayState {
       ])
     )
   );
+
   // Cache the final racing samples once; playback only looks up each runner's HP.
   finishFrames = $derived(
     new Map(
@@ -174,6 +178,7 @@ export class ReplayState {
       })
     )
   );
+
   hpResults = $derived(
     new Map(this.capture.runners.map((r) => [r.index, runnerHpResult(this.capture, r.index)]))
   );
@@ -181,6 +186,7 @@ export class ReplayState {
   fieldHp = (index: number, finished: boolean) => {
     const result = this.hpResults.get(index),
       hp = finished ? result?.finish : this.frame?.horses[index]?.hp;
+
     return hp !== undefined && result?.max
       ? Math.min(100, Math.max(0, (hp / result.max) * 100))
       : undefined;
@@ -213,10 +219,12 @@ export class ReplayState {
       this.time,
       'accelerationRates'
     );
+
     if (exact !== undefined) return exact;
     const source = this.frame?.sourceIndex ?? 0,
       left = this.capture.frames[source],
       right = this.capture.frames[source + 1];
+
     return left && right && right.time > left.time
       ? ((right.horses[index]?.speed ?? 0) - (left.horses[index]?.speed ?? 0)) /
           (right.time - left.time) /
@@ -230,11 +238,13 @@ export class ReplayState {
     const rightIndex = frames.findIndex(
       (frame) => (frame.horses[index]?.distance ?? 0) >= distance
     );
+
     if (rightIndex < 1) return undefined;
-    const left = frames[rightIndex - 1]!,
-      right = frames[rightIndex]!,
-      start = left.horses[index]!.distance,
-      end = right.horses[index]!.distance;
+    const left = frames[rightIndex - 1];
+    const right = frames[rightIndex];
+    const start = left?.horses[index]?.distance;
+    const end = right?.horses[index]?.distance;
+    if (!left || !right || start === undefined || end === undefined) return undefined;
     return (
       left.time +
       ((right.time - left.time) * (distance - start)) / Math.max(Number.EPSILON, end - start)
@@ -267,6 +277,7 @@ export class ReplayState {
       this.pause();
       return;
     }
+
     this.#animationFrame = requestAnimationFrame(this.#tick);
   };
 
@@ -275,6 +286,7 @@ export class ReplayState {
       this.pause();
       return;
     }
+
     if (this.time >= this.bounds.endTime) this.time = this.bounds.startTime;
     this.playing = true;
     this.#lastTick = undefined;

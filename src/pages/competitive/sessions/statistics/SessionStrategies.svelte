@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import type { MultiRaceAnalysis } from '@/lib/race/multi-race-analysis';
-  import { runningStyleName } from '@/lib/race/race-display';
+  import { runningStyleName } from '@/lib/race/replay/race-display';
   import DataTable from '@/components/data/DataTable.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
@@ -41,6 +41,7 @@
       winrate: rate(row.wins, row.races)
     }))
   );
+
   const compositions = $derived(styleCompositions(teams));
   const compositionRows = $derived(
     compositions.slice(0, 12).map((row) => ({

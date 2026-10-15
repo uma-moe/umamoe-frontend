@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { MultiRaceAnalysis } from '@/lib/race/multi-race-analysis';
   import { raceRunnerKey } from '@/lib/race/multi-race-analysis';
-  import { runningStyleName } from '@/lib/race/race-display';
+  import { runningStyleName } from '@/lib/race/replay/race-display';
   import SelectField from '@/components/controls/SelectField.svelte';
   import DataTable from '@/components/data/DataTable.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
@@ -29,9 +29,11 @@
     for (const { runner } of entries) {
       const key = raceRunnerKey(runner),
         styles = result.get(key) ?? new Set<number>();
+
       styles.add(runner.result?.runningStyle ?? 0);
       result.set(key, styles);
     }
+
     return new Map(
       [...result].map(([key, styles]) => [
         key,
@@ -42,6 +44,7 @@
       ])
     );
   });
+
   const characters = $derived(
     analysis.characters
       .filter((r) => rate(r.races, entries.length) >= Number(minimum))
@@ -51,6 +54,7 @@
           : rate(b.wins, b.races) - rate(a.wins, a.races)
       )
   );
+
   const selectedCharacter = $derived(characters.find((r) => r.key === uma) ?? characters[0]);
   const winningPartners = $derived(
     analysis.teams

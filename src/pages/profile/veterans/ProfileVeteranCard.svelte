@@ -8,15 +8,15 @@
     veteranFactors,
     veteranFactorTotals,
     type VeteranFactorFilter
-  } from '@/lib/profile/profile-veterans';
+  } from '@/lib/profile/veterans/profile-veterans';
   import {
     resolveEncodedSkill,
     skillPointTotal,
     skillImage,
     skillRarity,
     sortEncodedSkills,
-    type SkillCatalogEntry
-  } from '@/lib/catalog/skill-catalog';
+    type SkillData
+  } from '@/lib/game-data/skills/skills';
   import Icon from '@/components/Icon.svelte';
   import ProfileVeteranAffinity from './ProfileVeteranAffinity.svelte';
   import Badge from '@/components/Badge.svelte';
@@ -26,7 +26,7 @@
   import ProfileVeteranSparks from './ProfileVeteranSparks.svelte';
   import SkillChip from '@/components/game/SkillChip.svelte';
   import ProfileVeteranQueryMatches from './ProfileVeteranQueryMatches.svelte';
-  import type { VeteranQueryMatch } from '@/lib/profile/profile-veteran-query';
+  import type { VeteranQueryMatch } from '@/lib/profile/veterans/profile-veteran-query';
 
   let {
     veteran,
@@ -47,7 +47,7 @@
   }: {
     veteran: ProfileVeteran;
     summary: VeteranUiRecord;
-    skillCatalog: Map<number, SkillCatalogEntry>;
+    skillCatalog: Map<number, SkillData>;
     baseStats?: boolean;
     mood?: number;
     selectedFactors?: VeteranFactorFilter[];
@@ -61,15 +61,18 @@
     onskill?: (id: number) => void;
     ondetails?: () => void;
   } = $props();
+
   const id = $props.id();
 
   const sourceLabel = $derived(
     { family: 'family total', parent: 'Own', p1: 'P1', p2: 'P2' }[sparkSource]
   );
+
   const skills = $derived(sortEncodedSkills(skillCatalog, encodedSkills(veteran)));
   const sparks = $derived(
     sparkSource === 'family' ? veteranFactorTotals(veteran) : veteranFactors(veteran, sparkSource)
   );
+
   const stats = $derived(
     (summary.stats ?? [])
       .filter((stat) => stat.id !== 'total')
@@ -79,12 +82,14 @@
           veteran[stat.id as 'speed' | 'stamina' | 'power' | 'guts' | 'wiz'],
           mood
         );
+
         return {
           ...stat,
           value: value?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? '-'
         };
       })
   );
+
   const statTotal = $derived(
     baseStats
       ? (['speed', 'stamina', 'power', 'guts', 'wiz'] as const).reduce(
@@ -93,6 +98,7 @@
         )
       : totalStats(veteran)
   );
+
   const spTotal = $derived(skillPointTotal(skillCatalog, encodedSkills(veteran)));
   const created = $derived(
     veteran.creation_time && Number.isFinite(Date.parse(veteran.creation_time))

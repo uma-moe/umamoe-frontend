@@ -1,10 +1,13 @@
 <script lang="ts">
   import type { VirtualRange } from '@/lib/virtual-scroll';
   import { onDestroy, onMount } from 'svelte';
-  import type { CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
-  import { watchFactorCatalog, loadFactorArtwork } from '@/lib/catalog/factor-catalog';
-  import { loadSkillCatalog } from '@/lib/catalog/skill-catalog';
-  import { veteranDisplay, type VeteranDisplayRecord } from '@/lib/profile/profile-veterans';
+  import type { CharacterData } from '@/lib/game-data/characters';
+  import { watchFactors, loadFactorArtwork } from '@/lib/game-data/factors/factors';
+  import { loadSkills } from '@/lib/game-data/skills/skills';
+  import {
+    veteranDisplay,
+    type VeteranDisplayRecord
+  } from '@/lib/profile/veterans/profile-veterans';
   import { router } from '@/routes/router';
   import Pagination from '@/components/navigation/Pagination.svelte';
   import Button from '@/components/controls/Button.svelte';
@@ -13,7 +16,7 @@
   import TextField from '@/components/controls/TextField.svelte';
   import FilterSection from '@/components/filters/FilterSection.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
-  import VeteranCollection from '@/pages/veterans/VeteranCollection.svelte';
+  import VeteranCollection from '@/pages/veterans/collection/VeteranCollection.svelte';
   import type { ProfileResponse, ProfileVeteran } from '../profile-repository';
   import { profileRepository } from '../profile-repository';
   import ProfileVeteranDialog from './details/ProfileVeteranDialog.svelte';
@@ -35,7 +38,7 @@
   interface Props {
     accountId: string;
     profile: Pick<ProfileResponse, 'trainer' | 'veterans'>;
-    characters: Map<number, CharacterCatalogEntry>;
+    characters: Map<number, CharacterData>;
     isOwner: boolean;
     compact?: boolean;
     imports?: boolean;
@@ -60,14 +63,16 @@
     query,
     picks
   });
+
   const view = new RosterView(filters, query);
 
   let virtualRange = $state<VirtualRange>({ start: 0, end: 0 });
   let detail = $state.raw<ProfileVeteran>(),
     detailOpen = $state(false);
+
   let previewPage = $state(1);
   let initialized = $state('');
-  let catalogError = $state('');
+  let resourceError = $state('');
   let live = true;
 
   const previewPages = $derived(Math.max(1, Math.ceil(collection.filtered.length / 3)));
@@ -80,6 +85,7 @@
       )
       .map((veteran) => veteranDisplay(veteran, characters))
   );
+
   const queryMatches = $derived(
     new Map(
       displayed.map(({ veteran: v }) => [
@@ -88,6 +94,7 @@
       ])
     )
   );
+
   const virtualList = $derived({
     items: collection.filtered,
     searchText: findVeteranText,
@@ -125,6 +132,7 @@
     const url = URL.createObjectURL(
       new Blob([JSON.stringify(collection.filtered, null, 2)], { type: 'application/json' })
     );
+
     const link = document.createElement('a');
     link.href = url;
     link.download = `veterans-${accountId}.json`;
@@ -147,11 +155,11 @@
       }
     } catch {
       if (live && accountId === target)
-        catalogError = 'The collection could not be refreshed. Reload to try again.';
+        resourceError = 'The collection could not be refreshed. Reload to try again.';
     }
   }
 
-  onMount(watchFactorCatalog);
+  onMount(watchFactors);
 
   onMount(() => picks.restoreTarget());
 
@@ -182,11 +190,11 @@
   });
 
   $effect(() => {
-    void Promise.all([loadSkillCatalog(), loadFactorArtwork()])
+    void Promise.all([loadSkills(), loadFactorArtwork()])
       .then(([catalog]) => (collection.skillCatalog = catalog))
       .catch(
         () =>
-          (catalogError = 'Skill and race data could not be loaded. Reload the page to try again.')
+          (resourceError = 'Skill and race data could not be loaded. Reload the page to try again.')
       );
   });
 
@@ -203,9 +211,9 @@
   class="veterans-page"
   class:compact-roster={compact}
 >
-  {#if catalogError}
+  {#if resourceError}
     <Banner
-      title={catalogError}
+      title={resourceError}
       tone="warning"
     />
   {/if}

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-  import { raceMetricHelp, type HorseDiagnostics } from '@/lib/race/race-diagnostics';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import { raceMetricHelp, type HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
   import DataTable from '@/components/data/DataTable.svelte';
   import Button from '@/components/controls/Button.svelte';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
@@ -26,9 +26,11 @@
   const activationThresholds = $derived([
     ...new Set(rows.flatMap((row) => (typeof row.threshold === 'number' ? [row.threshold] : [])))
   ]);
+
   const sharedThreshold = $derived(
     activationThresholds.length === 1 ? activationThresholds[0] : undefined
   );
+
   const activatedSkills = $derived(rows.filter((row) => row.status === 'Activated').length);
 </script>
 

@@ -83,68 +83,15 @@
       )
       .slice(0, maxResults);
   });
+
   const visible = $derived(filtered.slice(virtualRange.start, virtualRange.end));
-
-  $effect(() => {
-    if (!expanded || !popupAnchor || !panel) return;
-    const anchor = popupAnchor,
-      popup = panel;
-    void visible.length;
-    if (!popup.matches(':popover-open')) popup.showPopover();
-    const limit =
-      parseFloat(getComputedStyle(popup).getPropertyValue('--combobox-max-height')) || 220;
-    const position = () => {
-      const rect = anchor.getBoundingClientRect(),
-        viewport = window.visualViewport;
-      const bottom = (viewport?.offsetTop ?? 0) + (viewport?.height ?? innerHeight),
-        top = viewport?.offsetTop ?? 0;
-      const below = bottom - rect.bottom - 8,
-        above = rect.top - top - 8;
-      const up = below < Math.min(limit, popup.scrollHeight) && above > below;
-      const height = Math.max(0, Math.min(limit, up ? above : below)),
-        width = Math.min(rect.width, innerWidth - 16);
-      const { left, top: popupTop } = popoverPosition(
-        popup,
-        Math.max(8, Math.min(rect.left, innerWidth - width - 8)),
-        up ? rect.top - Math.min(height, popup.scrollHeight) - 2 : rect.bottom + 2
-      );
-      Object.assign(popup.style, {
-        width: `${width}px`,
-        maxHeight: `${height}px`,
-        left: `${left}px`,
-        top: `${popupTop}px`
-      });
-    };
-    position();
-    const resize = new ResizeObserver(position);
-    resize.observe(anchor);
-    window.addEventListener('resize', position);
-    document.addEventListener('scroll', position, true);
-    window.visualViewport?.addEventListener('resize', position);
-    window.visualViewport?.addEventListener('scroll', position);
-    return () => {
-      resize.disconnect();
-      window.removeEventListener('resize', position);
-      document.removeEventListener('scroll', position, true);
-      window.visualViewport?.removeEventListener('resize', position);
-      window.visualViewport?.removeEventListener('scroll', position);
-    };
-  });
-
-  $effect(() => {
-    if (!editing && !action) query = selected?.label ?? '';
-  });
-
-  $effect(() => {
-    if (expanded && (!filtered[activeIndex] || filtered[activeIndex]?.disabled))
-      activeIndex = filtered.findIndex((option) => !option.disabled);
-  });
 
   function close() {
     if (editing && !query.trim() && emptyValue !== undefined && value !== emptyValue) {
       value = emptyValue;
       onchange?.(emptyValue);
     }
+
     open = false;
     editing = false;
     if (!action) query = selected?.label ?? '';
@@ -168,6 +115,7 @@
       const candidate = filtered[next];
       if (candidate && !candidate.disabled) break;
     }
+
     activeIndex = next;
   }
 
@@ -176,6 +124,7 @@
       query = '';
       editing = true;
     }
+
     activeIndex = filtered.findIndex((option) => option.value === value && !option.disabled);
     if (activeIndex < 0) activeIndex = filtered.findIndex((option) => !option.disabled);
     open = true;
@@ -216,6 +165,69 @@
       close();
     }
   }
+
+  $effect(() => {
+    if (!expanded || !popupAnchor || !panel) return;
+    const anchor = popupAnchor,
+      popup = panel;
+
+    void visible.length;
+    if (!popup.matches(':popover-open')) popup.showPopover();
+    const limit =
+      parseFloat(getComputedStyle(popup).getPropertyValue('--combobox-max-height')) || 220;
+
+    const position = () => {
+      const rect = anchor.getBoundingClientRect(),
+        viewport = window.visualViewport;
+
+      const bottom = (viewport?.offsetTop ?? 0) + (viewport?.height ?? innerHeight),
+        top = viewport?.offsetTop ?? 0;
+
+      const below = bottom - rect.bottom - 8,
+        above = rect.top - top - 8;
+
+      const up = below < Math.min(limit, popup.scrollHeight) && above > below;
+      const height = Math.max(0, Math.min(limit, up ? above : below)),
+        width = Math.min(rect.width, innerWidth - 16);
+
+      const { left, top: popupTop } = popoverPosition(
+        popup,
+        Math.max(8, Math.min(rect.left, innerWidth - width - 8)),
+        up ? rect.top - Math.min(height, popup.scrollHeight) - 2 : rect.bottom + 2
+      );
+
+      Object.assign(popup.style, {
+        width: `${width}px`,
+        maxHeight: `${height}px`,
+        left: `${left}px`,
+        top: `${popupTop}px`
+      });
+    };
+
+    position();
+    const resize = new ResizeObserver(position);
+    resize.observe(anchor);
+    window.addEventListener('resize', position);
+    document.addEventListener('scroll', position, true);
+    window.visualViewport?.addEventListener('resize', position);
+    window.visualViewport?.addEventListener('scroll', position);
+    return () => {
+      resize.disconnect();
+      window.removeEventListener('resize', position);
+      document.removeEventListener('scroll', position, true);
+      window.visualViewport?.removeEventListener('resize', position);
+      window.visualViewport?.removeEventListener('scroll', position);
+    };
+  });
+
+  $effect(() => {
+    if (!editing && !action) query = selected?.label ?? '';
+  });
+
+  $effect(() => {
+    if (expanded && (!filtered[activeIndex] || filtered[activeIndex]?.disabled))
+      activeIndex = filtered.findIndex((option) => !option.disabled);
+  });
 </script>
 
 <svelte:window onclick={handleWindowClick} />

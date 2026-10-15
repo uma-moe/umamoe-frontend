@@ -1,4 +1,4 @@
-import { QueryCache } from '@/services/data/query-cache';
+import { RequestCache } from '@/services/cache/request-cache';
 import { appHttp } from '@/services/http/app-http';
 import { umaLogsApi } from '@/services/http/service-endpoints';
 
@@ -119,6 +119,7 @@ export interface UmaLogsExplorerRow {
   meanFinishTime?: number;
   medianFinishTime?: number;
 }
+
 export interface UmaLogsExplorerResponse {
   totalTeams: number;
   filteredTeams: number;
@@ -128,63 +129,126 @@ export interface UmaLogsExplorerResponse {
   rows: UmaLogsExplorerRow[];
 }
 
-const cache = new QueryCache();
+const cache = new RequestCache();
 function assertManifest(value: UmaLogsManifest): UmaLogsManifest {
-  if (!value || !Array.isArray(value.datasets)) throw new Error('UmaLogs returned an invalid manifest.');
+  if (!value || !Array.isArray(value.datasets))
+    throw new Error('UmaLogs returned an invalid manifest.');
   return value;
 }
 
 function assertDataset(value: UmaLogsDataset): UmaLogsDataset {
-  if (!value || !Array.isArray(value.groups)) throw new Error('UmaLogs returned an invalid dataset summary.');
+  if (!value || !Array.isArray(value.groups))
+    throw new Error('UmaLogs returned an invalid dataset summary.');
   return value;
 }
 
 export const cmLogsRepository = {
   manifest(refresh = false): Promise<UmaLogsManifest> {
-    return cache.get('umalogs:manifest', 5 * 60_000, async () => assertManifest(await appHttp.request<UmaLogsManifest>(umaLogsApi('/api/umalogs/manifest'))), refresh);
+    return cache.get(
+      'umalogs:manifest',
+      5 * 60_000,
+      async () =>
+        assertManifest(await appHttp.request<UmaLogsManifest>(umaLogsApi('/api/umalogs/manifest'))),
+      refresh
+    );
   },
 
   summary(cmId: string, refresh = false): Promise<UmaLogsDataset> {
     const safeId = encodeURIComponent(cmId);
-    return cache.get(`umalogs:summary:${cmId}`, 5 * 60_000, async () => assertDataset(await appHttp.request<UmaLogsDataset>(umaLogsApi(`/api/umalogs/${safeId}/summary`))), refresh);
+    return cache.get(
+      `umalogs:summary:${cmId}`,
+      5 * 60_000,
+      async () =>
+        assertDataset(
+          await appHttp.request<UmaLogsDataset>(umaLogsApi(`/api/umalogs/${safeId}/summary`))
+        ),
+      refresh
+    );
   },
 
-  query(cmId: string, courseId: number, query: string, signal?: AbortSignal): Promise<UmaLogsQueryResponse> {
-    return appHttp.request<UmaLogsQueryResponse>(umaLogsApi(`/api/umalogs/${encodeURIComponent(cmId)}/groups/${courseId}/queries/run`), {
-      method: 'POST',
-      signal,
-      body: { query, compileOnly: false }
-    });
-  },
-
-  replays(cmId: string, courseId: number, options: { sortKey: 'date' | 'finishTime'; sortDir: 'asc' | 'desc'; limit: number; offset: number }, signal?: AbortSignal): Promise<UmaLogsReplaySearchResponse> {
-    return appHttp.request<UmaLogsReplaySearchResponse>(umaLogsApi(`/api/umalogs/${encodeURIComponent(cmId)}/groups/${courseId}/replays/query`), {
-      method: 'POST',
-      signal,
-      body: options
-    });
-  },
-
-  explorer(cmId: string, courseId: number, sortKey: UmaLogsExplorerSort, sortDesc: boolean, signal?: AbortSignal): Promise<UmaLogsExplorerResponse> {
-    const orderField: Record<UmaLogsExplorerSort, string> = { label: 'character', entries: 'entries', teams: 'teams', wins: 'wins', teamWins: 'team_wins', awPct: 'win_rate' };
-    return appHttp.request<UmaLogsExplorerResponse>(umaLogsApi(`/api/umalogs/${encodeURIComponent(cmId)}/groups/${courseId}/explorer/query`), {
-      method: 'POST',
-      signal,
-      body: {
-        querySpec: {
-          version: 1,
-          subject: 'teams',
-          where: null,
-          select: ['character', 'style', 'is_debuffer', 'entries', 'teams', 'wins', 'team_wins', 'team_win_rate'],
-          groupBy: ['character', 'style', 'is_debuffer'],
-          orderBy: [{ field: orderField[sortKey], direction: sortDesc ? 'desc' : 'asc' }],
-          limit: 100
-        },
-        sortKey,
-        sortDesc,
-        selectedRowKey: null
+  query(
+    cmId: string,
+    courseId: number,
+    query: string,
+    signal?: AbortSignal
+  ): Promise<UmaLogsQueryResponse> {
+    return appHttp.request<UmaLogsQueryResponse>(
+      umaLogsApi(`/api/umalogs/${encodeURIComponent(cmId)}/groups/${courseId}/queries/run`),
+      {
+        method: 'POST',
+        signal,
+        body: { query, compileOnly: false }
       }
-    });
+    );
+  },
+
+  replays(
+    cmId: string,
+    courseId: number,
+    options: {
+      sortKey: 'date' | 'finishTime';
+      sortDir: 'asc' | 'desc';
+      limit: number;
+      offset: number;
+    },
+    signal?: AbortSignal
+  ): Promise<UmaLogsReplaySearchResponse> {
+    return appHttp.request<UmaLogsReplaySearchResponse>(
+      umaLogsApi(`/api/umalogs/${encodeURIComponent(cmId)}/groups/${courseId}/replays/query`),
+      {
+        method: 'POST',
+        signal,
+        body: options
+      }
+    );
+  },
+
+  explorer(
+    cmId: string,
+    courseId: number,
+    sortKey: UmaLogsExplorerSort,
+    sortDesc: boolean,
+    signal?: AbortSignal
+  ): Promise<UmaLogsExplorerResponse> {
+    const orderField: Record<UmaLogsExplorerSort, string> = {
+      label: 'character',
+      entries: 'entries',
+      teams: 'teams',
+      wins: 'wins',
+      teamWins: 'team_wins',
+      awPct: 'win_rate'
+    };
+
+    return appHttp.request<UmaLogsExplorerResponse>(
+      umaLogsApi(`/api/umalogs/${encodeURIComponent(cmId)}/groups/${courseId}/explorer/query`),
+      {
+        method: 'POST',
+        signal,
+        body: {
+          querySpec: {
+            version: 1,
+            subject: 'teams',
+            where: null,
+            select: [
+              'character',
+              'style',
+              'is_debuffer',
+              'entries',
+              'teams',
+              'wins',
+              'team_wins',
+              'team_win_rate'
+            ],
+            groupBy: ['character', 'style', 'is_debuffer'],
+            orderBy: [{ field: orderField[sortKey], direction: sortDesc ? 'desc' : 'asc' }],
+            limit: 100
+          },
+          sortKey,
+          sortDesc,
+          selectedRowKey: null
+        }
+      }
+    );
   },
 
   invalidate(): void {

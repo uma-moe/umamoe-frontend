@@ -3,10 +3,10 @@ import fs from 'node:fs';
 // Isolated calculation benchmark; browser interaction/paint budgets remain in interaction.spec.ts.
 const server=await createServer({configLoader:'runner',mode:'beta',server:{middlewareMode:true},logLevel:'error'});
 try {
- const {withTimelineRewardFallbacks}=await server.ssrLoadModule('/src/lib/timeline/timeline-reward-summary.ts');
+ const {withTimelineRewardFallbacks}=await server.ssrLoadModule('/src/lib/timeline/events/timeline-reward-summary.ts');
  const {applyGlobalRewardPrecedence}=await server.ssrLoadModule('/src/lib/carat-planner/rewards/planner-reward-precedence.ts');
- const {profileVeteranAffinity}=await server.ssrLoadModule('/src/lib/profile/profile-veteran-metrics.ts');
- const {VeteranAffinityEngine}=await server.ssrLoadModule('/src/lib/veterans/affinity-engine.ts');
+ const {profileVeteranAffinity}=await server.ssrLoadModule('/src/lib/profile/veterans/profile-veteran-metrics.ts');
+ const {VeteranAffinityEngine}=await server.ssrLoadModule('/src/lib/veterans/affinity/affinity-engine.ts');
  const events=Array.from({length:4000},(_,i)=>({id:`event-${i}`,eventType:'character_banner',date:new Date(Date.UTC(2026,7,1+Math.floor(i/5)))}));
  const rewards=events.map((event,i)=>({id:`reward-${i}`,event_id:event.id,label:`Campaign ${i} missions and presents`,category:'campaign',currency:'free_jewels',amount:150,available_at:event.date.toISOString(),provenance:'jp_fallback'}));
  const globalLogins=Array.from({length:100},(_,i)=>({id:`global-${i}`,label:'Login bonus',currency:'free_jewels',amount:150,available_at:new Date(Date.UTC(2026,0,i*7+1)).toISOString(),provenance:'global_news'}));

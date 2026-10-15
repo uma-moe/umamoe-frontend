@@ -1,21 +1,21 @@
 import {
   characterImagePath,
-  loadReleasedCharacterCatalog,
-  type CharacterCatalogEntry
-} from '@/lib/catalog/character-catalog';
+  loadReleasedCharacters,
+  type CharacterData
+} from '@/lib/game-data/characters';
 import type { CharacterPickerSort } from '@/components/pickers/CharacterPicker.svelte';
-import type { AncestorScope } from '@/lib/profile/profile-veterans';
+import type { AncestorScope } from '@/lib/profile/veterans/profile-veterans';
 
 const TARGET_KEY = 'veteran-affinity-target';
 
 /** Released character choices for the affinity target and the include/exclude rule picker. */
 export class RosterCharacters {
-  #characters: () => Map<number, CharacterCatalogEntry>;
+  #characters: () => Map<number, CharacterData>;
 
   targetId = $state<number>();
   loading = $state(false);
   error = $state('');
-  choices = $state<CharacterCatalogEntry[]>([]);
+  choices = $state<CharacterData[]>([]);
   targetOpen = $state(false);
   targetSort = $state<CharacterPickerSort>('default');
 
@@ -25,9 +25,7 @@ export class RosterCharacters {
   umaDraft = $state<string[]>([]);
   umaSort = $state<CharacterPickerSort>('default');
 
-  target = $derived.by(() =>
-    this.targetId ? this.#characters().get(this.targetId) : undefined
-  );
+  target = $derived.by(() => (this.targetId ? this.#characters().get(this.targetId) : undefined));
   options = $derived(
     (this.choices.length ? this.choices : this.target ? [this.target] : []).map((character) => ({
       ...character,
@@ -35,7 +33,7 @@ export class RosterCharacters {
     }))
   );
 
-  constructor(characters: () => Map<number, CharacterCatalogEntry>) {
+  constructor(characters: () => Map<number, CharacterData>) {
     this.#characters = characters;
   }
 
@@ -44,7 +42,7 @@ export class RosterCharacters {
     this.loading = true;
     this.error = '';
     try {
-      this.choices = await loadReleasedCharacterCatalog();
+      this.choices = await loadReleasedCharacters();
     } catch {
       this.error = 'Target characters could not be loaded.';
     } finally {

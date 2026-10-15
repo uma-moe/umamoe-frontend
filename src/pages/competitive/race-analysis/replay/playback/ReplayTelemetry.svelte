@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { RaceRunner } from '@/lib/race/race-capture-parser';
-  import { hpRemainingColor } from '@/lib/race/race-display';
-  import { detailedSample } from '@/lib/race/race-diagnostics';
-  import { meanTrajectorySignal } from '@/lib/race/race-ensemble';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
+  import { hpRemainingColor } from '@/lib/race/replay/race-display';
+  import { detailedSample } from '@/lib/race/capture/race-diagnostics';
+  import { meanTrajectorySignal } from '@/lib/race/replay/race-ensemble';
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
@@ -44,13 +44,15 @@
       ? (replay.finishFrames.get(replay.runner?.index ?? 0) ?? replay.frame)
       : replay.frame
   );
+
   const chartSignals = $derived(
-    telemetrySignals($theme === 'dark', !!replay.ensemble).filter((signal) =>
+    telemetrySignals($theme === 'dark', Boolean(replay.ensemble)).filter((signal) =>
       metric === 'combined'
         ? ['speed', 'hp', 'gap'].includes(signal.value)
         : signal.value === metric
     )
   );
+
   const option = $derived(
     telemetryOption(
       {
@@ -90,6 +92,7 @@
     const { capture, ensemble, diagnostic } = replay;
     const sample = telemetryFrame,
       horse = sample?.horses[replay.runner?.index ?? 0];
+
     if (!sample || !horse) return undefined;
     if (ensemble && (signal === 'hp' || signal === 'gap'))
       return meanTrajectorySignal(ensemble, replay.time, replay.runner?.index ?? 0, signal);
@@ -175,8 +178,8 @@
         bind:metric
         bind:compare
         bind:chartEvents
-        detailed={!!replay.capture.detailed}
-        ensemble={!!replay.ensemble}
+        detailed={Boolean(replay.capture.detailed)}
+        ensemble={Boolean(replay.ensemble)}
       />
     {/snippet}
 

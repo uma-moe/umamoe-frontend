@@ -60,19 +60,22 @@
         );
         return;
       }
+
       const selected = plannerPickupGoals(value);
       const index = selected.findIndex((goal) => goal.pickupId === pickupId);
+      const goal = selected[index];
       const key = `${value.id}:${pickupId}`;
-      if (change !== undefined && index >= 0) {
-        selected[index]!.desiredCopies = Math.max(
+      if (change !== undefined && goal) {
+        goal.desiredCopies = Math.max(
           1,
-          Math.min(cardKind === 'support' ? 5 : 20, selected[index]!.desiredCopies + change)
+          Math.min(cardKind === 'support' ? 5 : 20, goal.desiredCopies + change)
         );
-        pickupCopyMemory.set(key, selected[index]!.desiredCopies);
-      } else if (index >= 0) {
-        pickupCopyMemory.set(key, selected[index]!.desiredCopies);
+        pickupCopyMemory.set(key, goal.desiredCopies);
+      } else if (goal) {
+        pickupCopyMemory.set(key, goal.desiredCopies);
         selected.splice(index, 1);
       } else selected.push({ pickupId, desiredCopies: pickupCopyMemory.get(key) ?? 1 });
+
       value.pickupGoals = selected;
       value.pickupId = selected[0]?.pickupId;
       value.desiredCopies = selected[0]?.desiredCopies ?? 1;

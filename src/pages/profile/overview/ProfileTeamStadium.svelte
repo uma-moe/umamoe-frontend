@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { characterImagePath, type CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
-  import { loadSkillCatalog, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
+  import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
+  import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import {
     aptitudeGrade,
     groupStadiumMembers,
@@ -23,19 +23,21 @@
   }: {
     accountId: string;
     members: StadiumMember[];
-    characters: Map<number, CharacterCatalogEntry>;
+    characters: Map<number, CharacterData>;
   } = $props();
 
   let detail = $state<ProfileVeteran>(),
     detailOpen = $state(false);
+
   let selectedStadiumTab = $state(0);
-  let skills = $state<Map<number, SkillCatalogEntry>>(new Map());
+  let skills = $state<Map<number, SkillData>>(new Map());
   let skillError = $state('');
 
   const stadiumGroups = $derived(groupStadiumMembers(members));
   const stadiumIndex = $derived(
     Math.min(selectedStadiumTab, Math.max(0, stadiumGroups.length - 1))
   );
+
   const stadiumGroup = $derived(stadiumGroups[stadiumIndex]);
 
   $effect(() => {
@@ -44,7 +46,7 @@
   });
 
   $effect(() => {
-    void loadSkillCatalog()
+    void loadSkills()
       .then((value) => (skills = value))
       .catch(() => (skillError = 'Skill names could not be loaded.'));
   });

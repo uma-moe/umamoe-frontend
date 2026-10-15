@@ -27,7 +27,7 @@ test('only local development injects the simulator key, without exposing it to t
         assert.equal(response.status, 200);
         assert.deepEqual(await response.json(), { key: mode === 'development' ? key : null, proof: 'browser-proof' });
         assert.equal(server.config.env.SIMULATOR_API_KEY, undefined);
-        assert.ok(!(await (await fetch(`${origin}/src/services/race-resimulation.ts`)).text()).includes(key));
+        assert.ok(!(await (await fetch(`${origin}/src/services/race/race-resimulation.ts`)).text()).includes(key));
       } finally { await server.close(); }
     }
     const build = await resolveConfig({ configFile, configLoader: 'runner', mode: 'development', logLevel: 'silent' }, 'build');

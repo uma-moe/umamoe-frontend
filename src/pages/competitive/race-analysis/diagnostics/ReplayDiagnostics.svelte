@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-  import { diagnosticHorse, hpChangeEvents } from '@/lib/race/race-diagnostics';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import { diagnosticHorse, hpChangeEvents } from '@/lib/race/capture/race-diagnostics';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
   import DiagnosticsOutcomeSummary from './DiagnosticsOutcomeSummary.svelte';
   import DiagnosticsSkills from './report/DiagnosticsSkills.svelte';
@@ -31,6 +31,7 @@
     onseek: (time: number) => void;
     onselect: (index: number) => void;
   } = $props();
+
   const instanceId = $props.id();
 
   let rawOpen = $state(true);

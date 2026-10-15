@@ -4,7 +4,7 @@
   import TextField from '@/components/controls/TextField.svelte';
   import AptitudeGrade, { type AptitudeGradeValue } from '@/components/game/AptitudeGrade.svelte';
   import Icon from '@/components/Icon.svelte';
-  import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import { getRankInfoFromLabel } from '@/lib/rank';
   import SimulatorRunnerFace from '../../reports/SimulatorRunnerFace.svelte';
   import { courseAptitudes, type VeteranEntry } from './veteran-entries';
@@ -24,7 +24,7 @@
     onchoose
   }: {
     entries: VeteranEntry[];
-    course?: CourseCatalogEntry;
+    course?: RaceCourse;
     mode?: 'single' | 'multi';
     /** The ticked Veterans' keys, in multi mode. */
     selected?: string[];
@@ -46,12 +46,14 @@
   const full = $derived(max !== undefined && selected.length >= max);
 
   function toggle(entry: VeteranEntry, on: boolean) {
-    selected = on
-      ? ticked.has(entry.key) || full
-        ? selected
-        : [...selected, entry.key]
-      : selected.filter((key) => key !== entry.key);
+    if (!on) {
+      selected = selected.filter((key) => key !== entry.key);
+      return;
+    }
+
+    if (!ticked.has(entry.key) && !full) selected = [...selected, entry.key];
   }
+
   const allShown = $derived(shown.length > 0 && shown.every((entry) => ticked.has(entry.key)));
   function tickShown() {
     if (allShown) {
@@ -59,13 +61,16 @@
       selected = selected.filter((key) => !drop.has(key));
       return;
     }
+
     const next = [...selected];
     for (const entry of shown) {
       if (max !== undefined && next.length >= max) break;
       if (!ticked.has(entry.key)) next.push(entry.key);
     }
+
     selected = next;
   }
+
   const rankColor = (rank: string) => getRankInfoFromLabel(rank).colorToken;
 </script>
 

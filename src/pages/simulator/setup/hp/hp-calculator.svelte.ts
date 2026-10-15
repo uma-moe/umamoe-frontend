@@ -1,8 +1,8 @@
-import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
-import type { SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
-import { createSimulatorUma, type SimulatorUma } from '../../simulator-uma';
+import type { RaceCourse } from '@/lib/game-data/racing/courses';
+import type { SkillData } from '@/lib/game-data/skills/skills';
+import { createSimulatorUma, restoreSimulatorUma, type SimulatorUma } from '../../simulator-uma';
 import { countSkills, createHpPlan, STAT_KEYS, type HpPlan } from './hp-plan';
-import { createTrainee, RUNNING_STYLES } from '../trainee';
+import { RUNNING_STYLES } from '../trainee';
 
 /**
  * The HP calculator's own runner, skill counts and race options, kept apart from the race field so nothing here
@@ -32,6 +32,7 @@ function defaults(): HpCalculatorState {
 type Loose = Record<string, unknown>;
 const record = (value: unknown): Loose | undefined =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Loose) : undefined;
+
 const count = (value: unknown, fallback: number) =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
 
@@ -39,12 +40,21 @@ const count = (value: unknown, fallback: number) =>
 export function restorePlan(saved: unknown): HpPlan {
   const plan = createHpPlan(),
     data = record(saved);
+
   if (!data) return plan;
   for (const kind of ['recovery', 'speed', 'accel', 'debuffs'] as const) {
-    const group = record(data[kind]),
-      target = plan[kind] as unknown as Record<string, number>;
-    if (group) for (const field of Object.keys(target)) target[field] = count(group[field], target[field]!);
+    const group = record(data[kind]);
+    if (!group) continue;
+    for (const field of ['gold', 'white', 'unique'] as const)
+      plan[kind][field] = count(group[field], plan[kind][field]);
   }
+
+  const recovery = record(data.recovery);
+  if (recovery) {
+    plan.recovery.uniquePercent = count(recovery.uniquePercent, plan.recovery.uniquePercent);
+    plan.recovery.uniqueLevel = count(recovery.uniqueLevel, plan.recovery.uniqueLevel);
+  }
+
   const green = record(data.green);
   for (const stat of STAT_KEYS) {
     const item = record(green?.[stat]);
@@ -54,6 +64,7 @@ export function restorePlan(saved: unknown): HpPlan {
         white: count(item.white, 0)
       };
   }
+
   for (const key of ['positionFight', 'rushed', 'paceDown', 'duel'] as const) {
     const item = record(data[key]);
     if (item)
@@ -62,6 +73,7 @@ export function restorePlan(saved: unknown): HpPlan {
         seconds: typeof item.seconds === 'number' && item.seconds > 0 ? item.seconds : null
       };
   }
+
   plan.downhill = data.downhill === true;
   // Debuffs used to be one count of a chosen percent; keep them as white or gold, whichever is nearer.
   const debuffs = record(data.debuffs);
@@ -69,6 +81,7 @@ export function restorePlan(saved: unknown): HpPlan {
     const percent = count(debuffs.percent, 1);
     plan.debuffs[percent >= 2 ? 'gold' : 'white'] = count(debuffs.count, 0);
   }
+
   return plan;
 }
 
@@ -77,15 +90,7 @@ function restore(): HpCalculatorState {
   try {
     const data = record(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'));
     if (!data) return state;
-    const uma = record(data.uma),
-      trainee = record(uma?.trainee);
-    if (uma && trainee && typeof uma.name === 'string')
-      state.uma = {
-        ...state.uma,
-        ...(uma as Partial<SimulatorUma>),
-        trainee: { ...createTrainee(), ...(trainee as Partial<SimulatorUma['trainee']>) },
-        skills: Array.isArray(uma.skills) ? (uma.skills as SimulatorUma['skills']) : []
-      };
+    state.uma = restoreSimulatorUma(data.uma, state.uma);
     state.plan = restorePlan(data.plan);
     if (typeof data.counted === 'string') state.counted = data.counted;
     if (typeof data.raceType === 'string') state.raceType = data.raceType;
@@ -93,6 +98,7 @@ function restore(): HpCalculatorState {
   } catch {
     /* Storage can be unavailable or hold something else; start fresh then. */
   }
+
   return state;
 }
 
@@ -111,8 +117,8 @@ export function saveHpCalculator(): void {
 /** Counts her learned skills into the skill counts, for this course and her running style. */
 export function countHpSkills(
   uma: SimulatorUma,
-  skills: Map<number, SkillCatalogEntry>,
-  course: CourseCatalogEntry | undefined
+  skills: Map<number, SkillData>,
+  course: RaceCourse | undefined
 ): void {
   if (!uma.skills.length || !skills.size) return;
   const style = RUNNING_STYLES.indexOf(uma.trainee.runningStyle as (typeof RUNNING_STYLES)[number]);
@@ -126,5 +132,6 @@ export function countHpSkills(
       style: style === 4 ? 1 : style + 1
     })
   );
+
   hpCalculator.counted = 'Counted from ' + uma.name + '’s ' + uma.skills.length + ' skills';
 }

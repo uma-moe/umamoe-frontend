@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from '../Icon.svelte';
   import Button from '../controls/Button.svelte';
-  import { DISCORD_SUPPORT_URL } from '@/services/site-links';
+  import { DISCORD_SUPPORT_URL } from '@/services/site/site-links';
 
   export interface Toast {
     id: string;
@@ -47,7 +47,8 @@
         <strong>{toast.title}</strong>
         {#if toast.message}
           <p>{toast.message}</p>
-        {/if}{#if toast.tone === 'danger'}
+        {/if}
+        {#if toast.tone === 'danger'}
           <div class="report-action">
             <Button
               href={DISCORD_SUPPORT_URL}

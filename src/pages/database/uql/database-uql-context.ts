@@ -4,8 +4,8 @@ import {
   type UqlContextIssue,
   type UqlContextQuery
 } from '@/lib/inheritance/uql/uql-context';
-import type { UqlQueryCatalog } from '@/lib/inheritance/uql/uql-compiler';
-import type { SelectableParent } from '@/lib/veterans/parent-picker';
+import type { UqlQueryData } from '@/lib/inheritance/uql/uql-compiler';
+import type { SelectableParent } from '@/lib/veterans/parents/parent-picker';
 
 export interface DatabaseUqlContext {
   targetId?: number;
@@ -23,10 +23,11 @@ export interface DatabaseUqlLegacyState {
 
 export function resolveDatabaseUqlContext(
   query: UqlContextQuery,
-  characters: UqlQueryCatalog['characters'],
+  characters: UqlQueryData['characters'],
   legacyState: DatabaseUqlLegacyState
 ): DatabaseUqlContext {
   if (query.issue) return { issue: query.issue };
+
   let targetId: number | undefined;
   let legacy: SelectableParent | undefined;
   for (const directive of query.directives) {
@@ -41,6 +42,7 @@ export function resolveDatabaseUqlContext(
               : `Unknown target: ${directive.value}`
           }
         };
+
       targetId = Number(resolution.match.id);
     } else {
       const resolution = resolveUqlLegacy(directive.value, legacyState.parents, characters);
@@ -50,11 +52,13 @@ export function resolveDatabaseUqlContext(
             pendingLegacy: directive.value,
             issue: { state: 'incomplete', message: 'Loading legacy…' }
           };
+
         if (legacyState.error)
           return {
             failedLegacy: directive.value,
             issue: { state: 'invalid', message: legacyState.error }
           };
+
         return {
           issue: {
             state: resolution.partial ? 'incomplete' : 'invalid',
@@ -64,8 +68,10 @@ export function resolveDatabaseUqlContext(
           }
         };
       }
+
       legacy = resolution.match;
     }
   }
+
   return { targetId, legacy };
 }

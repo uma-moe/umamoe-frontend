@@ -10,7 +10,7 @@ import {
   keymap,
   lineNumbers,
   placeholder as placeholderExt,
-  tooltips,
+  tooltips
 } from '@codemirror/view';
 import {
   Completion,
@@ -20,7 +20,7 @@ import {
   autocompletion,
   closeCompletion,
   completionKeymap,
-  startCompletion,
+  startCompletion
 } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 
@@ -29,7 +29,7 @@ import {
   type UqlCompletionResult,
   type UqlHighlightSegment,
   type UqlSuggestion,
-  type UqlValidationIssue,
+  type UqlValidationIssue
 } from './query-editor-types';
 
 class UqlWherePrefixWidget extends WidgetType {
@@ -39,9 +39,11 @@ class UqlWherePrefixWidget extends WidgetType {
     el.textContent = 'where ';
     return el;
   }
+
   override eq(other: WidgetType): boolean {
     return other instanceof UqlWherePrefixWidget;
   }
+
   override ignoreEvent(): boolean {
     return true;
   }
@@ -55,7 +57,7 @@ class UqlChipWidget extends WidgetType {
     private readonly contextClass: string,
     private readonly rarityClass: string | undefined,
     private readonly badgeText: string | undefined,
-    private readonly badgeClass: string | undefined,
+    private readonly badgeClass: string | undefined
   ) {
     super();
   }
@@ -72,6 +74,7 @@ class UqlChipWidget extends WidgetType {
       img.className = 'uql-cm-chip-img';
       el.appendChild(img);
     }
+
     const label = document.createElement('span');
     label.textContent = this.text;
     label.className = 'uql-cm-chip-label';
@@ -79,9 +82,11 @@ class UqlChipWidget extends WidgetType {
     if (this.badgeText) {
       const badge = document.createElement('span');
       badge.textContent = this.badgeText;
-      badge.className = `uql-cm-chip-badge ${this.badgeClass ? `uql-cm-chip-badge-${this.badgeClass}` : ''}`.trim();
+      badge.className =
+        `uql-cm-chip-badge ${this.badgeClass ? `uql-cm-chip-badge-${this.badgeClass}` : ''}`.trim();
       el.appendChild(badge);
     }
+
     return el;
   }
 
@@ -106,7 +111,10 @@ class UqlChipWidget extends WidgetType {
 const setSegmentsEffect = StateEffect.define<UqlHighlightSegment[]>();
 const setValidationIssueEffect = StateEffect.define<UqlValidationIssue | null>();
 
-function buildDecorationsFromSegments(segments: UqlHighlightSegment[], docLength: number): DecorationSet {
+function buildDecorationsFromSegments(
+  segments: UqlHighlightSegment[],
+  docLength: number
+): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
   let lastTo = -1;
   for (const seg of segments) {
@@ -131,26 +139,31 @@ function buildDecorationsFromSegments(segments: UqlHighlightSegment[], docLength
             ctxClass,
             seg.rarityClass,
             seg.badgeText,
-            seg.badgeClass,
+            seg.badgeClass
           ),
-          inclusive: false,
-        }),
+          inclusive: false
+        })
       );
     } else {
       const classes: string[] = [`uql-cm-${seg.kind}`];
       if (seg.kind === 'paren' && seg.depth !== undefined) {
         classes.push(`uql-cm-paren-depth-${seg.depth}`);
       }
+
       if (seg.valueContext) {
         classes.push(`uql-cm-ctx-${seg.valueContext}`);
       }
+
       if (seg.scopeContext) {
         classes.push(`uql-cm-scope-${seg.scopeContext}`);
       }
+
       builder.add(from, to, Decoration.mark({ class: classes.join(' ') }));
     }
+
     lastTo = to;
   }
+
   return builder.finish();
 }
 
@@ -163,12 +176,16 @@ const decorationField = StateField.define<DecorationSet>({
         deco = buildDecorationsFromSegments(ef.value, tr.state.doc.length);
       }
     }
+
     return deco;
   },
-  provide: (f) => EditorView.decorations.from(f),
+  provide: (f) => EditorView.decorations.from(f)
 });
 
-function buildValidationDecorations(issue: UqlValidationIssue | null, docLength: number): DecorationSet {
+function buildValidationDecorations(
+  issue: UqlValidationIssue | null,
+  docLength: number
+): DecorationSet {
   if (!issue) return Decoration.none;
   const from = Math.max(0, Math.min(docLength, issue.from));
   const to = Math.max(from, Math.min(docLength, issue.to));
@@ -177,8 +194,8 @@ function buildValidationDecorations(issue: UqlValidationIssue | null, docLength:
   return Decoration.set([
     Decoration.mark({
       class: classes.join(' '),
-      attributes: issue.message ? { title: issue.message } : undefined,
-    }).range(from, to),
+      attributes: issue.message ? { title: issue.message } : undefined
+    }).range(from, to)
   ]);
 }
 
@@ -191,9 +208,10 @@ const validationIssueField = StateField.define<DecorationSet>({
         deco = buildValidationDecorations(ef.value, tr.state.doc.length);
       }
     }
+
     return deco;
   },
-  provide: (f) => EditorView.decorations.from(f),
+  provide: (f) => EditorView.decorations.from(f)
 });
 
 const wherePrefixPlugin = ViewPlugin.fromClass(
@@ -202,21 +220,23 @@ const wherePrefixPlugin = ViewPlugin.fromClass(
     constructor(view: EditorView) {
       this.decorations = this.build(view);
     }
+
     update(u: ViewUpdate): void {
       if (u.docChanged || u.viewportChanged) this.decorations = this.build(u.view);
     }
+
     private build(view: EditorView): DecorationSet {
       if (view.state.doc.lines < 1) return Decoration.none;
       const first = view.state.doc.line(1);
       return Decoration.set([
         Decoration.widget({
           widget: new UqlWherePrefixWidget(),
-          side: -1,
-        }).range(first.from),
+          side: -1
+        }).range(first.from)
       ]);
     }
   },
-  { decorations: (v) => v.decorations },
+  { decorations: (v) => v.decorations }
 );
 
 const autocompleteTooltipPlacementPlugin = ViewPlugin.fromClass(
@@ -231,7 +251,12 @@ const autocompleteTooltipPlacementPlugin = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate): void {
-      if (update.transactions.length || update.geometryChanged || update.viewportChanged || update.focusChanged) {
+      if (
+        update.transactions.length ||
+        update.geometryChanged ||
+        update.viewportChanged ||
+        update.focusChanged
+      ) {
         this.schedule();
       }
     }
@@ -244,7 +269,7 @@ const autocompleteTooltipPlacementPlugin = ViewPlugin.fromClass(
       this.view.requestMeasure({
         key: this,
         read: () => this.measureTooltip(),
-        write: layout => {
+        write: (layout) => {
           if (!layout) return;
           const { tooltip, top, left, width } = layout;
           tooltip.style.setProperty('top', `${top}px`, 'important');
@@ -257,9 +282,10 @@ const autocompleteTooltipPlacementPlugin = ViewPlugin.fromClass(
           } else {
             this.resetMobilePositioning(tooltip);
           }
+
           tooltip.classList.remove('cm-tooltip-above');
           tooltip.classList.add('cm-tooltip-below');
-        },
+        }
       });
     }
 
@@ -269,6 +295,7 @@ const autocompleteTooltipPlacementPlugin = ViewPlugin.fromClass(
       const tooltip =
         this.view.dom.querySelector<HTMLElement>('.cm-tooltip.cm-tooltip-autocomplete') ??
         doc.querySelector<HTMLElement>('.cm-tooltip.cm-tooltip-autocomplete');
+
       if (!tooltip) return;
 
       const frame = this.view.dom.closest<HTMLElement>('.uql-cm-frame');
@@ -283,10 +310,21 @@ const autocompleteTooltipPlacementPlugin = ViewPlugin.fromClass(
           this.view.dom.getBoundingClientRect())
         : { left: 0, top: 0 };
 
-      const top = Math.max(this.inset, scrollerRect.top + 4, (selectionRect?.bottom ?? scrollerRect.top) + 4) - parentRect.top;
+      const top =
+        Math.max(
+          this.inset,
+          scrollerRect.top + 4,
+          (selectionRect?.bottom ?? scrollerRect.top) + 4
+        ) - parentRect.top;
+
       const left = Math.max(this.inset, frameRect.left + this.inset);
       const right = Math.min(docEl.clientWidth - this.inset, frameRect.right - this.inset);
-      return { tooltip, top, left: left - parentRect.left, width: docEl.clientWidth <= this.maxMobileWidth ? Math.max(0, right - left) : null };
+      return {
+        tooltip,
+        top,
+        left: left - parentRect.left,
+        width: docEl.clientWidth <= this.maxMobileWidth ? Math.max(0, right - left) : null
+      };
     }
 
     private resetMobilePositioning(tooltip: HTMLElement): void {
@@ -296,7 +334,7 @@ const autocompleteTooltipPlacementPlugin = ViewPlugin.fromClass(
       tooltip.style.removeProperty('max-width');
       tooltip.style.removeProperty('min-width');
     }
-  },
+  }
 );
 
 // Svelte owns mounting, binding and cleanup; this class owns one CodeMirror view.
@@ -305,17 +343,22 @@ export class QueryEditorView {
   private applyingExternalValue = false;
   private lastSegmentText: string | null = null;
   private validationIssue: UqlValidationIssue | null = null;
+  private value: string;
   constructor(
-    private readonly host: HTMLElement,
-    private value: string,
-    private readonly tokenize: (text: string) => UqlHighlightSegment[],
-    private readonly complete: (text: string, pos: number) => UqlCompletionResult | null,
-    private readonly onchange: (text: string) => void,
-    private readonly inputId: string,
-    private readonly oncomplete?: (suggestion: UqlSuggestion) => void,
+    private readonly options: {
+      host: HTMLElement;
+      value: string;
+      tokenize: (text: string) => UqlHighlightSegment[];
+      complete: (text: string, position: number) => UqlCompletionResult | null;
+      onchange: (text: string) => void;
+      inputId: string;
+      oncomplete?: (suggestion: UqlSuggestion) => void;
+    }
   ) {
+    this.value = options.value;
     this.createEditor();
   }
+
   update(value: string, issue: UqlValidationIssue | null, languageChanged = false): void {
     if (!this.view) return;
     this.value = value;
@@ -325,20 +368,29 @@ export class QueryEditorView {
       this.view.dispatch({ changes: { from: 0, to: current.length, insert: value } });
       this.applyingExternalValue = false;
     }
-    const issueChanged = this.validationIssue?.from !== issue?.from || this.validationIssue?.to !== issue?.to || this.validationIssue?.state !== issue?.state || this.validationIssue?.message !== issue?.message;
+
+    const issueChanged =
+      this.validationIssue?.from !== issue?.from ||
+      this.validationIssue?.to !== issue?.to ||
+      this.validationIssue?.state !== issue?.state ||
+      this.validationIssue?.message !== issue?.message;
+
     this.validationIssue = issue;
     if (languageChanged) this.lastSegmentText = null;
     this.dispatchSegments();
     if (issueChanged) this.dispatchValidationIssue();
     this.view.contentDOM.setAttribute('aria-invalid', String(Boolean(issue)));
   }
+
   focus(): void {
     this.view?.focus();
   }
+
   destroy(): void {
     this.view?.destroy();
     this.view = null;
   }
+
   private createEditor(): void {
     const updateListener = EditorView.updateListener.of((u: ViewUpdate) => {
       if (!u.docChanged) return;
@@ -347,13 +399,13 @@ export class QueryEditorView {
       if (this.applyingExternalValue) return;
       if (next === this.value) return;
       this.value = next;
-      this.onchange(next);
+      this.options.onchange(next);
     });
 
     const completionSource = (ctx: CompletionContext): CompletionResult | null => {
       const text = ctx.state.doc.toString();
       const pos = ctx.pos;
-      const result = this.complete?.(text, pos);
+      const result = this.options.complete(text, pos);
       if (!result || result.options.length === 0) return null;
       return {
         from: result.from,
@@ -369,8 +421,9 @@ export class QueryEditorView {
                 view.state.doc.toString(),
                 from,
                 insertValue,
-                s.kind,
+                s.kind
               );
+
               const prefix = view.state.doc.sliceString(0, adjustedFrom);
               const suffix = view.state.doc.sliceString(to);
               const needsLeading = prefix.length > 0 && !/[\s(,]$/.test(prefix);
@@ -379,14 +432,16 @@ export class QueryEditorView {
               const cursorPos = adjustedFrom + insert.length + (s.cursorOffset ?? 0);
               view.dispatch({
                 changes: { from: adjustedFrom, to, insert },
-                selection: { anchor: cursorPos },
+                selection: { anchor: cursorPos }
               });
-              this.oncomplete?.(s);
+
+              this.options.oncomplete?.(s);
             },
-            _uql: s,
+            _uql: s
           };
+
           return completion;
-        }),
+        })
       };
     };
 
@@ -394,10 +449,10 @@ export class QueryEditorView {
       doc: this.value || '',
       extensions: [
         EditorView.contentAttributes.of({
-          id: this.inputId,
+          id: this.options.inputId,
           'aria-label': 'UQL query',
-          'aria-describedby': this.inputId + '-hint',
-          'data-gramm': 'false',
+          'aria-describedby': this.options.inputId + '-hint',
+          'data-gramm': 'false'
         }),
         lineNumbers(),
         history(),
@@ -408,16 +463,16 @@ export class QueryEditorView {
         validationIssueField,
         wherePrefixPlugin,
         tooltips({
-          parent: this.host.ownerDocument.body,
+          parent: this.options.host.ownerDocument.body,
           tooltipSpace: (view: EditorView) => {
             const docEl = view.dom.ownerDocument.documentElement;
             return {
               top: 0,
               left: 0,
               right: docEl.clientWidth,
-              bottom: docEl.clientHeight + 10000,
+              bottom: docEl.clientHeight + 10000
             };
-          },
+          }
         }),
         autocompletion({
           override: [completionSource],
@@ -446,7 +501,7 @@ export class QueryEditorView {
                 img.className = 'uql-cm-completion-img';
                 return img;
               },
-              position: 20,
+              position: 20
             },
             {
               render: (c: Completion) => {
@@ -458,9 +513,9 @@ export class QueryEditorView {
                   `uql-cm-completion-badge ${meta.badgeClass ? `uql-cm-completion-badge-${meta.badgeClass}` : ''}`.trim();
                 return badge;
               },
-              position: 35,
-            },
-          ],
+              position: 35
+            }
+          ]
         }),
         autocompleteTooltipPlacementPlugin,
         keymap.of([
@@ -470,25 +525,25 @@ export class QueryEditorView {
           { key: 'Space', run: (view) => this.autoInsertInListParens(view) },
           ...completionKeymap,
           ...historyKeymap,
-          ...defaultKeymap,
+          ...defaultKeymap
         ]),
         EditorView.theme(
           {
             '&': {
               color: 'rgba(255,255,255,0.92)',
               backgroundColor: 'transparent',
-              fontSize: '13px',
+              fontSize: '13px'
             },
             '&.cm-focused': { outline: 'none' },
             '.cm-scroller': {
               fontFamily: '"JetBrains Mono","Fira Code","Cascadia Code",monospace',
               lineHeight: '1.55',
               minHeight: '112px',
-              maxHeight: '320px',
+              maxHeight: '320px'
             },
             '.cm-content': {
               padding: '12px 12px 12px 8px',
-              caretColor: '#64b5f6',
+              caretColor: '#64b5f6'
             },
             '.cm-line': { padding: '0 0 0 0' },
             '.cm-gutters': {
@@ -497,14 +552,15 @@ export class QueryEditorView {
               border: 'none',
               borderRight: '1px solid rgba(255,255,255,0.12)',
               fontFamily: '"JetBrains Mono",monospace',
-              fontSize: '12px',
+              fontSize: '12px'
             },
             '.cm-gutterElement': { padding: '0 8px 0 6px', minWidth: '28px' },
             '.cm-activeLine': { backgroundColor: 'transparent' },
             '.cm-activeLineGutter': { backgroundColor: 'transparent' },
-            '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, .cm-content ::selection': {
-              backgroundColor: 'rgba(100, 181, 246, 0.32) !important',
-            },
+            '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, .cm-content ::selection':
+              {
+                backgroundColor: 'rgba(100, 181, 246, 0.32) !important'
+              },
             '.cm-cursor': { borderLeftColor: '#64b5f6', borderLeftWidth: '2px' },
             '.cm-tooltip': {
               background: 'rgba(17,21,26,0.97)',
@@ -512,39 +568,40 @@ export class QueryEditorView {
               borderRadius: '6px',
               color: 'rgba(255,255,255,0.92)',
               boxShadow: '0 14px 32px rgba(0,0,0,0.42)',
-              maxWidth: '420px',
+              maxWidth: '420px'
             },
             '.cm-tooltip-autocomplete': { padding: '4px' },
             '.cm-tooltip-autocomplete > ul': {
               fontFamily: 'inherit',
-              maxHeight: '240px',
+              maxHeight: '240px'
             },
             '.cm-tooltip-autocomplete > ul > li': {
               padding: '4px 8px',
               borderRadius: '4px',
-              color: 'rgba(255,255,255,0.78)',
+              color: 'rgba(255,255,255,0.78)'
             },
             '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
               background: 'rgba(100,181,246,0.12)',
-              color: '#fff',
+              color: '#fff'
             },
             '.cm-completionDetail': {
               color: 'rgba(255,255,255,0.5)',
               fontStyle: 'normal',
               marginLeft: '12px',
-              fontSize: '11px',
-            },
+              fontSize: '11px'
+            }
           },
-          { dark: true },
+          { dark: true }
         ),
-        updateListener,
-      ],
+        updateListener
+      ]
     });
 
     this.view = new EditorView({
       state,
-      parent: this.host,
+      parent: this.options.host
     });
+
     this.dispatchSegments();
     this.dispatchValidationIssue();
   }
@@ -560,8 +617,9 @@ export class QueryEditorView {
     if (!/(?:^|\S\s+)(?:not\s+)?in$/i.test(beforeOperator)) return false;
     view.dispatch({
       changes: { from: cursor, to: cursor, insert: ' ()' },
-      selection: { anchor: cursor + 2 },
+      selection: { anchor: cursor + 2 }
     });
+
     return true;
   }
 
@@ -569,7 +627,7 @@ export class QueryEditorView {
     text: string,
     from: number,
     insertValue: string,
-    kind: UqlSuggestion['kind'],
+    kind: UqlSuggestion['kind']
   ): number {
     if (kind !== 'field' && kind !== 'snippet') return from;
     const before = text.slice(0, from);
@@ -591,11 +649,11 @@ export class QueryEditorView {
   }
 
   private dispatchSegments(): void {
-    if (!this.view || !this.tokenize) return;
+    if (!this.view) return;
     const text = this.view.state.doc.toString();
     if (text === this.lastSegmentText) return;
     this.lastSegmentText = text;
-    const segments = this.tokenize(text);
+    const segments = this.options.tokenize(text);
     this.view.dispatch({ effects: setSegmentsEffect.of(segments) });
   }
 

@@ -1,11 +1,23 @@
 import { expect, test, type Page } from './fixtures/test';
 import { mockDatabase, mockTimeline } from './fixtures/api';
 
+declare global {
+  interface Window {
+    adPages: number;
+    adDestroyed: string[];
+    footerRefreshes: number;
+    refreshFooter: (width: number, height: number) => void;
+    injectFooter: () => void;
+    footerCloseMode: 'widget' | 'hidden' | 'collapsed';
+  }
+}
+
 async function mockFooter(page: Page) {
   await mockDatabase(page);
-  await page.route('https://cdn.fuseplatform.net/**/fuse.js', route => route.fulfill({
-    contentType: 'application/javascript',
-    body: `
+  await page.route('https://cdn.fuseplatform.net/**/fuse.js', (route) =>
+    route.fulfill({
+      contentType: 'application/javascript',
+      body: `
       window.adPages = 0;
       window.adDestroyed = [];
       window.footerRefreshes = 0;
@@ -60,11 +72,17 @@ async function mockFooter(page: Page) {
         destroyZone(id) { window.adDestroyed.push(id); if (id.includes('scrolling_sticky_footer')) { clearInterval(refresh); document.querySelector('.' + name + '-container')?.remove(); } }
       };
     `
-  }));
+    })
+  );
 }
 
-test('timeline ads, consent and tours work without checkVisibility on older Safari', async ({ page }) => {
-  await page.addInitScript(() => { Reflect.deleteProperty(Element.prototype, 'checkVisibility'); });
+test('timeline ads, consent and tours work without checkVisibility on older Safari', async ({
+  page
+}) => {
+  await page.addInitScript(() => {
+    Reflect.deleteProperty(Element.prototype, 'checkVisibility');
+  });
+
   await page.setViewportSize({ width: 414, height: 736 });
   await mockFooter(page);
   await mockTimeline(page, false);
@@ -88,27 +106,33 @@ test('timeline ads, consent and tours work without checkVisibility on older Safa
   await page.evaluate(() => {
     const container = document.createElement('div');
     container.id = 'qc-cmp2-container';
-    container.innerHTML = '<div id="qc-cmp2-ui" style="position:fixed;inset:0">Privacy choices</div>';
+    container.innerHTML =
+      '<div id="qc-cmp2-ui" style="position:fixed;inset:0">Privacy choices</div>';
     document.body.append(container);
   });
+
   await expect(updates).toBeHidden();
   const consent = page.locator('#qc-cmp2-container');
-  await consent.evaluate(element => element.style.visibility = 'hidden');
+  await consent.evaluate((element) => (element.style.visibility = 'hidden'));
   await expect(updates).toBeVisible();
-  await consent.evaluate(element => element.style.visibility = 'visible');
+  await consent.evaluate((element) => (element.style.visibility = 'visible'));
   await expect(updates).toBeHidden();
-  await consent.evaluate(element => element.style.display = 'none');
+  await consent.evaluate((element) => (element.style.display = 'none'));
   await expect(updates).toBeVisible();
-  await consent.evaluate(element => element.remove());
+  await consent.evaluate((element) => element.remove());
   await updates.getByRole('button', { name: 'Got it', exact: true }).click();
 
-  await footer.locator('.fuse-slot').evaluate(element => element.style.visibility = 'hidden');
+  await footer.locator('.fuse-slot').evaluate((element) => (element.style.visibility = 'hidden'));
   await expect(footer).toBeHidden();
-  expect(await page.evaluate(() => (window as any).adDestroyed)).not.toContain('fuse-injected-scrolling_sticky_footer-1');
+  expect(await page.evaluate(() => window.adDestroyed)).not.toContain(
+    'fuse-injected-scrolling_sticky_footer-1'
+  );
   await expect(page.locator('#app-error')).toBeHidden();
 });
 
-test('database scroll shortcut stays above the footer ad as it resizes and closes', async ({ page }) => {
+test('database scroll shortcut stays above the footer ad as it resizes and closes', async ({
+  page
+}) => {
   await mockFooter(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/database');
@@ -118,15 +142,20 @@ test('database scroll shortcut stays above the footer ad as it resizes and close
   const shortcut = page.locator('.floating-scroll-btn');
   await expect(shortcut).toBeInViewport();
   for (const height of [50, 100, 250]) {
-    await page.evaluate(height => (window as any).refreshFooter(320, height), height);
+    await page.evaluate((height) => window.refreshFooter(320, height), height);
     await expect(shortcut).toHaveCSS('bottom', `${16 + Math.min(height, 126)}px`);
     await shortcut.click({ trial: true });
   }
+
   await page.getByRole('button', { name: 'Close footer ad', exact: true }).click();
   await expect(shortcut).toHaveCSS('bottom', '16px');
 });
 
-test('footer follows creative refreshes, survives navigation, and stays closed until a fresh load', async ({ page, isMobile, browserName }) => {
+test('footer follows creative refreshes, survives navigation, and stays closed until a fresh load', async ({
+  page,
+  isMobile,
+  browserName
+}) => {
   await mockFooter(page);
   await page.clock.install();
   await page.goto('/database');
@@ -152,71 +181,86 @@ test('footer follows creative refreshes, survives navigation, and stays closed u
     expect(button.x + button.width).toBeCloseTo(ad.x + ad.width - inset, 0);
     expect(button.y).toBeCloseTo(wrapper.y + inset, 0);
     await close.click({ trial: true });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true
+    );
   };
+
   await expect(close).toBeVisible();
   await checkGeometry(isMobile ? 320 : 728, isMobile ? 50 : 90);
   // A refresh may remove the old iframe before the next creative arrives.
-  await frame.evaluate(element => element.remove());
+  await frame.evaluate((element) => element.remove());
   await expect(close).toBeHidden();
   await page.clock.fastForward(1000);
-  await page.evaluate(() => (window as any).refreshFooter(innerWidth < 768 ? 320 : 728, innerWidth < 768 ? 50 : 90));
+  await page.evaluate(() =>
+    window.refreshFooter(innerWidth < 768 ? 320 : 728, innerWidth < 768 ? 50 : 90)
+  );
   await checkGeometry(isMobile ? 320 : 728, isMobile ? 50 : 90);
   await expect(footer.locator('[class$="-container-background"]')).toBeHidden();
   await expect(footer.locator('[class$="-button"]')).toBeHidden();
-  await footer.evaluate(element => element.setAttribute('data-original-instance', 'true'));
+  await footer.evaluate((element) => element.setAttribute('data-original-instance', 'true'));
   // Use the real client-side router so a document reload cannot accidentally pass.
   await page.locator('.veterans-action').click();
   await expect(page).toHaveURL(/\/veterans/);
   await expect(footer).toHaveAttribute('data-original-instance', 'true');
-  expect(await page.evaluate(() => (window as any).adPages)).toBe(1);
+  expect(await page.evaluate(() => window.adPages)).toBe(1);
   await page.clock.fastForward(30_000);
   await checkGeometry(isMobile ? 300 : 970, isMobile ? 100 : 250);
   // A tall creative scrolls inside the fixed publisher window, with the X stationary.
   await page.evaluate(() => {
     document.body.style.minHeight = '300vh';
-    (window as any).refreshFooter(innerWidth < 768 ? 320 : 970, 250);
+    window.refreshFooter(innerWidth < 768 ? 320 : 970, 250);
     window.scrollTo(0, 70);
   });
+
   await expect(footer.locator('.fuse-slot-sticky')).toHaveCSS('margin-top', '-70px');
   await checkGeometry(isMobile ? 320 : 970, 250, 70);
   // Content above the window is clipped instead of obscuring the page.
-  expect(await footer.evaluate(element => {
-    const box = element.getBoundingClientRect();
-    return element.contains(document.elementFromPoint(box.x + box.width / 2, box.y - 1));
-  })).toBe(false);
+  expect(
+    await footer.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return element.contains(document.elementFromPoint(box.x + box.width / 2, box.y - 1));
+    })
+  ).toBe(false);
+
   // A refresh to a short banner must still fit even if the provider retains its scroll offset.
-  await page.evaluate(() => (window as any).refreshFooter(innerWidth < 768 ? 320 : 728, 90));
+  await page.evaluate(() => window.refreshFooter(innerWidth < 768 ? 320 : 728, 90));
   await checkGeometry(isMobile ? 320 : 728, 90);
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect(footer.locator('.fuse-slot-sticky')).toHaveCSS('margin-top', '0px');
-  await page.evaluate(() => (window as any).refreshFooter(innerWidth < 768 ? 320 : 728, 90));
+  await page.evaluate(() => window.refreshFooter(innerWidth < 768 ? 320 : 728, 90));
   await checkGeometry(isMobile ? 320 : 728, 90);
-  const background = await close.evaluate(element => getComputedStyle(element).backgroundColor);
+  const background = await close.evaluate((element) => getComputedStyle(element).backgroundColor);
   await page.getByRole('button', { name: 'Toggle theme', exact: true }).click();
-  expect(await close.evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe(background);
-  expect(await close.evaluate(element => getComputedStyle(element).backgroundColor)).toBe(await footer.evaluate(element => getComputedStyle(element).backgroundColor));
+  expect(await close.evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe(
+    background
+  );
+  expect(await close.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
+    await footer.evaluate((element) => getComputedStyle(element).backgroundColor)
+  );
   await page.screenshot({ path: test.info().outputPath('footer-ad.png') });
   // A native button is operable from the keyboard as well as touch/pointer.
   await close.focus();
   await close.press('Enter');
   await expect(footer).toBeHidden();
   await page.evaluate(() => window.dispatchEvent(new Event('scroll')));
-  expect(await page.evaluate(() => (window as any).adDestroyed)).not.toContain('fuse-injected-scrolling_sticky_footer-1');
-  const refreshes = await page.evaluate(() => (window as any).footerRefreshes);
+  expect(await page.evaluate(() => window.adDestroyed)).not.toContain(
+    'fuse-injected-scrolling_sticky_footer-1'
+  );
+  const refreshes = await page.evaluate(() => window.footerRefreshes);
   await page.goBack();
   await expect(page).toHaveURL(/\/database/);
   await expect(page.locator('[data-ad-kind]:visible').first()).toContainText('Route advertisement');
   await page.clock.fastForward(30_000);
-  expect(await page.evaluate(() => (window as any).footerRefreshes)).toBe(refreshes);
+  expect(await page.evaluate(() => window.footerRefreshes)).toBe(refreshes);
   // Late publisher injection must also stay dismissed for this document.
-  await page.evaluate(() => (window as any).injectFooter());
+  await page.evaluate(() => window.injectFooter());
   await expect(close).toBeHidden();
   await expect(page.locator('.publift-widget-scrolling_sticky_footer-container')).toBeHidden();
   await page.evaluate(() => window.dispatchEvent(new Event('scroll')));
   await page.reload();
   await expect(close).toBeVisible();
-  expect(await page.evaluate(() => (window as any).adPages)).toBe(1);
+  expect(await page.evaluate(() => window.adPages)).toBe(1);
   await mockTimeline(page, false);
   await page.goto('/timeline');
   await expect(close).toBeVisible();
@@ -225,23 +269,36 @@ test('footer follows creative refreshes, survives navigation, and stays closed u
       const session = await page.context().newCDPSession(page);
       await session.send('Emulation.setSafeAreaInsetsOverride', { insets: { bottom: 24 } });
     }
+
     const toolbar = page.getByRole('navigation', { name: 'Timeline actions' });
-    await page.getByRole('button', { name: 'Search & filters', exact: true }).evaluate((button: HTMLButtonElement) => button.click());
+    await page
+      .getByRole('button', { name: 'Search & filters', exact: true })
+      .evaluate((button: HTMLButtonElement) => button.click());
+
     for (const width of [390, 1024]) {
       await page.setViewportSize({ width, height: 844 });
       await page.evaluate(() => scrollTo(0, 200));
       await expect(toolbar).toBeVisible();
-      await expect.poll(async () => {
-        const bar = (await toolbar.boundingBox())!;
-        return Math.abs(bar.y + bar.height - page.viewportSize()!.height);
-      }).toBeLessThan(1);
+      await expect
+        .poll(async () => {
+          const bar = (await toolbar.boundingBox())!;
+          return Math.abs(bar.y + bar.height - page.viewportSize()!.height);
+        })
+        .toBeLessThan(1);
+
       await expect(toolbar).toHaveCSS('height', browserName === 'chromium' ? '82px' : '58px');
-      await expect.poll(async () => {
-        const ad = (await footer.boundingBox())!, bar = (await toolbar.boundingBox())!;
-        return Math.abs(ad.y + ad.height - bar.y);
-      }).toBeLessThan(1);
+      await expect
+        .poll(async () => {
+          const ad = (await footer.boundingBox())!,
+            bar = (await toolbar.boundingBox())!;
+
+          return Math.abs(ad.y + ad.height - bar.y);
+        })
+        .toBeLessThan(1);
+
       await page.screenshot({ path: test.info().outputPath(`timeline-footer-${width}.png`) });
     }
+
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole('button', { name: 'Close filters', exact: true }).click();
     await expect(toolbar).toBeVisible();
@@ -251,18 +308,29 @@ test('footer follows creative refreshes, survives navigation, and stays closed u
     const board = page.locator('.timeline-board.desktop');
     await expect(board).toBeVisible();
     await page.clock.runFor(200);
-    await board.evaluate(node => node.scrollLeft = 0);
+    await board.evaluate((node) => (node.scrollLeft = 0));
     await page.clock.runFor(64);
-    await page.evaluate(() => (window as any).refreshFooter(970, 250));
-    await board.evaluate(node => node.scrollLeft += 1);
+    await page.evaluate(() => window.refreshFooter(970, 250));
+    await board.evaluate((node) => (node.scrollLeft += 1));
     await page.clock.runFor(32);
-    const before = await footer.locator('.fuse-slot-sticky').evaluate(node => parseFloat(getComputedStyle(node).marginTop));
-    await board.evaluate(node => node.scrollLeft += 500);
-    await expect.poll(async () => {
-      await page.clock.runFor(32);
-      return footer.locator('.fuse-slot-sticky').evaluate(node => parseFloat(getComputedStyle(node).marginTop));
-    }).toBeLessThan(before);
-    const after = await footer.locator('.fuse-slot-sticky').evaluate(node => parseFloat(getComputedStyle(node).marginTop));
+    const before = await footer
+      .locator('.fuse-slot-sticky')
+      .evaluate((node) => parseFloat(getComputedStyle(node).marginTop));
+
+    await board.evaluate((node) => (node.scrollLeft += 500));
+    await expect
+      .poll(async () => {
+        await page.clock.runFor(32);
+        return footer
+          .locator('.fuse-slot-sticky')
+          .evaluate((node) => parseFloat(getComputedStyle(node).marginTop));
+      })
+      .toBeLessThan(before);
+
+    const after = await footer
+      .locator('.fuse-slot-sticky')
+      .evaluate((node) => parseFloat(getComputedStyle(node).marginTop));
+
     expect(after).toBeLessThan(before);
     expect(after).toBeGreaterThanOrEqual(-124);
     await expect(footer).toHaveCSS('height', '126px');
@@ -270,22 +338,29 @@ test('footer follows creative refreshes, survives navigation, and stays closed u
   }
 });
 
-for (const mode of ['widget', 'hidden', 'collapsed']) {
-  test(`publisher close (${mode}) dismisses the whole footer for this document`, async ({ page }) => {
+for (const mode of ['widget', 'hidden', 'collapsed'] as const) {
+  test(`publisher close (${mode}) dismisses the whole footer for this document`, async ({
+    page
+  }) => {
     await mockFooter(page);
     await page.clock.install();
     await page.goto('/database');
     const footer = page.locator('.uma-footer-ad');
     await expect(page.getByRole('button', { name: 'Close footer ad', exact: true })).toBeVisible();
-    await page.evaluate(mode => { (window as any).footerCloseMode = mode; }, mode);
+    await page.evaluate((mode) => {
+      window.footerCloseMode = mode;
+    }, mode);
+
     await footer.frameLocator('iframe').getByRole('button', { name: 'Close creative' }).click();
     await expect(footer).toBeHidden();
-    expect(await page.evaluate(() => (window as any).adDestroyed)).not.toContain('fuse-injected-scrolling_sticky_footer-1');
-    const refreshes = await page.evaluate(() => (window as any).footerRefreshes);
+    expect(await page.evaluate(() => window.adDestroyed)).not.toContain(
+      'fuse-injected-scrolling_sticky_footer-1'
+    );
+    const refreshes = await page.evaluate(() => window.footerRefreshes);
     await page.locator('.veterans-action').click();
     await expect(page).toHaveURL(/\/veterans/);
     await page.clock.fastForward(30_000);
-    expect(await page.evaluate(() => (window as any).footerRefreshes)).toBe(refreshes);
+    expect(await page.evaluate(() => window.footerRefreshes)).toBe(refreshes);
     await expect(footer).toBeHidden();
     await page.reload();
     await expect(page.getByRole('button', { name: 'Close footer ad', exact: true })).toBeVisible();

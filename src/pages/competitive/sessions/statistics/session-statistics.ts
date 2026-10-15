@@ -1,9 +1,10 @@
-import type { RaceRunner } from '@/lib/race/race-capture-parser';
+import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
 import type { MultiRaceAnalysis } from '@/lib/race/multi-race-analysis';
-import { formatRaceTime } from '@/lib/race/race-display';
+import { formatRaceTime } from '@/lib/race/replay/race-display';
 import { rate, score, teamBuilds } from '../../analysis-view';
 
 export type SessionEntry = { runner: RaceRunner; race: number };
+
 export type SessionTeam = ReturnType<typeof teamBuilds>[number];
 
 export const metricHelp = {
@@ -66,9 +67,11 @@ export function sessionFeats(winners: SessionEntry[]) {
   const time = [...winners].sort(
     (a, b) => a.runner.result!.finishTime - b.runner.result!.finishTime
   );
+
   const ranked = winners
     .filter((e) => score(e.runner) > 0)
     .sort((a, b) => score(b.runner) - score(a.runner));
+
   return [
     {
       label: 'Fastest win',
@@ -102,14 +105,17 @@ export function styleCompositions(teams: SessionTeam[]) {
     string,
     { key: string; styles: number[]; appearances: number; wins: number }
   >();
+
   for (const team of teams) {
     const styles = team.members.map((r) => r.result?.runningStyle ?? 0).sort();
     const key = styles.join('-'),
       row = groups.get(key) ?? { key, styles, appearances: 0, wins: 0 };
+
     row.appearances += team.appearances;
     row.wins += team.wins;
     groups.set(key, row);
   }
+
   return [...groups.values()].sort(
     (a, b) => rate(b.wins, b.appearances) - rate(a.wins, a.appearances)
   );

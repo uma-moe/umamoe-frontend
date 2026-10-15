@@ -3,11 +3,14 @@
   import AppPage from '@/layouts/AppPage.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
-  import { readRaceCaptureFile, type ParsedRaceCapture } from '@/lib/race/race-capture-parser';
+  import {
+    readRaceCaptureFile,
+    type ParsedRaceCapture
+  } from '@/lib/race/capture/race-capture-parser';
   import { groupMultiRaceCaptures } from '@/lib/race/multi-race-analysis';
-  import { resimulateRace } from '@/services/race-resimulation';
-  import { loadCharacterCatalog } from '@/lib/catalog/character-catalog';
-  import { loadSkillCatalog } from '@/lib/catalog/skill-catalog';
+  import { resimulateRace } from '@/services/race/race-resimulation';
+  import { loadCharacters } from '@/lib/game-data/characters';
+  import { loadSkills } from '@/lib/game-data/skills/skills';
   import { runnerName } from './race-character-display';
   import { demoSkills, makeDemoRaces } from '@/pages/competitive/demo-races';
   import RaceReplay from './replay/RaceReplay.svelte';
@@ -30,10 +33,12 @@
     errors = $state<string[]>([]),
     loading = $state(false),
     demo = $state(false);
+
   let selected = $state('0'),
     group = $state('all'),
     uploadsOpen = $state(false),
     reportTarget = $state<HTMLElement>();
+
   let replayFocus = $state<{ runner: number; time?: number }>(),
     sessionBusy = $state(false),
     sessionProgress = $state(''),
@@ -46,7 +51,7 @@
   let skillNames = $state.raw(new Map<number, string>());
 
   onMount(() => {
-    void loadSkillCatalog()
+    void loadSkills()
       .then(
         (catalog) => (skillNames = new Map([...catalog].map(([id, skill]) => [id, skill.name])))
       )
@@ -59,10 +64,12 @@
       raceDistance: courses?.courses[capture.courseId ?? '']?.distance ?? capture.raceDistance
     }))
   );
+
   const groups = $derived(groupMultiRaceCaptures(resolvedCaptures));
   const filtered = $derived(
     group === 'all' ? resolvedCaptures : (groups.find((item) => item.key === group)?.captures ?? [])
   );
+
   const active = $derived(captures[Number(selected)]);
   const choices = $derived(raceChoices(captures));
 
@@ -92,15 +99,17 @@
         );
       }
     }
+
     if (loaded.length) {
       await resolveReplayCourses(loaded);
       try {
-        const characters = await loadCharacterCatalog();
+        const characters = await loadCharacters();
         for (const capture of loaded)
           for (const runner of capture.runners) runner.name = runnerName(runner, characters);
       } catch {
         /* IDs remain usable offline. */
       }
+
       const replace = demo || !captures.length;
       uploadsOpen = false;
       captures = replace ? loaded : [...captures, ...loaded];
@@ -113,6 +122,7 @@
         window.scrollTo({ top: 0, behavior: 'instant' });
       }
     }
+
     loading = false;
     if (loaded.length) void resimulateSession(loaded);
   }
@@ -154,6 +164,7 @@
     selected = String(resolvedCaptures.indexOf(filtered[index]!));
     await tick();
     replayFocus = runner === undefined ? undefined : { runner, time };
+
     await tick();
     scrollReport('replay');
   }
@@ -171,6 +182,7 @@
     if (sessionBusy) return;
     const pending = inputs.filter((capture) => capture.original && !capture.detailed),
       controller = new AbortController();
+
     if (!pending.length) return;
     sessionController = controller;
     sessionBusy = true;
@@ -183,6 +195,7 @@
           const result = await resimulateRace(input, input.courseId ?? 0, {
             signal: controller.signal
           });
+
           if (!controller.signal.aborted && captures.some((c) => c.original === input.original))
             keepSimulation(result);
         } catch (error) {

@@ -5,8 +5,8 @@
   "description": "Mobile-first Svelte frontend for uma.moe",
   "type": "module",
   "scripts": {
-    "format": "prettier --write \"src/**/*.{svelte,css}\"",
-    "format:check": "prettier --check \"src/**/*.{svelte,css}\"",
+    "format": "prettier --write \"src/**/*.{ts,svelte,css}\" \"scripts/**/*.ts\" \"tests/**/*.ts\" \"*.ts\" \"!src/**/generated/**\"",
+    "format:check": "prettier --check \"src/**/*.{ts,svelte,css}\" \"scripts/**/*.ts\" \"tests/**/*.ts\" \"*.ts\" \"!src/**/generated/**\"",
     "start": "vite --configLoader runner --mode development",
     "check:demo": "node scripts/check-demo.mjs",
     "dev:demo": "vite --configLoader runner --mode demo",

@@ -11,7 +11,7 @@
   import CourseButtons from '../../shell/CourseButtons.svelte';
   import RaceBar from '../../shell/RaceBar.svelte';
   import SimSection from '../../shell/SimSection.svelte';
-  import { simulatorCatalog } from '../../simulator-session.svelte';
+  import { simulatorCourseData } from '../../simulator-session.svelte';
   import TrackPool from './TrackPool.svelte';
   import type { TeamTrialsMode } from './track-pool';
   import { buildSearch } from './build-search.svelte';
@@ -32,6 +32,7 @@
     tt_long: 'Team Trials · Long',
     tt_dirt: 'Team Trials · Dirt'
   };
+
   const MODE_OPTIONS = OPTIMIZE_MODES.map((mode) => ({ value: mode, label: MODE_LABELS[mode] }));
 </script>
 
@@ -64,7 +65,7 @@
   {#if teamTrials}
     <TrackPool
       mode={buildSearch.mode as TeamTrialsMode}
-      catalog={simulatorCatalog.courses}
+      courseLookup={simulatorCourseData.courses}
       bind:picked={
         () => buildSearch.tracks[buildSearch.mode as TeamTrialsMode],
         (value) => (buildSearch.tracks[buildSearch.mode as TeamTrialsMode] = value)

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { paidBannerSteps } from '@/lib/carat-planner/planner-paid-banners';
+  import { paidBannerSteps } from '@/lib/carat-planner/gacha/planner-paid-banners';
   import type {
     PlannerDataBundle,
     PlannerGachaEntry,
@@ -8,7 +8,7 @@
   import {
     calculatePullDistribution,
     pullOutcomeSegments
-  } from '@/lib/carat-planner/planner-pull-probability';
+  } from '@/lib/carat-planner/gacha/planner-pull-probability';
   import { copies, percent, type PlannerGoalView } from './planner-goal-view';
   import Icon from '@/components/Icon.svelte';
 
@@ -42,6 +42,7 @@
       .slice(0, (projection.actualPulls ?? projection.plannedPulls) / 10)
       .filter((step) => step.selectable).length
   );
+
   const inferred = $derived(gacha?.rates_confidence === 'inferred_standard');
   const source = $derived(gacha?.pickups ?? gacha?.featured_pickups ?? []);
   const distribution = $derived(
@@ -54,6 +55,7 @@
       sparkExchangeable: goals.some((goal) => goal.option.exchangeable)
     })
   );
+
   const segments = $derived(pullOutcomeSegments(distribution));
   const allGoalsStatus = $derived(
     !projection.jointProbabilityExact
@@ -70,6 +72,7 @@
           .map((part, index, parts) => (index === parts.length - 1 ? `${part} included` : part))
           .join(' + ') || 'Exact joint chance'
   );
+
   const topRarity = $derived(cardKind === 'support' ? 'SSR' : '3★');
 </script>
 

@@ -13,6 +13,7 @@
   const pathFills: Partial<Record<IconName, string[]>> = {
     google: ['#4285f4', '#34a853', '#fbbc05', '#ea4335']
   };
+
   const paths: Record<IconName, string[]> = {
     'arrow-right': ['M4 12h16', 'm14 6 6 6-6 6'],
     gift: [

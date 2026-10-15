@@ -6,6 +6,7 @@ export interface ActivationCell {
   source: number;
   row: SkillDistributionRow;
 }
+
 export interface ActivationRow {
   id: number;
   /** Every runner shown who learned the skill, in the order the runners are shown. */
@@ -15,16 +16,24 @@ export interface ActivationRow {
 }
 
 /** One row per skill learned by any of `sources`, least reliable first: the lowest activation rate among its owners. */
-export function activationRows(result: MonteCarloResult, umas: SimulatorUma[], sources: number[]): ActivationRow[] {
+export function activationRows(
+  result: MonteCarloResult,
+  umas: SimulatorUma[],
+  sources: number[]
+): ActivationRow[] {
   const rows = new Map<number, ActivationRow>();
   for (const source of sources) {
-    const learned = umas[source]?.skills.map(skill => skill.skillId) ?? [];
-    for (const row of skillDistributions(result, source, learned).rows.filter(item => learned.includes(item.id))) {
+    const learned = umas[source]?.skills.map((skill) => skill.skillId) ?? [];
+    for (const row of skillDistributions(result, source, learned).rows.filter((item) =>
+      learned.includes(item.id)
+    )) {
       const entry = rows.get(row.id) ?? { id: row.id, cells: new Map(), lowest: 100 };
+
       entry.cells.set(source, { source, row });
       entry.lowest = Math.min(entry.lowest, row.rate);
       rows.set(row.id, entry);
     }
   }
+
   return [...rows.values()].sort((a, b) => a.lowest - b.lowest || a.id - b.id);
 }

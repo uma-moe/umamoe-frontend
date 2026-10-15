@@ -32,9 +32,9 @@
     optionLabel,
     selectedRaceInstanceId,
     selectedCourse,
-    simulatorCatalog,
-    catalogErrorVisible,
-    dismissCatalogError,
+    simulatorCourseData,
+    courseDataErrorVisible,
+    dismissCourseDataError,
     simulatorSession
   } from './simulator-session.svelte';
   import {
@@ -44,22 +44,24 @@
   } from './simulator-roster.svelte';
   import { createExampleRace } from './simulator-example';
   import type { SimulatorUma } from './simulator-uma';
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-  import { trackName, type CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import { trackName, type RaceCourse } from '@/lib/game-data/racing/courses';
 
   let raceType = $state('0'),
     runs = $state('100'),
     step = $state<'setup' | 'report'>('setup');
+
   let reportHeading = $state<HTMLElement>();
   let run = $state.raw<
     | (SimulatorRun<MonteCarloResult> & {
         input: MonteCarloInput;
         umas: SimulatorUma[];
-        course: CourseCatalogEntry;
+        course: RaceCourse;
         track: ParsedRaceCapture['track'];
       })
     | null
   >(null);
+
   let error = $state(''),
     busy = $state(false),
     searchOpen = $state(false),
@@ -85,17 +87,20 @@
       Number(simulatorSession.seed) < -2147483648 ||
       Number(simulatorSession.seed) > 2147483647
   );
+
   const runsInvalid = $derived(
     !/^\d+$/.test(String(runs)) || Number(runs) < 1 || Number(runs) > MAX_MONTE_CARLO_RUNS
   );
-  const canRun = $derived(!!course && simulatorRoster.umas.length >= 2 && !seedInvalid);
+
+  const canRun = $derived(Boolean(course) && simulatorRoster.umas.length >= 2 && !seedInvalid);
 
   function loadExample() {
     const example = createExampleRace();
-    if (!simulatorCatalog.courses.has(example.courseId)) {
-      error = 'The example course is unavailable. Reload the course catalog and retry.';
+    if (!simulatorCourseData.courses.has(example.courseId)) {
+      error = 'The example course is unavailable. Reload the course data and retry.';
       return;
     }
+
     importSimulatorUmas(example.umas, true);
     Object.assign(simulatorSession, {
       courseId: String(example.courseId),
@@ -109,6 +114,7 @@
       importNotice:
         'Example field: three captured CM20 teams · Nakayama 2,500 m · Yielding ground, Cloudy, Winter, Great mood. Edit any build to compare changes.'
     });
+
     raceType = '0';
     run = null;
     step = 'setup';
@@ -122,11 +128,13 @@
       ...uma,
       teamColor: simulatorTeamColor(uma.teamId)
     }));
+
     const track = {
       condition: optionLabel(GROUND_OPTIONS, simulatorSession.ground),
       weather: optionLabel(WEATHER_OPTIONS, simulatorSession.weather),
       season: optionLabel(SEASON_OPTIONS, simulatorSession.season)
     };
+
     busy = true;
     error = '';
     try {
@@ -152,6 +160,7 @@
         })),
         outputMode: 'report'
       });
+
       let response;
       try {
         response = await simulatorRepository.monteCarlo({
@@ -173,7 +182,9 @@
           });
         }
       }
+
       run = { ...response, input: body.input, umas, course: target, track };
+
       await showStep('report');
     } catch (reason) {
       error = reason instanceof Error ? reason.message : 'The simulation could not be completed.';
@@ -183,15 +194,15 @@
   }
 </script>
 
-{#if catalogErrorVisible()}
+{#if courseDataErrorVisible()}
   <Banner
     title="Race data unavailable"
     tone="danger"
     reportable={false}
     dismissible
-    ondismiss={dismissCatalogError}
+    ondismiss={dismissCourseDataError}
   >
-    {simulatorCatalog.error}
+    {simulatorCourseData.error}
   </Banner>
 {/if}
 {#if error}
@@ -337,7 +348,7 @@
               variant="secondary"
               size="sm"
               icon="refresh"
-              disabled={busy || simulatorCatalog.loading}
+              disabled={busy || simulatorCourseData.loading}
               onclick={loadExample}
             >
               Load example
@@ -454,7 +465,7 @@
     try {
       importSimulatorUmas(umas);
     } catch (reason) {
-      return (reason as Error).message;
+      return reason instanceof Error ? reason.message : 'Could not import this build.';
     }
     simulatorSession.importNotice =
       'Added ' + umas.map((uma) => uma.name).join(' and ') + ' from a build code.';

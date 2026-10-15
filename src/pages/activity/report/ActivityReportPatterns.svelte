@@ -27,6 +27,7 @@
     const values = new Map(
       (report.heatmap ?? []).map((cell) => [`${cell.dow}:${cell.hour}`, cell])
     );
+
     const max = Math.max(1, ...[...values.values()].map((cell) => cell.active_seconds));
     return {
       values,
@@ -34,6 +35,7 @@
       touched: [...values.values()].filter((cell) => cell.active_seconds || cell.careers).length
     };
   });
+
   const hourly = $derived(
     Array.from({ length: 24 }, (_, hour) =>
       (report.heatmap ?? [])
@@ -41,6 +43,7 @@
         .reduce((sum, cell) => sum + cell.active_seconds, 0)
     )
   );
+
   const dailyChartOption = $derived.by(() => {
     $theme;
     return activityDailyChartOption(report.daily ?? []);

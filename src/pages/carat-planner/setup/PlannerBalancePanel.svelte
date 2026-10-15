@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { itemIconPath } from '@/lib/catalog/item-icons';
+  import { itemIconPath } from '@/lib/game-assets/item-icons';
   import type { CaratPlan, PlannerBalances } from '@/lib/carat-planner/carat-planner';
   import { validPlannerDateKey } from '@/lib/carat-planner/planner-calendar';
   import TextField from '@/components/controls/TextField.svelte';

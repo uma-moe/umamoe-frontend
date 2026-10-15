@@ -1,6 +1,9 @@
 import { expect, test } from './fixtures/test';
 
-test('Tierlist retains Angular controls, percentile rows, and card interaction', async ({ page, isMobile }) => {
+test('Tierlist retains Angular controls, percentile rows, and card interaction', async ({
+  page,
+  isMobile
+}) => {
   await page.goto('/tierlist');
   await expect(page.getByRole('heading', { name: /Support Card Tierlist/ })).toBeVisible();
   await expect(page.getByText(/no longer maintained/i)).toBeVisible();
@@ -16,6 +19,7 @@ test('Tierlist retains Angular controls, percentile rows, and card interaction',
     await page.locator('.tierlist button').first().hover();
     await expect(page.getByRole('tooltip').getByText('Limit Break Progression')).toBeVisible();
   }
+
   await page.locator('.tierlist button').first().click();
   const dialog = page.getByRole('dialog', { name: 'Support Card Details' });
   await expect(dialog.getByText('Tier Progression by LB')).toBeVisible();
@@ -27,7 +31,11 @@ test('Tierlist retains Angular controls, percentile rows, and card interaction',
   await tabs.getByRole('tab', { name: 'Speed', exact: true }).focus();
   await page.keyboard.press('ArrowRight');
   await expect(tabs.getByRole('tab', { name: 'Stamina', exact: true })).toBeFocused();
-  await expect(tabs.getByRole('tab', { name: 'Stamina', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(tabs.getByRole('tab', { name: 'Stamina', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true'
+  );
+
   await page.keyboard.press('End');
   await expect(tabs.getByRole('tab', { name: 'Intelligence' })).toBeFocused();
 });
@@ -50,6 +58,11 @@ test('Tierlist preserves the dense Angular mobile grid without page overflow', a
     await expect(page.getByRole('dialog')).not.toBeVisible();
     await expect(card).toBeFocused();
   }
-  const geometry = await page.evaluate(() => ({ viewport: window.innerWidth, document: document.documentElement.scrollWidth }));
+
+  const geometry = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    document: document.documentElement.scrollWidth
+  }));
+
   expect(geometry.document).toBeLessThanOrEqual(geometry.viewport);
 });

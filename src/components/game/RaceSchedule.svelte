@@ -56,6 +56,7 @@
 
   function openSlot(year: RaceScheduleYear, slot: RaceScheduleSlot): void {
     picker = { year, slot };
+
     pickerOpen = true;
   }
 </script>

@@ -1,5 +1,5 @@
-import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-import { trackDetailName } from '@/lib/race/race-display';
+import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+import { trackDetailName } from '@/lib/race/replay/race-display';
 import { portrait } from '@/pages/competitive/analysis-view';
 import type { CourseData } from './replay/replay-course';
 
@@ -44,6 +44,7 @@ export function downloadDetailedReplay(capture: ParsedRaceCapture) {
       { type: 'application/json' }
     )
   );
+
   const link = document.createElement('a');
   link.href = url;
   link.download = 'detailed-' + capture.fileName.replace(/\.gz$/, '');

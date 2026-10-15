@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { RaceRunner } from '@/lib/race/race-capture-parser';
-  import { raceFrameAtTime, replayLaneMetres } from '@/lib/race/race-replay';
-  import { formatRaceTime } from '@/lib/race/race-display';
-  import { activeSpan, diagnosticLabel, detailedSample } from '@/lib/race/race-diagnostics';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
+  import { raceFrameAtTime, replayLaneMetres } from '@/lib/race/replay/race-replay';
+  import { formatRaceTime } from '@/lib/race/replay/race-display';
+  import { activeSpan, diagnosticLabel, detailedSample } from '@/lib/race/capture/race-diagnostics';
   import Button from '@/components/controls/Button.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
   import Icon from '@/components/Icon.svelte';
@@ -49,13 +49,16 @@
           .filter((e) => e.params[0] === runner?.index)
           .map((e) => ({ ...e, endTime: undefined }));
   });
+
   const blockedRunner = $derived(replay.capture.runners.find((r) => r.index === replay.blocker));
   const reference = $derived(
     activeSpan(replay.diagnostic?.positionKeepReferenceSpans, replay.time)?.referenceHorseIndex
   );
+
   const pacemaker = $derived(
     activeSpan(replay.capture.detailed?.annotations.paceMakerSpans, replay.time)?.horseIndex
   );
+
   const modes = $derived(
     Object.entries(replay.capture.detailed?.annotations.flags ?? {})
       .filter(
@@ -63,17 +66,21 @@
       )
       .map(([name]) => diagnosticLabel(name))
   );
+
   const rushed = $derived(
     replay.diagnostic?.temptationSpans
       ? (activeSpan(replay.diagnostic.temptationSpans, replay.time)?.mode ?? 0)
       : (replay.frame?.horses[runner?.index ?? 0]?.temptationMode ?? 0)
   );
+
   const targetSpeed = $derived(
     detailedSample(replay.capture.detailed, replay.diagnostic, replay.time, 'targetSpeeds')
   );
+
   const previousHorse = $derived(
     raceFrameAtTime(replay.capture.frames, replay.time - 1)?.horses[runner?.index ?? 0]
   );
+
   const laneChange = $derived(
     replay.currentHorse && previousHorse
       ? replayLaneMetres(
@@ -82,6 +89,7 @@
         )
       : 0
   );
+
   const runnerState = $derived(
     runner && replay.hasFinished(runner)
       ? replay.ensemble

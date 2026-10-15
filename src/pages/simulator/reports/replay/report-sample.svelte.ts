@@ -1,16 +1,16 @@
 import { tick, type Component } from 'svelte';
 import { simulatorReplayCapture, simulatorSampleReplay } from '../../simulator-results';
 import { simulatorRepository, type MonteCarloResult } from '../../simulator-repository';
-import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import type { SimulatorUma } from '../../simulator-uma';
 import type { MonteCarloInput } from '../../requests/race-sim-request';
-import { applyResimulation, type ParsedRaceCapture } from '@/lib/race/race-capture-parser';
+import { applyResimulation, type ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 
 type SampleContext = {
   result?: MonteCarloResult;
   input?: MonteCarloInput;
   umas: SimulatorUma[];
-  course?: CourseCatalogEntry;
+  course?: RaceCourse;
   track: ParsedRaceCapture['track'];
 };
 
@@ -50,6 +50,7 @@ export class ReportSample {
     document
       .getElementById('report-replays')
       ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+
     try {
       const data =
         index === 0 && result.first_replay
@@ -69,6 +70,7 @@ export class ReportSample {
               ).result,
               index
             );
+
       if (request.signal.aborted) return;
       this.capture = simulatorReplayCapture(data, umas, course, track);
       this.Replay = (
@@ -87,6 +89,7 @@ export class ReportSample {
     if (!this.capture || !result || !input) return;
     const previous = this.capture,
       request = (this.#request = new AbortController());
+
     this.loading = true;
     this.error = '';
     try {
@@ -94,6 +97,7 @@ export class ReportSample {
         body: { ...input, seed: result.seeds[this.index] },
         signal: request.signal
       });
+
       if (request.signal.aborted) return;
       if (
         response.result.engineBuild !== result.engine_build ||
@@ -106,6 +110,7 @@ export class ReportSample {
       const sources = input.runners
         .toSorted((a, b) => a.frame_order - b.frame_order)
         .map((r) => r.source_input_index);
+
       if (
         next.runners.some(
           (r, gate) =>

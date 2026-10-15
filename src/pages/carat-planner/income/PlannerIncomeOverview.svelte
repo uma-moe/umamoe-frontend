@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { itemIconPath } from '@/lib/catalog/item-icons';
+  import { itemIconPath } from '@/lib/game-assets/item-icons';
   import type { PlannerIncomeProjection } from './planner-income-edits';
   import Icon from '@/components/Icon.svelte';
 

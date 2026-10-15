@@ -11,7 +11,7 @@
     SURFACE_NAMES,
     DISTANCE_NAMES,
     TURN_NAMES
-  } from '@/lib/catalog/course-catalog';
+  } from '@/lib/game-data/racing/courses';
   import SimulatorCmPresets from '../courses/SimulatorCmPresets.svelte';
   import SimulatorCourseDetails from '../courses/SimulatorCourseDetails.svelte';
   import Combobox from '@/components/controls/Combobox.svelte';
@@ -28,7 +28,7 @@
     selectedCourse,
     optionLabel,
     selectedTrackId,
-    simulatorCatalog,
+    simulatorCourseData,
     simulatorSession,
     trackOptions
   } from '../simulator-session.svelte';
@@ -64,6 +64,7 @@
 
   const tracks = $derived(trackOptions()),
     courses = $derived(courseOptions());
+
   const course = $derived(selectedCourse());
 
   let trackAnchor = $state<HTMLDivElement>(),
@@ -72,7 +73,7 @@
   const trackPreviews = $derived(
     new Map(
       tracks.map((track) => {
-        const available = coursesForTrack(simulatorCatalog.courses, Number(track.value));
+        const available = coursesForTrack(simulatorCourseData.courses, Number(track.value));
         return [
           track.value,
           {
@@ -168,7 +169,7 @@
       </Button>
     </header>
   {/if}
-  {#if simulatorCatalog.loading}
+  {#if simulatorCourseData.loading}
     <Spinner label="Loading courses…" />
   {:else}
     {#if workspace && !inlineConditions}
@@ -251,7 +252,7 @@
               bind:value={simulatorSession.courseId}
             >
               {#snippet optionContent(option)}
-                {@const item = simulatorCatalog.courses.get(Number(option.value))}
+                {@const item = simulatorCourseData.courses.get(Number(option.value))}
                 <div class="course-option">
                   <SimulatorCoursePreview
                     course={item}

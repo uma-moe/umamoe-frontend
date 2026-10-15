@@ -6,7 +6,7 @@
   import Tabs from '@/components/navigation/Tabs.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
-  import { previews } from './catalog';
+  import { previews } from './component-previews';
 
   const layoutPreview = new URLSearchParams(location.search).get('example') === 'page-layout';
   const initial = previews.find((item) => item.id === location.hash.slice(1));
@@ -18,6 +18,7 @@
   const groups = $derived([
     ...new Set(previews.filter((item) => item.library === library).map((item) => item.group))
   ]);
+
   const visible = $derived(
     previews.filter(
       (item) =>
@@ -29,10 +30,12 @@
           : item.group === group)
     )
   );
+
   const count = $derived(
     new Set(previews.filter((item) => item.library === library).flatMap((item) => item.components))
       .size
   );
+
   const showcase = $derived(
     library === 'uma' ? import('./UmaShowcase.svelte') : import('./HakurakuLab.svelte')
   );

@@ -64,7 +64,8 @@
               size={14}
             />
           </button>
-        {/if}{#if onimport}
+        {/if}
+        {#if onimport}
           <button
             type="button"
             aria-label="Import presets"

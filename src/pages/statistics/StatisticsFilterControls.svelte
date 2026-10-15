@@ -1,7 +1,7 @@
 <script lang="ts">
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
-  import { scenarios } from '@/lib/catalog/scenario-catalog';
+  import { scenarios } from '@/lib/game-data/scenarios';
   import { scenarioName } from '@/lib/profile/profile-display';
   import { statisticsDistanceId } from '@/lib/statistics/statistics';
   import { classColors, distanceColors, distanceNames } from './statistics-display';
@@ -23,6 +23,7 @@
     selectedDistances?: string[];
     selectedSamples: number;
   } = $props();
+
   const id = $props.id();
 
   const groups = $derived([

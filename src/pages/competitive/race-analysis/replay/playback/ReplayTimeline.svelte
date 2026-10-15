@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-  import { formatRaceTime } from '@/lib/race/race-display';
-  import { replayProgress, type ReplayBounds } from '@/lib/race/race-replay';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import { formatRaceTime } from '@/lib/race/replay/race-display';
+  import { replayProgress, type ReplayBounds } from '@/lib/race/replay/race-replay';
   import { courseSegments, type Course } from '../replay-course';
   import { replayTimeTicks, timedSection } from '../replay-timeline';
   import ReplayPlaybackControls from './ReplayPlaybackControls.svelte';
@@ -79,11 +79,13 @@
       Math.max(2, Math.floor(plotWidth / 140))
     )
   );
+
   const minorTicks = $derived.by(() => {
     const step =
       [1, 2, 5, 10, 15, 30, 60, 120, 300].find(
         (value) => displayBounds.duration / value <= plotWidth / 14
       ) ?? Math.max(1, Math.ceil(displayBounds.duration / 60));
+
     const start = Math.ceil(bounds.startTime / step) * step;
     return Array.from(
       { length: Math.max(0, Math.ceil((displayBounds.endTime - start) / step)) },
@@ -106,6 +108,7 @@
       timedSection(section, frames, bounds.distanceMax, displayBounds.endTime, percent)
     )
   );
+
   const currentSegment = $derived(segments.find((s) => leader >= s.start && leader < s.end)?.label);
   const slope = $derived(
     course?.slopes.find((s) => leader >= s.start && leader < s.start + s.length)?.slope ?? 0

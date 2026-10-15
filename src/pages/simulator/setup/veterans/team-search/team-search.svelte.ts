@@ -1,4 +1,4 @@
-import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import { importSimulatorUmas } from '../../../simulator-roster.svelte';
 import { simulatorRepository } from '../../../simulator-repository';
 import { simulatorSession } from '../../../simulator-session.svelte';
@@ -9,7 +9,7 @@ import { veteranTeams, pairingFrameOrders } from './veteran-pairings';
 import { rankTeams, resultsMatchJobs, type TeamResult } from './team-results';
 
 export type TeamSearchPlan = {
-  target: CourseCatalogEntry;
+  target: RaceCourse;
   raceSetup: RaceSetupInput;
   pool: SimulatorUma[];
   fields: SimulatorUma[][];
@@ -31,7 +31,7 @@ export class TeamSearch {
   top = $state.raw<TeamResult[]>([]);
   failedMessages = $state.raw<string[]>([]);
   opponents = $state.raw<SimulatorUma[]>([]);
-  course = $state.raw<CourseCatalogEntry>();
+  course = $state.raw<RaceCourse>();
   setup = $state.raw<RaceSetupInput>();
   description = $state('');
   key = $state('');
@@ -49,6 +49,7 @@ export class TeamSearch {
       ],
       true
     );
+
     if (this.course && this.setup) {
       simulatorSession.courseId = String(this.course.course_id);
       simulatorSession.sourceCourseId = simulatorSession.courseId;
@@ -92,10 +93,12 @@ export class TeamSearch {
       sample = 0,
       nextId = 0,
       engine = '';
+
     try {
       while (!this.stop) {
         const batch = [],
           jobs: { team: TeamResult; seed: number }[] = [];
+
         let bytes = 0;
         while (batch.length < 50) {
           if (!team || sample === sampleCount) {
@@ -109,8 +112,10 @@ export class TeamSearch {
               errors: 0,
               rankTotal: 0
             };
+
             sample = 0;
           }
+
           const gates = pairingFrameOrders(seeds[sample]!, 9);
           const race = buildMonteCarloRequest({
             courseId: target.course_id,
@@ -127,6 +132,7 @@ export class TeamSearch {
               frameOrder: gates[index]
             }))
           }).input;
+
           const size = new TextEncoder().encode(JSON.stringify(race)).length;
           if (batch.length && bytes + size > 7 * 1024 * 1024) break;
           batch.push(race);
@@ -134,6 +140,7 @@ export class TeamSearch {
           bytes += size;
           sample++;
         }
+
         if (!batch.length) break;
         const response = (await simulatorRepository.batch({ body: { races: batch } })).result;
         const build = JSON.stringify(response.engine_builds);
@@ -148,6 +155,7 @@ export class TeamSearch {
           const job = jobs[index]!,
             result = response.results[index]!,
             record = job.team;
+
           if (result.error) {
             record.errors++;
             this.failures++;
@@ -162,6 +170,7 @@ export class TeamSearch {
               ...[0, 1, 2].map((source) => result.finish_order!.indexOf(source) + 1)
             );
           }
+
           this.completed++;
           if (record.successes === sampleCount && !record.errors) {
             this.top = rankTeams(this.top, record);
@@ -169,7 +178,7 @@ export class TeamSearch {
         }
       }
     } catch (reason) {
-      this.error = (reason as Error).message;
+      this.error = reason instanceof Error ? reason.message : 'Could not complete the team search.';
     } finally {
       this.busy = false;
     }

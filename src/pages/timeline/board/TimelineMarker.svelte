@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from '@/components/Icon.svelte';
-  import type { TimelineMarker } from '@/lib/timeline/timeline-layout';
+  import type { TimelineMarker } from '@/lib/timeline/board/timeline-layout';
 
   interface Props {
     marker: TimelineMarker;

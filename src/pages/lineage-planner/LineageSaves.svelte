@@ -39,6 +39,7 @@
       saves = stored;
       return true;
     }
+
     savesError = 'Saved trees could not be read. Your browser data has not been replaced.';
     return false;
   }
@@ -70,8 +71,10 @@
     if (Object.hasOwn(saves, name)) {
       savesOpen = false;
       saveAction = { kind: 'overwrite', name };
+
       return;
     }
+
     if (writeSaves({ ...saves, [name]: payload })) {
       savesOpen = false;
       saveName = '';
@@ -86,6 +89,7 @@
       savesError = `Save “${name}” could not be loaded. The current tree has not changed.`;
       return;
     }
+
     onapply(payload);
     savesOpen = false;
     notify(`Loaded “${name}”`, 'success');
@@ -99,10 +103,12 @@
       savesOpen = true;
       return;
     }
+
     const next =
       action.kind === 'overwrite'
         ? { ...saves, [action.name]: buildPlannerPayload(nodes) }
         : { ...saves };
+
     if (action.kind === 'delete') delete next[action.name];
     if (!writeSaves(next)) return;
     notify(`${action.kind === 'delete' ? 'Deleted' : 'Saved'} “${action.name}”`, 'success');

@@ -9,12 +9,12 @@
   import Icon from '@/components/Icon.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import {
-    loadSkillCatalog,
+    loadSkills,
     resolveEncodedSkill,
     skillPointTotal,
     skillRarity,
-    type SkillCatalogEntry
-  } from '@/lib/catalog/skill-catalog';
+    type SkillData
+  } from '@/lib/game-data/skills/skills';
   import { skillDistributions } from '../skill-distributions';
   import { runnerColor } from '../../simulation-report';
   import {
@@ -55,27 +55,44 @@
     children?: Snippet;
   } = $props();
 
-  let catalog = $state.raw(new Map<number, SkillCatalogEntry>());
+  let skillLookup = $state.raw(new Map<number, SkillData>());
   let sample = $state('quick');
+  let skillDataError = $state('');
   let sortKey = $state('value'),
     sortDirection = $state<SortDirection>('descending');
+
   onMount(() => {
-    void loadSkillCatalog()
-      .then((value) => (catalog = value))
-      .catch(() => {});
+    let active = true;
+    void loadSkills()
+      .then((value) => {
+        if (active) skillLookup = value;
+      })
+      .catch((reason: unknown) => {
+        if (active)
+          skillDataError =
+            reason instanceof Error
+              ? reason.message
+              : 'Skill names could not be loaded. Measurements remain available.';
+      });
+
+    return () => {
+      active = false;
+    };
   });
 
   const active = $derived(source !== undefined && sources.includes(source) ? source : sources[0]!);
   const races = $derived(
     sample === 'full' ? result.runs : Math.min(PRELIMINARY_RACES, result.runs)
   );
-  const name = (id: number) => resolveEncodedSkill(catalog, id).skill?.name ?? 'Skill ' + id;
+
+  const name = (id: number) => resolveEncodedSkill(skillLookup, id).skill?.name ?? 'Skill ' + id;
   const owned = (runner: number) => umas[runner]!.skills.map((skill) => skill.skillId);
   const unique = (id: number) => {
-    const { skill, inherited } = resolveEncodedSkill(catalog, id);
+    const { skill, inherited } = resolveEncodedSkill(skillLookup, id);
     return skillRarity(skill, inherited) === 'unique-main';
   };
-  const cost = (id: number) => (unique(id) ? null : skillPointTotal(catalog, [id]));
+
+  const cost = (id: number) => (unique(id) ? null : skillPointTotal(skillLookup, [id]));
   const value = (runner: number, id: number): SkillValue | undefined => {
     const outcome = impacts.get(runner, id);
     return outcome ? skillValue(result, runner, distance, outcome) : undefined;
@@ -87,9 +104,11 @@
     const observed = skillDistributions(result, active, learned).rows.filter((row) =>
       learned.includes(row.id)
     );
+
     return observed.map((row) => {
       const measured = value(active, row.id),
         sp = cost(row.id);
+
       return {
         id: row.id,
         rate: row.rate,
@@ -104,24 +123,30 @@
       };
     });
   });
+
   const unmeasured = $derived(
     rows.filter((row) => (impacts.get(active, row.id)?.count ?? 0) < races).length
   );
+
   const measuredRows = $derived(rows.filter((row) => row.measured));
   // Each runner's tab says how far her skills are measured, or her most valuable skill once they all are.
   const runnerSummary = (runner: number) => {
     const ids = owned(runner),
       done = ids.filter((id) => (impacts.get(runner, id)?.count ?? 0) >= races).length;
+
     const gains = ids.flatMap((id) => {
       const measured = value(runner, id);
       return measured ? [measured] : [];
     });
+
     if (!gains.length) return { badge: String(ids.length), title: ids.length + ' learned skills' };
+
     if (done < ids.length)
       return {
         badge: done + '/' + ids.length,
         title: done + ' of ' + ids.length + ' skills measured'
       };
+
     const top = gains.reduce((a, b) => (b.lengths > a.lengths ? b : a));
     const best = formatMarginValue(top.lengths, top.seconds, unit, 2);
     return { badge: best, title: 'Every skill measured; the most valuable gains ' + best };
@@ -170,6 +195,15 @@
     </span>
   </header>
   {@render lead?.()}
+  {#if skillDataError}
+    <Banner
+      title="Skill data unavailable"
+      tone="danger"
+      reportable={false}
+    >
+      {skillDataError}
+    </Banner>
+  {/if}
   {#if impacts.error}<Banner
       title="Skill impact could not be measured"
       tone="danger"

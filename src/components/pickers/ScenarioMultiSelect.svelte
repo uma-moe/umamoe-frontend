@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from '../Icon.svelte';
-  import { scenarios as options } from '@/lib/catalog/scenario-catalog';
+  import { scenarios as options } from '@/lib/game-data/scenarios';
 
   interface Props {
     id: string;
@@ -16,13 +16,11 @@
   let open = $state(false);
 
   const selected = $derived(options.filter((option) => value.includes(option.id)));
-  const summary = $derived(
-    selected.length === 0
-      ? 'Any scenario'
-      : selected.length === 1
-        ? (selected[0]?.label ?? 'Any scenario')
-        : `${selected.length} scenarios`
-  );
+  const summary = $derived.by(() => {
+    if (selected.length === 0) return 'Any scenario';
+    if (selected.length === 1) return selected[0]?.label ?? 'Any scenario';
+    return `${selected.length} scenarios`;
+  });
 
   function toggle(id: number): void {
     value = value.includes(id)

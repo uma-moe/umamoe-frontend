@@ -82,6 +82,7 @@
         'Could not copy the API key. Select and copy it manually before leaving this page.';
       return;
     }
+
     apiKeyError = '';
     copiedApiKey = true;
     window.setTimeout(() => (copiedApiKey = false), 2000);

@@ -2,7 +2,10 @@
   import { MediaQuery } from 'svelte/reactivity';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import RaceSchedule from '@/components/game/RaceSchedule.svelte';
-  import { optimalRaceSchedule, type OptimalRaceRecommendation } from '@/lib/catalog/race-catalog';
+  import {
+    optimalRaceSchedule,
+    type OptimalRaceRecommendation
+  } from '@/lib/game-data/racing/races';
 
   interface Props {
     open?: boolean;

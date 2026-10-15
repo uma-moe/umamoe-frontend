@@ -1,4 +1,4 @@
-import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import { courseFit, type VeteranEntry } from './veteran-entries';
 
 export const STYLES = [
@@ -8,6 +8,7 @@ export const STYLES = [
   { value: 'Sashi', label: 'Late' },
   { value: 'Oikomi', label: 'End' }
 ];
+
 export const STYLE_NAMES: Record<string, string> = {
   Nige: 'Front',
   Senko: 'Pace',
@@ -15,12 +16,14 @@ export const STYLE_NAMES: Record<string, string> = {
   Oikomi: 'End',
   Oonige: 'Runaway'
 };
+
 export const SORTS = [
   { value: 'fit', label: 'Course fit' },
   { value: 'rank', label: 'Rank' },
   { value: 'total', label: 'Total stats' },
   { value: 'newest', label: 'Newest' }
 ];
+
 export const STATS = [
   ['speed', 'speed'],
   ['stamina', 'stamina'],
@@ -35,7 +38,7 @@ export function shownVeterans(
   query: string,
   style: string,
   sort: string,
-  course?: CourseCatalogEntry
+  course?: RaceCourse
 ): VeteranEntry[] {
   const words = query.trim().toLowerCase();
   const list = entries.filter(
@@ -45,14 +48,10 @@ export function shownVeterans(
         (style === 'Nige' && entry.uma.trainee.runningStyle === 'Oonige')) &&
       (!words || entry.uma.name.toLowerCase().includes(words))
   );
+
   const fit = new Map(list.map((entry) => [entry.key, courseFit(entry.uma, course)]));
-  return list.sort(
-    sort === 'rank'
-      ? (a, b) => (b.score ?? 0) - (a.score ?? 0)
-      : sort === 'total'
-        ? (a, b) => b.total - a.total
-        : sort === 'newest'
-          ? (a, b) => b.created - a.created
-          : (a, b) => fit.get(a.key)! - fit.get(b.key)! || (b.score ?? 0) - (a.score ?? 0)
-  );
+  if (sort === 'rank') return list.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  if (sort === 'total') return list.sort((a, b) => b.total - a.total);
+  if (sort === 'newest') return list.sort((a, b) => b.created - a.created);
+  return list.sort((a, b) => fit.get(a.key)! - fit.get(b.key)! || (b.score ?? 0) - (a.score ?? 0));
 }

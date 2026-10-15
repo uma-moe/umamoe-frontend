@@ -6,8 +6,8 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import Slider from '@/components/controls/Slider.svelte';
-  import { factorImage, factorOptions, type FactorCategory } from '@/lib/catalog/factor-catalog';
-  import type { FactorRequirement } from '@/lib/inheritance/inheritance-search';
+  import { factorImage, factorOptions, type FactorCategory } from '@/lib/game-data/factors/factors';
+  import type { FactorRequirement } from '@/lib/inheritance/search/inheritance-search';
   import WhiteFactorTypePicker from './WhiteFactorTypePicker.svelte';
   import { completeTourInteraction } from '@/components/tours/tour-state';
 
@@ -47,18 +47,15 @@
       image: category === 'skills-races' ? factorImage(Number(factor.id)) : undefined
     }))
   ]);
-  const addLabel = $derived(
-    addLabelOverride ??
-      (category === 'stats'
-        ? 'Add Blue Factor'
-        : category === 'aptitude'
-          ? 'Add Pink Factor'
-          : category === 'unique'
-            ? 'Add Green Factor'
-            : priorityMode
-              ? 'Add Optional White Factor'
-              : 'Add White Factor')
-  );
+
+  const addLabel = $derived.by(() => {
+    if (addLabelOverride !== undefined) return addLabelOverride;
+    if (category === 'stats') return 'Add Blue Factor';
+    if (category === 'aptitude') return 'Add Pink Factor';
+    if (category === 'unique') return 'Add Green Factor';
+    return priorityMode ? 'Add Optional White Factor' : 'Add White Factor';
+  });
+
   const priorityDetail = $derived(
     label.toLocaleLowerCase().includes('lineage')
       ? 'priority group, then stack score'
@@ -76,6 +73,7 @@
         operator: 'and'
       }
     ];
+
     if (id === 'blue-factors') completeTourInteraction('filter-add-factor');
   }
 
@@ -83,6 +81,7 @@
     requirements = requirements.map((entry, entryIndex) =>
       entryIndex === index ? { ...entry, ...patch } : entry
     );
+
     if (id === 'blue-factors' && patch.minimumStars !== undefined)
       completeTourInteraction('filter-blue-factor-slider');
   }
@@ -107,6 +106,7 @@
         priority,
         operator: 'and' as const
       }));
+
     if (additions.length) requirements = [...requirements, ...additions];
   }
 </script>

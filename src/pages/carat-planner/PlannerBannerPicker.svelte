@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
-  import { filterPlannerBanners } from '@/lib/carat-planner/planner-presentation';
-  import { timelineDisplayTitle } from '@/lib/timeline/timeline-pickups';
+  import { filterPlannerBanners } from '@/lib/carat-planner/presentation/planner-presentation';
+  import { timelineDisplayTitle } from '@/lib/timeline/events/timeline-pickups';
   import Combobox from '@/components/controls/Combobox.svelte';
   import Icon from '@/components/Icon.svelte';
 

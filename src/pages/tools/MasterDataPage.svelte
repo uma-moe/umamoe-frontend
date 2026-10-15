@@ -14,6 +14,9 @@
   import MasterDataSchema from './master-data/MasterDataSchema.svelte';
   import MasterDataVersions from './master-data/MasterDataVersions.svelte';
   import type { MasterDataRow } from './master-data/master-data-export';
+  import type { MasterDataAction, MasterDataResponse } from './master-data/master-data-types';
+
+  const bundledSource = 'Bundled Hakuraku game data';
 
   let importOpen = $state(false),
     elapsed = $state(0),
@@ -23,7 +26,8 @@
   let worker: Worker | undefined,
     timeout: ReturnType<typeof setTimeout> | undefined,
     request = 0;
-  let pendingSource = 'Bundled Hakuraku catalog snapshot';
+
+  let pendingSource = bundledSource;
 
   let tab = $state('browser'),
     filter = $state(''),
@@ -32,7 +36,8 @@
     error = $state(''),
     busy = $state(false),
     loaded = $state(false),
-    source = $state('Bundled Hakuraku catalog snapshot');
+    source = $state(bundledSource);
+
   let schema = $state<Record<string, string[]>>({}),
     columns = $state<string[]>([]),
     rows = $state<MasterDataRow[]>([]),
@@ -41,17 +46,18 @@
 
   function start() {
     worker ??= new MasterWorker();
-    worker.onmessage = (event) => {
+    worker.onmessage = (event: MessageEvent<MasterDataResponse>) => {
       const result = event.data;
       if (result.id !== request) return;
       clearTimeout(timeout);
       busy = false;
       elapsed = Math.round(performance.now() - started);
-      if (result.error) {
+      if (result.kind === 'error') {
         error = result.error;
         return;
       }
-      if (result.schema) {
+
+      if (result.kind === 'schema') {
         schema = result.schema;
         loaded = true;
         source = pendingSource;
@@ -64,42 +70,53 @@
         }
       } else {
         columns = result.columns;
-        rows = result.values.map((values: (string | number | null)[]) =>
-          Object.fromEntries(columns.map((name, index) => [name, values[index] ?? 'NULL']))
+        rows = result.values.map((values) =>
+          Object.fromEntries(
+            columns.map((name, index) => {
+              const value = values[index];
+              return [name, value ?? 'NULL'];
+            })
+          )
         );
+
         truncated = result.truncated;
       }
     };
+
     worker.onerror = () => {
       clearTimeout(timeout);
       busy = false;
       loaded = false;
-      error = 'The SQL engine could not be loaded. Try loading the catalog again.';
+      error =
+        'The SQL engine could not be loaded. Reload the bundled data or reopen your database.';
       worker?.terminate();
       worker = undefined;
     };
+
+    return worker;
   }
 
-  function send(message: Record<string, unknown>) {
-    start();
+  function send(message: MasterDataAction) {
+    const activeWorker = start();
     error = '';
     busy = true;
     started = performance.now();
-    worker!.postMessage({ ...message, id: ++request });
+    activeWorker.postMessage({ ...message, id: ++request });
     timeout = setTimeout(() => {
       worker?.terminate();
       worker = undefined;
       busy = false;
       loaded = false;
       schema = {};
+
       rows = [];
       error = 'Operation exceeded 20 seconds. Reload a database and use a narrower query.';
     }, 20000);
   }
 
-  function load() {
-    pendingSource = 'Bundled Hakuraku catalog snapshot';
-    send({ kind: 'catalog' });
+  function loadBundledData() {
+    pendingSource = bundledSource;
+    send({ kind: 'bundled' });
   }
 
   function run() {
@@ -124,6 +141,7 @@
       error = 'Database files must be smaller than 150 MB.';
       return;
     }
+
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
       pendingSource = file.name;
@@ -134,7 +152,7 @@
     }
   }
 
-  onMount(load);
+  onMount(loadBundledData);
 
   onDestroy(() => {
     worker?.terminate();
@@ -177,16 +195,16 @@
       <span>{Object.keys(schema).length} tables · SQLite · Local, read-only</span>
     </div>
     <span class="source-badge">
-      {source === 'Bundled Hakuraku catalog snapshot' ? 'CATALOG SUBSET' : 'IMPORTED DATABASE'}
+      {source === bundledSource ? 'BUNDLED GAME DATA' : 'IMPORTED DATABASE'}
     </span>
     <Button
       variant="ghost"
       icon="refresh"
       size="sm"
       disabled={busy}
-      onclick={load}
+      onclick={loadBundledData}
     >
-      Reload bundled catalog
+      Reload bundled data
     </Button>
   </section>
   <div class="workbench">
@@ -267,7 +285,7 @@
     </div>
   </div>
   <p class="catalog-note">
-    The bundled Hakuraku catalog contains selected game tables. Open a complete master.mdb or
+    The bundled Hakuraku game data contains selected tables. Open a complete master.mdb or
     compressed database to browse the full table set.
   </p>
 </AppPage>

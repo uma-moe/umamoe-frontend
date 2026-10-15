@@ -138,6 +138,7 @@ export function histogramChart(
       : items,
     statColors[stat] ?? '#64b5f6'
   );
+
   return {
     ...option,
     yAxis: {

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { virtualScroll } from '@/lib/virtual-scroll';
-  import type { VeteranDisplayRecord } from '@/lib/profile/profile-veterans';
-  import type { VeteranQueryMatch } from '@/lib/profile/profile-veteran-query';
-  import { veteranDatabaseUrl } from '@/lib/veterans/veteran-links';
+  import type { VeteranDisplayRecord } from '@/lib/profile/veterans/profile-veterans';
+  import type { VeteranQueryMatch } from '@/lib/profile/veterans/profile-veteran-query';
+  import { veteranDatabaseUrl } from '@/lib/veterans/records/veteran-links';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
   import Button from '@/components/controls/Button.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
@@ -57,6 +57,7 @@
     } catch {
       /* Legacy transfer is best effort. */
     }
+
     window.open('/tools/lineage-planner?from=profile', '_blank', 'noopener');
   }
 </script>

@@ -9,7 +9,7 @@
     reloadUpdatedVersion,
     startSiteServices,
     CURRENT_UPDATE_VERSION
-  } from '@/services/site-services';
+  } from '@/services/site/site-services';
   import { browserProofPort, browserVerification } from '@/services/http/browser-proof';
   import type { RateLimitNotice } from '@/services/http/http-client';
 
@@ -53,22 +53,34 @@
           .then((module) => {
             if (active) UpdateNotification = module.default;
           })
-          .catch(() => {});
+          .catch((error: unknown) => {
+            if (active)
+              console.warn(
+                'Update notes could not be loaded. Opening them again will retry.',
+                error
+              );
+          });
     };
+
     const showUpdates = () => {
       updateRequest++;
       loadUpdates();
     };
+
     try {
       if (Number(localStorage.getItem('lastSeenUpdateVersion') ?? 0) < CURRENT_UPDATE_VERSION)
         loadUpdates();
-    } catch {}
+    } catch {
+      /* Browsers without storage can still open update notes from the menu. */
+    }
+
     window.addEventListener('uma:show-updates', showUpdates);
     const stop = startSiteServices();
     window.addEventListener('uma:rate-limit', rateLimit);
     const timer = setInterval(() => {
       if (rateLimited) now = Date.now();
     }, 1000);
+
     return () => {
       active = false;
       stop();

@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }) => {
     for (const key of ['popover', 'showPopover', 'hidePopover', 'togglePopover']) {
       Reflect.deleteProperty(HTMLElement.prototype, key);
     }
+
     for (const prototype of [HTMLButtonElement.prototype, HTMLInputElement.prototype]) {
       Reflect.deleteProperty(prototype, 'popoverTargetElement');
       Reflect.deleteProperty(prototype, 'popoverTargetAction');
@@ -22,10 +23,16 @@ test('legacy startup renders the planner and keeps mobile navigation working', a
   // Removing JS APIs cannot remove a modern browser's native hidden-popover CSS.
   await page.addStyleTag({ content: '[popover].\\:popover-open { display: block; }' });
   await expect(page.getByRole('button', { name: 'Choose Target', exact: true })).toBeVisible();
-  expect(await page.evaluate(() => {
-    const source = Object.freeze([3, 1, 2]);
-    return { source, sorted: source.toSorted((a, b) => a - b), sparse: Object.keys([, 1].toSorted()) };
-  })).toEqual({ source: [3, 1, 2], sorted: [1, 2, 3], sparse: ['0', '1'] });
+  expect(
+    await page.evaluate(() => {
+      const source = Object.freeze([3, 1, 2]);
+      return {
+        source,
+        sorted: source.toSorted((a, b) => a - b),
+        sparse: Object.keys([, 1].toSorted())
+      };
+    })
+  ).toEqual({ source: [3, 1, 2], sorted: [1, 2, 3], sparse: ['0', '1'] });
 
   const trigger = page.getByRole('button', { name: 'Open navigation', exact: true });
   const navigation = page.getByRole('navigation', { name: 'Mobile navigation', exact: true });
@@ -51,10 +58,15 @@ test('legacy startup renders the planner and keeps mobile navigation working', a
   await expect(page.locator('#app-error')).toBeHidden();
 });
 
-test('polyfilled account menus retain layout, keyboard focus and light dismissal', async ({ page }) => {
+test('polyfilled account menus retain layout, keyboard focus and light dismissal', async ({
+  page
+}) => {
   await page.addInitScript(() => localStorage.setItem('auth_token', 'compatibility-test'));
-  await page.route('**/api/auth/me', route => route.fulfill({ json: { id: 'owner', display_name: 'Test User' } }));
-  await page.route('**/api/auth/accounts', route => route.fulfill({ json: [] }));
+  await page.route('**/api/auth/me', (route) =>
+    route.fulfill({ json: { id: 'owner', display_name: 'Test User' } })
+  );
+
+  await page.route('**/api/auth/accounts', (route) => route.fulfill({ json: [] }));
   await page.goto('/tools');
   const trigger = page.getByRole('button', { name: 'Account menu for Test User', exact: true });
   const menu = page.getByRole('menu', { name: 'Your account', exact: true });
@@ -71,7 +83,10 @@ test('polyfilled account menus retain layout, keyboard focus and light dismissal
   await trigger.click();
   await expect(menu).toBeVisible();
   // The mobile menu covers the heading's centre; its left edge remains outside.
-  await page.getByRole('heading', { name: 'Tools & Calculators', exact: true }).click({ position: { x: 1, y: 1 } });
+  await page
+    .getByRole('heading', { name: 'Tools & Calculators', exact: true })
+    .click({ position: { x: 1, y: 1 } });
+
   await expect(menu).toBeHidden();
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('#app-error')).toBeHidden();

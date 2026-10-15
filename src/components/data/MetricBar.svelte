@@ -7,6 +7,7 @@
     tone?: 'accent' | 'success' | 'warning' | 'danger';
     compact?: boolean;
   }
+
   let { value, max = 100, label, unit = '%', tone = 'accent', compact = false }: Props = $props();
   const percent = $derived(Math.max(0, Math.min(100, max === 0 ? 0 : (value / max) * 100)));
 </script>

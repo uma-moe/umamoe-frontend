@@ -1,4 +1,4 @@
-import type { RaceHorseFrame, RaceRunner } from '@/lib/race/race-capture-parser';
+import type { RaceHorseFrame, RaceRunner } from '@/lib/race/capture/race-capture-parser';
 import { placeTrackCaption } from '../replay-track';
 
 type Point = { x: number; y: number };
@@ -31,26 +31,33 @@ export function placeCallouts<T extends MapMarker>(
         dx: 0,
         dy: -labelSize / 2 - 10
       };
+
       // Keep the exact point exposed even while a collision offset is interpolating.
       const minimum = labelSize / 2 + 7,
         axis = Math.max(Math.abs(current.dx), Math.abs(current.dy));
+
       const scale = axis ? Math.max(1, minimum / axis) : 1;
       const offset = axis
         ? { dx: current.dx * scale, dy: current.dy * scale }
         : { dx: 0, dy: -minimum };
+
       const x = marker.anchor.x + offset.dx,
         y = marker.anchor.y + offset.dy;
+
       const length = Math.hypot(x - marker.anchor.x, y - marker.anchor.y) || 1,
         edge = Math.min(labelSize / 2 - 4, length);
+
       const end = {
         x: x - ((x - marker.anchor.x) * edge) / length,
         y: y - ((y - marker.anchor.y) * edge) / length
       };
+
       const tipWidth = labelSize * 0.12,
         side = {
           x: (-(y - marker.anchor.y) * tipWidth) / length,
           y: ((x - marker.anchor.x) * tipWidth) / length
         };
+
       return {
         ...marker,
         x,
@@ -65,9 +72,7 @@ export function placeCallouts<T extends MapMarker>(
           .join(' ')
       };
     })
-    .sort(
-      (a, b) => Number(a.runner.index === selected) - Number(b.runner.index === selected)
-    );
+    .sort((a, b) => Number(a.runner.index === selected) - Number(b.runner.index === selected));
 }
 
 export function placeCaptions(
@@ -82,6 +87,7 @@ export function placeCaptions(
     { x: m.x, y: m.y, radius: 0, width: labelSize + 4, height: labelSize + 4 },
     { ...m.anchor, radius: dotRadius + 4 }
   ]);
+
   return new Map(
     callouts.map((m) => {
       const candidates = (width: number, height: number, above: boolean) => [
@@ -98,8 +104,16 @@ export function placeCaptions(
         { x: m.x + labelSize / 2 + width / 2 + 40, y: m.y + labelSize / 2 + 8 },
         { x: m.x - labelSize / 2 - width / 2 - 40, y: m.y + labelSize / 2 + 8 }
       ];
+
       const nameWidth = Math.max(48, m.runner.name.length * 6 + 8);
-      const name = placeTrackCaption(candidates(nameWidth, 14, true), nameWidth, 14, obstacles, bounds);
+      const name = placeTrackCaption(
+        candidates(nameWidth, 14, true),
+        nameWidth,
+        14,
+        obstacles,
+        bounds
+      );
+
       const height = Math.max(14, overlayHeight) + (flagged(m.runner.index) ? 12 : 0);
       const values = candidates(58, height, false);
       // In a tight pack, keep the values with the readable name rather than
@@ -112,6 +126,7 @@ export function placeCaptions(
         [...obstacles, { x: name.x, y: name.y + 7, radius: 0, width: nameWidth, height: 14 }],
         bounds
       );
+
       return [m.runner.index, { name, telemetry }] as const;
     })
   );
@@ -151,5 +166,6 @@ export function separatedCaptions<T extends { label: string; caption: Point }>(
     )
       accepted.push(item);
   }
+
   return new Set(accepted);
 }

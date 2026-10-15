@@ -3,7 +3,7 @@
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import Icon from '@/components/Icon.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
-  import { skillImage } from '@/lib/catalog/skill-catalog';
+  import { skillImage } from '@/lib/game-data/skills/skills';
   import type { OptimizeResult } from '../../../simulator-repository';
   import type { PricedOffer } from '../../../setup/build/skill-offers';
   import BuildResultFinalists from './BuildResultFinalists.svelte';
@@ -56,7 +56,7 @@
   /** She raced real CM fields, so gains are runners beaten, not seconds. */
   const field = $derived(result?.objective === 'field_place');
   /** An older service answers in a shape this page can't read honestly, so it says so instead of guessing. */
-  const outdated = $derived(!!result && result.report.schema_version < SCREEN_SCHEMA);
+  const outdated = $derived(result !== undefined && result.report.schema_version < SCREEN_SCHEMA);
   const finalists = $derived(outdated ? [] : (result?.report.finalists ?? []));
   const best = $derived(finalists[0]);
   const amount = (value: number) => formatAmount(value, field);
@@ -68,12 +68,15 @@
   /** Skills on offer that can never fire for her here, left out of the search, grouped by what rules them out. */
   const inert = $derived(inertOffers(outdated ? [] : result?.inert, offers));
   /** A simulator older than schema 7 never rules out skills that cannot fire for her, so it may buy them. */
-  const unfiltered = $derived(!!result && !outdated && result.schema_version < INERT_SCHEMA);
+  const unfiltered = $derived(
+    result !== undefined && !outdated && result.schema_version < INERT_SCHEMA
+  );
+
   const inertSet = $derived(new Set(inert.map((item) => item.purchase)));
   const inertReasons = $derived(inertGroups(inert));
   const impacts = $derived(screenedImpacts(outdated ? [] : result?.report.impacts, offers));
   const leftover = $derived(leftoverSp(best, budget, offers, bought, inertSet, impacts));
-  const saves = $derived(!!best?.build.purchases.length);
+  const saves = $derived(Boolean(best?.build.purchases.length));
   const screen = $derived(outdated ? undefined : result?.report.screen);
   const tally = $derived(!result || outdated ? '' : searchTally(result));
 </script>

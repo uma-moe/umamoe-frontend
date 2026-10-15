@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { decodeFactor, factorOptions, factorCatalogState } from '@/lib/catalog/factor-catalog';
+  import { decodeFactor, factorOptions, factorLoadingState } from '@/lib/game-data/factors/factors';
   import {
     plannerSparkChance,
     type plannerAffinityBreakdown,
@@ -48,6 +48,7 @@
   const factors = $derived(
     factorOptions().map((factor) => ({ value: factor.id, label: factor.text, type: factor.type }))
   );
+
   const filled = $derived(Boolean(node.characterId));
   const sortedSparks = $derived(
     node.sparks
@@ -236,7 +237,7 @@
           id={`spark-add-${node.position}`}
           label={node.label}
           options={factors}
-          {...$factorCatalogState}
+          {...$factorLoadingState}
           onadd={addSpark}
         />
       </section>

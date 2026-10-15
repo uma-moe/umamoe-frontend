@@ -17,16 +17,16 @@
     type InheritanceFactor,
     type SparkOrder,
     type inheritanceAffinity
-  } from '@/lib/inheritance/inheritance-factors';
-  import { sparkMetrics } from '@/lib/inheritance/spark-probability';
+  } from '@/lib/inheritance/sparks/inheritance-factors';
+  import { sparkMetrics } from '@/lib/inheritance/sparks/spark-probability';
   import type { UqlSparkHighlight } from '@/lib/inheritance/uql/uql-spark-highlight';
-  import type { VeteranAffinityEngine } from '@/lib/veterans/affinity-engine';
+  import type { VeteranAffinityEngine } from '@/lib/veterans/affinity/affinity-engine';
   import type { VeteranRecord } from '@/lib/veterans/generated/veteran-record';
   import type {
     InheritanceRecord,
     InheritanceSearchFilters
-  } from '@/lib/inheritance/inheritance-search';
-  import { catalogCharacter, type CatalogEntry } from '../../catalog-repository';
+  } from '@/lib/inheritance/search/inheritance-search';
+  import { findCharacterEntry, type GameDataEntry } from '@/lib/game-data/display-records';
 
   interface Props {
     record: InheritanceRecord;
@@ -37,10 +37,10 @@
     targetId?: number;
     affinityEngine?: VeteranAffinityEngine;
     partner?: VeteranRecord;
-    characters: CatalogEntry[];
-    main?: CatalogEntry;
-    left?: CatalogEntry;
-    right?: CatalogEntry;
+    characters: GameDataEntry[];
+    main?: GameDataEntry;
+    left?: GameDataEntry;
+    right?: GameDataEntry;
     splitSparks: boolean;
     sparkPortraits: boolean;
     sparkOrder: SparkOrder;
@@ -84,6 +84,7 @@
       )
     )
   );
+
   const displayFactors = $derived(
     inheritanceFactors(
       record,
@@ -116,6 +117,7 @@
       })),
       sparkPerRun
     );
+
     return `${chanceFormat.format(metrics.guaranteed ? metrics.expected : metrics.chance)}${metrics.guaranteed ? 'x' : '%'}`;
   }
 </script>
@@ -222,7 +224,7 @@
   {@const matched = inheritanceFactorMatched(factor, activeFilters, uqlHighlight)}
   {@const portrait =
     source?.side === 'p2'
-      ? catalogCharacter(
+      ? findCharacterEntry(
           characters,
           source.owner === 'main'
             ? (partner?.cardId ?? 0)

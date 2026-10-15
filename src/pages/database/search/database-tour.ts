@@ -1,4 +1,4 @@
-import type { InheritanceFilterMode } from '@/lib/inheritance/inheritance-search';
+import type { InheritanceFilterMode } from '@/lib/inheritance/search/inheritance-search';
 
 export interface DatabaseTourChanges {
   display?: true;
@@ -29,8 +29,10 @@ export function databaseTourChanges(step: string): DatabaseTourChanges | undefin
   const displayStep = displaySteps.includes(step);
   if (!step.startsWith('filter-') && !displayStep) return undefined;
   if (displayStep) return { display: true, panels: [] };
+
   if (['filter-open', 'filter-modes', 'filter-presets'].includes(step))
     return { expanded: true, panels: [] };
+
   const panels: string[] = [];
   if (step === 'filter-include-exclude') panels.push('characters');
   if (step === 'filter-trainer-search') panels.push('search');

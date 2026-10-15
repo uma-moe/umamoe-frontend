@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/race-capture-parser';
+  import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import { raceRunnerKey } from '@/lib/race/multi-race-analysis';
-  import { runningStyleName } from '@/lib/race/race-display';
+  import { runningStyleName } from '@/lib/race/replay/race-display';
   import TextField from '@/components/controls/TextField.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import Button from '@/components/controls/Button.svelte';

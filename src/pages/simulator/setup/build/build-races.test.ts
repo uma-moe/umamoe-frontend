@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import { createSimulatorUma } from '../../simulator-uma';
 import { buildRaces, fieldWhere } from './build-races';
 
@@ -12,7 +12,8 @@ const course = (course_id: number, race_track_id: number, distance: number, layo
     surface: 1,
     turn: 2,
     course: layout
-  }) as CourseCatalogEntry;
+  }) as RaceCourse;
+
 const SETUP = {
   raceInstanceId: 800023,
   raceType: 0,
@@ -21,6 +22,7 @@ const SETUP = {
   ground: 1,
   startTimeType: 2
 };
+
 const her = {
   ...createSimulatorUma('Her'),
   fanCount: 250000,
@@ -43,12 +45,14 @@ describe('Build search races', () => {
       course(10801, 10008, 1400, 1),
       course(10802, 10008, 1400, 2)
     ];
+
     const races = buildRaces({
       her,
       seed: 7,
       pool,
       setup: { ...SETUP, raceType: 14 }
     })!;
+
     expect(races.scenarios.map((scenario) => scenario.courseId)).toEqual([10101, 10801, 10802]);
     expect(new Set(races.scenarios.map((scenario) => scenario.name)).size).toBe(3);
     expect(races.scenarios.every((scenario) => scenario.runners.length === 1)).toBe(true);
@@ -71,6 +75,7 @@ describe('Build search races', () => {
       winner_accuracy: 0.37,
       winner_accuracy_without_skills: 0.33
     };
+
     const [cm, other] = [course(10903, 10009, 1600), course(10506, 10005, 2500)];
     const courses = new Map([cm, other].map((entry) => [entry.course_id, entry]));
     expect(fieldWhere(fields, cm, courses)).toBe(

@@ -1,14 +1,10 @@
 import { getRankInfoFromLabel } from '@/lib/rank';
-import type { AncestorScope, VeteranSortField } from '@/lib/profile/profile-veterans';
+import type { AncestorScope, VeteranSortField } from '@/lib/profile/veterans/profile-veterans';
 
 export type StatField = 'speed' | 'stamina' | 'power' | 'guts' | 'wiz';
 
 export type CollectionSortField =
-  | VeteranSortField
-  | 'affinity'
-  | 'white_count'
-  | 'white_stars_sum'
-  | 'win_count';
+  VeteranSortField | 'affinity' | 'white_count' | 'white_stars_sum' | 'win_count';
 
 export type MetricSortField = 'affinity' | 'white_count' | 'white_stars_sum' | 'win_count';
 
@@ -25,13 +21,7 @@ export type AptitudeField =
   | 'proper_running_style_oikomi';
 
 export type FilterTabId =
-  | 'stats'
-  | 'aptitudes'
-  | 'skills'
-  | 'parents'
-  | 'saddle'
-  | 'database'
-  | 'uql';
+  'stats' | 'aptitudes' | 'skills' | 'parents' | 'saddle' | 'database' | 'uql';
 
 export interface FilterTab {
   id: FilterTabId;

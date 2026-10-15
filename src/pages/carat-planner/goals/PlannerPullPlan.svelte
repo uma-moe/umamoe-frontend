@@ -8,8 +8,8 @@
     type PlannerTarget,
     type TargetProjection
   } from '@/lib/carat-planner/carat-planner';
-  import { plannerPullPlanItems } from '@/lib/carat-planner/planner-presentation';
-  import type { TimelinePickupCatalog } from '@/lib/timeline/timeline-pickups';
+  import { plannerPullPlanItems } from '@/lib/carat-planner/presentation/planner-presentation';
+  import type { TimelinePickupCatalog } from '@/lib/timeline/events/timeline-pickups';
   import PlannerTargetRow from './row/PlannerTargetRow.svelte';
   import Icon from '@/components/Icon.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
@@ -44,6 +44,7 @@
     const timing = activeTargets[0]?.pullTiming;
     return timings.size === 1 && (timing === 'start' || timing === 'end') ? timing : '';
   });
+
   const regularTargets = $derived(activeTargets.filter((target) => target.bannerKind !== 'paid'));
   const globalPaidCarats = $derived(
     regularTargets.length &&
@@ -73,6 +74,7 @@
         if (target.bannerKind !== 'paid') target.allowPaidJewels = selection === 'allow';
     });
   }
+
   function updateTarget(id: string, mutator: (target: PlannerTarget) => void): void {
     oncommit((value) => {
       const target = value.targets.find((item) => item.id === id);

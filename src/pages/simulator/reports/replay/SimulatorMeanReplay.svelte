@@ -5,9 +5,9 @@
     loadReplayCourses,
     type Course
   } from '@/pages/competitive/race-analysis/replay/replay-course';
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-  import type { RaceTrajectory } from '@/lib/race/race-ensemble';
-  import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import type { RaceTrajectory } from '@/lib/race/replay/race-ensemble';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import { telemetryEnsemble } from './report-replay';
   import SimulatorSkillWindows from '../skills/SimulatorSkillWindows.svelte';
   import type { MonteCarloResult } from '../../simulator-repository';
@@ -27,7 +27,7 @@
   }: {
     result: MonteCarloResult;
     umas: SimulatorUma[];
-    course?: CourseCatalogEntry;
+    course?: RaceCourse;
     track?: ParsedRaceCapture['track'];
     suspended?: boolean;
     /** The runner the replay follows, as a report source index. */
@@ -66,6 +66,7 @@
     void import('@/pages/competitive/race-analysis/replay/RaceReplay.svelte').then((module) => {
       if (alive) Replay = module.default as unknown as Component<ReplayProps, object, 'selected'>;
     });
+
     // Lane positions are stored relative to the track width; the replay reads them back with the same course metadata.
     void loadReplayCourses()
       .then((data) => {
@@ -75,6 +76,7 @@
       .catch(() => {
         if (alive) laneWidth = 11.25;
       });
+
     return () => {
       alive = false;
     };
@@ -90,9 +92,10 @@
       };
     }
   });
+
   const ensemble = $derived(built?.ensemble);
   const waiting = $derived(
-    !!course && !!result.report?.telemetry && (laneWidth === undefined || !Replay)
+    Boolean(course) && Boolean(result.report?.telemetry) && (laneWidth === undefined || !Replay)
   );
 
   // The replay follows a runner by index; in this replay that index is the report's source index.
@@ -113,8 +116,10 @@
     const winners = ensemble.trajectories
       .map((trajectory) => Math.min(...trajectory.finishTimes))
       .sort((a, b) => a - b);
+
     return { runner: untrack(() => source ?? 0), time: winners[winners.length >> 1] };
   });
+
   const races = $derived(
     ensemble
       ? (ensemble.trajectories.length < ensemble.runs

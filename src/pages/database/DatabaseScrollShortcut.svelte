@@ -35,9 +35,11 @@
             ? 'top'
             : '';
     };
+
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };
+
     const observer = new ResizeObserver(schedule);
     observer.observe(node);
     window.addEventListener('scroll', schedule, { passive: true });

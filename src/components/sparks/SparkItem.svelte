@@ -42,15 +42,13 @@
     onremove
   }: Props = $props();
 
-  const sourceLabel = $derived(
-    source === 'main'
-      ? 'Main parent'
-      : source === 'parent'
-        ? 'Parent'
-        : source === 'p2'
-          ? 'P2 legacy'
-          : undefined
-  );
+  const sourceLabels: Record<SparkSource, string> = {
+    main: 'Main parent',
+    parent: 'Parent',
+    p2: 'P2 legacy'
+  };
+
+  const sourceLabel = $derived(source === undefined ? undefined : sourceLabels[source]);
 </script>
 
 <span

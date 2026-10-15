@@ -6,28 +6,24 @@ import {
   type FriendlyScopedSparkField,
   type UqlFactorValueContext,
   buildScopedSparkFields,
-  scopedUqlFactors,
+  scopedUqlFactors
 } from '@/lib/inheritance/uql/uql-fields';
-import { factorOptions, factorImage } from '@/lib/catalog/factor-catalog';
-import { characterImagePath } from '@/lib/catalog/character-catalog';
+import { factorOptions, factorImage } from '@/lib/game-data/factors/factors';
+import { characterImagePath } from '@/lib/game-data/characters';
 import type {
   UqlSuggestion,
   UqlValueContext,
-  UqlFieldType,
+  UqlFieldType
 } from '@/components/editor/query-editor-types';
 import { UqlEditorLanguage } from '@/lib/inheritance/uql/uql-editor';
-import type { CatalogEntry } from '../catalog-repository';
-import type { RaceQueryValue } from '@/lib/catalog/race-catalog';
+import type { GameDataEntry } from '@/lib/game-data/display-records';
+import type { RaceQueryValue } from '@/lib/game-data/racing/races';
 import type { UqlCharacter } from '@/lib/inheritance/uql/uql-compiler';
 import { uqlLegacyDisplay, uqlLegacyName } from '@/lib/inheritance/uql/uql-context';
-import type { SelectableParent } from '@/lib/veterans/parent-picker';
+import type { SelectableParent } from '@/lib/veterans/parents/parent-picker';
 
 function getUqlValueContextForField(fieldText: string): UqlValueContext | null {
-  const normalized = fieldText
-    .toLowerCase()
-    .replace(/[_-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const normalized = fieldText.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
   if (
     endsWithAny(normalized, [
       'characters',
@@ -77,21 +73,16 @@ function getUqlValueContextForField(fieldText: string): UqlValueContext | null {
       'grandparent character',
       'grandparent characters',
       'great parent character',
-      'great parent characters',
+      'great parent characters'
     ])
   ) {
     return 'character';
   }
-  if (
-    endsWithAny(normalized, [
-      'support card',
-      'support',
-      'card',
-      'support card id',
-    ])
-  ) {
+
+  if (endsWithAny(normalized, ['support card', 'support', 'card', 'support card id'])) {
     return 'support-card';
   }
+
   if (
     endsWithAny(normalized, [
       'race results',
@@ -102,14 +93,16 @@ function getUqlValueContextForField(fieldText: string): UqlValueContext | null {
       'win saddles',
       'main win saddles',
       'left win saddles',
-      'right win saddles',
+      'right win saddles'
     ])
   ) {
     return 'race-saddle';
   }
+
   if (endsWithAny(normalized, ['rank', 'parent rank'])) {
     return 'rank';
   }
+
   if (
     endsWithAny(normalized, [
       'white sparks',
@@ -128,11 +121,12 @@ function getUqlValueContextForField(fieldText: string): UqlValueContext | null {
       'gp1 white factors',
       'gp1 white sparks',
       'gp2 white factors',
-      'gp2 white sparks',
+      'gp2 white sparks'
     ])
   ) {
     return 'white-factor';
   }
+
   if (
     endsWithAny(normalized, [
       'green sparks',
@@ -152,11 +146,12 @@ function getUqlValueContextForField(fieldText: string): UqlValueContext | null {
       'gp1 unique skills',
       'gp2 green sparks',
       'gp2 green factors',
-      'gp2 unique skills',
+      'gp2 unique skills'
     ])
   ) {
     return 'green-factor';
   }
+
   if (
     endsWithAny(normalized, [
       'blue sparks',
@@ -170,11 +165,12 @@ function getUqlValueContextForField(fieldText: string): UqlValueContext | null {
       'gp1 blue sparks',
       'gp1 blue factors',
       'gp2 blue sparks',
-      'gp2 blue factors',
+      'gp2 blue factors'
     ])
   ) {
     return 'blue-factor';
   }
+
   if (
     endsWithAny(normalized, [
       'pink sparks',
@@ -188,11 +184,12 @@ function getUqlValueContextForField(fieldText: string): UqlValueContext | null {
       'gp1 pink sparks',
       'gp1 pink factors',
       'gp2 pink sparks',
-      'gp2 pink factors',
+      'gp2 pink factors'
     ])
   ) {
     return 'pink-factor';
   }
+
   return null;
 }
 
@@ -200,31 +197,21 @@ function getFriendlyFieldSearchText(field: FriendlyFieldAlias): string {
   const extraTerms: string[] = [];
   switch (field.field) {
     case 'main_chara_id':
-      extraTerms.push(
-        'main char',
-        'main character',
-        'runner',
-        'runner character',
-      );
+      extraTerms.push('main char', 'main character', 'runner', 'runner character');
       break;
     case 'main_parent_id':
       extraTerms.push(
         'parent char',
         'parent character',
         'main parent char',
-        'main parent character',
+        'main parent character'
       );
       break;
     case 'blue_stars_sum':
     case 'pink_stars_sum':
     case 'green_stars_sum':
     case 'white_stars_sum':
-      extraTerms.push(
-        'total sparks',
-        'total stars',
-        'lineage total',
-        'lineage spark total',
-      );
+      extraTerms.push('total sparks', 'total stars', 'lineage total', 'lineage spark total');
       break;
     case 'left_chara_id':
       extraTerms.push(
@@ -234,7 +221,7 @@ function getFriendlyFieldSearchText(field: FriendlyFieldAlias): string {
         'gp1 character',
         'grandparent character',
         'left char',
-        'left character',
+        'left character'
       );
       break;
     case 'right_chara_id':
@@ -245,18 +232,18 @@ function getFriendlyFieldSearchText(field: FriendlyFieldAlias): string {
         'gp2 character',
         'grandparent character',
         'right char',
-        'right character',
+        'right character'
       );
       break;
     default:
       break;
   }
+
   return [...field.aliases, field.label, ...extraTerms].join(' ');
 }
 
 function getFriendlyFieldPriority(field: FriendlyFieldAlias): number {
-  if (field.field.endsWith('_chara_id') || field.field === 'main_parent_id')
-    return 0;
+  if (field.field.endsWith('_chara_id') || field.field === 'main_parent_id') return 0;
   if (field.field === 'support_card_id') return 1;
   if (field.field === 'limit_break_count') return 2;
   if (field.field === 'trainer_name' || field.field === 'account_id') return 4;
@@ -271,7 +258,7 @@ function getFriendlyFieldPriority(field: FriendlyFieldAlias): number {
       'left_green_factors',
       'right_blue_factors',
       'right_pink_factors',
-      'right_green_factors',
+      'right_green_factors'
     ].includes(field.field)
   )
     return 24;
@@ -282,7 +269,7 @@ function getFriendlyFieldPriority(field: FriendlyFieldAlias): number {
       'follower_num',
       'parent_rank',
       'affinity',
-      'computed_race_affinity',
+      'computed_race_affinity'
     ].includes(field.field)
   )
     return 8;
@@ -320,9 +307,7 @@ function getFriendlyFieldSuggestionDetail(field: FriendlyFieldAlias): string {
   }
 }
 
-function getScopedSparkFieldSearchText(
-  field: FriendlyScopedSparkField,
-): string {
+function getScopedSparkFieldSearchText(field: FriendlyScopedSparkField): string {
   const colorLabel = getUqlFactorColorLabel(field.valueContext);
   const coloredLabel = field.label.replace(/^(\S+)/, `$1 ${colorLabel}`);
   return [
@@ -332,7 +317,7 @@ function getScopedSparkFieldSearchText(
     coloredLabel,
     `${coloredLabel} sparks`,
     `${coloredLabel} factors`,
-    ...field.aliases,
+    ...field.aliases
   ].join(' ');
 }
 
@@ -347,14 +332,12 @@ function getUqlFactorColorLabel(context: UqlFactorValueContext): string {
     case 'white-factor':
       return 'white';
   }
+
   return 'spark';
 }
 
 function getScopedSparkFieldPriority(field: FriendlyScopedSparkField): number {
-  return field.valueContext === 'blue-factor' ||
-    field.valueContext === 'pink-factor'
-    ? 7
-    : 28;
+  return field.valueContext === 'blue-factor' || field.valueContext === 'pink-factor' ? 7 : 28;
 }
 
 function getScopedSparkCategorySuggestions(): UqlSuggestion[] {
@@ -371,9 +354,9 @@ function getScopedSparkCategorySuggestions(): UqlSuggestion[] {
         'gp blue sparks',
         'gp blue factors',
         'any gp blue sparks',
-        'any gp blue factors',
+        'any gp blue factors'
       ],
-      valueContext: 'blue-factor' as const,
+      valueContext: 'blue-factor' as const
     },
     {
       label: 'Great parent pink sparks',
@@ -387,9 +370,9 @@ function getScopedSparkCategorySuggestions(): UqlSuggestion[] {
         'gp pink sparks',
         'gp pink factors',
         'any gp pink sparks',
-        'any gp pink factors',
+        'any gp pink factors'
       ],
-      valueContext: 'pink-factor' as const,
+      valueContext: 'pink-factor' as const
     },
     {
       label: 'Great parent green sparks',
@@ -407,10 +390,10 @@ function getScopedSparkCategorySuggestions(): UqlSuggestion[] {
         'gp unique skills',
         'any gp green sparks',
         'any gp green factors',
-        'any gp unique skills',
+        'any gp unique skills'
       ],
-      valueContext: 'green-factor' as const,
-    },
+      valueContext: 'green-factor' as const
+    }
   ].map((field) => ({
     label: field.label,
     insertText: field.insertText,
@@ -421,7 +404,7 @@ function getScopedSparkCategorySuggestions(): UqlSuggestion[] {
     priority: 11,
     scopeContext: 'any-gp' as const,
     valueContext: field.valueContext,
-    fieldType: 'number' as UqlFieldType,
+    fieldType: 'number' as UqlFieldType
   }));
 }
 
@@ -432,27 +415,15 @@ function getSyntaxSuggestionPriority(suggestion: UqlSuggestion): number {
 }
 
 function getScopeContextForLabel(label: string): UqlSuggestion['scopeContext'] {
-  const normalized = label
-    .toLowerCase()
-    .replace(/[_-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const normalized = label.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
   if (/^(?:main|parent|main parent)\b/.test(normalized)) return 'main';
-  if (
-    /^(?:gp1|left|left parent|grandparent 1|grand parent 1|great parent 1)\b/.test(
-      normalized,
-    )
-  )
+  if (/^(?:gp1|left|left parent|grandparent 1|grand parent 1|great parent 1)\b/.test(normalized))
     return 'gp1';
-  if (
-    /^(?:gp2|right|right parent|grandparent 2|grand parent 2|great parent 2)\b/.test(
-      normalized,
-    )
-  )
+  if (/^(?:gp2|right|right parent|grandparent 2|grand parent 2|great parent 2)\b/.test(normalized))
     return 'gp2';
   if (
     /^(?:gp|any gp|grandparent|grand parent|great parent|any grandparent|any grand parent|any great parent)\b/.test(
-      normalized,
+      normalized
     )
   )
     return 'any-gp';
@@ -471,245 +442,246 @@ const factorContext = (type: number): UqlFactorValueContext =>
       : type === 5
         ? 'green-factor'
         : 'white-factor';
-const factorSuggestions = (): UqlSuggestion[] => factorOptions().filter(factor => factor.type >= 0 && factor.type <= 5).map((factor) => ({
-  label: factor.text,
-  insertText: factor.text,
-  kind: 'value',
-  detail: 'Factor id ' + factor.id,
-  searchText: [
-    factor.text,
-    factor.id,
-    ...Array.from({ length: 9 }, (_, i) => Number(factor.id) * 10 + i + 1),
-  ].join(' '),
-  valueContext: factorContext(factor.type),
-  priority: factorContext(factor.type) === 'white-factor' ? 12 : 18,
-  backendValue: String(Number(factor.id) * 10 + 1),
-}));
+
+const factorSuggestions = (): UqlSuggestion[] =>
+  factorOptions()
+    .filter((factor) => factor.type >= 0 && factor.type <= 5)
+    .map((factor) => ({
+      label: factor.text,
+      insertText: factor.text,
+      kind: 'value',
+      detail: 'Factor id ' + factor.id,
+      searchText: [
+        factor.text,
+        factor.id,
+        ...Array.from({ length: 9 }, (_, i) => Number(factor.id) * 10 + i + 1)
+      ].join(' '),
+      valueContext: factorContext(factor.type),
+      priority: factorContext(factor.type) === 'white-factor' ? 12 : 18,
+      backendValue: String(Number(factor.id) * 10 + 1)
+    }));
 
 const scopedSuggestions = new WeakMap<FriendlyScopedSparkField, UqlSuggestion>();
 export function createDatabaseUqlLanguage(
-  characters: CatalogEntry[],
-  supports: CatalogEntry[],
+  characters: GameDataEntry[],
+  supports: GameDataEntry[],
   races: readonly RaceQueryValue[],
   queryCharacters: readonly UqlCharacter[] = [],
-  legacyParents: readonly SelectableParent[] = [],
+  legacyParents: readonly SelectableParent[] = []
 ): UqlEditorLanguage {
   const syntaxSuggestions: UqlSuggestion[] = [
     {
       label: 'where',
       insertText: 'where ',
       kind: 'keyword',
-      detail: 'Start a filter expression',
+      detail: 'Start a filter expression'
     },
     {
       label: 'Scenario',
       insertText: 'Scenario = Aoharu',
       kind: 'snippet',
-      detail: 'Filter by the training scenario ID using its readable name',
+      detail: 'Filter by the training scenario ID using its readable name'
     },
     {
       label: 'Sort by total blue stars',
       insertText: 'sort by = Total Blue stars',
       kind: 'snippet',
-      detail: 'Order by total blue spark stars, highest first',
+      detail: 'Order by total blue spark stars, highest first'
     },
     {
       label: 'Sort by total red stars',
       insertText: 'sort by = Total Red stars',
       kind: 'snippet',
-      detail: 'Order by total red/pink spark stars, highest first',
+      detail: 'Order by total red/pink spark stars, highest first'
     },
     {
       label: 'Sort by total green stars',
       insertText: 'sort by = Total Green stars',
       kind: 'snippet',
-      detail: 'Order by total green spark stars, highest first',
+      detail: 'Order by total green spark stars, highest first'
     },
     {
       label: 'Sort by total white stars',
       insertText: 'sort by = Total White stars',
       kind: 'snippet',
-      detail: 'Order by total white spark stars, highest first',
+      detail: 'Order by total white spark stars, highest first'
     },
     {
       label: 'Sort by white skills amount',
       insertText: 'sort by = White skills amount',
       kind: 'snippet',
-      detail: 'Order by raw white skill count, then affinity',
+      detail: 'Order by raw white skill count, then affinity'
     },
     {
       label: 'and',
       insertText: ' and ',
       kind: 'keyword',
-      detail: 'Require both sides',
+      detail: 'Require both sides'
     },
     {
       label: 'or',
       insertText: ' or ',
       kind: 'keyword',
-      detail: 'Match either side',
+      detail: 'Match either side'
     },
     {
       label: 'not',
       insertText: 'not ',
       kind: 'keyword',
-      detail: 'Negate a predicate',
+      detail: 'Negate a predicate'
     },
     {
       label: 'greater than or equal',
       insertText: '>= ',
       kind: 'operator',
-      detail: 'At least',
+      detail: 'At least'
     },
     {
       label: 'less than or equal',
       insertText: '<= ',
       kind: 'operator',
-      detail: 'At most',
+      detail: 'At most'
     },
     {
       label: 'equals',
       insertText: '= ',
       kind: 'operator',
-      detail: 'Exact match',
+      detail: 'Exact match'
     },
     {
       label: 'match list',
       insertText: 'in ()',
       kind: 'operator',
-      detail: 'Match any listed value',
+      detail: 'Match any listed value'
     },
     {
       label: 'omit list',
       insertText: 'not in ()',
       kind: 'operator',
-      detail: 'Reject listed values',
+      detail: 'Reject listed values'
     },
     {
       label: 'Parentheses',
       insertText: '(Speed >= 3 or Stamina >= 3)',
       kind: 'snippet',
-      detail: 'Group OR logic',
+      detail: 'Group OR logic'
     },
     {
       label: 'Modulo search',
       insertText: 'Wins % 2 = 0',
       kind: 'snippet',
-      detail: 'Use arithmetic operators in numeric comparisons',
+      detail: 'Use arithmetic operators in numeric comparisons'
     },
     {
       label: 'Match list',
       insertText: 'Main character in (Special Week, Silence Suzuka)',
       kind: 'snippet',
-      detail: 'Use in (...) for listed values',
+      detail: 'Use in (...) for listed values'
     },
     {
       label: 'Omit list',
       insertText: 'Main character not in (Special Week, Silence Suzuka)',
       kind: 'snippet',
-      detail: 'Use not in (...) for omitted values',
+      detail: 'Use not in (...) for omitted values'
     },
     {
       label: 'has skill',
       insertText: 'has Right-Handed ○',
       kind: 'snippet',
-      detail: 'Skill present on any parent',
+      detail: 'Skill present on any parent'
     },
     {
       label: 'has any skills',
       insertText: 'has any (Right-Handed ○, Left-Handed ○)',
       kind: 'snippet',
-      detail: 'At least one skill present on any parent',
+      detail: 'At least one skill present on any parent'
     },
     {
       label: 'has all skills',
       insertText: 'has all (Right-Handed ○, Left-Handed ○)',
       kind: 'snippet',
-      detail: 'Every listed skill present across all parents',
+      detail: 'Every listed skill present across all parents'
     },
     {
       label: 'optional white skills',
       insertText: 'optional white in (Right-Handed ○, Left-Handed ○)',
       kind: 'snippet',
-      detail: 'Require and rank global white skill matches',
+      detail: 'Require and rank global white skill matches'
     },
     {
       label: 'optional white priority group',
-      insertText:
-        'optional white in (Right-Handed ○, Left-Handed ○, priority = 0)',
+      insertText: 'optional white in (Right-Handed ○, Left-Handed ○, priority = 0)',
       kind: 'snippet',
-      detail: 'Require and rank global white skill matches in priority group 0',
+      detail: 'Require and rank global white skill matches in priority group 0'
     },
     {
       label: 'optional white prio group',
-      insertText:
-        'optional white in (Right-Handed ○, Left-Handed ○, prio group = 0)',
+      insertText: 'optional white in (Right-Handed ○, Left-Handed ○, prio group = 0)',
       kind: 'snippet',
-      detail: 'Require and rank global white skill matches in prio group 0',
+      detail: 'Require and rank global white skill matches in prio group 0'
     },
     {
       label: 'optional main white skills',
       insertText: 'optional main white in (Right-Handed ○, Left-Handed ○)',
       kind: 'snippet',
-      detail: 'Require and rank main-parent white skill matches',
+      detail: 'Require and rank main-parent white skill matches'
     },
     {
       label: 'optional main white priority group',
-      insertText:
-        'optional main white in (Right-Handed ○, Left-Handed ○, priority group = 1)',
+      insertText: 'optional main white in (Right-Handed ○, Left-Handed ○, priority group = 1)',
       kind: 'snippet',
-      detail:
-        'Require and rank main-parent white skill matches in priority group 1',
+      detail: 'Require and rank main-parent white skill matches in priority group 1'
     },
     {
       label: 'lineage white skills',
       insertText: 'lineage white in (Right-Handed ○, Left-Handed ○)',
       kind: 'snippet',
-      detail: 'Sort by lineage-style white skill stacking',
+      detail: 'Sort by lineage-style white skill stacking'
     },
     {
       label: 'lineage white priority group',
       insertText: 'lineage white in (Right-Handed ○, Left-Handed ○, group = 2)',
       kind: 'snippet',
-      detail: 'Sort by lineage-style white skill stacking in priority group 2',
+      detail: 'Sort by lineage-style white skill stacking in priority group 2'
     },
     {
       label: 'Main speed stars',
       insertText: 'Main Speed >= 3',
       kind: 'snippet',
-      detail: 'Main slot Speed stars, max 3',
+      detail: 'Main slot Speed stars, max 3'
     },
     {
       label: 'GP1 speed stars',
       insertText: 'GP1 Speed >= 3',
       kind: 'snippet',
-      detail: 'Great parent 1 Speed stars, max 3',
+      detail: 'Great parent 1 Speed stars, max 3'
     },
     {
       label: 'GP2 speed stars',
       insertText: 'GP2 Speed >= 3',
       kind: 'snippet',
-      detail: 'Great parent 2 Speed stars, max 3',
+      detail: 'Great parent 2 Speed stars, max 3'
     },
     {
       label: 'Great parent speed stars',
       insertText: 'Great parent Speed >= 3',
       kind: 'snippet',
-      detail: 'Either great parent has Speed stars, max 3',
+      detail: 'Either great parent has Speed stars, max 3'
     },
     {
       label: 'Main has skill',
       insertText: 'Main has Right-Handed ○',
       kind: 'snippet',
-      detail: 'Specific white factor on the main slot',
+      detail: 'Specific white factor on the main slot'
     },
     {
       label: 'Great parent has skill',
       insertText: 'Great parent has Right-Handed ○',
       kind: 'snippet',
-      detail: 'Either great parent has this white factor',
-    },
+      detail: 'Either great parent has this white factor'
+    }
   ];
+
   const friendlyFieldSuggestions: UqlSuggestion[] = [
     ...[
       {
@@ -717,7 +689,7 @@ export function createDatabaseUqlLanguage(
         insertText: 'target',
         detail: 'Editor context target character',
         matchPhrases: ['target', 'target ace', 'affinity target'],
-        valueContext: 'character' as const,
+        valueContext: 'character' as const
       },
       {
         label: 'Owned legacy',
@@ -725,8 +697,8 @@ export function createDatabaseUqlLanguage(
         cursorOffset: -1,
         detail: 'Pick a legacy from your account',
         matchPhrases: ['owned legacy', 'legacy', 'your legacy', 'my legacy'],
-        valueContext: 'legacy' as const,
-      },
+        valueContext: 'legacy' as const
+      }
     ].map((field) => ({
       label: field.label,
       insertText: field.insertText || field.label,
@@ -737,7 +709,7 @@ export function createDatabaseUqlLanguage(
       priority: 0,
       valueContext: field.valueContext,
       fieldType: 'directive' as UqlFieldType,
-      cursorOffset: field.cursorOffset,
+      cursorOffset: field.cursorOffset
     })),
     ...friendlySparkFields.map((field) => ({
       label: field.label,
@@ -747,7 +719,7 @@ export function createDatabaseUqlLanguage(
       searchText: field.aliases.join(' '),
       matchPhrases: [field.label, ...field.aliases],
       priority: 22,
-      fieldType: 'number' as UqlFieldType,
+      fieldType: 'number' as UqlFieldType
     })),
     ...friendlyFieldAliases.map((alias) => ({
       label: alias.label,
@@ -758,37 +730,25 @@ export function createDatabaseUqlLanguage(
       matchPhrases: [alias.label, ...alias.aliases],
       priority: getFriendlyFieldPriority(alias),
       fieldType: alias.type,
-      valueContext: getUqlValueContextForField(alias.field) || undefined,
+      valueContext: getUqlValueContextForField(alias.field) || undefined
     })),
     ...getScopedSparkCategorySuggestions(),
     ...[
       {
         label: 'Optional white',
         detail: 'Ranks rows with these global white skill matches',
-        matchPhrases: [
-          'optional white',
-          'optional skills',
-          'optional white skills',
-        ],
+        matchPhrases: ['optional white', 'optional skills', 'optional white skills']
       },
       {
         label: 'Optional main white',
         detail: 'Ranks rows with these main-parent white skill matches',
-        matchPhrases: [
-          'optional main white',
-          'optional parent white',
-          'optional main skills',
-        ],
+        matchPhrases: ['optional main white', 'optional parent white', 'optional main skills']
       },
       {
         label: 'Lineage white',
         detail: 'Ranks rows by lineage-style white skill stacking',
-        matchPhrases: [
-          'lineage white',
-          'lineage skills',
-          'lineage white skills',
-        ],
-      },
+        matchPhrases: ['lineage white', 'lineage skills', 'lineage white skills']
+      }
     ].map((field) => ({
       label: field.label,
       insertText: field.label,
@@ -798,7 +758,7 @@ export function createDatabaseUqlLanguage(
       matchPhrases: field.matchPhrases,
       priority: 13,
       valueContext: 'white-factor' as const,
-      fieldType: 'array' as UqlFieldType,
+      fieldType: 'array' as UqlFieldType
     })),
     ...[
       {
@@ -806,37 +766,35 @@ export function createDatabaseUqlLanguage(
         detail: 'White factors on the main-parent slot',
         searchText: 'main parent main has parent has',
         matchPhrases: ['main', 'parent', 'main parent'],
-        scopeContext: 'main' as const,
+        scopeContext: 'main' as const
       },
       {
         label: 'GP1',
         detail: 'White factors on great parent 1',
-        searchText:
-          'gp1 left grandparent 1 grand parent 1 great parent 1 left has',
+        searchText: 'gp1 left grandparent 1 grand parent 1 great parent 1 left has',
         matchPhrases: [
           'gp1',
           'left',
           'left parent',
           'grandparent 1',
           'grand parent 1',
-          'great parent 1',
+          'great parent 1'
         ],
-        scopeContext: 'gp1' as const,
+        scopeContext: 'gp1' as const
       },
       {
         label: 'GP2',
         detail: 'White factors on great parent 2',
-        searchText:
-          'gp2 right grandparent 2 grand parent 2 great parent 2 right has',
+        searchText: 'gp2 right grandparent 2 grand parent 2 great parent 2 right has',
         matchPhrases: [
           'gp2',
           'right',
           'right parent',
           'grandparent 2',
           'grand parent 2',
-          'great parent 2',
+          'great parent 2'
         ],
-        scopeContext: 'gp2' as const,
+        scopeContext: 'gp2' as const
       },
       {
         label: 'Any GP',
@@ -851,9 +809,9 @@ export function createDatabaseUqlLanguage(
           'great parent',
           'any grandparent',
           'any grand parent',
-          'any great parent',
+          'any great parent'
         ],
-        scopeContext: 'any-gp' as const,
+        scopeContext: 'any-gp' as const
       },
       {
         label: 'Great parent',
@@ -868,10 +826,10 @@ export function createDatabaseUqlLanguage(
           'great parent',
           'any grandparent',
           'any grand parent',
-          'any great parent',
+          'any great parent'
         ],
-        scopeContext: 'any-gp' as const,
-      },
+        scopeContext: 'any-gp' as const
+      }
     ].map((field) => ({
       label: field.label,
       insertText: field.label,
@@ -882,7 +840,7 @@ export function createDatabaseUqlLanguage(
       priority: 14,
       scopeContext: field.scopeContext,
       valueContext: 'white-factor' as const,
-      fieldType: 'array' as UqlFieldType,
+      fieldType: 'array' as UqlFieldType
     })),
     ...buildScopedSparkFields(scopedUqlFactors()).map((field) => {
       const cached = scopedSuggestions.get(field);
@@ -891,34 +849,34 @@ export function createDatabaseUqlLanguage(
         label: field.label,
         insertText: field.label,
         kind: 'field',
-        detail: 'Up to 3 stars on a specific slot; compare a named factor like Main End Closer >= 1',
+        detail:
+          'Up to 3 stars on a specific slot; compare a named factor like Main End Closer >= 1',
         searchText: getScopedSparkFieldSearchText(field),
         matchPhrases: [field.label, ...field.aliases],
         priority: getScopedSparkFieldPriority(field),
         scopeContext: getScopeContextForLabel(field.label),
         valueContext: field.valueContext,
-        fieldType: 'number',
+        fieldType: 'number'
       };
+
       scopedSuggestions.set(field, suggestion);
       return suggestion;
-    }),
+    })
   ];
 
-  const characterNames = new Map(
-    queryCharacters.map((character) => [character.id, character]),
-  );
+  const characterNames = new Map(queryCharacters.map((character) => [character.id, character]));
   const characterSuggestions: UqlSuggestion[] = characters.map((character) => ({
     label: characterNames.get(character.id)?.displayName ?? character.title,
-    insertText:
-      characterNames.get(character.id)?.displayName ?? character.title,
+    insertText: characterNames.get(character.id)?.displayName ?? character.title,
     kind: 'value',
     detail: `${characterNames.get(character.id)?.skin || 'Original'} · Character id ${character.id}`,
     searchText: `${character.searchText} ${characterNames.get(character.id)?.displayName ?? ''}`,
     valueContext: 'character',
     priority: 0,
     backendValue: character.id,
-    imageUrl: character.image,
+    imageUrl: character.image
   }));
+
   const supportSuggestions: UqlSuggestion[] = supports.map((card) => {
     const label =
       card.title +
@@ -927,6 +885,7 @@ export function createDatabaseUqlLanguage(
       '] (' +
       (card.tags[0] === 'Wit' ? 'Wisdom' : card.tags[0]) +
       ')';
+
     return {
       label,
       insertText: label,
@@ -938,58 +897,62 @@ export function createDatabaseUqlLanguage(
       priority: 2,
       backendValue: card.id,
       imageUrl: card.image,
-      rarityClass: card.tags[1]?.toLowerCase(),
+      rarityClass: card.tags[1]?.toLowerCase()
     };
   });
+
   const raceSuggestions: UqlSuggestion[] = races.map((race) => ({
     label: race.name,
     insertText: race.name,
     kind: 'value',
     detail: 'Win saddle ids ' + race.saddleIds.join(', '),
     searchText:
-      race.searchText ??
-      [race.name, race.shortName, race.id, ...race.saddleIds].join(' '),
+      race.searchText ?? [race.name, race.shortName, race.id, ...race.saddleIds].join(' '),
     matchPhrases: race.aliases ?? [race.shortName, String(race.id)],
     valueContext: 'race-saddle',
     priority: 8,
     backendValue: race.saddleIds.join(', '),
     badgeText: race.grade,
-    badgeClass: race.grade ? 'grade-' + race.grade.toLowerCase() : undefined,
+    badgeClass: race.grade ? 'grade-' + race.grade.toLowerCase() : undefined
   }));
-  const rankSuggestions: UqlSuggestion[] = Array.from(
-    { length: 20 },
-    (_, i) => ({
-      label: 'Rank ' + (i + 1),
-      insertText: String(i + 1),
-      kind: 'value',
-      valueContext: 'rank',
-      priority: 4,
-      backendValue: String(i + 1),
-      imageUrl:
-        '/assets/images/icon/ranks/utx_txt_rank_' +
-        String(i + 1).padStart(2, '0') +
-        '.webp',
-    }),
-  );
+
+  const rankSuggestions: UqlSuggestion[] = Array.from({ length: 20 }, (_, i) => ({
+    label: 'Rank ' + (i + 1),
+    insertText: String(i + 1),
+    kind: 'value',
+    valueContext: 'rank',
+    priority: 4,
+    backendValue: String(i + 1),
+    imageUrl: '/assets/images/icon/ranks/utx_txt_rank_' + String(i + 1).padStart(2, '0') + '.webp'
+  }));
+
   return new UqlEditorLanguage([
     ...legacyParents.map((parent): UqlSuggestion => ({
       label: uqlLegacyDisplay(parent, queryCharacters),
       insertText: `[${uqlLegacyDisplay(parent, queryCharacters)}]`,
-      kind: 'value', valueContext: 'legacy', priority: 0,
+      kind: 'value',
+      valueContext: 'legacy',
+      priority: 0,
       detail: `Owned legacy · ${parent.trainer_id || parent.share_source}`,
-      matchPhrases: [uqlLegacyName(parent, queryCharacters), `${parent.trainer_id}:${parent.member_id}`],
+      matchPhrases: [
+        uqlLegacyName(parent, queryCharacters),
+        `${parent.trainer_id}:${parent.member_id}`
+      ],
       backendValue: String(parent.id),
-      imageUrl: parent.card_id ? characterImagePath(parent.card_id) : undefined,
+      imageUrl: parent.card_id ? characterImagePath(parent.card_id) : undefined
     })),
     ...friendlyFieldSuggestions,
     ...syntaxSuggestions.map((s) => ({
       ...s,
-      priority: getSyntaxSuggestionPriority(s),
+      priority: getSyntaxSuggestionPriority(s)
     })),
     ...characterSuggestions,
     ...supportSuggestions,
     ...raceSuggestions,
     ...rankSuggestions,
-    ...factorSuggestions().map((suggestion) => ({ ...suggestion, imageUrl: factorImage(Math.floor(Number(suggestion.backendValue) / 10)) })),
+    ...factorSuggestions().map((suggestion) => ({
+      ...suggestion,
+      imageUrl: factorImage(Math.floor(Number(suggestion.backendValue) / 10))
+    }))
   ]);
 }

@@ -11,7 +11,8 @@ const client = createHttpClient({
   getAuthToken,
   browserProof: browserProofPort,
   onUnauthorized: clearAuthToken,
-  onRateLimit: (notice) => window.dispatchEvent(new CustomEvent('uma:rate-limit', { detail: notice }))
+  onRateLimit: (notice) =>
+    window.dispatchEvent(new CustomEvent('uma:rate-limit', { detail: notice }))
 });
 
 export const appHttp = {

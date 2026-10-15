@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeSkill } from '@/lib/catalog/skill-catalog';
+import { normalizeSkill } from '@/lib/game-data/skills/skills';
 import { offerCost, offerPurchases, upgradedSkill } from './skill-offers';
 
 const catalog = new Map(
@@ -35,11 +35,13 @@ describe('skills on offer', () => {
     ]);
     expect(offerCost(170, 5, true)).toBe(85);
   });
+
   it('pairs a gold or ◎ skill with the skill it upgrades', () => {
     expect(upgradedSkill(catalog.get(200351)!, catalog)?.name).toBe('Corner Recovery ○');
     expect(upgradedSkill(catalog.get(200011)!, catalog)?.name).toBe('Right-Handed ○');
     expect(upgradedSkill(catalog.get(201601)!, catalog)).toBeUndefined();
   });
+
   it('pairs by rank in the skill group, whichever ID the upgrade has', () => {
     const lower = (id: number) => upgradedSkill(catalog.get(id)!, catalog)?.name;
     expect(lower(201662)).toBe("Playtime's Over!");
@@ -50,6 +52,7 @@ describe('skills on offer', () => {
     expect(lower(200281)).toBe('Competitive Spirit ○');
     for (const id of [200432, 200433, 200282, 200283]) expect(lower(id)).toBeUndefined();
   });
+
   it('buys a gold above a ◎ with every rank below it she lacks', () => {
     const alone = offerPurchases([{ skillId: 201173, hint: 0 }], [], catalog);
     expect(alone.purchases).toEqual([{ name: 'Blast Forward', cost: 360, skills: [201173] }]);
@@ -61,6 +64,7 @@ describe('skills on offer', () => {
     expect(offerPurchases([{ skillId: 201173, hint: 0 }], [201172], catalog).purchases).toEqual([
       { name: 'Blast Forward', cost: 260, skills: [201173], replaces: [201172] }
     ]);
+
     expect(
       offerPurchases(
         [
@@ -74,6 +78,7 @@ describe('skills on offer', () => {
       { name: 'Long Straightaways ○', cost: 100, skills: [201172] },
       { name: 'Blast Forward', cost: 260, skills: [201173], requires: [0], replaces: [201172] }
     ]);
+
     expect(
       offerPurchases(
         [
@@ -88,6 +93,24 @@ describe('skills on offer', () => {
       { name: 'See Ya Later!', cost: 128, skills: [201662], requires: [0], replaces: [201661] }
     ]);
   });
+
+  it('locks offers by their purchase index and prices them with what they need', () => {
+    const { locked, lockedCost } = offerPurchases(
+      [
+        { skillId: 200371, hint: 0, locked: true },
+        { skillId: 201172, hint: 0 },
+        { skillId: 201601, hint: 0 },
+        { skillId: 201173, hint: 0, locked: true }
+      ],
+      [],
+      catalog
+    );
+
+    // The offer without cost data is left out, so Blast Forward is purchase 2; it needs the ○ (purchase 0) first.
+    expect(locked).toEqual([2]);
+    expect(lockedCost).toBe(100 + 260);
+  });
+
   it('ties upgrades to what they upgrade: owned, on offer, or bought with them', () => {
     const { priced, missing, purchases } = offerPurchases(
       [
@@ -101,6 +124,7 @@ describe('skills on offer', () => {
       [],
       catalog
     );
+
     expect(missing).toEqual([{ skillId: 200371, hint: 0 }]);
     expect(purchases).toEqual([
       { name: 'Corner Recovery ○', cost: 102, skills: [200352] },
@@ -111,6 +135,7 @@ describe('skills on offer', () => {
       { name: 'Groundwork', cost: 112, skills: [201601] },
       { name: 'Inherited unique', cost: 160, skills: [900201] }
     ]);
+
     expect(priced.map((offer) => offer.needs)).toEqual([
       undefined,
       'offered',
@@ -123,6 +148,7 @@ describe('skills on offer', () => {
     expect(owned.purchases).toEqual([
       { name: 'Swinging Maestro', cost: 153, skills: [200351], replaces: [200352] }
     ]);
+
     expect(owned.priced[0]!.needs).toBe('owned');
   });
 });

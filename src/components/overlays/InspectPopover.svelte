@@ -22,6 +22,7 @@
     openOnHover = false,
     onopenchange
   }: Props = $props();
+
   const id = $props.id();
 
   let control: HTMLButtonElement;
@@ -39,6 +40,12 @@
     if (!open) return;
     const anchor = control.getBoundingClientRect();
     const box = panel.getBoundingClientRect();
+    let desiredTop = anchor.top - 4;
+    if (placement !== 'over') {
+      const fitsBelow = anchor.bottom + box.height + 8 <= innerHeight;
+      desiredTop = fitsBelow ? anchor.bottom + 7 : anchor.top - box.height - 7;
+    }
+
     const position = popoverPosition(
       panel,
       Math.max(
@@ -48,30 +55,12 @@
           innerWidth - box.width - 8
         )
       ),
-      Math.max(
-        8,
-        Math.min(
-          placement === 'over'
-            ? anchor.top - 4
-            : anchor.bottom + box.height + 8 <= innerHeight
-              ? anchor.bottom + 7
-              : anchor.top - box.height - 7,
-          innerHeight - box.height - 8
-        )
-      )
+      Math.max(8, Math.min(desiredTop, innerHeight - box.height - 8))
     );
+
     left = position.left;
     top = position.top;
   }
-
-  $effect(positionPanel);
-
-  $effect(() => {
-    if (!open) return;
-    const observer = new ResizeObserver(positionPanel);
-    observer.observe(panel);
-    return () => observer.disconnect();
-  });
 
   function close() {
     if (panel.matches(':popover-open')) panel.hidePopover();
@@ -106,6 +95,15 @@
     event.preventDefault();
     close();
   }
+
+  $effect(positionPanel);
+
+  $effect(() => {
+    if (!open) return;
+    const observer = new ResizeObserver(positionPanel);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  });
 </script>
 
 <svelte:window

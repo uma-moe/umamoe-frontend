@@ -3,6 +3,7 @@ import type { StaminaDistribution, StaminaResult } from '../../../simulator-repo
 import { goldRecoveryNeeded, hpBill, hpRaces, hpSpread, hpVerdict, quantile } from './hp-needed';
 
 const runner = { stamina: 900, style: 'Nige', motivation: 3 };
+
 const single: StaminaResult = {
   model: 'fixture',
   course_id: 10506,
@@ -56,6 +57,7 @@ function sampled(): StaminaResult {
     hp_band: { distance_m: [0, 2500], p10: [2000, 0], p50: [2000, 100], p90: [2000, 190] },
     median: 5
   };
+
   expect(distribution.seeds).toHaveLength(n);
   return { ...single, check_hp: [850], remaining_hp: 110, distribution };
 }
@@ -72,6 +74,7 @@ describe('HP races', () => {
       exhaustedAt: 2460,
       rushed: false
     });
+
     expect(races[2]).toMatchObject({ finish: 20, rushed: true, rateBefore: 0.05, rate: 0.1 });
     expect(hpRaces(single)).toEqual([
       {
@@ -116,14 +119,17 @@ describe('HP spread and verdict', () => {
       detail:
         'Full speed in 8 of 10 races, slower or later in 1 of 10. Her HP runs out in 1 of 10 races.'
     });
+
     expect(hpVerdict({ ...spread, full: 10, reduced: 0, none: 0, out: 0 }, false)).toEqual({
       tone: 'good',
       title: 'Holds a full last spurt',
       detail: 'Full speed in all 10 races. Her HP lasts to the finish in all 10 races.'
     });
+
     expect(hpVerdict({ ...spread, full: 0, reduced: 3, none: 7 }, false).title).toBe(
       'No full last spurt'
     );
+
     expect(hpVerdict({ ...spread, full: 3 }, false).tone).toBe('bad');
   });
 
@@ -135,6 +141,7 @@ describe('HP spread and verdict', () => {
       title: 'Runs out of HP on a full spurt',
       detail: 'Her HP runs out in 1 of 10 races.'
     });
+
     expect(hpVerdict({ ...spread, out: 0 }, true).title).toBe('Holds a full spurt to the finish');
     // One race reads without counts.
     expect(hpVerdict(hpSpread(single, runner, false), false).detail).toBe(
@@ -158,12 +165,14 @@ describe('HP bill', () => {
       { label: 'HP debuffs', hp: -100 },
       { label: 'At the spurt decision', hp: 850, total: true }
     ]);
+
     expect(bill.after).toEqual([
       { label: 'At the spurt decision', hp: 850, start: true },
       { label: 'Running', hp: -840 },
       { label: 'Recovery skills', hp: 100 },
       { label: 'Left at the finish', hp: 110, total: true }
     ]);
+
     expect(bill.decision).toEqual({ at: 1668, need: 760 });
   });
 

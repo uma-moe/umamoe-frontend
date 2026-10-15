@@ -1,7 +1,10 @@
 <script lang="ts">
   import SparkItem from '@/components/sparks/SparkItem.svelte';
-  import type { ResolvedVeteranFactor, VeteranFactorFilter } from '@/lib/profile/profile-veterans';
-  import type { VeteranQueryMatch } from '@/lib/profile/profile-veteran-query';
+  import type {
+    ResolvedVeteranFactor,
+    VeteranFactorFilter
+  } from '@/lib/profile/veterans/profile-veterans';
+  import type { VeteranQueryMatch } from '@/lib/profile/veterans/profile-veteran-query';
 
   let {
     items,
@@ -26,6 +29,7 @@
   const sourceLabel = $derived(
     { family: 'family total', parent: 'Own', p1: 'P1', p2: 'P2' }[source]
   );
+
   const white = $derived(items.filter((factor) => factor.tone === 'white'));
 
   const matched = (id: number) =>

@@ -6,6 +6,7 @@ import type { DistributionItem, StatisticsCatalogEntry } from './statistics-repo
 export const scenarioNames = Object.fromEntries(
   [1, 2, 3, 4, 5, 6, 7].map((id) => [String(id), scenarioName(id)])
 );
+
 export const statNames: Record<string, string> = {
   speed: 'Speed',
   stamina: 'Stamina',
@@ -15,6 +16,7 @@ export const statNames: Record<string, string> = {
   wisdom: 'Wit',
   rank_score: 'Rank Score'
 };
+
 export const statColors: Record<string, string> = {
   speed: '#098cdb',
   stamina: '#da4b38',

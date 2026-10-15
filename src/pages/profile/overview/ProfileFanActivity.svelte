@@ -37,6 +37,7 @@
   $effect(() => {
     const chosenYear = year,
       trainer = accountId;
+
     retry;
     const periods = [
       ...new Map(
@@ -45,6 +46,7 @@
           .map((month) => [`${month.month}:${month.circle_id}`, month])
       ).values()
     ];
+
     let active = true;
     points = [];
     error = '';
@@ -66,12 +68,14 @@
               )
             : []
         );
+
         points = buildProfileDailyFans(members, chosenYear);
         if (results.some((result) => result.status === 'rejected'))
           error = 'Some daily history could not be loaded.';
         loading = false;
       });
     }
+
     return () => {
       active = false;
     };
@@ -81,6 +85,7 @@
     const item = (Array.isArray(params) ? params[0] : params) as { dataIndex?: number } | undefined;
     const point = points[item?.dataIndex ?? 0],
       body = document.createElement('div');
+
     if (!point) return body;
     const title = document.createElement('strong');
     title.textContent = point.label;
@@ -90,16 +95,19 @@
       row.textContent = 'No recorded snapshot';
       body.append(row);
     }
+
     const rows: Array<[string, number | null | undefined, boolean?]> = [
       ['Total fans', point.total],
       ['Change since prior snapshot', point.gain, true]
     ];
+
     for (const [label, value, signed] of rows) {
       if (value == null || !Number.isFinite(value)) continue;
       const row = document.createElement('div');
       row.textContent = `${label}: ${signed && value > 0 ? '+' : ''}${value.toLocaleString()}`;
       body.append(row);
     }
+
     return body;
   }
 
@@ -111,6 +119,7 @@
     const text = color('--text-secondary'),
       accent = color('--accent-primary'),
       border = color('--border-primary');
+
     return {
       animation: false,
       grid: { left: 8, right: 8, top: 24, bottom: 52, containLabel: true },

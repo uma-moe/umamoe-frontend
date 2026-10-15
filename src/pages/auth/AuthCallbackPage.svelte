@@ -16,6 +16,7 @@
       error = 'The provider did not return a session token.';
       return;
     }
+
     void completeLogin(token)
       .then(() => {
         let destination: '/' | '/veterans' = '/';
@@ -25,6 +26,7 @@
         } catch {
           /* Fall back to Home when session storage is unavailable. */
         }
+
         return router.navigate(destination, { replace: true });
       })
       .catch((reason) => {

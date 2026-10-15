@@ -39,7 +39,14 @@ export interface TrainerRanking {
   circleId?: number;
   circleName?: string;
   rank: number;
-  stats: Array<{ label: string; value: string; mobileValue?: string; mobileHidden?: boolean; emphasized?: boolean; positive?: boolean }>;
+  stats: Array<{
+    label: string;
+    value: string;
+    mobileValue?: string;
+    mobileHidden?: boolean;
+    emphasized?: boolean;
+    positive?: boolean;
+  }>;
 }
 
 export interface RankingQuery {

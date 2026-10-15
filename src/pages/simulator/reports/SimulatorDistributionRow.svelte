@@ -9,6 +9,7 @@
     tone?: 'ahead' | '';
     main?: boolean;
   };
+
   export type BinTone = 'runner' | 'strong' | 'muted';
 </script>
 
@@ -23,6 +24,7 @@
    * and the last one the axis.
    */
   type Runner = { name: string; cardId?: number; color: string };
+
   let {
     runner,
     heading,
@@ -62,9 +64,11 @@
   const peak = $derived(Math.max(1, ...counts));
   const x = (value: number) =>
     Math.max(0, Math.min(100, ((value - axis.min) / (axis.max - axis.min)) * 100));
+
   const summary = $derived(
     runner.name + ': ' + tiles.map((tile) => tile.label + ' ' + tile.value).join(', ')
   );
+
   // Labels keep at least ~52 px apart, so narrow phone columns show every second or third tick instead of overlapping.
   let axisWidth = $state(600);
   const labelled = $derived.by(() => {
@@ -74,6 +78,7 @@
           ? (axisWidth * (ticks[1]! - ticks[0]!)) / (axis.max - axis.min)
           : axisWidth,
       every = Math.max(1, Math.ceil(52 / Math.max(1, gap)));
+
     const anchor = ticks.findIndex((value) => Math.abs(value) < 1e-9);
     return ticks.filter((_, index) => (index - Math.max(0, anchor)) % every === 0);
   });

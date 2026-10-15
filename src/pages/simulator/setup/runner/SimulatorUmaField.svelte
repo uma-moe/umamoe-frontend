@@ -6,18 +6,15 @@
   import StatStrip from '@/components/game/StatStrip.svelte';
   import SkillChip from '@/components/game/SkillChip.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
+  import { loadCharacters, type CharacterData } from '@/lib/game-data/characters';
   import {
-    loadCharacterCatalog,
-    type CharacterCatalogEntry
-  } from '@/lib/catalog/character-catalog';
-  import {
-    loadSkillCatalog,
+    loadSkills,
     resolveEncodedSkill,
     skillPointTotal,
     skillImage,
     skillRarity,
-    type SkillCatalogEntry
-  } from '@/lib/catalog/skill-catalog';
+    type SkillData
+  } from '@/lib/game-data/skills/skills';
   import RunnerLineupRow from '@/pages/competitive/runners/RunnerLineupRow.svelte';
   import { styleColors, stats } from '@/pages/competitive/analysis-view';
   import SimulatorUmaEditor from './SimulatorUmaEditor.svelte';
@@ -49,8 +46,8 @@
 
   const course = $derived(selectedCourse());
 
-  let skills = $state.raw(new Map<number, SkillCatalogEntry>());
-  let characters = $state.raw(new Map<number, CharacterCatalogEntry>());
+  let skills = $state.raw(new Map<number, SkillData>());
+  let characters = $state.raw(new Map<number, CharacterData>());
   let visibleSkills = $state<Record<string, number>>({});
 
   function rankSkills(ids: number[]) {
@@ -79,17 +76,21 @@
       for (const child of node.children) {
         const box = child.getBoundingClientRect(),
           shown = box.bottom <= bounds.bottom + 0.5 && box.right <= bounds.right + 0.5;
+
         child.setAttribute('aria-hidden', String(!shown));
         if (shown && child.classList.contains('skill-item')) count++;
       }
+
       if (visibleSkills[id] !== count) visibleSkills[id] = count;
     };
+
     const observer = new ResizeObserver(measure);
     const observe = () => {
       observer.disconnect();
       observer.observe(node);
       for (const child of node.children) observer.observe(child);
     };
+
     observe();
     return {
       update(next: typeof params) {
@@ -104,30 +105,40 @@
 
   onMount(() => {
     let active = true;
-    void loadSkillCatalog()
+    void loadSkills()
       .then((value) => {
         if (active) skills = value;
       })
-      .catch(() => {});
-    void loadCharacterCatalog()
+      .catch((reason: unknown) => {
+        if (active)
+          error = reason instanceof Error ? reason.message : 'Skill data could not be loaded.';
+      });
+
+    void loadCharacters()
       .then((value) => {
         if (active) characters = value;
       })
-      .catch(() => {});
+      .catch((reason: unknown) => {
+        if (active)
+          error = reason instanceof Error ? reason.message : 'Character data could not be loaded.';
+      });
+
     return () => {
       active = false;
     };
   });
 
-  async function edit(uma: SimulatorUma) {
-    await ensureSimulatorRoster().catch(() => {});
-    editing = uma;
-    editorOpen = true;
-  }
+  async function edit(uma?: SimulatorUma) {
+    try {
+      await ensureSimulatorRoster();
+    } catch (reason) {
+      error =
+        reason instanceof Error
+          ? reason.message
+          : 'Character data could not be loaded. You can still edit this runner manually.';
+    }
 
-  async function add() {
-    await ensureSimulatorRoster().catch(() => {});
-    editing = createRosterUma('Uma ' + (simulatorRoster.umas.length + 1));
+    editing = uma ?? createRosterUma('Uma ' + (simulatorRoster.umas.length + 1));
     editorOpen = true;
   }
 
@@ -152,7 +163,7 @@
       importSimulatorUmas(umas);
       error = '';
     } catch (reason) {
-      error = (reason as Error).message;
+      error = reason instanceof Error ? reason.message : 'Could not add these runners.';
     }
   }
 </script>
@@ -169,7 +180,7 @@
       icon="add"
       ariaLabel="Add Uma"
       disabled={simulatorRoster.umas.length >= 18}
-      onclick={add}
+      onclick={() => edit()}
     >
       Add Uma
     </Button><Button

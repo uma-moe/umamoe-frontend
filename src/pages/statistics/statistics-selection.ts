@@ -50,6 +50,7 @@ export function classDistribution(data: GlobalStatistics, state: StatisticsFilte
       const key = Object.keys(data.by_distance ?? {}).find(
         (id) => statisticsDistanceId(id) === statisticsDistanceId(distanceId)
       );
+
       const entry = key ? data.by_distance?.[key]?.by_team_class?.[classId] : undefined;
       if (!entry) continue;
       const overall = entry.overall ?? (!entry.by_scenario ? entry : undefined);
@@ -62,6 +63,7 @@ export function classDistribution(data: GlobalStatistics, state: StatisticsFilte
             entry.by_scenario?.[scenarioId]?.total_trained_umas ??
             0;
     }
+
     if (!state.distanceIds.length) {
       const entry = data.team_class_distribution?.[classId];
       value =
@@ -69,8 +71,10 @@ export function classDistribution(data: GlobalStatistics, state: StatisticsFilte
           ? entry
           : Number((entry as DistributionItem | undefined)?.count ?? 0);
     }
+
     return { id: classId, name: `Class ${classId}`, value };
   });
+
   const total = values.reduce((sum, item) => sum + item.value, 0);
   return values
     .map((item) => ({ ...item, percentage: total ? (item.value / total) * 100 : 0 }))
@@ -96,6 +100,7 @@ export function statAveragesByClass(
   const categories = state.classIds.map((id) => `Class ${id}`);
   const maps = state.classIds.map((id) => classStatMap(data, id, state));
   if (!maps.some((map) => Object.keys(map).length)) return { categories: [], series: [] };
+
   return {
     categories,
     series: ['speed', 'stamina', 'power', 'guts', 'wiz'].map((stat) => ({
@@ -115,6 +120,7 @@ export function distanceBreakdown(
 ): DistanceBreakdownItem[] {
   return filters.distanceIds.map((id) => {
     const scope = { ...filters, distanceIds: [id] };
+
     const value = classDistribution(stats, scope).reduce((sum, item) => sum + item.value, 0);
     const leader = aggregateMetric(metricMaps(stats, 'uma_distribution', scope), characterName)[0];
     return {

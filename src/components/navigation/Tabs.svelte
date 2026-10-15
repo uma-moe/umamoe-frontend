@@ -39,6 +39,45 @@
   let root = $state<HTMLElement>();
   let rootWidth = $state(0);
 
+  const navigation = $derived(items.some((item) => item.href));
+
+  function select(id: string) {
+    value = id;
+    onchange?.(id);
+  }
+
+  function navigate(event: KeyboardEvent, index: number) {
+    if (!items.length) return;
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight':
+        next = (index + 1) % items.length;
+        break;
+      case 'ArrowLeft':
+        next = (index - 1 + items.length) % items.length;
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = items.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    const item = items[next];
+    if (!item) return;
+    event.preventDefault();
+    select(item.id);
+    const button = (
+      event.currentTarget as HTMLElement
+    ).parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next];
+
+    button?.focus({ preventScroll: true });
+    button?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
   $effect(() => {
     value;
     items;
@@ -48,38 +87,11 @@
     if (!active) return;
     const left =
       active.getBoundingClientRect().left - root.getBoundingClientRect().left + root.scrollLeft;
+
     const right = left + active.offsetWidth;
     if (left < root.scrollLeft) root.scrollLeft = left;
     else if (right > root.scrollLeft + root.clientWidth) root.scrollLeft = right - root.clientWidth;
   });
-
-  const navigation = $derived(items.some((item) => item.href));
-
-  function select(id: string) {
-    value = id;
-    onchange?.(id);
-  }
-
-  function navigate(event: KeyboardEvent, index: number) {
-    const next =
-      event.key === 'ArrowRight'
-        ? (index + 1) % items.length
-        : event.key === 'ArrowLeft'
-          ? (index - 1 + items.length) % items.length
-          : event.key === 'Home'
-            ? 0
-            : event.key === 'End'
-              ? items.length - 1
-              : -1;
-    if (next < 0) return;
-    event.preventDefault();
-    select(items[next]!.id);
-    const button = (
-      event.currentTarget as HTMLElement
-    ).parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next];
-    button?.focus({ preventScroll: true });
-    button?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }
 </script>
 
 {#snippet content(item: TabItem)}

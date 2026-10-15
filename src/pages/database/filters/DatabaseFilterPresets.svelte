@@ -7,7 +7,7 @@
   import type {
     InheritanceFilterMode,
     InheritanceSearchFilters
-  } from '@/lib/inheritance/inheritance-search';
+  } from '@/lib/inheritance/search/inheritance-search';
   import {
     compactStateFromFilters,
     databasePresetFilterCount,
@@ -48,6 +48,7 @@
     const existing = presets.find(
       (entry) => entry.name.toLocaleLowerCase() === name.toLocaleLowerCase()
     );
+
     const preset: SavedDatabaseFilterPreset = {
       version: 1,
       id: existing?.id ?? crypto.randomUUID(),
@@ -57,6 +58,7 @@
       createdAt: existing?.createdAt ?? now,
       updatedAt: now
     };
+
     presets = [preset, ...presets.filter((entry) => entry.id !== preset.id)].sort(
       (left, right) => right.updatedAt - left.updatedAt
     );
@@ -86,6 +88,7 @@
       message = 'No presets to export.';
       return;
     }
+
     const transfer = exportDatabasePresets(presets);
     if (await copyText(transfer)) message = 'Export copied.';
     else {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { MultiRaceAnalysis } from '@/lib/race/multi-race-analysis';
-  import { hpRemainingColor } from '@/lib/race/race-display';
+  import { hpRemainingColor } from '@/lib/race/replay/race-display';
   import DataTable from '@/components/data/DataTable.svelte';
   import RunnerReference from '../../runners/RunnerReference.svelte';
   import { percent } from '../../analysis-view';

@@ -1,9 +1,9 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { characterImagePath, type CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
-  import { decodeFactor, factorOptions, factorCatalogState } from '@/lib/catalog/factor-catalog';
-  import { manualBestFits, type ManualParent } from '@/lib/veterans/parent-picker';
-  import type { VeteranAffinityEngine } from '@/lib/veterans/affinity-engine';
+  import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
+  import { decodeFactor, factorOptions, factorLoadingState } from '@/lib/game-data/factors/factors';
+  import { manualBestFits, type ManualParent } from '@/lib/veterans/parents/parent-picker';
+  import type { VeteranAffinityEngine } from '@/lib/veterans/affinity/affinity-engine';
   import Artwork from '@/components/game/Artwork.svelte';
   import Button from '@/components/controls/Button.svelte';
   import CharacterSelectDialog from '@/components/pickers/CharacterSelectDialog.svelte';
@@ -17,8 +17,8 @@
 
   interface Props {
     entry?: ManualParent;
-    characters: Map<number, CharacterCatalogEntry>;
-    selectableCharacters: CharacterCatalogEntry[];
+    characters: Map<number, CharacterData>;
+    selectableCharacters: CharacterData[];
     targetId?: number;
     engine?: VeteranAffinityEngine;
     onsave: (entry: ManualParent) => void;
@@ -27,6 +27,7 @@
 
   let { entry, characters, selectableCharacters, targetId, engine, onsave, oncancel }: Props =
     $props();
+
   const id = $props.id();
 
   let label = $state('');
@@ -47,27 +48,6 @@
   const factors = $derived(
     factorOptions().map((factor) => ({ value: factor.id, label: factor.text, type: factor.type }))
   );
-
-  $effect(() => {
-    label = entry?.label ?? '';
-    nodes = [
-      {
-        cardId: entry?.mainCardId ?? null,
-        factors: [...(entry?.ownSparkIds ?? [])],
-        wins: [...(entry?.mainWinSaddleIds ?? [])]
-      },
-      {
-        cardId: entry?.p1CardId ?? null,
-        factors: [...(entry?.p1SparkIds ?? [])],
-        wins: [...(entry?.p1WinSaddleIds ?? [])]
-      },
-      {
-        cardId: entry?.p2CardId ?? null,
-        factors: [...(entry?.p2SparkIds ?? [])],
-        wins: [...(entry?.p2WinSaddleIds ?? [])]
-      }
-    ];
-  });
 
   function payload(): ManualParent {
     return {
@@ -93,9 +73,11 @@
       image: characterImagePath(Number(character.id))
     }))
   );
+
   const pickerCharacters = $derived(
     new Map(selectableCharacters.map((character) => [Number(character.id), character]))
   );
+
   const affinityTargets = $derived([
     ...new Set(
       [targetId, characterSlot ? nodes[0]?.cardId : undefined]
@@ -103,6 +85,7 @@
         .map((value) => (value >= 100000 ? Math.floor(value / 100) : value))
     )
   ]);
+
   const characterChoices = $derived(
     choices.map((choice) => ({
       ...choice,
@@ -115,6 +98,7 @@
           : undefined
     }))
   );
+
   const bestChoices = $derived(
     bestSlot === null
       ? []
@@ -126,19 +110,18 @@
           pickerCharacters
         )
   );
+
   const affinities = $derived.by(() => {
     if (!engine?.ready || !nodes[0]?.cardId) return [0, 0, 0];
     const main = Math.floor(nodes[0].cardId / 100),
       target = targetId && (targetId >= 10000 ? Math.floor(targetId / 100) : targetId);
-    const grandparents = nodes
-      .slice(1)
-      .map((node) =>
-        !node.cardId
-          ? 0
-          : target
-            ? engine.triple(target, main, Math.floor(node.cardId / 100))
-            : engine.pair(main, Math.floor(node.cardId / 100))
-      );
+
+    const grandparents = nodes.slice(1).map((node) => {
+      if (!node.cardId) return 0;
+      const character = Math.floor(node.cardId / 100);
+      return target ? engine.triple(target, main, character) : engine.pair(main, character);
+    });
+
     return [
       (target ? engine.pair(target, main) : 0) +
         grandparents.reduce((sum, value) => sum + value, 0),
@@ -163,25 +146,11 @@
     bestTrigger?.focus({ preventScroll: true });
   }
 
-  $effect(() => {
-    if (!bestPanel) return;
-    const panel = bestPanel;
-    const onkey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        event.stopPropagation();
-        closeBestFits();
-      }
-    };
-    panel.addEventListener('keydown', onkey);
-    panel.scrollIntoView({ block: 'nearest' });
-    panel.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
-    return () => panel.removeEventListener('keydown', onkey);
-  });
-
   async function selectBestFit(slot: number, cardId: number, event: MouseEvent): Promise<void> {
+    const node = nodes[slot];
+    if (!node) return;
     const owner = (event.currentTarget as HTMLElement).closest('.manual-node');
-    nodes[slot]!.cardId = cardId;
+    node.cardId = cardId;
     bestSlot = null;
     await tick();
     owner
@@ -193,6 +162,57 @@
     raceSlot = slot;
     raceOpen = true;
   }
+
+  function selectCharacter(selected: string[]): void {
+    const node = nodes[characterSlot];
+    const cardId = Number(selected[0]);
+    if (!node || !Number.isSafeInteger(cardId) || cardId <= 0) return;
+    node.cardId = cardId;
+    characterOpen = false;
+  }
+
+  function confirmWins(wins: number[]): void {
+    const node = nodes[raceSlot];
+    if (node) node.wins = wins;
+  }
+
+  $effect(() => {
+    label = entry?.label ?? '';
+    nodes = [
+      {
+        cardId: entry?.mainCardId ?? null,
+        factors: [...(entry?.ownSparkIds ?? [])],
+        wins: [...(entry?.mainWinSaddleIds ?? [])]
+      },
+      {
+        cardId: entry?.p1CardId ?? null,
+        factors: [...(entry?.p1SparkIds ?? [])],
+        wins: [...(entry?.p1WinSaddleIds ?? [])]
+      },
+      {
+        cardId: entry?.p2CardId ?? null,
+        factors: [...(entry?.p2SparkIds ?? [])],
+        wins: [...(entry?.p2WinSaddleIds ?? [])]
+      }
+    ];
+  });
+
+  $effect(() => {
+    if (!bestPanel) return;
+    const panel = bestPanel;
+    const onkey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        closeBestFits();
+      }
+    };
+
+    panel.addEventListener('keydown', onkey);
+    panel.scrollIntoView({ block: 'nearest' });
+    panel.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+    return () => panel.removeEventListener('keydown', onkey);
+  });
 </script>
 
 <section
@@ -302,7 +322,7 @@
                 id={`${id}-factor-${index}`}
                 label={labels[index]!}
                 options={factors}
-                {...$factorCatalogState}
+                {...$factorLoadingState}
                 onadd={(value, level) =>
                   (node.factors = [...node.factors, Number(value) * 10 + level])}
               />
@@ -408,19 +428,16 @@
   bind:open={characterOpen}
   label={`Character for ${labels[characterSlot]}`}
   options={characterChoices}
-  selected={nodes[characterSlot]?.cardId ? [String(nodes[characterSlot]!.cardId)] : []}
+  selected={nodes[characterSlot]?.cardId ? [String(nodes[characterSlot]?.cardId)] : []}
   bind:sort={characterSort}
-  onselect={(selected) => {
-    nodes[characterSlot]!.cardId = Number(selected[0]);
-    characterOpen = false;
-  }}
+  onselect={selectCharacter}
 />
 {#if raceOpen}
   <RaceWinPickerDialog
     bind:open={raceOpen}
     charName={characters.get(nodes[raceSlot]?.cardId ?? 0)?.name}
     winSaddleIds={nodes[raceSlot]?.wins ?? []}
-    onconfirm={(wins) => (nodes[raceSlot]!.wins = wins)}
+    onconfirm={confirmWins}
   />
 {/if}
 

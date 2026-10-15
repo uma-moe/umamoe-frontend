@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { VirtualRange } from '@/lib/virtual-scroll';
   import { onMount, untrack } from 'svelte';
-  import { watchFactorCatalog, factorCatalogState } from '@/lib/catalog/factor-catalog';
+  import { watchFactors, factorLoadingState } from '@/lib/game-data/factors/factors';
   import SparkFilterDialog from './SparkFilterDialog.svelte';
   import {
     accountParent,
@@ -14,17 +14,17 @@
     type ParentPickerState,
     type ParentFactorFilter,
     type SelectableParent
-  } from '@/lib/veterans/parent-picker';
+  } from '@/lib/veterans/parents/parent-picker';
   import { authReady, authUser } from '@/services/auth/auth-state';
   import { activeWorkspace, selectWorkspace, workspaces } from '@/lib/workspaces/workspace-state';
-  import { mergeVeterans } from '@/lib/veterans/veteran-profile';
-  import { deviceParent } from '@/lib/veterans/parent-picker';
+  import { mergeVeterans } from '@/lib/veterans/records/veteran-profile';
+  import { deviceParent } from '@/lib/veterans/parents/parent-picker';
   import {
     draftScope,
     veteranDrafts,
     veteranLibraryRevision
-  } from '@/pages/veterans/veteran-library';
-  import VeteranCollection from '@/pages/veterans/VeteranCollection.svelte';
+  } from '@/pages/veterans/collection/veteran-library';
+  import VeteranCollection from '@/pages/veterans/collection/VeteranCollection.svelte';
   import { ParentPickerSources } from './parent-picker-sources.svelte';
   import ParentPickerFilterbar from './sections/ParentPickerFilterbar.svelte';
   import ParentPickerPartnerLookup from './sections/ParentPickerPartnerLookup.svelte';
@@ -36,8 +36,6 @@
   import Dialog from '@/components/overlays/Dialog.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import Tabs from '@/components/navigation/Tabs.svelte';
-
-  let virtualRange = $state<VirtualRange>({ start: 0, end: 0 });
 
   interface Props {
     open?: boolean;
@@ -54,10 +52,12 @@
     sessionScope,
     onselect
   }: Props = $props();
+
   const id = $props.id();
 
   const sources = new ParentPickerSources();
 
+  let virtualRange = $state<VirtualRange>({ start: 0, end: 0 });
   let sparkView = $state('combined');
   let pickerState = $state<ParentPickerState>({
     tab: 'veterans',
@@ -96,15 +96,13 @@
       ($veteranDrafts[scope] ?? []).map((record) => deviceParent(record, pickerState.accountId))
     ).map((veteran) => accountParent(veteran, pickerState.accountId))
   );
-  const current = $derived(
-    pickerState.tab === 'veterans'
-      ? collection
-      : pickerState.tab === 'bookmarks'
-        ? sources.bookmarks
-        : pickerState.tab === 'manual'
-          ? sources.manuals.map(manualParent)
-          : sources.partners
-  );
+
+  const current = $derived.by(() => {
+    if (pickerState.tab === 'veterans') return collection;
+    if (pickerState.tab === 'bookmarks') return sources.bookmarks;
+    if (pickerState.tab === 'manual') return sources.manuals.map(manualParent);
+    return sources.partners;
+  });
 
   const name = (parent: SelectableParent) =>
     `${parentCharacter(parent, sources.characters).name} ${parent.name ?? ''}`;
@@ -117,6 +115,7 @@
       ])
     )
   );
+
   const scores = $derived(
     new Map(
       [...affinities].map(([id, score]) => [
@@ -125,12 +124,15 @@
       ])
     )
   );
+
   const filtered = $derived(
     filterParents(current, pickerState, name, (parent) => scores.get(parent.pickerId) ?? 0)
   );
+
   const loadKey = $derived(
     pickerState.tab === 'veterans' ? `account:${pickerState.accountId}` : pickerState.tab
   );
+
   const loading = $derived(sources.busy[loadKey]);
   const error = $derived(sources.errors[loadKey]);
   const emptyCollection = $derived(
@@ -141,6 +143,7 @@
       !loading &&
       !error
   );
+
   const tabs = $derived([
     { id: 'veterans', label: 'Veterans', icon: 'users' as const, badge: String(collection.length) },
     {
@@ -163,6 +166,14 @@
     open = false;
   }
 
+  function saveManualEntry(entry: ManualParent): void {
+    const next = editedEntry
+      ? sources.manuals.map((item) => (item.id === entry.id ? entry : item))
+      : [entry, ...sources.manuals];
+
+    if (sources.saveManual(next)) editing = false;
+  }
+
   function clearSparkFilters(): void {
     pickerState.factors = [];
     pickerState.factorOperators = {};
@@ -173,7 +184,7 @@
     clearSparkFilters();
   }
 
-  onMount(watchFactorCatalog);
+  onMount(watchFactors);
 
   onMount(() => {
     const saved = sessionScope ? parentPickerSessions.get(sessionScope) : undefined;
@@ -186,9 +197,10 @@
           sort: targetId ? 'affinity' : 'total',
           factors: []
         };
+
     if (!targetId && pickerState.sort === 'affinity') pickerState.sort = 'total';
     sources.readManuals();
-    void sources.loadCatalogs();
+    void sources.loadGameData();
     return () => sources.dispose();
   });
 
@@ -286,15 +298,15 @@
               onclear={clearSparkFilters}
             />
             <div class="picker-results">
-              {#if sources.catalogError}
+              {#if sources.gameDataError}
                 <Banner
                   tone="warning"
                   title="Some resources are unavailable"
                 >
-                  <p>{sources.catalogError}</p>
+                  <p>{sources.gameDataError}</p>
                   <Button
                     variant="secondary"
-                    onclick={() => sources.loadCatalogs()}
+                    onclick={() => sources.loadGameData()}
                   >
                     Retry resources
                   </Button>
@@ -323,16 +335,7 @@
                     {targetId}
                     engine={sources.engine}
                     oncancel={() => (editing = false)}
-                    onsave={(entry) => {
-                      if (
-                        sources.saveManual(
-                          editedEntry
-                            ? sources.manuals.map((item) => (item.id === entry.id ? entry : item))
-                            : [entry, ...sources.manuals]
-                        )
-                      )
-                        editing = false;
-                    }}
+                    onsave={saveManualEntry}
                   />
                 {/if}
               {/if}
@@ -367,7 +370,7 @@
   <SparkFilterDialog
     filter={factorDraft}
     characters={sources.characters}
-    {...$factorCatalogState}
+    {...$factorLoadingState}
     onapply={applyFactor}
     onclose={() => (factorDraft = undefined)}
   />

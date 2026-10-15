@@ -18,7 +18,12 @@ function runners(count: number): Array<MonteCarloRunnerInput> {
 
 describe('monte carlo request', () => {
   it('always sends JSON results and defaults to one generated run', () => {
-    const body = buildMonteCarloRequest({ courseId: 11103, seed: 42, setup: SETUP, runners: runners(2) });
+    const body = buildMonteCarloRequest({
+      courseId: 11103,
+      seed: 42,
+      setup: SETUP,
+      runners: runners(2)
+    });
 
     expect(body.output_format).toBe('json');
     expect(body.output_mode).toBe('results');

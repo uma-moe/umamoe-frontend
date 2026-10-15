@@ -14,6 +14,7 @@
   let open = $state(false),
     query = $state(''),
     selected = $state(0);
+
   let matches = $state.raw<FindMatch[]>([]);
   let input = $state<HTMLInputElement>();
 
@@ -85,6 +86,7 @@
     if (!open) return;
     const sources = $findSources,
       value = query;
+
     // Searching data is debounced; scrolling itself does not rebuild this index.
     const timer = setTimeout(() => {
       const previous = value === lastQuery ? matches[selected] : undefined;
@@ -94,10 +96,12 @@
             (match) => match.source === previous.source && match.index === previous.index
           )
         : -1;
+
       if (retained >= 0 && highlighted?.isConnected) selected = retained;
       else void reveal(Math.max(0, retained));
       lastQuery = value;
     }, 120);
+
     return () => clearTimeout(timer);
   });
 

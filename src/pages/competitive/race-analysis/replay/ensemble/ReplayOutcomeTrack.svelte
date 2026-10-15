@@ -2,8 +2,8 @@
   import { onMount } from 'svelte';
   import Button from '@/components/controls/Button.svelte';
   import { portrait } from '@/pages/competitive/analysis-view';
-  import type { RaceRunner } from '@/lib/race/race-capture-parser';
-  import type { raceDistanceSpread } from '@/lib/race/race-ensemble';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
+  import type { raceDistanceSpread } from '@/lib/race/replay/race-ensemble';
   import {
     loadReplayGeometry,
     courseSegments,
@@ -46,6 +46,7 @@
         if (active)
           error = reason instanceof Error ? reason.message : 'Course geometry unavailable.';
       });
+
     return () => {
       active = false;
     };
@@ -75,6 +76,7 @@
   const meanPoint = $derived(project(trackPointAtDistance(points, spread.mean)));
   const startPoint = $derived(project(trackPointAtDistance(points, 0))),
     finishPoint = $derived(project(trackPointAtDistance(points, distance)));
+
   const sections = $derived(courseSegments(course));
 </script>
 

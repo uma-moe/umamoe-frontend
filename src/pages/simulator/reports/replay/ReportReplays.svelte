@@ -5,7 +5,7 @@
   import SimulatorRaceBrowser from './SimulatorRaceBrowser.svelte';
   import type { ReportSample } from './report-sample.svelte';
   import type { MonteCarloResult } from '../../simulator-repository';
-  import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import type { SimulatorUma } from '../../simulator-uma';
   import type { MonteCarloInput } from '../../requests/race-sim-request';
 
@@ -14,7 +14,7 @@
     result: MonteCarloResult;
     input?: MonteCarloInput;
     umas: SimulatorUma[];
-    course?: CourseCatalogEntry;
+    course?: RaceCourse;
     selected: number[];
     suspended: boolean;
     sample: ReportSample;
@@ -33,20 +33,26 @@
         { type: 'application/json' }
       )
     );
+
     const a = document.createElement('a');
     a.href = url;
     a.download = 'simulation-' + result.seeds[0] + '.json';
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+
   function representative(source: number, index: number) {
     const recorded = result.report?.runners.find((r) => r.source_input_index === source)
       ?.representative_runs[index];
+
     if (recorded !== undefined) return recorded;
     const values = result.finish_times.map((row) => row[source]!);
     const sorted = [...values].sort((a, b) => a - b),
       mid = (sorted[(sorted.length - 1) >> 1]! + sorted[sorted.length >> 1]!) / 2;
-    const target = index === 0 ? mid : index === 1 ? sorted[0]! : sorted.at(-1)!;
+
+    let target = mid;
+    if (index === 1) target = sorted[0]!;
+    else if (index !== 0) target = sorted.at(-1)!;
     return values.reduce(
       (best, v, i) => (Math.abs(v - target) < Math.abs(values[best]! - target) ? i : best),
       0

@@ -4,11 +4,7 @@
   import type { Snapshot } from '../../hakuraku-types';
   import { cmGet, snapshotPath, pct, number, styleNames, styleOrder } from '../cm-data';
   import type { SkillOverview } from '../cm-exploration';
-  import {
-    loadSkillCatalog,
-    resolveEncodedSkill,
-    type SkillCatalogEntry
-  } from '@/lib/catalog/skill-catalog';
+  import { loadSkills, resolveEncodedSkill, type SkillData } from '@/lib/game-data/skills/skills';
   import Icon from '@/components/Icon.svelte';
   import RaceSkill from '../../runners/RaceSkill.svelte';
   import CmSkillLanes from './CmSkillLanes.svelte';
@@ -29,13 +25,14 @@
     selected = $state<number[]>([]),
     expandedSkill = $state<number>(),
     comparison = $state<HTMLElement>();
-  let catalog = $state.raw(new Map<number, SkillCatalogEntry>());
+
+  let catalog = $state.raw(new Map<number, SkillData>());
   let course = $state.raw<Course>();
 
   const name = (id: number) => resolveEncodedSkill(catalog, id).skill?.name ?? 'Skill ' + id;
 
   onMount(() => {
-    void loadSkillCatalog()
+    void loadSkills()
       .then((c) => (catalog = c))
       .catch(() => {});
   });
@@ -49,6 +46,7 @@
         if (current) course = value;
       })
       .catch(() => {});
+
     return () => {
       current = false;
     };
@@ -69,6 +67,7 @@
       .catch((e) => {
         if (!controller.signal.aborted) error = e.message;
       });
+
     return () => controller.abort();
   });
 
@@ -76,6 +75,7 @@
   const rows = $derived(
     skills.filter((r) => (r.name + ' ' + r.id).toLowerCase().includes(search.trim().toLowerCase()))
   );
+
   const courseMatch = $derived(course?.distance === overview?.courseDistance ? course : undefined);
 
   function inspect(id: number) {

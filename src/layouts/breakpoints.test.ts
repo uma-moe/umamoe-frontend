@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { PAGE_LAYOUT, REVIEW_VIEWPORTS, SCREEN_BREAKPOINTS, shellLayoutForWidth } from './breakpoints';
+import {
+  PAGE_LAYOUT,
+  REVIEW_VIEWPORTS,
+  SCREEN_BREAKPOINTS,
+  shellLayoutForWidth
+} from './breakpoints';
 import adRegionSource from './ads/AdRegion.svelte?raw';
 import pageFrameSource from './PageFrame.svelte?raw';
 
@@ -22,7 +27,11 @@ describe('screen layout contract', () => {
 
   it('keeps every release review viewport assigned to a mode', () => {
     expect(REVIEW_VIEWPORTS.map(shellLayoutForWidth)).toEqual([
-      'mobile', 'mobile', 'compact', 'compact', 'compact'
+      'mobile',
+      'mobile',
+      'compact',
+      'compact',
+      'compact'
     ]);
   });
 
@@ -35,13 +44,17 @@ describe('screen layout contract', () => {
     expect(tokenSource).toContain(`--page-gutter-mobile: ${PAGE_LAYOUT.gutters.mobile}px`);
     expect(tokenSource).toContain(`--page-gutter-compact: ${PAGE_LAYOUT.gutters.compact}px`);
     expect(tokenSource).toContain(`--page-gutter-expanded: ${PAGE_LAYOUT.gutters.expanded}px`);
-    expect(tokenSource).toContain(`--page-content-normal: ${PAGE_LAYOUT.widths.normal.contentMax}px`);
+    expect(tokenSource).toContain(
+      `--page-content-normal: ${PAGE_LAYOUT.widths.normal.contentMax}px`
+    );
     expect(tokenSource).toContain(`--page-content-wide: ${PAGE_LAYOUT.widths.wide.contentMax}px`);
     expect(tokenSource).toContain(`--page-frame-normal: ${PAGE_LAYOUT.widths.normal.frameMax}px`);
     expect(tokenSource).toContain(`--page-frame-wide: ${PAGE_LAYOUT.widths.wide.frameMax}px`);
     expect(tokenSource).toContain(`--ad-rail-width: ${PAGE_LAYOUT.ads.railWidth}px`);
     expect(tokenSource).toContain(`--ad-rail-gap: ${PAGE_LAYOUT.ads.railGap}px`);
-    expect(tokenSource).toContain(`--ad-leaderboard-height: ${PAGE_LAYOUT.ads.leaderboardHeight}px`);
+    expect(tokenSource).toContain(
+      `--ad-leaderboard-height: ${PAGE_LAYOUT.ads.leaderboardHeight}px`
+    );
     expect(tokenSource).toContain(`--ad-mobile-height: ${PAGE_LAYOUT.ads.mobileHeight}px`);
     expect(tokenSource).toContain('--ad-inline-mobile-height: 100px');
     expect(pageFrameSource).toContain(`min-width: ${PAGE_LAYOUT.ads.railMin}px`);

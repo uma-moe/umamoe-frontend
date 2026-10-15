@@ -28,25 +28,19 @@
 
   const params = new URLSearchParams(location.search);
   const allowed = ['introduction', 'strategy', 'character', 'archetypes', 'skills', 'lobby'];
-  const legacyView = params.get('view'),
-    legacyTab =
-      legacyView === 'umas'
-        ? 'character'
-        : legacyView === 'skills'
-          ? 'skills'
-          : legacyView === 'teams'
-            ? 'archetypes'
-            : legacyView === 'lobby'
-              ? 'lobby'
-              : 'strategy';
+  const legacyView = params.get('view');
+  const legacyTabs: Record<string, string> = {
+    umas: 'character',
+    skills: 'skills',
+    teams: 'archetypes',
+    lobby: 'lobby'
+  };
 
-  let tab = $state(
-    params.get('tab') === 'explore'
-      ? legacyTab
-      : allowed.includes(params.get('tab') ?? '')
-        ? params.get('tab')!
-        : 'introduction'
-  );
+  const legacyTab = legacyTabs[legacyView ?? ''] ?? 'strategy';
+  const requestedTab = params.get('tab') ?? '';
+  const initialTab = requestedTab === 'explore' ? legacyTab : requestedTab;
+
+  let tab = $state(allowed.includes(initialTab) ? initialTab : 'introduction');
   let snapshotId = $state(params.get('snapshot') ?? ''),
     snapshots = $state<Snapshot[]>([]),
     data = $state<Summary>(),
@@ -55,9 +49,11 @@
     attempt = $state(0),
     colorblind = $state(false),
     query = $state(params.get('q') ?? '');
+
   let scope = $state(params.get('style') ?? 'all'),
     selectedUma = $state(''),
     umaView = $state(legacyView === 'umas' ? 'field' : 'overview');
+
   const lobbyState = new CmLobbyState(() => data);
 
   let visited = $state<string[]>([]);
@@ -106,6 +102,7 @@
       .catch((e) => {
         if (!controller.signal.aborted) manifestError = e.message;
       });
+
     return () => controller.abort();
   });
 
@@ -125,6 +122,7 @@
       .catch((e) => {
         if (!controller.signal.aborted) error = e.message;
       });
+
     return () => controller.abort();
   });
 

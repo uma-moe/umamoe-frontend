@@ -1,4 +1,4 @@
-import type { SparkOrder } from '@/lib/inheritance/inheritance-factors';
+import type { SparkOrder } from '@/lib/inheritance/sparks/inheritance-factors';
 import {
   DATABASE_HIDDEN_SPARKS_KEY,
   DATABASE_SPARK_ORDER_KEY,
@@ -26,6 +26,7 @@ export class DatabaseDisplay {
     } catch {
       this.sparkOrder = 'main';
     }
+
     this.hiddenSparkFactorIds = readHiddenSparkFactorIds(localStorage);
   }
 

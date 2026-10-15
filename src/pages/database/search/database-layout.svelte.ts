@@ -1,4 +1,4 @@
-import type { InheritanceFilterMode } from '@/lib/inheritance/inheritance-search';
+import type { InheritanceFilterMode } from '@/lib/inheritance/search/inheritance-search';
 import { databaseTourChanges } from './database-tour';
 import type { DatabaseFilters } from './database-filters.svelte';
 
@@ -25,6 +25,7 @@ export class DatabaseLayout {
     support: false,
     search: false
   });
+
   affinityOpen = $state(true);
   quickFiltersOpen = $state(typeof window === 'undefined' ? true : window.innerWidth > 600);
 
@@ -47,8 +48,10 @@ export class DatabaseLayout {
         this.tourPanels = this.#beforeTour.panels;
         this.#beforeTour = undefined;
       }
+
       return;
     }
+
     const changes = databaseTourChanges(step);
     if (!changes) return;
     this.#beforeTour ??= {
@@ -59,6 +62,7 @@ export class DatabaseLayout {
       quick: this.quickFiltersOpen,
       panels: { ...this.tourPanels }
     };
+
     if (changes.display) this.displayOptionsOpen = true;
     if (changes.expanded) this.filterExpanded = true;
     if (changes.mode) this.#filters.mode = changes.mode;

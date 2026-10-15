@@ -1,7 +1,7 @@
 <script lang="ts">
   import Button from '@/components/controls/Button.svelte';
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
-  import { skillImage } from '@/lib/catalog/skill-catalog';
+  import { skillImage } from '@/lib/game-data/skills/skills';
   import HpCounter from './HpCounter.svelte';
   import SimSection from '../../shell/SimSection.svelte';
   import { hpCalculator } from './hp-calculator.svelte';
@@ -35,6 +35,7 @@
     ['accel', 'Accel', 'acceleration'],
     ['debuffs', 'HP debuffs', 'HP debuff']
   ] as const;
+
   const TIERS = ['gold', 'white', 'unique'] as const;
   /** What one skill of a kind and tier does, for its tooltip. */
   function tierDetail(kind: (typeof KINDS)[number][0], tier: (typeof TIERS)[number]) {
@@ -56,6 +57,7 @@
   type Counts = Pick<HpPlan, 'recovery' | 'speed' | 'accel' | 'debuffs' | 'green'> & {
     counted: string;
   };
+
   let cleared = $state<Counts | null>(null);
   const greens = $derived(
     STAT_KEYS.flatMap((stat) =>
@@ -64,12 +66,14 @@
       )
     )
   );
+
   const total = $derived(
     [plan.recovery, plan.speed, plan.accel, plan.debuffs].reduce(
       (sum, group) => sum + group.gold + group.white + group.unique,
       0
     ) + greens.length
   );
+
   function clear() {
     cleared = {
       ...$state.snapshot({
@@ -81,14 +85,18 @@
       }),
       counted: hpCalculator.counted
     };
+
     for (const group of [plan.recovery, plan.speed, plan.accel, plan.debuffs]) {
       group.gold = 0;
       group.white = 0;
       group.unique = 0;
     }
+
     for (const stat of STAT_KEYS) plan.green[stat] = { gold: 0, white: 0 };
+
     hpCalculator.counted = '';
   }
+
   function undo() {
     if (!cleared) return;
     Object.assign(plan.recovery, cleared.recovery);
@@ -96,9 +104,11 @@
     Object.assign(plan.accel, cleared.accel);
     Object.assign(plan.debuffs, cleared.debuffs);
     for (const stat of STAT_KEYS) plan.green[stat] = { ...cleared.green[stat] };
+
     hpCalculator.counted = cleared.counted;
     cleared = null;
   }
+
   // Once something is counted again, Undo would throw it away, so it goes.
   $effect(() => {
     if (total) cleared = null;

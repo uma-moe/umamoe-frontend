@@ -8,6 +8,7 @@
     unit?: string;
     icon?: string;
   }
+
   interface Props {
     items: StatStripItem[];
     label?: string;
@@ -15,6 +16,7 @@
     framed?: boolean;
     presentation?: 'labels' | 'icons' | 'inline' | 'values';
   }
+
   let {
     items,
     label = 'Stats',

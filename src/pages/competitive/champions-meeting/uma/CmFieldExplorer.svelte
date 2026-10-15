@@ -35,12 +35,14 @@
     sort = $state('share'),
     descending = $state(true),
     range = $state<VirtualRange>({ start: 0, end: 0 });
+
   let inspector = $state<HTMLElement>(),
     canvas = $state<HTMLElement>();
 
   const scopedPairs = $derived(
     data.pairs.filter((p) => scope === 'all' || p.style === Number(scope))
   );
+
   const visibleStyles = $derived(scope === 'all' ? styleOrder : [Number(scope)]);
   const rows = $derived(
     fieldRows(scopedPairs, Number(minimum), search).sort((a, b) => {
@@ -48,6 +50,7 @@
       if (sort === 'share') return (a.share - b.share) * (descending ? -1 : 1);
       const av = a.cells.get(Number(sort)),
         bv = b.cells.get(Number(sort));
+
       if (!av || !bv) return av ? -1 : bv ? 1 : 0;
       return (
         ((metric === 'team' ? av.team : av.individual) -
@@ -73,6 +76,7 @@
         metric === 'team' ? b.teamCI[0] - a.teamCI[0] : b.individualCI[0] - a.individualCI[0]
       )
   );
+
   const current = $derived(scopedPairs.find((p) => p.key === selected));
   const baseline = $derived(metric === 'team' ? 1 / 3 : 1 / 9);
   const axisMax = $derived(
@@ -81,6 +85,7 @@
       ...ranked.map((p) => (metric === 'team' ? p.teamCI : p.individualCI)[1])
     ) * 1.04
   );
+
   const maxPop = $derived(Math.max(0.001, ...data.pairs.map((p) => p.pop)));
   const positive = $derived(colorblind ? 'var(--accent-primary)' : 'var(--accent-secondary)');
   const negative = $derived(colorblind ? 'var(--accent-purple)' : 'var(--accent-error)');

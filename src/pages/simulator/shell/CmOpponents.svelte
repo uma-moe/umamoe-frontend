@@ -3,7 +3,7 @@
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import Icon from '@/components/Icon.svelte';
-  import { describeCourse, trackName } from '@/lib/catalog/course-catalog';
+  import { describeCourse, trackName } from '@/lib/game-data/racing/courses';
   import { cmGet, type Manifest } from '@/pages/competitive/champions-meeting/cm-data';
   import type { Snapshot } from '@/pages/competitive/hakuraku-types';
   import { loadCmBenchmark, type CmBenchmark } from '../courses/cm-benchmark';
@@ -52,9 +52,10 @@
       })
       .catch((reason) => {
         if (controller.signal.aborted) return;
-        error = (reason as Error).message;
+        error = reason instanceof Error ? reason.message : 'Could not load CM opponents.';
         loading = false;
       });
+
     return () => controller.abort();
   });
 
@@ -71,11 +72,13 @@
         if (!controller.signal.aborted) benchmark = value;
       })
       .catch((reason) => {
-        if (!controller.signal.aborted) error = (reason as Error).message;
+        if (!controller.signal.aborted)
+          error = reason instanceof Error ? reason.message : 'Could not load CM opponents.';
       })
       .finally(() => {
         if (!controller.signal.aborted) loading = false;
       });
+
     return () => controller.abort();
   });
 </script>

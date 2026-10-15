@@ -41,8 +41,10 @@
       visible.find((p) => p.key === pair?.key) ??
       visible[0]
   );
+
   const xMin = $derived(Math.min(1 / 9, ...visible.map((p) => p.individual)) * 0.85),
     xMax = $derived(Math.max(1 / 9, ...visible.map((p) => p.individual)) * 1.15);
+
   const yMin = $derived(Math.min(1 / 3, ...visible.map((p) => p.team)) * 0.85),
     yMax = $derived(Math.max(1 / 3, ...visible.map((p) => p.team)) * 1.15);
 

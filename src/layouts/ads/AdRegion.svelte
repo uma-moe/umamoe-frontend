@@ -42,6 +42,7 @@
         unregister = undefined;
       }
     });
+
     observer.observe(element);
     return () => {
       observer.disconnect();

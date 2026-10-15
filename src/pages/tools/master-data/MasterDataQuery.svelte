@@ -38,6 +38,17 @@
       Object.values(row).some((value) => String(value).toLowerCase().includes(filter.toLowerCase()))
     )
   );
+
+  const displayRows = $derived(
+    filtered.map((row) =>
+      Object.fromEntries(
+        Object.entries(row).map(([key, value]) => [
+          key,
+          value instanceof Uint8Array ? value.toString() : value
+        ])
+      )
+    )
+  );
 </script>
 
 <div class="editor-heading">
@@ -152,7 +163,7 @@
       plain
       caption="SQL query results"
       columns={columns.map((key) => ({ key, label: key }))}
-      rows={filtered}
+      rows={displayRows}
     />
   {:else}
     <div class="query-empty">

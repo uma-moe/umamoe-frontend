@@ -4,8 +4,8 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
-  import { formatRaceTime } from '@/lib/race/race-display';
-  import type { ReplayBounds } from '@/lib/race/race-replay';
+  import { formatRaceTime } from '@/lib/race/replay/race-display';
+  import type { ReplayBounds } from '@/lib/race/replay/race-replay';
   import { slopeLabel } from '../replay-timeline';
 
   let {

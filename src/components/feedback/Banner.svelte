@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { DISCORD_SUPPORT_URL } from '@/services/site-links';
+  import { DISCORD_SUPPORT_URL } from '@/services/site/site-links';
   import Icon from '../Icon.svelte';
 
   interface Props {

@@ -49,6 +49,7 @@
         team.members.map((member, index) => {
           const key = team.id + ':' + index,
             build = draft.edits[key] ?? (member as Build);
+
           const uma = simulatorUmaFromCm(build, data, slot + 1);
           uma.frameOrder = draft.gates[key] ? Number(draft.gates[key]) : undefined;
           uma.trainee.motivation = draft.mood.startsWith('random')
@@ -60,6 +61,7 @@
           return uma;
         })
       );
+
       await openSimulatorField(umas, {
         replace: true,
         raceInstanceId: snapshot?.raceInstanceId,
@@ -75,6 +77,7 @@
 
   let editing = $state(''),
     edit = $state<Build>();
+
   let moving = $state<{ teamId: string; index: number }>();
 
   const movingTeam = $derived(teams.find((team) => team.id === moving?.teamId));
@@ -83,6 +86,7 @@
       ? (draft.edits[moving.teamId + ':' + moving.index] ?? movingTeam.members[moving.index])
       : undefined
   );
+
   const assigned = $derived(new Set(Object.values(draft.gates).filter(Boolean)));
   const invalidSeed = $derived(
     draft.seed !== '' &&

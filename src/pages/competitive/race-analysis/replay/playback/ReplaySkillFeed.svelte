@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { RaceEvent, RaceRunner } from '@/lib/race/race-capture-parser';
+  import type { RaceEvent, RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import Artwork from '@/components/game/Artwork.svelte';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import { portrait } from '@/pages/competitive/analysis-view';

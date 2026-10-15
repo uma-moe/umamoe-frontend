@@ -8,7 +8,7 @@ import type {
   UqlHighlightKind,
   UqlHighlightSegment,
   UqlSuggestion,
-  UqlCompletionResult,
+  UqlCompletionResult
 } from '@/components/editor/query-editor-types';
 
 interface UqlKnownSuggestionCandidate {
@@ -24,6 +24,7 @@ export class UqlEditorLanguage {
     this.rebuildFieldSuggestionPhraseIndex();
     for (const suggestion of this._suggestions) this.getSuggestionSearchEntry(suggestion);
   }
+
   private get suggestions(): UqlSuggestion[] {
     return this._suggestions;
   }
@@ -66,6 +67,7 @@ export class UqlEditorLanguage {
     if (this.tokenizeCache?.text === text) return this.tokenizeCache.segments;
     const segments = this.tokenizeQuery(text);
     this.tokenizeCache = { text, segments };
+
     return segments;
   };
 
@@ -80,11 +82,12 @@ export class UqlEditorLanguage {
   normalizeEditableSparkIds(
     query: string,
     selectionStart = query.length,
-    selectionEnd = selectionStart,
+    selectionEnd = selectionStart
   ): { query: string; selectionStart: number; selectionEnd: number; changed: boolean } {
     if (!query || this.knownFactorSparkValueCandidates.size === 0) {
       return { query, selectionStart, selectionEnd, changed: false };
     }
+
     const replacements: Array<{ start: number; end: number; text: string }> = [];
     let quoteCharacter: string | null = null;
     let index = 0;
@@ -95,27 +98,38 @@ export class UqlEditorLanguage {
         index++;
         continue;
       }
+
       if (isUqlQuoteStart(query, index)) {
         quoteCharacter = character;
         index++;
         continue;
       }
+
       if (!/[0-9]/.test(character)) {
         index++;
         continue;
       }
+
       const match = this.getKnownNumericValueMatchAt(query, index);
       const label = match?.suggestion.label;
-      if (!match || !label || label === match.text || match.text !== match.suggestion.backendValue) {
+      if (
+        !match ||
+        !label ||
+        label === match.text ||
+        match.text !== match.suggestion.backendValue
+      ) {
         index++;
         continue;
       }
+
       replacements.push({ start: index, end: index + match.text.length, text: label });
       index += match.text.length;
     }
+
     if (replacements.length === 0) {
       return { query, selectionStart, selectionEnd, changed: false };
     }
+
     let nextQuery = '';
     let lastIndex = 0;
     for (const replacement of replacements) {
@@ -123,6 +137,7 @@ export class UqlEditorLanguage {
       nextQuery += replacement.text;
       lastIndex = replacement.end;
     }
+
     nextQuery += query.slice(lastIndex);
     const mapPosition = (position: number): number => {
       let shift = 0;
@@ -131,13 +146,15 @@ export class UqlEditorLanguage {
         if (position < replacement.end) return replacement.start + shift + replacement.text.length;
         shift += replacement.text.length - (replacement.end - replacement.start);
       }
+
       return position + shift;
     };
+
     return {
       query: nextQuery,
       selectionStart: mapPosition(selectionStart),
       selectionEnd: mapPosition(selectionEnd),
-      changed: true,
+      changed: true
     };
   }
 
@@ -157,7 +174,7 @@ export class UqlEditorLanguage {
     'false',
     'has',
     'all',
-    'any',
+    'any'
   ]);
 
   private readonly highlightFunctions = new Set([
@@ -169,7 +186,7 @@ export class UqlEditorLanguage {
     'optional_white',
     'optional_main_white',
     'optional_any_white',
-    'lineage_white',
+    'lineage_white'
   ]);
 
   private rebuildHighlightLookups(): void {
@@ -190,7 +207,12 @@ export class UqlEditorLanguage {
           fieldCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
         }
       }
-      if (suggestion.kind === 'value' && !!suggestion.valueContext && suggestion.valueContext.endsWith('-factor')) {
+
+      if (
+        suggestion.kind === 'value' &&
+        suggestion.valueContext != null &&
+        suggestion.valueContext.endsWith('-factor')
+      ) {
         valueCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
         for (const candidate of this.createKnownSparkIdCandidates(suggestion)) {
           if (!factorSparkValueCandidates.has(candidate.candidate)) {
@@ -198,49 +220,76 @@ export class UqlEditorLanguage {
           }
         }
       }
+
       if (suggestion.kind === 'value' && suggestion.valueContext === 'character') {
         characterCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
       }
+
       if (suggestion.kind === 'value' && suggestion.valueContext === 'legacy') {
         legacyCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
       }
+
       if (suggestion.kind === 'value' && suggestion.valueContext === 'support-card') {
         supportCardCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
       }
+
       if (suggestion.kind === 'value' && suggestion.valueContext === 'race-saddle') {
         raceSaddleCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
       }
+
       if (suggestion.kind === 'value' && suggestion.valueContext === 'rank') {
         rankCandidates.push(...this.createKnownSuggestionCandidates(suggestion));
       }
     }
-    this.knownFactorValueCandidates = valueCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
-    this.knownCharacterValueCandidates = characterCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
-    this.knownLegacyValueCandidates = legacyCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
-    this.knownSupportCardValueCandidates = supportCardCandidates.sort(
-      (a, b) => b.candidate.length - a.candidate.length,
+
+    this.knownFactorValueCandidates = valueCandidates.sort(
+      (a, b) => b.candidate.length - a.candidate.length
     );
-    this.knownRaceSaddleValueCandidates = raceSaddleCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
-    this.knownRankValueCandidates = rankCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
-    this.knownFactorFieldCandidates = fieldCandidates.sort((a, b) => b.candidate.length - a.candidate.length);
+    this.knownCharacterValueCandidates = characterCandidates.sort(
+      (a, b) => b.candidate.length - a.candidate.length
+    );
+    this.knownLegacyValueCandidates = legacyCandidates.sort(
+      (a, b) => b.candidate.length - a.candidate.length
+    );
+    this.knownSupportCardValueCandidates = supportCardCandidates.sort(
+      (a, b) => b.candidate.length - a.candidate.length
+    );
+    this.knownRaceSaddleValueCandidates = raceSaddleCandidates.sort(
+      (a, b) => b.candidate.length - a.candidate.length
+    );
+    this.knownRankValueCandidates = rankCandidates.sort(
+      (a, b) => b.candidate.length - a.candidate.length
+    );
+    this.knownFactorFieldCandidates = fieldCandidates.sort(
+      (a, b) => b.candidate.length - a.candidate.length
+    );
     this.knownFactorSparkValueCandidates = factorSparkValueCandidates;
     this.knownFieldNames = fieldNames;
   }
 
-  private createKnownSuggestionCandidates(suggestion: UqlSuggestion): UqlKnownSuggestionCandidate[] {
+  private createKnownSuggestionCandidates(
+    suggestion: UqlSuggestion
+  ): UqlKnownSuggestionCandidate[] {
     const candidates: UqlKnownSuggestionCandidate[] = [];
     const seenCandidates = new Set<string>();
     const addCandidate = (candidate: string | undefined, displayText?: string) => {
       if (!candidate || seenCandidates.has(candidate)) return;
       seenCandidates.add(candidate);
-      candidates.push({ candidate, lowerCandidate: candidate.toLowerCase(), displayText, suggestion });
+      candidates.push({
+        candidate,
+        lowerCandidate: candidate.toLowerCase(),
+        displayText,
+        suggestion
+      });
     };
+
     const displayText =
       suggestion.valueContext === 'support-card' ||
       suggestion.valueContext === 'race-saddle' ||
       suggestion.valueContext === 'legacy'
         ? suggestion.label
         : undefined;
+
     addCandidate(suggestion.label);
     addCandidate(suggestion.insertText, displayText);
     suggestion.matchPhrases?.forEach((phrase) => addCandidate(phrase, displayText));
@@ -257,9 +306,10 @@ export class UqlEditorLanguage {
       candidates.push({
         candidate,
         lowerCandidate: candidate,
-        suggestion,
+        suggestion
       });
     }
+
     return candidates;
   }
 
@@ -271,20 +321,27 @@ export class UqlEditorLanguage {
       this.activeTokenizeText = text;
       this.activeValueMatchContextCache = new Map();
     }
+
     const out: UqlHighlightSegment[] = [];
     const len = text.length;
     let i = 0;
     let depth = 0;
-    const push = (kind: UqlHighlightKind, value: string, start: number, extra?: Partial<UqlHighlightSegment>) => {
+    const push = (
+      kind: UqlHighlightKind,
+      value: string,
+      start: number,
+      extra?: Partial<UqlHighlightSegment>
+    ) => {
       if (!value) return;
       out.push({
         kind,
         text: value,
         sourceStart: sourceOffset + start,
         sourceEnd: sourceOffset + start + value.length,
-        ...extra,
+        ...extra
       });
     };
+
     while (i < len) {
       const c = text.charAt(i);
       // whitespace / newlines preserved as text
@@ -295,6 +352,7 @@ export class UqlEditorLanguage {
         i = j;
         continue;
       }
+
       // strings
       if (isUqlQuoteStart(text, i)) {
         let j = i + 1;
@@ -304,21 +362,26 @@ export class UqlEditorLanguage {
               j += 2;
               continue;
             }
+
             break;
           }
+
           j++;
         }
+
         const end = Math.min(len, j + 1);
         push('string', text.slice(i, end), i);
         i = end;
         continue;
       }
+
       const keywordPhraseMatch = this.getKeywordPhraseMatchAt(text, i);
       if (keywordPhraseMatch) {
         push('keyword', keywordPhraseMatch, i);
         i += keywordPhraseMatch.length;
         continue;
       }
+
       const valueMatch = this.getKnownValueMatchAt(text, i);
       if (valueMatch) {
         push('identifier', valueMatch.text, i, {
@@ -329,11 +392,13 @@ export class UqlEditorLanguage {
           valueContext: valueMatch.suggestion.valueContext,
           rarityClass: valueMatch.suggestion.rarityClass,
           badgeText: valueMatch.suggestion.badgeText,
-          badgeClass: valueMatch.suggestion.badgeClass,
+          badgeClass: valueMatch.suggestion.badgeClass
         });
+
         i += valueMatch.text.length;
         continue;
       }
+
       const numericValueMatch = this.getKnownNumericValueMatchAt(text, i);
       if (numericValueMatch) {
         push('identifier', numericValueMatch.text, i, {
@@ -344,11 +409,13 @@ export class UqlEditorLanguage {
           valueContext: numericValueMatch.suggestion.valueContext,
           rarityClass: numericValueMatch.suggestion.rarityClass,
           badgeText: numericValueMatch.suggestion.badgeText,
-          badgeClass: numericValueMatch.suggestion.badgeClass,
+          badgeClass: numericValueMatch.suggestion.badgeClass
         });
+
         i += numericValueMatch.text.length;
         continue;
       }
+
       // numbers
       if (/[0-9]/.test(c)) {
         let j = i + 1;
@@ -358,6 +425,7 @@ export class UqlEditorLanguage {
         i = j;
         continue;
       }
+
       // parens with depth
       if (c === '(') {
         push('paren', '(', i, { depth: depth % 6 });
@@ -365,12 +433,14 @@ export class UqlEditorLanguage {
         i++;
         continue;
       }
+
       if (c === ')') {
         depth = Math.max(0, depth - 1);
         push('paren', ')', i, { depth: depth % 6 });
         i++;
         continue;
       }
+
       // operators
       const twoChar = text.slice(i, i + 2);
       if (twoChar === '>=' || twoChar === '<=' || twoChar === '!=' || twoChar === '<>') {
@@ -378,41 +448,61 @@ export class UqlEditorLanguage {
         i += 2;
         continue;
       }
-      if (c === '=' || c === '<' || c === '>' || c === '+' || c === '-' || c === '*' || c === '/' || c === '%') {
+
+      if (
+        c === '=' ||
+        c === '<' ||
+        c === '>' ||
+        c === '+' ||
+        c === '-' ||
+        c === '*' ||
+        c === '/' ||
+        c === '%'
+      ) {
         push('operator', c, i);
         i++;
         continue;
       }
+
       if (c === ',' || c === ';') {
         push('punct', c, i);
         i++;
         continue;
       }
+
       const partialValueMatch = this.getPartialValueMatchAt(text, i);
       if (partialValueMatch) {
         push('identifier', partialValueMatch.text, i, {
           displayText: partialValueMatch.displayText,
           imageUrl: partialValueMatch.imageUrl,
           title: partialValueMatch.title,
-          valueContext: partialValueMatch.valueContext,
+          valueContext: partialValueMatch.valueContext
         });
+
         i += partialValueMatch.text.length;
         continue;
       }
+
       const fieldMatch = this.getKnownFieldMatchAt(text, i);
       if (fieldMatch) {
         push('field', fieldMatch.text, i, {
           title: fieldMatch.suggestion.detail,
           valueContext: this.inferSuggestionValueContext(fieldMatch.suggestion),
-          scopeContext: this.inferSuggestionScopeContext(fieldMatch.suggestion),
+          scopeContext: this.inferSuggestionScopeContext(fieldMatch.suggestion)
         });
+
         i += fieldMatch.text.length;
         continue;
       }
+
       // identifiers (letters, digits, underscores, dots, accented; allow spaces only if followed by another identifier word)
       if (/[A-Za-z_\u00C0-\uFFFF]/.test(c)) {
         let j = i + 1;
-        while (j < len && /[A-Za-z0-9_.\u00C0-\uFFFF\u25A0-\u25FF\u2605\u2606\-]/.test(text.charAt(j))) j++;
+        while (
+          j < len &&
+          /[A-Za-z0-9_.\u00C0-\uFFFF\u25A0-\u25FF\u2605\u2606\-]/.test(text.charAt(j))
+        )
+          j++;
         const word = text.slice(i, j);
         const lower = word.toLowerCase();
         let kind: UqlHighlightKind = 'identifier';
@@ -423,14 +513,17 @@ export class UqlEditorLanguage {
         i = j;
         continue;
       }
+
       // fallback single char
       push('text', c, i);
       i++;
     }
+
     if (sourceOffset === 0) {
       this.activeTokenizeText = previousTokenizeText;
       this.activeValueMatchContextCache = previousValueMatchContextCache;
     }
+
     return out;
   }
 
@@ -444,6 +537,7 @@ export class UqlEditorLanguage {
       if (end < text.length && /[A-Za-z0-9_\u00C0-\uFFFF]/.test(text.charAt(end))) continue;
       return text.slice(index, end);
     }
+
     return null;
   }
 
@@ -454,26 +548,46 @@ export class UqlEditorLanguage {
 
   private getKnownValueMatchAt(
     text: string,
-    index: number,
+    index: number
   ): { text: string; displayText?: string; suggestion: UqlSuggestion } | null {
     if (this.isBooleanOperatorAfterCompletePredicate(text, index)) return null;
     const matchContext = this.getCachedValueMatchContext(text, index);
     const context = matchContext.context;
     if (context === 'character') {
-      return this.getKnownSuggestionMatchAt(text, index, this.knownCharacterValueCandidates, context);
+      return this.getKnownSuggestionMatchAt(
+        text,
+        index,
+        this.knownCharacterValueCandidates,
+        context
+      );
     }
+
     if (context === 'legacy') {
       return this.getKnownSuggestionMatchAt(text, index, this.knownLegacyValueCandidates, context);
     }
+
     if (context === 'support-card') {
-      return this.getKnownSuggestionMatchAt(text, index, this.knownSupportCardValueCandidates, context);
+      return this.getKnownSuggestionMatchAt(
+        text,
+        index,
+        this.knownSupportCardValueCandidates,
+        context
+      );
     }
+
     if (context === 'race-saddle') {
-      return this.getKnownSuggestionMatchAt(text, index, this.knownRaceSaddleValueCandidates, context);
+      return this.getKnownSuggestionMatchAt(
+        text,
+        index,
+        this.knownRaceSaddleValueCandidates,
+        context
+      );
     }
+
     if (context === 'rank') {
       return this.getKnownSuggestionMatchAt(text, index, this.knownRankValueCandidates, context);
     }
+
     if (context?.endsWith('-factor')) {
       if (this.isWhiteScoringParameterAt(text, index)) return null;
       const match = this.getKnownSuggestionMatchAt(
@@ -481,8 +595,9 @@ export class UqlEditorLanguage {
         index,
         this.knownFactorValueCandidates,
         context,
-        matchContext.allowAnyFactorContext,
+        matchContext.allowAnyFactorContext
       );
+
       if (
         /[0-9]/.test(text.charAt(index) || '') &&
         !matchContext.allowAnyFactorContext &&
@@ -490,23 +605,29 @@ export class UqlEditorLanguage {
         /[^0-9]/.test(match.text)
       )
         return match;
-      if (/[0-9]/.test(text.charAt(index) || '') && !matchContext.allowAnyFactorContext) return null;
+      if (/[0-9]/.test(text.charAt(index) || '') && !matchContext.allowAnyFactorContext)
+        return null;
       return match;
     }
+
     return null;
   }
 
-  private getKnownFieldMatchAt(text: string, index: number): { text: string; suggestion: UqlSuggestion } | null {
+  private getKnownFieldMatchAt(
+    text: string,
+    index: number
+  ): { text: string; suggestion: UqlSuggestion } | null {
     return this.getKnownSuggestionMatchAt(text, index, this.knownFactorFieldCandidates);
   }
 
   private getKnownNumericValueMatchAt(
     text: string,
-    index: number,
+    index: number
   ): { text: string; displayText?: string; suggestion: UqlSuggestion } | null {
     if (!/[0-9]/.test(text.charAt(index) || '')) return null;
     const matchContext = this.getCachedValueMatchContext(text, index);
-    if (matchContext.context?.endsWith('-factor') && this.isWhiteScoringParameterAt(text, index)) return null;
+    if (matchContext.context?.endsWith('-factor') && this.isWhiteScoringParameterAt(text, index))
+      return null;
     if (!matchContext.context?.endsWith('-factor') || !matchContext.inFactorArrayList) return null;
     let end = index + 1;
     while (end < text.length && /[0-9]/.test(text.charAt(end))) end++;
@@ -517,17 +638,27 @@ export class UqlEditorLanguage {
       !this.matchesValueContext(
         candidate.suggestion.valueContext,
         matchContext.context,
-        matchContext.allowAnyFactorContext,
+        matchContext.allowAnyFactorContext
       )
     )
       return null;
-    return { text: candidateText, displayText: candidate.displayText, suggestion: candidate.suggestion };
+    return {
+      text: candidateText,
+      displayText: candidate.displayText,
+      suggestion: candidate.suggestion
+    };
   }
 
   private getPartialValueMatchAt(
     text: string,
-    index: number,
-  ): { text: string; displayText?: string; imageUrl?: string; title?: string; valueContext: UqlValueContext } | null {
+    index: number
+  ): {
+    text: string;
+    displayText?: string;
+    imageUrl?: string;
+    title?: string;
+    valueContext: UqlValueContext;
+  } | null {
     if (index > 0 && /[A-Za-z0-9_\u00C0-\uFFFF]/.test(text.charAt(index - 1))) return null;
     if (this.isBooleanOperatorAfterCompletePredicate(text, index)) return null;
     const context = this.getValueContext(text.slice(0, index));
@@ -538,50 +669,72 @@ export class UqlEditorLanguage {
     if (!valueText || /^[,)]/.test(valueText)) return null;
     if (/^(?:and|or)\b/i.test(valueText.trimStart())) return null;
     if (context === 'legacy') {
-      return { text: valueText, valueContext: context, ...this.getPartialLegacyChipMetadata(valueText) };
+      return {
+        text: valueText,
+        valueContext: context,
+        ...this.getPartialLegacyChipMetadata(valueText)
+      };
     }
+
     return { text: valueText, valueContext: context };
   }
 
-  private getPartialLegacyChipMetadata(valueText: string): { displayText: string; imageUrl?: string; title?: string } {
+  private getPartialLegacyChipMetadata(valueText: string): {
+    displayText: string;
+    imageUrl?: string;
+    title?: string;
+  } {
     const displayText = valueText
       .trim()
       .replace(/^\[\s*/, '')
       .replace(/\s*\]$/, '');
-    const normalizedDisplayText = this.normalizeSuggestionToken(displayText).replace(/\s+/g, ' ').trim();
+
+    const normalizedDisplayText = this.normalizeSuggestionToken(displayText)
+      .replace(/\s+/g, ' ')
+      .trim();
+
     const legacySuggestion = normalizedDisplayText
       ? this.suggestions.find((suggestion) => {
           if (suggestion.kind !== 'value' || suggestion.valueContext !== 'legacy') return false;
           const values = [suggestion.label, ...(suggestion.matchPhrases || [])]
             .map((value) => this.normalizeSuggestionToken(value).replace(/\s+/g, ' ').trim())
             .filter(Boolean);
+
           return values.some((value) => value === normalizedDisplayText);
         })
       : undefined;
+
     const characterName = displayText
       .replace(/\s+@[A-Za-z0-9_-]+\s*$/i, '')
       .replace(/\s+#\S+\s*$/i, '')
       .trim();
+
     const normalizedName = this.normalizeSuggestionToken(characterName).replace(/\s+/g, ' ').trim();
     const characterSuggestion = normalizedName
       ? this.suggestions.find((suggestion) => {
           if (suggestion.kind !== 'value' || suggestion.valueContext !== 'character') return false;
-          const values = [suggestion.label, suggestion.insertText, ...(suggestion.matchPhrases || [])]
+          const values = [
+            suggestion.label,
+            suggestion.insertText,
+            ...(suggestion.matchPhrases || [])
+          ]
             .map((value) => this.normalizeSuggestionToken(value).replace(/\s+/g, ' ').trim())
             .filter(Boolean);
+
           return values.some(
             (value) =>
               value === normalizedName ||
               value.startsWith(`${normalizedName} `) ||
-              normalizedName.startsWith(`${value} `),
+              normalizedName.startsWith(`${value} `)
           );
         })
       : undefined;
+
     const matchedSuggestion = legacySuggestion ?? characterSuggestion;
     return {
       displayText,
       imageUrl: matchedSuggestion?.imageUrl,
-      title: matchedSuggestion?.detail,
+      title: matchedSuggestion?.detail
     };
   }
 
@@ -590,25 +743,29 @@ export class UqlEditorLanguage {
     index: number,
     candidates: UqlKnownSuggestionCandidate[],
     valueContext?: UqlValueContext,
-    allowAnyFactorContext = false,
+    allowAnyFactorContext = false
   ): { text: string; displayText?: string; suggestion: UqlSuggestion } | null {
     if (index > 0 && /[A-Za-z0-9_\u00C0-\uFFFF]/.test(text.charAt(index - 1))) return null;
     const lowerText = text.toLowerCase();
     const bucket = this.getKnownSuggestionBucket(candidates, lowerText[index] || '');
     for (const { candidate, lowerCandidate, displayText, suggestion } of bucket) {
-      if (valueContext && !this.matchesValueContext(suggestion.valueContext, valueContext, allowAnyFactorContext))
+      if (
+        valueContext &&
+        !this.matchesValueContext(suggestion.valueContext, valueContext, allowAnyFactorContext)
+      )
         continue;
       if (!candidate || !lowerText.startsWith(lowerCandidate, index)) continue;
       const end = index + candidate.length;
       if (end < text.length && /[A-Za-z0-9_\u00C0-\uFFFF]/.test(text.charAt(end))) continue;
       return { text: text.slice(index, end), displayText, suggestion };
     }
+
     return null;
   }
 
   private getKnownSuggestionBucket(
     candidates: UqlKnownSuggestionCandidate[],
-    firstChar: string,
+    firstChar: string
   ): UqlKnownSuggestionCandidate[] {
     let buckets = this.knownSuggestionBuckets.get(candidates);
     if (!buckets) {
@@ -619,15 +776,21 @@ export class UqlEditorLanguage {
         if (bucket) bucket.push(candidate);
         else buckets.set(key, [candidate]);
       }
+
       this.knownSuggestionBuckets.set(candidates, buckets);
     }
+
     return buckets.get(firstChar) || [];
   }
 
   private getCachedValueMatchContext(
     text: string,
-    index: number,
-  ): { context: UqlValueContext | null; allowAnyFactorContext: boolean; inFactorArrayList: boolean } {
+    index: number
+  ): {
+    context: UqlValueContext | null;
+    allowAnyFactorContext: boolean;
+    inFactorArrayList: boolean;
+  } {
     if (this.activeTokenizeText !== text) return this.getValueMatchContext(text.slice(0, index));
     const cached = this.activeValueMatchContextCache.get(index);
     if (cached) return cached;
@@ -646,14 +809,20 @@ export class UqlEditorLanguage {
     if (suggestion.valueContext) return suggestion.valueContext;
     const haystack =
       `${suggestion.label} ${suggestion.detail || ''} ${suggestion.searchText || ''} ${suggestion.insertText}`.toLowerCase();
+
     if (/\bowned legacy\b|\blegacy member\b|\bowned uma\b/.test(haystack)) return 'legacy';
     if (/\bblue[_\s-]?sparks?\b|\bblue factor/.test(haystack)) return 'blue-factor';
     if (/\bpink[_\s-]?sparks?\b|\bpink factor/.test(haystack)) return 'pink-factor';
-    if (/\bgreen[_\s-]?sparks?\b|\bunique skills?\b|\bgreen factor/.test(haystack)) return 'green-factor';
-    if (/\bwhite[_\s-]?sparks?\b|\bwhite skills?\b|\bwhite factors?\b|\bwhite factor/.test(haystack))
+    if (/\bgreen[_\s-]?sparks?\b|\bunique skills?\b|\bgreen factor/.test(haystack))
+      return 'green-factor';
+    if (
+      /\bwhite[_\s-]?sparks?\b|\bwhite skills?\b|\bwhite factors?\b|\bwhite factor/.test(haystack)
+    )
       return 'white-factor';
-    if (/\bsupport[_\s-]?cards?\b|\bsupport card id\b|\bcard id\b/.test(haystack)) return 'support-card';
-    if (/\bwin[_\s-]?saddles?\b|\brace results?\b|\brace wins?\b/.test(haystack)) return 'race-saddle';
+    if (/\bsupport[_\s-]?cards?\b|\bsupport card id\b|\bcard id\b/.test(haystack))
+      return 'support-card';
+    if (/\bwin[_\s-]?saddles?\b|\brace results?\b|\brace wins?\b/.test(haystack))
+      return 'race-saddle';
     if (/\bparent rank\b|\brank\b/.test(haystack)) return 'rank';
     return undefined;
   }
@@ -665,12 +834,15 @@ export class UqlEditorLanguage {
       .replace(/[_-]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+
     if (/^(?:main|parent|main parent)\b/.test(haystack)) return 'main';
-    if (/^(?:gp1|left|left parent|grandparent 1|grand parent 1|great parent 1)\b/.test(haystack)) return 'gp1';
-    if (/^(?:gp2|right|right parent|grandparent 2|grand parent 2|great parent 2)\b/.test(haystack)) return 'gp2';
+    if (/^(?:gp1|left|left parent|grandparent 1|grand parent 1|great parent 1)\b/.test(haystack))
+      return 'gp1';
+    if (/^(?:gp2|right|right parent|grandparent 2|grand parent 2|great parent 2)\b/.test(haystack))
+      return 'gp2';
     if (
       /^(?:gp|any gp|grandparent|grand parent|great parent|any grandparent|any grand parent|any great parent)\b/.test(
-        haystack,
+        haystack
       )
     )
       return 'any-gp';
@@ -679,17 +851,28 @@ export class UqlEditorLanguage {
 
   private getMatchingSuggestions(
     query: string,
-    cursor: number,
+    cursor: number
   ): { suggestions: UqlSuggestion[]; token: string; contextualSuggestions: UqlSuggestion[] } {
     const contextualSuggestions = this.getContextualSuggestions(query, cursor);
-    const token = this.getCompletionRangeForSuggestions(query, cursor, contextualSuggestions).token.toLowerCase();
+    const token = this.getCompletionRangeForSuggestions(
+      query,
+      cursor,
+      contextualSuggestions
+    ).token.toLowerCase();
+
     const normalizedToken = this.normalizeSuggestionToken(token);
     const queryTerms = normalizedToken.match(/[a-z0-9\u00c0-\uffff]+/g) || [];
     const rankedSuggestions = normalizedToken
       ? contextualSuggestions
-          .map((suggestion) => ({ suggestion, rank: this.getSuggestionMatchRank(suggestion, normalizedToken, queryTerms) }))
-          .filter((entry): entry is { suggestion: UqlSuggestion; rank: number } => entry.rank !== null)
+          .map((suggestion) => ({
+            suggestion,
+            rank: this.getSuggestionMatchRank(suggestion, normalizedToken, queryTerms)
+          }))
+          .filter(
+            (entry): entry is { suggestion: UqlSuggestion; rank: number } => entry.rank !== null
+          )
       : contextualSuggestions.map((suggestion) => ({ suggestion, rank: 0 }));
+
     const kindOrder: Record<string, number> = {
       field: 0,
       operator: 1,
@@ -697,8 +880,9 @@ export class UqlEditorLanguage {
       value: 3,
       snippet: 4,
       keyword: 5,
-      punctuation: 6,
+      punctuation: 6
     };
+
     const suggestions = [...rankedSuggestions]
       .sort((a, b) => {
         if (a.rank !== b.rank) return a.rank - b.rank;
@@ -710,13 +894,25 @@ export class UqlEditorLanguage {
         if (ka !== kb) return ka - kb;
         // prefer prefix matches over substring matches within a kind
         if (normalizedToken) {
-          const la = this.getSuggestionSearchEntry(a.suggestion).normalizedLabel.startsWith(normalizedToken) ? 0 : 1;
-          const lb = this.getSuggestionSearchEntry(b.suggestion).normalizedLabel.startsWith(normalizedToken) ? 0 : 1;
+          const la = this.getSuggestionSearchEntry(a.suggestion).normalizedLabel.startsWith(
+            normalizedToken
+          )
+            ? 0
+            : 1;
+
+          const lb = this.getSuggestionSearchEntry(b.suggestion).normalizedLabel.startsWith(
+            normalizedToken
+          )
+            ? 0
+            : 1;
+
           if (la !== lb) return la - lb;
         }
+
         return a.suggestion.label.localeCompare(b.suggestion.label);
       })
       .map((entry) => entry.suggestion);
+
     return { suggestions, token, contextualSuggestions };
   }
 
@@ -743,39 +939,51 @@ export class UqlEditorLanguage {
     if (arrayValueSuggestions.length) {
       return arrayValueSuggestions;
     }
+
     const scopedSparkValueSuggestions = this.scopedSparkValueSuggestionsForPrefix(prefix);
     if (scopedSparkValueSuggestions.length) {
       return scopedSparkValueSuggestions;
     }
+
     const scopePrefixSuggestions = this.scopePrefixFieldSuggestionsForPrefix(prefix);
     if (scopePrefixSuggestions.length) {
       return scopePrefixSuggestions;
     }
+
     const fieldMatch = this.matchTrailingField(trimmedPrefix);
     if (fieldMatch) {
       return this.operatorSuggestionsForFieldType(fieldMatch.fieldType);
     }
+
     if (this.isAfterComparisonOperator(prefix)) {
       const contextualValues = this.valueSuggestionsForPrefix(prefix);
       return contextualValues.length ? contextualValues : [this.valueSuggestionForPrefix(prefix)];
     }
+
     const trailingOperatorFieldMatch = this.matchFieldBeforeTrailingOperator(trimmedPrefix);
     if (trailingOperatorFieldMatch) {
       return this.operatorSuggestionsForFieldType(trailingOperatorFieldMatch.fieldType);
     }
-    const trailingOperatorPrefixFieldMatch = this.matchFieldBeforeTrailingOperatorPrefix(trimmedPrefix);
+
+    const trailingOperatorPrefixFieldMatch =
+      this.matchFieldBeforeTrailingOperatorPrefix(trimmedPrefix);
+
     if (trailingOperatorPrefixFieldMatch) {
       return this.operatorSuggestionsForFieldType(trailingOperatorPrefixFieldMatch.fieldType);
     }
+
     if (this.isAfterBooleanKeyword(trimmedPrefix)) {
       return this.expressionStartSuggestions();
     }
+
     if (this.isTypingBooleanContinuation(prefix)) {
       return this.continuationSuggestions(trimmedPrefix);
     }
+
     if (this.isAfterKnownValue(prefix) || this.isAfterCompleteLiteralPredicate(trimmedPrefix)) {
       return this.continuationSuggestions(trimmedPrefix);
     }
+
     const contextualValueSuggestions = this.valueSuggestionsForPrefix(prefix);
     if (contextualValueSuggestions.length) return contextualValueSuggestions;
     return this.expressionStartSuggestions();
@@ -789,7 +997,11 @@ export class UqlEditorLanguage {
     return this.suggestions.filter(
       (suggestion) =>
         suggestion.kind === 'value' &&
-        this.matchesValueContext(suggestion.valueContext, context, matchContext.allowAnyFactorContext),
+        this.matchesValueContext(
+          suggestion.valueContext,
+          context,
+          matchContext.allowAnyFactorContext
+        )
     );
   }
 
@@ -803,15 +1015,18 @@ export class UqlEditorLanguage {
       currentItem = currentClause.slice(listStart + 1);
     } else {
       const singleMatch = currentClause.match(
-        /\b(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s+(.*)$/i,
+        /\b(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s+(.*)$/i
       );
+
       if (!singleMatch) return [];
       currentItem = singleMatch[1]!;
     }
+
     // Only offer a star level once the skill name is finished (trailing space) and no comparison exists yet.
     if (!/\s$/.test(currentItem) || /(?:>=|<=|<>|!=|=|>|<)/.test(currentItem)) return [];
     const skillText = currentItem.trim();
-    if (!skillText || !this.isKnownFactorValue(skillText, context, allowAnyFactorContext)) return [];
+    if (!skillText || !this.isKnownFactorValue(skillText, context, allowAnyFactorContext))
+      return [];
     return this.skillLevelOperatorSuggestions();
   }
 
@@ -825,7 +1040,11 @@ export class UqlEditorLanguage {
     return this.skillLevelOperatorSuggestions();
   }
 
-  private isKnownFactorValue(value: string, context: UqlValueContext, allowAnyFactorContext: boolean): boolean {
+  private isKnownFactorValue(
+    value: string,
+    context: UqlValueContext,
+    allowAnyFactorContext: boolean
+  ): boolean {
     const normalized = this.normalizeSuggestionToken(value);
     if (!normalized) return false;
     return this.suggestions.some(
@@ -833,7 +1052,7 @@ export class UqlEditorLanguage {
         suggestion.kind === 'value' &&
         this.matchesValueContext(suggestion.valueContext, context, allowAnyFactorContext) &&
         (this.normalizeSuggestionToken(suggestion.label) === normalized ||
-          this.normalizeSuggestionToken(suggestion.insertText) === normalized),
+          this.normalizeSuggestionToken(suggestion.insertText) === normalized)
     );
   }
 
@@ -843,9 +1062,9 @@ export class UqlEditorLanguage {
     return this.suggestions.some(
       (suggestion) =>
         suggestion.kind === 'value' &&
-        !!suggestion.valueContext?.endsWith('-factor') &&
+        Boolean(suggestion.valueContext?.endsWith('-factor')) &&
         (this.normalizeSuggestionToken(suggestion.label) === normalized ||
-          this.normalizeSuggestionToken(suggestion.insertText) === normalized),
+          this.normalizeSuggestionToken(suggestion.insertText) === normalized)
     );
   }
 
@@ -855,19 +1074,34 @@ export class UqlEditorLanguage {
         label: '> stars',
         insertText: '> ',
         kind: 'operator',
-        detail: 'This skill above N stars - leave blank to match all star levels',
+        detail: 'This skill above N stars - leave blank to match all star levels'
       },
-      { label: '>= stars', insertText: '>= ', kind: 'operator', detail: 'This skill at N or more stars' },
-      { label: '= stars', insertText: '= ', kind: 'operator', detail: 'This skill at exactly N stars' },
-      { label: '<= stars', insertText: '<= ', kind: 'operator', detail: 'This skill at N or fewer stars' },
-      { label: '< stars', insertText: '< ', kind: 'operator', detail: 'This skill below N stars' },
+      {
+        label: '>= stars',
+        insertText: '>= ',
+        kind: 'operator',
+        detail: 'This skill at N or more stars'
+      },
+      {
+        label: '= stars',
+        insertText: '= ',
+        kind: 'operator',
+        detail: 'This skill at exactly N stars'
+      },
+      {
+        label: '<= stars',
+        insertText: '<= ',
+        kind: 'operator',
+        detail: 'This skill at N or fewer stars'
+      },
+      { label: '< stars', insertText: '< ', kind: 'operator', detail: 'This skill below N stars' }
     ];
   }
 
   private whiteScoringSuggestionsForPrefix(prefix: string): UqlSuggestion[] {
     if (this.getWhiteScoringContext(this.getCurrentClausePrefix(prefix)) !== 'skill') return [];
     return this.suggestions.filter(
-      (suggestion) => suggestion.kind === 'value' && suggestion.valueContext === 'white-factor',
+      (suggestion) => suggestion.kind === 'value' && suggestion.valueContext === 'white-factor'
     );
   }
 
@@ -877,7 +1111,7 @@ export class UqlEditorLanguage {
         suggestion.kind === 'field' ||
         suggestion.kind === 'keyword' ||
         suggestion.kind === 'function' ||
-        suggestion.kind === 'snippet',
+        suggestion.kind === 'snippet'
     );
   }
 
@@ -898,22 +1132,38 @@ export class UqlEditorLanguage {
     const scopedValue = this.getScopedSparkValuePrefix(prefix);
     if (!scopedValue) return [];
     return this.suggestions
-      .filter((suggestion) => suggestion.kind === 'value' && !!suggestion.valueContext?.endsWith('-factor'))
+      .filter(
+        (suggestion) =>
+          suggestion.kind === 'value' && Boolean(suggestion.valueContext?.endsWith('-factor'))
+      )
       .map((suggestion) => ({
         ...suggestion,
         priority: Math.min(suggestion.priority ?? this.defaultSuggestionPriority(suggestion), 6),
-        detail: `${this.getScopeLabel(scopedValue.scopeToken)} ${suggestion.detail || 'spark'}; compare stars with >=, =, <=`,
+        detail: `${this.getScopeLabel(scopedValue.scopeToken)} ${suggestion.detail || 'spark'}; compare stars with >=, =, <=`
       }));
   }
 
   private getScopedSparkValuePrefix(
-    prefix: string,
+    prefix: string
   ): { scopeToken: 'main' | 'gp1' | 'gp2' | 'gp'; valuePrefix: string } | null {
     const currentClause = this.getCurrentClausePrefix(prefix);
     const scopeAliases: Array<{ token: 'main' | 'gp1' | 'gp2' | 'gp'; aliases: string[] }> = [
       { token: 'main', aliases: ['main parent', 'main', 'parent'] },
-      { token: 'gp1', aliases: ['great parent 1', 'grand parent 1', 'grandparent 1', 'left parent', 'gp1', 'left'] },
-      { token: 'gp2', aliases: ['great parent 2', 'grand parent 2', 'grandparent 2', 'right parent', 'gp2', 'right'] },
+      {
+        token: 'gp1',
+        aliases: ['great parent 1', 'grand parent 1', 'grandparent 1', 'left parent', 'gp1', 'left']
+      },
+      {
+        token: 'gp2',
+        aliases: [
+          'great parent 2',
+          'grand parent 2',
+          'grandparent 2',
+          'right parent',
+          'gp2',
+          'right'
+        ]
+      },
       {
         token: 'gp',
         aliases: [
@@ -924,19 +1174,21 @@ export class UqlEditorLanguage {
           'grand parent',
           'grandparent',
           'any gp',
-          'gp',
-        ],
-      },
+          'gp'
+        ]
+      }
     ];
 
     for (const scope of scopeAliases) {
       for (const alias of scope.aliases) {
         const match = currentClause.match(
-          new RegExp(`^\\s*${this.escapeRegExp(alias).replace(/\\s+/g, '\\s+')}\\s+`, 'i'),
+          new RegExp(`^\\s*${this.escapeRegExp(alias).replace(/\\s+/g, '\\s+')}\\s+`, 'i')
         );
+
         if (!match) continue;
         const valuePrefix = currentClause.slice(match[0].length);
-        if (/[,();]|\b(?:where|and|or|not|has|contains|in|like|ilike)\b/i.test(valuePrefix)) return null;
+        if (/[,();]|\b(?:where|and|or|not|has|contains|in|like|ilike)\b/i.test(valuePrefix))
+          return null;
         return { scopeToken: scope.token, valuePrefix };
       }
     }
@@ -958,11 +1210,29 @@ export class UqlEditorLanguage {
   }
 
   private getTrailingScopeToken(prefix: string): 'main' | 'gp1' | 'gp2' | 'gp' | null {
-    const phrase = this.getCurrentClausePrefix(prefix).toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
+    const phrase = this.getCurrentClausePrefix(prefix)
+      .toLowerCase()
+      .replace(/[_-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
     if (['main', 'parent', 'main parent'].includes(phrase)) return 'main';
-    if (['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1', 'great parent 1'].includes(phrase))
+    if (
+      ['gp1', 'left', 'left parent', 'grandparent 1', 'grand parent 1', 'great parent 1'].includes(
+        phrase
+      )
+    )
       return 'gp1';
-    if (['gp2', 'right', 'right parent', 'grandparent 2', 'grand parent 2', 'great parent 2'].includes(phrase))
+    if (
+      [
+        'gp2',
+        'right',
+        'right parent',
+        'grandparent 2',
+        'grand parent 2',
+        'great parent 2'
+      ].includes(phrase)
+    )
       return 'gp2';
     if (
       [
@@ -973,7 +1243,7 @@ export class UqlEditorLanguage {
         'great parent',
         'any grandparent',
         'any grand parent',
-        'any great parent',
+        'any great parent'
       ].includes(phrase)
     )
       return 'gp';
@@ -994,8 +1264,16 @@ export class UqlEditorLanguage {
 
   private operatorSuggestionsForFieldType(fieldType?: UqlFieldType): UqlSuggestion[] {
     if (fieldType === 'directive') {
-      return [{ label: '=', insertText: '= ', kind: 'operator', detail: 'Choose this editor context value' }];
+      return [
+        {
+          label: '=',
+          insertText: '= ',
+          kind: 'operator',
+          detail: 'Choose this editor context value'
+        }
+      ];
     }
+
     if (fieldType === 'string') {
       return [
         {
@@ -1003,76 +1281,111 @@ export class UqlEditorLanguage {
           insertText: "ilike '%%'",
           kind: 'operator',
           detail: 'Fuzzy match (case-insensitive)',
-          cursorOffset: -2,
+          cursorOffset: -2
         },
-        { label: 'like', insertText: "like ''", kind: 'operator', detail: 'SQL LIKE pattern', cursorOffset: -1 },
-        { label: '=', insertText: "= ''", kind: 'operator', detail: 'Exact match', cursorOffset: -1 },
-        { label: '!=', insertText: "!= ''", kind: 'operator', detail: 'Not equal', cursorOffset: -1 },
+        {
+          label: 'like',
+          insertText: "like ''",
+          kind: 'operator',
+          detail: 'SQL LIKE pattern',
+          cursorOffset: -1
+        },
+        {
+          label: '=',
+          insertText: "= ''",
+          kind: 'operator',
+          detail: 'Exact match',
+          cursorOffset: -1
+        },
+        {
+          label: '!=',
+          insertText: "!= ''",
+          kind: 'operator',
+          detail: 'Not equal',
+          cursorOffset: -1
+        },
         {
           label: 'in (...)',
           insertText: 'in ()',
           kind: 'operator',
           detail: 'Match any listed value',
-          cursorOffset: -1,
+          cursorOffset: -1
         },
         {
           label: 'not ilike',
           insertText: "not ilike '%%'",
           kind: 'operator',
           detail: 'Exclude fuzzy match',
-          cursorOffset: -2,
-        },
+          cursorOffset: -2
+        }
       ];
     }
+
     if (fieldType === 'array') {
       return [
-        { label: 'has one', insertText: 'has ', kind: 'operator', detail: 'One skill/factor is present' },
+        {
+          label: 'has one',
+          insertText: 'has ',
+          kind: 'operator',
+          detail: 'One skill/factor is present'
+        },
         {
           label: 'has any',
           insertText: 'has any ()',
           kind: 'operator',
           detail: 'At least one listed skill/factor is present',
-          cursorOffset: -1,
+          cursorOffset: -1
         },
         {
           label: 'has all',
           insertText: 'has all ()',
           kind: 'operator',
           detail: 'Every listed skill/factor is present',
-          cursorOffset: -1,
+          cursorOffset: -1
         },
-        { label: 'does not have', insertText: 'does not have ', kind: 'operator', detail: 'Exclude one skill/factor' },
-        { label: 'contains', insertText: 'contains ', kind: 'operator', detail: 'Alias for "has one"' },
+        {
+          label: 'does not have',
+          insertText: 'does not have ',
+          kind: 'operator',
+          detail: 'Exclude one skill/factor'
+        },
+        {
+          label: 'contains',
+          insertText: 'contains ',
+          kind: 'operator',
+          detail: 'Alias for "has one"'
+        },
         {
           label: 'contains any',
           insertText: 'contains any ()',
           kind: 'operator',
           detail: 'Alias for "has any"',
-          cursorOffset: -1,
+          cursorOffset: -1
         },
         {
           label: 'contains all',
           insertText: 'contains all ()',
           kind: 'operator',
           detail: 'Alias for "has all"',
-          cursorOffset: -1,
+          cursorOffset: -1
         },
         {
           label: 'in (...)',
           insertText: 'in ()',
           kind: 'operator',
           detail: 'Match any listed skill/factor (like has any)',
-          cursorOffset: -1,
+          cursorOffset: -1
         },
         {
           label: 'not in (...)',
           insertText: 'not in ()',
           kind: 'operator',
           detail: 'Exclude every listed skill/factor',
-          cursorOffset: -1,
-        },
+          cursorOffset: -1
+        }
       ];
     }
+
     return [
       { label: '>=', insertText: '>= ', kind: 'operator', detail: 'At least' },
       { label: '=', insertText: '= ', kind: 'operator', detail: 'Exactly' },
@@ -1080,25 +1393,54 @@ export class UqlEditorLanguage {
       { label: '>', insertText: '> ', kind: 'operator', detail: 'Greater than' },
       { label: '<', insertText: '< ', kind: 'operator', detail: 'Less than' },
       { label: '+', insertText: '+ ', kind: 'operator', detail: 'Add another numeric expression' },
-      { label: '-', insertText: '- ', kind: 'operator', detail: 'Subtract another numeric expression' },
-      { label: '*', insertText: '* ', kind: 'operator', detail: 'Multiply by another numeric expression' },
-      { label: '/', insertText: '/ ', kind: 'operator', detail: 'Integer-divide by another numeric expression' },
+      {
+        label: '-',
+        insertText: '- ',
+        kind: 'operator',
+        detail: 'Subtract another numeric expression'
+      },
+      {
+        label: '*',
+        insertText: '* ',
+        kind: 'operator',
+        detail: 'Multiply by another numeric expression'
+      },
+      {
+        label: '/',
+        insertText: '/ ',
+        kind: 'operator',
+        detail: 'Integer-divide by another numeric expression'
+      },
       { label: '%', insertText: '% ', kind: 'operator', detail: 'Modulo remainder' },
       { label: 'mod', insertText: 'mod ', kind: 'operator', detail: 'Modulo remainder' },
       { label: 'between', insertText: 'between ', kind: 'operator', detail: 'Range a between b' },
-      { label: 'in (...)', insertText: 'in ()', kind: 'operator', detail: 'Include values', cursorOffset: -1 },
-      { label: 'not in (...)', insertText: 'not in ()', kind: 'operator', detail: 'Exclude values', cursorOffset: -1 },
+      {
+        label: 'in (...)',
+        insertText: 'in ()',
+        kind: 'operator',
+        detail: 'Include values',
+        cursorOffset: -1
+      },
+      {
+        label: 'not in (...)',
+        insertText: 'not in ()',
+        kind: 'operator',
+        detail: 'Exclude values',
+        cursorOffset: -1
+      }
     ];
   }
 
   private continuationSuggestions(trimmedPrefix: string): UqlSuggestion[] {
     const out: UqlSuggestion[] = [
       { label: 'and', insertText: 'and ', kind: 'keyword', detail: 'Require both sides' },
-      { label: 'or', insertText: 'or ', kind: 'keyword', detail: 'Match either side' },
+      { label: 'or', insertText: 'or ', kind: 'keyword', detail: 'Match either side' }
     ];
+
     if (this.countUnclosedParens(trimmedPrefix) > 0) {
       out.push({ label: ')', insertText: ')', kind: 'punctuation', detail: 'Close group' });
     }
+
     return out;
   }
 
@@ -1106,7 +1448,7 @@ export class UqlEditorLanguage {
     if (!trimmedPrefix) return false;
     if (
       /(?:\bwhere\b|\band\b|\bor\b|\bnot\b|\bin\b|\bbetween\b|\blike\b|\bilike\b|\bmod\b|[,(+\-*\/%]|=|!=|<>|<=|>=|<|>)$/i.test(
-        trimmedPrefix,
+        trimmedPrefix
       )
     )
       return false;
@@ -1124,7 +1466,11 @@ export class UqlEditorLanguage {
     return this.suggestions.some((suggestion) => {
       return (
         suggestion.kind === 'value' &&
-        this.matchesValueContext(suggestion.valueContext, context, matchContext.allowAnyFactorContext) &&
+        this.matchesValueContext(
+          suggestion.valueContext,
+          context,
+          matchContext.allowAnyFactorContext
+        ) &&
         [suggestion.insertText, suggestion.label, suggestion.backendValue]
           .filter((value): value is string => typeof value === 'string' && value.length > 0)
           .some((value) => this.normalizeValueToken(value) === normalizedValue)
@@ -1141,6 +1487,7 @@ export class UqlEditorLanguage {
         if (!lower.endsWith(phrase)) continue;
         const boundaryIndex = lower.length - phrase.length - 1;
         if (boundaryIndex < 0) return { fieldType: entry.fieldType };
+
         const boundaryChar = lower.charCodeAt(boundaryIndex);
         // space (32), tab (9), '(' (40)
         if (boundaryChar === 32 || boundaryChar === 9 || boundaryChar === 40) {
@@ -1148,18 +1495,24 @@ export class UqlEditorLanguage {
         }
       }
     }
+
     return null;
   }
 
-  private matchFieldBeforeTrailingOperator(trimmedPrefix: string): { fieldType?: UqlFieldType } | null {
+  private matchFieldBeforeTrailingOperator(
+    trimmedPrefix: string
+  ): { fieldType?: UqlFieldType } | null {
     const match = trimmedPrefix.match(
-      /^(.*?)(?:\s+)(?:not\s+in|in|has\s+all|has\s+any|does\s+not\s+have|has|between|ilike|like|!=|<>|<=|>=|=|<|>)\s*$/i,
+      /^(.*?)(?:\s+)(?:not\s+in|in|has\s+all|has\s+any|does\s+not\s+have|has|between|ilike|like|!=|<>|<=|>=|=|<|>)\s*$/i
     );
+
     if (!match) return null;
     return this.matchTrailingField(match[1]!.trimEnd());
   }
 
-  private matchFieldBeforeTrailingOperatorPrefix(trimmedPrefix: string): { fieldType?: UqlFieldType } | null {
+  private matchFieldBeforeTrailingOperatorPrefix(
+    trimmedPrefix: string
+  ): { fieldType?: UqlFieldType } | null {
     const operators = [
       'does not have',
       'not in',
@@ -1172,8 +1525,9 @@ export class UqlEditorLanguage {
       'like',
       'contains',
       'has',
-      'in',
+      'in'
     ];
+
     for (let index = trimmedPrefix.length - 1; index > 0; index--) {
       if (!/\s/.test(trimmedPrefix.charAt(index))) continue;
       const fieldText = trimmedPrefix.slice(0, index).trimEnd();
@@ -1182,11 +1536,13 @@ export class UqlEditorLanguage {
         .toLowerCase()
         .replace(/\s+/g, ' ')
         .trim();
+
       if (!fieldText || !operatorToken) continue;
       if (!operators.some((operator) => operator.startsWith(operatorToken))) continue;
       const fieldMatch = this.matchTrailingField(fieldText);
       if (fieldMatch) return fieldMatch;
     }
+
     return null;
   }
 
@@ -1207,11 +1563,18 @@ export class UqlEditorLanguage {
     return value.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
-  private matchesQueryTerms(candidateTerms: string[], queryTerms: string[], preserveOrder: boolean): boolean {
+  private matchesQueryTerms(
+    candidateTerms: string[],
+    queryTerms: string[],
+    preserveOrder: boolean
+  ): boolean {
     if (queryTerms.length === 0) return true;
     if (!preserveOrder) {
-      return queryTerms.every((queryTerm) => candidateTerms.some((candidate) => candidate.startsWith(queryTerm)));
+      return queryTerms.every((queryTerm) =>
+        candidateTerms.some((candidate) => candidate.startsWith(queryTerm))
+      );
     }
+
     let candidateIndex = 0;
     for (const queryTerm of queryTerms) {
       let found = false;
@@ -1221,17 +1584,27 @@ export class UqlEditorLanguage {
           candidateIndex++;
           break;
         }
+
         candidateIndex++;
       }
+
       if (!found) return false;
     }
+
     return true;
   }
 
-  private getSuggestionMatchRank(suggestion: UqlSuggestion, normalizedToken: string, queryTerms: string[]): number | null {
+  private getSuggestionMatchRank(
+    suggestion: UqlSuggestion,
+    normalizedToken: string,
+    queryTerms: string[]
+  ): number | null {
     if (!normalizedToken) return 0;
     const entry = this.getSuggestionSearchEntry(suggestion);
-    if (entry.normalizedLabel.startsWith(normalizedToken) || entry.normalizedInsertText.startsWith(normalizedToken))
+    if (
+      entry.normalizedLabel.startsWith(normalizedToken) ||
+      entry.normalizedInsertText.startsWith(normalizedToken)
+    )
       return 0;
     if (queryTerms.length === 0) return null;
     if (normalizedToken.length >= 3 && entry.haystack.includes(normalizedToken)) return 1;
@@ -1244,18 +1617,27 @@ export class UqlEditorLanguage {
     let entry = UqlEditorLanguage.suggestionSearchCache.get(suggestion);
     if (!entry) {
       const normalizedLabel = this.normalizeSuggestionToken(suggestion.label);
-      const normalizedInsertText = suggestion.insertText === suggestion.label ? normalizedLabel : this.normalizeSuggestionToken(suggestion.insertText);
+      const normalizedInsertText =
+        suggestion.insertText === suggestion.label
+          ? normalizedLabel
+          : this.normalizeSuggestionToken(suggestion.insertText);
+
       const normalizedSearch = this.normalizeSuggestionToken(suggestion.searchText || '');
       const normalizedDetail = this.normalizeSuggestionToken(suggestion.detail || '');
       const normalizedBackend = this.normalizeSuggestionToken(suggestion.backendValue || '');
       entry = {
         normalizedLabel,
         normalizedInsertText,
-        searchTerms: `${normalizedLabel} ${normalizedInsertText} ${normalizedSearch} ${normalizedDetail} ${normalizedBackend}`.match(/[a-z0-9\u00c0-\uffff]+/g) || [],
-        haystack: `${normalizedLabel} ${normalizedDetail} ${normalizedSearch} ${normalizedInsertText} ${normalizedBackend}`,
+        searchTerms:
+          `${normalizedLabel} ${normalizedInsertText} ${normalizedSearch} ${normalizedDetail} ${normalizedBackend}`.match(
+            /[a-z0-9\u00c0-\uffff]+/g
+          ) || [],
+        haystack: `${normalizedLabel} ${normalizedDetail} ${normalizedSearch} ${normalizedInsertText} ${normalizedBackend}`
       };
+
       UqlEditorLanguage.suggestionSearchCache.set(suggestion, entry);
     }
+
     return entry;
   }
 
@@ -1273,8 +1655,10 @@ export class UqlEditorLanguage {
         seen.add(`${suggestion.fieldType || ''}|${lower}`);
         phrases.push(lower);
       }
+
       if (phrases.length) index.push({ fieldType: suggestion.fieldType, phrases });
     }
+
     this.fieldSuggestionPhraseIndex = index;
   }
 
@@ -1287,19 +1671,22 @@ export class UqlEditorLanguage {
         if (c === quote) quote = null;
         continue;
       }
+
       if (isUqlQuoteStart(text, i)) {
         quote = c;
         continue;
       }
+
       if (c === '(') open++;
       else if (c === ')') open--;
     }
+
     return open;
   }
 
   private isAfterComparisonOperator(prefix: string): boolean {
     return /(=|!=|<>|<=|>=|<|>|\bin\b\s*(?:\(\s*)?|\bnot\s+in\b\s*(?:\(\s*)?|\bhas\s+|\bhas\s+any\s*\(|\bhas\s+all\s*\(|\bdoes\s+not\s+have\s+)\s*$/i.test(
-      prefix,
+      prefix
     );
   }
 
@@ -1308,29 +1695,48 @@ export class UqlEditorLanguage {
     if (valueContext === 'legacy') {
       return this.openLegacyPickerSuggestion();
     }
+
     const currentClause = this.getCurrentClausePrefix(prefix);
     const fieldPrefix = currentClause
       .replace(/(=|!=|<>|<=|>=|<|>|\bin\b\s*(?:\(\s*)?|\bnot\s+in\b\s*(?:\(\s*)?)\s*$/i, '')
       .trimEnd()
       .toLowerCase();
+
     const matchedField = this.findFieldSuggestion(fieldPrefix);
     if (matchedField?.detail?.toLowerCase().includes('max 3 stars')) {
-      return { label: '3', insertText: '3', kind: 'value', detail: 'Stars on this specific slot (1-3)' };
+      return {
+        label: '3',
+        insertText: '3',
+        kind: 'value',
+        detail: 'Stars on this specific slot (1-3)'
+      };
     }
+
     if (/(trainer name|trainer_name|name)$/i.test(fieldPrefix)) {
-      return { label: "'%name%'", insertText: "'%name%'", kind: 'value', detail: 'Text match value' };
+      return {
+        label: "'%name%'",
+        insertText: "'%name%'",
+        kind: 'value',
+        detail: 'Text match value'
+      };
     }
+
     if (/(support card|support_card|card)$/i.test(fieldPrefix)) {
       return {
         label: 'Support card name',
         insertText: 'Support card name',
         kind: 'value',
-        detail: 'Support card name',
+        detail: 'Support card name'
       };
     }
-    if (/^(main|parent)$/i.test(fieldPrefix) || /(characters?|charas?|chara|umas?|parent|_id)$/i.test(fieldPrefix)) {
+
+    if (
+      /^(main|parent)$/i.test(fieldPrefix) ||
+      /(characters?|charas?|chara|umas?|parent|_id)$/i.test(fieldPrefix)
+    ) {
       return { label: '1001', insertText: '1001', kind: 'value', detail: 'Character id' };
     }
+
     return { label: '0', insertText: '0', kind: 'value', detail: 'Any number' };
   }
 
@@ -1340,8 +1746,9 @@ export class UqlEditorLanguage {
     const values = this.suggestions.filter(
       (suggestion) =>
         suggestion.kind === 'value' &&
-        this.matchesValueContext(suggestion.valueContext, context, allowAnyFactorContext),
+        this.matchesValueContext(suggestion.valueContext, context, allowAnyFactorContext)
     );
+
     return context === 'legacy' ? [this.openLegacyPickerSuggestion(), ...values] : values;
   }
 
@@ -1351,7 +1758,7 @@ export class UqlEditorLanguage {
       insertText: '[]',
       kind: 'value',
       detail: 'Pick a legacy from your account',
-      valueContext: 'legacy',
+      valueContext: 'legacy'
     };
   }
 
@@ -1361,34 +1768,42 @@ export class UqlEditorLanguage {
     inFactorArrayList: boolean;
   } {
     const context = this.getValueContext(prefix);
-    const inFactorArrayList = !!context?.endsWith('-factor') && this.isArrayFactorValuePrefix(prefix);
+    const inFactorArrayList =
+      Boolean(context?.endsWith('-factor')) && this.isArrayFactorValuePrefix(prefix);
+
     return {
       context,
       allowAnyFactorContext: inFactorArrayList && this.shouldAllowAnyFactorContext(prefix),
-      inFactorArrayList,
+      inFactorArrayList
     };
   }
 
   private shouldAllowAnyFactorContext(prefix: string): boolean {
     const currentClause = this.getCurrentClausePrefix(prefix);
     const friendlyArrayMatch = currentClause.match(
-      /([^()]+?)\s+(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s*(?:\([^)]*)?[^)]*$/i,
+      /([^()]+?)\s+(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s*(?:\([^)]*)?[^)]*$/i
     );
+
     if (friendlyArrayMatch) {
       return this.isScopedParentFactorPrefix(friendlyArrayMatch[1]!);
     }
+
     return /^(?:not\s+)?(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains|in|not\s+in)\s*(?:\([^)]*)?[^)]*$/i.test(
-      currentClause.trimStart(),
+      currentClause.trimStart()
     );
   }
 
   private matchesValueContext(
     candidateContext: UqlValueContext | undefined,
     expectedContext: UqlValueContext,
-    allowAnyFactorContext = false,
+    allowAnyFactorContext = false
   ): boolean {
     if (candidateContext === expectedContext) return true;
-    return allowAnyFactorContext && !!candidateContext?.endsWith('-factor') && expectedContext.endsWith('-factor');
+    return (
+      allowAnyFactorContext &&
+      Boolean(candidateContext?.endsWith('-factor')) &&
+      expectedContext.endsWith('-factor')
+    );
   }
 
   private isArrayFactorValuePrefix(prefix: string): boolean {
@@ -1396,9 +1811,11 @@ export class UqlEditorLanguage {
     const whiteScoringContext = this.getWhiteScoringContext(currentClause);
     if (whiteScoringContext) return whiteScoringContext === 'skill';
     return (
-      /(?:contains|overlaps|has_all|contains_all)\s*\(\s*[^,()]+\s*,\s*(?:\([^)]*)?[^)]*$/i.test(currentClause) ||
+      /(?:contains|overlaps|has_all|contains_all)\s*\(\s*[^,()]+\s*,\s*(?:\([^)]*)?[^)]*$/i.test(
+        currentClause
+      ) ||
       /[^()]+?\s+(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s*(?:\([^)]*)?[^)]*$/i.test(
-        currentClause,
+        currentClause
       ) ||
       /\b(?:not\s+in|in)\s*\([^)]*$/i.test(currentClause)
     );
@@ -1411,15 +1828,17 @@ export class UqlEditorLanguage {
     if (whiteScoringContext === 'param') return null;
 
     const functionMatch = currentClause.match(
-      /(?:contains|overlaps|has_all|contains_all)\s*\(\s*([^,()]+)\s*,\s*(?:\([^)]*)?[^)]*$/i,
+      /(?:contains|overlaps|has_all|contains_all)\s*\(\s*([^,()]+)\s*,\s*(?:\([^)]*)?[^)]*$/i
     );
+
     if (functionMatch) {
       return this.valueContextForField(functionMatch[1]!);
     }
 
     const friendlyArrayMatch = currentClause.match(
-      /([^()]+?)\s+(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s*(?:\([^)]*)?[^)]*$/i,
+      /([^()]+?)\s+(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains)\s*(?:\([^)]*)?[^)]*$/i
     );
+
     if (friendlyArrayMatch) {
       if (this.isScopedParentFactorPrefix(friendlyArrayMatch[1]!)) return 'white-factor';
       return this.valueContextForField(friendlyArrayMatch[1]!);
@@ -1427,7 +1846,7 @@ export class UqlEditorLanguage {
 
     if (
       /^(?:not\s+)?(?:contains\s+all|contains\s+any|has\s+any|has\s+all|does\s+not\s+have|has|contains|in|not\s+in)\s*(?:\([^)]*)?[^)]*$/i.test(
-        currentClause.trimStart(),
+        currentClause.trimStart()
       )
     ) {
       return 'white-factor';
@@ -1436,6 +1855,7 @@ export class UqlEditorLanguage {
     const comparisonPrefix = currentClause
       .replace(/(?:=|!=|<>|<=|>=|<|>|\bin\b\s*\(?|\bnot\s+in\b\s*\(?)\s*[^()]*$/i, '')
       .trimEnd();
+
     if (comparisonPrefix !== currentClause.trimEnd()) {
       const normalizedComparisonPrefix = comparisonPrefix
         .toLowerCase()
@@ -1443,7 +1863,9 @@ export class UqlEditorLanguage {
         .replace(/\s+/g, ' ')
         .trim()
         .replace(/^(?:not|where)\s+/, '');
-      if (normalizedComparisonPrefix === 'main' || normalizedComparisonPrefix === 'parent') return 'character';
+
+      if (normalizedComparisonPrefix === 'main' || normalizedComparisonPrefix === 'parent')
+        return 'character';
       return this.valueContextForField(comparisonPrefix);
     }
 
@@ -1465,10 +1887,12 @@ export class UqlEditorLanguage {
         if (character === quoteCharacter) quoteCharacter = null;
         continue;
       }
+
       if (isUqlQuoteStart(prefix, index)) {
         quoteCharacter = character;
         continue;
       }
+
       if (character === '(') {
         openParens.push(index);
       } else if (character === ')') {
@@ -1482,19 +1906,20 @@ export class UqlEditorLanguage {
         return prefix.slice(openIndex + 1);
       }
     }
+
     return null;
   }
 
   private isWhiteScoringCallOpen(text: string, openIndex: number): boolean {
     const beforeOpen = text.slice(0, openIndex).trimEnd();
     return /(?:^|[^A-Za-z0-9_])(?:optional_white|optional_main_white|optional_any_white|lineage_white|optional\s+white|optional\s+main\s+white|optional\s+any\s+white|lineage\s+white)\s*(?:in\s*)?$/i.test(
-      beforeOpen,
+      beforeOpen
     );
   }
 
   private hasWhiteScoringParameterStarted(argsText: string): boolean {
     return /(?:^|,)\s*(?:priority|priority_group|prio_group|prio\s+group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|proc_kind|affinity)\s*(?:=|$)/i.test(
-      argsText,
+      argsText
     );
   }
 
@@ -1510,7 +1935,7 @@ export class UqlEditorLanguage {
     const currentArgumentPrefix = argsText.slice(argsText.lastIndexOf(',') + 1);
     if (currentArgumentPrefix.trim().length > 0) return false;
     return /^(?:priority|priority_group|prio_group|prio\s+group|group|type_weight|level_weight|match_weight|stack_weight|occurrence_weight|base|decay|weight|proc_weight|proc_kind|affinity)\s*=/i.test(
-      text.slice(index),
+      text.slice(index)
     );
   }
 
@@ -1523,14 +1948,17 @@ export class UqlEditorLanguage {
         if (character === quoteCharacter) quoteCharacter = null;
         continue;
       }
+
       if (isUqlQuoteStart(prefix, index)) {
         quoteCharacter = character;
         continue;
       }
+
       if (character === ';' || character === '\n') {
         clauseStart = index + 1;
         continue;
       }
+
       const booleanMatch = prefix.slice(index).match(/^(where|and|or)\b/i);
       if (!booleanMatch) continue;
       const before = index > 0 ? prefix.charAt(index - 1) : '';
@@ -1542,6 +1970,7 @@ export class UqlEditorLanguage {
         index = clauseStart - 1;
       }
     }
+
     return prefix.slice(clauseStart);
   }
 
@@ -1552,6 +1981,7 @@ export class UqlEditorLanguage {
       .replace(/\s+/g, ' ')
       .trim()
       .replace(/^(?:not|where)\s+/, '');
+
     return [
       'main',
       'parent',
@@ -1575,7 +2005,7 @@ export class UqlEditorLanguage {
       'right parent',
       'grandparent 2',
       'grand parent 2',
-      'great parent 2',
+      'great parent 2'
     ].includes(normalized);
   }
 
@@ -1586,11 +2016,13 @@ export class UqlEditorLanguage {
       .replace(/\s+/g, ' ')
       .trim()
       .replace(/^(?:not|where)\s+/, '');
+
     const matchedField = this.findFieldSuggestion(normalized);
     if (matchedField) {
       const context = this.inferSuggestionValueContext(matchedField);
       if (context) return context;
     }
+
     if (
       this.endsWithAny(normalized, [
         'target',
@@ -1658,17 +2090,20 @@ export class UqlEditorLanguage {
         'any gp character',
         'any gp characters',
         'any great parent character',
-        'any great parent characters',
+        'any great parent characters'
       ])
     ) {
       return 'character';
     }
+
     if (this.endsWithAny(normalized, ['legacy', 'owned legacy', 'owned uma', 'my legacy'])) {
       return 'legacy';
     }
+
     if (this.endsWithAny(normalized, ['support card', 'support', 'card', 'support card id'])) {
       return 'support-card';
     }
+
     if (
       this.endsWithAny(normalized, [
         'race results',
@@ -1679,14 +2114,16 @@ export class UqlEditorLanguage {
         'win saddles',
         'main win saddles',
         'left win saddles',
-        'right win saddles',
+        'right win saddles'
       ])
     ) {
       return 'race-saddle';
     }
+
     if (this.endsWithAny(normalized, ['rank', 'parent rank'])) {
       return 'rank';
     }
+
     if (
       this.endsWithAny(normalized, [
         'white sparks',
@@ -1708,11 +2145,12 @@ export class UqlEditorLanguage {
         'gp2 white sparks',
         'optional white',
         'optional main white',
-        'lineage white',
+        'lineage white'
       ])
     ) {
       return 'white-factor';
     }
+
     if (
       this.endsWithAny(normalized, [
         'green sparks',
@@ -1732,11 +2170,12 @@ export class UqlEditorLanguage {
         'gp1 unique skills',
         'gp2 green sparks',
         'gp2 green factors',
-        'gp2 unique skills',
+        'gp2 unique skills'
       ])
     ) {
       return 'green-factor';
     }
+
     if (
       this.endsWithAny(normalized, [
         'blue sparks',
@@ -1750,11 +2189,12 @@ export class UqlEditorLanguage {
         'gp1 blue sparks',
         'gp1 blue factors',
         'gp2 blue sparks',
-        'gp2 blue factors',
+        'gp2 blue factors'
       ])
     ) {
       return 'blue-factor';
     }
+
     if (
       this.endsWithAny(normalized, [
         'pink sparks',
@@ -1768,14 +2208,16 @@ export class UqlEditorLanguage {
         'gp1 pink sparks',
         'gp1 pink factors',
         'gp2 pink sparks',
-        'gp2 pink factors',
+        'gp2 pink factors'
       ])
     ) {
       return 'pink-factor';
     }
+
     if (this.endsWithAny(normalized, ['trainer name', 'trainer', 'name'])) {
       return 'text';
     }
+
     return null;
   }
 
@@ -1786,7 +2228,10 @@ export class UqlEditorLanguage {
         if (suggestion.kind !== 'field') return false;
         return [suggestion.label, suggestion.insertText]
           .filter(Boolean)
-          .some((value) => value.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim() === normalized);
+          .some(
+            (value) =>
+              value.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim() === normalized
+          );
       }) || null
     );
   }
@@ -1794,28 +2239,34 @@ export class UqlEditorLanguage {
   private getCompletionRangeForSuggestions(
     query: string,
     cursor: number,
-    suggestions: UqlSuggestion[],
+    suggestions: UqlSuggestion[]
   ): { start: number; end: number; token: string } {
     if (suggestions.some((suggestion) => suggestion.kind === 'value')) {
       const scopedValueRange = this.getScopedSparkValueCompletionRange(query, cursor);
       if (scopedValueRange) {
         return { ...scopedValueRange, token: query.slice(scopedValueRange.start, cursor) };
       }
+
       const valueRange = this.getCurrentValueRange(query, cursor);
       if (valueRange) {
         return { ...valueRange, token: query.slice(valueRange.start, cursor) };
       }
+
       return this.getCurrentWordRange(query, cursor);
     }
-    if (suggestions.some((suggestion) => suggestion.kind === 'field' || suggestion.kind === 'snippet')) {
+
+    if (
+      suggestions.some((suggestion) => suggestion.kind === 'field' || suggestion.kind === 'snippet')
+    ) {
       return this.getFieldOrSnippetCompletionRange(query, cursor);
     }
+
     return this.getCurrentWordRange(query, cursor);
   }
 
   private getScopedSparkValueCompletionRange(
     query: string,
-    cursor: number,
+    cursor: number
   ): { start: number; end: number; token: string } | null {
     const beforeCursor = query.slice(0, cursor);
     const currentClause = this.getCurrentClausePrefix(beforeCursor);
@@ -1825,37 +2276,50 @@ export class UqlEditorLanguage {
     return {
       start,
       end: cursor,
-      token: query.slice(start, cursor),
+      token: query.slice(start, cursor)
     };
   }
 
   private getFieldOrSnippetCompletionRange(
     query: string,
-    cursor: number,
+    cursor: number
   ): { start: number; end: number; token: string } {
     const wordRange = this.getCurrentWordRange(query, cursor);
     if (/^(?:and|or|not)$/i.test(wordRange.token)) {
       return { start: cursor, end: cursor, token: '' };
     }
+
     const phraseRange = this.getCurrentPhraseRange(query, cursor);
-    if (/(?:=|!=|<>|<=|>=|<|>|\bhas\b|\bin\b|\blike\b|\bilike\b|\d|'|"|\))/.test(phraseRange.token)) {
+    if (
+      /(?:=|!=|<>|<=|>=|<|>|\bhas\b|\bin\b|\blike\b|\bilike\b|\d|'|"|\))/.test(phraseRange.token)
+    ) {
       return wordRange;
     }
+
     return phraseRange;
   }
 
-  private getCurrentValueRange(query: string, cursor: number): { start: number; end: number; token: string } | null {
+  private getCurrentValueRange(
+    query: string,
+    cursor: number
+  ): { start: number; end: number; token: string } | null {
     const beforeCursor = query.slice(0, cursor);
     const delimiterPattern =
       /=|!=|<>|<=|>=|<|>|\bin\b\s*\(?|\bnot\s+in\b\s*\(?|\bhas\s+any\s*\(|\bhas\s+all\s*\(|\bhas\s+|\bdoes\s+not\s+have\s+|,|\(/gi;
+
     let start = -1;
     let match: RegExpExecArray | null;
     while ((match = delimiterPattern.exec(beforeCursor)) !== null) {
       start = match.index + match[0].length;
     }
+
     if (start < 0) return null;
     const valueStart = start + (query.slice(start).match(/^\s*/)?.[0].length ?? 0);
-    const end = this.getCurrentValueEnd(query, query.charAt(valueStart) === '[' ? valueStart : cursor);
+    const end = this.getCurrentValueEnd(
+      query,
+      query.charAt(valueStart) === '[' ? valueStart : cursor
+    );
+
     const rawToken = query.slice(start, end);
     const leadingWhitespace = rawToken.match(/^\s*/)?.[0].length ?? 0;
     const trailingWhitespace = rawToken.match(/\s*$/)?.[0].length ?? 0;
@@ -1867,15 +2331,16 @@ export class UqlEditorLanguage {
         return {
           start: rangeStart,
           end: knownValueEnd,
-          token: knownValueMatch.text,
+          token: knownValueMatch.text
         };
       }
     }
+
     const rangeEnd = Math.max(rangeStart, end - trailingWhitespace);
     return {
       start: rangeStart,
       end: rangeEnd,
-      token: query.slice(rangeStart, rangeEnd),
+      token: query.slice(rangeStart, rangeEnd)
     };
   }
 
@@ -1889,14 +2354,17 @@ export class UqlEditorLanguage {
           if (char === quote) quote = null;
           continue;
         }
+
         if (isUqlQuoteStart(query, i)) {
           quote = char;
           continue;
         }
+
         if (char === '[') depth++;
         if (char === ']' && --depth === 0) return i + 1;
       }
     }
+
     let quote: string | null = null;
     for (let i = cursor; i < query.length; i++) {
       const char = query.charAt(i);
@@ -1904,16 +2372,19 @@ export class UqlEditorLanguage {
         if (char === quote) quote = null;
         continue;
       }
+
       if (isUqlQuoteStart(query, i)) {
         quote = char;
         continue;
       }
+
       if (char === ',' || char === ')' || char === ']' || char === ';' || char === '\n') return i;
       if (/\s/.test(char)) {
         const rest = query.slice(i);
         if (/^\s+(?:and|or)\b/i.test(rest)) return i;
       }
     }
+
     return query.length;
   }
 
@@ -1921,18 +2392,24 @@ export class UqlEditorLanguage {
     return endings.some((ending) => value.endsWith(ending));
   }
 
-  private getCurrentWordRange(query: string, cursor: number): { start: number; end: number; token: string } {
+  private getCurrentWordRange(
+    query: string,
+    cursor: number
+  ): { start: number; end: number; token: string } {
     const beforeCursor = query.slice(0, cursor);
     const match = beforeCursor.match(/[A-Za-z0-9_-]*$/);
     const token = match?.[0] || '';
     return {
       start: cursor - token.length,
       end: cursor,
-      token,
+      token
     };
   }
 
-  private getCurrentPhraseRange(query: string, cursor: number): { start: number; end: number; token: string } {
+  private getCurrentPhraseRange(
+    query: string,
+    cursor: number
+  ): { start: number; end: number; token: string } {
     const beforeCursor = query.slice(0, cursor);
     const rawToken = this.getCurrentClausePrefix(beforeCursor);
     const leadingWhitespace = rawToken.match(/^\s*/)?.[0].length ?? 0;
@@ -1940,7 +2417,7 @@ export class UqlEditorLanguage {
     return {
       start,
       end: cursor,
-      token: query.slice(start, cursor),
+      token: query.slice(start, cursor)
     };
   }
 
@@ -1956,5 +2433,4 @@ export class UqlEditorLanguage {
   private escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
-
 }

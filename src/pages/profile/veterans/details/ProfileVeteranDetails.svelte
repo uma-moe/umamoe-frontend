@@ -3,16 +3,16 @@
   import type { ProfileVeteran } from '../../profile-repository';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
   import type { LineageBranch, LineageNodeData } from '@/components/lineage/lineage-types';
-  import type { RaceHistoryEntry } from '@/lib/catalog/race-catalog';
-  import { encodedSkills } from '@/lib/profile/profile-veterans';
+  import type { RaceHistoryEntry } from '@/lib/game-data/racing/races';
+  import { encodedSkills } from '@/lib/profile/veterans/profile-veterans';
   import {
     resolveEncodedSkill,
     skillImage,
     skillRarity,
     skillPointTotal,
     sortEncodedSkills,
-    type SkillCatalogEntry
-  } from '@/lib/catalog/skill-catalog';
+    type SkillData
+  } from '@/lib/game-data/skills/skills';
   import ProfileVeteranAffinity from '../ProfileVeteranAffinity.svelte';
   import ProfileVeteranDetailSparks from './ProfileVeteranDetailSparks.svelte';
   import ProfileVeteranSupportDeck from './ProfileVeteranSupportDeck.svelte';
@@ -37,7 +37,7 @@
   }: {
     veteran: ProfileVeteran;
     summary: VeteranUiRecord;
-    skillCatalog: Map<number, SkillCatalogEntry>;
+    skillCatalog: Map<number, SkillData>;
     family: { root: LineageNodeData; branches: LineageBranch[] };
     races: RaceHistoryEntry[];
     raceLoading: boolean;
@@ -61,6 +61,7 @@
             .flatMap((branch) => [branch.parent, ...branch.grandparents])
             .find((node) => node.id.split(':').pop() === sparkSource)?.id
   );
+
   const stats = $derived((summary.stats ?? []).filter((stat) => stat.id !== 'total'));
   const skills = $derived(
     sortEncodedSkills(skillCatalog, encodedSkills(veteran)).map((id) => ({
@@ -68,6 +69,7 @@
       ...resolveEncodedSkill(skillCatalog, id)
     }))
   );
+
   const spTotal = $derived(skillPointTotal(skillCatalog, encodedSkills(veteran)));
   const created = $derived(
     veteran.creation_time && Number.isFinite(Date.parse(veteran.creation_time))

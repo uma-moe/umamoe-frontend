@@ -63,6 +63,7 @@ export class StatisticsView {
   classAverages = $derived(
     this.stats ? statAveragesByClass(this.stats, this.filters) : { categories: [], series: [] }
   );
+
   umaData = $derived(
     this.stats
       ? aggregateMetric(metricMaps(this.stats, 'uma_distribution', this.filters), (id, item) =>
@@ -74,6 +75,7 @@ export class StatisticsView {
         }))
       : []
   );
+
   characterRows = $derived(rankCharacters(this.availableCharacters, this.umaData));
   deckData = $derived(
     this.stats
@@ -83,6 +85,7 @@ export class StatisticsView {
         )
       : []
   );
+
   supports = $derived(
     this.stats
       ? aggregateMetric(metricMaps(this.stats, 'support_cards', this.filters), (id, item) =>
@@ -90,6 +93,7 @@ export class StatisticsView {
         )
       : []
   );
+
   supportData = $derived(this.supports.map((item) => supportRow(this.supportCatalog, item)));
   skillData = $derived(
     this.stats
@@ -101,6 +105,7 @@ export class StatisticsView {
         }))
       : []
   );
+
   statData = $derived(
     this.stats
       ? aggregateStatDistributions(
@@ -110,6 +115,7 @@ export class StatisticsView {
         )
       : {}
   );
+
   averageStats = $derived(
     this.stats
       ? meanStats(
@@ -119,6 +125,7 @@ export class StatisticsView {
         )
       : {}
   );
+
   commonClass = $derived(
     [...this.classData].sort((a, b) => b.value - a.value).find((item) => item.value > 0)
   );

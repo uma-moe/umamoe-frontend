@@ -3,7 +3,7 @@
   import Button from '@/components/controls/Button.svelte';
   import { authReady, authUser } from '@/services/auth/auth-state';
   import { activeWorkspace } from '@/lib/workspaces/workspace-state';
-  import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import { simulatorRoster } from '../../../simulator-roster.svelte';
   import type { CmBenchmark } from '../../../courses/cm-benchmark';
   import type { RaceSetupInput } from '../../../requests/stamina-request';
@@ -27,7 +27,7 @@
     initialSnapshot = ''
   }: {
     open?: boolean;
-    course?: CourseCatalogEntry;
+    course?: RaceCourse;
     setup: RaceSetupInput;
     seed: number;
     initialSnapshot?: string;
@@ -41,9 +41,11 @@
     picked = $state<string[]>([]),
     poolLoading = $state(false),
     poolError = $state('');
+
   $effect(() => {
     if (open) accountId = $activeWorkspace.accountId ?? '';
   });
+
   $effect(() => {
     if (!open || !$authReady) return;
     const id = accountId;
@@ -64,14 +66,17 @@
       .finally(() => {
         if (active) poolLoading = false;
       });
+
     return () => {
       active = false;
     };
   });
+
   const candidates = $derived.by(() => {
     const keys = new Set(picked);
     return entries.filter((entry) => keys.has(entry.key)).map((entry) => entry.uma);
   });
+
   const teams = $derived(veteranTeamCount(candidates));
 
   // Opponents: the leading teams of a CM dataset, or six runners from the race field.
@@ -80,6 +85,7 @@
     benchmark = $state.raw<CmBenchmark>(),
     benchmarkLoading = $state(false),
     opponentIds = $state<string[]>([]);
+
   $effect(() => {
     if (open && !opponentSource)
       opponentSource =
@@ -87,13 +93,16 @@
           ? 'cm'
           : 'field';
   });
+
   $effect(() => {
     if (open && !opponentIds.length && simulatorRoster.umas.length >= 6)
       opponentIds = simulatorRoster.umas.slice(-6).map((uma) => uma.id);
   });
+
   const opponents = $derived(
     opponentIds.flatMap((id) => simulatorRoster.umas.filter((uma) => uma.id === id))
   );
+
   /** The course the teams race on: the dataset's, or the race's. */
   const raceCourse = $derived(opponentSource === 'cm' ? benchmark?.course : course);
 
@@ -103,38 +112,62 @@
   $effect(() => {
     if (!open) teamSearch.stop = true;
   });
+
   const validSamples = $derived(
     /^\d+$/.test(String(samples)) && Number(samples) >= 1 && Number(samples) <= 1000
   );
+
   const races = $derived(validSamples ? teams * Number(samples) : 0);
-  const blocked = $derived(
-    poolLoading
-      ? 'Loading your Veterans…'
-      : !teams
-        ? candidates.length < 3
-          ? 'Pick at least three Veterans.'
-          : 'Pick three different characters; variants of one can’t race together.'
-        : !validSamples
-          ? 'Races per team must be 1 to 1,000.'
-          : !(Number.isInteger(seed) && seed >= -2147483648 && seed <= 2147483647)
-            ? 'Fix the race seed first.'
-            : opponentSource === 'cm'
-              ? benchmarkLoading
-                ? 'Loading the CM teams…'
-                : !benchmark
-                  ? 'Choose a CM dataset that loads, or race the field.'
-                  : ''
-              : !course
-                ? 'Pick a course first.'
-                : opponents.length !== 6
-                  ? 'Pick six opponents.'
-                  : ''
-  );
+  const blocked = $derived.by(() => {
+    if (poolLoading) {
+      return 'Loading your Veterans…';
+    }
+
+    if (!teams) {
+      if (candidates.length < 3) {
+        return 'Pick at least three Veterans.';
+      }
+
+      return 'Pick three different characters; variants of one can’t race together.';
+    }
+
+    if (!validSamples) {
+      return 'Races per team must be 1 to 1,000.';
+    }
+
+    if (!(Number.isInteger(seed) && seed >= -2147483648 && seed <= 2147483647)) {
+      return 'Fix the race seed first.';
+    }
+
+    if (opponentSource === 'cm') {
+      if (benchmarkLoading) {
+        return 'Loading the CM teams…';
+      }
+
+      if (!benchmark) {
+        return 'Choose a CM dataset that loads, or race the field.';
+      }
+
+      return '';
+    }
+
+    if (!course) {
+      return 'Pick a course first.';
+    }
+
+    if (opponents.length !== 6) {
+      return 'Pick six opponents.';
+    }
+
+    return '';
+  });
+
   const inputKey = $derived(
     JSON.stringify([picked, opponentSource, snapshotId, opponentIds, samples, seed])
   );
+
   const stale = $derived(
-    !!teamSearch.top.length && !teamSearch.busy && teamSearch.key !== inputKey
+    Boolean(teamSearch.top.length) && !teamSearch.busy && teamSearch.key !== inputKey
   );
 
   async function search() {
@@ -142,9 +175,11 @@
     const cm = opponentSource === 'cm' ? benchmark : undefined;
     const target = structuredClone($state.snapshot(cm?.course ?? course!)),
       raceSetup = structuredClone($state.snapshot(cm?.setup ?? setup));
+
     const pool = structuredClone($state.snapshot(candidates)),
       sampleCount = Number(samples),
       seeds = pairingSeeds(seed, sampleCount);
+
     if (cm) for (const uma of pool) uma.trainee.motivation = String(cm.motivation);
     const fields = cm
       ? benchmarkFields(structuredClone(cm.teams.map((team) => team.umas)))
@@ -155,6 +190,7 @@
             frameOrder: undefined
           }))
         ];
+
     await teamSearch.run({
       target,
       raceSetup,

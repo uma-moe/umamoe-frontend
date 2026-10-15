@@ -6,7 +6,11 @@ import featureManifest from '../../contracts/features.json';
 export type RouteGroup = 'main' | 'community' | 'competitive' | 'research' | 'tools' | 'system';
 
 export const updatedNavigationHrefs = new Set([
-  '/database', '/timeline', '/timeline?tab=carat-planner', '/tools', '/tools/lineage-planner'
+  '/database',
+  '/timeline',
+  '/timeline?tab=carat-planner',
+  '/tools',
+  '/tools/lineage-planner'
 ]);
 
 export interface AppRouteDefinition {
@@ -65,23 +69,57 @@ function routesByIds(ids: readonly string[]): AppRouteDefinition[] {
 }
 
 // The logo remains the Home affordance; tool pages stay under their section.
-const mainRouteIds = ['database', 'veterans', 'clubs', 'rankings', 'activity', 'tierlist', 'competitive', 'tools', 'research', 'timeline'] as const;
+const mainRouteIds = [
+  'database',
+  'veterans',
+  'clubs',
+  'rankings',
+  'activity',
+  'tierlist',
+  'competitive',
+  'tools',
+  'research',
+  'timeline'
+] as const;
 
-export function navigationForPath(pathname: string, search = ''): { main: NavigationItem[]; mobileMore: NavigationItem[] } {
-  const plannerActive = pathname === '/timeline' && new URLSearchParams(search).get('tab') === 'carat-planner';
+export function navigationForPath(
+  pathname: string,
+  search = ''
+): { main: NavigationItem[]; mobileMore: NavigationItem[] } {
+  const plannerActive =
+    pathname === '/timeline' && new URLSearchParams(search).get('tab') === 'carat-planner';
+
   const plannerHref = '/timeline?tab=carat-planner';
-  const planner: NavigationSubItem = { id: 'carat-planner', label: 'Carat Planner', href: plannerHref, current: plannerActive, badge: updatedNavigationHrefs.has(plannerHref) ? 'Updated' : undefined };
+  const planner: NavigationSubItem = {
+    id: 'carat-planner',
+    label: 'Carat Planner',
+    href: plannerHref,
+    current: plannerActive,
+    badge: updatedNavigationHrefs.has(plannerHref) ? 'Updated' : undefined
+  };
+
   const main = routesByIds(mainRouteIds).map((route) => {
     const item = directItem(route, pathname);
     const children: NavigationSubItem[] = appRoutes
-      .filter(child => child.navigation === 'secondary' && child.path.startsWith(`${route.path}/`))
-      .map(child => directItem(child, pathname));
+      .filter(
+        (child) => child.navigation === 'secondary' && child.path.startsWith(`${route.path}/`)
+      )
+      .map((child) => directItem(child, pathname));
+
     if (route.id === 'tools') children.push(planner);
-    if (route.id === 'timeline') children.push(
-      { id: 'events', label: 'Events', href: '/timeline?tab=timeline', current: item.current && !plannerActive }, planner
-    );
+    if (route.id === 'timeline')
+      children.push(
+        {
+          id: 'events',
+          label: 'Events',
+          href: '/timeline?tab=timeline',
+          current: item.current && !plannerActive
+        },
+        planner
+      );
     return { ...item, children, expanded: item.current && children.length > 0 };
   });
+
   const mobilePrimaryIds = new Set<string>(mobilePrimaryRouteIds);
   const mobileMore = main.filter((item) => !mobilePrimaryIds.has(item.id));
   return { main, mobileMore };

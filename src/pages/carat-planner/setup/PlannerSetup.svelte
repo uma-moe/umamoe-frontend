@@ -9,7 +9,7 @@
     buildPlannerRewardGroups,
     plannerRewardSummary
   } from '@/lib/carat-planner/rewards/planner-reward-groups';
-  import { buildPlannerCampaigns } from '@/lib/carat-planner/planner-campaigns';
+  import { buildPlannerCampaigns } from '@/lib/carat-planner/rewards/planner-campaigns';
   import {
     activeIncomeAssumptionCount,
     type PlannerIncomeGroup
@@ -48,6 +48,7 @@
   let expandedIncomeSections = $state(new Set<string>());
   let rewardSearch = $state(''),
     showPastRewards = $state(false);
+
   let setup = $state<'' | 'resources' | 'income' | 'rewards'>('');
 
   // Pull counts and balances do not change reward descriptions or available outcomes.
@@ -58,6 +59,7 @@
       variableRewardSelections: plan.variableRewardSelections
     })
   );
+
   const rewardGroups = $derived(
     buildPlannerRewardGroups(
       effectiveRewards.rewards,
@@ -70,6 +72,7 @@
       JSON.parse(rewardSelections)
     )
   );
+
   const rewardCampaigns = $derived(
     buildPlannerCampaigns(
       effectiveRewards.free_pull_campaigns ?? [],
@@ -77,6 +80,7 @@
       plan.projectionStartDate
     )
   );
+
   const rewardSummary = $derived(plannerRewardSummary(plan, rewardGroups, rewardCampaigns));
   const incomeCount = $derived(activeIncomeAssumptionCount(plan, resources.income.rules));
   const incomePeriod = $derived(
@@ -90,6 +94,7 @@
             timeZone: 'UTC'
           }).format(new Date(income.through + 'T00:00:00Z'))
   );
+
   const setupTabs: TabItem[] = $derived([
     {
       id: 'resources',

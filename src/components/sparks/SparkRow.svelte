@@ -21,15 +21,14 @@
 
   let { tone, items, label, typeLabel, showType = true, compact = false }: Props = $props();
 
-  const defaultTypeLabel = $derived(
-    tone === 'blue'
-      ? 'Stats'
-      : tone === 'pink'
-        ? 'Aptitude'
-        : tone === 'green'
-          ? 'Unique'
-          : 'Skills / races'
-  );
+  const typeLabels: Record<SparkTone, string> = {
+    blue: 'Stats',
+    pink: 'Aptitude',
+    green: 'Unique',
+    white: 'Skills / races'
+  };
+
+  const defaultTypeLabel = $derived(typeLabels[tone]);
   const displayLabel = $derived(typeLabel ?? defaultTypeLabel);
   const accessibleLabel = $derived(label ?? `${displayLabel} sparks`);
 </script>

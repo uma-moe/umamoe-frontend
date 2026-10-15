@@ -45,6 +45,7 @@
   const tab = $derived(
     TABS.find((item) => item.path === router.route.pathname.replace(/\/+$/, '')) ?? TABS[1]
   );
+
   const items: TabItem[] = TABS.map((item) => ({
     id: item.id,
     label: item.label,

@@ -35,7 +35,7 @@
       validation={query.draft.validation}
       characters={query.characters}
       supports={query.supports}
-      catalog={query.catalog}
+      queryData={query.queryData}
       loading={query.loading}
       onclear={() => {
         filters.uql = '';

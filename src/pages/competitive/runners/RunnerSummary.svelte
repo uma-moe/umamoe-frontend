@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { RaceRunner } from '@/lib/race/race-capture-parser';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import ProfileVeteranIdentity from '@/pages/profile/veterans/ProfileVeteranIdentity.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
   import AptitudeGrade, { type AptitudeGradeValue } from '@/components/game/AptitudeGrade.svelte';

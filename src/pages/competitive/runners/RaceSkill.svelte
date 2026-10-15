@@ -2,12 +2,12 @@
   import { onMount } from 'svelte';
   import SkillChip from '@/components/game/SkillChip.svelte';
   import {
-    loadSkillCatalog,
+    loadSkills,
     resolveEncodedSkill,
     skillImage,
     skillRarity,
-    type SkillCatalogEntry
-  } from '@/lib/catalog/skill-catalog';
+    type SkillData
+  } from '@/lib/game-data/skills/skills';
 
   let {
     id,
@@ -25,10 +25,10 @@
     level?: string;
   } = $props();
 
-  let catalog = $state.raw(new Map<number, SkillCatalogEntry>());
+  let catalog = $state.raw(new Map<number, SkillData>());
 
   onMount(() => {
-    void loadSkillCatalog()
+    void loadSkills()
       .then((value) => (catalog = value))
       .catch(() => {});
   });

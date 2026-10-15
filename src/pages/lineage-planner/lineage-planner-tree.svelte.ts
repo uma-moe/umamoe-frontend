@@ -1,8 +1,8 @@
 import {
-  loadCharacterCatalog,
-  loadReleasedCharacterCatalog,
-  type CharacterCatalogEntry
-} from '@/lib/catalog/character-catalog';
+  loadCharacters,
+  loadReleasedCharacters,
+  type CharacterData
+} from '@/lib/game-data/characters';
 import {
   applyPlannerPayload,
   BTREE_ORDER,
@@ -22,8 +22,8 @@ import { persistPlannerTree, restoredPlannerPayload } from './lineage-planner-st
 
 export class LineagePlannerTree {
   nodes = $state(emptyPlannerNodes());
-  characters = $state(new Map<number, CharacterCatalogEntry>());
-  selectableCharacters = $state<CharacterCatalogEntry[]>([]);
+  characters = $state(new Map<number, CharacterData>());
+  selectableCharacters = $state<CharacterData[]>([]);
   charactersLoading = $state(false);
   charactersError = $state('');
   filledCount = $derived(
@@ -43,6 +43,7 @@ export class LineagePlannerTree {
 
   update(position: PlannerPosition, patch: Partial<PlannerNode>, shouldPersist = true): void {
     this.nodes = { ...this.nodes, [position]: { ...this.nodes[position], ...patch } };
+
     if (shouldPersist) this.persist();
   }
 
@@ -61,6 +62,7 @@ export class LineagePlannerTree {
 
   clearNode(position: PlannerPosition): void {
     this.nodes = { ...this.nodes, [position]: emptyPlannerNodes()[position] };
+
     this.persist();
   }
 
@@ -74,8 +76,8 @@ export class LineagePlannerTree {
     this.charactersLoading = true;
     this.charactersError = '';
     try {
-      this.selectableCharacters = await loadReleasedCharacterCatalog();
-      this.characters = await loadCharacterCatalog();
+      this.selectableCharacters = await loadReleasedCharacters();
+      this.characters = await loadCharacters();
       if (this.#disposed) return;
       this.hydrate();
       if (this.#legacyCardIds.size) {
@@ -90,7 +92,7 @@ export class LineagePlannerTree {
     }
   }
 
-  placeCharacter(position: PlannerPosition, entry: CharacterCatalogEntry): void {
+  placeCharacter(position: PlannerPosition, entry: CharacterData): void {
     this.update(position, {
       characterId: Number(entry.id),
       name: entry.name,
@@ -105,7 +107,7 @@ export class LineagePlannerTree {
   placeVeteran(
     position: PlannerPosition,
     id: number,
-    entry: CharacterCatalogEntry | undefined,
+    entry: CharacterData | undefined,
     veteran: ProfileVeteran
   ): void {
     this.update(
@@ -121,6 +123,7 @@ export class LineagePlannerTree {
       },
       false
     );
+
     this.nodes = applySuccession(
       this.nodes,
       position,

@@ -5,10 +5,10 @@ import {
   inheritanceRequestFilters,
   type InheritanceFilterMode,
   type InheritanceSearchFilters
-} from '@/lib/inheritance/inheritance-search';
+} from '@/lib/inheritance/search/inheritance-search';
 import { setUqlLegacy } from '@/lib/inheritance/uql/uql-context';
-import type { UqlQueryCatalog } from '@/lib/inheritance/uql/uql-compiler';
-import type { SelectableParent } from '@/lib/veterans/parent-picker';
+import type { UqlQueryData } from '@/lib/inheritance/uql/uql-compiler';
+import type { SelectableParent } from '@/lib/veterans/parents/parent-picker';
 import { restoreSavedParent } from '../database-legacy';
 import { automaticInheritanceSort } from '../database-local-results';
 import {
@@ -82,6 +82,7 @@ export class DatabaseFilters {
       else if (parent.trainer_id && parent.member_id != null)
         this.compact.vet = [parent.trainer_id, parent.member_id];
     }
+
     if (parent?.share_source === 'manual' && parent.share_local_id)
       this.compact.vet = `manual:${parent.share_local_id}`;
     if (parent?.share_source === 'bookmark') this.compact.p2i = parent.share_inheritance_id;
@@ -92,6 +93,7 @@ export class DatabaseFilters {
     this.selectedParent = undefined;
     this.values = emptyInheritanceFilters();
     this.compact = {};
+
     this.#source.onreset();
     this.presetMessage = 'Filters cleared.';
   };
@@ -118,11 +120,12 @@ export class DatabaseFilters {
       const automaticSort = automaticInheritanceSort(
         inheritanceRequestFilters(this.values, this.mode)
       );
+
       if (this.values.sortBy !== automaticSort) this.values.sortBy = automaticSort;
     }
   }
 
-  chooseUqlLegacy(parent: SelectableParent, characters: UqlQueryCatalog['characters']): void {
+  chooseUqlLegacy(parent: SelectableParent, characters: UqlQueryData['characters']): void {
     this.selectVeteran(parent);
     this.#appliedUqlLegacy = true;
     this.values.uql = setUqlLegacy(this.values.uql ?? '', parent, characters);
@@ -173,6 +176,7 @@ export class DatabaseFilters {
       !this.#disposed &&
       this.#source.userId() === session &&
       JSON.stringify(this.compact.vet) === key;
+
     try {
       const parent = await restoreSavedParent(reference, this.#source.signedIn());
       if (current()) this.selectVeteran(parent);
@@ -202,6 +206,7 @@ export class DatabaseFilters {
       this.compact = restored.compact;
       this.saved = restored.saved;
     }
+
     const linkedTrainerId = query.get('trainer_id')?.trim();
     if (linkedTrainerId) this.values.trainerId = linkedTrainerId;
   }
@@ -214,6 +219,7 @@ export class DatabaseFilters {
       this.saved,
       this.compact
     );
+
     this.saved = result.saved;
     this.compact = result.compact;
   }

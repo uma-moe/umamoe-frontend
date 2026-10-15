@@ -44,17 +44,21 @@
   const counts = $derived(
     [...new Set(filtered.flatMap((s) => s.buckets.map((b) => b.x)))].sort((a, b) => a - b)
   );
+
   const inspectedCount = $derived(
     counts.includes(Number(selectedCount)) ? Number(selectedCount) : counts[0]
   );
+
   const readout = $derived(
     filtered
       .map((s) => ({ ...s, bucket: s.buckets.find((b) => b.x === inspectedCount) }))
       .filter((s) => s.bucket)
   );
+
   const points = $derived(filtered.flatMap((s) => s.buckets));
   const min = $derived(points.length ? Math.min(...points.map((b) => b.x)) : 1),
     max = $derived(points.length ? Math.max(...points.map((b) => b.x)) : 2);
+
   const yMax = $derived(
     Math.ceil(Math.max(1 / 9, ...points.map((b) => Math.max(b.rate, b.ci[1]))) / 0.05) * 0.05
   );

@@ -1,12 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { watchFactorCatalog } from '@/lib/catalog/factor-catalog';
+  import { watchFactors } from '@/lib/game-data/factors/factors';
   import Button from '@/components/controls/Button.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import VeteranSummary from '@/components/game/VeteranSummary.svelte';
   import ProfileVeteranCard from '@/pages/profile/veterans/ProfileVeteranCard.svelte';
   import ProfileVeteranSparkMatcher from '@/pages/profile/veterans/ProfileVeteranSparkMatcher.svelte';
-  import type { VeteranFactorFilter } from '@/lib/profile/profile-veterans';
+  import type { VeteranFactorFilter } from '@/lib/profile/veterans/profile-veterans';
   import type { ProfileVeteran } from '@/pages/profile/profile-repository';
   import StatisticsFilterControls from '@/pages/statistics/StatisticsFilterControls.svelte';
   import StatisticsRanking from '@/pages/statistics/StatisticsRanking.svelte';
@@ -18,7 +18,7 @@
 
   let { ids }: { ids: string[] } = $props();
 
-  onMount(watchFactorCatalog);
+  onMount(watchFactors);
 
   const allScenarios = ['1', '2', '3', '4'],
     allClasses = ['1', '2', '3', '4', '5', '6'],
@@ -27,6 +27,7 @@
   let selectedScenarios = $state([...allScenarios]),
     selectedClasses = $state([...allClasses]),
     selectedDistances = $state([...allDistances]);
+
   let filtersOpen = $state(false);
 
   const sparkDefaults: VeteranFactorFilter[] = [
@@ -45,6 +46,7 @@
     p1: 'P1',
     p2: 'P2'
   };
+
   const characters = new Map([
     [101301, { id: '101301', name: 'Mejiro McQueen', image: mejiroMcQueenImage }],
     [100601, { id: '100601', name: 'Oguri Cap', image: oguriCapImage }]
