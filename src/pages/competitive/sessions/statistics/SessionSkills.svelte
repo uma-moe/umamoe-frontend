@@ -25,6 +25,7 @@
   const selectedSkill = $derived(
     analysis.skills.find((r) => String(r.skillId) === skill) ?? analysis.skills[0]
   );
+
   const distances = $derived(histogram(selectedSkill?.activationDistances ?? [], 16));
 </script>
 

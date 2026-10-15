@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/race-capture-parser';
-  import { formatRaceTime } from '@/lib/race/race-display';
+  import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
+  import { formatRaceTime } from '@/lib/race/replay/race-display';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
@@ -31,6 +31,7 @@
         .filter((n) => n > 0)
     )
   );
+
   const feats = $derived(sessionFeats(winners));
 </script>
 

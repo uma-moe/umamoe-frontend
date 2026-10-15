@@ -36,9 +36,11 @@
     loading: true,
     rewardsLoading: false
   });
+
   let mobile = $state(
     typeof matchMedia !== 'undefined' && matchMedia('(max-width: 1149px)').matches
   );
+
   let filtersOpen = $state(false);
   let dateOpen = $state(false);
 
@@ -71,8 +73,9 @@
   }
 
   function changeView(next: string) {
+    if (next !== 'horizontal' && next !== 'vertical') return;
     void content?.changeView(next);
-    view = next as typeof view;
+    view = next;
     filtersOpen = false;
   }
 
@@ -107,28 +110,41 @@
       mobile = responsive.matches;
       filtersOpen = false;
     };
+
     resize();
     responsive.addEventListener('change', resize);
     const footerObserver = new IntersectionObserver((entries) => {
       footerVisible = entries.some((entry) => entry.isIntersecting);
     });
+
     const footer = document.querySelector('.site-footer');
     if (footer) footerObserver.observe(footer);
     const prepareTour = () => {
       filtersOpen = true;
       scrollToToday();
     };
+
     addEventListener('umamoe:prepare-timeline-tour', prepareTour);
     try {
-      const stored = JSON.parse(localStorage.getItem(TIMELINE_PREFERENCES_KEY) ?? '{}') as {
-        direction?: string;
-        spacing?: string;
-      };
-      if (stored.direction === 'horizontal' || stored.direction === 'vertical')
+      const stored: unknown = JSON.parse(localStorage.getItem(TIMELINE_PREFERENCES_KEY) ?? '{}');
+      if (
+        stored !== null &&
+        typeof stored === 'object' &&
+        'direction' in stored &&
+        (stored.direction === 'horizontal' || stored.direction === 'vertical')
+      )
         view = stored.direction;
-      if (stored.spacing === 'calendar' || stored.spacing === 'compact')
+      if (
+        stored !== null &&
+        typeof stored === 'object' &&
+        'spacing' in stored &&
+        (stored.spacing === 'calendar' || stored.spacing === 'compact')
+      )
         compactGaps = stored.spacing === 'compact';
-    } catch {}
+    } catch {
+      // Invalid or unavailable storage must not prevent the timeline from loading.
+    }
+
     initialized = true;
     return () => {
       responsive.removeEventListener('change', resize);
@@ -144,7 +160,9 @@
         TIMELINE_PREFERENCES_KEY,
         JSON.stringify({ direction: view, spacing: compactGaps ? 'compact' : 'calendar' })
       );
-    } catch {}
+    } catch {
+      // Preferences are optional when browser storage is disabled or full.
+    }
   });
 
   $effect(() => {

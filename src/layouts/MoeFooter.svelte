@@ -1,8 +1,8 @@
 <script lang="ts">
   import { openFusePrivacyControls } from '@/services/ads/fuse-ads';
   import Icon from '@/components/Icon.svelte';
-  import { DISCORD_SUPPORT_URL } from '@/services/site-links';
-  import { buildVersion, serviceStatus } from '@/services/site-services';
+  import { DISCORD_SUPPORT_URL } from '@/services/site/site-links';
+  import { buildVersion, serviceStatus } from '@/services/site/site-services';
   import { copyText } from '@/lib/clipboard';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import Checkbox from '@/components/controls/Checkbox.svelte';

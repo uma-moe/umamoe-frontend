@@ -1,5 +1,5 @@
 import type { Toast } from '@/components/feedback/ToastRegion.svelte';
-import type { InheritanceRecord } from '@/lib/inheritance/inheritance-search';
+import type { InheritanceRecord } from '@/lib/inheritance/search/inheritance-search';
 import { borrowContext } from '../borrow-interactions';
 import { inheritanceRepository } from '../inheritance-repository';
 
@@ -37,6 +37,7 @@ export class DatabaseBookmarks {
       this.records = [];
       return;
     }
+
     this.loading = true;
     this.error = '';
     try {
@@ -66,6 +67,7 @@ export class DatabaseBookmarks {
           ...this.records.filter((item) => item.accountId !== record.accountId)
         ];
       }
+
       this.#notify(removing ? 'Bookmark removed' : 'Bookmarked', 'success');
     } catch {
       this.#notify(removing ? 'Failed to remove bookmark' : 'Failed to bookmark', 'danger');
@@ -95,6 +97,7 @@ export class DatabaseBookmarks {
       window.setTimeout(() => (this.clearArmed = false), 4_000);
       return;
     }
+
     this.clearArmed = false;
     try {
       const result = await inheritanceRepository.bulkDeleteBookmarks({ all: true });

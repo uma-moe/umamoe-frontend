@@ -1,15 +1,18 @@
 <script lang="ts">
-  import { itemIconPath } from '@/lib/catalog/item-icons';
+  import { itemIconPath } from '@/lib/game-assets/item-icons';
   import Button from '@/components/controls/Button.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Icon from '@/components/Icon.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
-  import { timelinePickup, type TimelinePickupCatalog } from '@/lib/timeline/timeline-pickups';
+  import {
+    timelinePickup,
+    type TimelinePickupCatalog
+  } from '@/lib/timeline/events/timeline-pickups';
   import type { PlannerGachaEntry } from '@/lib/carat-planner/carat-planner';
   import type {
     TimelineRewardItem,
     TimelineRewardSummary
-  } from '@/lib/timeline/timeline-reward-summary';
+  } from '@/lib/timeline/events/timeline-reward-summary';
   import type { TimelineRecord } from '../timeline-repository';
   import { hideImage } from './timeline-event-details';
 
@@ -51,6 +54,7 @@
   const rarityRate = $derived(
     [...(gacha?.rarity_rates ?? [])].sort((a, b) => b.rarity - a.rarity)[0]?.rate
   );
+
   const rateSummary = $derived(
     [
       Number.isFinite(rarityRate)
@@ -63,11 +67,13 @@
       .filter(Boolean)
       .join(' · ')
   );
+
   const pickups = $derived.by(() => {
     const kind = event.eventType === 'support_card_banner' ? 'support' : 'character';
     const rates = gacha?.featured_pickups?.length ? gacha.featured_pickups : (gacha?.pickups ?? []);
     const ordered =
       kind === 'support' ? [...rates].sort((a, b) => b.pickup_id - a.pickup_id) : rates;
+
     if (ordered.length)
       return ordered.map((rate) => ({
         pickup:
@@ -79,6 +85,7 @@
       .filter((p) => p.kind === kind)
       .map((pickup) => ({ pickup, rate: '' }));
   });
+
   const rewards = $derived.by(() => {
     const items: TimelineRewardItem[] = [...(rewardSummary?.items ?? [])];
     const free = Math.max(0, Number(gacha?.free_pulls) || 0);

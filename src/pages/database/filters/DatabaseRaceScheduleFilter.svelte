@@ -6,20 +6,15 @@
   import Spinner from '@/components/feedback/Spinner.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import type { RaceBadgeData, RaceScheduleYear } from '@/components/game/race-types';
-  import { loadRaceSaddleIndex, loadRaceSchedule } from '@/lib/catalog/race-catalog';
+  import { loadRaceSaddleIndex, loadRaceSchedule } from '@/lib/game-data/racing/races';
   import {
     raceSelectionKey,
+    decodeRaceAgenda,
     selectedRaceSaddles,
     toggleRaceSelection,
-    type EncodedRaceSelection
+    type EncodedRaceSelection,
+    type RaceAgendaEntry
   } from '../results/race-schedule-selection';
-
-  interface ScheduleEntry {
-    raceName: string;
-    grade: string;
-    year: string;
-    turn: string;
-  }
 
   interface Props {
     selection?: EncodedRaceSelection[];
@@ -81,7 +76,7 @@
     commit(toggleRaceSelection(selected, [year, month, half, raceId]));
   }
 
-  function entryFor(value: EncodedRaceSelection): ScheduleEntry | null {
+  function entryFor(value: EncodedRaceSelection): RaceAgendaEntry | null {
     const [yearIndex, month, half, raceId] = value;
     const year = years[yearIndex];
     if (!year) return null;
@@ -98,7 +93,10 @@
   }
 
   function exportSchedule(): void {
-    const entries = selected.map(entryFor).filter((entry): entry is ScheduleEntry => entry != null);
+    const entries = selected
+      .map(entryFor)
+      .filter((entry): entry is RaceAgendaEntry => entry != null);
+
     const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -112,16 +110,14 @@
     const file = files?.item(0);
     if (!file) return;
     try {
-      const entries = JSON.parse(await file.text()) as ScheduleEntry[];
+      const entries = decodeRaceAgenda(JSON.parse(await file.text()));
       let next: EncodedRaceSelection[] = [];
-      for (const entry of Array.isArray(entries) ? entries : []) {
-        const yearIndex = entry.year.toLocaleLowerCase().includes('junior')
-          ? 0
-          : entry.year.toLocaleLowerCase().includes('classic')
-            ? 1
-            : entry.year.toLocaleLowerCase().includes('senior')
-              ? 2
-              : -1;
+      for (const entry of entries) {
+        const yearName = entry.year.toLocaleLowerCase();
+        const yearIndex = ['junior', 'classic', 'senior'].findIndex((name) =>
+          yearName.includes(name)
+        );
+
         const [month = 0, half = 0] = entry.turn.split('_').map(Number);
         const year = years[yearIndex];
         const slot = year?.slots.find((item) => item.id === `${year.id}-${month}-${half}`);
@@ -129,11 +125,13 @@
         if (yearIndex >= 0 && month > 0 && half > 0 && race)
           next = toggleRaceSelection(next, [yearIndex, month, half, Number(race.id)]);
       }
+
       commit(next);
       error = '';
     } catch {
       error = 'The selected file is not a valid uma agenda schedule.';
     }
+
     if (fileInput) fileInput.value = '';
   }
 

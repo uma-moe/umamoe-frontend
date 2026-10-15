@@ -41,24 +41,33 @@
     page = 0;
   });
 
-  const spurtLabel = (race: ReturnType<typeof staminaRaces>[number]) =>
-    race.spurt === 'full'
-      ? 'Full'
-      : race.spurt === 'none'
-        ? 'None'
-        : race.spurt === 'late'
-          ? (race.recovered ? 'Full after recovery' : 'Slower or later') +
-            (race.speedLoss || race.delay
-              ? ' (' +
-                [
-                  race.speedLoss ? '−' + n(race.speedLoss, 2) + ' m/s' : '',
-                  race.delay ? whole(race.delay) + ' m late' : ''
-                ]
-                  .filter(Boolean)
-                  .join(', ') +
-                ')'
-              : '')
-          : '—';
+  const spurtLabel = (race: ReturnType<typeof staminaRaces>[number]) => {
+    if (race.spurt === 'full') {
+      return 'Full';
+    }
+
+    if (race.spurt === 'none') {
+      return 'None';
+    }
+
+    if (race.spurt === 'late') {
+      return (
+        (race.recovered ? 'Full after recovery' : 'Slower or later') +
+        (race.speedLoss || race.delay
+          ? ' (' +
+            [
+              race.speedLoss ? '−' + n(race.speedLoss, 2) + ' m/s' : '',
+              race.delay ? whole(race.delay) + ' m late' : ''
+            ]
+              .filter(Boolean)
+              .join(', ') +
+            ')'
+          : '')
+      );
+    }
+
+    return '—';
+  };
 </script>
 
 <div class="section-gap">

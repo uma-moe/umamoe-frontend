@@ -66,6 +66,7 @@
       label: `${item.name ?? item.id}${item.date ? ` (${new Date(item.date).toLocaleDateString()})` : ''}`
     }))
   );
+
   const allDistances = $derived(dataset?.index.distances ?? Object.keys(stats?.by_distance ?? {}));
   const distanceOptions = $derived([
     { value: 'all', label: 'All distances' },
@@ -74,6 +75,7 @@
       label: distanceNames[statisticsDistanceId(id)] ?? title(id)
     }))
   ]);
+
   const distanceFocus = $derived(
     selectedDistances.length === allDistances.length
       ? 'all'
@@ -85,6 +87,7 @@
   const allScenarios = $derived(
     Object.keys(stats?.scenario_distribution ?? {}).filter((key) => /^\d+$/.test(key))
   );
+
   const filters = $derived<StatisticsFilters>({
     classIds: selectedClasses,
     scenarioIds: selectedScenarios,
@@ -92,9 +95,11 @@
     allScenarioIds: allScenarios,
     allDistanceIds: allDistances
   });
+
   const availableCharacters = $derived(
     characters.filter((entry) => dataset?.index.character_ids?.includes(entry.id))
   );
+
   const selectedCharacter = $derived(characters.find((entry) => entry.id === character.id));
   const view = new StatisticsView({
     stats: () => stats,
@@ -104,11 +109,13 @@
     supportCatalog: () => supportCatalog,
     skillCatalog: () => skillCatalog
   });
+
   const filtersChanged = $derived(
     selectedScenarios.length !== allScenarios.length ||
       selectedClasses.length !== allClasses.length ||
       selectedDistances.length !== allDistances.length
   );
+
   const sampleTotal = $derived(stats?.metadata?.total_entries ?? dataset?.index.total_entries ?? 0);
 
   function showSection(id: string): void {
@@ -154,6 +161,7 @@
       selectedDistances = [
         ...(selectedDataset.index.distances ?? Object.keys(result.by_distance ?? {}))
       ];
+
       selectedClasses = [...allClasses];
       selectedScenarios = Object.keys(stats.scenario_distribution ?? {}).filter((key) =>
         /^\d+$/.test(key)
@@ -178,6 +186,7 @@
         }),
         statisticsRepository.catalog()
       ]);
+
       datasets = nextDatasets;
       characters = catalog.characters;
       supportCatalog = new Map(catalog.supports.map((item) => [item.id, item]));

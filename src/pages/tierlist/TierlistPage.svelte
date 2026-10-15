@@ -11,7 +11,7 @@
   import Spinner from '@/components/feedback/Spinner.svelte';
   import Tabs from '@/components/navigation/Tabs.svelte';
   import Icon from '@/components/Icon.svelte';
-  import { supportCardImagePath } from '@/lib/catalog/support-card-catalog';
+  import { supportCardImagePath } from '@/lib/game-data/support-cards/support-cards';
   import {
     cardsForType,
     chartAxisBounds,
@@ -68,6 +68,7 @@
       (_, index) => axis.minimum + index * 500
     )
   );
+
   const chartPoints = $derived.by(() => {
     const { minimum, maximum } = axis;
     const buckets: Array<{ score: number; count: number }> = [];
@@ -76,10 +77,13 @@
       let bucket = buckets.find(
         (item) => Math.abs(item.score - score) <= (mobile ? Math.max(60, chartWidth * 0.08) : 150)
       );
+
       if (!bucket) {
         bucket = { score, count: 0 };
+
         buckets.push(bucket);
       }
+
       const stack = bucket.count++;
       const rank = cards.findIndex((item) => item.id === card.id);
       return {
@@ -94,6 +98,7 @@
       };
     });
   });
+
   const chartHeight = $derived(
     Math.max(
       mobile ? 220 : 680,

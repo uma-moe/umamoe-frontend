@@ -1,7 +1,11 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import type { RaceRunner } from '@/lib/race/race-capture-parser';
-  import { formatRaceTime, runningStyleName, hpRemainingColor } from '@/lib/race/race-display';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
+  import {
+    formatRaceTime,
+    runningStyleName,
+    hpRemainingColor
+  } from '@/lib/race/replay/race-display';
   import Icon from '@/components/Icon.svelte';
   import IconButton from '@/components/controls/IconButton.svelte';
   import Artwork from '@/components/game/Artwork.svelte';

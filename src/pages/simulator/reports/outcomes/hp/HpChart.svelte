@@ -43,6 +43,7 @@
     band!.distance_m
       .map((at, index) => (index ? 'L' : 'M') + x(at) + ' ' + y(values[index]!))
       .join(' ');
+
   const median = $derived(band ? line(band.p50) : '');
   const area = $derived(
     band
@@ -56,6 +57,7 @@
           ' Z'
       : ''
   );
+
   const short = $derived(decision ? decision.need - decision.check : 0);
   // One thin lane per kind that has something, in race order of where they happen.
   const LANES = [
@@ -65,6 +67,7 @@
     ['accel', 'Acceleration'],
     ['speed', 'Speed']
   ] as const;
+
   const lanes = $derived(
     LANES.map(([kind, name]) => ({
       kind,

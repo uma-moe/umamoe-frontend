@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-  import type { HorseDiagnostics } from '@/lib/race/race-diagnostics';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import type { HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
   import DiagnosticsEventTable from '../DiagnosticsEventTable.svelte';
   import {

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { copyText } from '@/lib/clipboard';
-  import { loadCharacterImageCatalog } from '@/lib/catalog/character-catalog';
+  import { loadCharacterImages } from '@/lib/game-data/characters';
   import { setAccountWorkspaces } from '@/lib/workspaces/workspace-state';
   import type { LinkedAccount } from '@/services/auth/auth-types';
   import Banner from '@/components/feedback/Banner.svelte';
@@ -70,6 +70,7 @@
       linkError = 'Account ID must be exactly 12 digits.';
       return;
     }
+
     const accountId = newAccountId;
     busy['link'] = true;
     try {
@@ -86,6 +87,7 @@
 
   function startCooldown(accountId: string): void {
     verifyCooldown = { ...verifyCooldown, [accountId]: 30 };
+
     const timer = setInterval(() => {
       const next = (verifyCooldown[accountId] ?? 0) - 1;
       if (next <= 0) {
@@ -95,6 +97,7 @@
         cooldownTimers.delete(timer);
       } else verifyCooldown = { ...verifyCooldown, [accountId]: next };
     }, 1000);
+
     cooldownTimers.add(timer);
   }
 
@@ -102,6 +105,7 @@
     const accountId = account.account_id;
     if (busy[`verify:${accountId}`] || verifyCooldown[accountId]) return;
     verifyError = { ...verifyError, [accountId]: '' };
+
     busy[`verify:${accountId}`] = true;
     try {
       const response = await authRepository.verifyAccount(accountId);
@@ -120,6 +124,7 @@
       }
     } catch (reason) {
       verifyError = { ...verifyError, [accountId]: message(reason) };
+
       startCooldown(accountId);
     } finally {
       delete busy[`verify:${accountId}`];
@@ -148,9 +153,12 @@
         ...verifyError,
         [account.account_id]: 'Could not copy the code. Select and copy it manually.'
       };
+
       return;
     }
+
     verifyError = { ...verifyError, [account.account_id]: '' };
+
     copiedToken = token;
     window.setTimeout(() => {
       if (copiedToken === token) copiedToken = '';
@@ -159,7 +167,7 @@
 
   onMount(() => {
     void loadAccounts();
-    void loadCharacterImageCatalog().then(
+    void loadCharacterImages().then(
       (result) => (images = result),
       () => {}
     );

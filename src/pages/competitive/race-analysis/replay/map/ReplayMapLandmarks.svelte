@@ -38,12 +38,14 @@
   const tickStep = $derived(
     [25, 50, 100, 200, 500, 1000].find((step) => step * pixelsPerMetre >= 80) ?? 1000
   );
+
   const distanceTicks = $derived(
     Array.from({ length: Math.floor(courseLength / tickStep) }, (_, i) => (i + 1) * tickStep)
       .map((distance) => {
         const p = offsetAt(distance, 0),
           a = view.project(p),
           b = view.project(offsetAt(distance, laneWidth));
+
         const normal = view.rotate(p.nx, p.ny);
         return { distance, a, b, label: { x: a.x - normal.x * 16, y: a.y - normal.y * 16 } };
       })
@@ -51,12 +53,14 @@
         (t) => visible(t.a) && t.distance >= displayRange.min && t.distance <= displayRange.max
       )
   );
+
   const courseMarks = $derived(
     landmarks
       .map((m) => {
         const p = offsetAt(m.distance, 0),
           a = view.project(p),
           b = view.project(offsetAt(m.distance, laneWidth));
+
         const normal = view.rotate(p.nx, p.ny);
         return { ...m, a, b, caption: { x: b.x + normal.x * 18, y: b.y + normal.y * 18 } };
       })
@@ -70,6 +74,7 @@
           m.distance <= displayRange.max
       )
   );
+
   const landmarkCaptions = $derived(separatedCaptions(courseMarks, clearLabel));
 </script>
 

@@ -4,8 +4,8 @@
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import type { IconName } from '@/components/icon-types';
-  import { UPDATE_LOG, type ChangeCategory } from '@/services/update-log';
-  import { CURRENT_UPDATE_VERSION } from '@/services/site-services';
+  import { UPDATE_LOG, type ChangeCategory } from '@/services/site/update-log';
+  import { CURRENT_UPDATE_VERSION } from '@/services/site/site-services';
   import { afterPageReady } from '@/routes/after-page-paint';
 
   let { request = 0 }: { request?: number } = $props();
@@ -19,6 +19,7 @@
       (category) => !category.betaOnly || __APP_ENVIRONMENT__ !== 'production'
     )
   }));
+
   const latest = updates[0]!;
   const categoryIcons: Record<string, IconName> = {
     major: 'gauge',
@@ -26,13 +27,6 @@
     minor: 'star',
     bugfix: 'check'
   };
-
-  $effect(() => {
-    if (request) {
-      history = false;
-      open = true;
-    }
-  });
 
   function releaseDate(date: string): string {
     return new Intl.DateTimeFormat('en', {
@@ -51,6 +45,13 @@
     }
   }
 
+  $effect(() => {
+    if (request) {
+      history = false;
+      open = true;
+    }
+  });
+
   onMount(() => {
     let stopped = false;
     let timer: ReturnType<typeof setInterval> | undefined;
@@ -68,11 +69,13 @@
           clearInterval(timer);
           return;
         }
+
         if (document.hidden || document.querySelector('dialog[open], [data-tour-overlay]')) return;
         open = true;
         clearInterval(timer);
       }, 1500);
     });
+
     return () => {
       stopped = true;
       clearInterval(timer);

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-  import { diagnosticLabel, raceMetricHelp } from '@/lib/race/race-diagnostics';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import { diagnosticLabel, raceMetricHelp } from '@/lib/race/capture/race-diagnostics';
   import DataTable, { type TableColumn } from '@/components/data/DataTable.svelte';
   import Button from '@/components/controls/Button.svelte';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';

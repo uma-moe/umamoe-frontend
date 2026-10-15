@@ -1,6 +1,6 @@
 <script lang="ts">
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
-  import { supportCardImagePath } from '@/lib/catalog/support-card-catalog';
+  import { supportCardImagePath } from '@/lib/game-data/support-cards/support-cards';
   import { cardProgression, TIER_DEFINITIONS, type TierCard } from '@/lib/tierlist/tierlist';
 
   let { card, limitBreak = 4 }: { card: TierCard; limitBreak?: number } = $props();

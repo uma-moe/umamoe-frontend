@@ -1,7 +1,11 @@
 import { expect, test, replaceQuery } from './fixtures/test';
 import { mockDatabase, mockAffinity, record } from './fixtures/api';
 
-test('mobile filters and UQL remain usable with 12 records at 8x CPU slowdown', async ({ page, browserName, isMobile }, testInfo) => {
+test('mobile filters and UQL remain usable with 12 records at 8x CPU slowdown', async ({
+  page,
+  browserName,
+  isMobile
+}, testInfo) => {
   test.skip(browserName !== 'chromium' || !isMobile, 'Chrome CPU throttling with touch input');
   test.setTimeout(90_000);
   const cdp = await page.context().newCDPSession(page);
@@ -13,11 +17,13 @@ test('mobile filters and UQL remain usable with 12 records at 8x CPU slowdown', 
     item.inheritance.inheritance_id = index + 1;
     return item;
   });
+
   const queries: string[] = [];
-  await page.route('**/search/query?*', route => {
+  await page.route('**/search/query?*', (route) => {
     queries.push(new URL(route.request().url()).searchParams.get('uql') ?? '');
     return route.fulfill({ json: { items, total: 12, page: 0, limit: 12, total_pages: 1 } });
   });
+
   await page.goto('/database');
   await expect(page.locator('.inheritance-card')).toHaveCount(12);
   await page.getByRole('button', { name: 'Filters', exact: true }).tap();
@@ -41,16 +47,28 @@ test('mobile filters and UQL remain usable with 12 records at 8x CPU slowdown', 
   await expect.poll(() => queries.at(-1)).toBe('');
   await page.getByRole('radio', { name: 'Basic', exact: true }).tap();
   await expect(page.locator('[data-filter-group="inheritance"] .group-title')).toBeVisible();
-  await testInfo.attach('mobile-slowdown', { body: JSON.stringify({ cpu: 8, records: 12, uqlReadyMs: readyMs }), contentType: 'application/json' });
+  await testInfo.attach('mobile-slowdown', {
+    body: JSON.stringify({ cpu: 8, records: 12, uqlReadyMs: readyMs }),
+    contentType: 'application/json'
+  });
 });
 
-test('a failed rich editor download keeps the UQL query editable and validated', async ({ page }) => {
+test('a failed rich editor download keeps the UQL query editable and validated', async ({
+  page
+}) => {
   await mockDatabase(page);
-  await page.route('**/app/DatabaseUqlEditor-*.js', route => route.abort());
+  await page.route('**/app/DatabaseUqlEditor-*.js', (route) => route.abort());
   const queries: string[] = [];
-  page.on('request', request => { if (request.url().includes('/search/query?')) queries.push(new URL(request.url()).searchParams.get('uql') ?? ''); });
+  page.on('request', (request) => {
+    if (request.url().includes('/search/query?'))
+      queries.push(new URL(request.url()).searchParams.get('uql') ?? '');
+  });
+
   const raw = 'Main Speed >= 3\nand Followers < 1000';
-  await page.goto(`/database?filters=${encodeURIComponent(Buffer.from(JSON.stringify({ uql: raw })).toString('base64'))}`);
+  await page.goto(
+    `/database?filters=${encodeURIComponent(Buffer.from(JSON.stringify({ uql: raw })).toString('base64'))}`
+  );
+
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   const editor = page.getByRole('textbox', { name: 'UQL query', exact: true });
   await expect(editor).toHaveValue(raw);

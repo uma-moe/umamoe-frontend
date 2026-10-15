@@ -63,7 +63,8 @@
         <span class="skill-level">
           {level}
         </span>
-      {/if}{#if onremove}
+      {/if}
+      {#if onremove}
         <IconButton
           icon="close"
           size="sm"

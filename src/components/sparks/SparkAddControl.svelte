@@ -4,7 +4,7 @@
   import Combobox, { type ComboboxOption } from '../controls/Combobox.svelte';
   import IconButton from '../controls/IconButton.svelte';
   import SegmentedControl from '../controls/SegmentedControl.svelte';
-  import ResourceStatus from '../feedback/ResourceStatus.svelte';
+  import ResourceLoadStatus from '../feedback/ResourceLoadStatus.svelte';
 
   interface Props {
     id: string;
@@ -21,6 +21,7 @@
   let open = $state(false),
     query = $state(''),
     level = $state('3');
+
   let root = $state<HTMLDivElement>();
 
   async function toggle(next: boolean): Promise<void> {
@@ -40,6 +41,7 @@
         void toggle(false);
       }
     };
+
     element.addEventListener('keydown', escape, true);
     return () => element.removeEventListener('keydown', escape, true);
   });
@@ -100,7 +102,7 @@
         />
       {/if}
     </div>
-    <ResourceStatus
+    <ResourceLoadStatus
       {loading}
       {cached}
       {error}

@@ -1,9 +1,9 @@
 <script lang="ts">
   import Button from '@/components/controls/Button.svelte';
   import ParentPickerDialog from '@/components/parent-picker/ParentPickerDialog.svelte';
-  import { importVeteranFiles } from '@/pages/veterans/veteran-library';
+  import { importVeteranFiles } from '@/pages/veterans/collection/veteran-library';
   import { selectWorkspace } from '@/lib/workspaces/workspace-state';
-  import { veteranDatabaseUrl } from '@/lib/veterans/veteran-links';
+  import { veteranDatabaseUrl } from '@/lib/veterans/records/veteran-links';
 
   let open = $state(false),
     loading = $state(false),
@@ -18,6 +18,7 @@
       await importVeteranFiles([
         new File([await response.text()], 'demo-veterans.json', { type: 'application/json' })
       ]);
+
       selectWorkspace('local');
       open = true;
     } catch (reason) {

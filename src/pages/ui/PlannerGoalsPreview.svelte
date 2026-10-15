@@ -6,7 +6,7 @@
     type PlannerDataBundle,
     type PlannerTarget
   } from '@/lib/carat-planner/carat-planner';
-  import type { TimelinePickupCatalog } from '@/lib/timeline/timeline-pickups';
+  import type { TimelinePickupCatalog } from '@/lib/timeline/events/timeline-pickups';
 
   const resources: PlannerDataBundle = {
     core: { default_spark_pulls: 200 },
@@ -27,6 +27,7 @@
       }
     ]
   };
+
   const catalog: TimelinePickupCatalog = {
     characters: {},
     supports: new Map([

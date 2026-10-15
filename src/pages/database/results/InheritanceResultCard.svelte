@@ -7,6 +7,7 @@
     day: 'numeric',
     year: 'numeric'
   });
+
   const updatedTimeFormat = new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',
     minute: '2-digit',
@@ -17,19 +18,22 @@
 <script lang="ts">
   import type { IconName } from '@/components/icon-types';
   import Icon from '@/components/Icon.svelte';
-  import { inheritanceAffinity, type SparkOrder } from '@/lib/inheritance/inheritance-factors';
+  import {
+    inheritanceAffinity,
+    type SparkOrder
+  } from '@/lib/inheritance/sparks/inheritance-factors';
   import type { UqlSparkHighlight } from '@/lib/inheritance/uql/uql-spark-highlight';
-  import type { VeteranAffinityEngine } from '@/lib/veterans/affinity-engine';
+  import type { VeteranAffinityEngine } from '@/lib/veterans/affinity/affinity-engine';
   import type { VeteranRecord } from '@/lib/veterans/generated/veteran-record';
   import type {
     InheritanceRecord,
     InheritanceSearchFilters
-  } from '@/lib/inheritance/inheritance-search';
-  import { catalogCharacter, type CatalogEntry } from '../catalog-repository';
+  } from '@/lib/inheritance/search/inheritance-search';
+  import { findCharacterEntry, type GameDataEntry } from '@/lib/game-data/display-records';
   import {
     loadOptimalRaceRecommendations,
     type OptimalRaceRecommendation
-  } from '@/lib/catalog/race-catalog';
+  } from '@/lib/game-data/racing/races';
   import InheritanceCharacterPanel from './card/InheritanceCharacterPanel.svelte';
   import InheritanceRecordHeader from './card/InheritanceRecordHeader.svelte';
   import InheritanceSparkArrays from './card/InheritanceSparkArrays.svelte';
@@ -51,8 +55,8 @@
     showOccurrences?: boolean;
     showP2Sparks?: boolean;
     collapsedWhiteSections?: number[];
-    characters: CatalogEntry[];
-    supports: CatalogEntry[];
+    characters: GameDataEntry[];
+    supports: GameDataEntry[];
     defaultFocus?: 'all' | 'main' | 'left' | 'right';
     splitSparks?: boolean;
     sparkPortraits?: boolean;
@@ -111,9 +115,9 @@
   let optimalRetry = $state(0);
   let selectedParent = $state<'all' | 'main' | 'left' | 'right' | undefined>();
 
-  const main = $derived(catalogCharacter(characters, record.mainParentId));
-  const left = $derived(catalogCharacter(characters, record.leftParentId));
-  const right = $derived(catalogCharacter(characters, record.rightParentId));
+  const main = $derived(findCharacterEntry(characters, record.mainParentId));
+  const left = $derived(findCharacterEntry(characters, record.leftParentId));
+  const right = $derived(findCharacterEntry(characters, record.rightParentId));
   const support = $derived(supports.find((entry) => Number(entry.id) === record.supportCardId));
 
   $effect(() => {
@@ -125,6 +129,7 @@
       optimalRecommendations = [];
       return;
     }
+
     optimalRecommendations = [];
     let current = true;
     void loadOptimalRaceRecommendations(record.mainWinSaddles, partnerWinSaddles)
@@ -136,6 +141,7 @@
           optimalError =
             error instanceof Error ? error.message : 'Optimal races could not be loaded.';
       });
+
     return () => {
       current = false;
     };
@@ -144,6 +150,7 @@
   const affinity = $derived(
     inheritanceAffinity(record, targetId, partner, affinityEngine, raceGroups, partnerWinSaddles)
   );
+
   const updatedDate = $derived(new Date(record.lastUpdated ?? ''));
   const updatedLabel = $derived(
     Number.isNaN(updatedDate.getTime())
@@ -177,6 +184,7 @@
       },
       { rootMargin: '160px 0px', threshold: 0.2 }
     );
+
     observer.observe(cardElement);
     return () => observer.disconnect();
   });

@@ -1,5 +1,5 @@
-import { factorMetadata } from '@/lib/catalog/factor-catalog';
-import { characterImagePath, type CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
+import { factorMetadata } from '@/lib/game-data/factors/factors';
+import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
 import {
   BTREE_ORDER,
   emptyPlannerNodes,
@@ -7,19 +7,19 @@ import {
   type PlannerPosition,
   type PlannerSpark
 } from '@/lib/lineage/planner';
-import { resolveVeteranFactors } from '@/lib/profile/profile-veterans';
+import { resolveVeteranFactors } from '@/lib/profile/veterans/profile-veterans';
 import type { ProfileVeteran, SuccessionChara } from '@/pages/profile/profile-repository';
 
 export type PlannerNodes = Record<PlannerPosition, PlannerNode>;
 
-export function characterImage(entry: CharacterCatalogEntry | undefined): string | undefined {
+export function characterImage(entry: CharacterData | undefined): string | undefined {
   return entry ? characterImagePath(Number(entry.id)) : undefined;
 }
 
 export function characterEntry(
-  characters: Map<number, CharacterCatalogEntry>,
+  characters: Map<number, CharacterData>,
   id: number | null
-): [number, CharacterCatalogEntry] | undefined {
+): [number, CharacterData] | undefined {
   if (id == null) return undefined;
   const exact = characters.get(id);
   if (exact) return [id, exact];
@@ -28,7 +28,7 @@ export function characterEntry(
 
 export function hydratePlannerNodes(
   input: PlannerNodes,
-  characters: Map<number, CharacterCatalogEntry>,
+  characters: Map<number, CharacterData>,
   legacyCardIds: Set<number>
 ): PlannerNodes {
   return Object.fromEntries(
@@ -42,6 +42,7 @@ export function hydratePlannerNodes(
         const metadata = factorMetadata(spark.factorId);
         return metadata ? { ...spark, name: metadata.text, type: metadata.type } : spark;
       });
+
       return [
         position,
         {
@@ -72,14 +73,21 @@ export function sparksFrom(source: ProfileVeteran | SuccessionChara): PlannerSpa
 function successionMap(parent: PlannerPosition): Partial<Record<number, PlannerPosition>> {
   if (parent === 'target')
     return { 10: 'p1', 20: 'p2', 11: 'p1-1', 12: 'p1-2', 21: 'p2-1', 22: 'p2-2' };
+
   if (parent === 'p1')
     return { 10: 'p1-1', 20: 'p1-2', 11: 'p1-1-1', 12: 'p1-1-2', 21: 'p1-2-1', 22: 'p1-2-2' };
+
   if (parent === 'p2')
     return { 10: 'p2-1', 20: 'p2-2', 11: 'p2-1-1', 12: 'p2-1-2', 21: 'p2-2-1', 22: 'p2-2-2' };
+
   if (parent === 'p1-1') return { 10: 'p1-1-1', 20: 'p1-1-2' };
+
   if (parent === 'p1-2') return { 10: 'p1-2-1', 20: 'p1-2-2' };
+
   if (parent === 'p2-1') return { 10: 'p2-1-1', 20: 'p2-1-2' };
+
   if (parent === 'p2-2') return { 10: 'p2-2-1', 20: 'p2-2-2' };
+
   return {};
 }
 
@@ -87,10 +95,11 @@ export function applySuccession(
   nodes: PlannerNodes,
   parent: PlannerPosition,
   succession: SuccessionChara[],
-  characters: Map<number, CharacterCatalogEntry>
+  characters: Map<number, CharacterData>
 ): PlannerNodes {
   const mapping = successionMap(parent);
   const next = { ...nodes };
+
   for (const item of succession) {
     const position = mapping[item.position_id];
     if (!position) continue;
@@ -106,5 +115,6 @@ export function applySuccession(
       veteran: undefined
     };
   }
+
   return next;
 }

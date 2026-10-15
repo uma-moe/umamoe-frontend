@@ -17,6 +17,7 @@
       throw error;
     })
   );
+
   const definition = $derived(routeDefinitionForPath(router.route.pathname));
 
   const titles: Record<string, string> = {

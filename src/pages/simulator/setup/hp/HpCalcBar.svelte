@@ -20,20 +20,30 @@
     $props();
 
   // The answer in one line, for the bar that keeps it in reach while the form scrolls.
-  const summary = $derived(
-    !hasCourse
-      ? 'Pick a track and course first'
-      : error && !busy
-        ? 'Couldn’t calculate'
-        : !hasRun
-          ? busy
-            ? 'Calculating…'
-            : 'Does her HP last a full last spurt?'
-          : verdict!.title +
-            (spread?.needed
-              ? ' · needs ≈ ' + Math.round(spread.needed.p50).toLocaleString() + ' stamina'
-              : '')
-  );
+  const summary = $derived.by(() => {
+    if (!hasCourse) {
+      return 'Pick a track and course first';
+    }
+
+    if (error && !busy) {
+      return 'Couldn’t calculate';
+    }
+
+    if (!hasRun) {
+      if (busy) {
+        return 'Calculating…';
+      }
+
+      return 'Does her HP last a full last spurt?';
+    }
+
+    return (
+      verdict!.title +
+      (spread?.needed
+        ? ' · needs ≈ ' + Math.round(spread.needed.p50).toLocaleString() + ' stamina'
+        : '')
+    );
+  });
 </script>
 
 <div

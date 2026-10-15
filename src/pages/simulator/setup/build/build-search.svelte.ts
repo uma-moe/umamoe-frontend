@@ -1,8 +1,7 @@
 import { OPTIMIZE_MODES, type OptimizeMode } from '../../requests/optimize-request';
-import { createSimulatorUma, type SimulatorUma } from '../../simulator-uma';
+import { createSimulatorUma, restoreSimulatorUma, type SimulatorUma } from '../../simulator-uma';
 import { MAX_HINT, type SkillOffer } from './skill-offers';
 import type { TeamTrialsMode } from './track-pool';
-import { createTrainee } from '../trainee';
 
 /**
  * Build search's own setup: the runner at the end of her career, the skills on offer with their hints, the SP budget,
@@ -43,6 +42,7 @@ function defaults(): BuildSearchState {
 type Loose = Record<string, unknown>;
 const record = (value: unknown): Loose | undefined =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Loose) : undefined;
+
 const text = (value: unknown, fallback: string) =>
   typeof value === 'string' || typeof value === 'number' ? String(value) : fallback;
 
@@ -51,33 +51,38 @@ function restore(): BuildSearchState {
   try {
     const data = record(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'));
     if (!data) return state;
-    const uma = record(data.uma),
-      trainee = record(uma?.trainee);
-    if (uma && trainee && typeof uma.name === 'string')
-      state.uma = {
-        ...state.uma,
-        ...(uma as Partial<SimulatorUma>),
-        trainee: { ...createTrainee(), ...(trainee as Partial<SimulatorUma['trainee']>) },
-        skills: Array.isArray(uma.skills) ? (uma.skills as SimulatorUma['skills']) : []
-      };
+    state.uma = restoreSimulatorUma(data.uma, state.uma);
     if (Array.isArray(data.offers))
       state.offers = data.offers.flatMap((item) => {
         const offer = record(item);
         const skillId = Number(offer?.skillId),
           hint = Number(offer?.hint);
-        return Number.isInteger(skillId) && skillId > 0
-          ? [{ skillId, hint: Number.isInteger(hint) ? Math.min(MAX_HINT, Math.max(0, hint)) : 0 }]
-          : [];
+
+        if (!Number.isInteger(skillId) || skillId <= 0) {
+          return [];
+        }
+
+        return [
+          {
+            skillId,
+            hint: Number.isInteger(hint) ? Math.min(MAX_HINT, Math.max(0, hint)) : 0,
+            ...(offer?.locked === true ? { locked: true } : {})
+          }
+        ];
       });
     state.budget = text(data.budget, state.budget);
     state.fastLearner = data.fastLearner === true;
     state.mode = OPTIMIZE_MODES.find((mode) => mode === data.mode) ?? state.mode;
     const tracks = record(data.tracks);
-    for (const mode of OPTIMIZE_MODES)
-      if (mode !== 'cm' && Array.isArray(tracks?.[mode]))
-        state.tracks[mode] = (tracks[mode] as unknown[])
+    for (const mode of OPTIMIZE_MODES) {
+      if (mode === 'cm') continue;
+      const courses = tracks?.[mode];
+      if (Array.isArray(courses))
+        state.tracks[mode] = courses
           .map(Number)
           .filter((course) => Number.isInteger(course) && course > 0);
+    }
+
     state.seed = text(data.seed, state.seed);
     const debuffs = record(data.debuffs);
     if (debuffs)
@@ -85,6 +90,7 @@ function restore(): BuildSearchState {
         count: text(debuffs.count, state.debuffs.count),
         percent: text(debuffs.percent, state.debuffs.percent)
       };
+
     // The beam search's defaults (64 and 3) were too few for the tree search; 256 was the screen's before its fixed budget.
     if (!(data.candidates === '64' && data.finalists === '3')) {
       if (data.candidates !== '256') state.candidates = text(data.candidates, state.candidates);
@@ -93,6 +99,7 @@ function restore(): BuildSearchState {
   } catch {
     /* Storage can be unavailable or hold something else; start fresh then. */
   }
+
   return state;
 }
 

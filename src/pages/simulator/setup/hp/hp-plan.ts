@@ -1,4 +1,4 @@
-import { resolveEncodedSkill, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
+import { resolveEncodedSkill, type SkillData } from '@/lib/game-data/skills/skills';
 import type { MonteCarloSkillInput } from '../../requests/race-sim-request';
 import type {
   StaminaEffectInput,
@@ -56,11 +56,13 @@ export const SPEED_SKILLS = {
   white: { add: 0.15, seconds: 2.4 },
   unique: { add: 0.35, seconds: 5 }
 } as const;
+
 export const ACCEL_SKILLS = {
   gold: { add: 0.4, seconds: 3 },
   white: { add: 0.2, seconds: 3 },
   unique: { add: 0.4, seconds: 4 }
 } as const;
+
 export const GREEN_BONUS = { gold: 60, white: 40 } as const;
 /** Upper bound of every counter; keeps the request well inside the simulator's limits. */
 export const MAX_COUNT = 20;
@@ -103,6 +105,7 @@ export function effectTriggers(input: StaminaEffectInput): number[] {
 export function effectRates(inputs: StaminaEffectInput[], checkDistance?: number) {
   let before = 0,
     total = 0;
+
   for (const input of inputs) {
     if (!Number.isFinite(input.hpPercent)) continue;
     for (const at of effectTriggers(input)) {
@@ -110,6 +113,7 @@ export function effectRates(inputs: StaminaEffectInput[], checkDistance?: number
       if (checkDistance !== undefined && at < checkDistance) before += input.hpPercent / 100;
     }
   }
+
   return { before, total };
 }
 
@@ -142,6 +146,7 @@ export function withBonus(raw: number, bonus: number): number {
 /** Raw stats with green skills added. */
 export function planStats(stats: TraineeStats, plan: HpPlan): TraineeStats {
   const result = { ...stats };
+
   for (const key of STAT_KEYS)
     result[key] = withBonus(
       stats[key],
@@ -206,9 +211,11 @@ export function planEvents(
     decision = (distance * 2) / 3,
     straight = finalStraight(course),
     scale = distance / 1000;
+
   const effects: StaminaEffectInput[] = [],
     states: StaminaStateInput[] = [],
     markers: PlanMarker[] = [];
+
   const tally = (parts: Array<[number, string]>) =>
     parts
       .filter(([count]) => count > 0)
@@ -218,11 +225,13 @@ export function planEvents(
   // Recovery and debuffs: each lands somewhere in mid race.
   const from = place(midStart, distance),
     to = place(decision, distance);
+
   const heals: Array<[number, number, string]> = [
     [plan.recovery.unique, uniqueRecovery(plan), 'unique'],
     [plan.recovery.gold, RECOVERY_PERCENT.gold, 'gold'],
     [plan.recovery.white, RECOVERY_PERCENT.white, 'white']
   ];
+
   for (const [count, hpPercent] of heals)
     if (count > 0) effects.push({ count, hpPercent, startDistanceM: from, endDistanceM: to });
   if (heals.some(([count]) => count > 0))
@@ -235,6 +244,7 @@ export function planEvents(
   const debuffs = (['gold', 'white', 'unique'] as const).map(
     (tier) => [plan.debuffs[tier], tier] as [number, string]
   );
+
   for (const [count, tier] of debuffs)
     if (count > 0)
       effects.push({
@@ -259,6 +269,7 @@ export function planEvents(
       first = place(start, distance),
       // About 20 m/s while it lasts, so it ends before the finish.
       last = Math.max(first, place(end - duration * 20, distance));
+
     for (let index = 0; index < count; index++)
       states.push({
         startDistanceM: first,
@@ -270,11 +281,13 @@ export function planEvents(
       });
     return count ? { first, last: last + duration * 20 } : undefined;
   };
+
   const stretch = (kind: 'speed' | 'accel', windows: Array<ReturnType<typeof skill>>) => {
     const used = windows.filter((window) => window !== undefined);
     if (!used.length) return;
     const first = Math.min(...used.map((window) => window.first)),
       last = Math.max(...used.map((window) => window.last));
+
     markers.push({
       kind,
       at: first,
@@ -285,6 +298,7 @@ export function planEvents(
         ', in the spurt'
     });
   };
+
   stretch('speed', [
     skill('speed', 'gold', decision, distance - 60),
     skill('speed', 'white', decision, distance - 60),
@@ -309,14 +323,17 @@ export function planEvents(
     if (!item.on) return;
     const seconds = item.seconds ?? situationSeconds(key, guts, course),
       start = place(at, distance);
+
     states.push({
       startDistanceM: start,
       durationSeconds: seconds,
       ...flag,
       ...(spread ? { startSpreadM: spread } : {})
     });
+
     markers.push({ kind: 'state', at: start, length: spread || seconds * 20, label });
   };
+
   situation('positionFight', 150, { spotStruggle: true }, 'Position fight');
   const chance = Math.min(100, rushChance(wit));
   situation(
@@ -326,6 +343,7 @@ export function planEvents(
     'Rushed in ' + Math.round(chance) + '% of races, early to mid race',
     place((distance * 7) / 24, distance)
   );
+
   situation('paceDown', distance * 0.35, { paceDown: true }, 'Pace down');
   situation('duel', straight, { dueling: true }, 'Duel');
   if (plan.downhill)
@@ -349,18 +367,18 @@ function firstEffect(effect: string | undefined) {
   const match = (effect ?? '').match(
     /(Stamina Recovery|Increase Target Speed|Increase Current Speed|Increase Acceleration|(Speed|Stamina|Power|Guts|Wisdom|Wit) Stat Up)\s*\(\s*(-?\d*\.?\d+)\s*\)/i
   );
+
   if (!match) return undefined;
   const name = match[1]!.toLowerCase();
-  const stat = match[2]?.toLowerCase();
+  const statName = match[2]?.toLowerCase();
+  const stat = STAT_KEYS.find((key) => key === (statName === 'wit' ? 'wisdom' : statName));
+  let kind: 'recovery' | 'accel' | 'speed' | 'green' = 'green';
+  if (name.startsWith('stamina recovery')) kind = 'recovery';
+  else if (name.includes('acceleration')) kind = 'accel';
+  else if (name.includes('speed') && !stat) kind = 'speed';
   return {
-    kind: name.startsWith('stamina recovery')
-      ? ('recovery' as const)
-      : name.includes('acceleration')
-        ? ('accel' as const)
-        : name.includes('speed') && !stat
-          ? ('speed' as const)
-          : ('green' as const),
-    stat: (stat === 'wit' ? 'wisdom' : stat) as StatKey | undefined,
+    kind,
+    stat,
     value: Number(match[3])
   };
 }
@@ -376,10 +394,12 @@ function greenApplies(conditions: string | undefined, context: CountContext) {
     [/distance_type==(\d)/, context.distanceType],
     [/running_style==(\d)/, context.style]
   ];
+
   for (const [pattern, actual] of checks) {
     const match = text.match(pattern);
     if (match && actual !== undefined && Number(match[1]) !== actual) return false;
   }
+
   if (/is_basis_distance==1/.test(text) && context.distance !== undefined)
     return context.distance % 400 === 0;
   return true;
@@ -446,6 +466,7 @@ const ICON_KINDS: Record<string, 'recovery' | 'speed' | 'accel'> = {
   '2002': 'recovery',
   '2004': 'accel'
 };
+
 const ICON_STATS: Record<string, StatKey> = {
   '1001': 'speed',
   '1002': 'stamina',
@@ -453,6 +474,7 @@ const ICON_STATS: Record<string, StatKey> = {
   '1004': 'guts',
   '1005': 'wisdom'
 };
+
 /** How much a unique heals, from how its description puts it. */
 const HEAL_WORDS: Array<[RegExp, number]> = [
   [/greatly|tremendously|massively/i, 0.055],
@@ -461,19 +483,17 @@ const HEAL_WORDS: Array<[RegExp, number]> = [
 ];
 
 /** What a skill does from its icon and description, for catalogs without effect values. */
-function iconEffect(skill: SkillCatalogEntry): ReturnType<typeof firstEffect> {
+function iconEffect(skill: SkillData): ReturnType<typeof firstEffect> {
   const code = skill.icon?.match(/(\d{5})\.(?:png|webp)$/)?.[1];
   if (!code || code[4] === '4') return undefined;
   const family = code.slice(0, 4),
     description = skill.description ?? '';
+
   // Inherited uniques can carry a stat icon; their description says what they really do ("surge ahead" is speed).
-  const described = /recover (?:own )?endurance/i.test(description)
-    ? ('recovery' as const)
-    : /accelerat/i.test(description)
-      ? ('accel' as const)
-      : /velocity|surge ahead|kick forward/i.test(description)
-        ? ('speed' as const)
-        : undefined;
+  let described: 'recovery' | 'accel' | 'speed' | undefined;
+  if (/recover (?:own )?endurance/i.test(description)) described = 'recovery';
+  else if (/accelerat/i.test(description)) described = 'accel';
+  else if (/velocity|surge ahead|kick forward/i.test(description)) described = 'speed';
   const stat = ICON_STATS[family];
   if (stat && !described) {
     // A green raises a stat: marked ◎ or ○, or said to raise performance, proficiency or a stat by name.
@@ -481,13 +501,16 @@ function iconEffect(skill: SkillCatalogEntry): ReturnType<typeof firstEffect> {
       /[◎○]\s*$/.test(skill.name) ||
       (/performance|proficiency|\b(?:speed|stamina|power|guts|wit)\b/i.test(description) &&
         !/\{\d\}/.test(description));
+
     if (!green) return undefined;
     const strong =
       code[4] === '2' ||
       /◎\s*$/.test(skill.name) ||
       (!/○\s*$/.test(skill.name) && !/^\s*moderately/i.test(description));
+
     return { kind: 'green', stat, value: strong ? GREEN_BONUS.gold : GREEN_BONUS.white };
   }
+
   const kind = ICON_KINDS[family] ?? described;
   if (!kind) return undefined;
   const heal = HEAL_WORDS.find(([words]) => words.test(description))?.[1];
@@ -502,7 +525,7 @@ function iconEffect(skill: SkillCatalogEntry): ReturnType<typeof firstEffect> {
  * What one catalog skill counts as: recovery, speed or acceleration of a tier, or a green skill on a stat. Her own
  * unique counts as unique; an inherited unique counts as white. `undefined` when it does not change her HP use.
  */
-export function classifySkill(skill: SkillCatalogEntry, inherited = false): SkillCount | undefined {
+export function classifySkill(skill: SkillData, inherited = false): SkillCount | undefined {
   const effect = firstEffect(skill.effect) ?? iconEffect(skill);
   if (!effect || effect.value <= 0) return undefined;
   if (effect.kind === 'green')
@@ -514,14 +537,12 @@ export function classifySkill(skill: SkillCatalogEntry, inherited = false): Skil
           value: effect.value
         }
       : undefined;
+  let tier: 'unique' | 'gold' | 'white' = 'white';
+  if ((skill.unique || skill.rarity >= 3) && !inherited) tier = 'unique';
+  else if (skill.rarity === 2) tier = 'gold';
   return {
     kind: effect.kind,
-    tier:
-      (skill.unique || skill.rarity >= 3) && !inherited
-        ? 'unique'
-        : skill.rarity === 2
-          ? 'gold'
-          : 'white',
+    tier,
     value: effect.value,
     early: effect.kind !== 'recovery' && EARLY.test(skill.conditions ?? '')
   };
@@ -534,6 +555,7 @@ export const STAT_LABELS: Record<StatKey, string> = {
   guts: 'Guts',
   wisdom: 'Wit'
 };
+
 const TIER_LABELS = { gold: 'Gold', white: 'White', unique: 'Unique' } as const;
 const KIND_NOUNS = { recovery: 'recovery', speed: 'speed', accel: 'acceleration' } as const;
 
@@ -559,6 +581,7 @@ export function addSkillCount(
     green[item.tier] += 1;
     return true;
   }
+
   const group = plan[item.kind];
   if (group[item.tier] >= (item.tier === 'unique' ? 2 : MAX_COUNT)) return false;
   group[item.tier] += 1;
@@ -569,6 +592,7 @@ export function addSkillCount(
     );
     if (level !== undefined) plan.recovery.uniqueLevel = Math.min(6, Math.max(1, level));
   }
+
   return true;
 }
 
@@ -579,16 +603,17 @@ export function addSkillCount(
  */
 export function countSkills(
   skills: MonteCarloSkillInput[],
-  catalog: Map<number, SkillCatalogEntry>,
+  skillLookup: Map<number, SkillData>,
   context: CountContext = {}
 ): Pick<HpPlan, 'recovery' | 'speed' | 'accel' | 'green'> {
   const plan = createHpPlan();
   const seen = new Set<number>();
   for (const learned of skills) {
     const { skill, inherited, level } = resolveEncodedSkill(
-      catalog,
+      skillLookup,
       learned.skillId * 10 + (learned.level ?? 1)
     );
+
     if (!skill || seen.has(skill.skill_id)) continue;
     seen.add(skill.skill_id);
     const item = classifySkill(skill, inherited);
@@ -596,5 +621,6 @@ export function countSkills(
     if (item.kind === 'green' ? !greenApplies(skill.conditions, context) : item.early) continue;
     addSkillCount(plan, item, level);
   }
+
   return { recovery: plan.recovery, speed: plan.speed, accel: plan.accel, green: plan.green };
 }

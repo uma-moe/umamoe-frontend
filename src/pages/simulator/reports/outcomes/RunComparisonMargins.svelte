@@ -44,15 +44,19 @@
         .map((source) => [source, headToHead(result, source, reference, distance)])
     )
   );
+
   const marginRows = $derived(
     [...pairs.values()].sort((a, b) => (compact ? b.lengths.median - a.lengths.median : 0))
   );
+
   const marginScale = $derived(marginAxis([...pairs.values()], unit));
 
   const margin = (pair: HeadToHead, key: 'min' | 'max' | 'mean' | 'median') =>
     formatMarginValue(pair.lengths[key], pair.seconds[key], unit, 2);
+
   const otherUnit = (pair: HeadToHead, key: 'min' | 'max' | 'mean' | 'median') =>
     seconds ? signedLengths(pair.lengths[key], 2) : signedSeconds(-pair.seconds[key]);
+
   const ahead = (value: number) => (value > 1e-9 ? ('ahead' as const) : ('' as const));
 
   function marginTiles(pair: HeadToHead): DistributionTile[] {
@@ -105,8 +109,10 @@
     const from = marginScale.min + index * marginScale.width,
       to = from + marginScale.width,
       front = from + to > 0;
+
     const near = Math.min(Math.abs(from), Math.abs(to)),
       far = Math.max(Math.abs(from), Math.abs(to));
+
     const open = (index === 0 && !front) || (index === marginScale.bins - 1 && front);
     return (
       (front ? label(pair.source) : label(reference)) +
@@ -120,15 +126,20 @@
     );
   }
 
-  const marginTick = (value: number) =>
-    Math.abs(value) < 1e-9
-      ? '0'
-      : seconds
-        ? signedSeconds(
-            -value,
-            marginScale.ticks.some((t) => Math.abs(t * 10 - Math.round(t * 10)) > 1e-6) ? 2 : 1
-          )
-        : signedLengths(value, marginScale.ticks.some((t) => !Number.isInteger(t)) ? 1 : 0);
+  const marginTick = (value: number) => {
+    if (Math.abs(value) < 1e-9) {
+      return '0';
+    }
+
+    if (seconds) {
+      return signedSeconds(
+        -value,
+        marginScale.ticks.some((t) => Math.abs(t * 10 - Math.round(t * 10)) > 1e-6) ? 2 : 1
+      );
+    }
+
+    return signedLengths(value, marginScale.ticks.some((t) => !Number.isInteger(t)) ? 1 : 0);
+  };
 </script>
 
 {#each marginRows as pair, index (pair.source)}

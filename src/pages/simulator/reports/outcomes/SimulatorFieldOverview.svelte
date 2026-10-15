@@ -1,8 +1,8 @@
 <script lang="ts">
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import Icon from '@/components/Icon.svelte';
-  import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
-  import { formatRaceTime } from '@/lib/race/race-display';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
+  import { formatRaceTime } from '@/lib/race/replay/race-display';
   import SimulatorRunnerFace from '../SimulatorRunnerFace.svelte';
   import { runnerColor } from '../simulation-report';
   import {
@@ -28,7 +28,7 @@
   }: {
     result: MonteCarloResult;
     umas: SimulatorUma[];
-    course?: CourseCatalogEntry;
+    course?: RaceCourse;
     selected: number[];
     reference: number;
     unit?: MarginUnit;
@@ -67,12 +67,14 @@
       ? '—'
       : (value >= 99.95 || value <= 0.05 || value >= 10 ? value.toFixed(0) : value.toFixed(1)) +
         '%';
+
   const tone: Record<VerdictTone, string> = {
     good: 'clean',
     warn: 'warning',
     bad: 'error',
     neutral: ''
   };
+
   const name = (source: number) => umas[source]!.name;
 </script>
 

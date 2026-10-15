@@ -1,8 +1,8 @@
 <script lang="ts">
   import { Router } from 'sv-router';
   import { on } from 'svelte/events';
-  import AppShell from './layouts/AppShell.svelte';
-  import { router } from './routes/router';
+  import AppShell from '@/layouts/AppShell.svelte';
+  import { router } from '@/routes/router';
 
   const isDirectUiLabRoute = /^\/ui(?:-lab)?\/?$/.test(globalThis.location?.pathname ?? '');
 
@@ -30,7 +30,7 @@
   onerror={(error) => window.dispatchEvent(new CustomEvent('umamoe:app-error', { detail: error }))}
 >
   {#if import.meta.env.MODE === 'demo'}
-    {#await import('./pages/ui/DemoNotice.svelte') then module}
+    {#await import('@/pages/ui/DemoNotice.svelte') then module}
       <module.default />
     {/await}
   {/if}

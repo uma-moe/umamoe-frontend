@@ -2,22 +2,89 @@ import { expect, test } from './fixtures/test';
 import { mockTimeline } from './fixtures/api';
 import { plannerControlsPlan } from './fixtures/planner-controls';
 
-test('Step-ups share banner goal controls, budget paid steps and survive reload', async ({ page }, info) => {
+test('Step-ups share banner goal controls, budget paid steps and survive reload', async ({
+  page
+}, info) => {
   await mockTimeline(page);
-  const event = { id: 'paid-banner-50078', type: 'paid_banner', title: 'SSR Support Select Step-Up', gacha_id: 50078, gacha_type: 14, planner_data_available: true, global_release_date: '2026-09-10', estimated_end_date: '2026-09-30', is_confirmed: true };
-  await page.route('**/resources/test/banner_timeline.json*', route => route.fulfill({ json: { events: [event] } }));
-  await page.route('**/resources/test/planner_core.json*', route => route.fulfill({ json: { gacha_shard_by_event: { [event.id]: '2026' } } }));
-  await page.route('**/resources/test/planner_gacha_2026.json*', route => route.fulfill({ json: { gachas: [{ event_id: event.id, gacha_id: 50078, gacha_type: 14, banner_kind: 'support', start_date: event.global_release_date, end_date: event.estimated_end_date, pickups: [], step_up: { rounds: 1, selection_pool_size: 10, selection_pickup_rate: .003, steps: [500, 700, 1000, 1300, 1500].map((cost, i) => ({ gacha_id: 50078 + i, pulls: 10, cost, guaranteed_rarity: i < 2 ? 2 : 3, selectable: i === 4 })) } }] } }));
-  const plan = plannerControlsPlan(); plan.targets = []; plan.balances.paidJewels = 2199; plan.balances.freeJewels = 60000;
-  await page.addInitScript(plan => { if (!localStorage.getItem('carat-planner-plans-v1')) localStorage.setItem('carat-planner-plans-v1', JSON.stringify({ version: 1, activePlanId: plan.id, plans: [plan] })); }, plan);
+  const event = {
+    id: 'paid-banner-50078',
+    type: 'paid_banner',
+    title: 'SSR Support Select Step-Up',
+    gacha_id: 50078,
+    gacha_type: 14,
+    planner_data_available: true,
+    global_release_date: '2026-09-10',
+    estimated_end_date: '2026-09-30',
+    is_confirmed: true
+  };
+
+  await page.route('**/resources/test/banner_timeline.json*', (route) =>
+    route.fulfill({ json: { events: [event] } })
+  );
+
+  await page.route('**/resources/test/planner_core.json*', (route) =>
+    route.fulfill({ json: { gacha_shard_by_event: { [event.id]: '2026' } } })
+  );
+
+  await page.route('**/resources/test/planner_gacha_2026.json*', (route) =>
+    route.fulfill({
+      json: {
+        gachas: [
+          {
+            event_id: event.id,
+            gacha_id: 50078,
+            gacha_type: 14,
+            banner_kind: 'support',
+            start_date: event.global_release_date,
+            end_date: event.estimated_end_date,
+            pickups: [],
+            step_up: {
+              rounds: 1,
+              selection_pool_size: 10,
+              selection_pickup_rate: 0.003,
+              steps: [500, 700, 1000, 1300, 1500].map((cost, i) => ({
+                gacha_id: 50078 + i,
+                pulls: 10,
+                cost,
+                guaranteed_rarity: i < 2 ? 2 : 3,
+                selectable: i === 4
+              }))
+            }
+          }
+        ]
+      }
+    })
+  );
+
+  const plan = plannerControlsPlan();
+  plan.targets = [];
+  plan.balances.paidJewels = 2199;
+  plan.balances.freeJewels = 60000;
+  await page.addInitScript((plan) => {
+    if (!localStorage.getItem('carat-planner-plans-v1'))
+      localStorage.setItem(
+        'carat-planner-plans-v1',
+        JSON.stringify({ version: 1, activePlanId: plan.id, plans: [plan] })
+      );
+  }, plan);
+
   await page.goto('/timeline');
-  await page.getByRole('button', { name: `Add ${event.title} to Carat Planner`, exact: true }).click();
+  await page
+    .getByRole('button', { name: `Add ${event.title} to Carat Planner`, exact: true })
+    .click();
+
   await page.goto('/timeline?tab=carat-planner');
   const target = page.locator('article.target').filter({ hasText: event.title });
   await expect(target.locator('.funding')).toContainText('50 planned pulls');
   await expect(target.locator('.funding')).toContainText('Requires 2,801 paid Carats');
-  await expect(page.getByRole('group', { name: 'Projection summary' }).locator('strong').first()).toHaveText('2,801');
-  await expect(page.getByRole('group', { name: 'Projection summary' })).toContainText('Requires paid Carats');
+  await expect(
+    page.getByRole('group', { name: 'Projection summary' }).locator('strong').first()
+  ).toHaveText('2,801');
+
+  await expect(page.getByRole('group', { name: 'Projection summary' })).toContainText(
+    'Requires paid Carats'
+  );
+
   await expect(target.locator('.pickup-details')).toHaveCount(1);
   await expect(target.locator('.goal-workspace')).toHaveCount(0);
   await expect(target.getByLabel('Paid banner', { exact: true })).toBeVisible();
@@ -27,19 +94,32 @@ test('Step-ups share banner goal controls, budget paid steps and survive reload'
   await expect(target.locator('.selected-goal')).toHaveCount(1);
   await expect(target.getByRole('button', { name: 'Choose rate-ups' })).toHaveCount(0);
   const advanced = target.locator('.advanced-odds');
-  if (await advanced.getAttribute('open') === null) await advanced.locator('summary').first().click();
+  if ((await advanced.getAttribute('open')) === null)
+    await advanced.locator('summary').first().click();
   await expect(advanced).toContainText('1 copy is guaranteed');
   await target.locator('.step-costs > summary').click();
   await expect(target.locator('.step-costs li')).toHaveCount(5);
   await expect(target.locator('.step-costs li').last()).toContainText('Choose the guaranteed SSR');
   await target.screenshot({ path: info.outputPath('step-up-expanded.png') });
-  await target.getByRole('button', { name: 'Increase desired copies of Chosen card', exact: true }).click();
+  await target
+    .getByRole('button', { name: 'Increase desired copies of Chosen card', exact: true })
+    .click();
+
   await expect(target.locator('.goal-chance')).toContainText('29.7%');
-  await expect(target.getByRole('group', { name: 'Copies of Chosen card', exact: true })).toContainText('2');
-  await page.getByRole('group', { name: 'Projection summary' }).screenshot({ path: info.outputPath('paid-requirement-summary.png') });
+  await expect(
+    target.getByRole('group', { name: 'Copies of Chosen card', exact: true })
+  ).toContainText('2');
+
+  await page
+    .getByRole('group', { name: 'Projection summary' })
+    .screenshot({ path: info.outputPath('paid-requirement-summary.png') });
+
   const progress = target.getByRole('combobox', { name: 'Step-up progress', exact: true });
   await progress.click();
-  await target.getByRole('option', { name: 'Step 2 · 20 pulls · 1,200 paid Carats', exact: true }).click();
+  await target
+    .getByRole('option', { name: 'Step 2 · 20 pulls · 1,200 paid Carats', exact: true })
+    .click();
+
   await expect(target.locator('.funding')).toContainText('20 planned pulls');
   await expect(target.locator('.funding')).toContainText('Paid cost covered');
   await expect(advanced).toContainText('do not reach a guaranteed card choice');
@@ -50,17 +130,37 @@ test('Step-ups share banner goal controls, budget paid steps and survive reload'
   await expect(target.locator('.funding')).toContainText('20 planned pulls');
   await expect(target.locator('.goal-previews')).toContainText('2 copies required');
   await target.getByLabel(`Pickup goals for ${event.title}`, { exact: true }).click();
-  await target.getByRole('button', { name: 'Decrease desired copies of Chosen card', exact: true }).click();
+  await target
+    .getByRole('button', { name: 'Decrease desired copies of Chosen card', exact: true })
+    .click();
+
   await expect(target.locator('.goal-chance')).toContainText('5.8%');
-  await expect(target.getByRole('button', { name: 'Decrease desired copies of Chosen card', exact: true })).toBeDisabled();
-  const controls = await Promise.all([progress.boundingBox(), target.getByRole('button', { name: `Remove ${event.title}`, exact: true }).boundingBox()]);
+  await expect(
+    target.getByRole('button', { name: 'Decrease desired copies of Chosen card', exact: true })
+  ).toBeDisabled();
+
+  const controls = await Promise.all([
+    progress.boundingBox(),
+    target.getByRole('button', { name: `Remove ${event.title}`, exact: true }).boundingBox()
+  ]);
+
   expect(Math.abs(controls[0]!.height - controls[1]!.height)).toBeLessThanOrEqual(2);
-  await target.getByRole('button', { name: `Actual results for ${event.title}`, exact: true }).click();
+  await target
+    .getByRole('button', { name: `Actual results for ${event.title}`, exact: true })
+    .click();
+
   await target.getByRole('combobox', { name: 'Actual step-up progress', exact: true }).click();
-  await target.getByRole('option', { name: 'Step 1 · 10 pulls · 500 paid Carats', exact: true }).click();
+  await target
+    .getByRole('option', { name: 'Step 1 · 10 pulls · 500 paid Carats', exact: true })
+    .click();
+
   await expect(target.locator('.result-delta')).toHaveText('10 pulls saved');
   await expect(target.locator('.goal-chance > strong')).toHaveText('Copies not recorded');
-  const actualCopies = target.getByRole('spinbutton', { name: 'Actual copies of Chosen card', exact: true });
+  const actualCopies = target.getByRole('spinbutton', {
+    name: 'Actual copies of Chosen card',
+    exact: true
+  });
+
   await actualCopies.fill('1');
   await expect(target.locator('.goal-chance > strong')).toHaveText('All goals met');
   await actualCopies.fill('0');
@@ -68,18 +168,72 @@ test('Step-ups share banner goal controls, budget paid steps and survive reload'
   await actualCopies.fill('');
   await expect(target.locator('.goal-chance > strong')).toHaveText('Copies not recorded');
   await expect(progress).toContainText('Step 2 · 20 pulls');
-  await target.getByRole('dialog', { name: `Actual results for ${event.title}`, exact: true }).screenshot({ path: info.outputPath('actual-step-up.png') });
+  await target
+    .getByRole('dialog', { name: `Actual results for ${event.title}`, exact: true })
+    .screenshot({ path: info.outputPath('actual-step-up.png') });
+
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test('ordinary paid banners can be added, show paid shortfalls and respect their draw limit', async ({ page }, info) => {
+test('ordinary paid banners can be added, show paid shortfalls and respect their draw limit', async ({
+  page
+}, info) => {
   await mockTimeline(page);
-  const event = { id: 'paid-banner-50002', type: 'paid_banner', title: 'Premium SSR Guaranteed', gacha_id: 50002, gacha_type: 5, planner_data_available: true, pickup_card_ids: [30001], global_release_date: '2026-09-10', estimated_end_date: '2026-09-30', is_confirmed: true };
-  await page.route('**/resources/test/banner_timeline.json*', route => route.fulfill({ json: { events: [event] } }));
-  await page.route('**/resources/test/planner_core.json*', route => route.fulfill({ json: { gacha_shard_by_event: { [event.id]: '2026' } } }));
-  await page.route('**/resources/test/planner_gacha_2026.json*', route => route.fulfill({ json: { gachas: [{ event_id: event.id, gacha_id: 50002, gacha_type: 5, banner_kind: 'support', start_date: event.global_release_date, end_date: event.estimated_end_date, jewel_cost_per_pull: 150, paid_draw: { limit: 1, guaranteed_rarity: 3, guaranteed_count: 1 }, pickups: [{ pickup_id: 30001, rate: .015, exchangeable: false }], rarity_rates: [{ rarity: 3, rate: .03 }] }] } }));
-  const plan = plannerControlsPlan(); plan.targets = []; plan.balances.paidJewels = 1499; plan.balances.freeJewels = 60000; plan.balances.supportTickets = 100;
-  await page.addInitScript(plan => { if (!localStorage.getItem('carat-planner-plans-v1')) localStorage.setItem('carat-planner-plans-v1', JSON.stringify({ version: 1, activePlanId: plan.id, plans: [plan] })); }, plan);
+  const event = {
+    id: 'paid-banner-50002',
+    type: 'paid_banner',
+    title: 'Premium SSR Guaranteed',
+    gacha_id: 50002,
+    gacha_type: 5,
+    planner_data_available: true,
+    pickup_card_ids: [30001],
+    global_release_date: '2026-09-10',
+    estimated_end_date: '2026-09-30',
+    is_confirmed: true
+  };
+
+  await page.route('**/resources/test/banner_timeline.json*', (route) =>
+    route.fulfill({ json: { events: [event] } })
+  );
+
+  await page.route('**/resources/test/planner_core.json*', (route) =>
+    route.fulfill({ json: { gacha_shard_by_event: { [event.id]: '2026' } } })
+  );
+
+  await page.route('**/resources/test/planner_gacha_2026.json*', (route) =>
+    route.fulfill({
+      json: {
+        gachas: [
+          {
+            event_id: event.id,
+            gacha_id: 50002,
+            gacha_type: 5,
+            banner_kind: 'support',
+            start_date: event.global_release_date,
+            end_date: event.estimated_end_date,
+            jewel_cost_per_pull: 150,
+            paid_draw: { limit: 1, guaranteed_rarity: 3, guaranteed_count: 1 },
+            pickups: [{ pickup_id: 30001, rate: 0.015, exchangeable: false }],
+            rarity_rates: [{ rarity: 3, rate: 0.03 }]
+          }
+        ]
+      }
+    })
+  );
+
+  const plan = plannerControlsPlan();
+  plan.targets = [];
+  plan.balances.paidJewels = 1499;
+  plan.balances.freeJewels = 60000;
+  plan.balances.supportTickets = 100;
+  await page.addInitScript((plan) => {
+    if (!localStorage.getItem('carat-planner-plans-v1'))
+      localStorage.setItem(
+        'carat-planner-plans-v1',
+        JSON.stringify({ version: 1, activePlanId: plan.id, plans: [plan] })
+      );
+  }, plan);
+
   await page.goto('/timeline');
   await page.getByRole('button', { name: /^Add .+ to Carat Planner$/ }).click();
   await page.goto('/timeline?tab=carat-planner');
@@ -87,10 +241,19 @@ test('ordinary paid banners can be added, show paid shortfalls and respect their
   await expect(target.locator('.funding')).toContainText('10 planned pulls');
   await expect(target.locator('.funding')).toContainText('Requires 1 paid Carats');
   await expect(target.locator('.goal-chance')).toContainText('56.4%');
-  await expect(page.getByRole('group', { name: 'Projection summary' }).locator('strong').first()).toHaveText('1');
-  await expect(page.getByRole('group', { name: 'Projection summary' })).toContainText('Requires paid Carats');
+  await expect(
+    page.getByRole('group', { name: 'Projection summary' }).locator('strong').first()
+  ).toHaveText('1');
+
+  await expect(page.getByRole('group', { name: 'Projection summary' })).toContainText(
+    'Requires paid Carats'
+  );
+
   await expect(target.getByLabel('Paid banner', { exact: true })).toBeVisible();
-  await expect(target.getByRole('spinbutton', { name: 'Planned pulls', exact: true })).toHaveAttribute('max', '10');
+  await expect(
+    target.getByRole('spinbutton', { name: 'Planned pulls', exact: true })
+  ).toHaveAttribute('max', '10');
+
   await expect(target.getByRole('combobox', { name: 'Step-up progress' })).toHaveCount(0);
   await target.screenshot({ path: info.outputPath('paid-banner-planner.png') });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -99,8 +262,12 @@ test('ordinary paid banners can be added, show paid shortfalls and respect their
     collection.plans[0].balances.paidJewels = 0;
     localStorage.setItem('carat-planner-plans-v1', JSON.stringify(collection));
   });
+
   await page.reload();
   await expect(target.locator('.funding')).toContainText('Requires 1,500 paid Carats');
-  await expect(page.getByRole('group', { name: 'Projection summary' }).locator('strong').first()).toHaveText('1,500');
+  await expect(
+    page.getByRole('group', { name: 'Projection summary' }).locator('strong').first()
+  ).toHaveText('1,500');
+
   await expect(target.locator('.goal-chance')).toContainText('56.4%');
 });

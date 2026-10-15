@@ -1,6 +1,6 @@
 <script lang="ts">
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
-  import type { RaceTrajectory } from '@/lib/race/race-ensemble';
+  import type { RaceTrajectory } from '@/lib/race/replay/race-ensemble';
   import type { Course } from '../replay-course';
   import type { ReplayState } from '../replay-state.svelte';
   import ReplayFieldSpread from './ReplayFieldSpread.svelte';

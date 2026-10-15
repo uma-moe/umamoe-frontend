@@ -14,13 +14,7 @@
 
   let { node, selected = false, compact = false, onclick }: Props = $props();
 
-  const artworkSize = $derived(
-    node.role === 'main'
-      ? ('sm' as const)
-      : node.role === 'parent'
-        ? ('sm' as const)
-        : ('xs' as const)
-  );
+  const artworkSize = $derived(node.role === 'main' || node.role === 'parent' ? 'sm' : 'xs');
   const roleLabel = $derived(
     node.role === 'grandparent' ? node.roleLabel.replace(/^.*legacy\s*/i, 'L') : node.roleLabel
   );

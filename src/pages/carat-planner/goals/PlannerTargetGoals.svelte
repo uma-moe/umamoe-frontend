@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { isPaidBanner, plannerCardKind } from '@/lib/carat-planner/planner-paid-banners';
+  import { isPaidBanner, plannerCardKind } from '@/lib/carat-planner/gacha/planner-paid-banners';
   import {
     findGacha,
     type PlannerDataBundle,
     type PlannerTarget,
     type TargetProjection
   } from '@/lib/carat-planner/carat-planner';
-  import type { TimelinePickupCatalog } from '@/lib/timeline/timeline-pickups';
+  import type { TimelinePickupCatalog } from '@/lib/timeline/events/timeline-pickups';
   import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
   import {
     oddsLabel,
@@ -50,6 +50,7 @@
   const ratesAvailable = $derived(
     goals.length > 0 && goals.every((goal) => goal.odds?.pickupRate !== undefined)
   );
+
   const inferred = $derived(gacha?.rates_confidence === 'inferred_standard');
   const totalLabel = $derived(
     !goals.length
@@ -66,6 +67,7 @@
           ? 'Rates unavailable'
           : percent(projection.pickupProbability)
   );
+
   const fundingLabel = $derived(
     paidOnly
       ? `Paid Carats only · ${projection.shortfallJewels ? `Requires ${projection.shortfallJewels.toLocaleString()} paid Carats` : 'Paid cost covered'}`
@@ -79,6 +81,7 @@
           .filter(Boolean)
           .join(' · ')
   );
+
   const savedPulls = $derived(
     projection.plannedPulls - (projection.actualPulls ?? projection.plannedPulls)
   );

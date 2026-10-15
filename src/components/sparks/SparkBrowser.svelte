@@ -1,7 +1,7 @@
 <script lang="ts">
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
-  import { factorImage, factorOptions, type FactorMetadata } from '@/lib/catalog/factor-catalog';
-  import type { CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
+  import { factorImage, factorOptions, type FactorMetadata } from '@/lib/game-data/factors/factors';
+  import type { CharacterData } from '@/lib/game-data/characters';
   import WhiteFactorTypePicker from '@/pages/database/filters/factors/WhiteFactorTypePicker.svelte';
   import Button from '../controls/Button.svelte';
   import Icon from '../Icon.svelte';
@@ -16,10 +16,11 @@
     onchoose
   }: {
     category: string;
-    characters: Map<number, CharacterCatalogEntry>;
+    characters: Map<number, CharacterData>;
     selectedFactorIds?: number[];
     onchoose: (factorId: number) => void;
   } = $props();
+
   const id = $props.id();
 
   let uniqueSearch = $state('');
@@ -32,6 +33,7 @@
       .map((factor) => ({ factor, character: characters.get(Number(factor.id) / 10) }))
       .sort((a, b) => a.factor.text.localeCompare(b.factor.text))
   );
+
   const visibleUniques = $derived(
     uniqueSparks.filter(({ factor, character }) =>
       ((character?.name ?? '') + ' ' + factor.text)

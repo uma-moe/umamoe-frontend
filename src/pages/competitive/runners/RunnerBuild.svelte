@@ -1,16 +1,16 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { normalizeVeteranRecord } from '@/lib/veterans/veteran-normalizer';
-  import { veteranSupportCards } from '@/lib/veterans/veteran-profile';
+  import { normalizeVeteranRecord } from '@/lib/veterans/records/veteran-normalizer';
+  import { veteranSupportCards } from '@/lib/veterans/records/veteran-profile';
   import RunnerTraining from './RunnerTraining.svelte';
-  import type { RaceRunner } from '@/lib/race/race-capture-parser';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import ProfileVeteranIdentity from '@/pages/profile/veterans/ProfileVeteranIdentity.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
   import AptitudeGrid from '@/components/game/AptitudeGrid.svelte';
   import RaceSkill from './RaceSkill.svelte';
   import type { AptitudeGradeValue } from '@/components/game/AptitudeGrade.svelte';
   import AptitudeGrade from '@/components/game/AptitudeGrade.svelte';
-  import { runningStyleName } from '@/lib/race/race-display';
+  import { runningStyleName } from '@/lib/race/replay/race-display';
   import { identity, score, stats } from '../analysis-view';
 
   let {
@@ -42,6 +42,7 @@
       return undefined;
     }
   });
+
   const supports = $derived(veteranSupportCards(runner.raw));
   const aptitudes = $derived(
     [
@@ -81,15 +82,18 @@
       grade: grades[Math.max(0, value - 1)] ?? 'G'
     }))
   );
+
   const totalStats = $derived(
     Object.values(runner.stats).reduce((total, value) => total + (value ?? 0), 0)
   );
+
   const raceAptitudes = $derived.by(() => {
     if (!raceContext) return [];
     const style = runner.result?.runningStyle ?? Number(runner.raw.runningStyle);
     const styleKey = ['', 'nige', 'senko', 'sashi', 'oikomi', 'nige'][style];
     const surfaceKey =
       raceContext.surface === 1 ? 'turf' : raceContext.surface === 2 ? 'dirt' : undefined;
+
     const distance = raceContext.distance;
     const distanceKey = distance
       ? distance <= 1400
@@ -100,13 +104,16 @@
             ? 'middle'
             : 'long'
       : undefined;
+
     const aptitude = (key: string | undefined, aggregate: string) => {
       const camel = key?.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
       const value = Number(
         (key ? (runner.raw[key] ?? runner.raw[camel!]) : undefined) ?? runner.raw[aggregate]
       );
+
       return grades[value - 1];
     };
+
     return [
       {
         group: 'Distance',

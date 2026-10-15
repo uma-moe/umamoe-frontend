@@ -51,6 +51,23 @@ describe('optimize request', () => {
     expect(Object.hasOwn(second ?? {}, 'replaces')).toBe(false);
   });
 
+  it('sends locked purchases as valid unique indices, and nothing without any', () => {
+    const form = {
+      mode: 'cm' as const,
+      targetSourceInputIndex: 0,
+      spBudget: 500,
+      purchases: [
+        { name: 'A', cost: 10, skills: [1] },
+        { name: 'B', cost: 10, skills: [2] }
+      ],
+      scenarios: [scenario()],
+      seed: 5
+    };
+
+    expect(buildOptimizeRequest({ ...form, locked: [1, 1, 7, -1] }).locked).toEqual([1]);
+    expect(Object.hasOwn(buildOptimizeRequest({ ...form, locked: [] }), 'locked')).toBe(false);
+  });
+
   it('clamps the budget and candidate counts', () => {
     const body = buildOptimizeRequest({
       mode: 'cm',
@@ -156,7 +173,10 @@ describe('optimize request', () => {
     });
 
     expect(body.scenarios[0]?.input.runners).toHaveLength(1);
-    expect(body.scenarios[0]?.input.runners[0]).toMatchObject({ source_input_index: 0, frame_order: 1 });
+    expect(body.scenarios[0]?.input.runners[0]).toMatchObject({
+      source_input_index: 0,
+      frame_order: 1
+    });
   });
 
   it('keeps a Team Trials pool of up to 32 tracks', () => {
@@ -175,11 +195,26 @@ describe('optimize request', () => {
   });
 
   it('sends HP debuffs as drains somewhere in mid race, and nothing without any', () => {
-    const base = { mode: 'cm' as const, targetSourceInputIndex: 0, spBudget: 1200, purchases: [], scenarios: [scenario()], seed: 5 };
-    expect(buildOptimizeRequest({ ...base, debuffs: { count: 3, percent: 2 } }).hp_changes).toEqual([
-      { count: 3, hp_percent: -2, from: 1 / 6, to: 2 / 3 }
-    ]);
-    expect(Object.hasOwn(buildOptimizeRequest({ ...base, debuffs: { count: 0, percent: 2 } }), 'hp_changes')).toBe(false);
+    const base = {
+      mode: 'cm' as const,
+      targetSourceInputIndex: 0,
+      spBudget: 1200,
+      purchases: [],
+      scenarios: [scenario()],
+      seed: 5
+    };
+
+    expect(buildOptimizeRequest({ ...base, debuffs: { count: 3, percent: 2 } }).hp_changes).toEqual(
+      [{ count: 3, hp_percent: -2, from: 1 / 6, to: 2 / 3 }]
+    );
+
+    expect(
+      Object.hasOwn(
+        buildOptimizeRequest({ ...base, debuffs: { count: 0, percent: 2 } }),
+        'hp_changes'
+      )
+    ).toBe(false);
+
     expect(Object.hasOwn(buildOptimizeRequest(base), 'hp_changes')).toBe(false);
   });
 });

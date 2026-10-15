@@ -5,7 +5,7 @@
     type CourseShape
   } from '@/pages/competitive/race-analysis/replay/replay-course';
   import { trackBasis, trackSection } from '@/pages/competitive/race-analysis/replay/replay-track';
-  import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import { coursePreviewTrack } from './simulator-course-preview';
 
   let {
@@ -14,11 +14,12 @@
     interactive = false,
     highlight
   }: {
-    course?: CourseCatalogEntry;
+    course?: RaceCourse;
     compact?: boolean;
     interactive?: boolean;
     highlight?: { start: number; end: number; color: string; label: string };
   } = $props();
+
   const uid = $props.id();
 
   let shapes = $state.raw<Record<string, CourseShape>>({}),
@@ -33,6 +34,7 @@
       .catch(() => {
         if (active) unavailable = true;
       });
+
     return () => {
       active = false;
     };
@@ -42,31 +44,39 @@
     const shape = course && shapes[course.course_id];
     return shape ? coursePreviewTrack(shape, !compact) : { points: [], repeated: false };
   });
+
   const points = $derived(
     layout.points.filter((_, index) => index % 4 === 0 || index === layout.points.length - 1)
   );
+
   const finish = $derived(trackBasis(points, course?.distance ?? 0, course?.turn));
   const directions = $derived(
     [0.25, 0.6].map((progress) =>
       trackBasis(points, (course?.distance ?? 0) * progress, course?.turn)
     )
   );
+
   const viewBox = $derived.by(() => {
     const xs = points.map((point) => point.x),
       ys = points.map((point) => point.y);
+
     const left = Math.min(...xs),
       top = Math.min(...ys);
+
     return points.length
       ? [left - 32, top - 32, Math.max(...xs) - left + 64, Math.max(...ys) - top + 64].join(' ')
       : '0 0 1000 340';
   });
+
   const path = $derived(points.map((point) => point.x + ',' + point.y).join(' '));
   const lastThird = $derived(
     trackSection(points, ((course?.distance ?? 0) * 2) / 3, course?.distance ?? 0)
   );
+
   const highlighted = $derived(
     highlight ? trackSection(points, highlight.start, highlight.end) : ''
   );
+
   const boundaries = $derived(
     highlight
       ? [

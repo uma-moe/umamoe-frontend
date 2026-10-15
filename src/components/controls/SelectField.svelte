@@ -50,29 +50,6 @@
 
   const selected = $derived(options.find((option) => option.value === value));
 
-  $effect(() => {
-    if (!open || !panel) return;
-    const anchor = control.getBoundingClientRect();
-    let top = 8,
-      bottom = innerHeight - 8;
-    // Respect scroll containers, including the body above a dialog's footer.
-    for (let parent = root.parentElement; parent; parent = parent.parentElement) {
-      if (!/(auto|scroll|hidden|clip)/.test(getComputedStyle(parent).overflowY)) continue;
-      const bounds = parent.getBoundingClientRect();
-      top = Math.max(top, bounds.top);
-      bottom = Math.min(bottom, bounds.bottom);
-    }
-    const below = bottom - anchor.bottom - 4,
-      above = anchor.top - top - 4;
-    const flip = below < Math.min(220, panel.scrollHeight) && above > below;
-    const height = Math.max(44, Math.min(220, flip ? above : below));
-    opensAbove = flip;
-    panelHeight = height;
-    const active = panel.querySelectorAll<HTMLElement>('[role="option"]')[activeIndex];
-    if (active)
-      panel.scrollTop = Math.max(0, active.offsetTop - height / 2 + active.offsetHeight / 2);
-  });
-
   function available(index: number) {
     const option = options[index];
     return Boolean(option && !option.disabled);
@@ -85,6 +62,7 @@
       index = (index + direction + options.length) % options.length;
       if (available(index)) return index;
     }
+
     return start;
   }
 
@@ -129,6 +107,32 @@
   function handleWindowClick(event: MouseEvent) {
     if (open && event.target instanceof Node && !root.contains(event.target)) open = false;
   }
+
+  $effect(() => {
+    if (!open || !panel) return;
+    const anchor = control.getBoundingClientRect();
+    let top = 8,
+      bottom = innerHeight - 8;
+
+    // Respect scroll containers, including the body above a dialog's footer.
+    for (let parent = root.parentElement; parent; parent = parent.parentElement) {
+      if (!/(auto|scroll|hidden|clip)/.test(getComputedStyle(parent).overflowY)) continue;
+      const bounds = parent.getBoundingClientRect();
+      top = Math.max(top, bounds.top);
+      bottom = Math.min(bottom, bounds.bottom);
+    }
+
+    const below = bottom - anchor.bottom - 4,
+      above = anchor.top - top - 4;
+
+    const flip = below < Math.min(220, panel.scrollHeight) && above > below;
+    const height = Math.max(44, Math.min(220, flip ? above : below));
+    opensAbove = flip;
+    panelHeight = height;
+    const active = panel.querySelectorAll<HTMLElement>('[role="option"]')[activeIndex];
+    if (active)
+      panel.scrollTop = Math.max(0, active.offsetTop - height / 2 + active.offsetHeight / 2);
+  });
 </script>
 
 <svelte:window onclick={handleWindowClick} />
@@ -168,7 +172,8 @@
             name={prefixIcon}
             size={16}
           />
-        {/if}{#if selected?.image}
+        {/if}
+        {#if selected?.image}
           <img
             src={selected.image}
             alt=""

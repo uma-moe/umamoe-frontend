@@ -1,13 +1,13 @@
-import { characterImagePath, type CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
-import type { SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
+import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
+import type { SkillData } from '@/lib/game-data/skills/skills';
 import { aptitudeGrade } from '@/lib/profile/profile-display';
 import {
   resolveVeteranFactors,
   veteranDisplay,
   type FactorTone,
   type VeteranDisplayRecord
-} from '@/lib/profile/profile-veterans';
-import type { profileVeteranAffinity } from '@/lib/profile/profile-veteran-metrics';
+} from '@/lib/profile/veterans/profile-veterans';
+import type { profileVeteranAffinity } from '@/lib/profile/veterans/profile-veteran-metrics';
 import { getRankInfoFromScore } from '@/lib/rank';
 import type { AptitudeItem } from '@/components/game/AptitudeGrid.svelte';
 import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
@@ -23,10 +23,10 @@ export interface VeteranLineage {
 }
 
 export interface SummaryContext {
-  characters: Map<number, CharacterCatalogEntry>;
+  characters: Map<number, CharacterData>;
   affinity?: VeteranAffinity;
   targetId?: number;
-  target?: CharacterCatalogEntry;
+  target?: CharacterData;
 }
 
 export function factorGroups(items: ReturnType<typeof resolveVeteranFactors>) {
@@ -102,7 +102,7 @@ export function veteranSummary(
 
 export function veteranLineage(
   v: ProfileVeteran,
-  characters: Map<number, CharacterCatalogEntry>,
+  characters: Map<number, CharacterData>,
   mainAffinity: number | undefined
 ): VeteranLineage {
   const rootDisplay = veteranDisplay(v, characters);
@@ -119,6 +119,7 @@ export function veteranLineage(
     roleLabel: label,
     sparks: factorGroups(resolveVeteranFactors(item))
   });
+
   const branches = [10, 20]
     .map((position, index) => {
       const parent = successors.find((item) => item.position_id === position);
@@ -135,6 +136,7 @@ export function veteranLineage(
       };
     })
     .filter((branch): branch is LineageBranch => Boolean(branch));
+
   return {
     root: {
       id: `${v.trained_chara_id ?? v.id}`,
@@ -152,11 +154,12 @@ export function veteranLineage(
 export function veteranSearchText(
   veteran: ProfileVeteran,
   context: SummaryContext,
-  skillCatalog: Map<number, SkillCatalogEntry>
+  skillCatalog: Map<number, SkillData>
 ): string {
   const { characters } = context;
   const item = veteranDisplay(veteran, characters),
     summary = veteranSummary(item, context);
+
   return [
     summary.id,
     summary.name,

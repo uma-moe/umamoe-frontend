@@ -36,6 +36,7 @@
       (id, item) => characterName(view.characters, id, item)
     )
   );
+
   const distanceAverages = $derived(distances.filter((item) => Object.keys(item.means).length));
 </script>
 

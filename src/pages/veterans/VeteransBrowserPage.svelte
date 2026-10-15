@@ -4,19 +4,16 @@
   import { getAuthToken } from '@/services/auth/auth-token';
   import { activeWorkspace } from '@/lib/workspaces/workspace-state';
   import { router } from '@/routes/router';
-  import {
-    loadCharacterCatalog,
-    type CharacterCatalogEntry
-  } from '@/lib/catalog/character-catalog';
-  import { mergeVeterans } from '@/lib/veterans/veteran-profile';
-  import { deviceParent } from '@/lib/veterans/parent-picker';
-  import { draftScope, veteranDrafts, veteranLibraryRevision } from './veteran-library';
+  import { loadCharacters, type CharacterData } from '@/lib/game-data/characters';
+  import { mergeVeterans } from '@/lib/veterans/records/veteran-profile';
+  import { deviceParent } from '@/lib/veterans/parents/parent-picker';
+  import { draftScope, veteranDrafts, veteranLibraryRevision } from './collection/veteran-library';
   import {
     profileRepository,
     type ProfileResponse,
     type TrainerProfile
   } from '@/pages/profile/profile-repository';
-  import VeteranCollection from './VeteranCollection.svelte';
+  import VeteranCollection from './collection/VeteranCollection.svelte';
   import ProfileVeteransRoster from '@/pages/profile/veterans/ProfileVeteransRoster.svelte';
   import AppPage from '@/layouts/AppPage.svelte';
   import Button from '@/components/controls/Button.svelte';
@@ -26,8 +23,10 @@
 
   let trainerId = $state(''),
     browseError = $state('');
-  let characters = $state<Map<number, CharacterCatalogEntry>>(new Map()),
-    catalogError = $state('');
+
+  let characters = $state<Map<number, CharacterData>>(new Map()),
+    charactersError = $state('');
+
   let remote = $state.raw<ProfileResponse>(),
     loading = $state(false),
     error = $state('');
@@ -40,6 +39,7 @@
       ($veteranDrafts[scope] ?? []).map((record) => deviceParent(record, accountId))
     )
   );
+
   const trainer = $derived<TrainerProfile>(
     remote?.trainer ?? {
       account_id: accountId,
@@ -58,31 +58,32 @@
     live = true;
 
   onMount(() => {
-    void loadCharacters();
+    void loadCharacterData();
     return () => {
       live = false;
       generation++;
     };
   });
 
-  async function loadCharacters() {
+  async function loadCharacterData() {
     try {
-      const result = await loadCharacterCatalog();
+      const result = await loadCharacters();
       if (live) {
         characters = result;
-        catalogError = '';
+        charactersError = '';
       }
     } catch {
-      if (live) catalogError = 'Character names and artwork could not be loaded.';
+      if (live) charactersError = 'Character names and artwork could not be loaded.';
     }
   }
 
   async function loadCollection(id: string) {
     const current = ++generation,
       token = getAuthToken();
+
     remote = undefined;
     error = '';
-    loading = !!id;
+    loading = Boolean(id);
     if (!id) return;
     try {
       const result = await profileRepository.load(id, true);
@@ -112,6 +113,7 @@
       browseError = 'Enter a valid trainer ID.';
       return;
     }
+
     browseError = '';
     void router.navigate('/veterans/:accountId', { params: { accountId: id } });
   }
@@ -157,9 +159,9 @@
     </form>
   {/snippet}
   <VeteranCollection empty={!loading && !veterans.length}>
-    {#if catalogError}
+    {#if charactersError}
       <Banner
-        title={catalogError}
+        title={charactersError}
         tone="warning"
       >
         <Button

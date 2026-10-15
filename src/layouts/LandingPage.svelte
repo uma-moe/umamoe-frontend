@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, type Snippet } from 'svelte';
-  import { loadSiteStatistics, type SiteStatistics } from '@/services/site-statistics';
+  import { loadSiteStatistics, type SiteStatistics } from '@/services/site/site-statistics';
   import SiteStatisticsStrip from '@/components/SiteStatistics.svelte';
   import SourcePage from './SourcePage.svelte';
   import ContentAd from './ads/ContentAd.svelte';
@@ -25,7 +25,10 @@
     const controller = new AbortController();
     void loadSiteStatistics(controller.signal)
       .then((value) => (siteStats = value))
-      .catch(() => {});
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) console.warn('Site statistics could not be loaded.', error);
+      });
+
     return () => controller.abort();
   });
 </script>

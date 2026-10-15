@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import {
     raceMetricHelp,
     type hpChangeEvents,
     type HorseDiagnostics
-  } from '@/lib/race/race-diagnostics';
+  } from '@/lib/race/capture/race-diagnostics';
   import DataTable from '@/components/data/DataTable.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Disclosure from '@/components/overlays/Disclosure.svelte';

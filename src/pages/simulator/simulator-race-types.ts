@@ -17,10 +17,12 @@ export const RACE_TYPE_LABELS: Record<RaceType, string> = {
 };
 
 /** Ready for `SelectField`; keeps the simulator's numeric `race_type` as the option value. */
-export const RACE_TYPE_OPTIONS: Array<{ value: string; label: string }> = RACE_TYPES.map((raceType) => ({
-  value: String(raceType),
-  label: RACE_TYPE_LABELS[raceType]
-}));
+export const RACE_TYPE_OPTIONS: Array<{ value: string; label: string }> = RACE_TYPES.map(
+  (raceType) => ({
+    value: String(raceType),
+    label: RACE_TYPE_LABELS[raceType]
+  })
+);
 
 /** Label for a raw `race_type`, falling back to the number when unknown. */
 export function raceTypeLabel(raceType: number): string {

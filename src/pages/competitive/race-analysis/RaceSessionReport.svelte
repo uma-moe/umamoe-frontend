@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import type { groupMultiRaceCaptures } from '@/lib/race/multi-race-analysis';
   import SelectField from '@/components/controls/SelectField.svelte';
   import RaceStatistics from '@/pages/competitive/sessions/RaceStatistics.svelte';

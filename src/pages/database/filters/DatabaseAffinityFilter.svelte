@@ -6,7 +6,7 @@
   import type { CharacterPickerOption } from '@/components/pickers/picker-types';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
   import ParentPickerDialog from '@/components/parent-picker/ParentPickerDialog.svelte';
-  import type { SelectableParent } from '@/lib/veterans/parent-picker';
+  import type { SelectableParent } from '@/lib/veterans/parents/parent-picker';
 
   interface Props {
     characters: CharacterPickerOption[];
@@ -37,6 +37,7 @@
   let picker = $state<{ focusLegacy: () => void }>();
   let targetDialogOpen = $state(false),
     veteranDialogOpen = $state(false);
+
   let targetSort = $state<CharacterPickerSort>('default');
 
   const target = $derived(

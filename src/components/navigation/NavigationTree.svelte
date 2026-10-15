@@ -26,6 +26,7 @@
     const observer = new ResizeObserver(([entry]) => {
       if (entry) navigationWidth = entry.contentRect.width;
     });
+
     observer.observe(node);
     return {
       destroy() {
@@ -38,20 +39,13 @@
     return variant === 'rail' && (navigationWidth ?? 0) < 100;
   }
 
-  $effect(() => {
-    if (variant === 'rail' && navigationWidth === undefined) return;
-    const section = items.find((item) => item.expanded)?.id;
-    if (section === currentSection) return;
-    currentSection = section;
-    openItems = section && !isFlyout() ? { [section]: true } : {};
-  });
-
   function toggle(item: NavigationItem) {
     openItems = openItems[item.id] ? {} : { [item.id]: true };
   }
 
   function handleNavigate() {
     if (variant === 'sheet' || isFlyout()) openItems = {};
+
     onnavigate?.();
   }
 
@@ -65,6 +59,7 @@
   function handleKeydown(event: KeyboardEvent) {
     if (event.key !== 'Escape' || !Object.values(openItems).some(Boolean)) return;
     openItems = {};
+
     (event.target as HTMLElement)
       .closest('.navigation-item')
       ?.querySelector<HTMLButtonElement>('.navigation-disclosure')
@@ -75,6 +70,14 @@
     if (!isFlyout() || !Object.values(openItems).some(Boolean)) return;
     if (!event.composedPath().includes(navigationElement)) openItems = {};
   }
+
+  $effect(() => {
+    if (variant === 'rail' && navigationWidth === undefined) return;
+    const section = items.find((item) => item.expanded)?.id;
+    if (section === currentSection) return;
+    currentSection = section;
+    openItems = section && !isFlyout() ? { [section]: true } : {};
+  });
 </script>
 
 <svelte:window onpointerdown={handleOutsidePointer} />

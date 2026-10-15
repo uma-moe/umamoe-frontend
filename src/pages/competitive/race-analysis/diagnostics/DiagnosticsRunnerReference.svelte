@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import Artwork from '@/components/game/Artwork.svelte';
   import { portrait } from '@/pages/competitive/analysis-view';
   import { runnerName } from './diagnostics-format';

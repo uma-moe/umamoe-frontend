@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ParentPickerState } from '@/lib/veterans/parent-picker';
+  import type { ParentPickerState } from '@/lib/veterans/parents/parent-picker';
   import Button from '@/components/controls/Button.svelte';
   import IconButton from '@/components/controls/IconButton.svelte';
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';

@@ -75,7 +75,8 @@
               label={veteran.rank}
               size="sm"
             />
-          {/if}{#if veteran.score !== undefined}
+          {/if}
+          {#if veteran.score !== undefined}
             <span>
               {veteran.score.toLocaleString()}
             </span>
@@ -114,7 +115,8 @@
                   value={veteran.affinity}
                   kind="total"
                 />
-              {/if}{#if veteran.raceAffinity !== undefined}
+              {/if}
+              {#if veteran.raceAffinity !== undefined}
                 <AffinityStat
                   value={veteran.raceAffinity}
                   kind="race"

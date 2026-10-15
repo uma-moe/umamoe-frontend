@@ -41,8 +41,10 @@
       const baseId = String(Math.floor(Number(option.id) / 100));
       if (!map.has(baseId)) map.set(baseId, option);
     }
+
     return map;
   });
+
   const mode = $derived(activeRule.startsWith('allow') ? 'include' : 'exclude');
 
   function valuesFor(rule: Rule): string[] {

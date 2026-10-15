@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { characterImagePath, type CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
-  import { skillImage, skillRarity } from '@/lib/catalog/skill-catalog';
-  import { veteranDisplay } from '@/lib/profile/profile-veterans';
+  import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
+  import { skillImage, skillRarity } from '@/lib/game-data/skills/skills';
+  import { veteranDisplay } from '@/lib/profile/veterans/profile-veterans';
   import IncludeExcludePicker from '@/components/pickers/IncludeExcludePicker.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
@@ -31,7 +31,7 @@
     filters: RosterFilters;
     picks: RosterCharacters;
     collection: RosterCollection;
-    characters: Map<number, CharacterCatalogEntry>;
+    characters: Map<number, CharacterData>;
   }
 
   let { tab, filters, picks, collection, characters }: Props = $props();

@@ -52,7 +52,11 @@
     onblur
   }: Props = $props();
 
-  const describedBy = $derived(error ? `${id}-error` : help ? `${id}-help` : undefined);
+  const describedBy = $derived.by(() => {
+    if (error) return `${id}-error`;
+    if (help) return `${id}-help`;
+    return undefined;
+  });
 
   let input: HTMLInputElement;
 
@@ -134,7 +138,8 @@
           size={20}
         />
       </span>
-    {/if}{#if type === 'number'}
+    {/if}
+    {#if type === 'number'}
       <span class="number-controls">
         <NumberStepper
           increaseLabel={`Increase ${label}`}

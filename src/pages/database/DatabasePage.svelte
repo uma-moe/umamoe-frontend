@@ -11,12 +11,12 @@
   import { authUser, authReady } from '@/services/auth/auth-state';
   import {
     loadFactorArtwork,
-    watchFactorCatalog,
-    factorCatalogState
-  } from '@/lib/catalog/factor-catalog';
-  import type { SelectableParent } from '@/lib/veterans/parent-picker';
+    watchFactors,
+    factorLoadingState
+  } from '@/lib/game-data/factors/factors';
+  import type { SelectableParent } from '@/lib/veterans/parents/parent-picker';
   import ParentPickerDialog from '@/components/parent-picker/ParentPickerDialog.svelte';
-  import { DatabaseCatalogs } from './database-catalogs.svelte';
+  import { DatabaseGameData } from './data/database-game-data.svelte';
   import { DatabaseAffinity } from './database-affinity.svelte';
   import { filterAndSortBookmarks } from './database-local-results';
   import { DatabaseFilters } from './search/database-filters.svelte';
@@ -39,7 +39,7 @@
   let submitOpen = $state(false);
   let toasts = $state<Toast[]>([]);
 
-  const catalogs = new DatabaseCatalogs();
+  const gameData = new DatabaseGameData();
   const display = new DatabaseDisplay();
   const filters = new DatabaseFilters({
     userId: () => $authUser?.id,
@@ -47,6 +47,7 @@
     notify,
     onreset: () => (search.page = 1)
   });
+
   const layout = new DatabaseLayout(filters);
   const uql = new DatabaseUqlState({
     query: () => filters.values.uql,
@@ -57,19 +58,22 @@
     authReady: () => $authReady,
     onsettled: () => search.schedule(true)
   });
+
   const search = new DatabaseSearch({
     filters,
     display,
     uql,
     touring: () => Boolean($tourStepId)
   });
+
   const bookmarks = new DatabaseBookmarks(() => Boolean($authUser), notify);
   const affinity = new DatabaseAffinity({
     filters,
-    catalogs,
-    factorCatalog: () => $factorCatalogState,
+    gameData,
+    factorLoadingState: () => $factorLoadingState,
     notify
   });
+
   const recordActions = new DatabaseRecordActions({ filters, search, bookmarks, notify });
 
   const filteredBookmarks = $derived(
@@ -80,9 +84,11 @@
       filters.includeMaxFollowers
     )
   );
+
   const shortcutLoading = $derived(
     search.activeTab === 'database' ? search.loading && !search.appending : bookmarks.loading
   );
+
   const shortcutError = $derived(search.activeTab === 'database' ? search.error : bookmarks.error);
   const shortcutCount = $derived(
     search.activeTab === 'database' ? search.inheritance.total : filteredBookmarks.length
@@ -95,16 +101,16 @@
 
   function chooseUqlLegacy(parent: SelectableParent): void {
     uql.rememberLegacy(parent);
-    filters.chooseUqlLegacy(parent, uql.catalog?.characters ?? []);
+    filters.chooseUqlLegacy(parent, uql.queryData?.characters ?? []);
   }
 
   function initialize(): void {
     search.restore();
-    void catalogs.loadCharacters();
+    void gameData.loadCharacters();
     affinity.loadRaceGroups();
     void loadFactorArtwork().catch(() => notify('Factor artwork could not be loaded.', 'warning'));
     void affinity.load();
-    catalogs.loadDisplayCatalogs();
+    gameData.loadDisplayData();
     search.start();
   }
 
@@ -115,22 +121,22 @@
     untrack(() => layout.prepareTour(step));
   });
 
-  onMount(watchFactorCatalog);
+  onMount(watchFactors);
 
-  onMount(() => catalogs.watchSupportUpdates());
+  onMount(() => gameData.watchSupportUpdates());
 
   onMount(() => {
     void initialize();
     return () => {
       filters.dispose();
-      catalogs.dispose();
+      gameData.dispose();
       uql.cancel();
       search.dispose();
     };
   });
 
   $effect(() => {
-    if (filters.values.supportCardId) untrack(() => void catalogs.loadSupports());
+    if (filters.values.supportCardId) untrack(() => void gameData.loadSupports());
   });
 
   $effect(() => {
@@ -147,7 +153,7 @@
   $effect(() => {
     if (search.initialized && filters.mode === 'uql')
       untrack(() => {
-        if (!uql.catalog && !uql.catalogError) void uql.loadCatalog();
+        if (!uql.queryData && !uql.queryDataError) void uql.loadQueryData();
       });
   });
 
@@ -221,10 +227,10 @@
           <DatabaseUqlPanel
             bind:value={filters.values.uql}
             validation={uql.validation}
-            characters={catalogs.characters}
-            supports={catalogs.supports}
-            catalog={uql.catalog}
-            loading={uql.catalogLoading}
+            characters={gameData.characters}
+            supports={gameData.supports}
+            queryData={uql.queryData}
+            loading={uql.queryDataLoading}
             legacyParents={uql.legacyParents}
             onpicklegacy={() => (uql.pickerOpen = true)}
             onclear={filters.clear}
@@ -241,21 +247,21 @@
             bind:affinityOpen={layout.affinityOpen}
             bind:quickFiltersOpen={layout.quickFiltersOpen}
             bind:includeMaxFollowers={filters.includeMaxFollowers}
-            characterOptions={catalogs.characterOptions}
+            characterOptions={gameData.characterOptions}
             aceOptions={affinity.aceOptions}
-            charactersLoading={catalogs.charactersLoading}
-            charactersError={catalogs.charactersError}
-            supports={catalogs.supports}
-            supportOptions={catalogs.supportOptions}
-            supportsLoading={catalogs.supportsLoading}
-            supportsError={catalogs.supportsError}
-            supportsCached={catalogs.supportsCached || catalogs.supportsLoaded}
+            charactersLoading={gameData.charactersLoading}
+            charactersError={gameData.charactersError}
+            supports={gameData.supports}
+            supportOptions={gameData.supportOptions}
+            supportsLoading={gameData.supportsLoading}
+            supportsError={gameData.supportsError}
+            supportsCached={gameData.supportsCached || gameData.supportsLoaded}
             veteranView={affinity.veteranView}
             sharedLegacyLabel={filters.sharedLegacyLabel}
             selectedVeteranId={filters.selectedVeteranId}
             selectedAccountId={filters.selectedParent?.trainer_id}
-            onretrycharacters={catalogs.loadCharacters}
-            onloadsupports={(refresh) => void catalogs.loadSupports(refresh)}
+            onretrycharacters={gameData.loadCharacters}
+            onloadsupports={(refresh) => void gameData.loadSupports(refresh)}
             onveteranchange={filters.selectVeteran}
             onchange={() => (search.page = 1)}
           />
@@ -266,8 +272,8 @@
         bind:filters={filters.values}
         filterMode={filters.mode}
         uqlState={uql.validation.state}
-        characterOptions={catalogs.characterOptions}
-        supportOptions={catalogs.supportOptions}
+        characterOptions={gameData.characterOptions}
+        supportOptions={gameData.supportOptions}
         legacyName={filters.selectedVeteranId
           ? (affinity.veteranView?.name ?? 'Veteran')
           : undefined}
@@ -283,7 +289,7 @@
         {filters}
         {display}
         {layout}
-        {catalogs}
+        {gameData}
         {affinity}
         {uql}
         {bookmarks}

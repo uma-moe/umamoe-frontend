@@ -1,10 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import {
-    loadSkillCatalog,
-    resolveEncodedSkill,
-    type SkillCatalogEntry
-  } from '@/lib/catalog/skill-catalog';
+  import { loadSkills, resolveEncodedSkill, type SkillData } from '@/lib/game-data/skills/skills';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
@@ -13,7 +9,7 @@
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import { theme } from '@/stores/theme';
-  import { binomialProbabilities } from '@/lib/carat-planner/planner-pull-probability';
+  import { binomialProbabilities } from '@/lib/carat-planner/gacha/planner-pull-probability';
   import { skillDistributions, skillHistogram } from './skill-distributions';
   import { distributionChart } from '../distribution-chart';
   import type { MonteCarloResult } from '../../simulator-repository';
@@ -38,15 +34,24 @@
   } = $props();
 
   let expanded = $state(false),
-    catalog = $state.raw(new Map<number, SkillCatalogEntry>());
+    skillLookup = $state.raw(new Map<number, SkillData>());
+
+  let skillDataError = $state('');
 
   onMount(() => {
     let active = true;
-    void loadSkillCatalog()
+    void loadSkills()
       .then((value) => {
-        if (active) catalog = value;
+        if (active) skillLookup = value;
       })
-      .catch(() => {});
+      .catch((reason: unknown) => {
+        if (active)
+          skillDataError =
+            reason instanceof Error
+              ? reason.message
+              : 'Skill names could not be loaded. Observations remain available.';
+      });
+
     return () => {
       active = false;
     };
@@ -59,56 +64,103 @@
       umas[Number(source)]?.skills.map((skill) => skill.skillId) ?? []
     )
   );
+
   const row = $derived(
     data.rows.find((row) => row.id === selected) ??
       data.rows.find((row) => row.duration !== undefined) ??
       data.rows[0]
   );
+
   const discrete = $derived(mode === 'binomial' || mode === 'counts');
-  const unit = $derived(
-    mode === 'binomial' ? 'races' : mode === 'distance' ? 'm' : mode === 'counts' ? 'procs' : 's'
-  );
+  const unit = $derived.by(() => {
+    if (mode === 'binomial') {
+      return 'races';
+    }
+
+    if (mode === 'distance') {
+      return 'm';
+    }
+
+    if (mode === 'counts') {
+      return 'procs';
+    }
+
+    return 's';
+  });
+
   const observations = $derived(
     row?.procs
-      .map(({ proc }) => (mode === 'distance' ? proc[5] : mode === 'duration' ? proc[6] : proc[4]))
+      .map(({ proc }) => {
+        if (mode === 'distance') {
+          return proc[5];
+        }
+
+        if (mode === 'duration') {
+          return proc[6];
+        }
+
+        return proc[4];
+      })
       .filter((value) => mode !== 'duration' || value > 0) ?? []
   );
+
   const range = $derived.by(() => {
     if (discrete) return { min: 0, max: mode === 'binomial' ? result.runs : data.maxCount };
+
     if (!observations.length) return { min: 0, max: 1 };
+
     const low = Math.min(...observations),
       high = Math.max(...observations),
       padding = Math.max((high - low) * 0.1, mode === 'distance' ? 5 : 0.2);
+
     return {
       min: Math.max(0, low - padding),
       max: mode === 'distance' ? Math.min(distance, high + padding) : high + padding
     };
   });
+
   const bins = $derived(
     discrete ? range.max + 1 : Math.min(32, Math.max(8, Math.ceil(Math.sqrt(observations.length))))
   );
-  const values = $derived(
-    !row
-      ? []
-      : mode === 'binomial'
-        ? binomialProbabilities(result.runs, row.triggered / result.runs).map(
-            (value) => value * 100
-          )
-        : skillHistogram(row, mode, range.max, bins, range.min)
-  );
-  const mean = $derived(
-    !row
-      ? undefined
-      : mode === 'binomial'
-        ? row.triggered
-        : mode === 'counts'
-          ? row.total / result.runs
-          : mode === 'distance'
-            ? row.distance
-            : mode === 'duration'
-              ? row.duration
-              : row.time
-  );
+
+  const values = $derived.by(() => {
+    if (!row) {
+      return [];
+    }
+
+    if (mode === 'binomial') {
+      return binomialProbabilities(result.runs, row.triggered / result.runs).map(
+        (value) => value * 100
+      );
+    }
+
+    return skillHistogram(row, mode, range.max, bins, range.min);
+  });
+
+  const mean = $derived.by(() => {
+    if (!row) {
+      return undefined;
+    }
+
+    if (mode === 'binomial') {
+      return row.triggered;
+    }
+
+    if (mode === 'counts') {
+      return row.total / result.runs;
+    }
+
+    if (mode === 'distance') {
+      return row.distance;
+    }
+
+    if (mode === 'duration') {
+      return row.duration;
+    }
+
+    return row.time;
+  });
+
   const option = $derived({
     ...distributionChart(
       [
@@ -132,41 +184,57 @@
         ]
       : []
   });
+
   const modelInterval = $derived.by(() => {
     let sum = 0,
       low = 0,
       high = range.max,
       found = false;
+
     for (let i = 0; i < values.length; i++) {
       sum += values[i]!;
       if (!found && sum >= 2.5) {
         low = i;
         found = true;
       }
+
       if (sum >= 97.5) {
         high = i;
         break;
       }
     }
+
     return [low, high];
   });
-  const label = $derived(
-    mode === 'binomial'
-      ? 'Activation probability'
-      : mode === 'time'
-        ? 'Activation timing'
-        : mode === 'distance'
-          ? 'Activation distance'
-          : mode === 'duration'
-            ? 'Activation duration'
-            : 'Procs per race'
-  );
+
+  const label = $derived.by(() => {
+    if (mode === 'binomial') {
+      return 'Activation probability';
+    }
+
+    if (mode === 'time') {
+      return 'Activation timing';
+    }
+
+    if (mode === 'distance') {
+      return 'Activation distance';
+    }
+
+    if (mode === 'duration') {
+      return 'Activation duration';
+    }
+
+    return 'Procs per race';
+  });
 </script>
 
 <section
   class="skill-analysis"
   aria-label="Skill distributions"
 >
+  {#if skillDataError}
+    <p role="alert">{skillDataError}</p>
+  {/if}
   {#if !result.skill_procs}
     <p class="unavailable">Run a new batch to capture skill timings and duration distributions.</p>
   {:else}
@@ -259,7 +327,8 @@
                 onchange={(value) => (selected = Number(value))}
                 options={data.rows.map((skill) => ({
                   value: String(skill.id),
-                  label: resolveEncodedSkill(catalog, skill.id).skill?.name ?? 'Skill ' + skill.id
+                  label:
+                    resolveEncodedSkill(skillLookup, skill.id).skill?.name ?? 'Skill ' + skill.id
                 }))}
               />
             </div>

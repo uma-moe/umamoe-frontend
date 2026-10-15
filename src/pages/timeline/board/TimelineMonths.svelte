@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { timelineDateKey } from '@/lib/timeline/timeline-layout';
+  import { timelineDateKey } from '@/lib/timeline/board/timeline-layout';
   import type { TimelineRecord } from '../timeline-repository';
   import TimelineMarker from './TimelineMarker.svelte';
   import type { TimelineBoardViewport } from './timeline-board-viewport.svelte';

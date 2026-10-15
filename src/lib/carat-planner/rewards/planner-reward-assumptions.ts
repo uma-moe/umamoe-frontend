@@ -20,7 +20,7 @@ export const CONDITIONAL_REWARD_DEFAULT_SELECTIONS: Readonly<Record<string, stri
   white_day_gift_rewards: CONDITIONAL_REWARDS_INCLUDED_OPTION,
   christmas_gift_rewards: CONDITIONAL_REWARDS_INCLUDED_OPTION,
   limited_mission_rewards: CONDITIONAL_REWARDS_INCLUDED_OPTION,
-  masters_challenge_rewards: CONDITIONAL_REWARDS_NONE_OPTION,
+  masters_challenge_rewards: CONDITIONAL_REWARDS_NONE_OPTION
 };
 
 type RewardAssumptionFields = Pick<
@@ -41,34 +41,60 @@ export function conditionalRewardScenarioGroup(reward: RewardAssumptionFields): 
   if (assumption === 'temporary_character_story_read') return 'temporary_story_rewards';
   if (assumption === 'racing_carnival_bonus_skill_mission') return 'racing_carnival_mission';
   if (assumption === 'all_first_clears_high_difficulty') return 'masters_challenge_rewards';
-  if (assumption === 'full_completion' || assumption === 'jp_reward_parity_full_completion') return 'story_event_rewards';
+  if (assumption === 'full_completion' || assumption === 'jp_reward_parity_full_completion')
+    return 'story_event_rewards';
   if (assumption === 'all_reward_boxes') return 'factor_research_rewards';
-  if (assumption === 'scenario_evaluation_thresholds' || assumption === 'jp_reward_parity_scenario_evaluation_thresholds') return 'scenario_evaluation_rewards';
+  if (
+    assumption === 'scenario_evaluation_thresholds' ||
+    assumption === 'jp_reward_parity_scenario_evaluation_thresholds'
+  )
+    return 'scenario_evaluation_rewards';
   if (assumption === 'all_story_episodes_viewed') return 'main_story_rewards';
-  if (assumption === 'all_login_days' || assumption === 'all_login_days_global' || assumption === 'all_login_days_jp_parity') return 'limited_login_rewards';
-  if (assumption === 'jp_reward_parity' && /(?:mission|ミッション)/i.test(label)) return 'limited_mission_rewards';
+  if (
+    assumption === 'all_login_days' ||
+    assumption === 'all_login_days_global' ||
+    assumption === 'all_login_days_jp_parity'
+  )
+    return 'limited_login_rewards';
+  if (assumption === 'jp_reward_parity' && /(?:mission|ミッション)/i.test(label))
+    return 'limited_mission_rewards';
   if (assumption === 'all_first_clears') return 'racing_carnival_rewards';
-  if (['all_limited_shop_exchanges', 'full_exchange', 'jp_reward_parity_full_exchange', 'full_score_completion'].includes(assumption)) {
+  if (
+    [
+      'all_limited_shop_exchanges',
+      'full_exchange',
+      'jp_reward_parity_full_exchange',
+      'full_score_completion'
+    ].includes(assumption)
+  ) {
     if (/racing carnival/i.test(label)) return 'racing_carnival_rewards';
     if (/trainer skills test/i.test(label)) return 'trainer_skills_test_rewards';
   }
+
   return undefined;
 }
 
 export function conditionalRewardScenarioSelectionMatches(
   reward: RewardAssumptionFields,
-  selection: string | undefined,
+  selection: string | undefined
 ): boolean {
   const group = conditionalRewardScenarioGroup(reward);
   if (!group) return true;
   if (selection === CONDITIONAL_REWARDS_INCLUDED_OPTION) return true;
   if (group === 'masters_challenge_rewards') return mastersChallengeClearLimit(selection) !== null;
   if (group === 'trainer_skills_test_rewards') {
-    return selection === TRAINER_SKILLS_TEST_SCORE_ONLY_OPTION && reward.assumption === 'full_score_completion';
+    return (
+      selection === TRAINER_SKILLS_TEST_SCORE_ONLY_OPTION &&
+      reward.assumption === 'full_score_completion'
+    );
   }
+
   if (group === 'racing_carnival_rewards') {
-    return selection === RACING_CARNIVAL_CLEARS_ONLY_OPTION && reward.assumption === 'all_first_clears';
+    return (
+      selection === RACING_CARNIVAL_CLEARS_ONLY_OPTION && reward.assumption === 'all_first_clears'
+    );
   }
+
   return false;
 }
 
@@ -76,7 +102,7 @@ export function plannerRewardSelectionEnabled(
   reward: RewardAssumptionFields & Pick<PlannerRewardEntry, 'default_enabled'>,
   scenarioSelections: Readonly<Record<string, string>>,
   explicitlyEnabled = false,
-  explicitlyDisabled = false,
+  explicitlyDisabled = false
 ): boolean {
   if (explicitlyDisabled) return false;
   const group = conditionalRewardScenarioGroup(reward);
@@ -85,21 +111,27 @@ export function plannerRewardSelectionEnabled(
 }
 
 export function plannerRewardNeedsEnabledOverride(
-  reward: RewardAssumptionFields & Pick<PlannerRewardEntry, 'default_enabled'>,
+  reward: RewardAssumptionFields & Pick<PlannerRewardEntry, 'default_enabled'>
 ): boolean {
   return reward.default_enabled === false && !conditionalRewardScenarioGroup(reward);
 }
 
 export function selectedConditionalRewardAmount(
   reward: RewardAssumptionFields & Pick<PlannerRewardEntry, 'amount' | 'currency' | 'source_items'>,
-  selection: string | undefined,
+  selection: string | undefined
 ): number {
   const amount = Math.max(0, Math.trunc(Number(reward.amount) || 0));
-  if (conditionalRewardScenarioGroup(reward) !== 'masters_challenge_rewards' || selection === CONDITIONAL_REWARDS_INCLUDED_OPTION) return amount;
+  if (
+    conditionalRewardScenarioGroup(reward) !== 'masters_challenge_rewards' ||
+    selection === CONDITIONAL_REWARDS_INCLUDED_OPTION
+  )
+    return amount;
   const clearLimit = mastersChallengeClearLimit(selection);
   if (clearLimit === null) return 0;
   const totalClears = mastersChallengeTotalClears(reward, amount);
-  return totalClears <= 0 ? amount : Math.trunc(amount * Math.min(clearLimit, totalClears) / totalClears);
+  return totalClears <= 0
+    ? amount
+    : Math.trunc((amount * Math.min(clearLimit, totalClears)) / totalClears);
 }
 
 function mastersChallengeClearLimit(selection: string | undefined): number | null {
@@ -111,14 +143,22 @@ function mastersChallengeClearLimit(selection: string | undefined): number | nul
 
 function mastersChallengeTotalClears(
   reward: Pick<PlannerRewardEntry, 'currency' | 'source_items'>,
-  amount: number,
+  amount: number
 ): number {
   if (reward.currency === 'rainbow_crystal' || reward.currency === 'gold_crystal') return amount;
-  if ((reward.currency === 'free_jewels' || reward.currency === 'paid_jewels') && amount > 0 && amount % 900 === 0) return amount / 900;
+  if (
+    (reward.currency === 'free_jewels' || reward.currency === 'paid_jewels') &&
+    amount > 0 &&
+    amount % 900 === 0
+  )
+    return amount / 900;
   for (const item of reward.source_items ?? []) {
     const itemAmount = Math.max(0, Math.trunc(Number(item.amount) || 0));
-    if (item.item_category === 164 && (item.item_id === 149 || item.item_id === 150)) return itemAmount;
-    if (item.item_category === 90 && item.item_id === 43 && itemAmount % 900 === 0) return itemAmount / 900;
+    if (item.item_category === 164 && (item.item_id === 149 || item.item_id === 150))
+      return itemAmount;
+    if (item.item_category === 90 && item.item_id === 43 && itemAmount % 900 === 0)
+      return itemAmount / 900;
   }
+
   return 0;
 }

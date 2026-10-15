@@ -4,11 +4,18 @@ const DAY_MS = 86_400_000;
 export function plannerUtcDay(value: string | Date | null | undefined): number | undefined {
   if (!value) return undefined;
   const match = typeof value === 'string' ? /^(\d{4})-(\d{2})-(\d{2})/.exec(value) : null;
-  const date = match ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))) : new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : Math.trunc(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / DAY_MS);
+  const date = match
+    ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
+    : new Date(value);
+
+  return Number.isNaN(date.getTime())
+    ? undefined
+    : Math.trunc(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / DAY_MS);
 }
 
-export function plannerDayKey(day: number): string { return new Date(day * DAY_MS).toISOString().slice(0, 10); }
+export function plannerDayKey(day: number): string {
+  return new Date(day * DAY_MS).toISOString().slice(0, 10);
+}
 
 /** Display/fallback timestamps honor offsets; ledger calendar-day prefixes do not. */
 export function plannerTimestampDateKey(value: Date | string | undefined): string | null {
@@ -27,5 +34,7 @@ export function validPlannerDateKey(value: unknown): string {
 export function plannerCalendarMonthFrom(anchor: Date, offset: number): Date {
   const first = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + offset, 1));
   const days = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
-  return new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), Math.min(anchor.getUTCDate(), days)));
+  return new Date(
+    Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), Math.min(anchor.getUTCDate(), days))
+  );
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from '@/components/Icon.svelte';
   import type { IconName } from '@/components/icon-types';
-  import type { TimelinePredictionInsight } from '@/lib/timeline/timeline-prediction';
+  import type { TimelinePredictionInsight } from '@/lib/timeline/prediction/timeline-prediction';
 
   interface Props {
     prediction: TimelinePredictionInsight;

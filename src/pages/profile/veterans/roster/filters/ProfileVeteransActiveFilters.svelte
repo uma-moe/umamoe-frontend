@@ -1,8 +1,8 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import type { CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
-  import type { SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
-  import type { AncestorScope } from '@/lib/profile/profile-veterans';
+  import type { CharacterData } from '@/lib/game-data/characters';
+  import type { SkillData } from '@/lib/game-data/skills/skills';
+  import type { AncestorScope } from '@/lib/profile/veterans/profile-veterans';
   import FilterChip from '@/components/filters/FilterChip.svelte';
   import {
     allDistances,
@@ -19,8 +19,8 @@
   interface Props {
     filters: RosterFilters;
     view: RosterView;
-    characters: Map<number, CharacterCatalogEntry>;
-    skillCatalog: Map<number, SkillCatalogEntry>;
+    characters: Map<number, CharacterData>;
+    skillCatalog: Map<number, SkillData>;
     targetId?: number;
   }
 

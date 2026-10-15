@@ -50,6 +50,7 @@
   const displayedName = $derived(
     draftName?.planId === plan.id && draftName.savedName === plan.name ? draftName.value : plan.name
   );
+
   const planOptions: MenuItem[] = $derived([
     ...collection.plans.map((item) => ({
       id: 'plan:' + item.id,
@@ -101,6 +102,7 @@
       [JSON.stringify({ version: 1, plan: withoutPlannerResourceDates(plan) }, null, 2)],
       { type: 'application/json' }
     );
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -131,6 +133,7 @@
     const unsubscribe = plannerCloudSync.subscribe((status) => {
       if (status.kind === 'reverted') draftName = undefined;
     });
+
     return () => {
       destroyed = true;
       unsubscribe();

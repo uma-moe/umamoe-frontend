@@ -42,10 +42,13 @@
     { id: 'field', label: 'Full field', icon: 'users' },
     { id: 'replays', label: 'Replays', icon: 'race' }
   ].map((item) => ({ ...item, href: '#report-' + item.id })) as TabItem[];
+
   let navigation = $state<HTMLElement>(),
     navWidth = $state(0);
+
   function jump(event: MouseEvent) {
-    const link = (event.target as Element).closest<HTMLAnchorElement>('a[href^="#report-"]');
+    if (!(event.target instanceof Element)) return;
+    const link = event.target.closest<HTMLAnchorElement>('a[href^="#report-"]');
     if (
       !link ||
       event.button !== 0 ||
@@ -63,6 +66,7 @@
       .getElementById('report-' + id)
       ?.scrollIntoView({ block: 'start', behavior: 'instant' });
   }
+
   $effect(() => {
     if (!result) return;
     let frame = 0;
@@ -75,11 +79,14 @@
         const top = document.getElementById('report-' + section.id)?.getBoundingClientRect().top;
         if (top !== undefined && top <= line) current = section.id;
       }
+
       activeSection = atEnd ? sections.at(-1)!.id : current;
     };
+
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };
+
     update();
     addEventListener('scroll', schedule, { passive: true });
     addEventListener('resize', schedule);
@@ -89,11 +96,13 @@
       cancelAnimationFrame(frame);
     };
   });
+
   const runnerName = (source: number) => umas[source]!.name;
   // The sticky bar shows who is being compared with whom as portraits; the names are in its tooltip.
   const compared = $derived(scoped.filter((source) => source !== reference));
   const list = (names: string[]) =>
     names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names.at(-1) : (names[0] ?? '');
+
   const comparisonTitle = $derived(
     'Comparing ' +
       (scope === 'picked' ? list(compared.map(runnerName)) : 'all ' + umas.length + ' runners') +

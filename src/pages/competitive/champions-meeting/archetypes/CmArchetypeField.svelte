@@ -38,6 +38,7 @@
         )
       : undefined
   );
+
   const chart = $derived(fieldChart(distribution, population, $theme === 'dark', mobileTraining));
   const inlineChart = $derived(inlineFieldChart(chart));
 
@@ -56,6 +57,7 @@
       players: mode,
       sort
     });
+
     attempt;
     distribution = undefined;
     distributionError = '';
@@ -72,6 +74,7 @@
       .catch((e) => {
         if (!controller.signal.aborted) distributionError = e.message;
       });
+
     return () => controller.abort();
   });
 </script>

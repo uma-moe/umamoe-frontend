@@ -2,7 +2,7 @@
   import Button from '@/components/controls/Button.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import Icon from '@/components/Icon.svelte';
-  import { formatRaceTime } from '@/lib/race/race-display';
+  import { formatRaceTime } from '@/lib/race/replay/race-display';
   import type { PlanMarker } from '../../../setup/hp/hp-plan';
   import HpChart from './HpChart.svelte';
   import type { StaminaResult } from '../../../simulator-repository';
@@ -55,19 +55,27 @@
   const bill = $derived(result ? hpBill(result) : undefined);
   const needed = $derived(spread?.needed);
   // Enough for nine races in ten, for the median race, or not even that.
-  const cover = $derived(
-    !needed || !runner
-      ? ''
-      : runner.stamina >= needed.p90
-        ? 'good'
-        : runner.stamina >= needed.p50
-          ? 'warn'
-          : 'bad'
-  );
+  const cover = $derived.by(() => {
+    if (!needed || !runner) {
+      return '';
+    }
+
+    if (runner.stamina >= needed.p90) {
+      return 'good';
+    }
+
+    if (runner.stamina >= needed.p50) {
+      return 'warn';
+    }
+
+    return 'bad';
+  });
+
   // Short in the worst races: the same HP as gold recovery skills, when a few would do.
   const golds = $derived(
     spread?.spare && result ? goldRecoveryNeeded(-spread.spare.p10, result.max_hp) : undefined
   );
+
   const decision = $derived(
     result && result.check_hp[0] != null && result.spurt_calculation_distances[0] != null
       ? {

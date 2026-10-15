@@ -6,11 +6,7 @@
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import RaceSkill from '../../runners/RaceSkill.svelte';
-  import {
-    loadSkillCatalog,
-    resolveEncodedSkill,
-    type SkillCatalogEntry
-  } from '@/lib/catalog/skill-catalog';
+  import { loadSkills, resolveEncodedSkill, type SkillData } from '@/lib/game-data/skills/skills';
   import { cmGet, snapshotPath, pct, number } from '../cm-data';
   import {
     activationBins,
@@ -35,16 +31,18 @@
     course?: Course;
     courseLabel?: string;
   } = $props();
+
   const helpId = $props.id();
 
   let attempt = $state(0),
     cursor = $state(50),
     details = $state<Record<number, SkillDetail>>({}),
     failures = $state<Record<number, string>>({});
-  let catalog = $state.raw(new Map<number, SkillCatalogEntry>());
+
+  let catalog = $state.raw(new Map<number, SkillData>());
 
   onMount(() => {
-    void loadSkillCatalog()
+    void loadSkills()
       .then((value) => (catalog = value))
       .catch(() => {});
   });
@@ -54,6 +52,7 @@
   $effect(() => {
     overview.snapshotId;
     details = {};
+
     failures = {};
   });
 
@@ -61,6 +60,7 @@
     const id = overview.snapshotId,
       ids = [...selected],
       distance = overview.courseDistance;
+
     attempt;
     if (!distance) return;
     const controller = new AbortController();
@@ -82,6 +82,7 @@
           if (!controller.signal.aborted) failures[skill] = e.message;
         });
     }
+
     return () => controller.abort();
   });
 
@@ -89,6 +90,7 @@
     selected.map((id) => {
       const detail = details[id],
         bins = detail ? activationBins(detail, style) : Array<number>(100).fill(0);
+
       const peak = Math.max(1, ...bins);
       const bars = bins
         .map((count, bin) => {
@@ -98,6 +100,7 @@
             : '';
         })
         .join('');
+
       return {
         id,
         bins,
@@ -107,12 +110,14 @@
       };
     })
   );
+
   const distanceLabel = $derived(
     Math.round((cursor * overview.courseDistance) / 100) +
       '–' +
       Math.round(((cursor + 1) * overview.courseDistance) / 100) +
       ' m'
   );
+
   // Race phases use 4, 12, 4, 4 of 24 course sections: https://github.com/jalbarrang/torena-sim/blob/main/docs/mechanics/README.md#phase-phase
   const phases = $derived([
     {
@@ -144,25 +149,31 @@
       color: 'var(--accent-purple)'
     }
   ]);
+
   const segments = $derived.by(() => {
     const sections = courseSegments(course),
       first = sections[0];
+
     return first && first.start > 0
       ? [{ start: 0, end: first.start, label: 'Start section', color: '#8c939f' }, ...sections]
       : sections;
   });
+
   const cursorDistance = $derived(((cursor + 0.5) * overview.courseDistance) / 100);
   const currentPhase = $derived(
     phases.find((phase) => cursorDistance >= phase.start && cursorDistance < phase.end)!.label
   );
+
   const currentSegment = $derived(
     segments.find((segment) => cursorDistance >= segment.start && cursorDistance < segment.end)
       ?.label
   );
+
   const slope = $derived(
     course?.slopes.find((s) => cursorDistance >= s.start && cursorDistance < s.start + s.length)
       ?.slope ?? 0
   );
+
   const courseReading = $derived(
     [
       currentPhase,

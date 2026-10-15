@@ -1,7 +1,7 @@
 <script lang="ts">
   import ContentAd from '@/layouts/ads/ContentAd.svelte';
   import { onMount, untrack } from 'svelte';
-  import { watchFactorCatalog, factorOptions } from '@/lib/catalog/factor-catalog';
+  import { watchFactors, factorOptions } from '@/lib/game-data/factors/factors';
   import {
     calculatePlannerAffinity,
     canPlacePlannerCharacter,
@@ -11,9 +11,9 @@
     plannerSkillSparks,
     type PlannerPosition
   } from '@/lib/lineage/planner';
-  import { VeteranAffinityEngine } from '@/lib/veterans/affinity-engine';
-  import { veteranAffinityRepository } from '@/lib/veterans/affinity-repository';
-  import { parentCharacter } from '@/lib/veterans/parent-picker';
+  import { VeteranAffinityEngine } from '@/lib/veterans/affinity/affinity-engine';
+  import { veteranAffinityRepository } from '@/lib/veterans/affinity/affinity-repository';
+  import { parentCharacter } from '@/lib/veterans/parents/parent-picker';
   import ParentPickerDialog from '@/components/parent-picker/ParentPickerDialog.svelte';
   import RaceWinPickerDialog from '@/components/parent-picker/RaceWinPickerDialog.svelte';
   import RaceResultsDialog from '@/pages/database/results/RaceResultsDialog.svelte';
@@ -29,18 +29,18 @@
     loadG1SaddleGroups,
     loadOptimalRaceRecommendations,
     type OptimalRaceRecommendation
-  } from '@/lib/catalog/race-catalog';
+  } from '@/lib/game-data/racing/races';
   import LineagePlannerNode from './tree/LineagePlannerNode.svelte';
   import LazyContent from '@/components/LazyContent.svelte';
   import LineageSparkOdds from './LineageSparkOdds.svelte';
   import LineageInheritance from './tree/LineageInheritance.svelte';
   import LineageTree from './tree/LineageTree.svelte';
   import LineageSaves from './LineageSaves.svelte';
-  import { loadSkillCatalog, skillImage } from '@/lib/catalog/skill-catalog';
+  import { loadSkills, skillImage } from '@/lib/game-data/skills/skills';
   import { characterImage } from './lineage-planner-nodes';
   import { LineagePlannerTree } from './lineage-planner-tree.svelte';
 
-  onMount(watchFactorCatalog);
+  onMount(watchFactors);
 
   const tree = new LineagePlannerTree();
 
@@ -64,7 +64,7 @@
   $effect(() => {
     if ((oddsTab !== 'skills' && !inheritanceOpen) || skillIcons.size) return;
     let current = true;
-    void loadSkillCatalog()
+    void loadSkills()
       .then((catalog) => {
         if (!current) return;
         const icons = new Map<string, string>();
@@ -80,6 +80,7 @@
             'The odds remain available. Reopen this tab to retry.'
           );
       });
+
     return () => {
       current = false;
     };
@@ -104,6 +105,7 @@
         )
       }))
   );
+
   const activeNode = $derived(tree.nodes[activePosition]);
   const affinity = $derived(calculatePlannerAffinity(affinityEngine, tree.nodes, raceGroups));
   const flows = $derived(plannerAffinityFlows(affinity));
@@ -126,6 +128,7 @@
       .catch(() => {
         if (current) optimalError = 'Optimal races could not be loaded.';
       });
+
     return () => {
       current = false;
     };
@@ -183,9 +186,11 @@
     const currentCharacters = new Map(
       tree.selectableCharacters.map((character) => [Number(character.id), character])
     );
+
     const id =
       parentCharacter(veteran, currentCharacters).cardId ??
       parentCharacter(veteran, tree.characters).cardId;
+
     if (id == null || !validatePlacement(id)) return;
     const entry = currentCharacters.get(id) ?? tree.characters.get(id);
     tree.placeVeteran(activePosition, id, entry, veteran);
@@ -204,6 +209,7 @@
     } catch {
       loadError = 'The saved tree could not be loaded.';
     }
+
     void tree.loadCharacters();
     let current = true;
     void Promise.all([
@@ -217,6 +223,7 @@
       raceGroups = groups;
       if (affinityData) affinityEngine = new VeteranAffinityEngine(affinityData);
     });
+
     return () => {
       current = false;
       tree.dispose();

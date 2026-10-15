@@ -32,7 +32,7 @@
   import ClubDetailsOverview from './details/ClubDetailsOverview.svelte';
   import ClubMemberGrid from './members/ClubMemberGrid.svelte';
   import ClubMemberTable from './members/ClubMemberTable.svelte';
-  import { clubProgressionOption } from './club-chart';
+  import { clubProgressionOption } from './charts/club-chart';
   import type { ClubDetails } from './community-types';
 
   const jst = new Date(Date.now() + 9 * 60 * 60 * 1000);
@@ -71,9 +71,11 @@
   const isLastMonth = $derived(
     new Date(year, month).getTime() === new Date(jst.getUTCFullYear(), jst.getUTCMonth()).getTime()
   );
+
   const isLive = $derived(
     isCurrentMonth && Boolean(details) && (details?.circle.monthly_rank ?? 999) <= 100
   );
+
   const dataStatus = $derived(
     details
       ? clubDataStatus(
@@ -88,6 +90,7 @@
         )
       : undefined
   );
+
   const allMembers = $derived(
     details
       ? calculateMemberMetrics(details.members, {
@@ -103,6 +106,7 @@
         )
       : []
   );
+
   const members = $derived(
     allMembers.filter(
       (member) =>
@@ -117,6 +121,7 @@
   const computedMonthlyFans = $derived(
     allMembers.reduce((sum, member) => sum + (member.active ? member.monthlyGain : 0), 0)
   );
+
   const monthlyFans = $derived(
     isCurrentMonth
       ? (details?.circle.monthly_point ?? computedMonthlyFans)
@@ -124,6 +129,7 @@
         ? (details?.circle.last_month_point ?? computedMonthlyFans)
         : computedMonthlyFans
   );
+
   const displayedRank = $derived(
     isCurrentMonth
       ? details?.circle.monthly_rank
@@ -131,10 +137,12 @@
         ? details?.circle.last_month_rank || undefined
         : undefined
   );
+
   const primary = $derived(clubMetric(config));
   const extraMetrics = $derived(
     clubMetrics.filter((metric) => config[metric.flag] && metric.value !== primary.value)
   );
+
   const clubChart = $derived(clubProgressionOption(history, $theme));
 
   async function copyTrainer(member: ClubMemberMetric): Promise<void> {
@@ -146,6 +154,7 @@
       requestedClub = clubId,
       requestedYear = year,
       requestedMonth = month;
+
     refreshing = refresh && Boolean(details);
     loading = !refreshing;
     error = '';
@@ -157,6 +166,7 @@
         requestedMonth,
         refresh
       );
+
       if (id !== requestId) return;
       details = value;
       now = Date.now();
@@ -186,11 +196,11 @@
   }
 
   async function download(format: string): Promise<void> {
-    if (!details || !allMembers.length || exportBusy || !['csv', 'json', 'xlsx'].includes(format))
-      return;
+    if (!details || !allMembers.length || exportBusy) return;
+    if (format !== 'csv' && format !== 'json' && format !== 'xlsx') return;
     exportBusy = true;
     try {
-      await exportClub(details, allMembers, config, year, month, format as 'csv' | 'json' | 'xlsx');
+      await exportClub({ details, members: allMembers, config, year, month, format });
     } catch (reason) {
       error = reason instanceof Error ? reason.message : 'Export could not be created.';
     } finally {
@@ -230,6 +240,7 @@
       secondsUntilRefresh = communityRepository.clubDetailsRefreshSeconds(clubId, year, month);
       if (secondsUntilRefresh <= 0) void load(true);
     }, 1000);
+
     return () => {
       clearInterval(timer);
       requestId++;

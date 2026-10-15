@@ -41,6 +41,7 @@
 
   let historyOpen = $state(false),
     optimalOpen = $state(false);
+
   let lineage = $state('lineage-main'),
     selectedRace = $state(''),
     planned = $state(false);

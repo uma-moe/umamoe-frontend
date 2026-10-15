@@ -5,14 +5,14 @@ import {
   TURN_NAMES,
   coursesForTrack,
   describeCourse,
-  loadCourseCatalog,
+  loadCourses,
   trackName,
   tracksWithCourses,
-  type CourseCatalogEntry
-} from '@/lib/catalog/course-catalog';
+  type RaceCourse
+} from '@/lib/game-data/racing/courses';
 import { importSimulatorUmas, simulatorRoster } from './simulator-roster.svelte';
 import type { SimulatorUma } from './simulator-uma';
-import { resourceRepository } from '@/lib/catalog/resource-repository';
+import { resourceCache } from '@/services/resources/resource-cache';
 import type { Trainee } from './setup/trainee';
 import { EXAMPLE_RACE_SETTINGS } from './simulator-example';
 
@@ -78,27 +78,49 @@ export const simulatorSession = $state({
   courseId: String(EXAMPLE_RACE_SETTINGS.courseId),
   umaId: '',
   seed: String(Math.floor(Math.random() * 2 ** 31)),
-  importNotice: 'Example CM20 field · 3 teams · 9 trained builds with skills. Edit any Uma to compare your own build.',
+  importNotice:
+    'Example CM20 field · 3 teams · 9 trained builds with skills. Edit any Uma to compare your own build.',
   sourceCourseId: String(EXAMPLE_RACE_SETTINGS.courseId),
   raceInstanceId: EXAMPLE_RACE_SETTINGS.raceInstanceId,
   ground: EXAMPLE_RACE_SETTINGS.ground,
   season: EXAMPLE_RACE_SETTINGS.season,
   weather: EXAMPLE_RACE_SETTINGS.weather,
   startTime: EXAMPLE_RACE_SETTINGS.startTime,
-  get trainee(): Trainee { return (simulatorRoster.umas.find(uma => uma.id === simulatorSession.umaId) ?? simulatorRoster.umas[0]!).trainee; },
-  set trainee(value: Trainee) { (simulatorRoster.umas.find(uma => uma.id === simulatorSession.umaId) ?? simulatorRoster.umas[0]!).trainee = value; }
+  get trainee(): Trainee {
+    return (
+      simulatorRoster.umas.find((uma) => uma.id === simulatorSession.umaId) ??
+      simulatorRoster.umas[0]!
+    ).trainee;
+  },
+  set trainee(value: Trainee) {
+    (
+      simulatorRoster.umas.find((uma) => uma.id === simulatorSession.umaId) ??
+      simulatorRoster.umas[0]!
+    ).trainee = value;
+  }
 });
 
 /** Reuse the exact CM course ID; a failed lookup requires a manual selection. */
-export async function openSimulatorField(umas: SimulatorUma[], options: { replace?: boolean; raceInstanceId?: number; startTimeType?: number; seed?: string } = {}): Promise<void> {
+export async function openSimulatorField(
+  umas: SimulatorUma[],
+  options: {
+    replace?: boolean;
+    raceInstanceId?: number;
+    startTimeType?: number;
+    seed?: string;
+  } = {}
+): Promise<void> {
   let importedCourse: string | undefined;
   if (options.raceInstanceId) {
-    const { resolveRaceCourseIds } = await import('@/pages/competitive/race-analysis/replay/replay-course');
+    const { resolveRaceCourseIds } =
+      await import('@/pages/competitive/race-analysis/replay/replay-course');
+
     const ids = await resolveRaceCourseIds([options.raceInstanceId]);
-    await ensureSimulatorCatalog();
+    await ensureSimulatorCourses();
     const id = ids.get(options.raceInstanceId);
-    importedCourse = id && simulatorCatalog.courses.has(id) ? String(id) : '';
-  } else if (umas.some(uma => uma.source === 'CM Data')) importedCourse = '';
+    importedCourse = id && simulatorCourseData.courses.has(id) ? String(id) : '';
+  } else if (umas.some((uma) => uma.source === 'CM Data')) importedCourse = '';
+
   // Validate capacity before changing the current course or conditions.
   importSimulatorUmas(umas, options.replace);
   if (importedCourse !== undefined) {
@@ -109,12 +131,14 @@ export async function openSimulatorField(umas: SimulatorUma[], options: { replac
       ? 'CM builds imported. Review the race conditions before running.'
       : 'CM builds imported. Select their course and review the race conditions before running.';
     const course = selectedCourse();
-    if (course) for (const uma of umas) {
-      if (!uma.capturedAptitudes) continue;
-      uma.trainee.distanceAptitudes[course.distance_type - 1] = uma.capturedAptitudes[0];
-      uma.trainee.groundAptitudes[course.surface - 1] = uma.capturedAptitudes[1];
-    }
+    if (course)
+      for (const uma of umas) {
+        if (!uma.capturedAptitudes) continue;
+        uma.trainee.distanceAptitudes[course.distance_type - 1] = uma.capturedAptitudes[0];
+        uma.trainee.groundAptitudes[course.surface - 1] = uma.capturedAptitudes[1];
+      }
   }
+
   if (options.startTimeType) simulatorSession.startTime = String(options.startTimeType);
   if (options.seed) simulatorSession.seed = options.seed;
   simulatorSession.umaId = umas[0]?.id ?? '';
@@ -123,35 +147,42 @@ export async function openSimulatorField(umas: SimulatorUma[], options: { replac
 }
 
 export function selectedRaceInstanceId(): number {
-  return simulatorSession.courseId === simulatorSession.sourceCourseId ? simulatorSession.raceInstanceId : 0;
+  return simulatorSession.courseId === simulatorSession.sourceCourseId
+    ? simulatorSession.raceInstanceId
+    : 0;
 }
 
-export interface SimulatorCatalogState {
-  courses: Map<number, CourseCatalogEntry>;
+export interface SimulatorCourseDataState {
+  courses: Map<number, RaceCourse>;
   loading: boolean;
   error: string;
   /** Set once the reader closes the current failure, so navigation does not reopen it. */
   errorDismissed: boolean;
 }
 
-export const simulatorCatalog = $state<SimulatorCatalogState>({
+export const simulatorCourseData = $state<SimulatorCourseDataState>({
   courses: new Map(),
   loading: true,
   error: '',
   errorDismissed: false
 });
 
-let catalogLoad: Promise<void> | undefined;
-resourceRepository.onUpdate(name => { if (name === 'simulator_courses') { catalogLoad = undefined; void ensureSimulatorCatalog(); } });
+let courseDataLoad: Promise<void> | undefined;
+resourceCache.onUpdate((name) => {
+  if (name === 'simulator_courses') {
+    courseDataLoad = undefined;
+    void ensureSimulatorCourses();
+  }
+});
 
 /** Loads the course master data once per session, for every surface. */
-export function ensureSimulatorCatalog(): Promise<void> {
-  catalogLoad ??= loadCourseCatalog()
+export function ensureSimulatorCourses(): Promise<void> {
+  courseDataLoad ??= loadCourses()
     .then((courses) => {
-      simulatorCatalog.courses = courses;
-      simulatorCatalog.loading = false;
-      simulatorCatalog.error = '';
-      simulatorCatalog.errorDismissed = false;
+      simulatorCourseData.courses = courses;
+      simulatorCourseData.loading = false;
+      simulatorCourseData.error = '';
+      simulatorCourseData.errorDismissed = false;
       // Land on a real course so the page is runnable before anyone picks one.
       if (!simulatorSession.courseId) {
         const firstTrack = tracksWithCourses(courses)[0];
@@ -161,30 +192,31 @@ export function ensureSimulatorCatalog(): Promise<void> {
     })
     .catch((reason: unknown) => {
       // Clearing the handle lets a later navigation retry the load.
-      catalogLoad = undefined;
-      simulatorCatalog.loading = false;
+      courseDataLoad = undefined;
+      simulatorCourseData.loading = false;
       const message = reason instanceof Error ? reason.message : 'Could not load race data.';
       // A repeat of the failure the reader already closed stays closed; a
       // different one is news and shows again.
-      if (message !== simulatorCatalog.error) simulatorCatalog.errorDismissed = false;
-      simulatorCatalog.error = message;
+      if (message !== simulatorCourseData.error) simulatorCourseData.errorDismissed = false;
+      simulatorCourseData.error = message;
     });
-  return catalogLoad;
+
+  return courseDataLoad;
 }
 
 /** Whether the current load failure should be on screen. */
-export function catalogErrorVisible(): boolean {
-  return simulatorCatalog.error !== '' && !simulatorCatalog.errorDismissed;
+export function courseDataErrorVisible(): boolean {
+  return simulatorCourseData.error !== '' && !simulatorCourseData.errorDismissed;
 }
 
 /** Hides the current load failure until a different one arrives. */
-export function dismissCatalogError(): void {
-  simulatorCatalog.errorDismissed = true;
+export function dismissCourseDataError(): void {
+  simulatorCourseData.errorDismissed = true;
 }
 
 /** The course the session points at. */
-export function selectedCourse(): CourseCatalogEntry | undefined {
-  return simulatorCatalog.courses.get(Number(simulatorSession.courseId));
+export function selectedCourse(): RaceCourse | undefined {
+  return simulatorCourseData.courses.get(Number(simulatorSession.courseId));
 }
 
 /** Track of the selected course. */
@@ -209,7 +241,7 @@ export const RACE_INSTANCE_NONE = 0;
 
 /** Track picker options, name-sorted. */
 export function trackOptions(): Array<{ value: string; label: string }> {
-  return tracksWithCourses(simulatorCatalog.courses).map((track) => ({
+  return tracksWithCourses(simulatorCourseData.courses).map((track) => ({
     value: String(track.trackId),
     label: track.name
   }));
@@ -219,11 +251,13 @@ export function trackOptions(): Array<{ value: string; label: string }> {
 export function courseOptions(): Array<{ value: string; label: string; keywords: string }> {
   const trackId = selectedTrackId();
   if (trackId === undefined) return [];
-  const siblings = coursesForTrack(simulatorCatalog.courses, trackId);
+  const siblings = coursesForTrack(simulatorCourseData.courses, trackId);
   return siblings.map((course) => ({
     value: String(course.course_id),
-    label: [`${SURFACE_NAMES[course.surface] ?? 'Unknown'} ${course.distance.toLocaleString('en-US')} m`,
-      `(${TURN_NAMES[course.turn] ?? 'Unknown'}${siblings.some(other => other.course_id !== course.course_id && other.distance === course.distance && other.surface === course.surface) ? ', layout '+course.course : ''})`].join(' '),
+    label: [
+      `${SURFACE_NAMES[course.surface] ?? 'Unknown'} ${course.distance.toLocaleString('en-US')} m`,
+      `(${TURN_NAMES[course.turn] ?? 'Unknown'}${siblings.some((other) => other.course_id !== course.course_id && other.distance === course.distance && other.surface === course.surface) ? ', layout ' + course.course : ''})`
+    ].join(' '),
     keywords: `course ${course.course_id} ${describeCourse(course, siblings)}`
   }));
 }
@@ -235,14 +269,11 @@ export function courseOptions(): Array<{ value: string; label: string; keywords:
  * which is the only thing the simulator request actually needs.
  */
 export function selectTrack(trackId: string): void {
-  const first = coursesForTrack(simulatorCatalog.courses, Number(trackId))[0];
+  const first = coursesForTrack(simulatorCourseData.courses, Number(trackId))[0];
   if (first) simulatorSession.courseId = String(first.course_id);
 }
 
 /** Label for a value in one of the condition option lists. */
-export function optionLabel(
-  options: ReadonlyArray<ConditionOption>,
-  value: string
-): string {
+export function optionLabel(options: ReadonlyArray<ConditionOption>, value: string): string {
   return options.find((option) => option.value === value)?.label ?? '';
 }

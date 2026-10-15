@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { lastSpurtResult } from '@/lib/race/race-diagnostics';
+  import type { lastSpurtResult } from '@/lib/race/capture/race-diagnostics';
 
   let { result }: { result: ReturnType<typeof lastSpurtResult> } = $props();
 </script>

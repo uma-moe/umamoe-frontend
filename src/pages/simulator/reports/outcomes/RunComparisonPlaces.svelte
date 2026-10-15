@@ -38,10 +38,12 @@
       ])
     )
   );
+
   const placeScale = $derived(placeAxis(umas.length));
   const outcomes = $derived(
     new Map(sources.map((source) => [source, runnerOutcome(result, source)]))
   );
+
   const placeRows = $derived(
     compact
       ? [...sources].sort(
@@ -55,12 +57,14 @@
   function placeTiles(source: number): DistributionTile[] {
     const outcome = outcomes.get(source)!,
       summary = simulatorSampleSummary(places.get(source)!)!;
+
     const wins = {
       label: 'Wins',
       value: percent(outcome.winRate),
       detail: Math.round((outcome.winRate / 100) * result.runs) + ' of ' + result.runs,
       tone: outcome.winRate > 0 ? ('ahead' as const) : ('' as const)
     };
+
     if (compact) return [wins, { label: 'Top 3', value: percent(outcome.top3) }];
     return [
       wins,
@@ -77,8 +81,17 @@
     ];
   }
 
-  const placeTone = (index: number): BinTone =>
-    index === 0 ? 'strong' : index < 3 ? 'runner' : 'muted';
+  const placeTone = (index: number): BinTone => {
+    if (index === 0) {
+      return 'strong';
+    }
+
+    if (index < 3) {
+      return 'runner';
+    }
+
+    return 'muted';
+  };
 </script>
 
 {#each placeRows as source, index (source)}

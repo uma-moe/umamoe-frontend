@@ -1,7 +1,7 @@
 <script lang="ts">
   import Button from '@/components/controls/Button.svelte';
   import FilterChip from '@/components/filters/FilterChip.svelte';
-  import { trackName, type CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+  import { trackName, type RaceCourse } from '@/lib/game-data/racing/courses';
   import { MAX_TRACKS } from '../../requests/optimize-request';
   import { defaultPool, teamTrialsCourses, type TeamTrialsMode } from './track-pool';
 
@@ -11,32 +11,33 @@
    */
   let {
     mode,
-    catalog,
+    courseLookup,
     picked = $bindable()
   }: {
     mode: TeamTrialsMode;
-    catalog: ReadonlyMap<number, CourseCatalogEntry>;
+    courseLookup: ReadonlyMap<number, RaceCourse>;
     /** Course ids switched on; undefined is the default pool, the JRA's courses. */
     picked?: number[];
   } = $props();
 
-  const courses = $derived(teamTrialsCourses(catalog, mode));
+  const courses = $derived(teamTrialsCourses(courseLookup, mode));
   const fallback = $derived(defaultPool(courses));
   const on = $derived(new Set(picked ?? fallback));
   const count = $derived(courses.filter((course) => on.has(course.course_id)).length);
   const changed = $derived(count !== fallback.length || fallback.some((course) => !on.has(course)));
   const groups = $derived.by(() => {
-    const byTrack = new Map<number, CourseCatalogEntry[]>();
+    const byTrack = new Map<number, RaceCourse[]>();
     for (const course of courses)
       byTrack.set(course.race_track_id, [...(byTrack.get(course.race_track_id) ?? []), course]);
     return [...byTrack].map(([trackId, list]) => ({ trackId, name: trackName(trackId), list }));
   });
 
   /** `1,400 m`, with the layout when the track runs two at that distance and straight for Niigata's 1,000 m. */
-  function label(course: CourseCatalogEntry, siblings: ReadonlyArray<CourseCatalogEntry>) {
+  function label(course: RaceCourse, siblings: ReadonlyArray<RaceCourse>) {
     const twin = siblings.some(
       (other) => other.course_id !== course.course_id && other.distance === course.distance
     );
+
     return [
       course.distance.toLocaleString() + ' m',
       course.turn === 4 ? 'straight' : '',

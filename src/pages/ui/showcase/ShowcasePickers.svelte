@@ -11,10 +11,12 @@
   let target = $state('mcqueen'),
     targetOpen = $state(false),
     legacy = $state(true);
+
   let include = $state(['oguri']),
     exclude = $state<string[]>([]),
     pickerOpen = $state(false),
     pickerMode = $state<'include' | 'exclude'>('include');
+
   let support = $state('support-speed');
 
   const items = (values: string[]) =>

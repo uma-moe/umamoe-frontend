@@ -3,12 +3,12 @@
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
   import SkillChip from '@/components/game/SkillChip.svelte';
   import {
-    loadSkillCatalog,
+    loadSkills,
     skillPointTotal,
     skillImage,
     skillRarity,
-    type SkillCatalogEntry
-  } from '@/lib/catalog/skill-catalog';
+    type SkillData
+  } from '@/lib/game-data/skills/skills';
   import type { MonteCarloSkillInput } from '../../requests/race-sim-request';
 
   interface Props {
@@ -28,7 +28,7 @@
 
   const headingId = $derived(`${idPrefix}-skills-title`);
 
-  let catalog = $state<Map<number, SkillCatalogEntry>>(new Map());
+  let skillLookup = $state<Map<number, SkillData>>(new Map());
   let query = $state('');
   let error = $state('');
   // Anchors the suggestion panel: it has to escape the scrolling sidebar, which
@@ -36,9 +36,9 @@
   let searchAnchor = $state<HTMLDivElement>();
 
   $effect(() => {
-    void loadSkillCatalog()
+    void loadSkills()
       .then((loaded) => {
-        catalog = loaded;
+        skillLookup = loaded;
       })
       .catch(() => {
         error = 'Skill data could not be loaded.';
@@ -47,7 +47,7 @@
 
   /** Everything this runner does not already have, so a skill cannot be added twice. */
   const options = $derived(
-    [...catalog.values()]
+    [...skillLookup.values()]
       .filter((skill) => !skills.some((picked) => picked.skillId === skill.skill_id))
       .map((skill) => ({
         value: String(skill.skill_id),
@@ -86,7 +86,7 @@
       title="Base cost of learned skills including prerequisites, before hint discounts"
     >
       {skillPointTotal(
-        catalog,
+        skillLookup,
         skills.map((skill) => skill.skillId * 10 + (skill.level ?? 1))
       )?.toLocaleString() ?? '—'} SP
     </span>
@@ -115,7 +115,7 @@
   {#if skills.length > 0}
     <ul class="picked">
       {#each skills as picked (picked.skillId)}
-        {@const skill = catalog.get(picked.skillId)}
+        {@const skill = skillLookup.get(picked.skillId)}
         {@const name = skill?.name ?? `Skill ${picked.skillId}`}
         <li>
           <div class="chip">

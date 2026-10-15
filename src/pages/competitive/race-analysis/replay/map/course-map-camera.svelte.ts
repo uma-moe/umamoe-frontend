@@ -26,6 +26,7 @@ export class CourseMapCamera {
       ? fitTrackCamera(this.#framing(), this.width, this.height, 0, this.motion.current)
       : this.motion.current
   );
+
   zoomInDisabled = $derived(this.following ? this.followZoom >= 2 : this.current.scale >= 64);
   zoomOutDisabled = $derived(this.following ? this.followZoom <= 0.5 : this.current.scale <= 0.15);
 
@@ -55,6 +56,7 @@ export class CourseMapCamera {
       this.followZoom = Math.max(0.5, Math.min(2, this.followZoom * factor));
       return;
     }
+
     const camera = this.current;
     const scale = Math.max(0.15, Math.min(64, camera.scale * factor));
     const delta = this.rotate(point.x - this.width / 2, point.y - this.height / 2, -camera.angle);
@@ -64,6 +66,7 @@ export class CourseMapCamera {
       scale,
       angle: camera.angle
     };
+
     this.following = false;
   };
 
@@ -84,6 +87,7 @@ export class CourseMapCamera {
     if (event.button !== 0 || (event.target as Element).closest('[role="button"]')) return;
     const point = this.#localPoint(event);
     this.#drag = { id: event.pointerId, x: point.x, y: point.y, view: { ...this.current } };
+
     this.element?.setPointerCapture(event.pointerId);
   };
 
@@ -93,6 +97,7 @@ export class CourseMapCamera {
     const point = this.#localPoint(event),
       dx = point.x - drag.x,
       dy = point.y - drag.y;
+
     if (Math.hypot(dx, dy) < 4 || (event.pointerType === 'touch' && Math.abs(dy) > Math.abs(dx)))
       return;
     const delta = this.rotate(dx, dy, -drag.view.angle);

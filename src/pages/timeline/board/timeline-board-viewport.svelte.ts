@@ -7,7 +7,7 @@ import {
   timelinePosition,
   type TimelineAnniversary,
   type TimelineLane
-} from '@/lib/timeline/timeline-layout';
+} from '@/lib/timeline/board/timeline-layout';
 import type { TimelineRecord } from '../timeline-repository';
 import {
   buildFeedOffsets,
@@ -47,6 +47,7 @@ export class TimelineBoardViewport {
 
   #inputs: TimelineBoardInputs;
   #pendingHeights: Record<string, number> = {};
+
   #measurementFrame = 0;
   #frame = 0;
 
@@ -58,21 +59,26 @@ export class TimelineBoardViewport {
   monthLaneOffsets = $derived(
     buildMonthLaneOffsets(this.months, this.measured, this.viewportWidth)
   );
+
   monthOffsets = $derived(buildMonthOffsets(this.monthLaneOffsets));
   firstMonth = $derived.by(() => {
     if (!this.#inputs.virtualScrolling()) return 0;
     const index = this.monthOffsets.findIndex(
       (offset) => offset > Math.max(0, this.scrollTop - this.viewportHeight)
     );
+
     return index < 0 ? Math.max(0, this.months.groups.length - 1) : Math.max(0, index - 1);
   });
+
   lastMonth = $derived.by(() => {
     if (!this.#inputs.virtualScrolling()) return this.months.groups.length;
     const index = this.monthOffsets.findIndex(
       (offset) => offset > this.scrollTop + 2 * this.viewportHeight
     );
+
     return index < 0 ? this.months.groups.length : index;
   });
+
   width = $derived.by(() => (this.#inputs.lanes().at(-1)?.position ?? 0) + LANE_WIDTH + 48);
   // Keep one screen mounted before and after the visible lanes.
   firstLane = $derived.by(() => {
@@ -80,30 +86,38 @@ export class TimelineBoardViewport {
     const index = lanes.findIndex(
       (lane) => lane.position + LANE_WIDTH >= this.scrollLeft - this.viewportWidth
     );
+
     return index < 0 ? lanes.length : index;
   });
+
   lastLane = $derived.by(() => {
     const lanes = this.#inputs.lanes();
     const index = lanes.findIndex(
       (lane) => lane.position > this.scrollLeft + 2 * this.viewportWidth
     );
+
     return index < 0 ? lanes.length : index;
   });
+
   visibleLanes = $derived.by(() =>
     this.#inputs.virtualScrolling()
       ? this.#inputs.lanes().slice(this.firstLane, this.lastLane)
       : this.#inputs.lanes()
   );
+
   todayPosition = $derived.by(() => timelinePosition(this.#inputs.lanes(), this.#inputs.now()));
   todayLane = $derived.by(() => nearestLane(this.#inputs.lanes(), this.#inputs.now()));
   showToday = $derived.by(() => {
     const lanes = this.#inputs.lanes(),
       now = this.#inputs.now();
+
     return Boolean(lanes.length && now >= lanes[0]!.date && now <= lanes.at(-1)!.date);
   });
+
   trackHeight = $derived.by(() =>
     estimatedTrackHeight(this.#inputs.lanes(), this.measuredLaneHeight)
   );
+
   rows = $derived.by(() =>
     buildTimelineFeed(
       this.#inputs.events(),
@@ -112,6 +126,7 @@ export class TimelineBoardViewport {
       this.#inputs.now()
     )
   );
+
   offsets = $derived(buildFeedOffsets(this.rows, this.measured));
   // Prepare the neighboring screen before it enters view; older rows stay unmounted.
   start = $derived.by(() =>
@@ -122,6 +137,7 @@ export class TimelineBoardViewport {
         )
       : 0
   );
+
   finish = $derived.by(() =>
     this.#inputs.virtualScrolling()
       ? Math.min(
@@ -131,11 +147,13 @@ export class TimelineBoardViewport {
         )
       : this.rows.length
   );
+
   visibleRows = $derived(this.rows.slice(this.start, this.finish));
 
   verticalWindow(monthIndex: number) {
     const offsets = this.monthLaneOffsets[monthIndex]!;
     if (!this.#inputs.virtualScrolling()) return { first: 0, last: offsets.length - 1 };
+
     const top = this.scrollTop - this.monthOffsets[monthIndex]! - 56;
     const start = offsets.findIndex((offset) => offset > Math.max(0, top - this.viewportHeight));
     const first = start < 0 ? Math.max(0, offsets.length - 2) : Math.max(0, start - 1);
@@ -150,6 +168,7 @@ export class TimelineBoardViewport {
       this.scrollLeft = this.board.scrollLeft;
       this.scrollTop = this.board.scrollTop;
     }
+
     if (this.#inputs.mobile()) this.pageY = scrollY;
   };
 
@@ -162,6 +181,7 @@ export class TimelineBoardViewport {
         `${this.board.getBoundingClientRect().top}px`
       );
     }
+
     this.viewportHeight = this.#inputs.mobile()
       ? innerHeight
       : (this.board?.clientHeight ?? innerHeight);
@@ -196,8 +216,10 @@ export class TimelineBoardViewport {
       !this.months.groups.length
     ) {
       this.measured = { ...this.measured, ...heights };
+
       return;
     }
+
     const top = board.scrollTop;
     const atEnd = top >= board.scrollHeight - board.clientHeight - 1;
     const month = indexAt(top + 56, this.monthOffsets);
@@ -206,11 +228,13 @@ export class TimelineBoardViewport {
     // Change spacers and the visible window together, preserving the row below the sticky header.
     flushSync(() => {
       this.measured = { ...this.measured, ...heights };
+
       this.scrollTop = Math.max(
         0,
         top + this.monthOffsets[month]! + this.monthLaneOffsets[month]![lane]! - before
       );
     });
+
     board.scrollTo({ top: atEnd ? board.scrollHeight : this.scrollTop, behavior: 'instant' });
     this.updateViewport();
   }
@@ -229,6 +253,7 @@ export class TimelineBoardViewport {
           this.#pendingHeights = {};
         });
     });
+
     observer.observe(node);
     return {
       update: (next: string) => {
@@ -252,6 +277,7 @@ export class TimelineBoardViewport {
           this.measuredLaneHeight = Math.max(this.measuredLaneHeight, Math.ceil(height));
       });
     });
+
     observer.observe(node);
     return {
       destroy() {

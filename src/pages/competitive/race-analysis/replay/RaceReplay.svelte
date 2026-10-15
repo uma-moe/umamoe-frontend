@@ -2,8 +2,8 @@
   import { onDestroy, onMount, tick as flush, untrack } from 'svelte';
   import type { Snippet } from 'svelte';
   import { Spring } from 'svelte/motion';
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-  import { replayViewport } from '@/lib/race/race-replay';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import { replayViewport } from '@/lib/race/replay/race-replay';
   import Button from '@/components/controls/Button.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
@@ -28,7 +28,7 @@
   import ReplayRunnerAnalysis from './runner/ReplayRunnerAnalysis.svelte';
   import ReplayRunnerPicker from './runner/ReplayRunnerPicker.svelte';
   import ReplayBuildDialog from './runner/ReplayBuildDialog.svelte';
-  import type { RaceTrajectory } from '@/lib/race/race-ensemble';
+  import type { RaceTrajectory } from '@/lib/race/replay/race-ensemble';
 
   let {
     capture,
@@ -62,6 +62,7 @@
   let telemetryExpanded = $state(false);
   let windowMeters = $state(80),
     trackOverride = $state('');
+
   let report = $state<HTMLElement>(),
     analysisTarget = $state<HTMLElement>();
 
@@ -69,11 +70,13 @@
 
   let shapes = $state.raw<Record<string, CourseShape>>(),
     geometryError = $state('');
+
   let courses = $state.raw<CourseData>(),
     courseError = $state(''),
     visibility = $state<Record<number, number>>({}),
     fullscreenTarget = $state<HTMLDivElement>(),
     fullscreen = $state(false);
+
   let toggles = $state(defaultReplayToggles());
 
   let settingsOpen = $state(false),
@@ -91,6 +94,7 @@
     course: () => course,
     distance: () => course?.distance ?? shapes?.[trackId]?.distance
   });
+
   const viewport = $derived(
     replayViewport(
       replay.leader,
@@ -122,6 +126,7 @@
     const { bounds, leader } = replay;
     const width = viewport.max - viewport.min,
       distance = Math.max(0, Math.min(bounds.distanceMax, leader));
+
     const edge = Math.min(1, distance / width, (bounds.distanceMax - distance) / width);
     // Keep the leader forward during racing; gently center the start and finish.
     const center = distance - width * 0.3 * edge * edge * (3 - 2 * edge);
@@ -131,7 +136,9 @@
   function reviewBlocking(event: (typeof replay.blockingSpans)[number]) {
     selected = String(event.horseIndex);
     visibility = { ...visibility, [event.horseIndex]: 0, [event.blockerHorseIndex]: 0 };
+
     toggles = { ...toggles, blocked: true };
+
     reviewTime(event.startTime);
   }
 
@@ -247,6 +254,7 @@
       .catch((e) => {
         if (alive) courseError = e.message;
       });
+
     if (!ensemble) void loadGeometry();
     return () => {
       alive = false;

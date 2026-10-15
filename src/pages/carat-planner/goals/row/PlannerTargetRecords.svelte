@@ -6,7 +6,7 @@
     type PlannerStepUp,
     type PlannerTarget
   } from '@/lib/carat-planner/carat-planner';
-  import type { plannerPickupOptions } from '@/lib/carat-planner/planner-presentation';
+  import type { plannerPickupOptions } from '@/lib/carat-planner/presentation/planner-presentation';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
@@ -77,6 +77,7 @@
     const count = recordedPlannerCount(raw);
     onupdate((value) => {
       const copies = { ...value.actualCopies };
+
       if (count === undefined) delete copies[key];
       else copies[key] = count;
       value.actualCopies = Object.keys(copies).length ? copies : undefined;

@@ -26,6 +26,7 @@
     onnext,
     ondismiss
   }: Props = $props();
+
   const id = $props.id();
 </script>
 

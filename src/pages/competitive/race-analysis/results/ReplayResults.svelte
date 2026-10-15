@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-  import { lastSpurtResult, raceMetricHelp } from '@/lib/race/race-diagnostics';
-  import { formatRaceTime } from '@/lib/race/race-display';
-  import { loadSkillCatalog, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import { lastSpurtResult, raceMetricHelp } from '@/lib/race/capture/race-diagnostics';
+  import { formatRaceTime } from '@/lib/race/replay/race-display';
+  import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import { portrait, stats } from '@/pages/competitive/analysis-view';
   import DataTable from '@/components/data/DataTable.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
@@ -20,10 +20,10 @@
   }: { capture: ParsedRaceCapture; selectedIndex?: number; oninspect: (index: number) => void } =
     $props();
 
-  let catalog = $state.raw(new Map<number, SkillCatalogEntry>());
+  let catalog = $state.raw(new Map<number, SkillData>());
 
   onMount(() => {
-    void loadSkillCatalog()
+    void loadSkills()
       .then((v) => (catalog = v))
       .catch(() => {});
   });
@@ -37,6 +37,7 @@
         typeof row.paceUp === 'number'
     )
   );
+
   const hasLoss = $derived(rows.some((row) => typeof row.loss === 'number'));
   const hasIncidents = $derived(
     rows.some((row) => typeof row.blocked === 'number' || typeof row.rushed === 'number')

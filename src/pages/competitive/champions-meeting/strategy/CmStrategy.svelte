@@ -31,6 +31,7 @@
     minimum = $state('0.01'),
     repMin = $state('.01'),
     metric = $state('team');
+
   let repDescending = $state(true);
 
   function orderReps(key: string) {
@@ -44,13 +45,15 @@
   const representativeStyles = $derived(scope === 'all' ? [1, 2, 3, 4, 5, 6] : [Number(scope)]);
   const scopedStyles = $derived(scope === 'all' ? styleOrder : [Number(scope)]);
   const breakdown = $derived(
-    scopedStyles.map((id) => data.styles.find((s) => s.style === id)).filter((s) => !!s)
+    scopedStyles.map((id) => data.styles.find((s) => s.style === id)).filter((s) => s != null)
   );
+
   const fieldInsight = $derived(
     [...breakdown]
       .filter((row) => row.owners >= 30 && row.pop > 0)
       .sort((a, b) => b.winShare - b.pop - (a.winShare - a.pop))[0]
   );
+
   const barMax = $derived(Math.max(0.01, ...breakdown.flatMap((s) => [s.winShare, s.pop])));
   const rows = $derived(
     data.archetypes.filter(
@@ -66,6 +69,7 @@
       data.rooms.average[id - 1] ?? 0,
       ...data.rooms.rows.map((r) => r.counts[id - 1] ?? 0)
     );
+
   const cellColor = (id: number, count: number) =>
     'color-mix(in srgb, ' +
     colors[id] +

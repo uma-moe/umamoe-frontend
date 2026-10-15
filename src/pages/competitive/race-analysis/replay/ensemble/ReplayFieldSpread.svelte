@@ -1,8 +1,8 @@
 <script lang="ts">
   import Artwork from '@/components/game/Artwork.svelte';
   import { portrait } from '@/pages/competitive/analysis-view';
-  import { raceFieldSpread, type RaceTrajectory } from '@/lib/race/race-ensemble';
-  import type { RaceRunner } from '@/lib/race/race-capture-parser';
+  import { raceFieldSpread, type RaceTrajectory } from '@/lib/race/replay/race-ensemble';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
 
   let {
     trajectories,

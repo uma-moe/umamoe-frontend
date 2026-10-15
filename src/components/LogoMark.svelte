@@ -5,6 +5,7 @@
     animated?: boolean;
     fluid?: boolean;
   }
+
   let { size = 36, label = 'uma.moe', animated = false, fluid = false }: Props = $props();
   let renderedWidth = $state(0);
   let motionAllowed = $state(false);
@@ -16,10 +17,12 @@
     const sync = () => {
       motionAllowed = preference.matches;
     };
+
     sync();
     preference.addEventListener('change', sync);
     return () => preference.removeEventListener('change', sync);
   });
+
   $effect(() => {
     if (!motionAllowed || !drawing) return;
     drawing.setCurrentTime(0);

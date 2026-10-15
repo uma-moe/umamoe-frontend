@@ -1,12 +1,12 @@
 <script lang="ts">
   import { onDestroy, untrack, type Snippet } from 'svelte';
   import { prefersReducedMotion } from 'svelte/motion';
-  import type { RaceEvent, RaceFrame, RaceRunner } from '@/lib/race/race-capture-parser';
+  import type { RaceEvent, RaceFrame, RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import {
     raceFrameAtTime,
     replayLaneMetres,
     type InterpolatedRaceFrame
-  } from '@/lib/race/race-replay';
+  } from '@/lib/race/replay/race-replay';
   import Button from '@/components/controls/Button.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import { portrait } from '@/pages/competitive/analysis-view';
@@ -113,9 +113,11 @@
       .map((r) => {
         const horse = frame!.horses[r.index]!,
           lane = replayLaneMetres(horse.lanePosition, laneWidth);
+
         return { runner: r, horse, lane, point: offsetAt(horse.distance, lane) };
       })
   );
+
   const cone = $derived.by(() => {
     const horse = frame?.horses[Number(selected)];
     if (!horse || !viewDistance || !points.length) return '';
@@ -128,12 +130,15 @@
           Math.max(0, Math.min(laneWidth, lane + sign * (0.6 + (laneWidth * 0.32 * i) / 12)))
         )
       );
+
     return [...side(-1), ...side(1).reverse()].map((p) => p.x + ',' + p.y).join(' ');
   });
+
   const blockLinks = $derived(
     blocking.flatMap((pair) => {
       const horse = frame?.horses[pair.horseIndex],
         other = frame?.horses[pair.blockerHorseIndex];
+
       if (
         !horse ||
         !other ||
@@ -145,11 +150,13 @@
           offsetAt(horse.distance, replayLaneMetres(horse.lanePosition, laneWidth))
         ),
         b = view.project(offsetAt(other.distance, replayLaneMetres(other.lanePosition, laneWidth)));
+
       const basis = trackBasis(points, other.distance, course?.turn);
       const normal = view.rotate(basis.nx, basis.ny);
       return [{ ...pair, a, b, nx: normal.x, ny: normal.y }];
     })
   );
+
   const trail = $derived(
     [
       ...frames.slice(
@@ -165,6 +172,7 @@
       .map((p) => p.x + ',' + p.y)
       .join(' ')
   );
+
   const labelSize = $derived(primary ? (view.width < 600 ? 28 : 36) : 24);
   const overlayHeight = $derived((Number(showSpeed) + Number(showAcceleration)) * 14);
   const occupiedLane = $derived(
@@ -175,6 +183,7 @@
         .map((m) => m.lane)
     )
   );
+
   const occupiedWidth = $derived(occupiedLane + 2);
   const framedLanes = $derived(Math.max(Math.min(laneWidth, 10), occupiedWidth));
   const followPoints = $derived(points.map((p) => offsetAt(p.distance, occupiedWidth / 2)));
@@ -182,8 +191,10 @@
     const tangent = trackBasis(points, (viewport.min + viewport.max) / 2, course?.turn);
     const angle = -Math.atan2(tangent.ty, tangent.tx),
       previous = untrack(() => view.motion.target.angle);
+
     return previous + Math.atan2(Math.sin(angle - previous), Math.cos(angle - previous));
   });
+
   const followCamera = $derived.by(() => {
     const camera = followTrackCamera(
       roadPoints,
@@ -193,28 +204,34 @@
       view.followZoom,
       heading
     );
+
     // Use the same course basis as the dots and landmarks, including the finish.
     const centre = offsetAt((viewport.min + viewport.max) / 2, framedLanes / 2);
     return { ...camera, x: centre.x, y: centre.y };
   });
+
   const windowPoints = $derived([
     offsetAt(viewport.min, framedLanes / 2),
     ...roadPoints.filter((p) => p.distance > viewport.min && p.distance < viewport.max),
     offsetAt(viewport.max, framedLanes / 2)
   ]);
+
   // Reserve a little space at both rails for portraits beside the actual positions.
   const portraitClearance = $derived(
     24 / (Math.max(0.01, units * followCamera.scale) * lateralScale)
   );
+
   const framingPoints = $derived(
     windowPoints.flatMap((p) => [
       offsetAt(p.distance, -portraitClearance),
       offsetAt(p.distance, framedLanes + portraitClearance)
     ])
   );
+
   const framedCamera = $derived(
     fitTrackCamera(framingPoints, view.width, view.height, 0, followCamera)
   );
+
   const target = $derived(
     view.following
       ? framedCamera
@@ -232,11 +249,13 @@
   $effect(() => {
     const now = frame?.time ?? 0,
       seeking = !Number.isFinite(cameraTime) || Math.abs(now - cameraTime) > 0.5;
+
     cameraTime = now;
     const current = untrack(() => view.motion.current);
     const jumped =
       Math.hypot(target.x - current.x, target.y - current.y) * target.scale >
       Math.min(view.width, view.height) / 2;
+
     void view.motion
       .set(target, {
         instant: prefersReducedMotion.current || !view.following || jumped || seeking
@@ -261,6 +280,7 @@
         }
       : { min: 0, max: shape?.distance ?? 0 }
   );
+
   const screenMarkers = $derived(
     markers
       .map((marker) => {
@@ -313,6 +333,7 @@
 
   const visible = (p: { x: number; y: number }, margin = 20) =>
     p.x >= margin && p.x <= view.width - margin && p.y >= margin && p.y <= view.height - margin;
+
   const clearLabel = (p: { x: number; y: number }) =>
     visible(p, 24) && callouts.every((c) => Math.hypot(c.x - p.x, c.y - p.y) > 40);
 

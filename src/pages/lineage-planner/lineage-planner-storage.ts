@@ -1,4 +1,4 @@
-import type { CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
+import type { CharacterData } from '@/lib/game-data/characters';
 import {
   BTREE_ORDER,
   buildPlannerPayload,
@@ -24,6 +24,7 @@ export function persistPlannerTree(nodes: PlannerNodes): void {
   } catch {
     /* storage can be unavailable */
   }
+
   const url = new URL(window.location.href);
   const share = buildShareState(nodes);
   if (share) url.searchParams.set('tree', encodeShareState(share));
@@ -34,7 +35,7 @@ export function persistPlannerTree(nodes: PlannerNodes): void {
 }
 
 export function restoredPlannerPayload(
-  characters: Map<number, CharacterCatalogEntry>,
+  characters: Map<number, CharacterData>,
   legacyCardIds: Set<number>,
   onwarning: (message: string) => void
 ): PlannerPayloadNode[] | null {
@@ -45,6 +46,7 @@ export function restoredPlannerPayload(
     payload = decodeShareState(shared);
     if (!payload) onwarning('Invalid lineage planner URL state.');
   }
+
   const from = query.get('from');
   if (!payload && (from === 'db' || from === 'profile')) {
     let rawTransfer: unknown = null;
@@ -59,10 +61,12 @@ export function restoredPlannerPayload(
         /* legacy one-shot storage may be unavailable */
       }
     }
+
     payload =
       parsePlannerTransfer(rawTransfer, from === 'profile' ? 'profile' : 'database')?.payload ??
       null;
   }
+
   if (!payload && from !== 'db' && from !== 'profile') {
     const cards = query.get('cards');
     if (cards) {
@@ -77,9 +81,11 @@ export function restoredPlannerPayload(
           legacyCardIds.add(id);
         }
       });
+
       payload = buildPlannerPayload(initial);
     }
   }
+
   if (!payload) {
     try {
       payload = parsePlannerPayload(
@@ -89,6 +95,7 @@ export function restoredPlannerPayload(
       payload = null;
     }
   }
+
   return payload;
 }
 

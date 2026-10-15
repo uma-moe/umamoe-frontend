@@ -61,18 +61,23 @@
     if (!column) return rows;
     const value = (row: Record<string, string | number>) =>
       column.sortValue?.(row) ?? row[column.key] ?? '';
+
     return [...rows].sort((a, b) => {
       const av = value(a),
         bv = value(b);
+
       const an = typeof av === 'number' ? av : Number(String(av).replace(/[,%#\s]/g, '')),
         bn = typeof bv === 'number' ? bv : Number(String(bv).replace(/[,%#\s]/g, ''));
+
       const result =
         (column.numeric || typeof av === 'number') && Number.isFinite(an) && Number.isFinite(bn)
           ? an - bn
           : String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: 'base' });
+
       return sortDirection === 'ascending' ? result : -result;
     });
   });
+
   const expandedIndex = $derived(
     rowDetail && expandedRow !== undefined
       ? ordered.findIndex((row) => row[rowKey] === expandedRow)
@@ -90,16 +95,24 @@
   }
 
   function sort(column: TableColumn) {
-    sortDirection =
-      sortKey === column.key
-        ? sortDirection === 'ascending'
-          ? 'descending'
-          : 'ascending'
-        : column.numeric
-          ? 'descending'
-          : 'ascending';
+    if (sortKey === column.key) {
+      sortDirection = sortDirection === 'ascending' ? 'descending' : 'ascending';
+    } else {
+      sortDirection = column.numeric ? 'descending' : 'ascending';
+    }
+
     sortKey = column.key;
     if (maxHeight || fill) container?.scrollTo({ top: 0 });
+  }
+
+  function columnSort(column: TableColumn): 'ascending' | 'descending' | 'none' | undefined {
+    if (column.sortable === false) return undefined;
+    return sortKey === column.key ? sortDirection : 'none';
+  }
+
+  function sortIndicator(column: TableColumn): string {
+    if (sortKey !== column.key) return '↕';
+    return sortDirection === 'ascending' ? '↑' : '↓';
   }
 </script>
 
@@ -127,11 +140,7 @@
             class:numeric={column.numeric}
             scope="col"
             aria-label={column.label}
-            aria-sort={column.sortable === false
-              ? undefined
-              : sortKey === column.key
-                ? sortDirection
-                : 'none'}
+            aria-sort={columnSort(column)}
           >
             {#if column.sortable === false}
               {column.label}
@@ -142,10 +151,11 @@
               >
                 {column.label}
                 <span aria-hidden="true">
-                  {sortKey === column.key ? (sortDirection === 'ascending' ? '↑' : '↓') : '↕'}
+                  {sortIndicator(column)}
                 </span>
               </button>
-            {/if}{#if columnHelp?.[column.label]}
+            {/if}
+            {#if columnHelp?.[column.label]}
               <span class="column-help">
                 <InspectPopover
                   label={'About ' + column.label}
@@ -161,7 +171,8 @@
                   <p>{columnHelp[column.label]}</p>
                 </InspectPopover>
               </span>
-            {/if}{@render columnHeader?.(column)}
+            {/if}
+            {@render columnHeader?.(column)}
           </th>
         {/each}
       </tr>

@@ -2,11 +2,11 @@
   import type { ProfileVeteran } from '../../profile-repository';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
   import type { LineageBranch, LineageNodeData } from '@/components/lineage/lineage-types';
-  import type { SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
-  import { loadRaceHistory, type RaceHistoryEntry } from '@/lib/catalog/race-catalog';
+  import type { SkillData } from '@/lib/game-data/skills/skills';
+  import { loadRaceHistory, type RaceHistoryEntry } from '@/lib/game-data/racing/races';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import Button from '@/components/controls/Button.svelte';
-  import { veteranDatabaseUrl } from '@/lib/veterans/veteran-links';
+  import { veteranDatabaseUrl } from '@/lib/veterans/records/veteran-links';
   import ProfileVeteranIdentity from '../ProfileVeteranIdentity.svelte';
   import ProfileVeteranDetails from './ProfileVeteranDetails.svelte';
   import { simulatorUmaFromVeteran } from '@/pages/simulator/simulator-uma';
@@ -23,7 +23,7 @@
   }: {
     veteran: ProfileVeteran;
     summary: VeteranUiRecord;
-    skillCatalog: Map<number, SkillCatalogEntry>;
+    skillCatalog: Map<number, SkillData>;
     family?: { root: LineageNodeData; branches: LineageBranch[] };
     accountId?: string;
     open?: boolean;
@@ -72,6 +72,7 @@
       scheduleOpen = false;
       return;
     }
+
     let active = true;
     races = [];
     raceError = '';
@@ -86,6 +87,7 @@
       .finally(() => {
         if (active) raceLoading = false;
       });
+
     return () => {
       active = false;
     };
@@ -104,6 +106,7 @@
     } catch {
       /* Legacy transfer is best effort. */
     }
+
     window.open('/tools/lineage-planner?from=profile', '_blank', 'noopener');
   }
 </script>

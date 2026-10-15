@@ -11,7 +11,7 @@
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
-  import { memberProgressionOption } from '../club-chart';
+  import { memberProgressionOption } from '../charts/club-chart';
   import { theme } from '@/stores/theme';
 
   const legendHelpId = $props.id();
@@ -35,14 +35,17 @@
 
   let hidden = $state<number[]>([]),
     savedHidden = $state<number[] | null>(null);
+
   let isolated = $state<number>(),
     highlighted = $state<number>();
+
   let chartHeight = $state(400),
     calendarWidth = $state(800);
 
   const progression = $derived(
     buildMemberProgression(snapshots, year, month, includePrior, mode, search)
   );
+
   const weeks = $derived(buildClubCalendar(snapshots, year, month, search));
   const scale = $derived(Math.min(1, Math.max(0.5, calendarWidth / 800)));
   const option = $derived(

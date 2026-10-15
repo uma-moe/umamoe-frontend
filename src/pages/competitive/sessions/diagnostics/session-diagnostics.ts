@@ -1,11 +1,11 @@
-import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
+import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 import {
   diagnosticHorse,
   diagnosticLabel,
   lastSpurtResult,
   runnerHpResult
-} from '@/lib/race/race-diagnostics';
-import { formatRaceTime } from '@/lib/race/race-display';
+} from '@/lib/race/capture/race-diagnostics';
+import { formatRaceTime } from '@/lib/race/replay/race-display';
 
 export type DiagnosticEntry = ReturnType<typeof diagnosticEntries>[number];
 
@@ -25,6 +25,7 @@ export function outcomeRow(e: DiagnosticEntry, pending: boolean) {
   const h = e.horse,
     spurtResult = lastSpurtResult(e.capture, e.runner.index),
     hp = runnerHpResult(e.capture, e.runner.index);
+
   return {
     id: e.key,
     name: e.runner.name,
@@ -43,7 +44,7 @@ export function outcomeRow(e: DiagnosticEntry, pending: boolean) {
       e.runner.result?.startDelayTime !== undefined ? e.runner.result.startDelayTime * 1000 : '—',
     delayed: Number(
       h?.lostStartAccelerationFrame === true ||
-        (!!e.runner.result && (e.runner.result.startDelayTime ?? 0) >= 0.08)
+        (e.runner.result != null && (e.runner.result.startDelayTime ?? 0) >= 0.08)
     ),
     blocked: h?.frontBlockSpans?.reduce((sum, s) => sum + s.endTime - s.startTime, 0) ?? '—',
     source: h ? 'Detailed' : pending ? 'Processing' : 'Unavailable'
@@ -62,6 +63,7 @@ export function diagnosticModes(measured: DiagnosticEntry[]) {
       traces: { race: number; runner: number; name: string; start: number; end: number }[];
     }
   >();
+
   for (const e of measured)
     for (const [key, flag] of Object.entries(e.capture.detailed?.annotations.flags ?? {})) {
       const spans = e.horse!.spans.filter((s) => (s.mask & flag) !== 0);
@@ -74,6 +76,7 @@ export function diagnosticModes(measured: DiagnosticEntry[]) {
         entries: new Set(),
         traces: []
       };
+
       for (const span of spans) {
         row.duration += span.endTime - span.startTime;
         row.periods++;
@@ -85,8 +88,10 @@ export function diagnosticModes(measured: DiagnosticEntry[]) {
           end: span.endTime
         });
       }
+
       row.entries.add(e.key);
       totals.set(key, row);
     }
+
   return [...totals.values()];
 }

@@ -24,6 +24,7 @@
     'Characters in (Special Week, Silence Suzuka)',
     'Support card = Kitasan Black [SSR] (Speed) and limitbreak >= 4'
   ];
+
   const threeWayMatchDocSnippets = [
     'Main has all (Groundwork, Ignited Spirit WIT) and GP1 has all (Groundwork, Ignited Spirit WIT) and GP2 has all (Groundwork, Ignited Spirit WIT)'
   ];

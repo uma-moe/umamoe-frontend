@@ -32,6 +32,7 @@
       const key = item.group ?? 'General';
       grouped.set(key, [...(grouped.get(key) ?? []), item]);
     }
+
     return [...grouped.entries()].map(([groupLabel, groupItems]) => ({
       label: groupLabel,
       items: groupItems

@@ -9,6 +9,7 @@ describe('rank parity helpers', () => {
     expect(getRankInfo(98).label).toBe('US9');
     expect(getRankInfoFromLabel('UE1').iconIndex).toBe(39);
   });
+
   it('maps labels and score thresholds', () => {
     expect(getRankInfoFromLabel('UE1').label).toBe('UE1');
     expect(getRankInfoFromScore(28800).label).toBe('UE0');

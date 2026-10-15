@@ -1,39 +1,40 @@
-import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-import { raceFrameAtTime } from '@/lib/race/race-replay';
+import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+import { raceFrameAtTime } from '@/lib/race/replay/race-replay';
 import {
   diagnosticHorse,
   modeDuration,
   lastSpurtResult,
   runnerHpResult
-} from '@/lib/race/race-diagnostics';
-import { runningStyleName } from '@/lib/race/race-display';
-import { skillPointTotal, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
+} from '@/lib/race/capture/race-diagnostics';
+import { runningStyleName } from '@/lib/race/replay/race-display';
+import { skillPointTotal, type SkillData } from '@/lib/game-data/skills/skills';
 
 export const n = (v: unknown, digits = 2) =>
   typeof v === 'number' && Number.isFinite(v) ? v.toFixed(digits) : '—';
 
-export function raceResultRows(
-  capture: ParsedRaceCapture,
-  catalog: Map<number, SkillCatalogEntry>
-) {
+export function raceResultRows(capture: ParsedRaceCapture, catalog: Map<number, SkillData>) {
   return [...capture.runners]
     .sort((a, b) => (a.result?.finishOrder ?? 99) - (b.result?.finishOrder ?? 99))
     .map((r, place) => {
       const h = diagnosticHorse(capture, r.index),
         result = r.result,
         hpResult = runnerHpResult(capture, r.index);
+
       const end =
         result?.finishTimeRaw && result.finishTimeRaw > 0
           ? result.finishTimeRaw
           : result?.finishTime;
+
       const exhausted = capture.frames.find((f) => (f.horses[r.index]?.hp ?? 1) <= 0);
       const previousRunner = capture.runners.find(
           (other) => other.result?.finishOrder === (result?.finishOrder ?? 0) - 1
         ),
         previous = previousRunner?.result;
+
       const previousTime = previous?.finishTimeRaw ?? previous?.finishTime;
       const priorFinish =
         previousTime === undefined ? undefined : raceFrameAtTime(capture.frames, previousTime);
+
       const recordedGap =
         priorFinish && previousRunner
           ? Math.max(
@@ -42,8 +43,13 @@ export function raceResultRows(
                 (priorFinish.horses[r.index]?.distance ?? 0)
             )
           : undefined;
+
       const spurtResult = lastSpurtResult(capture, r.index),
         flags = capture.detailed?.annotations.flags;
+
+      let startStatus = h ? 'Normal' : '';
+      if (h?.lostStartAccelerationFrame) startStatus = 'Lost acceleration frame';
+      else if ((result?.startDelayTime ?? 0) >= 0.08) startStatus = 'Late start';
       return {
         id: r.index,
         place: result?.finishOrder ?? place + 1,
@@ -53,13 +59,7 @@ export function raceResultRows(
         gap: h ? (h.finishDistanceToPrevious ?? '—') : (recordedGap ?? '—'),
         style: runningStyleName(result?.runningStyle),
         delay: result?.startDelayTime !== undefined ? result.startDelayTime * 1000 : '—',
-        late: h?.lostStartAccelerationFrame
-          ? 'Lost acceleration frame'
-          : (result?.startDelayTime ?? 0) >= 0.08
-            ? 'Late start'
-            : h
-              ? 'Normal'
-              : '',
+        late: startStatus,
         spurt: spurtResult.delay ?? '—',
         hp: hpResult.finish ?? '—',
         startHp: hpResult.start ?? '—',

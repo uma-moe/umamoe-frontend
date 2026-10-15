@@ -1,7 +1,7 @@
 <script lang="ts">
   import { authReady, authUser } from '@/services/auth/auth-state';
   import { activeWorkspace, workspaces } from '@/lib/workspaces/workspace-state';
-  import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import Button from '@/components/controls/Button.svelte';
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
@@ -23,7 +23,7 @@
     room = 18
   }: {
     open?: boolean;
-    course?: CourseCatalogEntry;
+    course?: RaceCourse;
     onselect?: (uma: SimulatorUma) => void;
     /** Takes several at once; the dialog then ticks instead of choosing on click. */
     onselectMany?: (umas: SimulatorUma[]) => void;
@@ -37,8 +37,9 @@
     loading = $state(false),
     missing = $state(0),
     selected = $state<string[]>([]);
+
   let entries = $state.raw<VeteranEntry[]>([]);
-  const multi = $derived(!!onselectMany);
+  const multi = $derived(Boolean(onselectMany));
   const fitCourse = $derived(course ?? selectedCourse());
 
   $effect(() => {
@@ -67,6 +68,7 @@
       .finally(() => {
         if (active) loading = false;
       });
+
     return () => {
       active = false;
     };
@@ -76,6 +78,7 @@
     onselect?.(placeVeteran(entry));
     open = false;
   }
+
   function addSelected() {
     const byKey = new Map(entries.map((entry) => [entry.key, entry]));
     onselectMany?.(
@@ -84,6 +87,7 @@
         return entry ? [placeVeteran(entry)] : [];
       })
     );
+
     open = false;
   }
 </script>

@@ -173,11 +173,15 @@ export function buildStaminaRequest(form: StaminaForm) {
  * Normalizes effect rows: keeps every trigger on the course and before the
  * finish, clamps counts/percentages and drops rows that cannot trigger.
  */
-function buildEffects(effects: Array<StaminaEffectInput>, courseDistanceM?: number): Array<StaminaEffect> {
+function buildEffects(
+  effects: Array<StaminaEffectInput>,
+  courseDistanceM?: number
+): Array<StaminaEffect> {
   const finish =
     courseDistanceM !== undefined && Number.isFinite(courseDistanceM) && courseDistanceM > 0
       ? courseDistanceM
       : Number.POSITIVE_INFINITY;
+
   const built: Array<StaminaEffect> = [];
   let triggers = 0;
 
@@ -211,11 +215,15 @@ function buildEffects(effects: Array<StaminaEffectInput>, courseDistanceM?: numb
  * Normalizes distance windows: drops rows without a real window, clamps every addition and keeps a sampled start before
  * the finish.
  */
-function buildStates(states: Array<StaminaStateInput>, courseDistanceM?: number): Array<StaminaState> {
+function buildStates(
+  states: Array<StaminaStateInput>,
+  courseDistanceM?: number
+): Array<StaminaState> {
   const finish =
     courseDistanceM !== undefined && Number.isFinite(courseDistanceM) && courseDistanceM > 0
       ? courseDistanceM
       : Number.POSITIVE_INFINITY;
+
   const built: Array<StaminaState> = [];
 
   for (const state of states) {
@@ -236,20 +244,32 @@ function buildStates(states: Array<StaminaStateInput>, courseDistanceM?: number)
     if (state.targetSpeedAddMps !== undefined && Number.isFinite(state.targetSpeedAddMps)) {
       body.target_speed_add_mps = clampNumber(state.targetSpeedAddMps, -30, 30, 0);
     }
+
     if (state.currentSpeedAddMps !== undefined && Number.isFinite(state.currentSpeedAddMps)) {
       body.current_speed_add_mps = clampNumber(state.currentSpeedAddMps, -30, 30, 0);
     }
+
     if (state.accelerationAddMps2 !== undefined && Number.isFinite(state.accelerationAddMps2)) {
       body.acceleration_add_mps2 = clampNumber(state.accelerationAddMps2, -30, 30, 0);
     }
-    if (state.hpConsumptionMultiplier !== undefined && Number.isFinite(state.hpConsumptionMultiplier)) {
+
+    if (
+      state.hpConsumptionMultiplier !== undefined &&
+      Number.isFinite(state.hpConsumptionMultiplier)
+    ) {
       body.hp_consumption_multiplier = clampNumber(state.hpConsumptionMultiplier, 0, 10, 1);
     }
+
     if (state.chance !== undefined && Number.isFinite(state.chance) && state.chance < 1) {
       body.chance = clampNumber(state.chance, 0, 1, 1);
     }
+
     const room = Math.max(0, finish - 1 - state.startDistanceM);
-    if (state.startSpreadM !== undefined && Number.isFinite(state.startSpreadM) && state.startSpreadM > 0) {
+    if (
+      state.startSpreadM !== undefined &&
+      Number.isFinite(state.startSpreadM) &&
+      state.startSpreadM > 0
+    ) {
       body.start_spread_m = Math.min(state.startSpreadM, room);
     }
 
@@ -263,6 +283,7 @@ function raceTypeValue(raceType: number | undefined): number {
   if (raceType !== undefined && RACE_TYPES.some((candidate) => candidate === raceType)) {
     return raceType;
   }
+
   return 0;
 }
 

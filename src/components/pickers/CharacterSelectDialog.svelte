@@ -37,15 +37,13 @@
     onselect
   }: Props = $props();
 
-  const title = $derived(
-    multiple
-      ? mode === 'include'
-        ? 'Include Characters'
-        : mode === 'exclude'
-          ? 'Exclude Characters'
-          : 'Select Characters'
-      : 'Select Character'
-  );
+  const modeIcons = { target: 'user', include: 'add', exclude: 'minus' } as const;
+  const title = $derived.by(() => {
+    if (!multiple) return 'Select Character';
+    if (mode === 'include') return 'Include Characters';
+    if (mode === 'exclude') return 'Exclude Characters';
+    return 'Select Characters';
+  });
 
   function select(values: string[]) {
     selected = values;
@@ -68,7 +66,7 @@
     {id}
     bind:open
     {title}
-    icon={mode === 'include' ? 'add' : mode === 'exclude' ? 'minus' : 'user'}
+    icon={modeIcons[mode]}
     maxWidth="600px"
     mobileMaxHeight="calc(100dvh - 48px)"
     mobileInset="16px"

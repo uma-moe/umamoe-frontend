@@ -19,6 +19,7 @@ export function sectionChartOption(
     speedMin + 0.5,
     Math.ceil(Math.max(...sectionRows.map((row) => row.speed)) * 2) / 2
   );
+
   const xAxis = {
     type: 'category' as const,
     data: sectionRows.map((row) => row.section),
@@ -28,10 +29,12 @@ export function sectionChartOption(
     axisPointer: { type: 'line' as const, lineStyle: { color: text, type: 'dashed' as const } },
     splitLine: { show: false }
   };
+
   const rngPoints = sectionRows.map((row) => ({
     value: row.rng,
     itemStyle: { color: row.rng > 0 ? '#87ceab' : row.rng < 0 ? '#ed8d8d' : text }
   }));
+
   return {
     animation: false,
     aria: { enabled: true },
@@ -45,6 +48,7 @@ export function sectionChartOption(
       textStyle: { fontSize: 11 },
       formatter: (params: unknown) => {
         const point = (Array.isArray(params) ? params[0] : params) as { dataIndex: number };
+
         const row = sectionRows[point.dataIndex];
         return row
           ? `<strong>Section ${row.section}</strong><br>${row.phase}<br>${number(row.start)}–${number(row.end)} m<br>Target speed: ${row.speed.toFixed(2)} m/s<br>RNG: ${signed(row.rng)}%${row.rng === 0 ? '' : row.rng > 0 ? ' (faster)' : ' (slower)'}`

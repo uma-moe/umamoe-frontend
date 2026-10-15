@@ -1,17 +1,17 @@
 import type { Toast } from '@/components/feedback/ToastRegion.svelte';
-import { loadG1SaddleGroups } from '@/lib/catalog/race-catalog';
-import { VeteranAffinityEngine } from '@/lib/veterans/affinity-engine';
-import { veteranAffinityRepository } from '@/lib/veterans/affinity-repository';
-import { parentAffinity, parentCharacter } from '@/lib/veterans/parent-picker';
-import { normalizeVeteranRecord } from '@/lib/veterans/veteran-normalizer';
-import type { DatabaseCatalogs } from './database-catalogs.svelte';
+import { loadG1SaddleGroups } from '@/lib/game-data/racing/races';
+import { VeteranAffinityEngine } from '@/lib/veterans/affinity/affinity-engine';
+import { veteranAffinityRepository } from '@/lib/veterans/affinity/affinity-repository';
+import { parentAffinity, parentCharacter } from '@/lib/veterans/parents/parent-picker';
+import { normalizeVeteranRecord } from '@/lib/veterans/records/veteran-normalizer';
+import type { DatabaseGameData } from './data/database-game-data.svelte';
 import { legacyVeteranView } from './database-legacy';
 import type { DatabaseFilters } from './search/database-filters.svelte';
 
 export interface DatabaseAffinitySource {
   filters: DatabaseFilters;
-  catalogs: DatabaseCatalogs;
-  factorCatalog: () => unknown;
+  gameData: DatabaseGameData;
+  factorLoadingState: () => unknown;
   notify: (title: string, tone?: Toast['tone']) => void;
 }
 
@@ -24,15 +24,17 @@ export class DatabaseAffinity {
   #source: DatabaseAffinitySource;
 
   partner = $derived.by(() => {
-    const { filters, catalogs } = this.#source;
+    const { filters, gameData } = this.#source;
     const selectedParent = filters.selectedParent;
     if (selectedParent) {
       const { cardId } = parentCharacter(
         selectedParent,
-        new Map(catalogs.selectableCharacters.map((character) => [Number(character.id), character]))
+        new Map(gameData.selectableCharacters.map((character) => [Number(character.id), character]))
       );
+
       return cardId ? normalizeVeteranRecord({ ...selectedParent, card_id: cardId }) : undefined;
     }
+
     const characterId = filters.values.p2MainCharaId;
     if (!characterId) return undefined;
     return normalizeVeteranRecord({
@@ -40,25 +42,27 @@ export class DatabaseAffinity {
       win_saddle_id_array: filters.values.p2WinSaddle
     });
   });
+
   aceOptions = $derived.by(() => {
-    const { filters, catalogs } = this.#source;
+    const { filters, gameData } = this.#source;
     const selectedParent = filters.selectedParent;
     const engine = this.engine;
     return selectedParent && engine
-      ? catalogs.characterOptions.map((option) => ({
+      ? gameData.characterOptions.map((option) => ({
           ...option,
           affinity: parentAffinity(selectedParent, Number(option.id), engine, this.raceGroups)
         }))
-      : catalogs.characterOptions;
+      : gameData.characterOptions;
   });
+
   veteranView = $derived.by(() => {
-    const { filters, catalogs } = this.#source;
-    this.#source.factorCatalog();
+    const { filters, gameData } = this.#source;
+    this.#source.factorLoadingState();
     if (!filters.selectedParent || !this.partner) return undefined;
     return legacyVeteranView(
       filters.selectedParent,
       this.partner,
-      catalogs.characters,
+      gameData.characters,
       filters.values.playerCharaId,
       this.engine,
       this.raceGroups

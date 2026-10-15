@@ -28,17 +28,17 @@
 
   const imageSource = $derived(useFallback ? fallbackSrc : src);
 
+  function imageError() {
+    if (fallbackSrc && !useFallback) useFallback = true;
+    else failed = true;
+  }
+
   $effect(() => {
     src;
     fallbackSrc;
     failed = false;
     useFallback = false;
   });
-
-  function imageError() {
-    if (fallbackSrc && !useFallback) useFallback = true;
-    else failed = true;
-  }
 </script>
 
 <figure class="art art--{kind} art--{size} art--{shape}">

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { raceMetricHelp } from '@/lib/race/race-diagnostics';
+  import { raceMetricHelp } from '@/lib/race/capture/race-diagnostics';
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
 

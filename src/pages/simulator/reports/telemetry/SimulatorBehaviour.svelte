@@ -17,13 +17,16 @@
       const diagnostics = result.report?.runners.find(
         (row) => row.source_input_index === source
       )?.diagnostics;
+
       if (!diagnostics?.length) return [];
       const share = (
         test: (value: number) => boolean,
         key: 'blocked_seconds' | 'rushed_seconds' | 'spot_struggle_seconds' | 'duel_seconds'
       ) => (diagnostics.filter((row) => test(row[key])).length / diagnostics.length) * 100;
+
       const whenHappened = (key: 'blocked_seconds' | 'rushed_seconds') =>
         reportMean(diagnostics.filter((row) => row[key] > 0).map((row) => row[key]));
+
       return [
         {
           source,
@@ -41,17 +44,31 @@
       ];
     })
   );
+
   // A state none of the runners shown ever gets into is left out rather than shown as a column of zeros.
   const states = $derived(
     (['fights', 'duels'] as const).filter((key) => rows.some((row) => row[key] > 0))
   );
+
   const stateLabel = { fights: 'Position fight', duels: 'Duel' } as const;
   const peak = (key: 'blocked' | 'rushed' | 'fights' | 'duels') =>
     Math.max(1, ...rows.map((row) => row[key]));
+
   const seconds = (value: number | undefined, digits = 1) =>
     value == null ? '—' : value.toFixed(digits) + ' s';
-  const percent = (value: number) =>
-    value <= 0 ? '0%' : value < 1 ? '<1%' : Math.round(value) + '%';
+
+  const percent = (value: number) => {
+    if (value <= 0) {
+      return '0%';
+    }
+
+    if (value < 1) {
+      return '<1%';
+    }
+
+    return Math.round(value) + '%';
+  };
+
   const place = (value: number | undefined) => (value == null ? '—' : value.toFixed(1));
 </script>
 

@@ -1,4 +1,4 @@
-export type MasterDataRow = Record<string, string | number>;
+export type MasterDataRow = Record<string, string | number | Uint8Array>;
 
 export function downloadRows(rows: MasterDataRow[], columns: string[], format: 'json' | 'csv') {
   const escape = (value: unknown) => `"${String(value).replaceAll('"', '""')}"`;
@@ -9,9 +9,11 @@ export function downloadRows(rows: MasterDataRow[], columns: string[], format: '
           columns.map(escape).join(','),
           ...rows.map((row) => columns.map((column) => escape(row[column])).join(','))
         ].join('\r\n');
+
   const url = URL.createObjectURL(
     new Blob([content], { type: format === 'json' ? 'application/json' : 'text/csv' })
   );
+
   const link = document.createElement('a');
   link.href = url;
   link.download = `master-data.${format}`;

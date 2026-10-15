@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { characterImagePath, type CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
-  import { factorCatalogState, factorOptions } from '@/lib/catalog/factor-catalog';
+  import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
+  import { factorLoadingState, factorOptions } from '@/lib/game-data/factors/factors';
   import AffinityPicker from '@/components/pickers/AffinityPicker.svelte';
-  import ResourceStatus from '@/components/feedback/ResourceStatus.svelte';
+  import ResourceLoadStatus from '@/components/feedback/ResourceLoadStatus.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
@@ -31,7 +31,7 @@
     query: RosterQuery;
     picks: RosterCharacters;
     collection: RosterCollection;
-    characters: Map<number, CharacterCatalogEntry>;
+    characters: Map<number, CharacterData>;
   }
 
   let { filters, view, query, picks, collection, characters }: Props = $props();
@@ -211,7 +211,7 @@
         id="facet-factors"
         aria-label="Inheritance spark filters"
       >
-        <ResourceStatus {...$factorCatalogState} /><ProfileVeteranSparkMatcher
+        <ResourceLoadStatus {...$factorLoadingState} /><ProfileVeteranSparkMatcher
           bind:filters={filters.selectedFactors}
           bind:category={filters.factorCategory}
           {characters}

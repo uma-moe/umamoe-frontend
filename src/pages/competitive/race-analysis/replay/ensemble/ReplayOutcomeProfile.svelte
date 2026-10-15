@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { raceDistanceSpread } from '@/lib/race/race-ensemble';
+  import type { raceDistanceSpread } from '@/lib/race/replay/race-ensemble';
   import { courseSegments, type Course } from '../replay-course';
 
   let {
@@ -35,6 +35,7 @@
         counts[Math.min(35, Math.floor(((value - low) / (high - low)) * 36))]!++;
     return counts;
   });
+
   const peak = $derived(Math.max(1, ...bins));
   const outline = $derived(
     'M0,66 ' +
@@ -46,6 +47,7 @@
         .join(' ') +
       ' L600,66'
   );
+
   const rows = $derived([
     { label: 'Sections', segments: courseSegments(course).map((s) => ({ ...s, title: s.label })) },
     {

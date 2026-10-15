@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import Button from '@/components/controls/Button.svelte';
   import ToggleButton from '@/components/controls/ToggleButton.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';

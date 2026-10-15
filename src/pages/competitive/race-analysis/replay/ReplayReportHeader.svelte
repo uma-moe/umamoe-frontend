@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-  import { formatRaceTime, trackDetailName } from '@/lib/race/race-display';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import { formatRaceTime, trackDetailName } from '@/lib/race/replay/race-display';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import type { Course, CourseData } from './replay-course';

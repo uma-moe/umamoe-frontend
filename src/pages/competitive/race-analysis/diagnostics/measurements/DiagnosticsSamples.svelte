@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { raceMetricHelp } from '@/lib/race/race-diagnostics';
+  import { raceMetricHelp } from '@/lib/race/capture/race-diagnostics';
   import DataTable from '@/components/data/DataTable.svelte';
   import Button from '@/components/controls/Button.svelte';
   import {
@@ -28,6 +28,7 @@
       ...sampleRows.map((row) => (typeof row.targetSpeed === 'number' ? row.targetSpeed : 0))
     )
   );
+
   const accelerationLimit = $derived(
     Math.max(
       1,
@@ -36,6 +37,7 @@
       )
     )
   );
+
   const sectionRngLimit = $derived(rngLimit(sectionRows));
 </script>
 

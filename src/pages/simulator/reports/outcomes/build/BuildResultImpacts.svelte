@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from '@/components/Icon.svelte';
-  import { skillImage } from '@/lib/catalog/skill-catalog';
+  import { skillImage } from '@/lib/game-data/skills/skills';
   import type { OptimizeEstimate, OptimizeScreenStats } from '../../../simulator-repository';
   import {
     amount,
@@ -27,10 +27,12 @@
   let { impacts, inert, bought, field, screen, seeds }: Props = $props();
 
   /** The impacts carry what real CM races say about each skill. */
-  const evidence = $derived(impacts.some((impact) => !!impact.evidence));
+  const evidence = $derived(impacts.some((impact) => Boolean(impact.evidence)));
   const short = (estimate: OptimizeEstimate) => stoppedShort(estimate, seeds);
   const anyShort = $derived(
-    impacts.some((impact) => short(impact.alone) || (!!impact.together && short(impact.together)))
+    impacts.some(
+      (impact) => short(impact.alone) || (impact.together != null && short(impact.together))
+    )
   );
 </script>
 

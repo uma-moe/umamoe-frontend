@@ -24,9 +24,11 @@
   const estimated = $derived(rows.filter((row) => row.needed && row.stamina !== undefined));
   const axis = $derived.by(() => {
     if (!estimated.length) return { min: 0, max: 1 };
+
     const low = Math.min(...estimated.flatMap((row) => [row.needed!.p10, row.stamina!])),
       high = Math.max(...estimated.flatMap((row) => [row.needed!.p90, row.stamina!])),
       pad = Math.max(10, (high - low) * 0.06);
+
     return { min: Math.max(0, low - pad), max: high + pad };
   });
 
@@ -37,6 +39,7 @@
     const span = axis.max - axis.min,
       most = Math.max(2, Math.min(6, Math.floor(axisWidth / 70))),
       step = [25, 50, 100, 200, 250, 500].find((value) => span / value <= most) ?? 500;
+
     return Array.from(
       { length: Math.floor(axis.max / step) - Math.ceil(axis.min / step) + 1 },
       (_, index) => (Math.ceil(axis.min / step) + index) * step
@@ -47,6 +50,7 @@
   const style = (source: number) => runnerStyle(umas[source]!);
   const short = (row: StaminaRunner) =>
     row.needed && row.stamina !== undefined && row.needed.median > row.stamina;
+
   const staminaTitle = (row: StaminaRunner) =>
     row.needed
       ? name(row.source) +
@@ -62,6 +66,7 @@
         percent(row.covered) +
         ' of races'
       : '';
+
   const spurtTitle = (row: StaminaRunner) =>
     row.spurt
       ? name(row.source) +

@@ -5,12 +5,12 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import ScenarioMultiSelect from '@/components/pickers/ScenarioMultiSelect.svelte';
   import ToggleButton from '@/components/controls/ToggleButton.svelte';
-  import ResourceStatus from '@/components/feedback/ResourceStatus.svelte';
-  import { factorCatalogState } from '@/lib/catalog/factor-catalog';
+  import ResourceLoadStatus from '@/components/feedback/ResourceLoadStatus.svelte';
+  import { factorLoadingState } from '@/lib/game-data/factors/factors';
   import type {
     InheritanceFilterMode,
     InheritanceSearchFilters
-  } from '@/lib/inheritance/inheritance-search';
+  } from '@/lib/inheritance/search/inheritance-search';
   import FactorFilterEditor from './factors/FactorFilterEditor.svelte';
   import DatabaseFilterGroup from './DatabaseFilterGroup.svelte';
   import DatabaseWhiteCategoryFilter, {
@@ -50,6 +50,7 @@
     raceCount: filters.minRaceWhiteCount,
     raceStars: filters.minRaceWhiteStarsSum
   });
+
   const mainWhiteCategories = $derived<WhiteCategoryValues>({
     commonCount: filters.minMainCommonWhiteCount,
     commonStars: filters.minMainCommonWhiteStarsSum,
@@ -74,17 +75,18 @@
   ): void {
     const keys =
       scope === 'main'
-        ? {
+        ? ({
             common: { count: 'minMainCommonWhiteCount', stars: 'minMainCommonWhiteStarsSum' },
             scenario: { count: 'minMainScenarioWhiteCount', stars: 'minMainScenarioWhiteStarsSum' },
             race: { count: 'minMainRaceWhiteCount', stars: 'minMainRaceWhiteStarsSum' }
-          }
-        : {
+          } as const)
+        : ({
             common: { count: 'minCommonWhiteCount', stars: 'minCommonWhiteStarsSum' },
             scenario: { count: 'minScenarioWhiteCount', stars: 'minScenarioWhiteStarsSum' },
             race: { count: 'minRaceWhiteCount', stars: 'minRaceWhiteStarsSum' }
-          };
-    (filters as unknown as Record<string, unknown>)[keys[category][metric]] = value;
+          } as const);
+
+    filters[keys[category][metric]] = value;
     onchange();
   }
 
@@ -101,7 +103,7 @@
   <h3 id="property-filter-title">
     {filterMode === 'basic' ? 'Basic Criteria' : 'Property Filters'}
   </h3>
-  <ResourceStatus {...$factorCatalogState} />
+  <ResourceLoadStatus {...$factorLoadingState} />
   <div
     class="property-grid"
     class:basic={filterMode === 'basic'}

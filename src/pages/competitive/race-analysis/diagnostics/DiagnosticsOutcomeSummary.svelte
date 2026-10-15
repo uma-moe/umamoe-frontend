@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-  import { lastSpurtResult, type HorseDiagnostics } from '@/lib/race/race-diagnostics';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import { lastSpurtResult, type HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
   import DiagnosticsMetricHelp from './DiagnosticsMetricHelp.svelte';
   import { number } from './diagnostics-format';
 

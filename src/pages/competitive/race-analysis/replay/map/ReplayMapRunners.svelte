@@ -1,7 +1,7 @@
 <svelte:options namespace="svg" />
 
 <script lang="ts">
-  import type { RaceEvent, RaceRunner } from '@/lib/race/race-capture-parser';
+  import type { RaceEvent, RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import Artwork from '@/components/game/Artwork.svelte';
   import { portrait } from '@/pages/competitive/analysis-view';
   import { crowdedCallouts, dotRadius, placeCaptions, type MapCallout } from './course-map-labels';
@@ -52,6 +52,7 @@
       { width: mapWidth, height: mapHeight }
     )
   );
+
   const crowded = $derived(crowdedCallouts(callouts, labelSize, overlayHeight));
 </script>
 

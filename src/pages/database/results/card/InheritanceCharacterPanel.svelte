@@ -3,17 +3,20 @@
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import LimitBreak from '@/components/game/LimitBreak.svelte';
-  import type { FactorOwner, inheritanceAffinity } from '@/lib/inheritance/inheritance-factors';
-  import type { InheritanceRecord } from '@/lib/inheritance/inheritance-search';
-  import { supportCardImagePath } from '@/lib/catalog/support-card-catalog';
-  import type { CatalogEntry } from '../../catalog-repository';
+  import type {
+    FactorOwner,
+    inheritanceAffinity
+  } from '@/lib/inheritance/sparks/inheritance-factors';
+  import type { InheritanceRecord } from '@/lib/inheritance/search/inheritance-search';
+  import { supportCardImagePath } from '@/lib/game-data/support-cards/support-cards';
+  import type { GameDataEntry } from '@/lib/game-data/display-records';
 
   interface Props {
     record: InheritanceRecord;
-    main?: CatalogEntry;
-    left?: CatalogEntry;
-    right?: CatalogEntry;
-    support?: CatalogEntry;
+    main?: GameDataEntry;
+    left?: GameDataEntry;
+    right?: GameDataEntry;
+    support?: GameDataEntry;
     activeFocus?: FactorOwner;
     affinity: ReturnType<typeof inheritanceAffinity>;
     targetId?: number;

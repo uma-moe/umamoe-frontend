@@ -1,12 +1,12 @@
-import { factorOptions } from '@/lib/catalog/factor-catalog';
-import { loadRaceQueryValues, type RaceQueryValue } from '@/lib/catalog/race-catalog';
+import { factorOptions } from '@/lib/game-data/factors/factors';
+import { loadRaceQueryValues, type RaceQueryValue } from '@/lib/game-data/racing/races';
 import {
   activeVeteranFilterCount,
   computeVeteranStatBounds,
   type AncestorScope,
   type VeteranFactorFilter,
   type VeteranFilterState
-} from '@/lib/profile/profile-veterans';
+} from '@/lib/profile/veterans/profile-veterans';
 import type { ProfileVeteran } from '../../../profile-repository';
 import {
   allDistances,
@@ -165,6 +165,7 @@ export class RosterFilters {
       wizMin: this.wizMin,
       wizMax: this.wizMax
     };
+
     return values[`${field}${end ? 'Max' : 'Min'}`] ?? 0;
   }
 
@@ -199,31 +200,39 @@ export class RosterFilters {
       this.distance = [...allDistances];
       this.style = [...allStyles];
     }
+
     if (id === 'factors') {
       this.selectedFactors = [];
       this.factorCategory = 'all';
     }
+
     if (id === 'stats') {
       this.minTotal = 0;
       this.minSp = '';
       this.maxSp = '';
       this.resetStatRanges();
     }
+
     if (id === 'aptitudes') this.aptitudeFilters = {};
+
     if (id === 'skills') {
       this.selectedSkills = [];
       this.skillQuery = '';
     }
+
     if (id === 'parents') {
       this.include = {};
+
       this.exclude = {};
     }
+
     if (id === 'saddle') this.selectedRaceIds = [];
     if (id === 'database') {
       this.minAffinity = '';
       this.minWhites = '';
       this.scenarioFilter = '';
     }
+
     if (id === 'uql') {
       this.uql = '';
       this.appliedUql = '';
@@ -243,11 +252,14 @@ export class RosterFilters {
     this.style = [...allStyles];
     this.minTotal = 0;
     this.aptitudeFilters = {};
+
     this.selectedSkills = [];
     this.selectedFactors = [];
     this.selectedRaceIds = [];
     this.include = {};
+
     this.exclude = {};
+
     this.skillQuery = '';
     this.resetStatRanges();
   }
@@ -303,8 +315,7 @@ export class RosterFilters {
   }
 
   sortTable(field: CollectionSortField) {
-    this.sortDirection =
-      this.sortField === field && this.sortDirection === 'desc' ? 'asc' : 'desc';
+    this.sortDirection = this.sortField === field && this.sortDirection === 'desc' ? 'asc' : 'desc';
     this.sortField = field;
   }
 
@@ -316,11 +327,13 @@ export class RosterFilters {
   addAncestors(scope: AncestorScope, mode: 'include' | 'exclude', ids: number[]): void {
     const current = mode === 'include' ? this.include : this.exclude,
       opposite = mode === 'include' ? this.exclude : this.include;
+
     const next = { ...current, [scope]: [...new Set([...(current[scope] ?? []), ...ids])] },
       remaining = {
         ...opposite,
         [scope]: (opposite[scope] ?? []).filter((id) => !ids.includes(id))
       };
+
     if (mode === 'include') {
       this.include = next;
       this.exclude = remaining;
@@ -333,6 +346,7 @@ export class RosterFilters {
   removeAncestor(scope: AncestorScope, id: number, excluded = false): void {
     const target = excluded ? this.exclude : this.include;
     const next = { ...target, [scope]: (target[scope] ?? []).filter((value) => value !== id) };
+
     if (excluded) this.exclude = next;
     else this.include = next;
   }
@@ -349,6 +363,7 @@ export class RosterFilters {
     const saddles = new Set(
       (veteran.succession_chara_array ?? []).flatMap((node) => node.win_saddle_id_array ?? [])
     );
+
     return this.selectedRaceIds.some((raceId) =>
       (this.raceSaddleIndex.get(raceId) ?? []).some((saddle) => saddles.has(saddle))
     );

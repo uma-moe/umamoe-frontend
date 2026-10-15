@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { blockerAt } from '@/lib/race/race-diagnostics';
-  import { hpRemainingColor } from '@/lib/race/race-display';
+  import { blockerAt } from '@/lib/race/capture/race-diagnostics';
+  import { hpRemainingColor } from '@/lib/race/replay/race-display';
   import Artwork from '@/components/game/Artwork.svelte';
   import { portrait } from '@/pages/competitive/analysis-view';
   import { theme } from '@/stores/theme';
@@ -37,11 +37,13 @@
   const stageStart = $derived(
     Math.max(0, Math.min(...(replay.frame?.horses.map((h) => h.distance) ?? [0])))
   );
+
   const stageViewport = $derived(
     mapPrimary
       ? { min: stageStart, max: Math.max(stageStart + 1, replay.leader) }
       : positionViewport
   );
+
   const crowdedRunners = $derived.by(() => {
     const points = replay.capture.runners.flatMap((r) => {
       const h = replay.frame?.horses[r.index];
@@ -55,6 +57,7 @@
           ]
         : [];
     });
+
     return new Set(
       points
         .filter((a) =>

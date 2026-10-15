@@ -16,6 +16,29 @@ Crowded pages are organized by feature. A page file composes sections and coordi
 
 Domain code in `src/lib/` follows the same features (`lib/carat-planner/rewards/`, `lib/inheritance/uql/`). Services group by concern (`services/sentry/`, `services/analytics/`, `services/auth/`), and ad slots live in `layouts/ads/`.
 
+Existing feature folders also group their responsibilities internally:
+
+- `lib/veterans/`: `affinity/`, `sparks/`, `parents/`, `records/`, and `collection/`. Generated contracts remain in `generated/`.
+- `lib/carat-planner/`: `income/`, `gacha/`, `persistence/`, `presentation/`, and `rewards/`; projection, calendar, and ledger reference files remain at the root.
+- `lib/race/`: `capture/` for parsing and diagnostics, `replay/` for playback, ensembles, and display. Shared multi-race analysis remains at the root.
+- `lib/inheritance/`: `search/`, `sparks/`, and `uql/`.
+- `lib/profile/veterans/`: veteran display, measurements, and collection queries. General profile display stays at `lib/profile/`.
+- `lib/timeline/`: `board/`, `events/`, and `prediction/`.
+- `lib/game-data/`: `racing/`, `support-cards/`, `skills/`, and `factors/`, alongside shared character, scenario, and display records.
+- `services/site/` and `services/race/`: website information and race resimulation respectively; existing transport, authentication, caching, and provider folders retain their owners.
+- `pages/veterans/collection/` and `pages/clubs/charts/`: related components, calculations, tests, and styles stay together below their routed pages.
+
+Shared game resources have separate owners:
+
+- `services/resources/`: fetching, JSON/gzip decoding, manifest checks, persistent resource caching, and refresh notifications. `resourceCache` is the shared entry point.
+- `services/cache/`: the general request cache for concurrent requests and time-limited results.
+- `lib/game-data/`: character, skill, factor, race, course, support-card, and scenario data. Loaders have direct names such as `loadCharacters` and `loadSkills`; display records are shared here too.
+- `lib/game-assets/`: bundled item icons and timeline artwork lookups.
+- `lib/inheritance/uql/query-data.ts`: preparation of game data for query names and completion.
+- `pages/database/data/`: the database page's reactive game-data loading state.
+
+Keep resource URLs, backend artifact names, and persistent cache keys stable when renaming frontend modules. Imports point to their current owners rather than forwarding files at old locations.
+
 For example, `src/pages/settings/SettingsPage.svelte` handles authentication and composes linked accounts, connected logins, and API keys. Each settings component owns that feature's loading state, actions, and markup. Shared settings styles live beside them in `settings.css`, scoped under `.settings-page`.
 
 ## Component structure
@@ -23,6 +46,8 @@ For example, `src/pages/settings/SettingsPage.svelte` handles authentication and
 Read a component from top to bottom: imports, props and types, local state, derived values, event handlers, lifecycle hooks, markup, then its style block or stylesheet reference. Keep related feature code together so readers can follow its data flow without jumping around the file.
 
 Write nested elements, Svelte branches, and loops on separate lines. Expand event handlers with multiple statements and put each CSS declaration on its own line. Prettier handles indentation and wrapping; a multi-line Svelte branch stays multi-line.
+
+Leave one blank line after each completed logical block before the next statement or declaration. Within a function, group setup, execution, and cleanup with blank lines. Connected `else`, `catch`, and `finally` clauses remain together, as do object/array entries and closing delimiters.
 
 Keep a component when it is reused, owns meaningful behavior, or makes a large feature easier to follow. An independent section such as `database/filters/DatabasePropertyFilters.svelte` can own its controls and related state. Repeated markup with one owner, such as metric help in `ReplayDiagnostics.svelte`, belongs in a named local snippet. A component that only forwards props or wraps one element usually adds a file without helping the reader.
 
@@ -53,7 +78,7 @@ npm run check
 npm run test:run
 ```
 
-The formatting workflow checks Svelte files and styles on pull requests. For changes to page structure or interactions, also run the relevant tests in `tests/e2e/` on desktop and mobile:
+The formatting workflow checks authored TypeScript, Svelte files, and styles on pull requests; generated contracts are excluded. For changes to page structure or interactions, also run the relevant tests in `tests/e2e/` on desktop and mobile:
 
 ```sh
 npm run test:e2e -- tests/e2e/settings-parity.spec.ts tests/e2e/settings-concurrency.spec.ts --project=chromium --project=mobile-chromium

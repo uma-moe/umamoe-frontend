@@ -3,7 +3,7 @@
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import IconButton from '@/components/controls/IconButton.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
-  import { formatRaceTime } from '@/lib/race/race-display';
+  import { formatRaceTime } from '@/lib/race/replay/race-display';
   import SimulatorRunnerFace from '../SimulatorRunnerFace.svelte';
   import { runnerColor } from '../simulation-report';
   import type { MonteCarloResult } from '../../simulator-repository';
@@ -39,6 +39,7 @@
   const PAGE = 10;
   let view = $state('picks'),
     page = $state(0);
+
   const pages = $derived(Math.ceil(result.runs / PAGE));
   const races = $derived(
     Array.from(
@@ -46,15 +47,19 @@
       (_, index) => page * PAGE + index
     )
   );
+
   const KINDS = ['Typical', 'Fastest', 'Slowest'] as const;
   const name = (source: number) => umas[source]!.name;
   const time = (race: number, source: number) =>
     formatRaceTime(result.finish_times[race]?.[source], 2);
+
   const ordinal = (place: number) =>
     place +
     (['th', 'st', 'nd', 'rd'][place % 100 > 10 && place % 100 < 14 ? 0 : place % 10] ?? 'th');
+
   const place = (race: number, source: number) =>
     (result.finish_order[race]?.indexOf(source) ?? -1) + 1;
+
   // Jump the list to the page of a race opened from a quick pick, so it is highlighted there too.
   $effect(() => {
     if (active !== undefined) page = Math.floor(active / PAGE);

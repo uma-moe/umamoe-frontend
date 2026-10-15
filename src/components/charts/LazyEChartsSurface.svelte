@@ -39,7 +39,7 @@
     if (loading || Surface) return;
     loading = true;
     try {
-      Surface = (await import('./EChartsSurface.svelte')).default as Component<Props>;
+      Surface = (await import('./EChartsSurface.svelte')).default;
     } catch {
       failed = true;
     } finally {
@@ -52,6 +52,7 @@
       void load();
       return;
     }
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
@@ -61,6 +62,7 @@
       },
       { rootMargin: '240px' }
     );
+
     observer.observe(host);
     return () => observer.disconnect();
   });

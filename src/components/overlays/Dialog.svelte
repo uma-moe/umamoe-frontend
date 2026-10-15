@@ -72,6 +72,7 @@
     ) {
       returnFocus.focus({ preventScroll: true });
     }
+
     returnFocus = undefined;
   }
 
@@ -101,6 +102,7 @@
         document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
       element.showModal();
     }
+
     if ((!open || $privacyUiOpen) && element.open) closeElement();
   });
 </script>

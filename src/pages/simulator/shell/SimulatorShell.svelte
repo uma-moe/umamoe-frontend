@@ -9,7 +9,7 @@
   import { simulatorUmaSummary } from '../simulator-uma';
   import { simulatorRoster, ensureSimulatorRoster } from '../simulator-roster.svelte';
   import {
-    ensureSimulatorCatalog,
+    ensureSimulatorCourses,
     selectedCourse,
     simulatorSession
   } from '../simulator-session.svelte';
@@ -38,10 +38,11 @@
   );
 
   onMount(() => {
-    void ensureSimulatorCatalog();
+    void ensureSimulatorCourses();
     void ensureSimulatorRoster().catch(() => {
       /* Manual runners remain editable if character resources are unavailable. */
     });
+
     try {
       localStorage.removeItem('uma.simulator.api-key');
     } catch {

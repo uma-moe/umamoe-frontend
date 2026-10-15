@@ -22,6 +22,7 @@
       { data?: unknown[] } | undefined
     >
   );
+
   const hasData = $derived(series.some((entry) => entry?.data?.length));
 </script>
 

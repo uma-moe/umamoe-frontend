@@ -24,14 +24,17 @@
   let textValue = $state('Mejiro McQueen'),
     searchValue = $state(''),
     numberValue = $state('');
+
   let region = $state('global'),
     character = $state(''),
     storage = $state('local'),
     segment = $state('cards');
+
   let checked = $state(true),
     compact = $state(true),
     minimum = $state(2),
     maximum = $state(7);
+
   let eventTypes = $state([
     {
       id: 'characters',

@@ -1,8 +1,11 @@
 <script lang="ts">
   import { virtualScroll } from '@/lib/virtual-scroll';
-  import type { CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
-  import { veteranFactorTotals, type VeteranDisplayRecord } from '@/lib/profile/profile-veterans';
-  import type { VeteranQueryMatch } from '@/lib/profile/profile-veteran-query';
+  import type { CharacterData } from '@/lib/game-data/characters';
+  import {
+    veteranFactorTotals,
+    type VeteranDisplayRecord
+  } from '@/lib/profile/veterans/profile-veterans';
+  import type { VeteranQueryMatch } from '@/lib/profile/veterans/profile-veteran-query';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
   import AptitudeGrid from '@/components/game/AptitudeGrid.svelte';
   import Button from '@/components/controls/Button.svelte';
@@ -23,7 +26,7 @@
     virtual: Parameters<typeof virtualScroll<ProfileVeteran>>[1];
     filters: RosterFilters;
     spByVeteran: Map<ProfileVeteran, number | null>;
-    target?: CharacterCatalogEntry;
+    target?: CharacterData;
     queryMatches: Map<ProfileVeteran, VeteranQueryMatch[]>;
     summaryOf: (item: VeteranDisplayRecord) => VeteranUiRecord;
     ondetails: (veteran: ProfileVeteran) => void;

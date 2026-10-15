@@ -5,7 +5,7 @@
     PlannerIncomeRule,
     PlannerRewardEntry
   } from '@/lib/carat-planner/carat-planner';
-  import { isLegacyTrainingPassIncomeRule } from '@/lib/carat-planner/planner-income-assumptions';
+  import { isLegacyTrainingPassIncomeRule } from '@/lib/carat-planner/income/planner-income-assumptions';
   import { incomeRuleScheduleLabel, type PlannerIncomeGroup } from './planner-income-view';
   import { markIncomeEdited, type PlannerIncomeProjection } from './planner-income-edits';
   import PlannerCustomIncome from './PlannerCustomIncome.svelte';

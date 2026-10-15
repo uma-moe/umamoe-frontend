@@ -1,4 +1,4 @@
-import type { InheritanceSearchResult } from '@/lib/inheritance/inheritance-search';
+import type { InheritanceSearchResult } from '@/lib/inheritance/search/inheritance-search';
 import { withPageRequest } from '@/services/http/page-request';
 import { inheritanceRepository } from '../inheritance-repository';
 import { DATABASE_LIST_MODE_KEY, encodeDatabaseFilterState } from '../database-preferences';
@@ -34,6 +34,7 @@ export class DatabaseSearch {
     pageSize: this.pageSize,
     totalPages: 0
   });
+
   loading = $state(false);
   error = $state('');
 
@@ -47,6 +48,7 @@ export class DatabaseSearch {
   appending = $derived(
     this.listMode === 'infinite' && this.page > 1 && this.inheritance.records.length > 0
   );
+
   canLoadMore = $derived(
     this.initialized &&
       this.activeTab === 'database' &&
@@ -76,6 +78,7 @@ export class DatabaseSearch {
       this.page = requestedPage;
       this.listMode = 'paginated';
     }
+
     filters.includeMaxFollowers = (filters.values.maxFollowerNum ?? 999) >= 1000;
   }
 
@@ -112,12 +115,14 @@ export class DatabaseSearch {
       if (this.#lastSignature && this.page !== 1) this.page = 1;
       this.#lastSignature = signature;
     }
+
     if (this.activeTab === 'bookmarks') {
       this.loading = false;
       this.pendingSearch = true;
       this.persist();
       return;
     }
+
     this.#queue(immediate);
   };
 
@@ -139,6 +144,7 @@ export class DatabaseSearch {
       if (this.#session !== undefined) filters.dropAccountLegacy();
       this.#session = session;
     }
+
     if (filters.mode === 'uql') this.schedule();
   }
 
@@ -151,11 +157,12 @@ export class DatabaseSearch {
   /** Syncs the query's directives into the filters; false while the query cannot run yet. */
   #applyUql(): boolean {
     const { filters, uql } = this.#source;
-    if (!uql.catalog) {
-      this.loading = uql.catalogLoading;
+    if (!uql.queryData) {
+      this.loading = uql.queryDataLoading;
       this.persist();
       return false;
     }
+
     uql.promptForLegacy();
     if (uql.context.pendingLegacy) {
       void uql.loadLegacy(uql.context.pendingLegacy);
@@ -163,12 +170,14 @@ export class DatabaseSearch {
       this.persist();
       return false;
     }
+
     if (!uql.context.issue) filters.applyUqlContext(uql);
     if (uql.validation.state !== 'empty' && uql.validation.state !== 'valid') {
       this.loading = false;
       this.persist();
       return false;
     }
+
     return true;
   }
 
@@ -184,6 +193,7 @@ export class DatabaseSearch {
           resolve();
         };
       });
+
       if (cancelled) return;
       this.#cancelTimer = undefined;
       this.persist();
@@ -211,11 +221,13 @@ export class DatabaseSearch {
         filters.mode,
         uql.validation
       );
+
       if (controller.signal.aborted) return;
       const records =
         this.listMode === 'infinite' && requestedPage > 1
           ? [...this.inheritance.records, ...result.records]
           : result.records;
+
       this.inheritance = {
         ...result,
         records: [...new Map(records.map((record) => [record.id, record])).values()]

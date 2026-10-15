@@ -70,6 +70,7 @@
           startTimeType: snapshot?.startTimeType
         }
       );
+
       selected = '';
     } catch (error) {
       simError = (error as Error).message;
@@ -94,6 +95,7 @@
   $effect(() => {
     const id = data.snapshotId,
       team = selected;
+
     detail = undefined;
     detailError = '';
     copied = false;
@@ -108,6 +110,7 @@
       .catch((e) => {
         if (!controller.signal.aborted) detailError = e.message;
       });
+
     return () => controller.abort();
   });
 </script>

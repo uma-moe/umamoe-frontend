@@ -12,10 +12,12 @@ export type SkillImpactRow = {
   win: number;
   level: number;
 };
+
 export type SortDirection = 'ascending' | 'descending';
 
 // A gain axis with round steps covering every bar and 95% range in a list, always including zero.
 export type Scale = { min: number; max: number; ticks: number[] };
+
 export const makeScale = (
   points: { gain: number; low?: number; high?: number }[],
   unit: MarginUnit
@@ -23,13 +25,16 @@ export const makeScale = (
   const low = Math.min(0, ...points.map((row) => row.low ?? row.gain)),
     high = Math.max(0, ...points.map((row) => row.high ?? row.gain)),
     span = Math.max(high - low, unit === 'seconds' ? 0.05 : 0.5);
+
   const step =
     (unit === 'seconds'
       ? [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1]
       : [0.1, 0.2, 0.25, 0.5, 1, 2, 5]
     ).find((value) => span / value <= 6) ?? 5;
+
   const min = Math.floor(low / step) * step,
     max = Math.ceil(high / step) * step;
+
   return {
     min,
     max,
@@ -38,6 +43,7 @@ export const makeScale = (
     )
   };
 };
+
 export const place = (axis: Scale, gain: number) =>
   ((gain - axis.min) / Math.max(Number.EPSILON, axis.max - axis.min)) * 100;
 
@@ -55,21 +61,32 @@ export const sortRows = (
   name: (id: number) => string
 ) => {
   const direction = sortDirection === 'ascending' ? 1 : -1;
-  const key = (row: SkillImpactRow) =>
-    sortKey === 'id'
-      ? name(row.id)
-      : sortKey === 'per100'
-        ? row.per100
-        : sortKey === 'win'
-          ? row.win
-          : row.value;
+  const key = (row: SkillImpactRow) => {
+    if (sortKey === 'id') {
+      return name(row.id);
+    }
+
+    if (sortKey === 'per100') {
+      return row.per100;
+    }
+
+    if (sortKey === 'win') {
+      return row.win;
+    }
+
+    return row.value;
+  };
+
   const measured = rows.filter((row) => row.measured),
     pending = rows.filter((row) => !row.measured);
+
   measured.sort((a, b) => {
     const x = key(a),
       y = key(b);
+
     return (typeof x === 'string' ? x.localeCompare(String(y)) : x - Number(y)) * direction;
   });
+
   return [...measured, ...pending.sort((a, b) => name(a.id).localeCompare(name(b.id)))];
 };
 
@@ -87,12 +104,18 @@ export const range = (measured: SkillValue, unit: MarginUnit) =>
       measured.count +
       ' races'
     : measured.count + ' races';
-export const tickLabel = (gain: number, unit: MarginUnit) =>
-  Math.abs(gain) < 1e-9
-    ? '0'
-    : unit === 'seconds'
-      ? (gain > 0 ? '−' : '+') + Math.abs(gain).toFixed(2) + ' s'
-      : (gain > 0 ? '+' : '−') + Math.abs(gain) + ' L';
+
+export const tickLabel = (gain: number, unit: MarginUnit) => {
+  if (Math.abs(gain) < 1e-9) {
+    return '0';
+  }
+
+  if (unit === 'seconds') {
+    return (gain > 0 ? '−' : '+') + Math.abs(gain).toFixed(2) + ' s';
+  }
+
+  return (gain > 0 ? '+' : '−') + Math.abs(gain) + ' L';
+};
 
 export const help = {
   Gain: 'What this skill’s effects are worth at the finish, measured against matched runs with those effects suppressed: lengths (1 L = 2.5 m) and seconds, where negative seconds means she finishes earlier. The small range is the 95% interval. Values are not additive across skills.',

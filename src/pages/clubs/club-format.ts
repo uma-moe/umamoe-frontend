@@ -12,5 +12,7 @@ export function signed(value: number): string {
 }
 
 export function joinLabel(value: number): string {
-  return value === 1 ? 'Open' : value === 2 ? 'Approval' : 'Closed';
+  if (value === 1) return 'Open';
+  if (value === 2) return 'Approval';
+  return 'Closed';
 }

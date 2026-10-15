@@ -1,8 +1,21 @@
 import type { ClientEnvelope } from './generated/client-envelope';
 
-export type ClientConnectionState = 'not-installed' | 'detected' | 'pairing' | 'connected' | 'reconnecting' | 'permission-blocked' | 'version-incompatible' | 'cloud-fallback';
+export type ClientConnectionState =
+  | 'not-installed'
+  | 'detected'
+  | 'pairing'
+  | 'connected'
+  | 'reconnecting'
+  | 'permission-blocked'
+  | 'version-incompatible'
+  | 'cloud-fallback';
 
-export interface ClientConnectionDescriptor { endpoint: string; token: string; expiresAt: string; }
+export interface ClientConnectionDescriptor {
+  endpoint: string;
+  token: string;
+  expiresAt: string;
+}
+
 export type ClientTransportStatus = 'open' | 'closed' | 'error';
 export interface ClientTransport {
   connect(descriptor: ClientConnectionDescriptor): Promise<void>;

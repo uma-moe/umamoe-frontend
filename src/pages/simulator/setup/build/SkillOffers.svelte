@@ -1,9 +1,10 @@
 <script lang="ts">
+  import Icon from '@/components/Icon.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Combobox, { type ComboboxOption } from '@/components/controls/Combobox.svelte';
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
   import TextField from '@/components/controls/TextField.svelte';
-  import { skillImage, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
+  import { skillImage, type SkillData } from '@/lib/game-data/skills/skills';
   import SimSection from '../../shell/SimSection.svelte';
   import { buildSearch } from './build-search.svelte';
   import { baseCost, HINT_DISCOUNT, offerPurchases, type PricedOffer } from './skill-offers';
@@ -14,24 +15,25 @@
    */
   let {
     number = 3,
-    catalog,
+    skillLookup,
     owned = []
   }: {
     number?: number;
-    catalog: Map<number, SkillCatalogEntry>;
+    skillLookup: Map<number, SkillData>;
     /** Skills she already has, which upgrades build on. */
     owned?: number[];
   } = $props();
 
   const offers = $derived(
-    offerPurchases(buildSearch.offers, owned, catalog, buildSearch.fastLearner)
+    offerPurchases(buildSearch.offers, owned, skillLookup, buildSearch.fastLearner)
   );
+
   const total = $derived(offers.priced.reduce((sum, offer) => sum + offer.cost, 0));
   const budget = $derived(Number(buildSearch.budget) || 0);
 
   // Everything she could buy and does not have or have on offer yet: not her own unique, priced in the catalog.
   const options = $derived<ComboboxOption[]>(
-    [...catalog.values()]
+    [...skillLookup.values()]
       .filter(
         (skill) =>
           !skill.unique &&
@@ -48,6 +50,7 @@
         image: skillImage(skill.icon)
       }))
   );
+
   let query = $state('');
   let anchor = $state<HTMLDivElement>();
 
@@ -57,19 +60,38 @@
       return;
     buildSearch.offers.push({ skillId, hint: 0 });
   }
+
   function remove(skillId: number) {
     buildSearch.offers = buildSearch.offers.filter((offer) => offer.skillId !== skillId);
   }
+
+  function toggleLock(skillId: number) {
+    const offer = buildSearch.offers.find((item) => item.skillId === skillId);
+    if (offer) offer.locked = !offer.locked;
+  }
+
   function setHint(skillId: number, hint: string) {
     const offer = buildSearch.offers.find((item) => item.skillId === skillId);
     if (offer) offer.hint = Number(hint);
   }
+
   const HINT_OPTIONS = HINT_DISCOUNT.map((discount, level) => ({
     value: String(level),
     label: level ? 'Hint ' + level + ' · −' + discount + '%' : 'No hint'
   }));
-  const tier = (skill: SkillCatalogEntry) =>
-    skill.rarity >= 3 ? 'unique' : skill.rarity === 2 ? 'gold' : 'white';
+
+  const tier = (skill: SkillData) => {
+    if (skill.rarity >= 3) {
+      return 'unique';
+    }
+
+    if (skill.rarity === 2) {
+      return 'gold';
+    }
+
+    return 'white';
+  };
+
   /** What an upgrade builds on, in words. */
   function needs(offer: PricedOffer) {
     const parts = [];
@@ -138,6 +160,11 @@
           ? (total - budget).toLocaleString() + ' over, so the search chooses'
           : 'fits'}
       </span>
+      {#if offers.locked.length}
+        <span class:over-locked={offers.lockedCost > budget}>
+          {offers.lockedCost.toLocaleString()} SP locked
+        </span>
+      {/if}
     </p>
   </div>
   <div
@@ -155,7 +182,7 @@
       action
       popupAnchor={anchor}
       maxResults={12}
-      emptyText={catalog.size ? 'No skill matches.' : 'Skill data is loading…'}
+      emptyText={skillLookup.size ? 'No skill matches.' : 'Skill data is loading…'}
       onchange={add}
     />
   </div>
@@ -165,7 +192,10 @@
       aria-label="Skills on offer"
     >
       {#each offers.priced as offer (offer.skillId)}
-        <li class="offer tier-{tier(offer.skill)}">
+        <li
+          class="offer tier-{tier(offer.skill)}"
+          class:locked={offer.locked}
+        >
           <img
             src={skillImage(offer.skill.icon)}
             alt=""
@@ -177,6 +207,19 @@
             <strong>{offer.skill.name}</strong>
             {#if offer.upgrades}<small>{needs(offer)}</small>{/if}
           </span>
+          <button
+            type="button"
+            class="lock"
+            aria-pressed={Boolean(offer.locked)}
+            aria-label={'Always buy ' + offer.skill.name}
+            title={offer.locked ? 'Locked: every build buys it' : 'Lock it so every build buys it'}
+            onclick={() => toggleLock(offer.skillId)}
+          >
+            <Icon
+              name={offer.locked ? 'lock' : 'lock-open'}
+              size={15}
+            />
+          </button>
           <SelectFieldSlim
             id="build-hint-{offer.skillId}"
             label={'Hint for ' + offer.skill.name}
@@ -203,7 +246,7 @@
       {#each offers.missing as offer (offer.skillId)}
         <li class="offer missing">
           <span class="name">
-            <strong>{catalog.get(offer.skillId)?.name ?? 'Skill ' + offer.skillId}</strong>
+            <strong>{skillLookup.get(offer.skillId)?.name ?? 'Skill ' + offer.skillId}</strong>
             <small>no cost data, so the search leaves it out</small>
           </span>
           <button
@@ -303,8 +346,9 @@
     --tier-text: var(--text-primary);
     display: grid;
     --remove: 28px;
-    grid-template-columns: 24px minmax(0, 1fr) 128px 76px var(--remove);
-    grid-template-areas: 'icon name hint cost remove';
+    --lock: 28px;
+    grid-template-columns: 24px minmax(0, 1fr) var(--lock) 128px 76px var(--remove);
+    grid-template-areas: 'icon name lock hint cost remove';
     align-items: center;
     gap: 8px;
     min-height: 40px;
@@ -401,6 +445,34 @@
     background: var(--tab-btn-hover-bg);
     color: var(--text-primary);
   }
+  .lock {
+    grid-area: lock;
+    display: grid;
+    place-items: center;
+    width: var(--lock);
+    height: var(--lock);
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    opacity: 0.6;
+    cursor: pointer;
+  }
+  .lock:hover {
+    background: var(--tab-btn-hover-bg);
+    opacity: 1;
+  }
+  .offer.locked {
+    border-color: var(--accent-primary);
+  }
+  .offer.locked .lock {
+    color: var(--accent-primary);
+    opacity: 1;
+  }
+  .over-locked {
+    color: var(--accent-warning);
+  }
   .offer.missing {
     grid-template-columns: minmax(0, 1fr) var(--remove);
     grid-template-areas: 'name remove';
@@ -427,10 +499,10 @@
     }
     /* The name and cost on top, the hint under them. */
     .offer {
-      grid-template-columns: 24px minmax(0, 1fr) auto var(--remove);
+      grid-template-columns: var(--lock) minmax(0, 1fr) auto var(--remove);
       grid-template-areas:
         'icon name cost remove'
-        '. hint hint remove';
+        'lock hint hint remove';
       row-gap: 4px;
       padding-block: 6px;
     }
@@ -438,6 +510,7 @@
   @media (max-width: 767px) {
     .offer {
       --remove: 44px;
+      --lock: 44px;
     }
     .remove {
       width: 44px;

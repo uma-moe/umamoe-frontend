@@ -1,12 +1,12 @@
-import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
+import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 import {
   diagnosticLabel,
   skillActiveDuration,
   type DiagnosticRow,
   type HorseDiagnostics
-} from '@/lib/race/race-diagnostics';
-import { raceTimeAtDistance } from '@/lib/race/race-replay';
-import { formatRaceTime } from '@/lib/race/race-display';
+} from '@/lib/race/capture/race-diagnostics';
+import { raceTimeAtDistance } from '@/lib/race/replay/race-replay';
+import { formatRaceTime } from '@/lib/race/replay/race-display';
 
 type CaptureRunner = ParsedRaceCapture['runners'][number];
 
@@ -67,6 +67,7 @@ export function display(value: unknown, key = ''): string | number {
 export function rows(value: unknown): Record<string, string | number>[] {
   return (Array.isArray(value) ? value : [value]).map((item, i) => {
     const row: DiagnosticRow = item && typeof item === 'object' ? item : { value: item };
+
     return {
       id: i,
       ...Object.fromEntries(Object.entries(row).map(([k, v]) => [k, display(v, k)]))
@@ -102,6 +103,14 @@ export function runnerName(capture: ParsedRaceCapture, value: unknown) {
   return capture.runners.find((r) => r.index === Number(value))?.name ?? 'Unknown runner';
 }
 
+function activationStatus(roll: DiagnosticRow | undefined, observed: boolean): string {
+  if (!roll) return observed ? 'Activated' : 'Not recorded';
+  if (roll.activated) return 'Activated';
+  if (!roll.passed) return 'Wit check failed';
+  if (roll.required) return 'Passed wit check, failed condition';
+  return 'Not triggered';
+}
+
 export function skillRows(
   capture: ParsedRaceCapture,
   index: number,
@@ -112,7 +121,10 @@ export function skillRows(
   return [
     ...new Set([
       ...(runner?.skillIds ?? []),
-      ...activations.map((e) => e.params[1]!),
+      ...activations.flatMap((event) => {
+        const skillId = event.params[1];
+        return skillId === undefined ? [] : [skillId];
+      }),
       ...(horse?.skillActivationDecisions ?? []).map((d) => Number(d.skillId))
     ])
   ].map((id) => {
@@ -123,17 +135,7 @@ export function skillRows(
       count: events.length,
       first: events[0]?.frameTime ?? '—',
       duration: events.length || roll?.activated ? (skillActiveDuration(horse, id) ?? '—') : '—',
-      status: roll
-        ? roll.activated
-          ? 'Activated'
-          : !roll.passed
-            ? 'Wit check failed'
-            : roll.required
-              ? 'Passed wit check, failed condition'
-              : 'Not triggered'
-        : events.length
-          ? 'Activated'
-          : 'Not recorded',
+      status: activationStatus(roll, events.length > 0),
       witRequired: Number(roll?.required === true),
       witPassed: Number(roll?.passed === true),
       roll: typeof roll?.roll === 'number' ? roll.roll : '—',
@@ -156,17 +158,17 @@ export function sampleRows(
 export function modeRows(capture: ParsedRaceCapture, horse: HorseDiagnostics | undefined) {
   return Object.entries(capture.detailed?.annotations.flags ?? {}).flatMap(([key, flag]) => {
     const spans = horse?.spans.filter((span) => (span.mask & flag) !== 0) ?? [];
-    return spans.length
-      ? [
-          {
-            id: key,
-            mode: diagnosticLabel(key),
-            duration: spans.reduce((total, span) => total + span.endTime - span.startTime, 0),
-            periods: spans.length,
-            time: spans[0]!.startTime
-          }
-        ]
-      : [];
+    const firstSpan = spans[0];
+    if (!firstSpan) return [];
+    return [
+      {
+        id: key,
+        mode: diagnosticLabel(key),
+        duration: spans.reduce((total, span) => total + span.endTime - span.startTime, 0),
+        periods: spans.length,
+        time: firstSpan.startTime
+      }
+    ];
   });
 }
 

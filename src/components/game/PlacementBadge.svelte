@@ -8,17 +8,20 @@
 
   let { placement, compact = false }: Props = $props();
 
-  const suffix = $derived(
-    placement % 100 >= 11 && placement % 100 <= 13
-      ? 'th'
-      : placement % 10 === 1
-        ? 'st'
-        : placement % 10 === 2
-          ? 'nd'
-          : placement % 10 === 3
-            ? 'rd'
-            : 'th'
-  );
+  const suffix = $derived.by(() => {
+    const lastTwoDigits = placement % 100;
+    if (lastTwoDigits >= 11 && lastTwoDigits <= 13) return 'th';
+    switch (placement % 10) {
+      case 1:
+        return 'st';
+      case 2:
+        return 'nd';
+      case 3:
+        return 'rd';
+      default:
+        return 'th';
+    }
+  });
 </script>
 
 <span

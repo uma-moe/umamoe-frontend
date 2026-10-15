@@ -2,7 +2,10 @@ import { test, expect } from './fixtures/test';
 import { mockDatabase } from './fixtures/api';
 import { stressCatalogs } from '../performance/data';
 
-test('large factor menus load automatically and search their complete catalog', async ({ page, isMobile }) => {
+test('large factor menus load automatically and search their complete catalog', async ({
+  page,
+  isMobile
+}) => {
   await mockDatabase(page);
   await stressCatalogs(page);
   await page.goto('/database');
@@ -14,8 +17,11 @@ test('large factor menus load automatically and search their complete catalog', 
   const menu = page.getByRole('listbox', { name: 'Factor suggestions', exact: true });
   await expect.poll(() => menu.getByRole('option').count()).toBeGreaterThan(0);
   await expect.poll(() => menu.getByRole('option').count()).toBeLessThan(40);
-  await menu.evaluate(element => element.scrollTop = element.scrollHeight);
-  await expect(menu.getByRole('option', { name: 'Stress Factor 1199', exact: true })).toBeAttached();
+  await menu.evaluate((element) => (element.scrollTop = element.scrollHeight));
+  await expect(
+    menu.getByRole('option', { name: 'Stress Factor 1199', exact: true })
+  ).toBeAttached();
+
   await expect.poll(() => menu.getByRole('option').count()).toBeLessThan(40);
   await input.press('Escape');
   await input.click();

@@ -3,17 +3,17 @@
   import Button from '../controls/Button.svelte';
   import Dialog from '../overlays/Dialog.svelte';
   import SparkBrowser from '../sparks/SparkBrowser.svelte';
-  import { factorMetadata, loadFactorArtwork } from '@/lib/catalog/factor-catalog';
-  import type { CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
+  import { factorMetadata, loadFactorArtwork } from '@/lib/game-data/factors/factors';
+  import type { CharacterData } from '@/lib/game-data/characters';
   import SegmentedControl from '../controls/SegmentedControl.svelte';
   import Slider from '../controls/Slider.svelte';
   import SparkItem from '../sparks/SparkItem.svelte';
-  import ResourceStatus from '../feedback/ResourceStatus.svelte';
-  import type { ParentFactorFilter } from '@/lib/veterans/parent-picker';
+  import ResourceLoadStatus from '../feedback/ResourceLoadStatus.svelte';
+  import type { ParentFactorFilter } from '@/lib/veterans/parents/parent-picker';
 
   interface Props {
     filter: ParentFactorFilter;
-    characters: Map<number, CharacterCatalogEntry>;
+    characters: Map<number, CharacterData>;
     loading?: boolean;
     cached?: boolean;
     error?: string;
@@ -30,6 +30,7 @@
     onapply,
     onclose
   }: Props = $props();
+
   const id = $props.id();
 
   const editing = untrack(() => Boolean(filter.factorId));
@@ -40,6 +41,7 @@
       maxLevel: filter.maxLevel ?? (filter.scope === 'combined' ? 9 : 3)
     }))
   );
+
   let step = $state(editing ? 2 : 1);
 
   let root: HTMLDivElement;
@@ -61,8 +63,12 @@
   const selected = $derived(factorMetadata(draft.factorId));
   const maximum = $derived(draft.scope === 'combined' ? 9 : 3);
 
-  const tone = (type?: number) =>
-    type === 0 ? 'blue' : type === 1 ? 'pink' : type === 5 ? 'green' : 'white';
+  function tone(type?: number) {
+    if (type === 0) return 'blue';
+    if (type === 1) return 'pink';
+    if (type === 5) return 'green';
+    return 'white';
+  }
 
   async function focusStep() {
     await tick();
@@ -85,8 +91,16 @@
   }
 
   function changeSource(value: string) {
+    if (
+      value !== 'combined' &&
+      value !== 'any' &&
+      value !== 'own' &&
+      value !== 'p1' &&
+      value !== 'p2'
+    )
+      return;
     const previousCap = maximum;
-    draft.scope = value as ParentFactorFilter['scope'];
+    draft.scope = value;
     const cap = draft.scope === 'combined' ? 9 : 3;
     draft.minLevel = Math.min(draft.minLevel, cap);
     draft.maxLevel = draft.maxLevel === previousCap ? cap : Math.min(draft.maxLevel, cap);
@@ -100,8 +114,12 @@
         onclose();
       }
     };
+
     root.addEventListener('keydown', escape, true);
-    void loadFactorArtwork().catch(() => {});
+    void loadFactorArtwork().catch((error: unknown) => {
+      console.warn('Spark artwork could not be loaded; text choices remain available.', error);
+    });
+
     void focusStep();
     return () => root.removeEventListener('keydown', escape, true);
   });
@@ -150,7 +168,7 @@
             </Button>
           {/each}
         </div>
-        <ResourceStatus
+        <ResourceLoadStatus
           {loading}
           {cached}
           {error}

@@ -3,16 +3,16 @@
   import Button from '@/components/controls/Button.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import type { UqlValidation } from '@/lib/inheritance/uql/uql';
-  import type { UqlQueryCatalog } from '@/lib/inheritance/uql/uql-compiler';
-  import type { SelectableParent } from '@/lib/veterans/parent-picker';
-  import type { CatalogEntry } from '../catalog-repository';
+  import type { UqlQueryData } from '@/lib/inheritance/uql/uql-compiler';
+  import type { SelectableParent } from '@/lib/veterans/parents/parent-picker';
+  import type { GameDataEntry } from '@/lib/game-data/display-records';
 
   interface Props {
     value: string | undefined;
     validation: UqlValidation;
-    characters: CatalogEntry[];
-    supports: CatalogEntry[];
-    catalog: UqlQueryCatalog | null;
+    characters: GameDataEntry[];
+    supports: GameDataEntry[];
+    queryData: UqlQueryData | null;
     loading: boolean;
     legacyParents: SelectableParent[];
     onpicklegacy: () => void;
@@ -25,7 +25,7 @@
     validation,
     characters,
     supports,
-    catalog,
+    queryData,
     loading,
     legacyParents,
     onpicklegacy,
@@ -42,7 +42,7 @@
     {validation}
     {characters}
     {supports}
-    {catalog}
+    {queryData}
     {loading}
     {legacyParents}
     {onpicklegacy}

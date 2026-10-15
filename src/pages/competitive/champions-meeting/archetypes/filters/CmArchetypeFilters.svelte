@@ -36,10 +36,12 @@
     const slots: Requirement[] = parsed.error ? [{}, {}, {}] : parsed.slots.map((s) => ({ ...s }));
     const slot = slots[index] ?? {},
       first = slot.anyOf?.[0] ?? slot;
+
     const matcher =
       key === 'card'
         ? selectionMatcher(cards, value, String(first.style ?? ''))
         : { ...first, style: value ? Number(value) : undefined };
+
     const choices = [matcher, ...(slot.anyOf?.slice(1) ?? [])].filter(hasRequirement);
     slots[index] = choices.length > 1 ? { anyOf: choices } : (choices[0] ?? {});
     applySlots(slots);

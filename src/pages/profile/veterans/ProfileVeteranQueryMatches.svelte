@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { VeteranQueryMatch } from '@/lib/profile/profile-veteran-query';
+  import type { VeteranQueryMatch } from '@/lib/profile/veterans/profile-veteran-query';
   import SparkItem from '@/components/sparks/SparkItem.svelte';
 
   let { matches }: { matches: VeteranQueryMatch[] } = $props();

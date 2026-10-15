@@ -5,8 +5,8 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import { timelineRepository, type TimelineRecord } from '@/pages/timeline/timeline-repository';
-  import { describeCourse } from '@/lib/catalog/course-catalog';
-  import { simulatorCatalog, simulatorSession } from '../simulator-session.svelte';
+  import { describeCourse } from '@/lib/game-data/racing/courses';
+  import { simulatorCourseData, simulatorSession } from '../simulator-session.svelte';
   import { cmPreset } from './cm-presets';
 
   let { open = $bindable(false) }: { open?: boolean } = $props();
@@ -34,6 +34,7 @@
               const now = Date.now(),
                 aFuture = a.date.getTime() >= now,
                 bFuture = b.date.getTime() >= now;
+
               return (
                 Number(bFuture) - Number(aFuture) ||
                 (aFuture
@@ -43,11 +44,12 @@
             });
       })
       .catch((reason) => {
-        if (active) error = (reason as Error).message;
+        if (active) error = reason instanceof Error ? reason.message : 'Could not load CM presets.';
       })
       .finally(() => {
         if (active) loading = false;
       });
+
     return () => {
       active = false;
     };
@@ -56,9 +58,10 @@
   const presets = $derived(
     events.map((event) => ({
       event,
-      preset: cmPreset(event, [...simulatorCatalog.courses.values()])
+      preset: cmPreset(event, [...simulatorCourseData.courses.values()])
     }))
   );
+
   const matches = $derived(
     presets.filter(({ event, preset }) =>
       [event.title, event.dateLabel, ...preset.facts.map((fact) => fact.primary)]
@@ -67,6 +70,7 @@
         .includes(query.toLowerCase())
     )
   );
+
   const chosen = $derived(presets.find((item) => item.event.id === selected?.id));
 
   function choose(event: TimelineRecord) {

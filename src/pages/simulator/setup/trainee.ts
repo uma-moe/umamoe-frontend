@@ -141,5 +141,6 @@ function grades(values: Array<string>, count: number): Array<number> {
   for (let index = 0; index < count; index += 1) {
     numbers.push(aptitudeGradeNumber(gradeFrom(values[index])));
   }
+
   return numbers;
 }

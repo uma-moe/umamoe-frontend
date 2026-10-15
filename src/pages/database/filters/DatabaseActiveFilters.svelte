@@ -4,12 +4,11 @@
     CharacterPickerOption,
     SupportCardPickerOption
   } from '@/components/pickers/picker-types';
-  import { factorOptions } from '@/lib/catalog/factor-catalog';
+  import { factorOptions } from '@/lib/game-data/factors/factors';
   import type {
-    FactorRequirement,
     InheritanceFilterMode,
     InheritanceSearchFilters
-  } from '@/lib/inheritance/inheritance-search';
+  } from '@/lib/inheritance/search/inheritance-search';
   import type { UqlValidation } from '@/lib/inheritance/uql/uql';
 
   interface Props {
@@ -81,15 +80,18 @@
     const views: ActiveFilterView[] = [];
     const add = (id: string, label: string, tone: ActiveChipTone, remove: () => void) =>
       views.push({ id, label, tone, remove });
+
     if (filterMode === 'uql') {
       if (filters.uql?.trim())
         add('uql', `UQL: ${uqlState === 'valid' ? 'Active' : 'Editing'}`, 'default', onclear);
       return views;
     }
+
     const characterName = (id: number) =>
       characterOptions.find((option) =>
         id >= 10000 ? Number(option.id) === id : Math.floor(Number(option.id) / 100) === id
       )?.name ?? `Character ${id}`;
+
     if (filters.playerCharaId)
       add('target', `Target: ${characterName(filters.playerCharaId)}`, 'character', () => {
         filters.playerCharaId = undefined;
@@ -106,21 +108,25 @@
       add('trainer-name', `Username: ${filters.trainerName.trim()}`, 'default', () => {
         filters.trainerName = undefined;
       });
-    const characterGroups: Array<[keyof InheritanceSearchFilters, string, ActiveChipTone]> = [
+    const characterGroups = [
       ['mainParentIds', 'Allow main', 'character'],
       ['includeParentIds', 'Allow great', 'character'],
       ['excludeMainParentIds', 'Hide main', 'exclude'],
       ['excludeParentIds', 'Hide great', 'exclude']
-    ];
+    ] as const satisfies ReadonlyArray<
+      readonly [keyof InheritanceSearchFilters, string, ActiveChipTone]
+    >;
+
     for (const [key, prefix, tone] of characterGroups) {
-      const ids = filters[key] as number[];
+      const ids = filters[key];
       ids.forEach((id, index) =>
         add(`${String(key)}-${id}-${index}`, `${prefix}: ${characterName(id)}`, tone, () => {
-          (filters[key] as number[]) = ids.filter((_, itemIndex) => itemIndex !== index);
+          filters[key] = ids.filter((_, itemIndex) => itemIndex !== index);
         })
       );
     }
-    const factorGroups: Array<[keyof InheritanceSearchFilters, string, ActiveChipTone]> = [
+
+    const factorGroups = [
       ['blue', 'Blue', 'blue'],
       ['pink', 'Pink', 'pink'],
       ['green', 'Green', 'green'],
@@ -132,9 +138,12 @@
       ['optionalWhite', 'Preferred', 'optional'],
       ['optionalMainWhite', 'Preferred main', 'optional'],
       ['lineageWhite', 'Lineage', 'optional']
-    ];
+    ] as const satisfies ReadonlyArray<
+      readonly [keyof InheritanceSearchFilters, string, ActiveChipTone]
+    >;
+
     for (const [key, prefix, tone] of factorGroups) {
-      const requirements = filters[key] as FactorRequirement[];
+      const requirements = filters[key];
       requirements.forEach((requirement, index) => {
         if (
           !Number.isFinite(requirement.factorId) ||
@@ -146,22 +155,23 @@
           requirement.maximumStars && requirement.maximumStars !== requirement.minimumStars
             ? `${requirement.minimumStars}–${requirement.maximumStars}★`
             : `${requirement.minimumStars}★`;
+
         const range =
           requirement.metric === 'occurrences'
             ? `${requirement.minimumOccurrences ?? 0}–${requirement.maximumOccurrences ?? 3}×`
             : starRange;
+
         add(
           `${String(key)}-${requirement.factorId}-${index}`,
           `${prefix}: ${requirement.factorId === 0 ? 'Any' : (factorLabels.get(String(requirement.factorId)) ?? requirement.factorId)} ${range}`,
           tone,
           () => {
-            (filters[key] as FactorRequirement[]) = requirements.filter(
-              (_, itemIndex) => itemIndex !== index
-            );
+            filters[key] = requirements.filter((_, itemIndex) => itemIndex !== index);
           }
         );
       });
     }
+
     if (filters.supportCardId)
       add(
         'support',
@@ -177,7 +187,8 @@
         filters.scenarioIds = filters.scenarioIds.filter((value) => value !== id);
       })
     );
-    const scalarGroups: Array<[keyof InheritanceSearchFilters, string, ActiveChipTone]> = [
+
+    const scalarGroups = [
       ['minWinCount', 'Wins ≥', 'default'],
       ['minWhiteCount', 'White factors ≥', 'white'],
       ['minBlueStarsSum', 'Blue stars ≥', 'blue'],
@@ -191,14 +202,18 @@
       ['minRaceWhiteCount', 'Race factors ≥', 'white'],
       ['minRaceWhiteStarsSum', 'Race stars ≥', 'white'],
       ['minMainWhiteCount', 'Main white factors ≥', 'white']
-    ];
+    ] as const satisfies ReadonlyArray<
+      readonly [keyof InheritanceSearchFilters, string, ActiveChipTone]
+    >;
+
     for (const [key, prefix, tone] of scalarGroups) {
       const value = filters[key];
       if (typeof value === 'number' && value > 0)
         add(String(key), `${prefix} ${value}`, tone, () => {
-          (filters as unknown as Record<string, unknown>)[key] = undefined;
+          filters[key] = undefined;
         });
     }
+
     if ((filters.minParentRank ?? 1) > 1)
       add('minParentRank', `Rank ≥ ${filters.minParentRank}`, 'default', () => {
         filters.minParentRank = 1;

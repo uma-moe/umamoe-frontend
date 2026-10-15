@@ -12,12 +12,14 @@
   const runnerCount = $derived(
     result.finish_order.reduce((max, order) => Math.max(max, order.length), 0)
   );
+
   const rows = $derived.by(() => {
     const wins = Array.from({ length: runnerCount }, () => 0);
     for (const order of result.finish_order) {
       const winner = order[0];
       if (winner !== undefined && winner < wins.length) wins[winner] = (wins[winner] ?? 0) + 1;
     }
+
     return wins
       .map((count, source) => ({
         source,

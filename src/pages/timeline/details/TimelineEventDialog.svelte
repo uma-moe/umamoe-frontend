@@ -3,9 +3,9 @@
   import Spinner from '@/components/feedback/Spinner.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import type { PlannerGachaEntry } from '@/lib/carat-planner/carat-planner';
-  import type { TimelinePickupCatalog } from '@/lib/timeline/timeline-pickups';
-  import type { TimelineCalculation } from '@/lib/timeline/timeline-prediction-types';
-  import type { TimelineRewardSummary } from '@/lib/timeline/timeline-reward-summary';
+  import type { TimelinePickupCatalog } from '@/lib/timeline/events/timeline-pickups';
+  import type { TimelineCalculation } from '@/lib/timeline/prediction/timeline-prediction-types';
+  import type { TimelineRewardSummary } from '@/lib/timeline/events/timeline-reward-summary';
   import { plannerResourceRepository } from '@/pages/carat-planner/planner-resource-repository';
   import type { TimelineRecord } from '../timeline-repository';
 

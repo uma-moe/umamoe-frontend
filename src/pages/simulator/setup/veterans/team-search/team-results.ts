@@ -14,6 +14,7 @@ export type TeamRaceResult = { seed: number; finish_order?: number[]; error?: st
 
 export const teamRate = (team: TeamResult) =>
   team.successes ? (team.wins / team.successes) * 100 : 0;
+
 export const teamInterval = (team: TeamResult) => winRateInterval(team.wins, team.successes);
 export const teamBestPlace = (team: TeamResult) =>
   team.successes ? team.rankTotal / team.successes : 0;

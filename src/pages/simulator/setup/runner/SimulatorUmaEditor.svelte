@@ -6,9 +6,9 @@
   import CharacterSelectDialog from '@/components/pickers/CharacterSelectDialog.svelte';
   import {
     characterImagePath,
-    loadReleasedCharacterCatalog,
-    type CharacterCatalogEntry
-  } from '@/lib/catalog/character-catalog';
+    loadReleasedCharacters,
+    type CharacterData
+  } from '@/lib/game-data/characters';
   import TraineeInput from './TraineeInput.svelte';
   import RunnerSkills from './RunnerSkills.svelte';
   import SimulatorTeamPicker from './SimulatorTeamPicker.svelte';
@@ -27,8 +27,9 @@
   let draft = $state<SimulatorUma>();
   let gate = $state(''),
     fans = $state('');
+
   let characterOpen = $state(false),
-    characters = $state<CharacterCatalogEntry[]>([]),
+    characters = $state<CharacterData[]>([]),
     characterError = $state('');
 
   const uid = $props.id();
@@ -42,6 +43,7 @@
       rarity: character.rarity
     }))
   );
+
   const invalid = $derived(
     !draft ||
       !draft.name.trim() ||
@@ -65,6 +67,7 @@
       characterOpen = false;
       return;
     }
+
     draft = structuredClone($state.snapshot(uma));
     gate = uma.frameOrder ? String(uma.frameOrder) : '';
     fans = uma.fanCount === undefined ? '' : String(uma.fanCount);
@@ -74,7 +77,7 @@
     characterOpen = true;
     characterError = '';
     try {
-      characters = await loadReleasedCharacterCatalog();
+      characters = await loadReleasedCharacters();
     } catch {
       characterError = 'Character data could not be loaded.';
     }

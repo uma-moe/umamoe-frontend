@@ -72,36 +72,45 @@
   function toPercent(input: number) {
     return max === min ? 0 : Math.max(0, Math.min(100, ((input - min) / (max - min)) * 100));
   }
+
   function tickActive(tick: number) {
     if (isRange || mode === 'between') return tick >= value && tick <= actualEnd;
     return mode === 'after' ? tick >= value : tick <= value;
   }
+
   function formatted(input: number) {
     return `${input}${unit}`;
   }
+
   function clamp(input: number) {
     return Math.max(min, Math.min(max, input));
   }
+
   function snap(input: number) {
     const precision = Math.max(0, (String(step).split('.')[1] ?? '').length);
     return Number((min + Math.round((clamp(input) - min) / step) * step).toFixed(precision));
   }
+
   function updateThumb(thumb: 'start' | 'end', input: number) {
     const next = snap(input);
     if (thumb === 'start') value = isRange ? Math.min(next, actualEnd) : next;
     else endValue = Math.max(next, value);
     onchange?.(value, isRange ? actualEnd : undefined);
   }
+
   function changeStart(event: Event) {
     updateThumb('start', Number((event.currentTarget as HTMLInputElement).value));
   }
+
   function changeEnd(event: Event) {
     updateThumb('end', Number((event.currentTarget as HTMLInputElement).value));
   }
+
   function pointerValue(event: PointerEvent, element: HTMLElement) {
     const bounds = element.getBoundingClientRect();
     return snap(min + ((event.clientX - bounds.left) / bounds.width) * (max - min));
   }
+
   function beginTrackDrag(event: PointerEvent) {
     if (disabled || event.button !== 0) return;
     const target = event.currentTarget as HTMLButtonElement;
@@ -113,10 +122,12 @@
     target.setPointerCapture(event.pointerId);
     updateThumb(activeThumb, next);
   }
+
   function moveTrackDrag(event: PointerEvent) {
     if (!trackDragThumb) return;
     updateThumb(trackDragThumb, pointerValue(event, event.currentTarget as HTMLButtonElement));
   }
+
   function endTrackDrag(event: PointerEvent) {
     const target = event.currentTarget as HTMLButtonElement;
     if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);

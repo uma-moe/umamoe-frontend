@@ -33,11 +33,12 @@
   ];
 
   function toggleOpponent(id: string) {
-    opponentIds = opponentIds.includes(id)
-      ? opponentIds.filter((item) => item !== id)
-      : opponentIds.length < 6
-        ? [...opponentIds, id]
-        : opponentIds;
+    if (opponentIds.includes(id)) {
+      opponentIds = opponentIds.filter((item) => item !== id);
+      return;
+    }
+
+    if (opponentIds.length < 6) opponentIds = [...opponentIds, id];
   }
 </script>
 

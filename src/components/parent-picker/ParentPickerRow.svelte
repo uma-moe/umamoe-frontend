@@ -2,8 +2,8 @@
   import VeteranSummary from '@/components/game/VeteranSummary.svelte';
   import IconButton from '@/components/controls/IconButton.svelte';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
-  import { characterImagePath, type CharacterCatalogEntry } from '@/lib/catalog/character-catalog';
-  import { factorCatalogState } from '@/lib/catalog/factor-catalog';
+  import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
+  import { factorLoadingState } from '@/lib/game-data/factors/factors';
   import {
     parentCharacter,
     parentFactors,
@@ -11,12 +11,16 @@
     type ParentFactorFilter,
     type parentAffinityDetails,
     type SelectableParent
-  } from '@/lib/veterans/parent-picker';
-  import { combineVeteranFactors, sparkGroups, scenarios } from '@/pages/veterans/veteran-adapter';
+  } from '@/lib/veterans/parents/parent-picker';
+  import {
+    combineVeteranFactors,
+    sparkGroups,
+    scenarios
+  } from '@/pages/veterans/collection/veteran-adapter';
 
   interface Props {
     parent: SelectableParent;
-    characters: Map<number, CharacterCatalogEntry>;
+    characters: Map<number, CharacterData>;
     affinity?: ReturnType<typeof parentAffinityDetails>;
     combined?: boolean;
     filters?: ParentFactorFilter[];
@@ -39,12 +43,13 @@
   const character = $derived(parentCharacter(parent, characters));
   const name = $derived(parent.name || character.name);
   const summary = $derived.by<VeteranUiRecord>(() => {
-    $factorCatalogState;
+    $factorLoadingState;
     const highlight = (factors: ReturnType<typeof parentFactors>, source: 'own' | 'p1' | 'p2') =>
       factors.map((factor) => ({
         ...factor,
         matched: parentSparkMatched(parent, factor, source, filters)
       }));
+
     const factors = highlight(parentFactors(parent), 'own');
     const ancestors = (parent.succession_chara_array ?? [])
       .filter((node) => [10, 20].includes(node.position_id))
@@ -54,10 +59,12 @@
         sparks: highlight(parentFactors(node), node.position_id === 10 ? 'p1' : 'p2')
       }))
       .filter((node) => node.sparks.length);
+
     const allFactors = [...factors, ...ancestors.flatMap((node) => node.sparks)];
     const matchedIds = new Set(
       allFactors.filter((factor) => factor.matched).map((factor) => factor.id)
     );
+
     return {
       id: parent.pickerId,
       name: character.name,
@@ -78,18 +85,24 @@
           matched: matchedIds.has(factor.id)
         }))
       ),
-      parents: ancestors.map((node) => ({
-        id: String(node.position_id),
-        position: node.position_id === 10 ? 'P1' : 'P2',
-        name: characters.get(node.card_id)?.name ?? `Character ${node.card_id}`,
-        image: characterImagePath(node.card_id),
-        affinity: !affinity
-          ? NaN
-          : node.position_id === 10
-            ? affinity.parentOne.left + affinity.race.p1Left
-            : affinity.parentOne.right + affinity.race.p1Right,
-        sparks: sparkGroups(`${parent.pickerId}:${node.position_id}`, node.sparks, 'parent')
-      }))
+      parents: ancestors.map((node) => {
+        let parentAffinity = NaN;
+        if (affinity) {
+          parentAffinity =
+            node.position_id === 10
+              ? affinity.parentOne.left + affinity.race.p1Left
+              : affinity.parentOne.right + affinity.race.p1Right;
+        }
+
+        return {
+          id: String(node.position_id),
+          position: node.position_id === 10 ? 'P1' : 'P2',
+          name: characters.get(node.card_id)?.name ?? `Character ${node.card_id}`,
+          image: characterImagePath(node.card_id),
+          affinity: parentAffinity,
+          sparks: sparkGroups(`${parent.pickerId}:${node.position_id}`, node.sparks, 'parent')
+        };
+      })
     };
   });
 </script>
@@ -115,7 +128,8 @@
           label={`Edit ${name}`}
           onclick={onedit}
         />
-      {/if}{#if ondelete}
+      {/if}
+      {#if ondelete}
         <IconButton
           icon="trash"
           label={`Delete ${name}`}

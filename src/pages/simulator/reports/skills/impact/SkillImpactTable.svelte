@@ -50,18 +50,22 @@
   );
 
   const sortBy = (key: string) => {
-    sortDirection =
-      sortKey === key
-        ? sortDirection === 'ascending'
-          ? 'descending'
-          : 'ascending'
-        : key === 'id'
-          ? 'ascending'
-          : 'descending';
+    if (sortKey === key) sortDirection = sortDirection === 'ascending' ? 'descending' : 'ascending';
+    else sortDirection = key === 'id' ? 'ascending' : 'descending';
     sortKey = key;
   };
-  const arrow = (key: string) =>
-    sortKey === key ? (sortDirection === 'ascending' ? '↑' : '↓') : '↕';
+
+  const arrow = (key: string) => {
+    if (sortKey === key) {
+      if (sortDirection === 'ascending') {
+        return '↑';
+      }
+
+      return '↓';
+    }
+
+    return '↕';
+  };
 </script>
 
 {#snippet about(label: string, text: string)}<span class="column-help">

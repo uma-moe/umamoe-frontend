@@ -1,6 +1,7 @@
 export type UqlValidationState = 'empty' | 'valid' | 'incomplete' | 'invalid';
 
-export type UqlSuggestionKind = 'field' | 'operator' | 'function' | 'keyword' | 'value' | 'snippet' | 'punctuation';
+export type UqlSuggestionKind =
+  'field' | 'operator' | 'function' | 'keyword' | 'value' | 'snippet' | 'punctuation';
 
 export type UqlValueContext =
   | 'character'
@@ -84,6 +85,14 @@ export interface UqlCompletionResult {
 
 export function isUqlChipSegment(segment: UqlHighlightSegment): boolean {
   if (segment.kind !== 'identifier') return false;
-  if (segment.imageUrl || segment.valueContext === 'race-saddle' || segment.valueContext === 'legacy') return true;
-  return !!segment.valueContext?.endsWith('-factor') && !!(segment.atomic || segment.title || segment.displayText);
+  if (
+    segment.imageUrl ||
+    segment.valueContext === 'race-saddle' ||
+    segment.valueContext === 'legacy'
+  )
+    return true;
+  return Boolean(
+    segment.valueContext?.endsWith('-factor') &&
+    (segment.atomic || segment.title || segment.displayText)
+  );
 }

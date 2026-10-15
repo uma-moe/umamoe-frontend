@@ -61,10 +61,12 @@
   const navigation = $derived(
     navigationForPath(router.route.pathname, searchParams.toURLSearchParams().toString())
   );
+
   const profiles = $derived($workspaces.filter((workspace) => workspace.kind === 'account'));
   const ownProfile = $derived(
     profiles.find((profile) => profile.id === $activeWorkspace.id) ?? profiles[0]
   );
+
   const accountName = $derived($authUser?.display_name.trim() || 'Account');
   const accountInitials = $derived(
     accountName
@@ -74,6 +76,7 @@
       .join('')
       .toLocaleUpperCase()
   );
+
   const accountItems: MenuItem[] = $derived([
     ownProfile
       ? {
@@ -121,6 +124,7 @@
         if (!controller.signal.aborted)
           console.warn('Browser agent tools could not be registered.', error);
       });
+
     return () => controller.abort();
   });
 

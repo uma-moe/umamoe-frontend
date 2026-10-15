@@ -8,7 +8,7 @@
     type PlannerPosition,
     type PlannerSpark
   } from '@/lib/lineage/planner';
-  import { sparkMetrics } from '@/lib/inheritance/spark-probability';
+  import { sparkMetrics } from '@/lib/inheritance/sparks/spark-probability';
   import Icon from '@/components/Icon.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Tabs from '@/components/navigation/Tabs.svelte';
@@ -34,6 +34,7 @@
     { id: 'combined', label: 'Combined' },
     { id: 'skills', label: 'Skill Sparks' }
   ];
+
   const groups = [
     { label: 'Stats', tone: 'blue', type: 0 },
     { label: 'Aptitude', tone: 'pink', type: 1 },
@@ -42,6 +43,7 @@
     { label: 'Skill', tone: 'white', type: 3 },
     { label: 'Scenario', tone: 'white', type: 4 }
   ];
+
   const positions: PlannerPosition[] = ['p1', 'p2', 'p1-1', 'p1-2', 'p2-1', 'p2-2'];
 
   const sources = $derived(
@@ -55,6 +57,7 @@
           }))
       : []
   );
+
   const summary = $derived(
     sources
       .flatMap((source) =>
@@ -66,6 +69,7 @@
       )
       .sort((a, b) => b.chance - a.chance)
   );
+
   const combined = $derived.by(() => {
     const byName = new Map<string, typeof summary>();
     for (const entry of summary) {
@@ -73,6 +77,7 @@
       entries.push(entry);
       byName.set(entry.spark.name, entries);
     }
+
     return [...byName.values()]
       .map((entries) => ({
         spark: entries[0]!.spark,
@@ -81,6 +86,7 @@
       }))
       .sort((a, b) => b.metrics.expected - a.metrics.expected);
   });
+
   const skills = $derived(plannerSkillSparks(nodes));
 
   function groupFor(type: number) {

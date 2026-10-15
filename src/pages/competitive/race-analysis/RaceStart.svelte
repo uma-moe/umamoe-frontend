@@ -2,8 +2,8 @@
   import Button from '@/components/controls/Button.svelte';
   import FileDrop from '@/components/controls/FileDrop.svelte';
   import Icon from '@/components/Icon.svelte';
-  import { raceFrameAtTime } from '@/lib/race/race-replay';
-  import { formatRaceTime } from '@/lib/race/race-display';
+  import { raceFrameAtTime } from '@/lib/race/replay/race-replay';
+  import { formatRaceTime } from '@/lib/race/replay/race-display';
   import { portrait } from '@/pages/competitive/analysis-view';
   import { makeDemoRaces } from '@/pages/competitive/demo-races';
 
@@ -37,6 +37,7 @@
             ? 'Mid race'
             : 'Early race'
   );
+
   const viewStart = $derived(Math.min(2300, Math.max(0, leader - 90)));
 
   const distanceX = (distance: number) => 44 + ((distance - viewStart) / 100) * (previewWidth - 88);

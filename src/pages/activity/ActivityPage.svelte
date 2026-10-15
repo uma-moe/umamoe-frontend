@@ -72,6 +72,7 @@
         const groups = report.score
           ? buildEvidenceGroups(report.score.evidence?.reasons ?? [])
           : [];
+
         expandedEvidence = new Set(groups[0] ? [groups[0].key] : []);
         expandedSnapshots = new Set(
           report.short_career_snapshots?.[0] ? [report.short_career_snapshots[0].snapshot_id] : []
@@ -88,6 +89,7 @@
           },
           refresh
         );
+
         if (request !== loadGeneration) return;
         hall = result;
       }

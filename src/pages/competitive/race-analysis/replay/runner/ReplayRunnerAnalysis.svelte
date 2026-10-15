@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { RaceRunner } from '@/lib/race/race-capture-parser';
-  import { formatRaceTime } from '@/lib/race/race-display';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
+  import { formatRaceTime } from '@/lib/race/replay/race-display';
   import Button from '@/components/controls/Button.svelte';
   import Checkbox from '@/components/controls/Checkbox.svelte';
   import Icon from '@/components/Icon.svelte';

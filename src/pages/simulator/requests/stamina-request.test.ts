@@ -45,11 +45,13 @@ describe('stamina request', () => {
       ground_condition: 1,
       start_time_type: 2
     });
+
     expect(body.uma.aptitudes).toEqual({
       distance: [8, 7, 7, 7],
       running_style: [7, 7, 7, 7],
       ground: [7, 7]
     });
+
     expect(body.uma.running_style).toBe('Nige');
     expect(body.full_spurt).toBe(true);
     expect(body.effects).toEqual([]);
@@ -122,6 +124,7 @@ describe('stamina request', () => {
         hp_consumption_multiplier: 10
       }
     ]);
+
     expect(Object.hasOwn(body.states[0] ?? {}, 'rushed')).toBe(false);
   });
 
@@ -138,9 +141,21 @@ describe('stamina request', () => {
         { startDistanceM: 150, durationSeconds: 5, chance: 1 }
       ]
     });
+
     expect(body.states).toEqual([
-      { start_distance_m: 300, duration_seconds: 5, rushed: true, chance: 0.12, start_spread_m: 600 },
-      { start_distance_m: 1800, duration_seconds: 5, target_speed_add_mps: 0.35, start_spread_m: 199 },
+      {
+        start_distance_m: 300,
+        duration_seconds: 5,
+        rushed: true,
+        chance: 0.12,
+        start_spread_m: 600
+      },
+      {
+        start_distance_m: 1800,
+        duration_seconds: 5,
+        target_speed_add_mps: 0.35,
+        start_spread_m: 199
+      },
       { start_distance_m: 150, duration_seconds: 5 }
     ]);
   });

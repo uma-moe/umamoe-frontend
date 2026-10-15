@@ -26,10 +26,12 @@ export function duplicateActivePlan(collection: CaratPlanCollection): CaratPlanC
     ...item,
     id: `income-${crypto.randomUUID()}`
   }));
+
   copy.targets = copy.targets.map((target) => ({
     ...target,
     id: `target-${crypto.randomUUID()}`
   }));
+
   next.plans.push(copy);
   next.activePlanId = copy.id;
   return next;

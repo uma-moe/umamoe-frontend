@@ -30,6 +30,7 @@
   const downhills = $derived(
     (course.slopes ?? []).filter((slope) => slope.slope < 0 && slope.start < course.distance).length
   );
+
   const SITUATIONS = $derived([
     { key: 'positionFight', label: 'Position fight', where: 'early race, front runners' },
     {

@@ -43,7 +43,7 @@
     try {
       select(addSimulatorTeamColor((event.currentTarget as HTMLInputElement).value), event);
     } catch (reason) {
-      error = (reason as Error).message;
+      error = reason instanceof Error ? reason.message : 'Could not assign this team colour.';
     }
   }
 </script>

@@ -70,10 +70,12 @@
       .getElementById(id + '-title')
       ?.closest('figure')
       ?.querySelectorAll('button');
+
     const trigger =
       Array.from(buttons ?? []).find(
         (button) => button.getAttribute('aria-label') === 'Expand ' + title
       ) ?? document.getElementById(id + '-expand')?.querySelector('button');
+
     trigger?.focus({ preventScroll: true });
   }
 </script>
@@ -110,7 +112,8 @@
                 {/snippet}
                 <p class="about-text">{description}</p>
               </InspectPopover>
-            {/if}{@render titleActions?.()}
+            {/if}
+            {@render titleActions?.()}
           </div>
           {#if description && !slim}
             <p>{description}</p>
@@ -134,7 +137,8 @@
             <div class="chart-actions">
               {@render actions()}
             </div>
-          {/if}{#if onexport}
+          {/if}
+          {#if onexport}
             <button
               type="button"
               onclick={onexport}

@@ -27,6 +27,7 @@
     'light-hello': 'Training',
     'new-age-umamusume-data': 'Data & analysis'
   };
+
   const categories = [
     'All research',
     'Race mechanics',
@@ -34,6 +35,7 @@
     'Training',
     'Data & analysis'
   ];
+
   const params = new URLSearchParams(location.search);
 
   let sort = $state(params.get('sort') ?? 'newest');
@@ -47,6 +49,7 @@
         : manifest.filter((n) => topics[n.id] === name).length
     )
   }));
+
   const ordered = [...manifest].sort((a, b) => b.date.localeCompare(a.date));
 
   let search = $state(params.get('q') ?? ''),
@@ -61,6 +64,7 @@
     active = $state(''),
     readingTime = $state(0),
     progress = $state(0);
+
   let article = $state<HTMLElement>();
 
   const noteId = $derived((router.route.params as Record<string, string>).noteId);
@@ -82,6 +86,7 @@
             : b.date.localeCompare(a.date)
       )
   );
+
   const libraryQuery = $derived(
     new URLSearchParams({
       ...(search ? { q: search } : {}),
@@ -89,6 +94,7 @@
       ...(sort !== 'newest' ? { sort } : {})
     }).toString()
   );
+
   const libraryHref = $derived('/research' + (libraryQuery ? '?' + libraryQuery : ''));
 
   $effect(() => {
@@ -98,6 +104,7 @@
   const adjacent = $derived(selected ? ordered.indexOf(selected) : -1);
   const newer = $derived(ordered[adjacent - 1]),
     older = $derived(ordered[adjacent + 1]);
+
   const tools = $derived(
     selected?.id === 'new-age-umamusume-data'
       ? [
@@ -110,6 +117,7 @@
           ? [{ href: '/tools/lineage-planner', label: 'Lineage Planner' }]
           : []
   );
+
   const related = $derived(
     ordered
       .filter((n) => selected && n.id !== selected.id && topics[n.id] === topics[selected.id])
@@ -157,8 +165,10 @@
                 level: Number(heading.tagName[1])
               });
             }
+
           return { ...block, html: document.body.innerHTML };
         });
+
         outline = headings;
       })
       .catch((reason) => {
@@ -168,6 +178,7 @@
       .finally(() => {
         if (!controller.signal.aborted) loading = false;
       });
+
     return () => controller.abort();
   });
 
@@ -175,6 +186,7 @@
     blocks;
     let observer: IntersectionObserver | undefined,
       cancelled = false;
+
     void tick().then(() => {
       if (cancelled || !article) return;
       observer = new IntersectionObserver(
@@ -183,8 +195,10 @@
         },
         { rootMargin: '-80px 0px -60% 0px' }
       );
+
       article.querySelectorAll('h2[id],h3[id]').forEach((h) => observer!.observe(h));
     });
+
     return () => {
       cancelled = true;
       observer?.disconnect();

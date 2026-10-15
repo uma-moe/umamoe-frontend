@@ -3,9 +3,9 @@
   import Icon from '@/components/Icon.svelte';
   import type { UqlValidationIssue } from '@/components/editor/query-editor-types';
   import type { UqlValidation } from '@/lib/inheritance/uql/uql';
-  import type { UqlQueryCatalog } from '@/lib/inheritance/uql/uql-compiler';
-  import type { SelectableParent } from '@/lib/veterans/parent-picker';
-  import type { CatalogEntry } from '../catalog-repository';
+  import type { UqlQueryData } from '@/lib/inheritance/uql/uql-compiler';
+  import type { SelectableParent } from '@/lib/veterans/parents/parent-picker';
+  import type { GameDataEntry } from '@/lib/game-data/display-records';
   import { createDatabaseUqlLanguage } from './database-uql-language';
   import DatabaseUqlGuide from './DatabaseUqlGuide.svelte';
 
@@ -14,7 +14,7 @@
     validation,
     characters,
     supports,
-    catalog,
+    queryData,
     loading,
     legacyParents = [],
     onclear,
@@ -22,9 +22,9 @@
   }: {
     value?: string;
     validation: UqlValidation;
-    characters: CatalogEntry[];
-    supports: CatalogEntry[];
-    catalog: UqlQueryCatalog | null;
+    characters: GameDataEntry[];
+    supports: GameDataEntry[];
+    queryData: UqlQueryData | null;
     loading: boolean;
     legacyParents?: SelectableParent[];
     onclear: () => void;
@@ -35,28 +35,28 @@
     createDatabaseUqlLanguage(
       characters,
       supports,
-      catalog?.races ?? [],
-      catalog?.characters ?? [],
+      queryData?.races ?? [],
+      queryData?.characters ?? [],
       legacyParents
     )
   );
-  const statusLabel = $derived(
-    loading
-      ? 'Loading'
-      : !catalog
-        ? 'Unavailable'
-        : { empty: 'UQL', valid: 'Valid', incomplete: 'Incomplete', invalid: 'Invalid' }[
-            validation.state
-          ]
-  );
+
+  const statusLabel = $derived.by(() => {
+    if (loading) return 'Loading';
+    if (!queryData) return 'Unavailable';
+    return { empty: 'UQL', valid: 'Valid', incomplete: 'Incomplete', invalid: 'Invalid' }[
+      validation.state
+    ];
+  });
+
   const issue = $derived.by<UqlValidationIssue | null>(() => {
-    if (!catalog) return null;
+    if (!queryData) return null;
     if (validation.state !== 'invalid' && validation.state !== 'incomplete') return null;
     const unknown = validation.message.match(/^Unknown field or function: (.+)$/)?.[1];
     const index = unknown ? value.toLowerCase().indexOf(unknown.toLowerCase()) : -1;
     return {
       from: index < 0 ? 0 : index,
-      to: index < 0 ? value.length : index + unknown!.length,
+      to: index < 0 || unknown === undefined ? value.length : index + unknown.length,
       message: validation.message,
       state: validation.state
     };
@@ -68,6 +68,7 @@
       .trim()
       .replace(/;\s*$/, '')
       .replace(/\s+and\s*$/i, '');
+
     value = predicate ? `${predicate} and ${text}` : text;
   }
 </script>

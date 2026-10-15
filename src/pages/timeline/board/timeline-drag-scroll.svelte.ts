@@ -51,6 +51,7 @@ export class TimelineDragScroll {
     if (!delta) return;
     const unit =
       mode === 1 ? 18 : mode === 2 ? (event.shiftKey ? board.clientHeight : board.clientWidth) : 1;
+
     // The axis stays consistent over cards and at the ends. Shift accesses tall event stacks.
     event.preventDefault();
     board.scrollBy({ [event.shiftKey ? 'top' : 'left']: delta * unit, behavior: 'instant' });
@@ -89,6 +90,7 @@ export class TimelineDragScroll {
   move = (event: MouseEvent) => {
     const drag = this.#drag,
       board = this.#viewport.board;
+
     if (!drag || !board) return;
     if (!this.dragging && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 12) return;
     this.dragging = true;
@@ -99,6 +101,7 @@ export class TimelineDragScroll {
       drag.vx = ((event.clientX - drag.lastX) / elapsed) * 16;
       drag.vy = ((event.clientY - drag.lastY) / elapsed) * 16;
     }
+
     // Incremental movement preserves virtual-row corrections made during the drag.
     board.scrollLeft -= event.clientX - drag.lastX;
     board.scrollTop -= event.clientY - drag.lastY;
@@ -112,6 +115,7 @@ export class TimelineDragScroll {
     const drag = this.#drag;
     let vx = drag?.vx ?? 0,
       vy = drag?.vy ?? 0;
+
     const coast = () => {
       const board = this.#viewport.board;
       if (!board || Math.hypot(vx, vy) <= 0.5) return;
@@ -122,6 +126,7 @@ export class TimelineDragScroll {
       this.#viewport.updateViewport();
       this.#momentum = requestAnimationFrame(coast);
     };
+
     if (
       this.dragging &&
       drag &&

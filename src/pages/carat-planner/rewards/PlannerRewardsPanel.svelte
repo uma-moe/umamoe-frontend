@@ -8,6 +8,7 @@
     year: 'numeric',
     timeZone: 'UTC'
   });
+
   const shortDate = new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
@@ -31,9 +32,9 @@
     campaignState,
     selectPlannerCampaign,
     type PlannerCampaign
-  } from '@/lib/carat-planner/planner-campaigns';
-  import { itemIconPath } from '@/lib/catalog/item-icons';
-  import { timelineImage } from '@/lib/catalog/timeline-artwork';
+  } from '@/lib/carat-planner/rewards/planner-campaigns';
+  import { itemIconPath } from '@/lib/game-assets/item-icons';
+  import { timelineImage } from '@/lib/game-assets/timeline-artwork';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
@@ -81,8 +82,10 @@
       }))
     ].filter((item) => item.searchText.includes(search.trim().toLowerCase()))
   );
+
   const upcomingCount = $derived(items.filter((item) => !item.isPast).length),
     pastCount = $derived(items.length - upcomingCount);
+
   const matching = $derived(
     items
       .filter((item) => item.isPast === showPast)
@@ -97,6 +100,7 @@
               : a.id.localeCompare(b.id)
       )
   );
+
   const visible = $derived(matching.slice(virtualRange.start, virtualRange.end));
 
   const date = (value: string, year = true) =>

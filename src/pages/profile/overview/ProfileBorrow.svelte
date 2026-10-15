@@ -1,12 +1,12 @@
 <script lang="ts">
   import { copyText } from '@/lib/clipboard';
-  import { loadCatalog, type CatalogEntry } from '@/pages/database/catalog-repository';
+  import { loadGameDataEntries, type GameDataEntry } from '@/lib/game-data/display-records';
   import InheritanceResultCard from '@/pages/database/results/InheritanceResultCard.svelte';
   import { queueBorrowView, trackBorrowCopy } from '@/pages/database/borrow-interactions';
-  import { veteranAffinityRepository } from '@/lib/veterans/affinity-repository';
-  import { VeteranAffinityEngine } from '@/lib/veterans/affinity-engine';
-  import { loadG1SaddleGroups } from '@/lib/catalog/race-catalog';
-  import type { InheritanceRecord } from '@/lib/inheritance/inheritance-search';
+  import { veteranAffinityRepository } from '@/lib/veterans/affinity/affinity-repository';
+  import { VeteranAffinityEngine } from '@/lib/veterans/affinity/affinity-engine';
+  import { loadG1SaddleGroups } from '@/lib/game-data/racing/races';
+  import type { InheritanceRecord } from '@/lib/inheritance/search/inheritance-search';
   import { profileInheritanceRecord } from '@/lib/profile/profile-display';
   import Button from '@/components/controls/Button.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
@@ -18,8 +18,8 @@
 
   const accountId = $derived(profile.trainer.account_id);
 
-  let catalogCharacters = $state<CatalogEntry[]>([]);
-  let catalogSupports = $state<CatalogEntry[]>([]);
+  let characterEntries = $state<GameDataEntry[]>([]);
+  let catalogSupports = $state<GameDataEntry[]>([]);
   let affinityEngine = $state<VeteranAffinityEngine>();
   let affinityError = $state('');
   let raceGroups = $state<ReadonlyMap<number, number>>(new Map());
@@ -40,6 +40,7 @@
     const pending = trackBorrowCopy(record);
     if (!pending) return;
     borrowCopies = { profile, count: record.borrowCopies + 1 };
+
     const count = await pending;
     if (accountId === profile.trainer.account_id && borrowCopies?.profile === profile)
       borrowCopies = { profile, count };
@@ -64,6 +65,7 @@
     } catch {
       /* Legacy one-shot transfer is best effort. */
     }
+
     window.open('/tools/lineage-planner?from=profile', '_blank', 'noopener');
   }
 
@@ -71,6 +73,7 @@
     const copied = await copyText(
       `${location.origin}/database?trainer_id=${encodeURIComponent(record.accountId)}`
     );
+
     notify(
       copied ? 'Link copied to clipboard' : 'Failed to copy link',
       copied ? 'success' : 'danger'
@@ -102,9 +105,10 @@
       .catch(() => {
         inheritanceNotice = 'Race affinity details could not be loaded.';
       });
-    void Promise.all([loadCatalog('characters'), loadCatalog('supports')])
+
+    void Promise.all([loadGameDataEntries('characters'), loadGameDataEntries('supports')])
       .then(([characters, supports]) => {
-        catalogCharacters = characters;
+        characterEntries = characters;
         catalogSupports = supports;
       })
       .catch(() => {
@@ -124,7 +128,7 @@
     }}
     {affinityEngine}
     {raceGroups}
-    characters={catalogCharacters}
+    characters={characterEntries}
     supports={catalogSupports}
     actionBusy={inheritanceActionBusy}
     reportText="Update inheritance"

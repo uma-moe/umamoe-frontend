@@ -115,79 +115,6 @@
       : option;
   });
 
-  onMount(() => {
-    chart = echarts.init(host, undefined, { renderer: 'svg' });
-    chart.getZr().on('click', (event) => {
-      if ((!onaxisclick && !onplotclick) || !chart) return;
-      const grids = Array.isArray(option.grid) ? option.grid : [option.grid];
-      const gridIndex = grids.findIndex((_, index) =>
-        chart!.containPixel({ gridIndex: index }, [event.offsetX, event.offsetY])
-      );
-      if (gridIndex < 0) return;
-      const value = (
-        chart.convertFromPixel({ gridIndex }, [event.offsetX, event.offsetY]) as number[]
-      )[0];
-      if (typeof value === 'number' && Number.isFinite(value)) onaxisclick?.(value);
-      onplotclick?.(event.offsetX, event.offsetY);
-    });
-    chart.on('datazoom', () => {
-      const zoom = (chart!.getOption().dataZoom as { start: number; end: number }[])[0];
-      if (zoom) onzoom?.(zoom.start, zoom.end);
-    });
-    const observer = new ResizeObserver(() => chart?.resize());
-    observer.observe(host);
-    let dismissTimer: ReturnType<typeof setTimeout>;
-    let touchTooltip = false;
-    const hideTooltip = () => {
-      touchTooltip = false;
-      tooltipElement()?.dispatchEvent(new MouseEvent('mouseleave'));
-      chart?.dispatchAction({ type: 'hideTip' });
-      chart?.dispatchAction({ type: 'downplay' });
-    };
-    const pointerDown = (event: PointerEvent) => {
-      if (!dismissTouchTooltip) return;
-      clearTimeout(dismissTimer);
-      const insideTooltip = Boolean(tooltipElement()?.contains(event.target as Node));
-      touchTooltip =
-        event.pointerType === 'touch' &&
-        insideTooltip &&
-        Boolean((option.tooltip as TooltipComponentOption | undefined)?.enterable);
-      if (!host.contains(event.target as Node) && !insideTooltip) hideTooltip();
-    };
-    // Touch scrolling can synthesize a mouseleave; keep an entered tooltip open until an outside tap.
-    const leaveTooltip = (event: MouseEvent) => {
-      if (touchTooltip && event.target === tooltipElement()) event.stopImmediatePropagation();
-    };
-    const pointerUp = (event: PointerEvent) => {
-      if (
-        dismissTouchTooltip &&
-        event.pointerType === 'touch' &&
-        !(option.tooltip as TooltipComponentOption | undefined)?.enterable
-      ) {
-        clearTimeout(dismissTimer);
-        dismissTimer = setTimeout(hideTooltip, 2000);
-      }
-    };
-    document.addEventListener('pointerdown', pointerDown, { passive: true });
-    document.addEventListener('mouseleave', leaveTooltip, true);
-    host.addEventListener('pointerup', pointerUp, { passive: true });
-    host.addEventListener('pointercancel', pointerUp, { passive: true });
-    return () => {
-      clearTimeout(dismissTimer);
-      document.removeEventListener('pointerdown', pointerDown);
-      document.removeEventListener('mouseleave', leaveTooltip, true);
-      host.removeEventListener('pointerup', pointerUp);
-      host.removeEventListener('pointercancel', pointerUp);
-      observer.disconnect();
-      chart?.dispose();
-      chart = undefined;
-    };
-  });
-
-  $effect(() => {
-    if (chart) chart.setOption(chartOption, { notMerge: true });
-  });
-
   function navigate(event: KeyboardEvent): void {
     if (
       !zoomable ||
@@ -199,11 +126,14 @@
     const current = (
       chart.getOption().dataZoom as Array<{ start: number; end: number }> | undefined
     )?.[0];
+
     if (!current) return;
     const span = current.end - current.start,
       center = (current.start + current.end) / 2;
+
     let start = current.start,
       end = current.end;
+
     if (event.key === 'Home') {
       start = 0;
       end = 100;
@@ -216,8 +146,91 @@
       start = Math.max(0, Math.min(100 - nextSpan, center - nextSpan / 2));
       end = start + nextSpan;
     }
+
     chart.dispatchAction({ type: 'dataZoom', start, end });
   }
+
+  onMount(() => {
+    const mountedChart = echarts.init(host, undefined, { renderer: 'svg' });
+    chart = mountedChart;
+    mountedChart.getZr().on('click', (event) => {
+      if (!onaxisclick && !onplotclick) return;
+      const grids = Array.isArray(option.grid) ? option.grid : [option.grid];
+      const gridIndex = grids.findIndex((_, index) =>
+        mountedChart.containPixel({ gridIndex: index }, [event.offsetX, event.offsetY])
+      );
+
+      if (gridIndex < 0) return;
+      const value = (
+        mountedChart.convertFromPixel({ gridIndex }, [event.offsetX, event.offsetY]) as number[]
+      )[0];
+
+      if (typeof value === 'number' && Number.isFinite(value)) onaxisclick?.(value);
+      onplotclick?.(event.offsetX, event.offsetY);
+    });
+
+    mountedChart.on('datazoom', () => {
+      const zoom = (mountedChart.getOption().dataZoom as { start: number; end: number }[])[0];
+      if (zoom) onzoom?.(zoom.start, zoom.end);
+    });
+
+    const observer = new ResizeObserver(() => chart?.resize());
+    observer.observe(host);
+    let dismissTimer: ReturnType<typeof setTimeout>;
+    let touchTooltip = false;
+    const hideTooltip = () => {
+      touchTooltip = false;
+      tooltipElement()?.dispatchEvent(new MouseEvent('mouseleave'));
+      chart?.dispatchAction({ type: 'hideTip' });
+      chart?.dispatchAction({ type: 'downplay' });
+    };
+
+    const pointerDown = (event: PointerEvent) => {
+      if (!dismissTouchTooltip) return;
+      clearTimeout(dismissTimer);
+      const insideTooltip = Boolean(tooltipElement()?.contains(event.target as Node));
+      touchTooltip =
+        event.pointerType === 'touch' &&
+        insideTooltip &&
+        Boolean((option.tooltip as TooltipComponentOption | undefined)?.enterable);
+      if (!host.contains(event.target as Node) && !insideTooltip) hideTooltip();
+    };
+
+    // Touch scrolling can synthesize a mouseleave; keep an entered tooltip open until an outside tap.
+    const leaveTooltip = (event: MouseEvent) => {
+      if (touchTooltip && event.target === tooltipElement()) event.stopImmediatePropagation();
+    };
+
+    const pointerUp = (event: PointerEvent) => {
+      if (
+        dismissTouchTooltip &&
+        event.pointerType === 'touch' &&
+        !(option.tooltip as TooltipComponentOption | undefined)?.enterable
+      ) {
+        clearTimeout(dismissTimer);
+        dismissTimer = setTimeout(hideTooltip, 2000);
+      }
+    };
+
+    document.addEventListener('pointerdown', pointerDown, { passive: true });
+    document.addEventListener('mouseleave', leaveTooltip, true);
+    host.addEventListener('pointerup', pointerUp, { passive: true });
+    host.addEventListener('pointercancel', pointerUp, { passive: true });
+    return () => {
+      clearTimeout(dismissTimer);
+      document.removeEventListener('pointerdown', pointerDown);
+      document.removeEventListener('mouseleave', leaveTooltip, true);
+      host.removeEventListener('pointerup', pointerUp);
+      host.removeEventListener('pointercancel', pointerUp);
+      observer.disconnect();
+      mountedChart.dispose();
+      chart = undefined;
+    };
+  });
+
+  $effect(() => {
+    if (chart) chart.setOption(chartOption, { notMerge: true });
+  });
 </script>
 
 <figure

@@ -1,4 +1,4 @@
-import type { SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
+import type { SkillData } from '@/lib/game-data/skills/skills';
 import type { OptimizePurchaseInput } from '../../requests/optimize-request';
 
 /**
@@ -10,6 +10,8 @@ import type { OptimizePurchaseInput } from '../../requests/optimize-request';
 export interface SkillOffer {
   skillId: number;
   hint: number;
+  /** A non-negotiable: every build the search considers buys it. */
+  locked?: boolean;
 }
 
 /** Percent of the base cost taken off by each hint level, 0 to 5. */
@@ -25,12 +27,13 @@ export function offerCost(base: number, hint: number, fastLearner = false): numb
   const discount =
     HINT_DISCOUNT[Math.min(MAX_HINT, Math.max(0, Math.round(hint)))]! +
     (fastLearner ? FAST_LEARNER_DISCOUNT : 0);
+
   // Whole percents keep the arithmetic exact: 170 at 30% off is 119, not 118.99….
   return Math.floor((base * (100 - discount)) / 100);
 }
 
 /** A skill's base cost: its catalog cost, or the inherited unique cost. */
-export function baseCost(skill: SkillCatalogEntry): number | undefined {
+export function baseCost(skill: SkillData): number | undefined {
   if (String(skill.skill_id).startsWith('9') && skill.skill_id < 1_000_000)
     return INHERITED_UNIQUE_COST;
   return skill.baseCost;
@@ -41,7 +44,7 @@ export function baseCost(skill: SkillCatalogEntry): number | undefined {
  * is a plain white beside a ○ or ◎ (Wallflower) or beside a plain white of a lower ID (Gatekept beside Focus).
  * Undefined for uniques. The game's groups are the skill ID without its last digit.
  */
-function groupRank(skill: SkillCatalogEntry, group: SkillCatalogEntry[]): number | undefined {
+function groupRank(skill: SkillData, group: SkillData[]): number | undefined {
   if (skill.rarity === 2) return 3;
   if (skill.rarity !== 1) return undefined;
   const name = skill.name.trimEnd();
@@ -62,40 +65,43 @@ function groupRank(skill: SkillCatalogEntry, group: SkillCatalogEntry[]): number
  * Corner Recovery ○, See Ya Later! on Playtime's Over!, Blast Forward on Long Straightaways ◎), whichever ID it has.
  */
 export function upgradedSkill(
-  skill: SkillCatalogEntry,
-  catalog: Map<number, SkillCatalogEntry>
-): SkillCatalogEntry | undefined {
+  skill: SkillData,
+  skillLookup: Map<number, SkillData>
+): SkillData | undefined {
   const first = Math.floor(skill.skill_id / 10) * 10;
-  const group = Array.from({ length: 10 }, (_, digit) => catalog.get(first + digit)).filter(
-    (other): other is SkillCatalogEntry => !!other
+  const group = Array.from({ length: 10 }, (_, digit) => skillLookup.get(first + digit)).filter(
+    (other): other is SkillData => Boolean(other)
   );
+
   const rank = groupRank(skill, group);
   if (rank === undefined) return undefined;
-  let lower: SkillCatalogEntry | undefined,
+  let lower: SkillData | undefined,
     lowerRank = 0;
+
   for (const other of group) {
     const otherRank = other === skill ? undefined : groupRank(other, group);
     if (otherRank === undefined || otherRank <= 0 || otherRank >= rank) continue;
     if (otherRank > lowerRank) [lower, lowerRank] = [other, otherRank];
   }
+
   return lower;
 }
 
 /** One offer, priced, with what it needs. */
 export interface PricedOffer extends SkillOffer {
-  skill: SkillCatalogEntry;
+  skill: SkillData;
   /** Before the hint discount. */
   base: number;
   /** With the hint discount; includes the skill it upgrades when that is neither owned nor on offer. */
   cost: number;
   /** The skill it upgrades. */
-  upgrades?: SkillCatalogEntry;
+  upgrades?: SkillData;
   /** How the skill it upgrades is covered. */
   needs?: 'owned' | 'offered' | 'bundled';
   /** The ranks below it she neither owns nor has on offer, bought with it: Blast Forward without either straightaway. */
-  bundled?: SkillCatalogEntry[];
+  bundled?: SkillData[];
   /** The skill down its group it builds on and replaces: one she owns, or one on offer it needs bought first. */
-  buildsOn?: { skill: SkillCatalogEntry; owned: boolean };
+  buildsOn?: { skill: SkillData; owned: boolean };
 }
 
 /**
@@ -108,38 +114,51 @@ export interface PricedOffer extends SkillOffer {
 export function offerPurchases(
   offers: SkillOffer[],
   owned: number[],
-  catalog: Map<number, SkillCatalogEntry>,
+  skillLookup: Map<number, SkillData>,
   fastLearner = false
-): { priced: PricedOffer[]; missing: SkillOffer[]; purchases: OptimizePurchaseInput[] } {
+): {
+  priced: PricedOffer[];
+  missing: SkillOffer[];
+  purchases: OptimizePurchaseInput[];
+  locked: number[];
+  lockedCost: number;
+} {
   const priced: PricedOffer[] = [],
     missing: SkillOffer[] = [];
+
   const seen = new Set<number>();
   for (const offer of offers) {
-    const skill = catalog.get(offer.skillId);
+    const skill = skillLookup.get(offer.skillId);
     const base = skill && baseCost(skill);
     if (!skill || base == null || seen.has(offer.skillId)) {
       if (!seen.has(offer.skillId)) missing.push(offer);
       continue;
     }
+
     seen.add(offer.skillId);
     priced.push({ ...offer, skill, base, cost: offerCost(base, offer.hint, fastLearner) });
   }
+
   const index = new Map(priced.map((offer, position) => [offer.skillId, position]));
   for (const offer of priced) {
-    const lower = upgradedSkill(offer.skill, catalog);
+    const lower = upgradedSkill(offer.skill, skillLookup);
     if (!lower) continue;
     offer.upgrades = lower;
     // Down the group until a skill she owns or one on offer: every rank in between is bought with the upgrade.
-    let tier: SkillCatalogEntry | undefined = lower;
+    let tier: SkillData | undefined = lower;
     while (tier && !owned.includes(tier.skill_id) && !index.has(tier.skill_id)) {
       (offer.bundled ??= []).push(tier);
       const tierBase = baseCost(tier);
       offer.cost += tierBase == null ? 0 : offerCost(tierBase, 0, fastLearner);
-      tier = upgradedSkill(tier, catalog);
+      tier = upgradedSkill(tier, skillLookup);
     }
+
     if (tier) offer.buildsOn = { skill: tier, owned: owned.includes(tier.skill_id) };
-    offer.needs = offer.bundled ? 'bundled' : offer.buildsOn!.owned ? 'owned' : 'offered';
+
+    if (offer.bundled) offer.needs = 'bundled';
+    else offer.needs = offer.buildsOn?.owned ? 'owned' : 'offered';
   }
+
   const purchases = priced.map((offer): OptimizePurchaseInput => {
     const on = offer.buildsOn;
     const lower = on && !on.owned ? index.get(on.skill.skill_id) : undefined;
@@ -152,5 +171,22 @@ export function offerPurchases(
       ...(replaced !== undefined ? { replaces: [replaced] } : {})
     };
   });
-  return { priced, missing, purchases };
+
+  const locked = priced.flatMap((offer, position) => (offer.locked ? [position] : []));
+  return { priced, missing, purchases, locked, lockedCost: lockedCost(purchases, locked) };
+}
+
+/** What the locked purchases cost, each with the purchases it needs, counted once. */
+function lockedCost(purchases: OptimizePurchaseInput[], locked: number[]): number {
+  const bought = new Set<number>();
+  const pending = [...locked];
+  for (let index = pending.pop(); index !== undefined; index = pending.pop()) {
+    if (bought.has(index)) continue;
+    bought.add(index);
+    pending.push(...(purchases[index]?.requires ?? []));
+  }
+
+  let cost = 0;
+  for (const index of bought) cost += purchases[index]?.cost ?? 0;
+  return cost;
 }

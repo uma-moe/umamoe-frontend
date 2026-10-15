@@ -3,42 +3,107 @@ import { mockTimeline } from './fixtures/api';
 import { plannerControlsPlan } from './fixtures/planner-controls';
 import { readFile } from 'node:fs/promises';
 
-test('Planner import reports failures without data loss and round-trips Angular exports', async ({ page }) => {
+test('Planner import reports failures without data loss and round-trips Angular exports', async ({
+  page
+}) => {
   await mockTimeline(page);
-  const original = plannerControlsPlan(); original.targets = []; original.disabledEventIds = [];
-  await page.addInitScript(plan => { if (!localStorage.getItem('carat-planner-plans-v1')) localStorage.setItem('carat-planner-plans-v1', JSON.stringify({ version: 1, activePlanId: plan.id, plans: [plan] })); }, original);
+  const original = plannerControlsPlan();
+  original.targets = [];
+  original.disabledEventIds = [];
+  await page.addInitScript((plan) => {
+    if (!localStorage.getItem('carat-planner-plans-v1'))
+      localStorage.setItem(
+        'carat-planner-plans-v1',
+        JSON.stringify({ version: 1, activePlanId: plan.id, plans: [plan] })
+      );
+  }, original);
+
   await page.goto('/timeline?tab=carat-planner');
   const selected = page.getByRole('button', { name: 'Selected plan', exact: true });
   await expect(selected).toHaveText(original.name);
-  await expect.poll(async () => JSON.parse((await page.evaluate(() => localStorage.getItem('carat-planner-plans-v1')))!).plans[0].enabledRewardEventIds).toEqual(['character-1']);
+  await expect
+    .poll(
+      async () =>
+        JSON.parse((await page.evaluate(() => localStorage.getItem('carat-planner-plans-v1')))!)
+          .plans[0].enabledRewardEventIds
+    )
+    .toEqual(['character-1']);
   const before = await page.evaluate(() => localStorage.getItem('carat-planner-plans-v1'));
-  for (const [text, message] of [['{', 'not valid JSON'], ['null', 'invalid shape'], ['{"plans":[null,[]]}', 'no usable plans'], [' '.repeat(2_000_001), 'too large']]) {
+  for (const [text, message] of [
+    ['{', 'not valid JSON'],
+    ['null', 'invalid shape'],
+    ['{"plans":[null,[]]}', 'no usable plans'],
+    [' '.repeat(2_000_001), 'too large']
+  ]) {
     const chooser = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: 'More plan actions', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Import plan', exact: true }).click();
-    await (await chooser).setFiles({ name: 'plan.json', mimeType: 'application/json', buffer: Buffer.from(text!) });
+    await (
+      await chooser
+    ).setFiles({ name: 'plan.json', mimeType: 'application/json', buffer: Buffer.from(text!) });
+
     await expect(page.getByRole('alert')).toContainText(message!);
     expect(await page.evaluate(() => localStorage.getItem('carat-planner-plans-v1'))).toBe(before);
   }
-  const imported = { ...original, id: 'export-id', targets: [{ ...plannerControlsPlan().targets[0]!, id: 'imported-target', eventId: 'character-1', gachaId: 7001, plannedPulls: 222, pullTiming: 'custom', customPullDate: '2026-09-05', pickupGoals: [{ pickupId: 1001, desiredCopies: 2 }] }] };
-  await page.locator('input[type="file"]').setInputFiles({ name: 'angular-export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ version: 1, plan: imported })) });
+
+  const imported = {
+    ...original,
+    id: 'export-id',
+    targets: [
+      {
+        ...plannerControlsPlan().targets[0]!,
+        id: 'imported-target',
+        eventId: 'character-1',
+        gachaId: 7001,
+        plannedPulls: 222,
+        pullTiming: 'custom',
+        customPullDate: '2026-09-05',
+        pickupGoals: [{ pickupId: 1001, desiredCopies: 2 }]
+      }
+    ]
+  };
+
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'angular-export.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ version: 1, plan: imported }))
+  });
+
   await expect(selected).toHaveText('Controls plan 2');
   await expect(page.getByRole('alert')).toHaveCount(0);
   const row = page.locator('[data-target-id="imported-target"]');
   await expect(row.locator('.date')).toHaveText('Sep 1, 2026 – Sep 10, 2026');
-  await expect(row.getByRole('spinbutton', { name: 'Planned pulls', exact: true })).toHaveValue('222');
+  await expect(row.getByRole('spinbutton', { name: 'Planned pulls', exact: true })).toHaveValue(
+    '222'
+  );
+
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', { name: 'More plan actions', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Export plan', exact: true }).click();
   const download = await downloading;
   const exported = JSON.parse(await readFile((await download.path())!, 'utf8'));
-  expect(exported.version).toBe(1); expect(exported.plans).toBeUndefined();
+  expect(exported.version).toBe(1);
+  expect(exported.plans).toBeUndefined();
   expect(exported.plan).toMatchObject({ id: 'export-id', name: 'Controls plan 2' });
-  expect(exported.plan.targets[0]).toMatchObject({ plannedPulls: 222, customPullDate: '2026-09-05', pickupGoals: imported.targets[0]!.pickupGoals });
-  expect(exported.plan.targets[0].bannerStart).toBeUndefined(); expect(exported.plan.targets[0].bannerEnd).toBeUndefined();
-  await page.locator('input[type="file"]').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exported)) });
+  expect(exported.plan.targets[0]).toMatchObject({
+    plannedPulls: 222,
+    customPullDate: '2026-09-05',
+    pickupGoals: imported.targets[0]!.pickupGoals
+  });
+
+  expect(exported.plan.targets[0].bannerStart).toBeUndefined();
+  expect(exported.plan.targets[0].bannerEnd).toBeUndefined();
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'export.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(exported))
+  });
+
   await expect(selected).toHaveText('Controls plan 2 2');
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!));
+  const saved = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('carat-planner-plans-v1')!)
+  );
+
   expect(saved.plans).toHaveLength(3);
   expect(saved.activePlanId).not.toBe('export-id');
   await page.reload();
@@ -46,11 +111,39 @@ test('Planner import reports failures without data loss and round-trips Angular 
   await expect(row.locator('.date')).toHaveText('Sep 1, 2026 – Sep 10, 2026');
 });
 
-test('Planner refreshes stored banner metadata without losing choices or writing on resource arrival', async ({ page }) => {
+test('Planner refreshes stored banner metadata without losing choices or writing on resource arrival', async ({
+  page
+}) => {
   await mockTimeline(page);
   const plan = plannerControlsPlan();
-  plan.targets = [{ ...plan.targets[0]!, id: 'saved', eventId: ' CHARACTER__1 ', title: 'Old banner title', bannerStart: '2026-09-03', bannerEnd: '2026-09-04', imagePath: '/old-image.webp', gachaId: 1, gachaIds: [1], plannedPulls: 123, pullTiming: 'custom', customPullDate: '2026-09-06', allowPaidJewels: true, ticketLimit: 3, pickupGoals: [{ pickupId: 1001, desiredCopies: 2 }] }];
-  await page.addInitScript(plan => { if (!localStorage.getItem('carat-planner-plans-v1')) localStorage.setItem('carat-planner-plans-v1', JSON.stringify({ version: 1, activePlanId: plan.id, plans: [plan] })); }, plan);
+  plan.targets = [
+    {
+      ...plan.targets[0]!,
+      id: 'saved',
+      eventId: ' CHARACTER__1 ',
+      title: 'Old banner title',
+      bannerStart: '2026-09-03',
+      bannerEnd: '2026-09-04',
+      imagePath: '/old-image.webp',
+      gachaId: 1,
+      gachaIds: [1],
+      plannedPulls: 123,
+      pullTiming: 'custom',
+      customPullDate: '2026-09-06',
+      allowPaidJewels: true,
+      ticketLimit: 3,
+      pickupGoals: [{ pickupId: 1001, desiredCopies: 2 }]
+    }
+  ];
+
+  await page.addInitScript((plan) => {
+    if (!localStorage.getItem('carat-planner-plans-v1'))
+      localStorage.setItem(
+        'carat-planner-plans-v1',
+        JSON.stringify({ version: 1, activePlanId: plan.id, plans: [plan] })
+      );
+  }, plan);
+
   await page.goto('/timeline?tab=carat-planner');
   const row = page.locator('[data-target-id="saved"]');
   await expect(row.locator('.target-title strong')).toHaveText('Mejiro McQueen Pickup');
@@ -59,65 +152,179 @@ test('Planner refreshes stored banner metadata without losing choices or writing
   const selectedGoal = row.getByRole('article', { name: 'Mejiro McQueen', exact: true });
   await expect(selectedGoal).toContainText('1.00% estimated per pull');
   await expect(selectedGoal.getByRole('status')).toHaveText('2');
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0].targets[0].title)).toBe('Old banner title');
+  expect(
+    await page.evaluate(
+      () => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0].targets[0].title
+    )
+  ).toBe('Old banner title');
   await page.getByRole('textbox', { name: 'Plan name', exact: true }).fill('Updated plan');
   await page.getByRole('textbox', { name: 'Plan name', exact: true }).blur();
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0]);
+  const saved = await page.evaluate(
+    () => JSON.parse(localStorage.getItem('carat-planner-plans-v1')!).plans[0]
+  );
+
   const { imagePath, bannerStart, bannerEnd, ...expected } = plan.targets[0]!;
-  expect(saved.targets[0]).toMatchObject({ ...expected, desiredCopies: 2, pickupId: 1001, eventId: 'CHARACTER__1', title: 'Mejiro McQueen Pickup', gachaId: 7001, gachaIds: [7001] });
+  expect(saved.targets[0]).toMatchObject({
+    ...expected,
+    desiredCopies: 2,
+    pickupId: 1001,
+    eventId: 'CHARACTER__1',
+    title: 'Mejiro McQueen Pickup',
+    gachaId: 7001,
+    gachaIds: [7001]
+  });
+
   expect(saved.targets[0].imagePath).toBeUndefined();
-  expect(saved.targets[0].bannerStart).toBeUndefined(); expect(saved.targets[0].bannerEnd).toBeUndefined();
+  expect(saved.targets[0].bannerStart).toBeUndefined();
+  expect(saved.targets[0].bannerEnd).toBeUndefined();
   await page.reload();
   await expect(row.locator('.date')).toHaveText('Sep 1, 2026 – Sep 10, 2026');
-  await expect(row.getByRole('spinbutton', { name: 'Planned pulls', exact: true })).toHaveValue('123');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(page.viewportSize()!.width);
+  await expect(row.getByRole('spinbutton', { name: 'Planned pulls', exact: true })).toHaveValue(
+    '123'
+  );
+
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    page.viewportSize()!.width
+  );
 });
 
-test('Planner loads absent imported targets, ignores old plan requests, and retries unavailable resources', async ({ page }) => {
+test('Planner loads absent imported targets, ignores old plan requests, and retries unavailable resources', async ({
+  page
+}) => {
   await mockTimeline(page);
   const plans = [8001, 8002, 8003].map((gachaId, index) => {
     const plan = plannerControlsPlan();
-    plan.id = `plan-${index}`; plan.name = `Plan ${index}`;
-    plan.targets = [{ ...plan.targets[0]!, id: `target-${index}`, eventId: 'imported-banner', title: `Imported banner ${index}`, gachaId, bannerStart: undefined, bannerEnd: undefined, pickupId: 1001, pickupGoals: [{ pickupId: 1001, desiredCopies: 1 }] }];
+    plan.id = `plan-${index}`;
+    plan.name = `Plan ${index}`;
+    plan.targets = [
+      {
+        ...plan.targets[0]!,
+        id: `target-${index}`,
+        eventId: 'imported-banner',
+        title: `Imported banner ${index}`,
+        gachaId,
+        bannerStart: undefined,
+        bannerEnd: undefined,
+        pickupId: 1001,
+        pickupGoals: [{ pickupId: 1001, desiredCopies: 1 }]
+      }
+    ];
+
     return plan;
   });
-  await page.addInitScript(plans => localStorage.setItem('carat-planner-plans-v1', JSON.stringify({ version: 1, activePlanId: plans[0]!.id, plans })), plans);
-  await page.route('**/resources/planner/manifest.json*', route => route.fulfill({ json: { files: Object.fromEntries(['core', 'income', 'rewards', 'gacha_2027', 'gacha_2028', 'gacha_2029'].map(name => [`planner_${name}.json`, `/resources/test/planner_${name}.json`])) } }));
-  await page.route('**/resources/test/planner_core.json*', route => route.fulfill({ json: { jewel_cost_per_pull: 150, gacha_shard_by_id: { '8001': '2027', '8002': '2028', '8003': '2029' } } }));
-  const gacha = (id: number, label: string) => ({ event_id: 'imported-banner', gacha_id: id, banner_kind: 'character', start_date: '2026-09-25', end_date: '2026-10-03', pickups: [{ pickup_id: 1001, label, rate: .01, exchangeable: true }] });
+
+  await page.addInitScript(
+    (plans) =>
+      localStorage.setItem(
+        'carat-planner-plans-v1',
+        JSON.stringify({ version: 1, activePlanId: plans[0]!.id, plans })
+      ),
+    plans
+  );
+
+  await page.route('**/resources/planner/manifest.json*', (route) =>
+    route.fulfill({
+      json: {
+        files: Object.fromEntries(
+          ['core', 'income', 'rewards', 'gacha_2027', 'gacha_2028', 'gacha_2029'].map((name) => [
+            `planner_${name}.json`,
+            `/resources/test/planner_${name}.json`
+          ])
+        )
+      }
+    })
+  );
+
+  await page.route('**/resources/test/planner_core.json*', (route) =>
+    route.fulfill({
+      json: {
+        jewel_cost_per_pull: 150,
+        gacha_shard_by_id: { '8001': '2027', '8002': '2028', '8003': '2029' }
+      }
+    })
+  );
+
+  const gacha = (id: number, label: string) => ({
+    event_id: 'imported-banner',
+    gacha_id: id,
+    banner_kind: 'character',
+    start_date: '2026-09-25',
+    end_date: '2026-10-03',
+    pickups: [{ pickup_id: 1001, label, rate: 0.01, exchangeable: true }]
+  });
+
   let releaseOld!: () => void;
-  const oldGate = new Promise<void>(resolve => releaseOld = resolve);
-  let oldRequested = false; let oldDelivered = false; let repaired = false;
-  await page.route('**/resources/test/planner_gacha_2027.json*', async route => { oldRequested = true; await oldGate; await route.fulfill({ json: { gachas: [gacha(8001, 'Old plan pickup')] } }); oldDelivered = true; });
-  await page.route('**/resources/test/planner_gacha_2028.json*', route => route.fulfill({ json: { gachas: [gacha(8002, 'Current plan pickup')] } }));
-  await page.route('**/resources/test/planner_gacha_2029.json*', route => route.fulfill({ json: { gachas: repaired ? [gacha(8003, 'Repaired pickup')] : [] } }));
+  const oldGate = new Promise<void>((resolve) => (releaseOld = resolve));
+  let oldRequested = false;
+  let oldDelivered = false;
+  let repaired = false;
+  await page.route('**/resources/test/planner_gacha_2027.json*', async (route) => {
+    oldRequested = true;
+    await oldGate;
+    await route.fulfill({ json: { gachas: [gacha(8001, 'Old plan pickup')] } });
+    oldDelivered = true;
+  });
+
+  await page.route('**/resources/test/planner_gacha_2028.json*', (route) =>
+    route.fulfill({ json: { gachas: [gacha(8002, 'Current plan pickup')] } })
+  );
+
+  await page.route('**/resources/test/planner_gacha_2029.json*', (route) =>
+    route.fulfill({ json: { gachas: repaired ? [gacha(8003, 'Repaired pickup')] : [] } })
+  );
+
   try {
     await page.goto('/timeline?tab=carat-planner');
     await expect.poll(() => oldRequested).toBe(true);
     const select = page.getByRole('button', { name: 'Selected plan', exact: true });
-    await select.click(); await page.getByRole('menuitemradio', { name: 'Plan 1', exact: true }).click();
+    await select.click();
+    await page.getByRole('menuitemradio', { name: 'Plan 1', exact: true }).click();
     const current = page.locator('[data-target-id="target-1"]');
     await expect(current.locator('.date')).toHaveText('Sep 25, 2026 – Oct 3, 2026');
     await current.locator('summary').click();
-    await expect(current.getByRole('article', { name: 'Current plan pickup', exact: true })).toBeVisible();
+    await expect(
+      current.getByRole('article', { name: 'Current plan pickup', exact: true })
+    ).toBeVisible();
+
     releaseOld();
     await expect.poll(() => oldDelivered).toBe(true);
     await current.getByRole('spinbutton', { name: 'Planned pulls', exact: true }).fill('25');
     await current.getByRole('spinbutton', { name: 'Planned pulls', exact: true }).blur();
-    await expect(current.getByRole('article', { name: 'Current plan pickup', exact: true })).toBeVisible();
+    await expect(
+      current.getByRole('article', { name: 'Current plan pickup', exact: true })
+    ).toBeVisible();
+
     await expect(current.getByText('Old plan pickup')).toHaveCount(0);
-    await select.click(); await page.getByRole('menuitemradio', { name: 'Plan 2', exact: true }).click();
-    await expect(page.getByRole('alert')).toContainText('No protected gacha data was found for Imported banner 2.');
+    await select.click();
+    await page.getByRole('menuitemradio', { name: 'Plan 2', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText(
+      'No protected gacha data was found for Imported banner 2.'
+    );
     repaired = true;
     await page.getByRole('button', { name: 'Retry', exact: true }).click();
     const fixed = page.locator('[data-target-id="target-2"]');
     await expect(fixed.locator('.date')).toHaveText('Sep 25, 2026 – Oct 3, 2026');
     await fixed.locator('summary').click();
-    await expect(fixed.getByRole('article', { name: 'Repaired pickup', exact: true })).toBeVisible();
+    await expect(
+      fixed.getByRole('article', { name: 'Repaired pickup', exact: true })
+    ).toBeVisible();
+
     await expect(page.getByRole('alert')).toHaveCount(0);
     await page.getByRole('button', { name: 'Selected plan', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Add plan', exact: true }).click();
-    await expect.poll(() => page.evaluate(() => { const saved = JSON.parse(localStorage.getItem('carat-planner-plans-v1')!); return saved.plans.find((plan: { id: string }) => plan.id === saved.activePlanId); })).toMatchObject({ resourceDefaultsApplied: true, enabledIncomeRuleIds: ['daily-login'] });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(page.viewportSize()!.width);
-  } finally { releaseOld(); }
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const saved = JSON.parse(localStorage.getItem('carat-planner-plans-v1')!);
+          return saved.plans.find((plan: { id: string }) => plan.id === saved.activePlanId);
+        })
+      )
+      .toMatchObject({ resourceDefaultsApplied: true, enabledIncomeRuleIds: ['daily-login'] });
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+      page.viewportSize()!.width
+    );
+  } finally {
+    releaseOld();
+  }
 });

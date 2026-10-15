@@ -64,6 +64,7 @@
       document.documentElement.style.overflow = oldOverflow;
       scrollLocked = false;
     }
+
     if (returnFocus?.isConnected && !document.querySelector('dialog[open]'))
       returnFocus.focus({ preventScroll: true });
     returnFocus = undefined;
@@ -75,6 +76,7 @@
     const matches = [...document.querySelectorAll<HTMLElement>(current.selector)].filter((node) =>
       isElementVisible(node)
     );
+
     // Repeated timeline cards: inspect the one already in the viewport before scrolling to a fallback.
     if (current.stepId === 'timeline-event-card')
       return (
@@ -100,6 +102,7 @@
       innerWidth,
       innerHeight
     );
+
     callout.style.left = placed.left + 'px';
     callout.style.top = placed.top + 'px';
   }
@@ -116,6 +119,7 @@
       end();
       return;
     }
+
     index = next;
     const current = steps[next]!;
     tourStepId.set(current.stepId);
@@ -128,12 +132,14 @@
       await wait(100);
       found = target(current);
     }
+
     if (ticket !== generation) return;
     if (!found) {
       if (current.isOptional) {
         void show(next + direction, direction);
         return;
       }
+
       problem =
         'The tour could not find “' +
         current.title +
@@ -141,6 +147,7 @@
       end();
       return;
     }
+
     anchor = found;
     found.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
     shown = true;
@@ -202,19 +209,23 @@
       end();
       return;
     }
+
     const node = event.target as HTMLElement;
     if (event.key === 'Tab') {
       const selector =
         'button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),[tabindex="0"]';
+
       const controls = [
         ...(anchor?.matches(selector) ? [anchor] : []),
         ...(anchor?.querySelectorAll<HTMLElement>(selector) ?? []),
         ...(callout?.querySelectorAll<HTMLElement>(selector) ?? [])
       ].filter((node) => isElementVisible(node));
+
       if (!controls.length) return;
       event.preventDefault();
-      const at = controls.indexOf(document.activeElement as HTMLElement);
-      controls[(at + (event.shiftKey ? -1 : 1) + controls.length) % controls.length]!.focus();
+      const at = controls.findIndex((control) => control === document.activeElement);
+      const next = (at + (event.shiftKey ? -1 : 1) + controls.length) % controls.length;
+      controls[next]?.focus();
     } else if (
       !interactiveTourSteps.has(step?.stepId ?? '') &&
       !node.closest('input,textarea,select,[role="combobox"],[role="radiogroup"],[role="tablist"]')
@@ -223,6 +234,7 @@
         event.preventDefault();
         next();
       }
+
       if (event.key === 'ArrowLeft' && index > 0) {
         event.preventDefault();
         void show(index - 1, -1);
@@ -240,6 +252,7 @@
         scheduleIntro(1000);
         return;
       }
+
       intro = page;
     }, delay);
   }

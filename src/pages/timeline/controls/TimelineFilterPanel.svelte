@@ -36,6 +36,7 @@
       const trigger = document
         .querySelector('[data-timeline-control="filters"]')
         ?.getBoundingClientRect();
+
       if (trigger) {
         element.style.top = Math.min(trigger.bottom + 4, innerHeight - 100) + 'px';
         element.style.right = Math.max(8, innerWidth - trigger.right) + 'px';
@@ -44,6 +45,7 @@
       element.style.removeProperty('top');
       element.style.removeProperty('right');
     }
+
     if (!open && element.matches(':popover-open')) element.hidePopover();
   });
 </script>

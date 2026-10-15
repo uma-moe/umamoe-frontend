@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { itemIconPath } from '@/lib/catalog/item-icons';
+  import { itemIconPath } from '@/lib/game-assets/item-icons';
   import {
     availableCrystals,
     type PlannerGachaEntry,
@@ -24,18 +24,23 @@
       ? 'support'
       : 'uma'
   );
+
   const ticketCount = $derived(
     projection.balanceBefore[ticketKind === 'support' ? 'supportTickets' : 'umaTickets'] ?? 0
   );
+
   const ticketLabel = $derived(
     `${ticketCount} ${ticketKind === 'support' ? 'support' : 'Trainee'} tickets available at pull; ${projection.ticketPulls ? `${projection.ticketPulls} used and ${ticketCount - projection.ticketPulls} remaining` : 'none used'}`
   );
+
   const caratsBefore = $derived(
     (projection.balanceBefore.freeJewels ?? 0) + (projection.balanceBefore.paidJewels ?? 0)
   );
+
   const caratsAfter = $derived(
     (projection.freeJewelsAfter ?? 0) + (projection.paidJewelsAfter ?? 0)
   );
+
   const caratLabel = $derived(
     `${caratsBefore.toLocaleString()} Carats at pull (${projection.balanceBefore.freeJewels.toLocaleString()} free, ${projection.balanceBefore.paidJewels.toLocaleString()} paid); ${(caratsBefore - caratsAfter).toLocaleString()} spent; ${caratsAfter.toLocaleString()} remaining${!paidOnly && !target.allowPaidJewels && projection.balanceBefore.paidJewels > 0 ? '; paid Carats are reserved and will not be spent' : ''}`
   );

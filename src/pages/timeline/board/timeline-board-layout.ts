@@ -3,7 +3,7 @@ import {
   type timelineMonths,
   type TimelineFeedRow,
   type TimelineLane
-} from '@/lib/timeline/timeline-layout';
+} from '@/lib/timeline/board/timeline-layout';
 
 export type TimelineMonths = ReturnType<typeof timelineMonths>;
 
@@ -77,11 +77,13 @@ export function buildFeedOffsets(
 export function indexAt(offset: number, positions: number[]): number {
   let low = 0,
     high = Math.max(0, positions.length - 2);
+
   while (low < high) {
     const mid = Math.floor((low + high) / 2);
     if (positions[mid + 1]! <= offset) low = mid + 1;
     else high = mid;
   }
+
   return low;
 }
 
@@ -97,10 +99,7 @@ export function nearestLane(lanes: TimelineLane[], date: Date): TimelineLane | u
   );
 }
 
-export function nearestEventRow(
-  rows: TimelineFeedRow[],
-  date: Date
-): TimelineFeedRow | undefined {
+export function nearestEventRow(rows: TimelineFeedRow[], date: Date): TimelineFeedRow | undefined {
   return rows
     .filter((row) => !row.marker)
     .reduce<TimelineFeedRow | undefined>(

@@ -30,6 +30,7 @@
 
   let minPop = $state('3'),
     hidden = $state<number[]>([]);
+
   let search = $state('');
   let context = $state<Contexts>(),
     error = $state(''),
@@ -40,17 +41,21 @@
       (p.name + ' ' + p.outfit + ' ' + p.card).toLowerCase().includes(search.trim().toLowerCase())
     )
   );
+
   const pair = $derived(
     data.pairs.find((p) => p.key === selected) ?? [...data.pairs].sort((a, b) => b.pop - a.pop)[0]
   );
+
   const visible = $derived(
     matching.filter((p) => p.stylePop * 100 >= Number(minPop) && !hidden.includes(p.style))
   );
+
   const maxPop = $derived(Math.max(0.001, ...visible.map((p) => p.pop)));
 
   $effect(() => {
     const id = data.snapshotId,
       key = pair?.key;
+
     attempt;
     context = undefined;
     error = '';
@@ -63,6 +68,7 @@
       .catch((e) => {
         if (!controller.signal.aborted) error = e.message;
       });
+
     return () => controller.abort();
   });
 </script>

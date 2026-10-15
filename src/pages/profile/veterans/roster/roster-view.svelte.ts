@@ -34,11 +34,12 @@ export class RosterView {
 
   openFilter(id: string, toggle = false): void {
     const filters = this.#filters;
-    const close = toggle && !!filters.expanded[id];
+    const close = toggle && Boolean(filters.expanded[id]);
     if (id !== 'factors' || close) filters.factorCategory = 'all';
     this.drawerView = 'filters';
     this.filterDrawerOpen = id !== 'uql' && !this.desktopFilters.current;
     filters.expanded = close ? {} : { [id]: true };
+
     if (!close) {
       if (id === 'saddle' && !filters.raceChoices.length) void filters.loadSchedule();
       if (id === 'uql') void this.focusQuery();
@@ -56,6 +57,7 @@ export class RosterView {
 
   async hideQuery() {
     this.#filters.expanded = {};
+
     await tick();
     (
       document.getElementById('veteran-uql-trigger') ??

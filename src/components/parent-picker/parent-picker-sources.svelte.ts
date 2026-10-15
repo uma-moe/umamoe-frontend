@@ -1,9 +1,9 @@
 import {
-  loadCharacterCatalog,
-  loadReleasedCharacterCatalog,
-  type CharacterCatalogEntry
-} from '@/lib/catalog/character-catalog';
-import { loadG1SaddleGroups } from '@/lib/catalog/race-catalog';
+  loadCharacters,
+  loadReleasedCharacters,
+  type CharacterData
+} from '@/lib/game-data/characters';
+import { loadG1SaddleGroups } from '@/lib/game-data/racing/races';
 import {
   accountParent,
   inheritanceParent,
@@ -11,9 +11,9 @@ import {
   MANUAL_PARENTS_KEY,
   type ManualParent,
   type SelectableParent
-} from '@/lib/veterans/parent-picker';
-import { VeteranAffinityEngine } from '@/lib/veterans/affinity-engine';
-import { veteranAffinityRepository } from '@/lib/veterans/affinity-repository';
+} from '@/lib/veterans/parents/parent-picker';
+import { VeteranAffinityEngine } from '@/lib/veterans/affinity/affinity-engine';
+import { veteranAffinityRepository } from '@/lib/veterans/affinity/affinity-repository';
 import { profileRepository } from '@/pages/profile/profile-repository';
 import { inheritanceRepository } from '@/pages/database/inheritance-repository';
 import { partnerRepository, type PartnerPhase } from './partner-repository';
@@ -23,15 +23,15 @@ function message(error: unknown): string {
 }
 
 /**
- * Catalogs and parent sources for the picker: account veterans, bookmarks, saved partners,
+ * Game data and parent sources for the picker: account veterans, bookmarks, saved partners,
  * partner lookups and manual entries. Requests started before a sign-in change are ignored.
  */
 export class ParentPickerSources {
-  characters = $state.raw(new Map<number, CharacterCatalogEntry>());
+  characters = $state.raw(new Map<number, CharacterData>());
   engine = $state<VeteranAffinityEngine>();
   groups = $state.raw(new Map<number, number>());
-  selectableCharacters = $state.raw<CharacterCatalogEntry[]>([]);
-  catalogError = $state('');
+  selectableCharacters = $state.raw<CharacterData[]>([]);
+  gameDataError = $state('');
   veterans = $state.raw<Record<string, SelectableParent[]>>({});
   bookmarks = $state.raw<SelectableParent[]>([]);
   partners = $state.raw<SelectableParent[]>([]);
@@ -60,14 +60,15 @@ export class ParentPickerSources {
     }
   }
 
-  async loadCatalogs(): Promise<void> {
-    this.catalogError = '';
+  async loadGameData(): Promise<void> {
+    this.gameDataError = '';
     const results = await Promise.allSettled([
-      loadCharacterCatalog(),
+      loadCharacters(),
       veteranAffinityRepository.load(),
       loadG1SaddleGroups(),
-      loadReleasedCharacterCatalog()
+      loadReleasedCharacters()
     ]);
+
     if (!this.#live) return;
     if (results[0].status === 'fulfilled') this.characters = results[0].value;
     if (results[1].status === 'fulfilled')
@@ -78,13 +79,15 @@ export class ParentPickerSources {
       const released = new Map(
         this.selectableCharacters.map((character) => [Number(character.id), character] as const)
       );
+
       this.characters = new Map([
         ...released,
         ...[...this.characters].filter(([id]) => !released.has(id))
       ]);
     }
+
     if (results.some((result) => result.status === 'rejected'))
-      this.catalogError =
+      this.gameDataError =
         'Some character or affinity resources could not be loaded. Your saved entries have not been changed.';
   }
 
@@ -100,6 +103,7 @@ export class ParentPickerSources {
       this.#live &&
       generation === this.#accountGeneration &&
       this.#accountRequests.get(account) === request;
+
     try {
       const result = await profileRepository.load(account, refresh);
       if (current())
@@ -134,6 +138,7 @@ export class ParentPickerSources {
       if (refresh) this.#partnerReloadPending = true;
       return;
     }
+
     const generation = this.#accountGeneration;
     const current = () => this.#live && generation === this.#accountGeneration;
     this.busy.saved = true;
@@ -180,6 +185,7 @@ export class ParentPickerSources {
       this.saveManual(this.manuals.filter((entry) => entry.id !== parent.share_local_id));
       return;
     }
+
     try {
       await partnerRepository.remove(parent);
       if (!this.#live) return;
@@ -202,6 +208,7 @@ export class ParentPickerSources {
       const result = await partnerRepository.lookup(this.partnerId, controller.signal, (phase) => {
         if (this.#live && !controller.signal.aborted) this.partnerPhase = phase;
       });
+
       if (!this.#live || controller.signal.aborted) return;
       if (!result.parent)
         throw new Error('Lookup completed without inheritance data. Please try again.');
@@ -229,10 +236,13 @@ export class ParentPickerSources {
   resetForUser(user: unknown): void {
     this.#accountGeneration++;
     this.veterans = {};
+
     this.bookmarks = [];
     this.partners = [];
     this.busy = {};
+
     this.errors = {};
+
     this.#partnerReloadPending = false;
     this.#lookupController?.abort();
     this.lookupResult = undefined;

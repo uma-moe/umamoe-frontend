@@ -15,8 +15,8 @@
     isPaidBanner,
     paidBannerSteps,
     plannerCardKind
-  } from '@/lib/carat-planner/planner-paid-banners';
-  import { itemIconPath } from '@/lib/catalog/item-icons';
+  } from '@/lib/carat-planner/gacha/planner-paid-banners';
+  import { itemIconPath } from '@/lib/game-assets/item-icons';
   import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
   import {
     findGacha,
@@ -24,8 +24,8 @@
     type PlannerTarget,
     type TargetProjection
   } from '@/lib/carat-planner/carat-planner';
-  import { plannerPickupOptions } from '@/lib/carat-planner/planner-presentation';
-  import type { TimelinePickupCatalog } from '@/lib/timeline/timeline-pickups';
+  import { plannerPickupOptions } from '@/lib/carat-planner/presentation/planner-presentation';
+  import type { TimelinePickupCatalog } from '@/lib/timeline/events/timeline-pickups';
   import { plannerStepOptions } from './planner-target-steps';
   import PlannerTargetGoals from '../PlannerTargetGoals.svelte';
   import PlannerTargetActions from './PlannerTargetActions.svelte';
@@ -66,6 +66,7 @@
   const maxPulls = $derived(
     paidOnly ? paidBannerSteps(gacha).reduce((sum, step) => sum + step.pulls, 0) : 5000
   );
+
   const stepUp = $derived(gacha?.step_up);
   const pickupOptions = $derived(plannerPickupOptions(target, gacha, events, catalog));
   const stepOptions = $derived(plannerStepOptions(stepUp));

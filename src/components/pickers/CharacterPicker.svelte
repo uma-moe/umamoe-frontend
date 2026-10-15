@@ -62,11 +62,12 @@
         !needle ||
         `${option.name} ${option.subtitle ?? ''} ${option.id}`.toLocaleLowerCase().includes(needle)
     );
-    if (sort === 'name') return [...matches].sort((a, b) => a.name.localeCompare(b.name));
-    if (sort === 'affinity')
-      return [...matches].sort((a, b) => (b.affinity ?? -1) - (a.affinity ?? -1));
+
+    if (sort === 'name') return matches.sort((a, b) => a.name.localeCompare(b.name));
+    if (sort === 'affinity') return matches.sort((a, b) => (b.affinity ?? -1) - (a.affinity ?? -1));
     return matches;
   });
+
   const visible = $derived(filtered.slice(virtualRange.start, virtualRange.end));
 
   function toggle(id: string) {
@@ -190,7 +191,8 @@
                 size={24}
               />
             </span>
-          {/if}{#if option.affinity !== undefined}
+          {/if}
+          {#if option.affinity !== undefined}
             <span
               class="affinity-badge"
               class:zero={option.affinity === 0}

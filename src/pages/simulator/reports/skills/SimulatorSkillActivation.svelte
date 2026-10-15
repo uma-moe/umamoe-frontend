@@ -22,6 +22,7 @@
 
   let show = $state('all'),
     width = $state(0);
+
   const rows = $derived(activationRows(result, umas, sources));
   const visible = $derived(show === 'all' ? rows : rows.filter((row) => row.lowest < 95));
   const flagged = $derived(rows.filter((row) => row.lowest < 95).length);
@@ -30,6 +31,7 @@
   const cell = $derived(phone ? 46 : 62),
     skill = $derived(phone ? 124 : 200),
     gutter = 20;
+
   // As many side-by-side lists as fit, but never so many that each is only a few rows long.
   const columns = $derived(
     Math.max(
@@ -41,6 +43,7 @@
       )
     )
   );
+
   const lists = $derived.by(() => {
     const size = Math.ceil(visible.length / columns);
     return Array.from({ length: columns }, (_, index) =>
@@ -48,26 +51,56 @@
     );
   });
 
-  const rate = (value: number) =>
-    value === 0 ? 'Never' : value >= 99.95 ? '100%' : value < 1 ? '<1%' : value.toFixed(0) + '%';
+  const rate = (value: number) => {
+    if (value === 0) {
+      return 'Never';
+    }
+
+    if (value >= 99.95) {
+      return '100%';
+    }
+
+    if (value < 1) {
+      return '<1%';
+    }
+
+    return value.toFixed(0) + '%';
+  };
+
   // Reliable skills stay quiet; the rarer a skill fires, the stronger the amber, and never firing is red.
-  const fill = (value: number) =>
-    value >= 95
-      ? 'color-mix(in srgb, var(--text-secondary) 9%, transparent)'
-      : value === 0
-        ? 'color-mix(in srgb, var(--activation-never) 62%, transparent)'
-        : 'color-mix(in srgb, var(--activation-rare) ' +
-          Math.round(16 + ((95 - value) / 95) * 52) +
-          '%, transparent)';
+  const fill = (value: number) => {
+    if (value >= 95) {
+      return 'color-mix(in srgb, var(--text-secondary) 9%, transparent)';
+    }
+
+    if (value === 0) {
+      return 'color-mix(in srgb, var(--activation-never) 62%, transparent)';
+    }
+
+    return (
+      'color-mix(in srgb, var(--activation-rare) ' +
+      Math.round(16 + ((95 - value) / 95) * 52) +
+      '%, transparent)'
+    );
+  };
+
   const name = (source: number) => umas[source]!.name;
-  const lasts = (cell: ActivationCell) =>
-    cell.row.passive
-      ? 'passive'
-      : cell.row.duration != null
-        ? 'lasts ' + n(cell.row.duration) + ' s'
-        : cell.row.instant
-          ? 'instant'
-          : '';
+  const lasts = (cell: ActivationCell) => {
+    if (cell.row.passive) {
+      return 'passive';
+    }
+
+    if (cell.row.duration != null) {
+      return 'lasts ' + n(cell.row.duration) + ' s';
+    }
+
+    if (cell.row.instant) {
+      return 'instant';
+    }
+
+    return '';
+  };
+
   const tooltip = (source: number, cell: ActivationCell | undefined) => {
     if (!cell) return name(source) + ' has not learned it';
     const parts = [
@@ -82,6 +115,7 @@
         n(cell.row.interval[1], 0) +
         '%)'
     ];
+
     if (cell.row.triggered)
       parts.push((cell.row.total / result.runs).toFixed(2) + ' activations per race');
     const length = lasts(cell);

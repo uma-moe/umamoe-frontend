@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import { MAX_TRACKS } from '../../requests/optimize-request';
 import { defaultPool, poolProblem, teamTrialsCourses, teamTrialsPool } from './track-pool';
 
@@ -18,7 +18,8 @@ const course = (
     surface,
     turn: 1,
     course: 1
-  }) as CourseCatalogEntry;
+  }) as RaceCourse;
+
 const catalog = new Map(
   [
     course(10101, 10005, 1200, 1),

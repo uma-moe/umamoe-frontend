@@ -3,8 +3,8 @@
   import Button from '@/components/controls/Button.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import TextField from '@/components/controls/TextField.svelte';
-  import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
-  import { runningStyleName } from '@/lib/race/race-display';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
+  import { runningStyleName } from '@/lib/race/replay/race-display';
   import SimulatorRunnerFace from '../../reports/SimulatorRunnerFace.svelte';
   import { APTITUDE_GRADES } from '../../requests/stamina-request';
   import type { SimulatorUma } from '../../simulator-uma';
@@ -32,7 +32,7 @@
     uma: SimulatorUma;
     /** Green skills by the stat they raise, as the HP calculator counts them; left out, the stats stand alone. */
     green?: HpPlan['green'];
-    course?: CourseCatalogEntry;
+    course?: RaceCourse;
     /** Keeps field ids apart between pages. */
     idPrefix?: string;
     note?: string;
@@ -54,14 +54,17 @@
     ['guts', 'Guts', 'guts'],
     ['wisdom', 'Wit', 'wit']
   ] as const;
+
   const STYLE_OPTIONS = RUNNING_STYLES.map((value, index) => ({
     value,
     label: runningStyleName(index + 1)
   }));
+
   const MOOD_OPTIONS = ['Great', 'Good', 'Normal', 'Bad', 'Awful'].map((label, index) => ({
     value: String(5 - index),
     label
   }));
+
   const GRADE_OPTIONS = APTITUDE_GRADES.map((grade) => ({ value: grade, label: grade }));
 
   /** The stat with its green skills, when it has any. */
@@ -71,11 +74,13 @@
     const raw = Number(uma.trainee[key]);
     return bonus && Number.isFinite(raw) && raw > 0 ? withBonus(raw, bonus) : undefined;
   }
+
   // Her aptitudes for this course and style, each one entry of the trainee's full grid.
   const aptitudes = $derived.by(() => {
     const style = RUNNING_STYLES.indexOf(
       uma.trainee.runningStyle as (typeof RUNNING_STYLES)[number]
     );
+
     return [
       {
         id: 'distance',

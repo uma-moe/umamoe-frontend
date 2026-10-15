@@ -9,7 +9,7 @@
     timelinePosition,
     type TimelineAnniversary,
     type TimelineLane
-  } from '@/lib/timeline/timeline-layout';
+  } from '@/lib/timeline/board/timeline-layout';
   import type { TimelineRecord } from '../timeline-repository';
   import TimelineFeed from './TimelineFeed.svelte';
   import TimelineMonths from './TimelineMonths.svelte';
@@ -59,6 +59,7 @@
     active: () => active,
     virtualScrolling: () => $virtualScrolling
   });
+
   const drag = new TimelineDragScroll(
     viewport,
     () => active,
@@ -75,6 +76,7 @@
   $effect(() => {
     const host = mobile ? viewport.feed : viewport.board,
       searchable = events;
+
     if (!active || !host) return;
     const source = registerFindSource({
       host,
@@ -96,6 +98,7 @@
       },
       reveal: (index) => revealEvent(searchable[index]!)
     });
+
     return source.destroy;
   });
 
@@ -105,6 +108,7 @@
       const index = viewport.rows.findIndex((row) =>
         row.events.some((item) => item.id === event.id)
       );
+
       if (index < 0) return;
       window.scrollTo({ top: viewport.feedTop + viewport.offsets[index]!, behavior: 'instant' });
       viewport.updateViewport();
@@ -118,6 +122,7 @@
         const host = viewport.board!.querySelector<HTMLElement>(
           `[data-lane-key="${CSS.escape(lane.key)}"] .lane-events`
         );
+
         if (host)
           await revealVirtualItem(
             host,
@@ -125,9 +130,11 @@
           );
       }
     }
+
     const node = (mobile ? viewport.feed : viewport.board)?.querySelector<HTMLElement>(
       `[data-event-id="${CSS.escape(event.id)}"]`
     );
+
     node?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
     viewport.updateViewport();
     return node ?? undefined;
@@ -160,6 +167,7 @@
     else {
       if (viewport.todayLane) await scrollToLane(viewport.todayLane.key, smooth);
     }
+
     viewport.updateViewport();
   }
 
@@ -182,6 +190,7 @@
       const laneIndex = month.lanes.findIndex((lane) => lane.key === key);
       const destination = () =>
         viewport.monthOffsets[index]! + viewport.monthLaneOffsets[index]![laneIndex]!;
+
       // Mount and measure the destination in CSS pixels before moving the browser's scroll position.
       flushSync(() => (viewport.scrollTop = destination()));
       const heights = Object.fromEntries(
@@ -190,12 +199,16 @@
           node.offsetHeight
         ])
       );
+
       flushSync(() => {
         viewport.measured = { ...viewport.measured, ...heights };
+
         viewport.scrollTop = destination();
       });
+
       board.scrollTop = viewport.scrollTop;
     }
+
     viewport.updateViewport();
   }
 
@@ -205,6 +218,7 @@
     if (!mobile) {
       const lane =
         lanes.find((lane) => lane.key === timelineDateKey(date)) ?? nearestLane(lanes, date);
+
       if (lane) await scrollToLane(lane.key, false);
     } else if (feed) {
       drag.stop();
@@ -219,6 +233,7 @@
             (viewport.offsets[index + 1]! - viewport.offsets[index]!) / 2 -
             innerHeight / 2
         );
+
       flushSync(() => (viewport.pageY = destination()));
       const heights = Object.fromEntries(
         [...feed.querySelectorAll<HTMLElement>('.feed-row')].map((node, index) => [
@@ -226,10 +241,13 @@
           node.offsetHeight
         ])
       );
+
       flushSync(() => {
         viewport.measured = { ...viewport.measured, ...heights };
+
         viewport.pageY = destination();
       });
+
       window.scrollTo({ top: viewport.pageY, behavior: 'instant' });
       viewport.updateViewport();
     }
@@ -267,13 +285,16 @@
     const monthIndex = viewport.months.groups.findIndex(
       (month) => month.key === todayLane?.key.slice(0, 7)
     );
+
     const laneIndex =
       viewport.months.groups[monthIndex]?.lanes.findIndex((lane) => lane.key === todayLane?.key) ??
       -1;
+
     const todayTop =
       monthIndex >= 0 && laneIndex >= 0
         ? viewport.monthOffsets[monthIndex]! + viewport.monthLaneOffsets[monthIndex]![laneIndex]!
         : 0;
+
     viewport.scrollTop = next === 'vertical' ? savedVertical || todayTop : 0;
     await tick();
     viewport.viewportWidth = board.clientWidth;
@@ -292,6 +313,7 @@
       imagesReady = true;
       return;
     }
+
     initialToday = true;
     let correction = 0;
     const currentOffset = () =>
@@ -300,6 +322,7 @@
         : view === 'horizontal'
           ? viewport.board?.scrollLeft
           : viewport.board?.scrollTop;
+
     const id = requestAnimationFrame(() => {
       void scrollToToday(false).then(() => {
         const offset = currentOffset();
@@ -312,6 +335,7 @@
         });
       });
     });
+
     return () => {
       cancelAnimationFrame(id);
       cancelAnimationFrame(correction);
@@ -335,15 +359,18 @@
       drag.reset();
       return;
     }
+
     untrack(() => {
       if (mobile && initialToday) window.scrollTo({ top: viewport.pageY, behavior: 'instant' });
       viewport.measureViewport();
     });
+
     let pending = 0;
     const observer = new ResizeObserver(() => {
       cancelAnimationFrame(pending);
       pending = requestAnimationFrame(viewport.measureViewport);
     });
+
     observer.observe(node);
     return () => {
       observer.disconnect();

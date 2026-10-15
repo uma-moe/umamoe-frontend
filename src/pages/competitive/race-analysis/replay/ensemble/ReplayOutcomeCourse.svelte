@@ -1,7 +1,7 @@
 <script lang="ts">
   import RunnerReference from '@/pages/competitive/runners/RunnerReference.svelte';
-  import type { RaceRunner } from '@/lib/race/race-capture-parser';
-  import { raceDistanceSpread, type RaceTrajectory } from '@/lib/race/race-ensemble';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
+  import { raceDistanceSpread, type RaceTrajectory } from '@/lib/race/replay/race-ensemble';
   import type { Course } from '../replay-course';
   import ReplayOutcomeTrack from './ReplayOutcomeTrack.svelte';
   import ReplayOutcomeProfile from './ReplayOutcomeProfile.svelte';
@@ -33,6 +33,7 @@
       Math.max(120, (spread.p90 - spread.p10) * 2, Math.abs(spread.mean - spread.median) * 4)
     )
   );
+
   const low = $derived(Math.max(0, Math.min(distance - width, spread.median - width / 2))),
     high = $derived(low + width);
 </script>

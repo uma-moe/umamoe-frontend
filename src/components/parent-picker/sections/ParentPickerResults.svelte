@@ -6,7 +6,7 @@
     type ManualParent,
     type ParentPickerState,
     type SelectableParent
-  } from '@/lib/veterans/parent-picker';
+  } from '@/lib/veterans/parents/parent-picker';
   import { authUser } from '@/services/auth/auth-state';
   import ParentPickerRow from '../ParentPickerRow.svelte';
   import Banner from '@/components/feedback/Banner.svelte';

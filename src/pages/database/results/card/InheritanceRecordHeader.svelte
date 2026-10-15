@@ -3,9 +3,9 @@
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import RankBadge from '@/components/game/RankBadge.svelte';
-  import type { inheritanceAffinity } from '@/lib/inheritance/inheritance-factors';
-  import type { InheritanceRecord } from '@/lib/inheritance/inheritance-search';
-  import { scenarios } from '@/lib/catalog/scenario-catalog';
+  import type { inheritanceAffinity } from '@/lib/inheritance/sparks/inheritance-factors';
+  import type { InheritanceRecord } from '@/lib/inheritance/search/inheritance-search';
+  import { scenarios } from '@/lib/game-data/scenarios';
 
   interface Props {
     record: InheritanceRecord;

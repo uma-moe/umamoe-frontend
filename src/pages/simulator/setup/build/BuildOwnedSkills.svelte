@@ -1,14 +1,14 @@
 <script lang="ts">
   import SkillChip from '@/components/game/SkillChip.svelte';
-  import { skillImage, skillRarity, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
+  import { skillImage, skillRarity, type SkillData } from '@/lib/game-data/skills/skills';
   import { buildSearch } from './build-search.svelte';
 
   /** The skills she owns, under her stats. */
   interface Props {
-    catalog: Map<number, SkillCatalogEntry>;
+    skillLookup: Map<number, SkillData>;
   }
 
-  let { catalog }: Props = $props();
+  let { skillLookup }: Props = $props();
 </script>
 
 <div class="owned">
@@ -16,7 +16,7 @@
   {#if buildSearch.uma.skills.length}
     <ul>
       {#each buildSearch.uma.skills as learned (learned.skillId)}
-        {@const skill = catalog.get(learned.skillId)}
+        {@const skill = skillLookup.get(learned.skillId)}
         <li>
           <SkillChip
             name={skill?.name ?? 'Skill ' + learned.skillId}

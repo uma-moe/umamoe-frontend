@@ -2,17 +2,23 @@
   module
   lang="ts"
 >
-  const fullFormatters = [false, true].map(
-    (signed) => new Intl.NumberFormat('en', { signDisplay: signed ? 'exceptZero' : 'auto' })
-  );
-  const compactFormatters = [false, true].map(
-    (signed) =>
-      new Intl.NumberFormat('en', {
-        notation: 'compact',
-        maximumFractionDigits: 1,
-        signDisplay: signed ? 'exceptZero' : 'auto'
-      })
-  );
+  const fullFormatters = {
+    unsigned: new Intl.NumberFormat('en', { signDisplay: 'auto' }),
+    signed: new Intl.NumberFormat('en', { signDisplay: 'exceptZero' })
+  };
+
+  const compactFormatters = {
+    unsigned: new Intl.NumberFormat('en', {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+      signDisplay: 'auto'
+    }),
+    signed: new Intl.NumberFormat('en', {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+      signDisplay: 'exceptZero'
+    })
+  };
 </script>
 
 <script lang="ts">
@@ -52,15 +58,17 @@
   );
 
   function format(value: number, signed = false): string {
-    return fullFormatters[Number(signed)]!.format(value);
+    return fullFormatters[signed ? 'signed' : 'unsigned'].format(value);
   }
 
   function compact(value: number, signed = false): string {
-    return compactFormatters[Number(signed)]!.format(value);
+    return compactFormatters[signed ? 'signed' : 'unsigned'].format(value);
   }
 
   function joinLabel(style: number): string {
-    return style === 2 ? 'Approval' : style === 3 ? 'Closed' : 'Open';
+    if (style === 2) return 'Approval';
+    if (style === 3) return 'Closed';
+    return 'Open';
   }
 
   function trend(club: CircleCardData): number {
@@ -161,7 +169,8 @@
               >
                 {joinLabel(club.joinStyle)}
               </span>
-            {/if}{#if club.policy}
+            {/if}
+            {#if club.policy}
               <span class="policy-badge">
                 {policyLabels[club.policy] ?? 'Unknown'}
               </span>
@@ -174,7 +183,8 @@
               <span class="label">Leader:</span>
               {club.leaderName}
             </span>
-          {/if}{#if club.members != null}
+          {/if}
+          {#if club.members != null}
             <span>
               <span class="label">Members:</span>
               {club.members}/30
@@ -277,7 +287,8 @@
         <p class="comment">
           <DiscordText text={club.comment} />
         </p>
-      {/if}{@render children?.()}
+      {/if}
+      {@render children?.()}
     </div>
   {/if}
 </article>

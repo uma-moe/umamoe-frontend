@@ -50,6 +50,7 @@
       )
       .sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name) : a.rank - b.rank))
   );
+
   const listed = $derived(searchable ? matching : matching.slice(0, limit));
   const largestShare = $derived(Math.max(1, ...items.map((item) => item.percentage ?? 0)));
   const help = $derived(description + ' Bar lengths are relative to the leading result.');

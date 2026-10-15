@@ -2,15 +2,12 @@
   import Button from '@/components/controls/Button.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
-  import {
-    loadCharacterCatalog,
-    type CharacterCatalogEntry
-  } from '@/lib/catalog/character-catalog';
-  import { loadSkillCatalog, type SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
+  import { loadCharacters, type CharacterData } from '@/lib/game-data/characters';
+  import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import type { SimulatorUma } from '../../../simulator-uma';
   import {
-    ensureSimulatorCatalog,
-    simulatorCatalog,
+    ensureSimulatorCourses,
+    simulatorCourseData,
     simulatorSession
   } from '../../../simulator-session.svelte';
   import type { SkillOffer } from '../skill-offers';
@@ -57,20 +54,41 @@
     error = $state(''),
     applyError = $state(''),
     copied = $state('');
-  let skills = $state.raw(new Map<number, SkillCatalogEntry>()),
-    characters = $state.raw(new Map<number, CharacterCatalogEntry>());
+
+  let gameDataError = $state('');
+  let skills = $state.raw(new Map<number, SkillData>()),
+    characters = $state.raw(new Map<number, CharacterData>());
 
   $effect(() => {
     if (!open) return;
     applyError = '';
     copied = '';
-    void ensureSimulatorCatalog();
-    void loadSkillCatalog()
-      .then((value) => (skills = value))
-      .catch(() => {});
-    void loadCharacterCatalog()
-      .then((value) => (characters = value))
-      .catch(() => {});
+    gameDataError = '';
+    let active = true;
+    void ensureSimulatorCourses();
+    void loadSkills()
+      .then((value) => {
+        if (active) skills = value;
+      })
+      .catch((reason: unknown) => {
+        if (active)
+          gameDataError =
+            reason instanceof Error ? reason.message : 'Skill names could not be loaded.';
+      });
+
+    void loadCharacters()
+      .then((value) => {
+        if (active) characters = value;
+      })
+      .catch((reason: unknown) => {
+        if (active)
+          gameDataError =
+            reason instanceof Error ? reason.message : 'Character names could not be loaded.';
+      });
+
+    return () => {
+      active = false;
+    };
   });
 
   // Read the code as it is typed or pasted; a later edit wins over a slower earlier read.
@@ -78,6 +96,7 @@
   $effect(() => {
     const value = text,
       attempt = ++reading;
+
     code = undefined;
     error = '';
     if (!value.trim()) return;
@@ -92,14 +111,15 @@
   });
 
   const course = $derived(
-    code?.courseId ? simulatorCatalog.courses.get(Number(code.courseId)) : undefined
+    code?.courseId ? simulatorCourseData.courses.get(Number(code.courseId)) : undefined
   );
+
   const conditions = $derived(buildCodeConditions(code?.racedef));
   const goal = $derived(code ? buildCodeGoal(code) : {});
   const known = (id: number) => !skills.size || skills.has(id);
   const runners = $derived.by(() => {
     if (!code) return [];
-    const list = [code.uma1, code.uma2].filter((runner) => !!runner);
+    const list = [code.uma1, code.uma2].filter((runner) => runner != null);
     const wanted = target === 'race' && !sameRunner(code.uma1, code.uma2) ? list : list.slice(0, 1);
     return wanted.map((runner) => {
       const card = Number(runner.outfitId);
@@ -110,6 +130,7 @@
       });
     });
   });
+
   const offers = $derived(
     target === 'build' && code && runners[0]
       ? buildCodeOffers(
@@ -130,6 +151,7 @@
       season: simulatorSession.season,
       startTime: simulatorSession.startTime
     };
+
     if (course) {
       simulatorSession.courseId = String(course.course_id);
       if (conditions.ground) simulatorSession.ground = conditions.ground;
@@ -137,12 +159,14 @@
       if (conditions.season) simulatorSession.season = conditions.season;
       if (conditions.startTime) simulatorSession.startTime = conditions.startTime;
     }
+
     const message = onimport({ umas: runners.map((runner) => runner.uma), offers, goal });
     if (message) {
       Object.assign(simulatorSession, before);
       applyError = message;
       return;
     }
+
     text = '';
     open = false;
   }
@@ -183,6 +207,14 @@
   maxHeight="88dvh"
 >
   <div class="import">
+    {#if gameDataError}
+      <p
+        class="apply-error"
+        role="alert"
+      >
+        {gameDataError}
+      </p>
+    {/if}
     <TextField
       id="{uid}-code"
       label="Build code"

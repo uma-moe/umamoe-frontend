@@ -2,7 +2,7 @@
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import { workspaces } from '@/lib/workspaces/workspace-state';
-  import type { CourseCatalogEntry } from '@/lib/catalog/course-catalog';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import VeteranList from '../VeteranList.svelte';
   import type { VeteranEntry } from '../veteran-entries';
 
@@ -14,7 +14,7 @@
     loading: boolean;
     error: string;
     teams: number;
-    course?: CourseCatalogEntry;
+    course?: RaceCourse;
     disabled: boolean;
   }
 

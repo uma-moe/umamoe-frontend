@@ -66,6 +66,7 @@
     attempt = $state(0),
     result = $state<TeamSearchResponse>(),
     error = $state('');
+
   let showStats = $state(true);
   let buildTeam = $state(false);
   let selected = $state('');
@@ -105,6 +106,7 @@
       limit: '30',
       offset: String(offset)
     });
+
     attempt;
     if (offset === 0) result = undefined;
     error = '';
@@ -115,6 +117,7 @@
       .then((v) => {
         if (!controller.signal.aborted) {
           result = { ...v, teams: offset === 0 ? v.teams : [...(result?.teams ?? []), ...v.teams] };
+
           exhausted = v.teams.length < 30;
           loading = false;
         }
@@ -125,6 +128,7 @@
           loading = false;
         }
       });
+
     return () => controller.abort();
   });
 

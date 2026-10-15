@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { formatRaceTime } from '@/lib/race/race-display';
+  import { formatRaceTime } from '@/lib/race/replay/race-display';
   import Button from '@/components/controls/Button.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import RunnerBuildDetails from '@/pages/competitive/runners/RunnerBuildDetails.svelte';

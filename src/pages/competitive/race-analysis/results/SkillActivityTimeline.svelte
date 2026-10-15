@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ParsedRaceCapture } from '@/lib/race/race-capture-parser';
-  import { diagnosticHorse } from '@/lib/race/race-diagnostics';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
   import { skillActivityRows, skillIconGroups, type SkillPeriod } from './skill-activity';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import Icon from '@/components/Icon.svelte';
@@ -26,6 +26,7 @@
     ticks: number[];
     onseek: (time: number) => void;
   } = $props();
+
   const instanceId = $props.id();
 
   let width = $state(0),
@@ -44,6 +45,7 @@
       width
     )
   );
+
   const decisions = $derived(diagnosticHorse(capture, index)?.skillActivationDecisions ?? []);
   const missing = $derived(
     [
@@ -56,6 +58,7 @@
 
   const position = (value: number) =>
     Math.max(0, Math.min(100, ((value - startTime) / Math.max(1, endTime - startTime)) * 100));
+
   const current = (period: SkillPeriod) =>
     period.end === undefined || period.end === period.start
       ? Math.abs(time - period.start) < 0.05

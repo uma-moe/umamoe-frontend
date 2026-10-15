@@ -2,11 +2,11 @@
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Tabs from '@/components/navigation/Tabs.svelte';
-  import type { InheritanceRecord } from '@/lib/inheritance/inheritance-search';
+  import type { InheritanceRecord } from '@/lib/inheritance/search/inheritance-search';
   import { authUser } from '@/services/auth/auth-state';
   import { queueBorrowView } from '../borrow-interactions';
   import type { DatabaseAffinity } from '../database-affinity.svelte';
-  import type { DatabaseCatalogs } from '../database-catalogs.svelte';
+  import type { DatabaseGameData } from '../data/database-game-data.svelte';
   import type { DatabaseFilters } from '../search/database-filters.svelte';
   import type { DatabaseLayout } from '../search/database-layout.svelte';
   import type { DatabaseSearch } from '../search/database-search.svelte';
@@ -24,7 +24,7 @@
     filters: DatabaseFilters;
     display: DatabaseDisplay;
     layout: DatabaseLayout;
-    catalogs: DatabaseCatalogs;
+    gameData: DatabaseGameData;
     affinity: DatabaseAffinity;
     uql: DatabaseUqlState;
     bookmarks: DatabaseBookmarks;
@@ -39,7 +39,7 @@
     filters,
     display,
     layout,
-    catalogs,
+    gameData,
     affinity,
     uql,
     bookmarks,
@@ -65,8 +65,8 @@
     {record}
     uqlHighlight={uql.highlight}
     activeFilters={filters.mode === 'uql' ? undefined : filters.values}
-    characters={catalogs.characters}
-    supports={catalogs.supports}
+    characters={gameData.characters}
+    supports={gameData.supports}
     defaultFocus={display.defaultFocus}
     splitSparks={display.splitSparks}
     sparkPortraits={display.sparkPortraits}
@@ -165,15 +165,15 @@
     bind:page={search.page}
     listMode={search.listMode}
     canLoadMore={search.canLoadMore}
-    characters={catalogs.characters}
-    supports={catalogs.supports}
+    characters={gameData.characters}
+    supports={gameData.supports}
     sortingNotice={Boolean(
       filters.values.optionalWhite.length ||
       filters.values.optionalMainWhite.length ||
       filters.values.lineageWhite.length
     )}
     pendingSearch={search.pendingSearch}
-    uqlCatalogError={filters.mode === 'uql' ? uql.catalogError : ''}
+    uqlDataError={filters.mode === 'uql' ? uql.queryDataError : ''}
     failedLegacy={filters.mode === 'uql' ? uql.context.failedLegacy : undefined}
     legacyError={uql.legacyError}
     affinityError={affinity.error}

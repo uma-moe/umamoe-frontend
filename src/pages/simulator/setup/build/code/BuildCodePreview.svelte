@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { describeCourse, trackName, type CourseCatalogEntry } from '@/lib/catalog/course-catalog';
-  import type { SkillCatalogEntry } from '@/lib/catalog/skill-catalog';
+  import { describeCourse, trackName, type RaceCourse } from '@/lib/game-data/racing/courses';
+  import type { SkillData } from '@/lib/game-data/skills/skills';
   import { simulatorRoster } from '../../../simulator-roster.svelte';
   import {
     GROUND_OPTIONS,
@@ -15,12 +15,12 @@
   interface Props {
     code: BuildCode;
     target: 'race' | 'stamina' | 'build';
-    course?: CourseCatalogEntry;
+    course?: RaceCourse;
     conditions: ReturnType<typeof buildCodeConditions>;
     runners: ReturnType<typeof buildCodeUma>[];
     offers: SkillOffer[];
     goal: ReturnType<typeof buildCodeGoal>;
-    skills: Map<number, SkillCatalogEntry>;
+    skills: Map<number, SkillData>;
   }
 
   let { code, target, course, conditions, runners, offers, goal, skills }: Props = $props();
@@ -37,6 +37,7 @@
   const dropped = $derived(runners.reduce((sum, runner) => sum + runner.dropped, 0));
   const label = (options: Array<{ value: string; label: string }>, value?: string) =>
     options.find((option) => option.value === value)?.label;
+
   const conditionText = $derived(
     [
       label(GROUND_OPTIONS, conditions.ground),
@@ -47,16 +48,23 @@
       .filter(Boolean)
       .join(' · ')
   );
-  const changes = $derived(
-    target === 'race'
-      ? (simulatorRoster.configured ? 'Adds ' : 'Replaces the example field with ') +
-          (runners.length === 1 ? 'her' : 'both runners') +
-          (simulatorRoster.configured ? ' to the race field' : '') +
-          ' and sets the course.'
-      : target === 'build'
-        ? 'Replaces her build, the course, the goal and what she can buy.'
-        : 'Replaces her build and the course.'
-  );
+
+  const changes = $derived.by(() => {
+    if (target === 'race') {
+      return (
+        (simulatorRoster.configured ? 'Adds ' : 'Replaces the example field with ') +
+        (runners.length === 1 ? 'her' : 'both runners') +
+        (simulatorRoster.configured ? ' to the race field' : '') +
+        ' and sets the course.'
+      );
+    }
+
+    if (target === 'build') {
+      return 'Replaces her build, the course, the goal and what she can buy.';
+    }
+
+    return 'Replaces her build and the course.';
+  });
 </script>
 
 <dl class="preview">

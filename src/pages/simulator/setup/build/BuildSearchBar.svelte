@@ -16,19 +16,29 @@
 
   let { blocked, busy, error, result, current, onsend, onshow }: Props = $props();
 
-  const summary = $derived(
-    busy
-      ? 'Searching builds…'
-      : error
-        ? 'Couldn’t search'
-        : !result
-          ? 'Not searched yet'
-          : !current
-            ? 'Setup changed'
-            : result.report.finalists[0]
-              ? bestSummary(result.report.finalists[0], result.objective === 'field_place')
-              : 'No build came back'
-  );
+  const summary = $derived.by(() => {
+    if (busy) {
+      return 'Searching builds…';
+    }
+
+    if (error) {
+      return 'Couldn’t search';
+    }
+
+    if (!result) {
+      return 'Not searched yet';
+    }
+
+    if (!current) {
+      return 'Setup changed';
+    }
+
+    if (result.report.finalists[0]) {
+      return bestSummary(result.report.finalists[0], result.objective === 'field_place');
+    }
+
+    return 'No build came back';
+  });
 </script>
 
 <div class="search-bar">

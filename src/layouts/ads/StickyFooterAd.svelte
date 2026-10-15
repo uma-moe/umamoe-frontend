@@ -5,6 +5,7 @@
 
   const containers =
     '.publift-widget-sticky_footer-container, .publift-widget-scrolling_sticky_footer-container';
+
   const providerButton =
     '.publift-widget-sticky_footer-button, .publift-widget-scrolling_sticky_footer-button';
 
@@ -19,6 +20,7 @@
       cancelAnimationFrame(resizeFrame);
       resizeFrame = requestAnimationFrame(sync);
     });
+
     const dismissed = () => document.documentElement.classList.contains('footer-ad-dismissed');
     const dismiss = () => {
       if (dismissed()) return;
@@ -26,12 +28,14 @@
       document.documentElement.classList.add('footer-ad-dismissed');
       sync();
     };
+
     const closeProvider = (container: Element) => {
       // Publift's close action stops refresh. Destroying the zone removes DOM
       // still referenced by its scrolling widget's retained event handlers.
       if (!container.classList.contains('closed'))
         container.querySelector<HTMLElement>(providerButton)?.click();
     };
+
     const sync = () => {
       let footerHeight = 0;
       document.querySelectorAll<HTMLElement>(containers).forEach((container) => {
@@ -40,6 +44,7 @@
           // Publift retains scroll handlers referencing this wrapper; keep its hidden DOM intact.
           return;
         }
+
         if (!observed.has(container)) {
           observed.add(container);
           container.classList.add('uma-footer-ad');
@@ -50,6 +55,7 @@
             attributeFilter: ['class', 'hidden', 'style']
           });
         }
+
         const creatives = [...container.querySelectorAll('iframe')];
         const visible = creatives.filter(
           (frame) =>
@@ -57,6 +63,7 @@
             frame.clientHeight > 1 &&
             isElementVisible(frame, { visibilityProperty: true })
         );
+
         // A retained creative that is hidden/collapsed is a close, not a replacement during refresh.
         if (
           shown.has(container) &&
@@ -68,6 +75,7 @@
           dismiss();
           return;
         }
+
         if (visible.length && !container.classList.contains('closed')) {
           shown.add(container);
           visible.forEach((frame) => shown.add(frame));
@@ -75,6 +83,7 @@
           if (container.style.getPropertyValue('--footer-creative-height') !== height)
             container.style.setProperty('--footer-creative-height', height);
         }
+
         const empty = !visible.length || container.classList.contains('closed');
         if (container.classList.contains('footer-ad-empty') !== empty)
           container.classList.toggle('footer-ad-empty', empty);
@@ -84,6 +93,7 @@
             frames.add(frame);
             sizes.observe(frame);
           }
+
         if (container.querySelector('.footer-ad-close')) return;
         const close = document.createElement('button');
         close.type = 'button';
@@ -94,6 +104,7 @@
         close.onclick = dismiss;
         container.append(close);
       });
+
       document.documentElement.style.setProperty('--footer-ad-height', `${footerHeight}px`);
       for (const frame of frames) {
         if (!frame.isConnected) {
@@ -102,6 +113,7 @@
         }
       }
     };
+
     const observer = new MutationObserver((records) => {
       // Scrolling creatives change margin-top continuously; only visibility changes need a rescan.
       if (
@@ -116,6 +128,7 @@
       )
         sync();
     });
+
     observer.observe(document.body, { childList: true, subtree: true });
     const positions = new WeakMap<HTMLElement, { x: number; y: number }>();
     const scrollTimeline = (event: Event) => {
@@ -126,6 +139,7 @@
       if (!previous || dismissed()) return;
       const dx = board.scrollLeft - previous.x,
         dy = board.scrollTop - previous.y;
+
       const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
       document
         .querySelectorAll<HTMLElement>('.uma-footer-ad > .publift-widget-scrolling_sticky_footer')
@@ -140,6 +154,7 @@
           slot.style.marginTop = `${-Math.max(0, Math.min(range, offset + (delta * range) / (2 * innerHeight)))}px`;
         });
     };
+
     document.addEventListener('scroll', scrollTimeline, true);
     sync();
     return () => {
