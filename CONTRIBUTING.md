@@ -4,12 +4,17 @@ Start with the route's `*Page.svelte` in `src/pages/`. Shared UI lives in `src/c
 
 Find components by purpose: `components/controls/`, `overlays/`, `navigation/`, `feedback/`, `cards/`, `data/`, `charts/`, `pickers/`, `filters/`, `sparks/`, `lineage/`, and `game/`. Existing specialized editors, parent pickers, and tours keep their own folders. Imports point directly to the implementation; there are no forwarding files at the old paths.
 
-Crowded pages are organized by feature:
+Crowded pages are organized by feature. A page file composes sections and coordinates routing and data; each subfolder holds one part of the page with its components, styles, state classes (`*.svelte.ts`), and helpers:
 
-- `pages/database/`: the page and repositories, with `filters/`, `results/`, and `uql/`.
-- `pages/profile/`: the page and profile context, with `overview/` and `veterans/`.
-- `pages/competitive/`: routed pages and shared data, with `champions-meeting/`, `runners/`, and `sessions/`.
-- `pages/simulator/`: routed pages and shared state, with `setup/`, `courses/`, `requests/`, `shell/`, and `reports/`. Reports group outcomes, skills, replay, and telemetry with their related calculations and tests.
+- `pages/database/`: the page and repositories, with `search/` (filter, search, and layout state), `filters/`, `results/`, and `uql/`.
+- `pages/profile/`: the page and profile context, with `overview/`, `cm-logs/`, and `veterans/` (`roster/` and `details/`).
+- `pages/competitive/`: routed pages and shared data, with `champions-meeting/` (`archetypes/`, `uma/`, `skills/`, `strategy/`, `lobby/`), `race-analysis/` (`replay/`, `diagnostics/`, `results/`), `runners/`, and `sessions/`.
+- `pages/simulator/`: routed pages and shared state, with `setup/` (`runner/`, `hp/`, `build/`, `veterans/`), `courses/`, `requests/`, `shell/`, and `reports/`. Reports group outcomes, skills, replay, and telemetry with their related calculations and tests.
+- `pages/carat-planner/`: the planner shell, with `setup/`, `manager/`, `goals/`, `income/`, `rewards/`, and `cloud/`. Its calculations live in `lib/carat-planner/`.
+- `pages/timeline/`: the page and content, with `board/`, `controls/`, and `details/`.
+- Smaller pages use one subfolder for their sections, such as `statistics/sections/`, `clubs/details/`, and `lineage-planner/tree/`.
+
+Domain code in `src/lib/` follows the same features (`lib/carat-planner/rewards/`, `lib/inheritance/uql/`). Services group by concern (`services/sentry/`, `services/analytics/`, `services/auth/`), and ad slots live in `layouts/ads/`.
 
 For example, `src/pages/settings/SettingsPage.svelte` handles authentication and composes linked accounts, connected logins, and API keys. Each settings component owns that feature's loading state, actions, and markup. Shared settings styles live beside them in `settings.css`, scoped under `.settings-page`.
 
