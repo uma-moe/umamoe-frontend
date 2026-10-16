@@ -402,8 +402,9 @@ export function createSimulatorRepository(request: SimulatorHttpRequest) {
     batch: (run: SimulatorRunRequest) => post<SimulatorBatchResult>('/api/sim/batch', run),
     monteCarlo: (run: SimulatorRunRequest) => post<MonteCarloResult>('/api/sim/monte-carlo', run),
     comparison: (run: SimulatorRunRequest) => post<BuildComparison>('/api/sim/comparison', run),
+    // One race with full diagnostics; `/race` takes the normalized race as `input`.
     detailedReplay: (run: SimulatorRunRequest) =>
-      post<DetailedReplay>('/api/sim/replay/detailed', run),
+      post<DetailedReplay>('/api/sim/race', { ...run, body: { input: run.body } }),
     stamina: (run: SimulatorRunRequest) => post<StaminaResult>('/api/sim/stamina', run),
     optimize: (run: SimulatorRunRequest) => post<OptimizeResult>('/api/sim/optimize', run)
   };

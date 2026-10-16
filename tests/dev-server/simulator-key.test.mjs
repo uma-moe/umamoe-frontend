@@ -23,7 +23,7 @@ test('only local development injects the simulator key, without exposing it to t
       try {
         await server.listen();
         const origin = `http://127.0.0.1:${server.httpServer.address().port}`;
-        const response = await fetch(`${origin}/api/sim/races/resimulate`, { method: 'POST', headers: { 'X-Browser-Proof': 'browser-proof' }, body: '{}' });
+        const response = await fetch(`${origin}/api/sim/race`, { method: 'POST', headers: { 'X-Browser-Proof': 'browser-proof' }, body: '{}' });
         assert.equal(response.status, 200);
         assert.deepEqual(await response.json(), { key: mode === 'development' ? key : null, proof: 'browser-proof' });
         assert.equal(server.config.env.SIMULATOR_API_KEY, undefined);

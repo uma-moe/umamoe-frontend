@@ -242,9 +242,10 @@ export function validateSimulatorResponse(
   let valid = true;
   if (path.endsWith('/monte-carlo')) valid = monteCarlo(result, body);
   else if (path.endsWith('/comparison')) valid = comparison(result, body);
-  else if (path.endsWith('/replay/detailed')) {
-    if (!Array.isArray(body.runners)) throw new Error(incompatible);
-    validateDetailedReplay(result, body.runners.length);
+  else if (path.endsWith('/race')) {
+    const input = body.input;
+    if (!isRecord(input) || !Array.isArray(input.runners)) throw new Error(incompatible);
+    validateDetailedReplay(result, input.runners.length);
   } else if (path.endsWith('/stamina')) valid = stamina(result);
   else if (path.endsWith('/optimize'))
     valid =

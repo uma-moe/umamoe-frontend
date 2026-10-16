@@ -245,9 +245,9 @@ describe('typed HTTP middleware pipeline', () => {
       browserProof: port
     });
 
-    await client.request('/api/sim/races/resimulate', {
+    await client.request('/api/sim/race', {
       method: 'POST',
-      body: { capture: {} },
+      body: { capture: { capture: {} } },
       browserProof: true
     });
 

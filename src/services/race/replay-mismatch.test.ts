@@ -96,8 +96,14 @@ describe('replay mismatch reporting', () => {
       );
 
       expect(http.request).toHaveBeenLastCalledWith(
-        '/api/sim/races/resimulate',
-        expect.objectContaining({ browserProof: true, headers: { Accept: 'application/json' } })
+        '/api/sim/race',
+        expect.objectContaining({
+          browserProof: true,
+          headers: { Accept: 'application/json' },
+          body: {
+            capture: expect.objectContaining({ courseId: 10606, source: 'uma.moe/race-analysis' })
+          }
+        })
       );
     } finally {
       localStorage.removeItem('auth_token');
