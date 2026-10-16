@@ -40,7 +40,7 @@ for (const runners of [9, 18])
 
       await page.route('**/api/sim/**', async (route) => {
         const path = new URL(route.request().url()).pathname.replace('/api', '');
-        if (path.includes('replay')) replays++;
+        if (path.endsWith('/race')) replays++;
         if (path.endsWith('comparison')) comparisons++;
         if (
           path.endsWith('monte-carlo') &&

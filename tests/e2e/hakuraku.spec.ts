@@ -18,7 +18,7 @@ test.beforeEach(async ({ page }) => {
   );
 
   // Recorded-only workflows exercise the failure fallback without contacting the live simulator.
-  await page.route('**/api/sim/races/resimulate', (route) =>
+  await page.route('**/api/sim/race', (route) =>
     route.fulfill({ status: 503, json: { error: 'Simulator unavailable in this fixture' } })
   );
 });
@@ -139,11 +139,17 @@ test('session resimulation requires browser verification when signed in and repo
         headers: { 'access-control-allow-origin': '*' }
       });
     });
-  await page.route('**/api/sim/races/resimulate', async (route) => {
+  await page.route('**/api/sim/race', async (route) => {
     expect(route.request().headers()['authorization']).toBe('Bearer test-jwt');
     expect(route.request().headers()['x-browser-proof']).toBe('test-browser-proof');
     expect(route.request().headers()['x-api-key']).toBeUndefined();
-    expect(route.request().postDataJSON()).toEqual({ capture: raw, courseId: 10606 });
+    expect(route.request().postDataJSON()).toEqual({
+      capture: expect.objectContaining({
+        capture: raw,
+        courseId: 10606,
+        source: 'uma.moe/race-analysis'
+      })
+    });
     calls++;
     await route.fulfill({
       json: calls === 1 ? response : { ...response, validation: { status: 'matched' } }
@@ -3756,8 +3762,14 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   };
 
   let calls = 0;
-  await page.route('**/api/sim/races/resimulate', async (route) => {
-    expect(route.request().postDataJSON()).toEqual({ capture: raw, courseId: 10606 });
+  await page.route('**/api/sim/race', async (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      capture: expect.objectContaining({
+        capture: raw,
+        courseId: 10606,
+        source: 'uma.moe/race-analysis'
+      })
+    });
     expect(route.request().headers()['x-api-key']).toBeUndefined();
     expect(route.request().headers()['x-browser-proof']).toBe('test-browser-proof');
     calls++;
