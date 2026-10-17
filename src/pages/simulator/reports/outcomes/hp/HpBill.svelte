@@ -27,11 +27,11 @@
 <div class="bill">
   <h3>{median ? 'Where her HP goes in the median race' : 'Where her HP goes'}</h3>
   <table>
-    <caption>{bill.after.length ? 'To the spurt decision' : 'The whole race'}</caption>
+    <caption>{bill.after.length ? 'Up to the spurt check' : 'The whole race'}</caption>
     <tbody>
       {#each bill.before as item}{@render line(item)}{/each}
       {#if bill.decision && decided}<tr class="decision">
-          <th scope="row">Full spurt needs</th>
+          <th scope="row">Top-speed spurt needs</th>
           <td>{whole(bill.decision.need)}</td>
         </tr>{/if}
     </tbody>

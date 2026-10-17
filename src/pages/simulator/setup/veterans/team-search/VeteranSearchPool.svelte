@@ -39,7 +39,7 @@
     <h3>Your Veterans</h3>
     <span class="sub">
       {picked.length} picked ·
-      <strong>{teams.toLocaleString()}</strong>
+      <strong>{teams.toLocaleString('en-US')}</strong>
       {teams === 1 ? 'team' : 'teams'}
     </span>
     {#if $workspaces.length > 1}

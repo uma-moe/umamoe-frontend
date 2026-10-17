@@ -33,11 +33,11 @@
       description: 'Plan your full inheritance tree'
     },
     {
-      href: '/simulator',
+      href: '/simulator/hp',
       icon: 'battery' as const,
       accent: 'warning',
-      title: 'Stamina Calculator',
-      description: 'Calculate optimal stamina for races'
+      title: 'HP Calculator',
+      description: 'Check whether her HP lasts a top-speed spurt'
     },
     {
       href: '/simulator/race',

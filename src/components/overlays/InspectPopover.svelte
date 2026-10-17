@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { flushSync, type Snippet } from 'svelte';
   import { popoverPosition } from '@/lib/popover-position';
   import Icon from '../Icon.svelte';
 
@@ -38,6 +38,10 @@
 
   function positionPanel() {
     if (!open) return;
+    placePanel();
+  }
+
+  function placePanel() {
     const anchor = control.getBoundingClientRect();
     const box = panel.getBoundingClientRect();
     let desiredTop = anchor.top - 4;
@@ -141,7 +145,15 @@
     style:left="{left}px"
     style:top="{top}px"
     onbeforetoggle={(event) => {
-      if (event.newState === 'open') mounted = true;
+      if (event.newState !== 'open') return;
+      // Render the content now, and place the panel once it is shown but before the browser paints it, so it never
+      // flashes at its last position first.
+      mounted = true;
+      flushSync();
+      requestAnimationFrame(() => {
+        placePanel();
+        flushSync();
+      });
     }}
     ontoggle={(event) => {
       open = event.newState === 'open';

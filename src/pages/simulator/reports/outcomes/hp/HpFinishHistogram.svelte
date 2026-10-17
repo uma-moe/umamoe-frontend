@@ -26,22 +26,22 @@
           title={bin.count +
             (bin.count === 1 ? ' race: ' : ' races: ') +
             (histogram.step === 1
-              ? bin.from.toLocaleString()
-              : bin.from.toLocaleString() +
+              ? bin.from.toLocaleString('en-US')
+              : bin.from.toLocaleString('en-US') +
                 ' to ' +
-                (bin.from + histogram.step - 1).toLocaleString()) +
+                (bin.from + histogram.step - 1).toLocaleString('en-US')) +
             ' HP'}
         ></i>{/each}
     </div>
     <div class="ends">
-      <span>{histogram.low.toLocaleString()}</span>
+      <span>{histogram.low.toLocaleString('en-US')}</span>
       {#each histogram.ticks as tick}<span
           class="tick"
           style:left={((tick - histogram.start) / (histogram.end - histogram.start)) * 100 + '%'}
         >
-          {tick.toLocaleString()}
+          {tick.toLocaleString('en-US')}
         </span>{/each}
-      <span>{histogram.high.toLocaleString()} HP</span>
+      <span>{histogram.high.toLocaleString('en-US')} HP</span>
     </div>
   </figure>{/if}
 

@@ -9,9 +9,18 @@ export interface BuildRaces {
   scenarios: OptimizeScenarioInput[];
   /** The course that stands for the races: the CM's, or the first of the Team Trials pool. */
   course: RaceCourse;
-  /** Where she raced, in words, for the result. */
-  where: string;
+  /** Where and against whom she raced, as short sentences for the result. */
+  where: string[];
 }
+
+/** The simulator's own pack, said the same way for a CM and for Team Trials. */
+const PACK = 'the simulator’s own pack of eight runners without skills';
+const PACK_MEASURES =
+  'The pack is the same in every race, so the result measures only her own time.';
+
+/** A course in a sentence: `Nakayama Turf 2500m (Long) Right`. */
+const courseName = (course: RaceCourse) =>
+  trackName(course.race_track_id) + ' ' + describeCourse(course);
 
 /**
  * Her races for the optimizer. The simulator races her with a fixed pack of its own and judges a build by the time she runs, so no one
@@ -46,20 +55,21 @@ export function buildRaces(options: {
     const name = trackName(course.race_track_id) + ' · ' + describeCourse(course);
     return {
       course,
-      where: 'She raced with the pack on ' + name + '.',
+      where: ['She raced on ' + courseName(course) + ' against ' + PACK + '.', PACK_MEASURES],
       scenarios: [scenario(course, name, setup)]
     };
   }
 
   // A course drawn per race has no race of its own, so no race instance.
   const names = new Set<string>();
+  const courses =
+    pool.length + (pool.length === 1 ? ' Team Trials course' : ' Team Trials courses');
   return {
     course,
-    where:
-      'She raced with the pack on ' +
-      pool.length +
-      (pool.length === 1 ? ' course' : ' courses') +
-      ', one drawn per race as Team Trials does.',
+    where: [
+      'She raced on ' + courses + ', one drawn per race as the game does, against ' + PACK + '.',
+      PACK_MEASURES
+    ],
     scenarios: pool.map((course) => {
       const siblings = pool.filter((other) => other.race_track_id === course.race_track_id);
       let name = trackName(course.race_track_id) + ' · ' + describeCourse(course, siblings);
@@ -71,27 +81,24 @@ export function buildRaces(options: {
 }
 
 /**
- * Where she raced when the server raced her in real CM fields, in words: how many, from which CM course, and whether
- * that is the course she runs or the closest one recorded.
+ * Who she raced against when the server raced her in real CM fields, as short sentences. The simulator takes CM fields
+ * only from her own course; an older one could take them from the closest CM it had, so that course is named.
  */
 export function fieldWhere(
   fields: OptimizeFields,
-  course: RaceCourse | undefined,
+  goal: RaceCourse | undefined,
   courses: ReadonlyMap<number, RaceCourse>
-): string {
-  const source = courses.get(fields.course_id);
-  const name = source
-    ? trackName(source.race_track_id) + ' · ' + describeCourse(source)
-    : 'course ' + fields.course_id;
+): string[] {
+  const races = fields.fields.toLocaleString('en-US') + (fields.fields === 1 ? ' race' : ' races');
+  if (goal?.course_id === fields.course_id) {
+    return [
+      'She raced in ' +
+        races +
+        ' recorded at this CM, each time in place of a runner of her running style.'
+    ];
+  }
 
-  return course?.course_id === fields.course_id
-    ? 'She raced ' +
-        fields.fields +
-        ' real CM fields from this CM, in place of a runner of her style.'
-    : 'She raced ' +
-        fields.fields +
-        ' CM fields from ' +
-        name +
-        ', the closest CM recorded, in place of a runner of her style. Their runners were rebuilt for this race: ' +
-        'aptitudes, course and weather skills, and stamina for the distance.';
+  const source = courses.get(fields.course_id);
+  const sourceName = source ? courseName(source) : 'course ' + fields.course_id;
+  return ['Her opponents came from ' + races + ' of the CM on ' + sourceName + '.'];
 }

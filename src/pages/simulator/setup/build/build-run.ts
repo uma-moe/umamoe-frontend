@@ -13,7 +13,7 @@ export function bestSummary(
   field: boolean
 ): string {
   const gain = best.validation_gain ?? best.gain;
-  const cost = best.sp_cost.toLocaleString() + ' SP';
+  const cost = best.sp_cost.toLocaleString('en-US') + ' SP';
   if (gain && best.build.purchases.length && gain.mean > 0) {
     return (
       (field

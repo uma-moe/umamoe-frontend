@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uma.moe/contracts/build-code.schema.json",
   "title": "BuildCode",
-  "description": "The JSON inside a simulator build code. A build code is this JSON, gzipped, then base64 encoded (standard alphabet; URL-encoding is undone first). The shape mirrors the umalator's page state, so its field names, enums and value ranges match it; the fields marked as uma.moe additions are what Build search needs beyond that. Unknown fields are kept and ignored.",
+  "description": "The JSON inside a simulator build code. A build code is this JSON, gzipped, then base64 encoded (standard alphabet; URL-encoding is undone first). The shape mirrors the umalator's page state, so its field names, enums and value ranges match it; the fields marked as uma.moe additions are what the Skill planner needs beyond that. Unknown fields are kept and ignored.",
   "type": "object",
   "additionalProperties": true,
   "required": ["uma1"],
@@ -25,11 +25,11 @@
       "maximum": 2147483647
     },
     "mode": {
-      "description": "uma.moe addition. What Build search optimizes for: a Champions Meeting race or a Team Trials distance.",
+      "description": "uma.moe addition. What the Skill planner plans for: a Champions Meeting race or a Team Trials distance.",
       "enum": ["cm", "tt_sprint", "tt_mile", "tt_medium", "tt_long", "tt_dirt"]
     },
     "opponents": {
-      "description": "uma.moe addition, no longer read. Who Build search raced her against before it raced her alone: the leading teams of a CM (cm), eight copies of her (mirror), or the race sim field (field). Kept so older codes still validate.",
+      "description": "uma.moe addition, no longer read. Who the Skill planner raced her against before it raced her alone: the leading teams of a CM (cm), eight copies of her (mirror), or the race sim field (field). Kept so older codes still validate.",
       "enum": ["cm", "mirror", "field"]
     },
     "cmSnapshot": {
@@ -37,14 +37,14 @@
       "type": "string"
     },
     "tracks": {
-      "description": "uma.moe addition. For the tt_* modes: the courses Team Trials draws from, as simulator course_ids. Build search races one of them per race, as the game draws a course per match. Absent means every JRA course of the distance (turf of that distance type, or dirt).",
+      "description": "uma.moe addition. For the tt_* modes: the courses Team Trials draws from, as simulator course_ids. The Skill planner races one of them per race, as the game draws a course per match. Absent means every JRA course of the distance (turf of that distance type, or dirt).",
       "type": "array",
       "maxItems": 32,
       "uniqueItems": true,
       "items": { "type": "integer", "minimum": 1 }
     },
     "scoring": {
-      "description": "uma.moe addition, no longer read. Team Trials scoring from before Build search scored builds on the time they save; kept so older codes still validate.",
+      "description": "uma.moe addition, no longer read. Team Trials scoring from before the Skill planner scored builds on the time they save; kept so older codes still validate.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -55,7 +55,7 @@
       }
     },
     "uma1": {
-      "description": "The runner: at the end of a career for Build search, or the first runner elsewhere.",
+      "description": "The runner: at the end of a career for the Skill planner, or the first runner elsewhere.",
       "$ref": "#/$defs/runner"
     },
     "uma2": {
@@ -116,7 +116,7 @@
         "uniqueLv": { "description": "Her unique skill's level.", "type": "integer", "minimum": 1, "maximum": 6 },
         "mood": { "description": "-2 awful, -1 bad, 0 normal, 1 good, 2 great.", "enum": [-2, -1, 0, 1, 2] },
         "popularity": { "description": "Gate popularity. Not used by the simulator.", "type": "integer", "minimum": 1 },
-        "sp": { "description": "uma.moe addition. Skill points left to spend: Build search's budget.", "type": "integer", "minimum": 0 },
+        "sp": { "description": "uma.moe addition. Skill points left to spend: the Skill planner's budget.", "type": "integer", "minimum": 0 },
         "fans": { "description": "uma.moe addition. Her fan count; skills that grow with fans need it.", "type": "integer", "minimum": 0 },
         "fastLearner": { "description": "uma.moe addition. Fast Learner: another 10% off every skill.", "type": "boolean" }
       }

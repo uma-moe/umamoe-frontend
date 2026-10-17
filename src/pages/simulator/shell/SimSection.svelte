@@ -93,15 +93,22 @@
     gap: 8px;
     margin-left: auto;
   }
-  .actions :global(.ui-button) {
+  /* Buttons and menus in a section's header are one size, so a row of them reads as one set. */
+  .actions :global(.ui-button),
+  .actions :global(.menu > .trigger) {
     height: 28px;
     min-height: 28px;
     padding-inline: 10px;
     border-radius: var(--radius-sm);
     font-size: 11px;
   }
+  .actions :global(.menu > .trigger) {
+    color: var(--color-text);
+    font-weight: 700;
+  }
   @media (max-width: 767px) {
-    .actions :global(.ui-button) {
+    .actions :global(.ui-button),
+    .actions :global(.menu > .trigger) {
       height: 40px;
       min-height: 40px;
     }

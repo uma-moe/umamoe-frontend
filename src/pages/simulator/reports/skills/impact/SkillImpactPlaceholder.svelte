@@ -25,8 +25,8 @@
     />
     {#if busy}Measuring {runnerName}’s skills… each gain fills in as its races finish.{:else}What
       each skill is worth needs its own run: Measure replays {races}
-      races per skill with that skill switched off, {(rows.length * races).toLocaleString()} races for
-      all
+      races per skill with that skill switched off, {(rows.length * races).toLocaleString('en-US')} races
+      for all
       {rows.length} of {runnerName}’s skills.{/if}
   </p>
   <div class="chip-grid">

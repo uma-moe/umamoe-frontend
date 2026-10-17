@@ -106,7 +106,9 @@
     <div>
       <h2>The race at a glance</h2>
       <p>
-        {field ? 'Every runner on the same terms' : 'Your picked runners'} over the same {result.runs.toLocaleString()}
+        {field ? 'Every runner on the same terms' : 'Your picked runners'} over the same {result.runs.toLocaleString(
+          'en-US'
+        )}
         races. Margins are measured from the baseline, {label(reference)}.
       </p>
     </div>

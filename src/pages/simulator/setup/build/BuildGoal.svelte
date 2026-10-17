@@ -11,12 +11,23 @@
   import CourseButtons from '../../shell/CourseButtons.svelte';
   import RaceBar from '../../shell/RaceBar.svelte';
   import SimSection from '../../shell/SimSection.svelte';
-  import { simulatorCourseData } from '../../simulator-session.svelte';
+  import ToggleField from '../../shell/ToggleField.svelte';
+  import {
+    GROUND_OPTIONS,
+    SEASON_OPTIONS,
+    simulatorCourseData,
+    simulatorSession,
+    TIME_OPTIONS,
+    WEATHER_OPTIONS
+  } from '../../simulator-session.svelte';
   import TrackPool from './TrackPool.svelte';
   import type { TeamTrialsMode } from './track-pool';
   import { buildSearch } from './build-search.svelte';
 
-  /** What the build is for and where she races: the mode, its tracks or course, conditions and search sizes. */
+  /**
+   * What the build is for and where she races: the mode, its course (or, in Team Trials, the pool of tracks) and the
+   * conditions, then the HP she loses to debuffs and the size of the search.
+   */
   interface Props {
     teamTrials: boolean;
     invalidSeed: boolean;
@@ -39,46 +50,81 @@
 <SimSection
   number={2}
   title="Goal"
-  note="What the build is for and where she races"
+  note="Where she races"
 >
   {#snippet actions()}{#if !teamTrials}<CourseButtons />{/if}{/snippet}
-  <div class="goal-mode">
+  <!-- One grid on the runner's columns, so every field lines up with the stats above it. -->
+  <div
+    class="goal"
+    class:team-trials={teamTrials}
+  >
     <SelectField
       id="build-mode"
-      label="Optimize for"
+      label="Plan for"
       options={MODE_OPTIONS}
       bind:value={buildSearch.mode}
     />
-  </div>
-  <p class="goal-note">
-    {#if teamTrials}
-      She races with a fixed pack of eight runners without skills: one front runner, three pace
-      chasers, three late surgers and one end closer, all with her stats. Every build meets the same
-      pack, so each skill is judged by the time she actually runs.
-    {:else}
-      She races in real CM fields recorded in game, in place of a runner of her style, and each
-      skill is judged by how many runners she beats, weighed with what recorded CM races say about
-      it. On a course no recorded CM ran, the closest CM's runners are rebuilt for it. A simulator
-      without CM data races her with a fixed pack instead.
+    {#if !teamTrials}
+      <RaceBar
+        bare
+        courseOnly
+      />
     {/if}
-  </p>
-  {#if teamTrials}
-    <TrackPool
-      mode={buildSearch.mode as TeamTrialsMode}
-      courseLookup={simulatorCourseData.courses}
-      bind:picked={
-        () => buildSearch.tracks[buildSearch.mode as TeamTrialsMode],
-        (value) => (buildSearch.tracks[buildSearch.mode as TeamTrialsMode] = value)
-      }
+    <ToggleField
+      id="build-ground"
+      label="Ground"
+      options={GROUND_OPTIONS}
+      bind:value={simulatorSession.ground}
     />
-    <RaceBar
-      bare
-      conditionsOnly
+    <ToggleField
+      id="build-weather"
+      label="Weather"
+      options={WEATHER_OPTIONS}
+      bind:value={simulatorSession.weather}
     />
-  {:else}
-    <RaceBar bare />
-  {/if}
-  <div class="goal-fields">
+    <ToggleField
+      id="build-season"
+      label="Season"
+      options={SEASON_OPTIONS}
+      bind:value={simulatorSession.season}
+    />
+    <ToggleField
+      id="build-time"
+      label="Time of day"
+      options={TIME_OPTIONS}
+      bind:value={simulatorSession.startTime}
+    />
+    {#if teamTrials}
+      <div class="pool">
+        <TrackPool
+          mode={buildSearch.mode as TeamTrialsMode}
+          courseLookup={simulatorCourseData.courses}
+          bind:picked={
+            () => buildSearch.tracks[buildSearch.mode as TeamTrialsMode],
+            (value) => (buildSearch.tracks[buildSearch.mode as TeamTrialsMode] = value)
+          }
+        />
+      </div>
+    {/if}
+    <div class="pair">
+      <TextField
+        id="build-debuffs"
+        label="HP debuffs"
+        type="number"
+        min={0}
+        max={256}
+        bind:value={buildSearch.debuffs.count}
+      />
+      <TextField
+        id="build-debuff-percent"
+        label="% HP each"
+        type="number"
+        min={0.1}
+        max={100}
+        step={0.5}
+        bind:value={buildSearch.debuffs.percent}
+      />
+    </div>
     <div class="seed">
       <TextField
         id="build-seed"
@@ -90,111 +136,32 @@
       <Button
         variant="secondary"
         size="sm"
-        icon="refresh"
+        icon="dice"
         ariaLabel="Random seed"
         onclick={() => (buildSearch.seed = String(Math.floor(Math.random() * 2 ** 31)))}
       />
     </div>
-    <TextField
-      id="build-candidates"
-      label="Builds to try"
-      type="number"
-      min={1}
-      max={MAX_CANDIDATES}
-      bind:value={buildSearch.candidates}
-    />
-    <TextField
-      id="build-finalists"
-      label="Builds to check again"
-      type="number"
-      min={1}
-      max={MAX_FINALISTS}
-      bind:value={buildSearch.finalists}
-    />
-    <TextField
-      id="build-debuffs"
-      label="HP debuffs taken"
-      type="number"
-      min={0}
-      max={256}
-      bind:value={buildSearch.debuffs.count}
-    />
-    <TextField
-      id="build-debuff-percent"
-      label="% HP each"
-      type="number"
-      min={0.1}
-      max={100}
-      step={0.5}
-      bind:value={buildSearch.debuffs.percent}
-    />
+    <div class="pair">
+      <TextField
+        id="build-candidates"
+        label="Builds to try"
+        type="number"
+        min={1}
+        max={MAX_CANDIDATES}
+        bind:value={buildSearch.candidates}
+      />
+      <TextField
+        id="build-finalists"
+        label="Builds to compare"
+        type="number"
+        min={1}
+        max={MAX_FINALISTS}
+        bind:value={buildSearch.finalists}
+      />
+    </div>
   </div>
 </SimSection>
 
 <style>
-  .goal-mode {
-    --control-height: var(--setup-control-height);
-    display: grid;
-    max-width: 420px;
-  }
-  .goal-mode :global(.field) {
-    gap: 4px;
-  }
-  .goal-mode :global(label) {
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .goal-mode :global(.select-control) {
-    font-size: 13px;
-  }
-  .goal-note {
-    margin: 0;
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-  .goal-fields {
-    --control-height: var(--setup-control-height);
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 10px 12px;
-    align-items: start;
-  }
-  .goal-fields :global(.field) {
-    gap: 4px;
-  }
-  .goal-fields :global(label) {
-    font-size: 12px;
-  }
-  .goal-fields :global(input),
-  .goal-fields :global(.select-control) {
-    font-size: 13px;
-  }
-  .seed {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 36px;
-    gap: 6px;
-    align-items: start;
-  }
-  .seed > :global(.ui-button) {
-    width: 36px;
-    height: var(--setup-control-height);
-    margin-top: 18px;
-    padding: 0;
-  }
-  @container build-form (max-width: 700px) {
-    .goal-fields {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .seed {
-      grid-column: 1 / -1;
-    }
-  }
-  @media (max-width: 767px) {
-    .seed {
-      grid-template-columns: minmax(0, 1fr) 44px;
-    }
-    .seed > :global(.ui-button) {
-      width: 44px;
-    }
-  }
+  @import './build-goal.css';
 </style>

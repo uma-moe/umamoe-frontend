@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import Button from '@/components/controls/Button.svelte';
+  import Menu from '@/components/navigation/Menu.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import type { RaceCourse } from '@/lib/game-data/racing/courses';
@@ -122,76 +123,72 @@
         />
         {uma.name}
       </span>{/if}
-    <Button
-      variant="secondary"
-      size="sm"
-      icon="veterans"
-      onclick={() => (veteransOpen = true)}
-    >
-      Choose from Veterans
-    </Button>
-    {#if oncode}<Button
-        variant="secondary"
-        size="sm"
-        icon="clipboard"
-        onclick={oncode}
-      >
-        Build code
-      </Button>{/if}
+    <Menu
+      label="Import"
+      menuLabel="Import a runner"
+      icon="upload"
+      items={[
+        { id: 'veterans', label: 'Choose from Veterans', icon: 'veterans' },
+        ...(oncode ? [{ id: 'code', label: 'Build code', icon: 'clipboard' as const }] : [])
+      ]}
+      onselect={(id) => (id === 'code' ? oncode?.() : (veteransOpen = true))}
+    />
     <Button
       variant="secondary"
       size="sm"
       icon="edit"
       onclick={() => (editorOpen = true)}
     >
-      Full build &amp; skills
+      Edit build
     </Button>
   {/snippet}
-  <div class="fields stats">
-    {#each STATS as [key, label, icon]}
-      {@const effective = withGreens(key)}
-      <div class="stat">
-        <TextField
-          id="{idPrefix}-{key}"
-          {label}
-          type="number"
-          min={1}
-          max={3000}
-          prefixImage="/assets/images/icon/stats/{icon}.webp"
-          bind:value={uma.trainee[key]}
-        />
-        {#if effective !== undefined}<small
-            class="effective"
-            title="{effective.toLocaleString()} with green skills"
-          >
-            → {effective.toLocaleString()}
-            <span class="sr-only">{' with greens'}</span>
-          </small>{/if}
-      </div>
-    {/each}
-  </div>
-  <div class="fields">
-    <SelectField
-      id="{idPrefix}-style"
-      label="Running style"
-      options={STYLE_OPTIONS}
-      bind:value={uma.trainee.runningStyle}
-    />
-    <SelectField
-      id="{idPrefix}-mood"
-      label="Mood"
-      options={MOOD_OPTIONS}
-      bind:value={uma.trainee.motivation}
-    />
-    {#each aptitudes as aptitude (aptitude.id)}
+  <div class="runner-fields">
+    <div class="fields stats">
+      {#each STATS as [key, label, icon]}
+        {@const effective = withGreens(key)}
+        <div class="stat">
+          <TextField
+            id="{idPrefix}-{key}"
+            {label}
+            type="number"
+            min={1}
+            max={3000}
+            prefixImage="/assets/images/icon/stats/{icon}.webp"
+            bind:value={uma.trainee[key]}
+          />
+          {#if effective !== undefined}<small
+              class="effective"
+              title="{effective.toLocaleString('en-US')} with green skills"
+            >
+              → {effective.toLocaleString('en-US')}
+              <span class="sr-only">{' with greens'}</span>
+            </small>{/if}
+        </div>
+      {/each}
+    </div>
+    <div class="fields">
       <SelectField
-        id="{idPrefix}-aptitude-{aptitude.id}"
-        label="{aptitude.label} aptitude"
-        options={GRADE_OPTIONS}
-        value={uma.trainee[aptitude.list][aptitude.index] ?? 'A'}
-        onchange={(grade) => (uma.trainee[aptitude.list][aptitude.index] = grade)}
+        id="{idPrefix}-style"
+        label="Running style"
+        options={STYLE_OPTIONS}
+        bind:value={uma.trainee.runningStyle}
       />
-    {/each}
+      <SelectField
+        id="{idPrefix}-mood"
+        label="Mood"
+        options={MOOD_OPTIONS}
+        bind:value={uma.trainee.motivation}
+      />
+      {#each aptitudes as aptitude (aptitude.id)}
+        <SelectField
+          id="{idPrefix}-aptitude-{aptitude.id}"
+          label="{aptitude.label} aptitude"
+          options={GRADE_OPTIONS}
+          value={uma.trainee[aptitude.list][aptitude.index] ?? 'A'}
+          onchange={(grade) => (uma.trainee[aptitude.list][aptitude.index] = grade)}
+        />
+      {/each}
+    </div>
   </div>
   {@render children?.()}
 </SimSection>
@@ -207,6 +204,19 @@
 />
 
 <style>
+  /* Stats, then style, mood and aptitudes; one row of ten once the form is wide enough for them. */
+  .runner-fields {
+    display: grid;
+    gap: 8px 12px;
+  }
+  @container sim-form (min-width: 1280px) {
+    .runner-fields {
+      grid-template-columns: repeat(10, minmax(0, 1fr));
+    }
+    .runner-fields > .fields {
+      display: contents;
+    }
+  }
   .fields {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));

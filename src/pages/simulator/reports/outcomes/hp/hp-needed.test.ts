@@ -115,19 +115,19 @@ describe('HP spread and verdict', () => {
     const spread = hpSpread(sampled(), runner, false);
     expect(hpVerdict(spread, false)).toEqual({
       tone: 'warn',
-      title: 'Full spurt in 80% of races',
+      title: 'Top-speed spurt in 80% of races',
       detail:
-        'Full speed in 8 of 10 races, slower or later in 1 of 10. Her HP runs out in 1 of 10 races.'
+        'Top speed in 8 of 10 races, slower or later in 1 of 10. Her HP runs out in 1 of 10 races.'
     });
 
     expect(hpVerdict({ ...spread, full: 10, reduced: 0, none: 0, out: 0 }, false)).toEqual({
       tone: 'good',
-      title: 'Holds a full last spurt',
-      detail: 'Full speed in all 10 races. Her HP lasts to the finish in all 10 races.'
+      title: 'Enough HP to spurt at top speed',
+      detail: 'She spurts at top speed in all 10 races. Her HP lasts to the finish in all 10 races.'
     });
 
     expect(hpVerdict({ ...spread, full: 0, reduced: 3, none: 7 }, false).title).toBe(
-      'No full last spurt'
+      'Not enough HP to spurt at top speed'
     );
 
     expect(hpVerdict({ ...spread, full: 3 }, false).tone).toBe('bad');
@@ -138,14 +138,14 @@ describe('HP spread and verdict', () => {
     expect(spread).toMatchObject({ full: 9, reduced: 0, none: 1 });
     expect(hpVerdict(spread, true)).toEqual({
       tone: 'warn',
-      title: 'Runs out of HP on a full spurt',
+      title: 'Her HP runs out at top speed',
       detail: 'Her HP runs out in 1 of 10 races.'
     });
 
-    expect(hpVerdict({ ...spread, out: 0 }, true).title).toBe('Holds a full spurt to the finish');
+    expect(hpVerdict({ ...spread, out: 0 }, true).title).toBe('Her HP lasts at top speed');
     // One race reads without counts.
     expect(hpVerdict(hpSpread(single, runner, false), false).detail).toBe(
-      'Full speed. Her HP lasts to the finish.'
+      'She spurts at top speed. Her HP lasts to the finish.'
     );
   });
 
@@ -163,11 +163,11 @@ describe('HP bill', () => {
       { label: 'Running', hp: -1250 },
       { label: 'Recovery skills', hp: 200 },
       { label: 'HP debuffs', hp: -100 },
-      { label: 'At the spurt decision', hp: 850, total: true }
+      { label: 'At the spurt check', hp: 850, total: true }
     ]);
 
     expect(bill.after).toEqual([
-      { label: 'At the spurt decision', hp: 850, start: true },
+      { label: 'At the spurt check', hp: 850, start: true },
       { label: 'Running', hp: -840 },
       { label: 'Recovery skills', hp: 100 },
       { label: 'Left at the finish', hp: 110, total: true }

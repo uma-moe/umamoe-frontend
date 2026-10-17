@@ -1,0 +1,319 @@
+.budget-row {
+  --control-height: var(--setup-control-height, 36px);
+  display: grid;
+  grid-template-columns: 112px 128px auto minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: end;
+}
+.budget-row :global(.field) {
+  gap: 4px;
+}
+.budget-row :global(label) {
+  font-size: 12px;
+}
+.fast-learner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--control-height);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fast-learner input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+}
+.fast-learner span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
+  line-height: 1.3;
+}
+.fast-learner small {
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+/* What everything on offer costs against the budget, read at a glance. */
+.totals {
+  display: grid;
+  justify-items: end;
+  align-content: center;
+  gap: 2px;
+  min-height: var(--control-height);
+}
+.totals dl {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+}
+.totals dl div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.totals dt {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.totals dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.totals .over dd {
+  color: var(--accent-warning);
+}
+.totals .locked-total dd {
+  color: var(--accent-primary);
+}
+.totals .locked-total.over dd {
+  color: var(--accent-warning);
+}
+.totals p {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.add {
+  --control-height: var(--setup-control-height, 36px);
+}
+.add :global(input) {
+  font-size: 13px;
+}
+/* Rows share one set of columns, so names, hints, prices and locks line up down the list and across it. */
+.offers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr));
+  gap: 4px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.offer {
+  --tier: 148 163 184;
+  --tier-text: var(--text-primary);
+  --step: 24px;
+  --tap: 26px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto 62px auto var(--tap);
+  grid-template-areas: 'icon name hint cost lock remove';
+  align-items: center;
+  column-gap: 8px;
+  min-height: 38px;
+  padding: 3px 4px 3px 8px;
+  border: 1px solid rgb(var(--tier) / 0.28);
+  border-radius: var(--radius-md, 8px);
+  background: rgb(var(--tier) / 0.05);
+  transition:
+    border-color 150ms ease-out,
+    background-color 150ms ease-out;
+}
+.offer.locked {
+  border-color: rgb(var(--accent-primary-rgb) / 0.75);
+  background: rgb(var(--accent-primary-rgb) / 0.08);
+}
+.offer img {
+  grid-area: icon;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+.name {
+  grid-area: name;
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+.name strong {
+  overflow: hidden;
+  color: var(--tier-text);
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.name small {
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The hint stepper: − level +, then what the level takes off the price. */
+.hint {
+  grid-area: hint;
+  display: grid;
+  grid-template-columns: var(--step) 18px var(--step) 46px;
+  align-items: center;
+  height: var(--tap);
+}
+.hint button {
+  display: grid;
+  place-items: center;
+  width: var(--step);
+  height: 100%;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.hint button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+.hint button:nth-of-type(2) {
+  border-radius: 0 6px 6px 0;
+}
+.hint button:hover:not(:disabled) {
+  background: var(--surface-hover, var(--tab-btn-hover-bg));
+}
+.hint button:disabled {
+  color: var(--text-disabled);
+  cursor: default;
+}
+.hint output {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  border-block: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.discount {
+  padding-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-success);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.discount.none {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.cost {
+  grid-area: cost;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.cost strong {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.cost s,
+.cost small {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.cost s {
+  opacity: 0.75;
+}
+/* A labelled toggle, so a locked skill reads as locked without hovering. */
+.lock {
+  grid-area: lock;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 72px;
+  height: var(--tap);
+  padding: 0 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lock:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+.lock[aria-pressed='true'] {
+  border-color: rgb(var(--accent-primary-rgb) / 0.8);
+  background: rgb(var(--accent-primary-rgb) / 0.18);
+  color: var(--accent-primary);
+}
+.remove {
+  grid-area: remove;
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.remove:hover {
+  background: var(--tab-btn-hover-bg);
+  color: var(--text-primary);
+}
+.hint button:focus-visible,
+.lock:focus-visible,
+.remove:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+.offer.missing {
+  grid-template-columns: minmax(0, 1fr) var(--tap);
+  grid-template-areas: 'name remove';
+  border-style: dashed;
+}
+.empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+@container build-form (max-width:620px) {
+  .budget-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .fast-learner,
+  .totals {
+    grid-column: 1 / -1;
+  }
+  .totals {
+    justify-items: start;
+  }
+  .offers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* The name and price on top; the hint and the lock under them. */
+  .offer {
+    grid-template-columns: 22px minmax(0, 1fr) auto var(--tap);
+    grid-template-areas:
+      'icon name cost remove'
+      '. hint lock remove';
+    row-gap: 4px;
+    padding-block: 6px;
+  }
+  .hint {
+    justify-self: start;
+  }
+  .lock {
+    justify-self: end;
+  }
+}
+@media (max-width: 767px) {
+  .offer {
+    --step: 44px;
+    --tap: 44px;
+  }
+  .hint {
+    grid-template-columns: var(--step) 24px var(--step) 50px;
+  }
+}

@@ -2,17 +2,25 @@
   import Button from '@/components/controls/Button.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import Icon from '@/components/Icon.svelte';
+  import {
+    DISTANCE_NAMES,
+    SURFACE_NAMES,
+    TURN_NAMES,
+    trackName,
+    type RaceCourse
+  } from '@/lib/game-data/racing/courses';
   import { formatRaceTime } from '@/lib/race/replay/race-display';
   import type { PlanMarker } from '../../../setup/hp/hp-plan';
+  import SimulatorCoursePreview from '../../../courses/SimulatorCoursePreview.svelte';
   import HpChart from './HpChart.svelte';
   import type { StaminaResult } from '../../../simulator-repository';
   import { goldRecoveryNeeded, hpBill, hpSpread, hpVerdict, type HpRunner } from './hp-needed';
-  import { signed, whole } from './hp-result';
+  import { whole } from './hp-result';
   import HpBill from './HpBill.svelte';
   import HpFinishHistogram from './HpFinishHistogram.svelte';
 
   /**
-   * One HP calculation over many races, answer first: how often she holds a full last spurt; the stamina that takes
+   * One HP calculation over many races, answer first: how often she spurts at top speed; the stamina that takes
    * and how the worst races go; her HP across the course; then where her HP goes in the median race.
    */
   let {
@@ -26,6 +34,7 @@
     blocked = '',
     runner,
     markers = [],
+    course,
     distance
   }: {
     result?: StaminaResult;
@@ -44,10 +53,26 @@
     runner?: HpRunner & { base?: number };
     /** Where her skills and the situations between runners can happen, for the lanes under the chart. */
     markers?: PlanMarker[];
+    /** The course she races, named over the chart. */
+    course?: RaceCourse;
     distance?: number;
   } = $props();
 
   let rawOpen = $state(false);
+  const courseLabel = $derived(
+    course
+      ? [
+          (SURFACE_NAMES[course.surface] ?? 'Unknown') +
+            ' ' +
+            course.distance.toLocaleString('en-US') +
+            ' m',
+          DISTANCE_NAMES[course.distance_type],
+          TURN_NAMES[course.turn]
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      : ''
+  );
   const percent = (count: number, of: number) => (count / Math.max(1, of)) * 100 + '%';
 
   const spread = $derived(result && runner ? hpSpread(result, runner, forced) : undefined);
@@ -88,6 +113,8 @@
 
   /** HP at the finish, or what she was short when it ran out. */
   const left = (value: number) => whole(Math.abs(value)) + (value < 0 ? ' HP short' : ' HP left');
+  /** HP over what a top-speed spurt needs at the spurt check, or what she was short of it. */
+  const spare = (value: number) => whole(Math.abs(value)) + (value < 0 ? ' HP short' : ' HP spare');
 </script>
 
 <div
@@ -106,7 +133,7 @@
       </Button>{/if}
   </header>
 
-  <!-- The answer: how often she holds a full spurt, and why. -->
+  <!-- The answer: how often she spurts at top speed, and why. -->
   <div
     class="answer {error && !busy ? 'bad' : (verdict?.tone ?? '')}"
     role="status"
@@ -145,12 +172,12 @@
           ></i>
         </div>{/if}
     {:else}
-      <p class="title idle">Does her HP last a full last spurt?</p>
+      <p class="title idle">Can she spurt at top speed all the way to the finish?</p>
       <p class="detail">
         {blocked ||
           (busy
             ? 'Racing her 100 times…'
-            : 'Races her 100 times on this course. After the first time, the result follows every change.')}
+            : 'Races her 100 times on this course. After the first run, the result updates with every change.')}
       </p>
     {/if}
     {#if (!result || (error && !busy)) && oncalculate}<Button
@@ -170,16 +197,17 @@
         <dd>
           {#if needed}<strong>≈ {whole(needed.p50)}</strong>
             <small>
-              {whole(needed.p90)} for 9 in 10 · has {whole(runner?.stamina)}
+              {whole(needed.p90)} for 9 races in 10 · she has {whole(runner?.stamina)}
             </small>{:else}—{/if}
         </dd>
       </div>
       {#if spread.races > 1 && spread.spare}<div>
-          <dt>Worst 1 in 10</dt>
+          <dt>Worst race in 10</dt>
           <dd>
-            <strong class:bad={spread.spare.p10 < 0}>{signed(spread.spare.p10)}</strong>
-            <small>at the decision ·</small>
+            <strong class:bad={spread.spare.p10 < 0}>{spare(spread.spare.p10)}</strong>
+            <small>at the spurt check ·</small>
             <strong class:bad={spread.finish.p10 < 0}>{left(spread.finish.p10)}</strong>
+            <small>at the finish</small>
           </dd>
         </div>{/if}
       <div>
@@ -195,13 +223,26 @@
 
   <HpFinishHistogram {result} />
 
-  {#if distance}<HpChart
-      {distance}
-      {markers}
-      band={result?.distribution?.hp_band}
-      max={result?.max_hp}
-      {decision}
-    />{/if}
+  <!-- The course she races, and her HP across it once calculated. -->
+  {#if distance}<div class="course-view">
+      {#if course}<p class="course-name">
+          <SimulatorCoursePreview
+            {course}
+            compact
+          />
+          <span>
+            <strong>{trackName(course.race_track_id)}</strong>
+            {courseLabel}
+          </span>
+        </p>{/if}
+      <HpChart
+        {distance}
+        {markers}
+        band={result?.distribution?.hp_band}
+        max={result?.max_hp}
+        {decision}
+      />
+    </div>{/if}
 
   <!-- The bill: the median race's HP to the spurt decision, then to the finish. -->
   {#if result && bill}<HpBill
@@ -210,15 +251,15 @@
       decided={!!decision}
     />
     {#if cover && cover !== 'good' && needed && runner}<p class="fix">
-        For a full spurt in 9 races in 10: about {whole(needed.p90 - runner.stamina)} more stamina{golds &&
+        To spurt at top speed in 9 races in 10: about {whole(needed.p90 - runner.stamina)} more stamina{golds &&
         golds <= 3
           ? ', or ' + golds + ' more gold recovery skill' + (golds > 1 ? 's' : '') + ' in mid race'
           : ''}.
       </p>{/if}
     <p class="fine">
-      {spread && spread.races > 1 ? spread.races + ' races' : 'One race'} on her own at base speed, each
-      rolling her pace, where her skills land and whether she gets rushed{forced
-        ? ', with the last spurt forced to full'
+      {spread && spread.races > 1 ? spread.races + ' races' : 'One race'} with her alone on the course
+      at base speed, each rolling her pace, where her skills land and whether she gets rushed{forced
+        ? ', with her spurt always at top speed'
         : ''}.
     </p>{/if}
 </div>

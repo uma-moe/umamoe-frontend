@@ -1,351 +1,327 @@
 .field {
-  --roster-columns: 220px 180px minmax(0, 1fr) 176px;
   min-width: 0;
   container: setup-field / inline-size;
 }
-.column-headings,
-.runner {
-  display: grid;
-  grid-template-columns: var(--roster-columns);
-  align-items: center;
-  gap: 16px;
-}
-.column-headings {
-  padding: 0 0 9px;
-  color: var(--text-secondary);
-  font-size: 10px;
-}
-.column-headings small {
-  margin-left: 6px;
-  font-size: 10px;
-  color: var(--text-muted);
-}
-.action-headings {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: 12px;
-  text-align: center;
-}
+/* One card per runner, on one grid. A wide card keeps everything on two lines, and the field only adds a column when
+   every card can stay wide; a phone stacks the same parts. Her name is 13px, everything else 11px. */
 .runners {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
 }
 .runner {
-  min-width: 0;
-  padding: 6px 0;
-  border-top: 1px solid var(--border-subtle);
-}
-.runner > div {
-  min-width: 0;
-}
-.runner:hover {
-  background: color-mix(in srgb, var(--accent-primary) 3%, transparent);
-}
-.summary {
-  display: block;
-  min-width: 0;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-primary);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.summary:hover :global(h3) {
-  color: var(--accent-primary);
-}
-.summary:focus-visible {
-  outline: 2px solid var(--accent-primary);
-  outline-offset: 3px;
-}
-.summary :global(.compact h3) {
-  font-size: 13px;
-}
-.summary :global(.compact .art) {
-  width: 56px;
-  height: 52px;
-}
-.summary :global(.compact) {
-  grid-template-columns: 56px minmax(0, 1fr);
-  gap: 9px;
-}
-.summary :global(.compact .member-meta > small) {
+  --runner-bg: color-mix(in srgb, var(--text-primary) 3%, var(--surface-1));
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'art identity tools'
+    'art stats meta';
   align-items: center;
-  gap: 4px;
-  font-size: 10px;
+  gap: 6px 8px;
+  min-width: 0;
+  padding: 8px 10px 8px 8px;
+  border-radius: var(--radius-md);
+  background: var(--runner-bg);
+  container: runner-card / inline-size;
 }
-.summary :global(.member-meta > small > span:first-child:not(:last-child)) {
-  max-width: 100%;
-  color: var(--text-secondary);
-  white-space: nowrap;
+.runner > :global(.art) {
+  grid-area: art;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  background: transparent;
+}
+.runner > :global(.art img) {
+  object-fit: contain;
+  object-position: center bottom;
+}
+/* Who she is: her name, then outfit and running style. */
+.identity {
+  grid-area: identity;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+h3 {
+  flex: none;
+  max-width: 60%;
+  margin: 0;
   overflow: hidden;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
-.summary :global(.member-meta > small > span:first-child:not(:last-child):after) {
-  content: '·';
-  margin-left: 4px;
+.build {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.build > span {
+  flex: none;
+}
+.build > .outfit {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+}
+.separator {
   color: var(--text-muted);
 }
-.build-stats :global(.values.compact) {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+/* What she brings: her five stats, then her SP and skill count under the buttons' right edge. */
+.stats {
+  grid-area: stats;
+  min-width: 0;
 }
-.build-stats :global(.values.compact > div) {
+.stats :global(.values.compact) {
+  grid-template-columns: repeat(var(--stat-count), auto);
+  justify-content: start;
+  gap: 8px;
+}
+.stats :global(.values.compact > div) {
   justify-content: flex-start;
   gap: 4px;
 }
-.build-stats :global(.values.compact dd) {
-  font-size: 12px;
-  line-height: 1.4;
+.stats :global(.values.compact img) {
+  width: 14px;
+  height: 14px;
 }
-.build-stats :global(.values.compact img) {
-  width: 20px;
-  height: 20px;
-  flex: none;
-}
-.build-stats :global([data-stat='sp'] dt) {
-  order: -1;
-  flex: none;
-  width: 20px;
-  color: var(--text-secondary);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0;
-}
-.skill-summary {
-  --inspect-popover-width: 420px;
-  --inspect-popover-padding: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 80px;
-  gap: 10px;
-  align-items: center;
-}
-.preview-skills {
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  max-height: 44px;
-  overflow: hidden;
-}
-.skill-item {
-  display: inline-flex;
-  flex: none;
-  min-width: 0;
-  max-width: min(220px, 100%);
-}
-.skill-item :global(.skill-chip.compact) {
-  min-width: 0;
-  min-height: 20px;
-  font-size: 10px;
-}
-.skill-item :global(.skill-chip.compact img) {
-  width: 20px;
-  height: 20px;
-}
-.skill-item :global(.skill-chip.compact .skill-body) {
-  min-height: 20px;
-  align-items: center;
-  padding: 2px 5px;
-  gap: 3px;
-  border-radius: 4px;
-}
-.skill-item :global(.skill-chip.compact.with-icon .skill-body) {
-  padding-left: 4px;
-  border-radius: 0 4px 4px 0;
-}
-.skill-item :global(.skill-chip.compact .skill-level) {
-  font-size: 8px;
-  padding-left: 3px;
-}
-.no-skills {
+.stats :global(.values.compact dd) {
   font-size: 11px;
+}
+.runner-meta {
+  grid-area: meta;
+  justify-self: end;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 11px;
+  line-height: 1.4;
   color: var(--text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.sp strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+/* The skill count reads as text and opens the full list. */
+.skill-summary {
+  --inspect-popover-width: 320px;
+  --inspect-popover-padding: 0;
+  display: flex;
 }
 .skill-summary :global(.inspect) {
   display: flex;
-  min-width: 0;
 }
-.skill-summary :global(.inspect > .trigger) {
-  width: 80px;
-  height: var(--setup-control-height, 36px);
-  min-height: var(--setup-control-height, 36px);
-  padding: 4px 7px;
-  border: 1px solid var(--factor-field-border);
-  border-radius: var(--radius-sm);
-  background: var(--factor-field-bg);
-}
-.skill-summary :global(.inspect > .trigger:hover) {
-  border-color: var(--border-secondary);
-  background: var(--surface-2);
-}
-.more-skills {
+.skill-count {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-  font-size: 11px;
-  line-height: 1;
-  white-space: nowrap;
+  gap: 2px;
+  color: var(--text-secondary);
+}
+.skill-count:hover {
   color: var(--text-primary);
 }
-.more-skills :global(svg) {
-  flex: none;
-  color: var(--text-secondary);
-}
-.skill-list-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 52px 10px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-.skill-list-heading > div {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-.skill-list-heading strong {
-  font-size: 13px;
-  font-weight: 600;
-}
-.skill-list-heading strong > span {
-  margin-left: 5px;
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 400;
-}
-.skill-list-heading small {
-  color: var(--text-secondary);
-  font-size: 10px;
-}
-.skill-list-heading > span {
-  display: flex;
-}
-.skill-list-heading :global(.ui-button) {
-  width: 36px;
-  min-height: 36px;
-  height: 36px;
-  padding: 0;
-  border-radius: var(--radius-sm);
-}
-.skill-summary :global(.popover > .close) {
-  top: 10px;
-  right: 10px;
-  width: 36px;
-  height: 36px;
-}
-.all-skills {
-  display: grid;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-height: min(360px, calc(100dvh - 152px));
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-}
-.all-skills li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  padding: 5px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-.all-skills li:last-child {
-  border-bottom: 0;
-}
-.all-skills li.owned-unique {
-  background: color-mix(in srgb, var(--accent-primary) 5%, transparent);
-}
-.all-skills :global(.skill-chip) {
-  width: fit-content;
-  min-width: 0;
-  min-height: 22px;
-  font-size: 11px;
-}
-.all-skills :global(.skill-chip img) {
-  width: 22px;
-  height: 22px;
-}
-.all-skills :global(.skill-body) {
-  min-height: 22px;
-  align-items: center;
-  padding-block: 3px;
-}
-.skill-cost {
-  font-size: 10px;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.skill-list-note {
-  margin: 0;
-  padding: 10px 12px;
-  border-top: 1px solid var(--border-subtle);
-  color: var(--text-muted);
-  font-size: 10px;
-  line-height: 1.5;
-}
-.empty-skills {
-  margin: 0;
-  padding: 16px 12px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-.row-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-}
-.team-control {
+.skill-count :global(svg) {
   flex: none;
 }
-.team-control :global(.inspect > .trigger),
-.team-control :global(.team-indicator) {
-  height: var(--setup-control-height, 36px);
-  min-height: var(--setup-control-height, 36px);
+/* Edit, copy and delete as matching bordered buttons; Edit names itself when the card has the room. */
+.row-tools {
+  --tool: 26px;
+  grid-area: tools;
+  justify-self: end;
+  display: flex;
+  gap: 3px;
 }
-.row-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, 36px);
-  align-items: center;
-  gap: 6px;
-}
-.row-buttons > span {
+.row-tools > span {
   display: flex;
 }
-.row-buttons :global(.ui-button) {
-  width: 100%;
-  min-width: 36px;
-  min-height: 36px;
-  height: 36px;
+.row-tools :global(.ui-button) {
+  width: var(--tool);
+  min-width: var(--tool);
+  height: var(--tool);
+  min-height: var(--tool);
   padding: 0;
   border-radius: var(--radius-sm);
-  color: var(--text-primary);
 }
-.row-buttons :global(svg) {
-  width: 16px;
-  height: 16px;
+.row-tools :global(.ui-button svg) {
+  width: 15px;
+  height: 15px;
 }
-.row-buttons :global(.ui-button:hover:not(:disabled)) {
-  color: var(--text-primary);
+.row-tools .edit-control :global(.ui-button) {
+  width: auto;
+  gap: 4px;
+  padding-inline: 8px 9px;
+  font-size: 11px;
+}
+@container runner-card (max-width:439px) {
+  .row-tools .edit-control :global(.ui-button) {
+    width: var(--tool);
+    padding: 0;
+  }
+  .row-tools .edit-control :global(.ui-button > span) {
+    display: none;
+  }
 }
 .delete-control :global(.ui-button:hover:not(:disabled)) {
   color: var(--color-danger);
   background: var(--color-danger-soft);
   border-color: color-mix(in srgb, var(--color-danger) 38%, transparent);
 }
+/* Her team: a dot on her portrait's lower right, ringed in the card's color. Its button is larger than the dot, so it
+   stays easy to hit. */
+.team-control {
+  --dot: 14px;
+  --hit: 26px;
+  grid-area: art;
+  align-self: end;
+  justify-self: end;
+  z-index: 1;
+  margin: 0 -6px -4px 0;
+}
+.runner .team-control :global(.inspect > .trigger) {
+  display: grid;
+  place-items: center;
+  width: var(--hit);
+  min-width: var(--hit);
+  height: var(--hit);
+  min-height: var(--hit);
+  padding: 0;
+}
+.runner .team-control :global(.team-indicator) {
+  width: auto;
+  height: auto;
+}
+.runner .team-control :global(.team-indicator > i) {
+  box-sizing: content-box;
+  width: var(--dot);
+  height: var(--dot);
+  border: 2px solid var(--runner-bg);
+  border-radius: 50%;
+}
+.runner .team-control :global(.team-indicator svg),
+.runner .team-control :global(.team-indicator .swatch-arrow) {
+  display: none;
+}
+.runner .team-control :global(.trigger:hover .team-indicator > i) {
+  outline: 1px solid var(--border-strong);
+}
+/* The skill list, compact: one heading line, then a row a skill, its cost at the end. */
+.skill-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 34px 6px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.skill-list-heading > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.skill-list-heading strong {
+  flex: none;
+  font-size: 12px;
+  font-weight: 650;
+}
+.skill-list-heading strong > span {
+  margin-left: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 400;
+}
+.skill-list-heading small {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.skill-list-heading > span {
+  display: flex;
+}
+.skill-list-heading :global(.ui-button) {
+  width: 24px;
+  min-height: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+}
+.skill-list-heading :global(.ui-button svg) {
+  width: 14px;
+  height: 14px;
+}
+.skill-summary :global(.popover > .close) {
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+}
+.all-skills {
+  display: grid;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  max-height: min(340px, calc(100dvh - 120px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+/* Every chip spans its column, so the list reads as even rows; the costs line up in one column beside them. */
+.all-skills li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 2px 10px;
+}
+.all-skills li.owned-unique {
+  background: color-mix(in srgb, var(--accent-primary) 5%, transparent);
+}
+.all-skills :global(.skill-chip) {
+  min-width: 0;
+  min-height: 20px;
+  font-size: 11px;
+}
+.all-skills :global(.skill-chip img) {
+  width: 20px;
+  height: 20px;
+}
+.all-skills :global(.skill-body) {
+  min-height: 20px;
+  align-items: center;
+  padding-block: 1px;
+}
+.all-skills :global(.skill-name) {
+  white-space: nowrap;
+}
+.skill-cost {
+  text-align: right;
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.empty-skills {
+  margin: 0;
+  padding: 12px 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
 :global(:root:not([data-theme='light']))
-  .skill-summary
+  .all-skills
   :global(.skill-chip:not(.rarity-unique-main) .skill-body) {
   background: color-mix(in srgb, var(--skill-text) 4%, var(--surface-1));
   box-shadow: none;
@@ -354,90 +330,79 @@
   font-size: 12px;
   color: var(--color-danger);
 }
-@container setup-field (max-width:1150px) {
-  .column-headings,
-  .runner {
-    grid-template-columns: 200px 180px minmax(0, 1fr) 176px;
-    gap: 12px;
+/* A wide card needs about 427px: portrait, the name line or stats, and the buttons. A column more only when every
+   card keeps that: two from 870px of field, three from 1320px. */
+@container setup-field (min-width:870px) {
+  .runners {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@container setup-field (max-width:900px) {
-  .column-headings {
-    display: none;
-  }
-  .runner {
-    grid-template-columns: minmax(0, 1fr) 180px 176px;
-    gap: 6px 12px;
-    padding: 8px 0;
-  }
-  .skill-summary {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    margin-left: 65px;
-  }
-  .row-actions {
-    grid-column: 3;
-    grid-row: 1;
+@container setup-field (min-width:1320px) {
+  .runners {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
-@container setup-field (max-width:580px) {
+/* A phone, one card as wide as the field: the same parts stacked beside her portrait, the buttons on a line of
+   their own. */
+@container setup-field (max-width:429px) {
   .runner {
-    grid-template-columns: minmax(0, 1fr) 140px;
-    gap: 7px 8px;
-    padding: 10px 0;
+    grid-template-columns: 48px minmax(0, 1fr);
+    grid-template-areas:
+      'art identity'
+      'art stats'
+      'art meta'
+      'art tools';
+    gap: 4px 10px;
   }
-  .summary {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    padding-right: 52px;
+  .runner > :global(.art) {
+    align-self: start;
   }
-  .build-stats {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    max-width: 210px;
+  .identity {
+    flex-direction: column;
+    gap: 0;
   }
-  .row-actions {
-    display: contents;
+  h3 {
+    max-width: 100%;
   }
+  .runner-meta,
+  .row-tools {
+    justify-self: start;
+  }
+  .row-tools {
+    margin-top: 2px;
+  }
+  /* The buttons have a line of their own here, so Edit keeps its name. */
+  .row-tools .edit-control :global(.ui-button) {
+    width: auto;
+    padding-inline: 10px 12px;
+  }
+  .row-tools .edit-control :global(.ui-button > span) {
+    display: inline;
+  }
+  /* The portrait sits at the top of a tall cell, so the dot follows it there. */
   .team-control {
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: end;
-    z-index: 1;
-  }
-  .skill-summary {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    margin-left: 0;
-    gap: 8px;
-  }
-  .row-buttons {
-    grid-column: 2;
-    grid-row: 4;
-    grid-template-columns: repeat(3, 44px);
-    justify-content: flex-end;
-    gap: 4px;
-  }
-  .row-buttons :global(.ui-button) {
-    width: 44px;
-    min-width: 44px;
-    min-height: 44px;
-    height: 44px;
-  }
-  .summary :global(.compact h3) {
-    font-size: 12px;
-  }
-}
-@container setup-field (min-width:300px) and (max-width:580px) {
-  .build-stats {
-    grid-column: 1;
-    max-width: 168px;
-  }
-  .row-buttons {
-    grid-row: 2;
+    align-self: start;
+    margin: calc(40px - var(--hit) / 2) -8px 0 0;
   }
 }
 @media (max-width: 767px) {
+  .row-tools {
+    --tool: 44px;
+  }
+  .row-tools :global(.ui-button svg) {
+    width: 17px;
+    height: 17px;
+  }
+  .team-control {
+    --dot: 16px;
+    --hit: 36px;
+  }
+  /* A larger hit area for the skill list, without making its line taller. */
+  .skill-summary :global(.inspect > .trigger) {
+    min-width: 0;
+    min-height: 32px;
+    margin-block: -8px;
+  }
   .skill-list-heading {
     padding-right: 64px;
   }

@@ -5,18 +5,78 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import { timelineRepository, type TimelineRecord } from '@/pages/timeline/timeline-repository';
-  import { describeCourse } from '@/lib/game-data/racing/courses';
-  import { simulatorCourseData, simulatorSession } from '../simulator-session.svelte';
-  import { cmPreset } from './cm-presets';
+  import {
+    DISTANCE_NAMES,
+    SURFACE_NAMES,
+    TURN_NAMES,
+    describeCourse,
+    trackName,
+    type RaceCourse
+  } from '@/lib/game-data/racing/courses';
+  import {
+    GROUND_OPTIONS,
+    SEASON_OPTIONS,
+    WEATHER_OPTIONS,
+    simulatorCourseData,
+    simulatorSession
+  } from '../simulator-session.svelte';
+  import SimulatorCoursePreview from './SimulatorCoursePreview.svelte';
+  import {
+    cmPreset,
+    meetingTiming,
+    numberMeetings,
+    type CmPreset,
+    type MeetingTiming,
+    type NumberedMeeting
+  } from './cm-presets';
+
+  interface PresetItem extends NumberedMeeting {
+    preset: CmPreset;
+    timing: MeetingTiming;
+    /** The meeting to draw: its exact course, or the first of the layouts it could be. */
+    course?: RaceCourse;
+  }
 
   let { open = $bindable(false) }: { open?: boolean } = $props();
 
-  let events = $state.raw<TimelineRecord[]>([]),
+  let meetings = $state.raw<NumberedMeeting[]>([]),
     error = $state(''),
     loading = $state(false),
     query = $state(''),
     selected = $state<TimelineRecord>(),
     courseId = $state('');
+
+  const presets = $derived.by((): PresetItem[] => {
+    const now = Date.now();
+    const courses = [...simulatorCourseData.courses.values()];
+    return meetings.map((meeting) => {
+      const preset = cmPreset(meeting.event, courses);
+      return {
+        ...meeting,
+        preset,
+        timing: meetingTiming(meeting.event, now),
+        course: preset.candidates[0]
+      };
+    });
+  });
+
+  const matches = $derived(
+    presets.filter(({ event, preset, number }) =>
+      ['CM ' + number, event.title, event.dateLabel, ...preset.facts.map((fact) => fact.primary)]
+        .join(' ')
+        .toLowerCase()
+        .includes(query.toLowerCase())
+    )
+  );
+
+  // Coming meetings first, soonest at the top; then past ones, latest first.
+  const upcoming = $derived(matches.filter((item) => item.timing !== 'past'));
+  const past = $derived(matches.filter((item) => item.timing === 'past').reverse());
+  const nextId = $derived(
+    presets.find((item) => item.timing === 'upcoming' || item.timing === 'live')?.event.id
+  );
+
+  const chosen = $derived(presets.find((item) => item.event.id === selected?.id));
 
   $effect(() => {
     if (!open) return;
@@ -27,21 +87,7 @@
     void timelineRepository
       .load()
       .then((data) => {
-        if (active)
-          events = data.events
-            .filter((event) => event.eventType === 'champions_meeting')
-            .sort((a, b) => {
-              const now = Date.now(),
-                aFuture = a.date.getTime() >= now,
-                bFuture = b.date.getTime() >= now;
-
-              return (
-                Number(bFuture) - Number(aFuture) ||
-                (aFuture
-                  ? a.date.getTime() - b.date.getTime()
-                  : b.date.getTime() - a.date.getTime())
-              );
-            });
+        if (active) meetings = numberMeetings(data.events);
       })
       .catch((reason) => {
         if (active) error = reason instanceof Error ? reason.message : 'Could not load CM presets.';
@@ -55,23 +101,30 @@
     };
   });
 
-  const presets = $derived(
-    events.map((event) => ({
-      event,
-      preset: cmPreset(event, [...simulatorCourseData.courses.values()])
-    }))
-  );
+  /** Where the meeting is raced, in one line; what the schedule says when no course of ours matches. */
+  function courseLine(item: PresetItem): string {
+    const { course, preset } = item;
+    if (!course) {
+      return (
+        preset.facts
+          .map((fact) => [fact.primary, fact.secondary].filter(Boolean).join(' '))
+          .join(' · ') || 'Course not announced yet'
+      );
+    }
 
-  const matches = $derived(
-    presets.filter(({ event, preset }) =>
-      [event.title, event.dateLabel, ...preset.facts.map((fact) => fact.primary)]
-        .join(' ')
-        .toLowerCase()
-        .includes(query.toLowerCase())
-    )
-  );
-
-  const chosen = $derived(presets.find((item) => item.event.id === selected?.id));
+    return [
+      trackName(course.race_track_id),
+      (SURFACE_NAMES[course.surface] ?? 'Unknown') +
+        ' ' +
+        course.distance.toLocaleString('en-US') +
+        ' m',
+      DISTANCE_NAMES[course.distance_type],
+      TURN_NAMES[course.turn],
+      preset.candidates.length > 1 ? preset.candidates.length + ' layouts' : undefined
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  }
 
   function choose(event: TimelineRecord) {
     selected = event;
@@ -87,13 +140,83 @@
     if (chosen.preset.season) simulatorSession.season = chosen.preset.season;
     if (chosen.preset.weather) simulatorSession.weather = chosen.preset.weather;
     if (chosen.preset.ground) simulatorSession.ground = chosen.preset.ground;
-    simulatorSession.importNotice =
-      (selected?.predicted ? 'Estimated CM dates. ' : '') +
+    // Only what still needs doing; the dates already say in the list whether they are estimates.
+    simulatorSession.importNotice = (
       (!courseId ? 'Select the CM course before running. ' : '') +
-      (!chosen.preset.ground ? 'Review the ground condition before running.' : '');
+      (!chosen.preset.ground ? 'Review the ground condition before running.' : '')
+    ).trim();
     open = false;
   }
 </script>
+
+{#snippet conditions(preset: CmPreset)}
+  {@const ground = GROUND_OPTIONS.find((option) => option.value === preset.ground)}
+  {@const season = SEASON_OPTIONS.find((option) => option.value === preset.season)}
+  {@const weather = WEATHER_OPTIONS.find((option) => option.value === preset.weather)}
+  {#if ground || season || weather}
+    <span class="conditions">
+      {#if ground}
+        <span class="ground">{ground.label}</span>
+      {/if}
+      {#each [season, weather] as condition}
+        {#if condition}
+          <img
+            src={condition.image}
+            alt={condition.label}
+            title={condition.label}
+          />
+        {/if}
+      {/each}
+    </span>
+  {/if}
+{/snippet}
+
+{#snippet presetRow(item: PresetItem)}
+  <button
+    class="preset"
+    class:past={item.timing === 'past'}
+    class:selected={selected?.id === item.event.id}
+    aria-pressed={selected?.id === item.event.id}
+    onclick={() => choose(item.event)}
+  >
+    <span class="number">CM {item.number}</span>
+    <span
+      class="outline"
+      aria-hidden="true"
+    >
+      {#if item.course}
+        <SimulatorCoursePreview
+          course={item.course}
+          compact
+        />
+      {/if}
+    </span>
+    <span class="copy">
+      <span class="title-line">
+        <strong>{item.event.title}</strong>
+        {#if item.timing === 'live'}
+          <span class="badge">Now</span>
+        {:else if item.event.id === nextId}
+          <span class="badge">Next</span>
+        {/if}
+      </span>
+      <span
+        class="course-line"
+        class:unknown={!item.course}
+      >
+        {courseLine(item)}
+      </span>
+    </span>
+    <span class="when">
+      <span class="date">
+        {item.event.dateLabel}{#if item.event.predicted}
+          <span class="estimated">estimated</span>
+        {/if}
+      </span>
+      {@render conditions(item.preset)}
+    </span>
+  </button>
+{/snippet}
 
 <Dialog
   bind:open
@@ -105,7 +228,7 @@
     id="cm-preset-search"
     label="Find a meeting"
     hideLabel
-    placeholder="Search meeting, track or date…"
+    placeholder="Search CM number, meeting, track or date…"
     bind:value={query}
   />
   {#if loading}
@@ -115,25 +238,24 @@
     />
   {:else if error}
     <p role="alert">{error}</p>
+  {:else if !matches.length}
+    <p class="empty">No meeting matches “{query}”.</p>
   {:else}
-    <div class="presets">
-      {#each matches as { event, preset }}
-        <button
-          class:selected={selected?.id === event.id}
-          onclick={() => choose(event)}
+    {#each [{ label: 'Upcoming', items: upcoming }, { label: 'Past meetings', items: past }] as group (group.label)}
+      {#if group.items.length}
+        <section
+          class="group"
+          aria-label={group.label}
         >
-          <div>
-            <strong>{event.title}</strong>
-            <span>{event.dateLabel}{event.predicted ? ' (estimated)' : ''}</span>
+          <h3>{group.label}</h3>
+          <div class="presets">
+            {#each group.items as item (item.event.id)}
+              {@render presetRow(item)}
+            {/each}
           </div>
-          <p>
-            {preset.facts
-              .map((fact) => [fact.primary, fact.secondary].filter(Boolean).join(', '))
-              .join('; ') || 'Course details have not been announced.'}
-          </p>
-        </button>
-      {/each}
-    </div>
+        </section>
+      {/if}
+    {/each}
   {/if}
   {#if chosen}
     {#if chosen.preset.candidates.length > 1}
@@ -170,50 +292,5 @@
 </Dialog>
 
 <style>
-  .presets {
-    display: grid;
-    gap: 6px;
-    margin-top: 14px;
-  }
-  .presets button {
-    padding: 12px 14px;
-    text-align: left;
-    font: inherit;
-    color: var(--text-primary);
-    background: var(--surface-1);
-    border: 1px solid var(--border-subtle);
-    border-left: 3px solid transparent;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-  }
-  .presets button:hover {
-    background: var(--surface-3);
-  }
-  .presets button.selected {
-    background: var(--color-accent-soft);
-    border-color: color-mix(in srgb, var(--accent-primary) 30%, var(--border-subtle));
-    border-left-color: var(--accent-primary);
-  }
-  .presets button:focus-visible {
-    outline: 2px solid var(--accent-primary);
-    outline-offset: 2px;
-  }
-  .presets button > div {
-    display: flex;
-    gap: 8px;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    font-size: 13px;
-  }
-  .presets span,
-  .hint {
-    font-size: 11px;
-    color: var(--text-secondary);
-  }
-  .presets p {
-    font-size: 11px;
-    line-height: 1.6;
-    margin: 6px 0 0;
-    color: var(--text-secondary);
-  }
+  @import './simulator-cm-presets.css';
 </style>

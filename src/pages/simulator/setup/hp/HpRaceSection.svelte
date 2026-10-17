@@ -3,13 +3,14 @@
   import CourseButtons from '../../shell/CourseButtons.svelte';
   import RaceBar from '../../shell/RaceBar.svelte';
   import SimSection from '../../shell/SimSection.svelte';
+  import ToggleField from '../../shell/ToggleField.svelte';
   import { RACE_TYPE_OPTIONS } from '../../simulator-race-types';
   import { GROUND_OPTIONS, simulatorSession } from '../../simulator-session.svelte';
   import { hpCalculator } from './hp-calculator.svelte';
 
   const SPURT_OPTIONS = [
-    { value: 'false', label: 'By HP left' },
-    { value: 'true', label: 'Always full' }
+    { value: 'false', label: 'As HP allows', title: 'Spurt as fast as her HP allows' },
+    { value: 'true', label: 'Top speed', title: 'Always spurt at top speed' }
   ];
 </script>
 
@@ -23,7 +24,7 @@
       bare
       courseOnly
     />
-    <SelectField
+    <ToggleField
       id="hp-ground"
       label="Ground"
       options={GROUND_OPTIONS}
@@ -35,7 +36,7 @@
       options={RACE_TYPE_OPTIONS}
       bind:value={hpCalculator.raceType}
     />
-    <SelectField
+    <ToggleField
       id="hp-spurt"
       label="Last spurt"
       options={SPURT_OPTIONS}
@@ -63,12 +64,20 @@
   .race-row :global(.select-control) {
     font-size: 13px;
   }
-  /* A phone: the track and course a row each, the rest two a row. */
+  /* Narrower, where the ground's four words no longer fit a fifth of the form: track, course and ground, then the
+     format and spurt. */
+  @container sim-form (max-width: 1059px) {
+    .race-row {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  /* A phone: the track, course and ground a row each, the format and spurt sharing one. */
   @container sim-form (max-width: 560px) {
     .race-row {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    .race-row :global(.course-picker) {
+    .race-row :global(.course-picker),
+    .race-row :global(.toggle-field:has(#hp-ground)) {
       grid-column: 1 / -1;
     }
   }

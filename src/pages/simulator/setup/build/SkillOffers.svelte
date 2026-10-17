@@ -2,16 +2,23 @@
   import Icon from '@/components/Icon.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Combobox, { type ComboboxOption } from '@/components/controls/Combobox.svelte';
-  import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import { skillImage, type SkillData } from '@/lib/game-data/skills/skills';
   import SimSection from '../../shell/SimSection.svelte';
   import { buildSearch } from './build-search.svelte';
-  import { baseCost, HINT_DISCOUNT, offerPurchases, type PricedOffer } from './skill-offers';
+  import {
+    baseCost,
+    HINT_DISCOUNT,
+    MAX_HINT,
+    offerPurchases,
+    skillTier,
+    type PricedOffer
+  } from './skill-offers';
 
   /**
    * The skills she can buy at the end of her career, each with its hint level and what it costs with it, and the SP
-   * budget the search spends. Gold and ◎ skills show what they upgrade and how that is covered.
+   * budget the search spends. Gold and ◎ skills show what they upgrade and how that is covered; a locked skill is in
+   * every build.
    */
   let {
     number = 3,
@@ -70,27 +77,12 @@
     if (offer) offer.locked = !offer.locked;
   }
 
-  function setHint(skillId: number, hint: string) {
+  /** One hint level up or down, within 0 (no hint) and the highest level. */
+  function stepHint(skillId: number, step: 1 | -1) {
     const offer = buildSearch.offers.find((item) => item.skillId === skillId);
-    if (offer) offer.hint = Number(hint);
+    if (!offer) return;
+    offer.hint = Math.min(MAX_HINT, Math.max(0, offer.hint + step));
   }
-
-  const HINT_OPTIONS = HINT_DISCOUNT.map((discount, level) => ({
-    value: String(level),
-    label: level ? 'Hint ' + level + ' · −' + discount + '%' : 'No hint'
-  }));
-
-  const tier = (skill: SkillData) => {
-    if (skill.rarity >= 3) {
-      return 'unique';
-    }
-
-    if (skill.rarity === 2) {
-      return 'gold';
-    }
-
-    return 'white';
-  };
 
   /** What an upgrade builds on, in words. */
   function needs(offer: PricedOffer) {
@@ -109,13 +101,15 @@
   note="What she can buy, with the hints she has"
 >
   {#snippet actions()}
-    {#if buildSearch.offers.length}<Button
+    {#if buildSearch.offers.length}
+      <Button
         variant="ghost"
         size="sm"
         onclick={() => (buildSearch.offers = [])}
       >
         Clear
-      </Button>{/if}
+      </Button>
+    {/if}
   {/snippet}
   <div class="budget-row">
     <TextField
@@ -150,22 +144,28 @@
         <small>another 10% off every skill</small>
       </span>
     </label>
-    <p
-      class="total"
-      class:over={total > budget}
-    >
-      All on offer <strong>{total.toLocaleString()} SP</strong>
-      <span>
+    <div class="totals">
+      <dl>
+        <div class:over={total > budget}>
+          <dt>On offer</dt>
+          <dd>{total.toLocaleString('en-US')} SP</dd>
+        </div>
+        {#if offers.locked.length}
+          <div
+            class="locked-total"
+            class:over={offers.lockedCost > budget}
+          >
+            <dt>Locked</dt>
+            <dd>{offers.lockedCost.toLocaleString('en-US')} SP</dd>
+          </div>
+        {/if}
+      </dl>
+      <p>
         {total > budget
-          ? (total - budget).toLocaleString() + ' over, so the search chooses'
-          : 'fits'}
-      </span>
-      {#if offers.locked.length}
-        <span class:over-locked={offers.lockedCost > budget}>
-          {offers.lockedCost.toLocaleString()} SP locked
-        </span>
-      {/if}
-    </p>
+          ? (total - budget).toLocaleString('en-US') + ' SP over the budget, so the search chooses'
+          : 'Everything fits'}
+      </p>
+    </div>
   </div>
   <div
     class="add"
@@ -193,53 +193,88 @@
     >
       {#each offers.priced as offer (offer.skillId)}
         <li
-          class="offer tier-{tier(offer.skill)}"
+          class="offer tier-{skillTier(offer.skill)}"
           class:locked={offer.locked}
         >
           <img
             src={skillImage(offer.skill.icon)}
             alt=""
-            width="24"
-            height="24"
+            width="22"
+            height="22"
             loading="lazy"
           />
           <span class="name">
             <strong>{offer.skill.name}</strong>
-            {#if offer.upgrades}<small>{needs(offer)}</small>{/if}
+            {#if offer.upgrades}
+              <small>{needs(offer)}</small>
+            {/if}
+          </span>
+          <div
+            class="hint"
+            role="group"
+            aria-label={'Hint for ' + offer.skill.name}
+          >
+            <button
+              type="button"
+              aria-label={'Lower the hint for ' + offer.skill.name}
+              disabled={offer.hint <= 0}
+              onclick={() => stepHint(offer.skillId, -1)}
+            >
+              <Icon
+                name="minus"
+                size={14}
+              />
+            </button>
+            <output aria-live="polite">{offer.hint}</output>
+            <button
+              type="button"
+              aria-label={'Raise the hint for ' + offer.skill.name}
+              disabled={offer.hint >= MAX_HINT}
+              onclick={() => stepHint(offer.skillId, 1)}
+            >
+              <Icon
+                name="add"
+                size={14}
+              />
+            </button>
+            <span
+              class="discount"
+              class:none={!offer.hint}
+            >
+              {offer.hint ? '−' + HINT_DISCOUNT[offer.hint] + '%' : 'no hint'}
+            </span>
+          </div>
+          <span class="cost">
+            {#if offer.cost !== offer.base && offer.needs !== 'bundled'}
+              <s>{offer.base}</s>
+            {/if}
+            <strong>{offer.cost}</strong>
+            <small>SP</small>
           </span>
           <button
             type="button"
             class="lock"
             aria-pressed={Boolean(offer.locked)}
-            aria-label={'Always buy ' + offer.skill.name}
-            title={offer.locked ? 'Locked: every build buys it' : 'Lock it so every build buys it'}
+            aria-label={'Lock ' + offer.skill.name + ' so every build buys it'}
+            title={offer.locked ? 'Every build buys it' : 'Lock it so every build buys it'}
             onclick={() => toggleLock(offer.skillId)}
           >
             <Icon
               name={offer.locked ? 'lock' : 'lock-open'}
-              size={15}
+              size={14}
             />
+            <span>{offer.locked ? 'Locked' : 'Lock'}</span>
           </button>
-          <SelectFieldSlim
-            id="build-hint-{offer.skillId}"
-            label={'Hint for ' + offer.skill.name}
-            hideLabel
-            options={HINT_OPTIONS}
-            value={String(offer.hint)}
-            onchange={(value) => setHint(offer.skillId, value)}
-          />
-          <span class="cost">
-            {#if offer.cost !== offer.base && offer.needs !== 'bundled'}<s>{offer.base}</s>{/if}
-            <strong>{offer.cost}</strong>
-            SP
-          </span>
           <button
             type="button"
             class="remove"
             aria-label={'Remove ' + offer.skill.name}
             onclick={() => remove(offer.skillId)}
           >
-            ×
+            <Icon
+              name="close"
+              size={14}
+            />
           </button>
         </li>
       {/each}
@@ -255,7 +290,10 @@
             aria-label="Remove skill {offer.skillId}"
             onclick={() => remove(offer.skillId)}
           >
-            ×
+            <Icon
+              name="close"
+              size={14}
+            />
           </button>
         </li>
       {/each}
@@ -268,256 +306,6 @@
 </SimSection>
 
 <style>
-  .budget-row {
-    --control-height: var(--setup-control-height, 36px);
-    display: grid;
-    grid-template-columns: 120px 130px auto minmax(0, 1fr);
-    gap: 10px 14px;
-    align-items: end;
-  }
-  .budget-row :global(.field) {
-    gap: 4px;
-  }
-  .budget-row :global(label) {
-    font-size: 12px;
-  }
-  .fast-learner {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-height: var(--control-height);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .fast-learner input {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--accent-primary);
-  }
-  .fast-learner span {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0 8px;
-    line-height: 1.3;
-  }
-  .fast-learner small {
-    font-weight: 400;
-    color: var(--text-secondary);
-  }
-  .total {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 2px 8px;
-    min-height: var(--control-height);
-    margin: 0;
-    font-size: 12px;
-    color: var(--text-secondary);
-    align-content: center;
-  }
-  .total strong {
-    font-size: 15px;
-    color: var(--text-primary);
-    font-variant-numeric: tabular-nums;
-  }
-  .total.over strong {
-    color: var(--accent-warning);
-  }
-  .add {
-    --control-height: var(--setup-control-height, 36px);
-  }
-  .add :global(input) {
-    font-size: 13px;
-  }
-  /* Two a row only when both rows still fit the whole name. */
-  .offers {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 500px), 1fr));
-    gap: 6px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .offer {
-    --tier: 148 163 184;
-    --tier-text: var(--text-primary);
-    display: grid;
-    --remove: 28px;
-    --lock: 28px;
-    grid-template-columns: 24px minmax(0, 1fr) var(--lock) 128px 76px var(--remove);
-    grid-template-areas: 'icon name lock hint cost remove';
-    align-items: center;
-    gap: 8px;
-    min-height: 40px;
-    padding: 3px 4px 3px 8px;
-    border: 1px solid rgb(var(--tier) / 0.35);
-    border-radius: 8px;
-    background: rgb(var(--tier) / 0.06);
-  }
-  .tier-gold {
-    --tier: 255 193 7;
-    --tier-text: #ffe08a;
-  }
-  .tier-unique {
-    --tier: 206 147 216;
-    --tier-text: #e1bee7;
-  }
-  :global(:root[data-theme='light']) .tier-gold {
-    --tier: 217 119 6;
-    --tier-text: #92400e;
-  }
-  :global(:root[data-theme='light']) .tier-unique {
-    --tier: 126 34 206;
-    --tier-text: #6b21a8;
-  }
-  .offer img {
-    grid-area: icon;
-    width: 24px;
-    height: 24px;
-    object-fit: contain;
-  }
-  .name {
-    grid-area: name;
-    display: grid;
-    min-width: 0;
-    line-height: 1.25;
-  }
-  .name strong {
-    overflow: hidden;
-    color: var(--tier-text);
-    font-size: 12px;
-    font-weight: 650;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .name small {
-    overflow: hidden;
-    font-size: 11px;
-    color: var(--text-secondary);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .offer :global(.select-field-slim) {
-    grid-area: hint;
-  }
-  .offer :global(button.select-control) {
-    min-height: 28px;
-    padding: 0 6px;
-    border-radius: 6px;
-    font-size: 12px;
-  }
-  .cost {
-    grid-area: cost;
-    display: flex;
-    align-items: baseline;
-    justify-content: flex-end;
-    gap: 4px;
-    font-size: 11px;
-    color: var(--text-secondary);
-    font-variant-numeric: tabular-nums;
-  }
-  .cost strong {
-    font-size: 13px;
-    color: var(--text-primary);
-  }
-  .cost s {
-    opacity: 0.7;
-  }
-  .remove {
-    grid-area: remove;
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-  }
-  .remove:hover {
-    background: var(--tab-btn-hover-bg);
-    color: var(--text-primary);
-  }
-  .lock {
-    grid-area: lock;
-    display: grid;
-    place-items: center;
-    width: var(--lock);
-    height: var(--lock);
-    padding: 0;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text-secondary);
-    opacity: 0.6;
-    cursor: pointer;
-  }
-  .lock:hover {
-    background: var(--tab-btn-hover-bg);
-    opacity: 1;
-  }
-  .offer.locked {
-    border-color: var(--accent-primary);
-  }
-  .offer.locked .lock {
-    color: var(--accent-primary);
-    opacity: 1;
-  }
-  .over-locked {
-    color: var(--accent-warning);
-  }
-  .offer.missing {
-    grid-template-columns: minmax(0, 1fr) var(--remove);
-    grid-template-areas: 'name remove';
-    border-style: dashed;
-  }
-  .empty {
-    margin: 0;
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-  @container build-form (max-width:620px) {
-    .budget-row {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    }
-    .fast-learner,
-    .total {
-      grid-column: 1 / -1;
-    }
-    .total {
-      justify-content: flex-start;
-    }
-    .offers {
-      grid-template-columns: minmax(0, 1fr);
-    }
-    /* The name and cost on top, the hint under them. */
-    .offer {
-      grid-template-columns: var(--lock) minmax(0, 1fr) auto var(--remove);
-      grid-template-areas:
-        'icon name cost remove'
-        'lock hint hint remove';
-      row-gap: 4px;
-      padding-block: 6px;
-    }
-  }
-  @media (max-width: 767px) {
-    .offer {
-      --remove: 44px;
-      --lock: 44px;
-    }
-    .remove {
-      width: 44px;
-      height: 44px;
-    }
-    .offer :global(button.select-control) {
-      min-height: 44px;
-    }
-  }
+  @import './skill-offers.css';
+  @import './skill-tier.css';
 </style>

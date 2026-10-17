@@ -2,7 +2,7 @@ import type { StaminaResult } from '../../../simulator-repository';
 import { hpRaces } from './hp-needed';
 
 export const whole = (value: number | null | undefined) =>
-  value == null || !Number.isFinite(value) ? '—' : Math.round(value).toLocaleString();
+  value == null || !Number.isFinite(value) ? '—' : Math.round(value).toLocaleString('en-US');
 
 export const signed = (value: number) => {
   let sign = '';

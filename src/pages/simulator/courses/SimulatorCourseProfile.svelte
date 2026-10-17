@@ -144,7 +144,10 @@
   });
 
   const range = (start: number, end: number) =>
-    Math.round(start).toLocaleString() + '–' + Math.round(end).toLocaleString() + ' m';
+    Math.round(start).toLocaleString('en-US') +
+    '–' +
+    Math.round(end).toLocaleString('en-US') +
+    ' m';
 </script>
 
 <section
@@ -171,9 +174,9 @@
         {#if profile}
           <div class="course-distances">
             <span title="The final third begins here; last spurt can begin from this distance.">
-              Spurt from {Math.round((profile.distance * 2) / 3).toLocaleString()} m
+              Spurt from {Math.round((profile.distance * 2) / 3).toLocaleString('en-US')} m
             </span>
-            <span>{profile.distance.toLocaleString()} m</span>
+            <span>{profile.distance.toLocaleString('en-US')} m</span>
           </div>
         {/if}
       </div>
@@ -230,7 +233,7 @@
                           class="segment-distance"
                           aria-hidden="true"
                         >
-                          {Math.round(segment.start).toLocaleString()} m
+                          {Math.round(segment.start).toLocaleString('en-US')} m
                         </span>
                       {/if}
                     </button>
@@ -241,7 +244,7 @@
             <div class="axis">
               {#each [0, 1, 2, 3, 4] as tick}
                 <span style:left={tick * 25 + '%'}>
-                  {Math.round((profile.distance * tick) / 4).toLocaleString()} m
+                  {Math.round((profile.distance * tick) / 4).toLocaleString('en-US')} m
                 </span>
               {/each}
             </div>
@@ -257,7 +260,7 @@
             <span>
               {range(selected.start, selected.end)} · {Math.round(
                 selected.end - selected.start
-              ).toLocaleString()} m
+              ).toLocaleString('en-US')} m
             </span>
           {:else}
             Hover a section to highlight it on the track.

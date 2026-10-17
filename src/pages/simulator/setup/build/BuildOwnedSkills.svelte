@@ -28,7 +28,7 @@
       {/each}
     </ul>
   {:else}
-    <small>No skills yet; add the ones she has with Full build &amp; skills.</small>
+    <small>No skills yet; add the ones she has with Edit build.</small>
   {/if}
 </div>
 

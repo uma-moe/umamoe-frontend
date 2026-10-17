@@ -54,6 +54,7 @@ export type IconName =
   | 'help'
   | 'compass'
   | 'refresh'
+  | 'dice'
   | 'download'
   | 'filter'
   | 'tune'

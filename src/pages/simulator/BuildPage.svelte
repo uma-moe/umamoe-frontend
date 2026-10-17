@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Banner from '@/components/feedback/Banner.svelte';
-  import Button from '@/components/controls/Button.svelte';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import { buildOptimizeRequest, MAX_CANDIDATES, MAX_FINALISTS } from './requests/optimize-request';
   import { simulatorRepository, type OptimizeResult } from './simulator-repository';
@@ -42,7 +41,7 @@
     offers: PricedOffer[];
     budget: number;
     key: string;
-    where: string;
+    where: string[];
   } | null>(null);
 
   let error = $state('');
@@ -128,6 +127,15 @@
 
     return '';
   });
+
+  // What a search would plan with, said in the run bar beside its button.
+  const planSetup = $derived(
+    offers.purchases.length +
+      (offers.purchases.length === 1 ? ' skill' : ' skills') +
+      ' on offer · ' +
+      formNumber(buildSearch.budget).toLocaleString('en-US') +
+      ' SP'
+  );
 
   // Everything the search depends on, so the result can say when it no longer matches.
   const inputKey = $derived(
@@ -224,8 +232,9 @@
         offers: priced,
         budget,
         key,
+        // Against the course this search raced on, not whatever is picked once it answers.
         where: response.result.fields
-          ? fieldWhere(response.result.fields, course, simulatorCourseData.courses)
+          ? fieldWhere(response.result.fields, races.course, simulatorCourseData.courses)
           : races.where
       };
     } catch (reason) {
@@ -259,7 +268,7 @@
     <div
       class="build-form"
       role="group"
-      aria-label="Build search input"
+      aria-label="Skill planner input"
     >
       <RunnerInput
         bind:uma={buildSearch.uma}
@@ -280,23 +289,22 @@
         {owned}
       />
     </div>
+    <BuildSearchBar
+      {blocked}
+      {busy}
+      {error}
+      result={run?.result}
+      {current}
+      setup={planSetup}
+      onsend={send}
+      onshow={() => resultPanel?.scrollIntoView({ block: 'start', behavior: 'smooth' })}
+    />
     <aside
       class="build-side"
-      aria-label="Build search result"
+      aria-label="Skill planner result"
       bind:this={resultPanel}
     >
-      <h2 class="sr-only">Build search result</h2>
-      <div class="search">
-        <Button
-          icon="tune"
-          loading={busy}
-          disabled={!!blocked}
-          onclick={send}
-        >
-          Find the best build
-        </Button>
-        {#if blocked}<p class="blocked">{blocked}</p>{/if}
-      </div>
+      <h2 class="sr-only">Skill planner result</h2>
       <BuildResult
         result={run?.result}
         raw={run?.raw}
@@ -309,15 +317,6 @@
         onretry={blocked ? undefined : send}
       />
     </aside>
-    <BuildSearchBar
-      {blocked}
-      {busy}
-      {error}
-      result={run?.result}
-      {current}
-      onsend={send}
-      onshow={() => resultPanel?.scrollIntoView({ block: 'start', behavior: 'smooth' })}
-    />
   </div>
 </SimulatorShell>
 
@@ -337,11 +336,11 @@
 />
 
 <style>
-  /* The form, then the result under it at full width; a bar keeps the answer in reach while the form scrolls. */
+  /* The form, its run bar, then the result at full width; the bar stays in reach while the form scrolls. */
   .build-search {
     --setup-control-height: 36px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
     align-items: start;
     min-width: 0;
@@ -355,41 +354,10 @@
     border-radius: var(--radius-lg);
   }
   .build-side {
-    position: sticky;
-    top: calc(var(--app-header-height, 64px) + 12px);
     display: grid;
     gap: 10px;
     min-width: 0;
     scroll-margin-top: calc(var(--app-header-height, 64px) + 12px);
-  }
-  .search {
-    display: grid;
-    gap: 6px;
-  }
-  .search :global(.ui-button) {
-    width: 100%;
-    min-height: 44px;
-    font-size: 14px;
-  }
-  .blocked {
-    margin: 0;
-    font-size: 12px;
-    color: var(--accent-warning);
-    text-align: center;
-  }
-  @media all {
-    .build-search {
-      grid-template-columns: minmax(0, 1fr);
-    }
-    .build-side {
-      position: static;
-    }
-  }
-  /* Narrow: the search button floats at the bottom of the screen while the form and result scroll past. */
-  @media (max-width: 1180px) {
-    .search {
-      display: none;
-    }
   }
   @media (max-width: 767px) {
     .build-search {

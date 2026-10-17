@@ -16,7 +16,6 @@
   import SimulatorCourseDetails from '../courses/SimulatorCourseDetails.svelte';
   import Combobox from '@/components/controls/Combobox.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
-  import SelectField from '@/components/controls/SelectField.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import {
     GROUND_OPTIONS,
@@ -39,7 +38,6 @@
     sidebar = false,
     inlineConditions = false,
     bare = false,
-    conditionsOnly = false,
     courseOnly = false,
     extra
   }: {
@@ -49,8 +47,6 @@
     inlineConditions?: boolean;
     /** No card or buttons of its own: track, course and conditions as fields of a form section. */
     bare?: boolean;
-    /** In bare mode, the conditions without the track and course: for races whose course is drawn per race. */
-    conditionsOnly?: boolean;
     /** In bare mode, the track and course alone, each a cell of the form's own grid. */
     courseOnly?: boolean;
     /** More fields after the conditions in bare mode. */
@@ -95,8 +91,8 @@
 {#snippet conditions()}
   <div class="conditions">
     <div class="ground">
-      <SelectField
-        id="sim-ground"
+      <span class="label">Ground</span>
+      <SegmentedControl
         label="Ground"
         options={GROUND_OPTIONS}
         bind:value={simulatorSession.ground}
@@ -118,25 +114,14 @@
         bind:value={simulatorSession.season}
       />
     </div>
-    {#if sidebar || inlineConditions || bare}
-      <div>
-        <SelectField
-          id="sim-time"
-          label="Time of day"
-          options={[{ value: '1', label: 'Morning' }, ...TIME_OPTIONS]}
-          bind:value={simulatorSession.startTime}
-        />
-      </div>
-    {:else}
-      <div>
-        <span class="label">Time</span>
-        <SegmentedControl
-          label="Time"
-          options={TIME_OPTIONS}
-          bind:value={simulatorSession.startTime}
-        />
-      </div>
-    {/if}
+    <div>
+      <span class="label">Time of day</span>
+      <SegmentedControl
+        label="Time of day"
+        options={TIME_OPTIONS}
+        bind:value={simulatorSession.startTime}
+      />
+    </div>
     {#if note}
       <span class="note">{note}</span>
     {/if}
@@ -182,135 +167,135 @@
       </div>
     {/if}
     <div class="controls">
-      {#if !(bare && conditionsOnly)}<div class="course-row">
-          {#if !workspace && !sidebar && !bare}
-            <Button
-              variant="secondary"
-              size="sm"
-              icon="calendar"
-              onclick={() => (presetsOpen = true)}
-            >
-              CM presets
-            </Button>
-          {/if}
-          <div
-            class="course-picker"
-            bind:this={trackAnchor}
+      <div class="course-row">
+        {#if !workspace && !sidebar && !bare}
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="calendar"
+            onclick={() => (presetsOpen = true)}
           >
-            <Combobox
-              id="sim-track"
-              label="Track"
-              options={tracks}
-              placeholder="Search tracks…"
-              disabled={!tracks.length}
-              popupAnchor={trackAnchor}
-              bind:value={trackSelection}
-              onchange={selectTrack}
-            >
-              {#snippet optionContent(option)}
-                {@const preview = trackPreviews.get(option.value)}
-                <div class="track-option">
-                  <SimulatorCoursePreview
-                    course={preview?.course}
-                    compact
-                  />
-                  <strong>{option.label}</strong>
-                  <small>{preview?.count} {preview?.count === 1 ? 'course' : 'courses'}</small>
-                </div>
-              {/snippet}
-            </Combobox>
-            <span
-              class="selected-outline"
-              aria-hidden="true"
-            >
-              <SimulatorCoursePreview
-                course={trackPreviews.get(trackSelection)?.course}
-                compact
-              />
-            </span>
-            <span
-              class="picker-arrow"
-              aria-hidden="true"
-            >
-              <Icon
-                name="chevron"
-                size={14}
-              />
-            </span>
-          </div>
-          <div
-            class="course-picker"
-            bind:this={courseAnchor}
+            CM presets
+          </Button>
+        {/if}
+        <div
+          class="course-picker"
+          bind:this={trackAnchor}
+        >
+          <Combobox
+            id="sim-track"
+            label="Track"
+            options={tracks}
+            placeholder="Search tracks…"
+            disabled={!tracks.length}
+            popupAnchor={trackAnchor}
+            bind:value={trackSelection}
+            onchange={selectTrack}
           >
-            <Combobox
-              id="sim-course"
-              label="Course"
-              options={courses}
-              placeholder="Search distances or surfaces…"
-              emptyText="No courses on this track"
-              popupAnchor={courseAnchor}
-              bind:value={simulatorSession.courseId}
-            >
-              {#snippet optionContent(option)}
-                {@const item = simulatorCourseData.courses.get(Number(option.value))}
-                <div class="course-option">
-                  <SimulatorCoursePreview
-                    course={item}
-                    compact
-                  />
-                  <span class="course-copy">
-                    <strong>
-                      {item
-                        ? (SURFACE_NAMES[item.surface] ?? 'Unknown') +
-                          ' ' +
-                          item.distance.toLocaleString('en-US') +
-                          ' m'
-                        : option.label}
-                    </strong>
-                    <span class="course-meta">
-                      {#if item}
-                        <span>{DISTANCE_NAMES[item.distance_type]}</span>
-                        <span>{TURN_NAMES[item.turn]}</span>
-                        {#if option.label.includes('layout')}
-                          <span>Layout {item.course}</span>
-                        {/if}
+            {#snippet optionContent(option)}
+              {@const preview = trackPreviews.get(option.value)}
+              <div class="track-option">
+                <SimulatorCoursePreview
+                  course={preview?.course}
+                  compact
+                />
+                <strong>{option.label}</strong>
+                <small>{preview?.count} {preview?.count === 1 ? 'course' : 'courses'}</small>
+              </div>
+            {/snippet}
+          </Combobox>
+          <span
+            class="selected-outline"
+            aria-hidden="true"
+          >
+            <SimulatorCoursePreview
+              course={trackPreviews.get(trackSelection)?.course}
+              compact
+            />
+          </span>
+          <span
+            class="picker-arrow"
+            aria-hidden="true"
+          >
+            <Icon
+              name="chevron"
+              size={14}
+            />
+          </span>
+        </div>
+        <div
+          class="course-picker"
+          bind:this={courseAnchor}
+        >
+          <Combobox
+            id="sim-course"
+            label="Course"
+            options={courses}
+            placeholder="Search distances or surfaces…"
+            emptyText="No courses on this track"
+            popupAnchor={courseAnchor}
+            bind:value={simulatorSession.courseId}
+          >
+            {#snippet optionContent(option)}
+              {@const item = simulatorCourseData.courses.get(Number(option.value))}
+              <div class="course-option">
+                <SimulatorCoursePreview
+                  course={item}
+                  compact
+                />
+                <span class="course-copy">
+                  <strong>
+                    {item
+                      ? (SURFACE_NAMES[item.surface] ?? 'Unknown') +
+                        ' ' +
+                        item.distance.toLocaleString('en-US') +
+                        ' m'
+                      : option.label}
+                  </strong>
+                  <span class="course-meta">
+                    {#if item}
+                      <span>{DISTANCE_NAMES[item.distance_type]}</span>
+                      <span>{TURN_NAMES[item.turn]}</span>
+                      {#if option.label.includes('layout')}
+                        <span>Layout {item.course}</span>
                       {/if}
-                    </span>
+                    {/if}
                   </span>
-                </div>
-              {/snippet}
-            </Combobox>
-            <span
-              class="selected-outline"
-              aria-hidden="true"
-            >
-              <SimulatorCoursePreview
-                {course}
-                compact
-              />
-            </span>
-            <span
-              class="picker-arrow"
-              aria-hidden="true"
-            >
-              <Icon
-                name="chevron"
-                size={14}
-              />
-            </span>
-          </div>
-          {#if !workspace && !sidebar && !bare}
-            <Button
-              variant="ghost"
-              size="sm"
-              icon="chart"
-              disabled={!simulatorSession.courseId}
-              onclick={() => (detailsOpen = true)}
-            >
-              Course breakdown
-            </Button>
-          {/if}
-        </div>{/if}
+                </span>
+              </div>
+            {/snippet}
+          </Combobox>
+          <span
+            class="selected-outline"
+            aria-hidden="true"
+          >
+            <SimulatorCoursePreview
+              {course}
+              compact
+            />
+          </span>
+          <span
+            class="picker-arrow"
+            aria-hidden="true"
+          >
+            <Icon
+              name="chevron"
+              size={14}
+            />
+          </span>
+        </div>
+        {#if !workspace && !sidebar && !bare}
+          <Button
+            variant="ghost"
+            size="sm"
+            icon="chart"
+            disabled={!simulatorSession.courseId}
+            onclick={() => (detailsOpen = true)}
+          >
+            Course breakdown
+          </Button>
+        {/if}
+      </div>
       {#if sidebar || inlineConditions}
         {@render conditions()}
       {:else if workspace}
@@ -328,7 +313,7 @@
               {@const selected = (options as typeof WEATHER_OPTIONS).find(
                 (option) => option.value === value
               )}
-              <span title={selected?.label ?? (value === '1' ? 'Morning' : 'Unspecified')}>
+              <span title={selected?.label ?? 'Unspecified'}>
                 {#if selected}
                   <img
                     src={selected.image}
@@ -336,7 +321,7 @@
                   />
                   <span class="condition-label">{selected.label}</span>
                 {:else}
-                  {value === '1' ? 'Morning' : 'Unspecified'}
+                  Unspecified
                 {/if}
               </span>
             {/each}<Icon
@@ -390,12 +375,5 @@
   .course-only .controls,
   .course-only .course-row {
     display: contents;
-  }
-  /* The track already shows its shape; the course keeps its cell for the words. */
-  .course-only .course-picker + .course-picker .selected-outline {
-    display: none;
-  }
-  .course-only .course-picker + .course-picker :global(input) {
-    padding-left: 10px;
   }
 </style>

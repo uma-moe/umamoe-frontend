@@ -1,0 +1,128 @@
+.skip {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+section {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+h4 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-secondary);
+}
+h4 span {
+  font-weight: 500;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* One quiet line each, in the buy list's columns, so a value reads against the skills she buys. */
+.left {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  column-gap: 6px;
+}
+.left li {
+  --bar: var(--text-muted);
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto 56px 40px;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding-inline: 8px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.left li.helps {
+  --bar: var(--accent-success);
+}
+.left li.loss {
+  --bar: var(--accent-warning);
+}
+.left img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  opacity: 0.8;
+}
+.name {
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cost {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.bar {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-subtle);
+}
+.bar span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+.zero {
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--border-strong);
+}
+.fill {
+  border-radius: 2px;
+  background: var(--bar);
+  opacity: 0.7;
+}
+.value {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+}
+.helps .value {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.loss .value {
+  font-weight: 600;
+  color: var(--accent-warning);
+}
+/* Skills that can never fire here: names only, the reason on hover. */
+.ruled-out ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ruled-out li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 0 8px 0 5px;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-pill, 999px);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.ruled-out img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  opacity: 0.6;
+}

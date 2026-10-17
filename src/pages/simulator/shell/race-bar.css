@@ -85,9 +85,6 @@
   align-items: center;
   gap: 8px;
 }
-.ground {
-  width: 120px;
-}
 .label {
   font-size: 11px;
   color: var(--text-secondary);
@@ -132,9 +129,6 @@
   }
   .conditions > div {
     gap: 5px;
-  }
-  .ground {
-    width: 105px;
   }
   .note {
     margin-left: 0;
@@ -462,7 +456,7 @@
 }
 /* Inside a form that already has a card: no card of its own, the ground and the form's fields on one row. */
 /* Bare: track, course and conditions as fields of a form section. Wide, they share one row; narrower, the
-   conditions go under the course; on a phone, two a row. */
+   conditions go under the course and wrap; on a phone, one a row. */
 .bare {
   --control-height: var(--setup-control-height, 36px);
   padding: 0;
@@ -479,9 +473,9 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
 }
 .bare .conditions {
-  display: grid;
-  grid-template-columns: minmax(96px, 1fr) auto auto minmax(110px, 1fr);
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
   align-items: end;
 }
 .bare .conditions > div {
@@ -489,8 +483,9 @@
   gap: 4px;
   min-width: 0;
 }
-.bare .ground {
-  width: auto;
+/* Ground names are words, not icons, so their segments are narrower around the text. */
+.bare .ground :global(.segments button) {
+  padding-inline: 8px;
 }
 .bare :global(.field) {
   gap: 4px;
@@ -508,19 +503,20 @@
 .bare .conditions :global(.segments button) {
   min-width: 34px;
   min-height: calc(var(--control-height) - 6px);
+  font-size: 12px;
+  font-weight: 600;
 }
-@container race-fields (min-width:1040px) {
+@container race-fields (min-width:1240px) {
   .bare .controls {
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   }
 }
 @container race-fields (max-width:560px) {
-  .bare .course-row,
-  .bare .conditions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .bare .course-row {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .bare .conditions > div {
+    flex: 1 1 100%;
   }
   .bare .conditions :global(.segments) {
     width: 100%;

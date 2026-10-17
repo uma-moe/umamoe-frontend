@@ -65,7 +65,7 @@ export function simulatorTeamColor(id?: number): string {
 export function simulatorTeamLabel(id?: number, color?: string): string {
   return id
     ? (defaultTeamColors[id - 1]?.[0] ?? (color ?? simulatorTeamColor(id)).toUpperCase()) + ' team'
-    : 'Independent';
+    : 'No team';
 }
 
 /** One color identifies one team; imported numeric groups retain their simulator IDs. */
