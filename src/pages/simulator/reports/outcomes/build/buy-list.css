@@ -1,0 +1,114 @@
+/* Rows of game-style skill plates, as many columns as fit. */
+.buy-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.skill {
+  --tier: 148 163 184;
+  --tier-text: var(--text-primary);
+  --bar: var(--text-muted);
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'icon name cost'
+    'icon bar value';
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 5px;
+  min-width: 0;
+  padding: 7px 10px 7px 7px;
+  border: 1px solid rgb(var(--tier) / 0.3);
+  border-radius: var(--radius-md, 8px);
+  background: linear-gradient(90deg, rgb(var(--tier) / 0.1), rgb(var(--tier) / 0.03) 60%);
+}
+.skill.helps {
+  --bar: var(--accent-success);
+}
+.skill.loss {
+  --bar: var(--accent-warning);
+}
+img {
+  grid-area: icon;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.name {
+  grid-area: name;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.name strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--tier-text);
+  text-overflow: ellipsis;
+}
+.name small {
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+}
+.cost {
+  grid-area: cost;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cost :global(svg) {
+  color: var(--accent-primary);
+}
+/* What it adds: a hairline track with the value drawn from zero. */
+.bar {
+  grid-area: bar;
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(var(--tier) / 0.12);
+}
+.bar span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+.zero {
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--border-strong);
+}
+.fill {
+  border-radius: 2px;
+  background: var(--bar);
+}
+.value {
+  grid-area: value;
+  min-width: 40px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.helps .value {
+  font-weight: 650;
+  color: var(--text-primary);
+}
+.loss .value {
+  font-weight: 650;
+  color: var(--accent-warning);
+}

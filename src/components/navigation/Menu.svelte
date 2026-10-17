@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { flushSync, type Snippet } from 'svelte';
   import { popoverPosition } from '@/lib/popover-position';
   import Icon from '../Icon.svelte';
   import type { IconName } from '../icon-types';
@@ -50,6 +50,10 @@
 
   function position() {
     if (!open) return;
+    placeMenu();
+  }
+
+  function placeMenu() {
     const anchor = control.getBoundingClientRect();
     panel.style.minWidth = Math.min(Math.max(200, anchor.width), innerWidth - 16) + 'px';
     const box = panel.getBoundingClientRect();
@@ -189,6 +193,14 @@
     aria-label={menuLabel ?? ariaLabel ?? label}
     style:left="{left}px"
     style:top="{top}px"
+    onbeforetoggle={(event) => {
+      if (event.newState !== 'open') return;
+      // Place the menu once it is shown but before the browser paints it, so it never flashes at its last position.
+      requestAnimationFrame(() => {
+        placeMenu();
+        flushSync();
+      });
+    }}
     ontoggle={toggle}
     onkeydown={keydown}
   >

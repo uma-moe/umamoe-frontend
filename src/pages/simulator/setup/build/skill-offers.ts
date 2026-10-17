@@ -14,6 +14,14 @@ export interface SkillOffer {
   locked?: boolean;
 }
 
+/** The game's tier of a skill, for its tint: a unique, a gold skill, or a white one. */
+export function skillTier(skill: SkillData): 'unique' | 'gold' | 'white' {
+  if (skill.rarity >= 3) return 'unique';
+  if (skill.rarity === 2) return 'gold';
+
+  return 'white';
+}
+
 /** Percent of the base cost taken off by each hint level, 0 to 5. */
 export const HINT_DISCOUNT = [0, 10, 20, 30, 35, 40] as const;
 /** Fast Learner takes another 10% off every skill, added to the hint discount. */

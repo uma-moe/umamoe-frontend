@@ -4,16 +4,20 @@
 }
 .build-result {
   display: grid;
-  gap: 12px;
+  gap: 20px;
   min-width: 0;
+  container: build-result / inline-size;
 }
 .answer {
   display: grid;
-  gap: 4px;
+  gap: 6px;
   justify-items: start;
 }
 .answer p {
   margin: 0;
+}
+.answer > :global(.summary) {
+  justify-self: stretch;
 }
 .headline {
   display: flex;
@@ -32,69 +36,14 @@
 .bad .headline {
   color: var(--accent-error);
 }
-.detail,
-.spend,
-.metric {
+.detail {
+  max-width: 72ch;
   font-size: 13px;
+  line-height: 1.45;
   color: var(--text-secondary);
-}
-.spend strong,
-.metric strong {
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-.metric strong {
-  font-size: 18px;
-  color: var(--accent-success);
-}
-.metric small {
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
 }
 .answer :global(.ui-button) {
   margin-top: 6px;
-}
-.buy {
-  display: grid;
-  gap: 4px;
-  width: 100%;
-  margin: 6px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.buy li {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto 56px;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  background: var(--surface-2);
-  font-size: 12px;
-  font-weight: 600;
-}
-.buy .icons {
-  display: flex;
-  gap: 2px;
-}
-.buy img {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-}
-.buy small {
-  font-weight: 400;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-.buy .gain {
-  color: var(--accent-success);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-.buy .gain.loss {
-  color: var(--text-secondary);
 }
 .answer .stale-note {
   display: flex;
@@ -108,21 +57,59 @@
 .answer .stale-note :global(.ui-button) {
   margin-top: 0;
 }
-.stale .spend,
-.stale .metric,
-.stale .buy {
+.stale :global(.summary),
+.stale .body {
   opacity: 0.5;
 }
-.fine {
-  margin: 0;
-  font-size: 11px;
-  color: var(--text-secondary);
+/* The skills, and beside them the builds that came close once both fit. */
+.body {
+  display: grid;
+  gap: 20px;
+  align-items: start;
+  min-width: 0;
 }
-.via {
-  margin-left: 6px;
+.skills {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+/* What the bars on the skills mean, in the bars' own colours. */
+.key {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 14px;
+  margin: 0 0 -4px;
+  padding: 0;
+  list-style: none;
   font-size: 11px;
-  font-weight: 400;
-  color: var(--text-secondary);
+  color: var(--text-muted);
+}
+.key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.key li:first-child {
+  margin-right: auto;
+}
+.swatch {
+  width: 14px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-muted);
+}
+.swatch.helps {
+  background: var(--accent-success);
+}
+.swatch.loss {
+  background: var(--accent-warning);
+}
+@container build-result (min-width: 1080px) {
+  .body.with-close {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 28px;
+  }
 }
 pre {
   max-height: 60dvh;

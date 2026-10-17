@@ -51,22 +51,16 @@
 <div class="team-picker">
   <InspectPopover
     {label}
-    align="end"
+    align="start"
   >
     {#snippet trigger()}
       <span
         class="team-indicator"
-        class:independent={!value}
+        class:no-team={!value}
         style:--team-color={simulatorTeamColor(value)}
         title={simulatorTeamLabel(value)}
       >
         <i>
-          {#if !value}
-            <Icon
-              name="users"
-              size={14}
-            />
-          {/if}
           <span class="swatch-arrow">
             <Icon
               name="chevron"
@@ -77,10 +71,7 @@
         <span class="sr-only">{simulatorTeamLabel(value)}</span>
       </span>
     {/snippet}
-    <div class="picker-heading">
-      <strong>Team color</strong>
-      <p>Runners with the same color race together.</p>
-    </div>
+    <!-- One slim row: the team colors, no team, then a color of your own. -->
     <div
       class="swatches"
       role="group"
@@ -99,24 +90,24 @@
             simulatorRoster.umas.filter((uma) => uma.teamId === id).length +
             ' runners'}
           onclick={(event) => select(id, event)}
-        >
-          {#if value === id}
-            <span class="selected-mark">
-              <Icon
-                name="check"
-                size={14}
-              />
-            </span>
-          {/if}
-        </button>
+        ></button>
       {/each}
+      <button
+        type="button"
+        class="no-team-option"
+        class:selected={!value}
+        aria-label="No team"
+        aria-pressed={!value}
+        title="No team: she races on her own"
+        onclick={(event) => select(0, event)}
+      ></button>
       <label
         class="add-color"
         title="Add a custom team color"
       >
         <Icon
           name="add"
-          size={19}
+          size={14}
         />
         <input
           type="color"
@@ -126,23 +117,6 @@
         />
       </label>
     </div>
-    <button
-      type="button"
-      class="independent-option"
-      aria-pressed={!value}
-      onclick={(event) => select(0, event)}
-    >
-      <Icon
-        name="users"
-        size={15}
-      />Independent runner{#if !value}
-        <Icon
-          name="check"
-          size={15}
-        />
-      {/if}
-    </button>
-    <p class="picker-hint">Choose a color, or use + to add your own.</p>
     {#if error}
       <p
         class="picker-error"
@@ -156,8 +130,9 @@
 
 <style>
   .team-picker {
-    --inspect-popover-width: 320px;
-    --inspect-popover-padding: 14px;
+    --swatch: 24px;
+    --inspect-popover-width: calc(7 * var(--swatch) + 6 * 6px + 18px);
+    --inspect-popover-padding: 8px;
     display: flex;
     min-width: 0;
   }
@@ -169,6 +144,10 @@
     min-width: 44px;
     min-height: 32px;
     border-radius: var(--radius-sm);
+  }
+  /* The slim row closes with Escape or a click outside, like a menu, so it carries no close button of its own. */
+  .team-picker :global(.popover > .close) {
+    display: none;
   }
   .team-indicator {
     display: flex;
@@ -196,71 +175,66 @@
     color: white;
     filter: drop-shadow(0 0 1px #141414);
   }
-  .team-indicator.independent > i {
-    border: 1px dashed var(--border-secondary);
-    background: var(--surface-2);
-    color: var(--text-secondary);
+  /* No team: an empty swatch struck through, the usual mark for "no colour", so it never reads as a missing one. */
+  .team-indicator.no-team > i,
+  .no-team-option {
+    background:
+      linear-gradient(
+        135deg,
+        transparent calc(50% - 1px),
+        var(--color-danger) calc(50% - 1px) calc(50% + 1px),
+        transparent calc(50% + 1px)
+      ),
+      var(--surface-1);
+    box-shadow: inset 0 0 0 1.5px var(--text-secondary);
   }
   .team-indicator:hover > i {
     filter: brightness(1.08);
   }
-  .picker-heading {
-    padding-right: 30px;
-  }
-  .picker-heading strong {
-    font-size: 13px;
-  }
-  .picker-heading p {
-    font-size: 11px;
-    line-height: 1.6;
-    color: var(--text-secondary);
-    margin: 6px 0 14px;
-  }
   .swatches {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(38px, 1fr));
-    gap: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
   }
   .swatch,
+  .no-team-option,
   .add-color {
     position: relative;
     display: grid;
     place-items: center;
-    min-width: 0;
-    height: 42px;
+    width: var(--swatch);
+    height: var(--swatch);
     padding: 0;
-    border: 1px solid var(--border-secondary);
-    border-radius: var(--radius-md);
+    border: 1px solid rgb(255 255 255 / 0.18);
+    border-radius: 50%;
+    cursor: pointer;
   }
   .swatch {
     background: var(--team-color);
-    cursor: pointer;
-  }
-  .swatch.selected {
-    outline: 2px solid var(--text-primary);
-    outline-offset: 2px;
   }
   .swatch:hover {
     filter: brightness(1.1);
   }
-  .selected-mark {
-    display: grid;
-    place-items: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #141414;
-    color: white;
+  .no-team-option {
+    border: 0;
+  }
+  .no-team-option:hover {
+    box-shadow: inset 0 0 0 1.5px var(--text-primary);
   }
   .add-color {
     border-style: dashed;
+    border-color: var(--border-secondary);
     background: var(--surface-2);
     color: var(--text-secondary);
-    cursor: pointer;
   }
   .add-color:hover {
     color: var(--accent-primary);
     border-color: var(--accent-primary);
+  }
+  .swatch.selected,
+  .no-team-option.selected {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 2px;
   }
   .add-color input {
     position: absolute;
@@ -272,50 +246,25 @@
   }
   .swatch:focus-visible,
   .add-color:focus-within,
-  .independent-option:focus-visible {
+  .no-team-option:focus-visible {
     outline: 2px solid var(--accent-primary);
-    outline-offset: 3px;
+    outline-offset: 2px;
   }
-  .independent-option {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    min-height: 38px;
-    padding: 8px 0 0;
-    margin-top: 12px;
-    border: 0;
-    border-top: 1px solid var(--border-subtle);
-    background: transparent;
-    color: var(--text-secondary);
-    font: inherit;
-    font-size: 11px;
-    cursor: pointer;
-    text-align: left;
-  }
-  .independent-option :global(svg:last-child:not(:first-child)) {
-    margin-left: auto;
-  }
-  .picker-hint,
   .picker-error {
-    margin: 10px 0 0;
+    margin: 8px 0 0;
     font-size: 10px;
     line-height: 1.6;
-    color: var(--text-secondary);
-  }
-  .picker-error {
     color: var(--color-danger);
   }
   @media (max-width: 767px) {
+    .team-picker {
+      --swatch: 36px;
+    }
     .team-picker :global(.inspect > .trigger) {
       min-height: 44px;
     }
     .team-indicator {
       height: 40px;
-    }
-    .swatch,
-    .add-color {
-      height: 44px;
     }
   }
 </style>

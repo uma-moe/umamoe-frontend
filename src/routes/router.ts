@@ -182,9 +182,9 @@ export const router = createRouter({
   // loads before the switch; the layout warms all three, so switching shows the next tab at once.
   '/simulator': {
     layout: () => import('@/pages/simulator/shell/SimulatorLayout.svelte'),
-    '/': () => import('@/pages/simulator/SimulatorPage.svelte'),
     '/race': () => import('@/pages/simulator/RaceSimPage.svelte'),
-    '/build': () => import('@/pages/simulator/BuildPage.svelte')
+    '/hp': () => import('@/pages/simulator/SimulatorPage.svelte'),
+    '/skills': () => import('@/pages/simulator/BuildPage.svelte')
   },
   '/simulator/debug': {
     meta: { loadPage: () => import('@/pages/simulator/SimulatorDebugPage.svelte') },

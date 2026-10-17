@@ -145,6 +145,12 @@ export interface OptimizeScenarioResult {
   team_win_rate: OptimizeEstimate;
   finish_time_seconds: OptimizeEstimate;
   skill_activations: OptimizeEstimate;
+  /** Her finishing place, 1 for a win. Newer services only. */
+  place?: OptimizeEstimate;
+  /** Her HP at the finish as a share of her maximum; 0 when she ran out. Newer services only. */
+  hp_left?: OptimizeEstimate;
+  /** How often she had the HP for her fastest last spurt, 0 to 1. Newer services only. */
+  full_spurt?: OptimizeEstimate;
 }
 
 /** How a build did over every race: overall fitness and each scenario's metrics. */
@@ -190,6 +196,13 @@ export interface OptimizeImpact {
   together?: OptimizeEstimate;
   /** What real CM races say it adds, in the same unit, before any race of the search. */
   evidence?: { mean: number; error: number };
+  /** What the search values it at, weighed against the evidence. Newer services only. */
+  value?: OptimizeEstimate;
+  /**
+   * `best_build`: what it adds to the best build, or would add on top of it, SP aside. `screening`: the mean of
+   * alone and together, when it could not join the best build or the race cap left it unraced there.
+   */
+  valued_at?: 'best_build' | 'screening';
 }
 
 export interface OptimizeScreenStats {

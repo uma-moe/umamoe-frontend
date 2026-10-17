@@ -104,7 +104,7 @@ test('Home and Tools keep source link order, disabled tools and the Angular them
     'Team Stadium Statistics',
     'Carat PlannerUpdated',
     'Lineage Planner',
-    'Stamina Calculator',
+    'HP Calculator',
     'Race Simulator'
   ]);
   expect(

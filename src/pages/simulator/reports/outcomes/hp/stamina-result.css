@@ -14,10 +14,30 @@
   .hp-result > * {
     grid-column: 1;
   }
-  .hp-result > :global(.hp-chart) {
+  .hp-result > .course-view {
     grid-column: 2;
     grid-row: 1 / span 3;
   }
+}
+/* The course named over the chart: its outline, the track, then surface, distance and turn. */
+.course-view {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.course-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.course-name strong {
+  margin-right: 6px;
+  color: var(--text-primary);
+  font-weight: 650;
 }
 @supports (container-type: inline-size) {
   .hp-result {

@@ -111,14 +111,25 @@
       season: example.season,
       startTime: example.startTime,
       umaId: example.umas[0]!.id,
-      importNotice:
-        'Example field: three captured CM20 teams · Nakayama 2,500 m · Yielding ground, Cloudy, Winter, Great mood. Edit any build to compare changes.'
+      importNotice: ''
     });
 
     raceType = '0';
     run = null;
     step = 'setup';
     error = '';
+  }
+
+  /** The page's entries in the race field's Import menu. */
+  function importRunners(id: string) {
+    switch (id) {
+      case 'code':
+        codeOpen = true;
+        break;
+      case 'example':
+        loadExample();
+        break;
+    }
   }
 
   async function send(single: boolean): Promise<void> {
@@ -233,11 +244,11 @@
           tabindex="-1"
         >
           {#if run}{trackName(run.course.race_track_id)}
-            {run.course.distance.toLocaleString()} m
+            {run.course.distance.toLocaleString('en-US')} m
             <small>
               {[run.track.condition, run.track.weather, run.track.season]
                 .filter(Boolean)
-                .join(' · ')} · {run.result.runs.toLocaleString()}
+                .join(' · ')} · {run.result.runs.toLocaleString('en-US')}
               {run.result.runs === 1 ? 'race' : 'races'}
             </small>{:else}Results{/if}
         </h2>
@@ -288,7 +299,7 @@
               max={MAX_MONTE_CARLO_RUNS}
               label="Sampled races"
               error={runsInvalid
-                ? 'Enter 1–' + MAX_MONTE_CARLO_RUNS.toLocaleString() + ' races.'
+                ? 'Enter 1–' + MAX_MONTE_CARLO_RUNS.toLocaleString('en-US') + ' races.'
                 : undefined}
               bind:value={runs}
             />
@@ -307,7 +318,7 @@
               <Button
                 variant="secondary"
                 size="sm"
-                icon="refresh"
+                icon="dice"
                 ariaLabel="Random seed"
                 onclick={() =>
                   (simulatorSession.seed = String(Math.floor(Math.random() * 2 ** 31)))}
@@ -327,31 +338,32 @@
             showHeader={false}
           />
         </SimSection>
-        <SimulatorUmaField number={3}>
+        <SimulatorUmaField
+          number={3}
+          imports={[
+            {
+              id: 'code',
+              label: 'Build code',
+              icon: 'clipboard',
+              disabled: simulatorRoster.umas.length >= 18
+            },
+            {
+              id: 'example',
+              label: 'Load example',
+              icon: 'refresh',
+              disabled: busy || simulatorCourseData.loading
+            }
+          ]}
+          onimport={importRunners}
+        >
           {#snippet actions()}
             <Button
-              variant="secondary"
-              size="sm"
-              icon="clipboard"
-              disabled={simulatorRoster.umas.length >= 18}
-              onclick={() => (codeOpen = true)}
-            >
-              Build code
-            </Button><Button
               variant="secondary"
               size="sm"
               icon="veterans"
               onclick={() => (searchOpen = true)}
             >
               Find my best team
-            </Button><Button
-              variant="secondary"
-              size="sm"
-              icon="refresh"
-              disabled={busy || simulatorCourseData.loading}
-              onclick={loadExample}
-            >
-              Load example
             </Button>
           {/snippet}
         </SimulatorUmaField>
@@ -382,10 +394,13 @@
             </strong>
             <span>
               {course
-                ? trackName(course.race_track_id) + ' ' + course.distance.toLocaleString() + ' m'
+                ? trackName(course.race_track_id) +
+                  ' ' +
+                  course.distance.toLocaleString('en-US') +
+                  ' m'
                 : 'No course yet'} · {runsInvalid
                 ? 'check sampled races'
-                : Number(runs).toLocaleString() + (Number(runs) === 1 ? ' race' : ' races')}
+                : Number(runs).toLocaleString('en-US') + (Number(runs) === 1 ? ' race' : ' races')}
             </span>
           {/if}
         </p>

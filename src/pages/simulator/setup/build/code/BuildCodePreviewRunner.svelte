@@ -37,7 +37,7 @@
       {[
         runningStyleName(style + 1),
         (MOODS[Number(uma.trainee.motivation) - 1] ?? 'Normal') + ' mood',
-        uma.fanCount !== undefined ? uma.fanCount.toLocaleString() + ' fans' : ''
+        uma.fanCount !== undefined ? uma.fanCount.toLocaleString('en-US') + ' fans' : ''
       ]
         .filter(Boolean)
         .join(' · ')}

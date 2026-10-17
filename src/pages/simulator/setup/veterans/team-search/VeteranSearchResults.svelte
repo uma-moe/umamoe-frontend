@@ -42,7 +42,9 @@
         <span>({range[0].toFixed(1)}–{range[1].toFixed(1)}%)</span>
       </p>
       <p class="detail">
-        Best finisher places {teamBestPlace(best).toFixed(2)} on average · {best.successes.toLocaleString()}
+        Best finisher places {teamBestPlace(best).toFixed(2)} on average · {best.successes.toLocaleString(
+          'en-US'
+        )}
         races
       </p>
       <Button

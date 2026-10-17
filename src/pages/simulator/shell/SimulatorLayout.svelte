@@ -3,6 +3,7 @@
   import Tabs, { type TabItem } from '@/components/navigation/Tabs.svelte';
   import AppPage from '@/layouts/AppPage.svelte';
   import { router } from '@/routes/router';
+  import { saveSimulatorCourse } from '../simulator-session.svelte';
 
   /**
    * The simulator's page: the same heading, gutters and ad rail as every other page, with the tabs beside the
@@ -22,20 +23,20 @@
     },
     {
       id: 'stamina',
-      path: '/simulator',
+      path: '/simulator/hp',
       label: 'HP calculator',
       icon: 'battery',
       title: 'HP calculator',
       blurb:
-        'Check whether a runner’s HP lasts a full last spurt on your course, and how much stamina she needs.',
+        'Check whether a runner has the HP to spurt at top speed to the finish on your course, and how much stamina that takes.',
       load: () => import('../SimulatorPage.svelte')
     },
     {
       id: 'build',
-      path: '/simulator/build',
-      label: 'Build search',
+      path: '/simulator/skills',
+      label: 'Skill planner',
       icon: 'tune',
-      title: 'Build search',
+      title: 'Skill planner',
       blurb:
         'Find the skills to buy with her SP at the end of a career, for a CM or Team Trials race.',
       load: () => import('../BuildPage.svelte')
@@ -53,6 +54,9 @@
     href: item.path,
     onintent: () => void item.load().catch(() => {})
   }));
+
+  // Every tab races on the session's course; keep it in this browser so a reload returns to it.
+  $effect(saveSimulatorCourse);
 
   // The other tabs' code loads while this one is open, so a switch shows them at once.
   onMount(() => {

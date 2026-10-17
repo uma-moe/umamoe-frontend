@@ -15,6 +15,9 @@ import type { SimulatorUma } from './simulator-uma';
 import { resourceCache } from '@/services/resources/resource-cache';
 import type { Trainee } from './setup/trainee';
 import { EXAMPLE_RACE_SETTINGS } from './simulator-example';
+import { nextMeeting, numberMeetings, type NextMeeting } from './courses/cm-presets';
+import { timelineRepository } from '@/pages/timeline/timeline-repository';
+import morningIcon from '@/assets/images/simulator/time-morning.svg';
 
 export interface ConditionOption {
   value: string;
@@ -43,11 +46,11 @@ export const GROUND_OPTIONS: Array<ConditionOption> = [
 ];
 
 /**
- * There is no Morning tile in the game's icon set, so the picker offers the same
- * three times torema-sim does. The simulator still accepts a `start_time_type`
- * of 1 from anywhere else.
+ * The game's icon set has no Morning tile, so Morning uses a drawn sunrise in
+ * the same flat badge style as the other three.
  */
 export const TIME_OPTIONS: Array<ImageConditionOption> = [
+  { value: '1', label: 'Morning', image: morningIcon },
   { value: '2', label: 'Midday', image: conditionIcon('utx_ico_timezone_00.png') },
   { value: '3', label: 'Evening', image: conditionIcon('utx_ico_timezone_01.png') },
   { value: '4', label: 'Night', image: conditionIcon('utx_ico_timezone_02.png') }
@@ -74,12 +77,15 @@ export const WEATHER_OPTIONS: Array<ImageConditionOption> = [
 
 /** Race conditions the simulator takes as `setup`; strings because every field binds a string. */
 export const simulatorSession = $state({
-  /** The simulator's `course_id`. The track is derived from it, never stored. */
-  courseId: String(EXAMPLE_RACE_SETTINGS.courseId),
+  /**
+   * The simulator's `course_id`. The track is derived from it, never stored. Empty until something picks a course;
+   * the course data load then starts on the next Champions Meeting.
+   */
+  courseId: '',
   umaId: '',
   seed: String(Math.floor(Math.random() * 2 ** 31)),
-  importNotice:
-    'Example CM20 field · 3 teams · 9 trained builds with skills. Edit any Uma to compare your own build.',
+  /** Feedback on the last import or preset, shown under the race field; empty when there is nothing to say. */
+  importNotice: '',
   sourceCourseId: String(EXAMPLE_RACE_SETTINGS.courseId),
   raceInstanceId: EXAMPLE_RACE_SETTINGS.raceInstanceId,
   ground: EXAMPLE_RACE_SETTINGS.ground,
@@ -178,17 +184,14 @@ resourceCache.onUpdate((name) => {
 /** Loads the course master data once per session, for every surface. */
 export function ensureSimulatorCourses(): Promise<void> {
   courseDataLoad ??= loadCourses()
-    .then((courses) => {
+    .then(async (courses) => {
+      const start = simulatorSession.courseId ? undefined : await startingCourse(courses);
       simulatorCourseData.courses = courses;
       simulatorCourseData.loading = false;
       simulatorCourseData.error = '';
       simulatorCourseData.errorDismissed = false;
-      // Land on a real course so the page is runnable before anyone picks one.
-      if (!simulatorSession.courseId) {
-        const firstTrack = tracksWithCourses(courses)[0];
-        const firstCourse = firstTrack && coursesForTrack(courses, firstTrack.trackId)[0];
-        if (firstCourse) simulatorSession.courseId = String(firstCourse.course_id);
-      }
+      // Something may have picked a course while the schedule loaded; that pick stands.
+      if (start && !simulatorSession.courseId) Object.assign(simulatorSession, start);
     })
     .catch((reason: unknown) => {
       // Clearing the handle lets a later navigation retry the load.
@@ -202,6 +205,91 @@ export function ensureSimulatorCourses(): Promise<void> {
     });
 
   return courseDataLoad;
+}
+
+/** A course and the conditions that go with it, as the session holds them. */
+type CourseSetup = Pick<
+  typeof simulatorSession,
+  'courseId' | 'ground' | 'weather' | 'season' | 'startTime'
+>;
+
+const COURSE_STORAGE_KEY = 'uma.simulator.course';
+
+/** The course and conditions this browser last used, when they are still a course of ours. */
+function restoreCourse(courses: Map<number, RaceCourse>): CourseSetup | undefined {
+  try {
+    const data: unknown = JSON.parse(localStorage.getItem(COURSE_STORAGE_KEY) ?? 'null');
+    if (!data || typeof data !== 'object') return undefined;
+
+    const { courseId, ground, weather, season, startTime } = data as Record<string, unknown>;
+    if (typeof courseId !== 'string' || !courses.has(Number(courseId))) return undefined;
+
+    const text = (value: unknown, fallback: string) =>
+      typeof value === 'string' ? value : fallback;
+    return {
+      courseId,
+      ground: text(ground, simulatorSession.ground),
+      weather: text(weather, simulatorSession.weather),
+      season: text(season, simulatorSession.season),
+      startTime: text(startTime, simulatorSession.startTime)
+    };
+  } catch {
+    /* Storage can be unavailable or hold something else; start elsewhere then. */
+    return undefined;
+  }
+}
+
+/** Keeps the course and its conditions in this browser; call it from an effect so every change is kept. */
+export function saveSimulatorCourse(): void {
+  const { courseId, ground, weather, season, startTime } = simulatorSession;
+  if (!courseId) return;
+
+  const data = JSON.stringify({ courseId, ground, weather, season, startTime });
+  try {
+    localStorage.setItem(COURSE_STORAGE_KEY, data);
+  } catch {
+    /* Storage can be full or disabled; the course still works for this visit. */
+  }
+}
+
+/**
+ * Where a session opens before anyone picks a course: the one kept from last time, else the next Champions Meeting's
+ * with its conditions, else the example's, else the first track's shortest.
+ */
+async function startingCourse(
+  courses: Map<number, RaceCourse>
+): Promise<Partial<CourseSetup> | undefined> {
+  const kept = restoreCourse(courses);
+  if (kept) return kept;
+
+  const meeting = await loadNextMeeting(courses);
+  if (meeting) {
+    const { ground, season, weather } = meeting.preset;
+    return {
+      courseId: String(meeting.course.course_id),
+      ...(ground && { ground }),
+      ...(season && { season }),
+      ...(weather && { weather })
+    };
+  }
+
+  if (courses.has(EXAMPLE_RACE_SETTINGS.courseId))
+    return { courseId: String(EXAMPLE_RACE_SETTINGS.courseId) };
+
+  const firstTrack = tracksWithCourses(courses)[0];
+  const firstCourse = firstTrack && coursesForTrack(courses, firstTrack.trackId)[0];
+  return firstCourse ? { courseId: String(firstCourse.course_id) } : undefined;
+}
+
+/** The next Champions Meeting on the timeline, or none when the timeline cannot be read. */
+async function loadNextMeeting(courses: Map<number, RaceCourse>): Promise<NextMeeting | undefined> {
+  try {
+    const { events } = await timelineRepository.load();
+    return nextMeeting(numberMeetings(events), [...courses.values()], Date.now());
+  } catch {
+    // Without the schedule, the example course stands in.
+    return undefined;
+  }
 }
 
 /** Whether the current load failure should be on screen. */

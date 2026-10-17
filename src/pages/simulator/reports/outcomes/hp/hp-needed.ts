@@ -186,31 +186,31 @@ export function hpVerdict(spread: HpSpread, forced: boolean): HpVerdict {
     return spread.out
       ? {
           tone: spread.out > spread.races / 10 ? 'bad' : 'warn',
-          title: 'Runs out of HP on a full spurt',
+          title: 'Her HP runs out at top speed',
           detail: out
         }
-      : { tone: 'good', title: 'Holds a full spurt to the finish', detail: out };
+      : { tone: 'good', title: 'Her HP lasts at top speed', detail: out };
 
   const share = spread.full / spread.races;
   if (share >= 0.95)
     return {
       tone: 'good',
-      title: 'Holds a full last spurt',
-      detail: 'Full speed' + of(spread.full) + '. ' + out
+      title: 'Enough HP to spurt at top speed',
+      detail: 'She spurts at top speed' + of(spread.full) + '. ' + out
     };
 
   if (!spread.full)
     return {
       tone: 'bad',
-      title: 'No full last spurt',
-      detail: (spread.reduced ? 'A slower or later spurt' + of(spread.reduced) + '. ' : '') + out
+      title: 'Not enough HP to spurt at top speed',
+      detail: (spread.reduced ? 'She spurts slower or later' + of(spread.reduced) + '. ' : '') + out
     };
 
   return {
     tone: share >= 0.5 ? 'warn' : 'bad',
-    title: 'Full spurt in ' + Math.round(share * 100) + '% of races',
+    title: 'Top-speed spurt in ' + Math.round(share * 100) + '% of races',
     detail:
-      'Full speed' +
+      'Top speed' +
       of(spread.full) +
       (spread.reduced ? ', slower or later' + of(spread.reduced).replace(' races', '') : '') +
       '. ' +
@@ -274,9 +274,9 @@ export function hpBill(result: StaminaResult): {
     };
 
   return {
-    before: lines(start, recovered, drained, check, 'At the spurt decision'),
+    before: lines(start, recovered, drained, check, 'At the spurt check'),
     after: lines(
-      { label: 'At the spurt decision', hp: check, start: true },
+      { label: 'At the spurt check', hp: check, start: true },
       result.recovered_hp - recovered,
       result.debuff_hp_loss - drained,
       end,

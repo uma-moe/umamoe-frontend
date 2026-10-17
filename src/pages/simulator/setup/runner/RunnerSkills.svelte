@@ -88,7 +88,7 @@
       {skillPointTotal(
         skillLookup,
         skills.map((skill) => skill.skillId * 10 + (skill.level ?? 1))
-      )?.toLocaleString() ?? '—'} SP
+      )?.toLocaleString('en-US') ?? '—'} SP
     </span>
   </div>
 

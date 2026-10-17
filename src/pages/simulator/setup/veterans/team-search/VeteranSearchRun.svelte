@@ -28,7 +28,7 @@
     />
   </div>
   <p class="cost">
-    <strong>{races.toLocaleString()}</strong>
+    <strong>{races.toLocaleString('en-US')}</strong>
     races
     {#if races > 200000}<span class="warn">
         · that takes a while; pick fewer Veterans or races
@@ -63,7 +63,7 @@
       value={search.completed}
     ></progress>
     <span>
-      {search.completed.toLocaleString()} of {search.total.toLocaleString()} races{search.busy
+      {search.completed.toLocaleString('en-US')} of {search.total.toLocaleString('en-US')} races{search.busy
         ? ''
         : search.completed < search.total
           ? ' · stopped'

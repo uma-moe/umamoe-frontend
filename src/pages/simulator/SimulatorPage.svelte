@@ -291,6 +291,7 @@
         blocked={course ? '' : 'Pick a track and course first.'}
         runner={run?.runner}
         markers={run ? run.markers : events.markers}
+        course={run ? run.course : course}
         distance={run ? run.course.distance : geometry.distance}
       />
     </aside>

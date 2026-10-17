@@ -13,6 +13,11 @@
         params: { accountId: router.route.params.accountId },
         replace: true
       });
+    } else if (pathname === '/simulator' || pathname === '/simulator/') {
+      // The HP calculator was the simulator's bare address before each tab had its own.
+      void router.navigate('/simulator/hp', { replace: true, search: location.search });
+    } else if (pathname === '/simulator/build') {
+      void router.navigate('/simulator/skills', { replace: true, search: location.search });
     } else if (pathname === '/inheritance' || pathname === '/support-cards') {
       void router.navigate('/database', { replace: true });
     } else if (pathname === '/shame' || pathname.startsWith('/shame/')) {

@@ -273,7 +273,7 @@
               ? 'Measure ' +
                 unmeasured +
                 ' skills · ' +
-                (unmeasured * races).toLocaleString() +
+                (unmeasured * races).toLocaleString('en-US') +
                 ' races'
               : 'All skills measured'}
           </Button>

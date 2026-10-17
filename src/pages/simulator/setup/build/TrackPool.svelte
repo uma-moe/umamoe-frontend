@@ -39,7 +39,7 @@
     );
 
     return [
-      course.distance.toLocaleString() + ' m',
+      course.distance.toLocaleString('en-US') + ' m',
       course.turn === 4 ? 'straight' : '',
       twin ? '(' + course.course + ')' : ''
     ]

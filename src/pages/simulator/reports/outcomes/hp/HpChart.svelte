@@ -33,8 +33,8 @@
   let width = $state(340);
   const TOP = 14;
   const bottom = $derived(height - 2);
-  const metres = (value: number) => Math.round(value).toLocaleString() + ' m';
-  const hp = (value: number) => Math.round(value).toLocaleString();
+  const metres = (value: number) => Math.round(value).toLocaleString('en-US') + ' m';
+  const hp = (value: number) => Math.round(value).toLocaleString('en-US');
   const x = (at: number) => Math.min(1, Math.max(0, at / distance)) * width;
   const top = $derived(max && max > 0 ? max : 1);
   const y = (value: number) => TOP + (1 - Math.max(0, Math.min(top, value)) / top) * (bottom - TOP);
@@ -77,11 +77,21 @@
   );
 </script>
 
+{#snippet phaseBands()}
+  {#each RACE_PHASES as phase, index}<span
+      style:left={phase.start * 100 + '%'}
+      style:width={((RACE_PHASES[index + 1]?.start ?? 1) - phase.start) * 100 + '%'}
+      style:--phase={phase.color}
+    >
+      {phase.name}
+    </span>{/each}
+{/snippet}
+
 <figure
   class="hp-chart"
   class:stale={stale && !!band}
 >
-  <!-- Before a result there is no line to draw, so only where things happen shows. -->
+  <!-- Before a result there is no line to draw, so the race phases and where things happen show. -->
   {#if band}
     <div
       class="plot"
@@ -91,13 +101,7 @@
         class="phases"
         aria-hidden="true"
       >
-        {#each RACE_PHASES as phase, index}<span
-            style:left={phase.start * 100 + '%'}
-            style:width={((RACE_PHASES[index + 1]?.start ?? 1) - phase.start) * 100 + '%'}
-            style:--phase={phase.color}
-          >
-            {phase.name}
-          </span>{/each}
+        {@render phaseBands()}
       </div>
       <svg
         viewBox="0 0 {width} {height}"
@@ -111,7 +115,7 @@
             (decision
               ? ', ' +
                 hp(decision.check) +
-                ' at the median spurt decision with ' +
+                ' at the median spurt check with ' +
                 hp(decision.need) +
                 ' needed'
               : '') +
@@ -195,7 +199,15 @@
           of {hp(decision.need)}
         </span>
       {/if}
-    </div>{/if}
+    </div>
+  {:else}
+    <div
+      class="phases strip"
+      aria-hidden="true"
+    >
+      {@render phaseBands()}
+    </div>
+  {/if}
   {#if lanes.length}<div
       class="lanes"
       role="group"
@@ -248,6 +260,11 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
+  }
+  .phases.strip {
+    position: relative;
+    inset: auto;
+    height: 16px;
   }
   .phases span {
     position: absolute;

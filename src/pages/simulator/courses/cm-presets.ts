@@ -59,3 +59,54 @@ export function cmPreset(event: TimelineRecord, courses: RaceCourse[]) {
 
   return { facts, candidates, ...raceConditions(text) };
 }
+
+export type CmPreset = ReturnType<typeof cmPreset>;
+
+export interface NumberedMeeting {
+  event: TimelineRecord;
+  /** Its place in the global schedule: the first Champions Meeting is CM 1. */
+  number: number;
+}
+
+/** Every Champions Meeting on the timeline, oldest first, with its number. */
+export function numberMeetings(events: TimelineRecord[]): NumberedMeeting[] {
+  return events
+    .filter((event) => event.eventType === 'champions_meeting')
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .map((event, index) => ({ event, number: index + 1 }));
+}
+
+/** Whether a meeting is running, still to come, or over; one without an end date lasts its first day. */
+export type MeetingTiming = 'live' | 'upcoming' | 'past';
+
+export function meetingTiming(event: TimelineRecord, now: number): MeetingTiming {
+  const end = (event.estimatedEndDate ?? event.date).getTime();
+  if (end < now) return 'past';
+
+  return event.date.getTime() <= now ? 'live' : 'upcoming';
+}
+
+export interface NextMeeting extends NumberedMeeting {
+  preset: CmPreset;
+  course: RaceCourse;
+}
+
+/**
+ * The meeting a player prepares for: the running or next one whose announced course names exactly one of ours. A
+ * meeting with no course yet, or with two layouts to choose between, is passed over.
+ */
+export function nextMeeting(
+  meetings: NumberedMeeting[],
+  courses: RaceCourse[],
+  now: number
+): NextMeeting | undefined {
+  for (const meeting of meetings) {
+    if (meetingTiming(meeting.event, now) === 'past') continue;
+
+    const preset = cmPreset(meeting.event, courses);
+    const [course] = preset.candidates;
+    if (course && preset.candidates.length === 1) return { ...meeting, preset, course };
+  }
+
+  return undefined;
+}

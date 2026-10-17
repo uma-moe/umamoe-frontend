@@ -1,0 +1,72 @@
+/* Mode, track, course, ground and weather, then season, time of day, debuffs, seed and search sizes: two rows on the
+   runner's five columns. Team Trials draws its course per race, so its conditions follow the mode and its pool of
+   tracks takes a row of its own. */
+.goal {
+  --control-height: var(--setup-control-height);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px 12px;
+  align-items: start;
+}
+.goal :global(.field) {
+  gap: 4px;
+}
+.goal :global(label) {
+  font-size: 12px;
+  font-weight: 600;
+}
+.goal :global(input),
+.goal :global(.select-control) {
+  font-size: 13px;
+}
+.pool {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+.seed {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  gap: 6px;
+  align-items: start;
+  min-width: 0;
+}
+.seed > :global(.ui-button) {
+  width: 36px;
+  height: var(--setup-control-height);
+  margin-top: 18px;
+  padding: 0;
+}
+/* Narrower, where the ground's four words no longer fit a fifth of the form: three columns, any gap left by Team
+   Trials' pool filled by the next field. */
+@container build-form (max-width: 1059px) {
+  .goal {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-flow: row dense;
+  }
+}
+/* A phone: two columns; the mode, course pickers, ground and paired fields take the full width. */
+@container build-form (max-width: 620px) {
+  .goal {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .goal > :global(.field:has(#build-mode)),
+  .goal :global(.course-picker),
+  .goal > :global(.toggle-field:has(#build-ground)),
+  .pair {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 767px) {
+  .seed {
+    grid-template-columns: minmax(0, 1fr) 44px;
+  }
+  .seed > :global(.ui-button) {
+    width: 44px;
+  }
+}

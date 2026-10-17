@@ -2,9 +2,11 @@
   import { onMount, type Snippet } from 'svelte';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
+  import Menu, { type MenuItem } from '@/components/navigation/Menu.svelte';
   import SimulatorTeamPicker from './SimulatorTeamPicker.svelte';
-  import StatStrip from '@/components/game/StatStrip.svelte';
+  import Artwork from '@/components/game/Artwork.svelte';
   import SkillChip from '@/components/game/SkillChip.svelte';
+  import StatStrip from '@/components/game/StatStrip.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import { loadCharacters, type CharacterData } from '@/lib/game-data/characters';
   import {
@@ -15,8 +17,7 @@
     skillRarity,
     type SkillData
   } from '@/lib/game-data/skills/skills';
-  import RunnerLineupRow from '@/pages/competitive/runners/RunnerLineupRow.svelte';
-  import { styleColors, stats } from '@/pages/competitive/analysis-view';
+  import { identity, stats, styleColors } from '@/pages/competitive/analysis-view';
   import SimulatorUmaEditor from './SimulatorUmaEditor.svelte';
   import SimulatorVeteranPicker from '../veterans/SimulatorVeteranPicker.svelte';
   import SimSection from '../../shell/SimSection.svelte';
@@ -25,17 +26,21 @@
     simulatorRoster,
     createRosterUma,
     ensureSimulatorRoster,
-    importSimulatorUmas,
-    simulatorTeamLabel
+    importSimulatorUmas
   } from '../../simulator-roster.svelte';
   import { selectedCourse } from '../../simulator-session.svelte';
 
   let {
     number = 3,
+    imports = [],
+    onimport,
     actions: extraActions
   }: {
     /** Its place among the form's numbered sections. */
     number?: number;
+    /** The page's own ways to fill the field, listed in the Import menu after Veterans. */
+    imports?: MenuItem[];
+    onimport?: (id: string) => void;
     actions?: Snippet;
   } = $props();
 
@@ -48,8 +53,8 @@
 
   let skills = $state.raw(new Map<number, SkillData>());
   let characters = $state.raw(new Map<number, CharacterData>());
-  let visibleSkills = $state<Record<string, number>>({});
 
+  /** Own unique first, then by base SP cost: the order the skill list shows. */
   function rankSkills(ids: number[]) {
     return ids
       .map((encoded) => {
@@ -63,44 +68,6 @@
       .sort(
         (a, b) => Number(b.unique) - Number(a.unique) || b.cost - a.cost || a.encoded - b.encoded
       );
-  }
-
-  function fitSkills(
-    node: HTMLElement,
-    params: { id: string; skills: { encoded: number; cost: number }[] }
-  ) {
-    let id = params.id;
-    const measure = () => {
-      const bounds = node.getBoundingClientRect();
-      let count = 0;
-      for (const child of node.children) {
-        const box = child.getBoundingClientRect(),
-          shown = box.bottom <= bounds.bottom + 0.5 && box.right <= bounds.right + 0.5;
-
-        child.setAttribute('aria-hidden', String(!shown));
-        if (shown && child.classList.contains('skill-item')) count++;
-      }
-
-      if (visibleSkills[id] !== count) visibleSkills[id] = count;
-    };
-
-    const observer = new ResizeObserver(measure);
-    const observe = () => {
-      observer.disconnect();
-      observer.observe(node);
-      for (const child of node.children) observer.observe(child);
-    };
-
-    observe();
-    return {
-      update(next: typeof params) {
-        id = next.id;
-        observe();
-      },
-      destroy() {
-        observer.disconnect();
-      }
-    };
   }
 
   onMount(() => {
@@ -168,6 +135,70 @@
   }
 </script>
 
+{#snippet skillList(uma: SimulatorUma, ranked: ReturnType<typeof rankSkills>)}
+  <span class="skill-summary">
+    <InspectPopover
+      label={'Skills for ' + uma.name}
+      align="end"
+    >
+      {#snippet trigger()}
+        <span class="skill-count">
+          {uma.skills.length === 1 ? '1 skill' : uma.skills.length + ' skills'}<Icon
+            name="chevron"
+            size={11}
+          />
+        </span>
+      {/snippet}
+      <div class="skill-list-heading">
+        <div>
+          <strong>
+            Learned skills <span>{uma.skills.length}</span>
+          </strong>
+          <small>{uma.name}</small>
+        </div>
+        <span title="Edit build and skills">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="edit"
+            ariaLabel={'Edit skills for ' + uma.name}
+            onclick={() => edit(uma)}
+          />
+        </span>
+      </div>
+      {#if ranked.length}
+        <ul class="all-skills">
+          {#each ranked as item}
+            {@const resolved = resolveEncodedSkill(skills, item.encoded)}
+            <li
+              class:owned-unique={item.unique}
+              data-sp={item.cost}
+            >
+              <SkillChip
+                name={resolved.skill?.name ?? 'Skill ' + Math.floor(item.encoded / 10)}
+                icon={skillImage(resolved.skill?.icon)}
+                rarity={skillRarity(resolved.skill, resolved.inherited)}
+                level={item.unique || resolved.level > 1 ? 'Lv ' + resolved.level : undefined}
+                compact
+                fill
+              />
+              <span class="skill-cost">
+                {item.unique
+                  ? 'Own unique'
+                  : item.cost >= 0
+                    ? item.cost.toLocaleString('en-US') + ' SP'
+                    : '—'}
+              </span>
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="empty-skills">No skills added yet.</p>
+      {/if}
+    </InspectPopover>
+  </span>
+{/snippet}
+
 <SimSection
   {number}
   title="Race field"
@@ -183,207 +214,146 @@
       onclick={() => edit()}
     >
       Add Uma
-    </Button><Button
-      variant="secondary"
-      size="sm"
-      icon="veterans"
-      disabled={simulatorRoster.umas.length >= 18}
-      onclick={() => (veteransOpen = true)}
-    >
-      Choose from Veterans
-    </Button>{@render extraActions?.()}
+    </Button>
+    <Menu
+      label="Import"
+      menuLabel="Import runners"
+      icon="upload"
+      items={[
+        {
+          id: 'veterans',
+          label: 'Choose from Veterans',
+          icon: 'veterans',
+          disabled: simulatorRoster.umas.length >= 18
+        },
+        ...imports
+      ]}
+      onselect={(id) => (id === 'veterans' ? (veteransOpen = true) : onimport?.(id))}
+    />
+
+    {@render extraActions?.()}
   {/snippet}
   <div class="field">
-    <div
-      class="column-headings"
-      aria-hidden="true"
-    >
-      <span>
-        Runner <small>select to edit</small>
-      </span>
-      <span>Build stats</span>
-      <span>Learned skills</span>
-      <span class="action-headings">
-        <span>Team</span>
-        <span>Actions</span>
-      </span>
-    </div>
     <div class="runners">
       {#each simulatorRoster.umas as uma, index (uma.id)}
         {@const summary = simulatorUmaSummary(uma, index, course)}
+        {@const look = identity(summary)}
         {@const encodedSkills = uma.skills.map((skill) => skill.skillId * 10 + (skill.level ?? 1))}
-        {@const preview = rankSkills(encodedSkills)}
+        {@const ranked = rankSkills(encodedSkills)}
         {@const sp = skillPointTotal(skills, encodedSkills)}
         {@const outfit = characters.get(uma.cardId ?? 0)?.subtitle}
         <article
           class="runner"
           data-uma-id={uma.id}
-          title={simulatorTeamLabel(uma.teamId)}
+          aria-label={uma.name}
         >
-          <button
-            class="summary"
-            aria-label={'Edit ' + uma.name}
-            title={outfit}
-            onclick={() => edit(uma)}
-          >
-            <RunnerLineupRow
-              runner={summary}
-              {outfit}
-              color={styleColors[Number(summary.raw.runningStyle)]}
-              showStats={false}
+          <Artwork
+            src={look.image}
+            alt=""
+            size="sm"
+          />
+          <div class="identity">
+            <h3 title={uma.name}>{uma.name}</h3>
+            <p class="build">
+              {#if outfit}
+                <span
+                  class="outfit"
+                  title={outfit}
+                >
+                  {outfit}
+                </span>
+                <span
+                  class="separator"
+                  aria-hidden="true"
+                >
+                  ·
+                </span>
+              {/if}
+              <span style:color={styleColors[Number(summary.raw.runningStyle)]}>{look.detail}</span>
+            </p>
+          </div>
+          <!-- Her team, as a dot on her portrait's corner; it opens the team colors. -->
+          <span class="team-control">
+            <SimulatorTeamPicker
+              value={uma.teamId ?? 0}
+              label={'Assign team for ' + uma.name}
+              onchange={(id) => {
+                uma.teamId = id;
+                simulatorRoster.configured = true;
+              }}
             />
-          </button>
-          <div class="build-stats">
+          </span>
+          <!-- Everything else she can do, in one group of matching buttons. -->
+          <div
+            class="row-tools"
+            role="group"
+            aria-label={'Actions for ' + uma.name}
+          >
+            <span
+              class="edit-control"
+              title="Edit build"
+            >
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="edit"
+                ariaLabel={'Edit ' + uma.name}
+                onclick={() => edit(uma)}
+              >
+                Edit
+              </Button>
+            </span>
+            <span
+              title={simulatorRoster.umas.length >= 18 ? 'The race field is full' : 'Copy runner'}
+            >
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="copy"
+                ariaLabel={'Copy ' + uma.name}
+                disabled={simulatorRoster.umas.length >= 18}
+                onclick={() => duplicate(uma)}
+              />
+            </span>
+            <span
+              class="delete-control"
+              title={simulatorRoster.umas.length <= 2
+                ? 'Keep at least two runners'
+                : 'Delete runner'}
+            >
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="trash"
+                ariaLabel={'Delete ' + uma.name}
+                disabled={simulatorRoster.umas.length <= 2}
+                onclick={() => remove(uma)}
+              />
+            </span>
+          </div>
+          <div class="stats">
             <StatStrip
-              items={[
-                ...stats(summary),
-                { id: 'sp', label: 'SP', value: sp?.toLocaleString() ?? '—' }
-              ]}
+              items={stats(summary)}
               presentation="values"
               compact
               label={uma.name + ' build stats'}
             />
           </div>
-          <div class="skill-summary">
-            <div
-              class="skill-preview preview-skills"
-              use:fitSkills={{ id: uma.id, skills: preview }}
+          <div class="runner-meta">
+            <span
+              class="sp"
+              title="Base cost of learned skills including prerequisites, before hint discounts"
             >
-              {#each preview as item (item.encoded)}
-                {@const resolved = resolveEncodedSkill(skills, item.encoded)}
-                <span
-                  class="skill-item"
-                  data-sp={item.cost}
-                  data-owned-unique={item.unique}
-                >
-                  <SkillChip
-                    name={resolved.skill?.name ?? 'Skill ' + Math.floor(item.encoded / 10)}
-                    icon={skillImage(resolved.skill?.icon)}
-                    rarity={skillRarity(resolved.skill, resolved.inherited)}
-                    level={item.unique ? 'Lv ' + resolved.level : undefined}
-                    compact
-                  />
-                </span>
-              {:else}
-                <span class="no-skills">No skills added</span>
-              {/each}
-            </div>
-            <InspectPopover
-              label={'Skills for ' + uma.name}
-              align="end"
+              <strong>{sp?.toLocaleString('en-US') ?? '—'}</strong>
+              SP
+            </span>
+            <span
+              class="separator"
+              aria-hidden="true"
             >
-              {#snippet trigger()}
-                <span class="more-skills">
-                  {uma.skills.length > (visibleSkills[uma.id] ?? 0)
-                    ? '+' + (uma.skills.length - (visibleSkills[uma.id] ?? 0)) + ' more'
-                    : 'Skills'}<Icon
-                    name="chevron"
-                    size={12}
-                  />
-                </span>
-              {/snippet}
-              <div class="skill-list-heading">
-                <div>
-                  <strong>
-                    Learned skills <span>{uma.skills.length}</span>
-                  </strong>
-                  <small>{uma.name}</small>
-                </div>
-                <span title="Edit build and skills">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon="edit"
-                    ariaLabel={'Edit skills for ' + uma.name}
-                    onclick={() => edit(uma)}
-                  />
-                </span>
-              </div>
-              {#if preview.length}
-                <ul class="all-skills">
-                  {#each preview as item}
-                    {@const resolved = resolveEncodedSkill(skills, item.encoded)}
-                    <li class:owned-unique={item.unique}>
-                      <SkillChip
-                        name={resolved.skill?.name ?? 'Skill ' + Math.floor(item.encoded / 10)}
-                        icon={skillImage(resolved.skill?.icon)}
-                        rarity={skillRarity(resolved.skill, resolved.inherited)}
-                        level={item.unique || resolved.level > 1
-                          ? 'Lv ' + resolved.level
-                          : undefined}
-                        compact
-                      />
-                      <span class="skill-cost">
-                        {item.unique
-                          ? 'Own unique'
-                          : item.cost >= 0
-                            ? item.cost.toLocaleString() + ' SP'
-                            : '—'}
-                      </span>
-                    </li>
-                  {/each}
-                </ul>
-                <p class="skill-list-note">
-                  Own unique first · remaining skills by base SP cost, before hint discounts.
-                </p>
-              {:else}
-                <p class="empty-skills">No skills added yet.</p>
-              {/if}
-            </InspectPopover>
-          </div>
-          <div class="row-actions">
-            <div class="team-control">
-              <SimulatorTeamPicker
-                value={uma.teamId ?? 0}
-                label={'Assign team for ' + uma.name}
-                onchange={(id) => {
-                  uma.teamId = id;
-                  simulatorRoster.configured = true;
-                }}
-              />
-            </div>
-            <div
-              class="row-buttons"
-              role="group"
-              aria-label={'Actions for ' + uma.name}
-            >
-              <span title="Edit build">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon="edit"
-                  ariaLabel={'Edit build for ' + uma.name}
-                  onclick={() => edit(uma)}
-                />
-              </span>
-              <span
-                title={simulatorRoster.umas.length >= 18 ? 'The race field is full' : 'Copy runner'}
-              >
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon="copy"
-                  ariaLabel={'Copy ' + uma.name}
-                  disabled={simulatorRoster.umas.length >= 18}
-                  onclick={() => duplicate(uma)}
-                />
-              </span>
-              <span
-                class="delete-control"
-                title={simulatorRoster.umas.length <= 2
-                  ? 'Keep at least two runners'
-                  : 'Delete runner'}
-              >
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon="trash"
-                  ariaLabel={'Delete ' + uma.name}
-                  disabled={simulatorRoster.umas.length <= 2}
-                  onclick={() => remove(uma)}
-                />
-              </span>
-            </div>
+              ·
+            </span>
+            {@render skillList(uma, ranked)}
           </div>
         </article>
       {/each}

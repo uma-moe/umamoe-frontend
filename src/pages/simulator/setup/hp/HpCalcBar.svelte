@@ -34,13 +34,13 @@
         return 'Calculating…';
       }
 
-      return 'Does her HP last a full last spurt?';
+      return 'Can she spurt at top speed all the way to the finish?';
     }
 
     return (
       verdict!.title +
       (spread?.needed
-        ? ' · needs ≈ ' + Math.round(spread.needed.p50).toLocaleString() + ' stamina'
+        ? ' · needs ≈ ' + Math.round(spread.needed.p50).toLocaleString('en-US') + ' stamina'
         : '')
     );
   });

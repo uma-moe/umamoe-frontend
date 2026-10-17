@@ -102,7 +102,7 @@
         <span>
           {[
             offers.filter((offer) => offer.hint > 0).length + ' with a hint',
-            goal.sp !== undefined ? goal.sp.toLocaleString() + ' SP' : '',
+            goal.sp !== undefined ? goal.sp.toLocaleString('en-US') + ' SP' : '',
             goal.fastLearner ? 'Fast Learner' : ''
           ]
             .filter(Boolean)

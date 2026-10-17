@@ -746,7 +746,7 @@ it('keeps color teams unique, preserves imported IDs and includes colors in repl
   try {
     expect(Object.keys(simulatorTeamColors)).toHaveLength(5);
     expect(simulatorTeamLabel(1)).toBe('Blue team');
-    expect(simulatorTeamLabel(0)).toBe('Independent');
+    expect(simulatorTeamLabel(0)).toBe('No team');
     simulatorRoster.umas = [{ ...createSimulatorUma('Imported'), teamId: 6 }];
     expect(addSimulatorTeamColor('#69B7EE')).toBe(1);
     const id = addSimulatorTeamColor('#123ABC');
