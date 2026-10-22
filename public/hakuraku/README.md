@@ -6,10 +6,10 @@ Imported: 2026-09-21
 License: MIT (see LICENSE in this directory).
 
 `notes/` preserves the published research Markdown, manifest, and attachments.
-`umdb.json.gz` is a gzip-compressed copy of `public/data/umdb.json`: an exported
-game catalog subset, not a complete or continuously updated master database.
-The Master Data browser builds its local SQLite tables from this catalog and
-also accepts complete user-supplied SQLite databases.
+The Master Data browser follows Hakuraku's `/masterdata` page: it loads the
+complete game `master.mdb` into SQLite in the browser. It reads the database
+from the uma.moe resource manifest (`master.path`) rather than a copy here, and
+accepts the same `?q=` and `&filter=` links.
 
 CM Data reads the public, CORS-enabled `https://hakuraku.moe/api/simdata` GET
 endpoints for manifests, summaries, teams, distributions, character contexts,

@@ -8,7 +8,7 @@
       icon: 'database' as const,
       accent: 'primary',
       title: 'Master Data',
-      description: 'Explore game tables, inspect schemas, and run local SQL queries',
+      description: 'Browse every game table and run SQL queries in your browser',
       updated: true
     },
     {
