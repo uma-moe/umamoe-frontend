@@ -1,114 +1,110 @@
 import initSqlJs, { type Database, type SqlValue } from 'sql.js';
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import { ungzip } from 'pako';
-import type { MasterDataRequest, MasterDataResponse } from './master-data/master-data-types';
+import {
+  MAX_RESULT_ROWS,
+  type MasterDatabaseSource,
+  type MasterDataRequest,
+  type MasterDataResponse,
+  type MasterTable,
+  type QueryResult
+} from './master-data/master-data-types';
 
+const engine = initSqlJs({ locateFile: () => wasmUrl });
 let database: Database | undefined;
+
 const quote = (name: string) => `"${name.replaceAll('"', '""')}"`;
-const SQL = initSqlJs({ locateFile: () => wasmUrl });
+
+async function readSource(source: MasterDatabaseSource): Promise<Uint8Array> {
+  if (source.kind === 'file') return new Uint8Array(await source.file.arrayBuffer());
+
+  const response = await fetch(source.url, { credentials: 'omit' });
+  if (!response.ok) throw new Error(`The game database returned ${response.status}.`);
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+function readCatalog(next: Database): MasterTable[] {
+  const names =
+    next
+      .exec(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' ORDER BY name"
+      )[0]
+      ?.values.map(([name]) => String(name)) ?? [];
+
+  return names.map((name) => {
+    const rows = next.exec(`SELECT COUNT(*) FROM ${quote(name)}`)[0]?.values[0]?.[0];
+    const columns =
+      next.exec(`PRAGMA table_info(${quote(name)})`)[0]?.values.map((column) => ({
+        name: String(column[1]),
+        type: typeof column[2] === 'string' ? column[2] : ''
+      })) ?? [];
+
+    return { name, rows: Number(rows ?? 0), columns };
+  });
+}
+
+async function open(source: MasterDatabaseSource): Promise<MasterTable[]> {
+  const SQL = await engine;
+  const bytes = await readSource(source);
+  // The service sends Content-Encoding: gzip, but files and some proxies keep the raw archive.
+  const isGzip = bytes[0] === 0x1f && bytes[1] === 0x8b;
+  const next = new SQL.Database(isGzip ? ungzip(bytes) : bytes);
+
+  try {
+    next.run('PRAGMA query_only = ON');
+    const tables = readCatalog(next);
+    database?.close();
+    database = next;
+    return tables;
+  } catch (error) {
+    next.close();
+    throw error;
+  }
+}
+
+function query(sql: string): QueryResult {
+  if (!database) throw new Error('Load a database first.');
+
+  // A query may turn this off, so restore it before every statement.
+  database.run('PRAGMA query_only = ON');
+  const started = performance.now();
+  const statement = database.prepare(sql);
+
+  try {
+    const values: SqlValue[][] = [];
+    while (values.length < MAX_RESULT_ROWS && statement.step()) values.push(statement.get());
+
+    return {
+      columns: statement.getColumnNames(),
+      values,
+      truncated: values.length === MAX_RESULT_ROWS && statement.step(),
+      elapsedMs: Math.round(performance.now() - started)
+    };
+  } finally {
+    statement.free();
+  }
+}
+
+async function respond(request: MasterDataRequest): Promise<MasterDataResponse> {
+  const { id } = request;
+
+  switch (request.kind) {
+    case 'open':
+      return { id, kind: 'catalog', tables: await open(request.source) };
+    case 'query':
+      return { id, kind: 'result', ...query(request.sql) };
+    default: {
+      const unknown: never = request;
+      throw new Error(`Unknown master data request ${JSON.stringify(unknown)}.`);
+    }
+  }
+}
 
 self.onmessage = async (event: MessageEvent<MasterDataRequest>) => {
-  const request = event.data;
-  const { id, kind } = request;
+  const { id } = event.data;
+
   try {
-    const engine = await SQL;
-    if (kind !== 'query') {
-      let next: Database;
-      if (kind === 'file') {
-        const { bytes } = request;
-        next = new engine.Database(bytes[0] === 0x1f && bytes[1] === 0x8b ? ungzip(bytes) : bytes);
-      } else {
-        const response = await fetch('/hakuraku/umdb.json.gz');
-        if (!response.ok) throw new Error(`Bundled game data unavailable (${response.status})`);
-        const payload = new Uint8Array(await response.arrayBuffer());
-        const gameData: unknown = JSON.parse(
-          new TextDecoder().decode(
-            payload[0] === 0x1f && payload[1] === 0x8b ? ungzip(payload) : payload
-          )
-        );
-
-        if (gameData === null || typeof gameData !== 'object' || Array.isArray(gameData))
-          throw new Error('Invalid bundled game data.');
-        next = new engine.Database();
-        try {
-          next.run('BEGIN');
-          for (const [name, values] of Object.entries(gameData)) {
-            if (!Array.isArray(values) || !values.length) continue;
-            const rows = values.filter(
-              (row): row is Record<string, unknown> =>
-                row !== null && typeof row === 'object' && !Array.isArray(row)
-            );
-
-            if (rows.length !== values.length)
-              throw new Error(`Invalid rows in game data table ${name}.`);
-            const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
-            if (!columns.length) continue;
-            next.run(
-              `CREATE TABLE ${quote(name)} (${columns.map((column) => `${quote(column)} ${rows.some((row) => typeof row[column] === 'number') ? 'NUMERIC' : 'TEXT'}`).join(',')})`
-            );
-            const statement = next.prepare(
-              `INSERT INTO ${quote(name)} VALUES (${columns.map(() => '?').join(',')})`
-            );
-
-            try {
-              for (const row of rows)
-                statement.run(
-                  columns.map((column) => {
-                    const value = row[column];
-                    if (value === null || value === undefined) return null;
-                    if (typeof value === 'number' || typeof value === 'string') return value;
-                    return JSON.stringify(value);
-                  })
-                );
-            } finally {
-              statement.free();
-            }
-          }
-
-          next.run('COMMIT');
-        } catch (error) {
-          next.close();
-          throw error;
-        }
-      }
-
-      next.run('PRAGMA query_only = ON');
-      const tables =
-        next
-          .exec("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")[0]
-          ?.values.map((row) => String(row[0])) ?? [];
-
-      const schema = Object.fromEntries(
-        tables.map((table) => [
-          table,
-          next.exec(`PRAGMA table_info(${quote(table)})`)[0]?.values.map((row) => String(row[1])) ??
-            []
-        ])
-      );
-
-      database?.close();
-      database = next;
-      self.postMessage({ id, kind: 'schema', schema } satisfies MasterDataResponse);
-    } else {
-      if (!database) throw new Error('Load a database first.');
-      database.run('PRAGMA query_only = ON');
-      const statement = database.prepare(request.sql);
-      try {
-        const columns = statement.getColumnNames();
-        const values: SqlValue[][] = [];
-        while (values.length < 1000 && statement.step()) values.push(statement.get());
-        const truncated = values.length === 1000 && statement.step();
-        self.postMessage({
-          id,
-          kind: 'query',
-          columns,
-          values,
-          truncated
-        } satisfies MasterDataResponse);
-      } finally {
-        statement.free();
-      }
-    }
+    self.postMessage(await respond(event.data));
   } catch (error) {
     self.postMessage({
       id,
