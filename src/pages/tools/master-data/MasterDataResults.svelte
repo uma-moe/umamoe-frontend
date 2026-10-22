@@ -234,5 +234,6 @@
 </section>
 
 <style>
+  @import './master-data-cells.css';
   @import './master-data-results.css';
 </style>
