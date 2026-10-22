@@ -473,3 +473,34 @@ it('rejects a response whose JSON bytes do not match the manifest without overwr
   expect(await resourceCache.readCached('example')).toEqual({ value: 1 });
   expect(localStorage.getItem('umamoe_resource_meta_v1:example')).toBe(originalMeta);
 });
+
+it('locates the published master database without letting a malformed entry block resources', async () => {
+  const masterPath = '/resources/simulator/v1/master.mdb.gz';
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () =>
+      Response.json({ version: 'v1', master: { path: masterPath, marker: '1.35.2:10008300' } })
+    )
+  );
+
+  expect(await resourceCache.masterDatabase()).toEqual({
+    path: masterPath,
+    marker: '1.35.2:10008300'
+  });
+
+  resourceCache.invalidate();
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (path: string) =>
+      path.endsWith('manifest.json')
+        ? Response.json({
+            files: { example: '/resources/example.json' },
+            master: { path: 'https://elsewhere.test/master.mdb.gz' }
+          })
+        : Response.json({ value: 1 })
+    )
+  );
+
+  expect(await resourceCache.masterDatabase()).toBeUndefined();
+  expect(await resourceCache.load('example')).toEqual({ value: 1 });
+});

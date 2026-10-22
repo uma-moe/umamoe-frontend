@@ -1,4 +1,5 @@
-import { expect, test } from './fixtures/test';
+import { expect, replaceQuery, test, type Page } from './fixtures/test';
+import initSqlJs from 'sql.js';
 import { deflateSync, inflateSync, gzipSync, gunzipSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 import { matchesTeam } from '../../src/pages/competitive/hakuraku-query';
@@ -3431,41 +3432,86 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   );
 });
 
-test('master data executes SQLite, reports errors, inspects schemas and exports results', async ({
+/** A small SQLite master served the way the manifest publishes it, as a gzip archive. */
+async function routeMasterDatabase(page: Page): Promise<void> {
+  const SQL = await initSqlJs();
+  const database = new SQL.Database();
+  database.run(`
+    CREATE TABLE text_data (id INTEGER, category INTEGER, "index" INTEGER, text TEXT);
+    INSERT INTO text_data VALUES
+      (6, 6, 1001, 'Special Week'),
+      (6, 6, 1002, 'Silence Suzuka'),
+      (170, 170, 1001, 'First line' || char(10) || 'Second line');
+    CREATE TABLE chara_data (id INTEGER, birth_year INTEGER, start_date INTEGER);
+    INSERT INTO chara_data VALUES (1001, 1995, 1609513200), (1002, NULL, 0);
+    CREATE TABLE card_data (id INTEGER, chara_id INTEGER);
+    INSERT INTO card_data VALUES (100101, 1001);
+    CREATE TABLE unused_table (chara_id INTEGER);
+  `);
+  const archive = gzipSync(database.export());
+  database.close();
+
+  await page.route('**/resources/manifest.json*', (route) =>
+    route.fulfill({
+      json: {
+        version: 'test',
+        master: { path: '/resources/simulator/test/master.mdb.gz', marker: '1.0.0:1' }
+      }
+    })
+  );
+  await page.route('**/resources/simulator/test/master.mdb.gz', (route) =>
+    route.fulfill({ body: archive, contentType: 'application/octet-stream' })
+  );
+}
+
+test('master data browses the published database, follows columns and shares queries', async ({
   page
 }, info) => {
+  await routeMasterDatabase(page);
   await page.goto('/tools/master-data');
-  await expect(page.getByRole('button', { name: 'Run query', exact: true })).toBeEnabled({
-    timeout: 30000
-  });
 
-  await page.getByLabel('SQL query', { exact: true }).fill('SELECT COUNT(*) AS count FROM chara');
-  await page.getByRole('button', { name: 'Run query', exact: true }).click();
-  await expect(page.getByRole('table', { name: 'SQL query results', exact: true })).toContainText(
-    'count'
-  );
+  const tables = page.getByRole('navigation', { name: 'Database tables', exact: true });
+  const results = page.getByRole('table', { name: 'SQL query results', exact: true });
+  const editor = page.getByRole('textbox', { name: 'SQL query', exact: true });
+  const run = page.getByRole('button', { name: 'Run query', exact: true });
 
-  const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export JSON', exact: true }).click();
-  expect((await download).suggestedFilename()).toBe('master-data.json');
-  await page.getByLabel('SQL query', { exact: true }).fill('SELECT * FROM missing_table');
-  await page.getByRole('button', { name: 'Run query', exact: true }).click();
+  await expect(results).toContainText('Silence Suzuka', { timeout: 30000 });
+  await expect(tables).not.toContainText('unused_table');
+
+  await tables.getByRole('button', { name: /^chara_data/ }).click();
+  await expect(page.getByText(/^2 rows ·/)).toBeVisible();
+  await expect(results.getByText('NULL', { exact: true })).toBeVisible();
+
+  await tables.getByRole('button', { name: /^card_data/ }).click();
+  await page.getByRole('button', { name: 'Find tables with chara_id', exact: true }).click();
+  const references = page.getByRole('region', { name: 'Tables with chara_id', exact: true });
+  await expect(references).toContainText('card_data');
+  await references.getByRole('button', { name: /^unused_table/ }).click();
+  await expect(page.getByText('The query returned no rows.', { exact: true })).toBeVisible();
+
+  await replaceQuery(editor, 'SELECT * FROM missing_table');
+  await run.click();
   await expect(page.getByText('no such table: missing_table', { exact: true })).toBeVisible();
-  await page.getByLabel('SQL query', { exact: true }).fill('SELECT * FROM chara LIMIT 10');
-  await page.getByRole('button', { name: 'Run query', exact: true }).click();
-  await expect(page.getByText(/^10 rows ·/)).toBeVisible();
-  await page.getByLabel('SQL query', { exact: true }).fill('DELETE FROM chara');
-  await page.getByRole('button', { name: 'Run query', exact: true }).click();
+
+  await replaceQuery(editor, 'DELETE FROM chara_data');
+  await run.click();
   await expect(
     page.getByText('attempt to write a readonly database', { exact: true })
   ).toBeVisible();
 
-  await page.getByLabel('SQL query', { exact: true }).fill('SELECT * FROM chara LIMIT 10');
-  await page.getByRole('button', { name: 'Run query', exact: true }).click();
-  await expect(page.getByRole('table', { name: 'SQL query results', exact: true })).toBeVisible();
-  await page.screenshot({ path: info.outputPath('master-browser.png'), fullPage: true });
-  await page.getByRole('tab', { name: 'Schema & References', exact: true }).click();
-  await page.getByRole('heading', { name: 'Columns', exact: true }).waitFor();
+  await replaceQuery(editor, 'SELECT COUNT(*) AS count FROM text_data');
+  // CodeMirror reads Enter through Android's input events, so phones use the Run button.
+  if (info.project.name === 'chromium') await editor.press('Control+Enter');
+  else await run.click();
+  await expect(results).toContainText('count');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export JSON', exact: true }).click();
+  expect((await download).suggestedFilename()).toBe('master-data.json');
+
+  const sharedQuery = new URLSearchParams({ q: 'SELECT text FROM text_data', filter: 'suzuka' });
+  await page.goto(`/tools/master-data?${sharedQuery}`);
+  await expect(page.getByText(/^1 of 3 rows ·/)).toBeVisible({ timeout: 30000 });
+  await expect(results).toContainText('Silence Suzuka');
   await page.screenshot({ path: info.outputPath('master-data.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     page.viewportSize()!.width

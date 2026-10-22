@@ -1,162 +1,123 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import AppPage from '@/layouts/AppPage.svelte';
+  import Badge from '@/components/Badge.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
-  import Tabs from '@/components/navigation/Tabs.svelte';
-  import SelectField from '@/components/controls/SelectField.svelte';
   import FileDrop from '@/components/controls/FileDrop.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import Icon from '@/components/Icon.svelte';
-  import MasterWorker from './master-data.worker?worker';
+  import { copyText } from '@/lib/clipboard';
+  import MasterDataEditor from './master-data/MasterDataEditor.svelte';
+  import MasterDataResults from './master-data/MasterDataResults.svelte';
   import MasterDataSidebar from './master-data/MasterDataSidebar.svelte';
-  import MasterDataQuery from './master-data/MasterDataQuery.svelte';
-  import MasterDataSchema from './master-data/MasterDataSchema.svelte';
-  import MasterDataVersions from './master-data/MasterDataVersions.svelte';
-  import type { MasterDataRow } from './master-data/master-data-export';
-  import type { MasterDataAction, MasterDataResponse } from './master-data/master-data-types';
+  import { masterDataSearch, readMasterDataLink } from './master-data/master-data-link';
+  import { browseTableSql, firstQueriedTable } from './master-data/master-data-results';
+  import { MasterDataSession } from './master-data/master-data-session.svelte';
 
-  const bundledSource = 'Bundled Hakuraku game data';
+  const MAX_FILE_BYTES = 150 * 1024 * 1024;
+  // Every name, title and description in the game resolves through text_data.
+  const STARTING_TABLE = 'text_data';
 
-  let importOpen = $state(false),
-    elapsed = $state(0),
-    started = 0,
-    history = $state<string[]>([]);
+  const session = new MasterDataSession();
+  const link = readMasterDataLink(location.search);
 
-  let worker: Worker | undefined,
-    timeout: ReturnType<typeof setTimeout> | undefined,
-    request = 0;
+  let sql = $state(link.sql);
+  let executedSql = $state(link.sql);
+  let filter = $state(link.filter);
+  let importOpen = $state(false);
+  let fileError = $state('');
+  let linkCopied = $state(false);
+  let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
-  let pendingSource = bundledSource;
+  const loaded = $derived(session.database !== undefined);
+  const activeTable = $derived(firstQueriedTable(executedSql, session.tables));
+  const totalRows = $derived(session.tables.reduce((sum, table) => sum + table.rows, 0));
 
-  let tab = $state('browser'),
-    filter = $state(''),
-    table = $state(''),
-    sql = $state('SELECT * FROM "chara" LIMIT 100'),
-    error = $state(''),
-    busy = $state(false),
-    loaded = $state(false),
-    source = $state(bundledSource);
+  const sourceDetails = $derived.by(() => {
+    if (session.opening) return 'Downloading and opening the database…';
+    if (!loaded) return 'Not loaded';
 
-  let schema = $state<Record<string, string[]>>({}),
-    columns = $state<string[]>([]),
-    rows = $state<MasterDataRow[]>([]),
-    truncated = $state(false),
-    crossReference = $state('');
+    const size = `${session.tables.length.toLocaleString()} tables · ${totalRows.toLocaleString()} rows`;
+    if (session.database?.kind !== 'published') return size;
+    return `Global ${session.database.marker.replace(':', ' · resource ')} · ${size}`;
+  });
 
-  function start() {
-    worker ??= new MasterWorker();
-    worker.onmessage = (event: MessageEvent<MasterDataResponse>) => {
-      const result = event.data;
-      if (result.id !== request) return;
-      clearTimeout(timeout);
-      busy = false;
-      elapsed = Math.round(performance.now() - started);
-      if (result.kind === 'error') {
-        error = result.error;
-        return;
-      }
+  function execute(statement: string) {
+    if (!statement.trim()) return;
 
-      if (result.kind === 'schema') {
-        schema = result.schema;
-        loaded = true;
-        source = pendingSource;
-        table = Object.keys(schema)[0] ?? '';
-        sql = `SELECT * FROM "${table.replaceAll('"', '""')}" LIMIT 100`;
-        if (table) run();
-        else {
-          rows = [];
-          columns = [];
-        }
-      } else {
-        columns = result.columns;
-        rows = result.values.map((values) =>
-          Object.fromEntries(
-            columns.map((name, index) => {
-              const value = values[index];
-              return [name, value ?? 'NULL'];
-            })
-          )
-        );
-
-        truncated = result.truncated;
-      }
-    };
-
-    worker.onerror = () => {
-      clearTimeout(timeout);
-      busy = false;
-      loaded = false;
-      error =
-        'The SQL engine could not be loaded. Reload the bundled data or reopen your database.';
-      worker?.terminate();
-      worker = undefined;
-    };
-
-    return worker;
+    sql = statement;
+    executedSql = statement;
+    void session.run(statement);
   }
 
-  function send(message: MasterDataAction) {
-    const activeWorker = start();
-    error = '';
-    busy = true;
-    started = performance.now();
-    activeWorker.postMessage({ ...message, id: ++request });
-    timeout = setTimeout(() => {
-      worker?.terminate();
-      worker = undefined;
-      busy = false;
-      loaded = false;
-      schema = {};
-
-      rows = [];
-      error = 'Operation exceeded 20 seconds. Reload a database and use a narrower query.';
-    }, 20000);
+  function runEditor() {
+    if (!loaded) return;
+    execute(sql);
   }
 
-  function loadBundledData() {
-    pendingSource = bundledSource;
-    send({ kind: 'bundled' });
-  }
-
-  function run() {
-    history = [sql, ...history.filter((query) => query !== sql)].slice(0, 8);
+  function browse(table: string) {
     filter = '';
-    crossReference = '';
-    rows = [];
-    columns = [];
-    send({ kind: 'query', sql });
+    execute(browseTableSql(table));
   }
 
-  function select(name: string) {
-    table = name;
-    sql = `SELECT * FROM "${name.replaceAll('"', '""')}" LIMIT 100`;
-    run();
+  function browseStartingTable() {
+    const table =
+      session.tables.find((candidate) => candidate.name === STARTING_TABLE) ??
+      session.tables.find((candidate) => candidate.rows > 0);
+
+    if (table) browse(table.name);
   }
 
-  async function upload(files: FileList) {
+  async function openPublished() {
+    if (!(await session.openPublished())) return;
+
+    // A shared link opens on its own query; otherwise start somewhere useful.
+    if (executedSql.trim()) execute(executedSql);
+    else browseStartingTable();
+  }
+
+  async function switchToPublished() {
+    if (await session.openPublished()) browseStartingTable();
+  }
+
+  async function openFile(files: FileList) {
     const file = files[0];
     if (!file) return;
-    if (file.size > 150 * 1024 * 1024) {
-      error = 'Database files must be smaller than 150 MB.';
+
+    if (file.size > MAX_FILE_BYTES) {
+      fileError = 'Database files must be smaller than 150 MB.';
       return;
     }
 
-    try {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      pendingSource = file.name;
-      importOpen = false;
-      send({ kind: 'file', bytes });
-    } catch {
-      error = 'The database file could not be read.';
-    }
+    fileError = '';
+    importOpen = false;
+    if (await session.openFile(file)) browseStartingTable();
   }
 
-  onMount(loadBundledData);
+  async function copyLink() {
+    const url =
+      location.origin + location.pathname + masterDataSearch({ sql: executedSql, filter });
+    if (!(await copyText(url))) return;
 
-  onDestroy(() => {
-    worker?.terminate();
-    clearTimeout(timeout);
+    linkCopied = true;
+    clearTimeout(copiedTimer);
+    copiedTimer = setTimeout(() => (linkCopied = false), 2000);
+  }
+
+  // The address always reopens the rows on screen, like Hakuraku's shared links.
+  $effect(() => {
+    const search = masterDataSearch({ sql: executedSql, filter });
+    untrack(() => history.replaceState(history.state, '', location.pathname + search));
+  });
+
+  onMount(() => {
+    void openPublished();
+
+    return () => {
+      session.destroy();
+      clearTimeout(copiedTimer);
+    };
   });
 </script>
 
@@ -164,14 +125,13 @@
   <title>Master Data · uma.moe</title>
   <meta
     name="description"
-    content="Browse game master data and run SQLite queries locally."
+    content="Browse every table in the game's master database and run SQLite queries locally."
   />
 </svelte:head>
 <AppPage
   routeId="master-data"
   title="Master Data"
-  description="Explore the game’s tables, follow references, and query the data."
-  eyebrow="Tools"
+  description="Every table in the game’s master database. Pick a table, filter its rows, or write SQL."
   width="wide"
 >
   {#snippet actions()}
@@ -180,129 +140,128 @@
       icon="upload"
       onclick={() => (importOpen = true)}
     >
-      Open database
+      Open a database file
     </Button>
   {/snippet}
-  <section class="database-bar">
-    <div class="database-icon">
-      <Icon
-        name="database"
-        size={22}
-      />
+  <section
+    class="source-bar"
+    aria-label="Open database"
+  >
+    <Icon
+      name="database"
+      size={20}
+    />
+    <div class="source-name">
+      <strong>
+        {#if session.database?.kind === 'file'}
+          {session.database.name}
+          <Badge tone="warning">Your file</Badge>
+        {:else}
+          Game master database
+        {/if}
+      </strong>
+      <span>{sourceDetails}</span>
     </div>
-    <div class="database-name">
-      <strong>{source}</strong>
-      <span>{Object.keys(schema).length} tables · SQLite · Local, read-only</span>
-    </div>
-    <span class="source-badge">
-      {source === bundledSource ? 'BUNDLED GAME DATA' : 'IMPORTED DATABASE'}
-    </span>
-    <Button
-      variant="ghost"
-      icon="refresh"
-      size="sm"
-      disabled={busy}
-      onclick={loadBundledData}
-    >
-      Reload bundled data
-    </Button>
+    {#if session.database?.kind === 'file'}
+      <Button
+        variant="ghost"
+        size="sm"
+        icon="refresh"
+        disabled={session.opening}
+        onclick={switchToPublished}
+      >
+        Use the game database
+      </Button>
+    {/if}
   </section>
+  {#if session.loadError}
+    <Banner
+      title="The database could not be opened"
+      tone="danger"
+    >
+      <p>{session.loadError}</p>
+      {#if loaded}
+        <p>The database you had open is still loaded.</p>
+      {:else}
+        <Button
+          size="sm"
+          variant="secondary"
+          icon="refresh"
+          disabled={session.opening}
+          onclick={openPublished}
+        >
+          Try again
+        </Button>
+      {/if}
+    </Banner>
+  {/if}
   <div class="workbench">
     <MasterDataSidebar
-      {schema}
-      {table}
-      {busy}
-      onselect={select}
+      tables={session.tables}
+      active={activeTable}
+      loading={session.opening}
+      onbrowse={browse}
     />
-    <div class="database-main">
-      <div class="workspace-tabs">
-        <Tabs
-          items={[
-            { id: 'browser', label: 'SQL Browser' },
-            { id: 'schema', label: 'Schema & References' },
-            { id: 'versions', label: 'Version Changes' }
-          ]}
-          bind:value={tab}
-          label="Master data views"
-          controls="master-panel"
-          variant="underline"
-        />
+    <div class="workspace">
+      <MasterDataEditor
+        id="master-sql"
+        bind:value={sql}
+        tables={session.tables}
+        onrun={runEditor}
+      />
+      <div class="query-actions">
+        <Button
+          size="sm"
+          disabled={!loaded || session.opening || !sql.trim()}
+          onclick={runEditor}
+        >
+          {session.querying ? 'Running…' : 'Run query'}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          icon={linkCopied ? 'check' : 'share'}
+          disabled={!executedSql.trim()}
+          onclick={copyLink}
+        >
+          {linkCopied ? 'Link copied' : 'Copy link'}
+        </Button>
+        <span>Runs the first statement · up to 100,000 rows</span>
       </div>
-      <div
-        id="master-panel"
-        role="tabpanel"
-        aria-label="Master data view"
-      >
-        {#if error}
-          <div
-            class="query-error"
-            role="alert"
-          >
-            <Icon
-              name="warning"
-              size={16}
-            />
-            <strong>Query failed</strong>
-            <span>{error}</span>
-          </div>
-        {/if}
-        {#if tab === 'browser'}
-          <MasterDataQuery
-            bind:sql
-            bind:filter
-            {table}
-            {loaded}
-            {busy}
-            {elapsed}
-            {truncated}
-            {history}
-            {columns}
-            {rows}
-            onrun={run}
-          />
-        {:else if tab === 'schema'}
-          <MasterDataSchema
-            {schema}
-            bind:table
-            bind:crossReference
-            onbrowse={() => {
-              tab = 'browser';
-              select(table);
-            }}
-          />
-        {:else}
-          <MasterDataVersions />
-        {/if}
-      </div>
-      <footer class="workbench-status">
-        <span>
-          <i class:busy></i>
-          {busy ? 'Working…' : loaded ? 'Database ready' : 'No database loaded'}
-        </span>
-        <span>{table}</span>
-        <span>SQLite / WASM</span>
-      </footer>
+      <MasterDataResults
+        result={session.result}
+        tables={session.tables}
+        {activeTable}
+        bind:filter
+        pending={session.pending}
+        error={session.queryError}
+        onbrowse={browse}
+      />
     </div>
   </div>
-  <p class="catalog-note">
-    The bundled Hakuraku game data contains selected tables. Open a complete master.mdb or
-    compressed database to browse the full table set.
-  </p>
 </AppPage>
 <Dialog
   bind:open={importOpen}
-  title="Open a master database"
-  description="Files are processed locally and never uploaded."
+  title="Open a database file"
+  description="Any SQLite master.mdb, plain or gzip-compressed. It is read in your browser and never uploaded."
   maxWidth="640px"
 >
   <FileDrop
     id="master-upload"
-    label="Drop a master database"
-    description="SQLite .mdb, .db, .sqlite or gzip · Up to 150 MB"
+    label="Drop a database file"
+    description="SQLite .mdb, .db, .sqlite or .gz · Up to 150 MB"
     accept=".mdb,.db,.sqlite,.gz"
-    disabled={busy}
-    onfiles={upload}
+    disabled={session.opening}
+    onfiles={openFile}
   />
+  {#if fileError}
+    <p
+      class="file-error"
+      role="alert"
+    >
+      {fileError}
+    </p>
+  {/if}
 </Dialog>
 
 <style>
