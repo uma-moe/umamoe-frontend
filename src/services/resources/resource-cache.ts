@@ -16,6 +16,14 @@ type ManifestEntry =
       hash?: string;
     };
 
+/** The game's SQLite master database that an export was generated from. */
+export interface MasterDatabaseLocation {
+  /** Versioned and immutable, so the browser cache can keep it. */
+  path: string;
+  /** Game version and master revision, such as `1.35.2:10008300`. */
+  marker?: string;
+}
+
 interface ResourceManifest {
   version?: string;
   resource_version?: string;
@@ -27,6 +35,7 @@ interface ResourceManifest {
   resources?: Record<string, ManifestEntry> | ManifestEntry[];
   paths?: Record<string, ManifestEntry> | ManifestEntry[];
   entries?: Record<string, ManifestEntry> | ManifestEntry[];
+  master?: MasterDatabaseLocation;
 }
 
 const requestCache = new RequestCache();
@@ -119,7 +128,19 @@ function parseManifest(value: unknown): ResourceManifest {
     manifest[field] = entries;
   }
 
+  const master = parseMasterDatabase(value.master);
+  if (master) manifest.master = master;
   return manifest;
+}
+
+// Only Master Data reads this entry, so a malformed one must not block every other resource.
+function parseMasterDatabase(value: unknown): MasterDatabaseLocation | undefined {
+  if (!isRecord(value) || typeof value.path !== 'string' || !value.path.startsWith(baseUrl + '/'))
+    return undefined;
+
+  const location: MasterDatabaseLocation = { path: value.path };
+  if (typeof value.marker === 'string') location.marker = value.marker;
+  return location;
 }
 
 function parseResourceMeta(value: unknown): ResourceMeta | undefined {
@@ -416,6 +437,11 @@ export const resourceCache = {
     }
 
     return decode((await revalidate(name, decode, unpublished, refresh)).data);
+  },
+
+  /** Where the current export's master database can be downloaded, when the manifest names one. */
+  async masterDatabase(): Promise<MasterDatabaseLocation | undefined> {
+    return (await loadManifest(false)).master;
   },
 
   /** Navigation checks share one manifest request and never block cached rendering. */

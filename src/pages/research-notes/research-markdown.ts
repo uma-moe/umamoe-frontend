@@ -28,7 +28,7 @@ export function renderResearchMarkdown(markdown: string): string {
     const attr = element.tagName === 'A' ? 'href' : 'src';
     const original = element.getAttribute(attr) ?? '';
     const value = original
-      .replace(/^https:\/\/hakuraku\.moe(?=\/)/, '')
+      .replace(/^https:\/\/(?:hakuraku\.moe|ayaliz\.github\.io\/hakuraku\/+#)(?=\/)/, '')
       .replace(/^\/hakuraku\/+#(?=\/)/, '');
 
     if (value.startsWith('/attachments/')) element.setAttribute(attr, `/hakuraku/notes${value}`);
@@ -39,7 +39,8 @@ export function renderResearchMarkdown(markdown: string): string {
     else if (['/simdata', '/umalogs'].includes(value))
       element.setAttribute(attr, '/competitive/cm-data');
     else if (value === '/veterans') element.setAttribute(attr, '/veterans');
-    else if (value === '/masterdata') element.setAttribute(attr, '/tools/master-data');
+    else if (/^\/masterdata(?=[?#]|$)/.test(value))
+      element.setAttribute(attr, value.replace('/masterdata', '/tools/master-data'));
     else if (value.startsWith('/') && !value.startsWith('/hakuraku/'))
       element.setAttribute(attr, `https://hakuraku.moe${value}`);
   }

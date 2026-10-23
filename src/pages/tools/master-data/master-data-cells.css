@@ -1,0 +1,19 @@
+/* Cell values shared by query results and release diffs. */
+.null {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.timestamp {
+  display: block;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
+/* Story and dialogue text keeps its line breaks without stretching the column across the screen. */
+.text {
+  display: block;
+  width: max-content;
+  max-width: 56ch;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

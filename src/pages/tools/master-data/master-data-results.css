@@ -1,0 +1,195 @@
+.results {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+}
+.results[aria-busy='true'] :global(.table-wrap) {
+  opacity: 0.6;
+}
+.results-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 10px 8px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.results-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+.results-title h2 {
+  margin: 0;
+  font-size: var(--font-sm);
+}
+.results-title p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+  font-variant-numeric: tabular-nums;
+}
+.results-tools {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+.result-filter {
+  flex: 0 1 260px;
+  min-width: 120px;
+  margin-right: 4px;
+}
+.references {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 6px 10px;
+  padding: 10px 10px 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+}
+.references p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+.references p :global(svg) {
+  color: var(--accent-primary);
+}
+.references code {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+.references > :global(.icon-button) {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.reference-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 96px;
+  overflow: auto;
+}
+.reference-list button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  color: var(--text-secondary);
+  font: 12px var(--font-mono);
+  cursor: pointer;
+}
+.reference-list button:hover {
+  color: var(--text-primary);
+}
+.reference-list button.current {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+.reference-list small {
+  color: var(--text-muted);
+  font: 11px var(--font-sans);
+}
+.query-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgb(var(--accent-error-rgb) / 0.3);
+  border-radius: var(--radius-sm);
+  background: rgb(var(--accent-error-rgb) / 0.08);
+  color: var(--accent-error);
+  font-size: var(--font-sm);
+}
+.query-error span {
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+.results-empty {
+  flex: 1;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+.results-empty p {
+  margin: 0;
+  font-size: var(--font-sm);
+}
+.results :global(.table-wrap) {
+  margin: 0;
+  padding-inline-end: 0;
+}
+/* SQL names are case-sensitive identifiers; show them as written. */
+.results :global(th) {
+  font-family: var(--font-mono);
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* Columns shrink to their content and the last one takes the remaining width. */
+.results :global(th:not(:last-child)) {
+  width: 1%;
+}
+.results :global(td) {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  vertical-align: top;
+}
+.reference-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  opacity: 0.45;
+  vertical-align: middle;
+  cursor: pointer;
+}
+.reference-toggle:hover,
+.reference-toggle:focus-visible,
+.reference-toggle.active {
+  opacity: 1;
+  color: var(--accent-primary);
+}
+.reference-toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+}
+@media (max-width: 760px) {
+  .results {
+    height: 70dvh;
+    flex: none;
+  }
+  .results-tools {
+    flex-basis: 100%;
+  }
+  .result-filter {
+    flex: 1 1 auto;
+  }
+}

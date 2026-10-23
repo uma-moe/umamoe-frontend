@@ -1,4 +1,5 @@
-import { expect, test } from './fixtures/test';
+import { expect, replaceQuery, test, type Page } from './fixtures/test';
+import initSqlJs from 'sql.js';
 import { deflateSync, inflateSync, gzipSync, gunzipSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 import { matchesTeam } from '../../src/pages/competitive/hakuraku-query';
@@ -3431,45 +3432,208 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   );
 });
 
-test('master data executes SQLite, reports errors, inspects schemas and exports results', async ({
+/** A small SQLite master served the way the manifest publishes it, as a gzip archive. */
+async function routeMasterDatabase(page: Page): Promise<void> {
+  const SQL = await initSqlJs();
+  const database = new SQL.Database();
+  database.run(`
+    CREATE TABLE text_data (id INTEGER, category INTEGER, "index" INTEGER, text TEXT);
+    INSERT INTO text_data VALUES
+      (6, 6, 1001, 'Special Week'),
+      (6, 6, 1002, 'Silence Suzuka'),
+      (170, 170, 1001, 'First line' || char(10) || 'Second line');
+    CREATE TABLE chara_data (id INTEGER, birth_year INTEGER, start_date INTEGER);
+    INSERT INTO chara_data VALUES (1001, 1995, 1609513200), (1002, NULL, 0);
+    CREATE TABLE card_data (id INTEGER, chara_id INTEGER);
+    INSERT INTO card_data VALUES (100101, 1001);
+    CREATE TABLE unused_table (chara_id INTEGER);
+  `);
+  const archive = gzipSync(database.export());
+  database.close();
+
+  await page.route('**/resources/manifest.json*', (route) =>
+    route.fulfill({
+      json: {
+        version: 'test',
+        master: { path: '/resources/simulator/test/master.mdb.gz', marker: '1.0.0:1' }
+      }
+    })
+  );
+  await page.route('**/resources/simulator/test/master.mdb.gz', (route) =>
+    route.fulfill({ body: archive, contentType: 'application/octet-stream' })
+  );
+}
+
+test('master data browses the published database, follows columns and shares queries', async ({
   page
 }, info) => {
+  await routeMasterDatabase(page);
   await page.goto('/tools/master-data');
-  await expect(page.getByRole('button', { name: 'Run query', exact: true })).toBeEnabled({
-    timeout: 30000
-  });
 
-  await page.getByLabel('SQL query', { exact: true }).fill('SELECT COUNT(*) AS count FROM chara');
-  await page.getByRole('button', { name: 'Run query', exact: true }).click();
-  await expect(page.getByRole('table', { name: 'SQL query results', exact: true })).toContainText(
-    'count'
-  );
+  const tables = page.getByRole('navigation', { name: 'Database tables', exact: true });
+  const results = page.getByRole('table', { name: 'SQL query results', exact: true });
+  const editor = page.getByRole('textbox', { name: 'SQL query', exact: true });
+  const run = page.getByRole('button', { name: 'Run query', exact: true });
 
-  const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export JSON', exact: true }).click();
-  expect((await download).suggestedFilename()).toBe('master-data.json');
-  await page.getByLabel('SQL query', { exact: true }).fill('SELECT * FROM missing_table');
-  await page.getByRole('button', { name: 'Run query', exact: true }).click();
+  await expect(results).toContainText('Silence Suzuka', { timeout: 30000 });
+  await expect(tables).not.toContainText('unused_table');
+
+  await tables.getByRole('button', { name: /^chara_data/ }).click();
+  await expect(page.getByText(/^2 rows ·/)).toBeVisible();
+  await expect(results.getByText('NULL', { exact: true })).toBeVisible();
+
+  await tables.getByRole('button', { name: /^card_data/ }).click();
+  await page.getByRole('button', { name: 'Find tables with chara_id', exact: true }).click();
+  const references = page.getByRole('region', { name: 'Tables with chara_id', exact: true });
+  await expect(references).toContainText('card_data');
+  await references.getByRole('button', { name: /^unused_table/ }).click();
+  await expect(page.getByText('The query returned no rows.', { exact: true })).toBeVisible();
+
+  await replaceQuery(editor, 'SELECT * FROM missing_table');
+  await run.click();
   await expect(page.getByText('no such table: missing_table', { exact: true })).toBeVisible();
-  await page.getByLabel('SQL query', { exact: true }).fill('SELECT * FROM chara LIMIT 10');
-  await page.getByRole('button', { name: 'Run query', exact: true }).click();
-  await expect(page.getByText(/^10 rows ·/)).toBeVisible();
-  await page.getByLabel('SQL query', { exact: true }).fill('DELETE FROM chara');
-  await page.getByRole('button', { name: 'Run query', exact: true }).click();
+
+  await replaceQuery(editor, 'DELETE FROM chara_data');
+  await run.click();
   await expect(
     page.getByText('attempt to write a readonly database', { exact: true })
   ).toBeVisible();
 
-  await page.getByLabel('SQL query', { exact: true }).fill('SELECT * FROM chara LIMIT 10');
-  await page.getByRole('button', { name: 'Run query', exact: true }).click();
-  await expect(page.getByRole('table', { name: 'SQL query results', exact: true })).toBeVisible();
-  await page.screenshot({ path: info.outputPath('master-browser.png'), fullPage: true });
-  await page.getByRole('tab', { name: 'Schema & References', exact: true }).click();
-  await page.getByRole('heading', { name: 'Columns', exact: true }).waitFor();
+  await replaceQuery(editor, 'SELECT COUNT(*) AS count FROM text_data');
+  // CodeMirror reads Enter through Android's input events, so phones use the Run button.
+  if (info.project.name === 'chromium') await editor.press('Control+Enter');
+  else await run.click();
+  await expect(results).toContainText('count');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export JSON', exact: true }).click();
+  expect((await download).suggestedFilename()).toBe('master-data.json');
+
+  const sharedQuery = new URLSearchParams({ q: 'SELECT text FROM text_data', filter: 'suzuka' });
+  await page.goto(`/tools/master-data?${sharedQuery}`);
+  await expect(page.getByText(/^1 of 3 rows ·/)).toBeVisible({ timeout: 30000 });
+  await expect(results).toContainText('Silence Suzuka');
   await page.screenshot({ path: info.outputPath('master-data.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     page.viewportSize()!.width
   );
+});
+
+const INITIAL_MASTER_HASH = 'e0013366d059b091bb2a6b05275033d6b2302fb3297fc9227cc022d871ac0bfb';
+const NEXT_MASTER_HASH = 'a866b847996fd773c918a7b5192bbac3874d56fc84b3a44a6f4912e92b9ef426';
+
+/** Two releases and the diff between them, as the resources service publishes them. */
+async function routeMasterHistory(page: Page): Promise<void> {
+  const summary = { tables_changed: 2, added: 1, removed: 1, modified: 1 };
+  const diff = {
+    from_hash: INITIAL_MASTER_HASH,
+    to_hash: NEXT_MASTER_HASH,
+    date: '2026-10-07',
+    summary,
+    tables: {
+      text_data: {
+        columns: ['id', 'category', 'index', 'text'],
+        added: [[6, 6, 1003, 'Tokai Teio']],
+        removed: [],
+        modified: [
+          {
+            key: [63, 157],
+            before: [63, 63, 157, 'The event starts on MM/DD.'],
+            after: [63, 63, 157, 'The event starts on Oct 15, 2026.']
+          }
+        ]
+      },
+      chara_data: {
+        columns: ['id', 'birth_year', 'start_date'],
+        added: [],
+        removed: [[1003, 1998, 1609513200]],
+        modified: []
+      }
+    }
+  };
+
+  await page.route('**/resources/masterdata/versions.json', (route) =>
+    route.fulfill({
+      json: [
+        {
+          hash: INITIAL_MASTER_HASH,
+          short_hash: 'e0013366d059',
+          date: '2026-09-28',
+          previous_hash: null,
+          summary: null
+        },
+        {
+          hash: NEXT_MASTER_HASH,
+          short_hash: 'a866b847996f',
+          date: '2026-10-07',
+          previous_hash: INITIAL_MASTER_HASH,
+          summary
+        }
+      ]
+    })
+  );
+  await page.route('**/resources/masterdata/diffs/a866b847996f.json.gz', (route) =>
+    route.fulfill({ body: gzipSync(JSON.stringify(diff)), contentType: 'application/json' })
+  );
+}
+
+test('master data history opens shared table diffs without downloading the database', async ({
+  page
+}, info) => {
+  const databaseRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('master.mdb.gz')) databaseRequests.push(request.url());
+  });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => sessionStorage.setItem('test-copied-text', value)
+      }
+    });
+  });
+  await routeMasterDatabase(page);
+  await routeMasterHistory(page);
+
+  await page.goto('/tools/master-data?diff=a866b847996f&table=text_data');
+
+  const history = page.getByRole('tabpanel', { name: 'Version history', exact: true });
+  const textData = history.getByRole('table', { name: 'Changed rows in text_data', exact: true });
+  const charaToggle = history.getByRole('button', { name: /^chara_data/ });
+  await expect(textData).toContainText('The event starts on Oct 15, 2026.', { timeout: 30000 });
+  await expect(textData).toContainText('The event starts on MM/DD.');
+  await expect(textData).toContainText('Tokai Teio');
+  await expect(history.getByText('Initial version', { exact: true })).toBeVisible();
+  await expect(charaToggle).toHaveAttribute('aria-expanded', 'false');
+  await page.screenshot({ path: info.outputPath('master-data-history.png'), fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    page.viewportSize()!.width
+  );
+  expect(databaseRequests).toEqual([]);
+
+  await charaToggle.click();
+  const charaData = history.getByRole('table', { name: 'Changed rows in chara_data', exact: true });
+  await expect(charaData).toContainText('removed');
+  await history.getByRole('button', { name: 'Copy link to chara_data', exact: true }).click();
+  await expect(page).toHaveURL(/\?diff=a866b847996f&table=chara_data$/);
+  expect(await page.evaluate(() => sessionStorage.getItem('test-copied-text'))).toMatch(
+    /\/tools\/master-data\?diff=a866b847996f&table=chara_data$/
+  );
+
+  await history.getByRole('button', { name: 'Collapse all', exact: true }).click();
+  await expect(textData).toBeHidden();
+  await history.getByRole('button', { name: 'Hide diff', exact: true }).click();
+  await expect(page).toHaveURL(/\?tab=history$/);
+
+  await page.getByRole('tab', { name: 'Table browser', exact: true }).click();
+  const results = page.getByRole('table', { name: 'SQL query results', exact: true });
+  await expect(results).toContainText('Silence Suzuka', { timeout: 30000 });
+  await expect(page).toHaveURL(/\?q=SELECT/);
+
+  await page.getByRole('tab', { name: 'Version history', exact: true }).click();
+  await history.getByRole('button', { name: 'View diff', exact: true }).click();
+  await expect(history.getByRole('button', { name: /^text_data/ })).toBeVisible();
+  await expect(textData).toBeHidden();
+  await expect(page).toHaveURL(/\?diff=a866b847996f$/);
 });
 
 test('research opens original notes with math, attachments, and mobile layouts in both themes', async ({
