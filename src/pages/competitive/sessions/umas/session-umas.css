@@ -1,0 +1,184 @@
+/* CM Data's Uma breakdown: a ranked list beside the scatter, then the lineups of the selected Uma. */
+.umas {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  container: session-umas / inline-size;
+}
+.panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  min-width: 0;
+}
+.panels > :global(.chart-frame) {
+  height: 100%;
+}
+.minimum {
+  width: 120px;
+}
+
+.column-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 6px 6px 4px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.uma-list {
+  max-height: 400px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+.uma-list > li + li {
+  border-top: 1px solid var(--border-subtle);
+}
+.uma-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 7px 6px 7px 4px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.uma-row:hover,
+.uma-row:focus-visible {
+  background: var(--color-accent-soft);
+}
+.uma-row.selected {
+  background: var(--color-accent-soft);
+  box-shadow: inset 0 0 0 1px rgb(var(--accent-primary-rgb) / 0.35);
+}
+.uma-row.selected .uma-name strong {
+  color: var(--accent-primary);
+}
+.uma-row :global(.art) {
+  grid-row: 1/3;
+  width: 30px;
+  height: 36px;
+  border: 0;
+  background: transparent;
+}
+.uma-name {
+  min-width: 0;
+}
+.uma-name strong,
+.uma-name small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.uma-name strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.uma-name small,
+.uma-rate small {
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.uma-rate {
+  display: grid;
+  justify-items: end;
+  font-variant-numeric: tabular-nums;
+}
+.uma-rate strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.share-track {
+  grid-column: 2/4;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-2);
+}
+.share-track > span {
+  display: flex;
+  height: 100%;
+}
+.share-track i {
+  display: block;
+  height: 100%;
+}
+.empty {
+  padding: 24px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.inspection {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+.inspection > :global(.runner-reference) {
+  margin-right: auto;
+}
+.inspection dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0;
+}
+.inspection dl > div {
+  display: grid;
+  gap: 1px;
+}
+.inspection dt {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.inspection dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.partner-lineup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+}
+.partner-lineup button {
+  flex: 1;
+  min-width: 150px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.partner-lineup button:hover,
+.partner-lineup button:focus-visible,
+.partner-lineup button.current {
+  color: var(--accent-primary);
+}
+
+@container session-umas (max-width: 980px) {
+  .panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

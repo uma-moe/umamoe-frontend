@@ -47,6 +47,10 @@
     entries.filter((e) => uma === 'all' || raceRunnerKey(e.runner) === uma)
   );
 
+  const runnerScope = $derived(
+    choices.find((choice) => choice.value === uma)?.label ?? 'all runners'
+  );
+
   const measured = $derived(filtered.filter((e) => e.horse));
   const selected = $derived(entries.find((e) => e.key === expanded));
   const outcomeRows = $derived(filtered.map((e) => outcomeRow(e, pending)));
@@ -78,103 +82,22 @@
   class="session-diagnostics"
   aria-label="Detailed session analysis"
 >
-  <header>
-    <div>
-      <h3>
-        Race behaviour <small>{measured.length} measured entries</small>
-      </h3>
-      <p>Averages include runners where the mode stayed inactive.</p>
-    </div>
-    <SelectField
-      id={id + '-uma'}
-      label="Diagnostic runner"
-      options={[{ value: 'all', label: 'All runners' }, ...choices]}
-      bind:value={uma}
-    />
-  </header>
-  {#if measured.length}
-    <DataTable
-      columnHelp={raceMetricHelp}
-      plain
-      compact
-      caption="Session race behaviour"
-      rows={modeRows}
-      rowKey="id"
-      expandedRow={mode}
-      columns={[
-        { key: 'name', label: 'Mode' },
-        { key: 'mean', label: 'Avg. active (s)', numeric: true },
-        { key: 'duration', label: 'Total active (s)', numeric: true },
-        { key: 'entries', label: 'Runners', numeric: true },
-        { key: 'periods', label: 'Periods', numeric: true, sortable: false }
-      ]}
-    >
-      {#snippet cell(row, column)}
-        {#if column.key === 'periods'}
-          <Button
-            variant="ghost"
-            size="sm"
-            ariaExpanded={mode === row.id}
-            ariaLabel={'Show session ' + row.name + ' periods'}
-            onclick={() => (mode = mode === row.id ? undefined : String(row.id))}
-          >
-            <span class="period-label">
-              {row.periods}
-              <span
-                class="period-chevron"
-                class:open={mode === row.id}
-              >
-                <Icon
-                  name="chevron"
-                  size={12}
-                />
-              </span>
-            </span>
-          </Button>
-        {:else}
-          {row[column.key]}
-        {/if}
-      {/snippet}
-      {#snippet rowDetail(row)}
-        <ol class="mode-periods">
-          {#each modes.find((m) => m.id === row.id)?.traces ?? [] as span}
-            <li>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={!onreplay}
-                onclick={() => onreplay?.(span.race, span.runner, span.start)}
-              >
-                Race {span.race + 1}: {span.start.toFixed(3)}–{span.end.toFixed(3)} s ↗
-              </Button><RunnerReference
-                name={span.name}
-                cardId={captures[span.race]?.runners.find((r) => r.index === span.runner)?.cardId}
-                compact
-              />
-              <small>{(span.end - span.start).toFixed(2)} s</small>
-            </li>
-          {/each}
-        </ol>
-      {/snippet}
-    </DataTable>
-  {:else if pending}
-    <p role="status">Preparing simulation details…</p>
-  {:else}
-    <p>
-      Detailed simulation is unavailable for these runners. Recorded race results remain available
-      below.
-    </p>
-  {/if}
-  <section class="race-details">
+  <section class="diagnostics-card">
     <header>
       <div>
         <h3>
-          Detailed race results <small>{filtered.length} runner entries</small>
+          Race results <small>{filtered.length} runner entries</small>
         </h3>
-        <p>
-          Expand a runner to inspect the same skills, HP changes, decisions and graphs as the
-          single-race analysis.
-        </p>
+        <p>Expand a runner for the same skills, HP, decisions and graphs as the single race.</p>
+      </div>
+      <div class="runner-filter">
+        <SelectField
+          id={id + '-uma'}
+          label="Runner shown in the race results and race behaviour"
+          hideLabel
+          options={[{ value: 'all', label: 'All runners' }, ...choices]}
+          bind:value={uma}
+        />
       </div>
     </header>
     <DataTable
@@ -258,6 +181,97 @@
       onrunner={(key) => (expanded = key)}
     />
   {/if}
+  <section class="diagnostics-card">
+    <header>
+      <div>
+        <h3>
+          Race behaviour <small>{measured.length} measured entries · {runnerScope}</small>
+        </h3>
+        <p>
+          Time spent in each simulation mode. Averages include runners where it stayed inactive.
+        </p>
+      </div>
+    </header>
+    {#if measured.length}
+      <DataTable
+        columnHelp={raceMetricHelp}
+        plain
+        compact
+        caption="Session race behaviour"
+        rows={modeRows}
+        rowKey="id"
+        expandedRow={mode}
+        columns={[
+          { key: 'name', label: 'Mode' },
+          { key: 'mean', label: 'Avg. active (s)', numeric: true },
+          { key: 'duration', label: 'Total active (s)', numeric: true },
+          { key: 'entries', label: 'Runners', numeric: true },
+          { key: 'periods', label: 'Periods', numeric: true, sortable: false }
+        ]}
+      >
+        {#snippet cell(row, column)}
+          {#if column.key === 'periods'}
+            <Button
+              variant="ghost"
+              size="sm"
+              ariaExpanded={mode === row.id}
+              ariaLabel={'Show session ' + row.name + ' periods'}
+              onclick={() => (mode = mode === row.id ? undefined : String(row.id))}
+            >
+              <span class="period-label">
+                {row.periods}
+                <span
+                  class="period-chevron"
+                  class:open={mode === row.id}
+                >
+                  <Icon
+                    name="chevron"
+                    size={12}
+                  />
+                </span>
+              </span>
+            </Button>
+          {:else}
+            {row[column.key]}
+          {/if}
+        {/snippet}
+        {#snippet rowDetail(row)}
+          <ol class="mode-periods">
+            {#each modes.find((m) => m.id === row.id)?.traces ?? [] as span}
+              <li>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={!onreplay}
+                  icon="race"
+                  onclick={() => onreplay?.(span.race, span.runner, span.start)}
+                >
+                  Race {span.race + 1}: {span.start.toFixed(3)}–{span.end.toFixed(3)} s
+                </Button><RunnerReference
+                  name={span.name}
+                  cardId={captures[span.race]?.runners.find((r) => r.index === span.runner)?.cardId}
+                  compact
+                />
+                <small>{(span.end - span.start).toFixed(2)} s</small>
+              </li>
+            {/each}
+          </ol>
+        {/snippet}
+      </DataTable>
+    {:else if pending}
+      <p
+        class="notice"
+        role="status"
+      >
+        Preparing simulation details…
+      </p>
+    {:else}
+      <p class="notice">
+        Detailed simulation is unavailable for these runners. Their recorded results are listed
+        above.
+      </p>
+    {/if}
+  </section>
 </div>
 
 <style>

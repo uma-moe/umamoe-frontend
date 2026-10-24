@@ -1,0 +1,53 @@
+.teams {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+/* One row of filters; an Uma or composition sent from another view appears as a removable chip. */
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.search {
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+.select {
+  flex: 0 1 170px;
+  min-width: 140px;
+}
+.toolbar > :global(.ui-button) {
+  flex: none;
+}
+.count {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  gap: 10px;
+}
+.more {
+  display: flex;
+  justify-content: center;
+}
+@media (max-width: 600px) {
+  .search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .select {
+    flex: 1 1 0;
+  }
+  .count {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}

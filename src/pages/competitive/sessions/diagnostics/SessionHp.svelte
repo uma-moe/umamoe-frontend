@@ -1,28 +1,36 @@
 <script lang="ts">
   import type { MultiRaceAnalysis } from '@/lib/race/multi-race-analysis';
   import { hpRemainingColor } from '@/lib/race/replay/race-display';
+  import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import DataTable from '@/components/data/DataTable.svelte';
   import RunnerReference from '../../runners/RunnerReference.svelte';
   import { percent } from '../../analysis-view';
-  import { metricHelp } from './session-statistics';
+  import { metricHelp } from '../session-statistics';
   import { theme } from '@/stores/theme';
 
   interface Props {
     analysis: MultiRaceAnalysis;
-    active: boolean;
     onuma: (key: string) => void;
   }
 
-  let { analysis, active, onuma }: Props = $props();
+  let { analysis, onuma }: Props = $props();
 </script>
 
-{#if active}
+<ChartFrame
+  plain
+  surface
+  compact
+  id="session-hp"
+  title="HP & last spurt"
+  description="Averages for your own Umas across the session. Select an Uma to compare it with the field."
+>
   <DataTable
     plain
     compact
     caption="HP & Last Spurt"
     columnHelp={metricHelp}
     maxHeight={420}
+    emptyMessage="No player runners were identified in these captures."
     columns={[
       { key: 'name', label: 'Your Uma' },
       { key: 'finish', label: 'Avg. finish HP', numeric: true },
@@ -92,20 +100,23 @@
       {/if}
     {/snippet}
   </DataTable>
-  {#if !analysis.hp.length}
-    <p>No player runners were identified in these captures.</p>
-  {/if}
-{/if}
+</ChartFrame>
 
 <style>
-  @import './character-select.css';
-  p {
-    margin: 0;
+  .character-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
+    border: 0;
+    background: none;
+    color: var(--text-primary);
+    font: inherit;
+    cursor: pointer;
   }
-  p {
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--text-secondary);
+  .character-select:hover,
+  .character-select:focus-visible {
+    color: var(--accent-primary);
   }
   .warning {
     color: var(--accent-warning);

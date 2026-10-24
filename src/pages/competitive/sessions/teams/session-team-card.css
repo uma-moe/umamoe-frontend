@@ -1,0 +1,160 @@
+/* Matches CM Data's captured team cards so a session team reads the same as a published one. */
+.team-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 10px 12px 8px;
+  border: 1px solid var(--card-surface-border);
+  border-radius: var(--radius-lg);
+  background: var(--card-surface-bg);
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+.team-open {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.team-open:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+.team-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.team-heading > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.team-number {
+  flex: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.lineup {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.slash {
+  color: var(--text-muted);
+}
+.team-rate {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  gap: 4px;
+}
+.team-rate strong {
+  color: var(--accent-primary);
+  font-size: 21px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.team-rate > span {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.members {
+  display: grid;
+  flex: 1;
+  align-content: start;
+}
+.members > :global(.lineup-row) {
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 8px;
+  padding: 5px 0;
+}
+.members > :global(.lineup-row + .lineup-row) {
+  border-top: 1px solid var(--border-subtle);
+}
+.members :global(.lineup-row .art) {
+  width: 40px;
+  height: 40px;
+}
+.team-results {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 7px;
+  border-top: 1px solid var(--border-subtle);
+}
+.team-results dl {
+  display: flex;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+}
+.team-results dl > div {
+  min-width: 0;
+}
+.team-results dt {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.team-results dd {
+  margin: 2px 0 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-actions {
+  position: relative;
+  z-index: 2;
+  flex: none;
+}
+.team-actions > :global(.ui-button) {
+  min-height: 30px;
+  padding-inline: 12px;
+  font-size: 12px;
+}
+.team-card:focus-within {
+  border-color: rgb(var(--accent-primary-rgb) / 0.5);
+}
+@media (hover: hover) {
+  .team-card:hover {
+    border-color: var(--border-secondary);
+    background: var(--card-surface-hover-bg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .team-card {
+    transition: none;
+  }
+}
+@media (max-width: 760px) {
+  .team-card {
+    padding: 8px 10px 6px;
+  }
+  .team-rate strong {
+    font-size: 19px;
+  }
+  .team-results dl {
+    gap: 10px;
+  }
+}

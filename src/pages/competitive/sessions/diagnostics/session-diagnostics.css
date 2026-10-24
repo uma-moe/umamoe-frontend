@@ -1,32 +1,41 @@
 .session-diagnostics {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
-.race-details {
-  min-width: 0;
-  border-top: 1px solid var(--border-subtle);
-  padding-top: 12px;
+/* The runner choice narrows both tables, so it sits in the header of the first one. */
+.runner-filter {
+  flex: 0 1 260px;
+  min-width: 180px;
 }
-.session-diagnostics > header,
-section > header {
+/* The same surface as the session's chart cards. */
+.diagnostics-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+}
+.diagnostics-card > header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px 12px;
+  gap: 8px 16px;
 }
-header > :global(.field) {
-  width: 240px;
-  flex: none;
+.diagnostics-card > header > div:first-child {
+  display: grid;
+  flex: 1 1 280px;
+  gap: 3px;
 }
 h3,
 p {
   margin: 0;
 }
 h3 {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 650;
 }
 h3 small {
@@ -35,18 +44,15 @@ h3 small {
 }
 p,
 small {
+  color: var(--text-secondary);
   font-size: 11px;
   line-height: 1.5;
-  color: var(--text-secondary);
-}
-p {
-  margin-top: 3px;
 }
 small {
   font-weight: 400;
 }
-.race-details > header {
-  margin-bottom: 8px;
+.notice {
+  padding: 8px 0 2px;
 }
 .session-diagnostics :global(table) {
   font-size: 12px;
@@ -147,8 +153,8 @@ small {
   color: var(--accent-warning);
 }
 @media (max-width: 760px) {
-  header > :global(.field) {
-    width: 100%;
+  .runner-filter {
+    flex-basis: 100%;
   }
   .mode-periods > li {
     flex-wrap: wrap;

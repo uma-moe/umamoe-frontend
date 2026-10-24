@@ -1,0 +1,298 @@
+/* CM Data's strategy layout: the style breakdown beside saturation, then who ran each style and which lineups won. */
+.strategy {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  container: session-strategy / inline-size;
+}
+.panels {
+  display: grid;
+  gap: 12px;
+  align-items: stretch;
+  min-width: 0;
+}
+.upper {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.lower {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+}
+.panels > :global(.chart-frame) {
+  height: 100%;
+}
+
+.breakdown-key,
+.style-row {
+  display: grid;
+  grid-template-columns: 128px minmax(48px, 1fr) 64px 64px;
+  align-items: center;
+  gap: 12px;
+}
+.breakdown-key {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.breakdown-key > span:nth-child(n + 3) {
+  text-align: right;
+}
+.track-key {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.track-key i {
+  width: 8px;
+  height: 3px;
+  background: var(--text-secondary);
+  opacity: 0.5;
+}
+.track-key .win-key {
+  margin-left: 6px;
+  background: var(--accent-primary);
+  opacity: 1;
+}
+.style-row {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.style-row:last-child {
+  border-bottom: 0;
+}
+.style-name {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.style-name small,
+.readout small {
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.3;
+}
+.style-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.style-link:hover,
+.style-link:focus-visible {
+  color: var(--accent-primary);
+}
+.style-link i,
+h4 i,
+.composition i {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.tracks {
+  display: grid;
+  gap: 5px;
+}
+.track {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-2);
+}
+.track i {
+  display: block;
+  height: 100%;
+  background: color-mix(in srgb, var(--text-secondary) 45%, transparent);
+}
+.readout {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.readout strong {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.representatives {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+}
+h4 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.representative-head,
+.representative {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 48px 44px;
+  align-items: center;
+  gap: 8px;
+}
+.representative-head {
+  padding: 2px 0 4px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.representative-head > span:first-child {
+  grid-column: 1/3;
+}
+.representative-head > span:not(:first-child) {
+  text-align: right;
+}
+.representative {
+  width: 100%;
+  min-height: 34px;
+  padding: 3px 4px 3px 0;
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.representative:hover,
+.representative:focus-visible {
+  background: var(--color-accent-soft);
+}
+.representative :global(.art) {
+  width: 24px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+}
+.representative-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.representative strong,
+.representative small {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.representative strong {
+  font-weight: 600;
+}
+.representative small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.empty {
+  margin: 0;
+  padding: 6px 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.composition {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.composition > span:not(.slash) {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.composition:hover,
+.composition:focus-visible {
+  color: var(--accent-primary);
+}
+.slash {
+  color: var(--text-muted);
+}
+.team-rate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+.team-rate strong {
+  flex: none;
+  width: 48px;
+  font-weight: 600;
+  text-align: right;
+}
+.rate-bar {
+  position: relative;
+  flex: 1;
+  max-width: 160px;
+  min-width: 64px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-2);
+}
+.rate-bar .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent-primary);
+  opacity: 0.75;
+}
+.rate-bar .baseline {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  background: var(--text-primary);
+}
+.footnote {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+@container session-strategy (max-width: 1080px) {
+  .upper,
+  .lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@container session-strategy (max-width: 520px) {
+  .breakdown-key,
+  .style-row {
+    grid-template-columns: minmax(0, 1fr) 64px 64px;
+    gap: 6px 10px;
+  }
+  .track-key,
+  .tracks {
+    grid-row: 2;
+    grid-column: 1/-1;
+  }
+  .representatives {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,169 @@
+/* The session follows CM Data: a dataset strip, compact pill tabs, then one view at a time. */
+.session-analysis {
+  --control-height: 32px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+}
+.session-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--card-surface-border);
+  border-radius: var(--radius-md);
+  background: var(--card-surface-bg);
+}
+.session-scope {
+  display: flex;
+  flex: 1 1 280px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.session-scope > :global(svg) {
+  flex: none;
+  color: var(--accent-primary);
+}
+.session-scope :global(.field) {
+  width: min(100%, 400px);
+}
+.session-scope :global(.select-control) {
+  font-size: 12px;
+}
+.session-totals {
+  display: flex;
+  flex: none;
+  gap: 16px;
+  margin: 0;
+}
+.session-totals > div {
+  padding-left: 16px;
+  border-left: 1px solid var(--border-subtle);
+}
+.session-totals dt {
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+.session-totals dd {
+  margin: 2px 0 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.session-totals small {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.pending {
+  margin-left: 4px;
+  color: var(--accent-primary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.session-navigation {
+  min-width: 0;
+  scroll-margin-top: 56px;
+}
+.session-panels {
+  min-width: 0;
+  padding-top: 2px;
+}
+.runner-views {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  min-width: 0;
+}
+
+/* Every view's cards are CM Data's surface panels at the session's density. */
+.session-panels :global(.chart-frame.surface:not(.compact)) {
+  padding: 14px 16px;
+  gap: 10px;
+}
+.session-panels :global(.chart-frame.surface.compact) {
+  padding: 12px 14px;
+}
+.session-panels :global(.surface h3) {
+  font-size: 14px;
+}
+.session-panels :global(.surface .chart-heading) {
+  flex: 1 1 200px;
+}
+.session-panels :global(.surface .chart-tools) {
+  margin-left: auto;
+}
+.session-panels :global(.surface:not(.compact) figcaption) {
+  gap: 10px;
+  padding-bottom: 10px;
+}
+.session-panels :global(.surface figcaption p) {
+  margin-top: 3px;
+  font-size: 11px;
+}
+.session-panels :global(.compact th),
+.session-panels :global(.compact td) {
+  padding: 4px 8px;
+}
+.session-panels :global(th),
+.session-panels :global(.sort) {
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.session-panels :global(td .runner-reference) {
+  vertical-align: middle;
+}
+.session-panels :global(.chart-frame.expanded .lazy-surface),
+.session-panels :global(.chart-frame.expanded .lazy-surface > figure),
+.session-panels :global(.chart-frame.expanded .chart-host),
+.session-panels :global(.chart-frame.expanded .placeholder) {
+  height: 100%;
+  min-height: 0;
+}
+
+@media (max-width: 1000px) {
+  .session-summary {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .session-scope {
+    flex-basis: auto;
+  }
+  .session-totals {
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .session-totals > div:first-child {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+@media (max-width: 600px) {
+  .session-summary {
+    padding: 10px 12px;
+  }
+  .session-scope :global(.field) {
+    width: 100%;
+  }
+  .session-totals {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px 10px;
+  }
+  .session-totals > div {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .session-totals dd {
+    font-size: 15px;
+  }
+}
