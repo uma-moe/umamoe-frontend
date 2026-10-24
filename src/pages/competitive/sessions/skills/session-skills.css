@@ -1,0 +1,68 @@
+.skills {
+  min-width: 0;
+  container: session-skills / inline-size;
+}
+.search {
+  width: 240px;
+}
+/* The table and the selected skill's locations share one card; the chart stays beside the rows it answers. */
+.skill-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+}
+.skill-select {
+  padding: 2px 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  cursor: pointer;
+}
+.skill-select.selected {
+  box-shadow: 0 0 0 1px var(--accent-primary);
+}
+.locations {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding-left: 16px;
+  border-left: 1px solid var(--border-subtle);
+}
+h4 {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+h4 small {
+  overflow: hidden;
+  color: var(--accent-primary);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.locations p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+@container session-skills (max-width: 900px) {
+  .skill-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .locations {
+    order: -1;
+    padding: 0 0 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    border-left: 0;
+  }
+}
+@media (max-width: 600px) {
+  .search {
+    width: 100%;
+  }
+}
