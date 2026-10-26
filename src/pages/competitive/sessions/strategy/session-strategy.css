@@ -1,13 +1,13 @@
-/* CM Data's strategy layout: the style breakdown beside saturation, then who ran each style and which lineups won. */
+/* CM Data's strategy layout at session density: styles beside the rooms they ran in, saturation beside lineups, then who ran each style. */
 .strategy {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
   container: session-strategy / inline-size;
 }
 .panels {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   align-items: stretch;
   min-width: 0;
 }
@@ -20,18 +20,21 @@
 .panels > :global(.chart-frame) {
   height: 100%;
 }
+.strategy :global(.plot) {
+  align-content: start;
+}
 
 .breakdown-key,
 .style-row {
   display: grid;
-  grid-template-columns: 128px minmax(48px, 1fr) 64px 64px;
+  grid-template-columns: 136px minmax(48px, 1fr) 78px 44px;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 .breakdown-key {
-  padding-bottom: 8px;
+  padding-bottom: 4px;
   border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font-size: 10px;
 }
 .breakdown-key > span:nth-child(n + 3) {
@@ -55,27 +58,18 @@
   opacity: 1;
 }
 .style-row {
-  padding: 8px 0;
+  min-height: 30px;
+  padding: 3px 0;
   border-bottom: 1px solid var(--border-subtle);
 }
-.style-row:last-child {
+.style-row:last-of-type {
   border-bottom: 0;
-}
-.style-name {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-.style-name small,
-.readout small {
-  color: var(--text-secondary);
-  font-size: 10px;
-  line-height: 1.3;
 }
 .style-link {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
   padding: 0;
   border: 0;
   background: none;
@@ -84,7 +78,13 @@
   font-size: 12px;
   font-weight: 600;
   text-align: left;
+  white-space: nowrap;
   cursor: pointer;
+}
+.style-link small {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 400;
 }
 .style-link:hover,
 .style-link:focus-visible {
@@ -100,11 +100,11 @@ h4 i,
 }
 .tracks {
   display: grid;
-  gap: 5px;
+  gap: 3px;
 }
 .track {
   display: block;
-  height: 6px;
+  height: 4px;
   overflow: hidden;
   border-radius: 2px;
   background: var(--surface-2);
@@ -115,55 +115,139 @@ h4 i,
   background: color-mix(in srgb, var(--text-secondary) 45%, transparent);
 }
 .readout {
-  display: grid;
-  justify-items: end;
-  gap: 2px;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 5px;
   font-variant-numeric: tabular-nums;
 }
 .readout strong {
-  font-size: 16px;
+  font-size: 13px;
+  font-weight: 650;
+}
+.readout small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.ratio {
+  font-size: 13px;
+  font-weight: 650;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ratio.over {
+  color: var(--accent-success);
+}
+.ratio.under {
+  color: var(--accent-warning);
+}
+.ratio.even {
+  color: var(--text-secondary);
+}
+/* Rates from too few races stay readable but step back from the measured ones. */
+.strategy .few {
+  color: var(--text-muted);
+}
+
+/* Room compositions: one column per style, coloured by how many of that style shared the room. */
+.room-head,
+.room-row {
+  display: grid;
+  grid-template-columns: repeat(var(--styles), minmax(34px, 1fr)) 64px minmax(56px, 1.2fr);
+  align-items: center;
+  gap: 3px;
+}
+.room-head {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 10px;
   font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.025em;
+  text-align: center;
+}
+.room-head > span:nth-last-child(-n + 2) {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.room-head > span:nth-last-child(2) {
+  text-align: right;
+}
+.room-head > span:last-child {
+  text-align: left;
+  padding-left: 8px;
+}
+.room-row {
+  padding: 2px 0;
+}
+.room-row.average {
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+.count {
+  padding: 3px 0;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.count.none {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.races {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.average .races {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.races small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.winners {
+  display: flex;
+  gap: 1px;
+  height: 8px;
+  margin-left: 8px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-2);
+}
+.winners > i {
+  flex-basis: 0;
 }
 
 .representatives {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 20px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px 16px;
 }
 h4 {
   display: flex;
   align-items: center;
   gap: 7px;
-  margin: 0 0 4px;
+  margin: 0 0 2px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--border-subtle);
   font-size: 12px;
   font-weight: 600;
 }
-.representative-head,
 .representative {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 48px 44px;
+  grid-template-columns: 20px minmax(0, 1fr) 34px 44px;
   align-items: center;
-  gap: 8px;
-}
-.representative-head {
-  padding: 2px 0 4px;
-  color: var(--text-secondary);
-  font-size: 10px;
-}
-.representative-head > span:first-child {
-  grid-column: 1/3;
-}
-.representative-head > span:not(:first-child) {
-  text-align: right;
-}
-.representative {
+  gap: 6px;
   width: 100%;
-  min-height: 34px;
-  padding: 3px 4px 3px 0;
+  min-height: 26px;
+  padding: 2px 2px 2px 0;
   border: 0;
-  border-top: 1px solid var(--border-subtle);
   background: none;
   color: var(--text-primary);
   font: inherit;
@@ -176,8 +260,8 @@ h4 {
   background: var(--color-accent-soft);
 }
 .representative :global(.art) {
-  width: 24px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   border: 0;
   background: transparent;
 }
@@ -195,8 +279,8 @@ h4 {
   font-weight: 600;
 }
 .representative small {
-  color: var(--text-secondary);
-  font-size: 11px;
+  color: var(--text-muted);
+  font-size: 10px;
 }
 .empty {
   margin: 0;
@@ -209,7 +293,7 @@ h4 {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 26px;
+  min-height: 22px;
   padding: 0;
   border: 0;
   background: none;
@@ -248,9 +332,9 @@ h4 {
 .rate-bar {
   position: relative;
   flex: 1;
-  max-width: 160px;
-  min-width: 64px;
-  height: 6px;
+  max-width: 140px;
+  min-width: 56px;
+  height: 5px;
   overflow: hidden;
   border-radius: 2px;
   background: var(--surface-2);
@@ -269,10 +353,7 @@ h4 {
   background: var(--text-primary);
 }
 .footnote {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-  font-size: 10px;
-  line-height: 1.6;
+  padding-top: 6px;
 }
 
 @container session-strategy (max-width: 1080px) {
@@ -280,12 +361,15 @@ h4 {
   .lower {
     grid-template-columns: minmax(0, 1fr);
   }
+  .representatives {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @container session-strategy (max-width: 520px) {
   .breakdown-key,
   .style-row {
-    grid-template-columns: minmax(0, 1fr) 64px 64px;
-    gap: 6px 10px;
+    grid-template-columns: minmax(0, 1fr) 78px 44px;
+    gap: 4px 10px;
   }
   .track-key,
   .tracks {

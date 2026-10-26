@@ -1,19 +1,43 @@
 <script lang="ts">
   import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import type { MultiRaceAnalysis } from '@/lib/race/multi-race-analysis';
-  import { formatRaceTime, runningStyleName } from '@/lib/race/replay/race-display';
+  import { formatRaceTime, ordinalPlace, runningStyleName } from '@/lib/race/replay/race-display';
   import Button from '@/components/controls/Button.svelte';
-  import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
+  import DataTable from '@/components/data/DataTable.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import Icon from '@/components/Icon.svelte';
   import RunnerReference from '../../runners/RunnerReference.svelte';
-  import { histogram, percent, portrait, rate, score, styleColors } from '../../analysis-view';
+  import FindingSentence, { type FindingPart } from '../FindingSentence.svelte';
+  import SessionKpis from '../SessionKpis.svelte';
+  import { portrait, rate, styleColors } from '../../analysis-view';
   import {
-    chartInk,
+    compositionKpi,
+    playerKpi,
+    rateClass,
+    styleKpi,
+    umaKpi,
+    type SessionKpi
+  } from '../session-kpis';
+  import {
+    formatRate,
+    gateRecords,
+    isSmallSample,
+    playerRecord,
+    raceSummaries,
+    scoreSummary,
+    sessionBaseline,
+    SMALL_SAMPLE,
+    standoutComposition,
+    standoutUma,
+    styleShares,
+    styleStandouts
+  } from '../session-insights';
+  import {
+    chartColors,
+    metricHelp,
     sessionChart,
-    sessionFeats,
     umaStyleMix,
     type SessionComposition,
     type SessionEntry,
@@ -26,39 +50,74 @@
     analysis: MultiRaceAnalysis;
     captures: ParsedRaceCapture[];
     entries: SessionEntry[];
-    winners: SessionEntry[];
     compositions: SessionComposition[];
     onview: (view: SessionView) => void;
     onteams: (filter: TeamFilter) => void;
     onuma: (key: string) => void;
     oninspect: (members: RaceRunner[], title: string, race: number) => void;
+    onreplay?: (race: number, runner?: number) => void;
   }
 
   let {
     analysis,
     captures,
     entries,
-    winners,
     compositions,
     onview,
     onteams,
     onuma,
-    oninspect
+    oninspect,
+    onreplay
   }: Props = $props();
 
   const LISTED = 6;
 
-  let scorePopulation = $state('all');
+  const colors = $derived(chartColors($theme === 'dark'));
+  const baseline = $derived(sessionBaseline(analysis));
+  const player = $derived(playerRecord(captures));
+  const shares = $derived(styleShares(analysis));
+  const standouts = $derived(styleStandouts(shares));
+  const topUma = $derived(standoutUma(analysis));
+  const topComposition = $derived(standoutComposition(compositions));
 
-  const ink = $derived(chartInk($theme === 'dark'));
-  const styles = $derived(analysis.strategies.filter((row) => row.strategy > 0));
+  const kpis = $derived.by(() => {
+    const list: SessionKpi[] = [];
+    const strongest = standouts.strongest,
+      uma = topUma,
+      composition = topComposition;
 
-  /** Field and win shares use one scale so a style's two bars compare directly. */
+    if (player)
+      list.push(
+        playerKpi(player, baseline, { label: 'Your teams', onselect: () => onteams({ own: true }) })
+      );
+
+    if (strongest)
+      list.push(
+        styleKpi(strongest, 'Best running style', {
+          label: 'Strategy',
+          onselect: () => onview('strategy')
+        })
+      );
+
+    if (uma)
+      list.push(
+        umaKpi(uma, baseline, 'Top Uma', { label: 'Umas', onselect: () => onuma(uma.key) })
+      );
+
+    if (composition)
+      list.push(
+        compositionKpi(composition, baseline, {
+          label: 'Teams',
+          onselect: () => onteams({ composition: composition.key })
+        })
+      );
+
+    return list;
+  });
+
+  /** Field and win shares use one scale, so a style's bar and its field-share tick compare directly. */
   const styleScale = $derived(
-    Math.max(
-      1,
-      ...styles.flatMap((row) => [rate(row.races, entries.length), rate(row.wins, captures.length)])
-    )
+    Math.max(1, ...shares.flatMap((row) => [row.fieldShare, row.winShare]))
   );
   const styleMix = $derived(umaStyleMix(analysis));
   const popularUmas = $derived(
@@ -69,25 +128,54 @@
     [...compositions].sort((a, b) => b.appearances - a.appearances).slice(0, LISTED)
   );
 
-  const times = $derived(histogram(winners.map((entry) => entry.runner.result!.finishTime)));
-  const scores = $derived(
-    histogram(
-      (scorePopulation === 'winners' ? winners : entries)
-        .map((entry) => score(entry.runner))
-        .filter((value) => value > 0)
-    )
+  const races = $derived(raceSummaries(captures));
+  const raceRows = $derived(
+    races.map((summary) => ({
+      id: summary.race,
+      race: summary.race + 1,
+      winner: summary.winner.name,
+      time: summary.time,
+      margin: summary.margin ?? '—',
+      best: summary.playerBest ?? '—',
+      replay: ''
+    }))
   );
 
-  const gateCount = $derived(Math.max(0, ...captures.map((capture) => capture.runners.length)));
-  const gateWinRates = $derived(
-    Array.from({ length: gateCount }, (_, gate) => {
-      const starts = entries.filter((entry) => entry.runner.index === gate).length;
-      const wins = winners.filter((entry) => entry.runner.index === gate).length;
-      return +rate(wins, starts).toFixed(1);
-    })
+  const scores = $derived(scoreSummary(entries));
+  const scoreTakeaway = $derived.by((): FindingPart[] => {
+    if (!scores) return [];
+
+    const gap = Math.round(scores.winnerAverage - scores.fieldAverage);
+    return [
+      'Winners averaged ',
+      { text: Math.round(scores.winnerAverage).toLocaleString() },
+      ', ',
+      { text: Math.abs(gap).toLocaleString() },
+      (gap >= 0 ? ' above' : ' below') + ' the field’s ',
+      { text: Math.round(scores.fieldAverage).toLocaleString() },
+      '.'
+    ];
+  });
+
+  const gates = $derived(gateRecords(entries));
+  const gateStarts = $derived(Math.max(1, ...gates.map((gate) => gate.starts)));
+  const bestGate = $derived(
+    [...gates].sort((a, b) => b.wins - a.wins || a.gate - b.gate).find((gate) => gate.wins > 0)
   );
 
-  const feats = $derived(sessionFeats(winners));
+  const gateTakeaway = $derived.by((): FindingPart[] => {
+    if (!bestGate) return [];
+
+    return [
+      'Gate ',
+      { text: String(bestGate.gate) },
+      ' won most often: ',
+      { text: bestGate.wins + ' of ' + bestGate.starts },
+      ' starts. Blue bars beat the neutral ',
+      { text: formatRate(baseline.uma) },
+      ' (dashed).'
+    ];
+  });
 </script>
 
 {#snippet viewLink(label: string, target: SessionView)}
@@ -106,87 +194,87 @@
 {/snippet}
 
 <div class="overview">
+  <SessionKpis
+    label="Session at a glance"
+    {kpis}
+  />
   <div class="glance">
     <ChartFrame
       plain
       surface
       id="session-overview-styles"
       title="Running styles"
-      description="Share of runner entries and share of race wins."
+      description="Wins against field share"
     >
       {#snippet actions()}
         {@render viewLink('Strategy', 'strategy')}
       {/snippet}
       <div class="column-head styles">
-        <span>Style · entries</span>
+        <span>Style</span>
+        <span>Bar: wins · tick: field</span>
         <span>Field</span>
         <span>Wins</span>
       </div>
-      {#each styles as row (row.strategy)}
+      {#each shares as row (row.style)}
         <button
           class="overview-row styles"
-          aria-label={'Find ' + runningStyleName(row.strategy) + ' teams'}
-          onclick={() => onteams({ style: String(row.strategy) })}
+          aria-label={'Find ' + runningStyleName(row.style) + ' teams'}
+          title={row.entries + ' entries · ' + row.wins + ' wins'}
+          onclick={() => onteams({ style: String(row.style) })}
         >
-          <span class="style-name">
-            <span class="style-label">
-              <i style:background={styleColors[row.strategy]}></i>
-              {runningStyleName(row.strategy)}
-            </span>
-            <small>{row.races} entries · {percent(row.wins, row.races)} win rate</small>
+          <span
+            class="style-label"
+            style:color={styleColors[row.style]}
+          >
+            <i style:background={styleColors[row.style]}></i>
+            {runningStyleName(row.style)}
           </span>
-          <span>{percent(row.races, entries.length)}</span>
-          <strong>{percent(row.wins, captures.length)}</strong>
-          <span class="share-pair">
-            <span class="share-track">
-              <i
-                class="field-share"
-                style:width={(rate(row.races, entries.length) / styleScale) * 100 + '%'}
-              ></i>
-            </span>
-            <span class="share-track">
-              <i
-                style:width={(rate(row.wins, captures.length) / styleScale) * 100 + '%'}
-                style:background={styleColors[row.strategy]}
-              ></i>
-            </span>
+          <span class="share-track win-share">
+            <i
+              style:width={(row.winShare / styleScale) * 100 + '%'}
+              style:background={styleColors[row.style]}
+            ></i>
+            <b
+              class="field-mark"
+              style:left={(row.fieldShare / styleScale) * 100 + '%'}
+            ></b>
           </span>
+          <span class="number">{formatRate(row.fieldShare)}</span>
+          <strong class="number">{formatRate(row.winShare)}</strong>
         </button>
       {/each}
-      <p class="footnote">
-        Grey bars are field share, coloured bars win share. Select a style to find its teams.
-      </p>
+      <p class="footnote">A bar past its tick: the style won more than its share of the field.</p>
     </ChartFrame>
     <ChartFrame
       plain
       surface
       id="session-overview-umas"
       title="Most entered Umas"
-      description="Ranked by share of runner entries."
+      description="Share of runner entries"
     >
       {#snippet actions()}
         {@render viewLink('All Umas', 'umas')}
       {/snippet}
-      <div class="column-head">
-        <span>Uma · entries</span>
-        <span>Field share</span>
+      <div class="column-head umas">
+        <span>Uma</span>
+        <span>Styles run</span>
+        <span>Wins</span>
+        <span>Field</span>
       </div>
       {#each popularUmas as uma (uma.key)}
         <button
-          class="overview-row uma"
+          class="overview-row umas"
           aria-label={'Inspect ' + uma.name}
           onclick={() => onuma(uma.key)}
         >
-          <Artwork
-            src={portrait(uma.cardId)}
-            alt=""
-            size="sm"
-          />
           <span class="uma-name">
-            <strong>{uma.name}</strong>
-            <small>{uma.races} entries · {percent(uma.wins, uma.races)} win rate</small>
+            <Artwork
+              src={portrait(uma.cardId)}
+              alt=""
+              size="xs"
+            />
+            {uma.name}
           </span>
-          <strong>{percent(uma.races, entries.length)}</strong>
           <span class="share-track">
             {#each styleMix.get(uma.key) ?? [] as part (part.strategy)}
               <i
@@ -196,27 +284,36 @@
               ></i>
             {/each}
           </span>
+          <span
+            class="number"
+            class:few={isSmallSample(uma.races)}
+          >
+            {uma.wins}/{uma.races}
+          </span>
+          <strong class="number">{formatRate(rate(uma.races, entries.length))}</strong>
         </button>
       {/each}
-      <p class="footnote">Bar colours show the running styles each Uma ran.</p>
     </ChartFrame>
     <ChartFrame
       plain
       surface
       id="session-overview-teams"
-      title="Common team compositions"
-      description="Ranked by team appearances."
+      title="Common team styles"
+      description={baseline.team === undefined
+        ? 'Most raced lineups'
+        : 'Most raced lineups · even is ' + formatRate(baseline.team)}
     >
       {#snippet actions()}
         {@render viewLink('All teams', 'teams')}
       {/snippet}
-      <div class="column-head">
-        <span>Composition</span>
-        <span>Team wins</span>
+      <div class="column-head teams">
+        <span>Lineup</span>
+        <span>Wins</span>
+        <span>Rate</span>
       </div>
       {#each commonCompositions as composition (composition.key)}
         <button
-          class="overview-row team"
+          class="overview-row teams"
           aria-label={'Find ' +
             composition.styles.map((id) => runningStyleName(id)).join(' / ') +
             ' teams'}
@@ -224,17 +321,28 @@
         >
           <span class="team-styles">
             {#each composition.styles as id, index (index)}
-              <span>
+              <span style:color={styleColors[id]}>
                 <i style:background={styleColors[id]}></i>
-                {runningStyleName(id)}
+                {runningStyleName(id, true)}
               </span>
             {/each}
-            <small>{composition.appearances} team races · {composition.wins} wins</small>
           </span>
-          <strong>{percent(composition.wins, composition.appearances)}</strong>
+          <span class="number">{composition.wins}/{composition.appearances}</span>
+          <strong
+            class={[
+              'number',
+              rateClass(
+                rate(composition.wins, composition.appearances),
+                composition.appearances,
+                baseline.team
+              )
+            ]}
+          >
+            {formatRate(rate(composition.wins, composition.appearances))}
+          </strong>
         </button>
       {/each}
-      <p class="footnote">Select a composition to see its captured teams.</p>
+      <p class="footnote">Muted: fewer than {SMALL_SAMPLE} races.</p>
     </ChartFrame>
   </div>
   <div class="results">
@@ -242,123 +350,201 @@
       plain
       surface
       compact
-      expandable
-      maximize
-      id="winning-times"
-      title="Winning times"
-      description="Finish times of each race winner."
+      id="session-races"
+      title="Race by race"
+      description={player
+        ? 'Winner, your best finish and the margin · select a winner for the build'
+        : 'Winner and margin · select a winner for the build'}
     >
-      <LazyEChartsSurface
-        height={170}
-        label="Winning time distribution"
-        option={sessionChart(
-          ink,
-          [
-            {
-              type: 'bar',
-              data: times.counts,
-              itemStyle: { color: '#69b7ee', borderRadius: [3, 3, 0, 0] }
-            }
-          ],
-          { type: 'category', data: times.labels.map((value) => formatRaceTime(value, 2)) }
-        )}
-      />
+      <DataTable
+        plain
+        compact
+        caption="Session race winners"
+        columnHelp={metricHelp}
+        maxHeight={312}
+        rows={raceRows}
+        sortKey="race"
+        sortDirection="ascending"
+        columns={[
+          { key: 'race', label: 'Race', numeric: true },
+          { key: 'winner', label: 'Winner' },
+          ...(player ? [{ key: 'best', label: 'Your best', numeric: true }] : []),
+          { key: 'time', label: 'Winning time', numeric: true },
+          { key: 'margin', label: 'Margin', numeric: true },
+          ...(onreplay ? [{ key: 'replay', label: 'Replay', sortable: false }] : [])
+        ]}
+      >
+        {#snippet cell(row, column)}
+          {@const summary = races.find((item) => item.race === row.id)}
+          {#if !summary}
+            {row[column.key]}
+          {:else if column.key === 'winner'}
+            <button
+              class="winner"
+              aria-label={'Inspect ' + summary.winner.name + ', race ' + row.race + ' winner'}
+              onclick={() => oninspect([summary.winner], summary.winner.name, summary.race)}
+            >
+              <RunnerReference
+                name={summary.winner.name}
+                cardId={summary.winner.cardId}
+                detail={runningStyleName(summary.winner.result?.runningStyle)}
+                detailColor={styleColors[summary.winner.result?.runningStyle ?? 0]}
+                compact
+              />
+            </button>
+          {:else if column.key === 'time'}
+            {formatRaceTime(summary.time)}
+          {:else if column.key === 'margin'}
+            {summary.margin === undefined ? '—' : '+' + summary.margin.toFixed(2) + ' s'}
+          {:else if column.key === 'best'}
+            {#if summary.playerBest === undefined}
+              —
+            {:else}
+              <span
+                class="place"
+                class:won={summary.playerBest === 1}
+              >
+                {ordinalPlace(summary.playerBest)}
+              </span>
+            {/if}
+          {:else if column.key === 'replay' && onreplay}
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="race"
+              ariaLabel={'Watch race ' + row.race}
+              onclick={() => onreplay(summary.race, summary.winner.index)}
+            >
+              Watch
+            </Button>
+          {:else}
+            {row[column.key]}
+          {/if}
+        {/snippet}
+      </DataTable>
     </ChartFrame>
-    <ChartFrame
-      plain
-      surface
-      compact
-      expandable
-      maximize
-      id="score-distribution"
-      title="Training scores"
-      description="Rated scores in the field."
-      state={scores.counts.length ? 'ready' : 'empty'}
-      emptyDetail="Training scores were not included in these captures."
-    >
-      {#snippet actions()}
-        <SegmentedControl
-          compact
-          options={[
-            { value: 'all', label: 'All' },
-            { value: 'winners', label: 'Winners' }
-          ]}
-          bind:value={scorePopulation}
-          label="Score population"
+    <div class="factors">
+      <ChartFrame
+        plain
+        surface
+        compact
+        expandable
+        maximize
+        id="score-distribution"
+        title="Training score"
+        description="Winners against the whole field"
+        legend={[
+          { label: 'Field', color: colors.muted },
+          { label: 'Winners', color: colors.accent }
+        ]}
+        state={scores ? 'ready' : 'empty'}
+        emptyDetail="Training scores were not included in these captures."
+      >
+        {#if scores}
+          <p class="takeaway"><FindingSentence parts={scoreTakeaway} /></p>
+          <LazyEChartsSurface
+            height={118}
+            label="Training score distribution of the field and the winners"
+            option={sessionChart(
+              colors.ink,
+              [
+                {
+                  name: 'Field',
+                  type: 'bar',
+                  data: scores.field.map((value) => +value.toFixed(1)),
+                  itemStyle: { color: colors.muted, borderRadius: [2, 2, 0, 0] }
+                },
+                {
+                  name: 'Winners',
+                  type: 'bar',
+                  data: scores.winners.map((value) => +value.toFixed(1)),
+                  itemStyle: { color: colors.accent, borderRadius: [2, 2, 0, 0] }
+                }
+              ],
+              {
+                type: 'category',
+                data: scores.bins.map((value) => (value / 1000).toFixed(1) + 'k')
+              },
+              {
+                type: 'value',
+                axisLabel: { fontSize: 10, color: colors.ink, formatter: '{value}%' }
+              },
+              { tooltip: { trigger: 'axis', valueFormatter: (value: number) => value + '%' } }
+            )}
+          />
+        {/if}
+      </ChartFrame>
+      <ChartFrame
+        plain
+        surface
+        compact
+        expandable
+        maximize
+        id="gate-results"
+        title="Starting gate"
+        description={'Win rate by gate · one win moves a gate ' + formatRate(100 / gateStarts)}
+      >
+        {#if bestGate}
+          <p class="takeaway"><FindingSentence parts={gateTakeaway} /></p>
+        {/if}
+        <LazyEChartsSurface
+          height={118}
+          label="Win rate by starting gate"
+          option={sessionChart(
+            colors.ink,
+            [
+              {
+                name: 'Win rate',
+                type: 'bar',
+                data: gates.map((gate) => {
+                  const winRate = rate(gate.wins, gate.starts);
+                  return {
+                    value: +winRate.toFixed(1),
+                    itemStyle: {
+                      color: winRate > baseline.uma ? colors.accent : colors.muted,
+                      borderRadius: [2, 2, 0, 0]
+                    }
+                  };
+                }),
+                markLine: {
+                  silent: true,
+                  symbol: 'none',
+                  lineStyle: { type: 'dashed', color: colors.ink, opacity: 0.7 },
+                  label: { show: false },
+                  data: [{ yAxis: +baseline.uma.toFixed(1) }]
+                }
+              }
+            ],
+            { type: 'category', data: gates.map((gate) => String(gate.gate)), name: 'Gate' },
+            {
+              type: 'value',
+              axisLabel: { fontSize: 10, color: colors.ink, formatter: '{value}%' }
+            },
+            {
+              tooltip: {
+                trigger: 'axis',
+                formatter: (items: { dataIndex: number }[]) => {
+                  const gate = gates[items[0]?.dataIndex ?? -1];
+                  if (!gate) return '';
+
+                  return (
+                    'Gate ' +
+                    gate.gate +
+                    '<br>' +
+                    gate.wins +
+                    ' wins from ' +
+                    gate.starts +
+                    ' starts (' +
+                    formatRate(rate(gate.wins, gate.starts)) +
+                    ')'
+                  );
+                }
+              }
+            }
+          )}
         />
-      {/snippet}
-      <LazyEChartsSurface
-        height={170}
-        label="Training score distribution"
-        option={sessionChart(
-          ink,
-          [
-            {
-              type: 'bar',
-              data: scores.counts,
-              itemStyle: { color: '#7bc8a0', borderRadius: [3, 3, 0, 0] }
-            }
-          ],
-          { type: 'category', data: scores.labels.map((value) => (value / 1000).toFixed(1) + 'k') }
-        )}
-      />
-    </ChartFrame>
-    <ChartFrame
-      plain
-      surface
-      compact
-      expandable
-      maximize
-      id="gate-results"
-      title="Gate win rate"
-      description="Wins from each starting gate."
-    >
-      <LazyEChartsSurface
-        height={170}
-        label="Win rate by gate"
-        option={sessionChart(
-          ink,
-          [
-            {
-              type: 'bar',
-              data: gateWinRates,
-              itemStyle: { color: '#e8ad63', borderRadius: [3, 3, 0, 0] }
-            }
-          ],
-          {
-            type: 'category',
-            data: gateWinRates.map((_, gate) => String(gate + 1))
-          },
-          { type: 'value', axisLabel: { fontSize: 10, color: ink, formatter: '{value}%' } }
-        )}
-      />
-    </ChartFrame>
-    <ChartFrame
-      plain
-      surface
-      compact
-      id="session-highlights"
-      title="Notable winners"
-      description="Select a winner to inspect the build."
-    >
-      <div class="highlights">
-        {#each feats as feat (feat.label)}
-          <button
-            class="highlight"
-            aria-label={'Inspect ' + feat.entry.runner.name + ', ' + feat.label}
-            onclick={() => oninspect([feat.entry.runner], feat.entry.runner.name, feat.entry.race)}
-          >
-            <span class="highlight-label">{feat.label}</span>
-            <RunnerReference
-              name={feat.entry.runner.name}
-              cardId={feat.entry.runner.cardId}
-              compact
-            />
-            <strong>{feat.value}</strong>
-          </button>
-        {/each}
-      </div>
-    </ChartFrame>
+      </ChartFrame>
+    </div>
   </div>
 </div>
 

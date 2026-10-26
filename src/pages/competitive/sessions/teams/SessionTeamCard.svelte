@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { runningStyleName } from '@/lib/race/replay/race-display';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
+  import Artwork from '@/components/game/Artwork.svelte';
+  import StatStrip from '@/components/game/StatStrip.svelte';
   import Button from '@/components/controls/Button.svelte';
-  import RunnerLineupRow from '../../runners/RunnerLineupRow.svelte';
-  import { percent, styleColors } from '../../analysis-view';
-  import type { SessionTeam } from '../session-statistics';
+  import { identity, percent, stats, styleColors } from '../../analysis-view';
+  import { isSmallSample } from '../session-insights';
+  import { isPlayerTeam, type SessionTeam } from '../session-statistics';
 
-  /** One captured team build in CM Data's team card: the lineup, its members' builds and its record. */
+  /** One captured team build: its record in the header, then one line per member build. */
   let {
     team,
     position,
@@ -19,6 +21,30 @@
   } = $props();
 </script>
 
+{#snippet member(runner: RaceRunner)}
+  {@const summary = identity(runner)}
+  <li class="member">
+    <Artwork
+      src={summary.image}
+      alt=""
+      size="xs"
+    />
+    <h3 title={runner.name}>{runner.name}</h3>
+    <span
+      class="style"
+      style:color={styleColors[runner.result?.runningStyle ?? 0]}
+    >
+      {summary.detail}
+    </span>
+    <StatStrip
+      items={stats(runner)}
+      presentation="values"
+      compact
+      label={runner.name + ' build stats'}
+    />
+  </li>
+{/snippet}
+
 <article
   class="team-card"
   aria-label={'Team ' + position}
@@ -29,57 +55,43 @@
     onclick={oninspect}
   ></button>
   <header class="team-heading">
-    <div>
-      <span class="team-number">#{position}</span>
-      <span class="lineup">
-        {#each team.members as runner, index (runner.index)}
-          {#if index}
-            <span class="slash">/</span>
-          {/if}
-          <span style:color={styleColors[runner.result?.runningStyle ?? 0]}>
-            {runningStyleName(runner.result?.runningStyle, true)}
-          </span>
-        {/each}
-      </span>
-    </div>
-    <div class="team-rate">
+    <span class="team-number">#{position}</span>
+    {#if isPlayerTeam(team)}
+      <span class="own-team">Your team</span>
+    {/if}
+    <span
+      class="trainer"
+      title={team.trainer}
+    >
+      {team.trainer}
+    </span>
+    <span
+      class="team-rate"
+      class:few={isSmallSample(team.appearances)}
+      title={'Won ' + team.wins + ' of ' + team.appearances + ' races with any member'}
+    >
       <strong>{percent(team.wins, team.appearances)}</strong>
-      <span>team wins</span>
-    </div>
-  </header>
-  <div class="members">
-    {#each team.members as runner (runner.index)}
-      <RunnerLineupRow
-        {runner}
-        color={styleColors[runner.result?.runningStyle ?? 0]}
-      />
-    {/each}
-  </div>
-  <footer class="team-results">
-    <dl>
-      <div>
-        <dt>Trainer</dt>
-        <dd title={team.trainer}>{team.trainer}</dd>
-      </div>
-      <div>
-        <dt>Record</dt>
-        <dd>{team.wins} of {team.appearances} races</dd>
-      </div>
-    </dl>
+      {team.wins}/{team.appearances}
+    </span>
     {#if onreplay}
-      <div class="team-actions">
+      <span class="team-actions">
         <Button
           size="sm"
-          variant="secondary"
+          variant="ghost"
           icon="race"
           ariaLabel={'Watch a race with team ' + position}
           onclick={onreplay}
         >
-          Watch race
+          Watch
         </Button>
-      </div>
+      </span>
     {/if}
-  </footer>
+  </header>
+  <ul class="members">
+    {#each team.members as runner (runner.index)}
+      {@render member(runner)}
+    {/each}
+  </ul>
 </article>
 
 <style>

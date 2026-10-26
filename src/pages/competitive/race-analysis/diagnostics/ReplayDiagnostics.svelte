@@ -19,6 +19,7 @@
     distance,
     blocking,
     overview,
+    notice,
     onseek,
     onselect
   }: {
@@ -28,6 +29,8 @@
     distance: number;
     blocking?: Snippet;
     overview?: Snippet;
+    /** Replaces the recorded-data note while there is no detailed simulation for this runner. */
+    notice?: Snippet;
     onseek: (time: number) => void;
     onselect: (index: number) => void;
   } = $props();
@@ -54,67 +57,89 @@
   class="diagnostics"
   aria-label={(runner?.name ?? 'Runner') + ' detailed diagnostics'}
 >
-  {#if overview}
-    <div class="runner-overview">
-      {@render overview()}<DiagnosticsOutcomeSummary
+  {#snippet report()}
+    <div class="report-grid">
+      <DiagnosticsSkills
         {capture}
         {index}
         {horse}
+        {skillNames}
+        {onseek}
       />
+      {#if horse}
+        <div class="behaviour-report">
+          <DiagnosticsModes
+            {capture}
+            {horse}
+            {onseek}
+            bind:expandedMode
+          />
+          {#if spurt}
+            <DiagnosticsSpurt
+              bind:spurtOpen
+              id={instanceId}
+              {spurt}
+              {capture}
+              {index}
+              {horse}
+              {skillNames}
+              {onseek}
+              {onselect}
+            />
+          {/if}
+          {#if blocking}
+            <div class="blocking-summary">{@render blocking()}</div>
+          {/if}
+          <div class="incident-status">
+            {#if !hpRows.length}
+              <span>No recovery or HP debuffs</span>
+            {/if}
+            {#if !horse.temptationDecision && !rushing.length}
+              <span>No rushing</span>
+            {/if}
+          </div>
+        </div>
+      {:else if blocking}
+        <div class="blocking-summary">{@render blocking()}</div>
+      {/if}
+    </div>
+  {/snippet}
+
+  {#if overview}
+    <div class="runner-overview">
+      {@render overview()}
+      {#if horse}
+        <DiagnosticsOutcomeSummary
+          {capture}
+          {index}
+          {horse}
+          {notice}
+        />
+      {:else}
+        <!-- Without detailed simulation the notice is short, so the skills fill the space beside the card. -->
+        <div class="recorded-side">
+          <DiagnosticsOutcomeSummary
+            {capture}
+            {index}
+            {horse}
+            {notice}
+          />
+          {@render report()}
+        </div>
+      {/if}
     </div>
   {:else}
     <DiagnosticsOutcomeSummary
       {capture}
       {index}
       {horse}
+      {notice}
     />
   {/if}
 
-  <div class="report-grid">
-    <DiagnosticsSkills
-      {capture}
-      {index}
-      {horse}
-      {skillNames}
-      {onseek}
-    />
-    {#if horse}
-      <div class="behaviour-report">
-        <DiagnosticsModes
-          {capture}
-          {horse}
-          {onseek}
-          bind:expandedMode
-        />
-        {#if spurt}
-          <DiagnosticsSpurt
-            bind:spurtOpen
-            id={instanceId}
-            {spurt}
-            {capture}
-            {index}
-            {horse}
-            {skillNames}
-            {onseek}
-            {onselect}
-          />
-        {/if}
-        {#if blocking}
-          <div class="blocking-summary">{@render blocking()}</div>
-        {/if}
-        <div class="incident-status">
-          {#if !hpRows.length}
-            <span>No recovery or HP debuffs</span>
-          {/if}
-          {#if !horse.temptationDecision && !rushing.length}
-            <span>No rushing</span>
-          {/if}
-        </div>
-      </div>
-    {:else if blocking}
-      <div class="blocking-summary">{@render blocking()}</div>
-    {/if}
-  </div>
+  {#if horse || !overview}
+    {@render report()}
+  {/if}
   {#if horse}
     <div
       class="measurements"

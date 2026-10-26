@@ -168,9 +168,7 @@ test('session resimulation requires browser verification when signed in and repo
   );
 
   await openRaceSection(page, 'Session analysis');
-  await expect(page.locator('.session-simulation')).toContainText(
-    '2 / 2 races with detailed simulation'
-  );
+  await expect(page.locator('.session-totals .resimulated dd')).toHaveText('2 / 2');
   expect(calls).toBe(2);
   await expect(page.getByRole('button', { name: 'Detailed simulation', exact: true })).toHaveCount(
     0
@@ -191,7 +189,7 @@ test('session resimulation requires browser verification when signed in and repo
   expect(envelope).toContain('frames.distance');
   expect(envelope).not.toContain('test-jwt');
   expect(envelope).not.toContain('redact-original-credential');
-  await page.getByRole('button', { name: 'Detailed analysis', exact: true }).click();
+  await sessionTab(page, 'Runners').click();
   const session = page.getByRole('table', { name: 'Session detailed race results', exact: true });
   await expect(session).toContainText('850');
   await expect(session).toContainText('85.0%');
@@ -271,7 +269,7 @@ test('session resimulation requires browser verification when signed in and repo
   await expect(page.locator('.capture-summary')).toContainText('Detailed resimulation');
   await openRaceSection(page, 'Session analysis');
   await page.getByRole('button', { name: 'Show session Downhill periods', exact: true }).click();
-  await page.getByRole('button', { name: 'Race 1: 0.250–1.000 s ↗', exact: true }).click();
+  await page.getByRole('button', { name: 'Race 1: 0.250–1.000 s', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Race', exact: true })).toContainText(
     '1. first.json'
   );
@@ -282,7 +280,7 @@ test('session resimulation requires browser verification when signed in and repo
   );
 });
 
-test('CM combines individual captured runners into an editable custom team', async ({
+test('CM builds a lobby from captured teams and single runners, then races it', async ({
   page
 }, info) => {
   await page.route('https://hakuraku.moe/api/simdata/**', async (route) => {
@@ -321,118 +319,48 @@ test('CM combines individual captured runners into an editable custom team', asy
   });
 
   await page.goto('/competitive/cm-data?tab=archetypes');
-  const cards = page.locator('.team-row'),
-    tray = page.getByRole('region', { name: 'Custom team selection', exact: true });
-
+  const cards = page.locator('.team-row');
+  const lobby = page.getByRole('complementary', { name: 'Lobby', exact: true });
   await expect(cards.first()).toBeVisible();
-  await expect(page.getByRole('checkbox', { name: 'Build a team', exact: true })).not.toBeChecked();
-  await expect(cards.first().locator('.runner-toggle')).toHaveCount(3);
-  await cards.first().locator('.runner-toggle').first().click();
-  await expect(tray).toContainText('Build a team · 1/3');
-  await expect(page.getByRole('checkbox', { name: 'Build a team', exact: true })).toBeChecked();
-  await cards.first().locator('.runner-toggle').first().click();
-  await page.getByRole('checkbox', { name: 'Build a team', exact: true }).uncheck();
-  await cards.first().screenshot({ path: info.outputPath('cm-list-single-picks.png') });
-  await cards.first().getByRole('button', { name: 'Details', exact: true }).click();
+  await expect(lobby).toHaveCount(0);
+
+  // A whole team fills the first lobby team; single runners fill the next free places.
+  await cards.first().getByRole('button', { name: 'Add team 1 to the lobby', exact: true }).click();
+  await expect(lobby).toContainText('3/9 Uma');
+  await expect(cards.first().locator('.lobby-toggle [aria-pressed="true"]')).toHaveCount(3);
+  await cards
+    .nth(1)
+    .getByRole('button', { name: /^Add .+ to the lobby$/ })
+    .first()
+    .click();
+  await expect(lobby).toContainText('4/9 Uma');
+
+  await page.getByRole('button', { name: 'View team 2 details', exact: true }).click();
   const detail = page.getByRole('dialog', { name: 'Team details', exact: true });
-  await expect(
-    detail.getByRole('checkbox', { name: 'Build a team', exact: true })
-  ).not.toBeChecked();
-
-  const pick = detail.locator('.build-identity .runner-toggle').first();
-  await pick.click();
-  await expect(pick).toHaveAttribute('aria-pressed', 'true');
-  await expect(detail.getByRole('region', { name: 'Selected runners', exact: true })).toContainText(
-    'Build a team · 1/3'
-  );
-
-  await detail.screenshot({ path: info.outputPath('cm-detail-selection.png') });
-  await pick.click();
-  await expect(pick).toHaveAttribute('aria-pressed', 'false');
-  await expect(detail.getByRole('region', { name: 'Selected runners', exact: true })).toContainText(
-    'Build a team · 0/3'
-  );
-
+  await expect(detail.getByRole('button', { name: /^Remove .+ from the lobby$/ })).toHaveCount(1);
+  await detail
+    .getByRole('button', { name: /^Add .+ to the lobby$/ })
+    .first()
+    .click();
+  await expect(detail.getByRole('button', { name: /^Remove .+ from the lobby$/ })).toHaveCount(2);
+  await detail.screenshot({ path: info.outputPath('cm-detail-lobby.png') });
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('checkbox', { name: 'Build a team', exact: true })).toBeChecked();
-  await cards.nth(0).locator('.runner-toggle').nth(0).click();
-  await expect(tray).toContainText('Build a team · 1/3');
-  await expect(cards.nth(0).locator('.runner-toggle').nth(0)).toHaveAttribute(
-    'aria-pressed',
-    'true'
-  );
-  await cards.nth(0).locator('.runner-toggle').nth(0).click();
-  await expect(tray).toContainText('Build a team · 0/3');
-  for (let i = 0; i < 3; i++) {
-    await cards.nth(i).locator('.runner-toggle').nth(i).click();
-    await expect(tray).toContainText('Build a team · ' + (i + 1) + '/3');
-  }
+  await expect(lobby).toContainText('5/9 Uma');
 
-  await expect(cards.nth(0).locator('.runner-toggle').nth(1)).toBeDisabled();
-  await tray.screenshot({ path: info.outputPath('cm-individual-team.png') });
-  await cards.first().getByRole('button', { name: 'Details', exact: true }).click();
-  await expect(detail.getByRole('region', { name: 'Selected runners', exact: true })).toContainText(
-    'Build a team · 3/3'
-  );
+  // Selecting two places swaps their runners between lobby teams.
+  await lobby.getByRole('button', { name: 'Review lobby', exact: true }).click();
+  const places = lobby.locator('.place');
+  const first = await places.nth(0).getAttribute('title');
+  const fourth = await places.nth(3).getAttribute('title');
+  await places.nth(0).click();
+  await expect(places.nth(0)).toHaveAttribute('aria-pressed', 'true');
+  await places.nth(3).click();
+  await expect(places.nth(0)).toHaveAttribute('title', fourth!);
+  await expect(places.nth(3)).toHaveAttribute('title', first!);
+  await lobby.screenshot({ path: info.outputPath('cm-lobby-tray.png') });
 
-  await expect(detail.locator('.build-identity .runner-toggle').nth(1)).toBeDisabled();
-  await detail.getByRole('button', { name: 'Add custom team to lobby', exact: true }).click();
-  await expect(detail).not.toBeVisible();
-  const team = page.locator('.teams>.team').first();
-  await expect(team).toContainText('Custom team');
-  await expect(team).toContainText('Team win rate not measured');
-  await expect(team.locator('.runner')).toHaveCount(3);
-  await team.locator('.runner').first().click();
-  const editor = page.getByRole('dialog', { name: 'Edit runner', exact: true });
-  await expect(editor.locator('.stats input').first()).not.toHaveValue('');
-  await editor.locator('.stats input').first().fill('1500');
-  await editor.getByRole('button', { name: 'Save changes', exact: true }).click();
-  await expect(team).toContainText('Modified');
-  await expect(team).toContainText('1500');
-  await expect(team.locator('.race-aptitudes')).toHaveCount(3);
-  await page.locator('.teams').screenshot({ path: info.outputPath('cm-custom-lobby.png') });
-  await page.getByRole('button', { name: 'Browse teams', exact: true }).click();
-  await cards.first().getByRole('button', { name: 'Add to lobby', exact: true }).click();
-  await page.getByRole('tab', { name: 'Lobby Builder 2/3', exact: true }).click();
-  const captured = page.locator('.teams>.team').nth(1);
-  await expect(
-    captured.locator('.race-aptitudes [aria-label="Distance: E"]').first()
-  ).toBeVisible();
-  await captured.locator('.runner').first().click();
-  await expect(editor.getByRole('combobox', { name: 'Distance', exact: true })).toContainText('E');
-  await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
-  const sourceRow = team.locator('.gate').first(),
-    targetRow = captured.locator('.gate').nth(1);
-
-  const sourceName = await sourceRow.locator('.identity h3').innerText(),
-    targetName = await targetRow.locator('.identity h3').innerText();
-
-  await sourceRow.getByRole('combobox').click();
-  await page.getByRole('option', { name: 'Gate 1', exact: true }).click();
-  await targetRow.getByRole('combobox').click();
-  await page.getByRole('option', { name: 'Gate 2', exact: true }).click();
-  await sourceRow.getByRole('button', { name: /^Move / }).click();
-  const move = page.getByRole('dialog', { name: 'Move runner', exact: true });
-  await expect(move).toContainText(sourceName);
-  await move.screenshot({ path: info.outputPath('cm-move-runner.png') });
-  await move.locator('.move-choice').nth(1).click();
-  await expect(move).not.toBeVisible();
-  await expect(sourceRow.locator('.identity h3')).toHaveText(targetName);
-  await expect(targetRow.locator('.identity h3')).toHaveText(sourceName);
-  await expect(targetRow).toContainText('1500');
-  await expect(targetRow).toContainText('Modified');
-  await expect(sourceRow.getByRole('combobox')).toContainText('Gate 2');
-  await expect(targetRow.getByRole('combobox')).toContainText('Gate 1');
-  await expect(captured).toContainText('Team win rate not measured');
-  await targetRow.locator('.runner').click();
-  await expect(editor.locator('.stats input').first()).toHaveValue('1500');
-  await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await page.locator('.teams').screenshot({ path: info.outputPath('cm-swapped-lobby.png') });
-  await page.getByRole('button', { name: 'Browse teams', exact: true }).click();
-  await expect(
-    cards.first().getByRole('button', { name: 'Add to lobby', exact: true })
-  ).toBeEnabled();
-
+  await lobby.getByRole('button', { name: 'Open in simulator', exact: true }).click();
+  await expect(page).toHaveURL(/\/simulator\/race/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     page.viewportSize()!.width
   );
@@ -440,6 +368,17 @@ test('CM combines individual captured runners into an editable custom team', asy
 
 async function openRaceSection(page: import('@playwright/test').Page, title: string) {
   await page.getByRole('button', { name: title, exact: true }).click();
+}
+
+function sessionTab(page: import('@playwright/test').Page, label: string) {
+  return page
+    .getByRole('tablist', { name: 'Session analysis views', exact: true })
+    .getByRole('tab', { name: label, exact: true });
+}
+
+async function openSessionView(page: import('@playwright/test').Page, label: string) {
+  await openRaceSection(page, 'Session analysis');
+  await sessionTab(page, label).click();
 }
 
 const replayCourses = JSON.parse(
@@ -514,6 +453,7 @@ test('race field follows live positions and locks individual finishes with trimm
 
   const field = page.getByRole('complementary', { name: 'Race field', exact: true }),
     slider = page.getByRole('slider', { name: 'Replay time', exact: true });
+  await expect(page.getByRole('button', { name: /^Seek to final spurt window at/ })).toHaveCount(1);
 
   await expect(field.locator('.field-order')).toHaveText('Live order');
   expect(
@@ -2021,8 +1961,11 @@ test('race uploads keep replay and session sections together, retaining valid fi
   await expect(page.getByRole('heading', { name: 'Session analysis', exact: true })).toBeVisible();
   await expect(page.locator('.session-status:visible')).toContainText('24 races loaded');
   await expect(page.locator('.replay-layout')).toBeVisible();
-  await openRaceSection(page, 'Skill analysis');
-  const skillTable = page.getByRole('table', { name: 'Skill Analysis', exact: true });
+  await openSessionView(page, 'Skills');
+  const skillTable = page.getByRole('table', {
+    name: 'Learned skills in this session',
+    exact: true
+  });
   await expect(skillTable).toBeVisible();
   await skillTable.getByRole('button', { name: 'Activation rate', exact: true }).click();
   const rates = await skillTable
@@ -2036,13 +1979,14 @@ test('race uploads keep replay and session sections together, retaining valid fi
     skillTable.getByRole('columnheader', { name: 'Activation rate', exact: true })
   ).toHaveAttribute('aria-sort', 'descending');
 
-  await page
-    .locator('.analysis-section:not([hidden]) .lazy-surface')
-    .first()
-    .scrollIntoViewIfNeeded();
+  const skillPanel = page.locator('.session-panels > :not([hidden])');
+
+  const heatmap = skillPanel.getByRole('img', { name: /^Activations by race phase:/ });
+  await heatmap.scrollIntoViewIfNeeded();
+  await expect(heatmap).toBeVisible();
   await expect(
-    page.locator('.analysis-section:not([hidden]) .lazy-surface svg').first()
-  ).toBeVisible();
+    skillPanel.getByRole('table', { name: /by running style$/ }).getByRole('row')
+  ).not.toHaveCount(0);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: info.outputPath('race-analysis.png'), fullPage: false });
   await page.getByRole('button', { name: 'Add race files', exact: true }).click();
@@ -2062,28 +2006,28 @@ test('race uploads keep replay and session sections together, retaining valid fi
   await expect(page.getByRole('heading', { name: 'Session analysis', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Race replay', exact: true })).toBeVisible();
   await expect(map).toBeVisible();
-  await expect(page.locator('.replay-title')).toContainText('Tokyo · 2,400 m');
+  await expect(page.locator('.replay-title')).toContainText('Tokyo, 2,400 m');
   await page.getByRole('button', { name: 'Display options', exact: true }).click();
   await page.getByRole('combobox', { name: 'Track', exact: true }).click();
-  await page.getByRole('option', { name: 'Sapporo · 1200m · Turf · Right', exact: true }).click();
-  await expect(page.locator('.replay-title')).toContainText('Sapporo · 1,200 m');
+  await page.getByRole('option', { name: 'Sapporo, 1200m, Turf, Right', exact: true }).click();
+  await expect(page.locator('.replay-title')).toContainText('Sapporo, 1,200 m');
   await page.getByRole('combobox', { name: 'Track', exact: true }).click();
-  await page.getByRole('option', { name: 'Auto · Course 10606', exact: true }).click();
-  await expect(page.locator('.replay-title')).toContainText('Tokyo · 2,400 m');
+  await page.getByRole('option', { name: 'Auto, Course 10606', exact: true }).click();
+  await expect(page.locator('.replay-title')).toContainText('Tokyo, 2,400 m');
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     page.viewportSize()!.width
   );
   await page.getByRole('button', { name: 'Remove race', exact: true }).click();
   await expect(
-    page.getByRole('region', { name: 'Upload race captures', exact: true })
+    page.getByRole('region', { name: 'Start with your races', exact: true })
   ).toBeVisible();
 
   await expect(page.getByRole('button', { name: 'Try one demo race', exact: true })).toBeVisible();
   await page
     .locator('#race-upload')
     .setInputFiles(captureFile('800023_recorded-race.json', false, null));
-  await expect(page.locator('.replay-title')).toContainText('Nakayama · 2,500 m');
+  await expect(page.locator('.replay-title')).toContainText('Nakayama, 2,500 m');
   await expect(page.locator('.course-source')).toHaveText('Course detected');
   await expect(map).toBeVisible();
 });
@@ -2333,23 +2277,14 @@ test('race analysis is one continuous report with preserved selection and compac
   await page.getByRole('button', { name: 'Try 24 demo races', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Session analysis', exact: true })).toBeVisible();
   await expect(page.locator('.replay-layout')).toBeVisible();
-  await openRaceSection(page, 'Strategy analysis');
+  await openRaceSection(page, 'Session analysis');
   await expect(
-    page.getByRole('navigation', { name: 'Jump to session section', exact: true })
-  ).toBeVisible();
-
-  await expect(page.locator('.session-sections>.analysis-section')).toHaveCount(7);
-  await expect(
-    page.getByRole('tablist', { name: 'Session analysis views', exact: true })
-  ).toHaveCount(0);
-
+    page.getByRole('tablist', { name: 'Session analysis views', exact: true }).getByRole('tab')
+  ).toHaveText(['Overview', 'Strategy', 'Umas', 'Teams', 'Skills', 'Runners']);
+  await expect(sessionTab(page, 'Overview')).toHaveAttribute('aria-selected', 'true');
+  await sessionTab(page, 'Strategy').click();
   if (page.viewportSize()!.width > 1000) {
-    const charts = page
-      .locator('.analysis-section')
-      .filter({ has: page.getByRole('heading', { name: 'Strategy analysis', exact: true }) })
-      .locator('.two-col')
-      .first()
-      .locator(':scope>figure');
+    const charts = page.locator('.strategy .upper > figure');
 
     await expect(charts).toHaveCount(2);
     const [first, second] = await charts.evaluateAll((elements) =>
@@ -2364,9 +2299,12 @@ test('race analysis is one continuous report with preserved selection and compac
     expect(second!.left).toBeGreaterThanOrEqual(first!.right);
   }
 
-  await openRaceSection(page, 'Uma analysis');
-  await page.getByRole('combobox', { name: 'Rank by', exact: true }).click();
-  await page.getByRole('option', { name: 'Popularity', exact: true }).click();
+  await sessionTab(page, 'Umas').click();
+  await page
+    .getByRole('radiogroup', { name: 'Rank Umas by', exact: true })
+    .getByRole('radio', { name: 'Most entered', exact: true })
+    .click();
+
   const umaPlot = page.getByRole('group', {
     name: 'Uma popularity and win rate. Select a portrait to inspect its results.',
     exact: true
@@ -2378,33 +2316,52 @@ test('race analysis is one continuous report with preserved selection and compac
 
   await point.focus();
   await point.press('Enter');
-  await expect(page.locator('.uma-inspection')).toContainText(pointName);
-  await expect(page.locator('.character-select[aria-pressed=true]')).toContainText(pointName);
+  const umaInspection = page.locator('.umas .inspection');
+
+  await expect(umaInspection).toContainText(pointName);
+  await expect(
+    page
+      .getByRole('list', { name: 'Umas in this session', exact: true })
+      .getByRole('button', { pressed: true })
+  ).toContainText(pointName);
+
+  await umaInspection.getByRole('button', { name: 'Find teams', exact: true }).click();
+  await expect(sessionTab(page, 'Teams')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.team-grid .team-card').first()).toContainText(pointName);
   await page
-    .locator('.uma-inspection')
-    .getByRole('button', { name: 'Find teams', exact: true })
+    .getByRole('button', { name: 'Clear the ' + pointName + ' filter', exact: true })
     .click();
 
-  await expect(page.locator('.team-grid .team-card').first()).toContainText(pointName);
-  await page.getByRole('button', { name: 'Clear Uma filter', exact: true }).click();
-  await openRaceSection(page, 'HP & last spurt');
-  const hpTable = page.getByRole('table', { name: 'HP & Last Spurt', exact: true });
-  expect(await hpTable.locator('.runner-reference img').count()).toBeGreaterThan(0);
+  await sessionTab(page, 'Runners').click();
+  const umaTable = page.getByRole('table', { name: 'Your Umas', exact: true });
+  expect(await umaTable.locator('.runner-reference img').count()).toBeGreaterThan(0);
+  await expect(umaTable.getByRole('columnheader', { name: 'Full spurt', exact: true })).toHaveCount(
+    1
+  );
+  await umaTable
+    .getByRole('button', { name: /^Show .+ details$/ })
+    .first()
+    .click();
   await expect(
-    hpTable.getByRole('columnheader', { name: 'Avg. spurt delay', exact: true })
+    umaTable
+      .getByRole('table')
+      .filter({ hasText: 'When it did not' })
+      .getByRole('row', {
+        name: /^Dueled /
+      })
   ).toHaveCount(1);
 
-  await openRaceSection(page, 'Teams & builds');
+  await sessionTab(page, 'Teams').click();
   await expect(page.locator('.team-grid .team-card')).toHaveCount(12);
-  await page.getByRole('button', { name: 'Show more teams', exact: true }).click();
+  await page.getByRole('button', { name: 'Show 12 more teams', exact: true }).click();
   await expect(page.locator('.team-grid .team-card')).toHaveCount(24);
   await expect(page.getByRole('combobox', { name: 'Sort teams', exact: true })).toContainText(
     'Team win rate'
   );
 
   const sessionTeam = page.locator('.team-grid .team-card').first();
-  const sessionRunnerName = (await sessionTeam.locator('.identity h3').first().innerText()).trim();
-  await sessionTeam.getByRole('button', { name: 'Inspect team', exact: true }).click();
+  const sessionRunnerName = (await sessionTeam.locator('.members h3').first().innerText()).trim();
+  await sessionTeam.getByRole('button', { name: 'Inspect team 1 builds', exact: true }).click();
   const sessionBuild = page
     .getByRole('dialog')
     .filter({ has: page.getByRole('heading', { name: 'Learned skills' }) });
@@ -2413,31 +2370,34 @@ test('race analysis is one continuous report with preserved selection and compac
   await expect(sessionBuild.getByLabel(/^(All|Race) aptitudes$/)).toHaveCount(3);
   await expect(sessionBuild).toContainText(sessionRunnerName);
   await page.keyboard.press('Escape');
-  await sessionTeam
-    .getByRole('button', { name: 'Inspect ' + sessionRunnerName + ' build', exact: true })
+  await sessionTab(page, 'Overview').click();
+  await page
+    .getByRole('table', { name: 'Session race winners', exact: true })
+    .getByRole('button', { name: /^Inspect .+, race 1 winner$/ })
     .click();
-
   await expect(sessionBuild.getByRole('heading', { name: 'Learned skills' })).toHaveCount(1);
   await expect(
     sessionBuild.getByRole('button', { name: 'View race replay', exact: true })
   ).toBeEnabled();
 
   await page.keyboard.press('Escape');
-  await page
-    .getByRole('searchbox', { name: 'Uma or trainer', exact: true })
-    .fill('no such trainer');
-
+  await sessionTab(page, 'Teams').click();
+  await page.getByRole('searchbox', { name: 'Search teams', exact: true }).fill('no such trainer');
   await expect(page.getByText('No matching teams', { exact: true })).toBeVisible();
-  await openRaceSection(page, 'Skill analysis');
-  await expect(page.getByRole('searchbox', { name: 'Filter skills', exact: true })).toHaveValue('');
+  await sessionTab(page, 'Skills').click();
+  await expect(
+    page.getByRole('searchbox', { name: 'Search learned skills', exact: true })
+  ).toHaveValue('');
   await expect(
     page
-      .getByRole('table', { name: 'Skill Analysis', exact: true })
+      .getByRole('table', { name: 'Learned skills in this session', exact: true })
       .locator('tbody tr[data-virtual-index]')
   ).not.toHaveCount(0);
 
   await openRaceSection(page, 'Race replay');
-  await expect(page.getByRole('table', { name: 'Skill Analysis', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('table', { name: 'Learned skills in this session', exact: true })
+  ).toBeVisible();
   await page.getByRole('combobox', { name: 'Race', exact: true }).click();
   await page.getByRole('option', { name: /^2\. Demo race 2\b/ }).click();
   await expect(page.getByRole('combobox', { name: 'Race', exact: true })).toContainText(
@@ -2450,7 +2410,7 @@ test('race analysis is one continuous report with preserved selection and compac
   });
 
   await openRaceSection(page, 'Session analysis');
-  await expect(page.getByRole('button', { name: 'Skill analysis', exact: true })).toBeVisible();
+  await expect(sessionTab(page, 'Skills')).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('button', { name: 'Add race files', exact: true }).click();
   await page.locator('#race-upload').setInputFiles(captureFile('another-race.json'));
   await expect(page.locator('.session-status:visible')).toContainText('1 race loaded');
@@ -2472,15 +2432,15 @@ test('race analysis is one continuous report with preserved selection and compac
   await openRaceSection(page, 'Race replay');
   await expect(slider).toHaveValue('0.5');
   await openRaceSection(page, 'Session analysis');
-  await expect(page.getByRole('button', { name: 'Session overview', exact: true })).toBeVisible();
+  await expect(sessionTab(page, 'Overview')).toHaveAttribute('aria-selected', 'true');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     page.viewportSize()!.width
   );
 });
 
-test('Competitive shows a compact dataset preview and recovers from a failed request', async ({
+test('Competitive preserves its landing layout and shows the current meeting with a retry', async ({
   page
-}) => {
+}, info) => {
   let fail = true;
   await page.route('https://hakuraku.moe/api/simdata/**', async (route) => {
     const manifest = new URL(route.request().url()).pathname.endsWith('/manifest');
@@ -2501,24 +2461,32 @@ test('Competitive shows a compact dataset preview and recovers from a failed req
   });
 
   await page.goto('/competitive');
-  await expect(page.getByRole('heading', { name: 'Race Analysis', exact: true })).toBeVisible();
-  await expect(page.locator('.tools a')).toHaveCount(3);
-  await expect(page.getByRole('alert')).toContainText('CM preview unavailable');
-  fail = false;
-  await page.getByRole('button', { name: 'Retry', exact: true }).click();
-  await expect(page.locator('.field-preview tbody tr')).toHaveCount(5);
-  await expect(page.locator('.field-key')).toContainText('Team wins: any teammate finishes first.');
-  await expect(page.locator('.dataset-facts')).toContainText(
-    cmFixture.summary.meta.populationRaces.toLocaleString('en-US')
-  );
-  await expect(
-    page.getByRole('link', { name: 'Browse captured teams', exact: true })
-  ).toHaveAttribute('href', /tab=archetypes/);
+  const sections = page.locator('.quick-links a');
+  await expect(sections).toHaveCount(4);
+  expect(
+    await sections.evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+  ).toEqual(['/competitive/race-analysis', '/competitive/cm-data', '/simulator/race', '/research']);
+  await expect(page.getByRole('main').getByRole('link', { name: /Master Data/ })).toHaveCount(0);
 
-  await expect(page.locator('.tools a').last()).toHaveAttribute(
-    'href',
-    '/competitive/cm-data?tab=lobby'
+  const meeting = page.getByRole('region', { name: 'Current Champions Meeting', exact: true });
+  await expect(meeting.getByRole('alert')).toContainText(
+    'Current Champions Meeting figures are unavailable.'
   );
+  await expect(sections.filter({ hasText: 'CM Data' })).toHaveAttribute(
+    'href',
+    '/competitive/cm-data'
+  );
+  fail = false;
+  await meeting.getByRole('button', { name: 'Retry', exact: true }).click();
+
+  const current = cmFixture.manifest.snapshots[0];
+  await expect(meeting).toContainText(current.meta.populationRaces.toLocaleString('en-US'));
+  await expect(meeting).toContainText(current.meta.populationOwners.toLocaleString('en-US'));
+  await expect(meeting.getByRole('link', { name: new RegExp(current.cmId, 'i') })).toHaveAttribute(
+    'href',
+    '/competitive/cm-data?snapshot=' + encodeURIComponent(current.snapshotId)
+  );
+  await page.screenshot({ path: info.outputPath('competitive.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     page.viewportSize()!.width
   );
@@ -2873,7 +2841,7 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   await page.getByRole('button', { name: 'Add Skill 10071 to comparison', exact: true }).click();
   const addSkill = page.getByRole('combobox', { name: 'Add a skill to comparison', exact: true });
   await addSkill.fill('10081');
-  await page.getByRole('option', { name: 'Skill 10081 [Id 10081]', exact: true }).click();
+  await page.getByRole('option', { name: 'Skill 10081 · ID 10081', exact: true }).click();
   const comparison = page.getByRole('region', { name: 'Skill comparison', exact: true });
   await expect(comparison.locator('.lane.card')).toHaveCount(2);
   await expect(comparison.locator('svg[role="slider"]')).toHaveCount(2);
@@ -3167,26 +3135,16 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   }
 
   const teamCard = page.locator('.team-row').first();
-  const teamDetails = teamCard.getByRole('button', { name: 'Details', exact: true });
-  await expect(teamDetails).toBeVisible();
-  expect(
-    await teamCard.locator('.team-actions').evaluate((actions) => {
-      const [details, lobby] = Array.from(actions.querySelectorAll('button')).map((button) =>
-        button.getBoundingClientRect()
-      );
-
-      return (
-        details!.right <= lobby!.left &&
-        Math.abs(details!.top - lobby!.top) < 1 &&
-        Math.abs(details!.width - lobby!.width) < 1 &&
-        Math.abs(details!.height - lobby!.height) < 1
-      );
-    })
-  ).toBe(true);
+  const openTeam = page.getByRole('button', { name: 'View team 1 details', exact: true });
+  // The card opens its builds; each runner and the whole team can join the lobby.
+  await expect(teamCard.getByRole('button', { name: /^Add .+ to the lobby$/ })).toHaveCount(4);
+  await expect(
+    teamCard.getByRole('button', { name: 'Add team 1 to the lobby', exact: true })
+  ).toBeVisible();
 
   await expect(teamCard.locator('.member')).toHaveCount(3);
-  await expect(teamCard).toContainText('Estimated win range');
-  await expect(teamCard).toContainText('Simulated races');
+  await expect(teamCard).toContainText('Win range');
+  await expect(teamCard).toContainText('Races');
   await expect(page.getByRole('checkbox', { name: 'Build stats', exact: true })).toBeChecked();
   await expect(teamCard.locator('.member-stats')).toHaveCount(3);
   await expect(teamCard.locator('.member-stats').first()).toContainText('stamina');
@@ -3286,11 +3244,6 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
     page.getByRole('button', { name: 'Expand Matching field', exact: true })
   ).toBeFocused();
 
-  await teamDetails.click();
-  await expect(page.getByRole('dialog', { name: 'Team details', exact: true })).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(teamDetails).toBeFocused();
-  const openTeam = page.getByRole('button', { name: 'View team 1 details', exact: true });
   await openTeam.focus();
   await openTeam.press('Enter');
   const detail = page.getByRole('dialog');
@@ -3331,7 +3284,6 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
       '.aptitude-overview',
       '.runner-results',
       '.skills-section',
-      '.training-title',
       '.support-section',
       '.inheritance-section',
       '.parent-factors'
@@ -3388,44 +3340,27 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   await expect(firstBuild.locator('.parent-builds input[type="radio"]').nth(1)).toBeChecked();
   await expect(detail.locator('.parent-sparks .spark').first()).toBeVisible();
   await page.screenshot({ path: info.outputPath('cm-build.png') });
-  await detail.getByRole('button', { name: 'Add to lobby', exact: true }).click();
+  // Learned skills sit in equal columns, so chips in a row share one width.
+  const skillWidths = await firstBuild
+    .locator('.skills .skill-chip')
+    .evaluateAll((chips) => chips.map((chip) => Math.round(chip.getBoundingClientRect().width)));
+  expect(new Set(skillWidths).size).toBe(1);
+
+  await detail.getByRole('button', { name: 'Add team to lobby', exact: true }).click();
+  await expect(
+    detail.getByRole('button', { name: 'Remove team from lobby', exact: true })
+  ).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(openTeam).toBeFocused();
-  await page.locator('.team-row .member').first().click();
-  await expect(detail).toBeVisible();
-  await page.keyboard.press('Escape');
+  const lobby = page.getByRole('complementary', { name: 'Lobby', exact: true });
+  await expect(lobby).toContainText('3/9 Uma');
   await expect(page.getByRole('tab', { name: 'Archetype Analysis', exact: true })).toHaveAttribute(
     'aria-selected',
     'true'
   );
 
-  for (let i = 0; i < 2; i++)
-    await page.getByRole('button', { name: 'Add to lobby', exact: true }).first().click();
-  await expect(page.getByRole('dialog')).not.toBeVisible();
-  await expect(
-    page.getByRole('button', { name: 'Lobby full', exact: true }).first()
-  ).toBeDisabled();
-
-  await page.getByRole('tab', { name: 'Lobby Builder 3/3', exact: true }).click();
-  await expect(page.locator('.team .runner')).toHaveCount(9);
-  await expect(page.getByRole('button', { name: 'Run race', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Export lobby', exact: true })).toHaveCount(0);
-  await expect(page.locator('.team .gate')).toHaveCount(9);
-  await expect(page.getByRole('link', { name: 'Original Hakuraku', exact: false })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'MIT license', exact: false })).toHaveCount(0);
-  await page.getByLabel('Lobby seed', { exact: true }).fill('2147483648');
-  await expect(page.getByRole('alert')).toContainText('32-bit');
-  await page.getByLabel('Lobby seed', { exact: true }).fill('42');
-  await page.locator('.gate').first().getByRole('combobox').click();
-  await page.getByRole('option', { name: 'Gate 1', exact: true }).click();
-  await page.locator('.gate').nth(1).getByRole('combobox').click();
-  await expect(page.getByRole('option', { name: 'Gate 1', exact: true })).toBeDisabled();
-  await page.keyboard.press('Escape');
-  await page.screenshot({ path: info.outputPath('cm-lobby.png'), fullPage: true });
-  await page.getByRole('tab', { name: 'Archetype Analysis', exact: true }).click();
-  await page.getByRole('tab', { name: 'Lobby Builder 3/3', exact: true }).click();
-  await expect(page.getByLabel('Lobby seed', { exact: true })).toHaveValue('42');
-  await expect(page.locator('.gate').first().getByRole('combobox')).toContainText('Gate 1');
+  await lobby.getByRole('button', { name: 'Open in simulator', exact: true }).click();
+  await expect(page).toHaveURL(/\/simulator\/race/);
   expect(methods.every((method) => method === 'GET')).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     page.viewportSize()!.width
@@ -3522,22 +3457,23 @@ test('research opens original notes with math, attachments, and mobile layouts i
   page
 }, info) => {
   await page.goto('/research');
-  await expect(page.locator('.notes .note')).toHaveCount(10);
-  await expect(page.locator('[data-route-id="research"]')).toHaveAttribute(
-    'data-page-width',
-    'wide'
-  );
+  await expect(page.locator('#research-notes a')).toHaveCount(10);
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Research', exact: true })
+  ).toBeVisible();
   await page.screenshot({ path: info.outputPath('research-library.png'), fullPage: true });
   await page.getByRole('combobox', { name: 'Sort notes', exact: true }).click();
   await page.getByRole('option', { name: 'Oldest first', exact: true }).click();
-  await expect(page.locator('.notes .note').first()).toContainText(
+  await expect(page.locator('#research-notes a').first()).toContainText(
     'SingleModeUtils.CalcRelationPoint'
   );
   await page.getByRole('combobox', { name: 'Sort notes', exact: true }).click();
   await page.getByRole('option', { name: 'Title A–Z', exact: true }).click();
-  await expect(page.locator('.notes .note').first()).toContainText('A new age for Umamusume data');
+  await expect(page.locator('#research-notes a').first()).toContainText(
+    'A new age for Umamusume data'
+  );
   await page.getByRole('tab', { name: 'Race mechanics 3', exact: true }).click();
-  await expect(page.locator('.notes .note')).toHaveCount(3);
+  await expect(page.locator('#research-notes a')).toHaveCount(3);
   await page.getByRole('searchbox', { name: 'Search research', exact: true }).fill('spot struggle');
   await expect(page).toHaveURL(/topic=Race\+mechanics/);
   await page.reload();
@@ -3545,8 +3481,8 @@ test('research opens original notes with math, attachments, and mobile layouts i
     'spot struggle'
   );
 
-  await expect(page.locator('.notes .note')).toHaveCount(1);
-  await page.locator('.notes .note').click();
+  await expect(page.locator('#research-notes a')).toHaveCount(1);
+  await page.locator('#research-notes a').click();
   await expect(page.locator('.markdown .katex').first()).toBeVisible();
   if (info.project.name === 'chromium') {
     await page
@@ -3607,7 +3543,7 @@ test('research opens original notes with math, attachments, and mobile layouts i
     'spot struggle'
   );
 
-  await expect(page.locator('.notes .note')).toHaveCount(1);
+  await expect(page.locator('#research-notes a')).toHaveCount(1);
 });
 
 test('automatic resimulation falls back on failure and exposes simulator decisions', async ({
@@ -4014,13 +3950,16 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
       .locator('.runner-card')
       .evaluate((element) => getComputedStyle(element).borderTopWidth)
   ).toBe('0px');
+  await expect(analysis.locator('.runner-card .runner-results')).toContainText('2nd');
+  await expect(analysis.locator('.runner-card .runner-results')).toContainText('2:00.000');
   if (info.project.name === 'chromium') {
-    expect((await analysis.locator('.runner-card').boundingBox())!.height).toBeLessThan(90);
-    const identity = (await analysis.locator('.runner-card .build-identity').boundingBox())!,
-      stats = (await analysis.locator('.runner-card .stat-overview').boundingBox())!;
+    const card = (await analysis.locator('.runner-card').boundingBox())!,
+      outcomes = (await details.locator('.outcome-summary').boundingBox())!;
 
-    expect(Math.abs(identity.y + identity.height / 2 - stats.y - stats.height / 2)).toBeLessThan(2);
-    expect((await details.locator('.runner-overview').boundingBox())!.height).toBeLessThan(165);
+    // CM Data's build card sits beside the outcome tiles and shares their top edge.
+    expect(Math.abs(card.y - outcomes.y)).toBeLessThan(2);
+    expect(card.x + card.width).toBeLessThanOrEqual(outcomes.x);
+    expect((await details.locator('.runner-overview').boundingBox())!.height).toBeLessThan(320);
   }
 
   await analysis

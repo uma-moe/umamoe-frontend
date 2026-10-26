@@ -3,9 +3,10 @@
   import { frontBlockingSpans } from '@/lib/race/capture/race-diagnostics';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
   import Button from '@/components/controls/Button.svelte';
-  import RunnerBuild from '../../runners/RunnerBuild.svelte';
+  import RunnerBuildDetails from '../../runners/RunnerBuildDetails.svelte';
   import ReplayDiagnostics from '@/pages/competitive/race-analysis/diagnostics/ReplayDiagnostics.svelte';
   import RunnerReference from '../../runners/RunnerReference.svelte';
+  import { styleColors } from '../../analysis-view';
   import type { DiagnosticEntry } from './session-diagnostics';
 
   interface Props {
@@ -72,14 +73,14 @@
     }}
   >
     {#snippet overview()}
-      <div class="selected-overview">
-        <RunnerBuild
-          runner={selected.runner}
-          {skillNames}
-          compact
-          raceContext={{ distance: selected.capture.raceDistance }}
-        />
-      </div>
+      <RunnerBuildDetails
+        runner={selected.runner}
+        {skillNames}
+        framed
+        content="summary"
+        color={styleColors[selected.runner.result?.runningStyle ?? 0]}
+        raceContext={{ distance: selected.capture.raceDistance }}
+      />
     {/snippet}
     {#snippet blocking()}
       <section class="session-blocking">
@@ -158,36 +159,7 @@
   .session-blocking strong {
     font-weight: 500;
   }
-  .selected-overview {
-    min-width: 0;
-  }
-  .selected-overview :global(.build) {
-    display: grid;
-    grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.8fr);
-    align-items: center;
-    gap: 20px;
-  }
-  .selected-overview :global(.build-identity) {
-    padding: 0;
-  }
-  .selected-overview :global(.build-content) {
-    padding: 0;
-  }
-  .selected-overview :global(.veteran-identity) {
-    grid-template-columns: 48px minmax(0, 1fr);
-    gap: 10px;
-  }
-  .selected-overview :global(.portrait) {
-    height: 52px;
-  }
-  .selected-overview :global(.identity h3) {
-    font-size: 14px;
-  }
   @media (max-width: 760px) {
-    .selected-overview :global(.build) {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 8px;
-    }
     .selected-runner > div {
       margin-left: auto;
     }

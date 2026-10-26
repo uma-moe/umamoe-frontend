@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatPercentage,
   formatRaceTime,
+  ordinalPlace,
   runningStyleName,
   trackDetailName
 } from './race-display';
@@ -27,5 +28,23 @@ describe('shared race display semantics', () => {
     expect(formatRaceTime(15, 0)).toBe('0:15');
     expect(formatRaceTime(30, 0)).toBe('0:30');
     expect(formatRaceTime(60, 0)).toBe('1:00');
+  });
+
+  it('names finishing places with their English suffix, including the teens', () => {
+    const places = [1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 111].map(ordinalPlace);
+
+    expect(places).toEqual([
+      '1st',
+      '2nd',
+      '3rd',
+      '4th',
+      '11th',
+      '12th',
+      '13th',
+      '21st',
+      '22nd',
+      '23rd',
+      '111th'
+    ]);
   });
 });

@@ -1,7 +1,7 @@
 .session-diagnostics {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 /* The runner choice narrows both tables, so it sits in the header of the first one. */
@@ -14,7 +14,7 @@
   display: grid;
   gap: 8px;
   min-width: 0;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: var(--radius-lg);
   background: var(--surface-1);
 }
@@ -35,7 +35,7 @@ p {
   margin: 0;
 }
 h3 {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 650;
 }
 h3 small {
@@ -71,7 +71,7 @@ small {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 220px;
+  min-width: 180px;
   width: 100%;
   padding: 0;
   border: 0;
@@ -81,23 +81,11 @@ small {
   font: inherit;
   cursor: pointer;
 }
-.runner-detail :global(.veteran-identity) {
-  grid-template-columns: 36px minmax(0, 1fr);
-  gap: 7px;
-}
-.runner-detail :global(.portrait) {
-  height: 40px;
-}
-.runner-detail :global(.identity) {
-  gap: 3px;
-}
-.runner-detail :global(.identity h3) {
-  font-size: 12px;
-  white-space: normal;
-}
-.runner-detail :global(.scenario),
-.runner-detail :global(.race-style) {
-  font-size: 10px;
+/* Spurt delay and speed share one line, so every result row keeps the same short height. */
+.session-diagnostics :global(.spurt-result) {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
 .expand-icon {
   margin-left: auto;

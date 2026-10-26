@@ -1,0 +1,154 @@
+/* Your Umas: one row each, and on expand the finishes, condition splits and averages side by side. */
+.uma-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.uma-toggle:hover,
+.uma-toggle:focus-visible {
+  color: var(--accent-primary);
+}
+.chevron {
+  display: inline-flex;
+  color: var(--text-muted);
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease;
+}
+.chevron.open {
+  transform: none;
+}
+.few {
+  color: var(--text-muted);
+}
+.unmeasured {
+  color: var(--text-muted);
+}
+
+.uma-detail {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.7fr) minmax(260px, 1.4fr) minmax(180px, 0.8fr);
+  gap: 18px;
+  padding: 6px 4px 8px 26px;
+  white-space: normal;
+}
+.uma-detail section {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+h4 {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+}
+.places {
+  display: grid;
+  grid-auto-columns: minmax(10px, 1fr);
+  grid-auto-flow: column;
+  gap: 3px;
+  height: 58px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.places li {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: end;
+  justify-items: center;
+  gap: 2px;
+}
+.bar {
+  width: 100%;
+  min-height: 1px;
+  border-radius: 2px 2px 0 0;
+  background: color-mix(in srgb, var(--text-secondary) 45%, transparent);
+}
+.bar.win {
+  background: var(--accent-primary);
+}
+.places small {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.splits {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.splits th,
+.splits td {
+  padding: 2px 6px 2px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+.splits th {
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-align: left;
+}
+.splits td {
+  text-align: right;
+}
+.splits td > span {
+  font-weight: 600;
+}
+.splits small,
+dd small {
+  margin-left: 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+.splits thead th {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 400;
+  text-align: right;
+}
+.splits thead td {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+dt {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.uma-detail :global(.ui-button) {
+  justify-self: start;
+}
+
+@media (max-width: 900px) {
+  .uma-detail {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}

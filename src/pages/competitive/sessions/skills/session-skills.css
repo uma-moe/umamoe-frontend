@@ -1,19 +1,30 @@
 .skills {
+  display: grid;
+  gap: 8px;
   min-width: 0;
   container: session-skills / inline-size;
 }
 .search {
-  width: 240px;
+  width: 200px;
 }
-/* The table and the selected skill's locations share one card; the chart stays beside the rows it answers. */
+.style {
+  width: 140px;
+}
+/* The table and the selected skill share one card, so the heatmap stays beside the rows it answers. */
 .skill-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 14px;
   align-items: start;
   min-width: 0;
 }
+.skill-layout > :global(.skill-detail) {
+  padding-left: 14px;
+  border-left: 1px solid var(--border-subtle);
+}
 .skill-select {
+  display: inline-flex;
+  vertical-align: middle;
   padding: 2px 0;
   border: 0;
   border-radius: var(--radius-xs);
@@ -23,46 +34,77 @@
 .skill-select.selected {
   box-shadow: 0 0 0 1px var(--accent-primary);
 }
-.locations {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-  padding-left: 16px;
-  border-left: 1px solid var(--border-subtle);
+.few {
+  color: var(--text-muted);
 }
-h4 {
-  display: grid;
-  gap: 2px;
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-}
-h4 small {
-  overflow: hidden;
-  color: var(--accent-primary);
-  font-size: 12px;
-  font-weight: 600;
-  text-overflow: ellipsis;
+.gap {
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.locations p {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 11px;
+.gap.over {
+  color: var(--accent-success);
 }
+.gap.under {
+  color: var(--text-secondary);
+}
+
+/* A course in miniature: the bar spans the middle half of the activations, the tick is the median. */
+.where {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.track {
+  position: relative;
+  width: 52px;
+  height: 8px;
+  border-radius: 2px;
+  background:
+    linear-gradient(
+      to right,
+      transparent calc(100% * 4 / 24),
+      var(--border-subtle) calc(100% * 4 / 24) calc(100% * 4 / 24 + 1px),
+      transparent calc(100% * 4 / 24 + 1px) calc(100% * 16 / 24),
+      var(--border-subtle) calc(100% * 16 / 24) calc(100% * 16 / 24 + 1px),
+      transparent calc(100% * 16 / 24 + 1px) calc(100% * 20 / 24),
+      var(--border-subtle) calc(100% * 20 / 24) calc(100% * 20 / 24 + 1px),
+      transparent calc(100% * 20 / 24 + 1px)
+    ),
+    var(--surface-2);
+}
+.track i {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  min-width: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--accent-primary) 45%, transparent);
+}
+.track b {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent-primary);
+}
+
 @container session-skills (max-width: 900px) {
   .skill-layout {
     grid-template-columns: minmax(0, 1fr);
   }
-  .locations {
+  .skill-layout > :global(.skill-detail) {
     order: -1;
-    padding: 0 0 12px;
+    padding: 0 0 10px;
     border-bottom: 1px solid var(--border-subtle);
     border-left: 0;
   }
 }
 @media (max-width: 600px) {
-  .search {
+  .search,
+  .style {
     width: 100%;
   }
 }

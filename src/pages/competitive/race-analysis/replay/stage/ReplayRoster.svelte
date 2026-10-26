@@ -9,7 +9,7 @@
   import Icon from '@/components/Icon.svelte';
   import IconButton from '@/components/controls/IconButton.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
-  import { portrait } from '@/pages/competitive/analysis-view';
+  import { portrait, styleColors } from '@/pages/competitive/analysis-view';
   import { theme } from '@/stores/theme';
   import type { ReplayState } from '../replay-state.svelte';
 
@@ -42,6 +42,9 @@
       );
     else visibility = { ...visibility, [r.index]: ((visibility[r.index] ?? 0) + 1) % 3 };
   }
+
+  const runningStyle = (runner: RaceRunner) =>
+    runner.result?.runningStyle ?? Number(runner.raw.runningStyle);
 </script>
 
 <aside
@@ -121,8 +124,8 @@
             <strong>{r.name}</strong>
             <small class="field-meta">
               <span>Gate {r.index + 1}</span>
-              <span>
-                {runningStyleName(r.result?.runningStyle ?? Number(r.raw.runningStyle))}
+              <span style:color={styleColors[runningStyle(r)]}>
+                {runningStyleName(runningStyle(r))}
               </span>
             </small>
           </span>

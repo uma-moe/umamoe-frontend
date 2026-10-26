@@ -1,56 +1,73 @@
-/* CM Data's Uma breakdown: a ranked list beside the scatter, then the lineups of the selected Uma. */
+/* CM Data's Uma breakdown at session density: a ranked list beside the scatter, then rivals and lineups. */
 .umas {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
   container: session-umas / inline-size;
 }
 .panels {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
+  gap: 8px;
   align-items: stretch;
   min-width: 0;
 }
 .panels > :global(.chart-frame) {
   height: 100%;
 }
+.umas :global(.plot) {
+  align-content: start;
+}
 .minimum {
-  width: 120px;
+  width: 112px;
 }
 
+/* Every list is a header and single-line rows sharing its columns. */
+.column-head,
+.uma-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(40px, 1fr) 44px 52px;
+  align-items: center;
+  gap: 10px;
+}
+.column-head.opponents,
+.uma-row.opponents {
+  grid-template-columns: minmax(0, 1.3fr) minmax(40px, 0.8fr) 64px 34px 58px;
+}
 .column-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 6px 6px 4px;
-  color: var(--text-secondary);
+  padding: 0 6px 4px 4px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-muted);
   font-size: 10px;
 }
+.column-head > span:nth-child(n + 3) {
+  text-align: right;
+}
 .uma-list {
-  max-height: 400px;
+  max-height: 336px;
   margin: 0;
   padding: 0;
   overflow-y: auto;
   list-style: none;
   scrollbar-width: thin;
 }
+.uma-list.opponents {
+  max-height: none;
+}
 .uma-list > li + li {
   border-top: 1px solid var(--border-subtle);
 }
 .uma-row {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 4px 10px;
   width: 100%;
   min-width: 0;
-  padding: 7px 6px 7px 4px;
+  min-height: 27px;
+  padding: 3px 6px 3px 4px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-primary);
   font: inherit;
+  font-size: 12px;
   text-align: left;
   cursor: pointer;
 }
@@ -62,48 +79,55 @@
   background: var(--color-accent-soft);
   box-shadow: inset 0 0 0 1px rgb(var(--accent-primary-rgb) / 0.35);
 }
-.uma-row.selected .uma-name strong {
+.uma-row.selected .uma-name {
   color: var(--accent-primary);
 }
-.uma-row :global(.art) {
-  grid-row: 1/3;
-  width: 30px;
-  height: 36px;
-  border: 0;
-  background: transparent;
-}
 .uma-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
-}
-.uma-name strong,
-.uma-name small {
-  display: block;
   overflow: hidden;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.uma-name strong {
-  font-size: 12px;
-  font-weight: 600;
+.uma-name :global(.art) {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  background: transparent;
 }
-.uma-name small,
-.uma-rate small {
+.record {
   color: var(--text-secondary);
-  font-size: 10px;
-  line-height: 1.5;
+  font-size: 11px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.uma-rate {
-  display: grid;
-  justify-items: end;
+.record small {
+  margin-left: 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.uma-row strong {
+  font-size: 12px;
+  font-weight: 650;
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
-.uma-rate strong {
-  font-size: 13px;
-  font-weight: 600;
+.few {
+  color: var(--text-muted);
+}
+.uma-row strong.few {
+  color: var(--text-secondary);
+}
+.footnote {
+  padding-top: 6px;
 }
 .share-track {
-  grid-column: 2/4;
-  height: 3px;
+  height: 4px;
   overflow: hidden;
   border-radius: 2px;
   background: var(--surface-2);
@@ -116,6 +140,10 @@
   display: block;
   height: 100%;
 }
+.rival-share {
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--text-secondary) 60%, transparent);
+}
 .empty {
   padding: 24px 0;
   color: var(--text-muted);
@@ -127,8 +155,8 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px 20px;
-  padding-top: 10px;
+  gap: 6px 16px;
+  padding-top: 8px;
   border-top: 1px solid var(--border-subtle);
 }
 .inspection > :global(.runner-reference) {
@@ -137,7 +165,7 @@
 .inspection dl {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 14px;
   margin: 0;
 }
 .inspection dl > div {
@@ -157,12 +185,13 @@
 
 .partner-lineup {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 20px;
+  gap: 12px;
+  min-width: 0;
 }
 .partner-lineup button {
-  flex: 1;
-  min-width: 150px;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
   padding: 0;
   border: 0;
   background: none;
@@ -171,9 +200,21 @@
   text-align: left;
   cursor: pointer;
 }
+.partner-lineup :global(.runner-reference) {
+  max-width: 100%;
+}
+/* Teammates stay on one line; a long name ends in an ellipsis and its button title shows it whole. */
+.partner-lineup :global(.runner-reference .runner-name) {
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+.partner-lineup :global(.runner-name strong) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .partner-lineup button:hover,
-.partner-lineup button:focus-visible,
-.partner-lineup button.current {
+.partner-lineup button:focus-visible {
   color: var(--accent-primary);
 }
 

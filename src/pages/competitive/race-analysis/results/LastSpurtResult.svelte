@@ -15,20 +15,22 @@
       Delay: {result.delay === undefined ? '—' : result.delay.toFixed(1) + ' m'}
     {/if}
   </span>
-  <small>
-    Speed: <span
-      class:warning={result.speedPenalty}
-      class:clean={result.speed !== undefined && !result.speedPenalty}
-    >
-      {result.speed === undefined
-        ? '—'
-        : result.speed.toFixed(2) + ' m/s'}{#if (result.reduction ?? 0) >= 0.005}
-        {' '}(−{result.reduction!.toFixed(2)})
-      {:else if result.speedPenalty}
-        (penalty)
-      {/if}
-    </span>
-  </small>
+  {#if result.speed !== undefined || result.speedPenalty}
+    <small>
+      Speed: <span
+        class:warning={result.speedPenalty}
+        class:clean={result.speed !== undefined && !result.speedPenalty}
+      >
+        {result.speed === undefined
+          ? '—'
+          : result.speed.toFixed(2) + ' m/s'}{#if (result.reduction ?? 0) >= 0.005}
+          {' '}(−{result.reduction!.toFixed(2)})
+        {:else if result.speedPenalty}
+          (penalty)
+        {/if}
+      </span>
+    </small>
+  {/if}
 </div>
 
 <style>

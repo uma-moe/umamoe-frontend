@@ -1,100 +1,3 @@
-h2 {
-  font-size: 17px;
-  font-weight: 650;
-  margin: 0;
-}
-p {
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
-}
-.runner-card {
-  display: grid;
-  gap: 12px;
-  align-content: start;
-  min-width: 0;
-  background: var(--surface-1);
-  border-radius: var(--radius-lg);
-  padding: 12px;
-}
-.events h3 small {
-  font-size: 10px;
-  color: var(--text-secondary);
-  font-weight: 400;
-  margin-left: 4px;
-}
-.events {
-  background: var(--surface-1);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-.events header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  padding: 14px;
-}
-.events h3 {
-  font-size: 13px;
-  margin: 0;
-}
-.events header > span {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-.event-list {
-  max-height: 260px;
-  overflow: auto;
-  padding: 0 12px 12px;
-}
-.event-list button {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 9px 4px;
-  border: 0;
-  border-top: 1px solid var(--border-subtle);
-  background: none;
-  color: var(--text-primary);
-  cursor: pointer;
-}
-.event-list time {
-  font: 11px var(--font-mono);
-  color: var(--text-secondary);
-}
-.event-list button > span:last-child {
-  font-size: 11px;
-  margin-left: auto;
-  color: var(--text-secondary);
-}
-.event-list button.active {
-  background: color-mix(in srgb, var(--accent-warning) 8%, transparent);
-}
-@media (max-width: 700px) {
-  h2 {
-    font-size: 14px;
-  }
-}
-.blocking-pair {
-  display: grid;
-  gap: 3px;
-  text-align: left;
-  min-width: 0;
-}
-.blocking-pair strong {
-  font-size: 11px;
-  font-weight: 500;
-}
-.blocking-pair small {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-.events .event-list p {
-  padding: 8px 4px;
-}
 .report-heading {
   display: flex;
   align-items: center;
@@ -102,149 +5,32 @@ p {
   gap: 16px;
   margin-bottom: 12px;
 }
-.report-heading h2 {
+h2 {
+  margin: 0;
   font-size: 17px;
+  font-weight: 650;
 }
-.runner-card {
-  padding: 0 16px 0 0;
-  border-right: 1px solid var(--border-subtle);
-  border-radius: 0;
-  background: transparent;
-}
-.runner-outcomes {
-  margin-top: 16px;
-}
-@media (max-width: 767px) {
-  .report-heading {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .runner-card {
-    border-right: 0;
-    padding: 0;
-  }
-}
-:global(.runner-panel) > .report-heading {
-  margin-bottom: 8px;
-}
-.blocking-analysis .event-list button {
-  padding: 4px 0;
-}
-.blocking-analysis .blocking-pair {
-  gap: 1px;
-  line-height: 1.3;
-}
-.blocking-analysis .event-list p {
-  padding: 3px 0;
-}
-.runner-card {
-  display: block;
-  padding: 0 0 8px;
-  border: 0;
-  border-bottom: 1px solid var(--border-subtle);
-  border-radius: 0;
-  background: transparent;
-}
-.runner-outcomes {
-  margin-top: 8px;
-}
-.blocking-analysis {
-  margin-top: 0;
-  background: transparent;
-  border-radius: 0;
-}
-.blocking-analysis > header {
-  padding: 0 0 4px;
-}
-.blocking-analysis .event-list {
-  padding: 0;
-  max-height: 180px;
-}
-.blocking-analysis :global(.checkbox) {
-  min-height: 28px;
+.report-heading > :global(.ui-button) {
+  min-height: 32px;
+  padding-inline: 12px;
   font-size: 11px;
 }
-@media (max-width: 700px) {
-  .runner-card {
-    gap: 6px;
-    padding: 0 0 8px;
-  }
-  .runner-outcomes {
-    margin-top: 8px;
-  }
-  .blocking-analysis {
-    margin-top: 0;
-  }
-  .blocking-analysis > header {
-    flex-wrap: wrap;
-    gap: 6px;
-  }
+p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
 }
-.blocking-analysis :global(.checkbox) {
-  grid-template-columns: 16px auto;
-  gap: 6px;
-}
-.blocking-analysis :global(.box) {
-  width: 16px;
-  height: 16px;
-}
+
+/* CM Data's build card, cut to what this race needs: the skill table below lists the learned skills. */
 .runner-card {
-  display: block;
   min-width: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  overflow: visible;
 }
-.runner-card :global(.build) {
-  display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
-  align-items: center;
-  gap: 24px;
-}
-.runner-card :global(.build-identity) {
-  padding: 0;
-}
-.runner-card :global(.build-content) {
-  padding: 0;
-  display: block;
-}
-.runner-card :global(.stat-overview) {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-}
-.runner-card :global(.section-heading) {
-  display: none;
-}
-.runner-card :global(.stats-container) {
-  width: min(460px, 100%);
-  flex: 0 1 460px;
-}
-.runner-card :global(.inline-stats > div) {
-  border: 0;
-  padding-block: 3px;
-}
-.runner-card :global(.inline-stats dd) {
-  font-size: 14px;
-}
-.runner-card :global(.race-aptitudes) {
-  gap: 16px;
+.runner-card :global(.identity-line > .ui-button) {
   flex: none;
-}
-.runner-card :global(.race-aptitude > span:first-child) {
-  display: none;
-}
-.runner-card :global(.race-aptitude small) {
-  order: -1;
-  font-size: 11px;
-}
-.runner-card :global(.build-identity > .ui-button) {
-  flex: none;
-  font-size: 11px;
   min-height: 30px;
   padding-inline: 6px;
+  font-size: 11px;
 }
 .gate-label {
   display: inline-flex;
@@ -252,59 +38,100 @@ p {
   gap: 4px;
   white-space: nowrap;
 }
-:global(.runner-panel) > .report-heading > :global(.ui-button) {
-  min-height: 32px;
-  padding-inline: 12px;
+.runner-results small {
+  margin-left: 4px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.blocking-analysis header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 4px;
+}
+.blocking-analysis h3 {
+  margin: 0;
+  font-size: 13px;
+}
+.blocking-analysis h3 small {
+  margin-left: 4px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 400;
+}
+.blocking-analysis :global(.checkbox) {
+  grid-template-columns: 16px auto;
+  gap: 6px;
+  min-height: 28px;
   font-size: 11px;
 }
-.runner-outcomes {
-  margin-top: 0;
+.blocking-analysis :global(.box) {
+  width: 16px;
+  height: 16px;
 }
-@media (max-width: 800px) {
-  .runner-card {
-    padding: 0;
-  }
+.event-list {
+  max-height: 180px;
+  overflow: auto;
 }
-@media (max-width: 520px) {
-  .runner-card :global(.race-aptitudes) {
-    gap: 8px;
-  }
-  .runner-card :global(.race-aptitude) {
-    gap: 3px;
-  }
-  .runner-card :global(.race-aptitude small) {
-    font-size: 9px;
-  }
+.event-list button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  background: none;
+  color: var(--text-primary);
+  cursor: pointer;
 }
-@media (max-width: 1200px) {
-  .runner-card :global(.stat-overview) {
+.event-list button.active {
+  background: color-mix(in srgb, var(--accent-warning) 8%, transparent);
+}
+.event-list time {
+  color: var(--text-secondary);
+  font: 11px var(--font-mono);
+}
+.event-list button > span:last-child {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.event-list p {
+  padding: 3px 0;
+}
+.blocking-pair {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.3;
+  text-align: left;
+}
+.blocking-pair strong {
+  font-size: 11px;
+  font-weight: 500;
+}
+.blocking-pair small {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+@media (max-width: 767px) {
+  .report-heading {
     flex-wrap: wrap;
-    gap: 5px 16px;
-  }
-  .runner-card :global(.stats-container) {
-    width: 100%;
-    flex-basis: 100%;
-  }
-  .runner-card :global(.race-aptitudes) {
-    gap: 16px;
+    gap: 10px;
+    margin-bottom: 8px;
   }
 }
-@media (max-width: 800px) {
-  .runner-card :global(.build) {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 700px) {
+  h2 {
+    font-size: 14px;
+  }
+  .blocking-analysis header {
+    flex-wrap: wrap;
     gap: 6px;
-  }
-  .runner-card :global(.stat-overview) {
-    gap: 6px;
-  }
-  .runner-card :global(.race-aptitudes) {
-    gap: 16px;
-  }
-  .runner-card :global(.inline-stats dd) {
-    font-size: 13px;
-  }
-  :global(.runner-panel) > .report-heading > :global(.ui-button) {
-    min-height: 32px;
-    font-size: 11px;
   }
 }

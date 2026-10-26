@@ -17,11 +17,14 @@ it('provides deterministic complete race fixtures with one winner per race and c
     expect(race.frames.at(-1)!.horses.every((horse) => horse.distance === race.raceDistance)).toBe(
       true
     );
+    const skillEvents = race.events.filter((event) => event.type === 3);
+    const raceMarks = race.events.filter((event) => event.type !== 3);
     expect(
-      race.events.every((event) =>
+      skillEvents.every((event) =>
         race.runners[event.params[0]!]!.skillIds.includes(event.params[1]!)
       )
     ).toBe(true);
+    expect(raceMarks.every((event) => race.runners[event.params[0]!] !== undefined)).toBe(true);
   }
 
   const analysis = analyzeMultiRace(races);
