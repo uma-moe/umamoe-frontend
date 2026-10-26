@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { tick, type Snippet } from 'svelte';
+  import { tick } from 'svelte';
   import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import { analyzeMultiRace } from '@/lib/race/multi-race-analysis';
   import Button from '@/components/controls/Button.svelte';
-  import Icon from '@/components/Icon.svelte';
   import Tabs, { type TabItem } from '@/components/navigation/Tabs.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import RunnerBuildDetails from '../runners/RunnerBuildDetails.svelte';
@@ -13,8 +12,7 @@
   import SessionUmas from './umas/SessionUmas.svelte';
   import SessionTeams from './teams/SessionTeams.svelte';
   import SessionSkills from './skills/SessionSkills.svelte';
-  import SessionHp from './diagnostics/SessionHp.svelte';
-  import SessionDiagnostics from './diagnostics/SessionDiagnostics.svelte';
+  import SessionRunners from './diagnostics/SessionRunners.svelte';
   import { styleColors, teamBuilds } from '../analysis-view';
   import { styleCompositions, type SessionView, type TeamFilter } from './session-statistics';
 
@@ -22,14 +20,11 @@
     captures,
     skillNames = new Map<number, string>(),
     pending = false,
-    scope,
     onreplay
   }: {
     captures: ParsedRaceCapture[];
     skillNames?: Map<number, string>;
     pending?: boolean;
-    /** The course and conditions the races are narrowed to, at the start of the summary. */
-    scope: Snippet;
     onreplay?: (index: number, runner?: number, time?: number) => void;
   } = $props();
 
@@ -61,10 +56,13 @@
     captures.flatMap((capture, race) => capture.runners.map((runner) => ({ runner, race })))
   );
 
-  const winners = $derived(entries.filter((entry) => entry.runner.result?.finishOrder === 1));
   const teams = $derived(teamBuilds(captures));
   const compositions = $derived(styleCompositions(teams));
   const resimulated = $derived(captures.filter((capture) => capture.detailed).length);
+  // Demo races and captures without race input can never be resimulated, so a 0 / n count would only look stalled.
+  const showsResimulation = $derived(
+    captures.some((capture) => capture.detailed || capture.original !== undefined)
+  );
 
   $effect(() => {
     if (!visited.includes(view)) visited = [...visited, view];
@@ -107,51 +105,6 @@
 </script>
 
 <div class="session-analysis">
-  <section
-    class="session-summary"
-    aria-label="Session summary"
-  >
-    <div class="session-scope">
-      <Icon
-        name="race"
-        size={20}
-      />
-      {@render scope()}
-    </div>
-    <dl class="session-totals">
-      <div>
-        <dt>Races</dt>
-        <dd>{captures.length.toLocaleString()}</dd>
-      </div>
-      <div>
-        <dt>Runner entries</dt>
-        <dd>{entries.length.toLocaleString()}</dd>
-      </div>
-      <div>
-        <dt>Umas</dt>
-        <dd>{analysis.characters.length.toLocaleString()}</dd>
-      </div>
-      <div>
-        <dt>Team builds</dt>
-        <dd>{teams.length.toLocaleString()}</dd>
-      </div>
-      <div>
-        <dt>Resimulated</dt>
-        <dd>
-          {resimulated}
-          <small>/ {captures.length}</small>
-          {#if pending}
-            <span
-              class="pending"
-              role="status"
-            >
-              Running
-            </span>
-          {/if}
-        </dd>
-      </div>
-    </dl>
-  </section>
   <div
     class="session-navigation"
     bind:this={navigation}
@@ -164,6 +117,52 @@
       controls={panelId}
       bind:value={() => view, (next) => (view = next as SessionView)}
     />
+    <dl
+      class="session-totals"
+      aria-label="Session totals"
+    >
+      <div>
+        <dt>races</dt>
+        <dd>{captures.length.toLocaleString()}</dd>
+      </div>
+      <div>
+        <dt>runner entries</dt>
+        <dd>{entries.length.toLocaleString()}</dd>
+      </div>
+      <div>
+        <dt>Umas</dt>
+        <dd>{analysis.characters.length.toLocaleString()}</dd>
+      </div>
+      <div>
+        <dt>team builds</dt>
+        <dd>{teams.length.toLocaleString()}</dd>
+      </div>
+      {#if showsResimulation}
+        <div class="resimulated">
+          <dt>resimulated</dt>
+          <dd>
+            {resimulated}
+            <small>/ {captures.length}</small>
+            {#if pending}
+              <span
+                class="pending"
+                role="status"
+              >
+                Running
+              </span>
+            {/if}
+          </dd>
+          {#if pending}
+            <span
+              class="simulation-progress"
+              aria-hidden="true"
+            >
+              <i style:width={(resimulated / Math.max(1, captures.length)) * 100 + '%'}></i>
+            </span>
+          {/if}
+        </div>
+      {/if}
+    </dl>
   </div>
   <div
     id={panelId}
@@ -177,12 +176,12 @@
           {analysis}
           {captures}
           {entries}
-          {winners}
           {compositions}
           onview={show}
           onteams={findTeams}
           onuma={inspectUma}
           oninspect={inspect}
+          {onreplay}
         />
       </div>
     {/if}
@@ -192,7 +191,6 @@
           {analysis}
           {captures}
           {compositions}
-          entryCount={entries.length}
           onteams={findTeams}
         />
       </div>
@@ -201,6 +199,7 @@
       <div hidden={view !== 'umas'}>
         <SessionUmas
           {analysis}
+          {captures}
           {entries}
           bind:selected={selectedUma}
           onteams={findTeams}
@@ -212,6 +211,7 @@
         <SessionTeams
           {teams}
           {analysis}
+          {captures}
           bind:filter={teamFilter}
           oninspect={inspect}
           {onreplay}
@@ -227,19 +227,13 @@
       </div>
     {/if}
     {#if visited.includes('runners')}
-      <div
-        class="runner-views"
-        hidden={view !== 'runners'}
-      >
-        <SessionHp
-          {analysis}
-          onuma={inspectUma}
-        />
-        <SessionDiagnostics
+      <div hidden={view !== 'runners'}>
+        <SessionRunners
           {captures}
           {skillNames}
-          {onreplay}
           {pending}
+          onuma={inspectUma}
+          {onreplay}
           onbuild={(runner, race) => inspect([runner], runner.name, race)}
         />
       </div>

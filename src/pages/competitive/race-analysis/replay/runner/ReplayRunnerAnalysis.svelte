@@ -1,15 +1,17 @@
 <script lang="ts">
   import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
-  import { formatRaceTime } from '@/lib/race/replay/race-display';
+  import { formatRaceTime, ordinalPlace } from '@/lib/race/replay/race-display';
   import Button from '@/components/controls/Button.svelte';
   import Checkbox from '@/components/controls/Checkbox.svelte';
   import Icon from '@/components/Icon.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
-  import RunnerBuild from '@/pages/competitive/runners/RunnerBuild.svelte';
+  import RunnerBuildDetails from '@/pages/competitive/runners/RunnerBuildDetails.svelte';
   import { portrait } from '@/pages/competitive/analysis-view';
   import ReplayDiagnostics from '../../diagnostics/ReplayDiagnostics.svelte';
+  import type { DetailedSimulation } from '../../detailed-simulation';
   import type { Course } from '../replay-course';
   import type { ReplayState } from '../replay-state.svelte';
+  import ReplaySimulationNotice from './ReplaySimulationNotice.svelte';
 
   type BlockingSpan = ReplayState['blockingSpans'][number];
 
@@ -18,9 +20,11 @@
     runner,
     course,
     skillNames,
+    simulation,
     onbuild,
     onpickrunner,
     onreview,
+    onretry,
     onseek,
     onselect
   }: {
@@ -28,9 +32,11 @@
     runner: RaceRunner;
     course?: Course;
     skillNames: Map<number, string>;
+    simulation: DetailedSimulation;
     onbuild: () => void;
     onpickrunner: () => void;
     onreview: (event: BlockingSpan) => void;
+    onretry?: () => void;
     onseek: (time: number) => void;
     onselect: (index: number) => void;
   } = $props();
@@ -41,6 +47,12 @@
     allBlocking
       ? replay.blockingSpans
       : replay.blockingSpans.filter((event) => event.horseIndex === runner?.index)
+  );
+
+  const winningTime = $derived(
+    Math.min(
+      ...replay.capture.runners.flatMap((entry) => (entry.result ? [entry.result.finishTime] : []))
+    )
   );
 </script>
 
@@ -56,14 +68,13 @@
   </Button>
 </header>
 {#snippet runnerOverview()}
-  <article
-    class="runner-card"
-    style:--runner-color={replay.teamColor(runner)}
-  >
-    <RunnerBuild
+  <div class="runner-card">
+    <RunnerBuildDetails
       {runner}
       {skillNames}
-      compact
+      framed
+      content="summary"
+      color={replay.teamColor(runner)}
       raceContext={{
         surface: course?.surface,
         distance: course?.distance ?? replay.capture.raceDistance
@@ -84,8 +95,38 @@
           </span>
         </Button>
       {/snippet}
-    </RunnerBuild>
-  </article>
+      {#snippet metrics()}
+        {#if runner.result}
+          {@const won = runner.result.finishOrder === 1}
+          {@const behind = runner.result.finishTime - winningTime}
+          <dl class="runner-results">
+            <div>
+              <dt>Finish</dt>
+              <dd>
+                {ordinalPlace(runner.result.finishOrder)}
+                <small>of {replay.capture.runners.length}</small>
+              </dd>
+            </div>
+            <div>
+              <dt>Finish time</dt>
+              <dd>
+                {formatRaceTime(runner.result.finishTime)}
+                <small>{won ? 'Winner' : '+' + behind.toFixed(2) + ' s'}</small>
+              </dd>
+            </div>
+          </dl>
+        {/if}
+      {/snippet}
+    </RunnerBuildDetails>
+  </div>
+{/snippet}
+{#snippet simulationNotice()}
+  {#if simulation.status !== 'ready'}
+    <ReplaySimulationNotice
+      {simulation}
+      {onretry}
+    />
+  {/if}
 {/snippet}
 {#snippet blockingPanel()}
   <section
@@ -150,11 +191,13 @@
     distance={replay.bounds.distanceMax}
     blocking={blockingPanel}
     overview={runnerOverview}
+    notice={simulation.status === 'ready' ? undefined : simulationNotice}
     {onseek}
     {onselect}
   />
 </div>
 
 <style>
+  @import '../../../runners/runner-results.css';
   @import './replay-runner-analysis.css';
 </style>

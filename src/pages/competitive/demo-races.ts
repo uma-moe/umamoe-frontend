@@ -81,7 +81,12 @@ export function makeDemoRaces(
       },
       aptitudes: { surface: 7, distance: random() > 0.5 ? 8 : 7, style: 7 },
       skillIds: [...demoSkills.keys()].filter(() => random() > 0.25),
-      raw: { team_id: 1 + Math.floor(index / 3), rank_score: 13000 + Math.floor(random() * 6000) },
+      raw: {
+        team_id: 1 + Math.floor(index / 3),
+        rank_score: 13000 + Math.floor(random() * 6000),
+        // Normal to great, from the race and gate alone so the random sequence stays unchanged.
+        motivation: 3 + ((raceIndex + index) % 3)
+      },
       result: {
         finishOrder: finishTimes.filter((time) => time < finishTimes[index]!).length + 1,
         finishTime: finishTimes[index]!,
@@ -136,6 +141,30 @@ export function makeDemoRaces(
       }
     }
 
+    // Every third race, one runner is rushed for a stretch of the mid race.
+    if (raceIndex % 3 === 0) {
+      const rushed = (raceIndex * 5) % 9;
+      for (let i = 15; i <= 25; i++) frames[i]!.horses[rushed]!.temptationMode = 1;
+    }
+
+    const frontRunners = runners.filter((runner) => runner.result.runningStyle === 1);
+    const raceMarks = [
+      // Two or more Front Runners fight for the lead early on.
+      ...(frontRunners.length >= 2
+        ? frontRunners.map((runner) => ({
+            frameTime: duration * 0.12,
+            type: 4,
+            params: [runner.index]
+          }))
+        : []),
+      // Every other race, the first two finishers duel down the final straight.
+      ...(raceIndex % 2 === 0
+        ? runners
+            .filter((runner) => runner.result.finishOrder <= 2)
+            .map((runner) => ({ frameTime: duration * 0.9, type: 5, params: [runner.index] }))
+        : [])
+    ];
+
     const events = runners
       .flatMap((runner) =>
         runner.skillIds
@@ -146,6 +175,7 @@ export function makeDemoRaces(
             params: [runner.index, skill]
           }))
       )
+      .concat(raceMarks)
       .sort((a, b) => a.frameTime - b.frameTime);
 
     return {

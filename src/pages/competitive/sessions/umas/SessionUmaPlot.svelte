@@ -3,15 +3,21 @@
   import type { MultiRaceCharacterStats } from '@/lib/race/multi-race-analysis';
   import UmaChartPoint from '../UmaChartPoint.svelte';
   import { portrait, rate } from '../../analysis-view';
+  import { formatRate, isSmallSample } from '../session-insights';
+  import { chartColors } from '../session-statistics';
+  import { theme } from '@/stores/theme';
 
   let {
     characters,
     entries,
+    neutral,
     selected,
     onselect
   }: {
     characters: MultiRaceCharacterStats[];
     entries: number;
+    /** The win rate, in percent, every Uma would share if all were equally strong. */
+    neutral: number;
     selected?: string;
     onselect: (key: string) => void;
   } = $props();
@@ -27,13 +33,18 @@
 
   onDestroy(() => cancelAnimationFrame(resizeFrame));
 
-  const maxX = $derived(Math.max(5, ...characters.map((c) => rate(c.races, entries))) * 1.15);
+  const colors = $derived(chartColors($theme === 'dark'));
+  // An even split of the entries between the Umas shown, the vertical counterpart of the neutral rate.
+  const averageShare = $derived(characters.length ? 100 / characters.length : 0);
+  const maxX = $derived(
+    Math.max(5, averageShare, ...characters.map((c) => rate(c.races, entries))) * 1.15
+  );
   const maxY = $derived(
-    Math.min(110, Math.max(10, ...characters.map((c) => rate(c.wins, c.races))) * 1.15)
+    Math.min(110, Math.max(10, neutral, ...characters.map((c) => rate(c.wins, c.races))) * 1.15)
   );
 
   const x = (v: number) => 58 + (v / maxX) * Math.max(1, width - 90),
-    y = (v: number) => 260 - (v / maxY) * 220;
+    y = (v: number) => 226 - (v / maxY) * 192;
 </script>
 
 <div
@@ -41,7 +52,7 @@
   bind:clientWidth={() => width, resize}
 >
   <svg
-    viewBox={`0 0 ${width} 310`}
+    viewBox={`0 0 ${width} 270`}
     role="group"
     aria-label="Uma popularity and win rate. Select a portrait to inspect its results."
   >
@@ -61,7 +72,7 @@
       </text>
       <text
         x={x(maxX * f)}
-        y="283"
+        y="245"
         text-anchor="middle"
       >
         {(maxX * f).toFixed(1)}%
@@ -69,7 +80,7 @@
     {/each}
     <text
       x={width / 2}
-      y="304"
+      y="265"
       text-anchor="middle"
     >
       Field share
@@ -80,25 +91,58 @@
     >
       Win rate
     </text>
-    {#each [...characters].sort((a, b) => Number(a.key === selected) - Number(b.key === selected)) as c (c.key)}
-      <UmaChartPoint
-        x={x(rate(c.races, entries))}
-        y={y(rate(c.wins, c.races))}
-        r={17}
-        image={portrait(c.cardId)}
-        color={c.key === selected ? '#e8ad63' : '#69b7ee'}
-        selected={c.key === selected}
-        onselect={() => onselect(c.key)}
-        label={'Select ' +
-          c.name +
-          ': ' +
-          rate(c.wins, c.races).toFixed(1) +
-          '% win rate, ' +
-          rate(c.races, entries).toFixed(1) +
-          '% field share, ' +
-          c.races +
-          ' entries'}
+    <line
+      class="reference"
+      x1="48"
+      x2={width - 24}
+      y1={y(neutral)}
+      y2={y(neutral)}
+    />
+    <text
+      class="reference-label"
+      x={width - 24}
+      y={y(neutral) - 5}
+      text-anchor="end"
+    >
+      Neutral {formatRate(neutral)}
+    </text>
+    {#if averageShare > 0}
+      <line
+        class="reference"
+        x1={x(averageShare)}
+        x2={x(averageShare)}
+        y1={y(maxY)}
+        y2={y(0)}
       />
+      <text
+        class="reference-label"
+        x={x(averageShare) + 5}
+        y={y(maxY) + 10}
+      >
+        Average share {formatRate(averageShare)}
+      </text>
+    {/if}
+    {#each [...characters].sort((a, b) => Number(a.key === selected) - Number(b.key === selected)) as c (c.key)}
+      <g class:few={isSmallSample(c.races) && c.key !== selected}>
+        <UmaChartPoint
+          x={x(rate(c.races, entries))}
+          y={y(rate(c.wins, c.races))}
+          r={17}
+          image={portrait(c.cardId)}
+          color={c.key === selected ? colors.accent : colors.muted}
+          selected={c.key === selected}
+          onselect={() => onselect(c.key)}
+          label={'Select ' +
+            c.name +
+            ': ' +
+            rate(c.wins, c.races).toFixed(1) +
+            '% win rate, ' +
+            rate(c.races, entries).toFixed(1) +
+            '% field share, ' +
+            c.races +
+            ' entries'}
+        />
+      </g>
     {/each}
   </svg>
 </div>
@@ -111,11 +155,23 @@
   svg {
     display: block;
     width: 100%;
-    height: 310px;
+    height: 270px;
     overflow: visible;
   }
   line {
     stroke: var(--border-subtle);
+  }
+  .reference {
+    stroke: var(--text-secondary);
+    stroke-dasharray: 4 4;
+    opacity: 0.7;
+  }
+  .reference-label {
+    fill: var(--text-secondary);
+    font-size: 10px;
+  }
+  .few {
+    opacity: 0.45;
   }
   text {
     fill: var(--text-secondary);

@@ -1,7 +1,7 @@
 .results {
   --control-height: 32px;
   min-width: 0;
-  padding: 16px;
+  padding: 10px 12px;
   background: var(--surface-1);
   border-radius: var(--radius-lg);
 }
@@ -17,7 +17,7 @@ header {
   flex-wrap: wrap;
 }
 h2 {
-  font-size: 17px;
+  font-size: 15px;
   margin: 0;
 }
 h3 {
@@ -36,12 +36,12 @@ p {
   place-items: center;
   color: var(--text-secondary);
 }
-.results-context {
-  display: flex;
-  justify-content: space-between;
-  gap: 6px 16px;
+.results-title {
   flex-wrap: wrap;
-  margin: 6px 0 12px;
+  margin-bottom: 6px;
+}
+.results-context {
+  margin: 0;
   font-size: 11px;
   color: var(--text-secondary);
 }
@@ -56,7 +56,7 @@ p {
 }
 .results :global(th),
 .results :global(td) {
-  padding: 8px 12px;
+  padding: 4px 10px;
 }
 .results :global(th:first-child),
 .results :global(td:first-child) {
@@ -79,8 +79,22 @@ small {
   display: block;
   color: var(--text-secondary);
   font-size: 10px;
-  margin-top: 3px;
+  margin-top: 1px;
   line-height: 1.4;
+}
+/* Secondary values sit beside the main one, so each result stays on a single line. */
+small.aside {
+  display: inline;
+  margin: 0 0 0 5px;
+}
+.results :global(.spurt-result) {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.results :global(.spurt-result small) {
+  margin: 0;
 }
 .runner-name {
   width: 100%;
@@ -136,12 +150,15 @@ small {
   color: var(--accent-warning);
 }
 .build-cell {
-  display: inline-grid;
-  gap: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
 .build-cell > small {
+  margin: 0;
   text-align: right;
+  white-space: nowrap;
 }
 .result-stats {
   position: relative;
@@ -194,24 +211,18 @@ small {
   }
 }
 @media (max-width: 800px) {
-  .results {
-    padding: 12px;
-  }
   .results-context {
     font-size: 10px;
   }
   .results :global(th),
   .results :global(td) {
-    padding: 7px 8px;
+    padding: 5px 8px;
   }
   .runner-name {
     min-width: 130px;
     gap: 6px;
   }
   .runner-name :global(svg) {
-    display: none;
-  }
-  .gap-context {
     display: none;
   }
 }

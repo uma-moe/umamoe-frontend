@@ -4,49 +4,99 @@
   import { runningStyleName } from '@/lib/race/replay/race-display';
   import DataTable from '@/components/data/DataTable.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
-  import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
-  import { percent, portrait, rate, styleColors } from '../../analysis-view';
+  import CmSaturationChart from '../../champions-meeting/strategy/CmSaturationChart.svelte';
+  import SessionKpis from '../SessionKpis.svelte';
+  import { portrait, rate, styleColors } from '../../analysis-view';
+  import { compositionKpi, rateClass, styleKpi, type SessionKpi } from '../session-kpis';
   import {
-    chartInk,
+    averageRoom,
+    formatRate,
+    isSmallSample,
+    leaderlessRooms,
+    roomCompositions,
+    saturationBuckets,
+    SATURATION_MIN_RACES,
+    sessionBaseline,
+    SMALL_SAMPLE,
+    standoutComposition,
+    styleShares,
+    styleStandouts,
+    timesNeutral
+  } from '../session-insights';
+  import {
     metricHelp,
-    sessionChart,
     styleRepresentatives,
     type SessionComposition,
     type TeamFilter
   } from '../session-statistics';
-  import { theme } from '@/stores/theme';
 
   interface Props {
     analysis: MultiRaceAnalysis;
     captures: ParsedRaceCapture[];
     compositions: SessionComposition[];
-    entryCount: number;
     onteams: (filter: TeamFilter) => void;
   }
 
-  let { analysis, captures, compositions, entryCount, onteams }: Props = $props();
+  let { analysis, captures, compositions, onteams }: Props = $props();
 
-  /** Three equally matched teams each win one race in three. */
-  const NEUTRAL_TEAM_RATE = 100 / 3;
+  /** A style counts as winning above or below its numbers once it is a tenth away from an even result. */
+  const EVEN_RANGE = 0.1;
 
-  const ink = $derived(chartInk($theme === 'dark'));
-  const styles = $derived(analysis.strategies.filter((row) => row.strategy > 0));
-  const breakdown = $derived(
-    styles.map((row) => ({
-      style: row.strategy,
-      entries: row.races,
-      wins: row.wins,
-      field: rate(row.races, entryCount),
-      winShare: rate(row.wins, captures.length),
-      winRate: rate(row.wins, row.races)
-    }))
-  );
+  /** Room mixes listed below the average room; the rest are rarer than any reader would compare. */
+  const LISTED_ROOMS = 8;
+
+  const baseline = $derived(sessionBaseline(analysis));
+  const shares = $derived(styleShares(analysis));
+  const standouts = $derived(styleStandouts(shares));
+  const topComposition = $derived(standoutComposition(compositions));
+
+  const styles = $derived(shares.map((row) => row.style));
+  const rooms = $derived(roomCompositions(captures, styles));
+  const listedRooms = $derived(rooms.slice(0, LISTED_ROOMS));
+  const average = $derived(averageRoom(rooms, styles));
+  const roomMax = $derived(Math.max(1, ...rooms.flatMap((room) => room.counts)));
+  const leaderless = $derived(leaderlessRooms(captures));
+
+  const kpis = $derived.by(() => {
+    const list: SessionKpi[] = [];
+    const composition = topComposition;
+
+    if (standouts.strongest) list.push(styleKpi(standouts.strongest, 'Best running style'));
+    if (standouts.weakest) list.push(styleKpi(standouts.weakest, 'Weakest running style'));
+    if (composition)
+      list.push(
+        compositionKpi(composition, baseline, {
+          label: 'Teams',
+          onselect: () => onteams({ composition: composition.key })
+        })
+      );
+
+    list.push({
+      id: 'leaderless',
+      label: 'Rooms without a Front Runner',
+      value: formatRate(rate(leaderless, captures.length)),
+      detail: leaderless + ' of ' + captures.length + ' races · a Pace Chaser leads'
+    });
+
+    return list;
+  });
 
   // Both tracks share one scale, so a style winning more than its field share reads at a glance.
-  const trackMax = $derived(Math.max(1, ...breakdown.flatMap((row) => [row.field, row.winShare])));
+  const trackMax = $derived(
+    Math.max(1, ...shares.flatMap((row) => [row.fieldShare, row.winShare]))
+  );
 
-  const mostRoom = $derived(Math.max(9, ...captures.map((capture) => capture.runners.length)));
+  const saturation = $derived(
+    analysis.strategies
+      .filter((row) => row.strategy > 0)
+      .map((row) => ({
+        name: runningStyleName(row.strategy),
+        color: styleColors[row.strategy] ?? 'currentColor',
+        buckets: saturationBuckets(row)
+      }))
+  );
+
   const compositionRows = $derived(
     compositions.map((row) => ({
       id: row.key,
@@ -55,16 +105,44 @@
       winrate: rate(row.wins, row.appearances)
     }))
   );
+
+  function againstField(winShare: number, fieldShare: number) {
+    const times = timesNeutral(winShare, fieldShare);
+    if (times === undefined) return { label: '—', tone: 'even' };
+
+    const tone = times >= 1 + EVEN_RANGE ? 'over' : times <= 1 - EVEN_RANGE ? 'under' : 'even';
+    return { label: times.toFixed(1) + '×', tone };
+  }
+
+  /** A count's cell takes its style's colour, stronger the more runners of that style shared the room. */
+  function roomCell(count: number, style: number) {
+    if (count <= 0) return undefined;
+
+    const strength = Math.round(14 + (count / roomMax) * 56);
+    return `color-mix(in srgb, ${styleColors[style] ?? 'currentColor'} ${strength}%, transparent)`;
+  }
+
+  function winnersLabel(wins: number[]) {
+    return styles
+      .map((style, index) => ({ style, wins: wins[index] ?? 0 }))
+      .filter((item) => item.wins > 0)
+      .map((item) => runningStyleName(item.style) + ' ' + item.wins)
+      .join(', ');
+  }
 </script>
 
 <div class="strategy">
+  <SessionKpis
+    label="Strategy at a glance"
+    {kpis}
+  />
   <div class="panels upper">
     <ChartFrame
       plain
       surface
       id="session-style-breakdown"
       title="Style breakdown"
-      description="Field share and win share on one scale. Select a style to find its teams."
+      description="Share of wins against share of the field · select a style for its teams"
     >
       <div class="breakdown-key">
         <span>Running style</span>
@@ -74,32 +152,31 @@
           <i class="win-key"></i>
           Wins
         </span>
-        <span>Win share</span>
-        <span>Win rate</span>
+        <span>Wins</span>
+        <span>vs. field</span>
       </div>
-      {#each breakdown as row (row.style)}
+      {#each shares as row (row.style)}
+        {@const comparison = againstField(row.winShare, row.fieldShare)}
         <div class="style-row">
-          <div class="style-name">
-            <button
-              class="style-link"
-              onclick={() => onteams({ style: String(row.style) })}
-            >
-              <i style:background={styleColors[row.style]}></i>
-              {runningStyleName(row.style)}
-            </button>
-            <small>{row.entries} entries</small>
-          </div>
+          <button
+            class="style-link"
+            onclick={() => onteams({ style: String(row.style) })}
+          >
+            <i style:background={styleColors[row.style]}></i>
+            <span style:color={styleColors[row.style]}>{runningStyleName(row.style)}</span>
+            <small>{row.entries}</small>
+          </button>
           <div
             class="tracks"
             role="img"
             aria-label={runningStyleName(row.style) +
               ': ' +
-              row.field.toFixed(1) +
-              '% of the field, ' +
-              row.winShare.toFixed(1) +
-              '% of wins'}
+              formatRate(row.fieldShare) +
+              ' of the field, ' +
+              formatRate(row.winShare) +
+              ' of wins'}
           >
-            <span class="track"><i style:width={(row.field / trackMax) * 100 + '%'}></i></span>
+            <span class="track"><i style:width={(row.fieldShare / trackMax) * 100 + '%'}></i></span>
             <span class="track">
               <i
                 style:width={(row.winShare / trackMax) * 100 + '%'}
@@ -107,98 +184,107 @@
               ></i>
             </span>
           </div>
-          <div class="readout">
-            <strong>{row.winShare.toFixed(1)}%</strong>
-            <small>{row.field.toFixed(1)}% field</small>
-          </div>
-          <div class="readout">
-            <strong>{row.winRate.toFixed(1)}%</strong>
-            <small>{row.wins} wins</small>
-          </div>
+          <span class="readout">
+            <strong>{formatRate(row.winShare)}</strong>
+            <small>{formatRate(row.fieldShare)}</small>
+          </span>
+          <strong
+            class="ratio {comparison.tone}"
+            class:few={isSmallSample(row.entries)}
+            title={row.wins + ' wins from ' + row.entries + ' entries'}
+          >
+            {comparison.label}
+          </strong>
         </div>
       {/each}
+      <p class="footnote">
+        vs. field = win share ÷ field share: 1.0× is even, 1.5× won half again its numbers.
+      </p>
     </ChartFrame>
     <ChartFrame
       plain
       surface
-      compact
-      expandable
-      maximize
-      id="style-saturation"
-      title="Style saturation"
-      description="Win rate as more runners in the room share a style."
-      legend={styles.map((row) => ({
-        label: runningStyleName(row.strategy, true),
-        color: styleColors[row.strategy]!
-      }))}
+      id="session-rooms"
+      title="Room compositions"
+      description="Runners of each style per race, and which style won"
     >
-      <LazyEChartsSurface
-        height={230}
-        label="Win rate by number of runners with the same style"
-        option={sessionChart(
-          ink,
-          styles.map((row) => ({
-            name: runningStyleName(row.strategy),
-            type: 'line',
-            symbolSize: 7,
-            itemStyle: { color: styleColors[row.strategy] },
-            data: row.saturation.map((bucket) => [
-              bucket.count,
-              +rate(bucket.wins, bucket.races).toFixed(1)
-            ])
-          })),
-          { type: 'value', min: 1, max: mostRoom, interval: 1, name: 'Runners with the style' },
-          { type: 'value', axisLabel: { fontSize: 10, color: ink, formatter: '{value}%' } }
-        )}
-      />
+      <div
+        class="rooms"
+        style:--styles={styles.length}
+      >
+        <div class="room-head">
+          {#each styles as style (style)}
+            <span style:color={styleColors[style]}>{runningStyleName(style, true)}</span>
+          {/each}
+          <span>Races</span>
+          <span>Won by</span>
+        </div>
+        <div class="room-row average">
+          {#each average as value, index (index)}
+            <span class="count">{value.toFixed(1)}</span>
+          {/each}
+          <span class="races">average</span>
+          <span></span>
+        </div>
+        {#each listedRooms as room (room.key)}
+          <div class="room-row">
+            {#each room.counts as count, index (index)}
+              <span
+                class="count"
+                class:none={count === 0}
+                style:background={roomCell(count, styles[index] ?? 0)}
+              >
+                {count || '–'}
+              </span>
+            {/each}
+            <span class="races">
+              {room.races}
+              <small>{formatRate(rate(room.races, captures.length))}</small>
+            </span>
+            <span
+              class="winners"
+              role="img"
+              aria-label={'Won by ' + (winnersLabel(room.wins) || 'no recorded style')}
+              title={winnersLabel(room.wins)}
+            >
+              {#each room.wins as wins, index (index)}
+                {#if wins}
+                  <i
+                    style:flex-grow={wins}
+                    style:background={styleColors[styles[index] ?? 0]}
+                  ></i>
+                {/if}
+              {/each}
+            </span>
+          </div>
+        {/each}
+      </div>
+      <p class="footnote">
+        {leaderless} of {captures.length} races had no Front Runner, so a Pace Chaser led.
+        {#if rooms.length > LISTED_ROOMS}
+          {rooms.length - LISTED_ROOMS} rarer mixes are not listed.
+        {/if}
+      </p>
     </ChartFrame>
   </div>
   <div class="panels lower">
     <ChartFrame
       plain
       surface
-      id="session-representatives"
-      title="Style representatives"
-      description="The most entered Umas for each style. Select one to find its teams."
+      expandable
+      maximize
+      id="style-saturation"
+      title="Style saturation"
+      description={'Per-Uma win rate by how many shared the style · counts seen in fewer than ' +
+        SATURATION_MIN_RACES +
+        ' races are hidden'}
     >
-      <div class="representatives">
-        {#each styles as row (row.strategy)}
-          <section>
-            <h4>
-              <i style:background={styleColors[row.strategy]}></i>
-              {runningStyleName(row.strategy)}
-            </h4>
-            <div class="representative-head">
-              <span>Uma</span>
-              <span>Win%</span>
-              <span>Entries</span>
-            </div>
-            {#each styleRepresentatives(analysis, row.strategy) as uma (uma.key)}
-              <button
-                class="representative"
-                aria-label={'Find ' + uma.name + ' ' + runningStyleName(row.strategy) + ' teams'}
-                onclick={() => onteams({ uma: uma.key, style: String(row.strategy) })}
-              >
-                <Artwork
-                  src={portrait(uma.cardId)}
-                  alt=""
-                  size="xs"
-                />
-                <span class="representative-name">{uma.name}</span>
-                <strong>
-                  {percent(
-                    uma.entries.filter((entry) => entry.finishOrder === 1).length,
-                    uma.entries.length
-                  )}
-                </strong>
-                <small>{uma.entries.length}</small>
-              </button>
-            {:else}
-              <p class="empty">No entries</p>
-            {/each}
-          </section>
-        {/each}
-      </div>
+      <CmSaturationChart
+        series={saturation}
+        totalRaces={analysis.races}
+        neutral={baseline.uma / 100}
+        label="Per-Uma win rate versus number of the same style in the room"
+      />
     </ChartFrame>
     <ChartFrame
       plain
@@ -206,14 +292,16 @@
       compact
       id="session-compositions"
       title="Team compositions"
-      description="Races won by any member of a team with these styles."
+      description={baseline.team === undefined
+        ? 'Races won by any member of a lineup'
+        : 'Races won by any member · mark at the even ' + formatRate(baseline.team)}
     >
       <DataTable
         plain
         compact
         caption="Session team compositions"
         columnHelp={metricHelp}
-        maxHeight={360}
+        maxHeight={330}
         rows={compositionRows}
         sortKey="winrate"
         sortDirection="descending"
@@ -234,7 +322,7 @@
                 {#if index}
                   <span class="slash">/</span>
                 {/if}
-                <span>
+                <span style:color={styleColors[id]}>
                   <i style:background={styleColors[id]}></i>
                   {runningStyleName(id, true)}
                 </span>
@@ -242,34 +330,82 @@
             </button>
           {:else if column.key === 'winrate'}
             <span class="team-rate">
-              <strong>{Number(row.winrate).toFixed(1)}%</strong>
-              <span
-                class="rate-bar"
-                role="img"
-                aria-label={'Team win rate ' +
-                  Number(row.winrate).toFixed(1) +
-                  '% against a neutral 33.3%'}
+              <strong
+                class={rateClass(Number(row.winrate), Number(row.appearances), baseline.team)}
               >
-                <i
-                  class="fill"
-                  style:width={row.winrate + '%'}
-                ></i>
-                <i
-                  class="baseline"
-                  style:left={NEUTRAL_TEAM_RATE + '%'}
-                ></i>
-              </span>
+                {formatRate(Number(row.winrate))}
+              </strong>
+              {#if baseline.team !== undefined}
+                <span
+                  class="rate-bar"
+                  role="img"
+                  aria-label={'Team win rate ' +
+                    formatRate(Number(row.winrate)) +
+                    ' against a neutral ' +
+                    formatRate(baseline.team)}
+                >
+                  <i
+                    class="fill"
+                    style:width={row.winrate + '%'}
+                  ></i>
+                  <i
+                    class="baseline"
+                    style:left={baseline.team + '%'}
+                  ></i>
+                </span>
+              {/if}
             </span>
           {:else}
             {row[column.key]}
           {/if}
         {/snippet}
       </DataTable>
-      <p class="footnote">
-        The mark on each bar is 33.3%: one win in three for equally matched teams.
-      </p>
+      <p class="footnote">Muted: fewer than {SMALL_SAMPLE} races.</p>
     </ChartFrame>
   </div>
+  <ChartFrame
+    plain
+    surface
+    id="session-representatives"
+    title="Style representatives"
+    description={'Most entered Umas per style · neutral is ' +
+      formatRate(baseline.uma) +
+      ' · select one for its teams'}
+  >
+    <div class="representatives">
+      {#each shares as row (row.style)}
+        <section>
+          <h4>
+            <i style:background={styleColors[row.style]}></i>
+            {runningStyleName(row.style)}
+          </h4>
+          {#each styleRepresentatives(analysis, row.style) as uma (uma.key)}
+            {@const wins = uma.entries.filter((entry) => entry.finishOrder === 1).length}
+            <button
+              class="representative"
+              aria-label={'Find ' + uma.name + ' ' + runningStyleName(row.style) + ' teams'}
+              onclick={() => onteams({ uma: uma.key, style: String(row.style) })}
+            >
+              <Artwork
+                src={portrait(uma.cardId)}
+                alt=""
+                size="xs"
+              />
+              <span class="representative-name">{uma.name}</span>
+              <small>{wins}/{uma.entries.length}</small>
+              <strong
+                class={rateClass(rate(wins, uma.entries.length), uma.entries.length, baseline.uma)}
+              >
+                {formatRate(rate(wins, uma.entries.length))}
+              </strong>
+            </button>
+          {:else}
+            <p class="empty">No entries</p>
+          {/each}
+        </section>
+      {/each}
+    </div>
+  </ChartFrame>
 </div>
 
 <style>

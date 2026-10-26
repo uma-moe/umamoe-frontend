@@ -2,9 +2,10 @@
   import { onMount } from 'svelte';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { lastSpurtResult, raceMetricHelp } from '@/lib/race/capture/race-diagnostics';
-  import { formatRaceTime } from '@/lib/race/replay/race-display';
+  import { formatRaceTime, hpRemainingColor } from '@/lib/race/replay/race-display';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
-  import { portrait, stats } from '@/pages/competitive/analysis-view';
+  import { portrait, stats, styleColors } from '@/pages/competitive/analysis-view';
+  import { theme } from '@/stores/theme';
   import DataTable from '@/components/data/DataTable.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
@@ -43,6 +44,20 @@
     rows.some((row) => typeof row.blocked === 'number' || typeof row.rushed === 'number')
   );
 
+  const resultsContext = $derived(
+    hasModes || hasLoss || hasIncidents
+      ? 'Select a runner to inspect their race'
+      : 'Select a runner to inspect their race · recorded results only, without detailed simulation'
+  );
+
+  /** HP left as a share of the starting HP, for runners that reached the line with HP to spare. */
+  function hpShare(row: Record<string, string | number>) {
+    if (typeof row.exhausted === 'number') return undefined;
+    if (typeof row.hp !== 'number' || typeof row.startHp !== 'number') return undefined;
+
+    return row.startHp > 0 ? (row.hp / row.startHp) * 100 : undefined;
+  }
+
   function inspect(id: number) {
     oninspect(id);
   }
@@ -77,14 +92,9 @@
           measurements are not treated as zero.
         </p>
       </InspectPopover>
+      <p class="results-context">{resultsContext}</p>
     </div>
   </header>
-  <div class="results-context">
-    <span>Select one of {capture.runners.length} runners to inspect their race</span>
-    {#if !hasModes && !hasLoss && !hasIncidents}
-      <span>Recorded results (additional telemetry requires detailed simulation)</span>
-    {/if}
-  </div>
   <DataTable
     columnHelp={raceMetricHelp}
     plain
@@ -127,7 +137,10 @@
           />
           <span>
             <strong>{r.name}</strong>
-            <small>Gate {row.gate}, {row.style}</small>
+            <small>
+              Gate {row.gate},
+              <span style:color={styleColors[r.result?.runningStyle ?? 0]}>{row.style}</span>
+            </small>
           </span>
           <Icon
             name="arrow-right"
@@ -145,27 +158,33 @@
         <strong class="finish-time">
           {formatRaceTime(typeof row.time === 'number' ? row.time : undefined)}
         </strong>
-        <small>
-          {#if row.place === 1}
-            Winner
-          {:else if row.gap !== '—'}
+        {#if row.place !== 1 && row.gap !== '—'}
+          <small
+            class="aside"
+            title="Distance behind the previous finisher"
+          >
             +{n(row.gap, 1)} m
-            <span class="gap-context">to previous</span>
-          {/if}
-        </small>
+          </small>
+        {/if}
       {:else if col.key === 'delay'}
-        <span class:warning={row.late === 'Late start' || row.late === 'Lost acceleration frame'}>
+        {@const late = row.late === 'Late start' || row.late === 'Lost acceleration frame'}
+        <span
+          class:warning={late}
+          title={late ? String(row.late) : undefined}
+        >
           {typeof row.delay === 'number' ? n(row.delay, 1) + ' ms' : '—'}
         </span>
-        {#if row.late === 'Late start' || row.late === 'Lost acceleration frame'}
-          <small class="warning">
-            {row.late}
-          </small>
+        {#if late}
+          <small class="aside warning">late</small>
         {/if}
       {:else if col.key === 'spurt'}
         <LastSpurtResult result={lastSpurtResult(capture, r.index)} />
       {:else if col.key === 'hp'}
-        <span class:warning={typeof row.exhausted === 'number'}>
+        {@const share = hpShare(row)}
+        <span
+          class:warning={typeof row.exhausted === 'number'}
+          style:color={share === undefined ? undefined : hpRemainingColor(share, $theme === 'dark')}
+        >
           {typeof row.exhausted === 'number'
             ? 'Empty at ' + n(row.exhausted, 0) + ' m'
             : typeof row.hp === 'number'
@@ -173,11 +192,16 @@
               : '—'}
         </span>
         {#if typeof row.startHp === 'number'}
-          <small>
-            Started with {n(row.startHp, 0)} HP{#if typeof row.deficit === 'number' && row.deficit > 0}
-              ,
-              {n(row.deficit, 0)} short
-            {/if}
+          <small
+            class="aside"
+            title={'Started with ' +
+              n(row.startHp, 0) +
+              ' HP' +
+              (typeof row.deficit === 'number' && row.deficit > 0
+                ? ', ' + n(row.deficit, 0) + ' short'
+                : '')}
+          >
+            of {n(row.startHp, 0)}
           </small>
         {/if}
       {:else if col.key === 'duel'}

@@ -45,6 +45,12 @@ export function runningStyleName(value?: number, compact = false): string {
   );
 }
 
+/** A finishing place as read aloud: 1st, 2nd, 11th, 23rd. */
+export function ordinalPlace(place: number): string {
+  const teen = place % 100 >= 11 && place % 100 <= 13;
+  return place + (teen ? 'th' : (['th', 'st', 'nd', 'rd'][place % 10] ?? 'th'));
+}
+
 export function formatPercentage(value: number, total: number, digits = 1): string {
   return total > 0 ? `${((value / total) * 100).toFixed(digits)}%` : '-';
 }

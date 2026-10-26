@@ -1,7 +1,7 @@
 import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
 import type { MultiRaceAnalysis } from '@/lib/race/multi-race-analysis';
-import { formatRaceTime } from '@/lib/race/replay/race-display';
-import { rate, score, teamBuilds } from '../analysis-view';
+import { chartTheme } from '@/components/charts/chart-theme';
+import { rate, teamBuilds } from '../analysis-view';
 
 export type SessionEntry = { runner: RaceRunner; race: number };
 
@@ -10,7 +10,7 @@ export type SessionTeam = ReturnType<typeof teamBuilds>[number];
 export type SessionView = 'overview' | 'strategy' | 'umas' | 'teams' | 'skills' | 'runners';
 
 /** What the Teams view is narrowed to when another view sends the reader there. */
-export type TeamFilter = { uma?: string; style?: string; composition?: string };
+export type TeamFilter = { uma?: string; style?: string; composition?: string; own?: boolean };
 
 export const metricHelp = {
   'Field share': 'The percentage of all runner entries using this Uma or running style.',
@@ -21,14 +21,14 @@ export const metricHelp = {
     'Races won by any member of the team, divided by its races. Three equally matched teams each win one race in three.',
   'Activation rate':
     'The percentage of learned skill entries that activated at least once. Repeat activations do not increase this percentage.',
-  'Avg. active (s)':
-    'Average total active time across runner entries with detailed simulation data, including entries where the skill did not activate.',
-  'Wit check failed':
-    'Learned skill entries that failed the activation check against the runner’s wit-based activation chance.',
-  'Condition failed':
-    'Learned skill entries that passed the wit check but never met the skill’s activation conditions.',
-  'Runner win rate':
-    'The win rate of runners that learned this skill. This is a correlation and does not isolate the skill’s effect.',
+  'Win% if active':
+    'The win rate of runners whose skill activated. Stronger builds activate more skills, so this is a correlation, not the skill’s effect.',
+  'Median activation':
+    'The course position of the middle activation. The bar marks where the middle half of the activations fell.',
+  'vs. without':
+    'Win rate of runners that learned this skill minus the win rate of runners that did not, in percentage points. Stronger builds learn more skills, so read a gap as a hint, not as the skill’s effect.',
+  'Your best': 'The best finish among your runners in that race.',
+  Margin: 'Time between the winner and the runner-up.',
   'Double procs': 'Runner entries where this skill activated at least twice.',
   'Avg. start HP': 'Average HP at the start across entries with an HP measurement.',
   'Avg. finish HP':
@@ -69,42 +69,8 @@ export function sessionChart(
   };
 }
 
-export function sessionFeats(winners: SessionEntry[]) {
-  if (!winners.length) return [];
-  const time = [...winners].sort(
-    (a, b) => a.runner.result!.finishTime - b.runner.result!.finishTime
-  );
-
-  const ranked = winners
-    .filter((e) => score(e.runner) > 0)
-    .sort((a, b) => score(b.runner) - score(a.runner));
-
-  return [
-    {
-      label: 'Fastest win',
-      entry: time[0]!,
-      value: formatRaceTime(time[0]!.runner.result!.finishTime)
-    },
-    {
-      label: 'Slowest win',
-      entry: time.at(-1)!,
-      value: formatRaceTime(time.at(-1)!.runner.result!.finishTime)
-    },
-    ...(ranked.length
-      ? [
-          {
-            label: 'Highest rated winner',
-            entry: ranked[0]!,
-            value: score(ranked[0]!.runner).toLocaleString()
-          },
-          {
-            label: 'Lowest rated winner',
-            entry: ranked.at(-1)!,
-            value: score(ranked.at(-1)!.runner).toLocaleString()
-          }
-        ]
-      : [])
-  ];
+export function isPlayerTeam(team: SessionTeam) {
+  return team.members.some((runner) => runner.isPlayer);
 }
 
 /** A team's running styles in a fixed order, so the same lineup always shares one key. */
@@ -165,6 +131,15 @@ export function umaStyleMix(analysis: MultiRaceAnalysis) {
   );
 }
 
-export function chartInk(dark: boolean) {
-  return dark ? '#abb4c3' : '#566071';
+/**
+ * Chart colours for measures that are not running styles: the field in a neutral grey and the
+ * highlighted group in the accent, so style colours keep meaning only running styles.
+ */
+export function chartColors(dark: boolean) {
+  return {
+    ink: dark ? '#abb4c3' : '#566071',
+    muted: chartTheme(dark).muted,
+    shade: chartTheme(dark).shade,
+    accent: dark ? '#64b5f6' : '#2563eb'
+  };
 }

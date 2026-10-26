@@ -6,8 +6,16 @@
     name,
     cardId,
     detail,
+    detailColor,
     compact = false
-  }: { name: string; cardId?: number; detail?: string; compact?: boolean } = $props();
+  }: {
+    name: string;
+    cardId?: number;
+    detail?: string;
+    /** Colours the detail, such as a running style in its style colour. */
+    detailColor?: string;
+    compact?: boolean;
+  } = $props();
 </script>
 
 <span
@@ -22,7 +30,7 @@
   <span class="runner-name">
     <strong>{name}</strong>
     {#if detail}
-      <small>{detail}</small>
+      <small style:color={detailColor}>{detail}</small>
     {/if}
   </span>
 </span>

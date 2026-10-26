@@ -6,6 +6,11 @@ import {
   skillActiveDuration
 } from './capture/race-diagnostics';
 
+export interface SkillActivation {
+  id: number;
+  distance: number;
+}
+
 export interface MultiRaceHorseEntry {
   raceId: string;
   runnerIndex: number;
@@ -15,7 +20,8 @@ export interface MultiRaceHorseEntry {
   strategy: number;
   finishOrder: number;
   learnedSkillIds: number[];
-  activatedSkillIds: number[];
+  /** Every skill activation in the race, with the course position it fired at. */
+  skillActivations: SkillActivation[];
   isPlayer: boolean;
   teamId: number;
   startHp?: number;
@@ -114,10 +120,7 @@ function raceId(capture: ParsedRaceCapture, index: number): string {
   return `${capture.courseId ?? 'course'}:${capture.randomSeed ?? capture.fileName}:${index}`;
 }
 
-function activatedSkillEvents(
-  capture: ParsedRaceCapture,
-  runnerIndex: number
-): { id: number; distance: number }[] {
+function activatedSkillEvents(capture: ParsedRaceCapture, runnerIndex: number): SkillActivation[] {
   return capture.events
     .filter((event) => event.type === 3 && event.params[0] === runnerIndex)
     .map((event) => ({
@@ -196,7 +199,7 @@ export function analyzeMultiRace(captures: ParsedRaceCapture[]): MultiRaceAnalys
         strategy,
         finishOrder,
         learnedSkillIds: runner.skillIds,
-        activatedSkillIds: activations.map((activation) => activation.id),
+        skillActivations: activations,
         isPlayer: runner.isPlayer,
         teamId: numeric(runner.raw, 'team_id', 'teamId') ?? 0,
         startHp,

@@ -1,0 +1,132 @@
+/* The selected skill beside the table: a course heatmap over the race phases, then its use by style. */
+.skill-detail {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+header {
+  display: grid;
+  gap: 1px;
+}
+h4 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--accent-primary);
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+header p,
+.takeaway {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+/* One cell per course section, so the race phases below line up with the heat above. */
+.course {
+  display: grid;
+  gap: 3px;
+}
+.heat {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--sections), minmax(0, 1fr));
+  gap: 1px;
+  height: 26px;
+}
+.heat i {
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent-primary) var(--heat), var(--surface-2));
+}
+/* The middle half of the activations, drawn as a bracket under the heat with the median tick. */
+.spread {
+  position: absolute;
+  bottom: -3px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--text-primary);
+}
+.median {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--text-primary);
+}
+.phases {
+  display: grid;
+  grid-template-columns: repeat(var(--sections), minmax(0, 1fr));
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.phases li {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding-top: 2px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.phases li + li {
+  border-left: 1px solid var(--border-subtle);
+}
+.phases strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.phases li.busiest,
+.phases li.busiest strong {
+  color: var(--accent-primary);
+}
+
+.by-style {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.by-style th,
+.by-style td {
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: right;
+  white-space: nowrap;
+}
+.by-style thead th {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+.by-style th:first-child {
+  padding-left: 0;
+  text-align: left;
+}
+.by-style tbody th {
+  font-weight: 600;
+}
+.by-style tbody th i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 4px;
+  border-radius: 50%;
+}
+.few {
+  color: var(--text-muted);
+}
+.footnote {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}

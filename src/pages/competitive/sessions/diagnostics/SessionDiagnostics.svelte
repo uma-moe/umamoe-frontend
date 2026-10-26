@@ -7,12 +7,16 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
-  import ProfileVeteranIdentity from '@/pages/profile/veterans/ProfileVeteranIdentity.svelte';
   import LastSpurtResult from '@/pages/competitive/race-analysis/results/LastSpurtResult.svelte';
   import RunnerReference from '../../runners/RunnerReference.svelte';
   import SessionRunnerDiagnostics from './SessionRunnerDiagnostics.svelte';
-  import { diagnosticEntries, diagnosticModes, outcomeRow } from './session-diagnostics';
-  import { identity, portrait } from '../../analysis-view';
+  import {
+    diagnosticEntries,
+    diagnosticModes,
+    outcomeRow,
+    type DiagnosticEntry
+  } from './session-diagnostics';
+  import { identity, portrait, styleColors } from '../../analysis-view';
   import { theme } from '@/stores/theme';
 
   let {
@@ -34,6 +38,9 @@
     detailOpen = $state(true),
     mode = $state<string>();
 
+  /** Filter value for the player's own runners; Uma keys are numeric, so it never matches one. */
+  const OWN_RUNNERS = 'own';
+
   const id = $props.id();
 
   const entries = $derived(diagnosticEntries(captures));
@@ -43,13 +50,13 @@
     )
   );
 
-  const filtered = $derived(
-    entries.filter((e) => uma === 'all' || raceRunnerKey(e.runner) === uma)
-  );
+  const hasPlayerRunners = $derived(entries.some((e) => e.runner.isPlayer));
+  const filtered = $derived(entries.filter(shown));
 
-  const runnerScope = $derived(
-    choices.find((choice) => choice.value === uma)?.label ?? 'all runners'
-  );
+  const runnerScope = $derived.by(() => {
+    if (uma === OWN_RUNNERS) return 'your runners';
+    return choices.find((choice) => choice.value === uma)?.label ?? 'all runners';
+  });
 
   const measured = $derived(filtered.filter((e) => e.horse));
   const selected = $derived(entries.find((e) => e.key === expanded));
@@ -72,6 +79,12 @@
     mode = undefined;
   });
 
+  function shown(entry: DiagnosticEntry) {
+    if (uma === 'all') return true;
+    if (uma === OWN_RUNNERS) return entry.runner.isPlayer;
+    return raceRunnerKey(entry.runner) === uma;
+  }
+
   function inspect(key: string) {
     expanded = expanded === key ? '' : key;
     detailOpen = true;
@@ -86,16 +99,22 @@
     <header>
       <div>
         <h3>
-          Race results <small>{filtered.length} runner entries</small>
+          Race results
+          <small>
+            {filtered.length} runner entries · expand one for its skills, HP and decisions
+          </small>
         </h3>
-        <p>Expand a runner for the same skills, HP, decisions and graphs as the single race.</p>
       </div>
       <div class="runner-filter">
         <SelectField
           id={id + '-uma'}
           label="Runner shown in the race results and race behaviour"
           hideLabel
-          options={[{ value: 'all', label: 'All runners' }, ...choices]}
+          options={[
+            { value: 'all', label: 'All runners' },
+            ...(hasPlayerRunners ? [{ value: OWN_RUNNERS, label: 'Your runners' }] : []),
+            ...choices
+          ]}
           bind:value={uma}
         />
       </div>
@@ -127,9 +146,16 @@
             class="runner-detail"
             aria-label={'Inspect race ' + row.race + ' ' + row.name + ' diagnostics'}
             aria-expanded={expanded === row.id}
+            title={entry.runner.trainerName}
             onclick={() => inspect(String(row.id))}
           >
-            <ProfileVeteranIdentity summary={identity(entry.runner)} />
+            <RunnerReference
+              name={entry.runner.name}
+              cardId={entry.runner.cardId}
+              detail={identity(entry.runner).detail}
+              detailColor={styleColors[entry.runner.result?.runningStyle ?? 0]}
+              compact
+            />
             <span
               class="expand-icon"
               class:open={expanded === row.id}
@@ -185,11 +211,11 @@
     <header>
       <div>
         <h3>
-          Race behaviour <small>{measured.length} measured entries · {runnerScope}</small>
+          Race behaviour
+          <small>
+            {measured.length} measured entries · {runnerScope} · seconds in each simulation mode
+          </small>
         </h3>
-        <p>
-          Time spent in each simulation mode. Averages include runners where it stayed inactive.
-        </p>
       </div>
     </header>
     {#if measured.length}

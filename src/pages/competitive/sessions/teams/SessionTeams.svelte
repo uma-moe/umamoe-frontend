@@ -1,30 +1,76 @@
 <script lang="ts">
-  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import { raceRunnerKey, type MultiRaceAnalysis } from '@/lib/race/multi-race-analysis';
   import { runningStyleName } from '@/lib/race/replay/race-display';
+  import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import TextField from '@/components/controls/TextField.svelte';
+  import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import Button from '@/components/controls/Button.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
   import SessionTeamCard from './SessionTeamCard.svelte';
+  import SessionKpis from '../SessionKpis.svelte';
   import { rate } from '../../analysis-view';
-  import { compositionStyles, type SessionTeam, type TeamFilter } from '../session-statistics';
+  import { playerKpi, teamKpi, type SessionKpi } from '../session-kpis';
+  import { isSmallSample, playerRecord, sessionBaseline, SMALL_SAMPLE } from '../session-insights';
+  import {
+    compositionStyles,
+    isPlayerTeam,
+    type SessionTeam,
+    type TeamFilter
+  } from '../session-statistics';
 
   interface Props {
     teams: SessionTeam[];
     analysis: MultiRaceAnalysis;
+    captures: ParsedRaceCapture[];
     filter: TeamFilter;
     oninspect: (members: RaceRunner[], title: string, race: number) => void;
     onreplay?: (race: number) => void;
   }
 
-  let { teams, analysis, filter = $bindable(), oninspect, onreplay }: Props = $props();
+  let { teams, analysis, captures, filter = $bindable(), oninspect, onreplay }: Props = $props();
 
   const PAGE_SIZE = 12;
 
   let search = $state(''),
     sort = $state('winrate'),
     limit = $state(PAGE_SIZE);
+
+  const baseline = $derived(sessionBaseline(analysis));
+  const player = $derived(playerRecord(captures));
+  const hasPlayerTeams = $derived(teams.some(isPlayerTeam));
+  const measuredTeams = $derived(teams.filter((team) => !isSmallSample(team.appearances)));
+
+  const kpis = $derived.by(() => {
+    const list: SessionKpi[] = [];
+    if (player)
+      list.push(
+        playerKpi(player, baseline, {
+          label: 'Show yours',
+          onselect: () => (filter = { own: true })
+        })
+      );
+
+    const best = [...measuredTeams].sort(
+      (a, b) => rate(b.wins, b.appearances) - rate(a.wins, a.appearances)
+    )[0];
+    if (best)
+      list.push(
+        teamKpi(best, baseline, {
+          label: 'Inspect',
+          onselect: () => oninspect(best.members, best.trainer, best.races[0]!)
+        })
+      );
+
+    list.push({
+      id: 'measured',
+      label: 'Team builds with ' + SMALL_SAMPLE + '+ races',
+      value: measuredTeams.length + ' of ' + teams.length,
+      detail: 'the rest are muted: too few races to judge'
+    });
+
+    return list;
+  });
 
   const umaName = $derived(
     analysis.characters.find((uma) => uma.key === filter.uma)?.name ?? 'Selected Uma'
@@ -56,6 +102,7 @@
   });
 
   function matchesFilter(team: SessionTeam) {
+    if (filter.own && !isPlayerTeam(team)) return false;
     if (filter.composition && compositionStyles(team.members).join('-') !== filter.composition)
       return false;
 
@@ -81,7 +128,25 @@
 </script>
 
 <div class="teams">
+  <SessionKpis
+    label="Teams at a glance"
+    {kpis}
+  />
   <div class="toolbar">
+    {#if hasPlayerTeams}
+      <SegmentedControl
+        compact
+        label="Teams shown"
+        options={[
+          { value: 'all', label: 'All teams' },
+          { value: 'own', label: 'Your teams' }
+        ]}
+        bind:value={
+          () => (filter.own ? 'own' : 'all'),
+          (value) => (filter = { ...filter, own: value === 'own' || undefined })
+        }
+      />
+    {/if}
     <div class="search">
       <TextField
         id="session-team-search"
