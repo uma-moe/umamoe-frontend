@@ -35,19 +35,16 @@ export const identity = (runner: RaceRunner) => ({
   scenario: runner.trainerName
 });
 
-export const teamBuildKey = (members: RaceRunner[]) =>
-  members
-    .map(
-      (r) =>
-        `${r.trainerName}:${r.cardId ?? r.name}:${r.result?.runningStyle}:${statKeys.map((k) => r.stats[k]).join('.')}:${[...r.skillIds].sort((a, b) => a - b).join('.')}:${Object.entries(
-          r.aptitudes
-        )
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([key, value]) => key + '=' + value)
-          .join('.')}`
-    )
-    .sort()
-    .join('|');
+/** One runner's build: trainer, card, style, stats, skills and aptitudes. */
+export const memberBuildKey = (r: RaceRunner) =>
+  `${r.trainerName}:${r.cardId ?? r.name}:${r.result?.runningStyle}:${statKeys.map((k) => r.stats[k]).join('.')}:${[...r.skillIds].sort((a, b) => a - b).join('.')}:${Object.entries(
+    r.aptitudes
+  )
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => key + '=' + value)
+    .join('.')}`;
+
+export const teamBuildKey = (members: RaceRunner[]) => members.map(memberBuildKey).sort().join('|');
 
 export function histogram(values: number[], bins = 12) {
   if (!values.length) return { labels: [], counts: [] };
@@ -70,6 +67,8 @@ export function teamBuilds(captures: ParsedRaceCapture[]) {
       members: RaceRunner[];
       appearances: number;
       wins: number;
+      /** Races each member won, in `members` order. */
+      memberWins: number[];
       races: number[];
     }
   >();
@@ -89,12 +88,20 @@ export function teamBuilds(captures: ParsedRaceCapture[]) {
         members,
         appearances: 0,
         wins: 0,
+        memberWins: members.map(() => 0),
         races: []
       };
 
+      const winner = members.find((r) => r.result?.finishOrder === 1);
       team.appearances++;
-      team.wins += Number(members.some((r) => r.result?.finishOrder === 1));
       team.races.push(raceIndex);
+      if (winner) {
+        const winnerKey = memberBuildKey(winner);
+        const position = team.members.findIndex((r) => memberBuildKey(r) === winnerKey);
+
+        team.wins++;
+        if (position >= 0) team.memberWins[position] = (team.memberWins[position] ?? 0) + 1;
+      }
       teams.set(key, team);
     }
   });

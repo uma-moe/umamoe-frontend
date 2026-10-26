@@ -68,6 +68,7 @@
       list.push(
         compositionKpi(composition, baseline, {
           label: 'Teams',
+          icon: 'community',
           onselect: () => onteams({ composition: composition.key })
         })
       );
@@ -144,62 +145,66 @@
       title="Style breakdown"
       description="Share of wins against share of the field · select a style for its teams"
     >
-      <div class="breakdown-key">
-        <span>Running style</span>
-        <span class="track-key">
-          <i></i>
-          Field
-          <i class="win-key"></i>
-          Wins
-        </span>
-        <span>Wins</span>
-        <span>vs. field</span>
-      </div>
-      {#each shares as row (row.style)}
-        {@const comparison = againstField(row.winShare, row.fieldShare)}
-        <div class="style-row">
-          <button
-            class="style-link"
-            onclick={() => onteams({ style: String(row.style) })}
-          >
-            <i style:background={styleColors[row.style]}></i>
-            <span style:color={styleColors[row.style]}>{runningStyleName(row.style)}</span>
-            <small>{row.entries}</small>
-          </button>
-          <div
-            class="tracks"
-            role="img"
-            aria-label={runningStyleName(row.style) +
-              ': ' +
-              formatRate(row.fieldShare) +
-              ' of the field, ' +
-              formatRate(row.winShare) +
-              ' of wins'}
-          >
-            <span class="track"><i style:width={(row.fieldShare / trackMax) * 100 + '%'}></i></span>
-            <span class="track">
-              <i
-                style:width={(row.winShare / trackMax) * 100 + '%'}
-                style:background={styleColors[row.style]}
-              ></i>
-            </span>
-          </div>
-          <span class="readout">
-            <strong>{formatRate(row.winShare)}</strong>
-            <small>{formatRate(row.fieldShare)}</small>
+      <div class="breakdown">
+        <div class="breakdown-key">
+          <span>Running style</span>
+          <span class="track-key">
+            <i></i>
+            Field
+            <i class="win-key"></i>
+            Wins
           </span>
-          <strong
-            class="ratio {comparison.tone}"
-            class:few={isSmallSample(row.entries)}
-            title={row.wins + ' wins from ' + row.entries + ' entries'}
-          >
-            {comparison.label}
-          </strong>
+          <span>Wins</span>
+          <span>vs. field</span>
         </div>
-      {/each}
-      <p class="footnote">
-        vs. field = win share ÷ field share: 1.0× is even, 1.5× won half again its numbers.
-      </p>
+        {#each shares as row (row.style)}
+          {@const comparison = againstField(row.winShare, row.fieldShare)}
+          <div class="style-row">
+            <button
+              class="style-link"
+              onclick={() => onteams({ style: String(row.style) })}
+            >
+              <i style:background={styleColors[row.style]}></i>
+              <span style:color={styleColors[row.style]}>{runningStyleName(row.style)}</span>
+              <small>{row.entries}</small>
+            </button>
+            <div
+              class="tracks"
+              role="img"
+              aria-label={runningStyleName(row.style) +
+                ': ' +
+                formatRate(row.fieldShare) +
+                ' of the field, ' +
+                formatRate(row.winShare) +
+                ' of wins'}
+            >
+              <span class="track">
+                <i style:width={(row.fieldShare / trackMax) * 100 + '%'}></i>
+              </span>
+              <span class="track">
+                <i
+                  style:width={(row.winShare / trackMax) * 100 + '%'}
+                  style:background={styleColors[row.style]}
+                ></i>
+              </span>
+            </div>
+            <span class="readout">
+              <strong>{formatRate(row.winShare)}</strong>
+              <small>{formatRate(row.fieldShare)}</small>
+            </span>
+            <strong
+              class="ratio {comparison.tone}"
+              class:few={isSmallSample(row.entries)}
+              title={row.wins + ' wins from ' + row.entries + ' entries'}
+            >
+              {comparison.label}
+            </strong>
+          </div>
+        {/each}
+        <p class="footnote">
+          vs. field = win share ÷ field share: 1.0× is even, 1.5× won half again its numbers.
+        </p>
+      </div>
     </ChartFrame>
     <ChartFrame
       plain
@@ -283,6 +288,7 @@
         series={saturation}
         totalRaces={analysis.races}
         neutral={baseline.uma / 100}
+        countPicker={false}
         label="Per-Uma win rate versus number of the same style in the room"
       />
     </ChartFrame>

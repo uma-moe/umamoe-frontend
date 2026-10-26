@@ -60,6 +60,7 @@ export type IconName =
   | 'tune'
   | 'sort'
   | 'external'
+  | 'expand'
   | 'trash'
   | 'add'
   | 'minus'

@@ -59,15 +59,6 @@ p {
   flex-basis: 100%;
   color: var(--accent-primary);
 }
-.diagnostic-link {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent-primary);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
 .blocked-by {
   display: flex;
   align-items: center;
@@ -301,8 +292,7 @@ p {
 .runner-finished {
   color: var(--accent-success);
 }
-.blocked-by,
-.diagnostic-link {
+.blocked-by {
   border: 1px solid var(--border-primary);
   border-radius: 5px;
   background: var(--factor-field-bg);

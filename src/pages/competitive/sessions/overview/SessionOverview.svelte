@@ -88,26 +88,36 @@
 
     if (player)
       list.push(
-        playerKpi(player, baseline, { label: 'Your teams', onselect: () => onteams({ own: true }) })
+        playerKpi(player, baseline, {
+          label: 'Your teams',
+          icon: 'filter',
+          onselect: () => onteams({ own: true })
+        })
       );
 
     if (strongest)
       list.push(
         styleKpi(strongest, 'Best running style', {
           label: 'Strategy',
+          icon: 'chart',
           onselect: () => onview('strategy')
         })
       );
 
     if (uma)
       list.push(
-        umaKpi(uma, baseline, 'Top Uma', { label: 'Umas', onselect: () => onuma(uma.key) })
+        umaKpi(uma, baseline, 'Top Uma', {
+          label: 'Umas',
+          icon: 'users',
+          onselect: () => onuma(uma.key)
+        })
       );
 
     if (composition)
       list.push(
         compositionKpi(composition, baseline, {
           label: 'Teams',
+          icon: 'community',
           onselect: () => onteams({ composition: composition.key })
         })
       );
@@ -180,7 +190,7 @@
 
 {#snippet viewLink(label: string, target: SessionView)}
   <Button
-    variant="ghost"
+    variant="secondary"
     size="sm"
     onclick={() => onview(target)}
   >
@@ -409,7 +419,7 @@
             {/if}
           {:else if column.key === 'replay' && onreplay}
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               icon="race"
               ariaLabel={'Watch race ' + row.race}
@@ -443,6 +453,7 @@
         {#if scores}
           <p class="takeaway"><FindingSentence parts={scoreTakeaway} /></p>
           <LazyEChartsSurface
+            zoomable
             height={118}
             label="Training score distribution of the field and the winners"
             option={sessionChart(
@@ -488,6 +499,7 @@
           <p class="takeaway"><FindingSentence parts={gateTakeaway} /></p>
         {/if}
         <LazyEChartsSurface
+          zoomable
           height={118}
           label="Win rate by starting gate"
           option={sessionChart(

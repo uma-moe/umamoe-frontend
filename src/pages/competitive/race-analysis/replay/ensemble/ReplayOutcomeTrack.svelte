@@ -85,7 +85,7 @@
     <h3>Track ribbon</h3>
     <Button
       size="sm"
-      variant="ghost"
+      variant="secondary"
       onclick={() => (whole = !whole)}
     >
       {whole ? 'Follow spread' : 'Show whole track'}

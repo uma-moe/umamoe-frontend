@@ -82,7 +82,7 @@
     >
       {#snippet headerActions()}
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
           ariaLabel="Choose runner"
           onclick={onpickrunner}
@@ -173,7 +173,7 @@
             <strong>{blocked?.name}</strong>
             <small>Blocked by {blocker?.name}</small>
           </span>
-          <span>{(event.endTime - event.startTime).toFixed(2)} s ↗</span>
+          <span>{(event.endTime - event.startTime).toFixed(2)} s</span>
         </button>
       {:else}
         <p>

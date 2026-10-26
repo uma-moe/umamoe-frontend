@@ -409,7 +409,7 @@
           />
           <span>
             <small>BLOCKING {selectedRunner?.name}</small>
-            <strong>{blocker.name} ↗</strong>
+            <strong>{blocker.name}</strong>
           </span>
         </button>
       {/if}

@@ -1,6 +1,6 @@
 <script lang="ts">
   import Artwork from '@/components/game/Artwork.svelte';
-  import Icon from '@/components/Icon.svelte';
+  import Button from '@/components/controls/Button.svelte';
   import { portrait, styleColors } from '../analysis-view';
   import { kpiText, type KpiTone, type SessionKpi } from './session-kpis';
 
@@ -15,11 +15,15 @@
     {kpi.label}
     {#if kpi.action}
       <span class="kpi-action">
-        {kpi.action.label}
-        <Icon
-          name="arrow-right"
-          size={11}
-        />
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={kpi.action.icon}
+          ariaLabel={kpi.action.label + ': ' + kpiText(kpi)}
+          onclick={kpi.action.onselect}
+        >
+          {kpi.action.label}
+        </Button>
       </span>
     {/if}
   </span>
@@ -62,19 +66,9 @@
     aria-label={label}
   >
     {#each kpis as kpi (kpi.id)}
-      {#if kpi.action}
-        <button
-          class="kpi"
-          aria-label={kpiText(kpi) + '. ' + kpi.action.label}
-          onclick={kpi.action.onselect}
-        >
-          {@render tile(kpi)}
-        </button>
-      {:else}
-        <div class="kpi">
-          {@render tile(kpi)}
-        </div>
-      {/if}
+      <div class="kpi">
+        {@render tile(kpi)}
+      </div>
     {/each}
   </section>
 {/if}

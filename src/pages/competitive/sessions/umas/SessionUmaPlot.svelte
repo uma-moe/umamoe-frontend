@@ -1,6 +1,8 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
   import type { MultiRaceCharacterStats } from '@/lib/race/multi-race-analysis';
+  import PlotZoomControls from '@/components/charts/PlotZoomControls.svelte';
+  import { PlotSize } from '@/components/charts/plot-size.svelte';
+  import { axisTicks, PlotZoom, tickDecimals } from '@/components/charts/plot-zoom.svelte';
   import UmaChartPoint from '../UmaChartPoint.svelte';
   import { portrait, rate } from '../../analysis-view';
   import { formatRate, isSmallSample } from '../session-insights';
@@ -22,16 +24,15 @@
     onselect: (key: string) => void;
   } = $props();
 
-  let width = $state(600),
-    resizeFrame = 0;
+  /** Portrait radius; the clip leaves this much room so points on an edge stay whole. */
+  const POINT_RADIUS = 17;
+  const MARGIN = { left: 48, right: 24, top: 24, bottom: 46 };
 
-  function resize(next: number) {
-    if (next <= 0 || next === width) return;
-    cancelAnimationFrame(resizeFrame);
-    resizeFrame = requestAnimationFrame(() => (width = next));
-  }
+  const plotId = $props.id();
+  const clipId = plotId + '-plot';
+  const zoom = new PlotZoom();
 
-  onDestroy(() => cancelAnimationFrame(resizeFrame));
+  const size = new PlotSize({ width: 600, height: 300 });
 
   const colors = $derived(chartColors($theme === 'dark'));
   // An even split of the entries between the Umas shown, the vertical counterpart of the neutral rate.
@@ -43,120 +44,186 @@
     Math.min(110, Math.max(10, neutral, ...characters.map((c) => rate(c.wins, c.races))) * 1.15)
   );
 
-  const x = (v: number) => 58 + (v / maxX) * Math.max(1, width - 90),
-    y = (v: number) => 226 - (v / maxY) * 192;
+  const area = $derived({
+    left: MARGIN.left,
+    right: size.width - MARGIN.right,
+    top: MARGIN.top,
+    bottom: size.height - MARGIN.bottom
+  });
+
+  const xRange = $derived(zoom.visible('x', 0, maxX));
+  const yRange = $derived(zoom.visible('y', 0, maxY));
+  const xDecimals = $derived(tickDecimals(xRange.min, xRange.max) + 1);
+  const yDecimals = $derived(tickDecimals(yRange.min, yRange.max));
+
+  const x = (value: number) =>
+    area.left + ((value - xRange.min) / (xRange.max - xRange.min)) * (area.right - area.left);
+  const y = (value: number) =>
+    area.bottom - ((value - yRange.min) / (yRange.max - yRange.min)) * (area.bottom - area.top);
+
+  const ordered = $derived(
+    [...characters].sort((a, b) => Number(a.key === selected) - Number(b.key === selected))
+  );
 </script>
 
-<div
-  class="plot"
-  bind:clientWidth={() => width, resize}
->
-  <svg
-    viewBox={`0 0 ${width} 270`}
-    role="group"
-    aria-label="Uma popularity and win rate. Select a portrait to inspect its results."
+<div class="uma-plot">
+  <PlotZoomControls {zoom} />
+  <div
+    class="plot"
+    {@attach size.observe}
   >
-    {#each [0, 0.25, 0.5, 0.75, 1] as f}
-      <line
-        x1="48"
-        x2={width - 24}
-        y1={y(maxY * f)}
-        y2={y(maxY * f)}
-      />
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex (The plot takes keyboard zoom and pan.) -->
+    <svg
+      viewBox={`0 0 ${size.width} ${size.height}`}
+      role="group"
+      tabindex="0"
+      aria-label="Uma popularity and win rate. Select a portrait to inspect its results. Plus and minus zoom, arrow keys pan, Home shows the whole plot."
+      class:zoomed={zoom.zoomed}
+      {@attach zoom.gestures(() => area)}
+    >
+      <defs>
+        <clipPath id={clipId}>
+          <rect
+            x={area.left - POINT_RADIUS}
+            y={area.top - POINT_RADIUS}
+            width={area.right - area.left + POINT_RADIUS * 2}
+            height={area.bottom - area.top + POINT_RADIUS * 2}
+          />
+        </clipPath>
+      </defs>
+      {#each axisTicks(yRange.min, yRange.max) as tick (tick)}
+        <line
+          x1={area.left}
+          x2={area.right}
+          y1={y(tick)}
+          y2={y(tick)}
+        />
+        <text
+          x={area.left - 6}
+          y={y(tick) + 4}
+          text-anchor="end"
+        >
+          {tick.toFixed(yDecimals)}%
+        </text>
+      {/each}
+      {#each axisTicks(xRange.min, xRange.max) as tick (tick)}
+        <text
+          x={x(tick)}
+          y={area.bottom + 18}
+          text-anchor="middle"
+        >
+          {tick.toFixed(xDecimals)}%
+        </text>
+      {/each}
       <text
-        x="42"
-        y={y(maxY * f) + 4}
-        text-anchor="end"
-      >
-        {(maxY * f).toFixed(0)}%
-      </text>
-      <text
-        x={x(maxX * f)}
-        y="245"
+        x={(area.left + area.right) / 2}
+        y={size.height - 6}
         text-anchor="middle"
       >
-        {(maxX * f).toFixed(1)}%
+        Field share
       </text>
-    {/each}
-    <text
-      x={width / 2}
-      y="265"
-      text-anchor="middle"
-    >
-      Field share
-    </text>
-    <text
-      x="48"
-      y="16"
-    >
-      Win rate
-    </text>
-    <line
-      class="reference"
-      x1="48"
-      x2={width - 24}
-      y1={y(neutral)}
-      y2={y(neutral)}
-    />
-    <text
-      class="reference-label"
-      x={width - 24}
-      y={y(neutral) - 5}
-      text-anchor="end"
-    >
-      Neutral {formatRate(neutral)}
-    </text>
-    {#if averageShare > 0}
-      <line
-        class="reference"
-        x1={x(averageShare)}
-        x2={x(averageShare)}
-        y1={y(maxY)}
-        y2={y(0)}
-      />
       <text
-        class="reference-label"
-        x={x(averageShare) + 5}
-        y={y(maxY) + 10}
+        x={area.left}
+        y={area.top - 10}
       >
-        Average share {formatRate(averageShare)}
+        Win rate
       </text>
-    {/if}
-    {#each [...characters].sort((a, b) => Number(a.key === selected) - Number(b.key === selected)) as c (c.key)}
-      <g class:few={isSmallSample(c.races) && c.key !== selected}>
-        <UmaChartPoint
-          x={x(rate(c.races, entries))}
-          y={y(rate(c.wins, c.races))}
-          r={17}
-          image={portrait(c.cardId)}
-          color={c.key === selected ? colors.accent : colors.muted}
-          selected={c.key === selected}
-          onselect={() => onselect(c.key)}
-          label={'Select ' +
-            c.name +
-            ': ' +
-            rate(c.wins, c.races).toFixed(1) +
-            '% win rate, ' +
-            rate(c.races, entries).toFixed(1) +
-            '% field share, ' +
-            c.races +
-            ' entries'}
+      <g clip-path={`url(#${clipId})`}>
+        <line
+          class="reference"
+          x1={area.left}
+          x2={area.right}
+          y1={y(neutral)}
+          y2={y(neutral)}
         />
+        <text
+          class="reference-label"
+          x={area.right}
+          y={y(neutral) - 5}
+          text-anchor="end"
+        >
+          Neutral {formatRate(neutral)}
+        </text>
+        {#if averageShare > 0}
+          <line
+            class="reference"
+            x1={x(averageShare)}
+            x2={x(averageShare)}
+            y1={area.top}
+            y2={area.bottom}
+          />
+          <text
+            class="reference-label"
+            x={x(averageShare) + 5}
+            y={area.top + 10}
+          >
+            Average share {formatRate(averageShare)}
+          </text>
+        {/if}
+        {#each ordered as c (c.key)}
+          <g class:few={isSmallSample(c.races) && c.key !== selected}>
+            <UmaChartPoint
+              x={x(rate(c.races, entries))}
+              y={y(rate(c.wins, c.races))}
+              r={POINT_RADIUS}
+              image={portrait(c.cardId)}
+              color={c.key === selected ? colors.accent : colors.muted}
+              selected={c.key === selected}
+              onselect={() => onselect(c.key)}
+              label={'Select ' +
+                c.name +
+                ': ' +
+                rate(c.wins, c.races).toFixed(1) +
+                '% win rate, ' +
+                rate(c.races, entries).toFixed(1) +
+                '% field share, ' +
+                c.races +
+                ' entries'}
+            />
+          </g>
+        {/each}
       </g>
-    {/each}
-  </svg>
+    </svg>
+  </div>
 </div>
 
 <style>
-  .plot {
+  /* Fills whatever height its card has, so the scatter never leaves an empty band below it. */
+  .uma-plot {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 4px;
     min-width: 0;
-    width: 100%;
+    min-height: 0;
+  }
+  .plot {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 280px;
   }
   svg {
+    position: absolute;
+    inset: 0;
     display: block;
     width: 100%;
-    height: 270px;
-    overflow: visible;
+    height: 100%;
+    touch-action: pan-y;
+    user-select: none;
+  }
+  /* Once zoomed, a drag pans the plot instead of scrolling the page. */
+  svg.zoomed {
+    cursor: grab;
+    touch-action: none;
+  }
+  svg.zoomed:active {
+    cursor: grabbing;
+  }
+  svg:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
   }
   line {
     stroke: var(--border-subtle);
@@ -177,11 +244,5 @@
     fill: var(--text-secondary);
     font-family: inherit;
     font-size: 10px;
-  }
-  @media (max-width: 760px) {
-    svg {
-      height: auto;
-      min-height: 260px;
-    }
   }
 </style>

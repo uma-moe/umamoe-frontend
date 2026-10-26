@@ -1,13 +1,16 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import { raceRunnerKey, type MultiRaceAnalysis } from '@/lib/race/multi-race-analysis';
   import { runningStyleName } from '@/lib/race/replay/race-display';
-  import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import TextField from '@/components/controls/TextField.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import Button from '@/components/controls/Button.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
   import SessionTeamCard from './SessionTeamCard.svelte';
+  import SessionTeamDetails from './SessionTeamDetails.svelte';
   import SessionKpis from '../SessionKpis.svelte';
   import { rate } from '../../analysis-view';
   import { playerKpi, teamKpi, type SessionKpi } from '../session-kpis';
@@ -24,17 +27,19 @@
     analysis: MultiRaceAnalysis;
     captures: ParsedRaceCapture[];
     filter: TeamFilter;
-    oninspect: (members: RaceRunner[], title: string, race: number) => void;
+    skillNames: Map<number, string>;
     onreplay?: (race: number) => void;
   }
 
-  let { teams, analysis, captures, filter = $bindable(), oninspect, onreplay }: Props = $props();
+  let { teams, analysis, captures, filter = $bindable(), skillNames, onreplay }: Props = $props();
 
   const PAGE_SIZE = 12;
 
   let search = $state(''),
     sort = $state('winrate'),
-    limit = $state(PAGE_SIZE);
+    limit = $state(PAGE_SIZE),
+    skillCatalog = $state.raw<Map<number, SkillData>>(),
+    inspected = $state<SessionTeam>();
 
   const baseline = $derived(sessionBaseline(analysis));
   const player = $derived(playerRecord(captures));
@@ -46,7 +51,8 @@
     if (player)
       list.push(
         playerKpi(player, baseline, {
-          label: 'Show yours',
+          label: 'Your teams',
+          icon: 'filter',
           onselect: () => (filter = { own: true })
         })
       );
@@ -57,8 +63,9 @@
     if (best)
       list.push(
         teamKpi(best, baseline, {
-          label: 'Inspect',
-          onselect: () => oninspect(best.members, best.trainer, best.races[0]!)
+          label: 'Builds',
+          icon: 'eye',
+          onselect: () => (inspected = best)
         })
       );
 
@@ -121,10 +128,25 @@
     return names.toLowerCase().includes(query);
   }
 
+  /** Replays the team's first race, leaving the dialog so the replay is in view. */
+  function replayInspected() {
+    const race = inspected?.races[0];
+    inspected = undefined;
+    if (race !== undefined) onreplay?.(race);
+  }
+
   function clearFilters() {
     filter = {};
     search = '';
   }
+
+  onMount(() => {
+    loadSkills()
+      .then((catalog) => (skillCatalog = catalog))
+      .catch(() => {
+        // Skill point totals are optional; the cards read the same without them.
+      });
+  });
 </script>
 
 <div class="teams">
@@ -219,8 +241,9 @@
       {#each matching.slice(0, limit) as team, index (team.key)}
         <SessionTeamCard
           {team}
+          {skillCatalog}
           position={index + 1}
-          oninspect={() => oninspect(team.members, team.trainer, team.races[0]!)}
+          oninspect={() => (inspected = team)}
           onreplay={onreplay ? () => onreplay(team.races[0]!) : undefined}
         />
       {/each}
@@ -256,6 +279,13 @@
     </EmptyState>
   {/if}
 </div>
+<SessionTeamDetails
+  team={inspected}
+  {skillNames}
+  raceDistance={inspected ? captures[inspected.races[0]!]?.raceDistance : undefined}
+  onclose={() => (inspected = undefined)}
+  onreplay={onreplay ? replayInspected : undefined}
+/>
 
 <style>
   @import './session-teams.css';

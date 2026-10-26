@@ -24,6 +24,16 @@
   align-content: start;
 }
 
+/* The rows share the panel's height with the room table beside it, so no empty band opens below them. */
+.breakdown {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+.breakdown .style-row {
+  flex: 1 1 auto;
+}
 .breakdown-key,
 .style-row {
   display: grid;
@@ -48,7 +58,7 @@
 }
 .track-key i {
   width: 8px;
-  height: 3px;
+  height: 6px;
   background: var(--text-secondary);
   opacity: 0.5;
 }
@@ -65,14 +75,18 @@
 .style-row:last-of-type {
   border-bottom: 0;
 }
-.style-link {
+/* Styles and lineups open their teams, so they are drawn as secondary buttons rather than coloured text. */
+.style-link,
+.composition {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
-  padding: 0;
-  border: 0;
-  background: none;
+  min-height: 26px;
+  padding: 2px 8px;
+  border: 1px solid var(--factor-field-border);
+  border-radius: var(--radius-sm);
+  background: var(--factor-field-bg);
   color: var(--text-primary);
   font: inherit;
   font-size: 12px;
@@ -81,14 +95,19 @@
   white-space: nowrap;
   cursor: pointer;
 }
+.style-link:hover,
+.composition:hover {
+  border-color: var(--border-secondary);
+}
 .style-link small {
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 400;
 }
-.style-link:hover,
-.style-link:focus-visible {
-  color: var(--accent-primary);
+.style-link:focus-visible,
+.composition:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
 }
 .style-link i,
 h4 i,
@@ -104,7 +123,7 @@ h4 i,
 }
 .track {
   display: block;
-  height: 4px;
+  height: 9px;
   overflow: hidden;
   border-radius: 2px;
   background: var(--surface-2);
@@ -289,21 +308,6 @@ h4 {
   font-size: 11px;
 }
 
-.composition {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 22px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--text-primary);
-  font: inherit;
-  font-size: 12px;
-  text-align: left;
-  white-space: nowrap;
-  cursor: pointer;
-}
 .composition > span:not(.slash) {
   display: inline-flex;
   align-items: center;
@@ -334,9 +338,9 @@ h4 {
   flex: 1;
   max-width: 140px;
   min-width: 56px;
-  height: 5px;
+  height: 10px;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: 3px;
   background: var(--surface-2);
 }
 .rate-bar .fill {

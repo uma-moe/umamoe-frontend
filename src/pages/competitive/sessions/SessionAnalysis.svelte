@@ -213,7 +213,7 @@
           {analysis}
           {captures}
           bind:filter={teamFilter}
-          oninspect={inspect}
+          {skillNames}
           {onreplay}
         />
       </div>
@@ -223,6 +223,7 @@
         <SessionSkills
           {analysis}
           {skillNames}
+          raceInstanceId={captures[0]?.raceInstanceId}
         />
       </div>
     {/if}

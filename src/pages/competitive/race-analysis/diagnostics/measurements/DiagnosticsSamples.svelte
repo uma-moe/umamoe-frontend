@@ -69,11 +69,11 @@
       {#snippet cell(row, column)}
         {#if column.key === 'time'}
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             onclick={() => onseek(Number(row.time))}
           >
-            {Number(row.time).toFixed(3)} s ↗
+            {Number(row.time).toFixed(3)} s
           </Button>
         {:else if typeof row[column.key] === 'number'}
           <span class="sample-value">
@@ -139,12 +139,12 @@
           {#if column.key === 'section'}
             {#if typeof row.time === 'number'}
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
-                ariaLabel={'Section ' + row.section + ' ↗'}
+                ariaLabel={'Watch section ' + row.section}
                 onclick={() => onseek(Number(row.time))}
               >
-                {row.section} ↗
+                {row.section}
               </Button>
             {:else}
               {row.section}

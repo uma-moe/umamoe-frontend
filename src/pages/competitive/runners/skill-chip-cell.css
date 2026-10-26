@@ -1,0 +1,29 @@
+/* Skill chips in a table column share one width, so their names and icons line up row to row. */
+.skill-chip-cell :global(.skill-chip.fill) {
+  flex: none;
+  width: var(--skill-chip-width, 176px);
+  height: 24px;
+  min-height: 24px;
+  font-size: 12px;
+}
+.skill-chip-cell :global(.skill-chip img) {
+  width: 24px;
+  height: 24px;
+}
+.skill-chip-cell :global(.skill-chip .skill-body) {
+  min-width: 0;
+  min-height: 24px;
+  height: 24px;
+  padding-block: 0;
+  align-items: center;
+}
+.skill-chip-cell :global(.skill-chip .skill-name) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@media (max-width: 600px) {
+  .skill-chip-cell {
+    --skill-chip-width: 152px;
+  }
+}

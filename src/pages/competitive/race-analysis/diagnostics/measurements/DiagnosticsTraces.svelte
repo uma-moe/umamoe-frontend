@@ -66,11 +66,11 @@
               {#each group.spans as span}
                 <li>
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
                     onclick={() => onseek(span.startTime)}
                   >
-                    {span.startTime.toFixed(3)}–{span.endTime.toFixed(3)} s ↗
+                    {span.startTime.toFixed(3)}–{span.endTime.toFixed(3)} s
                   </Button>
                   {#if Number(span[group.key]) >= 0}
                     <button
@@ -160,17 +160,20 @@
           {#snippet cell(row, column)}
             {#if column.key === 'time'}
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
                 onclick={() => onseek(Number(row.time))}
               >
-                {Number(row.time).toFixed(3)} s ↗
+                {Number(row.time).toFixed(3)} s
               </Button>
             {:else if column.key === 'skillId'}
-              <RaceSkill
-                id={Number(row.skillId)}
-                name={skillNames.get(Number(row.skillId))}
-              />
+              <span class="skill-chip-cell">
+                <RaceSkill
+                  id={Number(row.skillId)}
+                  name={skillNames.get(Number(row.skillId))}
+                  fill
+                />
+              </span>
             {:else if column.key === 'casterHorseIndex'}
               <DiagnosticsRunnerReference
                 {capture}
@@ -231,4 +234,9 @@
   @import '../runner-reference.css';
   @import './detail-panel.css';
   @import './diagnostics-traces.css';
+  @import '../../../runners/skill-chip-cell.css';
+  .skill-chip-cell {
+    display: inline-flex;
+    vertical-align: middle;
+  }
 </style>

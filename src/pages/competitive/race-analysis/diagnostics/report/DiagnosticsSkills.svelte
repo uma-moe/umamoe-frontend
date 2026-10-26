@@ -3,9 +3,13 @@
   import { raceMetricHelp, type HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
   import DataTable from '@/components/data/DataTable.svelte';
   import Button from '@/components/controls/Button.svelte';
+  import Icon from '@/components/Icon.svelte';
+  import type { IconName } from '@/components/icon-types';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import DiagnosticsMetricHelp from '../DiagnosticsMetricHelp.svelte';
-  import { skillRows } from '../diagnostics-format';
+  import { isSkillOutcome, skillRows, type SkillOutcome } from '../diagnostics-format';
+
+  type OutcomeTone = 'activated' | 'caution' | 'failed' | 'idle';
 
   let {
     capture,
@@ -32,15 +36,34 @@
   );
 
   const activatedSkills = $derived(rows.filter((row) => row.status === 'Activated').length);
+
+  const outcomeTones: Record<SkillOutcome, OutcomeTone> = {
+    Activated: 'activated',
+    'Passed wit check, failed condition': 'caution',
+    'Wit check failed': 'failed',
+    'Not triggered': 'idle',
+    'Not recorded': 'idle'
+  };
+
+  const toneIcons: Record<OutcomeTone, IconName> = {
+    activated: 'check',
+    caution: 'warning',
+    failed: 'close',
+    idle: 'minus'
+  };
+
+  function outcomeTone(status: unknown): OutcomeTone {
+    return isSkillOutcome(status) ? outcomeTones[status] : 'idle';
+  }
 </script>
 
 <section
   class="report-block skills-report"
-  aria-label="Runner skill performance"
+  aria-label="Runner skill procs"
 >
   <header class="section-heading">
     <h3>
-      Skill performance <small>{activatedSkills}/{rows.length} activated</small>
+      Skill procs <small>{activatedSkills}/{rows.length} activated</small>
     </h3>
     {#if sharedThreshold !== undefined}
       <span class="activation-threshold">
@@ -70,17 +93,25 @@
   >
     {#snippet cell(row, column)}
       {#if column.key === 'id'}
-        <RaceSkill
-          id={Number(row.id)}
-          name={skillNames.get(Number(row.id))}
-        />
+        <span class="skill-chip-cell">
+          <RaceSkill
+            id={Number(row.id)}
+            name={skillNames.get(Number(row.id))}
+            fill
+          />
+        </span>
       {:else if column.key === 'status'}
-        <span
-          class="skill-status"
-          class:activated={row.status === 'Activated'}
-          class:failed={row.status === 'Wit check failed'}
-          class:caution={row.status === 'Passed wit check, failed condition'}
-        >
+        {@const tone = outcomeTone(row.status)}
+        <span class="skill-status {tone}">
+          <span
+            class="status-icon"
+            aria-hidden="true"
+          >
+            <Icon
+              name={toneIcons[tone]}
+              size={12}
+            />
+          </span>
           {row.status}
         </span>
       {:else if column.key === 'roll'}
@@ -107,11 +138,11 @@
         </span>
       {:else if column.key === 'first' && typeof row.first === 'number'}
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
           onclick={() => onseek(Number(row.first))}
         >
-          {Number(row.first).toFixed(3)} s ↗
+          {Number(row.first).toFixed(3)} s
         </Button>
       {:else}
         {typeof row[column.key] === 'number'
@@ -124,6 +155,7 @@
 
 <style>
   @import '../diagnostics-section.css';
+  @import '../../../runners/skill-chip-cell.css';
   h3 {
     margin: 0;
     font-size: 13px;
@@ -160,14 +192,51 @@
   .skills-report :global(th:last-child) {
     width: 112px;
   }
+  .skill-chip-cell {
+    display: inline-flex;
+    vertical-align: middle;
+  }
+  /* The icon carries the outcome at a glance; its colour repeats it for readers who scan by tone. */
   .skill-status {
-    color: var(--text-secondary);
+    --status-color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--status-color);
+  }
+  /* A solid badge in the outcome's colour, so the result reads at a glance. */
+  .status-icon {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--status-color);
+    color: var(--surface-1);
+  }
+  .skill-status.activated,
+  .skill-status.failed,
+  .skill-status.caution {
+    font-weight: 600;
   }
   .skill-status.activated {
-    color: var(--accent-secondary);
+    --status-color: var(--accent-success);
   }
   .skill-status.failed {
-    color: var(--accent-error);
+    --status-color: var(--accent-error);
+  }
+  .skill-status.idle .status-icon {
+    background: var(--surface-2);
+    color: var(--text-secondary);
+  }
+  /* Seeking stays a button, sized to the row so every skill keeps the same compact height. The
+     selector mirrors the race page's small-button rule so this one takes precedence inside the table. */
+  .skills-report :global(td .ui-button.ui-button--sm:not(.ui-button--ghost)) {
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
   }
   .wit-check {
     display: inline-grid;
@@ -182,9 +251,6 @@
     color: var(--accent-error);
   }
   .skill-status.caution {
-    color: var(--accent-warning);
-  }
-  .skills-report :global(.skill-chip) {
-    vertical-align: middle;
+    --status-color: var(--accent-warning);
   }
 </style>

@@ -107,8 +107,8 @@
 
   {#if overview}
     <div class="runner-overview">
-      {@render overview()}
       {#if horse}
+        {@render overview()}
         <DiagnosticsOutcomeSummary
           {capture}
           {index}
@@ -116,7 +116,15 @@
           {notice}
         />
       {:else}
-        <!-- Without detailed simulation the notice is short, so the skills fill the space beside the card. -->
+        <!-- Without detailed simulation the card and its blocking incidents fill the column beside the skills. -->
+        <div class="runner-column">
+          {@render overview()}
+          {#if blocking}
+            <div class="blocking-panel">
+              <div class="blocking-fill">{@render blocking()}</div>
+            </div>
+          {/if}
+        </div>
         <div class="recorded-side">
           <DiagnosticsOutcomeSummary
             {capture}
@@ -124,7 +132,13 @@
             {horse}
             {notice}
           />
-          {@render report()}
+          <DiagnosticsSkills
+            {capture}
+            {index}
+            {horse}
+            {skillNames}
+            {onseek}
+          />
         </div>
       {/if}
     </div>

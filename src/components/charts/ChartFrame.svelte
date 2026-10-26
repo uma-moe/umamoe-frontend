@@ -151,8 +151,9 @@
           {/if}
           {#if expandable && !expanded}
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
+              icon="expand"
               ariaLabel={'Expand ' + title}
               onclick={() => (expanded = true)}
             >
@@ -203,7 +204,7 @@
     class:plain
   >
     <Button
-      variant="ghost"
+      variant="secondary"
       onclick={() => (expanded = false)}
     >
       Return to {title}

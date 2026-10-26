@@ -5,6 +5,7 @@
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
+  import Button from '@/components/controls/Button.svelte';
   import Checkbox from '@/components/controls/Checkbox.svelte';
 
   let {
@@ -140,8 +141,9 @@
               id={row.id}
               name={skillNames.get(row.id)}
             />{#each row.periods as period}
-              <button
-                class="detail-seek"
+              <Button
+                variant="secondary"
+                size="sm"
                 onclick={() => onseek(period.start)}
               >
                 {period.start.toFixed(2)} s{#if period.end !== undefined}
@@ -149,7 +151,7 @@
                 {:else}
                   · Duration not recorded
                 {/if}
-              </button>
+              </Button>
             {/each}{@render roll(row.id)}
           </div>
         {/each}
@@ -411,6 +413,12 @@
   .detail-seek:hover,
   .detail-seek:focus-visible {
     text-decoration: underline;
+  }
+  .detail-row > :global(.ui-button) {
+    justify-self: start;
+    min-height: 28px;
+    padding-inline: 6px;
+    font-size: 11px;
   }
   .roll-details {
     font-variant-numeric: tabular-nums;

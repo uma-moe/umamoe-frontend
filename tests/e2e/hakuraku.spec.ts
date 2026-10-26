@@ -1963,29 +1963,31 @@ test('race uploads keep replay and session sections together, retaining valid fi
   await expect(page.locator('.replay-layout')).toBeVisible();
   await openSessionView(page, 'Skills');
   const skillTable = page.getByRole('table', {
-    name: 'Learned skills in this session',
+    name: 'Session skill procs',
     exact: true
   });
   await expect(skillTable).toBeVisible();
-  await skillTable.getByRole('button', { name: 'Activation rate', exact: true }).click();
-  const rates = await skillTable
-    .locator('tbody tr[data-virtual-index] td:nth-child(3)')
+  await skillTable.getByRole('button', { name: 'Activations', exact: true }).click();
+  const activations = await skillTable
+    .locator('tbody tr[data-virtual-index] td:nth-child(3) .activation-summary > strong')
     .allTextContents();
 
-  expect(rates.map((value) => parseFloat(value))).toEqual(
-    rates.map((value) => parseFloat(value)).sort((a, b) => b - a)
+  expect(activations.map((value) => parseFloat(value))).toEqual(
+    activations.map((value) => parseFloat(value)).sort((a, b) => b - a)
   );
   await expect(
-    skillTable.getByRole('columnheader', { name: 'Activation rate', exact: true })
+    skillTable.getByRole('columnheader', { name: 'Activations', exact: true })
   ).toHaveAttribute('aria-sort', 'descending');
 
-  const skillPanel = page.locator('.session-panels > :not([hidden])');
-
-  const heatmap = skillPanel.getByRole('img', { name: /^Activations by race phase:/ });
-  await heatmap.scrollIntoViewIfNeeded();
-  await expect(heatmap).toBeVisible();
+  // A session draws its skills with CM Data's activation lanes and outcome breakdown.
+  await skillTable.locator('tbody tr[data-virtual-index] .skill-select').first().click();
+  const skillDetail = page.getByRole('region', { name: /activation details$/ });
+  await skillDetail.scrollIntoViewIfNeeded();
+  await expect(skillDetail).toContainText('activation events');
   await expect(
-    skillPanel.getByRole('table', { name: /by running style$/ }).getByRole('row')
+    skillDetail
+      .getByRole('table', { name: 'Skill activation rates and outcomes by running style' })
+      .getByRole('row')
   ).not.toHaveCount(0);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: info.outputPath('race-analysis.png'), fullPage: false });
@@ -2306,8 +2308,7 @@ test('race analysis is one continuous report with preserved selection and compac
     .click();
 
   const umaPlot = page.getByRole('group', {
-    name: 'Uma popularity and win rate. Select a portrait to inspect its results.',
-    exact: true
+    name: /^Uma popularity and win rate\. Select a portrait to inspect its results\./
   });
 
   expect(await umaPlot.locator('image').count()).toBeGreaterThan(8);
@@ -2327,7 +2328,7 @@ test('race analysis is one continuous report with preserved selection and compac
 
   await umaInspection.getByRole('button', { name: 'Find teams', exact: true }).click();
   await expect(sessionTab(page, 'Teams')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('.team-grid .team-card').first()).toContainText(pointName);
+  await expect(page.locator('.team-grid .team-row').first()).toContainText(pointName);
   await page
     .getByRole('button', { name: 'Clear the ' + pointName + ' filter', exact: true })
     .click();
@@ -2352,19 +2353,23 @@ test('race analysis is one continuous report with preserved selection and compac
   ).toHaveCount(1);
 
   await sessionTab(page, 'Teams').click();
-  await expect(page.locator('.team-grid .team-card')).toHaveCount(12);
+  await expect(page.locator('.team-grid .team-row')).toHaveCount(12);
   await page.getByRole('button', { name: 'Show 12 more teams', exact: true }).click();
-  await expect(page.locator('.team-grid .team-card')).toHaveCount(24);
+  await expect(page.locator('.team-grid .team-row')).toHaveCount(24);
   await expect(page.getByRole('combobox', { name: 'Sort teams', exact: true })).toContainText(
     'Team win rate'
   );
 
-  const sessionTeam = page.locator('.team-grid .team-card').first();
+  const sessionTeam = page.locator('.team-grid .team-row').first();
   const sessionRunnerName = (await sessionTeam.locator('.members h3').first().innerText()).trim();
-  await sessionTeam.getByRole('button', { name: 'Inspect team 1 builds', exact: true }).click();
+  await sessionTeam.getByRole('button', { name: 'View team 1 builds', exact: true }).click();
   const sessionBuild = page
     .getByRole('dialog')
     .filter({ has: page.getByRole('heading', { name: 'Learned skills' }) });
+
+  await expect(page.getByRole('dialog', { name: 'Team details', exact: true })).toContainText(
+    'Team win rate'
+  );
 
   await expect(sessionBuild.getByRole('heading', { name: 'Learned skills' })).toHaveCount(3);
   await expect(sessionBuild.getByLabel(/^(All|Race) aptitudes$/)).toHaveCount(3);
@@ -2385,19 +2390,15 @@ test('race analysis is one continuous report with preserved selection and compac
   await page.getByRole('searchbox', { name: 'Search teams', exact: true }).fill('no such trainer');
   await expect(page.getByText('No matching teams', { exact: true })).toBeVisible();
   await sessionTab(page, 'Skills').click();
-  await expect(
-    page.getByRole('searchbox', { name: 'Search learned skills', exact: true })
-  ).toHaveValue('');
+  await expect(page.getByRole('searchbox', { name: 'Search skills', exact: true })).toHaveValue('');
   await expect(
     page
-      .getByRole('table', { name: 'Learned skills in this session', exact: true })
+      .getByRole('table', { name: 'Session skill procs', exact: true })
       .locator('tbody tr[data-virtual-index]')
   ).not.toHaveCount(0);
 
   await openRaceSection(page, 'Race replay');
-  await expect(
-    page.getByRole('table', { name: 'Learned skills in this session', exact: true })
-  ).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Session skill procs', exact: true })).toBeVisible();
   await page.getByRole('combobox', { name: 'Race', exact: true }).click();
   await page.getByRole('option', { name: /^2\. Demo race 2\b/ }).click();
   await expect(page.getByRole('combobox', { name: 'Race', exact: true })).toContainText(
@@ -2526,7 +2527,8 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
     else if (url.pathname.endsWith('/team-distribution')) payload = cmFixture.distribution;
     else if (url.pathname.endsWith('/skills/overview')) payload = cmFixture.skills;
     else if (url.pathname.includes('/skills/details/')) {
-      if (failSkillDetail) {
+      // Visible rows prefetch their timings, so the failure targets the skill the test inspects.
+      if (failSkillDetail && url.pathname.endsWith('/10071')) {
         failSkillDetail = false;
         await route.fulfill({
           status: 503,
@@ -2605,10 +2607,10 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
     page.getByRole('heading', { name: 'Effects of style saturation', exact: true })
   ).toBeVisible();
 
-  const counts = page.getByRole('group', { name: 'Inspect room count', exact: true });
-  await counts.getByRole('button', { name: '2 in room', exact: true }).click();
-  await expect(counts.getByRole('button', { name: '2 in room', exact: true })).toHaveAttribute(
-    'aria-pressed',
+  const counts = page.getByRole('radiogroup', { name: 'Inspect room count', exact: true });
+  await counts.getByRole('radio', { name: '2 in room', exact: true }).click();
+  await expect(counts.getByRole('radio', { name: '2 in room', exact: true })).toHaveAttribute(
+    'aria-checked',
     'true'
   );
 
@@ -2618,7 +2620,7 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   );
 
   await expect(
-    page.getByRole('img', { name: 'Per-Uma win rate versus number of the same style', exact: true })
+    page.getByRole('group', { name: /^Per-Uma win rate versus number of the same style\./ })
   ).toBeVisible();
 
   await page
@@ -4041,7 +4043,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   const downhillPeriods = details.getByRole('list', { name: 'Downhill periods', exact: true });
   await expect(downhillPeriods).toContainText('1.000');
   await expect(downhillPeriods).toContainText('2.000');
-  await downhillPeriods.getByRole('button', { name: '1.000 s ↗', exact: true }).click();
+  await downhillPeriods.getByRole('button', { name: '1.000 s', exact: true }).click();
   await expect(scrubber).toHaveValue('1');
   await openRaceSection(page, 'Runner analysis');
   await details.getByRole('button', { name: 'Show Downhill periods', exact: true }).click();
@@ -4135,7 +4137,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   await expect(sectionTable.getByRole('columnheader')).toHaveCount(5);
   await expect(sectionTable).toContainText('-1.20%');
   await expect(sectionTable).toContainText('+0.25%');
-  await sectionTable.getByRole('button', { name: 'Section 1 ↗', exact: true }).click();
+  await sectionTable.getByRole('button', { name: 'Watch section 1', exact: true }).click();
   await expect(scrubber).toHaveValue('0');
   await openRaceSection(page, 'Runner analysis');
   await expect(
@@ -4152,7 +4154,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
 
   await details
     .getByRole('table', { name: 'Simulator telemetry samples', exact: true })
-    .getByRole('button', { name: '1.000 s ↗', exact: true })
+    .getByRole('button', { name: '1.000 s', exact: true })
     .click();
 
   await expect(scrubber).toHaveValue('1');
@@ -4420,7 +4422,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
     style: '.utility-bar,.report-navigation{visibility:hidden !important}'
   });
 
-  await decisions.getByRole('button', { name: '0.250 s ↗', exact: true }).click();
+  await decisions.getByRole('button', { name: '0.250 s', exact: true }).click();
   await expect(scrubber).toHaveValue('0.25');
   await openRaceSection(page, 'Runner analysis');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(

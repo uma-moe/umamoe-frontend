@@ -1,4 +1,5 @@
 import type { MultiRaceCharacterStats } from '@/lib/race/multi-race-analysis';
+import type { IconName } from '@/components/icon-types';
 import { runningStyleName } from '@/lib/race/replay/race-display';
 import { rate } from '../analysis-view';
 import {
@@ -34,8 +35,8 @@ export interface SessionKpi {
   detail?: string;
   /** The value comes from a small sample, so it is shown muted. */
   few?: boolean;
-  /** Opens the view or list that explains the value. */
-  action?: { label: string; onselect: () => void };
+  /** Opens the view or list that explains the value, as a labelled button on the tile. */
+  action?: { label: string; icon: IconName; onselect: () => void };
 }
 
 type KpiAction = SessionKpi['action'];

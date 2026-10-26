@@ -56,14 +56,18 @@
       Try 24 demo races
     </Button>
   </div>
-  <a
-    class="capture-help"
-    href="https://github.com/ayaliz/horseACT#installation"
-    target="_blank"
-    rel="noreferrer"
-  >
-    How to capture races ↗
-  </a>
+  <div class="capture-help">
+    <Button
+      size="sm"
+      variant="secondary"
+      icon="external"
+      href="https://github.com/ayaliz/horseACT#installation"
+      target="_blank"
+      rel="noreferrer"
+    >
+      How to capture races
+    </Button>
+  </div>
 </Dialog>
 
 <style>
@@ -85,9 +89,6 @@
     margin-right: 4px;
   }
   .capture-help {
-    display: inline-block;
-    font-size: 11px;
-    color: var(--accent-primary);
     margin-top: 12px;
   }
   p {

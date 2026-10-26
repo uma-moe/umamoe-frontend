@@ -22,6 +22,11 @@
   padding-top: 8px;
   border-top: 1px solid var(--border-subtle);
 }
+/* Beside the skills it is a column of its own; a rule above it would only cut across the row. */
+.report-grid > .blocking-summary {
+  padding-top: 0;
+  border-top: 0;
+}
 .incident-status {
   --inspect-popover-width: 600px;
   display: flex;
@@ -155,12 +160,57 @@ pre {
   gap: 10px;
   min-width: 0;
 }
-.recorded-side > .report-grid {
-  padding-top: 0;
+/* The card keeps its height and the blocking list takes the rest, so the column ends with the skills. */
+.runner-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.blocking-panel {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 150px;
+  border: 1px solid var(--card-surface-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+/* Out of flow, so a long list scrolls inside the panel instead of making the row taller. */
+.blocking-fill {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+}
+.blocking-fill > :global(*) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+.blocking-fill :global(.event-list) {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
 }
 @media (max-width: 900px) {
   .runner-overview {
     grid-template-columns: minmax(0, 1fr);
     gap: 10px;
+  }
+  /* Stacked, the skills come before the blocking list. */
+  .runner-column {
+    display: contents;
+  }
+  .blocking-panel {
+    order: 1;
+    min-height: 0;
+  }
+  .blocking-fill {
+    position: static;
+  }
+  .blocking-fill :global(.event-list) {
+    max-height: 240px;
   }
 }
