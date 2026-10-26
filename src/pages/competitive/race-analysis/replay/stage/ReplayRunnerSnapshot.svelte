@@ -176,12 +176,14 @@
             {#if blockedRunner}
               <p>
                 Blocked by Gate {replay.blocker + 1}:
-                <button
-                  class="diagnostic-link"
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon="eye"
                   onclick={() => (selected = String(replay.blocker))}
                 >
-                  {blockedRunner.name} ↗
-                </button>
+                  {blockedRunner.name}
+                </Button>
               </p>
             {:else}
               <p>No front blocker at this moment.</p>
@@ -217,13 +219,15 @@
               <span class="mode-list">{modes.join(', ') || 'No special mode'}</span>
               {#each [{ label: 'Position-keep reference', index: reference }, { label: 'Pacemaker', index: pacemaker }] as item}
                 {#if item.index !== undefined && item.index >= 0}
-                  <button
-                    class="diagnostic-link"
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon="eye"
                     onclick={() => (selected = String(item.index))}
                   >
                     {item.label}: #{item.index + 1}
-                    {replay.capture.runners.find((r) => r.index === item.index)?.name} ↗
-                  </button>
+                    {replay.capture.runners.find((r) => r.index === item.index)?.name}
+                  </Button>
                 {/if}
               {/each}
             </div>
@@ -266,7 +270,6 @@
           />
           <span>
             Blocked by <strong>{blockedRunner.name}</strong>
-            ↗
           </span>
         </button>
       {:else}

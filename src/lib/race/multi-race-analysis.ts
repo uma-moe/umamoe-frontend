@@ -19,6 +19,8 @@ export interface MultiRaceHorseEntry {
   cardId?: number;
   strategy: number;
   finishOrder: number;
+  /** The trainer who entered the runner; counts distinct players, as CM Data does. */
+  trainerName: string;
   learnedSkillIds: number[];
   /** Every skill activation in the race, with the course position it fired at. */
   skillActivations: SkillActivation[];
@@ -198,6 +200,7 @@ export function analyzeMultiRace(captures: ParsedRaceCapture[]): MultiRaceAnalys
         cardId: runner.cardId,
         strategy,
         finishOrder,
+        trainerName: runner.trainerName ?? '',
         learnedSkillIds: runner.skillIds,
         skillActivations: activations,
         isPlayer: runner.isPlayer,

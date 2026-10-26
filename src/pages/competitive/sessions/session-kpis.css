@@ -14,25 +14,9 @@
   min-width: 0;
   margin: 0 0 -1px -1px;
   padding: 8px 12px;
-  border: 0;
   border-bottom: 1px solid var(--border-subtle);
   border-left: 1px solid var(--border-subtle);
-  background: none;
   color: var(--text-primary);
-  font: inherit;
-  text-align: left;
-}
-button.kpi {
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-button.kpi:hover,
-button.kpi:focus-visible {
-  background: rgba(var(--accent-primary-rgb), 0.07);
-}
-button.kpi:focus-visible {
-  outline: 2px solid var(--accent-primary);
-  outline-offset: -2px;
 }
 .kpi-label {
   display: flex;
@@ -44,16 +28,13 @@ button.kpi:focus-visible {
   line-height: 1.3;
 }
 .kpi-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  color: var(--text-muted);
-  font-size: 10px;
-  white-space: nowrap;
+  flex: none;
+  margin-block: -4px -2px;
 }
-button.kpi:hover .kpi-action,
-button.kpi:focus-visible .kpi-action {
-  color: var(--accent-primary);
+.kpi-action :global(button) {
+  min-height: 26px;
+  padding-inline: 8px;
+  font-size: 11px;
 }
 .kpi-headline {
   display: flex;
@@ -140,10 +121,11 @@ button.kpi:focus-visible .kpi-action {
   .kpi {
     padding: 7px 10px;
   }
+  /* An odd last tile takes the whole row instead of leaving an empty cell beside it. */
+  .kpi:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
   .kpi-headline strong {
     font-size: 16px;
-  }
-  .kpi-action {
-    display: none;
   }
 }

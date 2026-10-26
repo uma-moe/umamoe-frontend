@@ -48,11 +48,11 @@
     <h3>Last-spurt decision</h3>
     {#if typeof spurt.time === 'number'}
       <Button
-        variant="ghost"
+        variant="secondary"
         size="sm"
         onclick={() => onseek(Number(spurt.time))}
       >
-        {spurt.time.toFixed(3)} s ↗
+        {spurt.time.toFixed(3)} s
       </Button>
     {/if}
     <button

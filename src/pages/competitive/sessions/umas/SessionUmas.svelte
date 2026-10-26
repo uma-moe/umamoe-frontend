@@ -61,6 +61,7 @@
       list.push(
         umaKpi(uma, baseline, 'Top Uma', {
           label: 'Teams',
+          icon: 'community',
           onselect: () => onteams({ uma: uma.key })
         })
       );
@@ -72,7 +73,7 @@
         value: percent(popular.races, entries.length),
         subjects: [{ text: popular.name, cardId: popular.cardId }],
         detail: popular.races + ' of ' + entries.length + ' entries',
-        action: { label: 'Inspect', onselect: () => (selected = popular.key) }
+        action: { label: 'Select', icon: 'eye', onselect: () => (selected = popular.key) }
       });
 
     if (rival)
@@ -82,7 +83,7 @@
         value: rival.races + ' of ' + opponents.races,
         subjects: [{ text: rival.name, cardId: rival.cardId }],
         detail: 'races as the best-placed opponent · won ' + rival.wins,
-        action: { label: 'Inspect', onselect: () => (selected = rival.key) }
+        action: { label: 'Select', icon: 'eye', onselect: () => (selected = rival.key) }
       });
 
     const scoreTile = opponentScoreKpi(scores);

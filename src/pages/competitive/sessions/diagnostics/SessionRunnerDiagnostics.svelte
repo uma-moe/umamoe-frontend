@@ -91,12 +91,12 @@
           )}
           <div>
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               disabled={!onreplay}
               onclick={() => onreplay?.(selected.race, selected.runner.index, span.startTime)}
             >
-              {span.startTime.toFixed(3)} s ↗
+              {span.startTime.toFixed(3)} s
             </Button>
             <span>Blocked by</span>
             {#if blocker}

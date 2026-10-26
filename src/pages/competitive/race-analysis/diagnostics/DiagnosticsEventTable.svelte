@@ -45,11 +45,11 @@
     {#snippet cell(row, column)}
       {#if /^(time|startTime|endTime)$/.test(column.key) && typeof row[column.key] === 'number'}
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
           onclick={() => onseek(Number(row[column.key]))}
         >
-          {Number(row[column.key]).toFixed(3)} s ↗
+          {Number(row[column.key]).toFixed(3)} s
         </Button>
       {:else if /^(horseIndex|.*HorseIndex)$/.test(column.key) && Number(row[column.key]) >= 0}
         <DiagnosticsRunnerReference
@@ -61,10 +61,13 @@
       {:else if column.key === 'referenceHorseIndex'}
         <span class="muted">None</span>
       {:else if column.key === 'skillId'}
-        <RaceSkill
-          id={Number(row[column.key])}
-          name={skillNames.get(Number(row[column.key]))}
-        />
+        <span class="skill-chip-cell">
+          <RaceSkill
+            id={Number(row[column.key])}
+            name={skillNames.get(Number(row[column.key]))}
+            fill
+          />
+        </span>
         {#if Number(row.detailIndex) > 0}
           <small class="effect-index">
             Effect {Number(row.detailIndex) + 1}
@@ -110,6 +113,11 @@
 {/if}
 
 <style>
+  @import '../../runners/skill-chip-cell.css';
+  .skill-chip-cell {
+    display: inline-flex;
+    vertical-align: middle;
+  }
   p {
     margin: 0;
     font-size: 11px;

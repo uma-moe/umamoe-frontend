@@ -19,17 +19,8 @@ export const metricHelp = {
     'Wins divided by appearances. A runner’s rate measures individual wins; a team’s rate measures races won by any member.',
   'Team wins':
     'Races won by any member of the team, divided by its races. Three equally matched teams each win one race in three.',
-  'Activation rate':
-    'The percentage of learned skill entries that activated at least once. Repeat activations do not increase this percentage.',
-  'Win% if active':
-    'The win rate of runners whose skill activated. Stronger builds activate more skills, so this is a correlation, not the skill’s effect.',
-  'Median activation':
-    'The course position of the middle activation. The bar marks where the middle half of the activations fell.',
-  'vs. without':
-    'Win rate of runners that learned this skill minus the win rate of runners that did not, in percentage points. Stronger builds learn more skills, so read a gap as a hint, not as the skill’s effect.',
   'Your best': 'The best finish among your runners in that race.',
   Margin: 'Time between the winner and the runner-up.',
-  'Double procs': 'Runner entries where this skill activated at least twice.',
   'Avg. start HP': 'Average HP at the start across entries with an HP measurement.',
   'Avg. finish HP':
     'Average HP at each runner’s finish, rather than the end of the whole field. Missing measurements are excluded.',
@@ -52,6 +43,17 @@ export function sessionChart(
     textStyle: { color: ink },
     tooltip: { trigger: 'axis' },
     grid: { left: 40, right: 12, top: 18, bottom: 36 },
+    // Ctrl or ⌘ with the wheel zooms like the hand-drawn charts; a drag pans and two fingers pinch.
+    dataZoom: [
+      {
+        type: 'inside',
+        xAxisIndex: 0,
+        filterMode: 'none',
+        zoomOnMouseWheel: 'ctrl',
+        moveOnMouseMove: true,
+        moveOnMouseWheel: false
+      }
+    ],
     xAxis: {
       nameLocation: 'middle',
       nameGap: 26,

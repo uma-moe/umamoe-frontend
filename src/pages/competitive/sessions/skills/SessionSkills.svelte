@@ -1,26 +1,29 @@
 <script lang="ts">
   import type { MultiRaceAnalysis } from '@/lib/race/multi-race-analysis';
-  import { runningStyleName } from '@/lib/race/replay/race-display';
-  import TextField from '@/components/controls/TextField.svelte';
-  import SelectField from '@/components/controls/SelectField.svelte';
+  import Button from '@/components/controls/Button.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
-  import DataTable from '@/components/data/DataTable.svelte';
-  import ChartFrame from '@/components/charts/ChartFrame.svelte';
-  import RaceSkill from '../../runners/RaceSkill.svelte';
+  import SelectField from '@/components/controls/SelectField.svelte';
+  import TextField from '@/components/controls/TextField.svelte';
+  import CmSkillComparison from '../../champions-meeting/skills/CmSkillComparison.svelte';
+  import CmSkillTable from '../../champions-meeting/skills/CmSkillTable.svelte';
+  import { number, styleColors, styleNames, styleOrder } from '../../champions-meeting/cm-data';
+  import { skillRows } from '../../champions-meeting/skills/cm-skill-rows';
+  import { loadRaceCourse, type Course } from '../../race-analysis/replay/replay-course';
   import SessionKpis from '../SessionKpis.svelte';
-  import SessionSkillDetail from './SessionSkillDetail.svelte';
   import { rate } from '../../analysis-view';
-  import { rateClass, type SessionKpi } from '../session-kpis';
+  import type { SessionKpi } from '../session-kpis';
   import { formatRate, isSmallSample, SMALL_SAMPLE } from '../session-insights';
-  import { metricHelp } from '../session-statistics';
-  import { activationSpread, learnerWinGap, sessionSkills } from './session-skill-stats';
+  import { sessionSkillData, skillUseSummaries } from './session-skill-data';
+  import { SessionSkillDetails } from './session-skill-details';
 
   interface Props {
     analysis: MultiRaceAnalysis;
     skillNames: Map<number, string>;
+    /** The session's race, whose course the activation lanes are drawn on. */
+    raceInstanceId?: number;
   }
 
-  let { analysis, skillNames }: Props = $props();
+  let { analysis, skillNames, raceInstanceId }: Props = $props();
 
   /** A skill needs this many learners before its activation rate is worth calling out. */
   const RELIABILITY_SAMPLE = SMALL_SAMPLE * 2;
@@ -30,17 +33,16 @@
   let search = $state(''),
     style = $state('all'),
     runners = $state('all'),
-    selected = $state<number>();
+    selected = $state<number[]>([]),
+    inspected = $state<number>(),
+    sortKey = $state('players'),
+    course = $state.raw<Course>(),
+    comparison = $state<HTMLElement>(),
+    tableSection = $state<HTMLElement>();
 
   const hasPlayer = $derived(analysis.entries.some((entry) => entry.isPlayer));
   const styleOptions = $derived(
-    [...new Set(analysis.entries.map((entry) => entry.strategy))]
-      .filter((id) => id > 0)
-      .sort((a, b) => a - b)
-  );
-
-  const raceDistance = $derived(
-    Math.max(0, ...analysis.entries.map((entry) => entry.raceDistance))
+    styleOrder.filter((id) => analysis.entries.some((entry) => entry.strategy === id))
   );
 
   /** The runners every number in this view describes: all of them, or only the player's. */
@@ -48,289 +50,219 @@
     runners === 'own' ? analysis.entries.filter((entry) => entry.isPlayer) : analysis.entries
   );
 
-  const skills = $derived(sessionSkills(scopedEntries));
-  const styleFilter = $derived(style === 'all' ? undefined : Number(style));
+  const data = $derived(sessionSkillData(scopedEntries));
+  const overview = $derived(data.overview);
+  const details = $derived(new SessionSkillDetails(data.details));
+  const courseMatch = $derived(course?.distance === overview.courseDistance ? course : undefined);
 
-  const totals = $derived.by(() => {
-    const inStyle = scopedEntries.filter(
-      (entry) => styleFilter === undefined || entry.strategy === styleFilter
-    );
-
-    return {
-      entries: inStyle.length,
-      wins: inStyle.filter((entry) => entry.finishOrder === 1).length
-    };
-  });
-
-  /** The win rate of every runner in scope, which a skill's learners are read against. */
-  const neutralWin = $derived(rate(totals.wins, totals.entries));
-
-  const scoped = $derived(
-    skills.flatMap((skill) => {
-      const use = styleFilter === undefined ? skill.all : skill.byStyle.get(styleFilter);
-      if (!use) return [];
-
-      return [{ skill, use, name: skillName(skill.skillId), gap: learnerWinGap(use, totals) }];
-    })
+  const skills = $derived(skillRows(overview, style, skillName, { details: details.values }));
+  const rows = $derived(
+    skills.filter((row) => row.name.toLowerCase().includes(search.trim().toLowerCase()))
   );
 
-  const learnedTotal = $derived(scoped.reduce((total, item) => total + item.use.learned, 0));
-  const activatedTotal = $derived(scoped.reduce((total, item) => total + item.use.activated, 0));
-
   const kpis = $derived.by(() => {
+    const { skills: uses, population } = skillUseSummaries(overview, style);
+    const learned = uses.reduce((total, use) => total + use.owned, 0);
+    const activated = uses.reduce((total, use) => total + use.activated, 0);
     const list: SessionKpi[] = [];
-    if (!learnedTotal) return list;
+    if (!learned) return list;
 
     list.push({
       id: 'activation',
       label: 'Learned skills that activated',
-      value: formatRate(rate(activatedTotal, learnedTotal)),
-      detail: activatedTotal.toLocaleString() + ' of ' + learnedTotal.toLocaleString() + ' carried'
+      value: formatRate(rate(activated, learned)),
+      detail: number(activated) + ' of ' + number(learned) + ' carried'
     });
 
-    const unreliable = scoped
-      .filter(
-        (item) => item.use.learned >= RELIABILITY_SAMPLE && item.use.activated < item.use.learned
-      )
-      .sort(
-        (a, b) => rate(a.use.activated, a.use.learned) - rate(b.use.activated, b.use.learned)
-      )[0];
+    const unreliable = uses
+      .filter((use) => use.owned >= RELIABILITY_SAMPLE && use.activated < use.owned)
+      .sort((a, b) => rate(a.activated, a.owned) - rate(b.activated, b.owned))[0];
 
     if (unreliable)
       list.push({
         id: 'unreliable',
         label: 'Least reliable skill',
-        value: formatRate(rate(unreliable.use.activated, unreliable.use.learned)),
-        subjects: [{ text: unreliable.name }],
-        detail:
-          unreliable.use.activated + ' of ' + unreliable.use.learned + ' learners activated it',
-        action: { label: 'Show', onselect: () => (selected = unreliable.skill.skillId) }
+        value: formatRate(rate(unreliable.activated, unreliable.owned)),
+        subjects: [{ text: skillName(unreliable.skillId) }],
+        detail: unreliable.activated + ' of ' + unreliable.owned + ' learners activated it',
+        action: { label: 'Show', icon: 'eye', onselect: () => showSkill(unreliable.skillId) }
       });
 
-    const correlated = scoped
-      .filter((item) => item.gap !== undefined && item.gap >= NOTABLE_GAP)
-      .sort((a, b) => (b.gap ?? 0) - (a.gap ?? 0))[0];
+    const gaps = uses.flatMap((use) => {
+      const without = population.entries - use.owned;
+      if (isSmallSample(use.owned) || isSmallSample(without)) return [];
 
-    if (correlated?.gap !== undefined)
+      const gap =
+        rate(use.learnerWins, use.owned) - rate(population.wins - use.learnerWins, without);
+      return gap >= NOTABLE_GAP ? [{ skillId: use.skillId, gap }] : [];
+    });
+    const correlated = gaps.sort((a, b) => b.gap - a.gap)[0];
+
+    if (correlated)
       list.push({
         id: 'correlated',
         label: 'Learners won more with',
         value: '+' + correlated.gap.toFixed(1) + ' pts',
-        subjects: [{ text: correlated.name }],
+        subjects: [{ text: skillName(correlated.skillId) }],
         detail: 'than runners without it · a hint, not the skill’s effect',
-        action: { label: 'Show', onselect: () => (selected = correlated.skill.skillId) }
+        action: { label: 'Show', icon: 'eye', onselect: () => showSkill(correlated.skillId) }
       });
 
-    const repeated = [...scoped].sort((a, b) => b.use.doubleProcs - a.use.doubleProcs)[0];
-    if (repeated && repeated.use.doubleProcs > 0)
+    const repeated = [...uses].sort((a, b) => b.repeat - a.repeat)[0];
+    if (repeated && repeated.repeat > 0)
       list.push({
         id: 'double',
         label: 'Most double procs',
-        value: String(repeated.use.doubleProcs),
-        subjects: [{ text: repeated.name }],
+        value: String(repeated.repeat),
+        subjects: [{ text: skillName(repeated.skillId) }],
         detail: 'runners activated it twice or more',
-        action: { label: 'Show', onselect: () => (selected = repeated.skill.skillId) }
+        action: { label: 'Show', icon: 'eye', onselect: () => showSkill(repeated.skillId) }
       });
 
     return list;
   });
 
-  const hasDoubleProcs = $derived(scoped.some((item) => item.use.doubleProcs > 0));
-
-  const rows = $derived(
-    scoped
-      .filter((item) => item.name.toLowerCase().includes(search.trim().toLowerCase()))
-      .map(({ skill, use, name, gap }) => {
-        const spread = activationSpread(use.distances);
-
-        return {
-          id: skill.skillId,
-          name,
-          learned: use.learned,
-          activated: rate(use.activated, use.learned),
-          activeWin: use.activated ? rate(use.activatedWins, use.activated) : '—',
-          activatedRuns: use.activated,
-          gap: gap ?? '—',
-          where: spread?.median ?? '—',
-          low: spread?.low ?? 0,
-          high: spread?.high ?? 0,
-          double: use.doubleProcs
-        };
-      })
-  );
-
-  const selectedItem = $derived(
-    scoped.find((item) => item.skill.skillId === selected) ?? scoped[0]
-  );
-
-  const measured = $derived(
-    analysis.skills.find((row) => row.skillId === selectedItem?.skill.skillId)
-  );
-
-  const position = (distance: number) =>
-    Math.min(100, Math.max(0, (distance / Math.max(1, raceDistance)) * 100)) + '%';
-
   function skillName(id: number) {
     return skillNames.get(id) ?? 'Skill ' + id;
   }
-</script>
 
-{#snippet courseTrack(row: Record<string, string | number>)}
-  {#if typeof row.where === 'number'}
-    <span
-      class="where"
-      title={'Middle half between ' +
-        Math.round(Number(row.low)) +
-        ' m and ' +
-        Math.round(Number(row.high)) +
-        ' m'}
-    >
-      <span
-        class="track"
-        aria-hidden="true"
-      >
-        <i
-          style:left={position(Number(row.low))}
-          style:right={'calc(100% - ' + position(Number(row.high)) + ')'}
-        ></i>
-        <b style:left={position(row.where)}></b>
-      </span>
-      {Math.round(row.where).toLocaleString()} m
-    </span>
-  {:else}
-    —
-  {/if}
-{/snippet}
+  /** Narrows the table to one skill with its activation lanes open, from a figure that names it. */
+  function showSkill(id: number) {
+    search = skillName(id);
+    inspected = id;
+    tableSection?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+  }
+
+  /** Skills the other runners learned have no data among yours, so their lanes would stay empty. */
+  function countRunners(scope: string) {
+    runners = scope;
+    selected = selected.filter((id) => data.details[id]);
+    if (inspected !== undefined && !data.details[inspected]) inspected = undefined;
+  }
+
+  $effect(() => {
+    const instance = raceInstanceId;
+    course = undefined;
+    let current = true;
+
+    // Lanes fall back to plain distance marks when the course cannot be resolved.
+    void loadRaceCourse(instance)
+      .then((value) => {
+        if (current) course = value;
+      })
+      .catch(() => {});
+
+    return () => {
+      current = false;
+    };
+  });
+</script>
 
 <div class="skills">
   <SessionKpis
     label="Skills at a glance"
     {kpis}
   />
-  <ChartFrame
-    plain
-    surface
-    id="session-skills"
-    title="Learned skills"
-    description={'Select a skill for its course heatmap · under ' +
-      SMALL_SAMPLE +
-      ' learners muted'}
-  >
-    {#snippet actions()}
-      {#if hasPlayer}
-        <SegmentedControl
-          compact
-          label="Runners counted"
-          options={[
-            { value: 'all', label: 'All runners' },
-            { value: 'own', label: 'Yours' }
-          ]}
-          bind:value={runners}
-        />
-      {/if}
-      <div class="style">
-        <SelectField
-          id="session-skill-style"
-          label="Running style"
-          hideLabel
-          options={[
-            { value: 'all', label: 'All styles' },
-            ...styleOptions.map((id) => ({ value: String(id), label: runningStyleName(id) }))
-          ]}
-          bind:value={style}
-        />
-      </div>
-      <div class="search">
-        <TextField
-          id="session-skill-search"
-          label="Search learned skills"
-          hideLabel
-          type="search"
-          prefixIcon="search"
-          placeholder="Search skills"
-          bind:value={search}
-        />
-      </div>
-    {/snippet}
-    <div class="skill-layout">
-      <DataTable
-        plain
-        compact
-        caption="Learned skills in this session"
-        columnHelp={metricHelp}
-        maxHeight={420}
-        {rows}
-        emptyMessage="No learned skill matches this search."
-        columns={[
-          { key: 'name', label: 'Skill' },
-          { key: 'learned', label: 'Learned', numeric: true },
-          { key: 'activated', label: 'Activation rate', numeric: true },
-          { key: 'activeWin', label: 'Win% if active', numeric: true },
-          { key: 'gap', label: 'vs. without', numeric: true },
-          { key: 'where', label: 'Median activation', numeric: true },
-          ...(hasDoubleProcs ? [{ key: 'double', label: 'Double procs', numeric: true }] : [])
+  <div class="toolbar">
+    <TextField
+      id="session-skill-search"
+      type="search"
+      label="Search skills"
+      bind:value={search}
+      placeholder="Skill name"
+      prefixIcon="search"
+    />
+    <SelectField
+      id="session-skill-style"
+      label="Running style"
+      bind:value={style}
+      options={[
+        { value: 'all', label: 'All styles' },
+        ...styleOptions.map((id) => ({ value: String(id), label: styleNames[id]! }))
+      ]}
+    />
+    {#if hasPlayer}
+      <SegmentedControl
+        label="Runners counted"
+        options={[
+          { value: 'all', label: 'All runners' },
+          { value: 'own', label: 'Yours' }
         ]}
-      >
-        {#snippet cell(row, column)}
-          {#if column.key === 'name'}
-            <button
-              class="skill-select skill-chip-cell"
-              class:selected={row.id === selectedItem?.skill.skillId}
-              aria-pressed={row.id === selectedItem?.skill.skillId}
-              onclick={() => (selected = Number(row.id))}
-            >
-              <RaceSkill
-                id={Number(row.id)}
-                name={String(row.name)}
-                fill
-              />
-            </button>
-          {:else if column.key === 'activated'}
-            <span class:few={isSmallSample(Number(row.learned))}>
-              {formatRate(Number(row.activated))}
-            </span>
-          {:else if column.key === 'activeWin'}
-            {#if typeof row.activeWin === 'number'}
-              <span class={rateClass(row.activeWin, Number(row.activatedRuns), neutralWin)}>
-                {formatRate(row.activeWin)}
-              </span>
-            {:else}
-              —
-            {/if}
-          {:else if column.key === 'gap'}
-            {#if typeof row.gap === 'number'}
-              <span
-                class="gap"
-                class:over={row.gap >= NOTABLE_GAP}
-                class:under={row.gap <= -NOTABLE_GAP}
-              >
-                {(row.gap > 0 ? '+' : '') + row.gap.toFixed(1)} pts
-              </span>
-            {:else}
-              —
-            {/if}
-          {:else if column.key === 'where'}
-            {@render courseTrack(row)}
-          {:else}
-            {row[column.key]}
-          {/if}
-        {/snippet}
-      </DataTable>
-      {#if selectedItem}
-        <SessionSkillDetail
-          skill={selectedItem.skill}
-          name={selectedItem.name}
-          use={selectedItem.use}
-          {raceDistance}
-          {neutralWin}
-          {measured}
-        />
+        bind:value={() => runners, countRunners}
+      />
+    {/if}
+    <p>{number(overview.players)} players · {number(overview.races)} races</p>
+  </div>
+  <section
+    class="skill-list"
+    bind:this={tableSection}
+  >
+    <header>
+      <h2>
+        Skill procs <span>{rows.length} skills</span>
+      </h2>
+      {#if selected.length}
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="chevron"
+          onclick={() => comparison?.scrollIntoView({ block: 'nearest', behavior: 'instant' })}
+        >
+          Compare {selected.length}
+          {selected.length === 1 ? 'skill' : 'skills'}
+        </Button>
       {/if}
-    </div>
-  </ChartFrame>
+    </header>
+    <CmSkillTable
+      {overview}
+      {rows}
+      {style}
+      {details}
+      colors={styleColors}
+      {skillName}
+      caption="Session skill procs"
+      course={courseMatch}
+      columnHelp={{
+        Players: 'Distinct trainers in this session with a runner that learned this skill.',
+        Activations:
+          'All activation events, including repeats. The percentage counts learned runners with at least one activation. Select a skill to inspect exact counts.',
+        'Mean distance':
+          'Mean activation distance, measured in 1% sections of the course. The race replays hold exact positions.',
+        'Median distance':
+          'Median activation distance, measured in 1% sections of the course. The race replays hold exact positions.'
+      }}
+      bind:selected
+      bind:inspected
+      bind:sortKey
+    />
+    {#if !rows.length}
+      <Button
+        variant="secondary"
+        size="sm"
+        icon="refresh"
+        onclick={() => {
+          search = '';
+          style = 'all';
+        }}
+      >
+        Reset skill filters
+      </Button>
+    {/if}
+  </section>
+  <CmSkillComparison
+    {overview}
+    {style}
+    {skills}
+    {details}
+    colors={styleColors}
+    {skillName}
+    course={courseMatch}
+    bind:selected
+    bind:element={comparison}
+  />
 </div>
 
 <style>
-  @import '../../runners/skill-chip-cell.css';
+  @import '../../champions-meeting/skills/skill-sections.css';
   @import './session-skills.css';
 </style>

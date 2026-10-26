@@ -238,7 +238,7 @@
         {#snippet cell(row, column)}
           {#if column.key === 'periods'}
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               ariaExpanded={mode === row.id}
               ariaLabel={'Show session ' + row.name + ' periods'}
@@ -266,7 +266,7 @@
             {#each modes.find((m) => m.id === row.id)?.traces ?? [] as span}
               <li>
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
                   disabled={!onreplay}
                   icon="race"

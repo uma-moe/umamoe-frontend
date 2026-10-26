@@ -51,11 +51,11 @@
     {#snippet cell(row, column)}
       {#if column.key === 'time'}
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
           onclick={() => onseek(Number(row.time))}
         >
-          {Number(row.time).toFixed(3)} s ↗
+          {Number(row.time).toFixed(3)} s
         </Button>
       {:else if column.key === 'periods'}
         <button
@@ -88,19 +88,19 @@
           <li>
             <span>
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
                 onclick={() => onseek(span.startTime)}
               >
-                {span.startTime.toFixed(3)} s ↗
+                {span.startTime.toFixed(3)} s
               </Button>
               <span class="period-arrow">→</span>
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
                 onclick={() => onseek(span.endTime)}
               >
-                {span.endTime.toFixed(3)} s ↗
+                {span.endTime.toFixed(3)} s
               </Button>
             </span>
             <span>{display(span.phase, 'phase')}</span>

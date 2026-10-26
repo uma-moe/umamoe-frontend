@@ -60,8 +60,8 @@
 .uma-row {
   width: 100%;
   min-width: 0;
-  min-height: 27px;
-  padding: 3px 6px 3px 4px;
+  min-height: 30px;
+  padding: 4px 6px 4px 4px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -127,9 +127,9 @@
   padding-top: 6px;
 }
 .share-track {
-  height: 4px;
+  height: 10px;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: 3px;
   background: var(--surface-2);
 }
 .share-track > span {
@@ -141,7 +141,7 @@
   height: 100%;
 }
 .rival-share {
-  border-radius: 2px;
+  border-radius: 3px;
   background: color-mix(in srgb, var(--text-secondary) 60%, transparent);
 }
 .empty {
