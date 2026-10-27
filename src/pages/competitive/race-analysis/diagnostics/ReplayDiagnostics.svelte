@@ -7,6 +7,7 @@
   import DiagnosticsSkills from './report/DiagnosticsSkills.svelte';
   import DiagnosticsModes from './report/DiagnosticsModes.svelte';
   import DiagnosticsSpurt from './report/DiagnosticsSpurt.svelte';
+  import DiagnosticsRushing from './report/DiagnosticsRushing.svelte';
   import DiagnosticsPaceCharts from './measurements/DiagnosticsPaceCharts.svelte';
   import DiagnosticsSamples from './measurements/DiagnosticsSamples.svelte';
   import DiagnosticsTraces from './measurements/DiagnosticsTraces.svelte';
@@ -46,6 +47,7 @@
   const runner = $derived(capture.runners.find((r) => r.index === index));
   const samples = $derived(sampleRows(capture, horse));
   const rushing = $derived(rushingPeriods(horse));
+  const hasRushing = $derived(Boolean(horse?.temptationDecision) || rushing.length > 0);
   const spurt = $derived(horse?.lastSpurtDecision ?? horse?.lastSpurtDecisions?.at(-1));
   const hpRows = $derived(hpChangeEvents(capture, horse?.hpSkillApplications ?? []));
   const sections = $derived(
@@ -87,17 +89,33 @@
               {onselect}
             />
           {/if}
-          {#if blocking}
-            <div class="blocking-summary">{@render blocking()}</div>
+          {#if hasRushing}
+            <DiagnosticsRushing
+              {capture}
+              {index}
+              {horse}
+              rushingPeriods={rushing}
+              {skillNames}
+              {onseek}
+              {onselect}
+            />
           {/if}
-          <div class="incident-status">
-            {#if !hpRows.length}
-              <span>No recovery or HP debuffs</span>
-            {/if}
-            {#if !horse.temptationDecision && !rushing.length}
-              <span>No rushing</span>
-            {/if}
-          </div>
+          {#if !hpRows.length || !hasRushing}
+            <div class="incident-status">
+              {#if !hpRows.length}
+                <span>No recovery or HP debuffs</span>
+              {/if}
+              {#if !hasRushing}
+                <span>No rushing</span>
+              {/if}
+            </div>
+          {/if}
+          {#if blocking}
+            <!-- The incident list takes the column's remaining height, so the column ends with the skills. -->
+            <div class="blocking-panel">
+              <div class="blocking-fill">{@render blocking()}</div>
+            </div>
+          {/if}
         </div>
       {:else if blocking}
         <div class="blocking-summary">{@render blocking()}</div>
@@ -184,7 +202,6 @@
               {index}
               {horse}
               {hpRows}
-              rushingPeriods={rushing}
               {skillNames}
               {onseek}
               {onselect}

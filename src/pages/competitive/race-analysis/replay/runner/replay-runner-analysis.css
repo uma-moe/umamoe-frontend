@@ -68,6 +68,10 @@ p {
   min-height: 28px;
   font-size: 11px;
 }
+.blocking-analysis :global(.checkbox strong) {
+  font-size: 11px;
+  font-weight: 500;
+}
 .blocking-analysis :global(.box) {
   width: 16px;
   height: 16px;
@@ -81,7 +85,8 @@ p {
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 4px 0;
+  min-height: 30px;
+  padding: 2px 0;
   border: 0;
   border-top: 1px solid var(--border-subtle);
   background: none;
@@ -91,9 +96,19 @@ p {
 .event-list button.active {
   background: color-mix(in srgb, var(--accent-warning) 8%, transparent);
 }
+/* Drawn like the report's seek-time buttons; the whole row is the button that reviews the incident. */
 .event-list time {
-  color: var(--text-secondary);
-  font: 11px var(--font-mono);
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-height: 22px;
+  padding: 0 7px;
+  border: 1px solid var(--factor-field-border);
+  border-radius: 6px;
+  background: var(--factor-field-bg);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .event-list button > span:last-child {
   margin-left: auto;

@@ -11,6 +11,7 @@
     type CourseShape
   } from '../replay-course';
   import { replayTrack, trackPointAtDistance, trackSection, fitTrackCamera } from '../replay-track';
+  import { finalSpurtSection, FINAL_SPURT_HELP } from '@/lib/race/final-spurt';
 
   let {
     uid,
@@ -78,6 +79,8 @@
     finishPoint = $derived(project(trackPointAtDistance(points, distance)));
 
   const sections = $derived(courseSegments(course));
+  const spurt = $derived(finalSpurtSection(distance));
+  const spurtPoint = $derived(project(trackPointAtDistance(points, spurt.start)));
 </script>
 
 <div class="track">
@@ -135,6 +138,12 @@
           points={trackSection(points, 0, distance)}
         />
         <polyline
+          class="spurt-window"
+          points={trackSection(points, spurt.start, distance)}
+        >
+          <title>{FINAL_SPURT_HELP}</title>
+        </polyline>
+        <polyline
           class="ribbon outer"
           points={trackSection(points, spread.p10, spread.p90)}
         />
@@ -143,6 +152,14 @@
           points={trackSection(points, spread.p25, spread.p75)}
         />
       </g>
+      <circle
+        cx={spurtPoint.x}
+        cy={spurtPoint.y}
+        r="4"
+        fill={spurt.color}
+      >
+        <title>Final spurt window from {Math.round(spurt.start)} m. {FINAL_SPURT_HELP}</title>
+      </circle>
       <circle
         cx={startPoint.x}
         cy={startPoint.y}
@@ -210,7 +227,7 @@
     <span>
       {whole ? 'Whole course' : 'Following ' + Math.round(low) + '–' + Math.round(high) + ' m'}
     </span>
-    <span>Mean marker · Bands follow course distance</span>
+    <span>Final spurt from {Math.round(spurt.start)} m · Mean marker</span>
   </div>
 </div>
 

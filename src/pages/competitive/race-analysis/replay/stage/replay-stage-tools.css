@@ -54,3 +54,16 @@
     flex-wrap: wrap;
   }
 }
+/* Phones keep the actions as icons beside the camera controls. */
+@media (max-width: 700px) {
+  .tool-label {
+    display: none;
+  }
+  .stage-tools :global(.ui-button),
+  .guide-trigger {
+    min-width: 36px;
+    min-height: 36px;
+    padding-inline: 8px;
+    justify-content: center;
+  }
+}

@@ -1,0 +1,15 @@
+.report-block {
+  min-width: 0;
+}
+.section-heading > h3 {
+  margin: 0 auto 0 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+/* The count or status beside a heading. Global, so a section whose heading has none stays warning-free. */
+.section-heading > h3 > :global(small) {
+  margin-left: 5px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 400;
+}

@@ -72,7 +72,7 @@
     </button>
   </header>
   {#if !spurtOpen}
-    <dl class="spurt-summary">
+    <dl class="report-facts">
       <div>
         <dt>HP at decision<DiagnosticsMetricHelp label="HP at decision" /></dt>
         <dd>{number(spurt.checkHp)}</dd>
@@ -190,7 +190,7 @@
         value={horse.lastSpurtDecisions}
         title="Last-spurt decisions"
         columns={[
-          { key: 'time', label: 'Time (s)' },
+          { key: 'time', label: 'Time (s)', numeric: true },
           { key: 'checkDistance', label: 'Distance (m)', numeric: true },
           { key: 'checkHp', label: 'HP available', numeric: true },
           { key: 'fullSpurtNeedHp', label: 'HP required', numeric: true },
@@ -214,5 +214,7 @@
 
 <style>
   @import '../diagnostics-section.css';
+  @import './report-section.css';
+  @import './report-facts.css';
   @import './diagnostics-spurt.css';
 </style>

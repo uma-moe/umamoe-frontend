@@ -257,39 +257,60 @@
   </div>
   <div class="runner-extra">{@render movementReadings()}</div>
   {#if !replay.ensemble}
-    <div class="snapshot-status">
-      {#if blockedRunner}
-        <button
-          class="blocked-by"
-          title={'Front blocker: Gate ' + (replay.blocker + 1) + ', ' + blockedRunner.name}
-          onclick={() => (selected = String(replay.blocker))}
-        >
-          <Icon
-            name="warning"
-            size={12}
-          />
-          <span>
-            Blocked by <strong>{blockedRunner.name}</strong>
-          </span>
-        </button>
-      {:else}
-        <small class="blocker-clear">No front blocker</small>
-      {/if}
-      <div
-        class="current-skills"
-        aria-label="Current skills"
-      >
-        {#each activeSkills as event}
-          <span class="active-skill">
-            <RaceSkill
-              id={event.params[1]!}
-              name={skillNames.get(event.params[1]!)}
-              iconOnly
-            />
-          </span>
-        {/each}
+    <dl class="snapshot-status">
+      <div class="status-cell front-status">
+        <dt>Front</dt>
+        <dd>
+          {#if blockedRunner}
+            <button
+              class="blocker-link"
+              title={'Blocked by Gate ' +
+                (replay.blocker + 1) +
+                ', ' +
+                blockedRunner.name +
+                '. Select to follow them.'}
+              onclick={() => (selected = String(replay.blocker))}
+            >
+              <Icon
+                name="warning"
+                size={12}
+              />
+              <span>
+                Blocked by <strong>{blockedRunner.name}</strong>
+              </span>
+            </button>
+          {:else}
+            <span class="front-clear">Clear</span>
+          {/if}
+        </dd>
       </div>
-    </div>
+      <div class="status-cell skills-status">
+        <dt>Active</dt>
+        <dd
+          class="current-skills"
+          aria-label="Current skills"
+        >
+          {#each activeSkills as event}
+            {@const skillId = event.params[1] ?? 0}
+            <span
+              class="active-skill"
+              title={(skillNames.get(skillId) ?? 'Skill ' + skillId) +
+                (event.endTime === undefined
+                  ? ''
+                  : ', ' + Math.max(0, event.endTime - replay.time).toFixed(1) + ' s left')}
+            >
+              <RaceSkill
+                id={skillId}
+                name={skillNames.get(skillId)}
+                iconOnly
+              />
+            </span>
+          {:else}
+            <span class="front-clear">None</span>
+          {/each}
+        </dd>
+      </div>
+    </dl>
   {/if}
 </section>
 

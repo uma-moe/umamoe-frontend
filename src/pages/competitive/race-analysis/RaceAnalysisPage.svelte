@@ -14,11 +14,12 @@
   import { runnerName } from './race-character-display';
   import { demoSkills, makeDemoRaces } from '@/pages/competitive/demo-races';
   import RaceReplay from './replay/RaceReplay.svelte';
-  import RaceStart from './RaceStart.svelte';
+  import RaceStart from './start/RaceStart.svelte';
   import RaceUploadDialog from './RaceUploadDialog.svelte';
   import RaceSourceBar from './RaceSourceBar.svelte';
   import RaceSessionReport from './RaceSessionReport.svelte';
   import { downloadDetailedReplay, raceChoices } from './race-session';
+  import { missingSimulationInput, type DetailedSimulation } from './detailed-simulation';
   import { loadReplayCourses, resolveReplayCourses, type CourseData } from './replay/replay-course';
 
   let courses = $state<CourseData>();
@@ -41,8 +42,11 @@
 
   let replayFocus = $state<{ runner: number; time?: number }>(),
     sessionBusy = $state(false),
-    sessionProgress = $state(''),
     simulationErrors = $state<string[]>([]);
+
+  // Keyed by each capture's recorded input, which a resimulated copy keeps.
+  let simulating = $state.raw<ParsedRaceCapture['original']>(),
+    simulationFailures = $state.raw(new Map<ParsedRaceCapture['original'], string>());
 
   let sessionController: AbortController | undefined;
 
@@ -72,6 +76,32 @@
 
   const active = $derived(captures[Number(selected)]);
   const choices = $derived(raceChoices(captures));
+
+  const resimulable = $derived(captures.filter((capture) => capture.original));
+  const sessionProgress = $derived.by(() => {
+    const finished = resimulable.filter(
+      (capture) => capture.detailed || simulationFailures.has(capture.original)
+    ).length;
+
+    return Math.min(finished + 1, resimulable.length) + ' / ' + resimulable.length;
+  });
+
+  const activeSimulation = $derived.by((): DetailedSimulation => {
+    if (!active || active.detailed) return { status: 'ready' };
+
+    if (demo)
+      return {
+        status: 'unavailable',
+        reason: 'Demo races are synthetic, so they have no detailed simulation.'
+      };
+
+    if (!active.original) return { status: 'unavailable', reason: missingSimulationInput };
+
+    const failure = simulationFailures.get(active.original);
+    if (failure !== undefined) return { status: 'failed', reason: failure };
+
+    return { status: simulating === active.original ? 'running' : 'queued' };
+  });
 
   async function examples(count: number) {
     uploadsOpen = false;
@@ -115,8 +145,9 @@
       captures = replace ? loaded : [...captures, ...loaded];
       demo = false;
       group = 'all';
-      if (replace) simulationErrors = [];
       if (replace) {
+        simulationErrors = [];
+        simulationFailures = new Map();
         selected = '0';
         await tick();
         window.scrollTo({ top: 0, behavior: 'instant' });
@@ -124,7 +155,7 @@
     }
 
     loading = false;
-    if (loaded.length) void resimulateSession(loaded);
+    if (loaded.length) void resimulateSession();
   }
 
   function clear() {
@@ -132,6 +163,7 @@
     captures = [];
     errors = [];
     simulationErrors = [];
+    simulationFailures = new Map();
     demo = false;
     uploadsOpen = false;
     selected = '0';
@@ -178,42 +210,59 @@
     downloadDetailedReplay(active);
   }
 
-  async function resimulateSession(inputs: ParsedRaceCapture[]) {
-    if (sessionBusy) return;
-    const pending = inputs.filter((capture) => capture.original && !capture.detailed),
-      controller = new AbortController();
+  function awaitsSimulation(capture: ParsedRaceCapture) {
+    return (
+      Boolean(capture.original) && !capture.detailed && !simulationFailures.has(capture.original)
+    );
+  }
 
-    if (!pending.length) return;
+  /** The replay on screen goes first, so whichever race the reader opens gets its detailed simulation next. */
+  function nextSimulation() {
+    return active && awaitsSimulation(active) ? active : captures.find(awaitsSimulation);
+  }
+
+  /** Resimulates every capture still waiting, one at a time; races added meanwhile join the queue. */
+  async function resimulateSession() {
+    if (sessionBusy) return;
+
+    const controller = new AbortController();
     sessionController = controller;
     sessionBusy = true;
+
     try {
-      for (const [index, input] of pending.entries()) {
+      for (let input = nextSimulation(); input; input = nextSimulation()) {
         if (controller.signal.aborted) break;
-        if (!captures.some((c) => c.original === input.original)) continue;
-        sessionProgress = index + 1 + ' / ' + pending.length;
+
+        simulating = input.original;
         try {
           const result = await resimulateRace(input, input.courseId ?? 0, {
             signal: controller.signal
           });
 
-          if (!controller.signal.aborted && captures.some((c) => c.original === input.original))
-            keepSimulation(result);
+          if (!controller.signal.aborted) keepSimulation(result);
         } catch (error) {
-          if (!controller.signal.aborted)
-            simulationErrors = [
-              ...simulationErrors,
-              input.fileName +
-                ': ' +
-                (error instanceof Error ? error.message : 'Resimulation failed.')
-            ];
+          if (controller.signal.aborted) break;
+
+          const reason = error instanceof Error ? error.message : 'Resimulation failed.';
+          simulationFailures = new Map(simulationFailures).set(input.original, reason);
+          simulationErrors = [...simulationErrors, input.fileName + ': ' + reason];
         }
       }
     } finally {
       if (sessionController === controller) {
         sessionBusy = false;
-        sessionProgress = '';
+        simulating = undefined;
       }
     }
+  }
+
+  function retrySimulation() {
+    if (!active?.original) return;
+
+    const failures = new Map(simulationFailures);
+    failures.delete(active.original);
+    simulationFailures = failures;
+    void resimulateSession();
   }
 </script>
 
@@ -306,6 +355,7 @@
       {:else}
         <RaceStart
           loading={loading || sessionBusy}
+          {courses}
           onfiles={receive}
           onexample={examples}
         />
@@ -321,6 +371,8 @@
             skillNames={demo ? demoSkills : skillNames}
             hasSession={captures.length > 1}
             focus={replayFocus}
+            simulation={activeSimulation}
+            onretrysimulation={retrySimulation}
           >
             {#snippet headerActions()}
               <RaceSourceBar

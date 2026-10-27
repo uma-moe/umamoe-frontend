@@ -80,4 +80,8 @@ export type IconName =
   | 'star'
   | 'share'
   | 'send'
-  | 'id-card';
+  | 'id-card'
+  | 'flag'
+  | 'play'
+  | 'pause'
+  | 'skip-back';

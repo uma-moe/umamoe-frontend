@@ -35,16 +35,8 @@
 >
   <header>
     <h2 id={headingId}>Session analysis</h2>
-    <p>Styles, Umas, teams and skills across every loaded race.</p>
-  </header>
-  <SessionAnalysis
-    captures={filtered}
-    {skillNames}
-    {pending}
-    {onreplay}
-  >
-    {#snippet scope()}
-      {#if groups.length > 1}
+    {#if groups.length > 1}
+      <div class="scope">
         <SelectField
           id="race-group"
           label="Course and conditions"
@@ -59,27 +51,33 @@
           ]}
           bind:value={group}
         />
-      {:else if filtered[0]}
-        <div class="conditions">
-          <strong>{groupLabel(filtered[0], courses)}</strong>
-          <small>Every race shares this course and conditions</small>
-        </div>
-      {/if}
-    {/snippet}
-  </SessionAnalysis>
+      </div>
+    {:else if filtered[0]}
+      <p title="Every race shares this course and conditions">
+        {groupLabel(filtered[0], courses)}
+      </p>
+    {/if}
+  </header>
+  <SessionAnalysis
+    captures={filtered}
+    {skillNames}
+    {pending}
+    {onreplay}
+  />
 </section>
 
 <style>
   .session-report {
     display: grid;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
   }
   header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 2px 12px;
+    gap: 4px 12px;
+    min-width: 0;
   }
   h2 {
     margin: 0;
@@ -88,23 +86,19 @@
     letter-spacing: -0.02em;
   }
   p {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 11px;
-  }
-  .conditions {
-    display: grid;
-    gap: 1px;
     min-width: 0;
-  }
-  .conditions strong {
+    margin: 0;
     overflow: hidden;
-    font-size: 13px;
+    color: var(--text-secondary);
+    font-size: 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .conditions small {
-    color: var(--text-secondary);
-    font-size: 11px;
+  .scope {
+    width: min(100%, 380px);
+    --control-height: 30px;
+  }
+  .scope :global(.select-control) {
+    font-size: 12px;
   }
 </style>

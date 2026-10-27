@@ -15,17 +15,6 @@
 .pace-samples :global(th:first-child) {
   width: 100px;
 }
-.pace-samples :global(th),
-.pace-samples :global(td),
-.section-details :global(th),
-.section-details :global(td) {
-  height: 26px;
-  box-sizing: border-box;
-}
-.pace-samples :global(thead th),
-.section-details :global(thead th) {
-  height: 28px;
-}
 .section-details :global(th:first-child) {
   width: 64px;
 }

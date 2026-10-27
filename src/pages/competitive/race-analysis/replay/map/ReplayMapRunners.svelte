@@ -5,6 +5,8 @@
   import Artwork from '@/components/game/Artwork.svelte';
   import { portrait } from '@/pages/competitive/analysis-view';
   import { crowdedCallouts, dotRadius, placeCaptions, type MapCallout } from './course-map-labels';
+  import type { RunnerCallout } from '../replay-callouts';
+  import ReplayRunnerCallouts from '../ReplayRunnerCallouts.svelte';
 
   let {
     callouts,
@@ -17,6 +19,8 @@
     blocking,
     blockerIndex,
     skillEvents,
+    runnerLabels,
+    timers,
     visibility,
     teamColor,
     showSpeed,
@@ -34,6 +38,8 @@
     blocking: { horseIndex: number; blockerHorseIndex: number }[];
     blockerIndex: number;
     skillEvents: RaceEvent[];
+    runnerLabels: Map<number, RunnerCallout[]>;
+    timers: boolean;
     visibility: Record<number, number>;
     teamColor: (runner: RaceRunner) => string;
     showSpeed: boolean;
@@ -54,10 +60,14 @@
   );
 
   const crowded = $derived(crowdedCallouts(callouts, labelSize, overlayHeight));
+
+  const labelBoxHeight = 52;
+  const labelBoxWidth = 160;
 </script>
 
 {#each callouts as marker (marker.runner.index)}
   {@const caption = captions.get(marker.runner.index)!}
+  {@const labels = runnerLabels.get(marker.runner.index)}
   <g
     class="map-runner"
     data-distance={marker.horse.distance}
@@ -138,6 +148,25 @@
         </b>
       </div>
     </foreignObject>
+    {#if labels}
+      <foreignObject
+        class="runner-labels"
+        x={marker.x - labelBoxWidth / 2}
+        y={marker.y - labelSize / 2 - labelBoxHeight - 2}
+        width={labelBoxWidth}
+        height={labelBoxHeight}
+      >
+        <div class="runner-labels-stack">
+          <ReplayRunnerCallouts
+            callouts={labels}
+            {timers}
+            limit={crowded.has(marker.runner.index) && Number(selected) !== marker.runner.index
+              ? 1
+              : 3}
+          />
+        </div>
+      </foreignObject>
+    {/if}
     <text
       class="runner-name"
       x={caption.name.x}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { raceDistanceSpread } from '@/lib/race/replay/race-ensemble';
   import { courseSegments, type Course } from '../replay-course';
+  import { finalSpurtSection, FINAL_SPURT_HELP } from '@/lib/race/final-spurt';
 
   let {
     spread,
@@ -27,6 +28,7 @@
   let profileWidth = $state(600);
 
   const x = (value: number) => ((value - low) / (high - low)) * 600;
+  const spurt = $derived(finalSpurtSection(distance));
 
   const bins = $derived.by(() => {
     const counts = Array<number>(36).fill(0);
@@ -227,6 +229,18 @@
         >
           <title>Mean distance {spread.mean.toFixed(1)} m</title>
         </line>
+        {#if spurt.start >= low && spurt.start <= high}
+          <line
+            x1={x(spurt.start)}
+            x2={x(spurt.start)}
+            y1="4"
+            y2="164"
+            stroke={spurt.color}
+            stroke-dasharray="4 3"
+          >
+            <title>Final spurt window from {Math.round(spurt.start)} m. {FINAL_SPURT_HELP}</title>
+          </line>
+        {/if}
         <circle
           cx={x(spread.mean)}
           cy="77"
@@ -254,6 +268,11 @@
       distance +
       ' metres'}
   >
+    <b
+      class="spurt-window"
+      style:left={(spurt.start / distance) * 100 + '%'}
+      title={FINAL_SPURT_HELP}
+    ></b>
     <span
       style:left={(low / distance) * 100 + '%'}
       style:width={(width / distance) * 100 + '%'}
@@ -262,7 +281,9 @@
   </div>
   <div class="overview-labels">
     <span>Start</span>
-    <span>Inspected window · {distance.toLocaleString()} m course</span>
+    <span>
+      Final spurt from {Math.round(spurt.start).toLocaleString()} m · {distance.toLocaleString()} m course
+    </span>
     <span>Finish</span>
   </div>
 </div>

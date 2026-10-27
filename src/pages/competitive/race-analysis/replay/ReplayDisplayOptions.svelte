@@ -3,9 +3,17 @@
   import Button from '@/components/controls/Button.svelte';
   import ToggleButton from '@/components/controls/ToggleButton.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
+  import TextField from '@/components/controls/TextField.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import type { CourseData } from './replay-course';
-  import { defaultReplayToggles, replayToggleLabels, type ReplayToggles } from './replay-display';
+  import {
+    defaultReplayToggles,
+    replayToggleGroups,
+    replayToggleHelp,
+    replayToggleLabels,
+    type ReplayToggle,
+    type ReplayToggles
+  } from './replay-display';
 
   let {
     capture,
@@ -28,6 +36,38 @@
     windowMeters?: number;
     toggles?: ReplayToggles;
   } = $props();
+
+  /** An emptied number field is still being edited, so it changes nothing yet. */
+  function enteredNumber(event: Event): number | undefined {
+    if (!(event.currentTarget instanceof HTMLInputElement)) return undefined;
+    if (event.currentTarget.value === '') return undefined;
+
+    return event.currentTarget.valueAsNumber;
+  }
+
+  function setWindowMeters(event: Event) {
+    const meters = enteredNumber(event);
+    if (meters !== undefined) windowMeters = meters;
+  }
+
+  const allShown = $derived(Object.values(toggles).every(Boolean));
+
+  function toggle(option: ReplayToggle) {
+    toggles = { ...toggles, [option]: !toggles[option] };
+  }
+
+  function setAll(shown: boolean) {
+    toggles = Object.fromEntries(
+      Object.keys(toggles).map((option) => [option, shown])
+    ) as ReplayToggles;
+  }
+
+  function seekFrame(event: Event) {
+    const index = enteredNumber(event);
+    if (index === undefined) return;
+
+    onseek(capture.frames[index]?.time ?? time);
+  }
 </script>
 
 <Dialog
@@ -65,47 +105,42 @@
         ]}
       />
       <div class="precision-fields">
-        <label>
-          View window <span>
-            <input
-              aria-label="View window metres"
-              type="number"
-              min="20"
-              max="400"
-              step="10"
-              bind:value={windowMeters}
-            />
-            m
-          </span>
-        </label>
-        <label>
-          Replay frame <span>
-            <input
-              aria-label="Replay frame"
-              type="number"
-              min="0"
-              max={Math.max(0, capture.frames.length - 1)}
-              value={frameIndex}
-              onchange={(e) => onseek(capture.frames[Number(e.currentTarget.value)]?.time ?? time)}
-            />
-            / {capture.frames.length}
-          </span>
-        </label>
+        <TextField
+          id="replay-window-meters"
+          label="View window (m)"
+          type="number"
+          min={20}
+          max={400}
+          step={10}
+          value={String(windowMeters)}
+          oninput={setWindowMeters}
+        />
+        <TextField
+          id="replay-frame"
+          label="Replay frame"
+          type="number"
+          min={0}
+          max={Math.max(0, capture.frames.length - 1)}
+          value={String(frameIndex)}
+          help={'of ' + capture.frames.length + ' frames'}
+          oninput={seekFrame}
+        />
       </div>
     </section>
-    {#each [{ title: 'Runner overlays', keys: ['skills', 'blocked', 'speed', 'accel'] }, { title: 'Course overlays', keys: ['course', 'slopes', 'positionKeep', 'cone'] }] as group}
+    {#each replayToggleGroups as group}
       <section>
         <h3>{group.title}</h3>
         <div class="options">
           {#each group.keys as option}
-            <ToggleButton
-              icon="eye"
-              label={replayToggleLabels[option as keyof typeof replayToggleLabels]}
-              pressed={toggles[option as keyof typeof toggles]}
-              onclick={() =>
-                (toggles[option as keyof typeof toggles] =
-                  !toggles[option as keyof typeof toggles])}
-            />
+            <div class="option">
+              <ToggleButton
+                icon="eye"
+                label={replayToggleLabels[option]}
+                pressed={toggles[option]}
+                onclick={() => toggle(option)}
+              />
+              <small>{replayToggleHelp[option]}</small>
+            </div>
           {/each}
         </div>
       </section>
@@ -113,6 +148,12 @@
   </div>
   {#snippet actions()}
     <Button
+      size="sm"
+      variant="secondary"
+      onclick={() => setAll(!allShown)}
+    >
+      {allShown ? 'Hide all overlays' : 'Show all overlays'}
+    </Button><Button
       size="sm"
       variant="secondary"
       onclick={() => {
@@ -150,28 +191,25 @@
     grid-template-columns: 1fr 1fr;
     gap: 12px;
   }
-  .precision-fields label {
-    display: grid;
-    gap: 6px;
-    font-size: 11px;
-    color: var(--text-secondary);
-  }
-  input[type='number'] {
-    width: 75px;
-    padding: 6px;
-    border: 1px solid var(--border-primary);
-    background: var(--surface-2);
-    border-radius: var(--radius-sm);
-    color: var(--text-primary);
-    font: inherit;
-  }
   .options {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 4px 24px;
+    gap: 10px 24px;
   }
-  .options :global(.ui-toggle) {
+  .option {
+    display: grid;
+    align-content: start;
+    gap: 2px;
+    min-width: 0;
+  }
+  .option :global(.ui-toggle) {
     justify-content: space-between;
+  }
+  .option small {
+    padding-inline: 2px;
+    font-size: 10px;
+    line-height: 1.4;
+    color: var(--text-secondary);
   }
   @media (max-width: 700px) {
     .course-controls {
@@ -179,7 +217,11 @@
       width: 100%;
     }
     .options {
-      gap: 4px 12px;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .precision-fields {
+      gap: 8px;
     }
   }
 </style>

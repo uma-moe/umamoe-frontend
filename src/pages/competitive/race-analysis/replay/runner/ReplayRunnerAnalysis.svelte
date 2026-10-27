@@ -163,7 +163,7 @@
             ' seconds'}
           onclick={() => onreview(event)}
         >
-          <time>{formatRaceTime(event.startTime)}</time>
+          <time>{event.startTime.toFixed(3)} s</time>
           <Artwork
             src={portrait(blocked?.cardId)}
             alt=""

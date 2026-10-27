@@ -119,7 +119,7 @@ it('uses resource distances and grades for upcoming section, slope and phase mar
   expect(landmarks.filter((m) => m.distance === 400).some((m) => m.label === 'Level ground')).toBe(
     false
   );
-  expect(landmarks.find((m) => m.label === 'Late race')?.distance).toBe(800);
+  expect(landmarks.find((m) => m.label === 'Final spurt window · Late race')?.distance).toBe(800);
   expect(landmarks.at(-1)?.label).toBe('Finish');
   expect(courseLandmarks(undefined)).toEqual([]);
 });

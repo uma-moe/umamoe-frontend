@@ -3,6 +3,7 @@
 <script lang="ts">
   import { courseSegments, type Course } from '../replay-course';
   import { trackSection, type TrackCamera, type TrackPoint } from '../replay-track';
+  import { finalSpurtSection, FINAL_SPURT_HELP } from '@/lib/race/final-spurt';
 
   let {
     camera,
@@ -67,6 +68,16 @@
   const path = $derived(trackSection(roadPoints, displayRange.min, displayRange.max));
   const innerRail = $derived(trackSection(points, displayRange.min, displayRange.max));
   const outerRail = $derived(trackSection(outerPoints, displayRange.min, displayRange.max));
+  const spurt = $derived(finalSpurtSection(course?.distance ?? points.at(-1)?.distance ?? 0));
+  const spurtRail = $derived(
+    displayRange.max > spurt.start
+      ? trackSection(
+          outerPoints,
+          Math.max(displayRange.min, spurt.start),
+          Math.min(displayRange.max, spurt.end)
+        )
+      : ''
+  );
 </script>
 
 <g
@@ -138,6 +149,14 @@
     class="track-rail"
     points={outerRail}
   />
+  {#if spurtRail}
+    <polyline
+      class="spurt-window"
+      points={spurtRail}
+    >
+      <title>Final spurt window from {Math.round(spurt.start)} m. {FINAL_SPURT_HELP}</title>
+    </polyline>
+  {/if}
   {#if trailColor}
     <polyline
       class="runner-trail"
@@ -148,6 +167,13 @@
 </g>
 
 <style>
+  .spurt-window {
+    fill: none;
+    stroke: var(--accent-warning);
+    stroke-width: 2;
+    stroke-dasharray: 5 3;
+    vector-effect: non-scaling-stroke;
+  }
   .track-base,
   .track-rail,
   .track-section,

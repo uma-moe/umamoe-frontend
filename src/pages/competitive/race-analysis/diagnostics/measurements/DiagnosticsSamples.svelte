@@ -59,11 +59,11 @@
       caption="Simulator telemetry samples"
       rows={sampleRows}
       columns={[
-        { key: 'time', label: 'Time (s)' },
+        { key: 'time', label: 'Time (s)', numeric: true },
         { key: 'targetSpeed', label: 'Target (m/s)', numeric: true },
         { key: 'acceleration', label: 'Accel. (m/s²)', numeric: true }
       ]}
-      maxHeight={262}
+      maxHeight={300}
       onrowclick={(row) => seekRow(row, onseek)}
     >
       {#snippet cell(row, column)}
@@ -133,7 +133,7 @@
           { key: 'speed', label: 'Target (m/s)', numeric: true },
           { key: 'rng', label: 'RNG (%)', numeric: true }
         ]}
-        maxHeight={262}
+        maxHeight={300}
       >
         {#snippet cell(row, column)}
           {#if column.key === 'section'}

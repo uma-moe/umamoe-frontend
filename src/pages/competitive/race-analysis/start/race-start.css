@@ -1,0 +1,110 @@
+.race-start {
+  display: grid;
+  gap: var(--space-6);
+  padding-bottom: var(--space-8);
+}
+.start-hero {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(0, 1.75fr);
+  gap: var(--space-4);
+}
+
+.upload-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.upload-column p {
+  margin: 0;
+  padding-inline: 2px;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.upload-card {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+}
+.upload-card :global(.drop) {
+  box-sizing: border-box;
+  min-height: 260px;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-6);
+  background: var(--card-surface-bg);
+}
+.upload-card :global(.drop > svg) {
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--space-2);
+  color: var(--accent-primary);
+}
+.upload-card :global(.drop strong) {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.upload-card :global(.drop small) {
+  max-width: 34ch;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+.upload-card :global(.drop-action) {
+  min-height: 40px;
+  margin-top: var(--space-3);
+  padding-inline: 20px;
+  border-color: transparent;
+  background: var(--accent-primary);
+  color: var(--button-primary-text);
+  font-size: 0.875rem;
+}
+
+.capture-tools {
+  display: grid;
+  gap: var(--space-2);
+}
+.capture-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.demo-card {
+  min-width: 0;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--card-surface-border);
+  border-radius: var(--radius-lg);
+  background: var(--card-surface-bg);
+}
+.demo-card > :global(.track-display) {
+  flex: 1;
+}
+
+@media (max-width: 1100px) {
+  .start-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .upload-card :global(.drop) {
+    min-height: 220px;
+  }
+}
+@media (max-width: 767px) {
+  .upload-card :global(.drop) {
+    min-height: 200px;
+    padding: var(--space-6) var(--space-4);
+  }
+  .upload-card :global(.drop > svg) {
+    width: 36px;
+    height: 36px;
+  }
+  .upload-card :global(.drop strong) {
+    font-size: 1.125rem;
+  }
+  .upload-card :global(.drop-action) {
+    justify-self: stretch;
+  }
+  .capture-buttons :global(.ui-button) {
+    flex: 1;
+  }
+}

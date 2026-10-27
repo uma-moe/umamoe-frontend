@@ -15,6 +15,19 @@ import {
 import type { RaceTrajectory } from '@/lib/race/replay/race-ensemble';
 import type { Course } from './replay-course';
 
+/** Team ring colors for captures without a team color; fixed so they read on both themes. */
+export const replayTeamColors = ['#69b7ee', '#e69c72', '#c79be7', '#78bba3'];
+
+/** The game's recorded finish time; frames only approximate when a runner crosses the line. */
+export function recordedFinishTime(runner: RaceRunner): number | undefined {
+  const recorded =
+    runner.result?.finishTimeRaw && runner.result.finishTimeRaw > 0
+      ? runner.result.finishTimeRaw
+      : runner.result?.finishTime;
+
+  return recorded !== undefined && Number.isFinite(recorded) && recorded > 0 ? recorded : undefined;
+}
+
 interface ReplaySource {
   capture: () => ParsedRaceCapture;
   ensemble: () => RaceTrajectory[] | undefined;
@@ -124,27 +137,18 @@ export class ReplayState {
   teamColor = (r: RaceRunner) =>
     typeof r.raw.team_color === 'string' && /^#[0-9a-f]{6}$/i.test(r.raw.team_color)
       ? r.raw.team_color
-      : ['#69b7ee', '#e69c72', '#c79be7', '#78bba3'][
+      : replayTeamColors[
           this.#teamKeys.indexOf(
             String(r.raw.trainer_id ?? r.raw.team_id ?? r.trainerName ?? r.index)
-          ) % 4
+          ) % replayTeamColors.length
         ]!;
 
   finishTimes = $derived(
     new Map(
-      this.capture.runners.map((r) => {
-        const recorded =
-          r.result?.finishTimeRaw && r.result.finishTimeRaw > 0
-            ? r.result.finishTimeRaw
-            : r.result?.finishTime;
-
-        return [
-          r.index,
-          recorded !== undefined && Number.isFinite(recorded) && recorded > 0
-            ? recorded
-            : this.runnerTimeAtDistance(this.bounds.distanceMax, r.index)
-        ];
-      })
+      this.capture.runners.map((r) => [
+        r.index,
+        recordedFinishTime(r) ?? this.runnerTimeAtDistance(this.bounds.distanceMax, r.index)
+      ])
     )
   );
 

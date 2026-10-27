@@ -8,6 +8,7 @@ import type {
 import { raceTimeAtDistance } from '@/lib/race/replay/race-replay';
 import { hpRemainingColor } from '@/lib/race/replay/race-display';
 import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
+import { finalSpurtSection } from '@/lib/race/final-spurt';
 import {
   meanTrajectorySignal,
   trajectorySeries,
@@ -116,12 +117,19 @@ export function telemetryPhases(
   });
 }
 
-export function telemetryMarkers(
-  activations: RaceEvent[],
-  skillNames: Map<number, string>,
-  runner: RaceRunner | undefined,
-  timeAt: (distance: number) => number | undefined
-) {
+export function telemetryMarkers({
+  activations,
+  skillNames,
+  runner,
+  timeAt,
+  distance
+}: {
+  activations: RaceEvent[];
+  skillNames: Map<number, string>;
+  runner: RaceRunner | undefined;
+  timeAt: (distance: number) => number | undefined;
+  distance: number;
+}) {
   return [
     ...activations.map((event) => ({
       name: skillNames.get(event.params[1]!) ?? 'Skill ' + event.params[1],
@@ -129,7 +137,8 @@ export function telemetryMarkers(
       lineStyle: { color: '#e8ad63', opacity: 0.5 }
     })),
     ...[
-      runner?.result?.lastSpurtStartDistance
+      { name: 'Final spurt window', distance: finalSpurtSection(distance).start },
+      runner?.result?.lastSpurtStartDistance != null
         ? { name: 'Last spurt', distance: runner.result.lastSpurtStartDistance }
         : undefined
     ].flatMap((event) => {
@@ -160,6 +169,30 @@ export function telemetryBlocking(
     ]);
 }
 
+function hasDetailedAcceleration(chart: TelemetryChart, r: RaceRunner) {
+  return Boolean(diagnosticHorse(chart.capture, r.index)?.accelerationRates?.length);
+}
+
+/** Recorded races only carry speed, so acceleration is the change between adjacent frames. */
+function frameAcceleration(capture: ParsedRaceCapture, index: number): (number | null)[][] {
+  const data: (number | null)[][] = [];
+  for (let i = 1; i < capture.frames.length; i++) {
+    const previous = capture.frames[i - 1]!,
+      current = capture.frames[i]!;
+
+    const elapsed = current.time - previous.time;
+    if (elapsed <= 0) continue;
+
+    const speedChange = (current.horses[index]?.speed ?? 0) - (previous.horses[index]?.speed ?? 0);
+    data.push([previous.time, speedChange / elapsed / 100]);
+  }
+
+  return data;
+}
+
+/** Target speed is a speed, so both share the speed scale. */
+const signalAxis = (signal: string) => (signal === 'target' ? 'speed' : signal);
+
 function chartData(chart: TelemetryChart, r: RaceRunner, signal: string) {
   const { capture, ensemble } = chart;
   const finish = chart.finishTimes.get(r.index);
@@ -169,7 +202,10 @@ function chartData(chart: TelemetryChart, r: RaceRunner, signal: string) {
       frame.time,
       meanTrajectorySignal(ensemble, frame.time, r.index, signal)
     ]);
-  } else if (signal === 'target' || signal === 'acceleration') {
+  } else if (
+    signal === 'target' ||
+    (signal === 'acceleration' && hasDetailedAcceleration(chart, r))
+  ) {
     const h = diagnosticHorse(capture, r.index),
       samples = h?.sampleTimes ?? capture.detailed?.annotations.sampleTimes ?? [];
 
@@ -177,6 +213,8 @@ function chartData(chart: TelemetryChart, r: RaceRunner, signal: string) {
       t,
       (signal === 'target' ? h?.targetSpeeds : h?.accelerationRates)?.[i] ?? null
     ]);
+  } else if (signal === 'acceleration') {
+    data = frameAcceleration(capture, r.index);
   } else {
     data = capture.frames.map((f) => [
       f.time,
@@ -223,9 +261,23 @@ const finishLine: CustomSeriesRenderItem = (params, api) => {
   };
 };
 
+/** Speed reads on the left; the other scales stack outward on the right. */
+const axisPlacement: Record<string, { position: 'left' | 'right'; offset: number }> = {
+  speed: { position: 'left', offset: 0 },
+  acceleration: { position: 'left', offset: 0 },
+  hp: { position: 'right', offset: 0 },
+  gap: { position: 'right', offset: 26 }
+};
+
 export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChartsCoreOption {
   const { ensemble, runner, chartRunners, signals: chartSignals, dark } = chart;
-  const multiple = chartSignals.length > 1,
+  const axisSignals = chartSignals.filter(
+    (signal, i) =>
+      chartSignals.findIndex((other) => signalAxis(other.value) === signalAxis(signal.value)) === i
+  );
+
+  const axes = axisSignals.map((signal) => signalAxis(signal.value));
+  const multiple = axes.length > 1,
     color = dark ? '#abb4c3' : '#566071';
 
   const hpColor = (value?: number) => hpRemainingColor(value, dark);
@@ -259,19 +311,31 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
       nameTextStyle: { fontSize: 10, color },
       splitLine: { lineStyle: { opacity: 0.08 } }
     },
-    yAxis: chartSignals.map((signal, i) => ({
-      type: 'value',
-      position: multiple && signal.value !== 'speed' ? 'right' : 'left',
-      offset: multiple && signal.value === 'gap' ? 26 : 0,
-      min: signal.value === 'acceleration' ? undefined : 0,
-      max: signal.value === 'hp' ? 100 : undefined,
-      interval: signal.value === 'hp' ? 25 : undefined,
-      splitNumber: 4,
-      axisLabel: { fontSize: 10, color: signal.color, margin: 8, hideOverlap: true },
-      axisLine: { show: false },
-      axisTick: { show: false },
-      splitLine: { show: i === 0, lineStyle: { color, opacity: 0.12 } }
-    })),
+    yAxis: axisSignals.map((signal, i) => {
+      const axis = signalAxis(signal.value);
+      const placement = multiple ? axisPlacement[axis] : undefined;
+
+      return {
+        type: 'value',
+        position: placement?.position ?? 'left',
+        offset: placement?.offset ?? 0,
+        min: axis === 'acceleration' ? undefined : 0,
+        max: axis === 'hp' ? 100 : undefined,
+        interval: axis === 'hp' ? 25 : undefined,
+        splitNumber: 4,
+        // Combined acceleration has no room for a scale; its live value and tooltip carry it.
+        axisLabel: {
+          show: !(multiple && axis === 'acceleration'),
+          fontSize: 10,
+          color: signal.color,
+          margin: 8,
+          hideOverlap: true
+        },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: i === 0, lineStyle: { color, opacity: 0.12 } }
+      };
+    }),
     dataZoom: expanded
       ? [
           { type: 'inside', xAxisIndex: 0 },
@@ -301,7 +365,7 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
           name: 'Race ' + (trajectory.sample + 1) + ', ' + signal.label,
           type: 'line',
           xAxisIndex: 0,
-          yAxisIndex: i,
+          yAxisIndex: axes.indexOf(signalAxis(signal.value)),
           showSymbol: false,
           silent: true,
           lineStyle: {
@@ -318,19 +382,26 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
         chartRunners.map((r) => ({
           name:
             (ensemble ? 'Mean · ' : '') +
-            (multiple ? signal.label + ', ' : '') +
+            (chartSignals.length > 1 ? signal.label + ', ' : '') +
             'Gate ' +
             (r.index + 1) +
             ', ' +
             r.name,
           type: 'line',
           xAxisIndex: 0,
-          yAxisIndex: i,
+          yAxisIndex: axes.indexOf(signalAxis(signal.value)),
           showSymbol: false,
+          step: signal.value === 'target' ? 'end' : undefined,
           lineStyle: {
-            width: r.index === runner?.index ? 2.5 : 1,
+            width:
+              r.index === runner?.index ? (multiple && signal.value === 'target' ? 1.5 : 2.5) : 1,
             opacity: r.index === runner?.index ? 1 : 0.18,
-            type: r.index === runner?.index ? 'solid' : 'dotted'
+            type:
+              r.index !== runner?.index
+                ? 'dotted'
+                : multiple && signal.value === 'target'
+                  ? 'dashed'
+                  : 'solid'
           },
           itemStyle: { color: signal.color },
           z: r.index === runner?.index ? 3 : 1,
@@ -341,19 +412,25 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
                 : String(value)
           },
           data: chartData(chart, r, signal.value),
-          ...(i === 0 && r.index === runner?.index && chart.chartEvents
+          ...(i === 0 && r.index === runner?.index
             ? {
                 markLine: {
                   silent: false,
                   symbol: ['none', 'none'],
                   label: { show: false },
                   lineStyle: { type: 'dashed', width: 1 },
-                  data: chart.markers.filter((marker) => marker.xAxis <= chart.telemetryEnd)
+                  data: chart.markers.filter(
+                    (marker) =>
+                      marker.xAxis <= chart.telemetryEnd &&
+                      (chart.chartEvents ||
+                        marker.name === 'Final spurt window' ||
+                        marker.name === 'Last spurt')
+                  )
                 },
                 markArea: {
                   silent: false,
                   label: { show: false },
-                  data: [...chart.phases, ...chart.blocking]
+                  data: [...chart.phases, ...(chart.chartEvents ? chart.blocking : [])]
                 }
               }
             : {})

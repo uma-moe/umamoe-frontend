@@ -11,6 +11,44 @@
 .loaded :global(.app-page) {
   padding-bottom: 24px;
 }
+
+/* Before a race is loaded, the page opens like the section landing pages. The glow sits
+   on the page wrapper so it also spans the ad rail columns instead of boxing the content. */
+.race-page:not(.loaded) {
+  background:
+    radial-gradient(circle at 15% 18%, rgb(var(--accent-primary-rgb) / 0.1), transparent 40%),
+    radial-gradient(circle at 85% 10%, rgb(var(--accent-secondary-rgb) / 0.09), transparent 40%),
+    radial-gradient(circle at 50% 75%, rgb(var(--accent-warning-rgb) / 0.06), transparent 50%),
+    var(--bg-primary);
+}
+:global([data-theme='light']) .race-page:not(.loaded) {
+  background: var(--hero-light-bg);
+}
+.race-page:not(.loaded) :global(.app-page) {
+  background: transparent;
+}
+.race-page:not(.loaded) :global(.page-heading) {
+  justify-content: center;
+  padding-block: var(--space-10) var(--space-8);
+  text-align: center;
+}
+.race-page:not(.loaded) :global(.heading-title) {
+  justify-content: center;
+}
+.race-page:not(.loaded) :global(.page-heading h1) {
+  margin: 0 0 var(--space-3);
+  background: var(--gradient-heading);
+  background-clip: text;
+  color: transparent;
+  font-size: var(--font-display);
+  font-weight: 800;
+  line-height: 1.1;
+}
+.race-page:not(.loaded) :global(.page-heading p) {
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+  font-weight: 400;
+}
 .race-workspace {
   grid-template-columns: minmax(0, 1fr);
   --control-height: 32px;
@@ -35,6 +73,15 @@ li {
   overflow-wrap: anywhere;
 }
 @media (max-width: 767px) {
+  .race-page:not(.loaded) :global(.page-heading) {
+    padding-block: var(--space-8) var(--space-6);
+  }
+  .race-page:not(.loaded) :global(.page-heading h1) {
+    margin-bottom: var(--space-2);
+  }
+  .race-page:not(.loaded) :global(.page-heading p) {
+    font-size: 0.875rem;
+  }
   .loaded :global(.page-heading) {
     padding-block: 12px;
   }

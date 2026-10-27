@@ -65,21 +65,19 @@
       <Button
         variant="secondary"
         size="sm"
+        icon="minus"
         ariaLabel="Zoom course out"
         disabled={!hasTrack || zoomOutDisabled}
         onclick={() => onzoom(1 / 1.3)}
-      >
-        −
-      </Button>
+      />
       <Button
         variant="secondary"
         size="sm"
+        icon="add"
         ariaLabel="Zoom course in"
         disabled={!hasTrack || zoomInDisabled}
         onclick={() => onzoom(1.3)}
-      >
-        +
-      </Button>
+      />
     </div>
   </div>
   {@render toolbarEnd?.()}
@@ -123,6 +121,19 @@
     }
     .map-controls {
       margin-left: 0;
+    }
+  }
+  @media (max-width: 700px) {
+    .map-toolbar {
+      gap: 6px;
+    }
+    /* Camera controls and the replay actions share rows instead of nesting. */
+    .map-controls {
+      display: contents;
+    }
+    .map-zoom :global(.ui-button) {
+      min-width: 36px;
+      min-height: 36px;
     }
   }
 </style>

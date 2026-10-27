@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { formatRaceTime } from '@/lib/race/replay/race-display';
+  import { formatRaceTime, moodName } from '@/lib/race/replay/race-display';
   import Button from '@/components/controls/Button.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import RunnerBuildDetails from '@/pages/competitive/runners/RunnerBuildDetails.svelte';
@@ -48,7 +48,7 @@
                 <section class="entry-metadata">
                   <h3>Race entry</h3>
                   <dl>
-                    {#each [{ label: 'Game finish time', value: formatRaceTime(runner.result.finishTime) }, { label: 'Time behind previous', value: runner.result.finishDiffTime.toFixed(3) + ' s' }, { label: 'Guts / wit rank', value: runner.result.gutsOrder + ' / ' + runner.result.wizOrder }, { label: 'Result reason code', value: runner.result.defeatReason }, { label: 'Popularity', value: replay.diagnostic?.popularity ?? runner.raw.popularity ?? '—' }, { label: 'Mood', value: ['', 'Awful', 'Bad', 'Normal', 'Good', 'Great'][Number(runner.raw.motivation)] ?? '—' }] as fact}
+                    {#each [{ label: 'Game finish time', value: formatRaceTime(runner.result.finishTime) }, { label: 'Time behind previous', value: runner.result.finishDiffTime.toFixed(3) + ' s' }, { label: 'Guts / wit rank', value: runner.result.gutsOrder + ' / ' + runner.result.wizOrder }, { label: 'Result reason code', value: runner.result.defeatReason }, { label: 'Popularity', value: replay.diagnostic?.popularity ?? runner.raw.popularity ?? '—' }, { label: 'Mood', value: moodName(runner.raw.motivation) ?? '—' }] as fact}
                       <div>
                         <dt>{fact.label}</dt>
                         <dd>{fact.value}</dd>

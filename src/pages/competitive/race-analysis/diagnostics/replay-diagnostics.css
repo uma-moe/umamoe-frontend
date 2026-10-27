@@ -11,12 +11,17 @@
   gap: 20px;
   padding-top: 6px;
 }
+/* Stretched to the skills' height; the blocking panel at its end takes whatever height is left. */
 .behaviour-report {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  gap: 6px;
   min-width: 0;
+}
+.behaviour-report > :global(.report-block + .report-block) {
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
 }
 .blocking-summary {
   padding-top: 8px;
@@ -50,22 +55,9 @@
 }
 .measurement-data {
   display: grid;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
   min-width: 0;
-  padding-top: 8px;
-}
-.measurement-data :global(table) {
-  font-size: 12px;
-}
-.measurement-data :global(th),
-.measurement-data :global(.sort) {
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 11px;
-}
-.measurement-data :global(.compact th),
-.measurement-data :global(.compact td) {
-  padding: 3px 6px;
 }
 .measurement-data :global(.ui-button--ghost.ui-button--sm) {
   padding: 0;
@@ -90,14 +82,35 @@
   font-weight: 500;
   color: var(--text-primary);
 }
+/* The engine build is one long hash, so it breaks anywhere on a phone. */
+.simulation-meta > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .diagnostics :global(.ui-button--ghost.ui-button--sm) {
   min-height: 20px;
   font-size: 11px;
   padding: 1px 4px;
 }
+/* Every table in the report shares one row height, the one the skill procs set. */
 .diagnostics :global(.compact th),
 .diagnostics :global(.compact td) {
-  padding-block: 3px;
+  padding: 3px 6px;
+}
+.diagnostics :global(.compact td) {
+  height: 30px;
+  box-sizing: border-box;
+}
+/* A seek time is the same compact button in every table, period list and heading. Placing it by its
+   container outranks the race page's general small-button rule. */
+.diagnostics :global(:is(td, li, .section-heading) .ui-button.ui-button--sm.ui-button--secondary) {
+  min-height: 22px;
+  padding: 0 7px;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 .diagnostics :global(table) {
   font-size: 12px;
@@ -121,18 +134,41 @@ pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+/* The skill table needs its full width before the behaviour column does. */
+@media (max-width: 1500px) {
+  .report-grid {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    gap: 16px;
+  }
+}
 @media (max-width: 1100px) {
   .report-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
   }
   .behaviour-report {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
     gap: 10px 20px;
   }
+  .behaviour-report > :global(.report-block + .report-block) {
+    padding-top: 0;
+    border-top: 0;
+  }
   .incident-status,
-  .blocking-summary {
+  .blocking-summary,
+  .behaviour-report > .blocking-panel {
     grid-column: 1/-1;
+  }
+  .behaviour-report > .blocking-panel {
+    min-height: 0;
+  }
+  .behaviour-report .blocking-fill {
+    position: static;
+  }
+  .behaviour-report .blocking-fill :global(.event-list) {
+    max-height: 240px;
   }
 }
 @media (max-width: 700px) {

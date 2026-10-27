@@ -103,7 +103,21 @@ export function runnerName(capture: ParsedRaceCapture, value: unknown) {
   return capture.runners.find((r) => r.index === Number(value))?.name ?? 'Unknown runner';
 }
 
-function activationStatus(roll: DiagnosticRow | undefined, observed: boolean): string {
+export const skillOutcomes = [
+  'Activated',
+  'Passed wit check, failed condition',
+  'Wit check failed',
+  'Not triggered',
+  'Not recorded'
+] as const;
+
+export type SkillOutcome = (typeof skillOutcomes)[number];
+
+export function isSkillOutcome(value: unknown): value is SkillOutcome {
+  return (skillOutcomes as readonly unknown[]).includes(value);
+}
+
+function activationStatus(roll: DiagnosticRow | undefined, observed: boolean): SkillOutcome {
   if (!roll) return observed ? 'Activated' : 'Not recorded';
   if (roll.activated) return 'Activated';
   if (!roll.passed) return 'Wit check failed';

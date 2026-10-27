@@ -145,3 +145,14 @@
   stroke-width: 3px;
   pointer-events: none;
 }
+.runner-labels {
+  overflow: visible;
+  pointer-events: none;
+}
+.runner-labels-stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+}

@@ -45,11 +45,17 @@
       : replay.frame
   );
 
+  const combinedSignals = $derived.by(() => {
+    if (replay.ensemble) return ['speed', 'hp', 'gap'];
+
+    return replay.capture.detailed
+      ? ['speed', 'target', 'hp', 'gap', 'acceleration']
+      : ['speed', 'hp', 'gap', 'acceleration'];
+  });
+
   const chartSignals = $derived(
     telemetrySignals($theme === 'dark', Boolean(replay.ensemble)).filter((signal) =>
-      metric === 'combined'
-        ? ['speed', 'hp', 'gap'].includes(signal.value)
-        : signal.value === metric
+      metric === 'combined' ? combinedSignals.includes(signal.value) : signal.value === metric
     )
   );
 
@@ -67,12 +73,13 @@
         finishTimes: replay.finishTimes,
         selectedFinish,
         chartEvents,
-        markers: telemetryMarkers(
-          replay.activations,
+        markers: telemetryMarkers({
+          activations: replay.activations,
           skillNames,
-          replay.runner,
-          replay.runnerTimeAtDistance
-        ),
+          runner: replay.runner,
+          timeAt: replay.runnerTimeAtDistance,
+          distance: replay.bounds.distanceMax
+        }),
         phases: telemetryPhases(
           replay.capture,
           replay.bounds.distanceMax,
@@ -110,10 +117,7 @@
       return Math.max(0, ...sample.horses.map((h) => h.distance)) - horse.distance;
     if (signal === 'target')
       return detailedSample(capture.detailed, diagnostic, sample.time, 'targetSpeeds');
-    return (
-      detailedSample(capture.detailed, diagnostic, sample.time, 'accelerationRates') ??
-      replay.acceleration(replay.runner?.index ?? 0)
-    );
+    return replay.acceleration(replay.runner?.index ?? 0);
   }
 </script>
 

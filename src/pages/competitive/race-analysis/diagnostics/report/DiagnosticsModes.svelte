@@ -36,7 +36,7 @@
     compact
     caption="Race modes"
     {rows}
-    maxHeight={220}
+    maxHeight={210}
     emptyMessage="No race modes recorded."
     columns={[
       { key: 'mode', label: 'Mode' },
@@ -114,23 +114,7 @@
 
 <style>
   @import '../diagnostics-section.css';
-  h3 {
-    margin: 0;
-    font-size: 13px;
-    font-weight: 600;
-  }
-  h3 small {
-    margin-left: 5px;
-    color: var(--text-secondary);
-    font-size: 10px;
-    font-weight: 400;
-  }
-  .report-block {
-    min-width: 0;
-  }
-  .section-heading > h3 {
-    margin-right: auto;
-  }
+  @import './report-section.css';
   .period-toggle {
     display: inline-flex;
     align-items: center;

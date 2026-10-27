@@ -125,6 +125,13 @@ h3 {
   margin: 11px 0 0 54px;
   border-radius: 3px;
 }
+.spurt-window {
+  position: absolute;
+  right: 0;
+  inset-block: 0;
+  background: color-mix(in srgb, var(--accent-warning) 30%, transparent);
+  border-left: 1px solid var(--accent-warning);
+}
 .course-overview span {
   position: absolute;
   top: 0;

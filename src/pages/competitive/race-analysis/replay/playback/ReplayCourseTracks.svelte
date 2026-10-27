@@ -3,6 +3,7 @@
   import { raceTimeAtDistance, type ReplayBounds } from '@/lib/race/replay/race-replay';
   import type { Course, courseSegments } from '../replay-course';
   import { courseTerrain, slopeLabel, timedSection, type TimedSection } from '../replay-timeline';
+  import { finalSpurtSection, FINAL_SPURT_HELP } from '@/lib/race/final-spurt';
 
   let {
     frames,
@@ -53,6 +54,15 @@
   ]);
 
   const terrain = $derived(course ? courseTerrain(course) : undefined);
+  const spurt = $derived(
+    timedSection(
+      finalSpurtSection(bounds.distanceMax),
+      frames,
+      bounds.distanceMax,
+      endTime,
+      percent
+    )[0]
+  );
   const slopes = $derived(
     terrain?.slopes.flatMap((section) =>
       timedSection(section, frames, bounds.distanceMax, endTime, percent)
@@ -106,6 +116,7 @@
     <span class="timeline-label">Slope</span>
     <span class="timeline-label">Course</span>
     <span class="timeline-label">Race phase</span>
+    <span class="timeline-label">Final spurt</span>
   </div>
   <div
     bind:this={tracks}
@@ -228,6 +239,23 @@
       {/each}
     </div>
     <div
+      class="phase-navigation"
+      aria-label="Final spurt window"
+    >
+      {#if spurt}
+        <button
+          style:left={spurt.left + '%'}
+          style:width={spurt.width + '%'}
+          style:--segment-color={spurt.color}
+          title={FINAL_SPURT_HELP}
+          aria-label={'Seek to final spurt window at ' + Math.round(spurt.start) + ' metres'}
+          onclick={() => onseek(spurt.time)}
+        >
+          Final spurt window · {Math.round(spurt.start)} m
+        </button>
+      {/if}
+    </div>
+    <div
       class="timeline-cursor"
       aria-hidden="true"
     ></div>
@@ -239,6 +267,7 @@
         <span>{minHeight.toFixed(1)} m</span>
       {/if}
     </span>
+    <span></span>
     <span></span>
     <span></span>
     <span class="finish">Finish ▦</span>
