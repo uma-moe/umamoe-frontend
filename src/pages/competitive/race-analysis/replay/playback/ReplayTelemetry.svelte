@@ -10,6 +10,7 @@
   import { theme } from '@/stores/theme';
   import type { ReplayState } from '../replay-state.svelte';
   import ReplayTelemetryActions from './ReplayTelemetryActions.svelte';
+  import ReplayTelemetryGuide from './ReplayTelemetryGuide.svelte';
   import {
     telemetryBlocking,
     telemetryMarkers,
@@ -131,30 +132,7 @@
         />
       </span>
     {/snippet}
-    <h3>Race telemetry</h3>
-    {#if replay.ensemble}
-      <p>
-        Faint curves show every sampled race; the solid curve is their arithmetic mean at the same
-        elapsed time. Select an Uma to follow its spread on the track and graph. Finishers stay at
-        the line.
-      </p>
-      <p>
-        Click the chart to seek, or use the Replay time slider. Compare runners adds each Uma’s mean
-        curve.
-      </p>
-    {:else}
-      <p>
-        Combined overlays speed, remaining HP and distance behind the leader in one chart. Live
-        values are shown on the left. The speed scale is on the left of the graph; HP and distance
-        scales are on the right. The curves, course lanes and skill icons share one replay time
-        axis. Click the chart to seek, or use the Replay time slider with the keyboard.
-      </p>
-      <p>
-        Choose a single signal to focus on it, or enable Compare runners to add faint dotted traces
-        for the rest of the field. Race events show skill activation lines and front blocking
-        intervals. Expand the graph to zoom and pan.
-      </p>
-    {/if}
+    <ReplayTelemetryGuide ensemble={Boolean(replay.ensemble)} />
   </InspectPopover>
 {/snippet}
 <div class="telemetry">
@@ -197,12 +175,6 @@
           class:combined={metric === 'combined'}
           aria-label="Selected runner telemetry"
         >
-          <div class="telemetry-heading">
-            <h3 class="timeline-label">
-              {replay.ensemble ? 'Mean telemetry' : 'Race telemetry'}
-            </h3>
-            {@render telemetryHelp()}
-          </div>
           {#each chartSignals as signal}
             {@const value = signalValue(signal.value)}
             <div

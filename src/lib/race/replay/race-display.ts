@@ -45,6 +45,22 @@ export function runningStyleName(value?: number, compact = false): string {
   );
 }
 
+const moodNames = ['Awful', 'Bad', 'Normal', 'Good', 'Great'] as const;
+
+export type MoodName = (typeof moodNames)[number];
+
+/** The game's mood from its motivation value, 1 (awful) to 5 (great); undefined when unrecorded. */
+export function moodName(motivation: unknown): MoodName | undefined {
+  const value = Number(motivation);
+  if (!Number.isInteger(value) || value < 1 || value > moodNames.length) return undefined;
+
+  return moodNames[value - 1];
+}
+
+export function moodIcon(mood: MoodName): string {
+  return '/game-assets/textures/' + mood.toLowerCase() + '.webp';
+}
+
 /** A finishing place as read aloud: 1st, 2nd, 11th, 23rd. */
 export function ordinalPlace(place: number): string {
   const teen = place % 100 >= 11 && place % 100 <= 13;

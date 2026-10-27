@@ -9,20 +9,39 @@ import { skillActivityRows } from '../results/skill-activity';
 /** Instant skills, or skills without a recorded duration, keep their label this long. */
 export const MINIMUM_SKILL_LABEL_SECONDS = 2;
 
+/**
+ * A skill active from the gate for longer than any timed effect lasts, such as a passive course skill,
+ * describes the build rather than a moment of the race. It is listed apart instead of labelled all race.
+ */
+const WHOLE_RACE_START_SECONDS = 1;
+const WHOLE_RACE_MINIMUM_SECONDS = 30;
+
 export interface SkillWindow {
   runner: number;
   skillId: number;
   start: number;
   /** Absent when the recorded replay has no duration for the effect. */
   end?: number;
+  wholeRace: boolean;
 }
 
-export interface RunnerCallout {
+interface CalloutBase {
   key: string;
-  kind: 'skill' | 'mode';
   label: string;
   /** Seconds left on the effect or mode, when its end is known. */
   remaining?: number;
+}
+
+export type RunnerCallout =
+  (CalloutBase & { kind: 'skill'; skillId: number }) | (CalloutBase & { kind: 'mode' });
+
+function lastsWholeRace(period: { start: number; end?: number }) {
+  if (period.end === undefined) return false;
+
+  return (
+    period.start <= WHOLE_RACE_START_SECONDS &&
+    period.end - period.start >= WHOLE_RACE_MINIMUM_SECONDS
+  );
 }
 
 export function skillWindows(capture: ParsedRaceCapture): SkillWindow[] {
@@ -32,10 +51,18 @@ export function skillWindows(capture: ParsedRaceCapture): SkillWindow[] {
         runner: runner.index,
         skillId: row.id,
         start: period.start,
-        end: period.end
+        end: period.end,
+        wholeRace: lastsWholeRace(period)
       }))
     )
   );
+}
+
+/** The runner's skills that stay active for the whole race. */
+export function wholeRaceSkillIds(capture: ParsedRaceCapture, index: number): number[] {
+  return skillActivityRows(capture, index)
+    .filter((row) => row.periods.some(lastsWholeRace))
+    .map((row) => row.id);
 }
 
 function skillCallouts(
@@ -46,6 +73,8 @@ function skillCallouts(
   const callouts = new Map<number, RunnerCallout[]>();
 
   for (const window of windows) {
+    if (window.wholeRace) continue;
+
     const duration = window.end === undefined ? 0 : window.end - window.start;
     const labelEnd = window.start + Math.max(MINIMUM_SKILL_LABEL_SECONDS, duration);
     if (time < window.start || time >= labelEnd) continue;
@@ -55,6 +84,7 @@ function skillCallouts(
     list.push({
       key: 'skill-' + window.skillId + '-' + window.start,
       kind: 'skill',
+      skillId: window.skillId,
       label: skillNames.get(window.skillId) ?? 'Skill ' + window.skillId,
       remaining
     });
@@ -153,8 +183,14 @@ export function runnerCallouts({
   return callouts;
 }
 
-export function calloutText(callout: RunnerCallout, timers: boolean) {
-  if (!timers || callout.remaining === undefined || callout.remaining <= 0) return callout.label;
+/** The time left on a callout, when timers are shown and its end is known. */
+export function calloutTimer(callout: RunnerCallout, timers: boolean): string | undefined {
+  if (!timers || callout.remaining === undefined || callout.remaining <= 0) return undefined;
 
-  return callout.label + ' ' + callout.remaining.toFixed(1) + 's';
+  return callout.remaining.toFixed(1) + 's';
+}
+
+export function calloutText(callout: RunnerCallout, timers: boolean) {
+  const timer = calloutTimer(callout, timers);
+  return timer === undefined ? callout.label : callout.label + ' ' + timer;
 }

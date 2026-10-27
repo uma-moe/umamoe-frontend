@@ -42,31 +42,33 @@
 </script>
 
 <section
-  class="report-block rushing-report"
+  class="report-block report-card rushing-report"
   aria-label="Rushing"
 >
   <header class="section-heading">
     <h3>
-      Rushing <small class:rushed={rushing?.enabled}>{rushingOutcome(rushing)}</small>
+      Rushing <small class:caution={rushing?.enabled}>{rushingOutcome(rushing)}</small>
     </h3>
   </header>
   {#if rushing}
     <dl class="report-facts">
       <div>
         <dt>Check / chance<DiagnosticsMetricHelp label="Rushing check" /></dt>
-        <dd class="rushing-check">
+        <dd>
           {#if hasRoll}
-            <span
-              class="roll-meter"
-              aria-hidden="true"
-            >
-              <span style:width={percentPosition(rushing.threshold) + '%'}></span>
-              <i style:left={percentPosition(rushing.roll) + '%'}></i>
+            <span class="rushing-check">
+              <span
+                class="roll-meter"
+                aria-hidden="true"
+              >
+                <span style:width={percentPosition(rushing.threshold) + '%'}></span>
+                <i style:left={percentPosition(rushing.roll) + '%'}></i>
+              </span>
+              {Number(rushing.roll).toFixed(2)}% {Number(rushing.roll) < Number(rushing.threshold)
+                ? '<'
+                : '≥'}
+              {Number(rushing.threshold).toFixed(2)}%
             </span>
-            {Number(rushing.roll).toFixed(2)}% {Number(rushing.roll) < Number(rushing.threshold)
-              ? '<'
-              : '≥'}
-            {Number(rushing.threshold).toFixed(2)}%
           {:else}
             Not recorded
           {/if}
@@ -105,6 +107,7 @@
 
 <style>
   @import '../diagnostics-section.css';
+  @import '../report-card.css';
   @import './report-section.css';
   @import './report-facts.css';
   @import './diagnostics-rushing.css';

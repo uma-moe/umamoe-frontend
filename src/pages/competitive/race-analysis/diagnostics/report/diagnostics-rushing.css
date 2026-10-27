@@ -1,7 +1,3 @@
-.section-heading > h3 small.rushed {
-  color: var(--accent-warning);
-  font-weight: 600;
-}
 .rushing-check {
   display: inline-flex;
   align-items: center;

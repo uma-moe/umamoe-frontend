@@ -52,6 +52,11 @@
 
   const allShown = $derived(Object.values(toggles).every(Boolean));
 
+  /** Timers extend the skill and race-mode labels, so they need one of those shown. */
+  function unavailable(option: ReplayToggle) {
+    return option === 'skillTimers' && !toggles.skills && !toggles.raceModes;
+  }
+
   function toggle(option: ReplayToggle) {
     toggles = { ...toggles, [option]: !toggles[option] };
   }
@@ -104,42 +109,42 @@
           }))
         ]}
       />
-      <div class="precision-fields">
-        <TextField
-          id="replay-window-meters"
-          label="View window (m)"
-          type="number"
-          min={20}
-          max={400}
-          step={10}
-          value={String(windowMeters)}
-          oninput={setWindowMeters}
-        />
-        <TextField
-          id="replay-frame"
-          label="Replay frame"
-          type="number"
-          min={0}
-          max={Math.max(0, capture.frames.length - 1)}
-          value={String(frameIndex)}
-          help={'of ' + capture.frames.length + ' frames'}
-          oninput={seekFrame}
-        />
-      </div>
+      <TextField
+        id="replay-window-meters"
+        label="View window (m)"
+        type="number"
+        min={20}
+        max={400}
+        step={10}
+        value={String(windowMeters)}
+        oninput={setWindowMeters}
+      />
+      <TextField
+        id="replay-frame"
+        label={'Frame (of ' + capture.frames.length + ')'}
+        type="number"
+        min={0}
+        max={Math.max(0, capture.frames.length - 1)}
+        value={String(frameIndex)}
+        oninput={seekFrame}
+      />
     </section>
     {#each replayToggleGroups as group}
       <section>
         <h3>{group.title}</h3>
         <div class="options">
           {#each group.keys as option}
-            <div class="option">
+            <div
+              class="option"
+              title={replayToggleHelp[option]}
+            >
               <ToggleButton
                 icon="eye"
                 label={replayToggleLabels[option]}
                 pressed={toggles[option]}
+                disabled={unavailable(option)}
                 onclick={() => toggle(option)}
               />
-              <small>{replayToggleHelp[option]}</small>
             </div>
           {/each}
         </div>
@@ -175,53 +180,45 @@
   .replay-toolbar {
     --control-height: 32px;
     display: grid;
-    gap: 20px;
+    gap: 14px;
   }
   .replay-toolbar h3 {
     font-size: 13px;
-    margin: 0 0 8px;
+    margin: 0 0 6px;
   }
+  /* Track, view window and frame share one row; the heading spans it. */
   .course-controls {
     display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+    align-items: end;
     gap: 8px;
     min-width: 0;
   }
-  .precision-fields {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+  .course-controls > h3 {
+    grid-column: 1/-1;
+    margin: 0;
   }
   .options {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px 24px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px 8px;
   }
   .option {
-    display: grid;
-    align-content: start;
-    gap: 2px;
     min-width: 0;
   }
   .option :global(.ui-toggle) {
     justify-content: space-between;
-  }
-  .option small {
-    padding-inline: 2px;
-    font-size: 10px;
-    line-height: 1.4;
-    color: var(--text-secondary);
+    width: 100%;
   }
   @media (max-width: 700px) {
     .course-controls {
-      min-width: 0;
-      width: 100%;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .course-controls > :global(:nth-child(2)) {
+      grid-column: 1/-1;
     }
     .options {
-      grid-template-columns: 1fr;
-      gap: 8px;
-    }
-    .precision-fields {
-      gap: 8px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 </style>

@@ -58,7 +58,7 @@
 </script>
 
 <section
-  class="report-block skills-report"
+  class="report-block report-card skills-report"
   aria-label="Runner skill procs"
 >
   <header class="section-heading">
@@ -155,6 +155,7 @@
 
 <style>
   @import '../diagnostics-section.css';
+  @import '../report-card.css';
   @import './report-section.css';
   @import '../../../runners/skill-chip-cell.css';
   .activation-threshold {

@@ -67,7 +67,6 @@
 
 {#each callouts as marker (marker.runner.index)}
   {@const caption = captions.get(marker.runner.index)!}
-  {@const labels = runnerLabels.get(marker.runner.index)}
   <g
     class="map-runner"
     data-distance={marker.horse.distance}
@@ -148,25 +147,6 @@
         </b>
       </div>
     </foreignObject>
-    {#if labels}
-      <foreignObject
-        class="runner-labels"
-        x={marker.x - labelBoxWidth / 2}
-        y={marker.y - labelSize / 2 - labelBoxHeight - 2}
-        width={labelBoxWidth}
-        height={labelBoxHeight}
-      >
-        <div class="runner-labels-stack">
-          <ReplayRunnerCallouts
-            callouts={labels}
-            {timers}
-            limit={crowded.has(marker.runner.index) && Number(selected) !== marker.runner.index
-              ? 1
-              : 3}
-          />
-        </div>
-      </foreignObject>
-    {/if}
     <text
       class="runner-name"
       x={caption.name.x}
@@ -236,6 +216,36 @@
         <use href={'#' + helpId + '-selection'} />
       {/if}
     </g>
+  {/each}
+</g>
+
+<!-- Skill and mode labels sit above every portrait, so a runner drawn behind another keeps them readable. -->
+<g
+  class="label-layer"
+  aria-hidden="true"
+>
+  {#each callouts as marker (marker.runner.index)}
+    {@const labels = runnerLabels.get(marker.runner.index)}
+    {#if labels}
+      <foreignObject
+        class="runner-labels"
+        class:dim={visibility[marker.runner.index] === 1}
+        x={marker.x - labelBoxWidth / 2}
+        y={marker.y - labelSize / 2 - labelBoxHeight - 2}
+        width={labelBoxWidth}
+        height={labelBoxHeight}
+      >
+        <div class="runner-labels-stack">
+          <ReplayRunnerCallouts
+            callouts={labels}
+            {timers}
+            limit={crowded.has(marker.runner.index) && Number(selected) !== marker.runner.index
+              ? 1
+              : 3}
+          />
+        </div>
+      </foreignObject>
+    {/if}
   {/each}
 </g>
 

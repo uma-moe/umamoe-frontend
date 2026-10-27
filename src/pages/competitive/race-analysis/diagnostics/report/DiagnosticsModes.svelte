@@ -22,7 +22,7 @@
 </script>
 
 <section
-  class="report-block"
+  class="report-block report-card"
   aria-label="Runner race modes"
 >
   <header class="section-heading">
@@ -114,6 +114,7 @@
 
 <style>
   @import '../diagnostics-section.css';
+  @import '../report-card.css';
   @import './report-section.css';
   .period-toggle {
     display: inline-flex;

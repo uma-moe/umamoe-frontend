@@ -84,6 +84,7 @@
               {capture}
               {index}
               {horse}
+              {distance}
               {skillNames}
               {onseek}
               {onselect}
@@ -101,7 +102,7 @@
             />
           {/if}
           {#if !hpRows.length || !hasRushing}
-            <div class="incident-status">
+            <div class="incident-status report-card">
               {#if !hpRows.length}
                 <span>No recovery or HP debuffs</span>
               {/if}
@@ -111,14 +112,11 @@
             </div>
           {/if}
           {#if blocking}
-            <!-- The incident list takes the column's remaining height, so the column ends with the skills. -->
-            <div class="blocking-panel">
-              <div class="blocking-fill">{@render blocking()}</div>
-            </div>
+            <div class="report-card blocking-block">{@render blocking()}</div>
           {/if}
         </div>
       {:else if blocking}
-        <div class="blocking-summary">{@render blocking()}</div>
+        <div class="blocking-summary report-card">{@render blocking()}</div>
       {/if}
     </div>
   {/snippet}
@@ -138,7 +136,7 @@
         <div class="runner-column">
           {@render overview()}
           {#if blocking}
-            <div class="blocking-panel">
+            <div class="blocking-panel report-card">
               <div class="blocking-fill">{@render blocking()}</div>
             </div>
           {/if}
@@ -206,32 +204,34 @@
               {onseek}
               {onselect}
             />
-            <footer class="simulation-meta">
-              <span>
-                Engine <strong>{capture.detailed?.engineBuild}</strong>
-              </span>
-              <span>
-                Seed <strong>{capture.detailed?.seed}</strong>
-              </span>
-              <span>
-                Schema <strong>{capture.detailed?.annotations.schemaVersion}</strong>
-              </span>
-              {#if typeof horse.popularity === 'number'}
+            <div class="simulation-source report-card">
+              <footer class="simulation-meta">
                 <span>
-                  Popularity <strong>{horse.popularity}</strong>
+                  Engine <strong>{capture.detailed?.engineBuild}</strong>
                 </span>
-              {/if}
-            </footer>
-            <Disclosure
-              id={instanceId + '-source'}
-              title="Raw simulator response"
-              compact
-              bind:open={sourceOpen}
-            >
-              {#if sourceOpen}
-                <pre>{JSON.stringify(capture.detailed, null, 2)}</pre>
-              {/if}
-            </Disclosure>
+                <span>
+                  Seed <strong>{capture.detailed?.seed}</strong>
+                </span>
+                <span>
+                  Schema <strong>{capture.detailed?.annotations.schemaVersion}</strong>
+                </span>
+                {#if typeof horse.popularity === 'number'}
+                  <span>
+                    Popularity <strong>{horse.popularity}</strong>
+                  </span>
+                {/if}
+              </footer>
+              <Disclosure
+                id={instanceId + '-source'}
+                title="Raw simulator response"
+                compact
+                bind:open={sourceOpen}
+              >
+                {#if sourceOpen}
+                  <pre>{JSON.stringify(capture.detailed, null, 2)}</pre>
+                {/if}
+              </Disclosure>
+            </div>
           </div>
         {/if}
       </Disclosure>
@@ -240,5 +240,6 @@
 </section>
 
 <style>
+  @import './report-card.css';
   @import './replay-diagnostics.css';
 </style>

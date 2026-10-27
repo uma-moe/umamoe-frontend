@@ -116,17 +116,18 @@ dd {
   }
 }
 
-/* Beside a runner's build card the four outcomes become tiles that match the card's height. */
+/* Beside a runner's build card the four outcomes become tiles that match the card's height: a label
+   above one line holding the figure and its detail. */
 :global(.runner-overview) > .outcome-summary {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
   margin: 0;
 }
 :global(.runner-overview) .outcome {
   grid-template-columns: minmax(0, 1fr);
   align-content: space-between;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 2px;
+  padding: 7px 12px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--surface-2);
@@ -146,11 +147,13 @@ dd {
   font-size: 11px;
 }
 :global(.runner-overview) .outcome dd {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 10px;
 }
 :global(.runner-overview) .outcome strong {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 650;
   letter-spacing: -0.02em;
   line-height: 1.15;
@@ -160,7 +163,6 @@ dd {
   letter-spacing: 0;
 }
 :global(.runner-overview) .outcome-detail {
-  min-height: 15px;
   font-size: 11px;
 }
 @media (max-width: 420px) {

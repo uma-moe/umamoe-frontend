@@ -8,12 +8,18 @@ p {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   min-width: 0;
-  gap: 12px;
+  gap: 10px;
   align-items: start;
 }
-.trace-column {
+.trace-column,
+.reference-panel {
   display: grid;
+  gap: 10px;
   min-width: 0;
+}
+/* The offset parent of the decision table, whose height is measured from the top of the row. */
+.position-decisions {
+  position: relative;
 }
 .detail-footnote {
   margin-top: 2px;
@@ -68,9 +74,6 @@ p {
 }
 .application-change.debuff {
   color: var(--accent-error);
-}
-.reference-group + .reference-group {
-  border-top: 1px solid var(--border-subtle);
 }
 .reference-periods {
   list-style: none;

@@ -525,6 +525,7 @@
             onretry={onretrysimulation}
             onbuild={() => (buildOpen = true)}
             onpickrunner={() => (runnerPickerOpen = true)}
+            onswitchrunner={(index) => (selected = String(index))}
             onreview={reviewBlocking}
             onseek={reviewTime}
             onselect={reviewRunner}

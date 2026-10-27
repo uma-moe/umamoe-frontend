@@ -417,7 +417,7 @@ export const raceMetricHelp: Record<string, string> = {
   'HP at finish':
     'HP remaining when the runner finishes. Zero means HP was exhausted; the exhaustion distance shows where it happened.',
   'Race modes (s)':
-    'Seconds spent dueling, running downhill, or in position-keeping pace modes. Downhill time in the late race is shown separately.',
+    'Seconds spent dueling, running downhill, or in position-keeping pace modes. Hover the downhill time for the part in the late race.',
   'Course loss (m)':
     'Additional distance travelled because of track geometry, including the runner’s path through corners.',
   'Course loss':
@@ -425,8 +425,8 @@ export const raceMetricHelp: Record<string, string> = {
   'Incidents (s)':
     'Total seconds spent front-blocked or rushing. Rushing periods and front-blocking periods can overlap.',
   'Blocked (s)': 'Total time with another runner blocking the path directly ahead.',
-  Build:
-    'The five build stats. SP is the total cost of learned skills; popularity is the simulator’s ranking of the runner.',
+  Build: 'The five build stats, with the total cost of the learned skills in SP below them.',
+  Popularity: 'The simulator’s popularity ranking of the runner; 1 is the favourite.',
   Outcome:
     'Activated means the skill triggered. Wit check failed means its activation check did not pass. Passed wit check, failed condition means the check passed but the skill’s race conditions were not met.',
   Triggers: 'Number of recorded activations for this skill during the race.',
@@ -446,10 +446,14 @@ export const raceMetricHelp: Record<string, string> = {
   Periods:
     'Number of separate active periods. Expand the count to see each period and jump to it in replay.',
   'HP at decision': 'HP available when the simulator calculated the last-spurt plan.',
+  'Rushing check':
+    'The random percentage drawn for rushing, beside the runner’s rushing chance. A check below the chance makes the runner rush from the scheduled section; higher wit lowers the chance.',
   'HP for full spurt':
     'HP needed to start the full-speed spurt at this decision point and sustain it to the finish.',
   'Full spurt speed':
     'Target speed for a full last spurt before an HP shortage lowers the selected speed.',
+  'HP balance':
+    'HP at the decision minus the HP a full spurt needs. A shortfall delays the spurt or lowers its speed.',
   'Time (s)':
     'Seconds since the start of the race. Select a time to jump to that moment in replay.',
   'Target (m/s)':

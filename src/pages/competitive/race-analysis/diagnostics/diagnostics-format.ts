@@ -81,6 +81,16 @@ export function number(value: unknown, digits = 0) {
     : '—';
 }
 
+/** A number with a fixed count of decimals, so values line up down a column. */
+export function fixed(value: unknown, digits: number) {
+  return typeof value === 'number'
+    ? value.toLocaleString('en-US', {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      })
+    : '—';
+}
+
 export function count(value: number, noun: string) {
   return `${value} ${noun}${value === 1 ? '' : 's'}`;
 }

@@ -14,6 +14,7 @@
     capture,
     index,
     skillNames,
+    maxHeight,
     onseek,
     onselect
   }: {
@@ -23,6 +24,8 @@
     capture: ParsedRaceCapture;
     index: number;
     skillNames: Map<number, string>;
+    /** Replaces the default nine-row height, for a table that fills a column. */
+    maxHeight?: number;
     onseek: (time: number) => void;
     onselect: (index: number) => void;
   } = $props();
@@ -38,7 +41,7 @@
     caption={title}
     rows={rows(value)}
     {columns}
-    maxHeight={Array.isArray(value) && value.length > 9 ? 300 : undefined}
+    maxHeight={maxHeight ?? (Array.isArray(value) && value.length > 9 ? 300 : undefined)}
     onrowclick={(row) => seekRow(row, onseek)}
     emptyMessage="No observations recorded for this runner."
   >

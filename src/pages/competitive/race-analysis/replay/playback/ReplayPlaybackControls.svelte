@@ -7,6 +7,7 @@
   import { formatRaceTime } from '@/lib/race/replay/race-display';
   import type { ReplayBounds } from '@/lib/race/replay/race-replay';
   import { slopeLabel } from '../replay-timeline';
+  import ReplayTelemetryGuide from './ReplayTelemetryGuide.svelte';
 
   let {
     bounds,
@@ -158,6 +159,7 @@
           />
         </span>
       {/snippet}
+      <ReplayTelemetryGuide ensemble={minimal} />
       <h3>Course and skill timeline</h3>
       <p>
         The telemetry graph, course lanes and skill icons use the same replay time axis. Course

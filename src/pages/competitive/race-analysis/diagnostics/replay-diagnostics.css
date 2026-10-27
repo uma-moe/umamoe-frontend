@@ -2,35 +2,24 @@
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
+  gap: 10px;
 }
+/* Both columns end on one line: the shorter column's cards grow to the taller one. */
 .report-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
-  align-items: start;
-  gap: 20px;
-  padding-top: 6px;
+  align-items: stretch;
+  gap: 10px;
 }
-/* Stretched to the skills' height; the blocking panel at its end takes whatever height is left. */
+/* Beside a long skill list, the last-spurt chart takes the height that is left. */
 .behaviour-report {
   display: flex;
   flex-direction: column;
-  align-self: stretch;
-  gap: 6px;
+  gap: 10px;
   min-width: 0;
 }
-.behaviour-report > :global(.report-block + .report-block) {
-  padding-top: 6px;
-  border-top: 1px solid var(--border-subtle);
-}
-.blocking-summary {
-  padding-top: 8px;
-  border-top: 1px solid var(--border-subtle);
-}
-/* Beside the skills it is a column of its own; a rule above it would only cut across the row. */
-.report-grid > .blocking-summary {
-  padding-top: 0;
-  border-top: 0;
+.behaviour-report > :global(.spurt-report) {
+  flex: 1 1 auto;
 }
 .incident-status {
   --inspect-popover-width: 600px;
@@ -49,9 +38,7 @@
 .measurements {
   min-width: 0;
   display: grid;
-  gap: 4px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border-subtle);
+  gap: 10px;
 }
 .measurement-data {
   display: grid;
@@ -75,8 +62,6 @@
   gap: 4px 16px;
   font-size: 10px;
   color: var(--text-secondary);
-  padding-top: 8px;
-  border-top: 1px solid var(--border-subtle);
 }
 .simulation-meta strong {
   font-weight: 500;
@@ -138,42 +123,27 @@ pre {
 @media (max-width: 1500px) {
   .report-grid {
     grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
-    gap: 16px;
   }
 }
 @media (max-width: 1100px) {
   .report-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
   }
+  /* Below the skills the cards wrap in rows: cards that share a row share its height, and a card left
+     alone in a row takes the full width. */
   .behaviour-report {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-    gap: 10px 20px;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
-  .behaviour-report > :global(.report-block + .report-block) {
-    padding-top: 0;
-    border-top: 0;
+  .behaviour-report > :global(*),
+  .behaviour-report > :global(.spurt-report) {
+    flex: 1 1 340px;
   }
-  .incident-status,
-  .blocking-summary,
-  .behaviour-report > .blocking-panel {
+  .blocking-summary {
     grid-column: 1/-1;
   }
-  .behaviour-report > .blocking-panel {
-    min-height: 0;
-  }
-  .behaviour-report .blocking-fill {
-    position: static;
-  }
-  .behaviour-report .blocking-fill :global(.event-list) {
-    max-height: 240px;
-  }
-}
-@media (max-width: 700px) {
-  .behaviour-report {
-    grid-template-columns: minmax(0, 1fr);
+  .blocking-block {
+    flex-basis: 100%;
   }
 }
 
@@ -182,10 +152,13 @@ pre {
   display: grid;
   grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
   align-items: stretch;
-  gap: 16px;
-  margin-bottom: 2px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--border-subtle);
+  gap: 10px;
+}
+/* On a wide report the card puts its stats beside its aptitudes, so it is no taller than the outcomes. */
+@media (min-width: 1400px) {
+  .runner-overview {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  }
 }
 .runner-overview > :global(.fallback) {
   align-self: start;
@@ -207,17 +180,13 @@ pre {
   position: relative;
   flex: 1 1 auto;
   min-height: 150px;
-  border: 1px solid var(--card-surface-border);
-  border-radius: var(--radius-md);
-  background: var(--surface-2);
 }
-/* Out of flow, so a long list scrolls inside the panel instead of making the row taller. */
+/* Out of flow, so a long list scrolls inside the card instead of making the row taller. */
 .blocking-fill {
   position: absolute;
-  inset: 0;
+  inset: 10px 12px;
   display: flex;
   flex-direction: column;
-  padding: 8px 10px;
 }
 .blocking-fill > :global(*) {
   display: flex;
