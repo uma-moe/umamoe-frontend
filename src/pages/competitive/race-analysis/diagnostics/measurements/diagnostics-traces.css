@@ -9,14 +9,16 @@ p {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   min-width: 0;
   gap: 12px;
-  align-items: stretch;
+  align-items: start;
+}
+.trace-column {
+  display: grid;
+  min-width: 0;
 }
 .detail-footnote {
+  margin-top: 2px;
   font-size: 10px;
   color: var(--text-secondary);
-}
-.detail-footnote {
-  margin-top: 4px;
 }
 .muted {
   color: var(--text-secondary);
@@ -24,27 +26,14 @@ p {
 .detail-table :global(table) {
   min-width: 440px;
 }
-.hp-application-details {
-  grid-column: 1/-1;
-}
-.hp-application-details :global(table) {
-  width: min(100%, 960px);
-  min-width: 760px;
-}
 .hp-application-details :global(th:first-child) {
-  width: 72px;
-}
-.hp-application-details :global(th:nth-child(2)) {
-  width: 210px;
-}
-.hp-application-details :global(th:nth-child(3)) {
-  width: 160px;
+  width: 84px;
 }
 .hp-application-details :global(th:nth-child(4)) {
-  width: 160px;
+  width: 132px;
 }
 .hp-application-details :global(th:last-child) {
-  width: 160px;
+  width: 116px;
 }
 .hp-application-details :global(.skill-chip) {
   vertical-align: middle;
@@ -57,7 +46,6 @@ p {
 .application-change {
   display: grid;
   justify-items: end;
-  gap: 2px;
   font-variant-numeric: tabular-nums;
 }
 .application-change strong {
@@ -82,8 +70,6 @@ p {
   color: var(--accent-error);
 }
 .reference-group + .reference-group {
-  margin-top: 8px;
-  padding-top: 4px;
   border-top: 1px solid var(--border-subtle);
 }
 .reference-periods {
@@ -94,11 +80,13 @@ p {
   overflow: auto;
   scrollbar-width: thin;
 }
+/* Each period is a table-like row, the same height as the rows in the tables beside it. */
 .reference-periods > li {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 0;
+  min-height: 30px;
+  padding-inline: 6px;
   border-top: 1px solid var(--border-subtle);
   font-size: 11px;
 }

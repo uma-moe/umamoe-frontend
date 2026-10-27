@@ -9,12 +9,16 @@
 
   let { name, size = 20, label }: Props = $props();
 
-  const filledIcons = new Set<IconName>(['discord', 'google', 'github', 'ko-fi']);
+  const filledIcons = new Set<IconName>(['discord', 'google', 'github', 'ko-fi', 'play']);
   const pathFills: Partial<Record<IconName, string[]>> = {
     google: ['#4285f4', '#34a853', '#fbbc05', '#ea4335']
   };
 
   const paths: Record<IconName, string[]> = {
+    flag: ['M5 21V4', 'M5 4h14v9H5', 'M9.7 4v9m4.6-9v9', 'M5 8.5h14'],
+    play: ['M7 4.5v15L19.5 12 7 4.5Z'],
+    pause: ['M8 5v14', 'M16 5v14'],
+    'skip-back': ['M6 5v14', 'M18 5 9 12l9 7V5Z'],
     'arrow-right': ['M4 12h16', 'm14 6 6 6-6 6'],
     gift: [
       'M3 8h18v4H3z',

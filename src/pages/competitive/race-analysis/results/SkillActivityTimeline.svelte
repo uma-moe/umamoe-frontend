@@ -81,6 +81,32 @@
           ' s).';
   }
 
+  function periodLabel(period: SkillPeriod) {
+    if (period.end === undefined) return period.start.toFixed(2) + ' s';
+    if (period.end === period.start) return period.start.toFixed(2) + ' s · instant';
+
+    return period.start.toFixed(2) + '–' + period.end.toFixed(2) + ' s';
+  }
+
+  function rollLabel(id: number) {
+    const decision = decisions.find((decision) => Number(decision.skillId) === id);
+    if (!decision) return undefined;
+    if (!decision.required) return 'No wit check';
+    if (typeof decision.roll !== 'number' || typeof decision.threshold !== 'number')
+      return 'Wit check not recorded';
+
+    return (
+      'Wit ' +
+      decision.roll.toFixed(1) +
+      '% ' +
+      (decision.passed ? '<' : '≥') +
+      ' ' +
+      decision.threshold.toFixed(1) +
+      '% · ' +
+      (decision.passed ? 'passed' : 'failed')
+    );
+  }
+
   function outcome(id: number) {
     const decision = decisions.find((decision) => Number(decision.skillId) === id);
     return decision?.activated
@@ -230,10 +256,13 @@
                 <b>{group.events.length}</b>
               </span>
             {/snippet}
-            <h3>Nearby activations</h3>
-            <div class="activity-details">
+            <h3>
+              Nearby activations <small>{group.events.length}</small>
+            </h3>
+            <ul class="nearby-list">
               {#each group.events as event}
-                <div class="detail-row">
+                {@const roll = rollLabel(event.id)}
+                <li class:current={current(event.period)}>
                   <button
                     class="detail-seek"
                     aria-label={'Review ' + describe(event.id, event.period)}
@@ -244,11 +273,13 @@
                       name={skillNames.get(event.id)}
                     />
                   </button>
-                  <small>{describe(event.id, event.period)}</small>
-                  {@render roll(event.id)}
-                </div>
+                  <span class="nearby-time">{periodLabel(event.period)}</span>
+                  {#if roll}
+                    <small class="nearby-roll">{roll}</small>
+                  {/if}
+                </li>
               {/each}
-            </div>
+            </ul>
           </InspectPopover>
         </div>
       {/if}
@@ -422,6 +453,46 @@
   }
   .roll-details {
     font-variant-numeric: tabular-nums;
+  }
+  h3 small {
+    margin-left: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .nearby-list {
+    display: grid;
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .nearby-list li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2px 12px;
+    padding: 6px 0;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .nearby-list li:first-child {
+    border-top: 0;
+  }
+  .nearby-list li.current .nearby-time {
+    color: var(--accent-primary);
+  }
+  .nearby-time,
+  .nearby-roll {
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .nearby-roll {
+    grid-column: 1 / -1;
+    line-height: 1.3;
+  }
+  .nearby-list .detail-seek {
+    min-width: 0;
   }
   .skill-group :global(.trigger) {
     min-width: 28px;

@@ -7,11 +7,18 @@
   import { courseSegments, type Course } from '../replay-course';
   import type { ReplayState } from '../replay-state.svelte';
   import type { ReplayToggles } from '../replay-display';
+  import type { CourseShape } from '../replay-course';
+  import type { RunnerCallout } from '../replay-callouts';
+  import ReplayRunnerCallouts from '../ReplayRunnerCallouts.svelte';
+  import ReplayCourseMinimap from '../map/ReplayCourseMinimap.svelte';
+  import { finalSpurtSection } from '@/lib/race/final-spurt';
 
   let {
     replay,
     course,
     toggles,
+    callouts,
+    shape,
     mapPrimary,
     laneMax,
     laneTarget,
@@ -22,6 +29,8 @@
     replay: ReplayState;
     course?: Course;
     toggles: ReplayToggles;
+    callouts: Map<number, RunnerCallout[]>;
+    shape?: CourseShape;
     mapPrimary: boolean;
     laneMax: number;
     laneTarget: number;
@@ -139,7 +148,7 @@
               stroke-dasharray="4 4"
             />
           {/each}
-          {#each [{ distance: replay.bounds.distanceMax / 6, label: 'Mid race' }, { distance: (replay.bounds.distanceMax * 10) / 24, label: 'Position Keep ends' }, { distance: (replay.bounds.distanceMax * 2) / 3, label: 'Late race' }] as marker}
+          {#each [{ distance: replay.bounds.distanceMax / 6, label: 'Mid race' }, { distance: (replay.bounds.distanceMax * 10) / 24, label: 'Position Keep ends' }, { distance: finalSpurtSection(replay.bounds.distanceMax).start, label: 'Final spurt window' }] as marker}
             <line
               x1={x(marker.distance)}
               x2={x(marker.distance)}
@@ -212,7 +221,7 @@
           >
             {segment.label}
           </span>
-        {/each}{#each [{ distance: replay.bounds.distanceMax / 6, label: 'Mid race' }, { distance: (replay.bounds.distanceMax * 2) / 3, label: 'Late race' }].filter((m) => m.distance >= stageViewport.min && m.distance <= stageViewport.max) as marker}
+        {/each}{#each [{ distance: replay.bounds.distanceMax / 6, label: 'Mid race' }, { distance: finalSpurtSection(replay.bounds.distanceMax).start, label: 'Final spurt window · Late race' }].filter((m) => m.distance >= stageViewport.min && m.distance <= stageViewport.max) as marker}
           <span
             class="course-label phase"
             style:left={x(marker.distance) / 10 + '%'}
@@ -222,6 +231,7 @@
         {/each}
       {/if}
       {#each replay.capture.runners as r}
+        {@const runnerCallouts = callouts.get(r.index)}
         {@const horse =
           replay.frame?.horses[
             r.index
@@ -277,6 +287,15 @@
             {#if r.index === replay.runner?.index}
               <span class="marker-name">{r.name}</span>
             {/if}
+            {#if runnerCallouts}
+              <span class="marker-callouts">
+                <ReplayRunnerCallouts
+                  callouts={runnerCallouts}
+                  timers={toggles.skillTimers}
+                  limit={crowdedRunners.has(r.index) && r.index !== replay.runner?.index ? 1 : 3}
+                />
+              </span>
+            {/if}
             {#if !mapPrimary && (toggles.speed || toggles.accel)}
               <span class="marker-telemetry">
                 {#if toggles.speed}
@@ -295,6 +314,17 @@
           </button>
         {/if}
       {/each}
+      {#if toggles.minimap && shape}
+        <ReplayCourseMinimap
+          {shape}
+          frame={replay.frame}
+          runners={replay.capture.runners}
+          viewport={stageViewport}
+          selected={replay.runner?.index ?? -1}
+          {visibility}
+          teamColor={replay.teamColor}
+        />
+      {/if}
       <div class="distance-axis">
         {#each [0, 0.25, 0.5, 0.75, 1] as fraction}
           <span style:left={fraction * 100 + '%'}>

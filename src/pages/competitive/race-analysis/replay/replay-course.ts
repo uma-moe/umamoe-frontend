@@ -1,6 +1,7 @@
 import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 import { appHttp } from '@/services/http/app-http';
 import { resourceCache } from '@/services/resources/resource-cache';
+import { finalSpurtSection } from '@/lib/race/final-spurt';
 
 export type Course = {
   raceTrackId: number;
@@ -246,7 +247,11 @@ export function courseLandmarks(course: Course | undefined) {
         : [{ distance: s.start + s.length, label: 'Level ground', color: '#9ca5b4' }])
     ]),
     { distance: course.distance / 6, label: 'Mid race', color: '#69b7ee' },
-    { distance: (course.distance * 2) / 3, label: 'Late race', color: '#69b7ee' },
+    {
+      distance: finalSpurtSection(course.distance).start,
+      label: 'Final spurt window · Late race',
+      color: finalSpurtSection(course.distance).color
+    },
     { distance: course.distance, label: 'Finish', color: '#e5e7eb' }
   ]
     .filter((m) => m.distance >= 0 && m.distance <= course.distance)

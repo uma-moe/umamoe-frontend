@@ -2,7 +2,12 @@
   import { onMount } from 'svelte';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { lastSpurtResult, raceMetricHelp } from '@/lib/race/capture/race-diagnostics';
-  import { formatRaceTime, hpRemainingColor } from '@/lib/race/replay/race-display';
+  import {
+    formatRaceTime,
+    hpRemainingColor,
+    moodIcon,
+    moodName
+  } from '@/lib/race/replay/race-display';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import { portrait, stats, styleColors } from '@/pages/competitive/analysis-view';
   import { theme } from '@/stores/theme';
@@ -56,6 +61,22 @@
     if (typeof row.hp !== 'number' || typeof row.startHp !== 'number') return undefined;
 
     return row.startHp > 0 ? (row.hp / row.startHp) * 100 : undefined;
+  }
+
+  /** Where HP ran out, or how much was left at the finish. */
+  function hpResult(row: Record<string, string | number>) {
+    if (typeof row.exhausted === 'number') return 'Empty at ' + n(row.exhausted, 0) + ' m';
+    if (typeof row.hp === 'number') return n(row.hp, 0) + ' HP left';
+
+    return '—';
+  }
+
+  /** Distance behind the previous finisher; the winner has none. */
+  function finishGap(row: Record<string, string | number>) {
+    if (row.place === 1) return 'Winner';
+    if (typeof row.gap !== 'number') return '—';
+
+    return '+' + n(row.gap, 1) + ' m';
   }
 
   function inspect(id: number) {
@@ -117,36 +138,50 @@
       ...(hasIncidents
         ? [{ key: 'blocked', label: 'Incidents (s)', numeric: true, sortable: false }]
         : []),
-      { key: 'sp', label: 'Build', numeric: true, sortable: false }
+      { key: 'sp', label: 'Build', numeric: true, sortable: false },
+      { key: 'popularity', label: 'Popularity', numeric: true }
     ]}
   >
     {#snippet cell(row, col)}
       {@const r = capture.runners.find((r) => r.index === Number(row.id))!}
       {#if col.key === 'name'}
-        <button
-          class="runner-name"
-          class:focused={selectedIndex === r.index}
-          aria-label={'Inspect ' + r.name}
-          aria-pressed={selectedIndex === r.index}
-          onclick={() => inspect(r.index)}
-        >
-          <Artwork
-            src={portrait(r.cardId)}
-            alt=""
-            size="xs"
-          />
-          <span>
-            <strong>{r.name}</strong>
-            <small>
-              Gate {row.gate},
-              <span style:color={styleColors[r.result?.runningStyle ?? 0]}>{row.style}</span>
-            </small>
-          </span>
-          <Icon
-            name="arrow-right"
-            size={14}
-          />
-        </button>
+        {@const mood = moodName(r.raw.motivation)}
+        <span class="runner-cell">
+          <button
+            class="runner-name"
+            class:focused={selectedIndex === r.index}
+            aria-label={'Inspect ' + r.name}
+            aria-pressed={selectedIndex === r.index}
+            onclick={() => inspect(r.index)}
+          >
+            <Artwork
+              src={portrait(r.cardId)}
+              alt=""
+              size="xs"
+            />
+            <span>
+              <strong>{r.name}</strong>
+              <small>
+                Gate {row.gate},
+                <span style:color={styleColors[r.result?.runningStyle ?? 0]}>{row.style}</span>
+              </small>
+            </span>
+            <Icon
+              name="arrow-right"
+              size={14}
+            />
+          </button>
+          {#if mood}
+            <img
+              class="mood"
+              src={moodIcon(mood)}
+              alt={mood + ' mood'}
+              title={mood + ' mood'}
+              width="20"
+              height="20"
+            />
+          {/if}
+        </span>
       {:else if col.key === 'place'}
         <strong
           class="finish"
@@ -155,45 +190,39 @@
           {row.place}
         </strong>
       {:else if col.key === 'time'}
-        <strong class="finish-time">
+        <span class="value">
           {formatRaceTime(typeof row.time === 'number' ? row.time : undefined)}
-        </strong>
-        {#if row.place !== 1 && row.gap !== '—'}
-          <small
-            class="aside"
-            title="Distance behind the previous finisher"
-          >
-            +{n(row.gap, 1)} m
-          </small>
-        {/if}
+        </span>
+        <small title="Distance behind the previous finisher">{finishGap(row)}</small>
       {:else if col.key === 'delay'}
         {@const late = row.late === 'Late start' || row.late === 'Lost acceleration frame'}
         <span
+          class="value"
           class:warning={late}
-          title={late ? String(row.late) : undefined}
         >
           {typeof row.delay === 'number' ? n(row.delay, 1) + ' ms' : '—'}
         </span>
         {#if late}
-          <small class="aside warning">late</small>
+          <small
+            class="warning"
+            title={String(row.late)}
+          >
+            Late
+          </small>
         {/if}
       {:else if col.key === 'spurt'}
         <LastSpurtResult result={lastSpurtResult(capture, r.index)} />
       {:else if col.key === 'hp'}
         {@const share = hpShare(row)}
         <span
+          class="value"
           class:warning={typeof row.exhausted === 'number'}
           style:color={share === undefined ? undefined : hpRemainingColor(share, $theme === 'dark')}
         >
-          {typeof row.exhausted === 'number'
-            ? 'Empty at ' + n(row.exhausted, 0) + ' m'
-            : typeof row.hp === 'number'
-              ? n(row.hp, 0) + ' HP left'
-              : '—'}
+          {hpResult(row)}
         </span>
         {#if typeof row.startHp === 'number'}
           <small
-            class="aside"
             title={'Started with ' +
               n(row.startHp, 0) +
               ' HP' +
@@ -201,59 +230,51 @@
                 ? ', ' + n(row.deficit, 0) + ' short'
                 : '')}
           >
-            of {n(row.startHp, 0)}
+            of {n(row.startHp, 0)} HP
           </small>
         {/if}
       {:else if col.key === 'duel'}
-        <span class="mode-value">
-          <span>Duel</span>
-          <b>{n(row.duel)}</b>
-        </span>
-        <span
-          class="mode-value"
-          title={'Downhill before late race: ' +
-            (typeof row.downhill === 'number' && typeof row.downhillLate === 'number'
-              ? n(row.downhill - row.downhillLate)
-              : '—') +
-            ' s'}
-        >
-          <span>Downhill</span>
-          <b>
-            {n(row.downhill)}
-            <small class="inline">({n(row.downhillLate)} late)</small>
-          </b>
-        </span>
-        <span class="mode-value">
-          <span>Pace ↑ / ↓</span>
-          <b>{n(row.paceUp)} / {n(row.paceDown)}</b>
-        </span>
-      {:else if col.key === 'blocked'}
-        <span class="mode-value">
-          <span>Blocked</span>
-          <b>{n(row.blocked)}</b>
-        </span>
-        <span class="mode-value">
-          <span>Rushed</span>
-          <b>{n(row.rushed)}</b>
-        </span>
-      {:else if col.key === 'sp'}
-        <div class="build-cell">
-          <div class="result-stats">
-            <StatStrip
-              items={stats(r)}
-              label={r.name + ' build stats'}
-              presentation="values"
-              compact
-            />
+        <dl class="mode-values">
+          <div>
+            <dt>Duel</dt>
+            <dd>{n(row.duel)}</dd>
           </div>
-          <small>
-            {#if typeof row.sp === 'number'}
-              {Number(row.sp).toLocaleString()} SP
-            {/if}{#if typeof row.popularity === 'number'}
-              (Popularity {row.popularity})
-            {/if}
-          </small>
+          <div>
+            <dt>Downhill</dt>
+            <dd title={'In the late race: ' + n(row.downhillLate) + ' s'}>{n(row.downhill)}</dd>
+          </div>
+          <div>
+            <dt>Pace ↑</dt>
+            <dd>{n(row.paceUp)}</dd>
+          </div>
+          <div>
+            <dt>Pace ↓</dt>
+            <dd>{n(row.paceDown)}</dd>
+          </div>
+        </dl>
+      {:else if col.key === 'blocked'}
+        <dl class="mode-values incidents">
+          <div>
+            <dt>Blocked</dt>
+            <dd>{n(row.blocked)}</dd>
+          </div>
+          <div>
+            <dt>Rushed</dt>
+            <dd>{n(row.rushed)}</dd>
+          </div>
+        </dl>
+      {:else if col.key === 'sp'}
+        <div class="result-stats">
+          <StatStrip
+            items={stats(r)}
+            label={r.name + ' build stats'}
+            presentation="values"
+            compact
+          />
         </div>
+        <small>{typeof row.sp === 'number' ? n(row.sp, 0) + ' SP' : '—'}</small>
+      {:else if col.key === 'popularity'}
+        <span class="value">{row.popularity}</span>
       {:else}
         {typeof row[col.key] === 'number' &&
         ['duel', 'downhill', 'loss', 'blocked', 'rushed'].includes(col.key)

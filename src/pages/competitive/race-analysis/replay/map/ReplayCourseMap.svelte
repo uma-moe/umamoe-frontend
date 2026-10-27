@@ -26,6 +26,8 @@
   import ReplayMapCourse from './ReplayMapCourse.svelte';
   import ReplayMapLandmarks from './ReplayMapLandmarks.svelte';
   import ReplayMapRunners from './ReplayMapRunners.svelte';
+  import ReplayCourseMinimap from './ReplayCourseMinimap.svelte';
+  import type { RunnerCallout } from '../replay-callouts';
 
   let {
     course,
@@ -40,6 +42,9 @@
     onseekdistance,
     primary = false,
     skillEvents = [],
+    runnerLabels = new Map(),
+    timers = false,
+    minimap = false,
     runners,
     raceOrder,
     selected = $bindable('0'),
@@ -60,6 +65,10 @@
     blockerIndex?: number;
     primary?: boolean;
     skillEvents?: RaceEvent[];
+    runnerLabels?: Map<number, RunnerCallout[]>;
+    timers?: boolean;
+    /** Shows the full course beside the following camera. */
+    minimap?: boolean;
     course?: Course;
     shape?: CourseShape;
     frame?: InterpolatedRaceFrame;
@@ -414,6 +423,17 @@
         </button>
       {/if}
     {/if}
+    {#if minimap && shape && view.following}
+      <ReplayCourseMinimap
+        {shape}
+        {frame}
+        {runners}
+        {viewport}
+        selected={Number(selected)}
+        {visibility}
+        {teamColor}
+      />
+    {/if}
     {#if points.length}
       <!-- Runner callouts provide keyboard selection; the background supports pan and zoom. -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -518,6 +538,8 @@
           {blocking}
           {blockerIndex}
           {skillEvents}
+          {runnerLabels}
+          {timers}
           {visibility}
           {teamColor}
           {showSpeed}

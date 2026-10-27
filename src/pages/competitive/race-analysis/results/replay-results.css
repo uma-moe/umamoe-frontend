@@ -54,20 +54,31 @@ p {
   letter-spacing: 0;
   font-weight: 500;
 }
-.results :global(th),
-.results :global(td) {
-  padding: 4px 10px;
+/* Scoped to the compact table so these outrank its built-in cell padding. */
+.results :global(.table-wrap.compact th),
+.results :global(.table-wrap.compact td) {
+  padding: 4px 8px;
 }
-.results :global(th:first-child),
-.results :global(td:first-child) {
+.results :global(.table-wrap.compact th:first-child),
+.results :global(.table-wrap.compact td:first-child) {
   width: 40px;
   padding-inline: 6px 12px;
 }
-.results :global(th:nth-child(2)) {
-  width: 23%;
+/* Headers are wider than the values below them, so a narrow table wraps the label text instead of
+   scrolling; the sort and help icons stay beside it. */
+.results :global(th) {
+  vertical-align: bottom;
 }
 .results :global(.sort) {
-  gap: 5px;
+  gap: 3px;
+  white-space: normal;
+  text-align: inherit;
+}
+.results :global(.column-help) {
+  margin-left: 1px;
+}
+.results :global(.column-help .trigger) {
+  min-width: 16px;
 }
 .results :global(tbody tr:has(.runner-name.focused)) {
   background: var(--color-accent-soft);
@@ -75,29 +86,43 @@ p {
 .results :global(tbody tr:has(.runner-name.focused) td:first-child) {
   box-shadow: inset 2px 0 var(--accent-primary);
 }
+/* Every result is a value with at most one secondary line beneath it, so rows keep one height and the
+   numbers in a column line up from top to bottom. */
+.value {
+  display: block;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 small {
   display: block;
+  margin-top: 1px;
   color: var(--text-secondary);
   font-size: 10px;
-  margin-top: 1px;
-  line-height: 1.4;
-}
-/* Secondary values sit beside the main one, so each result stays on a single line. */
-small.aside {
-  display: inline;
-  margin: 0 0 0 5px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .results :global(.spurt-result) {
-  display: flex;
-  align-items: baseline;
-  justify-content: flex-end;
-  gap: 8px;
+  font-weight: 500;
+  line-height: 1.3;
 }
 .results :global(.spurt-result small) {
-  margin: 0;
+  margin-top: 1px;
+  font-weight: 400;
+}
+.runner-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mood {
+  flex: none;
+  width: 20px;
+  height: 20px;
 }
 .runner-name {
-  width: 100%;
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -142,23 +167,8 @@ small.aside {
 .finish.winner {
   color: var(--accent-primary);
 }
-.finish-time {
-  font-size: 13px;
-  font-weight: 600;
-}
 .warning {
   color: var(--accent-warning);
-}
-.build-cell {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.build-cell > small {
-  margin: 0;
-  text-align: right;
-  white-space: nowrap;
 }
 .result-stats {
   position: relative;
@@ -179,43 +189,50 @@ small.aside {
   width: 12px;
   height: 12px;
 }
-.mode-value {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 10px;
-  line-height: 1.5;
-}
-.mode-value > span {
-  color: var(--text-secondary);
-}
-.mode-value b {
-  font-weight: 500;
-}
-.inline {
-  display: inline;
-  font-size: 9px;
+/* Labelled values in a grid of two lines, so their columns line up from runner to runner. */
+.mode-values {
+  display: inline-grid;
+  grid-template-columns: repeat(2, max-content max-content);
+  align-items: baseline;
+  gap: 0 6px;
   margin: 0;
+  line-height: 1.35;
 }
-@media (max-width: 1400px) {
+.mode-values.incidents {
+  grid-template-columns: max-content max-content;
+}
+.mode-values > div {
+  display: contents;
+}
+.mode-values dt {
+  color: var(--text-secondary);
+  font-size: 10px;
+  text-align: left;
+}
+.mode-values dd {
+  margin: 0 6px 0 0;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.mode-values > div:nth-child(2n) dd,
+.mode-values.incidents dd {
+  margin-right: 0;
+}
+@media (max-width: 1500px) {
   .result-stats {
-    grid-template-columns: repeat(3, max-content);
-    gap: 2px 8px;
+    gap: 6px;
   }
-  .results :global(th),
-  .results :global(td) {
-    padding-inline: 8px;
-  }
-  .results :global(th:nth-child(2)) {
-    width: auto;
+  .results :global(.table-wrap.compact th),
+  .results :global(.table-wrap.compact td) {
+    padding-inline: 6px;
   }
 }
 @media (max-width: 800px) {
   .results-context {
     font-size: 10px;
   }
-  .results :global(th),
-  .results :global(td) {
+  .results :global(.table-wrap.compact th),
+  .results :global(.table-wrap.compact td) {
     padding: 5px 8px;
   }
   .runner-name {

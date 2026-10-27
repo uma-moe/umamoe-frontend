@@ -155,24 +155,8 @@
 
 <style>
   @import '../diagnostics-section.css';
+  @import './report-section.css';
   @import '../../../runners/skill-chip-cell.css';
-  h3 {
-    margin: 0;
-    font-size: 13px;
-    font-weight: 600;
-  }
-  h3 small {
-    margin-left: 5px;
-    color: var(--text-secondary);
-    font-size: 10px;
-    font-weight: 400;
-  }
-  .report-block {
-    min-width: 0;
-  }
-  .section-heading > h3 {
-    margin-right: auto;
-  }
   .activation-threshold {
     font-size: 10px;
     color: var(--text-secondary);
@@ -229,14 +213,6 @@
   .skill-status.idle .status-icon {
     background: var(--surface-2);
     color: var(--text-secondary);
-  }
-  /* Seeking stays a button, sized to the row so every skill keeps the same compact height. The
-     selector mirrors the race page's small-button rule so this one takes precedence inside the table. */
-  .skills-report :global(td .ui-button.ui-button--sm:not(.ui-button--ghost)) {
-    min-height: 22px;
-    padding: 0 7px;
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
   }
   .wit-check {
     display: inline-grid;

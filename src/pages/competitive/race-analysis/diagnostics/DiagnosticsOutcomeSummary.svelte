@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { lastSpurtResult, type HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
   import DiagnosticsMetricHelp from './DiagnosticsMetricHelp.svelte';
@@ -7,11 +8,13 @@
   let {
     capture,
     index,
-    horse
+    horse,
+    notice
   }: {
     capture: ParsedRaceCapture;
     index: number;
     horse: HorseDiagnostics | undefined;
+    notice?: Snippet;
   } = $props();
 
   const runner = $derived(capture.runners.find((r) => r.index === index));
@@ -109,6 +112,8 @@
       </dd>
     </div>
   </dl>
+{:else if notice}
+  {@render notice()}
 {:else}
   <p class="fallback">
     Detailed simulation data is unavailable. Showing recorded skill activations and blocking events.

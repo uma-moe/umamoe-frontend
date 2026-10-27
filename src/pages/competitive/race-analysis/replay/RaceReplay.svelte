@@ -5,6 +5,8 @@
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { replayViewport } from '@/lib/race/replay/race-replay';
   import Button from '@/components/controls/Button.svelte';
+  import Banner from '@/components/feedback/Banner.svelte';
+  import EmptyState from '@/components/feedback/EmptyState.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import ReplayResults from '../results/ReplayResults.svelte';
@@ -15,6 +17,7 @@
     type CourseShape
   } from './replay-course';
   import { defaultReplayToggles } from './replay-display';
+  import { runnerCallouts, skillWindows } from './replay-callouts';
   import { ReplayState } from './replay-state.svelte';
   import ReplayReportHeader from './ReplayReportHeader.svelte';
   import ReplayDisplayOptions from './ReplayDisplayOptions.svelte';
@@ -29,6 +32,7 @@
   import ReplayRunnerPicker from './runner/ReplayRunnerPicker.svelte';
   import ReplayBuildDialog from './runner/ReplayBuildDialog.svelte';
   import type { RaceTrajectory } from '@/lib/race/replay/race-ensemble';
+  import { recordedSimulation, type DetailedSimulation } from '../detailed-simulation';
 
   let {
     capture,
@@ -42,7 +46,9 @@
     overviewOnly = false,
     suspended = false,
     ensembleTimeline,
-    onanalyse
+    simulation,
+    onanalyse,
+    onretrysimulation
   }: {
     capture: ParsedRaceCapture;
     ensemble?: RaceTrajectory[];
@@ -56,7 +62,10 @@
     focus?: { runner: number; time?: number };
     overviewOnly?: boolean;
     suspended?: boolean;
+    /** Defaults to what the capture itself carries, for viewers that never load a simulation. */
+    simulation?: DetailedSimulation;
     onanalyse?: (focus: { runner: number; time: number }) => void;
+    onretrysimulation?: () => void;
   } = $props();
 
   let telemetryExpanded = $state(false);
@@ -94,6 +103,19 @@
     course: () => course,
     distance: () => course?.distance ?? shapes?.[trackId]?.distance
   });
+
+  const windows = $derived(skillWindows(capture));
+  const callouts = $derived(
+    runnerCallouts({
+      capture,
+      windows,
+      frame: replay.frame,
+      time: replay.time,
+      skillNames,
+      skills: toggles.skills,
+      modes: toggles.raceModes
+    })
+  );
 
   const viewport = $derived(
     replayViewport(
@@ -204,22 +226,28 @@
     }
   }
 
+  /** A resimulation keeps the recorded input, or for simulator samples the name and seed, of the race it replaces. */
+  const race = $derived(capture.original ?? capture.fileName + '#' + capture.randomSeed);
+
   let initialized = false;
 
+  // Starts each race over; the detailed simulation arriving for the race on screen keeps the reader's place.
   $effect(() => {
-    capture;
+    race;
     if (ensemble && initialized) return;
     initialized = true;
-    replay.pause();
-    replay.time = capture.frames[0]?.time ?? 0;
-    if (!ensemble) selected = String(capture.runners[0]?.index ?? 0);
-    trackOverride = '';
-    visibility = {};
+    untrack(() => {
+      replay.pause();
+      replay.time = capture.frames[0]?.time ?? 0;
+      if (!ensemble) selected = String(capture.runners[0]?.index ?? 0);
+      trackOverride = '';
+      visibility = {};
+    });
   });
 
   $effect(() => {
     const target = focus;
-    if (!ensemble) capture;
+    if (!ensemble) race;
     untrack(() => {
       if (target && capture.runners.some((r) => r.index === target.runner)) {
         selected = String(target.runner);
@@ -231,7 +259,6 @@
   $effect(() => {
     capture;
     untrack(() => {
-      if (!ensemble) replay.pause();
       replay.time = Math.min(replay.bounds.endTime, Math.max(replay.bounds.startTime, replay.time));
     });
   });
@@ -308,12 +335,12 @@
     bind:toggles
   />
   {#if courseError}
-    <p
-      class="notice"
-      role="status"
-    >
-      {courseError}
-    </p>
+    <div class="notice">
+      <Banner
+        title={courseError}
+        tone="warning"
+      />
+    </div>
   {/if}
   <div class="race-panels">
     <section
@@ -365,6 +392,8 @@
             {replay}
             {course}
             {toggles}
+            {callouts}
+            shape={shapes?.[trackId]}
             {mapPrimary}
             laneMax={displayedLaneMax}
             laneTarget={viewport.laneMax}
@@ -382,6 +411,9 @@
               onexpand={() => (focusView = 'map')}
               primary={mapPrimary}
               skillEvents={toggles.skills ? replay.recentSkills : []}
+              runnerLabels={callouts}
+              timers={toggles.skillTimers}
+              minimap={toggles.minimap}
               frames={capture.frames}
               laneWidth={replay.laneWidth}
               onseekdistance={seekDistance}
@@ -407,19 +439,25 @@
               hidden={!mapPrimary}
             >
               {#if geometryError}
-                <p
-                  class="notice"
-                  role="status"
-                >
-                  {geometryError}
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onclick={loadGeometry}
+                <div role="status">
+                  <EmptyState
+                    compact
+                    icon="warning"
+                    title="Course map unavailable"
+                    description={geometryError}
                   >
-                    Retry course geometry
-                  </Button>
-                </p>
+                    {#snippet actions()}
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon="refresh"
+                        onclick={loadGeometry}
+                      >
+                        Retry course geometry
+                      </Button>
+                    {/snippet}
+                  </EmptyState>
+                </div>
               {:else}
                 <Spinner
                   centered
@@ -483,6 +521,8 @@
             runner={replay.runner}
             {course}
             {skillNames}
+            simulation={simulation ?? recordedSimulation(capture)}
+            onretry={onretrysimulation}
             onbuild={() => (buildOpen = true)}
             onpickrunner={() => (runnerPickerOpen = true)}
             onreview={reviewBlocking}

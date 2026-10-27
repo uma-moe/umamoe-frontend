@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Badge from '@/components/Badge.svelte';
   import Button from '@/components/controls/Button.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import type { raceChoices } from './race-session';
@@ -39,7 +40,7 @@
         Resimulating {progress}…
       </span>
     {/if}{#if demo}
-      <span class="demo-badge">Demo data</span>
+      <Badge>Demo data</Badge>
     {/if}
   </div>
   <div class="race-selection">
@@ -88,13 +89,6 @@
     flex: none;
     justify-content: flex-end;
     color: var(--text-secondary);
-  }
-  .demo-badge {
-    font-size: 10px;
-    color: var(--text-secondary);
-    padding: 3px 6px;
-    background: var(--surface-3);
-    border-radius: 4px;
   }
   .race-selection {
     display: flex;

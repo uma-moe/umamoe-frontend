@@ -23,9 +23,10 @@
     variant="secondary"
     size="sm"
     icon="tune"
+    ariaLabel="Display options"
     onclick={onsettings}
   >
-    Display options
+    <span class="tool-label">Display options</span>
   </Button>
   <span class="replay-guide">
     <InspectPopover
@@ -37,7 +38,8 @@
           <Icon
             name="info"
             size={15}
-          />Guide
+          />
+          <span class="tool-label">Guide</span>
         </span>
       {/snippet}
       <div class="course-legend">
@@ -63,9 +65,11 @@
   <Button
     variant="secondary"
     size="sm"
+    icon="expand"
+    ariaLabel={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
     onclick={onfullscreen}
   >
-    {fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+    <span class="tool-label">{fullscreen ? 'Exit fullscreen' : 'Fullscreen'}</span>
   </Button>
 </div>
 

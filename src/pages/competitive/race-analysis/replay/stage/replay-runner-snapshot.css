@@ -59,25 +59,6 @@ p {
   flex-basis: 100%;
   color: var(--accent-primary);
 }
-.blocked-by {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 0;
-  border: 0;
-  background: none;
-  text-align: left;
-  color: var(--accent-error);
-  cursor: pointer;
-}
-.blocked-by span {
-  display: grid;
-  gap: 3px;
-}
-.blocked-by strong {
-  font-size: 12px;
-}
 .active-skill {
   display: inline-flex;
   align-items: center;
@@ -131,19 +112,9 @@ p {
 .runner-snapshot .current-skills {
   margin-top: 0;
 }
-.runner-snapshot .blocked-by {
-  padding: 2px 0;
-}
 .runner-snapshot .live-diagnostics {
   gap: 3px 8px;
   margin-top: 0;
-}
-.runner-snapshot .blocked-by :global(.art) {
-  width: 24px;
-  height: 24px;
-}
-.runner-snapshot .blocked-by strong {
-  font-size: 11px;
 }
 .runner-snapshot {
   margin-top: 8px;
@@ -229,38 +200,62 @@ p {
   white-space: nowrap;
 }
 .snapshot-status {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
   height: 24px;
-}
-.snapshot-status .blocked-by {
-  width: auto;
-  min-width: 0;
-  max-width: 75%;
   margin: 0;
-  padding: 2px 4px;
-  gap: 4px;
-  font-size: 10px;
-  white-space: nowrap;
 }
-.snapshot-status .blocked-by span {
-  display: block;
+.status-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.status-cell dt {
+  flex: none;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.status-cell dd {
+  min-width: 0;
+  margin: 0;
+  font-size: 11px;
+}
+.front-clear {
+  color: var(--text-secondary);
+}
+.blocker-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--accent-error) 45%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent-error) 12%, transparent);
+  color: var(--accent-error);
+  font: inherit;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.blocker-link:hover,
+.blocker-link:focus-visible {
+  background: color-mix(in srgb, var(--accent-error) 20%, transparent);
+}
+.blocker-link span {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.snapshot-status .blocked-by strong {
-  font-size: 10px;
-  font-weight: 500;
+.blocker-link strong {
+  font-weight: 600;
 }
-.snapshot-status .blocked-by :global(svg) {
+.blocker-link :global(svg) {
   flex: none;
-}
-.blocker-clear {
-  font-size: 10px;
-  color: var(--text-secondary);
-  white-space: nowrap;
 }
 .snapshot-status .current-skills {
   display: flex;
@@ -291,12 +286,6 @@ p {
 }
 .runner-finished {
   color: var(--accent-success);
-}
-.blocked-by {
-  border: 1px solid var(--border-primary);
-  border-radius: 5px;
-  background: var(--factor-field-bg);
-  padding: 4px 6px;
 }
 @media (min-width: 951px) {
   .runner-snapshot {

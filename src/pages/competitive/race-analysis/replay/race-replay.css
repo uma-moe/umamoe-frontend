@@ -10,12 +10,6 @@ h2 {
   font-weight: 650;
   margin: 0;
 }
-p {
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
-}
 .analysis-section {
   min-width: 0;
   scroll-margin-top: 80px;
@@ -31,7 +25,7 @@ p {
   min-height: 32px;
 }
 .notice {
-  padding: 12px;
+  margin-bottom: 12px;
 }
 .fullscreen-target {
   min-width: 0;

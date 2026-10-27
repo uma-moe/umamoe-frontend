@@ -117,3 +117,10 @@ polyline {
     font-size: 8px;
   }
 }
+.spurt-window {
+  fill: none;
+  stroke: var(--accent-warning);
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
+  vector-effect: non-scaling-stroke;
+}

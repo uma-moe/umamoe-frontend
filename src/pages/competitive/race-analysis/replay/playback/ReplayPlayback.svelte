@@ -78,9 +78,13 @@
         )
   );
 
+  // Target speed needs a detailed simulation; a mean race has no acceleration trace.
   $effect(() => {
-    if (!replay.capture.detailed && (metric === 'target' || metric === 'acceleration'))
-      metric = 'speed';
+    const unavailable =
+      (metric === 'target' && !replay.capture.detailed) ||
+      (metric === 'acceleration' && Boolean(replay.ensemble));
+
+    if (unavailable) metric = 'speed';
   });
 </script>
 
@@ -115,10 +119,11 @@
             <Button
               variant="secondary"
               size="sm"
+              icon="expand"
               ariaLabel="Expand Race telemetry"
               onclick={() => (expanded = true)}
             >
-              Expand
+              <span class="expand-text">Expand</span>
             </Button>
           </span>
         {/if}
@@ -206,6 +211,11 @@
   }
   .playback-actions-options {
     display: contents;
+  }
+  @container playback (max-width: 1400px) {
+    .expand-text {
+      display: none;
+    }
   }
   :global(.ensemble-view) .replay-timeline {
     margin-top: 8px;

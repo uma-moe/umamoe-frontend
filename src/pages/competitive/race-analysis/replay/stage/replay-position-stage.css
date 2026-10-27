@@ -218,6 +218,16 @@
 .replay-marker.triggered .portrait {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-warning) 70%, transparent);
 }
+.marker-callouts {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  z-index: 3;
+  transform: translateX(-50%);
+}
+.replay-marker:has(.marker-callouts):hover .marker-name {
+  display: none;
+}
 .marker-telemetry {
   position: absolute;
   top: calc(100% + 10px);

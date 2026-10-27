@@ -1,5 +1,6 @@
 <script lang="ts">
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
+  import SelectField from '@/components/controls/SelectField.svelte';
   import ToggleButton from '@/components/controls/ToggleButton.svelte';
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
@@ -17,25 +18,34 @@
     detailed: boolean;
     ensemble: boolean;
   } = $props();
-</script>
 
-<SegmentedControl
-  compact
-  options={[
+  const metrics = $derived([
     { value: 'combined', label: 'Combined' },
     { value: 'speed', label: 'Speed' },
     { value: 'hp', label: 'HP' },
     { value: 'gap', label: 'Gap' },
-    ...(detailed
-      ? [
-          { value: 'target', label: 'Target speed' },
-          { value: 'acceleration', label: 'Acceleration' }
-        ]
-      : [])
-  ]}
-  bind:value={metric}
-  label="Telemetry metric"
-/>
+    ...(detailed ? [{ value: 'target', label: 'Target speed' }] : []),
+    ...(ensemble ? [] : [{ value: 'acceleration', label: 'Acceleration' }])
+  ]);
+</script>
+
+<span class="metric-tabs">
+  <SegmentedControl
+    compact
+    options={metrics}
+    bind:value={metric}
+    label="Telemetry metric"
+  />
+</span>
+<span class="metric-select">
+  <SelectField
+    id="telemetry-metric"
+    label="Telemetry metric"
+    hideLabel
+    options={metrics}
+    bind:value={metric}
+  />
+</span>
 <span class="desktop-chart-options">
   <ToggleButton
     icon="users"
@@ -105,8 +115,29 @@
       display: inline-flex;
     }
   }
-  .mobile-chart-options {
+  .mobile-chart-options,
+  .metric-select {
     display: none;
+  }
+  .metric-tabs {
+    display: contents;
+  }
+  .metric-select :global(.field) {
+    width: 132px;
+  }
+  .metric-select :global(.field button),
+  .metric-select :global(.field select) {
+    min-height: 32px;
+    padding-block: 4px;
+  }
+  /* The metric list needs most of a row, so narrower toolbars use a menu. */
+  @container playback (max-width:1100px) {
+    .metric-tabs {
+      display: none;
+    }
+    .metric-select {
+      display: inline-flex;
+    }
   }
   @media (max-width: 700px) {
     .desktop-chart-options {
@@ -116,6 +147,17 @@
       display: inline-flex;
     }
     :global(.telemetry) .mobile-chart-options :global(.popover .ui-toggle) {
+      min-height: 36px;
+    }
+    .metric-tabs {
+      display: none;
+    }
+    .metric-select {
+      display: inline-flex;
+    }
+    .metric-select :global(.field button),
+    .metric-select :global(.field select),
+    .guide-trigger {
       min-height: 36px;
     }
   }

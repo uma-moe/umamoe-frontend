@@ -38,7 +38,7 @@
     caption={title}
     rows={rows(value)}
     {columns}
-    maxHeight={Array.isArray(value) && value.length > 12 ? 300 : undefined}
+    maxHeight={Array.isArray(value) && value.length > 9 ? 300 : undefined}
     onrowclick={(row) => seekRow(row, onseek)}
     emptyMessage="No observations recorded for this runner."
   >
