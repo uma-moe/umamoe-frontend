@@ -40,7 +40,7 @@
 </script>
 
 <div class="measurement-grid">
-  <section class="report-block pace-report">
+  <section class="report-block report-card pace-report">
     <header class="section-heading">
       <h4>
         Pace over time<DiagnosticsMetricHelp label="Pace over time" />
@@ -66,7 +66,7 @@
     {/if}
   </section>
   {#if sectionRows.length}
-    <section class="report-block section-speeds">
+    <section class="report-block report-card section-speeds">
       <header class="section-heading">
         <h4>
           Base target speed<DiagnosticsMetricHelp label="Base target speed" />
@@ -104,6 +104,7 @@
 
 <style>
   @import '../diagnostics-section.css';
+  @import '../report-card.css';
   @import './measurements.css';
   @import './diagnostics-pace-charts.css';
 </style>

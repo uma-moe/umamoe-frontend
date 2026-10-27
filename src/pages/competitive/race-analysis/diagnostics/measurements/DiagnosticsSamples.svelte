@@ -43,7 +43,7 @@
 
 <div class="measurement-details-grid">
   <section
-    class="detail-panel pace-samples"
+    class="detail-panel report-card pace-samples"
     aria-label="Exact telemetry samples"
   >
     <header class="section-heading">
@@ -111,7 +111,7 @@
   </section>
   {#if sectionRows.length}
     <section
-      class="detail-panel section-details"
+      class="detail-panel report-card section-details"
       aria-label="Course section speed details"
     >
       <header class="section-heading">
@@ -188,6 +188,7 @@
 
 <style>
   @import '../diagnostics-section.css';
+  @import '../report-card.css';
   @import './measurements.css';
   @import './detail-panel.css';
   @import './diagnostics-samples.css';

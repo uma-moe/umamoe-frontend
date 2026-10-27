@@ -10,6 +10,7 @@
   import Artwork from '@/components/game/Artwork.svelte';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import { portrait } from '@/pages/competitive/analysis-view';
+  import { wholeRaceSkillIds } from '../replay-callouts';
   import type { ReplayState } from '../replay-state.svelte';
 
   let {
@@ -26,6 +27,9 @@
     selected?: string;
   } = $props();
 
+  // Listed on their own, so the current skills are the ones that just activated.
+  const wholeRaceSkills = $derived(wholeRaceSkillIds(replay.capture, runner.index));
+
   const activeSkills = $derived.by(() => {
     const { diagnostic, time } = replay;
     return diagnostic?.activeSkillSpans
@@ -34,6 +38,7 @@
             diagnostic.activeSkillSpans
               .filter((s) => time >= s.startTime && time < s.endTime)
               .map((s) => s.skillId)
+              .filter((id) => !wholeRaceSkills.includes(id))
           )
         ].map((id) => ({
           params: [runner?.index ?? 0, id],
@@ -310,6 +315,28 @@
           {/each}
         </dd>
       </div>
+      {#if wholeRaceSkills.length}
+        <div class="status-cell skills-status">
+          <dt>All race</dt>
+          <dd
+            class="current-skills"
+            aria-label="Skills active for the whole race"
+          >
+            {#each wholeRaceSkills as skillId}
+              <span
+                class="active-skill"
+                title={(skillNames.get(skillId) ?? 'Skill ' + skillId) + ', active all race'}
+              >
+                <RaceSkill
+                  id={skillId}
+                  name={skillNames.get(skillId)}
+                  iconOnly
+                />
+              </span>
+            {/each}
+          </dd>
+        </div>
+      {/if}
     </dl>
   {/if}
 </section>

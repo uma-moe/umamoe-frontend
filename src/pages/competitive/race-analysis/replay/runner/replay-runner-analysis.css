@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 h2 {
   margin: 0;
@@ -11,7 +11,7 @@ h2 {
   font-weight: 650;
 }
 .report-heading > :global(.ui-button) {
-  min-height: 32px;
+  min-height: 28px;
   padding-inline: 12px;
   font-size: 11px;
 }
@@ -25,18 +25,57 @@ p {
 /* CM Data's build card, cut to what this race needs: the skill table below lists the learned skills. */
 .runner-card {
   min-width: 0;
+  container-type: inline-size;
 }
-.runner-card :global(.identity-line > .ui-button) {
+/* One joined control: the arrows step through the field and the gate in the middle opens the picker.
+   The card scope outranks the race page's own rule for small buttons. */
+.gate-switch {
+  display: inline-flex;
   flex: none;
+}
+.runner-card .gate-switch > :global(.ui-button.ui-button--sm) {
   min-height: 30px;
-  padding-inline: 6px;
+  padding-inline: 8px;
+  border-radius: 0;
   font-size: 11px;
+}
+.runner-card .gate-switch > :global(.ui-button.ui-button--sm:first-child) {
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+.runner-card .gate-switch > :global(.ui-button.ui-button--sm:last-child) {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.gate-switch > :global(.ui-button + .ui-button) {
+  margin-left: -1px;
+}
+.gate-switch > :global(.ui-button:hover),
+.gate-switch > :global(.ui-button:focus-visible) {
+  position: relative;
+  z-index: 1;
 }
 .gate-label {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   white-space: nowrap;
+}
+/* A wide card puts the stats beside the aptitudes, which keep the width their labels need. */
+@container (min-width: 660px) {
+  .runner-card :global(.build.compact > .build-content) {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    grid-template-rows: auto auto;
+    column-gap: 12px;
+    row-gap: 4px;
+  }
+  /* Both sections share the parent's rows, so their headings and their boxes start and end together. */
+  .runner-card :global(.build.compact > .build-content > :is(.stat-overview, .aptitude-overview)) {
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    align-items: center;
+  }
+  .runner-card :global(.build.compact .compact-aptitudes) {
+    align-self: stretch;
+  }
 }
 .runner-results small {
   margin-left: 4px;

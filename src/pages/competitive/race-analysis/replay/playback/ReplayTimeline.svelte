@@ -149,9 +149,6 @@
   >
     <div class="timeline-content">
       <div class="time-scrubber">
-        <div class="time-label timeline-label">
-          Time <span>m:ss</span>
-        </div>
         <div
           bind:clientWidth={plotWidth}
           class="time-axis"

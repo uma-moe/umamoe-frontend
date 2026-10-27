@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { MediaQuery } from 'svelte/reactivity';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import {
     raceMetricHelp,
@@ -34,14 +35,35 @@
     onseek: (time: number) => void;
     onselect: (index: number) => void;
   } = $props();
+
+  // Matches diagnostics-traces.css, where the decisions sit beside the reference and HP column.
+  const besideTraces = new MediaQuery('min-width: 1251px');
+
+  let traceHeight = $state(0);
+  let decisionPanel = $state<HTMLElement>();
+  let decisionTable = $state<HTMLDivElement>();
+
+  /** Beside the trace column the decisions scroll within its height instead of stopping at nine rows. */
+  const decisionHeight = $derived.by(() => {
+    if (!besideTraces.current || !decisionPanel || !decisionTable || !traceHeight) return undefined;
+
+    // The table starts below the decisions heading and ends above the card's padding; neither inset
+    // changes with the table's height.
+    const tableBottom = decisionTable.offsetTop + decisionTable.offsetHeight;
+    const bottomInset = decisionPanel.offsetHeight - tableBottom;
+    return Math.max(240, traceHeight - decisionTable.offsetTop - bottomInset);
+  });
 </script>
 
 <div class="detail-traces">
   <!-- The short reference lists leave room beside the decisions for the HP changes. -->
-  <div class="trace-column">
-    <section class="detail-panel reference-panel">
+  <div
+    class="trace-column"
+    bind:clientHeight={traceHeight}
+  >
+    <div class="reference-panel">
       {#each [{ title: 'Position keeping', spans: horse.positionKeepReferenceSpans ?? [], key: 'referenceHorseIndex' }, { title: 'Race pacemakers', spans: capture.detailed?.annotations.paceMakerSpans ?? [], key: 'horseIndex' }] as group}
-        <div class="reference-group">
+        <section class="detail-panel report-card reference-group">
           <Disclosure
             id={id + '-' + group.key}
             title={group.title}
@@ -90,11 +112,11 @@
               </p>
             {/if}
           </Disclosure>
-        </div>
+        </section>
       {/each}
-    </section>
+    </div>
     {#if horse.hpSkillApplications?.length}
-      <section class="detail-panel detail-table hp-application-details">
+      <section class="detail-panel report-card detail-table hp-application-details">
         <Disclosure
           id={id + '-hp-applications'}
           title="Recovery & HP changes"
@@ -182,7 +204,10 @@
       </section>
     {/if}
   </div>
-  <section class="detail-panel detail-table position-decisions">
+  <section
+    class="detail-panel report-card detail-table position-decisions"
+    bind:this={decisionPanel}
+  >
     <Disclosure
       id={id + '-position-decisions'}
       title="Position-keep decisions"
@@ -190,28 +215,32 @@
       compact
       open
     >
-      <DiagnosticsEventTable
-        value={horse.positionKeepDecisions ?? []}
-        title="Position-keep decisions"
-        columns={[
-          { key: 'time', label: 'Time (s)', numeric: true },
-          { key: 'attemptedMode', label: 'Mode' },
-          { key: 'outcome', label: 'Result' },
-          { key: 'referenceHorseIndex', label: 'Reference' },
-          { key: 'roll', label: 'Check / chance', numeric: true }
-        ]}
-        {capture}
-        {index}
-        {skillNames}
-        {onseek}
-        {onselect}
-      />
+      <div bind:this={decisionTable}>
+        <DiagnosticsEventTable
+          value={horse.positionKeepDecisions ?? []}
+          title="Position-keep decisions"
+          columns={[
+            { key: 'time', label: 'Time (s)', numeric: true },
+            { key: 'attemptedMode', label: 'Mode' },
+            { key: 'outcome', label: 'Result' },
+            { key: 'referenceHorseIndex', label: 'Reference' },
+            { key: 'roll', label: 'Check / chance', numeric: true }
+          ]}
+          {capture}
+          {index}
+          {skillNames}
+          maxHeight={decisionHeight}
+          {onseek}
+          {onselect}
+        />
+      </div>
     </Disclosure>
   </section>
 </div>
 
 <style>
   @import '../runner-reference.css';
+  @import '../report-card.css';
   @import './detail-panel.css';
   @import './diagnostics-traces.css';
   @import '../../../runners/skill-chip-cell.css';

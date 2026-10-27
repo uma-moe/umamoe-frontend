@@ -13,3 +13,7 @@
   font-size: 10px;
   font-weight: 400;
 }
+.section-heading > h3 > :global(small.caution) {
+  color: var(--accent-warning);
+  font-weight: 600;
+}

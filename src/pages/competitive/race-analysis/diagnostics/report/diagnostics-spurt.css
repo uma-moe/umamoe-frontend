@@ -9,16 +9,61 @@ p {
   color: var(--text-secondary);
   line-height: 1.5;
 }
-.decision-note.caution {
+.report-facts dd.caution {
   color: var(--accent-warning);
 }
-.report-facts small {
+/* The chart takes the height the report column has left beside the skills. */
+.spurt-report {
+  display: flex;
+  flex-direction: column;
+}
+.chart-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin-top: 4px;
   font-size: 10px;
-  font-weight: 400;
   color: var(--text-secondary);
 }
-.decision-note {
-  font-size: 11px;
+.chart-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.chart-legend > span::before {
+  content: '';
+  width: 12px;
+  height: 2px;
+  background: #7cc6a0;
+}
+.chart-legend > .need-key::before {
+  height: 0;
+  border-top: 2px dashed #e3b35f;
+  background: none;
+}
+.chart-legend > .delay-key::before {
+  height: 8px;
+  background: color-mix(in srgb, #e3b35f 30%, transparent);
+}
+.chart-legend small {
+  margin-left: auto;
+  font-size: 10px;
+}
+.spurt-chart {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 150px;
+}
+/* Out of flow, so the chart follows the space it is given instead of sizing the column. */
+.spurt-chart > :global(.lazy-surface) {
+  position: absolute;
+  inset: 0;
+}
+.spurt-chart :global(figure),
+.spurt-chart :global(.chart-host) {
+  height: 100%;
+  min-height: 0;
 }
 .spurt-calculation {
   margin-top: 4px;

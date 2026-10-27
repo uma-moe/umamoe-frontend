@@ -202,6 +202,7 @@ p {
 .snapshot-status {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  grid-auto-flow: column;
   align-items: center;
   gap: 12px;
   min-width: 0;

@@ -182,7 +182,9 @@ small {
 .result-stats :global(.stats) {
   display: contents;
 }
+/* As in CM Data's lineup rows, a four-digit box per value keeps each stat in the same column on every row. */
 .result-stats :global(.values dd) {
+  min-width: 4ch;
   font-size: 11px;
 }
 .result-stats :global(img) {

@@ -112,6 +112,12 @@ h2 {
 .results-panel {
   padding: 0;
 }
+/* The runner analysis is a row of cards of its own, so its section draws no panel behind them. */
+.runner-panel {
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
 .session-report,
 [data-report-section] {
   scroll-margin-top: 50px;
@@ -129,7 +135,8 @@ h2 {
   .analysis-section {
     padding: 12px;
   }
-  .results-panel {
+  .results-panel,
+  .runner-panel {
     padding: 0;
   }
   .session-report,

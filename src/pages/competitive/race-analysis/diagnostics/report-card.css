@@ -1,0 +1,13 @@
+/* Each part of the runner analysis is a card of its own, drawn like CM Data's panels. */
+.report-card {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--card-surface-border);
+  border-radius: var(--radius-lg);
+  background: var(--card-surface-bg);
+}
+@media (max-width: 600px) {
+  .report-card {
+    padding: 8px;
+  }
+}

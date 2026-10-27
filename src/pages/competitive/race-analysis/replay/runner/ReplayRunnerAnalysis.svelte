@@ -23,6 +23,7 @@
     simulation,
     onbuild,
     onpickrunner,
+    onswitchrunner,
     onreview,
     onretry,
     onseek,
@@ -35,6 +36,7 @@
     simulation: DetailedSimulation;
     onbuild: () => void;
     onpickrunner: () => void;
+    onswitchrunner: (index: number) => void;
     onreview: (event: BlockingSpan) => void;
     onretry?: () => void;
     onseek: (time: number) => void;
@@ -42,6 +44,19 @@
   } = $props();
 
   let allBlocking = $state(false);
+
+  let cardWidth = $state(0);
+
+  // The arrows step through the field in the order the runner picker lists it.
+  const fieldPosition = $derived(
+    replay.capture.runners.findIndex((entry) => entry.index === runner.index)
+  );
+  const previousRunner = $derived(
+    fieldPosition > 0 ? replay.capture.runners[fieldPosition - 1] : undefined
+  );
+  const nextRunner = $derived(
+    fieldPosition >= 0 ? replay.capture.runners[fieldPosition + 1] : undefined
+  );
 
   const visibleBlocking = $derived(
     allBlocking
@@ -54,6 +69,10 @@
       ...replay.capture.runners.flatMap((entry) => (entry.result ? [entry.result.finishTime] : []))
     )
   );
+
+  function showRunner(target: RaceRunner | undefined) {
+    if (target) onswitchrunner(target.index);
+  }
 </script>
 
 <header class="report-heading">
@@ -68,12 +87,17 @@
   </Button>
 </header>
 {#snippet runnerOverview()}
-  <div class="runner-card">
+  <!-- A card wide enough keeps the results beside the runner's name instead of on a row of their own. -->
+  <div
+    class="runner-card"
+    bind:clientWidth={cardWidth}
+  >
     <RunnerBuildDetails
       {runner}
       {skillNames}
       framed
       content="summary"
+      inlineMetrics={cardWidth >= 560}
       color={replay.teamColor(runner)}
       raceContext={{
         surface: course?.surface,
@@ -81,19 +105,41 @@
       }}
     >
       {#snippet headerActions()}
-        <Button
-          variant="secondary"
-          size="sm"
-          ariaLabel="Choose runner"
-          onclick={onpickrunner}
+        <div
+          class="gate-switch"
+          role="group"
+          aria-label="Runner"
         >
-          <span class="gate-label">
-            Gate {runner.index + 1}<Icon
-              name="chevron"
-              size={14}
-            />
-          </span>
-        </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="arrow-left"
+            ariaLabel="Previous runner"
+            disabled={!previousRunner}
+            onclick={() => showRunner(previousRunner)}
+          />
+          <Button
+            variant="secondary"
+            size="sm"
+            ariaLabel="Choose runner"
+            onclick={onpickrunner}
+          >
+            <span class="gate-label">
+              Gate {runner.index + 1}<Icon
+                name="chevron"
+                size={14}
+              />
+            </span>
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="arrow-right"
+            ariaLabel="Next runner"
+            disabled={!nextRunner}
+            onclick={() => showRunner(nextRunner)}
+          />
+        </div>
       {/snippet}
       {#snippet metrics()}
         {#if runner.result}

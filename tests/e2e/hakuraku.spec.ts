@@ -700,7 +700,7 @@ test('race field keeps nine runners visible when blocking and activation details
     await seek(1);
     await expect(field.locator('.field-hp strong')).toHaveText(Array(9).fill('99.9%'));
     await expect(page.locator('.skill-trigger')).toHaveCount(9);
-    await expect(page.locator('.blocked-by')).toBeVisible();
+    await expect(page.locator('.blocker-link')).toBeVisible();
     await expect(page.locator('.current-skills .active-skill')).toHaveCount(1);
     expect((await page.locator('.skill-feed').boundingBox())!.height).toBe(emptyFeed.height);
     expect((await page.locator('.runner-snapshot').boundingBox())!.height).toBe(
@@ -723,7 +723,7 @@ test('race field keeps nine runners visible when blocking and activation details
 
     await page.getByRole('button', { name: 'Following details', exact: true }).click();
     const details = page.getByRole('dialog', { name: 'Following details', exact: true });
-    await expect(details).toContainText('Front blocker');
+    await expect(details).toContainText('Blocked by Gate 2');
     await expect(details.locator('.snapshot-skill')).toHaveCount(1);
     expect((await page.locator('.runner-snapshot').boundingBox())!.height).toBe(
       emptySnapshot.height
@@ -732,7 +732,7 @@ test('race field keeps nine runners visible when blocking and activation details
     await toggleComparison();
     await page
       .getByRole('toolbar', { name: 'Playback and telemetry controls', exact: true })
-      .getByRole('button', { name: 'Finish', exact: true })
+      .getByRole('button', { name: 'Jump to finish', exact: true })
       .click();
 
     await expect(field.locator('.finished')).toHaveCount(9);
@@ -1409,11 +1409,12 @@ test('race uploads keep replay and session sections together, retaining valid fi
       .getByRole('radio', { name: 'Combined', exact: true })
   ).toHaveAttribute('aria-checked', 'true');
 
-  await expect(playback.locator('.signal-reading')).toHaveCount(3);
+  await expect(playback.locator('.signal-reading')).toHaveCount(4);
   expect(await playback.locator('.signal-reading>span').allTextContents()).toEqual([
     'Speed',
     'HP remaining',
-    'To leader'
+    'To leader',
+    'Acceleration'
   ]);
   expect(
     await playback.locator('.signal-reading').evaluateAll((readings) =>
@@ -1486,7 +1487,7 @@ test('race uploads keep replay and session sections together, retaining valid fi
     .getByRole('radio', { name: 'Combined', exact: true })
     .click();
 
-  await expect(playback.locator('.signal-reading')).toHaveCount(3);
+  await expect(playback.locator('.signal-reading')).toHaveCount(4);
   await playback.getByRole('slider', { name: 'Replay time', exact: true }).evaluate((e) => {
     (e as HTMLInputElement).value = '60';
     e.dispatchEvent(new Event('input', { bubbles: true }));
@@ -2229,7 +2230,7 @@ test('race analysis is one continuous report with preserved selection and compac
     0
   );
 
-  await expect(results.getByRole('columnheader')).toHaveCount(7);
+  await expect(results.getByRole('columnheader')).toHaveCount(8);
   await expect(
     results.getByRole('columnheader', { name: 'Race modes (s)', exact: true })
   ).toHaveCount(0);
@@ -3831,7 +3832,8 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   await expect(activity.locator('.axis')).toHaveCount(0);
   await expect(page.locator('.time-ticks')).toHaveCount(1);
   await expect(page.locator('.time-ticks')).toContainText('0:00');
-  await expect(page.locator('.time-label')).toHaveText('Time m:ss');
+  // The readings beside the chart start level with the time axis; no row heading pushes them down.
+  await expect(page.locator('.time-label')).toHaveCount(0);
   expect(
     await page.locator('.playback').evaluate((element) => {
       const axis = element.querySelector('.time-axis')!.getBoundingClientRect();
@@ -3849,13 +3851,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
         }
       );
 
-      return (
-        aligned &&
-        Math.abs(
-          element.querySelector('.time-label')!.getBoundingClientRect().left -
-            element.querySelector('.timeline-labels')!.getBoundingClientRect().left
-        ) < 1
-      );
+      return aligned;
     })
   ).toBe(true);
 
@@ -3879,9 +3875,9 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   await expect(page.locator('.view-cone')).toBeVisible();
   await expect(page.locator('.block-connection')).toBeVisible();
   await openRaceSection(page, 'Runner analysis');
-  await page.locator('.blocked-by').click();
+  await page.locator('.blocker-link').click();
   await expect(page.locator('.runner-card')).toContainText('Blocker Suzuka');
-  await expect(page.locator('.blocked-by')).toHaveCount(0);
+  await expect(page.locator('.blocker-link')).toHaveCount(0);
   await page.getByRole('radio', { name: 'Target speed', exact: true }).click();
   await expect(page.getByRole('radio', { name: 'Target speed', exact: true })).toHaveAttribute(
     'aria-checked',
@@ -3895,7 +3891,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
     0
   );
 
-  await expect(results.getByRole('columnheader')).toHaveCount(10);
+  await expect(results.getByRole('columnheader')).toHaveCount(11);
   await expect(results).toContainText('3.25');
   await expect(results).toContainText('1.25');
   await expect(results).toContainText('Downhill');
@@ -3961,7 +3957,8 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
     // CM Data's build card sits beside the outcome tiles and shares their top edge.
     expect(Math.abs(card.y - outcomes.y)).toBeLessThan(2);
     expect(card.x + card.width).toBeLessThanOrEqual(outcomes.x);
-    expect((await details.locator('.runner-overview').boundingBox())!.height).toBeLessThan(320);
+    // Stats and aptitudes share a row in the card, so the overview stays short.
+    expect((await details.locator('.runner-overview').boundingBox())!.height).toBeLessThan(200);
   }
 
   await analysis
@@ -4051,6 +4048,10 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
     name: 'Last-spurt calculation',
     exact: true
   });
+
+  const spurtReport = details.getByRole('region', { name: 'Last-spurt decision', exact: true });
+  await expect(spurtReport).toContainText('Delayed and slower');
+  await expect(spurtReport.locator('.spurt-chart')).toBeVisible();
 
   await spurtCalculation.click();
   await expect(
@@ -4375,15 +4376,19 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
     references.getByRole('button', { name: 'Race pacemakers', exact: true })
   ).toHaveAttribute('aria-expanded', 'true');
 
+  const hpPanel = details.locator('.hp-application-details');
   const referenceBounds = (await references.boundingBox())!,
-    decisionBounds = (await decisionPanel.boundingBox())!;
+    decisionBounds = (await decisionPanel.boundingBox())!,
+    hpBounds = (await hpPanel.boundingBox())!;
+
+  // The HP changes fill the column under the short reference lists instead of a row of their own.
+  expect(Math.abs(hpBounds.x - referenceBounds.x)).toBeLessThan(1);
+  expect(hpBounds.y).toBeGreaterThanOrEqual(referenceBounds.y + referenceBounds.height - 1);
 
   if (info.project.name === 'chromium') {
     expect(Math.abs(referenceBounds.y - decisionBounds.y)).toBeLessThan(1);
-    expect(Math.abs(referenceBounds.height - decisionBounds.height)).toBeLessThan(1);
     expect(decisionBounds.x).toBeGreaterThanOrEqual(referenceBounds.x + referenceBounds.width);
-  } else
-    expect(decisionBounds.y).toBeGreaterThanOrEqual(referenceBounds.y + referenceBounds.height);
+  } else expect(decisionBounds.y).toBeGreaterThanOrEqual(hpBounds.y + hpBounds.height);
 
   await expect(
     details.getByRole('button', { name: 'Recovery & HP changes', exact: true })
@@ -4396,15 +4401,11 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   await expect(applications.locator('.application-change small')).toHaveCount(1);
   await expect(applications).toContainText('0.0%');
   await expect(applications).toContainText('≈');
-  await expect(
-    details.getByRole('button', { name: 'Rushing details', exact: true })
-  ).toHaveAttribute('aria-expanded', 'true');
-
-  await expect(details.locator('.rushing-summary')).toContainText('No rushing');
-  await expect(details.locator('.rushing-summary')).toContainText('Check 99%');
-  await expect(details.locator('.rushing-summary')).toContainText('Rushing chance 11.34%');
-  await expect(details.locator('.rushing-summary')).toContainText('Not scheduled');
-  await expect(details.locator('.rushing-summary')).not.toContainText('-1');
+  const rushing = details.getByRole('region', { name: 'Rushing', exact: true });
+  await expect(rushing).toContainText('No rushing · check failed');
+  await expect(rushing).toContainText('99.00% ≥ 11.34%');
+  await expect(rushing).toContainText('Not scheduled');
+  await expect(rushing).not.toContainText('-1');
   await expect(
     details.getByRole('button', { name: 'Position-keep decisions', exact: true })
   ).toHaveAttribute('aria-expanded', 'true');

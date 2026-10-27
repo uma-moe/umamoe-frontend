@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   formatPercentage,
   formatRaceTime,
+  moodIcon,
+  moodName,
   ordinalPlace,
   runningStyleName,
   trackDetailName
@@ -46,5 +48,19 @@ describe('shared race display semantics', () => {
       '23rd',
       '111th'
     ]);
+  });
+
+  it('names the game mood from its motivation value', () => {
+    const moods = [1, 2, 3, 4, 5].map(moodName);
+
+    expect(moods).toEqual(['Awful', 'Bad', 'Normal', 'Good', 'Great']);
+    expect(moodName('5')).toBe('Great');
+    expect(moodIcon('Great')).toBe('/game-assets/textures/great.webp');
+  });
+
+  it('leaves an unrecorded or out-of-range mood unnamed', () => {
+    const moods = [undefined, 0, 6, 2.5, 'unknown'].map(moodName);
+
+    expect(moods).toEqual([undefined, undefined, undefined, undefined, undefined]);
   });
 });

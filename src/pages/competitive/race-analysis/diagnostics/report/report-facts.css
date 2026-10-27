@@ -18,10 +18,24 @@
   color: var(--text-secondary);
   line-height: 1.2;
 }
+/* Values end at one edge and their units sit in a column after it, so figures with and without a unit
+   line up. */
 .report-facts dd {
+  display: grid;
+  grid-template-columns: auto 24px;
+  align-items: baseline;
+  column-gap: 4px;
   margin: 0;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.report-facts dd > :global(small) {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  text-align: left;
 }

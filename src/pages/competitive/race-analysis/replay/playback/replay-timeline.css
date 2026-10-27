@@ -197,28 +197,3 @@
     padding-top: 4px;
   }
 }
-.time-label {
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 7px;
-  line-height: 16px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-}
-.time-label span {
-  font-size: 10px;
-  font-weight: 400;
-  color: var(--text-secondary);
-}
-@media (max-width: 700px) {
-  .time-label {
-    position: sticky;
-    left: 0;
-    z-index: 5;
-    background: linear-gradient(to right, var(--surface-1) calc(100% - 16px), transparent);
-  }
-}
