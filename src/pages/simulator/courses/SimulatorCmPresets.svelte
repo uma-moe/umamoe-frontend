@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Badge from '@/components/Badge.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import Button from '@/components/controls/Button.svelte';
   import TextField from '@/components/controls/TextField.svelte';
@@ -20,6 +21,7 @@
     simulatorCourseData,
     simulatorSession
   } from '../simulator-session.svelte';
+  import DialogStatus from '../shell/DialogStatus.svelte';
   import SimulatorCoursePreview from './SimulatorCoursePreview.svelte';
   import {
     cmPreset,
@@ -77,6 +79,14 @@
   );
 
   const chosen = $derived(presets.find((item) => item.event.id === selected?.id));
+  /** The course the meeting loads: its only layout, or the one picked from several. */
+  const chosenCourseId = $derived.by(() => {
+    const candidates = chosen?.preset.candidates ?? [];
+    if (candidates.length === 1) return String(candidates[0]!.course_id);
+
+    return courseId;
+  });
+  const needsLayout = $derived(Boolean(chosen && chosen.preset.candidates.length > 1 && !courseId));
 
   $effect(() => {
     if (!open) return;
@@ -87,7 +97,12 @@
     void timelineRepository
       .load()
       .then((data) => {
-        if (active) meetings = numberMeetings(data.events);
+        if (!active) return;
+        meetings = numberMeetings(data.events);
+        // Open on the meeting that is on now or comes next, so one click loads it.
+        const now = Date.now();
+        selected = meetings.find((meeting) => meetingTiming(meeting.event, now) !== 'past')?.event;
+        courseId = '';
       })
       .catch((reason) => {
         if (active) error = reason instanceof Error ? reason.message : 'Could not load CM presets.';
@@ -128,13 +143,12 @@
 
   function choose(event: TimelineRecord) {
     selected = event;
-    const preset = presets.find((item) => item.event.id === event.id)!.preset;
-    courseId = preset.candidates.length === 1 ? String(preset.candidates[0]!.course_id) : '';
+    courseId = '';
   }
 
   function apply() {
-    if (!chosen) return;
-    simulatorSession.courseId = courseId;
+    if (!chosen || needsLayout) return;
+    simulatorSession.courseId = chosenCourseId;
     simulatorSession.sourceCourseId = '';
     simulatorSession.raceInstanceId = 0;
     if (chosen.preset.season) simulatorSession.season = chosen.preset.season;
@@ -142,7 +156,7 @@
     if (chosen.preset.ground) simulatorSession.ground = chosen.preset.ground;
     // Only what still needs doing; the dates already say in the list whether they are estimates.
     simulatorSession.importNotice = (
-      (!courseId ? 'Select the CM course before running. ' : '') +
+      (!chosenCourseId ? 'Select the CM course before running. ' : '') +
       (!chosen.preset.ground ? 'Review the ground condition before running.' : '')
     ).trim();
     open = false;
@@ -171,119 +185,167 @@
   {/if}
 {/snippet}
 
+{#snippet badge(item: PresetItem)}
+  {#if item.timing === 'live'}
+    <Badge tone="accent">Now</Badge>
+  {:else if item.event.id === nextId}
+    <Badge tone="accent">Next</Badge>
+  {/if}
+{/snippet}
+
+{#snippet layoutPicker(item: PresetItem)}
+  {#if item.preset.candidates.length > 1}
+    <SelectField
+      id="cm-preset-course"
+      label="Course layout"
+      bind:value={courseId}
+      options={item.preset.candidates.map((course) => ({
+        value: String(course.course_id),
+        label: describeCourse(course)
+      }))}
+    />
+  {:else if !item.preset.candidates.length}
+    <p class="hint">
+      The published description doesn’t name an exact course. The preset loads the conditions it
+      has; choose the course on the form afterwards.
+    </p>
+  {/if}
+{/snippet}
+
 {#snippet presetRow(item: PresetItem)}
-  <button
-    class="preset"
-    class:past={item.timing === 'past'}
-    class:selected={selected?.id === item.event.id}
-    aria-pressed={selected?.id === item.event.id}
-    onclick={() => choose(item.event)}
-  >
-    <span class="number">CM {item.number}</span>
-    <span
-      class="outline"
-      aria-hidden="true"
+  {@const isSelected = selected?.id === item.event.id}
+  <li class="preset-item">
+    <button
+      type="button"
+      class="preset"
+      class:past={item.timing === 'past'}
+      class:selected={isSelected}
+      aria-pressed={isSelected}
+      onclick={() => choose(item.event)}
     >
-      {#if item.course}
-        <SimulatorCoursePreview
-          course={item.course}
-          compact
-        />
-      {/if}
-    </span>
-    <span class="copy">
-      <span class="title-line">
-        <strong>{item.event.title}</strong>
-        {#if item.timing === 'live'}
-          <span class="badge">Now</span>
-        {:else if item.event.id === nextId}
-          <span class="badge">Next</span>
-        {/if}
-      </span>
+      <span class="number">CM {item.number}</span>
       <span
-        class="course-line"
-        class:unknown={!item.course}
+        class="outline"
+        aria-hidden="true"
       >
-        {courseLine(item)}
-      </span>
-    </span>
-    <span class="when">
-      <span class="date">
-        {item.event.dateLabel}{#if item.event.predicted}
-          <span class="estimated">estimated</span>
+        {#if item.course}
+          <SimulatorCoursePreview
+            course={item.course}
+            compact
+          />
         {/if}
       </span>
-      {@render conditions(item.preset)}
-    </span>
-  </button>
+      <span class="copy">
+        <span class="title-line">
+          <strong>{item.event.title}</strong>
+          {@render badge(item)}
+        </span>
+        <span
+          class="course-line"
+          class:unknown={!item.course}
+        >
+          {courseLine(item)}
+        </span>
+      </span>
+      <span class="when">
+        <span class="date">
+          {item.event.dateLabel}{#if item.event.predicted}
+            <span class="estimated">estimated</span>
+          {/if}
+        </span>
+        {@render conditions(item.preset)}
+      </span>
+    </button>
+    <!-- A meeting raced on one of several layouts asks which, right under it. -->
+    {#if isSelected && item.preset.candidates.length !== 1}
+      <div class="inline-layout">
+        {@render layoutPicker(item)}
+      </div>
+    {/if}
+  </li>
 {/snippet}
 
 <Dialog
   bind:open
   title="Champions Meeting presets"
-  maxWidth="820px"
-  maxHeight="90dvh"
+  description="Load a meeting’s course and race conditions into the setup."
+  icon="trophy"
+  maxWidth="640px"
+  maxHeight="92dvh"
+  height="min(760px, 92dvh)"
+  mobileFill
+  compact
+  mobileMaxHeight="96dvh"
+  contentPadding="0"
+  mobileContentPadding="0"
 >
-  <TextField
-    id="cm-preset-search"
-    label="Find a meeting"
-    hideLabel
-    placeholder="Search CM number, meeting, track or date…"
-    bind:value={query}
-  />
-  {#if loading}
-    <Spinner
-      centered
-      label="Loading meeting schedule…"
-    />
-  {:else if error}
-    <p role="alert">{error}</p>
-  {:else if !matches.length}
-    <p class="empty">No meeting matches “{query}”.</p>
-  {:else}
-    {#each [{ label: 'Upcoming', items: upcoming }, { label: 'Past meetings', items: past }] as group (group.label)}
-      {#if group.items.length}
-        <section
-          class="group"
-          aria-label={group.label}
+  <div class="cm-presets">
+    <div class="schedule">
+      <div class="search">
+        <TextField
+          id="cm-preset-search"
+          label="Find a meeting"
+          hideLabel
+          prefixIcon="search"
+          placeholder="Search CM number, meeting, track or date…"
+          bind:value={query}
+        />
+      </div>
+      {#if loading}
+        <Spinner
+          centered
+          label="Loading meeting schedule…"
+        />
+      {:else if error}
+        <p
+          class="state bad"
+          role="alert"
         >
-          <h3>{group.label}</h3>
-          <div class="presets">
-            {#each group.items as item (item.event.id)}
-              {@render presetRow(item)}
-            {/each}
-          </div>
-        </section>
+          {error}
+        </p>
+      {:else if !matches.length}
+        <p class="state">No meeting matches “{query}”.</p>
+      {:else}
+        {#each [{ label: 'Upcoming', items: upcoming }, { label: 'Past meetings', items: past }] as group (group.label)}
+          {#if group.items.length}
+            <section
+              class="group"
+              aria-label={group.label}
+            >
+              <h3>{group.label}</h3>
+              <ul class="presets">
+                {#each group.items as item (item.event.id)}
+                  {@render presetRow(item)}
+                {/each}
+              </ul>
+            </section>
+          {/if}
+        {/each}
       {/if}
-    {/each}
-  {/if}
-  {#if chosen}
-    {#if chosen.preset.candidates.length > 1}
-      <SelectField
-        id="cm-preset-course"
-        label="Course layout"
-        bind:value={courseId}
-        options={chosen.preset.candidates.map((course) => ({
-          value: String(course.course_id),
-          label: describeCourse(course)
-        }))}
-      />
-    {/if}
-    {#if !chosen.preset.candidates.length}
-      <p class="hint">
-        An exact course could not be resolved from the published description. The preset loads its
-        available conditions; choose the course manually.
-      </p>
-    {/if}
-  {/if}
+    </div>
+  </div>
   {#snippet actions()}
+    <DialogStatus>
+      {#if chosen}
+        <strong>CM {chosen.number} · {chosen.event.title}</strong>
+        {#if needsLayout}
+          <span class="blocked">Choose the course layout.</span>
+        {:else}
+          <span>{courseLine(chosen)}</span>
+        {/if}
+      {:else}
+        <span>Choose a meeting.</span>
+      {/if}
+    </DialogStatus>
     <Button
       variant="secondary"
       onclick={() => (open = false)}
     >
       Cancel
-    </Button><Button
-      disabled={!chosen || (chosen.preset.candidates.length > 1 && !courseId)}
+    </Button>
+    <Button
+      icon="check"
+      disabled={!chosen || needsLayout}
       onclick={apply}
     >
       Use meeting

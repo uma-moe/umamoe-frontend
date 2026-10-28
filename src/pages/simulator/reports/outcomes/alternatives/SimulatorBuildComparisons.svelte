@@ -1,24 +1,61 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import Button from '@/components/controls/Button.svelte';
+  import IconButton from '@/components/controls/IconButton.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
-  import SimulatorUmaEditor from '../../../setup/runner/SimulatorUmaEditor.svelte';
+  import SimulatorUmaEditor from '../../../setup/runner/editor/SimulatorUmaEditor.svelte';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
+  import ReportRunnerPicker from '../../ReportRunnerPicker.svelte';
+  import RunnerStatline from '../../RunnerStatline.svelte';
+  import RunnerRaceAptitudes from '../../RunnerRaceAptitudes.svelte';
+  import SimulatorRunnerFace from '../../SimulatorRunnerFace.svelte';
   import { buildFieldRunners, type MonteCarloInput } from '../../../requests/race-sim-request';
   import { simulatorRepository, type MonteCarloResult } from '../../../simulator-repository';
   import { compareOutcomes, reportNumber as n } from '../../simulation-report';
+  import {
+    finishSecondsToLengths,
+    runnerOutcome,
+    signedLengths,
+    signedSeconds,
+    type MarginUnit
+  } from '../../simulation-comparison';
+  import { buildChanges, isSameBuild } from './build-changes';
   import type { SimulatorUma } from '../../../simulator-uma';
+  import type { RaceCourse } from '@/lib/game-data/racing/courses';
+
+  interface Alternative {
+    /** The runner whose build this replaces. */
+    source: number;
+    uma: SimulatorUma;
+    outcome?: ReturnType<typeof compareOutcomes>;
+  }
+
   let {
     input,
     result,
     umas,
-    source
-  }: { input: MonteCarloInput; result: MonteCarloResult; umas: SimulatorUma[]; source: number } =
-    $props();
+    sources,
+    course,
+    distance,
+    unit = 'lengths',
+    source = $bindable()
+  }: {
+    input: MonteCarloInput;
+    result: MonteCarloResult;
+    umas: SimulatorUma[];
+    /** The runners whose builds can be tried, as tabs. */
+    sources: number[];
+    /** The course the batch ran on: it decides which aptitudes count. */
+    course?: RaceCourse;
+    distance: number;
+    unit?: MarginUnit;
+    /** The runner the report follows; picking a tab here follows her everywhere. */
+    source?: number;
+  } = $props();
 
-  let alternatives = $state<
-      { source: number; uma: SimulatorUma; outcome?: ReturnType<typeof compareOutcomes> }[]
-    >([]),
+  const MAX_ALTERNATIVES = 3;
+
+  let alternatives = $state<Alternative[]>([]),
     editing = $state<SimulatorUma>(),
     editingIndex = $state(-1),
     editingSource = 0,
@@ -28,30 +65,69 @@
 
   let request: AbortController | undefined;
   onDestroy(() => request?.abort());
-  const rows = $derived(alternatives.filter((row) => row.source === source));
-  function aptitudes(uma: SimulatorUma) {
-    const grids = [
-      ['groundAptitudes', ['Turf', 'Dirt']],
-      ['distanceAptitudes', ['Sprint', 'Mile', 'Medium', 'Long']],
-      ['styleAptitudes', ['Front runner', 'Pace chaser', 'Late surger', 'End closer']]
-    ] as const;
 
-    return grids
-      .flatMap(([key, names]) =>
-        uma.trainee[key].flatMap((grade, i) =>
-          grade === umas[source]!.trainee[key][i]
-            ? []
-            : [names[i] + ': ' + umas[source]!.trainee[key][i] + ' → ' + grade]
-        )
-      )
-      .join(' · ');
+  const active = $derived(source !== undefined && sources.includes(source) ? source : sources[0]!);
+  const current = $derived(umas[active]!);
+  const baseline = $derived(runnerOutcome(result, active));
+  const rows = $derived(alternatives.filter((row) => row.source === active));
+
+  // Only a clear gain earns the tag: with a single compared build there is nothing to rank.
+  const best = $derived.by(() => {
+    const compared = rows.flatMap((row) => (row.outcome ? [{ row, mean: row.outcome.mean }] : []));
+    if (compared.length < 2) return undefined;
+
+    const top = compared.reduce((a, b) => (b.mean > a.mean ? b : a));
+    return top.mean > 0 ? top.row : undefined;
+  });
+
+  const alternativeBadge = (runner: number) => {
+    const count = alternatives.filter((row) => row.source === runner).length;
+    return count
+      ? { badge: String(count), title: count + ' alternative build' + (count === 1 ? '' : 's') }
+      : undefined;
+  };
+
+  const pct = (value: number | null | undefined) =>
+    value == null ? '—' : n(value, value >= 10 || value === 0 ? 0 : 1) + '%';
+
+  /** A percentage-point change; ± marks no change, as the report's margins do. */
+  function points(value: number) {
+    const rounded = Number(value.toFixed(1));
+    if (rounded === 0) return '±0 pp';
+    return (rounded > 0 ? '+' : '−') + Math.abs(rounded).toFixed(1) + ' pp';
+  }
+
+  const tone = (value: number | undefined) => {
+    if (value === undefined || Math.abs(value) < 0.05) return '';
+    return value > 0 ? 'good' : 'bad';
+  };
+
+  /** Time gained against the current build, in the report's leading unit. */
+  function gained(seconds: number, digits = 2) {
+    if (unit === 'seconds') return signedSeconds(seconds, digits + 1);
+    return signedLengths(finishSecondsToLengths(result, active, seconds, distance), digits);
   }
 
   function add() {
-    editingSource = source;
-    editing = structuredClone($state.snapshot(umas[source]!));
-    editing.name += ' · alternative ' + (rows.length + 1);
+    editingSource = active;
+    editing = structuredClone($state.snapshot(current));
+    editing.name = nextAlternativeName();
     editingIndex = -1;
+    open = true;
+  }
+
+  // The runner's tab already names her, so alternatives only need telling apart.
+  function nextAlternativeName() {
+    const names = new Set(rows.map((row) => row.uma.name));
+    let number = rows.length + 1;
+    while (names.has('Alternative ' + number)) number++;
+    return 'Alternative ' + number;
+  }
+
+  function edit(row: Alternative, index: number) {
+    editing = row.uma;
+    editingIndex = index;
+    editingSource = row.source;
     open = true;
   }
 
@@ -67,7 +143,7 @@
     if (!rows.length || busy) return;
     busy = true;
     error = '';
-    const snapshot = source,
+    const snapshot = active,
       variants = [...rows];
 
     request?.abort();
@@ -105,17 +181,17 @@
 
 <ChartFrame
   id="simulation-build-comparison"
-  title={'Try a different build · ' + umas[source]!.name}
+  title={'Try a different build · ' + current.name}
   slim
   description={'Change ' +
-    umas[source]!.name +
-    '’s stats, aptitudes, style or skills and rerun the exact same races: opponents, gates, conditions and seeds stay fixed, so the difference comes from the build. Time gained is how much earlier the alternative finishes on average; wins and full spurt are the change in percentage points. Native random draws can diverge once a build changes, so small differences are noise. Pick another runner in the field to try builds for her.'}
+    current.name +
+    '’s stats, aptitudes, style or skills and rerun the exact same races: opponents, gates, conditions and seeds stay fixed, so the difference comes from the build. Each row shows the stats and the three aptitudes this race applies, with changes from the current build highlighted. Gained is how far ahead of her current build the alternative finishes on average, with its 95% range; wins and full spurt show the change in percentage points and the current and alternative rate. Native random draws can diverge once a build changes, so small differences are noise.'}
 >
   {#snippet actions()}<Button
       size="sm"
       variant="secondary"
       icon="add"
-      disabled={rows.length >= 3 || busy}
+      disabled={rows.length >= MAX_ALTERNATIVES || busy}
       onclick={add}
     >
       Add alternative
@@ -132,268 +208,249 @@
       >
         Cancel
       </Button>{/if}{/snippet}
-  {#if error}<p
+  {#if sources.length > 1}
+    <ReportRunnerPicker
+      label="Runner for alternative builds"
+      {sources}
+      {active}
+      {umas}
+      summary={alternativeBadge}
+      onselect={(runner) => (source = runner)}
+    />
+  {/if}
+  {#if error}
+    <p
       role="alert"
       class="note"
     >
       {error}
-    </p>{/if}
-  {#if !rows.length}<p class="note">
-      No alternatives yet. Add one to copy {umas[source]!.name}’s build, change it, and compare it
-      on the same {result.runs} races.
     </p>
-  {:else}
-    {#each alternatives as row, i}{#if row.source === source}
-        {@const stats = (['speed', 'stamina', 'power', 'guts', 'wisdom'] as const).filter(
-          (k) => row.uma.trainee[k] !== umas[source]!.trainee[k]
-        )}
-        {@const added = row.uma.skills.filter(
-          (s) =>
-            !umas[source]!.skills.some((old) => old.skillId === s.skillId && old.level === s.level)
-        )}
-        {@const removed = umas[source]!.skills.filter(
-          (s) => !row.uma.skills.some((next) => next.skillId === s.skillId)
-        )}
-        <div class="build-row">
-          <div class="change">
-            <strong>{row.uma.name}</strong>
-            <div class="chips">
-              {#each stats as k}<span class="stat">
-                  {k[0]!.toUpperCase() + k.slice(1)}
-                  {umas[source]!.trainee[k]} →
-                  <b>{row.uma.trainee[k]}</b>
-                </span>{/each}
-              {#if row.uma.trainee.runningStyle !== umas[source]!.trainee.runningStyle}<span
-                  class="stat"
-                >
-                  Style → <b>{row.uma.trainee.runningStyle}</b>
-                </span>{/if}
-              {#if aptitudes(row.uma)}<span class="stat">{aptitudes(row.uma)}</span>{/if}
-              {#each added as skill}<span
-                  class="skill added"
-                  title="Added or changed"
-                >
-                  <b>+</b>
-                  <RaceSkill id={skill.skillId} />
-                </span>{/each}
-              {#each removed as skill}<span
-                  class="skill removed"
-                  title="Removed"
-                >
-                  <b>−</b>
-                  <RaceSkill id={skill.skillId} />
-                </span>{/each}
-              {#if !stats.length && !added.length && !removed.length && !aptitudes(row.uma) && row.uma.trainee.runningStyle === umas[source]!.trainee.runningStyle}<span
-                  class="stat"
-                >
-                  Same build
-                </span>{/if}
-            </div>
-          </div>
-          <dl class="tiles">
-            {#if row.outcome}
-              <div
-                class:good={row.outcome.mean > 0}
-                class:bad={row.outcome.mean < 0}
+  {/if}
+  <section
+    class="current-build"
+    aria-label={current.name + '’s current build'}
+  >
+    <span class="who">
+      <SimulatorRunnerFace
+        cardId={current.cardId}
+        size={30}
+      />
+      <span>
+        <small>Current build</small>
+        <strong>{current.name}</strong>
+      </span>
+    </span>
+    <RunnerStatline
+      uma={current}
+      aligned
+    />
+    <RunnerRaceAptitudes
+      uma={current}
+      {course}
+    />
+    <span class="muted">{current.skills.length} skills</span>
+    <dl class="baseline">
+      <div>
+        <dt>Wins</dt>
+        <dd>{pct(baseline.winRate)}</dd>
+      </div>
+      <div>
+        <dt>Full spurt</dt>
+        <dd>{pct(baseline.fullSpurtRate)}</dd>
+      </div>
+    </dl>
+  </section>
+  {#if rows.length}
+    <table aria-label={'Alternative builds for ' + current.name}>
+      <thead>
+        <tr>
+          <th
+            scope="col"
+            class="name"
+          >
+            Build
+          </th>
+          <th
+            scope="col"
+            class="stats"
+          >
+            Stats
+          </th>
+          <th
+            scope="col"
+            class="aptitudes"
+          >
+            Aptitudes
+          </th>
+          <th
+            scope="col"
+            class="skills"
+          >
+            Skills
+          </th>
+          <th
+            scope="col"
+            class="metric"
+            title="How far ahead of the current build the alternative finishes on average"
+          >
+            Gained
+          </th>
+          <th
+            scope="col"
+            class="metric"
+          >
+            Wins
+          </th>
+          <th
+            scope="col"
+            class="metric"
+          >
+            Full spurt
+          </th>
+          <th
+            scope="col"
+            class="row-actions"
+          >
+            <span class="sr-only">Actions</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each alternatives as row, index (row.uma.id + ':' + index)}
+          {#if row.source === active}
+            {@const changes = buildChanges(current, row.uma, course)}
+            <tr>
+              <th
+                scope="row"
+                class="name"
               >
-                <dt>Time gained</dt>
-                <dd>
-                  <strong>{(row.outcome.mean > 0 ? '+' : '') + n(row.outcome.mean, 3)} s</strong>
+                <span class="label">
+                  {row.uma.name}
+                  {#if row === best}
+                    <span class="best">Best</span>
+                  {/if}
+                </span>
+              </th>
+              <td class="stats">
+                <RunnerStatline
+                  uma={row.uma}
+                  baseline={current}
+                  aligned
+                />
+              </td>
+              <td class="aptitudes">
+                <RunnerRaceAptitudes
+                  uma={row.uma}
+                  {course}
+                  baseline={current}
+                />
+              </td>
+              <td class="skills">
+                {#if changes.added.length || changes.removed.length}
+                  <span class="skill-changes">
+                    {#each changes.added as skill (skill.skillId)}
+                      <span
+                        class="skill added"
+                        title="Added or changed"
+                      >
+                        <b>+</b>
+                        <RaceSkill id={skill.skillId} />
+                      </span>
+                    {/each}
+                    {#each changes.removed as skill (skill.skillId)}
+                      <span
+                        class="skill removed"
+                        title="Removed"
+                      >
+                        <b>−</b>
+                        <RaceSkill id={skill.skillId} />
+                      </span>
+                    {/each}
+                  </span>
+                {:else}
+                  <span class="muted">
+                    {isSameBuild(changes) ? 'Same build' : 'Same skills'}
+                  </span>
+                {/if}
+              </td>
+              {#if row.outcome}
+                {@const outcome = row.outcome}
+                <td
+                  class={'metric ' + tone(outcome.mean)}
+                  data-label="Gained"
+                >
+                  <strong>{gained(outcome.mean)}</strong>
                   <small>
-                    {row.outcome.interval
-                      ? '95%: ' + row.outcome.interval.map((v) => n(v, 3)).join(' to ')
-                      : row.outcome.count + ' races'}
+                    {outcome.interval
+                      ? gained(outcome.interval[0]) + ' to ' + gained(outcome.interval[1])
+                      : outcome.count + ' races'}
                   </small>
-                </dd>
-              </div>
-              <div
-                class:good={row.outcome.winChange > 0}
-                class:bad={row.outcome.winChange < 0}
-              >
-                <dt>Wins</dt>
-                <dd>
-                  <strong>
-                    {(row.outcome.winChange > 0 ? '+' : '') + n(row.outcome.winChange, 1)} pp
-                  </strong>
-                </dd>
-              </div>
-              <div
-                class:good={(row.outcome.spurtChange ?? 0) > 0}
-                class:bad={(row.outcome.spurtChange ?? 0) < 0}
-              >
-                <dt>Full spurt</dt>
-                <dd>
-                  <strong>
-                    {row.outcome.spurtChange == null
-                      ? '—'
-                      : (row.outcome.spurtChange > 0 ? '+' : '') +
-                        n(row.outcome.spurtChange, 1) +
-                        ' pp'}
-                  </strong>
-                </dd>
-              </div>
-            {:else}<div class="pending">
-                <dt>Result</dt>
-                <dd>
-                  <strong>Not compared yet</strong>
-                  <small>Press Compare</small>
-                </dd>
-              </div>{/if}
-          </dl>
-          <div class="row-actions">
-            <Button
-              size="sm"
-              variant="ghost"
-              icon="edit"
-              ariaLabel={'Edit ' + row.uma.name}
-              disabled={busy}
-              onclick={() => {
-                editing = row.uma;
-                editingIndex = i;
-                editingSource = row.source;
-                open = true;
-              }}
-            /><Button
-              size="sm"
-              variant="ghost"
-              icon="trash"
-              ariaLabel={'Remove ' + row.uma.name}
-              disabled={busy}
-              onclick={() => (alternatives = alternatives.filter((_, at) => at !== i))}
-            />
-          </div>
-        </div>
-      {/if}{/each}
+                </td>
+                <td
+                  class={'metric ' + tone(outcome.winChange)}
+                  data-label="Wins"
+                >
+                  <strong>{points(outcome.winChange)}</strong>
+                  <small>{pct(outcome.wins.before)} → {pct(outcome.wins.after)}</small>
+                </td>
+                <td
+                  class={'metric ' + tone(outcome.spurtChange)}
+                  data-label="Full spurt"
+                >
+                  {#if outcome.fullSpurt && outcome.spurtChange !== undefined}
+                    <strong>{points(outcome.spurtChange)}</strong>
+                    <small>{pct(outcome.fullSpurt.before)} → {pct(outcome.fullSpurt.after)}</small>
+                  {:else}
+                    <span class="muted">—</span>
+                  {/if}
+                </td>
+              {:else}
+                <td
+                  class="metric pending"
+                  colspan="3"
+                >
+                  <span class="muted">Not compared yet · press Compare</span>
+                </td>
+              {/if}
+              <td class="row-actions">
+                <div class="actions">
+                  <IconButton
+                    size="sm"
+                    icon="edit"
+                    label={'Edit ' + row.uma.name}
+                    disabled={busy}
+                    onclick={() => edit(row, index)}
+                  />
+                  <IconButton
+                    size="sm"
+                    icon="trash"
+                    label={'Remove ' + row.uma.name}
+                    disabled={busy}
+                    onclick={() => (alternatives = alternatives.filter((_, at) => at !== index))}
+                  />
+                </div>
+              </td>
+            </tr>
+          {/if}
+        {/each}
+      </tbody>
+    </table>
+  {:else}
+    <p class="note">
+      Add an alternative to copy {current.name}’s build, change it, and compare it on the same {result.runs}
+      races.
+    </p>
   {/if}
 </ChartFrame>
-{#if editing}<SimulatorUmaEditor
+{#if editing}
+  <SimulatorUmaEditor
     uma={editing}
+    {course}
     bind:open
     onsave={save}
-  />{/if}
+  />
+{/if}
 
 <style>
-  .note {
-    margin: 2px 0;
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-  .build-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    gap: 8px 16px;
-    align-items: center;
-    border-top: 1px solid var(--border-subtle);
-    padding: 8px 0;
-    font-size: 12px;
-  }
-  .build-row:first-of-type {
-    border-top: 0;
-  }
-  .change {
-    display: grid;
-    gap: 4px;
-    min-width: 0;
-  }
-  .change strong {
-    font-weight: 650;
-  }
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
-  }
-  .stat {
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: var(--surface-2, transparent);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-secondary);
-    white-space: nowrap;
-  }
-  .stat b {
-    color: var(--text-primary);
-    font-weight: 600;
-  }
-  .skill {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-  }
-  .skill b {
-    font-size: 12px;
-    width: 10px;
-    text-align: center;
-  }
-  .added b {
-    color: var(--accent-success);
-  }
-  .removed b {
-    color: var(--accent-error);
-  }
-  .removed :global(.skill-chip) {
-    opacity: 0.65;
-    text-decoration: line-through;
-  }
-  .tiles {
-    display: grid;
-    grid-template-columns: repeat(3, 96px);
-    gap: 4px;
-    margin: 0;
-  }
-  .tiles > div {
-    display: grid;
-    gap: 1px;
-    padding: 5px 6px;
-    border: 1px solid var(--border-subtle);
-    border-radius: 6px;
-    text-align: center;
-  }
-  .tiles > div.pending {
-    grid-column: 1/-1;
-  }
-  .tiles dt {
-    font-size: 9px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-  }
-  .tiles dd {
-    display: grid;
-    margin: 0;
-    line-height: 1.15;
-  }
-  .tiles strong {
-    font-size: 13px;
-    font-weight: 650;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-  .tiles small {
-    font-size: 9px;
-    color: var(--text-secondary);
-    white-space: nowrap;
-  }
-  .good strong {
-    color: var(--accent-success);
-  }
-  .bad strong {
-    color: var(--accent-error);
-  }
-  .row-actions {
-    display: flex;
-    gap: 2px;
-  }
-  @media (max-width: 760px) {
-    .build-row {
-      grid-template-columns: minmax(0, 1fr) auto;
-    }
-    .tiles {
-      grid-column: 1/-1;
-      grid-row: 2;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
+  @import './build-comparisons.css';
 </style>

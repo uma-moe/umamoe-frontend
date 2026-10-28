@@ -342,17 +342,16 @@ h3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
-/* A phone, one card as wide as the field: the same parts stacked beside her portrait, the buttons on a line of
-   their own. */
+/* A phone, one card as wide as the field: her name and the buttons on the first line, her stats and then her SP and
+   skills under them, beside her portrait. */
 @container setup-field (max-width:429px) {
   .runner {
-    grid-template-columns: 48px minmax(0, 1fr);
+    grid-template-columns: 48px minmax(0, 1fr) auto;
     grid-template-areas:
-      'art identity'
-      'art stats'
-      'art meta'
-      'art tools';
-    gap: 4px 10px;
+      'art identity tools'
+      'art stats stats'
+      'art meta meta';
+    gap: 3px 8px;
   }
   .runner > :global(.art) {
     align-self: start;
@@ -360,24 +359,27 @@ h3 {
   .identity {
     flex-direction: column;
     gap: 0;
+    overflow: hidden;
   }
   h3 {
     max-width: 100%;
   }
-  .runner-meta,
-  .row-tools {
+  /* Her outfit and style give way beside the buttons rather than run under them. */
+  .build {
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .build > span {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .runner-meta {
     justify-self: start;
   }
   .row-tools {
-    margin-top: 2px;
-  }
-  /* The buttons have a line of their own here, so Edit keeps its name. */
-  .row-tools .edit-control :global(.ui-button) {
-    width: auto;
-    padding-inline: 10px 12px;
-  }
-  .row-tools .edit-control :global(.ui-button > span) {
-    display: inline;
+    align-self: start;
   }
   /* The portrait sits at the top of a tall cell, so the dot follows it there. */
   .team-control {
@@ -387,15 +389,11 @@ h3 {
 }
 @media (max-width: 767px) {
   .row-tools {
-    --tool: 44px;
-  }
-  .row-tools :global(.ui-button svg) {
-    width: 17px;
-    height: 17px;
+    --tool: var(--control-height);
   }
   .team-control {
-    --dot: 16px;
-    --hit: 36px;
+    --dot: 14px;
+    --hit: 28px;
   }
   /* A larger hit area for the skill list, without making its line taller. */
   .skill-summary :global(.inspect > .trigger) {
@@ -404,12 +402,12 @@ h3 {
     margin-block: -8px;
   }
   .skill-list-heading {
-    padding-right: 64px;
+    padding-right: 48px;
   }
   .skill-list-heading :global(.ui-button),
   .skill-summary :global(.popover > .close) {
-    width: 44px;
-    min-height: 44px;
-    height: 44px;
+    width: var(--control-height);
+    min-height: var(--control-height);
+    height: var(--control-height);
   }
 }

@@ -1,170 +1,148 @@
 <script lang="ts">
-  import Button from '@/components/controls/Button.svelte';
   import TextField from '@/components/controls/TextField.svelte';
+  import Banner from '@/components/feedback/Banner.svelte';
+  import Disclosure from '@/components/overlays/Disclosure.svelte';
+  import SimSection from '../../../shell/SimSection.svelte';
   import type { TeamSearch } from './team-search.svelte';
 
+  /**
+   * How long the search runs: races per team, and what that comes to across every team. The run itself starts from the
+   * dialog's footer, where its progress shows; failures and errors from a run are listed here.
+   */
   interface Props {
     search: TeamSearch;
     samplesFieldId: string;
     samples: string;
+    teams: number;
     races: number;
-    blocked: string;
-    onsearch: () => void;
   }
 
-  let { search, samplesFieldId, samples = $bindable(), races, blocked, onsearch }: Props = $props();
+  let { search, samplesFieldId, samples = $bindable(), teams, races }: Props = $props();
+
+  const failedRaces = $derived(
+    search.failures + (search.failures === 1 ? ' race failed' : ' races failed')
+  );
+
+  /** Beyond this the search takes minutes rather than seconds. */
+  const SLOW_RACES = 200000;
 </script>
 
-<div class="run">
-  <div class="samples">
-    <TextField
-      id={samplesFieldId}
-      label="Races per team"
-      type="number"
-      min={1}
-      max={1000}
-      bind:value={samples}
-      disabled={search.busy}
-    />
+<SimSection
+  number={3}
+  title="Races"
+>
+  <div class="run">
+    <div class="samples">
+      <TextField
+        id={samplesFieldId}
+        label="Races per team"
+        type="number"
+        min={1}
+        max={1000}
+        bind:value={samples}
+        disabled={search.busy}
+      />
+    </div>
+    <p class="cost">
+      × {teams.toLocaleString('en-US')}
+      {teams === 1 ? 'team' : 'teams'} =
+      <strong>{races.toLocaleString('en-US')}</strong>
+      races
+      {#if races > SLOW_RACES}
+        <span class="warn">That takes a while; pick fewer Veterans or races.</span>
+      {/if}
+    </p>
   </div>
-  <p class="cost">
-    <strong>{races.toLocaleString('en-US')}</strong>
-    races
-    {#if races > 200000}<span class="warn">
-        · that takes a while; pick fewer Veterans or races
-      </span>{/if}
-  </p>
-  {#if search.busy}
-    <Button
-      variant="secondary"
-      onclick={() => (search.stop = true)}
-      disabled={search.stop}
+  {#if search.error}
+    <div
+      class="search-error"
+      role="alert"
     >
-      {search.stop ? 'Stopping…' : 'Stop'}
-    </Button>
-  {:else}
-    <Button
-      icon="chart"
-      disabled={!!blocked}
-      onclick={onsearch}
-    >
-      Find the best team
-    </Button>
+      <Banner
+        title="Team search stopped"
+        tone="danger"
+        reportable={false}
+      >
+        <p>{search.error}</p>
+      </Banner>
+    </div>
   {/if}
-</div>
-{#if blocked && !search.busy}<p class="blocked">{blocked}</p>{/if}
-{#if search.busy || search.completed}
-  <div
-    class="progress"
-    role="status"
-  >
-    <progress
-      max={search.total || 1}
-      value={search.completed}
-    ></progress>
-    <span>
-      {search.completed.toLocaleString('en-US')} of {search.total.toLocaleString('en-US')} races{search.busy
-        ? ''
-        : search.completed < search.total
-          ? ' · stopped'
-          : ' · done'}
-    </span>
-  </div>
-{/if}
-{#if search.error}<p
-    class="note bad"
-    role="alert"
-  >
-    {search.error}
-  </p>{/if}
-{#if search.failures}
-  <details class="failures">
-    <summary>
-      {search.failures}
-      {search.failures === 1 ? 'race' : 'races'} failed; those teams are left out of the ranking
-    </summary>
-    {#each search.failedMessages as message}<p>{message}</p>{/each}
-  </details>
-{/if}
+  {#if search.failures}
+    <div class="failures">
+      <Disclosure
+        id="{samplesFieldId}-failures"
+        compact
+        icon="warning"
+        title={failedRaces}
+        description="Those teams are left out of the ranking."
+      >
+        {#each search.failedMessages as message}
+          <p>{message}</p>
+        {/each}
+      </Disclosure>
+    </div>
+  {/if}
+</SimSection>
 
 <style>
+  .search-error {
+    margin-top: 8px;
+  }
+
   .run {
-    --control-height: 38px;
+    --control-height: 36px;
     display: flex;
     align-items: end;
-    gap: 10px;
+    gap: 12px;
   }
   .samples {
-    width: 120px;
+    width: 128px;
   }
   .samples :global(label) {
     font-size: 12px;
   }
   .cost {
-    flex: 1;
-    margin: 0 0 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 6px;
+    margin: 0 0 9px;
     font-size: 12px;
     color: var(--text-secondary);
-  }
-  .cost strong {
-    color: var(--text-primary);
-    font-size: 14px;
     font-variant-numeric: tabular-nums;
   }
+  .cost strong {
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--text-primary);
+  }
   .warn {
+    flex-basis: 100%;
     color: var(--accent-warning);
   }
-  .run :global(.ui-button) {
-    min-height: 38px;
+  .run {
+    --control-height: 32px;
+    gap: 8px;
   }
-  .blocked {
-    margin: -4px 0 0;
-    font-size: 12px;
-    color: var(--accent-warning);
-    text-align: right;
+  .samples {
+    width: 104px;
   }
-  .progress {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 12px;
-    color: var(--text-secondary);
+  .samples :global(label) {
+    font-size: 11px;
   }
-  .progress progress {
-    flex: 1;
-    height: 8px;
-    accent-color: var(--accent-primary);
+  .cost {
+    margin-bottom: 7px;
+    font-size: 11px;
   }
-  .note {
-    margin: 0;
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--text-secondary);
-  }
-  .note.bad {
-    color: var(--accent-error);
+  .cost strong {
+    font-size: 13px;
   }
   .failures {
-    font-size: 12px;
     color: var(--accent-warning);
-  }
-  .failures summary {
-    cursor: pointer;
   }
   .failures p {
     margin: 4px 0 0;
+    font-size: 12px;
     color: var(--text-secondary);
-  }
-  @media (max-width: 560px) {
-    .run {
-      flex-wrap: wrap;
-    }
-    .cost {
-      margin-bottom: 12px;
-    }
-    .run :global(.ui-button) {
-      width: 100%;
-      min-height: 44px;
-    }
   }
 </style>

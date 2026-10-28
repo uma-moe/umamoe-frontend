@@ -9,7 +9,7 @@
   import { hpCalculator } from './hp-calculator.svelte';
 
   const SPURT_OPTIONS = [
-    { value: 'false', label: 'As HP allows', title: 'Spurt as fast as her HP allows' },
+    { value: 'false', label: 'HP allows', title: 'Spurt as fast as her HP allows' },
     { value: 'true', label: 'Top speed', title: 'Always spurt at top speed' }
   ];
 </script>

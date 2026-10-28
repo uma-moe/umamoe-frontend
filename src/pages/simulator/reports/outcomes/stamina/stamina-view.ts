@@ -1,5 +1,3 @@
-import { runningStyleName } from '@/lib/race/replay/race-display';
-import { RUNNING_STYLES } from '../../../setup/trainee';
 import type { MonteCarloInput } from '../../../requests/race-sim-request';
 import type { SimulatorUma } from '../../../simulator-uma';
 
@@ -20,9 +18,6 @@ export function staminaInput(
       } as Pick<MonteCarloInput['runners'][number], 'stats' | 'running_style' | 'motivation'>)
     : undefined;
 }
-
-export const runnerStyle = (uma: SimulatorUma) =>
-  runningStyleName(RUNNING_STYLES.findIndex((value) => value === uma.trainee.runningStyle) + 1);
 
 export const whole = (value: number | undefined) =>
   value == null || !Number.isFinite(value) ? '—' : Math.round(value).toLocaleString('en-US');

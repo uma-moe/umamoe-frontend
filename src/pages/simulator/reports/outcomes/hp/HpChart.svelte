@@ -2,6 +2,7 @@
   import type { PlanMarker } from '../../../setup/hp/hp-plan';
   import type { StaminaDistribution } from '../../../simulator-repository';
   import { RACE_PHASES } from '../stamina-report';
+  import { finalSpurtSection, FINAL_SPURT_HELP } from '@/lib/race/final-spurt';
 
   /**
    * Her HP across the course over every race: the middle line is the median race at each point, the shaded band the
@@ -31,6 +32,7 @@
   } = $props();
 
   let width = $state(340);
+  const spurt = $derived(finalSpurtSection(distance));
   const TOP = 14;
   const bottom = $derived(height - 2);
   const metres = (value: number) => Math.round(value).toLocaleString('en-US') + ' m';
@@ -85,12 +87,23 @@
     >
       {phase.name}
     </span>{/each}
+  <i
+    class="spurt-window"
+    style:left={(spurt.start / distance) * 100 + '%'}
+    title={FINAL_SPURT_HELP}
+  ></i>
 {/snippet}
 
 <figure
   class="hp-chart"
   class:stale={stale && !!band}
 >
+  <div
+    class="spurt-key"
+    title={FINAL_SPURT_HELP}
+  >
+    Final spurt window from {metres(spurt.start)}
+  </div>
   <!-- Before a result there is no line to draw, so the race phases and where things happen show. -->
   {#if band}
     <div
@@ -245,6 +258,21 @@
 </figure>
 
 <style>
+  .spurt-key {
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    text-align: right;
+  }
+  .spurt-window {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    border-left: 1px dashed var(--accent-warning);
+    border-top: 2px solid var(--accent-warning);
+    pointer-events: none;
+  }
   .hp-chart {
     display: grid;
     gap: 3px;

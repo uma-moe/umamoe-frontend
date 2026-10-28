@@ -146,32 +146,36 @@ export function compareOutcomes(
   );
 
   const s = simulatorSampleSummary(gains)!;
-  const win = (r: MonteCarloResult) =>
-    (r.finish_order.filter((row) => row[0] === source).length / r.runs) * 100;
+  // The alternative may run only a prefix of the baseline's seeds, so both rates count the same races.
+  const runs = alternative.runs;
+  const winRate = (orders: number[][]) =>
+    (orders.slice(0, runs).filter((row) => row[0] === source).length / runs) * 100;
 
-  const spurt = (r: MonteCarloResult) =>
-    r.last_spurt_decisions?.filter((row) => row[source] === 1).length;
+  const fullSpurtRate = (decisions: number[][] | undefined) =>
+    decisions
+      ? (decisions.slice(0, runs).filter((row) => row[source] === 1).length / runs) * 100
+      : undefined;
+
+  const wins = { before: winRate(baseline.finish_order), after: winRate(alternative.finish_order) };
+  const spurtBefore = fullSpurtRate(baseline.last_spurt_decisions),
+    spurtAfter = fullSpurtRate(alternative.last_spurt_decisions);
+
+  const fullSpurt =
+    spurtBefore === undefined || spurtAfter === undefined
+      ? undefined
+      : { before: spurtBefore, after: spurtAfter };
 
   const margin = s.count > 1 ? (1.96 * s.sd) / Math.sqrt(s.count) : undefined;
+  const interval: [number, number] | undefined =
+    margin === undefined ? undefined : [s.mean - margin, s.mean + margin];
+
   return {
     ...s,
-    interval: margin === undefined ? undefined : [s.mean - margin, s.mean + margin],
-    winChange:
-      win(alternative) -
-      win({
-        ...baseline,
-        runs: alternative.runs,
-        finish_order: baseline.finish_order.slice(0, alternative.runs)
-      }),
-    spurtChange:
-      spurt(alternative) == null || spurt(baseline) == null
-        ? undefined
-        : ((spurt(alternative)! -
-            baseline
-              .last_spurt_decisions!.slice(0, alternative.runs)
-              .filter((row) => row[source] === 1).length) /
-            alternative.runs) *
-          100
+    interval,
+    wins,
+    fullSpurt,
+    winChange: wins.after - wins.before,
+    spurtChange: fullSpurt ? fullSpurt.after - fullSpurt.before : undefined
   };
 }
 

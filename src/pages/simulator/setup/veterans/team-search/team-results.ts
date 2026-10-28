@@ -1,4 +1,4 @@
-import { winRateInterval } from '../../../simulator-results';
+import { winRateInterval } from '@/lib/race/win-rate-interval';
 import type { SimulatorUma } from '../../../simulator-uma';
 
 export type TeamResult = {

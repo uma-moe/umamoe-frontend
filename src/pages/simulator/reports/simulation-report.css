@@ -137,8 +137,13 @@
 }
 .simulation-report .sample-tools {
   display: flex;
+  align-items: center;
   gap: 6px;
   margin-left: auto;
+}
+.simulation-report .simulation-status {
+  color: var(--accent-primary);
+  font-size: 11px;
 }
 .simulation-report pre {
   font-size: 10px;

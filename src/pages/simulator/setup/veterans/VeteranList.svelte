@@ -1,8 +1,10 @@
 <script lang="ts">
+  import Button from '@/components/controls/Button.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import AptitudeGrade, { type AptitudeGradeValue } from '@/components/game/AptitudeGrade.svelte';
+  import EmptyState from '@/components/feedback/EmptyState.svelte';
   import Icon from '@/components/Icon.svelte';
   import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import { getRankInfoFromLabel } from '@/lib/rank';
@@ -137,65 +139,70 @@
   class="veteran-list"
   class:compact
 >
-  <div class="tools">
-    <div class="search">
-      <TextField
-        id="{uid}-search"
-        label="Search Veterans"
-        hideLabel
-        prefixIcon="search"
-        placeholder="Search by name…"
-        bind:value={query}
+  <!-- Search, filters and the column heads stay in view while the list scrolls. -->
+  <div class="controls">
+    <div class="tools">
+      <div class="search">
+        <TextField
+          id="{uid}-search"
+          label="Search Veterans"
+          hideLabel
+          prefixIcon="search"
+          placeholder="Search by name…"
+          bind:value={query}
+        />
+      </div>
+      <SegmentedControl
+        label="Running style"
+        compact
+        options={STYLES}
+        bind:value={style}
       />
+      <div class="sort">
+        <SelectFieldSlim
+          id="{uid}-sort"
+          label="Sort Veterans"
+          hideLabel
+          options={SORTS}
+          bind:value={sort}
+        />
+      </div>
     </div>
-    <SegmentedControl
-      label="Running style"
-      compact
-      options={STYLES}
-      bind:value={style}
-    />
-    <div class="sort">
-      <SelectFieldSlim
-        id="{uid}-sort"
-        label="Sort Veterans"
-        hideLabel
-        options={SORTS}
-        bind:value={sort}
-      />
-    </div>
-  </div>
 
-  <div class="head">
-    <span class="count">
-      {shown.length === entries.length
-        ? entries.length + (entries.length === 1 ? ' Veteran' : ' Veterans')
-        : shown.length + ' of ' + entries.length}
-      {#if mode === 'multi' && shown.length}<button
-          type="button"
-          class="tick-all"
-          onclick={tickShown}
+    <div class="head">
+      <span class="count">
+        {shown.length === entries.length
+          ? entries.length + (entries.length === 1 ? ' Veteran' : ' Veterans')
+          : shown.length + ' of ' + entries.length}
+        {#if mode === 'multi' && shown.length}
+          <Button
+            variant="ghost"
+            size="sm"
+            onclick={tickShown}
+          >
+            {allShown ? 'Untick all' : 'Tick all'}
+          </Button>
+        {/if}
+        {#if mode === 'multi' && max !== undefined && max < entries.length}<span
+            class="room"
+            class:full
+          >
+            {selected.length} of {max} ticked
+          </span>{/if}
+      </span>
+      {#if !compact}<span
+          class="stats-head"
+          aria-hidden="true"
         >
-          {allShown ? 'Untick all' : 'Tick all'}
-        </button>{/if}
-      {#if mode === 'multi' && max !== undefined && max < entries.length}<span
-          class="room"
-          class:full
-        >
-          {selected.length} of {max} ticked
+          Stats
         </span>{/if}
-    </span>
-    {#if !compact}<span
-        class="stats-head"
+      <span
+        class="fit-head"
         aria-hidden="true"
       >
-        Stats
-      </span>{/if}
-    <span
-      class="fit-head"
-      aria-hidden="true"
-    >
-      {course ? 'On this course' : 'Aptitudes'}
-    </span>
+        {course ? 'On this course' : 'Aptitudes'}
+      </span>
+    </div>
   </div>
 
   {#if shown.length}
@@ -237,18 +244,30 @@
       {/each}
     </ul>
     {#if shown.length > limit}
-      <button
-        type="button"
-        class="more"
-        onclick={() => (limit += 200)}
-      >
-        Show {Math.min(200, shown.length - limit)} more of {shown.length - limit}
-      </button>
+      <span class="more">
+        <Button
+          variant="ghost"
+          size="sm"
+          onclick={() => (limit += 200)}
+        >
+          Show {Math.min(200, shown.length - limit)} more of {shown.length - limit}
+        </Button>
+      </span>
     {/if}
+  {:else if entries.length}
+    <EmptyState
+      compact
+      icon="search"
+      title="No matching Veterans"
+      description="No Veterans match these filters."
+    />
   {:else}
-    <p class="empty">
-      {entries.length ? 'No Veterans match.' : 'No Veterans with trained stats in this collection.'}
-    </p>
+    <EmptyState
+      compact
+      icon="veterans"
+      title="No Veterans to race"
+      description="No Veterans with trained stats in this collection."
+    />
   {/if}
 </div>
 

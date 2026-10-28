@@ -97,14 +97,14 @@
             <span>seed {result.seeds[sample.index]}</span>
             <small>The replay clock counts simulation seconds.</small>
             <span class="sample-tools">
-              {#if sample.capture && !sample.capture.detailed}<Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={sample.loading}
-                  onclick={() => sample.detailed()}
+              {#if sample.capture && sample.simulation.status === 'running'}
+                <span
+                  class="simulation-status"
+                  role="status"
                 >
-                  Full replay diagnostics
-                </Button>{/if}<Button
+                  Loading detailed simulation…
+                </span>
+              {/if}<Button
                 variant="ghost"
                 size="sm"
                 onclick={() => sample.close()}
@@ -120,6 +120,8 @@
             </p>{:else if sample.capture && sample.Replay}<sample.Replay
               capture={sample.capture}
               suspended={suspended || !sample.open}
+              simulation={sample.simulation}
+              onretrysimulation={() => sample.retrySimulation()}
             />{/if}
         </div>{/if}
     </SimulatorRaceBrowser>

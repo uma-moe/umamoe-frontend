@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
-  import { buildOptimizeRequest, MAX_CANDIDATES, MAX_FINALISTS } from './requests/optimize-request';
+  import { buildOptimizeRequest } from './requests/optimize-request';
   import { simulatorRepository, type OptimizeResult } from './simulator-repository';
   import { buildRaces, fieldWhere } from './setup/build/build-races';
   import RunnerInput from './setup/runner/RunnerInput.svelte';
@@ -16,11 +16,17 @@
   import {
     BUILD_CODE_VERSION,
     buildCodeRunner,
-    type BuildCode
+    type BuildCode,
+    type BuildCodePage
   } from './setup/build/code/build-code';
-  import { buildSearch, saveBuildSearch } from './setup/build/build-search.svelte';
+  import {
+    buildSearch,
+    restoreBuildSearch,
+    saveBuildSearch
+  } from './setup/build/build-search.svelte';
   import { offerPurchases, type PricedOffer } from './setup/build/skill-offers';
   import BuildResult from './reports/outcomes/build/BuildResult.svelte';
+  import { theorizedResult } from './reports/outcomes/build/build-result';
   import SimulatorShell from './shell/SimulatorShell.svelte';
   import {
     selectedRaceInstanceId,
@@ -46,6 +52,8 @@
 
   let error = $state('');
   let busy = $state(false);
+  /** The Setup row has room for her SP and fans, so the skills on offer leave them out. */
+  let budgetInSetup = $state(false);
   let resultPanel = $state<HTMLElement>();
   let codeOpen = $state(false);
 
@@ -87,18 +95,6 @@
     offerPurchases(buildSearch.offers, owned, skillLookup, buildSearch.fastLearner)
   );
 
-  const candidates = $derived(
-    Math.min(MAX_CANDIDATES, Math.max(1, Math.round(formNumber(buildSearch.candidates, 256))))
-  );
-
-  const finalists = $derived(
-    Math.min(
-      MAX_FINALISTS,
-      candidates,
-      Math.max(1, Math.round(formNumber(buildSearch.finalists, 5)))
-    )
-  );
-
   const invalidSeed = $derived(
     !/^-?\d+$/.test(String(buildSearch.seed)) || Math.abs(Number(buildSearch.seed)) > 2147483647
   );
@@ -127,6 +123,11 @@
 
     return '';
   });
+
+  /** The result as the theory valued it, its builds the most worth first: the pick, in the result and the run bar. */
+  const theorized = $derived(
+    run ? theorizedResult({ result: run.result, offers: run.offers }) : undefined
+  );
 
   // What a search would plan with, said in the run bar beside its button.
   const planSetup = $derived(
@@ -175,8 +176,16 @@
         buildSearch.offers
           .filter((offer) => offer.hint > 0)
           .map((offer) => [String(offer.skillId), offer.hint])
-      )
+      ),
+      page: { tab: 'build', setup: $state.snapshot(buildSearch) }
     };
+  }
+
+  /** Loads the whole Skill planner from a code copied from it. */
+  function restoreTab(page: BuildCodePage): string | void {
+    if (page.tab !== 'build') return 'This code was copied from another tab.';
+
+    Object.assign(buildSearch, restoreBuildSearch(page.setup));
   }
 
   async function send(): Promise<void> {
@@ -217,8 +226,6 @@
         locked: offers.locked,
         scenarios: races.scenarios,
         seed: formNumber(buildSearch.seed),
-        maxCandidates: candidates,
-        finalists,
         debuffs: {
           count: Number(buildSearch.debuffs.count),
           percent: Number(buildSearch.debuffs.percent)
@@ -282,11 +289,13 @@
       <BuildGoal
         {teamTrials}
         {invalidSeed}
+        bind:budgetHere={budgetInSetup}
       />
       <SkillOffers
         number={3}
         {skillLookup}
         {owned}
+        showBudget={!budgetInSetup}
       />
     </div>
     <BuildSearchBar
@@ -294,6 +303,7 @@
       {busy}
       {error}
       result={run?.result}
+      pick={theorized?.builds[0]}
       {current}
       setup={planSetup}
       onsend={send}
@@ -307,6 +317,7 @@
       <h2 class="sr-only">Skill planner result</h2>
       <BuildResult
         result={run?.result}
+        {theorized}
         raw={run?.raw}
         offers={run?.offers}
         budget={run?.budget}
@@ -324,6 +335,7 @@
   bind:open={codeOpen}
   target="build"
   current={currentCode}
+  onrestore={restoreTab}
   onimport={({ umas, offers, goal }) => {
     buildSearch.uma = umas[0]!;
     buildSearch.offers = offers;
@@ -359,12 +371,14 @@
     min-width: 0;
     scroll-margin-top: calc(var(--app-header-height, 64px) + 12px);
   }
+  /* A phone: the design system's denser controls, as on the database filters, and a tighter panel. */
   @media (max-width: 767px) {
     .build-search {
-      --setup-control-height: 44px;
+      --setup-control-height: var(--control-height);
+      gap: 10px;
     }
     .build-form {
-      padding: 14px;
+      padding: 10px 12px;
     }
   }
 </style>

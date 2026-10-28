@@ -68,22 +68,18 @@ describe('optimize request', () => {
     expect(Object.hasOwn(buildOptimizeRequest({ ...form, locked: [] }), 'locked')).toBe(false);
   });
 
-  it('clamps the budget and candidate counts', () => {
+  it('clamps the budget and the target index', () => {
     const body = buildOptimizeRequest({
       mode: 'cm',
       targetSourceInputIndex: -3,
       spBudget: -50,
       purchases: [],
       scenarios: [scenario()],
-      seed: 5,
-      maxCandidates: 9999,
-      finalists: 0
+      seed: 5
     });
 
     expect(body.sp_budget).toBe(0);
     expect(body.target_source_input_index).toBe(0);
-    expect(body.max_candidates).toBe(1024);
-    expect(body.finalists).toBe(1);
   });
 
   it('omits optional keys instead of sending null', () => {
@@ -100,22 +96,6 @@ describe('optimize request', () => {
     expect(Object.hasOwn(body, 'finalists')).toBe(false);
     expect(Object.hasOwn(body.purchases[0] ?? {}, 'excludes')).toBe(false);
     expect(Object.hasOwn(body.scenarios[0] ?? {}, 'score_context')).toBe(false);
-  });
-
-  it('keeps the finalist count inside the candidate count', () => {
-    const body = buildOptimizeRequest({
-      mode: 'cm',
-      targetSourceInputIndex: 0,
-      spBudget: 500,
-      purchases: [],
-      scenarios: [scenario()],
-      seed: 5,
-      maxCandidates: 3,
-      finalists: 10
-    });
-
-    expect(body.max_candidates).toBe(3);
-    expect(body.finalists).toBe(3);
   });
 
   it('maps score context for team trials and defaults a zero weight', () => {

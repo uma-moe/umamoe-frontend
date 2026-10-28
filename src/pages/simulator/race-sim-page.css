@@ -62,39 +62,6 @@
 .race-form :global(section.profile.compact .outline) {
   padding-block: 8px;
 }
-/* Run: what will run, and the buttons; it sticks to the bottom of the screen while the form scrolls. */
-.run-bar {
-  position: sticky;
-  bottom: 12px;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 8px 8px 16px;
-  background: var(--surface-1);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 0.28);
-}
-.run-summary {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 2px 8px;
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  font-size: 13px;
-}
-.run-summary span {
-  color: var(--text-secondary);
-}
-.run-bar :global(.ui-button) {
-  height: 40px;
-  min-height: 40px;
-  font-size: 13px;
-  border-radius: var(--radius-sm);
-}
 @container race-form (max-width:560px) {
   .race-fields {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -104,33 +71,20 @@
   }
 }
 @media (max-width: 767px) {
+  /* A phone: the design system's denser controls, as on the database filters, and a tighter panel. */
   .race-workspace {
-    --setup-panel-padding: 14px;
-    --setup-control-height: 44px;
+    --setup-panel-padding: 12px;
+    --setup-control-height: var(--control-height);
   }
   .race-form {
-    padding: 14px;
+    padding: 10px 12px;
   }
   .seed-setting {
-    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-columns: minmax(0, 1fr) var(--setup-control-height);
   }
   .seed-setting > :global(.ui-button) {
-    width: 44px;
-  }
-  .run-bar {
-    flex-wrap: wrap;
-    padding: 8px;
-  }
-  .run-summary {
-    flex-basis: 100%;
-    padding: 2px 6px 4px;
-  }
-  .run-bar > :global(.ui-button) {
-    flex: 1;
-    height: 44px;
-    min-height: 44px;
-    padding-inline: 8px;
-    font-size: 12px;
+    width: var(--setup-control-height);
+    height: var(--setup-control-height);
   }
 }
 .step-title {
@@ -178,10 +132,7 @@
 }
 .import-notice {
   max-width: 100ch;
-  margin: 12px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-secondary);
+  margin-top: 12px;
 }
 .race-main[hidden] {
   display: none;

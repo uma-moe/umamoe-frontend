@@ -69,6 +69,8 @@ export interface StaminaRunner {
   delay?: number;
   /** Full spurt speed, m/s. */
   fullSpeed?: number;
+  /** Mean target speed of the spurts she actually ran, m/s: below the full spurt speed when HP was short. */
+  spurtSpeed?: number;
   finishHp?: Summary;
   finishPercent?: Summary;
   exhausted?: { rate: number; at?: number };
@@ -339,6 +341,7 @@ export function staminaReport(
     fullSpeed: mean(
       diagnostics?.map((row) => row.full_spurt_target_speed_mps).filter(finite) ?? []
     ),
+    spurtSpeed: mean(diagnostics?.map((row) => row.spurt_target_speed_mps).filter(finite) ?? []),
     finishHp: simulatorSampleSummary(finish),
     finishPercent: simulatorSampleSummary(finishPercent),
     exhausted,

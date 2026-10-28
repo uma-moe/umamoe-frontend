@@ -1,5 +1,9 @@
 import type { SkillData } from '@/lib/game-data/skills/skills';
-import type { OptimizeResult } from '../../simulator-repository';
+import {
+  lengthsText,
+  winRateText,
+  type TheorizedBuild
+} from '../../reports/outcomes/build/build-result';
 
 /** A form value as a number, or the fallback when it is empty or not a number. */
 export const formNumber = (value: string | number | null | undefined, fallback = 0) => {
@@ -7,26 +11,18 @@ export const formNumber = (value: string | number | null | undefined, fallback =
   return value === '' || value == null || !Number.isFinite(parsed) ? fallback : parsed;
 };
 
-/** The best build in a line: what it gains her (time, or runners beaten in real fields) and what it costs. */
-export function bestSummary(
-  best: OptimizeResult['report']['finalists'][number],
-  field: boolean
-): string {
-  const gain = best.validation_gain ?? best.gain;
-  const cost = best.sp_cost.toLocaleString('en-US') + ' SP';
-  if (gain && best.build.purchases.length && gain.mean > 0) {
-    return (
-      (field
-        ? 'Beats ' + gain.mean.toFixed(2) + ' more runners a race · '
-        : 'Saves ' + gain.mean.toFixed(2) + ' s a race · ') + cost
-    );
-  }
+/**
+ * The pick in a line: what it is worth to her (her win rate in the races that ranked the builds, or the lengths it
+ * gains her where none did) and what it costs.
+ */
+export function bestSummary(pick: TheorizedBuild): string {
+  if (!pick.count) return 'Buying nothing helps her most';
 
-  if (best.build.purchases.length) {
-    return 'Best build: ' + cost;
-  }
-
-  return 'Buying nothing scores best';
+  const worth =
+    pick.raced === undefined
+      ? lengthsText(pick.lengths)
+      : winRateText(pick.raced.win_rate) + ' win rate';
+  return worth + ' · ' + pick.finalist.sp_cost.toLocaleString('en-US') + ' SP';
 }
 
 /** The server's message in the page's words, for the errors a reader can fix here. */

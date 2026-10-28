@@ -1,0 +1,277 @@
+/* The build every alternative is measured against, as one compact card above them. */
+.current-build {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  margin: 2px 0 6px;
+  padding: 6px 14px 6px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--color-surface-2);
+  font-size: 12px;
+}
+.who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.who > span {
+  display: grid;
+  line-height: 1.2;
+}
+.who small {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.who strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+.baseline {
+  display: flex;
+  gap: 16px;
+  /* Baseline results sit at the right edge, above the alternatives' results. */
+  margin: 0 0 0 auto;
+}
+.baseline div {
+  display: grid;
+  line-height: 1.2;
+}
+.baseline dt {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.baseline dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+.note {
+  margin: 6px 0 2px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+th,
+td {
+  padding: 3px 6px;
+  border-top: 1px solid var(--border-subtle);
+  text-align: left;
+  vertical-align: middle;
+  font-weight: 400;
+}
+thead th {
+  padding-block: 0 2px;
+  border-top: 0;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.name,
+.stats,
+.aptitudes {
+  width: 1px;
+  white-space: nowrap;
+}
+tbody .name {
+  font-weight: 650;
+}
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.best {
+  padding: 1px 6px;
+  border: 1px solid rgb(var(--accent-primary-rgb) / 0.35);
+  border-radius: 9px;
+  background: rgb(var(--accent-primary-rgb) / 0.12);
+  color: var(--accent-primary);
+  font-size: 10px;
+  font-weight: 600;
+}
+/* Skills take the spare width and wrap; everything else keeps its line. */
+.skills {
+  min-width: 120px;
+}
+.skill-changes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+}
+/* Skill chips at row height, so a changed skill does not make its row taller than the others. */
+.skill-changes :global(.skill-chip),
+.skill-changes :global(.skill-body) {
+  min-height: 20px;
+}
+.skill-changes :global(.skill-chip img) {
+  width: 20px;
+  height: 20px;
+}
+.skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.skill b {
+  width: 10px;
+  font-size: 12px;
+  text-align: center;
+}
+.added b {
+  color: var(--accent-success);
+}
+.removed b {
+  color: var(--accent-error);
+}
+.removed :global(.skill-chip) {
+  opacity: 0.65;
+  text-decoration: line-through;
+}
+.metric {
+  width: 1px;
+  min-width: 84px;
+  text-align: right;
+  white-space: nowrap;
+}
+td.metric {
+  line-height: 1.15;
+}
+/* Each result and its detail share one line, keeping every row at a single line's height. */
+td.metric strong {
+  font-size: 12px;
+  font-weight: 650;
+}
+td.metric small {
+  margin-left: 6px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.metric.pending {
+  text-align: center;
+}
+.muted {
+  color: var(--text-secondary);
+}
+.good strong {
+  color: var(--accent-success);
+}
+.bad strong {
+  color: var(--accent-error);
+}
+.row-actions {
+  width: 1px;
+  padding-inline: 4px 0;
+}
+.actions {
+  display: flex;
+  gap: 2px;
+}
+/* With a mouse, the row actions match the row height; touch screens keep the full touch target. */
+@media (pointer: fine) {
+  .actions :global(.icon-button) {
+    width: 26px;
+    height: 26px;
+  }
+}
+/* Medium widths: each result's detail goes under it, so the table still fits. */
+@media (max-width: 1550px) {
+  td.metric strong,
+  td.metric small {
+    display: block;
+    margin-left: 0;
+  }
+}
+/* Narrower screens: each build becomes a block, its name on top, then its build, then its results, each labelled. */
+@media (max-width: 1300px) {
+  table,
+  tbody {
+    display: block;
+  }
+  thead {
+    display: none;
+  }
+  tbody tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    align-items: center;
+    border-top: 1px solid var(--border-subtle);
+  }
+  tbody tr:first-child {
+    border-top: 0;
+  }
+  tbody th,
+  tbody td {
+    width: auto;
+    min-width: 0;
+    padding-block: 3px;
+    border-top: 0;
+  }
+  tbody .name {
+    grid-column: 1 / -1;
+    padding-top: 8px;
+  }
+  /* The stat line fits one column from here up, so the aptitudes can follow it directly. */
+  tbody .stats {
+    grid-column: 1;
+  }
+  tbody .aptitudes {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+  tbody .skills {
+    grid-column: 1 / -1;
+  }
+  .metric {
+    padding-bottom: 8px;
+    text-align: left;
+  }
+  td.metric strong,
+  td.metric small {
+    display: block;
+    margin-left: 0;
+  }
+  .metric.pending {
+    grid-column: span 3;
+    text-align: left;
+  }
+  td.metric[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .row-actions {
+    width: auto;
+    padding-bottom: 8px;
+  }
+}
+@media (max-width: 1000px) {
+  tbody .stats {
+    grid-column: 1 / span 2;
+  }
+  tbody .aptitudes {
+    grid-column: 3 / -1;
+  }
+}
+@media (max-width: 600px) {
+  tbody .stats,
+  tbody .aptitudes {
+    grid-column: 1 / -1;
+  }
+  td.metric small {
+    white-space: normal;
+  }
+}

@@ -4,7 +4,13 @@ import { baseChartOption, chartTheme } from '@/components/charts/chart-theme';
 
 /** `flip` labels the axis with the opposite sign, e.g. seconds ahead read as a finish-time difference. */
 export function distributionChart(
-  series: { name: string; color: string; values: number[]; mean?: number }[],
+  series: {
+    name: string;
+    color: string;
+    values: number[];
+    mean?: number;
+    window?: { start: number; end: number; label: string; color: string };
+  }[],
   min: number,
   max: number,
   unit: string,
@@ -97,15 +103,40 @@ export function distributionChart(
           : Number((min + ((index + 0.5) / row.values.length) * (max - min)).toFixed(5)),
         Number(value.toFixed(3))
       ]),
+      markArea:
+        row.window && row.window.end > min && row.window.start < max
+          ? {
+              silent: true,
+              itemStyle: { color: row.window.color, opacity: 0.08 },
+              label: { show: true, color, fontSize: 10 },
+              data: [
+                [
+                  { name: row.window.label, xAxis: Math.max(min, row.window.start) },
+                  { xAxis: Math.min(max, row.window.end) }
+                ]
+              ]
+            }
+          : undefined,
       markLine:
-        row.mean === undefined
+        row.mean === undefined && !row.window
           ? undefined
           : {
               silent: true,
               symbol: ['none', 'none'],
               label: { show: false },
               lineStyle: { color: row.color, type: 'dashed', width: 1, opacity: 0.6 },
-              data: [{ xAxis: row.mean }]
+              data: [
+                ...(row.mean === undefined ? [] : [{ xAxis: row.mean }]),
+                ...(row.window && row.window.start >= min && row.window.start <= max
+                  ? [
+                      {
+                        name: row.window.label,
+                        xAxis: row.window.start,
+                        lineStyle: { color: row.window.color }
+                      }
+                    ]
+                  : [])
+              ]
             }
     }))
   };

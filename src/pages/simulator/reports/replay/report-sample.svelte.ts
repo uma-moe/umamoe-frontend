@@ -5,6 +5,7 @@ import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import type { SimulatorUma } from '../../simulator-uma';
 import type { MonteCarloInput } from '../../requests/race-sim-request';
 import { applyResimulation, type ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+import type { DetailedSimulation } from '@/pages/competitive/race-analysis/detailed-simulation';
 
 type SampleContext = {
   result?: MonteCarloResult;
@@ -14,14 +15,25 @@ type SampleContext = {
   track: ParsedRaceCapture['track'];
 };
 
-/** One sampled race from the batch, loaded on demand and replayed under the race browser. */
+type ReplayProps = {
+  capture: ParsedRaceCapture;
+  suspended?: boolean;
+  simulation?: DetailedSimulation;
+  onretrysimulation?: () => void;
+};
+
+/**
+ * One sampled race from the batch, loaded on demand and replayed under the race browser.
+ * Its detailed simulation follows automatically; the recorded replay stays on screen meanwhile.
+ */
 export class ReportSample {
   index = $state(0);
   open = $state(false);
   loading = $state(false);
   error = $state('');
   capture = $state.raw<ParsedRaceCapture>();
-  Replay = $state.raw<Component<{ capture: ParsedRaceCapture; suspended?: boolean }> | undefined>();
+  simulation = $state.raw<DetailedSimulation>({ status: 'queued' });
+  Replay = $state.raw<Component<ReplayProps> | undefined>();
   #request: AbortController | undefined;
 
   constructor(readonly context: () => SampleContext) {}
@@ -46,6 +58,7 @@ export class ReportSample {
     this.loading = true;
     this.error = '';
     this.capture = undefined;
+    this.simulation = { status: 'queued' };
     await tick();
     document
       .getElementById('report-replays')
@@ -82,16 +95,26 @@ export class ReportSample {
     } finally {
       if (!request.signal.aborted) this.loading = false;
     }
+
+    if (this.capture && !request.signal.aborted) await this.#simulate(request);
   }
 
-  async detailed(): Promise<void> {
-    const { result, input } = this.context();
-    if (!this.capture || !result || !input) return;
-    const previous = this.capture,
-      request = (this.#request = new AbortController());
+  retrySimulation(): void {
+    this.#request?.abort();
+    void this.#simulate((this.#request = new AbortController()));
+  }
 
-    this.loading = true;
-    this.error = '';
+  async #simulate(request: AbortController): Promise<void> {
+    const { result, input } = this.context();
+    const previous = this.capture;
+    if (!previous || !result || !input) return;
+
+    if (previous.detailed) {
+      this.simulation = { status: 'ready' };
+      return;
+    }
+
+    this.simulation = { status: 'running' };
     try {
       const response = await simulatorRepository.detailedReplay({
         body: { ...input, seed: result.seeds[this.index] },
@@ -124,11 +147,14 @@ export class ReportSample {
           'These diagnostic outcomes no longer match this sampled race. Run the simulation again.'
         );
       this.capture = next;
+      this.simulation = { status: 'ready' };
     } catch (error) {
-      if (!request.signal.aborted)
-        this.error = error instanceof Error ? error.message : 'Could not load replay diagnostics.';
-    } finally {
-      if (!request.signal.aborted) this.loading = false;
+      if (request.signal.aborted) return;
+
+      this.simulation = {
+        status: 'failed',
+        reason: error instanceof Error ? error.message : 'Could not load replay diagnostics.'
+      };
     }
   }
 }

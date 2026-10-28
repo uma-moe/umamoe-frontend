@@ -258,13 +258,7 @@
   }
   @media (max-width: 767px) {
     .team-picker {
-      --swatch: 36px;
-    }
-    .team-picker :global(.inspect > .trigger) {
-      min-height: 44px;
-    }
-    .team-indicator {
-      height: 40px;
+      --swatch: 28px;
     }
   }
 </style>

@@ -1,127 +1,59 @@
-.card {
+.head {
   display: grid;
-  gap: 8px;
+  gap: 3px;
   min-width: 0;
-  padding: 10px 12px 12px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md, 8px);
-  background: var(--surface-2, var(--surface-1));
-  container: build-card / inline-size;
+  padding: 0 2px 5px;
+  border-bottom: 1px solid var(--border-subtle);
 }
-header {
+.rank {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0;
   font-size: 12px;
   font-weight: 650;
   color: var(--text-secondary);
 }
-.sp {
+/* Sized to the card's rank line. */
+h4 :global(.badge) {
+  min-height: 0;
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.spend {
   font-size: 11px;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.gain {
+/* The build's score, with what it gains her beside it. */
+.score {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 2px 8px;
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
-.gain strong {
-  font-size: 18px;
+.score strong {
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--text-primary);
 }
-.gain span {
+.score span {
   font-size: 11px;
   color: var(--text-muted);
 }
-/* What it swaps from the best build, the skills it buys first. */
-.swaps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  max-width: 100%;
-  min-height: 24px;
-  padding: 0 8px 0 6px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-pill, 999px);
-  color: var(--text-muted);
-  font-size: 11px;
+/* How far a build trails the pick: small builds that share most skills differ by tenths of a length. */
+.score .behind {
+  color: var(--accent-warning);
   font-weight: 600;
-}
-.chip.added {
-  border-color: rgb(var(--accent-success-rgb) / 0.45);
-  background: rgb(var(--accent-success-rgb) / 0.1);
-  color: var(--text-primary);
-}
-.sign {
-  width: 8px;
-  font-weight: 700;
-  text-align: center;
-}
-.added .sign {
-  color: var(--accent-success);
-}
-.chip img {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-}
-.chip-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* Race stats three and two; the best of the finalists reads brighter. */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px 8px;
-  margin: 0;
-  padding-top: 8px;
-  border-top: 1px solid var(--border-subtle);
-}
-.stats div {
-  display: grid;
-  gap: 1px;
-  min-width: 0;
-}
-.stats dt {
-  font-size: 10px;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-.stats dd {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.stats .top dd {
-  color: var(--text-primary);
-}
-/* A wide card: the stats in one row. */
-@container build-card (min-width: 340px) {
-  .stats {
-    grid-template-columns: repeat(5, minmax(0, auto));
-    justify-content: space-between;
-  }
 }

@@ -72,6 +72,33 @@
       "type": "object",
       "propertyNames": { "pattern": "^[1-9][0-9]*$" },
       "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 5 }
+    },
+    "page": {
+      "description": "uma.moe addition. The whole tab the code was copied from, as that tab saves its setup in the browser: the race field (every runner with team, gate and skills, the team colors, seed, race type and race count), the HP calculator (her build, the HP plan and race options) or the Skill planner (her build, the skills on offer with hints and locks, SP, Fast Learner, goal, tracks, seed and HP debuffs). Read only by that tab, which checks it like its own saved setup; other tabs and the umalator read the fields beside it.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["tab", "field"],
+          "properties": {
+            "tab": { "const": "race" },
+            "field": { "type": "array", "minItems": 1, "maxItems": 18, "items": { "type": "object" } },
+            "teamColors": {
+              "type": "object",
+              "propertyNames": { "pattern": "^[1-9][0-9]*$" },
+              "additionalProperties": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+            },
+            "seed": { "type": "string" },
+            "raceInstanceId": { "type": "integer", "minimum": 0 },
+            "raceType": { "type": "string" },
+            "runs": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["tab", "setup"],
+          "properties": { "tab": { "enum": ["stamina", "build"] }, "setup": { "type": "object" } }
+        }
+      ]
     }
   },
   "$defs": {

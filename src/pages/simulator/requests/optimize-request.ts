@@ -33,8 +33,6 @@ export const MAX_SCENARIOS = 8;
  * track to each seed, so a pool costs no more races than one track.
  */
 export const MAX_TRACKS = 32;
-export const MAX_CANDIDATES = 1024;
-export const MAX_FINALISTS = 10;
 
 export interface OptimizePurchaseInput {
   name: string;
@@ -111,8 +109,6 @@ export interface OptimizeBody {
   locked?: Array<number>;
   scenarios: Array<OptimizeScenario>;
   seed: number;
-  max_candidates?: number;
-  finalists?: number;
   hp_changes?: Array<OptimizeHpChange>;
 }
 
@@ -135,17 +131,15 @@ export interface OptimizeForm {
   locked?: Array<number>;
   scenarios: Array<OptimizeScenarioInput>;
   seed: number;
-  /** 1 … 1024, omitted when missing. */
-  maxCandidates?: number;
-  /** 1 … 10, omitted when missing. */
-  finalists?: number;
   /** HP debuffs taken in mid race in every race: how many, and percent of max HP each. */
   debuffs?: { count: number; percent: number };
 }
 
 /**
  * Writes the optimize body. For `cm` the caller must keep every scenario's
- * `course_id` and `setup` identical; this builder does not rewrite them.
+ * `course_id` and `setup` identical; this builder does not rewrite them. How
+ * many builds the search tries and compares is the service's own, so a page
+ * cannot ask for a search it was not sized for.
  */
 export function buildOptimizeRequest(form: OptimizeForm): OptimizeBody {
   const body: OptimizeBody = {
@@ -159,14 +153,6 @@ export function buildOptimizeRequest(form: OptimizeForm): OptimizeBody {
 
   const locked = validPurchaseIndices(form.locked, form.purchases.length);
   if (locked.length > 0) body.locked = locked;
-
-  if (form.maxCandidates !== undefined) {
-    body.max_candidates = clampInt(form.maxCandidates, 1, MAX_CANDIDATES, 1);
-  }
-
-  if (form.finalists !== undefined) {
-    body.finalists = clampInt(form.finalists, 1, MAX_FINALISTS, 1);
-  }
 
   const debuffs = form.debuffs;
   if (
@@ -185,11 +171,6 @@ export function buildOptimizeRequest(form: OptimizeForm): OptimizeBody {
         to: 2 / 3
       }
     ];
-  }
-
-  // The contract keeps the finalist count inside the candidate count.
-  if (body.max_candidates !== undefined && body.finalists !== undefined) {
-    body.finalists = Math.min(body.finalists, body.max_candidates);
   }
 
   return body;

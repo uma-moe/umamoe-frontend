@@ -2,12 +2,7 @@
   import Button from '@/components/controls/Button.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import TextField from '@/components/controls/TextField.svelte';
-  import {
-    MAX_CANDIDATES,
-    MAX_FINALISTS,
-    OPTIMIZE_MODES,
-    type OptimizeMode
-  } from '../../requests/optimize-request';
+  import { OPTIMIZE_MODES, type OptimizeMode } from '../../requests/optimize-request';
   import CourseButtons from '../../shell/CourseButtons.svelte';
   import RaceBar from '../../shell/RaceBar.svelte';
   import SimSection from '../../shell/SimSection.svelte';
@@ -20,20 +15,33 @@
     TIME_OPTIONS,
     WEATHER_OPTIONS
   } from '../../simulator-session.svelte';
+  import BuildBudget from './BuildBudget.svelte';
   import TrackPool from './TrackPool.svelte';
   import type { TeamTrialsMode } from './track-pool';
   import { buildSearch } from './build-search.svelte';
 
   /**
-   * What the build is for and where she races: the mode, its course (or, in Team Trials, the pool of tracks) and the
-   * conditions, then the HP she loses to debuffs and the size of the search.
+   * The setup: where she races, the course (or, in Team Trials, the pool of tracks) and its conditions; then, when the
+   * row has room, her SP, fans and Fast Learner, followed by what the build is for, the HP she loses to debuffs and the
+   * search's seed. How many builds it tries is the service's.
    */
   interface Props {
     teamTrials: boolean;
     invalidSeed: boolean;
+    /** Her SP, fans and Fast Learner are in the second row here; narrower, they stay above the skills on offer. */
+    budgetHere?: boolean;
   }
 
-  let { teamTrials, invalidSeed }: Props = $props();
+  let { teamTrials, invalidSeed, budgetHere = $bindable(false) }: Props = $props();
+
+  /** From this width the grid is ten columns (build-goal.css), with room for her SP and fans in the second row. */
+  const TEN_COLUMNS = 1300;
+
+  let width = $state(0);
+
+  $effect(() => {
+    budgetHere = width >= TEN_COLUMNS;
+  });
 
   const MODE_LABELS: Record<OptimizeMode, string> = {
     cm: 'Champions Meeting',
@@ -49,21 +57,17 @@
 
 <SimSection
   number={2}
-  title="Goal"
-  note="Where she races"
+  title="Setup"
+  note="The race, her SP and the search"
 >
   {#snippet actions()}{#if !teamTrials}<CourseButtons />{/if}{/snippet}
-  <!-- One grid on the runner's columns, so every field lines up with the stats above it. -->
+  <!-- One grid on the runner's columns, so every field lines up with the stats above it: the race first, then what the
+       search plans for and how it runs. -->
   <div
     class="goal"
     class:team-trials={teamTrials}
+    bind:clientWidth={width}
   >
-    <SelectField
-      id="build-mode"
-      label="Plan for"
-      options={MODE_OPTIONS}
-      bind:value={buildSearch.mode}
-    />
     {#if !teamTrials}
       <RaceBar
         bare
@@ -106,6 +110,13 @@
         />
       </div>
     {/if}
+    {#if budgetHere}<BuildBudget />{/if}
+    <SelectField
+      id="build-mode"
+      label="Plan for"
+      options={MODE_OPTIONS}
+      bind:value={buildSearch.mode}
+    />
     <div class="pair">
       <TextField
         id="build-debuffs"
@@ -139,24 +150,6 @@
         icon="dice"
         ariaLabel="Random seed"
         onclick={() => (buildSearch.seed = String(Math.floor(Math.random() * 2 ** 31)))}
-      />
-    </div>
-    <div class="pair">
-      <TextField
-        id="build-candidates"
-        label="Builds to try"
-        type="number"
-        min={1}
-        max={MAX_CANDIDATES}
-        bind:value={buildSearch.candidates}
-      />
-      <TextField
-        id="build-finalists"
-        label="Builds to compare"
-        type="number"
-        min={1}
-        max={MAX_FINALISTS}
-        bind:value={buildSearch.finalists}
       />
     </div>
   </div>

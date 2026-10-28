@@ -28,7 +28,7 @@
       icon: 'battery',
       title: 'HP calculator',
       blurb:
-        'Check whether a runner has the HP to spurt at top speed to the finish on your course, and how much stamina that takes.',
+        'Check whether she has the HP to spurt at top speed to the finish, and the stamina it takes.',
       load: () => import('../SimulatorPage.svelte')
     },
     {

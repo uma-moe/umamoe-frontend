@@ -1,4 +1,4 @@
-import { createSimulatorUma, type SimulatorUma } from './simulator-uma';
+import { createSimulatorUma, restoreSimulatorUma, type SimulatorUma } from './simulator-uma';
 import { loadReleasedCharacters, type CharacterData } from '@/lib/game-data/characters';
 import { createExampleRace } from './simulator-example';
 
@@ -41,6 +41,47 @@ export function importSimulatorUmas(umas: SimulatorUma[], replace = false): void
   simulatorRoster.umas = [...existing, ...umas];
   if (simulatorRoster.umas.length === 1) simulatorRoster.umas.push(createRosterUma('Opponent'));
   simulatorRoster.configured = true;
+}
+
+/** The most runners a race takes. */
+const MAX_FIELD = 18;
+
+/**
+ * A saved or imported field: every runner that reads as the field keeps them, each with an id of its own, and the
+ * team colors that are valid. Throws rather than empty the field or overfill it.
+ */
+export function restoreSimulatorField(saved: { field: unknown[]; teamColors?: unknown }): {
+  umas: SimulatorUma[];
+  teamColors: Record<number, string>;
+} {
+  const ids = new Set<string>();
+  const umas = saved.field.flatMap((value) => {
+    const fallback = createSimulatorUma();
+    const uma = restoreSimulatorUma(value, fallback);
+    if (uma === fallback) return [];
+
+    if (ids.has(uma.id)) uma.id = crypto.randomUUID();
+    ids.add(uma.id);
+    return [uma];
+  });
+
+  if (!umas.length) throw new Error('This code has no runner the race field can read.');
+  if (umas.length > MAX_FIELD)
+    throw new Error('A race can contain at most 18 Uma; this code has ' + umas.length + '.');
+
+  const teamColors: Record<number, string> = {};
+  const colors =
+    saved.teamColors && typeof saved.teamColors === 'object'
+      ? Object.entries(saved.teamColors)
+      : [];
+  for (const [key, color] of colors) {
+    const id = Number(key);
+    const valid = Number.isInteger(id) && id >= 1 && id <= 255;
+    if (valid && typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color))
+      teamColors[id] = color.toLowerCase();
+  }
+
+  return { umas, teamColors };
 }
 
 const defaultTeamColors = [
@@ -86,4 +127,17 @@ export function addSimulatorTeamColor(color: string): number {
   if (id === undefined) throw Error('All 255 team colors are in use. Choose an existing color.');
   simulatorTeamColors[id] = normalized;
   return id;
+}
+
+/** Replaces the whole field and its team colors, as loading a code copied from the race tab does. */
+export function replaceSimulatorField(
+  umas: SimulatorUma[],
+  teamColors: Record<number, string>
+): void {
+  simulatorRoster.umas = umas.length === 1 ? [...umas, createRosterUma('Opponent')] : umas;
+  simulatorRoster.configured = true;
+  for (const id of Object.keys(simulatorTeamColors)) delete simulatorTeamColors[Number(id)];
+  for (const [index, [, color]] of defaultTeamColors.entries())
+    simulatorTeamColors[index + 1] = color;
+  Object.assign(simulatorTeamColors, teamColors);
 }

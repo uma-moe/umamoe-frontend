@@ -44,9 +44,16 @@
     flex: 1 1 auto;
     padding-inline: 6px;
     font-size: 12px;
+    white-space: nowrap;
+  }
+  /* A phone: tighter segments, so two words still fit a half-width toggle on one line. */
+  @media (max-width: 767px) {
+    .toggle-field :global(.segments button) {
+      padding-inline: 4px;
+    }
   }
   .toggle-field :global(.segments button.icon-only) {
-    min-width: 30px;
+    min-width: 26px;
     padding-inline: 0;
   }
   .toggle-field :global(.segments img) {

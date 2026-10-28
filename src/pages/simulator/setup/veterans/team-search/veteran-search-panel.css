@@ -1,23 +1,4 @@
-.panel {
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
-}
-.panel header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-  min-height: 30px;
-  margin-bottom: 8px;
-}
-h3 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-}
+/* Notes under the team search's sections, as on the setup forms. */
 .note {
   margin: 0;
   font-size: 12px;

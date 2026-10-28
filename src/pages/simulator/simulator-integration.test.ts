@@ -21,9 +21,9 @@ import {
   simulatorSampleReplay,
   simulatorSampleSummary,
   simulatorMatchups,
-  winRateInterval,
   type SimulatorReplay
 } from './simulator-results';
+import { winRateInterval } from '@/lib/race/win-rate-interval';
 import { createExampleRace } from './simulator-example';
 import {
   raceSignalSpreads,

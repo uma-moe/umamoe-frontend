@@ -10,13 +10,22 @@
   import SimulatorShell from './shell/SimulatorShell.svelte';
   import RunnerInput from './setup/runner/RunnerInput.svelte';
   import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
-  import { BUILD_CODE_VERSION, buildCodeRunner } from './setup/build/code/build-code';
+  import {
+    BUILD_CODE_VERSION,
+    buildCodeRunner,
+    type BuildCodePage
+  } from './setup/build/code/build-code';
   import HpRaceSection from './setup/hp/HpRaceSection.svelte';
   import HpPlanInput from './setup/hp/HpPlanInput.svelte';
   import HpCalcBar from './setup/hp/HpCalcBar.svelte';
   import { explainStaminaError, traineeGrades } from './setup/hp/hp-run';
   import StaminaResultPanel from './reports/outcomes/hp/StaminaResult.svelte';
-  import { countHpSkills, hpCalculator, saveHpCalculator } from './setup/hp/hp-calculator.svelte';
+  import {
+    countHpSkills,
+    hpCalculator,
+    restoreHpCalculator,
+    saveHpCalculator
+  } from './setup/hp/hp-calculator.svelte';
   import { planEvents, planStats, type PlanMarker } from './setup/hp/hp-plan';
   import { hpSpread, hpVerdict } from './reports/outcomes/hp/hp-needed';
   import { traineeMotivation, traineeRunningStyle, traineeStats } from './setup/trainee';
@@ -131,20 +140,7 @@
 
   const verdict = $derived(spread && run ? hpVerdict(spread, run.forced) : undefined);
   let resultPanel = $state<HTMLElement>();
-  let resultInView = $state(true);
   let codeOpen = $state(false);
-
-  // The bar shows only while the result is out of sight.
-  $effect(() => {
-    if (!resultPanel || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(
-      ([entry]) => (resultInView = Boolean(entry?.isIntersecting)),
-      { rootMargin: '0px 0px -72px 0px' }
-    );
-
-    observer.observe(resultPanel);
-    return () => observer.disconnect();
-  });
 
   // Once she has a result, it follows the form a moment after each change.
   $effect(() => {
@@ -229,10 +225,21 @@
     }
   }
 
-  /** From the bar: calculates the first time, then shows the result. */
-  async function show() {
-    if (!run && !busy) await send();
+  function showResult() {
     resultPanel?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
+  /** From the bar: calculates her the first time, then shows the result. */
+  async function calculate() {
+    if (!run && !busy) await send();
+    showResult();
+  }
+
+  /** Loads the whole HP calculator from a code copied from it: her build, the HP plan and its race options. */
+  function restoreTab(page: BuildCodePage): string | void {
+    if (page.tab !== 'stamina') return 'This code was copied from another tab.';
+
+    Object.assign(hpCalculator, restoreHpCalculator(page.setup));
   }
 </script>
 
@@ -275,6 +282,18 @@
         oncount={() => count(hpCalculator.uma)}
       />
     </div>
+    <HpCalcBar
+      hasCourse={!!course}
+      hasRun={!!run}
+      {spread}
+      {verdict}
+      {error}
+      {busy}
+      {pending}
+      {canRun}
+      oncalculate={calculate}
+      onshow={showResult}
+    />
     <aside
       class="hp-result"
       aria-label="HP result"
@@ -287,7 +306,7 @@
         {busy}
         {pending}
         {error}
-        oncalculate={canRun ? send : undefined}
+        onretry={canRun ? send : undefined}
         blocked={course ? '' : 'Pick a track and course first.'}
         runner={run?.runner}
         markers={run ? run.markers : events.markers}
@@ -295,20 +314,6 @@
         distance={run ? run.course.distance : geometry.distance}
       />
     </aside>
-    <!-- The answer stays in reach while the form scrolls: until the result itself is in sight. -->
-    {#if !resultInView}
-      <HpCalcBar
-        hasCourse={!!course}
-        hasRun={!!run}
-        {spread}
-        {verdict}
-        {error}
-        {busy}
-        {pending}
-        {canRun}
-        onshow={show}
-      />
-    {/if}
   </div>
 </SimulatorShell>
 
@@ -324,8 +329,10 @@
       season: Number(simulatorSession.season),
       time: Number(simulatorSession.startTime)
     },
-    uma1: buildCodeRunner($state.snapshot(hpCalculator.uma), course)
+    uma1: buildCodeRunner($state.snapshot(hpCalculator.uma), course),
+    page: { tab: 'stamina', setup: $state.snapshot(hpCalculator) }
   })}
+  onrestore={restoreTab}
   onimport={({ umas }) => {
     hpCalculator.uma = umas[0]!;
     count(umas[0]!);
@@ -333,19 +340,20 @@
 />
 
 <style>
-  /* The form, then the result under it at full width; a bar keeps the answer in reach while the form scrolls. */
+  /* The form, its run bar, then the result at full width, as on the other tabs; the bar stays in reach while the
+     form scrolls. */
   .hp-calculator {
-    --setup-control-height: 34px;
+    --setup-control-height: 36px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
     align-items: start;
     min-width: 0;
   }
   .hp-form,
   .hp-result {
     min-width: 0;
-    padding: 10px 14px 12px;
+    padding: 12px 18px;
     background: var(--surface-1);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
@@ -362,26 +370,17 @@
   }
   .hp-result {
     container: hp-result / inline-size;
-    position: sticky;
-    top: calc(var(--app-header-height, 64px) + 12px);
-    max-height: calc(100dvh - var(--app-header-height, 64px) - 24px);
-    overflow-y: auto;
     scroll-margin-top: calc(var(--app-header-height, 64px) + 12px);
   }
-  /* Narrower: the result under the form, and the answer floating at the bottom while it is out of sight. */
-  @media all {
-    .hp-calculator {
-      grid-template-columns: minmax(0, 1fr);
-    }
-    .hp-result {
-      position: static;
-      max-height: none;
-      overflow: visible;
-    }
-  }
+  /* A phone: the design system's denser controls, as on the database filters, and tighter panels. */
   @media (max-width: 767px) {
     .hp-calculator {
-      --setup-control-height: 44px;
+      --setup-control-height: var(--control-height);
+      gap: 10px;
+    }
+    .hp-form,
+    .hp-result {
+      padding: 10px 12px;
     }
   }
 </style>

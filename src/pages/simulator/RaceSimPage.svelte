@@ -2,6 +2,7 @@
   import { onMount, tick } from 'svelte';
   import RaceBar from './shell/RaceBar.svelte';
   import CourseButtons from './shell/CourseButtons.svelte';
+  import RunBar from './shell/RunBar.svelte';
   import SimSection from './shell/SimSection.svelte';
   import SimulatorCourseProfile from './courses/SimulatorCourseProfile.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
@@ -12,7 +13,11 @@
   import SimulatorUmaField from './setup/runner/SimulatorUmaField.svelte';
   import SimulatorVeteranSearch from './setup/veterans/team-search/SimulatorVeteranSearch.svelte';
   import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
-  import { BUILD_CODE_VERSION, buildCodeRunner } from './setup/build/code/build-code';
+  import {
+    BUILD_CODE_VERSION,
+    buildCodeRunner,
+    type BuildCodePage
+  } from './setup/build/code/build-code';
   import RaceSimResult from './reports/RaceSimResult.svelte';
   import { RACE_TYPE_OPTIONS } from './simulator-race-types';
   import {
@@ -40,7 +45,10 @@
   import {
     simulatorRoster,
     importSimulatorUmas,
-    simulatorTeamColor
+    replaceSimulatorField,
+    restoreSimulatorField,
+    simulatorTeamColor,
+    simulatorTeamColors
   } from './simulator-roster.svelte';
   import { createExampleRace } from './simulator-example';
   import type { SimulatorUma } from './simulator-uma';
@@ -202,6 +210,36 @@
     } finally {
       busy = false;
     }
+  }
+
+  /** A whole number a code carries as text or a number, as text. */
+  function wholeNumber(value: unknown): string | undefined {
+    const text = typeof value === 'number' || typeof value === 'string' ? String(value).trim() : '';
+    return /^-?\d+$/.test(text) ? text : undefined;
+  }
+
+  /** Loads a whole race tab from a code copied from it: the field, its team colors, the seed and the race options. */
+  function restoreTab(page: BuildCodePage): string | void {
+    if (page.tab !== 'race') return 'This code was copied from another tab.';
+
+    let restored: ReturnType<typeof restoreSimulatorField>;
+    try {
+      restored = restoreSimulatorField(page);
+    } catch (reason) {
+      return reason instanceof Error ? reason.message : 'The race field can’t be read.';
+    }
+
+    replaceSimulatorField(restored.umas, restored.teamColors);
+    // Number fields hold numbers once edited, so a code may carry either.
+    const seed = wholeNumber(page.seed);
+    if (seed !== undefined) simulatorSession.seed = seed;
+    if (typeof page.raceInstanceId === 'number' && page.raceInstanceId >= 0)
+      simulatorSession.raceInstanceId = page.raceInstanceId;
+    if (typeof page.raceType === 'string') raceType = page.raceType;
+    const races = wholeNumber(page.runs);
+    if (races !== undefined) runs = races;
+    simulatorSession.importNotice =
+      'Loaded the whole race field of ' + restored.umas.length + ' runners from a build code.';
   }
 </script>
 
@@ -368,25 +406,25 @@
           {/snippet}
         </SimulatorUmaField>
         {#if simulatorSession.importNotice}
-          <p
-            class="import-notice"
-            role="status"
-          >
-            {simulatorSession.importNotice}
-          </p>
+          <div class="import-notice">
+            <Banner
+              title="Runners imported"
+              dismissible
+              ondismiss={() => (simulatorSession.importNotice = '')}
+            >
+              <p>{simulatorSession.importNotice}</p>
+            </Banner>
+          </div>
         {/if}
       </div>
       <!-- Running stays in reach while the form scrolls. -->
-      <section
-        class="run-bar"
-        aria-label="Run simulation"
+      <RunBar
+        label="Run simulation"
+        {busy}
       >
-        <p
-          class="run-summary"
-          role="status"
-        >
+        {#snippet summary()}
           {#if busy}
-            Simulating the field…
+            <strong>Simulating the field…</strong>
           {:else}
             <strong>
               {simulatorRoster.umas.length}
@@ -403,7 +441,7 @@
                 : Number(runs).toLocaleString('en-US') + (Number(runs) === 1 ? ' race' : ' races')}
             </span>
           {/if}
-        </p>
+        {/snippet}
         {#if run}<Button
             variant="ghost"
             size="sm"
@@ -411,14 +449,13 @@
             disabled={busy}
             onclick={() => showStep('report')}
           >
-            Last results
+            See result
           </Button>{/if}
         <Button
           variant="secondary"
           size="sm"
           icon="race"
-          loading={busy}
-          disabled={!canRun}
+          disabled={busy || !canRun}
           onclick={() => send(true)}
         >
           Run one race
@@ -426,13 +463,12 @@
           size="sm"
           icon="chart"
           ariaLabel={'Run ' + (runsInvalid ? 'samples' : runs + ' races')}
-          loading={busy}
-          disabled={!canRun || runsInvalid}
+          disabled={busy || !canRun || runsInvalid}
           onclick={() => send(false)}
         >
           Run simulation
         </Button>
-      </section>
+      </RunBar>
     {/if}
     {#if run}
       <div
@@ -472,10 +508,20 @@
             time: Number(simulatorSession.startTime)
           },
           uma1: buildCodeRunner(first, course),
-          ...(second ? { uma2: buildCodeRunner(second, course) } : {})
+          ...(second ? { uma2: buildCodeRunner(second, course) } : {}),
+          page: {
+            tab: 'race',
+            field: $state.snapshot(simulatorRoster.umas),
+            teamColors: $state.snapshot(simulatorTeamColors),
+            seed: String(simulatorSession.seed),
+            raceInstanceId: simulatorSession.raceInstanceId,
+            raceType,
+            runs: String(runs)
+          }
         }
       : undefined;
   }}
+  onrestore={restoreTab}
   onimport={({ umas }) => {
     try {
       importSimulatorUmas(umas);

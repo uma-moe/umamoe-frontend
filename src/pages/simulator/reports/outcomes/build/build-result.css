@@ -1,10 +1,7 @@
-/* The frame's chart height is for charts; this is text, so it takes only what it needs. */
-:global(.chart-frame .plot:has(> .build-result)) {
-  min-height: 0;
-}
+/* No panel of its own: the answer, the builds and the skills each stand as cards on the page. */
 .build-result {
   display: grid;
-  gap: 20px;
+  gap: 10px;
   min-width: 0;
   container: build-result / inline-size;
 }
@@ -12,6 +9,10 @@
   display: grid;
   gap: 6px;
   justify-items: start;
+  padding: 10px 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
 }
 .answer p {
   margin: 0;
@@ -23,7 +24,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -61,55 +62,22 @@
 .stale .body {
   opacity: 0.5;
 }
-/* The skills, and beside them the builds that came close once both fit. */
+/* How it was measured, from the info button at the end of the builds' header. */
+.about {
+  display: flex;
+}
+.about-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+/* The builds side by side, then every skill, then those that cannot fire here. */
 .body {
   display: grid;
-  gap: 20px;
+  gap: 10px;
   align-items: start;
   min-width: 0;
-}
-.skills {
-  display: grid;
-  gap: 12px;
-  min-width: 0;
-}
-/* What the bars on the skills mean, in the bars' own colours. */
-.key {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 4px 14px;
-  margin: 0 0 -4px;
-  padding: 0;
-  list-style: none;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-.key li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.key li:first-child {
-  margin-right: auto;
-}
-.swatch {
-  width: 14px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--text-muted);
-}
-.swatch.helps {
-  background: var(--accent-success);
-}
-.swatch.loss {
-  background: var(--accent-warning);
-}
-@container build-result (min-width: 1080px) {
-  .body.with-close {
-    grid-template-columns: minmax(0, 1fr) 300px;
-    gap: 28px;
-  }
 }
 pre {
   max-height: 60dvh;
@@ -117,4 +85,9 @@ pre {
   font-size: 11px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .answer {
+    padding: 10px 12px;
+  }
 }

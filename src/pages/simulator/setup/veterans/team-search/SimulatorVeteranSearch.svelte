@@ -14,6 +14,7 @@
   import VeteranSearchOpponents from './VeteranSearchOpponents.svelte';
   import VeteranSearchRun from './VeteranSearchRun.svelte';
   import VeteranSearchResults from './VeteranSearchResults.svelte';
+  import DialogStatus from '../../../shell/DialogStatus.svelte';
 
   /**
    * Find my best team: every team of three from the Veterans picked, raced against the same opponents, seeds and gates,
@@ -162,6 +163,17 @@
     return '';
   });
 
+  const progressText = $derived.by(() => {
+    const counted =
+      teamSearch.completed.toLocaleString('en-US') +
+      ' of ' +
+      teamSearch.total.toLocaleString('en-US') +
+      ' races';
+    if (teamSearch.busy) return counted;
+
+    return counted + (teamSearch.completed < teamSearch.total ? ' · stopped' : ' · done');
+  });
+
   const inputKey = $derived(
     JSON.stringify([picked, opponentSource, snapshotId, opponentIds, samples, seed])
   );
@@ -210,9 +222,12 @@
 <Dialog
   bind:open
   title="Find my best team"
-  icon="veterans"
-  maxWidth="1180px"
+  description="Every team of three from your Veterans, raced against the same opponents, seeds and gates."
+  maxWidth="640px"
   maxHeight="92dvh"
+  mobileMaxHeight="96dvh"
+  mobileFill
+  compact
 >
   <div class="team-search">
     <VeteranSearchPool
@@ -227,41 +242,53 @@
       disabled={teamSearch.busy}
     />
 
-    <div class="side">
-      <VeteranSearchOpponents
-        bind:source={opponentSource}
-        bind:snapshotId
-        bind:benchmark
-        bind:benchmarkLoading
-        bind:opponentIds
-        opponentCount={opponents.length}
-        {initialSnapshot}
-        disabled={teamSearch.busy}
-      />
+    <VeteranSearchOpponents
+      bind:source={opponentSource}
+      bind:snapshotId
+      bind:benchmark
+      bind:benchmarkLoading
+      bind:opponentIds
+      opponentCount={opponents.length}
+      {initialSnapshot}
+      disabled={teamSearch.busy}
+    />
 
-      <VeteranSearchRun
-        search={teamSearch}
-        samplesFieldId="{uid}-samples"
-        bind:samples
-        {races}
-        {blocked}
-        onsearch={search}
-      />
+    <VeteranSearchRun
+      search={teamSearch}
+      samplesFieldId="{uid}-samples"
+      bind:samples
+      {teams}
+      {races}
+    />
 
-      <VeteranSearchResults
-        top={teamSearch.top}
-        busy={teamSearch.busy}
-        {stale}
-        {blocked}
-        onuse={(team) => {
-          teamSearch.useTeam(team);
-          open = false;
-        }}
-        onsearch={search}
-      />
-    </div>
+    <VeteranSearchResults
+      top={teamSearch.top}
+      busy={teamSearch.busy}
+      {stale}
+      {blocked}
+      onuse={(team) => {
+        teamSearch.useTeam(team);
+        open = false;
+      }}
+      onsearch={search}
+    />
   </div>
   {#snippet actions()}
+    <DialogStatus>
+      {#if teamSearch.busy || (teamSearch.completed && teamSearch.key === inputKey)}
+        <progress
+          max={teamSearch.total || 1}
+          value={teamSearch.completed}
+          aria-hidden="true"
+        ></progress>
+        <span class="progress-text">{progressText}</span>
+      {:else if blocked}
+        <span class="blocked">{blocked}</span>
+      {:else}
+        <strong>{races.toLocaleString('en-US')} races</strong>
+        <span>{teams.toLocaleString('en-US')} {teams === 1 ? 'team' : 'teams'} × {samples}</span>
+      {/if}
+    </DialogStatus>
     <Button
       variant="secondary"
       onclick={() => {
@@ -271,25 +298,40 @@
     >
       Close
     </Button>
+    {#if teamSearch.busy}
+      <Button
+        variant="secondary"
+        onclick={() => (teamSearch.stop = true)}
+        disabled={teamSearch.stop}
+      >
+        {teamSearch.stop ? 'Stopping…' : 'Stop'}
+      </Button>
+    {:else}
+      <Button
+        icon="chart"
+        disabled={Boolean(blocked)}
+        onclick={search}
+      >
+        Find the best team
+      </Button>
+    {/if}
   {/snippet}
 </Dialog>
 
 <style>
+  /* One dense column: the Veterans, who they race, how many races, then the answer. */
   .team-search {
+    --control-height: 32px;
+    --setup-control-height: 32px;
     display: grid;
-    grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.1fr);
-    gap: 14px;
-    align-items: start;
     min-width: 0;
   }
-  .side {
-    display: grid;
-    gap: 10px;
-    min-width: 0;
+  progress {
+    width: 96px;
+    height: 6px;
+    accent-color: var(--accent-primary);
   }
-  @media (max-width: 900px) {
-    .team-search {
-      grid-template-columns: minmax(0, 1fr);
-    }
+  .progress-text {
+    color: var(--text-primary);
   }
 </style>

@@ -10,7 +10,7 @@
   import { APTITUDE_GRADES } from '../../requests/stamina-request';
   import type { SimulatorUma } from '../../simulator-uma';
   import SimSection from '../../shell/SimSection.svelte';
-  import SimulatorUmaEditor from './SimulatorUmaEditor.svelte';
+  import SimulatorUmaEditor from './editor/SimulatorUmaEditor.svelte';
   import SimulatorVeteranPicker from '../veterans/SimulatorVeteranPicker.svelte';
   import { GREEN_BONUS, withBonus, type HpPlan } from '../hp/hp-plan';
   import { RUNNING_STYLES } from '../trainee';
@@ -265,25 +265,31 @@
     font-size: 12px;
     font-weight: 600;
   }
-  /* A narrow form, as on a tablet: three stats a row. */
-  @container sim-form (max-width:640px) {
-    .stats {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-  /* On a phone: three stats a row and two fields a row, without the stat icons. */
+  /* A phone: all five stats still in one row, without their icons; style and mood share a line, the three
+     aptitudes the next. */
   @container sim-form (max-width:560px) {
+    .runner-fields,
     .fields {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 8px;
     }
-    .stats {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+    .fields:not(.stats) {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      align-items: end;
     }
-    .stats :global(.prefix-icon) {
+    .fields:not(.stats) > :global(*) {
+      grid-column: span 2;
+    }
+    .fields:not(.stats) > :global(*:nth-child(-n + 2)) {
+      grid-column: span 3;
+    }
+    /* The phone's number pad sets a stat, so its steppers make room for all four digits. */
+    .stats :global(.prefix-icon),
+    .stats :global(.number-controls) {
       display: none;
     }
+    .stats :global(input),
     .stats :global(input.has-prefix) {
-      padding-left: 10px;
+      padding-inline: 8px 4px;
     }
   }
 </style>

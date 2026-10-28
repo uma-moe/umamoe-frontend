@@ -18,7 +18,7 @@
     type SkillData
   } from '@/lib/game-data/skills/skills';
   import { identity, stats, styleColors } from '@/pages/competitive/analysis-view';
-  import SimulatorUmaEditor from './SimulatorUmaEditor.svelte';
+  import SimulatorUmaEditor from './editor/SimulatorUmaEditor.svelte';
   import SimulatorVeteranPicker from '../veterans/SimulatorVeteranPicker.svelte';
   import SimSection from '../../shell/SimSection.svelte';
   import { simulatorUmaSummary, type SimulatorUma } from '../../simulator-uma';
@@ -45,6 +45,7 @@
   } = $props();
 
   let editing = $state<SimulatorUma>(),
+    adding = $state(false),
     editorOpen = $state(false),
     veteransOpen = $state(false),
     error = $state('');
@@ -105,6 +106,7 @@
           : 'Character data could not be loaded. You can still edit this runner manually.';
     }
 
+    adding = !uma;
     editing = uma ?? createRosterUma('Uma ' + (simulatorRoster.umas.length + 1));
     editorOpen = true;
   }
@@ -371,6 +373,7 @@
 {#if editing}
   <SimulatorUmaEditor
     uma={editing}
+    {adding}
     bind:open={editorOpen}
     onsave={(uma) => {
       if (simulatorRoster.umas.some((item) => item.id === uma.id))

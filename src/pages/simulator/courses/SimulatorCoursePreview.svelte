@@ -7,6 +7,7 @@
   import { trackBasis, trackSection } from '@/pages/competitive/race-analysis/replay/replay-track';
   import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import { coursePreviewTrack } from './simulator-course-preview';
+  import { finalSpurtSection, FINAL_SPURT_HELP } from '@/lib/race/final-spurt';
 
   let {
     course,
@@ -50,6 +51,8 @@
   );
 
   const finish = $derived(trackBasis(points, course?.distance ?? 0, course?.turn));
+  const spurtSection = $derived(finalSpurtSection(course?.distance ?? 0));
+  const spurt = $derived(trackBasis(points, spurtSection.start, course?.turn));
   const directions = $derived(
     [0.25, 0.6].map((progress) =>
       trackBasis(points, (course?.distance ?? 0) * progress, course?.turn)
@@ -69,9 +72,7 @@
   });
 
   const path = $derived(points.map((point) => point.x + ',' + point.y).join(' '));
-  const lastThird = $derived(
-    trackSection(points, ((course?.distance ?? 0) * 2) / 3, course?.distance ?? 0)
-  );
+  const lastThird = $derived(trackSection(points, spurtSection.start, spurtSection.end));
 
   const highlighted = $derived(
     highlight ? trackSection(points, highlight.start, highlight.end) : ''
@@ -104,7 +105,7 @@
           '–' +
           Math.round(highlight.end) +
           ' m highlighted on the selected course.'
-        : 'Selected course outline. The final third is highlighted.'}
+        : 'Selected course outline. The final spurt window is highlighted.'}
     >
       <defs>
         <pattern
@@ -139,7 +140,24 @@
       <polyline
         points={lastThird}
         class="final-third"
-      />
+      >
+        <title>{FINAL_SPURT_HELP}</title>
+      </polyline>
+      <g
+        class="spurt-line"
+        transform={'translate(' +
+          spurt.x +
+          ',' +
+          spurt.y +
+          ') rotate(' +
+          (Math.atan2(spurt.ty, spurt.tx) * 180) / Math.PI +
+          ')'}
+      >
+        <path d="M0 -14v28" />
+        <title>
+          Final spurt window from {Math.round(spurtSection.start)} m. {FINAL_SPURT_HELP}
+        </title>
+      </g>
       {#if highlight && highlighted}
         <g
           class="highlight"
@@ -240,7 +258,7 @@
         </span>
         <span>
           <i class="spurt-key"></i>
-          Final third
+          Final spurt window
         </span>
         <span>
           <i class="finish-key"></i>
@@ -312,6 +330,11 @@
   .final-third {
     stroke: var(--accent-warning);
     stroke-width: 3;
+  }
+  .spurt-line path {
+    stroke: var(--accent-warning);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
   }
   .highlight-halo {
     stroke: var(--surface-1);

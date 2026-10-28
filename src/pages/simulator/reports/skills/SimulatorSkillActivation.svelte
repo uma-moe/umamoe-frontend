@@ -1,6 +1,7 @@
 <script lang="ts">
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
+  import EmptyState from '@/components/feedback/EmptyState.svelte';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import SimulatorRunnerFace from '../SimulatorRunnerFace.svelte';
   import { activationRows, type ActivationCell } from './skill-activation';
@@ -145,9 +146,12 @@
       ]}
       bind:value={show}
     />{/snippet}
-  {#if !result.skill_procs}<p class="empty">
-      This batch did not collect skill activations. Run the simulation again to see them.
-    </p>
+  {#if !result.skill_procs}
+    <EmptyState
+      compact
+      title="No skill activations"
+      description="This batch did not collect skill activations. Run the simulation again to see them."
+    />
   {:else}
     <div
       class="activation"
@@ -156,9 +160,16 @@
       style:--cell={cell + 'px'}
       style:--runners={sources.length}
     >
-      {#if !visible.length}<p class="empty">
-          Every skill activates in at least 95% of races for every runner shown.
-        </p>{/if}
+      {#if !visible.length}
+        <div class="all-reliable">
+          <EmptyState
+            compact
+            icon="check"
+            title="Every skill fires reliably"
+            description="Every skill activates in at least 95% of races for every runner shown."
+          />
+        </div>
+      {/if}
       {#each lists as list, index (index)}
         {#if list.length}<div
             class="list"
@@ -276,6 +287,9 @@
     scrollbar-width: thin;
     min-width: 0;
   }
+  .all-reliable {
+    flex: 1;
+  }
   :global(:root[data-theme='light']) .activation {
     --activation-rare: #e08a00;
     --activation-never: #e34948;
@@ -351,11 +365,6 @@
   }
   .line:not(.head):hover .skill :global(.skill-chip) {
     outline: 1px solid var(--border-primary);
-  }
-  .empty {
-    font-size: 12px;
-    color: var(--text-secondary);
-    padding: 10px 6px;
   }
   .key {
     display: flex;

@@ -14,6 +14,7 @@
   import { distributionChart } from '../distribution-chart';
   import type { MonteCarloResult } from '../../simulator-repository';
   import type { SimulatorUma } from '../../simulator-uma';
+  import { finalSpurtSection } from '@/lib/race/final-spurt';
 
   let {
     result,
@@ -168,7 +169,8 @@
           name: mode === 'binomial' ? 'Binomial probability' : 'Observed frequency',
           color: $theme === 'dark' ? '#69b7ee' : '#287caf',
           values,
-          mean
+          mean,
+          window: mode === 'distance' ? finalSpurtSection(distance) : undefined
         }
       ],
       range.min,

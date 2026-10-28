@@ -16,8 +16,6 @@ export interface BuildSearchState {
   /** The Team Trials tracks picked per distance, as course ids; a distance not here races its default pool. */
   tracks: Partial<Record<TeamTrialsMode, number[]>>;
   seed: string;
-  candidates: string;
-  finalists: string;
   /** HP debuffs she takes from other runners in every race, and how much of her max HP each one drains. */
   debuffs: { count: string; percent: string };
 }
@@ -33,8 +31,6 @@ function defaults(): BuildSearchState {
     mode: 'cm',
     tracks: {},
     seed: String(Math.floor(Math.random() * 2 ** 31)),
-    candidates: '150',
-    finalists: '5',
     debuffs: { count: '0', percent: '1' }
   };
 }
@@ -46,61 +42,62 @@ const record = (value: unknown): Loose | undefined =>
 const text = (value: unknown, fallback: string) =>
   typeof value === 'string' || typeof value === 'number' ? String(value) : fallback;
 
-function restore(): BuildSearchState {
+/** A saved or imported setup over the defaults, keeping only fields of the right type. */
+export function restoreBuildSearch(saved: unknown): BuildSearchState {
   const state = defaults();
-  try {
-    const data = record(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'));
-    if (!data) return state;
-    state.uma = restoreSimulatorUma(data.uma, state.uma);
-    if (Array.isArray(data.offers))
-      state.offers = data.offers.flatMap((item) => {
-        const offer = record(item);
-        const skillId = Number(offer?.skillId),
-          hint = Number(offer?.hint);
+  const data = record(saved);
+  if (!data) return state;
 
-        if (!Number.isInteger(skillId) || skillId <= 0) {
-          return [];
+  state.uma = restoreSimulatorUma(data.uma, state.uma);
+  if (Array.isArray(data.offers))
+    state.offers = data.offers.flatMap((item) => {
+      const offer = record(item);
+      const skillId = Number(offer?.skillId),
+        hint = Number(offer?.hint);
+
+      if (!Number.isInteger(skillId) || skillId <= 0) {
+        return [];
+      }
+
+      return [
+        {
+          skillId,
+          hint: Number.isInteger(hint) ? Math.min(MAX_HINT, Math.max(0, hint)) : 0,
+          ...(offer?.locked === true ? { locked: true } : {})
         }
-
-        return [
-          {
-            skillId,
-            hint: Number.isInteger(hint) ? Math.min(MAX_HINT, Math.max(0, hint)) : 0,
-            ...(offer?.locked === true ? { locked: true } : {})
-          }
-        ];
-      });
-    state.budget = text(data.budget, state.budget);
-    state.fastLearner = data.fastLearner === true;
-    state.mode = OPTIMIZE_MODES.find((mode) => mode === data.mode) ?? state.mode;
-    const tracks = record(data.tracks);
-    for (const mode of OPTIMIZE_MODES) {
-      if (mode === 'cm') continue;
-      const courses = tracks?.[mode];
-      if (Array.isArray(courses))
-        state.tracks[mode] = courses
-          .map(Number)
-          .filter((course) => Number.isInteger(course) && course > 0);
-    }
-
-    state.seed = text(data.seed, state.seed);
-    const debuffs = record(data.debuffs);
-    if (debuffs)
-      state.debuffs = {
-        count: text(debuffs.count, state.debuffs.count),
-        percent: text(debuffs.percent, state.debuffs.percent)
-      };
-
-    // The beam search's defaults (64 and 3) were too few for the tree search; 256 was the screen's before its fixed budget.
-    if (!(data.candidates === '64' && data.finalists === '3')) {
-      if (data.candidates !== '256') state.candidates = text(data.candidates, state.candidates);
-      state.finalists = text(data.finalists, state.finalists);
-    }
-  } catch {
-    /* Storage can be unavailable or hold something else; start fresh then. */
+      ];
+    });
+  state.budget = text(data.budget, state.budget);
+  state.fastLearner = data.fastLearner === true;
+  state.mode = OPTIMIZE_MODES.find((mode) => mode === data.mode) ?? state.mode;
+  const tracks = record(data.tracks);
+  for (const mode of OPTIMIZE_MODES) {
+    if (mode === 'cm') continue;
+    const courses = tracks?.[mode];
+    if (Array.isArray(courses))
+      state.tracks[mode] = courses
+        .map(Number)
+        .filter((course) => Number.isInteger(course) && course > 0);
   }
 
+  state.seed = text(data.seed, state.seed);
+  const debuffs = record(data.debuffs);
+  if (debuffs)
+    state.debuffs = {
+      count: text(debuffs.count, state.debuffs.count),
+      percent: text(debuffs.percent, state.debuffs.percent)
+    };
+
   return state;
+}
+
+function restore(): BuildSearchState {
+  try {
+    return restoreBuildSearch(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'));
+  } catch {
+    /* Storage can be unavailable or hold something else; start fresh then. */
+    return defaults();
+  }
 }
 
 export const buildSearch = $state<BuildSearchState>(restore());

@@ -21,9 +21,21 @@
     offers: SkillOffer[];
     goal: ReturnType<typeof buildCodeGoal>;
     skills: Map<number, SkillData>;
+    /** The code was copied from this tab and restores all of it. */
+    whole?: boolean;
   }
 
-  let { code, target, course, conditions, runners, offers, goal, skills }: Props = $props();
+  let {
+    code,
+    target,
+    course,
+    conditions,
+    runners,
+    offers,
+    goal,
+    skills,
+    whole = false
+  }: Props = $props();
 
   const MODES: Record<string, string> = {
     cm: 'Champions Meeting',
@@ -32,6 +44,18 @@
     tt_medium: 'Team Trials · Medium',
     tt_long: 'Team Trials · Long',
     tt_dirt: 'Team Trials · Dirt'
+  };
+
+  const WHOLE: Record<Props['target'], (runners: number) => string> = {
+    race: (count) =>
+      'Replaces the whole race field with these ' +
+      count +
+      (count === 1 ? ' runner' : ' runners') +
+      ', their teams and gates, the course, the seed and the race options.',
+    stamina: () =>
+      'Replaces the whole HP calculator: her build, the course, the HP plan and its race options.',
+    build: () =>
+      'Replaces the whole Skill planner: her build, the course, the goal, what she can buy with hints and locks, and the HP debuffs she takes.'
   };
 
   const dropped = $derived(runners.reduce((sum, runner) => sum + runner.dropped, 0));
@@ -49,7 +73,10 @@
       .join(' · ')
   );
 
+  /** What loading it changes on this tab, in a sentence. */
   const changes = $derived.by(() => {
+    if (whole) return WHOLE[target](runners.length);
+
     if (target === 'race') {
       return (
         (simulatorRoster.configured ? 'Adds ' : 'Replaces the example field with ') +

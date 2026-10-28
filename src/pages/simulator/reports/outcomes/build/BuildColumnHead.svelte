@@ -1,88 +1,81 @@
 <script lang="ts">
-  import { skillImage } from '@/lib/game-data/skills/skills';
-  import type { OptimizeEstimate } from '../../../simulator-repository';
-  import { amount, type HeldSkill, type StatCell } from './build-result';
+  import Badge from '@/components/Badge.svelte';
+  import { gapText, lengthsText, winRateText, winText, type RacedGap } from './build-result';
 
-  /** A build that came close to the best: what it gains her, how she races with it, and what it swaps. */
+  /**
+   * The head of one build's card: its rank, what it is worth to her and what it costs. Where races in her real fields
+   * ranked the builds, its worth is her win rate there, the theory's lengths beside it; otherwise the lengths. A build
+   * after the pick also says how far behind the pick it is, as builds that buy nearly the same skills differ by little.
+   */
   interface Props {
     title: string;
+    /** The build worth the most, whose skills she should buy. */
+    pick: boolean;
     spCost: number;
-    gain?: OptimizeEstimate;
-    /** The best build's gain, which this one trails. */
-    bestGain?: OptimizeEstimate;
-    /** Gains are runners beaten in real CM fields, not seconds. */
-    field: boolean;
-    stats: StatCell[];
-    /** What it buys that the best build does not, and what it drops. */
-    changes: { added: HeldSkill[]; dropped: HeldSkill[] };
+    /** Skills it buys, an upgrade and what it builds on counting as one. */
+    count: number;
+    /** Lengths it gains her over her build as it is. */
+    lengths: number;
+    /** Lengths it is worth less than the pick; absent for the pick. */
+    behind?: number;
+    /** Estimated win points (0–1) it is worth less than the pick, when the service sends them. */
+    behindWin?: number;
+    /** Her win rate with it in races of her real CM fields, when races ranked the builds: they are in its order. */
+    winRate?: number;
+    /** How far it trails the pick in those races; absent for the pick. */
+    racedBehind?: RacedGap;
+    /** What the races that checked it say, on hover. */
+    check: string;
   }
 
-  let { title, spCost, gain, bestGain, field, stats, changes }: Props = $props();
-
-  const behind = $derived(
-    gain && bestGain && bestGain.mean !== gain.mean ? gain.mean - bestGain.mean : undefined
-  );
+  let {
+    title,
+    pick,
+    spCost,
+    count,
+    lengths,
+    behind,
+    behindWin,
+    winRate,
+    racedBehind,
+    check
+  }: Props = $props();
 </script>
 
-{#snippet chips(skills: HeldSkill[], added: boolean)}
-  {#each skills as skill (skill.key)}
-    <li
-      class="chip"
-      class:added
-    >
-      <span class="sign">{added ? '+' : '−'}</span>
-      <img
-        src={skillImage(skill.offer.skill.icon)}
-        alt=""
-        width="16"
-        height="16"
-      />
-      <span class="chip-name">{skill.offer.skill.name}</span>
-      <span class="sr-only">{added ? ', bought instead' : ', dropped'}</span>
-    </li>
-  {/each}
-{/snippet}
-
-<article
-  class="card"
-  aria-label={title}
->
-  <header>
-    <h4>{title}</h4>
-    <span class="sp">{spCost.toLocaleString('en-US')} SP</span>
-  </header>
-
-  {#if gain}
-    <p class="gain">
-      <strong>{amount(gain.mean, field)}</strong>
-      {#if behind !== undefined}
-        <span>{amount(behind, field)} vs best</span>
+<header class="head">
+  <div class="rank">
+    <h4>
+      {title}
+      {#if pick}<Badge tone="accent">Pick</Badge>{/if}
+    </h4>
+    <span class="spend">
+      {count}
+      {count === 1 ? 'skill' : 'skills'} · {spCost.toLocaleString('en-US')} SP
+    </span>
+  </div>
+  <p
+    class="score"
+    title={check || undefined}
+  >
+    {#if winRate !== undefined}
+      <strong>{winRateText(winRate)}</strong>
+      <span>win rate</span>
+      {#if racedBehind}
+        <span class="behind">{gapText(racedBehind)} vs the pick</span>
       {/if}
-    </p>
-  {/if}
-
-  {#if changes.added.length || changes.dropped.length}
-    <ul
-      class="swaps"
-      aria-label="Swaps from the best build"
-    >
-      {@render chips(changes.added, true)}
-      {@render chips(changes.dropped, false)}
-    </ul>
-  {/if}
-
-  {#if stats.length}
-    <dl class="stats">
-      {#each stats as stat (stat.label)}
-        <div class:top={stat.top}>
-          <dt>{stat.label}</dt>
-          <dd>{stat.text}</dd>
-        </div>
-      {/each}
-    </dl>
-  {/if}
-</article>
+      <span>{lengthsText(lengths)} theorized</span>
+    {:else}
+      <strong>{lengthsText(lengths, 2, false)}</strong>
+      <span>lengths</span>
+      {#if behindWin !== undefined}
+        <span class="behind">≈ {winText(-behindWin)} win vs the pick</span>
+      {:else if behind !== undefined}
+        <span class="behind">{lengthsText(-behind)} vs the pick</span>
+      {/if}
+    {/if}
+  </p>
+</header>
 
 <style>
-  @import './build-card.css';
+  @import './build-column-head.css';
 </style>

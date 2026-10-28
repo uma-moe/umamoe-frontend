@@ -181,13 +181,12 @@ for (const runners of [9, 18])
 
         await samples.getByRole('button', { name: 'Median race', exact: true }).first().click();
         await expect(samples.locator('.replay')).toBeVisible();
-        await samples.getByRole('button', { name: 'Full replay diagnostics', exact: true }).click();
-        await expect(
-          samples.getByRole('button', { name: 'Full replay diagnostics', exact: true })
-        ).toHaveCount(0, { timeout: 30_000 });
+        await expect(samples.locator('.capture-summary')).toContainText('Detailed resimulation', {
+          timeout: 30_000
+        });
 
         await expect(samples.getByRole('alert')).toHaveCount(0);
-        expect(replays).toBe(1); // Only the explicit detailed replay; the normal sample uses /monte-carlo.
+        expect(replays).toBe(1); // Only the automatic detailed replay; the normal sample uses /monte-carlo.
         await samples.screenshot({ path: '.tmp/report-sample-diagnostics.png' });
       }
 

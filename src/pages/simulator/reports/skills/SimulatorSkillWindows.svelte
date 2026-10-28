@@ -23,6 +23,7 @@
   } from './skill-windows';
   import type { MonteCarloResult } from '../../simulator-repository';
   import type { SimulatorUma } from '../../simulator-uma';
+  import { finalSpurtSection, FINAL_SPURT_HELP } from '@/lib/race/final-spurt';
 
   /**
    * The followed runner's skills as a continuous heatmap under the replay's course strip, on its clock, sorted by when they usually fire.
@@ -78,6 +79,7 @@
   });
 
   const sections = $derived(windowSections(course, timeAt, startTime));
+  const spurtTime = $derived(timeAt(finalSpurtSection(distanceMax).start));
   const ramp = $derived($theme === 'light' ? RAMP_LIGHT : RAMP_DARK);
   const grid = $derived(windowGrid(startTime, endTime));
   const at = (value: number) => grid.at(value);
@@ -230,6 +232,13 @@
           {/if}
         {/each}
         <i class="lane"></i>
+        {#if spurtTime !== undefined}
+          <i
+            class="spurt-window"
+            style:left={at(spurtTime) + '%'}
+            title={FINAL_SPURT_HELP}
+          ></i>
+        {/if}
         <i
           class="heat"
           style:background={skill.gradient}
