@@ -68,18 +68,18 @@ function routesByIds(ids: readonly string[]): AppRouteDefinition[] {
   });
 }
 
-// The logo remains the Home affordance; tool pages stay under their section.
+// The logo remains the Home affordance; tool pages stay under their section. The order
+// follows the home page links; Veterans and Activity sit beside their closest section.
 const mainRouteIds = [
   'database',
   'veterans',
+  'competitive',
+  'tools',
+  'timeline',
   'clubs',
   'rankings',
   'activity',
-  'tierlist',
-  'competitive',
-  'tools',
-  'research',
-  'timeline'
+  'research'
 ] as const;
 
 export function navigationForPath(
@@ -102,9 +102,14 @@ export function navigationForPath(
     const item = directItem(route, pathname);
     const children: NavigationSubItem[] = appRoutes
       .filter(
-        (child) => child.navigation === 'secondary' && child.path.startsWith(`${route.path}/`)
+        (child) =>
+          child.navigation === 'secondary' &&
+          (child.path.startsWith(`${route.path}/`) ||
+            (route.id === 'tools' && child.group === 'tools'))
       )
       .map((child) => directItem(child, pathname));
+
+    if (children.some((child) => child.current)) item.current = true;
 
     if (route.id === 'tools') children.push(planner);
     if (route.id === 'timeline')

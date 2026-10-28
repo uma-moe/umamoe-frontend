@@ -3,7 +3,7 @@ import { pageTourForUrl, pageStepIds, tourSteps } from './page-tours';
 import { tourAudience, TOUR_AUDIENCE_KEY } from './tour-state';
 
 describe('Angular page tours', () => {
-  it('preserves route matching, all 90 ordered page steps, and the fallback', () => {
+  it('preserves route matching and ordered steps while excluding the hidden tierlist', () => {
     const urls = [
       '/',
       '/database?filters=x',
@@ -22,7 +22,7 @@ describe('Angular page tours', () => {
       'clubs',
       'rankings',
       'activity',
-      'tierlist',
+      undefined,
       'tools',
       'timeline',
       'carat-planner'
@@ -33,10 +33,10 @@ describe('Angular page tours', () => {
       undefined
     ]);
     expect(Object.values(pageStepIds).map((ids) => ids.length)).toEqual([
-      8, 28, 8, 6, 11, 7, 5, 11, 6
+      7, 28, 8, 6, 11, 7, 5, 11, 6
     ]);
     const ids = Object.values(pageStepIds).flat();
-    expect(new Set(ids).size).toBe(90);
+    expect(new Set(ids).size).toBe(89);
     expect(tourSteps.map((step) => step.stepId).sort()).toEqual([...ids, 'replay'].sort());
   });
 

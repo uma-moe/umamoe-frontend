@@ -243,7 +243,7 @@ test('lazy public pages keep one consistent set of metadata', async ({ page, con
     localStorage.setItem('lastSeenUpdateVersion', '17');
   });
 
-  for (const path of ['/tools', '/privacy-policy', '/circles', '/tierlist', '/timeline'] as const) {
+  for (const path of ['/tools', '/privacy-policy', '/circles', '/timeline'] as const) {
     await page.goto(path);
     await expect(page.locator('[data-app-shell]')).toBeVisible();
     await expect(page.locator('.pending-content')).toHaveCount(0);

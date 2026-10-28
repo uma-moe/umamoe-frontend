@@ -12,39 +12,39 @@
       description: 'Browse the Database'
     },
     {
-      href: '/circles',
-      icon: 'community' as const,
-      accent: 'secondary',
-      title: 'Clubs',
-      description: 'Club Database and Fan Progression'
-    },
-    {
-      href: '/rankings',
-      icon: 'rankings' as const,
+      href: '/competitive',
+      icon: 'trophy' as const,
       accent: 'warning',
-      title: 'Rankings',
-      description: 'Global Trainer Fan Rankings'
-    },
-    {
-      href: '/tierlist',
-      icon: 'tierlist' as const,
-      accent: 'warning',
-      title: 'Tierlists',
-      description: 'Support Card Tierlist'
-    },
-    {
-      href: '/timeline',
-      icon: 'timeline' as const,
-      accent: 'pink',
-      title: 'Timeline',
-      description: 'Estimated Release Schedule'
+      title: 'Competitive',
+      description: 'Race Analysis and CM Data'
     },
     {
       href: '/tools',
       icon: 'tools' as const,
       accent: 'purple',
       title: 'Tools & Analytics',
-      description: 'Advanced tools and statistics'
+      description: 'Calculators and Statistics'
+    },
+    {
+      href: '/timeline',
+      icon: 'timeline' as const,
+      accent: 'pink',
+      title: 'Timeline',
+      description: 'Estimated Release Dates'
+    },
+    {
+      href: '/circles',
+      icon: 'community' as const,
+      accent: 'secondary',
+      title: 'Clubs',
+      description: 'Clubs and Fan Progression'
+    },
+    {
+      href: '/rankings',
+      icon: 'rankings' as const,
+      accent: 'warning',
+      title: 'Rankings',
+      description: 'Trainer Fan Rankings'
     }
   ];
 </script>

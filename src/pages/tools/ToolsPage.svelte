@@ -8,43 +8,57 @@
       icon: 'database' as const,
       accent: 'primary',
       title: 'Master Data',
-      description: 'Browse every game table and run SQL queries in your browser',
+      description: 'Query every game table',
       updated: true
+    },
+    {
+      href: '/tools/skill-explorer',
+      icon: 'chart' as const,
+      accent: 'pink',
+      title: 'Skill Explorer',
+      description: 'Skill values per course'
     },
     {
       href: '/tools/statistics',
       icon: 'chart' as const,
       accent: 'primary',
       title: 'Team Stadium Statistics',
-      description: 'Interactive charts and data analysis'
+      description: 'Charts and data analysis'
     },
     {
       href: '/timeline?tab=carat-planner',
       icon: 'paid' as const,
       accent: 'secondary',
       title: 'Carat Planner',
-      description: 'Project income, tickets, pulls, and banner goals'
+      description: 'Plan pulls and banners'
     },
     {
       href: '/tools/lineage-planner',
       icon: 'lineage' as const,
       accent: 'success',
       title: 'Lineage Planner',
-      description: 'Plan your full inheritance tree'
+      description: 'Plan your inheritance tree'
     },
     {
       href: '/simulator/hp',
       icon: 'battery' as const,
       accent: 'warning',
       title: 'HP Calculator',
-      description: 'Check whether her HP lasts a top-speed spurt'
+      description: 'Check HP for a full spurt'
     },
     {
       href: '/simulator/race',
       icon: 'gauge' as const,
       accent: 'pink',
       title: 'Race Simulator',
-      description: 'Simulate race outcomes and performance'
+      description: 'Simulate race outcomes'
+    },
+    {
+      href: '/simulator/skills',
+      icon: 'tune' as const,
+      accent: 'success',
+      title: 'Build Optimizer',
+      description: 'Find the best skill buys'
     }
   ];
 </script>
@@ -61,28 +75,7 @@
   title="Tools & Calculators"
   description="Calculation tools and utilities for Umamusume trainers"
 >
-  {#snippet heading()}
-    <h1>Tools &amp; Calculators</h1>
-  {/snippet}
   {#each tools as tool}
     <FeatureLink {...tool} />
   {/each}
 </LandingPage>
-
-<style>
-  h1 {
-    margin: 0 0 1rem;
-    background: var(--gradient-heading);
-    background-clip: text;
-    color: transparent;
-    font-size: clamp(2rem, 5vw, 3rem);
-    font-weight: 800;
-    line-height: 1.1;
-  }
-  @media (max-width: 768px) {
-    h1 {
-      margin-bottom: 8px;
-      font-size: 2rem;
-    }
-  }
-</style>

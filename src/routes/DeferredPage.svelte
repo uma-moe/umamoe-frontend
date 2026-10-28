@@ -25,7 +25,6 @@
     rankings: 'Trainer Rankings',
     activity: 'Top 100 Club Activity Reports',
     statistics: 'Team Stadium',
-    tierlist: 'Support Card Tierlist',
     settings: 'Account Settings',
     privacy: 'Privacy Policy',
     tools: 'Tools & Calculators'

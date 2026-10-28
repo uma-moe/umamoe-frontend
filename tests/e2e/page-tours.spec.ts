@@ -9,13 +9,12 @@ import {
 } from './fixtures/api';
 import { pageStepIds, tourSteps, type PageTourId } from '../../src/components/tours/page-tours';
 
-const routes: Record<PageTourId, string> = {
+const routes: Partial<Record<PageTourId, string>> = {
   home: '/',
   database: '/database',
   clubs: '/circles',
   rankings: '/rankings',
   activity: '/activity/42',
-  tierlist: '/tierlist',
   tools: '/tools',
   timeline: '/timeline',
   'carat-planner': '/timeline?tab=carat-planner'

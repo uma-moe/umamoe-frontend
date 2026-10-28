@@ -5,7 +5,6 @@
   <url><loc>https://uma.moe/circles</loc></url>
   <url><loc>https://uma.moe/rankings</loc></url>
   <url><loc>https://uma.moe/activity</loc></url>
-  <url><loc>https://uma.moe/tierlist</loc></url>
   <url><loc>https://uma.moe/tools</loc></url>
   <url><loc>https://uma.moe/tools/statistics</loc></url>
   <url><loc>https://uma.moe/tools/lineage-planner</loc></url>
@@ -14,6 +13,7 @@
   <url><loc>https://uma.moe/competitive</loc></url>
   <url><loc>https://uma.moe/competitive/race-analysis</loc></url>
   <url><loc>https://uma.moe/competitive/cm-data</loc></url>
+  <url><loc>https://uma.moe/tools/skill-explorer</loc></url>
   <url><loc>https://uma.moe/tools/master-data</loc></url>
   <url><loc>https://uma.moe/research</loc></url>
 </urlset>

@@ -78,21 +78,6 @@
       "source": "moe"
     },
     {
-      "id": "tierlist",
-      "title": "Tierlist",
-      "description": "Compare Uma Musume support cards with a data-driven Global tier list, limit-break controls, type rankings, and performance details.",
-      "path": "/tierlist",
-      "group": "main",
-      "icon": "tierlist",
-      "status": "migration",
-      "dataOwnership": "public",
-      "indexable": true,
-      "adSurface": "tierlist",
-      "width": "wide",
-      "navigation": "primary",
-      "source": "moe"
-    },
-    {
       "id": "tools",
       "title": "Tools",
       "description": "Free Uma Musume calculators and tools for affinity, inheritance lineages, Team Stadium statistics, carat planning, and Global release tracking.",
@@ -211,6 +196,21 @@
       "indexable": true,
       "adSurface": null,
       "source": "hakuraku"
+    },
+    {
+      "id": "skill-explorer",
+      "title": "Skill Explorer",
+      "description": "See what every Uma Musume skill is worth and where it procs on every course, by running style, surface and length.",
+      "path": "/tools/skill-explorer",
+      "group": "tools",
+      "icon": "chart",
+      "navigation": "secondary",
+      "width": "wide",
+      "status": "migration",
+      "dataOwnership": "public",
+      "indexable": true,
+      "adSurface": null,
+      "source": "moe"
     },
     {
       "id": "master-data",

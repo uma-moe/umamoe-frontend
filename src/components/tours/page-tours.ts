@@ -66,7 +66,6 @@ export const pageStepIds: Record<PageTourId, string[]> = {
     'home-database-link',
     'home-clubs-link',
     'home-rankings-link',
-    'home-tierlist-link',
     'home-timeline-link',
     'home-tools-link',
     'home-stats'
@@ -207,17 +206,6 @@ export const tourSteps: TourStep[] = [
     asyncStepTimeout: 5000,
     isOptional: true,
     selector: '.home a[href="/rankings"]'
-  },
-  {
-    stepId: 'home-tierlist-link',
-    anchorId: 'home-tierlist-link',
-    title: 'Tierlists',
-    content:
-      'Open Tierlists when you want a quick support-card strength comparison by type and limit break.',
-    placement: { xPosition: 'after', yPosition: 'above' },
-    asyncStepTimeout: 5000,
-    isOptional: true,
-    selector: '.home a[href="/tierlist"]'
   },
   {
     stepId: 'home-timeline-link',
@@ -1175,7 +1163,6 @@ export function pageTourForUrl(value: string): PageTourId | undefined {
   if (path.startsWith('/activity')) return 'activity';
   if (path === '/timeline')
     return url.searchParams.get('tab') === 'carat-planner' ? 'carat-planner' : 'timeline';
-  if (path === '/rankings' || path === '/tierlist' || path === '/tools')
-    return path.slice(1) as PageTourId;
+  if (path === '/rankings' || path === '/tools') return path.slice(1) as PageTourId;
   return undefined;
 }

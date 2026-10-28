@@ -35,7 +35,6 @@ const angularRoutes = [
   '/activity',
   '/activity/123456789012',
   '/timeline',
-  '/tierlist',
   '/tools',
   '/tools/statistics',
   '/tools/lineage-planner',
@@ -92,7 +91,6 @@ test('representative Angular pages stay horizontally safe at 320px', async ({ pa
     '/rankings',
     '/activity',
     '/timeline',
-    '/tierlist',
     '/tools'
   ]) {
     await page.goto(path, { waitUntil: 'networkidle' });
