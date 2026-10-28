@@ -107,6 +107,7 @@ scripts/*
 !/src/assets/images/race-thumbnails/
 /src/assets/images/race-thumbnails/*
 !/src/assets/images/race-thumbnails/thum_race_rt_*.webp
+!/src/assets/images/simulator/
 !/public/assets/
 /public/assets/*
 !/public/assets/images/
