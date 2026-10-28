@@ -19,10 +19,12 @@ function point(overrides: Partial<SkillPoint>): SkillPoint {
     skillId: 200011,
     win: 0,
     winAlone: 0,
+    expected: 0,
     rate: 0,
     mean: 0,
     courses: 1,
     sections: new Array<number>(SECTIONS).fill(0),
+    forced: 0,
     ...overrides
   };
 }
@@ -63,6 +65,14 @@ describe('Skill Explorer data', () => {
 
     expect(scope.margins).toEqual({ '1': 0.25, '3': 0.4, all: 0.4 });
     expect(parseScope(courseFile).margins).toEqual({});
+  });
+
+  it('reads value over all races and forced courses, or derives them from an older row', () => {
+    const row = [200011, 4, 2, 0.5, 0.25, 3, sections(6, 500)];
+    const scope = parseScope({ courses: 3, styles: { '1': [[...row, 1.5, 1]], '2': [row] } });
+
+    expect(scope.styles['1'][0]).toMatchObject({ win: 4, expected: 1.5, forced: 1 });
+    expect(scope.styles['2'][0]).toMatchObject({ win: 4, expected: 2, forced: 0 });
   });
 
   it('rejects rows with the wrong section count', () => {

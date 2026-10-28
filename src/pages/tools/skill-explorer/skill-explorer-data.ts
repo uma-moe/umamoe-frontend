@@ -67,9 +67,14 @@ export interface ExplorerIndex {
 /** One skill for one style over a scope. */
 export interface SkillPoint {
   skillId: number;
-  /** Win points (0–100) it adds to the reference build, and on its own over no skills, by the model. */
+  /**
+   * Win points (0–100) it adds to the reference build, and on its own over no skills, by the model: in the races it
+   * fires in, where it fires.
+   */
   win: number;
   winAlone: number;
+  /** Win points it adds to the reference build over all races: per firing times its rate, 0 where it was forced. */
+  expected: number;
   /** Share of races it fires in. */
   rate: number;
   /** Mean first activation, as a share of the race. */
@@ -78,6 +83,11 @@ export interface SkillPoint {
   courses: number;
   /** Share of races it first fires in each section, summing to `rate`. */
   sections: number[];
+  /**
+   * Courses of the scope it never fired on in her build, so it was valued forced to fire wherever the course lets it
+   * (its style, distance, day, the runners around her and other skills' activations counting as met).
+   */
+  forced: number;
 }
 
 /** A skill that raises another's value beside it, and by how many win points. */
@@ -156,22 +166,29 @@ export function parseIndex(value: unknown): ExplorerIndex {
   };
 }
 
-/** A row is [id, win points in build, win points alone, rate, mean, courses, sections in permille of races]. */
+/**
+ * A row is [id, win points in build, win points alone, rate, mean, courses, sections in permille of races, win points
+ * over all races, courses forced on]; a bundle from before the last two reads them from the rest.
+ */
 function parseRow(value: unknown): SkillPoint {
-  if (!Array.isArray(value) || value.length !== 7 || !Array.isArray(value[6]))
+  if (!Array.isArray(value) || ![7, 9].includes(value.length) || !Array.isArray(value[6]))
     throw new Error('Skill Explorer data has an invalid skill row.');
   const sections = value[6].map((share) => finiteNumber(share, 'section share') / 1000);
   if (sections.length !== SECTIONS)
     throw new Error('Skill Explorer data has an invalid section count.');
 
+  const win = finiteNumber(value[1], 'win points');
+  const rate = finiteNumber(value[3], 'fire rate');
   return {
     skillId: finiteNumber(value[0], 'skill id'),
-    win: finiteNumber(value[1], 'win points'),
+    win,
     winAlone: finiteNumber(value[2], 'win points alone'),
-    rate: finiteNumber(value[3], 'fire rate'),
+    expected: value.length === 9 ? finiteNumber(value[7], 'win points over all races') : win * rate,
+    rate,
     mean: finiteNumber(value[4], 'fire point'),
     courses: finiteNumber(value[5], 'course count'),
-    sections
+    sections,
+    forced: value.length === 9 ? finiteNumber(value[8], 'forced course count') : 0
   };
 }
 
@@ -266,18 +283,22 @@ export function averageStyles(styles: SkillPoint[][]): SkillPoint[] {
           skillId: point.skillId,
           win: 0,
           winAlone: 0,
+          expected: 0,
           rate: 0,
           mean: 0,
           firedMean: 0,
           courses: 0,
-          sections: new Array<number>(SECTIONS).fill(0)
+          sections: new Array<number>(SECTIONS).fill(0),
+          forced: 0
         };
         totals.set(point.skillId, total);
       }
 
       total.win += point.win;
       total.winAlone += point.winAlone;
+      total.expected += point.expected;
       total.rate += point.rate;
+      total.forced = Math.max(total.forced, point.forced);
       total.firedMean += point.mean * point.rate;
       total.courses = Math.max(total.courses, point.courses);
       point.sections.forEach((share, index) => {
@@ -291,6 +312,7 @@ export function averageStyles(styles: SkillPoint[][]): SkillPoint[] {
     ...total,
     win: total.win / count,
     winAlone: total.winAlone / count,
+    expected: total.expected / count,
     rate: total.rate / count,
     mean: total.rate > 0 ? firedMean / total.rate : 0,
     sections: total.sections.map((share) => share / count)

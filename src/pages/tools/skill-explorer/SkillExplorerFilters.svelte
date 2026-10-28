@@ -32,6 +32,7 @@
     show: ShowLimit;
     bestOfFamily: boolean;
     showDayBound: boolean;
+    procScaled: boolean;
     umas: ExplorerUma[];
     surfaceOptions: SelectOption[];
     distanceOptions: SelectOption[];
@@ -55,6 +56,7 @@
     show = $bindable(),
     bestOfFamily = $bindable(),
     showDayBound = $bindable(),
+    procScaled = $bindable(),
     umas,
     surfaceOptions,
     distanceOptions,
@@ -180,6 +182,12 @@
       label="Ground, weather and season skills"
       description="Valued as if their day holds"
       bind:checked={showDayBound}
+    />
+    <Checkbox
+      id="skill-explorer-proc-scaled"
+      label="Scale by proc rate"
+      description="Over all races, not only those it fires in"
+      bind:checked={procScaled}
     />
   </div>
 

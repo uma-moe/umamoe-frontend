@@ -78,6 +78,8 @@ export interface PlotOptions {
   showDayBound: boolean;
   /** A CM's race day: its ground, weather and season skills show when they hold, whatever `showDayBound` says. */
   day?: RaceDay;
+  /** Values over all races, scaled by how often each skill fires, rather than in the races it fires in. */
+  procScaled: boolean;
   /** Only the best version of each skill family. */
   bestOfFamily: boolean;
   /** The most valuable skills to show; search matches show beyond it. None shows every skill. */
@@ -129,8 +131,16 @@ function positionLabel(share: number, courseDistance: number | undefined): strin
   return `${Math.round(share * courseDistance)} m`;
 }
 
-function plottedY(point: SkillPoint, yMode: YMode): number {
-  return yMode === 'value' ? point.win : point.winAlone;
+/**
+ * The value plotted: per firing, or scaled by its proc rate. Scaled, a skill forced to fire is worth 0 where it never
+ * fired, except a ground, weather or season skill on a CM whose day it holds on: there it fires at its forced rate.
+ */
+function plottedY(point: SkillPoint, skill: SkillData, options: PlotOptions): number {
+  const perFiring = options.yMode === 'value' ? point.win : point.winAlone;
+  if (!options.procScaled) return perFiring;
+  if (options.day !== undefined && isDayBound(skill)) return perFiring * point.rate;
+  if (point.win === 0) return 0;
+  return perFiring * (point.expected / point.win);
 }
 
 function plottedX(point: SkillPoint, skill: SkillData, xMode: XMode): number | undefined {
@@ -165,7 +175,7 @@ function candidatesOf(options: PlotOptions): Candidate[] {
       point,
       skill,
       x,
-      y: plottedY(point, options.yMode),
+      y: plottedY(point, skill, options),
       matches: nameMatches && umaGivesIt
     });
   }

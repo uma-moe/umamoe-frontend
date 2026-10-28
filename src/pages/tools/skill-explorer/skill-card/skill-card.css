@@ -118,6 +118,13 @@ h4 {
   text-transform: uppercase;
 }
 
+/* A skill that never procs for her, valued forced to. */
+.forced {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
 .needs p {
   margin: 0;
   color: var(--text-primary);

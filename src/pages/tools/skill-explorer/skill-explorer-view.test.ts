@@ -13,10 +13,12 @@ function point(skillId: number, win: number, mean: number): SkillPoint {
     skillId,
     win,
     winAlone: win / 2,
+    expected: win,
     rate: 1,
     mean,
     courses: 1,
-    sections: new Array<number>(SECTIONS).fill(0)
+    sections: new Array<number>(SECTIONS).fill(0),
+    forced: 0
   };
 }
 
@@ -58,6 +60,7 @@ function view(overrides: Partial<PlotOptions> = {}) {
     kinds: new Set(SKILL_KINDS),
     search: '',
     showDayBound: false,
+    procScaled: false,
     bestOfFamily: false,
     ...overrides
   });
@@ -79,6 +82,26 @@ describe('Skill Explorer plot view', () => {
 
     expect(shownIds({ day: firmDay })).toContain(200151);
     expect(shownIds({ day: heavyDay, showDayBound: true })).not.toContain(200151);
+  });
+
+  it('scales by proc rate when asked: a skill forced to proc counts 0, on her own too', () => {
+    const rare = { ...point(200341, 0.8, 0.6), expected: 0.08, rate: 0.1 };
+    const forced = { ...point(200011, 0.5, 0), expected: 0, forced: 1 };
+    const scaled = (yMode: PlotOptions['yMode']) =>
+      view({ points: [rare, forced], procScaled: true, yMode }).plotted.map((p) => [
+        p.skillId,
+        p.y
+      ]);
+
+    expect(view({ points: [rare, forced] }).plotted.map((p) => p.y)).toEqual([0.8, 0.5]);
+    expect(scaled('value')).toEqual([
+      [200341, 0.08],
+      [200011, 0]
+    ]);
+    expect(scaled('alone')).toEqual([
+      [200341, 0.04],
+      [200011, 0]
+    ]);
   });
 
   it('keeps only the best version of a family when asked', () => {
