@@ -1,5 +1,6 @@
 import type { MonteCarloResult, SimulatorProc } from '../../simulator-repository';
-import { simulatorSampleSummary, winRateInterval } from '../../simulator-results';
+import { winRateInterval } from '@/lib/race/win-rate-interval';
+import { simulatorSampleSummary } from '../../simulator-results';
 import { reportCrossing } from '../simulation-report';
 
 export function skillDistributions(result: MonteCarloResult, source: number, owned: number[]) {

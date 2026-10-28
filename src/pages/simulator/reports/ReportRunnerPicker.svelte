@@ -1,26 +1,31 @@
 <script lang="ts">
-  import { runnerColor } from '../../simulation-report';
-  import SimulatorRunnerFace from '../../SimulatorRunnerFace.svelte';
-  import type { SimulatorUma } from '../../../simulator-uma';
+  import { runnerColor } from './simulation-report';
+  import { runnerStyle } from './runner-profile';
+  import SimulatorRunnerFace from './SimulatorRunnerFace.svelte';
+  import type { SimulatorUma } from '../simulator-uma';
 
+  /** One tab per runner for the report sections that follow a single runner. */
   interface Props {
+    /** Names the picker for its section, since a report can show more than one. */
+    label: string;
     sources: number[];
     active: number;
     umas: SimulatorUma[];
-    summary: (runner: number) => { badge: string; title: string };
+    /** A short badge per runner, such as how far her measurements are. */
+    summary?: (runner: number) => { badge: string; title: string } | undefined;
     onselect: (runner: number) => void;
   }
 
-  let { sources, active, umas, summary: runnerSummary, onselect }: Props = $props();
+  let { label, sources, active, umas, summary: runnerSummary, onselect }: Props = $props();
 </script>
 
 <div
   class="runners"
   role="radiogroup"
-  aria-label="Runner"
+  aria-label={label}
 >
   {#each sources as runner (runner)}
-    {@const summary = runnerSummary(runner)}
+    {@const summary = runnerSummary?.(runner)}
     <button
       type="button"
       role="radio"
@@ -28,7 +33,7 @@
       class="runner"
       class:active={runner === active}
       style:--runner={runnerColor(runner)}
-      title={summary.title}
+      title={summary?.title}
       onclick={() => onselect(runner)}
     >
       <i
@@ -39,8 +44,13 @@
         cardId={umas[runner]!.cardId}
         size={24}
       />
-      <span class="runner-name">{umas[runner]!.name}</span>
-      <small>{summary.badge}</small>
+      <span class="runner-name">
+        {umas[runner]!.name}
+        <em>{runnerStyle(umas[runner]!)}</em>
+      </span>
+      {#if summary}
+        <small>{summary.badge}</small>
+      {/if}
     </button>
   {/each}
 </div>
@@ -85,10 +95,20 @@
     border-color: rgb(var(--accent-primary-rgb) / 0.3);
   }
   .runner-name {
+    display: grid;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    line-height: 1.2;
+  }
+  .runner-name em {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 400;
   }
   .runner small {
     display: inline-grid;

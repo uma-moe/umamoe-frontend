@@ -23,9 +23,10 @@ export function raceConditions(text: string) {
       snow: '4',
       snowy: '4'
     }),
+    // The English game calls the second going Good, after Firm; Yielding is the same going by another name.
     ground: find(/\b(?:firm|good|yielding|soft|heavy)\b/i, {
       firm: '1',
-      good: '1',
+      good: '2',
       yielding: '2',
       soft: '3',
       heavy: '4'

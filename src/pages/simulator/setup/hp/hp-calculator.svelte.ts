@@ -85,21 +85,28 @@ export function restorePlan(saved: unknown): HpPlan {
   return plan;
 }
 
-function restore(): HpCalculatorState {
+/** A saved or imported setup over the defaults, keeping only fields of the right type. */
+export function restoreHpCalculator(saved: unknown): HpCalculatorState {
   const state = defaults();
-  try {
-    const data = record(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'));
-    if (!data) return state;
-    state.uma = restoreSimulatorUma(data.uma, state.uma);
-    state.plan = restorePlan(data.plan);
-    if (typeof data.counted === 'string') state.counted = data.counted;
-    if (typeof data.raceType === 'string') state.raceType = data.raceType;
-    if (data.fullSpurt === 'true' || data.fullSpurt === 'false') state.fullSpurt = data.fullSpurt;
-  } catch {
-    /* Storage can be unavailable or hold something else; start fresh then. */
-  }
+  const data = record(saved);
+  if (!data) return state;
+
+  state.uma = restoreSimulatorUma(data.uma, state.uma);
+  state.plan = restorePlan(data.plan);
+  if (typeof data.counted === 'string') state.counted = data.counted;
+  if (typeof data.raceType === 'string') state.raceType = data.raceType;
+  if (data.fullSpurt === 'true' || data.fullSpurt === 'false') state.fullSpurt = data.fullSpurt;
 
   return state;
+}
+
+function restore(): HpCalculatorState {
+  try {
+    return restoreHpCalculator(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'));
+  } catch {
+    /* Storage can be unavailable or hold something else; start fresh then. */
+    return defaults();
+  }
 }
 
 export const hpCalculator = $state<HpCalculatorState>(restore());

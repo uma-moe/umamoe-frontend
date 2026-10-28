@@ -1,44 +1,58 @@
-/* Rows of game-style skill plates, as many columns as fit. */
-.buy-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.skill {
+/* One line a skill, every line the same height: icon, name, then SP and lengths (the cards say the units) in fixed
+   columns so they read down a card; a data bar behind it draws the lengths. */
+.skill-row {
   --tier: 148 163 184;
   --tier-text: var(--text-primary);
-  --bar: var(--text-muted);
+  --fill: color-mix(in srgb, var(--text-muted) 24%, transparent);
+  position: relative;
+  isolation: isolate;
+  container: skill-row / inline-size;
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
-  grid-template-areas:
-    'icon name cost'
-    'icon bar value';
+  grid-template-columns: 16px minmax(0, 1fr) 32px 46px;
   align-items: center;
-  column-gap: 10px;
-  row-gap: 5px;
+  gap: 6px;
+  height: 24px;
   min-width: 0;
-  padding: 7px 10px 7px 7px;
-  border: 1px solid rgb(var(--tier) / 0.3);
-  border-radius: var(--radius-md, 8px);
-  background: linear-gradient(90deg, rgb(var(--tier) / 0.1), rgb(var(--tier) / 0.03) 60%);
+  box-sizing: border-box;
+  padding: 0 5px 0 4px;
+  overflow: hidden;
+  border-radius: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
-.skill.helps {
-  --bar: var(--accent-success);
+.skill-row.helps {
+  --fill: rgb(var(--accent-success-rgb) / 0.3);
 }
-.skill.loss {
-  --bar: var(--accent-warning);
+/* A skill that costs her: no bar, but the whole row faintly orange. */
+.skill-row.loss {
+  background: rgb(var(--accent-warning-rgb) / 0.16);
+}
+.fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
+  background: var(--fill);
+}
+/* A skill that adds nothing here, or never fires: its worth muted, and a skill that never fires dimmed whole. */
+.nothing .value {
+  color: var(--text-muted);
+}
+.never {
+  opacity: 0.6;
+}
+/* A skill another build buys and the pick does not: outlined, as the fill already carries the worth. */
+.skill-row.differs {
+  box-shadow: inset 0 0 0 1px rgb(var(--accent-primary-rgb) / 0.5);
 }
 img {
-  grid-area: icon;
-  width: 32px;
-  height: 32px;
+  width: 16px;
+  height: 16px;
   object-fit: contain;
 }
+/* The name whole, then what an upgrade is bought with, which gives way first when the line runs out. */
 .name {
-  grid-area: name;
   display: flex;
   align-items: baseline;
   gap: 6px;
@@ -46,63 +60,41 @@ img {
   overflow: hidden;
   white-space: nowrap;
 }
+/* The name keeps its width until the line is too narrow for it alone; the suffix takes what is left. */
 .name strong {
+  flex: none;
+  max-width: 100%;
   overflow: hidden;
-  font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
   color: var(--tier-text);
   text-overflow: ellipsis;
 }
 .name small {
+  flex: 0 1 auto;
+  min-width: 0;
   overflow: hidden;
   font-size: 11px;
   color: var(--text-muted);
   text-overflow: ellipsis;
 }
 .cost {
-  grid-area: cost;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: flex-end;
+  gap: 3px;
   font-size: 11px;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 .cost :global(svg) {
   color: var(--accent-primary);
 }
-/* What it adds: a hairline track with the value drawn from zero. */
-.bar {
-  grid-area: bar;
-  position: relative;
-  height: 4px;
-  border-radius: 2px;
-  background: rgb(var(--tier) / 0.12);
-}
-.bar span {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-}
-.zero {
-  top: -2px;
-  bottom: -2px;
-  width: 1px;
-  background: var(--border-strong);
-}
-.fill {
-  border-radius: 2px;
-  background: var(--bar);
-}
 .value {
-  grid-area: value;
-  min-width: 40px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
   text-align: right;
+  white-space: nowrap;
 }
 .helps .value {
   font-weight: 650;
@@ -111,4 +103,29 @@ img {
 .loss .value {
   font-weight: 650;
   color: var(--accent-warning);
+}
+/* With the service's win estimate: a muted fifth column after the lengths. */
+.skill-row.with-win {
+  grid-template-columns: 16px minmax(0, 1fr) 32px 46px 40px;
+}
+.win {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+/* A narrow row keeps the whole name: what an upgrade is bought with gives way first, then shows on hover. */
+@container skill-row (max-width: 300px) {
+  .name small {
+    display: none;
+  }
+}
+/* Narrower still, the estimate gives way too; it stays in the hover. */
+@container skill-row (max-width: 240px) {
+  .skill-row.with-win {
+    grid-template-columns: 16px minmax(0, 1fr) 32px 46px;
+  }
+  .win {
+    display: none;
+  }
 }

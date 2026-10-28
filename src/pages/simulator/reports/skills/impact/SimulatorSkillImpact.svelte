@@ -17,6 +17,7 @@
   } from '@/lib/game-data/skills/skills';
   import { skillDistributions } from '../skill-distributions';
   import { runnerColor } from '../../simulation-report';
+  import ReportRunnerPicker from '../../ReportRunnerPicker.svelte';
   import {
     formatMarginValue,
     skillValue,
@@ -26,7 +27,6 @@
   import { PRELIMINARY_RACES, type SkillImpactStore } from './skill-impact.svelte';
   import { sortRows, type SkillImpactRow, type SortDirection } from './skill-impact-gains';
   import SkillImpactPlaceholder from './SkillImpactPlaceholder.svelte';
-  import SkillImpactRunners from './SkillImpactRunners.svelte';
   import SkillImpactTable from './SkillImpactTable.svelte';
   import type { MonteCarloResult } from '../../../simulator-repository';
   import type { SimulatorUma } from '../../../simulator-uma';
@@ -279,7 +279,8 @@
           </Button>
         {/if}
       {/snippet}
-      {#if sources.length > 1}<SkillImpactRunners
+      {#if sources.length > 1}<ReportRunnerPicker
+          label="Runner for skill impact"
           {sources}
           {active}
           {umas}

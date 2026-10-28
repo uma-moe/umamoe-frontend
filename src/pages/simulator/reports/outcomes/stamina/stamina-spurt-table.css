@@ -32,6 +32,12 @@ tr.focused {
   font-size: 10px;
   color: var(--text-secondary);
 }
+.num small.warn {
+  color: var(--accent-warning);
+}
+.speed {
+  white-space: nowrap;
+}
 .muted {
   color: var(--text-secondary);
   font-size: 11px;

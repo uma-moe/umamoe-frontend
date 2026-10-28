@@ -68,7 +68,7 @@ test.beforeEach(async ({ page }) => {
 
 test('Course setup preserves every searchable resource option and its breakdown', async ({
   page
-}) => {
+}, info) => {
   const courses = resources.simulator_courses.courses.map((course: { race_track_id: number }) =>
     course.race_track_id === 10009 ? { ...course, race_track_id: 10006 } : course
   );
@@ -112,6 +112,15 @@ test('Course setup preserves every searchable resource option and its breakdown'
   await page.getByRole('option').click();
   await expect(course).toHaveValue('Turf 2,200 m (Right)');
   const profile = page.getByRole('region', { name: 'Course profile', exact: true });
+  const spurt = profile.getByRole('button', { name: /Final spurt: Final spurt window/ });
+  await expect(spurt).toBeVisible();
+  await spurt.focus();
+  await expect(profile.locator('.outline .highlight')).toHaveAttribute(
+    'data-start',
+    String((2200 * 2) / 3)
+  );
+  await expect(profile.locator('.outline .highlight')).toHaveAttribute('data-end', '2200');
+  await expect(profile.locator('.spurt-line')).toHaveCount(1);
   await expect(track).toHaveValue('Tokyo');
   await expect(profile.locator('svg polyline.track')).toHaveCount(1);
   await expect(profile.locator('[data-band=slopes] .flat').first()).toBeVisible();
@@ -149,6 +158,7 @@ test('Course setup preserves every searchable resource option and its breakdown'
     String((2200 * 11) / 24)
   );
   await expect(profile.locator('.outline .highlight')).toHaveAttribute('data-end', '1100');
+  await profile.screenshot({ path: info.outputPath('course-final-spurt.png') });
 });
 
 test('Setup rows preserve cancelled edits and enforce the field capacity', async ({ page }) => {
@@ -168,12 +178,12 @@ test('Setup rows preserve cancelled edits and enforce the field capacity', async
     .getByRole('button', { name: /^Edit / })
     .first()
     .click();
-  const speed = await editor.getByLabel('Speed raw').inputValue();
-  await editor.getByLabel('Speed raw').fill('1400');
+  const speed = await editor.getByLabel('Speed', { exact: true }).inputValue();
+  await editor.getByLabel('Speed', { exact: true }).fill('1400');
   await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
   await field.getByRole('button', { name: 'Edit ' + firstName, exact: true }).click();
-  await expect(editor.getByLabel('Speed raw')).toHaveValue(speed);
-  await editor.getByLabel('Speed raw').fill('1400');
+  await expect(editor.getByLabel('Speed', { exact: true })).toHaveValue(speed);
+  await editor.getByLabel('Speed', { exact: true }).fill('1400');
   await editor.getByRole('button', { name: 'Save Uma', exact: true }).click();
   await expect(field.getByRole('definition').filter({ hasText: '1400' })).toHaveCount(1);
   for (let index = 0; index < 16; index++) {
@@ -587,7 +597,10 @@ for (const count of [2, 9, 18])
       }
 
       const runnerChoices = async (expected: number) => {
-        const picker = page.getByRole('radiogroup', { name: 'Runner', exact: true });
+        const picker = page.getByRole('radiogroup', {
+          name: 'Runner for skill impact',
+          exact: true
+        });
         await picker.scrollIntoViewIfNeeded();
         await expect(picker.getByRole('radio')).toHaveCount(expected);
       };
@@ -744,9 +757,11 @@ for (const count of [2, 9, 18])
       await editor.getByLabel('Name', { exact: true }).fill('Test alternative');
       await editor.getByRole('button', { name: 'Save Uma', exact: true }).click();
       await builds.getByRole('button', { name: 'Compare 1 build', exact: true }).click();
-      await expect(builds.locator('.build-row')).toContainText('Time gained');
+      const alternativeRows = builds.locator('tbody tr');
+      await expect(alternativeRows).toHaveCount(1);
+      await expect(alternativeRows.locator('td[data-label="Gained"] strong')).toBeVisible();
       await builds.getByRole('button', { name: 'Remove Test alternative', exact: true }).click();
-      await expect(builds.locator('.build-row')).toHaveCount(0);
+      await expect(alternativeRows).toHaveCount(0);
       await tab('Replays');
       const downloadPromise = page.waitForEvent('download');
       await page.getByRole('button', { name: 'Download data', exact: true }).click();
@@ -762,7 +777,7 @@ for (const count of [2, 9, 18])
       await expect(page.locator('.sample-heading')).toContainText('seed 0');
       await expect.poll(() => replayRequests).toBe(1);
       await page.getByRole('button', { name: 'Edit setup', exact: true }).click();
-      await page.getByRole('button', { name: 'Last results', exact: true }).click();
+      await page.getByRole('button', { name: 'See result', exact: true }).click();
       expect(replayRequests).toBe(1);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true
@@ -872,7 +887,8 @@ test('CM Data opens a Veteran search with common benchmark opponents, seeds and 
         race_instance_id: 800023,
         season: 4,
         weather: 2,
-        ground_condition: 1,
+        // CM20 ran on Good going.
+        ground_condition: 2,
         start_time_type: 1
       });
 
@@ -962,7 +978,7 @@ test('Veteran collection search evaluates every legal team and imports the selec
   for (let index = 0; index < 4; index++) {
     await page.getByRole('button', { name: 'Add Uma', exact: true }).click();
     await page
-      .getByRole('dialog', { name: 'Edit Uma', exact: true })
+      .getByRole('dialog', { name: 'Add Uma', exact: true })
       .getByRole('button', { name: 'Save Uma', exact: true })
       .click();
   }
@@ -1036,9 +1052,14 @@ test('captured CM builds transfer to the simulator with the exact course and ski
   });
 
   await page.goto('/competitive/cm-data?tab=archetypes');
-  await page.getByRole('button', { name: 'Details', exact: true }).first().click();
+  await page.getByRole('button', { name: 'View team 1 details', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Team details', exact: true });
-  await dialog.getByRole('button', { name: 'Simulate team', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Add team to lobby', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await page
+    .getByRole('complementary', { name: 'Lobby', exact: true })
+    .getByRole('button', { name: 'Open in simulator', exact: true })
+    .click();
   await expect(page.getByRole('heading', { name: 'Race simulator', exact: true })).toBeVisible();
   await expect(page.locator('.field .runner')).toHaveCount(3);
 
@@ -1142,10 +1163,15 @@ test('CM builds from the captured teams page can be assigned to teams', async ({
   });
 
   await page.goto('/competitive/cm-data?tab=archetypes');
-  await page.getByRole('button', { name: 'Details', exact: true }).first().click();
+  await page.getByRole('button', { name: 'View team 1 details', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Team details', exact: true })
-    .getByRole('button', { name: 'Simulate team', exact: true })
+    .getByRole('button', { name: 'Add team to lobby', exact: true })
+    .click();
+  await page.keyboard.press('Escape');
+  await page
+    .getByRole('complementary', { name: 'Lobby', exact: true })
+    .getByRole('button', { name: 'Open in simulator', exact: true })
     .click();
 
   await expandField(page);
@@ -1163,7 +1189,6 @@ test('CM builds from the captured teams page can be assigned to teams', async ({
   await expect
     .poll(async () => Number((await editor.locator('.sp').innerText()).replace(/[^0-9]/g, '')))
     .toBe(sp);
-  await editor.getByText('Gate, team and fans', { exact: true }).click();
   await editor.getByRole('button', { name: 'Team color', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Team color', exact: true })
@@ -1239,7 +1264,6 @@ test('Color teams support custom colors, direct row actions and independent runn
   await expect(field.locator('.runner')).toHaveCount(9);
   await first.getByRole('button', { name: 'Edit Silence Suzuka', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Edit Uma', exact: true });
-  await editor.getByText('Gate, team and fans', { exact: true }).click();
   await editor.getByRole('button', { name: 'Team color', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Team color', exact: true })
@@ -1504,7 +1528,7 @@ test('HP calculator races her many times and answers with how often she spurts a
   await page.getByRole('button', { name: 'More white speed skills', exact: true }).click();
   // Situations show their usual length as a value until one is typed; she gets rushed by her wit's chance.
   const rushed = page.getByRole('group', { name: 'Rushed', exact: true });
-  await rushed.getByRole('button').click();
+  await rushed.getByRole('checkbox').check();
   await expect(rushed.getByLabel('Rushed seconds')).toHaveValue('5.2');
   await expect(rushed).toContainText(/in \d+% of races, by her wit/);
   // The plan is on the course before calculating: where recovery can land.
@@ -1664,11 +1688,11 @@ test('HP calculator races her many times and answers with how often she spurts a
   await page.reload();
   await expect(greens).toContainText('Speed ○ +40');
   await expect(gold).toHaveValue('2');
-  // On a phone the result goes under the form, and the answer floats at the bottom while the form is in view.
+  // On a phone the result goes under the form, and the run bar floats at the bottom while the form is in view.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => scrollTo(0, 0));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  const bar = page.locator('.calc-bar');
+  const bar = page.getByRole('region', { name: 'Calculate HP', exact: true });
   await expect(bar).toBeVisible();
   await bar.getByRole('button', { name: 'Calculate HP', exact: true }).click();
   await expect(result.getByRole('status').first()).toContainText('Enough HP to spurt at top speed');
@@ -1802,10 +1826,51 @@ test('Build search prices the skills on offer by hint and answers with the skill
               { purchase: 1, alone: estimate(0.14), together: estimate(0.12) }
             ];
 
+    // What the theory says each finalist and each skill on her own is worth, in lengths, and how each fires.
+    const fire = (rate: number, mean_m: number | null) => ({ rate, mean_m });
+    const worth = (purchases: number[], lengths: number, skills: [number, number][]) => ({
+      purchases,
+      lengths,
+      hp_left: 120,
+      skills: skills.map(([purchase, value]) => ({ purchase, lengths: value, fire: fire(1, 1030) }))
+    });
+    const theoryFinalists = inert
+      ? [worth([0], 0.8, [[0, 0.8]])]
+      : nothing
+        ? [worth([], 0, [])]
+        : [worth([0, 1], 1.6, [[1, 1.6]]), worth([0], 0.9, [[0, 0.9]])];
+    const alone = nothing ? [-0.2, -0.1] : [0.9, 1.6];
+    const theory = {
+      unit: 'lengths',
+      search_draws: 64,
+      report_draws: 256,
+      builds_valued: 9,
+      lengths_per_second: 8,
+      runners_per_length: 0.3,
+      phase_bounds: [0, 400, 1600, 2000, 2400],
+      field: {
+        position_fight_seconds: 0,
+        rushed_chance: 0.12,
+        drain_mean: 0.054,
+        drain_spread: 0.034,
+        base_hp_left: 100
+      },
+      finalists: theoryFinalists,
+      offers: (inert ? [0] : [0, 1]).map((purchase) => ({
+        purchase,
+        lengths: alone[purchase]!,
+        fire: fire(1, 1030),
+        source: 'physics',
+        effect: 'recovery',
+        count_gated: false
+      }))
+    };
+
     return route.fulfill({
       json: {
-        schema_version: inert ? 7 : field ? 6 : 5,
+        schema_version: 8,
         mode: 'cm',
+        theory,
         ...(inert ? { inert: [{ purchase: 1, why: ['distance'] }] } : {}),
         ...(field
           ? {
@@ -1843,8 +1908,8 @@ test('Build search prices the skills on offer by hint and answers with the skill
   await page.goto('/simulator/build');
   await expect(page).toHaveURL(/\/simulator\/skills$/);
   // She races with the simulator's own fixed pack: there is no one to pick to race against.
-  const goal = page.getByRole('region', { name: 'Goal' });
-  await expect(goal.getByRole('radio', { name: 'Copies of her' })).toHaveCount(0);
+  const setup = page.getByRole('region', { name: 'Setup', exact: true });
+  await expect(setup.getByRole('radio', { name: 'Copies of her' })).toHaveCount(0);
   const find = page.getByRole('button', { name: 'Plan skills', exact: true });
   await expect(find).toBeVisible();
   await expectBuildBlocked(page, 'Add the skills she can buy first.');
@@ -1877,71 +1942,57 @@ test('Build search prices the skills on offer by hint and answers with the skill
   await expect(page.getByRole('group', { name: 'Hint for Corner Recovery ○' })).toContainText('5');
   await expect(offers.getByRole('listitem').first()).toContainText('102 SP');
   await find.click();
-  const result = page.getByRole('figure', { name: 'Result' });
-  /** Opens one of the closed sections under the answer, unless it is open already. */
-  const openSection = async (name: string) => {
-    const summary = result.getByRole('button', { name, exact: true });
-    if ((await summary.getAttribute('aria-expanded')) !== 'true') {
-      await summary.click();
-    }
-  };
-
-  // The answer is the list of skills to buy, what they cost and, in one plain sentence, what they gain her.
-  // An upgrade replaces the skill it builds on, so the two are one skill to buy, with both costs together.
-  await expect(result.getByRole('status')).toContainText('Buy this skill');
-  await expect(result.getByRole('status')).toContainText('272 of her 1,200 SP');
-  await expect(result.getByRole('status')).toContainText(
-    'With them she finishes about 0.42 s faster each race than she does now.'
-  );
+  const result = page.getByRole('region', { name: 'Result', exact: true });
+  // The answer: how many skills to buy, their SP and what they gain her. An upgrade and the skill it builds on are one
+  // skill to buy, with both costs together.
+  const answer = result.getByRole('status');
+  await expect(answer).toContainText('Buy 1 skill');
+  await expect(answer).toContainText('272 / 1,200 SP');
+  await expect(answer).toContainText('+1.60 lengths');
 
   const toBuy = result.getByRole('list', { name: 'Skills to buy', exact: true });
   await expect(toBuy.getByRole('listitem')).toHaveCount(1);
-  await expect(toBuy.getByRole('listitem').first()).toContainText(
-    /Swinging Maestro\s*272 SP\s*· buy Corner Recovery ○ first/
+  const maestro = toBuy.getByRole('listitem').first();
+  await expect(maestro).toContainText(/Swinging Maestro\s*with Corner Recovery ○\s*272 SP/);
+  // What it and Corner Recovery ○ add to the build, in lengths, with where and how often it fires and what values it.
+  await expect(maestro.locator('.value')).toContainText('+1.60');
+  await expect(maestro.locator('.value')).toHaveAttribute(
+    'title',
+    '+1.60 L in this build · Fires in 100% of races, first mid race (~1,030 m) · raced alone through her whole race'
   );
 
-  // Everything behind the answer waits in closed sections.
-  await expect(
-    result.getByRole('button', { name: 'What each skill adds', exact: true })
-  ).toHaveAttribute('aria-expanded', 'false');
+  // Every build that came back stands side by side, the most worth first; each carries the lengths it gains her.
+  const builds = result.getByRole('region', { name: /^Builds/ });
+  await expect(builds.getByRole('article')).toHaveCount(2);
+  const pick = builds.getByRole('article', { name: '1st', exact: true });
+  await expect(pick).toContainText('Pick');
+  await expect(pick).toContainText('+1.6');
+  await expect(pick.locator('.score')).toHaveAttribute('title', 'Checked in 64 races: +0.42 s');
+  // The next build's worth is its own; on the pick's line it holds only Corner Recovery ○ of the chain.
+  const runnerUp = builds.getByRole('article', { name: '2nd', exact: true });
+  await expect(runnerUp).toContainText('+0.90');
+  await expect(runnerUp).toContainText('−0.70 L vs the pick');
+  const runnerUpSkills = runnerUp.getByRole('list', {
+    name: 'Skills in the 2nd build',
+    exact: true
+  });
 
-  await openSection('What each skill adds');
-  const skillValues = result.getByRole('region', { name: 'What each skill adds', exact: true });
-  await expect(skillValues).toContainText('How many seconds faster she finishes per race');
-  await expect(skillValues.getByRole('list', { name: 'How to read the bars' })).toContainText(
-    'Faint: not sure, could be zero'
+  await expect(runnerUpSkills.getByRole('listitem')).toHaveCount(1);
+  await expect(runnerUpSkills).toContainText('Corner Recovery ○');
+  await expect(runnerUpSkills).not.toContainText('Swinging Maestro');
+
+  // How the theory valued it opens from the title.
+  const aboutButton = result.getByRole('button', { name: 'About the result', exact: true });
+  const about = page.getByRole('dialog', { name: 'About the result', exact: true });
+  await aboutButton.click();
+  await expect(about).toContainText('Every skill is valued by theory before any race');
+  await expect(about).toContainText(
+    'The theory valued 9 builds over 64 drawn races each, then the best ones and her build as it is raced 64 real races to check them.'
   );
 
-  const buy = skillValues.getByRole('region', { name: 'Buy', exact: true });
-  await expect(buy.getByRole('listitem')).toHaveCount(1);
-  await expect(buy.getByRole('listitem').first()).toContainText(
-    /Swinging Maestro\s*with Corner Recovery ○.*272 SP.*\+0\.33 s/
-  );
-
-  // How each skill was first tested shows on request.
-  await expect(skillValues).not.toContainText('First test');
-  await skillValues.getByRole('button', { name: 'Show test details', exact: true }).click();
-  await expect(buy.getByRole('listitem').first()).toContainText(
-    'First test: alone +0.14 s · with everything else +0.12 s'
-  );
-
-  // The next best build says what it drops from the best one.
-  await openSection('Other builds that came close');
-  const runnerUp = result.getByRole('article', { name: '2nd best', exact: true });
-  await expect(runnerUp).toContainText('0.30 s');
-  await expect(runnerUp.getByRole('list', { name: 'Drops', exact: true })).toContainText(
-    'Swinging Maestro'
-  );
-
-  await openSection('How this was measured');
-  const method = result.locator('#build-method');
-  await expect(method).toContainText('against the simulator’s own pack of eight runners');
-  await expect(method).toContainText('The margin of error on that gain is ± 0.03 s.');
-  await expect(method).toContainText(
-    'The search tried 9 builds over 2,304 races, then raced the best ones again on 64 new races to check them.'
-  );
-
-  await expect(page.locator('.search-bar .summary')).toContainText('Saves 0.42 s a race · 272 SP');
+  await page.keyboard.press('Escape');
+  const runBar = page.getByRole('region', { name: 'Plan skills', exact: true });
+  await expect(runBar.getByRole('status')).toContainText('+1.60 L · 272 SP');
   expect(sent?.sp_budget).toBe(1200);
   expect(sent?.mode).toBe('cm');
   expect((sent as unknown as { hp_changes: unknown }).hp_changes).toEqual([
@@ -1957,16 +2008,15 @@ test('Build search prices the skills on offer by hint and answers with the skill
     expect.objectContaining({ name: 'Swinging Maestro', requires: [0], replaces: [200352] })
   ]);
 
-  // When every skill she can afford surely makes her slower, she keeps the SP, and the skills to skip say why.
+  // When no skill she can afford gains her anything, she keeps the SP.
   nothing = true;
   await page.locator('#build-seed').fill('7');
   await find.click();
-  await expect(result.getByRole('status')).toContainText('Don’t buy any skills');
-  await expect(result).toContainText('Every skill she can afford makes her slower');
-  await expect(result.getByRole('list', { name: 'Skills to buy', exact: true })).toHaveCount(0);
-  await openSection('Skills to skip');
-  await expect(result.getByRole('region', { name: 'Not worth buying', exact: true })).toContainText(
-    /Corner Recovery ○.*Makes her slower/
+  await expect(answer).toContainText('Buy nothing');
+  await expect(result).toContainText('No skill on offer gains her a length in these races.');
+  await expect(toBuy.getByRole('listitem')).toHaveCount(0);
+  await expect(result.getByRole('region', { name: /^Skills \d/ })).toContainText(
+    'Corner Recovery ○'
   );
 
   // An older optimizer service is named as such, not read as an answer, whether it answers or refuses a solo race.
@@ -1974,7 +2024,7 @@ test('Build search prices the skills on offer by hint and answers with the skill
   await page.locator('#build-seed').fill('8');
   await find.click();
   await expect(result.getByRole('status')).toContainText('Optimizer out of date');
-  await expect(result).not.toContainText('Don’t buy any skills');
+  await expect(result).not.toContainText('Buy nothing');
   const refuse = (route: import('@playwright/test').Route) =>
     route.fulfill({ status: 422, json: { error: 'runner count must be 2..=18' } });
 
@@ -1989,60 +2039,46 @@ test('Build search prices the skills on offer by hint and answers with the skill
   field = true;
   await page.locator('#build-seed').fill('10');
   await find.click();
-  await expect(result.getByRole('status')).toContainText(
-    'With them she beats about 0.42 more of the 8 other runners each race than she does now.'
-  );
-
-  await openSection('How this was measured');
-  await expect(method).toContainText('She raced in 32 races recorded at this CM');
-  // The out-of-date answer had no skills to show, so its sections start closed again.
-  await openSection('What each skill adds');
-  await skillValues.getByRole('button', { name: 'Show test details', exact: true }).click();
-  await expect(buy.getByRole('listitem').first()).toContainText(
-    'First test: alone +0.14 · with everything else +0.12 · CM records say +0.05'
-  );
-
-  // Each value says on hover how sure it is.
-  await expect(skillValues.locator('.value').first()).toHaveAttribute(
+  await expect(answer).toContainText('+1.60 lengths');
+  // Worth stays in lengths; the races that check a build count runners beaten in those fields.
+  await expect(pick.locator('.score')).toHaveAttribute(
     'title',
-    '± 0.02 over 256 races'
+    'Checked in 64 races: +0.42 runners beaten'
   );
-
-  await expect(page.locator('.search-bar .summary')).toContainText(
-    'Beats 0.42 more runners a race'
-  );
-  // An older simulator cannot rule out skills that never fire for her, and the result says so.
-  await expect(result).toContainText(
-    'The simulator answering is an older build that can buy skills which never fire for her here'
-  );
+  await aboutButton.click();
+  await expect(about).toContainText('She raced in 32 races recorded at this CM');
+  await page.keyboard.press('Escape');
+  await expect(runBar.getByRole('status')).toContainText('+1.60 L · 272 SP');
   field = false;
   // A skill that can never fire for her here (another distance, style, track or day) is skipped, and says why.
   inert = true;
   await page.locator('#build-seed').fill('11');
   await find.click();
-  await expect(result).not.toContainText('older build that can buy skills');
-  await expect(result.getByRole('button', { name: 'Skills to skip', exact: true })).toContainText(
-    '1 can’t fire here'
+  const cantFire = result.getByRole('region', { name: /^Can’t fire here/ });
+  await expect(cantFire).toContainText('Swinging Maestro');
+  await expect(cantFire.getByRole('listitem').first()).toHaveAttribute(
+    'title',
+    'Needs another distance'
   );
-
-  await openSection('Skills to skip');
-  await expect(
-    result.getByRole('region', { name: 'Can’t fire for her here', exact: true })
-  ).toContainText(/Swinging Maestro.*Needs another distance/);
 
   await expect(toBuy).not.toContainText('Swinging Maestro');
-  await openSection('How this was measured');
-  await expect(method).toContainText(
-    'Each skill’s value also weighs what recorded CM races say it adds, turned into seconds on this course.'
+  await aboutButton.click();
+  await expect(about).toContainText(
+    'In her race here she gets rushed in 12% of races, and the field takes 5.4 ± 3.4% of her HP beyond that.'
   );
 
+  await page.keyboard.press('Escape');
   inert = false;
   // A change marks the result as out of date; the setup is kept in this browser.
   old = false;
   nothing = false;
   await find.click();
-  await expect(result.getByRole('status')).toContainText('Buy this skill');
-  await page.getByRole('checkbox', { name: /Fast Learner/ }).check();
+  await expect(answer).toContainText('Buy 1 skill');
+  await page
+    .getByRole('radiogroup', { name: 'Fast Learner', exact: true })
+    .getByRole('radio', { name: /another 10% off/ })
+    .click();
+
   await expect(result).toContainText('Setup changed since this search');
   await page.reload();
   await expect(
@@ -2144,7 +2180,7 @@ test('Build codes load the runner, the course, the goal and what she can buy on 
   await expect(dialog).toContainText('not a link');
   await dialog.getByLabel('Build code', { exact: true }).fill(code);
   await expect(dialog).toContainText('Turf 2500m');
-  await expect(dialog).toContainText('Yielding · Rainy · Autumn · Evening');
+  await expect(dialog).toContainText('Good · Rainy · Autumn · Evening');
   await expect(dialog).toContainText('254,000 fans');
   await expect(dialog).toContainText('1,450 SP · Fast Learner');
   await expect(dialog).toContainText('Team Trials · Long');
@@ -2154,7 +2190,11 @@ test('Build codes load the runner, the course, the goal and what she can buy on 
   await expect(page.locator('#build-stamina')).toHaveValue('1104');
   await expect(page.locator('#build-budget')).toHaveValue('1450');
   await expect(page.locator('#build-fans')).toHaveValue('254000');
-  await expect(page.getByRole('checkbox', { name: /Fast Learner/ })).toBeChecked();
+  await expect(
+    page
+      .getByRole('radiogroup', { name: 'Fast Learner', exact: true })
+      .getByRole('radio', { name: /another 10% off/ })
+  ).toHaveAttribute('aria-checked', 'true');
   const offers = page.getByRole('list', { name: 'Skills on offer' });
   await expect(offers.getByRole('listitem')).toHaveCount(3);
   // Fast Learner takes another 10% off: 170 at hint 5 is 50% off.
@@ -2171,7 +2211,9 @@ test('Build codes load the runner, the course, the goal and what she can buy on 
   await expect(page.getByRole('radiogroup', { name: 'Ground', exact: true })).toBeVisible();
   // Her fans go to the search; a skill that needs them says so in the page's words.
   await page.getByRole('button', { name: 'Plan skills', exact: true }).click();
-  await expect(page.getByRole('figure', { name: 'Result' })).toContainText('grows with her fans');
+  await expect(page.getByRole('region', { name: 'Result', exact: true })).toContainText(
+    'grows with her fans'
+  );
   expect(sent?.sp_budget).toBe(1450);
   expect(sent?.scenarios[0]!.input.runners[0]!.fan_count).toBe(254000);
   expect(sent?.mode).toBe('tt_long');
@@ -2213,4 +2255,35 @@ test('Build codes load the runner, the course, the goal and what she can buy on 
   await dialog.getByRole('button', { name: 'Load', exact: true }).click();
   await expect(page.locator('.field .runner')).toHaveCount(2);
   await expect(page.locator('.field .runner').first()).toContainText('Special Week');
+
+  // A code copied from a tab loads that whole tab back there: the field, its seed and its race options.
+  await page.locator('#race-seed').fill('4242');
+  await openBuildCode(page);
+  await dialog.getByRole('button', { name: 'Copy this setup', exact: true }).click();
+  await expect(dialog.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
+  const race = await page.evaluate(() => navigator.clipboard.readText());
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.locator('#race-seed').fill('1');
+  await openBuildCode(page);
+  await dialog.getByLabel('Build code', { exact: true }).fill(copied);
+  await dialog.getByRole('button', { name: 'Load', exact: true }).click();
+  await expect(page.locator('.field .runner')).toHaveCount(3);
+  await openBuildCode(page);
+  await dialog.getByLabel('Build code', { exact: true }).fill(race);
+  await expect(dialog).toContainText('Replaces the whole race field with these 2 runners');
+  await dialog.getByRole('button', { name: 'Load', exact: true }).click();
+  await expect(page.locator('.field .runner')).toHaveCount(2);
+  await expect(page.locator('#race-seed')).toHaveValue('4242');
+
+  // The Skill planner's whole tab comes back too, with what she can buy and its locks.
+  await page.getByRole('link', { name: 'Skill planner', exact: true }).click();
+  const planner = page.getByRole('list', { name: 'Skills on offer' }).getByRole('listitem');
+  await expect(planner).toHaveCount(3);
+  await page.locator('#build-budget').fill('999');
+  await openBuildCode(page);
+  await dialog.getByLabel('Build code', { exact: true }).fill(copied);
+  await expect(dialog).toContainText('Replaces the whole Skill planner');
+  await dialog.getByRole('button', { name: 'Load', exact: true }).click();
+  await expect(page.locator('#build-budget')).toHaveValue('1450');
+  await expect(planner).toHaveCount(3);
 });

@@ -30,7 +30,7 @@
     busy = false,
     pending = false,
     error = '',
-    oncalculate,
+    onretry,
     blocked = '',
     runner,
     markers = [],
@@ -45,8 +45,8 @@
     pending?: boolean;
     /** Why the last calculation failed, shown in place of the answer. */
     error?: string;
-    /** Calculates: the first time, and after an error. */
-    oncalculate?: () => void;
+    /** Calculates again after an error; the run bar calculates the first time. */
+    onretry?: () => void;
     /** Why it cannot calculate yet. */
     blocked?: string;
     /** Stamina with green skills (and `base` without them), running style and motivation the result used. */
@@ -59,6 +59,9 @@
   } = $props();
 
   let rawOpen = $state(false);
+
+  /** Before a result the course shows only to place her plan on it; a bare course says nothing yet. */
+  const showsCourse = $derived(Boolean(distance) && (result !== undefined || markers.length > 0));
   const courseLabel = $derived(
     course
       ? [
@@ -177,16 +180,16 @@
         {blocked ||
           (busy
             ? 'Racing her 100 times…'
-            : 'Races her 100 times on this course. After the first run, the result updates with every change.')}
+            : 'Set her up and press Calculate HP; from then on the result follows every change.')}
       </p>
     {/if}
-    {#if (!result || (error && !busy)) && oncalculate}<Button
-        icon={error ? 'refresh' : 'battery'}
-        variant={error ? 'secondary' : 'primary'}
-        loading={busy}
-        onclick={oncalculate}
+    {#if error && !busy && onretry}<Button
+        size="sm"
+        variant="secondary"
+        icon="refresh"
+        onclick={onretry}
       >
-        {error ? 'Try again' : 'Calculate HP'}
+        Try again
       </Button>{/if}
   </div>
 
@@ -224,7 +227,7 @@
   <HpFinishHistogram {result} />
 
   <!-- The course she races, and her HP across it once calculated. -->
-  {#if distance}<div class="course-view">
+  {#if distance && showsCourse}<div class="course-view">
       {#if course}<p class="course-name">
           <SimulatorCoursePreview
             {course}

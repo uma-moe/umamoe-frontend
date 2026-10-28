@@ -9,12 +9,14 @@ import {
   buildCodeOffers,
   buildCodeRunner,
   buildCodeUma,
+  codePage,
   decodeBuildCode,
   encodeBuildCode,
   looksLikeBuildCode,
   sameRunner,
   type BuildCode
 } from './build-code';
+import { createSimulatorUma } from '../../../simulator-uma';
 
 // A code with no uma.moe additions, as the umalator writes its state: Tokyo dirt 1,600 m, a Nige runner and 51
 // skills on offer with hints. URL-encoded, as it was copied.
@@ -182,5 +184,30 @@ describe('build codes', () => {
 
     // Reading the written runner gives the same build back.
     expect(buildCodeUma(read.uma1!, { course: TOKYO_DIRT_MILE }).uma.trainee).toEqual(uma.trainee);
+  });
+
+  it('carries a whole tab that reads back for that tab alone and fits the schema', async () => {
+    const page = {
+      tab: 'race' as const,
+      field: [{ name: 'Seiun Sky', trainee: { speed: '1500' }, skills: [] }],
+      teamColors: { '1': '#69b7ee' },
+      seed: '42',
+      raceInstanceId: 0,
+      raceType: '0',
+      runs: '100'
+    };
+    const code: BuildCode = {
+      version: 1,
+      uma1: buildCodeRunner(createSimulatorUma('Seiun Sky')),
+      page
+    };
+
+    const read = await decodeBuildCode(await encodeBuildCode(code));
+
+    expect(validate(read), JSON.stringify(validate.errors)).toBe(true);
+    expect(codePage(read, 'race')).toEqual(page);
+    expect(codePage(read, 'build')).toBeUndefined();
+    expect(codePage({ uma1: {}, page: { tab: 'race', field: [] } }, 'race')).toBeUndefined();
+    expect(codePage({ uma1: {}, page: { tab: 'build', setup: 'x' } }, 'build')).toBeUndefined();
   });
 });

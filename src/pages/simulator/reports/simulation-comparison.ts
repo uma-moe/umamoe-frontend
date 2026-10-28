@@ -6,7 +6,8 @@
  * rather than between independent universes.
  */
 import type { MonteCarloResult } from '../simulator-repository';
-import { simulatorSampleSummary, winRateInterval } from '../simulator-results';
+import { winRateInterval } from '@/lib/race/win-rate-interval';
+import { simulatorSampleSummary } from '../simulator-results';
 import {
   pairedProgression,
   reportCrossing,

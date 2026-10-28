@@ -8,7 +8,8 @@ import { createTrainee, RUNNING_STYLES } from '../../trainee';
 /**
  * Build codes: a runner, her race and what she can buy, as gzipped JSON in base64. The JSON mirrors the umalator's
  * page state (same field names, enums and ranges) and adds what Build search needs beyond it: skill points, fans,
- * Fast Learner, the goal and the Team Trials tracks. `contracts/build-code.schema.json` is the full description.
+ * Fast Learner, the goal and the Team Trials tracks. A code copied from a tab also carries that whole tab (`page`),
+ * so loading it there restores everything on it. `contracts/build-code.schema.json` is the full description.
  */
 export interface BuildCodeRunner {
   outfitId?: string;
@@ -53,6 +54,29 @@ export interface BuildCodeScoring {
   winsBefore?: number;
 }
 
+/** The simulator's tabs, as a code names them. */
+export type BuildCodeTab = 'race' | 'stamina' | 'build';
+
+/**
+ * A whole tab's setup, as the tab saves it in this browser: the race field with its teams, seed and options; the HP
+ * calculator; or the Skill planner. Read only by the tab it was copied from, which checks it as it checks its own saved
+ * setup; other tabs and the umalator read the fields beside it.
+ */
+export type BuildCodePage =
+  | {
+      tab: 'race';
+      /** Every runner of the field, as the field saves them. */
+      field: unknown[];
+      /** Team ids to their colors. */
+      teamColors?: unknown;
+      seed?: unknown;
+      raceInstanceId?: unknown;
+      raceType?: unknown;
+      runs?: unknown;
+    }
+  | { tab: 'stamina'; setup: unknown }
+  | { tab: 'build'; setup: unknown };
+
 export interface BuildCode {
   version?: number;
   courseId?: number;
@@ -70,6 +94,8 @@ export interface BuildCode {
   /** The skills on offer. */
   chartSkills?: string[];
   hintLevels?: Record<string, number>;
+  /** The whole tab the code was copied from. */
+  page?: BuildCodePage;
 }
 
 export const BUILD_CODE_VERSION = 1;
@@ -133,6 +159,19 @@ export async function decodeBuildCode(text: string): Promise<BuildCode> {
   if (Number(data.version) > BUILD_CODE_VERSION)
     throw new Error('This code is from a newer version. Reload the page and try again.');
   return data as BuildCode;
+}
+
+/** The whole setup of `tab` a code carries, when it was copied from that tab. */
+export function codePage<T extends BuildCodeTab>(
+  code: BuildCode,
+  tab: T
+): Extract<BuildCodePage, { tab: T }> | undefined {
+  const page = record(code.page);
+  if (page?.tab !== tab) return undefined;
+
+  const whole =
+    tab === 'race' ? Array.isArray(page.field) && page.field.length > 0 : !!record(page.setup);
+  return whole ? (page as Extract<BuildCodePage, { tab: T }>) : undefined;
 }
 
 /** Writes a build code: the JSON, gzipped, in base64. */

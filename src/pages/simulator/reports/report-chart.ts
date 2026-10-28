@@ -1,6 +1,7 @@
 import type { EChartsCoreOption } from 'echarts/core';
 import { runnerColor, type ReportBand } from './simulation-report';
 import { baseChartOption, chartTheme } from '@/components/charts/chart-theme';
+import { finalSpurtSection } from '@/lib/race/final-spurt';
 
 export interface CourseChartOptions {
   /** Formats a y value for the axis and tooltip. */
@@ -102,17 +103,33 @@ export function courseChart(
   if (series[0])
     Object.assign(series[0], {
       markArea: { silent: true, data: areas },
-      ...(options.zero
-        ? {
-            markLine: {
-              silent: true,
-              symbol: 'none',
-              label: { show: false },
-              lineStyle: { color: theme.muted, type: 'solid', opacity: 0.8 },
-              data: [{ yAxis: 0 }]
+      markLine: {
+        silent: true,
+        symbol: 'none',
+        lineStyle: { color: finalSpurtSection(distance).color, type: 'dashed', opacity: 0.8 },
+        data: [
+          {
+            name: 'Final spurt window',
+            xAxis: finalSpurtSection(distance).start,
+            label: {
+              show: true,
+              formatter: 'Final spurt window',
+              position: 'insideEndTop',
+              color,
+              fontSize: 9
             }
-          }
-        : {})
+          },
+          ...(options.zero
+            ? [
+                {
+                  yAxis: 0,
+                  label: { show: false },
+                  lineStyle: { color: theme.muted, type: 'solid' }
+                }
+              ]
+            : [])
+        ]
+      }
     });
   // Two or more runners get a legend, so a line is never told apart by its colour alone.
   const legend =

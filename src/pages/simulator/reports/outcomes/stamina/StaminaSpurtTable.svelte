@@ -3,7 +3,8 @@
   import SimulatorRunnerFace from '../../SimulatorRunnerFace.svelte';
   import { runnerColor, reportNumber as n } from '../../simulation-report';
   import type { StaminaRunner } from '../stamina-report';
-  import { percent, runnerStyle, whole } from './stamina-view';
+  import { runnerStyle } from '../../runner-profile';
+  import { percent, whole } from './stamina-view';
   import type { SimulatorUma } from '../../../simulator-uma';
 
   interface Props {
@@ -90,6 +91,29 @@
         ' · none in ' +
         percent(row.spurt.none)
       : '';
+
+  // A spurt that HP cut short runs below the full spurt speed, so the average only shows when it differs.
+  const shortSpurtSpeed = (row: StaminaRunner) =>
+    row.fullSpeed !== undefined &&
+    row.spurtSpeed !== undefined &&
+    row.fullSpeed - row.spurtSpeed >= 0.005
+      ? row.spurtSpeed
+      : undefined;
+
+  function speedTitle(row: StaminaRunner) {
+    if (row.fullSpeed === undefined) return '';
+
+    const average = shortSpurtSpeed(row);
+    return (
+      name(row.source) +
+      ': full last spurt at ' +
+      n(row.fullSpeed, 2) +
+      ' m/s' +
+      (average === undefined
+        ? ''
+        : ' · HP cut some spurts short, so the spurts she ran averaged ' + n(average, 2) + ' m/s')
+    );
+  }
 </script>
 
 <ChartFrame
@@ -140,6 +164,13 @@
             class="spurt-cell"
           >
             Full spurt
+          </th>
+          <th
+            scope="col"
+            class="num"
+            title="Target speed of her full last spurt; the average of the spurts she ran follows when HP cut some short"
+          >
+            Spurt speed
           </th>
           <th
             scope="col"
@@ -257,6 +288,21 @@
               {/if}
             </td>
             <td
+              class="num speed"
+              title={speedTitle(row)}
+            >
+              {#if row.fullSpeed === undefined}
+                —
+              {:else}
+                <strong>{n(row.fullSpeed, 2)}</strong>
+                <small>m/s</small>
+                {@const average = shortSpurtSpeed(row)}
+                {#if average !== undefined}
+                  <small class="warn">· avg {n(average, 2)}</small>
+                {/if}
+              {/if}
+            </td>
+            <td
               class="num"
               title={row.exhausted?.at
                 ? 'Usually at ' +
@@ -309,6 +355,7 @@
               {/each}
             </div>
           </td>
+          <td></td>
           <td></td>
           <td></td>
           <td></td>

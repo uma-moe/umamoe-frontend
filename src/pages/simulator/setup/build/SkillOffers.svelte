@@ -1,10 +1,11 @@
 <script lang="ts">
   import Icon from '@/components/Icon.svelte';
   import Button from '@/components/controls/Button.svelte';
+  import IconButton from '@/components/controls/IconButton.svelte';
   import Combobox, { type ComboboxOption } from '@/components/controls/Combobox.svelte';
-  import TextField from '@/components/controls/TextField.svelte';
   import { skillImage, type SkillData } from '@/lib/game-data/skills/skills';
   import SimSection from '../../shell/SimSection.svelte';
+  import BuildBudget from './BuildBudget.svelte';
   import { buildSearch } from './build-search.svelte';
   import {
     baseCost,
@@ -16,19 +17,22 @@
   } from './skill-offers';
 
   /**
-   * The skills she can buy at the end of her career, each with its hint level and what it costs with it, and the SP
+   * The skills she can buy at the end of her career, each with its hint level and what it costs with it, against the SP
    * budget the search spends. Gold and ◎ skills show what they upgrade and how that is covered; a locked skill is in
    * every build.
    */
   let {
     number = 3,
     skillLookup,
-    owned = []
+    owned = [],
+    showBudget = true
   }: {
     number?: number;
     skillLookup: Map<number, SkillData>;
     /** Skills she already has, which upgrades build on. */
     owned?: number[];
+    /** Her SP, fans and Fast Learner sit here, above the skills, unless the Setup row has room for them. */
+    showBudget?: boolean;
   } = $props();
 
   const offers = $derived(
@@ -95,12 +99,42 @@
   }
 </script>
 
+<!-- What everything on offer costs against her SP; on one line in the header when her SP sits in the Setup row. -->
+{#snippet totals(inline: boolean)}
+  <div
+    class="totals"
+    class:inline
+  >
+    <dl>
+      <div class:over={total > budget}>
+        <dt>On offer</dt>
+        <dd>{total.toLocaleString('en-US')} SP</dd>
+      </div>
+      {#if offers.locked.length}
+        <div
+          class="locked-total"
+          class:over={offers.lockedCost > budget}
+        >
+          <dt>Locked</dt>
+          <dd>{offers.lockedCost.toLocaleString('en-US')} SP</dd>
+        </div>
+      {/if}
+    </dl>
+    <p>
+      {total > budget
+        ? (total - budget).toLocaleString('en-US') + ' SP over the budget, so the search chooses'
+        : 'Everything fits'}
+    </p>
+  </div>
+{/snippet}
+
 <SimSection
   {number}
   title="Skills to buy"
   note="What she can buy, with the hints she has"
 >
   {#snippet actions()}
+    {#if !showBudget}{@render totals(true)}{/if}
     {#if buildSearch.offers.length}
       <Button
         variant="ghost"
@@ -111,62 +145,12 @@
       </Button>
     {/if}
   {/snippet}
-  <div class="budget-row">
-    <TextField
-      id="build-budget"
-      label="SP available"
-      type="number"
-      min={0}
-      bind:value={buildSearch.budget}
-    />
-    <TextField
-      id="build-fans"
-      label="Fans"
-      type="number"
-      min={0}
-      placeholder="—"
-      bind:value={
-        () => (buildSearch.uma.fanCount === undefined ? '' : String(buildSearch.uma.fanCount)),
-        (value) =>
-          (buildSearch.uma.fanCount =
-            value === '' || !Number.isFinite(Number(value))
-              ? undefined
-              : Math.max(0, Math.round(Number(value))))
-      }
-    />
-    <label class="fast-learner">
-      <input
-        type="checkbox"
-        bind:checked={buildSearch.fastLearner}
-      />
-      <span>
-        Fast Learner
-        <small>another 10% off every skill</small>
-      </span>
-    </label>
-    <div class="totals">
-      <dl>
-        <div class:over={total > budget}>
-          <dt>On offer</dt>
-          <dd>{total.toLocaleString('en-US')} SP</dd>
-        </div>
-        {#if offers.locked.length}
-          <div
-            class="locked-total"
-            class:over={offers.lockedCost > budget}
-          >
-            <dt>Locked</dt>
-            <dd>{offers.lockedCost.toLocaleString('en-US')} SP</dd>
-          </div>
-        {/if}
-      </dl>
-      <p>
-        {total > budget
-          ? (total - budget).toLocaleString('en-US') + ' SP over the budget, so the search chooses'
-          : 'Everything fits'}
-      </p>
+  {#if showBudget}
+    <div class="budget-row">
+      <BuildBudget />
+      {@render totals(false)}
     </div>
-  </div>
+  {/if}
   <div
     class="add"
     bind:this={anchor}
@@ -251,31 +235,27 @@
             <strong>{offer.cost}</strong>
             <small>SP</small>
           </span>
-          <button
-            type="button"
-            class="lock"
-            aria-pressed={Boolean(offer.locked)}
-            aria-label={'Lock ' + offer.skill.name + ' so every build buys it'}
-            title={offer.locked ? 'Every build buys it' : 'Lock it so every build buys it'}
-            onclick={() => toggleLock(offer.skillId)}
-          >
-            <Icon
-              name={offer.locked ? 'lock' : 'lock-open'}
-              size={14}
+          <span class="lock">
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={offer.locked ? 'lock' : 'lock-open'}
+              ariaPressed={Boolean(offer.locked)}
+              ariaLabel={'Lock ' + offer.skill.name + ' so every build buys it'}
+              title={offer.locked ? 'Every build buys it' : 'Lock it so every build buys it'}
+              onclick={() => toggleLock(offer.skillId)}
+            >
+              {offer.locked ? 'Locked' : 'Lock'}
+            </Button>
+          </span>
+          <span class="remove">
+            <IconButton
+              icon="close"
+              size="sm"
+              label={'Remove ' + offer.skill.name}
+              onclick={() => remove(offer.skillId)}
             />
-            <span>{offer.locked ? 'Locked' : 'Lock'}</span>
-          </button>
-          <button
-            type="button"
-            class="remove"
-            aria-label={'Remove ' + offer.skill.name}
-            onclick={() => remove(offer.skillId)}
-          >
-            <Icon
-              name="close"
-              size={14}
-            />
-          </button>
+          </span>
         </li>
       {/each}
       {#each offers.missing as offer (offer.skillId)}
@@ -284,17 +264,14 @@
             <strong>{skillLookup.get(offer.skillId)?.name ?? 'Skill ' + offer.skillId}</strong>
             <small>no cost data, so the search leaves it out</small>
           </span>
-          <button
-            type="button"
-            class="remove"
-            aria-label="Remove skill {offer.skillId}"
-            onclick={() => remove(offer.skillId)}
-          >
-            <Icon
-              name="close"
-              size={14}
+          <span class="remove">
+            <IconButton
+              icon="close"
+              size="sm"
+              label={'Remove skill ' + offer.skillId}
+              onclick={() => remove(offer.skillId)}
             />
-          </button>
+          </span>
         </li>
       {/each}
     </ul>

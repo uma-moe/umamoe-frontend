@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Checkbox from '@/components/controls/Checkbox.svelte';
   import HpSkillCounts from './HpSkillCounts.svelte';
   import SimSection from '../../shell/SimSection.svelte';
   import { hpCalculator } from './hp-calculator.svelte';
@@ -30,6 +31,11 @@
   const downhills = $derived(
     (course.slopes ?? []).filter((slope) => slope.slope < 0 && slope.start < course.distance).length
   );
+  const downhillWhere = $derived.by(() => {
+    if (!downhills) return 'no downhills here';
+
+    return 'on ' + (downhills === 1 ? 'the downhill' : 'all ' + downhills + ' downhills');
+  });
 
   const SITUATIONS = $derived([
     { key: 'positionFight', label: 'Position fight', where: 'early race, front runners' },
@@ -65,19 +71,15 @@
           role="group"
           aria-label={situation.label}
         >
-          <button
-            type="button"
-            class="toggle"
-            aria-pressed={item.on}
-            onclick={() => (item.on = !item.on)}
-          >
-            <span
-              class="check"
-              aria-hidden="true"
-            ></span>
-            {situation.label}
-            <small>{situation.where}</small>
-          </button>
+          <span class="toggle">
+            <Checkbox
+              id={'hp-situation-' + situation.key}
+              label={situation.label}
+              description={situation.where}
+              checked={item.on}
+              onchange={(checked) => (item.on = checked)}
+            />
+          </span>
           <label
             class="seconds"
             title={item.seconds == null
@@ -107,24 +109,16 @@
         role="group"
         aria-label="Downhill mode"
       >
-        <button
-          type="button"
-          class="toggle"
-          aria-pressed={plan.downhill}
-          disabled={!downhills}
-          onclick={() => (plan.downhill = !plan.downhill)}
-        >
-          <span
-            class="check"
-            aria-hidden="true"
-          ></span>
-          Downhill mode
-          <small>
-            {downhills
-              ? 'on ' + (downhills === 1 ? 'the downhill' : 'all ' + downhills + ' downhills')
-              : 'no downhills here'}
-          </small>
-        </button>
+        <span class="toggle">
+          <Checkbox
+            id="hp-situation-downhill"
+            label="Downhill mode"
+            description={downhillWhere}
+            disabled={!downhills}
+            checked={plan.downhill}
+            onchange={(checked) => (plan.downhill = checked)}
+          />
+        </span>
       </li>
     </ul>
   </SimSection>
@@ -167,60 +161,19 @@
     background: rgb(var(--accent-primary-rgb) / 0.07);
   }
   .toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
     flex: 1;
     min-width: 0;
-    align-self: stretch;
-    padding: 0 6px;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text-primary);
-    font: inherit;
-    font-size: 12px;
-    font-weight: 600;
-    text-align: left;
-    white-space: nowrap;
-    cursor: pointer;
+    padding-left: 4px;
   }
-  .toggle:hover {
-    background: var(--surface-2);
+  /* The row's own height: the situations stay one compact line each. */
+  .toggle :global(.checkbox) {
+    min-height: 32px;
+    gap: 8px;
   }
-  .toggle:disabled {
-    cursor: default;
-    opacity: 0.5;
-  }
-  .toggle small {
-    min-width: 0;
+  .toggle :global(.checkbox small) {
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 11px;
-    font-weight: 400;
-    color: var(--text-secondary);
-  }
-  .check {
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: 16px;
-    height: 16px;
-    border: 1.5px solid var(--border-primary);
-    border-radius: 4px;
-  }
-  .toggle[aria-pressed='true'] .check {
-    border-color: var(--accent-primary);
-    background: var(--accent-primary);
-  }
-  .toggle[aria-pressed='true'] .check:after {
-    content: '';
-    width: 4px;
-    height: 8px;
-    margin-top: -2px;
-    border: solid var(--surface-1);
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
+    white-space: nowrap;
   }
   .seconds {
     display: inline-flex;
@@ -270,14 +223,14 @@
       gap: 12px;
     }
   }
-  /* Touch-sized on a phone. */
+  /* A phone: the design system's control height. */
   @media (max-width: 767px) {
     .situations li {
-      min-height: 44px;
+      min-height: var(--control-height);
     }
     .seconds input {
-      height: 36px;
-      min-height: 36px;
+      height: var(--control-height);
+      min-height: var(--control-height);
     }
   }
 </style>

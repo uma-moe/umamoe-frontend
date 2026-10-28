@@ -1,59 +1,122 @@
-import type {
-  OptimizeEstimate,
-  OptimizeFinalist,
-  OptimizeImpact,
-  OptimizeResult,
-  OptimizeScenarioResult
+import {
+  isOptimizeTheory,
+  type OptimizeFinalist,
+  type OptimizeResult,
+  type OptimizeTheory,
+  type RacedWins,
+  type TheoryFire,
+  type TheoryOffer
 } from '../../../simulator-repository';
 import type { PricedOffer } from '../../../setup/build/skill-offers';
 
-/** The first optimizer that races her alone and screens every skill. */
-export const SCREEN_SCHEMA = 5;
-/** Optimize responses from schema 7 leave out skills that can never fire for her. */
-export const INERT_SCHEMA = 7;
-/** How sure a skill must be to cost time before the search leaves SP unspent on it (the server's rule). */
-const SURE = 3;
+/** The first optimizer that theorizes builds: worth in lengths from where skills fire and how they combine. */
+export const THEORY_SCHEMA = 8;
+/** A length (bashin) is 2.5 m. */
+export const LENGTH_M = 2.5;
+/** Worth this close to nothing, in lengths, adds nothing a race would show. */
+const NOTHING = 0.03;
+/** A skill that fires in fewer races than this rarely helps her. */
+const RARELY = 0.3;
+/** First activations this early are at the gate. */
+const GATE_M = 30;
 
-/** Seconds a build saves her a race: the fresh races' estimate when there is one. */
-export const gainOf = (finalist: OptimizeFinalist): OptimizeEstimate | undefined =>
-  finalist.validation_gain ?? finalist.gain;
+/** `+5.6%`, estimated win points (0–1) as a share of races won; one decimal, two below a point. */
+export function winText(win: number): string {
+  const points = win * 100;
+  const size = Math.abs(points).toFixed(Math.abs(points) < 1 ? 2 : 1);
+  if (points > 0) return `+${size}%`;
+  if (points < 0) return `−${size}%`;
+  return `${size}%`;
+}
 
-/** Rounds to nothing at two decimals, so it shows without a sign rather than as `−0.00`. */
-const roundsToZero = (value: number) => Math.abs(value) < 0.005;
+/** `38.1%`, a win rate (0–1) measured in races. */
+export function winRateText(rate: number): string {
+  return (rate * 100).toFixed(1) + '%';
+}
 
-/** `+0.42`, for columns that say their unit once. */
-export const signed = (value: number) => {
-  if (roundsToZero(value)) return '0.00';
+/** How far a build trails the pick in the races that ranked them: win points (0–1), and that gap's standard error. */
+export interface RacedGap {
+  behind: number;
+  error: number;
+}
 
-  return (value < 0 ? '−' : '+') + Math.abs(value).toFixed(2);
-};
+/**
+ * How far `build` trails `pick`, both raced beside the theory's pick. Each one's error is its gain's over that pick (0
+ * for the theory's pick itself), so the gap's is at most the root of their squares: the rate they share drops out.
+ */
+export function racedGap(pick: RacedWins, build: RacedWins): RacedGap {
+  return {
+    behind: pick.win_rate - build.win_rate,
+    error: Math.hypot(pick.error, build.error)
+  };
+}
 
-/** `0.42 s`, signed when it costs time; in real fields `+0.42`, runners beaten. */
-export const amount = (value: number, field: boolean) => {
-  if (field) return signed(value);
-  if (roundsToZero(value)) return '0.00 s';
+/** `−0.6 ± 0.4 pts`, a build's standing against the pick with its error; two decimals while the error is under a tenth. */
+export function gapText({ behind, error }: RacedGap): string {
+  const digits = error * 100 < 0.1 ? 2 : 1;
+  const points = -behind * 100;
+  const sign = points < 0 ? '−' : '+';
+  return sign + Math.abs(points).toFixed(digits) + ' ± ' + (error * 100).toFixed(digits) + ' pts';
+}
 
-  return (value < 0 ? '−' : '') + Math.abs(value).toFixed(2) + ' s';
-};
+/** `+0.62 L`, a skill's worth; builds read to one decimal, and a column that says its unit drops it. */
+export function lengthsText(lengths: number, digits = 2, unit = true): string {
+  const suffix = unit ? ' L' : '';
+  const rounds = Math.abs(lengths) < 0.5 * 10 ** -digits;
+  if (rounds) return (0).toFixed(digits) + suffix;
 
-/** Surely costs her: time with the pack, places in real fields. */
-export const surelyWorse = (estimate: OptimizeEstimate) =>
-  estimate.mean + SURE * estimate.standard_error < 0;
+  return (lengths > 0 ? '+' : '−') + Math.abs(lengths).toFixed(digits) + suffix;
+}
 
-/** Sure enough of a value's sign to show it: two standard errors clear of nothing. */
-export const clearOfZero = (estimate: OptimizeEstimate) =>
-  Math.abs(estimate.mean) > 2 * estimate.standard_error;
+/** What a skill's worth means for her: it helps, adds nothing, or costs her. */
+export type WorthState = 'helps' | 'nothing' | 'costs';
 
-/** Where the search valued a skill: in the best build, or only from the screening. */
-export type ValuedAt = NonNullable<OptimizeImpact['valued_at']>;
+export function worthState(lengths: number): WorthState {
+  if (lengths > NOTHING) return 'helps';
+  if (lengths < -NOTHING) return 'costs';
+  return 'nothing';
+}
 
-/** What the search values a skill at, weighed against CM evidence. An older service sends only the screening. */
-export function skillValue(impact: OptimizeImpact): { estimate: OptimizeEstimate; at: ValuedAt } {
-  if (impact.value !== undefined) {
-    return { estimate: impact.value, at: impact.valued_at ?? 'screening' };
+/** Where on the course a first activation lands, in words: at the gate, or the phase it falls in. */
+export function fireWhere(metres: number, phaseBounds: number[]): string {
+  if (metres <= GATE_M) return 'at the gate';
+
+  const phases = ['in the opening', 'mid race', 'in the late race', 'in the last spurt'];
+  const phase = phaseBounds.findIndex((bound, index) => index > 0 && metres < bound) - 1;
+  return phases[phase < 0 ? phases.length - 1 : phase] ?? 'in the last spurt';
+}
+
+/** How a skill fires, in a sentence: how often, where, and whether it waits for her other skills. */
+export function fireText({
+  fire,
+  phaseBounds,
+  countGated
+}: {
+  fire: TheoryFire;
+  phaseBounds: number[];
+  countGated: boolean;
+}): string {
+  if (fire.rate <= 0 || fire.mean_m === null) {
+    return countGated
+      ? 'Never fires here: too few of her skills fire before it'
+      : 'Never fires here';
   }
 
-  return { estimate: impact.together ?? impact.alone, at: 'screening' };
+  const share = Math.round(fire.rate * 100) + '% of races';
+  const at = Math.round(fire.mean_m / 10) * 10;
+  const after = countGated ? ', once enough of her skills have fired' : '';
+  const rarely = fire.rate < RARELY ? ' (rarely)' : '';
+  return (
+    'Fires in ' +
+    share +
+    rarely +
+    ', first ' +
+    fireWhere(fire.mean_m, phaseBounds) +
+    ' (~' +
+    at.toLocaleString('en-US') +
+    ' m)' +
+    after
+  );
 }
 
 /**
@@ -134,230 +197,181 @@ function heldSkill(offers: PricedOffer[], key: number, held: number[]): HeldSkil
   };
 }
 
-/** What finalist `build` buys that the best build does not, and what it leaves out that the best build buys. */
-export function changesFromBest(rows: CompareRow[], build: number, offers: PricedOffer[]) {
-  const added: HeldSkill[] = [];
-  const dropped: HeldSkill[] = [];
-  for (const row of rows) {
-    const best = new Set(row.held[0]);
-    const own = new Set(row.held[build]);
-    const gained = row.chain.filter((index) => own.has(index) && !best.has(index));
-    const lost = row.chain.filter((index) => best.has(index) && !own.has(index));
-
-    if (gained.length) added.push(heldSkill(offers, row.chain[0]!, gained));
-    if (lost.length) dropped.push(heldSkill(offers, row.chain[0]!, lost));
-  }
-
-  return { added, dropped };
+/** How the theory values a skill: its source and whether it waits for her other skills. */
+interface Valuation {
+  source: TheoryOffer['source'];
+  countGated: boolean;
 }
 
-/**
- * What each skill adds to the best build, raced there: the search's value, weighed against the evidence. An older
- * service sends only what the races measured for the best build's own skills.
- */
-export function valuesInBest(best: OptimizeFinalist | undefined, impacts: ScreenedImpact[]) {
-  const values = new Map<number, OptimizeEstimate>();
-  for (const contribution of best?.contributions ?? []) {
-    const index = contribution.purchases[0];
-    if (index !== undefined) values.set(index, contribution.gain);
-  }
-
-  for (const impact of impacts) {
-    if (impact.worth.at === 'best_build') values.set(impact.purchase, impact.worth.estimate);
-  }
-
-  return values;
+/** A build's card line: the part of a skill chain it holds, what that adds to the build and how it fires there. */
+export interface BuildCell {
+  skill: HeldSkill;
+  /** Lengths it adds to this build: the build against the build without it. */
+  lengths: number;
+  /** The same as estimated win points (0–1), when the service sends them. */
+  win?: number;
+  fire: TheoryFire;
+  valuation: Valuation;
+  locked: boolean;
+  /** It holds other skills of the chain than the pick does, or the pick holds none of it. */
+  differs: boolean;
 }
 
-/** The sum of independent estimates; undefined for none. */
-function total(estimates: OptimizeEstimate[]): OptimizeEstimate | undefined {
-  if (!estimates.length) return undefined;
-
-  return {
-    mean: estimates.reduce((sum, estimate) => sum + estimate.mean, 0),
-    standard_error: Math.hypot(...estimates.map((estimate) => estimate.standard_error)),
-    samples: Math.min(...estimates.map((estimate) => estimate.samples))
-  };
+/** A finalist with what the theory says it is worth, what races in her real fields won her with it, and its card. */
+export interface TheorizedBuild {
+  finalist: OptimizeFinalist;
+  /** Lengths it gains her over her build as it is, its skills' synergies included. */
+  lengths: number;
+  /** Estimated win points (0–1) from its skills', when the service sends them. */
+  win?: number;
+  /** Her win rate with it in the races that ranked the finalists, when races ranked them; the builds are in its order. */
+  raced?: RacedWins;
+  /** HP she has left at the finish, below zero when she runs out. */
+  hpLeft: number;
+  /** Skills it buys, a chain as one. */
+  count: number;
+  /** Its skills, the most worth first. */
+  cells: BuildCell[];
+  /** The pick's skills it does without. */
+  skipped: string[];
 }
 
-/** A skill of the skill lists: what it costs and what it adds to the best build. */
-export interface SkillRow {
-  /** Its first purchase. */
+/** A skill on offer in the list of every skill: what it is worth bought on her own, and whether the pick buys it. */
+export interface ListedSkill {
   key: number;
   offer: PricedOffer;
-  /** In the best build, the skills it builds on that are bought with it. */
-  via: PricedOffer[];
   cost: number;
-  value?: OptimizeEstimate;
-  /** Valued only by the screening: it cannot join the best build, or the race cap ran out there. */
-  screened: boolean;
+  lengths: number;
+  win?: number;
+  fire: TheoryFire;
+  valuation: Valuation;
   locked: boolean;
-  /** How the screening raced it: alone, with everything, and what CM records say. */
-  impact?: ScreenedImpact;
+  bought: boolean;
 }
 
-const byValue = (a: SkillRow, b: SkillRow) =>
-  (b.value?.mean ?? Number.NEGATIVE_INFINITY) - (a.value?.mean ?? Number.NEGATIVE_INFINITY);
-
-/** The best build's skills, a chain as one, and the skills it leaves out; each list the most useful first. */
-export function skillLists(
-  best: OptimizeFinalist | undefined,
-  offers: PricedOffer[],
-  impacts: ScreenedImpact[]
-) {
-  const screening = new Map(impacts.map((impact) => [impact.purchase, impact]));
-  const values = valuesInBest(best, impacts);
-  const valueOf = (index: number) => values.get(index) ?? screening.get(index)?.worth.estimate;
-
-  const buy: SkillRow[] = (best ? compareRows([best], offers).shared : []).map((row) => ({
-    key: row.chain[0]!,
-    offer: row.top,
-    via: row.base,
-    cost: row.cost,
-    value: total(row.chain.flatMap((index) => valueOf(index) ?? [])),
-    screened: row.chain.some((index) => !values.has(index)),
-    locked: row.chain.some((index) => offers[index]?.locked === true),
-    impact: screening.get(row.chain[0]!)
-  }));
-
-  const bought = new Set(best?.build.purchases ?? []);
-  const left: SkillRow[] = impacts
-    .filter((impact) => !bought.has(impact.purchase))
-    .map((impact) => ({
-      key: impact.purchase,
-      offer: impact.offer,
-      via: [],
-      cost: impact.offer.cost,
-      value: impact.worth.estimate,
-      screened: impact.worth.at === 'screening',
-      locked: false,
-      impact
-    }));
-
-  return { buy: buy.sort(byValue), left: left.sort(byValue) };
+/** The result as the page shows it: the theorized builds, the pick first, and every skill on offer. */
+export interface TheorizedResult {
+  builds: TheorizedBuild[];
+  skills: ListedSkill[];
+  /** The largest worth shown, which a full data bar stands for. */
+  scale: number;
+  phaseBounds: number[];
+  theory: OptimizeTheory;
 }
-
-/** How a build raced on average: wins, place, finish time and HP, from the fresh races when there are some. */
-export interface RaceStats {
-  win: number;
-  time: number;
-  place?: number;
-  hpLeft?: number;
-  fullSpurt?: number;
-}
-
-/** A finalist's race stats, each scenario counted by its races; fields an older service leaves out stay undefined. */
-export function raceStats(finalist: OptimizeFinalist): RaceStats | undefined {
-  const scenarios = (finalist.validation ?? finalist.search)?.scenarios ?? [];
-  const races = scenarios.reduce((sum, scenario) => sum + scenario.win_rate.samples, 0);
-  if (!races) return undefined;
-
-  const average = (pick: (scenario: OptimizeScenarioResult) => OptimizeEstimate | undefined) => {
-    let total = 0;
-    for (const scenario of scenarios) {
-      const estimate = pick(scenario);
-      if (estimate === undefined) return undefined;
-      total += estimate.mean * scenario.win_rate.samples;
-    }
-
-    return total / races;
-  };
-
-  return {
-    win: average((scenario) => scenario.win_rate)!,
-    time: average((scenario) => scenario.finish_time_seconds)!,
-    place: average((scenario) => scenario.place),
-    hpLeft: average((scenario) => scenario.hp_left),
-    fullSpurt: average((scenario) => scenario.full_spurt)
-  };
-}
-
-/** One race stat of a build as shown, and whether it is the best of the finalists. */
-export interface StatCell {
-  label: string;
-  text: string;
-  top: boolean;
-}
-
-/** `68%`. */
-export const percent = (share: number) => Math.round(share * 100) + '%';
-
-/** A finish time as the game shows it: `2:31.42`. */
-export function raceTime(seconds: number) {
-  const minutes = Math.floor(seconds / 60);
-  return minutes + ':' + (seconds - minutes * 60).toFixed(2).padStart(5, '0');
-}
-
-/** The race stats a build shows, each with which way is better. */
-const STATS: {
-  label: string;
-  pick: (stats: RaceStats) => number | undefined;
-  show: (value: number) => string;
-  better: 'higher' | 'lower';
-}[] = [
-  { label: 'Wins', pick: (stats) => stats.win, show: percent, better: 'higher' },
-  {
-    label: 'Avg place',
-    pick: (stats) => stats.place,
-    show: (value) => value.toFixed(2),
-    better: 'lower'
-  },
-  { label: 'Avg time', pick: (stats) => stats.time, show: raceTime, better: 'lower' },
-  { label: 'HP left', pick: (stats) => stats.hpLeft, show: percent, better: 'higher' },
-  { label: 'Full spurt', pick: (stats) => stats.fullSpurt, show: percent, better: 'higher' }
-];
 
 /**
- * Each finalist's race stats as shown, a stat an older service leaves out skipped for all of them. With more than one
- * finalist, the best value of each stat across them is marked.
+ * How many builds the result compares: the service returns this many, its best by her win rate in races of her real CM
+ * fields (or by theorized worth where it raced none), and the page keeps to it for a service that returns more.
  */
-export function statCells(finalists: OptimizeFinalist[]): StatCell[][] {
-  const stats = finalists.map(raceStats);
-  const cells: StatCell[][] = finalists.map(() => []);
-  for (const stat of STATS) {
-    const picked = stats.map((raced) => (raced ? stat.pick(raced) : undefined));
-    const known = picked.filter((value): value is number => value !== undefined);
-    if (!known.length) continue;
+export const COMPARED_BUILDS = 3;
 
-    const top = stat.better === 'higher' ? Math.max(...known) : Math.min(...known);
-    picked.forEach((value, index) => {
-      if (value === undefined) return;
-
-      cells[index]!.push({
-        label: stat.label,
-        text: stat.show(value),
-        top: finalists.length > 1 && value === top
-      });
-    });
-  }
-
-  return cells;
+/** The response's theory, when it has one the page can read. */
+export function theoryOf(result: OptimizeResult | undefined): OptimizeTheory | undefined {
+  const theory = result?.theory;
+  return isOptimizeTheory(theory) ? theory : undefined;
 }
 
-/** One scale for the value bars of every skill row, from below zero to the largest value. */
-export interface ValueScale {
-  from: number;
-  span: number;
-}
+/**
+ * The theorized result: each finalist with its worth, its win rate in races when races ranked it, and its skills'
+ * parts, in the service's order, the pick first; every skill on offer by what it is worth on her own. A skill that needs
+ * another on offer counts with it as one chain.
+ */
+export function theorizedResult({
+  result,
+  offers
+}: {
+  result: OptimizeResult;
+  offers: PricedOffer[];
+}): TheorizedResult | undefined {
+  const theory = theoryOf(result);
+  if (!theory) return undefined;
 
-/** A scale that fits every row's value, with a little room left of zero so a bar that costs her shows. */
-export function valueScale(rows: SkillRow[]): ValueScale {
-  const means = rows.flatMap((row) => (row.value ? [row.value.mean] : []));
-  const high = Math.max(0, ...means);
-  const low = Math.min(0, ...means);
-  const from = Math.min(low, -0.08 * (high - low || 1));
+  const finalists = result.report.finalists.slice(
+    0,
+    Math.min(COMPARED_BUILDS, theory.finalists.length)
+  );
+  const { differ, shared } = compareRows(finalists, offers);
+  const rows = [...shared, ...differ];
+  const valuation = new Map(
+    theory.offers.map((offer) => [
+      offer.purchase,
+      { source: offer.source, countGated: offer.count_gated }
+    ])
+  );
+  const valuationOf = (purchase: number): Valuation =>
+    valuation.get(purchase) ?? { source: 'physics', countGated: false };
 
-  return { from, span: high - from || 1 };
-}
+  const builds = finalists.map((finalist, build): TheorizedBuild => {
+    const theorized = theory.finalists[build]!;
+    const worth = new Map(theorized.skills.map((skill) => [skill.purchase, skill]));
+    const cells = rows
+      .flatMap((row): BuildCell[] => {
+        const held = row.held[build]!;
+        if (!held.length) return [];
 
-/** Where a bar starts and how wide it is on the scale, in percent: from zero to the value, either way. */
-export function barShape(scale: ValueScale, mean: number) {
-  const at = (value: number) =>
-    Math.min(100, Math.max(0, ((value - scale.from) / scale.span) * 100));
-  const zero = at(0);
-  const end = at(mean);
+        const part = worth.get(held[0]!);
+        const pick = row.held[0]!;
+        return [
+          {
+            skill: heldSkill(offers, row.chain[0]!, held),
+            lengths: part?.lengths ?? 0,
+            win: part?.win,
+            fire: part?.fire ?? { rate: 0, mean_m: null },
+            valuation: valuationOf(held[0]!),
+            locked: held.some((index) => offers[index]?.locked === true),
+            differs: build > 0 && held.join() !== pick.join()
+          }
+        ];
+      })
+      .sort((a, b) => b.lengths - a.lengths);
+    const skipped = rows.flatMap((row) =>
+      build > 0 && row.held[0]!.length && !row.held[build]!.length ? [row.top.skill.name] : []
+    );
+    return {
+      finalist,
+      lengths: theorized.lengths,
+      win: theorized.win,
+      raced: theorized.raced,
+      hpLeft: theorized.hp_left,
+      count: cells.length,
+      cells,
+      skipped
+    };
+  });
 
-  return { zero, left: Math.min(zero, end), width: Math.abs(end - zero) };
+  const picked = new Set(finalists[0]?.build.purchases ?? []);
+  const skills = theory.offers
+    .flatMap((offer): ListedSkill[] => {
+      const priced = offers[offer.purchase];
+      if (!priced) return [];
+
+      return [
+        {
+          key: offer.purchase,
+          offer: priced,
+          cost: priced.cost,
+          lengths: offer.lengths,
+          win: offer.win,
+          fire: offer.fire,
+          valuation: { source: offer.source, countGated: offer.count_gated },
+          locked: priced.locked === true,
+          bought: picked.has(offer.purchase)
+        }
+      ];
+    })
+    .sort((a, b) => b.lengths - a.lengths || a.key - b.key);
+
+  const shown = [
+    ...builds.flatMap((build) => build.cells.map((cell) => cell.lengths)),
+    ...skills.map((s) => s.lengths)
+  ];
+  return {
+    builds,
+    skills,
+    scale: Math.max(0, ...shown) || 1,
+    phaseBounds: theory.phase_bounds,
+    theory
+  };
 }
 
 /** Skills on offer that can never fire for her here: the search leaves them out, and so does what SP is left for. */
@@ -401,22 +415,7 @@ export function ruledOutSkills(
   });
 }
 
-/** Every skill on offer as screened, with what the search values it at, the most useful first. */
-export const screenedImpacts = (
-  impacts: OptimizeResult['report']['impacts'],
-  offers: PricedOffer[]
-) =>
-  (impacts ?? [])
-    .flatMap((impact) => {
-      const offer = offers[impact.purchase];
-      if (offer === undefined) return [];
-      return [{ ...impact, offer, worth: skillValue(impact) }];
-    })
-    .sort((a, b) => b.worth.estimate.mean - a.worth.estimate.mean || a.purchase - b.purchase);
-
-export type ScreenedImpact = ReturnType<typeof screenedImpacts>[number];
-
-/** What buying an offer costs on top of the best build: its price and every skill down its chain not bought yet. */
+/** What buying an offer costs on top of the pick: its price and every skill down its chain not bought yet. */
 function chainCost(offers: PricedOffer[], bought: Set<number>, index: number): number {
   const offer = offers[index]!;
   const on = offer.buildsOn;
@@ -426,63 +425,87 @@ function chainCost(offers: PricedOffer[], bought: Set<number>, index: number): n
   return offer.cost + (lower >= 0 && !bought.has(lower) ? chainCost(offers, bought, lower) : 0);
 }
 
-/** SP the best build leaves, and the skills it could still afford: the search only skips one that surely costs. */
-export function leftoverSp(
-  best: OptimizeFinalist | undefined,
-  budget: number | undefined,
-  offers: PricedOffer[],
-  bought: Set<number>,
-  inertSet: Set<number>,
-  impacts: ScreenedImpact[]
-) {
-  if (!best || budget === undefined) return undefined;
-  const left = budget - best.sp_cost;
-  const affordable = offers
-    .map((_, index) => {
-      if (bought.has(index) || inertSet.has(index)) return undefined;
-      return chainCost(offers, bought, index) <= left ? index : undefined;
-    })
-    .filter((index): index is number => index !== undefined);
+/** SP the pick leaves, and the skills it could still afford that the theory says add nothing or cost her. */
+export function leftoverSp({
+  pick,
+  budget,
+  offers,
+  inert,
+  skills
+}: {
+  pick: OptimizeFinalist | undefined;
+  budget: number | undefined;
+  offers: PricedOffer[];
+  inert: Set<number>;
+  skills: ListedSkill[];
+}) {
+  if (!pick || budget === undefined) return undefined;
 
-  const screened = new Map(impacts.map((impact) => [impact.purchase, impact]));
-  const slower = affordable.filter((index) => {
-    const impact = screened.get(index);
-    return impact !== undefined && surelyWorse(impact.worth.estimate);
-  });
+  const bought = new Set(pick.build.purchases);
+  const left = budget - pick.sp_cost;
+  const affordable = offers
+    .map((_, index) => index)
+    .filter((index) => !bought.has(index) && !inert.has(index))
+    .filter((index) => chainCost(offers, bought, index) <= left);
+  const worth = new Map(skills.map((skill) => [skill.key, skill.lengths]));
+  const useless = affordable.filter((index) => (worth.get(index) ?? 0) <= NOTHING);
 
   return {
     left,
     all: bought.size >= offers.length,
-    slower: slower.map((index) => offers[index]!.skill.name),
-    unexplained: affordable.length > slower.length
+    useless: useless.map((index) => offers[index]!.skill.name),
+    unexplained: affordable.length > useless.length
   };
 }
 
-/** How sure a raced value is, on hover. */
-export const spread = (estimate: OptimizeEstimate) =>
-  '± ' +
-  estimate.standard_error.toFixed(2) +
-  ' over ' +
-  estimate.samples.toLocaleString('en-US') +
-  (estimate.samples === 1 ? ' race' : ' races');
-
-/** How much racing it took, in a sentence. */
-export function searchTally(result: OptimizeResult) {
-  const report = result.report;
-  const builds = (report.screen?.builds ?? report.candidates_evaluated).toLocaleString('en-US');
-  const searched =
-    'The search tried ' +
-    builds +
+/**
+ * How the theory got there, in a sentence: the builds it valued, the races of her real fields that ranked the best ones
+ * by her win rate, and the races that checked the finalists.
+ */
+export function searchTally(result: OptimizeResult, theory: OptimizeTheory) {
+  const valued =
+    'The theory valued ' +
+    theory.builds_valued.toLocaleString('en-US') +
     ' builds over ' +
-    report.simulations.toLocaleString('en-US') +
-    ' races';
-  const fresh = report.validation_seeds.length;
-  if (!fresh) return searched + '.';
+    theory.search_draws.toLocaleString('en-US') +
+    ' drawn races each';
+  const ranking = theory.ranking_races ?? 0;
+  const checked = result.report.validation_seeds.length;
+  const steps: string[] = [];
+  if (ranking > 0) {
+    steps.push(
+      'its best builds raced ' +
+        ranking.toLocaleString('en-US') +
+        ' races of her real CM fields, seed for seed beside its pick, and her win rate there ranks them'
+    );
+  }
 
+  if (checked) {
+    steps.push(
+      'the best ones and her build as it is raced ' +
+        checked.toLocaleString('en-US') +
+        ' real races to check them'
+    );
+  }
+
+  if (!steps.length) return valued + '.';
+
+  return valued + ', then ' + steps.join(', and ') + '.';
+}
+
+/** What the races that checked a finalist say it gains her, in their unit: seconds, or runners beaten. */
+export function checkText(finalist: OptimizeFinalist, field: boolean, races: number): string {
+  const gain = finalist.validation_gain ?? finalist.gain;
+  if (!gain) return '';
+
+  const unit = field ? ' runners beaten' : ' s';
+  const sign = gain.mean >= 0 ? '+' : '−';
   return (
-    searched +
-    ', then raced the best ones again on ' +
-    fresh.toLocaleString('en-US') +
-    ' new races to check them.'
+    'Checked in ' +
+    races.toLocaleString('en-US') +
+    ' races: ' +
+    sign +
+    Math.abs(gain.mean).toFixed(2) +
+    unit
   );
 }

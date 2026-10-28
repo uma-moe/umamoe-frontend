@@ -4,6 +4,16 @@
   min-width: 0;
   container: veteran-list / inline-size;
 }
+.controls {
+  position: sticky;
+  top: var(--veteran-list-sticky-top, 0);
+  z-index: 2;
+  display: grid;
+  gap: 8px;
+  padding-block: 2px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--veteran-list-bg, var(--dialog-surface-bg));
+}
 .tools {
   --control-height: 34px;
   display: flex;
@@ -12,15 +22,15 @@
   align-items: center;
 }
 .search {
-  flex: 1 1 180px;
+  flex: 1 1 140px;
   min-width: 0;
 }
 .search :global(input) {
   font-size: 13px;
 }
 .sort {
-  flex: 0 1 190px;
-  min-width: 150px;
+  flex: 0 1 132px;
+  min-width: 112px;
 }
 .sort :global(button.select-control) {
   min-height: 34px;
@@ -82,14 +92,12 @@
 .room.full {
   color: var(--accent-warning);
 }
-.tick-all {
-  padding: 0;
-  border: 0;
-  background: none;
+/* A text action on the header's count line, at its size. */
+.head .count :global(.ui-button) {
+  min-height: 24px;
+  padding-inline: 6px;
   color: var(--accent-primary);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
+  font-size: 11px;
 }
 .stats-head {
   grid-column: 4;
@@ -200,25 +208,6 @@
 }
 .more {
   justify-self: center;
-  padding: 6px 10px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--accent-primary);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.more:hover {
-  background: var(--surface-2);
-}
-.empty {
-  margin: 0;
-  padding: 16px 8px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  text-align: center;
 }
 /* Phone: the stats go under her name. */
 @media (max-width: 640px) {
@@ -242,4 +231,49 @@
   .go {
     opacity: 1;
   }
+}
+/* Dense at every width: the forms' compact controls, and rows only as tall as name and stats need. */
+.veteran-list {
+  gap: 6px;
+}
+.controls {
+  gap: 6px;
+  padding-block: 0 4px;
+}
+.tools {
+  --control-height: 32px;
+  gap: 6px;
+}
+.search :global(input) {
+  font-size: 12px;
+}
+.sort :global(button.select-control) {
+  min-height: 32px;
+  font-size: 11px;
+}
+.head {
+  padding: 0 6px;
+  font-size: 10px;
+}
+.head,
+.row {
+  column-gap: 8px;
+}
+.row {
+  min-height: 36px;
+  padding: 3px 6px;
+}
+.who strong {
+  font-size: 12px;
+}
+.meta {
+  font-size: 10px;
+}
+.stats {
+  gap: 4px;
+  font-size: 11px;
+}
+.stats img {
+  width: 12px;
+  height: 12px;
 }

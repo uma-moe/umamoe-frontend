@@ -109,8 +109,8 @@
   @media (max-width: 767px) {
     .actions :global(.ui-button),
     .actions :global(.menu > .trigger) {
-      height: 40px;
-      min-height: 40px;
+      height: var(--control-height);
+      min-height: var(--control-height);
     }
   }
 </style>

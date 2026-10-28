@@ -4,6 +4,7 @@
   import { simulatorRoster } from '../../../simulator-roster.svelte';
   import type { CmBenchmark } from '../../../courses/cm-benchmark';
   import CmOpponents from '../../../shell/CmOpponents.svelte';
+  import SimSection from '../../../shell/SimSection.svelte';
 
   interface Props {
     source: string;
@@ -42,19 +43,18 @@
   }
 </script>
 
-<section
-  class="panel against"
-  aria-label="Opponents"
+<SimSection
+  number={2}
+  title="Opponents"
 >
-  <header>
-    <h3>Against</h3>
+  {#snippet actions()}
     <SegmentedControl
       label="Opponents"
       compact
       options={SOURCES}
       bind:value={source}
     />
-  </header>
+  {/snippet}
   {#if source === 'cm'}
     <CmOpponents
       bind:snapshotId
@@ -98,14 +98,10 @@
       {opponentCount} of 6 picked. The first three race as one team, the next three as another.
     </p>
   {/if}
-</section>
+</SimSection>
 
 <style>
   @import './veteran-search-panel.css';
-
-  .against header :global(.segments) {
-    margin-left: auto;
-  }
 
   .field-picks {
     display: grid;
@@ -123,7 +119,7 @@
     min-height: 34px;
     padding: 3px 8px 3px 4px;
     border: 1px solid var(--border-subtle);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: var(--text-primary);
     font: inherit;
@@ -143,9 +139,24 @@
     font-weight: 700;
     color: var(--accent-primary);
   }
+  .pick:hover:not(:disabled) {
+    border-color: var(--border-strong);
+  }
+  .pick:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 1px;
+  }
   .pick.on {
     border-color: color-mix(in srgb, var(--accent-primary) 45%, transparent);
     background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
+  }
+  .field-picks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px;
+  }
+  .pick {
+    min-height: 30px;
+    font-size: 11px;
   }
   .pick:disabled {
     opacity: 0.5;

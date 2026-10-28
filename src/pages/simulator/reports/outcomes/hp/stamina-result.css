@@ -99,13 +99,13 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 19px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1.2;
 }
 .title.idle {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 650;
 }
 .good .title {
@@ -118,7 +118,7 @@
   color: var(--accent-error);
 }
 .detail {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 .answer :global(.ui-button) {

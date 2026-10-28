@@ -1,10 +1,14 @@
 <script lang="ts">
   import Button from '@/components/controls/Button.svelte';
   import TextField from '@/components/controls/TextField.svelte';
+  import Banner from '@/components/feedback/Banner.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
+  import { describeCourse, trackName } from '@/lib/game-data/racing/courses';
+  import DialogStatus from '../../../shell/DialogStatus.svelte';
   import { loadCharacters, type CharacterData } from '@/lib/game-data/characters';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import type { SimulatorUma } from '../../../simulator-uma';
+  import { restoreSimulatorField } from '../../../simulator-roster.svelte';
   import {
     ensureSimulatorCourses,
     simulatorCourseData,
@@ -16,24 +20,28 @@
     buildCodeGoal,
     buildCodeOffers,
     buildCodeUma,
+    codePage,
     decodeBuildCode,
     encodeBuildCode,
     looksLikeBuildCode,
     sameRunner,
-    type BuildCode
+    type BuildCode,
+    type BuildCodePage
   } from './build-code';
   import BuildCodePreview from './BuildCodePreview.svelte';
 
   /**
    * Build codes in and out. Pasting one loads the runner (stats, style, mood, aptitudes, skills, fans), the course and
    * its conditions, and for Build search her skill points, Fast Learner, the goal and the skills on offer with their
-   * hints. Copying writes the page's setup as a code. A code pasted anywhere on the page opens this with it.
+   * hints. Copying writes the whole tab as a code; a code copied from this tab restores all of it here. A code pasted
+   * anywhere on the page opens this with it.
    */
   let {
     open = $bindable(false),
     target,
     current,
-    onimport
+    onimport,
+    onrestore
   }: {
     open?: boolean;
     /** What the page takes: the race field takes both runners, Build search also what she can buy. */
@@ -46,6 +54,8 @@
       offers: SkillOffer[];
       goal: ReturnType<typeof buildCodeGoal>;
     }) => string | void;
+    /** Restores the whole tab from a code copied from it; a returned message is shown instead of closing. */
+    onrestore?: (page: BuildCodePage) => string | void;
   } = $props();
 
   const uid = $props.id();
@@ -53,6 +63,7 @@
     code = $state.raw<BuildCode>(),
     error = $state(''),
     applyError = $state(''),
+    pasteError = $state(''),
     copied = $state('');
 
   let gameDataError = $state('');
@@ -99,6 +110,7 @@
 
     code = undefined;
     error = '';
+    pasteError = '';
     if (!value.trim()) return;
     decodeBuildCode(value)
       .then((result) => {
@@ -115,10 +127,27 @@
   );
 
   const conditions = $derived(buildCodeConditions(code?.racedef));
+  /** The whole tab, when the code was copied from this one and the tab can take it back. */
+  const page = $derived(code && onrestore ? codePage(code, target) : undefined);
+  /** The race field a whole race tab holds, or why it can't be read. */
+  const field = $derived.by(() => {
+    if (page?.tab !== 'race') return undefined;
+
+    try {
+      return { umas: restoreSimulatorField(page).umas, error: '' };
+    } catch (reason) {
+      return {
+        umas: [],
+        error: reason instanceof Error ? reason.message : 'The race field can’t be read.'
+      };
+    }
+  });
   const goal = $derived(code ? buildCodeGoal(code) : {});
   const known = (id: number) => !skills.size || skills.has(id);
   const runners = $derived.by(() => {
     if (!code) return [];
+    if (field) return field.umas.map((uma) => ({ uma, dropped: 0 }));
+
     const list = [code.uma1, code.uma2].filter((runner) => runner != null);
     const wanted = target === 'race' && !sameRunner(code.uma1, code.uma2) ? list : list.slice(0, 1);
     return wanted.map((runner) => {
@@ -160,7 +189,10 @@
       if (conditions.startTime) simulatorSession.startTime = conditions.startTime;
     }
 
-    const message = onimport({ umas: runners.map((runner) => runner.uma), offers, goal });
+    const message =
+      page && onrestore
+        ? onrestore(page)
+        : onimport({ umas: runners.map((runner) => runner.uma), offers, goal });
     if (message) {
       Object.assign(simulatorSession, before);
       applyError = message;
@@ -179,6 +211,15 @@
       copied = 'Copied';
     } catch {
       copied = 'Couldn’t copy';
+    }
+  }
+
+  async function pasteFromClipboard() {
+    pasteError = '';
+    try {
+      text = (await navigator.clipboard.readText()).trim();
+    } catch {
+      pasteError = 'The clipboard can’t be read here. Paste into the field instead.';
     }
   }
 
@@ -202,30 +243,60 @@
 <Dialog
   bind:open
   title="Build code"
+  description="Load a runner, her course and its conditions from a code{current
+    ? ', or copy this setup as one'
+    : ''}."
   icon="clipboard"
-  maxWidth="600px"
+  maxWidth="640px"
   maxHeight="88dvh"
+  mobileMaxHeight="96dvh"
+  compact
 >
+  {#snippet headerActions()}
+    {#if current}
+      <span class="copy-action">
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={copied === 'Copied' ? 'check' : 'copy'}
+          onclick={copy}
+        >
+          {copied || 'Copy this setup'}
+        </Button>
+      </span>
+    {/if}
+  {/snippet}
   <div class="import">
     {#if gameDataError}
-      <p
-        class="apply-error"
-        role="alert"
-      >
-        {gameDataError}
-      </p>
+      <div role="alert">
+        <Banner
+          title="Game data unavailable"
+          tone="warning"
+        >
+          <p>{gameDataError}</p>
+        </Banner>
+      </div>
     {/if}
-    <TextField
-      id="{uid}-code"
-      label="Build code"
-      placeholder="H4sI…"
-      autocomplete="off"
-      bind:value={text}
-      {error}
-      help={error
-        ? undefined
-        : 'Paste a code to load it. A code pasted anywhere on the page opens this too.'}
-    />
+    <div class="code-row">
+      <div class="code-field">
+        <TextField
+          id="{uid}-code"
+          label="Build code"
+          placeholder="H4sI…"
+          autocomplete="off"
+          bind:value={text}
+          error={error || field?.error || pasteError || ''}
+          help={error ? undefined : 'A code pasted anywhere on the page opens this with it.'}
+        />
+      </div>
+      <Button
+        variant="secondary"
+        icon="clipboard"
+        onclick={pasteFromClipboard}
+      >
+        Paste
+      </Button>
+    </div>
     {#if code && runners.length}
       <BuildCodePreview
         {code}
@@ -236,28 +307,53 @@
         {offers}
         {goal}
         {skills}
+        whole={page !== undefined}
       />
-      {#if applyError}<p
-          class="apply-error"
-          role="alert"
-        >
-          {applyError}
-        </p>{/if}
+    {:else if !text.trim()}
+      <div class="holds">
+        <strong>A code holds</strong>
+        <ul>
+          <li>Her stats, style, mood, aptitudes, skills and fans</li>
+          <li>The course with its ground, weather, season and time of day</li>
+          {#if target === 'build'}
+            <li>Her skill points, the goal and the skills on offer with their hints</li>
+          {/if}
+        </ul>
+      </div>
     {/if}
   </div>
   {#snippet actions()}
-    {#if current}<Button
-        variant="ghost"
-        icon={copied === 'Copied' ? 'check' : 'copy'}
-        onclick={copy}
-      >
-        {copied || 'Copy this setup'}
-      </Button>{/if}<Button
+    <DialogStatus>
+      {#if applyError}
+        <span class="bad">{applyError}</span>
+      {:else if code && runners.length}
+        <strong>
+          {page
+            ? 'This whole tab'
+            : runners.length === 1
+              ? '1 runner'
+              : runners.length + ' runners'}
+        </strong>
+        <span>
+          {course
+            ? trackName(course.race_track_id) + ' · ' + describeCourse(course)
+            : 'Course unchanged'}
+        </span>
+      {:else if error || field?.error}
+        <span class="blocked">This code can’t be loaded.</span>
+      {:else if text.trim()}
+        <span>Reading the code…</span>
+      {:else}
+        <span>Paste a code to see what it loads.</span>
+      {/if}
+    </DialogStatus>
+    <Button
       variant="secondary"
       onclick={() => (open = false)}
     >
       Cancel
-    </Button><Button
+    </Button>
+    <Button
       icon="download"
       disabled={!code || !runners.length}
       onclick={apply}
@@ -273,12 +369,74 @@
     gap: 12px;
     min-width: 0;
   }
-  .import :global(input) {
-    font-size: 13px;
+  /* The code is data: set it in the monospace face, so a pasted code reads as one. */
+  .code-row {
+    --control-height: 36px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 8px;
   }
-  .apply-error {
-    margin: 0;
+  .code-field :global(input) {
+    font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 12px;
-    color: var(--accent-error);
+  }
+  .code-field :global(label) {
+    font-size: 12px;
+  }
+  .code-row > :global(.ui-button) {
+    height: 36px;
+    min-height: 36px;
+    margin-top: 21px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+  }
+  .copy-action {
+    display: flex;
+    flex: none;
+    white-space: nowrap;
+  }
+  .holds {
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .holds strong {
+    font-weight: 650;
+    color: var(--text-primary);
+  }
+  .holds ul {
+    display: grid;
+    gap: 3px;
+    margin: 0;
+    padding-left: 18px;
+    line-height: 1.5;
+  }
+  @media (max-width: 767px) {
+    .import {
+      gap: 8px;
+    }
+    .code-row {
+      --control-height: 32px;
+      gap: 6px;
+    }
+    .code-field :global(label) {
+      font-size: 11px;
+    }
+    .code-row > :global(.ui-button) {
+      height: 32px;
+      min-height: 32px;
+      margin-top: 19px;
+      font-size: 11px;
+    }
+    .holds {
+      gap: 4px;
+      padding: 8px 10px;
+      font-size: 11px;
+    }
   }
 </style>

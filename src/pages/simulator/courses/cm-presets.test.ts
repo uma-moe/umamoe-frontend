@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
-import { meetingTiming, nextMeeting, numberMeetings } from './cm-presets';
+import { meetingTiming, nextMeeting, numberMeetings, raceConditions } from './cm-presets';
 
 const chukyo: RaceCourse = {
   course_id: 10701,
@@ -73,6 +73,16 @@ describe('CM presets', () => {
     const next = nextMeeting(meetings, [chukyo], now);
     expect(next).toMatchObject({ number: 3, course: { course_id: 10701 } });
     expect(next?.preset).toMatchObject({ ground: '1', season: '4', weather: '1' });
+  });
+
+  it('reads Good as the second going, after Firm, as the English game names them', () => {
+    const scheduled = raceConditions('Nakayama Turf 2500m Long Clockwise Good Winter Cloudy');
+    const captured = raceConditions('Good ground - Cloudy - Winter - Great mood');
+
+    expect(scheduled).toEqual({ ground: '2', season: '4', weather: '2' });
+    expect(captured.ground).toBe('2');
+    expect(raceConditions('Firm ground').ground).toBe('1');
+    expect(raceConditions('Yielding').ground).toBe('2');
   });
 
   it('has no next meeting when none to come names a course', () => {

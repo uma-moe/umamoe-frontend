@@ -138,21 +138,21 @@
     height: 24px;
     font-size: 12px;
   }
-  /* Touch-sized on a phone. */
+  /* A phone: the design system's control height. */
   @media (max-width: 767px) {
     .stepper:not(.small) button {
-      width: 44px;
-      height: 44px;
+      width: var(--control-height);
+      height: var(--control-height);
     }
     .stepper:not(.small) input {
-      height: 44px;
+      height: var(--control-height);
     }
     .small button {
-      width: 32px;
-      height: 36px;
+      width: 28px;
+      height: var(--control-height);
     }
     .small input {
-      height: 36px;
+      height: var(--control-height);
     }
   }
 </style>

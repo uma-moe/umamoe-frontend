@@ -1,0 +1,176 @@
+/* One column with the setup forms' Runner fields at their size: who she is and her race entry, her stats, then her
+   style, mood and aptitudes, then her skills. */
+.uma-editor {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.fields {
+  --control-height: var(--setup-control-height, 36px);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px 12px;
+}
+.fields :global(.field) {
+  gap: 4px;
+}
+.fields :global(label) {
+  font-size: 12px;
+}
+.fields :global(input),
+.fields :global(.select-control) {
+  font-size: 13px;
+}
+.stats :global(input) {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+/* Her character over the first two of the five columns, as a select-sized field: portrait, name and outfit. Choosing
+   one opens the character list. */
+.character-field {
+  position: relative;
+  display: grid;
+  grid-column: 1 / 3;
+  gap: 4px;
+  min-width: 0;
+}
+.field-label {
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.character {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  height: var(--control-height);
+  padding: 0 10px 0 4px;
+  border: 1px solid var(--factor-field-border);
+  border-radius: 8px;
+  background: var(--factor-field-bg);
+  color: var(--factor-field-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.character:hover {
+  border-color: var(--border-strong);
+}
+.character:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+.character > :global(svg) {
+  flex: none;
+  margin-left: auto;
+  color: var(--text-secondary);
+}
+.portrait {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--surface-3);
+}
+.portrait :global(.art) {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+}
+.portrait :global(.art img) {
+  object-fit: cover;
+  object-position: center top;
+}
+.character-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.character-copy strong {
+  flex: none;
+  font-size: 13px;
+  font-weight: 650;
+}
+.character-copy small {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+}
+/* Her team: a dot on the portrait's lower right, ringed in the field's color, as on the race field's cards. */
+.team-control {
+  --dot: 12px;
+  --hit: 24px;
+  position: absolute;
+  bottom: calc((var(--control-height) - var(--hit)) / 2 - 7px);
+  left: calc(34px - var(--hit) / 2);
+  z-index: 1;
+}
+.team-control :global(.inspect > .trigger) {
+  display: grid;
+  place-items: center;
+  width: var(--hit);
+  min-width: var(--hit);
+  height: var(--hit);
+  min-height: var(--hit);
+  padding: 0;
+}
+.team-control :global(.team-indicator) {
+  width: auto;
+  height: auto;
+}
+.team-control :global(.team-indicator > i) {
+  box-sizing: content-box;
+  width: var(--dot);
+  height: var(--dot);
+  border: 2px solid var(--factor-field-bg);
+  border-radius: 50%;
+}
+.team-control :global(.team-indicator svg),
+.team-control :global(.team-indicator .swatch-arrow) {
+  display: none;
+}
+.team-control :global(.trigger:hover .team-indicator > i) {
+  outline: 1px solid var(--border-strong);
+}
+/* A phone, as on the setup forms: portrait and name on one line and the entry under them; five stats in a row without
+   icons or steppers; style and mood on a line, the three aptitudes the next. */
+@media (max-width: 560px) {
+  .uma-editor,
+  .fields {
+    gap: 6px 8px;
+  }
+  .entry {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .character-field {
+    grid-column: 1 / -1;
+  }
+  .fields:not(.stats):not(.entry) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .fields:not(.stats):not(.entry) > :global(*) {
+    grid-column: span 2;
+  }
+  .fields:not(.stats):not(.entry) > :global(*:nth-child(-n + 2)) {
+    grid-column: span 3;
+  }
+  .stats :global(.prefix-icon),
+  .stats :global(.number-controls) {
+    display: none;
+  }
+  .stats :global(input),
+  .stats :global(input.has-prefix) {
+    padding-inline: 8px 4px;
+  }
+}

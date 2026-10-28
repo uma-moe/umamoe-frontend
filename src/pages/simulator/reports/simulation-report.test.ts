@@ -175,6 +175,8 @@ describe('simulation comparison report', () => {
     expect(delta.count).toBe(1);
     expect(delta.winChange).toBe(-100);
     expect(delta.spurtChange).toBe(-100);
+    expect(delta.wins).toEqual({ before: 100, after: 0 });
+    expect(delta.fullSpurt).toEqual({ before: 100, after: 0 });
     expect(delta.interval).toBeUndefined();
     expect(() => compareOutcomes(result, { ...alternative, seeds: [43] }, 0)).toThrow(
       /seed mapping/

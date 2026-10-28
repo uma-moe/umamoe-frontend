@@ -1,36 +1,30 @@
 <script lang="ts">
   import Button from '@/components/controls/Button.svelte';
-  import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import Icon from '@/components/Icon.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
-  import type { OptimizeResult } from '../../../simulator-repository';
+  import InspectPopover from '@/components/overlays/InspectPopover.svelte';
+  import type { OptimizeResult, OptimizeTheory } from '../../../simulator-repository';
   import type { PricedOffer } from '../../../setup/build/skill-offers';
-  import BuildCards from './BuildCards.svelte';
+  import BuildColumns from './BuildColumns.svelte';
   import BuildSummary from './BuildSummary.svelte';
-  import BuyList from './BuyList.svelte';
-  import SkipList from './SkipList.svelte';
+  import SkillScores from './SkillScores.svelte';
   import {
-    INERT_SCHEMA,
-    SCREEN_SCHEMA,
-    gainOf,
     inertPurchases,
     leftoverSp,
     ruledOutSkills,
-    screenedImpacts,
     searchTally,
-    skillLists,
-    statCells,
-    valueScale
+    type TheorizedResult
   } from './build-result';
 
   /**
-   * An optimized build, answer first: how many skills to buy and their SP beside what they gain her and how she races.
-   * Under it the skills to buy as the game lists them, each with a bar for what it adds, then the skills left out on
-   * the same scale; the builds that came close stand beside them. How it was measured opens from the title. In real CM
-   * fields a gain is runners she beats more of; with the fixed pack, seconds saved.
+   * A theorized build, answer first: how many skills to buy, their SP and what they are worth to her. Under it the
+   * builds the theory found as cards of their skills, side by side, the most worth first (by her win rate in races of
+   * her real fields when races ranked them), each skill by what it adds; then every skill on offer by what it is worth
+   * on her own. How the theory valued them opens from the info button beside the builds.
    */
   let {
     result,
+    theorized,
     raw = '',
     offers = [],
     budget,
@@ -41,6 +35,8 @@
     onretry
   }: {
     result?: OptimizeResult;
+    /** The result as the theory valued it, its builds the most worth first: the pick. */
+    theorized?: TheorizedResult;
     raw?: string;
     /** The skills on offer the search ran with, in purchase order. */
     offers?: PricedOffer[];
@@ -54,227 +50,191 @@
     onretry?: () => void;
   } = $props();
 
-  const FIELD_METHOD =
-    'She races real Champions Meeting races recorded in the game, in place of a runner of her running style, and every build races the same ones. A build scores by how many of the other 8 runners she finishes ahead of; a close finish counts as part of a runner, so field skills, blocking and debuffs all count. The search races each skill on its own and taken out of the full set, picks the best mix within her SP, then races the closest mixes against each other. What hundreds of thousands of recorded CM races say about each skill is weighed in, so a few lucky races cannot decide it. Unspent SP is lost after the career, so a skill is only left out when it surely costs her places.';
-
-  const PACK_METHOD =
-    'She races the simulator’s own pack of 8 runners without skills, the same in every race, so a build scores by her finish time alone. The search races each skill on its own and taken out of the full set, picks the best mix within her SP, then races the closest mixes against each other until nothing faster is left. Unspent SP is lost after the career, so a skill is only left out when it surely makes her slower. When the simulator has CM data, what recorded CM races say each skill adds is weighed in too, turned into seconds on this course: the CM races say how the skills compare, her own races what that is worth here.';
-
-  const CM_IN_SECONDS =
-    'Each skill’s value also weighs what recorded CM races say it adds, turned into seconds on this course.';
+  const THEORY_METHOD =
+    'Every skill is valued by theory before any race: where its conditions let it fire on this course and how often for her, what its effect does there in her race by the game’s own speed, HP and last-spurt rules, and how her skills combine, such as a skill that waits for others to fire, a heal that only counts once her HP runs short, or two that do the same. Skills that act on the field (the start, lanes, vision, debuffs on others) are valued from recorded CM races instead. Worth is in lengths of 2.5 m over her build as it is: a build’s is its own, its skills’ synergies included, and a skill’s is what the build loses without it.';
 
   let rawOpen = $state(false);
 
-  /** She raced real CM fields, so gains are runners beaten, not seconds. */
+  /** The check races measured runners beaten in real CM fields, not seconds. */
   const field = $derived(result?.objective === 'field_place');
-  /** An older service answers in a shape this page can't read honestly, so it says so instead of guessing. */
-  const outdated = $derived(result !== undefined && result.report.schema_version < SCREEN_SCHEMA);
-  const finalists = $derived(outdated ? [] : (result?.report.finalists ?? []));
-  const best = $derived(finalists[0]);
-  const bestGain = $derived(best ? gainOf(best) : undefined);
-  const worse = $derived(field ? 'costs her places' : 'makes her slower');
-
-  const bought = $derived(new Set(best?.build.purchases ?? []));
-  /** A simulator older than schema 7 never rules out skills that cannot fire for her, so it may buy them. */
-  const unfiltered = $derived(
-    result !== undefined && !outdated && result.schema_version < INERT_SCHEMA
-  );
+  /** An older service answers without a theory, so the page says so instead of guessing. */
+  const outdated = $derived(result !== undefined && theorized === undefined);
+  const builds = $derived(theorized?.builds ?? []);
+  const pickBuild = $derived(builds[0]);
+  const pick = $derived(pickBuild?.finalist);
 
   const inertSet = $derived(inertPurchases(outdated ? [] : result?.inert));
-  /** Skills on offer that can never fire for her here, so the search never raced them. */
+  /** Skills on offer that can never fire for her here, so the theory never valued them. */
   const ruledOut = $derived(ruledOutSkills(outdated ? [] : result?.inert, offers));
-  const impacts = $derived(screenedImpacts(outdated ? [] : result?.report.impacts, offers));
-  const leftover = $derived(leftoverSp(best, budget, offers, bought, inertSet, impacts));
-  const lists = $derived(skillLists(best, offers, impacts));
-  /** One scale for every skill's bar, bought or left out, so they compare. */
-  const scale = $derived(valueScale([...lists.buy, ...lists.left]));
-  const stats = $derived(statCells(finalists));
-  const saves = $derived(Boolean(best?.build.purchases.length));
-
-  /** A timed race still weighed what CM races say each skill adds, turned into seconds by the simulator. */
-  const cmWeighedIntoTime = $derived(
-    !field && (result?.report.impacts ?? []).some((impact) => impact.evidence !== undefined)
+  const leftover = $derived(
+    leftoverSp({ pick, budget, offers, inert: inertSet, skills: theorized?.skills ?? [] })
   );
+  const buys = $derived(Boolean(pick?.build.purchases.length));
+  const checkRaces = $derived(result?.validation_runs_per_finalist_per_scenario ?? 0);
 
-  /** How it was measured, behind the title's info button: the method, where she raced and how much racing it took. */
+  /** What the theory takes her race to be beyond her own skills, in a sentence. */
+  function fieldText(theory: OptimizeTheory) {
+    const f = theory.field;
+    const clauses = [
+      f.position_fight_seconds > 0
+        ? 'she fights for the lead for ' + f.position_fight_seconds.toFixed(1) + ' s'
+        : '',
+      'she gets rushed in ' + Math.round(f.rushed_chance * 100) + '% of races',
+      'the field takes ' +
+        (f.drain_mean * 100).toFixed(1) +
+        ' ± ' +
+        (f.drain_spread * 100).toFixed(1) +
+        '% of her HP beyond that'
+    ].filter(Boolean);
+    const last = clauses.pop()!;
+    return 'In her race here ' + [...clauses, 'and ' + last].join(', ') + '.';
+  }
+
+  /** How it was found, behind the info button: the method, her race, where she raced and the check. */
   const about = $derived.by(() => {
-    const method = field ? FIELD_METHOD : PACK_METHOD;
-    if (!result || outdated) return method;
+    if (!result || !theorized) return THEORY_METHOD;
 
-    const recorded = cmWeighedIntoTime ? [CM_IN_SECONDS] : [];
-    return [method, ...where, ...recorded, searchTally(result)].join(' ');
+    return [
+      THEORY_METHOD,
+      fieldText(theorized.theory),
+      ...where,
+      searchTally(result, theorized.theory)
+    ].join(' ');
   });
 </script>
 
-<ChartFrame
-  id="build-result"
-  title="Result"
-  slim
-  description={about}
->
-  {#snippet actions()}
-    {#if result && raw}
-      <Button
-        size="sm"
-        variant="ghost"
-        onclick={() => (rawOpen = true)}
-      >
-        Raw data
-      </Button>
-    {/if}
-  {/snippet}
-  <div
-    class="build-result"
-    class:stale={stale && !!result && !busy}
-    aria-busy={busy}
-  >
-    <div
-      class="answer"
-      class:bad={(!!error || outdated) && !busy}
-      role="status"
-    >
-      {#if busy}
-        <p class="headline">Searching builds…</p>
-        <p class="detail">
-          Racing her with every skill on offer, then the best combinations; this can take a minute.
-        </p>
-      {:else if error}
-        <p class="headline">
-          <Icon
-            name="warning"
-            size={20}
-          />Couldn’t search
-        </p>
-        <p class="detail">{error}</p>
-        {#if onretry}
-          <Button
-            size="sm"
-            variant="secondary"
-            icon="refresh"
-            onclick={onretry}
-          >
-            Try again
-          </Button>
-        {/if}
-      {:else if outdated}
-        <p class="headline">
-          <Icon
-            name="warning"
-            size={20}
-          />Optimizer out of date
-        </p>
-        <p class="detail">
-          The simulator service answering this page is an older build: it races her against other
-          runners and can’t measure what each skill saves her. Rebuild and restart it, then search
-          again.
-        </p>
-      {:else if result && best}
-        <BuildSummary
-          count={lists.buy.length}
-          spCost={best.sp_cost}
-          {budget}
-          gain={bestGain}
-          {field}
-          stats={stats[0] ?? []}
+{#snippet tools()}
+  <InspectPopover label="About the result">
+    {#snippet trigger()}
+      <span class="about">
+        <Icon
+          name="info"
+          size={14}
         />
-        {#if saves && leftover && leftover.left > 0 && !leftover.all && leftover.slower.length}
-          <p class="detail">
-            {leftover.slower.join(', ')}
-            {leftover.slower.length === 1 ? worse : 'all ' + worse}, so {leftover.left.toLocaleString(
-              'en-US'
-            )}
-            SP stay unspent.
-          </p>
-        {/if}
-        {#if !saves}
-          <p class="detail">
-            {leftover?.slower.length
-              ? 'Every skill she can afford ' + worse + ' in these races.'
-              : field
-                ? 'No skill on offer beats more runners in these races.'
-                : 'No skill on offer saves her time in these races.'}
-          </p>
-        {/if}
-        {#if unfiltered}
-          <p class="detail">
-            An older simulator answered: it can buy skills that never fire for her here. Rebuild and
-            restart it to rule those out.
-          </p>
-        {/if}
-        {#if stale}
-          <p class="stale-note">
-            Setup changed since this search
-            {#if onretry}
-              <Button
-                size="sm"
-                variant="secondary"
-                icon="refresh"
-                onclick={onretry}
-              >
-                Search again
-              </Button>
-            {/if}
-          </p>
-        {/if}
-      {:else if result}
-        <p class="headline">No build came back</p>
-        <p class="detail">Add skills on offer or raise the budget, then search again.</p>
-      {:else}
-        <p class="headline idle">Which skills should she buy?</p>
-        <p class="detail">Set her up, add the skills on offer and press Plan skills.</p>
-      {/if}
-    </div>
+      </span>
+    {/snippet}
+    <p class="about-text">{about}</p>
+  </InspectPopover>
+  {#if raw}
+    <Button
+      size="sm"
+      variant="ghost"
+      onclick={() => (rawOpen = true)}
+    >
+      Raw data
+    </Button>
+  {/if}
+{/snippet}
 
-    {#if result && best}
-      <div
-        class="body"
-        class:with-close={finalists.length > 1}
-      >
-        <div class="skills">
-          <ul
-            class="key"
-            aria-label="What the bars show"
-          >
-            <li>{field ? 'Runners beaten per race' : 'Seconds saved per race'}</li>
-            <li>
-              <span class="swatch helps"></span>
-              Helps
-            </li>
-            <li>
-              <span class="swatch"></span>
-              Not sure
-            </li>
-            <li>
-              <span class="swatch loss"></span>
-              Costs her
-            </li>
-          </ul>
-          {#if saves}
-            <BuyList
-              rows={lists.buy}
-              {scale}
-              {field}
-            />
+<section
+  class="build-result"
+  class:stale={stale && !!result && !busy}
+  aria-label="Result"
+  aria-busy={busy}
+>
+  <div
+    class="answer"
+    class:bad={(!!error || outdated) && !busy}
+    role="status"
+  >
+    {#if busy}
+      <p class="headline">Theorizing builds…</p>
+      <p class="detail">
+        Working out where each skill fires on this course and what it adds, then racing the best
+        builds against each other in her real CM fields; this takes up to half a minute.
+      </p>
+    {:else if error}
+      <p class="headline">
+        <Icon
+          name="warning"
+          size={20}
+        />Couldn’t search
+      </p>
+      <p class="detail">{error}</p>
+      {#if onretry}
+        <Button
+          size="sm"
+          variant="secondary"
+          icon="refresh"
+          onclick={onretry}
+        >
+          Try again
+        </Button>
+      {/if}
+    {:else if outdated}
+      <p class="headline">
+        <Icon
+          name="warning"
+          size={20}
+        />Optimizer out of date
+      </p>
+      <p class="detail">
+        The simulator service answering this page is an older build: it can’t theorize what skills
+        are worth. Rebuild and restart it, then search again.
+      </p>
+    {:else if result && pickBuild && pick}
+      <BuildSummary
+        count={pickBuild.count}
+        spCost={pick.sp_cost}
+        {budget}
+        lengths={pickBuild.lengths}
+        winRate={pickBuild.raced?.win_rate}
+      />
+      {#if buys && leftover && leftover.left > 0 && !leftover.all && leftover.useless.length}
+        <p class="detail">
+          {leftover.useless.join(', ')}
+          {leftover.useless.length === 1 ? 'adds' : 'add'} nothing here, so {leftover.left.toLocaleString(
+            'en-US'
+          )}
+          SP stay unspent.
+        </p>
+      {/if}
+      {#if !buys}
+        <p class="detail">No skill on offer gains her a length in these races.</p>
+      {/if}
+      {#if stale}
+        <p class="stale-note">
+          Setup changed since this search
+          {#if onretry}
+            <Button
+              size="sm"
+              variant="secondary"
+              icon="refresh"
+              onclick={onretry}
+            >
+              Search again
+            </Button>
           {/if}
-          <SkipList
-            left={lists.left}
-            {ruledOut}
-            {scale}
-            {field}
-          />
-        </div>
-        {#if finalists.length > 1}
-          <BuildCards
-            {finalists}
-            {offers}
-            {stats}
-            {field}
-          />
-        {/if}
-      </div>
+        </p>
+      {/if}
+    {:else if result}
+      <p class="headline">No build came back</p>
+      <p class="detail">Add skills on offer or raise the budget, then search again.</p>
+    {:else}
+      <p class="headline idle">Which skills should she buy?</p>
+      <p class="detail">Set her up, add the skills on offer and press Plan skills.</p>
     {/if}
   </div>
-</ChartFrame>
+
+  {#if result && theorized && pick}
+    <div class="body">
+      <BuildColumns
+        {builds}
+        scale={theorized.scale}
+        phaseBounds={theorized.phaseBounds}
+        {field}
+        {checkRaces}
+        {tools}
+      />
+      <SkillScores
+        skills={theorized.skills}
+        {ruledOut}
+        scale={theorized.scale}
+        phaseBounds={theorized.phaseBounds}
+      />
+    </div>
+  {/if}
+</section>
 
 <Dialog
   bind:open={rawOpen}

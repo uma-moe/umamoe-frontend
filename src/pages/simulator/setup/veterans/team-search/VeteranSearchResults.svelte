@@ -111,8 +111,8 @@
     <div class="idle">
       <p class="headline">Which three should race?</p>
       <p class="detail">
-        Pick your Veterans and who they race, then Find the best team. Every team gets the same
-        opponents, seeds and gates.
+        Every team of three from your picks races the same opponents, seeds and gates. The best
+        shows here when you Find the best team.
       </p>
     </div>
   {/if}
@@ -129,6 +129,8 @@
     display: grid;
     gap: 8px;
     min-width: 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-subtle);
   }
   .answer,
   .idle {
@@ -142,6 +144,11 @@
   }
   .answer {
     border-color: color-mix(in srgb, var(--accent-success) 40%, var(--border-subtle));
+    background: color-mix(in srgb, var(--accent-success) 5%, var(--surface-1));
+  }
+  .idle {
+    border-style: dashed;
+    background: transparent;
   }
   .answer p,
   .idle p {
@@ -246,6 +253,28 @@
   .rate small {
     font-size: 10px;
     color: var(--text-secondary);
+  }
+  .answer,
+  .idle {
+    gap: 4px;
+    padding: 10px;
+  }
+  .lineup li {
+    font-size: 12px;
+  }
+  .headline strong {
+    font-size: 20px;
+  }
+  .idle .headline {
+    font-size: 13px;
+  }
+  .detail,
+  .label {
+    font-size: 11px;
+  }
+  .others li {
+    min-height: 32px;
+    font-size: 11px;
   }
   @media (max-width: 560px) {
     .others li {

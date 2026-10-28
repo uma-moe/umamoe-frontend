@@ -1,9 +1,11 @@
 <script lang="ts">
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
-  import Icon from '@/components/Icon.svelte';
+  import Button from '@/components/controls/Button.svelte';
   import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import { formatRaceTime } from '@/lib/race/replay/race-display';
   import SimulatorRunnerFace from '../SimulatorRunnerFace.svelte';
+  import RunnerStatline from '../RunnerStatline.svelte';
+  import { runnerStyle } from '../runner-profile';
   import { runnerColor } from '../simulation-report';
   import {
     formatMargin,
@@ -115,6 +117,19 @@
             </th>
             <th
               scope="col"
+              class="style"
+            >
+              Style
+            </th>
+            <th
+              scope="col"
+              class="stats"
+              title="Speed, stamina, power, guts and wit as entered for this run"
+            >
+              Stats
+            </th>
+            <th
+              scope="col"
               class="wins"
               title="Share of races won. The lighter part of the bar extends to top-3 finishes."
             >
@@ -201,6 +216,15 @@
                   <small>#{source + 1}</small>
                 </label>
               </th>
+              <td
+                class="style"
+                title={runnerStyle(umas[source]!)}
+              >
+                {runnerStyle(umas[source]!)}
+              </td>
+              <td class="stats">
+                <RunnerStatline uma={umas[source]!} />
+              </td>
               <td class="wins">
                 <div>
                   <span
@@ -261,17 +285,17 @@
       </table>
     </div>
     {#if collapsible}
-      <button
-        type="button"
-        class="more"
-        aria-expanded={expanded}
-        onclick={() => (expanded = !expanded)}
-      >
-        {expanded ? 'Show favourites and picks only' : 'Show all ' + rows.length + ' runners'}<Icon
-          name="chevron"
-          size={14}
-        />
-      </button>
+      <span class="more">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon="chevron"
+          ariaExpanded={expanded}
+          onclick={() => (expanded = !expanded)}
+        >
+          {expanded ? 'Show favourites and picks only' : 'Show all ' + rows.length + ' runners'}
+        </Button>
+      </span>
     {/if}
   </ChartFrame>
 </section>
@@ -327,7 +351,14 @@
     cursor: default;
   }
   .runner {
-    width: 26%;
+    width: 22%;
+  }
+  .style {
+    width: 1px;
+    color: var(--text-secondary);
+  }
+  .stats {
+    width: 1px;
   }
   tbody .runner label {
     display: flex;
@@ -355,7 +386,7 @@
     color: var(--text-secondary);
   }
   .wins {
-    width: 40%;
+    width: 30%;
   }
   .wins > div {
     display: flex;
@@ -427,20 +458,28 @@
     box-shadow: inset 2px 0 var(--accent-primary);
   }
   .more {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+    display: flex;
     margin: 4px 0 2px;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--accent-primary);
-    font: inherit;
-    font-size: 11px;
-    cursor: pointer;
   }
-  .more[aria-expanded='true'] :global(svg) {
+  .more :global(.ui-button) {
+    min-height: 28px;
+    padding-inline: 6px;
+    color: var(--accent-primary);
+    font-size: 11px;
+  }
+  .more :global(.ui-button[aria-expanded='true'] svg) {
     transform: rotate(180deg);
+  }
+  /* Narrow screens drop the stat line first, then the style. */
+  @media (max-width: 1100px) {
+    .stats {
+      display: none;
+    }
+  }
+  @media (max-width: 760px) {
+    .style {
+      display: none;
+    }
   }
   /* Phones: every column stays on screen; the win bar gives way to the number. */
   @media (max-width: 600px) {

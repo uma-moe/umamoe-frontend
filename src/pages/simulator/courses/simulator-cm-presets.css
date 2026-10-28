@@ -1,35 +1,79 @@
-/* The schedule as rows: number, course outline, meeting and course, then dates and conditions. */
+/* One column: the search held at the top, then the schedule a row a meeting. A meeting with several layouts asks
+   which under its row once chosen. */
+.cm-presets {
+  --search-height: 48px;
+  --control-height: 32px;
+  height: 100%;
+  min-height: 0;
+  container: cm-presets / inline-size;
+}
+.schedule {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 12px 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.search {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 8px 0;
+  background: var(--dialog-surface-bg);
+}
+.search :global(input) {
+  font-size: 12px;
+}
 .group {
   display: grid;
   gap: 6px;
-  margin-top: 16px;
-  container: cm-presets / inline-size;
+  margin-top: 8px;
 }
+/* The group's name holds under the search while its meetings scroll by. */
 .group h3 {
+  position: sticky;
+  top: var(--search-height);
+  z-index: 2;
   margin: 0;
+  padding: 4px 0;
+  background: var(--dialog-surface-bg);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 650;
   color: var(--text-secondary);
 }
 .presets {
   display: grid;
   gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.preset-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 .preset {
   display: grid;
-  grid-template-columns: 48px 76px minmax(0, 1fr) auto;
+  grid-template-columns: 44px 68px minmax(0, 1fr) auto;
   grid-template-areas: 'number outline copy when';
   align-items: center;
   gap: 12px;
+  width: 100%;
   min-width: 0;
-  padding: 8px 14px 8px 12px;
-  border: 1px solid var(--border-subtle);
+  padding: 8px 12px;
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
-  background: var(--surface-1);
+  background: color-mix(in srgb, var(--text-primary) 3%, var(--surface-1));
   color: var(--text-primary);
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition:
+    border-color 140ms ease-out,
+    background-color 140ms ease-out;
 }
 .preset:hover {
   border-color: var(--border-secondary);
@@ -51,19 +95,22 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-/* The course outline, drawn larger than the pickers' thumbnail; an unannounced course leaves the space empty. */
+.selected .number {
+  color: var(--accent-primary);
+}
+/* The course outline; an unannounced course leaves the space empty. */
 .outline {
   grid-area: outline;
   display: flex;
   justify-content: center;
-  min-height: 40px;
+  min-height: 38px;
 }
 .preset .outline :global(figure) {
-  width: 76px;
-  height: 40px;
+  width: 68px;
+  height: 38px;
 }
 .preset .outline :global(figure svg) {
-  height: 40px;
+  height: 38px;
 }
 .copy {
   grid-area: copy;
@@ -74,7 +121,7 @@
 .title-line {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 .title-line strong {
@@ -84,15 +131,13 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.badge {
+/* Sized to the title line it sits on. */
+.title-line :global(.badge) {
   flex: none;
+  min-height: 0;
   padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--color-accent-soft);
-  color: var(--accent-primary);
   font-size: 10px;
-  font-weight: 650;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 .course-line {
   overflow: hidden;
@@ -123,10 +168,10 @@
 .conditions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 .ground {
-  padding: 1px 6px;
+  padding: 0 5px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   font-size: 10px;
@@ -134,8 +179,8 @@
   line-height: 1.5;
 }
 .conditions img {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 /* Past meetings stay choosable, a step quieter. */
 .preset.past:not(.selected) {
@@ -145,35 +190,65 @@
 .preset.past .number {
   color: var(--text-secondary);
 }
-.empty,
-.hint {
+.inline-layout {
+  display: grid;
+  padding: 0 2px 4px;
+}
+.inline-layout :global(label) {
   font-size: 11px;
+}
+.state {
+  margin: 0;
+  padding: 20px 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+.state.bad {
+  color: var(--accent-error);
+}
+.hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
   color: var(--text-secondary);
 }
-.empty {
-  margin: 16px 0 0;
-}
-/* Narrow: the outline beside the number, meeting and course, the dates and conditions under them. */
-@container cm-presets (max-width:560px) {
+@media (prefers-reduced-motion: reduce) {
   .preset {
-    grid-template-columns: 64px minmax(0, 1fr);
+    transition: none;
+  }
+}
+/* Narrow: three short lines beside the outline: number, meeting and conditions; the course; the dates. */
+@container cm-presets (max-width: 480px) {
+  .preset {
+    grid-template-columns: 48px auto minmax(0, 1fr) auto;
     grid-template-areas:
-      'outline number'
-      'outline copy'
-      'outline when';
-    gap: 2px 12px;
-    padding: 10px 12px;
+      'outline number title conditions'
+      'outline course course course'
+      'outline date date date';
+    gap: 2px 8px;
+    padding: 8px 10px;
+  }
+  .copy,
+  .when {
+    display: contents;
+  }
+  .title-line {
+    grid-area: title;
+  }
+  .course-line {
+    grid-area: course;
+  }
+  .date {
+    grid-area: date;
+  }
+  .conditions {
+    grid-area: conditions;
   }
   .number {
-    font-size: 11px;
+    font-size: 10px;
   }
   .preset .outline :global(figure) {
-    width: 64px;
-  }
-  .when {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 8px;
+    width: 48px;
   }
 }

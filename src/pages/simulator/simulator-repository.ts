@@ -261,9 +261,147 @@ export interface OptimizeInert {
   why: string[];
 }
 
+/** How often a skill fired over the theory's draws, and where it first fired on average, in metres. */
+export interface TheoryFire {
+  rate: number;
+  mean_m: number | null;
+}
+
+/** What a skill of a theorized build adds to it: the build against the build without it and what needs it. */
+export interface TheorySkillWorth {
+  /** Index into the request's purchases, at the top of its chain. */
+  purchase: number;
+  lengths: number;
+  /** Win points (0–1) it adds, by the model learned from real CM fields (schema 9 on). */
+  win?: number;
+  fire: TheoryFire;
+}
+
+/**
+ * A finalist raced beside the theory's pick in her real CM fields, seed for seed: her win rate with it (0–1), what it
+ * won over the pick per race (0 for the pick), and that gain's standard error.
+ */
+export interface RacedWins {
+  win_rate: number;
+  over_pick: number;
+  error: number;
+}
+
+/** A finalist as the theory values it: lengths gained over her build as it is, and each skill's part. */
+export interface TheoryBuild {
+  purchases: number[];
+  lengths: number;
+  /** Win points (0–1) it gains her by the model learned from real CM fields (schema 9 on); schema 10 searches by it. */
+  win?: number;
+  /** HP she has left at the finish, below zero when she runs out. */
+  hp_left: number;
+  skills: TheorySkillWorth[];
+  /** What it won in the races of her real CM fields that ranked the finalists, when races ranked them. */
+  raced?: RacedWins;
+}
+
+/** A purchase bought on her own, with what it needs, as the theory values it. */
+export interface TheoryOffer {
+  purchase: number;
+  lengths: number;
+  /** Win points (0–1) it gains her on her own, by the model learned from real CM fields (schema 9 on). */
+  win?: number;
+  fire: TheoryFire;
+  /** `physics`: what the solo race values; `prior`: what acts on the field, from recorded CM races. */
+  source: 'physics' | 'prior';
+  effect: string;
+  /** It fires only after enough of her other skills have. */
+  count_gated: boolean;
+}
+
+/** What the theory assumes of her race beyond her own skills. */
+export interface TheoryField {
+  position_fight_seconds: number;
+  rushed_chance: number;
+  /** HP a real field takes from her beyond the solo race, as a share of her max HP. */
+  drain_mean: number;
+  drain_spread: number;
+  base_hp_left: number;
+}
+
+/**
+ * The theory's answer: worth of the finalists, in their order, and of every purchase alone, in lengths (2.5 m) and,
+ * from schema 9, win points. `unit` names what the search maximised: lengths, or from schema 10 win points.
+ */
+export interface OptimizeTheory {
+  unit: 'lengths' | 'win';
+  search_draws: number;
+  report_draws: number;
+  builds_valued: number;
+  lengths_per_second: number;
+  runners_per_length: number;
+  /** The race's phases in metres: opening, middle, late, last spurt. */
+  phase_bounds: number[];
+  field: TheoryField;
+  /** The most worth first: in her real CM fields, by her win rate in the ranking races. */
+  finalists: TheoryBuild[];
+  offers: TheoryOffer[];
+  /** Races of her real CM fields that ranked the finalists by her win rate; 0 or absent when none did. */
+  ranking_races?: number;
+}
+
+const isNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+function isFire(value: unknown): value is TheoryFire {
+  return (
+    isRecord(value) && isNumber(value.rate) && (value.mean_m === null || isNumber(value.mean_m))
+  );
+}
+
+function isRacedWins(value: unknown): value is RacedWins {
+  return (
+    isRecord(value) &&
+    isNumber(value.win_rate) &&
+    isNumber(value.over_pick) &&
+    isNumber(value.error)
+  );
+}
+
+/** Whether a response's `theory` has the shape the page reads, so a partial or older one is not read as an answer. */
+export function isOptimizeTheory(value: unknown): value is OptimizeTheory {
+  if (!isRecord(value) || !Array.isArray(value.finalists) || !Array.isArray(value.offers))
+    return false;
+  if (!Array.isArray(value.phase_bounds) || !value.phase_bounds.every(isNumber)) return false;
+
+  const builds = value.finalists.every(
+    (build) =>
+      isRecord(build) &&
+      isNumber(build.lengths) &&
+      isNumber(build.hp_left) &&
+      (build.raced === undefined || isRacedWins(build.raced)) &&
+      Array.isArray(build.skills) &&
+      build.skills.every(
+        (skill) =>
+          isRecord(skill) &&
+          isNumber(skill.purchase) &&
+          isNumber(skill.lengths) &&
+          isFire(skill.fire)
+      )
+  );
+  const offers = value.offers.every(
+    (offer) =>
+      isRecord(offer) &&
+      isNumber(offer.purchase) &&
+      isNumber(offer.lengths) &&
+      isFire(offer.fire) &&
+      (offer.source === 'physics' || offer.source === 'prior')
+  );
+  return builds && offers && isRecord(value.field) && isNumber(value.builds_valued);
+}
+
 export interface OptimizeResult {
   schema_version: number;
   mode: string;
+  /** The theory's worth of the finalists and of every purchase, when the theory searched (schema 8). */
+  theory?: OptimizeTheory;
   /**
    * What gains measure: seconds she saves (`finish_time`, and older services that do not say), or how many more
    * runners she beats in real CM fields (`field_place`).

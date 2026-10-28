@@ -3,6 +3,7 @@
   import Spinner from '@/components/feedback/Spinner.svelte';
   import { workspaces } from '@/lib/workspaces/workspace-state';
   import type { RaceCourse } from '@/lib/game-data/racing/courses';
+  import SimSection from '../../../shell/SimSection.svelte';
   import VeteranList from '../VeteranList.svelte';
   import type { VeteranEntry } from '../veteran-entries';
 
@@ -31,17 +32,12 @@
   }: Props = $props();
 </script>
 
-<section
-  class="panel pool"
-  aria-label="Your Veterans"
+<SimSection
+  number={1}
+  title="Your Veterans"
+  note="{picked.length} picked · {teams.toLocaleString('en-US')} {teams === 1 ? 'team' : 'teams'}"
 >
-  <header>
-    <h3>Your Veterans</h3>
-    <span class="sub">
-      {picked.length} picked ·
-      <strong>{teams.toLocaleString('en-US')}</strong>
-      {teams === 1 ? 'team' : 'teams'}
-    </span>
+  {#snippet actions()}
     {#if $workspaces.length > 1}
       <div class="collection">
         <SelectFieldSlim
@@ -58,7 +54,7 @@
         />
       </div>
     {/if}
-  </header>
+  {/snippet}
   {#if loading}
     <Spinner
       centered
@@ -88,35 +84,24 @@
       />
     </div>
   {/if}
-</section>
+</SimSection>
 
 <style>
   @import './veteran-search-panel.css';
 
-  .sub {
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-  .sub strong {
-    color: var(--text-primary);
-  }
-  .collection {
-    margin-left: auto;
-    min-width: 160px;
-  }
-  .pool-list {
-    max-height: min(62dvh, 640px);
-    overflow: auto;
-    margin: 0 -6px;
-    padding: 0 6px;
-    scrollbar-gutter: stable;
-  }
   .note.bad {
     color: var(--accent-error);
   }
-  @media (max-width: 900px) {
-    .pool-list {
-      max-height: 44dvh;
-    }
+
+  .collection {
+    min-width: 160px;
+  }
+  /* The list scrolls inside the column, its search and filters held at the top. */
+  .pool-list {
+    --veteran-list-sticky-top: 0;
+    max-height: min(40dvh, 360px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
   }
 </style>

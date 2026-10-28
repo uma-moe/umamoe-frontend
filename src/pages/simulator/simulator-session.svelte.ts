@@ -38,9 +38,10 @@ export interface ImageConditionOption extends ConditionOption {
 const conditionIcon = (file: string): string => `/game-assets/textures/${file}`;
 const seasonIcon = (file: string): string => `/game-assets/track_details/${file}`;
 
+/** The going by the English game's names, as the schedule and recorded races say them. */
 export const GROUND_OPTIONS: Array<ConditionOption> = [
-  { value: '1', label: 'Good' },
-  { value: '2', label: 'Yielding' },
+  { value: '1', label: 'Firm' },
+  { value: '2', label: 'Good' },
   { value: '3', label: 'Soft' },
   { value: '4', label: 'Heavy' }
 ];

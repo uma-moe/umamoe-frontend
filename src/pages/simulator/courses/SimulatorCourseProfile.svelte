@@ -8,7 +8,9 @@
     type CourseData
   } from '@/pages/competitive/race-analysis/replay/replay-course';
   import { courseTerrain } from '@/pages/competitive/race-analysis/replay/replay-timeline';
+  import Spinner from '@/components/feedback/Spinner.svelte';
   import SimulatorCoursePreview from './SimulatorCoursePreview.svelte';
+  import { finalSpurtSection, FINAL_SPURT_HELP } from '@/lib/race/final-spurt';
 
   let {
     course,
@@ -96,6 +98,11 @@
             ]
           },
           {
+            id: 'final-spurt',
+            label: 'Final spurt',
+            segments: [finalSpurtSection(profile.distance)]
+          },
+          {
             id: 'race-sections',
             label: '24 sections',
             segments: Array.from({ length: 24 }, (_, index) => ({
@@ -173,7 +180,7 @@
         <h3>Course breakdown</h3>
         {#if profile}
           <div class="course-distances">
-            <span title="The final third begins here; last spurt can begin from this distance.">
+            <span title={FINAL_SPURT_HELP}>
               Spurt from {Math.round((profile.distance * 2) / 3).toLocaleString('en-US')} m
             </span>
             <span>{profile.distance.toLocaleString('en-US')} m</span>
@@ -267,16 +274,24 @@
           {/if}
         </p>
       {:else}
+        <!-- One live region whose message changes, so each new state is announced. -->
         <div
           class="profile-empty"
-          role="status"
+          aria-live="polite"
         >
-          {error ||
-            (data && course
-              ? 'Course profile unavailable'
-              : course
-                ? 'Loading course profile…'
-                : 'Choose a track and course above.')}
+          {#if error}
+            {error}
+          {:else if !course}
+            Choose a track and course above.
+          {:else if data}
+            Course profile unavailable
+          {:else}
+            <Spinner
+              size={18}
+              showLabel
+              label="Loading course profile…"
+            />
+          {/if}
         </div>
       {/if}
     </div>

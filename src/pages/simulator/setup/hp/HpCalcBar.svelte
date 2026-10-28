@@ -2,8 +2,12 @@
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import type { HpSpread, HpVerdict } from '../../reports/outcomes/hp/hp-needed';
+  import RunBar from '../../shell/RunBar.svelte';
 
-  /** The answer stays in reach while the form scrolls: until the result itself is in sight. */
+  /**
+   * The HP calculator's run bar: Calculate HP until she has been calculated once, then the answer, which follows every
+   * change from there, with a button to the result.
+   */
   interface Props {
     hasCourse: boolean;
     hasRun: boolean;
@@ -13,113 +17,79 @@
     busy: boolean;
     pending: boolean;
     canRun: boolean;
+    oncalculate: () => void;
     onshow: () => void;
   }
 
-  let { hasCourse, hasRun, spread, verdict, error, busy, pending, canRun, onshow }: Props =
-    $props();
+  let {
+    hasCourse,
+    hasRun,
+    spread,
+    verdict,
+    error,
+    busy,
+    pending,
+    canRun,
+    oncalculate,
+    onshow
+  }: Props = $props();
 
-  // The answer in one line, for the bar that keeps it in reach while the form scrolls.
-  const summary = $derived.by(() => {
-    if (!hasCourse) {
-      return 'Pick a track and course first';
-    }
+  const failed = $derived(Boolean(error) && !busy);
+  const tone = $derived(failed ? 'bad' : verdict?.tone);
 
-    if (error && !busy) {
-      return 'Couldn’t calculate';
-    }
+  // The answer in one line, or what a first calculation does.
+  const status = $derived.by(() => {
+    if (failed) return 'Couldn’t calculate';
+    if (!hasRun) return busy ? 'Calculating…' : 'Not calculated yet';
 
-    if (!hasRun) {
-      if (busy) {
-        return 'Calculating…';
-      }
+    return verdict?.title ?? 'Calculated';
+  });
 
-      return 'Can she spurt at top speed all the way to the finish?';
-    }
+  const detail = $derived.by(() => {
+    if (failed || !hasRun) return 'Races her 100 times on this course';
+    if (pending) return 'Updating…';
+    if (!spread?.needed) return '';
 
-    return (
-      verdict!.title +
-      (spread?.needed
-        ? ' · needs ≈ ' + Math.round(spread.needed.p50).toLocaleString('en-US') + ' stamina'
-        : '')
-    );
+    return 'needs ≈ ' + Math.round(spread.needed.p50).toLocaleString('en-US') + ' stamina';
   });
 </script>
 
-<div
-  class="calc-bar {error && !busy ? 'bad' : (verdict?.tone ?? '')}"
-  role="status"
+<RunBar
+  label="Calculate HP"
+  {tone}
+  busy={busy || pending}
 >
-  <span class="summary">
-    {#if verdict && !error}<Icon
-        name={verdict.tone === 'good' ? 'check' : 'warning'}
-        size={16}
-      />{/if}
-    {summary}
-    {#if pending && hasRun}<small>Updating…</small>{/if}
-  </span>
-  <Button
-    icon={hasRun ? undefined : 'battery'}
-    variant={hasRun ? 'secondary' : 'primary'}
-    loading={busy && !hasRun}
-    disabled={!canRun}
-    onclick={onshow}
-  >
-    {hasRun ? 'See result' : 'Calculate HP'}
-  </Button>
-</div>
-
-<style>
-  .calc-bar {
-    display: none;
-  }
-  /* Narrower: the answer floating at the bottom while the result is out of sight. */
-  @media all {
-    .calc-bar {
-      position: sticky;
-      bottom: 12px;
-      z-index: 5;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 8px 8px 8px 14px;
-      border: 1px solid var(--border-primary);
-      border-radius: var(--radius-lg);
-      background: var(--surface-1);
-      box-shadow: 0 6px 24px rgb(0 0 0 / 0.28);
-    }
-  }
-  .summary {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 2px 6px;
-    flex: 1;
-    min-width: 0;
-    font-size: 14px;
-    font-weight: 650;
-  }
-  .good .summary :global(svg) {
-    color: var(--accent-success);
-  }
-  .warn .summary :global(svg) {
-    color: var(--accent-warning);
-  }
-  .bad .summary {
-    color: var(--accent-error);
-  }
-  .summary small {
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--text-secondary);
-  }
-  .calc-bar :global(.ui-button) {
-    flex: none;
-    min-height: 40px;
-  }
-  @media (max-width: 767px) {
-    .calc-bar :global(.ui-button) {
-      min-height: 44px;
-    }
-  }
-</style>
+  {#snippet summary()}
+    {#if !hasCourse}
+      <span class="blocked">Pick a track and course first.</span>
+    {:else}
+      {#if verdict && !failed}
+        <Icon
+          name={verdict.tone === 'good' ? 'check' : 'warning'}
+          size={16}
+        />
+      {/if}
+      <strong>{status}</strong>
+      {#if detail}<span>{detail}</span>{/if}
+    {/if}
+  {/snippet}
+  {#if hasRun}
+    <Button
+      variant="ghost"
+      size="sm"
+      icon="chart"
+      onclick={onshow}
+    >
+      See result
+    </Button>
+  {:else}
+    <Button
+      size="sm"
+      icon="battery"
+      disabled={busy || !canRun}
+      onclick={oncalculate}
+    >
+      Calculate HP
+    </Button>
+  {/if}
+</RunBar>

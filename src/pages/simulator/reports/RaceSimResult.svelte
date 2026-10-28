@@ -4,7 +4,7 @@
   import SimulatorCourseCharts from './telemetry/SimulatorCourseCharts.svelte';
   import SimulatorBehaviour from './telemetry/SimulatorBehaviour.svelte';
   import SimulatorSkillActivation from './skills/SimulatorSkillActivation.svelte';
-  import SimulatorBuildComparisons from './outcomes/build/SimulatorBuildComparisons.svelte';
+  import SimulatorBuildComparisons from './outcomes/alternatives/SimulatorBuildComparisons.svelte';
   import SimulatorRunComparison from './outcomes/SimulatorRunComparison.svelte';
   import SimulatorSkillImpact from './skills/impact/SimulatorSkillImpact.svelte';
   import SimulatorMeanReplay from './replay/SimulatorMeanReplay.svelte';
@@ -243,7 +243,11 @@
                     {input}
                     {result}
                     {umas}
-                    source={inspected}
+                    sources={scoped}
+                    {course}
+                    distance={course?.distance ?? result.report?.distance_m.at(-1) ?? 2000}
+                    unit={marginUnit}
+                    bind:source={inspected}
                   />
                 </div>{/if}{/snippet}
           </SimulatorSkillImpact>{/if}

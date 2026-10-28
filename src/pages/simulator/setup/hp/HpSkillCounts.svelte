@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from '@/components/controls/Button.svelte';
+  import IconButton from '@/components/controls/IconButton.svelte';
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
   import { skillImage } from '@/lib/game-data/skills/skills';
   import HpCounter from './HpCounter.svelte';
@@ -223,13 +224,12 @@
               height="18"
             />
             {name} +{GREEN_BONUS[green.tier]}{#if green.count > 1}<b>×{green.count}</b>{/if}
-            <button
-              type="button"
-              aria-label={'Remove a ' + name + ' green skill'}
+            <IconButton
+              icon="close"
+              size="sm"
+              label={'Remove a ' + name + ' green skill'}
               onclick={() => (plan.green[green.stat][green.tier] -= 1)}
-            >
-              ×
-            </button>
+            />
           </span>
         {/each}
       </div>
@@ -318,43 +318,36 @@
   .green b {
     font-weight: 700;
   }
-  .green button {
-    display: grid;
-    place-items: center;
+  /* The chip's own colour, so removing reads as part of the chip. */
+  .green :global(.icon-button) {
     width: 22px;
     height: 22px;
-    padding: 0;
-    border: 0;
-    border-radius: 4px;
-    background: transparent;
     color: inherit;
-    font: inherit;
-    font-size: 14px;
-    cursor: pointer;
   }
-  .green button:hover {
+  .green :global(.icon-button:hover:not(:disabled)) {
     background: rgb(var(--green) / 0.2);
+    color: inherit;
   }
-  .green button:focus-visible {
-    outline: 2px solid var(--accent-primary);
-    outline-offset: 1px;
+  .green :global(.icon-button svg) {
+    width: 14px;
+    height: 14px;
   }
-  /* Touch-sized on a phone. */
+  /* A phone: the design system's control height. */
   @media (max-width: 767px) {
     .table {
-      --tile-height: 44px;
+      --tile-height: var(--control-height);
       grid-template-columns: 64px repeat(3, minmax(0, 1fr));
     }
     .heal :global(button.select-control) {
-      height: 36px;
-      min-height: 36px;
+      height: var(--control-height);
+      min-height: var(--control-height);
     }
     .green {
-      height: 36px;
+      height: var(--control-height);
     }
-    .green button {
-      width: 32px;
-      height: 32px;
+    .green :global(.icon-button) {
+      width: 28px;
+      height: 28px;
     }
   }
 </style>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import Combobox from '@/components/controls/Combobox.svelte';
+  import Banner from '@/components/feedback/Banner.svelte';
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
   import SkillChip from '@/components/game/SkillChip.svelte';
   import {
@@ -9,7 +10,7 @@
     skillRarity,
     type SkillData
   } from '@/lib/game-data/skills/skills';
-  import type { MonteCarloSkillInput } from '../../requests/race-sim-request';
+  import type { MonteCarloSkillInput } from '../../../requests/race-sim-request';
 
   interface Props {
     skills?: Array<MonteCarloSkillInput>;
@@ -85,10 +86,13 @@
       class="sp"
       title="Base cost of learned skills including prerequisites, before hint discounts"
     >
-      {skillPointTotal(
-        skillLookup,
-        skills.map((skill) => skill.skillId * 10 + (skill.level ?? 1))
-      )?.toLocaleString('en-US') ?? '—'} SP
+      <strong>
+        {skillPointTotal(
+          skillLookup,
+          skills.map((skill) => skill.skillId * 10 + (skill.level ?? 1))
+        )?.toLocaleString('en-US') ?? '—'}
+      </strong>
+      SP
     </span>
   </div>
 
@@ -124,6 +128,7 @@
               icon={skillImage(skill?.icon)}
               rarity={skillRarity(skill, Boolean(skill?.inherited))}
               compact
+              fill
               onremove={() => removeSkill(picked.skillId)}
             />
           </div>
@@ -140,83 +145,112 @@
         </li>
       {/each}
     </ul>
+  {:else if error}
+    <div role="alert">
+      <Banner
+        title="Skills unavailable"
+        tone="warning"
+      >
+        <p>{error}</p>
+      </Banner>
+    </div>
+  {:else}
+    <p class="empty">No skills yet. Search to add some.</p>
   {/if}
 </section>
 
 <style>
+  /* A heading line, the search, then the skills two to a row where there is room, at the setup forms' sizes. */
   .skills {
+    display: grid;
+    gap: 8px;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    padding: 0;
-    border: 0;
-    border-radius: var(--radius-md);
-    background: transparent;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-subtle);
   }
   .head {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-  }
-  .sp {
-    margin-left: auto;
-    font-size: 11px;
-    color: var(--text-secondary);
-    font-variant-numeric: tabular-nums;
-  }
-  .search {
-    min-width: 0;
-    --combobox-max-height: 200px;
+    gap: 6px;
   }
   h3 {
     margin: 0;
-    color: var(--color-text);
-    font-size: var(--font-sm);
-    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 650;
   }
   .count {
-    min-width: 20px;
-    padding: 1px 6px;
+    min-width: 18px;
+    padding: 0 5px;
     border-radius: 999px;
     background: var(--color-surface-3);
-    color: var(--color-text-muted);
-    font-size: var(--font-xs);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 18px;
     font-variant-numeric: tabular-nums;
     text-align: center;
   }
-
+  .sp {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .sp strong {
+    font-weight: 650;
+    color: var(--text-primary);
+  }
+  .search {
+    --control-height: var(--setup-control-height, 36px);
+    --combobox-max-height: 240px;
+    min-width: 0;
+  }
   .picked {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 12px;
     margin: 0;
     padding: 0;
     list-style: none;
   }
   .picked li {
-    min-width: 0;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 72px;
     align-items: center;
     gap: 6px;
-  }
-  .chip {
-    flex: 1 1 auto;
     min-width: 0;
   }
-  .level {
-    flex: none;
-    width: 62px;
+  .chip {
+    min-width: 0;
   }
-  /* The shared select is sized for a full-width form field; here it is a compact stepper. */
+  .chip :global(.skill-chip) {
+    min-height: 32px;
+    font-size: 12px;
+  }
+  /* The shared select is sized for a full-width form field; here it is a compact level stepper. */
   .level :global(button.select-control) {
-    min-height: 28px;
-    padding: 0 6px;
-    border-radius: 6px;
+    min-height: 32px;
+    padding: 0 8px;
+    border-radius: var(--radius-sm);
     font-size: 12px;
   }
   .level :global(div.select-panel) {
     left: auto;
     right: 0;
+  }
+  .empty {
+    margin: 0;
+    padding: 12px;
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+  @media (max-width: 520px) {
+    .picked {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 </style>
