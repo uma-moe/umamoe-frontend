@@ -1,6 +1,7 @@
-import type { Build, Summary, Snapshot } from '../hakuraku-types';
+import type { Build, Runner, Summary, Snapshot, TeamDetail } from '../hakuraku-types';
 import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
 import { loadCharacters } from '@/lib/game-data/characters';
+import { skillPointTotal, type SkillData } from '@/lib/game-data/skills/skills';
 
 // Hakuraku's published SimData schema and chart semantics; see public/hakuraku/LICENSE.
 export const CM_API = 'https://hakuraku.moe/api/simdata';
@@ -39,6 +40,27 @@ export const number = (n: number) => n.toLocaleString('en-US');
 export const snapshotPath = (id: string, path: string) =>
   '/snapshots/' + encodeURIComponent(id) + '/' + path;
 
+/** Older snapshots carry learned skills without the published base SP total. */
+export function capturedSkillPoints(
+  runner: Pick<Runner, 'skillPoints' | 'skills'>,
+  catalog?: Map<number, SkillData>
+): number | null {
+  if (
+    typeof runner.skillPoints === 'number' &&
+    Number.isFinite(runner.skillPoints) &&
+    runner.skillPoints >= 0
+  ) {
+    return runner.skillPoints;
+  }
+
+  if (!catalog || runner.skills === undefined) return null;
+
+  return skillPointTotal(
+    catalog,
+    runner.skills.map(([id]) => id)
+  );
+}
+
 export async function cmGet<T>(path: string, signal: AbortSignal, snapshotId?: string): Promise<T> {
   const response = await fetch(CM_API + path, { signal, credentials: 'omit' });
   if (!response.ok) throw new Error('Hakuraku data is unavailable (HTTP ' + response.status + ').');
@@ -52,6 +74,19 @@ export async function cmGet<T>(path: string, signal: AbortSignal, snapshotId?: s
   if (!data || typeof data !== 'object' || (snapshotId && data.snapshotId !== snapshotId))
     throw new Error('The results do not match this snapshot. Reload to try again.');
   return data as T;
+}
+
+/** A captured team with every member's full build: skills, deck and parents. */
+export function loadTeamDetail(
+  snapshotId: string,
+  teamId: string,
+  signal = new AbortController().signal
+): Promise<TeamDetail> {
+  return cmGet<TeamDetail>(
+    snapshotPath(snapshotId, 'teams/' + encodeURIComponent(teamId)),
+    signal,
+    snapshotId
+  );
 }
 
 /** Keep the published statistics, resolving display labels through uma.moe's catalog. */

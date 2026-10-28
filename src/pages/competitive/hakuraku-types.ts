@@ -89,6 +89,7 @@ export type Snapshot = {
   raceInstanceId?: number;
   startTimeType?: number;
   skillAnalysis?: { schemaVersion: number };
+  playerUsage?: { schemaVersion: number };
   sourceSha256: string;
   engineSha256: string;
   meta: SnapshotMeta;
@@ -118,6 +119,7 @@ export type Runner = {
   style: Style;
   racingStyle: number;
   score: number;
+  skillPoints?: number;
   stats?: [number, number, number, number, number];
   skills?: [number, number][];
   deck?: { position: number; id: number; lb: number; exp: number }[];
@@ -145,7 +147,6 @@ export type Performer = {
   ci: Interval;
   memberWins: number[];
   archiveIndex?: number;
-  custom?: boolean;
 };
 
 export type PerformerIndex = { snapshotId: string; teams: Performer[] };
@@ -164,8 +165,6 @@ export type TeamDistributionResponse = {
   topDecile: number | null;
   bins: { index: number; count: number; observedMin: number; observedMax: number }[];
 };
-
-export type LobbyEditorCatalog = { snapshotId: string; cards: number[]; skills: number[] };
 
 export type CompactPerformerIndex = {
   snapshotId: string;

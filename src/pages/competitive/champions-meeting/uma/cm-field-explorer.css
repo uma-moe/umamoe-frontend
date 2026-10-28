@@ -215,10 +215,6 @@ th[aria-sort='descending'] {
   color: var(--text-disabled);
   font-size: 12px;
 }
-.empty {
-  padding: 50px 0;
-  text-align: center;
-}
 .inspector {
   scroll-margin-top: 80px;
   position: sticky;

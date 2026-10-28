@@ -9,8 +9,10 @@
     outfit,
     color,
     framed = false,
+    content = 'full',
     raceContext,
     metrics: contentMetrics,
+    inlineMetrics = false,
     training,
     headerActions
   }: {
@@ -19,8 +21,12 @@
     outfit?: string;
     color?: string;
     framed?: boolean;
+    /** A summary keeps the identity, stats and race aptitudes, for a page that lists the skills itself. */
+    content?: 'full' | 'summary';
     raceContext?: { surface?: number; distance?: number };
     metrics?: Snippet;
+    /** Short metrics share the identity line instead of a row of their own. */
+    inlineMetrics?: boolean;
     training?: Snippet;
     headerActions?: Snippet;
   } = $props();
@@ -38,7 +44,8 @@
     {raceContext}
     {training}
     {headerActions}
-    expanded
+    {inlineMetrics}
+    expanded={content === 'full'}
     compact
   >
     {#snippet metrics()}
@@ -65,6 +72,12 @@
   }
   .build-metrics {
     min-width: 0;
+  }
+  /* A framed card opens with one band: who the runner is and how they did, tinted with their running style. */
+  .build-card.framed :global(.build.compact > .build-identity) {
+    padding: 8px 10px 10px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: color-mix(in srgb, var(--runner-color) 7%, transparent);
   }
   .build-card :global(.race-style) {
     color: var(--runner-color);

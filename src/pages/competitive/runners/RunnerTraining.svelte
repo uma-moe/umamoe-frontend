@@ -11,7 +11,10 @@
     loadSupportCards,
     type SupportCardData
   } from '@/lib/game-data/support-cards/support-cards';
-  import { supportCardDisplay } from '@/lib/game-data/support-cards/support-card-details';
+  import {
+    supportCardDisplay,
+    supportTypeName
+  } from '@/lib/game-data/support-cards/support-card-details';
   import { loadCharacters, type CharacterData } from '@/lib/game-data/characters';
   import { watchFactors, decodeFactorEntry } from '@/lib/game-data/factors/factors';
   import { portrait } from '../analysis-view';
@@ -28,6 +31,8 @@
     label?: string;
   } = $props();
 
+  type SupportType = ReturnType<typeof supportTypeName> | 'Group';
+
   const instanceId = $props.id();
 
   let selectedParent = $state(''),
@@ -39,6 +44,10 @@
   $effect(() => {
     selectedParent = String(parents[0]?.positionId ?? '');
   });
+
+  function supportType(card: SupportCardData): SupportType {
+    return card.type === 'group' ? 'Group' : supportTypeName(card.type);
+  }
 
   onMount(() => {
     void loadSupportCards()
@@ -68,39 +77,53 @@
 >
   {#snippet trainingSections()}
     <section class="support-section">
-      <h3>
-        Support deck <span>{deck.length} {deck.length === 1 ? 'card' : 'cards'}</span>
-      </h3>
+      <h3>Support deck</h3>
       {#if deck?.length}
         <ul class="support-deck">
           {#each deck as card}
             {@const resource = supports.get(String(card.id))}
             {@const display = resource ? supportCardDisplay(resource) : undefined}
+            {@const type = resource ? supportType(resource) : undefined}
             <li
               title={(display ? display.character + ' · ' + display.title : 'Support ' + card.id) +
                 ' · limit break ' +
                 card.lb}
             >
-              <Artwork
-                src={supportCardImagePath(card.id)}
-                fallbackSrc="/assets/images/placeholder-card.webp"
-                alt={display?.character ?? 'Support ' + card.id}
-                kind="card"
-                size="sm"
-              />
-              <span class="support-name">{display?.character ?? 'Card ' + card.id}</span>
-              <div class="support-meta">
-                {#if resource && [1, 2, 3].includes(resource.rarity)}
-                  {@const rarity =
-                    resource.rarity === 3 ? 'SSR' : resource.rarity === 2 ? 'SR' : 'R'}
+              <span class="support-art">
+                <Artwork
+                  src={supportCardImagePath(card.id)}
+                  fallbackSrc="/assets/images/placeholder-card.webp"
+                  alt={display?.character ?? 'Support ' + card.id}
+                  kind="card"
+                  size="sm"
+                />
+                {#if type}
                   <img
-                    src={'/game-assets/support-rarity/' + rarity.toLowerCase() + '.png'}
-                    alt={rarity}
-                    width="18"
-                    height="18"
+                    class="support-type"
+                    src={'/assets/images/icon/stats/' + type.toLowerCase() + '.webp'}
+                    alt={type + ' support'}
+                    title={type + ' support'}
+                    width="16"
+                    height="16"
                   />
                 {/if}
-                <span class="support-lb"><LimitBreak value={card.lb} /></span>
+              </span>
+              <div class="support-text">
+                <span class="support-name">{display?.character ?? 'Card ' + card.id}</span>
+                <div class="support-meta">
+                  {#if resource && [1, 2, 3].includes(resource.rarity)}
+                    {@const rarity =
+                      resource.rarity === 3 ? 'SSR' : resource.rarity === 2 ? 'SR' : 'R'}
+                    <img
+                      class="support-rarity"
+                      src={'/game-assets/support-rarity/' + rarity.toLowerCase() + '.png'}
+                      alt={rarity}
+                      width="22"
+                      height="22"
+                    />
+                  {/if}
+                  <span class="support-lb"><LimitBreak value={card.lb} /></span>
+                </div>
               </div>
             </li>
           {/each}
@@ -197,6 +220,7 @@
       </section>
     {/if}
   {/snippet}
+  <!-- Phones fold the setup away under its own toggle; wider cards show it as part of the build. -->
   {#if mobileTraining}
     <div class="mobile-training">
       <Disclosure
@@ -208,165 +232,10 @@
       </Disclosure>
     </div>
   {:else}
-    <h3 class="training-title">Training setup</h3>
     {@render trainingSections()}
   {/if}
 </section>
 
 <style>
-  .training {
-    margin: 0;
-    padding: 0;
-    min-width: 0;
-    display: grid;
-    align-content: start;
-    gap: 12px;
-  }
-  .support-section,
-  .inheritance-section {
-    display: grid;
-    align-content: start;
-    gap: 8px;
-    min-width: 0;
-  }
-  .mobile-training {
-    min-width: 0;
-  }
-  .mobile-training :global(details[open] .disclosure-content) {
-    display: grid;
-    gap: 12px;
-  }
-  .training h3 {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin: 0;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .training h3.training-title {
-    font-size: 13px;
-    margin-bottom: 2px;
-  }
-  .training h3 span {
-    font-size: 10px;
-    font-weight: 400;
-    color: var(--text-secondary);
-  }
-  .training p {
-    margin: 0;
-  }
-  .support-deck {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .support-deck li {
-    display: grid;
-    grid-template-columns: 34px minmax(0, 1fr);
-    grid-template-rows: 1fr auto;
-    column-gap: 5px;
-    row-gap: 2px;
-    align-items: center;
-    min-width: 0;
-    padding: 3px 0;
-  }
-  .support-deck :global(.art) {
-    grid-row: 1 / 3;
-    width: 34px;
-    height: 44px;
-    align-self: center;
-    border: 0;
-    background: transparent;
-  }
-  .support-deck :global(.art img),
-  .parent-builds :global(.art img) {
-    object-fit: contain;
-  }
-  .support-name {
-    min-width: 0;
-    font-size: 10px;
-    font-weight: 500;
-    line-height: 1.35;
-    overflow-wrap: anywhere;
-  }
-  .support-meta {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 3px 5px;
-    min-width: 0;
-  }
-  .support-meta img {
-    object-fit: contain;
-    flex: none;
-  }
-  .support-lb {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    font-size: 14px;
-    line-height: 1;
-  }
-  .parent-builds {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-  .parent-factors {
-    min-width: 0;
-  }
-  .parent-factors > header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  .parent-factors > header p {
-    font-size: 10px;
-    text-align: right;
-  }
-  .parent-sparks {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    padding: 8px 0 0;
-    min-width: 0;
-  }
-  .parent-sparks :global(.spark) {
-    max-width: 100%;
-  }
-  .parent-sparks :global(.name) {
-    white-space: normal;
-    overflow: visible;
-    overflow-wrap: anywhere;
-  }
-  p {
-    font-size: 11px;
-    color: var(--text-secondary);
-    line-height: 1.5;
-  }
-  .training h3 {
-    margin: 0;
-  }
-  .own-factors {
-    min-width: 0;
-  }
-  @media (max-width: 1100px) {
-    .support-deck {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-  @media (max-width: 650px) {
-    .support-lb {
-      font-size: 12px;
-    }
-    .support-meta img {
-      width: 16px;
-      height: 16px;
-    }
-  }
+  @import './runner-training.css';
 </style>

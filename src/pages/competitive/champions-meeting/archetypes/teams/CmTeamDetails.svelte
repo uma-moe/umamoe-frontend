@@ -1,85 +1,44 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
-  import { simulatorUmaFromCm } from '@/pages/simulator/simulator-uma';
-  import { openSimulatorField } from '@/pages/simulator/simulator-session.svelte';
-  import type { Build, Performer, Snapshot, Summary, TeamDetail } from '../../../hakuraku-types';
-  import { cmGet, snapshotPath, pct, number, buildRunner } from '../../cm-data';
-  import { portrait } from '../../../analysis-view';
+  import type { Summary, TeamDetail } from '../../../hakuraku-types';
+  import { pct, number, buildRunner, loadTeamDetail } from '../../cm-data';
   import Button from '@/components/controls/Button.svelte';
-  import Checkbox from '@/components/controls/Checkbox.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
-  import Artwork from '@/components/game/Artwork.svelte';
-  import Icon from '@/components/Icon.svelte';
+  import Banner from '@/components/feedback/Banner.svelte';
+  import EmptyState from '@/components/feedback/EmptyState.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import RunnerBuildDetails from '../../../runners/RunnerBuildDetails.svelte';
   import RunnerBuildGroup from '../../../runners/RunnerBuildGroup.svelte';
   import RunnerTraining from '../../../runners/RunnerTraining.svelte';
+  import type { CmLobby } from '../lobby/cm-lobby.svelte';
+  import { runnerKey } from '../lobby/lobby-slots';
+  import LobbyToggle from './LobbyToggle.svelte';
 
   interface Props {
     data: Summary;
-    snapshot?: Snapshot;
     colors: Record<number, string>;
     selected: string;
-    buildTeam: boolean;
-    simError?: string;
-    lobby: Performer[];
-    lobbyIds: Set<string>;
-    pendingTeams: string[];
-    pendingRunners: string[];
-    teamDraft: { key: string; build: Build }[];
-    teamError: string;
-    runnerToggle: Snippet<[Performer, number]>;
-    ontoggle: (team: Performer) => void;
-    onbuildteam: () => void;
-    onremoverunner: (key: string) => void;
+    lobby: CmLobby;
   }
 
-  let {
-    data,
-    snapshot,
-    colors,
-    selected = $bindable(),
-    buildTeam = $bindable(),
-    simError = $bindable(''),
-    lobby,
-    lobbyIds,
-    pendingTeams,
-    pendingRunners,
-    teamDraft,
-    teamError,
-    runnerToggle,
-    ontoggle,
-    onbuildteam,
-    onremoverunner
-  }: Props = $props();
+  let { data, colors, selected = $bindable(), lobby }: Props = $props();
 
-  let simBusy = $state(false),
-    detail = $state<TeamDetail>(),
+  let detail = $state<TeamDetail>(),
     detailError = $state(''),
+    copyError = $state(''),
     copied = $state(false);
 
-  async function simulate(builds: Build[], replace = false) {
-    simBusy = true;
-    simError = '';
-    try {
-      await openSimulatorField(
-        builds.map((build) => simulatorUmaFromCm(build, data, replace ? 1 : 0)),
-        {
-          replace,
-          raceInstanceId: snapshot?.raceInstanceId,
-          startTimeType: snapshot?.startTimeType
-        }
-      );
+  let controller: AbortController | undefined;
 
-      selected = '';
-    } catch (error) {
-      simError = (error as Error).message;
-    } finally {
-      simBusy = false;
-    }
-  }
+  const skillNames = $derived(
+    new Map(Object.entries(detail?.skills ?? {}).map(([id, name]) => [Number(id), name]))
+  );
+
+  const teamInLobby = $derived(detail ? lobby.hasTeam(detail.team.id) : false);
 
   async function copyLink() {
+    copyError = '';
+    copied = false;
+
     try {
       const url = new URL(location.href);
       url.searchParams.set('snapshot', data.snapshotId);
@@ -88,32 +47,64 @@
       await navigator.clipboard.writeText(url.href);
       copied = true;
     } catch {
-      detailError = 'Could not copy the team link.';
+      copyError = 'Could not copy the team link. Check clipboard permissions and try again.';
+    }
+  }
+
+  async function loadDetail(snapshotId: string, teamId: string) {
+    controller?.abort();
+    detail = undefined;
+    detailError = '';
+    copyError = '';
+    copied = false;
+
+    if (!teamId) return;
+
+    const request = new AbortController();
+    controller = request;
+
+    try {
+      const value = await loadTeamDetail(snapshotId, teamId, request.signal);
+
+      if (!request.signal.aborted) detail = value;
+    } catch (reason) {
+      if (!request.signal.aborted) {
+        detailError =
+          reason instanceof Error ? reason.message : 'The team builds could not be loaded.';
+      }
     }
   }
 
   $effect(() => {
-    const id = data.snapshotId,
-      team = selected;
+    void loadDetail(data.snapshotId, selected);
 
-    detail = undefined;
-    detailError = '';
-    copied = false;
-    if (!team) return;
-    const controller = new AbortController();
-    cmGet<TeamDetail>(snapshotPath(id, 'teams/' + encodeURIComponent(team)), controller.signal, id)
-      .then((v) => {
-        if (!controller.signal.aborted) {
-          detail = v;
-        }
-      })
-      .catch((e) => {
-        if (!controller.signal.aborted) detailError = e.message;
-      });
-
-    return () => controller.abort();
+    return () => controller?.abort();
   });
 </script>
+
+{#snippet teamOverview(team: TeamDetail['team'])}
+  <section
+    class="detail-overview"
+    aria-label="Captured team overview"
+  >
+    <dl class="detail-summary">
+      <div>
+        <dt>Team win rate</dt>
+        <dd>{pct(team.wins / team.n)}</dd>
+      </div>
+      <div>
+        <dt title="Uncertainty in the win rate, calculated with a 95% confidence interval.">
+          95% win range
+        </dt>
+        <dd>{pct(team.ci[0])}–{pct(team.ci[1])}</dd>
+      </div>
+      <div>
+        <dt>Simulated races</dt>
+        <dd>{number(team.n)}</dd>
+      </div>
+    </dl>
+  </section>
+{/snippet}
 
 <div class="team-details-dialog">
   <Dialog
@@ -122,46 +113,63 @@
     maxWidth="1480px"
     maxHeight="94dvh"
     mobileMaxHeight="94dvh"
-    contentPadding="10px"
-    mobileContentPadding="8px"
+    contentPadding="16px"
+    mobileContentPadding="12px"
     onclose={() => (selected = '')}
   >
     {#snippet headerActions()}
+      {#if detail}
+        <div class="header-overview">
+          {@render teamOverview(detail.team)}
+        </div>
+      {/if}
       <div class="detail-actions">
         {#if detail}
+          {@const team = detail.team}
           <Button
             size="sm"
-            variant="secondary"
-            icon="race"
-            loading={simBusy}
-            onclick={() => simulate(detail!.team.members, true)}
+            variant={teamInLobby ? 'secondary' : 'primary'}
+            icon={teamInLobby ? 'check' : 'add'}
+            loading={lobby.pending.includes(team.id)}
+            ariaPressed={teamInLobby}
+            ariaLabel={teamInLobby ? 'Remove team from lobby' : 'Add team to lobby'}
+            onclick={() => void lobby.toggleTeam(team.id)}
           >
-            Simulate team
-          </Button><Button
-            size="sm"
-            disabled={pendingTeams.includes(detail.team.id) ||
-              (!lobbyIds.has(detail.team.id) && lobby.length + pendingTeams.length >= 3)}
-            onclick={() => ontoggle(detail!.team)}
-          >
-            {lobbyIds.has(detail.team.id)
-              ? 'Remove from lobby'
-              : pendingTeams.includes(detail.team.id)
-                ? 'Loading…'
-                : lobby.length + pendingTeams.length >= 3
-                  ? 'Lobby full'
-                  : 'Add to lobby'}
+            <span class="action-label">
+              {teamInLobby ? 'Remove team from lobby' : 'Add team to lobby'}
+            </span>
           </Button>
-        {/if}<Button
+        {/if}
+        <Button
           size="sm"
-          variant="secondary"
+          variant="ghost"
+          icon={copied ? 'check' : 'copy'}
+          ariaLabel={copied ? 'Link copied' : 'Copy link'}
           onclick={copyLink}
         >
-          {copied ? 'Link copied' : 'Copy link'}
+          <span class="action-label">{copied ? 'Link copied' : 'Copy link'}</span>
         </Button>
       </div>
     {/snippet}
     {#if detailError}
-      <p role="alert">{detailError}</p>
+      <div role="alert">
+        <EmptyState
+          icon="warning"
+          title="Team builds unavailable"
+          description={detailError}
+        >
+          {#snippet actions()}
+            <Button
+              size="sm"
+              variant="secondary"
+              icon="refresh"
+              onclick={() => void loadDetail(data.snapshotId, selected)}
+            >
+              Retry loading team
+            </Button>
+          {/snippet}
+        </EmptyState>
+      </div>
     {:else if !detail}
       <Spinner
         size={48}
@@ -170,118 +178,63 @@
         label="Loading team builds…"
       />
     {:else}
-      {#if teamError && !buildTeam}
-        <p role="alert">{teamError}</p>
-      {/if}
-      <div class="detail-summary">
-        <div class="detail-rate">
-          <strong>{pct(detail.team.wins / detail.team.n)}</strong>
-          <span>Team win rate</span>
-        </div>
-        <dl>
-          <div>
-            <dt title="Uncertainty in the win rate, calculated with a 95% confidence interval.">
-              Estimated win range
-            </dt>
-            <dd>{pct(detail.team.ci[0])}–{pct(detail.team.ci[1])}</dd>
-          </div>
-          <div>
-            <dt>Simulated races</dt>
-            <dd>{number(detail.team.n)}</dd>
-          </div>
-        </dl>
-        <div class="detail-choice">
-          <Checkbox
-            id="cm-detail-build-team"
-            label="Build a team"
-            bind:checked={buildTeam}
-          />
-        </div>
+      {@const team = detail.team}
+      <!-- The header holds the overview where it fits; narrower dialogs show it above the builds instead. -->
+      <div class="content-overview">
+        {@render teamOverview(team)}
       </div>
-      {#if buildTeam}
-        <section
-          class="detail-selection"
-          aria-label="Selected runners"
+      {#if copyError || lobby.error}
+        <div
+          class="detail-error"
+          role="alert"
         >
-          <strong>Build a team · {teamDraft.length}/3</strong>
-          <div class="selected-builds">
-            {#each teamDraft as entry}
-              <span>
-                <Artwork
-                  src={portrait(entry.build.card)}
-                  alt=""
-                  size="xs"
-                />{data.cards[entry.build.card]?.name}
-                <button
-                  aria-label={'Remove ' + data.cards[entry.build.card]?.name + ' from selection'}
-                  onclick={() => onremoverunner(entry.key)}
-                >
-                  <Icon
-                    name="close"
-                    size={14}
-                  />
-                </button>
-              </span>
-            {/each}
-          </div>
-          <span
-            class="selection-status"
-            role="status"
+          <Banner
+            title={copyError ? 'Link not copied' : 'Lobby not updated'}
+            tone="warning"
           >
-            {teamError ||
-              (pendingRunners.length
-                ? 'Loading captured build…'
-                : !teamDraft.length
-                  ? 'Use + beside an Uma to select its build.'
-                  : 'Choose builds from any captured team.')}
-          </span>
-          <Button
-            size="sm"
-            disabled={teamDraft.length !== 3 ||
-              lobby.length + pendingTeams.length >= 3 ||
-              pendingRunners.length > 0}
-            onclick={() => {
-              selected = '';
-              onbuildteam();
-            }}
-          >
-            Add custom team to lobby
-          </Button>
-        </section>
+            <p>{copyError || lobby.error}</p>
+          </Banner>
+        </div>
       {/if}
       <RunnerBuildGroup>
-        {#each detail.team.members as member, index}
+        {#each team.members as member, index}
+          {@const memberWins = team.memberWins[index]}
           <RunnerBuildDetails
             runner={buildRunner(member, data, index)}
             outfit={data.cards[member.card]?.outfit}
             color={colors[member.style]}
             framed
-            skillNames={new Map(
-              Object.entries(detail.skills).map(([id, name]) => [Number(id), name])
-            )}
+            inlineMetrics
+            {skillNames}
           >
             {#snippet headerActions()}
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={simBusy}
-                onclick={() => simulate([member])}
-              >
-                Use in simulator
-              </Button>{@render runnerToggle(detail!.team, index)}
+              <LobbyToggle
+                name={data.cards[member.card]?.name ?? 'this Uma'}
+                added={lobby.hasRunner(team.id, index)}
+                loading={lobby.pending.includes(runnerKey(team.id, index))}
+                ontoggle={() => void lobby.toggleRunner(team.id, index)}
+              />
             {/snippet}
             {#snippet metrics()}
               <dl class="runner-results">
-                <div>
-                  <dt>Individual win rate</dt>
-                  <dd>{pct(detail!.team.memberWins[index]! / detail!.team.n)}</dd>
-                </div>
-                <div>
-                  <dt>Share of team wins</dt>
+                <div title="Individual win rate">
+                  <dt>win rate</dt>
                   <dd>
-                    {pct(
-                      detail!.team.wins ? detail!.team.memberWins[index]! / detail!.team.wins : 0
-                    )}
+                    {#if memberWins === undefined}
+                      —
+                    {:else}
+                      {pct(memberWins / team.n)}
+                    {/if}
+                  </dd>
+                </div>
+                <div title="Share of team wins">
+                  <dt>of wins</dt>
+                  <dd>
+                    {#if memberWins === undefined}
+                      —
+                    {:else}
+                      {pct(team.wins > 0 ? memberWins / team.wins : 0)}
+                    {/if}
                   </dd>
                 </div>
               </dl>
@@ -302,5 +255,6 @@
 
 <style>
   @import '../archetype-text.css';
+  @import '../../../runners/runner-results.css';
   @import './cm-team-details.css';
 </style>

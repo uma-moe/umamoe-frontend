@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { onMount, type Snippet } from 'svelte';
+  import { loadSkills, skillPointTotal, type SkillData } from '@/lib/game-data/skills/skills';
   import { normalizeVeteranRecord } from '@/lib/veterans/records/veteran-normalizer';
   import { veteranSupportCards } from '@/lib/veterans/records/veteran-profile';
   import RunnerTraining from './RunnerTraining.svelte';
@@ -20,6 +21,7 @@
     compact = false,
     outfit,
     metrics,
+    inlineMetrics = false,
     training,
     headerActions,
     raceContext
@@ -30,10 +32,14 @@
     compact?: boolean;
     outfit?: string;
     metrics?: Snippet;
+    /** Short compact metrics share the identity line instead of a row of their own. */
+    inlineMetrics?: boolean;
     training?: Snippet;
     headerActions?: Snippet;
     raceContext?: { surface?: number; distance?: number };
   } = $props();
+
+  let skillCatalog = $state.raw(new Map<number, SkillData>());
 
   const veteran = $derived.by(() => {
     try {
@@ -87,6 +93,9 @@
     Object.values(runner.stats).reduce((total, value) => total + (value ?? 0), 0)
   );
 
+  /** Null until the catalog prices every learned skill. */
+  const skillPoints = $derived(skillPointTotal(skillCatalog, runner.skillIds));
+
   const raceAptitudes = $derived.by(() => {
     if (!raceContext) return [];
     const style = runner.result?.runningStyle ?? Number(runner.raw.runningStyle);
@@ -105,11 +114,17 @@
             : 'long'
       : undefined;
 
-    const aptitude = (key: string | undefined, aggregate: string) => {
+    // Captures without per-category grades, such as the demo races, only carry summary grades.
+    const hasCategoryGrades = aptitudes.length > 0;
+    const aptitude = (
+      key: string | undefined,
+      aggregate: string,
+      summary: keyof RaceRunner['aptitudes']
+    ) => {
       const camel = key?.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
-      const value = Number(
-        (key ? (runner.raw[key] ?? runner.raw[camel!]) : undefined) ?? runner.raw[aggregate]
-      );
+      const recorded = key ? (runner.raw[key] ?? runner.raw[camel!]) : undefined;
+      const fallback = hasCategoryGrades ? undefined : runner.aptitudes[summary];
+      const value = Number(recorded ?? runner.raw[aggregate] ?? fallback);
 
       return grades[value - 1];
     };
@@ -119,20 +134,41 @@
         group: 'Distance',
         label: distanceKey
           ? { short: 'Sprint', mile: 'Mile', middle: 'Medium', long: 'Long' }[distanceKey]
-          : 'Distance',
-        grade: aptitude(distanceKey ? 'proper_distance_' + distanceKey : undefined, 'apt_distance')
+          : undefined,
+        grade: aptitude(
+          distanceKey ? 'proper_distance_' + distanceKey : undefined,
+          'apt_distance',
+          'distance'
+        )
       },
       {
         group: 'Surface',
-        label: surfaceKey ? (surfaceKey === 'turf' ? 'Turf' : 'Dirt') : 'Surface',
-        grade: aptitude(surfaceKey ? 'proper_ground_' + surfaceKey : undefined, 'apt_ground')
+        label: surfaceKey ? (surfaceKey === 'turf' ? 'Turf' : 'Dirt') : undefined,
+        grade: aptitude(
+          surfaceKey ? 'proper_ground_' + surfaceKey : undefined,
+          'apt_ground',
+          'surface'
+        )
       },
       {
         group: 'Style',
-        label: styleKey ? runningStyleName(style, true) : 'Style',
-        grade: aptitude(styleKey ? 'proper_running_style_' + styleKey : undefined, 'apt_style')
+        label: styleKey ? runningStyleName(style, true) : undefined,
+        grade: aptitude(
+          styleKey ? 'proper_running_style_' + styleKey : undefined,
+          'apt_style',
+          'style'
+        )
       }
     ];
+  });
+
+  onMount(() => {
+    // Only compact cards head their skills with the SP total; without the catalog the total is left out.
+    if (!compact) return;
+
+    void loadSkills()
+      .then((catalog) => (skillCatalog = catalog))
+      .catch(() => {});
   });
 </script>
 
@@ -141,12 +177,25 @@
   class:compact
 >
   <header class="build-identity">
-    <ProfileVeteranIdentity
-      summary={compact
-        ? { ...identity(runner), scenario: outfit ?? identity(runner).scenario }
-        : identity(runner)}
-      score={score(runner) || undefined}
-    />{@render headerActions?.()}
+    <div class="identity-line">
+      <ProfileVeteranIdentity
+        summary={compact
+          ? { ...identity(runner), scenario: outfit ?? identity(runner).scenario }
+          : identity(runner)}
+        score={score(runner) || undefined}
+        rankPlacement={compact ? 'details' : 'column'}
+      />
+      {#if compact && inlineMetrics && metrics}
+        <div class="identity-metrics">
+          {@render metrics()}
+        </div>
+      {/if}
+      {@render headerActions?.()}
+    </div>
+    <!-- Compact cards keep a runner's results with who they are, ahead of the build that produced them. -->
+    {#if compact && !inlineMetrics}
+      {@render metrics?.()}
+    {/if}
   </header>
   <div class="build-content">
     <section class="stat-overview">
@@ -163,41 +212,58 @@
         presentation={compact || !expanded ? 'inline' : 'icons'}
         compact
       />
-      {#if raceContext && !expanded}
+    </section>
+    {#if raceContext && !expanded}
+      <section class="aptitude-overview">
+        {#if compact}
+          <h3>Race aptitudes</h3>
+        {/if}
         <div
-          class="race-aptitudes"
+          class="compact-aptitudes race-aptitudes"
           aria-label="Aptitudes for this race"
         >
           {#each raceAptitudes as item}
             <span
-              class="race-aptitude"
-              title={item.group + ' · ' + item.label}
+              class="aptitude-cell race-aptitude"
+              style:--aptitude-color={item.grade
+                ? `var(--aptitude-${item.grade.toLowerCase()})`
+                : 'var(--text-muted)'}
+              title={item.group + ' · ' + (item.label ?? 'not detected')}
             >
-              <span>{item.group}</span>
+              <span class="race-aptitude-label">
+                {#if item.label}
+                  <small>{item.group}</small>
+                  {item.label}
+                {:else}
+                  {item.group}
+                {/if}
+              </span>
               {#if item.grade}
                 <AptitudeGrade
                   grade={item.grade}
-                  label={item.label}
-                  size="xs"
+                  label={item.label ?? item.group}
+                  size="sm"
                 />
               {:else}
                 <span
                   class="unknown-grade"
-                  aria-label={item.label + ': not recorded'}
+                  aria-label={(item.label ?? item.group) + ': not recorded'}
                   title="Aptitude not recorded"
                 >
                   —
                 </span>
               {/if}
-              <small>{item.label}</small>
             </span>
           {/each}
         </div>
-      {/if}
-    </section>
+      </section>
+    {/if}
     {#if expanded}
       {#if aptitudeItems.length}
         <section class="aptitude-overview">
+          {#if compact}
+            <h3>Aptitudes</h3>
+          {/if}
           {#if compact && raceContext && aptitudes.length}
             <div
               class="full-aptitudes"
@@ -208,11 +274,15 @@
                   <span>{group}</span>
                   <div>
                     {#each aptitudeItems.filter((item) => item.group === group) as item}
-                      <span>
-                        {item.label}<AptitudeGrade
+                      <span
+                        class="aptitude-cell"
+                        style:--aptitude-color={`var(--aptitude-${item.grade.toLowerCase()})`}
+                      >
+                        <span>{item.label}</span>
+                        <AptitudeGrade
                           grade={item.grade}
                           label={item.label}
-                          size="xs"
+                          size="sm"
                         />
                       </span>
                     {/each}
@@ -226,11 +296,15 @@
               aria-label="Race aptitudes"
             >
               {#each aptitudeItems as item}
-                <span>
-                  {item.label}<AptitudeGrade
+                <span
+                  class="aptitude-cell"
+                  style:--aptitude-color={`var(--aptitude-${item.grade.toLowerCase()})`}
+                >
+                  <span>{item.label}</span>
+                  <AptitudeGrade
                     grade={item.grade}
                     label={item.label}
-                    size="xs"
+                    size="sm"
                   />
                 </span>
               {/each}
@@ -244,18 +318,30 @@
           {/if}
         </section>
       {/if}
-      {@render metrics?.()}
+      {#if !compact}
+        {@render metrics?.()}
+      {/if}
       <section class="skills-section">
         {#if compact}
-          <h3>
-            Learned skills <span>{runner.skillIds.length}</span>
-          </h3>
+          <header class="section-heading">
+            <h3>
+              Learned skills <span>{runner.skillIds.length}</span>
+            </h3>
+            {#if skillPoints !== null}
+              <span
+                title="Base cost of the learned skills, including prerequisites, before hint discounts"
+              >
+                Total SP <strong>{skillPoints.toLocaleString('en-US')}</strong>
+              </span>
+            {/if}
+          </header>
         {/if}
         <div class="skills">
           {#each runner.skillIds as id}
             <RaceSkill
               {id}
               name={skillNames.get(id)}
+              fill={compact}
             />
           {/each}
         </div>
@@ -277,184 +363,5 @@
 </div>
 
 <style>
-  .build {
-    display: grid;
-    gap: 10px;
-    min-width: 0;
-    container-type: inline-size;
-  }
-  .skills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-  }
-  small {
-    font-size: 10px;
-    color: var(--text-secondary);
-  }
-  .build-content {
-    display: contents;
-  }
-  .stat-overview,
-  .aptitude-overview,
-  .skills-section {
-    display: grid;
-    gap: 8px;
-    min-width: 0;
-  }
-  .build-identity {
-    min-width: 0;
-  }
-  .compact {
-    display: grid;
-    gap: 0;
-  }
-  .compact .build-identity {
-    padding: 6px 10px;
-  }
-  .compact .build-content {
-    display: grid;
-    align-content: start;
-    gap: 8px;
-    padding: 0 10px 10px;
-  }
-  .compact h3 {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin: 0;
-    font-size: 13px;
-    font-weight: 600;
-  }
-  .compact h3 > span {
-    color: var(--text-secondary);
-    font-size: 11px;
-    font-weight: 400;
-  }
-  .section-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  .section-heading > span {
-    font-size: 10px;
-    color: var(--text-secondary);
-  }
-  .section-heading strong {
-    font-size: 11px;
-    margin-left: 4px;
-    color: var(--text-primary);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
-  .compact .skills-section {
-    align-content: start;
-  }
-  .compact .skills :global(.skill-chip) {
-    min-height: 25px;
-    font-size: 11px;
-    max-width: 100%;
-  }
-  .compact .skills :global(.skill-chip img) {
-    width: 25px;
-    height: 25px;
-  }
-  .compact .skills :global(.skill-body) {
-    min-height: 25px;
-  }
-  .compact .skills :global(.skill-name) {
-    white-space: normal;
-    overflow: visible;
-    overflow-wrap: anywhere;
-  }
-  .compact .build-identity {
-    padding-block: 6px;
-  }
-  .compact .build-content {
-    gap: 8px;
-  }
-  .compact .stat-overview,
-  .compact .aptitude-overview {
-    gap: 4px;
-  }
-  .build-identity {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .build-identity > :global(.veteran-identity) {
-    flex: 1;
-  }
-  .compact .stat-overview :global(.inline-stats > div) {
-    padding-block: 3px;
-    background: transparent;
-    border: 0;
-  }
-  .compact .stat-overview :global(.inline-stats dd) {
-    font-size: 13px;
-  }
-  .compact-aptitudes {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-    font-size: 10px;
-    color: var(--text-secondary);
-  }
-  .compact-aptitudes > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .race-aptitudes {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    font-size: 10px;
-    color: var(--text-secondary);
-  }
-  .race-aptitude {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .unknown-grade {
-    font-size: 12px;
-  }
-
-  .race-aptitudes {
-    justify-content: flex-start;
-    gap: 14px;
-    flex-wrap: wrap;
-  }
-  .race-aptitude small {
-    font-size: 9px;
-  }
-  .full-aptitudes {
-    display: grid;
-    gap: 6px;
-  }
-  .full-aptitudes > div {
-    display: grid;
-    grid-template-columns: 52px minmax(0, 1fr);
-    gap: 8px;
-    align-items: center;
-  }
-  .full-aptitudes > div > span {
-    font-size: 10px;
-    color: var(--text-secondary);
-  }
-  .full-aptitudes > div > div {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 14px;
-  }
-  .full-aptitudes > div > div > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 10px;
-  }
+  @import './runner-build.css';
 </style>

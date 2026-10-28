@@ -12,11 +12,11 @@
     styleChoices
   } from './archetype-matchers';
   import Button from '@/components/controls/Button.svelte';
+  import IconButton from '@/components/controls/IconButton.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import Combobox from '@/components/controls/Combobox.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
-  import Icon from '@/components/Icon.svelte';
 
   interface Props {
     cards: Record<number, Card>;
@@ -146,16 +146,12 @@
             {/if}{@render matcherSummary(matcher)}
           {/each}
         </span>
-        <button
-          type="button"
-          aria-label={'Remove exclusion ' + (slot.anyOf ?? [slot]).map(label).join(' or ')}
+        <IconButton
+          icon="close"
+          size="sm"
+          label={'Remove exclusion ' + (slot.anyOf ?? [slot]).map(label).join(' or ')}
           onclick={() => removeRule(index)}
-        >
-          <Icon
-            name="close"
-            size={14}
-          />
-        </button>
+        />
       </li>
     {:else if slot.anyOf}
       {#each slot.anyOf.slice(1) as alternative, option}
@@ -165,16 +161,12 @@
             <small>or</small>
           </span>
           <span class="rule-matches">{@render matcherSummary(alternative)}</span>
-          <button
-            type="button"
-            aria-label={'Remove Runner ' + (index + 1) + ' alternative ' + label(alternative)}
+          <IconButton
+            icon="close"
+            size="sm"
+            label={'Remove Runner ' + (index + 1) + ' alternative ' + label(alternative)}
             onclick={() => removeRule(index, option + 1)}
-          >
-            <Icon
-              name="close"
-              size={14}
-            />
-          </button>
+          />
         </li>
       {/each}
     {/if}

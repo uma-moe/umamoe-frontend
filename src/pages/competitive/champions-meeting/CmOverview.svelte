@@ -44,7 +44,7 @@
     title="Running styles"
     description="Share of simulated entries and share of race wins."
   >
-    {#snippet titleActions()}
+    {#snippet actions()}
       <Button
         variant="ghost"
         size="sm"
@@ -92,7 +92,7 @@
     title="Most represented Umas"
     description="Outfits ranked by share of simulated entries across all styles."
   >
-    {#snippet titleActions()}
+    {#snippet actions()}
       <Button
         variant="ghost"
         size="sm"
@@ -142,7 +142,7 @@
     title="Common team compositions"
     description="Ranked by share of simulated team appearances."
   >
-    {#snippet titleActions()}
+    {#snippet actions()}
       <Button
         variant="ghost"
         size="sm"
@@ -214,12 +214,6 @@
   }
   .meeting-overview :global(.plot) {
     gap: 0;
-  }
-  .meeting-overview :global(.title-row) {
-    justify-content: space-between;
-  }
-  .meeting-overview :global(.chart-heading) {
-    width: 100%;
   }
   .column-head {
     display: grid;

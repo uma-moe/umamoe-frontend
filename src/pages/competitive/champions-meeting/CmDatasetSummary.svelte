@@ -41,15 +41,16 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
-    padding: 14px 18px;
-    background: var(--surface-1);
+    gap: 16px;
+    padding: 10px 14px;
+    border: 1px solid var(--card-surface-border);
     border-radius: var(--radius-md);
-    margin-bottom: 12px;
+    background: var(--card-surface-bg);
+    margin-bottom: 8px;
   }
   .course {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     align-items: center;
     min-width: 0;
   }
@@ -58,8 +59,8 @@
     flex: none;
   }
   .course h2 {
-    font-size: 14px;
-    margin: 0 0 4px;
+    font-size: 13px;
+    margin: 0 0 2px;
     line-height: 1.4;
   }
   .course p {
@@ -69,24 +70,24 @@
   }
   .dataset-stats {
     display: flex;
-    gap: 24px;
+    gap: 16px;
     margin: 0;
     flex: none;
   }
   .dataset-stats > div {
-    padding-left: 24px;
+    padding-left: 16px;
     border-left: 1px solid var(--border-subtle);
   }
   .dataset-stats dt {
-    font-size: 10px;
+    font-size: var(--font-xs);
     color: var(--text-secondary);
   }
   .dataset-stats dd {
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 650;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.03em;
-    margin: 4px 0 0;
+    margin: 2px 0 0;
   }
   @media (max-width: 1100px) {
     .dataset-stats {
@@ -96,15 +97,15 @@
       padding-left: 14px;
     }
     .dataset-stats dd {
-      font-size: 17px;
+      font-size: 16px;
     }
   }
   @media (max-width: 767px) {
     .dataset {
       align-items: start;
       flex-direction: column;
-      gap: 14px;
-      padding: 14px;
+      gap: 10px;
+      padding: 10px 12px;
     }
     .dataset-stats {
       width: 100%;
@@ -119,7 +120,7 @@
       padding: 0;
     }
     .dataset-stats dd {
-      font-size: 17px;
+      font-size: 16px;
     }
   }
 </style>

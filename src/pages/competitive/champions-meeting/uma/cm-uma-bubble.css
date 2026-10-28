@@ -166,15 +166,6 @@
 .inspection dl small {
   font-size: 9px;
 }
-.empty {
-  min-height: 300px;
-  display: grid;
-  place-content: center;
-  gap: 14px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
 .pan-hint {
   display: none;
 }

@@ -1,11 +1,13 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
   import type { Build, Performer, Summary } from '../../../hakuraku-types';
-  import { pct, number, buildRunner, styleNames } from '../../cm-data';
+  import { pct, number, buildRunner, styleNames, capturedSkillPoints } from '../../cm-data';
+  import type { SkillData } from '@/lib/game-data/skills/skills';
   import { SHORT_STYLE } from '../../../hakuraku-query';
   import Button from '@/components/controls/Button.svelte';
-  import Icon from '@/components/Icon.svelte';
   import RunnerLineupRow from '../../../runners/RunnerLineupRow.svelte';
+  import type { CmLobby } from '../lobby/cm-lobby.svelte';
+  import { runnerKey } from '../lobby/lobby-slots';
+  import LobbyToggle from './LobbyToggle.svelte';
 
   interface Props {
     team: Performer;
@@ -13,27 +15,15 @@
     data: Summary;
     colors: Record<number, string>;
     showStats: boolean;
-    inLobby: boolean;
-    pending: boolean;
-    lobbyFull: boolean;
-    runnerToggle: Snippet<[Performer, number]>;
+    skillCatalog?: Map<number, SkillData>;
+    lobby: CmLobby;
     onopen: () => void;
-    ontoggle: () => void;
   }
 
-  let {
-    team,
-    position,
-    data,
-    colors,
-    showStats,
-    inLobby,
-    pending,
-    lobbyFull,
-    runnerToggle,
-    onopen,
-    ontoggle
-  }: Props = $props();
+  let { team, position, data, colors, showStats, skillCatalog, lobby, onopen }: Props = $props();
+
+  const inLobby = $derived(lobby.hasTeam(team.id));
+  const loadingTeam = $derived(lobby.pending.includes(team.id));
 </script>
 
 <article
@@ -69,45 +59,35 @@
       <span>team wins</span>
     </div>
   </header>
-  <div class="member-heading">
-    <span>Team lineup</span>
-    {#if showStats}
-      <span>Build stats</span>
-    {/if}
-  </div>
   <div class="members">
     {#each team.members as member, i}
       {@const card = data.cards[member.card]}
       {@const share = team.wins ? team.memberWins[i]! / team.wins : 0}
-      <div class="member-choice">
-        <button
-          class="member"
-          aria-label={'Inspect ' + card?.name + ' team'}
-          onclick={onopen}
+      <div class="member">
+        <RunnerLineupRow
+          runner={buildRunner(member as Build, data, i)}
+          outfit={card?.outfit ?? 'Unknown outfit'}
+          style={styleNames[member.style]}
+          color={colors[member.style]}
+          {showStats}
+          sp={capturedSkillPoints(member, skillCatalog)}
         >
-          <RunnerLineupRow
-            runner={buildRunner(member as Build, data, i)}
-            outfit={card?.outfit ?? 'Unknown outfit'}
-            style={styleNames[member.style]}
-            color={colors[member.style]}
-            {showStats}
-          >
-            {#snippet metadata()}
-              <span
-                class="member-share"
-                title={number(team.memberWins[i] ?? 0) + ' of ' + number(team.wins) + ' team wins'}
-              >
-                <strong>{pct(share)}</strong>
-                <small>of wins</small>
-              </span>
-            {/snippet}
-          </RunnerLineupRow>
-          <Icon
-            name="chevron"
-            size={13}
-          />
-        </button>
-        {@render runnerToggle(team, i)}
+          {#snippet metadata()}
+            <span
+              class="member-share"
+              title={number(team.memberWins[i] ?? 0) + ' of ' + number(team.wins) + ' team wins'}
+            >
+              <strong>{pct(share)}</strong>
+              <small>of wins</small>
+            </span>
+          {/snippet}
+        </RunnerLineupRow>
+        <LobbyToggle
+          name={card?.name ?? 'this Uma'}
+          added={lobby.hasRunner(team.id, i)}
+          loading={lobby.pending.includes(runnerKey(team.id, i))}
+          ontoggle={() => lobby.toggleRunner(team.id, i)}
+        />
       </div>
     {/each}
   </div>
@@ -117,12 +97,12 @@
         <dt
           title="Uncertainty in the simulated win rate, calculated with a 95% confidence interval."
         >
-          Estimated win range
+          Win range
         </dt>
         <dd>{pct(team.ci[0])}–{pct(team.ci[1])}</dd>
       </div>
       <div>
-        <dt>Simulated races</dt>
+        <dt>Races</dt>
         <dd>{number(team.n)}</dd>
       </div>
     </dl>
@@ -130,19 +110,15 @@
       <Button
         size="sm"
         variant="secondary"
-        onclick={(event) => {
-          (event.currentTarget as HTMLButtonElement).focus({ preventScroll: true });
-          onopen();
-        }}
+        icon={inLobby ? 'check' : 'add'}
+        loading={loadingTeam}
+        ariaLabel={(inLobby ? 'Remove team ' : 'Add team ') +
+          (position + 1) +
+          (inLobby ? ' from the lobby' : ' to the lobby')}
+        ariaPressed={inLobby}
+        onclick={() => lobby.toggleTeam(team.id)}
       >
-        Details
-      </Button><Button
-        size="sm"
-        variant={inLobby ? 'secondary' : 'primary'}
-        disabled={pending || (!inLobby && lobbyFull)}
-        onclick={ontoggle}
-      >
-        {inLobby ? 'Remove' : pending ? 'Loading…' : lobbyFull ? 'Lobby full' : 'Add to lobby'}
+        {inLobby ? 'In lobby' : 'Add team'}
       </Button>
     </div>
   </footer>

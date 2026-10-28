@@ -23,32 +23,16 @@
   min-width: 0;
 }
 .display-settings {
-  position: relative;
+  --inspect-popover-width: 260px;
   flex: none;
-  font-size: 11px;
 }
-.display-settings summary {
+.display-trigger {
   display: flex;
   gap: 6px;
   align-items: center;
-  cursor: pointer;
-  list-style: none;
   padding: 10px;
   color: var(--text-secondary);
-}
-.display-settings summary::-webkit-details-marker {
-  display: none;
-}
-.display-settings > div {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  width: 240px;
-  padding: 16px;
-  background: var(--surface-2);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  z-index: 10;
+  font-size: 11px;
 }
 .display-settings p {
   font-size: 11px;
@@ -65,6 +49,12 @@
 }
 .stack :global(.surface h3) {
   font-size: 15px;
+}
+.stack :global(.surface .chart-heading) {
+  flex: 1 1 200px;
+}
+.stack :global(.surface .chart-tools) {
+  margin-left: auto;
 }
 .stack :global(.surface:not(.compact) figcaption) {
   padding-bottom: 10px;
@@ -104,9 +94,11 @@
   .navigation {
     gap: 4px;
   }
-  .display-settings summary {
-    font-size: 0;
+  .display-trigger {
     padding: 10px 6px;
+  }
+  .display-label {
+    display: none;
   }
   .dataset-picker {
     width: min(100%, 350px);

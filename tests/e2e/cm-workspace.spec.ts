@@ -58,7 +58,219 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('skill details expand in their virtual row and comparison stays independent', async ({
+test('captured teams keep SP and win share visible together, including zero and missing totals', async ({
+  page
+}) => {
+  const team: Performer = fixture.teams.teams[0];
+  const skillPoints = [0, 4430, undefined];
+  const members = team.members.map((member, index) => ({
+    ...member,
+    skills: undefined,
+    skillPoints: skillPoints[index]
+  }));
+
+  await page.route('**/snapshots/*/teams?*', (route) =>
+    route.fulfill({
+      json: {
+        snapshotId: fixture.summary.snapshotId,
+        teams: [{ ...team, members }],
+        totalTeams: 1,
+        totalOwners: 1
+      },
+      headers: { 'access-control-allow-origin': '*' }
+    })
+  );
+
+  await page.goto('/competitive/cm-data?tab=archetypes');
+  const card = page.locator('.team-row').first();
+  await expect(card.locator('.sp')).toHaveText(['0 SP', '4,430 SP', '— SP']);
+  await expect(card.locator('.member-share')).toHaveCount(3);
+  await page.getByRole('checkbox', { name: 'Build stats', exact: true }).uncheck();
+  await expect(card.locator('.sp')).toHaveText(['0 SP', '4,430 SP', '— SP']);
+});
+
+test('a full lobby stays compact and keeps all nine places available', async ({ page }, info) => {
+  await page.goto('/competitive/cm-data?tab=archetypes');
+  const cards = page.locator('.team-row');
+
+  for (let index = 0; index < 3; index++) {
+    await cards
+      .nth(index)
+      .getByRole('button', {
+        name: 'Add team ' + (index + 1) + ' to the lobby',
+        exact: true
+      })
+      .click();
+  }
+
+  const lobby = page.getByRole('complementary', { name: 'Lobby', exact: true });
+  await expect(lobby).toContainText('9/9 Uma');
+  await lobby.getByRole('button', { name: 'Review lobby', exact: true }).click();
+  await expect(lobby.locator('.place.filled')).toHaveCount(9);
+
+  const bounds = await lobby.boundingBox();
+  expect(bounds?.width).toBeLessThanOrEqual(380);
+  expect(bounds?.height).toBeLessThanOrEqual(380);
+  expect(await lobby.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await lobby.screenshot({ path: info.outputPath('cm-compact-full-lobby.png') });
+
+  await lobby.getByRole('button', { name: 'Remove lobby team 2', exact: true }).click();
+  await expect(lobby).toContainText('6/9 Uma');
+  await expect(lobby.locator('.place.filled')).toHaveCount(6);
+  await lobby.getByRole('button', { name: 'Clear lobby', exact: true }).click();
+  await expect(lobby).toHaveCount(0);
+});
+
+test('team details keep the summary compact and align support cards with long or missing metadata', async ({
+  page
+}, info) => {
+  const team: Performer = fixture.teams.teams[0];
+  const supportIds = new Set(
+    team.members.flatMap((member) => (member.deck ?? []).map((card) => card.id))
+  );
+  const longName = 'A support card with a much longer character name';
+  const supports = Array.from(supportIds, (id, index) => ({
+    id: String(id),
+    character_name: index % 2 === 0 ? longName : 'Mr. C.B.',
+    rarity: index % 4,
+    type: 'speed',
+    release_date: ''
+  }));
+
+  await page.route('**/resources/*/support-cards-db.json*', (route) =>
+    route.fulfill({ json: supports })
+  );
+  await page.goto('/competitive/cm-data?tab=archetypes', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'View team 1 details', exact: true }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Team details', exact: true });
+  const builds = dialog.locator('.builds article');
+  await expect(builds).toHaveCount(3);
+  const firstBuild = builds.first();
+  await expect(firstBuild.locator('.aptitude-cell')).toHaveCount(3);
+  await expect
+    .poll(() =>
+      firstBuild.locator('.aptitude').evaluateAll((grades) =>
+        grades.every((grade) => {
+          const image = grade.querySelector('img');
+          return (
+            grade.querySelector('b') !== null ||
+            (image?.complete === true && image.naturalWidth > 0)
+          );
+        })
+      )
+    )
+    .toBe(true);
+  const headerSpace = await dialog.evaluate((element) => {
+    const first = element.querySelector('.build-card');
+    return first
+      ? first.getBoundingClientRect().top - element.getBoundingClientRect().top
+      : Infinity;
+  });
+  expect(headerSpace).toBeLessThanOrEqual(info.project.name === 'chromium' ? 150 : 180);
+  await page.screenshot({ path: info.outputPath('cm-team-details-compact.png') });
+
+  if (info.project.name === 'mobile-chromium') {
+    await firstBuild.getByRole('button', { name: 'Training setup', exact: true }).click();
+  }
+
+  const deck = firstBuild.locator('.support-deck');
+  await expect(deck.locator('.support-name').first()).toHaveText(longName);
+  await deck.scrollIntoViewIfNeeded();
+  const geometry = await deck.locator('li').evaluateAll((tiles) =>
+    tiles.map((tile) => {
+      const bounds = tile.getBoundingClientRect();
+      const name = tile.querySelector('.support-name')?.getBoundingClientRect();
+      const metadata = tile.querySelector('.support-meta')?.getBoundingClientRect();
+
+      return {
+        height: bounds.height,
+        width: bounds.width,
+        nameTop: name ? name.top - bounds.top : NaN,
+        metadataTop: metadata ? metadata.top - bounds.top : NaN,
+        fits: tile.scrollWidth <= tile.clientWidth
+      };
+    })
+  );
+
+  expect(geometry).toHaveLength(6);
+  for (const key of ['height', 'width', 'nameTop', 'metadataTop'] as const) {
+    const values = geometry.map((tile) => tile[key]);
+    expect(Math.max(...values) - Math.min(...values), key + ' stays aligned').toBeLessThan(1);
+  }
+
+  expect(geometry.every((tile) => tile.fits)).toBe(true);
+  await deck.screenshot({ path: info.outputPath('cm-aligned-support-deck.png') });
+});
+
+test('team details retry a failed request without closing the dialog', async ({ page }) => {
+  let failDetail = true;
+
+  await page.route('**/snapshots/*/teams/*', async (route) => {
+    if (failDetail) {
+      await route.fulfill({
+        status: 503,
+        json: { error: 'Temporary failure' },
+        headers: { 'access-control-allow-origin': '*' }
+      });
+    } else {
+      await route.fallback();
+    }
+  });
+
+  await page.goto('/competitive/cm-data?tab=archetypes');
+  await page.getByRole('button', { name: 'View team 1 details', exact: true }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Team details', exact: true });
+  await expect(dialog.getByRole('alert')).toContainText('HTTP 503');
+  await expect(dialog.locator('.builds article')).toHaveCount(0);
+
+  failDetail = false;
+  await dialog.getByRole('button', { name: 'Retry loading team', exact: true }).click();
+
+  await expect(
+    dialog.getByRole('region', { name: 'Captured team overview', exact: true })
+  ).toBeVisible();
+  await expect(dialog.locator('.builds article')).toHaveCount(3);
+  await expect(dialog.getByRole('alert')).toHaveCount(0);
+  await expect(
+    dialog.getByRole('button', { name: 'Add team to lobby', exact: true })
+  ).toBeEnabled();
+});
+
+test('team details preserve loaded builds when copying the link is denied', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async () => {
+          throw new DOMException('Clipboard access denied', 'NotAllowedError');
+        }
+      }
+    });
+  });
+
+  await page.goto('/competitive/cm-data?tab=archetypes');
+  await page.getByRole('button', { name: 'View team 1 details', exact: true }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Team details', exact: true });
+  await expect(dialog.locator('.builds article')).toHaveCount(3);
+
+  await dialog.getByRole('button', { name: 'Copy link', exact: true }).click();
+
+  await expect(dialog.getByRole('alert')).toContainText(
+    'Check clipboard permissions and try again.'
+  );
+  await expect(dialog.locator('.builds article')).toHaveCount(3);
+  await expect(dialog.getByRole('button', { name: 'Retry loading team', exact: true })).toHaveCount(
+    0
+  );
+  await expect(
+    dialog.getByRole('button', { name: 'Add team to lobby', exact: true })
+  ).toBeEnabled();
+});
+
+test('skill details expand within the selected row and comparison stays independent', async ({
   page
 }, info) => {
   let fail = true;
@@ -69,19 +281,33 @@ test('skill details expand in their virtual row and comparison stays independent
         json: { error: 'Temporary failure' },
         headers: { 'access-control-allow-origin': '*' }
       });
-    else await route.fallback();
+    else {
+      const id = Number(new URL(route.request().url()).pathname.split('/').at(-1));
+      const shift = id === 10071 ? 0 : ((id % 3) + 1) * 8;
+      const styles = Object.fromEntries(
+        Object.entries(fixture.skillDetail.styles as Record<string, number[][]>).map(
+          ([style, buckets]) => [
+            style,
+            buckets.map(([bucket, ...counts]) => [Math.min(99, (bucket ?? 0) + shift), ...counts])
+          ]
+        )
+      );
+      await route.fulfill({
+        json: { ...fixture.skillDetail, skillId: id, styles },
+        headers: { 'access-control-allow-origin': '*' }
+      });
+    }
   });
 
   await page.goto('/competitive/cm-data?tab=skills');
   const navigation = page.getByRole('tablist', { name: 'Champions Meeting views', exact: true });
-  await expect(navigation.getByRole('tab')).toHaveCount(6);
+  await expect(navigation.getByRole('tab')).toHaveCount(5);
   for (const name of [
     'Introduction',
     'Strategy Analysis',
     'Uma Analysis',
     'Skill Analysis',
-    'Archetype Analysis',
-    'Lobby Builder'
+    'Archetype Analysis'
   ])
     await expect(navigation.getByRole('tab', { name, exact: true })).toHaveCount(1);
   const selectedBounds = await navigation
@@ -93,10 +319,18 @@ test('skill details expand in their virtual row and comparison stays independent
   await expect(page.getByRole('tab', { name: 'Proc distributions', exact: true })).toHaveCount(0);
   await expect(page.locator('.lane')).toHaveCount(0);
   const table = page.getByRole('table', { name: 'CM Skill Analysis', exact: true });
+  const inspector = page.locator('#cm-skill-detail');
   await expect(table.locator('thead th').last()).toHaveText('Compare');
   const count = new Set(fixture.skills.rows.map((r: number[]) => r[0])).size;
   await expect(table).toHaveAttribute('aria-rowcount', String(count + 1));
   expect(await table.locator('tbody tr[data-virtual-index]').count()).toBeLessThan(count);
+  const rowHeights = await table
+    .locator('tbody tr[data-virtual-index]')
+    .evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect().height));
+  expect(Math.max(...rowHeights)).toBeLessThanOrEqual(34);
+  await page
+    .locator('.skill-list')
+    .screenshot({ path: info.outputPath('cm-skill-list-compact.png') });
   await table.getByRole('button', { name: 'Players', exact: true }).click();
   await expect(table.getByRole('columnheader', { name: 'Players', exact: true })).toHaveAttribute(
     'aria-sort',
@@ -155,7 +389,7 @@ test('skill details expand in their virtual row and comparison stays independent
   const search = page.getByRole('searchbox', { name: 'Search skills', exact: true });
   await search.fill('10071');
   const inspect = table.getByRole('button', { name: 'Inspect Skill 10071', exact: true });
-  await expect(inspect).toContainText('[Id 10071]');
+  await expect(inspect).toHaveAttribute('title', /ID 10071/);
   await table
     .locator('tbody tr')
     .filter({ has: page.getByRole('button', { name: 'Inspect Skill 10071', exact: true }) })
@@ -168,7 +402,7 @@ test('skill details expand in their virtual row and comparison stays independent
   await expect(inspect).toHaveAttribute('aria-expanded', 'false');
   await page.keyboard.press('Space');
   await expect(inspect).toHaveAttribute('aria-expanded', 'true');
-  await expect(table.locator('.detail-row')).toHaveCount(1);
+  await expect(inspector).toBeVisible();
   await expect(table).toHaveAttribute(
     'aria-rowcount',
     String(
@@ -180,13 +414,7 @@ test('skill details expand in their virtual row and comparison stays independent
     )
   );
   expect(
-    await table
-      .locator('.detail-row')
-      .evaluate(
-        (el) =>
-          el.previousElementSibling?.getAttribute('data-virtual-index') ===
-          el.getAttribute('data-virtual-index')
-      )
+    await inspector.evaluate((element) => element.closest('tr')?.classList.contains('detail-row'))
   ).toBe(true);
   await expect(
     page.getByRole('button', { name: 'Retry activation data', exact: true })
@@ -194,31 +422,43 @@ test('skill details expand in their virtual row and comparison stays independent
 
   fail = false;
   await page.getByRole('button', { name: 'Retry activation data', exact: true }).click();
-  await expect(table.locator('.lane svg[role="slider"]')).toHaveCount(1);
+  await expect(inspector.locator('.lane svg[role="slider"]')).toHaveCount(1);
   const total = Object.values(fixture.skillDetail.styles as Record<string, number[][]>)
     .flat()
     .reduce((sum, row) => sum + row[1]!, 0);
 
-  await expect(table.locator('.event-count')).toContainText(
+  await expect(inspector.locator('.event-count')).toContainText(
     total.toLocaleString('en-US') + ' activation events'
   );
-  await expect(table.locator('.lane-reading')).toContainText('Central 80% of events 1250–1275 m');
+  await inspector
+    .getByRole('button', { name: 'How to read activation distances', exact: true })
+    .click();
+  await expect(inspector.locator('.lane-reading')).toContainText(
+    'Central 80% of events 1250–1275 m'
+  );
+  await inspector
+    .getByRole('button', { name: 'How to read activation distances', exact: true })
+    .click();
   await table.getByRole('button', { name: 'Players', exact: true }).click();
-  await expect(table.locator('.detail-row').getByRole('slider')).toHaveAttribute(
+  await expect(inspector.getByRole('slider')).toHaveAttribute(
     'aria-label',
     'Skill 10071 activation distribution'
   );
   await expect(inspect).toHaveAttribute('aria-expanded', 'true');
   await expect(
     table.getByRole('button', { name: 'Add Skill 10071 to comparison', exact: true })
-  ).toHaveText('Compare');
+  ).toHaveAttribute('aria-pressed', 'false');
 
   await table.getByRole('button', { name: 'Add Skill 10071 to comparison', exact: true }).click();
   await expect(inspect).toHaveAttribute('aria-expanded', 'true');
   const comparison = page.getByRole('region', { name: 'Skill comparison', exact: true });
+  await expect(comparison.locator('.event-count')).toHaveText(
+    'Normalized activations · each skill’s peak = 100%'
+  );
+  await expect(comparison.locator('.line-scale')).toContainText('100%');
   await expect(comparison.locator('.lane svg[role="slider"]')).toHaveCount(1);
   await inspect.click();
-  await expect(table.locator('.detail-row')).toHaveCount(0);
+  await expect(inspector).toHaveCount(0);
   await expect(comparison.locator('.lane')).toHaveCount(1);
   const ids = [...new Set<number>(fixture.skills.rows.map((r: number[]) => r[0]))]
     .filter((id) => id !== 10071)
@@ -231,15 +471,22 @@ test('skill details expand in their virtual row and comparison stays independent
       .click();
   }
 
-  await expect(comparison.locator('.lane svg[role="slider"]')).toHaveCount(4);
+  await expect(comparison.locator('.lane svg[role="slider"]')).toHaveCount(1);
+  await expect(comparison.locator('.comparison-line')).toHaveCount(4);
   const add = comparison.getByRole('combobox', { name: 'Add a skill to comparison', exact: true });
   await add.fill(String(ids[3]));
   await page
-    .getByRole('option', { name: 'Skill ' + ids[3] + ' [Id ' + ids[3] + ']', exact: true })
+    .getByRole('option', { name: 'Skill ' + ids[3] + ' · ID ' + ids[3], exact: true })
     .click();
 
   await expect(add).toHaveValue('');
-  await expect(comparison.locator('.lane svg[role="slider"]')).toHaveCount(5);
+  await expect(comparison.locator('.lane svg[role="slider"]')).toHaveCount(1);
+  await expect(comparison.locator('.comparison-line')).toHaveCount(5);
+  await expect(comparison.locator('.comparison-table tbody tr')).toHaveCount(5);
+  const comparedChipWidths = await comparison
+    .locator('.legend-skill .skill-chip')
+    .evaluateAll((chips) => chips.map((chip) => chip.getBoundingClientRect().width));
+  expect(Math.max(...comparedChipWidths) - Math.min(...comparedChipWidths)).toBeLessThan(1);
   const charts = comparison.locator('.lane svg[role="slider"]');
   // A burst of pointer events uses the latest position, with one layout read per frame.
   expect(
@@ -268,19 +515,14 @@ test('skill details expand in their virtual row and comparison stays independent
 
   for (const chart of await charts.all())
     await expect(chart).toHaveAttribute('aria-valuenow', '98');
-  await expect(comparison.locator('.course-cursor')).toHaveCount(5);
+  await expect(comparison.locator('.course-cursor')).toHaveCount(1);
   for (const cursor of await comparison.locator('.course-cursor').all())
     await expect(cursor).toHaveAttribute('style', /left:\s*98\.5%/);
   await expect(comparison.locator('input[type="range"]')).toHaveCount(0);
-  expect(
-    await comparison
-      .locator('.lane')
-      .nth(4)
-      .evaluate((el) => getComputedStyle(el).getPropertyValue('--lane-color').trim())
-  ).not.toBe('');
+  expect(await comparison.locator('.comparison-line').nth(4).getAttribute('stroke')).not.toBe('');
   await add.fill('10071');
   await expect(
-    page.getByRole('option', { name: 'Skill 10071 [Id 10071]', exact: true })
+    page.getByRole('option', { name: 'Skill 10071 · ID 10071', exact: true })
   ).toHaveCount(0);
 
   await page.keyboard.press('Escape');
@@ -294,18 +536,26 @@ test('skill details expand in their virtual row and comparison stays independent
     0
   );
 
-  await expect(table.locator('.event-count')).toContainText(
+  await expect(inspector.locator('.event-count')).toContainText(
     pace.toLocaleString('en-US') + ' activation events'
   );
-  await expect(table.locator('.lane-reading')).toContainText('Central 80% of events 1250–1425 m');
-  const inlineChart = table.getByRole('slider', {
+  await inspector
+    .getByRole('button', { name: 'How to read activation distances', exact: true })
+    .click();
+  await expect(inspector.locator('.lane-reading')).toContainText(
+    'Central 80% of events 1250–1425 m'
+  );
+  await inspector
+    .getByRole('button', { name: 'How to read activation distances', exact: true })
+    .click();
+  const inlineChart = inspector.getByRole('slider', {
     name: 'Skill 10071 activation distribution',
     exact: true
   });
 
-  await expect(table.locator('input[type="range"]')).toHaveCount(0);
+  await expect(inspector.locator('input[type="range"]')).toHaveCount(0);
   await expect(inlineChart).toHaveAttribute('aria-valuenow', '50');
-  await expect(table.locator('.lane')).toContainText('10,989 events');
+  await expect(inspector.getByLabel('Outcomes at inspected distance')).toContainText('10,989');
   await inlineChart.press('ArrowRight');
   await expect(inlineChart).toHaveAttribute('aria-valuenow', '51');
   await inlineChart.press('ArrowLeft');
@@ -329,26 +579,243 @@ test('skill details expand in their virtual row and comparison stays independent
   });
 
   await expect(inlineChart).toHaveAttribute('aria-valuenow', '50');
-  await expect(table.locator('.lane')).toContainText('10,989 events');
-  const width = await table
-    .locator('.row-detail')
-    .evaluate((el) => el.getBoundingClientRect().width);
-
-  expect(width).toBeLessThanOrEqual((await scroll.evaluate((el) => el.clientWidth)) + 1);
+  await expect(inspector.getByLabel('Outcomes at inspected distance')).toContainText('10,989');
+  expect(
+    await inspector.evaluate((element) => element.getBoundingClientRect().width)
+  ).toBeLessThanOrEqual(page.viewportSize()!.width);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    page.viewportSize()!.width
+  );
   await comparison
-    .locator('.lane')
-    .first()
-    .getByRole('button', { name: /Remove/ })
+    .getByRole('button', { name: 'Remove Skill 10071 from comparison', exact: true })
     .click();
 
-  await expect(comparison.locator('.lane')).toHaveCount(4);
-  await expect(table.locator('.lane')).toHaveCount(1);
+  await expect(comparison.locator('.comparison-table tbody tr')).toHaveCount(4);
+  await expect(comparison.locator('.comparison-line')).toHaveCount(4);
+  await expect(inspector.locator('.lane')).toHaveCount(1);
   await navigation.getByRole('tab', { name: 'Uma Analysis', exact: true }).click();
   await navigation.getByRole('tab', { name: 'Skill Analysis', exact: true }).click();
   await expect(search).toHaveValue('10071');
   await expect(inspect).toHaveAttribute('aria-expanded', 'true');
-  await expect(comparison.locator('.lane')).toHaveCount(4);
+  await expect(comparison.locator('.comparison-table tbody tr')).toHaveCount(4);
+  await comparison.screenshot({ path: info.outputPath('cm-skill-line-comparison.png') });
   await page.screenshot({ path: info.outputPath('cm-inline-skills.png'), fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    page.viewportSize()!.width
+  );
+});
+
+test('skill rows load timing automatically and share it with inline details and comparison', async ({
+  page
+}) => {
+  const snapshotId = fixture.summary.snapshotId;
+  let detailRequests = 0;
+
+  await page.route('**/api/simdata/manifest', (route) =>
+    route.fulfill({
+      json: {
+        snapshots: fixture.manifest.snapshots.map((snapshot: { snapshotId: string }) => ({
+          ...snapshot,
+          playerUsage: { schemaVersion: 1 }
+        }))
+      },
+      headers: { 'access-control-allow-origin': '*' }
+    })
+  );
+  await page.route('**/snapshots/*/uma-usage', (route) =>
+    route.fulfill({
+      json: {
+        snapshotId,
+        totalPlayers: 20,
+        skills: [
+          { id: 10071, style: 0, players: 11 },
+          { id: 10071, style: 2, players: 0 }
+        ]
+      },
+      headers: { 'access-control-allow-origin': '*' }
+    })
+  );
+  await page.route('**/skills/details/*', (route) => {
+    const id = Number(new URL(route.request().url()).pathname.split('/').at(-1));
+    if (id === 10071) detailRequests++;
+    return route.fulfill({
+      json: { ...fixture.skillDetail, skillId: id },
+      headers: { 'access-control-allow-origin': '*' }
+    });
+  });
+
+  await page.goto('/competitive/cm-data?tab=skills');
+  await page.getByRole('searchbox', { name: 'Search skills', exact: true }).fill('10071');
+  const table = page.getByRole('table', { name: 'CM Skill Analysis', exact: true });
+  const row = table.locator('tbody tr[data-virtual-index]').filter({
+    has: page.getByRole('button', { name: 'Inspect Skill 10071', exact: true })
+  });
+  await expect(row.locator('td[data-label="Players"]')).toHaveText('11');
+  await expect(row.locator('td[data-label="Mean distance"]')).toHaveText(/^~[\d,]+ m$/);
+  await expect(row.locator('td[data-label="Median distance"]')).toHaveText(/^~[\d,]+ m$/);
+  await row.getByRole('button', { name: 'Inspect Skill 10071', exact: true }).click();
+  const inspector = page.locator('#cm-skill-detail');
+  await expect(inspector.getByRole('slider')).toBeVisible();
+  const mean = await row.locator('td[data-label="Mean distance"]').innerText();
+  expect(mean).toMatch(/^~[\d,]+ m$/);
+
+  await inspector.getByRole('button', { name: 'Close skill details', exact: true }).click();
+  await expect(row.locator('td[data-label="Mean distance"]')).toHaveText(mean);
+  await table.getByRole('button', { name: 'Mean distance', exact: true }).click();
+  await expect(
+    table.getByRole('columnheader', { name: 'Mean distance', exact: true })
+  ).toHaveAttribute('aria-sort', 'descending');
+  await expect(table.locator('tbody tr[data-virtual-index]').first()).toContainText(mean);
+  await table.getByRole('button', { name: 'Mean distance', exact: true }).click();
+  await expect(table.locator('tbody tr[data-virtual-index]').first()).toContainText(mean);
+  await row.getByRole('button', { name: 'Add Skill 10071 to comparison', exact: true }).click();
+  await row.getByRole('button', { name: 'Inspect Skill 10071', exact: true }).click();
+  await expect(page.locator('.lane svg[role="slider"]')).toHaveCount(2);
+  expect(detailRequests).toBe(1);
+
+  await page.getByRole('combobox', { name: 'Running style', exact: true }).click();
+  await page.getByRole('option', { name: 'Pace Chaser', exact: true }).click();
+  await expect(row.locator('td[data-label="Players"]')).toHaveText('0');
+  await expect(row.locator('td[data-label="Mean distance"]')).not.toHaveText('—');
+
+  await page.getByRole('searchbox', { name: 'Search skills', exact: true }).fill('');
+  const scrollArea = page.getByRole('region', { name: 'CM Skill Analysis scroll area' });
+  expect((await scrollArea.boundingBox())!.height).toBeLessThanOrEqual(960);
+});
+
+test('skill outcomes distinguish repeated procs, variants and selected first-activation ranges', async ({
+  page
+}, info) => {
+  const snapshotId = fixture.summary.snapshotId;
+  const overview = {
+    ...fixture.skills,
+    rows: [
+      [10071, 'Nige', 2, 20, 12, 17, 5, 4, 1, 7, 2],
+      [10071, 'Senko', 2, 10, 8, 8, 0, 2, 1, 4, 1]
+    ],
+    allPlayerCounts: { 10071: 3 },
+    variants: { 10071: [10071, 10081] },
+    populationByStyle: { Nige: [100, 20], Senko: [80, 12] }
+  };
+  const detail = {
+    snapshotId,
+    skillId: 10071,
+    bucketCount: 100,
+    courseDistance: overview.courseDistance,
+    styles: {
+      Nige: [
+        [0, 2, 2, 1, 1],
+        [70, 15, 10, 3, 6]
+      ],
+      Senko: [[70, 8, 8, 2, 4]]
+    },
+    variants: {
+      10071: {
+        rows: [overview.rows[0]],
+        styles: {
+          Nige: [
+            [0, 2, 2, 1, 1],
+            [70, 15, 10, 3, 6]
+          ]
+        }
+      },
+      10081: { rows: [overview.rows[1]], styles: { Senko: [[70, 8, 8, 2, 4]] } }
+    }
+  };
+  await page.route('**/skills/overview', (route) =>
+    route.fulfill({ json: overview, headers: { 'access-control-allow-origin': '*' } })
+  );
+  await page.route('**/skills/details/*', (route) =>
+    route.fulfill({ json: detail, headers: { 'access-control-allow-origin': '*' } })
+  );
+  await page.goto('/competitive/cm-data?tab=skills');
+  await page.getByRole('button', { name: 'Inspect Skill 10071', exact: true }).waitFor();
+  const mainRow = page.locator('.skill-list tr[data-virtual-index]').first();
+  await expect(mainRow.locator('.variant-alias')).toHaveText('Skill 10081');
+  await expect(mainRow.locator('.skill-label .skill-chip')).toHaveCount(2);
+  await expect(mainRow.getByTitle('Skill upgrade', { exact: true })).toHaveCount(1);
+  await expect(mainRow.locator('.style-procs')).toContainText(/Front\s+60\.0%/);
+  await expect(mainRow.locator('.style-procs')).toContainText(/Pace\s+80\.0%/);
+  await page.getByRole('button', { name: 'Inspect Skill 10071', exact: true }).click();
+  const expanded = page.locator('#cm-skill-detail');
+  const breakdown = expanded.getByRole('region', { name: 'Skill outcome breakdown', exact: true });
+  await expect(breakdown.locator('.outcome-rows tr')).toHaveCount(5);
+  const variantChipWidths = await breakdown
+    .locator('.outcome-skill .skill-chip')
+    .evaluateAll((chips) => chips.map((chip) => chip.getBoundingClientRect().width));
+  expect(Math.max(...variantChipWidths) - Math.min(...variantChipWidths)).toBeLessThan(1);
+  await breakdown
+    .getByRole('button', { name: 'How skill percentages are calculated', exact: true })
+    .click();
+  await expect(breakdown.locator('.rates-help')).toContainText('12 of those 60 entries won');
+  await breakdown
+    .getByRole('button', { name: 'How skill percentages are calculated', exact: true })
+    .click();
+  await expect(breakdown.locator('.outcome-rows tr').first()).toContainText('30.0%');
+  if (page.viewportSize()!.width > 1000) {
+    expect((await expanded.boundingBox())!.height).toBeLessThanOrEqual(560);
+  }
+
+  const listRow = page.locator('.skill-list tr[data-virtual-index]:not(.detail-row)').first();
+  expect((await listRow.boundingBox())!.height).toBeLessThanOrEqual(34);
+  const activationRates = expanded.getByRole('rowgroup', {
+    name: 'Activation and double-proc rates'
+  });
+  await expect(activationRates.getByRole('row', { name: /Repeat activation rate/ })).toContainText(
+    '16.7%'
+  );
+  await expect(activationRates.getByRole('row', { name: /Repeat activation rate/ })).toContainText(
+    '25.0%'
+  );
+  await expect(breakdown.getByRole('row', { name: /No variant learned/ })).toBeVisible();
+  await expect(expanded.locator('.spurt-band')).toContainText('Final spurt from 1,667 m');
+  await expanded
+    .getByRole('button', { name: 'How to read activation distances', exact: true })
+    .click();
+  await expect(expanded.locator('.lane-reading')).toContainText('Mean / median');
+  await expanded
+    .getByRole('button', { name: 'How to read activation distances', exact: true })
+    .click();
+  await page.getByRole('button', { name: 'Display options', exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Colorblind palette', exact: true }).check();
+  await expect(mainRow.locator('.style-procs span[title^="Pace Chaser"] i')).toHaveCSS(
+    'background-color',
+    'rgb(220, 38, 127)'
+  );
+  await expect(expanded.locator('.style-heading i').nth(2)).toHaveCSS(
+    'background-color',
+    'rgb(220, 38, 127)'
+  );
+  await page.getByRole('checkbox', { name: 'Colorblind palette', exact: true }).uncheck();
+  await page.getByRole('button', { name: 'Display options', exact: true }).click();
+  await page.locator('.skill-list').screenshot({ path: info.outputPath('cm-skill-colors.png') });
+  const chart = expanded.getByRole('slider');
+  await chart.press('Home');
+  await expect(expanded.getByLabel('Outcomes at inspected distance')).toContainText(
+    'First activations 2'
+  );
+  await expanded.getByRole('combobox', { name: 'Outcome measure', exact: true }).click();
+  await page.getByRole('option', { name: 'Runner entries', exact: true }).click();
+  await chart.press('Shift+ArrowRight');
+  await expect(breakdown.locator('.outcome-rows tr')).toHaveCount(3);
+  await expect(breakdown.locator('.outcome-rows tr').first().locator('td').last()).toHaveText('2');
+  await expect(expanded.locator('.range-toolbar')).toContainText('Selected 0–50 m');
+  await chart.press('Escape');
+  await expect(breakdown.locator('.outcome-rows tr')).toHaveCount(5);
+  await chart.scrollIntoViewIfNeeded();
+  const box = await chart.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width * 0.705, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width * 0.005, box!.y + box!.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await expect(expanded.locator('.range-toolbar')).toContainText('Selected 0–1775 m');
+  await expect(breakdown.locator('.outcome-rows tr').first().locator('td').last()).toHaveText('20');
+  await expanded.getByRole('button', { name: 'Clear distance range', exact: true }).click();
+  await expect(breakdown.locator('.outcome-rows tr')).toHaveCount(5);
+  await expanded.getByRole('combobox', { name: 'Outcome measure', exact: true }).click();
+  await page.getByRole('option', { name: 'Individual win rate', exact: true }).click();
+  await page.screenshot({ path: info.outputPath('cm-skill-outcomes.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     page.viewportSize()!.width
   );
@@ -388,18 +855,25 @@ test('Uma running-style table replaces the separate explorer and keeps captured 
   );
 
   await expect(page.locator('.team-row')).not.toHaveCount(0);
-  await page.locator('.team-row .member').first().click();
-  await expect(page.getByRole('dialog', { name: 'Team details', exact: true })).toBeVisible();
-  await expect(page.getByRole('dialog').locator('.builds article')).toHaveCount(3);
-  await page.getByRole('dialog').getByRole('button', { name: 'Add to lobby', exact: true }).click();
+  await page.getByRole('button', { name: 'View team 1 details', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Team details', exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('.builds article')).toHaveCount(3);
+
+  // A single runner joins the lobby tray without leaving CM Data.
+  await dialog
+    .getByRole('button', { name: /^Add .+ to the lobby$/ })
+    .first()
+    .click();
+  await expect(dialog.getByRole('button', { name: /^Remove .+ from the lobby$/ })).toHaveCount(1);
+  await page.screenshot({ path: info.outputPath('cm-team-details.png') });
   await page.keyboard.press('Escape');
-  await page.getByRole('tab', { name: 'Lobby Builder 1/3', exact: true }).click();
-  const openSimulator = page.getByRole('button', { name: 'Open in simulator', exact: true });
-  await expect(openSimulator).toBeEnabled();
-  await expect(page.locator('.run')).toContainText('3 Uma selected');
-  await page.getByRole('button', { name: 'Clear', exact: true }).click();
-  await expect(openSimulator).toBeDisabled();
-  await expect(page.locator('.run')).toContainText('Choose teams to simulate');
+  const lobby = page.getByRole('complementary', { name: 'Lobby', exact: true });
+  await expect(lobby).toContainText('1/9 Uma');
+  await expect(lobby.getByRole('button', { name: 'Open in simulator', exact: true })).toBeEnabled();
+  await lobby.getByRole('button', { name: 'Review lobby', exact: true }).click();
+  await lobby.getByRole('button', { name: 'Clear lobby', exact: true }).click();
+  await expect(lobby).toHaveCount(0);
   await page.getByRole('tab', { name: 'Uma Analysis', exact: true }).click();
   await page.getByRole('tab', { name: 'Performance ranges', exact: true }).click();
   await expect(page.locator('.ranking')).not.toHaveCount(0);
@@ -469,14 +943,43 @@ test('strategy keeps the familiar chart layout with sortable room data', async (
     ((insight.winShare - insight.pop) * 100).toFixed(1) + ' percentage points'
   );
   await page
-    .getByRole('group', { name: 'Inspect room count', exact: true })
-    .getByRole('button', { name: '2 in room', exact: true })
+    .getByRole('radiogroup', { name: 'Inspect room count', exact: true })
+    .getByRole('radio', { name: '2 in room', exact: true })
     .click();
 
   const frontBucket = fixture.summary.saturation[1].find((bucket: { x: number }) => bucket.x === 2);
   await expect(
     page.locator('.readout-values>div').filter({ hasText: 'Front Runner' })
   ).toContainText((frontBucket.rate * 100).toFixed(1) + '%');
+
+  const roomCounts = page.getByRole('radiogroup', { name: 'Inspect room count', exact: true });
+  await expect(roomCounts.getByRole('radio', { name: '2 in room', exact: true })).toHaveAttribute(
+    'aria-checked',
+    'true'
+  );
+  await page.keyboard.press('ArrowLeft');
+  await expect(roomCounts.getByRole('radio', { name: '1 in room', exact: true })).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await expect(roomCounts.getByRole('radio', { name: '2 in room', exact: true })).toBeFocused();
+
+  const inspectValues = page
+    .locator('.saturation')
+    .getByRole('button', { name: 'Inspect values', exact: true });
+  await inspectValues.click();
+  await expect(inspectValues).toHaveAttribute('aria-expanded', 'true');
+  await expect(
+    page.getByRole('table', {
+      name: 'Per-Uma win rate versus number of the same style values',
+      exact: true
+    })
+  ).toBeVisible();
+  await inspectValues.click();
+  await expect(inspectValues).toHaveAttribute('aria-expanded', 'false');
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.screenshot({ path: info.outputPath('cm-compact-header-controls.png') });
+  await page
+    .locator('.representatives')
+    .screenshot({ path: info.outputPath('cm-representative-controls.png') });
 
   const rooms = page.getByRole('table', { name: 'Room compositions', exact: true });
   await rooms.getByRole('button', { name: 'Frequency', exact: true }).click();

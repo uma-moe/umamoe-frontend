@@ -62,14 +62,14 @@
   font-weight: 500;
 }
 .ranking-help {
-  font-size: 10px;
-  margin: 8px 0 12px;
+  font-size: 11px;
+  margin: 8px 0 10px;
   line-height: 1.5;
 }
 .team-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr));
-  gap: 12px;
+  gap: 10px;
   align-items: stretch;
 }
 .teams-loading {
@@ -78,27 +78,8 @@
   place-items: center;
 }
 .loaded-count {
-  font-size: 10px;
+  font-size: 11px;
   margin: 12px 0 0;
-}
-.empty {
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  padding: 50px 16px;
-  background: var(--surface-1);
-  border-radius: var(--radius-lg);
-}
-.empty > :global(svg) {
-  color: var(--text-secondary);
-}
-.empty h3,
-.empty p {
-  margin: 0;
-  text-align: center;
-}
-.empty h3 {
-  font-size: 15px;
 }
 .browser-controls {
   display: flex;
@@ -116,9 +97,9 @@
   padding: 0;
   flex: none;
 }
-.browser-controls .browser-toolbar > :global(button) {
+.browser-controls .browser-toolbar > :global(.ui-button) {
   min-height: 32px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .team-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));

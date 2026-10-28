@@ -23,15 +23,15 @@
   }
   @media (min-width: 1001px) {
     .builds:not(.single) {
-      grid-template-rows: repeat(9, auto);
+      grid-template-rows: repeat(7, auto);
     }
     .builds:not(.single) :global(.build-card) {
       display: grid;
-      grid-row: 1 / span 9;
+      grid-row: 1 / span 7;
       grid-template-rows: subgrid;
     }
     .builds:not(.single) :global(.build.compact) {
-      grid-row: span 9;
+      grid-row: span 7;
       grid-template-rows: subgrid;
       gap: 8px;
       container-type: normal;
@@ -49,12 +49,8 @@
     .builds:not(.single) :global(.aptitude-overview) {
       grid-row: 3;
     }
-    .builds:not(.single) :global(.build-metrics) {
-      grid-row: 4;
-      margin-inline: 10px;
-    }
     .builds:not(.single) :global(.skills-section) {
-      grid-row: 5;
+      grid-row: 4;
     }
     .builds:not(.single) :global(.stat-overview),
     .builds:not(.single) :global(.aptitude-overview),
@@ -63,23 +59,21 @@
       align-content: start;
     }
     .builds:not(.single) :global(.training) {
-      grid-row: 6 / span 4;
+      grid-row: 5 / span 3;
       grid-template-rows: subgrid;
       gap: 8px;
       margin-inline: 10px;
-      padding-bottom: 10px;
-    }
-    .builds:not(.single) :global(.training-title) {
-      grid-row: 1;
+      padding: 10px 0;
+      border-top: 1px solid var(--border-subtle);
     }
     .builds:not(.single) :global(.support-section) {
-      grid-row: 2;
+      grid-row: 1;
     }
     .builds:not(.single) :global(.inheritance-section) {
-      grid-row: 3;
+      grid-row: 2;
     }
     .builds:not(.single) :global(.parent-factors) {
-      grid-row: 4;
+      grid-row: 3;
     }
   }
   .single :global(.build-identity) {

@@ -28,6 +28,22 @@
   const summary = $derived(identity(runner));
 </script>
 
+{#snippet results()}
+  {#if sp !== undefined || metadata}
+    <div class="member-results">
+      {#if sp !== undefined}
+        <span
+          class="sp"
+          title="Base cost of learned skills including prerequisites, before hint discounts"
+        >
+          {sp?.toLocaleString() ?? '—'} SP
+        </span>
+      {/if}
+      {@render metadata?.()}
+    </div>
+  {/if}
+{/snippet}
+
 <div
   class="lineup-row"
   class:compact={!showStats}
@@ -43,16 +59,7 @@
       <div class="member-heading"><h3 title={runner.name}>{runner.name}</h3></div>
       <div class="member-meta">
         <small style:color>{style ?? summary.detail}</small>
-        {#if metadata}
-          {@render metadata()}
-        {:else if sp !== undefined}
-          <span
-            class="sp"
-            title="Base cost of learned skills including prerequisites, before hint discounts"
-          >
-            {sp?.toLocaleString() ?? '—'} SP
-          </span>
-        {/if}
+        {@render results()}
       </div>
     {:else}
       <div class="member-line">
@@ -75,16 +82,7 @@
           {/if}
           <span style:color>{style ?? summary.detail}</span>
         </small>
-        {#if metadata}
-          {@render metadata()}
-        {:else if sp !== undefined}
-          <span
-            class="sp"
-            title="Base cost of learned skills including prerequisites, before hint discounts"
-          >
-            {sp?.toLocaleString() ?? '—'} SP
-          </span>
-        {/if}
+        {@render results()}
       </div>
     {/if}
   </div>
@@ -153,12 +151,24 @@
     grid-template-columns: repeat(var(--stat-count), auto);
     justify-content: space-between;
   }
+  /* A four-digit box per value keeps each stat in the same column on every row, whatever its digits. */
+  .member-stats :global(.values.compact dd) {
+    min-width: 4ch;
+  }
   .member-meta {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 3px 8px;
     min-width: 0;
+  }
+  .member-results {
+    display: flex;
+    flex: none;
+    align-items: baseline;
+    gap: 8px;
+    margin-left: auto;
   }
   .member-meta > small {
     display: flex;
