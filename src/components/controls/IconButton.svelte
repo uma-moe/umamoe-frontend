@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Spinner from '../feedback/Spinner.svelte';
   import Icon from '../Icon.svelte';
   import type { IconName } from '../icon-types';
 
@@ -9,6 +10,7 @@
     ariaExpanded?: boolean;
     selected?: boolean;
     disabled?: boolean;
+    loading?: boolean;
     size?: 'sm' | 'md';
     onclick?: (event: MouseEvent) => void;
   }
@@ -20,9 +22,12 @@
     ariaExpanded,
     selected = false,
     disabled = false,
+    loading = false,
     size = 'md',
     onclick
   }: Props = $props();
+
+  const iconSize = $derived(size === 'sm' ? 17 : 20);
 </script>
 
 <button
@@ -32,14 +37,24 @@
   aria-label={label}
   aria-pressed={ariaExpanded === undefined ? selected : undefined}
   aria-expanded={ariaExpanded}
+  aria-busy={loading}
   {title}
-  {disabled}
+  disabled={disabled || loading}
   {onclick}
 >
-  <Icon
-    name={icon}
-    size={size === 'sm' ? 17 : 20}
-  />
+  {#if loading}
+    <span
+      class="button-spinner"
+      aria-hidden="true"
+    >
+      <Spinner size={iconSize} />
+    </span>
+  {:else}
+    <Icon
+      name={icon}
+      size={iconSize}
+    />
+  {/if}
 </button>
 
 <style>
@@ -75,6 +90,13 @@
   .icon-button:disabled {
     cursor: not-allowed;
     opacity: 0.45;
+  }
+  .icon-button[aria-busy='true'] {
+    cursor: progress;
+    opacity: 1;
+  }
+  .button-spinner {
+    display: flex;
   }
   .icon-button--sm {
     width: 36px;

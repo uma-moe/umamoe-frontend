@@ -8,7 +8,6 @@
   import { supportTypeName } from '@/lib/game-data/support-cards/support-card-details';
   import { veteranSupportCards } from '@/lib/veterans/records/veteran-profile';
   import LimitBreak from '@/components/game/LimitBreak.svelte';
-  import Icon from '@/components/Icon.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import type { ProfileVeteran } from '../../profile-repository';
 
@@ -64,29 +63,14 @@
           />
           <span class="support-name">
             {#if type}
-              <span
+              <img
                 class="support-type"
+                src={'/assets/images/icon/stats/' + type.toLowerCase() + '.webp'}
+                alt={type + ' support'}
                 title={type + ' support'}
-              >
-                {#if type === 'Friend' || type === 'Group'}
-                  <span
-                    role="img"
-                    aria-label={type + ' support'}
-                  >
-                    <Icon
-                      name={type === 'Group' ? 'community' : 'user'}
-                      size={16}
-                    />
-                  </span>
-                {:else}
-                  <img
-                    src={'/assets/images/icon/stats/' + type.toLowerCase() + '.webp'}
-                    alt={type + ' support'}
-                    width="16"
-                    height="16"
-                  />
-                {/if}
-              </span>
+                width="16"
+                height="16"
+              />
             {/if}{card?.name ?? 'Card ' + id}
           </span>
           <div class="support-meta">

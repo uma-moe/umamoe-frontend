@@ -12,6 +12,7 @@
     leading?: Snippet;
     flush?: boolean;
     mobileHeading?: 'default' | 'actions-only';
+    compact?: boolean;
   }
 
   let {
@@ -24,13 +25,15 @@
     actions,
     leading,
     flush = false,
-    mobileHeading = 'default'
+    mobileHeading = 'default',
+    compact = false
   }: Props = $props();
 </script>
 
 <header
   class="page-heading"
   class:flush
+  class:compact
   class:actions-only={mobileHeading === 'actions-only'}
   data-tone={tone}
 >
@@ -128,6 +131,17 @@
   }
   .flush {
     padding-bottom: 12px;
+  }
+  .compact {
+    padding-block: 12px;
+    gap: 12px;
+  }
+  .compact h1 {
+    margin: 0 0 4px;
+    font-size: 24px;
+  }
+  .compact p {
+    font-size: 12px;
   }
   @media (max-width: 767px) {
     .page-heading {

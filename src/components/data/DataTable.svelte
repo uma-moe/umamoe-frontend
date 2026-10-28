@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { untrack, type Snippet } from 'svelte';
   import InspectPopover from '../overlays/InspectPopover.svelte';
   import Icon from '../Icon.svelte';
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
@@ -31,6 +31,7 @@
     expandedRow?: string | number;
     rowKey?: string;
     rowDetail?: Snippet<[Record<string, string | number>]>;
+    onvisiblerows?: (rows: Record<string, string | number>[]) => void;
   }
 
   let {
@@ -50,7 +51,8 @@
     onrowclick,
     expandedRow,
     rowKey = 'id',
-    rowDetail
+    rowDetail,
+    onvisiblerows
   }: Props = $props();
 
   let virtualRange = $state<VirtualRange>({ start: 0, end: 0 });
@@ -69,6 +71,12 @@
       const an = typeof av === 'number' ? av : Number(String(av).replace(/[,%#\s]/g, '')),
         bn = typeof bv === 'number' ? bv : Number(String(bv).replace(/[,%#\s]/g, ''));
 
+      // Unloaded numeric values stay below measured values in either direction.
+      if (column.numeric) {
+        if (!Number.isFinite(an)) return Number.isFinite(bn) ? 1 : 0;
+        if (!Number.isFinite(bn)) return -1;
+      }
+
       const result =
         (column.numeric || typeof av === 'number') && Number.isFinite(an) && Number.isFinite(bn)
           ? an - bn
@@ -83,6 +91,11 @@
       ? ordered.findIndex((row) => row[rowKey] === expandedRow)
       : -1
   );
+
+  $effect(() => {
+    const visible = ordered.slice(virtualRange.start, virtualRange.end);
+    untrack(() => onvisiblerows?.(visible));
+  });
 
   function clickRow(event: MouseEvent, row: Record<string, string | number>) {
     if (
@@ -180,6 +193,7 @@
     <tbody
       use:virtualScroll={{
         items: ordered,
+        key: (row) => row[rowKey] ?? row,
         searchText: (row) => columns.map((column) => row[column.key]).join(' '),
         estimate: compact ? 34 : 48,
         root: maxHeight || fill ? 'closest' : null,

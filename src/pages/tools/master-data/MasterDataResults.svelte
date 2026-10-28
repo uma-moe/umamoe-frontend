@@ -4,6 +4,9 @@
   import IconButton from '@/components/controls/IconButton.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import DataTable, { type TableColumn } from '@/components/data/DataTable.svelte';
+  import Banner from '@/components/feedback/Banner.svelte';
+  import EmptyState from '@/components/feedback/EmptyState.svelte';
+  import Spinner from '@/components/feedback/Spinner.svelte';
   import Icon from '@/components/Icon.svelte';
   import { downloadResult, type ExportFormat } from './master-data-export';
   import {
@@ -167,24 +170,36 @@
       class="query-error"
       role="alert"
     >
-      <Icon
-        name="warning"
-        size={16}
+      <Banner
+        title="Query failed"
+        tone="danger"
+        reportable={false}
+      >
+        <p>{error}</p>
+      </Banner>
+    </div>
+  {:else if !result && pending}
+    <div class="results-empty">
+      <Spinner
+        centered
+        label={pendingMessages[pending]}
       />
-      <strong>Query failed</strong>
-      <span>{error}</span>
     </div>
   {:else if !result}
     <div class="results-empty">
-      <Icon
-        name="database"
-        size={28}
+      <EmptyState
+        icon="database"
+        title="No table open"
+        description="Choose a table or run a query to see rows."
       />
-      <p>{pending ? pendingMessages[pending] : 'Choose a table or run a query to see rows.'}</p>
     </div>
   {:else if !result.columns.length}
     <div class="results-empty">
-      <p>The statement ran and returned no rows.</p>
+      <EmptyState
+        icon="check"
+        title="Statement complete"
+        description="The statement ran and returned no rows."
+      />
     </div>
   {:else}
     {#key result}

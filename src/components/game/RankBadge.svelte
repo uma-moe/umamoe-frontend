@@ -5,7 +5,7 @@
     label?: string;
     rarity?: number;
     score?: number;
-    size?: 'sm' | 'md' | 'lg';
+    size?: 'xs' | 'sm' | 'md' | 'lg';
     icon?: string;
     useIconAsset?: boolean;
   }
@@ -68,6 +68,10 @@
     display: block;
     object-fit: contain;
   }
+  .rank--xs {
+    width: 18px;
+    height: 18px;
+  }
   .rank--sm {
     width: 28px;
     height: 28px;
@@ -91,6 +95,10 @@
     font-size: 10px;
     font-weight: 850;
     letter-spacing: -0.02em;
+  }
+  .rank--xs .rank-fallback {
+    border-width: 1px;
+    font-size: 7px;
   }
   .rank--sm .rank-fallback {
     font-size: 8px;

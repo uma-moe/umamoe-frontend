@@ -10,18 +10,27 @@
     title,
     description,
     heading,
+    controls,
+    statistics,
     children
   }: {
     routeId: string;
     title: string;
     description: string;
-    heading: Snippet;
+    /** Custom branding; defaults to the page title as the hero heading. */
+    heading?: Snippet;
+    /** Filters or search between the description and the links. */
+    controls?: Snippet;
+    /** Replaces the site-wide statistics strip with figures for this section. */
+    statistics?: Snippet;
     children: Snippet;
   } = $props();
 
   let siteStats = $state<SiteStatistics>();
 
   onMount(() => {
+    if (statistics) return;
+
     const controller = new AbortController();
     void loadSiteStatistics(controller.signal)
       .then((value) => (siteStats = value))
@@ -43,8 +52,15 @@
     >
       <section class="hero">
         <div class="hero-content">
-          {@render heading()}
+          {#if heading}
+            {@render heading()}
+          {:else}
+            <h1 class="landing-title">{title}</h1>
+          {/if}
           <p class="hero-subtitle">{description}</p>
+          {#if controls}
+            <div class="hero-controls">{@render controls()}</div>
+          {/if}
           <div class="quick-links">{@render children()}</div>
         </div>
       </section>
@@ -55,7 +71,11 @@
     railAlternative={false}
     top
   />
-  <SiteStatisticsStrip stats={siteStats} />
+  {#if statistics}
+    {@render statistics()}
+  {:else}
+    <SiteStatisticsStrip stats={siteStats} />
+  {/if}
 </div>
 
 <style>
@@ -98,10 +118,24 @@
     max-width: 800px;
     text-align: center;
   }
+  .landing-title {
+    margin: 0 0 1rem;
+    background: var(--gradient-heading);
+    background-clip: text;
+    color: transparent;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.1;
+  }
   .hero-subtitle {
     margin: 0 0 3rem;
     color: var(--text-secondary);
     font-size: 1.25rem;
+  }
+  .hero-controls {
+    max-width: 900px;
+    margin: 0 auto 1.5rem;
+    text-align: left;
   }
   .quick-links {
     display: grid;
@@ -121,6 +155,9 @@
     .hero-subtitle {
       margin-bottom: 1.5rem;
     }
+    .hero-controls {
+      margin-bottom: 1rem;
+    }
     .quick-links {
       gap: 1rem;
     }
@@ -129,9 +166,16 @@
     .hero {
       padding: 16px 8px;
     }
+    .landing-title {
+      margin-bottom: 8px;
+      font-size: 2rem;
+    }
     .hero-subtitle {
       margin-bottom: 16px;
       font-size: 13px;
+    }
+    .hero-controls {
+      margin-bottom: 12px;
     }
     .quick-links {
       grid-template-columns: 1fr;

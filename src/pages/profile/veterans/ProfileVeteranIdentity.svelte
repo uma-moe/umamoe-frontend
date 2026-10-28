@@ -7,6 +7,7 @@
     summary,
     rarity,
     score,
+    rankPlacement = 'column',
     heading = 'h3',
     titleId,
     descriptionId
@@ -14,13 +15,18 @@
     summary: VeteranUiRecord;
     rarity?: number | null;
     score?: number | null;
+    /** Compact cards keep the rank as a small figure among the details, so it never crowds the name. */
+    rankPlacement?: 'column' | 'details';
     heading?: 'h2' | 'h3';
     titleId?: string;
     descriptionId?: string;
   } = $props();
 </script>
 
-<div class="veteran-identity">
+<div
+  class="veteran-identity"
+  class:rank-in-details={rankPlacement === 'details'}
+>
   <div class="portrait">
     {#if summary.image}
       <img
@@ -52,6 +58,15 @@
       {#if summary.detail}
         <span class="race-style">{summary.detail}</span>
       {/if}
+      {#if score != null && rankPlacement === 'details'}
+        <span class="rank-figure">
+          <RankBadge
+            {score}
+            size="xs"
+          />
+          {score.toLocaleString()}
+        </span>
+      {/if}
       {#if rarity}
         <span
           class="rarity"
@@ -62,7 +77,7 @@
       {/if}
     </div>
   </div>
-  {#if score != null}
+  {#if score != null && rankPlacement === 'column'}
     <div class="rank">
       <RankBadge {score} />
       <strong>{score.toLocaleString()}</strong>
@@ -80,6 +95,9 @@
     min-width: 0;
     text-align: left;
     color: var(--color-text);
+  }
+  .veteran-identity.rank-in-details {
+    grid-template-columns: 56px minmax(0, 1fr);
   }
   .portrait {
     height: 60px;
@@ -149,10 +167,23 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
+  .rank-figure {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
   @container (max-width:330px) {
     .veteran-identity {
       grid-template-columns: 44px minmax(0, 1fr) auto;
       gap: 8px;
+    }
+    .veteran-identity.rank-in-details {
+      grid-template-columns: 44px minmax(0, 1fr);
     }
     .portrait {
       height: 56px;

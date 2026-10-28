@@ -59,9 +59,7 @@
   font-size: var(--font-xs);
 }
 .file-error {
-  margin: 12px 0 0;
-  color: var(--accent-error);
-  font-size: var(--font-sm);
+  margin-top: 12px;
 }
 @media (max-width: 760px) {
   .source-bar {

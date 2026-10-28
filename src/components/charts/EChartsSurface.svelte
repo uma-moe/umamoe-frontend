@@ -262,7 +262,8 @@
   .chart-host {
     width: 100%;
     height: var(--chart-height);
-    min-height: 180px;
+    /* The floor keeps unsized charts readable; a compact chart that asks for less keeps its height. */
+    min-height: min(180px, var(--chart-height));
   }
   figcaption {
     margin-top: 5px;
