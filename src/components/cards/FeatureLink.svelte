@@ -81,9 +81,14 @@
     font-size: 1.125rem;
     font-weight: 600;
   }
+  /* Summaries stay on one line. Write them to fit the narrowest landing card (about 180px of
+     text); the ellipsis only guards longer copy. */
   .link-content > span {
+    overflow: hidden;
     color: var(--text-secondary);
     font-size: 0.875rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .disabled {
     cursor: not-allowed;

@@ -512,11 +512,11 @@ test('Veteran details retain support deck, stats, aptitudes, races, sparks, skil
         )
     )
     .toBe(true);
-  await expect(deck.locator('li').first().locator('.support-type img')).toHaveAttribute(
+  await expect(deck.locator('li').first().locator('img.support-type')).toHaveAttribute(
     'src',
     '/assets/images/icon/stats/speed.webp'
   );
-  await expect(deck.locator('li').nth(1).locator('.support-type img')).toHaveAttribute(
+  await expect(deck.locator('li').nth(1).locator('img.support-type')).toHaveAttribute(
     'alt',
     'Stamina support'
   );

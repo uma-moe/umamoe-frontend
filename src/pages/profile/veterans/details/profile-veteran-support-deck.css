@@ -49,10 +49,6 @@
 }
 .support-type {
   flex: none;
-  display: inline-flex;
-  color: var(--accent-primary);
-}
-.support-type img {
   display: block;
   object-fit: contain;
 }

@@ -19,6 +19,8 @@
     actions?: Snippet;
     mobileActionsStack?: boolean;
     mobileFill?: boolean;
+    /** The simulator forms' dense chrome: a one-line header, and on a phone tighter padding and smaller type. */
+    compact?: boolean;
     maxWidth?: string;
     maxHeight?: string;
     mobileMaxHeight?: string;
@@ -45,6 +47,7 @@
     actions,
     mobileActionsStack = false,
     mobileFill = false,
+    compact = false,
     maxWidth = '540px',
     maxHeight = '80dvh',
     mobileMaxHeight,
@@ -118,6 +121,7 @@
   bind:this={element}
   class:mobile-actions-stack={mobileActionsStack}
   class:mobile-fill={mobileFill}
+  class:compact
   class:fixed-height={Boolean(height) && stretchContent}
   aria-labelledby="{id}-title"
   aria-describedby={description ? `${id}-description` : undefined}
@@ -176,6 +180,17 @@
   dialog.fixed-height > :global(.dialog-panel) {
     height: 100%;
   }
+  /* Compact: one header line, the description beside the title instead of under it. */
+  dialog.compact {
+    --dialog-header-min-height: 52px;
+    --dialog-header-align: center;
+    --dialog-header-padding: 8px 12px 8px 20px;
+    --dialog-heading-direction: row;
+    --dialog-heading-items: baseline;
+    --dialog-heading-padding: 0;
+    --dialog-description-wrap: nowrap;
+    --dialog-title-wrap: nowrap;
+  }
   dialog::backdrop {
     background: rgb(0 0 0 / 0.68);
   }
@@ -183,6 +198,19 @@
     dialog {
       --dialog-height-limit: var(--dialog-mobile-max-height, var(--dialog-max-height));
       width: calc(100% - var(--dialog-mobile-inset));
+    }
+    dialog.compact {
+      --dialog-header-min-height: 44px;
+      --dialog-header-padding: 6px 8px 6px 12px;
+      --dialog-heading-padding: 2px;
+      --dialog-title-size: 14px;
+      --dialog-description-size: 11px;
+      --dialog-mobile-footer-padding: 8px;
+    }
+    /* The title carries the dialog; its icon and description would only cost width. */
+    dialog.compact > :global(.dialog-panel > header .header-icon),
+    dialog.compact > :global(.dialog-panel > header .heading p) {
+      display: none;
     }
     dialog.mobile-fill {
       height: var(--dialog-height-limit);

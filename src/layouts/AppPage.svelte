@@ -24,6 +24,7 @@
     adSurface?: string;
     fill?: boolean;
     mobileHeading?: 'default' | 'actions-only';
+    compactHeading?: boolean;
   }
 
   let {
@@ -42,7 +43,8 @@
     adsActive = true,
     adSurface: adSurfaceOverride,
     fill = false,
-    mobileHeading = 'default'
+    mobileHeading = 'default',
+    compactHeading = false
   }: Props = $props();
 
   const adSurface = $derived(adSurfaceOverride ?? adSurfaceForRoute(routeId));
@@ -94,6 +96,7 @@
       {actions}
       {flush}
       {mobileHeading}
+      compact={compactHeading}
     />
     <div class="page-sections">{@render children()}</div>
   </main>

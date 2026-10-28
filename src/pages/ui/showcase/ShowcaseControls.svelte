@@ -80,6 +80,10 @@
           icon="filter"
           label="Filters"
           selected
+        /><IconButton
+          icon="add"
+          label="Adding"
+          loading
         />
       </div>
       <div class="preview-row">

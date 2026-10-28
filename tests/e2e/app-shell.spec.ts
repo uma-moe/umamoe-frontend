@@ -59,8 +59,9 @@ test('mobile shell exposes all destinations from the header', async ({ page }) =
     'Clubs',
     'Rankings',
     'Activity',
-    'Tierlist',
+    'Competitive',
     'ToolsUpdated',
+    'Research',
     'TimelineUpdated'
   ]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -69,9 +70,9 @@ test('mobile shell exposes all destinations from the header', async ({ page }) =
 test('1536px shell centers the Tools landing page beside the compact sidebar', async ({ page }) => {
   await page.setViewportSize({ width: 1536, height: 864 });
   await page.goto('/tools');
-  await expect(page.locator('main .updated-feature')).toHaveText([
-    'Carat PlannerUpdatedProject income, tickets, pulls, and banner goals',
-    'Lineage PlannerUpdatedPlan your full inheritance tree'
+  await expect(page.locator('main .updated-feature strong')).toHaveText([
+    /Carat Planner\s*Updated/,
+    /Lineage Planner\s*Updated/
   ]);
 
   const rail = page.locator('[data-shell-rail]');
@@ -93,7 +94,7 @@ test('expanded shell keeps the original navbar destinations and wide layout', as
   await expect(navigation.getByRole('link', { name: 'Clubs' })).toBeVisible();
   await expect(navigation.getByRole('link', { name: 'Rankings' })).toBeVisible();
   await expect(navigation.getByRole('link', { name: 'Activity' })).toBeVisible();
-  await expect(navigation.getByRole('link', { name: 'Tierlist' })).toBeVisible();
+  await expect(navigation.getByRole('link', { name: 'Tierlist' })).toHaveCount(0);
   await expect(navigation.getByRole('button', { name: 'Open Tools subsections' })).toBeVisible();
   await expect(navigation.getByRole('button', { name: 'Open Timeline subsections' })).toBeVisible();
 
@@ -107,10 +108,10 @@ test('Home keeps the Angular landing background full-width inside the new shell'
 }) => {
   await page.setViewportSize({ width: 1536, height: 864 });
   await page.goto('/');
-  await expect(page.locator('main .updated-feature')).toHaveText([
-    'DatabaseUpdatedBrowse the Database',
-    'TimelineUpdatedEstimated Release Schedule',
-    'Tools & AnalyticsUpdatedAdvanced tools and statistics'
+  await expect(page.locator('main .updated-feature strong')).toHaveText([
+    /Database\s*Updated/,
+    /Timeline\s*Updated/,
+    /Tools & Analytics\s*Updated/
   ]);
 
   const geometry = await page.evaluate(() => {

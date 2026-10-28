@@ -12,6 +12,7 @@
     icon?: IconName;
     disabled?: boolean;
     loading?: boolean;
+    title?: string;
     ariaLabel?: string;
     ariaPressed?: boolean;
     ariaExpanded?: boolean;
@@ -31,6 +32,7 @@
     icon,
     disabled = false,
     loading = false,
+    title,
     ariaLabel,
     ariaPressed,
     ariaExpanded,
@@ -53,6 +55,7 @@
     aria-busy={loading}
     aria-label={ariaLabel}
     aria-current={ariaCurrent}
+    {title}
     tabindex={disabled || loading ? -1 : undefined}
     onclick={(event) => {
       if (disabled || loading) event.preventDefault();
@@ -84,6 +87,7 @@
     aria-busy={loading}
     aria-label={ariaLabel}
     aria-pressed={ariaPressed}
+    {title}
     aria-expanded={ariaExpanded}
     aria-controls={ariaControls}
     {onclick}

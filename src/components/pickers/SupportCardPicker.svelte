@@ -54,8 +54,6 @@
     (value) => {
       if (value === 'All') return { value, label: 'All types' };
 
-      if (value === 'Friend') return { value, label: value, icon: 'user' };
-
       return {
         value,
         label: value === 'Wit' ? 'Wisdom' : value,
@@ -221,26 +219,13 @@
               width="22"
               height="22"
             />
-            {#if option.type === 'Friend'}
-              <span
-                role="img"
-                aria-label="Friend support"
-                title="Friend support"
-              >
-                <Icon
-                  name="user"
-                  size={18}
-                />
-              </span>
-            {:else}
-              <img
-                src={`/assets/images/icon/stats/${option.type.toLowerCase()}.webp`}
-                alt={`${option.type === 'Wit' ? 'Wisdom' : option.type} support`}
-                title={`${option.type === 'Wit' ? 'Wisdom' : option.type} support`}
-                width="18"
-                height="18"
-              />
-            {/if}
+            <img
+              src={`/assets/images/icon/stats/${option.type.toLowerCase()}.webp`}
+              alt={`${option.type === 'Wit' ? 'Wisdom' : option.type} support`}
+              title={`${option.type === 'Wit' ? 'Wisdom' : option.type} support`}
+              width="18"
+              height="18"
+            />
             {#if value === option.id}
               <span
                 class="selection-check"

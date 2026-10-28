@@ -255,12 +255,17 @@
     onfiles={openFile}
   />
   {#if fileError}
-    <p
+    <div
       class="file-error"
       role="alert"
     >
-      {fileError}
-    </p>
+      <Banner
+        title="File not opened"
+        tone="warning"
+      >
+        <p>{fileError}</p>
+      </Banner>
+    </div>
   {/if}
 </Dialog>
 

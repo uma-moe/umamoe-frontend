@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "src/pages/competitive/race-analysis/race-analysis-page.css"
+        ],
+        "createdAt": "2026-10-23T20:40:39.154Z",
+        "reason": "Claude: incumbent design system - LandingPage .landing-title uses the same --gradient-heading background-clip title; the race page hero matches it"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "src/pages/home/HomePage.svelte"
+        ],
+        "createdAt": "2026-10-23T21:50:55.063Z",
+        "reason": "Claude: pre-existing uma.moe brand wordmark (.brand-name) uses the site's --gradient-heading; not part of this change"
+      }
+    ]
+  }
+}

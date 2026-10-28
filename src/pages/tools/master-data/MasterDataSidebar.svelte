@@ -1,5 +1,6 @@
 <script lang="ts">
   import TextField from '@/components/controls/TextField.svelte';
+  import Spinner from '@/components/feedback/Spinner.svelte';
   import Icon from '@/components/Icon.svelte';
   import type { MasterTable } from './master-data-types';
 
@@ -75,7 +76,11 @@
     {:else}
       <p class="table-empty">
         {#if loading}
-          Loading tables…
+          <Spinner
+            size={18}
+            showLabel
+            label="Loading tables…"
+          />
         {:else if populated.length}
           No tables match “{search}”.
         {:else}
