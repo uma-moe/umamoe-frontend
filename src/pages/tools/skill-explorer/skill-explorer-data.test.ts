@@ -58,6 +58,13 @@ describe('Skill Explorer data', () => {
     expect(scope.partners?.['2']?.size).toBe(0);
   });
 
+  it('reads the margins its checks cover, every style taking the widest', () => {
+    const scope = parseScope({ ...courseFile, margins: { '1': 0.25, '3': 0.4 } });
+
+    expect(scope.margins).toEqual({ '1': 0.25, '3': 0.4, all: 0.4 });
+    expect(parseScope(courseFile).margins).toEqual({});
+  });
+
   it('rejects rows with the wrong section count', () => {
     const file = { courses: 1, styles: { '1': [[200011, 4, 4, 1, 0.5, 1, [1, 2]]] } };
 

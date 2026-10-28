@@ -94,6 +94,11 @@ export interface ScopeData {
   builds?: Partial<Record<StyleKey, number[]>>;
   /** Per style, each skill's partners, for a single course. */
   partners?: Partial<Record<StyleKey, Map<number, Partner[]>>>;
+  /**
+   * Per style, the share of a skill's value 80% of the skills checked against full races came within (0.4 = ±40%).
+   * Absent for a style no check covers yet; every style together takes the widest.
+   */
+  margins: Partial<Record<StyleKey, number>>;
 }
 
 /** Selection names in the simulator's paths, by surface and by length as the game numbers them. */
@@ -229,8 +234,22 @@ export function parseScope(value: unknown): ScopeData {
     courses: finiteNumber(value.courses, 'course count'),
     styles: { ...byStyle, all: averageStyles(Object.values(byStyle)) },
     builds: parseBuilds(value.builds),
-    partners: parsePartners(value.partners)
+    partners: parsePartners(value.partners),
+    margins: parseMargins(value.margins)
   };
+}
+
+/** Per style, `{style: margin}`; a selection's checks may not cover every style yet. */
+function parseMargins(value: unknown): ScopeData['margins'] {
+  if (!isRecord(value)) return {};
+  const margins: ScopeData['margins'] = {};
+  for (const style of STYLE_KEYS) {
+    if (value[style] !== undefined) margins[style] = finiteNumber(value[style], 'margin');
+  }
+
+  const known = Object.values(margins);
+  if (known.length > 0) margins.all = Math.max(...known);
+  return margins;
 }
 
 /**
