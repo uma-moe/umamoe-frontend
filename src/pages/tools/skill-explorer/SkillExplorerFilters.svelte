@@ -178,7 +178,7 @@
     <Checkbox
       id="skill-explorer-day-bound"
       label="Ground, weather and season skills"
-      description="On a firm, sunny spring day"
+      description="Valued as if their day holds"
       bind:checked={showDayBound}
     />
   </div>
