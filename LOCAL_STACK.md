@@ -43,6 +43,18 @@ The simulator uses four workers/four CPUs by default; adjust `.env.stack.local`.
 | Search (`--app`) | http://127.0.0.1:3302/search/health |
 | Ingest (`--app`) | http://127.0.0.1:3303/health |
 
+## A simulator without Docker
+
+To try a simulator build directly (the V5 optimizer, the Skill Explorer files), run it natively and point Vite at it.
+`VITE_SIMULATOR_TARGET` sends `/api/sim/...` straight to the simulator's `/sim/...`, with no backend in between:
+
+```sh
+VITE_RESOURCE_PROXY_TARGET=https://uma.moe VITE_SIMULATOR_TARGET=http://127.0.0.1:3410 npm run dev -- --port 5200
+```
+
+The simulator needs its V5 model in `conf/` under its working directory (`UMAMOE_V5_MODEL`, `UMAMOE_V5_RANKER`) and
+serves the explorer bundle named by `UMAMOE_V3_SKILL_EXPLORER`; see the simulator's `deploy/README.md`.
+
 ## Full app
 
 Also check out **umamoe-backend**, **umamoe_db**, and **umamoe-ingest** beside this
