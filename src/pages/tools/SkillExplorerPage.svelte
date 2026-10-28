@@ -583,7 +583,8 @@
         is the median course's (0 where a skill cannot fire), so turf shows what a skill is worth on a
         typical turf course, and proc points average the races it fired in. Strong and weaker split at
         the median shown skill. Negative skills are left out; ground, weather and season skills show on
-        a CM whose day they hold on, and elsewhere only when asked, on a firm, sunny spring day.
+        a CM whose day they hold on, and elsewhere only when asked, valued as if their day held. Skills
+        that wait on other skills, such as Groundwork, are valued as if enough had fired before them.
         <strong>Picking an uma</strong>
         highlights her unique, as inherited, and the skills she starts with or unlocks by potential level:
         from the Global game data for umas out on Global, from the Japanese for those still to come. Skills
