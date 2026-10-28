@@ -20,7 +20,6 @@
   import ServiceNotices from './ServiceNotices.svelte';
   import FindLoadedResults from './FindLoadedResults.svelte';
   import StickyFooterAd from './ads/StickyFooterAd.svelte';
-  import { startAnalytics, trackPageView } from '@/services/analytics/analytics';
   import { syncFusePage } from '@/services/ads/fuse-ads';
 
   interface Props {
@@ -111,7 +110,24 @@
     if (tourAudience() === 'new') void loadTour();
   });
 
-  onMount(startAnalytics);
+  // Analytics loads after the first paint to keep it out of the base shell; the page-view effect below sends the
+  // current page once it has.
+  let analytics = $state.raw<typeof import('@/services/analytics/analytics')>();
+
+  onMount(() => {
+    let stop: (() => void) | undefined;
+    let destroyed = false;
+    void import('@/services/analytics/analytics').then((module) => {
+      if (destroyed) return;
+      stop = module.startAnalytics();
+      analytics = module;
+    });
+
+    return () => {
+      destroyed = true;
+      stop?.();
+    };
+  });
 
   onMount(syncFusePage);
 
@@ -129,7 +145,7 @@
   });
 
   $effect(() => {
-    trackPageView(router.route.pathname);
+    analytics?.trackPageView(router.route.pathname);
   });
 </script>
 
