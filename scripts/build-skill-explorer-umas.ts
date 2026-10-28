@@ -38,12 +38,20 @@ async function betaGlobalMaster(): Promise<{ bytes: Uint8Array; marker: string }
 
   const manifest: unknown = await manifestResponse.json();
   const master =
-    typeof manifest === 'object' && manifest !== null && 'master' in manifest ? manifest.master : undefined;
-  if (typeof master !== 'object' || master === null || !('path' in master) || typeof master.path !== 'string')
+    typeof manifest === 'object' && manifest !== null && 'master' in manifest
+      ? manifest.master
+      : undefined;
+  if (
+    typeof master !== 'object' ||
+    master === null ||
+    !('path' in master) ||
+    typeof master.path !== 'string'
+  )
     throw new Error('The beta resources manifest names no master database.');
 
   const masterResponse = await fetch(`${BETA_RESOURCES}${master.path}`);
-  if (!masterResponse.ok) throw new Error(`The beta master database returned ${masterResponse.status}.`);
+  if (!masterResponse.ok)
+    throw new Error(`The beta master database returned ${masterResponse.status}.`);
 
   // Served as .gz, though the response may already be decoded.
   const body = new Uint8Array(await masterResponse.arrayBuffer());
@@ -58,10 +66,9 @@ function rows(database: Database, sql: string): number[][] {
 
 function cardSkills(database: Database): Map<number, UmaSkills> {
   const cards = new Map<number, UmaSkills>(
-    rows(database, `SELECT c.id FROM card_data c WHERE ${TRAINEE_CARDS} ORDER BY c.id`).map(([card]) => [
-      card!,
-      { card: card!, skills: [] }
-    ])
+    rows(database, `SELECT c.id FROM card_data c WHERE ${TRAINEE_CARDS} ORDER BY c.id`).map(
+      ([card]) => [card!, { card: card!, skills: [] }]
+    )
   );
 
   // Every rarity of a card shares its unique, at a higher level.

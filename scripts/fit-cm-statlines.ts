@@ -84,10 +84,18 @@ const forecasts = Object.fromEntries(
 
 await writeFile(
   outPath,
-  JSON.stringify({ generated: new Date().toISOString(), latestCm, model, errors, past: statlines, forecasts })
+  JSON.stringify({
+    generated: new Date().toISOString(),
+    latestCm,
+    model,
+    errors,
+    past: statlines,
+    forecasts
+  })
 );
 
-const table = (values: Stats) => STAT_NAMES.map((name, stat) => `${name} ${values[stat]}`).join(', ');
+const table = (values: Stats) =>
+  STAT_NAMES.map((name, stat) => `${name} ${values[stat]}`).join(', ');
 console.log(`distance terms: ${STAT_NAMES.filter((_, stat) => terms[stat]).join(', ') || 'none'}`);
 console.log(`held out, ${errors.forecasts} CM × style forecasts`);
 console.log(`  model        ${table(errors.model)}`);

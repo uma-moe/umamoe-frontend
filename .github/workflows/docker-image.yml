@@ -133,7 +133,7 @@ jobs:
           validate_google_analytics_measurement_id "BETA" "$GOOGLE_ANALYTICS_MEASUREMENT"
 
           SITE_KEY="$BETA_TURNSTILE_SITE_KEY" perl -0pi -e 'my $replacement = "siteKey: \x27$ENV{SITE_KEY}\x27,"; my $count = s/siteKey:\s*[\x27"][^\x27"]*[\x27"],/$replacement/; die "siteKey property not found\n" unless $count;' src/config/environment.beta.ts
-          GA_MEASUREMENT_ID="$GOOGLE_ANALYTICS_MEASUREMENT" perl -0pi -e 'my $replacement = "measurementId: \x27$ENV{GA_MEASUREMENT_ID}\x27,"; my $count = s/measurementId:\s*[\x27"][^\x27"]*[\x27"],/$replacement/; die "Google Analytics measurementId property not found\n" unless $count;' src/config/environment.beta.ts
+          GA_MEASUREMENT_ID="$GOOGLE_ANALYTICS_MEASUREMENT" perl -0pi -e 'my $replacement = "measurementId: \x27$ENV{GA_MEASUREMENT_ID}\x27"; my $count = s/measurementId:\s*[\x27"][^\x27"]*[\x27"]/$replacement/; die "Google Analytics measurementId property not found\n" unless $count;' src/config/environment.beta.ts
 
           if grep -Eq "siteKey: ['\"][^'\"]*[{}][^'\"]*['\"]" src/config/environment.beta.ts; then
             echo "::error title=Invalid BETA Turnstile site key injection::The beta environment file still contains a placeholder-like siteKey after injection."
@@ -524,7 +524,7 @@ jobs:
           validate_google_analytics_measurement_id "PROD" "$GOOGLE_ANALYTICS_MEASUREMENT"
 
           SITE_KEY="$PROD_TURNSTILE_SITE_KEY" perl -0pi -e 'my $replacement = "siteKey: \x27$ENV{SITE_KEY}\x27,"; my $count = s/siteKey:\s*[\x27"][^\x27"]*[\x27"],/$replacement/; die "siteKey property not found\n" unless $count;' src/config/environment.prod.ts
-          GA_MEASUREMENT_ID="$GOOGLE_ANALYTICS_MEASUREMENT" perl -0pi -e 'my $replacement = "measurementId: \x27$ENV{GA_MEASUREMENT_ID}\x27,"; my $count = s/measurementId:\s*[\x27"][^\x27"]*[\x27"],/$replacement/; die "Google Analytics measurementId property not found\n" unless $count;' src/config/environment.prod.ts
+          GA_MEASUREMENT_ID="$GOOGLE_ANALYTICS_MEASUREMENT" perl -0pi -e 'my $replacement = "measurementId: \x27$ENV{GA_MEASUREMENT_ID}\x27"; my $count = s/measurementId:\s*[\x27"][^\x27"]*[\x27"]/$replacement/; die "Google Analytics measurementId property not found\n" unless $count;' src/config/environment.prod.ts
 
           if grep -Eq "siteKey: ['\"][^'\"]*[{}][^'\"]*['\"]" src/config/environment.prod.ts; then
             echo "::error title=Invalid PROD Turnstile site key injection::The production environment file still contains a placeholder-like siteKey after injection."
