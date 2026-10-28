@@ -244,6 +244,7 @@
   const pointsById = $derived(
     new Map((scopeData?.styles[style] ?? []).map((point) => [point.skillId, point]))
   );
+  const margin = $derived(scopeData?.margins[style]);
 
   function courseLabel(id: number): string {
     const course = raceCourses.get(id);
@@ -566,6 +567,11 @@
         or the nearest CM's runners brought to it. Her races show where each skill fires; the model
         turns that into seconds and win. Values are for comparing skills with each other; their
         exact size is an estimate.
+        {#if margin !== undefined}
+          Checked against full races, 80% of the skills here came within ±{Math.round(
+            margin * 100
+          )}% of their value.
+        {/if}
         <strong>In build</strong>
         is what a skill adds to, or takes from, a {index.buildSize}-skill reference build the model
         picks, in place of its gold or ◎ version when the build holds that;
