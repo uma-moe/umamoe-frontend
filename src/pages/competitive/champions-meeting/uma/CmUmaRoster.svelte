@@ -8,6 +8,7 @@
   import Artwork from '@/components/game/Artwork.svelte';
   import Button from '@/components/controls/Button.svelte';
   import TextField from '@/components/controls/TextField.svelte';
+  import EmptyState from '@/components/feedback/EmptyState.svelte';
 
   interface Props {
     matching: Pair[];
@@ -53,7 +54,7 @@
     title="Uma Breakdown"
     description="Select a runner to connect its results, role, and team compositions."
   >
-    {#snippet titleActions()}
+    {#snippet actions()}
       <SegmentedControl
         compact
         label="Uma breakdown ordering"
@@ -134,19 +135,26 @@
       </div>
     </div>
     {#if !sorted.length}
-      <p>No Umas match this search.</p>
-      <Button
-        variant="secondary"
-        size="sm"
-        onclick={() => (search = '')}
+      <EmptyState
+        compact
+        icon="search"
+        title="No matching Umas"
+        description="No Umas match this search."
       >
-        Clear search
-      </Button>
+        {#snippet actions()}
+          <Button
+            variant="secondary"
+            size="sm"
+            onclick={() => (search = '')}
+          >
+            Clear search
+          </Button>
+        {/snippet}
+      </EmptyState>
     {/if}
   </ChartFrame>
 </aside>
 
 <style>
-  @import './uma-text.css';
   @import './cm-uma-roster.css';
 </style>

@@ -5,6 +5,7 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Checkbox from '@/components/controls/Checkbox.svelte';
+  import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import Icon from '@/components/Icon.svelte';
   import type { TabItem } from '@/components/navigation/Tabs.svelte';
   import CmOverview from './champions-meeting/CmOverview.svelte';
@@ -14,8 +15,6 @@
   import CmUma from './champions-meeting/uma/CmUma.svelte';
   import CmArchetypes from './champions-meeting/archetypes/CmArchetypes.svelte';
   import CmSkills from './champions-meeting/skills/CmSkills.svelte';
-  import LobbyBuilder from './champions-meeting/lobby/LobbyBuilder.svelte';
-  import { CmLobbyState } from './champions-meeting/lobby/cm-lobby.svelte';
   import type { Summary, Snapshot, Requirement } from './hakuraku-types';
   import {
     cmGet,
@@ -27,18 +26,20 @@
   import { queryText } from './hakuraku-query';
 
   const params = new URLSearchParams(location.search);
-  const allowed = ['introduction', 'strategy', 'character', 'archetypes', 'skills', 'lobby'];
+  const allowed = ['introduction', 'strategy', 'character', 'archetypes', 'skills'];
   const legacyView = params.get('view');
   const legacyTabs: Record<string, string> = {
     umas: 'character',
     skills: 'skills',
     teams: 'archetypes',
-    lobby: 'lobby'
+    // The Lobby Builder became the race simulator; captured teams are where rooms start now.
+    lobby: 'archetypes'
   };
 
   const legacyTab = legacyTabs[legacyView ?? ''] ?? 'strategy';
   const requestedTab = params.get('tab') ?? '';
-  const initialTab = requestedTab === 'explore' ? legacyTab : requestedTab;
+  const initialTab =
+    requestedTab === 'explore' ? legacyTab : (legacyTabs[requestedTab] ?? requestedTab);
 
   let tab = $state(allowed.includes(initialTab) ? initialTab : 'introduction');
   let snapshotId = $state(params.get('snapshot') ?? ''),
@@ -53,8 +54,6 @@
   let scope = $state(params.get('style') ?? 'all'),
     selectedUma = $state(''),
     umaView = $state(legacyView === 'umas' ? 'field' : 'overview');
-
-  const lobbyState = new CmLobbyState(() => data);
 
   let visited = $state<string[]>([]);
 
@@ -76,13 +75,7 @@
     ...(snapshot?.skillAnalysis
       ? [{ id: 'skills', label: 'Skill Analysis', icon: 'star' as const }]
       : []),
-    { id: 'archetypes', label: 'Archetype Analysis', icon: 'grid' },
-    {
-      id: 'lobby',
-      label: 'Lobby Builder',
-      icon: 'race',
-      badge: lobbyState.lobby.length ? lobbyState.lobby.length + '/3' : undefined
-    }
+    { id: 'archetypes', label: 'Archetype Analysis', icon: 'grid' }
   ]);
 
   $effect(() => {
@@ -111,7 +104,6 @@
     attempt;
     data = undefined;
     error = '';
-    lobbyState.reset();
     visited = [];
     if (!id) return;
     const controller = new AbortController();
@@ -146,17 +138,13 @@
       tab = 'archetypes';
     }
   }
-
-  function addCustomTeam() {
-    if (lobbyState.addCustomTeam()) tab = 'lobby';
-  }
 </script>
 
 <svelte:head>
   <title>CM Data · uma.moe</title>
   <meta
     name="description"
-    content="Hakuraku Champions Meeting datasets, strategy and Uma analysis, captured teams, and lobby building in uma.moe."
+    content="Hakuraku Champions Meeting datasets, strategy and Uma analysis, and captured teams you can race in uma.moe."
   />
 </svelte:head>
 <AppPage
@@ -164,6 +152,7 @@
   title="CM Data"
   description="Champions Meeting statistics · Hakuraku × uma.moe"
   width="wide"
+  compactHeading
 >
   {#snippet actions()}
     {#if snapshot}
@@ -179,6 +168,7 @@
         <SelectField
           id="cm-snapshot"
           label="Dataset"
+          hideLabel
           options={snapshots.map((s) => ({ value: s.snapshotId, label: s.label }))}
           bind:value={snapshotId}
         />
@@ -211,7 +201,7 @@
         label="Loading Hakuraku datasets…"
       />
     {/if}
-    {#if data && snapshot}
+    {#if snapshot && (data || tab === 'skills')}
       <div class="navigation">
         <Tabs
           compact
@@ -221,22 +211,28 @@
           controls="cm-panel"
           variant="pills"
         />
-        <details class="display-settings">
-          <summary>
-            <Icon
-              name="tune"
-              size={15}
-            /> Display
-          </summary>
-          <div>
+        <div class="display-settings">
+          <InspectPopover
+            label="Display options"
+            align="end"
+          >
+            {#snippet trigger()}
+              <span class="display-trigger">
+                <Icon
+                  name="tune"
+                  size={15}
+                />
+                <span class="display-label">Display</span>
+              </span>
+            {/snippet}
             <Checkbox
               id="cm-palette"
               label="Colorblind palette"
               bind:checked={colorblind}
             />
             <p>Changes running-style colours throughout the analysis.</p>
-          </div>
-        </details>
+          </InspectPopover>
+        </div>
       </div>
       <div
         id="cm-panel"
@@ -244,7 +240,7 @@
         role="tabpanel"
         aria-label={tabs.find((t) => t.id === tab)?.label}
       >
-        {#if tab === 'introduction'}
+        {#if data && tab === 'introduction'}
           <CmOverview
             {data}
             {colors}
@@ -262,7 +258,7 @@
           />
           <CmIntroduction onbrowse={() => (tab = 'archetypes')} />
         {/if}
-        {#if visited.includes('strategy')}
+        {#if data && visited.includes('strategy')}
           <div hidden={tab !== 'strategy'}>
             <CmStrategy
               {data}
@@ -273,7 +269,7 @@
             />
           </div>
         {/if}
-        {#if visited.includes('character')}
+        {#if data && visited.includes('character')}
           <div hidden={tab !== 'character'}>
             <CmUma
               {data}
@@ -287,42 +283,19 @@
         {/if}
         {#if visited.includes('skills') && snapshot.skillAnalysis}
           <div hidden={tab !== 'skills'}>
-            <CmSkills {snapshot} />
+            <CmSkills
+              {snapshot}
+              {colors}
+            />
           </div>
         {/if}
-        {#if visited.includes('archetypes')}
+        {#if data && visited.includes('archetypes')}
           <div hidden={tab !== 'archetypes'}>
             <CmArchetypes
               {data}
               {colors}
               {snapshot}
               bind:query
-              lobby={lobbyState.lobby}
-              teamDraft={lobbyState.teamDraft}
-              pendingTeams={lobbyState.pendingTeams}
-              pendingRunners={lobbyState.pendingRunners}
-              teamError={lobbyState.teamError}
-              onrunner={lobbyState.toggleRunner}
-              onbuildteam={addCustomTeam}
-              onremoverunner={lobbyState.removeRunner}
-              onclearteam={() => (lobbyState.teamDraft = [])}
-              ontoggle={lobbyState.toggleTeam}
-              onlobby={() => (tab = 'lobby')}
-            />
-          </div>
-        {/if}
-        {#if visited.includes('lobby')}
-          <div hidden={tab !== 'lobby'}>
-            <LobbyBuilder
-              {data}
-              {colors}
-              {snapshot}
-              teams={lobbyState.lobby}
-              bind:draft={lobbyState.draft}
-              onmove={lobbyState.moveRunner}
-              onbrowse={() => (tab = 'archetypes')}
-              onremove={lobbyState.removeTeam}
-              onclear={lobbyState.clear}
             />
           </div>
         {/if}

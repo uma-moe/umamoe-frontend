@@ -5,6 +5,7 @@
   import IconButton from '@/components/controls/IconButton.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import TextField from '@/components/controls/TextField.svelte';
+  import EmptyState from '@/components/feedback/EmptyState.svelte';
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
   import type { Requirement, Summary } from '../../hakuraku-types';
   import { pct, number, styleNames, styleOrder } from '../cm-data';
@@ -63,6 +64,11 @@
   function order(key: string) {
     descending = sort === key ? !descending : key !== 'name';
     sort = key;
+  }
+
+  function resetFilters() {
+    search = '';
+    minimum = '1';
   }
 
   const ranked = $derived(
@@ -277,19 +283,21 @@
         </table>
       </div>
       {#if !rows.length}
-        <div class="empty">
-          <h3>No matching Umas</h3>
-          <p>Try another name or lower the player threshold.</p>
-          <Button
-            variant="secondary"
-            onclick={() => {
-              search = '';
-              minimum = '1';
-            }}
-          >
-            Reset field filters
-          </Button>
-        </div>
+        <EmptyState
+          icon="search"
+          title="No matching Umas"
+          description="Try another name or lower the player threshold."
+        >
+          {#snippet actions()}
+            <Button
+              variant="secondary"
+              size="sm"
+              onclick={resetFilters}
+            >
+              Reset field filters
+            </Button>
+          {/snippet}
+        </EmptyState>
       {/if}
     {:else}
       <div class="range-axis">
@@ -369,18 +377,21 @@
         intervals. Narrow intervals do not remove player or build selection bias.
       </p>
       {#if !ranked.length}
-        <div class="empty">
-          <h3>No matching results</h3>
-          <Button
-            variant="secondary"
-            onclick={() => {
-              search = '';
-              minimum = '1';
-            }}
-          >
-            Reset ranking filters
-          </Button>
-        </div>
+        <EmptyState
+          icon="search"
+          title="No matching results"
+          description="Try another name or lower the player threshold."
+        >
+          {#snippet actions()}
+            <Button
+              variant="secondary"
+              size="sm"
+              onclick={resetFilters}
+            >
+              Reset ranking filters
+            </Button>
+          {/snippet}
+        </EmptyState>
       {/if}
     {/if}
   </section>

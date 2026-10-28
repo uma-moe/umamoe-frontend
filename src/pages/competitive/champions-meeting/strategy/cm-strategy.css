@@ -36,9 +36,7 @@
   align-items: stretch;
 }
 .composition-panels {
-  height: clamp(500px, 58dvh, 680px);
   display: grid;
-  grid-template-rows: minmax(0, 1fr);
   grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
   gap: 14px;
   align-items: stretch;
@@ -179,8 +177,8 @@
 .focused .cross {
   grid-template-columns: 1fr;
 }
-.focused .reps {
-  grid-template-rows: minmax(0, 1fr);
+.focused .rep-scroll {
+  max-height: 420px;
 }
 h4 {
   margin: 0;
@@ -226,11 +224,11 @@ h4 i {
 }
 .rooms :global(th),
 .rooms :global(td) {
-  padding: 3px 5px;
+  padding: 3px 4px;
 }
 .room-count {
   display: block;
-  min-width: 26px;
+  min-width: 24px;
   padding: 4px 2px;
   text-align: center;
   border-radius: 3px;
@@ -251,7 +249,7 @@ h4 i {
   border-radius: 4px;
 }
 .room-average-grid small {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--text-secondary);
 }
 .room-average-grid strong {
@@ -267,13 +265,18 @@ h4 i {
   min-height: 0;
   overflow: visible;
 }
+.rep-controls {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  max-width: 100%;
+}
 .rep-filter {
   flex: none;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  margin-bottom: 8px;
+  justify-content: flex-end;
+  gap: 8px;
 }
 .rep-filter > :global(.segments) {
   min-width: 0;
@@ -281,10 +284,7 @@ h4 i {
 .reps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 12px 14px;
-  flex: 1;
-  min-height: 0;
+  gap: 16px 18px;
 }
 .reps > section {
   display: flex;
@@ -293,8 +293,8 @@ h4 i {
   min-height: 0;
 }
 .rep-scroll {
-  flex: 1;
-  min-height: 0;
+  /* About four and a half runners, so a cut-off row signals that the list scrolls on its own. */
+  max-height: 166px;
   overflow: auto;
   scrollbar-gutter: stable;
   padding-right: 8px;
@@ -312,8 +312,8 @@ h4 i {
 }
 .rep-columns {
   display: grid;
-  grid-template-columns: 1fr 42px 42px 38px;
-  gap: 5px;
+  grid-template-columns: 1fr 38px 38px 42px;
+  gap: 4px;
   margin-bottom: 3px;
   text-align: right;
   padding-right: 15px;
@@ -325,8 +325,9 @@ h4 i {
   background: none;
   color: var(--text-secondary);
   font: inherit;
-  font-size: 9px;
+  font-size: 10px;
   min-height: 25px;
+  white-space: nowrap;
   text-align: right;
   cursor: pointer;
 }
@@ -338,9 +339,9 @@ h4 i {
 }
 .reps .rep-scroll button {
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) 42px 42px 38px;
+  grid-template-columns: 22px minmax(0, 1fr) 38px 38px 42px;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   width: 100%;
   padding: 5px 0;
   background: transparent;
@@ -372,23 +373,27 @@ h4 i {
   text-align: right;
 }
 .reps :global(.art) {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
 }
 .room-average {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-secondary);
   line-height: 1.6;
   margin: 8px 0 0;
 }
-@container chart-frame (max-width:800px) {
+@container chart-frame (max-width:760px) {
   .reps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(3, minmax(0, 1fr));
   }
   .focused .reps {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr);
+  }
+}
+@media (min-width: 1001px) {
+  /* The room table takes the height of the representatives panel and scrolls inside it. */
+  .rooms {
+    contain: size;
   }
 }
 @media (max-width: 1000px) {
@@ -396,15 +401,9 @@ h4 i {
   .composition-panels {
     grid-template-columns: 1fr;
   }
-  .composition-panels {
-    height: auto;
-  }
   .rooms :global(.table-wrap) {
     flex: none;
     max-height: 440px;
-  }
-  .representatives :global(.plot) {
-    height: 480px;
   }
   .style-filter {
     align-items: start;
@@ -436,18 +435,7 @@ h4 i {
   }
   .reps {
     grid-template-columns: 1fr;
-    grid-template-rows: none;
-    flex: none;
     gap: 16px;
-  }
-  .reps > section {
-    height: 210px;
-  }
-  .representatives :global(.plot) {
-    height: auto;
-  }
-  .rep-scroll {
-    max-height: none;
   }
   .rep-filter {
     flex-wrap: wrap;
@@ -470,6 +458,6 @@ h4 i {
     grid-template-columns: repeat(6, minmax(0, 1fr)) 50px;
   }
   .room-average-grid small {
-    font-size: 8px;
+    font-size: 9px;
   }
 }

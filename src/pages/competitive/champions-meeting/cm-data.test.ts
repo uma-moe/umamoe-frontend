@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { gzipSync } from 'node:zlib';
-import { cmGet, buildRunner, loadCmSummary } from './cm-data';
+import { cmGet, buildRunner, loadCmSummary, capturedSkillPoints } from './cm-data';
+import type { SkillData } from '@/lib/game-data/skills/skills';
 import * as characters from '@/lib/game-data/characters';
 import { parseQuery, matchesTeam } from '../hakuraku-query';
 import type { Build } from '../hakuraku-types';
@@ -11,6 +12,52 @@ afterEach(() => {
 });
 
 describe('Hakuraku data contracts', () => {
+  it('uses published SP totals, including a valid zero, without needing learned skills', () => {
+    expect(capturedSkillPoints({ skillPoints: 4430 })).toBe(4430);
+    expect(capturedSkillPoints({ skillPoints: 0 })).toBe(0);
+  });
+
+  it('calculates older captured builds with prerequisite costs counted once', () => {
+    const gold: SkillData = {
+      skill_id: 200001,
+      name: 'Gold skill',
+      rarity: 2,
+      icon: '',
+      baseCost: 180
+    };
+    const prerequisite: SkillData = {
+      skill_id: 200002,
+      name: 'Normal skill',
+      rarity: 1,
+      icon: '',
+      baseCost: 120
+    };
+    const catalog = new Map([
+      [gold.skill_id, gold],
+      [prerequisite.skill_id, prerequisite]
+    ]);
+    const learnedSkills: [number, number][] = [
+      [gold.skill_id, 1],
+      [prerequisite.skill_id, 1]
+    ];
+
+    const total = capturedSkillPoints({ skills: learnedSkills }, catalog);
+
+    expect(total).toBe(300);
+    expect(capturedSkillPoints({ skillPoints: -1, skills: learnedSkills }, catalog)).toBe(300);
+  });
+
+  it('keeps missing skill data and invalid published totals distinct from an empty build', () => {
+    const catalog = new Map<number, SkillData>();
+
+    expect(capturedSkillPoints({}, catalog)).toBeNull();
+    expect(capturedSkillPoints({ skills: [] })).toBeNull();
+    expect(capturedSkillPoints({ skills: [] }, catalog)).toBe(0);
+    expect(capturedSkillPoints({ skills: [[999999, 1]] }, catalog)).toBeNull();
+    expect(capturedSkillPoints({ skillPoints: NaN })).toBeNull();
+    expect(capturedSkillPoints({ skillPoints: Infinity })).toBeNull();
+  });
+
   it('reads gzip responses and rejects a different snapshot', async () => {
     const bytes = gzipSync(JSON.stringify({ snapshotId: 'cm20', value: 42 }));
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(new Uint8Array(bytes))));

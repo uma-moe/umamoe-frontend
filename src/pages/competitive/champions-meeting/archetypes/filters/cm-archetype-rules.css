@@ -131,25 +131,8 @@
   font-size: 10px;
   color: var(--text-secondary);
 }
-.applied-rules button {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 26px;
-  height: 26px;
-  padding: 0;
+.applied-rules :global(.icon-button) {
   margin-left: auto;
-  background: transparent;
-  color: var(--text-secondary);
-  border: 0;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-.applied-rules button:hover {
-  background: var(--surface-3);
-}
-.applied-rules button:focus-visible {
-  outline: 2px solid var(--accent-primary);
 }
 .inline-rules {
   margin-top: 6px;
@@ -158,8 +141,8 @@
   .rule-fields {
     grid-template-columns: minmax(0, 1fr);
   }
-  .applied-rules button {
-    width: 36px;
-    height: 36px;
+  .applied-rules :global(.icon-button) {
+    width: var(--touch-target);
+    height: var(--touch-target);
   }
 }

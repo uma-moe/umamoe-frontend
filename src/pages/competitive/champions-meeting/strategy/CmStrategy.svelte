@@ -106,7 +106,7 @@
           : styleNames[Number(scope)] + ' · style overview'}
         description="Win share and simulated field share."
       >
-        {#snippet titleActions()}
+        {#snippet actions()}
           {#if scope === 'all'}
             <Button
               variant="ghost"
@@ -226,7 +226,7 @@
         description="Per-Uma win rate by style count in a room. Buckets need at least 1% of races."
         expandable
       >
-        {#snippet titleActions()}
+        {#snippet actions()}
           <SegmentedControl
             compact
             options={[
@@ -340,32 +340,34 @@
         title="Style Representatives"
         description="Team% counts wins by any teammate; Uma% counts this runner’s own wins. Select an Uma to inspect its captured builds."
       >
-        {#snippet titleActions()}
-          <SegmentedControl
-            compact
-            options={[
-              { value: 'team', label: 'Team' },
-              { value: 'individual', label: 'Personal' },
-              { value: 'pop', label: 'Most used' }
-            ]}
-            bind:value={metric}
-            label="Representative metric"
-          />
+        {#snippet actions()}
+          <div class="rep-controls">
+            <SegmentedControl
+              compact
+              options={[
+                { value: 'team', label: 'Team' },
+                { value: 'individual', label: 'Personal' },
+                { value: 'pop', label: 'Most used' }
+              ]}
+              bind:value={metric}
+              label="Representative metric"
+            />
+            <div class="rep-filter">
+              <span>Minimum style share</span>
+              <SegmentedControl
+                compact
+                label="Minimum style share"
+                bind:value={repMin}
+                options={[
+                  { value: '.005', label: '≥0.5%' },
+                  { value: '.01', label: '≥1%' },
+                  { value: '.02', label: '≥2%' },
+                  { value: '0', label: 'All' }
+                ]}
+              />
+            </div>
+          </div>
         {/snippet}
-        <div class="rep-filter">
-          <span>Minimum style share</span>
-          <SegmentedControl
-            compact
-            label="Minimum style share"
-            bind:value={repMin}
-            options={[
-              { value: '.005', label: '≥0.5%' },
-              { value: '.01', label: '≥1%' },
-              { value: '.02', label: '≥2%' },
-              { value: '0', label: 'All' }
-            ]}
-          />
-        </div>
         <!-- svelte-ignore a11y_no_noninteractive_tabindex (The bounded list is keyboard scrollable.) -->
         <div
           class="reps"

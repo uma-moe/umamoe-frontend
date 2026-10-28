@@ -31,12 +31,12 @@
     <section>
       <h3>Explore the builds behind the numbers</h3>
       <p>
-        Choose a style representative or team composition to find matching captured teams. Add
-        captured teams or combine individual Uma into your own team, then prepare a nine-runner room
-        in Lobby Builder.
+        Choose a style representative or team composition to find matching captured teams. Open a
+        team to inspect every build.
       </p>
       <p>
-        Open a captured build, team or lobby in the simulator to review its setup and run races.
+        Simulate a captured team, or add single Uma from different teams to the race simulator and
+        race them together.
       </p>
       <Button
         variant="secondary"

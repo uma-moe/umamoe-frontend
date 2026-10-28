@@ -1,230 +1,32 @@
-.team-details-dialog {
-  --dialog-header-min-height: 48px;
-  --dialog-header-padding: 8px 12px;
-  --dialog-header-align: center;
-  --dialog-heading-padding: 0;
+@import '../../../runners/team-details.css';
+
+.detail-error {
+  margin-bottom: var(--space-4);
 }
-.detail-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+/* Adding one Uma is the card's main action, so its toggle reads as a button rather than a bare icon. */
+.team-details-dialog :global(.build-card .lobby-toggle .icon-button) {
+  width: 36px;
+  height: 36px;
+  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
 }
-.detail-actions > :global(button) {
-  min-height: 30px;
-  padding: 0 10px;
-  font-size: 11px;
-  white-space: nowrap;
+.team-details-dialog :global(.build-card .lobby-toggle .icon-button:hover:not(:disabled)) {
+  background: color-mix(in srgb, var(--color-accent) 26%, transparent);
+  color: var(--color-accent);
 }
-.detail-summary {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 2px 2px 14px;
+.team-details-dialog :global(.build-card .lobby-toggle .icon-button.selected) {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--button-primary-text);
 }
-.detail-rate {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex: none;
+.team-details-dialog :global(.build-card .lobby-toggle .icon-button.selected:hover:not(:disabled)) {
+  background: color-mix(in srgb, var(--color-accent) 88%, white);
+  color: var(--button-primary-text);
 }
-.detail-rate strong {
-  font-size: 32px;
-  font-weight: 650;
-  color: var(--accent-primary);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.04em;
-  line-height: 1.2;
-}
-.detail-rate span {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-.detail-summary dl {
-  display: flex;
-  gap: 24px;
-  margin: 0;
-}
-.detail-summary dt {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-.detail-summary dd {
-  font-size: 13px;
-  font-weight: 600;
-  margin: 4px 0 0;
-  font-variant-numeric: tabular-nums;
-}
-.detail-choice {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: auto;
-}
-.runner-results {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  align-content: start;
-}
-.runner-results dt {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-.runner-results dd {
-  margin: 4px 0 0;
-  font-size: 18px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.runner-results > div:last-child dd {
-  color: var(--runner-color);
-}
-@media (max-width: 1100px) {
-  .detail-summary {
-    flex-wrap: wrap;
-    gap: 12px 20px;
-  }
-  .detail-choice {
-    flex-basis: 100%;
-    margin: 0;
-  }
-}
-@media (max-width: 760px) {
-  .detail-summary {
-    gap: 12px;
-  }
-  .detail-summary dl {
-    gap: 20px;
-  }
-  .detail-rate strong {
-    font-size: 28px;
-  }
-  .detail-rate {
-    flex-basis: 100%;
-  }
-  .detail-choice {
-    gap: 4px;
-  }
-  .detail-actions > :global(button) {
-    padding: 0 8px;
-    min-height: 36px;
-    font-size: 10px;
-  }
-}
-.detail-summary {
-  padding-bottom: 8px;
-}
-.detail-choice :global(.checkbox) {
-  min-height: 30px;
-  gap: 6px;
-}
-.detail-choice :global(.checkbox strong) {
-  font-size: 11px;
-  font-weight: 500;
-}
-.detail-selection {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  margin: 0 0 10px;
-  padding: 8px 10px;
-  background: var(--surface-2);
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  min-width: 0;
-}
-.detail-selection > strong {
-  flex: none;
-}
-.selected-builds {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-}
-.selected-builds > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.selected-builds :global(.art) {
-  border: 0;
-  background: transparent;
-}
-.selected-builds button {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border: 0;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-.selected-builds button:hover {
-  color: var(--accent-primary);
-}
-.selection-status {
-  color: var(--text-secondary);
-  font-size: 10px;
-}
-.detail-selection > :global(button) {
-  margin-left: auto;
-  white-space: nowrap;
-}
-.runner-results dd {
-  font-size: 16px;
-  margin-top: 3px;
-}
-@media (max-width: 760px) {
-  .detail-actions {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-  .detail-choice :global(.checkbox) {
-    min-height: 36px;
-  }
-  .detail-selection > :global(button) {
-    width: 100%;
-  }
-  .selected-builds {
-    flex-basis: 100%;
-  }
-}
-@media (max-width: 760px) {
-  .detail-summary {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px 12px;
-    align-items: center;
-  }
-  .detail-rate {
-    grid-column: 1;
-    gap: 5px;
-  }
-  .detail-rate strong {
-    font-size: 26px;
-  }
-  .detail-rate span {
-    font-size: 10px;
-  }
-  .detail-summary dl {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-  .detail-choice {
-    grid-column: 2;
-    grid-row: 1;
-    margin: 0;
-  }
-  .detail-choice :global(.checkbox) {
-    gap: 4px;
-  }
-  .detail-choice :global(.checkbox strong) {
-    font-size: 10px;
+@media (max-width: 767px) {
+  .team-details-dialog :global(.build-card .lobby-toggle .icon-button) {
+    width: var(--touch-target);
+    height: var(--touch-target);
   }
 }

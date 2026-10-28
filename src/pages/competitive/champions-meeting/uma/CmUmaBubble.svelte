@@ -7,6 +7,7 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import Button from '@/components/controls/Button.svelte';
+  import EmptyState from '@/components/feedback/EmptyState.svelte';
   import UmaChartPoint from '../../sessions/UmaChartPoint.svelte';
 
   interface Props {
@@ -219,20 +220,25 @@
           {/each}
         </svg>
       {:else}
-        <div class="empty">
-          <strong>No Umas match these chart filters.</strong>
-          <Button
-            variant="secondary"
-            size="sm"
-            onclick={() => {
-              hidden = [];
-              minPop = '0';
-              search = '';
-            }}
-          >
-            Reset chart filters
-          </Button>
-        </div>
+        <EmptyState
+          icon="search"
+          title="No matching Umas"
+          description="No Umas match these chart filters."
+        >
+          {#snippet actions()}
+            <Button
+              variant="secondary"
+              size="sm"
+              onclick={() => {
+                hidden = [];
+                minPop = '0';
+                search = '';
+              }}
+            >
+              Reset chart filters
+            </Button>
+          {/snippet}
+        </EmptyState>
       {/if}
     </div>
     {#if inspected}

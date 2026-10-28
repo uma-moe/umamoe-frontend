@@ -1,0 +1,186 @@
+/* The skill performance table and the activation lanes it opens. */
+.skill-table {
+  min-width: 0;
+}
+.skill-table :global(.bounded) {
+  max-height: clamp(680px, 78dvh, 960px) !important;
+}
+.skill-table :global(.table-wrap > table > tbody > tr[data-virtual-index]:not(.detail-row) > td) {
+  font-size: 13px;
+  padding-block: 2px;
+}
+.skill-table :global(.table-wrap > table > thead > tr > th) {
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+  background: var(--surface-1);
+}
+.skill-table :global(.table-wrap > table > tbody > tr > td[data-label='Activations']) {
+  text-align: left;
+}
+.skill-table :global(.table-wrap > table > thead > tr > th[aria-label='Activations']) {
+  text-align: left;
+}
+.skill-select {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 26px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+.skill-select.active,
+.skill-select:hover {
+  color: var(--accent-primary);
+}
+/* Names line up at one width; only skills with variants reserve room for the upgrade beside them. */
+.skill-label {
+  display: grid;
+  grid-template-columns: 176px;
+  align-items: center;
+  gap: 8px;
+  width: 176px;
+  min-width: 0;
+}
+.skill-label.with-variants {
+  grid-template-columns: 176px 14px 176px;
+  width: 382px;
+}
+.variant-alias {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.upgrade-icon {
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+}
+.variant-count {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.variant-alias:has(.variant-count) :global(.skill-body) {
+  padding-right: 24px;
+}
+.chevron {
+  display: flex;
+  flex: none;
+  transform: rotate(-90deg);
+}
+.chevron.open {
+  transform: none;
+}
+.skill-table :global(.table-wrap > table > thead > tr > th:first-child),
+.skill-table :global(.table-wrap > table > tbody > tr:not(.detail-row) > td:first-child) {
+  position: sticky;
+  left: 0;
+  background: var(--surface-1);
+  z-index: 1;
+}
+.skill-table :global(.table-wrap > table > thead > tr > th:first-child) {
+  z-index: 3;
+}
+.skill-table :global(.table-wrap > table > tbody > tr.interactive:hover > td:first-child),
+.skill-table :global(.table-wrap > table > tbody > tr.interactive:focus-within > td:first-child) {
+  background: var(--surface-2);
+}
+.skill-table :global(.table-wrap > table > tbody > tr:has(.skill-select.active) > td) {
+  background: color-mix(in srgb, var(--accent-primary) 6%, var(--surface-1));
+}
+.activation-summary {
+  display: grid;
+  grid-template-columns: 82px 42px auto;
+  align-items: baseline;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.activation-summary strong {
+  font-weight: 550;
+  text-align: right;
+}
+.activation-summary > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.style-procs {
+  display: grid;
+  grid-template-columns: repeat(5, 75px);
+  align-items: center;
+  gap: 8px;
+  margin-left: 4px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border-subtle);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.style-procs > span {
+  display: grid;
+  grid-template-columns: 6px 27px 1fr;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+.style-procs i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.style-procs strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+/* Table actions stay row-height so the compact skill list does not grow. */
+.skill-table :global(td .icon-button) {
+  width: 28px;
+  height: 28px;
+}
+.skill-table :global(td .ui-button) {
+  min-height: 28px;
+}
+.skill-table :global(.table-wrap > table > thead > tr > th:last-child),
+.skill-table :global(.table-wrap > table > tbody > tr:not(.detail-row) > td:last-child) {
+  width: 1%;
+  text-align: center;
+  padding-right: 4px;
+}
+.skill-detail {
+  padding: 8px 8px 12px;
+  border-top: 1px solid var(--border-subtle);
+  white-space: normal;
+}
+@media (max-width: 600px) {
+  .skill-label,
+  .skill-label.with-variants {
+    display: flex;
+    width: 152px;
+  }
+  .upgrade-icon {
+    display: none;
+  }
+  .variant-alias {
+    display: none;
+  }
+  .skill-detail {
+    padding: 8px 0;
+  }
+  .skill-table :global(.bounded) {
+    max-height: clamp(520px, 72dvh, 760px) !important;
+  }
+}

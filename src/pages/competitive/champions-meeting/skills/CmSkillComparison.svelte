@@ -5,14 +5,18 @@
   import CmSkillLanes from './CmSkillLanes.svelte';
   import Combobox from '@/components/controls/Combobox.svelte';
   import Button from '@/components/controls/Button.svelte';
+  import type { CmSkillDetails } from './cm-skill-details.svelte';
 
   interface Props {
     overview: SkillOverview;
     style: string;
     skills: { id: number; name: string }[];
     course?: Course;
-    courseLabel: string;
+    courseLabel?: string;
     selected: number[];
+    details: CmSkillDetails;
+    colors: Record<number, string>;
+    skillName: (id: number) => string;
     element?: HTMLElement;
   }
 
@@ -20,53 +24,65 @@
     overview,
     style,
     skills,
+    details,
+    colors,
+    skillName,
     course,
     courseLabel,
     selected = $bindable(),
     element = $bindable()
   }: Props = $props();
 
+  let searchAnchor = $state<HTMLDivElement>();
+
   const comparisonOptions = $derived(
     skills
       .filter((row) => !selected.includes(row.id))
-      .map((row) => ({ value: String(row.id), label: row.name + ' [Id ' + row.id + ']' }))
+      .map((row) => ({ value: String(row.id), label: row.name + ' · ID ' + row.id }))
   );
 </script>
 
-<section
-  class="comparison"
-  bind:this={element}
-  aria-label="Skill comparison"
->
-  <header>
-    <div>
-      <h2>
-        Compare activation distances <span>
-          {selected.length} skill{selected.length === 1 ? '' : 's'} · {number(
-            overview.courseDistance
-          )} m
-        </span>
-      </h2>
-      <p>Compare where skills activate, using a shared distance cursor.</p>
-    </div>
-    <div class="comparison-tools">
-      <div class="comparison-add">
-        <Combobox
-          id="cm-comparison-add"
-          label="Add a skill to comparison"
-          hideLabel
-          placeholder="Search by skill name or ID…"
-          prefixIcon="search"
-          action
-          options={comparisonOptions}
-          onchange={(value) => {
-            const id = Number(value);
-            if (!selected.includes(id)) selected = [...selected, id];
-          }}
-          emptyText="No more matching skills in this running style."
-        />
+{#if selected.length}
+  <section
+    class="comparison"
+    bind:this={element}
+    aria-label="Skill comparison"
+  >
+    <header>
+      <div>
+        <h2>
+          Compare activation distances <span>
+            {selected.length} skill{selected.length === 1 ? '' : 's'} · {number(
+              overview.courseDistance
+            )} m
+          </span>
+        </h2>
+        <p class="sr-only">
+          Compare activations normalized to each skill’s peak on one distance axis. Colour and line
+          patterns identify each skill in the table.
+        </p>
       </div>
-      {#if selected.length}
+      <div class="comparison-tools">
+        <div
+          class="comparison-add"
+          bind:this={searchAnchor}
+        >
+          <Combobox
+            id="cm-comparison-add"
+            label="Add a skill to comparison"
+            hideLabel
+            placeholder="Search by skill name or ID…"
+            prefixIcon="search"
+            action
+            popupAnchor={searchAnchor}
+            options={comparisonOptions}
+            onchange={(value) => {
+              const id = Number(value);
+              if (!selected.includes(id)) selected = [...selected, id];
+            }}
+            emptyText="No more matching skills in this running style."
+          />
+        </div>
         <Button
           variant="ghost"
           size="sm"
@@ -74,25 +90,20 @@
         >
           Clear comparison
         </Button>
-      {/if}
-    </div>
-  </header>
-  {#if selected.length}
+      </div>
+    </header>
     <CmSkillLanes
       {overview}
       {style}
       bind:selected
       {course}
       {courseLabel}
+      {details}
+      {colors}
+      {skillName}
     />
-  {:else}
-    <p class="comparison-empty">
-      Use <strong>Compare</strong>
-      in the list or search above to add skills here. Opening a skill’s details keeps your comparison
-      intact.
-    </p>
-  {/if}
-</section>
+  </section>
+{/if}
 
 <style>
   @import './skill-sections.css';
@@ -100,6 +111,10 @@
     min-width: 0;
     margin-top: 16px;
     scroll-margin-top: 80px;
+    padding: 12px;
+    border: 1px solid var(--card-surface-border);
+    border-radius: var(--radius-lg);
+    background: var(--card-surface-bg);
   }
   .comparison-tools {
     display: flex;
@@ -115,10 +130,6 @@
     width: 320px;
     max-width: 100%;
     margin: 0;
-  }
-  .comparison-empty {
-    padding: 6px 0;
-    font-size: 12px;
   }
   @media (max-width: 600px) {
     .comparison-tools {

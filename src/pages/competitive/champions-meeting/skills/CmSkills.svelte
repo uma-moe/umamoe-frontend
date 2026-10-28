@@ -1,35 +1,46 @@
 <script lang="ts">
+  import Banner from '@/components/feedback/Banner.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import type { Snapshot } from '../../hakuraku-types';
-  import { cmGet, snapshotPath, pct, number, styleNames, styleOrder } from '../cm-data';
+  import { cmGet, snapshotPath, number, styleNames, styleOrder, styleColors } from '../cm-data';
   import type { SkillOverview } from '../cm-exploration';
   import { loadSkills, resolveEncodedSkill, type SkillData } from '@/lib/game-data/skills/skills';
-  import Icon from '@/components/Icon.svelte';
-  import RaceSkill from '../../runners/RaceSkill.svelte';
-  import CmSkillLanes from './CmSkillLanes.svelte';
+  import CmSkillTable from './CmSkillTable.svelte';
   import CmSkillComparison from './CmSkillComparison.svelte';
-  import DataTable from '@/components/data/DataTable.svelte';
   import Button from '@/components/controls/Button.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import { loadRaceCourse, type Course } from '../../race-analysis/replay/replay-course';
-  import { skillRows } from './cm-skill-rows';
+  import { skillRows, validateSkillPlayerUsage, type SkillPlayerUsage } from './cm-skill-rows';
+  import { validateSkillOverview } from './cm-skill-analysis';
+  import { CmSkillDetails } from './cm-skill-details.svelte';
 
-  let { snapshot, style = $bindable('all') }: { snapshot: Snapshot; style?: string } = $props();
+  let {
+    snapshot,
+    style = $bindable('all'),
+    colors = styleColors
+  }: { snapshot: Snapshot; style?: string; colors?: Record<number, string> } = $props();
 
-  let overview = $state<SkillOverview>(),
+  let overview = $state.raw<SkillOverview>(),
     error = $state(''),
     attempt = $state(0),
     search = $state(''),
     selected = $state<number[]>([]),
-    expandedSkill = $state<number>(),
+    inspectedSkill = $state<number>(),
     comparison = $state<HTMLElement>();
+  let sortKey = $state('players');
+  let usage = $state.raw<SkillPlayerUsage>();
+  let usageError = $state('');
+  let usageAttempt = $state(0);
+  const details = new CmSkillDetails();
 
   let catalog = $state.raw(new Map<number, SkillData>());
   let course = $state.raw<Course>();
 
   const name = (id: number) => resolveEncodedSkill(catalog, id).skill?.name ?? 'Skill ' + id;
+
+  onDestroy(() => details.destroy());
 
   onMount(() => {
     void loadSkills()
@@ -58,33 +69,58 @@
     overview = undefined;
     error = '';
     selected = [];
-    expandedSkill = undefined;
+    inspectedSkill = undefined;
+    details.destroy();
     const controller = new AbortController();
     cmGet<SkillOverview>(snapshotPath(id, 'skills/overview'), controller.signal, id)
       .then((v) => {
-        if (!controller.signal.aborted) overview = v;
+        if (controller.signal.aborted) return;
+        validateSkillOverview(v);
+        details.reset(id, v.courseDistance);
+        overview = v;
       })
-      .catch((e) => {
-        if (!controller.signal.aborted) error = e.message;
+      .catch((reason: unknown) => {
+        if (controller.signal.aborted) return;
+
+        error = reason instanceof Error ? reason.message : 'Could not load skill data.';
       });
 
     return () => controller.abort();
   });
 
-  const skills = $derived(skillRows(overview, style, name));
+  $effect(() => {
+    const id = snapshot.snapshotId;
+    usageAttempt;
+    usage = undefined;
+    usageError = '';
+    if (snapshot.playerUsage?.schemaVersion !== 1) return;
+
+    const controller = new AbortController();
+    cmGet<SkillPlayerUsage>(snapshotPath(id, 'uma-usage'), controller.signal, id)
+      .then((value) => {
+        if (controller.signal.aborted) return;
+        validateSkillPlayerUsage(value);
+        usage = value;
+      })
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted)
+          usageError = reason instanceof Error ? reason.message : 'Player counts unavailable.';
+      });
+
+    return () => controller.abort();
+  });
+
+  const playersPending = $derived(snapshot.playerUsage?.schemaVersion === 1 && !usage);
+  const skills = $derived(
+    skillRows(overview, style, name, { details: details.values, usage, playersPending })
+  );
   const rows = $derived(
-    skills.filter((r) => (r.name + ' ' + r.id).toLowerCase().includes(search.trim().toLowerCase()))
+    skills.filter((r) =>
+      (r.name + ' ' + r.variants).toLowerCase().includes(search.trim().toLowerCase())
+    )
   );
 
   const courseMatch = $derived(course?.distance === overview?.courseDistance ? course : undefined);
-
-  function inspect(id: number) {
-    expandedSkill = expandedSkill === id ? undefined : id;
-  }
-
-  function toggle(id: number) {
-    selected = selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id];
-  }
 </script>
 
 {#if error}
@@ -124,107 +160,75 @@
           .map((id) => ({ value: String(id), label: styleNames[id]! }))
       ]}
     />
-    <p>{number(overview.players)} players · {number(overview.races)} simulated races</p>
+    <p>
+      {number(usage?.totalPlayers ?? overview.players)} players · {number(overview.races)} simulated races
+    </p>
   </div>
+  {#if usageError}
+    <div
+      class="usage-error"
+      role="alert"
+    >
+      <Banner
+        title="Player counts unavailable"
+        tone="warning"
+      >
+        <p>{usageError}</p>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon="refresh"
+          onclick={() => usageAttempt++}
+        >
+          Retry player counts
+        </Button>
+      </Banner>
+    </div>
+  {/if}
   <section class="skill-list">
     <header>
-      <div>
-        <h2>
-          Skill performance <span>{rows.length} skills</span>
-        </h2>
-        <p>Click a row for activation distances. Use Compare to add skills below.</p>
-      </div>
+      <h2>
+        Skill performance <span>{rows.length} skills</span>
+      </h2>
       {#if selected.length}
         <Button
           variant="secondary"
           size="sm"
+          icon="chevron"
           onclick={() => comparison?.scrollIntoView({ block: 'nearest', behavior: 'instant' })}
         >
-          Compare selected ({selected.length}) ↓
+          Compare {selected.length}
+          {selected.length === 1 ? 'skill' : 'skills'}
         </Button>
       {/if}
     </header>
-    <DataTable
-      plain
-      compact
-      caption="CM Skill Analysis"
-      maxHeight={580}
-      sortKey="players"
-      sortDirection="descending"
-      expandedRow={expandedSkill}
-      onrowclick={(row) => inspect(Number(row.id))}
-      emptyMessage="No skills match these filters."
-      columns={[
-        { key: 'name', label: 'Skill' },
-        { key: 'players', label: 'Players', numeric: true },
-        { key: 'owned', label: 'Learned entries', numeric: true },
-        { key: 'active', label: 'Activated entries', numeric: true },
-        { key: 'activation', label: 'Activation%', numeric: true },
-        { key: 'procs', label: 'Procs', numeric: true },
-        { key: 'winrate', label: 'Win% when active', numeric: true },
-        { key: 'timing', label: 'Compare', sortable: false }
-      ]}
+    <CmSkillTable
+      {overview}
       {rows}
-    >
-      {#snippet cell(row, column)}
-        {#if column.key === 'name'}
-          <button
-            class="skill-select"
-            class:active={expandedSkill === Number(row.id)}
-            aria-label={'Inspect ' + row.name}
-            aria-expanded={expandedSkill === Number(row.id)}
-            aria-controls={expandedSkill === Number(row.id) ? 'cm-skill-detail' : undefined}
-            onclick={() => inspect(Number(row.id))}
-          >
-            <span
-              class="chevron"
-              class:open={expandedSkill === Number(row.id)}
-            >
-              <Icon
-                name="chevron"
-                size={16}
-              />
-            </span>
-            <span class="skill-label">
-              <RaceSkill id={Number(row.id)} />
-              <small>[Id {row.id}]</small>
-            </span>
-          </button>
-        {:else if column.key === 'timing'}
-          <Button
-            variant={selected.includes(Number(row.id)) ? 'primary' : 'secondary'}
-            size="sm"
-            ariaLabel={(selected.includes(Number(row.id)) ? 'Remove ' : 'Add ') +
-              row.name +
-              (selected.includes(Number(row.id)) ? ' from comparison' : ' to comparison')}
-            ariaPressed={selected.includes(Number(row.id))}
-            onclick={() => toggle(Number(row.id))}
-          >
-            {selected.includes(Number(row.id)) ? 'Remove' : 'Compare'}
-          </Button>
-        {:else if column.key === 'activation' || column.key === 'winrate'}
-          {pct(Number(row[column.key]))}
-        {:else}
-          {number(Number(row[column.key]))}
-        {/if}
-      {/snippet}
-      {#snippet rowDetail(row)}
-        <section
-          id="cm-skill-detail"
-          class="skill-detail"
-          aria-label={row.name + ' activation details'}
-        >
-          <CmSkillLanes
-            overview={overview!}
-            {style}
-            selected={[Number(row.id)]}
-            removable={false}
-            course={courseMatch}
-            courseLabel={snapshot.meta.course}
-          />
-        </section>
-      {/snippet}
-    </DataTable>
+      {style}
+      {details}
+      {colors}
+      skillName={name}
+      caption="CM Skill Analysis"
+      course={courseMatch}
+      courseLabel={snapshot.meta.course}
+      playersUnavailable={usageError || undefined}
+      columnHelp={{
+        Players:
+          snapshot.playerUsage?.schemaVersion === 1
+            ? 'Players whose best active team learned this skill. Performance statistics use the full simulation.'
+            : 'Distinct players with a captured build that learned this skill.',
+        Activations:
+          'All activation events, including repeats. The percentage counts learned runner entries with at least one activation. Select a skill to inspect exact entry counts.',
+        'Mean distance':
+          'Approximate mean activation distance, calculated automatically from course buckets. Values become sortable as they load.',
+        'Median distance':
+          'Approximate median activation distance, calculated automatically from course buckets. Values become sortable as they load.'
+      }}
+      bind:selected
+      bind:inspected={inspectedSkill}
+      bind:sortKey
+    />
     {#if !rows.length}
       <Button
         variant="secondary"
@@ -237,15 +241,14 @@
         Reset skill filters
       </Button>
     {/if}
-    <p class="caption">
-      Entries count simulated runner appearances. Win rate when active describes association, not
-      the skill’s isolated effect. Debuffers are included under their running strategy.
-    </p>
   </section>
   <CmSkillComparison
     {overview}
     {style}
     {skills}
+    {details}
+    {colors}
+    skillName={name}
     course={courseMatch}
     courseLabel={snapshot.meta.course}
     bind:selected

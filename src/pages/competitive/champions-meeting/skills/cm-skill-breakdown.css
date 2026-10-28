@@ -1,0 +1,136 @@
+.breakdown {
+  --rate-low: var(--accent-primary);
+  --rate-high: var(--accent-warning);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+  min-width: 0;
+}
+.measure-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.measure-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.measure-select :global(.field) {
+  width: 180px;
+}
+.measure-select :global(.trigger) {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 28px;
+}
+.outcome-skill {
+  display: inline-flex;
+  vertical-align: middle;
+}
+.rates-help {
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: normal;
+}
+.rates-help p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+}
+.measure-select :global(.select-control) {
+  min-height: 28px;
+  padding-block: 4px;
+  font-size: 11px;
+}
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-secondary) transparent;
+}
+.table-scroll:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+th,
+td {
+  height: 28px;
+  padding: 2px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+  font-weight: 400;
+}
+thead th {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+}
+th:first-child {
+  text-align: left;
+  padding-left: 0;
+  min-width: 200px;
+}
+td {
+  min-width: 76px;
+}
+td.total {
+  font-weight: 600;
+}
+.rate {
+  --rate-color: color-mix(
+    in oklab,
+    var(--rate-low) calc(100% - var(--rate-position)),
+    var(--rate-high)
+  );
+  color: var(--rate-color);
+  background: color-mix(in srgb, var(--rate-color) 5%, transparent);
+}
+.rate-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 16px;
+  white-space: nowrap;
+}
+.rate-legend i {
+  width: 72px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg in oklab, var(--rate-low), var(--rate-high));
+}
+.style-heading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: end;
+  gap: 6px;
+}
+.style-heading i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.entries {
+  color: var(--text-secondary);
+  min-width: 96px;
+}
+.outcome-rows tr:first-child > * {
+  border-top: 1px solid var(--border-primary);
+}
+.outcome-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+@media (max-width: 600px) {
+  th:first-child {
+    min-width: 180px;
+  }
+}

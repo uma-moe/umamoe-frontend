@@ -1,11 +1,7 @@
 <script lang="ts">
-  import type {
-    Summary,
-    Performer,
-    Build,
-    TeamSearchResponse,
-    Snapshot
-  } from '../../hakuraku-types';
+  import { onMount } from 'svelte';
+  import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
+  import type { Summary, TeamSearchResponse, Snapshot } from '../../hakuraku-types';
   import { cmGet, snapshotPath, number } from '../cm-data';
   import { parseQuery, hasRequirement } from '../../hakuraku-query';
   import Button from '@/components/controls/Button.svelte';
@@ -13,49 +9,28 @@
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
   import Checkbox from '@/components/controls/Checkbox.svelte';
-  import Icon from '@/components/Icon.svelte';
+  import EmptyState from '@/components/feedback/EmptyState.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import CmArchetypeFilters from './filters/CmArchetypeFilters.svelte';
   import CmArchetypeField from './CmArchetypeField.svelte';
-  import CmCustomTeam from './teams/CmCustomTeam.svelte';
   import CmTeamCard from './teams/CmTeamCard.svelte';
   import CmTeamDetails from './teams/CmTeamDetails.svelte';
+  import CmLobbyTray from './lobby/CmLobbyTray.svelte';
+  import { CmLobby } from './lobby/cm-lobby.svelte';
 
   let {
     data,
     colors,
     snapshot,
-    query = $bindable(''),
-    lobby,
-    teamDraft,
-    pendingTeams,
-    pendingRunners,
-    teamError,
-    onrunner,
-    onbuildteam,
-    onremoverunner,
-    onclearteam,
-    ontoggle,
-    onlobby
+    query = $bindable('')
   }: {
     data: Summary;
     snapshot?: Snapshot;
     colors: Record<number, string>;
     query?: string;
-    lobby: Performer[];
-    pendingTeams: string[];
-    teamDraft: { key: string; build: Build }[];
-    pendingRunners: string[];
-    teamError: string;
-    onrunner: (team: Performer, index: number) => void;
-    onbuildteam: () => void;
-    onremoverunner: (key: string) => void;
-    onclearteam: () => void;
-    ontoggle: (team: Performer) => void;
-    onlobby: () => void;
   } = $props();
 
-  let simError = $state('');
+  const lobby = new CmLobby(() => ({ data, snapshot }));
 
   let mode = $state('all'),
     sort = $state('lower'),
@@ -68,10 +43,10 @@
     error = $state('');
 
   let showStats = $state(true);
-  let buildTeam = $state(false);
   let selected = $state('');
-
-  const selectedRunners = $derived(new Set(teamDraft.map((r) => r.key)));
+  let lobbyExpanded = $state(false);
+  let skillCatalog = $state.raw<Map<number, SkillData>>();
+  let skillCatalogError = $state('');
 
   const parsed = $derived.by(() => {
     try {
@@ -82,10 +57,15 @@
   });
 
   const activeFilters = $derived(parsed.slots.filter(hasRequirement).length);
-  const lobbyIds = $derived(new Set(lobby.map((t) => t.id)));
   const total = $derived(
     mode === 'unique' ? (result?.totalOwners ?? 0) : (result?.totalTeams ?? 0)
   );
+
+  $effect(() => {
+    data.snapshotId;
+    lobby.reset();
+    lobbyExpanded = false;
+  });
 
   $effect(() => {
     data.snapshotId;
@@ -143,42 +123,27 @@
     const params = new URLSearchParams(location.search);
     if (params.get('team')) selected = params.get('team')!;
   });
+
+  onMount(() => {
+    let active = true;
+
+    void loadSkills()
+      .then((catalog) => {
+        if (active) skillCatalog = catalog;
+      })
+      .catch(() => {
+        if (active) {
+          skillCatalogError =
+            'SP totals for older builds are unavailable. Reload the page to try again.';
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  });
 </script>
 
-{#snippet runnerToggle(team: Performer, index: number)}
-  {@const key = team.id + ':' + index}
-  {@const name = data.cards[team.members[index]!.card]?.name ?? 'Uma'}
-  <button
-    class="runner-toggle"
-    class:chosen={selectedRunners.has(key)}
-    aria-label={(selectedRunners.has(key) ? 'Remove ' : 'Add ') +
-      name +
-      (selectedRunners.has(key) ? ' from custom team' : ' to custom team')}
-    aria-pressed={selectedRunners.has(key)}
-    disabled={pendingRunners.includes(key) ||
-      (!selectedRunners.has(key) && teamDraft.length + pendingRunners.length >= 3)}
-    onclick={() => {
-      buildTeam = true;
-      onrunner(team, index);
-    }}
-  >
-    {#if pendingRunners.includes(key)}
-      <Spinner
-        size={14}
-        label="Loading build…"
-      />
-    {:else}
-      {#if selectedRunners.has(key)}
-        <Icon
-          name="close"
-          size={16}
-        />
-      {:else}
-        <span aria-hidden="true">+</span>
-      {/if}
-    {/if}
-  </button>
-{/snippet}
 <div class="archetype-workspace">
   <div
     class="browse-tools"
@@ -214,16 +179,22 @@
               : ''}
           </p>
         </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="users"
+          ariaExpanded={lobbyExpanded}
+          ariaControls="cm-lobby-teams"
+          onclick={() => (lobbyExpanded = !lobbyExpanded)}
+        >
+          {lobby.count ? 'Review lobby' : 'Build a lobby'}
+        </Button>
       </header>
       <div class="browser-toolbar">
         <Checkbox
           id="cm-show-build-stats"
           label="Build stats"
           bind:checked={showStats}
-        /><Checkbox
-          id="cm-build-team"
-          label="Build a team"
-          bind:checked={buildTeam}
         /><SegmentedControl
           compact
           options={[
@@ -241,40 +212,22 @@
             { value: 'lower', label: 'Reliable win rate' },
             { value: 'rate', label: 'Win rate' }
           ]}
-        /><Button
-          variant="secondary"
-          size="sm"
-          icon="race"
-          onclick={onlobby}
-        >
-          Lobby {lobby.length}/3
-        </Button>
+        />
       </div>
     </div>
     <p class="ranking-help">
       {sort === 'lower'
         ? 'Reliable ranking uses the lower end of the estimated win range.'
-        : 'Ranked by simulated team win rate.'} Select a team to inspect its builds. Use + to choose individual
-      Uma.
+        : 'Ranked by simulated team win rate.'} Add teams or single Uma to build a lobby, then open it
+      in the simulator.
     </p>
-    {#if buildTeam}
-      <CmCustomTeam
-        {data}
-        {lobby}
-        {teamDraft}
-        {pendingTeams}
-        {pendingRunners}
-        {teamError}
-        {onbuildteam}
-        {onremoverunner}
-        {onclearteam}
-      />
-    {/if}
-    {#if simError}
-      <p role="alert">{simError}</p>
-    {/if}
-    {#if teamError && !buildTeam}
-      <p role="alert">{teamError}</p>
+    {#if skillCatalogError}
+      <p
+        class="ranking-help"
+        role="status"
+      >
+        {skillCatalogError}
+      </p>
     {/if}
     {#if !result && !error}
       <div class="teams-loading">
@@ -285,21 +238,21 @@
         />
       </div>
     {:else if result && !result.teams.length}
-      <div class="empty">
-        <Icon
-          name="search"
-          size={26}
-        />
-        <h3>No matching teams</h3>
-        <p>Try another Uma or style, or clear the lineup filters.</p>
-        <Button
-          variant="secondary"
-          size="sm"
-          onclick={() => (query = '')}
-        >
-          Clear filters
-        </Button>
-      </div>
+      <EmptyState
+        icon="search"
+        title="No matching teams"
+        description="Try another Uma or style, or clear the lineup filters."
+      >
+        {#snippet actions()}
+          <Button
+            variant="secondary"
+            size="sm"
+            onclick={() => (query = '')}
+          >
+            Clear filters
+          </Button>
+        {/snippet}
+      </EmptyState>
     {:else if result}
       <div
         class="team-grid"
@@ -319,12 +272,9 @@
             {data}
             {colors}
             {showStats}
-            inLobby={lobbyIds.has(team.id)}
-            pending={pendingTeams.includes(team.id)}
-            lobbyFull={lobby.length + pendingTeams.length >= 3}
-            {runnerToggle}
+            {skillCatalog}
+            {lobby}
             onopen={() => (selected = team.id)}
-            ontoggle={() => ontoggle(team)}
           />
         {/each}
       </div>
@@ -350,25 +300,18 @@
 </div>
 <CmTeamDetails
   {data}
-  {snapshot}
   {colors}
   bind:selected
-  bind:buildTeam
-  bind:simError
   {lobby}
-  {lobbyIds}
-  {pendingTeams}
-  {pendingRunners}
-  {teamDraft}
-  {teamError}
-  {runnerToggle}
-  {ontoggle}
-  {onbuildteam}
-  {onremoverunner}
+/>
+<CmLobbyTray
+  {lobby}
+  {data}
+  {colors}
+  bind:expanded={lobbyExpanded}
 />
 
 <style>
   @import './archetype-text.css';
-  @import './teams/runner-toggle.css';
   @import './cm-archetypes.css';
 </style>

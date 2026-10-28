@@ -1,17 +1,17 @@
 import type { Pair } from '../hakuraku-types';
 
 export type SkillOverviewRow = [
-  number,
-  string,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number
+  skillId: number,
+  style: string,
+  players: number,
+  owned: number,
+  activated: number,
+  procs: number,
+  repeat: number,
+  ownWinsActive: number,
+  ownWinsInactive: number,
+  teamWinsActive: number,
+  teamWinsInactive: number
 ];
 export type SkillOverview = {
   snapshotId: string;
@@ -20,14 +20,28 @@ export type SkillOverview = {
   courseDistance: number;
   rows: SkillOverviewRow[];
   allPlayerCounts: Record<string, number>;
+  variants?: Record<string, number[]>;
+  populationByStyle?: Record<string, [entries: number, wins: number]>;
 };
+
+export type SkillBuckets = Record<
+  string,
+  [
+    bucket: number,
+    procs: number,
+    firstEntries: number,
+    firstIndividualWins: number,
+    firstTeamWins: number
+  ][]
+>;
 
 export type SkillDetail = {
   snapshotId: string;
   skillId: number;
   bucketCount: number;
   courseDistance: number;
-  styles: Record<string, [number, number, number, number, number][]>;
+  styles: SkillBuckets;
+  variants?: Record<string, { rows: SkillOverviewRow[]; styles: SkillBuckets }>;
 };
 
 export const skillStyles: Record<string, number> = {
