@@ -81,6 +81,9 @@ scripts/*
 !scripts/seo-pages.ts
 !scripts/seo-pages.test.ts
 !scripts/check-seo.mjs
+!scripts/companion-stylesheet-reload.ts
+!scripts/build-skill-explorer-umas.ts
+!scripts/fit-cm-statlines.ts
 
 .github/copilot-instructions.md
 !src/assets/
