@@ -15,22 +15,20 @@ describe('Application route manifest', () => {
     expect(navigation.main.map((item) => item.id)).toEqual([
       'database',
       'veterans',
+      'competitive',
+      'tools',
+      'timeline',
       'clubs',
       'rankings',
       'activity',
-      'tierlist',
-      'competitive',
-      'tools',
-      'research',
-      'timeline'
+      'research'
     ]);
     expect(navigation.mobileMore.map((item) => item.id)).toEqual([
       'veterans',
-      'tierlist',
       'competitive',
       'tools',
-      'research',
-      'timeline'
+      'timeline',
+      'research'
     ]);
     expect(navigation.main.find((item) => item.id === 'database')?.current).toBe(true);
     expect(navigation.main.some((item) => item.id === 'statistics')).toBe(false);
@@ -54,7 +52,9 @@ describe('Application route manifest', () => {
     expect(tools.children?.map((child) => child.href)).toEqual([
       '/tools/statistics',
       '/tools/lineage-planner',
+      '/tools/skill-explorer',
       '/tools/master-data',
+      '/simulator/skills',
       '/timeline?tab=carat-planner'
     ]);
     expect(tools.expanded).toBe(true);
@@ -81,5 +81,25 @@ describe('Application route manifest', () => {
     ]);
     expect(competitive.children?.map((item) => item.id)).toEqual(['race-analysis', 'cm-data']);
     expect(routeDefinitionForPath('/research/spot-struggle')?.id).toBe('research');
+  });
+
+  it('keeps the Build Optimizer selected under Tools at its simulator URL', () => {
+    const navigation = navigationForPath('/simulator/skills');
+    const tools = navigation.main.find((item) => item.id === 'tools');
+
+    expect(tools?.current).toBe(true);
+    expect(tools?.expanded).toBe(true);
+    expect(tools?.children?.filter((child) => child.current).map((child) => child.id)).toEqual([
+      'build-optimizer'
+    ]);
+    expect(routeDefinitionForPath('/simulator/skills')?.id).toBe('build-optimizer');
+  });
+
+  it('excludes the support card tierlist from all product routes and navigation', () => {
+    const navigation = navigationForPath('/');
+
+    expect(appRoutes.some((route) => route.path === '/tierlist')).toBe(false);
+    expect(navigation.main.some((item) => item.id === 'tierlist')).toBe(false);
+    expect(navigation.mobileMore.some((item) => item.id === 'tierlist')).toBe(false);
   });
 });

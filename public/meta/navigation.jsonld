@@ -36,56 +36,56 @@
     {
       "@type": "ListItem",
       "position": 6,
-      "name": "Tierlist",
-      "url": "https://uma.moe/tierlist"
-    },
-    {
-      "@type": "ListItem",
-      "position": 7,
       "name": "Tools",
       "url": "https://uma.moe/tools"
     },
     {
       "@type": "ListItem",
-      "position": 8,
+      "position": 7,
       "name": "Statistics",
       "url": "https://uma.moe/tools/statistics"
     },
     {
       "@type": "ListItem",
-      "position": 9,
+      "position": 8,
       "name": "Lineage Planner",
       "url": "https://uma.moe/tools/lineage-planner"
     },
     {
       "@type": "ListItem",
-      "position": 10,
+      "position": 9,
       "name": "Timeline",
       "url": "https://uma.moe/timeline"
     },
     {
       "@type": "ListItem",
-      "position": 11,
+      "position": 10,
       "name": "Privacy",
       "url": "https://uma.moe/privacy-policy"
     },
     {
       "@type": "ListItem",
-      "position": 12,
+      "position": 11,
       "name": "Competitive",
       "url": "https://uma.moe/competitive"
     },
     {
       "@type": "ListItem",
-      "position": 13,
+      "position": 12,
       "name": "Race Analysis",
       "url": "https://uma.moe/competitive/race-analysis"
     },
     {
       "@type": "ListItem",
-      "position": 14,
+      "position": 13,
       "name": "CM Data",
       "url": "https://uma.moe/competitive/cm-data"
+    },
+    {
+      "@type": "ListItem",
+      "position": 14,
+      "name": "Skill Explorer",
+      "url": "https://uma.moe/tools/skill-explorer"
     },
     {
       "@type": "ListItem",

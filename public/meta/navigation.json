@@ -20,13 +20,6 @@
           "adSurface": "database"
         },
         {
-          "id": "tierlist",
-          "title": "Tierlist",
-          "description": "Compare Uma Musume support cards with a data-driven Global tier list, limit-break controls, type rankings, and performance details.",
-          "path": "/tierlist",
-          "adSurface": "tierlist"
-        },
-        {
           "id": "timeline",
           "title": "Timeline",
           "description": "Browse the estimated Uma Musume Global banner and event schedule. Track character and support card releases, story events and races, and plan carats.",
@@ -113,6 +106,13 @@
           "description": "Calculate Uma Musume affinity and compatibility, compare parents, add shared G1 wins, estimate spark inheritance odds, and plan a complete lineage tree.",
           "path": "/tools/lineage-planner",
           "adSurface": "lineage_planner"
+        },
+        {
+          "id": "skill-explorer",
+          "title": "Skill Explorer",
+          "description": "See what every Uma Musume skill is worth and where it procs on every course, by running style, surface and length.",
+          "path": "/tools/skill-explorer",
+          "adSurface": null
         },
         {
           "id": "master-data",

@@ -10,7 +10,7 @@ try {
   ['/', '4.521'], ['/database', 'Parity Trainer'], ['/circles', 'Team Sirius'],
   ['/circles/7', 'Gold Ship'], ['/rankings', 'Parity Trainer'], ['/activity', 'Mejiro Analyst'],
   ['/activity/42', 'Mejiro Analyst'], ['/timeline', 'Mejiro McQueen Pickup'],
-  ['/tools/statistics', 'Special Week'], ['/tierlist', 'Tierlist Information'],
+  ['/tools/statistics', 'Special Week'],
   ['/profile/123456789012', 'Team Sirius'], ['/profile/123456789012/veterans', 'Grass Wonder']
  ]) {
   await page.goto(`${base}${path}`);

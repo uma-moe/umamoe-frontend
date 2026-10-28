@@ -56,12 +56,11 @@ test('Home and Tools keep source link order, disabled tools and the Angular them
     await cards
       .getByRole('link')
       .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
-  ).toEqual(['/database', '/circles', '/rankings', '/tierlist', '/timeline', '/tools']);
+  ).toEqual(['/database', '/circles', '/rankings', '/timeline', '/tools']);
   await expect(cards.locator('strong')).toHaveText([
-    'Database',
+    'DatabaseUpdated',
     'Clubs',
     'Rankings',
-    'Tierlists',
     'TimelineUpdated',
     'Tools & AnalyticsUpdated'
   ]);
@@ -101,19 +100,34 @@ test('Home and Tools keep source link order, disabled tools and the Angular them
   await toolsLink.press('Enter');
   await expect(page).toHaveURL(/\/tools$/);
   await expect(cards.locator('strong')).toHaveText([
+    'Master Data',
+    'Skill Explorer',
     'Team Stadium Statistics',
     'Carat PlannerUpdated',
-    'Lineage Planner',
+    'Lineage PlannerUpdated',
     'HP Calculator',
-    'Race Simulator'
+    'Race Simulator',
+    'Build Optimizer'
   ]);
   expect(
     await cards
       .getByRole('link')
       .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
-  ).toEqual(['/tools/statistics', '/timeline?tab=carat-planner', '/tools/lineage-planner']);
-  await expect(cards.locator('[aria-disabled="true"]')).toHaveCount(2);
-  await expect(cards.locator('.updated-feature')).toContainText('Carat Planner');
+  ).toEqual([
+    '/tools/master-data',
+    '/tools/skill-explorer',
+    '/tools/statistics',
+    '/timeline?tab=carat-planner',
+    '/tools/lineage-planner',
+    '/simulator/hp',
+    '/simulator/race',
+    '/simulator/skills'
+  ]);
+  await expect(cards.locator('[aria-disabled="true"]')).toHaveCount(0);
+  await expect(cards.locator('.updated-feature')).toContainText([
+    'Carat Planner',
+    'Lineage Planner'
+  ]);
   for (const width of [1536, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 844 });
     await expect

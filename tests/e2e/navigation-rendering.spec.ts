@@ -10,7 +10,6 @@ test('every page frame navigates without waiting for its content module', async 
     ['/circles', 'ClubsPage', 'clubs'],
     ['/rankings', 'RankingsPage', 'rankings'],
     ['/activity', 'ActivityPage', 'activity'],
-    ['/tierlist', 'TierlistPage', 'tierlist'],
     ['/tools/statistics', 'StatisticsPage', 'statistics'],
     ['/tools/lineage-planner', 'LineagePlannerPage', 'lineage-planner'],
     ['/veterans', 'VeteransBrowserPage', 'veterans'],
