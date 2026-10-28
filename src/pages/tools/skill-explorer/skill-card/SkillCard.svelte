@@ -139,6 +139,14 @@
     </div>
   </dl>
 
+  {#if point.forced > 0}
+    <p class="forced">
+      Never procs for her{point.courses > 1
+        ? ` on ${point.forced} of ${point.courses} courses`
+        : ''}: valued forced to proc where the course lets it.
+    </p>
+  {/if}
+
   {#if requirements.length > 0}
     <section class="needs">
       <h4>Needs</h4>

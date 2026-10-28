@@ -113,6 +113,7 @@
   let show = $state<ShowLimit>('50');
   let bestOfFamily = $state(true);
   let showDayBound = $state(false);
+  let procScaled = $state(false);
 
   const explorerCourses = $derived(index?.courses ?? []);
 
@@ -227,19 +228,20 @@
           limit: limitOf(show),
           showDayBound,
           day: selectedMeeting ? raceDay : undefined,
+          procScaled,
           courseDistance: selectedCourse?.distance
         })
       : undefined
   );
 
   const yTitle = $derived(
-    yMode === 'value'
+    (yMode === 'value'
       ? 'Est. win rate added to the reference build'
-      : 'Est. win rate gained on its own'
+      : 'Est. win rate gained on its own') + (procScaled ? ', over all races' : ', when it procs')
   );
   /** What the plot's axes mean: when it changes, the zoom starts again from the whole plot. */
   const viewKey = $derived(
-    [JSON.stringify(scope), style, xMode, yMode, selectedCourse?.distance].join('|')
+    [JSON.stringify(scope), style, xMode, yMode, procScaled, selectedCourse?.distance].join('|')
   );
   const pointsById = $derived(
     new Map((scopeData?.styles[style] ?? []).map((point) => [point.skillId, point]))
@@ -499,6 +501,7 @@
         bind:show
         bind:bestOfFamily
         bind:showDayBound
+        bind:procScaled
         {umas}
         {surfaceOptions}
         {distanceOptions}
@@ -563,10 +566,13 @@
         <strong>Win rate</strong>
         comes from the model the optimizer builds with ({modelName(index.model.variant)}, checkpoint {index
           .model.checkpoint}): on every course a reference runner per style, no particular uma, with
-        the statline forecast there, races sixteen real CM fields, the course's own recorded rooms
-        or the nearest CM's runners brought to it. Her races show where each skill fires; the model
-        turns that into seconds and win. Values are for comparing skills with each other; their
-        exact size is an estimate.
+        the statline forecast there, races a hundred real CM fields, the course's own recorded rooms
+        or the nearest CM's runners brought to it. Her races show where and how often each skill
+        fires; the model turns a proc there into seconds and win, so a value is what the skill adds
+        when it procs.
+        <strong>Scale by proc rate</strong>
+        weighs it by how often it procs, over all races. Values are for comparing skills with each other;
+        their exact size is an estimate.
         {#if margin !== undefined}
           Checked against full races, 80% of the skills here came within ±{Math.round(
             margin * 100
@@ -580,11 +586,12 @@
         <strong>Works best with</strong>
         names the skills that raise its value most beside it, on log-odds, so a stronger build's flatter
         win curve does not count as a combination. A CM shows its course. Over several courses, a value
-        is the median course's (0 where a skill cannot fire), so turf shows what a skill is worth on a
-        typical turf course, and proc points average the races it fired in. Strong and weaker split at
-        the median shown skill. Negative skills are left out; ground, weather and season skills show on
-        a CM whose day they hold on, and elsewhere only when asked, valued as if their day held. Skills
-        that wait on other skills, such as Groundwork, are valued as if enough had fired before them.
+        is the median course's, so turf shows what a skill is worth on a typical turf course, and proc
+        points average the races it fired in. Strong and weaker split at the median shown skill. A skill
+        that never procs for her, for another style or distance, another day, the runners around her or
+        skills it waits on (such as Groundwork), is forced to proc wherever the course lets it, however
+        unlikely the build, and counts 0 when scaled by proc rate. Negative skills are left out; ground,
+        weather and season skills show on a CM whose day they hold on, and elsewhere only when asked.
         <strong>Picking an uma</strong>
         highlights her unique, as inherited, and the skills she starts with or unlocks by potential level:
         from the Global game data for umas out on Global, from the Japanese for those still to come. Skills
