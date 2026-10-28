@@ -4,6 +4,7 @@ import legacy from '@vitejs/plugin-legacy';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 import { demoData } from './scripts/demo-data';
+import { companionStylesheetReload } from './scripts/companion-stylesheet-reload';
 import { seoPagesPlugin } from './scripts/seo-pages';
 import { environment as production } from './src/config/environment.prod';
 import { environment as beta } from './src/config/environment.beta';
@@ -66,6 +67,7 @@ export default defineConfig(async ({ mode, command }) => {
         // Windows dev requests can lose virtual CSS metadata; keep each component's styles with its JS.
         emitCss: !(command === 'serve' && process.platform === 'win32')
       }),
+      companionStylesheetReload(),
       seoPagesPlugin(),
       ...(mode === 'demo' ? [await demoData()] : []),
       sentryVitePlugin({
