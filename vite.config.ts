@@ -124,11 +124,18 @@ export default defineConfig(async ({ mode, command }) => {
         allow: [rootDirectory]
       },
       proxy: {
-        '/api/sim': {
-          target: variables.VITE_SIM_PROXY_TARGET ?? 'http://127.0.0.1:3001',
-          changeOrigin: true,
-          ...(simulatorApiKey ? { headers: { 'X-API-Key': simulatorApiKey } } : {})
-        },
+        // VITE_SIMULATOR_TARGET talks to a simulator directly, without a backend in front: it serves /sim/...
+        '/api/sim': variables.VITE_SIMULATOR_TARGET
+          ? {
+              target: variables.VITE_SIMULATOR_TARGET,
+              changeOrigin: true,
+              rewrite: (path: string) => path.replace(/^\/api/, '')
+            }
+          : {
+              target: variables.VITE_SIM_PROXY_TARGET ?? 'http://127.0.0.1:3001',
+              changeOrigin: true,
+              ...(simulatorApiKey ? { headers: { 'X-API-Key': simulatorApiKey } } : {})
+            },
         '/api': variables.VITE_API_PROXY_TARGET ?? 'http://127.0.0.1:3001',
         '/search': variables.VITE_SEARCH_PROXY_TARGET ?? 'http://127.0.0.1:3002',
         '/ingest': variables.VITE_INGEST_PROXY_TARGET ?? 'http://127.0.0.1:3003',
