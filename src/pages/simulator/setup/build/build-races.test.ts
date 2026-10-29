@@ -83,6 +83,26 @@ describe('Build search races', () => {
     expect(races.where[0]).toContain('3 Team Trials courses, one drawn per race');
   });
 
+  it('weighs each pool course as it is given, or the same when no weights come', () => {
+    const pool = [
+      course({ course_id: 10101, race_track_id: 10005, distance: 1200 }),
+      course({ course_id: 10801, race_track_id: 10008, distance: 1400 })
+    ];
+    const race = (weights?: Map<number, number>) =>
+      buildRaces({ her, seed: 7, pool, weights, setup: { ...SETUP, raceType: 14 } })!;
+
+    const weighted = race(
+      new Map([
+        [10101, 54],
+        [10801, 38]
+      ])
+    ).scenarios;
+    const even = race().scenarios;
+
+    expect(weighted.map((scenario) => scenario.weight)).toEqual([54, 38]);
+    expect(even.map((scenario) => scenario.weight)).toEqual([1, 1]);
+  });
+
   it('needs a course', () => {
     expect(buildRaces({ her, seed: 7, setup: SETUP })).toBeUndefined();
     expect(buildRaces({ her, seed: 7, pool: [], setup: SETUP })).toBeUndefined();

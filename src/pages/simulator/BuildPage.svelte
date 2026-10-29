@@ -12,7 +12,12 @@
   import BuildOwnedSkills from './setup/build/BuildOwnedSkills.svelte';
   import BuildSearchBar from './setup/build/BuildSearchBar.svelte';
   import { explainBuildError, formNumber } from './setup/build/build-run';
-  import { poolProblem, teamTrialsPool, type TeamTrialsMode } from './setup/build/track-pool';
+  import {
+    poolProblem,
+    poolWeights,
+    teamTrialsPool,
+    type TeamTrialsMode
+  } from './setup/build/track-pool';
   import {
     BUILD_CODE_VERSION,
     buildCodeRunner,
@@ -201,6 +206,7 @@
       seed: formNumber(buildSearch.seed),
       course: $state.snapshot(course),
       pool: teamTrials ? pool : undefined,
+      weights: teamTrials ? poolWeights(pool, buildSearch.mode as TeamTrialsMode) : undefined,
       setup: {
         raceInstanceId: selectedRaceInstanceId(),
         raceType: teamTrials ? TEAM_TRIALS_RACE_TYPE : 0,

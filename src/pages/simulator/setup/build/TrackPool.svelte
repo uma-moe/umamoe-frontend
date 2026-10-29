@@ -1,13 +1,14 @@
 <script lang="ts">
   import Button from '@/components/controls/Button.svelte';
-  import FilterChip from '@/components/filters/FilterChip.svelte';
-  import { trackName, type RaceCourse } from '@/lib/game-data/racing/courses';
+  import Icon from '@/components/Icon.svelte';
+  import { LAYOUT_NAMES, TURN_NAMES, type RaceCourse } from '@/lib/game-data/racing/courses';
   import { MAX_TRACKS } from '../../requests/optimize-request';
-  import { defaultPool, teamTrialsCourses, type TeamTrialsMode } from './track-pool';
+  import { courseGrid, defaultPool, teamTrialsCourses, type TeamTrialsMode } from './track-pool';
 
   /**
-   * The Team Trials tracks she races. The game draws the course for each match from every course of the distance, so
-   * the search deals these out over its races and averages the time she gains.
+   * The Team Trials courses she races, as a grid of tracks and distances with a toggle per course: tracks across where
+   * they fit, otherwise down. The game draws the course for each match from the distance's courses, so the search deals
+   * these out over its races and weighs each by how often the game draws its distance (track-pool.ts).
    */
   let {
     mode,
@@ -20,29 +21,44 @@
     picked?: number[];
   } = $props();
 
+  /** The narrowest columns (track-pool.css): with tracks across, a label column and one per track. */
+  const LABEL_COLUMN = 76;
+  const TRACK_COLUMN = 64;
+
+  let width = $state(0);
+
   const courses = $derived(teamTrialsCourses(courseLookup, mode));
+  const grid = $derived(courseGrid(courses));
   const fallback = $derived(defaultPool(courses));
   const on = $derived(new Set(picked ?? fallback));
   const count = $derived(courses.filter((course) => on.has(course.course_id)).length);
   const changed = $derived(count !== fallback.length || fallback.some((course) => !on.has(course)));
-  const groups = $derived.by(() => {
-    const byTrack = new Map<number, RaceCourse[]>();
-    for (const course of courses)
-      byTrack.set(course.race_track_id, [...(byTrack.get(course.race_track_id) ?? []), course]);
-    return [...byTrack].map(([trackId, list]) => ({ trackId, name: trackName(trackId), list }));
-  });
+  /** Every course here is the JRA's, so "JRA only" would be "All" again. */
+  const onlyJra = $derived(fallback.length === courses.length);
+  /** Tracks across where every track gets a column; unmeasured, it assumes so, as on most screens. */
+  const tracksAcross = $derived(
+    width === 0 || width >= LABEL_COLUMN + grid.tracks.length * TRACK_COLUMN
+  );
 
-  /** `1,400 m`, with the layout when the track runs two at that distance and straight for Niigata's 1,000 m. */
-  function label(course: RaceCourse, siblings: ReadonlyArray<RaceCourse>) {
-    const twin = siblings.some(
+  const formatDistance = (distance: number) => distance.toLocaleString('en-US') + ' m';
+
+  /** The layout where the track runs two at the course's distance, and the straight course; '' for the rest. */
+  function layoutText(course: RaceCourse, trackCourses: ReadonlyArray<RaceCourse>) {
+    const twin = trackCourses.some(
       (other) => other.course_id !== course.course_id && other.distance === course.distance
     );
 
-    return [
-      course.distance.toLocaleString('en-US') + ' m',
-      course.turn === 4 ? 'straight' : '',
-      twin ? '(' + course.course + ')' : ''
-    ]
+    if (twin) return LAYOUT_NAMES[course.course] ?? 'Course ' + course.course;
+    if (course.turn === 4) return TURN_NAMES[course.turn] ?? 'Straight';
+    return '';
+  }
+
+  function courseName(
+    trackName: string,
+    course: RaceCourse,
+    trackCourses: ReadonlyArray<RaceCourse>
+  ) {
+    return [trackName, formatDistance(course.distance), layoutText(course, trackCourses)]
       .filter(Boolean)
       .join(' ');
   }
@@ -54,10 +70,56 @@
   }
 </script>
 
+{#snippet courseToggle(trackName: string, course: RaceCourse, cell: RaceCourse[])}
+  {@const selected = on.has(course.course_id)}
+  {@const text = layoutText(course, cell)}
+  <button
+    type="button"
+    class="course"
+    class:selected
+    aria-label={courseName(trackName, course, cell)}
+    aria-pressed={selected}
+    onclick={() => toggle(course.course_id)}
+  >
+    <span
+      class="check"
+      aria-hidden="true"
+    >
+      {#if selected}
+        <Icon
+          name="check"
+          size={12}
+        />
+      {/if}
+    </span>
+    {#if text}
+      <span class="layout">{text}</span>
+    {/if}
+  </button>
+{/snippet}
+
+{#snippet courseCell(trackName: string, cell: RaceCourse[])}
+  <td>
+    {#if cell.length}
+      <span class="cell">
+        {#each cell as course (course.course_id)}
+          {@render courseToggle(trackName, course, cell)}
+        {/each}
+      </span>
+    {:else}
+      <span
+        class="none"
+        aria-hidden="true"
+      ></span>
+    {/if}
+  </td>
+{/snippet}
+
 <div
   class="track-pool"
   role="group"
   aria-labelledby="track-pool-label"
+  bind:clientWidth={width}
 >
   <div class="head">
     <span
@@ -70,116 +132,94 @@
       class="count"
       class:over={count > MAX_TRACKS}
     >
-      {count} of {courses.length} on · one drawn per race, as Team Trials does
+      {count} of {courses.length} courses · one drawn per race
     </span>
     <span class="actions">
       <Button
         size="sm"
-        variant="ghost"
+        variant="secondary"
         disabled={count === courses.length}
         onclick={() => (picked = courses.map((course) => course.course_id))}
       >
         All
       </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        disabled={!changed}
-        onclick={() => (picked = undefined)}
-      >
-        JRA only
-      </Button>
+      {#if !onlyJra}
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={!changed}
+          onclick={() => (picked = undefined)}
+        >
+          JRA only
+        </Button>
+      {/if}
     </span>
   </div>
-  {#if courses.length}
-    <ul>
-      {#each groups as group (group.trackId)}
-        <li>
-          <span class="track">{group.name}</span>
-          <span class="courses">
-            {#each group.list as course (course.course_id)}
-              <FilterChip
-                label={label(course, group.list)}
-                selected={on.has(course.course_id)}
-                onclick={() => toggle(course.course_id)}
-              />
-            {/each}
-          </span>
-        </li>
-      {/each}
-    </ul>
-  {:else}
+  {#if !courses.length}
     <p class="empty">The course data hasn’t loaded.</p>
+  {:else if tracksAcross}
+    <div class="frame">
+      <table>
+        <thead>
+          <tr>
+            <th
+              scope="col"
+              class="corner"
+            >
+              <span class="sr-only">Distance</span>
+            </th>
+            {#each grid.tracks as track (track.trackId)}
+              <th scope="col">{track.name}</th>
+            {/each}
+          </tr>
+        </thead>
+        <tbody>
+          {#each grid.rows as row (row.distance)}
+            <tr>
+              <th scope="row">{formatDistance(row.distance)}</th>
+              {#each row.cells as cell, index (grid.tracks[index]?.trackId)}
+                {@render courseCell(grid.tracks[index]?.name ?? '', cell)}
+              {/each}
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {:else}
+    <!-- Too narrow for a column per track: a row per track and a column per distance. -->
+    <div class="frame">
+      <table
+        class="tracks-down"
+        style:--distances={grid.rows.length}
+      >
+        <thead>
+          <tr>
+            <th
+              scope="col"
+              class="corner"
+            >
+              <span class="sr-only">Track</span>
+            </th>
+            {#each grid.rows as row (row.distance)}
+              <th scope="col">{formatDistance(row.distance)}</th>
+            {/each}
+          </tr>
+        </thead>
+        <tbody>
+          {#each grid.tracks as track, index (track.trackId)}
+            <tr>
+              <th scope="row">{track.name}</th>
+              {#each grid.rows as row (row.distance)}
+                {@render courseCell(track.name, row.cells[index] ?? [])}
+              {/each}
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
   {/if}
 </div>
 
 <style>
-  .track-pool {
-    display: grid;
-    gap: 6px;
-    min-width: 0;
-  }
-  .head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 2px 10px;
-  }
-  .label {
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .count {
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-  .count.over {
-    color: var(--accent-warning);
-  }
-  .actions {
-    display: flex;
-    gap: 2px;
-    margin-left: auto;
-  }
-  ul {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
-    gap: 6px 16px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  li {
-    display: grid;
-    grid-template-columns: 76px minmax(0, 1fr);
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-  }
-  .track {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-secondary);
-  }
-  .courses {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-  .courses :global(button) {
-    min-height: 28px;
-    padding: 0 10px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .empty {
-    margin: 0;
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-  @media (max-width: 767px) {
-    .courses :global(button) {
-      min-height: 36px;
-    }
-  }
+  @import './track-pool.css';
 </style>
