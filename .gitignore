@@ -20,6 +20,9 @@
 /.codex/
 /.impeccable/
 
+# Local performance and audit write-ups
+/reports/
+
 # ===== NODE.JS =====
 /node_modules
 .sentryclirc

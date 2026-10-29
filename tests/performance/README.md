@@ -16,7 +16,7 @@ npx playwright test navigation-rendering.spec.ts timeline-navigation.spec.ts --g
 
 All completion measurements retain the 300 ms limit. The same rendering tests also exercise automatic scrolling through 100 Clubs, Rankings and Activity results, without a Show more button. Planner, profile and tierlist workflows scroll to deferred sections before exercising their controls.
 
-For the reward and affinity hotspots found in the shared Firefox recordings, run `node tests/performance/profile-hotspots.mjs`. It reports medians for isolated calculations on synthetic data, without browser rendering or CPU throttling. See [the profile findings](../../reports/firefox-profiler-2026-09-20.md) for the recordings, changes and limits of these measurements.
+For the reward and affinity hotspots found in the shared Firefox recordings, run `node tests/performance/profile-hotspots.mjs`. It reports medians for isolated calculations on synthetic data, without browser rendering or CPU throttling.
 
 ## Native Firefox Profiler recordings
 
@@ -45,7 +45,7 @@ node tests/performance/firefox-stalls.mjs .tmp/firefox-stress
 Remove-Item Env:PERF_STRESS
 ```
 
-Firefox recording runs have **no artificial CPU throttle**. Firefox does not support Chromium's CDP throttle or Event Timing audit, so this config disables those flags. Use the Chromium audit below, without profiling, for the 300 ms budget. `PERF_ENFORCE=0` collects all diagnostic results; it does not certify a budget pass. See [the broader Firefox pass](../../reports/firefox-cross-page-2026-09-20.md).
+Firefox recording runs have **no artificial CPU throttle**. Firefox does not support Chromium's CDP throttle or Event Timing audit, so this config disables those flags. Use the Chromium audit below, without profiling, for the 300 ms budget. `PERF_ENFORCE=0` collects all diagnostic results; it does not certify a budget pass.
 
 ## All existing interaction workflows: 300 ms budget
 
