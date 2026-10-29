@@ -10,6 +10,7 @@
   import {
     baseCost,
     HINT_DISCOUNT,
+    isInheritedUnique,
     MAX_HINT,
     offerPurchases,
     skillTier,
@@ -43,12 +44,13 @@
   const total = $derived(offers.priced.reduce((sum, offer) => sum + offer.cost, 0));
   const budget = $derived(Number(buildSearch.budget) || 0);
 
-  // Everything she could buy and does not have or have on offer yet: not her own unique, priced in the catalog.
+  // Everything she could buy and does not have or have on offer yet: inherited uniques but not her own unique, priced
+  // in the catalog.
   const options = $derived<ComboboxOption[]>(
     [...skillLookup.values()]
       .filter(
         (skill) =>
-          !skill.unique &&
+          (isInheritedUnique(skill) || !skill.unique) &&
           skill.name &&
           baseCost(skill) != null &&
           !owned.includes(skill.skill_id) &&

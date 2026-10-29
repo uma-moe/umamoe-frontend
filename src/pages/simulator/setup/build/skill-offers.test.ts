@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeSkill } from '@/lib/game-data/skills/skills';
-import { offerCost, offerPurchases, upgradedSkill } from './skill-offers';
+import {
+  isInheritedUnique,
+  offerCost,
+  offerPurchases,
+  skillTier,
+  upgradedSkill
+} from './skill-offers';
 
 const catalog = new Map(
   [
@@ -150,5 +156,25 @@ describe('skills on offer', () => {
     ]);
 
     expect(owned.priced[0]!.needs).toBe('owned');
+  });
+});
+
+describe('inherited uniques', () => {
+  // The catalog flags inherited uniques as unique with a white rarity, as it does for Shooting Star.
+  const inherited = normalizeSkill({
+    skill_id: 900011,
+    name: 'Shooting Star',
+    rarity: 1,
+    unique: true,
+    inherited: true
+  });
+
+  it('recognises an inherited unique by its ID', () => {
+    expect(isInheritedUnique(inherited)).toBe(true);
+    expect(isInheritedUnique(catalog.get(200351)!)).toBe(false);
+  });
+
+  it('tints an inherited unique as a unique', () => {
+    expect(skillTier(inherited)).toBe('unique');
   });
 });

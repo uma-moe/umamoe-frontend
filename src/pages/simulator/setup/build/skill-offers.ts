@@ -16,7 +16,8 @@ export interface SkillOffer {
 
 /** The game's tier of a skill, for its tint: a unique, a gold skill, or a white one. */
 export function skillTier(skill: SkillData): 'unique' | 'gold' | 'white' {
-  if (skill.rarity >= 3) return 'unique';
+  // The catalog gives inherited uniques a white rarity.
+  if (skill.rarity >= 3 || isInheritedUnique(skill)) return 'unique';
   if (skill.rarity === 2) return 'gold';
 
   return 'white';
@@ -40,10 +41,14 @@ export function offerCost(base: number, hint: number, fastLearner = false): numb
   return Math.floor((base * (100 - discount)) / 100);
 }
 
+/** Inherited uniques are numbered from 900000: the unique's ID with its leading digit replaced by 9. */
+export function isInheritedUnique(skill: SkillData): boolean {
+  return skill.skill_id >= 900_000 && skill.skill_id < 1_000_000;
+}
+
 /** A skill's base cost: its catalog cost, or the inherited unique cost. */
 export function baseCost(skill: SkillData): number | undefined {
-  if (String(skill.skill_id).startsWith('9') && skill.skill_id < 1_000_000)
-    return INHERITED_UNIQUE_COST;
+  if (isInheritedUnique(skill)) return INHERITED_UNIQUE_COST;
   return skill.baseCost;
 }
 
