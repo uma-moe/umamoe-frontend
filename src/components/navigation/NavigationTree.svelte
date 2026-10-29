@@ -107,7 +107,6 @@
             aria-describedby={item.badge ? `${navigationId}-badge-${item.id}` : undefined}
             aria-expanded={openItems[item.id] ?? false}
             aria-controls={`${navigationId}-subsections-${item.id}`}
-            title={`${item.label} subsections${item.badge ? ` — ${item.badge}` : ''}`}
             onkeydown={handleKeydown}
             onclick={() => toggle(item)}
           >
@@ -140,7 +139,6 @@
             class:has-badge={Boolean(item.badge)}
             href={item.href}
             data-preload="hover"
-            title={`${item.label}${item.badge ? ` — ${item.badge}` : ''}`}
             aria-label={item.label}
             aria-describedby={item.badge ? `${navigationId}-badge-${item.id}` : undefined}
             aria-current={item.current ? 'page' : undefined}
@@ -165,6 +163,13 @@
           </a>
         {/if}
       </div>
+      <!-- The compact rail hides the labels, so this names the icon on hover and focus. -->
+      <span
+        class="navigation-tip"
+        aria-hidden="true"
+      >
+        {item.badge ? `${item.label} · ${item.badge}` : item.label}
+      </span>
 
       {#if item.children?.length && openItems[item.id]}
         <div
@@ -288,6 +293,9 @@
   }
   .open > .navigation-parent .disclosure-chevron {
     transform: rotate(0);
+  }
+  .navigation-tip {
+    display: none;
   }
   .navigation-subsections {
     display: grid;
@@ -418,6 +426,39 @@
     .navigation-tree:not(.sheet) .subsection-parent small {
       font-size: 9px;
       font-weight: 500;
+    }
+    .navigation-tree:not(.sheet) .navigation-tip {
+      position: absolute;
+      z-index: var(--z-overlay);
+      top: 50%;
+      left: calc(100% + 9px);
+      display: block;
+      width: max-content;
+      max-width: 220px;
+      padding: 5px 9px;
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      box-shadow: var(--shadow-md);
+      color: var(--color-text);
+      font-size: var(--font-xs);
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-50%);
+      transition: opacity var(--duration-fast);
+    }
+    @media (hover: hover) {
+      .navigation-tree:not(.sheet) .navigation-parent:hover + .navigation-tip {
+        opacity: 1;
+      }
+    }
+    .navigation-tree:not(.sheet) .navigation-parent:has(:focus-visible) + .navigation-tip {
+      opacity: 1;
+    }
+    /* The open flyout already names the section and sits where the tip would. */
+    .navigation-tree:not(.sheet) .open > .navigation-parent + .navigation-tip {
+      opacity: 0;
     }
   }
 
