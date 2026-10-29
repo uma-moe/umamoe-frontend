@@ -482,14 +482,16 @@
   line-height: 1.45;
   margin-top: 1px;
 }
-/* Expandable panels are cards too: the header row is the summary, and opened content stays inside the card. */
-.simulation-report details:has(> summary[role='button']) {
+/* Expandable panels are cards too: the header row is the summary, and opened content stays inside the card.
+   Compact disclosures are section headings inside a card, such as the embedded race replay's measurements,
+   so they stay plain instead of nesting cards. */
+.simulation-report details:not(.compact):has(> summary[role='button']) {
   border: 1px solid var(--card-surface-border);
   border-radius: var(--radius-lg);
   background: var(--card-surface-bg);
   padding: 0 10px;
 }
-.simulation-report details > summary[role='button'] {
+.simulation-report details:not(.compact) > summary[role='button'] {
   min-height: calc(var(--control-height) + 10px);
   padding: 5px 0;
   border: 0;
@@ -497,16 +499,16 @@
   background: transparent;
   gap: 8px;
 }
-.simulation-report details > summary[role='button'] > svg {
+.simulation-report details:not(.compact) > summary[role='button'] > svg {
   display: none;
 }
-.simulation-report details > summary[role='button'] > strong {
+.simulation-report details:not(.compact) > summary[role='button'] > strong {
   font-size: 13px;
 }
-.simulation-report details > summary[role='button'] > .description {
+.simulation-report details:not(.compact) > summary[role='button'] > .description {
   font-size: 11px;
 }
-.simulation-report details[open] > .disclosure-content {
+.simulation-report details[open]:not(.compact) > .disclosure-content {
   margin-top: 0;
   padding: 6px 0 10px;
   border-top: 1px solid var(--border-subtle);
@@ -571,7 +573,7 @@
     gap: 18px;
   }
   /* Disclosure buttons stay one line on phones; the title says enough. */
-  .simulation-report details > summary[role='button'] .description {
+  .simulation-report details:not(.compact) > summary[role='button'] .description {
     display: none;
   }
 }
