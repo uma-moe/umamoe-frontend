@@ -52,10 +52,11 @@ p {
 .results :global(th) {
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   text-align: center;
   vertical-align: middle;
+  white-space: normal;
   color: var(--text-secondary);
 }
 .results :global(td) {
@@ -68,20 +69,20 @@ p {
 }
 .results :global(.sort) {
   gap: 3px;
-  white-space: nowrap;
   text-align: inherit;
 }
-/* Scoped to the compact table so these outrank its built-in cell padding. */
+/* Scoped to the compact table so these outrank its built-in cell padding. Tight cells and headers that
+   wrap onto two lines let every column fit beside the stats on a 1080p screen. */
 .results :global(.table-wrap.compact th) {
-  padding: 8px 10px;
+  padding: 6px;
 }
 .results :global(.table-wrap.compact td) {
   height: 60px;
-  padding: 6px 10px;
+  padding: 6px;
 }
-.results :global(.table-wrap.compact th:first-child),
-.results :global(.table-wrap.compact td:first-child) {
-  width: 56px;
+/* Finish and gate numbers are one or two digits, so their headers wrap instead of setting the width. */
+.results :global(.table-wrap.compact :is(th, td):is(:first-child, :nth-child(2))) {
+  width: 44px;
 }
 .results :global(.column-help) {
   margin-left: 1px;
@@ -124,7 +125,7 @@ small {
 .runner-name {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   border: 0;
   padding: 0;
@@ -138,7 +139,7 @@ small {
   flex: none;
   display: grid;
   place-items: center;
-  width: 30px;
+  width: 24px;
 }
 .runner-name > span:not(.rank-slot) {
   flex: 1;
@@ -287,10 +288,6 @@ small {
 @media (max-width: 1500px) {
   .result-stats {
     gap: 4px 8px;
-  }
-  .results :global(.table-wrap.compact th),
-  .results :global(.table-wrap.compact td) {
-    padding-inline: 6px;
   }
 }
 @media (max-width: 800px) {
