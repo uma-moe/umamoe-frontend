@@ -1,2 +1,5 @@
+# Store text with LF so Windows checkouts cannot commit CRLF; nginx, Docker and shell scripts need LF.
+* text=auto eol=lf
+
 /local.sh text eol=lf
 /tests/local-stack.sh text eol=lf
