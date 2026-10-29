@@ -36,6 +36,13 @@ describe('Build optimizer setups from a code or this browser', () => {
     expect(setup.debuffs).toEqual({ count: '2', percent: '3' });
   });
 
+  it('draws a new seed in place of a saved one that is not a whole 32-bit number', () => {
+    const setups = ['12.5', 'abc', 2 ** 31].map((seed) => restoreBuildSearch({ seed }));
+
+    const seeds = setups.map((setup) => Number(setup.seed));
+    expect(seeds.every((seed) => Number.isInteger(seed) && seed >= 0 && seed < 2 ** 31)).toBe(true);
+  });
+
   it('starts from the defaults for anything it can’t read', () => {
     const setup = restoreBuildSearch('nothing');
 

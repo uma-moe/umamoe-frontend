@@ -15,6 +15,7 @@ export interface BuildSearchState {
   mode: OptimizeMode;
   /** The Team Trials tracks picked per distance, as course ids; a distance not here races its default pool. */
   tracks: Partial<Record<TeamTrialsMode, number[]>>;
+  /** Drawn once and kept, so a search can be repeated; the form doesn't show it, a build code can carry it. */
   seed: string;
   /** HP debuffs she takes from other runners in every race, and how much of her max HP each one drains. */
   debuffs: { count: string; percent: string };
@@ -80,7 +81,9 @@ export function restoreBuildSearch(saved: unknown): BuildSearchState {
         .filter((course) => Number.isInteger(course) && course > 0);
   }
 
-  state.seed = text(data.seed, state.seed);
+  // The form has no seed field to correct a bad one in, so only a whole 32-bit number replaces the drawn seed.
+  const seed = Number(data.seed);
+  if (Number.isInteger(seed) && Math.abs(seed) <= 2147483647) state.seed = String(seed);
   const debuffs = record(data.debuffs);
   if (debuffs)
     state.debuffs = {

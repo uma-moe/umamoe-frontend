@@ -117,10 +117,6 @@
     offerPurchases(buildSearch.offers, owned, skillLookup, buildSearch.fastLearner)
   );
 
-  const invalidSeed = $derived(
-    !/^-?\d+$/.test(String(buildSearch.seed)) || Math.abs(Number(buildSearch.seed)) > 2147483647
-  );
-
   // Why the search cannot run yet, said next to its button.
   const blocked = $derived.by(() => {
     if (teamTrials && poolProblem(pool)) {
@@ -137,10 +133,6 @@
 
     if (offers.lockedCost > formNumber(buildSearch.budget)) {
       return 'The locked skills cost more than the SP available.';
-    }
-
-    if (invalidSeed) {
-      return 'Fix the seed first.';
     }
 
     return '';
@@ -299,7 +291,6 @@
       </RunnerInput>
       <BuildGoal
         {teamTrials}
-        {invalidSeed}
         bind:budgetHere={budgetInSetup}
       />
       <SkillOffers

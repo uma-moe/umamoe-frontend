@@ -1,5 +1,5 @@
 /* The race on the first row and the settings on the second, on the runner's ten columns: track and course, ground,
-   then weather, season and time of day a column each; her SP, fans and Fast Learner, then the mode, debuffs and seed
+   then weather, season and time of day a column each; her SP, fans and Fast Learner, then the mode and debuffs
    under them. Team Trials draws its course per race, so its conditions lead and its pool of tracks, which the mode
    decides, closes the form on a row of its own.
    The ten columns start at the width BuildGoal's TEN_COLUMNS names. */
@@ -14,8 +14,7 @@
 .goal > :global(.toggle-field:has(#build-ground)),
 .goal > :global(.field:has(#build-mode)),
 .goal :global(.toggle-field:has(#build-fast-learner)),
-.pair,
-.seed {
+.pair {
   grid-column: span 2;
 }
 .goal :global(.course-picker:has(#sim-course)) {
@@ -42,19 +41,6 @@
   gap: 12px;
   min-width: 0;
 }
-.seed {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 36px;
-  gap: 6px;
-  align-items: start;
-  min-width: 0;
-}
-.seed > :global(.ui-button) {
-  width: 36px;
-  height: var(--setup-control-height);
-  margin-top: 18px;
-  padding: 0;
-}
 /* Narrower, where a column is too slim for four condition icons: five columns, a field each, in the same order. */
 @container build-form (max-width: 1299px) {
   .goal {
@@ -64,8 +50,7 @@
   .goal :global(.course-picker:has(#sim-course)),
   .goal > :global(.toggle-field:has(#build-ground)),
   .goal > :global(.field:has(#build-mode)),
-  .pair,
-  .seed {
+  .pair {
     grid-column: auto;
   }
 }
@@ -85,13 +70,5 @@
   .goal > :global(.toggle-field:has(#build-ground)),
   .pair {
     grid-column: 1 / -1;
-  }
-}
-@media (max-width: 767px) {
-  .seed {
-    grid-template-columns: minmax(0, 1fr) var(--setup-control-height);
-  }
-  .seed > :global(.ui-button) {
-    width: var(--setup-control-height);
   }
 }

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Button from '@/components/controls/Button.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import { OPTIMIZE_MODES, type OptimizeMode } from '../../requests/optimize-request';
@@ -22,17 +21,16 @@
 
   /**
    * The setup: where she races, the course (or, in Team Trials, the pool of tracks) and its conditions; then, when the
-   * row has room, her SP, fans and Fast Learner, followed by what the build is for, the HP she loses to debuffs and the
-   * search's seed. How many builds it tries is the service's.
+   * row has room, her SP, fans and Fast Learner, followed by what the build is for and the HP she loses to debuffs. The
+   * search's seed and how many builds it tries are not the reader's to set.
    */
   interface Props {
     teamTrials: boolean;
-    invalidSeed: boolean;
     /** Her SP, fans and Fast Learner are in the second row here; narrower, they stay above the skills on offer. */
     budgetHere?: boolean;
   }
 
-  let { teamTrials, invalidSeed, budgetHere = $bindable(false) }: Props = $props();
+  let { teamTrials, budgetHere = $bindable(false) }: Props = $props();
 
   /** From this width the grid is ten columns (build-goal.css), with room for her SP and fans in the second row. */
   const TEN_COLUMNS = 1300;
@@ -122,22 +120,6 @@
         max={100}
         step={0.5}
         bind:value={buildSearch.debuffs.percent}
-      />
-    </div>
-    <div class="seed">
-      <TextField
-        id="build-seed"
-        label="Seed"
-        type="number"
-        error={invalidSeed ? 'Enter a whole number.' : undefined}
-        bind:value={buildSearch.seed}
-      />
-      <Button
-        variant="secondary"
-        size="sm"
-        icon="dice"
-        ariaLabel="Random seed"
-        onclick={() => (buildSearch.seed = String(Math.floor(Math.random() * 2 ** 31)))}
       />
     </div>
     {#if teamTrials}
