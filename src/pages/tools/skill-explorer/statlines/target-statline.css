@@ -1,0 +1,146 @@
+.target-statline {
+  margin-left: auto;
+  min-width: 0;
+  --inspect-popover-width: 620px;
+  --inspect-popover-padding: 16px;
+}
+.stat-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 32px;
+  color: var(--text-secondary);
+}
+.strip-label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.strip-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.strip-stat img {
+  width: 16px;
+  height: 16px;
+}
+.by-style {
+  font-size: 0.8rem;
+}
+section {
+  display: grid;
+  gap: 0.85rem;
+}
+header {
+  display: grid;
+  gap: 0.2rem;
+  padding-right: 28px;
+}
+
+h3 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+  padding: 0.22rem 0.8rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+thead th {
+  padding-top: 0;
+  padding-bottom: 0.3rem;
+  font-weight: 500;
+}
+
+.stat-head {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.stat-head img {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.stat-head small {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+tbody th {
+  padding-left: 0.6rem;
+  border-radius: 6px 0 0 6px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+tbody td:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.value {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+td small {
+  margin-left: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+tr.own .value {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+tr.own td.apart .value {
+  padding: 0.05rem 0.35rem;
+  border-radius: 5px;
+  background: rgb(var(--accent-warning-rgb) / 0.16);
+  color: var(--accent-warning);
+  font-weight: 700;
+}
+
+tr.selected th,
+tr.selected td {
+  background: rgb(var(--accent-primary-rgb) / 0.1);
+}
+
+tr.selected th {
+  color: var(--accent-primary);
+}
+
+@media (max-width: 900px) {
+  .target-statline {
+    margin-left: 0;
+  }
+}

@@ -1,4 +1,15 @@
-import type { ParsedRaceCapture, RaceRunner } from './race-capture-parser';
+import type { ParsedRaceCapture, RaceRunner } from './capture/race-capture-parser';
+import {
+  diagnosticHorse,
+  lastSpurtResult,
+  runnerHpResult,
+  skillActiveDuration
+} from './capture/race-diagnostics';
+
+export interface SkillActivation {
+  id: number;
+  distance: number;
+}
 
 export interface MultiRaceHorseEntry {
   raceId: string;
@@ -8,12 +19,15 @@ export interface MultiRaceHorseEntry {
   cardId?: number;
   strategy: number;
   finishOrder: number;
+  /** The trainer who entered the runner; counts distinct players, as CM Data does. */
+  trainerName: string;
   learnedSkillIds: number[];
-  activatedSkillIds: number[];
+  /** Every skill activation in the race, with the course position it fired at. */
+  skillActivations: SkillActivation[];
   isPlayer: boolean;
   teamId: number;
-  startHp: number;
-  finishHp: number;
+  startHp?: number;
+  finishHp?: number;
   lastSpurtStartDistance: number;
   raceDistance: number;
 }
@@ -21,6 +35,7 @@ export interface MultiRaceHorseEntry {
 export interface MultiRaceCharacterStats {
   key: string;
   name: string;
+  cardId?: number;
   races: number;
   wins: number;
   top3: number;
@@ -46,23 +61,36 @@ export interface MultiRaceSkillStats {
   finishTotal: number;
   doubleProcRaces: number;
   activationDistances: number[];
+  durationTotal: number;
+  measuredEntries: number;
+  rollFailures: number;
+  passedUntriggered: number;
 }
 
 export interface MultiRaceHpStats {
   key: string;
   name: string;
+  cardId?: number;
   races: number;
   wins: number;
+  startHpEntries: number;
+  finishHpEntries: number;
+  finishHpPercentEntries: number;
+  finishHpPercentTotal: number;
   startHpTotal: number;
   finishHpTotal: number;
   survived: number;
   lastSpurtRaces: number;
   lastSpurtDistanceTotal: number;
+  spurtDelayEntries: number;
+  spurtDelayTotal: number;
+  spurtSpeedEntries: number;
+  spurtSpeedTotal: number;
 }
 
 export interface MultiRaceTeamStats {
   key: string;
-  members: { name: string; cardId?: number; strategy: number }[];
+  members: { key: string; name: string; cardId?: number; strategy: number }[];
   appearances: number;
   wins: number;
 }
@@ -82,10 +110,11 @@ function numeric(raw: Record<string, unknown>, ...keys: string[]): number | unde
     const value = Number(raw[key]);
     if (Number.isFinite(value)) return value;
   }
+
   return undefined;
 }
 
-function runnerKey(runner: RaceRunner): string {
+export function raceRunnerKey(runner: RaceRunner): string {
   return String(runner.cardId ?? runner.charaId ?? runner.trainedCharaId ?? runner.name);
 }
 
@@ -93,24 +122,42 @@ function raceId(capture: ParsedRaceCapture, index: number): string {
   return `${capture.courseId ?? 'course'}:${capture.randomSeed ?? capture.fileName}:${index}`;
 }
 
-function activatedSkillEvents(capture: ParsedRaceCapture, runnerIndex: number): { id: number; distance: number }[] {
-  return capture.events.filter((event) => event.type === 3 && event.params[0] === runnerIndex).map((event) => ({
-    id: event.params[1] ?? 0,
-    distance: capture.frames.find((frame) => frame.time >= event.frameTime)?.horses[runnerIndex]?.distance ?? capture.frames.at(-1)?.horses[runnerIndex]?.distance ?? 0
-  })).filter((event) => event.id > 0);
+function activatedSkillEvents(capture: ParsedRaceCapture, runnerIndex: number): SkillActivation[] {
+  return capture.events
+    .filter((event) => event.type === 3 && event.params[0] === runnerIndex)
+    .map((event) => ({
+      id: event.params[1] ?? 0,
+      distance:
+        capture.frames.find((frame) => frame.time >= event.frameTime)?.horses[runnerIndex]
+          ?.distance ??
+        capture.frames.at(-1)?.horses[runnerIndex]?.distance ??
+        0
+    }))
+    .filter((event) => event.id > 0);
 }
 
 export function multiRaceGroupKey(capture: ParsedRaceCapture): string {
-  return [capture.courseId ?? 'unknown', capture.laneDistanceMax ?? 'distance', capture.track.condition ?? 'condition', capture.track.weather ?? 'weather', capture.track.season ?? 'season'].join(':');
+  return [
+    capture.courseId ?? 'unknown',
+    capture.raceDistance ?? 'distance',
+    capture.track.condition ?? 'condition',
+    capture.track.weather ?? 'weather',
+    capture.track.season ?? 'season'
+  ].join(':');
 }
 
-export function groupMultiRaceCaptures(captures: ParsedRaceCapture[]): { key: string; captures: ParsedRaceCapture[] }[] {
+export function groupMultiRaceCaptures(
+  captures: ParsedRaceCapture[]
+): { key: string; captures: ParsedRaceCapture[] }[] {
   const groups = new Map<string, ParsedRaceCapture[]>();
   for (const capture of captures) {
     const key = multiRaceGroupKey(capture);
     groups.set(key, [...(groups.get(key) ?? []), capture]);
   }
-  return [...groups].map(([key, values]) => ({ key, captures: values })).sort((left, right) => right.captures.length - left.captures.length);
+
+  return [...groups]
+    .map(([key, values]) => ({ key, captures: values }))
+    .sort((left, right) => right.captures.length - left.captures.length);
 }
 
 export function analyzeMultiRace(captures: ParsedRaceCapture[]): MultiRaceAnalysis {
@@ -124,16 +171,27 @@ export function analyzeMultiRace(captures: ParsedRaceCapture[]): MultiRaceAnalys
   captures.forEach((capture, captureIndex) => {
     const id = raceId(capture, captureIndex);
     const strategyCounts = new Map<number, number>();
-    for (const runner of capture.runners) strategyCounts.set(runner.result?.runningStyle ?? 0, (strategyCounts.get(runner.result?.runningStyle ?? 0) ?? 0) + 1);
+    for (const runner of capture.runners)
+      strategyCounts.set(
+        runner.result?.runningStyle ?? 0,
+        (strategyCounts.get(runner.result?.runningStyle ?? 0) ?? 0) + 1
+      );
     const raceEntries: MultiRaceHorseEntry[] = [];
 
     for (const runner of capture.runners) {
       const finishOrder = runner.result?.finishOrder ?? capture.runners.length;
       const strategy = runner.result?.runningStyle ?? 0;
-      const key = runnerKey(runner);
+      const key = raceRunnerKey(runner);
       const activations = activatedSkillEvents(capture, runner.index);
-      const startHp = capture.frames[0]?.horses[runner.index]?.hp ?? 0;
-      const finishHp = capture.frames.at(-1)?.horses[runner.index]?.hp ?? 0;
+      const diagnostic = diagnosticHorse(capture, runner.index);
+      const {
+        start: startHp,
+        finish: finishHp,
+        percent: finishHpPercent
+      } = runnerHpResult(capture, runner.index);
+
+      const spurt = lastSpurtResult(capture, runner.index);
+      const spurtStart = spurt.start ?? 0;
       const entry: MultiRaceHorseEntry = {
         raceId: id,
         runnerIndex: runner.index,
@@ -142,55 +200,196 @@ export function analyzeMultiRace(captures: ParsedRaceCapture[]): MultiRaceAnalys
         cardId: runner.cardId,
         strategy,
         finishOrder,
+        trainerName: runner.trainerName ?? '',
         learnedSkillIds: runner.skillIds,
-        activatedSkillIds: activations.map((activation) => activation.id),
+        skillActivations: activations,
         isPlayer: runner.isPlayer,
         teamId: numeric(runner.raw, 'team_id', 'teamId') ?? 0,
         startHp,
         finishHp,
-        lastSpurtStartDistance: runner.result?.lastSpurtStartDistance ?? 0,
-        raceDistance: capture.laneDistanceMax ?? Math.max(0, ...capture.frames.at(-1)?.horses.map((horse) => horse.distance) ?? [0])
+        lastSpurtStartDistance: spurtStart,
+        raceDistance:
+          capture.raceDistance ??
+          Math.max(0, ...(capture.frames.at(-1)?.horses.map((horse) => horse.distance) ?? [0]))
       };
+
       entries.push(entry);
       raceEntries.push(entry);
 
-      const character = characters.get(key) ?? { key, name: runner.name, races: 0, wins: 0, top3: 0, finishTotal: 0, playerRaces: 0 };
-      character.races += 1; character.wins += finishOrder === 1 ? 1 : 0; character.top3 += finishOrder <= 3 ? 1 : 0; character.finishTotal += finishOrder; character.playerRaces += runner.isPlayer ? 1 : 0;
+      const character = characters.get(key) ?? {
+        key,
+        name: runner.name,
+        cardId: runner.cardId,
+        races: 0,
+        wins: 0,
+        top3: 0,
+        finishTotal: 0,
+        playerRaces: 0
+      };
+
+      character.races += 1;
+      character.wins += finishOrder === 1 ? 1 : 0;
+      character.top3 += finishOrder <= 3 ? 1 : 0;
+      character.finishTotal += finishOrder;
+      character.playerRaces += runner.isPlayer ? 1 : 0;
       characters.set(key, character);
 
-      const strategyStats = strategies.get(strategy) ?? { strategy, races: 0, wins: 0, top3: 0, finishTotal: 0, saturation: [] };
-      strategyStats.races += 1; strategyStats.wins += finishOrder === 1 ? 1 : 0; strategyStats.top3 += finishOrder <= 3 ? 1 : 0; strategyStats.finishTotal += finishOrder;
+      const strategyStats = strategies.get(strategy) ?? {
+        strategy,
+        races: 0,
+        wins: 0,
+        top3: 0,
+        finishTotal: 0,
+        saturation: []
+      };
+
+      strategyStats.races += 1;
+      strategyStats.wins += finishOrder === 1 ? 1 : 0;
+      strategyStats.top3 += finishOrder <= 3 ? 1 : 0;
+      strategyStats.finishTotal += finishOrder;
       const count = strategyCounts.get(strategy) ?? 0;
-      const saturation = strategyStats.saturation.find((item) => item.count === count) ?? { count, races: 0, wins: 0 };
-      saturation.races += 1; saturation.wins += finishOrder === 1 ? 1 : 0;
+      const saturation = strategyStats.saturation.find((item) => item.count === count) ?? {
+        count,
+        races: 0,
+        wins: 0
+      };
+
+      saturation.races += 1;
+      saturation.wins += finishOrder === 1 ? 1 : 0;
       if (!strategyStats.saturation.includes(saturation)) strategyStats.saturation.push(saturation);
       strategies.set(strategy, strategyStats);
 
       const activationCounts = new Map<number, number>();
-      for (const activation of activations) activationCounts.set(activation.id, (activationCounts.get(activation.id) ?? 0) + 1);
+      for (const activation of activations)
+        activationCounts.set(activation.id, (activationCounts.get(activation.id) ?? 0) + 1);
       for (const skillId of new Set(runner.skillIds)) {
-        const skill = skills.get(skillId) ?? { skillId, learned: 0, activations: 0, activatedRunners: 0, wins: 0, finishTotal: 0, doubleProcRaces: 0, activationDistances: [] };
+        const skill = skills.get(skillId) ?? {
+          skillId,
+          learned: 0,
+          activations: 0,
+          activatedRunners: 0,
+          wins: 0,
+          finishTotal: 0,
+          doubleProcRaces: 0,
+          activationDistances: [],
+          durationTotal: 0,
+          measuredEntries: 0,
+          rollFailures: 0,
+          passedUntriggered: 0
+        };
+
         const countForRunner = activationCounts.get(skillId) ?? 0;
-        skill.learned += 1; skill.activations += countForRunner; skill.activatedRunners += countForRunner > 0 ? 1 : 0; skill.wins += finishOrder === 1 ? 1 : 0; skill.finishTotal += finishOrder; skill.doubleProcRaces += countForRunner >= 2 ? 1 : 0;
-        skill.activationDistances.push(...activations.filter((activation) => activation.id === skillId).map((activation) => activation.distance));
+        skill.learned += 1;
+        skill.activations += countForRunner;
+        skill.activatedRunners += countForRunner > 0 ? 1 : 0;
+        skill.wins += finishOrder === 1 ? 1 : 0;
+        skill.finishTotal += finishOrder;
+        skill.doubleProcRaces += countForRunner >= 2 ? 1 : 0;
+        skill.activationDistances.push(
+          ...activations
+            .filter((activation) => activation.id === skillId)
+            .map((activation) => activation.distance)
+        );
+        const duration = skillActiveDuration(diagnostic, skillId),
+          decision = diagnostic?.skillActivationDecisions?.find((row) => row.skillId === skillId);
+
+        if (duration !== undefined) {
+          skill.durationTotal += duration;
+          skill.measuredEntries++;
+        }
+
+        if (decision?.required && decision.passed === false) skill.rollFailures++;
+        if (decision?.required && decision.passed === true && decision.activated === false)
+          skill.passedUntriggered++;
         skills.set(skillId, skill);
       }
 
       if (runner.isPlayer) {
-        const personal = hp.get(key) ?? { key, name: runner.name, races: 0, wins: 0, startHpTotal: 0, finishHpTotal: 0, survived: 0, lastSpurtRaces: 0, lastSpurtDistanceTotal: 0 };
-        personal.races += 1; personal.wins += finishOrder === 1 ? 1 : 0; personal.startHpTotal += startHp; personal.finishHpTotal += finishHp; personal.survived += finishHp > 0 ? 1 : 0;
-        if ((runner.result?.lastSpurtStartDistance ?? 0) > 0) { personal.lastSpurtRaces += 1; personal.lastSpurtDistanceTotal += runner.result!.lastSpurtStartDistance; }
+        const personal = hp.get(key) ?? {
+          key,
+          name: runner.name,
+          cardId: runner.cardId,
+          races: 0,
+          wins: 0,
+          startHpEntries: 0,
+          finishHpEntries: 0,
+          finishHpPercentEntries: 0,
+          finishHpPercentTotal: 0,
+          startHpTotal: 0,
+          finishHpTotal: 0,
+          survived: 0,
+          lastSpurtRaces: 0,
+          lastSpurtDistanceTotal: 0,
+          spurtDelayEntries: 0,
+          spurtDelayTotal: 0,
+          spurtSpeedEntries: 0,
+          spurtSpeedTotal: 0
+        };
+
+        personal.races += 1;
+        personal.wins += finishOrder === 1 ? 1 : 0;
+        if (startHp !== undefined) {
+          personal.startHpEntries++;
+          personal.startHpTotal += startHp;
+        }
+
+        if (finishHp !== undefined) {
+          personal.finishHpEntries++;
+          personal.finishHpTotal += finishHp;
+          personal.survived += Number(finishHp > 0);
+        }
+
+        if (finishHpPercent !== undefined) {
+          personal.finishHpPercentEntries++;
+          personal.finishHpPercentTotal += finishHpPercent;
+        }
+
+        if (spurtStart > 0) {
+          personal.lastSpurtRaces += 1;
+          personal.lastSpurtDistanceTotal += spurtStart;
+        }
+
+        if (spurt.delay !== undefined) {
+          personal.spurtDelayEntries++;
+          personal.spurtDelayTotal += spurt.delay;
+        }
+
+        if (spurt.speed !== undefined) {
+          personal.spurtSpeedEntries++;
+          personal.spurtSpeedTotal += spurt.speed;
+        }
+
         hp.set(key, personal);
       }
     }
 
     const teamGroups = new Map<number, MultiRaceHorseEntry[]>();
-    for (const entry of raceEntries) if (entry.teamId > 0) teamGroups.set(entry.teamId, [...(teamGroups.get(entry.teamId) ?? []), entry]);
+    for (const entry of raceEntries)
+      if (entry.teamId > 0)
+        teamGroups.set(entry.teamId, [...(teamGroups.get(entry.teamId) ?? []), entry]);
     for (const members of teamGroups.values()) {
-      const sorted = members.slice().sort((left, right) => left.charaKey.localeCompare(right.charaKey) || left.strategy - right.strategy);
+      const sorted = members
+        .slice()
+        .sort(
+          (left, right) =>
+            left.charaKey.localeCompare(right.charaKey) || left.strategy - right.strategy
+        );
+
       const key = sorted.map((entry) => `${entry.charaKey}.${entry.strategy}`).join('|');
-      const team = teams.get(key) ?? { key, members: sorted.map((entry) => ({ name: entry.name, cardId: entry.cardId, strategy: entry.strategy })), appearances: 0, wins: 0 };
-      team.appearances += 1; team.wins += sorted.some((entry) => entry.finishOrder === 1) ? 1 : 0;
+      const team = teams.get(key) ?? {
+        key,
+        members: sorted.map((entry) => ({
+          key: entry.charaKey,
+          name: entry.name,
+          cardId: entry.cardId,
+          strategy: entry.strategy
+        })),
+        appearances: 0,
+        wins: 0
+      };
+
+      team.appearances += 1;
+      team.wins += sorted.some((entry) => entry.finishOrder === 1) ? 1 : 0;
       teams.set(key, team);
     }
   });
@@ -198,10 +397,22 @@ export function analyzeMultiRace(captures: ParsedRaceCapture[]): MultiRaceAnalys
   return {
     races: captures.length,
     entries,
-    characters: [...characters.values()].sort((left, right) => right.wins - left.wins || left.finishTotal / left.races - right.finishTotal / right.races),
-    strategies: [...strategies.values()].map((entry) => ({ ...entry, saturation: entry.saturation.sort((left, right) => left.count - right.count) })).sort((left, right) => left.strategy - right.strategy),
-    skills: [...skills.values()].sort((left, right) => right.learned - left.learned || right.activations - left.activations),
+    characters: [...characters.values()].sort(
+      (left, right) =>
+        right.wins - left.wins || left.finishTotal / left.races - right.finishTotal / right.races
+    ),
+    strategies: [...strategies.values()]
+      .map((entry) => ({
+        ...entry,
+        saturation: entry.saturation.sort((left, right) => left.count - right.count)
+      }))
+      .sort((left, right) => left.strategy - right.strategy),
+    skills: [...skills.values()].sort(
+      (left, right) => right.learned - left.learned || right.activations - left.activations
+    ),
     hp: [...hp.values()].sort((left, right) => right.races - left.races || right.wins - left.wins),
-    teams: [...teams.values()].sort((left, right) => right.appearances - left.appearances || right.wins - left.wins)
+    teams: [...teams.values()].sort(
+      (left, right) => right.appearances - left.appearances || right.wins - left.wins
+    )
   };
 }

@@ -1,0 +1,122 @@
+.veterans-page {
+  min-width: 0;
+  width: 100%;
+  display: grid;
+  gap: 20px;
+}
+.collection-header {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.collection-toolbar {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.collection-toolbar > :global(.field) {
+  flex: 1;
+  min-width: 0;
+}
+.collection-toolbar > :global(.ui-button) {
+  flex: none;
+}
+.collection-toolbar :global(input) {
+  min-height: 44px;
+  border-color: var(--border-primary);
+  border-radius: 8px;
+  background: var(--card-surface-bg);
+}
+.collection-body {
+  min-width: 0;
+}
+.collection-body.with-sidebar {
+  display: grid;
+  grid-template-columns: 288px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+.filter-sidebar {
+  position: sticky;
+  top: calc(var(--utility-height, 60px) + 16px);
+  min-width: 0;
+  max-height: calc(100dvh - var(--utility-height, 60px) - 32px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding-right: 12px;
+  border-right: 1px solid var(--border-subtle);
+}
+.sidebar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 55px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.sidebar-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.sidebar-heading .active-count {
+  margin: 0;
+}
+.sidebar-heading :global(.ui-button) {
+  padding-inline: 4px;
+  font-size: 11px;
+}
+.collection-results {
+  container: veteran-results / inline-size;
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+.light-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.compact-roster {
+  padding: 0;
+}
+.preview-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+  color: var(--color-text-muted);
+  font-size: var(--font-xs);
+}
+.preview-pagination strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+@media (max-width: 767px) {
+  .veterans-page {
+    gap: 12px;
+  }
+  .collection-toolbar > :global(.ui-button) {
+    padding-inline: 10px;
+  }
+  .collection-results {
+    gap: 12px;
+  }
+  .light-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .light-filters > :global(.field:first-child) {
+    grid-column: 1/-1;
+  }
+}

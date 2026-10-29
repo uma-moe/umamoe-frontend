@@ -1,0 +1,294 @@
+<script lang="ts">
+  import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+  import type { DiagnosticRow, HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
+  import { theme } from '@/stores/theme';
+  import Button from '@/components/controls/Button.svelte';
+  import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
+  import Icon from '@/components/Icon.svelte';
+  import DiagnosticsEventTable from '../DiagnosticsEventTable.svelte';
+  import DiagnosticsMetricHelp from '../DiagnosticsMetricHelp.svelte';
+  import { count, display, fixed, number, signed } from '../diagnostics-format';
+  import { hpByDistance, lastSpurtChartOption, timeAtDistance } from './last-spurt-chart';
+
+  let {
+    id,
+    spurt,
+    capture,
+    index,
+    horse,
+    distance,
+    skillNames,
+    onseek,
+    onselect,
+    spurtOpen = $bindable(false)
+  }: {
+    id: string;
+    spurt: DiagnosticRow;
+    capture: ParsedRaceCapture;
+    index: number;
+    horse: HorseDiagnostics;
+    /** The race distance, where the chart's HP and full-spurt need end. */
+    distance: number;
+    skillNames: Map<number, string>;
+    onseek: (time: number) => void;
+    onselect: (index: number) => void;
+    spurtOpen?: boolean;
+  } = $props();
+
+  const spurtSelected = $derived(
+    spurt.result === 'True' || spurt.result === 'TrueExceedNeedMaximumHp'
+  );
+
+  const spurtHpBalance = $derived(
+    typeof spurt.checkHp === 'number' && typeof spurt.fullSpurtNeedHp === 'number'
+      ? spurt.checkHp - spurt.fullSpurtNeedHp
+      : undefined
+  );
+
+  const spurtCompromised = $derived(
+    !spurtSelected || Boolean(spurt.delayPenalty) || Boolean(spurt.speedPenalty)
+  );
+
+  const spurtOutcome = $derived.by(() => {
+    if (!spurtSelected) return display(spurt.result, 'result');
+    if (spurt.delayPenalty && spurt.speedPenalty) return 'Delayed and slower';
+    if (spurt.delayPenalty) return 'Delayed spurt';
+    if (spurt.speedPenalty) return 'Slower spurt';
+    return 'Full spurt';
+  });
+
+  const hpPoints = $derived(hpByDistance(capture, index, distance));
+
+  const delayedStart = $derived(
+    spurtSelected && spurt.delayPenalty && typeof spurt.selectedStartDistance === 'number'
+      ? spurt.selectedStartDistance
+      : undefined
+  );
+
+  const hpChart = $derived(
+    lastSpurtChartOption({
+      points: hpPoints,
+      marks: {
+        checkDistance: typeof spurt.checkDistance === 'number' ? spurt.checkDistance : undefined,
+        checkHp: typeof spurt.checkHp === 'number' ? spurt.checkHp : undefined,
+        needHp: typeof spurt.fullSpurtNeedHp === 'number' ? spurt.fullSpurtNeedHp : undefined,
+        delayedStart
+      },
+      raceDistance: distance,
+      dark: $theme === 'dark'
+    })
+  );
+
+  function seekDistance(value: number) {
+    const time = timeAtDistance(hpPoints, value);
+    if (time !== undefined) onseek(time);
+  }
+</script>
+
+<section
+  class="report-block report-card spurt-report"
+  aria-label="Last-spurt decision"
+>
+  <header class="section-heading">
+    <h3>
+      Last-spurt decision <small class:caution={spurtCompromised}>{spurtOutcome}</small>
+    </h3>
+    {#if typeof spurt.time === 'number'}
+      <Button
+        variant="secondary"
+        size="sm"
+        onclick={() => onseek(Number(spurt.time))}
+      >
+        {spurt.time.toFixed(3)} s
+      </Button>
+    {/if}
+    <button
+      class="calculation-toggle"
+      type="button"
+      aria-label="Last-spurt calculation"
+      aria-expanded={spurtOpen}
+      aria-controls={id + '-spurt-calculation'}
+      onclick={() => (spurtOpen = !spurtOpen)}
+    >
+      Calculation <span class:opened={spurtOpen}>
+        <Icon
+          name="chevron"
+          size={12}
+        />
+      </span>
+    </button>
+  </header>
+  {#if !spurtOpen}
+    <dl class="report-facts">
+      <div>
+        <dt>HP at decision<DiagnosticsMetricHelp label="HP at decision" /></dt>
+        <dd>
+          {number(spurt.checkHp)}
+          <small>HP</small>
+        </dd>
+      </div>
+      <div>
+        <dt>HP for full spurt<DiagnosticsMetricHelp label="HP for full spurt" /></dt>
+        <dd>
+          {number(spurt.fullSpurtNeedHp)}
+          <small>HP</small>
+        </dd>
+      </div>
+      {#if spurtHpBalance !== undefined}
+        <div>
+          <dt>
+            {spurtHpBalance < 0 ? 'HP short' : 'HP spare'}<DiagnosticsMetricHelp
+              label="HP balance"
+            />
+          </dt>
+          <dd class:caution={spurtHpBalance < 0}>
+            {(spurtHpBalance > 0 ? '+' : '') + number(spurtHpBalance)}
+            <small>HP</small>
+          </dd>
+        </div>
+      {/if}
+      <div>
+        <dt>Full spurt speed<DiagnosticsMetricHelp label="Full spurt speed" /></dt>
+        <dd>
+          {fixed(spurt.fullSpurtTargetSpeed, 2)}
+          <small>m/s</small>
+        </dd>
+      </div>
+    </dl>
+  {/if}
+  <div
+    class="spurt-calculation"
+    id={id + '-spurt-calculation'}
+    hidden={!spurtOpen}
+  >
+    {#if spurtHpBalance !== undefined}
+      <div
+        class="hp-equation"
+        aria-label="HP available minus HP required for a full spurt"
+      >
+        <span>
+          <small>Available HP</small>
+          <strong>{number(spurt.checkHp, 2)}</strong>
+        </span>
+        <b aria-hidden="true">−</b>
+        <span>
+          <small>Required HP</small>
+          <strong>{number(spurt.fullSpurtNeedHp, 2)}</strong>
+        </span>
+        <b aria-hidden="true">=</b>
+        <span class:shortfall={spurtHpBalance < 0}>
+          <small>{spurtHpBalance < 0 ? 'HP shortfall' : 'HP spare'}</small>
+          <strong>{signed(spurtHpBalance)}</strong>
+        </span>
+      </div>
+    {/if}
+    <table class="spurt-comparison">
+      <caption class="sr-only">Full and selected spurt</caption>
+      <thead>
+        <tr>
+          <th scope="col">Spurt</th>
+          <th scope="col">Full</th>
+          <th scope="col">Selected</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">
+            Start <small>m</small>
+          </th>
+          <td>{number(spurt.checkDistance, 2)}</td>
+          <td>{spurtSelected ? number(spurt.selectedStartDistance, 2) : '—'}</td>
+        </tr>
+        <tr>
+          <th scope="row">
+            Speed <small>m/s</small>
+          </th>
+          <td>{number(spurt.fullSpurtTargetSpeed, 2)}</td>
+          <td>{spurtSelected ? number(spurt.selectedTargetSpeed, 2) : '—'}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="spurt-result">
+      <strong>
+        {spurtSelected
+          ? spurt.speedPenalty || spurt.delayPenalty
+            ? 'Reduced spurt selected'
+            : display(spurt.result, 'result')
+          : display(spurt.result, 'result')}
+      </strong>
+      {#if spurtSelected && typeof spurt.selectedStartDistance === 'number' && typeof spurt.checkDistance === 'number'}
+        <span>
+          {spurt.delayPenalty
+            ? number(spurt.selectedStartDistance - spurt.checkDistance, 2) + ' m delay'
+            : 'No delay'}
+        </span>
+      {/if}
+      {#if spurtSelected && typeof spurt.selectedTargetSpeed === 'number' && typeof spurt.fullSpurtTargetSpeed === 'number'}
+        <span>
+          {spurt.speedPenalty
+            ? number(spurt.fullSpurtTargetSpeed - spurt.selectedTargetSpeed, 2) + ' m/s slower'
+            : 'Full speed'}
+        </span>
+      {/if}
+      {#if typeof spurt.calculationCount === 'number'}
+        <span>
+          {count(spurt.calculationCount, 'calculation')}
+        </span>
+      {/if}
+    </p>
+    {#if (horse.lastSpurtDecisions?.length ?? 0) > 1}
+      <h4>Decision history</h4>
+      <DiagnosticsEventTable
+        value={horse.lastSpurtDecisions}
+        title="Last-spurt decisions"
+        columns={[
+          { key: 'time', label: 'Time (s)', numeric: true },
+          { key: 'checkDistance', label: 'Distance (m)', numeric: true },
+          { key: 'checkHp', label: 'HP available', numeric: true },
+          { key: 'fullSpurtNeedHp', label: 'HP required', numeric: true },
+          { key: 'fullSpurtTargetSpeed', label: 'Full speed (m/s)', numeric: true },
+          { key: 'selectedStartDistance', label: 'Start (m)', numeric: true },
+          { key: 'selectedTargetSpeed', label: 'Speed (m/s)', numeric: true },
+          { key: 'result', label: 'Result' },
+          { key: 'delayPenalty', label: 'Delayed' },
+          { key: 'speedPenalty', label: 'Slower' },
+          { key: 'calculationCount', label: 'Calculations', numeric: true }
+        ]}
+        {capture}
+        {index}
+        {skillNames}
+        {onseek}
+        {onselect}
+      />
+    {/if}
+  </div>
+  {#if hpPoints.length > 1}
+    <div class="chart-legend">
+      <span class="hp-key">HP</span>
+      {#if typeof spurt.fullSpurtNeedHp === 'number'}
+        <span class="need-key">Full-spurt need</span>
+      {/if}
+      {#if delayedStart !== undefined}
+        <span class="delay-key">Spurt delay</span>
+      {/if}
+      <small>Select a point to watch it</small>
+    </div>
+    <div class="spurt-chart">
+      <LazyEChartsSurface
+        option={hpChart}
+        label="HP over the race against the HP a full spurt needed"
+        height={150}
+        zoomable
+        onaxisclick={seekDistance}
+      />
+    </div>
+  {/if}
+</section>
+
+<style>
+  @import '../diagnostics-section.css';
+  @import '../report-card.css';
+  @import './report-section.css';
+  @import './report-facts.css';
+  @import './diagnostics-spurt.css';
+</style>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <clipPath id="badge">
+    <circle cx="24" cy="24" r="24" />
+  </clipPath>
+  <g clip-path="url(#badge)">
+    <rect width="48" height="48" fill="#ffa9c3" />
+    <path d="M24 8.5v5M11.5 14l3.6 3.6M36.5 14l-3.6 3.6M6 26h5M42 26h-5" stroke="#fff4a8" stroke-width="3.2" stroke-linecap="round" />
+    <circle cx="24" cy="31" r="10" fill="#ffef36" />
+    <path d="M0 33.5c9-4 17-4.5 24-1.5s15 3 24-.5V48H0z" fill="#72c46a" />
+  </g>
+</svg>

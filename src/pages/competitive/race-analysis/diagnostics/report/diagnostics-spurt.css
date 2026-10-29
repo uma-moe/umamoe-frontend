@@ -1,0 +1,174 @@
+h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+p {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.report-facts dd.caution {
+  color: var(--accent-warning);
+}
+/* The chart takes the height the report column has left beside the skills. */
+.spurt-report {
+  display: flex;
+  flex-direction: column;
+}
+.chart-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.chart-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.chart-legend > span::before {
+  content: '';
+  width: 12px;
+  height: 2px;
+  background: #7cc6a0;
+}
+.chart-legend > .need-key::before {
+  height: 0;
+  border-top: 2px dashed #e3b35f;
+  background: none;
+}
+.chart-legend > .delay-key::before {
+  height: 8px;
+  background: color-mix(in srgb, #e3b35f 30%, transparent);
+}
+.chart-legend small {
+  margin-left: auto;
+  font-size: 10px;
+}
+.spurt-chart {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 150px;
+}
+/* Out of flow, so the chart follows the space it is given instead of sizing the column. */
+.spurt-chart > :global(.lazy-surface) {
+  position: absolute;
+  inset: 0;
+}
+.spurt-chart :global(figure),
+.spurt-chart :global(.chart-host) {
+  height: 100%;
+  min-height: 0;
+}
+.spurt-calculation {
+  margin-top: 4px;
+  padding: 6px 0;
+  background: transparent;
+}
+.spurt-calculation[hidden] {
+  display: none;
+}
+.hp-equation {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.hp-equation > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px 6px;
+}
+.hp-equation strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.hp-equation small {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+.hp-equation > b {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.hp-equation .shortfall strong {
+  color: var(--accent-warning);
+}
+.spurt-comparison {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.spurt-comparison th,
+.spurt-comparison td {
+  padding: 4px 0;
+  text-align: right;
+}
+.spurt-comparison th:first-child {
+  text-align: left;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+.spurt-comparison thead {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.spurt-comparison thead th {
+  font-weight: 400;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.spurt-comparison td:last-child {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+.spurt-comparison small {
+  font-size: 10px;
+  font-weight: 400;
+}
+.spurt-result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin-top: 6px;
+  font-size: 10px;
+}
+.spurt-result strong {
+  flex-basis: 100%;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.calculation-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  min-width: 36px;
+  min-height: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-primary);
+  font: inherit;
+  cursor: pointer;
+}
+.calculation-toggle {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.calculation-toggle > span {
+  display: flex;
+}
+.calculation-toggle .opened {
+  transform: rotate(180deg);
+}

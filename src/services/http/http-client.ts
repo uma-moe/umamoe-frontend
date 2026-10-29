@@ -27,7 +27,7 @@ export interface HttpRequestOptions extends Omit<RequestInit, 'body'> {
   body?: BodyInit | Record<string, unknown> | unknown[];
   query?: Record<string, string | number | boolean | undefined>;
   responseType?: 'json' | 'text' | 'blob' | 'arrayBuffer' | 'response';
-  /** Public protected assets need browser proof without receiving account auth. */
+  /** Force proof for public assets, or opt out for endpoints accepting JWT alone. */
   browserProof?: boolean;
 }
 
@@ -44,7 +44,9 @@ type Middleware = (request: PipelineRequest, next: Next) => Promise<Response>;
 function backendErrorMessage(body: unknown): string | undefined {
   if (!body || typeof body !== 'object') return undefined;
   const details = body as Record<string, unknown>;
-  return [details.message, details.detail, details.error].find((value): value is string => typeof value === 'string' && Boolean(value.trim()))?.trim();
+  return [details.message, details.detail, details.error]
+    .find((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+    ?.trim();
 }
 
 export class HttpError<T = unknown> extends Error {
@@ -63,13 +65,23 @@ export class HttpError<T = unknown> extends Error {
 }
 
 const retryStatuses = new Set([408, 502, 503, 504]);
-const proofErrorCodes = new Set(['browser_proof_required', 'turnstile_invalid', 'browser_context_mismatch', 'invalid_browser_proof', 'browser_proof_warmup_rate_limited', 'browser_proof_warmup_exhausted']);
+const proofErrorCodes = new Set([
+  'browser_proof_required',
+  'turnstile_invalid',
+  'browser_context_mismatch',
+  'invalid_browser_proof',
+  'browser_proof_warmup_rate_limited',
+  'browser_proof_warmup_exhausted'
+]);
 
 function isOwnApi(url: string, baseUrl: string): boolean {
-  if (url.startsWith('/api/') || url.startsWith('/ingest/') || url.startsWith('/search/')) return true;
+  if (url.startsWith('/api/') || url.startsWith('/ingest/') || url.startsWith('/search/'))
+    return true;
   if (!baseUrl) return false;
   const normalizedBase = baseUrl.replace(/\/$/, '');
-  return ['/api/', '/ingest/', '/search/'].some((prefix) => url.startsWith(normalizedBase + prefix));
+  return ['/api/', '/ingest/', '/search/'].some((prefix) =>
+    url.startsWith(normalizedBase + prefix)
+  );
 }
 
 function withHeaders(request: PipelineRequest, values: Record<string, string>): PipelineRequest {
@@ -82,7 +94,11 @@ function compose(middleware: Middleware[], transport: Next): Next {
   return middleware.reduceRight<Next>((next, item) => (request) => item(request, next), transport);
 }
 
-async function responseBody(response: Response, responseType: HttpRequestOptions['responseType'] = 'json', tolerateInvalidJson = false): Promise<unknown> {
+async function responseBody(
+  response: Response,
+  responseType: HttpRequestOptions['responseType'] = 'json',
+  tolerateInvalidJson = false
+): Promise<unknown> {
   if (response.status === 204) return null;
   if (responseType === 'blob') return response.blob();
   if (responseType === 'arrayBuffer') return response.arrayBuffer();
@@ -91,17 +107,25 @@ async function responseBody(response: Response, responseType: HttpRequestOptions
     const text = await response.text();
     if (!text) return null;
     const normalized = text.replace(/^\)\]\}',?\n/, '');
-    try { return JSON.parse(normalized); }
-    catch (error) { if (tolerateInvalidJson) return normalized; throw error; }
+    try {
+      return JSON.parse(normalized);
+    } catch (error) {
+      if (tolerateInvalidJson) return normalized;
+      throw error;
+    }
   }
+
   return null;
 }
 
 async function errorCode(response: Response): Promise<string | undefined> {
   const body = await responseBody(response.clone(), 'json', true);
-  if (typeof body === 'string') return [...proofErrorCodes, 'rate_limited'].find((code) => body.includes(code));
+  if (typeof body === 'string')
+    return [...proofErrorCodes, 'rate_limited'].find((code) => body.includes(code));
   if (!body || typeof body !== 'object') return undefined;
-  const candidate = (body as { error?: unknown; code?: unknown }).error ?? (body as { code?: unknown }).code;
+  const candidate =
+    (body as { error?: unknown; code?: unknown }).error ?? (body as { code?: unknown }).code;
+
   return typeof candidate === 'string' ? candidate : undefined;
 }
 
@@ -115,7 +139,14 @@ function retryAfterSeconds(response: Response): number {
 }
 
 function serializeBody(body: HttpRequestOptions['body'], headers: Headers): BodyInit | undefined {
-  if (body === undefined || body instanceof Blob || body instanceof FormData || body instanceof URLSearchParams || typeof body === 'string' || body instanceof ArrayBuffer) return body as BodyInit | undefined;
+  if (body === undefined || typeof body === 'string') return body;
+  if (
+    body instanceof Blob ||
+    body instanceof FormData ||
+    body instanceof URLSearchParams ||
+    body instanceof ArrayBuffer
+  )
+    return body;
   if (!headers.has('content-type')) headers.set('content-type', 'application/json');
   return JSON.stringify(body);
 }
@@ -140,22 +171,34 @@ export function createHttpClient(options: HttpClientOptions = {}) {
 
   const auth: Middleware = async (request, next) => {
     const token = request.ownApi ? options.getAuthToken?.()?.trim() : undefined;
-    const response = await next(token ? withHeaders(request, { authorization: 'Bearer ' + token }) : request);
-    if (response.status === 401 && request.ownApi && request.url.includes('/api/auth/')) options.onUnauthorized?.(request.url);
+    const response = await next(
+      token ? withHeaders(request, { authorization: 'Bearer ' + token }) : request
+    );
+
+    if (response.status === 401 && request.ownApi && request.url.includes('/api/auth/'))
+      options.onUnauthorized?.(request.url);
     return response;
   };
 
   const proof: Middleware = async (request, next) => {
     const port = options.browserProof;
     const headers = new Headers(request.init.headers);
-    if (!port || !request.proofRequired || request.init.method === 'OPTIONS' || headers.has(port.proofHeader) || headers.has('x-api-key')) return next(request);
+    if (
+      !port ||
+      !request.proofRequired ||
+      request.init.method === 'OPTIONS' ||
+      headers.has(port.proofHeader) ||
+      headers.has('x-api-key')
+    )
+      return next(request);
     // Share verification before sending protected requests; concurrent warmup
     // requests exhaust the server allowance and produce avoidable 429 responses.
-    const cached = port.getCached() ?? await port.refresh();
+    const cached = port.getCached() ?? (await port.refresh());
     const sent = withHeaders(request, { [port.proofHeader]: cached });
     let response = await next(sent);
     const returnedProof = response.headers.get(port.proofHeader)?.trim();
-    if (returnedProof) port.capture(returnedProof, Number(response.headers.get(port.ttlHeader) ?? 0));
+    if (returnedProof)
+      port.capture(returnedProof, Number(response.headers.get(port.ttlHeader) ?? 0));
     if (response.status !== 403 && response.status !== 429) return response;
     const code = await errorCode(response);
     if (!proofErrorCodes.has(code ?? '')) return response;
@@ -163,7 +206,8 @@ export function createHttpClient(options: HttpClientOptions = {}) {
     const fresh = await port.refresh();
     response = await next(withHeaders(request, { [port.proofHeader]: fresh }));
     const refreshedProof = response.headers.get(port.proofHeader)?.trim();
-    if (refreshedProof) port.capture(refreshedProof, Number(response.headers.get(port.ttlHeader) ?? 0));
+    if (refreshedProof)
+      port.capture(refreshedProof, Number(response.headers.get(port.ttlHeader) ?? 0));
     return response;
   };
 
@@ -174,10 +218,18 @@ export function createHttpClient(options: HttpClientOptions = {}) {
     while (true) {
       try {
         const response = await next(request);
-        if (!retryable || attempt >= retryCount || !retryStatuses.has(response.status)) return response;
+        if (!retryable || attempt >= retryCount || !retryStatuses.has(response.status))
+          return response;
       } catch (error) {
-        if (!retryable || attempt >= retryCount || request.init.signal?.aborted || error instanceof DOMException && error.name === 'AbortError') throw error;
+        if (
+          !retryable ||
+          attempt >= retryCount ||
+          request.init.signal?.aborted ||
+          (error instanceof DOMException && error.name === 'AbortError')
+        )
+          throw error;
       }
+
       attempt += 1;
     }
   };
@@ -187,29 +239,62 @@ export function createHttpClient(options: HttpClientOptions = {}) {
     if (response.status === 429) {
       const headers = new Headers(request.init.headers);
       const code = await errorCode(response.clone());
-      const warmup = Boolean(options.browserProof) && request.proofRequired && !headers.has(options.browserProof?.proofHeader ?? 'x-browser-proof') && (code === 'browser_proof_warmup_rate_limited' || code === 'browser_proof_warmup_exhausted' || code === 'rate_limited');
-      if (!warmup) options.onRateLimit?.({ retryAfterSeconds: retryAfterSeconds(response), url: request.url });
+      const warmup =
+        Boolean(options.browserProof) &&
+        request.proofRequired &&
+        !headers.has(options.browserProof?.proofHeader ?? 'x-browser-proof') &&
+        (code === 'browser_proof_warmup_rate_limited' ||
+          code === 'browser_proof_warmup_exhausted' ||
+          code === 'rate_limited');
+
+      if (!warmup)
+        options.onRateLimit?.({ retryAfterSeconds: retryAfterSeconds(response), url: request.url });
     }
+
     return response;
   };
 
-  const pipeline = compose([defaults, auth, proof, rateLimit, retry], (request) => fetcher(request.url, request.init));
+  const pipeline = compose([defaults, auth, proof, rateLimit, retry], (request) =>
+    fetcher(request.url, request.init)
+  );
 
   async function request<T>(path: string, requestOptions: HttpRequestOptions = {}): Promise<T> {
+    const {
+      query: queryValues,
+      responseType,
+      browserProof,
+      body,
+      ...fetchOptions
+    } = requestOptions;
+
     const query = new URLSearchParams();
-    for (const [name, value] of Object.entries(requestOptions.query ?? {})) if (value !== undefined) query.set(name, String(value));
-    const suffix = query.size ? (path.includes('?') ? '&' : '?') + query : '';
+    for (const [name, value] of Object.entries(queryValues ?? {})) {
+      if (value !== undefined) query.set(name, String(value));
+    }
+
+    const querySeparator = path.includes('?') ? '&' : '?';
+    const suffix = query.size ? querySeparator + query : '';
     const url = /^https?:\/\//i.test(path) ? path + suffix : baseUrl + path + suffix;
-    const headers = new Headers(requestOptions.headers);
-    const init: RequestInit = { ...requestOptions, method: requestOptions.method ?? 'GET', headers, body: serializeBody(requestOptions.body, headers) };
-    delete (init as HttpRequestOptions).query;
-    delete (init as HttpRequestOptions).responseType;
-    delete (init as HttpRequestOptions).browserProof;
+    const headers = new Headers(fetchOptions.headers);
+    const init: RequestInit = {
+      ...fetchOptions,
+      method: fetchOptions.method ?? 'GET',
+      headers,
+      body: serializeBody(body, headers)
+    };
+
     const ownApi = isOwnApi(url, baseUrl);
-    const response = await pipeline({ url, init, ownApi, proofRequired: ownApi || requestOptions.browserProof === true });
-    if (!response.ok) throw new HttpError(response.status, response.statusText, response.url || url, await responseBody(response, 'json', true), response);
-    if (requestOptions.responseType === 'response') return response as T;
-    return await responseBody(response, requestOptions.responseType) as T;
+    const response = await pipeline({ url, init, ownApi, proofRequired: browserProof ?? ownApi });
+    if (!response.ok)
+      throw new HttpError(
+        response.status,
+        response.statusText,
+        response.url || url,
+        await responseBody(response, 'json', true),
+        response
+      );
+    if (responseType === 'response') return response as T;
+    return (await responseBody(response, responseType)) as T;
   }
 
   return { request };

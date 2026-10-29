@@ -1,0 +1,239 @@
+.build {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  container-type: inline-size;
+}
+.skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+small {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.build-content {
+  display: contents;
+}
+.stat-overview,
+.aptitude-overview,
+.skills-section {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.build-identity {
+  min-width: 0;
+}
+.compact {
+  display: grid;
+  gap: 0;
+}
+.compact .build-identity {
+  padding: 6px 10px;
+}
+.compact .build-content {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+.compact h3 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.compact h3 > span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 400;
+}
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.section-heading > span {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.stat-totals {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.section-heading strong {
+  font-size: 11px;
+  margin-left: 4px;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.compact .skills-section {
+  align-content: start;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+/* Equal columns, as in the simulator's skill lists, so long and short names line up in rows. */
+.compact .skills {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 6px;
+}
+.compact .skills :global(.skill-chip) {
+  min-width: 0;
+  min-height: 24px;
+  font-size: 11px;
+}
+.compact .skills :global(.skill-chip img) {
+  width: 24px;
+  height: 24px;
+}
+.compact .skills :global(.skill-body) {
+  min-width: 0;
+  min-height: 24px;
+}
+.compact .skills :global(.skill-name) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@container (max-width: 300px) {
+  .compact .skills {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.compact .stat-overview,
+.compact .aptitude-overview {
+  gap: 4px;
+}
+.build-identity {
+  display: grid;
+  gap: 8px;
+}
+.identity-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.identity-line > :global(.veteran-identity) {
+  flex: 1;
+}
+.identity-metrics {
+  flex: none;
+  min-width: 0;
+}
+/* A narrow card moves the results under who the runner is, keeping the actions beside the name. */
+@container (max-width: 315px) {
+  .identity-line:has(.identity-metrics) {
+    flex-wrap: wrap;
+  }
+  .identity-metrics {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
+.compact .stat-overview :global(.inline-stats) {
+  gap: 4px;
+}
+.compact .stat-overview :global(.inline-stats > div) {
+  min-height: 48px;
+  gap: 4px;
+  padding: 6px 2px;
+  border: 1px solid color-mix(in srgb, var(--stat-color) 22%, var(--border-subtle));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--stat-color) 9%, var(--surface-2));
+}
+.compact .stat-overview :global(.inline-stats img) {
+  width: 14px;
+  height: 14px;
+}
+.compact .stat-overview :global(.inline-stats dd) {
+  font-size: 15px;
+  line-height: 1.2;
+}
+.compact .stat-overview :global(.inline-stats dt) {
+  font-size: 10px;
+  line-height: 1.3;
+  text-transform: capitalize;
+}
+.compact-aptitudes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.aptitude-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--aptitude-color) 18%, var(--border-subtle));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--aptitude-color) 6%, var(--surface-2));
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.aptitude-cell > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* A race's three relevant grades name the category they were read for, such as Medium or Turf. */
+.race-aptitude {
+  min-height: 38px;
+}
+.race-aptitude-label {
+  display: grid;
+  gap: 1px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.race-aptitude-label small {
+  font-size: 10px;
+  font-weight: 400;
+}
+.unknown-grade {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.full-aptitudes {
+  display: grid;
+  gap: 6px;
+  container-type: inline-size;
+}
+.full-aptitudes > div {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.full-aptitudes > div > span {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.full-aptitudes > div > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+.full-aptitudes .aptitude-cell {
+  padding-inline: 4px;
+  font-size: 10px;
+}
+@container (max-width: 360px) {
+  .full-aptitudes > div > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

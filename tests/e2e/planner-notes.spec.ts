@@ -2,7 +2,10 @@ import { readFile } from 'node:fs/promises';
 import { expect, test } from './fixtures/test';
 import { mockPlannerControls } from './fixtures/planner-controls';
 
-test('Banner notes save while typing and survive closing, reload, JSON export/import, and clearing', async ({ page, isMobile }, info) => {
+test('Banner notes save while typing and survive closing, reload, JSON export/import, and clearing', async ({
+  page,
+  isMobile
+}, info) => {
   await mockPlannerControls(page);
   await page.goto('/timeline?tab=carat-planner');
   const row = page.locator('[data-target-id="first"]');
@@ -37,14 +40,17 @@ test('Banner notes save while typing and survive closing, reload, JSON export/im
   for (const width of isMobile ? [390, 320] : [1536, 1301]) {
     await page.setViewportSize({ width, height: viewport.height });
     await expect(preview).toHaveCSS('text-overflow', 'ellipsis');
-    expect(await row.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+    expect(await row.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
     await row.screenshot({ path: info.outputPath(`note-preview-${width}.png`), scale: 'css' });
   }
+
   await page.setViewportSize(viewport);
   await summary.click();
   await expect(input).toHaveValue(notes + 'future');
   await expect(input).toHaveAttribute('maxlength', '2000');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(page.viewportSize()!.width);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    page.viewportSize()!.width
+  );
 
   const editor = row.getByRole('dialog', { name: 'Banner notes', exact: true });
   const box = (await editor.boundingBox())!;
@@ -56,9 +62,15 @@ test('Banner notes save while typing and survive closing, reload, JSON export/im
   const download = await downloading;
   const json = await readFile((await download.path())!, 'utf8');
   expect(JSON.parse(json).version).toBe(1);
-  await page.locator('input[type="file"]').setInputFiles({ name: 'notes.json', mimeType: 'application/json', buffer: Buffer.from(json) });
-  await expect(page.getByRole('button', { name: 'Selected plan', exact: true })).toHaveText('Controls plan 2');
-  if (!await input.isVisible()) await summary.click();
+  await page
+    .locator('input[type="file"]')
+    .setInputFiles({ name: 'notes.json', mimeType: 'application/json', buffer: Buffer.from(json) });
+
+  await expect(page.getByRole('button', { name: 'Selected plan', exact: true })).toHaveText(
+    'Controls plan 2'
+  );
+
+  if (!(await input.isVisible())) await summary.click();
   await expect(input).toHaveValue(notes + 'future');
   await input.fill('');
   await expect(preview).toHaveCount(0);

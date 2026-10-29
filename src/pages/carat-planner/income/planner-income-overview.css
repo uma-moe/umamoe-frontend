@@ -1,0 +1,121 @@
+.income-overview {
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  padding: 10px 12px;
+}
+.income-overview .panel-heading {
+  min-height: 0;
+  margin-bottom: 5px;
+}
+.income-overview .panel-heading > div {
+  flex-wrap: wrap;
+}
+.income-overview p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.income-overview .income-empty {
+  margin-top: 10px;
+}
+.income-resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  margin: 12px 0;
+}
+.income-resources > div {
+  display: grid;
+  grid-template-columns: 24px auto;
+  align-items: center;
+  gap: 2px 7px;
+}
+.income-resources img {
+  grid-row: 1/3;
+  object-fit: contain;
+}
+.income-resources dt {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.income-resources dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.income-resources dd.deduction {
+  color: var(--accent-warning);
+}
+.income-breakdown {
+  border-top: 1px solid var(--border-subtle);
+}
+.income-breakdown summary {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 11px;
+  list-style: none;
+}
+.income-breakdown summary::-webkit-details-marker {
+  display: none;
+}
+.income-breakdown summary small {
+  margin-left: 5px;
+  color: var(--text-secondary);
+}
+.income-breakdown[open] summary :global(svg) {
+  transform: rotate(180deg);
+}
+.income-breakdown summary:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+.income-breakdown ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.income-breakdown li {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px 16px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+}
+.income-breakdown li strong {
+  font-weight: 500;
+}
+.income-breakdown li span {
+  color: var(--text-secondary);
+  text-align: right;
+}
+.income-breakdown li strong,
+.income-breakdown li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .income-resources {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .income-breakdown li {
+    display: grid;
+    gap: 3px;
+  }
+  .income-breakdown li span {
+    text-align: left;
+  }
+}

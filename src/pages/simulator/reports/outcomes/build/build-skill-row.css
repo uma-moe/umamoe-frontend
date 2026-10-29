@@ -1,0 +1,99 @@
+.skill-row {
+  --tier: 148 163 184;
+  --tier-text: var(--text-primary);
+  --fill: color-mix(in srgb, var(--text-muted) 20%, transparent);
+  position: relative;
+  isolation: isolate;
+  container: skill-row / inline-size;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 32px 46px;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  min-width: 0;
+  padding: 0 5px 0 4px;
+  overflow: hidden;
+  border-radius: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.skill-row.helps {
+  --fill: rgb(var(--accent-success-rgb) / 0.24);
+}
+.skill-row.loss {
+  --fill: rgb(var(--accent-warning-rgb) / 0.18);
+}
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  background: var(--fill);
+}
+.nothing .value,
+.never .value {
+  color: var(--text-muted);
+}
+.skill-row.differs {
+  box-shadow: inset 0 0 0 1px rgb(var(--accent-primary-rgb) / 0.4);
+}
+img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+.name {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.name strong {
+  flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  font-weight: 600;
+  color: var(--tier-text);
+  text-overflow: ellipsis;
+}
+.name small {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+}
+.cost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.cost :global(svg) {
+  color: var(--accent-primary);
+}
+.value {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+.helps .value {
+  font-weight: 650;
+  color: var(--text-primary);
+}
+.loss .value {
+  font-weight: 650;
+  color: var(--accent-warning);
+}
+@container skill-row (max-width: 300px) {
+  .name small {
+    display: none;
+  }
+}

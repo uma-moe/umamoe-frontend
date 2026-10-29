@@ -1,0 +1,160 @@
+.release-tour {
+  display: grid;
+  grid-template-columns: 188px minmax(0, 1fr);
+  gap: 20px;
+  min-width: 0;
+  padding: 0 24px 14px;
+}
+.feature-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-self: start;
+}
+.feature-picker button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease-out,
+    color 140ms ease-out;
+}
+.feature-picker button > :global(svg) {
+  flex: none;
+}
+.feature-picker button:hover {
+  background: var(--surface-2);
+  color: var(--color-text);
+}
+.feature-picker button[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+}
+.feature-picker button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.feature-stage {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  align-self: start;
+}
+.feature-image {
+  overflow: hidden;
+  margin: 0;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.28);
+}
+.feature-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.feature-copy {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.feature-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.feature-heading h3 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.feature-pager {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+.feature-count {
+  margin-right: 6px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.feature-copy ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.feature-copy li::marker {
+  color: var(--color-accent);
+}
+.feature-action {
+  display: flex;
+  padding-top: 4px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .feature-image img {
+    animation: preview-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes preview-in {
+    from {
+      opacity: 0;
+      transform: scale(1.015);
+    }
+  }
+}
+/* A phone keeps every highlight in one row of icons, so none sit out of view. */
+@media (max-width: 767px) {
+  .release-tour {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 0 12px 16px;
+  }
+  .feature-picker {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    gap: 4px;
+  }
+  .feature-picker button {
+    justify-content: center;
+    min-height: 42px;
+    padding: 0;
+  }
+  /* Each button keeps its accessible name through aria-label. */
+  .picker-label {
+    display: none;
+  }
+  .feature-heading h3 {
+    font-size: 18px;
+  }
+  .feature-copy ul {
+    font-size: 12px;
+  }
+  .feature-action :global(.ui-button) {
+    flex: 1;
+  }
+}

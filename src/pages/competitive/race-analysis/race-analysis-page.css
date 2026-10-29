@@ -1,0 +1,142 @@
+.race-page {
+  min-width: 0;
+}
+.loaded :global(.page-heading) {
+  padding-block: 20px 16px;
+}
+.loaded :global(.page-heading h1) {
+  font-size: 26px;
+  margin: 0;
+}
+.loaded :global(.app-page) {
+  padding-bottom: 24px;
+}
+
+/* Before a race is loaded, the page opens like the section landing pages. The glow sits
+   on the page wrapper so it also spans the ad rail columns instead of boxing the content. */
+.race-page:not(.loaded) {
+  background:
+    radial-gradient(circle at 15% 18%, rgb(var(--accent-primary-rgb) / 0.1), transparent 40%),
+    radial-gradient(circle at 85% 10%, rgb(var(--accent-secondary-rgb) / 0.09), transparent 40%),
+    radial-gradient(circle at 50% 75%, rgb(var(--accent-warning-rgb) / 0.06), transparent 50%),
+    var(--bg-primary);
+}
+:global([data-theme='light']) .race-page:not(.loaded) {
+  background: var(--hero-light-bg);
+}
+.race-page:not(.loaded) :global(.app-page) {
+  background: transparent;
+}
+.race-page:not(.loaded) :global(.page-heading) {
+  justify-content: center;
+  padding-block: var(--space-10) var(--space-8);
+  text-align: center;
+}
+.race-page:not(.loaded) :global(.heading-title) {
+  justify-content: center;
+}
+.race-page:not(.loaded) :global(.page-heading h1) {
+  margin: 0 0 var(--space-3);
+  background: var(--gradient-heading);
+  background-clip: text;
+  color: transparent;
+  font-size: var(--font-display);
+  font-weight: 800;
+  line-height: 1.1;
+}
+.race-page:not(.loaded) :global(.page-heading p) {
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+.race-workspace {
+  grid-template-columns: minmax(0, 1fr);
+  --control-height: 32px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.file-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.analysis-workspace {
+  min-width: 0;
+}
+ul {
+  padding-left: 18px;
+  margin: 6px 0;
+}
+li {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .race-page:not(.loaded) :global(.page-heading) {
+    padding-block: var(--space-8) var(--space-6);
+  }
+  .race-page:not(.loaded) :global(.page-heading h1) {
+    margin-bottom: var(--space-2);
+  }
+  .race-page:not(.loaded) :global(.page-heading p) {
+    font-size: 0.875rem;
+  }
+  .loaded :global(.page-heading) {
+    padding-block: 12px;
+  }
+  .loaded :global(.page-heading h1) {
+    font-size: 22px;
+  }
+  .race-workspace {
+    margin-inline: 12px;
+  }
+}
+
+.race-page :global(.ui-button.ui-button--sm:not(.ui-button--ghost)) {
+  min-height: 32px;
+  padding: 5px 10px;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  line-height: 1.2;
+}
+.race-page :global(.ui-button.ui-button--ghost) {
+  min-height: 28px;
+  font-weight: 500;
+}
+.race-page :global(.table-wrap .ui-button.ui-button--ghost),
+.race-page :global(.mode-periods .ui-button.ui-button--ghost),
+.race-page :global(.reference-periods .ui-button.ui-button--ghost) {
+  min-height: 22px;
+  padding: 1px 3px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent-primary);
+  line-height: 1.3;
+}
+.race-page :global(.ui-button svg) {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+.race-page :global(.field select) {
+  min-height: 32px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+.race-page :global(.ui-toggle) {
+  height: 32px;
+  min-height: 32px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+}
+.race-page :global(.segments.compact) {
+  height: 32px;
+  border-radius: 6px;
+}
+.race-page :global(.icon-button--sm) {
+  border-radius: 6px;
+}

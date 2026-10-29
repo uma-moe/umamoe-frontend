@@ -1,0 +1,158 @@
+/* The plot takes whatever height its card has left, so the chart never ends above an empty band. */
+figure {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+.chart-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.plot {
+  min-height: 240px;
+}
+.small .plot {
+  min-height: 140px;
+}
+text {
+  fill: var(--text-secondary);
+  font-size: 12px;
+  font-family: inherit;
+}
+.axis-label {
+  font-size: 11px;
+}
+.small text {
+  font-size: 10px;
+}
+.grid {
+  stroke: var(--border-subtle);
+}
+.baseline {
+  stroke: var(--text-secondary);
+  stroke-dasharray: 4 3;
+}
+.cursor {
+  stroke: var(--text-secondary);
+  stroke-dasharray: 3 4;
+  opacity: 0.35;
+}
+.series-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.series-controls button {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  min-height: 28px;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+}
+.series-controls [aria-pressed='false'] {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+.readout {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+.inspection-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.count-picker {
+  display: flex;
+  min-width: 0;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+}
+.count-picker > span {
+  flex: none;
+  color: var(--text-secondary);
+}
+.count-picker :global(.segments) {
+  min-width: 0;
+}
+.count-picker :global(.segments button) {
+  min-width: 28px;
+  padding-inline: 6px;
+}
+.inspection-controls > span {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: right;
+  line-height: 1.6;
+}
+.readout-values {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+.readout-values > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 6px;
+  font-variant-numeric: tabular-nums;
+}
+.readout-values span {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.readout-values strong {
+  font-size: 12px;
+  font-weight: 550;
+  letter-spacing: -0.025em;
+}
+.readout-values small {
+  grid-column: 1/-1;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+p {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.values-disclosure :global(summary) {
+  min-height: 32px;
+  padding: 4px 10px;
+  background: var(--factor-field-bg);
+  border-color: var(--factor-field-border);
+}
+.values-disclosure :global(summary strong) {
+  font-size: 12px;
+}
+i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+@media (max-width: 900px) {
+  .readout-values {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .inspection-controls > span {
+    font-size: 9px;
+  }
+}

@@ -1,0 +1,221 @@
+.diagnostics {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+/* Both columns end on one line: the shorter column's cards grow to the taller one. */
+.report-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 10px;
+}
+/* Beside a long skill list, the last-spurt chart takes the height that is left. */
+.behaviour-report {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.behaviour-report > :global(.spurt-report) {
+  flex: 1 1 auto;
+}
+.incident-status {
+  --inspect-popover-width: 600px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.incident-status > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.measurements {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+.measurement-data {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+}
+.measurement-data :global(.ui-button--ghost.ui-button--sm) {
+  padding: 0;
+  font-weight: 500;
+}
+.measurement-data :global(.compact[open] > .disclosure-content) {
+  margin-top: 2px;
+}
+.measurement-data :global(.compact summary) {
+  min-height: 30px;
+}
+.simulation-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.simulation-meta strong {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+/* The engine build is one long hash, so it breaks anywhere on a phone. */
+.simulation-meta > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.diagnostics :global(.ui-button--ghost.ui-button--sm) {
+  min-height: 20px;
+  font-size: 11px;
+  padding: 1px 4px;
+}
+/* Every table in the report shares one row height, the one the skill procs set. */
+.diagnostics :global(.compact th),
+.diagnostics :global(.compact td) {
+  padding: 3px 6px;
+}
+.diagnostics :global(.compact td) {
+  height: 30px;
+  box-sizing: border-box;
+}
+/* A seek time is the same compact button in every table, period list and heading. Placing it by its
+   container outranks the race page's general small-button rule. */
+.diagnostics :global(:is(td, li, .section-heading) .ui-button.ui-button--sm.ui-button--secondary) {
+  min-height: 22px;
+  padding: 0 7px;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.diagnostics :global(table) {
+  font-size: 12px;
+}
+.diagnostics :global(th),
+.diagnostics :global(.sort) {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.diagnostics :global(.compact .sort) {
+  min-height: 22px;
+}
+pre {
+  max-height: 300px;
+  overflow: auto;
+  padding: 12px;
+  background: var(--surface-2);
+  font-size: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* The skill table needs its full width before the behaviour column does. */
+@media (max-width: 1500px) {
+  .report-grid {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  }
+}
+@media (max-width: 1100px) {
+  .report-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Below the skills the cards wrap in rows: cards that share a row share its height, and a card left
+     alone in a row takes the full width. */
+  .behaviour-report {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .behaviour-report > :global(*),
+  .behaviour-report > :global(.spurt-report) {
+    flex: 1 1 340px;
+  }
+  .blocking-summary {
+    grid-column: 1/-1;
+  }
+  .blocking-block {
+    flex-basis: 100%;
+  }
+}
+
+/* The runner's build card sits beside how their race went. */
+.runner-overview {
+  display: grid;
+  grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 10px;
+}
+/* On a wide report the card puts its stats beside its aptitudes, so it is no taller than the outcomes. */
+@media (min-width: 1400px) {
+  .runner-overview {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  }
+}
+.runner-overview > :global(.fallback) {
+  align-self: start;
+}
+.recorded-side {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+/* The card keeps its height and the blocking list takes the rest, so the column ends with the skills. */
+.runner-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.blocking-panel {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 150px;
+}
+/* Out of flow, so a long list scrolls inside the card instead of making the row taller. */
+.blocking-fill {
+  position: absolute;
+  inset: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+.blocking-fill > :global(*) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+.blocking-fill :global(.event-list) {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+@media (max-width: 900px) {
+  .runner-overview {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  /* Stacked, the skills come before the blocking list. */
+  .runner-column {
+    display: contents;
+  }
+  .blocking-panel {
+    order: 1;
+    min-height: 0;
+  }
+  .blocking-fill {
+    position: static;
+  }
+  .blocking-fill :global(.event-list) {
+    max-height: 240px;
+  }
+}

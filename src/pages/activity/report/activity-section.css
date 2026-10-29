@@ -1,0 +1,32 @@
+.detail-section {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--card-surface-border);
+  border-radius: var(--radius-lg);
+  background: var(--card-surface-bg);
+}
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.section-heading h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+.section-heading p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+}
+@media (max-width: 680px) {
+  .detail-section {
+    padding: 12px;
+  }
+  .section-heading {
+    gap: 8px;
+    flex-direction: column;
+  }
+}

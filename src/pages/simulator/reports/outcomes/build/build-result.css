@@ -1,0 +1,99 @@
+/* No panel of its own: the answer, the builds and the skills each stand as cards on the page. */
+.build-result {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  container: build-result / inline-size;
+}
+.answer {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 10px 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+.answer p {
+  margin: 0;
+}
+.answer > :global(.summary) {
+  justify-self: stretch;
+}
+.headline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+.headline.idle {
+  font-size: 17px;
+  font-weight: 650;
+}
+.bad .headline {
+  color: var(--accent-error);
+}
+.detail {
+  max-width: 72ch;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.result-note {
+  max-width: 85ch;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.answer :global(.ui-button) {
+  margin-top: 6px;
+}
+.answer .stale-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--accent-warning);
+}
+.answer .stale-note :global(.ui-button) {
+  margin-top: 0;
+}
+.stale :global(.summary),
+.stale .body {
+  opacity: 0.5;
+}
+/* How it was measured, from the info button at the end of the builds' header. */
+.about {
+  display: flex;
+}
+.about-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+/* The builds side by side, then every skill, then those that cannot fire here. */
+.body {
+  display: grid;
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+}
+pre {
+  max-height: 60dvh;
+  overflow: auto;
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .answer {
+    padding: 10px 12px;
+  }
+}

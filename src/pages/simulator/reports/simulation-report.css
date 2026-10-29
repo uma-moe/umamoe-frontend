@@ -1,0 +1,580 @@
+.simulation-report {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+/* Compact controls throughout the report: the same tokens the design system uses on small screens. */
+.simulation-report {
+  --control-height: 30px;
+  --touch-target: 30px;
+}
+.simulation-report .ui-button.ui-button--sm {
+  min-height: var(--control-height);
+  padding-inline: 10px;
+}
+.simulation-report .chart-frame .plot {
+  min-height: 0;
+}
+.simulation-report .chart-frame .state {
+  min-height: 88px;
+  padding: 8px;
+}
+.simulation-report .report-card {
+  min-width: 0;
+  padding: 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  scroll-margin-top: 80px;
+}
+.simulation-report .section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px 16px;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.simulation-report .section-header > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px 14px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.simulation-report .section-header h2 {
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.simulation-report .section-context {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.simulation-report .section-header p {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+.simulation-report .report-diagnostics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.simulation-report h3 {
+  font-size: 12px;
+  margin: 10px 0 6px;
+}
+.simulation-report .detail-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 8px 0;
+  scrollbar-width: thin;
+}
+/* Plain detail tables only: the report's own tables draw their own rows, and a bottom border here would add a stray line under them. */
+.simulation-report .detail-scroll table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 11px;
+  text-align: left;
+}
+.simulation-report .detail-scroll th,
+.simulation-report .detail-scroll td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+.simulation-report .detail-scroll th {
+  font-weight: 600;
+}
+.simulation-report .detail-scroll thead {
+  color: var(--text-secondary);
+}
+.simulation-report .detail-scroll td small {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.simulation-report .report-note {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 6px 0;
+}
+/* The replay of the chosen race sits under the race picker, with one slim line naming the race. */
+.simulation-report .sample {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+.simulation-report .sample-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding-bottom: 6px;
+  font-size: 12px;
+}
+.simulation-report .sample-heading > span {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.simulation-report .sample-heading small {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.simulation-report .sample > p {
+  margin: 0;
+  padding: 6px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.simulation-report .sample > p[role='alert'] {
+  color: var(--accent-error);
+}
+.simulation-report .sample-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.simulation-report .simulation-status {
+  color: var(--accent-primary);
+  font-size: 11px;
+}
+.simulation-report pre {
+  font-size: 10px;
+  max-height: 280px;
+  overflow: auto;
+  background: var(--surface-2);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+}
+@media (max-width: 1100px) {
+  .simulation-report .report-diagnostics {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 700px) {
+  .simulation-report .report-card {
+    padding: 12px;
+  }
+  .simulation-report .report-contents {
+    gap: 2px 14px;
+  }
+  .simulation-report .report-contents a {
+    min-height: 32px;
+  }
+  .simulation-report .comparison-runners button {
+    min-height: 36px;
+  }
+  .simulation-report .section-header {
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .simulation-report .section-header h2 {
+    font-size: 15px;
+  }
+  .simulation-report .section-context {
+    font-size: 10px;
+  }
+  .simulation-report summary {
+    min-height: 32px;
+    align-content: center;
+  }
+}
+
+.simulation-report .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Page structure mirrors the Statistics page: summary strip, sticky pill tabs with a scope bar, headed sections of chart cards. */
+.simulation-report {
+  container: simulation-report / inline-size;
+  grid-template-columns: minmax(0, 1fr);
+}
+.simulation-report .dataset-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--card-surface-bg);
+  padding: 5px 12px;
+}
+.simulation-report .dataset-summary > div {
+  min-width: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0 8px;
+  padding-inline: 14px;
+}
+.simulation-report .dataset-summary > div:first-child {
+  padding-left: 0;
+}
+.simulation-report .dataset-summary > div + div {
+  border-left: 1px solid var(--border-subtle);
+}
+.simulation-report .dataset-summary .summary-label {
+  grid-column: 1/-1;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+}
+.simulation-report .dataset-summary strong {
+  font-size: 17px;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.simulation-report .dataset-summary .sample-summary strong {
+  color: var(--accent-primary);
+  font-size: 18px;
+}
+.simulation-report .dataset-summary span:last-child {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* One sticky toolbar: the section tabs on the left, what is being compared and how on the right. */
+.simulation-report .workspace-navigation {
+  position: sticky;
+  top: var(--utility-height, 0px);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-width: 0;
+  padding: 4px;
+  border: 1px solid var(--tab-bar-border, var(--card-surface-border));
+  border-radius: 10px;
+  background: var(--tab-bar-bg, var(--card-surface-bg));
+  box-shadow: 0 -6px 0 var(--document-bg);
+}
+.simulation-report .workspace-navigation .tabs {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.simulation-report .scope-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 1 1 300px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.simulation-report .comparison-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px 0 6px;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  background: var(--card-surface-bg);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.simulation-report .comparison-pick:hover,
+.simulation-report .comparison-pick:focus-visible {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+.simulation-report .comparison-pick .faces {
+  display: inline-flex;
+  align-items: center;
+}
+.simulation-report .comparison-pick .faces .ring + .ring {
+  margin-left: -6px;
+}
+.simulation-report .comparison-pick .faces small {
+  margin-left: 4px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.simulation-report .comparison-pick .ring {
+  display: inline-flex;
+  border-radius: 50%;
+  background: var(--card-surface-bg);
+  box-shadow:
+    inset 0 0 0 2px var(--runner),
+    0 0 0 1px var(--card-surface-bg);
+  overflow: hidden;
+}
+.simulation-report .comparison-pick .ring .face {
+  transform: translateY(2px);
+}
+.simulation-report .comparison-runners {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.simulation-report .comparison-runner {
+  display: inline-flex;
+  min-width: 0;
+}
+.simulation-report .workspace-navigation > p[role='status'] {
+  width: 100%;
+  margin: 0 0 6px;
+  font-size: 11px;
+  color: var(--accent-primary);
+}
+.simulation-report .content-area {
+  display: grid;
+  gap: 22px;
+  padding-top: 2px;
+  min-width: 0;
+}
+/* The document's scroll-padding already clears the app bar (+8px); this adds the sticky section navigation. */
+.simulation-report .report-anchor {
+  min-width: 0;
+  scroll-margin-top: calc(var(--report-nav-offset, 48px) - 2px);
+}
+.simulation-report .report-section {
+  min-width: 0;
+  scroll-margin-top: 80px;
+}
+.simulation-report .section-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  margin-bottom: 6px;
+}
+.simulation-report .section-heading > div {
+  display: contents;
+}
+.simulation-report .section-heading h2 {
+  grid-area: 1/1;
+  min-height: var(--control-height);
+  display: flex;
+  align-items: center;
+}
+.simulation-report .section-heading > :not(div) {
+  grid-area: 1/2;
+}
+.simulation-report .section-heading p {
+  grid-column: 1/-1;
+}
+.simulation-report .section-heading h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+.simulation-report .section-heading p {
+  max-width: 90ch;
+  margin: 1px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.simulation-report .section-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  font-size: 11px;
+}
+.simulation-report .context-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: right;
+  flex: none;
+}
+.simulation-report .two-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.simulation-report .section-gap {
+  margin-top: 8px;
+}
+.simulation-report .chart-frame {
+  padding: 8px 10px;
+  gap: 6px;
+}
+.simulation-report .chart-frame figcaption h3 {
+  font-size: 13px;
+}
+.simulation-report .chart-frame figcaption {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 8px;
+}
+.simulation-report .chart-frame .chart-heading {
+  display: contents;
+}
+.simulation-report .chart-frame .title-row {
+  grid-area: 1/1;
+  min-height: var(--control-height);
+  flex-wrap: nowrap;
+}
+.simulation-report .chart-frame .chart-tools {
+  grid-area: 1/2;
+  flex-wrap: nowrap;
+}
+.simulation-report .chart-frame figcaption > .chart-heading > p {
+  grid-column: 1/-1;
+  grid-row: 2;
+}
+@container chart-frame (max-width:560px) {
+  .simulation-report .chart-frame .chart-tools,
+  .simulation-report .chart-frame .chart-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .simulation-report .chart-frame .chart-tools {
+    grid-area: 3/1/4/3;
+    margin-top: 4px;
+  }
+  .simulation-report .chart-frame .chart-actions {
+    width: 100%;
+  }
+}
+/* Runner references read as one line: name, then the gate and style in muted text. */
+.simulation-report .runner-reference .runner-name {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.simulation-report .runner-reference .runner-name small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.simulation-report .runner-reference .art {
+  width: 24px;
+  height: 28px;
+}
+.simulation-report .chart-frame figcaption p {
+  font-size: 11px;
+  line-height: 1.45;
+  margin-top: 1px;
+}
+/* Expandable panels are cards too: the header row is the summary, and opened content stays inside the card. */
+.simulation-report details:has(> summary[role='button']) {
+  border: 1px solid var(--card-surface-border);
+  border-radius: var(--radius-lg);
+  background: var(--card-surface-bg);
+  padding: 0 10px;
+}
+.simulation-report details > summary[role='button'] {
+  min-height: calc(var(--control-height) + 10px);
+  padding: 5px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  gap: 8px;
+}
+.simulation-report details > summary[role='button'] > svg {
+  display: none;
+}
+.simulation-report details > summary[role='button'] > strong {
+  font-size: 13px;
+}
+.simulation-report details > summary[role='button'] > .description {
+  font-size: 11px;
+}
+.simulation-report details[open] > .disclosure-content {
+  margin-top: 0;
+  padding: 6px 0 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+.simulation-report .runner-dialog {
+  display: grid;
+  gap: 16px;
+}
+.simulation-report .runner-dialog fieldset {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.simulation-report .runner-dialog legend {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.simulation-report .runner-dialog legend small {
+  margin-left: 6px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+@container simulation-report (max-width:700px) {
+  .simulation-report .two-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .simulation-report .dataset-summary > div {
+    padding-inline: 10px;
+  }
+  .simulation-report .context-label {
+    display: none;
+  }
+  .simulation-report .section-heading h2 {
+    font-size: 15px;
+  }
+}
+@media (max-width: 600px) {
+  .simulation-report .dataset-summary {
+    padding: 8px 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .simulation-report .dataset-summary > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-inline: 8px;
+  }
+  .simulation-report .dataset-summary strong,
+  .simulation-report .dataset-summary .sample-summary strong {
+    font-size: 16px;
+  }
+  .simulation-report .dataset-summary span {
+    font-size: 9px;
+  }
+  .simulation-report .scope-bar {
+    justify-content: space-between;
+  }
+  .simulation-report .content-area {
+    gap: 18px;
+  }
+  /* Disclosure buttons stay one line on phones; the title says enough. */
+  .simulation-report details > summary[role='button'] .description {
+    display: none;
+  }
+}
+.simulation-report .skill-lead {
+  margin-bottom: 8px;
+}

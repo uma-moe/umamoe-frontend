@@ -1,0 +1,9 @@
+small,
+p {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+p {
+  margin: 0;
+  line-height: 1.5;
+}

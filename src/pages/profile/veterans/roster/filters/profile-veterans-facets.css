@@ -1,0 +1,298 @@
+.card-display {
+  display: grid;
+  gap: 10px;
+  padding: 0 0 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.card-display h3 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.card-display :global(.segments) {
+  width: 100%;
+  padding: 2px;
+}
+.card-display :global(button) {
+  flex: 1;
+  min-width: 0;
+  padding-inline: 6px;
+  font-size: 11px;
+}
+.affinity-target {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.filter-facets {
+  min-width: 0;
+  padding: 0 16px 16px;
+}
+.filter-facet {
+  min-width: 0;
+}
+.filter-facet.expanded {
+  border-bottom: 1px solid var(--border-subtle);
+}
+.facet-heading {
+  min-width: 0;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+.facet-heading strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.facet-heading > :global(svg:first-child) {
+  flex: none;
+  color: var(--color-text-muted);
+}
+.facet-heading > :global(svg:last-child) {
+  margin-left: auto;
+  color: var(--color-text-muted);
+}
+.facet-heading > :global(svg:last-child) {
+  transform: rotate(-90deg);
+}
+.filter-facet.expanded .facet-heading > :global(svg:last-child) {
+  transform: rotate(0);
+}
+.filter-facet.expanded .facet-heading {
+  color: var(--accent-primary);
+}
+.primary-filters {
+  display: grid;
+  gap: 14px;
+  padding: 12px 0 20px;
+}
+.primary-filters fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.primary-filters legend {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.primary-filters legend > button {
+  min-height: 24px;
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 400;
+  cursor: pointer;
+}
+.primary-filters legend > button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+}
+.filter-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.filter-choices button {
+  min-height: 30px;
+  padding: 4px 9px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 5px;
+  background: var(--factor-field-bg);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.filter-choices button:hover {
+  background: var(--surface-2);
+  color: var(--color-text);
+}
+.filter-choices button.selected {
+  border-color: var(--accent-primary);
+  background: var(--factor-option-selected-bg);
+  color: var(--factor-option-selected-text);
+}
+.filter-choices button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+@media (max-width: 767px) {
+  .primary-filters legend > button {
+    min-height: var(--touch-target);
+    min-width: var(--touch-target);
+  }
+  .filter-choices button {
+    min-height: var(--touch-target);
+    min-width: var(--touch-target);
+  }
+}
+.spark-categories {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  padding: 18px 0 20px;
+  border-block: 1px solid var(--border-subtle);
+}
+.spark-categories > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 18px;
+}
+.spark-categories h3,
+.more-filters-heading {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+.spark-category-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.spark-category-grid > button {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 6px;
+  background: var(--factor-field-bg);
+  color: var(--color-text);
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.spark-category-grid > button:hover {
+  background: var(--surface-3);
+  border-color: var(--accent-primary);
+}
+.spark-category-grid > button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+.spark-category-grid > button.selected {
+  background: var(--factor-option-selected-bg);
+  border-color: var(--accent-primary);
+}
+.category-count {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  font-size: 10px;
+}
+.spark-category-star {
+  font-size: 15px;
+}
+.spark-category-star.blue {
+  color: var(--accent-primary);
+}
+.spark-category-star.pink {
+  color: var(--color-pink);
+}
+.spark-category-star.green {
+  color: var(--accent-secondary);
+}
+.spark-category-star.white {
+  color: var(--spark-white-text);
+}
+.more-filters-heading {
+  padding: 20px 0 8px;
+}
+.card-filter-hint {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  margin: 16px 0 0;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.card-filter-hint > :global(svg) {
+  flex: none;
+  margin-top: 2px;
+}
+.inline-spark-filters {
+  min-width: 0;
+  padding-top: 8px;
+}
+.inline-spark-filters :global(.spark-matcher) {
+  padding: 0;
+}
+:global(.filter-sidebar) .filter-facets {
+  padding: 0 0 16px;
+}
+:global(.filter-sidebar) .facet-heading {
+  min-height: 40px;
+  padding-block: 8px;
+}
+:global(.filter-sidebar) .facet-heading strong {
+  font-size: 12px;
+}
+.facet-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.facet-heading {
+  flex: 1;
+}
+.clear-facet {
+  flex: none;
+  min-height: 28px;
+  padding: 2px 0 2px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  cursor: pointer;
+}
+@media (max-width: 767px) {
+  .clear-facet {
+    min-height: var(--touch-target);
+  }
+}
+button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+@media (max-width: 767px) {
+  .filter-facets {
+    padding-inline: 12px;
+  }
+  .spark-category-grid > button {
+    min-height: var(--touch-target);
+  }
+  .facet-heading {
+    min-height: 52px;
+  }
+}

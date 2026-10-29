@@ -1,0 +1,7 @@
+/* Notes under the team search's sections, as on the setup forms. */
+.note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}

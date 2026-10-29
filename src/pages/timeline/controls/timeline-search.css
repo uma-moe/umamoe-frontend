@@ -1,0 +1,16 @@
+.search {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+.search :global(.field) {
+  flex: 1;
+}
+@media (max-width: 1280px) {
+  .search {
+    flex-basis: 240px;
+  }
+}

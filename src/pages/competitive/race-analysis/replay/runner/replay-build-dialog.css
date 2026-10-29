@@ -1,0 +1,17 @@
+@import '../../../runners/runner-results-stacked.css';
+
+.runner-build-dialog {
+  --dialog-header-min-height: 48px;
+  --dialog-header-padding: 8px 16px;
+  --dialog-header-align: center;
+  --dialog-heading-padding: 0;
+}
+.runner-build-dialog :global(.training) {
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+@media (max-width: 767px) {
+  .runner-build-dialog {
+    --dialog-header-padding: 8px 12px;
+  }
+}

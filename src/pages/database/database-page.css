@@ -1,0 +1,23 @@
+.inheritance-database {
+  min-height: calc(100dvh - var(--utility-height));
+  background: var(--color-canvas);
+  overflow-x: clip;
+}
+.content-container {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem var(--page-gutter-current);
+}
+@media (max-width: 600px) {
+  .content-container {
+    padding: 1rem 4px;
+  }
+}
+@media (max-width: 767px) {
+  .content-container {
+    padding: 8px 4px;
+    gap: 8px;
+  }
+}

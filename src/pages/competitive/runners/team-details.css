@@ -1,0 +1,88 @@
+@import './runner-results-stacked.css';
+
+/* A team's build dialog, shared by CM Data and the race session: its result beside the actions in
+   the header, then one framed build card per member. */
+.team-details-dialog {
+  --dialog-header-min-height: 48px;
+  --dialog-header-padding: 8px 16px;
+  --dialog-header-align: center;
+  --dialog-heading-padding: 0;
+}
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.detail-actions > :global(.ui-button) {
+  min-height: 36px;
+  padding-inline: var(--space-3);
+  white-space: nowrap;
+}
+/* The team's result sits in the header beside its actions, split from them by a rule. */
+.header-overview {
+  min-width: 0;
+  padding-right: var(--space-4);
+  border-right: 1px solid var(--border-subtle);
+}
+.content-overview {
+  display: none;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.detail-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-5);
+  margin: 0;
+}
+.detail-summary > div {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.detail-summary dt {
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.detail-summary dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@media (max-width: 1000px) {
+  .header-overview {
+    display: none;
+  }
+  .content-overview {
+    display: block;
+  }
+}
+@media (max-width: 767px) {
+  .team-details-dialog {
+    --dialog-header-padding: 8px 12px;
+  }
+  .detail-actions > :global(.ui-button) {
+    min-height: var(--touch-target);
+  }
+  .detail-summary {
+    gap: var(--space-1) var(--space-4);
+  }
+}
+/* Phones keep the header actions as labelled icons. */
+@media (max-width: 600px) {
+  .action-label {
+    display: none;
+  }
+  .detail-actions > :global(.ui-button) {
+    width: var(--touch-target);
+    padding: 0;
+  }
+}

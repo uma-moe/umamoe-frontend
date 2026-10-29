@@ -1,0 +1,52 @@
+.head {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 0 2px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.rank {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-secondary);
+}
+.spend {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* The build's score, with what it gains her beside it. */
+.score {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.score strong {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+.score span {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+/* How far a build trails the pick: small builds that share most skills differ by tenths of a length. */
+.score .behind {
+  color: var(--accent-warning);
+  font-weight: 600;
+}

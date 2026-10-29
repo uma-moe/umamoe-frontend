@@ -1,0 +1,179 @@
+.training {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+.support-section,
+.inheritance-section {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+/* The deck sizes its tiles to the card. The container sits here rather than on .training, because containment
+   there would stop the training rows from lining up across the cards of a team. */
+.support-section {
+  container-type: inline-size;
+}
+.mobile-training {
+  min-width: 0;
+}
+.mobile-training :global(details[open] .disclosure-content) {
+  display: grid;
+  gap: 12px;
+}
+.training h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.training h3 span {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+.training p {
+  margin: 0;
+}
+/* Each card as the game lists it: the art with its type in the corner, then the character over rarity and limit
+   break. The name keeps to one line and the metadata row has a fixed height, so a long name or a missing rarity never
+   shifts one tile against the others. */
+.support-deck {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Three tiles in a row can be narrower than two, so the art and figures scale with the tile itself: between the
+   smallest and largest tile they always leave the name room and keep rarity and all four crystals inside. */
+.support-deck li {
+  --support-art-size: clamp(40px, 33cqi, 48px);
+  --support-rarity-size: clamp(16px, 12cqi, 20px);
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 5px;
+  border: 1px solid var(--card-surface-border);
+  border-radius: var(--radius-md);
+  background: var(--card-surface-bg);
+}
+.support-art {
+  position: relative;
+  display: block;
+}
+.support-deck :global(.art) {
+  width: var(--support-art-size);
+  height: var(--support-art-size);
+  border: 0;
+  background: transparent;
+}
+.support-deck :global(.art img),
+.parent-builds :global(.art img) {
+  object-fit: contain;
+}
+.support-type {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+}
+.support-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.support-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.support-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--support-rarity-size);
+  min-width: 0;
+}
+.support-rarity {
+  flex: none;
+  width: var(--support-rarity-size);
+  height: var(--support-rarity-size);
+  object-fit: contain;
+}
+.support-lb {
+  display: flex;
+  align-items: center;
+  font-size: clamp(12px, 10cqi, 14px);
+  line-height: 1;
+}
+.parent-builds {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.parent-factors {
+  min-width: 0;
+}
+.parent-factors > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.parent-factors > header p {
+  font-size: 10px;
+  text-align: right;
+}
+/* Equal columns like the learned skills above, so the sparks read as rows rather than a ragged cloud. */
+.parent-sparks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 6px;
+  padding: 8px 0 0;
+  min-width: 0;
+}
+.parent-sparks :global(.spark) {
+  min-width: 0;
+  max-width: 100%;
+}
+.parent-sparks :global(.name) {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+p {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.own-factors {
+  min-width: 0;
+}
+@container (min-width: 440px) {
+  .support-deck {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@container (max-width: 260px) {
+  .support-deck {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

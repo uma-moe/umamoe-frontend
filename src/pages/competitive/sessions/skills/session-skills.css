@@ -1,0 +1,6 @@
+/* Session KPIs, then the shared skill view: filters, the table card and the comparison. */
+.skills {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}

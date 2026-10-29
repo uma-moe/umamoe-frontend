@@ -1,0 +1,69 @@
+.guide-trigger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 6px;
+}
+.course-legend {
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+.course-legend span {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.course-legend i {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+}
+.stage-tools {
+  display: flex;
+  align-items: center;
+  margin-left: 0;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.stage-tools :global(.ui-button) {
+  min-height: 32px;
+  font-size: 11px;
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+.replay-guide {
+  display: inline-flex;
+}
+.replay-guide :global(.trigger) {
+  border: 1px solid var(--factor-field-border);
+  border-radius: var(--radius-md);
+  background: var(--factor-field-bg);
+}
+.guide-trigger {
+  min-height: 30px;
+  box-sizing: border-box;
+  padding: 5px 8px;
+}
+@media (max-width: 950px) {
+  .stage-tools {
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+}
+/* Phones keep the actions as icons beside the camera controls. */
+@media (max-width: 700px) {
+  .tool-label {
+    display: none;
+  }
+  .stage-tools :global(.ui-button),
+  .guide-trigger {
+    min-width: 36px;
+    min-height: 36px;
+    padding-inline: 8px;
+    justify-content: center;
+  }
+}

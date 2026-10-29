@@ -1,0 +1,281 @@
+.track-display {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.display-stage {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 272px;
+}
+
+.course-map {
+  position: relative;
+  min-width: 0;
+  min-height: 340px;
+  background:
+    radial-gradient(ellipse at 50% 55%, rgb(var(--accent-secondary-rgb) / 0.07), transparent 65%),
+    var(--bg-primary);
+}
+.course-map svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.road,
+.home-stretch,
+.pack,
+.rail {
+  fill: none;
+  stroke-linejoin: round;
+}
+.road {
+  stroke: color-mix(in srgb, var(--text-primary) 10%, var(--bg-primary));
+}
+.home-stretch {
+  opacity: 0.32;
+}
+.pack {
+  stroke: rgb(var(--accent-primary-rgb) / 0.4);
+  stroke-linecap: round;
+}
+.rail {
+  stroke-width: 1.5;
+}
+.rail--inner {
+  stroke: var(--text-secondary);
+}
+.rail--outer {
+  stroke: var(--border-strong);
+  stroke-dasharray: 4 4;
+}
+.pole {
+  stroke: var(--border-strong);
+}
+.pole-label,
+.course-label {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+.course-label {
+  fill: var(--text-secondary);
+  font-weight: 600;
+}
+.runner circle {
+  fill: var(--runner-color);
+  stroke: var(--bg-primary);
+  stroke-width: 2;
+}
+.runner text {
+  fill: #141923;
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.map-status {
+  position: absolute;
+  inset: auto 0 16px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+.infield {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+}
+.infield-course {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.infield time {
+  color: var(--text-primary);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.infield-phase {
+  color: var(--accent-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.running-order {
+  min-width: 0;
+  padding: var(--space-4);
+  border-left: 1px solid var(--border-subtle);
+}
+.running-order h3 {
+  margin: 0 0 var(--space-2);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.running-order ol {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.running-order li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 18px 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  font-size: 0.8125rem;
+}
+.place {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.portrait {
+  position: relative;
+  display: block;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--runner-color);
+  border-radius: 50%;
+  background: var(--surface-1);
+}
+.portrait :global(.art) {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.portrait b {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  padding: 0 3px;
+  border-radius: var(--radius-xs);
+  background: var(--runner-color);
+  color: #141923;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.runner-name {
+  overflow: hidden;
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gap {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.running-order li.finished .gap {
+  color: var(--text-secondary);
+}
+.running-order li:first-child .gap {
+  color: var(--accent-secondary);
+  font-weight: 600;
+}
+
+.display-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+.display-controls :global(.ui-button) {
+  flex: none;
+  min-width: 76px;
+}
+.display-controls :global(.field) {
+  flex: 1;
+}
+.duration {
+  flex: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.display-actions {
+  flex: none;
+  display: flex;
+  gap: var(--space-2);
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--border-subtle);
+}
+
+@media (max-width: 1100px) {
+  .display-stage {
+    grid-template-columns: minmax(0, 1fr) 232px;
+  }
+}
+@media (max-width: 767px) {
+  .display-stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .course-map {
+    min-height: 190px;
+  }
+  .infield-course {
+    display: none;
+  }
+  .infield time {
+    font-size: 1.375rem;
+  }
+  .infield-phase {
+    font-size: 0.75rem;
+  }
+  .running-order {
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--border-subtle);
+    border-left: 0;
+  }
+  .running-order ol {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+  }
+  .running-order li {
+    display: block;
+    min-height: 0;
+  }
+  .place,
+  .runner-name,
+  .gap {
+    display: none;
+  }
+  .display-controls {
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    padding-inline: var(--space-3);
+  }
+  .display-actions {
+    flex: 1 1 100%;
+    padding: var(--space-2) 0 0;
+    border-top: 1px solid var(--border-subtle);
+    border-left: 0;
+  }
+  .display-actions :global(.ui-button) {
+    flex: 1;
+  }
+}

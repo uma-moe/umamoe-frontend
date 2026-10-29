@@ -1,0 +1,43 @@
+.error-state {
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgb(229 115 115/0.4);
+  border-radius: var(--radius-md);
+  background: rgb(229 115 115/0.08);
+  color: var(--accent-error);
+}
+.error-state p {
+  margin: 0;
+}
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border-subtle);
+}
+.pager label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.pager label > :global(*) {
+  width: 76px;
+}
+@media (max-width: 680px) {
+  .pager {
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+  }
+  .pager label {
+    margin-right: auto;
+  }
+}

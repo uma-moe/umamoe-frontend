@@ -1,0 +1,116 @@
+.club-page {
+  min-width: 0;
+  max-width: 1440px;
+  margin-inline: auto;
+  min-height: 80vh;
+  background: var(--bg-primary);
+  --control-height: 32px;
+  --touch-target: 32px;
+}
+.content {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 0 24px 24px;
+}
+.member-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.club-toolbar {
+  display: grid;
+  grid-template-columns: auto minmax(160px, 1fr) auto;
+  align-items: center;
+  gap: 10px 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.club-toolbar h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.member-count {
+  padding: 1px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  font-size: 11px;
+  font-weight: 500;
+}
+.member-controls {
+  flex-wrap: wrap;
+}
+.member-search {
+  width: 100%;
+  min-width: 0;
+}
+.member-search :global(input) {
+  font-size: 12px;
+}
+.members-section {
+  min-width: 0;
+}
+.no-members {
+  padding: 24px 0;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 12px;
+}
+@media (max-width: 767px) {
+  .club-page {
+    --control-height: 30px;
+    --touch-target: 30px;
+  }
+  .content {
+    padding: 0 4px 12px;
+    gap: 12px;
+  }
+  .club-toolbar {
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding-bottom: 8px;
+  }
+  .member-search {
+    grid-row: 2;
+    grid-column: 1/-1;
+  }
+  .member-controls {
+    grid-column: 2;
+    grid-row: 1;
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .member-search {
+    width: auto;
+    flex: 1;
+  }
+  .member-search :global(input) {
+    font-size: 11px;
+    padding-left: 8px;
+    padding-right: 26px;
+  }
+  .member-search :global(.suffix-icon) {
+    right: 7px;
+    width: 14px;
+  }
+  .member-search :global(svg) {
+    width: 14px;
+  }
+  .member-controls :global(.ui-toggle) {
+    padding-inline: 5px;
+    gap: 4px;
+    font-size: 10px;
+  }
+  .member-controls :global(.ui-toggle > svg) {
+    display: none;
+  }
+}

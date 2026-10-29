@@ -1,0 +1,63 @@
+.pickups {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  order: 0;
+}
+
+.pickups.wrap {
+  flex-wrap: wrap;
+}
+
+.pickups > a {
+  display: block;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 4px;
+  pointer-events: auto;
+  transition:
+    background 140ms,
+    transform 140ms;
+}
+
+.pickups > a.character {
+  height: 46px;
+}
+
+.pickups > a:hover,
+.pickups > a:focus-visible {
+  background: var(--surface-3);
+  outline: 1px solid var(--event-accent, var(--accent-primary));
+  outline-offset: 1px;
+}
+
+.pickups.grow > a:hover,
+.pickups.grow > a:focus-visible {
+  transform: scale(1.06);
+}
+
+.pickups img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.pickup-overflow {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pickups > a {
+    transition: none;
+  }
+
+  .pickups.grow > a:hover,
+  .pickups.grow > a:focus-visible {
+    transform: none;
+  }
+}

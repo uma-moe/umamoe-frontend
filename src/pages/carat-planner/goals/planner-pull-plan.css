@@ -1,0 +1,155 @@
+.targets {
+  padding: 0;
+}
+.targets > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.targets h2,
+.targets p {
+  margin: 0;
+}
+.targets h2 {
+  font-size: 16px;
+}
+.targets header p {
+  font-size: 12px;
+}
+.targets header p {
+  color: var(--text-secondary);
+}
+.target-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 480px;
+}
+.target-heading-actions > span {
+  color: var(--text-secondary);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.empty-targets {
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  padding: 14px 18px;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+.empty-targets > span {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  color: var(--accent-primary);
+}
+.empty-targets strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+}
+.empty-targets p {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+.target-bulk {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin-left: auto;
+}
+.bulk-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.bulk-title :global(svg) {
+  color: var(--accent-primary);
+}
+.target-bulk :global(.field) {
+  display: grid;
+  grid-template-columns: auto minmax(90px, 1fr);
+  align-items: center;
+  gap: 5px;
+}
+.target-bulk :global(label) {
+  white-space: nowrap;
+}
+.anniversary-marker {
+  min-height: 28px;
+  display: grid;
+  grid-template-columns: minmax(24px, 1fr) auto minmax(24px, 1fr);
+  align-items: center;
+  gap: 9px;
+  padding: 2px 12px;
+  color: var(--text-secondary);
+}
+.anniversary-marker > span {
+  height: 1px;
+  background: var(--border-secondary);
+}
+.anniversary-marker strong {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+}
+.target-list {
+  container: planner-targets / inline-size;
+  display: grid;
+  gap: 0;
+}
+.disclaimer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px !important;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+@media (max-width: 680px) {
+  .target-heading-actions {
+    width: 100%;
+    flex-basis: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .target-heading-actions > span {
+    align-self: flex-start;
+  }
+  .target-bulk {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-left: 0;
+  }
+  .bulk-title {
+    grid-column: 1/-1;
+  }
+  .target-bulk :global(.field) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .targets {
+    padding-inline: 4px;
+  }
+}
+@media (max-width: 640px) {
+  .targets header p {
+    display: none;
+  }
+}

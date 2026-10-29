@@ -1,0 +1,83 @@
+.comparison-table {
+  width: 100%;
+  min-width: 0;
+  contain: inline-size paint;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-secondary) transparent;
+}
+.comparison-table:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+th,
+td {
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 3px 10px;
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 400;
+}
+thead th {
+  height: 28px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  padding-left: 0;
+  text-align: left;
+  background: var(--card-surface-bg);
+}
+.legend-skill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.series-swatch {
+  width: 28px;
+  height: 10px;
+  flex: none;
+}
+.series-swatch path {
+  stroke-width: 2.5px;
+}
+small {
+  color: var(--text-secondary);
+  margin-left: 4px;
+  font-size: 11px;
+}
+td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  width: 28px;
+  padding-right: 0;
+  background: var(--card-surface-bg);
+}
+td :global(.icon-button) {
+  width: 26px;
+  height: 26px;
+}
+.load-state {
+  text-align: left;
+  color: var(--text-secondary);
+}
+.load-state :global(.ui-button) {
+  min-height: 26px;
+  font-size: 11px;
+}
+@media (max-width: 600px) {
+  .series-swatch {
+    width: 20px;
+  }
+}

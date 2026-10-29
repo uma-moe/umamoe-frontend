@@ -1,0 +1,114 @@
+p {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.detail-traces {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+  gap: 10px;
+  align-items: start;
+}
+.trace-column,
+.reference-panel {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+/* The offset parent of the decision table, whose height is measured from the top of the row. */
+.position-decisions {
+  position: relative;
+}
+.detail-footnote {
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.muted {
+  color: var(--text-secondary);
+}
+.detail-table :global(table) {
+  min-width: 440px;
+}
+.hp-application-details :global(th:first-child) {
+  width: 84px;
+}
+.hp-application-details :global(th:nth-child(4)) {
+  width: 132px;
+}
+.hp-application-details :global(th:last-child) {
+  width: 116px;
+}
+.hp-application-details :global(.skill-chip) {
+  vertical-align: middle;
+}
+.detail-transition {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.application-change {
+  display: grid;
+  justify-items: end;
+  font-variant-numeric: tabular-nums;
+}
+.application-change strong {
+  font-weight: 500;
+}
+.application-change > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.application-change small {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.change-percent {
+  font-size: 11px;
+}
+.application-change.recovery {
+  color: var(--accent-secondary);
+}
+.application-change.debuff {
+  color: var(--accent-error);
+}
+.reference-periods {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+/* Each period is a table-like row, the same height as the rows in the tables beside it. */
+.reference-periods > li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding-inline: 6px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+}
+.reference-periods small {
+  margin-left: auto;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.empty {
+  padding: 6px 0;
+}
+@media (max-width: 1250px) {
+  .detail-traces {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  .reference-periods > li {
+    flex-wrap: wrap;
+  }
+}

@@ -1,0 +1,463 @@
+.composition-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.composition-filter :global(.field) {
+  width: 88px;
+}
+.style-filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin-bottom: 12px;
+}
+.style-filter > span,
+.rep-filter > span {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.style-filter > :global(.segments) {
+  min-width: 0;
+}
+.analysis-grid {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.top-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 14px;
+  align-items: stretch;
+}
+.composition-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 14px;
+  align-items: stretch;
+}
+.top-panels > section,
+.composition-panels > section,
+.full {
+  min-width: 0;
+}
+.composition-panels > section {
+  min-height: 0;
+}
+.top-panels > section > :global(.chart-frame),
+.composition-panels > section > :global(.chart-frame) {
+  height: 100%;
+}
+.breakdown {
+  display: grid;
+  gap: 0;
+}
+.breakdown-key,
+.style-row {
+  display: grid;
+  grid-template-columns: 116px minmax(45px, 1fr) 68px;
+  gap: 12px;
+  align-items: center;
+}
+.breakdown-key {
+  font-size: 10px;
+  color: var(--text-secondary);
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.breakdown-key > span:last-child {
+  text-align: right;
+}
+.breakdown-key > span:nth-child(2) {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  white-space: nowrap;
+}
+.breakdown-key i {
+  width: 7px;
+  height: 3px;
+  background: var(--text-secondary);
+}
+.breakdown-key .win-key {
+  background: var(--accent-primary);
+  margin-left: 6px;
+}
+.style-row {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.share-tracks {
+  display: grid;
+  gap: 5px;
+}
+.share-readout {
+  text-align: right;
+}
+.share-readout strong {
+  font-size: 17px;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.share-readout small {
+  display: block;
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.style-link {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 0;
+}
+.style-link:hover {
+  color: var(--accent-primary);
+}
+.field-insight {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  line-height: 1.6;
+  padding: 10px 0 0;
+  margin: 4px 0 0;
+}
+.field-insight > i {
+  width: 3px;
+  flex: none;
+  border-radius: 2px;
+}
+.field-insight small {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 10px;
+  margin-top: 3px;
+}
+.style-facts {
+  grid-column: 1/-1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+  margin: 6px 0;
+  font-size: 10px;
+}
+.style-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.style-facts dt {
+  color: var(--text-secondary);
+}
+.style-facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.scope-interval,
+.role-note {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.scope-interval {
+  grid-column: 1/-1;
+  margin: 0;
+}
+.focused .reps,
+.focused .cross {
+  grid-template-columns: 1fr;
+}
+.focused .rep-scroll {
+  max-height: 420px;
+}
+h4 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+h4 i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.track {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.track i {
+  display: block;
+  height: 100%;
+}
+.muted {
+  background: var(--text-secondary);
+  opacity: 0.35;
+}
+.cross {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.rooms :global(.plot) {
+  gap: 8px;
+  min-height: 0;
+}
+.room-average-grid {
+  flex: none;
+}
+.rooms :global(.table-wrap) {
+  min-height: 0;
+}
+.rooms :global(th),
+.rooms :global(td) {
+  padding: 3px 4px;
+}
+.room-count {
+  display: block;
+  min-width: 24px;
+  padding: 4px 2px;
+  text-align: center;
+  border-radius: 3px;
+  font-weight: 600;
+}
+.room-average-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) 68px;
+  gap: 4px;
+  align-items: center;
+}
+.room-average-grid > div {
+  display: grid;
+  gap: 5px;
+  text-align: center;
+  padding: 7px 2px;
+  background: color-mix(in srgb, var(--style-color) 13%, transparent);
+  border-radius: 4px;
+}
+.room-average-grid small {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.room-average-grid strong {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.room-average-grid > span {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: right;
+}
+.representatives :global(.plot) {
+  min-height: 0;
+  overflow: visible;
+}
+.rep-controls {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  max-width: 100%;
+}
+.rep-filter {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.rep-filter > :global(.segments) {
+  min-width: 0;
+}
+.reps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 18px;
+}
+.reps > section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.rep-scroll {
+  /* About four and a half runners, so a cut-off row signals that the list scrolls on its own. */
+  max-height: 166px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-secondary) transparent;
+  overscroll-behavior: contain;
+}
+.rep-scroll::-webkit-scrollbar {
+  width: 7px;
+}
+.rep-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 5px;
+  min-height: 28px;
+}
+.rep-columns {
+  display: grid;
+  grid-template-columns: 1fr 38px 38px 42px;
+  gap: 4px;
+  margin-bottom: 3px;
+  text-align: right;
+  padding-right: 15px;
+}
+.rep-columns .rep-sort {
+  display: block;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 10px;
+  min-height: 25px;
+  white-space: nowrap;
+  text-align: right;
+  cursor: pointer;
+}
+.rep-columns .rep-sort:first-child {
+  text-align: left;
+}
+.rep-columns .rep-sort:hover {
+  color: var(--accent-primary);
+}
+.reps .rep-scroll button {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 38px 38px 42px;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 5px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+}
+.reps .rep-scroll button:hover {
+  background: var(--surface-2);
+}
+.reps button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reps strong {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.reps small {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: right;
+}
+.reps :global(.art) {
+  width: 22px;
+  height: 22px;
+}
+.room-average {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 8px 0 0;
+}
+@container chart-frame (max-width:760px) {
+  .reps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .focused .reps {
+    grid-template-columns: 1fr;
+  }
+}
+@media (min-width: 1001px) {
+  /* The room table takes the height of the representatives panel and scrolls inside it. */
+  .rooms {
+    contain: size;
+  }
+}
+@media (max-width: 1000px) {
+  .top-panels,
+  .composition-panels {
+    grid-template-columns: 1fr;
+  }
+  .rooms :global(.table-wrap) {
+    flex: none;
+    max-height: 440px;
+  }
+  .style-filter {
+    align-items: start;
+  }
+  .style-filter > span {
+    display: none;
+  }
+  .style-filter > :global(.segments) {
+    width: 100%;
+  }
+  .style-facts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .composition-filter > span {
+    display: none;
+  }
+  .analysis-grid {
+    gap: 12px;
+  }
+  .breakdown-key,
+  .style-row {
+    grid-template-columns: 106px minmax(40px, 1fr) 62px;
+    gap: 8px;
+  }
+  .cross {
+    grid-template-columns: 1fr;
+  }
+  .reps {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .rep-filter {
+    flex-wrap: wrap;
+  }
+  .reps .rep-scroll button {
+    grid-template-columns: 30px minmax(0, 1fr) 46px 46px 40px;
+    gap: 8px;
+    font-size: 12px;
+    padding: 6px 0;
+  }
+  .rep-columns {
+    grid-template-columns: 1fr 46px 46px 40px;
+    gap: 8px;
+  }
+  .reps :global(.art) {
+    width: 30px;
+    height: 30px;
+  }
+  .room-average-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) 50px;
+  }
+  .room-average-grid small {
+    font-size: 9px;
+  }
+}

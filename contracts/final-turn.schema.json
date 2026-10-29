@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uma.moe/contracts/final-turn.schema.json",
+  "title": "FinalTurn",
+  "description": "A career's final turn as honse_act or UmaExporter save it: her state when the career ends, before she spends her skill points. The Build code dialog loads it as the runner, her skill points, fans and every hinted skill at its hint level. Only the fields listed here are read; everything else the game sends is kept and ignored.",
+  "type": "object",
+  "additionalProperties": true,
+  "anyOf": [
+    {
+      "description": "honse_act: the turn's single_mode_load_common.",
+      "required": ["single_mode_load_common"],
+      "properties": { "single_mode_load_common": { "$ref": "#/$defs/careerState" } }
+    },
+    {
+      "description": "UmaExporter: the whole server response, with the career state under data.",
+      "required": ["data"],
+      "properties": { "data": { "$ref": "#/$defs/careerState" } }
+    },
+    { "description": "The career state on its own.", "$ref": "#/$defs/careerState" }
+  ],
+  "$defs": {
+    "careerState": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["chara_info"],
+      "properties": { "chara_info": { "$ref": "#/$defs/charaInfo" } }
+    },
+    "aptitude": { "description": "1 G to 8 S.", "type": "integer", "minimum": 1, "maximum": 8 },
+    "charaInfo": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "card_id",
+        "speed",
+        "stamina",
+        "power",
+        "guts",
+        "wiz",
+        "motivation",
+        "skill_point",
+        "race_running_style",
+        "proper_distance_short",
+        "proper_distance_mile",
+        "proper_distance_middle",
+        "proper_distance_long",
+        "proper_running_style_nige",
+        "proper_running_style_senko",
+        "proper_running_style_sashi",
+        "proper_running_style_oikomi",
+        "proper_ground_turf",
+        "proper_ground_dirt",
+        "skill_array"
+      ],
+      "properties": {
+        "card_id": { "description": "Her outfit.", "type": "integer", "minimum": 1 },
+        "speed": { "type": "integer", "minimum": 0 },
+        "stamina": { "type": "integer", "minimum": 0 },
+        "power": { "type": "integer", "minimum": 0 },
+        "guts": { "type": "integer", "minimum": 0 },
+        "wiz": { "description": "Wit.", "type": "integer", "minimum": 0 },
+        "motivation": { "description": "Mood: 1 awful to 5 great.", "type": "integer", "minimum": 1, "maximum": 5 },
+        "skill_point": { "description": "Skill points left to spend: the Build optimizer's budget.", "type": "integer", "minimum": 0 },
+        "fans": { "description": "Her fan count; skills that grow with fans need it.", "type": "integer", "minimum": 0 },
+        "race_running_style": { "description": "1 front runner, 2 pace chaser, 3 late surger, 4 end closer.", "enum": [1, 2, 3, 4] },
+        "proper_distance_short": { "$ref": "#/$defs/aptitude" },
+        "proper_distance_mile": { "$ref": "#/$defs/aptitude" },
+        "proper_distance_middle": { "$ref": "#/$defs/aptitude" },
+        "proper_distance_long": { "$ref": "#/$defs/aptitude" },
+        "proper_running_style_nige": { "$ref": "#/$defs/aptitude" },
+        "proper_running_style_senko": { "$ref": "#/$defs/aptitude" },
+        "proper_running_style_sashi": { "$ref": "#/$defs/aptitude" },
+        "proper_running_style_oikomi": { "$ref": "#/$defs/aptitude" },
+        "proper_ground_turf": { "$ref": "#/$defs/aptitude" },
+        "proper_ground_dirt": { "$ref": "#/$defs/aptitude" },
+        "skill_array": {
+          "description": "The skills she owns. Her unique's level is its level here.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["skill_id", "level"],
+            "properties": {
+              "skill_id": { "type": "integer", "minimum": 1 },
+              "level": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "skill_tips_array": {
+          "description": "Her skill hints: a skill group and rarity, at a hint level. Every skill of that rarity in the group is on offer at that level, except × ranks.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["group_id", "rarity", "level"],
+            "properties": {
+              "group_id": { "type": "integer", "minimum": 1 },
+              "rarity": { "type": "integer", "minimum": 1 },
+              "level": { "description": "Hint level, 1 to 5.", "type": "integer", "minimum": 1, "maximum": 5 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

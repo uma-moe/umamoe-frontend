@@ -6,7 +6,7 @@ export const environment = {
   enableSearchV3: true, // Enable V3 unified search API
   christmasTheme: false,
   googleAnalytics: {
-    measurementId: '',
+    measurementId: ''
   },
   fuse: {
     enabled: true,
@@ -127,8 +127,8 @@ export const environment = {
       profile_interscroller_1: 'leaderboard_incontent_1',
       profile_interscroller_2: 'leaderboard_incontent_2',
       profile_interscroller_3: 'leaderboard_incontent_3',
-      profile_interscroller_4: 'leaderboard_incontent_4',
-    },
+      profile_interscroller_4: 'leaderboard_incontent_4'
+    }
   },
   turnstile: {
     enabled: true,
@@ -144,6 +144,6 @@ export const environment = {
     scriptTimeoutMs: 15000,
     recoveryPromptMs: 10000,
     proofRefreshSkewMs: 5000,
-    failOpen: false,
+    failOpen: false
   }
 };

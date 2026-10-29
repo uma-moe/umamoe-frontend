@@ -1,0 +1,205 @@
+.hp-result {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+/* Wide, as under the form: the answer and its numbers on the left, the course and the bill on the right. */
+@container hp-result (min-width: 900px) {
+  .hp-result {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    column-gap: 24px;
+    align-items: start;
+    align-content: start;
+  }
+  .hp-result > * {
+    grid-column: 1;
+  }
+  .hp-result > .course-view {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+  }
+}
+/* The course named over the chart: its outline, the track, then surface, distance and turn. */
+.course-view {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.course-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.course-name strong {
+  margin-right: 6px;
+  color: var(--text-primary);
+  font-weight: 650;
+}
+@supports (container-type: inline-size) {
+  .hp-result {
+    grid-auto-flow: row dense;
+  }
+}
+.top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+.top h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+.top :global(.ui-button) {
+  height: 28px;
+  min-height: 28px;
+  font-size: 11px;
+}
+.updating {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.updating:before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  vertical-align: middle;
+  animation: pulse 0.9s ease-in-out infinite alternate;
+}
+@keyframes pulse {
+  from {
+    opacity: 0.25;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .updating:before {
+    animation: none;
+  }
+}
+/* The answer leads: what she does, then why, then how the races split. */
+.answer {
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+}
+.answer p {
+  margin: 0;
+}
+.title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.title.idle {
+  font-size: 17px;
+  font-weight: 650;
+}
+.good .title {
+  color: var(--accent-success);
+}
+.warn .title {
+  color: var(--accent-warning);
+}
+.bad .title {
+  color: var(--accent-error);
+}
+.detail {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.answer :global(.ui-button) {
+  margin-top: 6px;
+}
+/* Full, slower and no spurt, as shares of the races. */
+.split {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  margin-top: 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+.split i {
+  display: block;
+}
+.split .full {
+  background: var(--accent-success);
+}
+.split .reduced {
+  background: var(--accent-warning);
+}
+.split .none {
+  background: var(--accent-error);
+}
+/* A few facts, a line each. */
+.facts {
+  display: grid;
+  margin: 0;
+  border-top: 1px solid var(--border-subtle);
+}
+.facts > div {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.facts dt {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.facts dd {
+  margin: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.facts strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+.facts small {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.facts .good strong {
+  color: var(--accent-success);
+}
+.facts .warn strong {
+  color: var(--accent-warning);
+}
+.facts .bad strong,
+.facts strong.bad {
+  color: var(--accent-error);
+}
+.fix,
+.fine {
+  margin: 0;
+  font-size: 12px;
+}
+.fine {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+pre {
+  font-size: 11px;
+  max-height: 60dvh;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -1,0 +1,61 @@
+/* A card of its own on the page, as the builds are. */
+.card {
+  min-width: 0;
+  padding: 8px 10px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+}
+h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+h3 span {
+  margin-left: 6px;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+/* The builds' one-line rows, as many columns as fit, read down each column. */
+.skills {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 1px 12px;
+}
+.skills li {
+  min-width: 0;
+}
+/* A skill the pick does not buy. */
+.skills li.dimmed :global(.name strong) {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+/* Skills that can never fire here: names only, the reason on hover. */
+.ruled-out ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ruled-out li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 0 8px 0 5px;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-pill, 999px);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.ruled-out img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}

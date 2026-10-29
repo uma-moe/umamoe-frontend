@@ -17,7 +17,6 @@ These URLs are the canonical sources for the respective tools. Link to the relev
 
 - [Home](https://uma.moe/): Uma database for Umamusume: Pretty Derby Global. Find friends, trainer IDs and inheritance parents, compare support cards, and plan banners and carats.
 - [Database](https://uma.moe/database): Find Uma Musume Global friends, trainer IDs and inheritance parents. Filter sparks, factors, G1 wins and affinity, or find support cards to borrow.
-- [Tierlist](https://uma.moe/tierlist): Compare Uma Musume support cards with a data-driven Global tier list, limit-break controls, type rankings, and performance details.
 - [Timeline](https://uma.moe/timeline): Browse the estimated Uma Musume Global banner and event schedule. Track character and support card releases, story events and races, and plan carats.
 
 ### Community
@@ -26,11 +25,23 @@ These URLs are the canonical sources for the respective tools. Link to the relev
 - [Rankings](https://uma.moe/rankings): Search and compare Uma Musume Global trainer rankings, monthly fan totals, all-time performance, and recent fan gains.
 - [Activity](https://uma.moe/activity): Review activity patterns and evidence-based reports for top Uma Musume Global clubs and trainers.
 
+### Competitive
+
+- [Competitive](https://uma.moe/competitive): Explore Uma Musume Global race replays, Champions Meeting data, and competitive racing tools.
+- [Race Analysis](https://uma.moe/competitive/race-analysis): Upload Uma Musume races to inspect runner speed, HP, positioning, skill activations, and race mechanics in an interactive replay.
+- [CM Data](https://uma.moe/competitive/cm-data): Compare captured Uma Musume Global Champions Meeting races, runner builds, skills, and simulation results.
+
 ### Tools
 
 - [Tools](https://uma.moe/tools): Free Uma Musume calculators and tools for affinity, inheritance lineages, Team Stadium statistics, carat planning, and Global release tracking.
 - [Statistics](https://uma.moe/tools/statistics): Explore Uma Musume Team Stadium usage, support card performance, character trends, and score statistics for the Global version.
 - [Lineage Planner](https://uma.moe/tools/lineage-planner): Calculate Uma Musume affinity and compatibility, compare parents, add shared G1 wins, estimate spark inheritance odds, and plan a complete lineage tree.
+- [Skill Explorer](https://uma.moe/tools/skill-explorer): See what every Uma Musume skill is worth and where it procs on every course, by running style, surface and length.
+- [Master Data](https://uma.moe/tools/master-data): Browse Uma Musume game tables and run SQLite queries locally to investigate characters, skills, races, and other game data.
+
+### Research
+
+- [Research](https://uma.moe/research): Read Hakuraku research notes on Uma Musume racing, skills, simulation, and game mechanics.
 
 ### System
 

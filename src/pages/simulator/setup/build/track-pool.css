@@ -1,0 +1,175 @@
+/* The Team Trials courses as a framed grid with a toggle per course: tracks across where every track fits a column
+   (TrackPool's LABEL_COLUMN and TRACK_COLUMN), otherwise tracks down and a column per distance. */
+.track-pool {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  line-height: 1.2;
+}
+.label {
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.count {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.count.over {
+  color: var(--accent-warning);
+}
+.actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.frame {
+  min-width: 0;
+  border: 1px solid var(--factor-field-border);
+  border-radius: 8px;
+  background: var(--factor-field-bg);
+}
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+th,
+td {
+  padding: 2px 3px;
+}
+th {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+thead th {
+  padding-top: 6px;
+  padding-bottom: 5px;
+  text-align: center;
+}
+th[scope='row'] {
+  padding-left: 10px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+tbody tr > * {
+  border-top: 1px solid var(--factor-option-separator);
+}
+.corner,
+th[scope='row'] {
+  width: 76px;
+  border-right: 1px solid var(--factor-option-separator);
+}
+/* Tracks down: the columns size to their content, so the track names keep the room they need and the distances
+   share the rest. */
+.tracks-down {
+  table-layout: auto;
+}
+.tracks-down thead th {
+  padding-inline: 1px;
+}
+.tracks-down thead th:not(.corner) {
+  width: calc(100% / var(--distances));
+}
+.tracks-down .corner,
+.tracks-down th[scope='row'] {
+  width: 1%;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.tracks-down .course {
+  padding: 0 2px;
+}
+.cell {
+  display: flex;
+  gap: 3px;
+}
+.tracks-down .cell {
+  flex-direction: column;
+}
+.course {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 4px;
+  border: 1px dashed var(--border-secondary);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  transition:
+    background-color var(--duration-fast),
+    border-color var(--duration-fast);
+}
+.course:hover {
+  border-color: var(--border-secondary);
+  background: var(--factor-option-hover);
+}
+.course:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+.course.selected {
+  border-style: solid;
+  border-color: rgb(var(--accent-primary-rgb) / 0.35);
+  background: rgb(var(--accent-primary-rgb) / 0.12);
+  color: var(--color-accent);
+}
+.course.selected:hover {
+  background: rgb(var(--accent-primary-rgb) / 0.2);
+}
+.check {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-secondary);
+  border-radius: 3px;
+}
+.selected .check {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary);
+  color: #07121d;
+}
+.layout {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.none {
+  display: block;
+  width: 10px;
+  height: 1px;
+  margin: 0 auto;
+  background: var(--factor-field-border);
+}
+.empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+@media (max-width: 767px) {
+  .course {
+    height: 32px;
+  }
+}

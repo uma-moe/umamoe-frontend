@@ -1,0 +1,466 @@
+.timing {
+  --comparison-blue: #68bdf2;
+  --comparison-amber: #f4b544;
+  --comparison-pink: #df98cf;
+  --comparison-teal: #8ed5cf;
+  --comparison-purple: #b5a1f3;
+  --comparison-yellow: #e4d781;
+  min-width: 0;
+  container-type: inline-size;
+  container-name: skill-timing;
+}
+:global([data-theme='light']) .timing {
+  --comparison-blue: #0072b2;
+  --comparison-amber: #956800;
+  --comparison-pink: #9b3985;
+  --comparison-teal: #007c75;
+  --comparison-purple: #7054c3;
+  --comparison-yellow: #786c00;
+}
+.lanes {
+  display: grid;
+  gap: 8px;
+}
+.lane {
+  min-width: 0;
+}
+.chart-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.chart-identity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-width: 0;
+}
+.comparison-empty {
+  position: absolute;
+  inset: 24px 16px 16px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+.skill-title {
+  font-size: 13px;
+}
+.skill-variants {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.event-count,
+.course-name {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.event-count strong {
+  font-weight: 500;
+}
+.course-name {
+  margin-left: auto;
+}
+.chart-heading :global(.inspect > .trigger) {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+}
+.activation-help h3 {
+  font-size: 12px;
+  margin: 0;
+}
+.activation-help p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 10px 0 0;
+}
+.chart-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+.distance-chart {
+  min-width: 0;
+}
+.chart-stack {
+  position: relative;
+}
+.spurt-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  border-top: 1px solid var(--accent-warning);
+  border-left: 1px dashed var(--accent-warning);
+  pointer-events: none;
+}
+.spurt-band > span {
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  z-index: 1;
+  white-space: nowrap;
+  font-size: 10px;
+  color: var(--accent-warning);
+}
+.spurt-short {
+  display: none;
+}
+.phase-background > span:nth-child(3) .phase-label,
+.phase-background > span:nth-child(3) .phase-short {
+  visibility: hidden;
+}
+.lane-chart {
+  position: relative;
+  isolation: isolate;
+  height: 80px;
+  display: grid;
+  align-items: center;
+}
+.comparison .lane-chart {
+  height: 130px;
+}
+.comparison .lane svg {
+  height: 116px;
+}
+.comparison-line {
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+.line-point {
+  pointer-events: none;
+}
+.line-scale {
+  position: absolute;
+  top: 22px;
+  bottom: 14px;
+  left: 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 10px;
+  line-height: 12px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+.comparison-distance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding-block: 6px;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 4px;
+}
+.phase-background {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.phase-background > span {
+  position: absolute;
+  inset-block: 0;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--phase-color) 7%, transparent);
+  border-right: 1px dashed var(--border-secondary);
+}
+.phase-background > span:last-child {
+  border-right: 0;
+}
+.phase-label,
+.phase-short {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  right: 4px;
+  font-size: 11px;
+  line-height: 14px;
+  text-align: center;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.phase-short {
+  display: none;
+}
+.activation-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 13px;
+}
+.activation-error p {
+  margin: 0;
+}
+.lane svg {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 66px;
+  align-self: start;
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+.lane svg:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 3px;
+}
+.guide {
+  stroke: var(--border-subtle);
+  stroke-dasharray: 2 4;
+}
+.timing-marker {
+  stroke: var(--text-primary);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+.selected-range {
+  fill: var(--accent-primary);
+  fill-opacity: 0.12;
+  stroke: var(--accent-primary);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.course-bands {
+  position: relative;
+  height: 16px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.course-bands > span {
+  position: absolute;
+  inset-block: 0;
+  box-sizing: border-box;
+  padding: 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 10px;
+  line-height: 16px;
+  border-right: 1px solid var(--surface-1);
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--segment-color) 18%, transparent);
+  box-shadow: inset 0 -2px var(--segment-color);
+}
+.course-bands > .track-unavailable {
+  width: 100%;
+  background: none;
+  box-shadow: none;
+  border: 0;
+  text-align: left;
+  padding: 0;
+}
+.slope-bands {
+  position: relative;
+  height: 16px;
+  margin-top: 2px;
+}
+.slope-bands span {
+  position: absolute;
+  inset-block: 0;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--slope-color) 10%, transparent);
+  border-bottom: 1px solid var(--slope-color);
+}
+.course-cursor {
+  position: absolute;
+  top: 20px;
+  bottom: 0;
+  border-left: 1px dashed var(--text-secondary);
+  pointer-events: none;
+}
+.distance-axis {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  line-height: 14px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.lane-reading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-top: 6px;
+}
+.lane-reading > span {
+  display: flex;
+  gap: 8px;
+}
+.lane-reading strong {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.lane-inspection {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) minmax(0, 4fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding-top: 6px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border-subtle);
+  min-width: 0;
+}
+.inspection-distance {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.range-toolbar {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.course-reading {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-secondary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lane-inspection dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+.lane-inspection dl > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.lane-inspection dt {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-secondary);
+}
+.lane-inspection dd {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.lane-inspection small {
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin-left: 4px;
+}
+.chart-instruction {
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin: 0;
+}
+.inspection-action :global(.ui-button) {
+  height: 24px;
+  min-height: 24px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+.inspection-action {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+}
+@container skill-timing (max-width: 760px) {
+  .chart-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: start;
+    row-gap: 4px;
+  }
+  .chart-identity {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .chart-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .lane-inspection {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .lane-inspection dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 16px;
+  }
+  .lane-inspection dl > div {
+    display: block;
+  }
+  .course-name {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-left: 0;
+  }
+  .chart-heading :global(.inspect) {
+    grid-column: 2;
+    grid-row: 1;
+    margin-left: 0;
+  }
+  .chart-heading :global(.icon-button) {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .course-bands > span > span,
+  .phase-label {
+    display: none;
+  }
+  .phase-short {
+    display: block;
+  }
+  .slope-bands span {
+    font-size: 0;
+  }
+  .distance-axis span:nth-child(even) {
+    visibility: hidden;
+  }
+  .lane-reading {
+    display: grid;
+    gap: 8px;
+  }
+  .lane-reading > span {
+    justify-content: space-between;
+  }
+  .spurt-label {
+    display: none;
+  }
+  .spurt-short {
+    display: block;
+  }
+  .comparison-distance {
+    flex-wrap: wrap;
+  }
+  .comparison-distance .inspection-distance {
+    flex-wrap: wrap;
+  }
+}

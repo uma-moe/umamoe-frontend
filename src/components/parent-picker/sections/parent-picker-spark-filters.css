@@ -1,0 +1,112 @@
+.spark-search {
+  flex: none;
+}
+.spark-search :global(.ui-button) {
+  min-height: var(--control-height);
+  height: var(--control-height);
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+.spark-search :global(svg) {
+  width: 14px;
+  height: 14px;
+}
+.active-filters {
+  --spark-filter-height: 28px;
+  --control-height: var(--spark-filter-height);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px var(--picker-inset);
+  margin: 0 calc(-1 * var(--picker-inset)) 10px;
+  border-block: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+}
+.spark-filter-groups {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+.spark-filter-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.spark-filter-group :global(.segments) {
+  flex: none;
+  height: var(--spark-filter-height);
+  padding: 2px;
+}
+.spark-filter-group :global(.segments button) {
+  min-height: 0;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.group-filters {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+.spark-display {
+  margin-left: auto;
+}
+.spark-display :global(.segments) {
+  padding: 2px;
+  height: var(--control-height);
+}
+.spark-display :global(.segments button) {
+  min-height: 0;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.clear-sparks :global(.ui-button) {
+  min-height: var(--control-height);
+  padding: 2px 6px;
+  font-size: 11px;
+}
+.selected-factor {
+  --color-accent: var(--spark-white-text);
+  --color-accent-soft: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  min-width: 0;
+  max-width: 100%;
+}
+.selected-factor--blue {
+  --color-accent: var(--accent-primary);
+}
+.selected-factor--pink {
+  --color-accent: var(--color-pink);
+}
+.selected-factor--green {
+  --color-accent: var(--accent-secondary);
+}
+.selected-factor :global(.wrap) {
+  max-width: 100%;
+}
+.selected-factor :global(button) {
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 3px 8px;
+  font-size: 11px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.selected-factor :global(button:first-child) {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+.selected-factor :global(button.remove) {
+  flex: none;
+  width: var(--control-height);
+  padding: 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+@media (max-width: 600px) {
+  .active-filters {
+    --spark-filter-height: 32px;
+  }
+}

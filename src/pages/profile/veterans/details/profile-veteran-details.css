@@ -1,0 +1,165 @@
+.veteran-details > section {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 180px;
+}
+.veteran-details {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+.stat-overview {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.totals {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 14px;
+  margin: 0;
+  font-size: 11px;
+}
+.totals > div {
+  display: flex;
+  white-space: nowrap;
+  gap: 5px;
+  align-items: baseline;
+}
+dt {
+  color: var(--text-secondary);
+}
+dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.compact-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+}
+.aptitudes,
+.affinity-overview {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+}
+.affinity-overview :global(.affinity-sources) {
+  height: 100%;
+}
+.affinity-overview h3 {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px;
+}
+.affinity-overview h3 small {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+.skills-section,
+.race-section {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 8px;
+}
+.skills-section {
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+.race-section {
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+.skill-list {
+  min-width: 0;
+  display: flex;
+  align-content: start;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 1px;
+}
+.learned-skill {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+}
+.learned-skill :global(.skill-chip) {
+  min-height: 25px;
+  font-size: 11px;
+}
+.learned-skill :global(.skill-chip img) {
+  width: 25px;
+  height: 25px;
+}
+.learned-skill :global(.skill-body) {
+  min-height: 25px;
+}
+.learned-skill :global(.skill-name) {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+.learned-skill :global(.skill-level) {
+  font-size: 10px;
+}
+.race-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.race {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  font-size: 11px;
+}
+.race b {
+  font-size: 9px;
+  color: var(--color-text-muted);
+}
+.grade-g1 b {
+  color: var(--race-g1);
+}
+.grade-g2 b {
+  color: var(--race-g2);
+}
+.grade-g3 b {
+  color: var(--race-g3);
+}
+.family-section {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 8px;
+}
+.family-section h3 :global(svg) {
+  color: var(--color-accent);
+}
+footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+@media (max-width: 650px) {
+  .compact-overview {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

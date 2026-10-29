@@ -1,0 +1,12 @@
+/* The heading row above each panel of the mean-race outcome views. */
+.view-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+}
+h3 {
+  font-size: 11px;
+  margin: 0;
+}

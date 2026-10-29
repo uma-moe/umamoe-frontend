@@ -1,0 +1,143 @@
+.filter-panel {
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  min-width: 0;
+}
+.filter-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 26px;
+  margin-bottom: 8px;
+}
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  min-height: 26px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+.filter-toggle > strong {
+  font-size: 13px;
+}
+.filter-toggle > :global(svg) {
+  color: var(--accent-primary);
+}
+.filter-toggle:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.filter-chevron {
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+}
+.filter-chevron.open {
+  transform: rotate(180deg);
+}
+.filter-count {
+  font-size: 10px;
+  color: var(--accent-primary);
+}
+.filter-note {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.filter-heading > :global(button:last-child) {
+  margin-left: auto;
+  min-height: 26px;
+  padding: 0 4px;
+  font-size: 11px;
+}
+.filters {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.filter-slot {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  min-width: 0;
+  gap: 8px;
+  align-items: center;
+}
+.slot-number {
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+}
+.filter-slot.active .slot-number {
+  color: var(--accent-primary);
+}
+.slot-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(130px, 1fr);
+  gap: 8px;
+}
+.filters :global(.select-control) {
+  font-size: 11px !important;
+}
+.filters :global(.selected-copy img) {
+  width: 22px;
+  height: 22px;
+}
+@media (max-width: 760px) {
+  .filter-heading {
+    margin-bottom: 0;
+  }
+  .filter-note {
+    display: none;
+  }
+  .filters {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .filter-slot {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 6px;
+  }
+  .slot-controls {
+    grid-template-columns: minmax(0, 1.5fr) minmax(90px, 1fr);
+    gap: 6px;
+  }
+}
+.filter-columns {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 8px;
+  margin: 0 0 6px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.filter-columns > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(130px, 1fr);
+  gap: 8px;
+}
+.slot-controls :global(input[role='combobox']) {
+  font-size: 11px;
+}
+@media (max-width: 760px) {
+  .filter-columns {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 6px;
+    margin-top: 10px;
+    margin-bottom: 6px;
+  }
+  .filter-columns > div {
+    grid-template-columns: minmax(0, 1.5fr) minmax(90px, 1fr);
+    gap: 6px;
+  }
+  .filters {
+    margin-top: 0;
+  }
+}

@@ -1,0 +1,664 @@
+import { EditorState, RangeSetBuilder, StateEffect, StateField } from '@codemirror/state';
+import {
+  Decoration,
+  DecorationSet,
+  EditorView,
+  ViewPlugin,
+  ViewUpdate,
+  WidgetType,
+  drawSelection,
+  keymap,
+  lineNumbers,
+  placeholder as placeholderExt,
+  tooltips
+} from '@codemirror/view';
+import {
+  Completion,
+  CompletionContext,
+  CompletionResult,
+  acceptCompletion,
+  autocompletion,
+  closeCompletion,
+  completionKeymap,
+  startCompletion
+} from '@codemirror/autocomplete';
+import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+
+import {
+  isUqlChipSegment,
+  type UqlCompletionResult,
+  type UqlHighlightSegment,
+  type UqlSuggestion,
+  type UqlValidationIssue
+} from './query-editor-types';
+
+class UqlWherePrefixWidget extends WidgetType {
+  override toDOM(): HTMLElement {
+    const el = document.createElement('span');
+    el.className = 'uql-cm-where-prefix';
+    el.textContent = 'where ';
+    return el;
+  }
+
+  override eq(other: WidgetType): boolean {
+    return other instanceof UqlWherePrefixWidget;
+  }
+
+  override ignoreEvent(): boolean {
+    return true;
+  }
+}
+
+class UqlChipWidget extends WidgetType {
+  constructor(
+    private readonly text: string,
+    private readonly imageUrl: string | undefined,
+    private readonly title: string | undefined,
+    private readonly contextClass: string,
+    private readonly rarityClass: string | undefined,
+    private readonly badgeText: string | undefined,
+    private readonly badgeClass: string | undefined
+  ) {
+    super();
+  }
+
+  override toDOM(): HTMLElement {
+    const el = document.createElement('span');
+    el.className =
+      `uql-cm-chip ${this.contextClass} ${this.rarityClass ? `uql-cm-rarity-${this.rarityClass}` : ''}`.trim();
+    if (this.title) el.title = this.title;
+    if (this.imageUrl) {
+      const img = document.createElement('img');
+      img.src = this.imageUrl;
+      img.alt = '';
+      img.className = 'uql-cm-chip-img';
+      el.appendChild(img);
+    }
+
+    const label = document.createElement('span');
+    label.textContent = this.text;
+    label.className = 'uql-cm-chip-label';
+    el.appendChild(label);
+    if (this.badgeText) {
+      const badge = document.createElement('span');
+      badge.textContent = this.badgeText;
+      badge.className =
+        `uql-cm-chip-badge ${this.badgeClass ? `uql-cm-chip-badge-${this.badgeClass}` : ''}`.trim();
+      el.appendChild(badge);
+    }
+
+    return el;
+  }
+
+  override eq(other: WidgetType): boolean {
+    if (!(other instanceof UqlChipWidget)) return false;
+    return (
+      other.text === this.text &&
+      other.imageUrl === this.imageUrl &&
+      other.contextClass === this.contextClass &&
+      other.rarityClass === this.rarityClass &&
+      other.title === this.title &&
+      other.badgeText === this.badgeText &&
+      other.badgeClass === this.badgeClass
+    );
+  }
+
+  override ignoreEvent(): boolean {
+    return false;
+  }
+}
+
+const setSegmentsEffect = StateEffect.define<UqlHighlightSegment[]>();
+const setValidationIssueEffect = StateEffect.define<UqlValidationIssue | null>();
+
+function buildDecorationsFromSegments(
+  segments: UqlHighlightSegment[],
+  docLength: number
+): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+  let lastTo = -1;
+  for (const seg of segments) {
+    const rawFrom = seg.sourceStart;
+    const rawTo = seg.sourceEnd;
+    if (rawFrom === undefined || rawTo === undefined) continue;
+    const from = Math.max(0, Math.min(docLength, rawFrom));
+    const to = Math.max(from, Math.min(docLength, rawTo));
+    if (from === to) continue;
+    if (from < lastTo) continue; // guard against accidental overlap
+    if (isUqlChipSegment(seg)) {
+      const ctxClass = seg.valueContext ? `uql-cm-ctx-${seg.valueContext}` : '';
+      const display = seg.displayText || seg.text;
+      builder.add(
+        from,
+        to,
+        Decoration.replace({
+          widget: new UqlChipWidget(
+            display,
+            seg.imageUrl,
+            seg.title,
+            ctxClass,
+            seg.rarityClass,
+            seg.badgeText,
+            seg.badgeClass
+          ),
+          inclusive: false
+        })
+      );
+    } else {
+      const classes: string[] = [`uql-cm-${seg.kind}`];
+      if (seg.kind === 'paren' && seg.depth !== undefined) {
+        classes.push(`uql-cm-paren-depth-${seg.depth}`);
+      }
+
+      if (seg.valueContext) {
+        classes.push(`uql-cm-ctx-${seg.valueContext}`);
+      }
+
+      if (seg.scopeContext) {
+        classes.push(`uql-cm-scope-${seg.scopeContext}`);
+      }
+
+      builder.add(from, to, Decoration.mark({ class: classes.join(' ') }));
+    }
+
+    lastTo = to;
+  }
+
+  return builder.finish();
+}
+
+const decorationField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(deco, tr) {
+    deco = deco.map(tr.changes);
+    for (const ef of tr.effects) {
+      if (ef.is(setSegmentsEffect)) {
+        deco = buildDecorationsFromSegments(ef.value, tr.state.doc.length);
+      }
+    }
+
+    return deco;
+  },
+  provide: (f) => EditorView.decorations.from(f)
+});
+
+function buildValidationDecorations(
+  issue: UqlValidationIssue | null,
+  docLength: number
+): DecorationSet {
+  if (!issue) return Decoration.none;
+  const from = Math.max(0, Math.min(docLength, issue.from));
+  const to = Math.max(from, Math.min(docLength, issue.to));
+  if (from === to) return Decoration.none;
+  const classes = ['uql-cm-validation-issue', `uql-cm-validation-${issue.state}`];
+  return Decoration.set([
+    Decoration.mark({
+      class: classes.join(' '),
+      attributes: issue.message ? { title: issue.message } : undefined
+    }).range(from, to)
+  ]);
+}
+
+const validationIssueField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(deco, tr) {
+    deco = deco.map(tr.changes);
+    for (const ef of tr.effects) {
+      if (ef.is(setValidationIssueEffect)) {
+        deco = buildValidationDecorations(ef.value, tr.state.doc.length);
+      }
+    }
+
+    return deco;
+  },
+  provide: (f) => EditorView.decorations.from(f)
+});
+
+const wherePrefixPlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+
+    update(u: ViewUpdate): void {
+      if (u.docChanged || u.viewportChanged) this.decorations = this.build(u.view);
+    }
+
+    private build(view: EditorView): DecorationSet {
+      if (view.state.doc.lines < 1) return Decoration.none;
+      const first = view.state.doc.line(1);
+      return Decoration.set([
+        Decoration.widget({
+          widget: new UqlWherePrefixWidget(),
+          side: -1
+        }).range(first.from)
+      ]);
+    }
+  },
+  { decorations: (v) => v.decorations }
+);
+
+const autocompleteTooltipPlacementPlugin = ViewPlugin.fromClass(
+  class {
+    private readonly maxMobileWidth = 640;
+    private readonly inset = 8;
+    private readonly handleResize = () => this.schedule();
+
+    constructor(private readonly view: EditorView) {
+      this.view.dom.ownerDocument.defaultView?.addEventListener('resize', this.handleResize);
+      this.schedule();
+    }
+
+    update(update: ViewUpdate): void {
+      if (
+        update.transactions.length ||
+        update.geometryChanged ||
+        update.viewportChanged ||
+        update.focusChanged
+      ) {
+        this.schedule();
+      }
+    }
+
+    destroy(): void {
+      this.view.dom.ownerDocument.defaultView?.removeEventListener('resize', this.handleResize);
+    }
+
+    private schedule(): void {
+      this.view.requestMeasure({
+        key: this,
+        read: () => this.measureTooltip(),
+        write: (layout) => {
+          if (!layout) return;
+          const { tooltip, top, left, width } = layout;
+          tooltip.style.setProperty('top', `${top}px`, 'important');
+          if (width !== null) {
+            tooltip.dataset['uqlMobilePositioned'] = 'true';
+            tooltip.style.setProperty('left', `${left}px`, 'important');
+            tooltip.style.setProperty('width', `${width}px`, 'important');
+            tooltip.style.setProperty('max-width', `${width}px`, 'important');
+            tooltip.style.setProperty('min-width', '0', 'important');
+          } else {
+            this.resetMobilePositioning(tooltip);
+          }
+
+          tooltip.classList.remove('cm-tooltip-above');
+          tooltip.classList.add('cm-tooltip-below');
+        }
+      });
+    }
+
+    private measureTooltip() {
+      const doc = this.view.dom.ownerDocument;
+      const docEl = doc.documentElement;
+      const tooltip =
+        this.view.dom.querySelector<HTMLElement>('.cm-tooltip.cm-tooltip-autocomplete') ??
+        doc.querySelector<HTMLElement>('.cm-tooltip.cm-tooltip-autocomplete');
+
+      if (!tooltip) return;
+
+      const frame = this.view.dom.closest<HTMLElement>('.uql-cm-frame');
+      if (!frame) return;
+
+      const frameRect = frame.getBoundingClientRect();
+      const scrollerRect = this.view.scrollDOM.getBoundingClientRect();
+      const selectionRect = this.view.coordsAtPos(this.view.state.selection.main.head);
+      const isAbsolute = tooltip.style.position === 'absolute';
+      const parentRect = isAbsolute
+        ? ((tooltip.offsetParent as HTMLElement | null)?.getBoundingClientRect() ??
+          this.view.dom.getBoundingClientRect())
+        : { left: 0, top: 0 };
+
+      const top =
+        Math.max(
+          this.inset,
+          scrollerRect.top + 4,
+          (selectionRect?.bottom ?? scrollerRect.top) + 4
+        ) - parentRect.top;
+
+      const left = Math.max(this.inset, frameRect.left + this.inset);
+      const right = Math.min(docEl.clientWidth - this.inset, frameRect.right - this.inset);
+      return {
+        tooltip,
+        top,
+        left: left - parentRect.left,
+        width: docEl.clientWidth <= this.maxMobileWidth ? Math.max(0, right - left) : null
+      };
+    }
+
+    private resetMobilePositioning(tooltip: HTMLElement): void {
+      if (tooltip.dataset['uqlMobilePositioned'] !== 'true') return;
+      delete tooltip.dataset['uqlMobilePositioned'];
+      tooltip.style.removeProperty('width');
+      tooltip.style.removeProperty('max-width');
+      tooltip.style.removeProperty('min-width');
+    }
+  }
+);
+
+// Svelte owns mounting, binding and cleanup; this class owns one CodeMirror view.
+export class QueryEditorView {
+  private view: EditorView | null = null;
+  private applyingExternalValue = false;
+  private lastSegmentText: string | null = null;
+  private validationIssue: UqlValidationIssue | null = null;
+  private value: string;
+  constructor(
+    private readonly options: {
+      host: HTMLElement;
+      value: string;
+      tokenize: (text: string) => UqlHighlightSegment[];
+      complete: (text: string, position: number) => UqlCompletionResult | null;
+      onchange: (text: string) => void;
+      inputId: string;
+      oncomplete?: (suggestion: UqlSuggestion) => void;
+    }
+  ) {
+    this.value = options.value;
+    this.createEditor();
+  }
+
+  update(value: string, issue: UqlValidationIssue | null, languageChanged = false): void {
+    if (!this.view) return;
+    this.value = value;
+    const current = this.view.state.doc.toString();
+    if (value !== current) {
+      this.applyingExternalValue = true;
+      this.view.dispatch({ changes: { from: 0, to: current.length, insert: value } });
+      this.applyingExternalValue = false;
+    }
+
+    const issueChanged =
+      this.validationIssue?.from !== issue?.from ||
+      this.validationIssue?.to !== issue?.to ||
+      this.validationIssue?.state !== issue?.state ||
+      this.validationIssue?.message !== issue?.message;
+
+    this.validationIssue = issue;
+    if (languageChanged) this.lastSegmentText = null;
+    this.dispatchSegments();
+    if (issueChanged) this.dispatchValidationIssue();
+    this.view.contentDOM.setAttribute('aria-invalid', String(Boolean(issue)));
+  }
+
+  focus(): void {
+    this.view?.focus();
+  }
+
+  destroy(): void {
+    this.view?.destroy();
+    this.view = null;
+  }
+
+  private createEditor(): void {
+    const updateListener = EditorView.updateListener.of((u: ViewUpdate) => {
+      if (!u.docChanged) return;
+      const next = u.state.doc.toString();
+      this.dispatchSegments();
+      if (this.applyingExternalValue) return;
+      if (next === this.value) return;
+      this.value = next;
+      this.options.onchange(next);
+    });
+
+    const completionSource = (ctx: CompletionContext): CompletionResult | null => {
+      const text = ctx.state.doc.toString();
+      const pos = ctx.pos;
+      const result = this.options.complete(text, pos);
+      if (!result || result.options.length === 0) return null;
+      return {
+        from: result.from,
+        to: result.to,
+        filter: false,
+        options: result.options.map((s) => {
+          const completion: Completion & { _uql: UqlSuggestion } = {
+            label: s.label,
+            type: s.kind,
+            apply: (view: EditorView, _completion, from: number, to: number) => {
+              const insertValue = s.insertText;
+              const adjustedFrom = this.getOverlappingCompletionStart(
+                view.state.doc.toString(),
+                from,
+                insertValue,
+                s.kind
+              );
+
+              const prefix = view.state.doc.sliceString(0, adjustedFrom);
+              const suffix = view.state.doc.sliceString(to);
+              const needsLeading = prefix.length > 0 && !/[\s(,]$/.test(prefix);
+              const needsTrailing = suffix.length > 0 && !/^[\s),;]/.test(suffix);
+              const insert = `${needsLeading ? ' ' : ''}${insertValue}${needsTrailing ? ' ' : ''}`;
+              const cursorPos = adjustedFrom + insert.length + (s.cursorOffset ?? 0);
+              view.dispatch({
+                changes: { from: adjustedFrom, to, insert },
+                selection: { anchor: cursorPos }
+              });
+
+              this.options.oncomplete?.(s);
+            },
+            _uql: s
+          };
+
+          return completion;
+        })
+      };
+    };
+
+    const state = EditorState.create({
+      doc: this.value || '',
+      extensions: [
+        EditorView.contentAttributes.of({
+          id: this.options.inputId,
+          'aria-label': 'UQL query',
+          'aria-describedby': this.options.inputId + '-hint',
+          'data-gramm': 'false'
+        }),
+        lineNumbers(),
+        history(),
+        drawSelection(),
+        EditorView.lineWrapping,
+        placeholderExt('Speed >= 3'),
+        decorationField,
+        validationIssueField,
+        wherePrefixPlugin,
+        tooltips({
+          parent: this.options.host.ownerDocument.body,
+          tooltipSpace: (view: EditorView) => {
+            const docEl = view.dom.ownerDocument.documentElement;
+            return {
+              top: 0,
+              left: 0,
+              right: docEl.clientWidth,
+              bottom: docEl.clientHeight + 10000
+            };
+          }
+        }),
+        autocompletion({
+          override: [completionSource],
+          activateOnTyping: true,
+          maxRenderedOptions: 80,
+          aboveCursor: false,
+          icons: false,
+          closeOnBlur: true,
+          optionClass: (c: Completion) => {
+            const meta = (c as Completion & { _uql?: UqlSuggestion })._uql;
+            const parts = ['uql-cm-completion'];
+            if (meta?.valueContext) parts.push(`uql-cm-completion-ctx-${meta.valueContext}`);
+            if (meta?.scopeContext) parts.push(`uql-cm-completion-scope-${meta.scopeContext}`);
+            if (meta?.rarityClass) parts.push(`uql-cm-completion-rarity-${meta.rarityClass}`);
+            if (meta?.badgeClass) parts.push(`uql-cm-completion-badge-${meta.badgeClass}`);
+            return parts.join(' ');
+          },
+          addToOptions: [
+            {
+              render: (c: Completion) => {
+                const meta = (c as Completion & { _uql?: UqlSuggestion })._uql;
+                if (!meta?.imageUrl) return null;
+                const img = document.createElement('img');
+                img.src = meta.imageUrl;
+                img.alt = '';
+                img.className = 'uql-cm-completion-img';
+                return img;
+              },
+              position: 20
+            },
+            {
+              render: (c: Completion) => {
+                const meta = (c as Completion & { _uql?: UqlSuggestion })._uql;
+                if (!meta?.badgeText) return null;
+                const badge = document.createElement('span');
+                badge.textContent = meta.badgeText;
+                badge.className =
+                  `uql-cm-completion-badge ${meta.badgeClass ? `uql-cm-completion-badge-${meta.badgeClass}` : ''}`.trim();
+                return badge;
+              },
+              position: 35
+            }
+          ]
+        }),
+        autocompleteTooltipPlacementPlugin,
+        keymap.of([
+          { key: 'Tab', run: acceptCompletion },
+          { key: 'Mod-Space', run: startCompletion },
+          { key: 'Escape', run: closeCompletion },
+          { key: 'Space', run: (view) => this.autoInsertInListParens(view) },
+          ...completionKeymap,
+          ...historyKeymap,
+          ...defaultKeymap
+        ]),
+        EditorView.theme(
+          {
+            '&': {
+              color: 'rgba(255,255,255,0.92)',
+              backgroundColor: 'transparent',
+              fontSize: '13px'
+            },
+            '&.cm-focused': { outline: 'none' },
+            '.cm-scroller': {
+              fontFamily: '"JetBrains Mono","Fira Code","Cascadia Code",monospace',
+              lineHeight: '1.55',
+              minHeight: '112px',
+              maxHeight: '320px'
+            },
+            '.cm-content': {
+              padding: '12px 12px 12px 8px',
+              caretColor: '#64b5f6'
+            },
+            '.cm-line': { padding: '0 0 0 0' },
+            '.cm-gutters': {
+              background: 'transparent',
+              color: 'rgba(255,255,255,0.5)',
+              border: 'none',
+              borderRight: '1px solid rgba(255,255,255,0.12)',
+              fontFamily: '"JetBrains Mono",monospace',
+              fontSize: '12px'
+            },
+            '.cm-gutterElement': { padding: '0 8px 0 6px', minWidth: '28px' },
+            '.cm-activeLine': { backgroundColor: 'transparent' },
+            '.cm-activeLineGutter': { backgroundColor: 'transparent' },
+            '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, .cm-content ::selection':
+              {
+                backgroundColor: 'rgba(100, 181, 246, 0.32) !important'
+              },
+            '.cm-cursor': { borderLeftColor: '#64b5f6', borderLeftWidth: '2px' },
+            '.cm-tooltip': {
+              background: 'rgba(17,21,26,0.97)',
+              border: '1px solid rgba(100,181,246,0.2)',
+              borderRadius: '6px',
+              color: 'rgba(255,255,255,0.92)',
+              boxShadow: '0 14px 32px rgba(0,0,0,0.42)',
+              maxWidth: '420px'
+            },
+            '.cm-tooltip-autocomplete': { padding: '4px' },
+            '.cm-tooltip-autocomplete > ul': {
+              fontFamily: 'inherit',
+              maxHeight: '240px'
+            },
+            '.cm-tooltip-autocomplete > ul > li': {
+              padding: '4px 8px',
+              borderRadius: '4px',
+              color: 'rgba(255,255,255,0.78)'
+            },
+            '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+              background: 'rgba(100,181,246,0.12)',
+              color: '#fff'
+            },
+            '.cm-completionDetail': {
+              color: 'rgba(255,255,255,0.5)',
+              fontStyle: 'normal',
+              marginLeft: '12px',
+              fontSize: '11px'
+            }
+          },
+          { dark: true }
+        ),
+        updateListener
+      ]
+    });
+
+    this.view = new EditorView({
+      state,
+      parent: this.options.host
+    });
+
+    this.dispatchSegments();
+    this.dispatchValidationIssue();
+  }
+
+  private autoInsertInListParens(view: EditorView): boolean {
+    const selection = view.state.selection.main;
+    if (!selection.empty) return false;
+    const cursor = selection.head;
+    const before = view.state.doc.sliceString(0, cursor);
+    const after = view.state.doc.sliceString(cursor);
+    if (/^\s*\(/.test(after)) return false;
+    const beforeOperator = before.replace(/\s+$/g, '');
+    if (!/(?:^|\S\s+)(?:not\s+)?in$/i.test(beforeOperator)) return false;
+    view.dispatch({
+      changes: { from: cursor, to: cursor, insert: ' ()' },
+      selection: { anchor: cursor + 2 }
+    });
+
+    return true;
+  }
+
+  private getOverlappingCompletionStart(
+    text: string,
+    from: number,
+    insertValue: string,
+    kind: UqlSuggestion['kind']
+  ): number {
+    if (kind !== 'field' && kind !== 'snippet') return from;
+    const before = text.slice(0, from);
+    const trimmedBefore = before.replace(/\s+$/, '');
+    if (!trimmedBefore || !insertValue.trim()) return from;
+    const clauseMatch = trimmedBefore.match(/(?:^|[\n;(]|\b(?:where|and|or|not)\s+)([^\n;()]*)$/i);
+    if (!clauseMatch) return from;
+    const phrase = (clauseMatch[1] || '').trim();
+    if (!phrase || phrase.length < 3) return from;
+    const normalizedPhrase = this.normalizeCompletionOverlapText(phrase);
+    const normalizedInsert = this.normalizeCompletionOverlapText(insertValue);
+    if (!normalizedInsert.startsWith(normalizedPhrase)) return from;
+    const phraseStart = trimmedBefore.length - phrase.length;
+    return Math.max(0, phraseStart);
+  }
+
+  private normalizeCompletionOverlapText(value: string): string {
+    return value.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  private dispatchSegments(): void {
+    if (!this.view) return;
+    const text = this.view.state.doc.toString();
+    if (text === this.lastSegmentText) return;
+    this.lastSegmentText = text;
+    const segments = this.options.tokenize(text);
+    this.view.dispatch({ effects: setSegmentsEffect.of(segments) });
+  }
+
+  private dispatchValidationIssue(): void {
+    if (!this.view) return;
+    this.view.dispatch({ effects: setValidationIssueEffect.of(this.validationIssue) });
+  }
+}

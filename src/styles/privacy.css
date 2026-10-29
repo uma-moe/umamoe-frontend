@@ -1,25 +1,50 @@
 /* Publift/Quantcast owns the consent layout and controls; only theme its colours. */
-:is(#qc-cmp2-container, .qc-cmp2-container, #qc-cmp2-ui) { color-scheme: inherit !important; }
+:is(#qc-cmp2-container, .qc-cmp2-container, #qc-cmp2-ui) {
+  color-scheme: inherit !important;
+}
 
 #qc-cmp2-ui,
-#qc-cmp2-ui :is(.qc-cmp2-header, .qc-cmp2-main, .qc-cmp2-summary-section, .qc-cmp2-footer, .qc-cmp2-scrollable-section) {
+#qc-cmp2-ui
+  :is(
+    .qc-cmp2-header,
+    .qc-cmp2-main,
+    .qc-cmp2-summary-section,
+    .qc-cmp2-footer,
+    .qc-cmp2-scrollable-section
+  ) {
   background-color: var(--surface-overlay) !important;
   border-color: var(--border-primary) !important;
   color: var(--text-primary) !important;
 }
 
-#qc-cmp2-ui :is(.qc-cmp2-list, .qc-cmp2-list-item, .qc-cmp2-consent-info, .qc-cmp2-purpose-info, .qc-cmp2-vendor-info, .qc-cmp2-publisher-logo, .qc-cmp2-tabs, .qc-cmp2-tab) {
+#qc-cmp2-ui
+  :is(
+    .qc-cmp2-list,
+    .qc-cmp2-list-item,
+    .qc-cmp2-consent-info,
+    .qc-cmp2-purpose-info,
+    .qc-cmp2-vendor-info,
+    .qc-cmp2-publisher-logo,
+    .qc-cmp2-tabs,
+    .qc-cmp2-tab
+  ) {
   background-color: var(--bg-tertiary) !important;
   border-color: var(--border-primary) !important;
   color: var(--text-primary) !important;
 }
 
-#qc-cmp2-ui :is(div, span, p, li, td, label) { color: var(--text-secondary) !important; }
+#qc-cmp2-ui :is(div, span, p, li, td, label) {
+  color: var(--text-secondary) !important;
+}
 #qc-cmp2-ui :is(h1, h2, h3, h4, strong, .privacy-logo-text, .span-heading),
-#qc-cmp2-ui :is(h1, h2, h3, h4) * { color: var(--text-primary) !important; }
+#qc-cmp2-ui :is(h1, h2, h3, h4) * {
+  color: var(--text-primary) !important;
+}
 
 #qc-cmp2-ui :is(a, button[mode='link']),
-#qc-cmp2-ui a * { color: var(--accent-primary) !important; }
+#qc-cmp2-ui a * {
+  color: var(--accent-primary) !important;
+}
 
 #qc-cmp2-ui :where(.qc-cmp2-button, button[mode]:not([mode='link'])) {
   background-color: var(--bg-tertiary) !important;
@@ -33,9 +58,13 @@
   color: var(--button-primary-text) !important;
 }
 
-#qc-cmp2-ui :is(button[mode], .qc-cmp2-button) * { color: inherit !important; }
+#qc-cmp2-ui :is(button[mode], .qc-cmp2-button) * {
+  color: inherit !important;
+}
 #qc-cmp2-ui .qc-cmp2-list-item-header {
   background-color: transparent !important;
   color: var(--text-primary) !important;
 }
-#qc-cmp2-ui :is(.qc-cmp2-list-item, .qc-cmp2-tab):hover { background-color: var(--surface-hover) !important; }
+#qc-cmp2-ui :is(.qc-cmp2-list-item, .qc-cmp2-tab):hover {
+  background-color: var(--surface-hover) !important;
+}

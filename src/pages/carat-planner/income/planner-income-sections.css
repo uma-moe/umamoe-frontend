@@ -1,0 +1,35 @@
+.panel-heading {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.panel-heading > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.panel-heading strong {
+  font-size: 12px;
+}
+.panel-heading span {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+@media (max-width: 768px) {
+  .panel-heading :global(.ui-button) {
+    min-height: var(--touch-target);
+  }
+}
+@media (max-width: 600px) {
+  .panel-heading {
+    flex-wrap: wrap;
+  }
+  .panel-heading > div {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+}

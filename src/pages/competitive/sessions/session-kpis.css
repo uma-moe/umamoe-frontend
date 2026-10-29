@@ -1,0 +1,131 @@
+/* One row of answers above the panels, divided like the dataset strip so the tiles read as one set. */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--card-surface-border);
+  border-radius: var(--radius-md);
+  background: var(--card-surface-bg);
+}
+.kpi {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  min-width: 0;
+  margin: 0 0 -1px -1px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-left: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+.kpi-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.kpi-action {
+  flex: none;
+  margin-block: -4px -2px;
+}
+.kpi-action :global(button) {
+  min-height: 26px;
+  padding-inline: 8px;
+  font-size: 11px;
+}
+.kpi-headline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.subject {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.subject > i {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.subject :global(.art) {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-block: -3px;
+}
+.kpi-headline strong {
+  margin-left: auto;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.kpi-headline strong:first-child {
+  margin-left: 0;
+}
+.kpi-headline strong.few {
+  color: var(--text-secondary);
+}
+.kpi-headline strong.over {
+  color: var(--accent-success);
+}
+.kpi-headline strong.under {
+  color: var(--accent-warning);
+}
+.kpi-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px 8px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.comparison {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.comparison b {
+  font-size: 9px;
+}
+.comparison.over {
+  color: var(--accent-success);
+}
+.comparison.under {
+  color: var(--accent-warning);
+}
+.comparison.even {
+  color: var(--text-secondary);
+}
+.detail {
+  color: var(--text-muted);
+}
+
+@media (max-width: 600px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .kpi {
+    padding: 7px 10px;
+  }
+  /* An odd last tile takes the whole row instead of leaving an empty cell beside it. */
+  .kpi:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  .kpi-headline strong {
+    font-size: 16px;
+  }
+}

@@ -1,0 +1,5 @@
+.inheritance-list {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}

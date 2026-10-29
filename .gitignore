@@ -4,12 +4,30 @@
 # ===== COMPILED OUTPUT =====
 /dist
 /.tmp
+/.tmp-*/
+/.codex-worktrees/
+/.codex-remote-attachments/
+/.codex-sheet-audit/
+/deployed/
+/deployed-current/
+/patch-notes/
+/.angular-storage.json
+
+# ===== AGENT TOOLING =====
+# Local assistant setup (skills, agents, launch configs, caches); AGENTS.md stays tracked.
+/.claude/
+/.agents/
+/.codex/
+/.impeccable/
+
+# Local performance and audit write-ups
+/reports/
 
 # ===== NODE.JS =====
 /node_modules
 .sentryclirc
 .env.sentry-build-plugin
-.env.local
+.env*.local
 npm-debug.log
 yarn-error.log
 
@@ -59,6 +77,8 @@ src/assets/
 scripts/
 !scripts/
 scripts/*
+!scripts/build-skill-explorer-providers.ts
+!scripts/build-skill-explorer-providers.test.ts
 !scripts/sync-planner-item-icons.mjs
 !scripts/verify-google-analytics-build.js
 !scripts/generate-favicon.mjs
@@ -73,6 +93,9 @@ scripts/*
 !scripts/seo-pages.ts
 !scripts/seo-pages.test.ts
 !scripts/check-seo.mjs
+!scripts/companion-stylesheet-reload.ts
+!scripts/build-skill-explorer-umas.ts
+!scripts/fit-cm-statlines.ts
 
 .github/copilot-instructions.md
 !src/assets/
@@ -96,6 +119,7 @@ scripts/*
 !/src/assets/images/race-thumbnails/
 /src/assets/images/race-thumbnails/*
 !/src/assets/images/race-thumbnails/thum_race_rt_*.webp
+!/src/assets/images/simulator/
 !/public/assets/
 /public/assets/*
 !/public/assets/images/

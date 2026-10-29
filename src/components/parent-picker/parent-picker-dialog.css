@@ -1,0 +1,147 @@
+.parent-picker {
+  --parent-picker-height: min(1000px, 94dvh);
+  --dialog-content-font: var(--font-sans);
+  --control-height: 34px;
+}
+@media (max-width: 480px) {
+  .parent-picker {
+    --parent-picker-height: 96dvh;
+  }
+}
+.parent-picker > :global(dialog > .dialog-panel > header) {
+  min-height: 48px;
+  height: 48px;
+  align-items: center;
+  padding: 0 8px 0 20px;
+  border-bottom-color: var(--border-subtle);
+}
+.parent-picker > :global(dialog > .dialog-panel > header h2) {
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.parent-picker > :global(dialog > .dialog-panel > .content) {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+.picker-layout {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  flex: 1;
+}
+.parent-picker > :global(dialog > .dialog-panel > header .heading) {
+  flex: none;
+}
+.parent-picker > :global(dialog > .dialog-panel > header .header-actions) {
+  flex: 1;
+  justify-content: flex-start;
+  margin-left: 8px;
+}
+.parent-picker > :global(dialog > .dialog-panel > header .segments) {
+  padding: 2px;
+}
+.parent-picker > :global(dialog > .dialog-panel > header .segments button) {
+  min-height: 30px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.parent-picker :global(.tabs) {
+  flex: none;
+  gap: 0;
+  border-color: var(--border-subtle);
+}
+.parent-picker :global(.tabs button) {
+  min-width: 0;
+  min-height: 40px;
+  height: 40px;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.parent-picker :global(.tabs button.active) {
+  color: var(--accent-primary);
+  background: rgb(var(--accent-primary-rgb) / 0.06);
+}
+.parent-picker :global(.tabs small) {
+  min-width: 20px;
+  margin: 0;
+  padding: 0 5px;
+  border: 1px solid rgb(var(--accent-primary-rgb) / 0.32);
+  border-radius: var(--radius-pill);
+  background: rgb(var(--accent-primary-rgb) / 0.18);
+  color: var(--accent-primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.parent-picker :global(.tabs button.active small) {
+  background: rgb(var(--accent-primary-rgb) / 0.28);
+  border-color: rgb(var(--accent-primary-rgb) / 0.5);
+}
+.picker-body {
+  --picker-inset: 12px;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--picker-inset) 12px;
+}
+.picker-results {
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .parent-picker {
+    --control-height: var(--touch-target);
+  }
+  .parent-picker :global(.tabs button) {
+    min-height: var(--touch-target);
+    height: auto;
+  }
+}
+@media (max-width: 600px) {
+  .parent-picker > :global(dialog > .dialog-panel > header) {
+    padding-left: 12px;
+    gap: 6px;
+  }
+  .parent-picker > :global(dialog > .dialog-panel > header .header-actions) {
+    margin-left: 0;
+  }
+  .parent-picker > :global(dialog > .dialog-panel > header .segments button) {
+    min-height: var(--touch-target);
+  }
+  .picker-body {
+    --picker-inset: 8px;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+  .parent-picker :global(.tabs button) {
+    padding-inline: 4px;
+    font-size: 0.7rem;
+  }
+}
+@media (max-width: 480px) {
+  .parent-picker :global(.tabs button > svg) {
+    display: none;
+  }
+  .parent-picker :global(.tabs button) {
+    flex: 1 1 0;
+    gap: 4px;
+  }
+  .parent-picker :global(.tabs .tab-label) {
+    white-space: nowrap;
+  }
+  .parent-picker :global(.tabs small) {
+    flex: none;
+    min-width: 16px;
+    padding-inline: 3px;
+    font-size: 10px;
+  }
+  .parent-picker > :global(dialog > .dialog-panel > header h2) {
+    font-size: 0.84rem;
+  }
+}

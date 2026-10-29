@@ -1,0 +1,188 @@
+.playback-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.transport,
+.playback-tools,
+.playback-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  min-width: 0;
+}
+.playback-actions {
+  gap: 8px;
+}
+.playback-controls :global(.ui-button) {
+  min-height: 32px;
+  font-size: 11px;
+}
+.playback-controls :global(.ui-button svg) {
+  width: 15px;
+  height: 15px;
+}
+
+/* One quiet line: where the leader is and how far is left. */
+.playback-state {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  flex: 1;
+  min-width: 0;
+  margin: 0 0 0 4px;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.playback-state > * {
+  flex: none;
+}
+.playback-state > * + *::before {
+  content: '·';
+  margin-inline: 6px;
+  color: var(--border-primary);
+}
+.playback-state .remaining {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.race-phase {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.playback-clock {
+  flex: none;
+  margin-inline: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.playback-clock strong {
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.speed-select :global(.field) {
+  width: 64px;
+}
+.speed-select :global(.field select),
+.speed-select :global(.field button) {
+  min-height: 32px;
+  padding-block: 4px;
+  padding-inline: 8px 4px;
+}
+.timeline-help {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: var(--text-secondary);
+  border: 1px solid var(--factor-field-border);
+  border-radius: var(--radius-md);
+  background: var(--factor-field-bg);
+  box-sizing: border-box;
+}
+p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+h3 {
+  font-size: 14px;
+  margin-top: 0;
+}
+
+/* Secondary labels become icons first, then the toolbar splits into rows. */
+@container playback (max-width: 1400px) {
+  .optional-text,
+  .clock-total {
+    display: none;
+  }
+}
+@container playback (max-width: 960px) {
+  .playback-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'transport clock tools'
+      'actions state state';
+    gap: 6px 8px;
+  }
+  .transport {
+    grid-area: transport;
+  }
+  .playback-clock {
+    grid-area: clock;
+    justify-self: end;
+  }
+  .playback-tools {
+    grid-area: tools;
+  }
+  .playback-actions {
+    grid-area: actions;
+  }
+  .playback-state {
+    grid-area: state;
+    justify-content: flex-end;
+    margin: 0;
+  }
+}
+@container playback (max-width: 520px) {
+  .playback-controls {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'transport tools'
+      'clock state'
+      'actions actions';
+    gap: 8px;
+  }
+  .playback-tools {
+    justify-self: end;
+  }
+  .playback-clock {
+    justify-self: start;
+    margin: 0;
+  }
+  .playback-state {
+    justify-content: flex-start;
+    font-size: 10px;
+  }
+  .transport .button-text {
+    display: none;
+  }
+  .playback-controls :global(.ui-button) {
+    min-height: 36px;
+    min-width: 36px;
+    padding-inline: 8px;
+  }
+  .speed-select :global(.field select),
+  .speed-select :global(.field button),
+  .timeline-help {
+    min-height: 36px;
+    height: 36px;
+  }
+  .timeline-help {
+    width: 36px;
+  }
+  .speed-select :global(.field) {
+    width: 58px;
+  }
+  .playback-clock strong {
+    font-size: 14px;
+  }
+}
+@media (min-width: 951px) and (max-height: 1000px) {
+  .playback-controls {
+    margin-bottom: 0;
+  }
+}

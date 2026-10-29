@@ -1,0 +1,10 @@
+dt {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+dd {
+  margin: 3px 0 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}

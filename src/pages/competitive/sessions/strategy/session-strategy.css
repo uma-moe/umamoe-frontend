@@ -1,0 +1,386 @@
+/* CM Data's strategy layout at session density: styles beside the rooms they ran in, saturation beside lineups, then who ran each style. */
+.strategy {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  container: session-strategy / inline-size;
+}
+.panels {
+  display: grid;
+  gap: 8px;
+  align-items: stretch;
+  min-width: 0;
+}
+.upper {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.lower {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+}
+.panels > :global(.chart-frame) {
+  height: 100%;
+}
+.strategy :global(.plot) {
+  align-content: start;
+}
+
+/* The rows share the panel's height with the room table beside it, so no empty band opens below them. */
+.breakdown {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+.breakdown .style-row {
+  flex: 1 1 auto;
+}
+.breakdown-key,
+.style-row {
+  display: grid;
+  grid-template-columns: 136px minmax(48px, 1fr) 78px 44px;
+  align-items: center;
+  gap: 10px;
+}
+.breakdown-key {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.breakdown-key > span:nth-child(n + 3) {
+  text-align: right;
+}
+.track-key {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.track-key i {
+  width: 8px;
+  height: 6px;
+  background: var(--text-secondary);
+  opacity: 0.5;
+}
+.track-key .win-key {
+  margin-left: 6px;
+  background: var(--accent-primary);
+  opacity: 1;
+}
+.style-row {
+  min-height: 30px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.style-row:last-of-type {
+  border-bottom: 0;
+}
+/* Styles and lineups open their teams, so they are drawn as secondary buttons rather than coloured text. */
+.style-link,
+.composition {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 26px;
+  padding: 2px 8px;
+  border: 1px solid var(--factor-field-border);
+  border-radius: var(--radius-sm);
+  background: var(--factor-field-bg);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.style-link:hover,
+.composition:hover {
+  border-color: var(--border-secondary);
+}
+.style-link small {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+.style-link:focus-visible,
+.composition:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+.style-link i,
+h4 i,
+.composition i {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.tracks {
+  display: grid;
+  gap: 3px;
+}
+.track {
+  display: block;
+  height: 9px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-2);
+}
+.track i {
+  display: block;
+  height: 100%;
+  background: color-mix(in srgb, var(--text-secondary) 45%, transparent);
+}
+.readout {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.readout strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+.readout small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.ratio {
+  font-size: 13px;
+  font-weight: 650;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ratio.over {
+  color: var(--accent-success);
+}
+.ratio.under {
+  color: var(--accent-warning);
+}
+.ratio.even {
+  color: var(--text-secondary);
+}
+/* Rates from too few races stay readable but step back from the measured ones. */
+.strategy .few {
+  color: var(--text-muted);
+}
+
+/* Room compositions: one column per style, coloured by how many of that style shared the room. */
+.room-head,
+.room-row {
+  display: grid;
+  grid-template-columns: repeat(var(--styles), minmax(34px, 1fr)) 64px minmax(56px, 1.2fr);
+  align-items: center;
+  gap: 3px;
+}
+.room-head {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+}
+.room-head > span:nth-last-child(-n + 2) {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.room-head > span:nth-last-child(2) {
+  text-align: right;
+}
+.room-head > span:last-child {
+  text-align: left;
+  padding-left: 8px;
+}
+.room-row {
+  padding: 2px 0;
+}
+.room-row.average {
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+.count {
+  padding: 3px 0;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.count.none {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.races {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.average .races {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.races small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.winners {
+  display: flex;
+  gap: 1px;
+  height: 8px;
+  margin-left: 8px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-2);
+}
+.winners > i {
+  flex-basis: 0;
+}
+
+.representatives {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px 16px;
+}
+h4 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 2px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+  font-weight: 600;
+}
+.representative {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 34px 44px;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 26px;
+  padding: 2px 2px 2px 0;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.representative:hover,
+.representative:focus-visible {
+  background: var(--color-accent-soft);
+}
+.representative :global(.art) {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  background: transparent;
+}
+.representative-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.representative strong,
+.representative small {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.representative strong {
+  font-weight: 600;
+}
+.representative small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.empty {
+  margin: 0;
+  padding: 6px 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.composition > span:not(.slash) {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.composition:hover,
+.composition:focus-visible {
+  color: var(--accent-primary);
+}
+.slash {
+  color: var(--text-muted);
+}
+.team-rate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+.team-rate strong {
+  flex: none;
+  width: 48px;
+  font-weight: 600;
+  text-align: right;
+}
+.rate-bar {
+  position: relative;
+  flex: 1;
+  max-width: 140px;
+  min-width: 56px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+.rate-bar .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent-primary);
+  opacity: 0.75;
+}
+.rate-bar .baseline {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  background: var(--text-primary);
+}
+.footnote {
+  padding-top: 6px;
+}
+
+@container session-strategy (max-width: 1080px) {
+  .upper,
+  .lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .representatives {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container session-strategy (max-width: 520px) {
+  .breakdown-key,
+  .style-row {
+    grid-template-columns: minmax(0, 1fr) 78px 44px;
+    gap: 4px 10px;
+  }
+  .track-key,
+  .tracks {
+    grid-row: 2;
+    grid-column: 1/-1;
+  }
+  .representatives {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

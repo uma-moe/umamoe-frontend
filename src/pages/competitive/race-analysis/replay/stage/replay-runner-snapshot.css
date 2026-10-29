@@ -1,0 +1,330 @@
+p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+:global(.live-roster) h3 {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+:global(.live-roster) p {
+  font-size: 11px;
+}
+.current-skills {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-height: 24px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  align-items: center;
+}
+@media (max-width: 700px) {
+  .current-skills {
+    margin-top: 10px;
+  }
+}
+.runner-extra {
+  margin-top: 9px;
+}
+.runner-state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 9px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+.runner-state b {
+  color: var(--accent-warning);
+  font-weight: 500;
+}
+.live-diagnostics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.live-diagnostics b {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.mode-list {
+  flex-basis: 100%;
+  color: var(--accent-primary);
+}
+.active-skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.runner-snapshot {
+  display: grid;
+  gap: 8px;
+}
+.runner-snapshot header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.runner-snapshot h3 {
+  font-size: 12px;
+  margin: 0;
+}
+.runner-extra {
+  margin-top: 0;
+}
+.runner-snapshot {
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 10px;
+  gap: 6px;
+}
+.runner-snapshot header {
+  gap: 8px;
+}
+.runner-snapshot h3 {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.runner-snapshot :global(.inline-stats dd) {
+  font-size: 12px;
+}
+.runner-snapshot :global(.inline-stats dt) {
+  font-size: 9px;
+}
+.runner-snapshot :global(.inline-stats > div) {
+  gap: 2px;
+  padding-block: 2px;
+}
+.runner-snapshot .runner-state {
+  margin-top: 0;
+}
+.runner-snapshot .current-skills {
+  margin-top: 0;
+}
+.runner-snapshot .live-diagnostics {
+  gap: 3px 8px;
+  margin-top: 0;
+}
+.runner-snapshot {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--surface-2);
+  gap: 5px;
+}
+.runner-snapshot header {
+  gap: 8px;
+}
+.snapshot-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.snapshot-identity > div {
+  min-width: 0;
+}
+.snapshot-identity small {
+  display: block;
+  font-size: 10px;
+  color: var(--text-secondary);
+  line-height: 13px;
+}
+.runner-snapshot .snapshot-identity h3 {
+  font-size: 13px;
+  line-height: 17px;
+}
+.runner-snapshot header :global(.ui-button) {
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+.runner-snapshot .runner-state {
+  font-size: 10px;
+  line-height: 13px;
+  margin: 0;
+}
+.snapshot-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+.snapshot-details-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  min-height: 30px;
+  box-sizing: border-box;
+  border: 1px solid var(--factor-field-border);
+  border-radius: var(--radius-md);
+  background: var(--factor-field-bg);
+  font-size: 11px;
+}
+.snapshot-details {
+  display: grid;
+  gap: 8px;
+}
+.snapshot-movement {
+  display: none;
+}
+.snapshot-details h4 {
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+.snapshot-details p {
+  font-size: 11px;
+}
+.snapshot-skill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.snapshot-skill small {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.snapshot-status {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  height: 24px;
+  margin: 0;
+}
+.status-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.status-cell dt {
+  flex: none;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.status-cell dd {
+  min-width: 0;
+  margin: 0;
+  font-size: 11px;
+}
+.front-clear {
+  color: var(--text-secondary);
+}
+.blocker-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--accent-error) 45%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent-error) 12%, transparent);
+  color: var(--accent-error);
+  font: inherit;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.blocker-link:hover,
+.blocker-link:focus-visible {
+  background: color-mix(in srgb, var(--accent-error) 20%, transparent);
+}
+.blocker-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.blocker-link strong {
+  font-weight: 600;
+}
+.blocker-link :global(svg) {
+  flex: none;
+}
+.snapshot-status .current-skills {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+  margin: 0;
+  min-width: 0;
+  height: 24px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.snapshot-status .current-skills::-webkit-scrollbar {
+  display: none;
+}
+.runner-snapshot :global(.inline-stats dd) {
+  font-size: 14px;
+  line-height: 1;
+}
+.runner-snapshot :global(.inline-stats dt) {
+  font-size: 10px;
+  line-height: 1;
+}
+.runner-snapshot :global(.inline-stats > div) {
+  gap: 3px;
+  padding-block: 2px;
+}
+.runner-finished {
+  color: var(--accent-success);
+}
+@media (min-width: 951px) {
+  .runner-snapshot {
+    height: 126px;
+    max-height: none;
+    box-sizing: border-box;
+    grid-template-rows: 30px 13px 29px 24px;
+    gap: 4px;
+    overflow: visible;
+  }
+  .active-skill {
+    flex: none;
+  }
+}
+@media (min-width: 951px) and (max-height: 1000px) {
+  .runner-snapshot {
+    height: 119px;
+    padding: 6px;
+    gap: 3px;
+  }
+}
+@media (min-width: 951px) and (max-height: 850px) {
+  .runner-snapshot {
+    height: 72px;
+    grid-template-rows: 30px 24px;
+    gap: 4px;
+  }
+  .runner-snapshot > .runner-state,
+  .runner-snapshot > .runner-extra {
+    display: none;
+  }
+  .snapshot-movement {
+    display: grid;
+    gap: 8px;
+  }
+}
+@media (max-width: 950px) {
+  .runner-snapshot {
+    margin-top: 12px;
+  }
+}

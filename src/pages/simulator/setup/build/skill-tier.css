@@ -1,0 +1,18 @@
+/* The game's skill tiers as a tint: gold skills and uniques recolour a row or chip that sets the white default in
+   `--tier` (an RGB triple) and `--tier-text`. Import after the component's own sheet, so the tier wins. */
+.tier-gold {
+  --tier: 255 193 7;
+  --tier-text: #ffe08a;
+}
+.tier-unique {
+  --tier: 206 147 216;
+  --tier-text: #e1bee7;
+}
+:global(:root[data-theme='light']) .tier-gold {
+  --tier: 217 119 6;
+  --tier-text: #92400e;
+}
+:global(:root[data-theme='light']) .tier-unique {
+  --tier: 126 34 206;
+  --tier-text: #6b21a8;
+}

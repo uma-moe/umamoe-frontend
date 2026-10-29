@@ -1,0 +1,151 @@
+.session-diagnostics {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+/* The runner choice narrows both tables, so it sits in the header of the first one. */
+.runner-filter {
+  flex: 0 1 260px;
+  min-width: 180px;
+}
+/* The same surface as the session's chart cards. */
+.diagnostics-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+}
+.diagnostics-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.diagnostics-card > header > div:first-child {
+  display: grid;
+  flex: 1 1 280px;
+  gap: 3px;
+}
+h3,
+p {
+  margin: 0;
+}
+h3 {
+  font-size: 13px;
+  font-weight: 650;
+}
+h3 small {
+  display: inline;
+  margin-left: 6px;
+}
+p,
+small {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+small {
+  font-weight: 400;
+}
+.notice {
+  padding: 8px 0 2px;
+}
+.session-diagnostics :global(table) {
+  font-size: 12px;
+}
+.session-diagnostics :global(.compact th),
+.session-diagnostics :global(.compact td) {
+  padding: 4px 8px;
+}
+.session-diagnostics :global(th),
+.session-diagnostics :global(.sort) {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
+}
+.runner-detail {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+/* Spurt delay and speed share one line, so every result row keeps the same short height. */
+.session-diagnostics :global(.spurt-result) {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.expand-icon {
+  margin-left: auto;
+  color: var(--accent-primary);
+  transform: rotate(-90deg);
+}
+.expand-icon.open {
+  transform: none;
+}
+.runner-detail[aria-expanded='true'] {
+  color: var(--accent-primary);
+}
+.finish-hp {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+.finish-hp small {
+  color: inherit;
+  font-size: 10px;
+}
+.period-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.period-chevron {
+  display: flex;
+  align-items: center;
+}
+.period-chevron.open {
+  transform: rotate(180deg);
+}
+.mode-periods {
+  list-style: none;
+  margin: 0;
+  padding: 4px 8px;
+  background: var(--surface-2);
+  max-height: 220px;
+  overflow: auto;
+}
+.mode-periods > li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.mode-periods small {
+  margin-left: auto;
+}
+.warning {
+  color: var(--accent-warning);
+}
+@media (max-width: 760px) {
+  .runner-filter {
+    flex-basis: 100%;
+  }
+  .mode-periods > li {
+    flex-wrap: wrap;
+    gap: 2px 8px;
+  }
+}

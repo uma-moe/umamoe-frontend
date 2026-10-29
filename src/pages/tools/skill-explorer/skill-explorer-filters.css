@@ -1,0 +1,138 @@
+.explorer-filters {
+  display: grid;
+  gap: 0.55rem;
+}
+.primary-controls {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.6fr) minmax(170px, 1fr) minmax(170px, 1fr);
+  gap: 0.75rem;
+}
+.race-select {
+  min-width: 0;
+}
+.race-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+}
+.race-option > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.race-option small {
+  flex: none;
+  color: var(--accent-success);
+  font-size: 0.7rem;
+}
+.view-controls,
+.plot-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+}
+.plot-controls {
+  gap: 0.4rem;
+}
+.limit-select {
+  display: none;
+}
+.filter-menu {
+  margin-left: auto;
+  --inspect-popover-width: 460px;
+  --inspect-popover-padding: 16px;
+}
+.filter-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 36px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--factor-field-bg);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.filter-trigger:hover,
+.filter-menu.active .filter-trigger {
+  border-color: rgb(var(--accent-primary-rgb) / 0.5);
+  color: var(--accent-primary);
+}
+.filter-count {
+  color: var(--accent-primary);
+  font-variant-numeric: tabular-nums;
+}
+.filter-panel {
+  display: grid;
+  gap: 0.9rem;
+}
+.filter-panel header {
+  padding-right: 32px;
+}
+.filter-panel h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.filter-group {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.group-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.condition-filters {
+  display: grid;
+  gap: 0.35rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border-primary);
+}
+.filter-panel footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-primary);
+}
+@media (max-width: 767px) {
+  .primary-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .race-select {
+    grid-column: 1 / -1;
+  }
+  .view-controls {
+    display: grid;
+    grid-template-columns: 6.2rem minmax(0, 1fr) auto;
+    gap: 0.4rem 0.5rem;
+  }
+  .style-control,
+  .plot-controls {
+    grid-column: 1 / -1;
+  }
+  .plot-controls {
+    flex-wrap: nowrap;
+  }
+  .style-control :global(.segments) {
+    width: 100%;
+  }
+  .style-control :global(.segments > button) {
+    flex: 1;
+  }
+  .limit-segments {
+    display: none;
+  }
+  .limit-select {
+    display: block;
+  }
+}
+@media (max-width: 767px) {
+  .filter-trigger {
+    min-height: 44px;
+  }
+}

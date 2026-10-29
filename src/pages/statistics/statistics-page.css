@@ -1,0 +1,119 @@
+.statistics-content {
+  min-width: 0;
+  container: statistics / inline-size;
+}
+.dataset-select {
+  width: 290px;
+  flex: none;
+}
+.dataset-select > small {
+  display: block;
+  margin-top: 4px;
+  text-align: right;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.content-area {
+  padding-top: 6px;
+  scroll-margin-top: 64px;
+  min-height: 540px;
+}
+.content-area:focus {
+  outline: none;
+}
+.fine-print {
+  margin: 6px 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.distance-focus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 8px;
+}
+.distance-focus > span {
+  color: var(--text-muted);
+  font-size: 10px;
+  flex: none;
+}
+.distance-focus :global(.segments) {
+  padding: 2px;
+}
+.distance-focus :global(.segments button) {
+  min-height: 28px;
+  padding-inline: 12px;
+  font-size: 11px;
+}
+.explanation {
+  display: flex;
+  gap: 8px;
+  align-items: start;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+}
+.explanation > :global(svg) {
+  flex: none;
+  color: var(--accent-primary);
+}
+.explanation p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.section-gap {
+  margin-top: 12px;
+}
+footer {
+  display: flex;
+  align-items: start;
+  justify-content: center;
+  gap: 7px;
+  padding: 16px 0;
+  color: var(--text-muted);
+}
+footer > :global(svg) {
+  flex: none;
+  margin-top: 1px;
+}
+footer p {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.6;
+}
+@container statistics (max-width:950px) {
+  .content-area {
+    scroll-margin-top: 114px;
+  }
+}
+@container statistics (max-width:700px) {
+  .distance-focus {
+    display: block;
+  }
+  .distance-focus > span {
+    display: none;
+  }
+  .distance-focus :global(.segments) {
+    width: 100%;
+  }
+  .distance-focus :global(.segments button) {
+    flex: 1;
+    padding-inline: 10px;
+  }
+}
+@media (max-width: 600px) {
+  .dataset-select {
+    width: 100%;
+  }
+  .dataset-select > small {
+    display: none;
+  }
+  .dataset-select :global(.field) {
+    gap: 3px;
+  }
+  .content-area {
+    padding-top: 6px;
+    scroll-margin-top: 114px;
+  }
+}

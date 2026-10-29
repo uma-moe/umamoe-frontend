@@ -1,0 +1,358 @@
+.research-reader :global(.page-heading h1) {
+  text-wrap: balance;
+}
+.research-reader :global(.page-heading p) {
+  max-width: 80ch;
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.article-byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-top: calc(-1 * var(--space-2));
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-variant-numeric: tabular-nums;
+}
+.article-byline > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.article-byline > span + span {
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--border-subtle);
+}
+.article-byline :global(svg) {
+  color: var(--text-muted);
+}
+.article-byline strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.reader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+  align-items: start;
+  gap: var(--space-4);
+}
+.reader-main {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-6);
+}
+.mobile-contents {
+  display: none;
+}
+/* One ink for all prose: the site-wide muted paragraph colour would make paragraphs and lists differ. */
+.markdown {
+  color: rgb(var(--on-surface-rgb) / 0.88);
+  font-size: 15px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+.markdown :global(p) {
+  margin: 0 0 14px;
+  color: inherit;
+}
+.markdown > :first-child > :global(:first-child) {
+  margin-top: 0;
+}
+.markdown :global(h2) {
+  margin: 32px 0 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 20px;
+  line-height: 1.35;
+  text-wrap: balance;
+  scroll-margin-top: 90px;
+}
+.markdown :global(h3) {
+  margin: 24px 0 8px;
+  font-size: 16px;
+  line-height: 1.45;
+  text-wrap: balance;
+  scroll-margin-top: 90px;
+}
+.markdown :global(:is(h2, h3, h4, strong)) {
+  color: var(--text-primary);
+}
+.markdown :global(li + li) {
+  margin-top: 4px;
+}
+.markdown :global(img) {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 20px auto;
+  border-radius: var(--radius-md);
+}
+.markdown :global(code) {
+  padding: 0.1em 0.4em;
+  border: 1px solid rgb(var(--accent-primary-rgb) / 0.2);
+  border-radius: var(--radius-xs);
+  background: var(--color-accent-soft);
+  color: var(--accent-primary);
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  font-variant-ligatures: none;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.markdown :global(pre) {
+  margin: 16px 0 20px;
+  padding: 14px 18px;
+  overflow-x: auto;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  font-size: 13px;
+  line-height: 1.7;
+  tab-size: 2;
+}
+.markdown :global(pre code) {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+.markdown :global(blockquote) {
+  margin: 20px 0;
+  padding: 12px 18px;
+  border: 1px solid rgb(var(--accent-primary-rgb) / 0.2);
+  border-radius: var(--radius-md);
+  background: rgb(var(--accent-primary-rgb) / 0.05);
+  color: var(--text-secondary);
+}
+.markdown :global(blockquote p:last-child) {
+  margin-bottom: 0;
+}
+.markdown :global(table) {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin: 20px 0;
+  overflow: auto;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.markdown :global(th),
+.markdown :global(td) {
+  padding: 8px 12px;
+  border: 1px solid var(--border-primary);
+  white-space: normal;
+}
+.markdown :global(th) {
+  background: var(--bg-tertiary);
+  text-align: left;
+}
+.markdown :global(a) {
+  color: var(--accent-primary);
+  text-underline-offset: 3px;
+}
+.markdown :global(.katex) {
+  color: var(--accent-primary);
+  font-size: 1.1em;
+  overflow-wrap: normal;
+}
+.markdown :global(.katex-display) {
+  margin: 20px 0;
+  padding: 18px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid rgb(var(--accent-primary-rgb) / 0.2);
+  border-radius: var(--radius-md);
+  background: rgb(var(--accent-primary-rgb) / 0.05);
+}
+.markdown :global(.katex-display > .katex) {
+  width: max-content;
+  min-width: 100%;
+  color: var(--text-primary);
+}
+.publication-note {
+  margin: 28px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  line-height: 1.6;
+}
+.keep-reading {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.section-heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.more-notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.more-notes > li {
+  display: flex;
+  min-width: 0;
+}
+.reading-sidebar {
+  position: sticky;
+  top: 80px;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.sidebar-section {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.sidebar-section h2 {
+  margin: 0;
+  font-size: var(--font-sm);
+}
+.sidebar-section > :global(.ui-button) {
+  justify-content: start;
+}
+.outline-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-2);
+}
+.outline-heading > span {
+  color: var(--text-muted);
+  font-size: var(--font-xs);
+  font-variant-numeric: tabular-nums;
+}
+.reading-progress {
+  height: 3px;
+  margin-bottom: var(--space-2);
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+}
+.reading-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent-primary);
+  transition: width var(--duration-fast) linear;
+}
+/* A thin track ties the sections together; the active section lights its stretch of it. */
+nav[aria-label='Article outline'] {
+  display: grid;
+  gap: 2px;
+  padding-left: var(--space-1);
+  border-left: 1px solid var(--border-primary);
+}
+nav[aria-label='Article outline'] a {
+  position: relative;
+  padding: 7px 10px 7px 12px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none;
+  transition:
+    color var(--duration-fast),
+    background-color var(--duration-fast);
+}
+nav[aria-label='Article outline'] a::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: calc(-1 * var(--space-1) - 1px);
+  width: 1px;
+  background: transparent;
+  transition: background-color var(--duration-fast);
+}
+nav[aria-label='Article outline'] a:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+nav[aria-label='Article outline'] a.active {
+  color: var(--accent-primary);
+  background: var(--color-accent-soft);
+  font-weight: 600;
+}
+nav[aria-label='Article outline'] a.active::before {
+  background: var(--accent-primary);
+}
+nav[aria-label='Article outline'] a.subsection {
+  padding-left: 24px;
+  color: var(--text-muted);
+  font-size: var(--font-xs);
+  font-weight: 400;
+}
+nav[aria-label='Article outline'] a.subsection.active {
+  color: var(--accent-primary);
+}
+@media (max-width: 1100px) {
+  .reader {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .reading-sidebar {
+    display: none;
+  }
+  .mobile-contents {
+    display: block;
+  }
+}
+@media (max-width: 767px) {
+  .article-byline {
+    gap: var(--space-2) var(--space-3);
+    font-size: var(--font-xs);
+  }
+  .article-byline > span + span {
+    padding-left: var(--space-3);
+  }
+  .research-reader :global(.page-heading p) {
+    font-size: 13px;
+  }
+}
+@media (max-width: 767px) {
+  .markdown {
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .markdown :global(h2) {
+    font-size: 18px;
+    margin-top: 28px;
+  }
+  .markdown :global(h3) {
+    font-size: 15px;
+  }
+  .markdown :global(pre) {
+    padding: 12px 14px;
+    font-size: 12px;
+  }
+  .section-heading h2 {
+    font-size: 16px;
+  }
+  .more-notes {
+    gap: var(--space-2);
+  }
+}

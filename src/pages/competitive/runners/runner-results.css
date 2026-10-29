@@ -1,0 +1,22 @@
+/* A build card's result metrics, shown in its identity band: two figures split by a rule. */
+.runner-results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin: 0;
+}
+.runner-results > div + div {
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--border-subtle);
+}
+.runner-results dt {
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+.runner-results dd {
+  margin: 2px 0 0;
+  font-size: var(--font-sm);
+  font-weight: 650;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}

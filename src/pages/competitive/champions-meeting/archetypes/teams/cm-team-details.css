@@ -1,0 +1,32 @@
+@import '../../../runners/team-details.css';
+
+.detail-error {
+  margin-bottom: var(--space-4);
+}
+/* Adding one Uma is the card's main action, so its toggle reads as a button rather than a bare icon. */
+.team-details-dialog :global(.build-card .lobby-toggle .icon-button) {
+  width: 36px;
+  height: 36px;
+  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+.team-details-dialog :global(.build-card .lobby-toggle .icon-button:hover:not(:disabled)) {
+  background: color-mix(in srgb, var(--color-accent) 26%, transparent);
+  color: var(--color-accent);
+}
+.team-details-dialog :global(.build-card .lobby-toggle .icon-button.selected) {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--button-primary-text);
+}
+.team-details-dialog :global(.build-card .lobby-toggle .icon-button.selected:hover:not(:disabled)) {
+  background: color-mix(in srgb, var(--color-accent) 88%, white);
+  color: var(--button-primary-text);
+}
+@media (max-width: 767px) {
+  .team-details-dialog :global(.build-card .lobby-toggle .icon-button) {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+}

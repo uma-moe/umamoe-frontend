@@ -1,0 +1,61 @@
+.section-heading > span {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+}
+.table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface-1);
+  font-size: 0.72rem;
+}
+th,
+td {
+  height: 42px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+  white-space: nowrap;
+}
+th {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.positive {
+  color: var(--accent-secondary);
+}
+.snapshots .expand {
+  width: 30px;
+  height: 30px;
+  margin-right: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  vertical-align: middle;
+}
+.snapshots .expand[aria-expanded='true'] :global(svg) {
+  transform: rotate(180deg);
+}
+.snapshots tr.highlight {
+  background: rgb(229 115 115/0.05);
+}
+.snapshot-detail td {
+  padding: 8px;
+}
+.snapshot-detail div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px;
+  border-left: 3px solid var(--accent-error);
+  background: var(--surface-2);
+}

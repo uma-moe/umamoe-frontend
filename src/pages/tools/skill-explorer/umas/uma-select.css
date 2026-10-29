@@ -1,0 +1,128 @@
+/* Laid out like the explorer's select fields beside it. */
+.uma-select {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  color: var(--color-text);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.control {
+  position: relative;
+  min-width: 0;
+}
+
+.uma {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 0 10px 0 6px;
+  border: 1px solid var(--factor-field-border);
+  border-radius: 8px;
+  background: var(--factor-field-bg);
+  color: var(--factor-field-text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+}
+
+.uma:hover:not(:disabled) {
+  border-color: var(--border-secondary);
+}
+
+.uma:focus-visible {
+  border-color: var(--factor-field-focus-border);
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+.uma:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.uma > :global(svg:last-child) {
+  flex: none;
+  margin-left: auto;
+  color: var(--factor-field-arrow);
+}
+
+.portrait {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--text-secondary);
+}
+
+/* Name over outfit and release, so both fit a narrow column at the field's height. */
+.copy {
+  display: grid;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.copy strong,
+.copy small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.copy strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.copy small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+/* The clear button sits over the chevron, which leaves room for it while an uma is picked. */
+.uma:has(+ .clear) {
+  padding-right: 36px;
+}
+
+.uma:has(+ .clear) > :global(svg:last-child) {
+  visibility: hidden;
+}
+
+.clear {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.clear:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+.clear:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}

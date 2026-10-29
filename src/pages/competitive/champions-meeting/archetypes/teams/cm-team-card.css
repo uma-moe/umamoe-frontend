@@ -1,0 +1,13 @@
+/* CM Data's team card adds the lobby state to the shared team card. */
+@import '../../../runners/team-card.css';
+
+.team-row.in-lobby {
+  border-color: rgb(var(--accent-primary-rgb) / 0.45);
+}
+.in-lobby .team-actions > :global(button) {
+  border-color: rgb(var(--accent-primary-rgb) / 0.4);
+  color: var(--accent-primary);
+}
+.in-lobby .team-number {
+  color: var(--accent-primary);
+}

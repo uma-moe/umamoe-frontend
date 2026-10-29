@@ -1,0 +1,174 @@
+.field-panel {
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  min-width: 0;
+}
+.field-panel :global(.chart-frame) {
+  gap: 8px;
+}
+.field-panel :global(figcaption) {
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.field-panel :global(.title-row h3) {
+  font-size: 13px;
+}
+.field-panel :global(.plot) {
+  gap: 8px;
+  min-height: 0;
+}
+.field-panel :global(.chart-frame:not(.expanded) .plot[aria-busy='true']) {
+  height: 167px;
+}
+.field-panel :global(.chart-frame:not(.expanded) .state) {
+  min-height: 167px;
+  padding: 8px;
+}
+.field-panel :global(.chart-tools button) {
+  font-size: 10px;
+  padding: 0 4px;
+  min-height: 26px;
+}
+.field-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px;
+  gap: 16px;
+  align-items: center;
+  min-width: 0;
+}
+.field-stats {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: 0;
+  padding-left: 16px;
+  border-left: 1px solid var(--border-subtle);
+}
+.field-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.field-stats dt {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-secondary);
+}
+.field-stats dd {
+  order: -1;
+  margin: 0;
+  font-size: 21px;
+  font-weight: 650;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.field-content ~ .field-help {
+  font-size: 10px;
+  margin: 0;
+  line-height: 1.5;
+}
+.field-panel :global(.chart-host) {
+  min-height: 0;
+}
+.field-content > :global(.lazy-surface) {
+  min-width: 0;
+}
+@media (max-width: 760px) {
+  .field-stats {
+    gap: 8px;
+  }
+}
+@media (max-width: 600px) {
+  .field-content {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .field-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .field-stats dd {
+    font-size: 19px;
+  }
+  .field-stats dt {
+    font-size: 10px;
+  }
+}
+.field-graph {
+  height: 144px;
+  min-width: 0;
+  min-height: 0;
+}
+.field-graph :global(.lazy-surface) {
+  min-width: 0;
+}
+@media (min-width: 1051px) {
+  .field-panel {
+    display: flex;
+    flex-direction: column;
+  }
+  .field-panel :global(.chart-frame:not(.expanded)) {
+    flex: 1;
+    min-height: 0;
+  }
+  .field-panel :global(.chart-frame:not(.expanded) .plot[aria-busy='true']) {
+    height: auto;
+    min-height: 167px;
+  }
+  .field-content:not(.expanded) {
+    flex: 1;
+    align-items: stretch;
+  }
+  .field-content:not(.expanded) .field-graph {
+    height: auto;
+    min-height: 144px;
+    contain: size;
+  }
+  .field-content:not(.expanded) .field-stats {
+    align-self: center;
+  }
+}
+.field-panel :global(.chart-frame.expanded) {
+  padding: 10px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+}
+.field-panel :global(.chart-frame.expanded > figcaption) {
+  display: none;
+}
+.field-content.expanded {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+.field-content.expanded .field-graph {
+  grid-row: 2;
+  height: auto;
+  overflow: hidden;
+}
+.field-content.expanded .field-stats {
+  grid-row: 1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  padding: 0;
+  border: 0;
+}
+@media (max-width: 767px) {
+  .field-content.expanded .field-stats {
+    gap: 8px;
+  }
+  .field-content.expanded .field-stats dd {
+    font-size: 19px;
+  }
+  .field-content.expanded .field-stats dt {
+    font-size: 10px;
+  }
+}

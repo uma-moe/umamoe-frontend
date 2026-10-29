@@ -1,0 +1,361 @@
+.skill-card {
+  display: grid;
+  gap: 4px;
+  padding: 6px 10px 4px;
+  background: var(--component-bg);
+  animation: arrive 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+header {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.portrait {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 36px;
+}
+
+.portrait img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.portrait.character {
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+}
+
+.portrait.character > img:first-child {
+  object-fit: cover;
+  object-position: top;
+}
+
+.portrait .badge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+}
+
+h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+header p {
+  margin: 0.2rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.sources {
+  --disclosure-compact-summary-height: 24px;
+  --disclosure-compact-summary-padding: 0;
+  --disclosure-compact-content-gap: 2px;
+  display: grid;
+  gap: 2px;
+}
+
+.sources p {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.worth {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.worth > div {
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--border-primary);
+  border-radius: 5px;
+  background: var(--bg-secondary);
+}
+
+.worth dt {
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.worth dd {
+  margin: 0.1rem 0 0;
+  color: var(--accent-primary);
+  font-size: 0.85rem;
+  line-height: 1.1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.worth dd.positive {
+  color: var(--accent-success);
+}
+
+.worth dd.negative {
+  color: var(--accent-error);
+}
+
+.number {
+  color: var(--accent-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.worth small {
+  display: block;
+  color: var(--text-muted);
+  margin-top: 0;
+  font-size: 0.58rem;
+  font-weight: 500;
+}
+
+.procs {
+  margin: 0;
+}
+
+h4 {
+  margin: 0 0 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* A skill that never procs for her, valued forced to. */
+.forced {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.needs p {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.needs .or {
+  display: block;
+  margin: 0.1rem 0;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.effect-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sp-cost {
+  color: var(--accent-warning);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.effects p {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.effects small,
+.effects .or,
+.effects .unavailable {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.effects .or {
+  display: block;
+  margin: 0.2rem 0;
+}
+
+.related ul {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.related li {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.related li img {
+  width: 20px;
+  height: 20px;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 4px;
+}
+
+.related .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.related .gain {
+  color: var(--accent-success);
+  font-variant-numeric: tabular-nums;
+}
+
+.gate {
+  margin: 0 0 0.25rem;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.phase-0 {
+  fill: rgb(var(--accent-success-rgb) / 0.08);
+}
+
+.phase-1 {
+  fill: rgb(var(--on-surface-rgb) / 0.03);
+}
+
+.phase-2 {
+  fill: rgb(var(--accent-warning-rgb) / 0.08);
+}
+
+.phase-3 {
+  fill: rgb(var(--accent-error-rgb) / 0.09);
+}
+
+.phase-label {
+  fill: var(--text-muted);
+  font-size: 7.5px;
+}
+
+.bar {
+  fill: var(--accent-primary);
+}
+
+.mean {
+  stroke: var(--text-primary);
+  stroke-width: 1.25;
+  stroke-dasharray: 3 2;
+}
+.spurt-boundary {
+  stroke: var(--accent-warning);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+.key.spurt::before {
+  height: 2px;
+  background: var(--accent-warning);
+}
+
+.terrain {
+  position: relative;
+  height: 4px;
+  margin-top: 2px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--surface-3);
+}
+
+.terrain span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.7rem;
+  align-items: center;
+  margin-top: 2px;
+  line-height: 1.15;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.key::before {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+  vertical-align: -1px;
+  content: '';
+}
+
+.key.theory::before {
+  background: var(--accent-primary);
+}
+
+.ends {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.ends span + span::before {
+  margin-right: 0.5rem;
+  content: '–';
+}
+
+.notes {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 3px 0 0;
+  border-top: 1px solid var(--border-primary);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  list-style: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skill-card {
+    animation: none;
+  }
+}

@@ -1,0 +1,278 @@
+.fullscreen-target {
+  min-width: 0;
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.race-stage {
+  height: clamp(320px, 38dvh, 410px);
+  position: relative;
+  padding: 26px 12px 52px;
+  box-sizing: border-box;
+}
+.lane-axis {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  text-shadow: 0 1px 3px var(--surface-1);
+  left: 0;
+  top: 26px;
+  bottom: 52px;
+  width: 36px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.lane-axis span {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+}
+.lane-axis small {
+  position: absolute;
+  top: -23px;
+  right: 0;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.track-plane {
+  position: relative;
+  height: 100%;
+  border-bottom: 2px solid var(--border-primary);
+  overflow: clip;
+  overflow-clip-margin: 44px;
+}
+.course-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.lane-guide {
+  stroke: var(--border-primary);
+  stroke-width: 1;
+  opacity: 0.5;
+}
+.rail-label {
+  position: absolute;
+  bottom: 9px;
+  left: 8px;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary, var(--text-secondary));
+  opacity: 0.7;
+}
+.race-boundary {
+  stroke: var(--text-primary);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.boundary-label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.phase-marker {
+  stroke: var(--text-secondary);
+  stroke-dasharray: 5 5;
+}
+.course-label {
+  position: absolute;
+  top: 4px;
+  font-size: 9px;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  transform: translateX(3px);
+}
+.course-label.phase {
+  top: 18px;
+}
+.replay-marker {
+  position: absolute;
+  transform: translate(-50%, 50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  gap: 0;
+  background: none;
+  border: 0;
+  color: var(--text-primary);
+  cursor: pointer;
+  z-index: 2;
+}
+.replay-marker.selected,
+.replay-marker:focus-visible {
+  z-index: 4;
+}
+.replay-marker:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 5px;
+  border-radius: 50%;
+}
+.portrait {
+  position: relative;
+  display: block;
+  border: 2px solid var(--runner-color);
+  border-radius: 50%;
+  background: var(--surface-1);
+}
+.replay-marker.selected .portrait {
+  box-shadow:
+    0 0 0 3px var(--surface-1),
+    0 0 0 5px var(--runner-color);
+}
+.portrait b {
+  position: absolute;
+  bottom: -2px;
+  right: -3px;
+  padding: 1px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #141923;
+  border-radius: 4px;
+  background: var(--runner-color);
+}
+.hp {
+  position: absolute;
+  top: calc(100% + 3px);
+  display: block;
+  width: 36px;
+  height: 3px;
+  background: var(--surface-3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.hp i {
+  display: block;
+  height: 100%;
+  background: var(--accent-success);
+}
+.marker-name {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--surface-1);
+  padding: 2px 5px;
+  border-radius: 3px;
+  pointer-events: none;
+}
+.blocked {
+  position: absolute;
+  right: -13px;
+  top: -8px;
+  color: var(--accent-error);
+  font-weight: 800;
+  font-size: 18px;
+}
+.distance-axis {
+  position: absolute;
+  inset: 100% 0 auto;
+  height: 20px;
+  margin-top: 34px;
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+.distance-axis span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.distance-axis span:first-child {
+  transform: none;
+}
+.distance-axis span:last-child {
+  transform: translateX(-100%);
+}
+.dim {
+  opacity: 0.25;
+}
+@media (max-width: 700px) {
+  .race-stage {
+    height: 330px;
+  }
+  .lane-axis {
+    width: 33px;
+  }
+  .marker-name {
+    font-size: 9px;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+.replay-marker.front-blocked .portrait {
+  outline: 2px solid var(--accent-error);
+  outline-offset: 3px;
+}
+.replay-marker:hover .marker-name,
+.replay-marker:focus-visible .marker-name {
+  display: block;
+}
+.replay-marker.triggered .portrait {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-warning) 70%, transparent);
+}
+.marker-callouts {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  z-index: 3;
+  transform: translateX(-50%);
+}
+.replay-marker:has(.marker-callouts):hover .marker-name {
+  display: none;
+}
+.marker-telemetry {
+  position: absolute;
+  top: calc(100% + 10px);
+  display: flex;
+  gap: 4px;
+  font-size: 9px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px var(--surface-1);
+}
+.crowded .marker-telemetry {
+  visibility: hidden;
+}
+.crowded.selected .marker-telemetry,
+.crowded:hover .marker-telemetry,
+.crowded:focus-visible .marker-telemetry {
+  visibility: visible;
+}
+.replay-marker:hover {
+  z-index: 5;
+}
+.marker-telemetry > span + span {
+  color: var(--text-secondary);
+  padding-left: 4px;
+  border-left: 1px solid var(--border-primary);
+}
+.fullscreen-target {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: stretch;
+}
+@media (min-width: 951px) {
+  .fullscreen-target {
+    height: 100%;
+    min-height: 0;
+  }
+  .race-stage {
+    height: 100%;
+    min-height: 0;
+  }
+}
+@media (max-width: 950px) {
+  .fullscreen-target {
+    grid-column: auto;
+    grid-row: auto;
+    order: 1;
+  }
+}

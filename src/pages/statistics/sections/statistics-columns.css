@@ -1,0 +1,26 @@
+.fine-print {
+  margin: 6px 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.two-columns > :global(.statistics-chart),
+.two-columns > :global(.ranking) {
+  display: flex;
+  flex-direction: column;
+}
+.two-columns > :global(.statistics-chart) :global(.chart-frame),
+.two-columns > :global(.ranking) :global(.chart-frame) {
+  flex: 1;
+}
+.two-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-block: 12px;
+}
+@container statistics (max-width:700px) {
+  .two-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

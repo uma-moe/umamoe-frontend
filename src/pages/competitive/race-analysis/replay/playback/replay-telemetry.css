@@ -1,0 +1,299 @@
+.guide-trigger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 6px;
+}
+.telemetry {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+.telemetry :global(.chart-actions .checkbox strong) {
+  font-size: 11px;
+}
+.telemetry :global(.chart-tools) {
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.telemetry :global(.chart-tools > .ui-button) {
+  flex: none;
+}
+.telemetry :global(.chart-actions) {
+  gap: 4px 12px;
+  justify-content: flex-start;
+  flex: 1;
+}
+.telemetry :global(.chart-actions .checkbox) {
+  min-height: 32px;
+  grid-template-columns: 16px auto;
+  gap: 6px;
+}
+.telemetry :global(.chart-actions .box) {
+  width: 16px;
+  height: 16px;
+}
+.telemetry :global(.chart-frame.expanded .lazy-surface),
+.telemetry :global(.chart-frame.expanded .lazy-surface > figure),
+.telemetry :global(.chart-frame.expanded .chart-host),
+.telemetry :global(.chart-frame.expanded .placeholder) {
+  height: 100%;
+  min-height: 0;
+}
+@media (max-width: 700px) {
+  .telemetry :global(.chart-tools) {
+    width: 100%;
+    align-items: start;
+  }
+}
+.telemetry :global(.chart-frame.surface) {
+  padding: 0;
+  background: transparent;
+}
+.telemetry {
+  gap: 0;
+}
+.telemetry :global(.trigger) {
+  border: 1px solid var(--factor-field-border);
+  border-radius: var(--radius-md);
+  background: var(--factor-field-bg);
+}
+.guide-trigger {
+  min-height: 30px;
+  box-sizing: border-box;
+  padding: 5px 8px;
+}
+.telemetry :global(.chart-tools > .ui-button) {
+  background: var(--factor-field-bg);
+  border-color: var(--factor-field-border);
+  min-height: 32px;
+}
+@media (min-width: 951px) {
+  .telemetry-track :global(.chart-host),
+  .telemetry-track :global(.lazy-surface),
+  .telemetry-track :global(.placeholder) {
+    height: 240px;
+    min-height: 0;
+  }
+}
+@media (min-width: 951px) and (max-height: 1000px) {
+  .telemetry-track :global(.chart-host),
+  .telemetry-track :global(.lazy-surface),
+  .telemetry-track :global(.placeholder) {
+    height: clamp(84px, calc(100dvh - 770px), 190px);
+  }
+}
+.telemetry {
+  margin: 0;
+}
+.telemetry :global(.chart-frame) {
+  container-type: normal;
+  gap: 4px;
+}
+.telemetry :global(.chart-frame > figcaption) {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.telemetry :global(.chart-heading) {
+  flex: none;
+}
+.telemetry :global(.chart-tools) {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.telemetry :global(.chart-actions) {
+  flex: none;
+  gap: 12px;
+}
+.telemetry :global(.chart-frame .plot) {
+  min-height: 0;
+  overflow: visible;
+}
+/* The readings share the chart's height instead of setting it, so the plot ends where the track does. */
+.telemetry-reading {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 88px;
+  min-width: 0;
+  box-sizing: border-box;
+  contain: size;
+}
+.signal-reading {
+  flex: 1;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding-left: 8px;
+  border-left: 2px solid var(--signal-color);
+  min-width: 0;
+}
+.signal-reading > span {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.signal-reading strong {
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.signal-reading strong small {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+.telemetry-columns {
+  display: grid;
+  grid-template-columns: var(--timeline-label-width) minmax(0, 1fr) var(--timeline-value-width);
+  gap: var(--timeline-column-gap);
+  min-width: 0;
+}
+.telemetry-track {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 45%, transparent);
+}
+.telemetry-track :global(.chart-host > div),
+.telemetry-track :global(.chart-host svg) {
+  overflow: visible !important;
+}
+.telemetry-cursor {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: var(--replay-position);
+  width: 2px;
+  transform: translateX(-1px);
+  background: var(--accent-primary);
+  pointer-events: none;
+  z-index: 2;
+}
+.telemetry-cursor::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+}
+.telemetry-columns.expanded {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: 40px minmax(0, 1fr) var(--timeline-value-width);
+}
+.telemetry-columns.expanded .telemetry-track {
+  height: 100%;
+}
+.telemetry :global(.chart-frame.expanded) {
+  height: 100%;
+  padding: 16px;
+}
+.telemetry :global(.chart-frame.expanded .plot) {
+  flex: 1;
+  min-height: 0;
+}
+.telemetry :global(.chart-frame.expanded figcaption) {
+  flex-wrap: wrap;
+}
+@media (min-width: 951px) and (max-height: 1000px) {
+  .signal-reading {
+    gap: 2px;
+  }
+  .signal-reading > span {
+    font-size: 10px;
+    line-height: 12px;
+  }
+  .signal-reading strong {
+    font-size: 16px;
+  }
+}
+@media (max-width: 700px) {
+  .telemetry :global(.chart-frame > figcaption) {
+    position: sticky;
+    left: 0;
+    width: var(--timeline-visible-width);
+    box-sizing: border-box;
+    gap: 6px;
+  }
+  .telemetry :global(.chart-tools) {
+    display: contents;
+  }
+  .telemetry :global(.chart-heading) {
+    order: 0;
+    width: 100%;
+  }
+  .telemetry :global(.chart-tools > .ui-button) {
+    order: 2;
+    margin-left: 0;
+  }
+  .telemetry :global(.chart-actions) {
+    order: 1;
+    flex: 1;
+    justify-content: space-between;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  .telemetry-reading {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: var(--surface-1);
+  }
+  .signal-reading {
+    min-width: 0;
+    padding-left: 7px;
+  }
+  .signal-reading strong {
+    font-size: 18px;
+  }
+  .signal-reading > span,
+  .signal-reading strong small {
+    font-size: 10px;
+  }
+  .telemetry :global(.chart-frame.expanded > figcaption) {
+    position: static;
+    width: auto;
+  }
+  .telemetry-columns.expanded {
+    min-width: 0;
+  }
+}
+@media (min-width: 951px) and (max-height: 950px) {
+  .telemetry-columns:not(.expanded) .telemetry-reading {
+    width: 100%;
+  }
+  .telemetry-columns:not(.expanded) .signal-reading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    flex: 1;
+    padding-left: 6px;
+  }
+  .telemetry-columns:not(.expanded) .signal-reading strong {
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .telemetry-columns:not(.expanded) .signal-reading strong small {
+    font-size: 8px;
+  }
+}
+:global(.overview) .telemetry-columns:not(.expanded) .telemetry-track :global(.chart-host),
+:global(.overview) .telemetry-columns:not(.expanded) .telemetry-track :global(.lazy-surface),
+:global(.overview) .telemetry-columns:not(.expanded) .telemetry-track :global(.placeholder) {
+  height: clamp(220px, 24dvh, 280px);
+  min-height: 0;
+}

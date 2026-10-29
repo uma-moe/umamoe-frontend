@@ -1,0 +1,161 @@
+/* The race sim page: the setup as one form of numbered sections with the run bar under it, or the report. */
+.race-workspace {
+  --setup-panel-padding: 20px;
+  --setup-control-height: 36px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.race-form {
+  display: grid;
+  min-width: 0;
+  padding: 12px 18px;
+  container: race-form / inline-size;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  scroll-margin-top: 90px;
+}
+.race-form:focus {
+  outline: none;
+}
+/* Race format, sampled races and seed in one row. */
+.race-fields {
+  --control-height: var(--setup-control-height);
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) minmax(120px, 160px) minmax(180px, 260px);
+  gap: 12px;
+  align-items: start;
+}
+.race-fields :global(.field) {
+  gap: 4px;
+}
+.race-fields :global(label) {
+  font-size: 12px;
+}
+.race-fields :global(input),
+.race-fields :global(.select-control) {
+  font-size: 13px;
+}
+.seed-setting {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  gap: 6px;
+  align-items: start;
+}
+.seed-setting > :global(.ui-button) {
+  width: 36px;
+  height: var(--setup-control-height);
+  margin-top: 18px;
+  padding: 0;
+}
+/* The course map and its breakdown, inset under the course fields; the map kept small so the inset stays short. */
+.race-form :global(.profile.compact) {
+  background: var(--surface-2, transparent);
+}
+/* Only while the profile has room for both: narrower, its own layout puts the map under the breakdown. */
+@container course-profile (min-width: 581px) {
+  .race-form :global(section.profile.compact .profile-body) {
+    grid-template-columns: min(26%, 280px) minmax(0, 1fr);
+  }
+}
+.race-form :global(section.profile.compact .distance-profile) {
+  padding-block: 10px;
+}
+.race-form :global(section.profile.compact .outline) {
+  padding-block: 8px;
+}
+@container race-form (max-width:560px) {
+  .race-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    row-gap: 8px;
+  }
+  .race-fields > :global(.field:first-child) {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 767px) {
+  /* A phone: the design system's denser controls, as on the database filters, and a tighter panel. */
+  .race-workspace {
+    --setup-panel-padding: 12px;
+    --setup-control-height: var(--control-height);
+  }
+  .race-form {
+    padding: 10px 12px;
+  }
+  .seed-setting {
+    grid-template-columns: minmax(0, 1fr) var(--setup-control-height);
+  }
+  .seed-setting > :global(.ui-button) {
+    width: var(--setup-control-height);
+    height: var(--setup-control-height);
+  }
+}
+.step-title {
+  font-size: 24px;
+  letter-spacing: -0.03em;
+  margin: 0;
+  scroll-margin-top: 90px;
+}
+.step-title:focus {
+  outline: none;
+}
+.race-workspace.showing-report {
+  gap: 10px;
+}
+.showing-report .step-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 10px;
+  font-size: 21px;
+}
+/* The race conditions and sample size sit beside the course name on the results heading. */
+.showing-report .step-title small {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+.step-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.report-actions {
+  display: flex;
+  gap: 8px;
+}
+.report-actions :global(.ui-button) {
+  height: var(--setup-control-height);
+  min-height: var(--setup-control-height);
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+}
+.import-notice {
+  max-width: 100ch;
+  margin-top: 12px;
+}
+.race-main[hidden] {
+  display: none;
+}
+.race-main {
+  min-width: 0;
+  container: race-main / inline-size;
+}
+@media (max-width: 767px) {
+  .step-title {
+    font-size: 21px;
+  }
+  .report-actions {
+    gap: 4px;
+  }
+  .step-heading {
+    gap: 8px;
+  }
+  .report-actions > :global(.ui-button) {
+    font-size: 11px;
+  }
+}

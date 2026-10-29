@@ -1,0 +1,187 @@
+.race-timeline {
+  display: grid;
+  grid-template-columns: var(--timeline-label-width) minmax(0, 1fr) var(--timeline-value-width);
+  gap: var(--timeline-column-gap);
+  min-width: 0;
+}
+.timeline-labels,
+.course-tracks,
+.timeline-values {
+  display: grid;
+  grid-template-rows: 28px 18px 20px 18px 18px;
+  gap: 2px;
+  min-width: 0;
+}
+.timeline-labels {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.timeline-labels > span {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  gap: 4px;
+}
+.course-tracks {
+  position: relative;
+}
+.terrain {
+  min-width: 0;
+  position: relative;
+}
+.terrain svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.terrain-fill {
+  fill: var(--color-accent-soft);
+}
+.terrain-line {
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.hill {
+  fill: none;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.unknown-course {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.slope-bands,
+.course-bands,
+.phase-navigation {
+  position: relative;
+  min-width: 0;
+}
+.slope-bands button,
+.course-bands button,
+.phase-navigation button {
+  position: absolute;
+  inset-block: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  border-right: 1px solid var(--surface-1);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--segment-color) 18%, var(--surface-1));
+  box-shadow: inset 0 -2px var(--segment-color);
+  font: inherit;
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 0 6px;
+  cursor: pointer;
+  text-align: center;
+}
+.slope-bands button {
+  font-size: 10px;
+  box-shadow: none;
+}
+.phase-navigation button {
+  font-size: 10px;
+  box-shadow: none;
+}
+.slope-bands button.active,
+.course-bands button.active,
+.phase-navigation button.active {
+  background: color-mix(in srgb, var(--segment-color) 34%, var(--surface-1));
+  color: var(--text-primary);
+}
+.slope-bands button:hover,
+.course-bands button:hover,
+.phase-navigation button:hover {
+  background: color-mix(in srgb, var(--segment-color) 45%, var(--surface-1));
+  color: var(--text-primary);
+}
+.slope-bands button:focus-visible,
+.course-bands button:focus-visible,
+.phase-navigation button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+  z-index: 4;
+}
+.timeline-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--replay-position);
+  width: 2px;
+  background: var(--accent-primary);
+  transform: translateX(-1px);
+  pointer-events: none;
+  z-index: 3;
+}
+.timeline-values {
+  color: var(--text-secondary);
+  font-size: 10px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.elevation-range {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-block: 4px;
+}
+.finish {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+@media (max-width: 700px) {
+  .timeline-labels {
+    font-size: 10px;
+  }
+  .slope-bands button,
+  .course-bands button,
+  .phase-navigation button {
+    padding-inline: 2px;
+  }
+  .timeline-values {
+    font-size: 9px;
+  }
+}
+.slope-symbol {
+  display: none;
+}
+.narrow .slope-name {
+  display: none;
+}
+.narrow .slope-symbol {
+  display: inline;
+}
+@media (max-width: 700px) {
+  .timeline-labels {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: var(--surface-1);
+  }
+  .timeline-labels > span {
+    padding-right: 6px;
+  }
+}
+@media (min-width: 951px) {
+  .timeline-labels,
+  .course-tracks,
+  .timeline-values {
+    grid-template-rows: 24px 14px 18px 14px 14px;
+    gap: 1px;
+  }
+}
+@media (min-width: 951px) and (max-height: 1000px) {
+  .timeline-labels,
+  .course-tracks,
+  .timeline-values {
+    grid-template-rows: 20px 12px 16px 12px;
+  }
+}

@@ -1,151 +1,286 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
-  import type { EChartsCoreOption } from 'echarts/core';
   import { router } from '@/routes/router';
-  import type { ActivityHall, ActivityReport, ActivityScore, ActivitySort } from '@/lib/activity/activity-types';
-  import { averageCareersPerDay, buildCareerBuckets, buildDailyHighlights, buildEvidenceGroups, buildProbeInsights, buildScoreInsights, buildSessionRows, compactNumber, decimalNumber, formatDuration, parsedNumber, primarySessionSeconds, scoreBand, scoreTone, shortCareerWindowCount, verdictLabel, viewerFlags, wholeNumber } from '@/lib/activity/activity';
+  import type { ActivityHall, ActivityReport, ActivitySort } from '@/lib/activity/activity-types';
+  import { buildEvidenceGroups } from '@/lib/activity/activity';
   import AppPage from '@/layouts/AppPage.svelte';
-  import ContentAd from '@/layouts/ContentAd.svelte';
-  import Banner from '@/components/Banner.svelte';
-  import Badge from '@/components/Badge.svelte';
-  import Button from '@/components/Button.svelte';
-  import EmptyState from '@/components/EmptyState.svelte';
+  import Banner from '@/components/feedback/Banner.svelte';
+  import Button from '@/components/controls/Button.svelte';
+  import EmptyState from '@/components/feedback/EmptyState.svelte';
   import Icon from '@/components/Icon.svelte';
-  import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
-  import Pagination from '@/components/Pagination.svelte';
-  import SelectField from '@/components/SelectField.svelte';
-  import Spinner from '@/components/Spinner.svelte';
-  import TextField from '@/components/TextField.svelte';
+  import Pagination from '@/components/navigation/Pagination.svelte';
+  import SelectField from '@/components/controls/SelectField.svelte';
+  import Spinner from '@/components/feedback/Spinner.svelte';
   import { activityRepository } from './activity-repository';
-  import { theme } from '@/stores/theme';
+  import { pageSizeOptions, readActivityQuery, writeActivityQuery } from './activity-query';
+  import ActivityFilters from './ActivityFilters.svelte';
+  import ActivityHallList from './ActivityHallList.svelte';
+  import ActivityReportSummary from './report/ActivityReportSummary.svelte';
+  import ActivityReportSignals from './report/ActivityReportSignals.svelte';
+  import ActivityReportPatterns from './report/ActivityReportPatterns.svelte';
+  import ActivityReportRecords from './report/ActivityReportRecords.svelte';
 
-  const sortOptions = ([
-    ['score', 'Suspicion score'], ['short_fan_gain', 'Short high-fan score'], ['short_high_fan', 'Short high-fan careers'], ['online_streak', 'Online streak'],
-    ['active_time', 'Active time'], ['behavior_change', 'Behavior spike'], ['careers_per_hour', 'Careers/hour'], ['fans_per_minute', 'Fans/minute'],
-    ['peak_fans_per_minute', 'Peak fans/minute'], ['avg_career_length', 'Shortest avg career'], ['careers', 'Total careers'], ['max_session', 'Longest session']
-  ] satisfies Array<[ActivitySort, string]>).map(([value, label]) => ({ value, label }));
-  const scoreOptions = [{ value: '0', label: 'All scores' }, { value: '40', label: '40+' }, { value: '60', label: '60+' }, { value: '80', label: '80+' }];
-  const dayOptions = [1, 3, 7, 14, 30].map((value) => ({ value: String(value), label: `${value}+ observed days` }));
-  const pageSizeOptions = [25, 50, 100, 200].map((value) => ({ value: String(value), label: String(value) }));
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  let hall = $state<ActivityHall>();
+  let report = $state<ActivityReport>();
+  let loading = $state(true);
+  let error = $state('');
+  let search = $state('');
+  let committedSearch = $state('');
+  let sortBy = $state<ActivitySort>('score');
+  let minDays = $state('1');
+  let minScore = $state('0');
+  let page = $state(1);
+  let pageSize = $state('50');
 
-  let hall = $state<ActivityHall>(); let report = $state<ActivityReport>(); let loading = $state(true); let error = $state('');
-  let virtualRange = $state<VirtualRange>({ start: 0, end: 0 });
-  let search = $state(''); let committedSearch = $state(''); let sortBy = $state<ActivitySort>('score'); let minDays = $state('1'); let minScore = $state('0'); let page = $state(1); let pageSize = $state('50');
-  let searchTimer: ReturnType<typeof setTimeout> | undefined; let expandedEvidence = $state(new Set<string>()); let expandedSnapshots = $state(new Set<number>());
+  let searchTimer: ReturnType<typeof setTimeout> | undefined;
+
+  let expandedEvidence = $state(new Set<string>());
+  let expandedSnapshots = $state(new Set<number>());
+
   const viewerId = $derived(Number(router.route.params.viewerId || 0));
-  const score = $derived(report?.score); const evidenceGroups = $derived(score ? buildEvidenceGroups(score.evidence?.reasons ?? []) : []); const scoreInsights = $derived(score ? buildScoreInsights(score) : []); const probeInsights = $derived(buildProbeInsights(score?.probe_metrics));
-  const careerBuckets = $derived(score ? buildCareerBuckets(score) : []); const flags = $derived(score ? viewerFlags(score) : []); const dailyHighlights = $derived(buildDailyHighlights(report?.daily ?? [])); const sessionRows = $derived(buildSessionRows(report?.top_sessions?.length ? report.top_sessions : report?.top_online_streaks ?? []));
-  const snapshots = $derived((report?.short_career_snapshots ?? []).slice(0, 25));
-  const heatmap = $derived.by(() => { const values = new Map((report?.heatmap ?? []).map((cell) => [`${cell.dow}:${cell.hour}`, cell])); const max = Math.max(1, ...[...values.values()].map((cell) => cell.active_seconds)); return { values, max, touched: [...values.values()].filter((cell) => cell.active_seconds || cell.careers).length }; });
-  const hourly = $derived(Array.from({ length: 24 }, (_, hour) => (report?.heatmap ?? []).filter((cell) => cell.hour === hour).reduce((sum, cell) => sum + cell.active_seconds, 0)));
-  const dailyChartOption = $derived.by((): EChartsCoreOption => {
-    $theme;
-    const tokens = getComputedStyle(document.documentElement);
-    const color = (token: string) => tokens.getPropertyValue(token).trim();
-    const points = [...(report?.daily ?? [])].reverse().slice(-45); const maxFans = Math.max(1, ...points.map((point) => point.fan_gain)); const maxActive = Math.max(1, ...points.map((point) => point.active_seconds));
-    return { animation: false, grid: { left: 48, right: 18, top: 18, bottom: 34 }, tooltip: { trigger: 'axis', backgroundColor: color('--surface-overlay'), borderColor: color('--border-primary'), textStyle: { color: color('--text-primary') } }, xAxis: { type: 'category', data: points.map((point) => new Date(`${point.day}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })), axisLabel: { color: color('--text-secondary'), hideOverlap: true }, axisLine: { lineStyle: { color: color('--border-primary') } } }, yAxis: { type: 'value', min: -100, max: 100, axisLabel: { color: color('--text-secondary'), formatter: (value: number) => value > 0 ? compactNumber(maxFans * value / 100) : value < 0 ? formatDuration(maxActive * -value / 100) : 'balance' }, splitLine: { lineStyle: { color: color('--border-subtle') } } }, series: [
-      { name: 'Fan gain', type: 'line', data: points.map((point) => point.fan_gain / maxFans * 100), smooth: .25, symbol: 'none', lineStyle: { color: color('--accent-warning'), width: 2 }, areaStyle: { color: 'rgba(255,196,128,.14)' } },
-      { name: 'Bias', type: 'line', data: points.map((point) => (point.fan_gain / maxFans - point.active_seconds / maxActive) * 34), smooth: .3, symbol: 'none', lineStyle: { color: color('--text-primary'), width: 1.5 } },
-      { name: 'Active time', type: 'line', data: points.map((point) => -point.active_seconds / maxActive * 100), smooth: .22, symbol: 'none', lineStyle: { color: color('--accent-primary'), width: 2, type: 'dashed' }, areaStyle: { color: 'rgba(106,164,221,.12)' } }
-    ] };
-  });
+  const score = $derived(report?.score);
 
-  function readQuery(): void { const query = new URLSearchParams(location.search); page = Math.max(1, Number(query.get('page') ?? 0) + 1); pageSize = query.get('pageSize') ?? '50'; search = query.get('query') ?? ''; committedSearch = search; const requestedSort = query.get('sortBy') as ActivitySort | null; sortBy = requestedSort && sortOptions.some((option) => option.value === requestedSort) ? requestedSort : 'score'; minScore = query.get('minScore') ?? '0'; minDays = query.get('minDays') ?? '1'; }
-  function writeQuery(): void { const url = new URL(location.href); const set = (key: string, value: string, defaultValue: string) => value === defaultValue ? url.searchParams.delete(key) : url.searchParams.set(key, value); set('page', String(page - 1), '0'); set('pageSize', pageSize, '50'); set('query', committedSearch, ''); set('sortBy', sortBy, 'score'); set('minScore', minScore, '0'); set('minDays', minDays, '1'); history.replaceState(history.state, '', `${url.pathname}${url.search}`); }
+  function readQuery(): void {
+    const query = readActivityQuery(location.search);
+    page = query.page;
+    pageSize = query.pageSize;
+    search = query.search;
+    committedSearch = search;
+    sortBy = query.sortBy;
+    minScore = query.minScore;
+    minDays = query.minDays;
+  }
+
+  function writeQuery(): void {
+    writeActivityQuery({ page, pageSize, search: committedSearch, sortBy, minScore, minDays });
+  }
+
   let initialized = $state(false);
+
   let loadGeneration = 0;
+
   async function load(refresh = false): Promise<void> {
     const request = ++loadGeneration;
     const requestedViewer = viewerId;
-    loading = true; error = '';
+    loading = true;
+    error = '';
     try {
       if (requestedViewer) {
         const result = await activityRepository.report(requestedViewer, refresh);
         if (request !== loadGeneration) return;
         report = result;
-        const groups = report.score ? buildEvidenceGroups(report.score.evidence?.reasons ?? []) : [];
+        const groups = report.score
+          ? buildEvidenceGroups(report.score.evidence?.reasons ?? [])
+          : [];
+
         expandedEvidence = new Set(groups[0] ? [groups[0].key] : []);
-        expandedSnapshots = new Set(report.short_career_snapshots?.[0] ? [report.short_career_snapshots[0].snapshot_id] : []);
+        expandedSnapshots = new Set(
+          report.short_career_snapshots?.[0] ? [report.short_career_snapshots[0].snapshot_id] : []
+        );
       } else {
-        const result = await activityRepository.hall({ page: page - 1, limit: Number(pageSize), query: committedSearch || undefined, sortBy, minScore: Number(minScore), minDays: Number(minDays) }, refresh);
+        const result = await activityRepository.hall(
+          {
+            page: page - 1,
+            limit: Number(pageSize),
+            query: committedSearch || undefined,
+            sortBy,
+            minScore: Number(minScore),
+            minDays: Number(minDays)
+          },
+          refresh
+        );
+
         if (request !== loadGeneration) return;
         hall = result;
       }
-    } catch (reason) { if (request === loadGeneration) error = reason instanceof Error ? reason.message : `Could not load ${requestedViewer ? 'this viewer report' : 'suspicion scores'}.`; }
-    finally { if (request === loadGeneration) loading = false; }
+    } catch (reason) {
+      if (request === loadGeneration)
+        error =
+          reason instanceof Error
+            ? reason.message
+            : `Could not load ${requestedViewer ? 'this viewer report' : 'suspicion scores'}.`;
+    } finally {
+      if (request === loadGeneration) loading = false;
+    }
   }
-  function applyFilters(): void { page = 1; writeQuery(); void load(); }
-  function changeSearch(): void { if (searchTimer) clearTimeout(searchTimer); searchTimer = setTimeout(() => { committedSearch = search.trim(); applyFilters(); }, 300); }
-  function clearFilters(): void { search = ''; committedSearch = ''; sortBy = 'score'; minDays = '1'; minScore = '0'; applyFilters(); }
-  function toggleEvidence(key: string): void { const next = new Set(expandedEvidence); next.has(key) ? next.delete(key) : next.add(key); expandedEvidence = next; }
-  function toggleSnapshot(id: number): void { const next = new Set(expandedSnapshots); next.has(id) ? next.delete(id) : next.add(id); expandedSnapshots = next; }
-  function reasonMessage(reason: { key: string; message: string }, value: ActivityScore): string { if (reason.key === 'short_high_fan_careers') return `${value.short_high_fan_careers} career finishes were estimated under 15 minutes while reaching at least ${compactNumber(90_000)} fans per observed minute.`; if (reason.key === 'fan_gain_rate') return `Peak observed pace reached ${compactNumber(value.peak_fans_per_minute)} fans/min, with ${compactNumber(value.fans_per_active_minute)} fans/min sustained across active snapshots.`; return reason.message; }
-  function snapshotTime(value: string): string { return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
-  onMount(() => { initialized = true; return () => { loadGeneration++; if (searchTimer) clearTimeout(searchTimer); }; });
-  $effect(() => { viewerId; if (initialized) untrack(() => { if (searchTimer) clearTimeout(searchTimer); readQuery(); void load(); }); });
+
+  function applyFilters(): void {
+    page = 1;
+    writeQuery();
+    void load();
+  }
+
+  function changeSearch(): void {
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      committedSearch = search.trim();
+      applyFilters();
+    }, 300);
+  }
+
+  function clearFilters(): void {
+    search = '';
+    committedSearch = '';
+    sortBy = 'score';
+    minDays = '1';
+    minScore = '0';
+    applyFilters();
+  }
+
+  onMount(() => {
+    initialized = true;
+    return () => {
+      loadGeneration++;
+      if (searchTimer) clearTimeout(searchTimer);
+    };
+  });
+
+  $effect(() => {
+    viewerId;
+    if (initialized)
+      untrack(() => {
+        if (searchTimer) clearTimeout(searchTimer);
+        readQuery();
+        void load();
+      });
+  });
 </script>
 
-<svelte:head><title>{viewerId ? `Activity report ${viewerId}` : 'Activity Reports'} · uma.moe</title><meta name="description" content="Reconstructed activity signals for accounts observed in top Uma Musume clubs."/></svelte:head>
-<AppPage routeId="activity" title="Top 100 Club Activity Reports" description="Search observed trainers and compare activity across Top 100 clubs." width="wide">
-  {#if viewerId}{#snippet actions()}<Button href={`/activity${typeof window === 'undefined' ? '' : window.location.search}`} variant="secondary" icon="back">Back to activity reports</Button>{/snippet}{/if}
-  <Banner title="Limited snapshot reconstruction" tone="info"><p>Based on periodic club snapshots, including accounts with zero scores. Scores show unusual activity, not proof of botting; even 99/100 can reflect an outlier.</p></Banner>
-  {#if !viewerId}<section class="filters"><TextField id="activity-search" label="Search by Trainer Name or Viewer ID" hideLabel prefixIcon="search" type="search" placeholder="Search by Trainer Name or Viewer ID" bind:value={search} oninput={changeSearch}/><div><SelectField id="activity-sort" label="Sort by" prefixIcon="sort" hideLabel options={sortOptions} bind:value={sortBy} onchange={applyFilters}/><SelectField id="activity-days" label="Minimum observed" prefixIcon="calendar" hideLabel options={dayOptions} bind:value={minDays} onchange={applyFilters}/><SelectField id="activity-score" label="Minimum score" prefixIcon="gauge" hideLabel options={scoreOptions} bind:value={minScore} onchange={applyFilters}/>{#if committedSearch || sortBy !== 'score' || minDays !== '1' || minScore !== '0'}<Button variant="ghost" icon="close" onclick={clearFilters}>Clear</Button>{/if}</div></section>{/if}
-  {#if loading}<div class="loading"><Spinner size={30}/><span>{viewerId ? 'Loading viewer report…' : 'Loading suspicion scores…'}</span></div>
-  {:else if error}<section class="error-state" role="alert"><Icon name="warning"/><p>{error}</p><Button variant="secondary" size="sm" onclick={() => load(true)}>Retry</Button></section>
-  {:else if viewerId && score}
-    <section class="intro-stack tone-{scoreTone(score.suspicion_score)}">
-      <div class="report-lead"><div class="lead-identity"><div class="lead-kicker"><span>{verdictLabel(score.evidence?.verdict)}</span><small>Viewer ID {score.viewer_id}</small></div><h2>{score.trainer_name || 'Unknown Trainer'}</h2><div class="lead-meta"><span>{score.circle_name ?? 'No current club'}</span><span>{score.days_observed} observed days</span><span>Last seen {new Date(score.last_seen).toLocaleDateString()}</span></div></div><div class="report-score"><small>Suspicion score</small><div><strong>{score.suspicion_score}</strong><span>/100</span></div><span class="score-band">{scoreBand(score.suspicion_score)}</span></div><p class="lead-summary">{score.short_high_fan_careers ? `${score.short_high_fan_careers} under-15m high-fan careers. Short-career gains average ${compactNumber(score.short_career_avg_fan_gain)}.` : score.evidence?.summary}</p></div>
-      {#if score.evidence?.caveats?.length}<Banner title={score.evidence.caveats[0]!} tone="warning">{#each score.evidence.caveats.slice(1) as caveat}<p>{caveat}</p>{/each}</Banner>{/if}
-      {#if score.short_high_fan_careers || score.short_fan_gain_score}<div class="automation-panel"><div><span class="eyebrow">Primary signal · Training speed</span><h3>{wholeNumber(score.short_high_fan_careers)} under-15m high-fan careers</h3><p>High-fan means at least 90K fans per observed minute during an estimated career window.</p></div><div class="automation-score"><span>Weighted short-fan score</span><strong>{decimalNumber(score.short_fan_gain_score)}</strong><i><b style={`width:${Math.min(100, score.short_fan_gain_score / 35 * 100)}%`}></b></i><small>35+ is already saturated</small></div><dl><div><dt>Short windows</dt><dd>{wholeNumber(shortCareerWindowCount(score))}</dd></div><div><dt>Average short gain</dt><dd>{compactNumber(score.short_career_avg_fan_gain)}</dd></div><div><dt>P95 short gain</dt><dd>{compactNumber(score.short_career_p95_fan_gain)}</dd></div><div><dt>Last 20 avg</dt><dd>{formatDuration(score.avg_career_length_last20_seconds)}</dd></div></dl></div>{/if}
-      <div class="summary-metrics"><div><span>Total fan gain</span><strong>{compactNumber(score.total_fan_gain)}</strong></div><div><span>Peak fans/min</span><strong>{compactNumber(score.peak_fans_per_minute)}</strong></div><div><span>Last 20 careers/h</span><strong>{decimalNumber(score.career_rate_breakdown?.last_20?.careers_per_hour ?? score.careers_per_active_hour)}</strong></div><div><span>Careers/day</span><strong>{decimalNumber(averageCareersPerDay(score))}</strong></div><div><span>{score.max_online_streak_seconds ? 'Max online streak' : 'Longest session'}</span><strong>{formatDuration(primarySessionSeconds(score))}</strong></div><div><span>Weekly buckets</span><strong>{score.distinct_weekly_hour_buckets} / 168</strong></div><div><span>Under-15m high-fan</span><strong>{score.short_high_fan_careers}</strong></div><div><span>Recent 3d gain</span><strong>+{compactNumber(score.recent_fan_gain_3d)}</strong></div></div>
-    </section>
-
-    <section class="detail-section"><header class="section-heading"><div><h3>Score inputs</h3><p>Raw score payload grouped into activity, trend, and reset context.</p></div><div class="flags">{#each flags as flag}<span>{flag}</span>{:else}<span class="muted">No major activity signals were raised.</span>{/each}</div></header><div class="insight-grid">{#each scoreInsights as group}<article><h4>{group.title}</h4><p>{group.description}</p><div>{#each group.metrics as metric}<dl><dt>{metric.label}</dt><dd>{metric.value}</dd>{#if metric.hint}<small>{metric.hint}</small>{/if}</dl>{/each}</div></article>{/each}</div></section>
-
-    <section class="detail-section"><header class="section-heading"><div><h3>Why this account received this score</h3><p>Signals are outlier indicators, not proof.</p></div></header>{#if evidenceGroups.length}<div class="evidence-groups">{#each evidenceGroups as group}<article class:expanded={expandedEvidence.has(group.key)}><button type="button" onclick={() => toggleEvidence(group.key)} aria-expanded={expandedEvidence.has(group.key)}><span><strong>{group.label}</strong><small>{group.description}</small></span><span>{group.reasons.length} signals <Icon name="chevron" size={16}/></span></button>{#if expandedEvidence.has(group.key)}<div>{#each group.reasons as reason}<section><header><h4>{reason.label}</h4><strong>{reason.display_value}</strong></header><span>{reason.confidence} confidence</span><p>{reasonMessage(reason, score)}</p>{#if reason.caveat}<small>{reason.caveat}</small>{/if}</section>{/each}</div>{/if}</article>{/each}</div>{:else}<p>{score.evidence?.summary}</p>{/if}</section>
-
-    <section class="detail-grid"><article class="detail-section heatmap-section"><header class="section-heading"><div><h3>Weekly activity heatmap</h3><p>{heatmap.touched} of 168 slots · {score.days_observed} report days</p></div></header><div class="heat-scroll"><div class="hour-profile"><span>24h</span>{#each hourly as value}<i style={`--bar:${Math.max(4, value / Math.max(1, ...hourly) * 100)}%`}></i>{/each}</div><div class="hour-labels"><span></span>{#each Array.from({ length: 24 }, (_, index) => index) as hour}<span>{hour % 3 === 0 ? hour : ''}</span>{/each}</div>{#each days as day, dow}<div class="heat-row"><strong>{day}</strong>{#each Array.from({ length: 24 }, (_, index) => index) as hour}{@const cell = heatmap.values.get(`${dow}:${hour}`)}<i title={`${day} ${hour}:00 · ${formatDuration(cell?.active_seconds)}`} style={`--heat:${(cell?.active_seconds ?? 0) / heatmap.max}`}></i>{/each}</div>{/each}</div><div class="heat-legend"><span>Less</span>{#each [0, .25, .5, .75, 1] as level}<i style={`--heat:${level}`}></i>{/each}<span>More</span></div></article>
-      <article class="detail-section"><header class="section-heading"><div><h3>Career length buckets</h3><p>Count and suspicion weight by estimated run window.</p></div></header><div class="bucket-table"><div class="bucket-head"><span>Window</span><span>Careers</span><span>Suspicion weight</span></div>{#each careerBuckets as bucket}<div class:short={bucket.isShortWindow}><span><strong>{bucket.label}</strong><small>{bucket.description}</small></span><i><b style={`width:${bucket.countPercent}%`}></b><em>{wholeNumber(bucket.count)}</em></i><i class="signal"><b style={`width:${bucket.signalPercent}%`}></b><em>{decimalNumber(bucket.signalScore)}</em></i></div>{/each}</div></article></section>
-
-    {#if report?.daily?.length}<section class="detail-section daily"><header class="section-heading"><div><h3>Daily fan gain</h3><p>Fan gain is above balance, activity below, and the center line shows daily bias.</p></div><span>Peak +{compactNumber(Math.max(...report.daily.map((row) => row.fan_gain)))} · {report.daily.length} days</span></header><LazyEChartsSurface option={dailyChartOption} label="Daily fan gain and active time" height={340}/><div class="chart-legend"><span class="fan">Fan gain</span><span class="bias">Bias</span><span class="active">Active time</span></div><div class="daily-highlights">{#each dailyHighlights as metric}<dl><dt>{metric.label}</dt><dd>{metric.value}</dd><small>{metric.hint}</small></dl>{/each}</div></section>{/if}
-
-    {#if sessionRows.length}<section class="detail-section"><header class="section-heading"><div><h3>Top sessions</h3><p>Longest observed windows. Observed time can include idle gaps.</p></div></header><div class="table-wrap"><table><thead><tr><th>Day</th><th>Window</th><th>Observed</th><th>Active</th><th>Idle</th><th>Careers</th><th>Fan gain</th><th>Sessions</th></tr></thead><tbody>{#each sessionRows as row}<tr><td>{row.dayLabel}</td><td>{row.windowLabel}</td><td>{formatDuration(row.observedSeconds)}</td><td>{formatDuration(row.activeSeconds)}</td><td>{formatDuration(row.idleSeconds)}</td><td>{wholeNumber(row.careers)}</td><td class="positive">+{wholeNumber(row.fanGain)}</td><td>{wholeNumber(row.sessionCount)}</td></tr>{/each}</tbody></table></div></section>{/if}
-
-    {#if snapshots.length}<section class="detail-section"><header class="section-heading"><div><h3>Short careers</h3><p>Showing the latest {snapshots.length} of {report?.short_career_snapshots_total ?? snapshots.length} records.</p></div></header><div class="table-wrap"><table class="snapshots"><thead><tr><th>Time</th><th>Previous fans</th><th>Current fans</th><th>Gain</th><th>Snapshot gap</th><th>Career gap</th><th>Length</th><th>Fans/min</th><th>Score</th><th>Status</th></tr></thead><tbody>{#each snapshots as snapshot}<tr class:highlight={snapshot.is_high_fan_short}><td><button type="button" class="expand" aria-expanded={expandedSnapshots.has(snapshot.snapshot_id)} onclick={() => toggleSnapshot(snapshot.snapshot_id)}><Icon name="chevron" size={14}/></button>{snapshotTime(snapshot.snapshot_time)}</td><td>{wholeNumber(snapshot.previous_snapshot_fans)}</td><td>{wholeNumber(snapshot.current_fans)}</td><td class="positive">+{compactNumber(snapshot.fan_gain)}</td><td>{formatDuration(snapshot.snapshot_gap_seconds)}</td><td>{formatDuration(snapshot.previous_career_gap_seconds)}</td><td>{formatDuration(snapshot.career_length_seconds)}</td><td>{compactNumber(parsedNumber(snapshot.fans_per_minute))}</td><td>{decimalNumber(parsedNumber(snapshot.short_training_score))}</td><td>{snapshot.is_high_fan_short ? 'High-fan' : 'Below rate'}</td></tr>{#if expandedSnapshots.has(snapshot.snapshot_id)}<tr class="snapshot-detail"><td colspan="10"><div><strong>Highlighted short career</strong><span>Gain +{wholeNumber(snapshot.fan_gain)}</span><span>Runtime {formatDuration(snapshot.career_length_seconds)}</span>{#each [...(snapshot.prior_snapshots ?? []), ...(snapshot.next_snapshots ?? [])] as neighbor}<span>{snapshotTime(neighbor.snapshot_time)} · {neighbor.fan_delta >= 0 ? '+' : ''}{wholeNumber(neighbor.fan_delta)} · {neighbor.career_count} career ends</span>{/each}</div></td></tr>{/if}{/each}</tbody></table></div></section>{/if}
-
-    {#if probeInsights.length}<section class="detail-section"><header class="section-heading"><div><h3>Probe metrics</h3><p>Cadence, schedule, burst, and account-context metrics returned by the API.</p></div><span>cadence / schedule / context</span></header><div class="insight-grid">{#each probeInsights as group}<article><h4>{group.title}</h4><p>{group.description}</p><div>{#each group.metrics as metric}<dl><dt>{metric.label}</dt><dd>{metric.value}</dd><small>{metric.hint}</small></dl>{/each}</div></article>{/each}</div></section>{/if}
-  {:else if viewerId}<EmptyState icon="activity" title={`No suspicion score exists for viewer ID ${viewerId}.`} description="This viewer is not present in the retained Top 100 snapshot history."/>
-  {:else}
-    {#if !hall?.entries.length}<EmptyState icon="search" title="No matching suspicion score data found." description="Try lowering the score or observation threshold."/>{:else}<ContentAd routeId="activity" top/><div class="list-meta"><span>{hall.total.toLocaleString()} accounts</span>{#if hall.last_refreshed_at}<span>Updated {new Date(hall.last_refreshed_at).toLocaleString()}</span>{/if}</div><section use:virtualScroll={{ items: hall.entries, searchText: entry => [entry.trainer_name, entry.viewer_id, entry.circle_name, scoreBand(entry.suspicion_score), verdictLabel(entry.evidence?.verdict)].join(' '), key: entry => entry.viewer_id, estimate: 100, onrange: range => virtualRange = range }} class="activity-list">{#each hall.entries.slice(virtualRange.start, virtualRange.end) as entry, localIndex (entry.viewer_id)}{@const index = virtualRange.start + localIndex}<div data-virtual-index={index}><article class="activity-row tone-{scoreTone(entry.suspicion_score)}"><strong class="rank">#{(page - 1) * hall.limit + index + 1}</strong><div class="identity"><div><a href={`/activity/${entry.viewer_id}${typeof window === 'undefined' ? '' : window.location.search}`}>{entry.trainer_name || 'Unknown Trainer'}</a><span>ID {entry.viewer_id}</span></div><p>{#if entry.circle_id}<a href={`/circles/${entry.circle_id}`}>{entry.circle_name || 'Club'} {entry.circle_monthly_rank ? `#${entry.circle_monthly_rank}` : ''}</a>{/if}<span>{entry.days_observed}d observed</span><span>{entry.total_careers.toLocaleString()} careers</span></p><small>{verdictLabel(entry.evidence?.verdict)}{#each entry.evidence?.reasons?.slice(0, 2) ?? [] as reason}<Badge>{reason.label}</Badge>{/each}</small></div><dl><div><dt>Fan gain</dt><dd>{compactNumber(entry.total_fan_gain)}</dd></div><div><dt>Active</dt><dd>{formatDuration(entry.total_active_seconds)}</dd></div><div><dt>Careers/hr</dt><dd>{entry.careers_per_active_hour.toFixed(1)}</dd></div></dl><div class="row-score"><span>{scoreBand(entry.suspicion_score)}</span><strong>{entry.suspicion_score}</strong><small>/100</small></div><div class="open"><Button variant="ghost" icon="arrow-right" href={`/activity/${entry.viewer_id}${typeof window === 'undefined' ? '' : window.location.search}`} ariaLabel={`Open activity report for ${entry.trainer_name || entry.viewer_id}`}/></div></article>{#if index === 14 || index === 34}<ContentAd routeId="activity" index={index === 14 ? 2 : 3}/>{/if}</div>{/each}</section>{/if}
+<svelte:head>
+  <title>{viewerId ? `Activity report ${viewerId}` : 'Activity Reports'} · uma.moe</title>
+  <meta
+    name="description"
+    content="Reconstructed activity signals for accounts observed in top Uma Musume clubs."
+  />
+</svelte:head>
+<AppPage
+  routeId="activity"
+  title="Top 100 Club Activity Reports"
+  description="Search observed trainers and compare activity across Top 100 clubs."
+  width="wide"
+>
+  {#if viewerId}
+    {#snippet actions()}
+      <Button
+        href={`/activity${typeof window === 'undefined' ? '' : window.location.search}`}
+        variant="secondary"
+        icon="back"
+      >
+        Back to activity reports
+      </Button>
+    {/snippet}
   {/if}
-  {#if !viewerId && !loading}<footer class="pager"><label>Items per page: <SelectField id="activity-page-size" label="Items per page" hideLabel options={pageSizeOptions} bind:value={pageSize} onchange={applyFilters}/></label><span>{hall?.total ? `${(page - 1) * hall.limit + 1}–${Math.min(page * hall.limit, hall.total)} of ${hall.total}` : '0 of 0'}</span><Pagination bind:page pages={hall?.total_pages ?? 0} showPageNumbers={false} onchange={() => { writeQuery(); window.scrollTo({ top: 0, behavior: 'smooth' }); void load(); }}/></footer>{/if}
+  <Banner
+    title="Limited snapshot reconstruction"
+    tone="info"
+  >
+    <p>
+      Based on periodic club snapshots, including accounts with zero scores. Scores show unusual
+      activity, not proof of botting; even 99/100 can reflect an outlier.
+    </p>
+  </Banner>
+  {#if !viewerId}
+    <ActivityFilters
+      bind:search
+      {committedSearch}
+      bind:sortBy
+      bind:minDays
+      bind:minScore
+      onsearch={changeSearch}
+      onapply={applyFilters}
+      onclear={clearFilters}
+    />
+  {/if}
+  {#if loading}
+    <Spinner
+      centered
+      minHeight="260px"
+      label={viewerId ? 'Loading viewer report…' : 'Loading suspicion scores…'}
+    />
+  {:else if error}
+    <section
+      class="error-state"
+      role="alert"
+    >
+      <Icon name="warning" />
+      <p>{error}</p>
+      <Button
+        variant="secondary"
+        size="sm"
+        onclick={() => load(true)}
+      >
+        Retry
+      </Button>
+    </section>
+  {:else if viewerId && score}
+    <ActivityReportSummary {score} />
+
+    <ActivityReportSignals
+      {score}
+      bind:expandedEvidence
+    />
+
+    <ActivityReportPatterns
+      report={report!}
+      {score}
+    />
+
+    <ActivityReportRecords
+      report={report!}
+      {score}
+      bind:expandedSnapshots
+    />
+  {:else if viewerId}
+    <EmptyState
+      icon="activity"
+      title={`No suspicion score exists for viewer ID ${viewerId}.`}
+      description="This viewer is not present in the retained Top 100 snapshot history."
+    />
+  {:else}
+    {#if !hall?.entries.length}
+      <EmptyState
+        icon="search"
+        title="No matching suspicion score data found."
+        description="Try lowering the score or observation threshold."
+      />
+    {:else}
+      <ActivityHallList
+        {hall}
+        {page}
+      />
+    {/if}
+  {/if}
+  {#if !viewerId && !loading}
+    <footer class="pager">
+      <label>
+        Items per page: <SelectField
+          id="activity-page-size"
+          label="Items per page"
+          hideLabel
+          options={pageSizeOptions}
+          bind:value={pageSize}
+          onchange={applyFilters}
+        />
+      </label>
+      <span>
+        {hall?.total
+          ? `${(page - 1) * hall.limit + 1}–${Math.min(page * hall.limit, hall.total)} of ${hall.total}`
+          : '0 of 0'}
+      </span>
+      <Pagination
+        bind:page
+        pages={hall?.total_pages ?? 0}
+        showPageNumbers={false}
+        onchange={() => {
+          writeQuery();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          void load();
+        }}
+      />
+    </footer>
+  {/if}
 </AppPage>
 
 <style>
-
-  a{text-decoration:none}.loading{min-height:260px;display:flex;align-items:center;justify-content:center;gap:12px;color:var(--text-secondary)}.error-state{min-height:140px;display:flex;align-items:center;justify-content:center;gap:14px;padding:16px;border:1px solid rgb(229 115 115/.4);border-radius:var(--radius-md);background:rgb(229 115 115/.08);color:var(--accent-error)}.error-state p{margin:0}.filters{display:grid;gap:10px}.filters>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.filters>div>:global(*){width:190px}.filters>div>:global(*:first-child){width:230px}.list-meta{display:flex;justify-content:space-between;color:var(--text-secondary);font-size:.72rem}
-  .activity-list{display:grid;overflow:hidden;border:1px solid var(--card-surface-border);border-radius:var(--radius-md);background:var(--card-surface-bg)}
-  .activity-row{min-width:0;display:grid;grid-template-columns:28px 66px minmax(220px,1fr) minmax(280px,360px) 44px;grid-template-areas:'rank score identity metrics action';align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-subtle);color:var(--text-primary)}
-  .activity-row:last-child{border-bottom:0}.activity-row:hover,.activity-row:focus-within{background:var(--card-surface-hover-bg)}
-  .rank{grid-area:rank;color:var(--text-muted);font-size:12px;font-variant-numeric:tabular-nums}
-  .identity{grid-area:identity;min-width:0;display:grid;gap:4px}.identity>div{display:flex;align-items:baseline;gap:8px;min-width:0;flex-wrap:wrap}.identity>div a{min-width:0;overflow-wrap:anywhere;color:var(--accent-primary);font-size:15px;font-weight:650}.identity>div span{color:var(--text-muted);font-size:10px;white-space:nowrap}
-  .identity p,.identity small{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:0;color:var(--text-secondary);font-size:11px;line-height:1.4}.identity p a{color:var(--accent-primary)}
-  .activity-row dl{grid-area:metrics;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:0;color:var(--text-primary)}.activity-row dl div{min-width:0;display:flex;flex-direction:column;gap:3px;padding:0 12px;border-left:1px solid var(--border-subtle)}dt{color:var(--text-secondary);font-size:11px;line-height:1.4}dd{margin:3px 0 0;font-weight:650;font-variant-numeric:tabular-nums}.activity-row dd{order:-1;margin:0;font-size:15px}.activity-row dt{font-size:11px}
-  .row-score{grid-area:score;display:grid;grid-template-columns:auto auto;align-items:baseline;justify-content:start;gap:0 2px}.row-score span{grid-column:1/-1;color:var(--text-secondary);font-size:10px}.row-score strong{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--score-color)}.row-score small{font-size:10px;color:var(--text-secondary)}
-  .open{grid-area:action;min-width:44px;min-height:44px}.open :global(.ui-button){width:44px;padding:0}
-  .pager{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:10px 0;border-top:1px solid var(--border-subtle)}.pager label{display:flex;align-items:center;gap:8px;color:var(--text-secondary);font-size:12px}.pager label>:global(*){width:76px}
-  .intro-stack{display:grid;gap:12px;color:var(--text-primary)}.report-lead{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px 20px;padding:16px;border:1px solid var(--card-surface-border);border-radius:var(--radius-lg);background:var(--card-surface-bg)}.lead-identity{min-width:0}.lead-kicker,.lead-meta{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap}.lead-kicker span{padding:3px 6px;border:1px solid var(--border-subtle);border-radius:4px;font-size:11px;font-weight:600;color:var(--score-color)}.lead-kicker small{color:var(--text-secondary);font-size:11px}.report-lead h2{margin:8px 0 6px;font-size:24px;line-height:1.2;overflow-wrap:anywhere}.lead-meta{font-size:11px;color:var(--text-secondary)}.lead-summary{grid-column:1/-1;margin:0;padding-top:12px;border-top:1px solid var(--border-subtle);font-size:13px;line-height:1.5;color:var(--text-secondary)}.report-score{display:grid;gap:3px;justify-items:end;padding-left:16px;border-left:1px solid var(--border-subtle)}.report-score small{font-size:11px;color:var(--text-secondary)}.report-score>div{display:flex;align-items:baseline;gap:4px}.report-score strong{font-size:36px;line-height:1.1;font-weight:700;font-variant-numeric:tabular-nums;color:var(--score-color)}.report-score span{font-size:11px;color:var(--text-secondary)}.report-score .score-band{color:var(--score-color)}
-  .automation-panel{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(150px,.6fr) minmax(260px,1fr);align-items:center;gap:16px;padding:16px;border:1px solid var(--card-surface-border);border-radius:var(--radius-lg);background:var(--card-surface-bg)}.automation-panel h3{margin:5px 0;font-size:16px}.automation-panel p{margin:0;font-size:12px;line-height:1.5;color:var(--text-secondary)}.eyebrow{color:var(--accent-primary);font-size:11px;font-weight:600}.automation-score{display:grid;gap:5px}.automation-score>span,.automation-score small{color:var(--text-secondary);font-size:11px}.automation-score strong{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}.automation-score i{height:5px;overflow:hidden;border-radius:4px;background:var(--surface-3)}.automation-score b{height:100%;display:block;background:var(--score-color,var(--accent-primary))}.automation-panel dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0}.automation-panel dl>div{min-width:0}.automation-panel dd{font-size:15px}.summary-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:4px 16px;border:1px solid var(--card-surface-border);border-radius:var(--radius-lg);background:var(--card-surface-bg)}.summary-metrics>div{min-width:0;display:grid;align-content:start;gap:5px;padding:12px 0}.summary-metrics>div:nth-child(n+5){border-top:1px solid var(--border-subtle)}.summary-metrics span{color:var(--text-secondary);font-size:11px;line-height:1.35}.summary-metrics strong{font-size:16px;font-weight:650;font-variant-numeric:tabular-nums}
-.detail-section{min-width:0;padding:16px;border:1px solid var(--card-surface-border);border-radius:var(--radius-lg);background:var(--card-surface-bg)}.section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}.section-heading h3{margin:0 0 4px;font-size:16px}.section-heading p{margin:0;color:var(--text-secondary);font-size:.76rem}.section-heading>span{color:var(--text-secondary);font-size:.68rem}.flags{display:flex;justify-content:flex-end;gap:5px;flex-wrap:wrap}.flags span{padding:4px 7px;border-radius:10px;background:var(--color-warning-soft);color:var(--accent-warning);font-size:10px}.flags .muted{background:var(--surface-3);color:var(--text-secondary)}.insight-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.insight-grid article{min-width:0;padding:12px 0;border-top:1px solid var(--border-subtle)}.insight-grid h4{margin:0}.insight-grid article>p{margin:3px 0 12px;color:var(--text-secondary);font-size:.7rem}.insight-grid article>div{display:grid;grid-template-columns:1fr 1fr;gap:6px}.insight-grid dl{min-width:0;margin:0;padding:8px 0}.insight-grid dd{overflow:hidden;text-overflow:ellipsis}.insight-grid small{display:block;color:var(--text-secondary);font-size:10px}.evidence-groups{display:grid;gap:7px}.evidence-groups>article{overflow:hidden;border:1px solid var(--border-subtle);border-radius:var(--radius-md)}.evidence-groups>article>button{width:100%;min-height:48px;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:0;background:var(--surface-2);color:var(--text-primary);cursor:pointer;text-align:left}.evidence-groups button>span{display:grid;gap:2px}.evidence-groups button>span:last-child{display:flex;align-items:center;gap:8px;color:var(--text-secondary);font-size:9px}.evidence-groups button small{color:var(--text-secondary)}.evidence-groups .expanded button :global(svg){transform:rotate(180deg)}.evidence-groups article>div{display:grid;gap:6px;padding:8px}.evidence-groups section{padding:10px;border:1px solid var(--border-subtle);border-radius:var(--radius-sm);background:transparent}.evidence-groups section header{display:flex;justify-content:space-between}.evidence-groups section h4{margin:0}.evidence-groups section>span,.evidence-groups section>small{color:var(--text-secondary);font-size:9px}.evidence-groups section p{margin:6px 0}.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.heat-scroll{min-width:560px}.heatmap-section{overflow-x:auto}.hour-profile,.hour-labels,.heat-row{display:grid;grid-template-columns:34px repeat(24,1fr);gap:2px}.hour-profile{height:42px;align-items:end}.hour-profile>i{height:var(--bar);min-height:2px;background:var(--accent-primary)}.hour-labels span,.heat-row strong{color:var(--text-secondary);font-size:7px;text-align:center}.heat-row{margin-top:2px}.heat-row i,.heat-legend i{aspect-ratio:1;background:color-mix(in srgb,var(--accent-primary) calc(var(--heat) * 90%),var(--surface-3))}.heat-legend{display:flex;align-items:center;justify-content:flex-end;gap:3px;margin-top:8px;color:var(--text-secondary);font-size:10px}.heat-legend i{width:12px}.bucket-table{display:grid}.bucket-head,.bucket-table>div{display:grid;grid-template-columns:minmax(110px,.65fr) 1fr 1fr;align-items:center;gap:10px;min-height:42px;padding:5px;border-bottom:1px solid var(--border-subtle)}.bucket-head{min-height:28px;color:var(--text-secondary);font-size:10px;text-transform:uppercase}.bucket-table>div>span{display:grid}.bucket-table>div small{color:var(--text-secondary);font-size:10px}.bucket-table i{position:relative;height:18px;overflow:hidden;background:var(--surface-3)}.bucket-table i b{height:100%;display:block;background:var(--accent-primary)}.bucket-table i.signal b{background:var(--accent-error)}.bucket-table em{position:absolute;inset:0 4px;display:flex;align-items:center;justify-content:flex-end;color:var(--text-primary);font-size:10px;font-style:normal}.bucket-table .short>span strong{color:var(--accent-warning)}.chart-legend{display:flex;justify-content:center;gap:20px;color:var(--text-secondary);font-size:9px}.chart-legend span::before{content:'';width:14px;height:2px;display:inline-block;margin-right:5px;vertical-align:middle;background:currentColor}.chart-legend .fan{color:var(--accent-warning)}.chart-legend .bias{color:var(--text-primary)}.chart-legend .active{color:var(--accent-primary)}.daily-highlights{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px}.daily-highlights dl{margin:0;padding:9px 0;border-top:1px solid var(--border-subtle)}.daily-highlights small{display:block;color:var(--text-secondary);font-size:10px}.table-wrap{max-width:100%;overflow-x:auto;border:1px solid var(--border-subtle);border-radius:var(--radius-md)}table{width:100%;border-collapse:collapse;background:var(--surface-1);font-size:.72rem}th,td{height:42px;padding:8px 10px;border-bottom:1px solid var(--border-subtle);text-align:left;white-space:nowrap}th{background:var(--surface-2);color:var(--text-secondary);font-size:10px;text-transform:uppercase}.positive{color:var(--accent-secondary)}.snapshots .expand{width:30px;height:30px;margin-right:5px;border:0;background:transparent;color:var(--text-secondary);cursor:pointer;vertical-align:middle}.snapshots .expand[aria-expanded=true] :global(svg){transform:rotate(180deg)}.snapshots tr.highlight{background:rgb(229 115 115/.05)}.snapshot-detail td{padding:8px}.snapshot-detail div{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px;border-left:3px solid var(--accent-error);background:var(--surface-2)}
-
-  .tone-critical { --score-color:var(--accent-error); }
-  .tone-high { --score-color:var(--accent-warning); }
-  .tone-elevated { --score-color:var(--accent-primary); }
-  .tone-watch { --score-color:var(--accent-purple); }
-  .tone-low { --score-color:var(--accent-green-strong); }
-
-  @media(max-width:1100px){.activity-row{grid-template-columns:24px 60px minmax(0,1fr) 44px;grid-template-areas:'rank score identity action' '. metrics metrics metrics'}.activity-row dl{padding-top:10px;border-top:1px solid var(--border-subtle)}.activity-row dl div:first-child{border-left:0;padding-left:0}.automation-panel{grid-template-columns:minmax(0,1fr) 180px}.automation-panel dl{grid-column:1/-1;padding-top:12px;border-top:1px solid var(--border-subtle);grid-template-columns:repeat(4,minmax(0,1fr))}.insight-grid,.detail-grid{grid-template-columns:1fr}}
-  @media(max-width:680px){.filters{padding:0}.filters>div{display:grid;grid-template-columns:1fr}.filters>div>:global(*),.filters>div>:global(*:first-child){width:100%}.activity-row{grid-template-columns:minmax(0,1fr) 64px 44px;grid-template-areas:'identity score action' 'metrics metrics metrics';align-items:start;gap:10px 6px;padding:12px}.activity-row .rank{display:none}.identity{grid-area:identity}.row-score{grid-area:score;padding-top:2px}.open{grid-area:action}.activity-row dl{grid-area:metrics;padding-top:10px}.activity-row dl div{padding-inline:10px}.activity-row dd{font-size:15px}.identity>div a{font-size:15px}.identity small{font-size:10px;gap:4px}.pager{flex-wrap:wrap;gap:10px;font-size:12px}.pager label{margin-right:auto}.report-lead{padding:12px;gap:12px}.report-lead h2{font-size:21px}.report-score{padding-left:12px}.report-score small{max-width:74px;text-align:right}.report-score strong{font-size:32px}.lead-summary{font-size:12px}.automation-panel{grid-template-columns:minmax(0,1fr);padding:12px;gap:14px}.automation-score{grid-template-columns:minmax(0,1fr) auto;align-items:center}.automation-score i,.automation-score small{grid-column:1/-1}.automation-panel dl{grid-template-columns:repeat(2,minmax(0,1fr))}.summary-metrics{grid-template-columns:repeat(2,minmax(0,1fr));padding-inline:12px;column-gap:16px}.summary-metrics>div:nth-child(n+3){border-top:1px solid var(--border-subtle)}.detail-section{padding:12px}.section-heading{gap:8px;flex-direction:column}.flags{justify-content:flex-start}.insight-grid article>div{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}.insight-grid dd{overflow:visible;overflow-wrap:anywhere}.daily-highlights{grid-template-columns:repeat(2,minmax(0,1fr))}.daily-highlights dl:last-child{grid-column:1/-1}.chart-legend{gap:8px}.list-meta{gap:8px;font-size:11px;flex-wrap:wrap}}
+  @import './activity-page.css';
 </style>

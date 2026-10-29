@@ -4,7 +4,8 @@ import {
   type FactorRequirement,
   type InheritanceFilterMode,
   type InheritanceSearchFilters
-} from '@/lib/inheritance/inheritance-search';
+} from '@/lib/inheritance/search/inheritance-search';
+import type { SparkOrder } from '@/lib/inheritance/sparks/inheritance-factors';
 
 export const DATABASE_FILTER_STATE_KEY = 'database-filter-state-v2';
 export const DATABASE_FILTER_MODE_KEY = 'database-filter-mode-v1';
@@ -12,6 +13,13 @@ export const DATABASE_FILTER_PRESETS_KEY = 'database-filter-presets-v1';
 export const DATABASE_LIST_MODE_KEY = 'db-list-mode';
 export const DATABASE_HIDDEN_SPARKS_KEY = 'db-hidden-spark-factors';
 export const DATABASE_SPARK_ORDER_KEY = 'db-spark-order';
+
+export const SPARK_ORDER_OPTIONS: { value: SparkOrder; label: string }[] = [
+  { value: 'main', label: 'Main parent first' },
+  { value: 'stars', label: 'Most stars' },
+  { value: 'occurrences', label: 'Most occurrences' },
+  { value: 'alphabetical', label: 'Alphabetical' }
+];
 
 type PriorityFactorState = number | [number, number];
 
@@ -109,6 +117,7 @@ function utf8ToBinary(value: string): string {
   for (let index = 0; index < bytes.length; index += 0x8000) {
     binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
   }
+
   return binary;
 }
 
@@ -124,19 +133,27 @@ export function encodeDatabaseFilterState(state: CompactDatabaseFilterState): st
 
 export function decodeDatabaseFilterState(value: string | undefined): CompactDatabaseFilterState {
   if (!value) return {};
+
   const parsed = JSON.parse(binaryToUtf8(atob(value))) as unknown;
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Invalid database filter state.');
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+    throw new Error('Invalid database filter state.');
   return parsed as CompactDatabaseFilterState;
 }
 
 function finiteNumber(value: unknown): number | undefined {
-  if ((typeof value !== 'number' && typeof value !== 'string') || (typeof value === 'string' && !value.trim())) return undefined;
+  if (
+    (typeof value !== 'number' && typeof value !== 'string') ||
+    (typeof value === 'string' && !value.trim())
+  )
+    return undefined;
   const number = Number(value);
   return Number.isFinite(number) ? number : undefined;
 }
 
 function finiteNumbers(value: unknown): number[] {
-  return Array.isArray(value) ? value.map(finiteNumber).filter((item): item is number => item !== undefined) : [];
+  return Array.isArray(value)
+    ? value.map(finiteNumber).filter((item): item is number => item !== undefined)
+    : [];
 }
 
 function restoreFactors(value: unknown, maximumCap = 9): FactorRequirement[] {
@@ -146,14 +163,24 @@ function restoreFactors(value: unknown, maximumCap = 9): FactorRequirement[] {
     const factorId = finiteNumber(entry[0]);
     if (factorId === undefined || factorId < 0) return [];
     const minimumStars = Math.max(1, Math.min(maximumCap, finiteNumber(entry[1]) ?? 1));
-    const maximumStars = Math.max(minimumStars, Math.min(maximumCap, finiteNumber(entry[2]) ?? maximumCap));
+    const maximumStars = Math.max(
+      minimumStars,
+      Math.min(maximumCap, finiteNumber(entry[2]) ?? maximumCap)
+    );
+
     const requirement: FactorRequirement = { factorId, minimumStars, maximumStars };
+
     if (entry[3] === 1) requirement.operator = 'or';
     if (maximumCap === 3) return [requirement];
     const minimumOccurrences = finiteNumber(entry[4]);
     const maximumOccurrences = finiteNumber(entry[5]);
-    if (minimumOccurrences !== undefined) requirement.minimumOccurrences = Math.max(0, Math.min(3, Math.trunc(minimumOccurrences)));
-    if (maximumOccurrences !== undefined) requirement.maximumOccurrences = Math.max(requirement.minimumOccurrences ?? 0, Math.min(3, Math.trunc(maximumOccurrences)));
+    if (minimumOccurrences !== undefined)
+      requirement.minimumOccurrences = Math.max(0, Math.min(3, Math.trunc(minimumOccurrences)));
+    if (maximumOccurrences !== undefined)
+      requirement.maximumOccurrences = Math.max(
+        requirement.minimumOccurrences ?? 0,
+        Math.min(3, Math.trunc(maximumOccurrences))
+      );
     if (entry[6] === 1) requirement.metric = 'occurrences';
     return [requirement];
   });
@@ -164,7 +191,11 @@ function restorePriorityFactors(value: unknown): FactorRequirement[] {
   return value.flatMap((entry) => {
     const factorId = finiteNumber(Array.isArray(entry) ? entry[0] : entry);
     if (!factorId || factorId <= 0) return [];
-    const priority = Math.max(0, Math.floor(finiteNumber(Array.isArray(entry) ? entry[1] : 0) ?? 0));
+    const priority = Math.max(
+      0,
+      Math.floor(finiteNumber(Array.isArray(entry) ? entry[1] : 0) ?? 0)
+    );
+
     return [{ factorId, minimumStars: 1, maximumStars: 9, priority }];
   });
 }
@@ -178,40 +209,55 @@ function compactFactors(requirements: FactorRequirement[]): (number | null)[][] 
         Math.max(1, Math.trunc(requirement.minimumStars || 1)),
         Math.max(requirement.minimumStars || 1, Math.trunc(requirement.maximumStars ?? 9))
       ];
+
       if (requirement.operator === 'or') compact[3] = 1;
       if (requirement.minimumOccurrences !== undefined) compact[4] = requirement.minimumOccurrences;
       if (requirement.maximumOccurrences !== undefined) compact[5] = requirement.maximumOccurrences;
       if (requirement.metric === 'occurrences') compact[6] = 1;
       return compact;
     });
+
   return result.length ? result : undefined;
 }
 
-function compactPriorityFactors(requirements: FactorRequirement[]): PriorityFactorState[] | undefined {
+function compactPriorityFactors(
+  requirements: FactorRequirement[]
+): PriorityFactorState[] | undefined {
   const result = requirements
     .filter((requirement) => Number.isFinite(requirement.factorId) && requirement.factorId > 0)
     .map((requirement) => {
       const priority = Math.max(0, Math.floor(requirement.priority ?? 0));
-      return priority ? [Math.trunc(requirement.factorId), priority] as [number, number] : Math.trunc(requirement.factorId);
+      return priority
+        ? ([Math.trunc(requirement.factorId), priority] as [number, number])
+        : Math.trunc(requirement.factorId);
     });
+
   return result.length ? result : undefined;
 }
 
-function setOrDelete<T extends CompactDatabaseFilterState, K extends keyof T>(state: T, key: K, value: T[K] | undefined): void {
-  if (value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) delete state[key];
+function setOrDelete<T extends CompactDatabaseFilterState, K extends keyof T>(
+  state: T,
+  key: K,
+  value: T[K] | undefined
+): void {
+  if (value === undefined || value === '' || (Array.isArray(value) && value.length === 0))
+    delete state[key];
   else state[key] = value;
 }
 
-export function filtersFromCompactState(state: CompactDatabaseFilterState, mode: InheritanceFilterMode): InheritanceSearchFilters {
+export function filtersFromCompactState(
+  state: CompactDatabaseFilterState,
+  mode: InheritanceFilterMode
+): InheritanceSearchFilters {
   const filters = emptyInheritanceFilters();
   filters.blue = restoreFactors(state.b);
   filters.pink = restoreFactors(state.p);
   filters.green = restoreFactors(state.g);
-  filters.white = restoreFactors(state.w).filter(item => item.factorId > 0);
+  filters.white = restoreFactors(state.w).filter((item) => item.factorId > 0);
   filters.mainBlue = restoreFactors(state.mb, 3);
   filters.mainPink = restoreFactors(state.mp, 3);
   filters.mainGreen = restoreFactors(state.mg, 3);
-  filters.mainWhite = restoreFactors(state.mw, 3).filter(item => item.factorId > 0);
+  filters.mainWhite = restoreFactors(state.mw, 3).filter((item) => item.factorId > 0);
   filters.optionalWhite = restorePriorityFactors(state.ow);
   filters.optionalMainWhite = restorePriorityFactors(state.omw);
   filters.lineageWhite = restorePriorityFactors(state.lw);
@@ -224,7 +270,13 @@ export function filtersFromCompactState(state: CompactDatabaseFilterState, mode:
   filters.excludeMainParentIds = finiteNumbers(state.emp);
   const tree = Array.isArray(state.t) ? state.t.map(finiteNumber) : [];
   filters.playerCharaId = tree[0];
-  filters.mainParentIds = [...new Set([tree[1], ...filters.includeMainParentIds].filter((item): item is number => item !== undefined))];
+  filters.mainParentIds = [
+    ...new Set(
+      [tree[1], ...filters.includeMainParentIds].filter(
+        (item): item is number => item !== undefined
+      )
+    )
+  ];
   filters.parentLeftId = tree[2];
   filters.parentRightId = tree[3];
   filters.supportCardId = finiteNumber(state.sc);
@@ -252,45 +304,84 @@ export function filtersFromCompactState(state: CompactDatabaseFilterState, mode:
   filters.minMainRaceWhiteCount = finiteNumber(state.mrwc);
   filters.minMainRaceWhiteStarsSum = finiteNumber(state.mrws);
   filters.minMainWhiteCount = finiteNumber(state.mmwc);
-  filters.p2MainCharaId = !state.vet && typeof state.p2c === 'number' && Number.isSafeInteger(state.p2c) && state.p2c > 0 ? state.p2c : undefined;
-  filters.p2WinSaddle = state.vet ? [] : [...new Set(finiteNumbers(state.p2w).filter((id) => Number.isSafeInteger(id) && id > 0))];
+  filters.p2MainCharaId =
+    !state.vet && typeof state.p2c === 'number' && Number.isSafeInteger(state.p2c) && state.p2c > 0
+      ? state.p2c
+      : undefined;
+  filters.p2WinSaddle = state.vet
+    ? []
+    : [...new Set(finiteNumbers(state.p2w).filter((id) => Number.isSafeInteger(id) && id > 0))];
   filters.raceSchedule = Array.isArray(state.rs) ? state.rs : [];
   filters.uql = mode === 'uql' && typeof state.uql === 'string' ? state.uql : undefined;
   return filters;
 }
 
-export function compactStateFromFilters(filters: InheritanceSearchFilters, previous: CompactDatabaseFilterState = {}): CompactDatabaseFilterState {
+export function compactStateFromFilters(
+  filters: InheritanceSearchFilters,
+  previous: CompactDatabaseFilterState = {}
+): CompactDatabaseFilterState {
   const state: CompactDatabaseFilterState = { ...previous };
+
   setOrDelete(state, 'b', compactFactors(filters.blue));
   setOrDelete(state, 'p', compactFactors(filters.pink));
   setOrDelete(state, 'g', compactFactors(filters.green));
-  setOrDelete(state, 'w', compactFactors(filters.white.filter(item => item.factorId > 0)));
+  setOrDelete(state, 'w', compactFactors(filters.white.filter((item) => item.factorId > 0)));
   setOrDelete(state, 'mb', compactFactors(filters.mainBlue));
   setOrDelete(state, 'mp', compactFactors(filters.mainPink));
   setOrDelete(state, 'mg', compactFactors(filters.mainGreen));
-  setOrDelete(state, 'mw', compactFactors(filters.mainWhite.filter(item => item.factorId > 0)));
+  setOrDelete(state, 'mw', compactFactors(filters.mainWhite.filter((item) => item.factorId > 0)));
   setOrDelete(state, 'ow', compactPriorityFactors(filters.optionalWhite));
   setOrDelete(state, 'omw', compactPriorityFactors(filters.optionalMainWhite));
   setOrDelete(state, 'lw', compactPriorityFactors(filters.lineageWhite));
   setOrDelete(state, 'sid', filters.scenarioIds.length ? filters.scenarioIds : undefined);
-  setOrDelete(state, 'imp', filters.includeMainParentIds.length ? filters.includeMainParentIds : undefined);
+  setOrDelete(
+    state,
+    'imp',
+    filters.includeMainParentIds.length ? filters.includeMainParentIds : undefined
+  );
   setOrDelete(state, 'ip', filters.includeParentIds.length ? filters.includeParentIds : undefined);
   setOrDelete(state, 'ep', filters.excludeParentIds.length ? filters.excludeParentIds : undefined);
-  setOrDelete(state, 'emp', filters.excludeMainParentIds.length ? filters.excludeMainParentIds : undefined);
-  const previousTree = Array.isArray(previous.t) ? [...previous.t] : Array<number | null>(7).fill(null);
+  setOrDelete(
+    state,
+    'emp',
+    filters.excludeMainParentIds.length ? filters.excludeMainParentIds : undefined
+  );
+  const previousTree = Array.isArray(previous.t)
+    ? [...previous.t]
+    : Array<number | null>(7).fill(null);
+
   previousTree[0] = filters.playerCharaId ?? null;
-  previousTree[1] = filters.mainParentIds.find((id) => !filters.includeMainParentIds.includes(id)) ?? null;
+  previousTree[1] =
+    filters.mainParentIds.find((id) => !filters.includeMainParentIds.includes(id)) ?? null;
   previousTree[2] = filters.parentLeftId ?? null;
   previousTree[3] = filters.parentRightId ?? null;
   setOrDelete(state, 't', previousTree.some((value) => value != null) ? previousTree : undefined);
-  setOrDelete(state, 'sc', filters.supportCardId === undefined ? undefined : String(filters.supportCardId));
-  setOrDelete(state, 'lb', filters.minLimitBreak && filters.minLimitBreak > 0 ? filters.minLimitBreak : undefined);
+  setOrDelete(
+    state,
+    'sc',
+    filters.supportCardId === undefined ? undefined : String(filters.supportCardId)
+  );
+  setOrDelete(
+    state,
+    'lb',
+    filters.minLimitBreak && filters.minLimitBreak > 0 ? filters.minLimitBreak : undefined
+  );
   setOrDelete(state, 'uid', filters.trainerId?.trim() || undefined);
   setOrDelete(state, 'un', filters.trainerName?.trim() || undefined);
   setOrDelete(state, 'mwc', filters.minWinCount);
   setOrDelete(state, 'mwh', filters.minWhiteCount);
-  setOrDelete(state, 'pr', filters.minParentRank && filters.minParentRank !== 1 ? filters.minParentRank : undefined);
-  setOrDelete(state, 'mf', filters.maxFollowerNum !== undefined && filters.maxFollowerNum >= 1000 ? filters.maxFollowerNum : undefined);
+  setOrDelete(
+    state,
+    'pr',
+    filters.minParentRank && filters.minParentRank !== 1 ? filters.minParentRank : undefined
+  );
+  setOrDelete(
+    state,
+    'mf',
+    filters.maxFollowerNum !== undefined && filters.maxFollowerNum >= 1000
+      ? filters.maxFollowerNum
+      : undefined
+  );
   setOrDelete(state, 'bss', filters.minBlueStarsSum);
   setOrDelete(state, 'pss', filters.minPinkStarsSum);
   setOrDelete(state, 'gss', filters.minGreenStarsSum);
@@ -318,7 +409,10 @@ export function compactStateFromFilters(filters: InheritanceSearchFilters, previ
   return state;
 }
 
-function normalizedSavedState(value: unknown, modeFallback: InheritanceFilterMode): SavedDatabaseFilterState | null {
+function normalizedSavedState(
+  value: unknown,
+  modeFallback: InheritanceFilterMode
+): SavedDatabaseFilterState | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const candidate = value as Partial<SavedDatabaseFilterState>;
   if (candidate.version !== 2 || !isMode(candidate.mode)) return null;
@@ -336,16 +430,39 @@ export function readDatabasePreferences(storage: Storage): RestoredDatabasePrefe
   const storedMode = storage.getItem(DATABASE_FILTER_MODE_KEY);
   const parsedMode = isMode(storedMode) ? storedMode : undefined;
   let parsed: unknown = null;
-  try { parsed = JSON.parse(storage.getItem(DATABASE_FILTER_STATE_KEY) ?? 'null'); } catch { parsed = null; }
-  const candidateMode = parsed && typeof parsed === 'object' && isMode((parsed as { mode?: unknown }).mode) ? (parsed as { mode: InheritanceFilterMode }).mode : 'basic';
+  try {
+    parsed = JSON.parse(storage.getItem(DATABASE_FILTER_STATE_KEY) ?? 'null');
+  } catch {
+    parsed = null;
+  }
+
+  const candidateMode =
+    parsed && typeof parsed === 'object' && isMode((parsed as { mode?: unknown }).mode)
+      ? (parsed as { mode: InheritanceFilterMode }).mode
+      : 'basic';
+
   const mode = parsedMode ?? candidateMode;
   const saved = normalizedSavedState(parsed, mode);
   const encoded = mode === 'uql' ? saved?.uqlState : saved?.formState;
   let compact: CompactDatabaseFilterState = {};
-  try { compact = decodeDatabaseFilterState(encoded); } catch { compact = {}; }
+
+  try {
+    compact = decodeDatabaseFilterState(encoded);
+  } catch {
+    compact = {};
+  }
+
   let migrated = false;
-  if (saved?.defaultMlbFilterRemoved !== true && compact.lb === 4) { delete compact.lb; migrated = true; }
-  if (saved?.hiddenP2ContextRemoved !== true && ('p2c' in compact || 'p2w' in compact || 'p2i' in compact)) migrated = true;
+  if (saved?.defaultMlbFilterRemoved !== true && compact.lb === 4) {
+    delete compact.lb;
+    migrated = true;
+  }
+
+  if (
+    saved?.hiddenP2ContextRemoved !== true &&
+    ('p2c' in compact || 'p2w' in compact || 'p2i' in compact)
+  )
+    migrated = true;
   delete compact.p2c;
   delete compact.p2w;
   delete compact.p2i;
@@ -353,10 +470,12 @@ export function readDatabasePreferences(storage: Storage): RestoredDatabasePrefe
   if (saved && (migrated || !saved.defaultMlbFilterRemoved || !saved.hiddenP2ContextRemoved)) {
     const migratedState = encodeDatabaseFilterState(compact);
     restoredSaved = { ...saved, defaultMlbFilterRemoved: true, hiddenP2ContextRemoved: true };
+
     if (mode === 'uql') restoredSaved.uqlState = migratedState;
     else restoredSaved.formState = migratedState;
     storage.setItem(DATABASE_FILTER_STATE_KEY, JSON.stringify(restoredSaved));
   }
+
   return { mode, filters: filtersFromCompactState(compact, mode), compact, saved: restoredSaved };
 }
 
@@ -369,7 +488,10 @@ export function writeDatabasePreferences(
 ): { saved: SavedDatabaseFilterState; compact: CompactDatabaseFilterState } {
   const compact = compactStateFromFilters(filters, previousCompact);
   const preference = { ...compact };
-  delete preference.p2c; delete preference.p2w; delete preference.p2i;
+
+  delete preference.p2c;
+  delete preference.p2w;
+  delete preference.p2i;
   const encoded = encodeDatabaseFilterState(preference);
   const saved: SavedDatabaseFilterState = {
     version: 2,
@@ -379,10 +501,12 @@ export function writeDatabasePreferences(
     defaultMlbFilterRemoved: true,
     hiddenP2ContextRemoved: true
   };
+
   if (mode === 'uql') {
     saved.uqlState = encoded;
     if (!encoded) saved.formState = '';
   } else saved.formState = encoded;
+
   storage.setItem(DATABASE_FILTER_MODE_KEY, mode);
   storage.setItem(DATABASE_FILTER_STATE_KEY, JSON.stringify(saved));
   return { saved, compact };
@@ -392,45 +516,115 @@ export function readDatabasePresets(storage: Storage): SavedDatabaseFilterPreset
   try {
     const parsed = JSON.parse(storage.getItem(DATABASE_FILTER_PRESETS_KEY) ?? '[]') as unknown;
     return normalizePresetEntries(parsed);
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 function normalizePresetEntries(payload: unknown): SavedDatabaseFilterPreset[] {
-  const values = Array.isArray(payload) ? payload : payload && typeof payload === 'object' && Array.isArray((payload as { presets?: unknown }).presets) ? (payload as { presets: unknown[] }).presets : [];
-  return values.flatMap((value) => {
-    if (!value || typeof value !== 'object') return [];
-    const candidate = value as Partial<SavedDatabaseFilterPreset>;
-    if (candidate.version !== 1 || !candidate.name?.trim() || !isMode(candidate.mode) || typeof candidate.state !== 'string') return [];
-    try { if (candidate.state) decodeDatabaseFilterState(candidate.state); } catch { return []; }
-    const createdAt = Number.isFinite(candidate.createdAt) ? candidate.createdAt! : Date.now();
-    return [{ version: 1, id: candidate.id?.trim() || `${createdAt}-${candidate.name.trim().toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-')}`, name: candidate.name.trim(), mode: candidate.mode, state: candidate.state, createdAt, updatedAt: Number.isFinite(candidate.updatedAt) ? candidate.updatedAt! : createdAt } satisfies SavedDatabaseFilterPreset];
-  }).sort((left, right) => right.updatedAt - left.updatedAt || left.name.localeCompare(right.name));
+  const values = Array.isArray(payload)
+    ? payload
+    : payload &&
+        typeof payload === 'object' &&
+        Array.isArray((payload as { presets?: unknown }).presets)
+      ? (payload as { presets: unknown[] }).presets
+      : [];
+
+  return values
+    .flatMap((value) => {
+      if (!value || typeof value !== 'object') return [];
+      const candidate = value as Partial<SavedDatabaseFilterPreset>;
+      if (
+        candidate.version !== 1 ||
+        !candidate.name?.trim() ||
+        !isMode(candidate.mode) ||
+        typeof candidate.state !== 'string'
+      )
+        return [];
+      try {
+        if (candidate.state) decodeDatabaseFilterState(candidate.state);
+      } catch {
+        return [];
+      }
+
+      const createdAt = Number.isFinite(candidate.createdAt) ? candidate.createdAt! : Date.now();
+      return [
+        {
+          version: 1,
+          id:
+            candidate.id?.trim() ||
+            `${createdAt}-${candidate.name
+              .trim()
+              .toLocaleLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')}`,
+          name: candidate.name.trim(),
+          mode: candidate.mode,
+          state: candidate.state,
+          createdAt,
+          updatedAt: Number.isFinite(candidate.updatedAt) ? candidate.updatedAt! : createdAt
+        } satisfies SavedDatabaseFilterPreset
+      ];
+    })
+    .sort((left, right) => right.updatedAt - left.updatedAt || left.name.localeCompare(right.name));
 }
 
-export function exportDatabasePresets(presets: SavedDatabaseFilterPreset[], exportedAt = new Date().toISOString()): string {
-  return btoa(utf8ToBinary(JSON.stringify({ type: 'uma.moe.database-filter-presets', version: 1, exportedAt, presets })));
+export function exportDatabasePresets(
+  presets: SavedDatabaseFilterPreset[],
+  exportedAt = new Date().toISOString()
+): string {
+  return btoa(
+    utf8ToBinary(
+      JSON.stringify({ type: 'uma.moe.database-filter-presets', version: 1, exportedAt, presets })
+    )
+  );
 }
 
-export function importDatabasePresets(transferText: string, existing: SavedDatabaseFilterPreset[], now = Date.now()): { presets: SavedDatabaseFilterPreset[]; importedCount: number } {
+export function importDatabasePresets(
+  transferText: string,
+  existing: SavedDatabaseFilterPreset[],
+  now = Date.now()
+): { presets: SavedDatabaseFilterPreset[]; importedCount: number } {
   const payload = JSON.parse(binaryToUtf8(atob(transferText))) as unknown;
-  if (!payload || typeof payload !== 'object' || (payload as { type?: unknown }).type !== 'uma.moe.database-filter-presets' || (payload as { version?: unknown }).version !== 1) throw new Error('Invalid database preset export.');
+  if (
+    !payload ||
+    typeof payload !== 'object' ||
+    (payload as { type?: unknown }).type !== 'uma.moe.database-filter-presets' ||
+    (payload as { version?: unknown }).version !== 1
+  )
+    throw new Error('Invalid database preset export.');
   const imported = normalizePresetEntries(payload);
   if (!imported.length) return { presets: [...existing], importedCount: 0 };
+
   const presets = [...existing];
   const usedIds = new Set(presets.map((preset) => preset.id));
   let importedCount = 0;
   for (const preset of imported) {
-    const existingIndex = presets.findIndex((entry) => entry.name.toLocaleLowerCase() === preset.name.toLocaleLowerCase());
+    const existingIndex = presets.findIndex(
+      (entry) => entry.name.toLocaleLowerCase() === preset.name.toLocaleLowerCase()
+    );
+
     if (existingIndex >= 0) {
       const current = presets[existingIndex]!;
-      presets[existingIndex] = { ...preset, id: current.id, createdAt: current.createdAt, updatedAt: now + importedCount++ };
+      presets[existingIndex] = {
+        ...preset,
+        id: current.id,
+        createdAt: current.createdAt,
+        updatedAt: now + importedCount++
+      };
+
       continue;
     }
-    let id = preset.id; let collision = 0;
+
+    let id = preset.id;
+    let collision = 0;
     while (usedIds.has(id)) id = `${preset.id}-${++collision}`;
-    usedIds.add(id); presets.push({ ...preset, id, updatedAt: now + importedCount++ });
+    usedIds.add(id);
+    presets.push({ ...preset, id, updatedAt: now + importedCount++ });
   }
-  presets.sort((left, right) => right.updatedAt - left.updatedAt || left.name.localeCompare(right.name));
+
+  presets.sort(
+    (left, right) => right.updatedAt - left.updatedAt || left.name.localeCompare(right.name)
+  );
   return { presets, importedCount };
 }
 
@@ -439,6 +633,28 @@ export function writeDatabasePresets(storage: Storage, presets: SavedDatabaseFil
 }
 
 export function databasePresetFilterCount(preset: SavedDatabaseFilterPreset): number {
-  try { return activeInheritanceFilterCount(filtersFromCompactState(decodeDatabaseFilterState(preset.state), preset.mode)); }
-  catch { return 0; }
+  try {
+    return activeInheritanceFilterCount(
+      filtersFromCompactState(decodeDatabaseFilterState(preset.state), preset.mode)
+    );
+  } catch {
+    return 0;
+  }
+}
+
+export function sparkOrderValue(value: string | null): SparkOrder {
+  return SPARK_ORDER_OPTIONS.find((option) => option.value === value)?.value ?? 'main';
+}
+
+export function readHiddenSparkFactorIds(storage: Storage): number[] {
+  try {
+    const storedHidden = JSON.parse(storage.getItem(DATABASE_HIDDEN_SPARKS_KEY) ?? '[]') as unknown;
+    return Array.isArray(storedHidden)
+      ? [...new Set(storedHidden.map(Number).filter((id) => Number.isFinite(id) && id > 0))].sort(
+          (left, right) => left - right
+        )
+      : [];
+  } catch {
+    return [];
+  }
 }

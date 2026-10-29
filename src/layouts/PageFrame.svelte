@@ -38,18 +38,33 @@
   }: Props = $props();
 
   const resolvedContentId = $derived(contentId ?? `${routeId}-content`);
-  const hasAdRails = $derived(Boolean(adsEnabled && leftAd && rightAd));
+  const hasAdRails = $derived(Boolean(adsEnabled && rightAd));
+
   $effect(() => {
     const path = router.route.pathname;
     pageTitle;
     let active = true;
     // Lazy pages can write their head tags after the router has finished loading.
-    void tick().then(() => import('@/services/seo')).then(module => { if (active) module.applyRouteMetadata(path); }).catch(() => {});
-    return () => { active = false; };
+    void tick()
+      .then(() => import('@/services/site/seo'))
+      .then((module) => {
+        if (active) module.applyRouteMetadata(path);
+      })
+      .catch((error: unknown) => {
+        if (active) console.warn('Page metadata could not be updated.', error);
+      });
+
+    return () => {
+      active = false;
+    };
   });
 </script>
 
-<div class="page-boundary" class:fill data-page-frame>
+<div
+  class="page-boundary"
+  class:fill
+  data-page-frame
+>
   <article
     class="page-grid"
     class:has-ad-rails={hasAdRails}
@@ -58,23 +73,58 @@
     data-feature-id={featureId}
     data-page-layout="ad-aware"
     data-page-width={width}
-    class:page-grid--wide={width === 'wide'}
+    class:page-grid--wide={width === 'wide' || width === 'xl'}
+    class:page-grid--xl={width === 'xl'}
     class:page-grid--full-bleed={fullBleed}
   >
-    <section class="page-content" id={resolvedContentId} data-page-content>
-      {#if navigation}<nav aria-label="{pageTitle} navigation" data-page-navigation>{@render navigation()}</nav>{/if}
-      {#if header}<header data-page-header>{@render header()}</header>{/if}
-      <div class="page-body" data-page-body>{@render children()}</div>
+    <section
+      class="page-content"
+      id={resolvedContentId}
+      data-page-content
+    >
+      {#if navigation}
+        <nav
+          aria-label="{pageTitle} navigation"
+          data-page-navigation
+        >
+          {@render navigation()}
+        </nav>
+      {/if}
+      {#if header}
+        <header data-page-header>{@render header()}</header>
+      {/if}
+      <div
+        class="page-body"
+        data-page-body
+      >
+        {@render children()}
+      </div>
     </section>
-    {#if hasAdRails && leftAd && rightAd}
-      <div class="ad-rail ad-rail--left" data-ad-position="left-rail">{@render leftAd()}</div>
-      <div class="ad-rail ad-rail--right" data-ad-position="right-rail">{@render rightAd()}</div>
+    {#if hasAdRails && rightAd}
+      {#if leftAd}
+        <div
+          class="ad-rail ad-rail--left"
+          data-ad-position="left-rail"
+        >
+          {@render leftAd()}
+        </div>
+      {/if}
+      <div
+        class="ad-rail ad-rail--right"
+        data-ad-position="right-rail"
+      >
+        {@render rightAd()}
+      </div>
     {/if}
   </article>
 </div>
 
 <style>
-  .page-boundary { width: 100%; min-width: 0; container: page-frame / inline-size; }
+  .page-boundary {
+    width: 100%;
+    min-width: 0;
+    container: page-frame / inline-size;
+  }
   .page-grid {
     --page-gutter-current: var(--page-gutter-mobile);
     --page-content-current: var(--page-content-normal);
@@ -88,54 +138,128 @@
     margin-inline: auto;
     padding-inline: var(--page-gutter-current);
   }
-  .page-grid--wide { --page-content-current: var(--page-content-wide); --page-frame-current: var(--page-frame-wide); }
-  .page-grid--full-bleed { --page-content-current: 100%; --page-frame-current: 100%; padding-inline: 0; }
-  .page-content { width: min(100%, var(--page-content-current)); min-width: 0; grid-area: content; justify-self: center; }
-  .page-content > nav { margin-bottom: var(--space-3); }
-  .page-content > header { margin-bottom: var(--space-5); }
-  .page-body { min-width: 0; }
-  .fill, .fill .page-content, .fill .page-body { display: flex; flex-direction: column; min-height: 0; }
-  .fill .page-grid, .fill .page-body { flex: 1 1 0px; }
-  .fill .page-grid { grid-template-rows: minmax(0, 1fr); min-height: 0; }
+  .page-grid--wide {
+    --page-content-current: var(--page-content-wide);
+    --page-frame-current: var(--page-frame-wide);
+  }
+  .page-grid--xl {
+    --page-content-current: var(--page-content-xl);
+    --page-frame-current: var(--page-frame-xl);
+  }
+  .page-grid--full-bleed {
+    --page-content-current: 100%;
+    --page-frame-current: 100%;
+    padding-inline: 0;
+  }
+  .page-content {
+    width: min(100%, var(--page-content-current));
+    min-width: 0;
+    grid-area: content;
+    justify-self: center;
+  }
+  .page-content > nav {
+    margin-bottom: var(--space-3);
+  }
+  .page-content > header {
+    margin-bottom: var(--space-5);
+  }
+  .page-body {
+    min-width: 0;
+  }
+  .fill,
+  .fill .page-content,
+  .fill .page-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .fill .page-grid,
+  .fill .page-body {
+    flex: 1 1 0px;
+  }
+  .fill .page-grid {
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+  }
   .ad-rail {
     display: none;
     align-self: start;
     position: sticky;
     top: max(
       calc(var(--page-viewport-top, 0px) + var(--utility-height) + var(--space-4)),
-      calc(var(--page-viewport-top, 0px) + (var(--page-viewport-height, 100dvh) - var(--ad-rail-height)) / 2)
+      calc(
+        var(--page-viewport-top, 0px) +
+          (var(--page-viewport-height, 100dvh) - var(--ad-rail-height)) / 2
+      )
     );
   }
-  .ad-rail--left { grid-area: left-ad; }
-  .ad-rail--right { grid-area: right-ad; }
+  .ad-rail--left {
+    grid-area: left-ad;
+  }
+  .ad-rail--right {
+    grid-area: right-ad;
+  }
 
   @container app-viewport (min-width: 768px) {
-    .page-grid { --page-gutter-current: var(--page-gutter-compact); }
-    .page-grid--wide { padding-inline: 0; }
+    .page-grid {
+      --page-gutter-current: var(--page-gutter-compact);
+    }
+    .page-grid--wide {
+      padding-inline: 0;
+    }
   }
 
   @container app-viewport (min-width: 1800px) {
-    .page-grid { --page-gutter-current: var(--page-gutter-expanded); }
+    .page-grid {
+      --page-gutter-current: var(--page-gutter-expanded);
+    }
   }
 
   /* Publisher targeting uses viewport width, including the browser scrollbar. */
   @media (min-width: 1700px) {
-    .page-grid.has-ad-rails { grid-template-columns: minmax(0, 1fr) var(--ad-rail-width); grid-template-areas: 'content right-ad'; }
-    .page-grid.has-ad-rails .ad-rail--right { display: block; }
+    .page-grid.has-ad-rails {
+      grid-template-columns: minmax(0, 1fr) var(--ad-rail-width);
+      grid-template-areas: 'content right-ad';
+    }
+    .page-grid.has-ad-rails .ad-rail--right {
+      display: block;
+    }
   }
 
   /* At the 1080p scale, one 240px counter-rail balances the 240px navigation rail. */
   @container app-viewport (min-width: 1800px) and (max-width: 2199px) {
-    .page-grid.has-ad-rails { grid-template-columns: minmax(0, 1fr) var(--rail-expanded); grid-template-areas: 'content right-ad'; gap: 0; }
-    .page-grid.has-ad-rails .ad-rail--right { display: block; }
+    .page-grid.has-ad-rails {
+      grid-template-columns: minmax(0, 1fr) var(--rail-expanded);
+      grid-template-areas: 'content right-ad';
+      gap: 0;
+    }
+    .page-grid.has-ad-rails .ad-rail--right {
+      display: block;
+    }
   }
 
   /* The larger 2560-class scale has room for a balanced pair of Publift rails. */
   @media (min-width: 2200px) {
-    .page-grid.has-ad-rails { grid-template-columns: var(--ad-rail-width) minmax(960px, 1fr) var(--ad-rail-width); grid-template-areas: 'left-ad content right-ad'; gap: var(--ad-rail-gap); }
+    .page-grid.has-ad-rails {
+      grid-template-columns: var(--ad-rail-width) minmax(960px, 1fr) var(--ad-rail-width);
+      grid-template-areas: 'left-ad content right-ad';
+      gap: var(--ad-rail-gap);
+    }
     /* A publisher without a left slot must not reserve an empty rail column. */
-    .page-grid.has-ad-rails:not(:has(.ad-rail--left > :global(.ad-region))) { grid-template-columns: minmax(0, 1fr) var(--ad-rail-width); grid-template-areas: 'content right-ad'; }
+    .page-grid.has-ad-rails:not(:has(.ad-rail--left > :global(.ad-region))) {
+      grid-template-columns: minmax(0, 1fr) var(--ad-rail-width);
+      grid-template-areas: 'content right-ad';
+    }
     .page-grid.has-ad-rails .ad-rail--left:has(> :global(.ad-region)),
-    .page-grid.has-ad-rails .ad-rail--right { display: block; }
+    .page-grid.has-ad-rails .ad-rail--right {
+      display: block;
+    }
+  }
+
+  @media (min-width: 1700px) {
+    .page-grid.has-ad-rails:not(:has(.ad-rail--left)) {
+      grid-template-columns: minmax(0, 1fr) var(--ad-rail-width);
+      gap: var(--space-3);
+    }
   }
 </style>

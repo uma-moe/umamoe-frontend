@@ -1,0 +1,38 @@
+/* The team card CM Data uses, with this session's own-team mark and trainer. */
+@import '../../runners/team-card.css';
+
+.team-rate.few strong {
+  color: var(--text-secondary);
+}
+.team-results dl {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.trainer {
+  min-width: 0;
+}
+.trainer dd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.own-team {
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+  color: var(--accent-primary);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.team-row.own {
+  border-color: rgb(var(--accent-primary-rgb) / 0.45);
+}
+.own .team-number {
+  color: var(--accent-primary);
+}

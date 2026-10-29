@@ -1,0 +1,151 @@
+.archetype-workspace {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.browse-tools {
+  display: grid;
+  grid-template-columns: minmax(420px, 0.9fr) minmax(0, 1.4fr);
+  gap: 12px;
+  min-width: 0;
+}
+.team-browser {
+  min-width: 0;
+}
+.browser-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+.browser-heading h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+.browser-heading p {
+  margin: 4px 0 0;
+  font-size: 11px;
+}
+.browser-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  min-width: 0;
+}
+.browser-toolbar > :global(.field) {
+  margin-left: auto;
+  width: 160px;
+}
+.browser-toolbar :global(.checkbox) {
+  min-height: 30px;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) 16px;
+}
+.browser-toolbar :global(.checkbox .copy) {
+  grid-column: 1;
+  grid-row: 1;
+}
+.browser-toolbar :global(.box) {
+  grid-column: 2;
+  grid-row: 1;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+.browser-toolbar :global(.checkbox strong) {
+  font-size: 11px;
+  font-weight: 500;
+}
+.ranking-help {
+  font-size: 11px;
+  margin: 8px 0 10px;
+  line-height: 1.5;
+}
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+.teams-loading {
+  min-height: clamp(360px, 65dvh, 720px);
+  display: grid;
+  place-items: center;
+}
+.loaded-count {
+  font-size: 11px;
+  margin: 12px 0 0;
+}
+.browser-controls {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.browser-controls .browser-heading {
+  margin: 0;
+  flex: 1;
+}
+.browser-controls .browser-toolbar {
+  border: 0;
+  padding: 0;
+  flex: none;
+}
+.browser-controls .browser-toolbar > :global(.ui-button) {
+  min-height: 32px;
+  font-size: 12px;
+}
+.team-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 1000px) {
+  .browser-controls {
+    align-items: start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .browser-controls .browser-toolbar {
+    width: 100%;
+  }
+}
+@media (max-width: 1280px) {
+  .team-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr));
+  }
+}
+@media (max-width: 1050px) {
+  .browse-tools {
+    grid-template-columns: 1fr;
+  }
+  .browser-toolbar {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 760px) {
+  .team-grid {
+    grid-template-columns: 1fr;
+  }
+  .browser-heading h2 {
+    font-size: 18px;
+  }
+  .browser-toolbar {
+    gap: 8px;
+  }
+  .browser-toolbar > :global(.segments) {
+    order: 0;
+  }
+  .browser-toolbar > :global(.field) {
+    order: 2;
+    width: 100%;
+    margin: 0;
+  }
+  .browser-toolbar > :global(.checkbox) {
+    flex: none;
+  }
+}

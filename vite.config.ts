@@ -4,6 +4,7 @@ import legacy from '@vitejs/plugin-legacy';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 import { demoData } from './scripts/demo-data';
+import { companionStylesheetReload } from './scripts/companion-stylesheet-reload';
 import { seoPagesPlugin } from './scripts/seo-pages';
 import { environment as production } from './src/config/environment.prod';
 import { environment as beta } from './src/config/environment.beta';
@@ -14,48 +15,90 @@ export default defineConfig(async ({ mode, command }) => {
   // Keep the existing CI-injected public provider IDs during the framework migration.
   const environment = mode === 'production' ? production : beta;
   const variables = loadEnv(mode, rootDirectory, 'VITE_');
-  const uploadSourceMaps = Boolean(process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG) && ['production', 'beta'].includes(mode);
+  const uploadSourceMaps =
+    Boolean(process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG) &&
+    ['production', 'beta'].includes(mode);
+
   if (command === 'build' && ['production', 'beta'].includes(mode) && !uploadSourceMaps) {
-    console.warn('Sentry build credentials are unset: source-map upload is disabled for this build.');
+    console.warn(
+      'Sentry build credentials are unset: source-map upload is disabled for this build.'
+    );
   }
+
+  // Keep the local simulator credential in the dev proxy, outside browser assets.
+  const simulatorApiKey =
+    command === 'serve' && mode === 'development'
+      ? loadEnv(mode, rootDirectory, 'SIMULATOR_').SIMULATOR_API_KEY?.trim()
+      : undefined;
+
   return {
     root: rootDirectory,
+    cacheDir: `${rootDirectory}node_modules/.vite-${mode}`,
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
-    plugins: [{
-      name: 'svelte-runtime-error-details',
-      enforce: 'pre',
-      transform(code, id) {
-        if (!/\/svelte\/src\/internal\/(client|shared)\/errors\.js$/.test(id.replaceAll('\\', '/'))) return;
-        // Retain parameterized error messages without enabling Svelte's dev runtime.
-        const devImport = "import { DEV } from 'esm-env';";
-        if (!code.includes(devImport)) this.error('Svelte runtime error format changed; update the diagnostic transform.');
-        return { code: code.replace(devImport, 'const DEV = true;'), map: null };
-      }
-    }, legacy({
-      // Last Windows 7 browser generations, plus the existing Safari baseline.
-      modernTargets: ['Chrome >= 109', 'Edge >= 109', 'Firefox >= 115', 'Safari >= 16.4', 'iOS >= 16.4'],
-      modernPolyfills: true,
-      renderLegacyChunks: false
-    }), svelte(), seoPagesPlugin(), ...(mode === 'demo' ? [await demoData()] : []), sentryVitePlugin({
-      org: process.env.SENTRY_ORG,
-      project: 'umamoe-frontend',
-      authToken: process.env.SENTRY_AUTH_TOKEN,
-      telemetry: false,
-      applicationKey: 'umamoe-frontend',
-      errorHandler: error => { throw error; },
-      release: { name: process.env.APP_BUILD_VERSION, inject: false, create: uploadSourceMaps, finalize: uploadSourceMaps },
-      sourcemaps: { disable: !uploadSourceMaps, filesToDeleteAfterUpload: ['./dist/**/*.map'] },
-    })],
+    plugins: [
+      {
+        name: 'svelte-runtime-error-details',
+        enforce: 'pre',
+        transform(code, id) {
+          if (
+            !/\/svelte\/src\/internal\/(client|shared)\/errors\.js$/.test(id.replaceAll('\\', '/'))
+          )
+            return;
+          // Retain parameterized error messages without enabling Svelte's dev runtime.
+          const devImport = "import { DEV } from 'esm-env';";
+          if (!code.includes(devImport))
+            this.error('Svelte runtime error format changed; update the diagnostic transform.');
+          return { code: code.replace(devImport, 'const DEV = true;'), map: null };
+        }
+      },
+      legacy({
+        // Last Windows 7 browser generations, plus the existing Safari baseline.
+        modernTargets: [
+          'Chrome >= 109',
+          'Edge >= 109',
+          'Firefox >= 115',
+          'Safari >= 16.4',
+          'iOS >= 16.4'
+        ],
+        modernPolyfills: true,
+        renderLegacyChunks: false
+      }),
+      svelte({
+        // Windows dev requests can lose virtual CSS metadata; keep each component's styles with its JS.
+        emitCss: !(command === 'serve' && process.platform === 'win32')
+      }),
+      companionStylesheetReload(),
+      seoPagesPlugin(),
+      ...(mode === 'demo' ? [await demoData()] : []),
+      sentryVitePlugin({
+        org: process.env.SENTRY_ORG,
+        project: 'umamoe-frontend',
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        telemetry: false,
+        applicationKey: 'umamoe-frontend',
+        errorHandler: (error) => {
+          throw error;
+        },
+        release: {
+          name: process.env.APP_BUILD_VERSION,
+          inject: false,
+          create: uploadSourceMaps,
+          finalize: uploadSourceMaps
+        },
+        sourcemaps: { disable: !uploadSourceMaps, filesToDeleteAfterUpload: ['./dist/**/*.map'] }
+      })
+    ],
     optimizeDeps: {
       noDiscovery: true,
-      include: ['exceljs'],
+      include: ['exceljs', 'sql.js'],
       exclude: ['svelte', 'svelte/store', 'sv-router']
     },
     define: {
       __APP_ENVIRONMENT__: JSON.stringify(mode),
       __APP_CONFIG__: JSON.stringify({
         siteKey: variables.VITE_TURNSTILE_SITE_KEY ?? environment.turnstile.siteKey,
-        measurementId: variables.VITE_GOOGLE_ANALYTICS_ID ?? environment.googleAnalytics.measurementId,
+        measurementId:
+          variables.VITE_GOOGLE_ANALYTICS_ID ?? environment.googleAnalytics.measurementId,
         providersEnabled: mode === 'production' || mode === 'beta',
         fuseSlots: environment.fuse.slots,
         statusApiUrl: environment.statusApiUrl
@@ -81,11 +124,29 @@ export default defineConfig(async ({ mode, command }) => {
         allow: [rootDirectory]
       },
       proxy: {
-        '/api': 'http://127.0.0.1:3001',
-        '/search': 'http://127.0.0.1:3002',
-        '/ingest': 'http://127.0.0.1:3003',
-        '/resources': 'http://127.0.0.1:3004',
-        '/assets/data': { target: 'https://uma.moe', changeOrigin: true }
+        // VITE_SIMULATOR_TARGET talks to a simulator directly, without a backend in front: it serves /sim/...
+        '/api/sim': variables.VITE_SIMULATOR_TARGET
+          ? {
+              target: variables.VITE_SIMULATOR_TARGET,
+              changeOrigin: true,
+              rewrite: (path: string) => path.replace(/^\/api/, '')
+            }
+          : {
+              target: variables.VITE_SIM_PROXY_TARGET ?? 'http://127.0.0.1:3001',
+              changeOrigin: true,
+              ...(simulatorApiKey ? { headers: { 'X-API-Key': simulatorApiKey } } : {})
+            },
+        '/api': variables.VITE_API_PROXY_TARGET ?? 'http://127.0.0.1:3001',
+        '/search': variables.VITE_SEARCH_PROXY_TARGET ?? 'http://127.0.0.1:3002',
+        '/ingest': variables.VITE_INGEST_PROXY_TARGET ?? 'http://127.0.0.1:3003',
+        '/resources': {
+          target: variables.VITE_RESOURCE_PROXY_TARGET ?? 'http://127.0.0.1:3004',
+          changeOrigin: true
+        },
+        '/assets/data': { target: 'https://uma.moe', changeOrigin: true },
+        // Skill art lives in the separately deployed /assets bundle, so it has no
+        // local copy to serve. Dev-only; production loads it from its own origin.
+        '/assets/images/skills': { target: 'https://uma.moe', changeOrigin: true }
       }
     },
     test: {

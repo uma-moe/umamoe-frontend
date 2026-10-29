@@ -5,12 +5,23 @@ afterEach(() => vi.unstubAllGlobals());
 
 it('waits for visibility, disconnects before loading, and cleans up on removal', () => {
   let notify: (entries: Partial<IntersectionObserverEntry>[]) => void = () => {};
-  const observe = vi.fn(), disconnect = vi.fn(), load = vi.fn();
-  vi.stubGlobal('IntersectionObserver', class {
-    constructor(callback: typeof notify) { notify = callback; }
-    observe = observe;
-    disconnect = disconnect;
-  });
+
+  const observe = vi.fn(),
+    disconnect = vi.fn(),
+    load = vi.fn();
+
+  vi.stubGlobal(
+    'IntersectionObserver',
+    class {
+      constructor(callback: typeof notify) {
+        notify = callback;
+      }
+
+      observe = observe;
+      disconnect = disconnect;
+    }
+  );
+
   const node = document.createElement('div');
   const action = loadWhenVisible(node, load);
   expect(observe).toHaveBeenCalledWith(node);

@@ -73,12 +73,6 @@
     "priority": 0.8,
     "changeFrequency": "daily"
   },
-  "/tierlist": {
-    "title": "Uma Musume Support Card Tier List | uma.moe",
-    "description": "Compare Uma Musume support cards with a data-driven Global tier list, limit-break controls, type rankings, and performance details.",
-    "priority": 0.8,
-    "changeFrequency": "weekly"
-  },
   "/rankings": {
     "title": "Uma Musume Global Trainer Rankings | uma.moe",
     "description": "Search and compare Uma Musume Global trainer rankings, monthly fan totals, all-time performance, and recent fan gains.",
@@ -102,6 +96,47 @@
     "description": "Read the uma.moe privacy policy and learn how the Uma Musume resource hub handles accounts, analytics, cookies, and personal data.",
     "priority": 0.2,
     "changeFrequency": "yearly"
+  },
+  "/competitive": {
+    "title": "Uma Musume Race Analysis & Competitive Data | uma.moe",
+    "description": "Explore Uma Musume Global race replays, Champions Meeting data, and competitive racing tools.",
+    "priority": 0.8,
+    "changeFrequency": "weekly"
+  },
+  "/competitive/race-analysis": {
+    "title": "Uma Musume Race Replay & Analysis | uma.moe",
+    "description": "Upload Uma Musume races to inspect runner speed, HP, positioning, skill activations, and race mechanics in an interactive replay.",
+    "priority": 0.8,
+    "changeFrequency": "weekly"
+  },
+  "/competitive/cm-data": {
+    "title": "Uma Musume Champions Meeting Data | uma.moe",
+    "description": "Compare captured Uma Musume Global Champions Meeting races, runner builds, skills, and simulation results.",
+    "priority": 0.8,
+    "changeFrequency": "daily"
+  },
+  "/tools/master-data": {
+    "title": "Uma Musume Master Data Browser | uma.moe",
+    "description": "Browse Uma Musume game tables and run SQLite queries locally to investigate characters, skills, races, and other game data.",
+    "priority": 0.6,
+    "changeFrequency": "weekly"
+  },
+  "/tools/skill-explorer": {
+    "title": "Uma Musume Skill Explorer | uma.moe",
+    "description": "See what every Uma Musume skill is worth and where it procs on every course, by running style, surface and length.",
+    "priority": 0.6,
+    "changeFrequency": "weekly"
+  },
+  "/simulator/skills": {
+    "title": "Uma Musume Build Optimizer | uma.moe",
+    "description": "Compare Uma Musume skill purchases and find a build for your skill-point budget, course, and running style.",
+    "index": false
+  },
+  "/research": {
+    "title": "Uma Musume Racing Research & Mechanics | uma.moe",
+    "description": "Read Hakuraku research notes on Uma Musume racing, skills, simulation, and game mechanics.",
+    "priority": 0.7,
+    "changeFrequency": "weekly"
   },
   "/login": {
     "title": "Sign in | uma.moe",

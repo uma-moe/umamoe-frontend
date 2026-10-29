@@ -1,6 +1,11 @@
 import { clientConnection, clientLastEnvelope, clientLastEvent } from './client-state';
 import type { ClientEnvelope } from './generated/client-envelope';
-import type { ClientConnectionDescriptor, ClientConnectionState, ClientTransport, ClientTransportStatus } from './client-types';
+import type {
+  ClientConnectionDescriptor,
+  ClientConnectionState,
+  ClientTransport,
+  ClientTransportStatus
+} from './client-types';
 import { LoopbackWebSocketTransport } from './websocket-transport';
 
 interface ClientBridgeOptions {
@@ -16,7 +21,10 @@ export class ClientBridge {
   readonly #autoReconnect: boolean;
   readonly #retryDelayMs: number;
 
-  constructor(private readonly transport: ClientTransport, options: ClientBridgeOptions = {}) {
+  constructor(
+    private readonly transport: ClientTransport,
+    options: ClientBridgeOptions = {}
+  ) {
     this.#autoReconnect = options.autoReconnect ?? true;
     this.#retryDelayMs = options.retryDelayMs ?? 1200;
     transport.subscribe((envelope) => this.#receive(envelope));
@@ -30,13 +38,17 @@ export class ClientBridge {
     this.#manualDisconnect = false;
     this.#clearReconnect();
     clientConnection.set('pairing');
-    this.#connecting = this.transport.connect(descriptor)
+    this.#connecting = this.transport
+      .connect(descriptor)
       .then(() => clientConnection.set('connected'))
       .catch((reason: unknown) => {
         clientConnection.set(connectionFailureState(reason));
         throw reason;
       })
-      .finally(() => { this.#connecting = null; });
+      .finally(() => {
+        this.#connecting = null;
+      });
+
     return this.#connecting;
   }
 
@@ -57,14 +69,27 @@ export class ClientBridge {
   #receive(envelope: ClientEnvelope): void {
     clientLastEnvelope.set(envelope);
     clientLastEvent.set(envelope.timestamp);
-    if (envelope.type === 'error' && envelope.payload.code === 'PROTOCOL_VERSION') clientConnection.set('version-incompatible');
+    if (envelope.type === 'error' && envelope.payload.code === 'PROTOCOL_VERSION')
+      clientConnection.set('version-incompatible');
   }
 
   #transportStatus(status: ClientTransportStatus): void {
-    if (status === 'open') { clientConnection.set('connected'); return; }
+    if (status === 'open') {
+      clientConnection.set('connected');
+      return;
+    }
+
     if (status !== 'closed' || this.#manualDisconnect) return;
-    if (!this.#descriptor || Date.parse(this.#descriptor.expiresAt) <= Date.now()) { clientConnection.set('detected'); return; }
-    if (!this.#autoReconnect) { clientConnection.set('reconnecting'); return; }
+    if (!this.#descriptor || Date.parse(this.#descriptor.expiresAt) <= Date.now()) {
+      clientConnection.set('detected');
+      return;
+    }
+
+    if (!this.#autoReconnect) {
+      clientConnection.set('reconnecting');
+      return;
+    }
+
     clientConnection.set('reconnecting');
     this.#clearReconnect();
     this.#reconnectTimer = setTimeout(() => {
@@ -82,16 +107,28 @@ export class ClientBridge {
 
 export function validateDescriptor(descriptor: ClientConnectionDescriptor): void {
   const endpoint = new URL(descriptor.endpoint);
-  if (!['ws:', 'wss:'].includes(endpoint.protocol)) throw new Error('Pairing endpoint must use WebSocket transport.');
-  if (!['127.0.0.1', '[::1]', 'localhost'].includes(endpoint.hostname)) throw new Error('Pairing endpoint must stay on this device.');
-  if (!descriptor.token.trim()) throw new Error('Enter the short-lived pairing code shown by the client.');
-  if (!Number.isFinite(Date.parse(descriptor.expiresAt)) || Date.parse(descriptor.expiresAt) <= Date.now()) throw new Error('Pairing code has expired. Request a new code from the client.');
+  if (!['ws:', 'wss:'].includes(endpoint.protocol))
+    throw new Error('Pairing endpoint must use WebSocket transport.');
+  if (!['127.0.0.1', '[::1]', 'localhost'].includes(endpoint.hostname))
+    throw new Error('Pairing endpoint must stay on this device.');
+  if (!descriptor.token.trim())
+    throw new Error('Enter the short-lived pairing code shown by the client.');
+  if (
+    !Number.isFinite(Date.parse(descriptor.expiresAt)) ||
+    Date.parse(descriptor.expiresAt) <= Date.now()
+  )
+    throw new Error('Pairing code has expired. Request a new code from the client.');
 }
 
 function connectionFailureState(reason: unknown): ClientConnectionState {
   const message = reason instanceof Error ? reason.message.toLowerCase() : '';
   if (message.includes('version') || message.includes('protocol')) return 'version-incompatible';
-  if (message.includes('permission') || message.includes('blocked') || message.includes('local network')) return 'permission-blocked';
+  if (
+    message.includes('permission') ||
+    message.includes('blocked') ||
+    message.includes('local network')
+  )
+    return 'permission-blocked';
   return 'not-installed';
 }
 

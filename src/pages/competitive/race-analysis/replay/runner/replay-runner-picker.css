@@ -1,0 +1,63 @@
+.runner-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.runner-choice {
+  display: block;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-top: 2px solid var(--runner-color);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.runner-choice.chosen {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+}
+.runner-choice:hover {
+  background: var(--surface-3);
+}
+.runner-choice:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+.choice-gate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 0;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.choice-gate :global(svg) {
+  color: var(--accent-primary);
+}
+.runner-choice :global(.race-aptitude small) {
+  display: none;
+}
+.runner-choice :global(.identity h3) {
+  font-size: 14px;
+}
+.runner-choice :global(.portrait) {
+  height: 48px;
+}
+.runner-choice :global(.veteran-identity) {
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 8px;
+}
+@media (max-width: 800px) {
+  .runner-choices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .runner-choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

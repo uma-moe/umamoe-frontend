@@ -14,7 +14,7 @@
     },
     {
       "heading": "Plan your Global banners and events",
-      "text": "Follow the estimated Uma Musume Global banner and event schedule for characters, support cards, story events and race events. Use the carat planner to budget carats and tickets for upcoming banners, and compare support cards in the tier list.",
+      "text": "Follow the estimated Uma Musume Global banner and event schedule for characters, support cards, story events and race events. Use the carat planner to budget carats and tickets for upcoming banners.",
       "href": "/timeline",
       "label": "Browse the Global banner and event schedule"
     }
@@ -32,9 +32,7 @@
     },
     {
       "heading": "Find support cards to borrow",
-      "text": "Select a support card and minimum limit break to find trainers sharing it. If you are deciding which card to use, compare the Global support card tier list before searching. Availability can change when a trainer updates their shared card or inheritance team.",
-      "href": "/tierlist",
-      "label": "Compare the support card tier list"
+      "text": "Select a support card and minimum limit break to find trainers sharing it. Availability can change when a trainer updates their shared card or inheritance team."
     },
     {
       "heading": "Share your Trainer ID",
@@ -44,9 +42,7 @@
   "/timeline": [
     {
       "heading": "Global banner schedule",
-      "text": "Search upcoming Uma Musume character and support card banners, then use the date picker or Today button to navigate the timeline. Filters separate character banners, support cards and paid banners. Future Global release dates are estimates and may change; check official game announcements before spending carats.",
-      "href": "/tierlist",
-      "label": "Compare Global support cards before choosing a banner"
+      "text": "Search upcoming Uma Musume character and support card banners, then use the date picker or Today button to navigate the timeline. Filters separate character banners, support cards and paid banners. Future Global release dates are estimates and may change; check official game announcements before spending carats."
     },
     {
       "heading": "Global event schedule",

@@ -1,0 +1,79 @@
+.builds {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+.key {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.tools :global(.inspect > .trigger) {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+}
+.tools :global(.inspect > .trigger:hover) {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  align-items: start;
+  gap: 8px;
+}
+.column {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 8px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface-1);
+}
+.column.pick {
+  border-color: rgb(var(--accent-primary-rgb) / 0.6);
+}
+.cells {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cells li {
+  min-width: 0;
+}
+.skips {
+  margin: 0;
+  padding: 6px 2px 0;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.skips span {
+  margin-right: 4px;
+  font-weight: 650;
+}

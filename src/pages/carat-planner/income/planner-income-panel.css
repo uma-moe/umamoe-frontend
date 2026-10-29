@@ -1,0 +1,58 @@
+.income-panel {
+  grid-column: 1/-1;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  --control-height: 36px;
+  --select-label-size: 11px;
+  --select-description-size: 9px;
+}
+.rule-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 6px;
+}
+.rule-list button {
+  min-height: 40px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto 18px;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.rule-list button.active {
+  border-color: var(--accent-primary);
+  background: var(--color-accent-soft);
+}
+.rule-list strong {
+  font-size: 11px;
+}
+.rule-list small {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+.rule-list b {
+  color: var(--accent-secondary);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+@media (max-width: 768px) {
+  .income-panel {
+    --control-height: var(--touch-target);
+  }
+  .rule-list button {
+    min-height: var(--touch-target);
+  }
+}
+@media (max-width: 420px) {
+  .rule-list {
+    grid-template-columns: 1fr;
+  }
+}

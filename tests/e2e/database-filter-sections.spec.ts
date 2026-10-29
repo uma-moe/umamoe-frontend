@@ -1,7 +1,10 @@
 import { expect, test, setSliderValue } from './fixtures/test';
 import { mockDatabase, mockAffinity } from './fixtures/api';
 
-test('Database filters split on small screens, share collapse styling, and retain selections', async ({ page }) => {
+test('Database filters split on small screens, share collapse styling, and retain selections', async ({
+  page
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await mockDatabase(page);
   await mockAffinity(page);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -14,6 +17,7 @@ test('Database filters split on small screens, share collapse styling, and retai
   for (const id of ['characters', 'support', 'search', 'inheritance', 'main', 'races']) {
     await expect(group(id).locator('.collapsible-body')).toBeEmpty();
   }
+
   await header('affinity').click();
   for (const width of [320, 600, 760, 900]) {
     await page.setViewportSize({ width, height: 844 });
@@ -22,23 +26,41 @@ test('Database filters split on small screens, share collapse styling, and retai
       await expect(header(id)).toBeVisible();
       await expect(header(id)).toHaveAttribute('aria-expanded', 'false');
     }
+
     for (const theme of ['dark', 'light']) {
-      await page.evaluate(value => document.documentElement.dataset.theme = value, theme);
-      const styles = await page.locator('.database-filter-card').evaluateAll(cards => cards.map(card => {
-        const style = getComputedStyle(card);
-        const header = card.querySelector('.group-title')!;
-        const title = getComputedStyle(header);
-        return [card.getBoundingClientRect().width, style.backgroundColor, style.borderStyle, style.borderWidth, style.borderRadius, style.padding, header.getBoundingClientRect().height, title.color, title.fontSize];
-      }));
+      await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+      const styles = await page.locator('.database-filter-card').evaluateAll((cards) =>
+        cards.map((card) => {
+          const style = getComputedStyle(card);
+          const header = card.querySelector('.group-title')!;
+          const title = getComputedStyle(header);
+          return [
+            card.getBoundingClientRect().width,
+            style.backgroundColor,
+            style.borderStyle,
+            style.borderWidth,
+            style.borderRadius,
+            style.padding,
+            header.getBoundingClientRect().height,
+            title.color,
+            title.fontSize
+          ];
+        })
+      );
+
       for (const style of styles) expect(style).toEqual(styles[0]);
     }
+
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.evaluate(() => document.documentElement.dataset.theme = 'dark');
+  await page.evaluate(() => (document.documentElement.dataset.theme = 'dark'));
   await header('characters').click();
-  await page.getByRole('button', { name: 'Add included characters to Main parent (P1/P2)', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Add included characters to Main parent (P1/P2)', exact: true })
+    .click();
+
   const characters = page.getByRole('dialog', { name: 'Include Characters', exact: true });
   await characters.locator('.character-grid button').first().click();
   await characters.getByRole('button', { name: 'Add 1 Character', exact: true }).click();
@@ -46,7 +68,12 @@ test('Database filters split on small screens, share collapse styling, and retai
   await header('support').click();
   await setSliderValue(page.locator('#support-limit-break-advanced-start'), 2);
   await page.getByRole('button', { name: 'Borrow support card', exact: true }).click();
-  await page.getByRole('dialog', { name: 'Select Support Card', exact: true }).getByRole('radio').first().click();
+  await page
+    .getByRole('dialog', { name: 'Select Support Card', exact: true })
+    .getByRole('radio')
+    .first()
+    .click();
+
   await expect(header('support').locator('small')).toHaveText('2');
   await header('search').click();
   await page.locator('#trainer-id').fill('123456789012');

@@ -1,0 +1,225 @@
+/* The answers first, CM Data's at-a-glance lists in single lines, then the races themselves. */
+.overview {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  container: session-overview / inline-size;
+}
+.glance,
+.results,
+.factors {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.glance {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.results {
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  align-items: stretch;
+}
+.glance > :global(.chart-frame),
+.results > :global(.chart-frame),
+.factors > :global(.chart-frame) {
+  height: 100%;
+}
+.glance :global(.plot) {
+  gap: 0;
+  align-content: start;
+}
+.view-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* Each list is a header and single-line rows sharing its columns. */
+.column-head,
+.overview-row {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+}
+.column-head {
+  padding: 0 4px 4px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.column-head > span:not(:first-child) {
+  text-align: right;
+}
+.column-head.styles > span:nth-child(2) {
+  text-align: left;
+}
+.overview-row {
+  width: 100%;
+  min-height: 27px;
+  padding: 3px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.overview-row:last-of-type {
+  border-bottom: 0;
+}
+.overview-row:hover,
+.overview-row:focus-visible {
+  background: var(--color-accent-soft);
+}
+.number {
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+strong.number {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 650;
+}
+.styles {
+  grid-template-columns: minmax(84px, 0.9fr) minmax(40px, 1fr) 40px 44px;
+}
+.umas {
+  grid-template-columns: minmax(0, 1.4fr) minmax(32px, 0.6fr) 38px 38px;
+}
+.teams {
+  grid-template-columns: minmax(0, 1fr) 38px 44px;
+}
+.style-label,
+.team-styles > span,
+.uma-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.style-label i,
+.team-styles i {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.uma-name :global(.art) {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  background: transparent;
+}
+.share-track {
+  display: flex;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+.share-track > i {
+  display: block;
+  height: 100%;
+}
+.win-share {
+  position: relative;
+  overflow: visible;
+}
+.win-share > i {
+  border-radius: 3px;
+}
+.field-mark {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 16px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--text-secondary);
+}
+.team-styles {
+  display: flex;
+  gap: 3px 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+.team-styles > span {
+  flex: none;
+  font-size: 11px;
+}
+.footnote {
+  padding-top: 6px;
+}
+
+.few {
+  color: var(--text-muted);
+}
+strong.few {
+  color: var(--text-secondary);
+}
+.takeaway {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.winner {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.winner:hover,
+.winner:focus-visible {
+  color: var(--accent-primary);
+}
+.place {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.place.won {
+  color: var(--accent-primary);
+  font-weight: 650;
+}
+
+@container session-overview (max-width: 1180px) {
+  .glance {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .glance > :global(.chart-frame:last-child) {
+    grid-column: 1/-1;
+  }
+  .results {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .factors {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container session-overview (max-width: 680px) {
+  .glance,
+  .factors {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .glance > :global(.chart-frame:last-child) {
+    grid-column: auto;
+  }
+}

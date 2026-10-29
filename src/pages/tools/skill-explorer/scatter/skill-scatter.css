@@ -1,0 +1,437 @@
+.skill-scatter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  margin: 0;
+}
+
+.toolbar {
+  display: flex;
+  grid-row: 1;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.4rem;
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.with-touch {
+  display: none;
+}
+
+@media (hover: none), (max-width: 767px) {
+  .with-hover {
+    display: none;
+  }
+
+  .with-touch {
+    display: inline;
+  }
+}
+
+.zoom {
+  display: flex;
+  gap: 0.15rem;
+  align-items: center;
+}
+
+.zoom output {
+  min-width: 2.6rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.plot-area {
+  --plot-left: 60px;
+  --plot-right: 20px;
+  --plot-top: 56px;
+  --plot-bottom: 48px;
+  position: relative;
+  width: 100%;
+  height: var(--chart-height, max(420px, calc(100dvh - 340px)));
+  overflow: hidden;
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+}
+.y-title {
+  position: absolute;
+  z-index: 3;
+  top: 10px;
+  left: 14px;
+  right: 14px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.y-axis {
+  position: absolute;
+  top: var(--plot-top);
+  bottom: var(--plot-bottom);
+  left: 5px;
+  width: calc(var(--plot-left) - 14px);
+  pointer-events: none;
+}
+.y-axis span {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.y-axis .median {
+  display: grid;
+  justify-items: end;
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.1;
+}
+.y-axis .median small {
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 500;
+}
+.viewport {
+  position: absolute;
+  inset: var(--plot-top) var(--plot-right) var(--plot-bottom) var(--plot-left);
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.viewport.zoomed {
+  cursor: grab;
+  touch-action: none;
+}
+
+.viewport.dragging {
+  cursor: grabbing;
+}
+
+.x-axis {
+  position: absolute;
+  right: var(--plot-right);
+  bottom: 24px;
+  left: var(--plot-left);
+  height: 1.3rem;
+  pointer-events: none;
+}
+.x-axis span {
+  position: absolute;
+  top: 0.25rem;
+  transform: translateX(-50%);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.x-title {
+  position: absolute;
+  right: 10px;
+  bottom: 6px;
+  left: 10px;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+.quadrants {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+        to right,
+        rgb(var(--accent-success-rgb) / 0.12) 0 var(--split-left),
+        rgb(var(--accent-warning-rgb) / 0.12) var(--split-left) 100%
+      )
+      top / 100% var(--split-top) no-repeat,
+    linear-gradient(
+        to right,
+        rgb(var(--accent-error-rgb) / 0.11) 0 var(--split-left),
+        rgb(var(--accent-warning-rgb) / 0.06) var(--split-left) 100%
+      )
+      bottom / 100% calc(100% - var(--split-top)) no-repeat;
+}
+
+.quadrant {
+  position: absolute;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.top-left {
+  top: 32px;
+  left: 0.85rem;
+  color: var(--accent-success);
+}
+
+.top-right {
+  top: 32px;
+  right: 0.85rem;
+  color: var(--accent-warning);
+}
+
+.bottom-left {
+  bottom: 52px;
+  left: 0.85rem;
+  color: var(--accent-error);
+}
+
+.bottom-right {
+  right: 0.85rem;
+  bottom: 52px;
+  color: var(--accent-warning);
+}
+
+.grid-row {
+  position: absolute;
+  right: 0;
+  left: 0;
+  border-top: 1px dashed rgb(var(--on-surface-rgb) / 0.07);
+  pointer-events: none;
+}
+
+.grid-row.zero {
+  border-top-color: rgb(var(--on-surface-rgb) / 0.26);
+}
+
+.grid-column {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dotted rgb(var(--on-surface-rgb) / 0.1);
+  pointer-events: none;
+}
+
+.median-line {
+  position: absolute;
+  right: 0;
+  left: 0;
+  border-top: 1px dashed rgb(var(--on-surface-rgb) / 0.5);
+  pointer-events: none;
+}
+
+.name {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  position: absolute;
+  z-index: 1;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--bg-secondary) 84%, transparent);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.name.active {
+  color: var(--accent-primary);
+}
+
+.skill-dot {
+  pointer-events: auto;
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  padding: 2px;
+  border: 1px solid rgb(var(--on-surface-rgb) / 0.35);
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.45);
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  transition:
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 140ms ease;
+}
+
+.viewport.dragging .skill-dot {
+  cursor: grabbing;
+}
+
+.skill-dot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.skill-dot.tier-gold {
+  border-color: #e8c25a;
+}
+
+.skill-dot.tier-inherited {
+  border-color: var(--accent-pink);
+}
+
+.skill-dot.active {
+  z-index: 6;
+}
+
+.skill-dot:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.skill-dot.pinned {
+  z-index: 6;
+  border: 2px solid var(--accent-primary);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.45);
+  opacity: 1;
+}
+
+.fallback {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skill-dot {
+    transition: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .plot-area {
+    --plot-left: 48px;
+    --plot-right: 18px;
+    --plot-top: 52px;
+    --plot-bottom: 46px;
+  }
+  .y-title {
+    font-size: 0.65rem;
+  }
+  .quadrant {
+    font-size: 0.6rem;
+  }
+  .top-left,
+  .bottom-left {
+    left: var(--plot-left);
+  }
+}
+
+.label-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.name small {
+  flex: none;
+  font-size: 9px;
+  font-weight: 650;
+}
+.name.compared {
+  z-index: 4;
+  color: var(--accent-pink);
+  opacity: 1;
+}
+.skill-dot.compared {
+  z-index: 5;
+  border: 2px solid var(--accent-pink);
+  opacity: 1;
+}
+.name.search-match {
+  z-index: 8;
+  color: var(--accent-primary);
+  opacity: 1;
+  background: var(--component-bg);
+}
+.skill-dot.search-match {
+  z-index: 9;
+  border: 1px solid var(--accent-primary);
+  opacity: 1;
+}
+.skill-dot.search-match.active {
+  z-index: 10;
+}
+.name.search-match .compare-tag {
+  color: var(--accent-pink);
+}
+.marker-mark {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--component-bg);
+  pointer-events: none;
+}
+.search-mark {
+  color: var(--accent-primary);
+}
+.compare-mark {
+  color: var(--accent-pink);
+}
+.comparison-controls {
+  position: absolute;
+  z-index: 4;
+  top: 4px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.comparison-controls > span {
+  color: var(--accent-pink);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.comparing .y-title {
+  right: 160px;
+}
+.comparing .top-right {
+  top: 44px;
+}
+@media (max-width: 767px) {
+  .comparing .y-title {
+    white-space: normal;
+    line-height: 1.2;
+    max-height: 2.4em;
+  }
+}
+
+.skill-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+/* Composite the background once so overlapping nonmatches cannot accumulate opacity. */
+.skill-layer.dimmed {
+  z-index: 0;
+  opacity: 0.18;
+}
